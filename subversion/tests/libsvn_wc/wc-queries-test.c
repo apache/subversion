@@ -73,6 +73,7 @@ static const int schema_statements[] =
   STMT_CREATE_TARGET_PROP_CACHE,
   STMT_CREATE_REVERT_LIST,
   STMT_CREATE_DELETE_LIST,
+  STMT_CREATE_UPDATE_MOVE_LIST,
   -1 /* final marker */
 };
 
@@ -92,6 +93,7 @@ static const int slow_statements[] =
   STMT_INSERT_ACTUAL_EMPTIES,
   STMT_SELECT_REVERT_LIST_RECURSIVE,
   STMT_SELECT_DELETE_LIST,
+  STMT_SELECT_UPDATE_MOVE_LIST,
 
   /* Designed as slow to avoid penalty on other queries */
   STMT_SELECT_UNREFERENCED_PRISTINES,

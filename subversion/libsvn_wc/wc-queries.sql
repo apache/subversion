@@ -1315,6 +1315,30 @@ ORDER BY local_relpath
 -- STMT_FINALIZE_DELETE
 DROP TABLE IF EXISTS delete_list
 
+-- STMT_CREATE_UPDATE_MOVE_LIST
+DROP TABLE IF EXISTS update_move_list;
+CREATE TEMPORARY TABLE update_move_list (
+/* ### we should put the wc_id in here in case a move update spans multiple
+   ### working copies. queries, etc will need to be adjusted.  */
+  local_relpath TEXT PRIMARY KEY NOT NULL UNIQUE,
+  action INTEGER NOT NULL,
+  kind  INTEGER NOT NULL,
+  content_state INTEGER NOT NULL,
+  prop_state  INTEGER NOT NULL
+  )
+
+-- STMT_INSERT_UPDATE_MOVE_LIST
+INSERT INTO update_move_list(local_relpath, action, kind, content_state,
+  prop_state)
+VALUES (?1, ?2, ?3, ?4, ?5)
+
+-- STMT_SELECT_UPDATE_MOVE_LIST
+SELECT local_relpath, action, kind, content_state, prop_state
+FROM update_move_list
+ORDER BY local_relpath
+
+-- STMT_FINALIZE_UPDATE_MOVE
+DROP TABLE IF EXISTS update_move_list
 
 /* ------------------------------------------------------------------------- */
 
