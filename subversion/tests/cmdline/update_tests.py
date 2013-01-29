@@ -6463,6 +6463,80 @@ def update_swapped_depth_dirs(sbox):
                                         None, None, None,
                                         None, None, 1)
 
+def move_update_props(sbox):
+  "move-update with property mods"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Commit some 'future' property changes
+  sbox.simple_propset('propertyA', 'value1',
+                      'A/B', 'A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
+  sbox.simple_commit()
+  sbox.simple_propset('propertyB', 'value2',
+                      'A/B', 'A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
+  sbox.simple_commit()
+  sbox.simple_update(revision=1)
+
+  # Make some local property changes
+  sbox.simple_propset('propertyB', 'value3',
+                      'A/B/E', 'A/B/E/beta')
+
+  sbox.simple_move("A/B", "A/B2")
+
+  # Update and expect a conflict
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/B'         : Item(status='  ', treeconflict='C'),
+      'A/B/E'       : Item(status='  ', treeconflict='U'),
+      'A/B/E/alpha' : Item(status='  ', treeconflict='U'),
+      'A/B/E/beta'  : Item(status='  ', treeconflict='U'),
+      })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E',
+                       'A/B/lambda', 'A/B/F', 'A/B')
+  expected_disk.add({
+      'A/B2'         : Item(),
+      'A/B2/E'       : Item(),
+      'A/B2/E/alpha' : Item(contents="This is the file 'alpha'.\n"),
+      'A/B2/E/beta'  : Item(contents="This is the file 'beta'.\n"),
+      'A/B2/F'       : Item(),
+      'A/B2/lambda'  : Item(contents="This is the file 'lambda'.\n"),
+      })
+  expected_disk.tweak('A/B2/E', 'A/B2/E/beta', props={'propertyB':'value3'})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/B', status='D ', treeconflict='C', moved_to='A/B2')
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
+                        'A/B/F', 'A/B/lambda', status='D ')
+  expected_status.add({
+      'A/B2'         : Item(status='A ', copied='+', wc_rev='-',
+                            moved_from='A/B'),
+      'A/B2/E'       : Item(status=' M', copied='+', wc_rev='-'),
+      'A/B2/E/beta'  : Item(status=' M', copied='+', wc_rev='-'),
+      'A/B2/E/alpha' : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B2/F'       : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B2/lambda'  : Item(status='  ', copied='+', wc_rev='-'),
+      })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1,
+                                        '-r', '2', wc_dir)
+
+  # Resolve conflict moving changes to destination without conflict
+  svntest.actions.run_and_verify_svn("resolve failed", None, [],
+                                     'resolve',
+                                     '--accept=mine-conflict',
+                                     sbox.ospath('A/B'))
+
+  expected_status.tweak('A/B', treeconflict=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_disk.tweak('A/B2', 'A/B2/E/alpha', props={'propertyA' : 'value1'})
+  expected_disk.tweak('A/B2/E', 'A/B2/E/beta', props={'propertyA' : 'value1',
+                                                      'propertyB':'value3'})
+  svntest.actions.verify_disk(wc_dir, expected_disk, check_props = True)
 
   # Further update and expect a conflict.
   expected_status.tweak('A/B', status='D ', treeconflict='C', moved_to='A/B2')
@@ -6576,6 +6650,7 @@ test_list = [ None,
               update_removes_switched,
               incomplete_overcomplete,
               update_swapped_depth_dirs,
+              move_update_props,
              ]
 
 if __name__ == '__main__':
