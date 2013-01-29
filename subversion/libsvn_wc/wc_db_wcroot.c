@@ -705,7 +705,6 @@ try_symlink_as_dir:
                 SVN_ERR_WC_CORRUPT, err,
                 _("The working copy at '%s' is corrupt."),
                 svn_dirent_local_style(local_abspath, scratch_pool));
-          svn_error_clear(err);
 
           if (3 == info.size)
             {
