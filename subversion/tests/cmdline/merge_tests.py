@@ -18080,7 +18080,6 @@ def merge_target_selection(sbox):
 
   # Merge the file (wrong target)
   expected_output = [
-    '--- Merging r4 into \'.\':\n',
     '   C .\n',
     '--- Recording mergeinfo for merge of r4 into \'.\':\n',
     ' U   .\n',
