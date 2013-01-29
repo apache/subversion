@@ -506,6 +506,7 @@ update_working_props(svn_wc_notify_state_t *prop_state,
                      apr_pool_t *scratch_pool)
 {
   apr_hash_t *new_actual_props;
+  apr_array_header_t *new_propchanges;
 
   /*
    * Run a 3-way prop merge to update the props, using the pre-update
@@ -524,6 +525,18 @@ update_working_props(svn_wc_notify_state_t *prop_state,
                               old_version->props, old_version->props,
                               *actual_props, *propchanges,
                               result_pool, scratch_pool));
+
+  /* Setting properties in ACTUAL_NODE with svn_wc__db_op_set_props
+     relies on NODES row having been updated first which we don't do
+     at present. So this extra property diff has the same effect.
+
+     ### Perhaps we should update NODES first (but after
+     ### svn_wc__db_read_props above)?  */
+  SVN_ERR(svn_prop_diffs(&new_propchanges, new_actual_props, new_version->props,
+                         scratch_pool));
+  if (!new_propchanges->nelts)
+    new_actual_props = NULL;
+
   /* Install the new actual props. Don't set the conflict_skel yet, because
      we might need to add a text conflict to it as well. */
   SVN_ERR(svn_wc__db_op_set_props(db, local_abspath,
@@ -534,7 +547,6 @@ update_working_props(svn_wc_notify_state_t *prop_state,
 
   return SVN_NO_ERROR;
 }
-
 
 static svn_error_t *
 tc_editor_alter_directory(void *baton,
