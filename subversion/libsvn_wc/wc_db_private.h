@@ -354,6 +354,44 @@ svn_wc__db_get_children_op_depth(apr_hash_t **children,
                                  apr_pool_t *scratch_pool);
 
 
+/* Extend any delete of the parent of LOCAL_RELPATH to LOCAL_RELPATH.
+
+   ### What about KIND and OP_DEPTH?  KIND ought to be redundant; I'm
+       discussing on dev@ whether we can let that be null for presence
+       == base-deleted.  OP_DEPTH is the op-depth of what, and why?
+       It is used to select the lowest working node higher than OP_DEPTH,
+       so, in terms of the API, OP_DEPTH means ...?
+
+   Given a wc:
+
+              0         1         2         3         4
+              normal
+   A          normal
+   A/B        normal              normal
+   A/B/C                          not-pres  normal
+   A/B/C/D                                            normal
+
+   That is checkout, delete A/B, copy a replacement A/B, delete copied
+   child A/B/C, add replacement A/B/C, add A/B/C/D.
+
+   Now an update that adds base nodes for A/B/C, A/B/C/D and A/B/C/D/E
+   must extend the A/B deletion:
+
+              0         1         2         3         4
+              normal
+   A          normal
+   A/B        normal              normal
+   A/B/C      normal              not-pres  normal
+   A/B/C/D    normal              base-del            normal
+   A/B/C/D/E  normal              base-del
+
+   When adding a node if the parent has a higher working node then the
+   parent node is deleted (or replaced) and the delete must be extended
+   to cover new node.
+
+   In the example above A/B/C/D and A/B/C/D/E are the nodes that get
+   the extended delete, A/B/C is already deleted.
+ */
 svn_error_t *
 svn_wc__db_extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
                                 const char *local_relpath,
