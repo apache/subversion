@@ -169,8 +169,8 @@ svn_sqlite__get_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
    b     const void *              Blob data
          apr_size_t                Blob length
    r     svn_revnum_t              Revision number
-   t     const svn_token_t *       Token mapping table
-         int value                 Token value
+   t     const svn_token_map_t *   Token mapping table
+         int                       Token value
 
   Each character in FMT maps to one SQL parameter, and one or two function
   parameters, in the order they appear.
