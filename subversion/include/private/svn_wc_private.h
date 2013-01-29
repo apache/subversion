@@ -1716,9 +1716,10 @@ typedef svn_error_t *
  * or ignored if STATE_HANDLER is NULL
  */
 svn_error_t *
-svn_wc__wrap_diff_callbacks(svn_diff_tree_processor_t **diff_processor,
+svn_wc__wrap_diff_callbacks(const svn_diff_tree_processor_t **diff_processor,
                             const svn_wc_diff_callbacks4_t *callbacks,
                             void *callback_baton,
+                            svn_boolean_t walk_deleted_dirs,
                             svn_wc__diff_state_handle_t state_handle,
                             svn_wc__diff_state_close_t state_close,
                             svn_wc__diff_state_absent_t state_absent,

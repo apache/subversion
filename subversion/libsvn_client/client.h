@@ -37,6 +37,7 @@
 
 #include "private/svn_magic.h"
 #include "private/svn_client_private.h"
+#include "private/svn_diff_tree.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -709,23 +710,38 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
    is being driven. REVISION is the revision number of the 'old' side of
    the diff.
 
-   For each deleted directory, if WALK_DELETED_DIRS is true then just call
-   the 'dir_deleted' callback once, otherwise call the 'file_deleted' or
-   'dir_deleted' callback for each individual node in that subtree.
-
    If TEXT_DELTAS is FALSE, then do not expect text deltas from the edit
    drive, nor send the 'before' and 'after' texts to the diff callbacks;
    instead, send empty files to the diff callbacks if there was a change.
    This must be FALSE if the edit producer is not sending text deltas,
    otherwise the file content checksum comparisons will fail.
 
-   If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
-   file and directory operated on during the edit.
+   EDITOR/EDIT_BATON return the newly created editor and baton.
+
+   @since New in 1.8.
+   */
+svn_error_t *
+svn_client__get_diff_editor2(const svn_delta_editor_t **editor,
+                             void **edit_baton,
+                             svn_ra_session_t *ra_session,
+                             svn_depth_t depth,
+                             svn_revnum_t revision,
+                             svn_boolean_t text_deltas,
+                             const svn_diff_tree_processor_t *processor,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *result_pool);
+
+/* Like svn_client__get_diff_editor2 but calls DIFF_CALLBACKS with
+   DIFF_CMD_BATON. 
+
+   For each deleted directory, if WALK_DELETED_DIRS is true then just call
+   the 'dir_deleted' callback once, otherwise call the 'file_deleted' or
+   'dir_deleted' callback for each individual node in that subtree.
 
    If ABSENT_RELPATHS is non-null, collect const char * keys in it with
    the relative paths marked as absent by the diff driver.
-
-   EDITOR/EDIT_BATON return the newly created editor and baton. */
+ */
 svn_error_t *
 svn_client__get_diff_editor(const svn_delta_editor_t **editor,
                             void **edit_baton,
@@ -739,8 +755,6 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
                             void *diff_cmd_baton,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
-                            svn_wc_notify_func2_t notify_func,
-                            void *notify_baton,
                             apr_pool_t *result_pool);
 
 

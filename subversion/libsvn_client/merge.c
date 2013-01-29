@@ -3252,49 +3252,6 @@ record_operative_merge_action(merge_cmd_baton_t *merge_b,
   return SVN_NO_ERROR;
 }
 
-/* Handle a diff notification by calling the client's notification callback
- * and also by recording which paths changed (in BATON->*_abspaths).
- *
- * In some cases, notify that a merge is beginning, if we haven't already
- * done so.  (### TODO: Harmonize this so it handles all cases.)
- *
- * The paths in NOTIFY are relpaths, relative to the root of the diff (the
- * merge source). We convert these to abspaths in the merge target WC before
- * passing the notification structure on to the client.
- *
- * This function is not used for 'starting a merge', 'starting to record
- * mergeinfo' and 'completing a merge' notifications.
- *
- * Implements svn_wc_notify_func2_t.*/
-static void
-notification_receiver(void *baton, const svn_wc_notify_t *notify,
-                      apr_pool_t *pool)
-{
-#ifndef HANDLE_NOTIFY_FROM_MERGE
-  merge_cmd_baton_t *merge_b = baton;
-  const char *notify_abspath;
-
-  /* Skip notifications if this is a --record-only merge that is adding
-     or deleting NOTIFY->PATH, allow only mergeinfo changes and headers.
-     We will already have skipped the actual addition or deletion, but will
-     still get a notification callback for it. */
-  if (merge_b->record_only
-      && notify->action != svn_wc_notify_update_update)
-    return;
-
-  notify_abspath = svn_dirent_join(merge_b->target->abspath,
-                                   notify->path, pool);
-
-  if (merge_b->nrb.wrapped_func)
-    {
-      svn_wc_notify_t notify2 = *notify;
-
-      notify2.path = notify_abspath;
-      merge_b->nrb.wrapped_func(merge_b->nrb.wrapped_baton, &notify2, pool);
-    }
-#endif
-}
-
 /* Set *OUT_RANGELIST to the intersection of IN_RANGELIST with the simple
  * (inheritable) revision range REV1:REV2, according to CONSIDER_INHERITANCE.
  * If REV1 is equal to REV2, the result is an empty rangelist, otherwise
@@ -5250,7 +5207,6 @@ drive_merge_report_editor(const char *target_abspath,
                                       &merge_callbacks, merge_b,
                                       merge_b->ctx->cancel_func,
                                       merge_b->ctx->cancel_baton,
-                                      notification_receiver, merge_b,
                                       scratch_pool));
   SVN_ERR(svn_ra_do_diff3(merge_b->ra_session1,
                           &reporter, &report_baton, source->loc2->rev,
