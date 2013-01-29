@@ -923,6 +923,10 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
       (*result)->choice = svn_wc_conflict_choose_base;
       return SVN_NO_ERROR;
     case svn_cl__accept_working:
+      /* If the caller didn't merge the property values, then I guess
+       * 'choose working' means 'choose mine'... */
+      if (! desc->merged_file)
+        (*result)->merged_file = desc->my_abspath;
       (*result)->choice = svn_wc_conflict_choose_merged;
       return SVN_NO_ERROR;
     case svn_cl__accept_mine_conflict:

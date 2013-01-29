@@ -349,12 +349,24 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
     SVN_ERR(svn_wc__wq_run(db, local_abspath, cancel_func, cancel_baton,
                            scratch_pool));
 
+  /* If there is a conflict, try to resolve it. */
   if (conflict_skel && conflict_func)
-    SVN_ERR(svn_wc__conflict_invoke_resolver(db, local_abspath, conflict_skel,
-                                             NULL /* merge_options */,
-                                             conflict_func, conflict_baton,
-                                             cancel_func, cancel_baton,
-                                             scratch_pool));
+    {
+      svn_boolean_t prop_conflicted;
+
+      SVN_ERR(svn_wc__conflict_invoke_resolver(db, local_abspath, conflict_skel,
+                                               NULL /* merge_options */,
+                                               conflict_func, conflict_baton,
+                                               cancel_func, cancel_baton,
+                                               scratch_pool));
+
+      /* Reset *STATE if all prop conflicts were resolved. */
+      SVN_ERR(svn_wc__internal_conflicted_p(
+                NULL, &prop_conflicted, NULL,
+                wc_ctx->db, local_abspath, scratch_pool));
+      if (! prop_conflicted)
+        *state = svn_wc_notify_state_merged;
+    }
 
   return SVN_NO_ERROR;
 }

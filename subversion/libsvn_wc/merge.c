@@ -1396,11 +1396,27 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
                                scratch_pool));
 
       if (conflict_skel && conflict_func)
-        SVN_ERR(svn_wc__conflict_invoke_resolver(wc_ctx->db, target_abspath,
-                                                 conflict_skel, merge_options,
-                                                 conflict_func, conflict_baton,
-                                                 cancel_func, cancel_baton,
-                                                 scratch_pool));
+        {
+          svn_boolean_t text_conflicted, prop_conflicted;
+
+          SVN_ERR(svn_wc__conflict_invoke_resolver(
+                    wc_ctx->db, target_abspath,
+                    conflict_skel, merge_options,
+                    conflict_func, conflict_baton,
+                    cancel_func, cancel_baton,
+                    scratch_pool));
+
+          /* Reset *MERGE_CONTENT_OUTCOME etc. if a conflict was resolved. */
+          SVN_ERR(svn_wc__internal_conflicted_p(
+                    &text_conflicted, &prop_conflicted, NULL,
+                    wc_ctx->db, target_abspath, scratch_pool));
+          if (*merge_props_outcome == svn_wc_notify_state_conflicted
+              && ! prop_conflicted)
+            *merge_props_outcome = svn_wc_notify_state_merged;
+          if (*merge_content_outcome == svn_wc_merge_conflict
+              && ! text_conflicted)
+            *merge_content_outcome = svn_wc_merge_merged;
+        }
     }
   
   return SVN_NO_ERROR;

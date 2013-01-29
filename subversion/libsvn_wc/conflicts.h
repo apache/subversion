@@ -407,6 +407,12 @@ svn_wc__mark_resolved_text_conflict(svn_wc__db_t *db,
                                     const char *local_abspath,
                                     apr_pool_t *scratch_pool);
 
+/* Mark as resolved any prop conflicts on the node at DB/LOCAL_ABSPATH.  */
+svn_error_t *
+svn_wc__mark_resolved_prop_conflicts(svn_wc__db_t *db,
+                                     const char *local_abspath,
+                                     apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
