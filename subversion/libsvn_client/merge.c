@@ -5515,7 +5515,8 @@ single_file_merge_notify(merge_cmd_baton_t *merge_b,
   notify->kind = svn_node_file;
   notify->content_state = text_state;
   notify->prop_state = prop_state;
-  if (notify->content_state == svn_wc_notify_state_missing)
+  if (notify->action != svn_wc_notify_tree_conflict
+      && notify->content_state == svn_wc_notify_state_missing)
     {
       notify->action = svn_wc_notify_skip;
       SVN_ERR(record_skip(merge_b,

@@ -18080,9 +18080,12 @@ def merge_target_selection(sbox):
 
   # Merge the file (wrong target)
   expected_output = [
-    'Skipped missing target: \'.\'\n',
+    '--- Merging r4 into \'.\':\n',
+    '   C .\n',
+    '--- Recording mergeinfo for merge of r4 into \'.\':\n',
+    ' U   .\n',
     'Summary of conflicts:\n',
-    '  Skipped paths: 1\n',
+    '  Tree conflicts: 1\n',
   ]
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'merge', '^/dir/binary-file', '-c', '4', '.')
