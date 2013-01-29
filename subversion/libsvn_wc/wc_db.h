@@ -229,11 +229,12 @@ typedef struct svn_wc__db_lock_t {
    the administrative operation. It should live at least as long as the
    RESULT_POOL parameter.
 
-   When AUTO_UPGRADE is TRUE, then the working copy databases will be
-   upgraded when possible (when an old database is found/detected during
-   the operation of a wc_db API). If it is detected that a manual upgrade is
-   required, then SVN_ERR_WC_UPGRADE_REQUIRED will be returned from that API.
-   Passing FALSE will allow a bare minimum of APIs to function (most notably,
+   When OPEN_WITHOUT_UPGRADE is TRUE, then the working copy databases will
+   be opened even when an old database format is found/detected during
+   the operation of a wc_db API). If open_without_upgrade is FALSE and an
+   upgrade is required, then SVN_ERR_WC_UPGRADE_REQUIRED will be returned
+   from that API.
+   Passing TRUE will allow a bare minimum of APIs to function (most notably,
    the temp_get_format() function will always return a value) since most of
    these APIs expect a current-format database to be present.
 
@@ -257,7 +258,7 @@ typedef struct svn_wc__db_lock_t {
 svn_error_t *
 svn_wc__db_open(svn_wc__db_t **db,
                 svn_config_t *config,
-                svn_boolean_t auto_upgrade,
+                svn_boolean_t open_without_upgrade,
                 svn_boolean_t enforce_empty_wq,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool);
@@ -315,6 +316,9 @@ svn_wc__db_init(svn_wc__db_t *db,
 
    LOCAL_RELPATH will be allocated in RESULT_POOL. All other (temporary)
    allocations will be made in SCRATCH_POOL.
+
+   This function is available when DB is opened with the OPEN_WITHOUT_UPGRADE
+   option.
 */
 svn_error_t *
 svn_wc__db_to_relpath(const char **local_relpath,
@@ -333,7 +337,10 @@ svn_wc__db_to_relpath(const char **local_relpath,
 
    LOCAL_ABSPATH will be allocated in RESULT_POOL. All other (temporary)
    allocations will be made in SCRATCH_POOL.
-*/
+
+   This function is available when DB is opened with the OPEN_WITHOUT_UPGRADE
+   option.
+ */
 svn_error_t *
 svn_wc__db_from_relpath(const char **local_abspath,
                         svn_wc__db_t *db,
@@ -343,6 +350,9 @@ svn_wc__db_from_relpath(const char **local_abspath,
                         apr_pool_t *scratch_pool);
 
 /* Compute the working copy root WCROOT_ABSPATH for WRI_ABSPATH using DB.
+
+   This function is available when DB is opened with the OPEN_WITHOUT_UPGRADE
+   option.
  */
 svn_error_t *
 svn_wc__db_get_wcroot(const char **wcroot_abspath,

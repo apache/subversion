@@ -38,12 +38,15 @@ struct svn_wc__db_t {
      to figure out where we should look for the corresponding datastore. */
   svn_config_t *config;
 
-  /* Should we attempt to automatically upgrade the database when it is
+  /* Should we fail with SVN_ERR_WC_UPGRADE_REQUIRED when it is
      opened, and found to be not-current?  */
-  svn_boolean_t auto_upgrade;
+  svn_boolean_t verify_format;
 
   /* Should we ensure the WORK_QUEUE is empty when a WCROOT is opened?  */
   svn_boolean_t enforce_empty_wq;
+
+  /* Should we open Sqlite databases EXCLUSIVE */
+  svn_boolean_t exclusive;
 
   /* Map a given working copy directory to its relevant data.
      const char *local_abspath -> svn_wc__db_wcroot_t *wcroot  */
@@ -118,7 +121,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
                              svn_sqlite__db_t *sdb,
                              apr_int64_t wc_id,
                              int format,
-                             svn_boolean_t auto_upgrade,
+                             svn_boolean_t verify_format,
                              svn_boolean_t enforce_empty_wq,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
@@ -147,6 +150,19 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
    NOTE: the expression is multiply-evaluated!!  */
 #define VERIFY_USABLE_WCROOT(wcroot)  SVN_ERR_ASSERT(               \
     (wcroot) != NULL && (wcroot)->format == SVN_WC__VERSION)
+
+/* Check if the WCROOT is usable for light db operations such as path
+   calculations */
+#define CHECK_MINIMAL_WCROOT(wcroot, abspath, scratch_pool)             \
+    do                                                                  \
+    {                                                                   \
+      if (wcroot == NULL)                                               \
+        return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,     \
+                    _("The node '%s' is not in a working copy."),       \
+                             svn_dirent_local_style(wri_abspath,        \
+                                                    scratch_pool));     \
+    }                                                                   \
+    while (0)
 
 /* Calculates the depth of the relpath below "" */
 APR_INLINE static int
