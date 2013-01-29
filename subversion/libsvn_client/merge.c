@@ -265,6 +265,9 @@ typedef struct merge_cmd_baton_t {
                                          merge or not. */
   const merge_target_t *target;       /* Description of merge target node */
 
+  const svn_merge_range_t *current_range; /* For single file merges the current
+                                             revision range */
+
   /* The left and right URLs and revs.  The value of this field changes to
      reflect the merge_source_t *currently* being merged by do_merge(). */
   merge_source_t merge_source;
@@ -1447,6 +1450,9 @@ record_skip(const merge_cmd_baton_t *merge_b,
             svn_wc_notify_state_t state,
             apr_pool_t *scratch_pool)
 {
+  if (merge_b->record_only)
+    return SVN_NO_ERROR; /* ### Why? - Legacy compatibility */
+
   if (merge_b->merge_source.ancestral
       || merge_b->reintegrate_merge)
     {
@@ -2055,10 +2061,8 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
   if (merge_b->record_only)
     {
       *content_state = svn_wc_notify_state_unchanged;
-      return SVN_NO_ERROR;
     }
-
-  if (older_abspath)
+  else if (older_abspath)
     {
       svn_boolean_t has_local_mods;
       enum svn_wc_merge_outcome_t content_outcome;
@@ -3182,10 +3186,20 @@ record_operative_merge_action(merge_cmd_baton_t *merge_b,
                 }
             }
         }
+#ifdef HANDLE_NOTIFY_FROM_MERGE
+      else if (merge_b->nrb.nbr_operative_notifications == 1)
+        notify_merge_begin(merge_b->target->abspath,
+                           merge_b->current_range,
+                           merge_b->same_repos,
+                           merge_b->ctx, scratch_pool);
+#endif
     }
   /* Otherwise, our merge sources aren't ancestors of one another. */
-  else if (!(merge_b->nrb.is_single_file_merge)
-           && merge_b->nrb.nbr_operative_notifications == 1)
+  else if (merge_b->nrb.nbr_operative_notifications == 1
+#ifndef HANDLE_NOTIFY_FROM_MERGE
+           && (! merge_b->nrb.is_single_file_merge)
+#endif
+           )
     {
       notify_merge_begin(merge_b->target->abspath, NULL,
                          merge_b->same_repos,
@@ -3213,6 +3227,7 @@ static void
 notification_receiver(void *baton, const svn_wc_notify_t *notify,
                       apr_pool_t *pool)
 {
+#ifndef HANDLE_NOTIFY_FROM_MERGE
   merge_cmd_baton_t *merge_b = baton;
   const char *notify_abspath;
 
@@ -3234,6 +3249,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
       notify2.path = notify_abspath;
       merge_b->nrb.wrapped_func(merge_b->nrb.wrapped_baton, &notify2, pool);
     }
+#endif
 }
 
 /* Set *OUT_RANGELIST to the intersection of IN_RANGELIST with the simple
@@ -5494,7 +5510,7 @@ single_file_merge_get_file(const char **filename,
   return svn_error_trace(svn_stream_close(stream));
 }
 
-
+#ifndef HANDLE_NOTIFY_FROM_MERGE
 /* Send a notification specific to a single-file merge if the states
    indicate there's something worth reporting.
 
@@ -5519,50 +5535,11 @@ single_file_merge_notify(merge_cmd_baton_t *merge_b,
       && notify->content_state == svn_wc_notify_state_missing)
     {
       notify->action = svn_wc_notify_skip;
-      SVN_ERR(record_skip(merge_b,
-                          svn_dirent_join(
-                                merge_b->target->abspath,
-                                target_relpath, scratch_pool),
-                          svn_node_file, text_state,
-                          scratch_pool));
     }
 
-  if (action == svn_wc_notify_update_add)
-    {
-      SVN_ERR(record_update_add(merge_b,
-                                svn_dirent_join(
-                                        merge_b->target->abspath,
-                                        target_relpath, scratch_pool),
-                                svn_node_file, scratch_pool));
-    }
-  else if (action == svn_wc_notify_update_update)
-    {
-      if (text_state == svn_wc_notify_state_conflicted
-          || text_state == svn_wc_notify_state_merged
-          || text_state == svn_wc_notify_state_changed
-          || prop_state == svn_wc_notify_state_conflicted
-          || prop_state == svn_wc_notify_state_merged
-          || prop_state == svn_wc_notify_state_changed)
-        {
-          SVN_ERR(record_update_update(merge_b,
-                                       svn_dirent_join(
-                                        merge_b->target->abspath,
-                                        target_relpath, scratch_pool),
-                                       svn_node_file,
-                                       text_state, prop_state,
-                                       scratch_pool));
-        }
-    }
-  else if (action == svn_wc_notify_update_delete)
-    {
-      SVN_ERR(record_update_delete(merge_b,
-                                   svn_dirent_join(
-                                        merge_b->target->abspath,
-                                        target_relpath, scratch_pool),
-                                   svn_node_file, scratch_pool));
-    }
-
-  if (IS_OPERATIVE_NOTIFICATION(notify) && (! *header_sent))
+  if (IS_OPERATIVE_NOTIFICATION(notify)
+      && notify->action != svn_wc_notify_tree_conflict
+       && (! *header_sent))
     {
       notify_merge_begin(merge_b->target->abspath,
                          (merge_b->merge_source.ancestral ? r : NULL),
@@ -5574,6 +5551,7 @@ single_file_merge_notify(merge_cmd_baton_t *merge_b,
 
   return SVN_NO_ERROR;
 }
+#endif
 
 /* Compare two svn_client__merge_path_t elements **A and **B, given the
    addresses of pointers to them. Return an integer less than, equal to, or
@@ -7105,17 +7083,21 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
           svn_merge_range_t *r = APR_ARRAY_IDX(ranges_to_merge, i,
                                                svn_merge_range_t *);
           const merge_source_t *real_source;
+#ifndef HANDLE_NOTIFY_FROM_MERGE
           svn_boolean_t header_sent = FALSE;
+#endif
           const char *tmpfile1, *tmpfile2;
           apr_hash_t *props1, *props2;
           svn_string_t *pval;
           const char *mimetype1, *mimetype2;
           apr_array_header_t *propchanges;
-          svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
-          svn_wc_notify_state_t text_state = svn_wc_notify_state_unknown;
+          svn_wc_notify_state_t prop_state = svn_wc_notify_state_inapplicable;
+          svn_wc_notify_state_t text_state = svn_wc_notify_state_inapplicable;
           svn_boolean_t tree_conflicted = FALSE;
 
           svn_pool_clear(iterpool);
+
+          merge_b->current_range = r;
 
           /* While we currently don't allow it, in theory we could be
              fetching two fulltexts from two different repositories here. */
@@ -7158,6 +7140,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
                                          mimetype1, mimetype2,
                                          props1,
                                          merge_b, iterpool));
+#ifndef HANDLE_NOTIFY_FROM_MERGE
               SVN_ERR(single_file_merge_notify(merge_b, target_relpath,
                                                tree_conflicted
                                                  ? svn_wc_notify_tree_conflict
@@ -7165,7 +7148,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
                                                text_state,
                                                svn_wc_notify_state_unknown,
                                                r, &header_sent, iterpool));
-
+#endif
               /* ...plus add... */
               SVN_ERR(merge_file_added(&text_state, &prop_state,
                                        &tree_conflicted,
@@ -7176,12 +7159,14 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
                                        NULL, SVN_INVALID_REVNUM,
                                        propchanges, props1,
                                        merge_b, iterpool));
+#ifndef HANDLE_NOTIFY_FROM_MERGE
               SVN_ERR(single_file_merge_notify(merge_b, target_relpath,
                                                tree_conflicted
                                                  ? svn_wc_notify_tree_conflict
                                                  : svn_wc_notify_update_add,
                                                text_state, prop_state,
                                                r, &header_sent, iterpool));
+#endif
               /* ... equals replace. */
             }
           else
@@ -7194,12 +7179,14 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
                                          mimetype1, mimetype2,
                                          propchanges, props1,
                                          merge_b, iterpool));
+#ifndef HANDLE_NOTIFY_FROM_MERGE
               SVN_ERR(single_file_merge_notify(merge_b, target_relpath,
                                                tree_conflicted
                                                  ? svn_wc_notify_tree_conflict
                                                  : svn_wc_notify_update_update,
                                                text_state, prop_state,
                                                r, &header_sent, iterpool));
+#endif
             }
 
           if ((i < (ranges_to_merge->nelts - 1))
@@ -7209,6 +7196,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
               break;
             }
         }
+      merge_b->current_range = NULL;
     } /* !merge_b->record_only */
 
   /* Record updated WC mergeinfo to account for our new merges, minus
