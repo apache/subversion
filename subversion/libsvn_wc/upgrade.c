@@ -1497,6 +1497,51 @@ svn_wc__upgrade_conflict_skel_from_raw(svn_skel_t **conflicts,
   return SVN_NO_ERROR;
 }
 
+/* Helper function to upgrade a single conflict from bump_to_30 */
+static svn_error_t *
+bump_30_upgrade_one_conflict(svn_wc__db_t *wc_db,
+                             const char *wcroot_abspath,
+                             svn_sqlite__stmt_t *stmt,
+                             svn_sqlite__db_t *sdb,
+                             apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt_store;
+  svn_stringbuf_t *skel_data;
+  svn_skel_t *conflict_data;
+  apr_int64_t wc_id = svn_sqlite__column_int64(stmt, 0);
+  const char *local_relpath = svn_sqlite__column_text(stmt, 1, NULL);
+  const char *conflict_old = svn_sqlite__column_text(stmt, 2, NULL);
+  const char *conflict_wrk = svn_sqlite__column_text(stmt, 3, NULL);
+  const char *conflict_new = svn_sqlite__column_text(stmt, 4, NULL);
+  const char *prop_reject = svn_sqlite__column_text(stmt, 5, NULL);
+  apr_size_t tree_conflict_size;
+  const char *tree_conflict_data = svn_sqlite__column_blob(stmt, 6,
+                                           &tree_conflict_size, NULL);
+
+  SVN_ERR(svn_wc__upgrade_conflict_skel_from_raw(&conflict_data,
+                                                 wc_db, wcroot_abspath,
+                                                 local_relpath,
+                                                 conflict_old,
+                                                 conflict_wrk,
+                                                 conflict_new,
+                                                 prop_reject,
+                                                 tree_conflict_data,
+                                                 tree_conflict_size,
+                                                 scratch_pool, scratch_pool));
+
+  SVN_ERR_ASSERT(conflict_data != NULL);
+
+  skel_data = svn_skel__unparse(conflict_data, scratch_pool);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt_store, sdb,
+                                    STMT_UPGRADE_30_SET_CONFLICT));
+  SVN_ERR(svn_sqlite__bindf(stmt_store, "isb", wc_id, local_relpath,
+                            skel_data->data, skel_data->len));
+  SVN_ERR(svn_sqlite__step_done(stmt_store));
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 bump_to_30(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
@@ -1505,7 +1550,6 @@ bump_to_30(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_sqlite__stmt_t *stmt;
   svn_wc__db_t *db; /* Read only temp db */
-  const char *wri_abspath = bb->wcroot_abspath;
 
   SVN_ERR(svn_wc__db_open(&db, NULL, FALSE, FALSE,
                           scratch_pool, scratch_pool));
@@ -1516,41 +1560,19 @@ bump_to_30(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
   while (have_row)
     {
-      svn_sqlite__stmt_t *stmt_store;
-      svn_stringbuf_t *skel_data;
-      svn_skel_t *conflict_data;
-      apr_int64_t wc_id = svn_sqlite__column_int64(stmt, 0);
-      const char *local_relpath = svn_sqlite__column_text(stmt, 1, NULL);
-      const char *conflict_old = svn_sqlite__column_text(stmt, 2, NULL);
-      const char *conflict_wrk = svn_sqlite__column_text(stmt, 3, NULL);
-      const char *conflict_new = svn_sqlite__column_text(stmt, 4, NULL);
-      const char *prop_reject = svn_sqlite__column_text(stmt, 5, NULL);
-      apr_size_t tree_conflict_size;
-      const char *tree_conflict_data = svn_sqlite__column_blob(stmt, 6,
-                                               &tree_conflict_size, NULL);
-
+      svn_error_t *err;
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_wc__upgrade_conflict_skel_from_raw(&conflict_data,
-                                                     db, wri_abspath,
-                                                     local_relpath,
-                                                     conflict_old,
-                                                     conflict_wrk,
-                                                     conflict_new,
-                                                     prop_reject,
-                                                     tree_conflict_data,
-                                                     tree_conflict_size,
-                                                     iterpool, iterpool));
+      err = bump_30_upgrade_one_conflict(db, bb->wcroot_abspath, stmt, sdb,
+                                         iterpool);
 
-      SVN_ERR_ASSERT(conflict_data != NULL);
-
-      skel_data = svn_skel__unparse(conflict_data, iterpool);
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt_store, sdb,
-                                        STMT_UPGRADE_30_SET_CONFLICT));
-      SVN_ERR(svn_sqlite__bindf(stmt_store, "isb", wc_id, local_relpath,
-                                skel_data->data, skel_data->len));
-      SVN_ERR(svn_sqlite__step_done(stmt_store));
+      if (err)
+        {
+          return svn_error_trace(
+                    svn_error_compose_create(
+                            err,
+                            svn_sqlite__reset(stmt)));
+        }
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
