@@ -64,7 +64,7 @@
 
 #include "svn_private_config.h"
 
-/* #define HANDLE_NOTIFY_FROM_MERGE */
+#define HANDLE_NOTIFY_FROM_MERGE
 
 /*-----------------------------------------------------------------------*/
 
