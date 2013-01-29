@@ -144,11 +144,9 @@ def svnauthz_validate_repo_test(sbox):
                                           1, False, "validate", iota_url)
 
   # Non-existant authz url
-  # TODO: This should be exit code 2 but svnauthz is misbehaving and
-  # returning 1 for now.
   # exit code 2, operational error since we can't test the file.
   svntest.actions.run_and_verify_svnauthz("Non-existant authz file", None,
-                                          None, 1, False, "validate",
+                                          None, 2, False, "validate",
                                           repo_url + "/zilch")
 
 def svnauthz_validate_txn_test(sbox):
@@ -946,9 +944,9 @@ def svnauthz_compat_mode_repo_test(sbox):
                                           authz_path)
 
   # Check a non-existant url.
-  # TODO: Exit code really should be 2 but it's 1 right now.
+  # Exit code really should be 2 since this is an operational error. 
   svntest.actions.run_and_verify_svnauthz(
-      "svnauthz-validate on non-existant file", None, None, 1, True,
+      "svnauthz-validate on non-existant file", None, None, 2, True,
       repo_url + "/zilch"
   )
 
