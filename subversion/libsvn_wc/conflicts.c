@@ -2261,8 +2261,10 @@ svn_wc__read_conflicts(const apr_array_header_t **conflicts,
    and clearing the conflict filenames from the entry.  The latter needs to
    be done whether or not the conflict files exist.
 
-   ### This func combines *resolving* and *marking as resolved*.
-   ### Resolving is shared between this func and its caller -- seems wrong.
+   ### This func combines *resolving* and *marking as resolved* -- seems poor.
+
+   ### Resolving is shared between this func and its caller
+       'conflict_status_walker()' -- seems poor.
 
    LOCAL_ABSPATH in DB is the path to the item to be resolved.
    RESOLVE_TEXT, RESOLVE_PROPS and RESOLVE_TREE are TRUE iff text, property
@@ -2270,9 +2272,15 @@ svn_wc__read_conflicts(const apr_array_header_t **conflicts,
 
    If this call marks any conflict as resolved, set *DID_RESOLVE to true,
    else to false.
-   ### If asked to resolve a text or prop conflict, only set *DID_RESOLVE
-       to true if a conflict marker file was present.
+   If asked to resolve a text or prop conflict, only set *DID_RESOLVE
+   to true if a conflict marker file was present, because if no marker
+   file was present then the conflict is considered to be marked as
+   resolved already.
    ### If asked to resolve a tree conflict, always set *DID_RESOLVE to true.
+       This would make sense if 'resolve_tree' is only requested when
+       there is in fact a tree conflict to be resolved, but, for
+       consistency with text & prop conflicts, the code should probably
+       say "if (resolve_tree && tree_conflicted) *did_resolve = TRUE".
 
    See svn_wc_resolved_conflict5() for how CONFLICT_CHOICE behaves.
 */
