@@ -1174,7 +1174,7 @@ get_info(apr_hash_t **props,
                                            scratch_pool, scratch_pool));
 
   sorted_children = svn_sort__hash(hash_children,
-                                   svn_sort_compare_items_as_paths,
+                                   svn_sort_compare_items_lexically,
                                    scratch_pool);
 
   *children = apr_array_make(result_pool, sorted_children->nelts,
