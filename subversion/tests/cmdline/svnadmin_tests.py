@@ -1840,6 +1840,92 @@ def recover_old(sbox):
   svntest.main.run_svnadmin("recover", sbox.repo_dir)
 
 
+def verify_keep_going(sbox):
+  "svnadmin verify --keep-going test"
+
+  sbox.build(create_wc = False)
+  repo_url = sbox.repo_url
+  B_url = sbox.repo_url + '/B'
+  C_url = sbox.repo_url + '/C'
+
+  # Create A/B/E/bravo in r2.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', '-m', 'log_msg',
+                                     B_url)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', '-m', 'log_msg',
+                                     C_url)
+  
+  r2 = fsfs_file(sbox.repo_dir, 'revs', '2')
+  fp = open(r2, 'wb')
+  fp.write("""id: 0-2.0.r2/0
+type: dir
+count: 0
+cpath: /B
+copyroot: 0 /
+
+PLAIN
+K 1
+A
+V 17
+dir 0-1.0.r1/3837
+K 1
+B
+V 14
+dir 0-2.0.r2/0
+K 4
+iota
+V 19
+file 11-1.0.r1/3951
+END
+ENDREP
+id: 0.0.r2/165
+type: dir
+pred: 0.0.r1/4198
+count: 2
+text: 2 59 93 0 ae352a67fd07433f009f7234d2ea47ac
+cpath: /
+copyroot: 0 /
+
+_0.0.t1-1 Add-dir false false /B
+
+
+165 290
+""")
+  fp.close()
+  exit_code, output, errput = svntest.main.run_svnadmin("verify",
+                                                        "--keep-going",
+                                                        sbox.repo_dir)
+
+  exp_err = ["* Verifying repository metadata ...\n",
+             "* Verified revision 0.\n",
+             "* Verified revision 1.\n",
+             "* Error verifying revision 2.\n",
+             "svnadmin: E160004: Invalid change kind in rev file\n",
+             "* Verified revision 3.\n",
+             "svnadmin: E165005: Repository 'svn-test-work/repositories/svnadmin_tests-31' failed to verify\n"]
+
+  if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
+                                   [], errput, None, exp_err):
+    raise svntest.Failure
+
+  exit_code, output, errput = svntest.main.run_svnadmin("verify",
+                                                        sbox.repo_dir)
+
+  exp_err = ["* Verifying repository metadata ...\n",
+             "* Verified revision 0.\n",
+             "* Verified revision 1.\n",
+             "* Error verifying revision 2.\n",
+             "svnadmin: E160004: Invalid change kind in rev file\n",
+             "svnadmin: E165005: Repository 'svn-test-work/repositories/svnadmin_tests-31' failed to verify\n"]
+
+  if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
+                                   [], errput, None, exp_err):
+    raise svntest.Failure
+
+
+
 ########################################################################
 # Run the tests
 
@@ -1876,6 +1962,7 @@ test_list = [ None,
               locking,
               mergeinfo_race,
               recover_old,
+              verify_keep_going,
              ]
 
 if __name__ == '__main__':

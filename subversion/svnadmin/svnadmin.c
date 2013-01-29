@@ -175,6 +175,7 @@ enum svnadmin__cmdline_options_t
   {
     svnadmin__version = SVN_OPT_FIRST_LONGOPT_ID,
     svnadmin__incremental,
+    svnadmin__keep_going,
     svnadmin__deltas,
     svnadmin__ignore_uuid,
     svnadmin__force_uuid,
@@ -279,6 +280,9 @@ static const apr_getopt_option_t options_table[] =
 
     {"pre-1.6-compatible",     svnadmin__pre_1_6_compatible, 0,
      N_("deprecated; see --compatible-version")},
+
+    {"keep-going",    svnadmin__keep_going, 0,
+     N_("continue verifying after detecting a corruption")},
 
     {"memory-cache-size",     'M', 1,
      N_("size of the extra in-memory cache in MB used to\n"
@@ -471,7 +475,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
   {"verify", subcommand_verify, {0}, N_
    ("usage: svnadmin verify REPOS_PATH\n\n"
     "Verifies the data stored in the repository.\n"),
-  {'r', 'q', 'M'} },
+  {'r', 'q', svnadmin__keep_going, 'M'} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -501,6 +505,7 @@ struct svnadmin_opt_state
   svn_boolean_t clean_logs;                         /* --clean-logs */
   svn_boolean_t bypass_hooks;                       /* --bypass-hooks */
   svn_boolean_t wait;                               /* --wait */
+  svn_boolean_t keep_going;                         /* --keep-going */
   svn_boolean_t bypass_prop_validation;             /* --bypass-prop-validation */
   enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
                                                        --force-uuid */
@@ -742,6 +747,16 @@ repos_notify_handler(void *baton,
       svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
                                         "WARNING 0x%04x: %s\n", notify->warning,
                                         notify->warning_str));
+      return;
+
+    case svn_repos_notify_failure:
+      if (notify->revision != SVN_INVALID_REVNUM)
+        svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                          _("* Error verifying revision %ld.\n"),
+                                          notify->revision));
+      if (notify->err)
+        svn_handle_error2(notify->err, stderr, FALSE /* non-fatal */,
+                          "svnadmin: ");
       return;
 
     case svn_repos_notify_dump_rev_end:
@@ -1543,10 +1558,12 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (! opt_state->quiet)
     progress_stream = recode_stream_create(stderr, pool);
 
-  return svn_repos_verify_fs2(repos, lower, upper,
-                              !opt_state->quiet
-                                ? repos_notify_handler : NULL,
-                              progress_stream, check_cancel, NULL, pool);
+  return svn_error_trace(svn_repos_verify_fs3(repos, lower, upper,
+                                              opt_state->keep_going,
+                                              !opt_state->quiet
+                                              ? repos_notify_handler : NULL,
+                                              progress_stream, check_cancel,
+                                              NULL, pool));
 }
 
 /* This implements `svn_opt_subcommand_t'. */
@@ -2042,6 +2059,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
 
           opt_state.compatible_version = compatible_version;
         }
+        break;
+      case svnadmin__keep_going:
+        opt_state.keep_going = TRUE;
         break;
       case svnadmin__fs_type:
         SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.fs_type, opt_arg, pool));
