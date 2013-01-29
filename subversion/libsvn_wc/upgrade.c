@@ -1551,7 +1551,7 @@ bump_to_30(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   svn_sqlite__stmt_t *stmt;
   svn_wc__db_t *db; /* Read only temp db */
 
-  SVN_ERR(svn_wc__db_open(&db, NULL, FALSE, FALSE,
+  SVN_ERR(svn_wc__db_open(&db, NULL, TRUE /* open_without_upgrade */, FALSE,
                           scratch_pool, scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
@@ -2155,17 +2155,21 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__db_open(&db, NULL /* ### config */, TRUE, FALSE,
                           scratch_pool, scratch_pool));
 
+
   err = svn_wc__db_bump_format(&result_format, local_abspath, db,
                                scratch_pool);
   if (err)
     {
-      if (err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED) /* pre-1.7 WC */
+      if (err->apr_err != SVN_ERR_WC_UPGRADE_REQUIRED)
         {
-          svn_error_clear(err);
-          SVN_ERR(svn_wc__db_close(db));
+          return svn_error_trace(
+                    svn_error_compose_create(
+                            err,
+                            svn_wc__db_close(db)));
         }
-      else
-        return svn_error_trace(err);
+
+      svn_error_clear(err);
+      /* Pre 1.7: Fall through */
     }
   else
     {
@@ -2187,10 +2191,6 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
      the partial upgrade.  Moving the wc.db file creates a wcng, and
      'cleanup' with a new client will complete any outstanding
      upgrade. */
-
-  SVN_ERR(svn_wc__db_open(&db,
-                          NULL /* ### config */, TRUE, FALSE,
-                          scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__read_entries_old(&entries, local_abspath,
                                    scratch_pool, scratch_pool));

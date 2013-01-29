@@ -1565,7 +1565,7 @@ svn_wc__db_to_relpath(const char **local_relpath,
 
   /* This function is indirectly called from the upgrade code, so we
      can't verify the wcroot here. Just check that it is not NULL */
-  SVN_ERR_ASSERT(wcroot != NULL);
+  CHECK_MINIMAL_WCROOT(wcroot, wri_abspath, scratch_pool);
 
   if (svn_dirent_is_ancestor(wcroot->abspath, local_abspath))
     {
@@ -1597,7 +1597,11 @@ svn_wc__db_from_relpath(const char **local_abspath,
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &unused_relpath, db,
                               wri_abspath, scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
+
+  /* This function is indirectly called from the upgrade code, so we
+     can't verify the wcroot here. Just check that it is not NULL */
+  CHECK_MINIMAL_WCROOT(wcroot, wri_abspath, scratch_pool);
+
 
   *local_abspath = svn_dirent_join(wcroot->abspath,
                                    local_relpath,
@@ -1621,12 +1625,7 @@ svn_wc__db_get_wcroot(const char **wcroot_abspath,
 
   /* Can't use VERIFY_USABLE_WCROOT, as this should be usable to detect
      where call upgrade */
-
-  if (wcroot == NULL)
-    return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
-                             _("The node '%s' is not in a working copy."),
-                             svn_dirent_local_style(wri_abspath,
-                                                    scratch_pool));
+  CHECK_MINIMAL_WCROOT(wcroot, wri_abspath, scratch_pool);
 
   *wcroot_abspath = apr_pstrdup(result_pool, wcroot->abspath);
 
