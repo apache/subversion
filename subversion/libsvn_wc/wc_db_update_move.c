@@ -131,6 +131,86 @@ struct tc_editor_baton {
   apr_pool_t *result_pool;
 };
 
+/* 
+ * Notifications are delayed until the entire update-move transaction
+ * completes. These functions provide the necessary support by storing
+ * notification information in a temporary db table (the "update_move_list")
+ * and spooling notifications out of that table after the transaction.
+ */
+
+/* Add an entry to the notification list. */
+static svn_error_t *
+update_move_list_add(svn_wc__db_wcroot_t *wcroot,
+                     const char *local_relpath,
+                     svn_wc_notify_action_t action,
+                     svn_node_kind_t kind,
+                     svn_wc_notify_state_t content_state,
+                     svn_wc_notify_state_t prop_state)
+
+{
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_INSERT_UPDATE_MOVE_LIST));
+  SVN_ERR(svn_sqlite__bindf(stmt, "sdddd", local_relpath,
+                            action, kind, content_state, prop_state));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  return SVN_NO_ERROR;
+}
+
+/* Send all notifications stored in the notification list, and then
+ * remove the temporary database table. */
+static svn_error_t *
+update_move_list_notify(svn_wc__db_wcroot_t *wcroot,
+                        svn_revnum_t old_revision,
+                        svn_revnum_t new_revision,
+                        svn_wc_notify_func2_t notify_func,
+                        void *notify_baton,
+                        apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  apr_pool_t *iterpool;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_UPDATE_MOVE_LIST));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  iterpool = svn_pool_create(scratch_pool);
+  while (have_row)
+    {
+      const char *local_relpath;
+      svn_wc_notify_action_t action;
+      svn_wc_notify_t *notify;
+
+      svn_pool_clear(iterpool);
+
+      local_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      action = svn_sqlite__column_int(stmt, 1);
+      notify = svn_wc_create_notify(svn_dirent_join(wcroot->abspath,
+                                                    local_relpath,
+                                                    iterpool),
+                                    action, iterpool);
+      notify->kind = svn_sqlite__column_int(stmt, 2);
+      notify->content_state = svn_sqlite__column_int(stmt, 3);
+      notify->prop_state = svn_sqlite__column_int(stmt, 4);
+      notify->old_revision = old_revision;
+      notify->revision = new_revision;
+      notify_func(notify_baton, notify, scratch_pool);
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+  svn_pool_destroy(iterpool);
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_FINALIZE_UPDATE_MOVE));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 mark_tree_conflict(struct tc_editor_baton *b,
                    const char *local_relpath,
@@ -619,19 +699,11 @@ tc_editor_alter_directory(void *baton,
         }
 
       if (b->notify_func)
-        {
-          svn_wc_notify_t *notify;
-
-          notify = svn_wc_create_notify(dst_abspath,
-                                        svn_wc_notify_update_update,
-                                        scratch_pool);
-          notify->kind = svn_node_dir;
-          notify->content_state = svn_wc_notify_state_inapplicable;
-          notify->prop_state = prop_state;
-          notify->old_revision = b->old_version->peg_rev;
-          notify->revision = b->new_version->peg_rev;
-          b->notify_func(b->notify_baton, notify, scratch_pool);
-        }
+        SVN_ERR(update_move_list_add(b->wcroot, dst_relpath,
+                                     svn_wc_notify_update_update,
+                                     svn_node_dir,
+                                     svn_wc_notify_state_inapplicable,
+                                     prop_state));
     }
 
   return SVN_NO_ERROR;
@@ -749,19 +821,11 @@ update_working_file(svn_skel_t **work_items,
     }
 
   if (notify_func)
-    {
-      svn_wc_notify_t *notify;
-
-      notify = svn_wc_create_notify(local_abspath,
-                                    svn_wc_notify_update_update,
-                                    scratch_pool);
-      notify->kind = svn_node_file;
-      notify->content_state = content_state;
-      notify->prop_state = prop_state;
-      notify->old_revision = old_version->location_and_kind->peg_rev;
-      notify->revision = new_version->location_and_kind->peg_rev;
-      notify_func(notify_baton, notify, scratch_pool);
-    }
+    SVN_ERR(update_move_list_add(wcroot, local_relpath,
+                                 svn_wc_notify_update_update,
+                                 svn_node_file,
+                                 content_state,
+                                 prop_state));
 
   return SVN_NO_ERROR;
 }
@@ -1015,6 +1079,12 @@ tc_editor_complete(void *baton,
 {
   struct tc_editor_baton *b = baton;
 
+  /* Send all queued up notifications. */
+  SVN_ERR(update_move_list_notify(b->wcroot,
+                                  b->old_version->peg_rev,
+                                  b->new_version->peg_rev,
+                                  b->notify_func, b->notify_baton,
+                                  scratch_pool));
   if (b->notify_func)
     {
       svn_wc_notify_t *notify;
@@ -1560,6 +1630,10 @@ update_moved_away_conflict_victim(svn_skel_t **work_items,
                                svn_dirent_join(wcroot->abspath, victim_relpath,
                                                scratch_pool),
                                scratch_pool));
+
+  /* Create a new, and empty, list for notification information. */
+  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
+                                      STMT_CREATE_UPDATE_MOVE_LIST));
   /* Create the editor... */
   SVN_ERR(svn_editor_create(&tc_editor, tc_editor_baton,
                             cancel_func, cancel_baton,
