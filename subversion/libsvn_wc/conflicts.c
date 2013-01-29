@@ -2620,7 +2620,6 @@ svn_wc__mark_resolved_prop_conflicts(svn_wc__db_t *db,
 /* Baton for conflict_status_walker */
 struct conflict_status_walker_baton
 {
-  svn_wc_context_t *wc_ctx;
   svn_wc__db_t *db;
   svn_boolean_t resolve_text;
   const char *resolve_prop;
@@ -2716,18 +2715,14 @@ conflict_status_walker(void *baton,
                           /* Break the move by reverting the deleted half of
                            * the move, keeping the copied-half as a copy.
                            * Reverting a node requires write lock on parent. */
-                          SVN_WC__CALL_WITH_WRITE_LOCK(
-                            svn_wc__revert_internal(cswb->db, local_abspath,
-                                                    svn_depth_infinity,
-                                                    FALSE, 
-                                                    cswb->cancel_func,
-                                                    cswb->cancel_baton,
-                                                    cswb->notify_func,
-                                                    cswb->notify_baton,
-                                                    scratch_pool),
-                            cswb->wc_ctx,
-                            svn_dirent_dirname(local_abspath, scratch_pool),
-                            FALSE, scratch_pool);
+                          SVN_ERR(svn_wc__revert_internal(cswb->db, local_abspath,
+                                                          svn_depth_infinity,
+                                                          FALSE, 
+                                                          cswb->cancel_func,
+                                                          cswb->cancel_baton,
+                                                          cswb->notify_func,
+                                                          cswb->notify_baton,
+                                                          scratch_pool));
                           break;
                         default:
                           /* ### TODO other node_status cases */
@@ -2876,7 +2871,6 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
   else if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;
 
-  cswb.wc_ctx = wc_ctx;
   cswb.db = wc_ctx->db;
   cswb.resolve_text = resolve_text;
   cswb.resolve_prop = resolve_prop;
