@@ -4264,6 +4264,11 @@ svn_client_resolved(const char *path,
  *   - #svn_wc_conflict_choose_mine_conflict
  *     ###...
  *
+ *   - svn_wc_conflict_choose_unspecified
+ *     invoke @a ctx->conflict_func2 with @a ctx->conflict_baton2 to obtain
+ *     a resolution decision for each conflict.  This can be used to
+ *     implement interactive conflict resolution.
+ *
  * #svn_wc_conflict_choose_theirs_conflict and
  * #svn_wc_conflict_choose_mine_conflict are not legal for binary
  * files or properties.
