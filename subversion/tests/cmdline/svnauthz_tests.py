@@ -327,6 +327,160 @@ def svnauthz_accessof_repo_test(sbox):
                                           "--username", "groucho",
                                           "--repository", "comedy")
  
+def svnauthz_accessof_groups_file_test(sbox):
+  "test 'svnauthz accessof --groups-file' on files"
+
+  # build an authz file
+  (authz_fd, authz_path) = tempfile.mkstemp()
+  authz_content = "[/]\n@musicians = rw\n@comedians = \n" + \
+      "[comedy:/jokes]\n@musicians = \n@comedians = r\n"
+  svntest.main.file_write(authz_path, authz_content)
+
+  # build a groups file
+  (groups_fd, groups_path) = tempfile.mkstemp()
+  groups_content = "[groups]\nmusicians=stafford\ncomedians=groucho\n"
+  svntest.main.file_write(groups_path, groups_content)
+
+  # Anonymous access with no path, and no repository should be no
+  # since it returns the highest level of access granted anywhere.
+  svntest.actions.run_and_verify_svnauthz("Anonymous access", ["no\n"], None,
+                                          0, False, "accessof", authz_path,
+                                          "--groups-file", groups_path)
+
+  # User stafford (@musicians) access with no path, and no repository should
+  # be no since it returns the highest level of access granted anywhere.
+  svntest.actions.run_and_verify_svnauthz("Group 1 access",
+                                          ["rw\n"], None,
+                                          0, False, "accessof", authz_path,
+                                          "--groups-file", groups_path,
+                                          "--username", "stafford")
+
+  # User groucho (@comedians) access with no path, and no repository should
+  # be no since it returns the highest level of access granted anywhere.
+  svntest.actions.run_and_verify_svnauthz("Group 2 access",
+                                          ["no\n"], None,
+                                          0, False, "accessof", authz_path,
+                                          "--groups-file", groups_path,
+                                          "--username", "groucho")  
+
+  # Anonymous access specified on /jokes with the repo comedy will be no.
+  svntest.actions.run_and_verify_svnauthz("Anonymous access on path with repo",
+                                          ["no\n"], None, 0, False,
+                                          "accessof", authz_path,
+                                          "--groups-file", groups_path,
+                                          "--path", "jokes",
+                                          "--repository", "comedy")
+
+  # User stafford (@musicians) specified on /jokes with the repo comedy
+  # will be no.
+  svntest.actions.run_and_verify_svnauthz("Group 1 access on path with repo",
+                                          ["no\n"], None,
+                                          0, False, "accessof", authz_path,
+                                          "--groups-file", groups_path,
+                                          "--path", "jokes",
+                                          "--repository", "comedy",
+                                          "--username", "stafford")
+
+  # User groucho (@comedians) specified on /jokes with the repo
+  # comedy will be r.
+  svntest.actions.run_and_verify_svnauthz("Group 2 access on path with repo",
+                                          ["r\n"], None,
+                                          0, False, "accessof", authz_path,
+                                          "--groups-file", groups_path,
+                                          "--path", "jokes",
+                                          "--repository", "comedy",
+                                          "--username", "groucho")
+
+  os.close(authz_fd)
+  os.remove(authz_path)
+  os.close(groups_fd)
+  os.remove(groups_path)
+
+@SkipUnless(svntest.main.is_ra_type_file)
+def svnauthz_accessof_groups_repo_test(sbox):
+  "test 'svnauthz accessof --groups-file' on urls"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  authz_content = "[/]\n@musicians = rw\n@comedians = \n" + \
+      "[comedy:/jokes]\n@musicians = \n@comedians = r\n"
+
+  groups_content = "[groups]\nmusicians=stafford\ncomedians=groucho\n"
+
+  # build authz and groups files and commit them to the repo
+  authz_path = os.path.join(wc_dir, 'A', 'authz')
+  groups_path = os.path.join(wc_dir, 'A', 'groups')
+  svntest.main.file_write(authz_path, authz_content)
+  svntest.main.file_write(groups_path, groups_content)
+  svntest.main.run_svn(None, 'add', authz_path, groups_path)
+  expected_output = wc.State(wc_dir, {
+    'A/authz'            : Item(verb='Adding'),
+    'A/groups'           : Item(verb='Adding'),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/authz'            :  Item(status='  ', wc_rev=2),
+    'A/groups'           :  Item(status='  ', wc_rev=2),
+  })
+
+  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                           expected_status, None, wc_dir):
+    raise svntest.Failure
+
+  # Anonymous access with no path, and no repository should be no
+  # since it returns the highest level of access granted anywhere.
+  authz_url = repo_url + "/A/authz"
+  groups_url = repo_url + "/A/groups"
+  svntest.actions.run_and_verify_svnauthz("Anonymous access", ["no\n"], None,
+                                          0, False, "accessof", authz_url,
+                                          "--groups-file", groups_url)
+
+  # User stafford (@musicians) access with no path, and no repository should
+  # be no since it returns the highest level of access granted anywhere.
+  svntest.actions.run_and_verify_svnauthz("Group 1 access",
+                                          ["rw\n"], None,
+                                          0, False, "accessof", authz_url,
+                                          "--groups-file", groups_url,
+                                          "--username", "stafford")
+
+  # User groucho (@comedians) access with no path, and no repository should
+  # be no since it returns the highest level of access granted anywhere.
+  svntest.actions.run_and_verify_svnauthz("Group 2 access",
+                                          ["no\n"], None,
+                                          0, False, "accessof", authz_url,
+                                          "--groups-file", groups_url,
+                                          "--username", "groucho")  
+
+  # Anonymous access specified on /jokes with the repo comedy will be no.
+  svntest.actions.run_and_verify_svnauthz("Anonymous access on path with repo",
+                                          ["no\n"], None, 0, False,
+                                          "accessof", authz_url,
+                                          "--groups-file", groups_url,
+                                          "--path", "jokes",
+                                          "--repository", "comedy")
+
+  # User stafford (@musicians) specified on /jokes with the repo comedy
+  # will be no.
+  svntest.actions.run_and_verify_svnauthz("Group 1 access on path with repo",
+                                          ["no\n"], None,
+                                          0, False, "accessof", authz_url,
+                                          "--groups-file", groups_url,
+                                          "--path", "jokes",
+                                          "--repository", "comedy",
+                                          "--username", "stafford")
+
+  # User groucho (@comedians) specified on /jokes with the repo
+  # comedy will be r.
+  svntest.actions.run_and_verify_svnauthz("Group 2 access on path with repo",
+                                          ["r\n"], None,
+                                          0, False, "accessof", authz_url,
+                                          "--groups-file", groups_url,
+                                          "--path", "jokes",
+                                          "--repository", "comedy",
+                                          "--username", "groucho")
+
 def svnauthz_accessof_is_file_test(sbox):
   "test 'svnauthz accessof --is' on files"
 
@@ -809,6 +963,8 @@ test_list = [ None,
               svnauthz_validate_txn_test,
               svnauthz_accessof_file_test,
               svnauthz_accessof_repo_test,
+              svnauthz_accessof_groups_file_test,
+              svnauthz_accessof_groups_repo_test,
               svnauthz_accessof_is_file_test,
               svnauthz_accessof_is_repo_test,
               svnauthz_accessof_txn_test,
