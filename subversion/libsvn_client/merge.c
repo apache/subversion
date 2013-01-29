@@ -1833,6 +1833,12 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
                                   ctx->cancel_func, ctx->cancel_baton,
                                   scratch_pool));
 
+      if (*state == svn_wc_notify_state_conflicted)
+        {
+          alloc_and_store_path(&merge_b->conflicted_paths, local_abspath,
+                               merge_b->pool);
+        }
+
       if (*state == svn_wc_notify_state_conflicted
           || *state == svn_wc_notify_state_merged
           || *state == svn_wc_notify_state_changed)
@@ -1847,65 +1853,6 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
 
   return SVN_NO_ERROR;
 }
-
-/* Contains any state collected while resolving conflicts. */
-typedef struct conflict_resolver_baton_t
-{
-  /* The wrapped callback and baton. If func is null, postpone conflicts. */
-  svn_wc_conflict_resolver_func2_t wrapped_func;
-  void *wrapped_baton;
-
-  /* The list of any paths which remained in conflict after a
-     resolution attempt was made. Non-null ptr to possibly-null ptr to hash. */
-  apr_hash_t **conflicted_paths;
-
-  /* Pool with a sufficient lifetime to be used for output members such as
-   * *CONFLICTED_PATHS. */
-  apr_pool_t *pool;
-} conflict_resolver_baton_t;
-
-/* An implementation of the svn_wc_conflict_resolver_func_t interface.
-
-   This is called by the WC layer when a file merge conflicts.  We call
-   the wrapped conflict callback, BATON->wrapped_func, or, if that is
-   null, we postpone the conflict.
-
-   We keep a record of paths which remain in conflict.
-*/
-static svn_error_t *
-conflict_resolver(svn_wc_conflict_result_t **result,
-                  const svn_wc_conflict_description2_t *description,
-                  void *baton,
-                  apr_pool_t *result_pool,
-                  apr_pool_t *scratch_pool)
-{
-  svn_error_t *err;
-  conflict_resolver_baton_t *conflict_b = baton;
-
-  if (conflict_b->wrapped_func)
-    err = (*conflict_b->wrapped_func)(result, description,
-                                      conflict_b->wrapped_baton,
-                                      result_pool,
-                                      scratch_pool);
-  else
-    {
-      /* If we have no wrapped callback to invoke, then we still need
-         to behave like a proper conflict-callback ourselves.  */
-      *result = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,
-                                              NULL, result_pool);
-      err = SVN_NO_ERROR;
-    }
-
-  /* Keep a record of paths still in conflict after the resolution attempt. */
-  if ((*result)->choice == svn_wc_conflict_choose_postpone)
-    {
-      alloc_and_store_path(conflict_b->conflicted_paths,
-                           description->local_abspath, conflict_b->pool);
-    }
-
-  return svn_error_trace(err);
-}
-
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
@@ -2087,17 +2034,9 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
       const char *right_label = apr_psprintf(scratch_pool,
                                              _(".merge-right.r%ld"),
                                              yours_rev);
-      conflict_resolver_baton_t conflict_baton = { 0 };
 
       SVN_ERR(svn_wc_text_modified_p2(&has_local_mods, ctx->wc_ctx,
                                       local_abspath, FALSE, scratch_pool));
-
-      /* Wrap the resolver so as to keep a note of all postponed conflicts. */
-      conflict_baton.wrapped_func = ctx->conflict_func2;
-      conflict_baton.wrapped_baton = ctx->conflict_baton2;
-
-      conflict_baton.conflicted_paths = &merge_b->conflicted_paths;
-      conflict_baton.pool = merge_b->pool;
 
       /* Do property merge and text merge in one step so that keyword expansion
          takes into account the new property values. */
@@ -2108,10 +2047,17 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
                             merge_b->dry_run, merge_b->diff3_cmd,
                             merge_b->merge_options,
                             original_props, prop_changes,
-                            conflict_resolver, &conflict_baton,
+                            ctx->conflict_func2, ctx->conflict_baton2,
                             ctx->cancel_func,
                             ctx->cancel_baton,
                             scratch_pool));
+
+      if (content_outcome == svn_wc_merge_conflict
+          || *prop_state == svn_wc_notify_state_conflicted)
+        {
+          alloc_and_store_path(&merge_b->conflicted_paths, local_abspath,
+                               merge_b->pool);
+        }
 
       if (content_outcome == svn_wc_merge_conflict)
         *content_state = svn_wc_notify_state_conflicted;
