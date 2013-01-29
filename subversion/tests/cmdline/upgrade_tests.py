@@ -1271,7 +1271,7 @@ def upgrade_from_1_7(sbox):
   replace_sbox_with_tarfile(sbox, 'upgrade_from_1_7_wc.tar.bz2')
 
   # The working copy contains a text conflict, and upgrading such
-  # a working copy currently crashes 'svn'.
+  # a working copy currently causes a pointless 'upgrade required' error.
   svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
 
 ########################################################################
