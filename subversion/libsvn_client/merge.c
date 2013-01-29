@@ -1678,184 +1678,6 @@ record_update_delete(merge_cmd_baton_t *merge_b,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-merge_dir_props_changed(svn_wc_notify_state_t *state,
-                        svn_boolean_t *tree_conflicted,
-                        const char *local_relpath,
-                        svn_boolean_t dir_was_added,
-                        const apr_array_header_t *propchanges,
-                        apr_hash_t *original_props,
-                        void *diff_baton,
-                        apr_pool_t *scratch_pool)
-{
-  merge_cmd_baton_t *merge_b = diff_baton;
-  const apr_array_header_t *props;
-  const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
-                                              local_relpath, scratch_pool);
-  svn_wc_notify_state_t obstr_state;
-  svn_boolean_t is_deleted;
-  svn_node_kind_t kind;
-
-  SVN_ERR(perform_obstruction_check(&obstr_state, &is_deleted, &kind,
-                                    merge_b, local_abspath, svn_node_dir,
-                                    scratch_pool));
-
-  if (obstr_state != svn_wc_notify_state_inapplicable)
-    {
-      *state = obstr_state;
-      SVN_ERR(record_skip(merge_b, local_abspath, svn_node_dir,
-                          obstr_state, scratch_pool));
-      return SVN_NO_ERROR;
-    }
-
-  if (kind != svn_node_dir || is_deleted)
-    {
-      svn_wc_conflict_reason_t reason;
-
-      if (is_deleted)
-        {
-          svn_boolean_t moved_away;
-
-          SVN_ERR(check_moved_away(&moved_away, merge_b->ctx->wc_ctx,
-                                   local_abspath, scratch_pool));
-
-          if (moved_away)
-            reason = svn_wc_conflict_reason_moved_away;
-          else
-            reason = svn_wc_conflict_reason_deleted;
-        }
-      else
-        reason = svn_wc_conflict_reason_missing;
-
-      SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_file,
-                            svn_wc_conflict_action_edit, reason));
-
-      *tree_conflicted = TRUE;
-      *state = svn_wc_notify_state_missing;
-      SVN_ERR(record_tree_conflict(merge_b, local_abspath, svn_node_dir,
-                                   scratch_pool));
-
-      return SVN_NO_ERROR;
-    }
-
-  if (dir_was_added
-      && merge_b->dry_run
-      && dry_run_added_p(merge_b, local_abspath))
-    {
-      return SVN_NO_ERROR; /* We can't do a real prop merge for added dirs */
-    }
-
-  if (dir_was_added && merge_b->same_repos)
-    {
-      /* When the directory was added in merge_dir_added() we didn't update its
-         pristine properties. Instead we receive the property changes later and
-         apply them in this function.
-
-         If we would apply them as changes (such as before fixing issue #3405),
-         we would see the unmodified properties as local changes, and the
-         pristine properties would be out of sync with what the repository
-         expects for this directory.
-
-         Instead of doing that we now simply set the properties as the pristine
-         properties via a private libsvn_wc api.
-      */
-
-      const char *copyfrom_url;
-      svn_revnum_t copyfrom_rev;
-      const char *parent_abspath;
-      const char *child;
-
-      /* Creating a hash containing regular and entry props */
-      apr_hash_t *new_pristine_props = svn_prop__patch(original_props, propchanges,
-                                                       scratch_pool);
-
-      parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-      child = svn_dirent_is_child(merge_b->target->abspath, local_abspath, NULL);
-      SVN_ERR_ASSERT(child != NULL);
-
-      copyfrom_url = svn_path_url_add_component2(merge_b->merge_source.loc2->url,
-                                                 child, scratch_pool);
-      copyfrom_rev = merge_b->merge_source.loc2->rev;
-
-      SVN_ERR(check_repos_match(merge_b->target, parent_abspath, copyfrom_url,
-                                scratch_pool));
-
-      if (!merge_b->dry_run)
-        {
-          SVN_ERR(svn_wc__complete_directory_add(merge_b->ctx->wc_ctx,
-                                                local_abspath,
-                                                new_pristine_props,
-                                                copyfrom_url, copyfrom_rev,
-                                                scratch_pool));
-        }
-      *state = svn_wc_notify_state_changed; /* same as merge_props did */
-
-      /* Until issue #3405 was fixed the code for changed directories was
-         used for directory deletions, which made use apply svn:mergeinfo as if
-         additional changes were applied by the merge, which really weren't.
-
-         ### I wouldn't be surprised if we somehow relied on these for correct
-         ### merges, but in this case the fix added here should also be applied
-         ### for added files! */
-
-      /* ### The old code performed (via prepare_merge_props_changed):
-      if (apr_hash_get(new_pristine_props, SVN_PROP_MERGEINFO,
-                       APR_HASH_KEY_STRING))
-        {
-          alloc_and_store_path(&merge_b->paths_with_new_mergeinfo,
-                               local_abspath, merge_b->pool);
-        }
-         ### which is something merge_add_file() doesn't do, but
-         ### merge_tests.py 95: no self referential filtering on added path
-         ### fails if this block is not enabled.
-      */
-
-      return SVN_NO_ERROR;
-    }
-
-  SVN_ERR(prepare_merge_props_changed(&props, local_abspath, propchanges,
-                                      merge_b, scratch_pool, scratch_pool));
-
-  if (props->nelts)
-    {
-      const svn_wc_conflict_version_t *left;
-      const svn_wc_conflict_version_t *right;
-      svn_client_ctx_t *ctx = merge_b->ctx;
-
-      SVN_ERR(make_conflict_versions(&left, &right, local_abspath,
-                                     svn_node_dir, &merge_b->merge_source,
-                                     merge_b->target, merge_b->pool));
-
-      SVN_ERR(svn_wc_merge_props3(state, ctx->wc_ctx, local_abspath,
-                                  left, right,
-                                  original_props, props,
-                                  merge_b->dry_run,
-                                  ctx->conflict_func2, ctx->conflict_baton2,
-                                  ctx->cancel_func, ctx->cancel_baton,
-                                  scratch_pool));
-
-      if (*state == svn_wc_notify_state_conflicted)
-        {
-          alloc_and_store_path(&merge_b->conflicted_paths, local_abspath,
-                               merge_b->pool);
-        }
-
-      if (*state == svn_wc_notify_state_conflicted
-          || *state == svn_wc_notify_state_merged
-          || *state == svn_wc_notify_state_changed)
-        {
-          SVN_ERR(record_update_update(merge_b, local_abspath, svn_node_file,
-                                       svn_wc_notify_state_inapplicable,
-                                       *state, scratch_pool));
-        }
-    }
-  else
-    *state = svn_wc_notify_state_unchanged;
-
-  return SVN_NO_ERROR;
-}
-
-/* An svn_wc_diff_callbacks4_t function. */
-static svn_error_t *
 merge_file_opened(svn_boolean_t *tree_conflicted,
                   svn_boolean_t *skip,
                   const char *path,
@@ -2536,6 +2358,324 @@ merge_file_deleted(svn_wc_notify_state_t *state,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
+merge_dir_opened(svn_boolean_t *tree_conflicted,
+                 svn_boolean_t *skip,
+                 svn_boolean_t *skip_children,
+                 const char *local_relpath,
+                 svn_revnum_t rev,
+                 void *baton,
+                 apr_pool_t *scratch_pool)
+{
+  merge_cmd_baton_t *merge_b = baton;
+  const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
+                                              local_relpath, scratch_pool);
+  svn_node_kind_t wc_kind;
+  svn_wc_notify_state_t obstr_state;
+  svn_boolean_t is_deleted;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  /* Check for an obstructed or missing node on disk. */
+  SVN_ERR(perform_obstruction_check(&obstr_state, &is_deleted, &wc_kind,
+                                    merge_b, local_abspath, svn_node_unknown,
+                                    scratch_pool));
+
+  if (obstr_state != svn_wc_notify_state_inapplicable)
+    {
+      /* In Subversion <= 1.7 we always skipped descendants here */
+      if (obstr_state == svn_wc_notify_state_obstructed)
+        {
+          svn_boolean_t is_wcroot;
+
+          SVN_ERR(svn_wc_check_root(&is_wcroot, NULL, NULL,
+                                  merge_b->ctx->wc_ctx,
+                                  local_abspath, scratch_pool));
+
+          if (is_wcroot)
+            {
+              store_path(merge_b->skipped_abspaths, local_abspath);
+
+              *skip = TRUE;
+              *skip_children = TRUE;
+
+              if (merge_b->ctx->notify_func2)
+                {
+                  svn_wc_notify_t *notify;
+
+                  notify = svn_wc_create_notify(
+                                        local_abspath,
+                                        svn_wc_notify_update_skip_obstruction,
+                                        scratch_pool);
+                  notify->kind = svn_node_dir;
+                  notify->content_state = obstr_state;
+                  merge_b->ctx->notify_func2(merge_b->ctx->notify_baton2,
+                                             notify, scratch_pool);
+                }
+            }
+        }
+
+      return SVN_NO_ERROR;
+    }
+
+  if (wc_kind != svn_node_dir || is_deleted)
+    {
+      if (wc_kind == svn_node_none)
+        {
+          svn_depth_t parent_depth;
+
+          /* If the parent is too shallow to contain this directory,
+           * and the directory is not present on disk, skip it.
+           * Non-inheritable mergeinfo will be recorded, allowing
+           * future merges into non-shallow working copies to merge
+           * changes we missed this time around. */
+          SVN_ERR(svn_wc__node_get_depth(&parent_depth, merge_b->ctx->wc_ctx,
+                                         svn_dirent_dirname(local_abspath,
+                                                            scratch_pool),
+                                         scratch_pool));
+          if (parent_depth != svn_depth_unknown &&
+              parent_depth < svn_depth_immediates)
+            {
+              /* In Subversion <= 1.7 we skipped descendants here */
+              return SVN_NO_ERROR;
+            }
+        }
+
+      /* Check for tree conflicts, if any. */
+
+      /* If we're trying to open a file, the reason for the conflict is
+       * 'replaced'. Because the merge is trying to open the directory,
+       * rather than adding it, the directory must have existed in the
+       * history of the target branch and has been replaced with a file. */
+      if (wc_kind == svn_node_file)
+        {
+          SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
+                                svn_wc_conflict_action_edit,
+                                svn_wc_conflict_reason_replaced));
+          *tree_conflicted = TRUE;
+          *skip_children = TRUE;
+          SVN_ERR(record_tree_conflict(merge_b, local_abspath, svn_node_dir,
+                                       scratch_pool));
+        }
+
+      /* If we're trying to open a directory that's locally deleted,
+       * or not present because it was deleted in the history of the
+       * target branch, the reason for the conflict is 'deleted'.
+       *
+       * If the DB says something should be here, but there is
+       * nothing on disk, we're probably in a mixed-revision
+       * working copy and the parent has an outdated idea about
+       * the state of its child. Flag a tree conflict in this case
+       * forcing the user to sanity-check the merge result. */
+      else if (is_deleted || wc_kind == svn_node_none)
+        {
+          svn_wc_conflict_reason_t reason;
+
+          if (is_deleted)
+            {
+              svn_boolean_t moved_away;
+
+              SVN_ERR(check_moved_away(&moved_away, merge_b->ctx->wc_ctx,
+                                       local_abspath, scratch_pool));
+              reason = moved_away ? svn_wc_conflict_reason_moved_away
+                                  : svn_wc_conflict_reason_deleted;
+            }
+          else
+            reason = svn_wc_conflict_reason_missing;
+
+          SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
+                                svn_wc_conflict_action_edit, reason));
+          *tree_conflicted = TRUE;
+          *skip = TRUE;
+          *skip_children = TRUE;
+          SVN_ERR(record_tree_conflict(merge_b, local_abspath, svn_node_dir,
+                                       scratch_pool));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* An svn_wc_diff_callbacks4_t function. */
+static svn_error_t *
+merge_dir_props_changed(svn_wc_notify_state_t *state,
+                        svn_boolean_t *tree_conflicted,
+                        const char *local_relpath,
+                        svn_boolean_t dir_was_added,
+                        const apr_array_header_t *propchanges,
+                        apr_hash_t *original_props,
+                        void *diff_baton,
+                        apr_pool_t *scratch_pool)
+{
+  merge_cmd_baton_t *merge_b = diff_baton;
+  const apr_array_header_t *props;
+  const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
+                                              local_relpath, scratch_pool);
+  svn_wc_notify_state_t obstr_state;
+  svn_boolean_t is_deleted;
+  svn_node_kind_t kind;
+
+  SVN_ERR(perform_obstruction_check(&obstr_state, &is_deleted, &kind,
+                                    merge_b, local_abspath, svn_node_dir,
+                                    scratch_pool));
+
+  if (obstr_state != svn_wc_notify_state_inapplicable)
+    {
+      *state = obstr_state;
+      SVN_ERR(record_skip(merge_b, local_abspath, svn_node_dir,
+                          obstr_state, scratch_pool));
+      return SVN_NO_ERROR;
+    }
+
+  if (kind != svn_node_dir || is_deleted)
+    {
+      svn_wc_conflict_reason_t reason;
+
+      if (is_deleted)
+        {
+          svn_boolean_t moved_away;
+
+          SVN_ERR(check_moved_away(&moved_away, merge_b->ctx->wc_ctx,
+                                   local_abspath, scratch_pool));
+
+          if (moved_away)
+            reason = svn_wc_conflict_reason_moved_away;
+          else
+            reason = svn_wc_conflict_reason_deleted;
+        }
+      else
+        reason = svn_wc_conflict_reason_missing;
+
+      SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_file,
+                            svn_wc_conflict_action_edit, reason));
+
+      *tree_conflicted = TRUE;
+      *state = svn_wc_notify_state_missing;
+      SVN_ERR(record_tree_conflict(merge_b, local_abspath, svn_node_dir,
+                                   scratch_pool));
+
+      return SVN_NO_ERROR;
+    }
+
+  if (dir_was_added
+      && merge_b->dry_run
+      && dry_run_added_p(merge_b, local_abspath))
+    {
+      return SVN_NO_ERROR; /* We can't do a real prop merge for added dirs */
+    }
+
+  if (dir_was_added && merge_b->same_repos)
+    {
+      /* When the directory was added in merge_dir_added() we didn't update its
+         pristine properties. Instead we receive the property changes later and
+         apply them in this function.
+
+         If we would apply them as changes (such as before fixing issue #3405),
+         we would see the unmodified properties as local changes, and the
+         pristine properties would be out of sync with what the repository
+         expects for this directory.
+
+         Instead of doing that we now simply set the properties as the pristine
+         properties via a private libsvn_wc api.
+      */
+
+      const char *copyfrom_url;
+      svn_revnum_t copyfrom_rev;
+      const char *parent_abspath;
+      const char *child;
+
+      /* Creating a hash containing regular and entry props */
+      apr_hash_t *new_pristine_props = svn_prop__patch(original_props, propchanges,
+                                                       scratch_pool);
+
+      parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+      child = svn_dirent_is_child(merge_b->target->abspath, local_abspath, NULL);
+      SVN_ERR_ASSERT(child != NULL);
+
+      copyfrom_url = svn_path_url_add_component2(merge_b->merge_source.loc2->url,
+                                                 child, scratch_pool);
+      copyfrom_rev = merge_b->merge_source.loc2->rev;
+
+      SVN_ERR(check_repos_match(merge_b->target, parent_abspath, copyfrom_url,
+                                scratch_pool));
+
+      if (!merge_b->dry_run)
+        {
+          SVN_ERR(svn_wc__complete_directory_add(merge_b->ctx->wc_ctx,
+                                                local_abspath,
+                                                new_pristine_props,
+                                                copyfrom_url, copyfrom_rev,
+                                                scratch_pool));
+        }
+      *state = svn_wc_notify_state_changed; /* same as merge_props did */
+
+      /* Until issue #3405 was fixed the code for changed directories was
+         used for directory deletions, which made use apply svn:mergeinfo as if
+         additional changes were applied by the merge, which really weren't.
+
+         ### I wouldn't be surprised if we somehow relied on these for correct
+         ### merges, but in this case the fix added here should also be applied
+         ### for added files! */
+
+      /* ### The old code performed (via prepare_merge_props_changed):
+      if (apr_hash_get(new_pristine_props, SVN_PROP_MERGEINFO,
+                       APR_HASH_KEY_STRING))
+        {
+          alloc_and_store_path(&merge_b->paths_with_new_mergeinfo,
+                               local_abspath, merge_b->pool);
+        }
+         ### which is something merge_add_file() doesn't do, but
+         ### merge_tests.py 95: no self referential filtering on added path
+         ### fails if this block is not enabled.
+      */
+
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(prepare_merge_props_changed(&props, local_abspath, propchanges,
+                                      merge_b, scratch_pool, scratch_pool));
+
+  if (props->nelts)
+    {
+      const svn_wc_conflict_version_t *left;
+      const svn_wc_conflict_version_t *right;
+      svn_client_ctx_t *ctx = merge_b->ctx;
+
+      SVN_ERR(make_conflict_versions(&left, &right, local_abspath,
+                                     svn_node_dir, &merge_b->merge_source,
+                                     merge_b->target, merge_b->pool));
+
+      SVN_ERR(svn_wc_merge_props3(state, ctx->wc_ctx, local_abspath,
+                                  left, right,
+                                  original_props, props,
+                                  merge_b->dry_run,
+                                  ctx->conflict_func2, ctx->conflict_baton2,
+                                  ctx->cancel_func, ctx->cancel_baton,
+                                  scratch_pool));
+
+      if (*state == svn_wc_notify_state_conflicted)
+        {
+          alloc_and_store_path(&merge_b->conflicted_paths, local_abspath,
+                               merge_b->pool);
+        }
+
+      if (*state == svn_wc_notify_state_conflicted
+          || *state == svn_wc_notify_state_merged
+          || *state == svn_wc_notify_state_changed)
+        {
+          SVN_ERR(record_update_update(merge_b, local_abspath, svn_node_file,
+                                       svn_wc_notify_state_inapplicable,
+                                       *state, scratch_pool));
+        }
+    }
+  else
+    *state = svn_wc_notify_state_unchanged;
+
+  return SVN_NO_ERROR;
+}
+
+
+/* An svn_wc_diff_callbacks4_t function. */
+static svn_error_t *
 merge_dir_added(svn_wc_notify_state_t *state,
                 svn_boolean_t *tree_conflicted,
                 svn_boolean_t *skip,
@@ -2793,145 +2933,6 @@ merge_dir_deleted(svn_wc_notify_state_t *state,
 
       SVN_ERR(record_update_delete(merge_b, local_abspath, svn_node_dir,
                                    scratch_pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* An svn_wc_diff_callbacks4_t function. */
-static svn_error_t *
-merge_dir_opened(svn_boolean_t *tree_conflicted,
-                 svn_boolean_t *skip,
-                 svn_boolean_t *skip_children,
-                 const char *local_relpath,
-                 svn_revnum_t rev,
-                 void *baton,
-                 apr_pool_t *scratch_pool)
-{
-  merge_cmd_baton_t *merge_b = baton;
-  const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
-                                              local_relpath, scratch_pool);
-  svn_node_kind_t wc_kind;
-  svn_wc_notify_state_t obstr_state;
-  svn_boolean_t is_deleted;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  /* Check for an obstructed or missing node on disk. */
-  SVN_ERR(perform_obstruction_check(&obstr_state, &is_deleted, &wc_kind,
-                                    merge_b, local_abspath, svn_node_unknown,
-                                    scratch_pool));
-
-  if (obstr_state != svn_wc_notify_state_inapplicable)
-    {
-      /* In Subversion <= 1.7 we always skipped descendants here */
-      if (obstr_state == svn_wc_notify_state_obstructed)
-        {
-          svn_boolean_t is_wcroot;
-
-          SVN_ERR(svn_wc_check_root(&is_wcroot, NULL, NULL,
-                                  merge_b->ctx->wc_ctx,
-                                  local_abspath, scratch_pool));
-
-          if (is_wcroot)
-            {
-              store_path(merge_b->skipped_abspaths, local_abspath);
-
-              *skip = TRUE;
-              *skip_children = TRUE;
-
-              if (merge_b->ctx->notify_func2)
-                {
-                  svn_wc_notify_t *notify;
-
-                  notify = svn_wc_create_notify(
-                                        local_abspath,
-                                        svn_wc_notify_update_skip_obstruction,
-                                        scratch_pool);
-                  notify->kind = svn_node_dir;
-                  notify->content_state = obstr_state;
-                  merge_b->ctx->notify_func2(merge_b->ctx->notify_baton2,
-                                             notify, scratch_pool);
-                }
-            }
-        }
-
-      return SVN_NO_ERROR;
-    }
-
-  if (wc_kind != svn_node_dir || is_deleted)
-    {
-      if (wc_kind == svn_node_none)
-        {
-          svn_depth_t parent_depth;
-
-          /* If the parent is too shallow to contain this directory,
-           * and the directory is not present on disk, skip it.
-           * Non-inheritable mergeinfo will be recorded, allowing
-           * future merges into non-shallow working copies to merge
-           * changes we missed this time around. */
-          SVN_ERR(svn_wc__node_get_depth(&parent_depth, merge_b->ctx->wc_ctx,
-                                         svn_dirent_dirname(local_abspath,
-                                                            scratch_pool),
-                                         scratch_pool));
-          if (parent_depth != svn_depth_unknown &&
-              parent_depth < svn_depth_immediates)
-            {
-              /* In Subversion <= 1.7 we skipped descendants here */
-              return SVN_NO_ERROR;
-            }
-        }
-
-      /* Check for tree conflicts, if any. */
-
-      /* If we're trying to open a file, the reason for the conflict is
-       * 'replaced'. Because the merge is trying to open the directory,
-       * rather than adding it, the directory must have existed in the
-       * history of the target branch and has been replaced with a file. */
-      if (wc_kind == svn_node_file)
-        {
-          SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
-                                svn_wc_conflict_action_edit,
-                                svn_wc_conflict_reason_replaced));
-          *tree_conflicted = TRUE;
-          *skip_children = TRUE;
-          SVN_ERR(record_tree_conflict(merge_b, local_abspath, svn_node_dir,
-                                       scratch_pool));
-        }
-
-      /* If we're trying to open a directory that's locally deleted,
-       * or not present because it was deleted in the history of the
-       * target branch, the reason for the conflict is 'deleted'.
-       *
-       * If the DB says something should be here, but there is
-       * nothing on disk, we're probably in a mixed-revision
-       * working copy and the parent has an outdated idea about
-       * the state of its child. Flag a tree conflict in this case
-       * forcing the user to sanity-check the merge result. */
-      else if (is_deleted || wc_kind == svn_node_none)
-        {
-          svn_wc_conflict_reason_t reason;
-
-          if (is_deleted)
-            {
-              svn_boolean_t moved_away;
-
-              SVN_ERR(check_moved_away(&moved_away, merge_b->ctx->wc_ctx,
-                                       local_abspath, scratch_pool));
-              reason = moved_away ? svn_wc_conflict_reason_moved_away
-                                  : svn_wc_conflict_reason_deleted;
-            }
-          else
-            reason = svn_wc_conflict_reason_missing;
-
-          SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
-                                svn_wc_conflict_action_edit, reason));
-          *tree_conflicted = TRUE;
-          *skip = TRUE;
-          *skip_children = TRUE;
-          SVN_ERR(record_tree_conflict(merge_b, local_abspath, svn_node_dir,
-                                       scratch_pool));
-        }
     }
 
   return SVN_NO_ERROR;
