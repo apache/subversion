@@ -1713,18 +1713,13 @@ typedef svn_error_t *
                                        apr_pool_t *scratch_pool);
 
 /** Obtains a diff processor that will drive the diff callbacks when it
- * is invoked. The state arguments will be handled by the state processor
- * or ignored if STATE_HANDLER is NULL
+ * is invoked.
  */
 svn_error_t *
 svn_wc__wrap_diff_callbacks(const svn_diff_tree_processor_t **diff_processor,
                             const svn_wc_diff_callbacks4_t *callbacks,
                             void *callback_baton,
                             svn_boolean_t walk_deleted_dirs,
-                            svn_wc__diff_state_handle_t state_handle,
-                            svn_wc__diff_state_close_t state_close,
-                            svn_wc__diff_state_absent_t state_absent,
-                            void *state_baton,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 

@@ -1970,11 +1970,6 @@ typedef struct wc_diff_wrap_baton_t
 
   svn_boolean_t walk_deleted_dirs;
 
-  svn_wc__diff_state_handle_t state_handle;
-  svn_wc__diff_state_close_t state_close;
-  svn_wc__diff_state_absent_t state_absent;
-  void *state_baton;
-
   apr_pool_t *result_pool;
   const char *empty_file;
 
@@ -2026,15 +2021,6 @@ wrap_dir_opened(void **new_dir_baton,
                                         wb->callback_baton,
                                         scratch_pool));
 
-      if (wb->state_handle)
-        SVN_ERR(wb->state_handle(tree_conflicted, NULL, NULL,
-                                 relpath, svn_kind_dir,
-                                 TRUE /* before operation */,
-                                 FALSE /* for_add */,
-                                 (right_source == NULL) /* for_delete */,
-                                 wb->state_baton,
-                                 scratch_pool));
-
       if (! right_source && !wb->walk_deleted_dirs)
         *skip_children = TRUE;
     }
@@ -2053,13 +2039,6 @@ wrap_dir_opened(void **new_dir_baton,
                                             : SVN_INVALID_REVNUM,
                                        wb->callback_baton,
                                        scratch_pool));
-
-      if (wb->state_handle)
-        SVN_ERR(wb->state_handle(tree_conflicted, &state, NULL,
-                                 relpath, svn_kind_dir,
-                                 TRUE, TRUE, FALSE,
-                                 wb->state_baton,
-                                 scratch_pool));
     }
 
   *new_dir_baton = NULL;
@@ -2108,15 +2087,6 @@ wrap_dir_added(const char *relpath,
                                    TRUE /* dir_was_added */,
                                    wb->callback_baton,
                                    scratch_pool));
-
-  if (wb->state_handle)
-    SVN_ERR(wb->state_handle(tree_conflicted, &state, &prop_state,
-                             relpath, svn_kind_dir,
-                             FALSE /* before operation */,
-                             TRUE /* for_add */, FALSE /* for_delete */,
-                             wb->state_baton,
-                             scratch_pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -2133,23 +2103,10 @@ wrap_dir_deleted(const char *relpath,
   svn_boolean_t tree_conflicted = FALSE;
   svn_wc_notify_state_t state = svn_wc_notify_state_inapplicable;
 
-  if (wb->state_close)
-    SVN_ERR(wb->state_close(relpath, svn_kind_dir,
-                            wb->state_baton,
-                            scratch_pool));
-
   SVN_ERR(wb->callbacks->dir_deleted(&state, &tree_conflicted,
                                      relpath,
                                      wb->callback_baton,
                                      scratch_pool));
-
-  if (wb->state_handle)
-    SVN_ERR(wb->state_handle(tree_conflicted, &state, NULL,
-                             relpath, svn_kind_dir,
-                             FALSE /* before operation */,
-                             FALSE /* for_add */, TRUE /* for_delete */,
-                             wb->state_baton,
-                             scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2165,12 +2122,8 @@ wrap_dir_closed(const char *relpath,
 {
   wc_diff_wrap_baton_t *wb = processor->baton;
 
-  if (wb->state_close)
-    SVN_ERR(wb->state_close(relpath, svn_kind_dir,
-                            wb->state_baton, scratch_pool));
-
   /* No previous implementations provided these arguments, so we
-     are not doing with them either */
+     are not providing them either */
   SVN_ERR(wb->callbacks->dir_closed(NULL, NULL, NULL,
                                     relpath,
                                     (left_source == NULL) /* added */,
@@ -2203,15 +2156,6 @@ wrap_dir_changed(const char *relpath,
                                            left_props,
                                            wb->callback_baton,
                                            scratch_pool));
-
-  if (wb->state_handle)
-    SVN_ERR(wb->state_handle(tree_conflicted, NULL, &prop_state,
-                             relpath, svn_kind_dir,
-                             FALSE /* before operation */,
-                             FALSE /* for_add */, FALSE /* for_delete */,
-                             wb->state_baton,
-                             scratch_pool));
-
 
   /* And call dir_closed, etc */
   SVN_ERR(wrap_dir_closed(relpath, left_source, right_source,
@@ -2301,15 +2245,6 @@ wrap_file_added(const char *relpath,
                                     prop_changes, copyfrom_props,
                                     wb->callback_baton,
                                     scratch_pool));
-
-  if (wb->state_handle)
-    SVN_ERR(wb->state_handle(tree_conflicted, &state, &prop_state,
-                             relpath, svn_kind_file,
-                             FALSE /* before operation */,
-                             TRUE, FALSE,
-                             wb->state_baton,
-                             scratch_pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -2339,14 +2274,6 @@ wrap_file_deleted(const char *relpath,
                                       left_props,
                                       wb->callback_baton,
                                       scratch_pool));
-
-  if (wb->state_handle)
-    SVN_ERR(wb->state_handle(tree_conflicted, &state, NULL,
-                             relpath, svn_kind_file,
-                             FALSE /* before operation */,
-                             FALSE, TRUE,
-                             wb->state_baton,
-                             scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -2389,41 +2316,14 @@ wrap_file_changed(const char *relpath,
                                       left_props,
                                       wb->callback_baton,
                                       scratch_pool));
-
-  if (wb->state_handle)
-    SVN_ERR(wb->state_handle(tree_conflicted, &state, &prop_state,
-                             relpath, svn_kind_file,
-                             FALSE /* before operation */,
-                             FALSE, FALSE,
-                             wb->state_baton,
-                             scratch_pool));
   return SVN_NO_ERROR;
 }
-
-static svn_error_t *
-wrap_node_absent(const char *relpath,
-                 void *dir_baton,
-                 const svn_diff_tree_processor_t *processor,
-                 apr_pool_t *scratch_pool)
-{
-  wc_diff_wrap_baton_t *wb = processor->baton;
-  if (wb->state_absent)
-    SVN_ERR(wb->state_absent(relpath,
-                             wb->state_baton,
-                             scratch_pool));
-  return SVN_NO_ERROR;
-}
-
 
 svn_error_t *
 svn_wc__wrap_diff_callbacks(const svn_diff_tree_processor_t **diff_processor,
                             const svn_wc_diff_callbacks4_t *callbacks,
                             void *callback_baton,
                             svn_boolean_t walk_deleted_dirs,
-                            svn_wc__diff_state_handle_t state_handler,
-                            svn_wc__diff_state_close_t state_close,
-                            svn_wc__diff_state_absent_t state_absent,
-                            void *state_baton,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
@@ -2435,10 +2335,6 @@ svn_wc__wrap_diff_callbacks(const svn_diff_tree_processor_t **diff_processor,
   wrap_baton->result_pool = result_pool;
   wrap_baton->callbacks = callbacks;
   wrap_baton->callback_baton = callback_baton;
-  wrap_baton->state_handle = state_handler;
-  wrap_baton->state_close = state_close;
-  wrap_baton->state_absent = state_absent;
-  wrap_baton->state_baton = state_baton;
   wrap_baton->empty_file = NULL;
   wrap_baton->walk_deleted_dirs = walk_deleted_dirs;
 
@@ -2455,8 +2351,6 @@ svn_wc__wrap_diff_callbacks(const svn_diff_tree_processor_t **diff_processor,
   processor->file_deleted  = wrap_file_deleted;
   processor->file_changed  = wrap_file_changed;
   /*processor->file_closed   = wrap_file_closed*/; /* Not needed */
-
-  processor->node_absent   = wrap_node_absent;
 
   *diff_processor = processor;
   return SVN_NO_ERROR;
