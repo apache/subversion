@@ -3485,7 +3485,9 @@ try_get_wc_contents(svn_boolean_t *found_p,
   
   if (wc_stream)
     {
-      SVN_ERR(svn_stream_copy3(wc_stream, dst_stream, NULL, NULL, pool));
+        SVN_ERR(svn_stream_copy3(wc_stream,
+                                 svn_stream_disown(dst_stream, pool),
+                                 NULL, NULL, pool));
       *found_p = TRUE;
     }
 
