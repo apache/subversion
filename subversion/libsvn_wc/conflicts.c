@@ -537,6 +537,7 @@ svn_wc__conflict_skel_add_tree_conflict(svn_skel_t *conflict_skel,
                                         const char *wri_abspath,
                                         svn_wc_conflict_reason_t local_change,
                                         svn_wc_conflict_action_t incoming_change,
+                                        const char *moved_away_op_root_abspath,
                                         apr_pool_t *result_pool,
                                         apr_pool_t *scratch_pool)
 {
@@ -548,7 +549,24 @@ svn_wc__conflict_skel_add_tree_conflict(svn_skel_t *conflict_skel,
 
   SVN_ERR_ASSERT(!tree_conflict); /* ### Use proper error? */
 
+  SVN_ERR_ASSERT((local_change != svn_wc_conflict_reason_moved_away
+                  && !moved_away_op_root_abspath)
+                 || moved_away_op_root_abspath); /* ### Use proper error? */
+
   tree_conflict = svn_skel__make_empty_list(result_pool);
+
+  if (local_change == svn_wc_conflict_reason_moved_away)
+    {
+      const char *moved_away_op_root_relpath;
+
+      SVN_ERR(svn_wc__db_to_relpath(&moved_away_op_root_relpath,
+                                    db, wri_abspath,
+                                    moved_away_op_root_abspath,
+                                    result_pool, scratch_pool));
+
+      svn_skel__prepend_str(moved_away_op_root_relpath, tree_conflict,
+                            result_pool);
+    }
 
   svn_skel__prepend_str(
                 svn_token__to_word(incoming_change_map, incoming_change),
@@ -915,6 +933,7 @@ svn_wc__conflict_read_prop_conflict(const char **marker_abspath,
 svn_error_t *
 svn_wc__conflict_read_tree_conflict(svn_wc_conflict_reason_t *local_change,
                                     svn_wc_conflict_action_t *incoming_change,
+                                    const char **moved_away_op_root_abspath,
                                     svn_wc__db_t *db,
                                     const char *wri_abspath,
                                     const svn_skel_t *conflict_skel,
@@ -923,6 +942,7 @@ svn_wc__conflict_read_tree_conflict(svn_wc_conflict_reason_t *local_change,
 {
   svn_skel_t *tree_conflict;
   const svn_skel_t *c;
+  svn_boolean_t is_moved_away = FALSE;
 
   SVN_ERR(conflict__get_conflict(&tree_conflict, conflict_skel,
                                  SVN_WC__CONFLICT_KIND_TREE));
@@ -944,6 +964,8 @@ svn_wc__conflict_read_tree_conflict(svn_wc_conflict_reason_t *local_change,
         *local_change = value;
       else
         *local_change = svn_wc_conflict_reason_edited;
+
+      is_moved_away = *local_change == svn_wc_conflict_reason_moved_away;
     }
   c = c->next;
 
@@ -955,6 +977,19 @@ svn_wc__conflict_read_tree_conflict(svn_wc_conflict_reason_t *local_change,
         *incoming_change = value;
       else
         *incoming_change = svn_wc_conflict_action_edit;
+    }
+
+  c = c->next;
+
+  if (is_moved_away && moved_away_op_root_abspath)
+    {
+      const char *moved_away_op_root_relpath = apr_pstrmemdup(scratch_pool,
+                                                              c->data, c->len);
+
+      SVN_ERR(svn_wc__db_from_relpath(moved_away_op_root_abspath,
+                                      db, wri_abspath,
+                                      moved_away_op_root_relpath,
+                                      result_pool, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1973,6 +2008,7 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
 
       SVN_ERR(svn_wc__conflict_read_tree_conflict(&local_change,
                                                   &incoming_change,
+                                                  NULL,
                                                   db, local_abspath,
                                                   conflict_skel,
                                                   scratch_pool, scratch_pool));
@@ -2237,6 +2273,7 @@ svn_wc__read_conflicts(const apr_array_header_t **conflicts,
 
       SVN_ERR(svn_wc__conflict_read_tree_conflict(&local_change,
                                                   &incoming_change,
+                                                  NULL,
                                                   db, local_abspath,
                                                   conflict_skel,
                                                   scratch_pool, scratch_pool));

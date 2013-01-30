@@ -1457,6 +1457,7 @@ svn_wc__upgrade_conflict_skel_from_raw(svn_skel_t **conflicts,
                                                       db, wri_abspath,
                                                       tc->reason,
                                                       tc->action,
+                                                      NULL,
                                                       scratch_pool,
                                                       scratch_pool));
 
