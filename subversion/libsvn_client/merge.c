@@ -6924,14 +6924,10 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
           svn_merge_range_t *r = APR_ARRAY_IDX(ranges_to_merge, i,
                                                svn_merge_range_t *);
           const merge_source_t *real_source;
-          const char *tmpfile1, *tmpfile2;
-          apr_hash_t *props1, *props2;
-          svn_string_t *pval;
-          const char *mimetype1, *mimetype2;
-          apr_array_header_t *propchanges;
-          svn_wc_notify_state_t prop_state = svn_wc_notify_state_inapplicable;
-          svn_wc_notify_state_t text_state = svn_wc_notify_state_inapplicable;
-          svn_boolean_t tree_conflicted = FALSE;
+          const char *left_file, *right_file;
+          apr_hash_t *left_props, *right_props;
+          const svn_diff_source_t *left_source;
+          const svn_diff_source_t *right_source;
 
           svn_pool_clear(iterpool);
 
@@ -6943,63 +6939,101 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
             real_source = subrange_source(source, r->start, r->end, iterpool);
           else
             real_source = source;
-          SVN_ERR(single_file_merge_get_file(&tmpfile1, &props1,
+          SVN_ERR(single_file_merge_get_file(&left_file, &left_props,
                                              merge_b->ra_session1,
                                              real_source->loc1,
                                              target_abspath,
                                              iterpool, iterpool));
-          SVN_ERR(single_file_merge_get_file(&tmpfile2, &props2,
+          SVN_ERR(single_file_merge_get_file(&right_file, &right_props,
                                              merge_b->ra_session2,
                                              real_source->loc2,
                                              target_abspath,
                                              iterpool, iterpool));
+          /* Calculate sources for the diff processor */
+          left_source = svn_diff__source_create(r->start, iterpool);
+          right_source = svn_diff__source_create(r->end, iterpool);
 
-          /* Discover any svn:mime-type values in the proplists */
-          pval = apr_hash_get(props1, SVN_PROP_MIME_TYPE,
-                              strlen(SVN_PROP_MIME_TYPE));
-          mimetype1 = pval ? pval->data : NULL;
-
-          pval = apr_hash_get(props2, SVN_PROP_MIME_TYPE,
-                              strlen(SVN_PROP_MIME_TYPE));
-          mimetype2 = pval ? pval->data : NULL;
-
-          /* Deduce property diffs. */
-          SVN_ERR(svn_prop_diffs(&propchanges, props2, props1, iterpool));
 
           /* If the sources are related or we're ignoring ancestry in diffs,
              do a text-n-props merge; otherwise, do a delete-n-add merge. */
           if (! (merge_b->diff_ignore_ancestry || sources_related))
             {
+              void *file_baton;
+              svn_boolean_t skip;
+
               /* Delete... */
-              SVN_ERR(merge_file_deleted(&text_state,
-                                         &tree_conflicted,
-                                         target_relpath,
-                                         tmpfile1, tmpfile2,
-                                         mimetype1, mimetype2,
-                                         props1,
-                                         merge_b, iterpool));
+              file_baton = NULL;
+              skip = FALSE;
+              SVN_ERR(processor->file_opened(&file_baton, &skip, target_relpath,
+                                             left_source,
+                                             NULL /* right_source */,
+                                             NULL /* copyfrom_source */,
+                                             NULL /* dir_baton */,
+                                             processor,
+                                             iterpool, iterpool));
+              if (! skip)
+                SVN_ERR(processor->file_deleted(target_relpath,
+                                                left_source,
+                                                left_file,
+                                                left_props,
+                                                file_baton,
+                                                processor,
+                                                iterpool));
+
               /* ...plus add... */
-              SVN_ERR(merge_file_added(&text_state, &prop_state,
-                                       &tree_conflicted,
-                                       target_relpath,
-                                       tmpfile1, tmpfile2,
-                                       r->start, r->end,
-                                       mimetype1, mimetype2,
-                                       NULL, SVN_INVALID_REVNUM,
-                                       propchanges, props1,
-                                       merge_b, iterpool));
+              file_baton = NULL;
+              skip = FALSE;
+              SVN_ERR(processor->file_opened(&file_baton, &skip, target_relpath,
+                                             NULL /* left_source */,
+                                             right_source,
+                                             NULL /* copyfrom_source */,
+                                             NULL /* dir_baton */,
+                                             processor,
+                                             iterpool, iterpool));
+              if (! skip)
+                SVN_ERR(processor->file_added(target_relpath,
+                                              NULL /* copyfrom_source */,
+                                              right_source,
+                                              NULL /* copyfrom_file */,
+                                              right_file,
+                                              NULL /* copyfrom_props */,
+                                              right_props,
+                                              file_baton,
+                                              processor,
+                                              iterpool));
               /* ... equals replace. */
             }
           else
             {
-              SVN_ERR(merge_file_changed(&text_state, &prop_state,
-                                         &tree_conflicted,
-                                         target_relpath,
-                                         tmpfile1, tmpfile2,
-                                         r->start, r->end,
-                                         mimetype1, mimetype2,
-                                         propchanges, props1,
-                                         merge_b, iterpool));
+              void *file_baton = NULL;
+              svn_boolean_t skip = FALSE;
+              apr_array_header_t *propchanges;
+
+
+              /* Deduce property diffs. */
+              SVN_ERR(svn_prop_diffs(&propchanges, right_props, left_props,
+                                     iterpool));
+
+              SVN_ERR(processor->file_opened(&file_baton, &skip, target_relpath,
+                                             left_source,
+                                             right_source,
+                                             NULL /* copyfrom_source */,
+                                             NULL /* dir_baton */,
+                                             processor,
+                                             iterpool, iterpool));
+              if (! skip)
+                SVN_ERR(processor->file_changed(target_relpath,
+                                              left_source,
+                                              right_source,
+                                              left_file,
+                                              right_file,
+                                              left_props,
+                                              right_props,
+                                              TRUE /* file changed */,
+                                              propchanges,
+                                              file_baton,
+                                              processor,
+                                              iterpool));
             }
 
           if ((i < (ranges_to_merge->nelts - 1))
