@@ -2594,21 +2594,29 @@ merge_dir_opened(void **new_dir_baton,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks4_t function. */
+/* An svn_diff_tree_processor_t function.
+ *
+ * Called after merge_dir_opened() when a node exists in both the left and
+ * right source, but has its properties changed inbetween.
+ *
+ * After the merge_dir_opened() but before the call to this merge_dir_changed()
+ * function all descendants will have been updated.
+ */
 static svn_error_t *
-merge_dir_props_changed(svn_wc_notify_state_t *state,
-                        svn_boolean_t *tree_conflicted,
-                        const char *local_relpath,
-                        svn_boolean_t dir_was_added,
-                        const apr_array_header_t *propchanges,
-                        apr_hash_t *original_props,
-                        void *diff_baton,
-                        apr_pool_t *scratch_pool)
+merge_dir_changed(const char *relpath,
+                  const svn_diff_source_t *left_source,
+                  const svn_diff_source_t *right_source,
+                  /*const*/ apr_hash_t *left_props,
+                  /*const*/ apr_hash_t *right_props,
+                  const apr_array_header_t *prop_changes,
+                  void *dir_baton,
+                  const struct svn_diff_tree_processor_t *processor,
+                  apr_pool_t *scratch_pool)
 {
-  merge_cmd_baton_t *merge_b = diff_baton;
+  merge_cmd_baton_t *merge_b = processor->baton;
   const apr_array_header_t *props;
   const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
-                                              local_relpath, scratch_pool);
+                                              relpath, scratch_pool);
   svn_wc_notify_state_t obstr_state;
   svn_boolean_t is_deleted;
   svn_node_kind_t kind;
@@ -2653,14 +2661,121 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
       return SVN_NO_ERROR;
     }
 
-  if (dir_was_added
-      && merge_b->dry_run
+  SVN_ERR(prepare_merge_props_changed(&props, local_abspath, prop_changes,
+                                      merge_b, scratch_pool, scratch_pool));
+
+  if (props->nelts)
+    {
+      const svn_wc_conflict_version_t *left;
+      const svn_wc_conflict_version_t *right;
+      svn_client_ctx_t *ctx = merge_b->ctx;
+      svn_wc_notify_state_t prop_state;
+
+      SVN_ERR(make_conflict_versions(&left, &right, local_abspath,
+                                     svn_node_dir, &merge_b->merge_source,
+                                     merge_b->target, merge_b->pool));
+
+      SVN_ERR(svn_wc_merge_props3(&prop_state, ctx->wc_ctx, local_abspath,
+                                  left, right,
+                                  left_props, props,
+                                  merge_b->dry_run,
+                                  ctx->conflict_func2, ctx->conflict_baton2,
+                                  ctx->cancel_func, ctx->cancel_baton,
+                                  scratch_pool));
+
+      if (prop_state == svn_wc_notify_state_conflicted)
+        {
+          alloc_and_store_path(&merge_b->conflicted_paths, local_abspath,
+                               merge_b->pool);
+        }
+
+      if (prop_state == svn_wc_notify_state_conflicted
+          || prop_state == svn_wc_notify_state_merged
+          || prop_state == svn_wc_notify_state_changed)
+        {
+          SVN_ERR(record_update_update(merge_b, local_abspath, svn_node_file,
+                                       svn_wc_notify_state_inapplicable,
+                                       prop_state, scratch_pool));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* An svn_diff_tree_processor_t function.
+ *
+ * Called after merge_dir_opened() when a node doesn't exist in LEFT_SOURCE,
+ * but does in RIGHT_SOURCE. After the merge_dir_opened() but before the call
+ * to this merge_dir_added() function all descendants will have been added.
+ *
+ * When a node is replaced instead of just added a separate opened+deleted will
+ * be invoked before the current open+added.
+ */
+static svn_error_t *
+merge_dir_added(const char *relpath,
+                const svn_diff_source_t *copyfrom_source,
+                const svn_diff_source_t *right_source,
+                /*const*/ apr_hash_t *copyfrom_props,
+                /*const*/ apr_hash_t *right_props,
+                void *dir_baton,
+                const struct svn_diff_tree_processor_t *processor,
+                apr_pool_t *scratch_pool)
+{
+  merge_cmd_baton_t *merge_b = processor->baton;
+  const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
+                                              relpath, scratch_pool);
+  svn_wc_notify_state_t obstr_state;
+  svn_boolean_t is_deleted;
+  svn_node_kind_t kind;
+
+  SVN_ERR(perform_obstruction_check(&obstr_state, &is_deleted, &kind,
+                                    merge_b, local_abspath, svn_node_dir,
+                                    scratch_pool));
+
+  if (obstr_state != svn_wc_notify_state_inapplicable)
+    {
+      SVN_ERR(record_skip(merge_b, local_abspath, svn_node_dir,
+                          obstr_state, scratch_pool));
+      return SVN_NO_ERROR;
+    }
+
+  if (kind != svn_node_dir || is_deleted)
+    {
+      svn_wc_conflict_reason_t reason;
+      const char *moved_away_op_root_abspath = NULL;
+
+      if (is_deleted)
+        {
+          SVN_ERR(check_moved_away(&moved_away_op_root_abspath,
+                                   merge_b->ctx->wc_ctx,
+                                   local_abspath, scratch_pool));
+
+          if (moved_away_op_root_abspath)
+            reason = svn_wc_conflict_reason_moved_away;
+          else
+            reason = svn_wc_conflict_reason_deleted;
+        }
+      else
+        reason = svn_wc_conflict_reason_missing;
+
+      SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_file,
+                            svn_wc_conflict_action_edit, reason,
+                            moved_away_op_root_abspath));
+
+      SVN_ERR(record_tree_conflict(merge_b, local_abspath, svn_node_dir,
+                                   scratch_pool));
+
+      return SVN_NO_ERROR;
+    }
+
+  if (merge_b->dry_run
       && dry_run_added_p(merge_b, local_abspath))
     {
       return SVN_NO_ERROR; /* We can't do a real prop merge for added dirs */
     }
 
-  if (dir_was_added && merge_b->same_repos)
+  if (merge_b->same_repos)
     {
       /* When the directory was added in merge_dir_added() we didn't update its
          pristine properties. Instead we receive the property changes later and
@@ -2681,8 +2796,7 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
       const char *child;
 
       /* Creating a hash containing regular and entry props */
-      apr_hash_t *new_pristine_props = svn_prop__patch(original_props, propchanges,
-                                                       scratch_pool);
+      apr_hash_t *new_pristine_props = right_props;
 
       parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
       child = svn_dirent_is_child(merge_b->target->abspath, local_abspath, NULL);
@@ -2726,66 +2840,38 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
 
       return SVN_NO_ERROR;
     }
-
-  SVN_ERR(prepare_merge_props_changed(&props, local_abspath, propchanges,
-                                      merge_b, scratch_pool, scratch_pool));
-
-  if (props->nelts)
+  else
     {
-      const svn_wc_conflict_version_t *left;
-      const svn_wc_conflict_version_t *right;
-      svn_client_ctx_t *ctx = merge_b->ctx;
+      apr_array_header_t *regular_props;
+      apr_hash_t *new_props;
       svn_wc_notify_state_t prop_state;
 
-      SVN_ERR(make_conflict_versions(&left, &right, local_abspath,
-                                     svn_node_dir, &merge_b->merge_source,
-                                     merge_b->target, merge_b->pool));
+      SVN_ERR(svn_categorize_props(svn_prop_hash_to_array(right_props,
+                                                          scratch_pool),
+                                   NULL, NULL, &regular_props, scratch_pool));
 
-      SVN_ERR(svn_wc_merge_props3(&prop_state, ctx->wc_ctx, local_abspath,
-                                  left, right,
-                                  original_props, props,
+      new_props = svn_prop_array_to_hash(regular_props, scratch_pool);
+
+      apr_hash_set(new_props, SVN_PROP_MERGEINFO, APR_HASH_KEY_STRING, NULL);
+
+      /* ### What is the easiest way to set new_props on LOCAL_ABSPATH?
+
+         ### This doesn't need a merge as we just added the node
+         ### (or installed a tree conflict and skipped this node)*/
+
+      SVN_ERR(svn_wc_merge_props3(&prop_state, merge_b->ctx->wc_ctx,
+                                  local_abspath,
+                                  NULL, NULL,
+                                  apr_hash_make(scratch_pool),
+                                  svn_prop_hash_to_array(new_props,
+                                                         scratch_pool),
                                   merge_b->dry_run,
-                                  ctx->conflict_func2, ctx->conflict_baton2,
-                                  ctx->cancel_func, ctx->cancel_baton,
+                                  merge_b->ctx->conflict_func2,
+                                  merge_b->ctx->conflict_baton2,
+                                  merge_b->ctx->cancel_func,
+                                  merge_b->ctx->cancel_baton,
                                   scratch_pool));
-
-      if (prop_state == svn_wc_notify_state_conflicted)
-        {
-          alloc_and_store_path(&merge_b->conflicted_paths, local_abspath,
-                               merge_b->pool);
-        }
-
-      if (prop_state == svn_wc_notify_state_conflicted
-          || prop_state == svn_wc_notify_state_merged
-          || prop_state == svn_wc_notify_state_changed)
-        {
-          SVN_ERR(record_update_update(merge_b, local_abspath, svn_node_file,
-                                       svn_wc_notify_state_inapplicable,
-                                       prop_state, scratch_pool));
-        }
     }
-
-  return SVN_NO_ERROR;
-}
-
-
-/* An svn_wc_diff_callbacks4_t function. */
-static svn_error_t *
-merge_dir_added(svn_wc_notify_state_t *state,
-                svn_boolean_t *tree_conflicted,
-                svn_boolean_t *skip,
-                svn_boolean_t *skip_children,
-                const char *local_relpath,
-                svn_revnum_t rev,
-                const char *copyfrom_path,
-                svn_revnum_t copyfrom_revision,
-                void *baton,
-                apr_pool_t *scratch_pool)
-{
-  merge_cmd_baton_t *merge_b = baton;
-  /*const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
-                                              local_relpath, scratch_pool);*/
-
 
   return SVN_NO_ERROR;
 }
@@ -3061,6 +3147,35 @@ ignore_dir_opened(svn_boolean_t *tree_conflicted,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+ignore_dir_props_changed(svn_wc_notify_state_t *state,
+                         svn_boolean_t *tree_conflicted,
+                         const char *local_relpath,
+                         svn_boolean_t dir_was_added,
+                         const apr_array_header_t *propchanges,
+                         apr_hash_t *original_props,
+                         void *diff_baton,
+                         apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+ignore_dir_added(svn_wc_notify_state_t *state,
+                svn_boolean_t *tree_conflicted,
+                svn_boolean_t *skip,
+                svn_boolean_t *skip_children,
+                const char *local_relpath,
+                svn_revnum_t rev,
+                const char *copyfrom_path,
+                svn_revnum_t copyfrom_revision,
+                void *baton,
+                apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
+
 /* The main callback table for 'svn merge'.  */
 static const svn_wc_diff_callbacks4_t
 merge_callbacks =
@@ -3071,8 +3186,8 @@ merge_callbacks =
     ignore_file_deleted,
     merge_dir_deleted,
     ignore_dir_opened,
-    merge_dir_added,
-    merge_dir_props_changed,
+    ignore_dir_added,
+    ignore_dir_props_changed,
     merge_dir_closed
   };
 
@@ -9262,6 +9377,8 @@ do_merge(apr_hash_t **modified_subtrees,
                                                       scratch_pool);
 
     merge_processor->dir_opened   = merge_dir_opened;
+    merge_processor->dir_changed  = merge_dir_changed;
+    merge_processor->dir_added    = merge_dir_added;
 
     merge_processor->file_opened  = merge_file_opened;
     merge_processor->file_changed = merge_file_changed;
