@@ -6794,10 +6794,20 @@ typedef enum svn_wc_merge_outcome_t
  * is returned in @a *merge_content_outcome.
  * ### (and what about @a *merge_props_state?)
  *
+ * ### BH: Two kinds of outcome is not how it should be.
+ *
+ * ### For text, we report the outcome as 'merged' if there was some
+ *     incoming change that we dealt with (even if we decided to no-op?)
+ *     but the callers then convert this outcome into a notification
+ *     of 'merged' only if there was already a local modification;
+ *     otherwise they notify it as simply 'updated'.  But for props
+ *     we report a notify state of 'merged' here if there was an
+ *     incoming change regardless of the local-mod state.  Inconsistent.
+ *
  * Use @a scratch_pool for any temporary allocation.
  *
  * @since New in 1.8.
- */ /* ### BH: Two kinds of outcome is not how it should be */
+ */
 svn_error_t *
 svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
               enum svn_wc_notify_state_t *merge_props_state,
