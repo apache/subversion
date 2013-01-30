@@ -435,6 +435,12 @@ tc_editor_add_directory(void *baton,
       break;
     }
 
+  if (b->notify_func)
+    SVN_ERR(update_move_list_add(b->wcroot, relpath,
+                                 svn_wc_notify_update_add,
+                                 svn_node_dir,
+                                 svn_wc_notify_state_inapplicable,
+                                 svn_wc_notify_state_inapplicable));
   return SVN_NO_ERROR;
 }
 
@@ -492,6 +498,12 @@ tc_editor_add_file(void *baton,
   SVN_ERR(svn_wc__db_wq_add(b->db, b->wcroot->abspath, work_item,
                             scratch_pool));
 
+  if (b->notify_func)
+    SVN_ERR(update_move_list_add(b->wcroot, relpath,
+                                 svn_wc_notify_update_add,
+                                 svn_node_file,
+                                 svn_wc_notify_state_inapplicable,
+                                 svn_wc_notify_state_inapplicable));
   return SVN_NO_ERROR;
 }
 
