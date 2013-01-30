@@ -2192,22 +2192,26 @@ files_same_p(svn_boolean_t *same,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks4_t function. */
+/* An svn_diff_tree_processor_t function.
+ *
+ * Called after merge_file_opened() when a node does exist in LEFT_SOURCE, but
+ * no longer exists (or is replaced) in RIGHT_SOURCE.
+ *
+ * When a node is replaced instead of just added a separate opened+added will
+ * be invoked after the current open+deleted.
+ */
 static svn_error_t *
-merge_file_deleted(svn_wc_notify_state_t *state,
-                   svn_boolean_t *tree_conflicted,
-                   const char *mine_relpath,
-                   const char *older_abspath,
-                   const char *yours_abspath,
-                   const char *mimetype1,
-                   const char *mimetype2,
-                   apr_hash_t *original_props,
-                   void *baton,
+merge_file_deleted(const char *relpath,
+                   const svn_diff_source_t *left_source,
+                   const char *left_file,
+                   /*const*/ apr_hash_t *left_props,
+                   void *file_baton,
+                   const struct svn_diff_tree_processor_t *processor,
                    apr_pool_t *scratch_pool)
 {
-  merge_cmd_baton_t *merge_b = baton;
+  merge_cmd_baton_t *merge_b = processor->baton;
   const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
-                                              mine_relpath, scratch_pool);
+                                              relpath, scratch_pool);
   svn_node_kind_t kind;
   svn_boolean_t is_deleted;
   svn_boolean_t same;
@@ -2274,7 +2278,7 @@ merge_file_deleted(svn_wc_notify_state_t *state,
   
 
   /* If the files are identical, attempt deletion */
-  SVN_ERR(files_same_p(&same, older_abspath, original_props,
+  SVN_ERR(files_same_p(&same, left_file, left_props,
                        local_abspath, merge_b->ctx->wc_ctx,
                        scratch_pool));
   if (same || merge_b->force_delete || merge_b->record_only /* ### why? */)
@@ -3006,6 +3010,21 @@ ignore_file_added(svn_wc_notify_state_t *content_state,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+ignore_file_deleted(svn_wc_notify_state_t *state,
+                    svn_boolean_t *tree_conflicted,
+                    const char *mine_relpath,
+                    const char *older_abspath,
+                    const char *yours_abspath,
+                    const char *mimetype1,
+                    const char *mimetype2,
+                    apr_hash_t *original_props,
+                    void *baton,
+                    apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
 /* The main callback table for 'svn merge'.  */
 static const svn_wc_diff_callbacks4_t
 merge_callbacks =
@@ -3013,7 +3032,7 @@ merge_callbacks =
     ignore_file_opened,
     ignore_file_changed,
     ignore_file_added,
-    merge_file_deleted,
+    ignore_file_deleted,
     merge_dir_deleted,
     merge_dir_opened,
     merge_dir_added,
@@ -9206,9 +9225,11 @@ do_merge(apr_hash_t **modified_subtrees,
     merge_processor = svn_diff__tree_processor_create(&merge_cmd_baton,
                                                       scratch_pool);
 
-    merge_processor->file_opened = merge_file_opened;
+    merge_processor->file_opened  = merge_file_opened;
     merge_processor->file_changed = merge_file_changed;
     merge_processor->file_added   = merge_file_added;
+    merge_processor->file_deleted = merge_file_deleted;
+    /* Not interested in file_closed() */
 
     merge_processor->node_absent = merge_node_absent;
 
