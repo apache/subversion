@@ -185,7 +185,7 @@ start_207_element(int *elem, void *baton, int parent,
   if (parent == ELEM_prop)
     {
       svn_stringbuf_setempty(b->propname);
-      if (strcmp(nspace, SVN_DAV_PROP_NS_DAV) == 0)
+      if (strcmp(nspace, SVN_DAV_PROP_NS_SVN) == 0)
         svn_stringbuf_set(b->propname, SVN_PROP_PREFIX);
       else if (strcmp(nspace, "DAV:") == 0)
         svn_stringbuf_set(b->propname, "DAV:");
