@@ -225,6 +225,15 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * ^/subversion/branches/1.7.x-neon-properr
+   Justification:
+     Error messages which refer to "date" and "author" (when they mean
+     to say "svn:date" and "svn:author" can cause confusion.
+   Branch:
+     ^/subversion/branches/1.7.x-neon-properr
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 =====================
 
