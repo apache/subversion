@@ -425,6 +425,18 @@ open_root(void *edit_baton,
   db->left_source = svn_diff__source_create(eb->revision, db->pool);
   db->right_source = svn_diff__source_create(eb->target_revision, db->pool);
 
+  SVN_ERR(eb->processor->dir_opened(&db->pdb,
+                                    &db->skip,
+                                    &db->skip_children,
+                                    "",
+                                    db->left_source,
+                                    db->right_source,
+                                    NULL,
+                                    NULL,
+                                    eb->processor,
+                                    db->pool,
+                                    db->pool /* scratch_pool */));
+
   *root_baton = db;
   return SVN_NO_ERROR;
 }
