@@ -2919,6 +2919,36 @@ merge_dir_closed(svn_wc_notify_state_t *contentstate,
   return SVN_NO_ERROR;
 }
 
+/* An svn_diff_tree_processor_t function.
+
+   Called when the diff driver wants to report an absent path.
+
+   In case of merges this happens when the diff encounters a server-excluded
+   path.
+
+   We register a skipped path, which will make parent mergeinfo non-
+   inheritable. This ensures that a future merge might see these skipped
+   changes as eligable for merging.
+
+   For legacy reasons we also notify the path as skipped.
+ */
+static svn_error_t *
+merge_node_absent(const char *relpath,
+                  void *dir_baton,
+                  const svn_diff_tree_processor_t *processor,
+                  apr_pool_t *scratch_pool)
+{
+  merge_cmd_baton_t *merge_b = processor->baton;
+
+  const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
+                                              relpath, scratch_pool);
+
+  record_skip(merge_b, local_abspath, svn_node_unknown,
+              svn_wc_notify_state_missing, scratch_pool);
+
+  return SVN_NO_ERROR;
+}
+
 /* The main callback table for 'svn merge'.  */
 static const svn_wc_diff_callbacks4_t
 merge_callbacks =
@@ -4992,6 +5022,7 @@ static svn_error_t *
 drive_merge_report_editor(const char *target_abspath,
                           const merge_source_t *source,
                           const apr_array_header_t *children_with_mergeinfo,
+                          const svn_diff_tree_processor_t *processor,
                           svn_depth_t depth,
                           merge_cmd_baton_t *merge_b,
                           apr_pool_t *scratch_pool)
@@ -5004,7 +5035,6 @@ drive_merge_report_editor(const char *target_abspath,
   svn_boolean_t honor_mergeinfo = HONOR_MERGEINFO(merge_b);
   const char *old_sess1_url, *old_sess2_url;
   svn_boolean_t is_rollback = source->loc1->rev > source->loc2->rev;
-  apr_hash_t *absent_relpaths = apr_hash_make(scratch_pool);
 
   /* Start with a safe default starting revision for the editor and the
      merge target. */
@@ -5071,16 +5101,15 @@ drive_merge_report_editor(const char *target_abspath,
 
   /* Get the diff editor and a reporter with which to, ultimately,
      drive it. */
-  SVN_ERR(svn_client__get_diff_editor(&diff_editor, &diff_edit_baton,
-                                      depth,
-                                      merge_b->ra_session2, source->loc1->rev,
-                                      FALSE /* walk_deleted_dirs */,
-                                      TRUE /* text_deltas */,
-                                      absent_relpaths,
-                                      &merge_callbacks, merge_b,
-                                      merge_b->ctx->cancel_func,
-                                      merge_b->ctx->cancel_baton,
-                                      scratch_pool));
+  SVN_ERR(svn_client__get_diff_editor2(&diff_editor, &diff_edit_baton,
+                                       merge_b->ra_session2,
+                                       depth,
+                                       source->loc1->rev,
+                                       TRUE /* text_deltas */,
+                                       processor,
+                                       merge_b->ctx->cancel_func,
+                                       merge_b->ctx->cancel_baton,
+                                       scratch_pool));
   SVN_ERR(svn_ra_do_diff3(merge_b->ra_session1,
                           &reporter, &report_baton, source->loc2->rev,
                           "", depth, merge_b->diff_ignore_ancestry,
@@ -5197,24 +5226,6 @@ drive_merge_report_editor(const char *target_abspath,
   /* Caller must call svn_sleep_for_timestamps() */
   *(merge_b->use_sleep) = TRUE;
 
-  if (apr_hash_count(absent_relpaths))
-    {
-      apr_hash_index_t *hi;
-
-      for (hi = apr_hash_first(scratch_pool, absent_relpaths);
-           hi;
-           hi = apr_hash_next(hi))
-        {
-          const char *absent_abspath;
-
-          absent_abspath = svn_dirent_join(target_abspath,
-                                           svn__apr_hash_index_key(hi),
-                                           scratch_pool);
-
-          record_skip(merge_b, absent_abspath, svn_node_unknown,
-                      svn_wc_notify_state_missing, scratch_pool);
-        }
-    }
   return SVN_NO_ERROR;
 }
 
@@ -6800,6 +6811,7 @@ static svn_error_t *
 do_file_merge(svn_mergeinfo_catalog_t result_catalog,
               const merge_source_t *source,
               const char *target_abspath,
+              const svn_diff_tree_processor_t *processor,
               svn_boolean_t sources_related,
               svn_boolean_t squelch_mergeinfo_notifications,
               merge_cmd_baton_t *merge_b,
@@ -7252,6 +7264,7 @@ subtree_touched_by_merge(const char *local_abspath,
 static svn_error_t *
 do_mergeinfo_unaware_dir_merge(const merge_source_t *source,
                                const char *target_dir_wcpath,
+                               const svn_diff_tree_processor_t *processor,
                                svn_depth_t depth,
                                merge_cmd_baton_t *merge_b,
                                apr_pool_t *pool)
@@ -7269,7 +7282,7 @@ do_mergeinfo_unaware_dir_merge(const merge_source_t *source,
                  svn_client__merge_path_t *) = item;
   return drive_merge_report_editor(target_dir_wcpath,
                                    source,
-                                   NULL, depth,
+                                   NULL, processor, depth,
                                    merge_b, pool);
 }
 
@@ -8530,6 +8543,7 @@ static svn_error_t *
 do_mergeinfo_aware_dir_merge(svn_mergeinfo_catalog_t result_catalog,
                              const merge_source_t *source,
                              const char *target_abspath,
+                             const svn_diff_tree_processor_t *processor,
                              svn_depth_t depth,
                              svn_boolean_t squelch_mergeinfo_notifications,
                              svn_boolean_t abort_on_conflicts,
@@ -8716,6 +8730,7 @@ do_mergeinfo_aware_dir_merge(svn_mergeinfo_catalog_t result_catalog,
                 merge_b->target->abspath,
                 real_source,
                 merge_b->nrb.children_with_mergeinfo,
+                processor,
                 depth,
                 merge_b,
                 iterpool));
@@ -8776,6 +8791,7 @@ do_mergeinfo_aware_dir_merge(svn_mergeinfo_catalog_t result_catalog,
           SVN_ERR(drive_merge_report_editor(merge_b->target->abspath,
                                             source,
                                             NULL,
+                                            processor,
                                             depth,
                                             merge_b,
                                             scratch_pool));
@@ -8833,6 +8849,7 @@ static svn_error_t *
 do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
                    const merge_source_t *source,
                    const char *target_abspath,
+                   const svn_diff_tree_processor_t *processor,
                    svn_depth_t depth,
                    svn_boolean_t squelch_mergeinfo_notifications,
                    svn_boolean_t abort_on_conflicts,
@@ -8851,13 +8868,15 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
      business of merging changes! */
   if (HONOR_MERGEINFO(merge_b))
     SVN_ERR(do_mergeinfo_aware_dir_merge(result_catalog,
-                                         source, target_abspath, depth,
+                                         source, target_abspath,
+                                         processor, depth,
                                          squelch_mergeinfo_notifications,
                                          abort_on_conflicts,
                                          merge_b, scratch_pool));
   else
     SVN_ERR(do_mergeinfo_unaware_dir_merge(source,
-                                           target_abspath, depth,
+                                           target_abspath,
+                                           processor, depth,
                                            merge_b, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -8990,6 +9009,7 @@ do_merge(apr_hash_t **modified_subtrees,
   svn_ra_session_t *ra_session1 = NULL, *ra_session2 = NULL;
   const char *old_src_session_url = NULL;
   apr_pool_t *iterpool;
+  const svn_diff_tree_processor_t *processor;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(target->abspath));
 
@@ -9082,6 +9102,26 @@ do_merge(apr_hash_t **modified_subtrees,
   merge_cmd_baton.nrb.cur_ancestor_abspath = NULL;
   merge_cmd_baton.nrb.pool = result_pool;
 
+  {
+    svn_diff_tree_processor_t *callback_processor;
+    svn_diff_tree_processor_t *merge_processor;
+
+    SVN_ERR(svn_wc__wrap_diff_callbacks(&callback_processor,
+                                        &merge_callbacks, &merge_cmd_baton,
+                                        FALSE,
+                                        NULL, NULL, NULL, NULL,
+                                        scratch_pool, scratch_pool));
+
+    merge_processor = svn_diff__tree_processor_create(&merge_cmd_baton,
+                                                      scratch_pool);
+
+    merge_processor->node_absent = merge_node_absent;
+
+    processor = svn_diff__tree_processor_tee_create(callback_processor,
+                                                    merge_processor,
+                                                    scratch_pool);
+  }
+
   if (src_session)
     {
       SVN_ERR(svn_ra_get_session_url(src_session, &old_src_session_url,
@@ -9143,6 +9183,7 @@ do_merge(apr_hash_t **modified_subtrees,
         {
           SVN_ERR(do_file_merge(result_catalog,
                                 source, target->abspath,
+                                processor,
                                 sources_related,
                                 squelch_mergeinfo_notifications,
                                 &merge_cmd_baton, iterpool));
@@ -9157,6 +9198,7 @@ do_merge(apr_hash_t **modified_subtrees,
 
           SVN_ERR(do_directory_merge(result_catalog,
                                      source, target->abspath,
+                                     processor,
                                      depth, squelch_mergeinfo_notifications,
                                      abort_on_conflicts,
                                      &merge_cmd_baton,
