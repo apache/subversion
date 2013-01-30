@@ -1902,32 +1902,33 @@ merge_file_changed(const char *relpath,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks4_t function. */
+/* An svn_diff_tree_processor_t function.
+ *
+ * Called after merge_file_opened() when a node doesn't exist in LEFT_SOURCE,
+ * but does in RIGHT_SOURCE.
+ *
+ * When a node is replaced instead of just added a separate opened+deleted will
+ * be invoked before the current open+added.
+ */
 static svn_error_t *
-merge_file_added(svn_wc_notify_state_t *content_state,
-                 svn_wc_notify_state_t *prop_state,
-                 svn_boolean_t *tree_conflicted,
-                 const char *mine_relpath,
-                 const char *older_abspath,
-                 const char *yours_abspath,
-                 svn_revnum_t rev1,
-                 svn_revnum_t rev2,
-                 const char *mimetype1,
-                 const char *mimetype2,
-                 const char *copyfrom_path,
-                 svn_revnum_t copyfrom_revision,
-                 const apr_array_header_t *prop_changes,
-                 apr_hash_t *original_props,
-                 void *baton,
+merge_file_added(const char *relpath,
+                 const svn_diff_source_t *copyfrom_source,
+                 const svn_diff_source_t *right_source,
+                 const char *copyfrom_file,
+                 const char *right_file,
+                 /*const*/ apr_hash_t *copyfrom_props,
+                 /*const*/ apr_hash_t *right_props,
+                 void *file_baton,
+                 const struct svn_diff_tree_processor_t *processor,
                  apr_pool_t *scratch_pool)
 {
-  merge_cmd_baton_t *merge_b = baton;
+  merge_cmd_baton_t *merge_b = processor->baton;
   const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
-                                              mine_relpath, scratch_pool);
+                                              relpath, scratch_pool);
   svn_node_kind_t kind;
   svn_boolean_t is_deleted;
-  int i;
-  apr_hash_t *file_props;
+  apr_hash_t *pristine_props;
+  apr_hash_t *new_props;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -1935,34 +1936,6 @@ merge_file_added(svn_wc_notify_state_t *content_state,
   if (merge_b->record_only)
     {
       return SVN_NO_ERROR;
-    }
-
-  /* Apply the prop changes to a new hash table. */
-  file_props = apr_hash_copy(scratch_pool, original_props);
-  for (i = 0; i < prop_changes->nelts; ++i)
-    {
-      const svn_prop_t *prop = &APR_ARRAY_IDX(prop_changes, i, svn_prop_t);
-
-      /* We don't want any DAV wcprops related to this file because
-         they'll point to the wrong repository (in the
-         merge-from-foreign-repository scenario) or wrong place in the
-         right repository (in the same-repos scenario).  So we'll
-         strip them.  (Is this a layering violation?)  */
-      if (svn_property_kind2(prop->name) == svn_prop_wc_kind)
-        continue;
-
-      /* And in the foreign repository merge case, we only want
-         regular properties. */
-      if ((! merge_b->same_repos)
-          && (svn_property_kind2(prop->name) != svn_prop_regular_kind))
-        continue;
-
-      /* Issue #3383: We don't want mergeinfo from a foreign repository. */
-      if ((! merge_b->same_repos)
-          && strcmp(prop->name, SVN_PROP_MERGEINFO) == 0)
-        continue;
-
-      apr_hash_set(file_props, prop->name, APR_HASH_KEY_STRING, prop->value);
     }
 
   /* Check for an obstructed or missing node on disk. */
@@ -2005,8 +1978,7 @@ merge_file_added(svn_wc_notify_state_t *content_state,
     {
       const char *copyfrom_url;
       svn_revnum_t copyfrom_rev;
-      svn_stream_t *new_contents, *new_base_contents;
-      apr_hash_t *new_base_props, *new_props;
+      svn_stream_t *new_contents, *pristine_contents;
       svn_boolean_t existing_tree_conflict;
       svn_error_t *err;
       svn_node_kind_t parent_kind;
@@ -2038,26 +2010,42 @@ merge_file_added(svn_wc_notify_state_t *content_state,
           copyfrom_url = svn_path_url_add_component2(
                                        merge_b->merge_source.loc2->url,
                                        child, scratch_pool);
-          copyfrom_rev = rev2;
+          copyfrom_rev = right_source->revision;
           SVN_ERR(check_repos_match(merge_b->target, local_abspath,
                                     copyfrom_url, scratch_pool));
-          new_base_props = file_props;
-          new_props = NULL; /* inherit from new_base_props */
-          SVN_ERR(svn_stream_open_readonly(&new_base_contents,
-                                           yours_abspath,
+          SVN_ERR(svn_stream_open_readonly(&pristine_contents,
+                                           right_file,
                                            scratch_pool,
                                            scratch_pool));
           new_contents = NULL; /* inherit from new_base_contents */
+
+          pristine_props = right_props; /* Includes last_* information */
+          new_props = NULL; /* No local changes */
         }
       else
         {
+          apr_array_header_t *regular_props;
+
           copyfrom_url = NULL;
           copyfrom_rev = SVN_INVALID_REVNUM;
-          new_base_props = apr_hash_make(scratch_pool);
-          new_props = file_props;
-          new_base_contents = svn_stream_empty(scratch_pool);
-          SVN_ERR(svn_stream_open_readonly(&new_contents, yours_abspath,
+
+          pristine_contents = svn_stream_empty(scratch_pool);
+          SVN_ERR(svn_stream_open_readonly(&new_contents, right_file,
                                            scratch_pool, scratch_pool));
+
+          pristine_props = apr_hash_make(scratch_pool); /* Local addition */
+
+          /* We don't want any foreign properties */
+          SVN_ERR(svn_categorize_props(svn_prop_hash_to_array(right_props,
+                                                              scratch_pool),
+                                       NULL, NULL, &regular_props,
+                                       scratch_pool));
+
+          new_props = svn_prop_array_to_hash(regular_props, scratch_pool);
+
+          /* Issue #3383: We don't want mergeinfo from a foreign repository. */
+          apr_hash_set(new_props, SVN_PROP_MERGEINFO, APR_HASH_KEY_STRING,
+                       NULL);
         }
 
       err = svn_wc_conflicted_p3(NULL, NULL, &existing_tree_conflict,
@@ -2105,9 +2093,9 @@ merge_file_added(svn_wc_notify_state_t *content_state,
              we had called 'svn cp wc wc'. */
           SVN_ERR(svn_wc_add_repos_file4(merge_b->ctx->wc_ctx,
                                          local_abspath,
-                                         new_base_contents,
+                                         pristine_contents,
                                          new_contents,
-                                         new_base_props, new_props,
+                                         pristine_props, new_props,
                                          copyfrom_url, copyfrom_rev,
                                          merge_b->ctx->cancel_func,
                                          merge_b->ctx->cancel_baton,
@@ -2997,13 +2985,34 @@ ignore_file_changed(svn_wc_notify_state_t *content_state,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+ignore_file_added(svn_wc_notify_state_t *content_state,
+                  svn_wc_notify_state_t *prop_state,
+                  svn_boolean_t *tree_conflicted,
+                  const char *mine_relpath,
+                  const char *older_abspath,
+                  const char *yours_abspath,
+                  svn_revnum_t rev1,
+                  svn_revnum_t rev2,
+                  const char *mimetype1,
+                  const char *mimetype2,
+                  const char *copyfrom_path,
+                  svn_revnum_t copyfrom_revision,
+                  const apr_array_header_t *prop_changes,
+                  apr_hash_t *original_props,
+                  void *baton,
+                  apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
 /* The main callback table for 'svn merge'.  */
 static const svn_wc_diff_callbacks4_t
 merge_callbacks =
   {
     ignore_file_opened,
     ignore_file_changed,
-    merge_file_added,
+    ignore_file_added,
     merge_file_deleted,
     merge_dir_deleted,
     merge_dir_opened,
@@ -9199,6 +9208,7 @@ do_merge(apr_hash_t **modified_subtrees,
 
     merge_processor->file_opened = merge_file_opened;
     merge_processor->file_changed = merge_file_changed;
+    merge_processor->file_added   = merge_file_added;
 
     merge_processor->node_absent = merge_node_absent;
 
