@@ -1351,6 +1351,14 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   expected_status.remove('A/D/gamma')
   expected_status.add({'A/D/gamma_moved' : Item(status='  ', wc_rev=16)})
 
+  # Why is gamma_moved notified as ' G' rather than ' U'?  It was
+  # added by the merge and there is only a single editor drive, so
+  # how can any prop changes be merged to it?  The answer is that
+  # the merge code does some quiet housekeeping, merging gamma_moved's
+  # inherited mergeinfo into its incoming mergeinfo, see
+  # http://subversion.tigris.org/issues/show_bug.cgi?id=4309
+  # This test is not covering issue #4309 so we let the current
+  # behavior pass.
   # r17 - B) Synch merge from A to A_COPY
   svntest.actions.run_and_verify_svn(
     None,
@@ -1360,7 +1368,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
                            'D    ' + gamma_COPY_path + '\n',
                            ' U   ' + A_COPY_path     + '\n',
                            ' U   ' + D_COPY_path     + '\n',
-                           ' U   ' + gamma_moved_COPY_path + '\n']),
+                           ' G   ' + gamma_moved_COPY_path + '\n']),
     [], 'merge', sbox.repo_url + '/A',  A_COPY_path)
   expected_output = wc.State(
     wc_dir,
@@ -1430,7 +1438,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
     ''              : Item(status=' U'),
     'mu'            : Item(status=' G'),
     'D'             : Item(status=' U'),
-    'D/gamma_moved' : Item(status=' U'),
+    'D/gamma_moved' : Item(status=' G'), # More issue #4309 (see above)
     })
   expected_elision_output = wc.State(A_path, {
     })
@@ -1474,10 +1482,34 @@ def reintegrate_with_subtree_mergeinfo(sbox):
     'D/G/pi'        : Item("This is the file 'pi'.\n"),
     'D/G/rho'       : Item("New content"),
     'D/G/tau'       : Item("This is the file 'tau'.\n"),
+    # What's with all this mergeinfo?
+    #
+    # '/A/D/gamma_moved:2-7,9-12' - Incoming from the merge source.  Yes,
+    # this mergeinfo describes non-existent path-revs, this is the effect
+    # of issue #3669 'inheritance can result in mergeinfo describing
+    # nonexistent sources', but there is already a test for that issue so
+    # we tolerate it here.
+    #
+    # '/A_COPY/D/gamma_moved:17-19' - Describes the merge performed.
+    #
+    # '/A_COPY_3/D/gamma:9' - Explicit prior to the merge.
+    #
+    #'/A_COPY_3/D/gamma_moved:9' - Incoming from the merge source.
+    # For the curious, this was originally created in r17 when we merged
+    # ^/A to A_COPY.  This merge added A_COPY/D/gamma_moved, which had
+    # explicit mergeinfo and due to issue #4309 'wrong notification and
+    # bogus mergeinfo during merge which adds subtree with mergeinfo'
+    # this file inherited this bogus mergeinfo from A_COPY/D.  Yes, this
+    # is all quite ugly as the intersection or multiple known issues
+    # is likely to be.  However, given that none of this mergeinfo is
+    # particularly harmful and that this test is *not* about issues #3669
+    # or #4309, we are tolerting it.
     'D/gamma_moved' : Item(
       "Even newer content", props={SVN_PROP_MERGEINFO :
+                                   '/A/D/gamma_moved:2-7,9-12\n'
                                    '/A_COPY/D/gamma_moved:17-19\n'
-                                   '/A_COPY_3/D/gamma:9'}),
+                                   '/A_COPY_3/D/gamma:9\n'
+                                   '/A_COPY_3/D/gamma_moved:9'}),
     'D/H'           : Item(),
     'D/H/chi'       : Item("This is the file 'chi'.\n"),
     'D/H/psi'       : Item("New content"),
