@@ -13954,9 +13954,17 @@ def no_self_referential_filtering_on_added_path(sbox):
     'C'         : Item(status='D '),
     'C_MOVED'   : Item(status='A '),
     })
+  # Why is C_MOVED notified as ' G' rather than ' U'?  C_MOVED was
+  # added by the merge and there is only a single editor drive, so
+  # how can any prop changes be merged to it?  The answer is that
+  # the merge code does some quiet housekeeping, merging C_MOVED's
+  # inherited mergeinfo into its incoming mergeinfo, see
+  # http://subversion.tigris.org/issues/show_bug.cgi?id=4309
+  # This test is not covering issue #4309 so we let the current
+  # behavior pass.
   expected_mergeinfo_output = wc.State(A_COPY_2_path, {
     ''        : Item(status=' G'),
-    'C_MOVED' : Item(status=' G', prev_status=' G'),
+    'C_MOVED' : Item(status=' G'),
     })
   expected_elision_output = wc.State(A_COPY_2_path, {
     })
@@ -13991,6 +13999,7 @@ def no_self_referential_filtering_on_added_path(sbox):
     'B/E/beta'  : Item("New content"),
     'B/lambda'  : Item("This is the file 'lambda'.\n"),
     'B/F'       : Item(),
+  # What's up with the mergeinfo
     'C_MOVED'   : Item(props={SVN_PROP_MERGEINFO : '/A/C_MOVED:10\n' +
                               '/A_COPY/C:8\n' +
                               '/A_COPY/C_MOVED:8',
@@ -16804,7 +16813,7 @@ def merge_adds_subtree_with_mergeinfo(sbox):
     })
   expected_mergeinfo_output = wc.State(A_COPY2_path, {
     ''     : Item(status=' G'),
-    'C/nu' : Item(status=' G', prev_status=' U'),
+    'C/nu' : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_COPY2_path, {
     })
