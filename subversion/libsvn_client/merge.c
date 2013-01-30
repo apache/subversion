@@ -2508,8 +2508,6 @@ merge_dir_opened(void **new_dir_baton,
 
       /* Check for an obstructed or missing node on disk. */
       {
-        svn_wc_notify_state_t obstr_state;
-
         SVN_ERR(perform_obstruction_check(&obstr_state, &is_deleted, &kind,
                                           merge_b, local_abspath, svn_node_unknown,
                                           scratch_pool));
