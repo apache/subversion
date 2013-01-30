@@ -561,9 +561,6 @@ typedef struct working_node_version_t
   const svn_checksum_t *checksum; /* for files only */
 } working_node_version_t;
 
-/* ### ...
- * ### need to pass in the node kinds (before & after)?
- */
 static svn_error_t *
 create_conflict_markers(svn_skel_t **work_items,
                         const char *local_abspath,
@@ -573,28 +570,34 @@ create_conflict_markers(svn_skel_t **work_items,
                         svn_wc_operation_t operation,
                         const working_node_version_t *old_version,
                         const working_node_version_t *new_version,
+                        svn_kind_t local_kind,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
   svn_skel_t *work_item;
   svn_wc_conflict_version_t *original_version;
+  svn_wc_conflict_version_t *conflicted_version;
 
   original_version = svn_wc_conflict_version_dup(
                        old_version->location_and_kind, scratch_pool);
   original_version->path_in_repos = repos_relpath;
-  original_version->node_kind = svn_node_file;  /* ### ? */
+
+  conflicted_version = svn_wc_conflict_version_dup(
+                         new_version->location_and_kind, scratch_pool);
+  conflicted_version->node_kind = svn__node_kind_from_kind(local_kind);
+
   if (operation == svn_wc_operation_update)
     {
       SVN_ERR(svn_wc__conflict_skel_set_op_update(
                 conflict_skel, original_version,
-                NULL /* ### derive from new_version & new kind? */,
+                conflicted_version,
                 scratch_pool, scratch_pool));
     }
   else
     {
       SVN_ERR(svn_wc__conflict_skel_set_op_switch(
                 conflict_skel, original_version,
-                NULL /* ### derive from new_version & new kind? */,
+                conflicted_version,
                 scratch_pool, scratch_pool));
     }
 
@@ -724,11 +727,11 @@ tc_editor_alter_directory(void *baton,
 
       if (conflict_skel)
         {
-          /* ### need to pass in the node kinds (before & after)? */
           SVN_ERR(create_conflict_markers(b->work_items, dst_abspath,
                                           b->db, move_dst_repos_relpath,
                                           conflict_skel, b->operation,
                                           &old_version, &new_version,
+                                          move_dst_kind,
                                           b->result_pool, scratch_pool));
           SVN_ERR(svn_wc__db_mark_conflict_internal(b->wcroot, dst_relpath,
                                                     conflict_skel,
@@ -829,10 +832,10 @@ update_working_file(svn_skel_t **work_items,
    * too. */
   if (conflict_skel)
     {
-      /* ### need to pass in the node kinds (before & after)? */
       SVN_ERR(create_conflict_markers(work_items, local_abspath, db,
                                       repos_relpath, conflict_skel,
                                       operation, old_version, new_version,
+                                      svn_kind_file,
                                       result_pool, scratch_pool));
       SVN_ERR(svn_wc__db_mark_conflict_internal(wcroot, local_relpath,
                                                 conflict_skel,
