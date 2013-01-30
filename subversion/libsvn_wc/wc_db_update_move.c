@@ -940,6 +940,7 @@ tc_editor_delete(void *baton,
   svn_sqlite__stmt_t *stmt;
   int op_depth = relpath_depth(b->move_root_dst_relpath);
   svn_boolean_t is_conflicted;
+  svn_boolean_t must_delete_working_nodes = FALSE;
   const char *local_abspath = svn_dirent_join(b->wcroot->abspath, relpath,
                                               scratch_pool);
 
@@ -972,7 +973,6 @@ tc_editor_delete(void *baton,
               SVN_ERR(svn_sqlite__step_done(stmt));
 
               reason = svn_wc_conflict_reason_edited;
-              is_conflicted = TRUE;
             }
           else
             {
@@ -984,8 +984,9 @@ tc_editor_delete(void *baton,
               SVN_ERR(svn_sqlite__step_done(stmt));
 
               reason = svn_wc_conflict_reason_deleted;
-              /* Don't set is_conflicted so working files/dirs are deleted. */
+              must_delete_working_nodes = TRUE;
             }
+          is_conflicted = TRUE;
           SVN_ERR(mark_tree_conflict(b, relpath,
                                      /* ### kinds? */
                                      svn_node_dir, svn_node_dir, reason,
@@ -1000,7 +1001,7 @@ tc_editor_delete(void *baton,
         }
     }
 
-  if (!is_conflicted)
+  if (!is_conflicted || must_delete_working_nodes)
     {
       svn_boolean_t have_row;
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -1058,6 +1059,13 @@ tc_editor_delete(void *baton,
                                              iterpool, iterpool));
       SVN_ERR(svn_wc__db_wq_add(b->db, b->wcroot->abspath, work_item,
                                 iterpool));
+
+      if (b->notify_func && !is_conflicted)
+        SVN_ERR(update_move_list_add(b->wcroot, relpath,
+                                     svn_wc_notify_update_delete,
+                                     svn__node_kind_from_kind(del_kind),
+                                     svn_wc_notify_state_inapplicable,
+                                     svn_wc_notify_state_inapplicable));
       svn_pool_destroy(iterpool);
     }
 
