@@ -229,7 +229,7 @@ svn_diff__tree_processor_create(void *baton,
  * @since New in 1.8.
  */ /* Used by libsvn clients repository diff */
 const svn_diff_tree_processor_t *
-svn_diff__tree_processor_reverse_create(svn_diff_tree_processor_t * processor,
+svn_diff__tree_processor_reverse_create(const svn_diff_tree_processor_t * processor,
                                         const char *prefix_relpath,
                                         apr_pool_t *result_pool);
 

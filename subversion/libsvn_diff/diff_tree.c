@@ -237,7 +237,7 @@ svn_diff__tree_processor_create(void *baton,
 
 struct reverse_tree_baton_t
 {
-  svn_diff_tree_processor_t *processor;
+  const svn_diff_tree_processor_t *processor;
   const char *prefix_relpath;
 };
 
@@ -545,7 +545,7 @@ reverse_node_absent(const char *relpath,
 
 
 const svn_diff_tree_processor_t *
-svn_diff__tree_processor_reverse_create(svn_diff_tree_processor_t * processor,
+svn_diff__tree_processor_reverse_create(const svn_diff_tree_processor_t * processor,
                                         const char *prefix_relpath,
                                         apr_pool_t *result_pool)
 {
