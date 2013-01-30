@@ -1669,39 +1669,55 @@ record_update_delete(merge_cmd_baton_t *merge_b,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks4_t function. */
+/* An svn_diff_tree_processor_t function.
+
+   Called before either merge_file_changed(), merge_file_added(),
+   merge_file_deleted() or merge_file_closed(), unless it sets *SKIP to TRUE.
+
+   When *SKIP is TRUE, the diff driver avoids work on getting the details
+   for the closing callbacks.
+ */
 static svn_error_t *
-merge_file_opened(svn_boolean_t *tree_conflicted,
+merge_file_opened(void **new_file_baton,
                   svn_boolean_t *skip,
-                  const char *path,
-                  svn_revnum_t rev,
-                  void *diff_baton,
+                  const char *relpath,
+                  const svn_diff_source_t *left_source,
+                  const svn_diff_source_t *right_source,
+                  const svn_diff_source_t *copyfrom_source,
+                  void *dir_baton,
+                  const struct svn_diff_tree_processor_t *processor,
+                  apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks4_t function. */
+/* An svn_diff_tree_processor_t function.
+ *
+ * Called after merge_file_opened() when a node receives only text and/or
+ * property changes between LEFT_SOURCE and RIGHT_SOURCE.
+ *
+ * left_file and right_file can be NULL when the file is not modified.
+ * left_props and right_props are always available.
+ */
 static svn_error_t *
-merge_file_changed(svn_wc_notify_state_t *content_state,
-                   svn_wc_notify_state_t *prop_state,
-                   svn_boolean_t *tree_conflicted,
-                   const char *mine_relpath,
-                   const char *older_abspath,
-                   const char *yours_abspath,
-                   svn_revnum_t older_rev,
-                   svn_revnum_t yours_rev,
-                   const char *mimetype1,
-                   const char *mimetype2,
-                   const apr_array_header_t *prop_changes,
-                   apr_hash_t *original_props,
-                   void *baton,
-                   apr_pool_t *scratch_pool)
+merge_file_changed(const char *relpath,
+                  const svn_diff_source_t *left_source,
+                  const svn_diff_source_t *right_source,
+                  const char *left_file,
+                  const char *right_file,
+                  /*const*/ apr_hash_t *left_props,
+                  /*const*/ apr_hash_t *right_props,
+                  svn_boolean_t file_modified,
+                  const apr_array_header_t *prop_changes,
+                  void *file_baton,
+                  const struct svn_diff_tree_processor_t *processor,
+                  apr_pool_t *scratch_pool)
 {
-  merge_cmd_baton_t *merge_b = baton;
+  merge_cmd_baton_t *merge_b = processor->baton;
   svn_client_ctx_t *ctx = merge_b->ctx;
   const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
-                                              mine_relpath, scratch_pool);
+                                              relpath, scratch_pool);
   svn_node_kind_t wc_kind;
   svn_boolean_t is_deleted;
   const svn_wc_conflict_version_t *left;
@@ -1710,8 +1726,8 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
   svn_wc_notify_state_t property_state;
 
   SVN_ERR_ASSERT(local_abspath && svn_dirent_is_absolute(local_abspath));
-  SVN_ERR_ASSERT(!older_abspath || svn_dirent_is_absolute(older_abspath));
-  SVN_ERR_ASSERT(!yours_abspath || svn_dirent_is_absolute(yours_abspath));
+  SVN_ERR_ASSERT(!left_file || svn_dirent_is_absolute(left_file));
+  SVN_ERR_ASSERT(!right_file || svn_dirent_is_absolute(right_file));
 
   /* Check for an obstructed or missing node on disk. */
   {
@@ -1802,11 +1818,11 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
                                  svn_node_file, &merge_b->merge_source, merge_b->target, merge_b->pool));
 
   /* Do property merge now, if we are not going to perform a text merge */
-  if ((merge_b->record_only || !older_abspath) && prop_changes->nelts)
+  if ((merge_b->record_only || !left_file) && prop_changes->nelts)
     {
       SVN_ERR(svn_wc_merge_props3(&property_state, ctx->wc_ctx, local_abspath,
                                   left, right,
-                                  original_props, prop_changes,
+                                  left_props, prop_changes,
                                   merge_b->dry_run,
                                   ctx->conflict_func2, ctx->conflict_baton2,
                                   ctx->cancel_func, ctx->cancel_baton,
@@ -1818,7 +1834,7 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
     {
       /* NO-OP */
     }
-  else if (older_abspath)
+  else if (left_file)
     {
       svn_boolean_t has_local_mods;
       enum svn_wc_merge_outcome_t content_outcome;
@@ -1829,10 +1845,10 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
       const char *target_label = _(".working");
       const char *left_label = apr_psprintf(scratch_pool,
                                             _(".merge-left.r%ld"),
-                                            older_rev);
+                                            left_source->revision);
       const char *right_label = apr_psprintf(scratch_pool,
                                              _(".merge-right.r%ld"),
-                                             yours_rev);
+                                             right_source->revision);
 
       SVN_ERR(svn_wc_text_modified_p2(&has_local_mods, ctx->wc_ctx,
                                       local_abspath, FALSE, scratch_pool));
@@ -1840,12 +1856,12 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
       /* Do property merge and text merge in one step so that keyword expansion
          takes into account the new property values. */
       SVN_ERR(svn_wc_merge5(&content_outcome, &property_state, ctx->wc_ctx,
-                            older_abspath, yours_abspath, local_abspath,
+                            left_file, right_file, local_abspath,
                             left_label, right_label, target_label,
                             left, right,
                             merge_b->dry_run, merge_b->diff3_cmd,
                             merge_b->merge_options,
-                            original_props, prop_changes,
+                            left_props, prop_changes,
                             ctx->conflict_func2, ctx->conflict_baton2,
                             ctx->cancel_func,
                             ctx->cancel_baton,
@@ -2949,12 +2965,44 @@ merge_node_absent(const char *relpath,
   return SVN_NO_ERROR;
 }
 
+/* Ignore wrappers for the old callback api, for functions that have been
+   migrated to the newer diff api. See svn_wc_diff_callbacks4_t for docs */
+static svn_error_t *
+ignore_file_opened(svn_boolean_t *tree_conflicted,
+                   svn_boolean_t *skip,
+                   const char *path,
+                   svn_revnum_t rev,
+                   void *diff_baton,
+                   apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+ignore_file_changed(svn_wc_notify_state_t *content_state,
+                    svn_wc_notify_state_t *prop_state,
+                    svn_boolean_t *tree_conflicted,
+                    const char *mine_relpath,
+                    const char *older_abspath,
+                    const char *yours_abspath,
+                    svn_revnum_t older_rev,
+                    svn_revnum_t yours_rev,
+                    const char *mimetype1,
+                    const char *mimetype2,
+                    const apr_array_header_t *prop_changes,
+                    apr_hash_t *original_props,
+                    void *baton,
+                    apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
 /* The main callback table for 'svn merge'.  */
 static const svn_wc_diff_callbacks4_t
 merge_callbacks =
   {
-    merge_file_opened,
-    merge_file_changed,
+    ignore_file_opened,
+    ignore_file_changed,
     merge_file_added,
     merge_file_deleted,
     merge_dir_deleted,
@@ -9148,6 +9196,9 @@ do_merge(apr_hash_t **modified_subtrees,
 
     merge_processor = svn_diff__tree_processor_create(&merge_cmd_baton,
                                                       scratch_pool);
+
+    merge_processor->file_opened = merge_file_opened;
+    merge_processor->file_changed = merge_file_changed;
 
     merge_processor->node_absent = merge_node_absent;
 
