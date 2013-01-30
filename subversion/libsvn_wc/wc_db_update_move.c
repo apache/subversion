@@ -380,6 +380,13 @@ check_tree_conflict(svn_boolean_t *is_conflicted,
                               : svn_wc_conflict_reason_deleted),
                              action, conflict,
                              scratch_pool));
+  if (b->notify_func)
+    SVN_ERR(update_move_list_add(b->wcroot, local_relpath,
+                                 svn_wc_notify_tree_conflict,
+                                 kind,
+                                 svn_wc_notify_state_inapplicable,
+                                 svn_wc_notify_state_inapplicable));
+
   return SVN_NO_ERROR;
 }
 
@@ -397,6 +404,7 @@ tc_editor_add_directory(void *baton,
   const char *abspath;
   svn_node_kind_t kind;
   svn_skel_t *work_item;
+  svn_wc_notify_action_t action = svn_wc_notify_update_add;
 
   /* Update NODES, only the bits not covered by the later call to
      replace_moved_layer. */
@@ -422,6 +430,7 @@ tc_editor_add_directory(void *baton,
                                  svn_wc_conflict_reason_unversioned,
                                  svn_wc_conflict_action_add, NULL,
                                  scratch_pool));
+      action = svn_wc_notify_tree_conflict;
       break;
 
     case svn_node_none:
@@ -437,7 +446,7 @@ tc_editor_add_directory(void *baton,
 
   if (b->notify_func)
     SVN_ERR(update_move_list_add(b->wcroot, relpath,
-                                 svn_wc_notify_update_add,
+                                 action,
                                  svn_node_dir,
                                  svn_wc_notify_state_inapplicable,
                                  svn_wc_notify_state_inapplicable));
@@ -482,6 +491,12 @@ tc_editor_add_file(void *baton,
                                  svn_wc_conflict_reason_unversioned,
                                  svn_wc_conflict_action_add, NULL,
                                  scratch_pool));
+      if (b->notify_func)
+        SVN_ERR(update_move_list_add(b->wcroot, relpath,
+                                     svn_wc_notify_tree_conflict,
+                                     svn_node_file,
+                                     svn_wc_notify_state_inapplicable,
+                                     svn_wc_notify_state_inapplicable));
       return SVN_NO_ERROR;
     }
 
@@ -976,6 +991,12 @@ tc_editor_delete(void *baton,
                                      svn_node_dir, svn_node_dir, reason,
                                      svn_wc_conflict_action_delete, NULL,
                                      scratch_pool));
+          if (b->notify_func)
+            SVN_ERR(update_move_list_add(b->wcroot, relpath,
+                                         svn_wc_notify_tree_conflict,
+                                         svn_node_dir, /* ### kinds? */
+                                         svn_wc_notify_state_inapplicable,
+                                         svn_wc_notify_state_inapplicable));
         }
     }
 
