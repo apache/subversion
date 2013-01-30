@@ -13876,7 +13876,6 @@ def subtree_gets_changes_even_if_ultimately_deleted(sbox):
 
 #----------------------------------------------------------------------
 @SkipUnless(server_has_mergeinfo)
-@Wimp("Needs review after issue #3405 fix")
 def no_self_referential_filtering_on_added_path(sbox):
   "no self referential filtering on added path"
 
@@ -13957,7 +13956,7 @@ def no_self_referential_filtering_on_added_path(sbox):
     })
   expected_mergeinfo_output = wc.State(A_COPY_2_path, {
     ''        : Item(status=' G'),
-    'C_MOVED' : Item(status=' U'),
+    'C_MOVED' : Item(status=' G', prev_status=' G'),
     })
   expected_elision_output = wc.State(A_COPY_2_path, {
     })
@@ -16805,7 +16804,7 @@ def merge_adds_subtree_with_mergeinfo(sbox):
     })
   expected_mergeinfo_output = wc.State(A_COPY2_path, {
     ''     : Item(status=' G'),
-    'C/nu' : Item(status=' U'),
+    'C/nu' : Item(status=' G', prev_status=' U'),
     })
   expected_elision_output = wc.State(A_COPY2_path, {
     })
@@ -17643,7 +17642,6 @@ def merge_adds_then_deletes_subtree(sbox):
 # cause spurious subtree mergeinfo'.
 @SkipUnless(server_has_mergeinfo)
 @Issue(4169)
-@Wimp("Needs review after issue #3405 fix")
 def merge_with_added_subtrees_with_mergeinfo(sbox):
   "merge with added subtrees with mergeinfo"
 
@@ -17746,8 +17744,8 @@ def merge_with_added_subtrees_with_mergeinfo(sbox):
     })
   expected_mergeinfo_output = wc.State(A_COPY2_path, {
     ''      : Item(status=' U'),
-    'C/X/Y' : Item(status=' G'), # Added with explicit mergeinfo so mergeinfo
-    })                           # describing the merge shows as mer'G'ed.
+    'C/X/Y' : Item(status=' U'), # Added with explicit mergeinfo
+    })
   expected_elision_output = wc.State(A_COPY2_path, {
     })
   expected_status = wc.State(A_COPY2_path, {

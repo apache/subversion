@@ -2060,6 +2060,13 @@ merge_file_added(const char *relpath,
 
           pristine_props = right_props; /* Includes last_* information */
           new_props = NULL; /* No local changes */
+
+          if (apr_hash_get(pristine_props, SVN_PROP_MERGEINFO,
+                           APR_HASH_KEY_STRING))
+            {
+              alloc_and_store_path(&merge_b->paths_with_new_mergeinfo,
+                                   local_abspath, merge_b->pool);
+            }
         }
       else
         {
@@ -2863,25 +2870,12 @@ merge_dir_added(const char *relpath,
                                                 scratch_pool));
         }
 
-      /* Until issue #3405 was fixed the code for changed directories was
-         used for directory deletions, which made use apply svn:mergeinfo as if
-         additional changes were applied by the merge, which really weren't.
-
-         ### I wouldn't be surprised if we somehow relied on these for correct
-         ### merges, but in this case the fix added here should also be applied
-         ### for added files! */
-
-      /* ### The old code performed (via prepare_merge_props_changed):
       if (apr_hash_get(new_pristine_props, SVN_PROP_MERGEINFO,
                        APR_HASH_KEY_STRING))
         {
           alloc_and_store_path(&merge_b->paths_with_new_mergeinfo,
                                local_abspath, merge_b->pool);
         }
-         ### which is something merge_add_file() doesn't do, but
-         ### merge_tests.py 95: no self referential filtering on added path
-         ### fails if this block is not enabled.
-      */
 
       return SVN_NO_ERROR;
     }
