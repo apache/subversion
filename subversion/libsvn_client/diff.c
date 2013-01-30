@@ -1954,6 +1954,8 @@ diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
 
+  const svn_diff_tree_processor_t *diff_processor;
+
   const char *url1;
   const char *url2;
   const char *base_path;
@@ -2010,13 +2012,18 @@ diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
 
   /* Set up the repos_diff editor on BASE_PATH, if available.
      Otherwise, we just use "". */
-  SVN_ERR(svn_client__get_diff_editor(
+
+  SVN_ERR(svn_wc__wrap_diff_callbacks(&diff_processor,
+                                      callbacks, callback_baton,
+                                      TRUE /* walk_deleted_dirs */,
+                                      pool, pool));
+
+  SVN_ERR(svn_client__get_diff_editor2(
                 &diff_editor, &diff_edit_baton,
-                depth,
-                extra_ra_session, rev1, TRUE /* walk_deleted_dirs */,
+                extra_ra_session, depth,
+                rev1, 
                 TRUE /* text_deltas */,
-                NULL /* absent relpaths */,
-                callbacks, callback_baton,
+                diff_processor,
                 ctx->cancel_func, ctx->cancel_baton,
                 pool));
 
@@ -2645,6 +2652,8 @@ diff_summarize_repos_repos(svn_client_diff_summarize_func_t summarize_func,
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
 
+  const svn_diff_tree_processor_t *diff_processor;
+
   const char *url1;
   const char *url2;
   const char *base_path;
@@ -2697,14 +2706,20 @@ diff_summarize_repos_repos(svn_client_diff_summarize_func_t summarize_func,
                                                TRUE, ctx, pool));
 
   /* Set up the repos_diff editor. */
-  SVN_ERR(svn_client__get_diff_editor(&diff_editor, &diff_edit_baton,
-            depth,
-            extra_ra_session, rev1, TRUE /* walk_deleted_dirs */,
-            FALSE /* text_deltas */,
-            NULL /* absent relpaths */,
-            callbacks, callback_baton,
-            ctx->cancel_func, ctx->cancel_baton,
-            pool));
+
+  SVN_ERR(svn_wc__wrap_diff_callbacks(&diff_processor,
+                                      callbacks, callback_baton,
+                                      TRUE /* walk_deleted_dirs */,
+                                      pool, pool));
+
+  SVN_ERR(svn_client__get_diff_editor2(&diff_editor, &diff_edit_baton,
+                                       extra_ra_session,
+                                       depth,
+                                       rev1,
+                                       FALSE /* text_deltas */,
+                                       diff_processor,
+                                       ctx->cancel_func, ctx->cancel_baton,
+                                       pool));
 
   /* We want to switch our txn into URL2 */
   SVN_ERR(svn_ra_do_diff3

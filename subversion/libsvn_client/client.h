@@ -732,32 +732,6 @@ svn_client__get_diff_editor2(const svn_delta_editor_t **editor,
                              void *cancel_baton,
                              apr_pool_t *result_pool);
 
-/* Like svn_client__get_diff_editor2 but calls DIFF_CALLBACKS with
-   DIFF_CMD_BATON. 
-
-   For each deleted directory, if WALK_DELETED_DIRS is true then just call
-   the 'dir_deleted' callback once, otherwise call the 'file_deleted' or
-   'dir_deleted' callback for each individual node in that subtree.
-
-   If ABSENT_RELPATHS is non-null, collect const char * keys in it with
-   the relative paths marked as absent by the diff driver.
- */
-svn_error_t *
-svn_client__get_diff_editor(const svn_delta_editor_t **editor,
-                            void **edit_baton,
-                            svn_depth_t depth,
-                            svn_ra_session_t *ra_session,
-                            svn_revnum_t revision,
-                            svn_boolean_t walk_deleted_dirs,
-                            svn_boolean_t text_deltas,
-                            apr_hash_t *absent_relpaths,
-                            const svn_wc_diff_callbacks4_t *diff_callbacks,
-                            void *diff_cmd_baton,
-                            svn_cancel_func_t cancel_func,
-                            void *cancel_baton,
-                            apr_pool_t *result_pool);
-
-
 /* ---------------------------------------------------------------- */
 
 /*** Editor for diff summary ***/
