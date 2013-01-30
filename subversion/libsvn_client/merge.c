@@ -1399,9 +1399,9 @@ prepare_merge_props_changed(const apr_array_header_t **prop_updates,
   return SVN_NO_ERROR;
 }
 
-/* Indicate in *MOVED_AWAY whether the node at LOCAL_ABSPATH was
- * moved away locally. Do not raise an error if the node at LOCAL_ABSPATH
- * does not exist.
+/* Set *OP_ROOT_ABSPATH if the node at LOCAL_ABSPATH was moved away
+ * locally, or set *OP_ROOT_ABSPATH to NULL otherwise. Do not raise an
+ * error if the node at LOCAL_ABSPATH does not exist.
  *
  * ### Currently this looks at the highest moved-to but should merge
  * ### be looking at the lowest moved-to?  Or perhaps only the base
