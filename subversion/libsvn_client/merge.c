@@ -1700,6 +1700,8 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
   svn_boolean_t is_deleted;
   const svn_wc_conflict_version_t *left;
   const svn_wc_conflict_version_t *right;
+  svn_wc_notify_state_t text_state;
+  svn_wc_notify_state_t property_state;
 
   SVN_ERR_ASSERT(local_abspath && svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(!older_abspath || svn_dirent_is_absolute(older_abspath));
@@ -1777,25 +1779,13 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
       return SVN_NO_ERROR;
     }
 
-  /* ### TODO: Thwart attempts to merge into a path that has
-     ### unresolved conflicts.  This needs to be smart enough to deal
-     ### with tree conflicts!
-  if (is_path_conflicted_by_merge(merge_b, mine))
-    {
-      *content_state = svn_wc_notify_state_conflicted;
-      return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
-                               _("Path '%s' is in conflict, and must be "
-                                 "resolved before the remainder of the "
-                                 "requested merge can be applied"), mine);
-    }
-  */
-
   /* This callback is essentially no more than a wrapper around
      svn_wc_merge5().  Thank goodness that all the
      diff-editor-mechanisms are doing the hard work of getting the
      fulltexts! */
 
-  *prop_state = svn_wc_notify_state_unchanged;
+  property_state = svn_wc_notify_state_unchanged;
+  text_state = svn_wc_notify_state_unchanged;
 
   SVN_ERR(prepare_merge_props_changed(&prop_changes, local_abspath,
                                       prop_changes, merge_b,
@@ -1807,7 +1797,7 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
   /* Do property merge now, if we are not going to perform a text merge */
   if ((merge_b->record_only || !older_abspath) && prop_changes->nelts)
     {
-      SVN_ERR(svn_wc_merge_props3(prop_state, ctx->wc_ctx, local_abspath,
+      SVN_ERR(svn_wc_merge_props3(&property_state, ctx->wc_ctx, local_abspath,
                                   left, right,
                                   original_props, prop_changes,
                                   merge_b->dry_run,
@@ -1819,7 +1809,7 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
   /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
     {
-      *content_state = svn_wc_notify_state_unchanged;
+      /* NO-OP */
     }
   else if (older_abspath)
     {
@@ -1842,7 +1832,7 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
 
       /* Do property merge and text merge in one step so that keyword expansion
          takes into account the new property values. */
-      SVN_ERR(svn_wc_merge5(&content_outcome, prop_state, ctx->wc_ctx,
+      SVN_ERR(svn_wc_merge5(&content_outcome, &property_state, ctx->wc_ctx,
                             older_abspath, yours_abspath, local_abspath,
                             left_label, right_label, target_label,
                             left, right,
@@ -1862,27 +1852,27 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
         }
 
       if (content_outcome == svn_wc_merge_conflict)
-        *content_state = svn_wc_notify_state_conflicted;
+        text_state = svn_wc_notify_state_conflicted;
       else if (has_local_mods
                && content_outcome != svn_wc_merge_unchanged)
-        *content_state = svn_wc_notify_state_merged;
+        text_state = svn_wc_notify_state_merged;
       else if (content_outcome == svn_wc_merge_merged)
-        *content_state = svn_wc_notify_state_changed;
+        text_state = svn_wc_notify_state_changed;
       else if (content_outcome == svn_wc_merge_no_merge)
-        *content_state = svn_wc_notify_state_missing;
+        text_state = svn_wc_notify_state_missing;
       else /* merge_outcome == svn_wc_merge_unchanged */
-        *content_state = svn_wc_notify_state_unchanged;
+        text_state = svn_wc_notify_state_unchanged;
     }
 
-  if (*content_state == svn_wc_notify_state_conflicted
-      || *content_state == svn_wc_notify_state_merged
-      || *content_state == svn_wc_notify_state_changed
-      || *prop_state == svn_wc_notify_state_conflicted
-      || *prop_state == svn_wc_notify_state_merged
-      || *prop_state == svn_wc_notify_state_changed)
+  if (text_state == svn_wc_notify_state_conflicted
+      || text_state == svn_wc_notify_state_merged
+      || text_state == svn_wc_notify_state_changed
+      || property_state == svn_wc_notify_state_conflicted
+      || property_state == svn_wc_notify_state_merged
+      || property_state == svn_wc_notify_state_changed)
     {
       SVN_ERR(record_update_update(merge_b, local_abspath, svn_node_file,
-                                   *content_state, *prop_state,
+                                   text_state, property_state,
                                    scratch_pool));
     }
 
@@ -1923,11 +1913,6 @@ merge_file_added(svn_wc_notify_state_t *content_state,
     {
       return SVN_NO_ERROR;
     }
-
-  /* In most cases, we just leave prop_state as unknown, and let the
-     content_state what happened, so we set prop_state here to avoid that
-     below. */
-  *prop_state = svn_wc_notify_state_unknown;
 
   /* Apply the prop changes to a new hash table. */
   file_props = apr_hash_copy(scratch_pool, original_props);
@@ -2592,12 +2577,13 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
       const svn_wc_conflict_version_t *left;
       const svn_wc_conflict_version_t *right;
       svn_client_ctx_t *ctx = merge_b->ctx;
+      svn_wc_notify_state_t prop_state;
 
       SVN_ERR(make_conflict_versions(&left, &right, local_abspath,
                                      svn_node_dir, &merge_b->merge_source,
                                      merge_b->target, merge_b->pool));
 
-      SVN_ERR(svn_wc_merge_props3(state, ctx->wc_ctx, local_abspath,
+      SVN_ERR(svn_wc_merge_props3(&prop_state, ctx->wc_ctx, local_abspath,
                                   left, right,
                                   original_props, props,
                                   merge_b->dry_run,
@@ -2605,19 +2591,19 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
                                   ctx->cancel_func, ctx->cancel_baton,
                                   scratch_pool));
 
-      if (*state == svn_wc_notify_state_conflicted)
+      if (prop_state == svn_wc_notify_state_conflicted)
         {
           alloc_and_store_path(&merge_b->conflicted_paths, local_abspath,
                                merge_b->pool);
         }
 
-      if (*state == svn_wc_notify_state_conflicted
-          || *state == svn_wc_notify_state_merged
-          || *state == svn_wc_notify_state_changed)
+      if (prop_state == svn_wc_notify_state_conflicted
+          || prop_state == svn_wc_notify_state_merged
+          || prop_state == svn_wc_notify_state_changed)
         {
           SVN_ERR(record_update_update(merge_b, local_abspath, svn_node_file,
                                        svn_wc_notify_state_inapplicable,
-                                       *state, scratch_pool));
+                                       prop_state, scratch_pool));
         }
     }
 
