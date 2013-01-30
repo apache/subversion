@@ -1568,10 +1568,10 @@ drive_tree_conflict_editor(svn_editor_t *tc_editor,
                                  dst_relpath, old_version->peg_rev,
                                  db, wcroot, scratch_pool));
 
-  SVN_ERR(svn_editor_complete(tc_editor));
-
   SVN_ERR(replace_moved_layer(src_relpath, dst_relpath, src_op_depth,
                               wcroot, scratch_pool));
+
+  SVN_ERR(svn_editor_complete(tc_editor));
 
   return SVN_NO_ERROR;
 }
