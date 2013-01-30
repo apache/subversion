@@ -7303,6 +7303,13 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
 
       svn_pool_clear(iterpool);
 
+      /* Note: We could skip recording inherited mergeinfo here if this path
+         was added (with preexisting mergeinfo) by the merge.  That's actually
+         more correct, since the inherited mergeinfo likely describes
+         non-existent or unrelated merge history, but it's not quite so simple
+         as that, see http://subversion.tigris.org/issues/show_bug.cgi?id=4309
+         */
+
       /* Get the path's new explicit mergeinfo... */
       SVN_ERR(svn_client__get_wc_mergeinfo(&path_explicit_mergeinfo, NULL,
                                            svn_mergeinfo_explicit,
