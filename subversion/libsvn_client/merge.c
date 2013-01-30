@@ -1669,6 +1669,45 @@ record_update_delete(merge_cmd_baton_t *merge_b,
   return SVN_NO_ERROR;
 }
 
+/* Notify the pending 'D'eletes, that were waiting to see if a matching 'A'dd
+   might make them a 'R'eplace. */
+static svn_error_t *
+handle_pending_notifications(merge_cmd_baton_t *merge_b,
+                             const char *local_abspath,
+                             apr_pool_t *scratch_pool)
+{
+  if (merge_b->ctx->notify_func2)
+    {
+      apr_hash_index_t *hi;
+
+      for (hi = apr_hash_first(scratch_pool, merge_b->pending_deletes);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *del_abspath = svn__apr_hash_index_key(hi);
+
+          if (svn_dirent_is_child(local_abspath, del_abspath, NULL))
+            {
+              svn_wc_notify_t *notify;
+
+              notify = svn_wc_create_notify(del_abspath,
+                                            svn_wc_notify_update_delete,
+                                            scratch_pool);
+              notify->kind = svn_node_kind_from_word(
+                                    svn__apr_hash_index_val(hi));
+
+              (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2,
+                                            notify, scratch_pool);
+
+              apr_hash_set(merge_b->pending_deletes, del_abspath,
+                           APR_HASH_KEY_STRING, NULL);
+            }
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
+
 /* An svn_diff_tree_processor_t function.
 
    Called before either merge_file_changed(), merge_file_added(),
@@ -2349,6 +2388,9 @@ merge_dir_opened(void **new_dir_baton,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
+  if (! right_source)
+    *skip_children = TRUE; /* ### Compatibility with walk_children = FALSE */
+
   if (left_source != NULL)
     {
       /* The node exists pre-merge */
@@ -2619,6 +2661,8 @@ merge_dir_changed(const char *relpath,
   svn_boolean_t is_deleted;
   svn_node_kind_t kind;
 
+  SVN_ERR(handle_pending_notifications(merge_b, local_abspath, scratch_pool));
+
   SVN_ERR(perform_obstruction_check(&obstr_state, &is_deleted, &kind,
                                     merge_b, local_abspath, svn_node_dir,
                                     scratch_pool));
@@ -2726,6 +2770,9 @@ merge_dir_added(const char *relpath,
   svn_wc_notify_state_t obstr_state;
   svn_boolean_t is_deleted;
   svn_node_kind_t kind;
+
+  /* For consistency; usually a no-op from _dir_added() */
+  SVN_ERR(handle_pending_notifications(merge_b, local_abspath, scratch_pool));
 
   SVN_ERR(perform_obstruction_check(&obstr_state, &is_deleted, &kind,
                                     merge_b, local_abspath, svn_node_dir,
@@ -2874,20 +2921,35 @@ merge_dir_added(const char *relpath,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks4_t function. */
+/* An svn_diff_tree_processor_t function.
+ *
+ * Called after merge_dir_opened() when a node existed only in the left source.
+ *
+ * After the merge_dir_opened() but before the call to this merge_dir_deleted()
+ * function all descendants that existed in left_source will have been deleted.
+ *
+ * ### By default the diff drivers report all descendants of a delete,
+ * ### but this feature is currently disabled by a SKIP on merge_dir_opened()
+ *
+ * If this node is replaced, an _opened() followed by a matching _add() will
+ * be invoked after this function.
+ */
 static svn_error_t *
-merge_dir_deleted(svn_wc_notify_state_t *state,
-                  svn_boolean_t *tree_conflicted,
-                  const char *local_relpath,
-                  void *baton,
+merge_dir_deleted(const char *relpath,
+                  const svn_diff_source_t *left_source,
+                  /*const*/ apr_hash_t *left_props,
+                  void *dir_baton,
+                  const struct svn_diff_tree_processor_t *processor,
                   apr_pool_t *scratch_pool)
 {
-  merge_cmd_baton_t *merge_b = baton;
+  merge_cmd_baton_t *merge_b = processor->baton;
   const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
-                                              local_relpath, scratch_pool);
+                                              relpath, scratch_pool);
   svn_node_kind_t kind;
   svn_boolean_t is_deleted;
   svn_error_t *err;
+
+  SVN_ERR(handle_pending_notifications(merge_b, local_abspath, scratch_pool));
 
   /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
@@ -2986,51 +3048,30 @@ merge_dir_deleted(svn_wc_notify_state_t *state,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks4_t function. */
+/* An svn_diff_tree_processor_t function.
+ *
+ * Called after merge_dir_opened() when a node itself didn't change between
+ * the left and right source.
+ *
+ * After the merge_dir_opened() but before the call to this merge_dir_closed()
+ * function all descendants will have been processed.
+ */
 static svn_error_t *
-merge_dir_closed(svn_wc_notify_state_t *contentstate,
-                 svn_wc_notify_state_t *propstate,
-                 svn_boolean_t *tree_conflicted,
-                 const char *path,
-                 svn_boolean_t dir_was_added,
-                 void *baton,
+merge_dir_closed(const char *relpath,
+                 const svn_diff_source_t *left_source,
+                 const svn_diff_source_t *right_source,
+                 void *dir_baton,
+                 const struct svn_diff_tree_processor_t *processor,
                  apr_pool_t *scratch_pool)
 {
-  merge_cmd_baton_t *merge_b = baton;
+  merge_cmd_baton_t *merge_b = processor->baton;
+  const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
+                                              relpath, scratch_pool);
+
+  SVN_ERR(handle_pending_notifications(merge_b, local_abspath, scratch_pool));
 
   if (merge_b->dry_run)
     SVN_ERR(svn_hash__clear(merge_b->dry_run_deletions, scratch_pool));
-
-  if (merge_b->ctx->notify_func2)
-    {
-      apr_hash_index_t *hi;
-      const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
-                                                  path, scratch_pool);
-
-      for (hi = apr_hash_first(scratch_pool, merge_b->pending_deletes);
-           hi;
-           hi = apr_hash_next(hi))
-        {
-          const char *del_abspath = svn__apr_hash_index_key(hi);
-
-          if (svn_dirent_is_child(local_abspath, del_abspath, NULL))
-            {
-              svn_wc_notify_t *notify;
-
-              notify = svn_wc_create_notify(del_abspath,
-                                            svn_wc_notify_update_delete,
-                                            scratch_pool);
-              notify->kind = svn_node_kind_from_word(
-                                    svn__apr_hash_index_val(hi));
-
-              (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2,
-                                            notify, scratch_pool);
-
-              apr_hash_set(merge_b->pending_deletes, del_abspath,
-                           APR_HASH_KEY_STRING, NULL);
-            }
-        }
-    }
 
   return SVN_NO_ERROR;
 }
@@ -3064,131 +3105,6 @@ merge_node_absent(const char *relpath,
 
   return SVN_NO_ERROR;
 }
-
-/* Ignore wrappers for the old callback api, for functions that have been
-   migrated to the newer diff api. See svn_wc_diff_callbacks4_t for docs */
-static svn_error_t *
-ignore_file_opened(svn_boolean_t *tree_conflicted,
-                   svn_boolean_t *skip,
-                   const char *path,
-                   svn_revnum_t rev,
-                   void *diff_baton,
-                   apr_pool_t *scratch_pool)
-{
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-ignore_file_changed(svn_wc_notify_state_t *content_state,
-                    svn_wc_notify_state_t *prop_state,
-                    svn_boolean_t *tree_conflicted,
-                    const char *mine_relpath,
-                    const char *older_abspath,
-                    const char *yours_abspath,
-                    svn_revnum_t older_rev,
-                    svn_revnum_t yours_rev,
-                    const char *mimetype1,
-                    const char *mimetype2,
-                    const apr_array_header_t *prop_changes,
-                    apr_hash_t *original_props,
-                    void *baton,
-                    apr_pool_t *scratch_pool)
-{
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-ignore_file_added(svn_wc_notify_state_t *content_state,
-                  svn_wc_notify_state_t *prop_state,
-                  svn_boolean_t *tree_conflicted,
-                  const char *mine_relpath,
-                  const char *older_abspath,
-                  const char *yours_abspath,
-                  svn_revnum_t rev1,
-                  svn_revnum_t rev2,
-                  const char *mimetype1,
-                  const char *mimetype2,
-                  const char *copyfrom_path,
-                  svn_revnum_t copyfrom_revision,
-                  const apr_array_header_t *prop_changes,
-                  apr_hash_t *original_props,
-                  void *baton,
-                  apr_pool_t *scratch_pool)
-{
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-ignore_file_deleted(svn_wc_notify_state_t *state,
-                    svn_boolean_t *tree_conflicted,
-                    const char *mine_relpath,
-                    const char *older_abspath,
-                    const char *yours_abspath,
-                    const char *mimetype1,
-                    const char *mimetype2,
-                    apr_hash_t *original_props,
-                    void *baton,
-                    apr_pool_t *scratch_pool)
-{
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-ignore_dir_opened(svn_boolean_t *tree_conflicted,
-                  svn_boolean_t *skip,
-                  svn_boolean_t *skip_children,
-                  const char *local_relpath,
-                  svn_revnum_t rev,
-                  void *baton,
-                  apr_pool_t *scratch_pool)
-{
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-ignore_dir_props_changed(svn_wc_notify_state_t *state,
-                         svn_boolean_t *tree_conflicted,
-                         const char *local_relpath,
-                         svn_boolean_t dir_was_added,
-                         const apr_array_header_t *propchanges,
-                         apr_hash_t *original_props,
-                         void *diff_baton,
-                         apr_pool_t *scratch_pool)
-{
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-ignore_dir_added(svn_wc_notify_state_t *state,
-                svn_boolean_t *tree_conflicted,
-                svn_boolean_t *skip,
-                svn_boolean_t *skip_children,
-                const char *local_relpath,
-                svn_revnum_t rev,
-                const char *copyfrom_path,
-                svn_revnum_t copyfrom_revision,
-                void *baton,
-                apr_pool_t *scratch_pool)
-{
-  return SVN_NO_ERROR;
-}
-
-
-/* The main callback table for 'svn merge'.  */
-static const svn_wc_diff_callbacks4_t
-merge_callbacks =
-  {
-    ignore_file_opened,
-    ignore_file_changed,
-    ignore_file_added,
-    ignore_file_deleted,
-    merge_dir_deleted,
-    ignore_dir_opened,
-    ignore_dir_added,
-    ignore_dir_props_changed,
-    merge_dir_closed
-  };
-
 
 /*-----------------------------------------------------------------------*/
 
@@ -9362,14 +9278,7 @@ do_merge(apr_hash_t **modified_subtrees,
   merge_cmd_baton.nrb.pool = result_pool;
 
   {
-    const svn_diff_tree_processor_t *callback_processor;
     svn_diff_tree_processor_t *merge_processor;
-
-    SVN_ERR(svn_wc__wrap_diff_callbacks(&callback_processor,
-                                        &merge_callbacks, &merge_cmd_baton,
-                                        FALSE,
-                                        NULL, NULL, NULL, NULL,
-                                        scratch_pool, scratch_pool));
 
     merge_processor = svn_diff__tree_processor_create(&merge_cmd_baton,
                                                       scratch_pool);
@@ -9377,6 +9286,8 @@ do_merge(apr_hash_t **modified_subtrees,
     merge_processor->dir_opened   = merge_dir_opened;
     merge_processor->dir_changed  = merge_dir_changed;
     merge_processor->dir_added    = merge_dir_added;
+    merge_processor->dir_deleted  = merge_dir_deleted;
+    merge_processor->dir_closed   = merge_dir_closed;
 
     merge_processor->file_opened  = merge_file_opened;
     merge_processor->file_changed = merge_file_changed;
@@ -9386,9 +9297,7 @@ do_merge(apr_hash_t **modified_subtrees,
 
     merge_processor->node_absent = merge_node_absent;
 
-    processor = svn_diff__tree_processor_tee_create(callback_processor,
-                                                    merge_processor,
-                                                    scratch_pool);
+    processor = merge_processor;
   }
 
   if (src_session)
