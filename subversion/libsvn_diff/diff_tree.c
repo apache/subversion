@@ -969,8 +969,8 @@ tee_node_absent(const char *relpath,
 }
 
 const svn_diff_tree_processor_t *
-svn_diff__tree_processor_tee_create(svn_diff_tree_processor_t * processor1,
-                                    svn_diff_tree_processor_t * processor2,
+svn_diff__tree_processor_tee_create(const svn_diff_tree_processor_t *processor1,
+                                    const svn_diff_tree_processor_t *processor2,
                                     apr_pool_t *result_pool)
 {
   struct tee_baton_t *tb = apr_pcalloc(result_pool, sizeof(*tb));

@@ -242,8 +242,8 @@ svn_diff__tree_processor_reverse_create(svn_diff_tree_processor_t * processor,
  * @since New in 1.8.
  */ /* Used by libsvn clients repository diff */
 const svn_diff_tree_processor_t *
-svn_diff__tree_processor_tee_create(svn_diff_tree_processor_t * processor1,
-                                    svn_diff_tree_processor_t * processor2,
+svn_diff__tree_processor_tee_create(const svn_diff_tree_processor_t *processor1,
+                                    const svn_diff_tree_processor_t *processor2,
                                     apr_pool_t *result_pool);
 
 

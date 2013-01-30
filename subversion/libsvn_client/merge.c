@@ -9103,7 +9103,7 @@ do_merge(apr_hash_t **modified_subtrees,
   merge_cmd_baton.nrb.pool = result_pool;
 
   {
-    svn_diff_tree_processor_t *callback_processor;
+    const svn_diff_tree_processor_t *callback_processor;
     svn_diff_tree_processor_t *merge_processor;
 
     SVN_ERR(svn_wc__wrap_diff_callbacks(&callback_processor,
