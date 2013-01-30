@@ -1845,7 +1845,7 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
                             scratch_pool));
 
       if (content_outcome == svn_wc_merge_conflict
-          || *prop_state == svn_wc_notify_state_conflicted)
+          || property_state == svn_wc_notify_state_conflicted)
         {
           alloc_and_store_path(&merge_b->conflicted_paths, local_abspath,
                                merge_b->pool);
