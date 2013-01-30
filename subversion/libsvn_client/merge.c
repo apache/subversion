@@ -8108,6 +8108,13 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
                                       child_merge_src_fspath,
                                       child_merges, is_rollback,
                                       merge_b->ctx, iterpool));
+
+          /* Once is enough: We don't need to record mergeinfo describing
+             the merge a second.  If CHILD->ABSPATH is in
+             MERGE_B->ADDED_ABSPATHS, we'll do just that, so remove the
+             former from the latter. */
+          apr_hash_set(merge_b->added_abspaths, child->abspath,
+                       APR_HASH_KEY_STRING, NULL);
         }
 
       /* Elide explicit subtree mergeinfo whether or not we updated it. */
