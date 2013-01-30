@@ -1394,6 +1394,7 @@ check_tree_conflict(svn_skel_t **pconflict,
   svn_wc_conflict_reason_t reason = SVN_WC_CONFLICT_REASON_NONE;
   svn_boolean_t modified = FALSE;
   svn_boolean_t all_mods_are_deletes = FALSE;
+  const char *moved_away_op_root_abspath = NULL;
 
   *pconflict = NULL;
 
@@ -1431,21 +1432,26 @@ check_tree_conflict(svn_skel_t **pconflict,
           }
         else
           {
-            /* The node is locally replaced. */
-            reason = svn_wc_conflict_reason_replaced;
+            /* The node is locally replaced but could also be moved-away. */
+            SVN_ERR(svn_wc__db_base_moved_to(NULL, NULL,
+                                             &moved_away_op_root_abspath,
+                                             eb->db, local_abspath,
+                                             scratch_pool, scratch_pool));
+            if (moved_away_op_root_abspath)
+              reason = svn_wc_conflict_reason_moved_away;
+            else
+              reason = svn_wc_conflict_reason_replaced;
           }
         break;
 
 
       case svn_wc__db_status_deleted:
         {
-          const char *moved_to_abspath;
-
-          SVN_ERR(svn_wc__db_scan_deletion(NULL, &moved_to_abspath,
-                                           NULL, NULL, eb->db,
-                                           local_abspath,
+          SVN_ERR(svn_wc__db_base_moved_to(NULL, NULL,
+                                           &moved_away_op_root_abspath,
+                                           eb->db, local_abspath,
                                            scratch_pool, scratch_pool));
-          if (moved_to_abspath)
+          if (moved_away_op_root_abspath)
             reason = svn_wc_conflict_reason_moved_away;
           else
             reason = svn_wc_conflict_reason_deleted;
@@ -1560,6 +1566,7 @@ check_tree_conflict(svn_skel_t **pconflict,
                                                   eb->db, local_abspath,
                                                   reason,
                                                   action,
+                                                  moved_away_op_root_abspath,
                                                   result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -1795,7 +1802,7 @@ delete_entry(const char *path,
       apr_hash_set(pb->deletion_conflicts, apr_pstrdup(pb->pool, base),
                    APR_HASH_KEY_STRING, tree_conflict);
 
-      SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, NULL,
+      SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, NULL, NULL,
                                                   eb->db, local_abspath,
                                                   tree_conflict,
                                                   scratch_pool, scratch_pool));
@@ -2051,7 +2058,7 @@ add_directory(const char *path,
           /* ### Should store the conflict in DB to allow reinstalling
              ### with theoretically more data in close_directory() */
 
-          SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, NULL,
+          SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, NULL, NULL,
                                                       eb->db,
                                                       db->local_abspath,
                                                       tree_conflict,
@@ -2063,6 +2070,7 @@ add_directory(const char *path,
                                         tree_conflict,
                                         eb->db, db->local_abspath,
                                         reason, svn_wc_conflict_action_replace,
+                                        NULL,
                                         db->pool, db->pool));
 
           /* And now stop checking for conflicts here and just perform
@@ -2187,7 +2195,7 @@ add_directory(const char *path,
                                         tree_conflict,
                                         eb->db, db->local_abspath,
                                         svn_wc_conflict_reason_unversioned,
-                                        svn_wc_conflict_action_add,
+                                        svn_wc_conflict_action_add, NULL,
                                         db->pool, pool));
           db->edit_conflict = tree_conflict;
         }
@@ -2356,7 +2364,7 @@ open_directory(const char *path,
       db->edit_conflict = tree_conflict;
       /* Other modifications wouldn't be a tree conflict */
 
-      SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, NULL,
+      SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, NULL, NULL,
                                                   eb->db, db->local_abspath,
                                                   tree_conflict,
                                                   db->pool, db->pool));
@@ -3136,7 +3144,7 @@ add_file(const char *path,
           /* ### Should store the conflict in DB to allow reinstalling
              ### with theoretically more data in close_directory() */
 
-          SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, NULL,
+          SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, NULL, NULL,
                                                       eb->db,
                                                       fb->local_abspath,
                                                       tree_conflict,
@@ -3148,6 +3156,7 @@ add_file(const char *path,
                                         tree_conflict,
                                         eb->db, fb->local_abspath,
                                         reason, svn_wc_conflict_action_replace,
+                                        NULL,
                                         fb->pool, fb->pool));
 
           /* And now stop checking for conflicts here and just perform
@@ -3270,6 +3279,7 @@ add_file(const char *path,
                                         eb->db, fb->local_abspath,
                                         svn_wc_conflict_reason_unversioned,
                                         svn_wc_conflict_action_add,
+                                        NULL,
                                         fb->pool, scratch_pool));
         }
     }
@@ -3419,7 +3429,7 @@ open_file(const char *path,
       fb->edit_conflict = tree_conflict;
       /* Other modifications wouldn't be a tree conflict */
 
-      SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, NULL,
+      SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, NULL, NULL,
                                                   eb->db, fb->local_abspath,
                                                   tree_conflict,
                                                   scratch_pool, scratch_pool));
@@ -3655,6 +3665,7 @@ change_file_prop(void *file_baton,
                                      eb->db, fb->local_abspath,
                                      svn_wc_conflict_reason_edited,
                                      svn_wc_conflict_action_replace,
+                                     NULL,
                                      fb->pool, scratch_pool));
 
           SVN_ERR(complete_conflict(fb->edit_conflict, fb->dir_baton,

@@ -229,7 +229,7 @@ raise_tree_conflict(int argc, const char **argv, apr_pool_t *pool)
 
   /* Raise the conflict */
   SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
-  SVN_ERR(svn_wc__add_tree_conflict(wc_ctx, c, pool));
+  SVN_ERR(svn_wc__add_tree_conflict(wc_ctx, c, NULL, pool));
 
   return SVN_NO_ERROR;
 }

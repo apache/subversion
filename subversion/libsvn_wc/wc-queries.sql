@@ -96,7 +96,7 @@ FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 
 -- STMT_SELECT_LOWEST_WORKING_NODE
-SELECT op_depth, presence, kind
+SELECT op_depth, presence, kind, moved_to
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > ?3
 ORDER BY op_depth

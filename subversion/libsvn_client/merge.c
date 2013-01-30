@@ -765,7 +765,8 @@ tree_conflict(merge_cmd_baton_t *merge_b,
               const char *victim_abspath,
               svn_node_kind_t node_kind,
               svn_wc_conflict_action_t action,
-              svn_wc_conflict_reason_t reason)
+              svn_wc_conflict_reason_t reason,
+              const char *moved_away_op_root_abspath)
 {
   const svn_wc_conflict_description2_t *existing_conflict;
   svn_error_t *err;
@@ -796,6 +797,7 @@ tree_conflict(merge_cmd_baton_t *merge_b,
                                  &merge_b->merge_source, merge_b->target,
                                  merge_b->pool));
       SVN_ERR(svn_wc__add_tree_conflict(merge_b->ctx->wc_ctx, conflict,
+                                        moved_away_op_root_abspath,
                                         merge_b->pool));
 
       alloc_and_store_path(&merge_b->conflicted_paths, victim_abspath,
@@ -836,6 +838,7 @@ tree_conflict_on_add(merge_cmd_baton_t *merge_b,
     {
       /* There is no existing tree conflict so it is safe to add one. */
       SVN_ERR(svn_wc__add_tree_conflict(merge_b->ctx->wc_ctx, conflict,
+                                        NULL,
                                         merge_b->pool));
 
       alloc_and_store_path(&merge_b->conflicted_paths, victim_abspath,
@@ -863,6 +866,7 @@ tree_conflict_on_add(merge_cmd_baton_t *merge_b,
                                      merge_b->pool);
 
       SVN_ERR(svn_wc__add_tree_conflict(merge_b->ctx->wc_ctx, conflict,
+                                        NULL,
                                         merge_b->pool));
 
       alloc_and_store_path(&merge_b->conflicted_paths, victim_abspath,
@@ -1397,21 +1401,23 @@ prepare_merge_props_changed(const apr_array_header_t **prop_updates,
 
 /* Indicate in *MOVED_AWAY whether the node at LOCAL_ABSPATH was
  * moved away locally. Do not raise an error if the node at LOCAL_ABSPATH
- * does not exist. */
+ * does not exist.
+ *
+ * ### Currently this looks at the highest moved-to but should merge
+ * ### be looking at the lowest moved-to?  Or perhaps only the base
+ * ### moved-to? */
 static svn_error_t *
-check_moved_away(svn_boolean_t *moved_away,
+check_moved_away(const char **op_root_abspath,
                  svn_wc_context_t *wc_ctx,
                  const char *local_abspath,
                  apr_pool_t *scratch_pool)
 {
   const char *moved_to_abspath;
 
-  SVN_ERR(svn_wc__node_was_moved_away(&moved_to_abspath, NULL,
+  SVN_ERR(svn_wc__node_was_moved_away(&moved_to_abspath, op_root_abspath,
                                       wc_ctx, local_abspath,
                                       scratch_pool, scratch_pool));
   
-  *moved_away = (moved_to_abspath != NULL);
-
   return SVN_NO_ERROR;
 }
 
@@ -1731,8 +1737,8 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
      way svn_wc_merge5() can do the merge. */
   if (wc_kind != svn_node_file || is_deleted)
     {
-      svn_boolean_t moved_away;
       svn_wc_conflict_reason_t reason;
+      const char *moved_away_op_root_abspath = NULL;
 
       /* Maybe the node is excluded via depth filtering? */
 
@@ -1762,9 +1768,9 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
        */
       if (is_deleted)
         {
-          SVN_ERR(check_moved_away(&moved_away, ctx->wc_ctx,
+          SVN_ERR(check_moved_away(&moved_away_op_root_abspath, ctx->wc_ctx,
                                    local_abspath, scratch_pool));
-          if (moved_away)
+          if (moved_away_op_root_abspath)
             reason = svn_wc_conflict_reason_moved_away;
           else
             reason = svn_wc_conflict_reason_deleted;
@@ -1773,7 +1779,8 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
         reason = svn_wc_conflict_reason_missing;
 
       SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_file,
-                            svn_wc_conflict_action_edit, reason));
+                            svn_wc_conflict_action_edit, reason,
+                            moved_away_op_root_abspath));
       SVN_ERR(record_tree_conflict(merge_b, local_abspath, svn_node_file,
                                    scratch_pool));
       return SVN_NO_ERROR;
@@ -2234,15 +2241,15 @@ merge_file_deleted(svn_wc_notify_state_t *state,
   if (kind != svn_node_file || is_deleted)
     {
       svn_wc_conflict_reason_t reason;
+      const char *moved_away_op_root_abspath = NULL;
 
       if (is_deleted)
         {
-          svn_boolean_t moved_away;
-
-          SVN_ERR(check_moved_away(&moved_away, merge_b->ctx->wc_ctx,
+          SVN_ERR(check_moved_away(&moved_away_op_root_abspath,
+                                   merge_b->ctx->wc_ctx,
                                    local_abspath, scratch_pool));
 
-          if (moved_away)
+          if (moved_away_op_root_abspath)
             reason = svn_wc_conflict_reason_moved_away;
           else
             reason = svn_wc_conflict_reason_deleted;
@@ -2251,7 +2258,8 @@ merge_file_deleted(svn_wc_notify_state_t *state,
         reason = svn_wc_conflict_reason_missing;
 
       SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_file,
-                            svn_wc_conflict_action_delete, reason));
+                            svn_wc_conflict_action_delete, reason,
+                            moved_away_op_root_abspath));
 
       SVN_ERR(record_tree_conflict(merge_b, local_abspath, svn_node_dir,
                                    scratch_pool));
@@ -2289,7 +2297,7 @@ merge_file_deleted(svn_wc_notify_state_t *state,
        */
       SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_file,
                             svn_wc_conflict_action_delete,
-                            svn_wc_conflict_reason_edited));
+                            svn_wc_conflict_reason_edited, NULL));
 
       SVN_ERR(record_tree_conflict(merge_b, local_abspath, svn_node_dir,
                                    scratch_pool));
@@ -2392,7 +2400,7 @@ merge_dir_opened(svn_boolean_t *tree_conflicted,
         {
           SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
                                 svn_wc_conflict_action_edit,
-                                svn_wc_conflict_reason_replaced));
+                                svn_wc_conflict_reason_replaced, NULL));
 
           *skip_children = TRUE;
           SVN_ERR(record_tree_conflict(merge_b, local_abspath, svn_node_dir,
@@ -2411,21 +2419,24 @@ merge_dir_opened(svn_boolean_t *tree_conflicted,
       else if (is_deleted || wc_kind == svn_node_none)
         {
           svn_wc_conflict_reason_t reason;
+          const char *moved_away_op_root_abspath = NULL;
 
           if (is_deleted)
             {
-              svn_boolean_t moved_away;
-
-              SVN_ERR(check_moved_away(&moved_away, merge_b->ctx->wc_ctx,
+              SVN_ERR(check_moved_away(&moved_away_op_root_abspath,
+                                       merge_b->ctx->wc_ctx,
                                        local_abspath, scratch_pool));
-              reason = moved_away ? svn_wc_conflict_reason_moved_away
-                                  : svn_wc_conflict_reason_deleted;
+              if (moved_away_op_root_abspath)
+                reason = svn_wc_conflict_reason_moved_away;
+              else
+                reason = svn_wc_conflict_reason_deleted;
             }
           else
             reason = svn_wc_conflict_reason_missing;
 
           SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
-                                svn_wc_conflict_action_edit, reason));
+                                svn_wc_conflict_action_edit, reason,
+                                moved_away_op_root_abspath));
 
           *skip = TRUE;
           *skip_children = TRUE;
@@ -2470,15 +2481,15 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
   if (kind != svn_node_dir || is_deleted)
     {
       svn_wc_conflict_reason_t reason;
+      const char *moved_away_op_root_abspath = NULL;
 
       if (is_deleted)
         {
-          svn_boolean_t moved_away;
-
-          SVN_ERR(check_moved_away(&moved_away, merge_b->ctx->wc_ctx,
+          SVN_ERR(check_moved_away(&moved_away_op_root_abspath,
+                                   merge_b->ctx->wc_ctx,
                                    local_abspath, scratch_pool));
 
-          if (moved_away)
+          if (moved_away_op_root_abspath)
             reason = svn_wc_conflict_reason_moved_away;
           else
             reason = svn_wc_conflict_reason_deleted;
@@ -2487,7 +2498,8 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
         reason = svn_wc_conflict_reason_missing;
 
       SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_file,
-                            svn_wc_conflict_action_edit, reason));
+                            svn_wc_conflict_action_edit, reason,
+                            moved_away_op_root_abspath));
 
       SVN_ERR(record_tree_conflict(merge_b, local_abspath, svn_node_dir,
                                    scratch_pool));
@@ -2792,15 +2804,15 @@ merge_dir_deleted(svn_wc_notify_state_t *state,
   if (kind != svn_node_dir || is_deleted)
     {
       svn_wc_conflict_reason_t reason;
+      const char *moved_away_op_root_abspath = NULL;
 
       if (is_deleted)
         {
-          svn_boolean_t moved_away;
-
-          SVN_ERR(check_moved_away(&moved_away, merge_b->ctx->wc_ctx,
+          SVN_ERR(check_moved_away(&moved_away_op_root_abspath,
+                                   merge_b->ctx->wc_ctx,
                                    local_abspath, scratch_pool));
 
-          if (moved_away)
+          if (moved_away_op_root_abspath)
             reason = svn_wc_conflict_reason_moved_away;
           else
             reason = svn_wc_conflict_reason_deleted;
@@ -2809,7 +2821,8 @@ merge_dir_deleted(svn_wc_notify_state_t *state,
         reason = svn_wc_conflict_reason_missing;
 
       SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
-                            svn_wc_conflict_action_delete, reason));
+                            svn_wc_conflict_action_delete, reason,
+                            moved_away_op_root_abspath));
 
       SVN_ERR(record_tree_conflict(merge_b, local_abspath, svn_node_file,
                                    scratch_pool));
@@ -2839,7 +2852,7 @@ merge_dir_deleted(svn_wc_notify_state_t *state,
        * files, or property changes). Flag a tree conflict. */
       SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
                             svn_wc_conflict_action_delete,
-                            svn_wc_conflict_reason_edited));
+                            svn_wc_conflict_reason_edited, NULL));
 
       SVN_ERR(record_tree_conflict(merge_b, local_abspath, svn_node_dir,
                                    scratch_pool));

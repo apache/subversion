@@ -3271,6 +3271,15 @@ svn_wc__db_update_moved_away_conflict_victim(svn_skel_t **work_items,
                                              apr_pool_t *result_pool,
                                              apr_pool_t *scratch_pool);
 
+svn_error_t *
+svn_wc__db_base_moved_to(const char **moved_to_abspath,
+                         const char **moved_to_op_root_abspath,
+                         const char **op_root_abspath,
+                         svn_wc__db_t *db,
+                         const char *local_abspath,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+                         
 /* Recover space from the database file for LOCAL_ABSPATH by running
  * the "vacuum" command. */
 svn_error_t *
