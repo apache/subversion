@@ -1235,7 +1235,7 @@ def upgrade_missing_replaced(sbox):
   # Pass the old status tree to avoid testing via entries-dump
   # as fetching the entries crashes on the invalid db state.
   svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output,
-                                        None, expected_status.old_tree())
+                                        None, expected_status)
 
   svntest.actions.run_and_verify_svn(None, 'Reverted.*', [], 'revert', '-R',
                                      sbox.wc_dir)
