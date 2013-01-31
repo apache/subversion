@@ -3099,8 +3099,6 @@ merge_dir_deleted(const char *relpath,
   struct merge_dir_baton_t *db = dir_baton;
   const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
                                               relpath, scratch_pool);
-  svn_node_kind_t kind;
-  svn_boolean_t is_deleted;
   svn_error_t *err;
 
   SVN_ERR(handle_pending_notifications(merge_b, local_abspath, scratch_pool));
