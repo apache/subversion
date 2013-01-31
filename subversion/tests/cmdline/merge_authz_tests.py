@@ -258,7 +258,7 @@ def mergeinfo_and_skipped_paths(sbox):
   expected_skip = wc.State(A_COPY_2_path, {
     'B/E'     : Item(verb='Skipped missing target'),
     'D/G'     : Item(verb='Skipped missing target'),
-    'D/G/rho' : Item(verb='Skipped'),
+    'D/G/rho' : Item(verb='Skipped missing target'),
     'D/H/psi' : Item(verb='Skipped missing target'),
     })
   svntest.actions.run_and_verify_merge(A_COPY_2_path, '4', '8',

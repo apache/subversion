@@ -7821,8 +7821,8 @@ def merge_to_sparse_directories(sbox):
                               "prop:name" : "propval"}),
     })
   expected_skip = svntest.wc.State(immediates_dir, {
-    'D/H/omega' : Item(verb="Skipped"),
-    'B/E/beta'  : Item(verb="Skipped"),
+    'D/H/omega' : Item(verb='Skipped missing target'),
+    'B/E/beta'  : Item(verb='Skipped missing target'),
     })
   svntest.actions.run_and_verify_merge(immediates_dir, '4', '9',
                                        sbox.repo_url + '/A', None,
@@ -7876,8 +7876,8 @@ def merge_to_sparse_directories(sbox):
     })
   expected_skip = svntest.wc.State(files_dir, {
     'D'         : Item(verb='Skipped missing target'),
-    'D/H/omega' : Item(verb="Skipped"),
-    'B/E/beta'  : Item(verb="Skipped"),
+    'D/H/omega' : Item(verb='Skipped missing target'),
+    'B/E/beta'  : Item(verb='Skipped missing target'),
     })
   svntest.actions.run_and_verify_merge(files_dir, '4', '9',
                                        sbox.repo_url + '/A', None,
@@ -7919,10 +7919,10 @@ def merge_to_sparse_directories(sbox):
                               "prop:name" : "propval"}),
     })
   expected_skip = svntest.wc.State(empty_dir, {
-    'mu'        : Item(verb="Skipped missing target"),
-    'D'         : Item(verb="Skipped missing target"),
-    'D/H/omega' : Item(verb="Skipped"),
-    'B/E/beta'  : Item(verb="Skipped"),
+    'mu'        : Item(verb='Skipped missing target'),
+    'D'         : Item(verb='Skipped missing target'),
+    'D/H/omega' : Item(verb='Skipped missing target'),
+    'B/E/beta'  : Item(verb='Skipped missing target'),
     })
   svntest.actions.run_and_verify_merge(empty_dir, '4', '9',
                                        sbox.repo_url + '/A', None,
