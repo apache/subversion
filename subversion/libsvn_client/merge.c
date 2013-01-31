@@ -2071,7 +2071,7 @@ merge_file_opened(void **new_file_baton,
                        APR_HASH_KEY_STRING, NULL);
         }
 
-      if (! (merge_b->dry_run && (pdb && pdb->added || fb->add_is_replace)))
+      if (! (merge_b->dry_run && ((pdb && pdb->added) || fb->add_is_replace)))
         {
           svn_wc_notify_state_t obstr_state;
           svn_node_kind_t kind;
@@ -2790,7 +2790,7 @@ merge_dir_opened(void **new_dir_baton,
                        APR_HASH_KEY_STRING, NULL);
         }
 
-      if (! (merge_b->dry_run && (pdb && pdb->added || db->add_is_replace)))
+      if (! (merge_b->dry_run && ((pdb && pdb->added) || db->add_is_replace)))
         {
           svn_wc_notify_state_t obstr_state;
           svn_node_kind_t kind;
