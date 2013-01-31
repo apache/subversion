@@ -905,7 +905,11 @@ def reintegrate_on_shallow_wc(sbox):
   expected_A_disk.tweak('D', props={SVN_PROP_MERGEINFO : '/A_COPY/D:2-4*'})
   # ... a depth-restricted item is skipped ...
   expected_A_skip.add({
-      'D/H/psi' : Item(verb='Skipped')
+      'D/H' : Item(verb='Skipped missing target')
+  })
+  expected_output.add({
+    # Below the skip
+    'D/H/psi'           : Item(status='  ', treeconflict='U'),
   })
   # Currently this fails due to r1424469.  For a full explanation see
   # http://svn.haxx.se/dev/archive-2012-12/0472.shtml

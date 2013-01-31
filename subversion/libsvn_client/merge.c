@@ -1537,6 +1537,7 @@ static svn_error_t *
 record_skip(const merge_cmd_baton_t *merge_b,
             const char *local_abspath,
             svn_node_kind_t kind,
+            svn_wc_notify_action_t action,
             svn_wc_notify_state_t state,
             apr_pool_t *scratch_pool)
 {
@@ -1553,8 +1554,7 @@ record_skip(const merge_cmd_baton_t *merge_b,
     {
       svn_wc_notify_t *notify;
 
-      notify = svn_wc_create_notify(local_abspath, svn_wc_notify_skip,
-                                    scratch_pool);
+      notify = svn_wc_create_notify(local_abspath, action, scratch_pool);
       notify->kind = kind;
       notify->content_state = notify->prop_state = state;
 
@@ -2071,8 +2071,15 @@ merge_file_opened(void **new_file_baton,
                 {
                   fb->shadowed = TRUE;
 
-                  /*db->tree_conflict_reason = CONFLICT_REASON_SKIP; */
+                  fb->tree_conflict_reason = CONFLICT_REASON_SKIP;
                   fb->skip_reason = svn_wc_notify_state_missing;
+
+                  if (merge_b->merge_source.ancestral
+                      || merge_b->reintegrate_merge)
+                    {
+                      store_path(merge_b->skipped_abspaths, local_abspath);
+                    }
+
                   return SVN_NO_ERROR;
                 }
             }
@@ -2198,6 +2205,7 @@ merge_file_changed(const char *relpath,
         {
           /* We haven't notified for this node yet: report a skip */
           SVN_ERR(record_skip(merge_b, local_abspath, svn_node_file,
+                              svn_wc_notify_update_shadowed_update,
                               fb->skip_reason, scratch_pool));
         }
 
@@ -2341,6 +2349,7 @@ merge_file_added(const char *relpath,
         {
           /* We haven't notified for this node yet: report a skip */
           SVN_ERR(record_skip(merge_b, local_abspath, svn_node_file,
+                              svn_wc_notify_update_shadowed_add,
                               fb->skip_reason, scratch_pool));
         }
 
@@ -2594,6 +2603,7 @@ merge_file_deleted(const char *relpath,
         {
           /* We haven't notified for this node yet: report a skip */
           SVN_ERR(record_skip(merge_b, local_abspath, svn_node_file,
+                              svn_wc_notify_update_shadowed_delete,
                               fb->skip_reason, scratch_pool));
         }
 
@@ -2774,8 +2784,15 @@ merge_dir_opened(void **new_dir_baton,
                 {
                   db->shadowed = TRUE;
 
-                  /*db->tree_conflict_reason = CONFLICT_REASON_SKIP; */
+                  db->tree_conflict_reason = CONFLICT_REASON_SKIP;
                   db->skip_reason = svn_wc_notify_state_missing;
+
+                  if (merge_b->merge_source.ancestral
+                      || merge_b->reintegrate_merge)
+                    {
+                      store_path(merge_b->skipped_abspaths, local_abspath);
+                    }
+
                   return SVN_NO_ERROR;
                 }
             }
@@ -2973,6 +2990,7 @@ merge_dir_changed(const char *relpath,
         {
           /* We haven't notified for this node yet: report a skip */
           SVN_ERR(record_skip(merge_b, local_abspath, svn_node_dir,
+                              svn_wc_notify_update_shadowed_update,
                               db->skip_reason, scratch_pool));
         }
 
@@ -3055,6 +3073,7 @@ merge_dir_added(const char *relpath,
         {
           /* We haven't notified for this node yet: report a skip */
           SVN_ERR(record_skip(merge_b, local_abspath, svn_node_dir,
+                              svn_wc_notify_update_shadowed_add,
                               db->skip_reason, scratch_pool));
         }
 
@@ -3190,6 +3209,7 @@ merge_dir_deleted(const char *relpath,
         {
           /* We haven't notified for this node yet: report a skip */
           SVN_ERR(record_skip(merge_b, local_abspath, svn_node_dir,
+                              svn_wc_notify_update_shadowed_delete,
                               db->skip_reason, scratch_pool));
         }
 
@@ -3298,7 +3318,7 @@ merge_node_absent(const char *relpath,
                                               relpath, scratch_pool);
 
   record_skip(merge_b, local_abspath, svn_node_unknown,
-              svn_wc_notify_state_missing, scratch_pool);
+              svn_wc_notify_skip, svn_wc_notify_state_missing, scratch_pool);
 
   return SVN_NO_ERROR;
 }
