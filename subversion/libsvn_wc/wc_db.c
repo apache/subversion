@@ -11208,7 +11208,10 @@ scan_addition_txn(svn_wc__db_status_t *status,
           SVN_ERR_ASSERT(!original_repos_id
                          || *original_repos_id == INVALID_REPOS_ID);
         }
-      else
+      /* An upgrade with a missing directory can leave INCOMPLETE working
+         op-roots. See upgrade_tests.py 29: upgrade with missing replaced dir
+       */
+      else if (*status != svn_wc__db_status_incomplete)
         {
           SVN_ERR_ASSERT(!original_repos_relpath
                          || *original_repos_relpath != NULL);
