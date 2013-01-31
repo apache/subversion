@@ -3361,6 +3361,7 @@ notify_merge_begin(merge_cmd_baton_t *merge_b,
   if (merge_b->merge_source.ancestral
       && ! merge_b->is_single_file_merge)
     {
+      const svn_client__merge_path_t *child;
       /* Find NOTIFY->PATH's nearest ancestor in
          NOTIFY->CHILDREN_WITH_MERGEINFO.  Normally we consider a child in
          NOTIFY->CHILDREN_WITH_MERGEINFO representing PATH to be an
@@ -3376,14 +3377,17 @@ notify_merge_begin(merge_cmd_baton_t *merge_b,
            --- Merging rX into 'PARENT'
            D    PARENT/CHILD
       */
-      const svn_client__merge_path_t *child
-        = find_nearest_ancestor(
-            merge_b->children_with_mergeinfo,
-            ! delete_action,
-            local_abspath);
+
+      child = find_nearest_ancestor(merge_b->children_with_mergeinfo,
+                                    ! delete_action, local_abspath);
+
+      assert(child != NULL); /* Should always find the merge anchor */
+
+      if (! child)
+        return SVN_NO_ERROR;
 
       if (merge_b->cur_ancestor_abspath != NULL
-          && strcmp(child->abspath, merge_b->cur_ancestor_abspath))
+          && strcmp(child->abspath, merge_b->cur_ancestor_abspath) == 0)
         {
           /* Don't notify the same merge again */
           return SVN_NO_ERROR;
