@@ -1512,6 +1512,7 @@ def merge_skips_obstructions(sbox):
 
   expected_output = wc.State(C_path, {
     'foo'    : Item(status='A '),
+    'Q/bar'  : Item(status='  ', treeconflict='A'), # Skipped
     })
   expected_mergeinfo_output = wc.State(C_path, {
     '' : Item(status=' U'),
@@ -1529,7 +1530,6 @@ def merge_skips_obstructions(sbox):
     })
   expected_skip = wc.State(C_path, {
     'Q'     : Item(verb='Skipped'),
-    'Q/bar' : Item(verb='Skipped'),
     })
 
   svntest.actions.run_and_verify_merge(C_path, '1', '2', F_url, None,
@@ -7796,6 +7796,9 @@ def merge_to_sparse_directories(sbox):
     'D'   : Item(status=' U'),
     'mu'  : Item(status='U '),
     ''    : Item(status=' U'),
+    # Shadowed below skips
+    'D/H/omega' : Item(status='  ', treeconflict='U'),
+    'B/E/beta'  : Item(status='  ', treeconflict='U'),
     })
   expected_mergeinfo_output = wc.State(immediates_dir, {
     ''  : Item(status=' U'),
@@ -7821,8 +7824,8 @@ def merge_to_sparse_directories(sbox):
                               "prop:name" : "propval"}),
     })
   expected_skip = svntest.wc.State(immediates_dir, {
-    'D/H/omega' : Item(verb='Skipped missing target'),
-    'B/E/beta'  : Item(verb='Skipped missing target'),
+    'D/H'       : Item(verb='Skipped missing target'),
+    'B/E'       : Item(verb='Skipped missing target'),
     })
   svntest.actions.run_and_verify_merge(immediates_dir, '4', '9',
                                        sbox.repo_url + '/A', None,
@@ -7857,6 +7860,9 @@ def merge_to_sparse_directories(sbox):
   expected_output = wc.State(files_dir, {
     'mu' : Item(status='U '),
     ''   : Item(status=' U'),
+    # Below the skips
+    'D/H/omega' : Item(status='  ', treeconflict='U'),
+    'B/E/beta'  : Item(status='  ', treeconflict='U'),
     })
   expected_mergeinfo_output = wc.State(files_dir, {
     ''   : Item(status=' U'),
@@ -7876,8 +7882,7 @@ def merge_to_sparse_directories(sbox):
     })
   expected_skip = svntest.wc.State(files_dir, {
     'D'         : Item(verb='Skipped missing target'),
-    'D/H/omega' : Item(verb='Skipped missing target'),
-    'B/E/beta'  : Item(verb='Skipped missing target'),
+    'B'         : Item(verb='Skipped missing target'),
     })
   svntest.actions.run_and_verify_merge(files_dir, '4', '9',
                                        sbox.repo_url + '/A', None,
@@ -7905,6 +7910,9 @@ def merge_to_sparse_directories(sbox):
   # the one change that affects it directly (the prop add from r9).
   expected_output = wc.State(empty_dir, {
     ''   : Item(status=' U'),
+    # Below the skips
+    'B/E/beta'  : Item(status='  ', treeconflict='U'),
+    'D/H/omega' : Item(status='  ', treeconflict='U'),
     })
   expected_mergeinfo_output = wc.State(empty_dir, {
     '' : Item(status=' U'),
@@ -7921,8 +7929,7 @@ def merge_to_sparse_directories(sbox):
   expected_skip = svntest.wc.State(empty_dir, {
     'mu'        : Item(verb='Skipped missing target'),
     'D'         : Item(verb='Skipped missing target'),
-    'D/H/omega' : Item(verb='Skipped missing target'),
-    'B/E/beta'  : Item(verb='Skipped missing target'),
+    'B'         : Item(verb='Skipped missing target'),
     })
   svntest.actions.run_and_verify_merge(empty_dir, '4', '9',
                                        sbox.repo_url + '/A', None,

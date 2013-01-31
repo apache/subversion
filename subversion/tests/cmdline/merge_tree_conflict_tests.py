@@ -1284,6 +1284,14 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
 
   sbox.build()
   expected_output = wc.State('', {
+  # Below the skips
+  'DD/D1/D2'          : Item(status='  ', treeconflict='U'),
+  'DD/D1/D2/epsilon'  : Item(status='  ', treeconflict='A'),
+  'DDD/D1/D2/D3'      : Item(status='  ', treeconflict='U'),
+  'DDD/D1/D2/D3/zeta' : Item(status='  ', treeconflict='A'),
+  'DDF/D1/D2/gamma'   : Item(status='  ', treeconflict='U'),
+  'D/D1/delta'        : Item(status='  ', treeconflict='A'),
+  'DF/D1/beta'        : Item(status='  ', treeconflict='U'),
   })
 
   expected_disk = disk_after_tree_del
@@ -1315,19 +1323,12 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
   expected_skip = svntest.wc.State('', {
     'F/alpha'           : Item(verb='Skipped missing target'),
     # Obstruction handling improvements in 1.7 and 1.8 added
-    'DF/D1/beta'        : Item(verb='Skipped missing target'),
-    'DDD/D1/D2/D3/zeta' : Item(verb='Skipped missing target'),
-    'DDD/D1/D2/D3'      : Item(verb='Skipped missing target'),
-    'DDF/D1/D2/gamma'   : Item(verb='Skipped missing target'),
-    'D/D1/delta'        : Item(verb='Skipped missing target'),
-    'D/D1'              : Item(verb='Skipped missing target'),
-    'DD/D1/D2/epsilon'  : Item(verb='Skipped missing target'),
-    'DD/D1/D2'          : Item(verb='Skipped missing target'),
-    # And more recent changes added the obstruction roots
-    'DD/D1'             : Item(verb='Skipped missing target'),
-    'DF/D1'             : Item(verb='Skipped missing target'),
     'DDD/D1'            : Item(verb='Skipped missing target'),
+    'DF/D1'             : Item(verb='Skipped missing target'),
     'DDF/D1'            : Item(verb='Skipped missing target'),
+    'D/D1'              : Item(verb='Skipped missing target'),
+    'DD/D1'             : Item(verb='Skipped missing target'),
+    'F/alpha'           : Item(verb='Skipped missing target'),
   })
 
   # Currently this test fails because some parts of the merge
@@ -1361,6 +1362,11 @@ def tree_conflicts_merge_del_onto_missing(sbox):
 
   sbox.build()
   expected_output = wc.State('', {
+  # Below the skips
+    'DF/D1/beta'        : Item(status='  ', treeconflict='D'),
+    'DDD/D1/D2/D3'      : Item(status='  ', treeconflict='D'),
+    'DD/D1/D2'          : Item(status='  ', treeconflict='D'),
+    'DDF/D1/D2/gamma'   : Item(status='  ', treeconflict='D'),
   })
 
   expected_disk = disk_after_tree_del
@@ -1393,15 +1399,10 @@ def tree_conflicts_merge_del_onto_missing(sbox):
     'F/alpha'           : Item(verb='Skipped missing target'),
     'D/D1'              : Item(verb='Skipped missing target'),
     # Obstruction handling improvements in 1.7 and 1.8 added
-    'DD/D1/D2'          : Item(verb='Skipped missing target'),
-    'DF/D1/beta'        : Item(verb='Skipped missing target'),
-    'DDD/D1/D2/D3'      : Item(verb='Skipped missing target'),
-    'DDF/D1/D2/gamma'   : Item(verb='Skipped missing target'),
-    # And more recent changes added the obstruction roots
-    'DDF/D1'            : Item(verb='Skipped missing target'),
-    'DF/D1'             : Item(verb='Skipped missing target'),
     'DDD/D1'            : Item(verb='Skipped missing target'),
     'DD/D1'             : Item(verb='Skipped missing target'),
+    'DDF/D1'            : Item(verb='Skipped missing target'),
+    'DF/D1'             : Item(verb='Skipped missing target'),
   })
 
   svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
