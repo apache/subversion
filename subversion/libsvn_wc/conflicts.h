@@ -201,6 +201,19 @@ svn_wc__conflict_skel_add_prop_conflict(svn_skel_t *conflict_skel,
    It is an error to add another tree conflict to a conflict skel that
    already contains a tree conflict.
 
+   MOVED_AWAY_OP_ROOT_ABSPATH must be set when LOCAL_CHANGE is
+   svn_wc_conflict_reason_moved_away and NULL otherwise.  It should be
+   set to the op-root of the move-away unless the move is inside a
+   delete in which case it should be set to the op-root of the delete
+   (the delete can be a replace). So given:
+       A/B/C moved away (1)
+       A deleted and replaced
+       A/B/C moved away (2)
+       A/B deleted
+   MOVED_AWAY_OP_ROOT_ABSPATH should be A for a conflict associated
+   with (1), MOVED_AWAY_OP_ROOT_ABSPATH should be A/B for a conflict
+   associated with (2).
+
    ### Is it an error to add a tree conflict to any existing conflict?
 
    Do temporary allocations in SCRATCH_POOL.
