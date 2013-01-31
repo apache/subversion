@@ -2328,8 +2328,6 @@ merge_file_added(const char *relpath,
   struct merge_file_baton_t *fb = file_baton;
   const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
                                               relpath, scratch_pool);
-  svn_node_kind_t kind;
-  svn_boolean_t is_deleted;
   apr_hash_t *pristine_props;
   apr_hash_t *new_props;
 
@@ -2586,8 +2584,6 @@ merge_file_deleted(const char *relpath,
   struct merge_file_baton_t *fb = file_baton;
   const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
                                               relpath, scratch_pool);
-  svn_node_kind_t kind;
-  svn_boolean_t is_deleted;
   svn_boolean_t same;
 
   SVN_ERR(mark_file_edited(merge_b, fb, local_abspath, scratch_pool));
