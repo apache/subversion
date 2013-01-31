@@ -9563,6 +9563,9 @@ do_merge(apr_hash_t **modified_subtrees,
               *modified_subtrees =
                   apr_hash_overlay(result_pool, *modified_subtrees,
                                    merge_cmd_baton.skipped_abspaths);
+              *modified_subtrees =
+                  apr_hash_overlay(result_pool, *modified_subtrees,
+                                   merge_cmd_baton.tree_conflicted_abspaths);
             }
         }
 
