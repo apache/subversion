@@ -1775,8 +1775,11 @@ mark_dir_edited(merge_cmd_baton_t *merge_b,
                                         scratch_pool);
         }
 
-      /* We don't register the node in merge_b->skipped_abspaths here, as the
-         node itself is not skipped: the operation on a descendant is */
+      if (merge_b->merge_source.ancestral
+          || merge_b->reintegrate_merge)
+        {
+          store_path(merge_b->skipped_abspaths, local_abspath);
+        }
     }
   else if (db->tree_conflict_reason == CONFLICT_REASON_EXCLUDED)
     {
@@ -1872,6 +1875,12 @@ mark_file_edited(merge_cmd_baton_t *merge_b,
           (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2,
                                         notify,
                                         scratch_pool);
+        }
+
+      if (merge_b->merge_source.ancestral
+          || merge_b->reintegrate_merge)
+        {
+          store_path(merge_b->skipped_abspaths, local_abspath);
         }
     }
   else if (fb->tree_conflict_reason != CONFLICT_REASON_NONE
@@ -2007,13 +2016,6 @@ merge_file_opened(void **new_file_baton,
 
                   fb->tree_conflict_reason = CONFLICT_REASON_SKIP;
                   fb->skip_reason = svn_wc_notify_state_missing;
-
-                  if (merge_b->merge_source.ancestral
-                      || merge_b->reintegrate_merge)
-                    {
-                      store_path(merge_b->skipped_abspaths, local_abspath);
-                    }
-
                   return SVN_NO_ERROR;
                 }
             }
@@ -2723,12 +2725,6 @@ merge_dir_opened(void **new_dir_baton,
 
                   db->tree_conflict_reason = CONFLICT_REASON_SKIP;
                   db->skip_reason = svn_wc_notify_state_missing;
-
-                  if (merge_b->merge_source.ancestral
-                      || merge_b->reintegrate_merge)
-                    {
-                      store_path(merge_b->skipped_abspaths, local_abspath);
-                    }
 
                   return SVN_NO_ERROR;
                 }
@@ -9567,9 +9563,6 @@ do_merge(apr_hash_t **modified_subtrees,
               *modified_subtrees =
                   apr_hash_overlay(result_pool, *modified_subtrees,
                                    merge_cmd_baton.skipped_abspaths);
-              *modified_subtrees =
-                  apr_hash_overlay(result_pool, *modified_subtrees,
-                                   merge_cmd_baton.tree_conflicted_abspaths);
             }
         }
 
