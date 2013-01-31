@@ -183,13 +183,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1435361
-   JavaHL status API does not respect the ignoreExternals boolean.
-   Justification:
-     The API does not work properly and the fix was obvious.
-   Votes:
-     +1: markphip, rhuijben
-
  * r1435635, r1435714, r1435722, r1435737
    When svn update removes a switched subtree because it was deleted in the
    target revision, it would be nice if a future update would bring back
@@ -239,3 +232,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+* r1435361
+  JavaHL status API does not respect the ignoreExternals boolean.
+  Justification:
+    The API does not work properly and the fix was obvious.
+  Votes:
+    +1: markphip, rhuijben
+
