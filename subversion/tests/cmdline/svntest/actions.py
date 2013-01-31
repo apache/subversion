@@ -1132,7 +1132,7 @@ def run_and_verify_merge(dir, rev1, rev2, url1, url2,
       for x in out_dry:
         logger.warn(x)
       logger.warn("The full merge output:")
-      for x in out:
+      for x in merge_diff_out:
         logger.warn(x)
       logger.warn("=============================================================")
       raise main.SVNUnmatchedError
