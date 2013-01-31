@@ -84,14 +84,14 @@ automatic_merge(const char *source_path_or_url,
   svn_client_automatic_merge_t *merge;
 
   if (verbose)
-    SVN_ERR(svn_cmdline_printf(scratch_pool, _("checking branch relationship...\n")));
+    SVN_ERR(svn_cmdline_printf(scratch_pool, _("--- Checking branch relationship\n")));
   SVN_ERR_W(svn_cl__check_related_source_and_target(
               source_path_or_url, source_revision,
               target_wcpath, &unspecified_revision, ctx, scratch_pool),
             _("Source and target must be different but related branches"));
 
   if (verbose)
-    SVN_ERR(svn_cmdline_printf(scratch_pool, _("calculating automatic merge...\n")));
+    SVN_ERR(svn_cmdline_printf(scratch_pool, _("--- Calculating automatic merge\n")));
 
   /* Find the 3-way merges needed (and check suitability of the WC). */
   SVN_ERR(svn_client_find_automatic_merge(&merge,
@@ -128,7 +128,7 @@ automatic_merge(const char *source_path_or_url,
     }
 
   if (verbose)
-    SVN_ERR(svn_cmdline_printf(scratch_pool, _("merging...\n")));
+    SVN_ERR(svn_cmdline_printf(scratch_pool, _("--- Merging\n")));
 
   /* Perform the 3-way merges */
   SVN_ERR(svn_client_do_automatic_merge(merge, target_wcpath, depth,
@@ -489,7 +489,7 @@ svn_cl__merge(apr_getopt_t *os,
 
           /* This must be a 'sync' merge so check branch relationship. */
           if (opt_state->verbose)
-            SVN_ERR(svn_cmdline_printf(pool, _("checking branch relationship...\n")));
+            SVN_ERR(svn_cmdline_printf(pool, _("--- Checking branch relationship\n")));
           SVN_ERR_W(svn_cl__check_related_source_and_target(
                       sourcepath1, &peg_revision1,
                       targetpath, &unspecified_revision, ctx, pool),
@@ -497,7 +497,7 @@ svn_cl__merge(apr_getopt_t *os,
         }
 
       if (opt_state->verbose)
-        SVN_ERR(svn_cmdline_printf(pool, _("merging...\n")));
+        SVN_ERR(svn_cmdline_printf(pool, _("--- Merging\n")));
       merge_err = svn_client_merge_peg5(sourcepath1,
                                         ranges_to_merge,
                                         &peg_revision1,
@@ -521,7 +521,7 @@ svn_cl__merge(apr_getopt_t *os,
                                   "either paths or URLs"));
 
       if (opt_state->verbose)
-        SVN_ERR(svn_cmdline_printf(pool, _("merging...\n")));
+        SVN_ERR(svn_cmdline_printf(pool, _("--- Merging\n")));
       merge_err = svn_client_merge5(sourcepath1,
                                     &first_range_start,
                                     sourcepath2,
