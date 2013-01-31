@@ -7875,7 +7875,7 @@ def merge_to_sparse_directories(sbox):
                        props={SVN_PROP_MERGEINFO : '/A/mu:5-9'}),
     })
   expected_skip = svntest.wc.State(files_dir, {
-    'D'         : Item(verb="Skipped"),
+    'D'         : Item(verb='Skipped missing target'),
     'D/H/omega' : Item(verb="Skipped"),
     'B/E/beta'  : Item(verb="Skipped"),
     })
@@ -7920,7 +7920,7 @@ def merge_to_sparse_directories(sbox):
     })
   expected_skip = svntest.wc.State(empty_dir, {
     'mu'        : Item(verb="Skipped missing target"),
-    'D'         : Item(verb="Skipped"),
+    'D'         : Item(verb="Skipped missing target"),
     'D/H/omega' : Item(verb="Skipped"),
     'B/E/beta'  : Item(verb="Skipped"),
     })
