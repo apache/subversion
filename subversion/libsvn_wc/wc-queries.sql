@@ -1508,6 +1508,18 @@ WHERE wc_id = ?1
   AND op_depth > ?3
   AND moved_to IS NOT NULL
 
+-- STMT_SELECT_OP_DEPTH_MOVED_PAIR
+SELECT n.local_relpath, n.moved_to,
+       (SELECT o.repos_path FROM nodes AS o
+        WHERE o.wc_id = n.wc_id
+          AND o.local_relpath = n.local_relpath
+          AND o.op_depth < ?3 ORDER BY o.op_depth DESC LIMIT 1)
+FROM nodes AS n
+WHERE n.wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(n.local_relpath, ?2)
+  AND n.op_depth = ?3
+  AND n.moved_to IS NOT NULL
+
 -- STMT_HAS_LAYER_BETWEEN
 SELECT 1 FROM NODES
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > ?3 AND op_depth < ?4

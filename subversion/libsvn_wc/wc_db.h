@@ -3287,6 +3287,14 @@ svn_wc__db_vacuum(svn_wc__db_t *db,
                   const char *local_abspath,
                   apr_pool_t *scratch_pool);
 
+/* This raises move-edit tree-conflicts on any moves inside the
+   delete-edit conflict on LOCAL_ABSPATH. This is experimental: see
+   comment in resolve_conflict_on_node about combining with another
+   function. */
+svn_error_t *
+svn_wc__db_resolve_delete_raise_moved_away(svn_wc__db_t *db,
+                                           const char *local_abspath,
+                                           apr_pool_t *scratch_pool);
 /* @} */
 
 
