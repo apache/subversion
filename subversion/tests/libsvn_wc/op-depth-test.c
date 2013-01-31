@@ -5817,21 +5817,20 @@ move_in_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   SVN_ERR(sbox_wc_update(&b, "", 2));
-  /* This currently fails because the tree-conflict is recorded on the
-     deleted A/B, not the moved A/B/C. */
-  SVN_ERR(sbox_wc_resolve(&b, "A/B", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "A/B", svn_wc_conflict_choose_merged));
+  SVN_ERR(sbox_wc_resolve(&b, "A/B/C", svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
-      {0, "",        "normal",       1, ""},
-      {0, "A",       "normal",       1, "A"},
-      {0, "A/B",     "normal",       1, "A/B"},
-      {0, "A/B/C",   "normal",       1, "A/B/C"},
-      {0, "A/B/C/D", "normal",       1, "A/B/C/D"},
+      {0, "",        "normal",       2, ""},
+      {0, "A",       "normal",       2, "A"},
+      {0, "A/B",     "normal",       2, "A/B"},
+      {0, "A/B/C",   "normal",       2, "A/B/C"},
+      {0, "A/B/C/D", "normal",       2, "A/B/C/D"},
       {2, "A/B",     "base-deleted", NO_COPY_FROM},
       {2, "A/B/C",   "base-deleted", NO_COPY_FROM, "C2"},
       {2, "A/B/C/D", "base-deleted", NO_COPY_FROM},
-      {1, "C2",      "normal",       1, "A/B/C", MOVED_HERE},
-      {1, "C2/D",    "normal",       1, "A/B/C/D", MOVED_HERE},
+      {1, "C2",      "normal",       2, "A/B/C", MOVED_HERE},
+      {1, "C2/D",    "normal",       2, "A/B/C/D", MOVED_HERE},
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
@@ -6077,7 +6076,7 @@ layered_moved_to(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   SVN_ERR(sbox_wc_update(&b, "A", 2));
   SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
-  SVN_ERR(sbox_wc_resolve(&b, "X/B", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "X/B", svn_wc_conflict_choose_merged));
   SVN_ERR(sbox_wc_resolve(&b, "X/B/C", svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
@@ -6218,7 +6217,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move_update_delete_mods"),
     SVN_TEST_OPTS_PASS(nested_moves2,
                        "nested_moves2"),
-    SVN_TEST_OPTS_XFAIL(move_in_delete,
+    SVN_TEST_OPTS_PASS(move_in_delete,
                        "move_in_delete (issue 4303)"),
     SVN_TEST_OPTS_PASS(switch_move,
                        "switch_move"),

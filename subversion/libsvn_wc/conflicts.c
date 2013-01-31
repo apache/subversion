@@ -2597,7 +2597,27 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
     }
 
   if (resolve_tree)
-    *did_resolve = TRUE;
+    {
+      svn_wc_conflict_reason_t reason;
+
+      SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, NULL, NULL, 
+                                                  db, local_abspath,
+                                                  conflicts,
+                                                  scratch_pool, scratch_pool));
+
+      if (reason == svn_wc_conflict_reason_deleted)
+        {
+          /* ### FIXME.  At the moment this is a separate transaction
+             ### but it should somehow be combined with the transaction
+             ### in svn_wc__db_op_mark_resolved.  Perhaps move this
+             ### functionality into that function?  Perhaps have this
+             ### function generate "raise conflict" workqueue items? */
+          SVN_ERR(svn_wc__db_resolve_delete_raise_moved_away(db, local_abspath,
+                                                             scratch_pool));
+        }
+                                                  
+      *did_resolve = TRUE;
+    }
 
   if (resolve_text || resolve_props || resolve_tree)
     {
