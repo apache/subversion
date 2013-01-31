@@ -212,6 +212,8 @@ def mergeinfo_and_skipped_paths(sbox):
   # always takes precedence in terms of getting *non*-inheritable mergeinfo.
   expected_output = wc.State(A_COPY_2_path, {
     'D/H/omega' : Item(status='U '),
+    # Below the skip
+    'D/G/rho'   : Item(status='  ', treeconflict='U'),
     })
   expected_mergeinfo_output = wc.State(A_COPY_2_path, {
     ''          : Item(status=' U'),
@@ -258,7 +260,6 @@ def mergeinfo_and_skipped_paths(sbox):
   expected_skip = wc.State(A_COPY_2_path, {
     'B/E'     : Item(verb='Skipped missing target'),
     'D/G'     : Item(verb='Skipped missing target'),
-    'D/G/rho' : Item(verb='Skipped missing target'),
     'D/H/psi' : Item(verb='Skipped missing target'),
     })
   svntest.actions.run_and_verify_merge(A_COPY_2_path, '4', '8',
