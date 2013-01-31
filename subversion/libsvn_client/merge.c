@@ -286,10 +286,6 @@ typedef struct merge_cmd_baton_t {
      dry_run mode. */
   apr_hash_t *dry_run_deletions;
 
-  /* The list of paths for nodes we've added, used only when in
-     dry_run mode. */
-  apr_hash_t *dry_run_added;
-
   /* The list of any paths which remained in conflict after a
      resolution attempt was made.  We track this in-memory, rather
      than just using WC entry state, since the latter doesn't help us
@@ -561,20 +557,6 @@ dry_run_deleted_p(const merge_cmd_baton_t *merge_b,
                        APR_HASH_KEY_STRING) != NULL);
 }
 
-/* Return true iff we're in dry-run mode and LOCAL_ABSPATH would have been
-   added by now if we weren't in dry-run mode.
-   Used to avoid spurious notifications (e.g. conflicts) from a merge
-   attempt into an existing target which would have been deleted if we
-   weren't in dry_run mode (issue #2584). */
-static APR_INLINE svn_boolean_t
-dry_run_added_p(const merge_cmd_baton_t *merge_b,
-                const char *local_abspath)
-{
-  return (merge_b->dry_run &&
-          apr_hash_get(merge_b->dry_run_added, local_abspath,
-                       APR_HASH_KEY_STRING) != NULL);
-}
-
 /* Return whether any WC path was put in conflict by the merge
    operation corresponding to MERGE_B. */
 static APR_INLINE svn_boolean_t
@@ -635,24 +617,6 @@ perform_obstruction_check(svn_wc_notify_state_t *obstruction_state,
           if (expected_kind != svn_node_unknown
               && expected_kind != svn_node_none)
             *obstruction_state = svn_wc_notify_state_obstructed;
-          return SVN_NO_ERROR;
-        }
-      else if (dry_run_added_p(merge_b, local_abspath))
-        {
-          /* svn_wc_notify_state_inapplicable */
-
-          if (kind)
-            *kind = svn_node_dir; /* Currently only used for dirs */
-
-          return SVN_NO_ERROR;
-        }
-      else if (dry_run_added_p(merge_b,
-                               svn_dirent_dirname(local_abspath,
-                                                  scratch_pool)))
-        {
-          /* svn_wc_notify_state_inapplicable */
-          /* svn_node_none */
-
           return SVN_NO_ERROR;
         }
      }
@@ -2945,8 +2909,6 @@ merge_dir_opened(void **new_dir_baton,
                                             scratch_pool));
             }
         }
-      else /* merge_b->dry_run */
-        store_path(merge_b->dry_run_added, local_abspath);
 
       if (! db->shadowed && !merge_b->record_only)
         SVN_ERR(record_update_add(merge_b, local_abspath, svn_node_dir,
@@ -9563,8 +9525,6 @@ do_merge(apr_hash_t **modified_subtrees,
       merge_cmd_baton.merge_source = *source;
       merge_cmd_baton.implicit_src_gap = NULL;
       merge_cmd_baton.dry_run_deletions =
-        dry_run ? apr_hash_make(iterpool) : NULL;
-      merge_cmd_baton.dry_run_added =
         dry_run ? apr_hash_make(iterpool) : NULL;
       merge_cmd_baton.conflicted_paths = NULL;
       merge_cmd_baton.paths_with_new_mergeinfo = NULL;
