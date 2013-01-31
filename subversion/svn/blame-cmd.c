@@ -375,7 +375,9 @@ svn_cl__blame(apr_getopt_t *os,
             {
               svn_error_clear(err);
               SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-                                          _("Skipping binary file: '%s'\n"),
+                                          _("Skipping binary file "
+                                            "(use --force to treat as text): "
+                                            "'%s'\n"),
                                           target));
             }
           else if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND ||
