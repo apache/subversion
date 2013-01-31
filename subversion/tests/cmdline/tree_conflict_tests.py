@@ -1068,7 +1068,6 @@ def lock_update_only(sbox):
 
 #----------------------------------------------------------------------
 @Issue(3469)
-@Wimp("BH: Broken for a few hours max: merge tree conflicts")
 def at_directory_external(sbox):
   "tree conflict at directory external"
 

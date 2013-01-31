@@ -1316,12 +1316,12 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
     'F/alpha'           : Item(verb='Skipped missing target'),
     # Obstruction handling improvements in 1.7 and 1.8 added
     'DF/D1/beta'        : Item(verb='Skipped missing target'),
-    'DDD/D1/D2/D3/zeta' : Item(verb='Skipped'),
+    'DDD/D1/D2/D3/zeta' : Item(verb='Skipped missing target'),
     'DDD/D1/D2/D3'      : Item(verb='Skipped missing target'),
     'DDF/D1/D2/gamma'   : Item(verb='Skipped missing target'),
-    'D/D1/delta'        : Item(verb='Skipped'),
+    'D/D1/delta'        : Item(verb='Skipped missing target'),
     'D/D1'              : Item(verb='Skipped missing target'),
-    'DD/D1/D2/epsilon'  : Item(verb='Skipped'),
+    'DD/D1/D2/epsilon'  : Item(verb='Skipped missing target'),
     'DD/D1/D2'          : Item(verb='Skipped missing target'),
     # And more recent changes added the obstruction roots
     'DD/D1'             : Item(verb='Skipped missing target'),
