@@ -7200,7 +7200,9 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
 
           svn_pool_clear(iterpool);
 
+          /* Ensure any subsequent drives gets their own notification. */
           merge_b->current_range = r;
+          merge_b->notified_merge_begin = FALSE;
 
           /* While we currently don't allow it, in theory we could be
              fetching two fulltexts from two different repositories here. */
@@ -7314,10 +7316,6 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
                                               processor,
                                               iterpool));
             }
-
-          /* Ensure any subsequent drives gets their own notification. */
-          merge_b->notified_merge_begin = FALSE;
-
           if ((i < (ranges_to_merge->nelts - 1))
               && is_path_conflicted_by_merge(merge_b))
             {
@@ -7326,6 +7324,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
             }
         }
       merge_b->current_range = NULL;
+      merge_b->notified_merge_begin = FALSE;
     } /* !merge_b->record_only */
 
   /* Record updated WC mergeinfo to account for our new merges, minus
