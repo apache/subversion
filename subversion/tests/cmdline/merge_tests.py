@@ -18233,7 +18233,6 @@ def conflict_aborted_mergeinfo_described_partial_merge(sbox):
     ['/iota:2-4\n'], [], 'pg', SVN_PROP_MERGEINFO, iota_copy_path)
 
 @SkipUnless(server_has_mergeinfo)
-@XFail()
 @Issue(4310)
 # Test for issue #4310 "each editor drive gets its own notification
 # during 'svn merge'"
@@ -18288,7 +18287,8 @@ def multiple_editor_drive_merge_notifications(sbox):
     [], 'merge', sbox.repo_url + '/A/C', C_branch_path)
 
   # Then the file target:
-  # This currently fails because only the first range notification is printed:
+  # Previously this failed because only the first range notification was
+  # printed:
   #
   #   >svn merge ^/iota iota-copy
   #   --- Merging r2 through r4 into 'iota-copy':
