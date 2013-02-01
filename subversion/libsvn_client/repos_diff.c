@@ -1311,13 +1311,6 @@ fetch_base_func(const char **filename,
   return SVN_NO_ERROR;
 }
 
-/* Baton for diff_state_* functions */
-struct diff_notify_baton_t
-{
-  /* If not NULL collects the absent paths */
-  apr_hash_t *absent_relpaths;
-};
-
 /* Create a repository diff editor and baton.  */
 svn_error_t *
 svn_client__get_diff_editor2(const svn_delta_editor_t **editor,
