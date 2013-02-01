@@ -7315,6 +7315,9 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
                                               iterpool));
             }
 
+          /* Ensure any subsequent drives gets their own notification. */
+          merge_b->notified_merge_begin = FALSE;
+
           if ((i < (ranges_to_merge->nelts - 1))
               && is_path_conflicted_by_merge(merge_b))
             {
