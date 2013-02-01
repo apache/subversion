@@ -984,6 +984,99 @@ def merge_to_reverse_cherry_subtree_to_merge_to(sbox):
                                        None, None, None, None,
                                        None, 1, 0, A_COPY_path)
 
+#----------------------------------------------------------------------
+# Automatic merges should notice ancestory for replaced files
+@SkipUnless(server_has_mergeinfo)
+def merge_replacement(sbox):
+  "notice ancestory for replaced files"
+
+  A_path = sbox.ospath('A')
+  A_COPY_path = sbox.ospath('A_copy')
+  A_COPY_mu_path = sbox.ospath('A_copy/mu')
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  sbox.simple_copy('A', 'A_copy')
+  # Commit as r2
+  sbox.simple_commit()
+
+  sbox.simple_rm('A_copy/B/lambda')
+  sbox.simple_copy('A_copy/D/gamma', 'A_copy/B/lambda')
+
+  sbox.simple_rm('A_copy/mu')
+  svntest.main.file_write(A_COPY_mu_path, "Branch edit to 'mu'.\n")
+  sbox.simple_add('A_copy/mu')
+
+  # Commit as r3
+  sbox.simple_commit()
+
+  expected_output = wc.State(A_path, {
+    'B/lambda'   : Item(status='R '),
+    'mu'         : Item(status='R '),
+    })
+  expected_mergeinfo_output = wc.State(A_path, {
+    ''  : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(A_path, {
+    })
+
+  expected_status = wc.State(A_path, {
+    ''           : Item(status=' M', wc_rev='1'),
+    'B'          : Item(status='  ', wc_rev='1'),
+    'mu'         : Item(status='R ', copied='+', wc_rev='-'),
+    'B/E'        : Item(status='  ', wc_rev='1'),
+    'B/E/alpha'  : Item(status='  ', wc_rev='1'),
+    'B/E/beta'   : Item(status='  ', wc_rev='1'),
+    'B/lambda'   : Item(status='R ', copied='+', wc_rev='-'),
+    'B/F'        : Item(status='  ', wc_rev='1'),
+    'C'          : Item(status='  ', wc_rev='1'),
+    'D'          : Item(status='  ', wc_rev='1'),
+    'D/G'        : Item(status='  ', wc_rev='1'),
+    'D/G/pi'     : Item(status='  ', wc_rev='1'),
+    'D/G/rho'    : Item(status='  ', wc_rev='1'),
+    'D/G/tau'    : Item(status='  ', wc_rev='1'),
+    'D/gamma'    : Item(status='  ', wc_rev='1'),
+    'D/H'        : Item(status='  ', wc_rev='1'),
+    'D/H/chi'    : Item(status='  ', wc_rev='1'),
+    'D/H/psi'    : Item(status='  ', wc_rev='1'),
+    'D/H/omega'  : Item(status='  ', wc_rev='1'),
+    })
+
+  expected_disk = wc.State('', {
+    ''           : Item(props={SVN_PROP_MERGEINFO : '/A_copy:2-3'}),
+    'B'          : Item(),
+    'mu'         : Item("Branch edit to 'mu'.\n"),
+    'B/E'        : Item(),
+    'B/E/alpha'  : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'   : Item("This is the file 'beta'.\n"),
+    'B/lambda'   : Item("This is the file 'gamma'.\n"),
+    'B/F'        : Item(),
+    'C'          : Item(),
+    'D'          : Item(),
+    'D/G'        : Item(),
+    'D/G/pi'     : Item("This is the file 'pi'.\n"),
+    'D/G/rho'    : Item("This is the file 'rho'.\n"),
+    'D/G/tau'    : Item("This is the file 'tau'.\n"),
+    'D/gamma'    : Item("This is the file 'gamma'.\n"),
+    'D/H'        : Item(),
+    'D/H/chi'    : Item("This is the file 'chi'.\n"),
+    'D/H/psi'    : Item("This is the file 'psi'.\n"),
+    'D/H/omega'  : Item("This is the file 'omega'.\n"),
+    })
+
+  expected_skip = wc.State(A_COPY_path, { })
+
+  svntest.actions.run_and_verify_merge(A_path, None, None,
+                                       sbox.repo_url + '/A_copy', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1, 0, A_path)
+
 ########################################################################
 # Run the tests
 
@@ -1009,6 +1102,7 @@ test_list = [ None,
               cherry3_fwd,
               subtree_to_and_fro,
               merge_to_reverse_cherry_subtree_to_merge_to,
+              merge_replacement,
              ]
 
 if __name__ == '__main__':
