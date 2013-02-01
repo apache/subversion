@@ -18198,15 +18198,15 @@ def conflict_aborted_mergeinfo_described_partial_merge(sbox):
   sbox.simple_commit()
 
   # r3
-  sbox.simple_append('iota', 'new line in r3')
+  sbox.simple_append('iota', 'new line in r3\n')
   sbox.simple_commit()
 
   # r4
-  sbox.simple_append('iota', 'new line in r4')
+  sbox.simple_append('iota', 'new line in r4\n')
   sbox.simple_commit()
 
   # r5
-  sbox.simple_append('iota', 'new line in r5')
+  sbox.simple_append('iota', 'new line in r5\n')
   sbox.simple_commit()
 
   # r6 Merge r4 from iota to iota-moved
