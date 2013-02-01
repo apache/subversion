@@ -1318,22 +1318,6 @@ struct diff_notify_baton_t
   apr_hash_t *absent_relpaths;
 };
 
-static svn_error_t *
-diff_state_absent(const char *relpath,
-                  void *state_baton,
-                  apr_pool_t *scratch_pool)
-{
-  struct diff_notify_baton_t *dnb = state_baton;
-
-  if (dnb->absent_relpaths)
-    apr_hash_set(dnb->absent_relpaths,
-                 apr_pstrdup(apr_hash_pool_get(dnb->absent_relpaths), relpath),
-                 APR_HASH_KEY_STRING,
-                 "");
-
-  return SVN_NO_ERROR;
-}
-
 /* Create a repository diff editor and baton.  */
 svn_error_t *
 svn_client__get_diff_editor2(const svn_delta_editor_t **editor,

@@ -3264,7 +3264,6 @@ find_nearest_ancestor(const apr_array_header_t *children_with_mergeinfo,
                       const char *local_abspath)
 {
   int i;
-  svn_client__merge_path_t *ancestor = NULL;
 
   SVN_ERR_ASSERT_NO_RETURN(children_with_mergeinfo != NULL);
 
