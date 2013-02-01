@@ -34,6 +34,7 @@
 
 #include <apr_uri.h>
 #include <apr_md5.h>
+#include <assert.h>
 
 #include "svn_checksum.h"
 #include "svn_hash.h"
@@ -121,7 +122,7 @@ struct dir_baton {
 
   /* The baton for the parent directory, or null if this is the root of the
      hierarchy to be compared. */
-  struct dir_baton *dir_baton;
+  struct dir_baton *parent_baton;
 
   /* The overall crawler editor baton. */
   struct edit_baton *edit_baton;
@@ -143,11 +144,17 @@ struct dir_baton {
 
   /* Base revision of directory. */
   svn_revnum_t base_revision;
+
+  /* Number of users of baton. Its pool will be destroyed 0 */
+  int users;
 };
 
 /* File level baton.
  */
 struct file_baton {
+  /* Reference to parent baton */
+  struct dir_baton *parent_baton;
+
   /* Gets set if the file is added rather than replaced. */
   svn_boolean_t added;
 
@@ -219,12 +226,12 @@ make_dir_baton(const char *path,
                struct edit_baton *edit_baton,
                svn_boolean_t added,
                svn_revnum_t base_revision,
-               apr_pool_t *pool)
+               apr_pool_t *result_pool)
 {
-  apr_pool_t *dir_pool = svn_pool_create(pool);
+  apr_pool_t *dir_pool = svn_pool_create(result_pool);
   struct dir_baton *dir_baton = apr_pcalloc(dir_pool, sizeof(*dir_baton));
 
-  dir_baton->dir_baton = parent_baton;
+  dir_baton->parent_baton = parent_baton;
   dir_baton->edit_baton = edit_baton;
   dir_baton->added = added;
   dir_baton->tree_conflicted = FALSE;
@@ -232,10 +239,36 @@ make_dir_baton(const char *path,
   dir_baton->skip_children = FALSE;
   dir_baton->pool = dir_pool;
   dir_baton->path = apr_pstrdup(dir_pool, path);
-  dir_baton->propchanges  = apr_array_make(pool, 8, sizeof(svn_prop_t));
+  dir_baton->propchanges  = apr_array_make(dir_pool, 8, sizeof(svn_prop_t));
   dir_baton->base_revision = base_revision;
+  dir_baton->users++;
+
+  if (parent_baton)
+    parent_baton->users++;
 
   return dir_baton;
+}
+
+/* New function. Called by everyone who has a reference when done */
+static svn_error_t *
+release_dir(struct dir_baton *db)
+{
+  assert(db->users > 0);
+
+  db->users--;
+  if (db->users)
+     return SVN_NO_ERROR;
+
+  {
+    struct dir_baton *pb = db->parent_baton;
+
+    svn_pool_destroy(db->pool);
+
+    if (pb != NULL)
+      SVN_ERR(release_dir(pb));
+  }
+
+  return SVN_NO_ERROR;
 }
 
 /* Create a new file baton for PATH in POOL, which is a child of
@@ -245,21 +278,24 @@ make_dir_baton(const char *path,
  */
 static struct file_baton *
 make_file_baton(const char *path,
+                struct dir_baton *parent_baton,
                 svn_boolean_t added,
-                struct edit_baton *edit_baton,
-                apr_pool_t *pool)
+                apr_pool_t *result_pool)
 {
-  apr_pool_t *file_pool = svn_pool_create(pool);
+  apr_pool_t *file_pool = svn_pool_create(result_pool);
   struct file_baton *file_baton = apr_pcalloc(file_pool, sizeof(*file_baton));
 
-  file_baton->edit_baton = edit_baton;
+  file_baton->parent_baton = parent_baton;
+  file_baton->edit_baton = parent_baton->edit_baton;
   file_baton->added = added;
   file_baton->tree_conflicted = FALSE;
   file_baton->skip = FALSE;
   file_baton->pool = file_pool;
   file_baton->path = apr_pstrdup(file_pool, path);
-  file_baton->propchanges  = apr_array_make(pool, 8, sizeof(svn_prop_t));
-  file_baton->base_revision = edit_baton->revision;
+  file_baton->propchanges  = apr_array_make(file_pool, 8, sizeof(svn_prop_t));
+  file_baton->base_revision = parent_baton->edit_baton->revision;
+
+  parent_baton->users++;
 
   return file_baton;
 }
@@ -420,7 +456,7 @@ open_root(void *edit_baton,
 {
   struct edit_baton *eb = edit_baton;
   struct dir_baton *db = make_dir_baton("", NULL, eb, FALSE, base_revision,
-                                        pool);
+                                        eb->pool);
 
   db->left_source = svn_diff__source_create(eb->revision, db->pool);
   db->right_source = svn_diff__source_create(eb->target_revision, db->pool);
@@ -445,11 +481,11 @@ open_root(void *edit_baton,
  */
 static svn_error_t *
 diff_deleted_file(const char *path,
-                  void *ppdb,
-                  struct edit_baton *eb,
+                  struct dir_baton *db,
                   apr_pool_t *scratch_pool)
 {
-  struct file_baton *fb = make_file_baton(path, FALSE, eb, scratch_pool);
+  struct edit_baton *eb = db->edit_baton;
+  struct file_baton *fb = make_file_baton(path, db, FALSE, scratch_pool);
   svn_boolean_t skip = FALSE;
   svn_diff_source_t *left_source = svn_diff__source_create(eb->revision,
                                                            scratch_pool);
@@ -461,7 +497,7 @@ diff_deleted_file(const char *path,
                                      left_source,
                                      NULL /* right_source */,
                                      NULL /* copyfrom_source */,
-                                     ppdb,
+                                     db->pdb,
                                      eb->processor,
                                      scratch_pool, scratch_pool));
 
@@ -495,10 +531,11 @@ diff_deleted_file(const char *path,
 /* ### TODO: Handle depth. */
 static svn_error_t *
 diff_deleted_dir(const char *path,
-                 void *ppdb,
-                 struct edit_baton *eb,
+                 struct dir_baton *pb,
                  apr_pool_t *scratch_pool)
 {
+  struct edit_baton *eb = pb->edit_baton;
+  struct dir_baton *db;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_boolean_t skip = FALSE;
   svn_boolean_t skip_children = FALSE;
@@ -506,19 +543,20 @@ diff_deleted_dir(const char *path,
   apr_hash_t *left_props = NULL;
   svn_diff_source_t *left_source = svn_diff__source_create(eb->revision,
                                                            scratch_pool);
-  void *pdb;
+  db = make_dir_baton(path, pb, pb->edit_baton, FALSE, SVN_INVALID_REVNUM,
+                      scratch_pool);
 
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(eb->revision));
 
   if (eb->cancel_func)
     SVN_ERR(eb->cancel_func(eb->cancel_baton));
 
-  SVN_ERR(eb->processor->dir_opened(&pdb, &skip, &skip_children,
+  SVN_ERR(eb->processor->dir_opened(&db->pdb, &skip, &skip_children,
                                     path,
                                     left_source,
                                     NULL /* right_source */,
                                     NULL /* copyfrom_source */,
-                                    ppdb,
+                                    pb->pdb,
                                     eb->processor,
                                     scratch_pool, iterpool));
 
@@ -553,11 +591,11 @@ diff_deleted_dir(const char *path,
 
           if (dirent->kind == svn_node_file)
             {
-              SVN_ERR(diff_deleted_file(child_path, pdb, eb, iterpool));
+              SVN_ERR(diff_deleted_file(child_path, db, iterpool));
             }
           else if (dirent->kind == svn_node_dir)
             {
-              SVN_ERR(diff_deleted_dir(child_path, pdb, eb, iterpool));
+              SVN_ERR(diff_deleted_dir(child_path, db, iterpool));
             }
         }
     }
@@ -567,10 +605,12 @@ diff_deleted_dir(const char *path,
       SVN_ERR(eb->processor->dir_deleted(path,
                                          left_source,
                                          left_props,
-                                         pdb,
+                                         db->pdb,
                                          eb->processor,
                                          scratch_pool));
     }
+
+  SVN_ERR(release_dir(db));
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
@@ -602,12 +642,12 @@ delete_entry(const char *path,
     {
     case svn_node_file:
       {
-        SVN_ERR(diff_deleted_file(path, pb->pdb, eb, scratch_pool));
+        SVN_ERR(diff_deleted_file(path, pb, scratch_pool));
         break;
       }
     case svn_node_dir:
       {
-        SVN_ERR(diff_deleted_dir(path, pb->pdb, eb, scratch_pool));
+        SVN_ERR(diff_deleted_dir(path, pb, scratch_pool));
         break;
       }
     default:
@@ -634,7 +674,7 @@ add_directory(const char *path,
 
   /* ### TODO: support copyfrom? */
 
-  db = make_dir_baton(path, pb, eb, TRUE, SVN_INVALID_REVNUM, pool);
+  db = make_dir_baton(path, pb, eb, TRUE, SVN_INVALID_REVNUM, pb->pool);
   *child_baton = db;
 
   /* Skip *everything* within a newly tree-conflicted directory,
@@ -675,7 +715,7 @@ open_directory(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   struct dir_baton *db;
 
-  db = make_dir_baton(path, pb, eb, FALSE, base_revision, pool);
+  db = make_dir_baton(path, pb, eb, FALSE, base_revision, pb->pool);
 
   *child_baton = db;
 
@@ -719,7 +759,7 @@ add_file(const char *path,
 
   /* ### TODO: support copyfrom? */
 
-  fb = make_file_baton(path, TRUE, pb->edit_baton, pool);
+  fb = make_file_baton(path, pb, TRUE, pb->pool);
   *file_baton = fb;
 
   /* Process Skips. */
@@ -757,7 +797,7 @@ open_file(const char *path,
   struct dir_baton *pb = parent_baton;
   struct file_baton *fb;
   struct edit_baton *eb = pb->edit_baton;
-  fb = make_file_baton(path, FALSE, pb->edit_baton, pool);
+  fb = make_file_baton(path, pb, FALSE, pb->pool);
   *file_baton = fb;
 
   /* Process Skips. */
@@ -900,6 +940,7 @@ close_file(void *file_baton,
            apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
+  struct dir_baton *pb = fb->parent_baton;
   struct edit_baton *eb = fb->edit_baton;
   apr_pool_t *scratch_pool;
 
@@ -907,6 +948,7 @@ close_file(void *file_baton,
   if (fb->skip)
     {
       svn_pool_destroy(fb->pool);
+      SVN_ERR(release_dir(pb));
       return SVN_NO_ERROR;
     }
 
@@ -974,6 +1016,8 @@ close_file(void *file_baton,
     }
 
   svn_pool_destroy(fb->pool); /* Destroy file and scratch pool */
+
+  SVN_ERR(release_dir(pb));
 
   return SVN_NO_ERROR;
 }
@@ -1058,8 +1102,7 @@ close_directory(void *dir_baton,
                                         eb->processor,
                                         db->pool));
     }
-
-  svn_pool_destroy(db->pool); /* Destroy baton and scratch_pool */
+  SVN_ERR(release_dir(db));
 
   return SVN_NO_ERROR;
 }
