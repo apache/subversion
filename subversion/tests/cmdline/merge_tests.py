@@ -18232,6 +18232,95 @@ def conflict_aborted_mergeinfo_described_partial_merge(sbox):
     "Incorrect mergeinfo set during conflict aborted merge",
     ['/iota:2-4\n'], [], 'pg', SVN_PROP_MERGEINFO, iota_copy_path)
 
+@SkipUnless(server_has_mergeinfo)
+@XFail()
+@Issue(4310)
+# Test for issue #4310 "each editor drive gets its own notification
+# during 'svn merge'"
+def multiple_editor_drive_merge_notifications(sbox):
+  "each editor drive gets its own notification"
+
+  sbox.build()
+
+  iota_branch_path = sbox.ospath('iota-copy')
+  C_branch_path = sbox.ospath('branch')
+
+  # Branch a file and a directory:
+
+  # r2
+  sbox.simple_copy('iota', 'iota-copy')
+  sbox.simple_commit()
+
+  # r3
+  sbox.simple_copy('A/C', 'branch')
+  sbox.simple_commit()
+
+  # r4-8 - Set five non-conflicting properties on the branch parents.
+  for i in range(0,5):
+    sbox.simple_propset('foo' + str(i) , 'bar', 'iota')
+    sbox.simple_propset('foo' + str(i) , 'bar', 'A/C')
+    sbox.simple_commit()
+
+  # Cherry pick merge r5 and r6 to each branch and commit.
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '^/iota',
+                                     '-c', '5,7', iota_branch_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '^/A/C',
+                                     '-c', '5,7', C_branch_path)
+  sbox.simple_commit()
+
+  # Now auto merge all eligible revisions to each branch.
+  # First the directory target:
+  #
+  # TODO: We don't use run_and_verify_merge here because it has limitations
+  # re checking the merge notification headers -- which need to be improved
+  # at some point.
+  svntest.actions.run_and_verify_svn(
+    None,
+    ["--- Merging r2 through r4 into '" + C_branch_path + "':\n",
+     " U   " + C_branch_path + "\n",
+     "--- Merging r6 into '" + C_branch_path + "':\n",
+     " U   " + C_branch_path + "\n",
+     "--- Merging r8 through r9 into '" + C_branch_path + "':\n",
+     " U   " + C_branch_path + "\n",
+     "--- Recording mergeinfo for merge of r2 through r9 into '" +
+     C_branch_path + "':\n",
+     " U   " + C_branch_path + "\n"],
+    [], 'merge', sbox.repo_url + '/A/C', C_branch_path)
+
+  # Then the file target:
+  # This currently fails because only the first range notification is printed:
+  #
+  #   >svn merge ^/iota iota-copy
+  #   --- Merging r2 through r4 into 'iota-copy':
+  #    U   iota-copy
+  #    U   iota-copy
+  #    U   iota-copy
+  #   --- Recording mergeinfo for merge of r2 through r9 into 'iota-copy':
+  #    U   iota-copy
+  #
+  # This is what we expect:
+  #
+  #   --- Merging r2 through r4 into 'iota-copy':
+  #    U   iota-copy
+  #   --- Merging r6 into 'iota-copy': <-- 2nd editor drive
+  #    U   iota-copy
+  #   --- Merging r8 through r9 into 'iota-copy': <-- 3rd editor drive
+  #    U   iota-copy
+  #   --- Recording mergeinfo for merge of r2 through r9 into 'iota-copy':
+  #    U   iota-copy
+  svntest.actions.run_and_verify_svn(
+    None,
+    ["--- Merging r2 through r4 into '" + iota_branch_path + "':\n",
+     " U   " + iota_branch_path + "\n",
+     "--- Merging r6 into '" + iota_branch_path + "':\n",
+     " U   " + iota_branch_path + "\n",
+     "--- Merging r8 through r9 into '" + iota_branch_path + "':\n",
+     " U   " + iota_branch_path + "\n",
+     "--- Recording mergeinfo for merge of r2 through r9 into '" +
+     iota_branch_path + "':\n",
+     " U   " + iota_branch_path + "\n"],
+    [], 'merge', sbox.repo_url + '/iota', iota_branch_path)
+
 ########################################################################
 # Run the tests
 
@@ -18373,6 +18462,7 @@ test_list = [ None,
               merge_target_selection,
               merge_properties_on_adds,
               conflict_aborted_mergeinfo_described_partial_merge,
+              multiple_editor_drive_merge_notifications,
              ]
 
 if __name__ == '__main__':
