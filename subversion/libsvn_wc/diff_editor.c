@@ -288,6 +288,9 @@ struct dir_baton {
   /* The list of incoming BASE->repos propchanges. */
   apr_array_header_t *propchanges;
 
+  /* Has a change on regular properties */
+  svn_boolean_t has_propchange;
+
   /* The overall crawler editor baton. */
   struct edit_baton *eb;
 
@@ -315,6 +318,9 @@ struct file_baton {
 
   /* The list of incoming BASE->repos propchanges. */
   apr_array_header_t *propchanges;
+
+  /* Has a change on regular properties */
+  svn_boolean_t has_propchange;
 
   /* The current checksum on disk */
   const svn_checksum_t *base_checksum;
@@ -413,7 +419,7 @@ make_dir_baton(const char *path,
   db->added = added;
   db->depth = depth;
   db->pool = dir_pool;
-  db->propchanges = apr_array_make(dir_pool, 1, sizeof(svn_prop_t));
+  db->propchanges = apr_array_make(dir_pool, 8, sizeof(svn_prop_t));
   db->compared = apr_hash_make(dir_pool);
   db->path = apr_pstrdup(dir_pool, path);
 
@@ -446,7 +452,7 @@ make_file_baton(const char *path,
   fb->eb = eb;
   fb->added = added;
   fb->pool = file_pool;
-  fb->propchanges  = apr_array_make(file_pool, 1, sizeof(svn_prop_t));
+  fb->propchanges  = apr_array_make(file_pool, 8, sizeof(svn_prop_t));
   fb->path = apr_pstrdup(file_pool, path);
 
   fb->name = svn_dirent_basename(fb->path, NULL);
@@ -487,32 +493,6 @@ get_prop_mimetype(apr_hash_t *props)
   return svn_prop_get_value(props, SVN_PROP_MIME_TYPE);
 }
 
-
-/* Return the property hash resulting from combining PROPS and PROPCHANGES.
- *
- * A note on pool usage: The returned hash and hash keys are allocated in
- * the same pool as PROPS, but the hash values will be taken directly from
- * either PROPS or PROPCHANGES, as appropriate.  Caller must therefore
- * ensure that the returned hash is only used for as long as PROPS and
- * PROPCHANGES remain valid.
- */
-static apr_hash_t *
-apply_propchanges(apr_hash_t *props,
-                  const apr_array_header_t *propchanges)
-{
-  apr_hash_t *newprops = apr_hash_copy(apr_hash_pool_get(props), props);
-  int i;
-
-  for (i = 0; i < propchanges->nelts; ++i)
-    {
-      const svn_prop_t *prop = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
-      apr_hash_set(newprops, prop->name, APR_HASH_KEY_STRING, prop->value);
-    }
-
-  return newprops;
-}
-
-
 /* Diff the file PATH against its text base.  At this
  * stage we are dealing with a file that does exist in the working copy.
  *
@@ -551,10 +531,10 @@ file_diff(struct edit_baton *eb,
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL,
-                               &have_base, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               &original_repos_relpath, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, &have_base, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
   if (have_base)
     SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &revert_base_revnum,
@@ -571,7 +551,7 @@ file_diff(struct edit_baton *eb,
      the latter two have corresponding pristine info to diff against.  */
   if (status == svn_wc__db_status_added)
     SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL,
-                                     &original_repos_relpath, NULL, NULL,
+                                     NULL, NULL, NULL,
                                      NULL, NULL, NULL, db, local_abspath,
                                      scratch_pool, scratch_pool));
 
@@ -1342,7 +1322,7 @@ close_directory(void *dir_baton,
   apr_pool_t *scratch_pool = db->pool;
 
   /* Report the property changes on the directory itself, if necessary. */
-  if (db->propchanges->nelts > 0)
+  if (db->has_propchange)
     {
       /* The working copy properties at the base of the wc->repos comparison:
          either BASE or WORKING. */
@@ -1374,7 +1354,8 @@ close_directory(void *dir_baton,
                                                 eb->db, db->local_abspath,
                                                 scratch_pool, scratch_pool));
 
-              repos_props = apply_propchanges(base_props, db->propchanges);
+              repos_props = svn_prop__patch(base_props, db->propchanges,
+                                            scratch_pool);
 
               /* Recalculate b->propchanges as the change between WORKING
                  and repos. */
@@ -1671,7 +1652,7 @@ close_file(void *file_baton,
                                      fb->local_abspath,
                                      scratch_pool, scratch_pool));
 
-  repos_props = apply_propchanges(pristine_props, fb->propchanges);
+  repos_props = svn_prop__patch(pristine_props, fb->propchanges, scratch_pool);
   repos_mimetype = get_prop_mimetype(repos_props);
   repos_file = fb->temp_file_path ? fb->temp_file_path : pristine_file;
 
@@ -1766,7 +1747,7 @@ close_file(void *file_baton,
                              repos_props, originalprops, scratch_pool));
     }
 
-  if (localfile || fb->propchanges->nelts > 0)
+  if (localfile || fb->has_propchange)
     {
       const char *original_mimetype = get_prop_mimetype(originalprops);
 
@@ -1812,6 +1793,13 @@ change_file_prop(void *file_baton,
 {
   struct file_baton *fb = file_baton;
   svn_prop_t *propchange;
+  svn_prop_kind_t propkind;
+
+  propkind = svn_property_kind2(name);
+  if (propkind == svn_prop_wc_kind)
+    return SVN_NO_ERROR;
+  else if (propkind == svn_prop_regular_kind)
+    fb->has_propchange = TRUE;
 
   propchange = apr_array_push(fb->propchanges);
   propchange->name = apr_pstrdup(fb->pool, name);
@@ -1830,6 +1818,13 @@ change_dir_prop(void *dir_baton,
 {
   struct dir_baton *db = dir_baton;
   svn_prop_t *propchange;
+  svn_prop_kind_t propkind;
+
+  propkind = svn_property_kind2(name);
+  if (propkind == svn_prop_wc_kind)
+    return SVN_NO_ERROR;
+  else if (propkind == svn_prop_regular_kind)
+    db->has_propchange = TRUE;
 
   propchange = apr_array_push(db->propchanges);
   propchange->name = apr_pstrdup(db->pool, name);
