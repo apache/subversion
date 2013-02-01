@@ -1322,7 +1322,7 @@ close_directory(void *dir_baton,
   apr_pool_t *scratch_pool = db->pool;
 
   /* Report the property changes on the directory itself, if necessary. */
-  if (db->has_propchange)
+  if (db->propchanges->nelts > 0)
     {
       /* The working copy properties at the base of the wc->repos comparison:
          either BASE or WORKING. */
@@ -1745,11 +1745,9 @@ close_file(void *file_baton,
          fb->propchanges as the change between WORKING and repos. */
       SVN_ERR(svn_prop_diffs(&fb->propchanges,
                              repos_props, originalprops, scratch_pool));
-
-      fb->has_propchange = (fb->propchanges->nelts > 0);
     }
 
-  if (localfile || fb->has_propchange)
+  if (localfile || fb->propchanges->nelts > 0)
     {
       const char *original_mimetype = get_prop_mimetype(originalprops);
 
