@@ -32,6 +32,7 @@ logger = logging.getLogger()
 # Our testing module
 import svntest
 
+from prop_tests import binary_mime_type_on_text_file_warning
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -578,7 +579,8 @@ def diff_binary(sbox):
   # Set A/mu to a binary mime-type, tweak its text, and commit.
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   svntest.main.file_append(mu_path, 'new appended text for mu')
-  svntest.main.run_svn(None, 'propset', 'svn:mime-type',
+  svntest.main.run_svn(binary_mime_type_on_text_file_warning,
+                       'propset', 'svn:mime-type',
                        'application/octet-stream', mu_path)
   svntest.main.run_svn(None, 'ci', '-m', 'log msg', mu_path)
 

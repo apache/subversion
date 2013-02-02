@@ -32,6 +32,8 @@ import time
 import svntest
 from svntest import main, wc, verify, actions
 
+from prop_tests import binary_mime_type_on_text_file_warning
+
 # (abbreviation)
 Item = wc.StateItem
 Skip = svntest.testcase.Skip_deco
@@ -16524,7 +16526,8 @@ def merge_change_to_file_with_executable(sbox):
   beta_path = sbox.ospath('A/B/E/beta')
 
   # Force one of the files to be a binary type
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn2(None, None,
+                                      binary_mime_type_on_text_file_warning, 0,
                                      'propset', 'svn:mime-type',
                                      'application/octet-stream',
                                      alpha_path)
@@ -17915,7 +17918,9 @@ def merge_binary_file_with_keywords(sbox):
   # make some 'binary' files with keyword expansion enabled
   for f in files:
     svntest.main.file_append(sbox.ospath(f), "With $Revision: $ keyword.\n")
-    sbox.simple_propset('svn:mime-type', 'application/octet-stream', f)
+    svntest.main.run_svn(binary_mime_type_on_text_file_warning,
+                         'propset', 'svn:mime-type',
+                         'application/octet-stream', sbox.ospath(f))
     sbox.simple_propset('svn:keywords', 'Revision', f)
   sbox.simple_commit()
 
