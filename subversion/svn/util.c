@@ -1087,7 +1087,7 @@ svn_cl__propset_print_binary_mime_type_warning(apr_array_header_t *targets,
                                                local_abspath,
                                                svn_node_file,
                                                FALSE, NULL, NULL,
-                                               scratch_pool));
+                                               iterpool));
 
           if (svn_mime_type_is_binary(canon_propval->data))
             {
