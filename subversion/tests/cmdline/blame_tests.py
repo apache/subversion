@@ -31,6 +31,8 @@ import os, sys, re
 import svntest
 from svntest.main import server_has_mergeinfo
 
+from prop_tests import binary_mime_type_on_text_file_warning
+
 # For some basic merge setup used by blame -g tests.
 from merge_tests import set_up_branch
 
@@ -126,7 +128,8 @@ def blame_binary(sbox):
   # Then do it again, but this time we set the mimetype to binary.
   iota = os.path.join(wc_dir, 'iota')
   svntest.main.file_append(iota, "More new contents for iota\n")
-  svntest.main.run_svn(None, 'propset', 'svn:mime-type', 'image/jpeg', iota)
+  svntest.main.run_svn(binary_mime_type_on_text_file_warning,
+                       'propset', 'svn:mime-type', 'image/jpeg', iota)
   svntest.main.run_svn(None, 'ci',
                        '-m', '', iota)
 

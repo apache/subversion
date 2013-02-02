@@ -34,6 +34,8 @@ logger = logging.getLogger()
 import svntest
 from svntest import err
 
+from prop_tests import binary_mime_type_on_text_file_warning
+
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
 SkipUnless = svntest.testcase.SkipUnless_deco
@@ -1887,7 +1889,7 @@ def diff_force(sbox):
 
   # Append a line to iota and make it binary.
   svntest.main.file_append(iota_path, "new line")
-  svntest.main.run_svn(None,
+  svntest.main.run_svn(binary_mime_type_on_text_file_warning,
                        'propset', 'svn:mime-type',
                        'application/octet-stream', iota_path)
 
@@ -2304,8 +2306,9 @@ def diff_mime_type_changes(sbox):
                                      'diff', '-r', 'BASE:1')
 
   # Mark iota as a binary file in the working copy.
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset', 'svn:mime-type',
+  svntest.actions.run_and_verify_svn2(None, None,
+                                      binary_mime_type_on_text_file_warning, 0,
+                                      'propset', 'svn:mime-type',
                                      'application/octet-stream', 'iota')
 
   # Check that the earlier diffs against BASE are unaffected by the

@@ -49,6 +49,10 @@ def is_non_posix_and_non_windows_os():
   """lambda function to skip revprop_change test"""
   return (not svntest.main.is_posix_os()) and sys.platform != 'win32'
 
+# this is global so other test files can use it
+binary_mime_type_on_text_file_warning = \
+  "svn: warning:.*is a binary mime-type but file.*looks like text.*"
+
 ######################################################################
 # Tests
 
@@ -612,7 +616,9 @@ def inappropriate_props(sbox):
   svntest.main.file_append(path, "binary")
   sbox.simple_add('binary')
 
-  sbox.simple_propset('svn:mime-type', 'application/octet-stream', 'binary')
+  svntest.main.run_svn(binary_mime_type_on_text_file_warning,
+                       'propset', 'svn:mime-type', 'application/octet-stream',
+                       sbox.ospath('binary'))
 
   svntest.actions.run_and_verify_svn('Illegal target', None,
                                      svntest.verify.AnyOutput,
