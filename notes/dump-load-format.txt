@@ -1,6 +1,6 @@
 = How to interpret Subversion dumpfiles =
 
-Version 1.0, 2012-01-18
+Version 1.1, 2013-02-02
 
 == Introduction ==
 
@@ -13,13 +13,19 @@ a versioned filesystem-like store, such as another version-control
 system.  It derives from and incorporates some incomplete notes from 
 before r39883.
 
+=== Unresolved questions
+
 1. In interpreting a Node record which has both a copyfrom source and
 a property section, it is possible that the copy source node itself
 has a property section.  How are they to be combined?
 
-Also note that the section on the semantics of kinds of operations 
-documents a minor bug at r39883 in the behavior of "add", which 
-should be fixed.
+2. The section on the semantics of kinds of operations documents a
+minor bug at r39883 in the behavior of "add".  Has this been fixed?
+
+3. Are there other prefixes besides "link " used in the blob content
+of special files?  If so, what are they and what are their semantics?
+
+Portions of text relevant to these questions are tagged with FIXME.
 
 == Syntax ==
 
@@ -131,7 +137,9 @@ Node-action: {change | add | delete | replace}
 [Node-copyfrom-rev: <rev>]
 [Node-copyfrom-path: <path> ]
 [Text-copy-source-md5: <blob>]
+[Text-copy-source-sha1: <blob>]
 [Text-content-md5: <blob>]
+[Text-content-sha1: <blob>]
 [Text-content-length: <T>]
 [Prop-content-length: <P>]
 [Content-length: Y]
@@ -161,10 +169,11 @@ present, or neither will be.  They pair to describe a copy source for
 the node. Copy-source semantics will be described in detail later in
 this document.
 
-The Text-content-md5 and Text-copy-source-md5 lines are hash integrity
-checks and will be present only if Text-content-length and the copfyrom
-pair (respectively) are also present. A decoder may use them to verify
-that the source content they refer to has not been corrupted.
+The Text-content-{md5,sha1} and Text-copy-source-{md5,sha1} lines are
+hash integrity checks and will be present only if Text-content-length
+and the copfyrom pair (respectively) are also present. A decoder may
+use them to verify that the source content they refer to has not been
+corrupted.
 
 Text-content-length will be present only when there is a text section.
 Zero is a legal value for this length, indicating an empty file.
@@ -177,7 +186,7 @@ a delete operation cannot have either.  Some other operations that use
 copyfrom sources may also not have either.
 
 Again, the '!' stands in for a mandatory empty line following the
-RFC822-style headers. A body may follow
+RFC822-style headers. A body may follow.
 
 == Semantics ==
 
@@ -236,7 +245,7 @@ about this issue will help if you read the Ancient History section.
 |Fails on non-existent path |    no    |  yes   |   yes    |   yes    |   
 |======================================================================
 
-* As of December 2011 there is a minor bug: Adding a file with history
+FIXME: As of December 2011 there is a minor bug: Adding a file with history
 twice _in two different revisions_ succeeds silently.
 
 .Directory operations
@@ -351,6 +360,16 @@ to delete all properties from a path, the dumpfile generator will
 simply issue a node with an empty properties section. Note that this
 is different from an *absent* properties section, which will change
 no properties and will be associated with a change to content!
+
+=== Representation of symbolic links ===
+
+When the Subversion dumper creates a content blob representing a
+symbolic link (that is, with the svn:special property) the contents of
+the blob is not just the link's target path. It will have the prefix
+"link ".  The loader removes this prefix.
+
+FIXME: Why is this?  Was it part of a plan to tag other special 
+file types with different prefixes?
 
 === Implementation pragmatics ===
 
