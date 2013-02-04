@@ -102,6 +102,13 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > ?3
 ORDER BY op_depth
 LIMIT 1
 
+-- STMT_SELECT_HIGHEST_WORKING_NODE
+SELECT op_depth
+FROM nodes
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth < ?3
+ORDER BY op_depth DESC
+LIMIT 1
+
 -- STMT_SELECT_ACTUAL_NODE
 SELECT changelist, properties, conflict_data
 FROM actual_node
