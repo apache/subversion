@@ -59,7 +59,7 @@
 				DisableSpecificWarnings="4100;4127;4206;4701;4706"
 				Detect64BitPortabilityProblems="FALSE"
 				AdditionalOptions="
-				/we4002 /we4003 /we4013 /we4020 /we4022 /we4024 /we4028 /we4029 /we4030 /we4031 /we4033 /we4047 /we4089 /we4113 /we4115 /we4715"
+				/we4002 /we4003 /we4013 /we4020 /we4022 /we4024 /we4028 /we4029 /we4030 /we4031 /we4033 /we4047 /we4089 /we4113 /we4115 /we4204 /we4715"
 				DebugInformationFormat="3"
 				ProgramDataBaseFileName="$(IntDir)\[target.output_pdb]"
 				CompileAsManaged="0"
