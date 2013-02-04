@@ -1430,7 +1430,10 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
   else
     {
       /* if there is already an entry for this key, drop it.
+       * Since ensure_data_insertable may have removed entries from
+       * ENTRY's group, re-do the lookup.
        */
+      entry = find_entry(cache, group_index, to_find, FALSE);
       if (entry)
         drop_entry(cache, entry);
     }
