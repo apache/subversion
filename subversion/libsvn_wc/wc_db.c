@@ -9193,23 +9193,14 @@ svn_wc__db_prop_retrieve_recursive(apr_hash_t **values,
   return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
-/* Baton for passing args to db_read_cached_iprops(). */
-struct read_cached_iprops_baton_t
-{
-  apr_array_header_t *iprops;
-  apr_pool_t *result_pool;
-};
-
-/* The body of svn_wc__db_read_cached_iprops().
- *
- * (Not called in a txn, but implements svn_wc__db_txn_callback_t anyway.) */
+/* The body of svn_wc__db_read_cached_iprops(). */
 static svn_error_t *
-db_read_cached_iprops(void *baton,
+db_read_cached_iprops(apr_array_header_t **iprops,
                       svn_wc__db_wcroot_t *wcroot,
                       const char *local_relpath,
+                      apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
-  struct read_cached_iprops_baton_t *rib = baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
@@ -9226,8 +9217,8 @@ db_read_cached_iprops(void *baton,
                                                       scratch_pool));
     }
 
-  SVN_ERR(svn_sqlite__column_iprops(&rib->iprops, stmt, 0,
-                                    rib->result_pool, scratch_pool));
+  SVN_ERR(svn_sqlite__column_iprops(iprops, stmt, 0,
+                                    result_pool, scratch_pool));
 
   SVN_ERR(svn_sqlite__reset(stmt));
 
@@ -9243,7 +9234,6 @@ svn_wc__db_read_cached_iprops(apr_array_header_t **iprops,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  struct read_cached_iprops_baton_t rcib;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -9252,14 +9242,11 @@ svn_wc__db_read_cached_iprops(apr_array_header_t **iprops,
                                                 scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  rcib.result_pool = result_pool;
-
   /* Don't use with_txn yet, as we perform just a single transaction */
-  SVN_ERR(db_read_cached_iprops(&rcib, wcroot, local_relpath, scratch_pool));
+  SVN_ERR(db_read_cached_iprops(iprops, wcroot, local_relpath,
+                                result_pool, scratch_pool));
 
-  if (rcib.iprops)
-    *iprops = rcib.iprops;
-  else
+  if (!*iprops)
     {
       *iprops = apr_array_make(result_pool, 0,
                                sizeof(svn_prop_inherited_item_t *));
@@ -9328,10 +9315,7 @@ db_read_inherited_props(apr_array_header_t **iprops,
 
       if (is_switched || is_wc_root)
         {
-          struct read_cached_iprops_baton_t rib;
           is_wc_root = TRUE;
-
-          rib.result_pool = scratch_pool;
 
           /* If the WC root is also the root of the repository then by
              definition there are no inheritable properties to be had,
@@ -9339,10 +9323,9 @@ db_read_inherited_props(apr_array_header_t **iprops,
              anyway. */
 
           /* Grab the cached inherited properties for the WC root. */
-          SVN_ERR(db_read_cached_iprops(&rib, wcroot, parent_relpath,
-                                       iterpool));
-
-          cached_iprops = rib.iprops;
+          SVN_ERR(db_read_cached_iprops(&cached_iprops,
+                                        wcroot, parent_relpath,
+                                        result_pool, iterpool));
         }
 
       /* If PARENT_ABSPATH is a true parent of LOCAL_ABSPATH, then
