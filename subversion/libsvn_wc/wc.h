@@ -615,20 +615,14 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
 
 /* Internal version of svn_wc__node_get_repos_info() */
 svn_error_t *
-svn_wc__internal_get_repos_info(const char **repos_root_url,
+svn_wc__internal_get_repos_info(svn_revnum_t *revision,
+                                const char **repos_relpath,
+                                const char **repos_root_url,
                                 const char **repos_uuid,
                                 svn_wc__db_t *db,
                                 const char *local_abspath,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool);
-
-/* Internal version of svn_wc__node_get_repos_relpath() */
-svn_error_t *
-svn_wc__internal_get_repos_relpath(const char **repos_relpath,
-                                   svn_wc__db_t *db,
-                                   const char *local_abspath,
-                                   apr_pool_t *result_pool,
-                                   apr_pool_t *scratch_pool);
 
 /* Upgrade the wc sqlite database given in SDB for the wc located at
    WCROOT_ABSPATH. It's current/starting format is given by START_FORMAT.

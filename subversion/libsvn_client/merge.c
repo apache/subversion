@@ -9852,7 +9852,7 @@ open_target_wc(merge_target_t **target_p,
     {
       target->loc = *origin;
     }
-  else
+  else if (target->kind != svn_node_none)
     {
       /* The node has no location in the repository. It's unversioned or
        * locally added or locally deleted.
@@ -9860,10 +9860,18 @@ open_target_wc(merge_target_t **target_p,
        * If it's locally added or deleted, find the repository root
        * URL and UUID anyway, and leave the node URL and revision as NULL
        * and INVALID.  If it's unversioned, this will throw an error. */
-      SVN_ERR(svn_wc__node_get_repos_info(&target->loc.repos_root_url,
+      SVN_ERR(svn_wc__node_get_repos_info(NULL, NULL,
+                                          &target->loc.repos_root_url,
                                           &target->loc.repos_uuid,
                                           ctx->wc_ctx, wc_abspath,
                                           result_pool, scratch_pool));
+      target->loc.rev = SVN_INVALID_REVNUM;
+      target->loc.url = NULL;
+    }
+  else
+    {
+      target->loc.repos_root_url = NULL;
+      target->loc.repos_uuid = NULL;
       target->loc.rev = SVN_INVALID_REVNUM;
       target->loc.url = NULL;
     }
@@ -10857,9 +10865,9 @@ calculate_left_hand_side(svn_client__pathrev_t **left_p,
 
       /* Convert the absolute path with mergeinfo on it to a path relative
          to the session root. */
-      SVN_ERR(svn_wc__node_get_repos_relpath(&repos_relpath,
-                                             ctx->wc_ctx, local_abspath,
-                                             scratch_pool, iterpool));
+      SVN_ERR(svn_wc__node_get_repos_info(NULL, &repos_relpath, NULL, NULL,
+                                          ctx->wc_ctx, local_abspath,
+                                          scratch_pool, iterpool));
       target_child = svn_client__pathrev_create_with_relpath(
                        target->loc.repos_root_url, target->loc.repos_uuid,
                        target->loc.rev, repos_relpath, iterpool);

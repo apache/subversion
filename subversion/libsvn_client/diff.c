@@ -92,9 +92,9 @@ make_repos_relpath(const char **repos_relpath,
                                                       scratch_pool),
                                       scratch_pool));
 
-      err = svn_wc__node_get_repos_relpath(repos_relpath, wc_ctx,
-                                           local_abspath,
-                                           result_pool, scratch_pool);
+      err = svn_wc__node_get_repos_info(NULL, repos_relpath, NULL, NULL,
+                                        wc_ctx, local_abspath,
+                                        result_pool, scratch_pool);
 
       if (!ra_session
           || ! err
