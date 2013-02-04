@@ -22,9 +22,6 @@ has a property section.  How are they to be combined?
 2. The section on the semantics of kinds of operations documents a
 minor bug at r39883 in the behavior of "add".  Has this been fixed?
 
-3. Are there other prefixes besides "link " used in the blob content
-of special files?  If so, what are they and what are their semantics?
-
 Portions of text relevant to these questions are tagged with FIXME.
 
 == Syntax ==
@@ -363,13 +360,13 @@ no properties and will be associated with a change to content!
 
 === Representation of symbolic links ===
 
-When the Subversion dumper creates a content blob representing a
+When the Subversion client sends a content blob representing a
 symbolic link (that is, with the svn:special property) the contents of
 the blob is not just the link's target path. It will have the prefix
-"link ".  The loader removes this prefix.
+"link ".  The client likewise interprets this prefix at checkout time.
 
-FIXME: Why is this?  Was it part of a plan to tag other special 
-file types with different prefixes?
+In the future, other special blob formats with other prefix keywords may
+be defined.  None such yet exist as of revision 1441992 (February 2013).
 
 === Implementation pragmatics ===
 
