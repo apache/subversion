@@ -1547,42 +1547,8 @@ record_update_add(merge_cmd_baton_t *merge_b,
                   svn_boolean_t notify_replaced,
                   apr_pool_t *scratch_pool)
 {
-  svn_boolean_t root_of_added_subtree = TRUE;
-
   if (merge_b->merge_source.ancestral || merge_b->reintegrate_merge)
     {
-      /* Stash the root path of any added subtrees. */
-      if (merge_b->added_abspaths == NULL)
-        {
-          /* The first added path is always a root. */
-          merge_b->added_abspaths = apr_hash_make(merge_b->pool);
-        }
-      else
-        {
-          const char *added_path_dir = svn_dirent_dirname(local_abspath,
-                                                          scratch_pool);
-
-          /* Is NOTIFY->PATH the root of an added subtree? */
-          while (strcmp(merge_b->target->abspath, added_path_dir))
-            {
-              if (contains_path(merge_b->added_abspaths, added_path_dir))
-                {
-                  root_of_added_subtree = FALSE;
-                  break;
-                }
-
-              if (svn_dirent_is_root(added_path_dir, strlen(added_path_dir)))
-                break;
-              added_path_dir = svn_dirent_dirname(added_path_dir,
-                                                  scratch_pool);
-            }
-        }
-
-      if (root_of_added_subtree)
-        {
-          store_path(merge_b->added_abspaths, local_abspath);
-        }
-
       store_path(merge_b->merged_abspaths, local_abspath);
     }
 
@@ -2298,6 +2264,12 @@ merge_file_added(const char *relpath,
       return SVN_NO_ERROR;
     }
 
+  if ((merge_b->merge_source.ancestral || merge_b->reintegrate_merge)
+      && ( !fb->parent_baton || !fb->parent_baton->added))
+    {
+      /* Store the roots of added subtrees */
+      store_path(merge_b->added_abspaths, local_abspath);
+    }
 
   if (!merge_b->dry_run)
     {
@@ -2417,11 +2389,6 @@ merge_file_added(const char *relpath,
                                          merge_b->ctx->cancel_baton,
                                          scratch_pool));
         }
-    }
-  else /* dry_run */
-    {
-      /* ### Should we do this?
-      store_path(merge_b->dry_run_added, local_abspath); */
     }
 
   SVN_ERR(record_update_add(merge_b, local_abspath, svn_node_file,
@@ -3015,6 +2982,13 @@ merge_dir_added(const char *relpath,
                  && ! merge_b->record_only /* Skip details from merge_open_dir() */
                  );
 
+  if ((merge_b->merge_source.ancestral || merge_b->reintegrate_merge)
+      && ( !db->parent_baton || !db->parent_baton->added))
+    {
+      /* Store the roots of added subtrees */
+      store_path(merge_b->added_abspaths, local_abspath);
+    }
+
   if (merge_b->same_repos)
     {
       /* When the directory was added in merge_dir_added() we didn't update its
@@ -3064,8 +3038,6 @@ merge_dir_added(const char *relpath,
           alloc_and_store_path(&merge_b->paths_with_new_mergeinfo,
                                local_abspath, merge_b->pool);
         }
-
-      return SVN_NO_ERROR;
     }
   else
     {
