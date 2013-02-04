@@ -9296,7 +9296,6 @@ db_read_inherited_props(apr_array_header_t **iprops,
                         svn_wc__db_wcroot_t *wcroot,
                         const char *local_relpath,
                         const char *propname,
-                        const char *repos_root_url,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
@@ -9419,13 +9418,8 @@ svn_wc__db_read_inherited_props(apr_array_header_t **iprops,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  const char *repos_root_url;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__internal_get_repos_info(&repos_root_url, NULL, db,
-                                          local_abspath, scratch_pool,
-                                          scratch_pool));
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                                                 db, local_abspath,
@@ -9433,7 +9427,7 @@ svn_wc__db_read_inherited_props(apr_array_header_t **iprops,
   VERIFY_USABLE_WCROOT(wcroot);
 
   SVN_WC__DB_WITH_TXN(db_read_inherited_props(iprops,
-                                              wcroot, local_relpath, propname, repos_root_url,
+                                              wcroot, local_relpath, propname,
                                               result_pool, scratch_pool),
                       wcroot);
 
