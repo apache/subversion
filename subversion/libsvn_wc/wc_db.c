@@ -3830,7 +3830,7 @@ scan_deletion_txn(const char **base_del_relpath,
     }
 
 
-  while(TRUE)
+  while (TRUE)
     {
       svn_error_t *err;
       const char *parent_relpath;
@@ -3838,7 +3838,7 @@ scan_deletion_txn(const char **base_del_relpath,
 
       /* Step CURRENT_RELPATH to op-root */
 
-      while(TRUE)
+      while (TRUE)
         {
           if (scan)
             {
@@ -3856,7 +3856,7 @@ scan_deletion_txn(const char **base_del_relpath,
                 }
             }
 
-          if(current_depth <= op_depth)
+          if (current_depth <= op_depth)
             break;
 
           current_relpath = svn_relpath_dirname(current_relpath, scratch_pool);
@@ -11569,7 +11569,7 @@ svn_wc__db_op_depth_moved_to(const char **moved_to_relpath,
       if (!*moved_to_op_root_relpath)
         relpath = svn_relpath_dirname(relpath, scratch_pool);
     }
-  while(!*moved_to_op_root_relpath
+  while (!*moved_to_op_root_relpath
         && have_row && delete_op_depth < relpath_depth(relpath));
 
   if (*moved_to_op_root_relpath)
@@ -11578,7 +11578,7 @@ svn_wc__db_op_depth_moved_to(const char **moved_to_relpath,
         = svn_relpath_join(*moved_to_op_root_relpath,
                            svn_relpath_skip_ancestor(relpath, local_relpath),
                            result_pool);
-      while(delete_op_depth < relpath_depth(relpath))
+      while (delete_op_depth < relpath_depth(relpath))
         relpath = svn_relpath_dirname(relpath, scratch_pool);
       *op_root_relpath = apr_pstrdup(result_pool, relpath);
     }
