@@ -159,6 +159,7 @@ svn_client_upgrade(const char *path,
       const char *externals_parent_abspath;
       const char *externals_parent_url;
       const char *externals_parent_repos_root_url;
+      const char *externals_parent_repos_relpath;
       const char *externals_parent = svn__apr_hash_index_key(hi);
       svn_string_t *external_desc = svn__apr_hash_index_val(hi);
       apr_array_header_t *externals_p;
@@ -176,15 +177,19 @@ svn_client_upgrade(const char *path,
                                     externals_parent, iterpool);
 
       if (!err)
-        err = svn_wc__node_get_url(&externals_parent_url, ctx->wc_ctx,
-                                   externals_parent_abspath,
-                                   iterpool, iterpool);
-      if (!err)
-        err = svn_wc__node_get_repos_info(&externals_parent_repos_root_url,
+        err = svn_wc__node_get_repos_info(NULL,
+                                          &externals_parent_repos_relpath,
+                                          &externals_parent_repos_root_url,
                                           NULL,
                                           ctx->wc_ctx,
                                           externals_parent_abspath,
                                           iterpool, iterpool);
+
+      if (!err)
+        externals_parent_url = svn_path_url_add_component2(
+                                    externals_parent_repos_root_url,
+                                    externals_parent_repos_relpath,
+                                    iterpool);
       if (!err)
         err = svn_wc_parse_externals_description3(
                   &externals_p, svn_dirent_dirname(path, iterpool),
@@ -271,41 +276,23 @@ svn_client_upgrade(const char *path,
           /* First get the relpath, as that returns SVN_ERR_WC_PATH_NOT_FOUND
            * when the node is not present in the file system.
            * svn_wc__node_get_repos_info() would try to derive the URL. */
-          err = svn_wc__node_get_repos_relpath(&repos_relpath,
-                                               ctx->wc_ctx,
-                                               external_abspath,
-                                               iterpool2, iterpool2);
-          if (! err)
-            {
-              /* We got a repos relpath from a WC. So also get the root. */
-              err = svn_wc__node_get_repos_info(&repos_root_url,
-                                                &repos_uuid,
-                                                ctx->wc_ctx,
-                                                external_abspath,
-                                                iterpool2, iterpool2);
-              if (err)
-                goto handle_error;
-            }
-          else if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-            {
-              /* The external is not currently checked out. Try to figure out
-               * the URL parts via the defined URL and fetch_repos_info(). */
-              svn_error_clear(err);
-              repos_relpath = NULL;
-              repos_root_url = NULL;
-              repos_uuid = NULL;
-            }
-          else if (err)
+          err = svn_wc__node_get_repos_info(NULL,
+                                            &repos_relpath,
+                                            &repos_root_url,
+                                            &repos_uuid,
+                                            ctx->wc_ctx,
+                                            external_abspath,
+                                            iterpool2, iterpool2);
+          if (err)
             goto handle_error;
 
           /* If we haven't got any information from the checked out external,
            * or if the URL information mismatches the external's definition,
            * ask fetch_repos_info() to find out the repos root. */
-          if (! repos_relpath || ! repos_root_url
-              || 0 != strcmp(resolved_url,
-                             svn_path_url_add_component2(repos_root_url,
-                                                         repos_relpath,
-                                                         scratch_pool)))
+          if (0 != strcmp(resolved_url,
+                          svn_path_url_add_component2(repos_root_url,
+                                                      repos_relpath,
+                                                      scratch_pool)))
             {
               err = fetch_repos_info(&repos_root_url,
                                      &repos_uuid,

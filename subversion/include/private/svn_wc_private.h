@@ -416,18 +416,21 @@ svn_wc__node_get_children(const apr_array_header_t **children,
 
 
 /**
- * Fetch the repository root information for the working version
- * of the node at @a local_abspath into @a *repos_root_url
- * and @a *repos_uuid. Use @a wc_ctx to access the working copy
- * for @a local_abspath, @a scratch_pool for all temporary allocations,
- * @a result_pool for result allocations. Note: the results will be NULL if
- * the node does not exist or is not under version control. If the node is
- * locally added, return the repository root it will have if committed.
+ * Fetch the repository information for the working version
+ * of the node at @a local_abspath into @a *revision, @a *repos_relpath,
+ * @a *repos_root_url and @a *repos_uuid. Use @a wc_ctx to access the working
+ * copy. Allocate results in @a result_pool.
  *
- * Either output argument may be NULL, indicating no interest.
+ * @a *revision will be set to SVN_INVALID_REVNUM for any shadowed node (including
+ * added and deleted nodes). All other output values will be set to the current
+ * values or those they would have after a commit.
+ *
+ * All output argument may be NULL, indicating no interest.
  */
 svn_error_t *
-svn_wc__node_get_repos_info(const char **repos_root_url,
+svn_wc__node_get_repos_info(svn_revnum_t *revision,
+                            const char **repos_relpath,
+                            const char **repos_root_url,
                             const char **repos_uuid,
                             svn_wc_context_t *wc_ctx,
                             const char *local_abspath,
@@ -517,22 +520,6 @@ svn_wc__node_get_origin(svn_boolean_t *is_copy,
                         svn_boolean_t scan_deleted,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
-
-
-/**
- * Set @a *repos_relpath to the corresponding repos_relpath for @a
- * local_abspath, using @a wc_ctx. If the node is added, return the
- * repos_relpath it will have in the repository.
- *
- * If @a local_abspath is not in the working copy, return @c
- * SVN_ERR_WC_PATH_NOT_FOUND.
- * */
-svn_error_t *
-svn_wc__node_get_repos_relpath(const char **repos_relpath,
-                               svn_wc_context_t *wc_ctx,
-                               const char *local_abspath,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool);
 
 /**
  * Set @a *is_deleted to TRUE if @a local_abspath is deleted, using

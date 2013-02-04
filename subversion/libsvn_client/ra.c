@@ -324,7 +324,8 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
 
   if (base_dir_abspath)
     {
-      svn_error_t *err = svn_wc__node_get_repos_info(NULL, &uuid, ctx->wc_ctx,
+      svn_error_t *err = svn_wc__node_get_repos_info(NULL, NULL, NULL, &uuid,
+                                                     ctx->wc_ctx,
                                                      base_dir_abspath,
                                                      pool, pool);
 
