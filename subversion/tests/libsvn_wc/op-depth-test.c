@@ -4419,7 +4419,8 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   /* Resolve should update the move. */
-  SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",         "normal",       2, ""},
@@ -4462,7 +4463,8 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
 
-  SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",         "normal",       3, ""},
@@ -4508,7 +4510,8 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   SVN_ERR(sbox_wc_update(&b, "", 2));
-  SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",         "normal",       2, ""},
@@ -4563,7 +4566,8 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   SVN_ERR(sbox_wc_update(&b, "", 4));
-  SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",         "normal",       4, ""},
@@ -4593,7 +4597,8 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   SVN_ERR(sbox_wc_update(&b, "", 5));
-  SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",         "normal",       5, ""},
@@ -5124,7 +5129,8 @@ update_prop_mod_into_moved(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   /* Resolve should update the move. */
-  SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",         "normal",       2, ""},
@@ -5203,8 +5209,10 @@ nested_move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   /* Following the A->A2 move should raise a tree-conflict on A2/B/C,
      resolving that may require an explicit resolve. */
-  SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
-  SVN_ERR(sbox_wc_resolve(&b, "A2/B/C", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "A2/B/C", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",          "normal",       2, ""},
@@ -5586,7 +5594,8 @@ move_update_conflicts(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   SVN_ERR(sbox_wc_update(&b, "A", 2));
   SVN_ERR(check_tree_conflict_repos_path(&b, "A", "X/A", "X/A"));
-  SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",           "normal",       1, "X"},
@@ -5669,7 +5678,8 @@ move_update_delete_mods(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   SVN_ERR(sbox_wc_update(&b, "A", 2));
-  SVN_ERR(sbox_wc_resolve(&b, "A/B", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "A/B", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",        "normal",       1, ""},
@@ -5817,8 +5827,10 @@ move_in_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   SVN_ERR(sbox_wc_update(&b, "", 2));
-  SVN_ERR(sbox_wc_resolve(&b, "A/B", svn_wc_conflict_choose_merged));
-  SVN_ERR(sbox_wc_resolve(&b, "A/B/C", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "A/B", svn_depth_empty,
+                          svn_wc_conflict_choose_merged));
+  SVN_ERR(sbox_wc_resolve(&b, "A/B/C", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",        "normal",       2, ""},
@@ -5908,7 +5920,8 @@ switch_move(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   /* Conflicts from switch are resolved just like those from update. */
-  SVN_ERR(sbox_wc_resolve(&b, "B/D", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "B/D", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",        "normal",       3, "X"},
@@ -5933,7 +5946,8 @@ switch_move(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
 
-  SVN_ERR(sbox_wc_resolve(&b, "D2/E", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "D2/E", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",        "normal",       3, "X"},
@@ -6006,7 +6020,8 @@ move_replace(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
 
-  SVN_ERR(sbox_wc_resolve(&b, "B", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "B", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",    "normal",       2, ""},
@@ -6087,9 +6102,11 @@ layered_moved_to(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   SVN_ERR(sbox_wc_update(&b, "A", 2));
-  SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
-  SVN_ERR(sbox_wc_resolve(&b, "X/B/C", svn_wc_conflict_choose_merged));
-  SVN_ERR(sbox_wc_resolve(&b, "X/B/C/D/E",
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "X/B/C", svn_depth_empty,
+                          svn_wc_conflict_choose_merged));
+  SVN_ERR(sbox_wc_resolve(&b, "X/B/C/D/E", svn_depth_empty,
                           svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
@@ -6245,7 +6262,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "switch_move"),
     SVN_TEST_OPTS_PASS(move_replace,
                        "move_replace"),
-    SVN_TEST_OPTS_XFAIL(layered_moved_to,
+    SVN_TEST_OPTS_PASS(layered_moved_to,
                        "layered_moved_to"),
     SVN_TEST_NULL
   };

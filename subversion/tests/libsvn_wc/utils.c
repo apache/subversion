@@ -355,15 +355,16 @@ sbox_wc_switch(svn_test__sandbox_t *b, const char *url)
 svn_error_t *
 sbox_wc_resolved(svn_test__sandbox_t *b, const char *path)
 {
-  return sbox_wc_resolve(b, path, svn_wc_conflict_choose_merged);
+  return sbox_wc_resolve(b, path, svn_depth_infinity,
+                         svn_wc_conflict_choose_merged);
 }
 
 svn_error_t *
-sbox_wc_resolve(svn_test__sandbox_t *b, const char *path,
+sbox_wc_resolve(svn_test__sandbox_t *b, const char *path, svn_depth_t depth,
                 svn_wc_conflict_choice_t conflict_choice)
 {
   SVN_ERR(svn_wc__resolve_conflicts(b->wc_ctx, sbox_wc_path(b, path),
-                                    svn_depth_infinity,
+                                    depth,
                                     TRUE /* resolve_text */,
                                     "" /* resolve_prop (ALL props) */,
                                     TRUE /* resolve_tree */,
