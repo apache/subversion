@@ -314,8 +314,9 @@ dir_entry_id_from_node(const svn_fs_id_t **id_p,
 {
   svn_fs_dirent_t *dirent;
 
-  SVN_ERR(svn_fs_fs__dag_dir_entry(&dirent, parent, name, scratch_pool));
-  *id_p = dirent ? svn_fs_fs__id_copy(dirent->id, result_pool) : NULL;
+  SVN_ERR(svn_fs_fs__dag_dir_entry(&dirent, parent, name, result_pool,
+                                   scratch_pool));
+  *id_p = dirent ? dirent->id : NULL;
 
   return SVN_NO_ERROR;
 }
@@ -434,7 +435,8 @@ svn_error_t *
 svn_fs_fs__dag_dir_entry(svn_fs_dirent_t **dirent,
                          dag_node_t *node,
                          const char* name,
-                         apr_pool_t *pool)
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
 {
   node_revision_t *noderev;
   SVN_ERR(get_node_revision(&noderev, node));
@@ -444,8 +446,8 @@ svn_fs_fs__dag_dir_entry(svn_fs_dirent_t **dirent,
                             _("Can't get entries of non-directory"));
 
   /* Get a dirent hash for this directory. */
-  return svn_fs_fs__rep_contents_dir_entry(dirent, node->fs,
-                                           noderev, name, pool, pool);
+  return svn_fs_fs__rep_contents_dir_entry(dirent, node->fs, noderev, name,
+                                           result_pool, scratch_pool);
 }
 
 
