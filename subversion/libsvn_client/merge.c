@@ -3403,11 +3403,11 @@ notify_merge_begin(merge_cmd_baton_t *merge_b,
       notify_abspath = child->abspath;
       n_range = APR_ARRAY_IDX(child->remaining_ranges, 0, svn_merge_range_t *);
     }
-  else if (merge_b->merge_source.ancestral)
+  else
     {
-      merge_b->notified_merge_begin = TRUE;
+      merge_b->notified_merge_begin = TRUE; /* Notify just once per drive */
 
-      if (merge_b->current_range)
+      if (merge_b->merge_source.ancestral && merge_b->current_range)
         n_range = svn_merge_range_dup(merge_b->current_range, scratch_pool);
     }
 
