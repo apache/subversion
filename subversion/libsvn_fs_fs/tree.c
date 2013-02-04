@@ -497,6 +497,9 @@ dag_node_cache_set(svn_fs_root_t *root,
 
   SVN_ERR_ASSERT(*path == '/');
 
+  /* Do *not* attempt to dup and put the node into L1.
+   * dup() is twice as expensive as an L2 lookup (which will set also L1).
+   */
   locate_cache(&cache, &key, root, path, pool);
 
   return svn_cache__set(cache, key, node, pool);
@@ -847,8 +850,19 @@ typedef enum open_path_flags_t {
      directories must exist, as usual.)  If the last component doesn't
      exist, simply leave the `node' member of the bottom parent_path
      component zero.  */
-  open_path_last_optional = 1
+  open_path_last_optional = 1,
 
+  /* When this flag is set, don't bother to lookup the DAG node in
+     our caches because we already tried this.  Ignoring this flag
+     has no functional impact.  */
+  open_path_uncached = 2,
+
+  /* Assume that the path parameter is already in canonical form. */
+  open_path_is_canonical = 4,
+
+  /* The caller does not care about the parent node chain but only
+     the final DAG node. */
+  open_path_node_only = 8
 } open_path_flags_t;
 
 
@@ -871,6 +885,10 @@ typedef enum open_path_flags_t {
    callers that create new nodes --- we find the parent directory for
    them, and tell them whether the entry exists already.
 
+   The remaining bits in FLAGS are hints that allow this function
+   to take shortcuts based on knowledge that the caller provides,
+   such as the fact that PATH is already in canonical form.
+
    NOTE: Public interfaces which only *read* from the filesystem
    should not call this function directly, but should instead use
    get_dag().
@@ -884,22 +902,46 @@ open_path(parent_path_t **parent_path_p,
           apr_pool_t *pool)
 {
   svn_fs_t *fs = root->fs;
-  dag_node_t *here; /* The directory we're currently looking at.  */
-  parent_path_t *parent_path; /* The path from HERE up to the root.  */
+  dag_node_t *here = NULL; /* The directory we're currently looking at.  */
+  parent_path_t *parent_path; /* The path from HERE up to the root. */
   const char *rest; /* The portion of PATH we haven't traversed yet.  */
-  const char *canon_path = svn_fs__is_canonical_abspath(path)
+
+  /* ensure a canonical path representation */
+  const char *canon_path = (   (flags & open_path_is_canonical)
+                            || svn_fs__is_canonical_abspath(path))
                          ? path
                          : svn_fs__canonicalize_abspath(path, pool);
   const char *path_so_far = "/";
   apr_pool_t *iterpool = svn_pool_create(pool);
 
-  /* Make a parent_path item for the root node, using its own current
-     copy id.  */
-  SVN_ERR(root_node(&here, root, pool));
+  /* callers often traverse the tree in some path-based order.  That means
+     a sibbling of PATH has been resently accessed.  Try to start the lookup
+     directly at the parent node, if the caller did not requested the full
+     parent chain. */
+  const char *directory;
+  if (flags & open_path_node_only)
+    {
+      directory = svn_dirent_dirname(canon_path, pool);
+      if (directory[1] != 0) /* root nodes are covered anyway */
+        SVN_ERR(dag_node_cache_get(&here, root, directory, TRUE, pool));
+    }
+
+  /* did the shortcut work? */
+  if (here)
+    {
+      path_so_far = directory;
+      rest = canon_path + strlen(directory) + 1;
+    }
+  else
+    {
+      /* Make a parent_path item for the root node, using its own current
+         copy id.  */
+      SVN_ERR(root_node(&here, root, pool));
+      rest = canon_path + 1; /* skip the leading '/', it saves in iteration */
+    }
+ 
   parent_path = make_parent_path(here, 0, 0, pool);
   parent_path->copy_inherit = copy_id_inherit_self;
-
-  rest = canon_path + 1; /* skip the leading '/', it saves in iteration */
 
   /* Whenever we are at the top of this loop:
      - HERE is our current directory,
@@ -933,13 +975,16 @@ open_path(parent_path_t **parent_path_p,
           copy_id_inherit_t inherit;
           const char *copy_path = NULL;
           svn_error_t *err = SVN_NO_ERROR;
-          dag_node_t *cached_node;
+          dag_node_t *cached_node = NULL;
 
           /* If we found a directory entry, follow it.  First, we
              check our node cache, and, failing that, we hit the DAG
-             layer. */
-          SVN_ERR(dag_node_cache_get(&cached_node, root, path_so_far, TRUE,
-                                     pool));
+             layer.  Don't bother to contact the cache for the last
+             element if we already know the lookup to fail for the
+             complete path. */
+          if (next || !(flags & open_path_uncached))
+            SVN_ERR(dag_node_cache_get(&cached_node, root, path_so_far,
+                                       TRUE, pool));
           if (cached_node)
             child = cached_node;
           else
@@ -972,14 +1017,22 @@ open_path(parent_path_t **parent_path_p,
           /* Other errors we return normally.  */
           SVN_ERR(err);
 
-          /* Now, make a parent_path item for CHILD. */
-          parent_path = make_parent_path(child, entry, parent_path, pool);
-          if (txn_id)
+          if (flags & open_path_node_only)
             {
-              SVN_ERR(get_copy_inheritance(&inherit, &copy_path,
-                                           fs, parent_path, txn_id, iterpool));
-              parent_path->copy_inherit = inherit;
-              parent_path->copy_src_path = apr_pstrdup(pool, copy_path);
+              /* Shortcut: the caller only wan'ts the final DAG node. */
+              parent_path->node = child;
+            }
+          else
+            {
+              /* Now, make a parent_path item for CHILD. */
+              parent_path = make_parent_path(child, entry, parent_path, pool);
+              if (txn_id)
+                {
+                  SVN_ERR(get_copy_inheritance(&inherit, &copy_path, fs,
+                                               parent_path, txn_id, iterpool));
+                  parent_path->copy_inherit = inherit;
+                  parent_path->copy_src_path = apr_pstrdup(pool, copy_path);
+                }
             }
 
           /* Cache the node we found (if it wasn't already cached). */
@@ -1142,7 +1195,9 @@ get_dag(dag_node_t **dag_node_p,
         {
           /* Call open_path with no flags, as we want this to return an
            * error if the node for which we are searching doesn't exist. */
-          SVN_ERR(open_path(&parent_path, root, path, 0, NULL, pool));
+          SVN_ERR(open_path(&parent_path, root, path,
+                            open_path_uncached | open_path_is_canonical
+                            | open_path_node_only, NULL, pool));
           node = parent_path->node;
 
           /* No need to cache our find -- open_path() will do that for us. */
@@ -3162,7 +3217,7 @@ static svn_error_t *fs_closest_copy(svn_fs_root_t **root_p,
   if (kind == svn_node_none)
     return SVN_NO_ERROR;
   SVN_ERR(open_path(&copy_dst_parent_path, copy_dst_root, path,
-                    0, NULL, pool));
+                    open_path_node_only, NULL, pool));
   copy_dst_node = copy_dst_parent_path->node;
   if (! svn_fs_fs__id_check_related(svn_fs_fs__dag_get_id(copy_dst_node),
                                     svn_fs_fs__dag_get_id(parent_path->node)))
@@ -3775,7 +3830,8 @@ get_mergeinfo_for_path_internal(svn_mergeinfo_t *mergeinfo,
 
   path = svn_fs__canonicalize_abspath(path, scratch_pool);
 
-  SVN_ERR(open_path(&parent_path, rev_root, path, 0, NULL, scratch_pool));
+  SVN_ERR(open_path(&parent_path, rev_root, path, open_path_is_canonical,
+                    NULL, scratch_pool));
 
   if (inherit == svn_mergeinfo_nearest_ancestor && ! parent_path->parent)
     return SVN_NO_ERROR;
