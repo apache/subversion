@@ -6598,6 +6598,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
               svn_boolean_t sources_related,
               svn_boolean_t squelch_mergeinfo_notifications,
               notification_receiver_baton_t *notify_b,
+              svn_boolean_t abort_on_conflicts,
               merge_cmd_baton_t *merge_b,
               apr_pool_t *scratch_pool)
 {
@@ -6862,10 +6863,13 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
           SVN_ERR(svn_io_remove_file2(tmpfile1, TRUE, iterpool));
           SVN_ERR(svn_io_remove_file2(tmpfile2, TRUE, iterpool));
 
-          if ((i < (ranges_to_merge->nelts - 1))
+          if ((i < (ranges_to_merge->nelts - 1) || abort_on_conflicts)
               && is_path_conflicted_by_merge(merge_b))
             {
               conflicted_range = svn_merge_range_dup(r, scratch_pool);
+              /* Only record partial mergeinfo if only a partial merge was
+                 performed before a conflict was encountered. */
+              range.end = r->end;
               break;
             }
         }
@@ -6887,9 +6891,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
         &filtered_rangelist,
         mergeinfo_path,
         merge_target->implicit_mergeinfo,
-        /* Only record partial mergeinfo if only a partial merge was
-           performed before a conflict was encountered. */
-        conflicted_range ? conflicted_range : &range,
+        &range,
         iterpool));
 
       /* Only record mergeinfo if there is something other than
@@ -8804,6 +8806,11 @@ do_merge(apr_hash_t **modified_subtrees,
         APR_ARRAY_IDX(merge_sources, i, merge_source_t *);
       const char *url1, *url2;
       svn_revnum_t rev1, rev2;
+      /* If conflicts occur while merging any but the very last
+       * revision range we want an error to be raised that aborts
+       * the merge operation. The user will be asked to resolve conflicts
+       * before merging subsequent revision ranges. */
+      svn_boolean_t abort_on_conflicts = (i < merge_sources->nelts - 1);
 
       svn_pool_clear(iterpool);
 
@@ -8857,16 +8864,11 @@ do_merge(apr_hash_t **modified_subtrees,
                                 sources_related,
                                 squelch_mergeinfo_notifications,
                                 &notify_baton,
+                                abort_on_conflicts,
                                 &merge_cmd_baton, iterpool));
         }
       else if (target_kind == svn_node_dir)
         {
-          /* If conflicts occur while merging any but the very last
-           * revision range we want an error to be raised that aborts
-           * the merge operation. The user will be asked to resolve conflicts
-           * before merging subsequent revision ranges. */
-          svn_boolean_t abort_on_conflicts = (i < merge_sources->nelts - 1);
-
           SVN_ERR(do_directory_merge(result_catalog,
                                      url1, rev1, url2, rev2, target_abspath,
                                      depth, squelch_mergeinfo_notifications,

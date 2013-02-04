@@ -17503,44 +17503,56 @@ def conflict_aborted_mergeinfo_described_partial_merge(sbox):
 
   iota_copy_path = sbox.ospath('iota-copy')
 
-  # r2
+  # r2 - Make a file branch
   sbox.simple_copy('iota', 'iota-copy')
   sbox.simple_commit()
 
-  # r3
-  sbox.simple_append('iota', 'new line in r3')
+  # r3 - Propset on iota
+  sbox.simple_propset('moo:prop', 'dar', 'iota')
   sbox.simple_commit()
 
-  # r4
-  sbox.simple_append('iota', 'new line in r4')
+  # r4 - Propset on iota
+  sbox.simple_propset('foo:prop', 'bar', 'iota')
   sbox.simple_commit()
 
-  # r5
-  sbox.simple_append('iota', 'new line in r5')
+  # r5 - Text edit on iota
+  sbox.simple_append('iota', 'new line in r5\n')
   sbox.simple_commit()
 
-  # r6 Merge r4 from iota to iota-moved
+  # r6 - Propset on iota
+  sbox.simple_propset('bat:prop', 'baz', 'iota')
+  sbox.simple_commit()
+
+  # r7 - Text edit on iota
+  sbox.simple_append('iota', 'new line in r7\n')
+  sbox.simple_commit()
+
+  # r8 Merge r4 and r6 from iota to iota-moved
   svntest.actions.run_and_verify_svn(None, None, [], 'merge', '^/iota',
-                                     '-c', '4', iota_copy_path, '--accept',
-                                     'theirs-conflict')
+                                     '-c', '4,6', iota_copy_path)
   sbox.simple_commit()
 
-  # Merge everything (i.e. r2 and r5) from iota to iota-moved.
-  # This is split into to merges, first of r2 and then of r5.
-  # But since we are postponing conflict resolution, the merge
-  # should stop after r2 is merged, allowing us to resolve and
-  # repeat the merge at which point r5 can be merged.  The mergeinfo
-  # on iota-copy then should only reflect that r2 and r3 have been
-  # merged from ^/iota; r5 should not be present.
+  # r9 - Conflicting text edit on iota-copy
+  svntest.main.file_write(iota_copy_path, 'conflicting change\n')
+  sbox.simple_commit()
+  
+  # Merge everything (i.e. r3, r5, and r7) from iota to iota-moved.
+  # This is split into three merges, first of r3, r5, and lastly
+  # (assuming no conflicts) r7. But since we are postponing conflict
+  # resolution, the merge should stop after r5 is merged because that will
+  # conflict with the change made in r9.  The resulting mergeinfo should
+  # reflect the fact that r3 and r5 were merged, allowing us to resolve and
+  # repeat the merge at which point r7 can be merged.
   svntest.actions.run_and_verify_svn(None, None, '.*', 'merge', '^/iota',
                                      iota_copy_path, '--accept', 'postpone')
 
   # Previously this test failed because the merge failed after merging
-  # only r2 (as it should) but mergeinfo for r5-6 was recorded, preventing
+  # only r5 (as it should) but only mergeinfo for r5 was recorded, even
+  # though preventing
   # subsequent repeat merges from applying the operative r5.
   svntest.actions.run_and_verify_svn(
     "Incorrect mergeinfo set during conflict aborted merge",
-    ['/iota:2-4\n'], [], 'pg', SVN_PROP_MERGEINFO, iota_copy_path)
+    ['/iota:2-6\n'], [], 'pg', SVN_PROP_MERGEINFO, iota_copy_path)
 
 ########################################################################
 # Run the tests
