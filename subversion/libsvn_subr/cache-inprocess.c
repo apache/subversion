@@ -234,6 +234,37 @@ inprocess_cache_get(void **value_p,
     : SVN_NO_ERROR;
 }
 
+static svn_error_t *
+inprocess_cache_has_key_internal(svn_boolean_t *found,
+                                 inprocess_cache_t *cache,
+                                 const void *key,
+                                 apr_pool_t *scratch_pool)
+{
+  *found = apr_hash_get(cache->hash, key, cache->klen) != NULL;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+inprocess_cache_has_key(svn_boolean_t *found,
+                        void *cache_void,
+                        const void *key,
+                        apr_pool_t *scratch_pool)
+{
+  inprocess_cache_t *cache = cache_void;
+
+  if (key)
+    SVN_MUTEX__WITH_LOCK(cache->mutex,
+                         inprocess_cache_has_key_internal(found,
+                                                          cache,
+                                                          key,
+                                                          scratch_pool));
+  else
+    *found = FALSE;
+
+  return SVN_NO_ERROR;
+}
+
 /* Removes PAGE from the LRU list, removes all of its entries from
  * CACHE's hash, clears its pool, and sets its entry pointer to NULL.
  * Finally, puts it in the "partial page" slot in the cache and sets
@@ -592,6 +623,7 @@ inprocess_cache_get_info(void *cache_void,
 
 static svn_cache__vtable_t inprocess_cache_vtable = {
   inprocess_cache_get,
+  inprocess_cache_has_key,
   inprocess_cache_set,
   inprocess_cache_iter,
   inprocess_cache_is_cachable,

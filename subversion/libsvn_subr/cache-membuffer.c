@@ -1587,6 +1587,43 @@ membuffer_cache_get(svn_membuffer_t *cache,
 }
 
 /* Look for the cache entry in group GROUP_INDEX of CACHE, identified
+ * by the hash value TO_FIND.  If no item has been stored for KEY, *FOUND
+ * will be FALSE and TRUE otherwise.
+ */
+static svn_error_t *
+membuffer_cache_has_key_internal(svn_membuffer_t *cache,
+                                 apr_uint32_t group_index,
+                                 entry_key_t to_find,
+                                 svn_boolean_t *found)
+{
+  *found = find_entry(cache, group_index, to_find, FALSE) != NULL;
+
+  return SVN_NO_ERROR;
+}
+
+/* Look for an entry identified by KEY.  If no item has been stored
+ * for KEY, *FOUND will be set to FALSE and TRUE otherwise.
+ */
+/* Implements svn_cache__has_key for membuffer caches.
+ */
+static svn_error_t *
+membuffer_cache_has_key(svn_membuffer_t *cache,
+                        entry_key_t key,
+                        svn_boolean_t *found)
+{
+  /* find the entry group that will hold the key.
+   */
+  apr_uint32_t group_index = get_group_index(&cache, key);
+  WITH_READ_LOCK(cache,
+                 membuffer_cache_has_key_internal(cache,
+                                                  group_index,
+                                                  key,
+                                                  found));
+
+  return SVN_NO_ERROR;
+}
+
+/* Look for the cache entry in group GROUP_INDEX of CACHE, identified
  * by the hash value TO_FIND. FOUND indicates whether that entry exists.
  * If not found, *ITEM will be NULL.
  *
@@ -1979,6 +2016,37 @@ svn_membuffer_cache_get(void **value_p,
 
   /* return result */
   *found = *value_p != NULL;
+}
+
+/* Implement svn_cache__vtable_t.has_key (not thread-safe)
+ */
+static svn_error_t *
+svn_membuffer_cache_has_key(svn_boolean_t *found,
+                            void *cache_void,
+                            const void *key,
+                            apr_pool_t *scratch_pool)
+{
+  svn_membuffer_cache_t *cache = cache_void;
+
+  /* special case */
+  if (key == NULL)
+    {
+      *found = FALSE;
+
+      return SVN_NO_ERROR;
+    }
+
+  /* construct the full, i.e. globally unique, key by adding
+   * this cache instances' prefix
+   */
+  combine_key(cache, key, cache->key_len);
+
+  /* Look the item up. */
+  SVN_ERR(membuffer_cache_has_key(cache->membuffer,
+                                  cache->combined_key,
+                                  found));
+
+  /* return result */
   return SVN_NO_ERROR;
 }
 
@@ -2176,6 +2244,7 @@ svn_membuffer_cache_get_info(void *cache_void,
  */
 static svn_cache__vtable_t membuffer_cache_vtable = {
   svn_membuffer_cache_get,
+  svn_membuffer_cache_has_key,
   svn_membuffer_cache_set,
   svn_membuffer_cache_iter,
   svn_membuffer_cache_is_cachable,
@@ -2200,6 +2269,24 @@ svn_membuffer_cache_get_synced(void **value_p,
                                                cache_void,
                                                key,
                                                result_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Implement svn_cache__vtable_t.has_key and serialize all cache access.
+ */
+static svn_error_t *
+svn_membuffer_cache_has_key_synced(svn_boolean_t *found,
+                                   void *cache_void,
+                                   const void *key,
+                                   apr_pool_t *result_pool)
+{
+  svn_membuffer_cache_t *cache = cache_void;
+  SVN_MUTEX__WITH_LOCK(cache->mutex,
+                       svn_membuffer_cache_has_key(found,
+                                                   cache_void,
+                                                   key,
+                                                   result_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2270,6 +2357,7 @@ svn_membuffer_cache_set_partial_synced(void *cache_void,
  */
 static svn_cache__vtable_t membuffer_cache_synced_vtable = {
   svn_membuffer_cache_get_synced,
+  svn_membuffer_cache_has_key_synced,
   svn_membuffer_cache_set_synced,
   svn_membuffer_cache_iter,               /* no sync required */
   svn_membuffer_cache_is_cachable,        /* no sync required */

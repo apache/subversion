@@ -92,6 +92,21 @@ svn_cache__get(void **value_p,
 }
 
 svn_error_t *
+svn_cache__has_key(svn_boolean_t *found,
+                   svn_cache__t *cache,
+                   const void *key,
+                   apr_pool_t *scratch_pool)
+{
+  *found = FALSE;
+  return handle_error(cache,
+                      (cache->vtable->has_key)(found,
+                                               cache->cache_internal,
+                                               key,
+                                               scratch_pool),
+                      scratch_pool);
+}
+
+svn_error_t *
 svn_cache__set(svn_cache__t *cache,
                const void *key,
                void *value,

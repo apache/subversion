@@ -371,6 +371,18 @@ svn_cache__get(void **value,
                apr_pool_t *result_pool);
 
 /**
+ * Looks for an entry indexed by @a key in @a cache,  setting @a *found
+ * to TRUE if an entry has been found and FALSE otherwise.  @a key may be
+ * NULL in which case @a *found will be FALSE.  Temporary allocations will
+ * be made from @a scratch_pool.
+ */
+svn_error_t *
+svn_cache__has_key(svn_boolean_t *found,
+                   svn_cache__t *cache,
+                   const void *key,
+                   apr_pool_t *scratch_pool);
+
+/**
  * Stores the value @a value under the key @a key in @a cache.  Uses @a
  * scratch_pool for temporary allocations.  The cache makes copies of
  * @a key and @a value if necessary (that is, @a key and @a value may
