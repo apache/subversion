@@ -3212,8 +3212,9 @@ merge_node_absent(const char *relpath,
   const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
                                               relpath, scratch_pool);
 
-  record_skip(merge_b, local_abspath, svn_node_unknown,
-              svn_wc_notify_skip, svn_wc_notify_state_missing, scratch_pool);
+  SVN_ERR(record_skip(merge_b, local_abspath, svn_node_unknown,
+                      svn_wc_notify_skip, svn_wc_notify_state_missing,
+                      scratch_pool));
 
   return SVN_NO_ERROR;
 }
