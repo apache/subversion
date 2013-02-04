@@ -1321,10 +1321,12 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     ("Resolve conflicts on working copy files or directories.\n"
      "usage: resolve [PATH...]\n"
      "\n"
-     "  If no arguments are given, perform interactive conflict resolution for\n"
-     "  all conflicted paths in the working copy, with default depth 'infinity'.\n"
-     "  The --accept=ARG option prevents prompting and forces conflicts on PATH\n"
-     "  to resolved in the manner specified by ARG, with default depth 'empty'.\n"),
+     "  By default, perform interactive conflict resolution on PATH.\n"
+     "  In this mode, the command is recursive by default (depth 'infinity').\n"
+     "\n"
+     "  The --accept=ARG option prevents interactive prompting and forces\n"
+     "  conflicts on PATH to be resolved in the manner specified by ARG.\n"
+     "  In this mode, the command is not recursive by default (depth 'empty').\n"),
     {opt_targets, 'R', opt_depth, 'q', opt_accept},
     {{opt_accept, N_("specify automatic conflict resolution source\n"
                      "                             "
