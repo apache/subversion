@@ -1372,7 +1372,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
 
   /* if there is an old version of that entry and the new data fits into
    * the old spot, just re-use that space. */
-  if (buffer && entry && entry->size >= size)
+  if (entry && ALIGN_VALUE(entry->size) >= size && buffer)
     {
       cache->data_used += size - entry->size;
       entry->size = size;
