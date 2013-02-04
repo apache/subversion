@@ -1970,16 +1970,6 @@ svn_membuffer_cache_get(void **value_p,
                               DEBUG_CACHE_MEMBUFFER_TAG
                               result_pool));
 
-  /* We don't need more the key anymore.
-   * But since we allocate only small amounts of data per get() call and
-   * apr_pool_clear is somewhat expensive, we clear it only now and then.
-   */
-  if (++cache->alloc_counter > ALLOCATIONS_PER_POOL_CLEAR)
-    {
-      svn_pool_clear(cache->pool);
-      cache->alloc_counter = 0;
-    }
-
   /* return result */
   *found = *value_p != NULL;
   return SVN_NO_ERROR;
@@ -2061,12 +2051,6 @@ svn_membuffer_cache_get_partial(void **value_p,
       *found = FALSE;
 
       return SVN_NO_ERROR;
-    }
-
-  if (++cache->alloc_counter > ALLOCATIONS_PER_POOL_CLEAR)
-    {
-      svn_pool_clear(cache->pool);
-      cache->alloc_counter = 0;
     }
 
   combine_key(cache, key, cache->key_len);
