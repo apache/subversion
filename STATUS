@@ -198,15 +198,27 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1438602, r1438683
+ * r1438602, r1438683, r1441810
    Fix issue #4306, "multiple editor drive file merges record wrong mergeinfo
    during conflicts"
    Justification:
      Bogus mergeinfo is created during conflicting merges with file targets.
+   Notes: r1438602 is the initial test and r1438683 the initial fix. r1441810
+     is a follow-up that addressed a bug in the initial fix (see
+     http://svn.haxx.se/dev/archive-2013-02/0001.shtml) and also reworked the
+     test to use prop edits rather than text edits as the changes to be
+     merged.  Unfortunately, 1.7.x has unrelated problems with property
+     conflicts: It doesn't abort the merge if it encounters them!  It merrily
+     plugs along sans any "One or more conflicts were produced while
+     merging...resolve all conflicts and rerun the merge to apply the
+     remaining unmerged revisions" error (this is fixed on trunk).  So while
+     r1441810 is a valid fix (IMO) its test fails for unrelated reasons.  So
+     I reworked the earlier version of test to demonstrate the problem
+     r1441810 fixes, but using file conflicts.
    Branch:
      ^/subversion/branches/1.7.x-issue4306
    Votes:
-     +1: stsp, pburba
+     +1: stsp (r1438602 and r1438683 only), pburba
 
  * r1438879
    Make 'show-diff' at the interactive conflict prompt show nicer diffs.
