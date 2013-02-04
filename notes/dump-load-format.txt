@@ -13,7 +13,7 @@ a versioned filesystem-like store, such as another version-control
 system.  It derives from and incorporates some incomplete notes from 
 before r39883.
 
-=== Unresolved questions
+=== Unresolved questions ===
 
 1. In interpreting a Node record which has both a copyfrom source and
 a property section, it is possible that the copy source node itself
