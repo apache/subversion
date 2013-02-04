@@ -23,6 +23,7 @@
 
 -- STMT_CREATE_SCHEMA
 PRAGMA AUTO_VACUUM = 1;
+PRAGMA PAGE_SIZE = 4096;
 
 /* A table mapping representation hashes to locations in a rev file. */
 CREATE TABLE rep_cache (
