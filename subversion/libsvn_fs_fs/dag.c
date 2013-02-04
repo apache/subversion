@@ -1095,7 +1095,7 @@ svn_fs_fs__dag_serialize(void **data,
   svn_temp_serializer__context_t *context =
       svn_temp_serializer__init(node,
                                 sizeof(*node),
-                                503,
+                                1007,
                                 pool);
 
   /* for mutable nodes, we will _never_ cache the noderev */
