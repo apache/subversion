@@ -6223,7 +6223,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "switch_move"),
     SVN_TEST_OPTS_PASS(move_replace,
                        "move_replace"),
-    SVN_TEST_OPTS_XFAIL(layered_moved_to,
+    SVN_TEST_OPTS_PASS(layered_moved_to,
                        "layered_moved_to"),
     SVN_TEST_NULL
   };

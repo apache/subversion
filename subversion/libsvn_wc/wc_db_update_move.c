@@ -1743,11 +1743,11 @@ update_moved_away_conflict_victim(svn_skel_t **work_items,
 
   /* ### TODO get from svn_wc__db_op_depth_moved_to? */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_NODE_INFO));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, victim_relpath));
+                                    STMT_SELECT_HIGHEST_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
+                            moved_away_op_root_relpath,
+                            relpath_depth(moved_away_op_root_relpath)));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (have_row)
-    SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
     src_op_depth = svn_sqlite__column_int(stmt, 0);
   SVN_ERR(svn_sqlite__reset(stmt));
