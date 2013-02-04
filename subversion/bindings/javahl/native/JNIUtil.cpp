@@ -396,7 +396,7 @@ JNIUtil::putErrorsInTrace(svn_error_t *err,
 
   char *tmp_path;
   char *path = svn_dirent_dirname(err->file, err->pool);
-  while (tmp_path = strchr(path, '/'))
+  while ((tmp_path = strchr(path, '/')))
     *tmp_path = '.';
 
   jstring jmethodName = makeJString(path);

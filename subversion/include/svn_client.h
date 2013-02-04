@@ -365,6 +365,14 @@ typedef struct svn_client_proplist_item_t
  * properties inherited by @a path.  Use @a scratch_pool for all temporary
  * allocations.
  *
+ * The #svn_prop_inherited_item_t->path_or_url members of the
+ * #svn_prop_inherited_item_t * structures in @a inherited_props are
+ * URLs if @a path is a URL or if @path is a working copy path but the
+ * property represented by the structure is above the working copy root (i.e.
+ * the inherited property is from the cache).  In all other cases the
+ * #svn_prop_inherited_item_t->path_or_url members are absolute working copy
+ * paths.
+ *
  * @since New in 1.8.
  */
 typedef svn_error_t *(*svn_proplist_receiver2_t)(
@@ -2931,6 +2939,9 @@ svn_client_blame(const char *path_or_url,
  * and the addition of another, but if this flag is TRUE, unrelated
  * items will be diffed as if they were related.
  *
+ * If @a no_diff_added is TRUE, then no diff output will be generated
+ * on added files.
+ *
  * If @a no_diff_deleted is TRUE, then no diff output will be
  * generated on deleted files.
  *
@@ -2992,6 +3003,7 @@ svn_client_diff6(const apr_array_header_t *diff_options,
                  const char *relative_to_dir,
                  svn_depth_t depth,
                  svn_boolean_t ignore_ancestry,
+                 svn_boolean_t no_diff_added,
                  svn_boolean_t no_diff_deleted,
                  svn_boolean_t show_copies_as_adds,
                  svn_boolean_t ignore_content_type,
@@ -3007,7 +3019,7 @@ svn_client_diff6(const apr_array_header_t *diff_options,
 
 /** Similar to svn_client_diff6(), but with @a outfile and @a errfile,
  * instead of @a outstream and @a errstream, and always showing property
- * changes.
+ * changes and additions.
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
  * @since New in 1.7.
@@ -3153,6 +3165,7 @@ svn_client_diff_peg6(const apr_array_header_t *diff_options,
                      const char *relative_to_dir,
                      svn_depth_t depth,
                      svn_boolean_t ignore_ancestry,
+                     svn_boolean_t no_diff_added,
                      svn_boolean_t no_diff_deleted,
                      svn_boolean_t show_copies_as_adds,
                      svn_boolean_t ignore_content_type,
@@ -3489,7 +3502,7 @@ svn_client_find_automatic_merge_no_wc(
  * the WC at @a target_wcpath.  The @a merge structure would typically come
  * from calling svn_client_find_automatic_merge().
  *
- * The other parameters are as in svn_client_merge4().
+ * The other parameters are as in svn_client_merge5().
  *
  * @since New in 1.8.
  */
@@ -3497,7 +3510,8 @@ svn_error_t *
 svn_client_do_automatic_merge(const svn_client_automatic_merge_t *merge,
                               const char *target_wcpath,
                               svn_depth_t depth,
-                              svn_boolean_t force,
+                              svn_boolean_t diff_ignore_ancestry,
+                              svn_boolean_t force_delete,
                               svn_boolean_t record_only,
                               svn_boolean_t dry_run,
                               const apr_array_header_t *merge_options,
@@ -3575,16 +3589,19 @@ svn_client_automatic_merge_get_locations(
  *
  * If @a depth is #svn_depth_unknown, use the depth of @a target_wcpath.
  *
- * Use @a ignore_ancestry to control whether or not items being
- * diffed will be checked for relatedness first.  Unrelated items
- * are typically transmitted to the editor as a deletion of one thing
- * and the addition of another, but if this flag is TRUE, unrelated
- * items will be diffed as if they were related.
+ * If @a ignore_mergeinfo is true, disable merge tracking, by treating the
+ * two sources as unrelated even if they actually have a common ancestor.
  *
- * If @a force is false and the merge involves deleting a file whose
+ * If @a diff_ignore_ancestry is true, diff unrelated nodes as if related:
+ * that is, diff the 'left' and 'right' versions of a node as if they were
+ * related (if they are the same kind) even if they are not related.
+ * Otherwise, diff unrelated items as a deletion of one thing and the
+ * addition of another.
+ *
+ * If @a force_delete is false and the merge involves deleting a file whose
  * content differs from the source-left version, or a locally modified
  * directory, or an unversioned item, then the operation will fail.  If
- * @a force is true then all such items will be deleted.
+ * @a force_delete is true then all such items will be deleted.
  *
  * @a merge_options (an array of <tt>const char *</tt>), if non-NULL,
  * is used to pass additional command line arguments to the merge
@@ -3610,8 +3627,33 @@ svn_client_automatic_merge_get_locations(
  * The authentication baton cached in @a ctx is used to communicate with the
  * repository.
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client_merge5(const char *source1,
+                  const svn_opt_revision_t *revision1,
+                  const char *source2,
+                  const svn_opt_revision_t *revision2,
+                  const char *target_wcpath,
+                  svn_depth_t depth,
+                  svn_boolean_t ignore_mergeinfo,
+                  svn_boolean_t diff_ignore_ancestry,
+                  svn_boolean_t force_delete,
+                  svn_boolean_t record_only,
+                  svn_boolean_t dry_run,
+                  svn_boolean_t allow_mixed_rev,
+                  const apr_array_header_t *merge_options,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_merge5(), but the single @a ignore_ancestry
+ * parameter maps to both @c ignore_mergeinfo and @c diff_ignore_ancestry.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  * @since New in 1.7.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_merge4(const char *source1,
                   const svn_opt_revision_t *revision1,
@@ -3620,7 +3662,7 @@ svn_client_merge4(const char *source1,
                   const char *target_wcpath,
                   svn_depth_t depth,
                   svn_boolean_t ignore_ancestry,
-                  svn_boolean_t force,
+                  svn_boolean_t force_delete,
                   svn_boolean_t record_only,
                   svn_boolean_t dry_run,
                   svn_boolean_t allow_mixed_rev,
@@ -3630,7 +3672,8 @@ svn_client_merge4(const char *source1,
 
 /**
  * Similar to svn_client_merge4(), but with @a allow_mixed_rev set to
- * @c TRUE.
+ * @c TRUE.  The @a force parameter maps to the @c force_delete parameter
+ * of svn_client_merge4().
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  *
@@ -3699,49 +3742,16 @@ svn_client_merge(const char *source1,
 
 
 /**
- * Determine the URLs and revisions needed to perform a reintegrate merge
- * from @a source_path_or_url at @a source_peg_revision into the working
- * copy at @a target_wcpath.
- *
- * Set @a *url1_p and @a *rev1_p to the left side, and @a *url2_p and
- * @a *rev2_p to the right side, URLs and revisions of the source of the
- * required two-URL merge.
- *
- * If no merge should be performed, set @a *url1_p to NULL and @a *rev1_p
- * to #SVN_INVALID_REVNUM.
- *
- * The authentication baton cached in @a ctx is used to communicate with the
- * repository.
- *
- * Allocate all the results in @a result_pool.  Use @a scratch_pool for
- * temporary allocations.
- *
- * @since New in 1.8.
- */
-svn_error_t *
-svn_client_find_reintegrate_merge(const char **url1_p,
-                                  svn_revnum_t *rev1_p,
-                                  const char **url2_p,
-                                  svn_revnum_t *rev2_p,
-                                  /* inputs */
-                                  const char *source_path_or_url,
-                                  const svn_opt_revision_t *source_peg_revision,
-                                  const char *target_wcpath,
-                                  svn_client_ctx_t *ctx,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool);
-
-/**
  * Perform a reintegration merge of @a source_path_or_url at @a source_peg_revision
  * into @a target_wcpath.
  * @a target_wcpath must be a single-revision, #svn_depth_infinity,
  * pristine, unswitched working copy -- in other words, it must
  * reflect a single revision tree, the "target".  The mergeinfo on @a
  * source_path_or_url must reflect that all of the target has been merged into it.
- * Then this behaves like a merge with svn_client_merge4() from the
+ * Then this behaves like a merge with svn_client_merge5() from the
  * target's URL to the source.
  *
- * All other options are handled identically to svn_client_merge4().
+ * All other options are handled identically to svn_client_merge5().
  * The depth of the merge is always #svn_depth_infinity.
  *
  * @since New in 1.5.
@@ -3768,10 +3778,34 @@ svn_client_merge_reintegrate(const char *source_path_or_url,
  * list of provided ranges has an `unspecified' or unrecognized
  * `kind', return #SVN_ERR_CLIENT_BAD_REVISION.
  *
- * All other options are handled identically to svn_client_merge4().
+ * All other options are handled identically to svn_client_merge5().
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client_merge_peg5(const char *source_path_or_url,
+                      const apr_array_header_t *ranges_to_merge,
+                      const svn_opt_revision_t *source_peg_revision,
+                      const char *target_wcpath,
+                      svn_depth_t depth,
+                      svn_boolean_t ignore_mergeinfo,
+                      svn_boolean_t diff_ignore_ancestry,
+                      svn_boolean_t force_delete,
+                      svn_boolean_t record_only,
+                      svn_boolean_t dry_run,
+                      svn_boolean_t allow_mixed_rev,
+                      const apr_array_header_t *merge_options,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_merge_peg5(), but the single @a ignore_ancestry
+ * parameter maps to both @c ignore_mergeinfo and @c diff_ignore_ancestry.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  * @since New in 1.7.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_merge_peg4(const char *source_path_or_url,
                       const apr_array_header_t *ranges_to_merge,
@@ -3779,7 +3813,7 @@ svn_client_merge_peg4(const char *source_path_or_url,
                       const char *target_wcpath,
                       svn_depth_t depth,
                       svn_boolean_t ignore_ancestry,
-                      svn_boolean_t force,
+                      svn_boolean_t force_delete,
                       svn_boolean_t record_only,
                       svn_boolean_t dry_run,
                       svn_boolean_t allow_mixed_rev,
@@ -3789,7 +3823,8 @@ svn_client_merge_peg4(const char *source_path_or_url,
 
 /**
  * Similar to svn_client_merge_peg4(), but with @a allow_mixed_rev set to
- * @c TRUE.
+ * @c TRUE.  The @a force parameter maps to the @c force_delete parameter
+ * of svn_client_merge_peg4().
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  *
@@ -4208,21 +4243,31 @@ svn_client_resolved(const char *path,
 
 /** Perform automatic conflict resolution on a working copy @a path.
  *
- * If @a depth is #svn_depth_empty, act only on @a path; if
- * #svn_depth_files, resolve @a path and its conflicted file
- * children (if any); if #svn_depth_immediates, resolve @a path and
- * all its immediate conflicted children (both files and directories,
- * if any); if #svn_depth_infinity, resolve @a path and every
- * conflicted file or directory anywhere beneath it.
- * Note that this operation will try to lock the parent directory of
- * @a path in order to be able to resolve tree-conflicts on @a path.
+ * If @a conflict_choice is
  *
- * If @a conflict_choice is #svn_wc_conflict_choose_base, resolve the
- * conflict with the old file contents; if
- * #svn_wc_conflict_choose_mine_full, use the original working contents;
- * if #svn_wc_conflict_choose_theirs_full, the new contents; and if
- * #svn_wc_conflict_choose_merged, don't change the contents at all,
- * just remove the conflict status, which is the pre-1.5 behavior.
+ *   - #svn_wc_conflict_choose_base:
+ *     resolve the conflict with the old file contents
+ *
+ *   - #svn_wc_conflict_choose_mine_full:
+ *     use the original working contents
+ *
+ *   - #svn_wc_conflict_choose_theirs_full:
+ *     use the new contents
+ *
+ *   - #svn_wc_conflict_choose_merged:
+ *     don't change the contents at all, just remove the conflict
+ *     status, which is the pre-1.5 behavior.
+ *
+ *   - #svn_wc_conflict_choose_theirs_conflict
+ *     ###...
+ *
+ *   - #svn_wc_conflict_choose_mine_conflict
+ *     ###...
+ *
+ *   - svn_wc_conflict_choose_unspecified
+ *     invoke @a ctx->conflict_func2 with @a ctx->conflict_baton2 to obtain
+ *     a resolution decision for each conflict.  This can be used to
+ *     implement interactive conflict resolution.
  *
  * #svn_wc_conflict_choose_theirs_conflict and
  * #svn_wc_conflict_choose_mine_conflict are not legal for binary
@@ -4231,6 +4276,16 @@ svn_client_resolved(const char *path,
  * If @a path is not in a state of conflict to begin with, do nothing.
  * If @a path's conflict state is removed and @a ctx->notify_func2 is non-NULL,
  * call @a ctx->notify_func2 with @a ctx->notify_baton2 and @a path.
+ *
+ * If @a depth is #svn_depth_empty, act only on @a path; if
+ * #svn_depth_files, resolve @a path and its conflicted file
+ * children (if any); if #svn_depth_immediates, resolve @a path and
+ * all its immediate conflicted children (both files and directories,
+ * if any); if #svn_depth_infinity, resolve @a path and every
+ * conflicted file or directory anywhere beneath it.
+ *
+ * Note that this operation will try to lock the parent directory of
+ * @a path in order to be able to resolve tree-conflicts on @a path.
  *
  * @since New in 1.5.
  */
@@ -4495,6 +4550,12 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  * allowed. This parameter should be set to FALSE except where backwards
  * compatibility to svn_client_move6() is required.
  *
+ * If @a metadata_only is @c TRUE and moving a file in a working copy,
+ * everything in the metadata is updated as if the node is moved, but the
+ * actual disk move operation is not performed. This feature is useful for
+ * clients that want to keep the working copy in sync while the actual working
+ * copy is updated by some other task.
+ *
  * If non-NULL, @a revprop_table is a hash table holding additional,
  * custom revision properties (<tt>const char *</tt> names mapped to
  * <tt>svn_string_t *</tt> values) to be set on the new revision in
@@ -4523,6 +4584,7 @@ svn_client_move7(const apr_array_header_t *src_paths,
                  svn_boolean_t move_as_child,
                  svn_boolean_t make_parents,
                  svn_boolean_t allow_mixed_revisions,
+                 svn_boolean_t metadata_only,
                  const apr_hash_t *revprop_table,
                  svn_commit_callback2_t commit_callback,
                  void *commit_baton,
@@ -4531,7 +4593,7 @@ svn_client_move7(const apr_array_header_t *src_paths,
 
 /**
  * Similar to svn_client_move7(), but with allow_mixed_revisions always
- * set to @c TRUE.
+ * set to @c TRUE and record_only always to @c FALSE.
  *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.7 API.
@@ -4899,6 +4961,14 @@ svn_client_revprop_set(const char *propname,
  * the inherited properties come from the repository.  If @a inherited_props
  * is not @c NULL and no inheritable properties are found, then set
  * @a *inherited_props to an empty array.
+ *
+ * The #svn_prop_inherited_item_t->path_or_url members of the
+ * #svn_prop_inherited_item_t * structures in @a *inherited_props are
+ * URLs if @a target is a URL or if @target is a working copy path but the
+ * property represented by the structure is above the working copy root (i.e.
+ * the inherited property is from the cache).  In all other cases the
+ * #svn_prop_inherited_item_t->path_or_url members are absolute working copy
+ * paths.
  *
  * Allocate @a *props, its keys, and its values in @a pool, use
  * @a scratch_pool for temporary allocations.
@@ -5394,7 +5464,7 @@ svn_client_export(svn_revnum_t *result_rev,
  * externals, and will always finish listing an external before listing
  * the next one.
 
- * @a pool may be used for temporary allocations.
+ * @a scratch_pool may be used for temporary allocations.
  *
  * @since New in 1.8.
  */
@@ -5406,7 +5476,7 @@ typedef svn_error_t *(*svn_client_list_func2_t)(
   const char *abs_path,
   const char *external_parent_url,
   const char *external_target,
-  apr_pool_t *pool);
+  apr_pool_t *scratch_pool);
 
 /**
  * Similar to #svn_client_list_func2_t, but without any information about

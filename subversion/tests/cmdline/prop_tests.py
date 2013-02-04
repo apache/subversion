@@ -49,6 +49,10 @@ def is_non_posix_and_non_windows_os():
   """lambda function to skip revprop_change test"""
   return (not svntest.main.is_posix_os()) and sys.platform != 'win32'
 
+# this is global so other test files can use it
+binary_mime_type_on_text_file_warning = \
+  "svn: warning:.*is a binary mime-type but file.*looks like text.*"
+
 ######################################################################
 # Tests
 
@@ -92,11 +96,7 @@ def make_local_props(sbox):
   # Read the real disk tree.  Notice we are passing the (normally
   # disabled) "load props" flag to this routine.  This will run 'svn
   # proplist' on every item in the working copy!
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
-
-  # Compare actual vs. expected disk trees.
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk, True)
 
   # Edit without actually changing the property
   svntest.main.use_editor('identity')
@@ -616,7 +616,9 @@ def inappropriate_props(sbox):
   svntest.main.file_append(path, "binary")
   sbox.simple_add('binary')
 
-  sbox.simple_propset('svn:mime-type', 'application/octet-stream', 'binary')
+  svntest.main.run_svn(binary_mime_type_on_text_file_warning,
+                       'propset', 'svn:mime-type', 'application/octet-stream',
+                       sbox.ospath('binary'))
 
   svntest.actions.run_and_verify_svn('Illegal target', None,
                                      svntest.verify.AnyOutput,
@@ -1319,9 +1321,7 @@ def props_on_replaced_file(sbox):
   # check that the replaced file has no properties
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('iota', contents="some mod")
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
   # now add a new property to iota
   sbox.simple_propset('red', 'mojo', 'iota')
@@ -1329,9 +1329,7 @@ def props_on_replaced_file(sbox):
 
   # What we expect the disk tree to look like:
   expected_disk.tweak('iota', props={'red' : 'mojo', 'groovy' : 'baby'})
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
 #----------------------------------------------------------------------
 
@@ -1781,9 +1779,7 @@ def rm_of_replaced_file(sbox):
   expected_disk.tweak('iota', props={'red': 'rojo', 'blue': 'lagoon'})
   expected_disk.tweak('A/mu', props={'red': 'rojo', 'blue': 'lagoon'},
                       contents="This is the file 'iota'.\n")
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
   # Remove the copy. This should leave the original locally-deleted mu,
   # which should have no properties.
@@ -2012,17 +2008,13 @@ def obstructed_subdirs(sbox):
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/C', props={'red': 'blue'})
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, load_props=True)
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
   # Remove the subdir from disk, and validate the status
   svntest.main.safe_rmtree(C_path)
 
   expected_disk.remove('A/C')
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, load_props=True)
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/C', status='!M', wc_rev='1')
@@ -2035,9 +2027,7 @@ def obstructed_subdirs(sbox):
   expected_disk.add({'A/C': Item(contents='', props={'red': 'blue'})})
   expected_status.tweak('A/C', status='~M', wc_rev='1')
 
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, load_props=True)
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -2535,11 +2525,11 @@ def inheritable_ignores(sbox):
   sbox.simple_propset('svn:ignore', '*.foo', 'A/B/E')
   sbox.simple_commit()
 
-  # Some directories and files that should be added because they don't
-  # match any applicable ignores.
-  X_dir_path = os.path.join(wc_dir, 'ADD-ME-DIR-X')
-  Y_dir_path = os.path.join(wc_dir, 'A', 'ADD-ME-DIR-Y.doo')
-  Z_dir_path = os.path.join(wc_dir, 'A', 'D', 'G', 'ADD-ME-DIR-Z.doo')
+  # Some directories and files that should always be added because they
+  # don't match any applicable ignore patterns.
+  X_dir_path = sbox.ospath('ADD-ME-DIR-X')
+  Y_dir_path = sbox.ospath('A/ADD-ME-DIR-Y.doo')
+  Z_dir_path = sbox.ospath('A/D/G/ADD-ME-DIR-Z.doo')
   os.mkdir(X_dir_path)
   os.mkdir(Y_dir_path)
   os.mkdir(Z_dir_path)
@@ -2547,11 +2537,11 @@ def inheritable_ignores(sbox):
   # Some directories and files that should be ignored when adding
   # because they match an ignore pattern (unless of course they are
   # the direct target of an add, which we always add).
-  boo_dir_path = os.path.join(wc_dir, 'IGNORE-ME-DIR.boo')
-  goo_dir_path = os.path.join(wc_dir, 'IGNORE-ME-DIR.boo', 'IGNORE-ME-DIR.goo')
-  doo_dir_path = os.path.join(wc_dir, 'A', 'B', 'IGNORE-ME-DIR.doo')
-  moo_dir_path = os.path.join(wc_dir, 'A', 'D', 'IGNORE-ME-DIR.moo')
-  foo_dir_path = os.path.join(wc_dir, 'A', 'B', 'E', 'IGNORE-ME-DIR.foo')
+  boo_dir_path = sbox.ospath('IGNORE-ME-DIR.boo')
+  goo_dir_path = sbox.ospath('IGNORE-ME-DIR.boo/IGNORE-ME-DIR.goo')
+  doo_dir_path = sbox.ospath('A/B/IGNORE-ME-DIR.doo')
+  moo_dir_path = sbox.ospath('A/D/IGNORE-ME-DIR.moo')
+  foo_dir_path = sbox.ospath('A/B/E/IGNORE-ME-DIR.foo')
   os.mkdir(boo_dir_path)
   os.mkdir(goo_dir_path)
   os.mkdir(doo_dir_path)
@@ -2650,8 +2640,8 @@ def inheritable_ignores(sbox):
                                      '--config-dir', config_dir)
   os.chdir(saved_wd)
 
-  # Now revert and try the add with the --no-ignore flag, only the
-  # svn:global-ignores should be enforced.
+  # Now revert and try the add with the --no-ignore flag, nothing should
+  # be ignored.
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', wc_dir, '-R')
   saved_wd = os.getcwd()
   os.chdir(sbox.wc_dir)
@@ -2665,15 +2655,25 @@ def inheritable_ignores(sbox):
                                  'IGNORE-ME-DIR.goo') + '\n',
      'A         ' + os.path.join('A', 'B', 'E', 'IGNORE-ME-DIR.foo') + '\n',
      'A         ' + os.path.join('A', 'B', 'E', 'ignore-me-file.foo') + '\n',
-     'A         ' + os.path.join('A', 'D', 'G', 'ignore-me-file.goo') + '\n'])
-  svntest.actions.run_and_verify_svn("Adds in spite of ignores", expected,
-                                     [], 'add', '.', '--force','--no-ignore',
-                                     '--config-dir', config_dir)
+     'A         ' + os.path.join('A', 'D', 'G', 'ignore-me-file.goo') + '\n',
+
+     'A         ' + os.path.join('A', 'B', 'E', 'ignore-me-file.doo') + '\n',
+     'A         ' + os.path.join('A', 'B', 'IGNORE-ME-DIR.doo') + '\n',
+     'A         ' + os.path.join('A', 'B', 'IGNORE-ME-DIR.doo',
+                                 'ignore-me-file.doo') + '\n',
+     'A         ' + os.path.join('A', 'B', 'IGNORE-ME-DIR.doo',
+                                 'ignore-me-file.roo') + '\n',
+     'A         ' + os.path.join('A', 'D', 'IGNORE-ME-DIR.moo') + '\n',
+     'A         ' + os.path.join('A', 'D', 'ignore-me-file.moo') + '\n'])
+  svntest.actions.run_and_verify_svn("Files ignored with --no-ignore",
+                                     expected, [], 'add', '.', '--force',
+                                     '--no-ignore', '--config-dir',
+                                     config_dir)
 
 def almost_known_prop_names(sbox):
   "propset with svn: prefix but unknown name"
 
-  sbox.build()
+  sbox.build(read_only=True)
   wc_dir = sbox.wc_dir
   iota_path = sbox.ospath('iota')
 

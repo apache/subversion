@@ -94,10 +94,12 @@ typedef struct svn_ra_serf__connection_t {
 
 } svn_ra_serf__connection_t;
 
-/** Max. number of connctions we'll open to the server. 
- *  Note: minimum 2 connections are required for ra_serf to function correctly!
+/** Maximum value we'll allow for the http-max-connections config option.
+ *
+ * Note: minimum 2 connections are required for ra_serf to function
+ * correctly!
  */
-#define MAX_NR_OF_CONNS 4
+#define SVN_RA_SERF__MAX_CONNECTIONS_LIMIT 8
 
 /*
  * The master serf RA session.
@@ -111,6 +113,10 @@ struct svn_ra_serf__session_t {
   /* The current context */
   serf_context_t *context;
 
+  /* The maximum number of connections we'll use for parallelized
+     fetch operations (updates, etc.) */
+  apr_int64_t max_connections;
+
   /* Are we using ssl */
   svn_boolean_t using_ssl;
 
@@ -121,7 +127,7 @@ struct svn_ra_serf__session_t {
   const char *useragent;
 
   /* The current connection */
-  svn_ra_serf__connection_t *conns[MAX_NR_OF_CONNS];
+  svn_ra_serf__connection_t *conns[SVN_RA_SERF__MAX_CONNECTIONS_LIMIT];
   int num_conns;
   int cur_conn;
 
@@ -223,6 +229,26 @@ struct svn_ra_serf__session_t {
   /*** End HTTP v2 stuff ***/
 
   svn_ra_serf__blncache_t *blncache;
+
+  /* Trisate flag that indicates user preference for using bulk updates
+     (svn_tristate_true) with all the properties and content in the
+     update-report response. If svn_tristate_false, request a skelta
+     update-report with inlined properties. If svn_tristate_unknown then use
+     server preference. */
+  svn_tristate_t bulk_updates;
+
+  /* Indicates if the server wants bulk update requests (Prefer) or only
+     accepts skelta requests (Off). If this value is On both options are 
+     allowed. */
+  const char *server_allows_bulk;
+
+  /* Indicates if the server supports sending inlined props in update editor
+   * in skelta mode (send-all == 'false'). */
+  svn_boolean_t supports_inline_props;
+
+  /* Indicates whether the server supports issuing replay REPORTs
+     against rev resources (children of `rev_stub', elsestruct). */
+  svn_boolean_t supports_rev_rsrc_replay;
 };
 
 #define SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(sess) ((sess)->me_resource != NULL)

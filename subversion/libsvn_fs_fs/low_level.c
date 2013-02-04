@@ -525,7 +525,7 @@ svn_fs_fs__unparse_representation(representation_t *rep,
     return svn_stringbuf_ncreate("-1", 2, pool);
 
 #define DISPLAY_MAYBE_NULL_CHECKSUM(checksum)          \
-  ((may_be_corrupt == FALSE || (checksum) != NULL)     \
+  ((!may_be_corrupt || (checksum) != NULL)     \
    ? svn_checksum_to_cstring_display((checksum), pool) \
    : "(null)")
 
@@ -689,7 +689,7 @@ svn_fs_fs__write_rep_header(svn_fs_fs__rep_header_t *header,
 {
   const char *text;
   
-  if (header->is_delta == FALSE)
+  if (!header->is_delta)
     {
       text = REP_PLAIN "\n";
     }

@@ -39,6 +39,7 @@
 
 #include "svn_types.h"
 #include "svn_wc.h"
+#include "private/svn_diff_tree.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -305,6 +306,7 @@ svn_wc__get_tree_conflict(const svn_wc_conflict_description2_t **tree_conflict,
 svn_error_t *
 svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
                           const svn_wc_conflict_description2_t *conflict,
+                          const char *moved_away_op_root_abspath,
                           apr_pool_t *scratch_pool);
 
 /* Remove any tree conflict on victim @a victim_abspath using @a wc_ctx.
@@ -317,25 +319,29 @@ svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
                           const char *victim_abspath,
                           apr_pool_t *scratch_pool);
 
-/** Like svn_wc_is_wc_root(), but it doesn't consider switched subdirs or
+/** Check whether LOCAL_ABSPATH has a parent directory that knows about its
+ * existence. Set *IS_WCROOT to FALSE if a parent is found, and to TRUE
+ * if there is no such parent.
+ *
+ * Like svn_wc_is_wc_root2(), but doesn't consider switched subdirs or
  * deleted entries as working copy roots.
  */
 svn_error_t *
-svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
-                            svn_wc_context_t *wc_ctx,
-                            const char *local_abspath,
-                            apr_pool_t *scratch_pool);
+svn_wc__is_wcroot(svn_boolean_t *is_wcroot,
+                  svn_wc_context_t *wc_ctx,
+                  const char *local_abspath,
+                  apr_pool_t *scratch_pool);
 
 
 /** Set @a *wcroot_abspath to the local abspath of the root of the
  * working copy in which @a local_abspath resides.
  */
 svn_error_t *
-svn_wc__get_wc_root(const char **wcroot_abspath,
-                    svn_wc_context_t *wc_ctx,
-                    const char *local_abspath,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool);
+svn_wc__get_wcroot(const char **wcroot_abspath,
+                   svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool);
 
 /**
  * The following are temporary APIs to aid in the transition from wc-1 to
@@ -859,6 +865,11 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
  * required), up to and including the root of the working copy and
  * any cached inherited properties inherited by the root.
  *
+ * The #svn_prop_inherited_item_t->path_or_url members of the
+ * #svn_prop_inherited_item_t * structures in @a *inherited_props are
+ * paths relative to the repository root URL for cached inherited
+ * properties and absolute working copy paths otherwise.
+ *
  * Allocate @a *inherited_props in @a result_pool.  Use @a scratch_pool
  * for temporary allocations.
  */
@@ -1098,9 +1109,6 @@ svn_wc__get_not_present_descendants(const apr_array_header_t **descendants,
  * If KIND is not NULL, set *KIND to the kind of node registered in the working
  * copy, or SVN_NODE_NONE if the node doesn't
  *
- * If ADDED is not NULL, set *ADDED to TRUE if the node is added. (Addition,
- * copy or moved).
- *
  * If DELETED is not NULL, set *DELETED to TRUE if the node is marked as
  * deleted in the working copy.
  *
@@ -1112,7 +1120,6 @@ svn_wc__get_not_present_descendants(const apr_array_header_t **descendants,
 svn_error_t *
 svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
                                svn_node_kind_t *kind,
-                               svn_boolean_t *added,
                                svn_boolean_t *deleted,
                                svn_wc_context_t *wc_ctx,
                                const char *local_abspath,
@@ -1590,7 +1597,11 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
  * and for top-level file entries as well (if any).  If
  * #svn_depth_immediates, do the same as #svn_depth_files but also diff
  * top-level subdirectories at #svn_depth_empty.  If #svn_depth_infinity,
- * then diff fully recursively.
+ * then diff fully recursively. If @a depth is #svn_depth_unknown, then...
+ *
+ *   ### ... then the @a server_performs_filtering option is meaningful.
+ *   ### But what does this depth mean exactly? Something about 'ambient'
+ *   ### depth? How does it compare with depth 'infinity'?
  *
  * @a ignore_ancestry determines whether paths that have discontinuous node
  * ancestry are treated as delete/add or as simple modifications.  If
@@ -1617,9 +1628,28 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
  * it's a member of one of those changelists.  If @a changelist_filter is
  * empty (or altogether @c NULL), no changelist filtering occurs.
  *
-  * If @a server_performs_filtering is TRUE, assume that the server handles
+ * If @a server_performs_filtering is TRUE, assume that the server handles
  * the ambient depth filtering, so this doesn't have to be handled in the
  * editor.
+ *
+ *
+ * A diagram illustrating how this function is used.
+ *
+ *   Steps 1 and 2 create the chain; step 3 drives it.
+ *
+ *   1.                    svn_wc__get_diff_editor(diff_cbs)
+ *                                       |           ^
+ *   2.         svn_ra_do_diff3(editor)  |           |
+ *                    |           ^      |           |
+ *                    v           |      v           |
+ *           +----------+       +----------+       +----------+
+ *           |          |       |          |       |          |
+ *      +--> | reporter | ----> |  editor  | ----> | diff_cbs | ----> text
+ *      |    |          |       |          |       |          |       out
+ *      |    +----------+       +----------+       +----------+
+ *      |
+ *   3. svn_wc_crawl_revisions5(WC,reporter)
+ *
  *
  * @since New in 1.8.
  */
@@ -1643,6 +1673,56 @@ svn_wc__get_diff_editor(const svn_delta_editor_t **editor,
                         void *cancel_baton,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
+
+/** Callback for the svn_diff_tree_processor_t wrapper, to allow handling
+ *  notifications like how the repos diff in libsvn_client does.
+ *
+ * Probably only necessary while transitioning to svn_diff_tree_processor_t
+ */
+typedef svn_error_t *
+        (*svn_wc__diff_state_handle_t)(svn_boolean_t tree_conflicted,
+                                       svn_wc_notify_state_t *state,
+                                       svn_wc_notify_state_t *prop_state,
+                                       const char *relpath,
+                                       svn_kind_t kind,
+                                       svn_boolean_t before_op,
+                                       svn_boolean_t for_add,
+                                       svn_boolean_t for_delete,
+                                       void *state_baton,
+                                       apr_pool_t *scratch_pool);
+
+/** Callback for the svn_diff_tree_processor_t wrapper, to allow handling
+ *  notifications like how the repos diff in libsvn_client does.
+ *
+ * Probably only necessary while transitioning to svn_diff_tree_processor_t
+ */
+typedef svn_error_t *
+        (*svn_wc__diff_state_close_t)(const char *relpath,
+                                      svn_kind_t kind,
+                                      void *state_baton,
+                                      apr_pool_t *scratch_pool);
+
+/** Callback for the svn_diff_tree_processor_t wrapper, to allow handling
+ *  absent nodes.
+ *
+ * Probably only necessary while transitioning to svn_diff_tree_processor_t
+ */
+typedef svn_error_t *
+        (*svn_wc__diff_state_absent_t)(const char *relpath,
+                                       void *state_baton,
+                                       apr_pool_t *scratch_pool);
+
+/** Obtains a diff processor that will drive the diff callbacks when it
+ * is invoked.
+ */
+svn_error_t *
+svn_wc__wrap_diff_callbacks(const svn_diff_tree_processor_t **diff_processor,
+                            const svn_wc_diff_callbacks4_t *callbacks,
+                            void *callback_baton,
+                            svn_boolean_t walk_deleted_dirs,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
 
 /**
  * Assuming @a local_abspath itself or any of its children are under version
@@ -1760,6 +1840,26 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
               svn_wc_notify_func2_t notify_func,
               void *notify_baton,
               apr_pool_t *scratch_pool);
+
+
+/* During merge when we encounter added directories, we add them using
+   svn_wc_add4(), recording its original location, etc. But at that time
+   we don't have its original properties. This function allows updating the
+   BASE properties of such a special added node, but only before it receives
+   other changes.
+
+   NEW_ORIGINAL_PROPS is a new set of properties, including entry props that
+   will be applied to LOCAL_ABSPATH as pristine properties.
+
+   The copyfrom_* arguments are used to verify (some of) the assumptions of
+   this function */
+svn_error_t *
+svn_wc__complete_directory_add(svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_hash_t *new_original_props,
+                               const char *copyfrom_url,
+                               svn_revnum_t copyfrom_rev,
+                               apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

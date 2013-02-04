@@ -512,6 +512,26 @@ downgrade_commit_copied_notify_func(void *baton,
     b->orig_notify_func2(b->orig_notify_baton2, notify, pool);
 }
 
+svn_error_t *
+svn_client_commit5(const apr_array_header_t *targets,
+                   svn_depth_t depth,
+                   svn_boolean_t keep_locks,
+                   svn_boolean_t keep_changelists,
+                   svn_boolean_t commit_as_operations,
+                   const apr_array_header_t *changelists,
+                   const apr_hash_t *revprop_table,
+                   svn_commit_callback2_t commit_callback,
+                   void *commit_baton,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_client_commit6(targets, depth, keep_locks, keep_changelists,
+                            commit_as_operations,
+                            FALSE,  /* include_file_externals */
+                            FALSE, /* include_dir_externals */
+                            changelists, revprop_table, commit_callback,
+                            commit_baton, ctx, pool);
+}
 
 svn_error_t *
 svn_client_commit4(svn_commit_info_t **commit_info_p,
@@ -724,7 +744,8 @@ svn_client_move6(const apr_array_header_t *src_paths,
 {
   return svn_error_trace(svn_client_move7(src_paths, dst_path,
                                           move_as_child, make_parents,
-                                          TRUE, /* allow_mixed_revisions */
+                                          TRUE /* allow_mixed_revisions */,
+                                          FALSE /* metadata_only */,
                                           revprop_table,
                                           commit_callback, commit_baton,
                                           ctx, pool));
@@ -916,9 +937,11 @@ svn_client_diff5(const apr_array_header_t *diff_options,
 
   return svn_client_diff6(diff_options, path1, revision1, path2,
                           revision2, relative_to_dir, depth,
-                          ignore_ancestry, no_diff_deleted,
-                          show_copies_as_adds, ignore_content_type, FALSE,
-                          FALSE, use_git_diff_format, header_encoding,
+                          ignore_ancestry, FALSE /* no_diff_added */,
+                          no_diff_deleted, show_copies_as_adds,
+                          ignore_content_type, FALSE /* ignore_properties */,
+                          FALSE /* properties_only */, use_git_diff_format,
+                          header_encoding,
                           outstream, errstream, changelists, ctx, pool);
 }
 
@@ -1042,11 +1065,12 @@ svn_client_diff_peg5(const apr_array_header_t *diff_options,
                               relative_to_dir,
                               depth,
                               ignore_ancestry,
+                              FALSE /* no_diff_added */,
                               no_diff_deleted,
                               show_copies_as_adds,
                               ignore_content_type,
-                              FALSE,
-                              FALSE,
+                              FALSE /* ignore_properties */,
+                              FALSE /* properties_only */,
                               use_git_diff_format,
                               header_encoding,
                               outstream,
@@ -1606,6 +1630,34 @@ svn_client_log(const apr_array_header_t *targets,
 /*** From merge.c ***/
 
 svn_error_t *
+svn_client_merge4(const char *source1,
+                  const svn_opt_revision_t *revision1,
+                  const char *source2,
+                  const svn_opt_revision_t *revision2,
+                  const char *target_wcpath,
+                  svn_depth_t depth,
+                  svn_boolean_t ignore_ancestry,
+                  svn_boolean_t force_delete,
+                  svn_boolean_t record_only,
+                  svn_boolean_t dry_run,
+                  svn_boolean_t allow_mixed_rev,
+                  const apr_array_header_t *merge_options,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  SVN_ERR(svn_client_merge5(source1, revision1,
+                            source2, revision2,
+                            target_wcpath,
+                            depth,
+                            ignore_ancestry /*ignore_mergeinfo*/,
+                            ignore_ancestry /*diff_ignore_ancestry*/,
+                            force_delete, record_only,
+                            dry_run, allow_mixed_rev,
+                            merge_options, ctx, pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_client_merge3(const char *source1,
                   const svn_opt_revision_t *revision1,
                   const char *source2,
@@ -1663,6 +1715,34 @@ svn_client_merge(const char *source1,
   return svn_client_merge2(source1, revision1, source2, revision2,
                            target_wcpath, recurse, ignore_ancestry, force,
                            dry_run, NULL, ctx, pool);
+}
+
+svn_error_t *
+svn_client_merge_peg4(const char *source_path_or_url,
+                      const apr_array_header_t *ranges_to_merge,
+                      const svn_opt_revision_t *source_peg_revision,
+                      const char *target_wcpath,
+                      svn_depth_t depth,
+                      svn_boolean_t ignore_ancestry,
+                      svn_boolean_t force_delete,
+                      svn_boolean_t record_only,
+                      svn_boolean_t dry_run,
+                      svn_boolean_t allow_mixed_rev,
+                      const apr_array_header_t *merge_options,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool)
+{
+  SVN_ERR(svn_client_merge_peg5(source_path_or_url,
+                                ranges_to_merge,
+                                source_peg_revision,
+                                target_wcpath,
+                                depth,
+                                ignore_ancestry /*ignore_mergeinfo*/,
+                                ignore_ancestry /*diff_ignore_ancestry*/,
+                                force_delete, record_only,
+                                dry_run, allow_mixed_rev,
+                                merge_options, ctx, pool));
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

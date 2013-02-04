@@ -633,9 +633,8 @@ def propmods_with_changelists(sbox):
                       'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', 'A/D/H',
                       'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi', 'A/D/gamma',
                       'A/mu', 'iota', props={ 'name' : 'value' })
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+
+  svntest.actions.verify_disk(wc_dir, expected_disk, True)
 
   # Proplist the 'i' changelist
   exit_code, output, errput = svntest.main.run_svn(None, "proplist", "--depth",
@@ -653,9 +652,7 @@ def propmods_with_changelists(sbox):
                        wc_dir)
   expected_disk.tweak('A/D/G/pi', 'A/D/G/rho', 'A/D/H/chi', 'A/D/H/psi',
                       props={})
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk, True)
 
   # Add 'foo'='bar' property on all files under A/B to depth files and
   # in changelist 'a'.
@@ -664,9 +661,7 @@ def propmods_with_changelists(sbox):
                        os.path.join(wc_dir, 'A', 'B'))
   expected_disk.tweak('A/B/lambda', props={ 'name' : 'value',
                                             'foo'  : 'bar' })
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk, True)
 
   # Add 'bloo'='blarg' property to all files in changelist 'a'.
   svntest.main.run_svn(None, "pset", "--depth", "infinity",
@@ -678,9 +673,7 @@ def propmods_with_changelists(sbox):
   expected_disk.tweak('A/B/E/alpha', 'A/B/E/beta', 'A/D/H/omega', 'A/D/gamma',
                       'iota', props={ 'name' : 'value',
                                       'bloo' : 'blarg' })
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk, True)
 
   # Propget 'name' in files in changelists 'a' and 'i' to depth files.
   exit_code, output, errput = svntest.main.run_svn(None, "pget",
@@ -1189,57 +1182,6 @@ def readd_after_revert(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'add', dummy)
 
-def empty_pseudo_changelist(sbox):
-  "the empty pseudo-changelist"
-
-  # Boilerplate.
-  sbox.build(read_only = True)
-  wc_dir = sbox.wc_dir
-
-  # Helper functions.
-
-  def found_nodes(*args):
-    # Extract the Greek-tree-relative paths.
-    return set(map(lambda info: info['Path'][len(wc_dir)+1:],
-                    svntest.actions.run_and_parse_info(*args)))
-
-  def find_nodes(nodeset, *args):
-    assert isinstance(nodeset, set)
-    foundset = found_nodes(*args)
-    nodeset = set(map(lambda path: path.replace('/', os.path.sep), nodeset))
-    if nodeset != foundset:
-      raise svntest.Failure("Expected nodeset %s but found %s"
-                            % (nodeset, foundset))
-
-  # Convenience variables.
-  E_path = sbox.ospath('A/B/E')
-  alpha_path = sbox.ospath('A/B/E/alpha')
-  beta_path = sbox.ospath('A/B/E/beta')
-  iota_path = sbox.ospath('iota')
-
-  # Can't add an item to the empty changelist.
-  expected_err = 'svn: E125014: .*'
-  svntest.actions.run_and_verify_svn(None, [], expected_err,
-                                     'changelist', '', iota_path)
-
-  # Modify alpha and beta
-  svntest.main.file_append(alpha_path, "More stuff in alpha\n")
-  svntest.main.file_append(beta_path, "More stuff in beta\n")
-
-  # Add beta to 'testlist'.
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'changelist', 'testlist', beta_path)
-
-  # Convenience variables.
-  changelist = {
-    'testlist' : set(['A/B/E/beta']),
-    '' : set(['A/B/E', 'A/B/E/alpha']),
-  }
-
-  # Some basic validations.
-  find_nodes(changelist['testlist'] | changelist[''], '-R', E_path)
-  find_nodes(changelist['testlist'], '--cl', 'testlist', '-R', E_path)
-  find_nodes(changelist[''], '--cl', '', '-R', E_path)
 
 ########################################################################
 # Run the tests
@@ -1263,7 +1205,6 @@ test_list = [ None,
               add_remove_non_existent_target,
               add_remove_unversioned_target,
               readd_after_revert,
-              empty_pseudo_changelist,
              ]
 
 if __name__ == '__main__':

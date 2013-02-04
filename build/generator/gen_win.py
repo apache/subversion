@@ -462,7 +462,10 @@ class WinGeneratorBase(GeneratorBase):
       # Link everything except tests against the dll. Tests need to be linked
       # against the static libraries because they sometimes access internal
       # library functions.
-      if dep in deps[key] and key.find("test") == -1:
+
+      # ### The magic behavior for 'test' in a name and 'entries-dump' should
+      # ### move to another option in build.conf
+      if dep in deps[key] and key.find("test") == -1 and key != 'entries-dump':
         deps[key].remove(dep)
         deps[key].append(target)
 

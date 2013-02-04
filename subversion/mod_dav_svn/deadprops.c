@@ -136,7 +136,7 @@ get_value(dav_db *db, const dav_prop_name *name, svn_string_t **pvalue)
                                propname, db->p);
       else
         serr = svn_repos_fs_revision_prop(pvalue,
-                                          db->resource->info-> repos->repos,
+                                          db->resource->info->repos->repos,
                                           db->resource->info->root.rev,
                                           propname, db->authz_read_func,
                                           db->authz_read_baton, db->p);

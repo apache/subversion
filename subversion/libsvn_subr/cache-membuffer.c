@@ -1372,7 +1372,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
 
   /* if there is an old version of that entry and the new data fits into
    * the old spot, just re-use that space. */
-  if (buffer && entry && entry->size >= size)
+  if (entry && ALIGN_VALUE(entry->size) >= size && buffer)
     {
       cache->data_used += size - entry->size;
       entry->size = size;
@@ -1430,7 +1430,10 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
   else
     {
       /* if there is already an entry for this key, drop it.
+       * Since ensure_data_insertable may have removed entries from
+       * ENTRY's group, re-do the lookup.
        */
+      entry = find_entry(cache, group_index, to_find, FALSE);
       if (entry)
         drop_entry(cache, entry);
     }
@@ -2004,16 +2007,6 @@ svn_membuffer_cache_get(void **value_p,
                               DEBUG_CACHE_MEMBUFFER_TAG
                               result_pool));
 
-  /* We don't need more the key anymore.
-   * But since we allocate only small amounts of data per get() call and
-   * apr_pool_clear is somewhat expensive, we clear it only now and then.
-   */
-  if (++cache->alloc_counter > ALLOCATIONS_PER_POOL_CLEAR)
-    {
-      apr_pool_clear(cache->pool);
-      cache->alloc_counter = 0;
-    }
-
   /* return result */
   *found = *value_p != NULL;
 }
@@ -2072,7 +2065,7 @@ svn_membuffer_cache_set(void *cache_void,
   cache->alloc_counter += 3;
   if (cache->alloc_counter > ALLOCATIONS_PER_POOL_CLEAR)
     {
-      apr_pool_clear(cache->pool);
+      svn_pool_clear(cache->pool);
       cache->alloc_counter = 0;
     }
 
@@ -2126,12 +2119,6 @@ svn_membuffer_cache_get_partial(void **value_p,
       *found = FALSE;
 
       return SVN_NO_ERROR;
-    }
-
-  if (++cache->alloc_counter > ALLOCATIONS_PER_POOL_CLEAR)
-    {
-      apr_pool_clear(cache->pool);
-      cache->alloc_counter = 0;
     }
 
   combine_key(cache, key, cache->key_len);

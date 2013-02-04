@@ -39,6 +39,7 @@
 #include "svn_props.h"
 #include "cl.h"
 
+#include "private/svn_cmdline_private.h"
 #include "svn_private_config.h"
 
 
@@ -137,8 +138,8 @@ svn_cl__propedit(apr_getopt_t *os,
       /* Run the editor on a temporary file which contains the
          original property value... */
       SVN_ERR(svn_io_temp_dir(&temp_dir, pool));
-      SVN_ERR(svn_cl__edit_string_externally
-              (&propval, NULL,
+      SVN_ERR(svn_cmdline__edit_string_externally(
+               &propval, NULL,
                opt_state->editor_cmd, temp_dir,
                propval, "svn-prop",
                ctx->config,
@@ -272,16 +273,16 @@ svn_cl__propedit(apr_getopt_t *os,
 
           /* Run the editor on a temporary file which contains the
              original property value... */
-          SVN_ERR(svn_cl__edit_string_externally(&edited_propval, NULL,
-                                                 opt_state->editor_cmd,
-                                                 base_dir,
-                                                 propval,
-                                                 "svn-prop",
-                                                 ctx->config,
-                                                 svn_prop_needs_translation
-                                                 (pname_utf8),
-                                                 opt_state->encoding,
-                                                 subpool));
+          SVN_ERR(svn_cmdline__edit_string_externally(&edited_propval, NULL,
+                                                      opt_state->editor_cmd,
+                                                      base_dir,
+                                                      propval,
+                                                      "svn-prop",
+                                                      ctx->config,
+                                                      svn_prop_needs_translation
+                                                      (pname_utf8),
+                                                      opt_state->encoding,
+                                                      subpool));
 
           target_local = svn_path_is_url(target) ? target
             : svn_dirent_local_style(target, subpool);
@@ -314,6 +315,10 @@ svn_cl__propedit(apr_getopt_t *os,
                                                     sizeof(const char *));
 
                   APR_ARRAY_PUSH(targs, const char *) = target;
+
+                  SVN_ERR(svn_cl__propset_print_binary_mime_type_warning(
+                      targs, pname_utf8, propval, subpool));
+
                   err = svn_client_propset_local(pname_utf8, edited_propval,
                                                  targs, svn_depth_empty,
                                                  opt_state->force, NULL,

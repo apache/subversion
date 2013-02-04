@@ -376,23 +376,9 @@ update_internal(svn_revnum_t *result_rev,
   dfb.target_revision = revnum;
   dfb.anchor_url = anchor_loc->url;
 
-  err = svn_client__get_inheritable_props(&wcroot_iprops, local_abspath,
-                                          revnum, depth, ra_session, ctx,
-                                          pool, pool);
-
-  /* We might be trying to update to a non-existant path-rev. */
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
-        {
-          svn_error_clear(err);
-          err = NULL;
-        }
-      else
-        {
-          return svn_error_trace(err);
-        }
-    }
+  SVN_ERR(svn_client__get_inheritable_props(&wcroot_iprops, local_abspath,
+                                            revnum, depth, ra_session,
+                                            ctx, pool, pool));
 
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */

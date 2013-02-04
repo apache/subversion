@@ -85,23 +85,12 @@ tweak_status(void *baton,
   /* If the status item has an entry, but doesn't belong to one of the
      changelists our caller is interested in, we filter out this status
      transmission.  */
-  /* ### duplicated in ../libsvn_wc/diff_local.c */
-  if (sb->changelist_hash)
+  if (sb->changelist_hash
+      && (! status->changelist
+          || ! apr_hash_get(sb->changelist_hash, status->changelist,
+                            APR_HASH_KEY_STRING)))
     {
-      if (status->changelist)
-        {
-          /* Skip unless the caller requested this changelist. */
-          if (! apr_hash_get(sb->changelist_hash, status->changelist,
-                             APR_HASH_KEY_STRING))
-            return SVN_NO_ERROR;
-        }
-      else
-        {
-          /* Skip unless the caller requested changelist-lacking items. */
-          if (! apr_hash_get(sb->changelist_hash, "",
-                             APR_HASH_KEY_STRING))
-            return SVN_NO_ERROR;
-        }
+      return SVN_NO_ERROR;
     }
 
   /* If we know that the target was deleted in HEAD of the repository,
@@ -541,6 +530,7 @@ svn_client_status5(svn_revnum_t *result_rev,
       SVN_ERR(svn_client__do_external_status(ctx, external_map,
                                              depth, get_all,
                                              update, no_ignore,
+                                             sb.anchor_abspath, sb.anchor_relpath,
                                              status_func, status_baton, pool));
     }
 

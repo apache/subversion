@@ -25,6 +25,7 @@
 ######################################################################
 
 # General modules
+from __future__ import with_statement
 import shutil, stat, re, os, logging
 
 logger = logging.getLogger()
@@ -117,6 +118,87 @@ def add_with_symlink_in_path(sbox):
   sbox.simple_append('A/B/kappa', 'xyz', True)
   sbox.simple_add('Z/B/kappa')
 
+@Issue(4118)
+@SkipUnless(svntest.main.is_posix_os)
+def status_with_inaccessible_wc_db(sbox):
+  """inaccessible .svn/wc.db"""
+
+  sbox.build(read_only = True)
+  os.chmod(sbox.ospath(".svn/wc.db"), 0)
+  svntest.actions.run_and_verify_svn(
+    "Status when wc.db is not accessible", None,
+    r"[^ ]+ E155016: The working copy database at '.*' is corrupt",
+    "st", sbox.wc_dir)
+
+@Issue(4118)
+def status_with_corrupt_wc_db(sbox):
+  """corrupt .svn/wc.db"""
+
+  sbox.build(read_only = True)
+  with open(sbox.ospath(".svn/wc.db"), 'wb') as fd:
+    fd.write('\0' * 17)
+  svntest.actions.run_and_verify_svn(
+    "Status when wc.db is corrupt", None,
+    r"[^ ]+ E155016: The working copy database at '.*' is corrupt",
+    "st", sbox.wc_dir)
+
+@Issue(4118)
+def status_with_zero_length_wc_db(sbox):
+  """zero-length .svn/wc.db"""
+
+  sbox.build(read_only = True)
+  os.close(os.open(sbox.ospath(".svn/wc.db"), os.O_RDWR | os.O_TRUNC))
+  svntest.actions.run_and_verify_svn(
+    "Status when wc.db has zero length", None,
+    r"[^ ]+ E200030:",                    # SVN_ERR_SQLITE_ERROR
+    "st", sbox.wc_dir)
+
+@Issue(4118)
+def status_without_wc_db(sbox):
+  """missing .svn/wc.db"""
+
+  sbox.build(read_only = True)
+  os.remove(sbox.ospath(".svn/wc.db"))
+  svntest.actions.run_and_verify_svn(
+    "Status when wc.db is missing", None,
+    r"[^ ]+ E155016: The working copy database at '.*' is missing",
+    "st", sbox.wc_dir)
+
+@Issue(4118)
+@Skip()      # FIXME: Test fails in-tree because it finds the source WC root
+def status_without_wc_db_and_entries(sbox):
+  """missing .svn/wc.db and .svn/entries"""
+
+  sbox.build(read_only = True)
+  os.remove(sbox.ospath(".svn/wc.db"))
+  os.remove(sbox.ospath(".svn/entries"))
+  svntest.actions.run_and_verify_svn2(
+    "Status when wc.db and entries are missing", None,
+    r"[^ ]+ warning: W155007: '.*' is not a working copy",
+    0, "st", sbox.wc_dir)
+
+@Issue(4118)
+def status_with_missing_wc_db_and_maybe_valid_entries(sbox):
+  """missing .svn/wc.db, maybe valid .svn/entries"""
+
+  sbox.build(read_only = True)
+  with open(sbox.ospath(".svn/entries"), 'ab') as fd:
+    fd.write('something\n')
+    os.remove(sbox.ospath(".svn/wc.db"))
+  svntest.actions.run_and_verify_svn(
+    "Status when wc.db is missing and .svn/entries might be valid", None,
+    r"[^ ]+ E155036:",                    # SVN_ERR_WC_UPGRADE_REQUIRED
+    "st", sbox.wc_dir)
+
+
+@Issue(4267)
+def cleanup_below_wc_root(sbox):
+  """cleanup from directory below WC root"""
+
+  sbox.build(read_only = True)
+  svntest.actions.lock_admin_dir(sbox.ospath(""), True)
+  svntest.actions.run_and_verify_svn("Cleanup below wc root", None, [],
+                                     "cleanup", sbox.ospath("A"))
 
 ########################################################################
 # Run the tests
@@ -129,6 +211,13 @@ test_list = [ None,
               add_through_unversioned_symlink,
               add_through_versioned_symlink,
               add_with_symlink_in_path,
+              status_with_inaccessible_wc_db,
+              status_with_corrupt_wc_db,
+              status_with_zero_length_wc_db,
+              status_without_wc_db,
+              status_without_wc_db_and_entries,
+              status_with_missing_wc_db_and_maybe_valid_entries,
+              cleanup_below_wc_root,
              ]
 
 if __name__ == '__main__':

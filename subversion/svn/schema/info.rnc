@@ -27,8 +27,8 @@ info = element info { entry* }
 
 entry =
   element entry {
-    attlist.entry, url?, repository?, wc-info?, commit?, conflict?, lock?,
-    tree-conflict?
+    attlist.entry, url?, relative-url?, repository?, wc-info?,
+    commit?, conflict?, lock?, tree-conflict?
   }
 attlist.entry &=
   ## Local path.
@@ -40,6 +40,9 @@ attlist.entry &=
 
 ## URL of this item in the repository.
 url = element url { xsd:anyURI }
+
+## Repository relative URL (^/...) of this item in the repository.
+relative-url = element relative-url { string }
 
 ## Information of this item's repository.
 repository = element repository { root?, uuid? }

@@ -32,6 +32,7 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_io.h"    /* for svn_stream_t  */
+#include "svn_delta.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -79,8 +80,8 @@ extern "C" {
  * coupling between those subsystems.
  *
  * The set of changes, and the data necessary to describe it entirely, is
- * completely unbounded. An addition of one simple 20Gb file would be well
- * past the available memory of any machine processing these operations.
+ * completely unbounded. An addition of one simple 20 GB file might be well
+ * past the available memory of a machine processing these operations.
  * As a result, the API to describe the changes is designed to be applied
  * in a sequential (and relatively random-access) model. The operations
  * can be streamed from the driver to the receiver, resulting in the
@@ -884,8 +885,11 @@ svn_editor_add_absent(svn_editor_t *editor,
  *
  * Alter the properties of the directory at @a relpath.
  *
- * @a revision specifies the expected revision of the directory and is
- * used to catch attempts at altering out-of-date directories. If the
+ * @a revision specifies the revision at which the receiver should
+ * expect to find this node. That is, @a relpath at the start of the
+ * whole edit and @a relpath at @a revision must lie within the same
+ * node-rev (aka location history segment). This information may be used
+ * to catch an attempt to alter and out-of-date directory. If the
  * directory does not have a corresponding revision in the repository
  * (e.g. it has not yet been committed), then @a revision should be
  * #SVN_INVALID_REVNUM.
@@ -927,8 +931,8 @@ svn_editor_alter_directory(svn_editor_t *editor,
  * The properties and/or the contents must be changed. It is an error to
  * pass NULL for @a props, @a checksum, and @a contents.
  *
- * For a description of @a checksum, and @a contents see
- * svn_editor_add_file(). This functions allows @a props to be NULL, but
+ * For a description of @a checksum and @a contents see
+ * svn_editor_add_file(). This function allows @a props to be NULL, but
  * the parameter is otherwise described by svn_editor_add_file().
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
@@ -955,7 +959,7 @@ svn_editor_alter_file(svn_editor_t *editor,
  * The properties and/or the target must be changed. It is an error to
  * pass NULL for @a props and @a target.
  *
- * This functions allows @a props to be NULL, but the parameter is
+ * This function allows @a props to be NULL, but the parameter is
  * otherwise described by svn_editor_add_file().
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
@@ -1004,8 +1008,14 @@ svn_editor_copy(svn_editor_t *editor,
                 svn_revnum_t replaces_rev);
 
 /** Drive @a editor's #svn_editor_cb_move_t callback.
- * Move the node at @a src_relpath, expected to be identical to revision @a
- * src_revision of that path, to @a dst_relpath.
+ *
+ * Move the node at @a src_relpath to @a dst_relpath.
+ *
+ * @a src_revision specifies the revision at which the receiver should
+ * expect to find this node.  That is, @a src_relpath at the start of
+ * the whole edit and @a src_relpath at @a src_revision must lie within
+ * the same node-rev (aka history-segment).  This is just like the
+ * revisions specified to svn_editor_delete() and svn_editor_rotate().
  *
  * For a description of @a replaces_rev, see svn_editor_add_file().
  *
@@ -1032,7 +1042,7 @@ svn_editor_move(svn_editor_t *editor,
  * For example, the node at index 0 of @a relpaths and @a revisions will
  * be moved to the relpath specified at index 1 of @a relpaths. The node
  * at index 1 will be moved to the location at index 2. The node at index
- * N-1 will be moved to the relpath specifed at index 0.
+ * N-1 will be moved to the relpath specified at index 0.
  *
  * The simplest form of this operation is to swap nodes A and B. One may
  * think to move A to a temporary location T, then move B to A, then move
@@ -1076,6 +1086,28 @@ svn_editor_abort(svn_editor_t *editor);
 /** @} */
 
 /** @} */
+
+/** A temporary API which conditionally inserts a double editor shim
+ * into the chain of delta editors.  Used for testing Editor v2.
+ *
+ * Whether or not the shims are inserted is controlled by a compile-time
+ * option in libsvn_delta/compat.c.
+ *
+ * @note The use of these shims and this API will likely cause all kinds
+ * of performance degredation.  (Which is actually a moot point since they
+ * don't even work properly yet anyway.)
+ */
+svn_error_t *
+svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
+                         void **dedit_baton_out,
+                         const svn_delta_editor_t *deditor_in,
+                         void *dedit_baton_in,
+                         const char *repos_root,
+                         const char *base_dir,
+                         svn_delta_shim_callbacks_t *shim_callbacks,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }

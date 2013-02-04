@@ -33,7 +33,7 @@
 #include "svn_time.h"
 #include "cl.h"
 #include "svn_private_config.h"
-#include "tree-conflicts.h"
+#include "cl-conflicts.h"
 #include "private/svn_wc_private.h"
 
 /* Return the single character representation of STATUS */
@@ -288,7 +288,21 @@ print_status(const char *cwd_abspath, const char *path,
   /* Note that moved-from and moved-to information is only available in STATUS
    * for (op-)roots of a move. Those are exactly the nodes we want to show
    * move info for in 'svn status'. See also comments in svn_wc_status3_t. */
-  if (status->moved_from_abspath || status->moved_to_abspath)
+  if (status->moved_from_abspath && status->moved_to_abspath &&
+      strcmp(status->moved_from_abspath, status->moved_to_abspath) == 0)
+    {
+      const char *relpath;
+
+      relpath = make_relpath(cwd_abspath, status->moved_from_abspath,
+                             pool, pool);
+      relpath = svn_dirent_local_style(relpath, pool);
+      moved_from_line = apr_pstrcat(pool, "\n        > ",
+                                    apr_psprintf(pool,
+                                                 _("swapped places with %s"),
+                                                 relpath),
+                                    (char *)NULL);
+    }
+  else if (status->moved_from_abspath || status->moved_to_abspath)
     {
       const char *relpath;
 
@@ -377,7 +391,7 @@ print_status(const char *cwd_abspath, const char *path,
 
           SVN_ERR
             (svn_cmdline_printf(pool,
-                                "%c%c%c%c%c%c%c %c   %6s   %6s %-12s %s%s%s%s\n",
+                                "%c%c%c%c%c%c%c %c %8s %8s %-12s %s%s%s%s\n",
                                 generate_status_code(combined_status(status)),
                                 generate_status_code(prop_status),
                                 status->wc_is_locked ? 'L' : ' ',
@@ -396,7 +410,7 @@ print_status(const char *cwd_abspath, const char *path,
         }
       else
         SVN_ERR(
-           svn_cmdline_printf(pool, "%c%c%c%c%c%c%c %c   %6s   %s%s%s%s\n",
+           svn_cmdline_printf(pool, "%c%c%c%c%c%c%c %c %8s   %s%s%s%s\n",
                               generate_status_code(combined_status(status)),
                               generate_status_code(prop_status),
                               status->wc_is_locked ? 'L' : ' ',

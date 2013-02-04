@@ -25,10 +25,18 @@
 #
 
 
+import operator
 import os
 import re
 import sys
 
+
+# operator.methodcaller doesn't exist in Python 2.5.
+if not hasattr(operator, 'methodcaller'):
+  def methodcaller(method, *args, **kwargs):
+    return lambda x: getattr(x, method)(*args, **kwargs)
+  operator.methodcaller = methodcaller
+  del methodcaller
 
 DEFINE_END = '  ""\n\n'
 
@@ -89,10 +97,11 @@ class Processor(object):
 
     self.output.write('  APR_STRINGIFY(%s) \\\n' % define)
 
-  def __init__(self, dirpath, output, var_name):
+  def __init__(self, dirpath, output, var_name, token_map):
     self.dirpath = dirpath
     self.output = output
     self.var_name = var_name
+    self.token_map = token_map
 
     self.stmt_count = 0
     self.var_printed = False
@@ -140,6 +149,11 @@ class Processor(object):
             r" AND ((\1) < CASE (\2) WHEN '' THEN X'FFFF' ELSE (\2) || '0' END))",
             line)
 
+      # Another preprocessing.
+      for symbol, string in self.token_map.iteritems():
+        # ### This doesn't sql-escape 'string'
+        line = re.sub(r'\b%s\b' % re.escape(symbol), "'%s'" % string, line)
+
       if line.strip():
         handled = False
 
@@ -172,9 +186,50 @@ class Processor(object):
       self.var_printed = False
 
 
+class NonRewritableDict(dict):
+  """A dictionary that does not allow self[k]=v when k in self
+  (unless v is equal to the stored value).
+
+  (An entry would have to be explicitly deleted before a new value
+  may be entered.)
+  """
+
+  def __setitem__(self, key, val):
+    if self.__contains__(key) and self.__getitem__(key) != val:
+      raise Exception("Can't re-insert key %r with value %r "
+                      "(already present with value %r)"
+                      % (key, val, self.__getitem__(key)))
+    super(NonRewritableDict, self).__setitem__(key, val)
+
+def hotspots(fd):
+  hotspot = False
+  for line in fd:
+    # hotspot is TRUE within definitions of static const svn_token_map_t[].
+    hotspot ^= int(('svn_token_map_t', '\x7d;')[hotspot] in line)
+    if hotspot:
+      yield line
+
+def extract_token_map(filename):
+  try:
+    fd = open(filename)
+  except IOError:
+    return {}
+
+  pattern = re.compile(r'"(.*?)".*?(MAP_\w*)')
+  return \
+    NonRewritableDict(
+      map(operator.itemgetter(1,0),
+        map(operator.methodcaller('groups'),
+          filter(None,
+            map(pattern.search,
+              hotspots(fd))))))
+
 def main(input_filepath, output):
   filename = os.path.basename(input_filepath)
   input = open(input_filepath, 'r').read()
+
+  token_map_filename = os.path.dirname(input_filepath) + '/token-map.h'
+  token_map = extract_token_map(token_map_filename)
 
   var_name = re.sub('[-.]', '_', filename).upper()
 
@@ -184,7 +239,7 @@ def main(input_filepath, output):
     '\n'
     % (filename,))
 
-  proc = Processor(os.path.dirname(input_filepath), output, var_name)
+  proc = Processor(os.path.dirname(input_filepath), output, var_name, token_map)
   proc.process_file(input)
 
   ### the STMT_%d naming precludes *multiple* transform_sql headers from

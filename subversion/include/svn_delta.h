@@ -41,7 +41,6 @@
 #include "svn_string.h"
 #include "svn_io.h"
 #include "svn_checksum.h"
-#include "svn_editor.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -368,7 +367,7 @@ svn_txdelta_md5_digest(svn_txdelta_stream_t *stream);
  * @a source and @a target are both readable generic streams.  When we call
  * svn_txdelta_next_window() on @a *stream, it will read from @a source and
  * @a target to gather as much data as it needs.  If @a calculate_checksum
- * is set, you may call @ref svn_txdelta_md5_digest to get an MD5 checksum
+ * is set, you may call svn_txdelta_md5_digest() to get an MD5 checksum
  * for @a target.
  *
  * Do any necessary allocation in a sub-pool of @a pool.
@@ -1183,29 +1182,6 @@ typedef struct svn_delta_shim_callbacks_t
 svn_delta_shim_callbacks_t *
 svn_delta_shim_callbacks_default(apr_pool_t *result_pool);
 
-
-/** A temporary API which conditionally inserts a double editor shim
- * into the chain of delta editors.  Used for testing Editor v2.
- *
- * Whether or not the shims are inserted is controlled by a compile-time
- * option in libsvn_delta/compat.c.
- *
- * @note The use of these shims and this API will likely cause all kinds
- * of performance degredation.  (Which is actually a moot point since they
- * don't even work properly yet anyway.)
- *
- * ### This should not ship in the final release.
- */
-svn_error_t *
-svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
-                         void **dedit_baton_out,
-                         const svn_delta_editor_t *deditor_in,
-                         void *dedit_baton_in,
-                         const char *repos_root,
-                         const char *base_dir,
-                         svn_delta_shim_callbacks_t *shim_callbacks,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool);
 
 /** A text-delta window handler which does nothing.
  *

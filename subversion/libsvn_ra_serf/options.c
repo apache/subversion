@@ -211,6 +211,14 @@ capabilities_headers_iterator_callback(void *baton,
                        SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS, APR_HASH_KEY_STRING,
                        capability_yes);
         }
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_INLINE_PROPS, vals))
+        {
+          session->supports_inline_props = TRUE;
+        }
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_REPLAY_REV_RESOURCE, vals))
+        {
+          session->supports_rev_rsrc_replay = TRUE;
+        }
     }
 
   /* SVN-specific headers -- if present, server supports HTTP protocol v2 */
@@ -279,6 +287,10 @@ capabilities_headers_iterator_callback(void *baton,
       else if (svn_cstring_casecmp(key, SVN_DAV_YOUNGEST_REV_HEADER) == 0)
         {
           opt_ctx->youngest_rev = SVN_STR_TO_REV(val);
+        }
+      else if (svn_cstring_casecmp(key, SVN_DAV_ALLOW_BULK_UPDATES) == 0)
+        {
+          session->server_allows_bulk = apr_pstrdup(session->pool, val);
         }
       else if (svn_cstring_casecmp(key, SVN_DAV_SUPPORTED_POSTS_HEADER) == 0)
         {

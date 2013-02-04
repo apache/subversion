@@ -332,7 +332,7 @@ create_open(svn_wc__db_t **db,
                                   pool));
   SVN_ERR(svn_wc__db_open(db,
                           NULL /* config */,
-                          FALSE /* auto_upgrade */,
+                          FALSE /* not_upgraded_ok */,
                           TRUE /* enforce_empty_wq */,
                           pool, pool));
 
@@ -614,13 +614,13 @@ test_access_baton_like_locking(apr_pool_t *pool)
                                repos_root_url, 0, svn_depth_infinity,
                                pool));
 
-    SVN_ERR(svn_wc__check_wc_root(&is_root, NULL, NULL, wc_ctx->db, subdir,
-                                  pool));
+    SVN_ERR(svn_wc__db_is_switched(&is_root, NULL, NULL, wc_ctx->db, subdir,
+                                   pool));
 
     SVN_TEST_ASSERT(is_root);
 
-    SVN_ERR(svn_wc__check_wc_root(&is_root, NULL, NULL, wc_ctx2->db, subdir,
-                                  pool));
+    SVN_ERR(svn_wc__db_is_switched(&is_root, NULL, NULL, wc_ctx2->db, subdir,
+                                   pool));
 
     /* This test was added to show a regression where the next check failed,
        but the check above this succeeded */

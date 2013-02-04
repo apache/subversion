@@ -55,6 +55,9 @@
 
 #include "private/svn_cmdline_private.h"
 #include "private/svn_ra_private.h"
+#include "private/svn_string_private.h"
+
+#include "svn_private_config.h"
 
 static void handle_error(svn_error_t *err, apr_pool_t *pool)
 {
@@ -750,6 +753,29 @@ execute(const apr_array_header_t *actions,
                                             "svnmucc: ", "--config-option"));
   cfg_config = apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
                             APR_HASH_KEY_STRING);
+
+  if (! apr_hash_get(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING))
+    {
+      svn_string_t *msg = svn_string_create("", pool);
+
+      /* If we can do so, try to pop up $EDITOR to fetch a log message. */
+      if (non_interactive)
+        {
+          return svn_error_create
+            (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
+             _("Cannot invoke editor to get log message "
+               "when non-interactive"));
+        }
+      else
+        {
+          SVN_ERR(svn_cmdline__edit_string_externally(
+                      &msg, NULL, NULL, "", msg, "svnmucc-commit", config,
+                      TRUE, NULL, apr_hash_pool_get(revprops)));
+        }
+
+      apr_hash_set(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING, msg);
+    }
+
   SVN_ERR(create_ra_callbacks(&ra_callbacks, username, password, config_dir,
                               cfg_config, non_interactive, no_auth_cache,
                               pool));
@@ -899,38 +925,43 @@ static void
 usage(apr_pool_t *pool, int exit_val)
 {
   FILE *stream = exit_val == EXIT_SUCCESS ? stdout : stderr;
-  static const char *msg =
-    "Multiple URL Command Client (for Subversion)\n"
-    "\nUsage: svnmucc [OPTION]... [ACTION]...\n"
-    "\nActions:\n"
-    "  cp REV URL1 URL2      copy URL1@REV to URL2\n"
-    "  mkdir URL             create new directory URL\n"
-    "  mv URL1 URL2          move URL1 to URL2\n"
-    "  rm URL                delete URL\n"
-    "  put SRC-FILE URL      add or modify file URL with contents copied from\n"
-    "                        SRC-FILE (use \"-\" to read from standard input)\n"
-    "  propset NAME VAL URL  set property NAME on URL to value VAL\n"
-    "  propsetf NAME VAL URL set property NAME on URL to value from file VAL\n"
-    "  propdel NAME URL      delete property NAME from URL\n"
-    "\nOptions:\n"
-    "  -h, --help, -?        display this text\n"
-    "  -m, --message ARG     use ARG as a log message\n"
-    "  -F, --file ARG        read log message from file ARG\n"
-    "  -u, --username ARG    commit the changes as username ARG\n"
-    "  -p, --password ARG    use ARG as the password\n"
-    "  -U, --root-url ARG    interpret all action URLs are relative to ARG\n"
-    "  -r, --revision ARG    use revision ARG as baseline for changes\n"
-    "  --with-revprop A[=B]  set revision property A in new revision to B\n"
-    "                        if specified, else to the empty string\n"
-    "  -n, --non-interactive don't prompt the user about anything\n"
-    "  -X, --extra-args ARG  append arguments from file ARG (one per line;\n"
-    "                        use \"-\" to read from standard input)\n"
-    "  --config-dir ARG      use ARG to override the config directory\n"
-    "  --config-option ARG   use ARG to override a configuration option\n"
-    "  --no-auth-cache       do not cache authentication tokens\n"
-    "  --version             print version information\n";
-  svn_error_clear(svn_cmdline_fputs(msg, stream, pool));
-  apr_pool_destroy(pool);
+  svn_error_clear(svn_cmdline_fputs(
+    _("Subversion multiple URL command client\n"
+      "usage: svnmucc ACTION...\n"
+      "\n"
+      "  Perform one or more Subversion repository URL-based ACTIONs, committing\n"
+      "  the result as a (single) new revision.\n"
+      "\n"
+      "Actions:\n"
+      "  cp REV SRC-URL DST-URL : copy SRC-URL@REV to DST-URL\n"
+      "  mkdir URL              : create new directory URL\n"
+      "  mv SRC-URL DST-URL     : move SRC-URL to DST-URL\n"
+      "  rm URL                 : delete URL\n"
+      "  put SRC-FILE URL       : add or modify file URL with contents copied from\n"
+      "                           SRC-FILE (use \"-\" to read from standard input)\n"
+      "  propset NAME VALUE URL : set property NAME on URL to VALUE\n"
+      "  propsetf NAME FILE URL : set property NAME on URL to value read from FILE\n"
+      "  propdel NAME URL       : delete property NAME from URL\n"
+      "\n"
+      "Valid options:\n"
+      "  -h, -? [--help]        : display this text\n"
+      "  -m [--message] ARG     : use ARG as a log message\n"
+      "  -F [--file] ARG        : read log message from file ARG\n"
+      "  -u [--username] ARG    : commit the changes as username ARG\n"
+      "  -p [--password] ARG    : use ARG as the password\n"
+      "  -U [--root-url] ARG    : interpret all action URLs relative to ARG\n"
+      "  -r [--revision] ARG    : use revision ARG as baseline for changes\n"
+      "  --with-revprop ARG     : set revision property in the following format:\n"
+      "                               NAME[=VALUE]\n"
+      "  -n [--non-interactive] : don't prompt the user about anything\n"
+      "  -X [--extra-args] ARG  : append arguments from file ARG (one per line;\n"
+      "                         : use \"-\" to read from standard input)\n"
+      "  --config-dir ARG       : use ARG to override the config directory\n"
+      "  --config-option ARG    : use ARG to override a configuration option\n"
+      "  --no-auth-cache        : do not cache authentication tokens\n"
+      "  --version              : print version information\n"),
+                  stream, pool));
+  svn_pool_destroy(pool);
   exit(exit_val);
 }
 
@@ -956,6 +987,53 @@ display_version(apr_getopt_t *os, apr_pool_t *pool)
                               version_footer->data,
                               NULL, NULL, NULL, NULL, NULL, pool));
 
+  return SVN_NO_ERROR;
+}
+
+/* Return an error about the mutual exclusivity of the -m, -F, and
+   --with-revprop=svn:log command-line options. */
+static svn_error_t *
+mutually_exclusive_logs_error(void)
+{
+  return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                          _("--message (-m), --file (-F), and "
+                            "--with-revprop=svn:log are mutually "
+                            "exclusive"));
+}
+
+/* Ensure that the REVPROPS hash contains a command-line-provided log
+   message, if any, and that there was but one source of such a thing
+   provided on that command-line.  */
+static svn_error_t *
+sanitize_log_sources(apr_hash_t *revprops,
+                     const char *message,
+                     svn_stringbuf_t *filedata)
+{
+  apr_pool_t *hash_pool = apr_hash_pool_get(revprops);
+
+  /* If we already have a log message in the revprop hash, then just
+     make sure the user didn't try to also use -m or -F.  Otherwise,
+     we need to consult -m or -F to find a log message, if any. */
+  if (apr_hash_get(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING))
+    {
+      if (filedata || message)
+        return mutually_exclusive_logs_error();
+    }
+  else if (filedata)
+    {
+      if (message)
+        return mutually_exclusive_logs_error();
+
+      SVN_ERR(svn_utf_cstring_to_utf8(&message, filedata->data, hash_pool));
+      apr_hash_set(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
+                   svn_stringbuf__morph_into_string(filedata));
+    }
+  else if (message)
+    {
+      apr_hash_set(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
+                   svn_string_create(message, hash_pool));
+    }
+  
   return SVN_NO_ERROR;
 }
 
@@ -994,6 +1072,7 @@ main(int argc, const char **argv)
     {NULL, 0, 0, NULL}
   };
   const char *message = NULL;
+  svn_stringbuf_t *filedata = NULL;
   const char *username = NULL, *password = NULL;
   const char *root_url = NULL, *extra_args_file = NULL;
   const char *config_dir = NULL;
@@ -1031,12 +1110,9 @@ main(int argc, const char **argv)
         case 'F':
           {
             const char *arg_utf8;
-            svn_stringbuf_t *contents;
             err = svn_utf_cstring_to_utf8(&arg_utf8, arg, pool);
             if (! err)
-              err = svn_stringbuf_from_file2(&contents, arg, pool);
-            if (! err)
-              err = svn_utf_cstring_to_utf8(&message, contents->data, pool);
+              err = svn_stringbuf_from_file2(&filedata, arg, pool);
             if (err)
               handle_error(err, pool);
           }
@@ -1108,6 +1184,11 @@ main(int argc, const char **argv)
           break;
         }
     }
+
+  /* Make sure we have a log message to use. */
+  err = sanitize_log_sources(revprops, message, filedata);
+  if (err)
+    handle_error(err, pool);
 
   /* Copy the rest of our command-line arguments to an array,
      UTF-8-ing them along the way. */
@@ -1323,21 +1404,6 @@ main(int argc, const char **argv)
 
   if (! actions->nelts)
     usage(pool, EXIT_FAILURE);
-
-  if (message == NULL)
-    {
-      if (apr_hash_get(revprops, SVN_PROP_REVISION_LOG,
-                       APR_HASH_KEY_STRING) == NULL)
-        /* None of -F, -m, or --with-revprop=svn:log specified; default. */
-        apr_hash_set(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
-                     svn_string_create("committed using svnmucc", pool));
-    }
-  else
-    {
-      /* -F or -m specified; use that even if --with-revprop=svn:log. */
-      apr_hash_set(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
-                   svn_string_create(message, pool));
-    }
 
   if ((err = execute(actions, anchor, revprops, username, password,
                      config_dir, config_options, non_interactive,

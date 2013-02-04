@@ -351,9 +351,6 @@ switch_file_external(const char *local_abspath,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *scratch_pool)
 {
-  apr_pool_t *subpool = svn_pool_create(scratch_pool);
-  const char *dir_abspath;
-  const char *target;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
@@ -361,8 +358,6 @@ switch_file_external(const char *local_abspath,
   const char *diff3_cmd;
   const char *preserved_exts_str;
   const apr_array_header_t *preserved_exts;
-  svn_boolean_t locked_here;
-  svn_error_t *err = NULL;
   svn_node_kind_t kind, external_kind;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -377,32 +372,27 @@ switch_file_external(const char *local_abspath,
                  SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
 
   if (diff3_cmd != NULL)
-    SVN_ERR(svn_path_cstring_to_utf8(&diff3_cmd, diff3_cmd, subpool));
+    SVN_ERR(svn_path_cstring_to_utf8(&diff3_cmd, diff3_cmd, scratch_pool));
 
   /* See which files the user wants to preserve the extension of when
      conflict files are made. */
   svn_config_get(cfg, &preserved_exts_str, SVN_CONFIG_SECTION_MISCELLANY,
                  SVN_CONFIG_OPTION_PRESERVED_CF_EXTS, "");
   preserved_exts = *preserved_exts_str
-    ? svn_cstring_split(preserved_exts_str, "\n\r\t\v ", FALSE, subpool)
+    ? svn_cstring_split(preserved_exts_str, "\n\r\t\v ", FALSE, scratch_pool)
     : NULL;
 
-  svn_dirent_split(&dir_abspath, &target, local_abspath, subpool);
+  {
+    const char *wcroot_abspath;
 
-  /* Try to get a access baton for the anchor using the input access
-     baton.  If this fails and returns SVN_ERR_WC_NOT_LOCKED, then try
-     to get a new access baton to support inserting a file external
-     into a directory external. */
-  SVN_ERR(svn_wc_locked2(&locked_here, NULL, ctx->wc_ctx, dir_abspath,
-                         subpool));
-  if (!locked_here)
-    {
-      const char *wcroot_abspath;
+    SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx, local_abspath,
+                               scratch_pool, scratch_pool));
 
-      SVN_ERR(svn_wc__get_wc_root(&wcroot_abspath, ctx->wc_ctx, dir_abspath,
-                                  subpool, subpool));
+    /* File externals can only be installed inside the current working copy.
+       So verify if the working copy that contains/will contain the target
+       is the defining abspath, or one of its ancestors */
 
-      if (!svn_dirent_is_ancestor(wcroot_abspath, def_dir_abspath))
+    if (!svn_dirent_is_ancestor(wcroot_abspath, def_dir_abspath))
         return svn_error_createf(
                         SVN_ERR_WC_BAD_PATH, NULL,
                         _("Cannot insert a file external defined on '%s' "
@@ -411,18 +401,14 @@ switch_file_external(const char *local_abspath,
                                                scratch_pool),
                         svn_dirent_local_style(wcroot_abspath,
                                                scratch_pool));
-    }
+  }
 
-  err = svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE, subpool);
-  if (err)
-    goto cleanup;
+  SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
+                           scratch_pool));
 
-  err = svn_wc__read_external_info(&external_kind, NULL, NULL, NULL, NULL,
-                                   ctx->wc_ctx, local_abspath, local_abspath,
-                                   TRUE, scratch_pool, scratch_pool);
-
-  if (err)
-    goto cleanup;
+  SVN_ERR(svn_wc__read_external_info(&external_kind, NULL, NULL, NULL, NULL,
+                                     ctx->wc_ctx, local_abspath, local_abspath,
+                                     TRUE, scratch_pool, scratch_pool));
 
   /* If there is a versioned item with this name, ensure it's a file
      external before working with it.  If there is no entry in the
@@ -432,35 +418,25 @@ switch_file_external(const char *local_abspath,
     {
       if (external_kind != svn_node_file)
         {
-          if (!locked_here)
-            SVN_ERR(svn_wc__release_write_lock(ctx->wc_ctx, dir_abspath,
-                                               subpool));
-
           return svn_error_createf(
               SVN_ERR_CLIENT_FILE_EXTERNAL_OVERWRITE_VERSIONED, 0,
              _("The file external from '%s' cannot overwrite the existing "
                "versioned item at '%s'"),
-             url, svn_dirent_local_style(local_abspath, subpool));
+             url, svn_dirent_local_style(local_abspath, scratch_pool));
         }
     }
   else
     {
       svn_node_kind_t disk_kind;
 
-      err = svn_io_check_path(local_abspath, &disk_kind, subpool);
-
-      if (err)
-        goto cleanup;
+      SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
 
       if (kind == svn_node_file || kind == svn_node_dir)
-        {
-          err = svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,
-                                  _("The file external '%s' can not be "
-                                    "created because the node exists."),
-                                  svn_dirent_local_style(local_abspath,
-                                                         subpool));
-          goto cleanup;
-        }
+        return svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,
+                                 _("The file external '%s' can not be "
+                                   "created because the node exists."),
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool));
     }
 
   {
@@ -470,36 +446,36 @@ switch_file_external(const char *local_abspath,
     void *switch_baton;
     svn_client__pathrev_t *switch_loc;
     svn_revnum_t revnum;
-    /* ### TODO: Provide the real definition path (now available in
-       ### def_dir_abspath) after switching to the new externals store.
-       ### We can't enable this now, because that would move the external
-       ### information into the wrong working copy */
-    const char *definition_abspath = svn_dirent_dirname(local_abspath,subpool);
     apr_array_header_t *inherited_props;
+    const char *dir_abspath;
+    const char *target;
+
+    svn_dirent_split(&dir_abspath, &target, local_abspath, scratch_pool);
 
     /* Open an RA session to 'source' URL */
     SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &switch_loc,
                                               url, dir_abspath,
                                               peg_revision, revision,
-                                              ctx, subpool));
+                                              ctx, scratch_pool));
     /* Get the external file's iprops. */
     SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props, "",
-                                       switch_loc->rev, subpool, subpool));
+                                       switch_loc->rev,
+                                       scratch_pool, scratch_pool));
 
-    SVN_ERR(svn_ra_reparent(ra_session, svn_uri_dirname(url, subpool),
-                            subpool));
+    SVN_ERR(svn_ra_reparent(ra_session, svn_uri_dirname(url, scratch_pool),
+                            scratch_pool));
 
     SVN_ERR(svn_wc__get_file_external_editor(&switch_editor, &switch_baton,
                                              &revnum, ctx->wc_ctx,
                                              local_abspath,
-                                             definition_abspath /* wri */,
+                                             def_dir_abspath,
                                              switch_loc->url,
                                              switch_loc->repos_root_url,
                                              switch_loc->repos_uuid,
                                              inherited_props,
                                              use_commit_times,
                                              diff3_cmd, preserved_exts,
-                                             definition_abspath /* def */,
+                                             def_dir_abspath,
                                              url, peg_revision, revision,
                                              ctx->conflict_func2,
                                              ctx->conflict_baton2,
@@ -507,85 +483,134 @@ switch_file_external(const char *local_abspath,
                                              ctx->cancel_baton,
                                              ctx->notify_func2,
                                              ctx->notify_baton2,
-                                             subpool, subpool));
+                                             scratch_pool, scratch_pool));
 
     /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision. */
     SVN_ERR(svn_ra_do_switch2(ra_session, &reporter, &report_baton,
                               switch_loc->rev,
                               target, svn_depth_unknown, url,
-                              switch_editor, switch_baton, subpool));
+                              switch_editor, switch_baton, scratch_pool));
 
     SVN_ERR(svn_wc__crawl_file_external(ctx->wc_ctx, local_abspath,
                                         reporter, report_baton,
                                         TRUE,  use_commit_times,
                                         ctx->cancel_func, ctx->cancel_baton,
                                         ctx->notify_func2, ctx->notify_baton2,
-                                        subpool));
+                                        scratch_pool));
 
     if (ctx->notify_func2)
       {
         svn_wc_notify_t *notify
           = svn_wc_create_notify(local_abspath, svn_wc_notify_update_completed,
-                                 subpool);
+                                 scratch_pool);
         notify->kind = svn_node_none;
         notify->content_state = notify->prop_state
           = svn_wc_notify_state_inapplicable;
         notify->lock_state = svn_wc_notify_lock_state_inapplicable;
         notify->revision = revnum;
-        (*ctx->notify_func2)(ctx->notify_baton2, notify, subpool);
+        (*ctx->notify_func2)(ctx->notify_baton2, notify, scratch_pool);
       }
   }
 
-cleanup:
-  if (!locked_here)
-    err = svn_error_compose_create(err,
-             svn_wc__release_write_lock(ctx->wc_ctx, dir_abspath, subpool));
-
-  svn_pool_destroy(subpool);
-  return svn_error_trace(err);
+  return SVN_NO_ERROR;
 }
 
+/* Wrappers around svn_wc__external_remove, obtaining and releasing a lock for
+   directory externals */
+static svn_error_t *
+remove_external2(svn_boolean_t *removed,
+                svn_wc_context_t *wc_ctx,
+                const char *wri_abspath,
+                const char *local_abspath,
+                svn_node_kind_t external_kind,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_wc__external_remove(wc_ctx, wri_abspath,
+                                  local_abspath,
+                                  (external_kind == svn_node_none),
+                                  cancel_func, cancel_baton,
+                                  scratch_pool));
+
+  *removed = TRUE;
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+remove_external(svn_boolean_t *removed,
+                svn_wc_context_t *wc_ctx,
+                const char *wri_abspath,
+                const char *local_abspath,
+                svn_node_kind_t external_kind,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *scratch_pool)
+{
+  *removed = FALSE;
+  switch (external_kind)
+    {
+      case svn_node_dir:
+        SVN_WC__CALL_WITH_WRITE_LOCK(
+            remove_external2(removed,
+                             wc_ctx, wri_abspath,
+                             local_abspath, external_kind,
+                             cancel_func, cancel_baton,
+                             scratch_pool),
+            wc_ctx, local_abspath, FALSE, scratch_pool);
+        break;
+      case svn_node_file:
+      default:
+        SVN_ERR(remove_external2(removed,
+                                 wc_ctx, wri_abspath,
+                                 local_abspath, external_kind,
+                                 cancel_func, cancel_baton,
+                                 scratch_pool));
+        break;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Called when an external that is in the EXTERNALS table is no longer
+   referenced from an svn:externals property */
 static svn_error_t *
 handle_external_item_removal(const svn_client_ctx_t *ctx,
                              const char *defining_abspath,
                              const char *local_abspath,
                              apr_pool_t *scratch_pool)
 {
-  /* This branch is only used when an external is deleted from the
-     repository and the working copy is updated or committed. */
-
   svn_error_t *err;
-  svn_boolean_t lock_existed;
+  svn_node_kind_t external_kind;
   svn_node_kind_t kind;
-  const char *lock_root_abspath = NULL;
+  svn_boolean_t removed = FALSE;
 
   /* local_abspath should be a wcroot or a file external */
+  SVN_ERR(svn_wc__read_external_info(&external_kind, NULL, NULL, NULL, NULL,
+                                     ctx->wc_ctx, defining_abspath,
+                                     local_abspath, FALSE,
+                                     scratch_pool, scratch_pool));
+
   SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
                            scratch_pool));
 
-  if (kind != svn_node_none)
+  if (external_kind != kind)
+    external_kind = svn_node_none; /* Only remove the registration */
+
+  err = remove_external(&removed,
+                        ctx->wc_ctx, defining_abspath, local_abspath,
+                        external_kind,
+                        ctx->cancel_func, ctx->cancel_baton,
+                        scratch_pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED && removed)
     {
-      SVN_ERR(svn_wc_locked2(&lock_existed, NULL, ctx->wc_ctx,
-                             local_abspath, scratch_pool));
-
-      if (! lock_existed)
-        {
-          SVN_ERR(svn_wc__acquire_write_lock(&lock_root_abspath,
-                                             ctx->wc_ctx, local_abspath,
-                                             FALSE,
-                                             scratch_pool, scratch_pool));
-        }
+      svn_error_clear(err);
+      err = NULL; /* We removed the working copy, so we can't release the
+                     lock that was stored inside */
     }
-
-  /* We don't use relegate_dir_external() here, because we know that
-     nothing else in this externals description (at least) is
-     going to need this directory, and therefore it's better to
-     leave stuff where the user expects it. */
-  err = svn_wc__external_remove(ctx->wc_ctx, defining_abspath,
-                                local_abspath, (kind == svn_node_none),
-                                ctx->cancel_func, ctx->cancel_baton,
-                                scratch_pool);
 
   if (ctx->notify_func2)
     {
@@ -615,23 +640,6 @@ handle_external_item_removal(const svn_client_ctx_t *ctx,
     {
       svn_error_clear(err);
       err = NULL;
-    }
-
-
-  /* Unlock if we acquired the lock */
-  if (lock_root_abspath != NULL)
-    {
-      svn_error_t *err2 = svn_wc__release_write_lock(ctx->wc_ctx,
-                                                     lock_root_abspath,
-                                                     scratch_pool);
-
-      if (err2 && err2->apr_err == SVN_ERR_WC_NOT_LOCKED)
-        {
-          /* We removed the lock by removing the node, how nice! */
-          svn_error_clear(err2);
-        }
-      else
-        err = svn_error_compose_create(err, err2);
     }
 
   return svn_error_trace(err);
@@ -921,8 +929,6 @@ svn_client__handle_externals(apr_hash_t *externals_new,
 
   iterpool = svn_pool_create(scratch_pool);
 
-  /* Parse the old externals. This part will be replaced by reading EXTERNALS
-     from the DB. */
   SVN_ERR(svn_wc__externals_defined_below(&old_external_defs,
                                           ctx->wc_ctx, target_abspath,
                                           scratch_pool, iterpool));
@@ -1118,17 +1124,19 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
                                svn_boolean_t get_all,
                                svn_boolean_t update,
                                svn_boolean_t no_ignore,
+                               const char *anchor_abspath,
+                               const char *anchor_relpath,
                                svn_client_status_func_t status_func,
                                void *status_baton,
-                               apr_pool_t *pool)
+                               apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   /* Loop over the hash of new values (we don't care about the old
      ones).  This is a mapping of versioned directories to property
      values. */
-  for (hi = apr_hash_first(pool, external_map);
+  for (hi = apr_hash_first(scratch_pool, external_map);
        hi;
        hi = apr_hash_next(hi))
     {
@@ -1137,6 +1145,7 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
       const char *defining_abspath = svn__apr_hash_index_val(hi);
       svn_node_kind_t kind;
       svn_opt_revision_t opt_rev;
+      const char *status_path;
 
       svn_pool_clear(iterpool);
 
@@ -1167,8 +1176,17 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
                                     svn_wc_notify_status_external,
                                     iterpool), iterpool);
 
+      status_path = local_abspath;
+      if (anchor_abspath)
+        {
+          status_path = svn_dirent_join(anchor_relpath,
+                           svn_dirent_skip_ancestor(anchor_abspath,
+                                                    status_path),
+                           iterpool);
+        }
+
       /* And then do the status. */
-      SVN_ERR(svn_client_status5(NULL, ctx, local_abspath, &opt_rev, depth,
+      SVN_ERR(svn_client_status5(NULL, ctx, status_path, &opt_rev, depth,
                                  get_all, update, no_ignore, FALSE, FALSE,
                                  NULL, status_func, status_baton,
                                  iterpool));

@@ -192,6 +192,11 @@ extern "C" {
  * @since New in 1.8.   */
 #define SVN_DAV_SUPPORTED_POSTS_HEADER "SVN-Supported-Posts"
 
+/** This header is used in the OPTIONS response to indicate if the server
+ * wants bulk update requests (Prefer) or only accepts skelta requests (Off).
+ * If this value is On both options are allowed.
+ * @since New in 1.8.   */
+#define SVN_DAV_ALLOW_BULK_UPDATES "SVN-Allow-Bulk-Updates"
 
 /**
  * @name Fulltext MD5 headers
@@ -311,6 +316,20 @@ extern "C" {
  * transaction properties. */
 #define SVN_DAV_NS_DAV_SVN_EPHEMERAL_TXNPROPS\
             SVN_DAV_PROP_NS_DAV "svn/ephemeral-txnprops"
+
+/** Presence of this in a DAV header in an OPTIONS response indicates
+ * that the transmitter (in this case, the server) supports serving properties
+ * inline in update editor when 'send-all' is 'false'. */
+#define SVN_DAV_NS_DAV_SVN_INLINE_PROPS\
+            SVN_DAV_PROP_NS_DAV "svn/inline-props"
+
+/** Presence of this in a DAV header in an OPTIONS response indicates
+ * that the transmitter (in this case, the server) knows how to handle
+ * a replay of a revision resource.  Transmitters must be
+ * HTTP-v2-enabled to support this feature.  */
+#define SVN_DAV_NS_DAV_SVN_REPLAY_REV_RESOURCE\
+            SVN_DAV_PROP_NS_DAV "svn/replay-rev-resource"
+
 
 /** @} */
 

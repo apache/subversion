@@ -394,7 +394,7 @@ def basic_commit_corruption(sbox):
 
   # This commit should fail due to text base corruption.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status,
+                                        None, # expected_status,
                                         "svn: E200014: Checksum",
                                         wc_dir)
 
@@ -432,7 +432,9 @@ def basic_update_corruption(sbox):
 
   # Make the "other" working copy
   other_wc = sbox.add_wc_path('other')
-  svntest.actions.duplicate_dir(wc_dir, other_wc)
+
+  svntest.actions.run_and_verify_svn("Checkout to wc2", None, [],
+                                     'co', sbox.repo_url, other_wc)
 
   # Make a local mod to mu
   mu_path = sbox.ospath('A/mu')
@@ -459,10 +461,6 @@ def basic_update_corruption(sbox):
 
   # Create expected disk tree for the update.
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('A/mu',
-                      contents=expected_disk.desc['A/mu'].contents
-                      + 'appended mu text')
-
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(other_wc, 2)
 
@@ -481,11 +479,15 @@ def basic_update_corruption(sbox):
   os.chmod(tb_dir_path, tb_dir_saved_mode)
   os.chmod(mu_tb_path, mu_tb_saved_mode)
 
-  # Do the update and check the results in three ways.
+  # Do the update and check the results in four ways.
+  fail_output = wc.State(other_wc, {
+  })
+  fail_status = svntest.actions.get_virginal_state(other_wc, 1)
+  fail_status.tweak('A', '', status='! ', wc_rev=2)
   svntest.actions.run_and_verify_update(other_wc,
-                                        expected_output,
+                                        fail_output,
                                         expected_disk,
-                                        expected_status,
+                                        fail_status,
                                         "svn: E155017: Checksum", other_wc)
 
   # Restore the uncorrupted text base.
@@ -496,8 +498,15 @@ def basic_update_corruption(sbox):
   os.chmod(tb_dir_path, tb_dir_saved_mode)
   os.chmod(mu_tb_path, mu_tb_saved_mode)
 
+  # Create expected status tree for the update.
+  expected_status = svntest.actions.get_virginal_state(other_wc, 2)
+
   # This update should succeed.  (Actually, I'm kind of astonished
   # that this works without even an intervening "svn cleanup".)
+  expected_disk.tweak('A/mu',
+                      contents=expected_disk.desc['A/mu'].contents
+                      + 'appended mu text')
+
   svntest.actions.run_and_verify_update(other_wc,
                                         expected_output,
                                         expected_disk,
@@ -1936,7 +1945,7 @@ def delete_keep_local(sbox):
   # Update working copy to check disk state still greek tree
   expected_disk = svntest.main.greek_state.copy()
   expected_output = svntest.wc.State(wc_dir, {})
-  expected_status.tweak(wc_rev = 2);
+  expected_status.tweak(wc_rev = 2)
 
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -2249,12 +2258,14 @@ def automatic_conflict_resolution(sbox):
                                      # stdout, stderr
                                      None,
                                      ".*invalid 'accept' ARG",
-                                     'resolve', '--accept=edit')
+                                     'resolve', '--accept=edit',
+                                     '--force-interactive')
   svntest.actions.run_and_verify_svn(None,
                                      # stdout, stderr
                                      None,
                                      ".*invalid 'accept' ARG",
-                                     'resolve', '--accept=launch')
+                                     'resolve', '--accept=launch',
+                                     '--force-interactive')
   # Run 'svn resolved --accept=NOPE.  Using omega for the test.
   svntest.actions.run_and_verify_svn("Resolve command", None,
                                      ".*NOPE' is not a valid --accept value",
@@ -2493,8 +2504,17 @@ def basic_relative_url_with_peg_revisions(sbox):
                                 '^//A/@3', iota_url)
 
 
+def basic_auth_test_xfail_predicate():
+  """Predicate for XFail for basic_auth_test:
+  The test will fail if plaintext password storage is disabled,
+  and the RA method requires authentication."""
+  return (not svntest.main.is_os_windows()
+          and svntest.main.is_ra_type_dav()
+          and svntest.main.is_plaintext_password_storage_disabled())
+
 # Issue 2242, auth cache picking up password from wrong username entry
 @Issue(2242)
+@XFail(basic_auth_test_xfail_predicate)
 def basic_auth_test(sbox):
   "basic auth test"
 
@@ -2508,22 +2528,22 @@ def basic_auth_test(sbox):
 
   # Checkout with jrandom
   exit_code, output, errput = svntest.main.run_command(
-    svntest.main.svn_binary, None, 1, 'co', sbox.repo_url, wc_dir,
+    svntest.main.svn_binary, None, True, 'co', sbox.repo_url, wc_dir,
     '--username', 'jrandom', '--password', 'rayjandom',
     '--config-dir', config_dir)
 
   exit_code, output, errput = svntest.main.run_command(
-    svntest.main.svn_binary, None, 1, 'co', sbox.repo_url, wc_dir,
+    svntest.main.svn_binary, None, True, 'co', sbox.repo_url, wc_dir,
     '--username', 'jrandom', '--non-interactive', '--config-dir', config_dir)
 
   # Checkout with jconstant
   exit_code, output, errput = svntest.main.run_command(
-    svntest.main.svn_binary, None, 1, 'co', sbox.repo_url, wc_dir,
+    svntest.main.svn_binary, None, True, 'co', sbox.repo_url, wc_dir,
     '--username', 'jconstant', '--password', 'rayjandom',
     '--config-dir', config_dir)
 
   exit_code, output, errput = svntest.main.run_command(
-    svntest.main.svn_binary, None, 1, 'co', sbox.repo_url, wc_dir,
+    svntest.main.svn_binary, None, True, 'co', sbox.repo_url, wc_dir,
     '--username', 'jconstant', '--non-interactive',
     '--config-dir', config_dir)
 
@@ -2531,7 +2551,7 @@ def basic_auth_test(sbox):
   # a password and the above cached password belongs to jconstant
   expected_err = ["authorization failed: Could not authenticate to server:"]
   exit_code, output, errput = svntest.main.run_command(
-    svntest.main.svn_binary, expected_err, 1, 'co', sbox.repo_url, wc_dir,
+    svntest.main.svn_binary, expected_err, True, 'co', sbox.repo_url, wc_dir,
     '--username', 'jrandom', '--non-interactive', '--config-dir', config_dir)
 
 def basic_add_svn_format_file(sbox):
@@ -2926,7 +2946,6 @@ def quiet_commits(sbox):
 # Regression test for issue #4023: on Windows, 'svn rm' incorrectly deletes
 # on-disk file if it is case-clashing with intended (non-on-disk) target.
 @Issue(4023)
-@XFail(svntest.main.is_fs_case_insensitive)
 def rm_missing_with_case_clashing_ondisk_item(sbox):
   """rm missing item with case-clashing ondisk item"""
 
@@ -2946,8 +2965,10 @@ def rm_missing_with_case_clashing_ondisk_item(sbox):
     })
   svntest.actions.run_and_verify_unquiet_status(wc_dir, expected_status)
 
+  # Verify that the casing is not updated, because the path is on-disk.
+  expected_output = [ 'D         %s\n' % iota_path ]
   # 'svn rm' iota, should leave IOTA alone.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'rm', iota_path)
 
   # Test status: the unversioned IOTA should still be there.

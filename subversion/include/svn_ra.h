@@ -1930,6 +1930,11 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
  * inheritable properties are found, then set @a *inherited_props to
  * an empty array.
  *
+ * The #svn_prop_inherited_item_t->path_or_url members of the
+ * #svn_prop_inherited_item_t * structures in @a *inherited_props are
+ * paths relative to the repository root URL (of the repository which
+ * @a ra_session is associated).
+ *
  * Allocated @a *inherited_props in @a result_pool, use @a scratch_pool
  * for temporary allocations.
  *

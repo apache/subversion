@@ -1,5 +1,5 @@
 /*
- * main.c: Subversion server administration tool.
+ * svnadmin.c: Subversion server administration tool main file.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -759,6 +759,16 @@ repos_notify_handler(void *baton,
                                         notify->revision));
       return;
 
+    case  svn_repos_notify_verify_struc_rev:
+      if (notify->revision == SVN_INVALID_REVNUM)
+        svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                _("* Verifying repository metadata ...\n")));
+      else
+        svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                        _("* Verifying metadata at revision %ld ...\n"),
+                        notify->revision));
+      return;
+
     case svn_repos_notify_pack_shard_start:
       {
         const char *shardstr = apr_psprintf(scratch_pool,
@@ -1153,7 +1163,7 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                            opt_state->uuid_action, opt_state->parent_dir,
                            opt_state->use_pre_commit_hook,
                            opt_state->use_post_commit_hook,
-                           opt_state->bypass_prop_validation ? FALSE : TRUE,
+                           !opt_state->bypass_prop_validation,
                            opt_state->quiet ? NULL : repos_notify_handler,
                            stdout_stream, check_cancel, NULL, pool);
   if (err && err->apr_err == SVN_ERR_BAD_PROPERTY_VALUE)
@@ -2026,9 +2036,10 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                       compatible_version->patch))
             {
               err = svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                      _("Cannot guaranteed compatibility "
+                                      _("Cannot guarantee compatibility "
                                         "beyond the current running version "
-                                        "(" SVN_VER_NUM ")"));
+                                        "(%s)"),
+                                      SVN_VER_NUM );
               return EXIT_ERROR(err);
             }
 
@@ -2128,9 +2139,10 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
               const char *first_arg_utf8;
               SVN_INT_ERR(svn_utf_cstring_to_utf8(&first_arg_utf8,
                                                   first_arg, pool));
-              svn_error_clear(svn_cmdline_fprintf(stderr, pool,
-                                                  _("Unknown command: '%s'\n"),
-                                                  first_arg_utf8));
+              svn_error_clear(
+                svn_cmdline_fprintf(stderr, pool,
+                                    _("Unknown subcommand: '%s'\n"),
+                                    first_arg_utf8));
               SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
               return EXIT_FAILURE;
             }

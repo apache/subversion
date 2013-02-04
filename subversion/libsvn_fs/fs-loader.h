@@ -88,10 +88,12 @@ typedef struct fs_library_vtable_t
   svn_error_t *(*upgrade_fs)(svn_fs_t *fs, const char *path, apr_pool_t *pool,
                              apr_pool_t *common_pool);
   svn_error_t *(*verify_fs)(svn_fs_t *fs, const char *path,
-                            /* ### notification? */
-                            svn_cancel_func_t cancel_func, void *cancel_baton,
                             svn_revnum_t start,
                             svn_revnum_t end,
+                            svn_fs_progress_notify_func_t notify_func,
+                            void *notify_baton,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
                             apr_pool_t *pool,
                             apr_pool_t *common_pool);
   svn_error_t *(*delete_fs)(const char *path, apr_pool_t *pool);
@@ -202,6 +204,9 @@ typedef struct fs_vtable_t
                             svn_fs_get_locks_callback_t get_locks_func,
                             void *get_locks_baton,
                             apr_pool_t *pool);
+  svn_error_t *(*verify_rev)(svn_fs_t *fs,
+                             svn_revnum_t revision,
+                             apr_pool_t *pool);
   svn_error_t *(*freeze)(svn_fs_t *fs,
                          svn_error_t *(*freeze_body)(void *, apr_pool_t *),
                          void *baton, apr_pool_t *pool);

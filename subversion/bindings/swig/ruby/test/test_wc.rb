@@ -650,10 +650,10 @@ EOE
       ctx.add(path)
       ctx.ci(path)
 
-      File.open(path, "w") {|f| f.print("b")}
+      File.open(path, "w") {|f| f.print("bb")}
       ctx.ci(path)
 
-      File.open(path, "w") {|f| f.print("c")}
+      File.open(path, "w") {|f| f.print("ccc")}
       rev = ctx.ci(path).revision
 
       status = Svn::Wc::RevisionStatus.new(path, nil, true)

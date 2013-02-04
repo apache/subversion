@@ -1294,9 +1294,9 @@ open_root(void *edit_baton,
     {
       post_response_ctx_t *prc;
       const char *rel_path;
-      svn_boolean_t post_with_revprops =
-        apr_hash_get(ctx->session->supported_posts, "create-txn-with-props",
-                     APR_HASH_KEY_STRING) ? TRUE : FALSE;
+      svn_boolean_t post_with_revprops
+        = (apr_hash_get(ctx->session->supported_posts, "create-txn-with-props",
+                        APR_HASH_KEY_STRING) != NULL);
 
       /* Create our activity URL now on the server. */
       handler = apr_pcalloc(ctx->pool, sizeof(*handler));
@@ -1466,15 +1466,9 @@ open_root(void *edit_baton,
       for (hi = apr_hash_first(ctx->pool, ctx->revprop_table); hi;
            hi = apr_hash_next(hi))
         {
-          const void *key;
-          void *val;
-          const char *name;
-          svn_string_t *value;
+          const char *name = svn__apr_hash_index_key(hi);
+          svn_string_t *value = svn__apr_hash_index_val(hi);
           const char *ns;
-
-          apr_hash_this(hi, &key, NULL, &val);
-          name = key;
-          value = val;
 
           if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
             {
@@ -2267,7 +2261,6 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_delta_editor_t *editor;
   commit_context_t *ctx;
-  apr_hash_index_t *hi;
   const char *repos_root;
   const char *base_relpath;
   svn_boolean_t supports_ephemeral_props;
@@ -2279,17 +2272,7 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
   ctx->session = session;
   ctx->conn = session->conns[0];
 
-  ctx->revprop_table = apr_hash_make(pool);
-  for (hi = apr_hash_first(pool, revprop_table); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      apr_ssize_t klen;
-      void *val;
-
-      apr_hash_this(hi, &key, &klen, &val);
-      apr_hash_set(ctx->revprop_table, apr_pstrdup(pool, key), klen,
-                   svn_string_dup(val, pool));
-    }
+  ctx->revprop_table = svn_prop_hash_dup(revprop_table, pool);
 
   /* If the server supports ephemeral properties, add some carrying
      interesting version information. */

@@ -738,7 +738,7 @@ svn_fs_fs__serialize_node_revision(void **buffer,
 
   /* create an (empty) serialization context with plenty of buffer space */
   svn_temp_serializer__context_t *context =
-      svn_temp_serializer__init(NULL, 0, 503, pool);
+      svn_temp_serializer__init(NULL, 0, 1007, pool);
 
   /* serialize the noderev */
   svn_fs_fs__noderev_serialize(context, &noderev);

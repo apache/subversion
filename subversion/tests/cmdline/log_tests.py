@@ -1006,7 +1006,7 @@ def log_xml_empty_date(sbox):
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
 
-  date_re = re.compile('<date');
+  date_re = re.compile('<date')
 
   # Ensure that we get a date before we delete the property.
   exit_code, output, errput = svntest.actions.run_and_verify_svn(

@@ -294,6 +294,23 @@ svn_hash__make(apr_pool_t *pool);
 
 /** @} */
 
+
+/** Apply the changes described by @a prop_changes to @a original_props and
+ * return the result.  The inverse of svn_prop_diffs().
+ *
+ * Allocate the resulting hash from @a pool, but allocate its keys and
+ * values from @a pool and/or by reference to the storage of the inputs.
+ *
+ * Note: some other APIs use an array of pointers to svn_prop_t.
+ *
+ * @since New in 1.8.
+ */
+apr_hash_t *
+svn_prop__patch(const apr_hash_t *original_props,
+                const apr_array_header_t *prop_changes,
+                apr_pool_t *pool);
+
+
 /**
  * @defgroup svn_version Version number dotted triplet parsing
  * @{

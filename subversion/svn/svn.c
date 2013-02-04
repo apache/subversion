@@ -1,5 +1,5 @@
 /*
- * main.c:  Subversion command line client.
+ * svn.c:  Subversion command line client main file.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -75,6 +75,7 @@ typedef enum svn_cl__longopt_t {
   /* diff options */
   opt_diff_cmd,
   opt_internal_diff,
+  opt_no_diff_added,
   opt_no_diff_deleted,
   opt_show_copies_as_adds,
   opt_notice_ancestry,
@@ -101,6 +102,7 @@ typedef enum svn_cl__longopt_t {
   opt_no_ignore,
   opt_no_unlock,
   opt_non_interactive,
+  opt_force_interactive,
   opt_old_cmd,
   opt_record_only,
   opt_relocate,
@@ -229,11 +231,17 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "with '--non-interactive')") },
   {"non-interactive", opt_non_interactive, 0,
-                    N_("do no interactive prompting")},
+                    N_("do no interactive prompting (default is to prompt\n"
+                       "                             "
+                       "only if standard input is a terminal device)")},
+  {"force-interactive", opt_force_interactive, 0,
+                    N_("do interactive prompting even if standard input\n"
+                       "                             "
+                       "is not a terminal device")},
   {"dry-run",       opt_dry_run, 0,
                     N_("try operation but make no changes")},
   {"ignore-ancestry", opt_ignore_ancestry, 0,
-                    N_("ignore ancestry when calculating merges")},
+                    N_("disable merge tracking; diff nodes as if related")},
   {"ignore-externals", opt_ignore_externals, 0,
                     N_("ignore externals definitions")},
   {"diff3-cmd",     opt_merge_cmd, 1, N_("use ARG as merge command")},
@@ -330,12 +338,14 @@ const apr_getopt_option_t svn_cl__options[] =
   {"diff-cmd",      opt_diff_cmd, 1, N_("use ARG as diff command")},
   {"internal-diff", opt_internal_diff, 0,
                        N_("override diff-cmd specified in config file")},
+  {"no-diff-added", opt_no_diff_added, 0,
+                    N_("do not print differences for added files")},
   {"no-diff-deleted", opt_no_diff_deleted, 0,
                     N_("do not print differences for deleted files")},
   {"show-copies-as-adds", opt_show_copies_as_adds, 0,
                     N_("don't diff copied or moved files with their source")},
   {"notice-ancestry", opt_notice_ancestry, 0,
-                    N_("notice ancestry when calculating differences")},
+                    N_("diff unrelated nodes as delete and add")},
   {"summarize",     opt_summarize, 0, N_("show a summary of the results")},
   {"git", opt_use_git_diff_format, 0,
                        N_("use git's extended diff format")},
@@ -401,7 +411,8 @@ const apr_getopt_option_t svn_cl__options[] =
    willy-nilly to every invocation of 'svn') . */
 const int svn_cl__global_options[] =
 { opt_auth_username, opt_auth_password, opt_no_auth_cache, opt_non_interactive,
-  opt_trust_server_cert, opt_config_dir, opt_config_options, 0
+  opt_force_interactive, opt_trust_server_cert, opt_config_dir,
+  opt_config_options, 0
 };
 
 /* Options for giving a log message.  (Some of these also have other uses.)
@@ -549,8 +560,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  Use just 'svn diff' to display local modifications in a working copy.\n"),
     {'r', 'c', opt_old_cmd, opt_new_cmd, 'N', opt_depth, opt_diff_cmd,
-     opt_internal_diff, 'x', opt_no_diff_deleted, opt_ignore_properties,
-     opt_properties_only,
+     opt_internal_diff, 'x', opt_no_diff_added, opt_no_diff_deleted,
+     opt_ignore_properties, opt_properties_only,
      opt_show_copies_as_adds, opt_notice_ancestry, opt_summarize, opt_changelist,
      opt_force, opt_xml, opt_use_git_diff_format, opt_patch_compatible} },
   { "export", svn_cl__export, {0}, N_
@@ -730,7 +741,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "          (the 'automatic' merge)\n"
 "       2. merge [-c M[,N...] | -r N:M ...] SOURCE[@REV] [TARGET_WCPATH]\n"
 "          (the 'cherry-pick' merge)\n"
-"       3. merge SOURCE1[@N] SOURCE2[@M] [TARGET_WCPATH]\n"
+"       3. merge SOURCE1[@REV1] SOURCE2[@REV2] [TARGET_WCPATH]\n"
 "          (the '2-URL' merge)\n"
 "\n"
 "  1. This form, with one source path and no revision range, is called\n"
@@ -915,26 +926,27 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "\n"
 "  3. This form is called a '2-URL merge':\n"
 "\n"
-"       svn merge SOURCE1[@N] SOURCE2[@M] [TARGET_WCPATH]\n"
-"\n"
-"     Two source URLs are specified, together with two revisions N and M.\n"
-"     The two sources are compared at the specified revisions, and the\n"
-"     difference is applied to TARGET_WCPATH, which is a path to a working\n"
-"     copy of another branch. The three branches involved can be completely\n"
-"     unrelated.\n"
+"       svn merge SOURCE1[@REV1] SOURCE2[@REV2] [TARGET_WCPATH]\n"
 "\n"
 "     You should use this merge variant only if the other variants do not\n"
 "     apply to your situation, as this variant can be quite complex to\n"
 "     master.\n"
 "\n"
+"     Two source URLs are specified, identifying two trees on the same\n"
+"     branch or on different branches. The trees are compared and the\n"
+"     difference from SOURCE1@REV1 to SOURCE2@REV2 is applied to the\n"
+"     working copy of the target branch at TARGET_WCPATH. The target\n"
+"     branch may be the same as one or both sources, or different again.\n"
+"     The three branches involved can be completely unrelated.\n"
+"\n"
 "     If TARGET_WCPATH is omitted, a default value of '.' is assumed.\n"
 "     However, in the special case where both sources refer to a file node\n"
-"     with the same basename and a similarly named file is also found within\n"
-"     '.', the differences will be applied to that local file.  The source\n"
-"     revisions default to HEAD if omitted.\n"
+"     with the same name and a file with the same name is also found within\n"
+"     '.', the differences will be applied to that local file. The source\n"
+"     revisions REV1 and REV2 default to HEAD if omitted.\n"
 "\n"
-"     The sources can also be specified as working copy paths, in which case\n"
-"     the URLs of the merge sources are derived from the working copies.\n"
+"     SOURCE1 and/or SOURCE2 can also be specified as a working copy path,\n"
+"     in which case the merge source URL is derived from the working copy.\n"
 "\n"
 "       - 2-URL Merge Example -\n"
 "\n"
@@ -1036,7 +1048,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "  repositories.\n"),
     {'r', 'c', 'N', opt_depth, 'q', opt_force, opt_dry_run, opt_merge_cmd,
      opt_record_only, 'x', opt_ignore_ancestry, opt_accept, opt_reintegrate,
-     opt_allow_mixed_revisions} },
+     opt_allow_mixed_revisions, 'v'} },
 
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
     ("Display merge-related information.\n"
@@ -1230,18 +1242,15 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  The value may be provided with the --file option instead of PROPVAL.\n"
      "\n"
-     "  Note: svn recognizes the following special versioned properties\n"
-     "  but will store any arbitrary properties set:\n"
-     "    svn:ignore     - A newline separated list of file glob patterns to ignore.\n"
-     "    svn:global-ignores         - Like svn:ignore, but inheritable.\n"
+     "  Property names starting with 'svn:' are reserved.  Subversion recognizes\n"
+     "  the following special versioned properties on a file:\n"
      "    svn:keywords   - Keywords to be expanded.  Valid keywords are:\n"
      "      URL, HeadURL             - The URL for the head version of the object.\n"
      "      Author, LastChangedBy    - The last person to modify the file.\n"
      "      Date, LastChangedDate    - The date/time the object was last modified.\n"
      "      Rev, Revision,           - The last revision the object changed.\n"
-     "      LastChangedRevision\n"
-     "      Id                       - A compressed summary of the previous\n"
-     "                                   4 keywords.\n"
+     "        LastChangedRevision\n"
+     "      Id                       - A compressed summary of the previous four.\n"
      "      Header                   - Similar to Id but includes the full URL.\n"
      "    svn:executable - If present, make the file executable.  Use\n"
      "      'svn propdel svn:executable PATH...' to clear.\n"
@@ -1250,43 +1259,37 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "      whether to merge the file, and how to serve it from Apache.\n"
      "      A mimetype beginning with 'text/' (or an absent mimetype) is\n"
      "      treated as text.  Anything else is treated as binary.\n"
-     "    svn:externals  - A newline separated list of module specifiers,\n"
-     "      each of which consists of a URL and a relative directory path,\n"
-     "      similar to the syntax of the 'svn checkout' command:\n"
-     "        http://example.com/repos/zig foo/bar\n"
-     "      A revision to check out can optionally be specified to pin the\n"
-     "      external to a known revision:\n"
-     "        -r25 http://example.com/repos/zig foo/bar\n"
-     "      To unambiguously identify an element at a path which has been\n"
-     "      deleted (possibly even deleted multiple times in its history),\n"
-     "      an optional peg revision can be appended to the URL:\n"
-     "        -r25 http://example.com/repos/zig@42 foo/bar\n"
-     "      Relative URLs are indicated by starting the URL with one\n"
-     "      of the following strings:\n"
-     "        ../  to the parent directory of the extracted external\n"
-     "        ^/   to the repository root\n"
-     "        //   to the scheme\n"
-     "        /    to the server root\n"
-     "      The ambiguous format 'relative_path relative_path' is taken as\n"
-     "      'relative_url relative_path' with peg revision support.\n"
-     "      Lines in externals definitions starting with the '#' character\n"
-     "      are considered comments and are ignored.\n"
-     "      Subversion 1.4 and earlier only support the following formats\n"
-     "      where peg revisions can only be specified using a -r modifier\n"
-     "      and where URLs cannot be relative:\n"
-     "        foo             http://example.com/repos/zig\n"
-     "        foo/bar -r 1234 http://example.com/repos/zag\n"
-     "      Use of these formats is discouraged. They should only be used if\n"
-     "      interoperability with 1.4 clients is desired.\n"
      "    svn:needs-lock - If present, indicates that the file should be locked\n"
      "      before it is modified.  Makes the working copy file read-only\n"
      "      when it is not locked.  Use 'svn propdel svn:needs-lock PATH...'\n"
      "      to clear.\n"
      "\n"
-     "  The svn:keywords, svn:executable, svn:eol-style, svn:mime-type and\n"
-     "  svn:needs-lock properties cannot be set on a directory.  A non-recursive\n"
-     "  attempt will fail, and a recursive attempt will set the property\n"
-     "  only on the file children of the directory.\n"),
+     "  Subversion recognizes the following special versioned properties on a\n"
+     "  directory:\n"
+     "    svn:ignore         - A list of file glob patterns to ignore, one per line.\n"
+     "    svn:global-ignores - Like svn:ignore, but inheritable.\n"
+     "    svn:externals      - A list of module specifiers, one per line, in the\n"
+     "      following format similar to the syntax of 'svn checkout':\n"
+     "        [-r REV] URL[@PEG] LOCALPATH\n"
+     "      Example:\n"
+     "        http://example.com/repos/zig foo/bar\n"
+     "      The LOCALPATH is relative to the directory having this property.\n"
+     "      To pin the external to a known revision, specify the optional REV:\n"
+     "        -r25 http://example.com/repos/zig foo/bar\n"
+     "      To unambiguously identify an element at a path which may have been\n"
+     "      subsequently deleted or renamed, specify the optional PEG revision:\n"
+     "        -r25 http://example.com/repos/zig@42 foo/bar\n"
+     "      The URL may be a full URL or a relative URL starting with one of:\n"
+     "        ../  to the parent directory of the extracted external\n"
+     "        ^/   to the repository root\n"
+     "        /    to the server root\n"
+     "        //   to the URL scheme\n"
+     "      Use of the following format is discouraged but is supported for\n"
+     "      interoperability with Subversion 1.4 and earlier clients:\n"
+     "        LOCALPATH [-r PEG] URL\n"
+     "      The ambiguous format 'relative_path relative_path' is taken as\n"
+     "      'relative_url relative_path' with peg revision support.\n"
+     "      Lines starting with a '#' character are ignored.\n"),
     {'F', opt_encoding, 'q', 'r', opt_targets, 'R', opt_depth, opt_revprop,
      opt_force, opt_changelist },
     {{'F', N_("read property value from file ARG")}} },
@@ -1483,7 +1486,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn switch --relocate http://www.example.com/repo/project \\\n"
      "                          svn://svn.example.com/repo/project\n"),
     { 'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_relocate,
-      opt_ignore_externals, opt_ignore_ancestry, opt_force, opt_accept} },
+      opt_ignore_externals, opt_ignore_ancestry, opt_force, opt_accept},
+    {{opt_ignore_ancestry,
+      N_("allow switching to a node with no common ancestor")}}
+  },
 
   { "unlock", svn_cl__unlock, {0}, N_
     ("Unlock working copy paths or URLs.\n"
@@ -1668,6 +1674,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   svn_config_t *cfg_config;
   svn_boolean_t descend = TRUE;
   svn_boolean_t interactive_conflicts = FALSE;
+  svn_boolean_t force_interactive = FALSE;
   svn_boolean_t use_notifier = TRUE;
   apr_hash_t *changelists;
   const char *sqlite_exclusive;
@@ -1991,8 +1998,14 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       case opt_non_interactive:
         opt_state.non_interactive = TRUE;
         break;
+      case opt_force_interactive:
+        force_interactive = TRUE;
+        break;
       case opt_trust_server_cert:
         opt_state.trust_server_cert = TRUE;
+        break;
+      case opt_no_diff_added:
+        opt_state.diff.no_diff_added = TRUE;
         break;
       case opt_no_diff_deleted:
         opt_state.diff.no_diff_deleted = TRUE;
@@ -2092,6 +2105,12 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_changelist:
         opt_state.changelist = apr_pstrdup(pool, opt_arg);
+        if (opt_state.changelist[0] == '\0')
+          {
+            err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                   _("Changelist names must not be empty"));
+            return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+          }
         apr_hash_set(changelists, opt_state.changelist,
                      APR_HASH_KEY_STRING, (void *)1);
         break;
@@ -2200,6 +2219,20 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       }
     }
 
+  /* The --non-interactive and --force-interactive options are mutually
+   * exclusive. */
+  if (opt_state.non_interactive && force_interactive)
+    {
+      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("--non-interactive and --force-interactive "
+                               "are mutually exclusive"));
+      return EXIT_ERROR(err);
+    }
+  else
+    opt_state.non_interactive = !svn_cmdline__be_interactive(
+                                  opt_state.non_interactive,
+                                  force_interactive);
+
   /* Turn our hash of changelists into an array of unique ones. */
   SVN_INT_ERR(svn_hash_keys(&(opt_state.changelists), changelists, pool));
 
@@ -2262,7 +2295,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                                   first_arg, pool));
               svn_error_clear
                 (svn_cmdline_fprintf(stderr, pool,
-                                     _("Unknown command: '%s'\n"),
+                                     _("Unknown subcommand: '%s'\n"),
                                      first_arg_utf8));
               svn_cl__help(NULL, NULL, pool);
               return EXIT_FAILURE;
@@ -2450,7 +2483,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
     }
 
   /* -N has a different meaning depending on the command */
-  if (descend == FALSE)
+  if (!descend)
     {
       if (subcommand->cmd_func == svn_cl__status)
         {

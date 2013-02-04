@@ -103,7 +103,7 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
                                 scratch_pool));
       SVN_ERR(svn_wc_status3(&status, wc_ctx, local_abspath, scratch_pool,
                              scratch_pool));
-      if (status->text_status != svn_wc_status_normal)
+      if (status->node_status != svn_wc_status_normal)
         local_mod = TRUE;
     }
 

@@ -94,7 +94,13 @@ _re_parse_status = re.compile('^([?!MACDRUGXI_~ ][MACDRUG_ ])'
                               '((?P<wc_rev>\d+|-|\?) +(\d|-|\?)+ +(\S+) +)?'
                               '(?P<path>.+)$')
 
-_re_parse_skipped = re.compile("^Skipped[^']* '(.+)'( --.*)?\n")
+_re_parse_status_ex = re.compile('^      ('
+               '(  \> moved (from (?P<moved_from>.+)|to (?P<moved_to>.*)))'
+              '|(  \> swapped places with (?P<swapped_with>.+).*)'
+              '|(\>   (?P<tc>.+))'
+  ')$')
+
+_re_parse_skipped = re.compile("^(Skipped[^']*) '(.+)'( --.*)?\n")
 
 _re_parse_summarize = re.compile("^([MAD ][M ])      (.+)\n")
 
@@ -139,10 +145,11 @@ class State:
     "Import state items from a State object, reparent the items to PARENT."
     assert isinstance(state, State)
 
-    if parent and parent[-1] != '/':
-      parent += '/'
     for path, item in state.desc.items():
-      path = parent + path
+      if path == '':
+        path = parent
+      else:
+        path = parent + '/' + path
       self.desc[path] = item
 
   def remove(self, *paths):
@@ -254,8 +261,11 @@ class State:
 
     base = to_relpath(os.path.normpath(self.wc_dir))
 
+    # TODO: We should probably normalize the paths in moved_from and moved_to.
+
     desc = dict([(repos_join(base, path), item)
                  for path, item in self.desc.items()])
+
     return State('', desc)
 
   def compare(self, other):
@@ -327,8 +337,16 @@ class State:
       if item.status:
         # If this is an unversioned tree-conflict, remove it.
         # These are only in their parents' THIS_DIR, they don't have entries.
-        if item.status[0] in '!?' and item.treeconflict == 'C':
+        if item.status[0] in '!?' and item.treeconflict == 'C' and \
+                                      item.entry_status is None:
           del self.desc[path]
+        # Normal externals are not stored in the parent wc, drop the root
+        # and everything in these working copies
+        elif item.status == 'X ' or item.prev_status == 'X ':
+          del self.desc[path]
+          for p, i in self.desc.copy().items():
+            if p.startswith(path + '/'):
+              del self.desc[p]
         else:
           # when reading the entry structures, we don't examine for text or
           # property mods, so clear those flags. we also do not examine the
@@ -347,6 +365,9 @@ class State:
           if item.entry_status is not None:
             item.status = item.entry_status
             item.entry_status = None
+          if item.entry_copied is not None:
+            item.copied = item.entry_copied
+            item.entry_copied = None
       if item.writelocked:
         # we don't contact the repository, so our only information is what
         # is in the working copy. 'K' means we have one and it matches the
@@ -362,6 +383,11 @@ class State:
           item.writelocked = 'K'
         elif item.writelocked == 'O':
           item.writelocked = None
+      item.moved_from = None
+      item.moved_to = None
+      if path == '':
+        item.switched = None
+      item.treeconflict = None
 
   def old_tree(self):
     "Return an old-style tree (for compatibility purposes)."
@@ -397,7 +423,7 @@ class State:
     return not self.__eq__(other)
 
   @classmethod
-  def from_status(cls, lines):
+  def from_status(cls, lines, wc_dir_name=None):
     """Create a State object from 'svn status' output."""
 
     def not_space(value):
@@ -406,20 +432,49 @@ class State:
       return None
 
     desc = { }
+    last = None
     for line in lines:
       if line.startswith('DBG:'):
         continue
 
-      # Quit when we hit an externals status announcement.
-      ### someday we can fix the externals tests to expect the additional
-      ### flood of externals status data.
-      if line.startswith('Performing'):
-        break
-
       match = _re_parse_status.search(line)
       if not match or match.group(10) == '-':
+
+        ex_match = _re_parse_status_ex.search(line)
+
+        if ex_match:
+          if ex_match.group('moved_from'):
+            path = ex_match.group('moved_from')
+            if wc_dir_name and path.startswith(wc_dir_name + os.path.sep):
+              path = path[len(wc_dir_name) + 1:]
+            
+            last.tweak(moved_from = to_relpath(path))
+          elif ex_match.group('moved_to'):
+            path = ex_match.group('moved_to')
+            if wc_dir_name and path.startswith(wc_dir_name + os.path.sep):
+              path = path[len(wc_dir_name) + 1:]
+            
+            last.tweak(moved_to = to_relpath(path))
+          elif ex_match.group('swapped_with'):
+            path = ex_match.group('swapped_with')
+            if wc_dir_name and path.startswith(wc_dir_name + os.path.sep):
+              path = path[len(wc_dir_name) + 1:]
+            
+            last.tweak(moved_to = to_relpath(path))
+            last.tweak(moved_from = to_relpath(path))
+
+          # Parse TC description?
+
         # ignore non-matching lines, or items that only exist on repos
         continue
+
+      prev_status = None
+      prev_treeconflict = None
+
+      path = to_relpath(match.group('path'))
+      if path in desc:
+        prev_status = desc[path].status
+        prev_treeconflict = desc[path].treeconflict
 
       item = StateItem(status=match.group(1),
                        locked=not_space(match.group(2)),
@@ -428,8 +483,11 @@ class State:
                        writelocked=not_space(match.group(5)),
                        treeconflict=not_space(match.group(6)),
                        wc_rev=not_space(match.group('wc_rev')),
+                       prev_status=prev_status,
+                       prev_treeconflict =prev_treeconflict
                        )
-      desc[to_relpath(match.group('path'))] = item
+      desc[path] = item
+      last = item
 
     return cls('', desc)
 
@@ -444,7 +502,8 @@ class State:
 
       match = _re_parse_skipped.search(line)
       if match:
-        desc[to_relpath(match.group(1))] = StateItem()
+        desc[to_relpath(match.group(2))] =  StateItem(
+          verb=(match.group(1).strip(':')))
 
     return cls('', desc)
 
@@ -483,12 +542,38 @@ class State:
           treeconflict = match.group(3)
         else:
           treeconflict = None
-        desc[to_relpath(match.group(4))] = StateItem(status=match.group(1),
-                                                     treeconflict=treeconflict)
+        path = to_relpath(match.group(4))
+        prev_status = None
+        prev_verb = None
+        prev_treeconflict = None
+
+        if path in desc:
+          prev_status = desc[path].status
+          prev_verb = desc[path].verb
+          prev_treeconflict = desc[path].treeconflict
+
+        desc[path] = StateItem(status=match.group(1),
+                               treeconflict=treeconflict,
+                               prev_status=prev_status,
+                               prev_verb=prev_verb,
+                               prev_treeconflict=prev_treeconflict)
       else:
         match = re_extra.search(line)
         if match:
-          desc[to_relpath(match.group(2))] = StateItem(verb=match.group(1))
+          path = to_relpath(match.group(2))
+          prev_status = None
+          prev_verb = None
+          prev_treeconflict = None
+
+          if path in desc:
+            prev_status = desc[path].status
+            prev_verb = desc[path].verb
+            prev_treeconflict = desc[path].treeconflict
+
+          desc[path] = StateItem(verb=match.group(1),
+                                 prev_status=prev_status,
+                                 prev_verb=prev_verb,
+                                 prev_treeconflict=prev_treeconflict)
 
     return cls('', desc)
 
@@ -579,21 +664,14 @@ class State:
     desc = { }
     dot_svn = svntest.main.get_admin_name()
 
-    for dirpath in svntest.main.run_entriesdump_subdirs(base):
+    dump_data = svntest.main.run_entriesdump_tree(base)
 
-      if base == '.' and dirpath != '.':
-        dirpath = '.' + os.path.sep + dirpath
+    if not dump_data:
+      # Probably 'svn status' run on an actual only node
+      # ### Improve!
+      return cls('', desc)
 
-      entries = svntest.main.run_entriesdump(dirpath)
-      if entries is None:
-        continue
-
-      if dirpath == '.':
-        parent = ''
-      elif dirpath.startswith('.' + os.sep):
-        parent = to_relpath(dirpath[2:])
-      else:
-        parent = to_relpath(dirpath)
+    for parent, entries in sorted(dump_data.items()):
 
       parent_url = entries[''].url
 
@@ -605,6 +683,9 @@ class State:
           continue
         # entries that are ABSENT don't show up in status
         if entry.absent:
+          continue
+        # entries that are User Excluded don't show up in status
+        if entry.depth == -1:
           continue
         if name and entry.kind == 2:
           # stub subdirectory. leave a "missing" StateItem in here. note
@@ -631,6 +712,9 @@ class State:
         if implied_url and implied_url != entry.url:
           item.switched = 'S'
 
+        if entry.file_external:
+          item.switched = 'X'
+
     return cls('', desc)
 
 
@@ -644,9 +728,10 @@ class StateItem:
 
   def __init__(self, contents=None, props=None,
                status=None, verb=None, wc_rev=None,
-               entry_rev=None, entry_status=None,
+               entry_rev=None, entry_status=None, entry_copied=None,
                locked=None, copied=None, switched=None, writelocked=None,
-               treeconflict=None):
+               treeconflict=None, moved_from=None, moved_to=None,
+               prev_status=None, prev_verb=None, prev_treeconflict=None):
     # provide an empty prop dict if it wasn't provided
     if props is None:
       props = { }
@@ -663,22 +748,29 @@ class StateItem:
     self.props = props
     # A two-character string from the first two columns of 'svn status'.
     self.status = status
+    self.prev_status = prev_status
     # The action word such as 'Adding' printed by commands like 'svn update'.
     self.verb = verb
+    self.prev_verb = prev_verb
     # The base revision number of the node in the WC, as a string.
     self.wc_rev = wc_rev
     # These will be set when we expect the wc_rev/status to differ from those
     # found in the entries code.
     self.entry_rev = entry_rev
     self.entry_status = entry_status
+    self.entry_copied = entry_copied
     # For the following attributes, the value is the status character of that
     # field from 'svn status', except using value None instead of status ' '.
     self.locked = locked
     self.copied = copied
     self.switched = switched
     self.writelocked = writelocked
-    # Value 'C' or ' ', or None as an expected status meaning 'do not check'.
+    # Value 'C', 'A', 'D' or ' ', or None as an expected status meaning 'do not check'.
     self.treeconflict = treeconflict
+    self.prev_treeconflict = prev_treeconflict
+    # Relative paths to the move locations
+    self.moved_from = moved_from
+    self.moved_to = moved_to
 
   def copy(self):
     "Make a deep copy of self."
@@ -716,8 +808,12 @@ class StateItem:
     atts = { }
     if self.status is not None:
       atts['status'] = self.status
+    if self.prev_status is not None:
+      atts['prev_status'] = self.prev_status
     if self.verb is not None:
       atts['verb'] = self.verb
+    if self.prev_verb is not None:
+      atts['prev_verb'] = self.prev_verb
     if self.wc_rev is not None:
       atts['wc_rev'] = self.wc_rev
     if self.locked is not None:
@@ -730,6 +826,12 @@ class StateItem:
       atts['writelocked'] = self.writelocked
     if self.treeconflict is not None:
       atts['treeconflict'] = self.treeconflict
+    if self.prev_treeconflict is not None:
+      atts['prev_treeconflict'] = self.prev_treeconflict
+    if self.moved_from is not None:
+      atts['moved_from'] = self.moved_from
+    if self.moved_to is not None:
+      atts['moved_to'] = self.moved_to
 
     return (os.path.normpath(path), self.contents, self.props, atts)
 
@@ -827,9 +929,12 @@ def repos_join(base, path):
   """Join two repos paths. This generally works for URLs too."""
   if base == '':
     return path
-  if path == '':
+  elif path == '':
     return base
-  return base + '/' + path
+  elif base[len(base)-1:] == '/':
+    return base + path
+  else:
+    return base + '/' + path
 
 
 def svn_uri_quote(url):

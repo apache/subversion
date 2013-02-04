@@ -77,7 +77,7 @@ RevpropTable::RevpropTable(jobject jrevpropTable)
 
   if (jrevpropTable != NULL)
     {
-      static jmethodID keySet = 0, toArray = 0, get = 0;
+      static jmethodID keySet = 0, get = 0;
       JNIEnv *env = JNIUtil::getEnv();
 
       jclass mapClazz = env->FindClass("java/util/Map");

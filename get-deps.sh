@@ -24,13 +24,16 @@
 #
 
 APR=apr-1.4.6
-APR_UTIL=apr-util-1.4.1
-SERF=serf-1.0.1
+APR_UTIL=apr-util-1.5.1
+SERF=serf-1.1.1
 ZLIB=zlib-1.2.7
-SQLITE_VERSION=3.7.12
-SQLITE=sqlite-amalgamation-$(printf %u%02u%02u%02u $(echo $SQLITE_VERSION | sed -e "s/\./ /g"))
+SQLITE_VERSION=3.7.15.1
+SQLITE=sqlite-amalgamation-$(printf %d%02d%02d%02d $(echo $SQLITE_VERSION | sed -e 's/\./ /g'))
+GTEST_VERSION=1.6.0
+GTEST=gtest-${GTEST_VERSION}
+GTEST_URL=http://googletest.googlecode.com/files/
 
-HTTPD=httpd-2.2.22
+HTTPD=httpd-2.4.3
 APR_ICONV=apr-iconv-1.2.1
 
 BASEDIR=`pwd`
@@ -48,7 +51,7 @@ APACHE_MIRROR=http://archive.apache.org/dist
 # helpers
 usage() {
     echo "Usage: $0"
-    echo "Usage: $0 [ apr | serf | zlib | sqlite ] ..."
+    echo "Usage: $0 [ apr | serf | zlib | sqlite | gtest ] ..."
     exit $1
 }
 
@@ -103,11 +106,23 @@ get_sqlite() {
 
 }
 
+get_gtest() {
+    test -d $BASEDIR/gtest && return
+
+    cd $TEMPDIR
+    $HTTP_FETCH ${GTEST_URL}/${GTEST}.zip
+    cd $BASEDIR
+
+    unzip -q $TEMPDIR/$GTEST.zip
+
+    mv $GTEST gtest
+}
+
 # main()
 get_deps() {
     mkdir -p $TEMPDIR
 
-    for i in neon zlib serf sqlite-amalgamation apr apr-util; do
+    for i in zlib serf sqlite-amalgamation apr apr-util gtest; do
       if [ -d $i ]; then
         echo "Local directory '$i' already exists; the downloaded copy won't be used" >&2
       fi
@@ -115,7 +130,11 @@ get_deps() {
 
     if [ $# -gt 0 ]; then
       for target; do
-        get_$target || usage
+        if [ "$target" != "deps" ]; then
+          get_$target || usage
+        else
+          usage
+        fi
       done
     else
       get_apr

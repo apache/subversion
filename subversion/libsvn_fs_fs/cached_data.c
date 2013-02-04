@@ -137,7 +137,7 @@ get_cached_node_revision_body(node_revision_t **noderev_p,
     }
   else
     {
-      pair_cache_key_t key;
+      pair_cache_key_t key = { 0 };
 
       key.revision = svn_fs_fs__id_rev(id);
       key.second = svn_fs_fs__id_item(id);
@@ -166,7 +166,7 @@ set_cached_node_revision_body(node_revision_t *noderev_p,
 
   if (ffd->node_revision_cache && !svn_fs_fs__id_txn_id(id))
     {
-      pair_cache_key_t key;
+      pair_cache_key_t key = { 0 };
 
       key.revision = svn_fs_fs__id_rev(id);
       key.second = svn_fs_fs__id_item(id);
@@ -228,10 +228,6 @@ get_node_revision_body(node_revision_t **noderev_p,
                                   svn_stream_from_aprfile2(revision_file, FALSE,
                                                            pool),
                                   pool));
-  /* Workaround issue #4031: is-fresh-txn-root in revision files. */
-  if (svn_fs_fs__id_txn_id(id) == NULL)
-    (*noderev_p)->is_fresh_txn_root = FALSE;
-
 
   /* The noderev is not in cache, yet. Add it, if caching has been enabled. */
   return set_cached_node_revision_body(*noderev_p, fs, id, pool);
@@ -490,7 +486,7 @@ create_rep_state_body(rep_state_t **rep_state,
   *rep_state = rs;
   *rep_header = rh;
 
-  if (rh->is_delta == FALSE)
+  if (!rh->is_delta)
     /* This is a plaintext, so just return the current rep_state. */
     return SVN_NO_ERROR;
 
@@ -858,7 +854,7 @@ build_rep_list(apr_array_header_t **list,
           return SVN_NO_ERROR;
         }
 
-      if (rep_header->is_delta == FALSE)
+      if (!rep_header->is_delta)
         {
           /* This is a plaintext, so just return the current rep_state. */
           *src_state = rs;
@@ -1256,7 +1252,7 @@ svn_fs_fs__get_contents(svn_stream_t **contents_p,
   else
     {
       fs_fs_data_t *ffd = fs->fsap_data;
-      pair_cache_key_t fulltext_cache_key;
+      pair_cache_key_t fulltext_cache_key = { 0 };
       svn_filesize_t len = rep->expanded_size ? rep->expanded_size : rep->size;
       struct rep_read_baton *rb;
 
@@ -1334,7 +1330,7 @@ svn_fs_fs__try_process_file_contents(svn_boolean_t *success,
   if (rep)
     {
       fs_fs_data_t *ffd = fs->fsap_data;
-      pair_cache_key_t fulltext_cache_key;
+      pair_cache_key_t fulltext_cache_key = { 0 };
 
       fulltext_cache_key.revision = rep->revision;
       fulltext_cache_key.second = rep->item_index;
@@ -1684,7 +1680,7 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
     {
       fs_fs_data_t *ffd = fs->fsap_data;
       representation_t *rep = noderev->prop_rep;
-      pair_cache_key_t key;
+      pair_cache_key_t key = { 0 };
 
       key.revision = rep->revision;
       key.second = rep->item_index;

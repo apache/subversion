@@ -175,7 +175,7 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
   const svn_checksum_t *checksum;
 
   SVN_ERR(svn_wc__db_read_pristine_info(&status, &kind, NULL, NULL, NULL, NULL,
-                                        &checksum, NULL, NULL,
+                                        &checksum, NULL, NULL, NULL,
                                         db, local_abspath,
                                         scratch_pool, scratch_pool));
 
@@ -231,7 +231,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
     *size = SVN_INVALID_FILESIZE;
 
   SVN_ERR(svn_wc__db_read_pristine_info(&status, &kind, NULL, NULL, NULL, NULL,
-                                        &sha1_checksum, NULL, NULL,
+                                        &sha1_checksum, NULL, NULL, NULL,
                                         db, local_abspath,
                                         scratch_pool, scratch_pool));
 
@@ -569,40 +569,6 @@ svn_wc__adm_cleanup_tmp_area(svn_wc__db_t *db,
   return svn_error_trace(init_adm_tmp_area(adm_abspath, scratch_pool));
 }
 
-
-
-svn_error_t *
-svn_wc_create_tmp_file2(apr_file_t **fp,
-                        const char **new_name,
-                        const char *path,
-                        svn_io_file_del_t delete_when,
-                        apr_pool_t *pool)
-{
-  svn_wc__db_t *db;
-  const char *local_abspath;
-  const char *temp_dir;
-  svn_error_t *err;
-
-  SVN_ERR_ASSERT(fp || new_name);
-
-  SVN_ERR(svn_wc__db_open(&db,
-                          NULL /* config */,
-                          FALSE /* auto_upgrade */,
-                          TRUE /* enforce_empty_wq */,
-                          pool, pool));
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  err = svn_wc__db_temp_wcroot_tempdir(&temp_dir, db, local_abspath,
-                                       pool, pool);
-  err = svn_error_compose_create(err, svn_wc__db_close(db));
-  if (err)
-    return svn_error_trace(err);
-
-  SVN_ERR(svn_io_open_unique_file3(fp, new_name, temp_dir,
-                                   delete_when, pool, pool));
-
-  return SVN_NO_ERROR;
-}
 
 svn_error_t *
 svn_wc__get_tmpdir(const char **tmpdir_abspath,

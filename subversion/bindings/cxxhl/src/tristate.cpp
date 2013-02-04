@@ -1,6 +1,5 @@
-/*
- * tree-conflicts.h: Tree conflicts.
- *
+/**
+ * @copyright
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -19,50 +18,27 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
+ * @endcopyright
  */
 
-
-
-#ifndef SVN_TREE_CONFLICTS_H
-#define SVN_TREE_CONFLICTS_H
-
-/*** Includes. ***/
-#include <apr_pools.h>
+#include "svncxxhl/tristate.hpp"
 
 #include "svn_types.h"
-#include "svn_string.h"
-#include "svn_wc.h"
+#undef TRUE
+#undef FALSE
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+namespace subversion {
+namespace cxxhl {
+namespace version_1_9_dev {
 
-
+tristate::tristate(short value) throw()
+    : m_value(value)
+{}
 
-/**
- * Return in @a desc a possibly localized human readable
- * description of a tree conflict described by @a conflict.
- *
- * Allocate the result in @a pool.
- */
-svn_error_t *
-svn_cl__get_human_readable_tree_conflict_description(
-  const char **desc,
-  const svn_wc_conflict_description2_t *conflict,
-  apr_pool_t *pool);
+const tristate tristate::TRUE = tristate(svn_tristate_true);
+const tristate tristate::FALSE = tristate(svn_tristate_false);
+const tristate tristate::UNKNOWN = tristate(svn_tristate_unknown);
 
-/**
- * Append to @a str an XML representation of the tree conflict data
- * for @a conflict, in a format suitable for 'svn info --xml'.
- */
-svn_error_t *
-svn_cl__append_tree_conflict_info_xml(
-  svn_stringbuf_t *str,
-  const svn_wc_conflict_description2_t *conflict,
-  apr_pool_t *pool);
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
-
-#endif /* SVN_TREE_CONFLICTS_H */
+} // namespace version_1_9_dev
+} // namespace cxxhl
+} // namespace subversion

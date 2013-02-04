@@ -1,6 +1,6 @@
-/* -*- C++ -*- */
-/**
- * @copyright
+/*
+ * conflicts.h: Conflicts handling
+ *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -19,39 +19,50 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
-#ifndef __cplusplus
-#error "This is a C++ header file."
-#endif
 
-#ifndef SVN_CXXHL_TYPES_TRISTATE_H
-#define SVN_CXXHL_TYPES_TRISTATE_H
+
+#ifndef SVN_CONFLICTS_H
+#define SVN_CONFLICTS_H
 
-namespace apache {
-namespace subversion {
-namespace cxxhl {
+/*** Includes. ***/
+#include <apr_pools.h>
 
-class Tristate
-{
-  public:
-    Tristate(const Tristate& that) : m_value(that.m_value) {}
+#include "svn_types.h"
+#include "svn_string.h"
+#include "svn_wc.h"
 
-    bool operator==(const Tristate& that) { return m_value == that.m_value; }
-    bool operator!=(const Tristate& that) { return !(*this == that); }
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
-    static const Tristate TRUE;
-    static const Tristate FALSE;
-    static const Tristate UNKNOWN;
+
 
-  private:
-    explicit Tristate(short value);
-    short m_value;
-};
+/**
+ * Return in @a desc a possibly localized human readable
+ * description of a tree conflict described by @a conflict.
+ *
+ * Allocate the result in @a pool.
+ */
+svn_error_t *
+svn_cl__get_human_readable_tree_conflict_description(
+  const char **desc,
+  const svn_wc_conflict_description2_t *conflict,
+  apr_pool_t *pool);
 
-} // namespace cxxhl
-} // namespace subversion
-} // namespace apache
+/**
+ * Append to @a str an XML representation of the conflict data
+ * for @a conflict, in a format suitable for 'svn info --xml'.
+ */
+svn_error_t *
+svn_cl__append_conflict_info_xml(
+  svn_stringbuf_t *str,
+  const svn_wc_conflict_description2_t *conflict,
+  apr_pool_t *pool);
 
-#endif  // SVN_CXXHL_TYPES_TRISTATE_H
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_CONFLICTS_H */

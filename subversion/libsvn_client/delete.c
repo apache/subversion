@@ -46,36 +46,47 @@
 
 /*** Code. ***/
 
+/* Baton for find_undeletables */
+struct can_delete_baton_t
+{
+  const char *root_abspath;
+  svn_boolean_t target_missing;
+};
 
 /* An svn_wc_status_func4_t callback function for finding
    status structures which are not safely deletable. */
 static svn_error_t *
 find_undeletables(void *baton,
-                  const char *path,
+                  const char *local_abspath,
                   const svn_wc_status3_t *status,
                   apr_pool_t *pool)
 {
+  if (status->node_status == svn_wc_status_missing)
+    {
+      struct can_delete_baton_t *cdt = baton;
+
+      if (strcmp(cdt->root_abspath, local_abspath) == 0)
+        cdt->target_missing = TRUE;
+    }
+
   /* Check for error-ful states. */
   if (status->node_status == svn_wc_status_obstructed)
     return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                              _("'%s' is in the way of the resource "
                                "actually under version control"),
-                             svn_dirent_local_style(path, pool));
+                             svn_dirent_local_style(local_abspath, pool));
   else if (! status->versioned)
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                              _("'%s' is not under version control"),
-                             svn_dirent_local_style(path, pool));
+                             svn_dirent_local_style(local_abspath, pool));
 
-  else if ((status->node_status != svn_wc_status_normal
-            && status->node_status != svn_wc_status_deleted
-            && status->node_status != svn_wc_status_missing)
-           ||
-           (status->prop_status != svn_wc_status_none
-            && status->prop_status != svn_wc_status_normal))
+  else if (status->node_status != svn_wc_status_normal
+           && status->node_status != svn_wc_status_deleted
+           && status->node_status != svn_wc_status_missing)
     return svn_error_createf(SVN_ERR_CLIENT_MODIFIED, NULL,
                              _("'%s' has local modifications -- commit or "
                                "revert them first"),
-                             svn_dirent_local_style(path, pool));
+                             svn_dirent_local_style(local_abspath, pool));
 
   return SVN_NO_ERROR;
 }
@@ -86,13 +97,15 @@ find_undeletables(void *baton,
    command.  CTX is used for the client's config options.  POOL is
    used for all temporary allocations. */
 static svn_error_t *
-can_delete_node(const char *local_abspath,
+can_delete_node(svn_boolean_t *target_missing,
+                const char *local_abspath,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *scratch_pool)
 {
   svn_node_kind_t external_kind;
   const char *defining_abspath;
   apr_array_header_t *ignores;
+  struct can_delete_baton_t cdt;
 
   /* A file external should not be deleted since the file external is
      implemented as a switched file and it would delete the file the
@@ -123,17 +136,25 @@ can_delete_node(const char *local_abspath,
 
   SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, scratch_pool));
 
-  return svn_error_trace(svn_wc_walk_status(ctx->wc_ctx,
-                                            local_abspath,
-                                            svn_depth_infinity,
-                                            FALSE /* get_all */,
-                                            FALSE /* no_ignore */,
-                                            FALSE /* ignore_text_mod */,
-                                            ignores,
-                                            find_undeletables, NULL,
-                                            ctx->cancel_func,
-                                            ctx->cancel_baton,
-                                            scratch_pool));
+  cdt.root_abspath = local_abspath;
+  cdt.target_missing = FALSE;
+
+  SVN_ERR(svn_wc_walk_status(ctx->wc_ctx,
+                             local_abspath,
+                             svn_depth_infinity,
+                             FALSE /* get_all */,
+                             FALSE /* no_ignore */,
+                             FALSE /* ignore_text_mod */,
+                             ignores,
+                             find_undeletables, &cdt,
+                             ctx->cancel_func,
+                             ctx->cancel_baton,
+                             scratch_pool));
+
+  if (target_missing)
+    *target_missing = cdt.target_missing;
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -318,7 +339,7 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
 }
 
 svn_error_t *
-svn_client__wc_delete(const char *path,
+svn_client__wc_delete(const char *local_abspath,
                       svn_boolean_t force,
                       svn_boolean_t dry_run,
                       svn_boolean_t keep_local,
@@ -327,18 +348,20 @@ svn_client__wc_delete(const char *path,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
-  const char *local_abspath;
+  svn_boolean_t target_missing = FALSE;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   if (!force && !keep_local)
     /* Verify that there are no "awkward" files */
-    SVN_ERR(can_delete_node(local_abspath, ctx, pool));
+    SVN_ERR(can_delete_node(&target_missing, local_abspath, ctx, pool));
 
   if (!dry_run)
     /* Mark the entry for commit deletion and perform wc deletion */
     return svn_error_trace(svn_wc_delete4(ctx->wc_ctx, local_abspath,
-                                          keep_local, TRUE,
+                                          keep_local || target_missing
+                                                            /*keep_local */,
+                                          TRUE /* delete_unversioned */,
                                           ctx->cancel_func, ctx->cancel_baton,
                                           notify_func, notify_baton, pool));
 
@@ -356,30 +379,43 @@ svn_client__wc_delete_many(const apr_array_header_t *targets,
                            apr_pool_t *pool)
 {
   int i;
-  apr_array_header_t *abs_targets;
+  svn_boolean_t has_non_missing = FALSE;
 
-  abs_targets = apr_array_make(pool, targets->nelts, sizeof(const char *));
   for (i = 0; i < targets->nelts; i++)
     {
-      const char *path = APR_ARRAY_IDX(targets, i, const char *);
-      const char *local_abspath;
+      const char *local_abspath = APR_ARRAY_IDX(targets, i, const char *);
 
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-      APR_ARRAY_PUSH(abs_targets, const char *) = local_abspath;
+      SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
       if (!force && !keep_local)
-        /* Verify that there are no "awkward" files */
-        SVN_ERR(can_delete_node(local_abspath, ctx, pool));
+        {
+          svn_boolean_t missing;
+          /* Verify that there are no "awkward" files */
+
+          SVN_ERR(can_delete_node(&missing, local_abspath, ctx, pool));
+
+          if (! missing)
+            has_non_missing = TRUE;
+        }
+      else
+        has_non_missing = TRUE;
     }
 
   if (!dry_run)
-    /* Mark the entry for commit deletion and perform wc deletion */
-    return svn_error_trace(svn_wc__delete_many(ctx->wc_ctx, abs_targets,
-                                               keep_local, TRUE,
-                                               ctx->cancel_func,
-                                               ctx->cancel_baton,
-                                               notify_func, notify_baton,
-                                               pool));
+    {
+      /* Mark the entry for commit deletion and perform wc deletion */
+
+      /* If none of the targets exists, pass keep local TRUE, to avoid
+         deleting case-different files. Detecting this in the generic case
+         from the delete code is expensive */
+      return svn_error_trace(svn_wc__delete_many(ctx->wc_ctx, targets,
+                                                 keep_local || !has_non_missing,
+                                                 TRUE /* delete_unversioned_target */,
+                                                 ctx->cancel_func,
+                                                 ctx->cancel_baton,
+                                                 notify_func, notify_baton,
+                                                 pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -435,8 +471,8 @@ svn_client_delete4(const apr_array_header_t *paths,
                                           APR_ARRAY_IDX(paths, i,
                                                         const char *),
                                           pool));
-          SVN_ERR(svn_wc__get_wc_root(&wcroot_abspath, ctx->wc_ctx,
-                                      local_abspath, pool, iterpool));
+          SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
+                                     local_abspath, pool, iterpool));
           targets = apr_hash_get(wcroots, wcroot_abspath,
                                  APR_HASH_KEY_STRING);
           if (targets == NULL)

@@ -94,11 +94,13 @@ def compare_repos_dumps(svnrdump_sbox, svnadmin_dumpfile):
 
 def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
                   subdir = None, bypass_prop_validation = False,
-                  ignore_base_checksums = False):
+                  ignore_base_checksums = False, extra_options = []):
+
   """Load a dumpfile using 'svnadmin load', dump it with 'svnrdump
   dump' and check that the same dumpfile is produced or that
   expected_dumpfile_name is produced if provided. Additionally, the
-  subdir argument appends itself to the URL"""
+  subdir argument appends itself to the URL.  EXTRA_OPTIONS is an
+  array of optional additional options to pass to 'svnrdump dump'."""
 
   # Create an empty sandbox repository
   build_repos(sbox)
@@ -121,10 +123,10 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
     repo_url = repo_url + subdir
 
   # Create a dump file using svnrdump
+  opts = extra_options + ['-q', 'dump', repo_url]
   svnrdump_dumpfile = \
       svntest.actions.run_and_verify_svnrdump(None, svntest.verify.AnyOutput,
-                                              [], 0, '-q', 'dump',
-                                              repo_url)
+                                              [], 0, *opts)
 
   if expected_dumpfile_name:
     svnadmin_dumpfile = open(os.path.join(svnrdump_tests_dir,
@@ -335,7 +337,7 @@ def copy_revprops_load(sbox):
 def only_trunk_dump(sbox):
   "dump: subdirectory"
   run_dump_test(sbox, "trunk-only.dump", subdir="/trunk",
-                expected_dumpfile_name="trunk-only.expected.dump",)
+                expected_dumpfile_name="trunk-only.expected.dump")
 
 def only_trunk_A_with_changes_dump(sbox):
   "dump: subdirectory with changes on root"
@@ -356,6 +358,12 @@ def copy_bad_line_endings_dump(sbox):
                 expected_dumpfile_name="copy-bad-line-endings.expected.dump",
                 bypass_prop_validation=True)
 
+@Issue(4263)
+def copy_bad_line_endings_load(sbox):
+  "load: inconsistent line endings in svn:* props"
+  run_load_test(sbox, "copy-bad-line-endings.dump",
+                expected_dumpfile_name="copy-bad-line-endings.expected.dump")
+          
 def copy_bad_line_endings2_dump(sbox):
   "dump: non-LF line endings in svn:* props"
   run_dump_test(sbox, "copy-bad-line-endings2.dump",
@@ -731,7 +739,34 @@ def svnrdump_load_partial_incremental_dump(sbox):
                                           svntest.verify.AnyOutput,
                                           [], 0, 'load', sbox.repo_url)
 
-  ########################################################################
+
+#----------------------------------------------------------------------
+@Issue(4101)
+def range_dump(sbox):
+  "dump: using -rX:Y"
+  run_dump_test(sbox, "trunk-only.dump",
+                expected_dumpfile_name="root-range.expected.dump",
+                extra_options=['-r2:HEAD'])
+
+@Issue(4101)
+def only_trunk_range_dump(sbox):
+  "dump: subdirectory using -rX:Y"
+  run_dump_test(sbox, "trunk-only.dump", subdir="/trunk",
+                expected_dumpfile_name="trunk-only-range.expected.dump",
+                extra_options=['-r1:HEAD'])
+
+@Issue(4101)
+def only_trunk_A_range_dump(sbox):
+  "dump: deeper subdirectory using -rX:Y"
+  run_dump_test(sbox, "trunk-only.dump", subdir="/trunk/A",
+                expected_dumpfile_name="trunk-A-range.expected.dump",
+                extra_options=['-r2:HEAD'])
+
+
+#----------------------------------------------------------------------
+
+
+########################################################################
 # Run the tests
 
 
@@ -771,6 +806,7 @@ test_list = [ None,
               move_and_modify_in_the_same_revision_dump,
               move_and_modify_in_the_same_revision_load,
               copy_bad_line_endings_dump,
+              copy_bad_line_endings_load,
               copy_bad_line_endings2_dump,
               commit_a_copy_of_root_dump,
               commit_a_copy_of_root_load,
@@ -781,6 +817,9 @@ test_list = [ None,
               reflect_dropped_renumbered_revs,
               dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads,
               svnrdump_load_partial_incremental_dump,
+              range_dump,
+              only_trunk_range_dump,
+              only_trunk_A_range_dump,
              ]
 
 if __name__ == '__main__':

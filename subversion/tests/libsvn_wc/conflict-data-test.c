@@ -202,8 +202,8 @@ test_read_write_tree_conflicts(const svn_test_opts_t *opts,
 
   SVN_ERR(svn_test__sandbox_create(&sbox, "read_write_tree_conflicts", opts, pool));
   parent_abspath = svn_dirent_join(sbox.wc_abspath, "A", pool);
-  SVN_ERR(svn_wc__db_op_add_directory(sbox.wc_ctx->db, parent_abspath, NULL,
-                                      pool));
+  SVN_ERR(svn_wc__db_op_add_directory(sbox.wc_ctx->db, parent_abspath,
+                                      NULL /*props*/, NULL, pool));
   child1_abspath = svn_dirent_join(parent_abspath, "foo", pool);
   child2_abspath = svn_dirent_join(parent_abspath, "bar", pool);
 
@@ -229,9 +229,9 @@ test_read_write_tree_conflicts(const svn_test_opts_t *opts,
 
   /* Write */
   SVN_ERR(svn_wc__add_tree_conflict(sbox.wc_ctx, /*child1_abspath,*/
-                                    conflict1, pool));
+                                    conflict1, NULL, pool));
   SVN_ERR(svn_wc__add_tree_conflict(sbox.wc_ctx, /*child2_abspath,*/
-                                    conflict2, pool));
+                                    conflict2, NULL, pool));
 
   /* Query (conflict1 through WC-DB API, conflict2 through WC API) */
   {
@@ -337,6 +337,7 @@ test_serialize_prop_conflict(const svn_test_opts_t *opts,
                         svn_wc_conflict_version_create2("http://my-repos/svn",
                                                         "uuid", "trunk", 12,
                                                         svn_node_dir, pool),
+                        NULL /* wc_only */,
                         pool, pool));
 
   SVN_ERR(svn_wc__conflict_skel_is_complete(&complete, conflict_skel));
@@ -500,9 +501,10 @@ test_serialize_tree_conflict(const svn_test_opts_t *opts,
 
   SVN_ERR(svn_wc__conflict_skel_add_tree_conflict(
                               conflict_skel,
-                              sbox.wc_ctx->db, sbox.wc_abspath,
+                              sbox.wc_ctx->db, sbox_wc_path(&sbox, "A/B"),
                               svn_wc_conflict_reason_moved_away,
                               svn_wc_conflict_action_delete,
+                              sbox_wc_path(&sbox, "A/B"),
                               pool, pool));
 
   SVN_ERR(svn_wc__conflict_skel_set_op_switch(
@@ -510,6 +512,7 @@ test_serialize_tree_conflict(const svn_test_opts_t *opts,
                         svn_wc_conflict_version_create2("http://my-repos/svn",
                                                         "uuid", "trunk", 12,
                                                         svn_node_dir, pool),
+                        NULL /* wc_only */,
                         pool, pool));
 
   SVN_ERR(svn_wc__conflict_skel_is_complete(&complete, conflict_skel));
@@ -518,9 +521,11 @@ test_serialize_tree_conflict(const svn_test_opts_t *opts,
   {
     svn_wc_conflict_reason_t local_change;
     svn_wc_conflict_action_t incoming_change;
+    const char *moved_away_op_root_abspath;
 
     SVN_ERR(svn_wc__conflict_read_tree_conflict(&local_change,
                                                 &incoming_change,
+                                                &moved_away_op_root_abspath,
                                                 sbox.wc_ctx->db,
                                                 sbox.wc_abspath,
                                                 conflict_skel,
@@ -528,6 +533,8 @@ test_serialize_tree_conflict(const svn_test_opts_t *opts,
 
     SVN_TEST_ASSERT(local_change == svn_wc_conflict_reason_moved_away);
     SVN_TEST_ASSERT(incoming_change == svn_wc_conflict_action_delete);
+    SVN_TEST_ASSERT(!strcmp(moved_away_op_root_abspath,
+                            sbox_wc_path(&sbox, "A/B")));
   }
 
   return SVN_NO_ERROR;

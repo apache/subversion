@@ -1147,8 +1147,8 @@ svn_diff_open_patch_file(svn_patch_file_t **patch_file,
   svn_patch_file_t *p;
 
   p = apr_palloc(result_pool, sizeof(*p));
-  SVN_ERR(svn_io_file_open(&p->apr_file, local_abspath,
-                           APR_READ | APR_BINARY, 0, result_pool));
+  SVN_ERR(svn_io_file_open(&p->apr_file, local_abspath, APR_READ,
+                           APR_OS_DEFAULT, result_pool));
   p->next_patch_offset = 0;
   *patch_file = p;
 

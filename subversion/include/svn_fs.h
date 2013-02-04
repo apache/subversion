@@ -39,7 +39,6 @@
 #include "svn_io.h"
 #include "svn_mergeinfo.h"
 #include "svn_checksum.h"
-#include "svn_editor.h"
 
 
 #ifdef __cplusplus
@@ -271,27 +270,84 @@ svn_fs_upgrade(const char *path,
                apr_pool_t *pool);
 
 /**
- * Perform backend-specific data consistency and correctness validations
- * to the Subversion filesystem located in the directory @a path.
- * Use @a pool for necessary allocations.
+ * Callback function type for progress notification.
  *
+ * @a revision is the number of the revision currently begin processed,
+ * #SVN_INVALID_REVNUM if the current stage is not linked to any specific
+ * revision. @a baton is the callback baton.
+ *
+ * @since New in 1.8.
+ */
+typedef void (*svn_fs_progress_notify_func_t)(svn_revnum_t revision,
+                                              void *baton,
+                                              apr_pool_t *pool);
+
+/**
+ * Perform backend-specific data consistency and correctness validations
+ * to the Subversion filesystem (mainly the meta-data) located in the
+ * directory @a path.  Use @a scratch_pool for temporary allocations.
+ *
+ * @a start and @a end are used to limit the amount of checks being done
+ * to data that is relevant to that range of revisions.  However, this is
+ * only a lower limit to the actual amount of checks being done.  The
+ * backend may not even be able to limit the errors begin reported.
  * @a start and @a end may be #SVN_INVALID_REVNUM, in which case
  * svn_repos_verify_fs2()'s semantics apply.  When @c r0 is being
  * verified, global invariants may be verified as well.
+ *
+ * The optional @a notify_func callback is only a general feedback that
+ * the operation is still in process but may be called in random revisions
+ * order and more than once for the same revision, i.e. r2, r1, r2 would
+ * be a valid sequence.
+ *
+ * The optional @a cancel_func callback will be invoked as usual to allow
+ * the user to preempt this potentially lengthy operation.
  *
  * @note You probably don't want to use this directly.  Take a look at
  * svn_repos_verify_fs2() instead, which does non-backend-specific
  * verifications as well.
  *
+ * @note To ensure a full verification using all tests and covering all
+ * revisions, you must call this function *and* #svn_fs_verify_rev.
+ * 
+ * @note Implementors, please do tests that can be done efficiently for
+ * a single revision to #svn_fs_verify_rev.  This function is meant for
+ * global checks or tests that require an expensive context setup.
+ *
  * @since New in 1.8.
  */
 svn_error_t *
 svn_fs_verify(const char *path,
-              svn_cancel_func_t cancel_func,
-              void *cancel_baton,
               svn_revnum_t start,
               svn_revnum_t end,
+              svn_fs_progress_notify_func_t notify_func,
+              void *notify_baton,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
               apr_pool_t *scratch_pool);
+
+/**
+ * Perform backend-specific data consistency and correctness validations
+ * to revision @a revision of the Subversion filesystem @a fs.
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @note You probably don't want to use this directly.  Take a look at
+ * svn_repos_verify_fs2() instead, which does non-backend-specific
+ * verifications as well.
+ *
+* @note To ensure a full verification using all tests and covering all
+ * revisions, you must call this function *and* #svn_fs_verify.
+ *
+ * @note Implementors, please do tests that cannot be done efficiently for
+ * a single revision to #svn_fs_verify.  This function is meant for local
+ * checks that don't require an expensive context setup.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_verify_rev(svn_fs_t *fs,
+                  svn_revnum_t revision,
+                  apr_pool_t *scratch_pool);
 
 /**
  * Return, in @a *fs_type, a string identifying the back-end type of
@@ -1062,118 +1118,6 @@ svn_error_t *
 svn_fs_change_txn_props(svn_fs_txn_t *txn,
                         const apr_array_header_t *props,
                         apr_pool_t *pool);
-
-/** @} */
-
-
-/** Editors
- *
- * ### docco
- *
- * @defgroup svn_fs_editor Transaction editors
- * @{
- */
-
-/**
- * Create a new filesystem transaction, based on based on the youngest
- * revision of @a fs, and return its name @a *txn_name and an @a *editor
- * that can be used to make changes into it.
- *
- * @a flags determines transaction enforcement behaviors, and is composed
- * from the constants SVN_FS_TXN_* (#SVN_FS_TXN_CHECK_OOD etc.). It is a
- * property of the underlying transaction, and will not change if multiple
- * editors are used to refer to that transaction (see @a autocommit, below).
- * 
- * @note If you're building a txn for committing, you probably don't want
- * to call this directly.  Instead, call svn_repos__get_commit_ev2(), which
- * honors the repository's hook configurations.
- *
- * When svn_editor_complete() is called for @a editor, internal resources
- * will be cleaned and nothing more will happen. If you wish to commit the
- * transaction, call svn_fs_editor_commit() instead. It is illegal to call
- * both; the second call will return #SVN_ERR_FS_INCORRECT_EDITOR_COMPLETION.
- *
- * @see svn_fs_commit_txn()
- *
- * @since New in 1.8.
- */
-svn_error_t *
-svn_fs_editor_create(svn_editor_t **editor,
-                     const char **txn_name,
-                     svn_fs_t *fs,
-                     apr_uint32_t flags,
-                     svn_cancel_func_t cancel_func,
-                     void *cancel_baton,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool);
-
-
-/**
- * Like svn_fs_editor_create(), but open an existing transaction
- * @a txn_name and continue editing it.
- *
- * @since New in 1.8.
- */
-svn_error_t *
-svn_fs_editor_create_for(svn_editor_t **editor,
-                         svn_fs_t *fs,
-                         const char *txn_name,
-                         svn_cancel_func_t cancel_func,
-                         void *cancel_baton,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool);
-
-
-/**
- * Commit the transaction represented by @a editor.
- *
- * If the commit to the filesystem succeeds, then @a *revision will be set
- * to the resulting revision number. Note that further errors may occur,
- * as described below. If the commit process does not succeed, for whatever
- * reason, then @a *revision will be set to #SVN_INVALID_REVNUM.
- *
- * If a conflict occurs during the commit, then @a *conflict_path will
- * be set to a path that caused the conflict. #SVN_NO_ERROR will be returned.
- * Callers may want to construct an #SVN_ERR_FS_CONFLICT error with a
- * message that incorporates @a *conflict_path.
- *
- * If a non-conflict error occurs during the commit, then that error will
- * be returned.
- * As is standard with any Subversion API, @a revision, @a post_commit_err,
- * and @a conflict_path (the OUT parameters) have an indeterminate value if
- * an error is returned.
- *
- * If the commit completes (and a revision is returned in @a *revision), then
- * it is still possible for an error to occur during the cleanup process.
- * Any such error will be returned in @a *post_commit_err. The caller must
- * properly use or clear that error.
- *
- * If svn_editor_complete() has already been called on @a editor, then
- * #SVN_ERR_FS_INCORRECT_EDITOR_COMPLETION will be returned.
- *
- * @note After calling this function, @a editor will be marked as completed
- * and no further operations may be performed on it. The underlying
- * transaction will either be committed or aborted once this function is
- * called. It cannot be recovered for additional work.
- *
- * @a result_pool will be used to allocate space for @a conflict_path.
- * @a scratch_pool will be used for all temporary allocations.
- *
- * @note To summarize, there are three possible outcomes of this function:
- * successful commit (with or without an associated @a *post_commit_err);
- * failed commit due to a conflict (reported via @a *conflict_path); and
- * failed commit for some other reason (reported via the returned error.)
- *
- * @since New in 1.8.
- */
-svn_error_t *
-svn_fs_editor_commit(svn_revnum_t *revision,
-                     svn_error_t **post_commit_err,
-                     const char **conflict_path,
-                     svn_editor_t *editor,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool);
-
 
 /** @} */
 

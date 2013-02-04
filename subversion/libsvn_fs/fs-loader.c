@@ -120,8 +120,8 @@ load_module(fs_init_func_t *initfunc, const char *name, apr_pool_t *pool)
                                  _("Invalid name for FS type '%s'"),
                                  name);
 
-    libname = apr_psprintf(pool, "libsvn_fs_%s-%d.so.0",
-                           name, SVN_VER_MAJOR);
+    libname = apr_psprintf(pool, "libsvn_fs_%s-%d.so.%d",
+                           name, SVN_VER_MAJOR, SVN_SOVERSION);
     funcname = apr_psprintf(pool, "svn_fs_%s__init", name);
 
     /* Find/load the specified library.  If we get an error, assume
@@ -483,10 +483,12 @@ svn_fs_upgrade(const char *path, apr_pool_t *pool)
 
 svn_error_t *
 svn_fs_verify(const char *path,
-              svn_cancel_func_t cancel_func,
-              void *cancel_baton,
               svn_revnum_t start,
               svn_revnum_t end,
+              svn_fs_progress_notify_func_t notify_func,
+              void *notify_baton,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
               apr_pool_t *pool)
 {
   fs_library_vtable_t *vtable;
@@ -496,8 +498,10 @@ svn_fs_verify(const char *path,
   fs = fs_new(NULL, pool);
 
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
-                       vtable->verify_fs(fs, path, cancel_func, cancel_baton,
-                                         start, end, pool, common_pool));
+                       vtable->verify_fs(fs, path, start, end,
+                                         notify_func, notify_baton,
+                                         cancel_func, cancel_baton,
+                                         pool, common_pool));
   return SVN_NO_ERROR;
 }
 
@@ -622,6 +626,16 @@ svn_fs_recover(const char *path,
                                                     common_pool));
   return svn_error_trace(vtable->recover(fs, cancel_func, cancel_baton,
                                          pool));
+}
+
+svn_error_t *
+svn_fs_verify_rev(svn_fs_t *fs,
+                  svn_revnum_t revision,
+                  apr_pool_t *scratch_pool)
+{
+  SVN_ERR(fs->vtable->verify_rev(fs, revision, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

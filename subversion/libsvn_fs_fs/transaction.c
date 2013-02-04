@@ -60,6 +60,12 @@ static txn_vtable_t txn_vtable = {
   svn_fs_fs__change_txn_props
 };
 
+static svn_error_t *
+verify_walker(representation_t *rep,
+              void *baton,
+              svn_fs_t *fs,
+              apr_pool_t *scratch_pool);
+
 /* Functions for working with shared transaction data. */
 
 /* Return the transaction object for transaction TXN_ID from the
@@ -1771,6 +1777,7 @@ choose_delta_base(representation_t **rep,
   int walk;
   node_revision_t *base;
   fs_fs_data_t *ffd = fs->fsap_data;
+  svn_boolean_t maybe_shared_rep = FALSE;
 
   /* If we have no predecessors, then use the empty stream as a
      base. */
@@ -1810,12 +1817,83 @@ choose_delta_base(representation_t **rep,
      walk back two predecessors.) */
   base = noderev;
   while ((count++) < noderev->predecessor_count)
-    SVN_ERR(svn_fs_fs__get_node_revision(&base, fs,
-                                         base->predecessor_id, pool));
+    {
+      SVN_ERR(svn_fs_fs__get_node_revision(&base, fs,
+                                           base->predecessor_id, pool));
+
+      /* If there is a shared rep along the way, we need to limit the
+       * length of the deltification chain.
+       * 
+       * Please note that copied nodes - such as branch directories - will
+       * look the same (false positive) while reps shared within the same
+       * revision will not be caught (false negative).
+       */
+      if (props)
+        {
+          if (   base->prop_rep
+              && svn_fs_fs__id_rev(base->id) > base->prop_rep->revision)
+            maybe_shared_rep = TRUE;
+        }
+      else
+        {
+          if (   base->data_rep
+              && svn_fs_fs__id_rev(base->id) > base->data_rep->revision)
+            maybe_shared_rep = TRUE;
+        }
+    }
 
   /* return a suitable base representation */
   *rep = props ? base->prop_rep : base->data_rep;
 
+  /* if we encountered a shared rep, it's parent chain may be different
+   * from the node-rev parent chain. */
+  if (*rep && maybe_shared_rep)
+    {
+      /* Check whether the length of the deltification chain is acceptable.
+       * Otherwise, shared reps may form a non-skipping delta chain in
+       * extreme cases. */
+      apr_pool_t *sub_pool = svn_pool_create(pool);
+      representation_t base_rep = **rep;
+      
+      /* Some reasonable limit, depending on how acceptable longer linear
+       * chains are in this repo.  Also, allow for some minimal chain. */
+      int max_chain_length = 2 * (int)ffd->max_linear_deltification + 2;
+
+      /* re-use open files between iterations */
+      svn_revnum_t rev_hint = SVN_INVALID_REVNUM;
+      apr_file_t *file_hint = NULL;
+
+      /* follow the delta chain towards the end but for at most
+       * MAX_CHAIN_LENGTH steps. */
+      for (; max_chain_length; --max_chain_length)
+        {
+          struct rep_state *rep_state;
+          struct rep_args *rep_args;
+
+          SVN_ERR(create_rep_state_body(&rep_state,
+                                        &rep_args,
+                                        &file_hint,
+                                        &rev_hint,
+                                        &base_rep,
+                                        fs,
+                                        sub_pool));
+          if (!rep_args->is_delta  || !rep_args->base_revision)
+            break;
+
+          base_rep.revision = rep_args->base_revision;
+          base_rep.offset = rep_args->base_offset;
+          base_rep.size = rep_args->base_length;
+          base_rep.txn_id = NULL;
+        }
+
+      /* start new delta chain if the current one has grown too long */
+      if (max_chain_length == 0)
+        *rep = NULL;
+
+      svn_pool_destroy(sub_pool);
+    }
+
+  /* verify that the reps don't form a degenerated '*/
   return SVN_NO_ERROR;
 }
 
@@ -1969,10 +2047,14 @@ get_shared_rep(representation_t **old_rep,
       err = svn_fs_fs__get_rep_reference(old_rep, fs, rep->sha1_checksum,
                                          pool);
       /* ### Other error codes that we shouldn't mask out? */
-      if (err == SVN_NO_ERROR
-          || err->apr_err == SVN_ERR_FS_CORRUPT
-          || SVN_ERROR_IN_CATEGORY(err->apr_err,
-                                   SVN_ERR_MALFUNC_CATEGORY_START))
+      if (err == SVN_NO_ERROR)
+        {
+          if (*old_rep)
+            SVN_ERR(verify_walker(*old_rep, NULL, fs, pool));
+        }
+      else if (err->apr_err == SVN_ERR_FS_CORRUPT
+               || SVN_ERROR_IN_CATEGORY(err->apr_err,
+                                        SVN_ERR_MALFUNC_CATEGORY_START))
         {
           /* Fatal error; don't mask it.
 
@@ -2785,9 +2867,13 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   if (noderev->prop_rep)
     noderev->prop_rep->sha1_checksum = NULL;
 
+  /* Workaround issue #4031: is-fresh-txn-root in revision files. */
+  noderev->is_fresh_txn_root = FALSE;
+
   /* Write out our new node-revision. */
   if (at_root)
     SVN_ERR(validate_root_noderev(fs, noderev, rev, pool));
+
   SVN_ERR(svn_fs_fs__write_noderev(svn_stream_from_aprfile2(file, TRUE, pool),
                                    noderev, ffd->format,
                                    svn_fs_fs__fs_supports_mergeinfo(fs),
@@ -3199,23 +3285,6 @@ write_reps_to_cache(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_sqlite__transaction_callback_t. */
-static svn_error_t *
-commit_sqlite_txn_callback(void *baton, svn_sqlite__db_t *db,
-                           apr_pool_t *scratch_pool)
-{
-  struct commit_baton *cb = baton;
-
-  /* Write new entries to the rep-sharing database.
-   *
-   * We use an sqlite transcation to speed things up;
-   * see <http://www.sqlite.org/faq.html#q19>.
-   */
-  SVN_ERR(write_reps_to_cache(cb->fs, cb->reps_to_cache, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_fs_fs__commit(svn_revnum_t *new_rev_p,
                   svn_fs_t *fs,
@@ -3250,9 +3319,15 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
   if (ffd->rep_sharing_allowed)
     {
       SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
-      SVN_ERR(svn_sqlite__with_transaction(ffd->rep_cache_db,
-                                           commit_sqlite_txn_callback,
-                                           &cb, pool));
+
+      /* Write new entries to the rep-sharing database.
+       *
+       * We use an sqlite transaction to speed things up;
+       * see <http://www.sqlite.org/faq.html#q19>.
+       */
+      SVN_SQLITE__WITH_TXN(
+        write_reps_to_cache(fs, cb.reps_to_cache, pool),
+        ffd->rep_cache_db);
     }
 
   return SVN_NO_ERROR;

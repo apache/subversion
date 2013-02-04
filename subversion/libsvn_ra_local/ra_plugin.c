@@ -1058,22 +1058,12 @@ get_node_props(apr_hash_t **props,
       SVN_ERR(svn_fs_node_proplist(props, root, path, result_pool));
     }
 
-  /* Turn FS-path keys into URLs. */
+  /* Get inherited properties if requested. */
   if (inherited_props)
     {
-      int i;
-
       SVN_ERR(svn_repos_fs_get_inherited_props(inherited_props, root, path,
-                                               NULL, NULL,
+                                               NULL, NULL, NULL,
                                                result_pool, scratch_pool));
-
-      for (i = 0; i < (*inherited_props)->nelts; i++)
-        {
-          svn_prop_inherited_item_t *i_props =
-            APR_ARRAY_IDX(*inherited_props, i, svn_prop_inherited_item_t *);
-          i_props->path_or_url = svn_path_url_add_component2(
-            sess->repos_url, i_props->path_or_url, result_pool);
-        }
     }
 
   /* Now add some non-tweakable metadata to the hash as well... */
@@ -1230,7 +1220,7 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
           apr_hash_t *prophash;
           const char *datestring, *entryname, *fullpath;
           svn_fs_dirent_t *fs_entry;
-          svn_dirent_t *entry = apr_pcalloc(pool, sizeof(*entry));
+          svn_dirent_t *entry = svn_dirent_create(pool);
 
           svn_pool_clear(subpool);
 

@@ -741,7 +741,7 @@ svn_io_file_lock2(const char *lock_file,
  * is not available: throw an error instead.
  *
  * Lock will be automatically released when @a pool is cleared or destroyed.
- * You may also explicitly call @ref svn_io_unlock_open_file.
+ * You may also explicitly call svn_io_unlock_open_file().
  * Use @a pool for memory allocations. @a pool must be the pool that
  * @a lockfile_handle has been created in or one of its sub-pools.
  *
@@ -1570,10 +1570,31 @@ svn_io_get_dirents(apr_hash_t **dirents,
 /** Create a svn_io_dirent2_t instance for path. Specialized variant of
  * svn_io_stat() that directly translates node_kind and special.
  *
+ * If @a verify_truename is @c TRUE, an additional check is performed to
+ * verify the truename of the last path component on case insensitive
+ * filesystems. This check is expensive compared to a just a stat,
+ * but certainly cheaper than a full truename calculation using
+ * apr_filepath_merge() which verifies all path components.
+ *
  * If @a ignore_enoent is set to @c TRUE, set *dirent_p->kind to
  * svn_node_none instead of returning an error.
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_io_stat_dirent2(const svn_io_dirent2_t **dirent_p,
+                    const char *path,
+                    svn_boolean_t verify_truename,
+                    svn_boolean_t ignore_enoent,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
+
+
+/** Similar to svn_io_stat_dirent2, but always passes FALSE for
+ * verify_truename.
+ *
  * @since New in 1.7.
+ * @deprecated Provided for backwards compatibility with the 1.7 API.
  */
 svn_error_t *
 svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
@@ -1952,7 +1973,8 @@ svn_boolean_t
 svn_io_is_binary_data(const void *buf, apr_size_t len);
 
 
-/** Wrapper for apr_file_open().  @a fname is utf8-encoded. */
+/** Wrapper for apr_file_open().  @a fname is utf8-encoded.
+    Always passed flag | APR_BINARY to apr. */
 svn_error_t *
 svn_io_file_open(apr_file_t **new_file,
                  const char *fname,

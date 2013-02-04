@@ -346,7 +346,13 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
           if (n->hunk_matched_line > n->hunk_original_start)
             {
-              off = n->hunk_matched_line - n->hunk_original_start;
+              /* If we are patching from the start of an empty file,
+                 it is nicer to show offset 0 */
+              if (n->hunk_original_start == 0 && n->hunk_matched_line == 1)
+                off = 0; /* No offset, just adding */
+              else
+                off = n->hunk_matched_line - n->hunk_original_start;
+
               minus = "";
             }
           else
@@ -996,6 +1002,14 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_conflict_resolver_done:
       break;
+
+    case svn_wc_notify_foreign_copy_begin:
+      if (n->merge_range == NULL)
+        err = svn_cmdline_printf(pool,
+                                 _("--- Copying from foreign repository URL '%s':\n"),
+                                 n->url);
+      if (err)
+        goto print_error;
 
     default:
       break;

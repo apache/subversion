@@ -172,7 +172,7 @@ file_diff(struct diff_baton *eb,
                                            &base_revision,
                                            NULL, NULL, NULL, NULL, NULL, NULL,
                                            NULL, &base_checksum, NULL,
-                                           NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL,
                                            db, local_abspath,
                                            scratch_pool, scratch_pool));
 
@@ -204,10 +204,9 @@ file_diff(struct diff_baton *eb,
      the latter two have corresponding pristine info to diff against.  */
   if (status == svn_wc__db_status_added)
     SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL,
-                                     &original_repos_relpath, NULL, NULL,
+                                     NULL, NULL, NULL,
                                      NULL, NULL, NULL, db, local_abspath,
                                      scratch_pool, scratch_pool));
-
 
   SVN_ERR(get_empty_file(eb, &empty_file, scratch_pool));
 
@@ -239,12 +238,13 @@ file_diff(struct diff_baton *eb,
           /* We show a deletion of what was actually deleted */
           SVN_ERR_ASSERT(status == svn_wc__db_status_deleted);
 
-          SVN_ERR(svn_wc__get_pristine_props(&del_props, db, local_abspath,
-                                             scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_read_pristine_props(&del_props, db, local_abspath,
+                                                 scratch_pool, scratch_pool));
 
           SVN_ERR(svn_wc__db_read_pristine_info(NULL, NULL, NULL, NULL, NULL,
                                                 NULL, &del_checksum, NULL,
-                                                NULL, db, local_abspath,
+                                                NULL, NULL,
+                                                db, local_abspath,
                                                 scratch_pool, scratch_pool));
         }
 
@@ -445,25 +445,11 @@ diff_status_callback(void *baton,
         break; /* Go check other conditions */
     }
 
-  /* Filter items by changelist. */
-  /* ### duplicated in ../libsvn_client/status.c */
-  if (eb->changelist_hash)
-    {
-      if (status->changelist)
-        {
-          /* Skip unless the caller requested this changelist. */
-          if (! apr_hash_get(eb->changelist_hash, status->changelist,
-                             APR_HASH_KEY_STRING))
-            return SVN_NO_ERROR;
-        }
-      else
-        {
-          /* Skip unless the caller requested changelist-lacking items. */
-          if (! apr_hash_get(eb->changelist_hash, "",
-                             APR_HASH_KEY_STRING))
-            return SVN_NO_ERROR;
-        }
-    }
+  if (eb->changelist_hash != NULL
+      && (!status->changelist
+          || ! apr_hash_get(eb->changelist_hash, status->changelist,
+                            APR_HASH_KEY_STRING)))
+    return SVN_NO_ERROR; /* Filtered via changelist */
 
   /* ### The following checks should probably be reversed as it should decide
          when *not* to show a diff, because generally all changed nodes should
@@ -513,9 +499,7 @@ diff_status_callback(void *baton,
       /* Report the prop change. */
       /* ### This case should probably be extended for git-diff, but this
              is what the old diff code provided */
-      if (status->node_status == svn_wc_status_deleted
-          || status->node_status == svn_wc_status_replaced
-          || status->prop_status == svn_wc_status_modified)
+      if (status->prop_status == svn_wc_status_modified)
         {
           apr_array_header_t *propchanges;
           apr_hash_t *baseprops;

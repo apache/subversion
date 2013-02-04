@@ -28,9 +28,11 @@
 #define SVN_CMDLINE_PRIVATE_H
 
 #include <apr_pools.h>
+#include <apr_hash.h>
 
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_io.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -107,6 +109,95 @@ svn_cmdline__apply_config_options(apr_hash_t *config,
                                   const apr_array_header_t *config_options,
                                   const char *prefix,
                                   const char *argument_name);
+
+/* Return a string allocated in POOL that is a copy of STR but with each
+ * line prefixed with INDENT. A line is all characters up to the first
+ * CR-LF, LF-CR, CR or LF, or the end of STR if sooner. */
+const char *
+svn_cmdline__indent_string(const char *str,
+                           const char *indent,
+                           apr_pool_t *pool);
+
+/* Print to stdout a hash PROP_HASH that maps property names (char *) to
+   property values (svn_string_t *).  The names are assumed to be in UTF-8
+   format; the values are either in UTF-8 (the special Subversion props) or
+   plain binary values.
+
+   If OUT is not NULL, then write to it rather than stdout.
+
+   If NAMES_ONLY is true, print just names, else print names and
+   values. */
+svn_error_t *
+svn_cmdline__print_prop_hash(svn_stream_t *out,
+                             apr_hash_t *prop_hash,
+                             svn_boolean_t names_only,
+                             apr_pool_t *pool);
+
+/* Similar to svn_cmdline__print_prop_hash(), only output xml to *OUTSTR.
+   If INHERITED_PROPS is true, then PROP_HASH contains inherited properties,
+   otherwise PROP_HASH contains explicit properties.  If *OUTSTR is NULL,
+   allocate it first from POOL, otherwise append to it. */
+svn_error_t *
+svn_cmdline__print_xml_prop_hash(svn_stringbuf_t **outstr,
+                                 apr_hash_t *prop_hash,
+                                 svn_boolean_t names_only,
+                                 svn_boolean_t inherited_props,
+                                 apr_pool_t *pool);
+
+
+/* Search for a text editor command in standard environment variables,
+   and invoke it to edit PATH.  Use POOL for all allocations.
+
+   If EDITOR_CMD is not NULL, it is the name of the external editor
+   command to use, overriding anything else that might determine the
+   editor.
+
+   CONFIG is a hash of svn_config_t * items keyed on a configuration
+   category (SVN_CONFIG_CATEGORY_CONFIG et al), and may be NULL.  */
+svn_error_t *
+svn_cmdline__edit_file_externally(const char *path,
+                                  const char *editor_cmd,
+                                  apr_hash_t *config,
+                                  apr_pool_t *pool);
+
+/* Search for a text editor command in standard environment variables,
+   and invoke it to edit CONTENTS (using a temporary file created in
+   directory BASE_DIR).  Return the new contents in *EDITED_CONTENTS,
+   or set *EDITED_CONTENTS to NULL if no edit was performed.
+
+   If EDITOR_CMD is not NULL, it is the name of the external editor
+   command to use, overriding anything else that might determine the
+   editor.
+
+   If TMPFILE_LEFT is NULL, the temporary file will be destroyed.
+   Else, the file will be left on disk, and its path returned in
+   *TMPFILE_LEFT.
+
+   CONFIG is a hash of svn_config_t * items keyed on a configuration
+   category (SVN_CONFIG_CATEGORY_CONFIG et al), and may be NULL.
+
+   If AS_TEXT is TRUE, recode CONTENTS and convert to native eol-style before
+   editing and back again afterwards.  In this case, ENCODING determines the
+   encoding used during editing.  If non-NULL, use the named encoding, else
+   use the system encoding.  If AS_TEXT is FALSE, don't do any translation.
+   In that case, ENCODING is ignored.
+
+   Use POOL for all allocations.  Use PREFIX as the prefix for the
+   temporary file used by the editor.
+
+   If return error, *EDITED_CONTENTS is not touched. */
+svn_error_t *
+svn_cmdline__edit_string_externally(svn_string_t **edited_contents,
+                                    const char **tmpfile_left,
+                                    const char *editor_cmd,
+                                    const char *base_dir,
+                                    const svn_string_t *contents,
+                                    const char *prefix,
+                                    apr_hash_t *config,
+                                    svn_boolean_t as_text,
+                                    const char *encoding,
+                                    apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }

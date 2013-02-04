@@ -37,6 +37,7 @@
 
 #include "private/svn_magic.h"
 #include "private/svn_client_private.h"
+#include "private/svn_diff_tree.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -394,7 +395,6 @@ svn_error_t *svn_client__get_all_auto_props(apr_hash_t **autoprops,
    RESULT_POOL.  Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *svn_client__get_all_ignores(apr_array_header_t **ignores,
                                          const char *local_abspath,
-                                         svn_boolean_t no_ignore,
                                          svn_client_ctx_t *ctx,
                                          apr_pool_t *result_pool,
                                          apr_pool_t *scratch_pool);
@@ -421,17 +421,18 @@ svn_error_t *svn_client__get_inherited_ignores(apr_array_header_t **ignores,
    If DRY_RUN is TRUE all the checks are made to ensure that the delete can
    occur, but the working copy is not modified.  If NOTIFY_FUNC is not
    null, it is called with NOTIFY_BATON for each file or directory deleted. */
-svn_error_t * svn_client__wc_delete(const char *path,
-                                    svn_boolean_t force,
-                                    svn_boolean_t dry_run,
-                                    svn_boolean_t keep_local,
-                                    svn_wc_notify_func2_t notify_func,
-                                    void *notify_baton,
-                                    svn_client_ctx_t *ctx,
-                                    apr_pool_t *pool);
+svn_error_t *
+svn_client__wc_delete(const char *local_abspath,
+                      svn_boolean_t force,
+                      svn_boolean_t dry_run,
+                      svn_boolean_t keep_local,
+                      svn_wc_notify_func2_t notify_func,
+                      void *notify_baton,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool);
 
 
-/* Like svn_client__wc_delete(), but deletes mulitple TARGETS efficiently. */
+/* Like svn_client__wc_delete(), but deletes multiple TARGETS efficiently. */
 svn_error_t *
 svn_client__wc_delete_many(const apr_array_header_t *targets,
                            svn_boolean_t force,
@@ -650,19 +651,36 @@ svn_client__list_internal(const char *path_or_url,
 
 /*** Inheritable Properties ***/
 
+/* Convert any svn_prop_inherited_item_t elements in INHERITED_PROPS which
+   have repository root relative path PATH_OR_URL structure members to URLs
+   using REPOS_ROOT_URL.  Changes to the contents of INHERITED_PROPS are
+   allocated in RESULT_POOL.  SCRATCH_POOL is used for temporary
+   allocations. */
+svn_error_t *
+svn_client__iprop_relpaths_to_urls(apr_array_header_t *inherited_props,
+                                   const char *repos_root_url,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
+
 /* Fetch the inherited properties for the base of LOCAL_ABSPATH as well
    as any WC roots under LOCAL_ABSPATH (as limited by DEPTH) using
    RA_SESSION.  Store the results in *WCROOT_IPROPS, a hash mapping
    const char * absolute working copy paths to depth-first ordered arrays
    of svn_prop_inherited_item_t * structures.
 
+   Any svn_prop_inherited_item_t->path_or_url members returned in
+   *WCROOT_IPROPS are repository relative paths.
+
    If LOCAL_ABSPATH has no base then do nothing.
 
    RA_SESSION should be an open RA session pointing at the URL of PATH,
-   or NULL, in which case this function will open its own temporary session.
+   or NULL, in which case this function will use its own temporary session.
 
    Allocate *WCROOT_IPROPS in RESULT_POOL, use SCRATCH_POOL for temporary
    allocations.
+
+   If one or more of the paths are not available in the repository at the
+   specified revision, these paths will not be added to the hashtable.
 */
 svn_error_t *
 svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
@@ -692,36 +710,27 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
    is being driven. REVISION is the revision number of the 'old' side of
    the diff.
 
-   For each deleted directory, if WALK_DELETED_DIRS is true then just call
-   the 'dir_deleted' callback once, otherwise call the 'file_deleted' or
-   'dir_deleted' callback for each individual node in that subtree.
-
    If TEXT_DELTAS is FALSE, then do not expect text deltas from the edit
    drive, nor send the 'before' and 'after' texts to the diff callbacks;
    instead, send empty files to the diff callbacks if there was a change.
    This must be FALSE if the edit producer is not sending text deltas,
    otherwise the file content checksum comparisons will fail.
 
-   If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
-   file and directory operated on during the edit.
+   EDITOR/EDIT_BATON return the newly created editor and baton.
 
-   EDITOR/EDIT_BATON return the newly created editor and baton. */
+   @since New in 1.8.
+   */
 svn_error_t *
-svn_client__get_diff_editor(const svn_delta_editor_t **editor,
-                            void **edit_baton,
-                            svn_depth_t depth,
-                            svn_ra_session_t *ra_session,
-                            svn_revnum_t revision,
-                            svn_boolean_t walk_deleted_dirs,
-                            svn_boolean_t text_deltas,
-                            const svn_wc_diff_callbacks4_t *diff_callbacks,
-                            void *diff_cmd_baton,
-                            svn_cancel_func_t cancel_func,
-                            void *cancel_baton,
-                            svn_wc_notify_func2_t notify_func,
-                            void *notify_baton,
-                            apr_pool_t *result_pool);
-
+svn_client__get_diff_editor2(const svn_delta_editor_t **editor,
+                             void **edit_baton,
+                             svn_ra_session_t *ra_session,
+                             svn_depth_t depth,
+                             svn_revnum_t revision,
+                             svn_boolean_t text_deltas,
+                             const svn_diff_tree_processor_t *processor,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *result_pool);
 
 /* ---------------------------------------------------------------- */
 
@@ -741,6 +750,7 @@ svn_client__get_diff_summarize_callbacks(
                         svn_wc_diff_callbacks4_t **callbacks,
                         void **callback_baton,
                         const char *target,
+                        svn_boolean_t reversed,
                         svn_client_diff_summarize_func_t summarize_func,
                         void *summarize_baton,
                         apr_pool_t *pool);
@@ -891,6 +901,9 @@ typedef svn_error_t *(*svn_client__check_url_kind_t)(void *baton,
    as specified by DEPTH; the behavior is the same as that described
    for svn_client_commit4().
 
+   If DEPTH_EMPTY_START is >= 0, all targets after index DEPTH_EMPTY_START
+   in TARGETS are handled as having svn_depth_empty.
+
    If JUST_LOCKED is TRUE, treat unmodified items with lock tokens as
    commit candidates.
 
@@ -907,6 +920,7 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
                                  apr_hash_t **lock_tokens,
                                  const char *base_dir_abspath,
                                  const apr_array_header_t *targets,
+                                 int depth_empty_start,
                                  svn_depth_t depth,
                                  svn_boolean_t just_locked,
                                  const apr_array_header_t *changelists,
@@ -1075,7 +1089,11 @@ svn_client__export_externals(apr_hash_t *externals,
 
 /* Perform status operations on each external in EXTERNAL_MAP, a const char *
    local_abspath of all externals mapping to the const char* defining_abspath.
-   All other options are the same as those passed to svn_client_status(). */
+   All other options are the same as those passed to svn_client_status().
+
+   If ANCHOR_ABSPATH and ANCHOR-RELPATH are not null, use them to provide
+   properly formatted relative paths
+ */
 svn_error_t *
 svn_client__do_external_status(svn_client_ctx_t *ctx,
                                apr_hash_t *external_map,
@@ -1083,9 +1101,11 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
                                svn_boolean_t get_all,
                                svn_boolean_t update,
                                svn_boolean_t no_ignore,
+                               const char *anchor_abspath,
+                               const char *anchor_relpath,
                                svn_client_status_func_t status_func,
                                void *status_baton,
-                               apr_pool_t *pool);
+                               apr_pool_t *scratch_pool);
 
 
 /* List external items defined on each external in EXTERNALS, a const char *

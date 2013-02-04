@@ -1,5 +1,5 @@
 /*
- * main.c: Subversion dump stream filtering tool.
+ * svndumpfilter.c: Subversion dump stream filtering tool main file.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -887,7 +887,7 @@ delete_node_property(void *node_baton, const char *name)
   if (!nb->has_prop_delta)
     return svn_error_createf(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
                              _("Delta property block detected, but deltas "
-                               "are not enabled for node '%s' in original"
+                               "are not enabled for node '%s' in original "
                                "revision %ld"),
                              nb->node_path, rb->rev_orig);
  
@@ -1494,9 +1494,10 @@ main(int argc, const char *argv[])
                 return svn_cmdline_handle_exit_error(err, pool,
                                                      "svndumpfilter: ");
 
-              svn_error_clear(svn_cmdline_fprintf(stderr, pool,
-                                                  _("Unknown command: '%s'\n"),
-                                                  first_arg_utf8));
+              svn_error_clear(
+                svn_cmdline_fprintf(stderr, pool,
+                                    _("Unknown subcommand: '%s'\n"),
+                                    first_arg_utf8));
               SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
               svn_pool_destroy(pool);
               return EXIT_FAILURE;

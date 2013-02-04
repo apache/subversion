@@ -40,7 +40,7 @@
 #include "cl.h"
 
 #include "svn_private_config.h"
-#include "tree-conflicts.h"
+#include "cl-conflicts.h"
 
 
 /*** Code. ***/
@@ -102,7 +102,21 @@ print_info_xml(void *baton,
                         "revision", rev_str,
                         NULL);
 
+  /* "<url> xx </url>" */
   svn_cl__xml_tagged_cdata(&sb, pool, "url", info->URL);
+
+  if (info->repos_root_URL)
+    {
+      /* "<relative-url> xx </relative-url>" */
+      svn_cl__xml_tagged_cdata(&sb, pool, "relative-url",
+                               apr_pstrcat(pool, "^/",
+                                           svn_path_uri_encode(
+                                               svn_uri_skip_ancestor(
+                                                   info->repos_root_URL,
+                                                   info->URL, pool),
+                                               pool),
+                                           NULL));
+    }
 
   if (info->repos_root_URL || info->repos_UUID)
     {
@@ -226,47 +240,7 @@ print_info_xml(void *baton,
                       APR_ARRAY_IDX(info->wc_info->conflicts, i,
                                     const svn_wc_conflict_description2_t *);
 
-          switch (conflict->kind)
-            {
-              case svn_wc_conflict_kind_text:
-                /* "<conflict>" */
-                svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "conflict",
-                                      NULL);
-
-                /* "<prev-base-file> xx </prev-base-file>" */
-                svn_cl__xml_tagged_cdata(&sb, pool, "prev-base-file",
-                                         conflict->base_abspath);
-
-                /* "<prev-wc-file> xx </prev-wc-file>" */
-                svn_cl__xml_tagged_cdata(&sb, pool, "prev-wc-file",
-                                         conflict->my_abspath);
-
-                /* "<cur-base-file> xx </cur-base-file>" */
-                svn_cl__xml_tagged_cdata(&sb, pool, "cur-base-file",
-                                         conflict->their_abspath);
-
-                /* "</conflict>" */
-                svn_xml_make_close_tag(&sb, pool, "conflict");
-              break;
-
-              case svn_wc_conflict_kind_property:
-                /* "<conflict>" */
-                svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "conflict",
-                                      NULL);
-
-                /* "<prop-file> xx </prop-file>" */
-                svn_cl__xml_tagged_cdata(&sb, pool, "prop-file",
-                                         conflict->their_abspath);
-
-                /* "</conflict>" */
-                svn_xml_make_close_tag(&sb, pool, "conflict");
-              break;
-
-              case svn_wc_conflict_kind_tree:
-                SVN_ERR(svn_cl__append_tree_conflict_info_xml(sb, conflict,
-                                                              pool));
-              break;
-            }
+          SVN_ERR(svn_cl__append_conflict_info_xml(sb, conflict, pool));
         }
     }
 
@@ -307,6 +281,13 @@ print_info(void *baton,
 
   if (info->URL)
     SVN_ERR(svn_cmdline_printf(pool, _("URL: %s\n"), info->URL));
+
+  if (info->URL && info->repos_root_URL)
+    SVN_ERR(svn_cmdline_printf(pool, _("Relative URL: ^/%s\n"),
+                               svn_path_uri_encode(
+                                   svn_uri_skip_ancestor(info->repos_root_URL,
+                                                         info->URL, pool),
+                                   pool)));
 
   if (info->repos_root_URL)
     SVN_ERR(svn_cmdline_printf(pool, _("Repository Root: %s\n"),
@@ -461,12 +442,10 @@ print_info(void *baton,
 
           for (i = 0; i < info->wc_info->conflicts->nelts; i++)
             {
-                const svn_wc_conflict_description2_t *conflict =
-                      APR_ARRAY_IDX(info->wc_info->conflicts, i,
-                                    const svn_wc_conflict_description2_t *);
-                const char *desc;
-                const char *src_left_version;
-                const char *src_right_version;
+              const svn_wc_conflict_description2_t *conflict =
+                    APR_ARRAY_IDX(info->wc_info->conflicts, i,
+                                  const svn_wc_conflict_description2_t *);
+              const char *desc;
 
               switch (conflict->kind)
                 {
@@ -505,33 +484,45 @@ print_info(void *baton,
                         svn_cl__get_human_readable_tree_conflict_description(
                                                     &desc, conflict, pool));
 
-                    src_left_version =
-                          svn_cl__node_description(conflict->src_left_version,
-                                                   info->repos_root_URL, pool);
-
-                    src_right_version =
-                          svn_cl__node_description(conflict->src_right_version,
-                                                   info->repos_root_URL, pool);
-
                     SVN_ERR(svn_cmdline_printf(pool, "%s: %s\n",
                                                _("Tree conflict"), desc));
-
-                    if (src_left_version)
-                        SVN_ERR(svn_cmdline_printf(pool, "  %s: %s\n",
-                                   _("Source  left"), /* (1) */
-                                   src_left_version));
-                    /* (1): Sneaking in a space in "Source  left" so that
-                     * it is the same length as "Source right" while it still
-                     * starts in the same column. That's just a tiny tweak in
-                     * the English `svn'. */
-
-                    if (src_right_version)
-                        SVN_ERR(svn_cmdline_printf(pool, "  %s: %s\n",
-                                                   _("Source right"),
-                                                   src_right_version));
                   break;
                 }
             }
+
+          /* We only store one left and right version for all conflicts, which is
+             referenced from all conflicts.
+             Print it after the conflicts to match the 1.6/1.7 output where it is
+             only available for tree conflicts */
+          {
+            const char *src_left_version;
+            const char *src_right_version;
+            const svn_wc_conflict_description2_t *conflict =
+                  APR_ARRAY_IDX(info->wc_info->conflicts, 0,
+                                const svn_wc_conflict_description2_t *);
+
+            src_left_version =
+                        svn_cl__node_description(conflict->src_left_version,
+                                                 info->repos_root_URL, pool);
+
+            src_right_version =
+                        svn_cl__node_description(conflict->src_right_version,
+                                                 info->repos_root_URL, pool);
+
+            if (src_left_version)
+              SVN_ERR(svn_cmdline_printf(pool, "  %s: %s\n",
+                                         _("Source  left"), /* (1) */
+                                         src_left_version));
+            /* (1): Sneaking in a space in "Source  left" so that
+             * it is the same length as "Source right" while it still
+             * starts in the same column. That's just a tiny tweak in
+             * the English `svn'. */
+
+            if (src_right_version)
+              SVN_ERR(svn_cmdline_printf(pool, "  %s: %s\n",
+                                         _("Source right"),
+                                         src_right_version));
+          }
         }
     }
 

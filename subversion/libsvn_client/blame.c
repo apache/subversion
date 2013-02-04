@@ -54,9 +54,9 @@ struct rev
 /* One chunk of blame */
 struct blame
 {
-  struct rev *rev;    /* the responsible revision */
-  apr_off_t start;    /* the starting diff-token (line) */
-  struct blame *next; /* the next chunk */
+  const struct rev *rev;    /* the responsible revision */
+  apr_off_t start;          /* the starting diff-token (line) */
+  struct blame *next;       /* the next chunk */
 };
 
 /* A chain of blame chunks */
@@ -70,7 +70,7 @@ struct blame_chain
 /* The baton use for the diff output routine. */
 struct diff_baton {
   struct blame_chain *chain;
-  struct rev *rev;
+  const struct rev *rev;
 };
 
 /* The baton used for a file revision. */
@@ -118,7 +118,7 @@ struct delta_baton {
    at token START, and allocated in CHAIN->mainpool. */
 static struct blame *
 blame_create(struct blame_chain *chain,
-             struct rev *rev,
+             const struct rev *rev,
              apr_off_t start)
 {
   struct blame *blame;
@@ -217,7 +217,7 @@ blame_delete_range(struct blame_chain *chain,
    at token START and continuing for LENGTH tokens */
 static svn_error_t *
 blame_insert_range(struct blame_chain *chain,
-                   struct rev *rev,
+                   const struct rev *rev,
                    apr_off_t start,
                    apr_off_t length)
 {
@@ -273,8 +273,8 @@ static const svn_diff_output_fns_t output_fns = {
         output_diff_modified
 };
 
-/* Add the blame for the diffs between LAST_FILE and CUR_FILE with the rev
-   specified in FRB.  LAST_FILE may be NULL in which
+/* Add the blame for the diffs between LAST_FILE and CUR_FILE to CHAIN,
+   for revision REV.  LAST_FILE may be NULL in which
    case blame is added for every line of CUR_FILE. */
 static svn_error_t *
 add_file_blame(const char *last_file,
@@ -306,6 +306,13 @@ add_file_blame(const char *last_file,
   return SVN_NO_ERROR;
 }
 
+/* The delta window handler for the text delta between the previously seen
+ * revision and the revision currently being handled.
+ *
+ * Record the blame information for this revision in BATON->file_rev_baton.
+ *
+ * Implements svn_txdelta_window_handler_t.
+ */
 static svn_error_t *
 window_handler(svn_txdelta_window_t *window, void *baton)
 {
@@ -398,7 +405,15 @@ check_mimetype(const apr_array_header_t *prop_diffs, const char *target,
   return SVN_NO_ERROR;
 }
 
-
+/* Calculate and record blame information for one revision of the file,
+ * by comparing the file content against the previously seen revision.
+ *
+ * This handler is called once for each interesting revision of the file.
+ *
+ * Record the blame information for this revision in (file_rev_baton) BATON.
+ *
+ * Implements svn_file_rev_handler_t.
+ */
 static svn_error_t *
 file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
                  apr_hash_t *rev_props,
@@ -678,28 +693,41 @@ svn_client_blame5(const char *target,
       SVN_ERR(svn_wc_status3(&status, ctx->wc_ctx, target_abspath_or_url, pool,
                              pool));
 
-      if (status->text_status != svn_wc_status_normal)
+      if (status->text_status != svn_wc_status_normal
+          || (status->prop_status != svn_wc_status_normal
+              && status->prop_status != svn_wc_status_none))
         {
-          apr_hash_t *props;
           svn_stream_t *wcfile;
-          svn_string_t *keywords;
           svn_stream_t *tempfile;
+          svn_opt_revision_t rev;
+          svn_boolean_t normalize_eols = FALSE;
           const char *temppath;
-          apr_hash_t *kw = NULL;
 
-          SVN_ERR(svn_wc_prop_list2(&props, ctx->wc_ctx, target_abspath_or_url,
-                                    pool, pool));
-          SVN_ERR(svn_stream_open_readonly(&wcfile, target, pool, pool));
+          if (status->prop_status != svn_wc_status_none)
+            {
+              const svn_string_t *eol_style;
+              SVN_ERR(svn_wc_prop_get2(&eol_style, ctx->wc_ctx,
+                                       target_abspath_or_url,
+                                       SVN_PROP_EOL_STYLE,
+                                       pool, pool));
 
-          keywords = apr_hash_get(props, SVN_PROP_KEYWORDS,
-                                  APR_HASH_KEY_STRING);
+              if (eol_style)
+                {
+                  svn_subst_eol_style_t style;
+                  const char *eol;
+                  svn_subst_eol_style_from_value(&style, &eol, eol_style->data);
 
-          if (keywords)
-            SVN_ERR(svn_subst_build_keywords2(&kw, keywords->data, NULL, NULL,
-                                              0, NULL, pool));
+                  normalize_eols = (style == svn_subst_eol_style_native);
+                }
+            }
 
-          wcfile = svn_subst_stream_translated(wcfile, "\n", TRUE, kw, FALSE,
-                                               pool);
+          rev.kind = svn_opt_revision_working;
+          SVN_ERR(svn_client__get_normalized_stream(&wcfile, ctx->wc_ctx,
+                                                    target_abspath_or_url, &rev,
+                                                    FALSE, normalize_eols,
+                                                    ctx->cancel_func,
+                                                    ctx->cancel_baton,
+                                                    pool, pool));
 
           SVN_ERR(svn_stream_open_unique(&tempfile, &temppath, NULL,
                                          svn_io_file_del_on_pool_cleanup,

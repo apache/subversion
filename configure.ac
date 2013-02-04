@@ -49,10 +49,16 @@ SVN_CONFIG_NICE(config.nice)
 # ==== Check for programs ====================================================
 
 # Look for a C compiler (before anything can set CFLAGS)
+CMAINTAINERFLAGS="$CUSERFLAGS"
+CUSERFLAGS="$CFLAGS"
 AC_PROG_CC
+SVN_CC_MODE_SETUP
 
-# Look for a C++ compiler
+# Look for a C++ compiler (before anything can set CXXFLAGS)
+CXXMAINTAINERFLAGS="$CXXUSERFLAGS"
+CXXUSERFLAGS="$CXXFLAGS"
 AC_PROG_CXX
+SVN_CXX_MODE_SETUP
 
 # Look for a C pre-processor
 AC_PROG_CPP
@@ -99,18 +105,21 @@ SVN_LIB_APR($APR_VER_REGEXES)
 if test `expr $apr_version : 2` -ne 0; then
   dnl Bump the library so-version to 2 if using APR-2
   dnl (Debian uses so-version 1 for APR-1-with-largefile)
-  SVN_LT_SOVERSION="-version-info 2"
+  svn_lib_ver=2
   dnl APR-2 provides APRUTIL
   apu_config=$apr_config
   AC_SUBST(SVN_APRUTIL_INCLUDES)
   AC_SUBST(SVN_APRUTIL_CONFIG, ["$apu_config"])
   AC_SUBST(SVN_APRUTIL_LIBS)
 else
-  SVN_LT_SOVERSION="-version-info 0"
+  svn_lib_ver=0
   APU_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\."]
   SVN_LIB_APRUTIL($APU_VER_REGEXES)
 fi
+SVN_LT_SOVERSION="-version-info $svn_lib_ver"
 AC_SUBST(SVN_LT_SOVERSION)
+AC_DEFINE_UNQUOTED(SVN_SOVERSION, $svn_lib_ver,
+                   [Subversion library major verson])
 
 dnl Search for pkg-config
 AC_PATH_PROG(PKG_CONFIG, pkg-config)
@@ -145,9 +154,8 @@ SVN_FIND_APACHE(20020903)
 
 dnl Search for SQLite
 SQLITE_MINIMUM_VER="3.7.12"
-SQLITE_RECOMMENDED_VER="3.7.12"
-SQLITE_RECOMMENDED_VER_URL="3071200"
-SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-${SQLITE_RECOMMENDED_VER_URL}.zip"
+SQLITE_RECOMMENDED_VER="3.7.15.1"
+SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-$(printf %d%02d%02d%02d $(echo ${SQLITE_RECOMMENDED_VER} | sed -e 's/\./ /g')).zip"
 
 SVN_LIB_SQLITE(${SQLITE_MINIMUM_VER}, ${SQLITE_RECOMMENDED_VER},
                ${SQLITE_URL})
@@ -895,6 +903,13 @@ AC_CHECK_FUNCS(symlink readlink)
 dnl check for uname
 AC_CHECK_HEADERS(sys/utsname.h, [AC_CHECK_FUNCS(uname)], [])
 
+dnl check for termios
+AC_CHECK_HEADER(termios.h,[
+  AC_CHECK_FUNCS(tcgetattr tcsetattr,[
+    AC_DEFINE(HAVE_TERMIOS_H,1,[Defined if we have a usable termios library.])
+  ])
+])
+
 dnl Process some configuration options ----------
 
 AC_ARG_WITH(ssl,
@@ -934,22 +949,22 @@ AS_HELP_STRING([--enable-debug],
 [
     # Neither --enable-debug nor --disable-debug was passed.
     enable_debugging="maybe"
-
-        # We leave this as 'maybe' because setting it to 'no' would modify the
-        # CFLAGS/CXXFLAGS later (just after the --enable-maintainer-mode block),
-        # and we don't want to force that.
-    #
-    # TODO: set enable_debugging='no' here, and provide another way to disable
-    #       the CFLAGS/CXXFLAGS munging.
 ])
 
-
-dnl Add -Werror=implicit-function-declaration to CFLAGS
-CFLAGS_KEEP="$CFLAGS"
-CFLAGS="$CFLAGS_KEEP -Werror=implicit-function-declaration"
-AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
-CFLAGS="$CFLAGS_KEEP"
-
+AC_ARG_ENABLE(optimize,
+AS_HELP_STRING([--enable-optimize],
+               [Turn on optimizations]),
+[
+    if test "$enableval" = "yes" ; then
+      enable_optimization="yes"
+    else
+      enable_optimization="no"
+    fi
+],
+[
+    # Neither --enable-optimize nor --disable-optimize was passed.
+    enable_optimization="maybe"
+])
 
 dnl Use -Wl,--no-undefined during linking of some libraries
 AC_ARG_ENABLE(disallowing-of-undefined-references,
@@ -1003,88 +1018,137 @@ AS_HELP_STRING([--enable-maintainer-mode],
         AC_MSG_ERROR([Can't have --disable-debug and --enable-maintainer-mode])
       fi
       enable_debugging=yes
+
+      dnl Enable some extra warnings. Put these before the user's flags
+      dnl so the user can specify flags that override these.
       if test "$GCC" = "yes"; then
         AC_MSG_NOTICE([maintainer-mode: adding GCC warning flags])
-        dnl Enable some extra warnings. Put these before the user's flags
-        dnl so the user can specify flags that override these.
-        CFLAGS="-Wpointer-arith -Wwrite-strings -Wshadow -ansi -Wall -Wformat=2 -Wunused -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Wunreachable-code -Winline -Wno-long-long $CFLAGS"
-        CXXFLAGS="-Wpointer-arith -Wwrite-strings -Wshadow -ansi -Wall $CXXFLAGS"
 
         dnl some additional flags that can be handy for an occasional review,
         dnl but throw too many warnings in svn code, of too little importance,
         dnl to keep these enabled. Remove the "dnl" to do a run with these
         dnl switches enabled.
-        dnl CFLAGS="-Wswitch-enum -Wswitch-default $CFLAGS"
+        dnl ./configure CUSERFLAGS="-Wswitch-enum -Wswitch-default"
 
         dnl Add each of the following flags only if the C compiler accepts it.
-
         CFLAGS_KEEP="$CFLAGS"
-        AC_LANG_PUSH([C])
+        CFLAGS=""
 
-        CFLAGS="-Werror=declaration-after-statement $CFLAGS_KEEP"
-        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
+        SVN_CFLAGS_ADD_IFELSE([-Werror=implicit-function-declaration])
+        SVN_CFLAGS_ADD_IFELSE([-Werror=declaration-after-statement])
+        SVN_CFLAGS_ADD_IFELSE([-Wextra-tokens])
+        SVN_CFLAGS_ADD_IFELSE([-Wnewline-eof])
+        SVN_CFLAGS_ADD_IFELSE([-Wshorten-64-to-32])
+        SVN_CFLAGS_ADD_IFELSE([-Wold-style-definition])
+        SVN_CFLAGS_ADD_IFELSE([-Wno-system-headers])
+        SVN_CFLAGS_ADD_IFELSE([-Wno-format-nonliteral])
 
-        CFLAGS="-Wextra-tokens $CFLAGS_KEEP"
-        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
-
-        CFLAGS="-Wnewline-eof $CFLAGS_KEEP"
-        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
-
-        CFLAGS="-Wshorten-64-to-32 $CFLAGS_KEEP"
-        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
-
-        CFLAGS="-Wold-style-definition $CFLAGS_KEEP"
-        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
-
-        CFLAGS="-Wno-system-headers $CFLAGS_KEEP"
-        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
-
-        dnl Put this flag behind -Wall:
-
-        CFLAGS="$CFLAGS_KEEP -Wno-format-nonliteral"
-        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
-
-        AC_LANG_POP([C])
+        CMAINTAINERFLAGS="$CFLAGS $CMAINTAINERFLAGS"
         CFLAGS="$CFLAGS_KEEP"
 
+        dnl Add flags that all versions of GCC (should) support
+        CMAINTAINERFLAGS="-Wall -Wpointer-arith -Wwrite-strings -Wshadow -Wformat=2 -Wunused -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Winline -Wno-long-long $CMAINTAINERFLAGS"
+      fi
+      if test "$GXX" = "yes"; then
+        AC_MSG_NOTICE([maintainer-mode: adding G++ warning flags])
+
         dnl Add each of the following flags only if the C++ compiler accepts it.
-
         CXXFLAGS_KEEP="$CXXFLAGS"
-        AC_LANG_PUSH([C++])
+        CXXFLAGS=""
 
-        CXXFLAGS="-Wextra-tokens $CXXFLAGS_KEEP"
-        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CXXFLAGS_KEEP="$CXXFLAGS"])
+        SVN_CXXFLAGS_ADD_IFELSE([-Wextra-tokens])
+        SVN_CXXFLAGS_ADD_IFELSE([-Wnewline-eof])
+        SVN_CXXFLAGS_ADD_IFELSE([-Wshorten-64-to-32])
+        SVN_CXXFLAGS_ADD_IFELSE([-Wno-system-headers])
 
-        CXXFLAGS="-Wshorten-64-to-32 $CXXFLAGS_KEEP"
-        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CXXFLAGS_KEEP="$CXXFLAGS"])
-
-        CXXFLAGS="-Wno-system-headers $CXXFLAGS_KEEP"
-        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CXXFLAGS_KEEP="$CXXFLAGS"])
-
-        AC_LANG_POP([C++])
+        CXXMAINTAINERFLAGS="$CXXFLAGS $CXXMAINTAINERFLAGS"
         CXXFLAGS="$CXXFLAGS_KEEP"
+
+        dnl Add flags that all versions of G++ (should) support
+        CXXMAINTAINERFLAGS="-Wall -Wpointer-arith -Wwrite-strings -Wshadow -Wunused -Wunreachable-code $CXXMAINTAINERFLAGS"
       fi
     fi
 ])
 
 if test "$enable_debugging" = "yes" ; then
   dnl At the moment, we don't want optimization, because we're
-  dnl debugging.
-  CFLAGS=["`echo $CFLAGS' ' | $SED -e 's/-O[^ ]* //g'`"]
-  CXXFLAGS=["`echo $CXXFLAGS' ' | $SED -e 's/-O[^ ]* //g'`"]
+  dnl debugging. Unless optiization was explicitly enabled.
+  if test "$enable_optimization" != "yes"; then
+    AC_MSG_NOTICE([Disabling optimizations for debugging])
+    CFLAGS=["`echo $CFLAGS' ' | $SED -e 's/-O[^ ]* //g'`"]
+    CXXFLAGS=["`echo $CXXFLAGS' ' | $SED -e 's/-O[^ ]* //g'`"]
+  fi
+  dnl Add debugging flags, unless they were set by the user
+  if test -z ["`echo $CUSERFLAGS' ' | $EGREP -- '-g[0-9]? '`"]; then
+    AC_MSG_NOTICE([Enabling debugging for C])
+    CFLAGS=["`echo $CFLAGS' ' | $SED -e 's/-g[0-9] //g' -e 's/-g //g'`"]
+    SVN_CFLAGS_ADD_IFELSE([-fno-inline])
+    SVN_CFLAGS_ADD_IFELSE([-fno-omit-frame-pointer])
+    SVN_CFLAGS_ADD_IFELSE([-g3],[],[
+      SVN_CFLAGS_ADD_IFELSE([-g2],[],[
+        SVN_CFLAGS_ADD_IFELSE([-g])])])
+  fi
+  if test -z ["`echo $CXXUSERFLAGS' ' | $EGREP -- '-g[0-9]? '`"]; then
+    AC_MSG_NOTICE([Enabling debugging for C++])
+    CXXFLAGS=["`echo $CXXFLAGS' ' | $SED -e 's/-g[0-9] //g' -e 's/-g //g'`"]
+    SVN_CXXFLAGS_ADD_IFELSE([-fno-inline])
+    SVN_CXXFLAGS_ADD_IFELSE([-fno-omit-frame-pointer])
+    SVN_CXXFLAGS_ADD_IFELSE([-g3],[],[
+      SVN_CXXFLAGS_ADD_IFELSE([-g2],[],[
+        SVN_CXXFLAGS_ADD_IFELSE([-g])])])
+  fi
   dnl SVN_DEBUG enables specific features for developer builds
   dnl AP_DEBUG enables specific (Apache) features for developer builds
   CFLAGS="$CFLAGS -DSVN_DEBUG -DAP_DEBUG"
   CXXFLAGS="$CXXFLAGS -DSVN_DEBUG -DAP_DEBUG"
 elif test "$enable_debugging" = "no" ; then
-    CFLAGS=["`echo $CFLAGS' ' | $SED -e 's/-g[0-9] //g' | $SED -e 's/-g//g'`"]
-    CXXFLAGS=["`echo $CXXFLAGS' ' | $SED -e 's/-g[0-9] //g' | $SED -e 's/-g//g'`"]
-    dnl Compile with NDEBUG to get rid of assertions
-    CFLAGS="$CFLAGS -DNDEBUG"
-    CXXFLAGS="$CXXFLAGS -DNDEBUG"
+  AC_MSG_NOTICE([Disabling debugging])
+  CFLAGS=["`echo $CFLAGS' ' | $SED -e 's/-g[0-9] //g' -e 's/-g //g'`"]
+  CXXFLAGS=["`echo $CXXFLAGS' ' | $SED -e 's/-g[0-9] //g' -e 's/-g //g'`"]
+  dnl Compile with NDEBUG to get rid of assertions
+  CFLAGS="$CFLAGS -DNDEBUG"
+  CXXFLAGS="$CXXFLAGS -DNDEBUG"
 # elif test "$enable_debugging" = "maybe" ; then
 #   # do nothing
 fi
+
+if test "$enable_optimization" = "yes"; then
+  dnl Add optimization flags, unless they were set by the user
+  if test -z ["`echo $CUSERFLAGS' ' | $EGREP -- '-O[^ ]* '`"]; then
+    CFLAGS=["`echo $CFLAGS' ' | $SED -e 's/-O[^ ]* //g'`"]
+    if test "$enable_debugging" = "yes"; then
+      AC_MSG_NOTICE([Enabling optimizations for C (with debugging enabled)])
+      SVN_CFLAGS_ADD_IFELSE([-O1],[],[
+        SVN_CFLAGS_ADD_IFELSE([-O])])
+    else
+      AC_MSG_NOTICE([Enabling optimizations for C])
+      SVN_CFLAGS_ADD_IFELSE([-O2],[],[
+        SVN_CFLAGS_ADD_IFELSE([-O1],[],[
+          SVN_CFLAGS_ADD_IFELSE([-O])])])
+    fi
+  fi
+  if test -z ["`echo $CXXUSERFLAGS' ' | $EGREP -- '-O[^ ]* '`"]; then
+    CXXFLAGS=["`echo $CXXFLAGS' ' | $SED -e 's/-O[^ ]* //g'`"]
+    if test "$enable_debugging" = "yes"; then
+      AC_MSG_NOTICE([Enabling optimizations for C++ (with debugging enabled)])
+      SVN_CXXFLAGS_ADD_IFELSE([-O1],[],[
+        SVN_CXXFLAGS_ADD_IFELSE([-O])])
+    else
+      AC_MSG_NOTICE([Enabling optimizations for C++])
+      SVN_CXXFLAGS_ADD_IFELSE([-O2],[],[
+        SVN_CXXFLAGS_ADD_IFELSE([-O1],[],[
+          SVN_CXXFLAGS_ADD_IFELSE([-O])])])
+    fi
+  fi
+elif test "$enable_optimization" = "no"; then
+  dnl Remove all optimization flags
+  AC_MSG_NOTICE([Disabling optimizations])
+  CFLAGS=["`echo $CFLAGS' ' | $SED -e 's/-O[^ ]* //g'`"]
+  CXXFLAGS=["`echo $CXXFLAGS' ' | $SED -e 's/-O[^ ]* //g'`"]
+# elif test "$enable_optimization" = "maybe" ; then
+#   # do nothing
+fi
+
 
 AC_ARG_ENABLE(full-version-match,
 AS_HELP_STRING([--disable-full-version-match],
@@ -1131,6 +1195,30 @@ AS_HELP_STRING([--enable-mod-activation],
 AC_SUBST(MOD_ACTIVATION)
 
 
+
+AC_ARG_ENABLE(gcov,
+AC_HELP_STRING([--enable-gcov],
+               [Turn on gcov coverage testing (GCC only).]),
+[
+    if test "$enableval" = "yes" ; then
+      dnl Probably other compilers support something similar;
+      dnl feel free to extend this to include them.
+      if test "$GCC" = "yes"; then
+        if test "$svn_enable_shared" = "yes" ; then
+          AC_MSG_ERROR([Can't have --enable-gcov without --disable-shared (we
+                        recommend also using --enable-all-static).])
+        fi
+        if test ! "$enable_all_static" = "yes" ; then
+          AC_MSG_WARN(We recommend --enable-all-static with --enable-gcov.)
+        fi
+        AC_MSG_NOTICE([Enabling gcov coverage testing.])
+        CFLAGS="$CFLAGS -fprofile-arcs -ftest-coverage"
+        CXXFLAGS="$CXXFLAGS -fprofile-arcs -ftest-coverage"
+      else
+        AC_MSG_ERROR([We only support --enable-gcov with GCC right now.])
+      fi
+    fi
+])
 
 AC_ARG_ENABLE(gprof,
 AS_HELP_STRING([--enable-gprof],
@@ -1378,12 +1466,7 @@ AC_SUBST(JAVAHL_COMPAT_TESTS_TARGET)
 # Strip '-no-cpp-precomp' from CPPFLAGS for the clang compiler
 ### I think we get this flag from APR, so the fix probably belongs there
 if test "$CC" = "clang"; then
-  CPPFLAGS=`echo "$CPPFLAGS" | $SED -e 's/-no-cpp-precomp //'`
-fi
-
-# Clang also doesn't (yet) support the '-ansi' flag
-if test "$CC" = "clang"; then
-  CFLAGS=`echo "$CFLAGS" | $SED -e 's/-ansi //'`
+  SVN_STRIP_FLAG(CPPFLAGS, [-no-cpp-precomp ])
 fi
 
 dnl Since this is used only on Unix-y systems, define the path separator as '/'

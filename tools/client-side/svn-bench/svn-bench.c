@@ -222,7 +222,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    If locked, the letter 'O'.  (Use 'svn info URL' to see details)\n"
      "    Size (in bytes)\n"
      "    Date and time of the last commit\n"),
-    {'r', 'v', 'R', opt_depth} },
+    {'r', 'v', 'q', 'R', opt_depth} },
 
   { "null-log", svn_cl__null_log, {0}, N_
     ("Fetch the log messages for a set of revision(s) and/or path(s).\n"
@@ -684,7 +684,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                                   first_arg, pool));
               svn_error_clear
                 (svn_cmdline_fprintf(stderr, pool,
-                                     _("Unknown command: '%s'\n"),
+                                     _("Unknown subcommand: '%s'\n"),
                                      first_arg_utf8));
               svn_cl__help(NULL, NULL, pool);
               return EXIT_FAILURE;
@@ -798,7 +798,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
     }
 
   /* -N has a different meaning depending on the command */
-  if (descend == FALSE)
+  if (!descend)
     opt_state.depth = svn_depth_files;
 
   err = svn_config_get_config(&(ctx->config),

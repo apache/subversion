@@ -42,7 +42,9 @@
 #include <apr_version.h>
 #include <apu_version.h>
 
+#include "svn_pools.h"
 #include "svn_ctype.h"
+#include "svn_dirent_uri.h"
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_string.h"
@@ -133,10 +135,14 @@ svn_sysinfo__linked_libs(apr_pool_t *pool)
   lib->compiled_version = APR_VERSION_STRING;
   lib->runtime_version = apr_pstrdup(pool, apr_version_string());
 
+/* Don't list APR-Util if it isn't linked in, which it may not be if
+ * we're using APR 2.x+ which combined APR-Util into APR. */
+#ifdef APU_VERSION_STRING
   lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
   lib->name = "APR-Util";
   lib->compiled_version = APU_VERSION_STRING;
   lib->runtime_version = apr_pstrdup(pool, apu_version_string());
+#endif
 
   lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
   lib->name = "SQLite";
@@ -827,25 +833,19 @@ win32_shared_libs(apr_pool_t *pool)
       if (GetModuleFileNameW(*module, buffer, MAX_PATH))
         {
           buffer[MAX_PATH] = 0;
+
           version = file_version_number(buffer, pool);
           filename = wcs_to_utf8(buffer, pool);
           if (filename)
             {
               svn_version_ext_loaded_lib_t *lib;
-              char *truename;
-
-              if (0 == apr_filepath_merge(&truename, "", filename,
-                                          APR_FILEPATH_NATIVE
-                                          | APR_FILEPATH_TRUENAME,
-                                          pool))
-                filename = truename;
 
               if (!array)
                 {
                   array = apr_array_make(pool, 32, sizeof(*lib));
                 }
               lib = &APR_ARRAY_PUSH(array, svn_version_ext_loaded_lib_t);
-              lib->name = filename;
+              lib->name = svn_dirent_local_style(filename, pool);
               lib->version = version;
             }
         }

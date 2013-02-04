@@ -48,29 +48,6 @@
 
 /*** Code. ***/
 
-/* Check whether NAME is a revision property name.
- *
- * Return TRUE if it is.
- * Return FALSE if it is not.
- */
-static svn_boolean_t
-is_revision_prop_name(const char *name)
-{
-  apr_size_t i;
-  static const char *revision_props[] =
-    {
-      SVN_PROP_REVISION_ALL_PROPS
-    };
-
-  for (i = 0; i < sizeof(revision_props) / sizeof(revision_props[0]); i++)
-    {
-      if (strcmp(name, revision_props[i]) == 0)
-        return TRUE;
-    }
-  return FALSE;
-}
-
-
 /* Return an SVN_ERR_CLIENT_PROPERTY_NAME error if NAME is a wcprop,
    else return SVN_NO_ERROR. */
 static svn_error_t *
@@ -285,7 +262,7 @@ static svn_error_t *
 check_prop_name(const char *propname,
                 const svn_string_t *propval)
 {
-  if (is_revision_prop_name(propname))
+  if (svn_prop_is_known_svn_rev_prop(propname))
     return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
                              _("Revision property '%s' not allowed "
                                "in this context"), propname);
@@ -659,11 +636,19 @@ remote_propget(apr_hash_t *props,
 
   if (inherited_props)
     {
+      const char *repos_root_url;
+
       /* We will filter out all but PROPNAME later, making a final copy
-         in RESULT_POOL, so pass SCRATCH_POOL for both pools. */
+         in RESULT_POOL, so pass SCRATCH_POOL for all pools. */
       SVN_ERR(svn_ra_get_inherited_props(ra_session, inherited_props,
                                          target_relative, revnum,
                                          scratch_pool, scratch_pool));
+      SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url,
+                                     scratch_pool));
+      SVN_ERR(svn_client__iprop_relpaths_to_urls(*inherited_props,
+                                                 repos_root_url,
+                                                 scratch_pool,
+                                                 scratch_pool));
     }
 
   /* Make a copy of any inherited PROPNAME properties in RESULT_POOL. */
@@ -913,9 +898,20 @@ svn_client_propget5(apr_hash_t **props,
         return svn_error_trace(err);
 
       if (inherited_props && local_iprops)
-        SVN_ERR(svn_wc__get_iprops(inherited_props, ctx->wc_ctx,
-                                   target, propname,
-                                   result_pool, scratch_pool));
+        {
+          const char *repos_root_url;
+
+          SVN_ERR(svn_wc__get_iprops(inherited_props, ctx->wc_ctx,
+                                     target, propname,
+                                     result_pool, scratch_pool));
+          SVN_ERR(svn_client_get_repos_root(&repos_root_url, NULL,
+                                            target, ctx, scratch_pool,
+                                            scratch_pool));
+          SVN_ERR(svn_client__iprop_relpaths_to_urls(*inherited_props,
+                                                     repos_root_url,
+                                                     result_pool,
+                                                     scratch_pool));
+        }
 
       SVN_ERR(get_prop_from_wc(props, propname, target,
                                pristine, kind,
@@ -1147,11 +1143,23 @@ remote_proplist(const char *target_prefix,
     }
 
   if (get_target_inherited_props)
-    SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props,
-                                       target_relative, revnum,
-                                       result_pool, scratch_pool));
+    {
+      const char *repos_root_url;
+
+      SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props,
+                                         target_relative, revnum,
+                                         result_pool, scratch_pool));
+      SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url,
+                                     scratch_pool));
+      SVN_ERR(svn_client__iprop_relpaths_to_urls(inherited_props,
+                                                 repos_root_url,
+                                                 result_pool,
+                                                 scratch_pool));
+    }
   else
-    inherited_props = NULL;
+    {
+      inherited_props = NULL;
+    }
 
   if (get_explicit_props)
     {
@@ -1431,9 +1439,15 @@ get_local_props(const char *path_or_url,
   if (get_target_inherited_props)
     {
       apr_array_header_t *iprops;
+      const char *repos_root_url;
 
       SVN_ERR(svn_wc__get_iprops(&iprops, ctx->wc_ctx, local_abspath,
                                  NULL, scratch_pool, scratch_pool));
+      SVN_ERR(svn_client_get_repos_root(&repos_root_url, NULL, local_abspath,
+                                        ctx, scratch_pool, scratch_pool));
+      SVN_ERR(svn_client__iprop_relpaths_to_urls(iprops, repos_root_url,
+                                                 scratch_pool,
+                                                 scratch_pool));
       SVN_ERR(call_receiver(path_or_url, NULL, iprops, receiver,
                             receiver_baton, scratch_pool));
     }

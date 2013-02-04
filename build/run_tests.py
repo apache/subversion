@@ -354,7 +354,7 @@ class TestHarness:
       if self.config_file is not None:
         cmdline.append('--config-file=' + self.config_file)
     else:
-      print('Don\'t know what to do about ' + progbase)
+      print("Don't know what to do about " + progbase)
       sys.exit(1)
 
     if self.verbose is not None:
@@ -433,8 +433,8 @@ class TestHarness:
       prog_mod = imp.load_module(progbase[:-3], open(prog, 'r'), prog,
                                  ('.py', 'U', imp.PY_SOURCE))
     except:
-      print('Don\'t know what to do about ' + progbase)
-      raise
+      print("Don't know what to do about " + progbase)
+      sys.exit(1)
 
     import svntest.main
 
@@ -565,11 +565,12 @@ class TestHarness:
     progdir, progbase = os.path.split(prog)
     if self.log:
       # Using write here because we don't want even a trailing space
-      test_info = '%s [%d/%d]' % (progbase, test_nr + 1, total_tests)
+      test_info = '[%s/%d] %s' % (str(test_nr + 1).zfill(len(str(total_tests))),
+                                  total_tests, progbase)
       if self.list_tests:
         sys.stdout.write('Listing tests in %s' % (test_info, ))
       else:
-        sys.stdout.write('Running tests in %s' % (test_info, ))
+        sys.stdout.write('%s' % (test_info, ))
       sys.stdout.flush()
     else:
       # ### Hack for --log-to-stdout to work (but not print any dots).
@@ -589,7 +590,6 @@ class TestHarness:
     line_length = _get_term_width()
     dots_needed = line_length \
                     - len(test_info) \
-                    - len('Running tests in ') \
                     - len('success')
     try:
       os.chdir(progdir)

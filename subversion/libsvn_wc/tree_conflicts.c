@@ -400,6 +400,7 @@ svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
 svn_error_t *
 svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
                           const svn_wc_conflict_description2_t *conflict,
+                          const char *moved_away_op_root_abspath,
                           apr_pool_t *scratch_pool)
 {
   svn_boolean_t existing_conflict;
@@ -432,6 +433,7 @@ svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
                                                   conflict->local_abspath,
                                                   conflict->reason,
                                                   conflict->action,
+                                                  moved_away_op_root_abspath,
                                                   scratch_pool, scratch_pool));
 
   switch(conflict->operation)
@@ -440,11 +442,13 @@ svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
       default:
         SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_skel,
                                                     conflict->src_left_version,
+                                                    conflict->src_right_version,
                                                     scratch_pool, scratch_pool));
         break;
       case svn_wc_operation_switch:
         SVN_ERR(svn_wc__conflict_skel_set_op_switch(conflict_skel,
                                                     conflict->src_left_version,
+                                                    conflict->src_right_version,
                                                     scratch_pool, scratch_pool));
         break;
       case svn_wc_operation_merge:

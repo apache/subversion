@@ -245,6 +245,7 @@ do_wc_to_wc_moves_with_locks2(svn_client__copy_pair_t *pair,
                               svn_boolean_t lock_src,
                               svn_boolean_t lock_dst,
                               svn_boolean_t allow_mixed_revisions,
+                              svn_boolean_t metadata_only,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *scratch_pool)
 {
@@ -254,7 +255,7 @@ do_wc_to_wc_moves_with_locks2(svn_client__copy_pair_t *pair,
                                 scratch_pool);
 
   SVN_ERR(svn_wc__move2(ctx->wc_ctx, pair->src_abspath_or_url,
-                        dst_abspath, FALSE /* metadata_only */,
+                        dst_abspath, metadata_only,
                         allow_mixed_revisions,
                         ctx->cancel_func, ctx->cancel_baton,
                         ctx->notify_func2, ctx->notify_baton2,
@@ -270,18 +271,21 @@ do_wc_to_wc_moves_with_locks1(svn_client__copy_pair_t *pair,
                               svn_boolean_t lock_src,
                               svn_boolean_t lock_dst,
                               svn_boolean_t allow_mixed_revisions,
+                              svn_boolean_t metadata_only,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *scratch_pool)
 {
   if (lock_dst)
     SVN_WC__CALL_WITH_WRITE_LOCK(
       do_wc_to_wc_moves_with_locks2(pair, dst_parent_abspath, lock_src,
-                                    lock_dst, allow_mixed_revisions, ctx,
-                                    scratch_pool),
+                                    lock_dst, allow_mixed_revisions,
+                                    metadata_only,
+                                    ctx, scratch_pool),
       ctx->wc_ctx, dst_parent_abspath, FALSE, scratch_pool);
   else
     SVN_ERR(do_wc_to_wc_moves_with_locks2(pair, dst_parent_abspath, lock_src,
                                           lock_dst, allow_mixed_revisions,
+                                          metadata_only,
                                           ctx, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -293,6 +297,7 @@ static svn_error_t *
 do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
                   const char *dst_path,
                   svn_boolean_t allow_mixed_revisions,
+                  svn_boolean_t metadata_only,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
@@ -348,13 +353,16 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
         SVN_WC__CALL_WITH_WRITE_LOCK(
           do_wc_to_wc_moves_with_locks1(pair, pair->dst_parent_abspath,
                                         lock_src, lock_dst,
-                                        allow_mixed_revisions, ctx, iterpool),
+                                        allow_mixed_revisions,
+                                        metadata_only,
+                                        ctx, iterpool),
           ctx->wc_ctx, src_parent_abspath,
           FALSE, iterpool);
       else
         SVN_ERR(do_wc_to_wc_moves_with_locks1(pair, pair->dst_parent_abspath,
                                               lock_src, lock_dst,
                                               allow_mixed_revisions,
+                                              metadata_only,
                                               ctx, iterpool));
 
     }
@@ -1538,58 +1546,73 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
 
+  if (!same_repositories && ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify;
+      notify = svn_wc_create_notify_url(
+                            pair->src_abspath_or_url,
+                            svn_wc_notify_foreign_copy_begin,
+                            pool);
+      notify->kind = pair->src_kind;
+      ctx->notify_func2(ctx->notify_baton2, notify, pool);
+
+      /* Allow a theoretical cancel to get through. */
+      if (ctx->cancel_func)
+        SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+    }
+
   if (pair->src_kind == svn_node_dir)
     {
-      svn_boolean_t sleep_needed = FALSE;
-      const char *tmpdir_abspath, *tmp_abspath;
+      if (same_repositories)
+        {
+          svn_boolean_t sleep_needed = FALSE;
+          const char *tmpdir_abspath, *tmp_abspath;
 
-      /* Find a temporary location in which to check out the copy source. */
-      SVN_ERR(svn_wc__get_tmpdir(&tmpdir_abspath, ctx->wc_ctx, dst_abspath,
-                                 pool, pool));
-                                 
-      SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_abspath, tmpdir_abspath,
-                                       svn_io_file_del_on_close, pool, pool));
+          /* Find a temporary location in which to check out the copy source. */
+          SVN_ERR(svn_wc__get_tmpdir(&tmpdir_abspath, ctx->wc_ctx, dst_abspath,
+                                     pool, pool));
+                                     
+          SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_abspath, tmpdir_abspath,
+                                           svn_io_file_del_on_close, pool, pool));
 
-      /* Make a new checkout of the requested source. While doing so,
-       * resolve pair->src_revnum to an actual revision number in case it
-       * was until now 'invalid' meaning 'head'.  Ask this function not to
-       * sleep for timestamps, by passing a sleep_needed output param.
-       * Send notifications for all nodes except the root node, and adjust
-       * them to refer to the destination rather than this temporary path. */
-      {
-        svn_wc_notify_func2_t old_notify_func2 = ctx->notify_func2;
-        void *old_notify_baton2 = ctx->notify_baton2;
-        struct notification_adjust_baton nb;
-        svn_error_t *err;
+          /* Make a new checkout of the requested source. While doing so,
+           * resolve pair->src_revnum to an actual revision number in case it
+           * was until now 'invalid' meaning 'head'.  Ask this function not to
+           * sleep for timestamps, by passing a sleep_needed output param.
+           * Send notifications for all nodes except the root node, and adjust
+           * them to refer to the destination rather than this temporary path. */
+          {
+            svn_wc_notify_func2_t old_notify_func2 = ctx->notify_func2;
+            void *old_notify_baton2 = ctx->notify_baton2;
+            struct notification_adjust_baton nb;
+            svn_error_t *err;
+          
+            nb.inner_func = ctx->notify_func2;
+            nb.inner_baton = ctx->notify_baton2;
+            nb.checkout_abspath = tmp_abspath;
+            nb.final_abspath = dst_abspath;
+            ctx->notify_func2 = notification_adjust_func;
+            ctx->notify_baton2 = &nb;
+          
+            err = svn_client__checkout_internal(&pair->src_revnum,
+                                                pair->src_original,
+                                                tmp_abspath,
+                                                &pair->src_peg_revision,
+                                                &pair->src_op_revision,
+                                                svn_depth_infinity,
+                                                ignore_externals, FALSE,
+                                                &sleep_needed, ctx, pool);
+          
+            ctx->notify_func2 = old_notify_func2;
+            ctx->notify_baton2 = old_notify_baton2;
 
-        nb.inner_func = ctx->notify_func2;
-        nb.inner_baton = ctx->notify_baton2;
-        nb.checkout_abspath = tmp_abspath;
-        nb.final_abspath = dst_abspath;
-        ctx->notify_func2 = notification_adjust_func;
-        ctx->notify_baton2 = &nb;
-
-        err = svn_client__checkout_internal(&pair->src_revnum,
-                                            pair->src_original,
-                                            tmp_abspath,
-                                            &pair->src_peg_revision,
-                                            &pair->src_op_revision,
-                                            svn_depth_infinity,
-                                            ignore_externals, FALSE,
-                                            &sleep_needed, ctx, pool);
-
-        ctx->notify_func2 = old_notify_func2;
-        ctx->notify_baton2 = old_notify_baton2;
-
-        SVN_ERR(err);
-      }
+            SVN_ERR(err);
+          }
 
       /* Schedule dst_path for addition in parent, with copy history.
          Don't send any notification here.
          Then remove the temporary checkout's .svn dir in preparation for
          moving the rest of it into the final destination. */
-      if (same_repositories)
-        {
           SVN_ERR(svn_wc_copy3(ctx->wc_ctx, tmp_abspath, dst_abspath,
                                TRUE /* metadata_only */,
                                ctx->cancel_func, ctx->cancel_baton,
@@ -1608,21 +1631,16 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
         }
       else
         {
-          /* ### We want to schedule this as a simple add, or even better
-             a copy from a foreign repos, but we don't yet have the
-             WC APIs to do that, so we will just move the whole WC into
-             place as a disjoint, nested WC. */
+          SVN_ERR(svn_client__copy_foreign(pair->src_abspath_or_url,
+                                           dst_abspath,
+                                           &pair->src_peg_revision,
+                                           &pair->src_op_revision,
+                                           svn_depth_infinity,
+                                           FALSE /* make_parents */,
+                                           TRUE /* already_locked */,
+                                           ctx, pool));
 
-          /* Move the working copy to where it is expected. */
-          SVN_ERR(svn_wc__rename_wc(ctx->wc_ctx, tmp_abspath, dst_abspath,
-                                    pool));
-
-          svn_io_sleep_for_timestamps(dst_abspath, pool);
-
-          return svn_error_createf(
-             SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-             _("Source URL '%s' is from foreign repository; "
-               "leaving it as a disjoint WC"), pair->src_abspath_or_url);
+          return SVN_NO_ERROR;
         }
     } /* end directory case */
 
@@ -1640,6 +1658,10 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
       SVN_ERR(svn_ra_get_file(ra_session, src_rel, pair->src_revnum,
                               new_base_contents,
                               &pair->src_revnum, &new_props, pool));
+
+      if (new_props && ! same_repositories)
+        apr_hash_set(new_props, SVN_PROP_MERGEINFO, APR_HASH_KEY_STRING, NULL);
+
       SVN_ERR(svn_wc_add_repos_file4(
          ctx->wc_ctx, dst_abspath,
          new_base_contents, NULL, new_props, NULL,
@@ -1876,6 +1898,7 @@ try_copy(const apr_array_header_t *sources,
          const char *dst_path_in,
          svn_boolean_t is_move,
          svn_boolean_t allow_mixed_revisions,
+         svn_boolean_t metadata_only,
          svn_boolean_t make_parents,
          svn_boolean_t ignore_externals,
          const apr_hash_t *revprop_table,
@@ -2167,9 +2190,14 @@ try_copy(const apr_array_header_t *sources,
       if (is_move)
         return svn_error_trace(do_wc_to_wc_moves(copy_pairs, dst_path_in,
                                                  allow_mixed_revisions,
+                                                 metadata_only,
                                                  ctx, pool));
       else
-        return svn_error_trace(do_wc_to_wc_copies(copy_pairs, ctx, pool));
+        {
+          /* We ignore these values, so assert the default value */
+          SVN_ERR_ASSERT(allow_mixed_revisions && !metadata_only);
+          return svn_error_trace(do_wc_to_wc_copies(copy_pairs, ctx, pool));
+        }
     }
   else if ((! srcs_are_urls) && (dst_is_url))
     {
@@ -2217,6 +2245,7 @@ svn_client_copy6(const apr_array_header_t *sources,
   err = try_copy(sources, dst_path,
                  FALSE /* is_move */,
                  TRUE /* allow_mixed_revisions */,
+                 FALSE /* metadata_only */,
                  make_parents,
                  ignore_externals,
                  revprop_table,
@@ -2249,6 +2278,7 @@ svn_client_copy6(const apr_array_header_t *sources,
                          : svn_dirent_join(dst_path, src_basename, subpool),
                      FALSE /* is_move */,
                      TRUE /* allow_mixed_revisions */,
+                     FALSE /* metadata_only */,
                      make_parents,
                      ignore_externals,
                      revprop_table,
@@ -2268,6 +2298,7 @@ svn_client_move7(const apr_array_header_t *src_paths,
                  svn_boolean_t move_as_child,
                  svn_boolean_t make_parents,
                  svn_boolean_t allow_mixed_revisions,
+                 svn_boolean_t metadata_only,
                  const apr_hash_t *revprop_table,
                  svn_commit_callback2_t commit_callback,
                  void *commit_baton,
@@ -2302,8 +2333,9 @@ svn_client_move7(const apr_array_header_t *src_paths,
   err = try_copy(sources, dst_path,
                  TRUE /* is_move */,
                  allow_mixed_revisions,
+                 metadata_only,
                  make_parents,
-                 FALSE,
+                 FALSE /* ignore_externals */,
                  revprop_table,
                  commit_callback, commit_baton,
                  ctx,
@@ -2333,8 +2365,9 @@ svn_client_move7(const apr_array_header_t *src_paths,
                          : svn_dirent_join(dst_path, src_basename, pool),
                      TRUE /* is_move */,
                      allow_mixed_revisions,
+                     metadata_only,
                      make_parents,
-                     FALSE,
+                     FALSE /* ignore_externals */,
                      revprop_table,
                      commit_callback, commit_baton,
                      ctx,

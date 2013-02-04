@@ -428,7 +428,7 @@ write_var_values(PSYMBOL_INFO sym_info, ULONG sym_size, void *baton)
                    (void *)var_data);
       fprintf(log_file, "%s=%s", sym_info->Name, value_str);
     }
-  if (log_params == FALSE && sym_info->Flags & SYMFLAG_LOCAL)
+  if (!log_params && sym_info->Flags & SYMFLAG_LOCAL)
     {
       format_value(value_str, sym_info->ModBase, sym_info->TypeIndex,
                    (void *)var_data);
@@ -738,13 +738,13 @@ svn__unhandled_exception_filter(PEXCEPTION_POINTERS ptrs)
     return EXCEPTION_CONTINUE_SEARCH;
 
   /* ... or if we can't create the log files ... */
-  if (get_temp_filename(dmp_filename, LOGFILE_PREFIX, "dmp") == FALSE ||
-      get_temp_filename(log_filename, LOGFILE_PREFIX, "log") == FALSE)
+  if (!get_temp_filename(dmp_filename, LOGFILE_PREFIX, "dmp") ||
+      !get_temp_filename(log_filename, LOGFILE_PREFIX, "log"))
     return EXCEPTION_CONTINUE_SEARCH;
 
   /* If we can't load a recent version of the dbghelp.dll, pass on this
      exception */
-  if (load_dbghelp_dll() == FALSE)
+  if (!load_dbghelp_dll())
     return EXCEPTION_CONTINUE_SEARCH;
 
   /* open log file */

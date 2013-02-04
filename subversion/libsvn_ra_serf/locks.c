@@ -261,7 +261,7 @@ handle_lock(serf_request_t *request,
                                request, response, ctx->handler, pool));
     }
 
-  if (ctx->read_headers == FALSE)
+  if (!ctx->read_headers)
     {
       serf_bucket_t *headers;
       const char *val;

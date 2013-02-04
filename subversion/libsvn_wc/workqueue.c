@@ -50,6 +50,7 @@
 #define OP_SYNC_FILE_FLAGS "sync-file-flags"
 #define OP_PREJ_INSTALL "prej-install"
 #define OP_DIRECTORY_REMOVE "dir-remove"
+#define OP_DIRECTORY_INSTALL "dir-install"
 
 #define OP_POSTUPGRADE "postupgrade"
 
@@ -148,13 +149,16 @@ run_base_remove(svn_wc__db_t *db,
                                            &not_present_rev, NULL,
                                            NULL, NULL, NULL,
                                            NULL, NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL,
+                                           NULL, NULL, NULL,
                                            db, local_abspath,
                                            scratch_pool, scratch_pool));
         }
     }
 
-  SVN_ERR(svn_wc__db_base_remove(db, local_abspath, FALSE, not_present_rev,
+  SVN_ERR(svn_wc__db_base_remove(db, local_abspath,
+                                 FALSE /* keep_as_working */,
+                                 TRUE /* queue_deletes */,
+                                 not_present_rev,
                                  NULL, NULL, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -382,10 +386,6 @@ svn_wc__wq_build_file_commit(svn_skel_t **work_item,
   SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
                                 local_abspath, result_pool, scratch_pool));
 
-  /* This are currently ignored, they are here for compat. */
-  svn_skel__prepend_int(FALSE, *work_item, result_pool);
-  svn_skel__prepend_int(FALSE, *work_item, result_pool);
-
   svn_skel__prepend_str(local_relpath, *work_item, result_pool);
 
   svn_skel__prepend_str(OP_FILE_COMMIT, *work_item, result_pool);
@@ -416,6 +416,8 @@ run_postupgrade(svn_wc__db_t *db,
   if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
     /* No entry, this can happen when the wq item is rerun. */
     svn_error_clear(err);
+  else
+    SVN_ERR(err);
 
   SVN_ERR(svn_wc__db_get_wcroot(&wcroot_abspath, db, wri_abspath,
                                 scratch_pool, scratch_pool));
@@ -1016,6 +1018,51 @@ svn_wc__wq_build_file_copy_translated(svn_skel_t **work_item,
   return SVN_NO_ERROR;
 }
 
+/* ------------------------------------------------------------------------ */
+
+/* OP_DIRECTORY_INSTALL  */
+
+static svn_error_t *
+run_dir_install(svn_wc__db_t *db,
+                    const svn_skel_t *work_item,
+                    const char *wri_abspath,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg1 = work_item->children->next;
+  const char *local_relpath;
+  const char *local_abspath;
+
+  local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+  SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
+                                  local_relpath, scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_wc__ensure_directory(local_abspath, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__wq_build_dir_install(svn_skel_t **work_item,
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             apr_pool_t *scratch_pool,
+                             apr_pool_t *result_pool)
+{
+  const char *local_relpath;
+
+  *work_item = svn_skel__make_empty_list(result_pool);
+
+  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
+                                local_abspath, result_pool, scratch_pool));
+  svn_skel__prepend_str(local_relpath, *work_item, result_pool);
+
+  svn_skel__prepend_str(OP_DIRECTORY_INSTALL, *work_item, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ------------------------------------------------------------------------ */
 
@@ -1274,7 +1321,7 @@ run_set_text_conflict_markers(svn_wc__db_t *db,
         /* No conflict exists, create a basic skel */
         conflicts = svn_wc__conflict_skel_create(scratch_pool);
 
-        SVN_ERR(svn_wc__conflict_skel_set_op_update(conflicts, NULL,
+        SVN_ERR(svn_wc__conflict_skel_set_op_update(conflicts, NULL, NULL,
                                                     scratch_pool,
                                                     scratch_pool));
       }
@@ -1339,7 +1386,7 @@ run_set_property_conflict_marker(svn_wc__db_t *db,
         /* No conflict exists, create a basic skel */
         conflicts = svn_wc__conflict_skel_create(scratch_pool);
 
-        SVN_ERR(svn_wc__conflict_skel_set_op_update(conflicts, NULL,
+        SVN_ERR(svn_wc__conflict_skel_set_op_update(conflicts, NULL, NULL,
                                                     scratch_pool,
                                                     scratch_pool));
       }
@@ -1370,6 +1417,7 @@ static const struct work_item_dispatch dispatch_table[] = {
   { OP_SYNC_FILE_FLAGS, run_sync_file_flags },
   { OP_PREJ_INSTALL, run_prej_install },
   { OP_DIRECTORY_REMOVE, run_dir_remove },
+  { OP_DIRECTORY_INSTALL, run_dir_install },
 
   /* Upgrade steps */
   { OP_POSTUPGRADE, run_postupgrade },
@@ -1433,10 +1481,7 @@ dispatch_work_item(svn_wc__db_t *db,
          Contrary to issue #1581, we cannot simply remove work items and
          continue, so bail out with an error.  */
       return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, NULL,
-                               _("Unrecognized work item in the queue "
-                                 "associated with '%s'"),
-                               svn_dirent_local_style(wri_abspath,
-                                                      scratch_pool));
+                               _("Unrecognized work item in the queue"));
     }
 
   return SVN_NO_ERROR;
@@ -1468,6 +1513,7 @@ svn_wc__wq_run(svn_wc__db_t *db,
     {
       apr_uint64_t id;
       svn_skel_t *work_item;
+      svn_error_t *err;
 
       svn_pool_clear(iterpool);
 
@@ -1487,8 +1533,20 @@ svn_wc__wq_run(svn_wc__db_t *db,
          we're done.  */
       if (work_item == NULL)
         break;
-      SVN_ERR(dispatch_work_item(db, wri_abspath, work_item,
-                                 cancel_func, cancel_baton, iterpool));
+
+      err = dispatch_work_item(db, wri_abspath, work_item,
+                               cancel_func, cancel_baton, iterpool);
+      if (err)
+        {
+          const char *skel = svn_skel__unparse(work_item, scratch_pool)->data;
+
+          return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, err,
+                                   _("Failed to run the WC DB work queue "
+                                     "associated with '%s', work item %d %s"),
+                                   svn_dirent_local_style(wri_abspath,
+                                                          scratch_pool),
+                                   (int)id, skel);
+        }
 
       /* The work item finished without error. Mark it completed
          in the next loop.  */
