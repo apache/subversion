@@ -350,12 +350,11 @@ typedef struct merge_cmd_baton_t {
   /* State for notify_merge_begin() */
   struct notify_begin_state_t
   {
-    /* const char * indicating which abspath was last notified for the current
-       operation. */
+    /* Cache contain which abspath was last notified. */
     const char *last_abspath;
 
-    /* Reference to the on-and-only CHILDREN_WITH_MERGEINFO (see global comment
-       or a similar list for single-file-merges */
+    /* Reference to the one-and-only CHILDREN_WITH_MERGEINFO (see global
+       comment) or a similar list for single-file-merges */
     const apr_array_header_t *nodes_with_mergeinfo;
   } notify_begin;
 
@@ -5563,13 +5562,7 @@ slice_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
 
    If a range is removed from a child's remaining_ranges array, allocate the
    new remaining_ranges array in POOL.
-
-   ### TODO: We should have remaining_ranges in reverse order to avoid
-   ### recreating and reallocating the remaining_ranges every time we want
-   ### to remove the first range.  If the ranges were reversed we could simply
-   ### pop the last element in the array.  Alternatively we might be able to
-   ### make svn_sort__array_delete() efficient: it could increment 'elts'
-   ### (and decrement 'nelts' and 'nalloc') instead of moving elements. */
+ */
 static void
 remove_first_range_from_remaining_ranges(svn_revnum_t revision,
                                          apr_array_header_t
@@ -7323,10 +7316,11 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
               break;
             }
 
-          /* Poor mans delete first item */
-          SVN_ERR(svn_rangelist_reverse(ranges_to_merge, iterpool));
-          ranges_to_merge->nelts--;
-          SVN_ERR(svn_rangelist_reverse(ranges_to_merge, iterpool));
+          /* Now delete the just merged range from the hash
+             (This list is used from notify_merge_begin)
+
+            Directory merges use remove_first_range_from_remaining_ranges() */
+          svn_sort__array_delete(ranges_to_merge, 0, 1);
         }
       merge_b->notify_begin.last_abspath = NULL;
     } /* !merge_b->record_only */
@@ -7583,8 +7577,8 @@ subtree_touched_by_merge(const char *local_abspath,
    are all cascaded from do_directory_merge's arguments of the same names.
 
    NOTE: This is a very thin wrapper around drive_merge_report_editor() and
-   exists only to populate NOTIFY_B->CHILDREN_WITH_MERGEINFO with the single
-   element expected during mergeinfo unaware merges.
+   exists only to populate CHILDREN_WITH_MERGEINFO with the single element
+   expected during mergeinfo unaware merges.
 */
 static svn_error_t *
 do_mergeinfo_unaware_dir_merge(const merge_source_t *source,
@@ -8837,11 +8831,11 @@ remove_noop_subtree_ranges(const merge_source_t *source,
    directories -- for the single file case, the caller should use
    do_file_merge().
 
-   MERGE_B describes the merge being performed.  As this function is for a
-   mergeinfo-aware merge, SOURCE->ancestral should be TRUE, and
-   SOURCE->loc1 must be a historical ancestor of SOURCE->loc2, or
-   vice-versa (see `MERGEINFO MERGE SOURCE NORMALIZATION' for more
-   requirements around SOURCE).
+   CHILDREN_WITH_MERGEINFO and MERGE_B describe the merge being performed
+   As this function is for a mergeinfo-aware merge, SOURCE->ancestral
+   should be TRUE, and SOURCE->loc1 must be a historical ancestor of
+   SOURCE->loc2, or vice-versa (see `MERGEINFO MERGE SOURCE NORMALIZATION'
+   for more requirements around SOURCE).
 
    Mergeinfo changes will be recorded unless MERGE_B->dry_run is true.
 
