@@ -9517,27 +9517,6 @@ do_merge(apr_hash_t **modified_subtrees,
                                      abort_on_conflicts,
                                      &merge_cmd_baton,
                                      iterpool));
-
-          /* Does the caller want to know what the merge has done? */
-          /* ### Why only if the target is a dir and not a file? */
-          if (modified_subtrees)
-            {
-              *modified_subtrees =
-                  apr_hash_overlay(result_pool, *modified_subtrees,
-                                   merge_cmd_baton.merged_abspaths);
-              *modified_subtrees =
-                  apr_hash_overlay(result_pool, *modified_subtrees,
-                                   merge_cmd_baton.added_abspaths);
-              *modified_subtrees =
-                  apr_hash_overlay(result_pool, *modified_subtrees,
-                                   merge_cmd_baton.deleted_abspaths);
-              *modified_subtrees =
-                  apr_hash_overlay(result_pool, *modified_subtrees,
-                                   merge_cmd_baton.skipped_abspaths);
-              *modified_subtrees =
-                  apr_hash_overlay(result_pool, *modified_subtrees,
-                                   merge_cmd_baton.tree_conflicted_abspaths);
-            }
         }
 
       /* The final mergeinfo on TARGET_WCPATH may itself elide. */
@@ -9548,6 +9527,26 @@ do_merge(apr_hash_t **modified_subtrees,
 
   /* Let everyone know we're finished here. */
   notify_merge_completed(target->abspath, ctx, iterpool);
+
+    /* Does the caller want to know what the merge has done? */
+  if (modified_subtrees)
+    {
+      *modified_subtrees =
+          apr_hash_overlay(result_pool, *modified_subtrees,
+                           merge_cmd_baton.merged_abspaths);
+      *modified_subtrees =
+          apr_hash_overlay(result_pool, *modified_subtrees,
+                           merge_cmd_baton.added_abspaths);
+      *modified_subtrees =
+          apr_hash_overlay(result_pool, *modified_subtrees,
+                           merge_cmd_baton.deleted_abspaths);
+      *modified_subtrees =
+          apr_hash_overlay(result_pool, *modified_subtrees,
+                           merge_cmd_baton.skipped_abspaths);
+      *modified_subtrees =
+          apr_hash_overlay(result_pool, *modified_subtrees,
+                           merge_cmd_baton.tree_conflicted_abspaths);
+    }
 
   if (src_session)
     SVN_ERR(svn_ra_reparent(src_session, old_src_session_url, iterpool));
