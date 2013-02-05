@@ -1498,8 +1498,3 @@ svn_fs_fs__verify_rev(svn_fs_t *fs,
 
   return SVN_NO_ERROR;
 }
-
-  svn_pool_destroy(iterpool);
-  return SVN_NO_ERROR;
-}
-
