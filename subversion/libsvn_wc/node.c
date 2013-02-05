@@ -661,16 +661,19 @@ svn_wc__node_get_base(svn_revnum_t *revision,
                       const char **repos_relpath,
                       const char **repos_root_url,
                       const char **repos_uuid,
+                      const char **lock_token,
                       svn_wc_context_t *wc_ctx,
                       const char *local_abspath,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
+  svn_wc__db_lock_t *lock;
 
   err = svn_wc__db_base_get_info(NULL, NULL, revision, repos_relpath,
                                  repos_root_url, repos_uuid, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL,
+                                 lock_token ? &lock : NULL,
                                  NULL, NULL, NULL,
                                  wc_ctx->db, local_abspath,
                                  result_pool, scratch_pool);
@@ -685,9 +688,14 @@ svn_wc__node_get_base(svn_revnum_t *revision,
         *repos_root_url = NULL;
       if (repos_uuid)
         *repos_uuid = NULL;
+      if (lock_token)
+        *lock_token = NULL;
       return SVN_NO_ERROR;
     }
   SVN_ERR(err);
+
+  if (lock_token)
+    *lock_token = lock ? lock->token : NULL;
 
   SVN_ERR_ASSERT(!revision || SVN_IS_VALID_REVNUM(*revision));
   SVN_ERR_ASSERT(!repos_relpath || *repos_relpath);
@@ -740,45 +748,6 @@ svn_wc__node_get_pre_ng_status_data(svn_revnum_t *revision,
 
          ### Better to report nothing, than the wrong information */
     }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc__node_get_lock_info(const char **lock_token,
-                           const char **lock_owner,
-                           const char **lock_comment,
-                           apr_time_t *lock_date,
-                           svn_wc_context_t *wc_ctx,
-                           const char *local_abspath,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
-{
-  svn_wc__db_lock_t *lock;
-  svn_error_t *err;
-
-  err = svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, &lock, NULL,
-                                 NULL, NULL,
-                                 wc_ctx->db, local_abspath,
-                                 result_pool, scratch_pool);
-
-  if (err)
-    {
-      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-        return svn_error_trace(err);
-
-      svn_error_clear(err);
-      lock = NULL;
-    }
-  if (lock_token)
-    *lock_token = lock ? lock->token : NULL;
-  if (lock_owner)
-    *lock_owner = lock ? lock->owner : NULL;
-  if (lock_comment)
-    *lock_comment = lock ? lock->comment : NULL;
-  if (lock_date)
-    *lock_date = lock ? lock->date : 0;
 
   return SVN_NO_ERROR;
 }

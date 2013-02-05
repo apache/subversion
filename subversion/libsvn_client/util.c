@@ -183,6 +183,7 @@ svn_client__wc_node_get_base(svn_client__pathrev_t **base_p,
                                 &relpath,
                                 &(*base_p)->repos_root_url,
                                 &(*base_p)->repos_uuid,
+                                NULL,
                                 wc_ctx, wc_abspath,
                                 result_pool, scratch_pool));
   if ((*base_p)->repos_root_url && relpath)

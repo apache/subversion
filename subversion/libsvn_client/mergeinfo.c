@@ -217,8 +217,8 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
   if (limit_abspath)
     SVN_ERR_ASSERT(svn_dirent_is_absolute(limit_abspath));
 
-  SVN_ERR(svn_wc__node_get_base(&base_revision, NULL, NULL, NULL, ctx->wc_ctx,
-                                local_abspath,
+  SVN_ERR(svn_wc__node_get_base(&base_revision, NULL, NULL, NULL, NULL,
+                                ctx->wc_ctx, local_abspath,
                                 scratch_pool, scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);
@@ -287,7 +287,7 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
           local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
           SVN_ERR(svn_wc__node_get_base(&parent_base_rev, NULL, NULL, NULL,
-                                        ctx->wc_ctx, local_abspath,
+                                        NULL, ctx->wc_ctx, local_abspath,
                                         scratch_pool, scratch_pool));
           SVN_ERR(svn_wc__node_get_changed_info(&parent_changed_rev,
                                                 NULL, NULL,

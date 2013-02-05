@@ -342,7 +342,7 @@ organize_lock_targets(const char **common_parent_url,
             {
               svn_revnum_t *revnum;
               revnum = apr_palloc(result_pool, sizeof(* revnum));
-              SVN_ERR(svn_wc__node_get_base(revnum, NULL, NULL, NULL,
+              SVN_ERR(svn_wc__node_get_base(revnum, NULL, NULL, NULL, NULL,
                                             ctx->wc_ctx, abs_path,
                                             result_pool, iterpool));
               apr_hash_set(rel_targets_ret, rel_url,
@@ -355,10 +355,10 @@ organize_lock_targets(const char **common_parent_url,
               /* If not forcing the unlock, get the lock token. */
               if (! force)
                 {
-                  SVN_ERR(svn_wc__node_get_lock_info(&lock_token, NULL, NULL,
-                                                     NULL, ctx->wc_ctx,
-                                                     abs_path, result_pool,
-                                                     iterpool));
+                  SVN_ERR(svn_wc__node_get_base(NULL, NULL, NULL, NULL,
+                                                &lock_token,
+                                                ctx->wc_ctx, abs_path,
+                                                result_pool, iterpool));
                   if (! lock_token)
                     return svn_error_createf(
                                SVN_ERR_CLIENT_MISSING_LOCK_TOKEN, NULL,
