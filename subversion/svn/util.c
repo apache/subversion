@@ -974,9 +974,7 @@ svn_cl__assert_homogeneous_target_type(const apr_array_header_t *targets)
 
   err = svn_client__assert_homogeneous_target_type(targets);
   if (err && err->apr_err == SVN_ERR_ILLEGAL_TARGET)
-    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, err,
-                             _("Cannot mix repository and working copy "
-                               "targets"));
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, err, NULL);
   return err;
 }
 
