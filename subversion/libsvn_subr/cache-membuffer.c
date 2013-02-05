@@ -2009,6 +2009,8 @@ svn_membuffer_cache_get(void **value_p,
 
   /* return result */
   *found = *value_p != NULL;
+
+  return SVN_NO_ERROR;
 }
 
 /* Implement svn_cache__vtable_t.has_key (not thread-safe)
