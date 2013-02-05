@@ -198,9 +198,9 @@
  * merge target and any of its subtrees which have explicit mergeinfo
  * or otherwise need special attention during a merge.
  *
- * During mergeinfo unaware merges, CHILDREN_WITH_MERGEINFO is created by
- * do_mergeinfo_unaware_dir_merge and contains only one element describing
- * a contiguous range to be merged to the WC merge target.
+ * During mergeinfo unaware merges, CHILDREN_WITH_MERGEINFO contains
+ * contains only one element (added by do_mergeinfo_unaware_dir_merge)
+ * describing a contiguous range to be merged to the WC merge target.
  *
  * During mergeinfo aware merges CHILDREN_WITH_MERGEINFO is created
  * by get_mergeinfo_paths() and outside of that function and its helpers
@@ -315,6 +315,10 @@ typedef struct merge_cmd_baton_t {
   /* A hash of (const char *) absolute WC paths mapped to the same which
      represent the roots of subtrees added by the merge. */
   apr_hash_t *added_abspaths;
+
+  /* A hash of (const char *) absolute WC paths mapped to the same which
+     represent the roots of subtrees deleted by the merge. */
+  apr_hash_t *deleted_abspaths;
 
   /* A list of tree conflict victim absolute paths which may be NULL. */
   apr_hash_t *tree_conflicted_abspaths;
@@ -1547,6 +1551,8 @@ record_update_add(merge_cmd_baton_t *merge_b,
   if (merge_b->merge_source.ancestral || merge_b->reintegrate_merge)
     {
       store_path(merge_b->merged_abspaths, local_abspath);
+      apr_hash_set(merge_b->deleted_abspaths, local_abspath,
+                   APR_HASH_KEY_STRING, NULL);
     }
 
   if (merge_b->ctx->notify_func2)
@@ -1621,7 +1627,6 @@ record_update_delete(merge_cmd_baton_t *merge_b,
          paths. */
       apr_hash_set(merge_b->added_abspaths, local_abspath,
                    APR_HASH_KEY_STRING, NULL);
-      store_path(merge_b->merged_abspaths, local_abspath);
     }
 
   SVN_ERR(notify_merge_begin(merge_b, local_abspath, TRUE, scratch_pool));
@@ -2534,6 +2539,8 @@ merge_file_deleted(const char *relpath,
 
       SVN_ERR(record_update_delete(merge_b, fb->parent_baton, local_abspath,
                                    svn_node_file, scratch_pool));
+
+      store_path(merge_b->deleted_abspaths, local_abspath);
     }
   else
     {
@@ -3156,6 +3163,8 @@ merge_dir_deleted(const char *relpath,
 
       SVN_ERR(record_update_delete(merge_b, db->parent_baton, local_abspath,
                                    svn_node_dir, scratch_pool));
+
+      store_path(merge_b->deleted_abspaths, local_abspath);
     }
 
   return SVN_NO_ERROR;
@@ -7540,6 +7549,7 @@ subtree_touched_by_merge(const char *local_abspath,
   return (path_is_subtree(local_abspath, merge_b->merged_abspaths, pool)
           || path_is_subtree(local_abspath, merge_b->skipped_abspaths, pool)
           || path_is_subtree(local_abspath, merge_b->added_abspaths, pool)
+          || path_is_subtree(local_abspath, merge_b->deleted_abspaths, pool)
           || path_is_subtree(local_abspath, merge_b->tree_conflicted_abspaths,
                              pool));
 }
@@ -7855,15 +7865,10 @@ flag_subtrees_needing_mergeinfo(svn_boolean_t operative_merge,
 
       if (operative_merge)
         {
-          svn_boolean_t child_is_deleted;
-
           svn_pool_clear(iterpool);
 
           /* If CHILD is deleted we don't need to set mergeinfo on it. */
-          SVN_ERR(svn_wc__node_is_status_deleted(&child_is_deleted,
-                                                 merge_b->ctx->wc_ctx,
-                                                 child->abspath, iterpool));
-          if (!child_is_deleted
+          if (! contains_path(merge_b->deleted_abspaths, child->abspath)
               && subtree_touched_by_merge(child->abspath, merge_b,
                                           iterpool))
             {
@@ -9319,7 +9324,7 @@ do_merge(apr_hash_t **modified_subtrees,
          apr_pool_t *result_pool,
          apr_pool_t *scratch_pool)
 {
-  merge_cmd_baton_t merge_cmd_baton;
+  merge_cmd_baton_t merge_cmd_baton = { 0 };
   svn_config_t *cfg;
   const char *diff3_cmd;
   int i;
@@ -9405,6 +9410,7 @@ do_merge(apr_hash_t **modified_subtrees,
 
   merge_cmd_baton.skipped_abspaths = apr_hash_make(result_pool);
   merge_cmd_baton.added_abspaths = apr_hash_make(result_pool);
+  merge_cmd_baton.deleted_abspaths = apr_hash_make(result_pool);
   merge_cmd_baton.tree_conflicted_abspaths = apr_hash_make(result_pool);
 
   merge_cmd_baton.children_with_mergeinfo = NULL;
@@ -9522,6 +9528,9 @@ do_merge(apr_hash_t **modified_subtrees,
               *modified_subtrees =
                   apr_hash_overlay(result_pool, *modified_subtrees,
                                    merge_cmd_baton.added_abspaths);
+              *modified_subtrees =
+                  apr_hash_overlay(result_pool, *modified_subtrees,
+                                   merge_cmd_baton.deleted_abspaths);
               *modified_subtrees =
                   apr_hash_overlay(result_pool, *modified_subtrees,
                                    merge_cmd_baton.skipped_abspaths);
