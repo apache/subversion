@@ -117,9 +117,9 @@ def invalid_delete_targets(sbox):
 def invalid_diff_targets(sbox):
   "invalid targets for 'diff'"
   sbox.build(read_only=True)
-  for (target1, target2) in [("iota", "^/"), ("file://", "iota")]:
+  for (target1, target2, target3) in [("iota", "^/", "A/mu"), ("file://", "iota", "A/mu")]:
     run_and_verify_svn_in_wc(sbox, "svn: E205000: Cannot mix repository and working "
-                             "copy targets", 'diff', target1, target2)
+                             "copy targets", 'diff', target1, target2, target3)
 
 def invalid_export_targets(sbox):
   "invalid targets for 'export'"
