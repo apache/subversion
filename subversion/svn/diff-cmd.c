@@ -338,7 +338,10 @@ svn_cl__diff(apr_getopt_t *os,
       old_target = "";
       new_target = "";
 
-      SVN_ERR(svn_cl__assert_homogeneous_target_type(targets));
+      SVN_ERR_W(svn_cl__assert_homogeneous_target_type(targets),
+        _("'svn diff [-r N[:M]] [TARGET[@REV]...]' does not support mixed "
+          "target types. Try using the --old and --new options or one of "
+          "the shorthand invocations listed in 'svn help diff'."));
 
       working_copy_present = ! svn_path_is_url(APR_ARRAY_IDX(targets, 0,
                                                              const char *));
