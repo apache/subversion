@@ -1376,9 +1376,7 @@ def actual_only_node_behaviour(sbox):
   # update (up)
   expected_stdout = [
    "Skipped '%s' -- Node remains in conflict\n" % sbox.ospath('A/foo'),
-   "Summary of conflicts:\n",
-   "  Skipped paths: 1\n",
-  ]
+  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
   expected_stderr = []
   run_and_verify_svn(None, expected_stdout, expected_stderr,
                      "update", foo_path)

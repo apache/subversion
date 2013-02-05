@@ -209,8 +209,8 @@ def basic_update(sbox):
   exit_code, out, err = svntest.actions.run_and_verify_svn(
     "update xx/xx",
     ["Skipped '"+xx_path+"'\n",
-    "Summary of conflicts:\n",
-    "  Skipped paths: 1\n"], [], 'update', xx_path)
+    ] + svntest.main.summary_of_conflicts(skipped_paths=1),
+    [], 'update', xx_path)
   exit_code, out, err = svntest.actions.run_and_verify_svn(
     "update xx/xx", [], [],
     'update', '--quiet', xx_path)

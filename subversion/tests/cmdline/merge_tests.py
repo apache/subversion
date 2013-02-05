@@ -18083,9 +18083,7 @@ def merge_target_selection(sbox):
     '   C .\n',
     '--- Recording mergeinfo for merge of r4 into \'.\':\n',
     ' U   .\n',
-    'Summary of conflicts:\n',
-    '  Tree conflicts: 1\n',
-  ]
+  ] + svntest.main.summary_of_conflicts(tree_conflicts=1)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'merge', '^/dir/binary-file', '-c', '4', '.')
 
@@ -18097,9 +18095,7 @@ def merge_target_selection(sbox):
     '   C %s\n' % os.path.join('binary-file'),
     '--- Recording mergeinfo for merge of r4 into \'binary-file\':\n',
     ' U   binary-file\n',
-    'Summary of conflicts:\n',
-    '  Tree conflicts: 1\n',
-  ]
+  ] + svntest.main.summary_of_conflicts(tree_conflicts=1)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'merge', '^/dir', '-c', '4', 'binary-file')
 

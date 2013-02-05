@@ -266,9 +266,7 @@ def patch_absolute_paths(sbox):
   expected_output = [
     'U         %s\n' % os.path.join('A', 'B', 'E', 'alpha'),
     'Skipped missing target: \'%s\'\n' % lambda_path,
-    'Summary of conflicts:\n',
-    '  Skipped paths: 1\n'
-  ]
+  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
 
   alpha_contents = "This is the file 'alpha'.\nWhoooo whooooo whoooooooo!\n"
 
@@ -988,9 +986,7 @@ def patch_add_new_dir(sbox):
     'Skipped missing target: \'%s\'\n' % A_B_E_Y_new_path,
     'Skipped missing target: \'%s\'\n' % A_C_new_path,
     'Skipped missing target: \'%s\'\n' % A_Z_new_path,
-    'Summary of conflicts:\n',
-    '  Skipped paths: 3\n',
-  ]
+  ] + svntest.main.summary_of_conflicts(skipped_paths=3)
 
   # Create the unversioned obstructing directory
   os.mkdir(os.path.dirname(A_Z_new_path))
@@ -1174,9 +1170,7 @@ def patch_reject(sbox):
   expected_output = [
     'C         %s\n' % sbox.ospath('A/D/gamma'),
     '>         rejected hunk @@ -1,1 +1,1 @@\n',
-    'Summary of conflicts:\n',
-    '  Text conflicts: 1\n',
-  ]
+  ] + svntest.main.summary_of_conflicts(text_conflicts=1)
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/D/gamma', contents=gamma_contents)
@@ -2456,9 +2450,7 @@ def patch_same_twice(sbox):
     '>         hunk @@ -6,6 +6,9 @@ already applied\n',
     '>         hunk @@ -14,11 +17,8 @@ already applied\n',
     'Skipped \'%s\'\n' % beta_path,
-    'Summary of conflicts:\n',
-    '  Skipped paths: 1\n',
-  ]
+  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
 
   expected_skip = wc.State('', {beta_path : Item(verb='Skipped')})
 
@@ -2543,9 +2535,7 @@ def patch_dir_properties(sbox):
   expected_output = [
     ' U        %s\n' % wc_dir,
     ' C        %s\n' % sbox.ospath('A/B'),
-    'Summary of conflicts:\n',
-    '  Property conflicts: 1\n',
-  ]
+  ] + svntest.main.summary_of_conflicts(prop_conflicts=1)
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
@@ -3969,9 +3959,7 @@ def patch_delete_and_skip(sbox):
     'D         %s\n' % os.path.join('A', 'B', 'E', 'beta'),
     'D         %s\n' % os.path.join('A', 'B', 'E'),
     'Skipped missing target: \'%s\'\n' % skipped_path,
-    'Summary of conflicts:\n',
-    '  Skipped paths: 1\n'
-  ]
+  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/B/E/alpha')
@@ -4402,9 +4390,7 @@ def single_line_mismatch(sbox):
   expected_output = [
     'C         %s\n' % sbox.ospath('test'),
     '>         rejected hunk @@ -1,1 +1,1 @@\n',
-    'Summary of conflicts:\n',
-    '  Text conflicts: 1\n',
-  ]
+  ] + svntest.main.summary_of_conflicts(text_conflicts=1)
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'patch', patch_file_path, wc_dir)
