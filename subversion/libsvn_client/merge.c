@@ -4431,7 +4431,7 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
      So in the name of user friendliness, return an error suggesting a helpful
      course of action.
   */
-  SVN_ERR(svn_wc__node_get_base(&child_base_revision, NULL, NULL, NULL,
+  SVN_ERR(svn_wc__node_get_base(&child_base_revision, NULL, NULL, NULL, NULL,
                                 ctx->wc_ctx, child->abspath,
                                 scratch_pool, scratch_pool));
   /* If CHILD has no base revision then it hasn't been committed yet, so it

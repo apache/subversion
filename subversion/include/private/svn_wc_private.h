@@ -608,14 +608,14 @@ svn_wc__node_has_working(svn_boolean_t *has_working,
 /**
  * Get the repository location of the base node at @a local_abspath.
  *
- * Set *REVISION, *REPOS_RELPATH, *REPOS_ROOT_URL and *REPOS_UUID to the
- * location that this node was checked out at or last updated/switched to,
- * regardless of any uncommitted changes (delete, replace and/or
- * copy-here/move-here).
+ * Set *REVISION, *REPOS_RELPATH, *REPOS_ROOT_URL *REPOS_UUID and *LOCK_TOKEN
+ * to the location that this node was checked out at or last updated/switched
+ * to, regardless of any uncommitted changes (delete, replace and/or copy-here/
+ * move-here).
  *
  * If there is no base node at @a local_abspath (such as when there is a
  * locally added/copied/moved-here node that is not part of a replace),
- * return @c SVN_INVALID_REVNUM/NULL/NULL/NULL.
+ * return @c SVN_INVALID_REVNUM/NULL/NULL/NULL/NULL.
  *
  * All output arguments may be NULL.
  *
@@ -627,6 +627,7 @@ svn_wc__node_get_base(svn_revnum_t *revision,
                       const char **repos_relpath,
                       const char **repos_root_url,
                       const char **repos_uuid,
+                      const char **lock_token,
                       svn_wc_context_t *wc_ctx,
                       const char *local_abspath,
                       apr_pool_t *result_pool,
@@ -665,30 +666,6 @@ svn_wc__node_get_pre_ng_status_data(svn_revnum_t *revision,
                                     const char *local_abspath,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
-
-/**
- * Fetch lock information (if any) for @a local_abspath using @a wc_ctx:
- *
- *   Set @a *lock_token to the lock token (or NULL)
- *   Set @a *lock_owner to the owner of the lock (or NULL)
- *   Set @a *lock_comment to the comment associated with the lock (or NULL)
- *   Set @a *lock_date to the timestamp of the lock (or 0)
- *
- * Any of the aforementioned return values may be NULL to indicate
- * that the caller doesn't care about those values.
- *
- * If @a local_abspath is not in the working copy, return @c
- * SVN_ERR_WC_PATH_NOT_FOUND.
- */
-svn_error_t *
-svn_wc__node_get_lock_info(const char **lock_token,
-                           const char **lock_owner,
-                           const char **lock_comment,
-                           apr_time_t *lock_date,
-                           svn_wc_context_t *wc_ctx,
-                           const char *local_abspath,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
 
 /**
  * Acquire a recursive write lock for @a local_abspath.  If @a lock_anchor
