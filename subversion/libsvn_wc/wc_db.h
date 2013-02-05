@@ -3295,6 +3295,13 @@ svn_error_t *
 svn_wc__db_resolve_delete_raise_moved_away(svn_wc__db_t *db,
                                            const char *local_abspath,
                                            apr_pool_t *scratch_pool);
+
+/* Like svn_wc__db_resolve_delete_raise_moved_away this should be
+   combined. */
+svn_error_t *
+svn_wc__db_resolve_break_moved_away(svn_wc__db_t *db,
+                                    const char *local_abspath,
+                                    apr_pool_t *scratch_pool);
 /* @} */
 
 

@@ -2615,6 +2615,14 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
           SVN_ERR(svn_wc__db_resolve_delete_raise_moved_away(db, local_abspath,
                                                              scratch_pool));
         }
+      else if (reason == svn_wc_conflict_reason_moved_away
+               && conflict_choice == svn_wc_conflict_choose_merged)
+        {
+          /* ### As above, this should also be combined with
+             ### svn_wc__db_op_mark_resolved. */
+          SVN_ERR(svn_wc__db_resolve_break_moved_away(db, local_abspath,
+                                                      scratch_pool));
+        }
                                                   
       *did_resolve = TRUE;
     }
