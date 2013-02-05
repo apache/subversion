@@ -239,31 +239,15 @@ svn_cl__diff(apr_getopt_t *os,
 
       /* Set default start/end revisions based on target types, in the same
        * manner as done for the corresponding '--old X --new Y' cases. */
-      if (svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *))
-          && svn_path_is_url(APR_ARRAY_IDX(targets, 1, const char *)))
-        {
-          /* The 'svn diff OLD_URL[@OLDREV] NEW_URL[@NEWREV]' case matches. */
-          if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
-            opt_state->start_revision.kind = svn_opt_revision_head;
-          if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
-            opt_state->end_revision.kind = svn_opt_revision_head;
-        }
-      else if (svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *)))
-        {
-          /* The 'svn diff OLD_URL[@OLDREV] NEW_PATH[@NEWREV]' case matches. */
-          if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
-            opt_state->start_revision.kind = svn_opt_revision_head;
-          if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
-            opt_state->end_revision.kind = svn_opt_revision_working;
-        }
-      else
-        {
-          /* The 'svn diff OLD_PATH[@OLDREV] NEW_URL[@NEWREV]' case matches. */
-          if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
-            opt_state->start_revision.kind = svn_opt_revision_working;
-          if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
-            opt_state->end_revision.kind = svn_opt_revision_head;
-        }
+      if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
+        opt_state->start_revision.kind
+          = svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *))
+            ? svn_opt_revision_head : svn_opt_revision_base;
+
+      if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
+        opt_state->end_revision.kind
+          = svn_path_is_url(APR_ARRAY_IDX(targets, 1, const char *))
+            ? svn_opt_revision_head : svn_opt_revision_working;
     }
   else if (opt_state->old_target)
     {
