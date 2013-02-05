@@ -50,9 +50,10 @@ from svntest.actions import fill_file_with_lines
 from svntest.actions import make_conflict_marker_text
 from svntest.actions import inject_conflict_into_expected_state
 
-def expected_merge_output(rev_ranges, additional_lines=None, foreign=False,
+def expected_merge_output(rev_ranges, additional_lines=[], foreign=False,
                           elides=False, two_url=False, target=None,
-                          text_conflicts=0, prop_conflicts=0, tree_conflicts=0):
+                          text_conflicts=0, prop_conflicts=0, tree_conflicts=0,
+                          skipped_paths=0):
   """Generate an (inefficient) regex representing the expected merge
   output and mergeinfo notifications from REV_RANGES and ADDITIONAL_LINES.
 
@@ -64,7 +65,8 @@ def expected_merge_output(rev_ranges, additional_lines=None, foreign=False,
 
   ADDITIONAL_LINES is a list of strings to match the other lines of output;
   these are basically regular expressions except that backslashes will be
-  escaped herein.
+  escaped herein.  If ADDITIONAL_LINES is a single string, it is interpreted
+  the same as a list containing that string.
 
   If ELIDES is true, add to the regex an expression representing elision
   notification.  If TWO_URL is true, tweak the regex to expect the
@@ -73,8 +75,8 @@ def expected_merge_output(rev_ranges, additional_lines=None, foreign=False,
   TARGET is the local path to the target, as it should appear in
   notifications; if None, it is not checked.
 
-  TEXT_CONFLICTS, PROP_CONFLICTS and TREE_CONFLICTS specify the number of
-  each kind of conflict to expect.
+  TEXT_CONFLICTS, PROP_CONFLICTS, TREE_CONFLICTS and SKIPPED_PATHS specify
+  the number of each kind of conflict to expect.
   """
 
   if rev_ranges is None:
@@ -97,31 +99,21 @@ def expected_merge_output(rev_ranges, additional_lines=None, foreign=False,
   if (two_url):
     lines += ["--- Recording mergeinfo for merge between repository URLs .*\n"]
 
-  if isinstance(additional_lines, list):
-    # Address "The Backslash Plague"
-    #
-    # If ADDITIONAL_LINES are present there are possibly paths in it with
-    # multiple components and on Windows these components are separated with
-    # '\'.  These need to be escaped properly in the regexp for the match to
-    # work correctly.  See http://aspn.activestate.com/ASPN/docs/ActivePython
-    # /2.2/howto/regex/regex.html#SECTION000420000000000000000.
-    if sys.platform == 'win32':
-      for i in range(0, len(additional_lines)):
-        additional_lines[i] = additional_lines[i].replace("\\", "\\\\")
-    lines.extend(additional_lines)
-  else:
-    if sys.platform == 'win32' and additional_lines != None:
-      additional_lines = additional_lines.replace("\\", "\\\\")
-    lines.append(str(additional_lines))
+  # Address "The Backslash Plague"
+  #
+  # If ADDITIONAL_LINES are present there are possibly paths in it with
+  # multiple components and on Windows these components are separated with
+  # '\'.  These need to be escaped properly in the regexp for the match to
+  # work correctly.  See http://aspn.activestate.com/ASPN/docs/ActivePython
+  # /2.2/howto/regex/regex.html#SECTION000420000000000000000.
+  if isinstance(additional_lines, str):
+    additional_lines = [additional_lines]
+  if sys.platform == 'win32':
+    additional_lines = [line.replace("\\", "\\\\") for line in additional_lines]
+  lines += additional_lines
 
-  if text_conflicts or prop_conflicts or tree_conflicts:
-    lines.append("Summary of conflicts:\n")
-    if text_conflicts:
-      lines.append("  Text conflicts: %d\n" % text_conflicts)
-    if prop_conflicts:
-      lines.append("  Property conflicts: %d\n" % prop_conflicts)
-    if tree_conflicts:
-      lines.append("  Tree conflicts: %d\n" % tree_conflicts)
+  lines += svntest.main.summary_of_conflicts(text_conflicts, prop_conflicts,
+                                             tree_conflicts, skipped_paths)
 
   return "|".join(lines)
 
