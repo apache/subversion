@@ -638,6 +638,7 @@ svn_fs_fs__read_rep_header(svn_fs_fs__rep_header_t **header,
   SVN_ERR(svn_stream_readline(stream, &buffer, "\n", &eol, pool));
 
   *header = apr_pcalloc(pool, sizeof(**header));
+  (*header)->header_size = buffer->len + 1;
   if (strcmp(buffer->data, REP_PLAIN) == 0)
     return SVN_NO_ERROR;
 

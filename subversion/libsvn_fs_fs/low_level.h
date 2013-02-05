@@ -113,6 +113,11 @@ typedef struct svn_fs_fs__rep_header_t
   /* if this rep is a delta against some other rep, this is the (deltified)
    * size of that base rep.  Should be 0 if there is no base rep. */
   svn_filesize_t base_length;
+
+  /* length of the textual representation of the header in the rep or pack
+   * file, including EOL.  Only valid after reading it from disk.
+   * Should be 0 otherwise. */
+  apr_size_t header_size;
 } svn_fs_fs__rep_header_t;
 
 /* Read the next line from file FILE and parse it as a text
