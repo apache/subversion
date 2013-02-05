@@ -60,12 +60,6 @@ static txn_vtable_t txn_vtable = {
   svn_fs_fs__change_txn_props
 };
 
-static svn_error_t *
-verify_walker(representation_t *rep,
-              void *baton,
-              svn_fs_t *fs,
-              apr_pool_t *scratch_pool);
-
 /* Functions for working with shared transaction data. */
 
 /* Return the transaction object for transaction TXN_ID from the
@@ -1849,48 +1843,13 @@ choose_delta_base(representation_t **rep,
    * from the node-rev parent chain. */
   if (*rep && maybe_shared_rep)
     {
-      /* Check whether the length of the deltification chain is acceptable.
-       * Otherwise, shared reps may form a non-skipping delta chain in
-       * extreme cases. */
-      apr_pool_t *sub_pool = svn_pool_create(pool);
-      representation_t base_rep = **rep;
+      int chain_length = 0;
+      SVN_ERR(svn_fs_fs__rep_chain_length(&chain_length, *rep, fs, pool));
       
       /* Some reasonable limit, depending on how acceptable longer linear
        * chains are in this repo.  Also, allow for some minimal chain. */
-      int max_chain_length = 2 * (int)ffd->max_linear_deltification + 2;
-
-      /* re-use open files between iterations */
-      svn_revnum_t rev_hint = SVN_INVALID_REVNUM;
-      apr_file_t *file_hint = NULL;
-
-      /* follow the delta chain towards the end but for at most
-       * MAX_CHAIN_LENGTH steps. */
-      for (; max_chain_length; --max_chain_length)
-        {
-          struct rep_state *rep_state;
-          struct rep_args *rep_args;
-
-          SVN_ERR(create_rep_state_body(&rep_state,
-                                        &rep_args,
-                                        &file_hint,
-                                        &rev_hint,
-                                        &base_rep,
-                                        fs,
-                                        sub_pool));
-          if (!rep_args->is_delta  || !rep_args->base_revision)
-            break;
-
-          base_rep.revision = rep_args->base_revision;
-          base_rep.offset = rep_args->base_offset;
-          base_rep.size = rep_args->base_length;
-          base_rep.txn_id = NULL;
-        }
-
-      /* start new delta chain if the current one has grown too long */
-      if (max_chain_length == 0)
+      if (chain_length >= 2 * (int)ffd->max_linear_deltification + 2)
         *rep = NULL;
-
-      svn_pool_destroy(sub_pool);
     }
 
   /* verify that the reps don't form a degenerated '*/
@@ -2050,7 +2009,7 @@ get_shared_rep(representation_t **old_rep,
       if (err == SVN_NO_ERROR)
         {
           if (*old_rep)
-            SVN_ERR(verify_walker(*old_rep, NULL, fs, pool));
+            SVN_ERR(svn_fs_fs__check_rep(*old_rep, fs, pool));
         }
       else if (err->apr_err == SVN_ERR_FS_CORRUPT
                || SVN_ERROR_IN_CATEGORY(err->apr_err,

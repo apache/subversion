@@ -1370,52 +1370,38 @@ verify_walker(representation_t *rep,
               svn_fs_t *fs,
               apr_pool_t *scratch_pool)
 {
-  struct rep_state *rs;
-  struct rep_args *rep_args;
+  verify_walker_baton_t *walker_baton = baton;
+  apr_file_t * previous_file;
 
-  if (baton)
+  /* notify and free resources periodically */
+  if (   walker_baton->iteration_count > 1000
+      || walker_baton->file_count > 16)
     {
-      verify_walker_baton_t *walker_baton = baton;
-      apr_file_t * previous_file;
-
-      /* notify and free resources periodically */
-      if (   walker_baton->iteration_count > 1000
-          || walker_baton->file_count > 16)
+      if (   walker_baton->notify_func
+          && rep->revision != walker_baton->last_notified_revision)
         {
-          if (   walker_baton->notify_func
-              && rep->revision != walker_baton->last_notified_revision)
-            {
-              walker_baton->notify_func(rep->revision,
-                                        walker_baton->notify_baton,
-                                        scratch_pool);
-              walker_baton->last_notified_revision = rep->revision;
-            }
-
-          svn_pool_clear(walker_baton->pool);
-          
-          walker_baton->iteration_count = 0;
-          walker_baton->file_count = 0;
-          walker_baton->file_hint = NULL;
-          walker_baton->rev_hint = SVN_INVALID_REVNUM;
+          walker_baton->notify_func(rep->revision,
+                                    walker_baton->notify_baton,
+                                    scratch_pool);
+          walker_baton->last_notified_revision = rep->revision;
         }
 
-      /* access the repo data */
-      previous_file = walker_baton->file_hint;
-      SVN_ERR(create_rep_state(&rs, &rep_args, &walker_baton->file_hint,
-                               &walker_baton->rev_hint, rep, fs,
-                               walker_baton->pool));
+      svn_pool_clear(walker_baton->pool);
 
-      /* update resource usage counters */
-      walker_baton->iteration_count++;
-      if (previous_file != walker_baton->file_hint)
-        walker_baton->file_count++;
+      walker_baton->iteration_count = 0;
+      walker_baton->file_count = 0;
+      walker_baton->file_hint = NULL;
+      walker_baton->rev_hint = SVN_INVALID_REVNUM;
     }
-  else
-    {
-      /* ### Should this be using read_rep_line() directly? */
-      SVN_ERR(create_rep_state(&rs, &rep_args, NULL, NULL, rep, fs,
-                               scratch_pool));
-    }
+
+  /* access the repo data */
+  previous_file = walker_baton->file_hint;
+  SVN_ERR(svn_fs_fs__check_rep(rep, fs, walker_baton->pool));
+
+  /* update resource usage counters */
+  walker_baton->iteration_count++;
+  if (previous_file != walker_baton->file_hint)
+    walker_baton->file_count++;
 
   return SVN_NO_ERROR;
 }

@@ -563,6 +563,62 @@ svn_fs_fs__check_rep(representation_t *rep,
   return SVN_NO_ERROR;
 }
 
+/* .
+   Do any allocations in POOL. */
+svn_error_t *
+svn_fs_fs__rep_chain_length(int *chain_length,
+                            representation_t *rep,
+                            svn_fs_t *fs,
+                            apr_pool_t *pool)
+{
+  int count = 0;
+  apr_pool_t *sub_pool = svn_pool_create(pool);
+  
+  /* Check whether the length of the deltification chain is acceptable.
+   * Otherwise, shared reps may form a non-skipping delta chain in
+   * extreme cases. */
+  representation_t base_rep = *rep;
+
+  /* re-use open files between iterations */
+  svn_revnum_t rev_hint = SVN_INVALID_REVNUM;
+  apr_file_t *file_hint = NULL;
+
+  svn_fs_fs__rep_header_t *header;
+
+  /* follow the delta chain towards the end but for at most
+   * MAX_CHAIN_LENGTH steps. */
+  do
+    {
+      rep_state_t *rep_state;
+      SVN_ERR(create_rep_state_body(&rep_state,
+                                    &header,
+                                    &file_hint,
+                                    &rev_hint,
+                                    &base_rep,
+                                    fs,
+                                    sub_pool));
+
+      base_rep.revision = header->base_revision;
+      base_rep.item_index = header->base_item_index;
+      base_rep.size = header->base_length;
+      base_rep.txn_id = NULL;
+
+      ++count;
+      if (count % 16 == 0)
+        {
+          rev_hint = SVN_INVALID_REVNUM;
+          file_hint = NULL;
+          svn_pool_clear(sub_pool);
+        }
+    }
+  while (header->is_delta && header->base_revision);
+
+  *chain_length = count;
+  svn_pool_destroy(sub_pool);
+
+  return SVN_NO_ERROR;
+}
+
 
 struct rep_read_baton
 {

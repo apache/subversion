@@ -53,6 +53,15 @@ svn_fs_fs__check_rep(representation_t *rep,
                      svn_fs_t *fs,
                      apr_pool_t *pool);
 
+/* Follow the representation delta chain in FS starting with REP.  The
+   number of reps (including REP) in the chain will be returned in
+   *CHAIN_LENGTH.  Do any allocations in POOL. */
+svn_error_t *
+svn_fs_fs__rep_chain_length(int *chain_length,
+                            representation_t *rep,
+                            svn_fs_t *fs,
+                            apr_pool_t *pool);
+
 /* Set *CONTENTS to be a readable svn_stream_t that receives the text
    representation REP as seen in filesystem FS.
    Use POOL for temporary allocations. */
