@@ -557,6 +557,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     paths.  OLD-TGT and NEW-TGT may be working copy paths or URL[@REV].\n"
      "     NEW-TGT defaults to OLD-TGT if not specified.  -r N makes OLDREV default\n"
      "     to N, -r N:M makes OLDREV default to N and NEWREV default to M.\n"
+     "     If OLDREV or NEWREV are not specified, they default to WORKING for\n"
+     "     working copy targets and to HEAD for URL targets.\n"
      "\n"
      "     Either or both OLD-TGT and NEW-TGT may also be paths to unversioned\n"
      "     targets. Revisions cannot be specified for unversioned targets.\n"
