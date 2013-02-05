@@ -111,14 +111,14 @@ def invalid_delete_targets(sbox):
   "invalid targets for 'delete'"
   sbox.build(read_only=True)
   for (target1, target2) in [("iota", "^/"), ("file://", "iota")]:
-    run_and_verify_svn_in_wc(sbox, "svn: E205000: Cannot mix repository and working "
+    run_and_verify_svn_in_wc(sbox, "svn: E200009: Cannot mix repository and working "
                              "copy targets", 'delete', target1, target2)
 
 def invalid_diff_targets(sbox):
   "invalid targets for 'diff'"
   sbox.build(read_only=True)
   for (target1, target2, target3) in [("iota", "^/", "A/mu"), ("file://", "iota", "A/mu")]:
-    run_and_verify_svn_in_wc(sbox, "svn: E205000: Cannot mix repository and working "
+    run_and_verify_svn_in_wc(sbox, "svn: E200009: Cannot mix repository and working "
                              "copy targets", 'diff', target1, target2, target3)
 
 def invalid_export_targets(sbox):
@@ -202,14 +202,14 @@ def invalid_lock_targets(sbox):
   "wc paths and repo URL target mixture for 'lock'"
   sbox.build(read_only=True)
   for (target1, target2) in [("iota", "^/"), ("file://", "iota")]:
-    run_and_verify_svn_in_wc(sbox, "svn: E205000: Cannot mix repository and working "
+    run_and_verify_svn_in_wc(sbox, "svn: E200009: Cannot mix repository and working "
                              "copy targets", 'lock', target1, target2)
 
 def invalid_unlock_targets(sbox):
   "wc paths and repo URL target mixture for 'unlock'"
   sbox.build(read_only=True)
   for (target1, target2) in [("iota", "^/"), ("file://", "iota")]:
-    run_and_verify_svn_in_wc(sbox, "svn: E205000: Cannot mix repository and working "
+    run_and_verify_svn_in_wc(sbox, "svn: E200009: Cannot mix repository and working "
                              "copy targets", 'unlock', target1, target2)
 
 def invalid_status_targets(sbox):
@@ -243,7 +243,7 @@ def invalid_relocate_targets(sbox):
 def invalid_mkdir_targets(sbox):
   "invalid targets for 'mkdir'"
   sbox.build(read_only=True)
-  run_and_verify_svn_in_wc(sbox, "svn: E205000: Cannot mix repository and working "
+  run_and_verify_svn_in_wc(sbox, "svn: E200009: Cannot mix repository and working "
                            "copy targets", 'mkdir', "folder", "^/folder")
 
 def invalid_update_targets(sbox):
