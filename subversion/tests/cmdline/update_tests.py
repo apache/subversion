@@ -3694,6 +3694,35 @@ def update_copied_and_deleted_prop(sbox):
 
 #----------------------------------------------------------------------
 
+def update_output_with_conflicts(rev, target, paths=None):
+  """Return the expected output for an update of TARGET to revision REV, in
+     which all of the PATHS are updated and conflicting.
+
+     If PATHS is None, it means [TARGET].  The output is a list of lines.
+  """
+  if paths is None:
+    paths = [target]
+
+  lines = ["Updating '%s':\n" % target]
+  for path in paths:
+    lines += ['C    %s\n' % path]
+  lines += ['Updated to revision %d.\n' % rev]
+  lines += svntest.main.summary_of_conflicts(text_conflicts=len(paths))
+  return lines
+
+def update_output_with_conflicts_resolved(rev, target, paths=None):
+  """Like update_output_with_conflicts(), but where all of the conflicts are
+     resolved within the update.
+  """
+  if paths is None:
+    paths = [target]
+
+  lines = update_output_with_conflicts(rev, target, paths)
+  for path in paths:
+    lines += ["Resolved conflicted state of '%s'\n" % path]
+  return lines
+
+#----------------------------------------------------------------------
 
 def update_accept_conflicts(sbox):
   "update --accept automatic conflict resolution"
@@ -3778,22 +3807,16 @@ def update_accept_conflicts(sbox):
   # Just leave the conflicts alone, since run_and_verify_svn already uses
   # the --non-interactive option.
   svntest.actions.run_and_verify_svn(None,
-                                     ["Updating '%s':\n" % (iota_path_backup),
-                                      'C    %s\n' % (iota_path_backup,),
-                                      'Updated to revision 2.\n',
-                                      'Summary of conflicts:\n',
-                                      '  Text conflicts: 1\n'],
+                                     update_output_with_conflicts(
+                                       2, iota_path_backup),
                                      [],
                                      'update', iota_path_backup)
 
   # lambda: --accept=postpone
   # Just leave the conflicts alone.
   svntest.actions.run_and_verify_svn(None,
-                                     ["Updating '%s':\n" % (lambda_path_backup),
-                                      'C    %s\n' % (lambda_path_backup,),
-                                      'Updated to revision 2.\n',
-                                      'Summary of conflicts:\n',
-                                      '  Text conflicts: 1\n'],
+                                     update_output_with_conflicts(
+                                       2, lambda_path_backup),
                                      [],
                                      'update', '--accept=postpone',
                                      lambda_path_backup)
@@ -3801,13 +3824,8 @@ def update_accept_conflicts(sbox):
   # mu: --accept=base
   # Accept the pre-update base file.
   svntest.actions.run_and_verify_svn(None,
-                                     ["Updating '%s':\n" % (mu_path_backup),
-                                      'C    %s\n' % (mu_path_backup,),
-                                      'Updated to revision 2.\n',
-                                      'Summary of conflicts:\n',
-                                      '  Text conflicts: 1\n',
-                                      "Resolved conflicted state of '%s'\n"
-                                        % (mu_path_backup)],
+                                     update_output_with_conflicts_resolved(
+                                       2, mu_path_backup),
                                      [],
                                      'update', '--accept=base',
                                      mu_path_backup)
@@ -3815,13 +3833,8 @@ def update_accept_conflicts(sbox):
   # alpha: --accept=mine
   # Accept the user's working file.
   svntest.actions.run_and_verify_svn(None,
-                                     ["Updating '%s':\n" % (alpha_path_backup),
-                                      'C    %s\n' % (alpha_path_backup,),
-                                      'Updated to revision 2.\n',
-                                      'Summary of conflicts:\n',
-                                      '  Text conflicts: 1\n',
-                                      "Resolved conflicted state of '%s'\n"
-                                        % (alpha_path_backup)],
+                                     update_output_with_conflicts_resolved(
+                                       2, alpha_path_backup),
                                      [],
                                      'update', '--accept=mine-full',
                                      alpha_path_backup)
@@ -3829,13 +3842,8 @@ def update_accept_conflicts(sbox):
   # beta: --accept=theirs
   # Accept their file.
   svntest.actions.run_and_verify_svn(None,
-                                     ["Updating '%s':\n" % (beta_path_backup),
-                                      'C    %s\n' % (beta_path_backup,),
-                                      'Updated to revision 2.\n',
-                                      'Summary of conflicts:\n',
-                                      '  Text conflicts: 1\n',
-                                      "Resolved conflicted state of '%s'\n"
-                                        % (beta_path_backup)],
+                                     update_output_with_conflicts_resolved(
+                                       2, beta_path_backup),
                                      [],
                                      'update', '--accept=theirs-full',
                                      beta_path_backup)
@@ -3845,13 +3853,8 @@ def update_accept_conflicts(sbox):
   # conflicts in place, so expect a message on stderr, but expect
   # svn to exit with an exit code of 0.
   svntest.actions.run_and_verify_svn2(None,
-                                      ["Updating '%s':\n" % (pi_path_backup),
-                                       'C    %s\n' % (pi_path_backup,),
-                                       'Updated to revision 2.\n',
-                                      'Summary of conflicts:\n',
-                                      '  Text conflicts: 1\n',
-                                      "Resolved conflicted state of '%s'\n"
-                                        % (pi_path_backup)],
+                                      update_output_with_conflicts_resolved(
+                                        2, pi_path_backup),
                                       "system(.*) returned.*", 0,
                                       'update', '--accept=edit',
                                       '--force-interactive',
@@ -3860,11 +3863,8 @@ def update_accept_conflicts(sbox):
   # rho: --accept=launch
   # Run the external merge tool, it should leave conflict markers in place.
   svntest.actions.run_and_verify_svn(None,
-                                     ["Updating '%s':\n" % (rho_path_backup),
-                                      'C    %s\n' % (rho_path_backup,),
-                                      'Updated to revision 2.\n',
-                                      'Summary of conflicts:\n',
-                                      '  Text conflicts: 1\n'],
+                                     update_output_with_conflicts(
+                                       2, rho_path_backup),
                                      [],
                                      'update', '--accept=launch',
                                      '--force-interactive',
