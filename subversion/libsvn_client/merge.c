@@ -9166,9 +9166,9 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
                    apr_pool_t *scratch_pool)
 {
   apr_array_header_t *children_with_mergeinfo;
+  svn_error_t *err;
   /* Note that this is not a single-file merge. */
   merge_b->is_single_file_merge = FALSE;
-  svn_error_t *err;
 
   /* Initialize CHILDREN_WITH_MERGEINFO. See the comment
      'THE CHILDREN_WITH_MERGEINFO ARRAY' at the start of this file. */
@@ -9193,7 +9193,7 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
                                          target_abspath,
                                          children_with_mergeinfo,
                                          processor, depth,
-                                         merge_b, scratch_pool));
+                                         merge_b, scratch_pool);
 
   merge_b->children_with_mergeinfo = NULL;
 
