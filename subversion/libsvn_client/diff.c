@@ -1192,37 +1192,6 @@ static const svn_wc_diff_callbacks4_t diff_callbacks =
    the user specifies two dates that resolve to the same revision.  */
 
 
-
-
-/* Helper function: given a working-copy ABSPATH_OR_URL, return its
-   associated url in *URL, allocated in RESULT_POOL.  If ABSPATH_OR_URL is
-   *already* a URL, that's fine, return ABSPATH_OR_URL allocated in
-   RESULT_POOL.
-
-   Use SCRATCH_POOL for temporary allocations. */
-static svn_error_t *
-convert_to_url(const char **url,
-               svn_wc_context_t *wc_ctx,
-               const char *abspath_or_url,
-               apr_pool_t *result_pool,
-               apr_pool_t *scratch_pool)
-{
-  if (svn_path_is_url(abspath_or_url))
-    {
-      *url = apr_pstrdup(result_pool, abspath_or_url);
-      return SVN_NO_ERROR;
-    }
-
-  SVN_ERR(svn_wc__node_get_url(url, wc_ctx, abspath_or_url,
-                               result_pool, scratch_pool));
-  if (! *url)
-    return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                             _("Path '%s' has no URL"),
-                             svn_dirent_local_style(abspath_or_url,
-                                                    scratch_pool));
-  return SVN_NO_ERROR;
-}
-
 /** Check if paths PATH_OR_URL1 and PATH_OR_URL2 are urls and if the
  * revisions REVISION1 and REVISION2 are local. If PEG_REVISION is not
  * unspecified, ensure that at least one of the two revisions is not
@@ -1386,22 +1355,22 @@ diff_prepare_repos_repos(const char **url1,
   const char *abspath_or_url1;
 
   if (!svn_path_is_url(path_or_url2))
-    SVN_ERR(svn_dirent_get_absolute(&abspath_or_url2, path_or_url2,
-                                    pool));
+    {
+      SVN_ERR(svn_dirent_get_absolute(&abspath_or_url2, path_or_url2, pool));
+      SVN_ERR(svn_wc__node_get_url(url2, ctx->wc_ctx, abspath_or_url2,
+                                   pool, pool));
+    }
   else
-    abspath_or_url2 = path_or_url2;
+    *url2 = abspath_or_url2 = apr_pstrdup(pool, path_or_url2);
 
   if (!svn_path_is_url(path_or_url1))
-    SVN_ERR(svn_dirent_get_absolute(&abspath_or_url1, path_or_url1,
-                                    pool));
+    {
+      SVN_ERR(svn_dirent_get_absolute(&abspath_or_url1, path_or_url1, pool));
+      SVN_ERR(svn_wc__node_get_url(url1, ctx->wc_ctx, abspath_or_url1,
+                                   pool, pool));
+    }
   else
-    abspath_or_url1 = path_or_url1;
-
-  /* Figure out URL1 and URL2. */
-  SVN_ERR(convert_to_url(url1, ctx->wc_ctx, abspath_or_url1,
-                         pool, pool));
-  SVN_ERR(convert_to_url(url2, ctx->wc_ctx, abspath_or_url2,
-                         pool, pool));
+    *url1 = abspath_or_url1 = apr_pstrdup(pool, path_or_url1);
 
   /* We need exactly one BASE_PATH, so we'll let the BASE_PATH
      calculated for PATH_OR_URL2 override the one for PATH_OR_URL1
@@ -2250,15 +2219,20 @@ diff_repos_wc(const char *path_or_url1,
   SVN_ERR_ASSERT(! svn_path_is_url(path2));
 
   if (!svn_path_is_url(path_or_url1))
-    SVN_ERR(svn_dirent_get_absolute(&abspath_or_url1, path_or_url1, pool));
+    {
+      SVN_ERR(svn_dirent_get_absolute(&abspath_or_url1, path_or_url1, pool));
+      SVN_ERR(svn_wc__node_get_url(&url1, ctx->wc_ctx, abspath_or_url1,
+                                   pool, pool));
+    }
   else
-    abspath_or_url1 = path_or_url1;
+    {
+      url1 = path_or_url1;
+      abspath_or_url1 = path_or_url1;
+    }
 
   SVN_ERR(svn_dirent_get_absolute(&abspath2, path2, pool));
 
   /* Convert path_or_url1 to a URL to feed to do_diff. */
-  SVN_ERR(convert_to_url(&url1, ctx->wc_ctx, abspath_or_url1, pool, pool));
-
   SVN_ERR(svn_wc_get_actual_target2(&anchor, &target,
                                     ctx->wc_ctx, path2,
                                     pool, pool));
@@ -2267,10 +2241,7 @@ diff_repos_wc(const char *path_or_url1,
   SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, pool));
   SVN_ERR(svn_wc__node_get_url(&anchor_url, ctx->wc_ctx, anchor_abspath,
                                pool, pool));
-  if (! anchor_url)
-    return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                             _("Directory '%s' has no URL"),
-                             svn_dirent_local_style(anchor, pool));
+  SVN_ERR_ASSERT(anchor_url != NULL);
 
   /* If we are performing a pegged diff, we need to find out what our
      actual URLs will be. */
