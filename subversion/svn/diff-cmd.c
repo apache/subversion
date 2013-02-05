@@ -221,12 +221,13 @@ svn_cl__diff(apr_getopt_t *os,
 
   if (! opt_state->old_target && ! opt_state->new_target
       && (targets->nelts == 2)
-      && svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *))
-      && svn_path_is_url(APR_ARRAY_IDX(targets, 1, const char *))
+      && (svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *))
+          || svn_path_is_url(APR_ARRAY_IDX(targets, 1, const char *)))
       && opt_state->start_revision.kind == svn_opt_revision_unspecified
       && opt_state->end_revision.kind == svn_opt_revision_unspecified)
     {
-      /* The 'svn diff OLD_URL[@OLDREV] NEW_URL[@NEWREV]' case matches. */
+      /* A 2-target diff where one or both targets are URLs. These are
+       * shorthands for some 'svn diff --old X --new Y' invocations. */
 
       SVN_ERR(svn_opt_parse_path(&opt_state->start_revision, &old_target,
                                  APR_ARRAY_IDX(targets, 0, const char *),
@@ -236,10 +237,33 @@ svn_cl__diff(apr_getopt_t *os,
                                  pool));
       targets->nelts = 0;
 
-      if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
-        opt_state->start_revision.kind = svn_opt_revision_head;
-      if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
-        opt_state->end_revision.kind = svn_opt_revision_head;
+      /* Set default start/end revisions based on target types, in the same
+       * manner as done for the corresponding '--old X --new Y' cases. */
+      if (svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *))
+          && svn_path_is_url(APR_ARRAY_IDX(targets, 1, const char *)))
+        {
+          /* The 'svn diff OLD_URL[@OLDREV] NEW_URL[@NEWREV]' case matches. */
+          if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
+            opt_state->start_revision.kind = svn_opt_revision_head;
+          if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
+            opt_state->end_revision.kind = svn_opt_revision_head;
+        }
+      else if (svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *)))
+        {
+          /* The 'svn diff OLD_URL[@OLDREV] NEW_PATH[@NEWREV]' case matches. */
+          if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
+            opt_state->start_revision.kind = svn_opt_revision_head;
+          if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
+            opt_state->end_revision.kind = svn_opt_revision_working;
+        }
+      else
+        {
+          /* The 'svn diff OLD_PATH[@OLDREV] NEW_URL[@NEWREV]' case matches. */
+          if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
+            opt_state->start_revision.kind = svn_opt_revision_working;
+          if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
+            opt_state->end_revision.kind = svn_opt_revision_head;
+        }
     }
   else if (opt_state->old_target)
     {
