@@ -235,9 +235,6 @@ typedef struct merge_target_t
   /* Absolute path to the WC node */
   const char *abspath;
 
-  /* Node kind of the WC node (at the start of the merge) */
-  svn_node_kind_t kind;
-
   /* The repository location of the base node of the target WC.  If the node
    * is locally added, then URL & REV are NULL & SVN_INVALID_REVNUM.
    * REPOS_ROOT_URL and REPOS_UUID are always valid. */
@@ -9354,10 +9351,6 @@ do_merge(apr_hash_t **modified_subtrees,
     }
 
   iterpool = svn_pool_create(scratch_pool);
-  if (target->kind != svn_node_dir && target->kind != svn_node_file)
-    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                             _("Merge target '%s' does not exist in the "
-                               "working copy"), target->abspath);
 
   /* Ensure a known depth. */
   if (depth == svn_depth_unknown)
@@ -9789,7 +9782,6 @@ ensure_wc_path_has_repo_revision(const char *path_or_url,
 }
 
 /* "Open" the target WC for a merge.  That means:
- *   - find out its node kind
  *   - find out its exact repository location
  *   - check the WC for suitability (throw an error if unsuitable)
  *
@@ -9817,34 +9809,41 @@ open_target_wc(merge_target_t **target_p,
 
   target->abspath = apr_pstrdup(result_pool, wc_abspath);
 
-  SVN_ERR(svn_wc_read_kind(&target->kind, ctx->wc_ctx, wc_abspath, FALSE,
-                           scratch_pool));
   SVN_ERR(svn_client__wc_node_get_origin(&origin, wc_abspath, ctx,
                                          result_pool, scratch_pool));
   if (origin)
     {
       target->loc = *origin;
     }
-  else if (target->kind != svn_node_none)
+  else
     {
+      svn_error_t *err;
       /* The node has no location in the repository. It's unversioned or
        * locally added or locally deleted.
        *
        * If it's locally added or deleted, find the repository root
        * URL and UUID anyway, and leave the node URL and revision as NULL
        * and INVALID.  If it's unversioned, this will throw an error. */
-      SVN_ERR(svn_wc__node_get_repos_info(NULL, NULL,
-                                          &target->loc.repos_root_url,
-                                          &target->loc.repos_uuid,
-                                          ctx->wc_ctx, wc_abspath,
-                                          result_pool, scratch_pool));
-      target->loc.rev = SVN_INVALID_REVNUM;
-      target->loc.url = NULL;
-    }
-  else
-    {
-      target->loc.repos_root_url = NULL;
-      target->loc.repos_uuid = NULL;
+      err = svn_wc__node_get_repos_info(NULL, NULL,
+                                        &target->loc.repos_root_url,
+                                        &target->loc.repos_uuid,
+                                        ctx->wc_ctx, wc_abspath,
+                                        result_pool, scratch_pool);
+
+      if (err)
+        {
+          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
+              && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY
+              && err->apr_err != SVN_ERR_WC_UPGRADE_REQUIRED)
+            return svn_error_trace(err);
+
+          return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, err,
+                                   _("Merge target '%s' does not exist in the "
+                                     "working copy"),
+                                   svn_dirent_local_style(wc_abspath,
+                                                          scratch_pool));
+        }
+
       target->loc.rev = SVN_INVALID_REVNUM;
       target->loc.url = NULL;
     }
@@ -11805,7 +11804,6 @@ svn_client_find_automatic_merge_no_wc(
             target_path_or_url, NULL, target_revision, target_revision,
             ctx, result_pool));
   s_t->target = apr_palloc(scratch_pool, sizeof(*s_t->target));
-  s_t->target->kind = svn_node_none;
   s_t->target->abspath = NULL;  /* indicate the target is not a WC */
   s_t->target->loc = *target_loc;
 
