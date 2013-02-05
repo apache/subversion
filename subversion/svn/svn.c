@@ -541,6 +541,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "       2. diff [-r N[:M]] --old=OLD-TGT[@OLDREV] [--new=NEW-TGT[@NEWREV]] \\\n"
      "               [PATH...]\n"
      "       3. diff OLD-URL[@OLDREV] NEW-URL[@NEWREV]\n"
+     "       4. diff OLD-URL[@OLDREV] NEW-PATH[@NEWREV]\n"
+     "       5. diff OLD-PATH[@OLDREV] NEW-URL[@NEWREV]\n"
      "\n"
      "  1. Display the changes made to TARGETs as they are seen in REV between\n"
      "     two revisions.  TARGETs may be all working copy paths or all URLs.\n"
@@ -557,6 +559,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     to N, -r N:M makes OLDREV default to N and NEWREV default to M.\n"
      "\n"
      "  3. Shorthand for 'svn diff --old=OLD-URL[@OLDREV] --new=NEW-URL[@NEWREV]'\n"
+     "  4. Shorthand for 'svn diff --old=OLD-URL[@OLDREV] --new=NEW-PATH[@NEWREV]'\n"
+     "  5. Shorthand for 'svn diff --old=OLD-PATH[@OLDREV] --new=NEW-URL[@NEWREV]'\n"
      "\n"
      "  Use just 'svn diff' to display local modifications in a working copy.\n"),
     {'r', 'c', opt_old_cmd, opt_new_cmd, 'N', opt_depth, opt_diff_cmd,
