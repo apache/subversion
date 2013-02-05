@@ -536,22 +536,25 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {opt_force, 'q', opt_targets, SVN_CL__LOG_MSG_OPTIONS, opt_keep_local} },
 
   { "diff", svn_cl__diff, {"di"}, N_
-    ("Display the differences between two revisions or paths.\n"
-     "usage: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
-     "       2. diff [-r N[:M]] --old=OLD-TGT[@OLDREV] [--new=NEW-TGT[@NEWREV]] \\\n"
+    ("Display local changes or differences between two revisions or paths.\n"
+     "usage: 1. diff\n"
+     "       2. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
+     "       3. diff [-r N[:M]] --old=OLD-TGT[@OLDREV] [--new=NEW-TGT[@NEWREV]] \\\n"
      "               [PATH...]\n"
-     "       3. diff OLD-URL[@OLDREV] NEW-URL[@NEWREV]\n"
-     "       4. diff OLD-URL[@OLDREV] NEW-PATH[@NEWREV]\n"
-     "       5. diff OLD-PATH[@OLDREV] NEW-URL[@NEWREV]\n"
+     "       4. diff OLD-URL[@OLDREV] NEW-URL[@NEWREV]\n"
+     "       5. diff OLD-URL[@OLDREV] NEW-PATH[@NEWREV]\n"
+     "       6. diff OLD-PATH[@OLDREV] NEW-URL[@NEWREV]\n"
      "\n"
-     "  1. Display the changes made to TARGETs as they are seen in REV between\n"
+     "  1. Use just 'svn diff' to display local modifications in a working copy.\n"
+     "\n"
+     "  2. Display the changes made to TARGETs as they are seen in REV between\n"
      "     two revisions.  TARGETs may be all working copy paths or all URLs.\n"
      "     If TARGETs are working copy paths, N defaults to BASE and M to the\n"
      "     working copy; if URLs, N must be specified and M defaults to HEAD.\n"
      "     The '-c M' option is equivalent to '-r N:M' where N = M-1.\n"
      "     Using '-c -M' does the reverse: '-r M:N' where N = M-1.\n"
      "\n"
-     "  2. Display the differences between OLD-TGT as it was seen in OLDREV and\n"
+     "  3. Display the differences between OLD-TGT as it was seen in OLDREV and\n"
      "     NEW-TGT as it was seen in NEWREV.  PATHs, if given, are relative to\n"
      "     OLD-TGT and NEW-TGT and restrict the output to differences for those\n"
      "     paths.  OLD-TGT and NEW-TGT may be working copy paths or URL[@REV].\n"
@@ -565,11 +568,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     Both targets must be of the same node kind (file or directory).\n"
      "     Diffing unversioned targets against URL targets is not supported.\n"
      "\n"
-     "  3. Shorthand for 'svn diff --old=OLD-URL[@OLDREV] --new=NEW-URL[@NEWREV]'\n"
-     "  4. Shorthand for 'svn diff --old=OLD-URL[@OLDREV] --new=NEW-PATH[@NEWREV]'\n"
-     "  5. Shorthand for 'svn diff --old=OLD-PATH[@OLDREV] --new=NEW-URL[@NEWREV]'\n"
-     "\n"
-     "  Use just 'svn diff' to display local modifications in a working copy.\n"),
+     "  4. Shorthand for 'svn diff --old=OLD-URL[@OLDREV] --new=NEW-URL[@NEWREV]'\n"
+     "  5. Shorthand for 'svn diff --old=OLD-URL[@OLDREV] --new=NEW-PATH[@NEWREV]'\n"
+     "  6. Shorthand for 'svn diff --old=OLD-PATH[@OLDREV] --new=NEW-URL[@NEWREV]'\n"),
     {'r', 'c', opt_old_cmd, opt_new_cmd, 'N', opt_depth, opt_diff_cmd,
      opt_internal_diff, 'x', opt_no_diff_added, opt_no_diff_deleted,
      opt_ignore_properties, opt_properties_only,
