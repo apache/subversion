@@ -1152,6 +1152,10 @@ def basic_delete(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'rm', '--force', X_path)
 
+  # Deleting an unchanged copy shouldn't error.
+  sbox.simple_copy('iota', 'iota2')
+  svntest.main.run_svn(None, 'rm', sbox.ospath('iota2'))
+
   # Deleting already removed from wc versioned item with --force
   iota_path = sbox.ospath('iota')
   os.remove(iota_path)
