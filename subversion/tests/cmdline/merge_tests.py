@@ -17495,6 +17495,13 @@ def merge_source_with_replacement(sbox):
                                      'merge', sbox.repo_url + '/A',
                                      A_COPY_path)
 
+  # Misleading notifications are one thing, incorrect mergeinfo is quite
+  # another.
+  svntest.actions.run_and_verify_svn(None,
+                                     [A_COPY_path + ' - /A:2-5,7-8\n'],
+                                     [], 'pg', SVN_PROP_MERGEINFO,
+                                     '-R', A_COPY_path)
+
 #----------------------------------------------------------------------
 # Test for issue #4144 'Reverse merge with replace in source applies
 # diffs in forward order'.
