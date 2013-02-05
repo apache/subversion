@@ -287,9 +287,16 @@ arbitrary_diff_walker(void *baton, const char *local_abspath,
                       const apr_finfo_t *finfo,
                       apr_pool_t *scratch_pool);
 
-/* Produce a diff between two arbitrary directories at LOCAL_ABSPATH1 and
- * LOCAL_ABSPATH2, using the provided diff callbacks to show file changes
- * and, for versioned nodes, property changes.
+/* Another forward declaration. */
+static svn_error_t *
+arbitrary_diff_this_dir(struct arbitrary_diff_walker_baton *b,
+                        const char *local_abspath,
+                        svn_depth_t depth,
+                        apr_pool_t *scratch_pool);
+
+/* Produce a diff of depth DEPTH between two arbitrary directories at
+ * LOCAL_ABSPATH1 and LOCAL_ABSPATH2, using the provided diff callbacks
+ * to show file changes and, for versioned nodes, property changes.
  *
  * If ROOT_ABSPATH1 and ROOT_ABSPATH2 are not NULL, show paths in diffs
  * relative to these roots, rather than relative to LOCAL_ABSPATH1 and
@@ -300,6 +307,7 @@ do_arbitrary_dirs_diff(const char *local_abspath1,
                        const char *local_abspath2,
                        const char *root_abspath1,
                        const char *root_abspath2,
+                       svn_depth_t depth,
                        const svn_wc_diff_callbacks4_t *callbacks,
                        void *diff_baton,
                        svn_client_ctx_t *ctx,
@@ -331,22 +339,25 @@ do_arbitrary_dirs_diff(const char *local_abspath1,
                                    NULL, svn_io_file_del_on_pool_cleanup,
                                    scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_io_dir_walk2(b.recursing_within_added_subtree ? local_abspath2
-                                                            : local_abspath1,
-                           0, arbitrary_diff_walker, &b, scratch_pool));
-
+  if (depth <= svn_depth_immediates)
+    SVN_ERR(arbitrary_diff_this_dir(&b, local_abspath1, depth, scratch_pool));
+  else if (depth == svn_depth_infinity)
+    SVN_ERR(svn_io_dir_walk2(b.recursing_within_added_subtree ? local_abspath2
+                                                              : local_abspath1,
+                             0, arbitrary_diff_walker, &b, scratch_pool));
   return SVN_NO_ERROR;
 }
 
-/* An implementation of svn_io_walk_func_t.
- * Note: LOCAL_ABSPATH is the path being crawled and can be on either side
+/* Produce a diff of depth DEPTH for the directory at LOCAL_ABSPATH,
+ * using information from the arbitrary_diff_walker_baton B.
+ * LOCAL_ABSPATH is the path being crawled and can be on either side
  * of the diff depending on baton->recursing_within_added_subtree. */
 static svn_error_t *
-arbitrary_diff_walker(void *baton, const char *local_abspath,
-                      const apr_finfo_t *finfo,
-                      apr_pool_t *scratch_pool)
+arbitrary_diff_this_dir(struct arbitrary_diff_walker_baton *b,
+                        const char *local_abspath,
+                        svn_depth_t depth,
+                        apr_pool_t *scratch_pool)
 {
-  struct arbitrary_diff_walker_baton *b = baton;
   const char *local_abspath1;
   const char *local_abspath2;
   svn_node_kind_t kind1;
@@ -358,12 +369,6 @@ arbitrary_diff_walker(void *baton, const char *local_abspath,
   apr_array_header_t *sorted_dirents;
   int i;
   apr_pool_t *iterpool;
-
-  if (b->ctx->cancel_func)
-    SVN_ERR(b->ctx->cancel_func(b->ctx->cancel_baton));
-
-  if (finfo->filetype != APR_DIR)
-    return SVN_NO_ERROR;
 
   if (b->recursing_within_adm_dir)
     {
@@ -398,12 +403,15 @@ arbitrary_diff_walker(void *baton, const char *local_abspath,
                                    scratch_pool);
   SVN_ERR(svn_io_check_resolved_path(local_abspath2, &kind2, scratch_pool));
 
-  if (kind1 == svn_node_dir)
-    SVN_ERR(svn_io_get_dirents3(&dirents1, local_abspath1,
-                                TRUE, /* only_check_type */
-                                scratch_pool, scratch_pool));
-  else
-    dirents1 = apr_hash_make(scratch_pool);
+  if (depth > svn_depth_empty)
+    {
+      if (kind1 == svn_node_dir)
+        SVN_ERR(svn_io_get_dirents3(&dirents1, local_abspath1,
+                                    TRUE, /* only_check_type */
+                                    scratch_pool, scratch_pool));
+      else
+        dirents1 = apr_hash_make(scratch_pool);
+    }
 
   if (kind2 == svn_node_dir)
     {
@@ -425,13 +433,19 @@ arbitrary_diff_walker(void *baton, const char *local_abspath,
                                                 b->diff_baton,
                                                 scratch_pool));
 
-      /* Read directory entries. */
-      SVN_ERR(svn_io_get_dirents3(&dirents2, local_abspath2,
-                                  TRUE, /* only_check_type */
-                                  scratch_pool, scratch_pool));
+      if (depth > svn_depth_empty)
+        {
+          /* Read directory entries. */
+          SVN_ERR(svn_io_get_dirents3(&dirents2, local_abspath2,
+                                      TRUE, /* only_check_type */
+                                      scratch_pool, scratch_pool));
+        }
     }
-  else
+  else if (depth > svn_depth_empty)
     dirents2 = apr_hash_make(scratch_pool);
+
+  if (depth <= svn_depth_empty)
+    return SVN_NO_ERROR;
 
   /* Compare dirents1 to dirents2 and show added/deleted/changed files. */
   merged_dirents = apr_hash_merge(scratch_pool, dirents1, dirents2,
@@ -482,7 +496,25 @@ arbitrary_diff_walker(void *baton, const char *local_abspath,
 
       if (dirent1->kind == svn_node_dir &&
           dirent2->kind == svn_node_dir)
-        continue;
+        {
+          if (depth == svn_depth_immediates)
+            {
+              /* Not using the walker, so show property diffs on these dirs. */
+              SVN_ERR(do_arbitrary_dirs_diff(child1_abspath, child2_abspath,
+                                             b->root1_abspath, b->root2_abspath,
+                                             svn_depth_empty,
+                                             b->callbacks, b->diff_baton,
+                                             b->ctx, iterpool));
+            }
+          else
+            {
+              /* Either the walker will visit these directories (with
+               * depth=infinity) and they will be processed as 'this dir'
+               * later, or we're showing file children only (depth=files). */
+              continue;
+            }
+
+        }
 
       /* Files that exist only in dirents1. */
       if (dirent1->kind == svn_node_file &&
@@ -521,10 +553,14 @@ arbitrary_diff_walker(void *baton, const char *local_abspath,
 
       /* Directories that only exist in dirents2. These aren't crawled
        * by this walker so we have to crawl them separately. */
-      if (dirent2->kind == svn_node_dir &&
+      if (depth > svn_depth_files &&
+          dirent2->kind == svn_node_dir &&
           (dirent1->kind == svn_node_file || dirent1->kind == svn_node_none))
         SVN_ERR(do_arbitrary_dirs_diff(child1_abspath, child2_abspath,
                                        b->root1_abspath, b->root2_abspath,
+                                       depth <= svn_depth_immediates
+                                         ? svn_depth_empty
+                                         : svn_depth_infinity ,
                                        b->callbacks, b->diff_baton,
                                        b->ctx, iterpool));
     }
@@ -534,14 +570,32 @@ arbitrary_diff_walker(void *baton, const char *local_abspath,
   return SVN_NO_ERROR;
 }
 
-/* Produce a diff between two files or two directories at LOCAL_ABSPATH1
- * and LOCAL_ABSPATH2, using the provided diff callbacks to show changes
- * in files. The files and directories involved may be part of a working
- * copy or they may be unversioned. For versioned files, show property
- * changes, too. */
+/* An implementation of svn_io_walk_func_t.
+ * Note: LOCAL_ABSPATH is the path being crawled and can be on either side
+ * of the diff depending on baton->recursing_within_added_subtree. */
+static svn_error_t *
+arbitrary_diff_walker(void *baton, const char *local_abspath,
+                      const apr_finfo_t *finfo,
+                      apr_pool_t *scratch_pool)
+{
+  struct arbitrary_diff_walker_baton *b = baton;
+
+  if (b->ctx->cancel_func)
+    SVN_ERR(b->ctx->cancel_func(b->ctx->cancel_baton));
+
+  if (finfo->filetype != APR_DIR)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(arbitrary_diff_this_dir(b, local_abspath, svn_depth_infinity,
+                                  scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_client__arbitrary_nodes_diff(const char *local_abspath1,
                                  const char *local_abspath2,
+                                 svn_depth_t depth,
                                  const svn_wc_diff_callbacks4_t *callbacks,
                                  void *diff_baton,
                                  svn_client_ctx_t *ctx,
@@ -558,6 +612,9 @@ svn_client__arbitrary_nodes_diff(const char *local_abspath1,
                              _("'%s' is not the same node kind as '%s'"),
                              local_abspath1, local_abspath2);
 
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_infinity;
+
   if (kind1 == svn_node_file)
     SVN_ERR(do_arbitrary_files_diff(local_abspath1, local_abspath2,
                                     svn_dirent_basename(local_abspath1,
@@ -567,7 +624,7 @@ svn_client__arbitrary_nodes_diff(const char *local_abspath1,
                                     ctx, scratch_pool));
   else if (kind1 == svn_node_dir)
     SVN_ERR(do_arbitrary_dirs_diff(local_abspath1, local_abspath2,
-                                   NULL, NULL,
+                                   NULL, NULL, depth,
                                    callbacks, diff_baton,
                                    ctx, scratch_pool));
   else

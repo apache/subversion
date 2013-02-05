@@ -2479,6 +2479,7 @@ do_diff(const svn_wc_diff_callbacks4_t *callbacks,
               SVN_ERR(svn_dirent_get_absolute(&abspath2, path_or_url2, pool));
 
               SVN_ERR(svn_client__arbitrary_nodes_diff(abspath1, abspath2,
+                                                       depth,
                                                        callbacks,
                                                        callback_baton,
                                                        ctx, pool));
@@ -2784,6 +2785,7 @@ do_diff_summarize(svn_client_diff_summarize_func_t summarize_func,
                      summarize_func, summarize_baton, pool));
 
              SVN_ERR(svn_client__arbitrary_nodes_diff(abspath1, abspath2,
+                                                      depth,
                                                       callbacks,
                                                       callback_baton,
                                                       ctx, pool));
