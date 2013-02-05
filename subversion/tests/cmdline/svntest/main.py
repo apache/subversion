@@ -1193,7 +1193,7 @@ def summary_of_conflicts(text_conflicts=0, prop_conflicts=0,
      parameters are zero, return an empty list.
   """
   lines = []
-  if text_conflicts or prop_conflicts or tree_conflicts:
+  if text_conflicts or prop_conflicts or tree_conflicts or skipped_paths:
     lines.append("Summary of conflicts:\n")
     if text_conflicts:
       lines.append("  Text conflicts: %d\n" % text_conflicts)
