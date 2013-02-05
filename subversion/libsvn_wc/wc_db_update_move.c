@@ -220,9 +220,10 @@ mark_tree_conflict(struct tc_editor_baton *b,
                    svn_wc_conflict_reason_t reason,
                    svn_wc_conflict_action_t action,
                    const char *moved_away_op_root_relpath,
-                   svn_skel_t *conflict,
                    apr_pool_t *scratch_pool)
 {
+  svn_error_t *err;
+  svn_skel_t *conflict;
   svn_wc_conflict_version_t *old_version, *new_version;
   const char *moved_away_op_root_abspath
     = moved_away_op_root_relpath
@@ -247,7 +248,52 @@ mark_tree_conflict(struct tc_editor_baton *b,
                                                    local_relpath),
                          scratch_pool);
 
-  if (!conflict)
+  err = svn_wc__db_read_conflict_internal(&conflict, b->wcroot, local_relpath,
+                                          scratch_pool, scratch_pool);
+  if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+    return err;
+  else if (err)
+    {
+      svn_error_clear(err);
+      conflict = NULL;
+    }
+
+  if (conflict)
+    {
+      svn_wc_conflict_reason_t existing_reason;
+      svn_wc_conflict_action_t existing_action;
+      const char *existing_abspath;
+
+      err = svn_wc__conflict_read_tree_conflict(&existing_reason,
+                                                &existing_action,
+                                                &existing_abspath,
+                                                b->db, b->wcroot->abspath,
+                                                conflict,
+                                                scratch_pool, scratch_pool);
+      if (err && err->apr_err != SVN_ERR_WC_MISSING)
+        return err;
+
+      if (!err)
+        {
+          if (reason != existing_reason
+              || action != existing_action
+              || (reason == svn_wc_conflict_reason_moved_away
+                  && strcmp(moved_away_op_root_relpath,
+                            svn_dirent_skip_ancestor(b->wcroot->abspath,
+                                                     existing_abspath))))
+            return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                                     _("'%s' already in conflict"),
+                                     svn_dirent_local_style(local_relpath,
+                                                            scratch_pool));
+
+          /* Already a suitable tree-conflict. */
+          return SVN_NO_ERROR;
+        }
+
+      /* Not a tree-conflict. */
+      svn_error_clear(err);
+    }
+  else
     conflict = svn_wc__conflict_skel_create(scratch_pool);
 
   b->conflict_root_relpath = apr_pstrdup(b->result_pool, local_relpath);
@@ -324,7 +370,6 @@ check_tree_conflict(svn_boolean_t *is_conflicted,
   const char *conflict_root_relpath = local_relpath;
   const char *moved_to_relpath, *moved_to_op_root_relpath;
   const char *moved_away_op_root_relpath;
-  svn_skel_t *conflict;
 
   if (b->conflict_root_relpath)
     {
@@ -364,28 +409,6 @@ check_tree_conflict(svn_boolean_t *is_conflicted,
       action = svn_wc_conflict_action_edit;
     }
 
-  SVN_ERR(svn_wc__db_read_conflict_internal(&conflict, b->wcroot,
-                                            conflict_root_relpath,
-                                            scratch_pool, scratch_pool));
-
-  if (conflict)
-    {
-      svn_error_t *err
-        = svn_wc__conflict_read_tree_conflict(NULL, NULL, NULL,
-                                              b->db, b->wcroot->abspath,
-                                              conflict,
-                                              scratch_pool, scratch_pool);
-      if (err && err->apr_err != SVN_ERR_WC_MISSING)
-        return err;
-
-      if (!err)
-        /* Already a tree-conflict. */
-        return SVN_NO_ERROR;
-
-      /* Not a tree-conflict. */
-      svn_error_clear(err);
-    }
-
   SVN_ERR(svn_wc__db_op_depth_moved_to(&moved_to_relpath,
                                        &moved_to_op_root_relpath,
                                        &moved_away_op_root_relpath,
@@ -399,7 +422,7 @@ check_tree_conflict(svn_boolean_t *is_conflicted,
                               ? svn_wc_conflict_reason_moved_away
                               : svn_wc_conflict_reason_deleted),
                              action, moved_away_op_root_relpath,
-                             conflict, scratch_pool));
+                             scratch_pool));
   if (b->notify_func)
     SVN_ERR(update_move_list_add(b->wcroot, local_relpath,
                                  svn_wc_notify_tree_conflict,
@@ -472,7 +495,7 @@ tc_editor_add_directory(void *baton,
       SVN_ERR(mark_tree_conflict(b, relpath, old_kind, svn_node_dir,
                                  move_dst_repos_relpath,
                                  svn_wc_conflict_reason_unversioned,
-                                 svn_wc_conflict_action_add, NULL, NULL,
+                                 svn_wc_conflict_action_add, NULL,
                                  scratch_pool));
       action = svn_wc_notify_tree_conflict;
       break;
@@ -556,7 +579,7 @@ tc_editor_add_file(void *baton,
       SVN_ERR(mark_tree_conflict(b, relpath, old_kind, svn_node_file,
                                  move_dst_repos_relpath,
                                  svn_wc_conflict_reason_unversioned,
-                                 svn_wc_conflict_action_add, NULL, NULL,
+                                 svn_wc_conflict_action_add, NULL,
                                  scratch_pool));
       if (b->notify_func)
         SVN_ERR(update_move_list_add(b->wcroot, relpath,
@@ -1072,7 +1095,7 @@ tc_editor_delete(void *baton,
           is_conflicted = TRUE;
           SVN_ERR(mark_tree_conflict(b, relpath, move_dst_kind, svn_node_none,
                                      move_dst_repos_relpath, reason,
-                                     svn_wc_conflict_action_delete, NULL, NULL,
+                                     svn_wc_conflict_action_delete, NULL,
                                      scratch_pool));
           if (b->notify_func)
             SVN_ERR(update_move_list_add(b->wcroot, relpath,
@@ -1981,7 +2004,7 @@ resolve_delete_raise_moved_away(svn_wc__db_wcroot_t *wcroot,
                                  svn_node_dir /* ### ? */,
                                  moved_dst_repos_relpath,
                                  svn_wc_conflict_reason_moved_away,
-                                 action, local_relpath, NULL, iterpool));
+                                 action, local_relpath, iterpool));
 
       /* ### Do notification? */
 
