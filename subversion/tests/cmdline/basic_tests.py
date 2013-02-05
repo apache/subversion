@@ -1052,6 +1052,10 @@ def basic_delete(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
+  # Copies of unmodified
+  sbox.simple_copy('iota', 'iota-copied')
+  sbox.simple_copy('A/B/F', 'F-copied')
+
   # modify text of chi
   chi_parent_path = sbox.ospath('A/D/H')
   chi_path = os.path.join(chi_parent_path, 'chi')
@@ -1094,9 +1098,11 @@ def basic_delete(sbox):
   expected_output.tweak('A/D/G/rho', 'A/B/F', status=' M')
 #  expected_output.tweak('A/C/sigma', status='? ')
   expected_output.add({
-    'A/B/X' : Item(status='A ', wc_rev=0),
-    'A/B/X/xi' : Item(status='A ', wc_rev=0),
-    'A/D/Y' : Item(status='A ', wc_rev=0),
+    'A/B/X'       : Item(status='A ', wc_rev='-'),
+    'A/B/X/xi'    : Item(status='A ', wc_rev='-'),
+    'A/D/Y'       : Item(status='A ', wc_rev='-'),
+    'F-copied'    : Item(status='A ', copied='+', wc_rev='-'),
+    'iota-copied' : Item(status='A ', copied='+', wc_rev='-'),
     })
 
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
@@ -1153,8 +1159,10 @@ def basic_delete(sbox):
                                      'rm', '--force', X_path)
 
   # Deleting an unchanged copy shouldn't error.
-  sbox.simple_copy('iota', 'iota2')
-  svntest.main.run_svn(None, 'rm', sbox.ospath('iota2'))
+  sbox.simple_mkdir('Z-added')
+  svntest.main.run_svn(None, 'rm', sbox.ospath('iota-copied'),
+                                   sbox.ospath('F-copied'),
+                                   sbox.ospath('Z-added'))
 
   # Deleting already removed from wc versioned item with --force
   iota_path = sbox.ospath('iota')
