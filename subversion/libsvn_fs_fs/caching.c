@@ -66,7 +66,8 @@ read_config(svn_memcache_t **memcache_p,
   *cache_txdeltas
     = svn_hash__get_bool(fs->config,
                          SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
-                         FALSE);
+                         TRUE);
+
   /* by default, cache fulltexts.
    * Most SVN tools care about reconstructed file content.
    * Thus, this is a reasonable default.
