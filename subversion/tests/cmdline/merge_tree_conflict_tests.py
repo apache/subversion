@@ -1876,7 +1876,6 @@ def merge_replace_causes_tree_conflict2(sbox):
 # Test for issue #4011 'merge of replacement on local delete fails'
 @SkipUnless(server_has_mergeinfo)
 @Issue(4011)
-@XFail()
 def merge_replace_on_del_fails(sbox):
   "merge replace on local delete fails"
 
