@@ -313,10 +313,6 @@ typedef struct merge_cmd_baton_t {
      represent the roots of subtrees added by the merge. */
   apr_hash_t *added_abspaths;
 
-  /* A hash of (const char *) absolute WC paths mapped to the same which
-     represent the roots of subtrees deleted by the merge. */
-  apr_hash_t *deleted_abspaths;
-
   /* A list of tree conflict victim absolute paths which may be NULL. */
   apr_hash_t *tree_conflicted_abspaths;
 
@@ -350,7 +346,7 @@ typedef struct merge_cmd_baton_t {
   /* State for notify_merge_begin() */
   struct notify_begin_state_t
   {
-    /* Cache contain which abspath was last notified. */
+    /* Cache of which abspath was last notified. */
     const char *last_abspath;
 
     /* Reference to the one-and-only CHILDREN_WITH_MERGEINFO (see global
@@ -1540,8 +1536,6 @@ record_update_add(merge_cmd_baton_t *merge_b,
   if (merge_b->merge_source.ancestral || merge_b->reintegrate_merge)
     {
       store_path(merge_b->merged_abspaths, local_abspath);
-      apr_hash_set(merge_b->deleted_abspaths, local_abspath,
-                   APR_HASH_KEY_STRING, NULL);
     }
 
   if (merge_b->ctx->notify_func2)
@@ -1616,6 +1610,7 @@ record_update_delete(merge_cmd_baton_t *merge_b,
          paths. */
       apr_hash_set(merge_b->added_abspaths, local_abspath,
                    APR_HASH_KEY_STRING, NULL);
+      store_path(merge_b->merged_abspaths, local_abspath);
     }
 
   SVN_ERR(notify_merge_begin(merge_b, local_abspath, TRUE, scratch_pool));
@@ -2528,8 +2523,6 @@ merge_file_deleted(const char *relpath,
 
       SVN_ERR(record_update_delete(merge_b, fb->parent_baton, local_abspath,
                                    svn_node_file, scratch_pool));
-
-      store_path(merge_b->deleted_abspaths, local_abspath);
     }
   else
     {
@@ -3152,8 +3145,6 @@ merge_dir_deleted(const char *relpath,
 
       SVN_ERR(record_update_delete(merge_b, db->parent_baton, local_abspath,
                                    svn_node_dir, scratch_pool));
-
-      store_path(merge_b->deleted_abspaths, local_abspath);
     }
 
   return SVN_NO_ERROR;
@@ -7384,7 +7375,6 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
     }
 
   /* Caller must call svn_sleep_for_timestamps() */
-  *(merge_b->use_sleep) = TRUE;
   merge_b->notify_begin.nodes_with_mergeinfo = NULL;
 
   svn_pool_destroy(iterpool);
@@ -7565,7 +7555,6 @@ subtree_touched_by_merge(const char *local_abspath,
   return (path_is_subtree(local_abspath, merge_b->merged_abspaths, pool)
           || path_is_subtree(local_abspath, merge_b->skipped_abspaths, pool)
           || path_is_subtree(local_abspath, merge_b->added_abspaths, pool)
-          || path_is_subtree(local_abspath, merge_b->deleted_abspaths, pool)
           || path_is_subtree(local_abspath, merge_b->tree_conflicted_abspaths,
                              pool));
 }
@@ -9427,7 +9416,6 @@ do_merge(apr_hash_t **modified_subtrees,
 
   merge_cmd_baton.skipped_abspaths = apr_hash_make(result_pool);
   merge_cmd_baton.added_abspaths = apr_hash_make(result_pool);
-  merge_cmd_baton.deleted_abspaths = apr_hash_make(result_pool);
   merge_cmd_baton.tree_conflicted_abspaths = apr_hash_make(result_pool);
 
   {
@@ -9551,9 +9539,6 @@ do_merge(apr_hash_t **modified_subtrees,
       *modified_subtrees =
           apr_hash_overlay(result_pool, *modified_subtrees,
                            merge_cmd_baton.added_abspaths);
-      *modified_subtrees =
-          apr_hash_overlay(result_pool, *modified_subtrees,
-                           merge_cmd_baton.deleted_abspaths);
       *modified_subtrees =
           apr_hash_overlay(result_pool, *modified_subtrees,
                            merge_cmd_baton.skipped_abspaths);
