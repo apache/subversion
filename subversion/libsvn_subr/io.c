@@ -3416,10 +3416,10 @@ svn_io_file_aligned_seek(apr_file_t *file,
                          apr_pool_t *pool)
 {
   apr_size_t file_buffer_size = 4096;
-  char dummy;
   apr_off_t desired_buffer = 0;
   apr_off_t current = 0;
   apr_off_t aligned_offset = 0;
+  svn_boolean_t fill_buffer = FALSE;
 
   /* paranoia check: huge blocks on 32 bit machines may cause overflows */
   SVN_ERR_ASSERT(block_size == (apr_size_t)block_size);
@@ -3437,8 +3437,7 @@ svn_io_file_aligned_seek(apr_file_t *file,
 
       /* seek to the start of the block and cause APR to read 1 block */
       aligned_offset = offset - (offset % block_size);
-      SVN_ERR(svn_io_file_seek(file, SEEK_SET, &aligned_offset, pool));
-      SVN_ERR(svn_io_file_getc(&dummy, file, pool));
+      fill_buffer = TRUE;
     }
   else
 #endif
@@ -3451,22 +3450,34 @@ svn_io_file_aligned_seek(apr_file_t *file,
          definitely lies outside the current buffer.
        */
       SVN_ERR(svn_io_file_seek(file, SEEK_CUR, &current, pool));
-      if (   aligned_offset + file_buffer_size <= current
-          || current + file_buffer_size >= aligned_offset)
-        {
-          /* seek to the start of the block and cause APR to read 1 block */
-          SVN_ERR(svn_io_file_seek(file, SEEK_SET, &aligned_offset, pool));
-          SVN_ERR(svn_io_file_getc(&dummy, file, pool));
-        }
+      fill_buffer = aligned_offset + file_buffer_size <= current
+                 || current + file_buffer_size >= aligned_offset;
+    }
+
+  if (fill_buffer)
+    {
+      char dummy;
+      apr_status_t status;
+
+      /* seek to the start of the block and cause APR to read 1 block */
+      SVN_ERR(svn_io_file_seek(file, SEEK_SET, &aligned_offset, pool));
+      status = apr_file_getc(&dummy, file);
+
+      /* read may fail if we seek to or behind EOF.  That's ok then. */
+      if (status != APR_SUCCESS && !APR_STATUS_IS_EOF(status))
+        return do_io_file_wrapper_cleanup(file, status,
+                                          N_("Can't read file '%s'"),
+                                          N_("Can't read stream"),
+                                          pool);
     }
 
   /* finally, seek to the OFFSET the caller wants */
   desired_buffer = offset;
   SVN_ERR(svn_io_file_seek(file, SEEK_SET, &offset, pool));
-  if (desired_buffer == offset)
+  if (desired_buffer != offset)
     return do_io_file_wrapper_cleanup(file, APR_EOF,
-                                      N_("Can't read file '%s'"),
-                                      N_("Can't read stream"),
+                                      N_("Can't seek in file '%s'"),
+                                      N_("Can't seek in stream"),
                                       pool);
 
   /* return the buffer start that we (probably) enforced */
