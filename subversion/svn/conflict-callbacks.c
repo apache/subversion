@@ -390,6 +390,21 @@ static const resolver_option_t tree_conflict_options[] =
   { NULL }
 };
 
+static const resolver_option_t tree_conflict_options_update_moved_away[] =
+{
+  { "p",  "postpone",         N_("resolve the conflict later"),
+                              svn_wc_conflict_choose_postpone },
+  { "mc", "mine-conflict",    N_("apply the update to the move destination"),
+                              svn_wc_conflict_choose_mine_conflict },
+  { "tc", "theirs-conflict",  N_("break the move, change move destination into "
+                                 "a copy"),
+                              svn_wc_conflict_choose_theirs_conflict },
+  { "q",  "quit",             N_("postpone all remaining conflicts"),
+                              svn_cl__accept_postpone },
+  { "h",  "help",             N_("show this help (also '?')"), -1 },
+  { NULL }
+};
+
 /* Return a pointer to the option description in OPTIONS matching the
  * one- or two-character OPTION_CODE.  Return NULL if not found. */
 static const resolver_option_t *
@@ -823,11 +838,20 @@ handle_tree_conflict(svn_wc_conflict_result_t *result,
   while (1)
     {
       const resolver_option_t *opt;
+      const resolver_option_t *tc_opts;
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(prompt_user(&opt, tree_conflict_options, NULL, b->pb,
-                          iterpool));
+      if ((desc->operation == svn_wc_operation_update ||
+           desc->operation == svn_wc_operation_switch) &&
+          desc->reason == svn_wc_conflict_reason_moved_away)
+        {
+          tc_opts = tree_conflict_options_update_moved_away;
+        }
+      else
+        tc_opts = tree_conflict_options;
+
+      SVN_ERR(prompt_user(&opt, tc_opts, NULL, b->pb, iterpool));
       if (! opt)
         continue;
 
