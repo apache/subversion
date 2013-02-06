@@ -1924,6 +1924,9 @@ merge_file_opened(void **new_file_baton,
       svn_boolean_t excluded;
       svn_depth_t parent_depth;
 
+      if (! right_source)
+        fb->tree_conflict_action = svn_wc_conflict_action_delete;
+
       {
         svn_wc_notify_state_t obstr_state;
 
@@ -2021,12 +2024,22 @@ merge_file_opened(void **new_file_baton,
           && contains_path(pdb->pending_deletes, local_abspath))
         {
           fb->add_is_replace = TRUE;
+          fb->tree_conflict_action = svn_wc_conflict_action_replace;
 
           apr_hash_set(pdb->pending_deletes, local_abspath,
                        APR_HASH_KEY_STRING, NULL);
         }
 
-      if (! (merge_b->dry_run && ((pdb && pdb->added) || fb->add_is_replace)))
+      if (contains_path(merge_b->tree_conflicted_abspaths, local_abspath))
+        {
+          *skip = TRUE;
+
+          /* ### TODO: Update the tree conflict to store that this is a replace */
+
+          return SVN_NO_ERROR;
+        }
+      else if (! (merge_b->dry_run
+                  && ((pdb && pdb->added) || fb->add_is_replace)))
         {
           svn_wc_notify_state_t obstr_state;
           svn_node_kind_t kind;
@@ -2641,6 +2654,9 @@ merge_dir_opened(void **new_dir_baton,
       svn_boolean_t excluded;
       svn_depth_t parent_depth;
 
+      if (! right_source)
+          db->tree_conflict_action = svn_wc_conflict_action_delete;
+
       /* Check for an obstructed or missing node on disk. */
       {
         svn_wc_notify_state_t obstr_state;
@@ -2782,12 +2798,23 @@ merge_dir_opened(void **new_dir_baton,
           && contains_path(pdb->pending_deletes, local_abspath))
         {
           db->add_is_replace = TRUE;
+          db->tree_conflict_action = svn_wc_conflict_action_replace;
 
           apr_hash_set(pdb->pending_deletes, local_abspath,
                        APR_HASH_KEY_STRING, NULL);
         }
 
-      if (! (merge_b->dry_run && ((pdb && pdb->added) || db->add_is_replace)))
+      if (contains_path(merge_b->tree_conflicted_abspaths, local_abspath))
+        {
+          *skip = TRUE;
+          *skip_children = TRUE;
+
+          /* ### TODO: Update the tree conflict to store that this is a replace */
+
+          return SVN_NO_ERROR;
+        }
+      else if (! (merge_b->dry_run
+                  && ((pdb && pdb->added) || db->add_is_replace)))
         {
           svn_wc_notify_state_t obstr_state;
           svn_node_kind_t kind;
