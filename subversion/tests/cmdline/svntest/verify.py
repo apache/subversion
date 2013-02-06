@@ -101,11 +101,12 @@ class ExpectedOutput(object):
 
   def __init__(self, expected, match_all=True):
     """Initialize the expected output to EXPECTED which is a string, or
-    a list of strings, or None meaning an empty list. If MATCH_ALL is True, the
+    a list of strings. If MATCH_ALL is True, the
     expected strings will be matched with the actual strings, one-to-one, in
     the same order. If False, they will be matched with a subset of the
     actual strings, one-to-one, in the same order, ignoring any other actual
     strings among the matching ones."""
+    assert expected is not None
     self.expected = expected
     self.match_all = match_all
 
@@ -117,13 +118,11 @@ class ExpectedOutput(object):
                     "see the 'matches()' method")
 
   def matches(self, actual, except_re=None):
-    """Return whether SELF.expected matches OTHER (which may be a list
-    of newline-terminated lines, or a single string).  Either value
-    may be None."""
+    """Return whether SELF.expected matches ACTUAL (which may be a list
+    of newline-terminated lines, or a single string).  ACTUAL may be None,
+    meaning an empty list."""
     expected = self.expected
-    if expected is None:
-      expected = []
-    elif not isinstance(expected, list):
+    if not isinstance(expected, list):
       expected = [expected]
     if actual is None:
       actual = []
@@ -180,7 +179,7 @@ class ExpectedOutput(object):
 class AnyOutput(ExpectedOutput):
   """Matches any non-empty output."""
   def __init__(self):
-    ExpectedOutput.__init__(self, None, False)
+    ExpectedOutput.__init__(self, [], False)
 
   def is_equivalent_list(self, ignored, actual):
     if len(actual) == 0:
@@ -353,13 +352,15 @@ def compare_and_display_lines(message, label, expected, actual,
                               raisable=None, except_re=None):
   """Compare two sets of output lines, and print them if they differ,
   preceded by MESSAGE iff not None.  EXPECTED may be an instance of
-  ExpectedOutput (and if not, it is wrapped as such).  RAISABLE is an
+  ExpectedOutput (and if not, it is wrapped as such).  ACTUAL may be a
+  list of newline-terminated lines, or a single string.  RAISABLE is an
   exception class, an instance of which is thrown if ACTUAL doesn't
   match EXPECTED."""
   if raisable is None:
     raisable = svntest.main.SVNLineUnequal
   ### It'd be nicer to use createExpectedOutput() here, but its
   ### semantics don't match all current consumers of this function.
+  assert expected is not None
   if not isinstance(expected, ExpectedOutput):
     expected = ExpectedOutput(expected)
 
