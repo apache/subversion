@@ -1079,7 +1079,7 @@ def merge_replacement(sbox):
 
 @SkipUnless(server_has_mergeinfo)
 @Issue(4313)
-@XFail()
+
 # Test for issue #4313 'replaced merges source causes assertion during
 # automatic merge'
 def auto_merge_handles_replacements_in_merge_source(sbox):
@@ -1104,7 +1104,9 @@ def auto_merge_handles_replacements_in_merge_source(sbox):
   sbox.simple_update()
 
   # Merge^/A to branch-2, it should be a no-op but for mergeinfo changes,
-  # but it *should* work.  Currently this asserts:
+  # but it *should* work.  Previously this failed because automatic merges
+  # weren't adhering to the merge source normalization rules, resulting in
+  # this assertion:
   #
   #   >svn merge ^/A branch-2
   #   ..\..\..\subversion\libsvn_client\merge.c:4568: (apr_err=235000)
