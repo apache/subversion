@@ -1256,10 +1256,10 @@ prepare_merge_props_changed(const apr_array_header_t **prop_updates,
     }
   *prop_updates = props;
 
-  /* If this is not a dry run then make a record in BATON if we find a
-     PATH where mergeinfo is added where none existed previously or PATH
-     is having its existing mergeinfo deleted. */
-  if (!merge_b->dry_run && props->nelts)
+  /* Make a record in BATON if we find a PATH where mergeinfo is added
+     where none existed previously or PATH is having its existing
+     mergeinfo deleted. */
+  if (props->nelts)
     {
       int i;
 
@@ -5162,10 +5162,11 @@ remove_absent_children(const char *target_wcpath,
    drive removes explicit mergeinfo from a subtree of the merge target.
 
    MERGE_B is cascaded from the argument of the same name in
-   do_directory_merge().  If MERGE_B->DRY_RUN is true do nothing, if it is
-   false then for each path (if any) in MERGE_B->PATHS_WITH_DELETED_MERGEINFO
-   remove that path from CHILDREN_WITH_MERGEINFO by setting that
-   child to NULL.  The one exception is for the merge target itself,
+   do_directory_merge().  For each path (if any) in
+   MERGE_B->PATHS_WITH_DELETED_MERGEINFO remove that path from
+   CHILDREN_WITH_MERGEINFO.
+
+   The one exception is for the merge target itself,
    MERGE_B->target->abspath, this must always be present in
    CHILDREN_WITH_MERGEINFO so this is never removed by this
    function. */
@@ -5175,7 +5176,7 @@ remove_children_with_deleted_mergeinfo(merge_cmd_baton_t *merge_b,
 {
   int i;
 
-  if (merge_b->dry_run || !merge_b->paths_with_deleted_mergeinfo)
+  if (!merge_b->paths_with_deleted_mergeinfo)
     return;
 
   /* CHILDREN_WITH_MERGEINFO[0] is the always the merge target
@@ -5184,8 +5185,8 @@ remove_children_with_deleted_mergeinfo(merge_cmd_baton_t *merge_b,
     {
       svn_client__merge_path_t *child =
         APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
-      if (apr_hash_get(merge_b->paths_with_deleted_mergeinfo,
-                       child->abspath, APR_HASH_KEY_STRING))
+
+      if (contains_path(merge_b->paths_with_deleted_mergeinfo, child->abspath))
         {
           svn_sort__array_delete(children_with_mergeinfo, i--, 1);
         }
@@ -7826,6 +7827,8 @@ flag_subtrees_needing_mergeinfo(svn_boolean_t operative_merge,
   int i;
   apr_hash_t *operative_immediate_children = NULL;
 
+  assert(! merge_b->dry_run);
+
   if (!merge_b->record_only
       && merged_range->start <= merged_range->end
       && (depth < svn_depth_infinity))
@@ -7848,9 +7851,14 @@ flag_subtrees_needing_mergeinfo(svn_boolean_t operative_merge,
       if (child->absent)
         continue;
 
+      /* Verify that remove_children_with_deleted_mergeinfo() did its job */
+      assert((i == 0)
+             ||! merge_b->paths_with_deleted_mergeinfo
+             || !contains_path(merge_b->paths_with_deleted_mergeinfo,
+                               child->abspath));
+
       /* Don't record mergeinfo on skipped paths. */
-      if (apr_hash_get(merge_b->skipped_abspaths, child->abspath,
-                       APR_HASH_KEY_STRING))
+      if (contains_path(merge_b->skipped_abspaths, child->abspath))
         continue;
 
       /* ### ptb: Yes, we could combine the following into a single
@@ -7878,70 +7886,65 @@ flag_subtrees_needing_mergeinfo(svn_boolean_t operative_merge,
           child->record_mergeinfo = TRUE;
         }
 
-      if (operative_merge)
+      if (operative_merge
+          && subtree_touched_by_merge(child->abspath, merge_b, iterpool))
         {
           svn_pool_clear(iterpool);
 
-          /* If CHILD is deleted we don't need to set mergeinfo on it. */
-          if (! contains_path(merge_b->deleted_abspaths, child->abspath)
-              && subtree_touched_by_merge(child->abspath, merge_b,
-                                          iterpool))
+          /* This subtree was affected by the merge. */
+          child->record_mergeinfo = TRUE;
+
+          /* Were any CHILD's missing children skipped by the merge?
+             If not, then CHILD's missing children don't need to be
+             considered when recording mergeinfo describing the merge. */
+          if (! merge_b->reintegrate_merge
+              && child->missing_child
+              && !path_is_subtree(child->abspath,
+                                  merge_b->skipped_abspaths,
+                                  iterpool))
             {
-              /* This subtree was affected by the merge. */
-              child->record_mergeinfo = TRUE;
+              child->missing_child = FALSE;
+            }
 
-              /* Were any CHILD's missing children skipped by the merge?
-                 If not, then CHILD's missing children don't need to be
-                 considered when recording mergeinfo describing the merge. */
-              if (!merge_b->reintegrate_merge
-                  && child->missing_child
-                  && !path_is_subtree(child->abspath,
-                                      merge_b->skipped_abspaths,
-                                      iterpool))
+          /* If CHILD has an immediate switched child or children and
+             none of these were touched by the merge, then we don't need
+             need to do any special handling of those switched subtrees
+             (e.g. record non-inheritable mergeinfo) when recording
+             mergeinfo describing the merge. */
+          if (child->switched_child)
+            {
+              int j;
+              svn_boolean_t operative_switched_child = FALSE;
+
+              for (j = i + 1;
+                   j < children_with_mergeinfo->nelts;
+                   j++)
                 {
-                  child->missing_child = FALSE;
-                }
+                  svn_client__merge_path_t *potential_child =
+                    APR_ARRAY_IDX(children_with_mergeinfo, j,
+                                  svn_client__merge_path_t *);
+                  if (!svn_dirent_is_ancestor(child->abspath,
+                                              potential_child->abspath))
+                    break;
 
-              /* If CHILD has an immediate switched child or children and
-                 none of these were touched by the merge, then we don't need
-                 need to do any special handling of those switched subtrees
-                 (e.g. record non-inheritable mergeinfo) when recording
-                 mergeinfo describing the merge. */
-              if (child->switched_child)
-                {
-                  int j;
-                  svn_boolean_t operative_switched_child = FALSE;
+                  /* POTENTIAL_CHILD is a subtree of CHILD, but is it
+                     an immediate child? */
+                  if (strcmp(child->abspath,
+                             svn_dirent_dirname(potential_child->abspath,
+                                                iterpool)))
+                    continue;
 
-                  for (j = i + 1;
-                       j < children_with_mergeinfo->nelts;
-                       j++)
+                  if (potential_child->switched
+                      && potential_child->record_mergeinfo)
                     {
-                      svn_client__merge_path_t *potential_child =
-                        APR_ARRAY_IDX(children_with_mergeinfo, j,
-                                      svn_client__merge_path_t *);
-                      if (!svn_dirent_is_ancestor(child->abspath,
-                                                  potential_child->abspath))
-                        break;
-
-                      /* POTENTIAL_CHILD is a subtree of CHILD, but is it
-                         an immediate child? */
-                      if (strcmp(child->abspath,
-                                 svn_dirent_dirname(potential_child->abspath,
-                                                    iterpool)))
-                        continue;
-
-                      if (potential_child->switched
-                          && potential_child->record_mergeinfo)
-                        {
-                          operative_switched_child = TRUE;
-                          break;
-                        }
+                      operative_switched_child = TRUE;
+                      break;
                     }
-
-                  /* Can we treat CHILD as if it has no switched children? */
-                  if (!operative_switched_child)
-                    child->switched_child = FALSE;
                 }
+
+              /* Can we treat CHILD as if it has no switched children? */
+              if (! operative_switched_child)
+                child->switched_child = FALSE;
             }
         }
 
@@ -7999,7 +8002,7 @@ flag_subtrees_needing_mergeinfo(svn_boolean_t operative_merge,
                 }
             }
         }
-      else
+      else /* child->record_mergeinfo */
         {
           /* If CHILD is in NOTIFY_B->CHILDREN_WITH_MERGEINFO simply
              because it had no explicit mergeinfo of its own at the
@@ -8062,6 +8065,8 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   svn_merge_range_t range = *merged_range;
+
+  assert(! merge_b->dry_run);
 
   /* Regardless of what subtrees in MERGE_B->target->abspath might be missing
      could this merge have been operative? */
