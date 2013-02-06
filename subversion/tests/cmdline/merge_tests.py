@@ -18383,6 +18383,52 @@ def multiple_editor_drive_merge_notifications(sbox):
      " U   " + iota_branch_path + "\n"],
     [], 'merge', sbox.repo_url + '/iota', iota_branch_path)
 
+@SkipUnless(server_has_mergeinfo)
+@Issue(4313)
+@XFail()
+# Test for issue #4313 'replaced merges source causes assertion during
+# automatic merge'
+def auto_merge_handles_replacements_in_merge_source(sbox):
+  "automerge handles replacements in merge source"
+
+  sbox.build()
+
+  A_path = sbox.ospath('A')
+  branch1_path = sbox.ospath('branch-1')
+  branch2_path = sbox.ospath('branch-2')
+
+  # r2 - Make two branches.
+  sbox.simple_copy('A', 'branch-1')
+  sbox.simple_copy('A', 'branch-2')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # r3 - Replace 'A' with 'branch-1'.
+  svntest.main.run_svn(None, 'del', A_path)
+  svntest.main.run_svn(None, 'copy', branch1_path, A_path)
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Merge^/A to branch-2, it should be a no-op but for mergeinfo changes,
+  # but it *should* work.  Currently this asserts:
+  #
+  #   >svn merge ^/A branch-2
+  #   ..\..\..\subversion\libsvn_client\merge.c:4568: (apr_err=235000)
+  #   svn: E235000: In file '..\..\..\subversion\libsvn_client\merge.c'
+  #     line 4568: assertion failed (apr_hash_count(implicit_src_mergeinfo)
+  #     == 1)
+  #
+  #   This application has requested the Runtime to terminate it in an
+  #   unusual way.
+  #   Please contact the application's support team for more information.
+  svntest.actions.run_and_verify_svn(
+    None,
+    ["--- Recording mergeinfo for merge of r2 into '" + branch2_path + "':\n",
+     " U   " + branch2_path + "\n",
+     "--- Recording mergeinfo for merge of r3 into '" + branch2_path + "':\n",
+     " U   " + branch2_path + "\n"],
+    [], 'merge', sbox.repo_url + '/A', branch2_path)
+
 ########################################################################
 # Run the tests
 
@@ -18525,6 +18571,7 @@ test_list = [ None,
               merge_properties_on_adds,
               conflict_aborted_mergeinfo_described_partial_merge,
               multiple_editor_drive_merge_notifications,
+              auto_merge_handles_replacements_in_merge_source,
              ]
 
 if __name__ == '__main__':
