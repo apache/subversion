@@ -2374,6 +2374,9 @@ merge_file_added(const char *relpath,
                                          merge_b->ctx->cancel_func,
                                          merge_b->ctx->cancel_baton,
                                          scratch_pool));
+
+          /* Caller must call svn_sleep_for_timestamps() */
+          *merge_b->use_sleep = TRUE;
         }
     }
 
@@ -7374,7 +7377,6 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
         }
     }
 
-  /* Caller must call svn_sleep_for_timestamps() */
   merge_b->notify_begin.nodes_with_mergeinfo = NULL;
 
   svn_pool_destroy(iterpool);
