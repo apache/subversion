@@ -12030,7 +12030,7 @@ do_automatic_merge_locked(const svn_client_automatic_merge_t *merge,
                                   scratch_pool),
         ra_session, ctx, scratch_pool, scratch_pool));
 
-      err = do_merge(NULL, NULL, merge_sources, target, NULL,
+      err = do_merge(NULL, NULL, merge_sources, target, ra_session,
                      TRUE /*related*/, TRUE /*same_repos*/,
                      FALSE /*ignore_mergeinfo*/, diff_ignore_ancestry,
                      force_delete, dry_run,
