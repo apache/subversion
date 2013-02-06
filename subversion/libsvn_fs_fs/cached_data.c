@@ -1653,11 +1653,12 @@ get_dir_contents(apr_hash_t *entries,
 
 /* Given a hash STR_ENTRIES with values as svn_string_t as specified
    in an FSFS directory contents listing, return a hash of dirents in
-   *ENTRIES_P.  Perform allocations in POOL. */
+   *ENTRIES_P.  Use ID to generate more helpful error messages.
+   Perform allocations in POOL. */
 static svn_error_t *
 parse_dir_entries(apr_hash_t **entries_p,
                   apr_hash_t *str_entries,
-                  const char *unparsed_id,
+                  const svn_fs_id_t *id,
                   apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
@@ -1679,7 +1680,7 @@ parse_dir_entries(apr_hash_t **entries_p,
       if (str == NULL)
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                  _("Directory entry corrupt in '%s'"),
-                                 unparsed_id);
+                                 svn_fs_fs__id_unparse(id, pool)->data);
 
       if (strcmp(str, SVN_FS_FS__KIND_FILE) == 0)
         {
@@ -1693,14 +1694,14 @@ parse_dir_entries(apr_hash_t **entries_p,
         {
           return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                    _("Directory entry corrupt in '%s'"),
-                                   unparsed_id);
+                                   svn_fs_fs__id_unparse(id, pool)->data);
         }
 
       str = svn_cstring_tokenize(" ", &last_str);
       if (str == NULL)
           return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                    _("Directory entry corrupt in '%s'"),
-                                   unparsed_id);
+                                   svn_fs_fs__id_unparse(id, pool)->data);
 
       dirent->id = svn_fs_fs__id_parse(str, strlen(str), pool);
 
@@ -1710,16 +1711,43 @@ parse_dir_entries(apr_hash_t **entries_p,
   return SVN_NO_ERROR;
 }
 
-/* Return the cache object in FS responsible to storing the directory
- * the NODEREV. If none exists, return NULL. */
+/* Return the cache object in FS responsible to storing the directory the
+ * NODEREV plus the corresponding *KEY.  If no cache exists, return NULL.
+ * PAIR_KEY must point to some key struct, which does not need to be
+ * initialized.  We use it to avoid dynamic allocation.
+ */
 static svn_cache__t *
 locate_dir_cache(svn_fs_t *fs,
-                 node_revision_t *noderev)
+                 const void **key,
+                 pair_cache_key_t *pair_key,
+                 node_revision_t *noderev,
+                 apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  return svn_fs_fs__id_txn_id(noderev->id)
-      ? ffd->txn_dir_cache
-      : ffd->dir_cache;
+  if (svn_fs_fs__id_txn_id(noderev->id))
+    {
+      /* data in txns requires the expensive fs_id-based addressing mode */
+      *key = svn_fs_fs__id_unparse(noderev->id, pool)->data;
+      return ffd->txn_dir_cache;
+    }
+  else
+    {
+      /* committed data can use simple rev,item pairs */
+      if (noderev->data_rep)
+        {
+          pair_key->revision = noderev->data_rep->revision;
+          pair_key->second = noderev->data_rep->item_index;
+          *key = pair_key;
+        }
+      else
+        {
+          /* no data rep -> empty directory.
+             A NULL key causes a cache miss. */
+          *key = NULL;
+        }
+      
+      return ffd->dir_cache;
+    }
 }
 
 svn_error_t *
@@ -1728,18 +1756,17 @@ svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
                             node_revision_t *noderev,
                             apr_pool_t *pool)
 {
-  const char *unparsed_id = NULL;
+  pair_cache_key_t pair_key = { 0 };
+  const void *key;
   apr_hash_t *unparsed_entries, *parsed_entries;
 
   /* find the cache we may use */
-  svn_cache__t *cache = locate_dir_cache(fs, noderev);
+  svn_cache__t *cache = locate_dir_cache(fs, &key, &pair_key, noderev, pool);
   if (cache)
     {
       svn_boolean_t found;
 
-      unparsed_id = svn_fs_fs__id_unparse(noderev->id, pool)->data;
-      SVN_ERR(svn_cache__get((void **) entries_p, &found, cache,
-                             unparsed_id, pool));
+      SVN_ERR(svn_cache__get((void **)entries_p, &found, cache, key, pool));
       if (found)
         return SVN_NO_ERROR;
     }
@@ -1748,11 +1775,11 @@ svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
   unparsed_entries = apr_hash_make(pool);
   SVN_ERR(get_dir_contents(unparsed_entries, fs, noderev, pool));
   SVN_ERR(parse_dir_entries(&parsed_entries, unparsed_entries,
-                            unparsed_id, pool));
+                            noderev->id, pool));
 
   /* Update the cache, if we are to use one. */
   if (cache)
-    SVN_ERR(svn_cache__set(cache, unparsed_id, parsed_entries, pool));
+    SVN_ERR(svn_cache__set(cache, key, parsed_entries, pool));
 
   *entries_p = parsed_entries;
   return SVN_NO_ERROR;
@@ -1769,17 +1796,17 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
   svn_boolean_t found = FALSE;
 
   /* find the cache we may use */
-  svn_cache__t *cache = locate_dir_cache(fs, noderev);
+  pair_cache_key_t pair_key = { 0 };
+  const void *key;
+  svn_cache__t *cache = locate_dir_cache(fs, &key, &pair_key, noderev,
+                                         scratch_pool);
   if (cache)
     {
-      const char *unparsed_id =
-        svn_fs_fs__id_unparse(noderev->id, scratch_pool)->data;
-
       /* Cache lookup. */
       SVN_ERR(svn_cache__get_partial((void **)dirent,
                                      &found,
                                      cache,
-                                     unparsed_id,
+                                     key,
                                      svn_fs_fs__extract_dir_entry,
                                      (void*)name,
                                      result_pool));
