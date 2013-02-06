@@ -117,7 +117,7 @@ class ExpectedOutput(object):
     raise TypeError("ExpectedOutput does not implement direct comparison; "
                     "see the 'matches()' method")
 
-  def matches(self, actual, except_re=None):
+  def matches(self, actual):
     """Return whether SELF.expected matches ACTUAL (which may be a list
        of newline-terminated lines, or a single string).
     """
@@ -128,28 +128,7 @@ class ExpectedOutput(object):
     if not isinstance(actual, list):
       actual = [actual]
 
-    if except_re:
-      return self.matches_except(expected, actual, except_re)
-    else:
-      return self.is_equivalent_list(expected, actual)
-
-  def matches_except(self, expected, actual, except_re):
-    "Return whether EXPECTED and ACTUAL match except for except_re."
-    i_expected = 0
-    i_actual = 0
-    while i_expected < len(expected) and i_actual < len(actual):
-      if re.match(except_re, actual[i_actual]):
-        i_actual += 1
-      elif re.match(except_re, expected[i_expected]):
-        i_expected += 1
-      elif expected[i_expected] == actual[i_actual]:
-        i_expected += 1
-        i_actual += 1
-      else:
-        return False
-    if i_expected == len(expected) and i_actual == len(actual):
-          return True
-    return False
+    return self.is_equivalent_list(expected, actual)
 
   def is_equivalent_list(self, expected, actual):
     "Return whether EXPECTED and ACTUAL are equivalent."
@@ -201,9 +180,6 @@ class AnyOutput(ExpectedOutput):
 class RegexOutput(ExpectedOutput):
   """Matches an ordered list of regular expressions."""
 
-  def matches_except(self, expected, actual, except_re):
-    raise Exception("RegexOutput does not implement the matches_except() method")
-
   def is_equivalent_list(self, expected, actual):
     expected_re = expected[0]
     # If we want to check that every line matches the regexp
@@ -238,11 +214,6 @@ class RegexOutput(ExpectedOutput):
 class UnorderedOutput(ExpectedOutput):
   """Matches an unordered list of lines."""
 
-  def matches_except(self, expected, actual, except_re):
-    assert type(actual) == type([]) # ### if this trips: fix it!
-    return self.is_equivalent_list([l for l in expected if not except_re.match(l)],
-                                   [l for l in actual if not except_re.match(l)])
-
   def is_equivalent_list(self, expected, actual):
     # Disregard the order of ACTUAL lines during comparison.
     e_set = set(expected)
@@ -261,9 +232,6 @@ class UnorderedOutput(ExpectedOutput):
 
 class UnorderedRegexOutput(UnorderedOutput, RegexOutput):
   """Matches an unordered list of regular expressions."""
-
-  # Explicitly choose the (unimplemented) RegexOutput version of this method.
-  matches_except = RegexOutput.matches_except
 
   def is_equivalent_list(self, expected, actual):
     # Disregard the order of ACTUAL lines during comparison.
@@ -348,7 +316,7 @@ def display_lines(message, label, expected, actual, expected_is_regexp=None,
       sys.stdout.write(x)
 
 def compare_and_display_lines(message, label, expected, actual,
-                              raisable=None, except_re=None):
+                              raisable=None):
   """Compare two sets of output lines, and print them if they differ,
   preceded by MESSAGE iff not None.  EXPECTED may be an instance of
   ExpectedOutput (and if not, it is wrapped as such).  ACTUAL may be a
@@ -368,7 +336,7 @@ def compare_and_display_lines(message, label, expected, actual,
     actual = [actual]
   actual = svntest.main.filter_dbg(actual)
 
-  if not expected.matches(actual, except_re):
+  if not expected.matches(actual):
     expected.display_differences(message, label, actual)
     raise raisable
 
