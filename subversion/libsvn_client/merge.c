@@ -5459,9 +5459,6 @@ drive_merge_report_editor(const char *target_abspath,
   SVN_ERR(svn_ra_reparent(merge_b->ra_session1, old_sess1_url, scratch_pool));
   SVN_ERR(svn_ra_reparent(merge_b->ra_session2, old_sess2_url, scratch_pool));
 
-  /* Caller must call svn_sleep_for_timestamps() */
-  *(merge_b->use_sleep) = TRUE;
-
   return SVN_NO_ERROR;
 }
 
