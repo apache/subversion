@@ -1531,6 +1531,13 @@ WHERE n.wc_id = ?1
 SELECT 1 FROM NODES
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > ?3 AND op_depth < ?4
 
+-- STMT_SELECT_REPOS_PATH_REVISION
+SELECT local_relpath, repos_path, revision FROM nodes
+WHERE wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND op_depth = 0
+ORDER BY local_relpath
+
 /* ------------------------------------------------------------------------- */
 
 /* Queries for verification. */
