@@ -2058,6 +2058,26 @@ svn_io_file_seek(apr_file_t *file,
                  apr_off_t *offset,
                  apr_pool_t *pool);
 
+/** Set the file pointer of @a file to @a offset.  In contrast to
+ * #svn_io_file_seek, this function will attempt to resize the internal
+ * data buffer to @a block_size bytes and to read data aligned to multiples
+ * of that value.  The beginning of the block will be returned in
+ * @a buffer_start, if that is not NULL.
+ * Uses @a pool for temporary allocations.
+ *
+ * @note Due to limitations of the APR API, in particular pre-1.3 APR,
+ * the alignment may not be successful.  If you never use any other seek
+ * function on @a file, you are, however, virtually guaranteed to get at
+ * least 4kByte alignments for all reads.
+ *
+ * @since New in 1.9
+ */
+svn_error_t *
+svn_io_file_aligned_seek(apr_file_t *file,
+                         apr_off_t block_size,
+                         apr_off_t *buffer_start,
+                         apr_off_t offset,
+                         apr_pool_t *pool);
 
 /** Wrapper for apr_file_write(). */
 svn_error_t *

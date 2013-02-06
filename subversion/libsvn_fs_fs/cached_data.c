@@ -38,6 +38,21 @@
 
 #include "svn_private_config.h"
 
+/* Convenience wrapper around svn_io_file_aligned_seek, taking filesystem
+   FS instead of a block size. */
+static svn_error_t *
+aligned_seek(svn_fs_t *fs,
+             apr_file_t *file,
+             apr_off_t *buffer_start,
+             apr_off_t offset,
+             apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  return svn_error_trace(svn_io_file_aligned_seek(file, ffd->block_size,
+                                                  buffer_start, offset,
+                                                  pool));
+}
+
 /* Open the revision file for revision REV in filesystem FS and store
    the newly opened file in FILE.  Seek to location OFFSET before
    returning.  Perform temporary allocations in POOL. */
@@ -55,7 +70,7 @@ open_and_seek_revision(apr_file_t **file,
 
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, rev, pool));
   SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rev, NULL, item, pool));
-  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
+  SVN_ERR(aligned_seek(fs, rev_file, NULL, offset, pool));
 
   *file = rev_file;
 
@@ -82,7 +97,7 @@ open_and_seek_transaction(apr_file_t **file,
 
   SVN_ERR(svn_fs_fs__item_offset(&offset, fs, SVN_INVALID_REVNUM, txn_id,
                                  rep->item_index, pool));
-  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
+  SVN_ERR(aligned_seek(fs, rev_file, NULL, offset, pool));
 
   *file = rev_file;
 
@@ -265,7 +280,7 @@ get_fs_id_at_offset(svn_fs_id_t **id_p,
 {
   node_revision_t *noderev;
 
-  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
+  SVN_ERR(aligned_seek(fs, rev_file, NULL, offset, pool));
   SVN_ERR(svn_fs_fs__read_noderev(&noderev,
                                   svn_stream_from_aprfile2(rev_file, TRUE,
                                                            pool),
@@ -496,8 +511,7 @@ create_rep_state_body(rep_state_t **rep_state,
           apr_off_t offset;
           SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rep->revision, NULL,
                                          rep->item_index, pool));
-          SVN_ERR(svn_io_file_seek((*shared_file)->file, SEEK_SET, &offset,
-                                   pool));
+          SVN_ERR(aligned_seek(fs, (*shared_file)->file, NULL, offset, pool));
 
           rs->file = *shared_file;
         }
@@ -1021,7 +1035,8 @@ auto_read_diff_version(rep_state_t *rs, apr_pool_t *pool)
   if (rs->ver == -1)
     {
       char buf[4];
-      SVN_ERR(svn_io_file_seek(rs->file->file, SEEK_SET, &rs->start, pool));
+      SVN_ERR(aligned_seek(rs->file->fs, rs->file->file, NULL, rs->start,
+                           pool));
       SVN_ERR(svn_io_file_read_full2(rs->file->file, buf, sizeof(buf),
                                      NULL, NULL, pool));
 
@@ -1056,7 +1071,7 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
   /* RS->FILE may be shared between RS instances -> make sure we point
    * to the right data. */
   offset = rs->start + rs->current;
-  SVN_ERR(svn_io_file_seek(rs->file->file, SEEK_SET, &offset, pool));
+  SVN_ERR(aligned_seek(rs->file->fs, rs->file->file, NULL, offset, pool));
 
   /* Skip windows to reach the current chunk if we aren't there yet. */
   while (rs->chunk_index < this_chunk)
@@ -1109,7 +1124,7 @@ read_plain_window(svn_stringbuf_t **nwin, rep_state_t *rs,
   SVN_ERR(auto_set_start_offset(rs, pool));
 
   offset = rs->start + rs->current;
-  SVN_ERR(svn_io_file_seek(rs->file->file, APR_SET, &offset, pool));
+  SVN_ERR(aligned_seek(rs->file->fs, rs->file->file, NULL, offset, pool));
 
   /* Read the plain data. */
   *nwin = svn_stringbuf_create_ensure(size, pool);
@@ -1268,8 +1283,8 @@ get_contents(struct rep_read_baton *rb,
           SVN_ERR(auto_set_start_offset(rs, rb->pool));
 
           offset = rs->start + rs->current;
-          SVN_ERR(svn_io_file_seek(rs->file->file, SEEK_SET, &offset,
-                                   rb->pool));
+          SVN_ERR(aligned_seek(rs->file->fs, rs->file->file, NULL, offset,
+                               rb->pool));
           SVN_ERR(svn_io_file_read_full2(rs->file->file, cur, copy_len,
                                          NULL, NULL, rb->pool));
         }
