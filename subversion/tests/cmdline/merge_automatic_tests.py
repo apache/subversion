@@ -1120,7 +1120,7 @@ def auto_merge_handles_replacements_in_merge_source(sbox):
     ["--- Recording mergeinfo for merge of r2 into '" + branch2_path + "':\n",
      " U   " + branch2_path + "\n",
      "--- Recording mergeinfo for merge of r3 into '" + branch2_path + "':\n",
-     " U   " + branch2_path + "\n"],
+     " G   " + branch2_path + "\n"],
     [], 'merge', sbox.repo_url + '/A', branch2_path)
 
 ########################################################################
