@@ -226,6 +226,24 @@ svn_fs_fs__replace_dir_entry(void **data,
                              apr_pool_t *pool);
 
 /**
+ * Implements #svn_cache__serialize_func_t for a #svn_fs_fs__rep_header_t.
+ */
+svn_error_t *
+svn_fs_fs__serialize_rep_header(void **data,
+                                apr_size_t *data_len,
+                                void *in,
+                                apr_pool_t *pool);
+
+/**
+ * Implements #svn_cache__deserialize_func_t for a #svn_fs_fs__rep_header_t.
+ */
+svn_error_t *
+svn_fs_fs__deserialize_rep_header(void **out,
+                                  void *data,
+                                  apr_size_t data_len,
+                                  apr_pool_t *pool);
+
+/**
  * Implements #svn_cache__serialize_func_t for an #apr_array_header_t of
  * #change_t *.
  */

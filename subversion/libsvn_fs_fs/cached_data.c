@@ -480,6 +480,7 @@ create_rep_state_body(rep_state_t **rep_state,
   fs_fs_data_t *ffd = fs->fsap_data;
   rep_state_t *rs = apr_pcalloc(pool, sizeof(*rs));
   svn_fs_fs__rep_header_t *rh;
+  svn_boolean_t is_cached = FALSE;
 
   /* If the hint is
    * - given,
@@ -495,6 +496,10 @@ create_rep_state_body(rep_state_t **rep_state,
       && (   ((*shared_file)->revision / ffd->max_files_per_dir)
           == (rep->revision / ffd->max_files_per_dir));
       
+  pair_cache_key_t key;
+  key.revision = rep->revision;
+  key.second = rep->item_index;
+
   /* continue constructing RS and RA */
   rs->size = rep->size;
   rs->revision = rep->revision;
@@ -503,6 +508,32 @@ create_rep_state_body(rep_state_t **rep_state,
   rs->combined_cache = ffd->combined_window_cache;
   rs->ver = -1;
 
+  if (ffd->rep_header_cache && !rep->txn_id)
+    SVN_ERR(svn_cache__get((void **) &rh, &is_cached,
+                           ffd->rep_header_cache, &key, pool));
+  if (is_cached)
+    {
+      /* we don't know the offset of the item */
+      rs->start = -1;
+
+      if (reuse_shared_file)
+        {
+          rs->file = *shared_file;
+        }
+      else
+        {
+          shared_file_t *file = apr_pcalloc(pool, sizeof(*file));
+          file->revision = rep->revision;
+          file->pool = pool;
+          file->fs = fs;
+          rs->file = file;
+
+          /* remember the current file, if suggested by the caller */
+          if (shared_file)
+            *shared_file = file;
+        }
+    }
+  else
     {
       if (reuse_shared_file)
         {
@@ -536,6 +567,12 @@ create_rep_state_body(rep_state_t **rep_state,
 
       SVN_ERR(svn_fs_fs__read_rep_header(&rh, rs->file->stream, pool));
       SVN_ERR(get_file_offset(&rs->start, rs->file->file, pool));
+
+      if (!rep->txn_id)
+        {
+          if (ffd->rep_header_cache)
+            SVN_ERR(svn_cache__set(ffd->rep_header_cache, &key, rh, pool));
+        }
     }
 
   rs->header_size = rh->header_size;

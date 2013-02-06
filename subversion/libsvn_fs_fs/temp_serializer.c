@@ -33,6 +33,7 @@
 #include "private/svn_subr_private.h"
 
 #include "temp_serializer.h"
+#include "low_level.h"
 
 /* Utility to encode a signed NUMBER into a variable-length sequence of
  * 8-bit chars in KEY_BUFFER and return the last writen position.
@@ -1052,6 +1053,36 @@ svn_fs_fs__replace_dir_entry(void **data,
     svn_temp_deserializer__ptr((const char *)hash_data,
                                (const void *const *)&hash_data->lengths);
   lengths[pos] = length;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t  *
+svn_fs_fs__serialize_rep_header(void **data,
+                                apr_size_t *data_len,
+                                void *in,
+                                apr_pool_t *pool)
+{
+  svn_fs_fs__rep_header_t *copy = apr_palloc(pool, sizeof(*copy));
+  *copy = *(svn_fs_fs__rep_header_t *)in;
+
+  *data_len = sizeof(svn_fs_fs__rep_header_t);
+  *data = copy;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__deserialize_rep_header(void **out,
+                                  void *data,
+                                  apr_size_t data_len,
+                                  apr_pool_t *pool)
+{
+  svn_fs_fs__rep_header_t *copy = apr_palloc(pool, sizeof(*copy));
+  SVN_ERR_ASSERT(data_len == sizeof(*copy));
+
+  *copy = *(svn_fs_fs__rep_header_t *)data;
+  *out = data;
 
   return SVN_NO_ERROR;
 }

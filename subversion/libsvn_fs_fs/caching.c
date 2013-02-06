@@ -392,6 +392,19 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        no_handler,
                        fs->pool));
 
+  /* initialize representation header cache, if caching has been enabled */
+  SVN_ERR(create_cache(&(ffd->rep_header_cache),
+                       NULL,
+                       membuffer,
+                       0, 0, /* Do not use inprocess cache */
+                       svn_fs_fs__serialize_rep_header,
+                       svn_fs_fs__deserialize_rep_header,
+                       sizeof(pair_cache_key_t),
+                       apr_pstrcat(pool, prefix, "REPHEADER", (char *)NULL),
+                       fs,
+                       no_handler,
+                       fs->pool));
+
   /* initialize node change list cache, if caching has been enabled */
   SVN_ERR(create_cache(&(ffd->changes_cache),
                        NULL,
