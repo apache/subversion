@@ -1345,9 +1345,8 @@ check_moved_here(svn_boolean_t *moved_here,
 }
 
 #define CONFLICT_REASON_NONE       ((svn_wc_conflict_reason_t)-1)
-#define CONFLICT_REASON_EXCLUDED   ((svn_wc_conflict_reason_t)-2)
-#define CONFLICT_REASON_SKIP       ((svn_wc_conflict_reason_t)-3)
-#define CONFLICT_REASON_SKIP_WC    ((svn_wc_conflict_reason_t)-4)
+#define CONFLICT_REASON_SKIP       ((svn_wc_conflict_reason_t)-2)
+#define CONFLICT_REASON_SKIP_WC    ((svn_wc_conflict_reason_t)-3)
 
 /* Baton used for testing trees for being editted while performing tree
    conflict detection for incoming deletes */
@@ -1390,10 +1389,6 @@ struct merge_dir_baton_t
      conflict.
 
      Special values:
-       CONFLICT_REASON_EXCLUDED:
-            The node has been excluded (or depth filtered) and the node will
-            only be reported as skipped.
-
        CONFLICT_REASON_SKIP:
             The node will be skipped with content and property state as stored in
             SKIP_REASON.
@@ -1746,17 +1741,6 @@ mark_dir_edited(merge_cmd_baton_t *merge_b,
           store_path(merge_b->skipped_abspaths, local_abspath);
         }
     }
-  else if (db->tree_conflict_reason == CONFLICT_REASON_EXCLUDED)
-    {
-      /* open_directory() decided not to flag a tree conflict, while
-         there really should be one.
-
-         Ok: The skip for the descendant will do the right thing anyway!
-       */
-
-      /* We don't register the node in merge_b->skipped_abspaths here, as the
-         node itself is not skipped: the operation on a descendant is */
-    }
   else if (db->tree_conflict_reason != CONFLICT_REASON_NONE)
     {
       /* open_directory() decided that a tree conflict should be raised */
@@ -1855,8 +1839,7 @@ mark_file_edited(merge_cmd_baton_t *merge_b,
           store_path(merge_b->skipped_abspaths, local_abspath);
         }
     }
-  else if (fb->tree_conflict_reason != CONFLICT_REASON_NONE
-           && fb->tree_conflict_reason != CONFLICT_REASON_EXCLUDED)
+  else if (fb->tree_conflict_reason != CONFLICT_REASON_NONE)
     {
       /* open_directory() decided that a tree conflict should be raised */
       const char *moved_away_abspath = NULL;
