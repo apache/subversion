@@ -38,6 +38,16 @@
 
 #include "svn_private_config.h"
 
+/* forward-declare */
+static svn_error_t *
+block_read(void **result,
+           svn_fs_t *fs,
+           svn_revnum_t revision,
+           apr_uint64_t item_index,
+           apr_file_t *revision_file,
+           apr_pool_t *result_pool,
+           apr_pool_t *scratch_pool);
+
 /* Convenience wrapper around svn_io_file_aligned_seek, taking filesystem
    FS instead of a block size. */
 static svn_error_t *
@@ -132,68 +142,6 @@ err_dangling_id(svn_fs_t *fs, const svn_fs_id_t *id)
      id_str->data, fs->path);
 }
 
-/* Look up the NODEREV_P for ID in FS' node revsion cache. If noderev
- * caching has been enabled and the data can be found, IS_CACHED will
- * be set to TRUE. The noderev will be allocated from POOL.
- *
- * Non-permanent ids (e.g. ids within a TXN) will not be cached.
- */
-static svn_error_t *
-get_cached_node_revision_body(node_revision_t **noderev_p,
-                              svn_fs_t *fs,
-                              const svn_fs_id_t *id,
-                              svn_boolean_t *is_cached,
-                              apr_pool_t *pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-  if (! ffd->node_revision_cache || svn_fs_fs__id_txn_id(id))
-    {
-      *is_cached = FALSE;
-    }
-  else
-    {
-      pair_cache_key_t key = { 0 };
-
-      key.revision = svn_fs_fs__id_rev(id);
-      key.second = svn_fs_fs__id_item(id);
-      SVN_ERR(svn_cache__get((void **) noderev_p,
-                            is_cached,
-                            ffd->node_revision_cache,
-                            &key,
-                            pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* If noderev caching has been enabled, store the NODEREV_P for the given ID
- * in FS' node revsion cache. SCRATCH_POOL is used for temporary allcations.
- *
- * Non-permanent ids (e.g. ids within a TXN) will not be cached.
- */
-static svn_error_t *
-set_cached_node_revision_body(node_revision_t *noderev_p,
-                              svn_fs_t *fs,
-                              const svn_fs_id_t *id,
-                              apr_pool_t *scratch_pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-
-  if (ffd->node_revision_cache && !svn_fs_fs__id_txn_id(id))
-    {
-      pair_cache_key_t key = { 0 };
-
-      key.revision = svn_fs_fs__id_rev(id);
-      key.second = svn_fs_fs__id_item(id);
-      return svn_cache__set(ffd->node_revision_cache,
-                            &key,
-                            noderev_p,
-                            scratch_pool);
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Get the node-revision for the node ID in FS.
    Set *NODEREV_P to the new node-revision structure, allocated in POOL.
    See svn_fs_fs__get_node_revision, which wraps this and adds another
@@ -207,45 +155,90 @@ get_node_revision_body(node_revision_t **noderev_p,
   apr_file_t *revision_file;
   svn_error_t *err;
   svn_boolean_t is_cached = FALSE;
+  fs_fs_data_t *ffd = fs->fsap_data;
+  const char *txn_id = svn_fs_fs__id_txn_id(id);
 
-  /* First, try a cache lookup. If that succeeds, we are done here. */
-  SVN_ERR(get_cached_node_revision_body(noderev_p, fs, id, &is_cached, pool));
-  if (is_cached)
-    return SVN_NO_ERROR;
-
-  if (svn_fs_fs__id_txn_id(id))
+  if (txn_id)
     {
-      /* This is a transaction node-rev. */
+      /* This is a transaction node-rev.  Its storage logic is very
+         different from that of rev / pack files. */
       err = svn_io_file_open(&revision_file, path_txn_node_rev(fs, id, pool),
                              APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
+      if (err)
+        {
+          if (APR_STATUS_IS_ENOENT(err->apr_err))
+            {
+              svn_error_clear(err);
+              return svn_error_trace(err_dangling_id(fs, id));
+            }
+
+          return svn_error_trace(err);
+        }
+
+      SVN_ERR(svn_fs_fs__read_noderev(noderev_p,
+                                      svn_stream_from_aprfile2(revision_file,
+                                                               FALSE,
+                                                               pool),
+                                      pool));
     }
   else
     {
-      /* This is a revision node-rev. */
+      /* noderevs in rev / pack files can be cached */
+      pair_cache_key_t key;
+      key.revision = svn_fs_fs__id_rev(id);
+      key.second = svn_fs_fs__id_item(id);
+    
+      /* First, try a cache lookup. If that succeeds, we are done here. */
+      if (ffd->node_revision_cache)
+        {
+          SVN_ERR(svn_cache__get((void **) noderev_p,
+                                 &is_cached,
+                                 ffd->node_revision_cache,
+                                 &key,
+                                 pool));
+          if (is_cached)
+            return SVN_NO_ERROR;
+        }
+
+      /* someone needs to read the data from this file: */
       err = open_and_seek_revision(&revision_file, fs,
                                    svn_fs_fs__id_rev(id),
                                    svn_fs_fs__id_item(id),
                                    pool);
-    }
 
-  if (err)
-    {
-      if (APR_STATUS_IS_ENOENT(err->apr_err))
+      if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
         {
-          svn_error_clear(err);
-          return svn_error_trace(err_dangling_id(fs, id));
+          /* block-read will parse the whole block and will also return
+             the one noderev that we need right now. */
+          SVN_ERR(block_read((void **)noderev_p, fs,
+                             svn_fs_fs__id_rev(id),
+                             svn_fs_fs__id_item(id),
+                             revision_file,
+                             pool,
+                             pool));
+          SVN_ERR(svn_io_file_close(revision_file, pool));
         }
+      else
+        {
+          /* pre-format7 reading, parsing and caching */
+          SVN_ERR(svn_fs_fs__read_noderev(noderev_p,
+                                          svn_stream_from_aprfile2(revision_file,
+                                                                   FALSE,
+                                                                   pool),
+                                          pool));
+          /* Workaround issue #4031: is-fresh-txn-root in revision files. */
+          (*noderev_p)->is_fresh_txn_root = FALSE;
 
-      return svn_error_trace(err);
+          /* The noderev is not in cache, yet. Add it, if caching has been enabled. */
+          if (ffd->node_revision_cache)
+            SVN_ERR(svn_cache__set(ffd->node_revision_cache,
+                                   &key,
+                                   *noderev_p,
+                                   pool));
+        }
     }
 
-  SVN_ERR(svn_fs_fs__read_noderev(noderev_p,
-                                  svn_stream_from_aprfile2(revision_file, FALSE,
-                                                           pool),
-                                  pool));
-
-  /* The noderev is not in cache, yet. Add it, if caching has been enabled. */
-  return set_cached_node_revision_body(*noderev_p, fs, id, pool);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -570,6 +563,9 @@ create_rep_state_body(rep_state_t **rep_state,
 
       if (!rep->txn_id)
         {
+          if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+            SVN_ERR(block_read(NULL, fs, rep->revision, rep->item_index,
+                               rs->file->file, pool, pool));
           if (ffd->rep_header_cache)
             SVN_ERR(svn_cache__set(ffd->rep_header_cache, &key, rh, pool));
         }
@@ -1101,7 +1097,34 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
   apr_off_t offset;
   SVN_ERR_ASSERT(rs->chunk_index <= this_chunk);
 
+  /* Read the next window.  But first, try to find it in the cache. */
+  SVN_ERR(get_cached_window(nwin, rs, this_chunk, &is_cached, pool));
+  if (is_cached)
+    return SVN_NO_ERROR;
+
+  /* someone has to actually read the data from file.  Open it */
   SVN_ERR(auto_open_shared_file(rs->file));
+
+  /* invoke the 'block-read' feature for non-txn data.
+     However, don't do that if we are in the middle of some representation,
+     because the block is unlikely to contain other data. */
+  if (rs->chunk_index == 0 && SVN_IS_VALID_REVNUM(rs->revision))
+    {
+      fs_fs_data_t *ffd = rs->file->fs->fsap_data;
+      
+      if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+        SVN_ERR(block_read(NULL, rs->file->fs, rs->revision, rs->item_index,
+                           rs->file->file, pool, pool));
+
+      /* reading the whole block probably also provided us with the
+         desired txdelta window */
+      SVN_ERR(get_cached_window(nwin, rs, this_chunk, &is_cached, pool));
+      if (is_cached)
+        return SVN_NO_ERROR;
+    }
+
+  /* data is still not cached -> we need to read it.
+     Make sure we have all the necessary info. */
   SVN_ERR(auto_set_start_offset(rs, pool));
   SVN_ERR(auto_read_diff_version(rs, pool));
 
@@ -1124,11 +1147,6 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
                                   "beyond the end of the "
                                   "representation"));
     }
-
-  /* Read the next window. But first, try to find it in the cache. */
-  SVN_ERR(get_cached_window(nwin, rs, this_chunk, &is_cached, pool));
-  if (is_cached)
-    return SVN_NO_ERROR;
 
   /* Actually read the next window. */
   SVN_ERR(svn_txdelta_read_svndiff_window(nwin, rs->file->stream, rs->ver,
@@ -1960,28 +1978,359 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
   /* read changes from revision file */
   
   SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, pool));
-
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev, pool));
 
-  if (ffd->format < SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    SVN_ERR(get_root_changes_offset(NULL, &changes_offset, revision_file,
-                                    fs, rev, pool));
+  if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+    {
+      /* 'block-read' will also provide us with the desired data */
+      SVN_ERR(block_read((void **)changes, fs,
+                         rev, SVN_FS_FS__ITEM_INDEX_CHANGES,
+                         revision_file, pool, pool));
+    }
   else
-    SVN_ERR(svn_fs_fs__item_offset(&changes_offset, fs, rev, NULL,
-                                   SVN_FS_FS__ITEM_INDEX_CHANGES, pool));
+    {
+      /* pre-format7 code path */
+      SVN_ERR(get_root_changes_offset(NULL, &changes_offset, revision_file,
+                                      fs, rev, pool));
+      SVN_ERR(svn_io_file_seek(revision_file, APR_SET, &changes_offset, pool));
+      SVN_ERR(svn_fs_fs__read_changes(changes,
+                                      svn_stream_from_aprfile2(revision_file,
+                                                               TRUE, pool),
+                                      pool));
 
-  SVN_ERR(svn_io_file_seek(revision_file, APR_SET, &changes_offset, pool));
-  SVN_ERR(svn_fs_fs__read_changes(changes,
-                                  svn_stream_from_aprfile2(revision_file,
-                                                           TRUE, pool),
-                                  pool));
+      /* cache for future reference */
+
+      if (ffd->changes_cache)
+        SVN_ERR(svn_cache__set(ffd->changes_cache, &rev, *changes, pool));
+    }
+
   SVN_ERR(svn_io_file_close(revision_file, pool));
-
-  /* cache for future reference */
-  
-  if (ffd->changes_cache)
-    SVN_ERR(svn_cache__set(ffd->changes_cache, &rev, *changes, pool));
 
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+block_read_rep_header(svn_fs_fs__rep_header_t **rep_header,
+                      svn_fs_t *fs,
+                      svn_stream_t *stream,
+                      pair_cache_key_t *key,
+                      apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  SVN_ERR(svn_fs_fs__read_rep_header(rep_header, stream, pool));
+
+  if (ffd->rep_header_cache)
+    SVN_ERR(svn_cache__set(ffd->rep_header_cache, key, *rep_header, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+block_read_windows(svn_fs_fs__rep_header_t *rep_header,
+                   svn_fs_t *fs,
+                   apr_file_t *file,
+                   svn_stream_t *stream,
+                   svn_fs_fs__p2l_entry_t* entry,
+                   apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  shared_file_t shared_file = { 0 };
+  rep_state_t rs = { 0 };
+  apr_off_t offset;
+  svn_boolean_t is_cached = FALSE;
+  window_cache_key_t key = { 0 };
+
+  if (   (rep_header->is_delta && !ffd->txdelta_window_cache)
+      || (!rep_header->is_delta && !ffd->combined_window_cache))
+    return SVN_NO_ERROR;
+
+  shared_file.file = file;
+  shared_file.stream = stream;
+  shared_file.fs = fs;
+  shared_file.revision = entry->revision;
+  shared_file.pool = pool;
+
+  rs.file = &shared_file;
+  rs.revision = entry->revision;
+  rs.item_index = entry->item_index;
+  rs.header_size = rep_header->header_size;
+  rs.start = entry->offset + rs.header_size;
+  rs.current = rep_header->is_delta ? 4 : 0;
+  rs.size = entry->size - rep_header->header_size - 7;
+  rs.ver = 1;
+  rs.chunk_index = 0;
+  rs.window_cache = ffd->txdelta_window_cache;
+  rs.combined_cache = ffd->combined_window_cache;
+  
+  /* RS->FILE may be shared between RS instances -> make sure we point
+   * to the right data. */
+  offset = rs.start + rs.current;
+  if (!rep_header->is_delta)
+    {
+      svn_stringbuf_t *plaintext;
+      
+      /* already in cache? */
+      SVN_ERR(svn_cache__has_key(&is_cached, rs.combined_cache,
+                                 get_window_key(&key, &rs), pool));
+      if (is_cached)
+        return SVN_NO_ERROR;
+
+      SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
+
+      plaintext = svn_stringbuf_create_ensure(rs.size, pool);
+      SVN_ERR(svn_io_file_read_full2(file, plaintext->data, rs.size,
+                                     &plaintext->len, NULL, pool));
+      plaintext->data[plaintext->len] = 0;
+      rs.current += rs.size;
+
+      SVN_ERR(set_cached_combined_window(plaintext, &rs, pool));
+    }
+  else
+    {
+      SVN_ERR(svn_cache__has_key(&is_cached, rs.window_cache,
+                                 get_window_key(&key, &rs), pool));
+      if (is_cached)
+        return SVN_NO_ERROR;
+
+      SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
+      while (rs.current < rs.size)
+        {
+          svn_txdelta_window_t *window;
+          /* Actually read the next window. */
+          SVN_ERR(svn_txdelta_read_svndiff_window(&window, stream, rs.ver,
+                                                  pool));
+          SVN_ERR(get_file_offset(&offset, file, pool));
+          rs.current = offset - rs.start;
+          if (rs.current > rs.size)
+            return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                    _("Reading one svndiff window read beyond "
+                                      "the end of the representation"));
+
+          /* the window has not been cached before, thus cache it now
+           * (if caching is used for them at all) */
+          SVN_ERR(set_cached_window(window, &rs, pool));
+          rs.chunk_index++;
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+block_read_contents(svn_stringbuf_t **item,
+                    svn_fs_t *fs,
+                    apr_file_t *file,
+                    svn_stream_t *stream,
+                    svn_fs_fs__p2l_entry_t* entry,
+                    pair_cache_key_t *key,
+                    apr_pool_t *pool)
+{
+  svn_fs_fs__rep_header_t *rep_header;
+  SVN_ERR(block_read_rep_header(&rep_header, fs, stream, key, pool));
+  SVN_ERR(block_read_windows(rep_header, fs, file, stream, entry, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+auto_select_stream(svn_stream_t **stream,
+                   svn_fs_t *fs,
+                   apr_file_t *file,
+                   svn_stream_t *file_stream,
+                   svn_fs_fs__p2l_entry_t* entry,
+                   apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  if (((entry->offset + entry->size) ^ entry->offset) >= ffd->block_size)
+    {
+      svn_stringbuf_t *text = svn_stringbuf_create_ensure(entry->size, pool);
+      text->len = entry->size;
+      text->data[text->len] = 0;
+      SVN_ERR(svn_io_file_read_full2(file, text->data, text->len, NULL,
+                                     NULL, pool));
+      *stream = svn_stream_from_stringbuf(text, pool);
+    }
+  else
+    {
+      *stream = file_stream;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+block_read_changes(apr_array_header_t **changes,
+                   svn_fs_t *fs,
+                   apr_file_t *file,
+                   svn_stream_t *file_stream,
+                   svn_fs_fs__p2l_entry_t* entry,
+                   svn_boolean_t must_read,
+                   apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_stream_t *stream;
+  if (!must_read && !ffd->changes_cache)
+    return SVN_NO_ERROR;
+
+  /* already in cache? */
+  if (!must_read && ffd->changes_cache)
+    {
+      svn_boolean_t is_cached = FALSE;
+      SVN_ERR(svn_cache__has_key(&is_cached, ffd->changes_cache,
+                                 &entry->revision, pool));
+      if (is_cached)
+        return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(auto_select_stream(&stream, fs, file, file_stream, entry, pool));
+
+  /* read changes from revision file */
+
+  SVN_ERR(svn_fs_fs__read_changes(changes, stream, pool));
+
+  /* cache for future reference */
+
+  if (ffd->changes_cache)
+    SVN_ERR(svn_cache__set(ffd->changes_cache, &entry->revision, *changes, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+block_read_noderev(node_revision_t **noderev_p,
+                   svn_fs_t *fs,
+                   apr_file_t *file,
+                   svn_stream_t *file_stream,
+                   svn_fs_fs__p2l_entry_t* entry,
+                   pair_cache_key_t *key,
+                   svn_boolean_t must_read,
+                   apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_stream_t *stream;
+  if (!must_read && !ffd->node_revision_cache)
+    return SVN_NO_ERROR;
+
+  /* already in cache? */
+  if (!must_read && ffd->node_revision_cache)
+    {
+      svn_boolean_t is_cached = FALSE;
+      SVN_ERR(svn_cache__has_key(&is_cached, ffd->node_revision_cache, key,
+                                 pool));
+      if (is_cached)
+        return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(auto_select_stream(&stream, fs, file, file_stream, entry, pool));
+
+  /* read node rev from revision file */
+
+  SVN_ERR(svn_fs_fs__read_noderev(noderev_p, stream, pool));
+
+  /* Workaround issue #4031: is-fresh-txn-root in revision files. */
+  (*noderev_p)->is_fresh_txn_root = FALSE;
+
+  if (ffd->node_revision_cache)
+    SVN_ERR(svn_cache__set(ffd->node_revision_cache, key, *noderev_p, pool));
+
+  if (   entry->item_index == SVN_FS_FS__ITEM_INDEX_ROOT_NODE
+      && ffd->rev_root_id_cache)
+    SVN_ERR(svn_cache__set(ffd->rev_root_id_cache, &entry->revision,
+                           (void *)(*noderev_p)->id, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+block_read(void **result,
+           svn_fs_t *fs,
+           svn_revnum_t revision,
+           apr_uint64_t item_index,
+           apr_file_t *revision_file,
+           apr_pool_t *result_pool,
+           apr_pool_t *scratch_pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  apr_off_t offset = 0;
+  apr_off_t block_start = 0;
+  apr_array_header_t *entries;
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  svn_stream_t *stream = svn_stream_from_aprfile2(revision_file, TRUE,
+                                                  scratch_pool);
+
+  /* don't try this on transaction protorev files */
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
+  
+  /* index lookup: find the OFFSET of the item we *must* read plus
+   * the list of items in the same block. */
+  SVN_ERR(svn_fs_fs__item_offset(&offset, fs, revision, NULL, item_index,
+                                 iterpool));
+  SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, fs, revision, offset,
+                                      scratch_pool));
+  SVN_ERR(aligned_seek(fs, revision_file, &block_start, offset, iterpool));
+  
+  /* read all items from the block */
+  for (i = 0; i < entries->nelts; ++i)
+    {
+      svn_fs_fs__p2l_entry_t* entry
+        = &APR_ARRAY_IDX(entries, i, svn_fs_fs__p2l_entry_t);
+      svn_boolean_t is_result = result && entry->revision == revision
+                                       && entry->item_index == item_index;
+
+      /* select the pool that we want the item to be allocated in */
+      apr_pool_t *pool = is_result ? result_pool : iterpool;
+
+      /* handle all items that start within this block and are relatively
+       * small (i.e. < block size).  Always read the item we need to return.
+       */
+      if (is_result || (   entry->offset >= block_start
+                        && entry->size < ffd->block_size))
+        {
+          void *item = NULL;
+          pair_cache_key_t key;
+          key.revision = entry->revision;
+          key.second = entry->item_index;
+
+          SVN_ERR(svn_io_file_seek(revision_file, SEEK_SET, &entry->offset,
+                                   iterpool));
+          switch (entry->type)
+            {
+              case SVN_FS_FS__ITEM_TYPE_FILE_REP:
+              case SVN_FS_FS__ITEM_TYPE_DIR_REP:
+              case SVN_FS_FS__ITEM_TYPE_FILE_PROPS:
+              case SVN_FS_FS__ITEM_TYPE_DIR_PROPS:
+                SVN_ERR(block_read_contents((svn_stringbuf_t **)&item,
+                                            fs, revision_file, stream,
+                                            entry, &key, pool));
+                break;
+
+              case SVN_FS_FS__ITEM_TYPE_NODEREV:
+                if (ffd->node_revision_cache || is_result)
+                  SVN_ERR(block_read_noderev((node_revision_t **)&item,
+                                             fs, revision_file, stream,
+                                             entry, &key, is_result, pool));
+                break;
+
+              case SVN_FS_FS__ITEM_TYPE_CHANGES:
+                SVN_ERR(block_read_changes((apr_array_header_t **)&item,
+                                           fs, revision_file,  stream,
+                                           entry, is_result, pool));
+                break;
+
+              default:
+                break;
+            }
+
+          if (is_result)
+            *result = item;
+
+          svn_pool_clear(iterpool);
+        }
+    }
+
+  SVN_ERR(svn_stream_close(stream));
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
