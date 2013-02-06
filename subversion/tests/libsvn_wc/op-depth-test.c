@@ -5848,6 +5848,48 @@ move_in_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
 
+  SVN_ERR(sbox_wc_update(&b, "", 3));
+  SVN_ERR(sbox_wc_revert(&b, "A/B", svn_depth_empty));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",          "normal",       3, ""},
+      {0, "A",         "normal",       3, "A"},
+      {0, "A/B",       "normal",       3, "A/B"},
+      {0, "A/B/C",     "normal",       3, "A/B/C"},
+      {0, "A/B/C/D",   "normal",       3, "A/B/C/D"},
+      {0, "A/B/C/D/E", "normal",       3, "A/B/C/D/E"},
+      {3, "A/B/C",     "base-deleted", NO_COPY_FROM, "C2"},
+      {3, "A/B/C/D",   "base-deleted", NO_COPY_FROM},
+      {3, "A/B/C/D/E", "base-deleted", NO_COPY_FROM},
+      {1, "C2",        "normal",       2, "A/B/C", MOVED_HERE},
+      {1, "C2/D",      "normal",       2, "A/B/C/D", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Revert should have left a tree-conflict (or broken the move). */
+  SVN_ERR(sbox_wc_resolve(&b, "A/B/C", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",          "normal",       3, ""},
+      {0, "A",         "normal",       3, "A"},
+      {0, "A/B",       "normal",       3, "A/B"},
+      {0, "A/B/C",     "normal",       3, "A/B/C"},
+      {0, "A/B/C/D",   "normal",       3, "A/B/C/D"},
+      {0, "A/B/C/D/E", "normal",       3, "A/B/C/D/E"},
+      {3, "A/B/C",     "base-deleted", NO_COPY_FROM, "C2"},
+      {3, "A/B/C/D",   "base-deleted", NO_COPY_FROM},
+      {3, "A/B/C/D/E", "base-deleted", NO_COPY_FROM},
+      {1, "C2",        "normal",       3, "A/B/C", MOVED_HERE},
+      {1, "C2/D",      "normal",       3, "A/B/C/D", MOVED_HERE},
+      {1, "C2/D/E",    "normal",       3, "A/B/C/D", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
   return SVN_NO_ERROR;
 }
 
@@ -6500,7 +6542,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move_update_delete_mods"),
     SVN_TEST_OPTS_PASS(nested_moves2,
                        "nested_moves2"),
-    SVN_TEST_OPTS_PASS(move_in_delete,
+    SVN_TEST_OPTS_XFAIL(move_in_delete,
                        "move_in_delete (issue 4303)"),
     SVN_TEST_OPTS_PASS(switch_move,
                        "switch_move"),
