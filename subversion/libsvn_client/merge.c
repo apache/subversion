@@ -12005,9 +12005,8 @@ do_automatic_merge_locked(const svn_client_automatic_merge_t *merge,
                                                    dry_run,
                                                    merge_options, &use_sleep,
                                                    ctx, scratch_pool);
-
     }
-  else
+  else /* ! merge->is_reintegrate_like */
     {
       /* Ignoring the base that we found, we pass the YCA instead and let
          do_merge() work out which subtrees need which revision ranges to
@@ -12018,15 +12017,18 @@ do_automatic_merge_locked(const svn_client_automatic_merge_t *merge,
          An improvement would be to change find_automatic_merge() to
          find the base for each sutree, and then here use the oldest base
          among all subtrees. */
-      merge_source_t source;
       apr_array_header_t *merge_sources;
+      svn_ra_session_t *ra_session = NULL;
 
-      source.loc1 = merge->yca;
-      source.loc2 = merge->right;
-      source.ancestral = ! merge->is_reintegrate_like;
-
-      merge_sources = apr_array_make(scratch_pool, 1, sizeof(merge_source_t *));
-      APR_ARRAY_PUSH(merge_sources, const merge_source_t *) = &source;
+      /* Normalize our merge sources, do_merge() requires this.  See the
+         'MERGEINFO MERGE SOURCE NORMALIZATION' global comment. */
+      SVN_ERR(ensure_ra_session_url(&ra_session, merge->right->url,
+                                    ctx, scratch_pool));
+      SVN_ERR(normalize_merge_sources_internal(
+        &merge_sources, merge->right,
+        svn_rangelist__initialize(merge->yca->rev, merge->right->rev, TRUE,
+                                  scratch_pool),
+        ra_session, ctx, scratch_pool, scratch_pool));
 
       err = do_merge(NULL, NULL, merge_sources, target, NULL,
                      TRUE /*related*/, TRUE /*same_repos*/,
