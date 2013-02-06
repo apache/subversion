@@ -6184,8 +6184,7 @@ def break_moved_replaced_dir(sbox):
 
   # Now resolve the conflict, using --accept=theirs-conflict.
   # This should break the move of A/B/E to A/B/E2, leaving A/B/E2
-  # as a copy. A/B/E is not reverted since it has been replaced
-  # by a new A/B/E.
+  # as a copy. A/B/E is not reverted.
   svntest.actions.run_and_verify_svn("resolve failed", None, [],
                                      'resolve', '--recursive',
                                      '--accept=theirs-conflict', wc_dir)
