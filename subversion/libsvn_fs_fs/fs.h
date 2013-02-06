@@ -244,6 +244,19 @@ typedef struct pair_cache_key_t
   apr_uint64_t second;
 } pair_cache_key_t;
 
+/* Key type that identifies a txdelta window. */
+typedef struct window_cache_key_t
+{
+  /* Revision that contains the representation */
+  svn_revnum_t revision;
+
+  /* Item index of the representation */
+  apr_uint64_t item_index;
+
+  /* Window number within that representation */
+  int chunk_index;
+} window_cache_key_t;
+
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object.
    Any caches in here may be NULL. */
 typedef struct fs_fs_data_t
@@ -317,14 +330,15 @@ typedef struct fs_fs_data_t
      respective pack file. */
   svn_cache__t *packed_offset_cache;
 
-  /* Cache for txdelta_window_t objects; the key is (revFilePath, offset) */
+  /* Cache for txdelta_window_t objects; the key is window_cache_key_t */
   svn_cache__t *txdelta_window_cache;
 
   /* Cache for combined windows as svn_stringbuf_t objects;
-     the key is (revFilePath, offset) */
+     the key is window_cache_key_t */
   svn_cache__t *combined_window_cache;
 
-  /* Cache for node_revision_t objects; the key is (revision, id offset) */
+  /* Cache for svn_fs_fs__rep_header_t objects;
+   * the key is (revision, item index) */
   svn_cache__t *node_revision_cache;
 
   /* Cache for change lists as APR arrays of change_t * objects; the key

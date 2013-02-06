@@ -497,7 +497,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            0, 0, /* Do not use inprocess cache */
                            svn_fs_fs__serialize_txdelta_window,
                            svn_fs_fs__deserialize_txdelta_window,
-                           APR_HASH_KEY_STRING,
+                           sizeof(window_cache_key_t),
                            apr_pstrcat(pool, prefix, "TXDELTA_WINDOW",
                                        (char *)NULL),
                            fs,
@@ -510,7 +510,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            0, 0, /* Do not use inprocess cache */
                            /* Values are svn_stringbuf_t */
                            NULL, NULL,
-                           APR_HASH_KEY_STRING,
+                           sizeof(window_cache_key_t),
                            apr_pstrcat(pool, prefix, "COMBINED_WINDOW",
                                        (char *)NULL),
                            fs,

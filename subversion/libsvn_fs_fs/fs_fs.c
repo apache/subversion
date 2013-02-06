@@ -1352,11 +1352,8 @@ typedef struct verify_walker_baton_t
   /* remember the last revision for which we called notify_func */
   svn_revnum_t last_notified_revision;
 
-  /* current file handle (or NULL) */
-  apr_file_t *file_hint;
-
-  /* corresponding revision (or SVN_INVALID_REVNUM) */
-  svn_revnum_t rev_hint;
+  /* cached hint for successive calls to svn_fs_fs__check_rep() */
+  void *hint;
 
   /* pool to use for the file handles etc. */
   apr_pool_t *pool;
@@ -1371,7 +1368,7 @@ verify_walker(representation_t *rep,
               apr_pool_t *scratch_pool)
 {
   verify_walker_baton_t *walker_baton = baton;
-  apr_file_t * previous_file;
+  void *previous_hint;
 
   /* notify and free resources periodically */
   if (   walker_baton->iteration_count > 1000
@@ -1390,17 +1387,17 @@ verify_walker(representation_t *rep,
 
       walker_baton->iteration_count = 0;
       walker_baton->file_count = 0;
-      walker_baton->file_hint = NULL;
-      walker_baton->rev_hint = SVN_INVALID_REVNUM;
+      walker_baton->hint = NULL;
     }
 
   /* access the repo data */
-  previous_file = walker_baton->file_hint;
-  SVN_ERR(svn_fs_fs__check_rep(rep, fs, walker_baton->pool));
+  previous_hint = walker_baton->hint;
+  SVN_ERR(svn_fs_fs__check_rep(rep, fs, &walker_baton->hint,
+                               walker_baton->pool));
 
   /* update resource usage counters */
   walker_baton->iteration_count++;
-  if (previous_file != walker_baton->file_hint)
+  if (previous_hint != walker_baton->hint)
     walker_baton->file_count++;
 
   return SVN_NO_ERROR;
@@ -1438,7 +1435,6 @@ svn_fs_fs__verify(svn_fs_t *fs,
       /* provide a baton to allow the reuse of open file handles between
          iterations (saves 2/3 of OS level file operations). */
       verify_walker_baton_t *baton = apr_pcalloc(pool, sizeof(*baton));
-      baton->rev_hint = SVN_INVALID_REVNUM;
       baton->pool = svn_pool_create(pool);
       baton->last_notified_revision = SVN_INVALID_REVNUM;
       baton->notify_func = notify_func;
