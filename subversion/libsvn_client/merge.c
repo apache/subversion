@@ -1354,6 +1354,21 @@ check_moved_here(svn_boolean_t *moved_here,
 #define CONFLICT_REASON_SKIP       ((svn_wc_conflict_reason_t)-3)
 #define CONFLICT_REASON_SKIP_WC    ((svn_wc_conflict_reason_t)-4)
 
+/* Baton used for testing trees for being editted while performing tree
+   conflict detection for incoming deletes */
+struct dir_delete_baton_t
+{
+  /* Reference to dir baton of directory that is the root of the deletion */
+  struct merge_dir_baton_t *del_root;
+
+  /* Boolean indicating that some edit is found. Allows avoiding more work */
+  svn_boolean_t found_edit;
+
+  /* A list of paths that are compared. Kept up to date until FOUND_EDIT is
+     set to TRUE */
+  apr_hash_t *compared_abspaths;
+};
+
 /* Baton for the merge_dir_*() functions. Initialized in merge_dir_opened() */
 struct merge_dir_baton_t
 {
@@ -1411,6 +1426,11 @@ struct merge_dir_baton_t
      notification (which may be a replaced notification if the node is not just
      deleted) */
   apr_hash_t *pending_deletes;
+
+  /* If not NULL, a reference to the information of the delete test that is
+     currently in progress. Allocated in the root-directory baton, referenced
+     from all descendants */
+  struct dir_delete_baton_t *delete_state;
 };
 
 /* Baton for the merge_dir_*() functions. Initialized in merge_file_opened() */
@@ -1691,8 +1711,14 @@ mark_dir_edited(merge_cmd_baton_t *merge_b,
   if (! db->shadowed)
     return SVN_NO_ERROR; /* Easy out */
 
-  if (db->tree_conflict_reason == CONFLICT_REASON_SKIP
-      || db->tree_conflict_reason == CONFLICT_REASON_SKIP_WC)
+  if (db->parent_baton
+      && db->parent_baton->delete_state
+      && db->tree_conflict_reason != CONFLICT_REASON_NONE)
+    {
+      db->parent_baton->delete_state->found_edit = TRUE;
+    }
+  else if (db->tree_conflict_reason == CONFLICT_REASON_SKIP
+           || db->tree_conflict_reason == CONFLICT_REASON_SKIP_WC)
     {
       /* open_directory() decided not to flag a tree conflict, but
          for clarity we produce a skip for this node that
@@ -1798,8 +1824,14 @@ mark_file_edited(merge_cmd_baton_t *merge_b,
   if (! fb->shadowed)
     return SVN_NO_ERROR; /* Easy out */
 
-  if (fb->tree_conflict_reason == CONFLICT_REASON_SKIP
-      || fb->tree_conflict_reason == CONFLICT_REASON_SKIP_WC)
+  if (fb->parent_baton
+      && fb->parent_baton->delete_state
+      && fb->tree_conflict_reason != CONFLICT_REASON_NONE)
+    {
+      fb->parent_baton->delete_state->found_edit = TRUE;
+    }
+  else if (fb->tree_conflict_reason == CONFLICT_REASON_SKIP
+           || fb->tree_conflict_reason == CONFLICT_REASON_SKIP_WC)
     {
       /* open_directory() decided not to flag a tree conflict, but
          for clarity we produce a skip for this node that
@@ -1998,7 +2030,13 @@ merge_file_opened(void **new_file_baton,
               return SVN_NO_ERROR; /* Already set a tree conflict */
             }
 
-          /* TODO: Start comparison mode to verify for delete tree conflict */
+          /* Comparison mode to verify for delete tree conflicts? */
+          if (pdb && pdb->delete_state
+              && pdb->delete_state->found_edit)
+            {
+              /* Earlier nodes found a conflict. Done. */
+              *skip = TRUE;
+            }
         }
     }
   else
@@ -2509,21 +2547,45 @@ merge_file_deleted(const char *relpath,
     }
 
   /* If the files are identical, attempt deletion */
-  SVN_ERR(files_same_p(&same, left_file, left_props,
-                       local_abspath, merge_b->ctx->wc_ctx,
-                       scratch_pool));
-  if (same || merge_b->force_delete || merge_b->record_only /* ### why? */)
+  if (merge_b->force_delete)
+    same = TRUE;
+  else
+    SVN_ERR(files_same_p(&same, left_file, left_props,
+                         local_abspath, merge_b->ctx->wc_ctx,
+                         scratch_pool));
+
+  if (fb->parent_baton
+      && fb->parent_baton->delete_state)
     {
-      /* Passing NULL for the notify_func and notify_baton because
-         repos_diff.c:delete_entry() will do it for us. */
-      SVN_ERR(svn_client__wc_delete(local_abspath, TRUE,
-                                    merge_b->dry_run, FALSE, NULL, NULL,
-                                    merge_b->ctx, scratch_pool));
+      if (same)
+        {
+          /* Note that we checked this file */
+          store_path(fb->parent_baton->delete_state->compared_abspaths,
+                     local_abspath);
+        }
+      else
+        {
+          /* We found some modification. Parent should raise a tree conflict */
+          fb->parent_baton->delete_state->found_edit = TRUE;
+        }
+
+      return SVN_NO_ERROR;
+    }
+  else if (same)
+    {
+      if (!merge_b->dry_run)
+        SVN_ERR(svn_wc_delete4(merge_b->ctx->wc_ctx, local_abspath,
+                               FALSE /* keep_local */, FALSE /* unversioned */,
+                               merge_b->ctx->cancel_func,
+                               merge_b->ctx->cancel_baton,
+                               NULL, NULL /* no notify */,
+                               scratch_pool));
 
       /* Record that we might have deleted mergeinfo */
       alloc_and_store_path(&merge_b->paths_with_deleted_mergeinfo,
                            local_abspath, merge_b->pool);
 
+      /* And notify the deletion */
       SVN_ERR(record_update_delete(merge_b, fb->parent_baton, local_abspath,
                                    svn_node_file, scratch_pool));
     }
@@ -2586,9 +2648,6 @@ merge_dir_opened(void **new_dir_baton,
 
   *new_dir_baton = db;
 
-  if (! right_source)
-    *skip_children = TRUE; /* ### Compatibility with walk_children = FALSE */
-
   if (pdb)
     {
       db->parent_baton = pdb;
@@ -2637,6 +2696,14 @@ merge_dir_opened(void **new_dir_baton,
 
             db->tree_conflict_reason = CONFLICT_REASON_SKIP;
             db->skip_reason = obstr_state;
+
+            if (! right_source)
+              {
+                *skip = *skip_children = TRUE;
+                SVN_ERR(mark_dir_edited(merge_b, db, local_abspath,
+                                        scratch_pool));
+              }
+
             return SVN_NO_ERROR;
           }
 
@@ -2712,10 +2779,32 @@ merge_dir_opened(void **new_dir_baton,
 
           if (db->shadowed)
             {
+              *skip_children = TRUE;
               return SVN_NO_ERROR; /* Already set a tree conflict */
             }
 
-          /* TODO: Start comparison mode to verify for delete tree conflict */
+          db->delete_state = (pdb != NULL) ? pdb->delete_state : NULL;
+
+          if (db->delete_state && db->delete_state->found_edit)
+            {
+              /* A sibling found a conflict. Done. */
+              *skip = TRUE;
+              *skip_children = TRUE;
+            }
+          else if (merge_b->force_delete)
+            {
+              /* No comparison necessary */
+              *skip_children = TRUE;
+            }
+          else if (! db->delete_state)
+            {
+              /* Start descendant comparison */
+              db->delete_state = apr_pcalloc(db->pool,
+                                             sizeof(*db->delete_state));
+
+              db->delete_state->del_root = db;
+              db->delete_state->compared_abspaths = apr_hash_make(db->pool);
+            }
         }
     }
   else
@@ -3064,15 +3153,37 @@ merge_dir_added(const char *relpath,
   return SVN_NO_ERROR;
 }
 
+/* Helper for merge_dir_deleted. Implement svn_wc_status_func4_t */
+static svn_error_t *
+verify_touched_by_del_check(void *baton,
+                            const char *local_abspath,
+                            const svn_wc_status3_t *status,
+                            apr_pool_t *scratch_pool)
+{
+  struct dir_delete_baton_t *delb = baton;
+
+  if (contains_path(delb->compared_abspaths, local_abspath))
+    return SVN_NO_ERROR;
+
+  switch (status->node_status)
+    {
+      case svn_wc_status_deleted:
+      case svn_wc_status_ignored:
+      case svn_wc_status_none:
+        return SVN_NO_ERROR;
+
+      default:
+        delb->found_edit = TRUE;
+        return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
+    }
+}
+
 /* An svn_diff_tree_processor_t function.
  *
  * Called after merge_dir_opened() when a node existed only in the left source.
  *
  * After the merge_dir_opened() but before the call to this merge_dir_deleted()
  * function all descendants that existed in left_source will have been deleted.
- *
- * ### By default the diff drivers report all descendants of a delete,
- * ### but this feature is currently disabled by a SKIP on merge_dir_opened()
  *
  * If this node is replaced, an _opened() followed by a matching _add() will
  * be invoked after this function.
@@ -3089,7 +3200,9 @@ merge_dir_deleted(const char *relpath,
   struct merge_dir_baton_t *db = dir_baton;
   const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
                                               relpath, scratch_pool);
-  svn_error_t *err;
+  struct dir_delete_baton_t *delb;
+  svn_boolean_t same;
+  apr_hash_t *working_props;
 
   SVN_ERR(handle_pending_notifications(merge_b, db, scratch_pool));
   SVN_ERR(mark_dir_edited(merge_b, db, local_abspath, scratch_pool));
@@ -3113,23 +3226,96 @@ merge_dir_deleted(const char *relpath,
       return SVN_NO_ERROR;
     }
 
-  /* ### TODO: Before deleting, we should ensure that this dir
-     tree is equal to the one we're being asked to delete.
-     If not, mark this directory as a tree conflict victim,
-     because this could be use case 5 as described in
-     notes/tree-conflicts/detection.txt.
-   */
+  SVN_ERR(svn_wc_prop_list2(&working_props,
+                            merge_b->ctx->wc_ctx, local_abspath,
+                            scratch_pool, scratch_pool));
 
-  /* Passing NULL for the notify_func and notify_baton because
-     repos_diff.c:delete_entry() will do it for us. */
-  err = svn_client__wc_delete(local_abspath, merge_b->force_delete,
-                              merge_b->dry_run, FALSE,
-                              NULL, NULL,
-                              merge_b->ctx, scratch_pool);
-  if (err)
+  if (merge_b->force_delete)
+    same = TRUE;
+  else
     {
-      svn_error_clear(err);
+      /* Compare the properties */
+      SVN_ERR(properties_same_p(&same, left_props, working_props,
+                                scratch_pool));
+    }
 
+  delb = db->delete_state;
+  assert(delb != NULL);
+
+  if (! same)
+    {
+      delb->found_edit = TRUE;
+    }
+  else
+    {
+      store_path(delb->compared_abspaths, local_abspath);
+    }
+
+  if (delb->del_root != db)
+    return SVN_NO_ERROR;
+
+  if (delb->found_edit)
+    same = FALSE;
+  else if (merge_b->force_delete)
+    same = TRUE;
+  else
+    {
+      apr_array_header_t *ignores;
+      svn_error_t *err;
+      same = TRUE;
+
+      SVN_ERR(svn_wc_get_default_ignores(&ignores, merge_b->ctx->config,
+                                         scratch_pool));
+
+      /* None of the descendants was modified, but maybe there are
+         descendants we haven't walked?
+
+         Note that we aren't interested in changes, as we already verified
+         changes in the paths touched by the merge. And the existance of
+         other paths is enough to mark the directory edited */
+      err = svn_wc_walk_status(merge_b->ctx->wc_ctx, local_abspath,
+                               svn_depth_infinity, TRUE /* get-all */,
+                               FALSE /* no-ignore */,
+                               TRUE /* ignore-text-mods */, ignores,
+                               verify_touched_by_del_check, delb,
+                               merge_b->ctx->cancel_func,
+                               merge_b->ctx->cancel_baton,
+                               scratch_pool);
+
+      if (err)
+        {
+          if (err->apr_err != SVN_ERR_CEASE_INVOCATION)
+            return svn_error_trace(err);
+
+          svn_error_clear(err);
+        }
+
+      same = ! delb->found_edit;
+    }
+
+  if (same && !merge_b->dry_run)
+    {
+      svn_error_t *err;
+
+      err = svn_wc_delete4(merge_b->ctx->wc_ctx, local_abspath,
+                           FALSE /* keep_local */, FALSE /* unversioned */,
+                           merge_b->ctx->cancel_func,
+                           merge_b->ctx->cancel_baton,
+                           NULL, NULL /* no notify */,
+                           scratch_pool);
+
+      if (err)
+        {
+          if (err->apr_err != SVN_ERR_WC_LEFT_LOCAL_MOD)
+            return svn_error_trace(err);
+
+          svn_error_clear(err);
+          same = FALSE;
+        }
+    }
+
+  if (! same)
+    {
       /* If the attempt to delete an existing directory failed,
        * the directory has local modifications (e.g. locally added
        * files, or property changes). Flag a tree conflict. */
@@ -3143,8 +3329,13 @@ merge_dir_deleted(const char *relpath,
   else
     {
       /* Record that we might have deleted mergeinfo */
-      alloc_and_store_path(&merge_b->paths_with_deleted_mergeinfo,
-                           local_abspath, merge_b->pool);
+      if (working_props
+          && apr_hash_get(working_props, SVN_PROP_MERGEINFO,
+                          APR_HASH_KEY_STRING))
+        {
+          alloc_and_store_path(&merge_b->paths_with_deleted_mergeinfo,
+                               local_abspath, merge_b->pool);
+        }
 
       SVN_ERR(record_update_delete(merge_b, db->parent_baton, local_abspath,
                                    svn_node_dir, scratch_pool));

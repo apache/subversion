@@ -689,7 +689,6 @@ def merge_dir_mod_onto_not_dir(sbox):
   test_tc_merge(sbox2, d_mods, wc_scen = d_dels + d_moves)
 
 # Test for issue #3150 'tree conflicts with directories as victims'.
-@XFail()
 @Issue(3150)
 def merge_dir_del_onto_not_same(sbox):
   "merge dir: del/rpl/mv onto not-same"
