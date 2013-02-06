@@ -1189,6 +1189,8 @@ svn_error_t *
 svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
                                svn_node_kind_t *kind,
                                svn_boolean_t *deleted,
+                               svn_boolean_t *excluded,
+                               svn_depth_t *parent_depth,
                                svn_wc_context_t *wc_ctx,
                                const char *local_abspath,
                                svn_boolean_t no_wcroot_check,
@@ -1204,6 +1206,10 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
     *kind = svn_node_none;
   if (deleted)
     *deleted = FALSE;
+  if (excluded)
+    *excluded = FALSE;
+  if (parent_depth)
+    *parent_depth = svn_depth_unknown;
 
   SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
 
@@ -1226,9 +1232,10 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
         }
 
       err = svn_wc__db_read_info(&status, &db_kind, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, parent_depth, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL,
                                  wc_ctx->db, svn_dirent_dirname(local_abspath,
                                                                 scratch_pool),
                                  scratch_pool, scratch_pool);
@@ -1289,6 +1296,9 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
 
       case svn_wc__db_status_excluded:
       case svn_wc__db_status_server_excluded:
+        if (excluded)
+          *excluded = TRUE;
+        /* fall through */
       case svn_wc__db_status_incomplete:
         *obstruction_state = svn_wc_notify_state_missing;
         break;

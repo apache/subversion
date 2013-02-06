@@ -1076,6 +1076,12 @@ svn_wc__get_not_present_descendants(const apr_array_header_t **descendants,
  * If DELETED is not NULL, set *DELETED to TRUE if the node is marked as
  * deleted in the working copy.
  *
+ * If EXCLUDED is not NULL, set *EXCLUDED to TRUE if the node is marked as
+ * user or server excluded.
+ *
+ * If PARENT_DEPTH is not NULL, set *PARENT_DEPTH to the depth stored on the
+ * parent. (Set to svn_depth_unknown if LOCAL_ABSPATH itself exists as node)
+ *
  * All output arguments except OBSTRUCTION_STATE can be NULL to ommit the
  * result.
  *
@@ -1085,6 +1091,8 @@ svn_error_t *
 svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
                                svn_node_kind_t *kind,
                                svn_boolean_t *deleted,
+                               svn_boolean_t *excluded,
+                               svn_depth_t *parent_depth,
                                svn_wc_context_t *wc_ctx,
                                const char *local_abspath,
                                svn_boolean_t no_wcroot_check,
