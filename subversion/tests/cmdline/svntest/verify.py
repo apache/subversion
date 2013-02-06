@@ -119,14 +119,13 @@ class ExpectedOutput(object):
 
   def matches(self, actual, except_re=None):
     """Return whether SELF.expected matches ACTUAL (which may be a list
-    of newline-terminated lines, or a single string).  ACTUAL may be None,
-    meaning an empty list."""
+       of newline-terminated lines, or a single string).
+    """
+    assert actual is not None
     expected = self.expected
     if not isinstance(expected, list):
       expected = [expected]
-    if actual is None:
-      actual = []
-    elif not isinstance(actual, list):
+    if not isinstance(actual, list):
       actual = [actual]
 
     if except_re:
@@ -361,6 +360,7 @@ def compare_and_display_lines(message, label, expected, actual,
   ### It'd be nicer to use createExpectedOutput() here, but its
   ### semantics don't match all current consumers of this function.
   assert expected is not None
+  assert actual is not None
   if not isinstance(expected, ExpectedOutput):
     expected = ExpectedOutput(expected)
 
