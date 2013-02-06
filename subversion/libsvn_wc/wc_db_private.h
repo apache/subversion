@@ -412,6 +412,7 @@ svn_wc__db_retract_parent_delete(svn_wc__db_wcroot_t *wcroot,
 svn_error_t *
 svn_wc__db_op_depth_moved_to(const char **moved_to_relpath,
                              const char **moved_to_op_root_relpath,
+                             const char **moved_away_root_relpath,
                              const char **op_root_relpath,
                              int op_depth,
                              svn_wc__db_wcroot_t *wcroot,

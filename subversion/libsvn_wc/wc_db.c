@@ -11496,6 +11496,9 @@ svn_wc__db_follow_moved_to(apr_array_header_t **moved_tos,
    the move of LOCAL_RELPATH. This may be equal to *MOVED_TO_RELPATH
    if LOCAL_RELPATH is the root of the move.
 
+   *MOVED_AWAY_ROOT_RELPATH: the root of the move source.  For
+   moves inside a delete this will be different from *OP_ROOT_RELPATH.
+
    *OP_ROOT_RELPATH: the root of the source layer that contains the
    move.  For moves inside deletes this is the root of the delete, for
    other moves this is the root of the move.
@@ -11504,10 +11507,12 @@ svn_wc__db_follow_moved_to(apr_array_header_t **moved_tos,
 
      MOVED_TO_RELPATH is X/C
      MOVED_TO_OP_ROOT_RELPATH is X
+     MOVED_AWAY_OP_ROOT_RELPATH is A/B
      OP_ROOT_RELPATH is A/B
 
-   If A is then deleted the MOVED_TO_RELPATH and MOVED_TO_OP_ROOT_RELPATH
-   remain the same but OP_ROOT_RELPATH changes to A.
+   If A is then deleted the MOVED_TO_RELPATH, MOVED_TO_OP_ROOT_RELPATH
+   and MOVED_AWAY_ROOT_RELPATH remain the same but OP_ROOT_RELPATH
+   changes to A.
 
    ### Think about combining with scan_deletion?  Also with
    ### scan_addition to get moved-to for replaces?  Do we need to
@@ -11516,6 +11521,7 @@ svn_wc__db_follow_moved_to(apr_array_header_t **moved_tos,
 svn_error_t *
 svn_wc__db_op_depth_moved_to(const char **moved_to_relpath,
                              const char **moved_to_op_root_relpath,
+                             const char **moved_away_root_relpath,
                              const char **op_root_relpath,
                              int op_depth,
                              svn_wc__db_wcroot_t *wcroot,
@@ -11528,7 +11534,8 @@ svn_wc__db_op_depth_moved_to(const char **moved_to_relpath,
   int delete_op_depth;
   const char *relpath = local_relpath;
 
-  *moved_to_relpath = *moved_to_op_root_relpath = *op_root_relpath = NULL;
+  *moved_to_relpath = *moved_to_op_root_relpath = NULL;
+  *moved_away_root_relpath = *op_root_relpath = NULL;
 
   do
     {
@@ -11541,13 +11548,15 @@ svn_wc__db_op_depth_moved_to(const char **moved_to_relpath,
           delete_op_depth = svn_sqlite__column_int(stmt, 0);
           *moved_to_op_root_relpath = svn_sqlite__column_text(stmt, 3,
                                                               result_pool);
+          if (*moved_to_op_root_relpath)
+            *moved_away_root_relpath = apr_pstrdup(result_pool, relpath);
         }
       SVN_ERR(svn_sqlite__reset(stmt));
       if (!*moved_to_op_root_relpath)
         relpath = svn_relpath_dirname(relpath, scratch_pool);
     }
   while (!*moved_to_op_root_relpath
-        && have_row && delete_op_depth < relpath_depth(relpath));
+        && have_row && delete_op_depth <= relpath_depth(relpath));
 
   if (*moved_to_op_root_relpath)
     {
@@ -11569,6 +11578,7 @@ svn_wc__db_op_depth_moved_to(const char **moved_to_relpath,
 svn_error_t *
 svn_wc__db_base_moved_to(const char **moved_to_abspath,
                          const char **moved_to_op_root_abspath,
+                         const char **moved_away_root_abspath,
                          const char **op_root_abspath,
                          svn_wc__db_t *db,
                          const char *local_abspath,
@@ -11577,7 +11587,8 @@ svn_wc__db_base_moved_to(const char **moved_to_abspath,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  const char *moved_to_relpath, *moved_to_op_root_relpath, *op_root_relpath;
+  const char *moved_to_relpath, *moved_to_op_root_relpath;
+  const char *moved_away_root_relpath, *op_root_relpath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -11587,6 +11598,7 @@ svn_wc__db_base_moved_to(const char **moved_to_abspath,
 
   SVN_WC__DB_WITH_TXN(svn_wc__db_op_depth_moved_to(&moved_to_relpath,
                                                    &moved_to_op_root_relpath,
+                                                   &moved_away_root_relpath,
                                                    &op_root_relpath,
                                                    0 /* BASE op-depth */,
                                                    wcroot, local_relpath,
@@ -11603,6 +11615,13 @@ svn_wc__db_base_moved_to(const char **moved_to_abspath,
     *moved_to_op_root_abspath
       = moved_to_op_root_relpath
       ? svn_dirent_join(wcroot->abspath, moved_to_relpath, result_pool)
+      : NULL;
+
+  if (moved_away_root_abspath)
+    *moved_away_root_abspath
+      = moved_away_root_relpath
+      ? svn_dirent_join(wcroot->abspath, moved_away_root_relpath,
+                        result_pool)
       : NULL;
 
   if (op_root_abspath)

@@ -6322,6 +6322,74 @@ layered_moved_to(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+update_within_move(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  svn_error_t *err;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "update_within_move", opts, pool));
+
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C/D"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+
+  SVN_ERR(sbox_wc_move(&b, "A", "X"));
+  SVN_ERR(sbox_wc_update(&b, "A/B/C", 2));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",        "normal",       1, ""},
+      {0, "A",       "normal",       1, "A"},
+      {0, "A/B",     "normal",       1, "A/B"},
+      {0, "A/B/C",   "normal",       2, "A/B/C"},
+      {0, "A/B/C/D", "normal",       2, "A/B/C/D"},
+      {1, "A",       "base-deleted", NO_COPY_FROM, "X"},
+      {1, "A/B",     "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C",   "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C/D", "base-deleted", NO_COPY_FROM},
+      {1, "X",       "normal",       1, "A", MOVED_HERE},
+      {1, "X/B",     "normal",       1, "A/B", MOVED_HERE},
+      {1, "X/B/C",   "normal",       1, "A/B/C", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Can't resolve mixed-revision source to mine-conflict. */
+  err = sbox_wc_resolve(&b, "A", svn_depth_empty,
+                        svn_wc_conflict_choose_mine_conflict);
+  SVN_ERR_ASSERT(err && err->apr_err == SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE);
+  svn_error_clear(err);
+
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_merged));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",        "normal",       1, ""},
+      {0, "A",       "normal",       1, "A"},
+      {0, "A/B",     "normal",       1, "A/B"},
+      {0, "A/B/C",   "normal",       2, "A/B/C"},
+      {0, "A/B/C/D", "normal",       2, "A/B/C/D"},
+      {1, "A",       "base-deleted", NO_COPY_FROM},
+      {1, "A/B",     "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C",   "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C/D", "base-deleted", NO_COPY_FROM},
+      {1, "X",       "normal",       1, "A"},
+      {1, "X/B",     "normal",       1, "A/B"},
+      {1, "X/B/C",   "normal",       1, "A/B/C"},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+
+  return SVN_NO_ERROR;
+}
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -6440,5 +6508,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move_replace"),
     SVN_TEST_OPTS_PASS(layered_moved_to,
                        "layered_moved_to"),
+    SVN_TEST_OPTS_PASS(update_within_move,
+                       "update_within_move"),
     SVN_TEST_NULL
   };
