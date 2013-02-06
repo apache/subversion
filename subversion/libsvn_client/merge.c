@@ -536,10 +536,11 @@ is_path_conflicted_by_merge(merge_cmd_baton_t *merge_b)
 static svn_error_t *
 perform_obstruction_check(svn_wc_notify_state_t *obstruction_state,
                           svn_boolean_t *deleted,
+                          svn_boolean_t *excluded,
                           svn_node_kind_t *kind,
+                          svn_depth_t *parent_depth,
                           const merge_cmd_baton_t *merge_b,
                           const char *local_abspath,
-                          svn_node_kind_t expected_kind,
                           apr_pool_t *scratch_pool)
 {
   svn_wc_context_t *wc_ctx = merge_b->ctx->wc_ctx;
@@ -563,17 +564,11 @@ perform_obstruction_check(svn_wc_notify_state_t *obstruction_state,
   SVN_ERR(svn_wc__check_for_obstructions(obstruction_state,
                                          kind,
                                          deleted,
+                                         excluded,
+                                         parent_depth,
                                          wc_ctx, local_abspath,
                                          check_root,
                                          scratch_pool));
-
-  if (*obstruction_state == svn_wc_notify_state_inapplicable
-      && expected_kind != svn_node_unknown
-      && *kind != expected_kind)
-    {
-      *obstruction_state = svn_wc_notify_state_obstructed;
-    }
-
   return SVN_NO_ERROR;
 }
 
@@ -1943,13 +1938,16 @@ merge_file_opened(void **new_file_baton,
       /* Node is expected to be a file, which will be changed or deleted. */
       svn_node_kind_t kind;
       svn_boolean_t is_deleted;
+      svn_boolean_t excluded;
+      svn_depth_t parent_depth;
 
       {
         svn_wc_notify_state_t obstr_state;
 
-        SVN_ERR(perform_obstruction_check(&obstr_state, &is_deleted, &kind,
+        SVN_ERR(perform_obstruction_check(&obstr_state, &is_deleted, &excluded,
+                                          &kind, &parent_depth,
                                           merge_b, local_abspath,
-                                          svn_node_unknown, scratch_pool));
+                                          scratch_pool));
 
         if (obstr_state != svn_wc_notify_state_inapplicable)
           {
@@ -1975,24 +1973,15 @@ merge_file_opened(void **new_file_baton,
              Non-inheritable mergeinfo will be recorded, allowing
              future merges into non-shallow working copies to merge
              changes we missed this time around. */
-          if (pdb != NULL)
+          if (pdb && (excluded
+                      || (parent_depth != svn_depth_unknown &&
+                          parent_depth < svn_depth_files)))
             {
-              svn_depth_t parent_depth;
-              const char *dir_abspath = svn_dirent_dirname(local_abspath,
-                                                           scratch_pool);
+                fb->shadowed = TRUE;
 
-              SVN_ERR(svn_wc__node_get_depth(&parent_depth,
-                                             merge_b->ctx->wc_ctx,
-                                             dir_abspath, scratch_pool));
-              if (parent_depth != svn_depth_unknown &&
-                  parent_depth < svn_depth_immediates)
-                {
-                  fb->shadowed = TRUE;
-
-                  fb->tree_conflict_reason = CONFLICT_REASON_SKIP;
-                  fb->skip_reason = svn_wc_notify_state_missing;
-                  return SVN_NO_ERROR;
-                }
+                fb->tree_conflict_reason = CONFLICT_REASON_SKIP;
+                fb->skip_reason = svn_wc_notify_state_missing;
+                return SVN_NO_ERROR;
             }
 
           if (is_deleted)
@@ -2060,9 +2049,9 @@ merge_file_opened(void **new_file_baton,
           svn_node_kind_t kind;
           svn_boolean_t is_deleted;
 
-          SVN_ERR(perform_obstruction_check(&obstr_state, &is_deleted, &kind,
+          SVN_ERR(perform_obstruction_check(&obstr_state, &is_deleted, NULL,
+                                            &kind, NULL,
                                             merge_b, local_abspath,
-                                            svn_node_unknown,
                                             scratch_pool));
 
           if (obstr_state != svn_wc_notify_state_inapplicable)
@@ -2666,13 +2655,15 @@ merge_dir_opened(void **new_dir_baton,
       /* Node is expected to be a directory. */
       svn_node_kind_t kind;
       svn_boolean_t is_deleted;
+      svn_boolean_t excluded;
+      svn_depth_t parent_depth;
 
       /* Check for an obstructed or missing node on disk. */
       {
         svn_wc_notify_state_t obstr_state;
-        SVN_ERR(perform_obstruction_check(&obstr_state, &is_deleted, &kind,
+        SVN_ERR(perform_obstruction_check(&obstr_state, &is_deleted, &excluded,
+                                          &kind, &parent_depth,
                                           merge_b, local_abspath,
-                                          svn_node_unknown,
                                           scratch_pool));
 
         if (obstr_state != svn_wc_notify_state_inapplicable)
@@ -2723,25 +2714,16 @@ merge_dir_opened(void **new_dir_baton,
              Non-inheritable mergeinfo will be recorded, allowing
              future merges into non-shallow working copies to merge
              changes we missed this time around. */
-          if (pdb != NULL)
+          if (pdb && (excluded
+                      || (parent_depth != svn_depth_unknown &&
+                          parent_depth < svn_depth_immediates)))
             {
-              svn_depth_t parent_depth;
-              const char *dir_abspath = svn_dirent_dirname(local_abspath,
-                                                           scratch_pool);
+              db->shadowed = TRUE;
 
-              SVN_ERR(svn_wc__node_get_depth(&parent_depth,
-                                             merge_b->ctx->wc_ctx,
-                                             dir_abspath, scratch_pool));
-              if (parent_depth != svn_depth_unknown &&
-                  parent_depth < svn_depth_immediates)
-                {
-                  db->shadowed = TRUE;
+              db->tree_conflict_reason = CONFLICT_REASON_SKIP;
+              db->skip_reason = svn_wc_notify_state_missing;
 
-                  db->tree_conflict_reason = CONFLICT_REASON_SKIP;
-                  db->skip_reason = svn_wc_notify_state_missing;
-
-                  return SVN_NO_ERROR;
-                }
+              return SVN_NO_ERROR;
             }
 
           if (is_deleted)
@@ -2828,9 +2810,9 @@ merge_dir_opened(void **new_dir_baton,
           svn_node_kind_t kind;
           svn_boolean_t is_deleted;
 
-          SVN_ERR(perform_obstruction_check(&obstr_state, &is_deleted, &kind,
+          SVN_ERR(perform_obstruction_check(&obstr_state, &is_deleted, NULL,
+                                            &kind, NULL,
                                             merge_b, local_abspath,
-                                            svn_node_unknown,
                                             scratch_pool));
 
           /* In this case of adding a directory, we have an exception to the
@@ -5265,8 +5247,9 @@ record_skips_in_mergeinfo(const char *mergeinfo_path,
       /* Before we override, make sure this is a versioned path, it might
          be an external or missing from disk due to authz restrictions. */
       SVN_ERR(perform_obstruction_check(&obstruction_state, NULL, NULL,
+                                        NULL, NULL,
                                         merge_b, skipped_abspath,
-                                        svn_node_unknown, iterpool));
+                                        iterpool));
       if (obstruction_state == svn_wc_notify_state_obstructed
           || obstruction_state == svn_wc_notify_state_missing)
         continue;
