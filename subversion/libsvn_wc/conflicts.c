@@ -2641,23 +2641,13 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
                   *did_resolve = TRUE;
                 }
             }
-          else if (conflict_choice == svn_wc_conflict_choose_theirs_conflict)
+          else if (conflict_choice == svn_wc_conflict_choose_theirs_conflict ||
+                   conflict_choice == svn_wc_conflict_choose_merged)
             {
-              /* Break the move by reverting the deleted half of
-               * the move, keeping the copied-half as a copy.
-               * Reverting a node requires write lock on parent. */
-              SVN_ERR(svn_wc__revert_internal(db, local_abspath,
-                                              svn_depth_infinity,
-                                              FALSE, 
-                                              cancel_func,
-                                              cancel_baton,
-                                              notify_func,
-                                              notify_baton,
-                                              scratch_pool));
-              *did_resolve = TRUE;
-            }
-          else if (conflict_choice == svn_wc_conflict_choose_merged)
-            {
+              /* We must break the move even if the user accepts the current
+               * working copy state (choose_merged) instead of updating the
+               * move. Else the move would be left in an invalid state. */
+
               /* ### As above, this should also be combined with
                  ### svn_wc__db_op_mark_resolved. */
               SVN_ERR(svn_wc__db_resolve_break_moved_away(db, local_abspath,
