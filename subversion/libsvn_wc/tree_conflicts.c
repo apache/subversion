@@ -419,7 +419,7 @@ svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
       svn_error_clear(err);
     }
   else if (existing_conflict)
-    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+    return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                              _("Attempt to add tree conflict that already "
                                "exists at '%s'"),
                              svn_dirent_local_style(conflict->local_abspath,

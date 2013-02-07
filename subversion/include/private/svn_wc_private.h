@@ -302,6 +302,9 @@ svn_wc__get_tree_conflict(const svn_wc_conflict_description2_t **tree_conflict,
 /** Record the tree conflict described by @a conflict in the WC for
  * @a conflict->local_abspath.  Use @a scratch_pool for all temporary
  * allocations.
+ *
+ * Returns an SVN_ERR_WC_PATH_UNEXPECTED_STATUS error when
+ * CONFLICT->LOCAL_ABSPATH is already tree conflicted.
  */
 svn_error_t *
 svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
