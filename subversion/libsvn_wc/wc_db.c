@@ -6229,6 +6229,27 @@ op_revert_recursive_txn(void *baton,
                                                     local_relpath,
                                                     scratch_pool));
 
+  /* Remove moved-here from move destinations outside the tree. */
+  SVN_ERR(svn_sqlite__get_statement(
+                    &stmt, wcroot->sdb, STMT_SELECT_MOVED_OUTSIDE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
+                            op_depth));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      const char *move_src_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      svn_error_t *err;
+
+      err = svn_wc__db_resolve_break_moved_away_internal(wcroot,
+                                                         move_src_relpath,
+                                                         scratch_pool);
+      if (err)
+        return svn_error_compose_create(err, svn_sqlite__reset(stmt));
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+
   /* Don't delete BASE nodes */
   select_op_depth = op_depth ? op_depth : 1;
 

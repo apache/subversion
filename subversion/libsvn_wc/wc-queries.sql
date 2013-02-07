@@ -1516,6 +1516,14 @@ WHERE wc_id = ?1
   AND op_depth > ?3
   AND moved_to IS NOT NULL
 
+-- STMT_SELECT_MOVED_OUTSIDE
+SELECT local_relpath FROM nodes
+WHERE wc_id = ?1
+  AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND op_depth >= ?3
+  AND moved_to IS NOT NULL
+  AND NOT IS_STRICT_DESCENDANT_OF(moved_to, ?2)
+
 -- STMT_SELECT_OP_DEPTH_MOVED_PAIR
 SELECT n.local_relpath, n.moved_to,
        (SELECT o.repos_path FROM nodes AS o
