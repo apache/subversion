@@ -1796,7 +1796,7 @@ def rm_of_replaced_file(sbox):
   exit_code, output, errput = svntest.main.run_svn(None,
                                                    'proplist', '-v',
                                                    mu_path + '@base')
-  expected_output = svntest.verify.UnorderedRegexOutput([
+  expected_output = svntest.verify.UnorderedRegexListOutput([
       'Properties on',
       '  yellow',
       '    submarine',

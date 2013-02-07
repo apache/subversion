@@ -282,13 +282,18 @@ class UnorderedOutput(ExpectedOutput):
     display_lines_diff(self.expected, actual, label + ' (unordered)', label)
 
 
-class UnorderedRegexOutput(ExpectedOutput):
+class UnorderedRegexListOutput(ExpectedOutput):
   """Matches an unordered list of regular expressions.
 
-     After removing any duplicate actual lines, each expected regular
-     expression must match one actual line, one-to-one, in any order.
-     If multiple expressions match the same actual line, the behaviour
-     is undefined.
+     The expressions must match all the actual lines, one-to-one, in any
+     order.
+
+     Note: This can give a false negative result (no match) when there is
+     an actual line that matches multiple expressions and a different
+     actual line that matches some but not all of those same
+     expressions.  The implementation matches each expression in turn to
+     the first unmatched actual line that it can match, and does not try
+     all the permutations when there are multiple possible matches.
   """
 
   def __init__(self, expected):
@@ -300,17 +305,13 @@ class UnorderedRegexOutput(ExpectedOutput):
     if not isinstance(actual, list):
       actual = [actual]
 
-    # Disregard the order of ACTUAL lines during comparison.
-    e_set = set(self.expected)
-    a_set = set(actual)
-
-    if len(e_set) != len(a_set):
+    if len(self.expected) != len(actual):
       return False
-    for e in e_set:
+    for e in self.expected:
       expect_re = re.compile(e)
-      for actual_line in a_set:
+      for actual_line in actual:
         if expect_re.match(actual_line):
-          a_set.remove(actual_line)
+          actual.remove(actual_line)
           break
       else:
         # One of the regexes was not found
