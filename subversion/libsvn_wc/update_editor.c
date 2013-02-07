@@ -1144,6 +1144,15 @@ path_join_under_root(const char **result_path,
                                  pool));
     }
 
+  /* This catches issue #3288 */
+  if (strcmp(add_path, svn_dirent_basename(*result_path, NULL)) != 0)
+    {
+      return svn_error_createf(
+          SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+          _("'%s' is not valid as filename in a working copy path"),
+          svn_dirent_local_style(add_path, pool));
+    }
+
   return SVN_NO_ERROR;
 }
 
