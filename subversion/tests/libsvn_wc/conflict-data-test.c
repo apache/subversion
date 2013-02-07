@@ -229,9 +229,9 @@ test_read_write_tree_conflicts(const svn_test_opts_t *opts,
 
   /* Write */
   SVN_ERR(svn_wc__add_tree_conflict(sbox.wc_ctx, /*child1_abspath,*/
-                                    conflict1, NULL, pool));
+                                    conflict1, pool));
   SVN_ERR(svn_wc__add_tree_conflict(sbox.wc_ctx, /*child2_abspath,*/
-                                    conflict2, NULL, pool));
+                                    conflict2, pool));
 
   /* Query (conflict1 through WC-DB API, conflict2 through WC API) */
   {

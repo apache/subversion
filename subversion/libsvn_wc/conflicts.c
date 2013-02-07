@@ -549,13 +549,13 @@ svn_wc__conflict_skel_add_tree_conflict(svn_skel_t *conflict_skel,
 
   SVN_ERR_ASSERT(!tree_conflict); /* ### Use proper error? */
 
-  SVN_ERR_ASSERT((local_change != svn_wc_conflict_reason_moved_away
-                  && !moved_away_op_root_abspath)
-                 || moved_away_op_root_abspath); /* ### Use proper error? */
+  SVN_ERR_ASSERT(local_change == svn_wc_conflict_reason_moved_away
+                 || !moved_away_op_root_abspath); /* ### Use proper error? */
 
   tree_conflict = svn_skel__make_empty_list(result_pool);
 
-  if (local_change == svn_wc_conflict_reason_moved_away)
+  if (local_change == svn_wc_conflict_reason_moved_away
+      && moved_away_op_root_abspath)
     {
       const char *moved_away_op_root_relpath;
 
@@ -956,16 +956,18 @@ svn_wc__conflict_read_tree_conflict(svn_wc_conflict_reason_t *local_change,
 
   c = c->next; /* Skip markers */
 
-  if (local_change)
-    {
-      int value = svn_token__from_mem(local_change_map, c->data, c->len);
+  {
+    int value = svn_token__from_mem(local_change_map, c->data, c->len);
 
-      if (value != SVN_TOKEN_UNKNOWN)
-        *local_change = value;
-      else
-        *local_change = svn_wc_conflict_reason_edited;
+    if (local_change)
+      {
+        if (value != SVN_TOKEN_UNKNOWN)
+          *local_change = value;
+        else
+          *local_change = svn_wc_conflict_reason_edited;
+      }
 
-      is_moved_away = *local_change == svn_wc_conflict_reason_moved_away;
+      is_moved_away = (value == svn_wc_conflict_reason_moved_away);
     }
   c = c->next;
 
@@ -981,15 +983,21 @@ svn_wc__conflict_read_tree_conflict(svn_wc_conflict_reason_t *local_change,
 
   c = c->next;
 
-  if (is_moved_away && moved_away_op_root_abspath)
+  if (moved_away_op_root_abspath)
     {
-      const char *moved_away_op_root_relpath = apr_pstrmemdup(scratch_pool,
-                                                              c->data, c->len);
+      /* Only set for update and switch tree conflicts */
+      if (c && is_moved_away)
+        {
+          const char *moved_away_op_root_relpath
+                            = apr_pstrmemdup(scratch_pool, c->data, c->len);
 
-      SVN_ERR(svn_wc__db_from_relpath(moved_away_op_root_abspath,
-                                      db, wri_abspath,
-                                      moved_away_op_root_relpath,
-                                      result_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_from_relpath(moved_away_op_root_abspath,
+                                          db, wri_abspath,
+                                          moved_away_op_root_relpath,
+                                          result_pool, scratch_pool));
+        }
+      else
+        *moved_away_op_root_abspath = NULL;
     }
 
   return SVN_NO_ERROR;
