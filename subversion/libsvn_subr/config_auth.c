@@ -29,6 +29,8 @@
 
 #include "config_impl.h"
 
+#include "auth.h"
+
 #include "svn_private_config.h"
 
 /* Helper for svn_config_{read|write}_auth_data.  Return a path to a
