@@ -372,8 +372,9 @@ svn_auth__simple_creds_cache_set(svn_boolean_t *saved,
           simple_provider_baton_t *b =
             (simple_provider_baton_t *)provider_baton;
 
-          if (svn_cstring_casecmp(store_plaintext_passwords,
-                                  SVN_CONFIG_ASK) == 0)
+          if (store_plaintext_passwords
+              && svn_cstring_casecmp(store_plaintext_passwords,
+                                     SVN_CONFIG_ASK) == 0)
             {
               if (non_interactive)
                 /* In non-interactive mode, the default behaviour is
@@ -438,13 +439,15 @@ svn_auth__simple_creds_cache_set(svn_boolean_t *saved,
                   may_save_password = TRUE;
                 }
             }
-          else if (svn_cstring_casecmp(store_plaintext_passwords,
-                                       SVN_CONFIG_FALSE) == 0)
+          else if (store_plaintext_passwords
+                   && svn_cstring_casecmp(store_plaintext_passwords,
+                                          SVN_CONFIG_FALSE) == 0)
             {
               may_save_password = FALSE;
             }
-          else if (svn_cstring_casecmp(store_plaintext_passwords,
-                                       SVN_CONFIG_TRUE) == 0)
+          else if (!store_plaintext_passwords
+                   || svn_cstring_casecmp(store_plaintext_passwords,
+                                          SVN_CONFIG_TRUE) == 0)
             {
               may_save_password = TRUE;
             }

@@ -590,19 +590,25 @@ svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 
 /** @brief Indicates whether providers may save passwords to disk in
  * plaintext. Property value can be either SVN_CONFIG_TRUE,
- * SVN_CONFIG_FALSE, or SVN_CONFIG_ASK. */
+ * SVN_CONFIG_FALSE, or SVN_CONFIG_ASK.
+ * @since New in 1.6.
+ */
 #define SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS  SVN_AUTH_PARAM_PREFIX \
                                                   "store-plaintext-passwords"
 
 /** @brief The application doesn't want any providers to save passphrase
  * to disk. Property value is irrelevant; only property's existence
- * matters. */
+ * matters.
+ * @since New in 1.6.
+ */
 #define SVN_AUTH_PARAM_DONT_STORE_SSL_CLIENT_CERT_PP \
   SVN_AUTH_PARAM_PREFIX "dont-store-ssl-client-cert-pp"
 
 /** @brief Indicates whether providers may save passphrase to disk in
  * plaintext. Property value can be either SVN_CONFIG_TRUE,
- * SVN_CONFIG_FALSE, or SVN_CONFIG_ASK. */
+ * SVN_CONFIG_FALSE, or SVN_CONFIG_ASK.
+ * @since New in 1.6.
+ */
 #define SVN_AUTH_PARAM_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT \
   SVN_AUTH_PARAM_PREFIX "store-ssl-client-cert-pp-plaintext"
 
