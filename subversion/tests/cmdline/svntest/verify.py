@@ -284,36 +284,34 @@ def display_lines(message, label, expected, actual, expected_is_regexp=None,
   Both EXPECTED and ACTUAL may be strings or lists of strings."""
   if message is not None:
     logger.warn(message)
+
+  if type(expected) is str:
+    expected = [expected]
+  if type(actual) is str:
+    actual = [actual]
   if expected is not None:
     output = 'EXPECTED %s' % label
     if expected_is_regexp:
       output += ' (regexp)'
-      expected = [expected + '\n']
     if expected_is_unordered:
       output += ' (unordered)'
     output += ':'
     logger.warn(output)
     for x in expected:
-      sys.stdout.write(x)
+      logger.warn('| ' + x.rstrip())
   if actual is not None:
     logger.warn('ACTUAL %s:', label)
     for x in actual:
-      sys.stdout.write(x)
+      logger.warn('| ' + x.rstrip())
 
   # Additionally print unified diff
   if not expected_is_regexp:
     logger.warn('DIFF ' + ' '.join(output.split(' ')[1:]))
 
-    if type(expected) is str:
-      expected = [expected]
-
-    if type(actual) is str:
-      actual = [actual]
-
     for x in unified_diff(expected, actual,
                           fromfile="EXPECTED %s" % label,
                           tofile="ACTUAL %s" % label):
-      sys.stdout.write(x)
+      logger.warn('| ' + x.rstrip())
 
 def compare_and_display_lines(message, label, expected, actual,
                               raisable=None):
