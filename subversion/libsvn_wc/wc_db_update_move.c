@@ -2108,10 +2108,10 @@ svn_wc__db_resolve_delete_raise_moved_away(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-resolve_break_moved_away(svn_wc__db_wcroot_t *wcroot,
-                         const char *local_relpath,
-                         apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__db_resolve_break_moved_away_internal(svn_wc__db_wcroot_t *wcroot,
+                                             const char *local_relpath,
+                                             apr_pool_t *scratch_pool)
 {
   const char *dummy, *moved_to_op_root_relpath;
   const char *moved_away_root_relpath, *op_root_relpath;
@@ -2156,9 +2156,10 @@ svn_wc__db_resolve_break_moved_away(svn_wc__db_t *db,
                                                 scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_WC__DB_WITH_TXN(resolve_break_moved_away(wcroot, local_relpath,
-                                               scratch_pool),
-                      wcroot);
+  SVN_WC__DB_WITH_TXN(
+    svn_wc__db_resolve_break_moved_away_internal(wcroot, local_relpath,
+                                                 scratch_pool),
+    wcroot);
 
   return SVN_NO_ERROR;
 }

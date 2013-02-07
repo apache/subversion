@@ -4139,6 +4139,24 @@ revert_nested_move(const svn_test_opts_t *opts, apr_pool_t *pool)
     {3, "A2/B2/C2", "normal",       1, "A/B/C", MOVED_HERE},
     {0}
   };
+  nodes_row_t nodes_AB_moved_C_copied[] = {
+    {0, "",         "normal",       1, ""},
+    {0, "A",        "normal",       1, "A"},
+    {0, "A/B",      "normal",       1, "A/B"},
+    {0, "A/B/C",    "normal",       1, "A/B/C"},
+    {1, "A",        "base-deleted", NO_COPY_FROM, "A2"},
+    {1, "A/B",      "base-deleted", NO_COPY_FROM},
+    {1, "A/B/C",    "base-deleted", NO_COPY_FROM},
+    {1, "A2",       "normal",       1, "A",     MOVED_HERE},
+    {1, "A2/B",     "normal",       1, "A/B",   MOVED_HERE},
+    {1, "A2/B/C",   "normal",       1, "A/B/C", MOVED_HERE},
+    {2, "A2/B",     "base-deleted", NO_COPY_FROM, "A2/B2"},
+    {2, "A2/B/C",   "base-deleted", NO_COPY_FROM},
+    {2, "A2/B2",    "normal",       1, "A/B",   MOVED_HERE},
+    {2, "A2/B2/C",  "normal",       1, "A/B/C", MOVED_HERE},
+    {3, "A2/B2/C2", "normal",       1, "A/B/C"},
+    {0}
+  };
 
   SVN_ERR(svn_test__sandbox_create(&b, "revert_nested_move", opts, pool));
 
@@ -4162,6 +4180,14 @@ revert_nested_move(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(check_db_rows(&b, "", nodes_A_moved));
 
   SVN_ERR(sbox_wc_move(&b, "A2/B", "A2/B2"));
+  SVN_ERR(sbox_wc_move(&b, "A2/B2/C", "A2/B2/C2"));
+  SVN_ERR(check_db_rows(&b, "", nodes_ABC_moved));
+
+  SVN_ERR(sbox_wc_revert(&b, "A2/B2/C", svn_depth_empty));
+  SVN_ERR(check_db_rows(&b, "", nodes_AB_moved_C_copied));
+  SVN_ERR(sbox_wc_revert(&b, "A2/B2/C2", svn_depth_infinity));
+  SVN_ERR(check_db_rows(&b, "", nodes_AB_moved));
+
   SVN_ERR(sbox_wc_move(&b, "A2/B2/C", "A2/B2/C2"));
   SVN_ERR(check_db_rows(&b, "", nodes_ABC_moved));
 
