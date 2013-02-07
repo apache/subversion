@@ -29,6 +29,9 @@
 
 #include <apr_pools.h>
 #include "svn_auth.h"
+#include "svn_dirent_uri.h"
+#include "svn_hash.h"
+#include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_utf.h"
 #include "svn_config.h"
@@ -37,6 +40,8 @@
 #include "private/svn_auth_private.h"
 
 #include "svn_private_config.h"
+
+#include "auth.h"
 
 /*-----------------------------------------------------------------------*/
 /* File provider                                                         */
@@ -520,6 +525,135 @@ simple_save_creds(svn_boolean_t *saved,
                                           pool);
 }
 
+svn_error_t *
+svn_auth__simple_cleanup_walk(svn_auth_baton_t *baton,
+                              svn_auth_cleanup_callback cleanup,
+                              void *cleanup_baton,
+                              apr_hash_t *creds_cache,
+                              apr_pool_t *scratch_pool)
+{
+  const char *config_dir;
+  svn_boolean_t no_auth_cache;
+  int i;
+  apr_pool_t *iterpool;
+
+  const char *cred_kinds[] =
+  {
+      SVN_AUTH_CRED_SIMPLE,
+      SVN_AUTH_CRED_USERNAME,
+      SVN_AUTH_CRED_SSL_CLIENT_CERT,
+      SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
+      SVN_AUTH_CRED_SSL_SERVER_TRUST,
+      NULL
+  };
+
+  config_dir = svn_auth_get_parameter(baton, SVN_AUTH_PARAM_CONFIG_DIR);
+  no_auth_cache = (svn_auth_get_parameter(baton, SVN_AUTH_PARAM_NO_AUTH_CACHE)
+                                != NULL);
+
+  if ((! config_dir) || no_auth_cache)
+    {
+      /* Can't locate the cache to clear */
+      return SVN_NO_ERROR;
+    }
+
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; cred_kinds[i]; i++)
+    {
+      const char *item_path;
+      const char *dir_path;
+      apr_hash_t *nodes;
+      svn_error_t *err;
+      apr_pool_t *itempool;
+      apr_hash_index_t *hi;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_auth__file_path(&item_path, cred_kinds[i], "!", config_dir,
+                                  iterpool));
+
+      dir_path = svn_dirent_dirname(item_path, iterpool);
+
+      err = svn_io_get_dirents3(&nodes, dir_path, TRUE, iterpool, iterpool);
+
+      if (err)
+        {
+          if (!APR_STATUS_IS_ENOENT(err->apr_err)
+              && !SVN__APR_STATUS_IS_ENOTDIR(err->apr_err))
+            return svn_error_trace(err);
+
+          svn_error_clear(err);
+          continue;
+        }
+
+      itempool = svn_pool_create(iterpool);
+      for (hi = apr_hash_first(iterpool, nodes); hi; hi = apr_hash_next(hi))
+        {
+          svn_io_dirent2_t *dirent = svn__apr_hash_index_val(hi);
+          const char *item_path;
+          svn_error_t *err;
+          svn_stream_t *stream;
+          apr_hash_t *file_data;
+
+          if (dirent->kind != svn_node_file)
+            continue;
+
+          svn_pool_clear(itempool);
+
+          item_path = svn_dirent_join(dir_path, svn__apr_hash_index_key(hi),
+                                      itempool);
+
+          err = svn_stream_open_readonly(&stream, item_path, itempool, itempool);
+          if (err)
+            {
+              /* Ignore this file. There are no credentials in it anyway */
+              svn_error_clear(err);
+              continue;
+            }
+
+          file_data = apr_hash_make(itempool);
+          err = svn_hash_read2(file_data, stream, SVN_HASH_TERMINATOR, itempool);
+          err = svn_error_compose_create(err, svn_stream_close(stream));
+          if (err)
+            {
+              /* Ignore this file. There are no credentials in it anyway */
+              svn_error_clear(err);
+              continue;
+            }
+
+          {
+            const svn_string_t *realm = svn_hash_gets(file_data, SVN_CONFIG_REALMSTRING_KEY);
+            svn_boolean_t delete_file = FALSE;
+
+            if (! realm)
+              continue; /* Not an auth file */
+
+            SVN_ERR(cleanup(&delete_file, cleanup_baton, cred_kinds[i], realm->data,
+                            SVN_AUTH_CRED_SIMPLE, itempool));
+
+            if (delete_file)
+              {
+                /* Delete from the credential hash */
+                const char *cache_key = apr_pstrcat(itempool,
+                                                    cred_kinds[0],
+                                                    ":",
+                                                    realm->data,
+                                                    (char *)NULL);
+
+                svn_hash_sets(creds_cache, cache_key, NULL);
+
+                /* And the file on disk */
+                SVN_ERR(svn_io_remove_file2(item_path, TRUE, itempool));
+              }
+          }
+        }
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
+
 static const svn_auth_provider_t simple_provider = {
   SVN_AUTH_CRED_SIMPLE,
   simple_first_creds,
@@ -720,7 +854,6 @@ simple_prompt_next_creds(void **credentials_p,
                                  pb, parameters, realmstring, FALSE,
                                  ! no_auth_cache, pool);
 }
-
 
 static const svn_auth_provider_t simple_prompt_provider = {
   SVN_AUTH_CRED_SIMPLE,
