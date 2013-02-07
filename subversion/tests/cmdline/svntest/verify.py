@@ -99,7 +99,7 @@ def createExpectedOutput(expected, output_type, match_all=True):
 class ExpectedOutput(object):
   """Matches an ordered list of lines.
 
-     If MATCH_ALL is True, the expected lines must match the actual
+     If MATCH_ALL is True, the expected lines must match all the actual
      lines, one-to-one, in the same order.  If MATCH_ALL is False, the
      expected lines must match a subset of the actual lines, one-to-one,
      in the same order, ignoring any other actual lines among the
@@ -133,13 +133,8 @@ class ExpectedOutput(object):
       actual = [actual]
 
     if self.match_all:
-      # The EXPECTED lines must match the ACTUAL lines, one-to-one, in
-      # the same order.
       return expected == actual
 
-    # The EXPECTED lines must match a subset of the ACTUAL lines,
-    # one-to-one, in the same order, with zero or more other ACTUAL
-    # lines interspersed among the matching ACTUAL lines.
     i_expected = 0
     for actual_line in actual:
       if expected[i_expected] == actual_line:
@@ -218,6 +213,44 @@ class RegexOutput(ExpectedOutput):
     display_lines(message, self.expected, actual, label + ' (regexp)', label)
 
 
+class RegexListOutput(ExpectedOutput):
+  """Matches an ordered list of regular expressions.
+
+     If MATCH_ALL is True, the expressions must match all the actual
+     lines, one-to-one, in the same order.  If MATCH_ALL is False, the
+     expressions must match a subset of the actual lines, one-to-one, in
+     the same order, ignoring any other actual lines among the matching
+     ones.
+
+     In any case, there must be at least one line of actual output.
+  """
+
+  def __init__(self, expected, match_all=True):
+    "EXPECTED is a list of regular expression strings."
+    assert isinstance(expected, list) and expected != []
+    ExpectedOutput.__init__(self, expected, match_all)
+    self.expected_res = [re.compile(e) for e in expected]
+
+  def matches(self, actual):
+    assert actual is not None
+    if not isinstance(actual, list):
+      actual = [actual]
+
+    if self.match_all:
+      return all(e.match(a) for e, a in zip(self.expected_res, actual))
+
+    i_expected = 0
+    for actual_line in actual:
+      if self.expected_res[i_expected].match(actual_line):
+        i_expected += 1
+        if i_expected == len(self.expected_res):
+          return True
+    return False
+
+  def display_differences(self, message, label, actual):
+    display_lines(message, self.expected, actual, label + ' (regexp)', label)
+
+
 class UnorderedOutput(ExpectedOutput):
   """Matches an unordered list of lines.
 
@@ -261,7 +294,6 @@ class UnorderedRegexOutput(ExpectedOutput):
   def __init__(self, expected):
     assert isinstance(expected, list)
     ExpectedOutput.__init__(self, expected)
-    # TODO: compile the regular expressions?
 
   def matches(self, actual):
     assert actual is not None
