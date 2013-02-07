@@ -26,6 +26,7 @@
 #include "svn_private_config.h"
 
 #include "../svn_test.h"
+#include "private/svn_auth_private.h"
 
 static svn_error_t *
 test_platform_specific_auth_providers(apr_pool_t *pool)
@@ -207,6 +208,26 @@ test_platform_specific_auth_providers(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Helper for test_auth_clear(). Implements svn_auth_cleanup_callback */
+static svn_error_t *
+cleanup_callback(svn_boolean_t *delete_cred,
+                 void *cleanup_baton,
+                 const char *cred_kind,
+                 const char *realmstring,
+                 const char *provider,
+                 apr_pool_t *scratch_pool)
+{
+  if (!strcmp(provider, SVN_AUTH__SIMPLE_PASSWORD_TYPE))
+    return SVN_NO_ERROR;
+
+  SVN_TEST_ASSERT(! strcmp(cred_kind, SVN_AUTH_CRED_SIMPLE));
+  SVN_TEST_ASSERT(! strcmp(realmstring, "<http://my.host> My realm"));
+
+  *delete_cred = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 test_auth_clear(apr_pool_t *pool)
 {
@@ -255,9 +276,35 @@ test_auth_clear(apr_pool_t *pool)
   SVN_ERR(svn_auth_save_credentials(state, pool));
 
   /* Ok, and now we try to remove the credentials */
+  svn_auth_set_parameter(baton, SVN_AUTH_PARAM_DEFAULT_USERNAME, NULL);
+  svn_auth_set_parameter(baton, SVN_AUTH_PARAM_DEFAULT_PASSWORD, NULL);
 
-  /* ### TODO: Implement to resolve issue #2775 */
+  /* Are they still in the baton? */
+  SVN_ERR(svn_auth_first_credentials(&credentials,
+                                     &state,
+                                     SVN_AUTH_CRED_SIMPLE,
+                                     "<http://my.host> My realm",
+                                     baton,
+                                     pool));
 
+  SVN_TEST_ASSERT(credentials);
+  creds = credentials;
+  SVN_TEST_ASSERT(! strcmp(creds->username, "jrandom"));
+  SVN_TEST_ASSERT(creds->may_save);
+
+
+  SVN_ERR(svn_auth_cleanup_walk(baton,
+                                cleanup_callback, NULL,
+                                pool));
+
+  SVN_ERR(svn_auth_first_credentials(&credentials,
+                                     &state,
+                                     SVN_AUTH_CRED_SIMPLE,
+                                     "<http://my.host> My realm",
+                                     baton,
+                                     pool));
+
+  SVN_TEST_ASSERT(! credentials);
 
   return SVN_NO_ERROR;
 }
@@ -270,7 +317,13 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_platform_specific_auth_providers,
                    "test retrieving platform-specific auth providers"),
+#ifndef SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE
     SVN_TEST_PASS2(test_auth_clear,
                    "test svn_auth_clear()"),
+#else
+    SVN_TEST_WIMP(test_auth_clear,
+                  "test svn_auth_clear()",
+                  "Needs testing with SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE"),
+#endif
     SVN_TEST_NULL
   };
