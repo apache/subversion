@@ -6567,8 +6567,8 @@ def move_update_props(sbox):
 
 @Issues(3288)
 @SkipUnless(svntest.main.is_os_windows)
-def windows_invalid_characters(sbox):
-  "checkout with invalid NTFS characters"
+def windows_update_backslash(sbox):
+  "test filename with backslashes inside"
 
   sbox.build()
 
@@ -6579,8 +6579,10 @@ def windows_invalid_characters(sbox):
                     '-m', '',
                     'mkdir', 'A/completely\\unusable\\dir')
 
-  expected_error = 'svn: E155000: .* is not valid.*'
+  # No error and a proper skip + recording in the working copy would also
+  # be a good result. This just verifies current behavior.
 
+  expected_error = 'svn: E155000: .* is not valid.*'
   svntest.actions.run_and_verify_svn(wc_dir, None, expected_error, 'up',
                                      wc_dir)
 
@@ -6667,7 +6669,7 @@ test_list = [ None,
               incomplete_overcomplete,
               update_swapped_depth_dirs,
               move_update_props,
-              windows_invalid_characters,
+              windows_update_backslash,
              ]
 
 if __name__ == '__main__':
