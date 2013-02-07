@@ -3131,9 +3131,9 @@ def pinned_externals(sbox):
 
   repo_X_mu = repo_url + '/X/mu'
 
-  expected_output = verify.RegexOutput([
+  expected_output = verify.RegexOutput(
     '^      1 jrandom            .* mu$'
-  ])
+  )
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'list', repo_X_mu, '-v')
