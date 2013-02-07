@@ -326,8 +326,8 @@ checkout_node(const char **working_url,
   if (status)
     return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                             _("Error parsing Location header value"));
-        
-  *working_url = apr_pstrdup(result_pool, uri.path);
+
+  *working_url = svn_urlpath__canonicalize(uri.path, result_pool);
 
   return SVN_NO_ERROR;
 }
