@@ -1146,36 +1146,6 @@ check_moved_away(const char **op_root_abspath,
   return SVN_NO_ERROR;
 }
 
-/* Indicate in *MOVED_HERE whether the node at LOCAL_ABSPATH was
- * moved here locally. Do not raise an error if the node at LOCAL_ABSPATH
- * does not exist. */
-static svn_error_t *
-check_moved_here(svn_boolean_t *moved_here,
-                 svn_wc_context_t *wc_ctx,
-                 const char *local_abspath,
-                 apr_pool_t *scratch_pool)
-{
-  const char *moved_from_abspath;
-  svn_error_t *err;
-
-  *moved_here = FALSE;
-
-  err = svn_wc__node_was_moved_here(&moved_from_abspath, NULL,
-                                    wc_ctx, local_abspath,
-                                    scratch_pool, scratch_pool);
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-        svn_error_clear(err);
-      else
-        return svn_error_trace(err);
-    }
-  else if (moved_from_abspath)
-    *moved_here = TRUE;
-
-  return SVN_NO_ERROR;
-}
-
 #define CONFLICT_REASON_NONE       ((svn_wc_conflict_reason_t)-1)
 #define CONFLICT_REASON_SKIP       ((svn_wc_conflict_reason_t)-2)
 #define CONFLICT_REASON_SKIP_WC    ((svn_wc_conflict_reason_t)-3)
