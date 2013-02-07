@@ -6567,6 +6567,7 @@ def move_update_props(sbox):
 
 @Issues(3288)
 @SkipUnless(svntest.main.is_os_windows)
+@XFail(svntest.main.is_ra_type_dav)
 def windows_update_backslash(sbox):
   "test filename with backslashes inside"
 
