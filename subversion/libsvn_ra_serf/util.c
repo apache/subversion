@@ -991,6 +991,7 @@ svn_ra_serf__response_discard_handler(serf_request_t *request,
    otherwise.  All allocations will be made in POOL.  */
 static const char *
 response_get_location(serf_bucket_t *response,
+                      const char *repos_root_url,
                       apr_pool_t *pool)
 {
   serf_bucket_t *headers;
@@ -1000,6 +1001,21 @@ response_get_location(serf_bucket_t *response,
   location = serf_bucket_headers_get(headers, "Location");
   if (location == NULL)
     return NULL;
+
+  /* One of the buildbots appears to return a location header in /path/form.
+     Let's join it to the hostname to obtain a proper uri */
+  if (*location == '/')
+    {
+      const char *root_url = repos_root_url;
+
+      while (! svn_uri_is_root(root_url, strlen(root_url)))
+        root_url = svn_uri_dirname(root_url, pool);
+
+      return apr_pstrcat(pool,
+                         root_url,
+                         svn_urlpath__canonicalize(location, pool),
+                         (char *)NULL);
+    }
 
   return svn_uri_canonicalize(location, pool);
 }
@@ -1890,7 +1906,9 @@ handle_response(serf_request_t *request,
     }
 
   /* ... and set up the header fields in HANDLER.  */
-  handler->location = response_get_location(response, handler->handler_pool);
+  handler->location = response_get_location(response,
+                                            handler->session->repos_root_str,
+                                            handler->handler_pool);
 
   /* On the last request, we failed authentication. We succeeded this time,
      so let's save away these credentials.  */
