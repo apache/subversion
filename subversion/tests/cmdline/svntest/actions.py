@@ -89,16 +89,10 @@ def setup_pristine_greek_repository():
     # import the greek tree, using l:foo/p:bar
     ### todo: svn should not be prompting for auth info when using
     ### repositories with no auth/auth requirements
-    exit_code, output, errput = main.run_svn(None, 'import', '-m',
-                                             'Log message for revision 1.',
-                                             main.greek_dump_dir,
-                                             main.pristine_greek_repos_url)
-
-    # check for any errors from the import
-    if len(errput):
-      display_lines("Errors during initial 'svn import':",
-                    'STDERR', None, errput)
-      sys.exit(1)
+    _, output, _ = main.run_svn(None, 'import', '-m',
+                                'Log message for revision 1.',
+                                main.greek_dump_dir,
+                                main.pristine_greek_repos_url)
 
     # verify the printed output of 'svn import'.
     lastline = output.pop().strip()

@@ -151,7 +151,8 @@ class ExpectedOutput(object):
   def display_differences(self, message, label, actual):
     """Delegate to the display_lines() routine with the appropriate
     args.  MESSAGE is ignored if None."""
-    display_lines(message, label, self.expected, actual, False, False)
+    display_lines(message, self.expected, actual, label, label)
+    display_lines_diff(self.expected, actual, label, label)
 
 
 class AnyOutput(ExpectedOutput):
@@ -208,7 +209,7 @@ class RegexOutput(ExpectedOutput):
     return all_lines_match_re
 
   def display_differences(self, message, label, actual):
-    display_lines(message, label, self.expected, actual, True, False)
+    display_lines(message, self.expected, actual, label + ' (regexp)', label)
 
 
 class UnorderedOutput(ExpectedOutput):
@@ -227,7 +228,8 @@ class UnorderedOutput(ExpectedOutput):
     return len(e_set.intersection(a_set)) > 0
 
   def display_differences(self, message, label, actual):
-    display_lines(message, label, self.expected, actual, False, True)
+    display_lines(message, self.expected, actual, label + ' (unordered)', label)
+    display_lines_diff(self.expected, actual, label + ' (unordered)', label)
 
 
 class UnorderedRegexOutput(UnorderedOutput, RegexOutput):
@@ -259,7 +261,8 @@ class UnorderedRegexOutput(UnorderedOutput, RegexOutput):
     return False
 
   def display_differences(self, message, label, actual):
-    display_lines(message, label, self.expected, actual, True, True)
+    display_lines(message, self.expected, actual,
+                  label + ' (regexp) (unordered)', label)
 
 
 ######################################################################
@@ -277,11 +280,23 @@ def display_trees(message, label, expected, actual):
     svntest.tree.dump_tree(actual)
 
 
-def display_lines(message, label, expected, actual, expected_is_regexp=None,
-                  expected_is_unordered=None):
+def display_lines_diff(expected, actual, expected_label, actual_label):
+  """Print a unified diff between EXPECTED (labeled with EXPECTED_LABEL)
+     and ACTUAL (labeled with ACTUAL_LABEL).
+     Each of EXPECTED and ACTUAL is a string or a list of strings.
+  """
+  logger.warn('DIFF ' + expected_label + ':')
+  for x in unified_diff(expected, actual,
+                        fromfile='EXPECTED ' + expected_label,
+                        tofile='ACTUAL ' + actual_label):
+    logger.warn('| ' + x.rstrip())
+
+def display_lines(message, expected, actual,
+                  expected_label, actual_label=None):
   """Print MESSAGE, unless it is None, then print EXPECTED (labeled
-  with LABEL) followed by ACTUAL (also labeled with LABEL).
-  Both EXPECTED and ACTUAL may be strings or lists of strings."""
+     with EXPECTED_LABEL) followed by ACTUAL (labeled with ACTUAL_LABEL).
+     Each of EXPECTED and ACTUAL is a string or a list of strings.
+  """
   if message is not None:
     logger.warn(message)
 
@@ -289,28 +304,15 @@ def display_lines(message, label, expected, actual, expected_is_regexp=None,
     expected = [expected]
   if type(actual) is str:
     actual = [actual]
+  if actual_label is None:
+    actual_label = expected_label
   if expected is not None:
-    output = 'EXPECTED %s' % label
-    if expected_is_regexp:
-      output += ' (regexp)'
-    if expected_is_unordered:
-      output += ' (unordered)'
-    output += ':'
-    logger.warn(output)
+    logger.warn('EXPECTED %s:', expected_label)
     for x in expected:
       logger.warn('| ' + x.rstrip())
   if actual is not None:
-    logger.warn('ACTUAL %s:', label)
+    logger.warn('ACTUAL %s:', actual_label)
     for x in actual:
-      logger.warn('| ' + x.rstrip())
-
-  # Additionally print unified diff
-  if not expected_is_regexp:
-    logger.warn('DIFF ' + ' '.join(output.split(' ')[1:]))
-
-    for x in unified_diff(expected, actual,
-                          fromfile="EXPECTED %s" % label,
-                          tofile="ACTUAL %s" % label):
       logger.warn('| ' + x.rstrip())
 
 def compare_and_display_lines(message, label, expected, actual,
@@ -372,8 +374,7 @@ def verify_exit_code(message, actual, expected,
   not None) and raise an exception."""
 
   if expected != actual:
-    display_lines(message, "Exit Code",
-                  str(expected) + '\n', str(actual) + '\n')
+    display_lines(message, str(expected), str(actual), "Exit Code")
     raise raisable
 
 # A simple dump file parser.  While sufficient for the current
