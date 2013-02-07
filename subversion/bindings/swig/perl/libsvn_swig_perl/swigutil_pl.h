@@ -40,6 +40,7 @@
 #include "svn_delta.h"
 #include "svn_client.h"
 #include "svn_repos.h"
+#undef _
 #include "svn_private_config.h"
 
 #ifdef __cplusplus
