@@ -1362,6 +1362,10 @@ record_tree_conflict(merge_cmd_baton_t *merge_b,
                                      &merge_b->merge_source, merge_b->target,
                                      result_pool, scratch_pool));
 
+      /* Fix up delete of file, add of dir replacement (or other way around) */
+      if (existing_conflict != NULL && existing_conflict->src_left_version)
+          left = existing_conflict->src_left_version;
+
       conflict = svn_wc_conflict_description_create_tree2(
                         local_abspath, node_kind, svn_wc_operation_merge,
                         left, right, result_pool);
@@ -1878,6 +1882,14 @@ merge_file_opened(void **new_file_baton,
           fb->tree_conflict_action = svn_wc_conflict_action_replace;
           fb->tree_conflict_reason = old_tc->reason;
 
+          /* Update the tree conflict to store that this is a replace */
+          SVN_ERR(record_tree_conflict(merge_b, local_abspath, pdb,
+                                       svn_node_file,
+                                       fb->tree_conflict_action,
+                                       fb->tree_conflict_reason,
+                                       old_tc, FALSE,
+                                       scratch_pool));
+
           if (old_tc->reason == svn_wc_conflict_reason_deleted
               || old_tc->reason == svn_wc_conflict_reason_moved_away)
             {
@@ -1890,14 +1902,6 @@ merge_file_opened(void **new_file_baton,
           else
             {
               *skip = TRUE;
-
-              /* Update the tree conflict to store that this is a replace */
-              SVN_ERR(record_tree_conflict(merge_b, local_abspath, pdb,
-                                           svn_node_file,
-                                           fb->tree_conflict_action,
-                                           fb->tree_conflict_reason,
-                                           old_tc, FALSE,
-                                           scratch_pool));
 
               return SVN_NO_ERROR;
             }
