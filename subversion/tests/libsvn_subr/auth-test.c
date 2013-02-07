@@ -258,6 +258,7 @@ test_auth_clear(apr_pool_t *pool)
   svn_auth_set_parameter(baton, SVN_AUTH_PARAM_DEFAULT_PASSWORD, "rayjandom");
   svn_auth_set_parameter(baton, SVN_AUTH_PARAM_CONFIG_DIR, auth_dir);
 
+  /* Create the auth subdirs. Without these we can't store passwords */
   SVN_ERR(svn_config_ensure(auth_dir, pool));
 
   /* Obtain the default credentials just passed */
