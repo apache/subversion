@@ -24,6 +24,8 @@
 #ifndef SVN_SUBR_AUTH_H
 #define SVN_SUBR_AUTH_H
 
+#include "svn_auth.h"
+
 /* Helper for svn_config_{read|write}_auth_data.  Return a path to a
    file within ~/.subversion/auth/ that holds CRED_KIND credentials
    within REALMSTRING.  If no path is available *PATH will be set to

@@ -590,8 +590,6 @@ svn_auth__simple_cleanup_walk(svn_auth_baton_t *baton,
       for (hi = apr_hash_first(iterpool, nodes); hi; hi = apr_hash_next(hi))
         {
           svn_io_dirent2_t *dirent = svn__apr_hash_index_val(hi);
-          const char *item_path;
-          svn_error_t *err;
           svn_stream_t *stream;
           apr_hash_t *file_data;
 
