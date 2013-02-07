@@ -6024,6 +6024,7 @@ op_revert_txn(void *baton,
   int op_depth;
   svn_boolean_t moved_here;
   int affected_rows;
+  const char *moved_to;
 
   /* ### Similar structure to op_revert_recursive_txn, should they be
          combined? */
@@ -6069,7 +6070,50 @@ op_revert_txn(void *baton,
 
   op_depth = svn_sqlite__column_int(stmt, 0);
   moved_here = svn_sqlite__column_boolean(stmt, 15);
+  moved_to = svn_sqlite__column_text(stmt, 17, scratch_pool);
   SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (moved_to)
+    {
+      SVN_ERR(svn_wc__db_resolve_break_moved_away_internal(wcroot,
+                                                           local_relpath,
+                                                           scratch_pool));
+    }
+  else
+    {
+      svn_skel_t *conflict;
+
+      SVN_ERR(svn_wc__db_read_conflict_internal(&conflict, wcroot,
+                                                local_relpath,
+                                                scratch_pool, scratch_pool));
+      if (conflict)
+        {
+          svn_wc_operation_t operation;
+          svn_boolean_t tree_conflicted;
+
+          SVN_ERR(svn_wc__conflict_read_info(&operation, NULL, NULL, NULL,
+                                             &tree_conflicted, NULL, NULL,
+                                             conflict,
+                                             scratch_pool, scratch_pool));
+          if (tree_conflicted
+              && (operation == svn_wc_operation_update
+                  || operation == svn_wc_operation_switch))
+            {
+              svn_wc_conflict_reason_t reason;
+              svn_wc_conflict_action_t action;
+
+              SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, &action,
+                                                          NULL, NULL, NULL,
+                                                          conflict,
+                                                          scratch_pool,
+                                                          scratch_pool));
+
+              if (reason == svn_wc_conflict_reason_deleted)
+                ;
+              /* svn_wc__db_resolve_delete_raise_moved */
+            }
+        }
+    }
 
   if (op_depth > 0 && op_depth == relpath_depth(local_relpath))
     {
