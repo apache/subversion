@@ -888,7 +888,6 @@ def tree_conflicts_on_merge_local_ci_4_2(sbox):
                         expected_skip) ], True)
 
 #----------------------------------------------------------------------
-@XFail()
 @Issue(2282)
 def tree_conflicts_on_merge_local_ci_5_1(sbox):
   "tree conflicts 5.1: leaf edit, tree del"
@@ -906,23 +905,23 @@ def tree_conflicts_on_merge_local_ci_5_1(sbox):
     ''                  : Item(status=' M', wc_rev='3'),
     'D'                 : Item(status='  ', wc_rev='3'),
     'D/D1'              : Item(status='  ', treeconflict='C', wc_rev='4'),
-    'D/D1/delta'        : Item(status='D ', wc_rev='4'),
+    'D/D1/delta'        : Item(status='  ', wc_rev='4'),
     'DD'                : Item(status='  ', wc_rev='3'),
-    'DD/D1'             : Item(status='  ', treeconflict='C', wc_rev='4'),
-    'DD/D1/D2'          : Item(status='D ', wc_rev='3'),
-    'DD/D1/D2/epsilon'  : Item(status='D ', wc_rev='4'),
+    'DD/D1'             : Item(status='  ', treeconflict='C', wc_rev='3'),
+    'DD/D1/D2'          : Item(status='  ', wc_rev='4'),
+    'DD/D1/D2/epsilon'  : Item(status='  ', wc_rev='4'),
     'DDD'               : Item(status='  ', wc_rev='3'),
-    'DDD/D1'            : Item(status='  ', treeconflict='C', wc_rev='4'),
-    'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
-    'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='3'),
-    'DDD/D1/D2/D3/zeta' : Item(status='D ', wc_rev='4'),
+    'DDD/D1'            : Item(status='  ', treeconflict='C', wc_rev='3'),
+    'DDD/D1/D2'         : Item(status='  ', wc_rev='3'),
+    'DDD/D1/D2/D3'      : Item(status='  ', wc_rev='4'),
+    'DDD/D1/D2/D3/zeta' : Item(status='  ', wc_rev='4'),
     'DDF'               : Item(status='  ', wc_rev='3'),
-    'DDF/D1'            : Item(status='  ', treeconflict='C', wc_rev='4'),
-    'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
-    'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='4'),
+    'DDF/D1'            : Item(status='  ', treeconflict='C', wc_rev='3'),
+    'DDF/D1/D2'         : Item(status='  ', wc_rev='3'),
+    'DDF/D1/D2/gamma'   : Item(status='  ', wc_rev='4'),
     'DF'                : Item(status='  ', wc_rev='3'),
-    'DF/D1'             : Item(status='  ', treeconflict='C', wc_rev='4'),
-    'DF/D1/beta'        : Item(status='D ', wc_rev='4'),
+    'DF/D1'             : Item(status='  ', treeconflict='C', wc_rev='3'),
+    'DF/D1/beta'        : Item(status='  ', wc_rev='4'),
     'F'                 : Item(status='  ', wc_rev='3'),
     'F/alpha'           : Item(status='  ', treeconflict='C', wc_rev='4'),
 

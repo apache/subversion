@@ -981,7 +981,7 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
         x_skip.copy()
         x_skip.wc_dir = local
 
-      varargs = (local,)
+      varargs = (local,'--allow-mixed-revisions',)
       if ignore_ancestry:
         varargs = varargs + ('--ignore-ancestry',)
 
