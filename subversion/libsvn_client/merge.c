@@ -575,7 +575,7 @@ perform_obstruction_check(svn_wc_notify_state_t *obstruction_state,
 /* Create *LEFT and *RIGHT conflict versions for conflict victim
  * at VICTIM_ABSPATH, with kind NODE_KIND, using information obtained
  * from MERGE_SOURCE and TARGET.
- * Allocate returned conflict versions in POOL. */
+ * Allocate returned conflict versions in RESULT_POOL. */
 static svn_error_t *
 make_conflict_versions(const svn_wc_conflict_version_t **left,
                        const svn_wc_conflict_version_t **right,
@@ -583,7 +583,8 @@ make_conflict_versions(const svn_wc_conflict_version_t **left,
                        svn_node_kind_t node_kind,
                        const merge_source_t *merge_source,
                        const merge_target_t *target,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   const char *child = svn_dirent_skip_ancestor(target->abspath,
                                                victim_abspath);
@@ -591,185 +592,24 @@ make_conflict_versions(const svn_wc_conflict_version_t **left,
 
   SVN_ERR_ASSERT(child != NULL);
   left_relpath = svn_client__pathrev_relpath(merge_source->loc1,
-                                             pool);
+                                             scratch_pool);
   right_relpath = svn_client__pathrev_relpath(merge_source->loc2,
-                                              pool);
+                                              scratch_pool);
 
   *left = svn_wc_conflict_version_create2(
             merge_source->loc1->repos_root_url,
             merge_source->loc1->repos_uuid,
-            svn_relpath_join(left_relpath, child, pool),
-            merge_source->loc1->rev, node_kind, pool);
+            svn_relpath_join(left_relpath, child, scratch_pool),
+            merge_source->loc1->rev, node_kind, result_pool);
 
   *right = svn_wc_conflict_version_create2(
              merge_source->loc2->repos_root_url,
              merge_source->loc2->repos_uuid,
-             svn_relpath_join(right_relpath, child, pool),
-             merge_source->loc2->rev, node_kind, pool);
+             svn_relpath_join(right_relpath, child, scratch_pool),
+             merge_source->loc2->rev, node_kind, result_pool);
 
   return SVN_NO_ERROR;
 }
-
-/* Set *CONFLICT to a new tree-conflict description allocated in POOL,
- * populated with information from the other parameters.
- * See tree_conflict() for the other parameters.
- */
-static svn_error_t*
-make_tree_conflict(svn_wc_conflict_description2_t **conflict,
-                   const char *victim_abspath,
-                   svn_node_kind_t node_kind,
-                   svn_wc_conflict_action_t action,
-                   svn_wc_conflict_reason_t reason,
-                   const merge_source_t *merge_source,
-                   const merge_target_t *target,
-                   apr_pool_t *pool)
-{
-  const svn_wc_conflict_version_t *left;
-  const svn_wc_conflict_version_t *right;
-
-  SVN_ERR(make_conflict_versions(&left, &right, victim_abspath, node_kind,
-                                 merge_source, target, pool));
-
-  *conflict = svn_wc_conflict_description_create_tree2(
-                    victim_abspath, node_kind, svn_wc_operation_merge,
-                    left, right, pool);
-
-  (*conflict)->action = action;
-  (*conflict)->reason = reason;
-
-  return SVN_NO_ERROR;
-}
-
-/* Record a tree conflict in the WC, unless this is a dry run or a record-
- * only merge, or if a tree conflict is already flagged for the VICTIM_PATH.
- * (The latter can happen if a merge-tracking-aware merge is doing multiple
- * editor drives because of a gap in the range of eligible revisions.)
- *
- * The tree conflict, with its victim specified by VICTIM_PATH, is
- * assumed to have happened during a merge using merge baton MERGE_B.
- *
- * NODE_KIND must be the node kind of "old" and "theirs" and "mine";
- * this function cannot cope with node kind clashes.
- * ACTION and REASON correspond to the fields
- * of the same names in svn_wc_tree_conflict_description_t.
- */
-static svn_error_t*
-tree_conflict(merge_cmd_baton_t *merge_b,
-              const char *victim_abspath,
-              svn_node_kind_t node_kind,
-              svn_wc_conflict_action_t action,
-              svn_wc_conflict_reason_t reason,
-              const char *moved_away_op_root_abspath)
-{
-  const svn_wc_conflict_description2_t *existing_conflict;
-  svn_error_t *err;
-
-  if (merge_b->record_only || merge_b->dry_run)
-    return SVN_NO_ERROR;
-
-  err = svn_wc__get_tree_conflict(&existing_conflict, merge_b->ctx->wc_ctx,
-                                  victim_abspath, merge_b->pool,
-                                  merge_b->pool);
-
-  if (err)
-    {
-      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-        return svn_error_trace(err);
-
-      svn_error_clear(err);
-      existing_conflict = FALSE;
-    }
-
-  if (existing_conflict == NULL)
-    {
-      svn_wc_conflict_description2_t *conflict;
-
-      /* There is no existing tree conflict so it is safe to add one. */
-      SVN_ERR(make_tree_conflict(&conflict, victim_abspath,
-                                 node_kind, action, reason,
-                                 &merge_b->merge_source, merge_b->target,
-                                 merge_b->pool));
-      SVN_ERR(svn_wc__add_tree_conflict(merge_b->ctx->wc_ctx, conflict,
-                                        moved_away_op_root_abspath,
-                                        merge_b->pool));
-
-      alloc_and_store_path(&merge_b->conflicted_paths, victim_abspath,
-                           merge_b->pool);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* Similar to tree_conflict(), but if this is an "add" action and there
-   is an existing tree conflict on the victim with a "delete" action, then
-   combine the two conflicts into a single conflict with a "replace" action. */
-static svn_error_t*
-tree_conflict_on_add(merge_cmd_baton_t *merge_b,
-                     const char *victim_abspath,
-                     svn_node_kind_t node_kind,
-                     svn_wc_conflict_action_t action,
-                     svn_wc_conflict_reason_t reason)
-{
-  const svn_wc_conflict_description2_t *existing_conflict;
-  svn_wc_conflict_description2_t *conflict;
-
-  if (merge_b->record_only || merge_b->dry_run)
-    return SVN_NO_ERROR;
-
-  /* Construct the new conflict first  compare the new conflict with
-     a possibly existing one. */
-  SVN_ERR(make_tree_conflict(&conflict, victim_abspath,
-                             node_kind, action, reason,
-                             &merge_b->merge_source, merge_b->target,
-                             merge_b->pool));
-
-  SVN_ERR(svn_wc__get_tree_conflict(&existing_conflict, merge_b->ctx->wc_ctx,
-                                    victim_abspath, merge_b->pool,
-                                    merge_b->pool));
-
-  if (existing_conflict == NULL)
-    {
-      /* There is no existing tree conflict so it is safe to add one. */
-      SVN_ERR(svn_wc__add_tree_conflict(merge_b->ctx->wc_ctx, conflict,
-                                        NULL,
-                                        merge_b->pool));
-
-      alloc_and_store_path(&merge_b->conflicted_paths, victim_abspath,
-                           merge_b->pool);
-    }
-  else if (existing_conflict->action == svn_wc_conflict_action_delete &&
-           conflict->action == svn_wc_conflict_action_add)
-    {
-      /* There is already a tree conflict raised by a previous incoming
-       * change that attempted to delete the item (whether in this same
-       * merge operation or not). Change the existing conflict to note
-       * that the incoming change is replacement. */
-
-      /* Remove the existing tree-conflict so we can add a new one.*/
-      SVN_ERR(svn_wc__del_tree_conflict(merge_b->ctx->wc_ctx,
-                                        victim_abspath, merge_b->pool));
-
-      /* Preserve the reason which caused the first conflict,
-       * re-label the incoming change as 'replacement', and update
-       * version info for the left version of the conflict. */
-      conflict->reason = existing_conflict->reason;
-      conflict->action = svn_wc_conflict_action_replace;
-      conflict->src_left_version = svn_wc_conflict_version_dup(
-                                     existing_conflict->src_left_version,
-                                     merge_b->pool);
-
-      SVN_ERR(svn_wc__add_tree_conflict(merge_b->ctx->wc_ctx, conflict,
-                                        NULL,
-                                        merge_b->pool));
-
-      alloc_and_store_path(&merge_b->conflicted_paths, victim_abspath,
-                           merge_b->pool);
-    }
-
-  /* In any other cases, we don't touch the existing conflict. */
-  return SVN_NO_ERROR;
-}
-
 
 /* Helper for filter_self_referential_mergeinfo()
 
@@ -1496,18 +1336,69 @@ record_skip(merge_cmd_baton_t *merge_b,
   return SVN_NO_ERROR;
 }
 
-/* Record the skip for future processing and (later) produce the
-   tree conflict notification */
+/* Record a tree conflict in the WC, unless this is a dry run or a record-
+ * only merge, or if a tree conflict is already flagged for the VICTIM_PATH.
+ * (The latter can happen if a merge-tracking-aware merge is doing multiple
+ * editor drives because of a gap in the range of eligible revisions.)
+ *
+ * The tree conflict, with its victim specified by VICTIM_PATH, is
+ * assumed to have happened during a merge using merge baton MERGE_B.
+ *
+ * NODE_KIND must be the node kind of "old" and "theirs" and "mine";
+ * this function cannot cope with node kind clashes.
+ * ACTION and REASON correspond to the fields
+ * of the same names in svn_wc_tree_conflict_description_t.
+ */
 static svn_error_t *
 record_tree_conflict(merge_cmd_baton_t *merge_b,
                      const char *local_abspath,
-                     svn_node_kind_t kind,
+                     struct merge_dir_baton_t *parent_baton,
+                     svn_node_kind_t node_kind,
+                     svn_wc_conflict_action_t action,
+                     svn_wc_conflict_reason_t reason,
+                     const char *moved_away_op_root_abspath,
                      apr_pool_t *scratch_pool)
 {
+  svn_wc_conflict_description2_t *cf;
+  const svn_wc_conflict_version_t *left;
+  const svn_wc_conflict_version_t *right;
+
+  if (merge_b->merge_source.ancestral
+      || merge_b->reintegrate_merge)
+    {
+      store_path(merge_b->tree_conflicted_abspaths, local_abspath);
+    }
+
+  alloc_and_store_path(&merge_b->conflicted_paths, local_abspath,
+                       merge_b->pool);
+
+
+  if (!merge_b->record_only && !merge_b->dry_run)
+    {
+       apr_pool_t *result_pool = parent_baton ? parent_baton->pool
+                                              : scratch_pool;
+
+      SVN_ERR(make_conflict_versions(&left, &right, local_abspath, node_kind,
+                                     &merge_b->merge_source, merge_b->target,
+                                     result_pool, scratch_pool));
+
+      cf = svn_wc_conflict_description_create_tree2(
+                        local_abspath, node_kind, svn_wc_operation_merge,
+                        left, right, result_pool);
+
+      cf->action = action;
+      cf->reason = reason;
+      
+      /* May return SVN_ERR_WC_PATH_UNEXPECTED_STATUS */
+      SVN_ERR(svn_wc__add_tree_conflict(merge_b->ctx->wc_ctx, cf,
+                                        moved_away_op_root_abspath,
+                                        scratch_pool));
+
+      /* ### TODO: Store in parent baton */
+    }
+
   /* On a replacement we currently get two tree conflicts */
-  if (merge_b->ctx->notify_func2
-      && !contains_path(merge_b->tree_conflicted_abspaths,
-                        local_abspath))
+  if (merge_b->ctx->notify_func2)
     {
       svn_wc_notify_t *notify;
 
@@ -1515,16 +1406,10 @@ record_tree_conflict(merge_cmd_baton_t *merge_b,
 
       notify = svn_wc_create_notify(local_abspath, svn_wc_notify_tree_conflict,
                                     scratch_pool);
-      notify->kind = kind;
+      notify->kind = node_kind;
 
       (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2, notify,
                                     scratch_pool);
-    }
-
-  if (merge_b->merge_source.ancestral
-      || merge_b->reintegrate_merge)
-    {
-      store_path(merge_b->tree_conflicted_abspaths, local_abspath);
     }
 
   return SVN_NO_ERROR;
@@ -1764,11 +1649,11 @@ mark_dir_edited(merge_cmd_baton_t *merge_b,
             }
         }
 
-      SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
-                            db->tree_conflict_action, db->tree_conflict_reason,
-                            moved_away_abspath));
-
-      SVN_ERR(record_tree_conflict(merge_b, local_abspath, svn_node_dir, scratch_pool));
+      SVN_ERR(record_tree_conflict(merge_b, local_abspath, db->parent_baton,
+                                   svn_node_dir, db->tree_conflict_action,
+                                   db->tree_conflict_reason,
+                                   moved_away_abspath,
+                                   scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1862,11 +1747,11 @@ mark_file_edited(merge_cmd_baton_t *merge_b,
             }
         }
 
-      SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_file,
-                            fb->tree_conflict_action, fb->tree_conflict_reason,
-                            moved_away_abspath));
-
-      SVN_ERR(record_tree_conflict(merge_b, local_abspath, svn_node_dir, scratch_pool));
+      SVN_ERR(record_tree_conflict(merge_b, local_abspath, fb->parent_baton,
+                                   svn_node_file, fb->tree_conflict_action,
+                                   fb->tree_conflict_reason,
+                                   moved_away_abspath,
+                                   scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -2136,7 +2021,8 @@ merge_file_changed(const char *relpath,
                                       scratch_pool, scratch_pool));
 
   SVN_ERR(make_conflict_versions(&left, &right, local_abspath,
-                                 svn_node_file, &merge_b->merge_source, merge_b->target, merge_b->pool));
+                                 svn_node_file, &merge_b->merge_source, merge_b->target,
+                                 scratch_pool, scratch_pool));
 
   /* Do property merge now, if we are not going to perform a text merge */
   if ((merge_b->record_only || !left_file) && prop_changes->nelts)
@@ -2285,8 +2171,6 @@ merge_file_added(const char *relpath,
       const char *copyfrom_url;
       svn_revnum_t copyfrom_rev;
       svn_stream_t *new_contents, *pristine_contents;
-      svn_boolean_t existing_tree_conflict;
-      svn_error_t *err;
 
       /* If this is a merge from the same repository as our
          working copy, we handle adds as add-with-history.
@@ -2345,62 +2229,19 @@ merge_file_added(const char *relpath,
                        NULL);
         }
 
-      err = svn_wc_conflicted_p3(NULL, NULL, &existing_tree_conflict,
-                                 merge_b->ctx->wc_ctx, local_abspath,
-                                 merge_b->pool);
+      /* Do everything like if we had called 'svn cp PATH1 PATH2'. */
+      SVN_ERR(svn_wc_add_repos_file4(merge_b->ctx->wc_ctx,
+                                      local_abspath,
+                                      pristine_contents,
+                                      new_contents,
+                                      pristine_props, new_props,
+                                      copyfrom_url, copyfrom_rev,
+                                      merge_b->ctx->cancel_func,
+                                      merge_b->ctx->cancel_baton,
+                                      scratch_pool));
 
-      if (err)
-        {
-          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-            return svn_error_trace(err);
-
-          svn_error_clear(err);
-          existing_tree_conflict = FALSE;
-        }
-
-      if (existing_tree_conflict)
-        {
-          svn_boolean_t moved_here;
-          svn_wc_conflict_reason_t reason;
-
-          /* Possibly collapse the existing conflict into a 'replace'
-           * tree conflict. The conflict reason is 'added' because
-           * the now-deleted tree conflict victim must have been
-           * added in the history of the merge target. */
-          SVN_ERR(check_moved_here(&moved_here, merge_b->ctx->wc_ctx,
-                                   local_abspath, scratch_pool));
-          reason = moved_here ? svn_wc_conflict_reason_moved_here
-                              : svn_wc_conflict_reason_added;
-          SVN_ERR(tree_conflict_on_add(merge_b, local_abspath,
-                                       svn_node_file,
-                                       svn_wc_conflict_action_add,
-                                       reason));
-
-          SVN_ERR(record_tree_conflict(merge_b, local_abspath, svn_node_file,
-                                       scratch_pool));
-          return SVN_NO_ERROR;
-        }
-      else
-        {
-          /* Since 'mine' doesn't exist, and this is
-             'merge_file_added', I hope it's safe to assume that
-             'older' is empty, and 'yours' is the full file.  Merely
-             copying 'yours' to 'mine', isn't enough; we need to get
-             the whole text-base and props installed too, just as if
-             we had called 'svn cp wc wc'. */
-          SVN_ERR(svn_wc_add_repos_file4(merge_b->ctx->wc_ctx,
-                                         local_abspath,
-                                         pristine_contents,
-                                         new_contents,
-                                         pristine_props, new_props,
-                                         copyfrom_url, copyfrom_rev,
-                                         merge_b->ctx->cancel_func,
-                                         merge_b->ctx->cancel_baton,
-                                         scratch_pool));
-
-          /* Caller must call svn_sleep_for_timestamps() */
-          *merge_b->use_sleep = TRUE;
-        }
+      /* Caller must call svn_sleep_for_timestamps() */
+      *merge_b->use_sleep = TRUE;
     }
 
   SVN_ERR(record_update_add(merge_b, local_abspath, svn_node_file,
@@ -2578,14 +2419,13 @@ merge_file_deleted(const char *relpath,
     {
       /* The files differ, so raise a conflict instead of deleting */
 
-      /* This might be use case 5 described in the paper attached to issue
+      /* This is use case 5 described in the paper attached to issue
        * #2282.  See also notes/tree-conflicts/detection.txt
        */
-      SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_file,
-                            svn_wc_conflict_action_delete,
-                            svn_wc_conflict_reason_edited, NULL));
-
-      SVN_ERR(record_tree_conflict(merge_b, local_abspath, svn_node_dir,
+      SVN_ERR(record_tree_conflict(merge_b, local_abspath, fb->parent_baton,
+                                   svn_node_file,
+                                   svn_wc_conflict_action_delete,
+                                   svn_wc_conflict_reason_edited, NULL,
                                    scratch_pool));
     }
   
@@ -2976,7 +2816,8 @@ merge_dir_changed(const char *relpath,
 
       SVN_ERR(make_conflict_versions(&left, &right, local_abspath,
                                      svn_node_dir, &merge_b->merge_source,
-                                     merge_b->target, merge_b->pool));
+                                     merge_b->target,
+                                     scratch_pool, scratch_pool));
 
       SVN_ERR(svn_wc_merge_props3(&prop_state, ctx->wc_ctx, local_abspath,
                                   left, right,
@@ -3311,11 +3152,14 @@ merge_dir_deleted(const char *relpath,
       /* If the attempt to delete an existing directory failed,
        * the directory has local modifications (e.g. locally added
        * files, or property changes). Flag a tree conflict. */
-      SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
-                            svn_wc_conflict_action_delete,
-                            svn_wc_conflict_reason_edited, NULL));
 
-      SVN_ERR(record_tree_conflict(merge_b, local_abspath, svn_node_dir,
+      /* This handles use case 5 described in the paper attached to issue
+       * #2282.  See also notes/tree-conflicts/detection.txt
+       */
+      SVN_ERR(record_tree_conflict(merge_b, local_abspath, db->parent_baton,
+                                   svn_node_dir,
+                                   svn_wc_conflict_action_delete,
+                                   svn_wc_conflict_reason_edited, NULL,
                                    scratch_pool));
     }
   else
