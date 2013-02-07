@@ -30,7 +30,7 @@ import time
 
 # Our testing module
 import svntest
-from svntest import main, wc, verify, actions
+from svntest import main, wc, verify, actions, deeptrees
 
 # (abbreviation)
 Item = wc.StateItem
@@ -789,21 +789,21 @@ def tree_conflicts_and_obstructions(sbox):
 # parent directory.
 
 # convenience definitions
-leaf_edit = svntest.actions.deep_trees_leaf_edit
-tree_del = svntest.actions.deep_trees_tree_del
-leaf_del = svntest.actions.deep_trees_leaf_del
+leaf_edit = svntest.deeptrees.deep_trees_leaf_edit
+tree_del = svntest.deeptrees.deep_trees_tree_del
+leaf_del = svntest.deeptrees.deep_trees_leaf_del
 
-disk_after_leaf_edit = svntest.actions.deep_trees_after_leaf_edit
-disk_after_leaf_del = svntest.actions.deep_trees_after_leaf_del
-disk_after_tree_del = svntest.actions.deep_trees_after_tree_del
-disk_after_leaf_del_no_ci = svntest.actions.deep_trees_after_leaf_del_no_ci
-disk_after_tree_del_no_ci = svntest.actions.deep_trees_after_tree_del_no_ci
+disk_after_leaf_edit = svntest.deeptrees.deep_trees_after_leaf_edit
+disk_after_leaf_del = svntest.deeptrees.deep_trees_after_leaf_del
+disk_after_tree_del = svntest.deeptrees.deep_trees_after_tree_del
+disk_after_leaf_del_no_ci = svntest.deeptrees.deep_trees_after_leaf_del_no_ci
+disk_after_tree_del_no_ci = svntest.deeptrees.deep_trees_after_tree_del_no_ci
 
-deep_trees_conflict_output = svntest.actions.deep_trees_conflict_output
+deep_trees_conflict_output = svntest.deeptrees.deep_trees_conflict_output
 
 j = os.path.join
 
-DeepTreesTestCase = svntest.actions.DeepTreesTestCase
+DeepTreesTestCase = svntest.deeptrees.DeepTreesTestCase
 
 alpha_beta_gamma = svntest.wc.State('', {
   'F/alpha'           : Item(),
@@ -840,7 +840,7 @@ def tree_conflicts_on_merge_local_ci_4_1(sbox):
 
   expected_skip = svntest.wc.State('', { })
 
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_leaf_edit",
                         tree_del,
                         leaf_edit,
@@ -878,7 +878,7 @@ def tree_conflicts_on_merge_local_ci_4_2(sbox):
   expected_skip = svntest.wc.State('', {
     })
 
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_leaf_del",
                         tree_del,
                         leaf_del,
@@ -931,7 +931,7 @@ def tree_conflicts_on_merge_local_ci_5_1(sbox):
   expected_skip = svntest.wc.State('', {
     })
 
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
                         leaf_edit,
                         tree_del,
@@ -972,7 +972,7 @@ def tree_conflicts_on_merge_local_ci_5_2(sbox):
   expected_skip = svntest.wc.State('', {
     })
 
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase("local_leaf_del_incoming_tree_del",
                         leaf_del,
                         tree_del,
@@ -1011,7 +1011,7 @@ def tree_conflicts_on_merge_local_ci_6(sbox):
   expected_skip = svntest.wc.State('', {
     })
 
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_tree_del",
                         tree_del,
                         tree_del,
@@ -1058,7 +1058,7 @@ def tree_conflicts_on_merge_no_local_ci_4_1(sbox):
   expected_skip = svntest.wc.State('', {
     })
 
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase(
                "local_tree_del_incoming_leaf_edit",
                tree_del,
@@ -1106,7 +1106,7 @@ def tree_conflicts_on_merge_no_local_ci_4_2(sbox):
   expected_skip = svntest.wc.State('', {
     })
 
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase(
                "local_tree_del_incoming_leaf_del",
                tree_del,
@@ -1157,7 +1157,7 @@ def tree_conflicts_on_merge_no_local_ci_5_1(sbox):
   expected_skip = svntest.wc.State('', {
     })
 
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase(
                "local_leaf_edit_incoming_tree_del",
                leaf_edit,
@@ -1204,7 +1204,7 @@ def tree_conflicts_on_merge_no_local_ci_5_2(sbox):
   expected_skip = svntest.wc.State('', {
     })
 
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase(
                "local_leaf_del_incoming_tree_del",
                leaf_del,
@@ -1253,7 +1253,7 @@ def tree_conflicts_on_merge_no_local_ci_6(sbox):
   expected_skip = svntest.wc.State('', {
     })
 
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase(
                "local_tree_del_incoming_tree_del",
                tree_del,
@@ -1331,10 +1331,10 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
 
   # Currently this test fails because some parts of the merge
   # start succeeding. 
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase(
                "local_tree_missing_incoming_leaf_edit",
-               svntest.actions.deep_trees_rmtree,
+               svntest.deeptrees.deep_trees_rmtree,
                leaf_edit,
                expected_output,
                expected_disk,
@@ -1403,10 +1403,10 @@ def tree_conflicts_merge_del_onto_missing(sbox):
     'DF/D1'             : Item(verb='Skipped missing target'),
   })
 
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase(
                "local_tree_missing_incoming_leaf_del",
-               svntest.actions.deep_trees_rmtree,
+               svntest.deeptrees.deep_trees_rmtree,
                leaf_del,
                expected_output,
                expected_disk,
