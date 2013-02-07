@@ -6565,6 +6565,26 @@ def move_update_props(sbox):
   svntest.actions.verify_disk(wc_dir, expected_disk, True,
                               svntest.tree.detect_conflict_files, extra_files)
 
+@Issues(3288)
+@SkipUnless(svntest.main.is_os_windows)
+def windows_invalid_characters(sbox):
+  "checkout with invalid NTFS characters"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
+                    '-U', sbox.repo_url,
+                    '-m', '',
+                    'mkdir', 'A/completely\\unusable\\dir')
+
+  expected_error = 'svn: E155000: .* is not valid.*'
+
+  svntest.actions.run_and_verify_svn(wc_dir, None, expected_error, 'up',
+                                     wc_dir)
+
+
 #######################################################################
 # Run the tests
 
@@ -6647,6 +6667,7 @@ test_list = [ None,
               incomplete_overcomplete,
               update_swapped_depth_dirs,
               move_update_props,
+              windows_invalid_characters,
              ]
 
 if __name__ == '__main__':
