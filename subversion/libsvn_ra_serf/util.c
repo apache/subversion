@@ -41,6 +41,7 @@
 #include "svn_string.h"
 #include "svn_xml.h"
 #include "svn_props.h"
+#include "svn_dirent_uri.h"
 
 #include "../libsvn_ra/ra_loader.h"
 #include "private/svn_dep_compat.h"
@@ -994,20 +995,13 @@ response_get_location(serf_bucket_t *response,
 {
   serf_bucket_t *headers;
   const char *location;
-  apr_status_t status;
-  apr_uri_t uri;
 
   headers = serf_bucket_response_get_headers(response);
   location = serf_bucket_headers_get(headers, "Location");
   if (location == NULL)
     return NULL;
 
-  /* Ignore the scheme/host/port. Or just return as-is if we can't parse.  */
-  status = apr_uri_parse(pool, location, &uri);
-  if (!status)
-    location = uri.path;
-
-  return svn_urlpath__canonicalize(location, pool);
+  return svn_uri_canonicalize(location, pool);
 }
 
 

@@ -289,6 +289,8 @@ checkout_node(const char **working_url,
               apr_pool_t *scratch_pool)
 {
   svn_ra_serf__handler_t handler = { 0 };
+  apr_status_t status;
+  apr_uri_t uri;
 
   /* HANDLER_POOL is the scratch pool since we don't need to remember
      anything from the handler. We just want the working resource.  */
@@ -315,7 +317,17 @@ checkout_node(const char **working_url,
     return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                             _("No Location header received"));
 
-  *working_url = apr_pstrdup(result_pool, handler.location);
+  /* We only want the path portion of the Location header.
+     (code.google.com sometimes returns an 'http:' scheme for an
+     'https:' transaction ... we'll work around that by stripping the
+     scheme, host, and port here and re-adding the correct ones
+     later.  */
+  status = apr_uri_parse(scratch_pool, handler.location, &uri);
+  if (status)
+    return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                            _("Error parsing Location header value"));
+        
+  *working_url = apr_pstrdup(result_pool, uri.path);
 
   return SVN_NO_ERROR;
 }
