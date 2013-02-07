@@ -1241,12 +1241,12 @@ open_root(void *edit_baton,
 
   if (have_work)
     {
-      const char *moved_away_root_abspath;
+      const char *move_src_root_abspath;
 
-      SVN_ERR(svn_wc__db_base_moved_to(NULL, NULL, &moved_away_root_abspath,
+      SVN_ERR(svn_wc__db_base_moved_to(NULL, NULL, &move_src_root_abspath,
                                        NULL, eb->db, db->local_abspath,
                                        pool, pool));
-      if (moved_away_root_abspath)
+      if (move_src_root_abspath)
         {
           /* This is an update anchored inside a move. We need to
              raise a move-edit tree-conflict on the move root to
@@ -1254,26 +1254,26 @@ open_root(void *edit_baton,
           svn_skel_t *tree_conflict = svn_wc__conflict_skel_create(pool);
 
           SVN_ERR(svn_wc__conflict_skel_add_tree_conflict(
-                    tree_conflict, eb->db, moved_away_root_abspath,
+                    tree_conflict, eb->db, move_src_root_abspath,
                     svn_wc_conflict_reason_moved_away,
                     svn_wc_conflict_action_edit,
-                    moved_away_root_abspath, pool, pool));
+                    move_src_root_abspath, pool, pool));
 
-          if (strcmp(db->local_abspath, moved_away_root_abspath))
+          if (strcmp(db->local_abspath, move_src_root_abspath))
             {
               /* This is some parent of the edit root, we won't be
                  handling it again so raise the conflict now. */
               SVN_ERR(complete_conflict(tree_conflict, eb,
-                                        moved_away_root_abspath,
+                                        move_src_root_abspath,
                                         db->old_repos_relpath,
                                         db->old_revision, db->new_relpath,
                                         svn_node_dir, svn_node_dir,
                                         pool, pool));
               SVN_ERR(svn_wc__db_op_mark_conflict(eb->db,
-                                                  moved_away_root_abspath,
+                                                  move_src_root_abspath,
                                                   tree_conflict,
                                                   NULL, pool));
-              do_notification(eb, moved_away_root_abspath, svn_node_dir,
+              do_notification(eb, move_src_root_abspath, svn_node_dir,
                               svn_wc_notify_tree_conflict, pool);
             }
           else
@@ -1455,7 +1455,7 @@ check_tree_conflict(svn_skel_t **pconflict,
   svn_wc_conflict_reason_t reason = SVN_WC_CONFLICT_REASON_NONE;
   svn_boolean_t modified = FALSE;
   svn_boolean_t all_mods_are_deletes = FALSE;
-  const char *moved_away_op_root_abspath = NULL;
+  const char *move_src_op_root_abspath = NULL;
 
   *pconflict = NULL;
 
@@ -1495,10 +1495,10 @@ check_tree_conflict(svn_skel_t **pconflict,
           {
             /* The node is locally replaced but could also be moved-away. */
             SVN_ERR(svn_wc__db_base_moved_to(NULL, NULL, NULL,
-                                             &moved_away_op_root_abspath,
+                                             &move_src_op_root_abspath,
                                              eb->db, local_abspath,
                                              scratch_pool, scratch_pool));
-            if (moved_away_op_root_abspath)
+            if (move_src_op_root_abspath)
               reason = svn_wc_conflict_reason_moved_away;
             else
               reason = svn_wc_conflict_reason_replaced;
@@ -1509,10 +1509,10 @@ check_tree_conflict(svn_skel_t **pconflict,
       case svn_wc__db_status_deleted:
         {
           SVN_ERR(svn_wc__db_base_moved_to(NULL, NULL, NULL,
-                                           &moved_away_op_root_abspath,
+                                           &move_src_op_root_abspath,
                                            eb->db, local_abspath,
                                            scratch_pool, scratch_pool));
-          if (moved_away_op_root_abspath)
+          if (move_src_op_root_abspath)
             reason = svn_wc_conflict_reason_moved_away;
           else
             reason = svn_wc_conflict_reason_deleted;
@@ -1627,7 +1627,7 @@ check_tree_conflict(svn_skel_t **pconflict,
                                                   eb->db, local_abspath,
                                                   reason,
                                                   action,
-                                                  moved_away_op_root_abspath,
+                                                  move_src_op_root_abspath,
                                                   result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
