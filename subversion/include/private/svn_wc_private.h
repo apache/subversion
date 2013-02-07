@@ -305,11 +305,13 @@ svn_wc__get_tree_conflict(const svn_wc_conflict_description2_t **tree_conflict,
  *
  * Returns an SVN_ERR_WC_PATH_UNEXPECTED_STATUS error when
  * CONFLICT->LOCAL_ABSPATH is already tree conflicted.
+ *
+ * ### This function can't set moved_away, moved_here conflicts for
+ *     any operation, except merges.
  */
 svn_error_t *
 svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
                           const svn_wc_conflict_description2_t *conflict,
-                          const char *moved_away_op_root_abspath,
                           apr_pool_t *scratch_pool);
 
 /* Remove any tree conflict on victim @a victim_abspath using @a wc_ctx.

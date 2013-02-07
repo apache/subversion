@@ -400,12 +400,17 @@ svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
 svn_error_t *
 svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
                           const svn_wc_conflict_description2_t *conflict,
-                          const char *moved_away_op_root_abspath,
                           apr_pool_t *scratch_pool)
 {
   svn_boolean_t existing_conflict;
   svn_skel_t *conflict_skel;
   svn_error_t *err;
+
+  SVN_ERR_ASSERT(conflict != NULL);
+  SVN_ERR_ASSERT(conflict->operation == svn_wc_operation_merge
+                 || (conflict->reason != svn_wc_conflict_reason_moved_away
+                     && conflict->reason != svn_wc_conflict_reason_moved_here)
+                );
 
   /* Re-adding an existing tree conflict victim is an error. */
   err = svn_wc__internal_conflicted_p(NULL, NULL, &existing_conflict,
@@ -433,7 +438,7 @@ svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
                                                   conflict->local_abspath,
                                                   conflict->reason,
                                                   conflict->action,
-                                                  moved_away_op_root_abspath,
+                                                  NULL,
                                                   scratch_pool, scratch_pool));
 
   switch(conflict->operation)

@@ -1322,7 +1322,6 @@ record_tree_conflict(merge_cmd_baton_t *merge_b,
        svn_wc_conflict_description2_t *conflict;
        const svn_wc_conflict_version_t *left;
        const svn_wc_conflict_version_t *right;
-       const char *moved_away_op_root_abspath = NULL;
        apr_pool_t *result_pool = parent_baton ? parent_baton->pool
                                               : scratch_pool;
 
@@ -1336,16 +1335,9 @@ record_tree_conflict(merge_cmd_baton_t *merge_b,
 
           if (moved_to_abspath)
             {
-              /* Local abspath has been moved away itself, as we only create
-                 tree conflict on the obstructing op-root.
-
-                 If only a descendant is moved away, we call the node itself
-                 deleted. */
+              /* Local abspath itself has been moved away. If only a
+                 descendant is moved away, we call the node itself deleted */
               reason = svn_wc_conflict_reason_moved_away;
-              moved_away_op_root_abspath = local_abspath; /* ### NOT OK */
-              /* local_abspath would be nonsense as that is what the conflict
-                 is on, and the move destination should be obtained by another
-                 api as that might just change while the conflict exists */
             }
         }
       else if (reason == svn_wc_conflict_reason_added)
@@ -1379,7 +1371,6 @@ record_tree_conflict(merge_cmd_baton_t *merge_b,
                                           scratch_pool));
 
       SVN_ERR(svn_wc__add_tree_conflict(merge_b->ctx->wc_ctx, conflict,
-                                        moved_away_op_root_abspath,
                                         scratch_pool));
 
       if (parent_baton)
