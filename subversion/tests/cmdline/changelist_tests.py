@@ -927,24 +927,24 @@ def tree_conflicts_and_changelists_on_commit2(sbox):
   # Remove it, warp back, add a prop, update.
   svntest.main.run_svn(None, 'delete', C)
 
-  expected_output = svntest.verify.UnorderedRegexOutput(
-                                     ["Deleting.*" + re.escape(C)],
+  expected_output = svntest.verify.RegexOutput(
+                                     "Deleting.*" + re.escape(C),
                                      False)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'commit', '-m', 'delete A/C', C)
 
-  expected_output = svntest.verify.UnorderedRegexOutput(
+  expected_output = svntest.verify.RegexOutput(
                                      "A.*" + re.escape(C), False)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'update', C, "-r1")
 
-  expected_output = svntest.verify.UnorderedRegexOutput(
+  expected_output = svntest.verify.RegexOutput(
                                      ".*'propname' set on '"
                                      + re.escape(C) + "'", False)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'propset', 'propname', 'propval', C)
 
-  expected_output = svntest.verify.UnorderedRegexOutput(
+  expected_output = svntest.verify.RegexOutput(
                                      "   C " + re.escape(C), False)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'update', wc_dir)
