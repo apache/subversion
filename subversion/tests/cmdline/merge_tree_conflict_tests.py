@@ -1721,7 +1721,6 @@ def merge_replace_causes_tree_conflict(sbox):
   actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
-@XFail()
 @Issue(3806)
 def merge_replace_causes_tree_conflict2(sbox):
   "replace vs. delete tree-conflicts"
@@ -1782,13 +1781,18 @@ def merge_replace_causes_tree_conflict2(sbox):
                         'A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi',
                         status='D ')
 
+  # H is now a file. This hides the status of the descendants.
+  expected_status.remove('A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega')
+
   # Merge them one by one to see all the errors.
 
   ### A file-with-file replacement onto a deleted file.
   # svn merge $URL/A/mu $URL/branch/mu A/mu
   expected_stdout = expected_merge_output(None, [
     '   C ' + A_mu + '\n',  # merge
+    'A    ' + A_mu + '\n',  # merge
     " U   " + A + "\n",     # mergeinfo
+    " U   " + A_mu + "\n",  # mergeinfo -> 'RM' status
   ], target=A, two_url=True, tree_conflicts=1)
 
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
@@ -1800,13 +1804,14 @@ def merge_replace_causes_tree_conflict2(sbox):
   #
   #  D     C merge_tree_conflict_tests-23\A\mu
   #      >   local delete, incoming replace upon merge
-  expected_status.tweak('A/mu', status='R ', wc_rev='-', copied='+',
+  expected_status.tweak('A/mu', status='RM', wc_rev='-', copied='+',
                         treeconflict='C')
 
   ### A dir-with-dir replacement onto a deleted directory.
   # svn merge $URL/A/B $URL/branch/B A/B
   expected_stdout = expected_merge_output(None, [
     '   C ' + A_B_E + '\n',   # merge
+    'A    ' + A_B_E + '\n',   # merge
     " U   " + A_B + "\n",     # mergeinfo
   ], target=A_B, two_url=True, tree_conflicts=1)
 
@@ -1826,8 +1831,8 @@ def merge_replace_causes_tree_conflict2(sbox):
   # svn merge --depth=immediates $URL/A/D $URL/branch/D A/D
   expected_stdout = expected_merge_output(None, [
     '   C ' + A_D_H + '\n',   # merge
+    'A    ' + A_D_H + '\n',   # merge
     " U   " + A_D + "\n",     # mergeinfo
-    " U   " + A_D_G + "\n",
   ], target=A_D, two_url=True, tree_conflicts=1)
 
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
@@ -1846,7 +1851,9 @@ def merge_replace_causes_tree_conflict2(sbox):
   # svn merge $URL/A/D/G $URL/branch/D/G A/D/G
   expected_stdout = expected_merge_output(None, [
     '   C ' + A_D_G_pi + '\n',  # merge
-  ], target=A_D_G, elides=[A_D_G_pi, A_D_G], two_url=True, tree_conflicts=1)
+    'A    ' + A_D_G_pi + '\n',  # merge
+    " U   " + A_D_G + "\n",     # mergeinfo
+  ], target=A_D_G, two_url=True, tree_conflicts=1)
 
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
     url_A_D_G, url_branch_D_G, A_D_G)
@@ -1865,7 +1872,8 @@ def merge_replace_causes_tree_conflict2(sbox):
 
   # Check the tree conflict types:
   expected_stdout = '(R.*)|(Summary of conflicts.*)|(  Tree conflicts.*)' \
-                    '|(.*local delete, incoming replace upon merge.*)'
+                    '|(.*local delete, incoming replace upon merge.*)' \
+                    '|(      \>.*)'
   tree_conflicted_path = [A_B_E, A_mu, A_D_G_pi, A_D_H]
   for path in tree_conflicted_path:
     actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'st',
