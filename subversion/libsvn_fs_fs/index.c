@@ -68,10 +68,11 @@ typedef struct l2p_index_header_t
   /* (max) number of entries per page */
   apr_size_t page_size;
 
-  /* pointers into PAGE_TABLE that mark the first page of the respective
-   * revision.  PAGE_TABLES[REVISION_COUNT] points to the end of PAGE_TABLE.
+  /* indexes into PAGE_TABLE that mark the first page of the respective
+   * revision.  PAGE_TABLE_INDEX[REVISION_COUNT] points to the end of
+   * PAGE_TABLE.
    */
-  l2_index_page_table_entry_t ** page_tables;
+  apr_size_t * page_table_index;
 
   /* Page table covering all pages in the index */
   l2_index_page_table_entry_t * page_table;
@@ -603,6 +604,7 @@ get_l2p_header(l2p_index_header_t **header,
   apr_size_t page, page_count;
   apr_off_t offset;
   l2p_index_header_t *result = apr_pcalloc(pool, sizeof(*result));
+  apr_size_t page_table_index;
 
   if (*stream == NULL)
     SVN_ERR(packed_stream_open(stream, path_l2p_index(fs, revision, pool),
@@ -621,16 +623,18 @@ get_l2p_header(l2p_index_header_t **header,
   /* allocate the page tables */
   result->page_table
     = apr_pcalloc(pool, page_count * sizeof(*result->page_table));
-  result->page_tables
+  result->page_table_index
     = apr_pcalloc(pool, (result->revision_count + 1)
-                      * sizeof(*result->page_tables));
+                      * sizeof(*result->page_table_index));
 
   /* read per-revision page table sizes */
-  result->page_tables[0] = result->page_table;
+  page_table_index = 0;
+  result->page_table_index[0] = page_table_index;
   for (i = 0; i < result->revision_count; ++i)
     {
       SVN_ERR(packed_stream_get(&value, *stream));
-      result->page_tables[i+1] = result->page_tables[i] + (apr_size_t)value;
+      page_table_index += (apr_size_t)value;
+      result->page_table_index[i+1] = page_table_index;
     }
 
   /* read actual page tables */
@@ -733,7 +737,8 @@ l2p_index_lookup(apr_off_t *offset,
       /* most revs fit well into a single page */
       page_offset = (apr_size_t)item_index;
       page_no = 0;
-      entry = header->page_tables[revision - header->first_revision];
+      entry = header->page_table
+            + header->page_table_index[revision - header->first_revision];
     }
   else
     {
@@ -742,8 +747,10 @@ l2p_index_lookup(apr_off_t *offset,
       page_no = (apr_uint32_t)(item_index / header->page_size);
 
       /* range of pages for this rev */
-      first_entry = header->page_tables[revision - header->first_revision];
-      last_entry = header->page_tables[revision + 1 - header->first_revision];
+      first_entry = header->page_table
+            + header->page_table_index[revision - header->first_revision];
+      last_entry = header->page_table
+            + header->page_table_index[revision + 1 - header->first_revision];
 
       if (last_entry - first_entry > page_no)
         {
@@ -832,27 +839,33 @@ svn_fs_fs__l2p_get_max_ids(apr_array_header_t **max_ids,
 
   /* read index master data structure */
   SVN_ERR(get_l2p_header(&header, &stream, fs, start_rev, pool));
+  SVN_ERR(packed_stream_close(stream));
+  stream = NULL;
 
   *max_ids = apr_array_make(pool, (int)count, sizeof(apr_uint64_t));
   for (revision = start_rev; revision < last_rev; ++revision)
     {
       apr_uint64_t page_count;
-      l2_index_page_table_entry_t *last_entry;
       apr_uint64_t item_count;
+      apr_size_t first_page_index, last_page_index;
 
       if (revision >= header->first_revision + header->revision_count)
-        SVN_ERR(get_l2p_header(&header, &stream, fs, revision, pool));
+        {
+          SVN_ERR(get_l2p_header(&header, &stream, fs, revision, pool));
+          SVN_ERR(packed_stream_close(stream));
+          stream = NULL;
+        }
 
-      page_count = header->page_tables[revision - header->first_revision + 1]
-                 - header->page_tables[revision - header->first_revision] - 1;
-      last_entry = header->page_tables[revision - header->first_revision + 1]
-                 - 1;
-      item_count = page_count * header->page_size + last_entry->entry_count;
+      first_page_index
+         = header->page_table_index[revision - header->first_revision];
+      last_page_index
+         = header->page_table_index[revision - header->first_revision + 1];
+      page_count = first_page_index - last_page_index - 1;
+      item_count = page_count * header->page_size
+                 + header->page_table[last_page_index - 1].entry_count;
 
       APR_ARRAY_PUSH(*max_ids, apr_uint64_t) = item_count;
     }
-
-  SVN_ERR(packed_stream_close(stream));
 
   return SVN_NO_ERROR;
 }

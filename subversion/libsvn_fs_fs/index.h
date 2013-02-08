@@ -142,7 +142,8 @@ svn_fs_fs__p2l_index_create(svn_fs_t *fs,
 
 /* Use the phys-to-log mapping files in FS to build a list of entries
  * that (partly) share in the same cluster as the item at global OFFSET
- * in the rep file containing REVISION.  Return the array in *ENTRIES.
+ * in the rep file containing REVISION.  Return the array in *ENTRIES,
+ * elements being of type svn_fs_fs__p2l_entry_t.
  * Use POOL for allocations.
  *
  * Note that (only) the first and the last mapping may cross a cluster
