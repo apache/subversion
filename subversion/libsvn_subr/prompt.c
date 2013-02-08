@@ -146,10 +146,10 @@ terminal_close(terminal_handle_t *terminal)
   return SVN_NO_ERROR;
 }
 
-/* Open TERMINAL. If NOECHO is TRUE, try to turn off terminal echo.
-   Use POOL for al allocations.*/
+/* Allocate and open *TERMINAL. If NOECHO is TRUE, try to turn off
+   terminal echo.  Use POOL for all allocations.*/
 static svn_error_t *
-terminal_open(terminal_handle_t *terminal, svn_boolean_t noecho,
+terminal_open(terminal_handle_t **terminal, svn_boolean_t noecho,
               apr_pool_t *pool)
 {
   apr_status_t status;
@@ -161,11 +161,12 @@ terminal_open(terminal_handle_t *terminal, svn_boolean_t noecho,
                                    FILE_SHARE_READ | FILE_SHARE_WRITE,
                                    NULL, OPEN_EXISTING,
                                    FILE_ATTRIBUTE_NORMAL, NULL);
+  *terminal = apr_palloc(pool, sizeof(terminal_handle_t));
   if (conin != INVALID_HANDLE_VALUE)
     {
       /* The process has a console. */
       CloseHandle(conin);
-      terminal_handle_init(terminal, NULL, NULL, noecho, FALSE, NULL);
+      terminal_handle_init(*terminal, NULL, NULL, noecho, FALSE, NULL);
       return SVN_NO_ERROR;
     }
 #else  /* !WIN32 */
@@ -176,10 +177,11 @@ terminal_open(terminal_handle_t *terminal, svn_boolean_t noecho,
   status = apr_file_open(&tmpfd, "/dev/tty",
                          APR_FOPEN_READ | APR_FOPEN_WRITE,
                          APR_OS_DEFAULT, pool);
+  *terminal = apr_palloc(pool, sizeof(terminal_handle_t));
   if (!status)
     {
       /* We have a terminal handle that we can use for input and output. */
-      terminal_handle_init(terminal, tmpfd, tmpfd, FALSE, TRUE, pool);
+      terminal_handle_init(*terminal, tmpfd, tmpfd, FALSE, TRUE, pool);
     }
 #endif /* !WIN32 */
   else
@@ -194,33 +196,33 @@ terminal_open(terminal_handle_t *terminal, svn_boolean_t noecho,
       status = apr_file_open_stderr(&outfd, pool);
       if (status)
         return svn_error_wrap_apr(status, _("Can't open stderr"));
-      terminal_handle_init(terminal, infd, outfd, FALSE, FALSE, pool);
+      terminal_handle_init(*terminal, infd, outfd, FALSE, FALSE, pool);
     }
 
 #ifdef HAVE_TERMIOS_H
   /* Set terminal state */
-  if (0 == apr_os_file_get(&terminal->osinfd, terminal->infd))
+  if (0 == apr_os_file_get(&(*terminal)->osinfd, (*terminal)->infd))
     {
-      if (0 == tcgetattr(terminal->osinfd, &terminal->attr))
+      if (0 == tcgetattr((*terminal)->osinfd, &(*terminal)->attr))
         {
-          struct termios attr = terminal->attr;
+          struct termios attr = (*terminal)->attr;
           /* Turn off signal handling and canonical input mode */
           attr.c_lflag &= ~(ISIG | ICANON);
           attr.c_cc[VMIN] = 1;          /* Read one byte at a time */
           attr.c_cc[VTIME] = 0;         /* No timeout, wait indefinitely */
           if (noecho)
             attr.c_lflag &= ~(ECHO);    /* Turn off echo */
-          if (0 == tcsetattr(terminal->osinfd, TCSAFLUSH, &attr))
+          if (0 == tcsetattr((*terminal)->osinfd, TCSAFLUSH, &attr))
             {
-              terminal->noecho = noecho;
-              terminal->restore_state = TRUE;
+              (*terminal)->noecho = noecho;
+              (*terminal)->restore_state = TRUE;
             }
         }
     }
 #endif /* HAVE_TERMIOS_H */
 
   /* Register pool cleanup to close handles and restore echo state. */
-  apr_pool_cleanup_register(terminal->pool, terminal,
+  apr_pool_cleanup_register((*terminal)->pool, *terminal,
                             terminal_plain_cleanup,
                             terminal_child_cleanup);
   return SVN_NO_ERROR;
@@ -437,16 +439,16 @@ prompt(const char **result,
 
   svn_boolean_t saw_first_half_of_eol = FALSE;
   svn_stringbuf_t *strbuf = svn_stringbuf_create_empty(pool);
-  terminal_handle_t terminal;
+  terminal_handle_t *terminal;
   int code;
   char c;
 
   SVN_ERR(terminal_open(&terminal, hide, pool));
-  SVN_ERR(terminal_puts(prompt_msg, &terminal, pool));
+  SVN_ERR(terminal_puts(prompt_msg, terminal, pool));
 
   while (1)
     {
-      SVN_ERR(terminal_getc(&code, &terminal, (strbuf->len > 0), pool));
+      SVN_ERR(terminal_getc(&code, terminal, (strbuf->len > 0), pool));
 
       /* Check for cancellation after a character has been read, some
          input processing modes may eat ^C and we'll only notice a
@@ -477,7 +479,7 @@ prompt(const char **result,
         case TERMINAL_EOF:
           return svn_error_create(
               APR_EOF,
-              terminal_close(&terminal),
+              terminal_close(terminal),
               _("End of file while reading from terminal"));
 
         default:
@@ -512,13 +514,13 @@ prompt(const char **result,
       svn_stringbuf_appendbyte(strbuf, c);
     }
 
-  if (terminal.noecho)
+  if (terminal->noecho)
     {
       /* If terminal echo was turned off, make sure future output
          to the terminal starts on a new line, as expected. */
-      terminal_puts(APR_EOL_STR, &terminal, pool);
+      terminal_puts(APR_EOL_STR, terminal, pool);
     }
-  SVN_ERR(terminal_close(&terminal));
+  SVN_ERR(terminal_close(terminal));
 
   return svn_cmdline_cstring_to_utf8(result, strbuf->data, pool);
 }
@@ -536,13 +538,13 @@ maybe_print_realm(const char *realm, apr_pool_t *pool)
 {
   if (realm)
     {
-      terminal_handle_t terminal;
+      terminal_handle_t *terminal;
       SVN_ERR(terminal_open(&terminal, FALSE, pool));
       SVN_ERR(terminal_puts(
                   apr_psprintf(pool,
                                _("Authentication realm: %s\n"), realm),
-                  &terminal, pool));
-      SVN_ERR(terminal_close(&terminal));
+                  terminal, pool));
+      SVN_ERR(terminal_close(terminal));
     }
 
   return SVN_NO_ERROR;
@@ -757,7 +759,7 @@ plaintext_prompt_helper(svn_boolean_t *may_save_plaintext,
   svn_boolean_t answered = FALSE;
   svn_cmdline_prompt_baton2_t *pb = baton;
   const char *config_path = NULL;
-  terminal_handle_t terminal;
+  terminal_handle_t *terminal;
 
   if (pb)
     SVN_ERR(svn_config_get_user_config_path(&config_path, pb->config_dir,
@@ -766,8 +768,8 @@ plaintext_prompt_helper(svn_boolean_t *may_save_plaintext,
   SVN_ERR(terminal_open(&terminal, FALSE, pool));
   SVN_ERR(terminal_puts(apr_psprintf(pool, prompt_text,
                                      realmstring, config_path),
-                        &terminal, pool));
-  SVN_ERR(terminal_close(&terminal));
+                        terminal, pool));
+  SVN_ERR(terminal_close(terminal));
 
   do
     {
