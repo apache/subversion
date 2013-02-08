@@ -235,6 +235,18 @@ svn_diff__tree_processor_reverse_create(const svn_diff_tree_processor_t * proces
 
 /**
  * Create a new svn_diff_tree_processor_t instance with all functions setup
+ * to first call into processor for all paths equal to and below prefix_relpath.
+ *
+ * @since New in 1.8.
+ */ /* Used by libsvn clients repository diff */
+const svn_diff_tree_processor_t *
+svn_diff__tree_processor_filter_create(const svn_diff_tree_processor_t *processor,
+                                       const char *prefix_relpath,
+                                       apr_pool_t *result_pool);
+
+
+/**
+ * Create a new svn_diff_tree_processor_t instance with all functions setup
  * to first call into processor1 and then processor2.
  *
  * This function is mostly a debug and migration helper.
