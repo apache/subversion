@@ -224,6 +224,14 @@ struct edit_baton {
   const svn_wc_diff_callbacks4_t *callbacks;
   void *callback_baton;
 
+  /* A diff tree processor, wrapping the callbacks.
+     This node is wrapped with a reversion processor when REVERSE_ORDER is
+     set, so it can always be driven forward.
+
+     ### Currently only an implementation detail as we don't handle all batons
+         yet. */
+  const svn_diff_tree_processor_t *processor;
+
   /* How does this diff descend? */
   svn_depth_t depth;
 
@@ -374,6 +382,7 @@ make_edit_baton(struct edit_baton **edit_baton,
 {
   apr_hash_t *changelist_hash = NULL;
   struct edit_baton *eb;
+  const svn_diff_tree_processor_t *processor;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(anchor_abspath));
 
@@ -381,10 +390,18 @@ make_edit_baton(struct edit_baton **edit_baton,
     SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelist_filter,
                                        pool));
 
+  SVN_ERR(svn_wc__wrap_diff_callbacks(&processor,
+                                      callbacks, callback_baton, TRUE,
+                                      pool, pool));
+
+  if (reverse_order)
+    processor = svn_diff__tree_processor_reverse_create(processor, NULL, pool);
+
   eb = apr_pcalloc(pool, sizeof(*eb));
   eb->db = db;
   eb->anchor_abspath = apr_pstrdup(pool, anchor_abspath);
   eb->target = apr_pstrdup(pool, target);
+  eb->processor = processor;
   eb->callbacks = callbacks;
   eb->callback_baton = callback_baton;
   eb->depth = depth;
@@ -623,25 +640,35 @@ file_diff(struct edit_baton *eb,
   if ((! replaced && status == svn_wc__db_status_deleted) ||
       (replaced && ! eb->ignore_ancestry))
     {
-      const char *base_mimetype;
-      apr_hash_t *baseprops;
+      apr_hash_t *left_props;
+      void *file_baton = NULL;
+      svn_boolean_t skip = FALSE;
+      svn_diff_source_t *left_src = svn_diff__source_create(revision,
+                                                            scratch_pool);
 
       /* Get svn:mime-type from pristine props (in BASE or WORKING) of PATH. */
-      SVN_ERR(svn_wc__db_read_pristine_props(&baseprops, db, local_abspath,
+      SVN_ERR(svn_wc__db_read_pristine_props(&left_props, db, local_abspath,
                                              scratch_pool, scratch_pool));
-      if (baseprops)
-        base_mimetype = get_prop_mimetype(baseprops);
-      else
-        base_mimetype = NULL;
 
-      SVN_ERR(eb->callbacks->file_deleted(NULL, NULL, path,
-                                          textbase,
-                                          empty_file,
-                                          base_mimetype,
-                                          NULL,
-                                          baseprops,
-                                          eb->callback_baton,
-                                          scratch_pool));
+      SVN_ERR(eb->processor->file_opened(&file_baton,
+                                         &skip,
+                                         path,
+                                         left_src,
+                                         NULL /* right_source */,
+                                         NULL /* copyfrom_source */,
+                                         NULL /* ### dir_baton */,
+                                         eb->processor,
+                                         scratch_pool,
+                                         scratch_pool));
+
+      if (!skip)
+        SVN_ERR(eb->processor->file_deleted(path,
+                                            left_src,
+                                            textbase,
+                                            left_props,
+                                            file_baton,
+                                            eb->processor,
+                                            scratch_pool));
 
       if (! (replaced && ! eb->ignore_ancestry))
         {
@@ -664,42 +691,70 @@ file_diff(struct edit_baton *eb,
        status == svn_wc__db_status_moved_here) &&
          (eb->show_copies_as_adds || eb->use_git_diff_format)))
     {
+      void *file_baton = NULL;
+      svn_boolean_t skip = FALSE;
       const char *translated = NULL;
-      const char *working_mimetype;
-      apr_hash_t *baseprops;
-      apr_hash_t *workingprops;
-      apr_array_header_t *propchanges;
+      svn_diff_source_t *copyfrom_src = NULL;
+      svn_diff_source_t *right_src = svn_diff__source_create(revision,
+                                                             scratch_pool);
 
-      /* Get svn:mime-type from ACTUAL props of PATH. */
-      SVN_ERR(svn_wc__get_actual_props(&workingprops, db, local_abspath,
-                                       scratch_pool, scratch_pool));
-      working_mimetype = get_prop_mimetype(workingprops);
+      /* ### Needs reason */
+      if (! eb->show_copies_as_adds && eb->use_git_diff_format
+          && status != svn_wc__db_status_added)
+        {
+          copyfrom_src = svn_diff__source_create(0, scratch_pool);
+        }
 
-      /* Set the original properties to empty, then compute "changes" from
-         that. Essentially, all ACTUAL props will be "added".  */
-      baseprops = apr_hash_make(scratch_pool);
-      SVN_ERR(svn_prop_diffs(&propchanges, workingprops, baseprops,
-                             scratch_pool));
+      SVN_ERR(eb->processor->file_opened(&file_baton, &skip,
+                                         path,
+                                         NULL /* left source */,
+                                         right_src,
+                                         copyfrom_src,
+                                         NULL /* ### dir baton */,
+                                         eb->processor,
+                                         scratch_pool, scratch_pool));
 
-      SVN_ERR(svn_wc__internal_translated_file(
-              &translated, local_abspath, db, local_abspath,
-              SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
-              eb->cancel_func, eb->cancel_baton,
-              scratch_pool, scratch_pool));
+      if (!skip)
+        {
+          apr_hash_t *right_props;
+          apr_hash_t *copyfrom_props = NULL;
+          const char *copyfrom_file = NULL;
 
-      SVN_ERR(eb->callbacks->file_added(NULL, NULL, NULL, path,
-                                        (! eb->show_copies_as_adds &&
-                                         eb->use_git_diff_format &&
-                                         status != svn_wc__db_status_added) ?
-                                          textbase : empty_file,
-                                        translated,
-                                        0, revision,
-                                        NULL,
-                                        working_mimetype,
-                                        original_repos_relpath,
-                                        SVN_INVALID_REVNUM, propchanges,
-                                        baseprops, eb->callback_baton,
-                                        scratch_pool));
+          /* Get svn:mime-type from ACTUAL props of PATH. */
+          SVN_ERR(svn_wc__db_read_props(&right_props, db, local_abspath,
+                                        scratch_pool, scratch_pool));
+
+          if (copyfrom_src)
+            {
+              SVN_ERR(svn_wc__db_read_pristine_props(&copyfrom_props,
+                                                     db, local_abspath,
+                                                     scratch_pool,
+                                                     scratch_pool));
+              copyfrom_file = textbase;
+            }
+
+          SVN_ERR(svn_wc__internal_translated_file(&translated, local_abspath,
+                                                   db, local_abspath,
+                                                   SVN_WC_TRANSLATE_TO_NF
+                                             | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
+                                                   eb->cancel_func,
+                                                   eb->cancel_baton,
+                                                   scratch_pool,
+                                                   scratch_pool));
+
+          SVN_ERR(eb->processor->file_added(path,
+                                            copyfrom_src,
+                                            right_src,
+                                            copyfrom_src
+                                                ? textbase
+                                                : NULL,
+                                            translated,
+                                            copyfrom_props,
+                                            right_props,
+                                            file_baton,
+                                            eb->processor,
+                                            scratch_pool));
+        }
     }
   else
     {
