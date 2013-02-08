@@ -237,7 +237,8 @@ class RegexListOutput(ExpectedOutput):
       actual = [actual]
 
     if self.match_all:
-      return all(e.match(a) for e, a in zip(self.expected_res, actual))
+      return (len(self.expected_res) == len(actual) and
+              all(e.match(a) for e, a in zip(self.expected_res, actual)))
 
     i_expected = 0
     for actual_line in actual:
