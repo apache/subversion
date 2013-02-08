@@ -314,7 +314,6 @@ UPDATE NODES SET op_depth = 0,
                  revision = ?6,
                  dav_cache = NULL,
                  moved_here = NULL,
-                 moved_to = NULL,
                  presence = CASE presence
                               WHEN MAP_NORMAL THEN MAP_NORMAL
                               WHEN MAP_EXCLUDED THEN MAP_EXCLUDED
