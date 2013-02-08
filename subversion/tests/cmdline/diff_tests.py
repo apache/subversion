@@ -991,7 +991,21 @@ def diff_head_of_moved_file(sbox):
   # Modify the file to ensure that the diff is non-empty.
   svntest.main.file_append(new_mu_path, "\nActually, it's a new mu.")
 
-  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+  mu_new = sbox.ospath('A/mu.new').replace('\\','/')
+
+  expected_output = [
+    'Index: %s\n' % mu_new,
+    '===================================================================\n',
+    '--- %s\t(.../mu)\t(revision 1)\n' % mu_new,
+    '+++ %s\t(.../mu.new)\t(working copy)\n' % mu_new,
+    '@@ -1 +1,3 @@\n',
+    ' This is the file \'mu\'.\n',
+    '+\n',
+    '+Actually, it\'s a new mu.\n',
+    '\ No newline at end of file\n',
+  ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-r', 'HEAD', new_mu_path)
 
 
@@ -3316,7 +3330,6 @@ def make_file_edit_del_add(dir):
   svntest.main.run_svn(None, 'add', theta)
 
 
-@XFail()
 @Issue(3295)
 def diff_url_against_local_mods(sbox):
   "diff URL against working copy with local mods"
