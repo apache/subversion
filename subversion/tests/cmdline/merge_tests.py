@@ -49,6 +49,7 @@ from svntest.main import server_has_mergeinfo
 from svntest.actions import fill_file_with_lines
 from svntest.actions import make_conflict_marker_text
 from svntest.actions import inject_conflict_into_expected_state
+from svntest.verify import RegexListOutput
 
 def expected_merge_output(rev_ranges, additional_lines=[], foreign=False,
                           elides=False, two_url=False, target=None,
@@ -18182,10 +18183,166 @@ def merge_properties_on_adds(sbox):
   # })
   # svntest.actions.run_and_verify_status(G, expected_status)
 
+
+# ======================================================================
+# Functions for parsing mergeinfo
+
+def parse_changes_list(changes_string):
+  """Parse a string containing a list of revision numbers in the form
+     of the '--change' command-line argument (e.g. '1,3,-5,7-10').
+     Return a list of elements of the form [[1], [3], [-5], [7,10]].
+  """
+  rev_ranges = []
+  for rr in changes_string.split(','):
+    if '-' in rr[1:]:
+      revs = rr.split('-')
+      rev_ranges.append([int(revs[0]), int(revs[1])])
+    else:
+      rev_ranges.append([int(rr)])
+  return rev_ranges
+
+def parse_rev_args(arg_list):
+  """Return a list of [rX:rY] or [rZ] elements representing ARG_LIST
+     whose elements are strings in the form '-rX:Y' or '-cZ,X-Y,...'.
+  """
+  rev_ranges = []
+  for arg in arg_list:
+    kind = arg[:2]
+    val = arg[2:]
+    if kind == '-r':
+      if ':' in val:
+        revs = map(int, val.split(':'))
+        if revs[0] < revs[1]:
+          rev_ranges.append([revs[0] + 1, revs[1]])
+        else:
+          rev_ranges.append([revs[0], revs[1] + 1])
+      else:
+        rev_ranges.append([int(val)])
+    elif kind == '-c':
+      rev_ranges.extend(parse_changes_list(val))
+    else:
+      raise ValueError("revision arg '" + arg + "' in '" + arg_list +
+                       "' does not start with -r or -c")
+  return rev_ranges
+
+class RangeList(list):
+  """Represents of a list of revision ranges, as a list of one- or
+     two-element lists, each of the form [X] meaning "--revision (X-1):X"
+     or [X,Y] meaning "--revision (X-1):Y".
+  """
+  def __init__(self, arg):
+    """
+    """
+    self.as_given = arg
+    if isinstance(arg, str):
+      list.__init__(self, parse_changes_list(arg))
+    elif isinstance(arg, list):
+      list.__init__(self, parse_rev_args(arg))
+    else:
+      raise ValueError("RangeList needs a string or a list, not '" + str(arg) + "'")
+
+def expected_merge_output2(tgt_ospath,
+                           recorded_ranges,
+                           merged_ranges=None,
+                           prop_conflicts=0):
+  """Return an ExpectedOutput instance corresponding to the expected
+     output of a merge into TGT_OSPATH, with one 'recording
+     mergeinfo...' notification per specified revision range in
+     RECORDED_RANGES and one 'merging...' notification per revision
+     range in MERGED_RANGES.
+
+     RECORDED_RANGES is a mergeinfo-string or a RangeList.
+
+     MERGED_RANGES is a list of mergeinfo-strings or a list of
+     RangeLists.  If None, it means [[r] for r in RECORDED_RANGES].
+  """
+  # Convert RECORDED_RANGES to a RangeList.
+  if isinstance(recorded_ranges, str):
+    recorded_ranges = RangeList(recorded_ranges)
+  # Convert MERGED_RANGES to a list of RangeLists.
+  if merged_ranges is None:
+    merged_ranges = [[r] for r in recorded_ranges]
+  elif len(merged_ranges) > 0 and isinstance(merged_ranges[0], str):
+    # List of mergeinfo-strings => list of rangelists
+    merged_ranges = [RangeList(r) for r in merged_ranges]
+
+  status_letters_re = prop_conflicts and ' [UC]' or ' U'
+  status_letters_mi = ' [UG]'
+  lines = []
+  for i, rr in enumerate(recorded_ranges):
+    # Merging ...
+    for sr in merged_ranges[i]:
+      revstart = sr[0]
+      revend = len(sr) > 1 and sr[1] or None
+      lines += [svntest.main.merge_notify_line(revstart, revend,
+                                               target=tgt_ospath)]
+      lines += [status_letters_re + '   ' + re.escape(tgt_ospath) + '\n']
+    # Recording mergeinfo ...
+    revstart = rr[0]
+    revend = len(rr) > 1 and rr[1] or None
+    lines += [svntest.main.mergeinfo_notify_line(revstart, revend,
+                                                 target=tgt_ospath)]
+    lines += [status_letters_mi + '   ' + re.escape(tgt_ospath) + '\n']
+
+  # Summary of conflicts
+  lines += svntest.main.summary_of_conflicts(prop_conflicts=prop_conflicts)
+
+  return RegexListOutput(lines)
+
+def expected_out_and_err(tgt_ospath,
+                           recorded_ranges,
+                           merged_ranges=None,
+                           prop_conflicts=0,
+                           expect_error=True):
+  """Return a tuple (expected_out, expected_err) giving the expected
+     output and expected error output for a merge into TGT_OSPATH. See
+     expected_merge_output2() for details of RECORDED_RANGES and
+     MERGED_RANGES and PROP_CONFLICTS.  EXPECT_ERROR should be true iff
+     we expect the merge to abort with an error about conflicts being
+     raised.
+  """
+  expected_out = expected_merge_output2(tgt_ospath, recorded_ranges,
+                                        merged_ranges, prop_conflicts)
+  if expect_error:
+    expected_err = RegexListOutput([
+                     '^svn: E155015: .* conflicts were produced .* into$',
+                     "^'.*" + tgt_ospath + "' --$",
+                     '^resolve all conflicts .* remaining$',
+                     '^unmerged revisions$'],
+                     match_all=False)
+  else:
+    expected_err = []
+
+  return expected_out, expected_err
+
+def check_mergeinfo(expected_mergeinfo, tgt_ospath):
+  """Read the mergeinfo on TGT_OSPATH; verify that it matches
+     EXPECTED_MERGEINFO (list of lines).
+  """
+  svntest.actions.run_and_verify_svn(
+    None, expected_mergeinfo, [], 'pg', SVN_PROP_MERGEINFO, tgt_ospath)
+
+def simple_merge(src_path, tgt_ospath, rev_args):
+  """Merge from ^/SRC_PATH to TGT_OSPATH using revision arguments REV_ARGS
+     (list of '-r...' or '-c...' strings); expect a single-target merge
+     with no conflicts or errors.
+  """
+  rev_ranges = RangeList(rev_args)
+
+  expected_out = expected_merge_output(rev_ranges,
+                                       [' U   ' + tgt_ospath + '\n',
+                                        ' [UG]   ' + tgt_ospath + '\n'],
+                                       target=tgt_ospath)
+  src_url = '^/' + src_path
+  svntest.actions.run_and_verify_svn(
+    None, expected_out, [],
+    'merge', src_url, tgt_ospath, '--accept', 'postpone', *rev_args)
+
 @SkipUnless(server_has_mergeinfo)
 @Issue(4306)
 # Test for issue #4306 'multiple editor drive file merges record wrong
 # mergeinfo during conflicts'
+### TODO: Directory merges. We're only testing single-file merges so far.
 def conflict_aborted_mergeinfo_described_partial_merge(sbox):
   "conflicted split merge can be repeated"
 
@@ -18223,32 +18380,45 @@ def conflict_aborted_mergeinfo_described_partial_merge(sbox):
                                      '--accept', 'theirs-conflict')
   sbox.simple_commit()
 
-  def try_merge(target, conflict_rev, rev_ranges, mergeinfo, expect_error=True):
-    """Revert TARGET_PATH in the branch; merge TARGET_PATH in the trunk
-       to TARGET_PATH in the branch; expect to find MERGEINFO.
-    """
-    src_url = '^/' + trunk + '/' + target
-    src_path = trunk + '/' + target
-    tgt_path = branch + '/' + target
+  def revert_branch():
     svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R',
-                                       sbox.ospath(tgt_path))
-    edit_file(tgt_path, conflict_rev, 'Conflict')
-    if expect_error:
-      expected_error = ('^svn: E155015: .* conflicts were produced .* into$'
-                        "|^'.*" + sbox.ospath(tgt_path) + "' --$"
-                        '|^resolve all conflicts .* remaining$'
-                        '|^unmerged revisions$')
-    else:
-      expected_error = []
-    svntest.actions.run_and_verify_svn(None, None, expected_error,
-                                       'merge',
-                                       src_url, sbox.ospath(tgt_path),
-                                       '--accept', 'postpone',
-                                       *rev_ranges)
-    expected_out = ['/' + src_path + ':' + mergeinfo + '\n']
+                                       sbox.ospath(branch))
+
+  def try_merge(relpath, conflict_rev, rev_args,
+                expected_out_err, expected_mi):
+    """Revert RELPATH in the branch; make a change that will conflict
+       with CONFLICT_REV if not None; merge RELPATH in the trunk
+       to RELPATH in the branch using revision arguments REV_ARGS (list of
+       '-r...' or '-c...' strings).
+
+       EXPECTED_OUT_ERR_MI is a tuple: (expected_out, expected_err,
+       expected_mi).  EXPECTED_OUT and EXPECTED_ERR are instances of
+       ExpectedOutput.
+
+       Expect to find mergeinfo EXPECTED_MI if not None.  EXPECTED_MI is
+       a single mergeinfo-string.
+    """
+    src_path = trunk + '/' + relpath
+    tgt_path = branch + '/' + relpath
+    tgt_ospath = sbox.ospath(tgt_path)
+
+    expected_out, expected_err = expected_out_err
+
+    revert_branch()
+
+    # Arrange for the merge to conflict at CONFLICT_REV.
+    if conflict_rev:
+      edit_file(tgt_path, conflict_rev, 'Conflict')
+
+    src_url = '^/' + src_path
     svntest.actions.run_and_verify_svn(
-      "Incorrect mergeinfo set during conflict aborted merge",
-      expected_out, [], 'pg', SVN_PROP_MERGEINFO, sbox.ospath(tgt_path))
+                      None, expected_out, expected_err,
+                      'merge', src_url, tgt_ospath, '--accept', 'postpone',
+                      *rev_args)
+
+    if expected_mi is not None:
+      expected_mergeinfo = ['/' + src_path + ':' + expected_mi + '\n']
+      check_mergeinfo(expected_mergeinfo, tgt_ospath)
 
   # In a mergeinfo-aware merge, each specified revision range is split
   # internally into sub-ranges, to avoid any already-merged revisions.
@@ -18260,6 +18430,8 @@ def conflict_aborted_mergeinfo_described_partial_merge(sbox):
   #
   # We test merges that raise a conflict in the first and last sub-range
   # of the first and last specified range.
+
+  tgt_ospath = sbox.ospath(branch + '/' + file)
 
   # First test: Merge "everything" to the branch.
   #
@@ -18274,25 +18446,81 @@ def conflict_aborted_mergeinfo_described_partial_merge(sbox):
   # Previously the merge failed after merging only r3-4 (as it should)
   # but mergeinfo for the whole range was recorded, preventing subsequent
   # repeat merges from applying the rest of the source changes.
-  try_merge(file, 4, [], '3-5,9')
+  expect = expected_out_and_err(tgt_ospath,
+                                '3-4', ['3-4'],
+                                prop_conflicts=1)
+  try_merge(file, 4, [], expect, '3-5,9')
 
   # Try a multiple-range merge that raises a conflict in the
-  # first sub-range in the first specified range.
-  try_merge(file, 4, ['-r1:6', '-r7:10'], '3-5,9')
-
-  # Try a multiple-range merge that raises a conflict in the
-  # last sub-range in the first specified range.
-  try_merge(file, 6, ['-r1:6', '-r7:10'], '3-6,9')
-
-  # Try a multiple-range merge that raises a conflict in the
-  # first sub-range in the last specified range.
-  try_merge(file, 8, ['-r1:6', '-r7:10'], '3-6,8-9')
-
-  # Try a multiple-range merge that raises a conflict in the
+  # first sub-range in the first specified range;
+  expect = expected_out_and_err(tgt_ospath,
+                                '4', ['4'],
+                                prop_conflicts=1)
+  try_merge(file, 4, ['-c4-6,8-10'], expect, '4-5,9')
+  # last sub-range in the first specified range;
+  expect = expected_out_and_err(tgt_ospath,
+                                '4-6', ['4,6'],
+                                prop_conflicts=1)
+  try_merge(file, 6, ['-c4-6,8-10'], expect, '4-6,9')
+  # first sub-range in the last specified range;
+  expect = expected_out_and_err(tgt_ospath,
+                                '4-6,8', ['4,6', '8'],
+                                prop_conflicts=1)
+  try_merge(file, 8, ['-c4-6,8-10'], expect, '4-6,8-9')
   # last sub-range in the last specified range.
   # (Expect no error, because 'svn merge' does not throw an error if
   # there is no more merging to do when a conflict occurs.)
-  try_merge(file, 10, ['-r1:6', '-r7:10'], '3-6,8-10', expect_error=False)
+  expect = expected_out_and_err(tgt_ospath,
+                                '4-6,8-10', ['4,6', '8,10'],
+                                prop_conflicts=1, expect_error=False)
+  try_merge(file, 10, ['-c4-6,8-10'], expect, '4-6,8-10')
+
+  # Try similar merges but involving ranges in reverse order.
+  expect = expected_out_and_err(tgt_ospath,
+                                '8', ['8'],
+                                prop_conflicts=1)
+  try_merge(file, 8,  ['-c8-10,4-6'], expect, '5,8-9')
+  expect = expected_out_and_err(tgt_ospath,
+                                '8-10', ['8,10'],
+                                prop_conflicts=1)
+  try_merge(file, 10, ['-c8-10,4-6'], expect, '5,8-10')
+  expect = expected_out_and_err(tgt_ospath,
+                                '8-10,4', ['8,10', '4'],
+                                prop_conflicts=1)
+  try_merge(file, 4,  ['-c8-10,4-6'], expect, '4-5,8-10')
+  expect = expected_out_and_err(tgt_ospath,
+                                '8-10,4-6', ['8,10', '4,6'],
+                                prop_conflicts=1, expect_error=False)
+  try_merge(file, 6,  ['-c8-10,4-6'], expect, '4-6,8-10')
+
+  # Try some reverse merges, with ranges in forward and reverse order.
+  #
+  # Reverse merges start with all source changes merged except 5 and 9.
+  revert_branch()
+  simple_merge(trunk_file, sbox.ospath(branch + '/' + file),
+               ['-c-5,-9,4,6-8,10'])
+  sbox.simple_commit(branch + '/' + file)
+
+  expect = expected_out_and_err(tgt_ospath,
+                                '6-4,10-8', ['-6,-4', '-10,-8'],
+                                expect_error=False)
+  try_merge(file, None, ['-r6:3', '-r10:7'], expect, '7')
+  expect = expected_out_and_err(tgt_ospath,
+                                '-6', ['-6'],
+                                prop_conflicts=1)
+  try_merge(file, 6,  ['-r6:3', '-r10:7'], expect, '4,7-8,10')
+  expect = expected_out_and_err(tgt_ospath,
+                                '6-4', ['-6,-4'],
+                                prop_conflicts=1)
+  try_merge(file, 4,  ['-r6:3', '-r10:7'], expect, '7-8,10')
+  expect = expected_out_and_err(tgt_ospath,
+                                '6-4,-10', ['-6,-4', '-10'],
+                                prop_conflicts=1)
+  try_merge(file, 10, ['-r6:3', '-r10:7'], expect, '7-8')
+  expect = expected_out_and_err(tgt_ospath,
+                                '6-4,10-8', ['-6,-4', '-10,-8'],
+                                prop_conflicts=1, expect_error=False)
+  try_merge(file, 8,  ['-r6:3', '-r10:7'], expect, '7')
 
 @SkipUnless(server_has_mergeinfo)
 @Issue(4310)
