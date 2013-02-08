@@ -2972,13 +2972,14 @@ def url_to_wc_copy_of_externals(sbox):
   external_tau_path = os.path.join(wc_dir, "External-WC-to-URL-Copy",
                                    "external", "tau")
   expected_stdout = verify.UnorderedOutput([
-    "\n",
     " U   " + external_root_path + "\n",
+    "\n",
     "Fetching external item into '" + external_ex_path + "':\n",
     "A    " + external_pi_path + "\n",
     "A    " + external_rho_path + "\n",
     "A    " + external_tau_path + "\n",
     "Checked out external at revision 2.\n",
+    "\n",
     "Checked out revision 2.\n",
     "A         " + external_root_path + "\n"
   ])
