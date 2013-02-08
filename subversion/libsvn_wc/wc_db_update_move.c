@@ -260,21 +260,34 @@ mark_tree_conflict(struct tc_editor_baton *b,
 
   if (conflict)
     {
-      svn_wc_conflict_reason_t existing_reason;
-      svn_wc_conflict_action_t existing_action;
-      const char *existing_abspath;
+      svn_wc_operation_t operation;
+      svn_boolean_t tree_conflicted;
 
-      err = svn_wc__conflict_read_tree_conflict(&existing_reason,
-                                                &existing_action,
-                                                &existing_abspath,
-                                                b->db, b->wcroot->abspath,
-                                                conflict,
-                                                scratch_pool, scratch_pool);
-      if (err && err->apr_err != SVN_ERR_WC_MISSING)
-        return err;
+      SVN_ERR(svn_wc__conflict_read_info(&operation, NULL, NULL, NULL,
+                                         &tree_conflicted,
+                                         b->db, b->wcroot->abspath, conflict,
+                                         scratch_pool, scratch_pool));
 
-      if (!err)
+      if (operation != svn_wc_operation_update
+          && operation != svn_wc_operation_switch)
+        return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                                 _("'%s' already in conflict"),
+                                 svn_dirent_local_style(local_relpath,
+                                                        scratch_pool));
+
+      if (tree_conflicted)
         {
+          svn_wc_conflict_reason_t existing_reason;
+          svn_wc_conflict_action_t existing_action;
+          const char *existing_abspath;
+
+          SVN_ERR(svn_wc__conflict_read_tree_conflict(&existing_reason,
+                                                      &existing_action,
+                                                      &existing_abspath,
+                                                      b->db, b->wcroot->abspath,
+                                                      conflict,
+                                                      scratch_pool,
+                                                      scratch_pool));
           if (reason != existing_reason
               || action != existing_action
               || (reason == svn_wc_conflict_reason_moved_away
@@ -289,9 +302,6 @@ mark_tree_conflict(struct tc_editor_baton *b,
           /* Already a suitable tree-conflict. */
           return SVN_NO_ERROR;
         }
-
-      /* Not a tree-conflict. */
-      svn_error_clear(err);
     }
   else
     conflict = svn_wc__conflict_skel_create(scratch_pool);
@@ -1330,7 +1340,9 @@ get_tc_info(svn_wc_operation_t *operation,
                                      db, src_abspath,
                                      conflict_skel, result_pool,
                                      scratch_pool));
-  if (!tree_conflicted)
+  if ((*operation != svn_wc_operation_update
+       && *operation != svn_wc_operation_switch)
+      || !tree_conflicted)
     return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                              _("'%s' is not a tree-conflict victim"),
                              svn_dirent_local_style(src_abspath,

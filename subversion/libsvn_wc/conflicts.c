@@ -2615,30 +2615,25 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
                                                   conflicts,
                                                   scratch_pool, scratch_pool));
 
-      if (reason == svn_wc_conflict_reason_deleted)
+      if (operation == svn_wc_operation_update
+          || operation == svn_wc_operation_switch)
         {
-          /* ### FIXME.  At the moment this is a separate transaction
-             ### but it should somehow be combined with the transaction
-             ### in svn_wc__db_op_mark_resolved.  Perhaps move this
-             ### functionality into that function?  Perhaps have this
-             ### function generate "raise conflict" workqueue items? */
-          if (conflict_choice == svn_wc_conflict_choose_merged)
+          if (reason == svn_wc_conflict_reason_deleted)
             {
-              SVN_ERR(svn_wc__db_resolve_delete_raise_moved_away(db,
-                                                                 local_abspath,
-                                                                 scratch_pool));
-              *did_resolve = TRUE;
+              if (conflict_choice == svn_wc_conflict_choose_merged)
+                {
+                  SVN_ERR(svn_wc__db_resolve_delete_raise_moved_away(
+                            db, local_abspath, scratch_pool));
+                  *did_resolve = TRUE;
+                }
             }
-        }
-      else if (reason == svn_wc_conflict_reason_moved_away)
-        {
-          /* After updates, we can resolve local moved-away vs. any incoming
-           * change, either by updating the moved-away node (mine-conflict)
-           * or by breaking the move (theirs-conflict). */
-          if (conflict_choice == svn_wc_conflict_choose_mine_conflict)
+          else if (reason == svn_wc_conflict_reason_moved_away)
             {
-              if (operation == svn_wc_operation_update ||
-                  operation == svn_wc_operation_switch)
+              /* After updates, we can resolve local moved-away
+               * vs. any incoming change, either by updating the
+               * moved-away node (mine-conflict) or by breaking the
+               * move (theirs-conflict). */
+              if (conflict_choice == svn_wc_conflict_choose_mine_conflict)
                 {
                   SVN_ERR(svn_wc__db_update_moved_away_conflict_victim(
                             &work_items,
@@ -2648,19 +2643,21 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
                             scratch_pool, scratch_pool));
                   *did_resolve = TRUE;
                 }
-            }
-          else if (conflict_choice == svn_wc_conflict_choose_theirs_conflict ||
-                   conflict_choice == svn_wc_conflict_choose_merged)
-            {
-              /* We must break the move even if the user accepts the current
-               * working copy state (choose_merged) instead of updating the
-               * move. Else the move would be left in an invalid state. */
+              else if (conflict_choice == svn_wc_conflict_choose_theirs_conflict
+                       || conflict_choice == svn_wc_conflict_choose_merged)
+                {
+                  /* We must break the move even if the user accepts
+                   * the current working copy state (choose_merged)
+                   * instead of updating the move. Else the move would
+                   * be left in an invalid state. */
 
-              /* ### As above, this should also be combined with
-                 ### svn_wc__db_op_mark_resolved. */
-              SVN_ERR(svn_wc__db_resolve_break_moved_away(db, local_abspath,
-                                                          scratch_pool));
-              *did_resolve = TRUE;
+                  /* ### This breaks the move but leaves the conflict
+                     ### involving the move until
+                     ### svn_wc__db_op_mark_resolved. */
+                  SVN_ERR(svn_wc__db_resolve_break_moved_away(db, local_abspath,
+                                                              scratch_pool));
+                  *did_resolve = TRUE;
+                }
             }
         }
 
