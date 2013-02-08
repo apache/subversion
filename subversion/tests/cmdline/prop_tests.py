@@ -2271,28 +2271,26 @@ def propget_redirection(sbox):
 
   # Check if the redirected output of svn pg -vR on the root of the WC
   # is what we expect.
+  expected_mergeinfo_displayed = [
+    '    /' + line for line in big_prop_val.splitlines(True) ]
   expected_output = [
     "Properties on '" + B_path +  "':\n", # Should ocur only once!
-    "Properties on '" + C_path +  "':\n", # Should ocur only once!
-    "Properties on '" + D_path +  "':\n", # Should ocur only once!
-    # Everything below should appear three times since this same
-    # mergeinfo value is set on three paths in the WC.
     "  svn:mergeinfo\n",
-    ] + [ '    /' + line for line in big_prop_val.splitlines(True) ]
+    ] + expected_mergeinfo_displayed + [
+    "Properties on '" + C_path +  "':\n", # Should ocur only once!
+    "  svn:mergeinfo\n",
+    ] + expected_mergeinfo_displayed + [
+    "Properties on '" + D_path +  "':\n", # Should ocur only once!
+    "  svn:mergeinfo\n",
+    ] + expected_mergeinfo_displayed
   svntest.verify.verify_outputs(
     "Redirected pg -vR doesn't match pg -vR stdout",
     pg_stdout_redir, None,
     svntest.verify.UnorderedOutput(expected_output), None)
-  # Because we are using UnorderedOutput above, this test would spuriously
-  # pass if the redirected pg output contained duplicates.  This hasn't been
-  # observed as part of issue #3721, but we might as well be thorough...
-  #
-  # ...Since we've set the same mergeinfo prop on A/B, A/C, and A/D, this
-  # means the number of lines in the redirected output of svn pg -vR should
-  # be three times the number of lines in EXPECTED_OUTPUT, adjusted for the
-  # fact the "Properties on '[A/B | A/C | A/D]'" headers  appear only once.
-  if ((len(expected_output) * 3) - 6) != len(pg_stdout_redir):
-    raise svntest.Failure("Redirected pg -vR has unexpected duplicates")
+  # (We want this check to fail if the redirected pg output contains
+  # unexpected duplicate lines, although this hasn't been observed as
+  # part of issue #3721.  We used to check separately here because the old
+  # UnorderedOutput class ignored duplicates but now it detects them.)
 
 @Issue(3852)
 def file_matching_dir_prop_reject(sbox):

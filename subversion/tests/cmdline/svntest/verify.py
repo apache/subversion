@@ -254,17 +254,8 @@ class RegexListOutput(ExpectedOutput):
 class UnorderedOutput(ExpectedOutput):
   """Matches an unordered list of lines.
 
-     After removing any duplicate actual lines, each expected regular
-     expression must match one actual line, one-to-one, in any order.
-
-     Note that duplicate lines, whether appearing together or separated,
-     are not significant in the expected lines or in the actual lines.
-
-        expected  actual
-        [A,B]     [B,B,A]   match
-        [A,B]     [B,B]     no match
-        [A,B]     [A,B,C]   no match
-        [A]       []        no match
+     The expected lines must match all the actual lines, one-to-one, in
+     any order.
   """
 
   def __init__(self, expected):
@@ -275,7 +266,7 @@ class UnorderedOutput(ExpectedOutput):
     if not isinstance(actual, list):
       actual = [actual]
 
-    return set(self.expected) == set(actual)
+    return sorted(self.expected) == sorted(actual)
 
   def display_differences(self, message, label, actual):
     display_lines(message, self.expected, actual, label + ' (unordered)', label)

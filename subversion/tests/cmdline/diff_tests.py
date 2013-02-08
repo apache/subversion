@@ -3878,6 +3878,7 @@ def no_spurious_conflict(sbox):
   expected_status.tweak('3449_spurious', status='  ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+@XFail()
 def diff_two_working_copies(sbox):
   "diff between two working copies"
   sbox.build()
