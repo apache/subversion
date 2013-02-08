@@ -2065,9 +2065,8 @@ diff_repos_wc_file_target(const char *target,
 
   /* We might have to create a normalised version of the working file. */
   svn_subst_eol_style_from_value(&eol_style, &eol_str,
-                                 apr_hash_get(file2_props,
-                                              SVN_PROP_EOL_STYLE,
-                                              APR_HASH_KEY_STRING));
+                                 svn_prop_get_value(file2_props,
+                                                    SVN_PROP_EOL_STYLE));
   keywords_prop = apr_hash_get(file2_props, SVN_PROP_KEYWORDS,
                                APR_HASH_KEY_STRING);
   if (keywords_prop)
@@ -2097,6 +2096,8 @@ diff_repos_wc_file_target(const char *target,
 
   if (kind1 == svn_node_file && !(show_copies_as_adds && is_copy))
     {
+      const char *mime1 = svn_prop_get_value(file1_props, SVN_PROP_MIME_TYPE);
+      const char *mime2 = svn_prop_get_value(file2_props, SVN_PROP_MIME_TYPE);
       SVN_ERR(callbacks->file_opened(NULL, NULL, target,
                                      reverse ? SVN_INVALID_REVNUM : rev,
                                      callback_baton, scratch_pool));
@@ -2105,12 +2106,8 @@ diff_repos_wc_file_target(const char *target,
         SVN_ERR(callbacks->file_changed(NULL, NULL, NULL, target,
                                         file2_abspath, file1_abspath,
                                         SVN_INVALID_REVNUM, rev,
-                                        apr_hash_get(file2_props,
-                                                     SVN_PROP_MIME_TYPE,
-                                                     APR_HASH_KEY_STRING),
-                                        apr_hash_get(file1_props,
-                                                     SVN_PROP_MIME_TYPE,
-                                                     APR_HASH_KEY_STRING),
+                                        mime2,
+                                        mime1,
                                         make_regular_props_array(
                                           file1_props, scratch_pool,
                                           scratch_pool),
@@ -2120,12 +2117,8 @@ diff_repos_wc_file_target(const char *target,
         SVN_ERR(callbacks->file_changed(NULL, NULL, NULL, target,
                                         file1_abspath, file2_abspath,
                                         rev, SVN_INVALID_REVNUM,
-                                        apr_hash_get(file1_props,
-                                                     SVN_PROP_MIME_TYPE,
-                                                     APR_HASH_KEY_STRING),
-                                        apr_hash_get(file2_props,
-                                                     SVN_PROP_MIME_TYPE,
-                                                     APR_HASH_KEY_STRING),
+                                        mime1,
+                                        mime2,
                                         make_regular_props_array(
                                           file2_props, scratch_pool,
                                           scratch_pool),
@@ -2134,13 +2127,12 @@ diff_repos_wc_file_target(const char *target,
     }
   else
     {
+      const char *mime2 = svn_prop_get_value(file2_props, SVN_PROP_MIME_TYPE);
       if (reverse)
         {
           SVN_ERR(callbacks->file_deleted(NULL, NULL,
                                           target, file2_abspath, file1_abspath,
-                                          apr_hash_get(file2_props,
-                                                       SVN_PROP_MIME_TYPE,
-                                                       APR_HASH_KEY_STRING),
+                                          mime2,
                                           NULL,
                                           make_regular_props_hash(
                                             file2_props, scratch_pool,
@@ -2153,9 +2145,7 @@ diff_repos_wc_file_target(const char *target,
                                         file1_abspath, file2_abspath,
                                         rev, SVN_INVALID_REVNUM,
                                         NULL,
-                                        apr_hash_get(file2_props,
-                                                     SVN_PROP_MIME_TYPE,
-                                                     APR_HASH_KEY_STRING),
+                                        mime2,
                                         NULL, SVN_INVALID_REVNUM,
                                         make_regular_props_array(
                                           file2_props, scratch_pool,
