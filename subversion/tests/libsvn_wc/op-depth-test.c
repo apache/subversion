@@ -5930,7 +5930,7 @@ move_in_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
       {3, "A/B/C/D/E", "base-deleted", NO_COPY_FROM},
       {1, "C2",        "normal",       3, "A/B/C", MOVED_HERE},
       {1, "C2/D",      "normal",       3, "A/B/C/D", MOVED_HERE},
-      {1, "C2/D/E",    "normal",       3, "A/B/C/D", MOVED_HERE},
+      {1, "C2/D/E",    "normal",       3, "A/B/C/D/E", MOVED_HERE},
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
