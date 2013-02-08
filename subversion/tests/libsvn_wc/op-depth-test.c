@@ -5437,8 +5437,7 @@ nested_move_commit(const svn_test_opts_t *opts, apr_pool_t *pool)
       {3, "A2/B/C",    "base-deleted", NO_COPY_FROM, "C2"},
       {3, "A2/B/C/f",  "base-deleted", NO_COPY_FROM},
 
-      /* Currently these are recorded as a move but still
-         have the copy history from ^/A/B/C@1 */
+      /* These need to have their copyfrom information updated */
       {1, "C2",        "normal",       2, "A2/B/C", MOVED_HERE},
       {1, "C2/f",      "normal",       2, "A2/B/C/f", MOVED_HERE},
       {0}
@@ -6579,7 +6578,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "update_prop_mod_into_moved"),
     SVN_TEST_OPTS_PASS(nested_move_update,
                        "nested_move_update"),
-    SVN_TEST_OPTS_XFAIL(nested_move_commit,
+    SVN_TEST_OPTS_PASS(nested_move_commit,
                        "nested_move_commit"),
     SVN_TEST_OPTS_PASS(nested_move_update2,
                        "nested_move_update2"),
