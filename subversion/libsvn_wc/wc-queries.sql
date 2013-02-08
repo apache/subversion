@@ -1536,6 +1536,34 @@ WHERE n.wc_id = ?1
   AND n.op_depth = ?3
   AND n.moved_to IS NOT NULL
 
+-- STMT_SELECT_MOVED_DESCENDANTS
+SELECT n.local_relpath, h.moved_to
+FROM nodes n, nodes h
+WHERE n.wc_id = ?1
+  AND h.wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(n.local_relpath, ?2)
+  AND h.local_relpath = n.local_relpath
+  AND n.op_depth = ?3
+  AND h.op_depth = (SELECT MIN(o.op_depth)
+                    FROM nodes o
+                    WHERE o.wc_id = ?1
+                      AND o.local_relpath = n.local_relpath
+                      AND o.op_depth > ?3)
+  AND h.moved_to IS NOT NULL
+
+-- STMT_COMMIT_UPDATE_ORIGIN
+/* Note that the only reason this SUBSTR() trick is valid is that you
+   can move neither the working copy nor the repository root.
+
+   SUBSTR(local_relpath, LENGTH(?2)+1) includes the '/' of the path */
+UPDATE nodes SET repos_id = ?4,
+                 repos_path = ?5 || SUBSTR(local_relpath, LENGTH(?2)+1),
+                 revision = ?6
+WHERE wc_id = ?1
+  AND (local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND op_depth = ?3
+
 -- STMT_HAS_LAYER_BETWEEN
 SELECT 1 FROM NODES
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > ?3 AND op_depth < ?4
