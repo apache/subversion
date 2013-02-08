@@ -295,6 +295,11 @@ WHERE wc_id = ?1
   AND (op_depth < ?3
        OR (op_depth = ?3 AND presence = MAP_BASE_DELETED))
 
+-- STMT_CLEAR_MOVED_TO_FROM_DEST
+UPDATE NODES SET moved_to = NULL
+WHERE wc_id = ?1
+  AND moved_to = ?2
+
 /* Get not-present descendants of a copied node. Not valid for the wc-root */
 -- STMT_SELECT_NOT_PRESENT_DESCENDANTS
 SELECT local_relpath FROM nodes

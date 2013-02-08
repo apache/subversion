@@ -10118,12 +10118,12 @@ moved_descendant_commit(svn_wc__db_wcroot_t *wcroot,
                                                 revision));
       SVN_ERR(svn_sqlite__update(&affected, stmt));
 
-      /* ### The following check should be valid, but triggers
-         copy_tests.py 84: copy a directory with whitespace to one without
-
-         indicating that we don't properly clean up in some other place,
-         or some commit ordering issue ### BH: Looking into this */
-      /* SVN_ERR_ASSERT(affected >= 1); */
+#ifdef SVN_DEBUG
+      /* Enable in release code?
+         Broken moves are not fatal yet, but this assertion would break
+         committing them */
+      SVN_ERR_ASSERT(affected >= 1); /* If this fails there is no move dest */
+#endif
 
       SVN_ERR(moved_descendant_commit(wcroot, to_relpath, to_op_depth,
                                       repos_id, new_repos_relpath, revision,
@@ -10327,6 +10327,14 @@ commit_node(svn_wc__db_wcroot_t *wcroot,
       SVN_ERR(moved_descendant_commit(wcroot, local_relpath, 0,
                                       repos_id, repos_relpath, new_revision,
                                       scratch_pool));
+
+      /* This node is no longer modified, so no node was moved here */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_CLEAR_MOVED_TO_FROM_DEST));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
+                                            local_relpath));
+
+      SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
   /* Update or add the BASE_NODE row with all the new information.  */
