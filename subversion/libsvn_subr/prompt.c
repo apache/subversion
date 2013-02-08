@@ -137,11 +137,7 @@ terminal_close(terminal_handle_t *terminal)
 {
   apr_status_t status;
 
-  /* Can't use apr_pool_cleanup_kill to remove the child cleanup; so
-     instead, replace it with the no-op handler. */
-  apr_pool_child_cleanup_set(terminal->pool, terminal,
-                             terminal_plain_cleanup,
-                             apr_pool_cleanup_null);
+  /* Can't use apr_pool_cleanup_kill removes both normal and child cleanup */
   apr_pool_cleanup_kill(terminal->pool, terminal, terminal_plain_cleanup);
 
   status = terminal_cleanup_handler(terminal, TRUE, TRUE);
