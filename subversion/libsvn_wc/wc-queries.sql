@@ -302,13 +302,22 @@ WHERE wc_id = ?1 AND op_depth = ?3
   AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND presence = MAP_NOT_PRESENT
 
--- STMT_COMMIT_DESCENDANT_TO_BASE
-UPDATE NODES SET op_depth = 0, repos_id = ?4, repos_path = ?5, revision = ?6,
-  moved_here = NULL, moved_to = NULL, dav_cache = NULL,
-  presence = CASE presence WHEN MAP_NORMAL THEN MAP_NORMAL
-                           WHEN MAP_EXCLUDED THEN MAP_EXCLUDED
-                           ELSE MAP_NOT_PRESENT END
-WHERE wc_id = ?1 AND local_relpath = ?2 and op_depth = ?3
+-- STMT_COMMIT_DESCENDANTS_TO_BASE
+UPDATE NODES SET op_depth = 0,
+                 repos_id = ?4,
+                 repos_path = ?5 || SUBSTR(local_relpath, LENGTH(?2)+1),
+                 revision = ?6,
+                 dav_cache = NULL,
+                 moved_here = NULL,
+                 moved_to = NULL,
+                 presence = CASE presence
+                              WHEN MAP_NORMAL THEN MAP_NORMAL
+                              WHEN MAP_EXCLUDED THEN MAP_EXCLUDED
+                              ELSE MAP_NOT_PRESENT
+                            END
+WHERE wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND op_depth = ?3
 
 -- STMT_SELECT_NODE_CHILDREN
 /* Return all paths that are children of the directory (?1, ?2) in any
