@@ -239,6 +239,13 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r1443929
+   Introduce a subpool.
+   Justifcation:
+     Better server memory use.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
