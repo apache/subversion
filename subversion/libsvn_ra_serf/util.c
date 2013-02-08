@@ -988,11 +988,12 @@ svn_ra_serf__response_discard_handler(serf_request_t *request,
 
 
 /* Return the value of the RESPONSE's Location header if any, or NULL
-   otherwise.  All allocations will be made in POOL.  */
+   otherwise.  */
 static const char *
 response_get_location(serf_bucket_t *response,
-                      const char *repos_root_url,
-                      apr_pool_t *pool)
+                      const char *base_url,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
 {
   serf_bucket_t *headers;
   const char *location;
@@ -1002,22 +1003,36 @@ response_get_location(serf_bucket_t *response,
   if (location == NULL)
     return NULL;
 
-  /* One of the buildbots appears to return a location header in /path/form.
-     Let's join it to the hostname to obtain a proper uri */
+  /* The RFCs say we should have received a full url in LOCATION, but
+     older apache versions and many custom web handlers just return a
+     relative path here...
+
+     And we can't trust anything because it is network data.
+   */
   if (*location == '/')
     {
-      const char *root_url = repos_root_url;
+      apr_uri_t uri;
+      apr_status_t status;
 
-      while (! svn_uri_is_root(root_url, strlen(root_url)))
-        root_url = svn_uri_dirname(root_url, pool);
+      status = apr_uri_parse(scratch_pool, base_url, &uri);
 
-      return apr_pstrcat(pool,
-                         root_url,
-                         svn_urlpath__canonicalize(location, pool),
-                         (char *)NULL);
+      if (status != APR_SUCCESS)
+        return NULL;
+
+      /* Replace the path path with what we got */
+      uri.path = (char*)svn_urlpath__canonicalize(location, scratch_pool);
+
+      /* And make APR produce a proper full url for us */
+      location = apr_uri_unparse(scratch_pool, &uri, 0);
+
+      /* Fall through to ensure our canonicalization rules */
+    }
+  else if (!svn_path_is_url(location))
+    {
+      return NULL; /* Any other formats we should support? */
     }
 
-  return svn_uri_canonicalize(location, pool);
+  return svn_uri_canonicalize(location, result_pool);
 }
 
 
@@ -1907,8 +1922,9 @@ handle_response(serf_request_t *request,
 
   /* ... and set up the header fields in HANDLER.  */
   handler->location = response_get_location(response,
-                                            handler->session->repos_root_str,
-                                            handler->handler_pool);
+                                            handler->session->session_url_str,
+                                            handler->handler_pool,
+                                            scratch_pool);
 
   /* On the last request, we failed authentication. We succeeded this time,
      so let's save away these credentials.  */
