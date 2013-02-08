@@ -6019,6 +6019,7 @@ op_revert_txn(void *baton,
               const char *local_relpath,
               apr_pool_t *scratch_pool)
 {
+  svn_wc__db_t *db = baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   int op_depth;
@@ -6092,7 +6093,8 @@ op_revert_txn(void *baton,
           svn_boolean_t tree_conflicted;
 
           SVN_ERR(svn_wc__conflict_read_info(&operation, NULL, NULL, NULL,
-                                             &tree_conflicted, NULL, NULL,
+                                             &tree_conflicted,
+                                             db, wcroot->abspath,
                                              conflict,
                                              scratch_pool, scratch_pool));
           if (tree_conflicted
@@ -6103,14 +6105,17 @@ op_revert_txn(void *baton,
               svn_wc_conflict_action_t action;
 
               SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, &action,
-                                                          NULL, NULL, NULL,
+                                                          NULL,
+                                                          db, wcroot->abspath,
                                                           conflict,
                                                           scratch_pool,
                                                           scratch_pool));
 
               if (reason == svn_wc_conflict_reason_deleted)
-                ;
-              /* svn_wc__db_resolve_delete_raise_moved */
+                SVN_ERR(svn_wc__db_resolve_delete_raise_moved_away(
+                          db, svn_dirent_join(wcroot->abspath, local_relpath,
+                                              scratch_pool),
+                          scratch_pool));
             }
         }
     }
@@ -6333,6 +6338,7 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
     {
     case svn_depth_empty:
       wtb.cb_func = op_revert_txn;
+      wtb.cb_baton = db;
       break;
     case svn_depth_infinity:
       wtb.cb_func = op_revert_recursive_txn;

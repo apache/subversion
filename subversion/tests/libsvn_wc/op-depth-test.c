@@ -6588,7 +6588,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move_update_delete_mods"),
     SVN_TEST_OPTS_PASS(nested_moves2,
                        "nested_moves2"),
-    SVN_TEST_OPTS_XFAIL(move_in_delete,
+    SVN_TEST_OPTS_PASS(move_in_delete,
                        "move_in_delete (issue 4303)"),
     SVN_TEST_OPTS_PASS(switch_move,
                        "switch_move"),
