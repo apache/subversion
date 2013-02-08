@@ -18212,7 +18212,7 @@ def conflict_aborted_mergeinfo_described_partial_merge(sbox):
     """Make a local edit to the file at PATH."""
     sbox.simple_propset('prop-' + str(rev), val + ' pval ' + str(rev), path)
 
-  # r4 through r13: simple edits
+  # r4 through r10: simple edits
   for rev in range(4, 11):
     edit_file(trunk_file, rev, 'Edited')
     sbox.simple_commit()
