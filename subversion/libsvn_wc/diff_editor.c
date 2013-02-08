@@ -261,6 +261,9 @@ struct dir_baton {
   /* Gets set if the directory is added rather than replaced/unchanged. */
   svn_boolean_t added;
 
+  /* Reference to parent directory baton (or NULL for the root) */
+  struct dir_baton *parent_baton;
+
   /* The depth at which this directory should be diffed. */
   svn_depth_t depth;
 
@@ -295,6 +298,7 @@ struct dir_baton {
   struct edit_baton *eb;
 
   apr_pool_t *pool;
+  int users;
 };
 
 /* File level baton.
@@ -302,6 +306,8 @@ struct dir_baton {
 struct file_baton {
   /* Gets set if the file is added rather than replaced. */
   svn_boolean_t added;
+
+  struct dir_baton *parent_baton;
 
   /* The name and path of this file as if they would be/are in the
       local working copy. */
@@ -412,9 +418,11 @@ make_dir_baton(const char *path,
                svn_depth_t depth,
                apr_pool_t *result_pool)
 {
-  apr_pool_t *dir_pool = svn_pool_create(result_pool);
+  apr_pool_t *dir_pool = svn_pool_create(parent_baton ? parent_baton->pool
+                                                      : eb->pool);
   struct dir_baton *db = apr_pcalloc(dir_pool, sizeof(*db));
 
+  db->parent_baton = parent_baton;
   db->eb = eb;
   db->added = added;
   db->depth = depth;
@@ -426,10 +434,16 @@ make_dir_baton(const char *path,
   db->name = svn_dirent_basename(db->path, NULL);
 
   if (parent_baton != NULL)
-    db->local_abspath = svn_dirent_join(parent_baton->local_abspath, db->name,
-                                        dir_pool);
+    {
+      db->local_abspath = svn_dirent_join(parent_baton->local_abspath,
+                                          db->name,
+                                          dir_pool);
+      parent_baton->users++;
+    }
   else
     db->local_abspath = apr_pstrdup(dir_pool, eb->anchor_abspath);
+
+  db->users = 1;
 
   return db;
 }
@@ -450,6 +464,8 @@ make_file_baton(const char *path,
   struct edit_baton *eb = parent_baton->eb;
 
   fb->eb = eb;
+  fb->parent_baton = parent_baton;
+  fb->parent_baton->users++;
   fb->added = added;
   fb->pool = file_pool;
   fb->propchanges  = apr_array_make(file_pool, 8, sizeof(svn_prop_t));
@@ -460,6 +476,25 @@ make_file_baton(const char *path,
                                       file_pool);
 
   return fb;
+}
+
+/* Destroy DB when there are no more registered users */
+static svn_error_t *
+maybe_done(struct dir_baton *db)
+{
+  db->users--;
+
+  if (!db->users)
+    {
+      struct dir_baton *pb = db->parent_baton;
+
+      svn_pool_clear(db->pool);
+
+      if (pb != NULL)
+        SVN_ERR(maybe_done(pb));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 /* Get the empty file associated with the edit baton. This is cached so
@@ -1398,7 +1433,7 @@ close_directory(void *dir_baton,
                                         db->added, db->eb->callback_baton,
                                         scratch_pool));
 
-  svn_pool_destroy(db->pool); /* destroys scratch_pool */
+  SVN_ERR(maybe_done(db)); /* destroys scratch_pool */
 
   return SVN_NO_ERROR;
 }
@@ -1646,12 +1681,6 @@ close_file(void *file_baton,
         pristine_props = apr_hash_make(scratch_pool);
     }
 
-  if (status == svn_wc__db_status_added)
-    SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL, NULL, eb->db,
-                                     fb->local_abspath,
-                                     scratch_pool, scratch_pool));
-
   repos_props = svn_prop__patch(pristine_props, fb->propchanges, scratch_pool);
   repos_mimetype = get_prop_mimetype(repos_props);
   repos_file = fb->temp_file_path ? fb->temp_file_path : pristine_file;
@@ -1661,7 +1690,15 @@ close_file(void *file_baton,
      and it was marked as schedule-deleted), we show either an addition
      or a deletion of the complete contents of the repository file,
      depending upon the direction of the diff. */
-  if (fb->added || (!eb->use_text_base && status == svn_wc__db_status_deleted))
+  if (eb->ignore_ancestry && status == svn_wc__db_status_added)
+    {
+        /* Add this filename to the parent directory's list of elements that
+           have been compared. */
+      svn_hash_sets(fb->parent_baton->compared,
+                    apr_pstrdup(fb->parent_baton->pool, fb->path), "");
+    }
+  else if (fb->added
+           || (!eb->use_text_base && status == svn_wc__db_status_deleted))
     {
       if (eb->reverse_order)
         return eb->callbacks->file_added(NULL, NULL, NULL, fb->path,
@@ -1686,6 +1723,12 @@ close_file(void *file_baton,
                                            eb->callback_baton,
                                            scratch_pool);
     }
+
+  if (status == svn_wc__db_status_added)
+    SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, eb->db,
+                                     fb->local_abspath,
+                                     scratch_pool, scratch_pool));
 
   /* If the file was locally added with history, and we want to show copies
    * as added, diff the file with the empty file. */
@@ -1779,6 +1822,7 @@ close_file(void *file_baton,
                                            scratch_pool));
     }
 
+  SVN_ERR(maybe_done(fb->parent_baton));
   svn_pool_destroy(fb->pool); /* destroys scratch_pool */
   return SVN_NO_ERROR;
 }
