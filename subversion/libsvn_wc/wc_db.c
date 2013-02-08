@@ -10035,7 +10035,7 @@ determine_repos_info(apr_int64_t *repos_id,
 /* Helper for svn_wc__db_global_commit()
 
    Makes local_relpath and all its descendants at the same op-depth represent
-   the copy origin repos:repos_relpath@revision.
+   the copy origin repos_id:repos_relpath@revision.
 
    This code is only valid to fix-up a move from an old location, to a new
    location during a commit.
@@ -10136,52 +10136,42 @@ moved_descendant_commit(svn_wc__db_wcroot_t *wcroot,
 
 /* Helper for svn_wc__db_global_commit()
 
-   Moves all nodes below PARENT_LOCAL_RELPATH from op-depth OP_DEPTH to
-   op-depth 0 (BASE), setting their presence to 'not-present' if their presence
-   wasn't 'normal'. */
+   Moves all nodes below LOCAL_RELPATH from op-depth OP_DEPTH to op-depth 0
+   (BASE), setting their presence to 'not-present' if their presence wasn't
+   'normal'.
+
+   Makes all nodes below LOCAL_RELPATH represent the descendants of repository
+   location repos_id:repos_relpath@revision.
+
+   Assumptions: 
+     * local_relpath is not the working copy root (can't be replaced)
+     * repos_relpath is not the repository root (can't be replaced)
+   */
 static svn_error_t *
 descendant_commit(svn_wc__db_wcroot_t *wcroot,
-                  const char *parent_local_relpath,
+                  const char *local_relpath,
                   int op_depth,
                   apr_int64_t repos_id,
-                  const char *parent_repos_relpath,
+                  const char *repos_relpath,
                   svn_revnum_t revision,
                   apr_pool_t *scratch_pool)
 {
-  const apr_array_header_t *children;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_sqlite__stmt_t *stmt;
-  int i;
+
+  SVN_ERR_ASSERT(*local_relpath != '\0'
+                 && *repos_relpath != '\0');
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_COMMIT_DESCENDANT_TO_BASE));
+                                    STMT_COMMIT_DESCENDANTS_TO_BASE));
 
-  SVN_ERR(gather_repo_children(&children, wcroot, parent_local_relpath,
-                               op_depth, scratch_pool, iterpool));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isdisr", wcroot->wc_id,
+                                            local_relpath,
+                                            op_depth,
+                                            repos_id,
+                                            repos_relpath,
+                                            revision));
 
-  for (i = 0; i < children->nelts; i++)
-    {
-      const char *local_relpath;
-      const char *repos_relpath;
-      const char *name = APR_ARRAY_IDX(children, i, const char *);
-
-      svn_pool_clear(iterpool);
-
-      local_relpath = svn_relpath_join(parent_local_relpath, name, iterpool);
-      repos_relpath = svn_relpath_join(parent_repos_relpath, name, iterpool);
-      SVN_ERR(svn_sqlite__bindf(stmt, "isdisr",
-                                wcroot->wc_id,
-                                local_relpath,
-                                op_depth,
-                                repos_id,
-                                repos_relpath,
-                                revision));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-
-      SVN_ERR(descendant_commit(wcroot, local_relpath, op_depth, repos_id,
-                                repos_relpath, revision, iterpool));
-    }
-  svn_pool_destroy(iterpool);
+  SVN_ERR(svn_sqlite__update(NULL, stmt));
 
   return SVN_NO_ERROR;
 }
