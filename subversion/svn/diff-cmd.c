@@ -238,10 +238,11 @@ svn_cl__diff(apr_getopt_t *os,
       targets->nelts = 0;
 
       /* Set default start/end revisions based on target types, in the same
-       * manner as done for the corresponding '--old X --new Y' cases. */
+       * manner as done for the corresponding '--old X --new Y' cases,
+       * (note that we have an explicit --new target) */
       if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
         opt_state->start_revision.kind = svn_path_is_url(old_target)
-            ? svn_opt_revision_head : svn_opt_revision_base;
+            ? svn_opt_revision_head : svn_opt_revision_working;
 
       if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
         opt_state->end_revision.kind = svn_path_is_url(new_target)
@@ -280,21 +281,14 @@ svn_cl__diff(apr_getopt_t *os,
       if (new_rev.kind != svn_opt_revision_unspecified)
         opt_state->end_revision = new_rev;
 
-      if (opt_state->new_target
-          && opt_state->start_revision.kind == svn_opt_revision_unspecified
-          && opt_state->end_revision.kind == svn_opt_revision_unspecified
-          && ! svn_path_is_url(old_target)
-          && ! svn_path_is_url(new_target))
-        {
-          /* We want the arbitrary_nodes_diff instead of just working nodes */
-          opt_state->start_revision.kind = svn_opt_revision_working;
-          opt_state->end_revision.kind = svn_opt_revision_working;
-        }
-
+      /* For URLs, default to HEAD. For WC paths, default to WORKING if
+       * new target is explicit; if new target is implicitly the same as
+       * old target, then default the old to BASE and new to WORKING. */
       if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
         opt_state->start_revision.kind = svn_path_is_url(old_target)
-          ? svn_opt_revision_head : svn_opt_revision_base;
-
+          ? svn_opt_revision_head
+          : (opt_state->new_target
+             ? svn_opt_revision_working : svn_opt_revision_base);
       if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
         opt_state->end_revision.kind = svn_path_is_url(new_target)
           ? svn_opt_revision_head : svn_opt_revision_working;
