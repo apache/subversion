@@ -279,13 +279,18 @@ SELECT local_relpath, kind FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = ?3
   AND (?3 != 0 OR file_external is NULL)
 
+/* Used by non-recursive revert to detect higher level children, and
+   actual-only rows that would be left orphans, if the revert
+   proceeded. */
 -- STMT_SELECT_GE_OP_DEPTH_CHILDREN
 SELECT 1 FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2
   AND (op_depth > ?3 OR (op_depth = ?3 AND presence != MAP_BASE_DELETED))
 UNION ALL
-SELECT 1 FROM ACTUAL_NODE
+SELECT 1 FROM ACTUAL_NODE a
 WHERE wc_id = ?1 AND parent_relpath = ?2
+  AND NOT EXISTS (SELECT 1 FROM nodes n
+                   WHERE wc_id = ?1 AND n.local_relpath = a.local_relpath)
 
 /* Delete the nodes shadowed by local_relpath. Not valid for the wc-root */
 -- STMT_DELETE_SHADOWED_RECURSIVE
