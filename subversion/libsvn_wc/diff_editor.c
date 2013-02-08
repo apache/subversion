@@ -1006,29 +1006,26 @@ report_wc_file_as_added(struct edit_baton *eb,
                         apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = eb->db;
-  apr_hash_t *emptyprops;
-  const char *mimetype;
-  apr_hash_t *wcprops = NULL;
-  apr_array_header_t *propchanges;
-  const char *empty_file;
+  svn_diff_source_t *right_src;
+  const char *changelist;
+  apr_hash_t *right_props = NULL;
   const char *source_file;
   const char *translated_file;
   svn_wc__db_status_t status;
   svn_revnum_t revision;
-
-  /* If this entry is filtered by changelist specification, do nothing. */
-  if (! svn_wc__internal_changelist_match(db, local_abspath,
-                                          eb->changelist_hash, scratch_pool))
-    return SVN_NO_ERROR;
-
-  SVN_ERR(get_empty_file(eb, &empty_file));
+  void *file_baton = NULL;
+  svn_boolean_t skip = FALSE;
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, &changelist,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
+
+  if (changelist && eb->changelist_hash
+      && !svn_hash_gets(eb->changelist_hash, changelist))
+    return SVN_NO_ERROR;
 
   if (status == svn_wc__db_status_added)
     SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
@@ -1053,19 +1050,26 @@ report_wc_file_as_added(struct edit_baton *eb,
       return file_diff(eb, local_abspath, path, scratch_pool);
     }
 
-  emptyprops = apr_hash_make(scratch_pool);
+  right_src = svn_diff__source_create(revision, scratch_pool);
+
+  SVN_ERR(eb->processor->file_opened(&file_baton, &skip,
+                                     path,
+                                     NULL,
+                                     right_src,
+                                     NULL,
+                                     NULL /* ### dir_baton */,
+                                     eb->processor,
+                                     scratch_pool, scratch_pool));
+
+  if (skip)
+    return SVN_NO_ERROR;
 
   if (eb->use_text_base)
-    SVN_ERR(svn_wc__db_read_pristine_props(&wcprops, db, local_abspath,
+    SVN_ERR(svn_wc__db_read_pristine_props(&right_props, db, local_abspath,
                                            scratch_pool, scratch_pool));
   else
-    SVN_ERR(svn_wc__get_actual_props(&wcprops, db, local_abspath,
-                                     scratch_pool, scratch_pool));
-  mimetype = get_prop_mimetype(wcprops);
-
-  SVN_ERR(svn_prop_diffs(&propchanges,
-                         wcprops, emptyprops, scratch_pool));
-
+    SVN_ERR(svn_wc__db_read_props(&right_props, db, local_abspath,
+                                  scratch_pool, scratch_pool));
 
   if (eb->use_text_base)
     {
@@ -1084,14 +1088,15 @@ report_wc_file_as_added(struct edit_baton *eb,
            scratch_pool, scratch_pool));
     }
 
-  SVN_ERR(eb->callbacks->file_added(NULL, NULL, NULL,
-                                    path,
-                                    empty_file, translated_file,
-                                    0, revision,
-                                    NULL, mimetype,
-                                    NULL, SVN_INVALID_REVNUM,
-                                    propchanges, emptyprops,
-                                    eb->callback_baton,
+  SVN_ERR(eb->processor->file_added(path,
+                                    NULL /* copyfrom source */,
+                                    right_src,
+                                    NULL /* copyfrom file */,
+                                    translated_file,
+                                    NULL /* copyfrom props */,
+                                    right_props,
+                                    file_baton,
+                                    eb->processor,
                                     scratch_pool));
 
   return SVN_NO_ERROR;
@@ -1755,28 +1760,31 @@ close_file(void *file_baton,
   else if (fb->added
            || (!eb->use_text_base && status == svn_wc__db_status_deleted))
     {
-      if (eb->reverse_order)
-        return eb->callbacks->file_added(NULL, NULL, NULL, fb->path,
-                                         empty_file,
-                                         repos_file,
-                                         0,
-                                         eb->revnum,
-                                         NULL,
-                                         repos_mimetype,
-                                         NULL, SVN_INVALID_REVNUM,
-                                         fb->propchanges,
-                                         apr_hash_make(pool),
-                                         eb->callback_baton,
-                                         scratch_pool);
-      else
-        return eb->callbacks->file_deleted(NULL, NULL, fb->path,
-                                           repos_file,
-                                           empty_file,
-                                           repos_mimetype,
-                                           NULL,
-                                           repos_props,
-                                           eb->callback_baton,
-                                           scratch_pool);
+      void *file_baton = NULL;
+      svn_boolean_t skip = FALSE;
+
+      svn_diff_source_t *left_src = svn_diff__source_create(eb->revnum,
+                                                            scratch_pool);
+
+      SVN_ERR(eb->processor->file_opened(&file_baton, &skip,
+                                         fb->path,
+                                         left_src,
+                                         NULL /* right source */,
+                                         NULL /* copyfrom source */,
+                                         NULL /* ### dir_baton */,
+                                         eb->processor,
+                                         scratch_pool, scratch_pool));
+
+      if (! skip)
+        SVN_ERR(eb->processor->file_deleted(fb->path,
+                                            left_src,
+                                            repos_file,
+                                            repos_props,
+                                            file_baton,
+                                            eb->processor,
+                                            scratch_pool));
+
+      return SVN_NO_ERROR;
     }
 
   if (status == svn_wc__db_status_added)
@@ -1789,19 +1797,43 @@ close_file(void *file_baton,
    * as added, diff the file with the empty file. */
   if ((status == svn_wc__db_status_copied ||
        status == svn_wc__db_status_moved_here) && eb->show_copies_as_adds)
-    return eb->callbacks->file_added(NULL, NULL, NULL, fb->path,
-                                     empty_file,
-                                     fb->local_abspath,
-                                     0,
-                                     eb->revnum,
-                                     NULL,
-                                     repos_mimetype,
-                                     NULL, SVN_INVALID_REVNUM,
-                                     fb->propchanges,
-                                     apr_hash_make(pool),
-                                     eb->callback_baton,
-                                     scratch_pool);
+    {
+      void *file_baton = NULL;
+      svn_boolean_t skip = FALSE;
 
+      svn_diff_source_t *right_src = svn_diff__source_create(eb->revnum,
+                                                             scratch_pool);
+
+      /* ### This code path looks like an ugly hack. No normalization,
+             nothing... */
+
+      SVN_ERR(eb->processor->file_opened(&file_baton, &skip,
+                                         fb->path,
+                                         NULL /* left_source */,
+                                         right_src,
+                                         NULL /* copyfrom source */,
+                                         NULL /* ### dir_baton */,
+                                         eb->processor,
+                                         scratch_pool, scratch_pool));
+
+      if (! skip)
+        {
+          apr_hash_t *right_props;
+          SVN_ERR(svn_wc__db_read_props(&right_props, db, fb->local_abspath,
+                                        scratch_pool, scratch_pool));
+
+          SVN_ERR(eb->processor->file_added(fb->path,
+                                          NULL /* copyfrom_src */,
+                                          right_src,
+                                          NULL /* copyfrom file */,
+                                          fb->local_abspath,
+                                          NULL /* copyfrom props */,
+                                          right_props,
+                                          file_baton,
+                                          eb->processor,
+                                          scratch_pool));
+        }
+    }
   /* If we didn't see any content changes between the BASE and repository
      versions (i.e. we only saw property changes), then, if we're diffing
      against WORKING, we also need to check whether there are any local
