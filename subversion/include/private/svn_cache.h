@@ -299,6 +299,33 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
                                   apr_pool_t *result_pool);
 
 /**
+ * @defgroup Standard priority classes for #svn_cache__create_membuffer_cache.
+ * @{
+ */
+
+/**
+ * Data in this priority class should not be removed from the cache unless
+ * absolutely necessary.  Use of this should be very restricted.
+ */
+#define SVN_CACHE__MEMBUFFER_HIGH_PRIORITY   10000
+
+/**
+ * Data in this priority class has a good chance to remain in cache unless
+ * there is more data in this class than the cache's capcity.  Use of this
+ * as the default for all information that is costly to fetch from disk.
+ */
+#define SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY 1000
+
+/**
+ * Data in this priority class will be removed as soon as the cache starts
+ * filling up.  Use of this for ephemeral data that can easisly be acquired
+ * again from other sources.
+ */
+#define SVN_CACHE__MEMBUFFER_LOW_PRIORITY      100
+
+/** @} */
+
+/**
  * Creates a new cache in @a *cache_p, storing the data in a potentially
  * shared @a membuffer object.  The elements in the cache will be indexed
  * by keys of length @a klen, which may be APR_HASH_KEY_STRING if they
@@ -306,7 +333,9 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
  * serialize_func and deserialized using @a deserialize_func.  Because
  * the same memcache object may cache many different kinds of values
  * form multiple caches, @a prefix should be specified to differentiate
- * this cache from other caches.  @a *cache_p will be allocated in @a result_pool.
+ * this cache from other caches.  All entries written through this cache
+ * interface will be assigned into the given @a priority class.  @a *cache_p
+ * will be allocated in @a result_pool.
  *
  * If @a deserialize_func is NULL, then the data is returned as an
  * svn_string_t; if @a serialize_func is NULL, then the data is
@@ -325,6 +354,7 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
                                   svn_cache__deserialize_func_t deserialize,
                                   apr_ssize_t klen,
                                   const char *prefix,
+                                  apr_uint32_t priority,
                                   svn_boolean_t thread_safe,
                                   apr_pool_t *result_pool);
 

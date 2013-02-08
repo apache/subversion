@@ -350,6 +350,10 @@ typedef struct entry_t
    */
   apr_uint32_t previous;
 
+  /* Priority of this entry.  This entry will not be replaced by lower-
+   * priority items.
+   */
+  apr_uint32_t priority;
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
   /* Remember type, content and key hashes.
    */
@@ -919,7 +923,8 @@ find_entry(svn_membuffer_t *cache,
            */
           entry = &group->entries[rand() % GROUP_SIZE];
           for (i = 1; i < GROUP_SIZE; ++i)
-            if (entry->hit_count > group->entries[i].hit_count)
+            if (  entry->hit_count * entry->priority
+                > group->entries[i].hit_count * group->entries[i].priority)
               entry = &group->entries[i];
 
           /* for the entries that don't have been removed,
@@ -983,12 +988,16 @@ move_entry(svn_membuffer_t *cache, entry_t *entry)
 }
 
 /* If necessary, enlarge the insertion window until it is at least
- * SIZE bytes long. SIZE must not exceed the data buffer size.
+ * SIZE bytes long.  SIZE must not exceed the data buffer size.  The
+ * new item will be of the given PRIORITY class.
+ *
  * Return TRUE if enough room could be found or made. A FALSE result
  * indicates that the respective item shall not be added.
  */
 static svn_boolean_t
-ensure_data_insertable(svn_membuffer_t *cache, apr_size_t size)
+ensure_data_insertable(svn_membuffer_t *cache,
+                       apr_uint32_t priority,
+                       apr_size_t size)
 {
   entry_t *entry;
   apr_uint64_t average_hit_value;
@@ -997,7 +1006,7 @@ ensure_data_insertable(svn_membuffer_t *cache, apr_size_t size)
   /* accumulated size of the entries that have been removed to make
    * room for the new one.
    */
-  apr_size_t drop_size = 0;
+  apr_size_t moved_size = 0;
 
   /* This loop will eventually terminate because every cache entry
    * would get dropped eventually:
@@ -1024,15 +1033,11 @@ ensure_data_insertable(svn_membuffer_t *cache, apr_size_t size)
       if (end >= size + cache->current_data)
         return TRUE;
 
-      /* Don't be too eager to cache data. Smaller items will fit into
-       * the cache after dropping a single item. Of the larger ones, we
-       * will only accept about 50%. They are also likely to get evicted
-       * soon due to their notoriously low hit counts.
-       *
-       * As long as enough similarly or even larger sized entries already
-       * exist in the cache, much less insert requests will be rejected.
+      /* Don't be too eager to cache data.  If a lot of data has been 
+       * moved around, the current item has probably a relatively low
+       * priority.  So, give up after some time.
        */
-      if (2 * drop_size > size)
+      if (moved_size > 16 * size)
         return FALSE;
 
       /* try to enlarge the insertion window
@@ -1049,6 +1054,7 @@ ensure_data_insertable(svn_membuffer_t *cache, apr_size_t size)
         }
       else
         {
+          svn_boolean_t keep;
           entry = get_entry(cache, cache->next);
 
           /* Keep entries that are very small. Those are likely to be data
@@ -1059,45 +1065,45 @@ ensure_data_insertable(svn_membuffer_t *cache, apr_size_t size)
           if (   (apr_uint64_t)entry->size * cache->used_entries
                < cache->data_used / 8)
             {
+              keep = TRUE;
+            }
+          else if (priority != entry->priority)
+            {
+              /* strictly let the higher priority win */
+              keep = entry->priority > priority;
+            }
+          else if (cache->hit_count > cache->used_entries)
+            {
+              /* Roll the dice and determine a threshold somewhere
+               * from 0 up to 2 times the average hit count.
+               */
+              average_hit_value = cache->hit_count / cache->used_entries;
+              threshold = (average_hit_value+1) * (rand() % 4096) / 2048;
+
+              keep = entry->hit_count > threshold;
+            }
+          else
+            {
+              /* general hit count is low. Keep everything that got hit
+               * at all and assign some 50% survival chance to everything
+               * else.
+               */
+              keep = rand() & 1;
+            }
+
+          /* keepers or destroyers? */
+          if (keep)
+            {
+              moved_size += entry->size;
               move_entry(cache, entry);
             }
           else
             {
-              svn_boolean_t keep;
-
-              if (cache->hit_count > cache->used_entries)
-                {
-                  /* Roll the dice and determine a threshold somewhere from 0 up
-                   * to 2 times the average hit count.
-                   */
-                  average_hit_value = cache->hit_count / cache->used_entries;
-                  threshold = (average_hit_value+1) * (rand() % 4096) / 2048;
-
-                  keep = entry->hit_count >= threshold;
-                }
-              else
-                {
-                  /* general hit count is low. Keep everything that got hit
-                   * at all and assign some 50% survival chance to everything
-                   * else.
-                   */
-                  keep = (entry->hit_count > 0) || (rand() & 1);
-                }
-
-              /* keepers or destroyers? */
-              if (keep)
-                {
-                  move_entry(cache, entry);
-                }
-              else
-                {
-                 /* Drop the entry from the end of the insertion window, if it
-                  * has been hit less than the threshold. Otherwise, keep it and
-                  * move the insertion window one entry further.
-                  */
-                  drop_size += entry->size;
-                  drop_entry(cache, entry);
-                }
+              /* Drop the entry from the end of the insertion window, if it
+               * has been hit less than the threshold. Otherwise, keep it and
+               * move the insertion window one entry further.
+               */
+              drop_entry(cache, entry);
             }
         }
     }
@@ -1364,6 +1370,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
                              apr_uint32_t group_index,
                              char *buffer,
                              apr_size_t size,
+                             apr_uint32_t priority,
                              DEBUG_CACHE_MEMBUFFER_TAG_ARG
                              apr_pool_t *scratch_pool)
 {
@@ -1376,6 +1383,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
     {
       cache->data_used += size - entry->size;
       entry->size = size;
+      entry->priority = priority;
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
 
@@ -1397,7 +1405,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
    */
   if (   buffer != NULL
       && cache->max_entry_size >= size
-      && ensure_data_insertable(cache, size))
+      && ensure_data_insertable(cache, priority, size))
     {
       /* Remove old data for this key, if that exists.
        * Get an unused entry for the key and and initialize it with
@@ -1406,6 +1414,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
       entry = find_entry(cache, group_index, to_find, TRUE);
       entry->size = size;
       entry->offset = cache->current_data;
+      entry->priority = priority;
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
 
@@ -1455,6 +1464,7 @@ membuffer_cache_set(svn_membuffer_t *cache,
                     entry_key_t key,
                     void *item,
                     svn_cache__serialize_func_t serializer,
+                    apr_uint32_t priority,
                     DEBUG_CACHE_MEMBUFFER_TAG_ARG
                     apr_pool_t *scratch_pool)
 {
@@ -1479,6 +1489,7 @@ membuffer_cache_set(svn_membuffer_t *cache,
                                                group_index,
                                                buffer,
                                                size,
+                                               priority,
                                                DEBUG_CACHE_MEMBUFFER_TAG
                                                scratch_pool));
   return SVN_NO_ERROR;
@@ -1793,9 +1804,10 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
             {
               /* Remove the old entry and try to make space for the new one.
                */
+              apr_uint32_t priority = entry->priority;
               drop_entry(cache, entry);
               if (   (cache->max_entry_size >= size)
-                  && ensure_data_insertable(cache, size))
+                  && ensure_data_insertable(cache, priority, size))
                 {
                   /* Write the new entry.
                    */
@@ -1900,6 +1912,9 @@ typedef struct svn_membuffer_cache_t
    */
   apr_ssize_t key_len;
 
+  /* priority class for all items written through this interface */
+  apr_uint32_t priority;
+  
   /* Temporary buffer containing the hash key for the current access
    */
   entry_key_t combined_key;
@@ -2083,6 +2098,7 @@ svn_membuffer_cache_set(void *cache_void,
                              cache->combined_key,
                              value,
                              cache->serializer,
+                             cache->priority,
                              DEBUG_CACHE_MEMBUFFER_TAG
                              cache->pool);
 }
@@ -2401,6 +2417,7 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
                                   svn_cache__deserialize_func_t deserializer,
                                   apr_ssize_t klen,
                                   const char *prefix,
+                                  apr_uint32_t priority,
                                   svn_boolean_t thread_safe,
                                   apr_pool_t *pool)
 {
@@ -2421,6 +2438,7 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
                       ? deserializer
                       : deserialize_svn_stringbuf;
   cache->full_prefix = apr_pstrdup(pool, prefix);
+  cache->priority = priority;
   cache->key_len = klen;
   cache->pool = svn_pool_create(pool);
   cache->alloc_counter = 0;

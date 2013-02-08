@@ -1414,7 +1414,9 @@ read_revisions(fs_fs_t **fs,
                                             svn_cache__get_global_membuffer_cache(),
                                             NULL, NULL,
                                             sizeof(window_cache_key_t),
-                                            "", FALSE, pool));
+                                            "",
+                                            SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
+                                            FALSE, pool));
 
   /* read all packed revs */
   for ( revision = start_revision
