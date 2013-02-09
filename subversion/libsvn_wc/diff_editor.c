@@ -219,11 +219,6 @@ struct edit_baton {
   /* Was the root opened? */
   svn_boolean_t root_opened;
 
-  /* The callbacks and callback argument that implement the file comparison
-     functions */
-  const svn_wc_diff_callbacks4_t *callbacks;
-  void *callback_baton;
-
   /* A diff tree processor, wrapping the callbacks.
      This node is wrapped with a reversion processor when REVERSE_ORDER is
      set, so it can always be driven forward.
@@ -246,9 +241,6 @@ struct edit_baton {
 
   /* Possibly diff repos against text-bases instead of working files. */
   svn_boolean_t use_text_base;
-
-  /* Possibly show the diffs backwards. */
-  svn_boolean_t reverse_order;
 
   /* Empty file used to diff adds / deletes */
   const char *empty_file;
@@ -283,6 +275,14 @@ struct dir_baton {
   /* The "correct" path of the directory, but it may not exist in the
      working copy. */
   const char *path;
+
+  /* Processor state */
+  void *pdb;
+  svn_boolean_t skip;
+  svn_boolean_t skip_children;
+
+  svn_diff_source_t *left_src;
+  svn_diff_source_t *right_src;
 
   /* Identifies those directory elements that get compared while running
      the crawler.  These elements should not be compared again when
@@ -409,14 +409,11 @@ make_edit_baton(struct edit_baton **edit_baton,
   eb->anchor_abspath = apr_pstrdup(pool, anchor_abspath);
   eb->target = apr_pstrdup(pool, target);
   eb->processor = processor;
-  eb->callbacks = callbacks;
-  eb->callback_baton = callback_baton;
   eb->depth = depth;
   eb->ignore_ancestry = ignore_ancestry;
   eb->show_copies_as_adds = show_copies_as_adds;
   eb->use_git_diff_format = use_git_diff_format;
   eb->use_text_base = use_text_base;
-  eb->reverse_order = reverse_order;
   eb->changelist_hash = changelist_hash;
   eb->cancel_func = cancel_func;
   eb->cancel_baton = cancel_baton;
@@ -1400,6 +1397,7 @@ add_directory(const char *path,
               void **child_baton)
 {
   struct dir_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->eb;
   struct dir_baton *db;
   svn_depth_t subdir_depth = (pb->depth == svn_depth_immediates)
                               ? svn_depth_empty : pb->depth;
@@ -1415,6 +1413,17 @@ add_directory(const char *path,
      diff. The repository node is unrelated from the working copy version
      (similar to not-present in the working copy) */
 
+  db->left_src  = svn_diff__source_create(eb->revnum, db->pool);
+
+  SVN_ERR(eb->processor->dir_opened(&db->pdb, &db->skip, &db->skip_children,
+                                    db->path,
+                                    db->left_src,
+                                    NULL /* right_source */,
+                                    NULL /* copyfrom src */,
+                                    pb->pdb,
+                                    eb->processor,
+                                    db->pool, db->pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -1427,6 +1436,7 @@ open_directory(const char *path,
                void **child_baton)
 {
   struct dir_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->eb;
   struct dir_baton *db;
   svn_depth_t subdir_depth = (pb->depth == svn_depth_immediates)
                               ? svn_depth_empty : pb->depth;
@@ -1436,13 +1446,21 @@ open_directory(const char *path,
   db = make_dir_baton(path, pb, pb->eb, FALSE, subdir_depth, dir_pool);
   *child_baton = db;
 
+  db->left_src  = svn_diff__source_create(eb->revnum, db->pool);
+  db->right_src = svn_diff__source_create(SVN_INVALID_REVNUM, db->pool);
+
   /* Add this path to the parent directory's list of elements that
      have been compared. */
   svn_hash_sets(pb->compared, apr_pstrdup(pb->pool, db->path), "");
 
-  SVN_ERR(db->eb->callbacks->dir_opened(NULL, NULL, NULL,
-                                        path, base_revision,
-                                        db->eb->callback_baton, dir_pool));
+  SVN_ERR(eb->processor->dir_opened(&db->pdb, &db->skip, &db->skip_children,
+                                    db->path,
+                                    db->left_src,
+                                    db->right_src,
+                                    NULL /* copyfrom src */,
+                                    pb->pdb,
+                                    eb->processor,
+                                    db->pool, db->pool));
 
   return SVN_NO_ERROR;
 }
@@ -1459,6 +1477,25 @@ close_directory(void *dir_baton,
   struct dir_baton *db = dir_baton;
   struct edit_baton *eb = db->eb;
   apr_pool_t *scratch_pool = db->pool;
+  svn_boolean_t reported_closed = FALSE;
+
+  /* Mark the properties of this directory as having already been
+     compared so that we know not to show any local modifications
+     in walk_local_nodes_diff. */
+  svn_hash_sets(db->compared, db->path, "");
+
+  /* Report local modifications for this directory.  Skip added
+     directories since they can only contain added elements, all of
+     which have already been diff'd. */
+  if (!db->added)
+    SVN_ERR(walk_local_nodes_diff(eb,
+                                  db->local_abspath,
+                                  db->path,
+                                  db->depth,
+                                  db->compared,
+                                  NULL /* ### parent_baton */,
+                                  scratch_pool));
+
 
   /* Report the property changes on the directory itself, if necessary. */
   if (db->propchanges->nelts > 0)
@@ -1503,40 +1540,45 @@ close_directory(void *dir_baton,
             }
         }
 
-      if (!eb->reverse_order)
-        reverse_propchanges(originalprops, db->propchanges, db->pool);
+      if (!db->added)
+        {
+          reverse_propchanges(originalprops, db->propchanges, db->pool);
 
-      SVN_ERR(eb->callbacks->dir_props_changed(NULL, NULL,
-                                               db->path,
-                                               db->added,
-                                               db->propchanges,
-                                               originalprops,
-                                               eb->callback_baton,
-                                               scratch_pool));
-
-      /* Mark the properties of this directory as having already been
-         compared so that we know not to show any local modifications
-         later on. */
-      svn_hash_sets(db->compared, db->path, "");
+          SVN_ERR(eb->processor->dir_changed(db->path,
+                                             db->left_src,
+                                             db->right_src,
+                                             originalprops,
+                                             svn_prop__patch(originalprops,
+                                                             db->propchanges,
+                                                             scratch_pool),
+                                             db->propchanges,
+                                             db->pdb,
+                                             eb->processor,
+                                             scratch_pool));
+        }
+      else
+        {
+          SVN_ERR(eb->processor->dir_deleted(db->path,
+                                             db->left_src,
+                                             svn_prop__patch(originalprops,
+                                                             db->propchanges,
+                                                             scratch_pool),
+                                             db->pdb,
+                                             eb->processor,
+                                             scratch_pool));
+        }
+      reported_closed = TRUE;
     }
-
-  /* Report local modifications for this directory.  Skip added
-     directories since they can only contain added elements, all of
-     which have already been diff'd. */
-  if (!db->added)
-    SVN_ERR(walk_local_nodes_diff(eb,
-                                  db->local_abspath,
-                                  db->path,
-                                  db->depth,
-                                  db->compared,
-                                  NULL /* ### parent_baton */,
-                                  scratch_pool));
 
   /* Mark this directory as compared in the parent directory's baton,
      unless this is the root of the comparison. */
-  SVN_ERR(db->eb->callbacks->dir_closed(NULL, NULL, NULL, db->path,
-                                        db->added, db->eb->callback_baton,
-                                        scratch_pool));
+  if (!reported_closed)
+    SVN_ERR(eb->processor->dir_closed(db->path,
+                                      db->left_src,
+                                      db->right_src,
+                                      db->pdb,
+                                      eb->processor,
+                                      scratch_pool));
 
   SVN_ERR(maybe_done(db)); /* destroys scratch_pool */
 
@@ -1569,6 +1611,15 @@ add_file(const char *path,
   fb->left_src = svn_diff__source_create(eb->revnum, fb->pool);
   fb->right_src = svn_diff__source_create(SVN_INVALID_REVNUM, fb->pool);
 
+  SVN_ERR(eb->processor->file_opened(&fb->pfb, &fb->skip,
+                                     fb->path,
+                                     fb->left_src,
+                                     fb->right_src,
+                                     NULL /* copyfrom src */,
+                                     pb->pdb,
+                                     eb->processor,
+                                     fb->pool, fb->pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -1600,8 +1651,14 @@ open_file(const char *path,
   fb->left_src = svn_diff__source_create(eb->revnum, fb->pool);
   fb->right_src = svn_diff__source_create(SVN_INVALID_REVNUM, fb->pool);
 
-  SVN_ERR(eb->callbacks->file_opened(NULL, NULL, fb->path, base_revision,
-                                     eb->callback_baton, fb->pool));
+  SVN_ERR(eb->processor->file_opened(&fb->pfb, &fb->skip,
+                                     fb->path,
+                                     fb->left_src,
+                                     fb->right_src,
+                                     NULL /* copyfrom src */,
+                                     pb->pdb,
+                                     eb->processor,
+                                     fb->pool, fb->pool));
 
   return SVN_NO_ERROR;
 }
