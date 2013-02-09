@@ -1032,7 +1032,6 @@ walk_local_nodes_diff(struct edit_baton *eb,
       apr_array_header_t *propchanges;
       apr_hash_t *left_props;
       apr_hash_t *right_props;
-      SVN_DBG(("Handling: %s\n", local_abspath));
 
       SVN_ERR(svn_wc__internal_propdiff(&propchanges, &left_props,
                                         db, local_abspath,
