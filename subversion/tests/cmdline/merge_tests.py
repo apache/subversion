@@ -18306,7 +18306,7 @@ def expected_out_and_err(tgt_ospath,
   if expect_error:
     expected_err = RegexListOutput([
                      '^svn: E155015: .* conflicts were produced .* into$',
-                     "^'.*" + tgt_ospath + "' --$",
+                     "^'.*" + re.escape(tgt_ospath) + "' --$",
                      '^resolve all conflicts .* remaining$',
                      '^unmerged revisions$'],
                      match_all=False)
