@@ -1189,42 +1189,27 @@ report_wc_directory_as_added(struct edit_baton *eb,
                              apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = eb->db;
-  apr_hash_t *emptyprops, *wcprops = NULL;
-  apr_array_header_t *propchanges;
   const apr_array_header_t *children;
   int i;
   apr_pool_t *iterpool;
-
-  emptyprops = apr_hash_make(scratch_pool);
-
-  /* If this directory passes changelist filtering, get its BASE or
-     WORKING properties, as appropriate, and simulate their
-     addition.
-     ### it should be noted that we do not currently allow directories
-     ### to be part of changelists, so if a changelist is provided, this
-     ### check will always fail. */
-  if (svn_wc__internal_changelist_match(db, local_abspath,
-                                        eb->changelist_hash, scratch_pool))
-    {
-      if (eb->use_text_base)
-        SVN_ERR(svn_wc__db_read_pristine_props(&wcprops, db, local_abspath,
-                                               scratch_pool, scratch_pool));
-      else
-        SVN_ERR(svn_wc__get_actual_props(&wcprops, db, local_abspath,
-                                         scratch_pool, scratch_pool));
-
-      SVN_ERR(svn_prop_diffs(&propchanges, wcprops, emptyprops, scratch_pool));
-
-      if (propchanges->nelts > 0)
-        SVN_ERR(eb->callbacks->dir_props_changed(NULL, NULL,
-                                                 path, TRUE,
-                                                 propchanges, emptyprops,
-                                                 eb->callback_baton,
-                                                 scratch_pool));
-    }
+  void *pdb = NULL;
+  svn_boolean_t skip = FALSE;
+  svn_boolean_t skip_children = FALSE;
+  svn_diff_source_t *right_src = svn_diff__source_create(SVN_INVALID_REVNUM,
+                                                         scratch_pool);
 
   /* Report the addition of the directory's contents. */
   iterpool = svn_pool_create(scratch_pool);
+
+  SVN_ERR(eb->processor->dir_opened(&pdb, &skip, &skip_children,
+                                    path,
+                                    NULL,
+                                    right_src,
+                                    NULL /* copyfrom_src */,
+                                    parent_baton,
+                                    eb->processor,
+                                    scratch_pool, scratch_pool));
+
 
   SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath,
                                    scratch_pool, iterpool));
@@ -1268,7 +1253,7 @@ report_wc_directory_as_added(struct edit_baton *eb,
         case svn_kind_file:
         case svn_kind_symlink:
           SVN_ERR(report_wc_file_as_added(eb, child_abspath, child_path,
-                                          parent_baton, iterpool));
+                                          pdb, iterpool));
           break;
 
         case svn_kind_dir:
@@ -1283,7 +1268,7 @@ report_wc_directory_as_added(struct edit_baton *eb,
                                                    child_abspath,
                                                    child_path,
                                                    depth_below_here,
-                                                   parent_baton,
+                                                   pdb,
                                                    iterpool));
             }
           break;
@@ -1293,6 +1278,25 @@ report_wc_directory_as_added(struct edit_baton *eb,
         }
     }
 
+  if (!skip)
+    {
+      apr_hash_t *right_props;
+      if (eb->use_text_base)
+        SVN_ERR(svn_wc__db_read_pristine_props(&right_props, db, local_abspath,
+                                               scratch_pool, scratch_pool));
+      else
+        SVN_ERR(svn_wc__get_actual_props(&right_props, db, local_abspath,
+                                         scratch_pool, scratch_pool));
+
+      SVN_ERR(eb->processor->dir_added(path,
+                                       NULL /* copyfrom_src */,
+                                       right_src,
+                                       NULL,
+                                       right_props,
+                                       pdb,
+                                       eb->processor,
+                                       iterpool));
+    }
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
