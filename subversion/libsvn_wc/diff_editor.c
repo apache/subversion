@@ -322,6 +322,13 @@ struct file_baton {
   const char *name;
   const char *local_abspath;
 
+  /* Processor state */
+  void *pfb;
+  svn_boolean_t skip;
+
+  const svn_diff_source_t *left_src;
+  const svn_diff_source_t *right_src;
+
   /* PATH is the "correct" path of the file, but it may not exist in the
      working copy */
   const char *path;
@@ -1543,6 +1550,7 @@ add_file(const char *path,
          void **file_baton)
 {
   struct dir_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->eb;
   struct file_baton *fb;
 
   /* ### TODO: support copyfrom? */
@@ -1554,6 +1562,9 @@ add_file(const char *path,
      elements that have been compared, to show local additions via the local
      diff. The repository node is unrelated from the working copy version
      (similar to not-present in the working copy) */
+
+  fb->left_src = svn_diff__source_create(eb->revnum, fb->pool);
+  fb->right_src = svn_diff__source_create(SVN_INVALID_REVNUM, fb->pool);
 
   return SVN_NO_ERROR;
 }
@@ -1582,6 +1593,9 @@ open_file(const char *path,
                                    NULL, NULL, NULL, NULL,
                                    eb->db, fb->local_abspath,
                                    fb->pool, fb->pool));
+
+  fb->left_src = svn_diff__source_create(eb->revnum, fb->pool);
+  fb->right_src = svn_diff__source_create(SVN_INVALID_REVNUM, fb->pool);
 
   SVN_ERR(eb->callbacks->file_opened(NULL, NULL, fb->path, base_revision,
                                      eb->callback_baton, fb->pool));
@@ -1794,13 +1808,12 @@ close_file(void *file_baton,
   else if (fb->added
            || (!eb->use_text_base && status == svn_wc__db_status_deleted))
     {
-      void *file_baton = NULL;
       svn_boolean_t skip = FALSE;
 
       svn_diff_source_t *left_src = svn_diff__source_create(eb->revnum,
                                                             scratch_pool);
 
-      SVN_ERR(eb->processor->file_opened(&file_baton, &skip,
+      SVN_ERR(eb->processor->file_opened(&fb->pfb, &skip,
                                          fb->path,
                                          left_src,
                                          NULL /* right source */,
@@ -1814,7 +1827,7 @@ close_file(void *file_baton,
                                             left_src,
                                             repos_file,
                                             repos_props,
-                                            file_baton,
+                                            fb->pfb,
                                             eb->processor,
                                             scratch_pool));
 
@@ -1832,7 +1845,6 @@ close_file(void *file_baton,
   if ((status == svn_wc__db_status_copied ||
        status == svn_wc__db_status_moved_here) && eb->show_copies_as_adds)
     {
-      void *file_baton = NULL;
       svn_boolean_t skip = FALSE;
 
       svn_diff_source_t *right_src = svn_diff__source_create(eb->revnum,
@@ -1841,7 +1853,7 @@ close_file(void *file_baton,
       /* ### This code path looks like an ugly hack. No normalization,
              nothing... */
 
-      SVN_ERR(eb->processor->file_opened(&file_baton, &skip,
+      SVN_ERR(eb->processor->file_opened(&fb->pfb, &skip,
                                          fb->path,
                                          NULL /* left_source */,
                                          right_src,
@@ -1863,7 +1875,7 @@ close_file(void *file_baton,
                                           fb->local_abspath,
                                           NULL /* copyfrom props */,
                                           right_props,
-                                          file_baton,
+                                          fb->pfb,
                                           eb->processor,
                                           scratch_pool));
         }
@@ -1913,34 +1925,22 @@ close_file(void *file_baton,
 
   if (localfile || fb->propchanges->nelts > 0)
     {
-      const char *original_mimetype = get_prop_mimetype(originalprops);
+      reverse_propchanges(originalprops, fb->propchanges, scratch_pool);
 
-      if (fb->propchanges->nelts > 0
-          && ! eb->reverse_order)
-        reverse_propchanges(originalprops, fb->propchanges, scratch_pool);
-
-      SVN_ERR(eb->callbacks->file_changed(NULL, NULL, NULL,
-                                          fb->path,
-                                          eb->reverse_order ? localfile
-                                                            : repos_file,
-                                           eb->reverse_order
-                                                          ? repos_file
-                                                          : localfile,
-                                           eb->reverse_order
-                                                          ? SVN_INVALID_REVNUM
-                                                          : eb->revnum,
-                                           eb->reverse_order
-                                                          ? eb->revnum
-                                                          : SVN_INVALID_REVNUM,
-                                           eb->reverse_order
-                                                          ? original_mimetype
-                                                          : repos_mimetype,
-                                           eb->reverse_order
-                                                          ? repos_mimetype
-                                                          : original_mimetype,
-                                           fb->propchanges, originalprops,
-                                           eb->callback_baton,
-                                           scratch_pool));
+      SVN_ERR(eb->processor->file_changed(fb->path,
+                                          fb->left_src,
+                                          fb->right_src,
+                                          repos_file,
+                                          localfile,
+                                          originalprops,
+                                          svn_prop__patch(originalprops,
+                                                          fb->propchanges,
+                                                          scratch_pool),
+                                          localfile != NULL,
+                                          fb->propchanges,
+                                          fb->pfb,
+                                          eb->processor,
+                                          scratch_pool));
     }
 
   SVN_ERR(maybe_done(fb->parent_baton));
