@@ -18351,12 +18351,14 @@ def conflict_aborted_mergeinfo_described_partial_merge(sbox):
   trunk = 'A'
   branch = 'A2'
   file = 'mu'
+  dir = 'B'
   trunk_file = 'A/mu'
+  trunk_dir = 'A/B'
 
   # r2: initial state
   for rev in range(4, 11):
     sbox.simple_propset('prop-' + str(rev), 'Old pval ' + str(rev),
-                        trunk_file)
+                        trunk_file, trunk_dir)
   sbox.simple_commit()
 
   # r3: branch
@@ -18365,13 +18367,14 @@ def conflict_aborted_mergeinfo_described_partial_merge(sbox):
 
   zero_rev = 3
 
-  def edit_file(path, rev, val):
+  def edit_file_or_dir(path, rev, val):
     """Make a local edit to the file at PATH."""
     sbox.simple_propset('prop-' + str(rev), val + ' pval ' + str(rev), path)
 
   # r4 through r10: simple edits
   for rev in range(4, 11):
-    edit_file(trunk_file, rev, 'Edited')
+    edit_file_or_dir(trunk_file, rev, 'Edited')
+    edit_file_or_dir(trunk_dir, rev, 'Edited')
     sbox.simple_commit()
 
   # r14: merge some changes to the branch so that later merges will be split
@@ -18379,6 +18382,7 @@ def conflict_aborted_mergeinfo_described_partial_merge(sbox):
                                      '^/' + trunk, sbox.ospath(branch),
                                      '--accept', 'theirs-conflict')
   sbox.simple_commit()
+  sbox.simple_update()
 
   def revert_branch():
     svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R',
@@ -18408,7 +18412,7 @@ def conflict_aborted_mergeinfo_described_partial_merge(sbox):
 
     # Arrange for the merge to conflict at CONFLICT_REV.
     if conflict_rev:
-      edit_file(tgt_path, conflict_rev, 'Conflict')
+      edit_file_or_dir(tgt_path, conflict_rev, 'Conflict')
 
     src_url = '^/' + src_path
     svntest.actions.run_and_verify_svn(
@@ -18431,96 +18435,99 @@ def conflict_aborted_mergeinfo_described_partial_merge(sbox):
   # We test merges that raise a conflict in the first and last sub-range
   # of the first and last specified range.
 
-  tgt_ospath = sbox.ospath(branch + '/' + file)
+  for target in [file, dir]:
 
-  # First test: Merge "everything" to the branch.
-  #
-  # This merge is split into three sub-ranges: r3-4, r6-8, r10-head.
-  # We have arranged that the merge will raise a conflict in the first
-  # sub-range.  Since we are postponing conflict resolution, the merge
-  # should stop after the first sub-range, allowing us to resolve and
-  # repeat the merge at which point the next sub-range(s) can be merged.
-  # The mergeinfo on the target then should only reflect that the first
-  # sub-range (r3-4) has been merged.
-  #
-  # Previously the merge failed after merging only r3-4 (as it should)
-  # but mergeinfo for the whole range was recorded, preventing subsequent
-  # repeat merges from applying the rest of the source changes.
-  expect = expected_out_and_err(tgt_ospath,
-                                '3-4', ['3-4'],
-                                prop_conflicts=1)
-  try_merge(file, 4, [], expect, '3-5,9')
+    tgt_ospath = sbox.ospath(branch + '/' + target)
 
-  # Try a multiple-range merge that raises a conflict in the
-  # first sub-range in the first specified range;
-  expect = expected_out_and_err(tgt_ospath,
-                                '4', ['4'],
-                                prop_conflicts=1)
-  try_merge(file, 4, ['-c4-6,8-10'], expect, '4-5,9')
-  # last sub-range in the first specified range;
-  expect = expected_out_and_err(tgt_ospath,
-                                '4-6', ['4,6'],
-                                prop_conflicts=1)
-  try_merge(file, 6, ['-c4-6,8-10'], expect, '4-6,9')
-  # first sub-range in the last specified range;
-  expect = expected_out_and_err(tgt_ospath,
-                                '4-6,8', ['4,6', '8'],
-                                prop_conflicts=1)
-  try_merge(file, 8, ['-c4-6,8-10'], expect, '4-6,8-9')
-  # last sub-range in the last specified range.
-  # (Expect no error, because 'svn merge' does not throw an error if
-  # there is no more merging to do when a conflict occurs.)
-  expect = expected_out_and_err(tgt_ospath,
-                                '4-6,8-10', ['4,6', '8,10'],
-                                prop_conflicts=1, expect_error=False)
-  try_merge(file, 10, ['-c4-6,8-10'], expect, '4-6,8-10')
+    # First test: Merge "everything" to the branch.
+    #
+    # This merge is split into three sub-ranges: r3-4, r6-8, r10-head.
+    # We have arranged that the merge will raise a conflict in the first
+    # sub-range.  Since we are postponing conflict resolution, the merge
+    # should stop after the first sub-range, allowing us to resolve and
+    # repeat the merge at which point the next sub-range(s) can be merged.
+    # The mergeinfo on the target then should only reflect that the first
+    # sub-range (r3-4) has been merged.
+    #
+    # Previously the merge failed after merging only r3-4 (as it should)
+    # but mergeinfo for the whole range was recorded, preventing subsequent
+    # repeat merges from applying the rest of the source changes.
+    expect = expected_out_and_err(tgt_ospath,
+                                  '3-4', ['3-4'],
+                                  prop_conflicts=1)
+    try_merge(target, 4, [], expect, '3-5,9')
 
-  # Try similar merges but involving ranges in reverse order.
-  expect = expected_out_and_err(tgt_ospath,
-                                '8', ['8'],
-                                prop_conflicts=1)
-  try_merge(file, 8,  ['-c8-10,4-6'], expect, '5,8-9')
-  expect = expected_out_and_err(tgt_ospath,
-                                '8-10', ['8,10'],
-                                prop_conflicts=1)
-  try_merge(file, 10, ['-c8-10,4-6'], expect, '5,8-10')
-  expect = expected_out_and_err(tgt_ospath,
-                                '8-10,4', ['8,10', '4'],
-                                prop_conflicts=1)
-  try_merge(file, 4,  ['-c8-10,4-6'], expect, '4-5,8-10')
-  expect = expected_out_and_err(tgt_ospath,
-                                '8-10,4-6', ['8,10', '4,6'],
-                                prop_conflicts=1, expect_error=False)
-  try_merge(file, 6,  ['-c8-10,4-6'], expect, '4-6,8-10')
+    # Try a multiple-range merge that raises a conflict in the
+    # first sub-range in the first specified range;
+    expect = expected_out_and_err(tgt_ospath,
+                                  '4', ['4'],
+                                  prop_conflicts=1)
+    try_merge(target, 4, ['-c4-6,8-10'], expect, '4-5,9')
+    # last sub-range in the first specified range;
+    expect = expected_out_and_err(tgt_ospath,
+                                  '4-6', ['4,6'],
+                                  prop_conflicts=1)
+    try_merge(target, 6, ['-c4-6,8-10'], expect, '4-6,9')
+    # first sub-range in the last specified range;
+    expect = expected_out_and_err(tgt_ospath,
+                                  '4-6,8', ['4,6', '8'],
+                                  prop_conflicts=1)
+    try_merge(target, 8, ['-c4-6,8-10'], expect, '4-6,8-9')
+    # last sub-range in the last specified range.
+    # (Expect no error, because 'svn merge' does not throw an error if
+    # there is no more merging to do when a conflict occurs.)
+    expect = expected_out_and_err(tgt_ospath,
+                                  '4-6,8-10', ['4,6', '8,10'],
+                                  prop_conflicts=1, expect_error=False)
+    try_merge(target, 10, ['-c4-6,8-10'], expect, '4-6,8-10')
 
-  # Try some reverse merges, with ranges in forward and reverse order.
-  #
-  # Reverse merges start with all source changes merged except 5 and 9.
-  revert_branch()
-  simple_merge(trunk_file, sbox.ospath(branch + '/' + file),
-               ['-c-5,-9,4,6-8,10'])
-  sbox.simple_commit(branch + '/' + file)
+    # Try similar merges but involving ranges in reverse order.
+    expect = expected_out_and_err(tgt_ospath,
+                                  '8', ['8'],
+                                  prop_conflicts=1)
+    try_merge(target, 8,  ['-c8-10,4-6'], expect, '5,8-9')
+    expect = expected_out_and_err(tgt_ospath,
+                                  '8-10', ['8,10'],
+                                  prop_conflicts=1)
+    try_merge(target, 10, ['-c8-10,4-6'], expect, '5,8-10')
+    expect = expected_out_and_err(tgt_ospath,
+                                  '8-10,4', ['8,10', '4'],
+                                  prop_conflicts=1)
+    try_merge(target, 4,  ['-c8-10,4-6'], expect, '4-5,8-10')
+    expect = expected_out_and_err(tgt_ospath,
+                                  '8-10,4-6', ['8,10', '4,6'],
+                                  prop_conflicts=1, expect_error=False)
+    try_merge(target, 6,  ['-c8-10,4-6'], expect, '4-6,8-10')
 
-  expect = expected_out_and_err(tgt_ospath,
-                                '6-4,10-8', ['-6,-4', '-10,-8'],
-                                expect_error=False)
-  try_merge(file, None, ['-r6:3', '-r10:7'], expect, '7')
-  expect = expected_out_and_err(tgt_ospath,
-                                '-6', ['-6'],
-                                prop_conflicts=1)
-  try_merge(file, 6,  ['-r6:3', '-r10:7'], expect, '4,7-8,10')
-  expect = expected_out_and_err(tgt_ospath,
-                                '6-4', ['-6,-4'],
-                                prop_conflicts=1)
-  try_merge(file, 4,  ['-r6:3', '-r10:7'], expect, '7-8,10')
-  expect = expected_out_and_err(tgt_ospath,
-                                '6-4,-10', ['-6,-4', '-10'],
-                                prop_conflicts=1)
-  try_merge(file, 10, ['-r6:3', '-r10:7'], expect, '7-8')
-  expect = expected_out_and_err(tgt_ospath,
-                                '6-4,10-8', ['-6,-4', '-10,-8'],
-                                prop_conflicts=1, expect_error=False)
-  try_merge(file, 8,  ['-r6:3', '-r10:7'], expect, '7')
+    # Try some reverse merges, with ranges in forward and reverse order.
+    #
+    # Reverse merges start with all source changes merged except 5 and 9.
+    revert_branch()
+    simple_merge(trunk + '/' + target, sbox.ospath(branch + '/' + target),
+                 ['-c-5,-9,4,6-8,10'])
+    sbox.simple_commit()
+    sbox.simple_update()
+
+    expect = expected_out_and_err(tgt_ospath,
+                                  '6-4,10-8', ['-6,-4', '-10,-8'],
+                                  expect_error=False)
+    try_merge(target, None, ['-r6:3', '-r10:7'], expect, '7')
+    expect = expected_out_and_err(tgt_ospath,
+                                  '-6', ['-6'],
+                                  prop_conflicts=1)
+    try_merge(target, 6,  ['-r6:3', '-r10:7'], expect, '4,7-8,10')
+    expect = expected_out_and_err(tgt_ospath,
+                                  '6-4', ['-6,-4'],
+                                  prop_conflicts=1)
+    try_merge(target, 4,  ['-r6:3', '-r10:7'], expect, '7-8,10')
+    expect = expected_out_and_err(tgt_ospath,
+                                  '6-4,-10', ['-6,-4', '-10'],
+                                  prop_conflicts=1)
+    try_merge(target, 10, ['-r6:3', '-r10:7'], expect, '7-8')
+    expect = expected_out_and_err(tgt_ospath,
+                                  '6-4,10-8', ['-6,-4', '-10,-8'],
+                                  prop_conflicts=1, expect_error=False)
+    try_merge(target, 8,  ['-r6:3', '-r10:7'], expect, '7')
 
 @SkipUnless(server_has_mergeinfo)
 @Issue(4310)
