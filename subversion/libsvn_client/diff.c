@@ -50,6 +50,7 @@
 
 #include "private/svn_wc_private.h"
 #include "private/svn_diff_private.h"
+#include "private/svn_subr_private.h"
 
 #include "svn_private_config.h"
 
@@ -594,6 +595,12 @@ struct diff_cmd_baton {
   /* Whether deletion of a file is summarized versus showing a full diff. */
   svn_boolean_t no_diff_deleted;
 
+  /* Whether to ignore copyfrom information when showing adds */
+  svn_boolean_t no_copyfrom_on_add;
+
+  /* Empty files for creating diffs or NULL if not used yet */
+  const char *empty_file;
+
   svn_wc_context_t *wc_ctx;
 
   /* The RA session used during diffs involving the repository. */
@@ -994,6 +1001,30 @@ diff_file_added(svn_wc_notify_state_t *content_state,
       if (rev2 == SVN_INVALID_REVNUM &&
           diff_cmd_baton->revnum2 != SVN_INVALID_REVNUM)
         rev2 = diff_cmd_baton->revnum2;
+    }
+
+  if (diff_cmd_baton->no_copyfrom_on_add
+      && (copyfrom_path || SVN_IS_VALID_REVNUM(copyfrom_revision)))
+    {
+      apr_hash_t *empty_hash = apr_hash_make(scratch_pool);
+      apr_array_header_t *new_changes;
+
+      /* Rebase changes on having no left source. */
+      if (!diff_cmd_baton->empty_file)
+        SVN_ERR(svn_io_open_unique_file3(NULL, &diff_cmd_baton->empty_file,
+                                         NULL, svn_io_file_del_on_pool_cleanup,
+                                         diff_cmd_baton->pool, scratch_pool));
+
+      SVN_ERR(svn_prop_diffs(&new_changes,
+                             svn_prop__patch(original_props, prop_changes,
+                                             scratch_pool),
+                             empty_hash,
+                             scratch_pool));
+
+      tmpfile1 = diff_cmd_baton->empty_file;
+      prop_changes = new_changes;
+      original_props = empty_hash;
+      copyfrom_revision = SVN_INVALID_REVNUM;
     }
 
   if (diff_cmd_baton->no_diff_added)
@@ -2607,6 +2638,8 @@ svn_client_diff6(const apr_array_header_t *options,
   diff_cmd_baton.use_git_diff_format = use_git_diff_format;
   diff_cmd_baton.no_diff_added = no_diff_added;
   diff_cmd_baton.no_diff_deleted = no_diff_deleted;
+  diff_cmd_baton.no_copyfrom_on_add = show_copies_as_adds;
+
   diff_cmd_baton.wc_ctx = ctx->wc_ctx;
   diff_cmd_baton.ra_session = NULL;
   diff_cmd_baton.anchor = NULL;
@@ -2668,6 +2701,8 @@ svn_client_diff_peg6(const apr_array_header_t *options,
   diff_cmd_baton.use_git_diff_format = use_git_diff_format;
   diff_cmd_baton.no_diff_added = no_diff_added;
   diff_cmd_baton.no_diff_deleted = no_diff_deleted;
+  diff_cmd_baton.no_copyfrom_on_add = show_copies_as_adds;
+
   diff_cmd_baton.wc_ctx = ctx->wc_ctx;
   diff_cmd_baton.ra_session = NULL;
   diff_cmd_baton.anchor = NULL;
