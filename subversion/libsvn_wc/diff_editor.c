@@ -55,6 +55,8 @@
 #include <apr_hash.h>
 #include <apr_md5.h>
 
+#include <assert.h>
+
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
@@ -404,6 +406,10 @@ make_edit_baton(struct edit_baton **edit_baton,
   if (reverse_order)
     processor = svn_diff__tree_processor_reverse_create(processor, NULL, pool);
 
+  if (! show_copies_as_adds)
+    processor = svn_diff__tree_processor_copy_as_changed_create(processor,
+                                                                pool);
+
   eb = apr_pcalloc(pool, sizeof(*eb));
   eb->db = db;
   eb->anchor_abspath = apr_pstrdup(pool, anchor_abspath);
@@ -572,6 +578,7 @@ file_diff(struct edit_baton *eb,
   const char *empty_file;
   svn_boolean_t replaced;
   svn_wc__db_status_t status;
+  svn_revnum_t original_revision;
   const char *original_repos_relpath;
   svn_revnum_t revision;
   svn_revnum_t revert_base_revnum;
@@ -589,8 +596,9 @@ file_diff(struct edit_baton *eb,
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
-                               &original_repos_relpath, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               &original_repos_relpath, NULL, NULL,
+                               &original_revision, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
                                NULL, &have_base, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
   if (have_base)
@@ -604,14 +612,6 @@ file_diff(struct edit_baton *eb,
               && have_base
               && base_status != svn_wc__db_status_not_present);
 
-  /* Now refine ADDED to one of: ADDED, COPIED, MOVED_HERE. Note that only
-     the latter two have corresponding pristine info to diff against.  */
-  if (status == svn_wc__db_status_added)
-    SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL,
-                                     NULL, NULL, NULL, db, local_abspath,
-                                     scratch_pool, scratch_pool));
-
   /* A wc-wc diff of replaced files actually shows a diff against the
    * revert-base, showing all previous lines as removed and adding all new
    * lines. This does not happen for copied/moved-here files, not even with
@@ -619,8 +619,7 @@ file_diff(struct edit_baton *eb,
    * an add, diffing against the empty file).
    * So show the revert-base revision for plain replaces. */
   if (replaced
-      && ! (status == svn_wc__db_status_copied
-            || status == svn_wc__db_status_moved_here))
+      && ! original_repos_relpath)
     {
       use_base = TRUE;
       revision = revert_base_revnum;
@@ -690,11 +689,11 @@ file_diff(struct edit_baton *eb,
   * diff, and the file was copied, we need to report the file as added and
   * diff it against the text base, so that a "copied" git diff header, and
   * possibly a diff against the copy source, will be generated for it. */
-  if ((! replaced && status == svn_wc__db_status_added) ||
-     (replaced && ! eb->ignore_ancestry) ||
-     ((status == svn_wc__db_status_copied ||
-       status == svn_wc__db_status_moved_here) &&
-         (eb->show_copies_as_adds || eb->use_git_diff_format)))
+  if ((! replaced && status == svn_wc__db_status_added
+                  && !original_repos_relpath)
+      || (replaced && ! eb->ignore_ancestry)
+      || (original_repos_relpath
+          && (eb->show_copies_as_adds || eb->use_git_diff_format)))
     {
       void *file_baton = NULL;
       svn_boolean_t skip = FALSE;
@@ -1752,6 +1751,8 @@ close_file(void *file_baton,
   apr_pool_t *scratch_pool = fb->pool;
   svn_wc__db_status_t status;
   const char *empty_file;
+  const char *original_repos_relpath;
+  svn_revnum_t original_revision;
   svn_error_t *err;
 
   /* The BASE information */
@@ -1800,9 +1801,10 @@ close_file(void *file_baton,
     }
 
   err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, &pristine_checksum, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, &had_props, &props_mod,
+                             NULL, NULL, NULL, &pristine_checksum, NULL,
+                             &original_repos_relpath,
+                             NULL, NULL, &original_revision, NULL, NULL, NULL,
+                             NULL, NULL, NULL, &had_props, &props_mod,
                              NULL, NULL, NULL,
                              db, fb->local_abspath,
                              scratch_pool, scratch_pool);
@@ -1814,6 +1816,8 @@ close_file(void *file_baton,
       pristine_checksum = NULL;
       had_props = FALSE;
       props_mod = FALSE;
+      original_repos_relpath = NULL;
+      original_revision = SVN_INVALID_REVNUM;
     }
   else
     SVN_ERR(err);
@@ -1894,16 +1898,9 @@ close_file(void *file_baton,
       return SVN_NO_ERROR;
     }
 
-  if (status == svn_wc__db_status_added)
-    SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL, NULL, eb->db,
-                                     fb->local_abspath,
-                                     scratch_pool, scratch_pool));
-
   /* If the file was locally added with history, and we want to show copies
    * as added, diff the file with the empty file. */
-  if ((status == svn_wc__db_status_copied ||
-       status == svn_wc__db_status_moved_here) && eb->show_copies_as_adds)
+  if (original_repos_relpath && eb->show_copies_as_adds)
     {
       svn_boolean_t skip = FALSE;
 
