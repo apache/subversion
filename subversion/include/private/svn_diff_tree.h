@@ -235,7 +235,7 @@ svn_diff__tree_processor_reverse_create(const svn_diff_tree_processor_t * proces
 
 /**
  * Create a new svn_diff_tree_processor_t instance with all functions setup
- * to first call into processor for all paths equal to and below prefix_relpath.
+ * to call into processor for all paths equal to and below prefix_relpath.
  *
  * @since New in 1.8.
  */ /* Used by libsvn clients repository diff */
@@ -243,6 +243,18 @@ const svn_diff_tree_processor_t *
 svn_diff__tree_processor_filter_create(const svn_diff_tree_processor_t *processor,
                                        const char *prefix_relpath,
                                        apr_pool_t *result_pool);
+
+/**
+ * Create a new svn_diff_tree_processor_t instace with all function setup
+ * to call into processor with all adds with copyfrom information transformed
+ * to simple node changes.
+ *
+ * @since New in 1.8.
+ */ /* Used by libsvn_wc diff editor */
+const svn_diff_tree_processor_t *
+svn_diff__tree_processor_copy_as_changed_create(
+                                const svn_diff_tree_processor_t *processor,
+                                apr_pool_t *result_pool);
 
 
 /**
