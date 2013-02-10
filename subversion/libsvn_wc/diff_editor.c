@@ -406,7 +406,7 @@ make_edit_baton(struct edit_baton **edit_baton,
   if (reverse_order)
     processor = svn_diff__tree_processor_reverse_create(processor, NULL, pool);
 
-  if (! show_copies_as_adds)
+  if (! show_copies_as_adds && !use_git_diff_format)
     processor = svn_diff__tree_processor_copy_as_changed_create(processor,
                                                                 pool);
 
@@ -689,24 +689,22 @@ file_diff(struct edit_baton *eb,
   * diff, and the file was copied, we need to report the file as added and
   * diff it against the text base, so that a "copied" git diff header, and
   * possibly a diff against the copy source, will be generated for it. */
-  if ((! replaced && status == svn_wc__db_status_added
-                  && !original_repos_relpath)
-      || (replaced && ! eb->ignore_ancestry)
-      || (original_repos_relpath
-          && (eb->show_copies_as_adds || eb->use_git_diff_format)))
+  if (status == svn_wc__db_status_added
+      && !(eb->ignore_ancestry && replaced))
     {
       void *file_baton = NULL;
       svn_boolean_t skip = FALSE;
       const char *translated = NULL;
       svn_diff_source_t *copyfrom_src = NULL;
-      svn_diff_source_t *right_src = svn_diff__source_create(revision,
-                                                             scratch_pool);
+      svn_diff_source_t *right_src = svn_diff__source_create(
+                                                    SVN_INVALID_REVNUM,
+                                                    scratch_pool);
 
-      /* ### Needs reason */
-      if (! eb->show_copies_as_adds && eb->use_git_diff_format
-          && status != svn_wc__db_status_added)
+      if (original_repos_relpath)
         {
-          copyfrom_src = svn_diff__source_create(0, scratch_pool);
+          copyfrom_src = svn_diff__source_create(original_revision,
+                                                 scratch_pool);
+          copyfrom_src->repos_relpath = original_repos_relpath;
         }
 
       SVN_ERR(eb->processor->file_opened(&file_baton, &skip,
@@ -2459,7 +2457,12 @@ wrap_file_added(const char *relpath,
                                      ? svn_prop_get_value(right_props,
                                                           SVN_PROP_MIME_TYPE)
                                      : NULL,
-                                    NULL, SVN_INVALID_REVNUM,
+                                    copyfrom_source
+                                            ? copyfrom_source->repos_relpath
+                                            : NULL,
+                                    copyfrom_source
+                                            ? copyfrom_source->revision
+                                            : SVN_INVALID_REVNUM,
                                     prop_changes, copyfrom_props,
                                     wb->callback_baton,
                                     scratch_pool));
