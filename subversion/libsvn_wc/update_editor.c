@@ -284,6 +284,8 @@ remember_skipped_tree(struct edit_baton *eb,
   return SVN_NO_ERROR;
 }
 
+/* Per directory baton. Lives in its own subpool of the parent directory
+   or of the edit baton if there is no parent directory */
 struct dir_baton
 {
   /* Basename of this directory. */
@@ -381,26 +383,10 @@ struct dir_baton
 
   /* The pool in which this baton itself is allocated. */
   apr_pool_t *pool;
-};
 
-
-/* The bump information is tracked separately from the directory batons.
-   This is a small structure kept in the edit pool, while the heavier
-   directory baton is managed by the editor driver.
-
-   In a postfix delta case, the directory batons are going to disappear.
-   The files will refer to these structures, rather than the full
-   directory baton.  */
-struct bump_dir_info
-{
-  /* ptr to the bump information for the parent directory */
-  struct bump_dir_info *parent;
-
-  /* how many entries are referring to this bump information? */
+  /* how many nodes are referring to baton? */
   int ref_count;
 
-  /* Pool that should be cleared after the dir is bumped */
-  apr_pool_t *pool;
 };
 
 
@@ -514,7 +500,6 @@ make_dir_baton(struct dir_baton **d_p,
 {
   apr_pool_t *dir_pool;
   struct dir_baton *d;
-  struct bump_dir_info *bdi;
 
   if (pb != NULL)
     dir_pool = svn_pool_create(pb->pool);
@@ -599,23 +584,13 @@ make_dir_baton(struct dir_baton **d_p,
         }
     }
 
-  /* the bump information lives in the edit pool */
-  bdi = apr_pcalloc(dir_pool, sizeof(*bdi));
-  bdi->parent = pb ? pb->bump_info : NULL;
-  bdi->ref_count = 1;
-  bdi->pool = dir_pool;
-
-  /* the parent's bump info has one more referer */
-  if (pb)
-    ++bdi->parent->ref_count;
-
   d->edit_baton   = eb;
   d->parent_baton = pb;
   d->pool         = dir_pool;
   d->propchanges  = apr_array_make(dir_pool, 1, sizeof(svn_prop_t));
   d->obstruction_found = FALSE;
   d->add_existed  = FALSE;
-  d->bump_info    = bdi;
+  d->ref_count = 1;
   d->old_revision = SVN_INVALID_REVNUM;
   d->adding_dir   = adding;
   d->changed_rev  = SVN_INVALID_REVNUM;
@@ -626,6 +601,9 @@ make_dir_baton(struct dir_baton **d_p,
     {
       d->skip_this = pb->skip_this;
       d->shadowed = pb->shadowed || pb->edit_obstructed;
+
+      /* the parent's bump info has one more referer */
+      pb->ref_count++;
     }
 
   /* The caller of this function needs to fill these in. */
@@ -663,34 +641,32 @@ do_notification(const struct edit_baton *eb,
   (*eb->notify_func)(eb->notify_baton, notify, scratch_pool);
 }
 
-/* Decrement the bump_dir_info's reference count. If it hits zero,
+/* Decrement the directory's reference count. If it hits zero,
    then this directory is "done". This means it is safe to clear its pool.
 
-   In addition, when the directory is "done", we loop onto the parent's
-   bump information to possibly mark it as done, too.
+   In addition, when the directory is "done", we recurse to possible cleanup
+   the parent directory.
 */
 static svn_error_t *
-maybe_release_dir_info(struct bump_dir_info *bdi)
+maybe_release_dir_info(struct dir_baton *db)
 {
-  /* Keep moving up the tree of directories until we run out of parents,
-     or a directory is not yet "done".  */
-  while (bdi != NULL)
+  db->ref_count--;
+
+  if (!db->ref_count)
     {
-      apr_pool_t *destroy_pool;
+      struct dir_baton *pb = db->parent_baton;
 
-      if (--bdi->ref_count > 0)
-        break;  /* directory isn't done yet */
+      svn_pool_destroy(db->pool);
 
-      destroy_pool = bdi->pool;
-      bdi = bdi->parent;
-
-      svn_pool_destroy(destroy_pool);
+      if (pb)
+        SVN_ERR(maybe_release_dir_info(pb));
     }
-  /* we exited the for loop because there are no more parents */
 
   return SVN_NO_ERROR;
 }
 
+/* Per file baton. Lives in its own subpool below the pool of the parent
+   directory */
 struct file_baton
 {
   /* Pool specific to this file_baton. */
@@ -842,8 +818,8 @@ make_file_baton(struct file_baton **f_p,
   f->dir_baton         = pb;
   f->changed_rev       = SVN_INVALID_REVNUM;
 
-  /* the directory's bump info has one more referer now */
-  ++f->bump_info->ref_count;
+  /* the directory has one more referer now */
+  pb->ref_count++;
 
   *f_p = f;
   return SVN_NO_ERROR;
@@ -2521,7 +2497,7 @@ close_directory(void *dir_baton,
   if (db->skip_this)
     {
       /* Allow the parent to complete its update. */
-      SVN_ERR(maybe_release_dir_info(db->bump_info));
+      SVN_ERR(maybe_release_dir_info(db));
 
       return SVN_NO_ERROR;
     }
@@ -2937,7 +2913,7 @@ close_directory(void *dir_baton,
 
   /* We're done with this directory, so remove one reference from the
      bump information. */
-  SVN_ERR(maybe_release_dir_info(db->bump_info));
+  SVN_ERR(maybe_release_dir_info(db));
 
   return SVN_NO_ERROR;
 }
@@ -4112,6 +4088,7 @@ close_file(void *file_baton,
            apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
+  struct dir_baton *pdb = fb->dir_baton;
   struct edit_baton *eb = fb->edit_baton;
   svn_wc_notify_state_t content_state, prop_state;
   svn_wc_notify_lock_state_t lock_state;
@@ -4134,8 +4111,8 @@ close_file(void *file_baton,
 
   if (fb->skip_this)
     {
-      SVN_ERR(maybe_release_dir_info(fb->bump_info));
       svn_pool_destroy(fb->pool);
+      SVN_ERR(maybe_release_dir_info(pdb));
       return SVN_NO_ERROR;
     }
 
@@ -4317,8 +4294,8 @@ close_file(void *file_baton,
                                             scratch_pool));
               fb->skip_this = TRUE;
 
-              SVN_ERR(maybe_release_dir_info(fb->bump_info));
               svn_pool_destroy(fb->pool);
+              SVN_ERR(maybe_release_dir_info(pdb));
               return SVN_NO_ERROR;
             }
           else
@@ -4560,10 +4537,10 @@ close_file(void *file_baton,
       eb->notify_func(eb->notify_baton, notify, scratch_pool);
     }
 
-  /* We have one less referrer to the directory's bump information. */
-  SVN_ERR(maybe_release_dir_info(fb->bump_info));
-
   svn_pool_destroy(fb->pool); /* Destroy scratch_pool */
+
+  /* We have one less referrer to the directory */
+  SVN_ERR(maybe_release_dir_info(pdb));
 
   return SVN_NO_ERROR;
 }
