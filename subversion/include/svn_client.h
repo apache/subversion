@@ -367,7 +367,7 @@ typedef struct svn_client_proplist_item_t
  *
  * The #svn_prop_inherited_item_t->path_or_url members of the
  * #svn_prop_inherited_item_t * structures in @a inherited_props are
- * URLs if @a path is a URL or if @path is a working copy path but the
+ * URLs if @a path is a URL or if @a path is a working copy path but the
  * property represented by the structure is above the working copy root (i.e.
  * the inherited property is from the cache).  In all other cases the
  * #svn_prop_inherited_item_t->path_or_url members are absolute working copy
@@ -4964,7 +4964,7 @@ svn_client_revprop_set(const char *propname,
  *
  * The #svn_prop_inherited_item_t->path_or_url members of the
  * #svn_prop_inherited_item_t * structures in @a *inherited_props are
- * URLs if @a target is a URL or if @target is a working copy path but the
+ * URLs if @a target is a URL or if @a target is a working copy path but the
  * property represented by the structure is above the working copy root (i.e.
  * the inherited property is from the cache).  In all other cases the
  * #svn_prop_inherited_item_t->path_or_url members are absolute working copy
