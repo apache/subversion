@@ -6478,6 +6478,72 @@ update_within_move(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+commit_moved_descendant(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  SVN_ERR(svn_test__sandbox_create(&b, "commit_moved_descendant", opts, pool));
+
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A/A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A/A/A/A"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_copy(&b, "A", "A_copied"));
+  SVN_ERR(sbox_wc_move(&b, "A/A/A", "AAA_moved"));
+  SVN_ERR(sbox_wc_delete(&b, "A/A"));
+  SVN_ERR(sbox_wc_copy(&b, "A_copied/A", "A/A"));
+
+  /* And now I want to commit AAA_moved (the entire move), but not
+     the replacement of A/A */
+
+  /* For now, just start committing directly */
+  /* ### This fails, because A/A/A is not collected by the commit
+         harvester (it doesn't need committing, but our move filter
+         blocks on it) */
+  SVN_ERR(sbox_wc_commit(&b, ""));
+
+  /* It would be nicer if we could just do a: */
+  /* SVN_ERR(sbox_wc_commit(&b, "AAA_moved")); */
+  /* Which then includes the delete half of the move, when it is
+     shadowed, like in this case. The commit processing doesn't
+     support this yet though*/
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+commit_moved_away_descendant(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  SVN_ERR(svn_test__sandbox_create(&b, "commit_moved_away_descendant",
+                                   opts, pool));
+
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A/A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A/A/A/A"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_copy(&b, "A", "A_copied"));
+  SVN_ERR(sbox_wc_move(&b, "A/A/A", "AAA_moved"));
+  SVN_ERR(sbox_wc_delete(&b, "A/A"));
+  SVN_ERR(sbox_wc_copy(&b, "A_copied/A", "A/A"));
+
+  /* And now I want to make sure that I can't commit A, without also
+     committing AAA_moved, as that would break the move*/
+  SVN_ERR(sbox_wc_commit(&b, "A"));
+
+  return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                          "The commit should have failed");
+
+  /*return SVN_NO_ERROR;*/
+}
+
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -6598,5 +6664,9 @@ struct svn_test_descriptor_t test_funcs[] =
                        "layered_moved_to"),
     SVN_TEST_OPTS_PASS(update_within_move,
                        "update_within_move"),
+    SVN_TEST_OPTS_XFAIL(commit_moved_descendant,
+                        "commit_moved_descendant"),
+    SVN_TEST_OPTS_XFAIL(commit_moved_away_descendant,
+                        "commit_moved_away_descendant"),
     SVN_TEST_NULL
   };
