@@ -183,4 +183,99 @@ svn_fs_fs__l2p_get_max_ids(apr_array_header_t **max_ids,
                            apr_size_t count,
                            apr_pool_t *pool);
 
+/* Serialization and caching interface
+ */
+
+/* We use this key type to address individual pages from both index types.
+ */
+typedef struct svn_fs_fs__page_cache_key_t
+{
+  /* in l2p: this is the revision of the items being mapped
+     in p2l: this is the start revision identifying the pack / rev file */
+  svn_revnum_t revision;
+
+  /* if TRUE, this is the index to a pack file
+   */
+  svn_boolean_t is_packed;
+
+  /* in l2p: page number within the revision
+   * in p2l: page number with the rev / pack file
+   */
+  apr_uint64_t page;
+} svn_fs_fs__page_cache_key_t;
+
+/*
+ * Implements svn_cache__serialize_func_t for l2p_header_t objects.
+ */
+svn_error_t *
+svn_fs_fs__serialize_l2p_header(void **data,
+                                apr_size_t *data_len,
+                                void *in,
+                                apr_pool_t *pool);
+
+/*
+ * Implements svn_cache__deserialize_func_t for l2p_header_t objects.
+ */
+svn_error_t *
+svn_fs_fs__deserialize_l2p_header(void **out,
+                                  void *data,
+                                  apr_size_t data_len,
+                                  apr_pool_t *pool);
+
+/*
+ * Implements svn_cache__serialize_func_t for l2p_page_t objects.
+ */
+svn_error_t *
+svn_fs_fs__serialize_l2p_page(void **data,
+                              apr_size_t *data_len,
+                              void *in,
+                              apr_pool_t *pool);
+
+/*
+ * Implements svn_cache__deserialize_func_t for l2p_page_t objects.
+ */
+svn_error_t *
+svn_fs_fs__deserialize_l2p_page(void **out,
+                                void *data,
+                                apr_size_t data_len,
+                                apr_pool_t *pool);
+
+/*
+ * Implements svn_cache__serialize_func_t for p2l_header_t objects.
+ */
+svn_error_t *
+svn_fs_fs__serialize_p2l_header(void **data,
+                                apr_size_t *data_len,
+                                void *in,
+                                apr_pool_t *pool);
+
+/*
+ * Implements svn_cache__deserialize_func_t for p2l_header_t objects.
+ */
+svn_error_t *
+svn_fs_fs__deserialize_p2l_header(void **out,
+                                  void *data,
+                                  apr_size_t data_len,
+                                  apr_pool_t *pool);
+
+/*
+ * Implements svn_cache__serialize_func_t for apr_array_header_t objects
+ * with elements of type svn_fs_fs__p2l_entry_t.
+ */
+svn_error_t *
+svn_fs_fs__serialize_p2l_page(void **data,
+                              apr_size_t *data_len,
+                              void *in,
+                              apr_pool_t *pool);
+
+/*
+ * Implements svn_cache__deserialize_func_t for apr_array_header_t objects
+ * with elements of type svn_fs_fs__p2l_entry_t.
+ */
+svn_error_t *
+svn_fs_fs__deserialize_p2l_page(void **out,
+                                void *data,
+                                apr_size_t data_len,
+                                apr_pool_t *pool);
+
 #endif

@@ -358,6 +358,23 @@ typedef struct fs_fs_data_t
      if the node has mergeinfo, "0" if it doesn't. */
   svn_cache__t *mergeinfo_existence_cache;
 
+  /* Cache for l2p_header_t objects; the key is (revision, is-packed).
+     Will be NULL for pre-format7 repos */
+  svn_cache__t *l2p_header_cache;
+
+  /* Cache for l2p_page_t objects; the key is svn_fs_fs__page_cache_key_t.
+     Will be NULL for pre-format7 repos */
+  svn_cache__t *l2p_page_cache;
+
+  /* Cache for p2l_header_t objects; the key is (revision, is-packed).
+     Will be NULL for pre-format7 repos */
+  svn_cache__t *p2l_header_cache;
+
+  /* Cache for apr_array_header_t objects containing svn_fs_fs__p2l_entry_t
+     elements; the key is svn_fs_fs__page_cache_key_t.
+     Will be NULL for pre-format7 repos */
+  svn_cache__t *p2l_page_cache;
+
   /* TRUE while the we hold a lock on the write lock file. */
   svn_boolean_t has_write_lock;
 
