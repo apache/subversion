@@ -160,6 +160,9 @@ typedef struct packed_number_stream_t
   /* offset in FILE from which the next number has to be read */
   apr_off_t next_offset;
 
+  /* read the file in chunks of this size */
+  apr_size_t block_size;
+
   /* pool to be used for file ops etc. */
   apr_pool_t *pool;
 
@@ -190,8 +193,8 @@ packed_stream_read(packed_number_stream_t *stream)
    * i.e. the last number has been incomplete (and not buffered in stream)
    * and need to be re-read.  Therefore, always correct the file pointer.
    */
-  SVN_ERR(svn_io_file_seek(stream->file, SEEK_SET, &stream->next_offset,
-                           stream->pool));
+  SVN_ERR(svn_io_file_aligned_seek(stream->file, stream->block_size, NULL,
+                                   stream->next_offset, stream->pool));
   SVN_ERR(svn_io_file_read_full2(stream->file, buffer, sizeof(buffer),
                                  &read, &eof, stream->pool));
 
@@ -204,11 +207,13 @@ packed_stream_read(packed_number_stream_t *stream)
   if SVN__PREDICT_FALSE(read == 0)
     {
       const char *file_name;
+      apr_off_t offset = 0;
       SVN_ERR(svn_io_file_name_get(&file_name, stream->file,
                                    stream->pool));
+      SVN_ERR(svn_io_file_seek(stream->file, SEEK_CUR, &offset, stream->pool));
       return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
-                               _("Unexpected end of index file %s"),
-                               file_name);
+                            _("Unexpected end of index file %s at offset %lx"),
+                               file_name, offset);
     }
 
   /* parse file buffer and expand into stream buffer */
@@ -257,11 +262,13 @@ packed_stream_read(packed_number_stream_t *stream)
 };
 
 /* Create and open a packed number stream reading from FILE_NAME and
- * return it in *STREAM.  Use POOL for allocations.
+ * return it in *STREAM.  Access the file in chunks of BLOCK_SIZE bytes.
+ * Use POOL for allocations.
  */
 static svn_error_t *
 packed_stream_open(packed_number_stream_t **stream,
                    const char *file_name,
+                   apr_size_t block_size,
                    apr_pool_t *pool)
 {
   packed_number_stream_t *result = apr_palloc(pool, sizeof(*result));
@@ -270,11 +277,13 @@ packed_stream_open(packed_number_stream_t **stream,
   SVN_ERR(svn_io_file_open(&result->file, file_name,
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
                            result->pool));
+  SVN_ERR(svn_io_file_aligned_seek(result->file, block_size, NULL, 0, pool));
   
   result->used = 0;
   result->current = 0;
   result->start_offset = 0;
   result->next_offset = 0;
+  result->block_size = block_size;
 
   *stream = result;
   
@@ -606,6 +615,7 @@ get_l2p_header(l2p_header_t **header,
                svn_revnum_t revision,
                apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   apr_uint64_t value;
   int i;
   apr_size_t page, page_count;
@@ -615,7 +625,7 @@ get_l2p_header(l2p_header_t **header,
 
   if (*stream == NULL)
     SVN_ERR(packed_stream_open(stream, path_l2p_index(fs, revision, pool),
-                               pool));
+                               ffd->block_size, pool));
 
   /* read the table sizes */
   SVN_ERR(packed_stream_get(&value, *stream));
@@ -679,6 +689,7 @@ get_l2p_page(l2p_page_t **page,
              l2p_page_table_entry_t *table_entry,
              apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   apr_uint64_t value;
   apr_uint32_t i;
   l2p_page_t *result = apr_pcalloc(pool, sizeof(*result));
@@ -687,6 +698,7 @@ get_l2p_page(l2p_page_t **page,
   if (*stream == NULL)
     SVN_ERR(packed_stream_open(stream,
                                path_l2p_index(fs, start_revision, pool),
+                               ffd->block_size,
                                pool));
 
   packed_stream_seek(*stream, table_entry->offset);
@@ -1061,6 +1073,7 @@ get_p2l_header(p2l_header_t **header,
                svn_revnum_t revision,
                apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   apr_uint64_t value;
   apr_size_t i;
   apr_off_t offset;
@@ -1069,7 +1082,7 @@ get_p2l_header(p2l_header_t **header,
   /* open index file */
   if (*stream == NULL)
     SVN_ERR(packed_stream_open(stream, path_p2l_index(fs, revision, pool),
-                               pool));
+                               ffd->block_size, pool));
 
   /* read table sizes and allocate page array */
   SVN_ERR(packed_stream_get(&value, *stream));
@@ -1147,6 +1160,7 @@ get_p2l_page(apr_array_header_t **entries,
              apr_uint64_t page_size,
              apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   apr_uint64_t value;
   apr_array_header_t *result
     = apr_array_make(pool, 16, sizeof(svn_fs_fs__p2l_entry_t));
@@ -1157,7 +1171,7 @@ get_p2l_page(apr_array_header_t **entries,
   if (*stream == NULL)
     SVN_ERR(packed_stream_open(stream,
                                path_p2l_index(fs, start_revision, pool),
-                               pool));
+                               ffd->block_size, pool));
   packed_stream_seek(*stream, start_offset);
 
   /* read rev file offset of the first page entry (all page entries will
