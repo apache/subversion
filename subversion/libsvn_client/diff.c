@@ -1636,64 +1636,6 @@ diff_wc_wc(const char *path1,
   return SVN_NO_ERROR;
 }
 
-/* Create an array of regular properties in PROP_HASH, filtering entry-props
- * and wc-props. Allocate the returned array in RESULT_POOL.
- * Use SCRATCH_POOL for temporary allocations. */
-static apr_array_header_t *
-make_regular_props_array(apr_hash_t *prop_hash,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
-{
-  apr_array_header_t *regular_props;
-  apr_hash_index_t *hi;
-
-  regular_props = apr_array_make(result_pool, 0, sizeof(svn_prop_t));
-  for (hi = apr_hash_first(scratch_pool, prop_hash); hi;
-       hi = apr_hash_next(hi))
-    {
-      const char *name = svn__apr_hash_index_key(hi);
-      svn_string_t *value = svn__apr_hash_index_val(hi);
-      svn_prop_kind_t prop_kind = svn_property_kind2(name);
-
-      if (prop_kind == svn_prop_regular_kind)
-        {
-          svn_prop_t *prop = apr_palloc(scratch_pool, sizeof(svn_prop_t));
-
-          prop->name = name;
-          prop->value = value;
-          APR_ARRAY_PUSH(regular_props, svn_prop_t) = *prop;
-        }
-    }
-
-  return regular_props;
-}
-
-/* Create a hash of regular properties from PROP_HASH, filtering entry-props
- * and wc-props. Allocate the returned hash in RESULT_POOL.
- * Use SCRATCH_POOL for temporary allocations. */
-static apr_hash_t *
-make_regular_props_hash(apr_hash_t *prop_hash,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool)
-{
-  apr_hash_t *regular_props;
-  apr_hash_index_t *hi;
-
-  regular_props = apr_hash_make(result_pool);
-  for (hi = apr_hash_first(scratch_pool, prop_hash); hi;
-       hi = apr_hash_next(hi))
-    {
-      const char *name = svn__apr_hash_index_key(hi);
-      svn_string_t *value = svn__apr_hash_index_val(hi);
-      svn_prop_kind_t prop_kind = svn_property_kind2(name);
-
-      if (prop_kind == svn_prop_regular_kind)
-        apr_hash_set(regular_props, name, APR_HASH_KEY_STRING, value);
-    }
-
-  return regular_props;
-}
-
 /* Perform a diff between two repository paths.
 
    PATH_OR_URL1 and PATH_OR_URL2 may be either URLs or the working copy paths.
