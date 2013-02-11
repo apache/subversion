@@ -1015,17 +1015,16 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
   return SVN_NO_ERROR;
 }
 
-/* Report an existing file in the working copy (either in BASE or WORKING)
- * as having been added.
- *
- * Do all allocation in POOL.
+/* Report the local version of a file in the working copy as added.
+ * This file can be in either WORKING or BASE, as for the repository
+ * it does not exist.
  */
 static svn_error_t *
-report_wc_file_as_added(struct edit_baton_t *eb,
-                        const char *local_abspath,
-                        const char *path,
-                        void *parent_baton,
-                        apr_pool_t *scratch_pool)
+report_local_only_file(struct edit_baton_t *eb,
+                       const char *local_abspath,
+                       const char *path,
+                       void *parent_baton,
+                       apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = eb->db;
   svn_diff_source_t *right_src;
@@ -1133,12 +1132,12 @@ report_wc_file_as_added(struct edit_baton_t *eb,
  * Do all allocation in POOL.
  */
 static svn_error_t *
-report_wc_directory_as_added(struct edit_baton_t *eb,
-                             const char *local_abspath,
-                             const char *path,
-                             svn_depth_t depth,
-                             void *parent_baton,
-                             apr_pool_t *scratch_pool)
+report_local_only_dir(struct edit_baton_t *eb,
+                      const char *local_abspath,
+                      const char *path,
+                      svn_depth_t depth,
+                      void *parent_baton,
+                      apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = eb->db;
   const apr_array_header_t *children;
@@ -1204,8 +1203,8 @@ report_wc_directory_as_added(struct edit_baton_t *eb,
         {
         case svn_kind_file:
         case svn_kind_symlink:
-          SVN_ERR(report_wc_file_as_added(eb, child_abspath, child_path,
-                                          pdb, iterpool));
+          SVN_ERR(report_local_only_file(eb, child_abspath, child_path,
+                                         pdb, iterpool));
           break;
 
         case svn_kind_dir:
@@ -1216,12 +1215,12 @@ report_wc_directory_as_added(struct edit_baton_t *eb,
               if (depth_below_here == svn_depth_immediates)
                 depth_below_here = svn_depth_empty;
 
-              SVN_ERR(report_wc_directory_as_added(eb,
-                                                   child_abspath,
-                                                   child_path,
-                                                   depth_below_here,
-                                                   pdb,
-                                                   iterpool));
+              SVN_ERR(report_local_only_dir(eb,
+                                            child_abspath,
+                                            child_path,
+                                            depth_below_here,
+                                            pdb,
+                                            iterpool));
             }
           break;
 
@@ -1320,19 +1319,19 @@ delete_entry(const char *path,
       /* A delete is required to change working-copy into requested
          revision, so diff should show this as an add. Thus compare
          the empty file against the current working copy. */
-          SVN_ERR(report_wc_file_as_added(eb, local_abspath, path,
-                                          NULL /* ### parent_baton */,
-                                          pool));
+          SVN_ERR(report_local_only_file(eb, local_abspath, path,
+                                         pb->pdb,
+                                         pool));
       break;
     case svn_kind_dir:
       /* A delete is required to change working-copy into requested
          revision, so diff should show this as an add. */
-      SVN_ERR(report_wc_directory_as_added(eb,
-                                           local_abspath,
-                                           path,
-                                           svn_depth_infinity,
-                                           NULL /* ### parent_baton */,
-                                           pool));
+      SVN_ERR(report_local_only_dir(eb,
+                                    local_abspath,
+                                    path,
+                                    svn_depth_infinity,
+                                    pb->pdb,
+                                    pool));
 
     default:
       break;
