@@ -720,7 +720,6 @@ file_diff(struct edit_baton *eb,
         {
           apr_hash_t *right_props;
           apr_hash_t *copyfrom_props = NULL;
-          const char *copyfrom_file = NULL;
 
           /* Get svn:mime-type from ACTUAL props of PATH. */
           SVN_ERR(svn_wc__db_read_props(&right_props, db, local_abspath,
@@ -732,7 +731,6 @@ file_diff(struct edit_baton *eb,
                                                      db, local_abspath,
                                                      scratch_pool,
                                                      scratch_pool));
-              copyfrom_file = textbase;
             }
 
           SVN_ERR(svn_wc__internal_translated_file(&translated, local_abspath,
@@ -1761,7 +1759,6 @@ close_file(void *file_baton,
   /* The repository information; constructed from BASE + Changes */
   const char *repos_file;
   apr_hash_t *repos_props;
-  const char *repos_mimetype;
   svn_boolean_t had_props, props_mod;
 
   /* The path to the wc file: either a pristine or actual. */
@@ -1852,7 +1849,6 @@ close_file(void *file_baton,
     }
 
   repos_props = svn_prop__patch(pristine_props, fb->propchanges, scratch_pool);
-  repos_mimetype = get_prop_mimetype(repos_props);
   repos_file = fb->temp_file_path ? fb->temp_file_path : pristine_file;
 
   /* If the file isn't in the working copy (either because it was added
