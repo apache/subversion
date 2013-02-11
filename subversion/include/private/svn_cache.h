@@ -509,7 +509,8 @@ svn_string_t *
 svn_cache__format_info(const svn_cache__info_t *info,
                        apr_pool_t *result_pool);
 
-/* Access the process-global (singleton) membuffer cache. The first call
+/**
+ * Access the process-global (singleton) membuffer cache. The first call
  * will automatically allocate the cache using the current cache config.
  * NULL will be returned if the desired cache size is 0.
  *
