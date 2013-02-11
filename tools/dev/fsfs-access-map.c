@@ -283,9 +283,15 @@ parse_line(svn_stringbuf_t *line)
   char *return_value = strrchr(line->data, ' ');
   char *first_param_end;
   apr_int64_t func_return = 0;
+  char *func_start = strchr(line->data, ' ');
 
   if (func_end == NULL || return_value == NULL)
     return;
+
+  if (func_start == NULL || func_start > func_end)
+    func_start = line->data;
+  else
+    func_start++;
   
   first_param_end = strchr(func_end, ',');
   if (first_param_end == NULL)
@@ -303,7 +309,7 @@ parse_line(svn_stringbuf_t *line)
   svn_error_clear(svn_cstring_atoi64(&func_return, return_value));
   
   /* process those operations that we care about */
-  if (strcmp(line->data, "open") == 0)
+  if (strcmp(func_start, "open") == 0)
     {
       /* remove double quotes from file name parameter */
       *func_end++ = 0;
@@ -311,11 +317,11 @@ parse_line(svn_stringbuf_t *line)
       
       open_file(func_end, (int)func_return);
     }
-  else if (strcmp(line->data, "read") == 0)
+  else if (strcmp(func_start, "read") == 0)
     read_file(atoi(func_end), func_return);
-  else if (strcmp(line->data, "lseek") == 0)
+  else if (strcmp(func_start, "lseek") == 0)
     seek_file(atoi(func_end), func_return);
-  else if (strcmp(line->data, "close") == 0)
+  else if (strcmp(func_start, "close") == 0)
     close_file(atoi(func_end));
 }
 
