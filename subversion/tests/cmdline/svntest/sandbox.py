@@ -191,6 +191,12 @@ class Sandbox:
        path WC_DIR if supplied."""
     return [self.ospath(rp, wc_dir) for rp in relpaths]
 
+  def path(self, relpath, wc_dir=None):
+    """Return RELPATH converted to an path relative to the WC dir
+       of this sbox, or relative to WC_DIR if supplied, but always
+       using '/' as directory separator."""
+    return self.ospath(relpath, wc_dir=wc_dir).replace(os.path.sep, '/')
+
   def redirected_root_url(self, temporary=False):
     """If TEMPORARY is set, return the URL which should be configured
        to temporarily redirect to the root of this repository;
