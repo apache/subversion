@@ -775,11 +775,11 @@ svn_auth_get_simple_provider2(
   void *prompt_baton,
   apr_pool_t *pool);
 
-/** Callback for svn_auth_cleanup_walk.
+/** Callback for svn_auth_cleanup_walk().
  *
  * Called for each credential to allow selectively removing credentials.
  *
- * @a cred_kind and @realm specify the key of the credential (see
+ * @a cred_kind and @a realmstring specify the key of the credential (see
  * svn_auth_first_credentials()).
  *
  * @a provider specifies which provider currently holds the credential.
