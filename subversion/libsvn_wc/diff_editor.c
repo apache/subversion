@@ -210,10 +210,16 @@ struct edit_baton_t
   /* A wc db. */
   svn_wc__db_t *db;
 
+  /* A diff tree processor, receiving the result of the diff. */
+  const svn_diff_tree_processor_t *processor;
+
+  /* A boolean indicating whether local additions should be reported before
+     remote deletes. The processor can transform adds in deletes and deletes
+     in adds, but it can't reorder the output. */
+  svn_boolean_t local_before_remote;
+
   /* ANCHOR/TARGET represent the base of the hierarchy to be compared. */
   const char *target;
-
-  /* The absolute path of the anchor directory */
   const char *anchor_abspath;
 
   /* Target revision */
@@ -222,15 +228,7 @@ struct edit_baton_t
   /* Was the root opened? */
   svn_boolean_t root_opened;
 
-  /* A diff tree processor, wrapping the callbacks.
-     This node is wrapped with a reversion processor when REVERSE_ORDER is
-     set, so it can always be driven forward.
-
-     ### Currently only an implementation detail as we don't handle all batons
-         yet. */
-  const svn_diff_tree_processor_t *processor;
-
-  /* How does this diff descend? */
+  /* How does this diff descend as seen from target? */
   svn_depth_t depth;
 
   /* Should this diff ignore node ancestry? */
@@ -239,14 +237,8 @@ struct edit_baton_t
   /* Should this diff not compare copied files with their source? */
   svn_boolean_t show_copies_as_adds;
 
-  /* Are we producing a git-style diff? */
-  svn_boolean_t use_git_diff_format;
-
   /* Possibly diff repos against text-bases instead of working files. */
-  svn_boolean_t use_text_base;
-
-  /* Empty file used to diff adds / deletes */
-  const char *empty_file;
+  svn_boolean_t diff_pristine;
 
   /* Hash whose keys are const char * changelist names. */
   apr_hash_t *changelist_hash;
@@ -421,8 +413,8 @@ make_edit_baton(struct edit_baton_t **edit_baton,
   eb->depth = depth;
   eb->ignore_ancestry = ignore_ancestry;
   eb->show_copies_as_adds = show_copies_as_adds;
-  eb->use_git_diff_format = use_git_diff_format;
-  eb->use_text_base = use_text_base;
+  eb->local_before_remote = reverse_order;
+  eb->diff_pristine = use_text_base;
   eb->changelist_hash = changelist_hash;
   eb->cancel_func = cancel_func;
   eb->cancel_baton = cancel_baton;
@@ -527,37 +519,6 @@ maybe_done(struct dir_baton_t *db)
   return SVN_NO_ERROR;
 }
 
-/* Get the empty file associated with the edit baton. This is cached so
- * that it can be reused, all empty files are the same.
- */
-static svn_error_t *
-get_empty_file(struct edit_baton_t *b,
-               const char **empty_file)
-{
-  /* Create the file if it does not exist */
-  /* Note that we tried to use /dev/null in r857294, but
-     that won't work on Windows: it's impossible to stat NUL */
-  if (!b->empty_file)
-    {
-      SVN_ERR(svn_io_open_unique_file3(NULL, &b->empty_file, NULL,
-                                       svn_io_file_del_on_pool_cleanup,
-                                       b->pool, b->pool));
-    }
-
-  *empty_file = b->empty_file;
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Return the value of the svn:mime-type property held in PROPS, or NULL
-   if no such property exists. */
-static const char *
-get_prop_mimetype(apr_hash_t *props)
-{
-  return svn_prop_get_value(props, SVN_PROP_MIME_TYPE);
-}
-
 /* Diff the file PATH against its text base.  At this
  * stage we are dealing with a file that does exist in the working copy.
  *
@@ -578,7 +539,6 @@ file_diff(struct edit_baton_t *eb,
 {
   svn_wc__db_t *db = eb->db;
   const char *textbase;
-  const char *empty_file;
   svn_boolean_t replaced;
   svn_wc__db_status_t status;
   svn_revnum_t original_revision;
@@ -589,7 +549,7 @@ file_diff(struct edit_baton_t *eb,
   svn_wc__db_status_t base_status;
   svn_boolean_t use_base = FALSE;
 
-  SVN_ERR_ASSERT(! eb->use_text_base);
+  SVN_ERR_ASSERT(! eb->diff_pristine);
 
   /* If the item is not a member of a specified changelist (and there are
      some specified changelists), skip it. */
@@ -635,8 +595,6 @@ file_diff(struct edit_baton_t *eb,
      there might be - see get_nearest_pristine_text_as_file(). */
   SVN_ERR(get_pristine_file(&textbase, db, local_abspath,
                             use_base, scratch_pool, scratch_pool));
-
-  SVN_ERR(get_empty_file(eb, &empty_file));
 
   /* Delete compares text-base against empty file, modifications to the
    * working-copy version of the deleted file are not wanted.
@@ -892,7 +850,7 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
   svn_diff_source_t *right_src;
 
   /* Everything we do below is useless if we are comparing to BASE. */
-  if (eb->use_text_base)
+  if (eb->diff_pristine)
     return SVN_NO_ERROR;
 
   /* Determine if this is the anchor directory if the anchor is different
@@ -1097,7 +1055,7 @@ report_wc_file_as_added(struct edit_baton_t *eb,
                                      local_abspath, scratch_pool, scratch_pool));
 
   /* We can't show additions for files that don't exist. */
-  SVN_ERR_ASSERT(status != svn_wc__db_status_deleted || eb->use_text_base);
+  SVN_ERR_ASSERT(status != svn_wc__db_status_deleted || eb->diff_pristine);
 
   /* If the file was added *with history*, then we don't want to
      see a comparison to the empty file;  we want the usual working
@@ -1107,7 +1065,7 @@ report_wc_file_as_added(struct edit_baton_t *eb,
     {
       /* Don't show anything if we're comparing to BASE, since by
          definition there can't be any local modifications. */
-      if (eb->use_text_base)
+      if (eb->diff_pristine)
         return SVN_NO_ERROR;
 
       /* Otherwise show just the local modifications. */
@@ -1128,14 +1086,14 @@ report_wc_file_as_added(struct edit_baton_t *eb,
   if (skip)
     return SVN_NO_ERROR;
 
-  if (eb->use_text_base)
+  if (eb->diff_pristine)
     SVN_ERR(svn_wc__db_read_pristine_props(&right_props, db, local_abspath,
                                            scratch_pool, scratch_pool));
   else
     SVN_ERR(svn_wc__db_read_props(&right_props, db, local_abspath,
                                   scratch_pool, scratch_pool));
 
-  if (eb->use_text_base)
+  if (eb->diff_pristine)
     {
       SVN_ERR(get_pristine_file(&source_file, db, local_abspath,
                                 FALSE, scratch_pool, scratch_pool));
@@ -1237,7 +1195,7 @@ report_wc_directory_as_added(struct edit_baton_t *eb,
 
       /* If comparing against WORKING, skip entries that are
          schedule-deleted - they don't really exist. */
-      if (!eb->use_text_base && status == svn_wc__db_status_deleted)
+      if (!eb->diff_pristine && status == svn_wc__db_status_deleted)
         continue;
 
       child_path = svn_relpath_join(path, name, iterpool);
@@ -1275,7 +1233,7 @@ report_wc_directory_as_added(struct edit_baton_t *eb,
   if (!skip)
     {
       apr_hash_t *right_props;
-      if (eb->use_text_base)
+      if (eb->diff_pristine)
         SVN_ERR(svn_wc__db_read_pristine_props(&right_props, db, local_abspath,
                                                scratch_pool, scratch_pool));
       else
@@ -1336,7 +1294,6 @@ delete_entry(const char *path,
   struct dir_baton_t *pb = parent_baton;
   struct edit_baton_t *eb = pb->eb;
   svn_wc__db_t *db = eb->db;
-  const char *empty_file;
   const char *name = svn_dirent_basename(path, NULL);
   const char *local_abspath = svn_dirent_join(pb->local_abspath, name, pool);
   svn_wc__db_status_t status;
@@ -1353,10 +1310,9 @@ delete_entry(const char *path,
 
   /* If comparing against WORKING, skip nodes that are deleted
      - they don't really exist. */
-  if (!eb->use_text_base && status == svn_wc__db_status_deleted)
+  if (!eb->diff_pristine && status == svn_wc__db_status_deleted)
     return SVN_NO_ERROR;
 
-  SVN_ERR(get_empty_file(pb->eb, &empty_file));
   switch (kind)
     {
     case svn_kind_file:
@@ -1508,7 +1464,7 @@ close_directory(void *dir_baton,
         }
       else
         {
-          if (db->eb->use_text_base)
+          if (db->eb->diff_pristine)
             {
               SVN_ERR(svn_wc__db_read_pristine_props(&originalprops,
                                                      eb->db, db->local_abspath,
@@ -1749,7 +1705,6 @@ close_file(void *file_baton,
   svn_wc__db_t *db = eb->db;
   apr_pool_t *scratch_pool = fb->pool;
   svn_wc__db_status_t status;
-  const char *empty_file;
   const char *original_repos_relpath;
   svn_revnum_t original_revision;
   svn_error_t *err;
@@ -1820,12 +1775,10 @@ close_file(void *file_baton,
   else
     SVN_ERR(err);
 
-  SVN_ERR(get_empty_file(eb, &empty_file));
-
   if (fb->added)
     {
       pristine_props = apr_hash_make(scratch_pool);
-      pristine_file = empty_file;
+      pristine_file = NULL;
     }
   else
     {
@@ -1867,7 +1820,7 @@ close_file(void *file_baton,
                     apr_pstrdup(fb->parent_baton->pool, fb->path), "");
     }
   else if (fb->added
-           || (!eb->use_text_base && status == svn_wc__db_status_deleted))
+           || (!eb->diff_pristine && status == svn_wc__db_status_deleted))
     {
       svn_boolean_t skip = FALSE;
 
@@ -1939,14 +1892,14 @@ close_file(void *file_baton,
      against WORKING, we also need to check whether there are any local
      (BASE:WORKING) modifications. */
   modified = (fb->temp_file_path != NULL);
-  if (!modified && !eb->use_text_base)
+  if (!modified && !eb->diff_pristine)
     SVN_ERR(svn_wc__internal_file_modified_p(&modified, eb->db,
                                              fb->local_abspath,
                                              FALSE, scratch_pool));
 
   if (modified)
     {
-      if (eb->use_text_base)
+      if (eb->diff_pristine)
         SVN_ERR(get_pristine_file(&localfile, eb->db, fb->local_abspath,
                                   FALSE, scratch_pool, scratch_pool));
       else
@@ -1960,7 +1913,7 @@ close_file(void *file_baton,
   else
     localfile = repos_file = NULL;
 
-  if (eb->use_text_base)
+  if (eb->diff_pristine)
     {
       originalprops = pristine_props;
     }
