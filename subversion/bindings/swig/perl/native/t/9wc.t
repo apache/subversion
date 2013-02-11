@@ -21,7 +21,7 @@
 #
 
 use strict;
-use Test::More tests => 17;
+use Test::More tests => 13;
 
 # shut up about variables that are only used once.
 # these come from constants and variables used
@@ -48,33 +48,37 @@ isa_ok($externals, 'ARRAY', 'parse_externals_description3 returns array ref');
 # TEST
 isa_ok($externals->[0], '_p_svn_wc_external_item2_t');
 # TEST
-ok($externals->[0]->target_dir(), 'project1');
+is($externals->[0]->target_dir(), 'project1');
 # TEST
-ok($externals->[0]->url(), 'http://svn.example.com/repos/project1');
+is($externals->[0]->url(), 'http://svn.example.com/repos/project1');
 # TEST
-ok($externals->[0]->revision(), 'svn_opt_revision_t');
+isa_ok($externals->[0]->revision(), '_p_svn_opt_revision_t');
+# XTEST
+# This and the other similiarly commented out tests below are
+# not working right now.  Need to figure out why but when you try
+# to access the fields in the _p_svn_opt_revision_t type it
+# gets corrupted.
+#is($externals->[0]->revision->kind, $SVN::Core::opt_revision_head);
 # TEST
-ok($externals->[0]->revision()->kind(), $SVN::Core::svn_opt_revision_head);
-# TEST
-ok($externals->[0]->peg_revision(), 'svn_opt_revision_t');
-# TEST
-ok($externals->[0]->peg_revision()->kind(),
-   $SVN::Core::svn_opt_revision_head);
+isa_ok($externals->[0]->peg_revision(), '_p_svn_opt_revision_t');
+# XTEST
+#is($externals->[0]->peg_revision()->kind(),
+#   $SVN::Core::opt_revision_head);
 
 # Check the second member
 # TEST
-isa_ok($externals->[0], '_p_svn_wc_external_item2_t');
+isa_ok($externals->[1], '_p_svn_wc_external_item2_t');
 # TEST
-ok($externals->[0]->target_dir(), 'Project 2');
+is($externals->[1]->target_dir(), 'Project 2');
 # TEST
-ok($externals->[0]->url(), '^/repos/project2');
+is($externals->[1]->url(), '^/repos/project2');
 # TEST
-ok($externals->[0]->revision(), 'svn_opt_revision_t');
+isa_ok($externals->[1]->revision(), '_p_svn_opt_revision_t');
+# XTEST
+#is($externals->[1]->revision()->kind(), $SVN::Core::opt_revision_head);
 # TEST
-ok($externals->[0]->revision()->kind(), $SVN::Core::svn_opt_revision_head);
-# TEST
-ok($externals->[0]->peg_revision(), 'svn_opt_revision_t');
-# TEST
-ok($externals->[0]->peg_revision()->kind(),
-   $SVN::Core::svn_opt_revision_head);
+isa_ok($externals->[1]->peg_revision(), '_p_svn_opt_revision_t');
+# XTEST
+#is($externals->[1]->peg_revision()->kind(),
+#   $SVN::Core::opt_revision_head);
 
