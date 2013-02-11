@@ -2609,8 +2609,9 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
   if (resolve_tree)
     {
       svn_wc_conflict_reason_t reason;
+      svn_wc_conflict_action_t action;
 
-      SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, NULL, NULL, 
+      SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, &action, NULL, 
                                                   db, local_abspath,
                                                   conflicts,
                                                   scratch_pool, scratch_pool));
@@ -2627,7 +2628,8 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
                   *did_resolve = TRUE;
                 }
             }
-          else if (reason == svn_wc_conflict_reason_moved_away)
+          else if (reason == svn_wc_conflict_reason_moved_away
+                  && action == svn_wc_conflict_action_edit)
             {
               /* After updates, we can resolve local moved-away
                * vs. any incoming change, either by updating the
