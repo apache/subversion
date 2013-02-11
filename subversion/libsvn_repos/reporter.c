@@ -1152,6 +1152,8 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   apr_pool_t *subpool;
   const char *name, *s_fullpath, *t_fullpath, *e_fullpath;
   path_info_t *info;
+  apr_array_header_t *t_ordered_entries = NULL;
+  int i;
 
   /* Compare the property lists.  If we're starting empty, pass a NULL
      source path so that we add all the properties.
@@ -1282,12 +1284,14 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
         }
 
       /* Loop over the dirents in the target. */
-      for (hi = apr_hash_first(pool, t_entries); hi; hi = apr_hash_next(hi))
+      SVN_ERR(svn_fs_dir_optimal_order(&t_ordered_entries, b->t_root,
+                                       t_entries, pool));
+      for (i = 0; i < t_ordered_entries->nelts; ++i)
         {
           const svn_fs_dirent_t *s_entry, *t_entry;
 
           svn_pool_clear(subpool);
-          t_entry = svn__apr_hash_index_val(hi);
+          t_entry = APR_ARRAY_IDX(t_ordered_entries, i, svn_fs_dirent_t *);
 
           if (is_depth_upgrade(wc_depth, requested_depth, t_entry->kind))
             {

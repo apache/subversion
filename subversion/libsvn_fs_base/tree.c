@@ -1563,6 +1563,23 @@ base_dir_entries(apr_hash_t **table_p,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+base_dir_optimal_order(apr_array_header_t **ordered_p,
+                       svn_fs_root_t *root,
+                       apr_hash_t *entries,
+                       apr_pool_t *pool)
+{
+  /* 1:1 copy of entries with no differnce in ordering */
+  apr_hash_index_t *hi;
+  apr_array_header_t *result = apr_array_make(pool, apr_hash_count(entries),
+                                              sizeof(svn_fs_dirent_t *));
+  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+    APR_ARRAY_PUSH(result, svn_fs_dirent_t *) = svn__apr_hash_index_val(hi);
+
+  *ordered_p = result;
+  return SVN_NO_ERROR;
+}
+
 
 
 /* Merges and commits. */
@@ -5381,6 +5398,7 @@ static root_vtable_t root_vtable = {
   base_change_node_prop,
   base_props_changed,
   base_dir_entries,
+  base_dir_optimal_order,
   base_make_dir,
   base_copy,
   base_revision_link,

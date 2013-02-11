@@ -292,6 +292,10 @@ typedef struct root_vtable_t
   /* Directories */
   svn_error_t *(*dir_entries)(apr_hash_t **entries_p, svn_fs_root_t *root,
                               const char *path, apr_pool_t *pool);
+  svn_error_t *(*dir_optimal_order)(apr_array_header_t **ordered_p,
+                                    svn_fs_root_t *root,
+                                    apr_hash_t *entries,
+                                    apr_pool_t *pool);
   svn_error_t *(*make_dir)(svn_fs_root_t *root, const char *path,
                            apr_pool_t *pool);
   svn_error_t *(*copy)(svn_fs_root_t *from_root, const char *from_path,

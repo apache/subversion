@@ -1131,6 +1131,16 @@ svn_fs_dir_entries(apr_hash_t **entries_p, svn_fs_root_t *root,
 }
 
 svn_error_t *
+svn_fs_dir_optimal_order(apr_array_header_t **ordered_p,
+                         svn_fs_root_t *root,
+                         apr_hash_t *entries,
+                         apr_pool_t *pool)
+{
+  return svn_error_trace(root->vtable->dir_optimal_order(ordered_p, root,
+                                                         entries, pool));
+}
+
+svn_error_t *
 svn_fs_make_dir(svn_fs_root_t *root, const char *path, apr_pool_t *pool)
 {
   SVN_ERR(svn_fs__path_valid(path, pool));

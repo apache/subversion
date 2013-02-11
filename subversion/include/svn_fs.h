@@ -1771,6 +1771,17 @@ svn_fs_dir_entries(apr_hash_t **entries_p,
                    const char *path,
                    apr_pool_t *pool);
 
+/** Take the #svn_fs_dirent_t structures in @a entries as returned by
+ * #svn_fs_dir_entries for @a root and determine an optimized ordering
+ * in which data access would most likely be efficient.  Set @a *ordered_p
+ * to a newly allocated APR array of pointers to these #svn_fs_dirent_t
+ * structures.  Allocate the array (but not its contents) in @a pool.
+ */
+svn_error_t *
+svn_fs_dir_optimal_order(apr_array_header_t **ordered_p,
+                         svn_fs_root_t *root,
+                         apr_hash_t *entries,
+                         apr_pool_t *pool);
 
 /** Create a new directory named @a path in @a root.  The new directory has
  * no entries, and no properties.  @a root must be the root of a transaction,

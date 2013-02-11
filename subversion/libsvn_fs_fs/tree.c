@@ -59,6 +59,7 @@
 #include "temp_serializer.h"
 #include "cached_data.h"
 #include "transaction.h"
+#include "pack.h"
 
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_subr_private.h"
@@ -2183,6 +2184,17 @@ fs_dir_entries(apr_hash_t **table_p,
   return svn_fs_fs__dag_dir_entries(table_p, node, pool);
 }
 
+static svn_error_t *
+fs_dir_optimal_order(apr_array_header_t **ordered_p,
+                     svn_fs_root_t *root,
+                     apr_hash_t *entries,
+                     apr_pool_t *pool)
+{
+  *ordered_p = svn_fs_fs__order_dir_entries(entries, pool);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Create a new directory named PATH in ROOT.  The new directory has
    no entries, and no properties.  ROOT must be the root of a
@@ -4105,6 +4117,7 @@ static root_vtable_t root_vtable = {
   fs_change_node_prop,
   fs_props_changed,
   fs_dir_entries,
+  fs_dir_optimal_order,
   fs_make_dir,
   fs_copy,
   fs_revision_link,

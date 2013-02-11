@@ -350,6 +350,9 @@ copy_rep_to_temp(pack_context_t *context,
   return SVN_NO_ERROR;
 }
 
+/* Directories first, dirs / files in newest-revision-first order,
+ * same-type nodes in the same rev sorted by offset / item index.
+ */
 static int
 compare_dir_entries(const svn_sort__item_t *a,
                     const svn_sort__item_t *b)
@@ -375,6 +378,25 @@ compare_dir_entries(const svn_sort__item_t *a,
     return lhs_item_index > rhs_item_index ? -1 : 1;
 
   return 0;
+}
+
+apr_array_header_t *
+svn_fs_fs__order_dir_entries(apr_hash_t *directory,
+                             apr_pool_t *pool)
+{
+  /* The revision and offset ordering aspect of this will benefit
+     pre-format7 repos as well */
+  apr_array_header_t *ordered
+    = svn_sort__hash(directory, compare_dir_entries, pool);
+  apr_array_header_t *result
+    = apr_array_make(pool, ordered->nelts, sizeof(svn_fs_dirent_t *));
+  int i;
+
+  for (i = 0; i < ordered->nelts; ++i)
+    APR_ARRAY_PUSH(result, svn_fs_dirent_t *)
+      = APR_ARRAY_IDX(ordered, i, svn_sort__item_t).value;
+
+  return result;
 }
 
 static svn_error_t *
@@ -420,11 +442,11 @@ copy_node_to_temp(pack_context_t *context,
       rep_info = rep_info->base;
       SVN_ERR(svn_fs_fs__rep_contents_dir(&directory, context->fs, noderev,
                                           scratch_pool));
-      sorted = svn_sort__hash(directory, compare_dir_entries, scratch_pool);
+      sorted = svn_fs_fs__order_dir_entries(directory, scratch_pool);
       for (i = 0; i < sorted->nelts; ++i)
         {
           svn_fs_dirent_t *dir_entry
-            = APR_ARRAY_IDX(sorted, i, svn_sort__item_t).value;
+            = APR_ARRAY_IDX(sorted, i, svn_fs_dirent_t *);
           svn_revnum_t revision = svn_fs_fs__id_rev(dir_entry->id);
           apr_int64_t item_index = svn_fs_fs__id_item(dir_entry->id);
 
