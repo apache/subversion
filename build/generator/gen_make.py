@@ -396,6 +396,8 @@ class Generator(gen_base.GeneratorBase):
         ezt_area.uppervar = upper_var
 
         # ### TODO: This is a hack.  See discussion here:
+        # ### email to dev@, 2012-03-16, from Daniel Shahaf, subject
+        # ### "[1.7.x] build.conf += install-tools of an apache-mod",
         # ### http://mid.gmane.org/20120316191639.GA28451@daniel3.local
         apache_files = [gen_base.FileInfo(t.filename, t.when)
                         for t in inst_targets
