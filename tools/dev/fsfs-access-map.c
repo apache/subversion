@@ -188,6 +188,14 @@ open_file(const char *name, int handle)
       else
         file->rev_num = -1;
 
+      /* filter out log/phys index files */
+      if (file->rev_num >= 0)
+        {
+          const char *suffix = name + strlen(name) - 4;
+          if (strcmp(suffix, ".l2p") == 0 || strcmp(suffix, ".p2l") == 0)
+            file->rev_num = -1;
+        }
+
       apr_hash_set(files, file->name, APR_HASH_KEY_STRING, file);
     }
 
