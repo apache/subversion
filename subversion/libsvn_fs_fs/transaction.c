@@ -177,7 +177,7 @@ get_lock_on_filesystem(const char *lock_filename,
       svn_error_clear(err);
       err = NULL;
 
-      SVN_ERR(svn_io_file_create(lock_filename, "", pool));
+      SVN_ERR(svn_io_file_create2(lock_filename, "", 0, pool));
       SVN_ERR(svn_io_file_lock2(lock_filename, TRUE, FALSE, pool));
     }
 
@@ -1134,20 +1134,20 @@ svn_fs_fs__create_txn(svn_fs_txn_t **txn_p,
   SVN_ERR(create_new_txn_noderev_from_rev(fs, txn->id, root_id, pool));
 
   /* Create an empty rev file. */
-  SVN_ERR(svn_io_file_create(path_txn_proto_rev(fs, txn->id, pool), "",
-                             pool));
+  SVN_ERR(svn_io_file_create2(path_txn_proto_rev(fs, txn->id, pool), "",
+                              0, pool));
 
   /* Create an empty rev-lock file. */
-  SVN_ERR(svn_io_file_create(path_txn_proto_rev_lock(fs, txn->id, pool), "",
-                             pool));
+  SVN_ERR(svn_io_file_create2(path_txn_proto_rev_lock(fs, txn->id, pool),
+                              "", 0, pool));
 
   /* Create an empty changes file. */
-  SVN_ERR(svn_io_file_create(path_txn_changes(fs, txn->id, pool), "",
-                             pool));
+  SVN_ERR(svn_io_file_create2(path_txn_changes(fs, txn->id, pool), "",
+                              0, pool));
 
   /* Create the next-ids file. */
-  return svn_io_file_create(path_txn_next_ids(fs, txn->id, pool), "0 0\n",
-                            pool);
+  return svn_io_file_create2(path_txn_next_ids(fs, txn->id, pool), "0 0\n",
+                             5, pool);
 }
 
 /* Store the property list for transaction TXN_ID in PROPLIST.

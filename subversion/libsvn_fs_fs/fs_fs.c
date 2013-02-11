@@ -528,8 +528,8 @@ write_config(svn_fs_t *fs,
 "# " CONFIG_OPTION_P2L_PAGE_SIZE " = 64"                                     NL
 ;
 #undef NL
-  return svn_io_file_create(svn_dirent_join(fs->path, PATH_CONFIG, pool),
-                            fsfs_conf_contents, pool);
+  return svn_io_file_create2(svn_dirent_join(fs->path, PATH_CONFIG, pool),
+                             fsfs_conf_contents, 0, pool);
 }
 
 svn_error_t *
@@ -578,7 +578,7 @@ create_file_ignore_eexist(const char *file,
                           const char *contents,
                           apr_pool_t *pool)
 {
-  svn_error_t *err = svn_io_file_create(file, contents, pool);
+  svn_error_t *err = svn_io_file_create2(file, contents, 0, pool);
   if (err && APR_STATUS_IS_EEXIST(err->apr_err))
     {
       svn_error_clear(err);
@@ -644,7 +644,8 @@ upgrade_body(void *baton, apr_pool_t *pool)
 
   /* If our filesystem is new enough, write the min unpacked rev file. */
   if (format < SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(svn_io_file_create(path_min_unpacked_rev(fs, pool), "0\n", pool));
+    SVN_ERR(svn_io_file_create2(path_min_unpacked_rev(fs, pool), "0\n", 2,
+                                pool));
 
   /* If the file system supports revision packing but not revprop packing,
      pack the revprops up to the point that revision data has been packed. */
@@ -902,25 +903,25 @@ write_revision_zero(svn_fs_t *fs)
 
   /* Write out a rev file for revision 0. */
   if (ffd->format < SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    SVN_ERR(svn_io_file_create(path_revision_zero,
-                               "PLAIN\nEND\nENDREP\n"
-                               "id: 0.0.r0/17\n"
-                               "type: dir\n"
-                               "count: 0\n"
-                               "text: 0 0 4 4 "
-                               "2d2977d1c96f487abe4a1e202dd03b4e\n"
-                               "cpath: /\n"
-                               "\n\n17 107\n", fs->pool));
+    SVN_ERR(svn_io_file_create2(path_revision_zero,
+                                "PLAIN\nEND\nENDREP\n"
+                                "id: 0.0.r0/17\n"
+                                "type: dir\n"
+                                "count: 0\n"
+                                "text: 0 0 4 4 "
+                                "2d2977d1c96f487abe4a1e202dd03b4e\n"
+                                "cpath: /\n"
+                                "\n\n17 107\n", 0, fs->pool));
   else
-    SVN_ERR(svn_io_file_create(path_revision_zero,
-                               "PLAIN\nEND\nENDREP\n"
-                               "id: 0.0.r0/2\n"
-                               "type: dir\n"
-                               "count: 0\n"
-                               "text: 0 3 4 4 "
-                               "2d2977d1c96f487abe4a1e202dd03b4e\n"
-                               "cpath: /\n"
-                               "\n\n", fs->pool));
+    SVN_ERR(svn_io_file_create2(path_revision_zero,
+                                "PLAIN\nEND\nENDREP\n"
+                                "id: 0.0.r0/2\n"
+                                "type: dir\n"
+                                "count: 0\n"
+                                "text: 0 3 4 4 "
+                                "2d2977d1c96f487abe4a1e202dd03b4e\n"
+                                "cpath: /\n"
+                                "\n\n", 0, fs->pool));
 
   SVN_ERR(svn_io_set_file_read_only(path_revision_zero, FALSE, fs->pool));
 
@@ -1023,11 +1024,11 @@ svn_fs_fs__create(svn_fs_t *fs,
                                         pool));
 
   /* Create the 'current' file. */
-  SVN_ERR(svn_io_file_create(svn_fs_fs__path_current(fs, pool),
-                             (format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT
-                              ? "0\n" : "0 1 1\n"),
-                             pool));
-  SVN_ERR(svn_io_file_create(path_lock(fs, pool), "", pool));
+  SVN_ERR(svn_io_file_create2(svn_fs_fs__path_current(fs, pool),
+                              (format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT
+                               ? "0\n" : "0 1 1\n"), 0,
+                              pool));
+  SVN_ERR(svn_io_file_create2(path_lock(fs, pool), "", 0, pool));
   SVN_ERR(svn_fs_fs__set_uuid(fs, NULL, pool));
 
   SVN_ERR(write_revision_zero(fs));
@@ -1038,16 +1039,17 @@ svn_fs_fs__create(svn_fs_t *fs,
 
   /* Create the min unpacked rev file. */
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(svn_io_file_create(path_min_unpacked_rev(fs, pool), "0\n", pool));
+    SVN_ERR(svn_io_file_create2(path_min_unpacked_rev(fs, pool), "0\n",
+                                2, pool));
 
   /* Create the txn-current file if the repository supports
      the transaction sequence file. */
   if (format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
     {
-      SVN_ERR(svn_io_file_create(path_txn_current(fs, pool),
-                                 "0\n", pool));
-      SVN_ERR(svn_io_file_create(path_txn_current_lock(fs, pool),
-                                 "", pool));
+      SVN_ERR(svn_io_file_create2(path_txn_current(fs, pool),
+                                  "0\n", 2, pool));
+      SVN_ERR(svn_io_file_create2(path_txn_current_lock(fs, pool),
+                                  "", 0, pool));
     }
 
   /* This filesystem is ready.  Stamp it with a format number. */

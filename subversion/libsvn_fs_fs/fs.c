@@ -265,8 +265,8 @@ fs_open_for_recovery(svn_fs_t *fs,
   /* Use a partly-filled fs pointer first to create 'current'.  This will fail
      if 'current' already exists, but we don't care about that. */
   fs->path = apr_pstrdup(fs->pool, path);
-  svn_error_clear(svn_io_file_create(svn_fs_fs__path_current(fs, pool),
-                                     "0 1 1\n", pool));
+  svn_error_clear(svn_io_file_create2(svn_fs_fs__path_current(fs, pool),
+                                      "0 1 1\n", 0, pool));
 
   /* Now open the filesystem properly by calling the vtable method directly. */
   return fs_open(fs, path, pool, common_pool);

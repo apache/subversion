@@ -903,28 +903,28 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
                                         pool));
 
   /* Create the 'current' file. */
-  SVN_ERR(svn_io_file_create(svn_fs_fs__path_current(dst_fs, pool),
-                             (dst_ffd->format >=
-                                SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT
-                                ? "0\n" : "0 1 1\n"),
-                             pool));
+  SVN_ERR(svn_io_file_create2(svn_fs_fs__path_current(dst_fs, pool),
+                              (dst_ffd->format >=
+                                 SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT
+                                 ? "0\n" : "0 1 1\n"), 0, 
+                              pool));
 
   /* Create lock file and UUID. */
-  SVN_ERR(svn_io_file_create(path_lock(dst_fs, pool), "", pool));
+  SVN_ERR(svn_io_file_create2(path_lock(dst_fs, pool), "", 0, pool));
   SVN_ERR(svn_fs_fs__set_uuid(dst_fs, src_fs->uuid, pool));
 
   /* Create the min unpacked rev file. */
   if (dst_ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(svn_io_file_create(path_min_unpacked_rev(dst_fs, pool),
-                                                     "0\n", pool));
+    SVN_ERR(svn_io_file_create2(path_min_unpacked_rev(dst_fs, pool),
+                                                      "0\n", 2, pool));
   /* Create the txn-current file if the repository supports
      the transaction sequence file. */
   if (dst_ffd->format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
     {
-      SVN_ERR(svn_io_file_create(path_txn_current(dst_fs, pool),
-                                 "0\n", pool));
-      SVN_ERR(svn_io_file_create(path_txn_current_lock(dst_fs, pool),
-                                 "", pool));
+      SVN_ERR(svn_io_file_create2(path_txn_current(dst_fs, pool),
+                                  "0\n", 2, pool));
+      SVN_ERR(svn_io_file_create2(path_txn_current_lock(dst_fs, pool),
+                                  "", 0, pool));
     }
 
   dst_ffd->youngest_rev_cache = 0;
