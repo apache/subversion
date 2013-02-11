@@ -2329,6 +2329,8 @@ block_read(void **result,
         }
     }
 
+  /* if the caller requested a result, we must have provided one by now */
+  assert(!result || *result);
   SVN_ERR(svn_stream_close(stream));
   svn_pool_destroy(iterpool);
 
