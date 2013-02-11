@@ -282,6 +282,10 @@ struct dir_baton_t
 
   apr_hash_t *local_info;
 
+  /* A hash containing the basenames of the nodes reported deleted by the
+     repository (or NULL for no values). */
+  apr_hash_t *deletes;
+
   /* Identifies those directory elements that get compared while running
      the crawler.  These elements should not be compared again when
      recursively looking for local modifications.
@@ -1277,17 +1281,17 @@ report_local_only_dir(struct edit_baton_t *eb,
   return SVN_NO_ERROR;
 }
 
+/* Ensures that local changes are reported to pb->eb->processor if there
+   are any. */
 static svn_error_t *
 ensure_local_only_handled(struct dir_baton_t *pb,
                           const char *name,
-                          svn_boolean_t for_delete,
                           apr_pool_t *scratch_pool)
 {
   struct edit_baton_t *eb = pb->eb;
   const struct svn_wc__db_info_t *info;
-
-  if (eb->ignore_ancestry && !for_delete)
-    return SVN_NO_ERROR;
+  svn_boolean_t repos_delete = (pb->deletes
+                                && svn_hash_gets(pb->deletes, name));
 
   assert(!strchr(name, '/'));
   assert(!pb->added || eb->ignore_ancestry);
@@ -1295,15 +1299,16 @@ ensure_local_only_handled(struct dir_baton_t *pb,
   if (svn_hash_gets(pb->compared, name))
     return SVN_NO_ERROR;
 
+  SVN_DBG(("Repos del %s: %d\n", name, repos_delete));
+
+  svn_hash_sets(pb->compared, apr_pstrdup(pb->pool, name), "");
+
   SVN_ERR(ensure_local_info(pb, scratch_pool));
 
   info = svn_hash_gets(pb->local_info, name);
 
   if (info == NULL)
     return SVN_NO_ERROR;
-
-  if (for_delete)
-    svn_hash_sets(pb->compared, apr_pstrdup(pb->pool, name), "");
 
   switch (info->status)
     {
@@ -1314,12 +1319,13 @@ ensure_local_only_handled(struct dir_baton_t *pb,
         return SVN_NO_ERROR; /* Not local only */
 
       case svn_wc__db_status_normal:
-        if (! for_delete)
+        if (!repos_delete)
           return SVN_NO_ERROR; /* Local and remote */
+        svn_hash_sets(pb->deletes, name, NULL);
         break;
 
       case svn_wc__db_status_deleted:
-        if (!eb->diff_pristine)
+        if (!(eb->diff_pristine && repos_delete))
           return SVN_NO_ERROR;
         break;
 
@@ -1327,9 +1333,6 @@ ensure_local_only_handled(struct dir_baton_t *pb,
       default:
         break;
     }
-
-  if (!for_delete)
-    svn_hash_sets(pb->compared, apr_pstrdup(pb->pool, name), "");
 
   if (info->kind == svn_kind_dir)
     {
@@ -1344,7 +1347,7 @@ ensure_local_only_handled(struct dir_baton_t *pb,
                       eb,
                       svn_dirent_join(pb->local_abspath, name, scratch_pool),
                       svn_relpath_join(pb->path, name, scratch_pool),
-                      for_delete ? svn_depth_infinity : depth,
+                      repos_delete ? svn_depth_infinity : depth,
                       pb->pdb,
                       scratch_pool));
     }
@@ -1397,13 +1400,12 @@ delete_entry(const char *path,
              apr_pool_t *pool)
 {
   struct dir_baton_t *pb = parent_baton;
-  const char *name = svn_dirent_basename(path, NULL);
+  const char *name = svn_dirent_basename(path, pb->pool);
 
-  /* Mark this node as compared in the parent directory's baton. */
-  SVN_ERR(ensure_local_only_handled(pb,
-                                    name,
-                                    TRUE /* for_delete */,
-                                    pool));
+  if (!pb->deletes)
+    pb->deletes = apr_hash_make(pb->pool);
+
+  svn_hash_sets(pb->deletes, name, "");
   return SVN_NO_ERROR;
 }
 
@@ -1428,10 +1430,9 @@ add_directory(const char *path,
                       dir_pool);
   *child_baton = db;
 
-  if (pb && eb->local_before_remote && !pb->added)
+  if (pb && eb->local_before_remote && !pb->added && !eb->ignore_ancestry)
     SVN_ERR(ensure_local_only_handled(pb,
                                       db->name,
-                                      FALSE /* for_delete */,
                                       dir_pool));
 
   /* Issue #3797: Don't add this filename to the parent directory's list of
@@ -1472,8 +1473,8 @@ open_directory(const char *path,
   db = make_dir_baton(path, pb, pb->eb, FALSE, subdir_depth, dir_pool);
   *child_baton = db;
 
-  if (eb->local_before_remote)
-    SVN_ERR(ensure_local_only_handled(pb, db->name, FALSE, dir_pool));
+  if (eb->local_before_remote && !eb->ignore_ancestry)
+    SVN_ERR(ensure_local_only_handled(pb, db->name, dir_pool));
 
   db->left_src  = svn_diff__source_create(eb->revnum, db->pool);
   db->right_src = svn_diff__source_create(SVN_INVALID_REVNUM, db->pool);
@@ -1507,6 +1508,23 @@ close_directory(void *dir_baton,
   struct edit_baton_t *eb = db->eb;
   apr_pool_t *scratch_pool = db->pool;
   svn_boolean_t reported_closed = FALSE;
+
+  if (db->deletes)
+    {
+      apr_hash_index_t *hi;
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+      for (hi = apr_hash_first(scratch_pool, db->deletes); hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *name = svn__apr_hash_index_key(hi);
+
+          svn_pool_clear(iterpool);
+          SVN_ERR(ensure_local_only_handled(db, name, iterpool));
+        }
+
+      svn_pool_destroy(iterpool);
+    }
 
   /* Mark the properties of this directory as having already been
      compared so that we know not to show any local modifications
@@ -1610,7 +1628,7 @@ close_directory(void *dir_baton,
                                       scratch_pool));
 
   if (db->parent_baton)
-    SVN_ERR(ensure_local_only_handled(db->parent_baton, db->name, FALSE,
+    SVN_ERR(ensure_local_only_handled(db->parent_baton, db->name,
                                       scratch_pool));
   SVN_ERR(maybe_done(db)); /* destroys scratch_pool */
 
@@ -1634,12 +1652,6 @@ add_file(const char *path,
 
   fb = make_file_baton(path, TRUE, pb, file_pool);
   *file_baton = fb;
-
-  if (eb->local_before_remote)
-    SVN_ERR(ensure_local_only_handled(pb,
-                                      fb->name,
-                                      FALSE /* for_delete */,
-                                      file_pool));
 
   /* Issue #3797: Don't add this filename to the parent directory's list of
      elements that have been compared, to show local additions via the local
@@ -1675,9 +1687,6 @@ open_file(const char *path,
 
   fb = make_file_baton(path, FALSE, pb, file_pool);
   *file_baton = fb;
-
-  if (eb->local_before_remote)
-    SVN_ERR(ensure_local_only_handled(pb, fb->name, FALSE, file_pool));
 
   /* Add this filename to the parent directory's list of elements that
      have been compared. */
@@ -1839,6 +1848,14 @@ close_file(void *file_baton,
                             _("Checksum mismatch for '%s'"),
                             svn_dirent_local_style(fb->local_abspath,
                                                    scratch_pool));
+    }
+
+  if (fb->added
+      && eb->local_before_remote
+      && !pb->added 
+      && !eb->ignore_ancestry)
+    {
+      SVN_ERR(ensure_local_only_handled(pb, fb->name, scratch_pool));
     }
 
   err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -2038,7 +2055,7 @@ close_file(void *file_baton,
                                           scratch_pool));
     }
 
-  SVN_ERR(ensure_local_only_handled(pb, fb->name, FALSE, scratch_pool));
+  SVN_ERR(ensure_local_only_handled(pb, fb->name, scratch_pool));
   svn_pool_destroy(fb->pool); /* destroys scratch_pool */
   SVN_ERR(maybe_done(fb->parent_baton));
   return SVN_NO_ERROR;
@@ -2108,7 +2125,7 @@ close_edit(void *edit_baton,
                                     eb->anchor_abspath,
                                     "",
                                     eb->depth,
-                                    NULL,
+                                    NULL /* compared */,
                                     NULL /* No parent_baton */,
                                     eb->pool));
     }

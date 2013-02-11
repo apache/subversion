@@ -4249,15 +4249,13 @@ def simple_ancestry(sbox):
                                         '--show-copies-as-adds',
                                         '--no-diff-added')
 
-  # Now introduce a replacements and a delete-deletes
+  # Now introduce a replacements and some delete-deletes
   sbox.simple_update()
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'cp', sbox.repo_url + '/A/B/E@1',
-                                           sbox.ospath('A/B/E'))
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'cp', sbox.repo_url + '/A/D/G/rho@1',
-                                           sbox.repo_url + '/A/D/G/tau@1',
-                                           sbox.ospath('A/D/G'))
+  sbox.simple_mkdir('A/B/E')
+  sbox.simple_add_text('New alpha', 'A/B/E/alpha')
+  sbox.simple_add_text('New beta', 'A/B/E/beta')
+  sbox.simple_add_text('New rho', 'A/D/G/rho')
+  sbox.simple_add_text('New tau', 'A/D/G/tau')
   sbox.simple_rm('A/B/E_copied', 'A/D/G/pi-2', 'A/D/G/rho-2')
 
   expected_output = svntest.verify.UnorderedOutput([
@@ -4280,6 +4278,17 @@ def simple_ancestry(sbox):
     'Index: %s (added)\n'   % sbox.path('A/D/G/tau'),
     line,
   ])
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', sbox.wc_dir,
+                                        '-r', '1',
+                                        '--notice-ancestry',
+                                        '--no-diff-deleted',
+                                        '--show-copies-as-adds',
+                                        '--no-diff-added')
+
+  sbox.simple_commit()
+  sbox.simple_update()
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', sbox.wc_dir,
