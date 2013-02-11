@@ -4175,6 +4175,120 @@ def diff_arbitrary_same(sbox):
                                      '--old', sbox.ospath('A'),
                                      '--new', sbox.ospath('A2'))
 
+def simple_ancestry(sbox):
+  "diff some simple ancestry changes"
+
+  sbox.build()
+  sbox.simple_copy('A/B/E', 'A/B/E_copied')
+  sbox.simple_copy('A/D/G/pi', 'A/D/G/pi-2')
+  sbox.simple_copy('A/D/G/rho', 'A/D/G/rho-2')
+  sbox.simple_rm('A/B/F', 'A/B/E', 'A/D/G/rho', 'A/D/G/tau')
+  sbox.simple_add_text('new', 'new')
+
+  line = '===================================================================\n'
+
+  expected_output = svntest.verify.UnorderedOutput([
+    'Index: %s (added)\n' % sbox.path('new'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/B/E/alpha'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/B/E/beta'),
+    line,
+    'Index: %s (added)\n' % sbox.path('A/B/E_copied/beta'),
+    line,
+    'Index: %s (added)\n' % sbox.path('A/B/E_copied/alpha'),
+    line,
+    'Index: %s (added)\n' % sbox.path('A/D/G/pi-2'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/D/G/rho'),
+    line,
+    'Index: %s (added)\n' % sbox.path('A/D/G/rho-2'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/D/G/tau'),
+    line,
+  ])
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', sbox.wc_dir,
+                                        '-r', '1',
+                                        '--notice-ancestry',
+                                        '--no-diff-deleted',
+                                        '--show-copies-as-adds',
+                                        '--no-diff-added')
+
+  # And try the same thing in reverse
+  sbox.simple_commit()
+  sbox.simple_update(revision=1)
+
+  expected_output = svntest.verify.UnorderedOutput([
+    'Index: %s (deleted)\n' % sbox.path('new'),
+    line,
+    'Index: %s (added)\n'   % sbox.path('A/B/E/alpha'),
+    line,
+    'Index: %s (added)\n'   % sbox.path('A/B/E/beta'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/B/E_copied/beta'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/B/E_copied/alpha'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/D/G/pi-2'),
+    line,
+    'Index: %s (added)\n'   % sbox.path('A/D/G/rho'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/D/G/rho-2'),
+    line,
+    'Index: %s (added)\n'   % sbox.path('A/D/G/tau'),
+    line,
+  ])
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', sbox.wc_dir,
+                                        '-r', 'HEAD',
+                                        '--notice-ancestry',
+                                        '--no-diff-deleted',
+                                        '--show-copies-as-adds',
+                                        '--no-diff-added')
+
+  # Now introduce a replacements and a delete-deletes
+  sbox.simple_update()
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', sbox.repo_url + '/A/B/E@1',
+                                           sbox.ospath('A/B/E'))
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', sbox.repo_url + '/A/D/G/rho@1',
+                                           sbox.repo_url + '/A/D/G/tau@1',
+                                           sbox.ospath('A/D/G'))
+  sbox.simple_rm('A/B/E_copied', 'A/D/G/pi-2', 'A/D/G/rho-2')
+
+  expected_output = svntest.verify.UnorderedOutput([
+    'Index: %s (added)\n'   % sbox.path('new'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/B/E/alpha'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/B/E/beta'),
+    line,
+    'Index: %s (added)\n'   % sbox.path('A/B/E/alpha'),
+    line,
+    'Index: %s (added)\n'   % sbox.path('A/B/E/beta'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/D/G/rho'),
+    line,
+    'Index: %s (added)\n'   % sbox.path('A/D/G/rho'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/D/G/tau'),
+    line,
+    'Index: %s (added)\n'   % sbox.path('A/D/G/tau'),
+    line,
+  ])
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', sbox.wc_dir,
+                                        '-r', '1',
+                                        '--notice-ancestry',
+                                        '--no-diff-deleted',
+                                        '--show-copies-as-adds',
+                                        '--no-diff-added')
+
 
 ########################################################################
 #Run the tests
@@ -4250,6 +4364,7 @@ test_list = [ None,
               diff_properties_no_newline,
               diff_arbitrary_same,
               diff_git_format_wc_wc_dir_mv,
+              simple_ancestry,
               ]
 
 if __name__ == '__main__':
