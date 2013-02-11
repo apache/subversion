@@ -344,11 +344,12 @@ struct file_baton_t
   /* Has a change on regular properties */
   svn_boolean_t has_propchange;
 
-  /* The current checksum on disk */
+  /* The current BASE checksum and props */
   const svn_checksum_t *base_checksum;
+  apr_hash_t *base_props;
 
   /* The resulting checksum from apply_textdelta */
-  svn_checksum_t *result_checksum;
+  unsigned char result_digest[APR_MD5_DIGESTSIZE];
 
   /* The overall crawler editor baton. */
   struct edit_baton_t *eb;
@@ -1692,7 +1693,7 @@ open_file(const char *path,
 
   SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, &fb->base_checksum, NULL,
-                                   NULL, NULL, NULL, NULL,
+                                   NULL, NULL, &fb->base_props, NULL,
                                    eb->db, fb->local_abspath,
                                    fb->pool, fb->pool));
 
@@ -1711,56 +1712,63 @@ open_file(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* Baton for window_handler */
-struct window_handler_baton
-{
-  struct file_baton_t *fb;
-
-  /* APPLY_HANDLER/APPLY_BATON represent the delta applcation baton. */
-  svn_txdelta_window_handler_t apply_handler;
-  void *apply_baton;
-
-  unsigned char result_digest[APR_MD5_DIGESTSIZE];
-};
-
-/* Do the work of applying the text delta. */
-static svn_error_t *
-window_handler(svn_txdelta_window_t *window,
-               void *window_baton)
-{
-  struct window_handler_baton *whb = window_baton;
-  struct file_baton_t *fb = whb->fb;
-
-  SVN_ERR(whb->apply_handler(window, whb->apply_baton));
-
-  if (!window)
-    {
-      fb->result_checksum = svn_checksum__from_digest_md5(whb->result_digest,
-                                                          fb->pool);
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* An svn_delta_editor_t function. */
 static svn_error_t *
 apply_textdelta(void *file_baton,
-                const char *base_checksum,
+                const char *base_checksum_hex,
                 apr_pool_t *pool,
                 svn_txdelta_window_handler_t *handler,
                 void **handler_baton)
 {
   struct file_baton_t *fb = file_baton;
-  struct window_handler_baton *whb;
   struct edit_baton_t *eb = fb->eb;
   svn_stream_t *source;
   svn_stream_t *temp_stream;
+  svn_checksum_t *repos_checksum = NULL;
 
-  if (fb->base_checksum)
-    SVN_ERR(svn_wc__db_pristine_read(&source, NULL,
-                                     eb->db, fb->local_abspath,
-                                     fb->base_checksum,
-                                     pool, pool));
+  if (base_checksum_hex && fb->base_checksum)
+    {
+      const svn_checksum_t *base_md5;
+      SVN_ERR(svn_checksum_parse_hex(&repos_checksum, svn_checksum_md5,
+                                     base_checksum_hex, pool));
+
+      SVN_ERR(svn_wc__db_pristine_get_md5(&base_md5,
+                                          eb->db, eb->anchor_abspath,
+                                          fb->base_checksum,
+                                          pool, pool));
+
+      if (! svn_checksum_match(repos_checksum, base_md5))
+        {
+          /* ### I expect that there are some bad drivers out there
+             ### that used to give bad results. We could look in
+             ### working to see if the expected checksum matches and
+             ### then return the pristine of that... But that only moves
+             ### the problem */
+
+          /* If needed: compare checksum obtained via md5 of working.
+             And if they match set fb->base_checksum and fb->base_props */
+
+          return svn_checksum_mismatch_err(
+                        base_md5,
+                        repos_checksum,
+                        pool,
+                        _("Checksum mismatch for '%s'"),
+                        svn_dirent_local_style(fb->local_abspath,
+                                               pool));
+        }
+
+      SVN_ERR(svn_wc__db_pristine_read(&source, NULL,
+                                       eb->db, fb->local_abspath,
+                                       fb->base_checksum,
+                                       pool, pool));
+    }
+  else if (fb->base_checksum)
+    {
+      SVN_ERR(svn_wc__db_pristine_read(&source, NULL,
+                                       eb->db, fb->local_abspath,
+                                       fb->base_checksum,
+                                       pool, pool));
+    }
   else
     source = svn_stream_empty(pool);
 
@@ -1769,17 +1777,12 @@ apply_textdelta(void *file_baton,
                                  svn_io_file_del_on_pool_cleanup,
                                  fb->pool, fb->pool));
 
-  whb = apr_pcalloc(fb->pool, sizeof(*whb));
-  whb->fb = fb;
-
   svn_txdelta_apply(source, temp_stream,
-                    whb->result_digest,
+                    fb->result_digest,
                     fb->path /* error_info */,
                     fb->pool,
-                    &whb->apply_handler, &whb->apply_baton);
+                    handler, handler_baton);
 
-  *handler = window_handler;
-  *handler_baton = whb;
   return SVN_NO_ERROR;
 }
 
@@ -1805,7 +1808,6 @@ close_file(void *file_baton,
   svn_error_t *err;
 
   /* The BASE information */
-  const svn_checksum_t *pristine_checksum;
   const char *pristine_file;
   apr_hash_t *pristine_props;
 
@@ -1824,7 +1826,9 @@ close_file(void *file_baton,
   if (expected_md5_digest != NULL)
     {
       svn_checksum_t *expected_checksum;
-      const svn_checksum_t *repos_checksum = fb->result_checksum;
+      const svn_checksum_t *repos_checksum = svn_checksum__from_digest_md5(
+                                                    fb->result_digest,
+                                                    scratch_pool);
 
       SVN_ERR(svn_checksum_parse_hex(&expected_checksum, svn_checksum_md5,
                                      expected_md5_digest, scratch_pool));
@@ -1856,7 +1860,7 @@ close_file(void *file_baton,
     }
 
   err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, &pristine_checksum, NULL,
+                             NULL, NULL, NULL, NULL, NULL,
                              &original_repos_relpath,
                              NULL, NULL, &original_revision, NULL, NULL, NULL,
                              NULL, NULL, NULL, &had_props, &props_mod,
@@ -1868,7 +1872,6 @@ close_file(void *file_baton,
     {
       svn_error_clear(err);
       status = svn_wc__db_status_not_present;
-      pristine_checksum = NULL;
       had_props = FALSE;
       props_mod = FALSE;
       original_repos_relpath = NULL;
@@ -1884,25 +1887,13 @@ close_file(void *file_baton,
     }
   else
     {
-      if (status != svn_wc__db_status_normal)
-        SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                                         NULL, NULL, NULL, NULL,
-                                         &pristine_checksum,
-                                         NULL, NULL,
-                                         &had_props, NULL, NULL,
-                                         db, fb->local_abspath,
-                                         scratch_pool, scratch_pool));
-
       SVN_ERR(svn_wc__db_pristine_get_path(&pristine_file,
                                            db, fb->local_abspath,
-                                           pristine_checksum,
+                                           fb->base_checksum,
                                            scratch_pool, scratch_pool));
 
-      if (had_props)
-        SVN_ERR(svn_wc__db_base_get_props(&pristine_props,
-                                           db, fb->local_abspath,
-                                           scratch_pool, scratch_pool));
-      else
+      pristine_props = fb->base_props;
+      if (! pristine_props)
         pristine_props = apr_hash_make(scratch_pool);
     }
 
