@@ -467,7 +467,7 @@ class Generator(gen_base.GeneratorBase):
       dep.generated = ezt.boolean(getattr(objname, 'source_generated', 0))
 
     template = ezt.Template(os.path.join('build', 'generator', 'templates',
-                                         'makefile.ezt'),
+                                         'build-outputs.mk.ezt'),
                             compress_whitespace=False)
     template.generate(open('build-outputs.mk', 'w'), data)
 
