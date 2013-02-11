@@ -205,7 +205,8 @@ get_pristine_file(const char **result_abspath,
 
 /* Overall crawler editor baton.
  */
-struct edit_baton {
+struct edit_baton_t 
+{
   /* A wc db. */
   svn_wc__db_t *db;
 
@@ -259,12 +260,13 @@ struct edit_baton {
 
 /* Directory level baton.
  */
-struct dir_baton {
+struct dir_baton_t
+{
   /* Gets set if the directory is added rather than replaced/unchanged. */
   svn_boolean_t added;
 
   /* Reference to parent directory baton (or NULL for the root) */
-  struct dir_baton *parent_baton;
+  struct dir_baton_t *parent_baton;
 
   /* The depth at which this directory should be diffed. */
   svn_depth_t depth;
@@ -305,7 +307,7 @@ struct dir_baton {
   svn_boolean_t has_propchange;
 
   /* The overall crawler editor baton. */
-  struct edit_baton *eb;
+  struct edit_baton_t *eb;
 
   apr_pool_t *pool;
   int users;
@@ -313,11 +315,12 @@ struct dir_baton {
 
 /* File level baton.
  */
-struct file_baton {
+struct file_baton_t
+{
   /* Gets set if the file is added rather than replaced. */
   svn_boolean_t added;
 
-  struct dir_baton *parent_baton;
+  struct dir_baton_t *parent_baton;
 
   /* The name and path of this file as if they would be/are in the
       local working copy. */
@@ -352,7 +355,7 @@ struct file_baton {
   svn_checksum_t *result_checksum;
 
   /* The overall crawler editor baton. */
-  struct edit_baton *eb;
+  struct edit_baton_t *eb;
 
   apr_pool_t *pool;
 };
@@ -372,7 +375,7 @@ struct file_baton {
  * filtering is requested.
  */
 static svn_error_t *
-make_edit_baton(struct edit_baton **edit_baton,
+make_edit_baton(struct edit_baton_t **edit_baton,
                 svn_wc__db_t *db,
                 const char *anchor_abspath,
                 const char *target,
@@ -390,7 +393,7 @@ make_edit_baton(struct edit_baton **edit_baton,
                 apr_pool_t *pool)
 {
   apr_hash_t *changelist_hash = NULL;
-  struct edit_baton *eb;
+  struct edit_baton_t *eb;
   const svn_diff_tree_processor_t *processor;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(anchor_abspath));
@@ -437,17 +440,17 @@ make_edit_baton(struct edit_baton **edit_baton,
  * exist in the working copy.  EDIT_BATON is the overall crawler
  * editor baton.
  */
-static struct dir_baton *
+static struct dir_baton_t *
 make_dir_baton(const char *path,
-               struct dir_baton *parent_baton,
-               struct edit_baton *eb,
+               struct dir_baton_t *parent_baton,
+               struct edit_baton_t *eb,
                svn_boolean_t added,
                svn_depth_t depth,
                apr_pool_t *result_pool)
 {
   apr_pool_t *dir_pool = svn_pool_create(parent_baton ? parent_baton->pool
                                                       : eb->pool);
-  struct dir_baton *db = apr_pcalloc(dir_pool, sizeof(*db));
+  struct dir_baton_t *db = apr_pcalloc(dir_pool, sizeof(*db));
 
   db->parent_baton = parent_baton;
   db->eb = eb;
@@ -480,15 +483,15 @@ make_dir_baton(const char *path,
  * replaced.  PARENT_BATON is the baton of the parent directory.
  * The directory and its parent may or may not exist in the working copy.
  */
-static struct file_baton *
+static struct file_baton_t *
 make_file_baton(const char *path,
                 svn_boolean_t added,
-                struct dir_baton *parent_baton,
+                struct dir_baton_t *parent_baton,
                 apr_pool_t *result_pool)
 {
   apr_pool_t *file_pool = svn_pool_create(result_pool);
-  struct file_baton *fb = apr_pcalloc(file_pool, sizeof(*fb));
-  struct edit_baton *eb = parent_baton->eb;
+  struct file_baton_t *fb = apr_pcalloc(file_pool, sizeof(*fb));
+  struct edit_baton_t *eb = parent_baton->eb;
 
   fb->eb = eb;
   fb->parent_baton = parent_baton;
@@ -507,13 +510,13 @@ make_file_baton(const char *path,
 
 /* Destroy DB when there are no more registered users */
 static svn_error_t *
-maybe_done(struct dir_baton *db)
+maybe_done(struct dir_baton_t *db)
 {
   db->users--;
 
   if (!db->users)
     {
-      struct dir_baton *pb = db->parent_baton;
+      struct dir_baton_t *pb = db->parent_baton;
 
       svn_pool_clear(db->pool);
 
@@ -528,7 +531,7 @@ maybe_done(struct dir_baton *db)
  * that it can be reused, all empty files are the same.
  */
 static svn_error_t *
-get_empty_file(struct edit_baton *b,
+get_empty_file(struct edit_baton_t *b,
                const char **empty_file)
 {
   /* Create the file if it does not exist */
@@ -567,7 +570,7 @@ get_prop_mimetype(apr_hash_t *props)
  * directory.
  */
 static svn_error_t *
-file_diff(struct edit_baton *eb,
+file_diff(struct edit_baton_t *eb,
           const char *local_abspath,
           const char *path,
           void *dir_baton,
@@ -869,7 +872,7 @@ file_diff(struct edit_baton *eb,
  * DIR_BATON is the baton for the directory.
  */
 static svn_error_t *
-walk_local_nodes_diff(struct edit_baton *eb,
+walk_local_nodes_diff(struct edit_baton_t *eb,
                       const char *local_abspath,
                       const char *path,
                       svn_depth_t depth,
@@ -1060,7 +1063,7 @@ walk_local_nodes_diff(struct edit_baton *eb,
  * Do all allocation in POOL.
  */
 static svn_error_t *
-report_wc_file_as_added(struct edit_baton *eb,
+report_wc_file_as_added(struct edit_baton_t *eb,
                         const char *local_abspath,
                         const char *path,
                         void *parent_baton,
@@ -1172,7 +1175,7 @@ report_wc_file_as_added(struct edit_baton *eb,
  * Do all allocation in POOL.
  */
 static svn_error_t *
-report_wc_directory_as_added(struct edit_baton *eb,
+report_wc_directory_as_added(struct edit_baton_t *eb,
                              const char *local_abspath,
                              const char *path,
                              svn_depth_t depth,
@@ -1300,7 +1303,7 @@ set_target_revision(void *edit_baton,
                     svn_revnum_t target_revision,
                     apr_pool_t *pool)
 {
-  struct edit_baton *eb = edit_baton;
+  struct edit_baton_t *eb = edit_baton;
   eb->revnum = target_revision;
 
   return SVN_NO_ERROR;
@@ -1313,8 +1316,8 @@ open_root(void *edit_baton,
           apr_pool_t *dir_pool,
           void **root_baton)
 {
-  struct edit_baton *eb = edit_baton;
-  struct dir_baton *db;
+  struct edit_baton_t *eb = edit_baton;
+  struct dir_baton_t *db;
 
   eb->root_opened = TRUE;
   db = make_dir_baton("", NULL, eb, FALSE, eb->depth, dir_pool);
@@ -1330,8 +1333,8 @@ delete_entry(const char *path,
              void *parent_baton,
              apr_pool_t *pool)
 {
-  struct dir_baton *pb = parent_baton;
-  struct edit_baton *eb = pb->eb;
+  struct dir_baton_t *pb = parent_baton;
+  struct edit_baton_t *eb = pb->eb;
   svn_wc__db_t *db = eb->db;
   const char *empty_file;
   const char *name = svn_dirent_basename(path, NULL);
@@ -1391,9 +1394,9 @@ add_directory(const char *path,
               apr_pool_t *dir_pool,
               void **child_baton)
 {
-  struct dir_baton *pb = parent_baton;
-  struct edit_baton *eb = pb->eb;
-  struct dir_baton *db;
+  struct dir_baton_t *pb = parent_baton;
+  struct edit_baton_t *eb = pb->eb;
+  struct dir_baton_t *db;
   svn_depth_t subdir_depth = (pb->depth == svn_depth_immediates)
                               ? svn_depth_empty : pb->depth;
 
@@ -1430,9 +1433,9 @@ open_directory(const char *path,
                apr_pool_t *dir_pool,
                void **child_baton)
 {
-  struct dir_baton *pb = parent_baton;
-  struct edit_baton *eb = pb->eb;
-  struct dir_baton *db;
+  struct dir_baton_t *pb = parent_baton;
+  struct edit_baton_t *eb = pb->eb;
+  struct dir_baton_t *db;
   svn_depth_t subdir_depth = (pb->depth == svn_depth_immediates)
                               ? svn_depth_empty : pb->depth;
 
@@ -1469,8 +1472,8 @@ static svn_error_t *
 close_directory(void *dir_baton,
                 apr_pool_t *pool)
 {
-  struct dir_baton *db = dir_baton;
-  struct edit_baton *eb = db->eb;
+  struct dir_baton_t *db = dir_baton;
+  struct edit_baton_t *eb = db->eb;
   apr_pool_t *scratch_pool = db->pool;
   svn_boolean_t reported_closed = FALSE;
 
@@ -1589,9 +1592,9 @@ add_file(const char *path,
          apr_pool_t *file_pool,
          void **file_baton)
 {
-  struct dir_baton *pb = parent_baton;
-  struct edit_baton *eb = pb->eb;
-  struct file_baton *fb;
+  struct dir_baton_t *pb = parent_baton;
+  struct edit_baton_t *eb = pb->eb;
+  struct file_baton_t *fb;
 
   /* ### TODO: support copyfrom? */
 
@@ -1626,9 +1629,9 @@ open_file(const char *path,
           apr_pool_t *file_pool,
           void **file_baton)
 {
-  struct dir_baton *pb = parent_baton;
-  struct edit_baton *eb = pb->eb;
-  struct file_baton *fb;
+  struct dir_baton_t *pb = parent_baton;
+  struct edit_baton_t *eb = pb->eb;
+  struct file_baton_t *fb;
 
   fb = make_file_baton(path, FALSE, pb, file_pool);
   *file_baton = fb;
@@ -1661,7 +1664,7 @@ open_file(const char *path,
 /* Baton for window_handler */
 struct window_handler_baton
 {
-  struct file_baton *fb;
+  struct file_baton_t *fb;
 
   /* APPLY_HANDLER/APPLY_BATON represent the delta applcation baton. */
   svn_txdelta_window_handler_t apply_handler;
@@ -1676,7 +1679,7 @@ window_handler(svn_txdelta_window_t *window,
                void *window_baton)
 {
   struct window_handler_baton *whb = window_baton;
-  struct file_baton *fb = whb->fb;
+  struct file_baton_t *fb = whb->fb;
 
   SVN_ERR(whb->apply_handler(window, whb->apply_baton));
 
@@ -1697,9 +1700,9 @@ apply_textdelta(void *file_baton,
                 svn_txdelta_window_handler_t *handler,
                 void **handler_baton)
 {
-  struct file_baton *fb = file_baton;
+  struct file_baton_t *fb = file_baton;
   struct window_handler_baton *whb;
-  struct edit_baton *eb = fb->eb;
+  struct edit_baton_t *eb = fb->eb;
   svn_stream_t *source;
   svn_stream_t *temp_stream;
 
@@ -1741,8 +1744,8 @@ close_file(void *file_baton,
            const char *expected_md5_digest,
            apr_pool_t *pool)
 {
-  struct file_baton *fb = file_baton;
-  struct edit_baton *eb = fb->eb;
+  struct file_baton_t *fb = file_baton;
+  struct edit_baton_t *eb = fb->eb;
   svn_wc__db_t *db = eb->db;
   apr_pool_t *scratch_pool = fb->pool;
   svn_wc__db_status_t status;
@@ -2007,7 +2010,7 @@ change_file_prop(void *file_baton,
                  const svn_string_t *value,
                  apr_pool_t *pool)
 {
-  struct file_baton *fb = file_baton;
+  struct file_baton_t *fb = file_baton;
   svn_prop_t *propchange;
   svn_prop_kind_t propkind;
 
@@ -2032,7 +2035,7 @@ change_dir_prop(void *dir_baton,
                 const svn_string_t *value,
                 apr_pool_t *pool)
 {
-  struct dir_baton *db = dir_baton;
+  struct dir_baton_t *db = dir_baton;
   svn_prop_t *propchange;
   svn_prop_kind_t propkind;
 
@@ -2055,7 +2058,7 @@ static svn_error_t *
 close_edit(void *edit_baton,
            apr_pool_t *pool)
 {
-  struct edit_baton *eb = edit_baton;
+  struct edit_baton_t *eb = edit_baton;
 
   if (!eb->root_opened)
     {
@@ -2096,7 +2099,7 @@ svn_wc__get_diff_editor(const svn_delta_editor_t **editor,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  struct edit_baton *eb;
+  struct edit_baton_t *eb;
   void *inner_baton;
   svn_delta_editor_t *tree_editor;
   const svn_delta_editor_t *inner_editor;
