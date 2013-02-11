@@ -1299,8 +1299,6 @@ ensure_local_only_handled(struct dir_baton_t *pb,
   if (svn_hash_gets(pb->compared, name))
     return SVN_NO_ERROR;
 
-  SVN_DBG(("Repos del %s: %d\n", name, repos_delete));
-
   svn_hash_sets(pb->compared, apr_pstrdup(pb->pool, name), "");
 
   SVN_ERR(ensure_local_info(pb, scratch_pool));
@@ -1850,9 +1848,8 @@ close_file(void *file_baton,
                                                    scratch_pool));
     }
 
-  if (fb->added
-      && eb->local_before_remote
-      && !pb->added 
+  if (eb->local_before_remote
+      && !pb->added
       && !eb->ignore_ancestry)
     {
       SVN_ERR(ensure_local_only_handled(pb, fb->name, scratch_pool));
