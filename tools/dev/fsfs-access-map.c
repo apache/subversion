@@ -291,7 +291,8 @@ parse_line(svn_stringbuf_t *line)
   if (func_start == NULL || func_start > func_end)
     func_start = line->data;
   else
-    func_start++;
+    while(*func_start == ' ')
+      func_start++;
   
   first_param_end = strchr(func_end, ',');
   if (first_param_end == NULL)
