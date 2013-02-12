@@ -18623,7 +18623,7 @@ def multiple_editor_drive_merge_notifications(sbox):
 @Issue(4317)
 # Test for issue #4317 "redundant notifications in single editor drive merge".
 def single_editor_drive_merge_notifications(sbox):
-  "single editor drive"
+  "single editor drive merge notifications"
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -18658,8 +18658,12 @@ def single_editor_drive_merge_notifications(sbox):
   #    U   A_COPY\D
   #   --- Eliding mergeinfo from 'A_COPY\D':
   #    U   A_COPY\D
-  svntest.actions.run_and_verify_svn(
-    None,
+  #
+  # The order of 'beta' and 'omega' can vary, so use UnorderedOutput.  This
+  # raises the possibility that the test could spuriously pass if the 'U'pdate
+  # notifications aren't grouped with the correct headers, but that's not what
+  # is being tested here.
+  expected_output = svntest.verify.UnorderedOutput(
     ["--- Merging r2 through r3 into '" + A_copy_path + "':\n",
      "U    " + psi_copy_path + "\n",
      "--- Merging r4 through r7 into '" + A_copy_path + "':\n",
@@ -18672,8 +18676,9 @@ def single_editor_drive_merge_notifications(sbox):
      D_copy_path + "':\n",
      " U   " + D_copy_path + "\n",
      "--- Eliding mergeinfo from '" + D_copy_path + "':\n",
-     " U   " + D_copy_path + "\n"],
-    [], 'merge', sbox.repo_url + '/A', A_copy_path)
+     " U   " + D_copy_path + "\n"])
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'merge',
+                                     sbox.repo_url + '/A', A_copy_path)
 
   # r8 and r9 - Commit and do reverse subtree merge.
   sbox.simple_commit()
@@ -18685,8 +18690,7 @@ def single_editor_drive_merge_notifications(sbox):
   # Now try a reverse merge.  There should only be one notification for
   # r7-5:
   sbox.simple_update()
-  svntest.actions.run_and_verify_svn(
-    None,
+  expected_output = svntest.verify.UnorderedOutput(
     ["--- Reverse-merging r7 through r5 into '" + A_copy_path + "':\n",
      "U    " + beta_copy_path + "\n",
      "U    " + omega_copy_path + "\n",
@@ -18699,8 +18703,10 @@ def single_editor_drive_merge_notifications(sbox):
      D_copy_path + "':\n",
      " U   " + D_copy_path + "\n",
      "--- Eliding mergeinfo from '" + D_copy_path + "':\n",
-     " U   " + D_copy_path + "\n"],
-    [], 'merge', '-r9:2', sbox.repo_url + '/A', A_copy_path)
+     " U   " + D_copy_path + "\n"])     
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'merge',
+                                     '-r9:2', sbox.repo_url + '/A',
+                                     A_copy_path)
 
 ########################################################################
 # Run the tests
