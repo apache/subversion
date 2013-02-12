@@ -6115,6 +6115,7 @@ op_revert_txn(void *baton,
                 SVN_ERR(svn_wc__db_resolve_delete_raise_moved_away(
                           db, svn_dirent_join(wcroot->abspath, local_relpath,
                                               scratch_pool),
+                          NULL, NULL /* ### How do we notify this? */,
                           scratch_pool));
             }
         }

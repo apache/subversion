@@ -2624,7 +2624,8 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
               if (conflict_choice == svn_wc_conflict_choose_merged)
                 {
                   SVN_ERR(svn_wc__db_resolve_delete_raise_moved_away(
-                            db, local_abspath, scratch_pool));
+                            db, local_abspath, notify_func, notify_baton,
+                            scratch_pool));
                   *did_resolve = TRUE;
                 }
             }

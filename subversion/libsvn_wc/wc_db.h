@@ -3300,6 +3300,8 @@ svn_wc__db_vacuum(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_resolve_delete_raise_moved_away(svn_wc__db_t *db,
                                            const char *local_abspath,
+                                           svn_wc_notify_func2_t notify_func,
+                                           void *notify_baton,
                                            apr_pool_t *scratch_pool);
 
 /* Like svn_wc__db_resolve_delete_raise_moved_away this should be
