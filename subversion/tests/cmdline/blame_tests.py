@@ -818,20 +818,20 @@ def blame_multiple_targets(sbox):
 
   sbox.build()
 
+  # First, make a new revision of iota.
+  iota = os.path.join(sbox.wc_dir, 'iota')
+  svntest.main.file_append(iota, "New contents for iota\n")
+  svntest.main.run_svn(None, 'ci', '-m', '', iota)
+
+  expected_output = [
+    "     1    jrandom This is the file 'iota'.\n",
+    "     2    jrandom New contents for iota\n",
+    ]
+
   def multiple_wc_targets():
     "multiple wc targets"
 
-    # First, make a new revision of iota.
-    iota = os.path.join(sbox.wc_dir, 'iota')
     non_existent = os.path.join(sbox.wc_dir, 'non-existent')
-    svntest.main.file_append(iota, "New contents for iota\n")
-    svntest.main.run_svn(None, 'ci',
-                         '-m', '', iota)
-
-    expected_output = [
-      "     1    jrandom This is the file 'iota'.\n",
-      "     2    jrandom New contents for iota\n",
-      ]
 
     expected_err = ".*W155010.*\n.*E200009.*"
     expected_err_re = re.compile(expected_err, re.DOTALL)
@@ -843,22 +843,13 @@ def blame_multiple_targets(sbox):
     if not expected_err_re.match("".join(error)):
       raise svntest.Failure('blame failed: expected error "%s", but received '
                             '"%s"' % (expected_err, "".join(error)))
+    svntest.verify.verify_outputs(None, output, None, expected_output, None)
 
   def multiple_url_targets():
     "multiple url targets"
 
-    # First, make a new revision of iota.
-    iota = os.path.join(sbox.wc_dir, 'iota')
     iota_url = sbox.repo_url + '/iota'
     non_existent = sbox.repo_url + '/non-existent'
-    svntest.main.file_append(iota, "New contents for iota\n")
-    svntest.main.run_svn(None, 'ci',
-                         '-m', '', iota)
-
-    expected_output = [
-      "     1    jrandom This is the file 'iota'.\n",
-      "     2    jrandom New contents for iota\n",
-      ]
 
     expected_err = ".*(W160017|W160013|W150000).*\n.*E200009.*"
     expected_err_re = re.compile(expected_err, re.DOTALL)
@@ -870,6 +861,7 @@ def blame_multiple_targets(sbox):
     if not expected_err_re.match("".join(error)):
       raise svntest.Failure('blame failed: expected error "%s", but received '
                             '"%s"' % (expected_err, "".join(error)))
+    svntest.verify.verify_outputs(None, output, None, expected_output, None)
 
   # Test one by one
   multiple_wc_targets()
