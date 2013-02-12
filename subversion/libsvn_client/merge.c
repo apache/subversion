@@ -10187,18 +10187,16 @@ merge_locked(const char *source1,
                                                        merge_options,
                                                        &use_sleep, ctx,
                                                        scratch_pool);
-          if (err)
-            {
-              if (use_sleep)
-                svn_io_sleep_for_timestamps(target->abspath, scratch_pool);
-
-              return svn_error_trace(err);
-            }
-
           /* Close our temporary RA sessions (this could've happened
              after the second call to normalize_merge_sources() inside
              the merge_cousins_and_supplement_mergeinfo() routine). */
           svn_pool_destroy(sesspool);
+
+          if (use_sleep)
+            svn_io_sleep_for_timestamps(target->abspath, scratch_pool);
+
+          if (err)
+              return svn_error_trace(err);
 
           return SVN_NO_ERROR;
         }
