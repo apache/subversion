@@ -338,20 +338,6 @@ svn_delta_get_cancellation_editor(svn_cancel_func_t cancel_func,
                                   void **edit_baton,
                                   apr_pool_t *pool)
 {
-  if (wrapped_editor
-      && wrapped_editor->set_target_revision == set_target_revision)
-    {
-      /* The delta editor is already wrapped with a cancel editor,
-       * so there is no good reason to wrap it again.
-       *
-       * This code is commonly triggered by libsvn_client as both
-       * the ra as the wc layer wrap their editors with this cancellation
-       * editor */
-
-      cancel_func = NULL; /* Don't wrap again */
-      cancel_baton = NULL;
-    }
-
   if (cancel_func)
     {
       svn_delta_editor_t *tree_editor = svn_delta_default_editor(pool);
