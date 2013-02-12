@@ -1311,7 +1311,7 @@ svn_fs_fs__l2p_get_max_ids(apr_array_header_t **max_ids,
          = header->page_table_index[revision - header->first_revision];
       last_page_index
          = header->page_table_index[revision - header->first_revision + 1];
-      full_page_count = first_page_index - last_page_index - 1;
+      full_page_count = last_page_index - first_page_index - 1;
       item_count = full_page_count * header->page_size
                  + header->page_table[last_page_index - 1].entry_count;
 
