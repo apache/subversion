@@ -2672,8 +2672,8 @@ install_patched_prop_targets(patch_target_t *target,
         {
           if (! dry_run)
             {
-              SVN_ERR(svn_io_file_create2(target->local_abspath, "", 0,
-                                          scratch_pool));
+              SVN_ERR(svn_io_file_create_empty(target->local_abspath,
+                                               scratch_pool));
               SVN_ERR(svn_wc_add_from_disk2(ctx->wc_ctx, target->local_abspath,
                                             NULL /*props*/,
                                             /* suppress notification */

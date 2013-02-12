@@ -1139,17 +1139,10 @@ svn_io_make_dir_recursively(const char *path, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_io_file_create(const char *file,
-                                const char *contents,
-                                apr_pool_t *pool)
-{
-  return svn_error_trace(svn_io_file_create2(file, contents, 0, pool));
-}
-
-svn_error_t *svn_io_file_create2(const char *file,
-                                 const char *contents,
-                                 apr_size_t length,
-                                 apr_pool_t *pool)
+svn_error_t *svn_io_file_create_binary(const char *file,
+                                       const char *contents,
+                                       apr_size_t length,
+                                       apr_pool_t *pool)
 {
   apr_file_t *f;
   apr_size_t written;
@@ -1159,17 +1152,26 @@ svn_error_t *svn_io_file_create2(const char *file,
                            (APR_WRITE | APR_CREATE | APR_EXCL),
                            APR_OS_DEFAULT,
                            pool));
-  if (contents)
-    {
-      if (length == 0)
-        length = strlen(contents);
-      if (length)
-        err = svn_io_file_write_full(f, contents, length, &written, pool);
-    }
+  if (length)
+    err = svn_io_file_write_full(f, contents, length, &written, pool);
 
   return svn_error_trace(
                         svn_error_compose_create(err,
                                                  svn_io_file_close(f, pool)));
+}
+
+svn_error_t *svn_io_file_create(const char *file,
+                                const char *contents,
+                                apr_pool_t *pool)
+{
+  return svn_error_trace(svn_io_file_create_binary(file, contents,
+                                                   strlen(contents), pool));
+}
+
+svn_error_t *svn_io_file_create_empty(const char *file,
+                                      apr_pool_t *pool)
+{
+  return svn_error_trace(svn_io_file_create_binary(file, "", 0, pool));
 }
 
 svn_error_t *svn_io_dir_file_copy(const char *src_path,

@@ -230,7 +230,7 @@ create_db_logs_lock(svn_repos_t *repos, apr_pool_t *pool) {
   else
     contents = pre12_compat_unneeded_file_contents;
 
-  SVN_ERR_W(svn_io_file_create2(lockfile_path, contents, 0, pool),
+  SVN_ERR_W(svn_io_file_create(lockfile_path, contents, pool),
             _("Creating db logs lock file"));
 
   return SVN_NO_ERROR;
@@ -248,7 +248,7 @@ create_db_lock(svn_repos_t *repos, apr_pool_t *pool) {
   else
     contents = pre12_compat_unneeded_file_contents;
 
-  SVN_ERR_W(svn_io_file_create2(lockfile_path, contents, 0, pool),
+  SVN_ERR_W(svn_io_file_create(lockfile_path, contents, pool),
             _("Creating db lock file"));
 
   return SVN_NO_ERROR;
@@ -369,7 +369,7 @@ PREWRITTEN_HOOKS_TEXT
 
 #undef SCRIPT_NAME
 
-    SVN_ERR_W(svn_io_file_create2(this_path, contents, 0, pool),
+    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               _("Creating start-commit hook"));
 
     SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
@@ -461,7 +461,7 @@ PREWRITTEN_HOOKS_TEXT
 
 #undef SCRIPT_NAME
 
-    SVN_ERR_W(svn_io_file_create2(this_path, contents, 0, pool),
+    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               _("Creating pre-commit hook"));
 
     SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
@@ -539,7 +539,7 @@ PREWRITTEN_HOOKS_TEXT
 
 #undef SCRIPT_NAME
 
-    SVN_ERR_W(svn_io_file_create2(this_path, contents, 0, pool),
+    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               _("Creating pre-revprop-change hook"));
 
     SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
@@ -631,7 +631,7 @@ PREWRITTEN_HOOKS_TEXT
 
 #undef SCRIPT_NAME
 
-    SVN_ERR_W(svn_io_file_create2(this_path, contents, 0, pool),
+    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               "Creating pre-lock hook");
 
     SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
@@ -715,7 +715,7 @@ PREWRITTEN_HOOKS_TEXT
 
 #undef SCRIPT_NAME
 
-    SVN_ERR_W(svn_io_file_create2(this_path, contents, 0, pool),
+    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               "Creating pre-unlock hook");
 
     SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
@@ -779,7 +779,7 @@ PREWRITTEN_HOOKS_TEXT
 
 #undef SCRIPT_NAME
 
-    SVN_ERR_W(svn_io_file_create2(this_path, contents, 0, pool),
+    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               _("Creating post-commit hook"));
 
     SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
@@ -842,7 +842,7 @@ PREWRITTEN_HOOKS_TEXT
 
 #undef SCRIPT_NAME
 
-    SVN_ERR_W(svn_io_file_create2(this_path, contents, 0, pool),
+    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               "Creating post-lock hook");
 
     SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
@@ -903,7 +903,7 @@ PREWRITTEN_HOOKS_TEXT
 
 #undef SCRIPT_NAME
 
-    SVN_ERR_W(svn_io_file_create2(this_path, contents, 0, pool),
+    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               "Creating post-unlock hook");
 
     SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
@@ -971,7 +971,7 @@ PREWRITTEN_HOOKS_TEXT
 
 #undef SCRIPT_NAME
 
-    SVN_ERR_W(svn_io_file_create2(this_path, contents, 0, pool),
+    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               _("Creating post-revprop-change hook"));
 
     SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
@@ -1066,8 +1066,8 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "# min-encryption = 0"                                                       NL
 "# max-encryption = 256"                                                     NL;
 
-    SVN_ERR_W(svn_io_file_create2(svn_repos_svnserve_conf(repos, pool),
-                                  svnserve_conf_contents, 0, pool),
+    SVN_ERR_W(svn_io_file_create(svn_repos_svnserve_conf(repos, pool),
+                                 svnserve_conf_contents, pool),
               _("Creating svnserve.conf file"));
   }
 
@@ -1082,10 +1082,10 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "# harry = harryssecret"                                                     NL
 "# sally = sallyssecret"                                                     NL;
 
-    SVN_ERR_W(svn_io_file_create2(svn_dirent_join(repos->conf_path,
-                                                  SVN_REPOS__CONF_PASSWD,
-                                                  pool),
-                                  passwd_contents, 0, pool),
+    SVN_ERR_W(svn_io_file_create(svn_dirent_join(repos->conf_path,
+                                                 SVN_REPOS__CONF_PASSWD,
+                                                 pool),
+                                 passwd_contents, pool),
               _("Creating passwd file"));
   }
 
@@ -1124,10 +1124,10 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "# @harry_and_sally = rw"                                                    NL
 "# * = r"                                                                    NL;
 
-    SVN_ERR_W(svn_io_file_create2(svn_dirent_join(repos->conf_path,
-                                                  SVN_REPOS__CONF_AUTHZ,
-                                                  pool),
-                                  authz_contents, 0, pool),
+    SVN_ERR_W(svn_io_file_create(svn_dirent_join(repos->conf_path,
+                                                 SVN_REPOS__CONF_AUTHZ,
+                                                 pool),
+                                 authz_contents, pool),
               _("Creating authz file"));
   }
 
@@ -1153,10 +1153,10 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "# [pre-commit]"                                                             NL
 "# PATH = /usr/local/bin:/usr/bin:/usr/sbin"                                 NL;
 
-    SVN_ERR_W(svn_io_file_create2(svn_dirent_join(repos->conf_path,
-                                                  SVN_REPOS__CONF_HOOKS_ENV,
-                                                  pool),
-                                  hooks_env_contents, 0, pool),
+    SVN_ERR_W(svn_io_file_create(svn_dirent_join(repos->conf_path,
+                                                 SVN_REPOS__CONF_HOOKS_ENV,
+                                                 pool),
+                                 hooks_env_contents, pool),
               _("Creating hooks-env file"));
   }
 

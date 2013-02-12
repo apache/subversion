@@ -378,16 +378,16 @@ init_adm(svn_wc__db_t *db,
                           pool));
 
   /* Stamp ENTRIES and FORMAT files for old clients.  */
-  SVN_ERR(svn_io_file_create2(svn_wc__adm_child(local_abspath,
-                                                SVN_WC__ADM_ENTRIES,
-                                                pool),
-                              SVN_WC__NON_ENTRIES_STRING, 0,
-                              pool));
-  SVN_ERR(svn_io_file_create2(svn_wc__adm_child(local_abspath,
-                                                SVN_WC__ADM_FORMAT,
-                                                pool),
-                              SVN_WC__NON_ENTRIES_STRING, 0,
-                              pool));
+  SVN_ERR(svn_io_file_create(svn_wc__adm_child(local_abspath,
+                                               SVN_WC__ADM_ENTRIES,
+                                               pool),
+                             SVN_WC__NON_ENTRIES_STRING,
+                             pool));
+  SVN_ERR(svn_io_file_create(svn_wc__adm_child(local_abspath,
+                                               SVN_WC__ADM_FORMAT,
+                                               pool),
+                             SVN_WC__NON_ENTRIES_STRING,
+                             pool));
 
   return SVN_NO_ERROR;
 }
