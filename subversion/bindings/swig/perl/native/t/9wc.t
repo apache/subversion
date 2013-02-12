@@ -21,7 +21,8 @@
 #
 
 use strict;
-use Test::More tests => 13;
+use Test::More tests => 17;
+use Scalar::Util;
 
 # shut up about variables that are only used once.
 # these come from constants and variables used
@@ -53,17 +54,13 @@ is($externals->[0]->target_dir(), 'project1');
 is($externals->[0]->url(), 'http://svn.example.com/repos/project1');
 # TEST
 isa_ok($externals->[0]->revision(), '_p_svn_opt_revision_t');
-# XTEST
-# This and the other similiarly commented out tests below are
-# not working right now.  Need to figure out why but when you try
-# to access the fields in the _p_svn_opt_revision_t type it
-# gets corrupted.
-#is($externals->[0]->revision->kind, $SVN::Core::opt_revision_head);
+# TEST
+is($externals->[0]->revision->kind, $SVN::Core::opt_revision_head);
 # TEST
 isa_ok($externals->[0]->peg_revision(), '_p_svn_opt_revision_t');
-# XTEST
-#is($externals->[0]->peg_revision()->kind(),
-#   $SVN::Core::opt_revision_head);
+# TEST
+is($externals->[0]->peg_revision()->kind(),
+   $SVN::Core::opt_revision_head);
 
 # Check the second member
 # TEST
@@ -74,11 +71,11 @@ is($externals->[1]->target_dir(), 'Project 2');
 is($externals->[1]->url(), '^/repos/project2');
 # TEST
 isa_ok($externals->[1]->revision(), '_p_svn_opt_revision_t');
-# XTEST
-#is($externals->[1]->revision()->kind(), $SVN::Core::opt_revision_head);
+# TEST
+is($externals->[1]->revision()->kind(), $SVN::Core::opt_revision_head);
 # TEST
 isa_ok($externals->[1]->peg_revision(), '_p_svn_opt_revision_t');
-# XTEST
-#is($externals->[1]->peg_revision()->kind(),
-#   $SVN::Core::opt_revision_head);
+# TEST
+is($externals->[1]->peg_revision()->kind(),
+   $SVN::Core::opt_revision_head);
 

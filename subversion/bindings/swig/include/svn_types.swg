@@ -1170,7 +1170,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #ifdef SWIGPERL
 %typemap(in) svn_opt_revision_t * (svn_opt_revision_t rev) {
     $1 = &rev;
-    svn_swig_pl_set_revision(&rev, $input);
+    svn_swig_pl_set_revision(&$1, $input);
 }
 #endif
 
