@@ -242,6 +242,24 @@ get_option(const dav_resource *resource,
         }
     }
 
+  if (resource->info->repos->repos)
+    {
+        svn_error_t *serr;
+        svn_boolean_t has;
+
+        serr = svn_repos_has_capability(resource->info->repos->repos, &has,
+                                        SVN_REPOS_CAPABILITY_MERGEINFO,
+                                        r->pool);
+        if (serr)
+        return dav_svn__convert_err
+                    (serr, HTTP_INTERNAL_SERVER_ERROR,
+                    "Error fetching repository capabilities",
+                    resource->pool);
+
+        apr_table_set(r->headers_out, SVN_DAV_REPOSITORY_MERGEINFO,
+                    has ? "yes" : "no");
+    }
+
   /* Welcome to the 2nd generation of the svn HTTP protocol, now
      DeltaV-free!  If we're configured to advise this support, do so.  */
   if (resource->info->repos->v2_protocol)
