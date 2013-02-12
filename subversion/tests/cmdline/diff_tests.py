@@ -4298,6 +4298,99 @@ def simple_ancestry(sbox):
                                         '--show-copies-as-adds',
                                         '--no-diff-added')
 
+@XFail()
+def local_tree_replace(sbox):
+  "diff a replaced tree"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_add_text('extra', 'A/B/F/extra')
+  sbox.simple_commit()
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', '--keep-local',
+                                     sbox.ospath('A/B'))
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'add', sbox.ospath('A/B'))
+
+  # By default we ignore ancestry, so there are no differences against r1
+  expected_output = []
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', wc_dir,
+                                     '-r', '2',
+                                     '--show-copies-as-adds')
+  # Note that 'svn diff' without revision diffs against pristine, which would
+  # would show differences!
+
+  # And now check with ancestry
+
+  line = '===================================================================\n'
+
+  expected_output = svntest.verify.UnorderedOutput([
+    'Index: %s (deleted)\n' % sbox.path('A/B/lambda'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/B/E/alpha'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/B/E/beta'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/B/F/extra'),
+    line,
+    'Index: %s (added)\n' % sbox.path('A/B/lambda'),
+    line,
+    'Index: %s (added)\n' % sbox.path('A/B/E/alpha'),
+    line,
+    'Index: %s (added)\n' % sbox.path('A/B/E/beta'),
+    line,
+    'Index: %s (added)\n' % sbox.path('A/B/F/extra'),
+    line,
+  ])
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', wc_dir,
+                                     '-r', '2',
+                                     '--notice-ancestry',
+                                     '--show-copies-as-adds',
+                                     '--no-diff-added',
+                                     '--no-diff-deleted')
+
+  # Now create patches to verify the tree ordering
+  patch = os.path.abspath(os.path.join(wc_dir, 'ancestry.patch'))
+
+  cwd = os.getcwd()
+  os.chdir(wc_dir)
+  _, out, _ = svntest.actions.run_and_verify_svn(None, None, [],
+                                                 'diff', '.',
+                                                 '-r', '2',
+                                                 '--notice-ancestry',
+                                                 '--show-copies-as-adds')
+  svntest.main.file_append(patch, ''.join(out))
+  os.chdir(cwd)
+
+  # And try to apply it
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
+
+  expected_output = svntest.verify.UnorderedOutput([
+    'D         %s\n' % sbox.ospath('A/B/F/extra'),
+    'D         %s\n' % sbox.ospath('A/B/F'),
+    'D         %s\n' % sbox.ospath('A/B/E/beta'),
+    'D         %s\n' % sbox.ospath('A/B/E/alpha'),
+    'D         %s\n' % sbox.ospath('A/B/E'),
+    'D         %s\n' % sbox.ospath('A/B'),
+    'A         %s\n' % sbox.ospath('A/B'),
+    'A         %s\n' % sbox.ospath('A/B/lambda'),
+    'A         %s\n' % sbox.ospath('A/B/F'),
+    'A         %s\n' % sbox.ospath('A/B/F/extra'),
+    'A         %s\n' % sbox.ospath('A/B/E'),
+    'A         %s\n' % sbox.ospath('A/B/E/beta'),
+    'A         %s\n' % sbox.ospath('A/B/E/alpha'),
+    'A         %s\n' % sbox.ospath('A/B/lambda'),
+  ])
+  # And this currently fails because the ordering is broken, but also
+  # because it hits an issue in 'svn patch'
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'patch', patch, wc_dir)
+
 
 ########################################################################
 #Run the tests
@@ -4374,6 +4467,7 @@ test_list = [ None,
               diff_arbitrary_same,
               diff_git_format_wc_wc_dir_mv,
               simple_ancestry,
+              local_tree_replace,
               ]
 
 if __name__ == '__main__':
