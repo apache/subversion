@@ -1056,19 +1056,30 @@ report_local_only_file(struct edit_baton_t *eb,
 {
   svn_wc__db_t *db = eb->db;
   svn_diff_source_t *right_src;
-  const char *changelist;
-  apr_hash_t *right_props = NULL;
-  const char *source_file;
-  const char *translated_file;
+  svn_diff_source_t *copyfrom_src = NULL;
   svn_wc__db_status_t status;
+  svn_kind_t kind;
+  const svn_checksum_t *checksum;
+  const char *original_repos_relpath;
+  svn_revnum_t original_revision;
+  const char *changelist;
+  svn_boolean_t had_props;
+  svn_boolean_t props_mod;
+  apr_hash_t *pristine_props;
+  apr_hash_t *right_props = NULL;
+  const char *pristine_file;
+  const char *translated_file;
   svn_revnum_t revision;
   void *file_baton = NULL;
   svn_boolean_t skip = FALSE;
+  svn_boolean_t file_mod = TRUE;
 
-  SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, &changelist,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, &revision, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, &checksum, NULL,
+                               &original_repos_relpath, NULL, NULL,
+                               &original_revision, NULL, NULL, NULL,
+                               &changelist, NULL, NULL, &had_props,
+                               &props_mod, NULL, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
 
@@ -1076,36 +1087,54 @@ report_local_only_file(struct edit_baton_t *eb,
       && !svn_hash_gets(eb->changelist_hash, changelist))
     return SVN_NO_ERROR;
 
-  if (status == svn_wc__db_status_added)
-    SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL, NULL, db,
-                                     local_abspath, scratch_pool, scratch_pool));
-
-  /* We can't show additions for files that don't exist. */
-  SVN_ERR_ASSERT(status != svn_wc__db_status_deleted || eb->diff_pristine);
-
-  /* If the file was added *with history*, then we don't want to
-     see a comparison to the empty file;  we want the usual working
-     vs. text-base comparison. */
-  if (status == svn_wc__db_status_copied ||
-      status == svn_wc__db_status_moved_here)
+  if (status == svn_wc__db_status_deleted)
     {
-      /* Don't show anything if we're comparing to BASE, since by
-         definition there can't be any local modifications. */
-      if (eb->diff_pristine)
-        return SVN_NO_ERROR;
+      assert(eb->diff_pristine);
 
-      /* Otherwise show just the local modifications. */
-      return file_diff(eb, local_abspath, path, parent_baton, scratch_pool);
+      SVN_ERR(svn_wc__db_read_pristine_info(&status, &kind, NULL, NULL, NULL,
+                                            NULL, &checksum, NULL, &had_props,
+                                            &pristine_props,
+                                            db, local_abspath,
+                                            scratch_pool, scratch_pool));
+      props_mod = FALSE;
+    }
+  else if (!had_props)
+    pristine_props = apr_hash_make(scratch_pool);
+  else
+    SVN_ERR(svn_wc__db_read_pristine_props(&pristine_props,
+                                           db, local_abspath,
+                                           scratch_pool, scratch_pool));
+
+  assert(kind == svn_kind_file);
+
+  if (original_repos_relpath)
+    {
+      copyfrom_src = svn_diff__source_create(original_revision, scratch_pool);
+      copyfrom_src->repos_relpath = original_repos_relpath;
+      revision = original_revision;
     }
 
-  right_src = svn_diff__source_create(revision, scratch_pool);
+  if (props_mod || !SVN_IS_VALID_REVNUM(revision))
+    right_src = svn_diff__source_create(SVN_INVALID_REVNUM, scratch_pool);
+  else
+    {
+      if (eb->diff_pristine)
+        file_mod = FALSE;
+      else
+        SVN_ERR(svn_wc__internal_file_modified_p(&file_mod, db, local_abspath,
+                                                 FALSE, scratch_pool));
+
+      if (!file_mod)
+        right_src = svn_diff__source_create(revision, scratch_pool);
+      else
+        right_src = svn_diff__source_create(SVN_INVALID_REVNUM, scratch_pool);
+    }
 
   SVN_ERR(eb->processor->file_opened(&file_baton, &skip,
                                      path,
-                                     NULL,
+                                     NULL /* left_source */,
                                      right_src,
-                                     NULL,
+                                     copyfrom_src,
                                      parent_baton,
                                      eb->processor,
                                      scratch_pool, scratch_pool));
@@ -1113,36 +1142,41 @@ report_local_only_file(struct edit_baton_t *eb,
   if (skip)
     return SVN_NO_ERROR;
 
-  if (eb->diff_pristine)
-    SVN_ERR(svn_wc__db_read_pristine_props(&right_props, db, local_abspath,
-                                           scratch_pool, scratch_pool));
-  else
+  if (props_mod && !eb->diff_pristine)
     SVN_ERR(svn_wc__db_read_props(&right_props, db, local_abspath,
                                   scratch_pool, scratch_pool));
+  else
+    right_props = svn_prop_hash_dup(pristine_props, scratch_pool);
+
+  if (checksum)
+    SVN_ERR(svn_wc__db_pristine_get_path(&pristine_file, db, eb->anchor_abspath,
+                                         checksum, scratch_pool, scratch_pool));
+  else
+    pristine_file = NULL;
 
   if (eb->diff_pristine)
     {
-      SVN_ERR(get_pristine_file(&source_file, db, local_abspath,
-                                FALSE, scratch_pool, scratch_pool));
-      translated_file = source_file; /* No translation needed */
+      translated_file = pristine_file; /* No translation needed */
     }
   else
     {
-      source_file = local_abspath;
-
       SVN_ERR(svn_wc__internal_translated_file(
-           &translated_file, source_file, db, local_abspath,
+           &translated_file, local_abspath, db, local_abspath,
            SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
            eb->cancel_func, eb->cancel_baton,
            scratch_pool, scratch_pool));
     }
 
   SVN_ERR(eb->processor->file_added(path,
-                                    NULL /* copyfrom source */,
+                                    copyfrom_src,
                                     right_src,
-                                    NULL /* copyfrom file */,
+                                    copyfrom_src
+                                      ? pristine_file
+                                      : NULL,
                                     translated_file,
-                                    NULL /* copyfrom props */,
+                                    copyfrom_src
+                                      ? pristine_props
+                                      : NULL,
                                     right_props,
                                     file_baton,
                                     eb->processor,

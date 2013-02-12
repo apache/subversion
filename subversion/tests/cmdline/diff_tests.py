@@ -2528,7 +2528,7 @@ def diff_repos_working_added_dir(sbox):
     "@@ -0,0 +1 @@\n",
     "+content\n" ]
   expected_output_r1_WORKING = make_diff_header("X/bar", "revision 0",
-                                                "revision 2") + [
+                                                "working copy") + [
     "@@ -0,0 +1,2 @@\n",
     "+content\n",
     "+more content\n" ]
