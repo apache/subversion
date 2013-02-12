@@ -2388,20 +2388,21 @@ create_missing_parents(patch_target_t *target,
           target->skipped = TRUE;
           break;
         }
-      else if (wc_kind == svn_node_dir)
+      else if (disk_kind == svn_node_dir)
         {
-          if (is_deleted)
+          if (wc_kind == svn_node_dir && !is_deleted)
+            present_components++;
+          else if (is_deleted)
+            break;
+          else
             {
               target->skipped = TRUE;
               break;
             }
-
-          /* continue one level deeper */
-          present_components++;
         }
-      else if (disk_kind == svn_node_dir)
+      else if (wc_kind != svn_node_none && !is_deleted)
         {
-          /* Obstructed. ### BH: why? We can just add a directory */
+          /* Node is missing */
           target->skipped = TRUE;
           break;
         }
@@ -2412,7 +2413,6 @@ create_missing_parents(patch_target_t *target,
           break;
         }
     }
-
   if (! target->skipped)
     {
       local_abspath = abs_wc_path;
@@ -2504,37 +2504,58 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
   else
     {
       svn_node_kind_t parent_db_kind;
-
-      if (target->added)
+      if (target->added || target->replaced)
         {
+          const char *parent_abspath;
+
+          parent_abspath = svn_dirent_dirname(target->local_abspath,
+                                              pool);
           /* If the target's parent directory does not yet exist
            * we need to create it before we can copy the patched
            * result in place. */
           SVN_ERR(svn_wc_read_kind(&parent_db_kind, ctx->wc_ctx,
-                                   svn_dirent_dirname(target->local_abspath,
-                                                      pool),
-                                   FALSE, pool));
+                                   parent_abspath, FALSE, pool));
 
-          /* We don't allow targets to be added under dirs scheduled for
-           * deletion. */
-          if (parent_db_kind == svn_node_dir)
+          /* We can't add targets under nodes scheduled for delete, so add
+             a new directory if needed. */
+          if (parent_db_kind == svn_node_dir
+              || parent_db_kind == svn_node_file)
             {
-              const char *parent_abspath;
               svn_boolean_t is_deleted;
 
-              parent_abspath = svn_dirent_dirname(target->local_abspath,
-                                                  pool);
               SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, ctx->wc_ctx,
                                                      parent_abspath, pool));
               if (is_deleted)
+                SVN_ERR(create_missing_parents(target, abs_wc_path, ctx,
+                                               dry_run, pool));
+              else if (parent_db_kind != svn_node_dir)
+                target->skipped = TRUE;
+              else
                 {
-                  target->skipped = TRUE;
-                  return SVN_NO_ERROR;
+                  svn_node_kind_t disk_kind;
+                  SVN_ERR(svn_io_check_path(parent_abspath, &disk_kind, pool));
+                
+                  if (disk_kind != svn_node_dir)
+                    target->skipped = TRUE;
                 }
             }
           else
             SVN_ERR(create_missing_parents(target, abs_wc_path, ctx,
                                            dry_run, pool));
+
+        }
+      else
+        {
+          svn_node_kind_t wc_kind;
+          /* The target should exist */
+          SVN_ERR(svn_wc_read_kind(&wc_kind, ctx->wc_ctx,
+                                   target->local_abspath, FALSE, pool));
+
+          if (target->kind_on_disk == svn_node_none
+              || wc_kind != target->kind_on_disk)
+            {
+              target->skipped = TRUE;
+            }
         }
 
       if (! dry_run && ! target->skipped)
