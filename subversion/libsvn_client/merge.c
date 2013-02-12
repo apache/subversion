@@ -3290,6 +3290,125 @@ find_nearest_ancestor(const apr_array_header_t *children_with_mergeinfo,
   return NULL;
 }
 
+/* Find the highest level path in a merge target (possibly the merge target
+   itself) to use in a merge notification header.
+
+   Return the svn_client__merge_path_t * representing the most distant
+   ancestor in CHILDREN_WITH_MERGEINFO of LOCAL_ABSPATH where said
+   ancestor's first remaining ranges element (per the REMAINING_RANGES
+   member of the ancestor) intersect with the first remaining ranges element
+   for every intermediate ancestor svn_client__merge_path_t * of
+   LOCAL_ABSPATH.  If no such ancestor is found return NULL.
+
+   If the remaining ranges of the elements in CHILDREN_WITH_MERGEINFO
+   represent a forward merge, then set *START to the oldest revision found
+   in any of the intersecting ancestors and *END to the youngest revision
+   found.  If the remaining ranges of the elements in CHILDREN_WITH_MERGEINFO
+   represent a reverse merge, then set *START to the youngest revision
+   found and *END to the oldest revision found.  If no ancestors are found
+   then set *START and *END to SVN_INVALID_REVNUM.
+
+   If PATH_IS_OWN_ANCESTOR is TRUE then a child in CHILDREN_WITH_MERGEINFO
+   where child->abspath == PATH is considered PATH's ancestor.  If FALSE,
+   then child->abspath must be a proper ancestor of PATH.
+
+   See the CHILDREN_WITH_MERGEINFO ARRAY global comment for more
+   information. */
+static svn_client__merge_path_t *
+find_nearest_ancestor_with_intersecting_ranges(
+  svn_revnum_t *start,
+  svn_revnum_t *end,
+  const apr_array_header_t *children_with_mergeinfo,
+  svn_boolean_t path_is_own_ancestor,
+  const char *local_abspath)
+{
+  int i;
+  svn_client__merge_path_t *nearest_ancestor = NULL;
+
+  *start = SVN_INVALID_REVNUM;
+  *end = SVN_INVALID_REVNUM;
+
+  SVN_ERR_ASSERT_NO_RETURN(children_with_mergeinfo != NULL);
+
+  for (i = children_with_mergeinfo->nelts - 1; i >= 0 ; i--)
+    {
+      svn_client__merge_path_t *child =
+        APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
+
+      if (svn_dirent_is_ancestor(child->abspath, local_abspath)
+          && (path_is_own_ancestor
+              || strcmp(child->abspath, local_abspath) != 0))
+        {
+          if (nearest_ancestor == NULL)
+            {
+              /* Found an ancestor. */
+              nearest_ancestor = child;
+
+              if (child->remaining_ranges)
+                {
+                  svn_merge_range_t *r1 = APR_ARRAY_IDX(
+                    child->remaining_ranges, 0, svn_merge_range_t *);
+                  *start = r1->start;
+                  *end = r1->end;
+                }
+              else
+                {
+                  /* If CHILD->REMAINING_RANGES is null then LOCAL_ABSPATH
+                     is inside an absent subtree in the merge target. */
+                  *start = SVN_INVALID_REVNUM;
+                  *end = SVN_INVALID_REVNUM;
+                  break;
+                }
+            }
+          else
+            {
+              /* We'e found another ancestor for LOCAL_ABSPATH.  Do its
+                 first remaining range intersect with the previously
+                 found ancestor? */
+              svn_merge_range_t *r1 =
+                APR_ARRAY_IDX(nearest_ancestor->remaining_ranges, 0,
+                              svn_merge_range_t *);
+              svn_merge_range_t *r2 =
+                APR_ARRAY_IDX(child->remaining_ranges, 0,
+                              svn_merge_range_t *);
+
+              if (r1 && r2)
+                {
+                  svn_merge_range_t range1;
+                  svn_merge_range_t range2;
+                  svn_boolean_t reverse_merge = r1->start > r2->end;
+
+                  /* Flip endpoints if this is a reverse merge. */
+                  if (reverse_merge)
+                    {
+                      range1.start = r1->end;
+                      range1.end = r1->start;
+                      range2.start = r2->end;
+                      range2.end = r2->start;
+                    }
+                  else
+                    {
+                      range1.start = r1->start;
+                      range1.end = r1->end;
+                      range2.start = r2->start;
+                      range2.end = r2->end;
+                    }
+
+                  if (range1.start < range2.end && range2.start < range1.end)
+                    {
+                      *start = reverse_merge ?
+                        MAX(r1->start, r2->start) : MIN(r1->start, r2->start);
+                      *end = reverse_merge ?
+                        MIN(r1->end, r2->end) : MAX(r1->end, r2->end);
+                      nearest_ancestor = child;
+                    }
+                }
+            }
+        }
+    }
+  return nearest_ancestor;
+}
+
 /* Notify that we're starting to record mergeinfo for the merge of the
  * revision range RANGE into TARGET_ABSPATH.  RANGE should be null if the
  * merge sources are not from the same URL.
@@ -3356,7 +3475,8 @@ notify_merge_begin(merge_cmd_baton_t *merge_b,
                    apr_pool_t *scratch_pool)
 {
   svn_wc_notify_t *notify;
-  svn_merge_range_t *n_range = NULL;
+  svn_merge_range_t n_range =
+    {SVN_INVALID_REVNUM, SVN_INVALID_REVNUM, TRUE};
   const char *notify_abspath;
 
   if (! merge_b->ctx->notify_func2)
@@ -3382,8 +3502,10 @@ notify_merge_begin(merge_cmd_baton_t *merge_b,
            D    PARENT/CHILD
       */
 
-      child = find_nearest_ancestor(merge_b->notify_begin.nodes_with_mergeinfo,
-                                    ! delete_action, local_abspath);
+      child = find_nearest_ancestor_with_intersecting_ranges(
+        &(n_range.start), &(n_range.end),
+        merge_b->notify_begin.nodes_with_mergeinfo,
+        ! delete_action, local_abspath);
 
       if (!child && delete_action)
         {
@@ -3406,14 +3528,14 @@ notify_merge_begin(merge_cmd_baton_t *merge_b,
 
       merge_b->notify_begin.last_abspath = child->abspath;
 
-      if (child->absent || child->remaining_ranges->nelts == 0)
+      if (child->absent || child->remaining_ranges->nelts == 0
+          || !SVN_IS_VALID_REVNUM(n_range.start))
         {
           /* No valid information for an header */
           return SVN_NO_ERROR;
         }
 
       notify_abspath = child->abspath;
-      n_range = APR_ARRAY_IDX(child->remaining_ranges, 0, svn_merge_range_t *);
     }
   else
     {
@@ -3430,7 +3552,11 @@ notify_merge_begin(merge_cmd_baton_t *merge_b,
                                       ? svn_wc_notify_merge_begin
                                       : svn_wc_notify_foreign_merge_begin,
                                 scratch_pool);
-  notify->merge_range = n_range;
+
+  if (SVN_IS_VALID_REVNUM(n_range.start))
+    notify->merge_range = &n_range;
+  else
+    notify->merge_range = NULL;
 
   (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2, notify,
                                 scratch_pool);

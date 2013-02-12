@@ -18618,6 +18618,90 @@ def multiple_editor_drive_merge_notifications(sbox):
      " U   " + iota_branch_path + "\n"],
     [], 'merge', sbox.repo_url + '/iota', iota_branch_path)
 
+#----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
+@Issue(4317)
+# Test for issue #4317 "redundant notifications in single editor drive merge".
+def single_editor_drive_merge_notifications(sbox):
+  "single editor drive"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A_copy_path = sbox.ospath('A_COPY')
+  D_copy_path = sbox.ospath('A_COPY/D')
+  psi_copy_path = sbox.ospath('A_COPY/D/H/psi')
+  omega_copy_path = sbox.ospath('A_COPY/D/H/omega')
+  beta_copy_path = sbox.ospath('A_COPY/B/E/beta')
+
+  # r2 - r6: Copy A to A_COPY and then make some text changes under A.
+  set_up_branch(sbox)
+
+  # r7 - Subtree merge
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '^/A/D',
+                                     '-c4', D_copy_path)
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Previously this failed because of redundant merge notifications
+  # for r4-7:
+  #
+  #   >svn merge ^/A A_COPY
+  #   --- Merging r2 through r3 into 'A_COPY\D':
+  #   U    A_COPY\D\H\psi
+  #   --- Merging r5 through r7 into 'A_COPY\D':
+  #   U    A_COPY\D\H\omega
+  #   --- Merging r4 through r7 into 'A_COPY':
+  #   U    A_COPY\B\E\beta
+  #   --- Recording mergeinfo for merge of r2 through r7 into 'A_COPY':
+  #    U   A_COPY
+  #   --- Recording mergeinfo for merge of r2 through r7 into 'A_COPY\D':
+  #    U   A_COPY\D
+  #   --- Eliding mergeinfo from 'A_COPY\D':
+  #    U   A_COPY\D
+  svntest.actions.run_and_verify_svn(
+    None,
+    ["--- Merging r2 through r3 into '" + A_copy_path + "':\n",
+     "U    " + psi_copy_path + "\n",
+     "--- Merging r4 through r7 into '" + A_copy_path + "':\n",
+     "U    " + omega_copy_path + "\n",
+     "U    " + beta_copy_path + "\n",
+     "--- Recording mergeinfo for merge of r2 through r7 into '" +
+     A_copy_path + "':\n",
+     " U   " + A_copy_path + "\n",
+     "--- Recording mergeinfo for merge of r2 through r7 into '" +
+     D_copy_path + "':\n",
+     " U   " + D_copy_path + "\n",
+     "--- Eliding mergeinfo from '" + D_copy_path + "':\n",
+     " U   " + D_copy_path + "\n"],
+    [], 'merge', sbox.repo_url + '/A', A_copy_path)
+
+  # r8 and r9 - Commit and do reverse subtree merge.
+  sbox.simple_commit()
+  sbox.simple_update()
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '^/A/D',
+                                     '-c-4', D_copy_path)
+  sbox.simple_commit()
+
+  # Now try a reverse merge.  There should only be one notification for
+  # r7-5:
+  sbox.simple_update()
+  svntest.actions.run_and_verify_svn(
+    None,
+    ["--- Reverse-merging r7 through r5 into '" + A_copy_path + "':\n",
+     "U    " + beta_copy_path + "\n",
+     "U    " + omega_copy_path + "\n",
+     "--- Reverse-merging r4 through r3 into '" + A_copy_path + "':\n",
+     "U    " + psi_copy_path + "\n",
+     "--- Recording mergeinfo for reverse merge of r7 through r3 into '" +
+     A_copy_path + "':\n",
+     " U   " + A_copy_path + "\n",
+     "--- Recording mergeinfo for reverse merge of r7 through r3 into '" +
+     D_copy_path + "':\n",
+     " U   " + D_copy_path + "\n",
+     "--- Eliding mergeinfo from '" + D_copy_path + "':\n",
+     " U   " + D_copy_path + "\n"],
+    [], 'merge', '-r9:2', sbox.repo_url + '/A', A_copy_path)
+
 ########################################################################
 # Run the tests
 
@@ -18760,6 +18844,7 @@ test_list = [ None,
               merge_properties_on_adds,
               conflict_aborted_mergeinfo_described_partial_merge,
               multiple_editor_drive_merge_notifications,
+              single_editor_drive_merge_notifications,
              ]
 
 if __name__ == '__main__':
