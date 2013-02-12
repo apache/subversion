@@ -2533,8 +2533,8 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
               else
                 {
                   svn_node_kind_t disk_kind;
+
                   SVN_ERR(svn_io_check_path(parent_abspath, &disk_kind, pool));
-                
                   if (disk_kind != svn_node_dir)
                     target->skipped = TRUE;
                 }
@@ -2547,6 +2547,7 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
       else
         {
           svn_node_kind_t wc_kind;
+
           /* The target should exist */
           SVN_ERR(svn_wc_read_kind(&wc_kind, ctx->wc_ctx,
                                    target->local_abspath, FALSE, pool));
