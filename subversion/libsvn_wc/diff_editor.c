@@ -2428,7 +2428,7 @@ wrap_dir_closed(const char *relpath,
      are not providing them either */
   SVN_ERR(wb->callbacks->dir_closed(NULL, NULL, NULL,
                                     relpath,
-                                    (left_source == NULL) /* added */,
+                                    FALSE /* added */,
                                     wb->callback_baton,
                                     scratch_pool));
 
@@ -2453,7 +2453,7 @@ wrap_dir_changed(const char *relpath,
 
   SVN_ERR(wb->callbacks->dir_props_changed(&prop_state, &tree_conflicted,
                                            relpath,
-                                           (left_source == NULL) /* added */,
+                                           FALSE /* dir_was_added */,
                                            prop_changes,
                                            left_props,
                                            wb->callback_baton,
