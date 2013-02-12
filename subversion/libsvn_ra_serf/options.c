@@ -177,8 +177,11 @@ capabilities_headers_iterator_callback(void *baton,
         {
           /* The server doesn't know what repository we're referring
              to, so it can't just say capability_yes. */
-          svn_hash_sets(session->capabilities,
-                        SVN_RA_CAPABILITY_MERGEINFO, capability_server_yes);
+          if (!svn_hash_gets(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO))
+            {
+              svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+                            capability_server_yes);
+            }
         }
       if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
         {
@@ -300,6 +303,19 @@ capabilities_headers_iterator_callback(void *baton,
               svn_hash_sets(session->supported_posts, post_val, (void *)1);
             }
         }
+      else if (svn_cstring_casecmp(key, SVN_DAV_REPOSITORY_MERGEINFO) == 0)
+        {
+          if (svn_cstring_casecmp(val, "yes") == 0)
+            {
+              svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+                            capability_yes);
+            }
+          else if (svn_cstring_casecmp(val, "no") == 0)
+            {
+              svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+                            capability_no);
+            }
+        }
     }
 
   return 0;
@@ -329,7 +345,7 @@ options_response_handler(serf_request_t *request,
       svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_DEPTH,
                     capability_no);
       svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
-                    capability_no);
+                    NULL);
       svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
                     capability_no);
       svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
@@ -342,6 +358,12 @@ options_response_handler(serf_request_t *request,
       /* Then see which ones we can discover. */
       serf_bucket_headers_do(hdrs, capabilities_headers_iterator_callback,
                              opt_ctx);
+
+      /* Assume mergeinfo capability unsupported, if didn't recieve information
+         about server or repository mergeinfo capability. */
+      if (!svn_hash_gets(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO))
+        svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+                      capability_no);
 
       opt_ctx->headers_processed = TRUE;
     }
