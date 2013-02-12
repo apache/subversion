@@ -511,21 +511,37 @@ pick_recursively(pack_context_t *context,
                  rep_info_t *info)
 {
   rep_info_t *temp;
+  rep_info_t *current;
+  rep_info_t *below = NULL;
+
   do
     {
-      if (info->entry)
+      /* go down _1_ level but not on rep deltification bases */
+      if (   info->entry
+          && info->entry->type == SVN_FS_FS__ITEM_TYPE_NODEREV
+          && info->base)
+        below = info->base->next;
+
+      /* store the dependency / deltification chain in proper order */
+      for (current = info; current; current = temp)
         {
-          APR_ARRAY_PUSH(context->reps, svn_fs_fs__p2l_entry_t *)
-            = info->entry;
-          info->entry = NULL;
+          if (current->entry)
+            {
+              APR_ARRAY_PUSH(context->reps, svn_fs_fs__p2l_entry_t *)
+                = current->entry;
+              current->entry = NULL;
+            }
+
+          temp = current->base;
+          current->base = NULL;
         }
 
-      if (info->base)
-        {
-          pick_recursively(context, info->base);
-          info->base = NULL;
-        }
-
+      /* we basically stored the current node with its dependencies.
+         Process sub-directories now. */
+      if (below)
+        pick_recursively(context, below);
+      
+      /* continue with sibbling nodes */
       temp = info->next;
       info->next = NULL;
       info = temp;
@@ -537,6 +553,8 @@ static void
 sort_reps(pack_context_t *context)
 {
   int i;
+
+  /* Place all root directories and root nodes first */
   for (i = context->reps_infos->nelts - 1; i >= 0; --i)
     {
       rep_info_t *info = APR_ARRAY_IDX(context->reps_infos, i, rep_info_t *);
@@ -553,13 +571,15 @@ sort_reps(pack_context_t *context)
         while (info && info->entry);
     }
 
+  /* 2nd run: place nodes along the directory tree structure */
   for (i = context->reps_infos->nelts - 1; i >= 0; --i)
     {
       rep_info_t *info = APR_ARRAY_IDX(context->reps_infos, i, rep_info_t *);
-      if (info && info->entry == NULL && info->next)
+      if (info && info->entry == NULL)
         pick_recursively(context, info);
     }
 
+  /* 3rd place: place any left-overs */
   for (i = context->reps_infos->nelts - 1; i >= 0; --i)
     {
       rep_info_t *info = APR_ARRAY_IDX(context->reps_infos, i, rep_info_t *);
@@ -860,6 +880,7 @@ pack_log_addressed(svn_fs_t *fs,
   pack_context_t context = { 0 };
   int i;
   apr_size_t item_count = 0;
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   SVN_ERR(initialize_pack_context(&context, fs, pack_file_dir, shard_dir,
                                   shard_rev, max_items, cancel_func,
@@ -878,8 +899,8 @@ pack_log_addressed(svn_fs_t *fs,
       {
         if (context.start_rev < context.end_rev)
           {
-            SVN_ERR(pack_section(&context, pool));
-            SVN_ERR(reset_pack_context(&context, pool));
+            SVN_ERR(pack_section(&context, iterpool));
+            SVN_ERR(reset_pack_context(&context, iterpool));
             item_count = 0;
           }
 
@@ -888,18 +909,21 @@ pack_log_addressed(svn_fs_t *fs,
 
         if (APR_ARRAY_IDX(max_ids, i, apr_uint64_t) > max_items)
           {
-            SVN_ERR(append_revision(&context, pool));
+            SVN_ERR(append_revision(&context, iterpool));
             context.start_rev++;
           }
         else
           item_count += (apr_size_t)APR_ARRAY_IDX(max_ids, i, apr_uint64_t);
+
+        svn_pool_clear(iterpool);
       }
       
   if (context.start_rev < context.end_rev)
-    SVN_ERR(pack_section(&context, pool));
+    SVN_ERR(pack_section(&context, iterpool));
 
-  SVN_ERR(reset_pack_context(&context, pool));
-  SVN_ERR(close_pack_context(&context, pool));
+  SVN_ERR(reset_pack_context(&context, iterpool));
+  SVN_ERR(close_pack_context(&context, iterpool));
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
