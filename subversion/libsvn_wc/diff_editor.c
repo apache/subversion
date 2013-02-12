@@ -1842,7 +1842,6 @@ close_file(void *file_baton,
   svn_wc__db_status_t status;
   const char *original_repos_relpath;
   svn_revnum_t original_revision;
-  svn_error_t *err;
 
   /* The repository information; constructed from BASE + Changes */
   const char *repos_file;
