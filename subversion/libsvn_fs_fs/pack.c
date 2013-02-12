@@ -1133,6 +1133,7 @@ pack_shard(const char *revs_dir,
            void *cancel_baton,
            apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   const char *rev_shard_path, *rev_pack_file_dir;
   const char *revprops_shard_path, *revprops_pack_file_dir;
 
@@ -1175,12 +1176,11 @@ pack_shard(const char *revs_dir,
                                   cancel_func, cancel_baton, pool));
     }
 
-  /* Update the min-unpacked-rev file to reflect our newly packed shard.
-   * (This doesn't update ffd->min_unpacked_rev.  That will be updated by
-   * update_min_unpacked_rev() when necessary.) */
+  /* Update the min-unpacked-rev file to reflect our newly packed shard. */
   SVN_ERR(write_revnum_file(fs,
                             (svn_revnum_t)((shard + 1) * max_files_per_dir),
                             pool));
+  ffd->min_unpacked_rev = (svn_revnum_t)((shard + 1) * max_files_per_dir);
 
   /* Finally, remove the existing shard directories. */
   SVN_ERR(svn_io_remove_dir2(rev_shard_path, TRUE,
