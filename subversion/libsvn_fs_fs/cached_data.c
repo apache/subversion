@@ -48,6 +48,89 @@ block_read(void **result,
            apr_pool_t *result_pool,
            apr_pool_t *scratch_pool);
 
+
+/* Defined this to enable access logging via dgb__log_access
+#define SVN_FS_FS__LOG_ACCESS
+*/
+
+/* When SVN_FS_FS__LOG_ACCESS has been defined, write a line to console
+ * showing where REVISION, ITEM_INDEX is located in FS and use ITEM to
+ * show details on it's contents if not NULL.  Use SCRATCH_POOL for
+ * temporary allocations.
+ *
+ * For pre-format7 repos, the display will be very restricted.
+ */
+static svn_error_t *
+dgb__log_access(svn_fs_t *fs,
+                svn_revnum_t revision,
+                apr_uint64_t item_index,
+                void *item,
+                apr_pool_t *scratch_pool)
+{
+  /* no-op if this is not defined */
+#ifdef SVN_FS_FS__LOG_ACCESS
+  fs_fs_data_t *ffd = fs->fsap_data;
+  apr_off_t offset = -1;
+  apr_off_t end_offset = 0;
+  apr_array_header_t *entries;
+  svn_fs_fs__p2l_entry_t *entry = NULL;
+  int i;
+  static const char *types[] = {"none ", "frep ", "drep ", "fprop", "dprop",
+                                "node ", "chgs "};
+  const char *description = "";
+  const char *type = "<n/a>";
+
+  /* determine rev / pack file offset */
+  SVN_ERR(svn_fs_fs__item_offset(&offset, fs, revision, NULL, item_index,
+                                 scratch_pool));
+
+  /* most info is only available in format7 repos */
+  if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+    {
+      /* reverse index lookup: get item description in ENTRY */
+      SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, fs, revision, offset,
+                                          scratch_pool));
+      for (i = 0; !entry && i < entries->nelts; ++i)
+        {
+          svn_fs_fs__p2l_entry_t *current
+            = &APR_ARRAY_IDX(entries, i, svn_fs_fs__p2l_entry_t);
+          if (   current->revision == revision
+              && current->item_index == item_index)
+            entry = current;
+        }
+
+      if (entry)
+        {
+          /* more details */
+          end_offset = offset + entry->size;
+          type = types[entry->type];
+          if (entry->type == SVN_FS_FS__ITEM_TYPE_NODEREV)
+            {
+              node_revision_t *node = item;
+              description = apr_psprintf(scratch_pool, "%s (%d)",
+                                         node->created_path,
+                                         node->predecessor_count);
+            }
+        }
+
+      /* line output */
+      printf("%4ld|%4lx:%04lx-%4lx:%04lx %s %7ld %5ld %s\n",
+             revision / ffd->max_files_per_dir,
+             offset / ffd->block_size, offset % ffd->block_size,
+             end_offset / ffd->block_size, end_offset % ffd->block_size,
+             type, revision, item_index, description);
+    }
+  else
+    {
+      /* minimal logging for format 6 and earlier */
+      printf("%10lx %7ld\n", offset, revision);
+    }
+
+#endif
+  
+  return SVN_NO_ERROR;
+}
+
 /* Convenience wrapper around svn_io_file_aligned_seek, taking filesystem
    FS instead of a block size. */
 static svn_error_t *
@@ -255,6 +338,13 @@ svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
                                "Corrupt node-revision '%s'",
                                id_string->data);
     }
+
+  SVN_ERR(dgb__log_access(fs,
+                          svn_fs_fs__id_rev(id),
+                          svn_fs_fs__id_item(id),
+                          *noderev_p,
+                          pool));
+
   return svn_error_trace(err);
 }
 
@@ -570,6 +660,8 @@ create_rep_state_body(rep_state_t **rep_state,
             SVN_ERR(svn_cache__set(ffd->rep_header_cache, &key, rh, pool));
         }
     }
+
+  SVN_ERR(dgb__log_access(fs, rep->revision, rep->item_index, NULL, pool));
 
   rs->header_size = rh->header_size;
   *rep_state = rs;
@@ -1096,6 +1188,9 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
   svn_boolean_t is_cached;
   apr_off_t offset;
   SVN_ERR_ASSERT(rs->chunk_index <= this_chunk);
+
+  SVN_ERR(dgb__log_access(rs->file->fs, rs->revision, rs->item_index,
+                          NULL, pool));
 
   /* Read the next window.  But first, try to find it in the cache. */
   SVN_ERR(get_cached_window(nwin, rs, this_chunk, &is_cached, pool));
@@ -1979,6 +2074,8 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
   
   SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, pool));
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev, pool));
+
+  SVN_ERR(dgb__log_access(fs, rev, SVN_FS_FS__ITEM_INDEX_CHANGES, NULL, pool));
 
   if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
     {
