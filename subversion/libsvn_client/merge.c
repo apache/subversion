@@ -5276,20 +5276,65 @@ record_skips_in_mergeinfo(const char *mergeinfo_path,
   return SVN_NO_ERROR;
 }
 
+/* Data for reporting when a merge aborted because of raising conflicts.
+ *
+ * ### TODO: More info, including the ranges (or other parameters) the user
+ *     needs to complete the merge.
+ */
+typedef struct conflict_report_t
+{
+  const char *target_abspath;
+  /* The revision range during which conflicts were raised */
+  svn_merge_range_t *r;
+  svn_boolean_t was_last_range;
+} conflict_report_t;
+
+/* Return a new conflict_report_t containing deep copies of the parameters,
+ * allocated in RESULT_POOL. */
+static conflict_report_t *
+conflict_report_create(const char *target_abspath,
+                       const svn_merge_range_t *conflicted_range,
+                       svn_boolean_t was_last_range,
+                       apr_pool_t *result_pool)
+{
+  conflict_report_t *report = apr_palloc(result_pool, sizeof(*report));
+
+  report->target_abspath = apr_pstrdup(result_pool, target_abspath);
+  report->r = svn_merge_range_dup(conflicted_range, result_pool);
+  report->was_last_range = was_last_range;
+  return report;
+}
+
+/* Return a deep copy of REPORT, allocated in RESULT_POOL. */
+static conflict_report_t *
+conflict_report_dup(const conflict_report_t *report,
+                    apr_pool_t *result_pool)
+{
+  conflict_report_t *new = apr_pmemdup(result_pool, report, sizeof(*new));
+
+  new->target_abspath = apr_pstrdup(result_pool, report->target_abspath);
+  new->r = svn_merge_range_dup(report->r, result_pool);
+  return new;
+}
+
 /* Create and return an error structure appropriate for the unmerged
    revisions range(s). */
 static APR_INLINE svn_error_t *
-make_merge_conflict_error(const char *target_wcpath,
-                          svn_merge_range_t *r,
+make_merge_conflict_error(conflict_report_t *report,
+                          const char *target_wcpath,
                           apr_pool_t *scratch_pool)
 {
-  return svn_error_createf
-    (SVN_ERR_WC_FOUND_CONFLICT, NULL,
-     _("One or more conflicts were produced while merging r%ld:%ld into\n"
-       "'%s' --\n"
-       "resolve all conflicts and rerun the merge to apply the remaining\n"
-       "unmerged revisions"),
-     r->start, r->end, svn_dirent_local_style(target_wcpath, scratch_pool));
+  assert(!report || svn_dirent_is_absolute(report->target_abspath));
+
+  if (report && ! report->was_last_range)
+    return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
+       _("One or more conflicts were produced while merging r%ld:%ld into\n"
+         "'%s' --\n"
+         "resolve all conflicts and rerun the merge to apply the remaining\n"
+         "unmerged revisions"),
+       report->r->start, report->r->end,
+       svn_dirent_local_style(report->target_abspath, scratch_pool));
+  return SVN_NO_ERROR;
 }
 
 /* Helper for do_directory_merge().
@@ -9412,6 +9457,14 @@ ensure_ra_session_url(svn_ra_session_t **ra_session,
    by the merge.  Keys and values of the hash are both (const char *)
    absolute paths.  The contents of the hash are allocated in RESULT_POOL.
 
+   If the merge raises any conflicts while merging a revision range, return
+   early and set *CONFLICT_REPORT to describe the details.  (In this case,
+   notify that the merge is complete if and only if this was the last
+   revision range of the merge.)  If there are no conflicts, set
+   *CONFLICT_REPORT to NULL.  A revision range here can be one specified
+   in MERGE_SOURCES or an internally generated sub-range of one of those
+   when merge tracking is in use.
+
    For every (const merge_source_t *) merge source in MERGE_SOURCES, if
    SOURCE->ANCESTRAL is set, then the "left" and "right" side are
    ancestrally related.  (See 'MERGEINFO MERGE SOURCE NORMALIZATION'
@@ -9468,6 +9521,8 @@ ensure_ra_session_url(svn_ra_session_t **ra_session,
 static svn_error_t *
 do_merge(apr_hash_t **modified_subtrees,
          svn_mergeinfo_catalog_t result_catalog,
+         conflict_report_t **conflict_report,
+         svn_boolean_t *use_sleep,
          const apr_array_header_t *merge_sources,
          const merge_target_t *target,
          svn_ra_session_t *src_session,
@@ -9483,7 +9538,6 @@ do_merge(apr_hash_t **modified_subtrees,
          svn_boolean_t squelch_mergeinfo_notifications,
          svn_depth_t depth,
          const apr_array_header_t *merge_options,
-         svn_boolean_t *use_sleep,
          svn_client_ctx_t *ctx,
          apr_pool_t *result_pool,
          apr_pool_t *scratch_pool)
@@ -9499,6 +9553,8 @@ do_merge(apr_hash_t **modified_subtrees,
   const svn_diff_tree_processor_t *processor;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(target->abspath));
+
+  *conflict_report = NULL;
 
   /* Check from some special conditions when in record-only mode
      (which is a merge-tracking thing). */
@@ -9612,7 +9668,6 @@ do_merge(apr_hash_t **modified_subtrees,
       merge_source_t *source =
         APR_ARRAY_IDX(merge_sources, i, merge_source_t *);
       svn_merge_range_t *conflicted_range;
-      svn_error_t *err;
 
       svn_pool_clear(iterpool);
 
@@ -9657,45 +9712,48 @@ do_merge(apr_hash_t **modified_subtrees,
       /* Call our merge helpers based on SRC1's kind. */
       if (src1_kind != svn_node_dir)
         {
-          err = do_file_merge(result_catalog, &conflicted_range,
-                              source, target->abspath,
-                              processor,
-                              sources_related,
-                              squelch_mergeinfo_notifications,
-                              &merge_cmd_baton, iterpool, iterpool);
+          SVN_ERR(do_file_merge(result_catalog, &conflicted_range,
+                                source, target->abspath,
+                                processor,
+                                sources_related,
+                                squelch_mergeinfo_notifications,
+                                &merge_cmd_baton, iterpool, iterpool));
         }
       else /* Directory */
         {
-          err = do_directory_merge(result_catalog, &conflicted_range,
-                                   source, target->abspath,
-                                   processor,
-                                   depth, squelch_mergeinfo_notifications,
-                                   &merge_cmd_baton, iterpool, iterpool);
+          SVN_ERR(do_directory_merge(result_catalog, &conflicted_range,
+                                     source, target->abspath,
+                                     processor,
+                                     depth, squelch_mergeinfo_notifications,
+                                     &merge_cmd_baton, iterpool, iterpool));
         }
-      /* If conflicts occurred while merging any but the very last
-       * range of a multi-pass merge, we raise an error that aborts
-       * the merge. The user will be asked to resolve conflicts
-       * before merging subsequent revision ranges. */
-      if (conflicted_range
-          && (i < merge_sources->nelts - 1
-              || conflicted_range->end != source->loc2->rev))
-        {
-          err = svn_error_compose_create(
-                  err, make_merge_conflict_error(
-                         target->abspath, conflicted_range, scratch_pool));
-        }
-      SVN_ERR(err);
-
       /* The final mergeinfo on TARGET_WCPATH may itself elide. */
       if (! dry_run)
         SVN_ERR(svn_client__elide_mergeinfo(target->abspath, NULL,
                                             ctx, iterpool));
+
+      /* If conflicts occurred while merging any but the very last
+       * range of a multi-pass merge, we raise an error that aborts
+       * the merge. The user will be asked to resolve conflicts
+       * before merging subsequent revision ranges. */
+      if (conflicted_range)
+        {
+          *conflict_report = conflict_report_create(
+                               target->abspath, conflicted_range,
+                               (i == merge_sources->nelts - 1
+                                && conflicted_range->end == source->loc2->rev),
+                               result_pool);
+          break;
+        }
     }
 
-  /* Let everyone know we're finished here. */
-  notify_merge_completed(target->abspath, ctx, iterpool);
+  if (! *conflict_report || (*conflict_report)->was_last_range)
+    {
+      /* Let everyone know we're finished here. */
+      notify_merge_completed(target->abspath, ctx, iterpool);
+    }
 
-    /* Does the caller want to know what the merge has done? */
+  /* Does the caller want to know what the merge has done? */
   if (modified_subtrees)
     {
       *modified_subtrees =
@@ -9724,6 +9782,9 @@ do_merge(apr_hash_t **modified_subtrees,
    merge (unless this is record-only), followed by record-only merges
    to represent the changed mergeinfo.
 
+   Set *CONFLICT_REPORT to indicate if there were any conflicts, as in
+   do_merge().
+
    The diff to be merged is between SOURCE->loc1 (in URL1_RA_SESSION1)
    and SOURCE->loc2 (in URL2_RA_SESSION2); YCA is their youngest
    common ancestor.
@@ -9741,7 +9802,9 @@ do_merge(apr_hash_t **modified_subtrees,
    SCRATCH_POOL is used for all temporary allocations.
  */
 static svn_error_t *
-merge_cousins_and_supplement_mergeinfo(const merge_target_t *target,
+merge_cousins_and_supplement_mergeinfo(conflict_report_t **conflict_report,
+                                       svn_boolean_t *use_sleep,
+                                       const merge_target_t *target,
                                        svn_ra_session_t *URL1_ra_session,
                                        svn_ra_session_t *URL2_ra_session,
                                        const merge_source_t *source,
@@ -9753,8 +9816,8 @@ merge_cousins_and_supplement_mergeinfo(const merge_target_t *target,
                                        svn_boolean_t record_only,
                                        svn_boolean_t dry_run,
                                        const apr_array_header_t *merge_options,
-                                       svn_boolean_t *use_sleep,
                                        svn_client_ctx_t *ctx,
+                                       apr_pool_t *result_pool,
                                        apr_pool_t *scratch_pool)
 {
   apr_array_header_t *remove_sources, *add_sources;
@@ -9784,20 +9847,30 @@ merge_cousins_and_supplement_mergeinfo(const merge_target_t *target,
                                       scratch_pool),
             URL2_ra_session, ctx, scratch_pool, subpool));
 
+  *conflict_report = NULL;
+
   /* If this isn't a record-only merge, we'll first do a stupid
      point-to-point merge... */
   if (! record_only)
     {
       apr_array_header_t *faux_sources =
         apr_array_make(scratch_pool, 1, sizeof(merge_source_t *));
+
       modified_subtrees = apr_hash_make(scratch_pool);
       APR_ARRAY_PUSH(faux_sources, const merge_source_t *) = source;
-      SVN_ERR(do_merge(&modified_subtrees, NULL, faux_sources, target,
+      SVN_ERR(do_merge(&modified_subtrees, NULL, conflict_report, use_sleep,
+                       faux_sources, target,
                        URL1_ra_session, TRUE, same_repos,
                        FALSE /*ignore_mergeinfo*/, diff_ignore_ancestry,
                        force_delete, dry_run, FALSE, NULL, TRUE,
-                       FALSE, depth, merge_options, use_sleep, ctx,
+                       FALSE, depth, merge_options, ctx,
                        scratch_pool, subpool));
+      if (*conflict_report)
+        {
+          *conflict_report = conflict_report_dup(*conflict_report, result_pool);
+          if (! (*conflict_report)->was_last_range)
+            return SVN_NO_ERROR;
+        }
     }
   else if (! same_repos)
     {
@@ -9825,21 +9898,35 @@ merge_cousins_and_supplement_mergeinfo(const merge_target_t *target,
 
       notify_mergeinfo_recording(target->abspath, NULL, ctx, scratch_pool);
       svn_pool_clear(subpool);
-      SVN_ERR(do_merge(NULL, add_result_catalog, add_sources, target,
+      SVN_ERR(do_merge(NULL, add_result_catalog, conflict_report, use_sleep,
+                       add_sources, target,
                        URL1_ra_session, TRUE, same_repos,
                        FALSE /*ignore_mergeinfo*/, diff_ignore_ancestry,
                        force_delete, dry_run, TRUE,
                        modified_subtrees, TRUE,
-                       TRUE, depth, merge_options, use_sleep, ctx,
+                       TRUE, depth, merge_options, ctx,
                        scratch_pool, subpool));
+      if (*conflict_report)
+        {
+          *conflict_report = conflict_report_dup(*conflict_report, result_pool);
+          if (! (*conflict_report)->was_last_range)
+            return SVN_NO_ERROR;
+        }
       svn_pool_clear(subpool);
-      SVN_ERR(do_merge(NULL, remove_result_catalog, remove_sources, target,
+      SVN_ERR(do_merge(NULL, remove_result_catalog, conflict_report, use_sleep,
+                       remove_sources, target,
                        URL1_ra_session, TRUE, same_repos,
                        FALSE /*ignore_mergeinfo*/, diff_ignore_ancestry,
                        force_delete, dry_run, TRUE,
                        modified_subtrees, TRUE,
-                       TRUE, depth, merge_options, use_sleep, ctx,
+                       TRUE, depth, merge_options, ctx,
                        scratch_pool, subpool));
+      if (*conflict_report)
+        {
+          *conflict_report = conflict_report_dup(*conflict_report, result_pool);
+          if (! (*conflict_report)->was_last_range)
+            return SVN_NO_ERROR;
+        }
       SVN_ERR(svn_mergeinfo_catalog_merge(add_result_catalog,
                                           remove_result_catalog,
                                           scratch_pool, scratch_pool));
@@ -10078,6 +10165,7 @@ merge_locked(const char *source1,
   svn_ra_session_t *ra_session1, *ra_session2;
   apr_array_header_t *merge_sources;
   svn_error_t *err;
+  conflict_report_t *conflict_report;
   svn_boolean_t use_sleep = FALSE;
   svn_client__pathrev_t *yca = NULL;
   apr_pool_t *sesspool;
@@ -10174,7 +10262,9 @@ merge_locked(const char *source1,
           source.loc2 = source2_loc;
           source.ancestral = FALSE;
 
-          err = merge_cousins_and_supplement_mergeinfo(target,
+          err = merge_cousins_and_supplement_mergeinfo(&conflict_report,
+                                                       &use_sleep,
+                                                       target,
                                                        ra_session1,
                                                        ra_session2,
                                                        &source,
@@ -10185,7 +10275,8 @@ merge_locked(const char *source1,
                                                        force_delete,
                                                        record_only, dry_run,
                                                        merge_options,
-                                                       &use_sleep, ctx,
+                                                       ctx,
+                                                       scratch_pool,
                                                        scratch_pool);
           /* Close our temporary RA sessions (this could've happened
              after the second call to normalize_merge_sources() inside
@@ -10197,6 +10288,9 @@ merge_locked(const char *source1,
 
           if (err)
               return svn_error_trace(err);
+
+          SVN_ERR(make_merge_conflict_error(
+                    conflict_report, target->abspath, scratch_pool));
 
           return SVN_NO_ERROR;
         }
@@ -10214,11 +10308,12 @@ merge_locked(const char *source1,
       APR_ARRAY_PUSH(merge_sources, merge_source_t *) = &source;
     }
 
-  err = do_merge(NULL, NULL, merge_sources, target,
+  err = do_merge(NULL, NULL, &conflict_report, &use_sleep,
+                 merge_sources, target,
                  ra_session1, sources_related, same_repos,
                  ignore_mergeinfo, diff_ignore_ancestry, force_delete, dry_run,
                  record_only, NULL, FALSE, FALSE, depth, merge_options,
-                 &use_sleep, ctx, scratch_pool, scratch_pool);
+                 ctx, scratch_pool, scratch_pool);
 
   /* Close our temporary RA sessions. */
   svn_pool_destroy(sesspool);
@@ -10228,6 +10323,9 @@ merge_locked(const char *source1,
 
   if (err)
     return svn_error_trace(err);
+
+  SVN_ERR(make_merge_conflict_error(
+            conflict_report, target->abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -11338,6 +11436,7 @@ merge_reintegrate_locked(const char *source_path_or_url,
   svn_client__pathrev_t *source_loc;
   merge_source_t *source;
   svn_client__pathrev_t *yc_ancestor;
+  conflict_report_t *conflict_report;
   svn_boolean_t use_sleep;
   svn_error_t *err;
 
@@ -11363,7 +11462,9 @@ merge_reintegrate_locked(const char *source_path_or_url,
      ### isn't "ancestral" even if it is (in the degenerate case where
      ### source-left equals YCA). */
   source->ancestral = FALSE;
-  err = merge_cousins_and_supplement_mergeinfo(target,
+  err = merge_cousins_and_supplement_mergeinfo(&conflict_report,
+                                               &use_sleep,
+                                               target,
                                                target_ra_session,
                                                source_ra_session,
                                                source, yc_ancestor,
@@ -11373,14 +11474,17 @@ merge_reintegrate_locked(const char *source_path_or_url,
                                                FALSE /* force_delete */,
                                                FALSE /* record_only */,
                                                dry_run,
-                                               merge_options, &use_sleep,
-                                               ctx, scratch_pool);
+                                               merge_options,
+                                               ctx,
+                                               scratch_pool, scratch_pool);
 
   if (use_sleep)
     svn_io_sleep_for_timestamps(target_abspath, scratch_pool);
 
   if (err)
     return svn_error_trace(err);
+  SVN_ERR(make_merge_conflict_error(
+            conflict_report, target->abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -11441,6 +11545,7 @@ merge_peg_locked(const char *source_path_or_url,
   apr_array_header_t *merge_sources;
   svn_ra_session_t *ra_session;
   apr_pool_t *sesspool;
+  conflict_report_t *conflict_report;
   svn_boolean_t use_sleep = FALSE;
   svn_error_t *err;
   svn_boolean_t same_repos;
@@ -11471,11 +11576,14 @@ merge_peg_locked(const char *source_path_or_url,
 
   /* Do the real merge!  (We say with confidence that our merge
      sources are both ancestral and related.) */
-  err = do_merge(NULL, NULL, merge_sources, target, ra_session,
+  err = do_merge(NULL, NULL, &conflict_report, &use_sleep,
+                 merge_sources, target, ra_session,
                  TRUE /*sources_related*/, same_repos, ignore_mergeinfo,
                  diff_ignore_ancestry, force_delete, dry_run,
                  record_only, NULL, FALSE, FALSE, depth, merge_options,
-                 &use_sleep, ctx, sesspool, sesspool);
+                 ctx, sesspool, sesspool);
+  SVN_ERR(make_merge_conflict_error(
+            conflict_report, target->abspath, scratch_pool));
 
   if (use_sleep)
     svn_io_sleep_for_timestamps(target_abspath, sesspool);
@@ -12093,6 +12201,7 @@ do_automatic_merge_locked(const svn_client_automatic_merge_t *merge,
 {
   merge_target_t *target;
   svn_boolean_t reintegrate_like = merge->is_reintegrate_like;
+  conflict_report_t *conflict_report;
   svn_boolean_t use_sleep = FALSE;
   svn_error_t *err;
 
@@ -12150,7 +12259,9 @@ do_automatic_merge_locked(const svn_client_automatic_merge_t *merge,
       source.loc2 = merge->right;
       source.ancestral = ! merge->is_reintegrate_like;
 
-      err = merge_cousins_and_supplement_mergeinfo(target,
+      err = merge_cousins_and_supplement_mergeinfo(&conflict_report,
+                                                   &use_sleep,
+                                                   target,
                                                    base_ra_session,
                                                    right_ra_session,
                                                    &source, merge->yca,
@@ -12159,8 +12270,9 @@ do_automatic_merge_locked(const svn_client_automatic_merge_t *merge,
                                                    FALSE /*diff_ignore_ancestry*/,
                                                    force_delete, record_only,
                                                    dry_run,
-                                                   merge_options, &use_sleep,
-                                                   ctx, scratch_pool);
+                                                   merge_options,
+                                                   ctx,
+                                                   scratch_pool, scratch_pool);
     }
   else /* ! merge->is_reintegrate_like */
     {
@@ -12186,18 +12298,22 @@ do_automatic_merge_locked(const svn_client_automatic_merge_t *merge,
                                   scratch_pool),
         ra_session, ctx, scratch_pool, scratch_pool));
 
-      err = do_merge(NULL, NULL, merge_sources, target, ra_session,
+      err = do_merge(NULL, NULL, &conflict_report, &use_sleep,
+                     merge_sources, target, ra_session,
                      TRUE /*related*/, TRUE /*same_repos*/,
                      FALSE /*ignore_mergeinfo*/, diff_ignore_ancestry,
                      force_delete, dry_run,
                      record_only, NULL, FALSE, FALSE, depth, merge_options,
-                     &use_sleep, ctx, scratch_pool, scratch_pool);
+                     ctx, scratch_pool, scratch_pool);
     }
 
   if (use_sleep)
     svn_io_sleep_for_timestamps(target_abspath, scratch_pool);
 
   SVN_ERR(err);
+
+  SVN_ERR(make_merge_conflict_error(
+            conflict_report, target->abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
