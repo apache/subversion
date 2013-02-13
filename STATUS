@@ -246,6 +246,15 @@ Candidate changes:
    Votes:
      +1: philip, ivan
 
+ * r1445753
+   Fix issue #3741, 'externals not removed when working copy is made shallow'.
+   Justification:
+     Externals linger after update --set-depth empty, causing unnecessary
+     tree conflicts when the working copy is updated back to depth infinity.
+     See regression test and also the recipe script attached to issue #3741.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
