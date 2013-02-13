@@ -3042,6 +3042,7 @@ test_get_file_revs(const svn_test_opts_t *opts,
   };
   apr_hash_t *ht_trunk_results = apr_hash_make(subpool);
   apr_hash_t *ht_branch_results = apr_hash_make(subpool);
+  apr_hash_t *ht_reverse_results = apr_hash_make(subpool);
 
   for (i = 0; i < sizeof(trunk_results) / sizeof(trunk_results[0]); i++)
     apr_hash_set(ht_trunk_results, &trunk_results[i].rev,
@@ -3050,6 +3051,11 @@ test_get_file_revs(const svn_test_opts_t *opts,
   for (i = 0; i < sizeof(branch_results) / sizeof(branch_results[0]); i++)
     apr_hash_set(ht_branch_results, &branch_results[i].rev,
                  sizeof(svn_revnum_t), &branch_results[i]);
+
+  for (i = 0; i < sizeof(trunk_results) / sizeof(trunk_results[0]); i++)
+    if (!trunk_results[i].result_of_merge)
+      apr_hash_set(ht_reverse_results, &trunk_results[i].rev,
+                   sizeof(svn_revnum_t), &trunk_results[i]);
 
   /* Create the repository and verify blame results. */
   SVN_ERR(svn_test__create_blame_repository(&repos, "test-repo-get-filerevs",
@@ -3060,7 +3066,7 @@ test_get_file_revs(const svn_test_opts_t *opts,
 
   /* Verify blame of /trunk/A/mu */
   SVN_ERR(svn_repos_get_file_revs2(repos, "/trunk/A/mu", 0, youngest_rev,
-                                   1, NULL, NULL,
+                                   TRUE, NULL, NULL,
                                    file_rev_handler,
                                    ht_trunk_results,
                                    subpool));
@@ -3069,13 +3075,20 @@ test_get_file_revs(const svn_test_opts_t *opts,
   /* Verify blame of /branches/1.0.x/A/mu */
   SVN_ERR(svn_repos_get_file_revs2(repos, "/branches/1.0.x/A/mu", 0,
                                    youngest_rev,
-                                   1, NULL, NULL,
+                                   TRUE, NULL, NULL,
                                    file_rev_handler,
                                    ht_branch_results,
                                    subpool));
   SVN_TEST_ASSERT(apr_hash_count(ht_branch_results) == 0);
 
   /* ### TODO: Verify blame of /branches/1.0.x/A/mu in range 6-7 */
+
+  SVN_ERR(svn_repos_get_file_revs2(repos, "/trunk/A/mu", youngest_rev, 0,
+                                   FALSE, NULL, NULL,
+                                   file_rev_handler,
+                                   ht_reverse_results,
+                                   subpool));
+  SVN_TEST_ASSERT(apr_hash_count(ht_reverse_results) == 0);
 
   svn_pool_destroy(subpool);
 

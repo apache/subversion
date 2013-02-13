@@ -1909,6 +1909,10 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
  * If @a include_merged_revisions is TRUE, revisions which a included as a
  * result of a merge between @a start and @a end will be included.
  *
+ * Since Subversion 1.8 this function has been enabled to support reversion
+ * the revision range for @a include_merged_revision @c FALSE reporting by
+ * switching @a start with @a end.
+ *
  * @since New in 1.5.
  */
 svn_error_t *

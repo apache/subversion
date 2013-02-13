@@ -1675,6 +1675,10 @@ svn_ra_get_location_segments(svn_ra_session_t *session,
  * server doesn't implement it, an alternative (but much slower)
  * implementation based on svn_ra_get_log2() is used.
  *
+ * On subversion 1.8 and newer servers this function has been enabled
+ * to support reversion of the revision range for @a include_merged_revision
+ * @c FALSE reporting by switching  @a end with @a start.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
