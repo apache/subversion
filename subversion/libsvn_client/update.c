@@ -209,6 +209,7 @@ update_internal(svn_revnum_t *result_rev,
   struct svn_client__dirent_fetcher_baton_t dfb;
   svn_boolean_t server_supports_depth;
   svn_boolean_t tree_conflicted;
+  svn_boolean_t cropping_target;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
@@ -268,7 +269,8 @@ update_internal(svn_revnum_t *result_rev,
     }
 
   /* We may need to crop the tree if the depth is sticky */
-  if (depth_is_sticky && depth < svn_depth_infinity)
+  cropping_target = (depth_is_sticky && depth < svn_depth_infinity);
+  if (cropping_target)
     {
       svn_node_kind_t target_kind;
 
@@ -421,7 +423,8 @@ update_internal(svn_revnum_t *result_rev,
   /* We handle externals after the update is complete, so that
      handling external items (and any errors therefrom) doesn't delay
      the primary operation.  */
-  if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
+  if ((SVN_DEPTH_IS_RECURSIVE(depth) || cropping_target)
+      && (! ignore_externals))
     {
       apr_hash_t *new_externals;
       apr_hash_t *new_depths;

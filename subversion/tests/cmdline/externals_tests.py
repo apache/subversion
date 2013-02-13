@@ -2309,6 +2309,45 @@ def url_to_wc_copy_of_externals(sbox):
     "OUTPUT", expected_stdout, [], 0, 'copy', repo_url + '/A/C',
     os.path.join(wc_dir, 'External-WC-to-URL-Copy'))
 
+# Test for issue #3741 'externals not removed when working copy is made shallow'
+@Issue(3741)
+def update_dir_external_shallow(sbox):
+  "shallow update should remove externals"
+
+  sbox.build()
+
+  # Create an external in r2
+  sbox.simple_propset('svn:externals', '^/A/D/H X', 'A/B/E')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Now make A/B/E shallow by updating with "--set-depth empty"
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'A/B/E/alpha' : Item(status='D '),
+    'A/B/E/X'     : Item(verb='Removed external'),
+    'A/B/E/beta'  : Item(status='D '),
+  })
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output, None, None,
+                                        None, None, None, None, None, False,
+                                        '--set-depth=empty',
+                                        sbox.ospath('A/B/E'))
+
+  # And bring the external back by updating with "--set-depth infinity"
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'A/B/E/X/psi'   : Item(status='A '),
+    'A/B/E/X/chi'   : Item(status='A '),
+    'A/B/E/X/omega' : Item(status='A '),
+    'A/B/E/alpha'   : Item(status='A '),
+    'A/B/E/beta'    : Item(status='A '),
+  })
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output, None, None,
+                                        None, None, None, None, None, False,
+                                        '--set-depth=infinity',
+                                        sbox.ospath('A/B/E'))
+
+
 ########################################################################
 # Run the tests
 
@@ -2353,6 +2392,7 @@ test_list = [ None,
               remap_file_external_with_prop_del,
               dir_external_with_dash_r_only,
               url_to_wc_copy_of_externals,
+              update_dir_external_shallow,
              ]
 
 if __name__ == '__main__':
