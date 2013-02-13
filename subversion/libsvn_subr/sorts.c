@@ -270,3 +270,22 @@ svn_sort__array_delete(apr_array_header_t *arr,
       arr->nelts -= elements_to_delete;
     }
 }
+
+void
+svn_sort__array_reverse(apr_array_header_t *array,
+                        apr_pool_t *scratch_pool)
+{
+  int i;
+
+  assert(array->elt_size == sizeof(void *));
+
+  for (i = 0; i < array->nelts / 2; i++)
+    {
+      int swap_index = array->nelts - i - 1;
+      void *tmp = APR_ARRAY_IDX(array, i, void *);
+
+      APR_ARRAY_IDX(array, i, void *) =
+        APR_ARRAY_IDX(array, swap_index, void *);
+      APR_ARRAY_IDX(array, swap_index, void *) = tmp;
+    }
+}
