@@ -991,7 +991,21 @@ def diff_head_of_moved_file(sbox):
   # Modify the file to ensure that the diff is non-empty.
   svntest.main.file_append(new_mu_path, "\nActually, it's a new mu.")
 
-  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+  mu_new = sbox.ospath('A/mu.new').replace('\\','/')
+
+  expected_output = [
+    'Index: %s\n' % mu_new,
+    '===================================================================\n',
+    '--- %s\t(.../mu)\t(revision 1)\n' % mu_new,
+    '+++ %s\t(.../mu.new)\t(working copy)\n' % mu_new,
+    '@@ -1 +1,3 @@\n',
+    ' This is the file \'mu\'.\n',
+    '+\n',
+    '+Actually, it\'s a new mu.\n',
+    '\ No newline at end of file\n',
+  ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-r', 'HEAD', new_mu_path)
 
 
@@ -2092,45 +2106,36 @@ def diff_property_changes_to_base(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
+  # Each of these returns an expected diff as a list of lines.
+  def add_diff_A(r1, r2):
+    return (make_diff_header("A", r1, r2) +
+            make_diff_prop_header("A") +
+            make_diff_prop_added("dirprop", "r2value"))
 
-  add_diff = \
-    make_diff_prop_header("A") + \
-    make_diff_prop_added("dirprop", "r2value") + \
-    make_diff_prop_header("iota") + \
-    make_diff_prop_added("fileprop", "r2value")
+  def add_diff_iota(r1, r2):
+    return (make_diff_header("iota", r1, r2) +
+            make_diff_prop_header("iota") +
+            make_diff_prop_added("fileprop", "r2value"))
 
-  del_diff = \
-    make_diff_prop_header("A") + \
-    make_diff_prop_deleted("dirprop", "r2value") + \
-    make_diff_prop_header("iota") + \
-    make_diff_prop_deleted("fileprop", "r2value")
+  def del_diff_A(r1, r2):
+    return (make_diff_header("A", r1, r2) +
+            make_diff_prop_header("A") +
+            make_diff_prop_deleted("dirprop", "r2value"))
 
+  def del_diff_iota(r1, r2):
+    return (make_diff_header("iota", r1, r2) +
+            make_diff_prop_header("iota") +
+            make_diff_prop_deleted("fileprop", "r2value"))
 
-  expected_output_r1_r2 = list(make_diff_header('A', 'revision 1', 'revision 2')
-                               + add_diff[:6]
-                               + make_diff_header('iota', 'revision 1',
-                                                   'revision 2')
-                               + add_diff[7:])
-
-  expected_output_r2_r1 = list(make_diff_header('A', 'revision 2',
-                                                'revision 1')
-                               + del_diff[:6]
-                               + make_diff_header('iota', 'revision 2',
-                                                  'revision 1')
-                               + del_diff[7:])
-
-  expected_output_r1 = list(make_diff_header('A', 'revision 1',
-                                             'working copy')
-                            + add_diff[:6]
-                            + make_diff_header('iota', 'revision 1',
-                                               'working copy')
-                            + add_diff[7:])
-  expected_output_base_r1 = list(make_diff_header('A', 'working copy',
-                                                  'revision 1')
-                                 + del_diff[:6]
-                                 + make_diff_header('iota', 'working copy',
-                                                    'revision 1')
-                                 + del_diff[7:])
+  # Each of these is an expected diff as a list of lines.
+  expected_output_r1_r2 =   (add_diff_A('revision 1', 'revision 2') +
+                             add_diff_iota('revision 1', 'revision 2'))
+  expected_output_r2_r1 =   (del_diff_A('revision 2', 'revision 1') +
+                             del_diff_iota('revision 2', 'revision 1'))
+  expected_output_r1 =      (add_diff_A('revision 1', 'working copy') +
+                             add_diff_iota('revision 1', 'working copy'))
+  expected_output_base_r1 = (del_diff_A('working copy', 'revision 1') +
+                             del_diff_iota('working copy', 'revision 1'))
 
   os.chdir(sbox.wc_dir)
 
@@ -2938,146 +2943,117 @@ def diff_with_depth(sbox):
   "test diffs at various depths"
 
   sbox.build()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
   B_path = os.path.join('A', 'B')
 
-  diff = make_diff_prop_header(".") + \
-         make_diff_prop_added("foo1", "bar1") + \
-         make_diff_prop_header("iota") + \
-         make_diff_prop_added("foo2", "bar2") + \
-         make_diff_prop_header("A") + \
-         make_diff_prop_added("foo3", "bar3") + \
-         make_diff_prop_header("A/B") + \
-         make_diff_prop_added("foo4", "bar4")
+  sbox.simple_propset('foo1', 'bar1', '.')
+  sbox.simple_propset('foo2', 'bar2', 'iota')
+  sbox.simple_propset('foo3', 'bar3', 'A')
+  sbox.simple_propset('foo4', 'bar4', 'A/B')
 
-  dot_header = make_diff_header(".", "revision 1", "working copy")
-  iota_header = make_diff_header('iota', "revision 1", "working copy")
-  A_header = make_diff_header('A', "revision 1", "working copy")
-  B_header = make_diff_header(B_path, "revision 1", "working copy")
+  def create_expected_diffs(r1, r2):
+    diff_dot = \
+      make_diff_header(".", r1, r2) + \
+      make_diff_prop_header(".") + \
+      make_diff_prop_added("foo1", "bar1")
+    diff_iota = \
+      make_diff_header('iota', r1, r2) + \
+      make_diff_prop_header("iota") + \
+      make_diff_prop_added("foo2", "bar2")
+    diff_A = \
+      make_diff_header('A', r1, r2) + \
+      make_diff_prop_header("A") + \
+      make_diff_prop_added("foo3", "bar3")
+    diff_AB = \
+      make_diff_header(B_path, r1, r2) + \
+      make_diff_prop_header("A/B") + \
+      make_diff_prop_added("foo4", "bar4")
 
-  expected_empty = svntest.verify.UnorderedOutput(dot_header + diff[:7])
-  expected_files = svntest.verify.UnorderedOutput(dot_header + diff[:7]
-                                                  + iota_header + diff[8:14])
-  expected_immediates = svntest.verify.UnorderedOutput(dot_header + diff[:7]
-                                                       + iota_header
-                                                       + diff[8:14]
-                                                       + A_header + diff[15:21])
-  expected_infinity = svntest.verify.UnorderedOutput(dot_header + diff[:7]
-                                                       + iota_header
-                                                       + diff[8:14]
-                                                       + A_header + diff[15:21]
-                                                       + B_header + diff[22:])
-
-  os.chdir(sbox.wc_dir)
-
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset',
-                                     'foo1', 'bar1', '.')
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset',
-                                     'foo2', 'bar2', 'iota')
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset',
-                                     'foo3', 'bar3', 'A')
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset',
-                                     'foo4', 'bar4', os.path.join('A', 'B'))
+    expected = {}
+    expected['empty'] =      svntest.verify.UnorderedOutput(diff_dot)
+    expected['files'] =      svntest.verify.UnorderedOutput(diff_dot +
+                                                            diff_iota)
+    expected['immediates'] = svntest.verify.UnorderedOutput(diff_dot +
+                                                            diff_iota +
+                                                            diff_A)
+    expected['infinity'] =   svntest.verify.UnorderedOutput(diff_dot +
+                                                            diff_iota +
+                                                            diff_A +
+                                                            diff_AB)
+    return expected
 
   # Test wc-wc diff.
-  svntest.actions.run_and_verify_svn(None, expected_empty, [],
-                                     'diff', '--depth', 'empty')
-  svntest.actions.run_and_verify_svn(None, expected_files, [],
-                                     'diff', '--depth', 'files')
-  svntest.actions.run_and_verify_svn(None, expected_immediates, [],
-                                     'diff', '--depth', 'immediates')
-  svntest.actions.run_and_verify_svn(None, expected_infinity, [],
-                                     'diff', '--depth', 'infinity')
+  expected_diffs = create_expected_diffs("revision 1", "working copy")
+  for depth in ['empty', 'files', 'immediates', 'infinity']:
+    svntest.actions.run_and_verify_svn(None, expected_diffs[depth], [],
+                                       'diff', '--depth', depth)
 
   # Commit the changes.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', '')
 
-  dot_header = make_diff_header(".", "revision 1", "revision 2")
-  iota_header = make_diff_header('iota', "revision 1", "revision 2")
-  A_header = make_diff_header('A', "revision 1", "revision 2")
-  B_header = make_diff_header(B_path, "revision 1", "revision 2")
-
-  expected_empty = svntest.verify.UnorderedOutput(dot_header + diff[:7])
-  expected_files = svntest.verify.UnorderedOutput(dot_header + diff[:7]
-                                                  + iota_header + diff[8:14])
-  expected_immediates = svntest.verify.UnorderedOutput(dot_header + diff[:7]
-                                                       + iota_header
-                                                       + diff[8:14]
-                                                       + A_header + diff[15:21])
-  expected_infinity = svntest.verify.UnorderedOutput(dot_header + diff[:6]
-                                                       + iota_header
-                                                       + diff[8:14]
-                                                       + A_header + diff[15:21]
-                                                       + B_header + diff[22:])
-
   # Test repos-repos diff.
-  svntest.actions.run_and_verify_svn(None, expected_empty, [],
-                                     'diff', '-c2', '--depth', 'empty')
-  svntest.actions.run_and_verify_svn(None, expected_files, [],
-                                     'diff', '-c2', '--depth', 'files')
-  svntest.actions.run_and_verify_svn(None, expected_immediates, [],
-                                     'diff', '-c2', '--depth', 'immediates')
-  svntest.actions.run_and_verify_svn(None, expected_infinity, [],
-                                     'diff', '-c2', '--depth', 'infinity')
+  expected_diffs = create_expected_diffs("revision 1", "revision 2")
+  for depth in ['empty', 'files', 'immediates', 'infinity']:
+    svntest.actions.run_and_verify_svn(None, expected_diffs[depth], [],
+                                       'diff', '-c2', '--depth', depth)
 
-  diff_wc_repos = \
-    make_diff_header("A/B", "revision 2", "working copy") + \
-    make_diff_prop_header("A/B") + \
-    make_diff_prop_modified("foo4", "bar4", "baz4") + \
-    make_diff_header("A", "revision 2", "working copy") + \
-    make_diff_prop_header("A") + \
-    make_diff_prop_modified("foo3", "bar3", "baz3") + \
-    make_diff_header("A/mu", "revision 1", "working copy") + [
-    "@@ -1 +1,2 @@\n",
-    " This is the file 'mu'.\n",
-    "+new text\n",
-    ] + make_diff_header("iota", "revision 2", "working copy") + [
-    "@@ -1 +1,2 @@\n",
-    " This is the file 'iota'.\n",
-    "+new text\n",
-    ] + make_diff_prop_header("iota") + \
-    make_diff_prop_modified("foo2", "bar2", "baz2") + \
-    make_diff_header(".", "revision 2", "working copy") + \
-    make_diff_prop_header(".") + \
-    make_diff_prop_modified("foo1", "bar1", "baz1")
+  def create_expected_repos_wc_diffs():
+    diff_AB = \
+      make_diff_header("A/B", "revision 2", "working copy") + \
+      make_diff_prop_header("A/B") + \
+      make_diff_prop_modified("foo4", "bar4", "baz4")
+    diff_A = \
+      make_diff_header("A", "revision 2", "working copy") + \
+      make_diff_prop_header("A") + \
+      make_diff_prop_modified("foo3", "bar3", "baz3")
+    diff_mu = \
+      make_diff_header("A/mu", "revision 1", "working copy") + [
+      "@@ -1 +1,2 @@\n",
+      " This is the file 'mu'.\n",
+      "+new text\n",]
+    diff_iota = \
+      make_diff_header("iota", "revision 2", "working copy") + [
+      "@@ -1 +1,2 @@\n",
+      " This is the file 'iota'.\n",
+      "+new text\n",
+      ] + make_diff_prop_header("iota") + \
+      make_diff_prop_modified("foo2", "bar2", "baz2")
+    diff_dot = \
+      make_diff_header(".", "revision 2", "working copy") + \
+      make_diff_prop_header(".") + \
+      make_diff_prop_modified("foo1", "bar1", "baz1")
 
-  expected_empty = svntest.verify.UnorderedOutput(diff_wc_repos[49:])
-  expected_files = svntest.verify.UnorderedOutput(diff_wc_repos[33:])
-  expected_immediates = svntest.verify.UnorderedOutput(diff_wc_repos[13:26]
-                                                       +diff_wc_repos[33:])
-  expected_infinity = svntest.verify.UnorderedOutput(diff_wc_repos[:])
+    expected = {}
+    expected['empty'] = svntest.verify.UnorderedOutput(diff_dot)
+    expected['files'] = svntest.verify.UnorderedOutput(diff_iota +
+                                                       diff_dot)
+    expected['immediates'] = svntest.verify.UnorderedOutput(diff_A +
+                                                            diff_iota +
+                                                            diff_dot)
+    expected['infinity'] = svntest.verify.UnorderedOutput(diff_AB +
+                                                          diff_A +
+                                                          diff_mu +
+                                                          diff_iota +
+                                                          diff_dot)
+    return expected
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'up', '-r1')
 
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset',
-                                     'foo1', 'baz1', '.')
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset',
-                                     'foo2', 'baz2', 'iota')
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset',
-                                     'foo3', 'baz3', 'A')
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset',
-                                     'foo4', 'baz4', os.path.join('A', 'B'))
+  sbox.simple_propset('foo1', 'baz1', '.')
+  sbox.simple_propset('foo2', 'baz2', 'iota')
+  sbox.simple_propset('foo3', 'baz3', 'A')
+  sbox.simple_propset('foo4', 'baz4', 'A/B')
   svntest.main.file_append(os.path.join('A', 'mu'), "new text\n")
   svntest.main.file_append('iota', "new text\n")
 
   # Test wc-repos diff.
-  svntest.actions.run_and_verify_svn(None, expected_empty, [],
-                                     'diff', '-rHEAD', '--depth', 'empty')
-  svntest.actions.run_and_verify_svn(None, expected_files, [],
-                                     'diff', '-rHEAD', '--depth', 'files')
-  svntest.actions.run_and_verify_svn(None, expected_immediates, [],
-                                     'diff', '-rHEAD', '--depth', 'immediates')
-  svntest.actions.run_and_verify_svn(None, expected_infinity, [],
-                                     'diff', '-rHEAD', '--depth', 'infinity')
+  expected_diffs = create_expected_repos_wc_diffs()
+  for depth in ['empty', 'files', 'immediates', 'infinity']:
+    svntest.actions.run_and_verify_svn(None, expected_diffs[depth], [],
+                                       'diff', '-rHEAD', '--depth', depth)
 
 # test for issue 2920: ignore eol-style on empty lines
 @Issue(2920)
@@ -3316,7 +3292,6 @@ def make_file_edit_del_add(dir):
   svntest.main.run_svn(None, 'add', theta)
 
 
-@XFail()
 @Issue(3295)
 def diff_url_against_local_mods(sbox):
   "diff URL against working copy with local mods"
@@ -3903,6 +3878,7 @@ def no_spurious_conflict(sbox):
   expected_status.tweak('3449_spurious', status='  ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+@XFail()
 def diff_two_working_copies(sbox):
   "diff between two working copies"
   sbox.build()
@@ -4199,6 +4175,129 @@ def diff_arbitrary_same(sbox):
                                      '--old', sbox.ospath('A'),
                                      '--new', sbox.ospath('A2'))
 
+def simple_ancestry(sbox):
+  "diff some simple ancestry changes"
+
+  sbox.build()
+  sbox.simple_copy('A/B/E', 'A/B/E_copied')
+  sbox.simple_copy('A/D/G/pi', 'A/D/G/pi-2')
+  sbox.simple_copy('A/D/G/rho', 'A/D/G/rho-2')
+  sbox.simple_rm('A/B/F', 'A/B/E', 'A/D/G/rho', 'A/D/G/tau')
+  sbox.simple_add_text('new', 'new')
+
+  line = '===================================================================\n'
+
+  expected_output = svntest.verify.UnorderedOutput([
+    'Index: %s (added)\n' % sbox.path('new'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/B/E/alpha'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/B/E/beta'),
+    line,
+    'Index: %s (added)\n' % sbox.path('A/B/E_copied/beta'),
+    line,
+    'Index: %s (added)\n' % sbox.path('A/B/E_copied/alpha'),
+    line,
+    'Index: %s (added)\n' % sbox.path('A/D/G/pi-2'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/D/G/rho'),
+    line,
+    'Index: %s (added)\n' % sbox.path('A/D/G/rho-2'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/D/G/tau'),
+    line,
+  ])
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', sbox.wc_dir,
+                                        '-r', '1',
+                                        '--notice-ancestry',
+                                        '--no-diff-deleted',
+                                        '--show-copies-as-adds',
+                                        '--no-diff-added')
+
+  # And try the same thing in reverse
+  sbox.simple_commit()
+  sbox.simple_update(revision=1)
+
+  expected_output = svntest.verify.UnorderedOutput([
+    'Index: %s (deleted)\n' % sbox.path('new'),
+    line,
+    'Index: %s (added)\n'   % sbox.path('A/B/E/alpha'),
+    line,
+    'Index: %s (added)\n'   % sbox.path('A/B/E/beta'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/B/E_copied/beta'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/B/E_copied/alpha'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/D/G/pi-2'),
+    line,
+    'Index: %s (added)\n'   % sbox.path('A/D/G/rho'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/D/G/rho-2'),
+    line,
+    'Index: %s (added)\n'   % sbox.path('A/D/G/tau'),
+    line,
+  ])
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', sbox.wc_dir,
+                                        '-r', 'HEAD',
+                                        '--notice-ancestry',
+                                        '--no-diff-deleted',
+                                        '--show-copies-as-adds',
+                                        '--no-diff-added')
+
+  # Now introduce a replacements and some delete-deletes
+  sbox.simple_update()
+  sbox.simple_mkdir('A/B/E')
+  sbox.simple_add_text('New alpha', 'A/B/E/alpha')
+  sbox.simple_add_text('New beta', 'A/B/E/beta')
+  sbox.simple_add_text('New rho', 'A/D/G/rho')
+  sbox.simple_add_text('New tau', 'A/D/G/tau')
+  sbox.simple_rm('A/B/E_copied', 'A/D/G/pi-2', 'A/D/G/rho-2')
+
+  expected_output = svntest.verify.UnorderedOutput([
+    'Index: %s (added)\n'   % sbox.path('new'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/B/E/alpha'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/B/E/beta'),
+    line,
+    'Index: %s (added)\n'   % sbox.path('A/B/E/alpha'),
+    line,
+    'Index: %s (added)\n'   % sbox.path('A/B/E/beta'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/D/G/rho'),
+    line,
+    'Index: %s (added)\n'   % sbox.path('A/D/G/rho'),
+    line,
+    'Index: %s (deleted)\n' % sbox.path('A/D/G/tau'),
+    line,
+    'Index: %s (added)\n'   % sbox.path('A/D/G/tau'),
+    line,
+  ])
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', sbox.wc_dir,
+                                        '-r', '1',
+                                        '--notice-ancestry',
+                                        '--no-diff-deleted',
+                                        '--show-copies-as-adds',
+                                        '--no-diff-added')
+
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', sbox.wc_dir,
+                                        '-r', '1',
+                                        '--notice-ancestry',
+                                        '--no-diff-deleted',
+                                        '--show-copies-as-adds',
+                                        '--no-diff-added')
+
 
 ########################################################################
 #Run the tests
@@ -4274,6 +4373,7 @@ test_list = [ None,
               diff_properties_no_newline,
               diff_arbitrary_same,
               diff_git_format_wc_wc_dir_mv,
+              simple_ancestry,
               ]
 
 if __name__ == '__main__':

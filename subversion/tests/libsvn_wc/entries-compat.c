@@ -601,12 +601,14 @@ test_access_baton_like_locking(apr_pool_t *pool)
   {
     const char *url, *repos_root_url, *repos_uuid;
     const char *subdir = svn_dirent_join(local_abspath, "sub-wc", pool);
+    const char *repos_relpath;
 
     svn_boolean_t is_root;
-    SVN_ERR(svn_wc__node_get_url(&url, wc_ctx, local_abspath, pool, pool));
-    SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, &repos_uuid,
+    SVN_ERR(svn_wc__node_get_repos_info(NULL, &repos_relpath,
+                                        &repos_root_url, &repos_uuid,
                                         wc_ctx, local_abspath,
                                         pool, pool));
+    url = svn_path_url_add_component2(repos_root_url, repos_relpath, pool);
 
     SVN_ERR(svn_io_make_dir_recursively(subdir, pool));
     SVN_ERR(svn_wc_ensure_adm3(subdir, repos_uuid,

@@ -687,18 +687,13 @@ delta_files(report_baton_t *b, void *file_baton, svn_revnum_t s_rev,
     {
       SVN_ERR(get_source_root(b, &s_root, s_rev));
 
-      /* Is this delta calculation worth our time?  If we are ignoring
-         ancestry, then our editor implementor isn't concerned by the
-         theoretical differences between "has contents which have not
-         changed with respect to" and "has the same actual contents
-         as".  We'll do everything we can to avoid transmitting even
-         an empty text-delta in that case.  */
-      if (b->ignore_ancestry)
-        SVN_ERR(svn_repos__compare_files(&changed, b->t_root, t_path,
-                                         s_root, s_path, pool));
-      else
-        SVN_ERR(svn_fs_contents_changed(&changed, b->t_root, t_path, s_root,
-                                        s_path, pool));
+      /* We're not interested in the theoretical difference between "has
+         contents which have not changed with respect to" and "has the same
+         actual contents as" when sending text-deltas.  If we know the
+         delta is an empty one, we avoiding sending it in either case. */
+      SVN_ERR(svn_repos__compare_files(&changed, b->t_root, t_path,
+                                       s_root, s_path, pool));
+
       if (!changed)
         return SVN_NO_ERROR;
 

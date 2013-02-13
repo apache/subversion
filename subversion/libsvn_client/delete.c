@@ -79,7 +79,14 @@ find_undeletables(void *baton,
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                              _("'%s' is not under version control"),
                              svn_dirent_local_style(local_abspath, pool));
-
+  else if ((status->node_status == svn_wc_status_added
+            || status->node_status == svn_wc_status_replaced)
+           && status->text_status == svn_wc_status_normal
+           && (status->prop_status == svn_wc_status_normal
+               || status->prop_status == svn_wc_status_none))
+    {
+      /* Unmodified copy. Go ahead, remove it */
+    }
   else if (status->node_status != svn_wc_status_normal
            && status->node_status != svn_wc_status_deleted
            && status->node_status != svn_wc_status_missing)

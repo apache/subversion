@@ -29,7 +29,8 @@
 -- STMT_SELECT_NODE_INFO
 SELECT op_depth, repos_id, repos_path, presence, kind, revision, checksum,
   translated_size, changed_revision, changed_date, changed_author, depth,
-  symlink_target, last_mod_time, properties, moved_here, inherited_props
+  symlink_target, last_mod_time, properties, moved_here, inherited_props,
+  moved_to
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2
 ORDER BY op_depth DESC
@@ -100,6 +101,13 @@ SELECT op_depth, presence, kind, moved_to
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > ?3
 ORDER BY op_depth
+LIMIT 1
+
+-- STMT_SELECT_HIGHEST_WORKING_NODE
+SELECT op_depth
+FROM nodes
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth < ?3
+ORDER BY op_depth DESC
 LIMIT 1
 
 -- STMT_SELECT_ACTUAL_NODE
@@ -271,13 +279,18 @@ SELECT local_relpath, kind FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = ?3
   AND (?3 != 0 OR file_external is NULL)
 
+/* Used by non-recursive revert to detect higher level children, and
+   actual-only rows that would be left orphans, if the revert
+   proceeded. */
 -- STMT_SELECT_GE_OP_DEPTH_CHILDREN
 SELECT 1 FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2
   AND (op_depth > ?3 OR (op_depth = ?3 AND presence != MAP_BASE_DELETED))
 UNION ALL
-SELECT 1 FROM ACTUAL_NODE
+SELECT 1 FROM ACTUAL_NODE a
 WHERE wc_id = ?1 AND parent_relpath = ?2
+  AND NOT EXISTS (SELECT 1 FROM nodes n
+                   WHERE wc_id = ?1 AND n.local_relpath = a.local_relpath)
 
 /* Delete the nodes shadowed by local_relpath. Not valid for the wc-root */
 -- STMT_DELETE_SHADOWED_RECURSIVE
@@ -287,6 +300,11 @@ WHERE wc_id = ?1
   AND (op_depth < ?3
        OR (op_depth = ?3 AND presence = MAP_BASE_DELETED))
 
+-- STMT_CLEAR_MOVED_TO_FROM_DEST
+UPDATE NODES SET moved_to = NULL
+WHERE wc_id = ?1
+  AND moved_to = ?2
+
 /* Get not-present descendants of a copied node. Not valid for the wc-root */
 -- STMT_SELECT_NOT_PRESENT_DESCENDANTS
 SELECT local_relpath FROM nodes
@@ -294,13 +312,21 @@ WHERE wc_id = ?1 AND op_depth = ?3
   AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND presence = MAP_NOT_PRESENT
 
--- STMT_COMMIT_DESCENDANT_TO_BASE
-UPDATE NODES SET op_depth = 0, repos_id = ?4, repos_path = ?5, revision = ?6,
-  moved_here = NULL, moved_to = NULL, dav_cache = NULL,
-  presence = CASE presence WHEN MAP_NORMAL THEN MAP_NORMAL
-                           WHEN MAP_EXCLUDED THEN MAP_EXCLUDED
-                           ELSE MAP_NOT_PRESENT END
-WHERE wc_id = ?1 AND local_relpath = ?2 and op_depth = ?3
+-- STMT_COMMIT_DESCENDANTS_TO_BASE
+UPDATE NODES SET op_depth = 0,
+                 repos_id = ?4,
+                 repos_path = ?5 || SUBSTR(local_relpath, LENGTH(?2)+1),
+                 revision = ?6,
+                 dav_cache = NULL,
+                 moved_here = NULL,
+                 presence = CASE presence
+                              WHEN MAP_NORMAL THEN MAP_NORMAL
+                              WHEN MAP_EXCLUDED THEN MAP_EXCLUDED
+                              ELSE MAP_NOT_PRESENT
+                            END
+WHERE wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND op_depth = ?3
 
 -- STMT_SELECT_NODE_CHILDREN
 /* Return all paths that are children of the directory (?1, ?2) in any
@@ -1508,6 +1534,14 @@ WHERE wc_id = ?1
   AND op_depth > ?3
   AND moved_to IS NOT NULL
 
+-- STMT_SELECT_MOVED_OUTSIDE
+SELECT local_relpath FROM nodes
+WHERE wc_id = ?1
+  AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND op_depth >= ?3
+  AND moved_to IS NOT NULL
+  AND NOT IS_STRICT_DESCENDANT_OF(moved_to, ?2)
+
 -- STMT_SELECT_OP_DEPTH_MOVED_PAIR
 SELECT n.local_relpath, n.moved_to,
        (SELECT o.repos_path FROM nodes AS o
@@ -1520,9 +1554,44 @@ WHERE n.wc_id = ?1
   AND n.op_depth = ?3
   AND n.moved_to IS NOT NULL
 
+-- STMT_SELECT_MOVED_DESCENDANTS
+SELECT n.local_relpath, h.moved_to
+FROM nodes n, nodes h
+WHERE n.wc_id = ?1
+  AND h.wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(n.local_relpath, ?2)
+  AND h.local_relpath = n.local_relpath
+  AND n.op_depth = ?3
+  AND h.op_depth = (SELECT MIN(o.op_depth)
+                    FROM nodes o
+                    WHERE o.wc_id = ?1
+                      AND o.local_relpath = n.local_relpath
+                      AND o.op_depth > ?3)
+  AND h.moved_to IS NOT NULL
+
+-- STMT_COMMIT_UPDATE_ORIGIN
+/* Note that the only reason this SUBSTR() trick is valid is that you
+   can move neither the working copy nor the repository root.
+
+   SUBSTR(local_relpath, LENGTH(?2)+1) includes the '/' of the path */
+UPDATE nodes SET repos_id = ?4,
+                 repos_path = ?5 || SUBSTR(local_relpath, LENGTH(?2)+1),
+                 revision = ?6
+WHERE wc_id = ?1
+  AND (local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND op_depth = ?3
+
 -- STMT_HAS_LAYER_BETWEEN
 SELECT 1 FROM NODES
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > ?3 AND op_depth < ?4
+
+-- STMT_SELECT_REPOS_PATH_REVISION
+SELECT local_relpath, repos_path, revision FROM nodes
+WHERE wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND op_depth = 0
+ORDER BY local_relpath
 
 /* ------------------------------------------------------------------------- */
 

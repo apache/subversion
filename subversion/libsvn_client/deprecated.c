@@ -2785,7 +2785,8 @@ svn_client_uuid_from_path2(const char **uuid,
                            apr_pool_t *scratch_pool)
 {
   return svn_error_trace(
-    svn_wc__node_get_repos_info(NULL, uuid, ctx->wc_ctx, local_abspath,
+      svn_client_get_repos_root(NULL, uuid,
+                                local_abspath, ctx,
                                 result_pool, scratch_pool));
 }
 

@@ -4139,6 +4139,41 @@ revert_nested_move(const svn_test_opts_t *opts, apr_pool_t *pool)
     {3, "A2/B2/C2", "normal",       1, "A/B/C", MOVED_HERE},
     {0}
   };
+  nodes_row_t nodes_AB_moved_C_copied[] = {
+    {0, "",         "normal",       1, ""},
+    {0, "A",        "normal",       1, "A"},
+    {0, "A/B",      "normal",       1, "A/B"},
+    {0, "A/B/C",    "normal",       1, "A/B/C"},
+    {1, "A",        "base-deleted", NO_COPY_FROM, "A2"},
+    {1, "A/B",      "base-deleted", NO_COPY_FROM},
+    {1, "A/B/C",    "base-deleted", NO_COPY_FROM},
+    {1, "A2",       "normal",       1, "A",     MOVED_HERE},
+    {1, "A2/B",     "normal",       1, "A/B",   MOVED_HERE},
+    {1, "A2/B/C",   "normal",       1, "A/B/C", MOVED_HERE},
+    {2, "A2/B",     "base-deleted", NO_COPY_FROM, "A2/B2"},
+    {2, "A2/B/C",   "base-deleted", NO_COPY_FROM},
+    {2, "A2/B2",    "normal",       1, "A/B",   MOVED_HERE},
+    {2, "A2/B2/C",  "normal",       1, "A/B/C", MOVED_HERE},
+    {3, "A2/B2/C2", "normal",       1, "A/B/C"},
+    {0}
+  };
+  nodes_row_t nodes_AC_moved_B_copied[] = {
+    {0, "",         "normal",       1, ""},
+    {0, "A",        "normal",       1, "A"},
+    {0, "A/B",      "normal",       1, "A/B"},
+    {0, "A/B/C",    "normal",       1, "A/B/C"},
+    {1, "A",        "base-deleted", NO_COPY_FROM, "A2"},
+    {1, "A/B",      "base-deleted", NO_COPY_FROM},
+    {1, "A/B/C",    "base-deleted", NO_COPY_FROM},
+    {1, "A2",       "normal",       1, "A",     MOVED_HERE},
+    {1, "A2/B",     "normal",       1, "A/B",   MOVED_HERE},
+    {1, "A2/B/C",   "normal",       1, "A/B/C", MOVED_HERE},
+    {2, "A2/B2",    "normal",       1, "A/B"},
+    {2, "A2/B2/C",  "normal",       1, "A/B/C"},
+    {3, "A2/B2/C",  "base-deleted", NO_COPY_FROM, "A2/B2/C2"},
+    {3, "A2/B2/C2", "normal",       1, "A/B/C", MOVED_HERE},
+    {0}
+  };
 
   SVN_ERR(svn_test__sandbox_create(&b, "revert_nested_move", opts, pool));
 
@@ -4165,7 +4200,16 @@ revert_nested_move(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_move(&b, "A2/B2/C", "A2/B2/C2"));
   SVN_ERR(check_db_rows(&b, "", nodes_ABC_moved));
 
+  SVN_ERR(sbox_wc_revert(&b, "A2/B2/C", svn_depth_empty));
+  SVN_ERR(check_db_rows(&b, "", nodes_AB_moved_C_copied));
+  SVN_ERR(sbox_wc_revert(&b, "A2/B2/C2", svn_depth_infinity));
+  SVN_ERR(check_db_rows(&b, "", nodes_AB_moved));
+
+  SVN_ERR(sbox_wc_move(&b, "A2/B2/C", "A2/B2/C2"));
+  SVN_ERR(check_db_rows(&b, "", nodes_ABC_moved));
+
   SVN_ERR(sbox_wc_revert(&b, "A2/B2/C", svn_depth_infinity));
+  SVN_ERR(check_db_rows(&b, "", nodes_AB_moved_C_copied));
   SVN_ERR(sbox_wc_revert(&b, "A2/B2/C2", svn_depth_infinity));
   SVN_ERR(check_db_rows(&b, "", nodes_AB_moved));
 
@@ -4179,6 +4223,9 @@ revert_nested_move(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_move(&b, "A/B", "A/B2"));
   SVN_ERR(sbox_wc_move(&b, "A", "A2"));
   SVN_ERR(check_db_rows(&b, "", nodes_ABC_moved));
+
+  SVN_ERR(sbox_wc_revert(&b, "A2/B", svn_depth_infinity));
+  SVN_ERR(check_db_rows(&b, "", nodes_AC_moved_B_copied));
 
   return SVN_NO_ERROR;
 }
@@ -4419,7 +4466,8 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   /* Resolve should update the move. */
-  SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",         "normal",       2, ""},
@@ -4462,7 +4510,8 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
 
-  SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",         "normal",       3, ""},
@@ -4508,7 +4557,8 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   SVN_ERR(sbox_wc_update(&b, "", 2));
-  SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",         "normal",       2, ""},
@@ -4563,7 +4613,8 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   SVN_ERR(sbox_wc_update(&b, "", 4));
-  SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",         "normal",       4, ""},
@@ -4593,7 +4644,8 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   SVN_ERR(sbox_wc_update(&b, "", 5));
-  SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",         "normal",       5, ""},
@@ -5124,7 +5176,8 @@ update_prop_mod_into_moved(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   /* Resolve should update the move. */
-  SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",         "normal",       2, ""},
@@ -5203,8 +5256,10 @@ nested_move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   /* Following the A->A2 move should raise a tree-conflict on A2/B/C,
      resolving that may require an explicit resolve. */
-  SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
-  SVN_ERR(sbox_wc_resolve(&b, "A2/B/C", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "A2/B/C", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",          "normal",       2, ""},
@@ -5382,8 +5437,7 @@ nested_move_commit(const svn_test_opts_t *opts, apr_pool_t *pool)
       {3, "A2/B/C",    "base-deleted", NO_COPY_FROM, "C2"},
       {3, "A2/B/C/f",  "base-deleted", NO_COPY_FROM},
 
-      /* Currently these are recorded as a move but still
-         have the copy history from ^/A/B/C@1 */
+      /* These need to have their copyfrom information updated */
       {1, "C2",        "normal",       2, "A2/B/C", MOVED_HERE},
       {1, "C2/f",      "normal",       2, "A2/B/C/f", MOVED_HERE},
       {0}
@@ -5586,7 +5640,8 @@ move_update_conflicts(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   SVN_ERR(sbox_wc_update(&b, "A", 2));
   SVN_ERR(check_tree_conflict_repos_path(&b, "A", "X/A", "X/A"));
-  SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",           "normal",       1, "X"},
@@ -5669,7 +5724,8 @@ move_update_delete_mods(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   SVN_ERR(sbox_wc_update(&b, "A", 2));
-  SVN_ERR(sbox_wc_resolve(&b, "A/B", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "A/B", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",        "normal",       1, ""},
@@ -5817,8 +5873,10 @@ move_in_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   SVN_ERR(sbox_wc_update(&b, "", 2));
-  SVN_ERR(sbox_wc_resolve(&b, "A/B", svn_wc_conflict_choose_merged));
-  SVN_ERR(sbox_wc_resolve(&b, "A/B/C", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "A/B", svn_depth_empty,
+                          svn_wc_conflict_choose_merged));
+  SVN_ERR(sbox_wc_resolve(&b, "A/B/C", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",        "normal",       2, ""},
@@ -5831,6 +5889,48 @@ move_in_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
       {2, "A/B/C/D", "base-deleted", NO_COPY_FROM},
       {1, "C2",      "normal",       2, "A/B/C", MOVED_HERE},
       {1, "C2/D",    "normal",       2, "A/B/C/D", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  SVN_ERR(sbox_wc_update(&b, "", 3));
+  SVN_ERR(sbox_wc_revert(&b, "A/B", svn_depth_empty));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",          "normal",       3, ""},
+      {0, "A",         "normal",       3, "A"},
+      {0, "A/B",       "normal",       3, "A/B"},
+      {0, "A/B/C",     "normal",       3, "A/B/C"},
+      {0, "A/B/C/D",   "normal",       3, "A/B/C/D"},
+      {0, "A/B/C/D/E", "normal",       3, "A/B/C/D/E"},
+      {3, "A/B/C",     "base-deleted", NO_COPY_FROM, "C2"},
+      {3, "A/B/C/D",   "base-deleted", NO_COPY_FROM},
+      {3, "A/B/C/D/E", "base-deleted", NO_COPY_FROM},
+      {1, "C2",        "normal",       2, "A/B/C", MOVED_HERE},
+      {1, "C2/D",      "normal",       2, "A/B/C/D", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Revert should have left a tree-conflict (or broken the move). */
+  SVN_ERR(sbox_wc_resolve(&b, "A/B/C", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",          "normal",       3, ""},
+      {0, "A",         "normal",       3, "A"},
+      {0, "A/B",       "normal",       3, "A/B"},
+      {0, "A/B/C",     "normal",       3, "A/B/C"},
+      {0, "A/B/C/D",   "normal",       3, "A/B/C/D"},
+      {0, "A/B/C/D/E", "normal",       3, "A/B/C/D/E"},
+      {3, "A/B/C",     "base-deleted", NO_COPY_FROM, "C2"},
+      {3, "A/B/C/D",   "base-deleted", NO_COPY_FROM},
+      {3, "A/B/C/D/E", "base-deleted", NO_COPY_FROM},
+      {1, "C2",        "normal",       3, "A/B/C", MOVED_HERE},
+      {1, "C2/D",      "normal",       3, "A/B/C/D", MOVED_HERE},
+      {1, "C2/D/E",    "normal",       3, "A/B/C/D/E", MOVED_HERE},
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
@@ -5908,7 +6008,8 @@ switch_move(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   /* Conflicts from switch are resolved just like those from update. */
-  SVN_ERR(sbox_wc_resolve(&b, "B/D", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "B/D", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",        "normal",       3, "X"},
@@ -5933,7 +6034,8 @@ switch_move(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
 
-  SVN_ERR(sbox_wc_resolve(&b, "D2/E", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "D2/E", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",        "normal",       3, "X"},
@@ -6006,7 +6108,8 @@ move_replace(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
 
-  SVN_ERR(sbox_wc_resolve(&b, "B", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "B", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",    "normal",       2, ""},
@@ -6029,76 +6132,276 @@ static svn_error_t *
 layered_moved_to(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_test__sandbox_t b;
+  svn_error_t *err;
 
   SVN_ERR(svn_test__sandbox_create(&b, "layered_moved_to", opts, pool));
 
   SVN_ERR(sbox_wc_mkdir(&b, "A"));
   SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
   SVN_ERR(sbox_wc_mkdir(&b, "A/B/C"));
-  SVN_ERR(sbox_wc_mkdir(&b, "B"));
-  SVN_ERR(sbox_wc_mkdir(&b, "B/C"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C/D"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C/D/E"));
+  SVN_ERR(sbox_wc_mkdir(&b, "C"));
+  SVN_ERR(sbox_wc_mkdir(&b, "C/D"));
+  SVN_ERR(sbox_wc_mkdir(&b, "C/D/E"));
   SVN_ERR(sbox_wc_commit(&b, ""));
-  SVN_ERR(sbox_wc_propset(&b, "property", "value", "A/B/C"));
-  SVN_ERR(sbox_wc_propset(&b, "property", "value", "B/C"));
+  SVN_ERR(sbox_wc_propset(&b, "property", "value", "A/B/C/D/E"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_propset(&b, "property", "value", "C/D/E"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_mkdir(&b, "P"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_propset(&b, "property2", "value", "A/B/C/D/E"));
+  SVN_ERR(sbox_wc_propset(&b, "property2", "value", "C/D/E"));
   SVN_ERR(sbox_wc_commit(&b, ""));
   SVN_ERR(sbox_wc_update(&b, "", 1));
 
   SVN_ERR(sbox_wc_move(&b, "A", "X"));
-  SVN_ERR(sbox_wc_move(&b, "X/B/C", "C2"));
-  SVN_ERR(sbox_wc_delete(&b, "X/B"));
-  SVN_ERR(sbox_wc_move(&b, "B", "X/B"));
-  SVN_ERR(sbox_wc_move(&b, "X/B/C", "C3"));
+  SVN_ERR(sbox_wc_move(&b, "X/B/C/D/E", "E2"));
+  SVN_ERR(sbox_wc_delete(&b, "X/B/C"));
+  SVN_ERR(sbox_wc_move(&b, "C", "X/B/C"));
+  SVN_ERR(sbox_wc_move(&b, "X/B/C/D/E", "E3"));
   {
     nodes_row_t nodes[] = {
-      {0, "",        "normal",       1, ""},
-      {0, "A",       "normal",       1, "A"},
-      {0, "A/B",     "normal",       1, "A/B"},
-      {0, "A/B/C",   "normal",       1, "A/B/C"},
-      {0, "B",       "normal",       1, "B"},
-      {0, "B/C",     "normal",       1, "B/C"},
-      {1, "A",       "base-deleted", NO_COPY_FROM, "X"},
-      {1, "A/B",     "base-deleted", NO_COPY_FROM},
-      {1, "A/B/C",   "base-deleted", NO_COPY_FROM},
-      {1, "B",       "base-deleted", NO_COPY_FROM, "X/B"},
-      {1, "B/C",     "base-deleted", NO_COPY_FROM},
-      {1, "X",       "normal",       1, "A", MOVED_HERE},
-      {1, "X/B",     "normal",       1, "A/B", MOVED_HERE},
-      {1, "X/B/C",   "normal",       1, "A/B/C", MOVED_HERE},
-      {2, "X/B",     "normal",       1, "B", MOVED_HERE},
-      {2, "X/B/C",   "normal",       1, "B/C", FALSE, "C2", TRUE},
-      {3, "X/B/C",   "base-deleted", NO_COPY_FROM, "C3"},
-      {1, "C2",      "normal",       1, "A/B/C", MOVED_HERE},
-      {1, "C3",      "normal",       1, "B/C", MOVED_HERE},
+      {0, "",            "normal",       1, ""},
+      {0, "A",           "normal",       1, "A"},
+      {0, "A/B",         "normal",       1, "A/B"},
+      {0, "A/B/C",       "normal",       1, "A/B/C"},
+      {0, "A/B/C/D",     "normal",       1, "A/B/C/D"},
+      {0, "A/B/C/D/E",   "normal",       1, "A/B/C/D/E"},
+      {0, "C",           "normal",       1, "C"},
+      {0, "C/D",         "normal",       1, "C/D"},
+      {0, "C/D/E",       "normal",       1, "C/D/E"},
+      {1, "A",           "base-deleted", NO_COPY_FROM, "X"},
+      {1, "A/B",         "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C",       "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C/D",     "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C/D/E",   "base-deleted", NO_COPY_FROM},
+      {1, "C",           "base-deleted", NO_COPY_FROM, "X/B/C"},
+      {1, "C/D",         "base-deleted", NO_COPY_FROM},
+      {1, "C/D/E",       "base-deleted", NO_COPY_FROM},
+      {1, "X",           "normal",       1, "A", MOVED_HERE},
+      {1, "X/B",         "normal",       1, "A/B", MOVED_HERE},
+      {1, "X/B/C",       "normal",       1, "A/B/C", MOVED_HERE},
+      {1, "X/B/C/D",     "normal",       1, "A/B/C/D", MOVED_HERE},
+      {1, "X/B/C/D/E",   "normal",       1, "A/B/C/D/E", MOVED_HERE},
+      {3, "X/B/C",       "normal",       1, "C", MOVED_HERE},
+      {3, "X/B/C/D",     "normal",       1, "C/D", MOVED_HERE},
+      {3, "X/B/C/D/E",   "normal",       1, "C/D/E", FALSE, "E2", TRUE},
+      {5, "X/B/C/D/E",   "base-deleted", NO_COPY_FROM, "E3"},
+      {1, "E2",          "normal",       1, "A/B/C/D/E", MOVED_HERE},
+      {1, "E3",          "normal",       1, "C/D/E", MOVED_HERE},
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
 
   SVN_ERR(sbox_wc_update(&b, "A", 2));
-  SVN_ERR(sbox_wc_resolve(&b, "A", svn_wc_conflict_choose_mine_conflict));
-  SVN_ERR(sbox_wc_resolve(&b, "X/B", svn_wc_conflict_choose_merged));
-  SVN_ERR(sbox_wc_resolve(&b, "X/B/C", svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "X/B/C", svn_depth_empty,
+                          svn_wc_conflict_choose_merged));
+  SVN_ERR(sbox_wc_resolve(&b, "X/B/C/D/E", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
-      {0, "",        "normal",       1, ""},
-      {0, "A",       "normal",       2, "A"},
-      {0, "A/B",     "normal",       2, "A/B"},
-      {0, "A/B/C",   "normal",       2, "A/B/C"},
-      {0, "B",       "normal",       1, "B"},
-      {0, "B/C",     "normal",       1, "B/C"},
-      {1, "A",       "base-deleted", NO_COPY_FROM, "X"},
-      {1, "A/B",     "base-deleted", NO_COPY_FROM},
-      {1, "A/B/C",   "base-deleted", NO_COPY_FROM},
-      {1, "B",       "base-deleted", NO_COPY_FROM, "X/B"},
-      {1, "B/C",     "base-deleted", NO_COPY_FROM},
-      {1, "X",       "normal",       2, "A", MOVED_HERE},
-      {1, "X/B",     "normal",       2, "A/B", MOVED_HERE},
-      {1, "X/B/C",   "normal",       2, "A/B/C", MOVED_HERE},
-      {2, "X/B",     "normal",       1, "B", MOVED_HERE},
-      {2, "X/B/C",   "normal",       1, "B/C", FALSE, "C2", TRUE},
-      {3, "X/B/C",   "base-deleted", NO_COPY_FROM, "C3"},
-      {1, "C2",      "normal",       2, "A/B/C", MOVED_HERE},
-      {1, "C3",      "normal",       1, "B/C", MOVED_HERE},
+      {0, "",            "normal",       1, ""},
+      {0, "A",           "normal",       2, "A"},
+      {0, "A/B",         "normal",       2, "A/B"},
+      {0, "A/B/C",       "normal",       2, "A/B/C"},
+      {0, "A/B/C/D",     "normal",       2, "A/B/C/D"},
+      {0, "A/B/C/D/E",   "normal",       2, "A/B/C/D/E"},
+      {0, "C",           "normal",       1, "C"},
+      {0, "C/D",         "normal",       1, "C/D"},
+      {0, "C/D/E",       "normal",       1, "C/D/E"},
+      {1, "A",           "base-deleted", NO_COPY_FROM, "X"},
+      {1, "A/B",         "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C",       "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C/D",     "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C/D/E",   "base-deleted", NO_COPY_FROM},
+      {1, "C",           "base-deleted", NO_COPY_FROM, "X/B/C"},
+      {1, "C/D",         "base-deleted", NO_COPY_FROM},
+      {1, "C/D/E",       "base-deleted", NO_COPY_FROM},
+      {1, "X",           "normal",       2, "A", MOVED_HERE},
+      {1, "X/B",         "normal",       2, "A/B", MOVED_HERE},
+      {1, "X/B/C",       "normal",       2, "A/B/C", MOVED_HERE},
+      {1, "X/B/C/D",     "normal",       2, "A/B/C/D", MOVED_HERE},
+      {1, "X/B/C/D/E",   "normal",       2, "A/B/C/D/E", MOVED_HERE},
+      {3, "X/B/C",       "normal",       1, "C", MOVED_HERE},
+      {3, "X/B/C/D",     "normal",       1, "C/D", MOVED_HERE},
+      {3, "X/B/C/D/E",   "normal",       1, "C/D/E", FALSE, "E2", TRUE},
+      {5, "X/B/C/D/E",   "base-deleted", NO_COPY_FROM, "E3"},
+      {1, "E2",          "normal",       2, "A/B/C/D/E", MOVED_HERE},
+      {1, "E3",          "normal",       1, "C/D/E", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  SVN_ERR(sbox_wc_update(&b, "C", 3));
+  SVN_ERR(sbox_wc_resolve(&b, "C", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "X/B/C/D/E", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",            "normal",       1, ""},
+      {0, "A",           "normal",       2, "A"},
+      {0, "A/B",         "normal",       2, "A/B"},
+      {0, "A/B/C",       "normal",       2, "A/B/C"},
+      {0, "A/B/C/D",     "normal",       2, "A/B/C/D"},
+      {0, "A/B/C/D/E",   "normal",       2, "A/B/C/D/E"},
+      {0, "C",           "normal",       3, "C"},
+      {0, "C/D",         "normal",       3, "C/D"},
+      {0, "C/D/E",       "normal",       3, "C/D/E"},
+      {1, "A",           "base-deleted", NO_COPY_FROM, "X"},
+      {1, "A/B",         "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C",       "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C/D",     "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C/D/E",   "base-deleted", NO_COPY_FROM},
+      {1, "C",           "base-deleted", NO_COPY_FROM, "X/B/C"},
+      {1, "C/D",         "base-deleted", NO_COPY_FROM},
+      {1, "C/D/E",       "base-deleted", NO_COPY_FROM},
+      {1, "X",           "normal",       2, "A", MOVED_HERE},
+      {1, "X/B",         "normal",       2, "A/B", MOVED_HERE},
+      {1, "X/B/C",       "normal",       2, "A/B/C", MOVED_HERE},
+      {1, "X/B/C/D",     "normal",       2, "A/B/C/D", MOVED_HERE},
+      {1, "X/B/C/D/E",   "normal",       2, "A/B/C/D/E", MOVED_HERE},
+      {3, "X/B/C",       "normal",       3, "C", MOVED_HERE},
+      {3, "X/B/C/D",     "normal",       3, "C/D", MOVED_HERE},
+      {3, "X/B/C/D/E",   "normal",       3, "C/D/E", FALSE, "E2", TRUE},
+      {5, "X/B/C/D/E",   "base-deleted", NO_COPY_FROM, "E3"},
+      {1, "E2",          "normal",       2, "A/B/C/D/E", MOVED_HERE},
+      {1, "E3",          "normal",       3, "C/D/E", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* An update with no text/property/tree changes in A, just a revision bump. */
+  SVN_ERR(sbox_wc_update(&b, "A", 4));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",            "normal",       1, ""},
+      {0, "A",           "normal",       4, "A"},
+      {0, "A/B",         "normal",       4, "A/B"},
+      {0, "A/B/C",       "normal",       4, "A/B/C"},
+      {0, "A/B/C/D",     "normal",       4, "A/B/C/D"},
+      {0, "A/B/C/D/E",   "normal",       4, "A/B/C/D/E"},
+      {0, "C",           "normal",       3, "C"},
+      {0, "C/D",         "normal",       3, "C/D"},
+      {0, "C/D/E",       "normal",       3, "C/D/E"},
+      {1, "A",           "base-deleted", NO_COPY_FROM, "X"},
+      {1, "A/B",         "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C",       "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C/D",     "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C/D/E",   "base-deleted", NO_COPY_FROM},
+      {1, "C",           "base-deleted", NO_COPY_FROM, "X/B/C"},
+      {1, "C/D",         "base-deleted", NO_COPY_FROM},
+      {1, "C/D/E",       "base-deleted", NO_COPY_FROM},
+      {1, "X",           "normal",       4, "A", MOVED_HERE},
+      {1, "X/B",         "normal",       4, "A/B", MOVED_HERE},
+      {1, "X/B/C",       "normal",       4, "A/B/C", MOVED_HERE},
+      {1, "X/B/C/D",     "normal",       4, "A/B/C/D", MOVED_HERE},
+      {1, "X/B/C/D/E",   "normal",       4, "A/B/C/D/E", MOVED_HERE},
+      {3, "X/B/C",       "normal",       3, "C", MOVED_HERE},
+      {3, "X/B/C/D",     "normal",       3, "C/D", MOVED_HERE},
+      {3, "X/B/C/D/E",   "normal",       3, "C/D/E", FALSE, "E2", TRUE},
+      {5, "X/B/C/D/E",   "base-deleted", NO_COPY_FROM, "E3"},
+      {1, "E2",          "normal",       4, "A/B/C/D/E", MOVED_HERE},
+      {1, "E3",          "normal",       3, "C/D/E", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Update for conflicts on A and C */
+  SVN_ERR(sbox_wc_update(&b, "", 5));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",            "normal",       5, ""},
+      {0, "A",           "normal",       5, "A"},
+      {0, "A/B",         "normal",       5, "A/B"},
+      {0, "A/B/C",       "normal",       5, "A/B/C"},
+      {0, "A/B/C/D",     "normal",       5, "A/B/C/D"},
+      {0, "A/B/C/D/E",   "normal",       5, "A/B/C/D/E"},
+      {0, "P",           "normal",       5, "P"},
+      {0, "C",           "normal",       5, "C"},
+      {0, "C/D",         "normal",       5, "C/D"},
+      {0, "C/D/E",       "normal",       5, "C/D/E"},
+      {1, "A",           "base-deleted", NO_COPY_FROM, "X"},
+      {1, "A/B",         "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C",       "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C/D",     "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C/D/E",   "base-deleted", NO_COPY_FROM},
+      {1, "C",           "base-deleted", NO_COPY_FROM, "X/B/C"},
+      {1, "C/D",         "base-deleted", NO_COPY_FROM},
+      {1, "C/D/E",       "base-deleted", NO_COPY_FROM},
+      {1, "X",           "normal",       4, "A", MOVED_HERE},
+      {1, "X/B",         "normal",       4, "A/B", MOVED_HERE},
+      {1, "X/B/C",       "normal",       4, "A/B/C", MOVED_HERE},
+      {1, "X/B/C/D",     "normal",       4, "A/B/C/D", MOVED_HERE},
+      {1, "X/B/C/D/E",   "normal",       4, "A/B/C/D/E", MOVED_HERE},
+      {3, "X/B/C",       "normal",       3, "C", MOVED_HERE},
+      {3, "X/B/C/D",     "normal",       3, "C/D", MOVED_HERE},
+      {3, "X/B/C/D/E",   "normal",       3, "C/D/E", FALSE, "E2", TRUE},
+      {5, "X/B/C/D/E",   "base-deleted", NO_COPY_FROM, "E3"},
+      {1, "E2",          "normal",       4, "A/B/C/D/E", MOVED_HERE},
+      {1, "E3",          "normal",       3, "C/D/E", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Partially resolve A */
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "X/B/C", svn_depth_empty,
+                          svn_wc_conflict_choose_merged));
+
+  /* Cannot resolve C */
+  err = sbox_wc_resolve(&b, "C", svn_depth_empty,
+                        svn_wc_conflict_choose_mine_conflict);
+  SVN_ERR_ASSERT(err && err->apr_err == SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE);
+  svn_error_clear(err);
+
+  /* Complete resolving A and then resolve C */
+  SVN_ERR(sbox_wc_resolve(&b, "X/B/C/D/E", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "C", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",            "normal",       5, ""},
+      {0, "A",           "normal",       5, "A"},
+      {0, "A/B",         "normal",       5, "A/B"},
+      {0, "A/B/C",       "normal",       5, "A/B/C"},
+      {0, "A/B/C/D",     "normal",       5, "A/B/C/D"},
+      {0, "A/B/C/D/E",   "normal",       5, "A/B/C/D/E"},
+      {0, "P",           "normal",       5, "P"},
+      {0, "C",           "normal",       5, "C"},
+      {0, "C/D",         "normal",       5, "C/D"},
+      {0, "C/D/E",       "normal",       5, "C/D/E"},
+      {1, "A",           "base-deleted", NO_COPY_FROM, "X"},
+      {1, "A/B",         "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C",       "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C/D",     "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C/D/E",   "base-deleted", NO_COPY_FROM},
+      {1, "C",           "base-deleted", NO_COPY_FROM, "X/B/C"},
+      {1, "C/D",         "base-deleted", NO_COPY_FROM},
+      {1, "C/D/E",       "base-deleted", NO_COPY_FROM},
+      {1, "X",           "normal",       5, "A", MOVED_HERE},
+      {1, "X/B",         "normal",       5, "A/B", MOVED_HERE},
+      {1, "X/B/C",       "normal",       5, "A/B/C", MOVED_HERE},
+      {1, "X/B/C/D",     "normal",       5, "A/B/C/D", MOVED_HERE},
+      {1, "X/B/C/D/E",   "normal",       5, "A/B/C/D/E", MOVED_HERE},
+      {3, "X/B/C",       "normal",       5, "C", MOVED_HERE},
+      {3, "X/B/C/D",     "normal",       5, "C/D", MOVED_HERE},
+      {3, "X/B/C/D/E",   "normal",       5, "C/D/E", FALSE, "E2", TRUE},
+      {5, "X/B/C/D/E",   "base-deleted", NO_COPY_FROM, "E3"},
+      {1, "E2",          "normal",       5, "A/B/C/D/E", MOVED_HERE},
+      {1, "E3",          "normal",       3, "C/D/E", MOVED_HERE},
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
@@ -6106,6 +6409,140 @@ layered_moved_to(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *
+update_within_move(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  svn_error_t *err;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "update_within_move", opts, pool));
+
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C/D"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+
+  SVN_ERR(sbox_wc_move(&b, "A", "X"));
+  SVN_ERR(sbox_wc_update(&b, "A/B/C", 2));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",        "normal",       1, ""},
+      {0, "A",       "normal",       1, "A"},
+      {0, "A/B",     "normal",       1, "A/B"},
+      {0, "A/B/C",   "normal",       2, "A/B/C"},
+      {0, "A/B/C/D", "normal",       2, "A/B/C/D"},
+      {1, "A",       "base-deleted", NO_COPY_FROM, "X"},
+      {1, "A/B",     "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C",   "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C/D", "base-deleted", NO_COPY_FROM},
+      {1, "X",       "normal",       1, "A", MOVED_HERE},
+      {1, "X/B",     "normal",       1, "A/B", MOVED_HERE},
+      {1, "X/B/C",   "normal",       1, "A/B/C", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Can't resolve mixed-revision source to mine-conflict. */
+  err = sbox_wc_resolve(&b, "A", svn_depth_empty,
+                        svn_wc_conflict_choose_mine_conflict);
+  SVN_ERR_ASSERT(err && err->apr_err == SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE);
+  svn_error_clear(err);
+
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_merged));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",        "normal",       1, ""},
+      {0, "A",       "normal",       1, "A"},
+      {0, "A/B",     "normal",       1, "A/B"},
+      {0, "A/B/C",   "normal",       2, "A/B/C"},
+      {0, "A/B/C/D", "normal",       2, "A/B/C/D"},
+      {1, "A",       "base-deleted", NO_COPY_FROM},
+      {1, "A/B",     "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C",   "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C/D", "base-deleted", NO_COPY_FROM},
+      {1, "X",       "normal",       1, "A"},
+      {1, "X/B",     "normal",       1, "A/B"},
+      {1, "X/B/C",   "normal",       1, "A/B/C"},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+commit_moved_descendant(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  SVN_ERR(svn_test__sandbox_create(&b, "commit_moved_descendant", opts, pool));
+
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A/A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A/A/A/A"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_copy(&b, "A", "A_copied"));
+  SVN_ERR(sbox_wc_move(&b, "A/A/A", "AAA_moved"));
+  SVN_ERR(sbox_wc_delete(&b, "A/A"));
+  SVN_ERR(sbox_wc_copy(&b, "A_copied/A", "A/A"));
+
+  /* And now I want to commit AAA_moved (the entire move), but not
+     the replacement of A/A */
+
+  /* For now, just start committing directly */
+  /* ### This fails, because A/A/A is not collected by the commit
+         harvester (it doesn't need committing, but our move filter
+         blocks on it) */
+  SVN_ERR(sbox_wc_commit(&b, ""));
+
+  /* It would be nicer if we could just do a: */
+  /* SVN_ERR(sbox_wc_commit(&b, "AAA_moved")); */
+  /* Which then includes the delete half of the move, when it is
+     shadowed, like in this case. The commit processing doesn't
+     support this yet though*/
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+commit_moved_away_descendant(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  SVN_ERR(svn_test__sandbox_create(&b, "commit_moved_away_descendant",
+                                   opts, pool));
+
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A/A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A/A/A/A"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_copy(&b, "A", "A_copied"));
+  SVN_ERR(sbox_wc_move(&b, "A/A/A", "AAA_moved"));
+  SVN_ERR(sbox_wc_delete(&b, "A/A"));
+  SVN_ERR(sbox_wc_copy(&b, "A_copied/A", "A/A"));
+
+  /* And now I want to make sure that I can't commit A, without also
+     committing AAA_moved, as that would break the move*/
+  SVN_ERR(sbox_wc_commit(&b, "A"));
+
+  return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                          "The commit should have failed");
+
+  /*return SVN_NO_ERROR;*/
+}
+
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
@@ -6207,7 +6644,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "update_prop_mod_into_moved"),
     SVN_TEST_OPTS_PASS(nested_move_update,
                        "nested_move_update"),
-    SVN_TEST_OPTS_XFAIL(nested_move_commit,
+    SVN_TEST_OPTS_PASS(nested_move_commit,
                        "nested_move_commit"),
     SVN_TEST_OPTS_PASS(nested_move_update2,
                        "nested_move_update2"),
@@ -6223,7 +6660,13 @@ struct svn_test_descriptor_t test_funcs[] =
                        "switch_move"),
     SVN_TEST_OPTS_PASS(move_replace,
                        "move_replace"),
-    SVN_TEST_OPTS_XFAIL(layered_moved_to,
+    SVN_TEST_OPTS_PASS(layered_moved_to,
                        "layered_moved_to"),
+    SVN_TEST_OPTS_PASS(update_within_move,
+                       "update_within_move"),
+    SVN_TEST_OPTS_XFAIL(commit_moved_descendant,
+                        "commit_moved_descendant"),
+    SVN_TEST_OPTS_XFAIL(commit_moved_away_descendant,
+                        "commit_moved_away_descendant"),
     SVN_TEST_NULL
   };

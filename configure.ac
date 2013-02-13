@@ -1122,9 +1122,12 @@ if test "$enable_optimization" = "yes"; then
         SVN_CFLAGS_ADD_IFELSE([-O])])
     else
       AC_MSG_NOTICE([Enabling optimizations for C])
-      SVN_CFLAGS_ADD_IFELSE([-O2],[],[
-        SVN_CFLAGS_ADD_IFELSE([-O1],[],[
-          SVN_CFLAGS_ADD_IFELSE([-O])])])
+      SVN_CFLAGS_ADD_IFELSE([-O3],[],[
+        SVN_CFLAGS_ADD_IFELSE([-O2],[],[
+          SVN_CFLAGS_ADD_IFELSE([-O1],[],[
+            SVN_CFLAGS_ADD_IFELSE([-O])])])])
+      SVN_CFLAGS_ADD_IFELSE([-flto -Wno-clobbered])
+      SVN_CFLAGS_ADD_IFELSE([-fwhole-program])
     fi
   fi
   if test -z ["`echo $CXXUSERFLAGS' ' | $EGREP -- '-O[^ ]* '`"]; then
@@ -1135,9 +1138,12 @@ if test "$enable_optimization" = "yes"; then
         SVN_CXXFLAGS_ADD_IFELSE([-O])])
     else
       AC_MSG_NOTICE([Enabling optimizations for C++])
-      SVN_CXXFLAGS_ADD_IFELSE([-O2],[],[
-        SVN_CXXFLAGS_ADD_IFELSE([-O1],[],[
-          SVN_CXXFLAGS_ADD_IFELSE([-O])])])
+      SVN_CXXFLAGS_ADD_IFELSE([-O3],[],[
+        SVN_CXXFLAGS_ADD_IFELSE([-O2],[],[
+          SVN_CXXFLAGS_ADD_IFELSE([-O1],[],[
+            SVN_CXXFLAGS_ADD_IFELSE([-O])])])])
+      SVN_CXXFLAGS_ADD_IFELSE([-flto -Wno-clobbered])
+      SVN_CXXFLAGS_ADD_IFELSE([-fwhole-program])
     fi
   fi
 elif test "$enable_optimization" = "no"; then

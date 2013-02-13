@@ -1444,7 +1444,7 @@ def revert_tree_conflicts_with_replacements(sbox):
   # Revert everything (i.e., accept "theirs-full").
   svntest.actions.run_and_verify_revert([
     wc('A/B/E'),
-    wc('A/B/E/alpha'),   # incoming
+    wc('A/B/E/alpha'),   # incoming & local
     wc('A/B/E/beta'),
     wc('A/B/E/loc_beta'),
     wc('A/B/lambda'),
@@ -1459,7 +1459,6 @@ def revert_tree_conflicts_with_replacements(sbox):
     wc('A/D/H/loc_psi'),
     wc('A/D/gamma'),
     wc('A/mu'),
-    wc('A/B/E/alpha'),
     ], '-R', wc_dir)
 
   # Remove a few unversioned files that revert left behind.

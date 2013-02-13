@@ -226,14 +226,15 @@ svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
-/* Produce a diff between two files or two directories at LOCAL_ABSPATH1
- * and LOCAL_ABSPATH2, using the provided diff callbacks to show changes
- * in files. The files and directories involved may be part of a working
- * copy or they may be unversioned. For versioned files, show property
- * changes, too. */
+/* Produce a diff with depth DEPTH between two files or two directories at
+ * LOCAL_ABSPATH1 and LOCAL_ABSPATH2, using the provided diff callbacks to
+ * show changes in files. The files and directories involved may be part of
+ * a working copy or they may be unversioned. For versioned files, show
+ * property changes, too. */
 svn_error_t *
 svn_client__arbitrary_nodes_diff(const char *local_abspath1,
                                  const char *local_abspath2,
+                                 svn_depth_t depth,
                                  const svn_wc_diff_callbacks4_t *callbacks,
                                  void *callback_baton,
                                  svn_client_ctx_t *ctx,

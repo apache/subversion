@@ -1073,9 +1073,7 @@ def status_add_plus_conflict(sbox):
     "?       " + sbox.ospath('trunk/file.merge-right.r5') + "\n",
     "?       " + sbox.ospath('trunk/file.working') + "\n",
     "C  +    " + sbox.ospath('trunk/file') + "\n",
-    "Summary of conflicts:\n",
-    "  Text conflicts: 1\n",
-  ]
+  ] + svntest.main.summary_of_conflicts(text_conflicts=1)
   if svntest.main.server_has_mergeinfo():
     lines.append(" M      " + sbox.ospath('trunk') + "\n")
 
@@ -1745,9 +1743,7 @@ def status_with_tree_conflicts(sbox):
           "      >   local file delete, incoming file edit upon update\n",
           "!     C %s\n" % tau,
           "      >   local file delete, incoming file delete upon update\n",
-          "Summary of conflicts:\n",
-          "  Tree conflicts: 3\n",
-          ])
+         ] + svntest.main.summary_of_conflicts(tree_conflicts=3))
 
   svntest.actions.run_and_verify_svn(None,
                                      expected,
@@ -1763,10 +1759,7 @@ def status_with_tree_conflicts(sbox):
           "      >   local file edit, incoming file delete upon update\n",
           "!     C                                  %s\n" % tau,
           "      >   local file delete, incoming file delete upon update\n",
-          "Summary of conflicts:\n",
-          "  Tree conflicts: 3\n",
-          ])
-
+         ] + svntest.main.summary_of_conflicts(tree_conflicts=3))
 
   svntest.actions.run_and_verify_svn(None,
                                      expected,

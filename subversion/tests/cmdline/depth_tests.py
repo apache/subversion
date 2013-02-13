@@ -1042,46 +1042,26 @@ def diff_in_depthy_wc(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'commit', '-m', '', wc)
 
-  diff = [
-    "Index: A/mu\n",
-    "===================================================================\n",
-    "--- A/mu\t(revision 2)\n",
-    "+++ A/mu\t(working copy)\n",
+  from diff_tests import make_diff_header, make_diff_prop_header
+  from diff_tests import make_diff_prop_deleted, make_diff_prop_added
+  diff_mu = make_diff_header('A/mu', 'revision 2', 'working copy') + [
     "@@ -1 +1 @@\n",
     "-new text\n",
-    "+This is the file 'mu'.\n",
-    "Index: A\n",
-    "===================================================================\n",
-    "--- A\t(revision 2)\n",
-    "+++ A\t(working copy)\n",
-    "\n",
-    "Property changes on: A\n",
-    "___________________________________________________________________\n",
-    "Deleted: bar\n",
-    "## -1 +0,0 ##\n",
-    "-bar-val\n",
-    "Index: iota\n",
-    "===================================================================\n",
-    "--- iota\t(revision 2)\n",
-    "+++ iota\t(working copy)\n",
+    "+This is the file 'mu'.\n"]
+  diff_A = make_diff_header('A', 'revision 2', 'working copy') + \
+           make_diff_prop_header('A') + \
+           make_diff_prop_deleted('bar', 'bar-val')
+  diff_iota = make_diff_header('iota', 'revision 2', 'working copy') + [
     "@@ -1 +1 @@\n",
     "-new text\n",
-    "+This is the file 'iota'.\n",
-    "Index: .\n",
-    "===================================================================\n",
-    "--- .\t(revision 2)\n",
-    "+++ .\t(working copy)\n",
-    "\n",
-    "Property changes on: .\n",
-    "___________________________________________________________________\n",
-    "Deleted: foo\n",
-    "## -1 +0,0 ##\n",
-    "-foo-val\n",
-    "\\ No newline at end of property\n"]
+    "+This is the file 'iota'.\n"]
+  diff_dot = make_diff_header('.', 'revision 2', 'working copy') + \
+             make_diff_prop_header('.') + \
+             make_diff_prop_deleted('foo', 'foo-val')
 
   os.chdir(wc_empty)
 
-  expected_output = svntest.verify.UnorderedOutput(diff[24:])
+  expected_output = svntest.verify.UnorderedOutput(diff_dot)
   # The diff should contain only the propchange on '.'
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-rHEAD')
@@ -1091,11 +1071,11 @@ def diff_in_depthy_wc(sbox):
                                      '--set-depth', 'files', '-r1')
   # The diff should contain only the propchange on '.' and the
   # contents change on iota.
-  expected_output = svntest.verify.UnorderedOutput(diff[17:])
+  expected_output = svntest.verify.UnorderedOutput(diff_iota + diff_dot)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-rHEAD')
   # Do a diff at --depth empty.
-  expected_output = svntest.verify.UnorderedOutput(diff[24:])
+  expected_output = svntest.verify.UnorderedOutput(diff_dot)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '--depth', 'empty', '-rHEAD')
 
@@ -1104,11 +1084,12 @@ def diff_in_depthy_wc(sbox):
                                      '--set-depth', 'immediates', '-r1')
   # The diff should contain the propchanges on '.' and 'A' and the
   # contents change on iota.
-  expected_output = svntest.verify.UnorderedOutput(diff[7:])
+  expected_output = svntest.verify.UnorderedOutput(diff_A + diff_iota +
+                                                   diff_dot)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                     'diff', '-rHEAD')
   # Do a diff at --depth files.
-  expected_output = svntest.verify.UnorderedOutput(diff[17:])
+  expected_output = svntest.verify.UnorderedOutput(diff_iota + diff_dot)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '--depth', 'files', '-rHEAD')
 
@@ -1117,11 +1098,12 @@ def diff_in_depthy_wc(sbox):
                                      '--set-depth', 'files', '-r1', 'A')
   # The diff should contain everything but the contents change on
   # gamma (which does not exist in this working copy).
-  expected_output = svntest.verify.UnorderedOutput(diff)
+  expected_output = svntest.verify.UnorderedOutput(diff_mu + diff_A +
+                                                   diff_iota + diff_dot)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-rHEAD')
   # Do a diff at --depth immediates.
-  expected_output = svntest.verify.UnorderedOutput(diff[7:])
+  expected_output = svntest.verify.UnorderedOutput(diff_A + diff_iota +                                                                                diff_dot)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                     'diff', '--depth', 'immediates', '-rHEAD')
 

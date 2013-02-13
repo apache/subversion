@@ -170,6 +170,7 @@ save_value(dav_db *db, const dav_prop_name *name,
   const char *propname;
   svn_error_t *serr;
   const dav_resource *resource = db->resource;
+  apr_pool_t *subpool;
 
   /* get the repos-local name */
   get_repos_propname(db, name, &propname);
@@ -204,13 +205,16 @@ save_value(dav_db *db, const dav_prop_name *name,
 
   */
 
+  /* A subpool to cope with mod_dav making multiple calls, e.g. during
+     PROPPATCH with multiple values. */
+  subpool = svn_pool_create(db->resource->pool);
   if (db->resource->baselined)
     {
       if (db->resource->working)
         {
           serr = svn_repos_fs_change_txn_prop(resource->info->root.txn,
                                               propname, value,
-                                              resource->pool);
+                                              subpool);
         }
       else
         {
@@ -221,7 +225,7 @@ save_value(dav_db *db, const dav_prop_name *name,
                                                TRUE, TRUE,
                                                db->authz_read_func,
                                                db->authz_read_baton,
-                                               resource->pool);
+                                               subpool);
 
           /* Prepare any hook failure message to get sent over the wire */
           if (serr)
@@ -244,20 +248,21 @@ save_value(dav_db *db, const dav_prop_name *name,
           dav_svn__operational_log(resource->info,
                                    svn_log__change_rev_prop(
                                       resource->info->root.rev,
-                                      propname, resource->pool));
+                                      propname, subpool));
         }
     }
   else if (resource->info->restype == DAV_SVN_RESTYPE_TXN_COLLECTION)
     {
       serr = svn_repos_fs_change_txn_prop(resource->info->root.txn,
-                                          propname, value, resource->pool);
+                                          propname, value, subpool);
     }
   else
     {
       serr = svn_repos_fs_change_node_prop(resource->info->root.root,
                                            get_repos_path(resource->info),
-                                           propname, value, resource->pool);
+                                           propname, value, subpool);
     }
+  svn_pool_destroy(subpool);
 
   if (serr != NULL)
     return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -538,6 +543,7 @@ db_remove(dav_db *db, const dav_prop_name *name)
 {
   svn_error_t *serr;
   const char *propname;
+  apr_pool_t *subpool;
 
   /* get the repos-local name */
   get_repos_propname(db, name, &propname);
@@ -546,11 +552,15 @@ db_remove(dav_db *db, const dav_prop_name *name)
   if (propname == NULL)
     return NULL;
 
+  /* A subpool to cope with mod_dav making multiple calls, e.g. during
+     PROPPATCH with multiple values. */
+  subpool = svn_pool_create(db->resource->pool);
+
   /* Working Baseline or Working (Version) Resource */
   if (db->resource->baselined)
     if (db->resource->working)
       serr = svn_repos_fs_change_txn_prop(db->resource->info->root.txn,
-                                          propname, NULL, db->resource->pool);
+                                          propname, NULL, subpool);
     else
       /* ### VIOLATING deltaV: you can't proppatch a baseline, it's
          not a working resource!  But this is how we currently
@@ -562,11 +572,12 @@ db_remove(dav_db *db, const dav_prop_name *name)
                                            propname, NULL, NULL, TRUE, TRUE,
                                            db->authz_read_func,
                                            db->authz_read_baton,
-                                           db->resource->pool);
+                                           subpool);
   else
     serr = svn_repos_fs_change_node_prop(db->resource->info->root.root,
                                          get_repos_path(db->resource->info),
-                                         propname, NULL, db->resource->pool);
+                                         propname, NULL, subpool);
+  svn_pool_destroy(subpool);
   if (serr != NULL)
     return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                 "could not remove a property",

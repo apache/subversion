@@ -537,7 +537,7 @@ svn_wc__conflict_skel_add_tree_conflict(svn_skel_t *conflict_skel,
                                         const char *wri_abspath,
                                         svn_wc_conflict_reason_t local_change,
                                         svn_wc_conflict_action_t incoming_change,
-                                        const char *moved_away_op_root_abspath,
+                                        const char *move_src_op_root_abspath,
                                         apr_pool_t *result_pool,
                                         apr_pool_t *scratch_pool)
 {
@@ -549,22 +549,22 @@ svn_wc__conflict_skel_add_tree_conflict(svn_skel_t *conflict_skel,
 
   SVN_ERR_ASSERT(!tree_conflict); /* ### Use proper error? */
 
-  SVN_ERR_ASSERT((local_change != svn_wc_conflict_reason_moved_away
-                  && !moved_away_op_root_abspath)
-                 || moved_away_op_root_abspath); /* ### Use proper error? */
+  SVN_ERR_ASSERT(local_change == svn_wc_conflict_reason_moved_away
+                 || !move_src_op_root_abspath); /* ### Use proper error? */
 
   tree_conflict = svn_skel__make_empty_list(result_pool);
 
-  if (local_change == svn_wc_conflict_reason_moved_away)
+  if (local_change == svn_wc_conflict_reason_moved_away
+      && move_src_op_root_abspath)
     {
-      const char *moved_away_op_root_relpath;
+      const char *move_src_op_root_relpath;
 
-      SVN_ERR(svn_wc__db_to_relpath(&moved_away_op_root_relpath,
+      SVN_ERR(svn_wc__db_to_relpath(&move_src_op_root_relpath,
                                     db, wri_abspath,
-                                    moved_away_op_root_abspath,
+                                    move_src_op_root_abspath,
                                     result_pool, scratch_pool));
 
-      svn_skel__prepend_str(moved_away_op_root_relpath, tree_conflict,
+      svn_skel__prepend_str(move_src_op_root_relpath, tree_conflict,
                             result_pool);
     }
 
@@ -933,7 +933,7 @@ svn_wc__conflict_read_prop_conflict(const char **marker_abspath,
 svn_error_t *
 svn_wc__conflict_read_tree_conflict(svn_wc_conflict_reason_t *local_change,
                                     svn_wc_conflict_action_t *incoming_change,
-                                    const char **moved_away_op_root_abspath,
+                                    const char **move_src_op_root_abspath,
                                     svn_wc__db_t *db,
                                     const char *wri_abspath,
                                     const svn_skel_t *conflict_skel,
@@ -956,16 +956,18 @@ svn_wc__conflict_read_tree_conflict(svn_wc_conflict_reason_t *local_change,
 
   c = c->next; /* Skip markers */
 
-  if (local_change)
-    {
-      int value = svn_token__from_mem(local_change_map, c->data, c->len);
+  {
+    int value = svn_token__from_mem(local_change_map, c->data, c->len);
 
-      if (value != SVN_TOKEN_UNKNOWN)
-        *local_change = value;
-      else
-        *local_change = svn_wc_conflict_reason_edited;
+    if (local_change)
+      {
+        if (value != SVN_TOKEN_UNKNOWN)
+          *local_change = value;
+        else
+          *local_change = svn_wc_conflict_reason_edited;
+      }
 
-      is_moved_away = *local_change == svn_wc_conflict_reason_moved_away;
+      is_moved_away = (value == svn_wc_conflict_reason_moved_away);
     }
   c = c->next;
 
@@ -981,15 +983,21 @@ svn_wc__conflict_read_tree_conflict(svn_wc_conflict_reason_t *local_change,
 
   c = c->next;
 
-  if (is_moved_away && moved_away_op_root_abspath)
+  if (move_src_op_root_abspath)
     {
-      const char *moved_away_op_root_relpath = apr_pstrmemdup(scratch_pool,
-                                                              c->data, c->len);
+      /* Only set for update and switch tree conflicts */
+      if (c && is_moved_away)
+        {
+          const char *move_src_op_root_relpath
+                            = apr_pstrmemdup(scratch_pool, c->data, c->len);
 
-      SVN_ERR(svn_wc__db_from_relpath(moved_away_op_root_abspath,
-                                      db, wri_abspath,
-                                      moved_away_op_root_relpath,
-                                      result_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_from_relpath(move_src_op_root_abspath,
+                                          db, wri_abspath,
+                                          move_src_op_root_relpath,
+                                          result_pool, scratch_pool));
+        }
+      else
+        *move_src_op_root_abspath = NULL;
     }
 
   return SVN_NO_ERROR;
@@ -2330,7 +2338,9 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
                          svn_boolean_t resolve_tree,
                          svn_wc_conflict_choice_t conflict_choice,
                          svn_skel_t *work_items,
-                         svn_cancel_func_t cancel_func_t,
+                         svn_wc_notify_func2_t notify_func,
+                         void *notify_baton,
+                         svn_cancel_func_t cancel_func,
                          void *cancel_baton,
                          apr_pool_t *scratch_pool)
 {
@@ -2599,23 +2609,75 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
   if (resolve_tree)
     {
       svn_wc_conflict_reason_t reason;
+      svn_wc_conflict_action_t action;
 
-      SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, NULL, NULL, 
+      SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, &action, NULL, 
                                                   db, local_abspath,
                                                   conflicts,
                                                   scratch_pool, scratch_pool));
 
-      if (reason == svn_wc_conflict_reason_deleted)
+      if (operation == svn_wc_operation_update
+          || operation == svn_wc_operation_switch)
         {
-          /* ### FIXME.  At the moment this is a separate transaction
-             ### but it should somehow be combined with the transaction
-             ### in svn_wc__db_op_mark_resolved.  Perhaps move this
-             ### functionality into that function?  Perhaps have this
-             ### function generate "raise conflict" workqueue items? */
-          SVN_ERR(svn_wc__db_resolve_delete_raise_moved_away(db, local_abspath,
-                                                             scratch_pool));
+          if (reason == svn_wc_conflict_reason_deleted)
+            {
+              if (conflict_choice == svn_wc_conflict_choose_merged)
+                {
+                  SVN_ERR(svn_wc__db_resolve_delete_raise_moved_away(
+                            db, local_abspath, scratch_pool));
+                  *did_resolve = TRUE;
+                }
+            }
+          else if (reason == svn_wc_conflict_reason_moved_away
+                  && action == svn_wc_conflict_action_edit)
+            {
+              /* After updates, we can resolve local moved-away
+               * vs. any incoming change, either by updating the
+               * moved-away node (mine-conflict) or by breaking the
+               * move (theirs-conflict). */
+              if (conflict_choice == svn_wc_conflict_choose_mine_conflict)
+                {
+                  SVN_ERR(svn_wc__db_update_moved_away_conflict_victim(
+                            &work_items,
+                            db, local_abspath,
+                            notify_func, notify_baton,
+                            cancel_func, cancel_baton,
+                            scratch_pool, scratch_pool));
+                  *did_resolve = TRUE;
+                }
+              else if (conflict_choice == svn_wc_conflict_choose_theirs_conflict
+                       || conflict_choice == svn_wc_conflict_choose_merged)
+                {
+                  /* We must break the move even if the user accepts
+                   * the current working copy state (choose_merged)
+                   * instead of updating the move. Else the move would
+                   * be left in an invalid state. */
+
+                  /* ### This breaks the move but leaves the conflict
+                     ### involving the move until
+                     ### svn_wc__db_op_mark_resolved. */
+                  SVN_ERR(svn_wc__db_resolve_break_moved_away(db, local_abspath,
+                                                              scratch_pool));
+                  *did_resolve = TRUE;
+                }
+            }
         }
-                                                  
+
+      if (*did_resolve == FALSE &&
+          conflict_choice != svn_wc_conflict_choose_merged)
+        {
+          /* For other tree conflicts, there is no way to pick
+           * theirs-full or mine-full, etc. Throw an error if the
+           * user expects us to be smarter than we really are. */
+          return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
+                                   NULL,
+                                   _("Tree conflict can only be "
+                                     "resolved to 'working' state; "
+                                     "'%s' not resolved"),
+                                   svn_dirent_local_style(local_abspath,
+                                                          scratch_pool));
+        }
+
       *did_resolve = TRUE;
     }
 
@@ -2627,7 +2689,7 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
 
       /* Run the work queue to remove conflict marker files. */
       SVN_ERR(svn_wc__wq_run(db, local_abspath,
-                             cancel_func_t, cancel_baton,
+                             cancel_func, cancel_baton,
                              pool));
     }
 
@@ -2650,6 +2712,7 @@ svn_wc__mark_resolved_text_conflict(svn_wc__db_t *db,
                            FALSE /* resolve_tree */,
                            svn_wc_conflict_choose_merged,
                            NULL,
+                           NULL, NULL, /* notify_func */
                            NULL, NULL, /* cancel_func */
                            scratch_pool));
 }
@@ -2669,6 +2732,7 @@ svn_wc__mark_resolved_prop_conflicts(svn_wc__db_t *db,
                            FALSE /* resolve_tree */,
                            svn_wc_conflict_choose_merged,
                            NULL /* work_items */,
+                           NULL, NULL, /* notify_func */
                            NULL, NULL, /* cancel_func */
                            scratch_pool));
 }
@@ -2749,58 +2813,6 @@ conflict_status_walker(void *baton,
           case svn_wc_conflict_kind_tree:
             if (!cswb->resolve_tree)
               break;
-
-            /* After updates, we can resolve local moved-away vs. any incoming
-             * change, either by updating the moved-away node (mine-conflict)
-             * or by breaking the move (theirs-conflict). */
-            if ((cd->operation == svn_wc_operation_update ||
-                 cd->operation == svn_wc_operation_switch) &&
-                cd->reason == svn_wc_conflict_reason_moved_away)
-              {
-                if (my_choice == svn_wc_conflict_choose_mine_conflict)
-                  SVN_ERR(svn_wc__db_update_moved_away_conflict_victim(
-                            &work_items,
-                            cswb->db, local_abspath,
-                            cswb->notify_func, cswb->notify_baton,
-                            cswb->cancel_func, cswb->cancel_baton,
-                            scratch_pool, scratch_pool));
-                 else if (my_choice == svn_wc_conflict_choose_theirs_conflict)
-                  {
-                    switch (status->node_status)
-                      {
-                        case svn_wc_status_deleted:
-                          /* Break the move by reverting the deleted half of
-                           * the move, keeping the copied-half as a copy.
-                           * Reverting a node requires write lock on parent. */
-                          SVN_ERR(svn_wc__revert_internal(cswb->db, local_abspath,
-                                                          svn_depth_infinity,
-                                                          FALSE, 
-                                                          cswb->cancel_func,
-                                                          cswb->cancel_baton,
-                                                          cswb->notify_func,
-                                                          cswb->notify_baton,
-                                                          scratch_pool));
-                          break;
-                        default:
-                          /* ### TODO other node_status cases */
-                          break;
-                      }
-                  }
-              }
-            else if (my_choice != svn_wc_conflict_choose_merged)
-              {
-                /* For other tree conflicts, there is no way to pick
-                 * theirs-full or mine-full, etc. Throw an error if the
-                 * user expects us to be smarter than we really are. */
-                return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
-                                         NULL,
-                                         _("Tree conflict can only be "
-                                           "resolved to 'working' state; "
-                                           "'%s' not resolved"),
-                                         svn_dirent_local_style(local_abspath,
-                                                                iterpool));
-              }
-
             SVN_ERR(resolve_conflict_on_node(&did_resolve,
                                              db,
                                              local_abspath,
@@ -2809,6 +2821,8 @@ conflict_status_walker(void *baton,
                                              TRUE /* resolve_tree */,
                                              my_choice,
                                              work_items,
+                                             cswb->notify_func,
+                                             cswb->notify_baton,
                                              cswb->cancel_func,
                                              cswb->cancel_baton,
                                              iterpool));
@@ -2828,6 +2842,8 @@ conflict_status_walker(void *baton,
                                              FALSE /* resolve_tree */,
                                              my_choice,
                                              NULL,
+                                             cswb->notify_func,
+                                             cswb->notify_baton,
                                              cswb->cancel_func,
                                              cswb->cancel_baton,
                                              iterpool));
@@ -2858,6 +2874,8 @@ conflict_status_walker(void *baton,
                                              FALSE /* resolve_tree */,
                                              my_choice,
                                              NULL,
+                                             cswb->notify_func,
+                                             cswb->notify_baton,
                                              cswb->cancel_func,
                                              cswb->cancel_baton,
                                              iterpool));

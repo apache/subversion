@@ -138,12 +138,16 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
                                     if not l.startswith('Text-delta-base-md5')]
       svnrdump_dumpfile = [l for l in svnrdump_dumpfile
                                     if not l.startswith('Text-delta-base-md5')]
+    svnadmin_dumpfile = [l for l in svnadmin_dumpfile
+                                  if not mismatched_headers_re.match(l)]
+    svnrdump_dumpfile = [l for l in svnrdump_dumpfile
+                                  if not mismatched_headers_re.match(l)]
 
     svnadmin_dumpfile = svntest.verify.UnorderedOutput(svnadmin_dumpfile)
 
     svntest.verify.compare_and_display_lines(
       "Dump files", "DUMP", svnadmin_dumpfile, svnrdump_dumpfile,
-      None, mismatched_headers_re)
+      None)
 
   else:
     compare_repos_dumps(sbox, svnadmin_dumpfile)
