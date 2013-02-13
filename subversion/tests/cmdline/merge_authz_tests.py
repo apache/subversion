@@ -122,7 +122,7 @@ def mergeinfo_and_skipped_paths(sbox):
   A_COPY_2_H_path = os.path.join(wc_restricted, "A_COPY_2", "D", "H")
   A_COPY_3_path = os.path.join(wc_restricted, "A_COPY_3")
   omega_path = os.path.join(wc_restricted, "A_COPY", "D", "H", "omega")
-  zeta_path = os.path.join(wc_dir, "A", "D", "H", "zeta")
+  zeta_path = sbox.ospath("A/D/H/zeta")
 
   # Merge r4:8 into the restricted WC's A_COPY.
   #
@@ -503,10 +503,10 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
                              svntest.main.wc_author2 + " = rw")})
 
   # Some paths we'll care about
-  Acopy_path = os.path.join(wc_dir, 'A_copy')
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
-  Acopy_gamma_path = os.path.join(wc_dir, 'A_copy', 'D', 'gamma')
-  Acopy_D_path = os.path.join(wc_dir, 'A_copy', 'D')
+  Acopy_path = sbox.ospath('A_copy')
+  gamma_path = sbox.ospath('A/D/gamma')
+  Acopy_gamma_path = sbox.ospath('A_copy/D/gamma')
+  Acopy_D_path = sbox.ospath('A_copy/D')
   A_url = sbox.repo_url + '/A'
   Acopy_url = sbox.repo_url + '/A_copy'
 
@@ -624,12 +624,12 @@ def reintegrate_fails_if_no_root_access(sbox):
 
   # Some paths we'll care about
   wc_dir = sbox.wc_dir
-  A_path          = os.path.join(wc_dir, 'A')
-  A_COPY_path     = os.path.join(wc_dir, 'A_COPY')
-  beta_COPY_path  = os.path.join(wc_dir, 'A_COPY', 'B', 'E', 'beta')
-  rho_COPY_path   = os.path.join(wc_dir, 'A_COPY', 'D', 'G', 'rho')
-  omega_COPY_path = os.path.join(wc_dir, 'A_COPY', 'D', 'H', 'omega')
-  psi_COPY_path   = os.path.join(wc_dir, 'A_COPY', 'D', 'H', 'psi')
+  A_path          = sbox.ospath('A')
+  A_COPY_path     = sbox.ospath('A_COPY')
+  beta_COPY_path  = sbox.ospath('A_COPY/B/E/beta')
+  rho_COPY_path   = sbox.ospath('A_COPY/D/G/rho')
+  omega_COPY_path = sbox.ospath('A_COPY/D/H/omega')
+  psi_COPY_path   = sbox.ospath('A_COPY/D/H/psi')
 
   # Copy A@1 to A_COPY in r2, and then make some changes to A in r3-6.
   sbox.build()
@@ -637,7 +637,7 @@ def reintegrate_fails_if_no_root_access(sbox):
   expected_disk, expected_status = set_up_branch(sbox)
 
   # Make a change on the branch, to A_COPY/mu, commit in r7.
-  svntest.main.file_write(os.path.join(wc_dir, "A_COPY", "mu"),
+  svntest.main.file_write(sbox.ospath("A_COPY/mu"),
                           "Changed on the branch.")
   expected_output = wc.State(wc_dir, {'A_COPY/mu' : Item(verb='Sending')})
   expected_status.tweak('A_COPY/mu', wc_rev=7)
