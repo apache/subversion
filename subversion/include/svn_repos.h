@@ -3210,7 +3210,8 @@ svn_repos_authz_read(svn_authz_t **authz_p,
  * If @a path or @a groups_path is not a valid authz rule file, then return
  * #SVN_ERR_AUTHZ_INVALID_CONFIG.  The contents of @a *authz_p is then
  * undefined.  If @a must_exist is TRUE, a missing authz or groups file
- * is also an error.
+ * is also an error other than #SVN_ERR_AUTHZ_INVALID_CONFIG (exact error
+ * depends on the access type).
  *
  * If @a path is a repos relative URL then @a repos_root must be set to
  * the root of the repository the authz configuration will be used with.

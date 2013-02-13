@@ -774,8 +774,8 @@ use SVN::Base qw(Core svn_opt_revision_t_);
 
 =cut
 
-package _p_svn_opt_revision_t_value;
-use SVN::Base qw(Core svn_opt_revision_t_value_);
+package _p_svn_opt_revision_value_t;
+use SVN::Base qw(Core svn_opt_revision_value_t_);
 
 package _p_svn_config_t;
 use SVN::Base qw(Core svn_config_);

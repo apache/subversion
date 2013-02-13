@@ -607,6 +607,34 @@ svn_wc_create_tmp_file(apr_file_t **fp,
                                  pool);
 }
 
+svn_error_t *
+svn_wc_create_tmp_file2(apr_file_t **fp,
+                        const char **new_name,
+                        const char *path,
+                        svn_io_file_del_t delete_when,
+                        apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+  const char *local_abspath;
+  const char *temp_dir;
+  svn_error_t *err;
+
+  SVN_ERR_ASSERT(fp || new_name);
+
+  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  err = svn_wc__get_tmpdir(&temp_dir, wc_ctx, local_abspath, pool, pool);
+  err = svn_error_compose_create(err, svn_wc_context_destroy(wc_ctx));
+  if (err)
+    return svn_error_trace(err);
+
+  SVN_ERR(svn_io_open_unique_file3(fp, new_name, temp_dir,
+                                   delete_when, pool, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 /*** From adm_ops.c ***/
 svn_error_t *

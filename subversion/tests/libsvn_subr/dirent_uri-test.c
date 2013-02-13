@@ -618,6 +618,11 @@ test_uri_dirname(apr_pool_t *pool)
     { "http://server", "http://server" },
     { "file:///a/b", "file:///a" },
     { "file:///a", "file://" },
+    { "file://", "file://" },
+#ifdef WIN32
+    { "file:///A:/dir", "file:///A:" },
+    { "file:///A:", "file://" },
+#endif
   };
 
   for (i = 0; i < COUNT_OF(tests); i++)

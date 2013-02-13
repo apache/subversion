@@ -31,6 +31,8 @@ import sys, os, re
 import svntest
 from svntest import wc
 
+from prop_tests import binary_mime_type_on_text_file_warning
+
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
 SkipUnless = svntest.testcase.SkipUnless_deco
@@ -213,7 +215,8 @@ def commit_one_new_binary_file(sbox):
   expected_status = make_standard_slew_of_changes(wc_dir)
 
   gloo_path = sbox.ospath('A/D/H/gloo')
-  svntest.main.run_svn(None, 'propset', 'svn:mime-type',
+  svntest.main.run_svn(binary_mime_type_on_text_file_warning,
+                       'propset', 'svn:mime-type',
                        'application/octet-stream', gloo_path)
 
   # Create expected state.

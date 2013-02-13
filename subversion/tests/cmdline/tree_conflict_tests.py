@@ -689,7 +689,6 @@ def merge_dir_mod_onto_not_dir(sbox):
   test_tc_merge(sbox2, d_mods, wc_scen = d_dels + d_moves)
 
 # Test for issue #3150 'tree conflicts with directories as victims'.
-@XFail()
 @Issue(3150)
 def merge_dir_del_onto_not_same(sbox):
   "merge dir: del/rpl/mv onto not-same"
@@ -1376,9 +1375,7 @@ def actual_only_node_behaviour(sbox):
   # update (up)
   expected_stdout = [
    "Skipped '%s' -- Node remains in conflict\n" % sbox.ospath('A/foo'),
-   "Summary of conflicts:\n",
-   "  Skipped paths: 1\n",
-  ]
+  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
   expected_stderr = []
   run_and_verify_svn(None, expected_stdout, expected_stderr,
                      "update", foo_path)

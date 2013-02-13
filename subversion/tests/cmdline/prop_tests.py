@@ -49,6 +49,10 @@ def is_non_posix_and_non_windows_os():
   """lambda function to skip revprop_change test"""
   return (not svntest.main.is_posix_os()) and sys.platform != 'win32'
 
+# this is global so other test files can use it
+binary_mime_type_on_text_file_warning = \
+  "svn: warning:.*is a binary mime-type but file.*looks like text.*"
+
 ######################################################################
 # Tests
 
@@ -612,7 +616,9 @@ def inappropriate_props(sbox):
   svntest.main.file_append(path, "binary")
   sbox.simple_add('binary')
 
-  sbox.simple_propset('svn:mime-type', 'application/octet-stream', 'binary')
+  svntest.main.run_svn(binary_mime_type_on_text_file_warning,
+                       'propset', 'svn:mime-type', 'application/octet-stream',
+                       sbox.ospath('binary'))
 
   svntest.actions.run_and_verify_svn('Illegal target', None,
                                      svntest.verify.AnyOutput,
@@ -1790,7 +1796,7 @@ def rm_of_replaced_file(sbox):
   exit_code, output, errput = svntest.main.run_svn(None,
                                                    'proplist', '-v',
                                                    mu_path + '@base')
-  expected_output = svntest.verify.UnorderedRegexOutput([
+  expected_output = svntest.verify.UnorderedRegexListOutput([
       'Properties on',
       '  yellow',
       '    submarine',
@@ -2124,6 +2130,8 @@ def propget_redirection(sbox):
   # it refers to non-existent path-revs, but that is not relevant to
   # this test.  What matters is that it is a realistic 'big' mergeinfo
   # value (it is from Subversion's own 1.6.x branch in fact).
+  # Also, the syntax is wrong: every path should start with '/';
+  # Subversion currently silently corrects this.
   big_prop_val = "subversion/branches/1.5.x:872364-874936\n"           + \
   "subversion/branches/1.5.x-34184:874657-874741\n"                    + \
   "subversion/branches/1.5.x-34432:874744-874798\n"                    + \
@@ -2263,131 +2271,26 @@ def propget_redirection(sbox):
 
   # Check if the redirected output of svn pg -vR on the root of the WC
   # is what we expect.
+  expected_mergeinfo_displayed = [
+    '    /' + line for line in big_prop_val.splitlines(True) ]
   expected_output = [
     "Properties on '" + B_path +  "':\n", # Should ocur only once!
-    "Properties on '" + C_path +  "':\n", # Should ocur only once!
-    "Properties on '" + D_path +  "':\n", # Should ocur only once!
-    # Everything below should appear three times since this same
-    # mergeinfo value is set on three paths in the WC.
     "  svn:mergeinfo\n",
-    "    /subversion/branches/1.5.x:872364-874936\n",
-    "    /subversion/branches/1.5.x-34184:874657-874741\n",
-    "    /subversion/branches/1.5.x-34432:874744-874798\n",
-    "    /subversion/branches/1.5.x-issue3067:872184-872314\n",
-    "    /subversion/branches/1.5.x-issue3157:872165-872175\n",
-    "    /subversion/branches/1.5.x-issue3174:872178-872348\n",
-    "    /subversion/branches/1.5.x-r30215:870310,870312,870319,870362\n",
-    "    /subversion/branches/1.5.x-r30756:874853-874870\n",
-    "    /subversion/branches/1.5.x-r30868:870951-870970\n",
-    "    /subversion/branches/1.5.x-r31314:874476-874605\n",
-    "    /subversion/branches/1.5.x-r31516:871592-871649\n",
-    "    /subversion/branches/1.5.x-r32470:872546-872676\n",
-    "    /subversion/branches/1.5.x-r32968:873773-873872\n",
-    "    /subversion/branches/1.5.x-r33447:873527-873547\n",
-    "    /subversion/branches/1.5.x-r33465:873541-873549\n",
-    "    /subversion/branches/1.5.x-r33641:873880-873883\n",
-    "    /subversion/branches/1.5.x-r34050-followups:874639-874686\n",
-    "    /subversion/branches/1.5.x-r34487:874562-874581\n",
-    "    /subversion/branches/1.5.x-ra_serf-backports:872354-872626\n",
-    "    /subversion/branches/1.5.x-rb-test-fix:874916-874919\n",
-    "    /subversion/branches/1.5.x-reintegrate-improvements:874586-874922\n",
-    "    /subversion/branches/1.5.x-tests-pass:870925-870973\n",
-    "    /subversion/branches/dont-save-plaintext-passwords-by-default:"
-    "870728-871118\n",
-    "    /subversion/branches/gnome-keyring:870558-871410\n",
-    "    /subversion/branches/issue-3220-dev:872210-872226\n",
-    "    /subversion/branches/kwallet:870785-871314\n",
-    "    /subversion/branches/log-g-performance:870941-871032\n",
-    "    /subversion/branches/r30963-1.5.x:871056-871076\n",
-    "    /subversion/branches/reintegrate-improvements:873853-874164\n",
-    "    /subversion/branches/svn-mergeinfo-enhancements:870196\n",
-    "    /subversion/branches/svnpatch-diff:871905\n",
-    "    /subversion/trunk:869159-869165,869168-869181,869185,869188,869191,"
-    "869200-869201,869203-869207,869209-869224,869227-869238,869240-869244,"
-    "869248,869250-869260,869262-869263,869265,869267-869268,869272-869280,"
-    "869282-869325,869328-869330,869335,869341-869347,869351,869354-869355,"
-    "869358,869361-869377,869379-869381,869383-869417,869419-869422,869432-"
-    "869453,869455-869466,869471-869473,869475,869483,869486,869488-869489,"
-    "869491-869497,869499-869500,869503,869506-869508,869510-869521,869523-"
-    "869540,869542-869552,869556,869558,869560-869561,869563,869565,869567,"
-    "869570,869572,869582,869601-869602,869605,869607,869613-869614,869616,"
-    "869618,869620,869625,869627,869630,869633,869639,869641-869643,869645-"
-    "869652,869655,869657,869665,869668,869674,869677,869681,869685,869687-"
-    "869688,869693,869697,869699-869700,869704-869708,869716,869719,869722,"
-    "869724,869730,869733-869734,869737-869740,869745-869746,869751-869754,"
-    "869766,869812-869813,869815-869818,869820,869825,869837,869841,869843-"
-    "869844,869858,869860-869861,869871,869875,869889,869895,869898,869902,"
-    "869907,869909,869926,869928-869929,869931-869933,869942-869943,869950,"
-    "869952,869957-869958,869969,869972,869974,869988,869994,869996,869999,"
-    "870004,870013-870014,870016,870024,870032,870036,870039,870041-870043,"
-    "870054,870060,870068-870071,870078,870083,870094,870104,870124,870127-"
-    "870128,870133,870135-870136,870141,870144,870148,870160,870172,870175,"
-    "870191,870198,870203-870204,870211,870219,870225,870233,870235-870236,"
-    "870254-870255,870259,870307,870311,870313,870320,870323,870330-870331,"
-    "870352-870353,870355,870359-870360,870371,870373,870378,870393-870395,"
-    "870402,870409-870410,870414,870416,870421,870436,870442,870447,870449,"
-    "870452,870454,870466,870476,870481-870483,870486,870500,870502,870505,"
-    "870513-870518,870522-870523,870527,870529,870534,870536-870538,870540-"
-    "870541,870543-870548,870554,870556,870561,870563,870584,870590-870592,"
-    "870594-870595,870597,870618,870620,870622,870625-870626,870641,870647,"
-    "870657,870665,870671,870681,870702-870703,870706-870708,870717-870718,"
-    "870727,870730,870737,870740,870742,870752,870758,870800,870809,870815,"
-    "870817,870820-870825,870830,870834-870836,870850-870851,870853,870859,"
-    "870861,870886,870894,870916-870918,870942,870945,870957,870962,870970,"
-    "870979,870981,870989,870996,871003,871005,871009,871011,871023,871033,"
-    "871035-871038,871041,871060,871078,871080,871092,871097,871099,871105,"
-    "871107,871120,871123-871127,871130,871133-871135,871140,871149,871155-"
-    "871156,871160,871162,871164,871181,871191,871199-871200,871205,871211-"
-    "871212,871215,871219,871225,871227,871229,871231,871236,871270,871273,"
-    "871277,871283,871297,871302,871306,871308,871315-871320,871323-871325,"
-    "871333-871335,871345,871347-871350,871354,871357,871361,871363-871366,"
-    "871374-871375,871377,871382,871385-871388,871391,871408,871411,871422,"
-    "871435,871441,871443-871444,871465,871470,871472-871476,871481,871489,"
-    "871499,871501-871502,871505,871508,871520,871523,871525-871527,871538,"
-    "871542,871544,871547-871549,871556,871559,871562-871563,871578,871581,"
-    "871587,871589-871597,871608,871613,871616-871617,871620,871624,871649,"
-    "871668,871675,871677,871693-871694,871696,871704,871732-871733,871744,"
-    "871747,871759,871762,871766,871769,871793,871796,871799,871801,871811,"
-    "871813,871821-871826,871831,871843,871860,871880,871891,871894,871899,"
-    "871907,871911,871926,871928,871933,871935,871941-871942,871947-871949,"
-    "871958,871974,872000-872001,872003,872005,872018,872022,872038,872065,"
-    "872068,872086,872091,872093,872097,872103,872112,872130,872154,872157,"
-    "872206,872216,872218-872219,872227,872234,872238,872243,872253,872255,"
-    "872259,872261,872278-872279,872281,872310-872311,872362,872404,872416-"
-    "872417,872429,872431,872434,872439,872450-872453,872468,872470,872477-"
-    "872478,872483,872490-872491,872495,872515-872516,872518-872519,872537,"
-    "872541,872544,872565,872568,872571-872573,872584,872596-872597,872612,"
-    "872619,872624,872632,872656,872670,872706,872710,872713,872717,872746-"
-    "872748,872777,872780-872782,872791,872804,872813,872845,872864,872870,"
-    "872872,872947-872948,872961,872974,872981,872985-872987,873004,873042,"
-    "873049,873051,873076,873087,873090,873096,873098,873100,873183,873186,"
-    "873192,873195,873210-873211,873247,873252,873256,873259,873275,873286,"
-    "873288,873343,873379-873381,873443,873521,873538-873539,873714-873715,"
-    "873718,873733,873745,873751,873767,873778,873781,873849,873856,873862,"
-    "873914,873940,873947-873948,873975-873976,873987,873998,874026-874027,"
-    "874075,874077-874078,874124-874125,874127,874156,874159,874161,874165,"
-    "874168,874170,874184,874189,874204,874223-874224,874245,874258,874262,"
-    "874270,874292-874297,874300-874301,874303,874305,874316-874318,874330,"
-    "874363,874380,874405,874421,874441,874459,874467,874473,874497,874506,"
-    "874545-874546,874561,874566,874568,874580,874619,874621,874634,874636,"
-    "874659,874673,874681,874727,874730,874743,874765-874767,874806,874816,"
-    "874848,874868,874888,874896,874909,874912,874996,875051,875069,875129,"
-    "875132,875134,875137,875151-875153,875186-875188,875190,875235-875237,"
-    "875242-875243,875249,875388,875393,875406,875411\n"]
+    ] + expected_mergeinfo_displayed + [
+    "Properties on '" + C_path +  "':\n", # Should ocur only once!
+    "  svn:mergeinfo\n",
+    ] + expected_mergeinfo_displayed + [
+    "Properties on '" + D_path +  "':\n", # Should ocur only once!
+    "  svn:mergeinfo\n",
+    ] + expected_mergeinfo_displayed
   svntest.verify.verify_outputs(
     "Redirected pg -vR doesn't match pg -vR stdout",
     pg_stdout_redir, None,
     svntest.verify.UnorderedOutput(expected_output), None)
-  # Because we are using UnorderedOutput above, this test would spuriously
-  # pass if the redirected pg output contained duplicates.  This hasn't been
-  # observed as part of issue #3721, but we might as well be thorough...
-  #
-  # ...Since we've set the same mergeinfo prop on A/B, A/C, and A/D, this
-  # means the number of lines in the redirected output of svn pg -vR should
-  # be three times the number of lines in EXPECTED_OUTPUT, adjusted for the
-  # fact the "Properties on '[A/B | A/C | A/D]'" headers  appear only once.
-  if ((len(expected_output) * 3) - 6) != len(pg_stdout_redir):
-    raise svntest.Failure("Redirected pg -vR has unexpected duplicates")
+  # (We want this check to fail if the redirected pg output contains
+  # unexpected duplicate lines, although this hasn't been observed as
+  # part of issue #3721.  We used to check separately here because the old
+  # UnorderedOutput class ignored duplicates but now it detects them.)
 
 @Issue(3852)
 def file_matching_dir_prop_reject(sbox):

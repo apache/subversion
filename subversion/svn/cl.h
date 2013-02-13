@@ -817,6 +817,18 @@ svn_cl__check_related_source_and_target(const char *path_or_url1,
                                         svn_client_ctx_t *ctx,
                                         apr_pool_t *pool);
 
+/* If the user is setting a mime-type to mark one of the TARGETS as binary,
+ * as determined by property name PROPNAME and value PROPVAL, then check
+ * whether Subversion's own binary-file detection recognizes the target as
+ * a binary file. If Subversion doesn't consider the target to be a binary
+ * file, assume the user is making an error and print a warning to inform
+ * the user that some operations might fail on the file in the future. */
+svn_error_t *
+svn_cl__propset_print_binary_mime_type_warning(apr_array_header_t *targets,
+                                               const char *propname,
+                                               const svn_string_t *propval,
+                                               apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

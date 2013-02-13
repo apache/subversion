@@ -584,7 +584,6 @@ def theirs_conflict_in_subdir(sbox):
 # Regression test for issue #4238 "merge -cA,B with --accept option aborts
 # if rA conflicts".
 @Issue(4238)
-@XFail()
 def multi_range_merge_with_accept(sbox):
   "multi range merge with --accept keeps going"
 

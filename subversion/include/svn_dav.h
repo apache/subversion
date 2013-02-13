@@ -198,6 +198,13 @@ extern "C" {
  * @since New in 1.8.   */
 #define SVN_DAV_ALLOW_BULK_UPDATES "SVN-Allow-Bulk-Updates"
 
+/** Assuming the request target is a Subversion repository resource,
+ * this header is returned in the OPTIONS response to indicate whether
+ * the repository supports the merge tracking feature ("yes") or not
+ * ("no").
+ * @since New in 1.8.  */
+#define SVN_DAV_REPOSITORY_MERGEINFO "SVN-Repository-MergeInfo"
+
 /**
  * @name Fulltext MD5 headers
  *

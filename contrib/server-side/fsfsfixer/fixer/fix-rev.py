@@ -55,18 +55,21 @@ def run_cmd(cmd, *args):
   return run_cmd_quiet(cmd, *args)
 
 def replace_in_file(filename, old, new):
-  """Replace the string OLD with the string NEW in file FILE.
-     Replace all occurrences.  Raise an error if nothing changes."""
+  """Replace all occurrences of the string OLD with the string NEW in the
+     file at path FILENAME.  Raise an error if nothing changes."""
 
   verbose_print("Replacing '" + old + "' in file '" + filename + "'\n" +
                 "    with  '" + new + "'")
   # Note: we can't use '/' as a delimiter in the substitution command.
   run_cmd('perl', '-pi.bak', '-e', "s," + old + "," + new + ",", filename)
-  if run_cmd_quiet('cmp', '--quiet', filename, filename + '.bak') == 0:
-    raise FixError("'" + filename + "' is unchanged after sed substitution.")
+  if run_cmd_quiet('cmp', '--quiet', filename, filename + '.bak') != 1:
+    raise FixError("failed to substitute '" + old + "' with '" + new + "' in file '" + filename + "'.")
   os.remove(filename + '.bak')
 
 def replace_in_rev_file(repo_dir, rev, old, new):
+  """Replace all occurrences of the string OLD with the string NEW in the
+     revision file for revision REV in the repository at REPO_DIR.  Raise an
+     error if nothing changes."""
   rev_file = rev_file_path(repo_dir, rev)
   replace_in_file(rev_file, old, new)
 

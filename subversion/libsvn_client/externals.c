@@ -212,9 +212,21 @@ switch_dir_external(const char *local_abspath,
 
              To do so, we need to know the repository root URL of the
              external working copy as it currently sits. */
-          SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, &repos_uuid,
-                                              ctx->wc_ctx, local_abspath,
-                                              pool, subpool));
+          err = svn_wc__node_get_repos_info(NULL, NULL,
+                                            &repos_root_url, &repos_uuid,
+                                            ctx->wc_ctx, local_abspath,
+                                            pool, subpool);
+          if (err)
+            {
+              if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
+                  && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+                return svn_error_trace(err);
+
+              svn_error_clear(err);
+              repos_root_url = NULL;
+              repos_uuid = NULL;
+            }
+
           if (repos_root_url)
             {
               /* If the new external target URL is not obviously a
@@ -315,7 +327,8 @@ switch_dir_external(const char *local_abspath,
                                         FALSE, FALSE, timestamp_sleep,
                                         ctx, pool));
 
-  SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url,
+  SVN_ERR(svn_wc__node_get_repos_info(NULL, NULL,
+                                      &repos_root_url,
                                       &repos_uuid,
                                       ctx->wc_ctx, local_abspath,
                                       pool, pool));
@@ -739,6 +752,7 @@ handle_external_item_change(svn_client_ctx_t *ctx,
             const char *local_repos_root_url;
             const char *local_repos_uuid;
             const char *ext_repos_relpath;
+            svn_error_t *err;
 
             /*
              * The working copy library currently requires that all files
@@ -749,11 +763,22 @@ handle_external_item_change(svn_client_ctx_t *ctx,
              * sure both URLs point to the same repository. See issue #4087.
              */
 
-            SVN_ERR(svn_wc__node_get_repos_info(&local_repos_root_url,
-                                                &local_repos_uuid,
-                                                ctx->wc_ctx,
-                                                parent_dir_abspath,
-                                                scratch_pool, scratch_pool));
+            err = svn_wc__node_get_repos_info(NULL, NULL,
+                                              &local_repos_root_url,
+                                              &local_repos_uuid,
+                                              ctx->wc_ctx, parent_dir_abspath,
+                                              scratch_pool, scratch_pool);
+            if (err)
+              {
+                if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
+                    && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+                  return svn_error_trace(err);
+
+                svn_error_clear(err);
+                local_repos_root_url = NULL;
+                local_repos_uuid = NULL;
+              }
+
             ext_repos_relpath = svn_uri_skip_ancestor(new_loc->repos_root_url,
                                                       new_url, scratch_pool);
             if (local_repos_uuid == NULL || local_repos_root_url == NULL ||

@@ -1186,6 +1186,26 @@ def merge_notify_line(revstart=None, revend=None, same_URL=True,
       return "--- Merging %sr%ld through r%ld into '%s':\n" \
              % (from_foreign_phrase, revstart, revend, target_re)
 
+def summary_of_conflicts(text_conflicts=0, prop_conflicts=0,
+                         tree_conflicts=0, skipped_paths=0):
+  """Return a list of lines corresponding to the summary of conflicts and
+     skipped paths that is printed by merge and update and switch.  If all
+     parameters are zero, return an empty list.
+  """
+  lines = []
+  if text_conflicts or prop_conflicts or tree_conflicts or skipped_paths:
+    lines.append("Summary of conflicts:\n")
+    if text_conflicts:
+      lines.append("  Text conflicts: %d\n" % text_conflicts)
+    if prop_conflicts:
+      lines.append("  Property conflicts: %d\n" % prop_conflicts)
+    if tree_conflicts:
+      lines.append("  Tree conflicts: %d\n" % tree_conflicts)
+    if skipped_paths:
+      lines.append("  Skipped paths: %d\n" % skipped_paths)
+
+  return lines
+
 
 def make_log_msg():
   "Conjure up a log message based on the calling test."

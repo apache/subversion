@@ -37,6 +37,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * 'svn merge' now uses reintegrate mode automatically when needed
     * 'svn' is now non-interactive when not run in a terminal device (r1424037)
     * 'svn propset' checks spelling of reserved property names.
+    * improve working copy performance on network disks (issue #4176) 
 
   - Client-side bugfixes:
     * 
@@ -714,7 +715,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.15
    * improve some swig parameter mapping (r984565, r1035745)
    * improve test accuracy over dav (r991534, r877814)
    * create fails.log for test runs (r964349)
-   * improve detection of 'svnversion' when buildling (r877219, et al)
+   * improve detection of 'svnversion' when building (r877219, et al)
    * don't violate API layering in dumpstream logic (issue #3733)
    * don't report working copy installs as switched (r1033921)
 
