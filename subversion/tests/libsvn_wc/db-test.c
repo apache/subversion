@@ -546,8 +546,7 @@ test_getting_info(apr_pool_t *pool)
             NULL, NULL, NULL, NULL,
             db, svn_dirent_join(local_abspath, "missing-file", pool),
             pool, pool);
-  SVN_TEST_ASSERT(err != NULL && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND);
-  svn_error_clear(err);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_WC_PATH_NOT_FOUND);
 
   return SVN_NO_ERROR;
 }

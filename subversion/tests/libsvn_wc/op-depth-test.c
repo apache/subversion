@@ -2032,12 +2032,10 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
                    before, before, before_actual4, after_actual4));
     err = revert(&b, "A/B", svn_depth_empty,
                  before, before, common_actual5, common_actual5);
-    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
-    svn_error_clear(err);
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_WC_INVALID_OPERATION_DEPTH);
     err = revert(&b, "A/B/C", svn_depth_empty,
                  before, before, common_actual6, common_actual6);
-    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
-    svn_error_clear(err);
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_WC_INVALID_OPERATION_DEPTH);
   }
 
   {
@@ -2090,30 +2088,24 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
 
     err = revert(&b, "A/B", svn_depth_empty,
                  common, common, NULL, NULL);
-    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
-    svn_error_clear(err);
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_WC_INVALID_OPERATION_DEPTH);
     err = revert(&b, "A/B", svn_depth_empty,
                  common, common, common_actual, common_actual);
-    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
-    svn_error_clear(err);
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_WC_INVALID_OPERATION_DEPTH);
 
     err = revert(&b, "P", svn_depth_empty,
                  common, common, NULL, NULL);
-    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
-    svn_error_clear(err);
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_WC_INVALID_OPERATION_DEPTH);
     err = revert(&b, "P", svn_depth_empty,
                  common, common, common_actual, common_actual);
-    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
-    svn_error_clear(err);
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_WC_INVALID_OPERATION_DEPTH);
 
     err = revert(&b, "X", svn_depth_empty,
                  common, common, NULL, NULL);
-    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
-    svn_error_clear(err);
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_WC_INVALID_OPERATION_DEPTH);
     err = revert(&b, "X", svn_depth_empty,
                  common, common, common_actual, common_actual);
-    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
-    svn_error_clear(err);
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_WC_INVALID_OPERATION_DEPTH);
   }
 
   {
@@ -2314,8 +2306,7 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
     };
     err = revert(&b, "A", svn_depth_empty,
                  common, common, NULL, NULL);
-    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
-    svn_error_clear(err);
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_WC_INVALID_OPERATION_DEPTH);
   }
 
   {
@@ -3512,8 +3503,7 @@ copy_wc_wc_server_excluded(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(check_db_rows(&b, "", before));
   SVN_ERR(sbox_disk_mkdir(&b, "A"));
   err = sbox_wc_copy(&b, "A", "X");
-  SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS);
-  svn_error_clear(err);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_WC_PATH_UNEXPECTED_STATUS);
   SVN_ERR(check_db_rows(&b, "", after));
 
   return SVN_NO_ERROR;
@@ -6362,8 +6352,7 @@ layered_moved_to(const svn_test_opts_t *opts, apr_pool_t *pool)
   /* Cannot resolve C */
   err = sbox_wc_resolve(&b, "C", svn_depth_empty,
                         svn_wc_conflict_choose_mine_conflict);
-  SVN_ERR_ASSERT(err && err->apr_err == SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE);
-  svn_error_clear(err);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE);
 
   /* Complete resolving A and then resolve C */
   SVN_ERR(sbox_wc_resolve(&b, "X/B/C/D/E", svn_depth_empty,
@@ -6450,8 +6439,7 @@ update_within_move(const svn_test_opts_t *opts, apr_pool_t *pool)
   /* Can't resolve mixed-revision source to mine-conflict. */
   err = sbox_wc_resolve(&b, "A", svn_depth_empty,
                         svn_wc_conflict_choose_mine_conflict);
-  SVN_ERR_ASSERT(err && err->apr_err == SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE);
-  svn_error_clear(err);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE);
 
   SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
                           svn_wc_conflict_choose_merged));
