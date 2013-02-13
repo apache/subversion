@@ -261,10 +261,21 @@ class State:
 
     base = to_relpath(os.path.normpath(self.wc_dir))
 
-    # TODO: We should probably normalize the paths in moved_from and moved_to.
-
     desc = dict([(repos_join(base, path), item)
                  for path, item in self.desc.items()])
+
+    for path, item in desc.copy().items():
+      if item.moved_from or item.moved_to:
+        i = item.copy()
+
+        if i.moved_from:
+          i.moved_from = to_relpath(os.path.normpath(
+                                        repos_join(base, i.moved_from)))
+        if i.moved_to:
+          i.moved_to = to_relpath(os.path.normpath(
+                                        repos_join(base, i.moved_to)))
+
+        desc[path] = i
 
     return State('', desc)
 
@@ -423,7 +434,7 @@ class State:
     return not self.__eq__(other)
 
   @classmethod
-  def from_status(cls, lines, wc_dir_name=None):
+  def from_status(cls, lines):
     """Create a State object from 'svn status' output."""
 
     def not_space(value):
@@ -445,21 +456,12 @@ class State:
         if ex_match:
           if ex_match.group('moved_from'):
             path = ex_match.group('moved_from')
-            if wc_dir_name and path.startswith(wc_dir_name + os.path.sep):
-              path = path[len(wc_dir_name) + 1:]
-            
             last.tweak(moved_from = to_relpath(path))
           elif ex_match.group('moved_to'):
             path = ex_match.group('moved_to')
-            if wc_dir_name and path.startswith(wc_dir_name + os.path.sep):
-              path = path[len(wc_dir_name) + 1:]
-            
             last.tweak(moved_to = to_relpath(path))
           elif ex_match.group('swapped_with'):
             path = ex_match.group('swapped_with')
-            if wc_dir_name and path.startswith(wc_dir_name + os.path.sep):
-              path = path[len(wc_dir_name) + 1:]
-            
             last.tweak(moved_to = to_relpath(path))
             last.tweak(moved_from = to_relpath(path))
 
@@ -472,6 +474,8 @@ class State:
       prev_treeconflict = None
 
       path = to_relpath(match.group('path'))
+      if path == '.':
+        path = ''
       if path in desc:
         prev_status = desc[path].status
         prev_treeconflict = desc[path].treeconflict
@@ -790,15 +794,14 @@ class StateItem:
     if not isinstance(other, StateItem):
       return False
     v_self = dict([(k, v) for k, v in vars(self).items()
-                   if not k.startswith('_')])
+                   if not k.startswith('_') and not k.startswith('entry_')])
     v_other = dict([(k, v) for k, v in vars(other).items()
-                    if not k.startswith('_')])
-    if self.treeconflict is None:
-      v_other = v_other.copy()
-      v_other['treeconflict'] = None
-    if other.treeconflict is None:
-      v_self = v_self.copy()
-      v_self['treeconflict'] = None
+                    if not k.startswith('_') and not k.startswith('entry_')])
+
+    if self.wc_rev == '0' and self.status == 'A ':
+      v_self['wc_rev'] = '-'
+    if other.wc_rev == '0' and other.status == 'A ':
+      v_other['wc_rev'] = '-'
     return v_self == v_other
 
   def __ne__(self, other):

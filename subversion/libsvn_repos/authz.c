@@ -771,9 +771,9 @@ authz_validate(svn_authz_t *authz, apr_pool_t *pool)
 /* Retrieve the file at DIRENT (contained in a repo) then parse it as a config
  * file placing the result into CFG_P allocated in POOL.
  *
- * If DIRENT is not a valid authz rule file then return SVN_AUTHZ_INVALD_CONFIG
- * as the error.  The contents of CFG_P is then undefined.  If MUST_EXIST is
- * TRUE, a missing authz file is also an error.
+ * If DIRENT cannot be parsed as a config file then an error is returned.  The
+ * contents of CFG_P is then undefined.  If MUST_EXIST is TRUE, a missing
+ * authz file is also an error.
  *
  * SCRATCH_POOL will be used for temporary allocations. */
 static svn_error_t *
@@ -794,7 +794,7 @@ authz_retrieve_config_repo(svn_config_t **cfg_p, const char *dirent,
   /* Search for a repository in the full path. */
   repos_root_dirent = svn_repos_find_root_path(dirent, scratch_pool);
   if (!repos_root_dirent)
-    return svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+    return svn_error_createf(SVN_ERR_RA_LOCAL_REPOS_NOT_FOUND, NULL,
                              "Unable to find repository at '%s'", dirent);
 
   /* Attempt to open a repository at repos_root_dirent. */
@@ -804,7 +804,7 @@ authz_retrieve_config_repo(svn_config_t **cfg_p, const char *dirent,
 
   /* Root path is always a directory so no reason to go any further */
   if (*fs_path == '\0')
-    return svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                              "'/' is not a file in repo '%s'",
                              repos_root_dirent);
 
@@ -831,14 +831,14 @@ authz_retrieve_config_repo(svn_config_t **cfg_p, const char *dirent,
         }
       else
         {
-          return svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+          return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                                    "'%s' path not found in repo '%s'", fs_path,
                                    repos_root_dirent);
         }
     }
   else if (node_kind != svn_node_file)
     {
-      return svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+      return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                                "'%s' is not a file in repo '%s'", fs_path,
                                repos_root_dirent);
     }
@@ -862,9 +862,9 @@ authz_retrieve_config_repo(svn_config_t **cfg_p, const char *dirent,
  * Retrieve the configuration data that PATH points at and parse it into
  * CFG_P allocated in POOL.
  *
- * If PATH is not a valid authz rule file then return SVN_AUTHZ_INVALD_CONFIG
- * as the error.  The contents of CFG_P is then undefined.  If MUST_EXIST is
- * TRUE, a missing authz file is also an error.
+ * If PATH cannot be parsed as a config file then an error is returned.  The
+ * contents of CFG_P is then undefined.  If MUST_EXIST is TRUE, a missing
+ * authz file is also an error.
  *
  * REPOS_ROOT points at the root of the repos you are
  * going to apply the authz against, can be NULL if you are sure that you

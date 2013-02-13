@@ -84,14 +84,14 @@ automatic_merge(const char *source_path_or_url,
   svn_client_automatic_merge_t *merge;
 
   if (verbose)
-    SVN_ERR(svn_cmdline_printf(scratch_pool, _("checking branch relationship...\n")));
+    SVN_ERR(svn_cmdline_printf(scratch_pool, _("--- Checking branch relationship\n")));
   SVN_ERR_W(svn_cl__check_related_source_and_target(
               source_path_or_url, source_revision,
               target_wcpath, &unspecified_revision, ctx, scratch_pool),
             _("Source and target must be different but related branches"));
 
   if (verbose)
-    SVN_ERR(svn_cmdline_printf(scratch_pool, _("calculating automatic merge...\n")));
+    SVN_ERR(svn_cmdline_printf(scratch_pool, _("--- Calculating automatic merge\n")));
 
   /* Find the 3-way merges needed (and check suitability of the WC). */
   SVN_ERR(svn_client_find_automatic_merge(&merge,
@@ -128,7 +128,7 @@ automatic_merge(const char *source_path_or_url,
     }
 
   if (verbose)
-    SVN_ERR(svn_cmdline_printf(scratch_pool, _("merging...\n")));
+    SVN_ERR(svn_cmdline_printf(scratch_pool, _("--- Merging\n")));
 
   /* Perform the 3-way merges */
   SVN_ERR(svn_client_do_automatic_merge(merge, target_wcpath, depth,
@@ -423,8 +423,29 @@ svn_cl__merge(apr_getopt_t *os,
                                   "with --reintegrate"));
     }
 
-  /* Postpone conflict resolution during the merge operation.
-   * If any conflicts occur we'll run the conflict resolver later. */
+  /* Decide how to handle conflicts.  If the user wants interactive
+   * conflict resolution, postpone conflict resolution during the merge
+   * and if any conflicts occur we'll run the conflict resolver later.
+   * Otherwise install the appropriate resolver now. */
+  if (opt_state->accept_which == svn_cl__accept_unspecified
+      || opt_state->accept_which == svn_cl__accept_postpone
+      || opt_state->accept_which == svn_cl__accept_edit
+      || opt_state->accept_which == svn_cl__accept_launch)
+    {
+      /* 'svn.c' has already installed the 'postpone' handler for us. */
+    }
+  else
+    {
+      svn_cl__interactive_conflict_baton_t *b;
+
+      ctx->conflict_func2 = svn_cl__conflict_func_interactive;
+      SVN_ERR(svn_cl__get_conflict_func_interactive_baton(
+                &b,
+                opt_state->accept_which,
+                ctx->config, opt_state->editor_cmd,
+                ctx->cancel_func, ctx->cancel_baton, pool));
+      ctx->conflict_baton2 = b;
+    }
 
   /* Do an automatic merge if just one source and no revisions. */
   if ((! two_sources_specified)
@@ -468,7 +489,7 @@ svn_cl__merge(apr_getopt_t *os,
 
           /* This must be a 'sync' merge so check branch relationship. */
           if (opt_state->verbose)
-            SVN_ERR(svn_cmdline_printf(pool, _("checking branch relationship...\n")));
+            SVN_ERR(svn_cmdline_printf(pool, _("--- Checking branch relationship\n")));
           SVN_ERR_W(svn_cl__check_related_source_and_target(
                       sourcepath1, &peg_revision1,
                       targetpath, &unspecified_revision, ctx, pool),
@@ -476,7 +497,7 @@ svn_cl__merge(apr_getopt_t *os,
         }
 
       if (opt_state->verbose)
-        SVN_ERR(svn_cmdline_printf(pool, _("merging...\n")));
+        SVN_ERR(svn_cmdline_printf(pool, _("--- Merging\n")));
       merge_err = svn_client_merge_peg5(sourcepath1,
                                         ranges_to_merge,
                                         &peg_revision1,
@@ -500,7 +521,7 @@ svn_cl__merge(apr_getopt_t *os,
                                   "either paths or URLs"));
 
       if (opt_state->verbose)
-        SVN_ERR(svn_cmdline_printf(pool, _("merging...\n")));
+        SVN_ERR(svn_cmdline_printf(pool, _("--- Merging\n")));
       merge_err = svn_client_merge5(sourcepath1,
                                     &first_range_start,
                                     sourcepath2,
@@ -521,7 +542,9 @@ svn_cl__merge(apr_getopt_t *os,
   if (! opt_state->quiet)
     err = svn_cl__print_conflict_stats(ctx->notify_baton2, pool);
 
-  if (!err)
+  /* Resolve any postponed conflicts.  (Only if we've been using the
+   * default 'postpone' resolver which remembers what was postponed.) */
+  if (!err && ctx->conflict_func2 == svn_cl__conflict_func_postpone)
     err = svn_cl__resolve_postponed_conflicts(ctx->conflict_baton2,
                                               opt_state->depth,
                                               opt_state->accept_which,

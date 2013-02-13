@@ -55,17 +55,19 @@ svn_client_resolve(const char *path,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  SVN_ERR(svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,
-                                    depth,
-                                    TRUE /* resolve_text */,
-                                    "" /* resolve_prop (ALL props) */,
-                                    TRUE /* resolve_tree */,
-                                    conflict_choice,
-                                    ctx->conflict_func2,
-                                    ctx->conflict_baton2,
-                                    ctx->cancel_func, ctx->cancel_baton,
-                                    ctx->notify_func2, ctx->notify_baton2,
-                                    pool));
+  SVN_WC__CALL_WITH_WRITE_LOCK(
+      svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,
+                                depth,
+                                TRUE /* resolve_text */,
+                                "" /* resolve_prop (ALL props) */,
+                                TRUE /* resolve_tree */,
+                                conflict_choice,
+                                ctx->conflict_func2,
+                                ctx->conflict_baton2,
+                                ctx->cancel_func, ctx->cancel_baton,
+                                ctx->notify_func2, ctx->notify_baton2,
+                                pool),
+      ctx->wc_ctx, local_abspath, TRUE, pool);
 
   return SVN_NO_ERROR;
 }

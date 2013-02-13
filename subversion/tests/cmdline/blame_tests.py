@@ -31,6 +31,8 @@ import os, sys, re
 import svntest
 from svntest.main import server_has_mergeinfo
 
+from prop_tests import binary_mime_type_on_text_file_warning
+
 # For some basic merge setup used by blame -g tests.
 from merge_tests import set_up_branch
 
@@ -126,9 +128,21 @@ def blame_binary(sbox):
   # Then do it again, but this time we set the mimetype to binary.
   iota = os.path.join(wc_dir, 'iota')
   svntest.main.file_append(iota, "More new contents for iota\n")
-  svntest.main.run_svn(None, 'propset', 'svn:mime-type', 'image/jpeg', iota)
+  svntest.main.run_svn(binary_mime_type_on_text_file_warning,
+                       'propset', 'svn:mime-type', 'image/jpeg', iota)
+
+  # Blame fails when mime-type is locally modified to binary
+  exit_code, output, errput = svntest.main.run_svn(2, 'blame', iota)
+  if (len(errput) != 1) or (errput[0].find('Skipping') == -1):
+    raise svntest.Failure
+
   svntest.main.run_svn(None, 'ci',
                        '-m', '', iota)
+
+  # Blame fails when mime-type is binary
+  exit_code, output, errput = svntest.main.run_svn(2, 'blame', iota)
+  if (len(errput) != 1) or (errput[0].find('Skipping') == -1):
+    raise svntest.Failure
 
   # Once more, but now let's remove that mimetype.
   iota = os.path.join(wc_dir, 'iota')
@@ -136,14 +150,16 @@ def blame_binary(sbox):
   svntest.main.run_svn(None, 'propdel', 'svn:mime-type', iota)
   svntest.main.run_svn(None, 'ci',
                        '-m', '', iota)
-
-  exit_code, output, errput = svntest.main.run_svn(2, 'blame', iota)
+  
+  # Blame fails when asking about an old revision where the mime-type is binary
+  exit_code, output, errput = svntest.main.run_svn(2, 'blame', iota + '@3')
   if (len(errput) != 1) or (errput[0].find('Skipping') == -1):
     raise svntest.Failure
 
   # But with --force, it should work.
-  exit_code, output, errput = svntest.main.run_svn(2, 'blame', '--force', iota)
-  if (len(errput) != 0 or len(output) != 4):
+  exit_code, output, errput = svntest.main.run_svn(2, 'blame', '--force',
+                                                   iota + '@3')
+  if (len(errput) != 0 or len(output) != 3):
     raise svntest.Failure
 
 
@@ -599,7 +615,7 @@ def blame_file_not_in_head(sbox):
 
   # Check that a correct error message is printed when blaming a target that
   # doesn't exist (in HEAD).
-  expected_err = ".*notexisting' (is not a file.*|path not found)"
+  expected_err = ".*notexisting' (is not a file.*|path not found|does not exist)"
   svntest.actions.run_and_verify_svn(None, [], expected_err,
                                      'blame', notexisting_url)
 
@@ -802,20 +818,20 @@ def blame_multiple_targets(sbox):
 
   sbox.build()
 
+  # First, make a new revision of iota.
+  iota = os.path.join(sbox.wc_dir, 'iota')
+  svntest.main.file_append(iota, "New contents for iota\n")
+  svntest.main.run_svn(None, 'ci', '-m', '', iota)
+
+  expected_output = [
+    "     1    jrandom This is the file 'iota'.\n",
+    "     2    jrandom New contents for iota\n",
+    ]
+
   def multiple_wc_targets():
     "multiple wc targets"
 
-    # First, make a new revision of iota.
-    iota = os.path.join(sbox.wc_dir, 'iota')
     non_existent = os.path.join(sbox.wc_dir, 'non-existent')
-    svntest.main.file_append(iota, "New contents for iota\n")
-    svntest.main.run_svn(None, 'ci',
-                         '-m', '', iota)
-
-    expected_output = [
-      "     1    jrandom This is the file 'iota'.\n",
-      "     2    jrandom New contents for iota\n",
-      ]
 
     expected_err = ".*W155010.*\n.*E200009.*"
     expected_err_re = re.compile(expected_err, re.DOTALL)
@@ -827,24 +843,15 @@ def blame_multiple_targets(sbox):
     if not expected_err_re.match("".join(error)):
       raise svntest.Failure('blame failed: expected error "%s", but received '
                             '"%s"' % (expected_err, "".join(error)))
+    svntest.verify.verify_outputs(None, output, None, expected_output, None)
 
   def multiple_url_targets():
     "multiple url targets"
 
-    # First, make a new revision of iota.
-    iota = os.path.join(sbox.wc_dir, 'iota')
     iota_url = sbox.repo_url + '/iota'
     non_existent = sbox.repo_url + '/non-existent'
-    svntest.main.file_append(iota, "New contents for iota\n")
-    svntest.main.run_svn(None, 'ci',
-                         '-m', '', iota)
 
-    expected_output = [
-      "     1    jrandom This is the file 'iota'.\n",
-      "     2    jrandom New contents for iota\n",
-      ]
-
-    expected_err = ".*(W160017|W160013).*\n.*E200009.*"
+    expected_err = ".*(W160017|W160013|W150000).*\n.*E200009.*"
     expected_err_re = re.compile(expected_err, re.DOTALL)
 
     exit_code, output, error = svntest.main.run_svn(1, 'blame',
@@ -854,6 +861,7 @@ def blame_multiple_targets(sbox):
     if not expected_err_re.match("".join(error)):
       raise svntest.Failure('blame failed: expected error "%s", but received '
                             '"%s"' % (expected_err, "".join(error)))
+    svntest.verify.verify_outputs(None, output, None, expected_output, None)
 
   # Test one by one
   multiple_wc_targets()

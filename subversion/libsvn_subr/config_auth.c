@@ -29,18 +29,20 @@
 
 #include "config_impl.h"
 
+#include "auth.h"
+
 #include "svn_private_config.h"
 
 /* Helper for svn_config_{read|write}_auth_data.  Return a path to a
    file within ~/.subversion/auth/ that holds CRED_KIND credentials
    within REALMSTRING.  If no path is available *PATH will be set to
    NULL. */
-static svn_error_t *
-auth_file_path(const char **path,
-               const char *cred_kind,
-               const char *realmstring,
-               const char *config_dir,
-               apr_pool_t *pool)
+svn_error_t *
+svn_auth__file_path(const char **path,
+                    const char *cred_kind,
+                    const char *realmstring,
+                    const char *config_dir,
+                    apr_pool_t *pool)
 {
   const char *authdir_path, *hexname;
   svn_checksum_t *checksum;
@@ -81,8 +83,8 @@ svn_config_read_auth_data(apr_hash_t **hash,
 
   *hash = NULL;
 
-  SVN_ERR(auth_file_path(&auth_path, cred_kind, realmstring, config_dir,
-                         pool));
+  SVN_ERR(svn_auth__file_path(&auth_path, cred_kind, realmstring, config_dir,
+                              pool));
   if (! auth_path)
     return SVN_NO_ERROR;
 
@@ -118,8 +120,8 @@ svn_config_write_auth_data(apr_hash_t *hash,
   svn_stream_t *stream;
   const char *auth_path;
 
-  SVN_ERR(auth_file_path(&auth_path, cred_kind, realmstring, config_dir,
-                         pool));
+  SVN_ERR(svn_auth__file_path(&auth_path, cred_kind, realmstring, config_dir,
+                              pool));
   if (! auth_path)
     return svn_error_create(SVN_ERR_NO_AUTH_FILE_PATH, NULL,
                             _("Unable to locate auth file"));

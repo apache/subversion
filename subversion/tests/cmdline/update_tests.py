@@ -33,7 +33,7 @@ logger = logging.getLogger()
 
 # Our testing module
 import svntest
-from svntest import wc, actions, verify
+from svntest import wc, actions, verify, deeptrees
 from merge_tests import expected_merge_output
 from merge_tests import set_up_branch
 
@@ -3694,6 +3694,35 @@ def update_copied_and_deleted_prop(sbox):
 
 #----------------------------------------------------------------------
 
+def update_output_with_conflicts(rev, target, paths=None):
+  """Return the expected output for an update of TARGET to revision REV, in
+     which all of the PATHS are updated and conflicting.
+
+     If PATHS is None, it means [TARGET].  The output is a list of lines.
+  """
+  if paths is None:
+    paths = [target]
+
+  lines = ["Updating '%s':\n" % target]
+  for path in paths:
+    lines += ['C    %s\n' % path]
+  lines += ['Updated to revision %d.\n' % rev]
+  lines += svntest.main.summary_of_conflicts(text_conflicts=len(paths))
+  return lines
+
+def update_output_with_conflicts_resolved(rev, target, paths=None):
+  """Like update_output_with_conflicts(), but where all of the conflicts are
+     resolved within the update.
+  """
+  if paths is None:
+    paths = [target]
+
+  lines = update_output_with_conflicts(rev, target, paths)
+  for path in paths:
+    lines += ["Resolved conflicted state of '%s'\n" % path]
+  return lines
+
+#----------------------------------------------------------------------
 
 def update_accept_conflicts(sbox):
   "update --accept automatic conflict resolution"
@@ -3778,22 +3807,16 @@ def update_accept_conflicts(sbox):
   # Just leave the conflicts alone, since run_and_verify_svn already uses
   # the --non-interactive option.
   svntest.actions.run_and_verify_svn(None,
-                                     ["Updating '%s':\n" % (iota_path_backup),
-                                      'C    %s\n' % (iota_path_backup,),
-                                      'Updated to revision 2.\n',
-                                      'Summary of conflicts:\n',
-                                      '  Text conflicts: 1\n'],
+                                     update_output_with_conflicts(
+                                       2, iota_path_backup),
                                      [],
                                      'update', iota_path_backup)
 
   # lambda: --accept=postpone
   # Just leave the conflicts alone.
   svntest.actions.run_and_verify_svn(None,
-                                     ["Updating '%s':\n" % (lambda_path_backup),
-                                      'C    %s\n' % (lambda_path_backup,),
-                                      'Updated to revision 2.\n',
-                                      'Summary of conflicts:\n',
-                                      '  Text conflicts: 1\n'],
+                                     update_output_with_conflicts(
+                                       2, lambda_path_backup),
                                      [],
                                      'update', '--accept=postpone',
                                      lambda_path_backup)
@@ -3801,13 +3824,8 @@ def update_accept_conflicts(sbox):
   # mu: --accept=base
   # Accept the pre-update base file.
   svntest.actions.run_and_verify_svn(None,
-                                     ["Updating '%s':\n" % (mu_path_backup),
-                                      'C    %s\n' % (mu_path_backup,),
-                                      'Updated to revision 2.\n',
-                                      'Summary of conflicts:\n',
-                                      '  Text conflicts: 1\n',
-                                      "Resolved conflicted state of '%s'\n"
-                                        % (mu_path_backup)],
+                                     update_output_with_conflicts_resolved(
+                                       2, mu_path_backup),
                                      [],
                                      'update', '--accept=base',
                                      mu_path_backup)
@@ -3815,13 +3833,8 @@ def update_accept_conflicts(sbox):
   # alpha: --accept=mine
   # Accept the user's working file.
   svntest.actions.run_and_verify_svn(None,
-                                     ["Updating '%s':\n" % (alpha_path_backup),
-                                      'C    %s\n' % (alpha_path_backup,),
-                                      'Updated to revision 2.\n',
-                                      'Summary of conflicts:\n',
-                                      '  Text conflicts: 1\n',
-                                      "Resolved conflicted state of '%s'\n"
-                                        % (alpha_path_backup)],
+                                     update_output_with_conflicts_resolved(
+                                       2, alpha_path_backup),
                                      [],
                                      'update', '--accept=mine-full',
                                      alpha_path_backup)
@@ -3829,13 +3842,8 @@ def update_accept_conflicts(sbox):
   # beta: --accept=theirs
   # Accept their file.
   svntest.actions.run_and_verify_svn(None,
-                                     ["Updating '%s':\n" % (beta_path_backup),
-                                      'C    %s\n' % (beta_path_backup,),
-                                      'Updated to revision 2.\n',
-                                      'Summary of conflicts:\n',
-                                      '  Text conflicts: 1\n',
-                                      "Resolved conflicted state of '%s'\n"
-                                        % (beta_path_backup)],
+                                     update_output_with_conflicts_resolved(
+                                       2, beta_path_backup),
                                      [],
                                      'update', '--accept=theirs-full',
                                      beta_path_backup)
@@ -3845,13 +3853,8 @@ def update_accept_conflicts(sbox):
   # conflicts in place, so expect a message on stderr, but expect
   # svn to exit with an exit code of 0.
   svntest.actions.run_and_verify_svn2(None,
-                                      ["Updating '%s':\n" % (pi_path_backup),
-                                       'C    %s\n' % (pi_path_backup,),
-                                       'Updated to revision 2.\n',
-                                      'Summary of conflicts:\n',
-                                      '  Text conflicts: 1\n',
-                                      "Resolved conflicted state of '%s'\n"
-                                        % (pi_path_backup)],
+                                      update_output_with_conflicts_resolved(
+                                        2, pi_path_backup),
                                       "system(.*) returned.*", 0,
                                       'update', '--accept=edit',
                                       '--force-interactive',
@@ -3860,11 +3863,8 @@ def update_accept_conflicts(sbox):
   # rho: --accept=launch
   # Run the external merge tool, it should leave conflict markers in place.
   svntest.actions.run_and_verify_svn(None,
-                                     ["Updating '%s':\n" % (rho_path_backup),
-                                      'C    %s\n' % (rho_path_backup,),
-                                      'Updated to revision 2.\n',
-                                      'Summary of conflicts:\n',
-                                      '  Text conflicts: 1\n'],
+                                     update_output_with_conflicts(
+                                       2, rho_path_backup),
                                      [],
                                      'update', '--accept=launch',
                                      '--force-interactive',
@@ -4181,25 +4181,25 @@ def restarted_update_should_delete_dir_prop(sbox):
 # See use cases 1-3 in notes/tree-conflicts/use-cases.txt for background.
 
 # convenience definitions
-leaf_edit = svntest.actions.deep_trees_leaf_edit
-tree_del = svntest.actions.deep_trees_tree_del
-leaf_del = svntest.actions.deep_trees_leaf_del
+leaf_edit = svntest.deeptrees.deep_trees_leaf_edit
+tree_del = svntest.deeptrees.deep_trees_tree_del
+leaf_del = svntest.deeptrees.deep_trees_leaf_del
 
-disk_after_leaf_edit = svntest.actions.deep_trees_after_leaf_edit
-disk_after_leaf_del = svntest.actions.deep_trees_after_leaf_del
-disk_after_tree_del = svntest.actions.deep_trees_after_tree_del
+disk_after_leaf_edit = svntest.deeptrees.deep_trees_after_leaf_edit
+disk_after_leaf_del = svntest.deeptrees.deep_trees_after_leaf_del
+disk_after_tree_del = svntest.deeptrees.deep_trees_after_tree_del
 
-disk_empty_dirs = svntest.actions.deep_trees_empty_dirs
+disk_empty_dirs = svntest.deeptrees.deep_trees_empty_dirs
 
-deep_trees_conflict_output = svntest.actions.deep_trees_conflict_output
+deep_trees_conflict_output = svntest.deeptrees.deep_trees_conflict_output
 deep_trees_conflict_output_skipped = \
-    svntest.actions.deep_trees_conflict_output_skipped
+    svntest.deeptrees.deep_trees_conflict_output_skipped
 deep_trees_status_local_tree_del = \
-    svntest.actions.deep_trees_status_local_tree_del
+    svntest.deeptrees.deep_trees_status_local_tree_del
 deep_trees_status_local_leaf_edit = \
-    svntest.actions.deep_trees_status_local_leaf_edit
+    svntest.deeptrees.deep_trees_status_local_leaf_edit
 
-DeepTreesTestCase = svntest.actions.DeepTreesTestCase
+DeepTreesTestCase = svntest.deeptrees.DeepTreesTestCase
 
 
 def tree_conflicts_on_update_1_1(sbox):
@@ -4280,7 +4280,7 @@ def tree_conflicts_on_update_1_1(sbox):
     },
   }
 
-  svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_leaf_edit",
                         tree_del,
                         leaf_edit,
@@ -4377,7 +4377,7 @@ def tree_conflicts_on_update_1_2(sbox):
     },
   }
 
-  svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_leaf_del",
                         tree_del,
                         leaf_del,
@@ -4465,7 +4465,7 @@ def tree_conflicts_on_update_2_1(sbox):
   ### local-copy from its original revision. however, right now, we cannot
   ### denote that delta is a local-add rather than a child of that D/D1 copy.
   ### thus, it appears in the status output as a (M)odified child.
-  svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
                         leaf_edit,
                         tree_del,
@@ -4488,7 +4488,7 @@ def tree_conflicts_on_update_2_2(sbox):
 
   expected_disk = disk_empty_dirs.copy()
 
-  expected_status = svntest.actions.deep_trees_virginal_state.copy()
+  expected_status = svntest.deeptrees.deep_trees_virginal_state.copy()
   expected_status.add({'' : Item()})
   expected_status.tweak(contents=None, status='  ', wc_rev=3)
   # Tree conflicts.
@@ -4568,7 +4568,7 @@ def tree_conflicts_on_update_2_2(sbox):
     },
   }
 
-  svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_leaf_del_incoming_tree_del",
                         leaf_del,
                         tree_del,
@@ -4640,7 +4640,7 @@ def tree_conflicts_on_update_2_3(sbox):
   # tree-conflict on DDD/D1. ('D/D1', '') likewise, as tree-conflict
   # information is stored in the parent of a victim directory.
 
-  svntest.actions.deep_trees_skipping_on_update(sbox,
+  svntest.deeptrees.deep_trees_skipping_on_update(sbox,
     DeepTreesTestCase("local_leaf_edit_incoming_tree_del_skipping",
                       leaf_edit,
                       tree_del,
@@ -4730,7 +4730,7 @@ def tree_conflicts_on_update_3(sbox):
     },
   }
 
-  svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_tree_del",
                         tree_del,
                         tree_del,
@@ -6120,14 +6120,11 @@ def break_moved_dir_edited_leaf_del(sbox):
 
   # Now resolve the conflict, using --accept=theirs-conflict.
   # This should break the move of A/B/E to A/B/E2, leaving A/B/E2
-  # as a copy. The deletion of A/B/E is reverted (unless it has been
-  # replaced by a new A/B/E, which is a different test case).
-  # XFAIL: Currently the move is still recorded after 'svn resolve'.
+  # as a copy. The deletion of A/B/E is not reverted.
   svntest.actions.run_and_verify_svn("resolve failed", None, [],
                                      'resolve', '--recursive',
                                      '--accept=theirs-conflict', wc_dir)
-  expected_status.tweak('A/B/E', status='  ', treeconflict=None, moved_to=None)
-  expected_status.tweak('A/B/E/beta', status='  ')
+  expected_status.tweak('A/B/E', treeconflict=None, moved_to=None)
   expected_status.tweak('A/B/E2', moved_from=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -6187,8 +6184,7 @@ def break_moved_replaced_dir(sbox):
 
   # Now resolve the conflict, using --accept=theirs-conflict.
   # This should break the move of A/B/E to A/B/E2, leaving A/B/E2
-  # as a copy. A/B/E is not reverted since it has been replaced
-  # by a new A/B/E.
+  # as a copy. A/B/E is not reverted.
   svntest.actions.run_and_verify_svn("resolve failed", None, [],
                                      'resolve', '--recursive',
                                      '--accept=theirs-conflict', wc_dir)
@@ -6569,6 +6565,29 @@ def move_update_props(sbox):
   svntest.actions.verify_disk(wc_dir, expected_disk, True,
                               svntest.tree.detect_conflict_files, extra_files)
 
+@Issues(3288)
+@SkipUnless(svntest.main.is_os_windows)
+@XFail(svntest.main.is_ra_type_dav)
+def windows_update_backslash(sbox):
+  "test filename with backslashes inside"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
+                    '-U', sbox.repo_url,
+                    '-m', '',
+                    'mkdir', 'A/completely\\unusable\\dir')
+
+  # No error and a proper skip + recording in the working copy would also
+  # be a good result. This just verifies current behavior.
+
+  expected_error = 'svn: E155000: .* is not valid.*'
+  svntest.actions.run_and_verify_svn(wc_dir, None, expected_error, 'up',
+                                     wc_dir)
+
+
 #######################################################################
 # Run the tests
 
@@ -6651,6 +6670,7 @@ test_list = [ None,
               incomplete_overcomplete,
               update_swapped_depth_dirs,
               move_update_props,
+              windows_update_backslash,
              ]
 
 if __name__ == '__main__':

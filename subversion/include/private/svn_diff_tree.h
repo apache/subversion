@@ -117,14 +117,14 @@ typedef struct svn_diff_tree_processor_t
    */
   svn_error_t *
   (*dir_changed)(const char *relpath,
-                const svn_diff_source_t *left_source,
-                const svn_diff_source_t *right_source,
-                /*const*/ apr_hash_t *left_props,
-                /*const*/ apr_hash_t *right_props,
-                const apr_array_header_t *prop_changes,
-                void *dir_baton,
-                const struct svn_diff_tree_processor_t *processor,
-                apr_pool_t *scratch_pool);
+                 const svn_diff_source_t *left_source,
+                 const svn_diff_source_t *right_source,
+                 /*const*/ apr_hash_t *left_props,
+                 /*const*/ apr_hash_t *right_props,
+                 const apr_array_header_t *prop_changes,
+                 void *dir_baton,
+                 const struct svn_diff_tree_processor_t *processor,
+                 apr_pool_t *scratch_pool);
 
   /* Called when a directory is closed without applying changes to
    * the directory itself.
@@ -229,9 +229,47 @@ svn_diff__tree_processor_create(void *baton,
  * @since New in 1.8.
  */ /* Used by libsvn clients repository diff */
 const svn_diff_tree_processor_t *
-svn_diff__tree_processor_reverse_create(svn_diff_tree_processor_t * processor,
+svn_diff__tree_processor_reverse_create(const svn_diff_tree_processor_t * processor,
                                         const char *prefix_relpath,
                                         apr_pool_t *result_pool);
+
+/**
+ * Create a new svn_diff_tree_processor_t instance with all functions setup
+ * to call into processor for all paths equal to and below prefix_relpath.
+ *
+ * @since New in 1.8.
+ */ /* Used by libsvn clients repository diff */
+const svn_diff_tree_processor_t *
+svn_diff__tree_processor_filter_create(const svn_diff_tree_processor_t *processor,
+                                       const char *prefix_relpath,
+                                       apr_pool_t *result_pool);
+
+/**
+ * Create a new svn_diff_tree_processor_t instace with all function setup
+ * to call into processor with all adds with copyfrom information transformed
+ * to simple node changes.
+ *
+ * @since New in 1.8.
+ */ /* Used by libsvn_wc diff editor */
+const svn_diff_tree_processor_t *
+svn_diff__tree_processor_copy_as_changed_create(
+                                const svn_diff_tree_processor_t *processor,
+                                apr_pool_t *result_pool);
+
+
+/**
+ * Create a new svn_diff_tree_processor_t instance with all functions setup
+ * to first call into processor1 and then processor2.
+ *
+ * This function is mostly a debug and migration helper.
+ *
+ * @since New in 1.8.
+ */ /* Used by libsvn clients repository diff */
+const svn_diff_tree_processor_t *
+svn_diff__tree_processor_tee_create(const svn_diff_tree_processor_t *processor1,
+                                    const svn_diff_tree_processor_t *processor2,
+                                    apr_pool_t *result_pool);
+
 
 svn_diff_source_t *
 svn_diff__source_create(svn_revnum_t revision,

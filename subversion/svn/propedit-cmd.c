@@ -315,6 +315,10 @@ svn_cl__propedit(apr_getopt_t *os,
                                                     sizeof(const char *));
 
                   APR_ARRAY_PUSH(targs, const char *) = target;
+
+                  SVN_ERR(svn_cl__propset_print_binary_mime_type_warning(
+                      targs, pname_utf8, propval, subpool));
+
                   err = svn_client_propset_local(pname_utf8, edited_propval,
                                                  targs, svn_depth_empty,
                                                  opt_state->force, NULL,

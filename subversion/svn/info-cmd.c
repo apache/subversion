@@ -105,7 +105,7 @@ print_info_xml(void *baton,
   /* "<url> xx </url>" */
   svn_cl__xml_tagged_cdata(&sb, pool, "url", info->URL);
 
-  if (info->repos_root_URL)
+  if (info->repos_root_URL && info->URL)
     {
       /* "<relative-url> xx </relative-url>" */
       svn_cl__xml_tagged_cdata(&sb, pool, "relative-url",

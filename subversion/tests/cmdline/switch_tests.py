@@ -29,7 +29,7 @@ import shutil, re, os
 
 # Our testing module
 import svntest
-from svntest import verify, actions, main
+from svntest import verify, actions, main, deeptrees
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -2283,25 +2283,25 @@ def tolerate_local_mods(sbox):
 # parent directory.
 
 # convenience definitions
-leaf_edit = svntest.actions.deep_trees_leaf_edit
-tree_del = svntest.actions.deep_trees_tree_del
-leaf_del = svntest.actions.deep_trees_leaf_del
+leaf_edit = svntest.deeptrees.deep_trees_leaf_edit
+tree_del = svntest.deeptrees.deep_trees_tree_del
+leaf_del = svntest.deeptrees.deep_trees_leaf_del
 
-disk_after_leaf_edit = svntest.actions.deep_trees_after_leaf_edit
-disk_after_leaf_del = svntest.actions.deep_trees_after_leaf_del
-disk_after_tree_del = svntest.actions.deep_trees_after_tree_del
+disk_after_leaf_edit = svntest.deeptrees.deep_trees_after_leaf_edit
+disk_after_leaf_del = svntest.deeptrees.deep_trees_after_leaf_del
+disk_after_tree_del = svntest.deeptrees.deep_trees_after_tree_del
 
-disk_empty_dirs = svntest.actions.deep_trees_empty_dirs
+disk_empty_dirs = svntest.deeptrees.deep_trees_empty_dirs
 
-deep_trees_conflict_output = svntest.actions.deep_trees_conflict_output
+deep_trees_conflict_output = svntest.deeptrees.deep_trees_conflict_output
 deep_trees_conflict_output_skipped = \
-    svntest.actions.deep_trees_conflict_output_skipped
+    svntest.deeptrees.deep_trees_conflict_output_skipped
 deep_trees_status_local_tree_del = \
-    svntest.actions.deep_trees_status_local_tree_del
+    svntest.deeptrees.deep_trees_status_local_tree_del
 deep_trees_status_local_leaf_edit = \
-    svntest.actions.deep_trees_status_local_leaf_edit
+    svntest.deeptrees.deep_trees_status_local_leaf_edit
 
-DeepTreesTestCase = svntest.actions.DeepTreesTestCase
+DeepTreesTestCase = svntest.deeptrees.DeepTreesTestCase
 
 j = os.path.join
 
@@ -2385,7 +2385,7 @@ def tree_conflicts_on_switch_1_1(sbox):
     },
   }
 
-  svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_leaf_edit",
                         tree_del,
                         leaf_edit,
@@ -2483,7 +2483,7 @@ def tree_conflicts_on_switch_1_2(sbox):
     },
   }
 
-  svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_leaf_del",
                         tree_del,
                         leaf_del,
@@ -2571,7 +2571,7 @@ def tree_conflicts_on_switch_2_1(sbox):
   ### local-copy from its original revision. however, right now, we cannot
   ### denote that delta is a local-add rather than a child of that D/D1 copy.
   ### thus, it appears in the status output as a (M)odified child.
-  svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
                         leaf_edit,
                         tree_del,
@@ -2593,7 +2593,7 @@ def tree_conflicts_on_switch_2_2(sbox):
 
   expected_disk = disk_empty_dirs.copy()
 
-  expected_status = svntest.actions.deep_trees_virginal_state.copy()
+  expected_status = svntest.deeptrees.deep_trees_virginal_state.copy()
   expected_status.add({'' : Item(),
                        'F/alpha' : Item()})
   expected_status.tweak(contents=None, status='  ', wc_rev=3)
@@ -2665,7 +2665,7 @@ def tree_conflicts_on_switch_2_2(sbox):
     },
   }
 
-  svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_leaf_del_incoming_tree_del",
                         leaf_del,
                         tree_del,
@@ -2754,7 +2754,7 @@ def tree_conflicts_on_switch_3(sbox):
     },
   }
 
-  svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_tree_del",
                         tree_del,
                         tree_del,

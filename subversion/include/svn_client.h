@@ -367,7 +367,7 @@ typedef struct svn_client_proplist_item_t
  *
  * The #svn_prop_inherited_item_t->path_or_url members of the
  * #svn_prop_inherited_item_t * structures in @a inherited_props are
- * URLs if @a path is a URL or if @path is a working copy path but the
+ * URLs if @a path is a URL or if @a path is a working copy path but the
  * property represented by the structure is above the working copy root (i.e.
  * the inherited property is from the cache).  In all other cases the
  * #svn_prop_inherited_item_t->path_or_url members are absolute working copy
@@ -4264,6 +4264,11 @@ svn_client_resolved(const char *path,
  *   - #svn_wc_conflict_choose_mine_conflict
  *     ###...
  *
+ *   - svn_wc_conflict_choose_unspecified
+ *     invoke @a ctx->conflict_func2 with @a ctx->conflict_baton2 to obtain
+ *     a resolution decision for each conflict.  This can be used to
+ *     implement interactive conflict resolution.
+ *
  * #svn_wc_conflict_choose_theirs_conflict and
  * #svn_wc_conflict_choose_mine_conflict are not legal for binary
  * files or properties.
@@ -4959,7 +4964,7 @@ svn_client_revprop_set(const char *propname,
  *
  * The #svn_prop_inherited_item_t->path_or_url members of the
  * #svn_prop_inherited_item_t * structures in @a *inherited_props are
- * URLs if @a target is a URL or if @target is a working copy path but the
+ * URLs if @a target is a URL or if @a target is a working copy path but the
  * property represented by the structure is above the working copy root (i.e.
  * the inherited property is from the cache).  In all other cases the
  * #svn_prop_inherited_item_t->path_or_url members are absolute working copy

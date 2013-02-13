@@ -35,6 +35,8 @@
 #include "svn_dso.h"
 #include "svn_version.h"
 
+#include "auth.h"
+
 /* AN OVERVIEW
    ===========
 
@@ -616,6 +618,23 @@ svn_auth_get_platform_specific_client_providers(apr_array_header_t **providers,
           SVN__MAYBE_ADD_PROVIDER(*providers, provider);
         }
     }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_auth_cleanup_walk(svn_auth_baton_t *baton,
+                      svn_auth_cleanup_callback cleanup,
+                      void *cleanup_baton,
+                      apr_pool_t *scratch_pool)
+{
+
+  if (apr_hash_get(baton->tables, SVN_AUTH_CRED_SIMPLE, APR_HASH_KEY_STRING))
+    {
+      SVN_ERR(svn_auth__simple_cleanup_walk(baton, cleanup, cleanup_baton,
+                                            baton->creds_cache, scratch_pool));
+    }
+  /* ### Maybe add support for other providers? */
 
   return SVN_NO_ERROR;
 }

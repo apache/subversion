@@ -1499,44 +1499,31 @@ def test_lslocks_and_rmlocks(sbox):
                                      [], "lock", "-m", "Locking files",
                                      iota_url, lambda_url)
 
-  expected_output_list = [
-      "Path: /A/B/lambda",
+  def expected_output_list(path):
+    return [
+      "Path: " + path,
       "UUID Token: opaquelocktoken",
       "Owner: jrandom",
       "Created:",
       "Expires:",
       "Comment \(1 line\):",
       "Locking files",
-      "Path: /iota",
-      "UUID Token: opaquelocktoken.*",
       "\n", # empty line
       ]
 
   # List all locks
   exit_code, output, errput = svntest.main.run_svnadmin("lslocks",
                                                         sbox.repo_dir)
-
   if errput:
     raise SVNUnexpectedStderr(errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
-  try:
-    expected_output = svntest.verify.UnorderedRegexOutput(expected_output_list)
-    svntest.verify.compare_and_display_lines('lslocks output mismatch',
-                                             'output',
-                                             expected_output, output)
-  except:
-    # Usually both locks have the same timestamp but if the clock
-    # ticks between creating the two locks then the timestamps will
-    # differ.  When the output has two identical "Created" lines
-    # UnorderedRegexOutput must have one matching regex, when the
-    # output has two different "Created" lines UnorderedRegexOutput
-    # must have two regex.
-    expected_output_list.append("Created:.*")
-    expected_output = svntest.verify.UnorderedRegexOutput(expected_output_list)
-    svntest.verify.compare_and_display_lines('lslocks output mismatch',
-                                             'output',
-                                             expected_output, output)
+  expected_output = svntest.verify.UnorderedRegexListOutput(
+                                     expected_output_list('/A/B/lambda') +
+                                     expected_output_list('/iota'))
+  svntest.verify.compare_and_display_lines('lslocks output mismatch',
+                                           'output',
+                                           expected_output, output)
 
   # List lock in path /A
   exit_code, output, errput = svntest.main.run_svnadmin("lslocks",
@@ -1545,18 +1532,10 @@ def test_lslocks_and_rmlocks(sbox):
   if errput:
     raise SVNUnexpectedStderr(errput)
 
-  expected_output = svntest.verify.UnorderedRegexOutput([
-    "Path: /A/B/lambda",
-    "UUID Token: opaquelocktoken",
-    "Owner: jrandom",
-    "Created:",
-    "Expires:",
-    "Comment \(1 line\):",
-    "Locking files",
-    "\n", # empty line
-    ])
-
-  svntest.verify.compare_and_display_lines('message', 'label',
+  expected_output = svntest.verify.RegexListOutput(
+                                     expected_output_list('/A/B/lambda'))
+  svntest.verify.compare_and_display_lines('lslocks output mismatch',
+                                           'output',
                                            expected_output, output)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
