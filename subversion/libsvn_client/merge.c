@@ -11548,12 +11548,12 @@ merge_peg_locked(const char *source_path_or_url,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
 
-  /* Create a short lived session pool */
-  sesspool = svn_pool_create(scratch_pool);
-
   SVN_ERR(open_target_wc(&target, target_abspath,
                          allow_mixed_rev, TRUE, TRUE,
-                         ctx, sesspool, sesspool));
+                         ctx, scratch_pool, scratch_pool));
+
+  /* Create a short lived session pool */
+  sesspool = svn_pool_create(scratch_pool);
 
   /* Open an RA session to our source URL, and determine its root URL. */
   SVN_ERR(svn_client__ra_session_from_path2(
@@ -11565,7 +11565,7 @@ merge_peg_locked(const char *source_path_or_url,
   SVN_ERR(normalize_merge_sources(&merge_sources, source_path_or_url,
                                   source_loc,
                                   ranges_to_merge, ra_session, ctx,
-                                  sesspool, sesspool));
+                                  scratch_pool, scratch_pool));
 
   /* Check for same_repos. */
   same_repos = is_same_repos(&target->loc, source_loc, TRUE /* strict_urls */);
@@ -11577,13 +11577,13 @@ merge_peg_locked(const char *source_path_or_url,
                  TRUE /*sources_related*/, same_repos, ignore_mergeinfo,
                  diff_ignore_ancestry, force_delete, dry_run,
                  record_only, NULL, FALSE, FALSE, depth, merge_options,
-                 ctx, sesspool, sesspool);
+                 ctx, scratch_pool, scratch_pool);
 
   /* We're done with our RA session. */
   svn_pool_destroy(sesspool);
 
   if (use_sleep)
-    svn_io_sleep_for_timestamps(target_abspath, sesspool);
+    svn_io_sleep_for_timestamps(target_abspath, scratch_pool);
 
   SVN_ERR(err);
   SVN_ERR(make_merge_conflict_error(
