@@ -10804,7 +10804,7 @@ bump_revisions_post_update(svn_wc__db_wcroot_t *wcroot,
                              TRUE /* is_root */, FALSE, db,
                              scratch_pool));
 
-  SVN_ERR(svn_wc__db_bump_moved_away(wcroot, local_relpath, depth,
+  SVN_ERR(svn_wc__db_bump_moved_away(wcroot, local_relpath, depth, db,
                                      scratch_pool));
 
   return SVN_NO_ERROR;

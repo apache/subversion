@@ -1528,7 +1528,7 @@ WHERE wc_id = ?1
   AND NOT IS_STRICT_DESCENDANT_OF(moved_to, ?2)
 
 -- STMT_SELECT_MOVED_PAIR3
-SELECT local_relpath, moved_to, op_depth FROM nodes
+SELECT local_relpath, moved_to, op_depth, kind FROM nodes
 WHERE wc_id = ?1
   AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth > ?3
@@ -1592,6 +1592,17 @@ WHERE wc_id = ?1
   AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND op_depth = 0
 ORDER BY local_relpath
+
+-- STMT_SELECT_HAS_NON_FILE_CHILDREN
+SELECT 1 FROM nodes
+WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = 0 AND kind != MAP_FILE
+
+-- STMT_SELECT_HAS_GRANDCHILDREN
+SELECT 1 FROM nodes
+WHERE wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(parent_relpath, ?2)
+  AND op_depth = 0
+  AND file_external IS NULL
 
 /* ------------------------------------------------------------------------- */
 
