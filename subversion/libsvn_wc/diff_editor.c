@@ -2496,8 +2496,7 @@ wrap_dir_changed(const char *relpath,
   svn_boolean_t tree_conflicted = FALSE;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_inapplicable;
 
-  if (!(left_source && right_source))
-    RaiseException(0,0,0,0);
+  assert(left_source && right_source);
 
   SVN_ERR(wb->callbacks->dir_props_changed(&prop_state, &tree_conflicted,
                                            relpath,
