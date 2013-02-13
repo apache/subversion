@@ -10286,9 +10286,7 @@ merge_locked(const char *source1,
           if (use_sleep)
             svn_io_sleep_for_timestamps(target->abspath, scratch_pool);
 
-          if (err)
-              return svn_error_trace(err);
-
+          SVN_ERR(err);
           SVN_ERR(make_merge_conflict_error(
                     conflict_report, target->abspath, scratch_pool));
 
@@ -10321,8 +10319,7 @@ merge_locked(const char *source1,
   if (use_sleep)
     svn_io_sleep_for_timestamps(target->abspath, scratch_pool);
 
-  if (err)
-    return svn_error_trace(err);
+  SVN_ERR(err);
 
   SVN_ERR(make_merge_conflict_error(
             conflict_report, target->abspath, scratch_pool));
@@ -11481,8 +11478,7 @@ merge_reintegrate_locked(const char *source_path_or_url,
   if (use_sleep)
     svn_io_sleep_for_timestamps(target_abspath, scratch_pool);
 
-  if (err)
-    return svn_error_trace(err);
+  SVN_ERR(err);
   SVN_ERR(make_merge_conflict_error(
             conflict_report, target->abspath, scratch_pool));
 
@@ -11582,16 +11578,18 @@ merge_peg_locked(const char *source_path_or_url,
                  diff_ignore_ancestry, force_delete, dry_run,
                  record_only, NULL, FALSE, FALSE, depth, merge_options,
                  ctx, sesspool, sesspool);
-  SVN_ERR(make_merge_conflict_error(
-            conflict_report, target->abspath, scratch_pool));
-
-  if (use_sleep)
-    svn_io_sleep_for_timestamps(target_abspath, sesspool);
 
   /* We're done with our RA session. */
   svn_pool_destroy(sesspool);
 
-  return svn_error_trace(err);
+  if (use_sleep)
+    svn_io_sleep_for_timestamps(target_abspath, sesspool);
+
+  SVN_ERR(err);
+  SVN_ERR(make_merge_conflict_error(
+            conflict_report, target->abspath, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -12311,7 +12309,6 @@ do_automatic_merge_locked(const svn_client_automatic_merge_t *merge,
     svn_io_sleep_for_timestamps(target_abspath, scratch_pool);
 
   SVN_ERR(err);
-
   SVN_ERR(make_merge_conflict_error(
             conflict_report, target->abspath, scratch_pool));
 
