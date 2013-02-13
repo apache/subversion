@@ -75,131 +75,6 @@
 
 #include "svn_private_config.h"
 
-
-/*-------------------------------------------------------------------------*/
-/* A little helper function.
-
-   You see, when we ask the server to update us to a certain revision,
-   we construct the new fulltext, and then run
-
-         'diff <repos_fulltext> <working_fulltext>'
-
-   which is, of course, actually backwards from the repository's point
-   of view.  It thinks we want to move from working->repos.
-
-   So when the server sends property changes, they're effectively
-   backwards from what we want.  We don't want working->repos, but
-   repos->working.  So this little helper "reverses" the value in
-   BASEPROPS and PROPCHANGES before we pass them off to the
-   prop_changed() diff-callback.  */
-static void
-reverse_propchanges(apr_hash_t *baseprops,
-                    apr_array_header_t *propchanges,
-                    apr_pool_t *pool)
-{
-  int i;
-
-  /* ### todo: research lifetimes for property values below */
-
-  for (i = 0; i < propchanges->nelts; i++)
-    {
-      svn_prop_t *propchange
-        = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
-
-      const svn_string_t *original_value =
-        apr_hash_get(baseprops, propchange->name, APR_HASH_KEY_STRING);
-
-      if ((original_value == NULL) && (propchange->value != NULL))
-        {
-          /* found an addition.  make it look like a deletion. */
-          apr_hash_set(baseprops, propchange->name, APR_HASH_KEY_STRING,
-                       svn_string_dup(propchange->value, pool));
-          propchange->value = NULL;
-        }
-
-      else if ((original_value != NULL) && (propchange->value == NULL))
-        {
-          /* found a deletion.  make it look like an addition. */
-          propchange->value = svn_string_dup(original_value, pool);
-          apr_hash_set(baseprops, propchange->name, APR_HASH_KEY_STRING,
-                       NULL);
-        }
-
-      else if ((original_value != NULL) && (propchange->value != NULL))
-        {
-          /* found a change.  just swap the values.  */
-          const svn_string_t *str = svn_string_dup(propchange->value, pool);
-          propchange->value = svn_string_dup(original_value, pool);
-          apr_hash_set(baseprops, propchange->name, APR_HASH_KEY_STRING, str);
-        }
-    }
-}
-
-
-/* Set *RESULT_ABSPATH to the absolute path to a readable file containing
-   the pristine text of LOCAL_ABSPATH in DB, or to NULL if it does not have
-   any pristine text.
-
-   If USE_BASE is FALSE it gets the pristine text of what is currently in the
-   working copy. (So it returns the pristine file of a copy).
-
-   If USE_BASE is TRUE, it looks in the lowest layer of the working copy and
-   shows exactly what was originally checked out (or updated to).
-
-   Rationale:
-
-   Which text-base do we want to use for the diff?  If the node is replaced
-   by a new file, then the base of the replaced file is called (in WC-1) the
-   "revert base".  If the replacement is a copy or move, then there is also
-   the base of the copied file to consider.
-
-   One could argue that we should never diff against the revert
-   base, and instead diff against the empty-file for both types of
-   replacement.  After all, there is no ancestry relationship
-   between the working file and the base file.  But my guess is that
-   in practice, users want to see the diff between their working
-   file and "the nearest versioned thing", whatever that is.  I'm
-   not 100% sure this is the right decision, but it at least seems
-   to match our test suite's expectations. */
-static svn_error_t *
-get_pristine_file(const char **result_abspath,
-                  svn_wc__db_t *db,
-                  const char *local_abspath,
-                  svn_boolean_t use_base,
-                  apr_pool_t *result_pool,
-                  apr_pool_t *scratch_pool)
-{
-  const svn_checksum_t *checksum;
-
-  if (!use_base)
-    {
-      SVN_ERR(svn_wc__db_read_pristine_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                                            &checksum, NULL, NULL, NULL,
-                                            db, local_abspath,
-                                            scratch_pool, scratch_pool));
-    }
-  else
-    {
-      SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, &checksum,
-                                       NULL, NULL, NULL, NULL, NULL,
-                                       db, local_abspath,
-                                       scratch_pool, scratch_pool));
-    }
-
-  if (checksum != NULL)
-    {
-      SVN_ERR(svn_wc__db_pristine_get_path(result_abspath, db, local_abspath,
-                                           checksum,
-                                           result_pool, scratch_pool));
-      return SVN_NO_ERROR;
-    }
-
-  *result_abspath = NULL;
-  return SVN_NO_ERROR;
-}
-
-
 /*-------------------------------------------------------------------------*/
 
 
@@ -254,9 +129,6 @@ struct edit_baton_t
  */
 struct dir_baton_t
 {
-  /* Gets set if the directory is added rather than replaced/unchanged. */
-  svn_boolean_t added;
-
   /* Reference to parent directory baton (or NULL for the root) */
   struct dir_baton_t *parent_baton;
 
@@ -268,7 +140,13 @@ struct dir_baton_t
   const char *name;
   const char *relpath;
   const char *local_abspath;
-  svn_boolean_t shadowed;
+
+  /* TRUE if the file is added by the editor drive. */
+  svn_boolean_t added;
+  /* TRUE if the node exists only on the repository side (op_depth 0 or added) */
+  svn_boolean_t repos_only;
+  /* TRUE if the node is to be compared with an unrelated node*/
+  svn_boolean_t ignoring_ancestry;
 
   /* Processor state */
   void *pdb;
@@ -311,9 +189,6 @@ struct dir_baton_t
  */
 struct file_baton_t
 {
-  /* Gets set if the file is added rather than replaced. */
-  svn_boolean_t added;
-
   struct dir_baton_t *parent_baton;
 
   /* The name and path of this file as if they would be/are in the
@@ -321,19 +196,20 @@ struct file_baton_t
   const char *name;
   const char *relpath;
   const char *local_abspath;
-  svn_boolean_t shadowed;
 
   /* Processor state */
   void *pfb;
   svn_boolean_t skip;
 
+  /* TRUE if the file is added by the editor drive. */
+  svn_boolean_t added;
+  /* TRUE if the node exists only on the repository side (op_depth 0 or added) */
+  svn_boolean_t repos_only;
+  /* TRUE if the node is to be compared with an unrelated node*/
+  svn_boolean_t ignoring_ancestry;
+
   const svn_diff_source_t *left_src;
   const svn_diff_source_t *right_src;
-
-
- /* When constructing the requested repository version of the file, we
-    drop the result into a file at TEMP_FILE_PATH. */
-  const char *temp_file_path;
 
   /* The list of incoming BASE->repos propchanges. */
   apr_array_header_t *propchanges;
@@ -345,9 +221,9 @@ struct file_baton_t
   const svn_checksum_t *base_checksum;
   apr_hash_t *base_props;
 
-  /* The resulting checksum from apply_textdelta */
+  /* The resulting from apply_textdelta */
+  const char *temp_file_path;
   unsigned char result_digest[APR_MD5_DIGESTSIZE];
-  svn_boolean_t got_textdelta;
 
   /* The overall crawler editor baton. */
   struct edit_baton_t *eb;
@@ -464,7 +340,6 @@ make_dir_baton(const char *path,
   if (parent_baton != NULL)
     {
       parent_baton->users++;
-      db->shadowed = parent_baton->shadowed;
     }
 
   db->users = 1;
@@ -495,7 +370,6 @@ make_file_baton(const char *path,
   fb->local_abspath = svn_dirent_join(eb->anchor_abspath, path, file_pool);
   fb->relpath = svn_dirent_skip_ancestor(eb->anchor_abspath, fb->local_abspath);
   fb->name = svn_dirent_basename(fb->relpath, NULL);
-  fb->shadowed = parent_baton->shadowed;
 
   fb->added = added;
   fb->pool = file_pool;
@@ -523,35 +397,71 @@ maybe_done(struct dir_baton_t *db)
   return SVN_NO_ERROR;
 }
 
-/* Diff the file PATH against its text base.  At this
+/* Standard check to see if a node is represented in the local working copy */
+#define NOT_PRESENT(status)                                    \
+            ((status) == svn_wc__db_status_not_present          \
+             || (status) == svn_wc__db_status_excluded          \
+             || (status) == svn_wc__db_status_server_excluded)
+
+/* Prototypes of the local report tree walkers */
+static svn_error_t *
+report_local_only_file(struct edit_baton_t *eb,
+                       const char *local_abspath,
+                       const char *path,
+                       void *parent_baton,
+                       apr_pool_t *scratch_pool);
+static svn_error_t *
+report_local_only_dir(struct edit_baton_t *eb,
+                      const char *local_abspath,
+                      const char *path,
+                      svn_depth_t depth,
+                      void *parent_baton,
+                      apr_pool_t *scratch_pool);
+static svn_error_t *
+report_base_only_file(struct edit_baton_t *eb,
+                      const char *local_abspath,
+                      const char *path,
+                      void *parent_baton,
+                      apr_pool_t *scratch_pool);
+static svn_error_t *
+report_base_only_dir(struct edit_baton_t *eb,
+                     const char *local_abspath,
+                     const char *path,
+                     svn_depth_t depth,
+                     void *parent_baton,
+                     apr_pool_t *scratch_pool);
+
+
+/* Diff the file PATH against the text base of its BASE layer.  At this
  * stage we are dealing with a file that does exist in the working copy.
- *
- * DIR_BATON is the parent directory baton, PATH is the path to the file to
- * be compared.
- *
- * Do all allocation in POOL.
- *
- * ### TODO: Need to work on replace if the new filename used to be a
- * directory.
  */
 static svn_error_t *
-file_diff(struct edit_baton_t *eb,
-          const char *local_abspath,
-          const char *path,
-          void *dir_baton,
-          apr_pool_t *scratch_pool)
+base_working_diff(struct edit_baton_t *eb,
+                  const char *local_abspath,
+                  const char *relpath,
+                  void *dir_baton,
+                  apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = eb->db;
-  const char *textbase;
-  svn_boolean_t replaced;
+  void *file_baton = NULL;
+  svn_boolean_t skip = FALSE;
   svn_wc__db_status_t status;
-  svn_revnum_t original_revision;
-  const char *original_repos_relpath;
   svn_revnum_t revision;
-  svn_revnum_t revert_base_revnum;
-  svn_boolean_t have_base;
+  svn_boolean_t had_props;
+  svn_boolean_t props_mod;
+  svn_boolean_t files_same = FALSE;
   svn_wc__db_status_t base_status;
-  svn_boolean_t use_base = FALSE;
+  const svn_checksum_t *working_checksum;
+  const svn_checksum_t *checksum;
+  svn_filesize_t recorded_size;
+  apr_time_t recorded_time;
+  const char *pristine_file;
+  const char *local_file;
+  svn_diff_source_t *left_src;
+  svn_diff_source_t *right_src;
+  apr_hash_t *base_props;
+  apr_hash_t *local_props;
+  apr_array_header_t *prop_changes;
 
   SVN_ERR_ASSERT(! eb->diff_pristine);
 
@@ -562,265 +472,133 @@ file_diff(struct edit_baton_t *eb,
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               &original_repos_relpath, NULL, NULL,
-                               &original_revision, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
-                               NULL, &have_base, NULL, NULL,
+                               NULL, NULL, NULL, NULL, &working_checksum, NULL,
+                               NULL, NULL, NULL, NULL, NULL, &recorded_size,
+                               &recorded_time, NULL, NULL, NULL, &had_props,
+                               &props_mod, NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
-  if (have_base)
-    SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &revert_base_revnum,
-                                     NULL, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                     db, local_abspath,
+  checksum = working_checksum;
+
+  assert(status == svn_wc__db_status_normal
+         || status == svn_wc__db_status_added
+         || (status == svn_wc__db_status_deleted && eb->diff_pristine));
+
+  if (status != svn_wc__db_status_normal)
+    {
+      SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &revision,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, &checksum, NULL, NULL, &had_props,
+                                       NULL, NULL,
+                                       db, local_abspath,
+                                       scratch_pool, scratch_pool));
+      recorded_size = SVN_INVALID_FILESIZE;
+      recorded_time = 0;
+      props_mod = TRUE; /* Requires compare */
+    }
+  else if (eb->diff_pristine)
+    files_same = TRUE;
+  else
+    {
+      const svn_io_dirent2_t *dirent;
+
+      SVN_ERR(svn_io_stat_dirent2(&dirent, local_abspath,
+                                  FALSE /* verify truename */,
+                                  TRUE /* ingore_enoent */,
+                                  scratch_pool, scratch_pool));
+
+      if (dirent->kind == svn_node_file
+          && dirent->filesize == recorded_size
+          && dirent->mtime == recorded_time)
+        {
+          files_same = TRUE;
+        }
+    }
+
+  if (files_same && !props_mod)
+    return SVN_NO_ERROR; /* Cheap exit */
+
+  assert(checksum);
+
+  left_src = svn_diff__source_create(eb->revnum, scratch_pool);
+  right_src = svn_diff__source_create(SVN_INVALID_REVNUM, scratch_pool);
+
+  SVN_ERR(eb->processor->file_opened(&file_baton, &skip, relpath,
+                                     left_src,
+                                     right_src,
+                                     NULL /* copyfrom_src */,
+                                     dir_baton,
+                                     eb->processor,
                                      scratch_pool, scratch_pool));
 
-  replaced = ((status == svn_wc__db_status_added)
-              && have_base
-              && base_status != svn_wc__db_status_not_present);
+  if (skip)
+    return SVN_NO_ERROR;
 
-  /* A wc-wc diff of replaced files actually shows a diff against the
-   * revert-base, showing all previous lines as removed and adding all new
-   * lines. This does not happen for copied/moved-here files, not even with
-   * show_copies_as_adds == TRUE (in which case copy/move is really shown as
-   * an add, diffing against the empty file).
-   * So show the revert-base revision for plain replaces. */
-  if (replaced
-      && ! original_repos_relpath)
-    {
-      use_base = TRUE;
-      revision = revert_base_revnum;
-    }
+  SVN_ERR(svn_wc__db_pristine_get_path(&pristine_file,
+                                       db, eb->anchor_abspath, checksum,
+                                       scratch_pool, scratch_pool));
 
-  /* Set TEXTBASE to the path to the text-base file that we want to diff
-     against.
-
-     ### There shouldn't be cases where the result is NULL, but at present
-     there might be - see get_nearest_pristine_text_as_file(). */
-  SVN_ERR(get_pristine_file(&textbase, db, local_abspath,
-                            use_base, scratch_pool, scratch_pool));
-
-  /* Delete compares text-base against empty file, modifications to the
-   * working-copy version of the deleted file are not wanted.
-   * Replace is treated like a delete plus an add: two comparisons are
-   * generated, first one for the delete and then one for the add.
-   * However, if this file was replaced and we are ignoring ancestry,
-   * report it as a normal file modification instead. */
-  if ((! replaced && status == svn_wc__db_status_deleted) ||
-      (replaced && ! eb->ignore_ancestry))
-    {
-      apr_hash_t *left_props;
-      void *file_baton = NULL;
-      svn_boolean_t skip = FALSE;
-      svn_diff_source_t *left_src = svn_diff__source_create(revision,
-                                                            scratch_pool);
-
-      /* Get svn:mime-type from pristine props (in BASE or WORKING) of PATH. */
-      SVN_ERR(svn_wc__db_read_pristine_props(&left_props, db, local_abspath,
-                                             scratch_pool, scratch_pool));
-
-      SVN_ERR(eb->processor->file_opened(&file_baton,
-                                         &skip,
-                                         path,
-                                         left_src,
-                                         NULL /* right_source */,
-                                         NULL /* copyfrom_source */,
-                                         dir_baton,
-                                         eb->processor,
-                                         scratch_pool,
-                                         scratch_pool));
-
-      if (!skip)
-        SVN_ERR(eb->processor->file_deleted(path,
-                                            left_src,
-                                            textbase,
-                                            left_props,
-                                            file_baton,
-                                            eb->processor,
-                                            scratch_pool));
-
-      if (! (replaced && ! eb->ignore_ancestry))
-        {
-          /* We're here only for showing a delete, so we're done. */
-          return SVN_NO_ERROR;
-        }
-    }
-
- /* Now deal with showing additions, or the add-half of replacements.
-  * If the item is schedule-add *with history*, then we usually want
-  * to see the usual working vs. text-base comparison, which will show changes
-  * made since the file was copied.  But in case we're showing copies as adds,
-  * we need to compare the copied file to the empty file. If we're doing a git
-  * diff, and the file was copied, we need to report the file as added and
-  * diff it against the text base, so that a "copied" git diff header, and
-  * possibly a diff against the copy source, will be generated for it. */
-  if (status == svn_wc__db_status_added
-      && !(eb->ignore_ancestry && replaced))
-    {
-      void *file_baton = NULL;
-      svn_boolean_t skip = FALSE;
-      const char *translated = NULL;
-      svn_diff_source_t *copyfrom_src = NULL;
-      svn_diff_source_t *right_src = svn_diff__source_create(
-                                                    SVN_INVALID_REVNUM,
-                                                    scratch_pool);
-
-      if (original_repos_relpath)
-        {
-          copyfrom_src = svn_diff__source_create(original_revision,
-                                                 scratch_pool);
-          copyfrom_src->repos_relpath = original_repos_relpath;
-        }
-
-      SVN_ERR(eb->processor->file_opened(&file_baton, &skip,
-                                         path,
-                                         NULL /* left source */,
-                                         right_src,
-                                         copyfrom_src,
-                                         dir_baton,
-                                         eb->processor,
+  if (eb->diff_pristine)
+    SVN_ERR(svn_wc__db_pristine_get_path(&local_file,
+                                         db, eb->anchor_abspath,
+                                         working_checksum,
                                          scratch_pool, scratch_pool));
+  else if (! (had_props || props_mod))
+    local_file = local_abspath;
+  else if (files_same)
+    local_file = pristine_file;
+  else
+    SVN_ERR(svn_wc__internal_translated_file(
+                            &local_file, local_abspath,
+                            db, local_abspath,
+                            SVN_WC_TRANSLATE_TO_NF
+                                | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
+                            eb->cancel_func, eb->cancel_baton,
+                            scratch_pool, scratch_pool));
 
-      if (!skip)
-        {
-          apr_hash_t *right_props;
-          apr_hash_t *copyfrom_props = NULL;
+  if (! files_same)
+    SVN_ERR(svn_io_files_contents_same_p(&files_same, local_file,
+                                         pristine_file, scratch_pool));
 
-          /* Get svn:mime-type from ACTUAL props of PATH. */
-          SVN_ERR(svn_wc__db_read_props(&right_props, db, local_abspath,
-                                        scratch_pool, scratch_pool));
+  if (had_props)
+    SVN_ERR(svn_wc__db_base_get_props(&base_props, db, local_abspath,
+                                      scratch_pool, scratch_pool));
+  else
+    base_props = apr_hash_make(scratch_pool);
 
-          if (copyfrom_src)
-            {
-              SVN_ERR(svn_wc__db_read_pristine_props(&copyfrom_props,
-                                                     db, local_abspath,
-                                                     scratch_pool,
-                                                     scratch_pool));
-            }
+  if (status == svn_wc__db_status_normal && (eb->diff_pristine || !props_mod))
+    local_props = base_props;
+  else if (eb->diff_pristine)
+    SVN_ERR(svn_wc__db_read_pristine_props(&local_props, db, local_abspath,
+                                           scratch_pool, scratch_pool));
+  else
+    SVN_ERR(svn_wc__db_read_props(&local_props, db, local_abspath,
+                                  scratch_pool, scratch_pool));
 
-          SVN_ERR(svn_wc__internal_translated_file(&translated, local_abspath,
-                                                   db, local_abspath,
-                                                   SVN_WC_TRANSLATE_TO_NF
-                                             | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
-                                                   eb->cancel_func,
-                                                   eb->cancel_baton,
-                                                   scratch_pool,
-                                                   scratch_pool));
+  SVN_ERR(svn_prop_diffs(&prop_changes, local_props, base_props, scratch_pool));
 
-          SVN_ERR(eb->processor->file_added(path,
-                                            copyfrom_src,
-                                            right_src,
-                                            copyfrom_src
-                                                ? textbase
-                                                : NULL,
-                                            translated,
-                                            copyfrom_props,
-                                            right_props,
-                                            file_baton,
-                                            eb->processor,
-                                            scratch_pool));
-        }
+  if (prop_changes->nelts || !files_same)
+    {
+      SVN_ERR(eb->processor->file_changed(relpath,
+                                          left_src,
+                                          right_src,
+                                          pristine_file,
+                                          local_file,
+                                          base_props,
+                                          local_props,
+                                          ! files_same,
+                                          prop_changes,
+                                          file_baton,
+                                          eb->processor,
+                                          scratch_pool));
     }
   else
     {
-      const char *translated = NULL;
-      apr_hash_t *left_props;
-      apr_hash_t *right_props;
-      apr_array_header_t *propchanges;
-      svn_boolean_t modified;
-      void *file_baton = NULL;
-      svn_boolean_t skip = FALSE;
-      svn_diff_source_t *left_src = svn_diff__source_create(revision,
-                                                            scratch_pool);
-      svn_diff_source_t *right_src = svn_diff__source_create(
-                                                    SVN_INVALID_REVNUM,
-                                                    scratch_pool);
-
-      SVN_ERR(eb->processor->file_opened(&file_baton, &skip,
-                                         path,
+      SVN_ERR(eb->processor->file_closed(relpath,
                                          left_src,
                                          right_src,
-                                         NULL,
-                                         dir_baton,
+                                         file_baton,
                                          eb->processor,
-                                         scratch_pool, scratch_pool));
-
-      if (skip)
-        return SVN_NO_ERROR;
-
-      /* Here we deal with showing pure modifications. */
-      SVN_ERR(svn_wc__internal_file_modified_p(&modified, db, local_abspath,
-                                               FALSE, scratch_pool));
-      if (modified)
-        {
-          /* Note that this might be the _second_ time we translate
-             the file, as svn_wc__text_modified_internal_p() might have used a
-             tmp translated copy too.  But what the heck, diff is
-             already expensive, translating twice for the sake of code
-             modularity is liveable. */
-          SVN_ERR(svn_wc__internal_translated_file(
-                    &translated, local_abspath, db, local_abspath,
-                    SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
-                    eb->cancel_func, eb->cancel_baton,
-                    scratch_pool, scratch_pool));
-        }
-
-      /* Get the properties, the svn:mime-type values, and compute the
-         differences between the two.  */
-      if (replaced
-          && eb->ignore_ancestry)
-        {
-          /* We don't want the normal pristine properties (which are
-             from the WORKING tree). We want the pristines associated
-             with the BASE tree, which are saved as "revert" props.  */
-          SVN_ERR(svn_wc__db_base_get_props(&left_props,
-                                            db, local_abspath,
-                                            scratch_pool, scratch_pool));
-        }
-      else
-        {
-          /* We can only fetch the pristine props (from BASE or WORKING) if
-             the node has not been replaced, or it was copied/moved here.  */
-          SVN_ERR_ASSERT(!replaced
-                         || status == svn_wc__db_status_copied
-                         || status == svn_wc__db_status_moved_here);
-
-          SVN_ERR(svn_wc__db_read_pristine_props(&left_props, db, local_abspath,
-                                                 scratch_pool, scratch_pool));
-
-          /* baseprops will be NULL for added nodes */
-          if (!left_props)
-            left_props = apr_hash_make(scratch_pool);
-        }
-
-      SVN_ERR(svn_wc__get_actual_props(&right_props, db, local_abspath,
-                                       scratch_pool, scratch_pool));
-
-      SVN_ERR(svn_prop_diffs(&propchanges, right_props, left_props,
-                             scratch_pool));
-
-      if (modified || propchanges->nelts > 0)
-        {
-          SVN_ERR(eb->processor->file_changed(path,
-                                              left_src,
-                                              right_src,
-                                              textbase,
-                                              translated,
-                                              left_props,
-                                              right_props,
-                                              modified,
-                                              propchanges,
-                                              file_baton,
-                                              eb->processor,
-                                              scratch_pool));
-        }
-      else
-        SVN_ERR(eb->processor->file_closed(path,
-                                           left_src,
-                                           right_src,
-                                           file_baton,
-                                           eb->processor,
-                                           scratch_pool));
+                                         scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -888,10 +666,13 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
                                db, local_abspath, scratch_pool, scratch_pool));
 
   left_src = svn_diff__source_create(revision, scratch_pool);
-  right_src = svn_diff__source_create(0, scratch_pool);
+  right_src = svn_diff__source_create(SVN_INVALID_REVNUM, scratch_pool);
 
   if (compared)
-    dir_baton = parent_baton;
+    {
+      dir_baton = parent_baton;
+      skip = TRUE;
+    }
   else if (!in_anchor_not_target)
     SVN_ERR(eb->processor->dir_opened(&dir_baton, &skip, &skip_children,
                                       path,
@@ -905,19 +686,37 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
 
   if (!skip_children && depth != svn_depth_empty)
     {
-      const apr_array_header_t *children;
-      int i;
-      SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath,
-                                       scratch_pool, iterpool));
+      apr_hash_t *nodes;
+      apr_hash_t *conflicts;
+      apr_hash_index_t *hi;
+      svn_depth_t depth_below_here = depth;
+      svn_boolean_t diff_files;
+      svn_boolean_t diff_dirs;
 
-      for (i = 0; i < children->nelts; i++)
+      if (depth_below_here == svn_depth_immediates)
+        depth_below_here = svn_depth_empty;
+
+      diff_files = (depth == svn_depth_unknown
+                   || depth >= svn_depth_files);
+      diff_dirs = (depth == svn_depth_unknown
+                   || depth >= svn_depth_immediates);
+
+      SVN_ERR(svn_wc__db_read_children_info(&nodes, &conflicts,
+                                            db, local_abspath,
+                                            scratch_pool, iterpool));
+
+      for (hi = apr_hash_first(scratch_pool, nodes);
+           hi; hi = apr_hash_next(hi))
         {
-          const char *name = APR_ARRAY_IDX(children, i, const char*);
-          const char *child_abspath, *child_path;
-          svn_wc__db_status_t status;
-          svn_kind_t kind;
-
-          svn_pool_clear(iterpool);
+          const char *name = svn__apr_hash_index_key(hi);
+          struct svn_wc__db_info_t *info = svn__apr_hash_index_val(hi);
+          const char *child_abspath;
+          const char *child_relpath;
+          svn_boolean_t repos_only;
+          svn_boolean_t do_diff;
+          svn_boolean_t local_only;
+          svn_revnum_t revision = SVN_INVALID_REVNUM;
+          svn_kind_t base_kind;
 
           if (eb->cancel_func)
             SVN_ERR(eb->cancel_func(eb->cancel_baton));
@@ -932,67 +731,131 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
           if (compared && svn_hash_gets(compared, name))
             continue;
 
+          if (NOT_PRESENT(info->status))
+            continue;
+
+          assert(info->status == svn_wc__db_status_normal
+                 || info->status == svn_wc__db_status_added
+                 || info->status == svn_wc__db_status_deleted);
+
+          svn_pool_clear(iterpool);
           child_abspath = svn_dirent_join(local_abspath, name, iterpool);
+          child_relpath = svn_relpath_join(path, name, iterpool);
 
-          SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
-                                       db, child_abspath,
-                                       iterpool, iterpool));
+          repos_only = FALSE;
+          local_only = FALSE;
+          do_diff = FALSE;
 
-          if (status == svn_wc__db_status_not_present
-              || status == svn_wc__db_status_excluded
-              || status == svn_wc__db_status_server_excluded)
-            continue;
-
-          child_path = svn_relpath_join(path, name, iterpool);
-
-          /* Skip this node if it is in the list of nodes already diff'd. */
-          if (compared && apr_hash_get(compared, child_path, APR_HASH_KEY_STRING))
-            continue;
-
-          switch (kind)
+          if (!info->have_base)
             {
-            case svn_kind_file:
-            case svn_kind_symlink:
-              SVN_ERR(file_diff(eb, child_abspath, child_path, dir_baton,
-                                iterpool));
-              break;
+              local_only = TRUE; /* Only report additions */
+            }
+          else if (info->status == svn_wc__db_status_normal)
+            {
+              /* Simple diff */
+              base_kind = info->kind;
+              revision = info->revnum;
+              do_diff = TRUE;
+            }
+          else if (info->status == svn_wc__db_status_deleted
+                   && (!eb->diff_pristine || !info->have_more_work))
+            {
+              svn_wc__db_status_t base_status;
+              repos_only = TRUE;
+              SVN_ERR(svn_wc__db_base_get_info(&base_status, &base_kind, NULL,
+                                               NULL, NULL, NULL, NULL, NULL,
+                                               NULL, NULL, NULL, NULL, NULL,
+                                               NULL, NULL, NULL,
+                                               db, child_abspath,
+                                               iterpool, iterpool));
 
-            case svn_kind_dir:
-              /* ### TODO: Don't know how to do replaced dirs. How do I get
-                 information about what is being replaced? If it was a
-                 directory then the directory elements are also going to be
-                 deleted. We need to show deletion diffs for these
-                 files. If it was a file we need to show a deletion diff
-                 for that file. */
+              if (NOT_PRESENT(base_status))
+                continue;
+            }
+          else
+            {
+              /* working status is either added or deleted */
+              svn_wc__db_status_t base_status;
 
-              /* Check the subdir if in the anchor (the subdir is the target),
-                 or if recursive */
-              if (in_anchor_not_target
-                  || (depth > svn_depth_files)
-                  || (depth == svn_depth_unknown))
+              SVN_ERR(svn_wc__db_base_get_info(&base_status, &base_kind, NULL,
+                                               NULL, NULL, NULL, NULL, NULL,
+                                               NULL, NULL, NULL, NULL, NULL,
+                                               NULL, NULL, NULL,
+                                               db, child_abspath,
+                                               iterpool, iterpool));
+
+              if (NOT_PRESENT(base_status))
+                local_only = TRUE;
+              else if (base_kind != info->kind 
+                       || !eb->ignore_ancestry
+                       || (info->copied && eb->show_copies_as_adds))
                 {
-                  svn_depth_t depth_below_here = depth;
-
-                  if (depth_below_here == svn_depth_immediates)
-                    depth_below_here = svn_depth_empty;
-
-                  SVN_ERR(walk_local_nodes_diff(eb,
-                                                child_abspath,
-                                                child_path,
-                                                depth_below_here,
-                                                NULL /* compared */,
-                                                dir_baton,
-                                                iterpool));
+                  repos_only = TRUE;
+                  local_only = TRUE;
                 }
-              break;
+              else
+              {
+                do_diff = TRUE;
+              }
+            }
 
-            default:
-              break;
-          }
+          if (eb->local_before_remote && local_only)
+            {
+              if (info->kind == svn_kind_file && diff_files)
+                SVN_ERR(report_local_only_file(eb, child_abspath,
+                                               child_relpath,
+                                               dir_baton, iterpool));
+              else if (info->kind == svn_kind_dir && diff_dirs)
+                SVN_ERR(report_local_only_dir(eb, child_abspath,
+                                              child_relpath, depth_below_here,
+                                              dir_baton, iterpool));
+            }
+
+          if (repos_only)
+            {
+              /* Report repository form deleted */
+              if (base_kind == svn_kind_file && diff_files)
+                SVN_ERR(report_base_only_file(eb, child_abspath,
+                                              child_relpath,
+                                              dir_baton, iterpool));
+              else if (base_kind == svn_kind_dir && diff_dirs)
+                SVN_ERR(report_base_only_dir(eb, child_abspath,
+                                             child_relpath, depth_below_here,
+                                             dir_baton, iterpool));
+            }
+          else if (do_diff)
+            {
+              /* Diff base against actual */
+              if (info->kind == svn_kind_file && diff_files)
+                {
+                  if (info->status != svn_wc__db_status_normal
+                      || !eb->diff_pristine)
+                    {
+                      SVN_ERR(base_working_diff(eb, child_abspath,
+                                                child_relpath,
+                                                dir_baton, scratch_pool));
+                    }
+                }
+              else if (info->kind == svn_kind_dir && diff_dirs)
+                SVN_ERR(walk_local_nodes_diff(eb, child_abspath,
+                                              child_relpath,
+                                              depth_below_here,
+                                              NULL /* compared */,
+                                              dir_baton,
+                                              scratch_pool));
+            }
+
+          if (!eb->local_before_remote && local_only)
+            {
+              if (info->kind == svn_kind_file && diff_files)
+                SVN_ERR(report_local_only_file(eb, child_abspath,
+                                               child_relpath,
+                                               dir_baton, iterpool));
+              else if (info->kind == svn_kind_dir && diff_dirs)
+                SVN_ERR(report_local_only_dir(eb, child_abspath,
+                                              child_relpath, depth_below_here,
+                                              dir_baton, iterpool));
+            }
         }
     }
 
@@ -1004,11 +867,10 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
      ### it should be noted that we do not currently allow directories
      ### to be part of changelists, so if a changelist is provided, the
      ### changelist check will always fail. */
-  if (! eb->changelist_hash
+  if (! skip
+      && ! eb->changelist_hash
       && ! in_anchor_not_target
-      && (!compared || ! svn_hash_gets(compared, ""))
-      && props_mod
-      && ! skip)
+      && props_mod)
     {
       apr_array_header_t *propchanges;
       apr_hash_t *left_props;
@@ -1083,6 +945,12 @@ report_local_only_file(struct edit_baton_t *eb,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
 
+  assert(kind == svn_kind_file
+         && (status == svn_wc__db_status_normal
+             || status == svn_wc__db_status_added
+             || (status == svn_wc__db_status_deleted && eb->diff_pristine)));
+
+
   if (changelist && eb->changelist_hash
       && !svn_hash_gets(eb->changelist_hash, changelist))
     return SVN_NO_ERROR;
@@ -1104,8 +972,6 @@ report_local_only_file(struct edit_baton_t *eb,
     SVN_ERR(svn_wc__db_read_pristine_props(&pristine_props,
                                            db, local_abspath,
                                            scratch_pool, scratch_pool));
-
-  assert(kind == svn_kind_file);
 
   if (original_repos_relpath)
     {
@@ -1315,12 +1181,11 @@ report_local_only_dir(struct edit_baton_t *eb,
   return SVN_NO_ERROR;
 }
 
-/* Ensures that local changes are reported to pb->eb->processor if there
-   are any. */
+/* Reports local changes. */
 static svn_error_t *
-ensure_local_only_handled(struct dir_baton_t *pb,
-                          const char *name,
-                          apr_pool_t *scratch_pool)
+handle_local_only(struct dir_baton_t *pb,
+                  const char *name,
+                  apr_pool_t *scratch_pool)
 {
   struct edit_baton_t *eb = pb->eb;
   const struct svn_wc__db_info_t *info;
@@ -1330,23 +1195,15 @@ ensure_local_only_handled(struct dir_baton_t *pb,
   assert(!strchr(name, '/'));
   assert(!pb->added || eb->ignore_ancestry);
 
-  if (svn_hash_gets(pb->compared, name))
-    return SVN_NO_ERROR;
-
-  svn_hash_sets(pb->compared, apr_pstrdup(pb->pool, name), "");
-
   SVN_ERR(ensure_local_info(pb, scratch_pool));
 
   info = svn_hash_gets(pb->local_info, name);
 
-  if (info == NULL)
+  if (info == NULL || NOT_PRESENT(info->status))
     return SVN_NO_ERROR;
 
   switch (info->status)
     {
-      case svn_wc__db_status_not_present:
-      case svn_wc__db_status_excluded:
-      case svn_wc__db_status_server_excluded:
       case svn_wc__db_status_incomplete:
         return SVN_NO_ERROR; /* Not local only */
 
@@ -1394,6 +1251,166 @@ ensure_local_only_handled(struct dir_baton_t *pb,
   return SVN_NO_ERROR;
 }
 
+/* Reports a file LOCAL_ABSPATH in BASE as deleted */
+static svn_error_t *
+report_base_only_file(struct edit_baton_t *eb,
+                      const char *local_abspath,
+                      const char *relpath,
+                      void *parent_baton,
+                      apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t status;
+  svn_kind_t kind;
+  svn_revnum_t revision;
+  const svn_checksum_t *checksum;
+  apr_hash_t *props;
+  void *file_baton = NULL;
+  svn_boolean_t skip = FALSE;
+  svn_diff_source_t *left_src;
+  const char *pristine_file;
+
+  SVN_ERR(svn_wc__db_base_get_info(&status, &kind, &revision, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, &checksum, NULL,
+                                   NULL, NULL, &props, NULL,
+                                   eb->db, local_abspath,
+                                   scratch_pool, scratch_pool));
+
+  if (status != svn_wc__db_status_normal)
+    return SVN_NO_ERROR;
+
+  SVN_ERR_ASSERT(kind == svn_kind_file && checksum);
+
+  left_src = svn_diff__source_create(revision, scratch_pool);
+
+  SVN_ERR(eb->processor->file_opened(&file_baton, &skip,
+                                     relpath,
+                                     left_src,
+                                     NULL /* right_src */,
+                                     NULL /* copyfrom_source */,
+                                     parent_baton,
+                                     eb->processor,
+                                     scratch_pool, scratch_pool));
+
+  if (skip)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_wc__db_pristine_get_path(&pristine_file,
+                                       eb->db, eb->anchor_abspath, checksum,
+                                       scratch_pool, scratch_pool));
+
+  SVN_ERR(eb->processor->file_deleted(relpath,
+                                      left_src,
+                                      pristine_file,
+                                      props,
+                                      file_baton,
+                                      eb->processor,
+                                      scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Reports a BASE directory and everything below it as deleted */
+static svn_error_t *
+report_base_only_dir(struct edit_baton_t *eb,
+                     const char *local_abspath,
+                     const char *relpath,
+                     svn_depth_t depth,
+                     void *parent_baton,
+                     apr_pool_t *scratch_pool)
+{
+  void *dir_baton = NULL;
+  svn_boolean_t skip = FALSE;
+  svn_boolean_t skip_children = FALSE;
+  svn_diff_source_t *left_src;
+
+  left_src = svn_diff__source_create(eb->revnum, scratch_pool);
+
+  SVN_ERR(eb->processor->dir_opened(&dir_baton, &skip, &skip_children,
+                                    relpath,
+                                    left_src,
+                                    NULL /* right_src */,
+                                    NULL /* copyfrom_src */,
+                                    parent_baton,
+                                    eb->processor,
+                                    scratch_pool, scratch_pool));
+
+  if (!skip_children && depth == svn_depth_unknown || depth > svn_depth_empty)
+    {
+      apr_hash_t *nodes;
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+      apr_hash_index_t *hi;
+
+      SVN_ERR(svn_wc__db_base_get_children_info(&nodes, eb->db, local_abspath,
+                                                scratch_pool, iterpool));
+
+      for (hi = apr_hash_first(scratch_pool, nodes); hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *name = svn__apr_hash_index_key(hi);
+          struct svn_wc__db_base_info_t *info = svn__apr_hash_index_val(hi);
+          const char *child_abspath;
+          const char *child_relpath;
+
+          if (info->status != svn_wc__db_status_normal)
+            continue;
+
+          if (eb->cancel_func)
+            SVN_ERR(eb->cancel_func(eb->cancel_baton));
+
+          svn_pool_clear(iterpool);
+
+          child_abspath = svn_dirent_join(local_abspath, name, iterpool);
+          child_relpath = svn_relpath_join(relpath, name, iterpool);
+
+          switch (info->kind)
+            {
+              case svn_kind_file:
+              case svn_kind_symlink:
+                SVN_ERR(report_base_only_file(eb,
+                                              child_abspath,
+                                              child_relpath,
+                                              dir_baton,
+                                              scratch_pool));
+                break;
+              case svn_kind_dir:
+                if (depth > svn_depth_files || depth == svn_depth_unknown)
+                  {
+                    svn_depth_t depth_below_here = depth;
+
+                    if (depth_below_here == svn_depth_immediates)
+                      depth_below_here = svn_depth_empty;
+
+                    SVN_ERR(report_base_only_dir(eb,
+                                                 child_abspath,
+                                                 child_relpath,
+                                                 depth_below_here,
+                                                 dir_baton,
+                                                 iterpool));
+                  }
+                break;
+
+              default:
+                break;
+            }
+        }
+    }
+
+  if (!skip)
+    {
+      apr_hash_t *props;
+      SVN_ERR(svn_wc__db_base_get_props(&props, eb->db, local_abspath,
+                                        scratch_pool, scratch_pool));
+
+      SVN_ERR(eb->processor->dir_deleted(relpath,
+                                         left_src,
+                                         props,
+                                         dir_baton,
+                                         eb->processor,
+                                         scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
 
 /* An svn_delta_editor_t function. */
 static svn_error_t *
@@ -1420,6 +1437,9 @@ open_root(void *edit_baton,
   eb->root_opened = TRUE;
   db = make_dir_baton("", NULL, eb, FALSE, eb->depth, dir_pool);
   *root_baton = db;
+
+  db->left_src = svn_diff__source_create(eb->revnum, dir_pool);
+  db->right_src = svn_diff__source_create(SVN_INVALID_REVNUM, dir_pool);
 
   return SVN_NO_ERROR;
 }
@@ -1456,37 +1476,52 @@ add_directory(const char *path,
   svn_depth_t subdir_depth = (pb->depth == svn_depth_immediates)
                               ? svn_depth_empty : pb->depth;
 
-  /* ### TODO: support copyfrom? */
-
   db = make_dir_baton(path, pb, pb->eb, TRUE, subdir_depth,
                       dir_pool);
   *child_baton = db;
 
-  if (!db->shadowed)
+  if (pb->repos_only || !eb->ignore_ancestry)
+    db->repos_only = TRUE;
+  else
     {
       struct svn_wc__db_info_t *info;
       SVN_ERR(ensure_local_info(pb, dir_pool));
 
       info = svn_hash_gets(pb->local_info, db->name);
 
-      if (!info || info->kind != svn_kind_dir)
-        db->shadowed = TRUE;
+      if (!info || info->kind != svn_kind_dir || NOT_PRESENT(info->status))
+        db->repos_only = TRUE;
+
+      if (!db->repos_only && info->status != svn_wc__db_status_added)
+        db->repos_only = TRUE;
+
+      /* ### Yuck,... but we love legacy compatibility */
+      if (!db->repos_only
+          && eb->ignore_ancestry
+          && eb->show_copies_as_adds
+          && info->copied)
+        {
+          db->repos_only = TRUE;
+        }
+
+      if (!db->repos_only)
+        {
+          db->right_src = svn_diff__source_create(SVN_INVALID_REVNUM, db->pool);
+          db->ignoring_ancestry = TRUE;
+
+          svn_hash_sets(pb->compared, apr_pstrdup(pb->pool, db->name), "");
+        }
     }
 
-  if (eb->local_before_remote && !eb->ignore_ancestry && !db->shadowed)
-    SVN_ERR(ensure_local_only_handled(pb, db->name, dir_pool));
+  db->left_src = svn_diff__source_create(eb->revnum, db->pool);
 
-  /* Issue #3797: Don't add this filename to the parent directory's list of
-     elements that have been compared, to show local additions via the local
-     diff. The repository node is unrelated from the working copy version
-     (similar to not-present in the working copy) */
-
-  db->left_src  = svn_diff__source_create(eb->revnum, db->pool);
+  if (eb->local_before_remote && !db->repos_only && !db->ignoring_ancestry)
+    SVN_ERR(handle_local_only(pb, db->name, dir_pool));
 
   SVN_ERR(eb->processor->dir_opened(&db->pdb, &db->skip, &db->skip_children,
                                     db->relpath,
                                     db->left_src,
-                                    NULL /* right_source */,
+                                    db->right_src,
                                     NULL /* copyfrom src */,
                                     pb->pdb,
                                     eb->processor,
@@ -1514,26 +1549,61 @@ open_directory(const char *path,
   db = make_dir_baton(path, pb, pb->eb, FALSE, subdir_depth, dir_pool);
   *child_baton = db;
 
-  if (!db->shadowed)
+  if (pb->repos_only)
+    db->repos_only = TRUE;
+  else
     {
       struct svn_wc__db_info_t *info;
       SVN_ERR(ensure_local_info(pb, dir_pool));
 
       info = svn_hash_gets(pb->local_info, db->name);
 
-      if (!info || info->kind != svn_kind_dir)
-        db->shadowed = TRUE;
+      if (!info || info->kind != svn_kind_dir || NOT_PRESENT(info->status))
+        db->repos_only = TRUE;
+
+      if (!db->repos_only)
+        switch (info->status)
+          {
+            case svn_wc__db_status_normal:
+              break;
+            case svn_wc__db_status_deleted:
+              db->repos_only = TRUE;
+
+              if (!info->have_more_work)
+                svn_hash_sets(pb->compared,
+                              apr_pstrdup(pb->pool, db->name), "");
+              break;
+            case svn_wc__db_status_added:
+              if (eb->ignore_ancestry)
+                db->ignoring_ancestry = TRUE;
+              else
+                db->repos_only = TRUE;
+              break;
+            default:
+              SVN_ERR_MALFUNCTION();
+        }
+
+      /* ### Yuck,... but we love legacy compatibility */
+      if (!db->repos_only
+          && eb->ignore_ancestry
+          && eb->show_copies_as_adds
+          && info->copied)
+        {
+          db->repos_only = TRUE;
+          db->ignoring_ancestry = FALSE;
+        }
+
+      if (!db->repos_only)
+        {
+          db->right_src = svn_diff__source_create(SVN_INVALID_REVNUM, db->pool);
+          svn_hash_sets(pb->compared, apr_pstrdup(pb->pool, db->name), "");
+        }
     }
 
-  if (eb->local_before_remote && !eb->ignore_ancestry && !db->shadowed)
-    SVN_ERR(ensure_local_only_handled(pb, db->name, dir_pool));
+  db->left_src = svn_diff__source_create(eb->revnum, db->pool);
 
-  db->left_src  = svn_diff__source_create(eb->revnum, db->pool);
-  db->right_src = svn_diff__source_create(SVN_INVALID_REVNUM, db->pool);
-
-  /* Add this path to the parent directory's list of elements that
-     have been compared. */
-  svn_hash_sets(pb->compared, apr_pstrdup(pb->pool, db->name), "");
+  if (eb->local_before_remote && !db->repos_only && !db->ignoring_ancestry)
+    SVN_ERR(handle_local_only(pb, db->name, dir_pool));
 
   SVN_ERR(eb->processor->dir_opened(&db->pdb, &db->skip, &db->skip_children,
                                     db->relpath,
@@ -1557,6 +1627,7 @@ close_directory(void *dir_baton,
                 apr_pool_t *pool)
 {
   struct dir_baton_t *db = dir_baton;
+  struct dir_baton_t *pb = db->parent_baton;
   struct edit_baton_t *eb = db->eb;
   apr_pool_t *scratch_pool = db->pool;
   svn_boolean_t reported_closed = FALSE;
@@ -1572,7 +1643,9 @@ close_directory(void *dir_baton,
           const char *name = svn__apr_hash_index_key(hi);
 
           svn_pool_clear(iterpool);
-          SVN_ERR(ensure_local_only_handled(db, name, iterpool));
+          SVN_ERR(handle_local_only(db, name, iterpool));
+
+          svn_hash_sets(db->compared, name, "");
         }
 
       svn_pool_destroy(iterpool);
@@ -1581,87 +1654,86 @@ close_directory(void *dir_baton,
   /* Report local modifications for this directory.  Skip added
      directories since they can only contain added elements, all of
      which have already been diff'd. */
-  if (!db->added)
+  if (!db->repos_only)
+  {
     SVN_ERR(walk_local_nodes_diff(eb,
                                   db->local_abspath,
                                   db->relpath,
                                   db->depth,
                                   db->compared,
-                                  NULL /* ### parent_baton */,
+                                  db->pdb,
                                   scratch_pool));
+  }
 
 
   /* Report the property changes on the directory itself, if necessary. */
-  if (db->propchanges->nelts > 0)
+  if (db->propchanges->nelts > 0 || db->repos_only)
     {
-      /* The working copy properties at the base of the wc->repos comparison:
-         either BASE or WORKING. */
-      apr_hash_t *originalprops;
+      apr_hash_t *repos_props;
 
       if (db->added)
         {
-          originalprops = apr_hash_make(scratch_pool);
+          repos_props = apr_hash_make(scratch_pool);
         }
       else
         {
-          if (db->eb->diff_pristine)
-            {
-              SVN_ERR(svn_wc__db_read_pristine_props(&originalprops,
-                                                     eb->db, db->local_abspath,
-                                                     scratch_pool,
-                                                     scratch_pool));
-            }
-          else
-            {
-              apr_hash_t *base_props, *repos_props;
-
-              SVN_ERR(svn_wc__get_actual_props(&originalprops,
-                                               eb->db, db->local_abspath,
-                                               scratch_pool, scratch_pool));
-
-              /* Load the BASE and repository directory properties. */
-              SVN_ERR(svn_wc__db_base_get_props(&base_props,
-                                                eb->db, db->local_abspath,
-                                                scratch_pool, scratch_pool));
-
-              repos_props = svn_prop__patch(base_props, db->propchanges,
-                                            scratch_pool);
-
-              /* Recalculate b->propchanges as the change between WORKING
-                 and repos. */
-              SVN_ERR(svn_prop_diffs(&db->propchanges, repos_props,
-                                     originalprops, scratch_pool));
-            }
+          SVN_ERR(svn_wc__db_base_get_props(&repos_props,
+                                            eb->db, db->local_abspath,
+                                            scratch_pool, scratch_pool));
         }
 
-      if (!db->added)
-        {
-          reverse_propchanges(originalprops, db->propchanges, db->pool);
+      /* Add received property changes and entry props */
+      if (db->propchanges->nelts)
+        repos_props = svn_prop__patch(repos_props, db->propchanges,
+                                      scratch_pool);
 
-          SVN_ERR(eb->processor->dir_changed(db->relpath,
-                                             db->left_src,
-                                             db->right_src,
-                                             originalprops,
-                                             svn_prop__patch(originalprops,
-                                                             db->propchanges,
-                                                             scratch_pool),
-                                             db->propchanges,
-                                             db->pdb,
-                                             eb->processor,
-                                             scratch_pool));
-        }
-      else
+      if (db->repos_only)
         {
           SVN_ERR(eb->processor->dir_deleted(db->relpath,
                                              db->left_src,
-                                             svn_prop__patch(originalprops,
-                                                             db->propchanges,
-                                                             scratch_pool),
+                                             repos_props,
                                              db->pdb,
                                              eb->processor,
                                              scratch_pool));
+          reported_closed = TRUE;
         }
-      reported_closed = TRUE;
+      else
+        {
+          apr_hash_t *local_props;
+          apr_array_header_t *prop_changes;
+
+          if (eb->diff_pristine)
+            SVN_ERR(svn_wc__db_read_pristine_info(NULL, NULL, NULL, NULL, NULL,
+                                                  NULL, NULL, NULL, NULL,
+                                                  &local_props,
+                                                  eb->db, db->local_abspath,
+                                                  scratch_pool, scratch_pool));
+          else
+            SVN_ERR(svn_wc__db_read_props(&local_props,
+                                          eb->db, db->local_abspath,
+                                          scratch_pool, scratch_pool));
+
+          SVN_ERR(svn_prop_diffs(&prop_changes, local_props, repos_props,
+                                 scratch_pool));
+
+          /* ### as a good diff processor we should now only report changes
+                 if there are non-entry changes, but for now we stick to
+                 compatibility */
+
+          if (prop_changes->nelts)
+            {
+              SVN_ERR(eb->processor->dir_changed(db->relpath,
+                                                 db->left_src,
+                                                 db->right_src,
+                                                 repos_props,
+                                                 local_props,
+                                                 prop_changes,
+                                                 db->pdb,
+                                                 eb->processor,
+                                                 scratch_pool));
+              reported_closed = TRUE;
+          }
+        }
     }
 
   /* Mark this directory as compared in the parent directory's baton,
@@ -1674,9 +1746,9 @@ close_directory(void *dir_baton,
                                       eb->processor,
                                       scratch_pool));
 
-  if (db->parent_baton)
-    SVN_ERR(ensure_local_only_handled(db->parent_baton, db->name,
-                                      scratch_pool));
+  if (pb && !eb->local_before_remote && !db->repos_only && !db->ignoring_ancestry)
+    SVN_ERR(handle_local_only(pb, db->name, scratch_pool));
+
   SVN_ERR(maybe_done(db)); /* destroys scratch_pool */
 
   return SVN_NO_ERROR;
@@ -1695,29 +1767,45 @@ add_file(const char *path,
   struct edit_baton_t *eb = pb->eb;
   struct file_baton_t *fb;
 
-  /* ### TODO: support copyfrom? */
-
   fb = make_file_baton(path, TRUE, pb, file_pool);
   *file_baton = fb;
 
-  if (!fb->shadowed)
+  if (pb->repos_only || !eb->ignore_ancestry)
+    fb->repos_only = TRUE;
+  else
     {
       struct svn_wc__db_info_t *info;
       SVN_ERR(ensure_local_info(pb, file_pool));
 
       info = svn_hash_gets(pb->local_info, fb->name);
 
-      if (!info || info->kind != svn_kind_file)
-        fb->shadowed = TRUE;
+      if (!info || info->kind != svn_kind_file || NOT_PRESENT(info->status))
+        fb->repos_only = TRUE;
+
+      if (!fb->repos_only && info->status != svn_wc__db_status_added)
+        fb->repos_only = TRUE;
+
+      /* ### Yuck,... but we love legacy compatibility */
+      if (!fb->repos_only
+          && eb->ignore_ancestry
+          && eb->show_copies_as_adds
+          && info->copied)
+        {
+          fb->repos_only = TRUE;
+        }
+
+      if (!fb->repos_only)
+        {
+          /* Add this path to the parent directory's list of elements that
+             have been compared. */
+          fb->right_src = svn_diff__source_create(SVN_INVALID_REVNUM, fb->pool);
+          fb->ignoring_ancestry = TRUE;
+
+          svn_hash_sets(pb->compared, apr_pstrdup(pb->pool, fb->name), "");
+        }
     }
 
-  /* Issue #3797: Don't add this filename to the parent directory's list of
-     elements that have been compared, to show local additions via the local
-     diff. The repository node is unrelated from the working copy version
-     (similar to not-present in the working copy) */
-
   fb->left_src = svn_diff__source_create(eb->revnum, fb->pool);
-  fb->right_src = svn_diff__source_create(SVN_INVALID_REVNUM, fb->pool);
 
   SVN_ERR(eb->processor->file_opened(&fb->pfb, &fb->skip,
                                      fb->relpath,
@@ -1746,29 +1834,65 @@ open_file(const char *path,
   fb = make_file_baton(path, FALSE, pb, file_pool);
   *file_baton = fb;
 
-  if (!fb->shadowed)
+  if (pb->repos_only)
+    fb->repos_only = TRUE;
+  else
     {
       struct svn_wc__db_info_t *info;
       SVN_ERR(ensure_local_info(pb, file_pool));
 
       info = svn_hash_gets(pb->local_info, fb->name);
 
-      if (!info || info->kind != svn_kind_file)
-        fb->shadowed = TRUE;
+      if (!info || info->kind != svn_kind_file || NOT_PRESENT(info->status))
+        fb->repos_only = TRUE;
+
+      if (!fb->repos_only)
+        switch (info->status)
+          {
+            case svn_wc__db_status_normal:
+              break;
+            case svn_wc__db_status_deleted:
+              fb->repos_only = TRUE;
+              if (!info->have_more_work)
+                svn_hash_sets(pb->compared,
+                              apr_pstrdup(pb->pool, fb->name), "");
+              break;
+            case svn_wc__db_status_added:
+              if (eb->ignore_ancestry)
+                fb->ignoring_ancestry = TRUE;
+              else
+                fb->repos_only = TRUE;
+              break;
+            default:
+              SVN_ERR_MALFUNCTION();
+        }
+
+      /* ### Yuck,... but we love legacy compatibility */
+      if (!fb->repos_only
+          && eb->ignore_ancestry
+          && eb->show_copies_as_adds
+          && info->copied)
+        {
+          fb->repos_only = TRUE;
+          fb->ignoring_ancestry = FALSE;
+        }
+
+      if (!fb->repos_only)
+        {
+          /* Add this path to the parent directory's list of elements that
+             have been compared. */
+          fb->right_src = svn_diff__source_create(SVN_INVALID_REVNUM, fb->pool);
+          svn_hash_sets(pb->compared, apr_pstrdup(pb->pool, fb->name), "");
+        }
     }
 
-  /* Add this filename to the parent directory's list of elements that
-     have been compared. */
-  svn_hash_sets(pb->compared, apr_pstrdup(pb->pool, fb->name), "");
+  fb->left_src = svn_diff__source_create(eb->revnum, fb->pool);
 
   SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, &fb->base_checksum, NULL,
                                    NULL, NULL, &fb->base_props, NULL,
                                    eb->db, fb->local_abspath,
                                    fb->pool, fb->pool));
-
-  fb->left_src = svn_diff__source_create(eb->revnum, fb->pool);
-  fb->right_src = svn_diff__source_create(SVN_INVALID_REVNUM, fb->pool);
 
   SVN_ERR(eb->processor->file_opened(&fb->pfb, &fb->skip,
                                      fb->relpath,
@@ -1847,7 +1971,6 @@ apply_textdelta(void *file_baton,
                                  svn_io_file_del_on_pool_cleanup,
                                  fb->pool, fb->pool));
 
-  fb->got_textdelta = TRUE;
   svn_txdelta_apply(source, temp_stream,
                     fb->result_digest,
                     fb->local_abspath /* error_info */,
@@ -1871,30 +1994,18 @@ close_file(void *file_baton,
   struct file_baton_t *fb = file_baton;
   struct dir_baton_t *pb = fb->parent_baton;
   struct edit_baton_t *eb = fb->eb;
-  svn_wc__db_t *db = eb->db;
   apr_pool_t *scratch_pool = fb->pool;
-  svn_wc__db_status_t status;
-  const char *original_repos_relpath;
-  svn_revnum_t original_revision;
 
   /* The repository information; constructed from BASE + Changes */
   const char *repos_file;
   apr_hash_t *repos_props;
-  svn_boolean_t had_props, props_mod;
-
-  /* The path to the wc file: either a pristine or actual. */
-  const char *localfile;
-  svn_boolean_t modified;
-  /* The working copy properties at the base of the wc->repos
-     comparison: either BASE or WORKING. */
-  apr_hash_t *originalprops;
 
   if (expected_md5_digest != NULL)
     {
       svn_checksum_t *expected_checksum;
       const svn_checksum_t *result_checksum;
 
-      if (fb->got_textdelta)
+      if (fb->temp_file_path)
         result_checksum = svn_checksum__from_digest_md5(fb->result_digest,
                                                         scratch_pool);
       else
@@ -1919,205 +2030,102 @@ close_file(void *file_baton,
                                                    scratch_pool));
     }
 
-  if (eb->local_before_remote
-      && (!eb->ignore_ancestry || fb->shadowed))
-    {
-      SVN_ERR(ensure_local_only_handled(pb, fb->name, scratch_pool));
-    }
+  if (eb->local_before_remote && !fb->repos_only && !fb->ignoring_ancestry)
+    SVN_ERR(handle_local_only(pb, fb->name, scratch_pool));
 
-  if ((fb->added && !eb->ignore_ancestry)
-      || fb->shadowed)
+  {
+    apr_hash_t *prop_base;
+
+    if (fb->added)
+      prop_base = apr_hash_make(scratch_pool);
+    else
+      prop_base = fb->base_props;
+
+    /* includes entry props */
+    repos_props = svn_prop__patch(prop_base, fb->propchanges, scratch_pool);
+
+    repos_file = fb->temp_file_path;
+    if (! repos_file)
+      {
+        assert(fb->base_checksum);
+        SVN_ERR(svn_wc__db_pristine_get_path(&repos_file,
+                                             eb->db, eb->anchor_abspath,
+                                             fb->base_checksum,
+                                             scratch_pool, scratch_pool));
+      }
+  }
+
+  if (fb->repos_only)
     {
       SVN_ERR(eb->processor->file_deleted(fb->relpath,
                                           fb->left_src,
                                           fb->temp_file_path,
-                                          svn_prop__patch(
-                                                apr_hash_make(scratch_pool),
-                                                fb->propchanges,
-                                                scratch_pool),
+                                          repos_props,
                                           fb->pfb,
                                           eb->processor,
                                           scratch_pool));
-
-      svn_hash_sets(pb->compared, apr_pstrdup(pb->pool, pb->name), "");
-      return SVN_NO_ERROR;
-    }
-
-  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
-                               &original_repos_relpath,
-                               NULL, NULL, &original_revision, NULL, NULL,
-                               NULL, NULL, NULL, NULL, &had_props,
-                               &props_mod, NULL, NULL, NULL,
-                               db, fb->local_abspath,
-                               scratch_pool, scratch_pool));
-
-  if (fb->added)
-    {
-      repos_props = svn_prop__patch(apr_hash_make(scratch_pool),
-                                    fb->propchanges, scratch_pool);
-      repos_file = fb->temp_file_path;
     }
   else
     {
-      if (fb->temp_file_path)
-        repos_file = fb->temp_file_path;
-      else
-        SVN_ERR(svn_wc__db_pristine_get_path(&repos_file,
-                                             db, fb->local_abspath,
-                                             fb->base_checksum,
-                                             scratch_pool, scratch_pool));
+      /* Produce a diff of actual or pristine against repos */
+      apr_hash_t *local_props;
+      apr_array_header_t *prop_changes;
+      const char *localfile;
 
-      repos_props = svn_prop__patch(fb->base_props, fb->propchanges,
-                                    scratch_pool);
-    }
+      /* pb->local_info contains some information that might allow optimizing
+         this a bit */
 
-  /* If the file isn't in the working copy (either because it was added
-     in the BASE->repos diff or because we're diffing against WORKING
-     and it was marked as schedule-deleted), we show either an addition
-     or a deletion of the complete contents of the repository file,
-     depending upon the direction of the diff. */
-  if (eb->ignore_ancestry && status == svn_wc__db_status_added)
-    {
-        /* Add this filename to the parent directory's list of elements that
-           have been compared. */
-      svn_hash_sets(fb->parent_baton->compared,
-                    apr_pstrdup(fb->parent_baton->pool, fb->name), "");
-    }
-  else if (fb->added
-           || (!eb->diff_pristine && status == svn_wc__db_status_deleted))
-    {
-      svn_boolean_t skip = FALSE;
-
-      svn_diff_source_t *left_src = svn_diff__source_create(eb->revnum,
-                                                            scratch_pool);
-
-      SVN_ERR(eb->processor->file_opened(&fb->pfb, &skip,
-                                         fb->relpath,
-                                         left_src,
-                                         NULL /* right source */,
-                                         NULL /* copyfrom source */,
-                                         NULL /* ### dir_baton */,
-                                         eb->processor,
-                                         scratch_pool, scratch_pool));
-
-      if (! skip)
-        SVN_ERR(eb->processor->file_deleted(fb->relpath,
-                                            left_src,
-                                            repos_file,
-                                            repos_props,
-                                            fb->pfb,
-                                            eb->processor,
-                                            scratch_pool));
-
-      return SVN_NO_ERROR;
-    }
-
-  /* If the file was locally added with history, and we want to show copies
-   * as added, diff the file with the empty file. */
-  if (original_repos_relpath && eb->show_copies_as_adds)
-    {
-      svn_boolean_t skip = FALSE;
-
-      svn_diff_source_t *right_src = svn_diff__source_create(eb->revnum,
-                                                             scratch_pool);
-
-      /* ### This code path looks like an ugly hack. No normalization,
-             nothing... */
-
-      SVN_ERR(eb->processor->file_opened(&fb->pfb, &skip,
-                                         fb->relpath,
-                                         NULL /* left_source */,
-                                         right_src,
-                                         NULL /* copyfrom source */,
-                                         NULL /* ### dir_baton */,
-                                         eb->processor,
-                                         scratch_pool, scratch_pool));
-
-      if (! skip)
+      if (eb->diff_pristine)
         {
-          apr_hash_t *right_props;
-          SVN_ERR(svn_wc__db_read_props(&right_props, db, fb->local_abspath,
+          const svn_checksum_t *checksum;
+          SVN_ERR(svn_wc__db_read_pristine_info(NULL, NULL, NULL, NULL, NULL,
+                                                NULL, &checksum, NULL, NULL,
+                                                &local_props,
+                                                eb->db, fb->local_abspath,
+                                                scratch_pool, scratch_pool));
+          assert(checksum);
+          SVN_ERR(svn_wc__db_pristine_get_path(&localfile,
+                                               eb->db, eb->anchor_abspath,
+                                               checksum,
+                                               scratch_pool, scratch_pool));
+        }
+      else
+        {
+          SVN_ERR(svn_wc__db_read_props(&local_props,
+                                        eb->db, fb->local_abspath,
                                         scratch_pool, scratch_pool));
 
-          SVN_ERR(eb->processor->file_added(fb->relpath,
-                                          NULL /* copyfrom_src */,
-                                          right_src,
-                                          NULL /* copyfrom file */,
-                                          fb->local_abspath,
-                                          NULL /* copyfrom props */,
-                                          right_props,
-                                          fb->pfb,
-                                          eb->processor,
-                                          scratch_pool));
+          /* a detranslated version of the working file */
+          SVN_ERR(svn_wc__internal_translated_file(
+                    &localfile, fb->local_abspath, eb->db, fb->local_abspath,
+                    SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
+                    eb->cancel_func, eb->cancel_baton,
+                    scratch_pool, scratch_pool));
         }
-    }
-  /* If we didn't see any content changes between the BASE and repository
-     versions (i.e. we only saw property changes), then, if we're diffing
-     against WORKING, we also need to check whether there are any local
-     (BASE:WORKING) modifications. */
-  modified = (fb->temp_file_path != NULL);
-  if (!modified && !eb->diff_pristine)
-    SVN_ERR(svn_wc__internal_file_modified_p(&modified, eb->db,
-                                             fb->local_abspath,
-                                             FALSE, scratch_pool));
 
-  if (modified)
-    {
-      if (eb->diff_pristine)
-        SVN_ERR(get_pristine_file(&localfile, eb->db, fb->local_abspath,
-                                  FALSE, scratch_pool, scratch_pool));
-      else
-        /* a detranslated version of the working file */
-        SVN_ERR(svn_wc__internal_translated_file(
-                 &localfile, fb->local_abspath, eb->db, fb->local_abspath,
-                 SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
-                 eb->cancel_func, eb->cancel_baton,
-                 scratch_pool, scratch_pool));
-    }
-  else
-    localfile = repos_file = NULL;
+      SVN_ERR(svn_prop_diffs(&prop_changes, local_props, repos_props,
+                             scratch_pool));
 
-  if (eb->diff_pristine)
-    {
-      SVN_ERR(svn_wc__db_read_pristine_props(&originalprops,
-                                             eb->db, fb->local_abspath,
-                                             scratch_pool, scratch_pool));
-    }
-  else
-    {
-      SVN_ERR(svn_wc__get_actual_props(&originalprops,
-                                       eb->db, fb->local_abspath,
-                                       scratch_pool, scratch_pool));
-    }
 
-  /* We have the repository properties in repos_props, and the
-     WORKING properties in originalprops.  Recalculate
-     fb->propchanges as the change between WORKING and repos. */
-  SVN_ERR(svn_prop_diffs(&fb->propchanges,
-                         repos_props, originalprops, scratch_pool));
-
-  if (localfile || fb->propchanges->nelts > 0)
-    {
-      reverse_propchanges(originalprops, fb->propchanges, scratch_pool);
-
+      /* ### as a good diff processor we should now only report changes, and
+             report file_closed() in other cases */
       SVN_ERR(eb->processor->file_changed(fb->relpath,
                                           fb->left_src,
                                           fb->right_src,
-                                          repos_file,
-                                          localfile,
-                                          originalprops,
-                                          svn_prop__patch(originalprops,
-                                                          fb->propchanges,
-                                                          scratch_pool),
-                                          localfile != NULL,
-                                          fb->propchanges,
+                                          repos_file /* left file */,
+                                          localfile /* right file */,
+                                          repos_props /* left_props */,
+                                          local_props /* right props */,
+                                          TRUE /* ### file_modified */,
+                                          prop_changes,
                                           fb->pfb,
                                           eb->processor,
                                           scratch_pool));
     }
 
-  SVN_ERR(ensure_local_only_handled(pb, fb->name, scratch_pool));
+  if (!eb->local_before_remote && !fb->repos_only && !fb->ignoring_ancestry)
+    SVN_ERR(handle_local_only(pb, fb->name, scratch_pool));
+
   svn_pool_destroy(fb->pool); /* destroys scratch_pool */
   SVN_ERR(maybe_done(fb->parent_baton));
   return SVN_NO_ERROR;
@@ -2343,6 +2351,9 @@ wrap_dir_opened(void **new_dir_baton,
   wc_diff_wrap_baton_t *wb = processor->baton;
   svn_boolean_t tree_conflicted = FALSE;
 
+  assert(left_source || right_source);
+  assert(!copyfrom_source || !right_source);
+
   /* Maybe store state and tree_conflicted in baton? */
   if (left_source != NULL)
     {
@@ -2484,6 +2495,9 @@ wrap_dir_changed(const char *relpath,
   wc_diff_wrap_baton_t *wb = processor->baton;
   svn_boolean_t tree_conflicted = FALSE;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_inapplicable;
+
+  if (!(left_source && right_source))
+    RaiseException(0,0,0,0);
 
   SVN_ERR(wb->callbacks->dir_props_changed(&prop_state, &tree_conflicted,
                                            relpath,
@@ -2639,6 +2653,8 @@ wrap_file_changed(const char *relpath,
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_inapplicable;
 
   SVN_ERR(wrap_ensure_empty_file(wb, scratch_pool));
+
+  assert(left_source && right_source);
 
   SVN_ERR(wb->callbacks->file_changed(&state, &prop_state, &tree_conflicted,
                                       relpath,

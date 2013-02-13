@@ -2209,15 +2209,13 @@ def diff_schedule_delete(sbox):
 
   expected_output_r2_base = make_diff_header("foo", "revision 2",
                                                 "working copy") + [
-  "@@ -1 +1,2 @@\n",
-  " xxx\n",
-  "+yyy\n"
+  "@@ -1 +0,0 @@\n",
+  "-xxx\n",
   ]
-  expected_output_base_r2 = make_diff_header("foo", "working copy",
+  expected_output_base_r2 = make_diff_header("foo", "revision 0",
                                                 "revision 2") + [
-  "@@ -1,2 +1 @@\n",
-  " xxx\n",
-  "-yyy\n"
+  "@@ -0,0 +1 @@\n",
+  "+xxx\n",
   ]
 
   expected_output_r1_base = make_diff_header("foo", "revision 0",
@@ -3009,7 +3007,7 @@ def diff_with_depth(sbox):
       make_diff_prop_header("A") + \
       make_diff_prop_modified("foo3", "bar3", "baz3")
     diff_mu = \
-      make_diff_header("A/mu", "revision 1", "working copy") + [
+      make_diff_header("A/mu", "revision 2", "working copy") + [
       "@@ -1 +1,2 @@\n",
       " This is the file 'mu'.\n",
       "+new text\n",]
@@ -4298,7 +4296,6 @@ def simple_ancestry(sbox):
                                         '--show-copies-as-adds',
                                         '--no-diff-added')
 
-@XFail()
 def local_tree_replace(sbox):
   "diff a replaced tree"
 
@@ -4376,6 +4373,7 @@ def local_tree_replace(sbox):
     'D         %s\n' % sbox.ospath('A/B/E/beta'),
     'D         %s\n' % sbox.ospath('A/B/E/alpha'),
     'D         %s\n' % sbox.ospath('A/B/E'),
+    'D         %s\n' % sbox.ospath('A/B/lambda'),
     'D         %s\n' % sbox.ospath('A/B'),
     'A         %s\n' % sbox.ospath('A/B'),
     'A         %s\n' % sbox.ospath('A/B/lambda'),
@@ -4384,7 +4382,6 @@ def local_tree_replace(sbox):
     'A         %s\n' % sbox.ospath('A/B/E'),
     'A         %s\n' % sbox.ospath('A/B/E/beta'),
     'A         %s\n' % sbox.ospath('A/B/E/alpha'),
-    'A         %s\n' % sbox.ospath('A/B/lambda'),
   ])
   # And this currently fails because the ordering is broken, but also
   # because it hits an issue in 'svn patch'
