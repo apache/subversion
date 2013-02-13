@@ -17501,58 +17501,112 @@ def conflict_aborted_mergeinfo_described_partial_merge(sbox):
 
   sbox.build()
 
-  iota_copy_path = sbox.ospath('iota-copy')
+  trunk = 'A'
+  branch = 'A2'
+  file = 'mu'
+  trunk_file = 'A/mu'
 
-  # r2 - Make a file branch
-  sbox.simple_copy('iota', 'iota-copy')
+  # r2: initial state
+  file_text = 'line 1\n'
+  for i in range(2, 22):
+    file_text += 'line ' + str(i) + '.\n'
+  svntest.main.file_write(sbox.ospath('A/mu'), file_text)
   sbox.simple_commit()
 
-  # r3 - Propset on iota
-  sbox.simple_propset('moo:prop', 'dar', 'iota')
+  # r3: branch
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', sbox.wc_dir)
+  sbox.simple_copy(trunk, branch)
   sbox.simple_commit()
 
-  # r4 - Propset on iota
-  sbox.simple_propset('foo:prop', 'bar', 'iota')
-  sbox.simple_commit()
+  # r4 through r13: simple edits
+  for r in range (1, 11):
+    file_text = file_text.replace('line ' + str(r*2) + '.', 'line ' +
+                                  str(r*2) + ' Edited in r' + str(r+3) + '.')
+    svntest.main.file_write(sbox.ospath('A/mu'), file_text)
+    sbox.simple_commit()
 
-  # r5 - Text edit on iota
-  sbox.simple_append('iota', 'new line in r5\n')
+  # r14: merge some changes to the branch so that later merges will be split
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-c5,9',
+                                     '^/' + trunk, sbox.ospath(branch),
+                                     '--accept', 'theirs-conflict')
   sbox.simple_commit()
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', sbox.wc_dir)
 
-  # r6 - Propset on iota
-  sbox.simple_propset('bat:prop', 'baz', 'iota')
-  sbox.simple_commit()
+  def try_merge(target, conflict_rev, rev_ranges, mergeinfo, expect_error=True):
+    """Revert TARGET_PATH in the branch; merge TARGET_PATH in the trunk
+       to TARGET_PATH in the branch; expect to find MERGEINFO.
+    """
+    src_url = '^/' + trunk + '/' + target
+    src_path = trunk + '/' + target
+    tgt_path = branch + '/' + target
+    svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R',
+                                       sbox.ospath(tgt_path))
+    file_text = open(sbox.ospath(tgt_path), 'r').read()
+    r = conflict_rev - 3
+    file_text = file_text.replace('line ' + str(r*2) + '.', 'line ' +
+                                  str(r*2) + ' Conflicted.')
+    svntest.main.file_write(sbox.ospath('A2/mu'), file_text)
 
-  # r7 - Text edit on iota
-  sbox.simple_append('iota', 'new line in r7\n')
-  sbox.simple_commit()
+    if expect_error:
+      expected_error = ('^svn: E155015: .* conflicts were produced .* into$'
+                        "|^'.*" + sbox.ospath(tgt_path) + "' --$"
+                        '|^resolve all conflicts .* remaining$'
+                        '|^unmerged revisions$')
+    else:
+      expected_error = []
+    svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                       'merge',
+                                       src_url, sbox.ospath(tgt_path),
+                                       '--accept', 'postpone',
+                                       *rev_ranges)
+    expected_out = ['/' + src_path + ':' + mergeinfo + '\n']
+    svntest.actions.run_and_verify_svn(
+      "Incorrect mergeinfo set during conflict aborted merge",
+      expected_out, [], 'pg', SVN_PROP_MERGEINFO, sbox.ospath(tgt_path))
 
-  # r8 Merge r4 and r6 from iota to iota-moved
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '^/iota',
-                                     '-c', '4,6', iota_copy_path)
-  sbox.simple_commit()
+  # In a mergeinfo-aware merge, each specified revision range is split
+  # internally into sub-ranges, to avoid any already-merged revisions.
+  #
+  # From white-box inspection, we see there are code paths that treat
+  # the last specified range and the last sub-range specially.  The
+  # first specified range or sub-range is not treated specially in terms
+  # of the code paths, although it might be in terms of data flow.
+  #
+  # We test merges that raise a conflict in the first and last sub-range
+  # of the first and last specified range.
 
-  # r9 - Conflicting text edit on iota-copy
-  svntest.main.file_write(iota_copy_path, 'conflicting change\n')
-  sbox.simple_commit()
-  
-  # Merge everything (i.e. r3, r5, and r7) from iota to iota-moved.
-  # This is split into three merges, first of r3, r5, and lastly
-  # (assuming no conflicts) r7. But since we are postponing conflict
-  # resolution, the merge should stop after r5 is merged because that will
-  # conflict with the change made in r9.  The resulting mergeinfo should
-  # reflect the fact that r3 and r5 were merged, allowing us to resolve and
-  # repeat the merge at which point r7 can be merged.
-  svntest.actions.run_and_verify_svn(None, None, '.*', 'merge', '^/iota',
-                                     iota_copy_path, '--accept', 'postpone')
+  # First test: Merge "everything" to the branch.
+  #
+  # This merge is split into three sub-ranges: r3-4, r6-8, r10-head.
+  # We have arranged that the merge will raise a conflict in the first
+  # sub-range.  Since we are postponing conflict resolution, the merge
+  # should stop after the first sub-range, allowing us to resolve and
+  # repeat the merge at which point the next sub-range(s) can be merged.
+  # The mergeinfo on the target then should only reflect that the first
+  # sub-range (r3-4) has been merged.
+  #
+  # Previously the merge failed after merging only r3-4 (as it should)
+  # but mergeinfo for the whole range was recorded, preventing subsequent
+  # repeat merges from applying the rest of the source changes.
+  try_merge(file, 4, [], '3-5,9')
 
-  # Previously this test failed because the merge failed after merging
-  # only r5 (as it should) but only mergeinfo for r5 was recorded, even
-  # though preventing
-  # subsequent repeat merges from applying the operative r5.
-  svntest.actions.run_and_verify_svn(
-    "Incorrect mergeinfo set during conflict aborted merge",
-    ['/iota:2-6\n'], [], 'pg', SVN_PROP_MERGEINFO, iota_copy_path)
+  # Try a multiple-range merge that raises a conflict in the
+  # first sub-range in the first specified range.
+  try_merge(file, 4, ['-r1:6', '-r7:10'], '3-5,9')
+
+  # Try a multiple-range merge that raises a conflict in the
+  # last sub-range in the first specified range.
+  try_merge(file, 6, ['-r1:6', '-r7:10'], '3-6,9')
+
+  # Try a multiple-range merge that raises a conflict in the
+  # first sub-range in the last specified range.
+  try_merge(file, 8, ['-r1:6', '-r7:10'], '3-6,8-9')
+
+  # Try a multiple-range merge that raises a conflict in the
+  # last sub-range in the last specified range.
+  # (Expect no error, because 'svn merge' does not throw an error if
+  # there is no more merging to do when a conflict occurs.)
+  try_merge(file, 10, ['-r1:6', '-r7:10'], '3-6,8-10', expect_error=False)
 
 ########################################################################
 # Run the tests
