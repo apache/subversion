@@ -315,30 +315,31 @@ SV *svn_swig_pl_revnums_to_list(const apr_array_header_t *array)
 } 
 
 /* perl -> c svn_opt_revision_t conversion */
-void svn_swig_pl_set_revision(svn_opt_revision_t **rev, SV *source)
+svn_opt_revision_t *svn_swig_pl_set_revision(svn_opt_revision_t *rev, SV *source)
 {
     if (source == NULL || source == &PL_sv_undef || !SvOK(source)) {
-        (*rev)->kind = svn_opt_revision_unspecified;
+        rev->kind = svn_opt_revision_unspecified;
     }
     else if (sv_isobject(source) && sv_derived_from(source, "_p_svn_opt_revision_t")) {
-        SWIG_ConvertPtr(source, (void **)rev, _SWIG_TYPE("svn_opt_revision_t *"), 0);
+        /* this will assign to rev */
+        SWIG_ConvertPtr(source, (void **)&rev, _SWIG_TYPE("svn_opt_revision_t *"), 0);
     }
     else if (looks_like_number(source)) {
-        (*rev)->kind = svn_opt_revision_number;
-        (*rev)->value.number = SvIV(source);
+        rev->kind = svn_opt_revision_number;
+        rev->value.number = SvIV(source);
     }
     else if (SvPOK(source)) {
         char *input = SvPV_nolen(source);
         if (svn_cstring_casecmp(input, "BASE") == 0)
-            (*rev)->kind = svn_opt_revision_base;
+            rev->kind = svn_opt_revision_base;
         else if (svn_cstring_casecmp(input, "HEAD") == 0)
-            (*rev)->kind = svn_opt_revision_head;
+            rev->kind = svn_opt_revision_head;
         else if (svn_cstring_casecmp(input, "WORKING") == 0)
-            (*rev)->kind = svn_opt_revision_working;
+            rev->kind = svn_opt_revision_working;
         else if (svn_cstring_casecmp(input, "COMMITTED") == 0)
-            (*rev)->kind = svn_opt_revision_committed;
+            rev->kind = svn_opt_revision_committed;
         else if (svn_cstring_casecmp(input, "PREV") == 0)
-            (*rev)->kind = svn_opt_revision_previous;
+            rev->kind = svn_opt_revision_previous;
         else if (*input == '{') {
             svn_boolean_t matched;
             apr_time_t tm;
@@ -360,8 +361,8 @@ void svn_swig_pl_set_revision(svn_opt_revision_t **rev, SV *source)
                 croak("unknown opt_revision_t string \"{%s}\": "
                       "svn_parse_date failed to parse it", input + 1);
 
-            (*rev)->kind = svn_opt_revision_date;
-            (*rev)->value.date = tm;
+            rev->kind = svn_opt_revision_date;
+            rev->value.date = tm;
         } else
             croak("unknown opt_revision_t string \"%s\": must be one of "
                   "\"BASE\", \"HEAD\", \"WORKING\", \"COMMITTED\", "
@@ -371,6 +372,8 @@ void svn_swig_pl_set_revision(svn_opt_revision_t **rev, SV *source)
               "a string (one of \"BASE\", \"HEAD\", \"WORKING\", "
               "\"COMMITTED\", \"PREV\" or a \"{DATE}\") "
               "or a _p_svn_opt_revision_t object");
+
+    return rev;
 }
 
 /* put the va_arg in stack and invoke caller_func with func.
