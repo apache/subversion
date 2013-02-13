@@ -1463,6 +1463,10 @@ send_path_revision(struct path_revision *path_rev,
  *     oldest to youngest, interleaving as appropriate.  This is implemented
  *     similar to an insertion sort, but instead of inserting into another
  *     array, we just call the appropriate handler.
+ *
+ * 2013-02: Added a very simple reverse for mainline only changes. Before this,
+ *          this would return an error (path not found) or just the first
+ *          revision.
  */
 svn_error_t *
 svn_repos_get_file_revs2(svn_repos_t *repos,
@@ -1480,6 +1484,21 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
   apr_hash_t *duplicate_path_revs;
   struct send_baton sb;
   int mainline_pos, merged_pos;
+  svn_boolean_t reverse = FALSE;
+
+  if (end < start)
+    {
+      svn_revnum_t tmp;
+
+      /* Reporting merged revision backwards makes no sense */
+      if (include_merged_revisions)
+        return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
+
+      tmp = end;
+      end = start;
+      start = tmp;
+      reverse = TRUE;
+    }
 
   /* Get the revisions we are interested in. */
   duplicate_path_revs = apr_hash_make(pool);
@@ -1512,6 +1531,9 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
   /* We want the first txdelta to be against the empty file. */
   sb.last_root = NULL;
   sb.last_path = NULL;
+
+  if (reverse)
+    svn_sort__array_reverse(mainline_path_revisions, pool);
 
   /* Create an empty hash table for the first property diff. */
   sb.last_props = apr_hash_make(sb.last_pool);
