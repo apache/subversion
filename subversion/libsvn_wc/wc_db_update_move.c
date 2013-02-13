@@ -215,6 +215,8 @@ update_move_list_notify(svn_wc__db_wcroot_t *wcroot,
   return SVN_NO_ERROR;
 }
 
+/* Mark a tree-conflict on LOCAL_RELPATH if such a tree-conflict does
+   not already exist. */
 static svn_error_t *
 mark_tree_conflict(struct tc_editor_baton *b,
                    const char *local_relpath,
@@ -255,7 +257,7 @@ mark_tree_conflict(struct tc_editor_baton *b,
   err = svn_wc__db_read_conflict_internal(&conflict, b->wcroot, local_relpath,
                                           scratch_pool, scratch_pool);
   if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-    return err;
+    return svn_error_trace(err);
   else if (err)
     {
       svn_error_clear(err);
@@ -1923,6 +1925,87 @@ svn_wc__db_update_moved_away_conflict_victim(svn_skel_t **work_items,
   return SVN_NO_ERROR;
 }
 
+/* Set *CAN_BUMP to TRUE if DEPTH is sufficient to cover the entire
+   BASE tree at LOCAL_RELPATH, to FALSE otherwise. */
+static svn_error_t *
+depth_sufficient_to_bump(svn_boolean_t *can_bump,
+                         const char *local_relpath,
+                         svn_wc__db_wcroot_t *wcroot,
+                         svn_depth_t depth,
+                         apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+          
+  switch (depth)
+    {
+    case svn_depth_infinity:
+      *can_bump = TRUE;
+      return SVN_NO_ERROR;
+
+    case svn_depth_empty:
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_SELECT_OP_DEPTH_CHILDREN));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
+                                local_relpath, 0));
+      break;
+
+    case svn_depth_files:
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_SELECT_HAS_NON_FILE_CHILDREN));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
+                                local_relpath));
+      break;
+
+    case svn_depth_immediates:
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_SELECT_HAS_GRANDCHILDREN));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
+                                local_relpath));
+      break;
+    default:
+      SVN_ERR_MALFUNCTION();
+    }
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  *can_bump = !have_row;
+  return SVN_NO_ERROR;
+}
+
+/* Mark a move-edit conflict on MOVE_SRC_ROOT_RELPATH.
+
+   ### Combine with mark_tree_conflict. */
+static svn_error_t *
+bump_mark_tree_conflict(svn_wc__db_wcroot_t *wcroot,
+                        const char *move_src_root_relpath,
+                        const char *move_src_op_root_relpath,
+                        svn_wc__db_t *db,
+                        apr_pool_t *scratch_pool)
+{
+  svn_skel_t *conflict = svn_wc__conflict_skel_create(scratch_pool);
+
+  /* ### Look for existing conflict? */
+  SVN_ERR(svn_wc__conflict_skel_add_tree_conflict(
+            conflict, db,
+            svn_dirent_join(wcroot->abspath, move_src_root_relpath,
+                            scratch_pool),
+            svn_wc_conflict_reason_moved_away,
+            svn_wc_conflict_action_edit,
+            svn_dirent_join(wcroot->abspath, move_src_op_root_relpath,
+                            scratch_pool),
+            scratch_pool, scratch_pool));
+
+  /* ### Get proper info for this call. */
+  SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict, NULL, NULL,
+                                              scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_wc__db_mark_conflict_internal(wcroot, move_src_root_relpath,
+                                            conflict, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Bump LOCAL_RELPATH, and all the children of LOCAL_RELPATH, that are
    moved-to at op-depth greater than OP_DEPTH.  SRC_DONE is a hash
    with keys that are 'const char *' relpaths that have already been
@@ -1932,6 +2015,8 @@ bump_moved_away(svn_wc__db_wcroot_t *wcroot,
                 const char *local_relpath,
                 int op_depth,
                 apr_hash_t *src_done,
+                svn_depth_t depth,
+                svn_wc__db_t *db,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
@@ -1953,11 +2038,50 @@ bump_moved_away(svn_wc__db_wcroot_t *wcroot,
       int src_op_depth = svn_sqlite__column_int(stmt, 2);
       svn_error_t *err;
       svn_skel_t *conflict;
+      svn_depth_t src_depth = depth;
 
       svn_pool_clear(iterpool);
 
       src_relpath = svn_sqlite__column_text(stmt, 0, iterpool);
       dst_relpath = svn_sqlite__column_text(stmt, 1, iterpool);
+
+      if (depth != svn_depth_infinity)
+        {
+          svn_boolean_t skip_this_src = FALSE;
+          svn_kind_t src_kind;
+
+          if (strcmp(src_relpath, local_relpath))
+            {
+              switch (depth)
+                {
+                case svn_depth_empty:
+                  skip_this_src = TRUE;
+                  break;
+                case svn_depth_files:
+                  src_kind = svn_sqlite__column_token(stmt, 3, kind_map);
+                  if (src_kind != svn_kind_file)
+                    {
+                      skip_this_src = TRUE;
+                      break;
+                    }
+                  /* Fallthrough */
+                case svn_depth_immediates:
+                  if (strcmp(svn_relpath_dirname(src_relpath, scratch_pool),
+                             local_relpath))
+                    skip_this_src = TRUE;
+                  src_depth = svn_depth_empty;
+                  break;
+                default:
+                  SVN_ERR_MALFUNCTION();
+                }
+            }
+
+          if (skip_this_src)
+            {
+              SVN_ERR(svn_sqlite__step(&have_row, stmt));
+              continue;
+            }
+        }
 
       err = svn_sqlite__get_statement(&stmt2, wcroot->sdb,
                                       STMT_HAS_LAYER_BETWEEN);
@@ -1970,29 +2094,50 @@ bump_moved_away(svn_wc__db_wcroot_t *wcroot,
         err = svn_sqlite__reset(stmt2);
       if (!err && !have_row)
         {
+          svn_boolean_t can_bump;
           const char *src_root_relpath = src_relpath;
 
-          while (relpath_depth(src_root_relpath) > src_op_depth)
-            src_root_relpath = svn_relpath_dirname(src_root_relpath, iterpool);
-
-          if (!apr_hash_get(src_done, src_relpath, APR_HASH_KEY_STRING))
+          if (op_depth == 0)
+            err = depth_sufficient_to_bump(&can_bump, src_relpath, wcroot,
+                                           src_depth, scratch_pool);
+          if (!err)
             {
-              apr_hash_set(src_done, apr_pstrdup(result_pool, src_relpath),
-                           APR_HASH_KEY_STRING, "");
-              err = svn_wc__db_read_conflict_internal(&conflict, wcroot,
-                                                      src_root_relpath,
-                                                      iterpool, iterpool);
-              /* ### TODO: check this is the right sort of tree-conflict? */
-              if (!err && !conflict)
+              if (!can_bump)
                 {
-                  /* ### TODO: verify moved_here? */
-                  err = replace_moved_layer(src_relpath, dst_relpath, op_depth,
-                                            wcroot, iterpool);
+                  err = bump_mark_tree_conflict(wcroot, src_relpath,
+                                                src_root_relpath,
+                                                db, scratch_pool);
+                  if (err)
+                    return svn_error_compose_create(err,
+                                                    svn_sqlite__reset(stmt));
+                  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+                  continue;
+                }
 
-                  if (!err)
-                    err = bump_moved_away(wcroot, dst_relpath,
-                                          relpath_depth(dst_relpath), src_done,
-                                          result_pool, iterpool);
+              while (relpath_depth(src_root_relpath) > src_op_depth)
+                src_root_relpath = svn_relpath_dirname(src_root_relpath,
+                                                       iterpool);
+
+              if (!apr_hash_get(src_done, src_relpath, APR_HASH_KEY_STRING))
+                {
+                  apr_hash_set(src_done, apr_pstrdup(result_pool, src_relpath),
+                               APR_HASH_KEY_STRING, "");
+                  err = svn_wc__db_read_conflict_internal(&conflict, wcroot,
+                                                          src_root_relpath,
+                                                          iterpool, iterpool);
+                  /* ### TODO: check this is the right sort of tree-conflict? */
+                  if (!err && !conflict)
+                    {
+                      /* ### TODO: verify moved_here? */
+                      err = replace_moved_layer(src_relpath, dst_relpath,
+                                                op_depth, wcroot, iterpool);
+
+                      if (!err)
+                        err = bump_moved_away(wcroot, dst_relpath,
+                                              relpath_depth(dst_relpath),
+                                              src_done, depth, db,
+                                              result_pool, iterpool);
+                    }
                 }
             }
         }
@@ -2013,16 +2158,33 @@ svn_error_t *
 svn_wc__db_bump_moved_away(svn_wc__db_wcroot_t *wcroot,
                            const char *local_relpath,
                            svn_depth_t depth,
+                           svn_wc__db_t *db,
                            apr_pool_t *scratch_pool)
 {
+  const char *dummy1, *dummy2;
+  const char *move_src_root_relpath, *move_src_op_root_relpath;
   apr_hash_t *src_done;
 
-  /* ### TODO: raise tree-conflicts? */
-  if (depth != svn_depth_infinity)
-    return SVN_NO_ERROR;
+  SVN_ERR(svn_wc__db_op_depth_moved_to(&dummy1, &dummy2,
+                                       &move_src_root_relpath,
+                                       &move_src_op_root_relpath, 0,
+                                       wcroot, local_relpath,
+                                       scratch_pool, scratch_pool));
+
+  if (move_src_root_relpath)
+    {
+      if (strcmp(move_src_root_relpath, local_relpath))
+        {
+          SVN_ERR(bump_mark_tree_conflict(wcroot, move_src_root_relpath,
+                                          move_src_op_root_relpath,
+                                          db, scratch_pool));
+          return SVN_NO_ERROR;
+        }
+
+    }
 
   src_done = apr_hash_make(scratch_pool);
-  SVN_ERR(bump_moved_away(wcroot, local_relpath, 0, src_done,
+  SVN_ERR(bump_moved_away(wcroot, local_relpath, 0, src_done, depth, db,
                           scratch_pool, scratch_pool));
 
   return SVN_NO_ERROR;

@@ -314,7 +314,10 @@ sbox_wc_commit(svn_test__sandbox_t *b, const char *path)
 }
 
 svn_error_t *
-sbox_wc_update(svn_test__sandbox_t *b, const char *path, svn_revnum_t revnum)
+sbox_wc_update_depth(svn_test__sandbox_t *b,
+                     const char *path,
+                     svn_revnum_t revnum,
+                     svn_depth_t depth)
 {
   svn_client_ctx_t *ctx;
   apr_array_header_t *result_revs;
@@ -328,9 +331,16 @@ sbox_wc_update(svn_test__sandbox_t *b, const char *path, svn_revnum_t revnum)
   APR_ARRAY_PUSH(paths, const char *) = sbox_wc_path(b, path);
   SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
   ctx->wc_ctx = b->wc_ctx;
-  return svn_client_update4(&result_revs, paths, &revision, svn_depth_infinity,
-                            TRUE, FALSE, FALSE, FALSE, FALSE,
+  return svn_client_update4(&result_revs, paths, &revision, depth,
+                            FALSE, FALSE, FALSE, FALSE, FALSE,
                             ctx, b->pool);
+}
+
+svn_error_t *
+sbox_wc_update(svn_test__sandbox_t *b, const char *path, svn_revnum_t revnum)
+{
+  SVN_ERR(sbox_wc_update_depth(b, path, revnum, svn_depth_infinity));
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
