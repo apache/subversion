@@ -277,15 +277,32 @@ svn_sort__array_reverse(apr_array_header_t *array,
 {
   int i;
 
-  assert(array->elt_size == sizeof(void *));
-
-  for (i = 0; i < array->nelts / 2; i++)
+  if (array->elt_size == sizeof(void *))
     {
-      int swap_index = array->nelts - i - 1;
-      void *tmp = APR_ARRAY_IDX(array, i, void *);
+      for (i = 0; i < array->nelts / 2; i++)
+        {
+          int swap_index = array->nelts - i - 1;
+          void *tmp = APR_ARRAY_IDX(array, i, void *);
 
-      APR_ARRAY_IDX(array, i, void *) =
-        APR_ARRAY_IDX(array, swap_index, void *);
-      APR_ARRAY_IDX(array, swap_index, void *) = tmp;
+          APR_ARRAY_IDX(array, i, void *) =
+            APR_ARRAY_IDX(array, swap_index, void *);
+          APR_ARRAY_IDX(array, swap_index, void *) = tmp;
+        }
+    }
+  else
+    {
+      size_t sz = array->elt_size;
+      char *tmp = apr_palloc(scratch_pool, sz);
+
+      for (i = 0; i < array->nelts / 2; i++)
+        {
+          int swap_index = array->nelts - i - 1;
+          char *x = array->elts + (sz * i);
+          char *y = array->elts + (sz * swap_index);
+
+          memcpy(tmp, x, sz);
+          memcpy(x, y, sz);
+          memcpy(y, tmp, sz);
+        }
     }
 }
