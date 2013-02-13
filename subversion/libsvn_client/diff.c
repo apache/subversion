@@ -1886,7 +1886,7 @@ diff_repos_wc(const char *path_or_url1,
   SVN_ERR(svn_ra_check_path(ra_session, "", rev, &kind1, pool));
 
   /* Figure out the node kind of the local target. */
-  SVN_ERR(svn_io_check_resolved_path(abspath2, &kind2, pool));
+  SVN_ERR(svn_wc_read_kind(&kind2, ctx->wc_ctx, abspath2, FALSE, pool));
 
   cmd_baton->ra_session = ra_session;
   cmd_baton->anchor = anchor;
