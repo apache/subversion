@@ -291,7 +291,7 @@ svn_sort__array_reverse(apr_array_header_t *array,
     }
   else
     {
-      size_t sz = array->elt_size;
+      apr_size_t sz = array->elt_size;
       char *tmp = apr_palloc(scratch_pool, sz);
 
       for (i = 0; i < array->nelts / 2; i++)
