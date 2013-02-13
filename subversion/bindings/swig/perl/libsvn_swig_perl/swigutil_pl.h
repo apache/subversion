@@ -106,7 +106,7 @@ SV *svn_swig_pl_convert_array(const apr_array_header_t *array,
 
 SV *svn_swig_pl_revnums_to_list(const apr_array_header_t *array);
 
-void svn_swig_pl_set_revision(svn_opt_revision_t **rev, SV *source);
+svn_opt_revision_t *svn_swig_pl_set_revision(svn_opt_revision_t *rev, SV *source);
 
 /* thunked log receiver function.  */
 svn_error_t * svn_swig_pl_thunk_log_receiver(void *py_receiver,
