@@ -170,6 +170,23 @@ typedef struct packed_number_stream_t
   value_position_pair_t buffer[MAX_NUMBER_PREFETCH];
 } packed_number_stream_t;
 
+/* Return an svn_error_t * object for error ERR on STREAM with the given
+ * MESSAGE string.  The latter must have a placeholder for the index file
+ * name ("%s") and the current read offset (e.g. "%lx").
+ */
+static svn_error_t *
+stream_error_create(packed_number_stream_t *stream,
+                    apr_status_t err,
+                    const char *message)
+{
+  const char *file_name;
+  apr_off_t offset = 0;
+  SVN_ERR(svn_io_file_name_get(&file_name, stream->file,
+                               stream->pool));
+  SVN_ERR(svn_io_file_seek(stream->file, SEEK_CUR, &offset, stream->pool));
+  return svn_error_createf(err, NULL, message, file_name, offset);
+}
+
 /* Read up to MAX_NUMBER_PREFETCH numbers from the STREAM->NEXT_OFFSET in
  * STREAM->FILE and buffer them.
  *
@@ -182,9 +199,11 @@ packed_stream_read(packed_number_stream_t *stream)
 {
   unsigned char buffer[MAX_NUMBER_PREFETCH];
   apr_size_t read = 0;
-  svn_boolean_t eof;
   apr_size_t i;
   value_position_pair_t *target;
+  apr_off_t block_start = 0;
+  apr_off_t block_left = 0;
+  apr_status_t err;
 
   /* all buffered data will have been read starting here */
   stream->start_offset = stream->next_offset;
@@ -193,10 +212,23 @@ packed_stream_read(packed_number_stream_t *stream)
    * i.e. the last number has been incomplete (and not buffered in stream)
    * and need to be re-read.  Therefore, always correct the file pointer.
    */
-  SVN_ERR(svn_io_file_aligned_seek(stream->file, stream->block_size, NULL,
-                                   stream->next_offset, stream->pool));
-  SVN_ERR(svn_io_file_read_full2(stream->file, buffer, sizeof(buffer),
-                                 &read, &eof, stream->pool));
+  SVN_ERR(svn_io_file_aligned_seek(stream->file, stream->block_size,
+                                   &block_start, stream->next_offset,
+                                   stream->pool));
+
+  /* prefetch at least one number but, if feasible, don't cross block
+   * boundaries.  This shall prevent jumping back and forth between two
+   * blocks because the extra data was not actually request _now_.
+   */
+  read = sizeof(buffer);
+  block_left = stream->block_size - (stream->next_offset - block_start);
+  if (block_left >= 10 && block_left < read)
+    read = block_left;
+
+  err = apr_file_read(stream->file, buffer, &read);
+  if (err && !APR_STATUS_IS_EOF(err))
+    return stream_error_create(stream, err,
+                               _("Can't read index file '%s' at offset %lx"));
 
   /* if the last number is incomplete, trim it from the buffer */
   while (read > 0 && buffer[read-1] >= 0x80)
@@ -205,16 +237,8 @@ packed_stream_read(packed_number_stream_t *stream)
   /* we call read() only if get() requires more data.  So, there must be
    * at least *one* further number. */
   if SVN__PREDICT_FALSE(read == 0)
-    {
-      const char *file_name;
-      apr_off_t offset = 0;
-      SVN_ERR(svn_io_file_name_get(&file_name, stream->file,
-                                   stream->pool));
-      SVN_ERR(svn_io_file_seek(stream->file, SEEK_CUR, &offset, stream->pool));
-      return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
-                            _("Unexpected end of index file %s at offset %lx"),
-                               file_name, offset);
-    }
+    return stream_error_create(stream, err,
+                          _("Unexpected end of index file %s at offset %lx"));
 
   /* parse file buffer and expand into stream buffer */
   target = stream->buffer;
