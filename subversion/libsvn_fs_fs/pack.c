@@ -266,6 +266,28 @@ copy_file_data(pack_context_t *context,
   return SVN_NO_ERROR;
 }
 
+/* Writes SIZE bytes, all 0, to DEST.  Uses POOL for allocations.
+ */
+static svn_error_t *
+write_null_bytes(apr_file_t *dest,
+                 apr_off_t size,
+                 apr_pool_t *pool)
+{
+  /* Have a collection of high-quality, easy to access NUL bytes handy. */
+  enum { BUFFER_SIZE = 1024 };
+  static const char buffer[BUFFER_SIZE] = { 0 };
+
+  /* copy SIZE of them into the file's buffer */
+  while (size)
+    {
+      apr_size_t to_write = MIN(size, BUFFER_SIZE);
+      SVN_ERR(svn_io_file_write_full(dest, buffer, to_write, NULL, pool));
+      size -= to_write;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 copy_item_to_temp(pack_context_t *context,
                   apr_array_header_t *entries,
@@ -588,24 +610,77 @@ sort_reps(pack_context_t *context)
     }
 }
 
+/* Copy (append) the items identified by svn_fs_fs__p2l_entry_t * elements
+ * in ENTRIES strictly in order from TEMP_FILE into CONTEXT->PACK_FILE.
+ * Use POOL for temporary allocations.
+ */
 static svn_error_t *
 copy_items_from_temp(pack_context_t *context,
                      apr_array_header_t *entries,
                      apr_file_t *temp_file,
                      apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = context->fs->fsap_data;
   apr_pool_t *iterpool = svn_pool_create(pool);
   int i;
+
+  /* To prevent items from overlapping a block boundary, we will usually
+   * put them into the next block and top up the old one with NUL bytes.
+   * This is the maximum number of bytes "wasted" that way per block.
+   * Larger items will cross the block boundaries. */
+  const apr_off_t alignment_limit = MAX(ffd->block_size / 50, 512);
+
+  /* copy all items in strict order */
   for (i = 0; i < entries->nelts; ++i)
     {
       svn_fs_fs__p2l_entry_t *entry
         = APR_ARRAY_IDX(entries, i, svn_fs_fs__p2l_entry_t *);
 
+      apr_off_t in_block_offset = context->pack_offset % ffd->block_size;
+
+      /* Determine how many bytes must still be available in the current
+       * block to be able to insert the current item without crossing the
+       * boundary.  Also, add 80 extra bytes (i.e. the size our line-based
+       * parser prefetch) for items that get parsed such that there will
+       * be no back-and-forth between blocks during parsing. */
+      apr_off_t safe_size = entry->size;
+      if (entry->type == SVN_FS_FS__ITEM_TYPE_NODEREV ||
+          entry->type == SVN_FS_FS__ITEM_TYPE_CHANGES)
+        safe_size += 80;
+
+      /* still enough space in current block? */
+      if (in_block_offset + safe_size > ffd->block_size)
+        {
+          /* No.  Is wasted space small enough to align the current item
+           * to the next block? */
+          apr_off_t bytes_to_alignment = ffd->block_size - in_block_offset;
+          if (bytes_to_alignment < alignment_limit)
+            {
+              /* Yes. To up with NUL bytes and don't forget to create
+               * an P2L index entry marking this section as unused. */
+              svn_fs_fs__p2l_entry_t null_entry;
+              null_entry.offset = context->pack_offset;
+              null_entry.size = bytes_to_alignment;
+              null_entry.type = SVN_FS_FS__ITEM_TYPE_UNUSED;
+              null_entry.revision = 0;
+              null_entry.item_index = SVN_FS_FS__ITEM_INDEX_UNUSED;
+              
+              SVN_ERR(write_null_bytes(context->pack_file,
+                                       bytes_to_alignment, iterpool));
+              SVN_ERR(svn_fs_fs__p2l_proto_index_add_entry
+                          (context->proto_p2l_index, &null_entry, iterpool));
+              context->pack_offset += bytes_to_alignment;
+            }
+        }
+
+      /* select the item in the source file and copy it into the target
+       * pack file */
       SVN_ERR(svn_io_file_seek(temp_file, SEEK_SET, &entry->offset,
                                iterpool));
       SVN_ERR(copy_file_data(context, context->pack_file, temp_file,
                              entry->size, pool));
 
+      /* write index entry and update current position */
       entry->offset = context->pack_offset;
       context->pack_offset += entry->size;
        
