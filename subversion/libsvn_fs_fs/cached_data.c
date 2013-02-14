@@ -96,16 +96,18 @@ dgb__log_access(svn_fs_t *fs,
   if (item_type == SVN_FS_FS__ITEM_TYPE_NODEREV && item != NULL)
     {
       node_revision_t *node = item;
-      const char *data_rep = node->data_rep
-                           ? apr_psprintf(scratch_pool, " d=%ld/%ld",
-                                          node->data_rep->revision,
-                                          node->data_rep->item_index)
-                           : "";
-      const char *prop_rep = node->prop_rep
-                           ? apr_psprintf(scratch_pool, " p=%ld/%ld",
-                                          node->prop_rep->revision,
-                                          node->prop_rep->item_index)
-                           : "";
+      const char *data_rep
+        = node->data_rep
+        ? apr_psprintf(scratch_pool, " d=%ld/%" APR_UINT64_T_FMT,
+                       node->data_rep->revision,
+                       node->data_rep->item_index)
+        : "";
+      const char *prop_rep
+        = node->prop_rep
+        ? apr_psprintf(scratch_pool, " p=%ld/%" APR_UINT64_T_FMT,
+                       node->prop_rep->revision,
+                       node->prop_rep->item_index)
+        : "";
       description = apr_psprintf(scratch_pool, "%s   (pc=%d%s%s)",
                                  node->created_path,
                                  node->predecessor_count,
@@ -122,7 +124,8 @@ dgb__log_access(svn_fs_t *fs,
       else if (header->is_delta_vs_empty)
         description = "  DELTA";
       else
-        description = apr_psprintf(scratch_pool, "  DELTA against %ld/%ld",
+        description = apr_psprintf(scratch_pool,
+                                   "  DELTA against %ld/%" APR_UINT64_T_FMT,
                                    header->base_revision,
                                    header->base_item_index);
     }
@@ -163,16 +166,20 @@ dgb__log_access(svn_fs_t *fs,
         }
 
       /* line output */
-      printf("%5s%4lx:%04lx -%4lx:%04lx %s %7ld %5ld   %s\n",
-             pack, offset / ffd->block_size, offset % ffd->block_size,
-             end_offset / ffd->block_size, end_offset % ffd->block_size,
+      printf("%5s%4lx:%04lx -%4lx:%04lx %s %7ld %5"APR_UINT64_T_FMT"   %s\n",
+             pack, (long)(offset / ffd->block_size),
+             (long)(offset % ffd->block_size),
+             (long)(end_offset / ffd->block_size),
+             (long)(end_offset % ffd->block_size),
              type, revision, item_index, description);
     }
   else
     {
       /* reduced logging for format 6 and earlier */
-      printf("%5s%10lx %s %7ld %7ld   %s\n",
-             pack, offset, type, revision, item_index, description);
+      printf("%5s%10" APR_UINT64_T_HEX_FMT " %s %7ld %7" APR_UINT64_T_FMT \
+             "   %s\n",
+             pack, (apr_uint64_t)(offset), type, revision, item_index,
+             description);
     }
 
 #endif
