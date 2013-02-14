@@ -110,9 +110,6 @@ struct edit_baton_t
   /* Should this diff ignore node ancestry? */
   svn_boolean_t ignore_ancestry;
 
-  /* Should this diff not compare copied files with their source? */
-  svn_boolean_t show_copies_as_adds;
-
   /* Possibly diff repos against text-bases instead of working files. */
   svn_boolean_t diff_pristine;
 
@@ -256,7 +253,6 @@ make_edit_baton(struct edit_baton_t **edit_baton,
                 svn_depth_t depth,
                 svn_boolean_t ignore_ancestry,
                 svn_boolean_t show_copies_as_adds,
-                svn_boolean_t use_git_diff_format,
                 svn_boolean_t use_text_base,
                 svn_boolean_t reverse_order,
                 const apr_array_header_t *changelist_filter,
@@ -281,7 +277,11 @@ make_edit_baton(struct edit_baton_t **edit_baton,
   if (reverse_order)
     processor = svn_diff__tree_processor_reverse_create(processor, NULL, pool);
 
-  if (! show_copies_as_adds && !use_git_diff_format)
+  /* --show-copies-as-adds implies --notice-ancestry */
+  if (show_copies_as_adds)
+    ignore_ancestry = FALSE;
+
+  if (! show_copies_as_adds)
     processor = svn_diff__tree_processor_copy_as_changed_create(processor,
                                                                 pool);
 
@@ -292,7 +292,6 @@ make_edit_baton(struct edit_baton_t **edit_baton,
   eb->processor = processor;
   eb->depth = depth;
   eb->ignore_ancestry = ignore_ancestry;
-  eb->show_copies_as_adds = show_copies_as_adds;
   eb->local_before_remote = reverse_order;
   eb->diff_pristine = use_text_base;
   eb->changelist_hash = changelist_hash;
@@ -756,9 +755,7 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
 
               if (NOT_PRESENT(base_status))
                 local_only = TRUE;
-              else if (base_kind != info->kind 
-                       || !eb->ignore_ancestry
-                       || (info->copied && eb->show_copies_as_adds))
+              else if (base_kind != info->kind || !eb->ignore_ancestry)
                 {
                   repos_only = TRUE;
                   local_only = TRUE;
@@ -1531,15 +1528,6 @@ add_directory(const char *path,
       if (!db->repos_only && info->status != svn_wc__db_status_added)
         db->repos_only = TRUE;
 
-      /* ### Yuck,... but we love legacy compatibility */
-      if (!db->repos_only
-          && eb->ignore_ancestry
-          && eb->show_copies_as_adds
-          && info->copied)
-        {
-          db->repos_only = TRUE;
-        }
-
       if (!db->repos_only)
         {
           db->right_src = svn_diff__source_create(SVN_INVALID_REVNUM, db->pool);
@@ -1617,16 +1605,6 @@ open_directory(const char *path,
               break;
             default:
               SVN_ERR_MALFUNCTION();
-        }
-
-      /* ### Yuck,... but we love legacy compatibility */
-      if (!db->repos_only
-          && eb->ignore_ancestry
-          && eb->show_copies_as_adds
-          && info->copied)
-        {
-          db->repos_only = TRUE;
-          db->ignoring_ancestry = FALSE;
         }
 
       if (!db->repos_only)
@@ -1829,15 +1807,6 @@ add_file(const char *path,
       if (!fb->repos_only && info->status != svn_wc__db_status_added)
         fb->repos_only = TRUE;
 
-      /* ### Yuck,... but we love legacy compatibility */
-      if (!fb->repos_only
-          && eb->ignore_ancestry
-          && eb->show_copies_as_adds
-          && info->copied)
-        {
-          fb->repos_only = TRUE;
-        }
-
       if (!fb->repos_only)
         {
           /* Add this path to the parent directory's list of elements that
@@ -1911,16 +1880,6 @@ open_file(const char *path,
               break;
             default:
               SVN_ERR_MALFUNCTION();
-        }
-
-      /* ### Yuck,... but we love legacy compatibility */
-      if (!fb->repos_only
-          && eb->ignore_ancestry
-          && eb->show_copies_as_adds
-          && info->copied)
-        {
-          fb->repos_only = TRUE;
-          fb->ignoring_ancestry = FALSE;
         }
 
       if (!fb->repos_only)
@@ -2295,12 +2254,15 @@ svn_wc__get_diff_editor(const svn_delta_editor_t **editor,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(anchor_abspath));
 
+  /* --git implies --show-copies-as-adds */
+  if (use_git_diff_format)
+    show_copies_as_adds = TRUE;
+
   SVN_ERR(make_edit_baton(&eb,
                           wc_ctx->db,
                           anchor_abspath, target,
                           callbacks, callback_baton,
                           depth, ignore_ancestry, show_copies_as_adds,
-                          use_git_diff_format,
                           use_text_base, reverse_order, changelist_filter,
                           cancel_func, cancel_baton,
                           result_pool));
