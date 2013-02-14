@@ -6336,10 +6336,13 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * @a show_copies_as_adds determines whether paths added with history will
  * appear as a diff against their copy source, or whether such paths will
  * appear as if they were newly added in their entirety.
+ * @a show_copies_as_adds implies not @a ignore_ancestry.
  *
  * If @a use_git_diff_format is TRUE, copied paths will be treated as added
  * if they weren't modified after being copied. This allows the callbacks
  * to generate appropriate --git diff headers for such files.
+ * @a use_git_diff_format implies @a show_copies_as_adds, and as such implies
+ * not @a ignore_ancestry.
  *
  * Normally, the difference from repository->working_copy is shown.
  * If @a reverse_order is TRUE, then show working_copy->repository diffs.
