@@ -593,8 +593,8 @@ gcov-clean:
 	find . -name "*.gcda" -o -name "*.gcno" -print0 | xargs -0 rm -f --
 
 check-clean: gcov-clean
-	find subversion/tests/cmdline/svn-test-work -print0    \
-	       -mindepth 1 -maxdepth 1 | xargs -0 rm -rf --;   \
+	find subversion/tests/cmdline/svn-test-work -mindepth 1 -maxdepth 1 \
+               -print0 | xargs -0 rm -rf --;   \
 	rm -rf subversion/tests/libsvn_fs/test-repo-*          \
 	       subversion/tests/libsvn_fs_base/test-repo-*     \
 	       subversion/tests/libsvn_fs_fs/test-repo-*       \
