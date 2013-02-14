@@ -310,12 +310,7 @@ switch_internal(svn_revnum_t *result_rev,
 
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the update_editor
-     will be driven by svn_repos_dir_delta2.
-
-     We pass in an external_func for recording all externals. It
-     shouldn't be needed for a switch if it wasn't for the relative
-     externals of type '../path'. All of those must be resolved to
-     the new location.  */
+     will be driven by svn_repos_dir_delta2. */
   err = svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath, reporter,
                                 report_baton, TRUE, depth, (! depth_is_sticky),
                                 (! server_supports_depth),
