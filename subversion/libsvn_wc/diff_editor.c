@@ -62,6 +62,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_hash.h"
+#include "svn_sorts.h"
 
 #include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
@@ -663,10 +664,11 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
     {
       apr_hash_t *nodes;
       apr_hash_t *conflicts;
-      apr_hash_index_t *hi;
+      apr_array_header_t *children;
       svn_depth_t depth_below_here = depth;
       svn_boolean_t diff_files;
       svn_boolean_t diff_dirs;
+      int i;
 
       if (depth_below_here == svn_depth_immediates)
         depth_below_here = svn_depth_empty;
@@ -680,11 +682,16 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
                                             db, local_abspath,
                                             scratch_pool, iterpool));
 
-      for (hi = apr_hash_first(scratch_pool, nodes);
-           hi; hi = apr_hash_next(hi))
+      children = svn_sort__hash(nodes, svn_sort_compare_items_lexically,
+                            scratch_pool);
+
+      for (i = 0; i < children->nelts; i++)
         {
-          const char *name = svn__apr_hash_index_key(hi);
-          struct svn_wc__db_info_t *info = svn__apr_hash_index_val(hi);
+          svn_sort__item_t *item = &APR_ARRAY_IDX(children, i,
+                                                  svn_sort__item_t);
+          const char *name = item->key;
+          struct svn_wc__db_info_t *info = item->value;
+
           const char *child_abspath;
           const char *child_relpath;
           svn_boolean_t repos_only;
@@ -1070,6 +1077,8 @@ svn_wc__diff_local_only_dir(svn_wc__db_t *db,
   svn_diff_source_t *right_src = svn_diff__source_create(SVN_INVALID_REVNUM,
                                                          scratch_pool);
   svn_depth_t depth_below_here = depth;
+  apr_hash_t *nodes;
+  apr_hash_t *conflicts;
 
   /* Report the addition of the directory's contents. */
   iterpool = svn_pool_create(scratch_pool);
@@ -1083,19 +1092,22 @@ svn_wc__diff_local_only_dir(svn_wc__db_t *db,
                                 processor,
                                 scratch_pool, iterpool));
 
-  SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath,
-                                   scratch_pool, iterpool));
+  SVN_ERR(svn_wc__db_read_children_info(&nodes, &conflicts, db, local_abspath,
+                                        scratch_pool, iterpool));
 
   if (depth_below_here == svn_depth_immediates)
     depth_below_here = svn_depth_empty;
 
+  children = svn_sort__hash(nodes, svn_sort_compare_items_lexically,
+                            scratch_pool);
+
   for (i = 0; i < children->nelts; i++)
     {
-      const char *name = APR_ARRAY_IDX(children, i, const char *);
+      svn_sort__item_t *item = &APR_ARRAY_IDX(children, i, svn_sort__item_t);
+      const char *name = item->key;
+      struct svn_wc__db_info_t *info = item->value;
       const char *child_abspath;
       const char *child_relpath;
-      svn_wc__db_status_t status;
-      svn_kind_t kind;
 
       svn_pool_clear(iterpool);
 
@@ -1104,27 +1116,19 @@ svn_wc__diff_local_only_dir(svn_wc__db_t *db,
 
       child_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
-      SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   db, child_abspath, iterpool, iterpool));
-
-      if (status == svn_wc__db_status_not_present
-          || status == svn_wc__db_status_excluded
-          || status == svn_wc__db_status_server_excluded)
+      if (NOT_PRESENT(info->status))
         {
           continue;
         }
 
       /* If comparing against WORKING, skip entries that are
          schedule-deleted - they don't really exist. */
-      if (!diff_pristine && status == svn_wc__db_status_deleted)
+      if (!diff_pristine && info->status == svn_wc__db_status_deleted)
         continue;
 
       child_relpath = svn_relpath_join(relpath, name, iterpool);
 
-      switch (kind)
+      switch (info->kind)
         {
         case svn_kind_file:
         case svn_kind_symlink:
@@ -1358,16 +1362,21 @@ svn_wc__diff_base_only_dir(svn_wc__db_t *db,
     {
       apr_hash_t *nodes;
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-      apr_hash_index_t *hi;
+      apr_array_header_t *children;
+      int i;
 
       SVN_ERR(svn_wc__db_base_get_children_info(&nodes, db, local_abspath,
                                                 scratch_pool, iterpool));
 
-      for (hi = apr_hash_first(scratch_pool, nodes); hi;
-           hi = apr_hash_next(hi))
+      children = svn_sort__hash(nodes, svn_sort_compare_items_lexically,
+                                scratch_pool);
+
+      for (i = 0; i < children->nelts; i++)
         {
-          const char *name = svn__apr_hash_index_key(hi);
-          struct svn_wc__db_base_info_t *info = svn__apr_hash_index_val(hi);
+          svn_sort__item_t *item = &APR_ARRAY_IDX(children, i,
+                                                  svn_sort__item_t);
+          const char *name = item->key;
+          struct svn_wc__db_base_info_t *info = item->value;
           const char *child_abspath;
           const char *child_relpath;
 
@@ -1650,15 +1659,19 @@ close_directory(void *dir_baton,
   apr_pool_t *scratch_pool = db->pool;
   svn_boolean_t reported_closed = FALSE;
 
-  if (db->deletes && !db->skip_children)
+  if (!db->skip_children && db->deletes && apr_hash_count(db->deletes))
     {
-      apr_hash_index_t *hi;
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+      apr_array_header_t *children;
+      int i;
+      children = svn_sort__hash(db->deletes, svn_sort_compare_items_lexically,
+                                scratch_pool);
 
-      for (hi = apr_hash_first(scratch_pool, db->deletes); hi;
-           hi = apr_hash_next(hi))
+      for (i = 0; i < children->nelts; i++)
         {
-          const char *name = svn__apr_hash_index_key(hi);
+          svn_sort__item_t *item = &APR_ARRAY_IDX(children, i,
+                                                  svn_sort__item_t);
+          const char *name = item->key;
 
           svn_pool_clear(iterpool);
           SVN_ERR(handle_local_only(db, name, iterpool));
