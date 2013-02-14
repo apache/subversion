@@ -1159,7 +1159,6 @@ get_postponed_conflicted_paths(void *baton, apr_pool_t *result_pool)
 
 svn_error_t *
 svn_cl__resolve_postponed_conflicts(void *baton,
-                                    svn_depth_t depth,
                                     svn_cl__accept_t accept_which,
                                     const char *editor_cmd,
                                     svn_client_ctx_t *ctx,
@@ -1201,7 +1200,7 @@ svn_cl__resolve_postponed_conflicts(void *baton,
                                                           scratch_pool));
       ctx->conflict_baton2 = b;
 
-      err = svn_client_resolve(local_abspath, depth,
+      err = svn_client_resolve(local_abspath, svn_depth_empty,
                                svn_wc_conflict_choose_unspecified,
                                ctx, iterpool);
 

@@ -195,7 +195,6 @@ svn_cl__update(apr_getopt_t *os,
     }
 
   err = svn_cl__resolve_postponed_conflicts(ctx->conflict_baton2,
-                                            opt_state->depth,
                                             opt_state->accept_which,
                                             opt_state->editor_cmd,
                                             ctx, scratch_pool);
