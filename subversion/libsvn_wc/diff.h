@@ -120,6 +120,23 @@ svn_wc__diff_base_only_dir(svn_wc__db_t *db,
                            void *cancel_baton,
                            apr_pool_t *scratch_pool);
 
+/* Diff the file PATH against the text base of its BASE layer.  At this
+ * stage we are dealing with a file that does exist in the working copy.
+ */
+svn_error_t *
+svn_wc__diff_base_working_diff(svn_wc__db_t *db,
+                               const char *local_abspath,
+                               const char *relpath,
+                               svn_revnum_t revision,
+                               apr_hash_t *changelist_hash,
+                               const svn_diff_tree_processor_t *processor,
+                               void *processor_dir_baton,
+                               svn_boolean_t diff_pristine,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
+                               apr_pool_t *scratch_pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
