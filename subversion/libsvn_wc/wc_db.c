@@ -10760,6 +10760,8 @@ bump_revisions_post_update(svn_wc__db_wcroot_t *wcroot,
                            svn_revnum_t new_revision,
                            apr_hash_t *exclude_relpaths,
                            apr_hash_t *wcroot_iprops,
+                           svn_wc_notify_func2_t notify_func,
+                           void *notify_baton,
                            apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
@@ -10805,7 +10807,11 @@ bump_revisions_post_update(svn_wc__db_wcroot_t *wcroot,
                              scratch_pool));
 
   SVN_ERR(svn_wc__db_bump_moved_away(wcroot, local_relpath, depth, db,
-                                     scratch_pool));
+                                     notify_func, notify_baton, scratch_pool));
+
+  SVN_ERR(svn_wc__db_update_move_list_notify(wcroot, SVN_INVALID_REVNUM,
+                                             SVN_INVALID_REVNUM, notify_func,
+                                             notify_baton, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -10820,6 +10826,8 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
                                          svn_revnum_t new_revision,
                                          apr_hash_t *exclude_relpaths,
                                          apr_hash_t *wcroot_iprops,
+                                         svn_wc_notify_func2_t notify_func,
+                                         void *notify_baton,
                                          apr_pool_t *scratch_pool)
 {
   const char *local_relpath;
@@ -10840,7 +10848,8 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
     bump_revisions_post_update(wcroot, local_relpath, db,
                                depth, new_repos_relpath, new_repos_root_url,
                                new_repos_uuid, new_revision,
-                               exclude_relpaths, wcroot_iprops, scratch_pool),
+                               exclude_relpaths, wcroot_iprops,
+                               notify_func, notify_baton, scratch_pool),
     wcroot);
 
   return SVN_NO_ERROR;

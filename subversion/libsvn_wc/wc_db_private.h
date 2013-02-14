@@ -429,11 +429,21 @@ svn_wc__db_bump_moved_away(svn_wc__db_wcroot_t *wcroot,
                            const char *local_relpath,
                            svn_depth_t depth,
                            svn_wc__db_t *db,
+                           svn_wc_notify_func2_t notify_func,
+                           void *notify_baton,
                            apr_pool_t *scratch_pool);
 
 svn_error_t *
 svn_wc__db_resolve_break_moved_away_internal(svn_wc__db_wcroot_t *wcroot,
                                              const char *local_relpath,
                                              apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__db_update_move_list_notify(svn_wc__db_wcroot_t *wcroot,
+                                   svn_revnum_t old_revision,
+                                   svn_revnum_t new_revision,
+                                   svn_wc_notify_func2_t notify_func,
+                                   void *notify_baton,
+                                   apr_pool_t *scratch_pool);
 
 #endif /* WC_DB_PRIVATE_H */

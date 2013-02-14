@@ -4593,6 +4593,8 @@ close_edit(void *edit_baton,
                                                        *(eb->target_revision),
                                                        eb->skipped_trees,
                                                        eb->wcroot_iprops,
+                                                       eb->notify_func,
+                                                       eb->notify_baton,
                                                        eb->pool));
 
       if (*eb->target_basename != '\0')
