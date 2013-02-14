@@ -944,8 +944,17 @@ svn_txdelta_parse_svndiff(svn_txdelta_window_handler_t handler,
   db->header_bytes = 0;
   db->error_on_early_close = error_on_early_close;
   stream = svn_stream_create(db, pool);
-  svn_stream_set_write(stream, write_handler);
-  svn_stream_set_close(stream, close_handler);
+
+  if (handler != svn_delta_noop_window_handler)
+    {
+      svn_stream_set_write(stream, write_handler);
+      svn_stream_set_close(stream, close_handler);
+    }
+  else
+    {
+      /* And else we just ignore everything as efficiently as we can.
+         by not hooking the stream at all */
+    }
   return stream;
 }
 
