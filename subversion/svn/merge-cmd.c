@@ -272,8 +272,7 @@ svn_cl__merge(apr_getopt_t *os,
   apr_array_header_t *targets;
   const char *sourcepath1 = NULL, *sourcepath2 = NULL, *targetpath = "";
   svn_boolean_t two_sources_specified = TRUE;
-  svn_error_t *err = SVN_NO_ERROR;
-  svn_error_t *merge_err = SVN_NO_ERROR;
+  svn_error_t *merge_err;
   svn_opt_revision_t first_range_start, first_range_end, peg_revision1,
     peg_revision2;
   apr_array_header_t *options, *ranges_to_merge = opt_state->revision_ranges;
@@ -574,34 +573,31 @@ svn_cl__merge(apr_getopt_t *os,
                         targetpath,
                         ranges_to_merge, first_range_start, first_range_end,
                         opt_state, options, ctx, pool);
-
-  if (! opt_state->quiet)
-    err = svn_cl__print_conflict_stats(ctx->notify_baton2, pool);
-
-  /* Resolve any postponed conflicts.  (Only if we've been using the
-   * default 'postpone' resolver which remembers what was postponed.) */
-  if (!err && ctx->conflict_func2 == svn_cl__conflict_func_postpone)
-    err = svn_cl__resolve_postponed_conflicts(ctx->conflict_baton2,
-                                              opt_state->depth,
-                                              opt_state->accept_which,
-                                              opt_state->editor_cmd,
-                                              ctx, pool);
-  if (merge_err)
+  if (merge_err && merge_err->apr_err
+                   == SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING)
     {
-      if (merge_err->apr_err ==
-          SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING)
-        {
-          err = svn_error_quick_wrap(
-            svn_error_compose_create(merge_err, err),
-            _("Merge tracking not possible, use --ignore-ancestry or\n"
-              "fix invalid mergeinfo in target with 'svn propset'"));
-        }
-      else
-        {
-          err = svn_error_compose_create(merge_err, err);
-          return svn_cl__may_need_force(err);
-        }
+      return svn_error_quick_wrap(
+               merge_err,
+               _("Merge tracking not possible, use --ignore-ancestry or\n"
+                 "fix invalid mergeinfo in target with 'svn propset'"));
+    }
+  if (! merge_err || merge_err->apr_err == SVN_ERR_WC_FOUND_CONFLICT)
+    {
+      svn_error_t *err = SVN_NO_ERROR;
+
+      if (! opt_state->quiet)
+        err = svn_cl__print_conflict_stats(ctx->notify_baton2, pool);
+
+      /* Resolve any postponed conflicts.  (Only if we've been using the
+       * default 'postpone' resolver which remembers what was postponed.) */
+      if (!err && ctx->conflict_func2 == svn_cl__conflict_func_postpone)
+        err = svn_cl__resolve_postponed_conflicts(ctx->conflict_baton2,
+                                                  opt_state->depth,
+                                                  opt_state->accept_which,
+                                                  opt_state->editor_cmd,
+                                                  ctx, pool);
+      merge_err = svn_error_compose_create(merge_err, err);
     }
 
-  return svn_error_trace(err);
+  return svn_cl__may_need_force(merge_err);
 }
