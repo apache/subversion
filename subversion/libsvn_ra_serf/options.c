@@ -203,6 +203,13 @@ capabilities_headers_iterator_callback(void *baton,
           svn_hash_sets(session->capabilities,
                         SVN_RA_CAPABILITY_INHERITED_PROPS, capability_yes);
         }
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_GET_FILE_REVS_REVERSE,
+                                 vals))
+        {
+          svn_hash_sets(session->capabilities,
+                        SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE,
+                        capability_yes);
+        }
       if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_EPHEMERAL_TXNPROPS, vals))
         {
           svn_hash_sets(session->capabilities,

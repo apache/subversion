@@ -2039,6 +2039,15 @@ svn_ra_has_capability(svn_ra_session_t *session,
  */
 #define SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS "ephemeral-txnprops"
 
+/**
+ * The capability of a server to walk revisions backwards in
+ * svn_ra_get_file_revs2
+ *
+ * @since New in 1.8.
+ */
+#define SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE "get-file-revs-reversed"
+
+
 /*       *** PLEASE READ THIS IF YOU ADD A NEW CAPABILITY ***
  *
  * RA layers generally fetch all capabilities when asked about any
