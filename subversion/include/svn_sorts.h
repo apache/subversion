@@ -208,11 +208,7 @@ svn_sort__array_delete(apr_array_header_t *arr,
                        int delete_index,
                        int elements_to_delete);
 
-/* Reverse the order of elements in @a array, in place.  The elements of
- * @a array shall be pointers.
- *
- * Non-pointer elements could be supported in future.  The @a scratch_pool
- * is currently unused but could be used in future.
+/* Reverse the order of elements in @a array, in place.
  */
 void
 svn_sort__array_reverse(apr_array_header_t *array,
