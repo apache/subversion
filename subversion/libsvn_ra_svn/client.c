@@ -2589,43 +2589,46 @@ ra_svn_replay_range(svn_ra_session_t *session,
 }
 
 
-static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
-                                          svn_boolean_t *has,
-                                          const char *capability,
-                                          apr_pool_t *pool)
+static svn_error_t *
+ra_svn_has_capability(svn_ra_session_t *session,
+                      svn_boolean_t *has,
+                      const char *capability,
+                      apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess = session->priv;
+  static const char* capabilities[][2] =
+  {
+      /* { ra capability string, svn:// wire capability string} */
+      {SVN_RA_CAPABILITY_DEPTH, SVN_RA_SVN_CAP_DEPTH},
+      {SVN_RA_CAPABILITY_MERGEINFO, SVN_RA_SVN_CAP_MERGEINFO},
+      {SVN_RA_CAPABILITY_LOG_REVPROPS, SVN_RA_SVN_CAP_LOG_REVPROPS},
+      {SVN_RA_CAPABILITY_PARTIAL_REPLAY, SVN_RA_SVN_CAP_PARTIAL_REPLAY},
+      {SVN_RA_CAPABILITY_COMMIT_REVPROPS, SVN_RA_SVN_CAP_COMMIT_REVPROPS},
+      {SVN_RA_CAPABILITY_ATOMIC_REVPROPS, SVN_RA_SVN_CAP_ATOMIC_REVPROPS},
+      {SVN_RA_CAPABILITY_INHERITED_PROPS, SVN_RA_SVN_CAP_INHERITED_PROPS},
+      {SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS,
+                                          SVN_RA_SVN_CAP_EPHEMERAL_TXNPROPS},
+      {SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE,
+                                       SVN_RA_SVN_CAP_GET_FILE_REVS_REVERSE},
+
+      {NULL, NULL} /* End of list marker */
+  };
+  int i;
 
   *has = FALSE;
 
-  if (strcmp(capability, SVN_RA_CAPABILITY_DEPTH) == 0)
-    *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_DEPTH);
-  else if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
-    *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_MERGEINFO);
-  else if (strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0)
-    *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_LOG_REVPROPS);
-  else if (strcmp(capability, SVN_RA_CAPABILITY_PARTIAL_REPLAY) == 0)
-    *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_PARTIAL_REPLAY);
-  else if (strcmp(capability, SVN_RA_CAPABILITY_COMMIT_REVPROPS) == 0)
-    *has = svn_ra_svn_has_capability(sess->conn,
-                                     SVN_RA_SVN_CAP_COMMIT_REVPROPS);
-  else if (strcmp(capability, SVN_RA_CAPABILITY_ATOMIC_REVPROPS) == 0)
-    *has = svn_ra_svn_has_capability(sess->conn,
-                                     SVN_RA_SVN_CAP_ATOMIC_REVPROPS);
-  else if (strcmp(capability, SVN_RA_CAPABILITY_INHERITED_PROPS) == 0)
-    *has = svn_ra_svn_has_capability(sess->conn,
-                                     SVN_RA_SVN_CAP_INHERITED_PROPS);
-  else if (strcmp(capability, SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS) == 0)
-    *has = svn_ra_svn_has_capability(sess->conn,
-                                     SVN_RA_SVN_CAP_EPHEMERAL_TXNPROPS);
-  else  /* Don't know any other capabilities, so error. */
+  for (i = 0; capabilities[i][0]; i++)
     {
-      return svn_error_createf
-        (SVN_ERR_UNKNOWN_CAPABILITY, NULL,
-         _("Don't know anything about capability '%s'"), capability);
+      if (strcmp(capability, capabilities[i][0]))
+        {
+          *has = svn_ra_svn_has_capability(sess->conn, capabilities[i][1]);
+          return SVN_NO_ERROR;
+        }
     }
 
-  return SVN_NO_ERROR;
+  return svn_error_createf(SVN_ERR_UNKNOWN_CAPABILITY, NULL,
+                           _("Don't know anything about capability '%s'"),
+                           capability);
 }
 
 static svn_error_t *
