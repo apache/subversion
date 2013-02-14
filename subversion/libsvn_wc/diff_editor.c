@@ -72,6 +72,7 @@
 #include "props.h"
 #include "adm_files.h"
 #include "translate.h"
+#include "diff.h"
 
 #include "svn_private_config.h"
 
@@ -404,19 +405,6 @@ maybe_done(struct dir_baton_t *db)
              || (status) == svn_wc__db_status_server_excluded)
 
 /* Prototypes of the local report tree walkers */
-static svn_error_t *
-report_local_only_file(struct edit_baton_t *eb,
-                       const char *local_abspath,
-                       const char *path,
-                       void *parent_baton,
-                       apr_pool_t *scratch_pool);
-static svn_error_t *
-report_local_only_dir(struct edit_baton_t *eb,
-                      const char *local_abspath,
-                      const char *path,
-                      svn_depth_t depth,
-                      void *parent_baton,
-                      apr_pool_t *scratch_pool);
 static svn_error_t *
 report_base_only_file(struct edit_baton_t *eb,
                       const char *local_abspath,
@@ -800,13 +788,23 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
           if (eb->local_before_remote && local_only)
             {
               if (info->kind == svn_kind_file && diff_files)
-                SVN_ERR(report_local_only_file(eb, child_abspath,
-                                               child_relpath,
-                                               dir_baton, iterpool));
+                SVN_ERR(svn_wc__diff_local_only_file(db, child_abspath,
+                                                     child_relpath,
+                                                     eb->processor, dir_baton,
+                                                     eb->changelist_hash,
+                                                     eb->diff_pristine,
+                                                     eb->cancel_func,
+                                                     eb->cancel_baton,
+                                                     iterpool));
               else if (info->kind == svn_kind_dir && diff_dirs)
-                SVN_ERR(report_local_only_dir(eb, child_abspath,
-                                              child_relpath, depth_below_here,
-                                              dir_baton, iterpool));
+                SVN_ERR(svn_wc__diff_local_only_dir(db, child_abspath,
+                                                     child_relpath, depth_below_here,
+                                                     eb->processor, dir_baton,
+                                                     eb->changelist_hash,
+                                                     eb->diff_pristine,
+                                                     eb->cancel_func,
+                                                     eb->cancel_baton,
+                                                     iterpool));
             }
 
           if (repos_only)
@@ -846,13 +844,23 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
           if (!eb->local_before_remote && local_only)
             {
               if (info->kind == svn_kind_file && diff_files)
-                SVN_ERR(report_local_only_file(eb, child_abspath,
-                                               child_relpath,
-                                               dir_baton, iterpool));
+                SVN_ERR(svn_wc__diff_local_only_file(db, child_abspath,
+                                                     child_relpath,
+                                                     eb->processor, dir_baton,
+                                                     eb->changelist_hash,
+                                                     eb->diff_pristine,
+                                                     eb->cancel_func,
+                                                     eb->cancel_baton,
+                                                     iterpool));
               else if (info->kind == svn_kind_dir && diff_dirs)
-                SVN_ERR(report_local_only_dir(eb, child_abspath,
-                                              child_relpath, depth_below_here,
-                                              dir_baton, iterpool));
+                SVN_ERR(svn_wc__diff_local_only_dir(db, child_abspath,
+                                                     child_relpath, depth_below_here,
+                                                     eb->processor, dir_baton,
+                                                     eb->changelist_hash,
+                                                     eb->diff_pristine,
+                                                     eb->cancel_func,
+                                                     eb->cancel_baton,
+                                                     iterpool));
             }
         }
     }
@@ -903,18 +911,18 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
   return SVN_NO_ERROR;
 }
 
-/* Report the local version of a file in the working copy as added.
- * This file can be in either WORKING or BASE, as for the repository
- * it does not exist.
- */
-static svn_error_t *
-report_local_only_file(struct edit_baton_t *eb,
-                       const char *local_abspath,
-                       const char *path,
-                       void *parent_baton,
-                       apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__diff_local_only_file(svn_wc__db_t *db,
+                             const char *local_abspath,
+                             const char *relpath,
+                             const svn_diff_tree_processor_t *processor,
+                             void *processor_parent_baton,
+                             apr_hash_t *changelist_hash,
+                             svn_boolean_t diff_pristine,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = eb->db;
   svn_diff_source_t *right_src;
   svn_diff_source_t *copyfrom_src = NULL;
   svn_wc__db_status_t status;
@@ -946,16 +954,16 @@ report_local_only_file(struct edit_baton_t *eb,
   assert(kind == svn_kind_file
          && (status == svn_wc__db_status_normal
              || status == svn_wc__db_status_added
-             || (status == svn_wc__db_status_deleted && eb->diff_pristine)));
+             || (status == svn_wc__db_status_deleted && diff_pristine)));
 
 
-  if (changelist && eb->changelist_hash
-      && !svn_hash_gets(eb->changelist_hash, changelist))
+  if (changelist && changelist_hash
+      && !svn_hash_gets(changelist_hash, changelist))
     return SVN_NO_ERROR;
 
   if (status == svn_wc__db_status_deleted)
     {
-      assert(eb->diff_pristine);
+      assert(diff_pristine);
 
       SVN_ERR(svn_wc__db_read_pristine_info(&status, &kind, NULL, NULL, NULL,
                                             NULL, &checksum, NULL, &had_props,
@@ -982,7 +990,7 @@ report_local_only_file(struct edit_baton_t *eb,
     right_src = svn_diff__source_create(SVN_INVALID_REVNUM, scratch_pool);
   else
     {
-      if (eb->diff_pristine)
+      if (diff_pristine)
         file_mod = FALSE;
       else
         SVN_ERR(svn_wc__internal_file_modified_p(&file_mod, db, local_abspath,
@@ -994,31 +1002,31 @@ report_local_only_file(struct edit_baton_t *eb,
         right_src = svn_diff__source_create(SVN_INVALID_REVNUM, scratch_pool);
     }
 
-  SVN_ERR(eb->processor->file_opened(&file_baton, &skip,
-                                     path,
-                                     NULL /* left_source */,
-                                     right_src,
-                                     copyfrom_src,
-                                     parent_baton,
-                                     eb->processor,
-                                     scratch_pool, scratch_pool));
+  SVN_ERR(processor->file_opened(&file_baton, &skip,
+                                 relpath,
+                                 NULL /* left_source */,
+                                 right_src,
+                                 copyfrom_src,
+                                 processor_parent_baton,
+                                 processor,
+                                 scratch_pool, scratch_pool));
 
   if (skip)
     return SVN_NO_ERROR;
 
-  if (props_mod && !eb->diff_pristine)
+  if (props_mod && !diff_pristine)
     SVN_ERR(svn_wc__db_read_props(&right_props, db, local_abspath,
                                   scratch_pool, scratch_pool));
   else
     right_props = svn_prop_hash_dup(pristine_props, scratch_pool);
 
   if (checksum)
-    SVN_ERR(svn_wc__db_pristine_get_path(&pristine_file, db, eb->anchor_abspath,
+    SVN_ERR(svn_wc__db_pristine_get_path(&pristine_file, db, local_abspath,
                                          checksum, scratch_pool, scratch_pool));
   else
     pristine_file = NULL;
 
-  if (eb->diff_pristine)
+  if (diff_pristine)
     {
       translated_file = pristine_file; /* No translation needed */
     }
@@ -1027,45 +1035,41 @@ report_local_only_file(struct edit_baton_t *eb,
       SVN_ERR(svn_wc__internal_translated_file(
            &translated_file, local_abspath, db, local_abspath,
            SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
-           eb->cancel_func, eb->cancel_baton,
+           cancel_func, cancel_baton,
            scratch_pool, scratch_pool));
     }
 
-  SVN_ERR(eb->processor->file_added(path,
-                                    copyfrom_src,
-                                    right_src,
-                                    copyfrom_src
-                                      ? pristine_file
-                                      : NULL,
-                                    translated_file,
-                                    copyfrom_src
-                                      ? pristine_props
-                                      : NULL,
-                                    right_props,
-                                    file_baton,
-                                    eb->processor,
-                                    scratch_pool));
+  SVN_ERR(processor->file_added(relpath,
+                                copyfrom_src,
+                                right_src,
+                                copyfrom_src
+                                  ? pristine_file
+                                  : NULL,
+                                translated_file,
+                                copyfrom_src
+                                  ? pristine_props
+                                  : NULL,
+                                right_props,
+                                file_baton,
+                                processor,
+                                scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
-/* Report an existing directory in the working copy (either in BASE
- * or WORKING) as having been added.  If recursing, also report any
- * subdirectories as added.
- *
- * DIR_BATON is the baton for the directory.
- *
- * Do all allocation in POOL.
- */
-static svn_error_t *
-report_local_only_dir(struct edit_baton_t *eb,
-                      const char *local_abspath,
-                      const char *path,
-                      svn_depth_t depth,
-                      void *parent_baton,
-                      apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__diff_local_only_dir(svn_wc__db_t *db,
+                            const char *local_abspath,
+                            const char *relpath,
+                            svn_depth_t depth,
+                            const svn_diff_tree_processor_t *processor,
+                            void *processor_parent_baton,
+                            apr_hash_t *changelist_hash,
+                            svn_boolean_t diff_pristine,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = eb->db;
   const apr_array_header_t *children;
   int i;
   apr_pool_t *iterpool;
@@ -1074,34 +1078,38 @@ report_local_only_dir(struct edit_baton_t *eb,
   svn_boolean_t skip_children = FALSE;
   svn_diff_source_t *right_src = svn_diff__source_create(SVN_INVALID_REVNUM,
                                                          scratch_pool);
+  svn_depth_t depth_below_here = depth;
 
   /* Report the addition of the directory's contents. */
   iterpool = svn_pool_create(scratch_pool);
 
-  SVN_ERR(eb->processor->dir_opened(&pdb, &skip, &skip_children,
-                                    path,
-                                    NULL,
-                                    right_src,
-                                    NULL /* copyfrom_src */,
-                                    parent_baton,
-                                    eb->processor,
-                                    scratch_pool, scratch_pool));
-
+  SVN_ERR(processor->dir_opened(&pdb, &skip, &skip_children,
+                                relpath,
+                                NULL,
+                                right_src,
+                                NULL /* copyfrom_src */,
+                                processor_parent_baton,
+                                processor,
+                                scratch_pool, iterpool));
 
   SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath,
                                    scratch_pool, iterpool));
 
+  if (depth_below_here == svn_depth_immediates)
+    depth_below_here = svn_depth_empty;
+
   for (i = 0; i < children->nelts; i++)
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
-      const char *child_abspath, *child_path;
+      const char *child_abspath;
+      const char *child_relpath;
       svn_wc__db_status_t status;
       svn_kind_t kind;
 
       svn_pool_clear(iterpool);
 
-      if (eb->cancel_func)
-        SVN_ERR(eb->cancel_func(eb->cancel_baton));
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
 
       child_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
@@ -1120,33 +1128,34 @@ report_local_only_dir(struct edit_baton_t *eb,
 
       /* If comparing against WORKING, skip entries that are
          schedule-deleted - they don't really exist. */
-      if (!eb->diff_pristine && status == svn_wc__db_status_deleted)
+      if (!diff_pristine && status == svn_wc__db_status_deleted)
         continue;
 
-      child_path = svn_relpath_join(path, name, iterpool);
+      child_relpath = svn_relpath_join(relpath, name, iterpool);
 
       switch (kind)
         {
         case svn_kind_file:
         case svn_kind_symlink:
-          SVN_ERR(report_local_only_file(eb, child_abspath, child_path,
-                                         pdb, iterpool));
+          SVN_ERR(svn_wc__diff_local_only_file(db, child_abspath,
+                                               child_relpath,
+                                               processor, pdb,
+                                               changelist_hash,
+                                               diff_pristine,
+                                               cancel_func, cancel_baton,
+                                               scratch_pool));
           break;
 
         case svn_kind_dir:
           if (depth > svn_depth_files || depth == svn_depth_unknown)
             {
-              svn_depth_t depth_below_here = depth;
-
-              if (depth_below_here == svn_depth_immediates)
-                depth_below_here = svn_depth_empty;
-
-              SVN_ERR(report_local_only_dir(eb,
-                                            child_abspath,
-                                            child_path,
-                                            depth_below_here,
-                                            pdb,
-                                            iterpool));
+              SVN_ERR(svn_wc__diff_local_only_dir(db, child_abspath,
+                                                  child_relpath, depth_below_here,
+                                                  processor, pdb,
+                                                  changelist_hash,
+                                                  diff_pristine,
+                                                  cancel_func, cancel_baton,
+                                                  iterpool));
             }
           break;
 
@@ -1158,21 +1167,21 @@ report_local_only_dir(struct edit_baton_t *eb,
   if (!skip)
     {
       apr_hash_t *right_props;
-      if (eb->diff_pristine)
+      if (diff_pristine)
         SVN_ERR(svn_wc__db_read_pristine_props(&right_props, db, local_abspath,
                                                scratch_pool, scratch_pool));
       else
         SVN_ERR(svn_wc__get_actual_props(&right_props, db, local_abspath,
                                          scratch_pool, scratch_pool));
 
-      SVN_ERR(eb->processor->dir_added(path,
-                                       NULL /* copyfrom_src */,
-                                       right_src,
-                                       NULL,
-                                       right_props,
-                                       pdb,
-                                       eb->processor,
-                                       iterpool));
+      SVN_ERR(processor->dir_added(relpath,
+                                   NULL /* copyfrom_src */,
+                                   right_src,
+                                   NULL,
+                                   right_props,
+                                   pdb,
+                                   processor,
+                                   iterpool));
     }
   svn_pool_destroy(iterpool);
 
@@ -1233,20 +1242,26 @@ handle_local_only(struct dir_baton_t *pb,
       else
         depth = svn_depth_empty;
 
-      SVN_ERR(report_local_only_dir(
-                      eb,
+      SVN_ERR(svn_wc__diff_local_only_dir(
+                      eb->db,
                       svn_dirent_join(pb->local_abspath, name, scratch_pool),
                       svn_relpath_join(pb->relpath, name, scratch_pool),
                       repos_delete ? svn_depth_infinity : depth,
-                      pb->pdb,
+                      eb->processor, pb->pdb,
+                      eb->changelist_hash,
+                      eb->diff_pristine,
+                      eb->cancel_func, eb->cancel_baton,
                       scratch_pool));
     }
   else
-    SVN_ERR(report_local_only_file(
-                      eb,
+    SVN_ERR(svn_wc__diff_local_only_file(
+                      eb->db,
                       svn_dirent_join(pb->local_abspath, name, scratch_pool),
                       svn_relpath_join(pb->relpath, name, scratch_pool),
-                      pb->pdb,
+                      eb->processor, pb->pdb,
+                      eb->changelist_hash,
+                      eb->diff_pristine,
+                      eb->cancel_func, eb->cancel_baton,
                       scratch_pool));
 
   return SVN_NO_ERROR;
