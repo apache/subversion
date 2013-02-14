@@ -1193,6 +1193,9 @@ handle_local_only(struct dir_baton_t *pb,
   assert(!strchr(name, '/'));
   assert(!pb->added || eb->ignore_ancestry);
 
+  if (pb->skip_children)
+    return SVN_NO_ERROR;
+
   SVN_ERR(ensure_local_info(pb, scratch_pool));
 
   info = svn_hash_gets(pb->local_info, name);
@@ -1332,7 +1335,7 @@ report_base_only_dir(struct edit_baton_t *eb,
                                     eb->processor,
                                     scratch_pool, scratch_pool));
 
-  if (!skip_children && depth == svn_depth_unknown || depth > svn_depth_empty)
+  if (!skip_children && (depth == svn_depth_unknown || depth > svn_depth_empty))
     {
       apr_hash_t *nodes;
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -1436,8 +1439,23 @@ open_root(void *edit_baton,
   db = make_dir_baton("", NULL, eb, FALSE, eb->depth, dir_pool);
   *root_baton = db;
 
-  db->left_src = svn_diff__source_create(eb->revnum, dir_pool);
-  db->right_src = svn_diff__source_create(SVN_INVALID_REVNUM, dir_pool);
+  if (eb->target[0] == '\0')
+    {
+      db->left_src = svn_diff__source_create(eb->revnum, db->pool);
+      db->right_src = svn_diff__source_create(SVN_INVALID_REVNUM, db->pool);
+
+      SVN_ERR(eb->processor->dir_opened(&db->pdb, &db->skip,
+                                        &db->skip_children,
+                                        "",
+                                        db->left_src,
+                                        db->right_src,
+                                        NULL /* copyfrom_source */,
+                                        NULL /* parent_baton */,
+                                        eb->processor,
+                                        db->pool, db->pool));
+    }
+  else
+    db->skip = TRUE; /* Skip this, but not the children */
 
   return SVN_NO_ERROR;
 }
@@ -1630,7 +1648,7 @@ close_directory(void *dir_baton,
   apr_pool_t *scratch_pool = db->pool;
   svn_boolean_t reported_closed = FALSE;
 
-  if (db->deletes)
+  if (db->deletes && !db->skip_children)
     {
       apr_hash_index_t *hi;
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -1652,7 +1670,7 @@ close_directory(void *dir_baton,
   /* Report local modifications for this directory.  Skip added
      directories since they can only contain added elements, all of
      which have already been diff'd. */
-  if (!db->repos_only)
+  if (!db->repos_only && !db->skip_children)
   {
     SVN_ERR(walk_local_nodes_diff(eb,
                                   db->local_abspath,
@@ -1663,9 +1681,12 @@ close_directory(void *dir_baton,
                                   scratch_pool));
   }
 
-
   /* Report the property changes on the directory itself, if necessary. */
-  if (db->propchanges->nelts > 0 || db->repos_only)
+  if (db->skip)
+    {
+      /* Diff processor requested no directory details */
+    }
+  else if (db->propchanges->nelts > 0 || db->repos_only)
     {
       apr_hash_t *repos_props;
 
@@ -1736,7 +1757,7 @@ close_directory(void *dir_baton,
 
   /* Mark this directory as compared in the parent directory's baton,
      unless this is the root of the comparison. */
-  if (!reported_closed)
+  if (!reported_closed && !db->skip)
     SVN_ERR(eb->processor->dir_closed(db->relpath,
                                       db->left_src,
                                       db->right_src,
@@ -1768,7 +1789,12 @@ add_file(const char *path,
   fb = make_file_baton(path, TRUE, pb, file_pool);
   *file_baton = fb;
 
-  if (pb->repos_only || !eb->ignore_ancestry)
+  if (pb->skip_children)
+    {
+      fb->skip = TRUE;
+      return SVN_NO_ERROR;
+    }
+  else if (pb->repos_only || !eb->ignore_ancestry)
     fb->repos_only = TRUE;
   else
     {
@@ -1832,7 +1858,9 @@ open_file(const char *path,
   fb = make_file_baton(path, FALSE, pb, file_pool);
   *file_baton = fb;
 
-  if (pb->repos_only)
+  if (pb->skip_children)
+    fb->skip = TRUE;
+  else if (pb->repos_only)
     fb->repos_only = TRUE;
   else
     {
@@ -1918,6 +1946,13 @@ apply_textdelta(void *file_baton,
   svn_stream_t *temp_stream;
   svn_checksum_t *repos_checksum = NULL;
 
+  if (fb->skip)
+    {
+      *handler = svn_delta_noop_window_handler;
+      *handler_baton = NULL;
+      return SVN_NO_ERROR;
+    }
+
   if (base_checksum_hex && fb->base_checksum)
     {
       const svn_checksum_t *base_md5;
@@ -1998,7 +2033,7 @@ close_file(void *file_baton,
   const char *repos_file;
   apr_hash_t *repos_props;
 
-  if (expected_md5_digest != NULL)
+  if (!fb->skip && expected_md5_digest != NULL)
     {
       svn_checksum_t *expected_checksum;
       const svn_checksum_t *result_checksum;
@@ -2053,7 +2088,11 @@ close_file(void *file_baton,
       }
   }
 
-  if (fb->repos_only)
+  if (fb->skip)
+    {
+      /* Diff processor requested skipping information */
+    }
+  else if (fb->repos_only)
     {
       SVN_ERR(eb->processor->file_deleted(fb->relpath,
                                           fb->left_src,
