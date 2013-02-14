@@ -403,21 +403,23 @@ maybe_done(struct dir_baton_t *db)
              || (status) == svn_wc__db_status_excluded          \
              || (status) == svn_wc__db_status_server_excluded)
 
-/* Diff the file PATH against the text base of its BASE layer.  At this
- * stage we are dealing with a file that does exist in the working copy.
- */
-static svn_error_t *
-base_working_diff(struct edit_baton_t *eb,
-                  const char *local_abspath,
-                  const char *relpath,
-                  void *dir_baton,
-                  apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__diff_base_working_diff(svn_wc__db_t *db,
+                               const char *local_abspath,
+                               const char *relpath,
+                               svn_revnum_t revision,
+                               apr_hash_t *changelist_hash,
+                               const svn_diff_tree_processor_t *processor,
+                               void *processor_dir_baton,
+                               svn_boolean_t diff_pristine,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
+                               apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = eb->db;
   void *file_baton = NULL;
   svn_boolean_t skip = FALSE;
   svn_wc__db_status_t status;
-  svn_revnum_t revision;
+  svn_revnum_t db_revision;
   svn_boolean_t had_props;
   svn_boolean_t props_mod;
   svn_boolean_t files_same = FALSE;
@@ -433,30 +435,29 @@ base_working_diff(struct edit_baton_t *eb,
   apr_hash_t *base_props;
   apr_hash_t *local_props;
   apr_array_header_t *prop_changes;
+  const char *changelist;
 
-  SVN_ERR_ASSERT(! eb->diff_pristine);
-
-  /* If the item is not a member of a specified changelist (and there are
-     some specified changelists), skip it. */
-  if (! svn_wc__internal_changelist_match(db, local_abspath,
-                                          eb->changelist_hash, scratch_pool))
-    return SVN_NO_ERROR;
-
-  SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL, NULL, NULL,
+  SVN_ERR(svn_wc__db_read_info(&status, NULL, &db_revision, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, &working_checksum, NULL,
                                NULL, NULL, NULL, NULL, NULL, &recorded_size,
-                               &recorded_time, NULL, NULL, NULL, &had_props,
-                               &props_mod, NULL, NULL, NULL,
+                               &recorded_time, &changelist, NULL, NULL,
+                               &had_props, &props_mod, NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
   checksum = working_checksum;
 
   assert(status == svn_wc__db_status_normal
          || status == svn_wc__db_status_added
-         || (status == svn_wc__db_status_deleted && eb->diff_pristine));
+         || (status == svn_wc__db_status_deleted && diff_pristine));
+
+  /* If the item is not a member of a specified changelist (and there are
+     some specified changelists), skip it. */
+  if (changelist_hash && !svn_hash_gets(changelist_hash, changelist))
+    return SVN_NO_ERROR;
+
 
   if (status != svn_wc__db_status_normal)
     {
-      SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &revision,
+      SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &db_revision,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, &checksum, NULL, NULL, &had_props,
                                        NULL, NULL,
@@ -466,7 +467,7 @@ base_working_diff(struct edit_baton_t *eb,
       recorded_time = 0;
       props_mod = TRUE; /* Requires compare */
     }
-  else if (eb->diff_pristine)
+  else if (diff_pristine)
     files_same = TRUE;
   else
     {
@@ -490,27 +491,30 @@ base_working_diff(struct edit_baton_t *eb,
 
   assert(checksum);
 
-  left_src = svn_diff__source_create(eb->revnum, scratch_pool);
+  if (!SVN_IS_VALID_REVNUM(revision))
+    revision = db_revision;
+
+  left_src = svn_diff__source_create(revision, scratch_pool);
   right_src = svn_diff__source_create(SVN_INVALID_REVNUM, scratch_pool);
 
-  SVN_ERR(eb->processor->file_opened(&file_baton, &skip, relpath,
-                                     left_src,
-                                     right_src,
-                                     NULL /* copyfrom_src */,
-                                     dir_baton,
-                                     eb->processor,
-                                     scratch_pool, scratch_pool));
+  SVN_ERR(processor->file_opened(&file_baton, &skip, relpath,
+                                 left_src,
+                                 right_src,
+                                 NULL /* copyfrom_src */,
+                                 processor_dir_baton,
+                                 processor,
+                                 scratch_pool, scratch_pool));
 
   if (skip)
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_wc__db_pristine_get_path(&pristine_file,
-                                       db, eb->anchor_abspath, checksum,
+                                       db, local_abspath, checksum,
                                        scratch_pool, scratch_pool));
 
-  if (eb->diff_pristine)
+  if (diff_pristine)
     SVN_ERR(svn_wc__db_pristine_get_path(&local_file,
-                                         db, eb->anchor_abspath,
+                                         db, local_abspath,
                                          working_checksum,
                                          scratch_pool, scratch_pool));
   else if (! (had_props || props_mod))
@@ -523,7 +527,7 @@ base_working_diff(struct edit_baton_t *eb,
                             db, local_abspath,
                             SVN_WC_TRANSLATE_TO_NF
                                 | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
-                            eb->cancel_func, eb->cancel_baton,
+                            cancel_func, cancel_baton,
                             scratch_pool, scratch_pool));
 
   if (! files_same)
@@ -536,9 +540,9 @@ base_working_diff(struct edit_baton_t *eb,
   else
     base_props = apr_hash_make(scratch_pool);
 
-  if (status == svn_wc__db_status_normal && (eb->diff_pristine || !props_mod))
+  if (status == svn_wc__db_status_normal && (diff_pristine || !props_mod))
     local_props = base_props;
-  else if (eb->diff_pristine)
+  else if (diff_pristine)
     SVN_ERR(svn_wc__db_read_pristine_props(&local_props, db, local_abspath,
                                            scratch_pool, scratch_pool));
   else
@@ -549,27 +553,27 @@ base_working_diff(struct edit_baton_t *eb,
 
   if (prop_changes->nelts || !files_same)
     {
-      SVN_ERR(eb->processor->file_changed(relpath,
-                                          left_src,
-                                          right_src,
-                                          pristine_file,
-                                          local_file,
-                                          base_props,
-                                          local_props,
-                                          ! files_same,
-                                          prop_changes,
-                                          file_baton,
-                                          eb->processor,
-                                          scratch_pool));
+      SVN_ERR(processor->file_changed(relpath,
+                                      left_src,
+                                      right_src,
+                                      pristine_file,
+                                      local_file,
+                                      base_props,
+                                      local_props,
+                                      ! files_same,
+                                      prop_changes,
+                                      file_baton,
+                                      processor,
+                                      scratch_pool));
     }
   else
     {
-      SVN_ERR(eb->processor->file_closed(relpath,
-                                         left_src,
-                                         right_src,
-                                         file_baton,
-                                         eb->processor,
-                                         scratch_pool));
+      SVN_ERR(processor->file_closed(relpath,
+                                     left_src,
+                                     right_src,
+                                     file_baton,
+                                     processor,
+                                     scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -814,9 +818,16 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
                   if (info->status != svn_wc__db_status_normal
                       || !eb->diff_pristine)
                     {
-                      SVN_ERR(base_working_diff(eb, child_abspath,
+                      SVN_ERR(svn_wc__diff_base_working_diff(
+                                                db, child_abspath,
                                                 child_relpath,
-                                                dir_baton, scratch_pool));
+                                                eb->revnum,
+                                                eb->changelist_hash,
+                                                eb->processor, dir_baton,
+                                                eb->diff_pristine,
+                                                eb->cancel_func,
+                                                eb->cancel_baton,
+                                                scratch_pool));
                     }
                 }
               else if (info->kind == svn_kind_dir && diff_dirs)
