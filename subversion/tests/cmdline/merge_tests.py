@@ -1390,6 +1390,13 @@ def merge_in_new_file_and_diff(sbox):
 
   # Finally, run diff.
   expected_output = [
+    "Index: " + url_branch_path + "/newfile\n",
+    "===================================================================\n",
+    "--- "+ url_branch_path + "/newfile	(revision 0)\n",
+    "+++ "+ url_branch_path + "/newfile	(working copy)\n",
+    "@@ -0,0 +1 @@\n",
+    "+newfile\n",
+
     "Index: " + url_branch_path + "\n",
     "===================================================================\n",
     "--- "+ url_branch_path + "\t(revision 2)\n",
@@ -1399,12 +1406,7 @@ def merge_in_new_file_and_diff(sbox):
     "___________________________________________________________________\n",
     "Added: " + SVN_PROP_MERGEINFO + "\n",
     "   Merged /A/B/E:r2-3\n",
-    "Index: " + url_branch_path + "/newfile\n",
-    "===================================================================\n",
-    "--- "+ url_branch_path + "/newfile	(revision 0)\n",
-    "+++ "+ url_branch_path + "/newfile	(working copy)\n",
-    "@@ -0,0 +1 @@\n",
-    "+newfile\n"]
+  ]
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
                                      '--show-copies-as-adds', branch_path)
 

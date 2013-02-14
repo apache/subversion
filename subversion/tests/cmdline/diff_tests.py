@@ -3387,7 +3387,7 @@ def diff_git_format_wc_wc(sbox):
 
   expected_output = make_git_diff_header(
                          alpha_copied_path, "A/B/E/alpha_copied",
-                         "revision 1", "working copy",
+                         "revision 0", "working copy",
                          copyfrom_path="A/B/E/alpha", 
                          copyfrom_rev='1', cp=True,
                          text_changes=True) + [
@@ -4387,6 +4387,39 @@ def local_tree_replace(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'patch', patch, wc_dir)
 
+def diff_dir_replaced_by_file(sbox):
+  "diff a directory replaced by a file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_rm('A/B/E')
+  sbox.simple_add_text('text', 'A/B/E')
+
+  expected_output = [
+    'Index: %s\n' % sbox.path('A/B/E/alpha'),
+    '===================================================================\n',
+    '--- %s\t(revision 1)\n' % sbox.path('A/B/E/alpha'),
+    '+++ %s\t(working copy)\n' % sbox.path('A/B/E/alpha'),
+    '@@ -1 +0,0 @@\n',
+    '-This is the file \'alpha\'.\n',
+    'Index: %s\n' % sbox.path('A/B/E/beta'),
+    '===================================================================\n',
+    '--- %s\t(revision 1)\n' % sbox.path('A/B/E/beta'),
+    '+++ %s\t(working copy)\n' % sbox.path('A/B/E/beta'),
+    '@@ -1 +0,0 @@\n',
+    '-This is the file \'beta\'.\n',
+    'Index: %s\n' % sbox.path('A/B/E'),
+    '===================================================================\n',
+    '--- %s\t(revision 0)\n' % sbox.path('A/B/E'),
+    '+++ %s\t(working copy)\n' % sbox.path('A/B/E'),
+    '@@ -0,0 +1 @@\n',
+    '+text\n',
+    '\ No newline at end of file\n',
+  ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', wc_dir)
 
 ########################################################################
 #Run the tests
@@ -4464,6 +4497,7 @@ test_list = [ None,
               diff_git_format_wc_wc_dir_mv,
               simple_ancestry,
               local_tree_replace,
+              diff_dir_replaced_by_file,
               ]
 
 if __name__ == '__main__':

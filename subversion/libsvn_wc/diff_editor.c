@@ -981,7 +981,6 @@ svn_wc__diff_local_only_file(svn_wc__db_t *db,
     {
       copyfrom_src = svn_diff__source_create(original_revision, scratch_pool);
       copyfrom_src->repos_relpath = original_repos_relpath;
-      revision = original_revision;
     }
 
   if (props_mod || !SVN_IS_VALID_REVNUM(revision))
@@ -2614,9 +2613,7 @@ wrap_file_added(const char *relpath,
                                         ? copyfrom_file
                                         : wb->empty_file,
                                     right_file,
-                                    copyfrom_source
-                                       ? copyfrom_source->revision
-                                       : 0 /* For legacy reasons */,
+                                    0,
                                     right_source->revision,
                                     copyfrom_props
                                      ? svn_prop_get_value(copyfrom_props,
