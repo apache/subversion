@@ -2101,7 +2101,9 @@ bump_moved_away(svn_wc__db_wcroot_t *wcroot,
             err = depth_sufficient_to_bump(&can_bump, src_relpath, wcroot,
                                            src_depth, scratch_pool);
           else
-            can_bump = TRUE; /* ### OK? With FALSE many op-depth tests fail */
+            /* Having chosen to bump an entire BASE tree move we
+               always have sufficient depth to bump subtree moves. */
+            can_bump = TRUE;
 
           if (!err)
             {
