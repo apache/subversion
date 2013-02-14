@@ -4311,15 +4311,6 @@ def local_tree_replace(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'add', sbox.ospath('A/B'))
 
-  # By default we ignore ancestry, so there are no differences against r1
-  expected_output = []
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     'diff', wc_dir,
-                                     '-r', '2',
-                                     '--show-copies-as-adds')
-  # Note that 'svn diff' without revision diffs against pristine, which would
-  # would show differences!
-
   # And now check with ancestry
 
   line = '===================================================================\n'
