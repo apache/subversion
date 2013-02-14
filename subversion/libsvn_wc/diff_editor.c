@@ -688,7 +688,6 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
           const char *child_abspath;
           const char *child_relpath;
           svn_boolean_t repos_only;
-          svn_boolean_t do_diff;
           svn_boolean_t local_only;
           svn_kind_t base_kind;
 
@@ -718,7 +717,6 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
 
           repos_only = FALSE;
           local_only = FALSE;
-          do_diff = FALSE;
 
           if (!info->have_base)
             {
@@ -728,7 +726,6 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
             {
               /* Simple diff */
               base_kind = info->kind;
-              do_diff = TRUE;
             }
           else if (info->status == svn_wc__db_status_deleted
                    && (!eb->diff_pristine || !info->have_more_work))
@@ -764,10 +761,6 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
                   repos_only = TRUE;
                   local_only = TRUE;
                 }
-              else
-              {
-                do_diff = TRUE;
-              }
             }
 
           if (eb->local_before_remote && local_only)
@@ -810,7 +803,7 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
                                                    eb->cancel_baton,
                                                    iterpool));
             }
-          else if (do_diff)
+          else if (!local_only) /* Not local only nor remote only */
             {
               /* Diff base against actual */
               if (info->kind == svn_kind_file && diff_files)
@@ -2687,7 +2680,8 @@ wrap_file_changed(const char *relpath,
 
   SVN_ERR(wb->callbacks->file_changed(&state, &prop_state, &tree_conflicted,
                                       relpath,
-                                      left_file, right_file,
+                                      file_modified ? left_file : NULL,
+                                      file_modified ? right_file : NULL,
                                       left_source->revision,
                                       right_source->revision,
                                       left_props
