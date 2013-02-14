@@ -787,15 +787,11 @@ EOE
 
   def test_diff_callbacks
     assert_diff_callbacks(:diff_editor2) do |property_info, result|
-      dir_changed_props = {}
-      property_info[:dir_changed_prop_names].each do |name|
-        dir_changed_props[name] = nil
-      end
       prop_name = property_info[:file_changed_prop_name]
       prop_value = property_info[:file_changed_prop_value]
       file_changed_props = {prop_name => prop_value}
       empty_changed_props = {}
-      [[dir_changed_props, file_changed_props, empty_changed_props],
+      [[file_changed_props, empty_changed_props],
        result]
     end
   end
