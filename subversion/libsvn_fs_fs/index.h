@@ -44,6 +44,9 @@
 #define SVN_FS_FS__ITEM_TYPE_NODEREV    5  /* item is a noderev */
 #define SVN_FS_FS__ITEM_TYPE_CHANGES    6  /* item is a changed paths list */
 
+#define SVN_FS_FS__ITEM_TYPE_ANY_REP    7  /* item is any representation.
+                                              Only used in pre-format7. */
+
 /* (user visible) entry in the phys-to-log index.  It describes a section
  * of some packed / non-packed rev file as containing a specific item.
  * There must be no overlapping / conflicting entries.
