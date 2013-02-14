@@ -2187,7 +2187,19 @@ stringbuf_from_aprfile(svn_stringbuf_t **result,
         {
           apr_finfo_t finfo;
           if (! (status = apr_stat(&finfo, filename, APR_FINFO_MIN, pool)))
-            res_initial_len = (apr_size_t)finfo.size;
+            {
+              /* we've got the file length. Now, read it in one go. */
+              svn_boolean_t eof;
+              res_initial_len = (apr_size_t)finfo.size;
+              res = svn_stringbuf_create_ensure(res_initial_len, pool);
+              SVN_ERR(svn_io_file_read_full2(file, res->data,
+                                             res_initial_len, &res->len,
+                                             &eof, pool));
+              res->data[res->len] = 0;
+              
+              *result = res;
+              return SVN_NO_ERROR;
+            }
         }
     }
 
