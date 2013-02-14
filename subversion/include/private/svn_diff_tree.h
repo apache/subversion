@@ -37,7 +37,7 @@ extern "C" {
 /* 
  *                   About the diff tree processor.
  *
- * Subversion uses two kinds of editors to describe changes. One to describe
+ * Subversion uses two kinds of editors to describe changes. One to
  * describe changes on how to *exactly* transform one tree to another tree,
  * as efficiently as possible and one to describe the difference between trees
  * in order to review the changes, or to allow applying them on a third tree
@@ -61,42 +61,40 @@ extern "C" {
  * arguments to the already overloaded diff callbacks the api was completely
  * redesigned with a few points in mind.
  *
- *  * It must be able to drive the old callbacks interface without users
- *    noticing the difference (100% compatible).
- *    (Implemented as svn_wc__wrap_diff_callbacks())
+ *   * It must be able to drive the old callbacks interface without users
+ *     noticing the difference (100% compatible).
+ *     (Implemented as svn_wc__wrap_diff_callbacks())
  *
- *  * It should provide the information that was missing in the old interface,
- *    but required to close existing issues.
+ *   * It should provide the information that was missing in the old interface,
+ *     but required to close existing issues.
  *
  *     E.g. - properties and children on deleted directories. 
  *          - revision numbers and copyfrom information on directories.
  *
- *
  * To cleanup the implementation and make it easier on diff processors to
  * handle the results I also added the following constraints.
  *
- *  * Diffs should be fully reversable: anything that is deleted should be
- *    available, just like something that is added.
- *    (Proven via svn_diff__tree_processor_reverse_create)
- *    ### Still in doubt if *_deleted() needs a copy_to argument, for the
- *        99% -> 100%.
+ *   * Diffs should be fully reversable: anything that is deleted should be
+ *     available, just like something that is added.
+ *     (Proven via svn_diff__tree_processor_reverse_create)
+ *     ### Still in doubt if *_deleted() needs a copy_to argument, for the
+ *     ### 99% -> 100%.
  *
- *  * Diff processors should have an easy way to communicate that they are
- *    not interrested in certain expensive to obtain results.
+ *   * Diff processors should have an easy way to communicate that they are
+ *     not interrested in certain expensive to obtain results.
  *
- *  * Directories should have clear open and close events to allow adding them
- *    before their children, but still allowing property changes to have
- *    defined behavior.
+ *   * Directories should have clear open and close events to allow adding them
+ *     before their children, but still allowing property changes to have
+ *     defined behavior.
  *
- *  * Files and directories should be handled as similar as possible as in
- *    many cases they are just nodes in a tree.
+ *   * Files and directories should be handled as similar as possible as in
+ *     many cases they are just nodes in a tree.
  *
- *  * It should be easy to create diff wrappers to apply certain transforms.
+ *   * It should be easy to create diff wrappers to apply certain transforms.
  *
  * During the creation an additional requirement of knowing about 'some
  * absent' nodes was added, to allow the merge to work on just this processor
  * api.
- *
  *
  * The api describes a clean open-close walk through a tree, depending on the
  * driver multiple siblings can be described at the same time, but when a
