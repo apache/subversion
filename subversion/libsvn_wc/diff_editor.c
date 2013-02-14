@@ -715,7 +715,6 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
           svn_boolean_t repos_only;
           svn_boolean_t do_diff;
           svn_boolean_t local_only;
-          svn_revnum_t revision = SVN_INVALID_REVNUM;
           svn_kind_t base_kind;
 
           if (eb->cancel_func)
@@ -754,7 +753,6 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
             {
               /* Simple diff */
               base_kind = info->kind;
-              revision = info->revnum;
               do_diff = TRUE;
             }
           else if (info->status == svn_wc__db_status_deleted
