@@ -32,6 +32,7 @@
 #include "svn_wc.h"
 
 #include "wc_db.h"
+#include "private/svn_diff_tree.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -72,7 +73,7 @@ svn_wc__diff_local_only_file(svn_wc__db_t *db,
    If CHANGELIST_HASH is not NULL and LOCAL_ABSPATH's changelist is not
    in the changelist, don't report the node.
  */
-static svn_error_t *
+svn_error_t *
 svn_wc__diff_local_only_dir(svn_wc__db_t *db,
                             const char *local_abspath,
                             const char *relpath,
@@ -85,6 +86,39 @@ svn_wc__diff_local_only_dir(svn_wc__db_t *db,
                             void *cancel_baton,
                             apr_pool_t *scratch_pool);
 
+/* Reports the BASE-file LOCAL_ABSPATH as deleted to PROCESSOR with relpath
+   RELPATH, revision REVISION and parent baton PROCESSOR_PARENT_BATON.
+
+   If REVISION is invalid, the revision as stored in BASE is used.
+
+   The node is expected to have status svn_wc__db_status_normal in BASE. */
+svn_error_t *
+svn_wc__diff_base_only_file(svn_wc__db_t *db,
+                            const char *local_abspath,
+                            const char *relpath,
+                            svn_revnum_t revision,
+                            const svn_diff_tree_processor_t *processor,
+                            void *processor_parent_baton,
+                            apr_pool_t *scratch_pool);
+
+/* Reports the BASE-directory LOCAL_ABSPATH and everything below it (limited
+   by DEPTH) as deleted to PROCESSOR with relpath RELPATH and parent baton
+   PROCESSOR_PARENT_BATON.
+
+   If REVISION is invalid, the revision as stored in BASE is used.
+
+   The node is expected to have status svn_wc__db_status_normal in BASE. */
+svn_error_t *
+svn_wc__diff_base_only_dir(svn_wc__db_t *db,
+                           const char *local_abspath,
+                           const char *relpath,
+                           svn_revnum_t revision,
+                           svn_depth_t depth,
+                           const svn_diff_tree_processor_t *processor,
+                           void *processor_parent_baton,
+                           svn_cancel_func_t cancel_func,
+                           void *cancel_baton,
+                           apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }
