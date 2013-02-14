@@ -382,7 +382,6 @@ svn_cl__conflict_func_postpone(svn_wc_conflict_result_t **result,
  */
 svn_error_t *
 svn_cl__resolve_postponed_conflicts(void *baton,
-                                    svn_depth_t depth,
                                     svn_cl__accept_t accept_which,
                                     const char *editor_cmd,
                                     svn_client_ctx_t *ctx,

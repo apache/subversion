@@ -592,7 +592,6 @@ svn_cl__merge(apr_getopt_t *os,
        * default 'postpone' resolver which remembers what was postponed.) */
       if (!err && ctx->conflict_func2 == svn_cl__conflict_func_postpone)
         err = svn_cl__resolve_postponed_conflicts(ctx->conflict_baton2,
-                                                  opt_state->depth,
                                                   opt_state->accept_which,
                                                   opt_state->editor_cmd,
                                                   ctx, pool);
