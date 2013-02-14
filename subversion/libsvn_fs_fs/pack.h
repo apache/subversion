@@ -51,9 +51,11 @@ svn_fs_fs__get_packed_offset(apr_off_t *rev_offset,
 
 /* Return the svn_dir_entry_t* objects of DIRECTORY in an APR array
  * allocated in POOL with entries added in storage (on-disk) order.
+ * FS format will be used to pick the optimal ordering strategy.
  */
 apr_array_header_t *
-svn_fs_fs__order_dir_entries(apr_hash_t *directory,
+svn_fs_fs__order_dir_entries(svn_fs_t *fs,
+                             apr_hash_t *directory,
                              apr_pool_t *pool);
 
 
