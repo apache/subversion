@@ -86,7 +86,8 @@ def make_no_diff_deleted_header(path, old_tag, new_tag):
 def make_git_diff_header(target_path, repos_relpath,
                          old_tag, new_tag, add=False, src_label=None,
                          dst_label=None, delete=False, text_changes=True,
-                         cp=False, mv=False, copyfrom_path=None):
+                         cp=False, mv=False, copyfrom_path=None,
+                         copyfrom_rev=None):
   """ Generate the expected 'git diff' header for file TARGET_PATH.
   REPOS_RELPATH is the location of the path relative to the repository root.
   The old and new versions ("revision X", or "working copy") must be
@@ -134,9 +135,13 @@ def make_git_diff_header(target_path, repos_relpath,
         "+++ /dev/null\t(" + new_tag + ")\n"
       ])
   elif cp:
+    if copyfrom_rev:
+      copyfrom_rev = '@' + copyfrom_rev
+    else:
+      copyfrom_rev = ''
     output.extend([
       "diff --git a/" + copyfrom_path + " b/" + repos_relpath + "\n",
-      "copy from " + copyfrom_path + "\n",
+      "copy from " + copyfrom_path + copyfrom_rev + "\n",
       "copy to " + repos_relpath + "\n",
     ])
     if text_changes:
@@ -3380,35 +3385,38 @@ def diff_git_format_wc_wc(sbox):
 
   ### We're not testing moved paths
 
-  expected_output = make_git_diff_header(lambda_copied_path,
+  expected_output = make_git_diff_header(
+                         alpha_copied_path, "A/B/E/alpha_copied",
+                         "revision 1", "working copy",
+                         copyfrom_path="A/B/E/alpha", 
+                         copyfrom_rev='1', cp=True,
+                         text_changes=True) + [
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'alpha'.\n",
+    "+This is a copy of 'alpha'.\n",
+  ] + make_git_diff_header(lambda_copied_path,
                                          "A/B/lambda_copied",
                                          "revision 1", "working copy",
-                                         copyfrom_path="A/B/lambda", cp=True,
+                                         copyfrom_path="A/B/lambda",
+                                         copyfrom_rev='1', cp=True,
                                          text_changes=False) \
   + make_git_diff_header(mu_path, "A/mu", "revision 1",
                                          "working copy",
                                          delete=True) + [
     "@@ -1 +0,0 @@\n",
     "-This is the file 'mu'.\n",
-  ] + make_git_diff_header(alpha_copied_path, "A/B/E/alpha_copied",
-                         "revision 0", "working copy",
-                         copyfrom_path="A/B/E/alpha", cp=True,
-                         text_changes=True) + [
-    "@@ -1 +1,2 @@\n",
-    " This is the file 'alpha'.\n",
-    "+This is a copy of 'alpha'.\n",
-  ] + make_git_diff_header(new_path, "new", "revision 0",
-                           "working copy", add=True) + [
-    "@@ -0,0 +1 @@\n",
-    "+This is the file 'new'.\n",
-  ] +  make_git_diff_header(iota_path, "iota", "revision 1",
+  ] + make_git_diff_header(iota_path, "iota", "revision 1",
                             "working copy") + [
     "@@ -1 +1,2 @@\n",
     " This is the file 'iota'.\n",
     "+Changed 'iota'.\n",
+  ] + make_git_diff_header(new_path, "new", "revision 0",
+                           "working copy", add=True) + [
+    "@@ -0,0 +1 @@\n",
+    "+This is the file 'new'.\n",
   ]
 
-  expected = svntest.verify.UnorderedOutput(expected_output)
+  expected = expected_output
 
   svntest.actions.run_and_verify_svn(None, expected, [], 'diff',
                                      '--git', wc_dir)
@@ -3448,13 +3456,13 @@ def diff_git_format_wc_wc_dir_mv(sbox):
     "@@ -1 +0,0 @@\n",
     "-This is the file 'tau'.\n"
   ] + make_git_diff_header(new_pi_path, "A/D/G2/pi", None, None, cp=True,
-                           copyfrom_path="A/D/G/pi", text_changes=False) \
+                           copyfrom_path="A/D/G/pi", copyfrom_rev='1', text_changes=False) \
   + make_git_diff_header(new_rho_path, "A/D/G2/rho", None, None, cp=True,
-                         copyfrom_path="A/D/G/rho", text_changes=False) \
+                         copyfrom_path="A/D/G/rho", copyfrom_rev='1', text_changes=False) \
   + make_git_diff_header(new_tau_path, "A/D/G2/tau", None, None, cp=True,
-                         copyfrom_path="A/D/G/tau", text_changes=False)
+                         copyfrom_path="A/D/G/tau", copyfrom_rev='1', text_changes=False)
 
-  expected = svntest.verify.UnorderedOutput(expected_output)
+  expected = expected_output
 
   svntest.actions.run_and_verify_svn(None, expected, [], 'diff',
                                      '--git', wc_dir)
