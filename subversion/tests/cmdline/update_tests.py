@@ -6587,6 +6587,82 @@ def windows_update_backslash(sbox):
   svntest.actions.run_and_verify_svn(wc_dir, None, expected_error, 'up',
                                      wc_dir)
 
+@XFail()
+def update_moved_away(sbox):
+  "switch a moved away directory"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_add_text('new', 'new')
+  sbox.simple_commit()
+
+  sbox.simple_move('A', 'A_moved')
+
+  expected_output = svntest.wc.State(wc_dir, {
+  })
+
+  expected_disk = None
+  expected_status = expected_output = svntest.wc.State(wc_dir, {
+    ''                  : Item(status='  ', wc_rev='1'),
+    'A'                 : Item(status='D ', wc_rev='1', moved_to='A_moved'),
+    'A/B'               : Item(status='D ', wc_rev='1'),
+    'A/B/E'             : Item(status='D ', wc_rev='1'),
+    'A/B/E/beta'        : Item(status='D ', wc_rev='1'),
+    'A/B/E/alpha'       : Item(status='D ', wc_rev='1'),
+    'A/B/F'             : Item(status='D ', wc_rev='1'),
+    'A/B/lambda'        : Item(status='D ', wc_rev='1'),
+    'A/D'               : Item(status='D ', wc_rev='1'),
+    'A/D/G'             : Item(status='D ', wc_rev='1'),
+    'A/D/G/pi'          : Item(status='D ', wc_rev='1'),
+    'A/D/G/tau'         : Item(status='D ', wc_rev='1'),
+    'A/D/G/rho'         : Item(status='D ', wc_rev='1'),
+    'A/D/H'             : Item(status='D ', wc_rev='1'),
+    'A/D/H/psi'         : Item(status='D ', wc_rev='1'),
+    'A/D/H/chi'         : Item(status='D ', wc_rev='1'),
+    'A/D/H/omega'       : Item(status='D ', wc_rev='1'),
+    'A/D/gamma'         : Item(status='D ', wc_rev='1'),
+    'A/C'               : Item(status='D ', wc_rev='1'),
+    'A/mu'              : Item(status='D ', wc_rev='1'),
+    'A_moved'           : Item(status='A ', copied='+', moved_from='A'),
+    'A_moved/D'         : Item(status='  ', copied='+', wc_rev='-'),
+    'A_moved/D/G'       : Item(status='  ', copied='+', wc_rev='-'),
+    'A_moved/D/G/rho'   : Item(status='  ', copied='+', wc_rev='-'),
+    'A_moved/D/G/tau'   : Item(status='  ', copied='+', wc_rev='-'),
+    'A_moved/D/G/pi'    : Item(status='  ', copied='+', wc_rev='-'),
+    'A_moved/D/H'       : Item(status='  ', copied='+', wc_rev='-'),
+    'A_moved/D/H/omega' : Item(status='  ', copied='+', wc_rev='-'),
+    'A_moved/D/H/psi'   : Item(status='  ', copied='+', wc_rev='-'),
+    'A_moved/D/H/chi'   : Item(status='  ', copied='+', wc_rev='-'),
+    'A_moved/D/gamma'   : Item(status='  ', copied='+', wc_rev='-'),
+    'A_moved/B'         : Item(status='  ', copied='+', wc_rev='-'),
+    'A_moved/B/E'       : Item(status='A ', copied='+', wc_rev='-'),
+    'A_moved/B/E/beta'  : Item(status='  ', copied='+', wc_rev='-'),
+    'A_moved/B/E/alpha' : Item(status='  ', copied='+', wc_rev='-'),
+    'A_moved/B/lambda'  : Item(status='  ', copied='+', wc_rev='-'),
+    'A_moved/B/F'       : Item(status='  ', copied='+', wc_rev='-'),
+    'A_moved/mu'        : Item(status='  ', copied='+', wc_rev='-'),
+    'A_moved/C'         : Item(status='  ', copied='+', wc_rev='-'),
+    'iota'              : Item(status='  ', wc_rev='1'),
+    'new'               : Item(status='  ', wc_rev='2'),
+  })
+
+  # This update currently breaks the moved status away from the
+  # original location. 
+
+  # Either this update should fail (error/skip), or the moved from
+  # information should stay in sync. (A/E should be its own op-depth)
+
+  # Note that this same scenario doesn't apply to switch as we don't
+  # allow switches with as root a shadowed node.
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, None,
+                                        sbox.ospath('A/E'))
+
 
 #######################################################################
 # Run the tests
@@ -6671,6 +6747,7 @@ test_list = [ None,
               update_swapped_depth_dirs,
               move_update_props,
               windows_update_backslash,
+              update_moved_away,
              ]
 
 if __name__ == '__main__':
