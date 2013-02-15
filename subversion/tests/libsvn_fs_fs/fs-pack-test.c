@@ -737,7 +737,7 @@ recover_fully_packed(const svn_test_opts_t *opts,
    from the transaction that is commiting rev = SHARD_SIZE). */
 #define REPO_NAME "test-repo-file-hint-at-shard-boundry"
 #define SHARD_SIZE 4
-#define MAX_REV SHARD_SIZE - 1
+#define MAX_REV (SHARD_SIZE - 1)
 static svn_error_t *
 file_hint_at_shard_boundry(const svn_test_opts_t *opts,
                            apr_pool_t *pool)
