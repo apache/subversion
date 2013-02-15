@@ -2123,7 +2123,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
           {
             err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                    _("Changelist names must not be empty"));
-            return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+            return EXIT_ERROR(err);
           }
         apr_hash_set(changelists, opt_state.changelist,
                      APR_HASH_KEY_STRING, (void *)1);
