@@ -45,7 +45,7 @@
 [end][end]  <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
 [for configs][for platforms]    <OutDir Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">$(SolutionDir)[configs.name]\[target.output_dir]\</OutDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">$(SolutionDir)[configs.name]\[target.intermediate_dir]\[target.proj_name]\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">$(SolutionDir)[configs.name]\obj\[target.intermediate_dir]\[target.proj_name]\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[target.output_name_without_ext]</TargetName>
 [is config_type "DynamicLibrary"][is target.output_ext ".dll"][else]    <TargetExt>[target.output_ext]</TargetExt>
 [end][end][end][end]  </PropertyGroup>
