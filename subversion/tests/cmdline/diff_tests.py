@@ -2430,9 +2430,9 @@ def diff_repos_wc_add_with_props(sbox):
     ] + make_diff_prop_header("X/bar") + \
     make_diff_prop_added("propname", "propvalue")
 
-  diff_X_r1_base = make_diff_header("X", "revision 1",
+  diff_X_r1_base = make_diff_header("X", "revision 0",
                                          "working copy") + diff_X
-  diff_X_base_r3 = make_diff_header("X", "working copy",
+  diff_X_base_r3 = make_diff_header("X", "revision 0",
                                          "revision 3") + diff_X
   diff_foo_r1_base = make_diff_header("foo", "revision 0",
                                              "revision 3") + diff_foo
@@ -4421,6 +4421,103 @@ def diff_dir_replaced_by_file(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', wc_dir)
 
+def diff_dir_replaced_by_dir(sbox):
+  "diff a directory replaced by a directory tree"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_rm('A/B/E')
+  sbox.simple_mkdir('A/B/E')
+  sbox.simple_propset('a', 'b\n', 'A/B/E')
+  sbox.simple_add_text('New beta\n', 'A/B/E/beta')
+
+  # First check with ancestry (Tree replace)
+
+  expected_output = [
+    'Index: %s\n' % sbox.path('A/B/E/alpha'),
+    '===================================================================\n',
+    '--- %s\t(revision 1)\n' % sbox.path('A/B/E/alpha'),
+    '+++ %s\t(working copy)\n' % sbox.path('A/B/E/alpha'),
+    '@@ -1 +0,0 @@\n',
+    '-This is the file \'alpha\'.\n',
+    'Index: %s\n' % sbox.path('A/B/E/beta'),
+    '===================================================================\n',
+    '--- %s\t(revision 1)\n' % sbox.path('A/B/E/beta'),
+    '+++ %s\t(working copy)\n' % sbox.path('A/B/E/beta'),
+    '@@ -1 +0,0 @@\n',
+    '-This is the file \'beta\'.\n',
+    'Index: %s\n' % sbox.path('A/B/E/beta'),
+    '===================================================================\n',
+    '--- %s\t(revision 0)\n' % sbox.path('A/B/E/beta'),
+    '+++ %s\t(working copy)\n' % sbox.path('A/B/E/beta'),
+    '@@ -0,0 +1 @@\n',
+    '+New beta\n',
+    'Index: %s\n' % sbox.path('A/B/E'),
+    '===================================================================\n',
+    '--- %s\t(revision 0)\n' % sbox.path('A/B/E'),
+    '+++ %s\t(working copy)\n' % sbox.path('A/B/E'),
+    '\n',
+    'Property changes on: %s\n' % sbox.path('A/B/E'),
+    '___________________________________________________________________\n',
+    'Added: a\n',
+    '## -0,0 +1 ##\n',
+    '+b\n',
+  ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '--notice-ancestry', wc_dir)
+
+  # And summarized. Currently produces directory adds after their children
+  expected_output = svntest.verify.UnorderedOutput([
+    'D       %s\n' % sbox.ospath('A/B/E/alpha'),
+    'D       %s\n' % sbox.ospath('A/B/E/beta'),
+    'D       %s\n' % sbox.ospath('A/B/E'),
+    'A       %s\n' % sbox.ospath('A/B/E'),
+    'A       %s\n' % sbox.ospath('A/B/E/beta'),
+  ])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '--summarize', wc_dir,
+                                     '--notice-ancestry')
+
+  # And now without (file delete, change + properties)
+  expected_output = [
+    'Index: %s\n' % sbox.path('A/B/E/alpha'),
+    '===================================================================\n',
+    '--- %s\t(revision 1)\n' % sbox.path('A/B/E/alpha'),
+    '+++ %s\t(working copy)\n' % sbox.path('A/B/E/alpha'),
+    '@@ -1 +0,0 @@\n',
+    '-This is the file \'alpha\'.\n',
+    'Index: %s\n' % sbox.path('A/B/E/beta'),
+    '===================================================================\n',
+    '--- %s\t(revision 1)\n' % sbox.path('A/B/E/beta'),
+    '+++ %s\t(working copy)\n' % sbox.path('A/B/E/beta'),
+    '@@ -1 +1 @@\n',
+    '-This is the file \'beta\'.\n',
+    '+New beta\n',
+    'Index: %s\n' % sbox.path('A/B/E'),
+    '===================================================================\n',
+    '--- %s\t(revision 1)\n' % sbox.path('A/B/E'),
+    '+++ %s\t(working copy)\n' % sbox.path('A/B/E'),
+    '\n',
+    'Property changes on: %s\n' % sbox.path('A/B/E'),
+    '___________________________________________________________________\n',
+    'Added: a\n',
+    '## -0,0 +1 ##\n',
+    '+b\n',
+  ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', wc_dir)
+
+  expected_output = [
+    'D       %s\n' % sbox.ospath('A/B/E/alpha'),
+    'M       %s\n' % sbox.ospath('A/B/E/beta'),
+    ' M      %s\n' % sbox.ospath('A/B/E'),
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '--summarize', wc_dir)
+
 ########################################################################
 #Run the tests
 
@@ -4498,6 +4595,7 @@ test_list = [ None,
               simple_ancestry,
               local_tree_replace,
               diff_dir_replaced_by_file,
+              diff_dir_replaced_by_dir,
               ]
 
 if __name__ == '__main__':

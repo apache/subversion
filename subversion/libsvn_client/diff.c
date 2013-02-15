@@ -676,7 +676,9 @@ diff_dir_props_changed(svn_wc_notify_state_t *state,
   return svn_error_trace(diff_props_changed(diff_relpath,
                                             /* ### These revs be filled
                                              * ### with per node info */
-                                            diff_cmd_baton->revnum1,
+                                            dir_was_added
+                                                ? 0 /* Magic legacy value */
+                                                : diff_cmd_baton->revnum1,
                                             diff_cmd_baton->revnum2,
                                             dir_was_added,
                                             propchanges,
