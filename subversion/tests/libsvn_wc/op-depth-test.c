@@ -6674,6 +6674,47 @@ finite_move_update_bump(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+move_away_delete_update(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  SVN_ERR(svn_test__sandbox_create(&b, "move_away_delete_update",
+                                   opts, pool));
+
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C"));
+  SVN_ERR(sbox_wc_mkdir(&b, "P"));
+  SVN_ERR(sbox_wc_mkdir(&b, "P/Q"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_delete(&b, "A/B"));
+  SVN_ERR(sbox_wc_delete(&b, "P/Q"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+  SVN_ERR(sbox_wc_move(&b, "A/B/C", "C2"));
+  SVN_ERR(sbox_wc_move(&b, "P/Q", "Q2"));
+  SVN_ERR(sbox_wc_update(&b, "", 2));
+  SVN_ERR(sbox_wc_resolve(&b, "A/B", svn_depth_empty,
+                          svn_wc_conflict_choose_merged));
+  SVN_ERR(sbox_wc_resolve(&b, "P/Q", svn_depth_empty,
+                          svn_wc_conflict_choose_merged));
+  /* Either update or resolve should clear the moved-here flags */
+  {
+    nodes_row_t nodes[] = {
+      {0, "",   "normal", 2, ""},
+      {0, "A",  "normal", 2, "A"},
+      {0, "P",  "normal", 2, "P"},
+      {1, "C2", "normal", 1, "A/B/C"},
+      {1, "Q2", "normal", 1, "P/Q"},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
@@ -6801,5 +6842,7 @@ struct svn_test_descriptor_t test_funcs[] =
                         "commit_moved_away_descendant"),
     SVN_TEST_OPTS_PASS(finite_move_update_bump,
                        "finite_move_update_bump"),
+    SVN_TEST_OPTS_XFAIL(move_away_delete_update,
+                        "move_away_delete_update"),
     SVN_TEST_NULL
   };
