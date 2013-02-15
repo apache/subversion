@@ -374,14 +374,20 @@ svn_cl__conflict_func_postpone(svn_wc_conflict_result_t **result,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
-/* Perform conflict resolver on any conflicted paths stored in the BATON
+/* Perform conflict resolution on any conflicted paths stored in the BATON
  * which was obtained from svn_cl__get_conflict_func_postpone_baton().
+ *
+ * If CONFLICTS_ALL_RESOLVED is not null, set *CONFLICTS_ALL_RESOLVED to
+ * true if this resolves all the conflicts on the paths that were
+ * recorded (or if none were recorded); or to false if some conflicts
+ * remain.
  *
  * The conflict resolution will be interactive if ACCEPT_WHICH is
  * svn_cl__accept_unspecified.
  */
 svn_error_t *
-svn_cl__resolve_postponed_conflicts(void *baton,
+svn_cl__resolve_postponed_conflicts(svn_boolean_t *conflicts_all_resolved,
+                                    void *baton,
                                     svn_cl__accept_t accept_which,
                                     const char *editor_cmd,
                                     svn_client_ctx_t *ctx,
@@ -577,13 +583,20 @@ svn_cl__check_externals_failed_notify_wrapper(void *baton,
                                               const svn_wc_notify_t *n,
                                               apr_pool_t *pool);
 
-/* Print conflict stats accumulated in NOTIFY_BATON.
- * Return any error encountered during printing.
- * Do all allocations in POOL.*/
+/* Reset to zero the conflict stats accumulated in BATON, which is the
+ * notifier baton from svn_cl__get_notifier().
+ */
 svn_error_t *
-svn_cl__print_conflict_stats(void *notify_baton, apr_pool_t *pool);
+svn_cl__notifier_reset_conflict_stats(void *baton);
 
-
+/* Print the conflict stats accumulated in BATON, which is the
+ * notifier baton from svn_cl__get_notifier().
+ * Return any error encountered during printing.
+ */
+svn_error_t *
+svn_cl__notifier_print_conflict_stats(void *baton, apr_pool_t *scratch_pool);
+
+
 /*** Log message callback stuffs. ***/
 
 /* Allocate in POOL a baton for use with svn_cl__get_log_message().

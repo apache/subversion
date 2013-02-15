@@ -586,12 +586,14 @@ svn_cl__merge(apr_getopt_t *os,
       svn_error_t *err = SVN_NO_ERROR;
 
       if (! opt_state->quiet)
-        err = svn_cl__print_conflict_stats(ctx->notify_baton2, pool);
+        err = svn_cl__notifier_print_conflict_stats(ctx->notify_baton2,
+                                                        pool);
 
       /* Resolve any postponed conflicts.  (Only if we've been using the
        * default 'postpone' resolver which remembers what was postponed.) */
       if (!err && ctx->conflict_func2 == svn_cl__conflict_func_postpone)
-        err = svn_cl__resolve_postponed_conflicts(ctx->conflict_baton2,
+        err = svn_cl__resolve_postponed_conflicts(NULL,
+                                                  ctx->conflict_baton2,
                                                   opt_state->accept_which,
                                                   opt_state->editor_cmd,
                                                   ctx, pool);

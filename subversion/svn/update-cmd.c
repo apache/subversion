@@ -189,12 +189,14 @@ svn_cl__update(apr_getopt_t *os,
       /* ### Layering problem: This call assumes that the baton we're
        * passing is the one that was originally provided by
        * svn_cl__get_notifier(), but that isn't promised. */
-      err = svn_cl__print_conflict_stats(nwb.wrapped_baton, scratch_pool);
+      err = svn_cl__notifier_print_conflict_stats(nwb.wrapped_baton,
+                                                  scratch_pool);
       if (err)
         return svn_error_compose_create(externals_err, err);
     }
 
-  err = svn_cl__resolve_postponed_conflicts(ctx->conflict_baton2,
+  err = svn_cl__resolve_postponed_conflicts(NULL,
+                                            ctx->conflict_baton2,
                                             opt_state->accept_which,
                                             opt_state->editor_cmd,
                                             ctx, scratch_pool);
