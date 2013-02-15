@@ -735,12 +735,12 @@ recover_fully_packed(const svn_test_opts_t *opts,
 /* ------------------------------------------------------------------------ */
 /* Regression test for issue #4320 (fsfs file-hinting fails when reading a rep
    from the transaction that is commiting rev = SHARD_SIZE). */
-#define REPO_NAME "test-repo-file-hint-at-shard-boundry"
+#define REPO_NAME "test-repo-file-hint-at-shard-boundary"
 #define SHARD_SIZE 4
 #define MAX_REV (SHARD_SIZE - 1)
 static svn_error_t *
-file_hint_at_shard_boundry(const svn_test_opts_t *opts,
-                           apr_pool_t *pool)
+file_hint_at_shard_boundary(const svn_test_opts_t *opts,
+                            apr_pool_t *pool)
 {
   apr_pool_t *subpool;
   svn_fs_t *fs;
@@ -810,7 +810,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "get/set huge packed revprops in FSFS"),
     SVN_TEST_OPTS_PASS(recover_fully_packed,
                        "recover a fully packed filesystem"),
-    SVN_TEST_OPTS_PASS(file_hint_at_shard_boundry,
-                       "test file hint at shard boundry"),
+    SVN_TEST_OPTS_PASS(file_hint_at_shard_boundary,
+                       "test file hint at shard boundary"),
     SVN_TEST_NULL
   };
