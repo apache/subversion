@@ -37,6 +37,7 @@ class Sandbox:
   a test to operate within."""
 
   dependents = None
+  tmp_dir = None
 
   def __init__(self, module, idx):
     self.test_paths = []
@@ -44,10 +45,6 @@ class Sandbox:
     self._set_name("%s-%d" % (module, idx))
     # This flag is set to True by build() and returned by is_built()
     self._is_built = False
-
-    # Create an empty directory for temporary files
-    self.tmp_dir = self.add_wc_path('tmp', remove=True)
-    os.mkdir(self.tmp_dir)
 
   def _set_name(self, name, read_only=False):
     """A convenience method for renaming a sandbox, useful when
@@ -158,6 +155,11 @@ class Sandbox:
   def get_tempname(self, prefix='tmp'):
     """Get a stable name for a temporary file that will be removed after
        running the test"""
+
+    if not self.tmp_dir:
+      # Create an empty directory for temporary files
+      self.tmp_dir = self.add_wc_path('tmp', remove=True)
+      os.mkdir(self.tmp_dir)
 
     self.tempname_offs = self.tempname_offs + 1
 
