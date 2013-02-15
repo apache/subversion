@@ -4386,12 +4386,14 @@ create_rep_state_body(struct rep_state **rep_state,
 
   /* If the hint is
    * - given,
+   * - refers to a valid revision,
    * - refers to a packed revision,
    * - as does the rep we want to read, and
    * - refers to the same pack file as the rep
    * ...
    */
   if (   file_hint && rev_hint && *file_hint
+      && SVN_IS_VALID_REVNUM(*rev_hint)
       && *rev_hint < ffd->min_unpacked_rev
       && rep->revision < ffd->min_unpacked_rev
       && (   (*rev_hint / ffd->max_files_per_dir)
