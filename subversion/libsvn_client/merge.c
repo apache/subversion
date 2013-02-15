@@ -1404,11 +1404,8 @@ record_tree_conflict(merge_cmd_baton_t *merge_b,
   return SVN_NO_ERROR;
 }
 
-/* Record the add for future processing and (later) produce the
+/* Record the add for future processing and produce the
    update_add notification
-
-   Originally a helper for notification_receiver: Cache the roots of
-   subtrees added under TARGET_ABSPATH.
  */
 static svn_error_t *
 record_update_add(merge_cmd_baton_t *merge_b,
@@ -1442,8 +1439,8 @@ record_update_add(merge_cmd_baton_t *merge_b,
   return SVN_NO_ERROR;
 }
 
-/* Record the update for future processing and (later) produce the
-   update_add notification */
+/* Record the update for future processing and produce the
+   update_update notification */
 static svn_error_t *
 record_update_update(merge_cmd_baton_t *merge_b,
                      const char *local_abspath,
@@ -1476,7 +1473,7 @@ record_update_update(merge_cmd_baton_t *merge_b,
   return SVN_NO_ERROR;
 }
 
-/* Record the delete for future processing and (later) produce the
+/* Record the delete for future processing and for (later) producing the
    update_delete notification */
 static svn_error_t *
 record_update_delete(merge_cmd_baton_t *merge_b,
