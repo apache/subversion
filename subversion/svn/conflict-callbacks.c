@@ -1137,9 +1137,6 @@ get_postponed_conflicted_paths(void *baton, apr_pool_t *result_pool)
   apr_array_header_t *result_array;
   int i;
 
-  if (apr_hash_count(conflicted_paths) == 0)
-    return NULL;
-
   sorted_array = svn_sort__hash(conflicted_paths,
                                 svn_sort_compare_items_as_paths,
                                 apr_hash_pool_get(conflicted_paths));
@@ -1158,7 +1155,8 @@ get_postponed_conflicted_paths(void *baton, apr_pool_t *result_pool)
 }
 
 svn_error_t *
-svn_cl__resolve_postponed_conflicts(void *baton,
+svn_cl__resolve_postponed_conflicts(svn_boolean_t *conflicts_all_resolved,
+                                    void *baton,
                                     svn_cl__accept_t accept_which,
                                     const char *editor_cmd,
                                     svn_client_ctx_t *ctx,
@@ -1169,8 +1167,9 @@ svn_cl__resolve_postponed_conflicts(void *baton,
   apr_pool_t *iterpool;
 
   targets = get_postponed_conflicted_paths(baton, scratch_pool);
-  if (targets == NULL)
-    return SVN_NO_ERROR;
+
+  if (conflicts_all_resolved != NULL)
+    *conflicts_all_resolved = TRUE;
 
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < targets->nelts; i++)
@@ -1181,6 +1180,7 @@ svn_cl__resolve_postponed_conflicts(void *baton,
       svn_wc_conflict_resolver_func2_t conflict_func2;
       void *conflict_baton2;
       svn_cl__interactive_conflict_baton_t *b;
+      svn_boolean_t text_c, prop_c, tree_c;
 
       svn_pool_clear(iterpool);
 
@@ -1215,6 +1215,16 @@ svn_cl__resolve_postponed_conflicts(void *baton,
             return svn_error_trace(err);
 
           svn_error_clear(err);
+        }
+
+      /* Report if we left any of the conflicts unresolved */
+      if (conflicts_all_resolved != NULL)
+        {
+          SVN_ERR(svn_wc_conflicted_p3(&text_c, &prop_c, &tree_c,
+                                       ctx->wc_ctx, local_abspath,
+                                       scratch_pool));
+          if (text_c || prop_c || tree_c)
+            *conflicts_all_resolved = FALSE;
         }
     }
   svn_pool_destroy(iterpool);

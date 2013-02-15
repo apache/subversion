@@ -65,29 +65,43 @@ struct notify_baton
 
 
 svn_error_t *
-svn_cl__print_conflict_stats(void *baton, apr_pool_t *pool)
+svn_cl__notifier_reset_conflict_stats(void *baton)
+{
+  struct notify_baton *nb = baton;
+
+  nb->text_conflicts = 0;
+  nb->prop_conflicts = 0;
+  nb->tree_conflicts = 0;
+  nb->skipped_paths = 0;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cl__notifier_print_conflict_stats(void *baton, apr_pool_t *scratch_pool)
 {
   struct notify_baton *nb = baton;
 
   if (nb->text_conflicts > 0 || nb->prop_conflicts > 0
       || nb->tree_conflicts > 0 || nb->skipped_paths > 0)
-      SVN_ERR(svn_cmdline_printf(pool, "%s", _("Summary of conflicts:\n")));
+    SVN_ERR(svn_cmdline_printf(scratch_pool,
+                               _("Summary of conflicts:\n")));
 
   if (nb->text_conflicts > 0)
-    SVN_ERR(svn_cmdline_printf(
-              pool, _("  Text conflicts: %d\n"), nb->text_conflicts));
-
+    SVN_ERR(svn_cmdline_printf(scratch_pool,
+                               _("  Text conflicts: %d\n"),
+                               nb->text_conflicts));
   if (nb->prop_conflicts > 0)
-    SVN_ERR(svn_cmdline_printf(
-              pool, _("  Property conflicts: %d\n"), nb->prop_conflicts));
-
+    SVN_ERR(svn_cmdline_printf(scratch_pool,
+                               _("  Property conflicts: %d\n"),
+                               nb->prop_conflicts));
   if (nb->tree_conflicts > 0)
-    SVN_ERR(svn_cmdline_printf(
-              pool, _("  Tree conflicts: %d\n"), nb->tree_conflicts));
-
+    SVN_ERR(svn_cmdline_printf(scratch_pool,
+                               _("  Tree conflicts: %d\n"),
+                               nb->tree_conflicts));
   if (nb->skipped_paths > 0)
-    SVN_ERR(svn_cmdline_printf(
-              pool, _("  Skipped paths: %d\n"), nb->skipped_paths));
+    SVN_ERR(svn_cmdline_printf(scratch_pool,
+                               _("  Skipped paths: %d\n"),
+                               nb->skipped_paths));
 
   return SVN_NO_ERROR;
 }
@@ -988,7 +1002,8 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_conflict_resolver_starting:
       /* Once all operations invoke the interactive conflict resolution after
-       * they've completed, we can run svn_cl__print_conflict_stats() here. */
+       * they've completed, we can run svn_cl__notifier_print_conflict_stats()
+       * here. */
       break;
 
     case svn_wc_notify_conflict_resolver_done:
