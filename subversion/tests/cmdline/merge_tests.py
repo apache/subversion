@@ -18344,7 +18344,6 @@ def simple_merge(src_path, tgt_ospath, rev_args):
 @Issue(4306)
 # Test for issue #4306 'multiple editor drive file merges record wrong
 # mergeinfo during conflicts'
-### TODO: Directory merges. We're only testing single-file merges so far.
 def conflict_aborted_mergeinfo_described_partial_merge(sbox):
   "conflicted split merge can be repeated"
 
