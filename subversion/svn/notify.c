@@ -54,10 +54,10 @@ struct notify_baton
                                     when we've already had one print error. */
 
   /* Conflict stats for update and merge. */
-  unsigned int text_conflicts;
-  unsigned int prop_conflicts;
-  unsigned int tree_conflicts;
-  unsigned int skipped_paths;
+  int text_conflicts;
+  int prop_conflicts;
+  int tree_conflicts;
+  int skipped_paths;
 
   /* The cwd, for use in decomposing absolute paths. */
   const char *path_prefix;
@@ -65,38 +65,29 @@ struct notify_baton
 
 
 svn_error_t *
-svn_cl__print_conflict_stats(void *notify_baton, apr_pool_t *pool)
+svn_cl__print_conflict_stats(void *baton, apr_pool_t *pool)
 {
-  struct notify_baton *nb = notify_baton;
-  unsigned int text_conflicts;
-  unsigned int prop_conflicts;
-  unsigned int tree_conflicts;
-  unsigned int skipped_paths;
+  struct notify_baton *nb = baton;
 
-  text_conflicts = nb->text_conflicts;
-  prop_conflicts = nb->prop_conflicts;
-  tree_conflicts = nb->tree_conflicts;
-  skipped_paths = nb->skipped_paths;
-
-  if (text_conflicts > 0 || prop_conflicts > 0
-    || tree_conflicts > 0 || skipped_paths > 0)
+  if (nb->text_conflicts > 0 || nb->prop_conflicts > 0
+      || nb->tree_conflicts > 0 || nb->skipped_paths > 0)
       SVN_ERR(svn_cmdline_printf(pool, "%s", _("Summary of conflicts:\n")));
 
-  if (text_conflicts > 0)
-    SVN_ERR(svn_cmdline_printf
-      (pool, _("  Text conflicts: %u\n"), text_conflicts));
+  if (nb->text_conflicts > 0)
+    SVN_ERR(svn_cmdline_printf(
+              pool, _("  Text conflicts: %d\n"), nb->text_conflicts));
 
-  if (prop_conflicts > 0)
-    SVN_ERR(svn_cmdline_printf
-      (pool, _("  Property conflicts: %u\n"), prop_conflicts));
+  if (nb->prop_conflicts > 0)
+    SVN_ERR(svn_cmdline_printf(
+              pool, _("  Property conflicts: %d\n"), nb->prop_conflicts));
 
-  if (tree_conflicts > 0)
-    SVN_ERR(svn_cmdline_printf
-      (pool, _("  Tree conflicts: %u\n"), tree_conflicts));
+  if (nb->tree_conflicts > 0)
+    SVN_ERR(svn_cmdline_printf(
+              pool, _("  Tree conflicts: %d\n"), nb->tree_conflicts));
 
-  if (skipped_paths > 0)
-    SVN_ERR(svn_cmdline_printf
-      (pool, _("  Skipped paths: %u\n"), skipped_paths));
+  if (nb->skipped_paths > 0)
+    SVN_ERR(svn_cmdline_printf(
+              pool, _("  Skipped paths: %d\n"), nb->skipped_paths));
 
   return SVN_NO_ERROR;
 }
