@@ -6589,7 +6589,7 @@ def windows_update_backslash(sbox):
 
 @XFail()
 def update_moved_away(sbox):
-  "switch a moved away directory"
+  "update subtree of moved away"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -6599,17 +6599,21 @@ def update_moved_away(sbox):
 
   sbox.simple_move('A', 'A_moved')
 
+  # Adding prev_status=' ' and prev_treeconflict='C' to A will make
+  # the test PASS but why are we getting two conflicts?
   expected_output = svntest.wc.State(wc_dir, {
+      'A' : Item(status='  ', treeconflict='C'),
   })
 
   expected_disk = None
-  expected_status = expected_output = svntest.wc.State(wc_dir, {
+  expected_status = svntest.wc.State(wc_dir, {
     ''                  : Item(status='  ', wc_rev='1'),
-    'A'                 : Item(status='D ', wc_rev='1', moved_to='A_moved'),
+    'A'                 : Item(status='D ', wc_rev='1', moved_to='A_moved',
+                               treeconflict='C'),
     'A/B'               : Item(status='D ', wc_rev='1'),
-    'A/B/E'             : Item(status='D ', wc_rev='1'),
-    'A/B/E/beta'        : Item(status='D ', wc_rev='1'),
-    'A/B/E/alpha'       : Item(status='D ', wc_rev='1'),
+    'A/B/E'             : Item(status='D ', wc_rev='2'),
+    'A/B/E/beta'        : Item(status='D ', wc_rev='2'),
+    'A/B/E/alpha'       : Item(status='D ', wc_rev='2'),
     'A/B/F'             : Item(status='D ', wc_rev='1'),
     'A/B/lambda'        : Item(status='D ', wc_rev='1'),
     'A/D'               : Item(status='D ', wc_rev='1'),
@@ -6624,7 +6628,8 @@ def update_moved_away(sbox):
     'A/D/gamma'         : Item(status='D ', wc_rev='1'),
     'A/C'               : Item(status='D ', wc_rev='1'),
     'A/mu'              : Item(status='D ', wc_rev='1'),
-    'A_moved'           : Item(status='A ', copied='+', moved_from='A'),
+    'A_moved'           : Item(status='A ', copied='+', wc_rev='-',
+                               moved_from='A'),
     'A_moved/D'         : Item(status='  ', copied='+', wc_rev='-'),
     'A_moved/D/G'       : Item(status='  ', copied='+', wc_rev='-'),
     'A_moved/D/G/rho'   : Item(status='  ', copied='+', wc_rev='-'),
@@ -6636,7 +6641,7 @@ def update_moved_away(sbox):
     'A_moved/D/H/chi'   : Item(status='  ', copied='+', wc_rev='-'),
     'A_moved/D/gamma'   : Item(status='  ', copied='+', wc_rev='-'),
     'A_moved/B'         : Item(status='  ', copied='+', wc_rev='-'),
-    'A_moved/B/E'       : Item(status='A ', copied='+', wc_rev='-'),
+    'A_moved/B/E'       : Item(status='  ', copied='+', wc_rev='-'),
     'A_moved/B/E/beta'  : Item(status='  ', copied='+', wc_rev='-'),
     'A_moved/B/E/alpha' : Item(status='  ', copied='+', wc_rev='-'),
     'A_moved/B/lambda'  : Item(status='  ', copied='+', wc_rev='-'),
@@ -6647,11 +6652,9 @@ def update_moved_away(sbox):
     'new'               : Item(status='  ', wc_rev='2'),
   })
 
-  # This update currently breaks the moved status away from the
-  # original location. 
-
-  # Either this update should fail (error/skip), or the moved from
-  # information should stay in sync. (A/E should be its own op-depth)
+  # This update raises a tree-conflict on A.  The conflict cannot be
+  # resolved to update the move destination because the move source is
+  # mixed rev.
 
   # Note that this same scenario doesn't apply to switch as we don't
   # allow switches with as root a shadowed node.
@@ -6661,7 +6664,7 @@ def update_moved_away(sbox):
                                         expected_status,
                                         None, None, None,
                                         None, None, None,
-                                        sbox.ospath('A/E'))
+                                        sbox.ospath('A/B/E'))
 
 
 #######################################################################
