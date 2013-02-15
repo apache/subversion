@@ -21,7 +21,7 @@
 #
 
 use strict;
-use Test::More tests => 17;
+use Test::More tests => 19;
 use Scalar::Util;
 
 # shut up about variables that are only used once.
@@ -34,9 +34,9 @@ use_ok('SVN::Core');
 # TEST
 use_ok('SVN::Wc');
 
-my $external_desc = <<END;
+my $external_desc = <<'END';
 http://svn.example.com/repos/project1 project1
-^/repos/project2 "Project 2"
+-r6 ^/repos/project2@3 "Project 2"
 END
 
 # Run parse_externals_description3()
@@ -72,10 +72,13 @@ is($externals->[1]->url(), '^/repos/project2');
 # TEST
 isa_ok($externals->[1]->revision(), '_p_svn_opt_revision_t');
 # TEST
-is($externals->[1]->revision()->kind(), $SVN::Core::opt_revision_head);
+is($externals->[1]->revision()->kind(), $SVN::Core::opt_revision_number);
+# TEST
+is($externals->[1]->revision()->value()->number(), 6);
 # TEST
 isa_ok($externals->[1]->peg_revision(), '_p_svn_opt_revision_t');
 # TEST
-is($externals->[1]->peg_revision()->kind(),
-   $SVN::Core::opt_revision_head);
+is($externals->[1]->peg_revision()->kind(), $SVN::Core::opt_revision_number);
+# TEST
+is($externals->[1]->peg_revision()->value()->number(), 3);
 
