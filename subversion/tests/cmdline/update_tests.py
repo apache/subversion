@@ -6656,8 +6656,12 @@ def update_moved_away(sbox):
   # resolved to update the move destination because the move source is
   # mixed rev.
 
-  # Note that this same scenario doesn't apply to switch as we don't
-  # allow switches with as root a shadowed node.
+  # Note that this exact scenario doesn't apply to switch as we don't
+  # allow switches with as root a shadowed node.  However it is
+  # possible to get essentially the problem with switch by invoking a
+  # depth immedates switch on the parent of the root of the move
+  # source. That switches the root of the move without switching the
+  # children.
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
