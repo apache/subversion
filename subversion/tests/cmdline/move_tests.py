@@ -180,8 +180,6 @@ def move_file_test(sbox, source, dest, move_func, test):
         resolve['error'] = [] 
       if 'revert_paths' in resolve:
         revert_paths = resolve['revert_paths']
-      if isinstance(resolve['error'], svntest.verify.RegexOutput):
-        import pdb;pdb.set_trace()
       svntest.actions.run_and_verify_svn('Resolve modification to source of move',
                                           resolve['output'], resolve['error'],
                                           'resolve', '--accept', resolve_accept,
