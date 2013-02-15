@@ -657,15 +657,17 @@ svn_repos_recover(const char *path,
                   apr_pool_t *pool);
 
 /**
- * Take an exclusive lock on @a path to prevent commits and then
- * invoke @a freeze_body passing @a baton.  The repository may be
- * readable by Subversion while frozen, or it may be unreadable,
- * depending on which FS backend the repository uses.
+ * Take an exclusive lock on each of the repositories in @a paths to
+ * prevent commits and then while holding all the locks invoke
+ * @a freeze_body passing @a baton.  The repositories may be readable
+ * by Subversion while frozen, or it may be unreadable, depending on
+ * which FS backend the repository uses.  Repositories are locked
+ * in array order from zero.
  *
  * @since New in 1.8.
  */
 svn_error_t *
-svn_repos_freeze(const char *path,
+svn_repos_freeze(apr_array_header_t *paths,
                  svn_error_t *(*freeze_body)(void *baton, apr_pool_t *pool),
                  void *baton,
                  apr_pool_t *pool);
