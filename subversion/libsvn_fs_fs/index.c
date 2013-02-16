@@ -773,6 +773,8 @@ get_l2p_header_body(l2p_header_t **header,
   if (*stream == NULL)
     SVN_ERR(packed_stream_open(stream, path_l2p_index(fs, revision, pool),
                                ffd->block_size, pool));
+  else
+    packed_stream_seek(*stream, 0);
 
   /* read the table sizes */
   SVN_ERR(packed_stream_get(&value, *stream));
@@ -1626,11 +1628,13 @@ get_p2l_page_info(p2l_page_info_baton_t *baton,
     return SVN_NO_ERROR;
 
   /* not found -> must read it from disk.
-   * Open index file */
+   * Open index file or position read pointer to the begin of the file */
   if (*stream == NULL)
     SVN_ERR(packed_stream_open(stream,
                                path_p2l_index(fs, baton->revision, pool),
                                ffd->block_size, pool));
+  else
+    packed_stream_seek(*stream, 0);
 
   /* read table sizes and allocate page array */
   SVN_ERR(packed_stream_get(&value, *stream));
