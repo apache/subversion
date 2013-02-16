@@ -257,7 +257,6 @@ diff_status_callback(void *baton,
 
   {
     svn_boolean_t repos_only;
-    svn_boolean_t do_diff;
     svn_boolean_t local_only;
     svn_wc__db_status_t db_status;
     svn_boolean_t have_base;
@@ -272,7 +271,6 @@ diff_status_callback(void *baton,
 
     repos_only = FALSE;
     local_only = FALSE;
-    do_diff = FALSE;
 
     /* ### optimize away this call using status info. Should
            be possible in almost every case (except conflict, missing, obst.)*/
@@ -291,7 +289,6 @@ diff_status_callback(void *baton,
       {
         /* Simple diff */
         base_kind = db_kind;
-        do_diff = TRUE;
       }
     else if (db_status == svn_wc__db_status_deleted)
       {
