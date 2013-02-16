@@ -13,81 +13,77 @@ aspects:
 - reduce disk I/O by 3x or more in typical scenarios
 - faster data processing and reduced interaction with the OS
 
-The key point will be to attempt all of this while keeping much code
-shared between old and format support.
-
-In contrast to the recent format changes, there will be no way to
-upgrade a repository in-situ.  Even if we provide an upgrade command,
-it will effectively do a dump / load cycle.
+The key point will be to attempt all of this while keeping much of the
+code shared between old and format support.
 
 
-TODO
-====
+TODO (see also DONE section below)
+==================================
 
-Logical addressing
-------------------
+Support for mixed structure repositories
+----------------------------------------
 
-To allow for moving data structures around within the repository, we must
-replace the current absolute addressing using file offsets with a logical
-one.  All references will no take the form of (revision, index) pairs and
-a replacement to the format 6 manifest files will map that to actual file
-offsets.
+A user shall be able to run 'svnadmin upgrade' on a sharded repository
+(i.e. min format is 3) and the format7 features shall then be available
+in future commits.
 
-Having the need to map revision-local offsets to pack-file global offsets
-today already gives us some localized address mapping code that simply
-needs to be replaced.
+To that end, the format file will contain another line that tells which
+will be the first revision to use logical addressing.  We don't support
+mixed modes within a pack file.  Therefore, this first / switchover
+revision may be one not yet committed in the repository.
+
+
+Internal API cleanup
+--------------------
+
+During refactoring, some functions had to be declared in header files
+to make them available to other fsfs code.  We need to revisit those
+function definitions to turn them into a proper API that may be useful
+to other other code (such as fsfs tools).
+
+
+Checksum all FSFS metadata elements
+-----------------------------------
+
+All elements of an FSFS repository shall be guarded by checksums. That
+includes indexes, noderevs etc.  Larger data structures, such as index
+files, should have checksummed sub-elements such that corrupted parts
+may be identified and potentially repaired / circumvented in a meaningful
+way.
+
+Those checksums may be quite simple such as Adler32 because that meta-
+data can be cross-verified with other parts as well and acts only as a
+fallback to narrow down the affected parts.
+
+
+Update existing FSFS tools
+--------------------------
+
+fsfs-stats, fsfsverify.py and possibly others will need to be enabled
+to format7's logical addressing.
+
+
+Extend 'svnadmin verify'
+------------------------
+
+Format 7 provides many extra chances to verify contents plus contains
+extra indexes that must be consistent with the pack / rev files.  We
+must extend the tests to cover all that.
 
 
 Optimize data ordering during pack
 ----------------------------------
 
-Replace today's simple concatenating shard packing process with a one
-placing fragments (representations and noderevs) from various revisions
-close to each other if they are likely needed to serve in the same request.
+Some aspects that have not been implemented yet:
 
-We will optimize on a per-shard basis.  The general strategy is
+* deltified file and directory properties reps shall be stored in
+  their deltification order, i.e. all elements of the delta chain
+  in one place (just as for deltified file and directory reps)
+* containers (see below) may favour a slightly different grouping
 
-* place all file properties reps at the beginning of the pack file
-  - if deltified, place them in deltification order
-  - place newer reps first
-* place all directory properties next (same internal ordering as above)
-* place all change lists and root nodes next
-  - strict revision order
-  - place newest ones first
-  - place root node rev in front of change list (i.e. 1 pair / rev)
-* place remaining content as follows:
-  - place node rev directly in front of their reps (where they have one)
-  - start with the latest root directory not placed, yet
-  - recurse to sub-folders first with the newest ones first
-  - per folder, place newest files ones first
-  - place rep deltification chains in deltification order (new->old)
-* no fragments should be left but if they are put them at the end
-
-The fsfs-reorg prototype implements a similar scheme and has shown that
-managing memory consumption during the pack process will be hard.  However,
-logical addressing will make it much simpler as no content (directories)
-needs to be modified.
-
-
-Index pack files
-----------------
-
-In addition to the manifest we need for the (revision, index) -> offset
-mapping, we also introduce an offset -> (revision, index, type) index
-file.  This will allow us to parse any data in a pack file without walking
-the DAG top down.
-
-
-Data prefetch
--------------
-
-This builds on the previous.  The idea is that whenever a cache lookup
-fails,  we will not just read the single missing fragment but parse all
-data within the APR file buffer and put that into the cache.
-
-For maximum efficiency,  we will align the data blocks being read to
-multiples of the block size and allow that buffer size to be configured
-(where supported by APR).  The default block size will be raised to 64kB.
+I/O optimized copy algorithms are yet to be implemented.  The current
+code is relatively slow as it performans quasi-random I/O on the
+input stream.
 
 
 TxDelta v2
@@ -167,4 +163,108 @@ Binary lookup in directory data structures is not a frequent operation in
 comparison to reading / writing them from / to disk or cache.  That not
 only reduces CPU load during e.g. transaction building but also gives us
 a deterministic repo representation without relying on stable hash order.
+
+
+Containers
+----------
+
+Extend the index format support containers, i.e. map a logical item index
+to (file offset, sub-index) pairs.  The whole container will be read and
+cached and the specific item later accessed from the whole structure.
+
+Use these containers for reps, noderevs and changes.  Provide specific
+data container types for each of these item types and different item
+types cannot be put into the same container.  Containers are binaries,
+i.e. there is no textual representations of their contents.
+
+This allows for significant space savings on disk due to deltification
+amongst e.g. revprops.  More importantly, it reduces the size of the
+runtime data structures within the cache *and* reduces the number of
+cache entries (the cache is can't handle items < 500 bytes very well).
+
+
+Star-Deltification
+------------------
+
+Most node contents are smaller than 500k, i.e. less than Txdelta 2 window.
+Those contents shall be aggregated into star-delta containers upon pack.
+This will save significant amounts of disk space, particularly in case
+of heavy branching.  Also, the data extraction is indenpendent of the
+number of deltas, i.e. delta chain length) within the same container.
+
+
+Multiple pack stages (may not happen in f7)
+-------------------------------------------
+
+Format 6 only knows one packing level - the shard.  For repositories with
+a large number of revisions, it may be more efficient to start with small
+packs (10-ish) and later pack them into larger and larger ones.
+
+
+DONE
+====
+
+Logical addressing
+------------------
+
+To allow for moving data structures around within the repository, we must
+replace the current absolute addressing using file offsets with a logical
+one.  All references will no take the form of (revision, index) pairs and
+a replacement to the format 6 manifest files will map that to actual file
+offsets.
+
+Having the need to map revision-local offsets to pack-file global offsets
+today already gives us some localized address mapping code that simply
+needs to be replaced.
+
+
+Optimize data ordering during pack
+----------------------------------
+
+Replace today's simple concatenating shard packing process with a one
+placing fragments (representations and noderevs) from various revisions
+close to each other if they are likely needed to serve in the same request.
+
+We will optimize on a per-shard basis.  The general strategy is
+
+* place all change lists at the beginning of the pack file
+  - strict revision order
+  - place newest ones first
+* place all file properties reps next
+  - place newer reps first
+* place all directory properties next
+  - place newer reps first
+* place all root nodes and root directories
+  - ordered newest rev -> oldest rev
+  - place rep delta chains 'en block'
+  - place root node in front of rep, if that rep has not already
+    been placed as part of a rep delta chain
+* place remaining content as follows:
+  - place node rev directly in front of their reps (where they have one)
+  - start with the latest root directory not placed, yet
+  - recurse to sub-folders first with, sorted by name
+  - per folder, place files in naming order
+  - place rep deltification chains in deltification order (new->old)
+* no fragments should be left but if they are, put them at the end
+
+
+Index pack files
+----------------
+
+In addition to the manifest we need for the (revision, index) -> offset
+mapping, we also introduce an offset -> (revision, index, type) index
+file.  This will allow us to parse any data in a pack file without walking
+the DAG top down.
+
+
+Data prefetch
+-------------
+
+This builds on the previous.  The idea is that whenever a cache lookup
+fails,  we will not just read the single missing fragment but parse all
+data within the APR file buffer and put that into the cache.
+
+For maximum efficiency,  we will align the data blocks being read to
+multiples of the block size and allow that buffer size to be configured
+(where supported by APR).  The default block size will be raised to 64kB.
 
