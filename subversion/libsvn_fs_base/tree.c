@@ -4024,7 +4024,7 @@ base_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
   SVN_ERR(base_file_contents(&target, target_root, target_path, pool));
 
   /* Create a delta stream that turns the ancestor into the target.  */
-  svn_txdelta(&delta_stream, source, target, pool);
+  svn_txdelta2(&delta_stream, source, target, TRUE, pool);
 
   *stream_p = delta_stream;
   return SVN_NO_ERROR;
