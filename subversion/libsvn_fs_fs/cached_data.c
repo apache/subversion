@@ -821,6 +821,7 @@ svn_fs_fs__rep_chain_length(int *chain_length,
 {
   int count = 0;
   apr_pool_t *sub_pool = svn_pool_create(pool);
+  svn_boolean_t is_delta = FALSE;
   
   /* Check whether the length of the deltification chain is acceptable.
    * Otherwise, shared reps may form a non-skipping delta chain in
@@ -848,6 +849,7 @@ svn_fs_fs__rep_chain_length(int *chain_length,
       base_rep.item_index = header->base_item_index;
       base_rep.size = header->base_length;
       base_rep.txn_id = NULL;
+      is_delta = header->is_delta;
 
       ++count;
       if (count % 16 == 0)
@@ -856,7 +858,7 @@ svn_fs_fs__rep_chain_length(int *chain_length,
           svn_pool_clear(sub_pool);
         }
     }
-  while (header->is_delta && header->base_revision);
+  while (is_delta && base_rep.revision);
 
   *chain_length = count;
   svn_pool_destroy(sub_pool);
