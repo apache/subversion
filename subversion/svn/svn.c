@@ -2530,6 +2530,17 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                  SVN_CONFIG_SECTION_WORKING_COPY,
                  SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE,
                  NULL);
+  /* #########################################################################
+     This blocks every other application from accessing our wc.db at the same
+     time as this process. So instead of using the working copy lock functions
+     as designed other processes will already block before being able to check
+     that the working copy is locked and without a way to report what blocks
+     it or being able to recover using 'svn cleanup' when a process gets stuck
+
+     BH: I call this a breaking change, but let's discuss that on dev@s.a.o.
+         first. This behavior should be opt-in, not opt-out until 2.0.
+     #########################################################################
+   */
   if (!sqlite_exclusive)
     svn_config_set(cfg_config,
                    SVN_CONFIG_SECTION_WORKING_COPY,
