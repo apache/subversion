@@ -1785,8 +1785,8 @@ delete_entry(const char *path,
 
 
 
-    /* Receive the remote removal of excluded/server-excluded/not present node.
-       Do not notify, but perform the change even when the node is shadowed */
+  /* Receive the remote removal of excluded/server-excluded/not present node.
+     Do not notify, but perform the change even when the node is shadowed */
   if (base_status == svn_wc__db_status_not_present
       || base_status == svn_wc__db_status_excluded
       || base_status == svn_wc__db_status_server_excluded)
