@@ -2456,11 +2456,6 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         return EXIT_ERROR(err);
     }
 
-  /* Create a client context object. */
-  command_baton.opt_state = &opt_state;
-  SVN_INT_ERR(svn_client_create_context2(&ctx, cfg_hash, pool));
-  command_baton.ctx = ctx;
-
   /* Relocation is infinite-depth only. */
   if (opt_state.relocate)
     {
@@ -2519,14 +2514,14 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         }
     }
 
-  cfg_config = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
+  cfg_config = apr_hash_get(cfg_hash, SVN_CONFIG_CATEGORY_CONFIG,
                             APR_HASH_KEY_STRING);
 
   /* Update the options in the config */
   if (opt_state.config_options)
     {
       svn_error_clear(
-          svn_cmdline__apply_config_options(ctx->config,
+          svn_cmdline__apply_config_options(cfg_hash,
                                             opt_state.config_options,
                                             "svn: ", "--config-option"));
     }
@@ -2540,6 +2535,11 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                    SVN_CONFIG_SECTION_WORKING_COPY,
                    SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE,
                    "true");
+
+  /* Create a client context object. */
+  command_baton.opt_state = &opt_state;
+  SVN_INT_ERR(svn_client_create_context2(&ctx, cfg_hash, pool));
+  command_baton.ctx = ctx;
 
   /* If we're running a command that could result in a commit, verify
      that any log message we were given on the command line makes
