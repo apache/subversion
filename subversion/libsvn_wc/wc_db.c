@@ -2252,10 +2252,13 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
       while (have_row)
         {
           const char *child_relpath;
+          svn_error_t *err;
           
           svn_pool_clear(iterpool);
           child_relpath = svn_sqlite__column_text(stmt, 0, iterpool);
-          SVN_ERR(clear_moved_here(child_relpath, wcroot, iterpool));
+          err = clear_moved_here(child_relpath, wcroot, iterpool);
+          if (err)
+            return svn_error_compose_create(err, svn_sqlite__reset(stmt));
           SVN_ERR(svn_sqlite__step(&have_row, stmt));
         }
       svn_pool_destroy(iterpool);
