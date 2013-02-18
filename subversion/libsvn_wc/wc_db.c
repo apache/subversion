@@ -2055,6 +2055,33 @@ svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
     kind, svn_wc__db_status_not_present, conflict, work_items, scratch_pool);
 }
 
+/* Recursively clear moved-here information at the copy-half of the move
+ * which moved the node at SRC_RELPATH away. This transforms the move into
+ * a simple copy. */
+static svn_error_t *
+clear_moved_here(const char *src_relpath,
+                 svn_wc__db_wcroot_t *wcroot,
+                 apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  const char *dst_relpath;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_SELECT_MOVED_TO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
+                            src_relpath, relpath_depth(src_relpath)));
+  SVN_ERR(svn_sqlite__step_row(stmt));
+  dst_relpath = svn_sqlite__column_text(stmt, 0, scratch_pool);
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_CLEAR_MOVED_HERE_RECURSIVE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
+                            dst_relpath, relpath_depth(dst_relpath)));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  return SVN_NO_ERROR;
+}
+
 /* The body of svn_wc__db_base_remove().
  */
 static svn_error_t *
@@ -2199,6 +2226,41 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
            ACTUAL_NODE records */
 
   /* Step 3: Delete WORKING nodes */
+  if (conflict)
+    {
+      apr_pool_t *iterpool;
+
+      /* 
+       * When deleting a conflicted node, moves of any moved-outside children
+       * of the node must be broken. Else, the destination will still be marked
+       * moved-here after the move source disappears from the working copy.
+       *
+       * ### FIXME: It would be nicer to have the conflict resolver
+       * break the move instead. It might also be a good idea to
+       * flag a tree conflict on each moved-away child. But doing so
+       * might introduce actual-only nodes without direct parents,
+       * and we're not yet sure if other existing code is prepared
+       * to handle such nodes. To be revisited post-1.8.
+       */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_SELECT_MOVED_OUTSIDE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
+                                             local_relpath,
+                                             relpath_depth(local_relpath)));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      iterpool = svn_pool_create(scratch_pool);
+      while (have_row)
+        {
+          const char *child_relpath;
+          
+          svn_pool_clear(iterpool);
+          child_relpath = svn_sqlite__column_text(stmt, 0, iterpool);
+          clear_moved_here(child_relpath, wcroot, iterpool);
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+        }
+      svn_pool_destroy(iterpool);
+      svn_sqlite__reset(stmt);
+    }
   if (keep_working)
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,

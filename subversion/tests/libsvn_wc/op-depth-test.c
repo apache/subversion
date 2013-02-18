@@ -6842,7 +6842,7 @@ struct svn_test_descriptor_t test_funcs[] =
                         "commit_moved_away_descendant"),
     SVN_TEST_OPTS_PASS(finite_move_update_bump,
                        "finite_move_update_bump"),
-    SVN_TEST_OPTS_XFAIL(move_away_delete_update,
-                        "move_away_delete_update"),
+    SVN_TEST_OPTS_PASS(move_away_delete_update,
+                       "move_away_delete_update"),
     SVN_TEST_NULL
   };
