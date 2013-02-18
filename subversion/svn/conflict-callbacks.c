@@ -337,7 +337,7 @@ static const resolver_option_t text_conflict_options[] =
   { "m",  "merge",            N_("use internal merge tool to resolve conflict"), -1 },
   { "l",  "launch",           N_("launch external tool to resolve conflict"), -1 },
   { "q",  "quit",             N_("postpone all remaining conflicts"),
-                              svn_cl__accept_postpone },
+                              svn_wc_conflict_choose_postpone },
   { "s",  "show all options", N_("show this list (also 'h', '?')"), -1 },
   { NULL }
 };
@@ -353,7 +353,7 @@ static const resolver_option_t prop_conflict_options[] =
   { "tf", "theirs-full",      N_("accept their version of entire file (same)"),
                               svn_wc_conflict_choose_theirs_full },
   { "q",  "quit",             N_("postpone all remaining conflicts"),
-                              svn_cl__accept_postpone },
+                              svn_wc_conflict_choose_postpone },
   { "h",  "help",             N_("show this help (also '?')"), -1 },
   { NULL }
 };
@@ -368,7 +368,7 @@ static const resolver_option_t obstructed_add_options[] =
   { "tf", "theirs-full",      N_("accept incoming item (overwrite pre-existing item)"),
                               svn_wc_conflict_choose_theirs_full },
   { "q",  "quit",             N_("postpone all remaining conflicts"),
-                              svn_cl__accept_postpone },
+                              svn_wc_conflict_choose_postpone },
   { "h",  "help",             N_("show this help (also '?')"), -1 },
   { NULL }
 };
@@ -385,7 +385,7 @@ static const resolver_option_t tree_conflict_options[] =
   { "tc", "theirs-conflict",  N_("prefer incoming change"),
                               svn_wc_conflict_choose_theirs_conflict },
   { "q",  "quit",             N_("postpone all remaining conflicts"),
-                              svn_cl__accept_postpone },
+                              svn_wc_conflict_choose_postpone },
   { "h",  "help",             N_("show this help (also '?')"), -1 },
   { NULL }
 };
@@ -400,7 +400,7 @@ static const resolver_option_t tree_conflict_options_update_moved_away[] =
                                  "a copy"),
                               svn_wc_conflict_choose_theirs_conflict },
   { "q",  "quit",             N_("postpone all remaining conflicts"),
-                              svn_cl__accept_postpone },
+                              svn_wc_conflict_choose_postpone },
   { "h",  "help",             N_("show this help (also '?')"), -1 },
   { NULL }
 };
@@ -602,7 +602,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
       if (strcmp(opt->code, "q") == 0)
         {
           result->choice = opt->choice;
-          b->accept_which = opt->choice;
+          b->accept_which = svn_cl__accept_postpone;
           break;
         }
       else if (strcmp(opt->code, "s") == 0)
@@ -797,7 +797,7 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
       if (strcmp(opt->code, "q") == 0)
         {
           result->choice = opt->choice;
-          b->accept_which = opt->choice;
+          b->accept_which = svn_cl__accept_postpone;
           break;
         }
       else if (opt->choice != -1)
@@ -858,7 +858,7 @@ handle_tree_conflict(svn_wc_conflict_result_t *result,
       if (strcmp(opt->code, "q") == 0)
         {
           result->choice = opt->choice;
-          b->accept_which = opt->choice;
+          b->accept_which = svn_cl__accept_postpone;
           break;
         }
       else if (opt->choice != -1)
@@ -907,7 +907,7 @@ handle_obstructed_add(svn_wc_conflict_result_t *result,
       if (strcmp(opt->code, "q") == 0)
         {
           result->choice = opt->choice;
-          b->accept_which = opt->choice;
+          b->accept_which = svn_cl__accept_postpone;
           break;
         }
       else if (opt->choice != -1)
