@@ -1691,7 +1691,6 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   svn_boolean_t force_interactive = FALSE;
   svn_boolean_t use_notifier = TRUE;
   apr_hash_t *changelists;
-  const char *sqlite_exclusive;
   apr_hash_t *cfg_hash;
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
@@ -2526,10 +2525,14 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                             "svn: ", "--config-option"));
     }
 
-  svn_config_get(cfg_config, &sqlite_exclusive,
-                 SVN_CONFIG_SECTION_WORKING_COPY,
-                 SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE,
-                 NULL);
+#if !defined(SVN_CL_NO_DEFAULT_EXCLUSIVE_LOCK) && !defined(WIN32)
+  {
+    const char *sqlite_exclusive;
+
+    svn_config_get(cfg_config, &sqlite_exclusive,
+                   SVN_CONFIG_SECTION_WORKING_COPY,
+                   SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE,
+                   NULL);
   /* #########################################################################
      This blocks every other application from accessing our wc.db at the same
      time as this process. So instead of using the working copy lock functions
@@ -2541,11 +2544,13 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
          first. This behavior should be opt-in, not opt-out until 2.0.
      #########################################################################
    */
-  if (!sqlite_exclusive)
-    svn_config_set(cfg_config,
-                   SVN_CONFIG_SECTION_WORKING_COPY,
-                   SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE,
-                   "true");
+    if (!sqlite_exclusive)
+      svn_config_set(cfg_config,
+                     SVN_CONFIG_SECTION_WORKING_COPY,
+                     SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE,
+                     "true");
+  }
+#endif
 
   /* Create a client context object. */
   command_baton.opt_state = &opt_state;
