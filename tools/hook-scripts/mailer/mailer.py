@@ -99,7 +99,7 @@ def main(pool, cmd, config_fname, repos_dir, cmd_args):
     revision = int(cmd_args[0])
     repos = Repository(repos_dir, revision, pool)
     cfg = Config(config_fname, repos,
-                 {'author': author,
+                 {'author': repos.author,
                   'repos_basename': os.path.basename(repos.repos_dir)
                  })
     messenger = Commit(pool, cfg, repos)
