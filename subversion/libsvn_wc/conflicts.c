@@ -2308,9 +2308,6 @@ svn_wc__read_conflicts(const apr_array_header_t **conflicts,
 
    ### This func combines *resolving* and *marking as resolved* -- seems poor.
 
-   ### Resolving is shared between this func and its caller
-       'conflict_status_walker()' -- seems poor.
-
    LOCAL_ABSPATH in DB is the path to the item to be resolved.
    RESOLVE_TEXT, RESOLVE_PROPS and RESOLVE_TREE are TRUE iff text, property
    and tree conflicts respectively are to be resolved.
