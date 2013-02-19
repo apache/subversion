@@ -1348,25 +1348,11 @@ get_tc_info(svn_wc_operation_t *operation,
   if (locations)
     {
       SVN_ERR_ASSERT(locations->nelts >= 2);
-
-      /* This might set {old,new}_version to NULL. */
       *old_version = APR_ARRAY_IDX(locations, 0,
-                                   svn_wc_conflict_version_t *);
+                                     svn_wc_conflict_version_t *);
       *new_version = APR_ARRAY_IDX(locations, 1,
                                    svn_wc_conflict_version_t *);
     }
-  else
-    {
-      *old_version = NULL;
-      *new_version = NULL;
-    }
-
-  /* The update-move editor relies on version information being available. */
-  if (*old_version == NULL || *new_version == NULL)
-    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                             _("'%s' has no conflict version information"),
-                             svn_dirent_local_style(src_abspath,
-                                                    scratch_pool));
 
   SVN_ERR(svn_wc__conflict_read_tree_conflict(local_change,
                                               incoming_change,
