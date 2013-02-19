@@ -52,6 +52,7 @@ struct svn_cl__interactive_conflict_baton_t {
   svn_boolean_t external_failed;
   svn_cmdline_prompt_baton_t *pb;
   const char *path_prefix;
+  svn_boolean_t quit;
 };
 
 svn_error_t *
@@ -75,6 +76,7 @@ svn_cl__get_conflict_func_interactive_baton(
   (*b)->external_failed = FALSE;
   (*b)->pb = pb;
   SVN_ERR(svn_dirent_get_absolute(&(*b)->path_prefix, "", result_pool));
+  (*b)->quit = FALSE;
 
   return SVN_NO_ERROR;
 }
@@ -603,6 +605,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
         {
           result->choice = opt->choice;
           b->accept_which = svn_cl__accept_postpone;
+          b->quit = TRUE;
           break;
         }
       else if (strcmp(opt->code, "s") == 0)
@@ -798,6 +801,7 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
         {
           result->choice = opt->choice;
           b->accept_which = svn_cl__accept_postpone;
+          b->quit = TRUE;
           break;
         }
       else if (opt->choice != -1)
@@ -859,6 +863,7 @@ handle_tree_conflict(svn_wc_conflict_result_t *result,
         {
           result->choice = opt->choice;
           b->accept_which = svn_cl__accept_postpone;
+          b->quit = TRUE;
           break;
         }
       else if (opt->choice != -1)
@@ -908,6 +913,7 @@ handle_obstructed_add(svn_wc_conflict_result_t *result,
         {
           result->choice = opt->choice;
           b->accept_which = svn_cl__accept_postpone;
+          b->quit = TRUE;
           break;
         }
       else if (opt->choice != -1)
@@ -1226,6 +1232,9 @@ svn_cl__resolve_postponed_conflicts(svn_boolean_t *conflicts_all_resolved,
           if (text_c || prop_c || tree_c)
             *conflicts_all_resolved = FALSE;
         }
+
+      if (b->quit)
+        break;
     }
   svn_pool_destroy(iterpool);
 
