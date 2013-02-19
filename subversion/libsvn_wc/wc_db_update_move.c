@@ -1775,15 +1775,28 @@ suitable_for_move(svn_wc__db_wcroot_t *wcroot,
       relpath = svn_relpath_skip_ancestor(local_relpath, relpath);
       relpath = svn_relpath_join(repos_relpath, relpath, iterpool);
 
-      if (revision != node_revision
-          || strcmp(relpath, svn_sqlite__column_text(stmt, 1, NULL)))
+      if (revision != node_revision)
         return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
                                  svn_sqlite__reset(stmt),
-                      _("The tree '%s' is not single-revision and unswitched"),
-                        svn_dirent_local_style(svn_dirent_join(wcroot->abspath,
-                                                               local_relpath,
-                                                               scratch_pool),
-                                               scratch_pool));
+                                 _("Cannot apply update because move source "
+                                   "%s' is a mixed-revision working copy"), 
+                                 svn_dirent_local_style(svn_dirent_join(
+                                                          wcroot->abspath,
+                                                          local_relpath,
+                                                          scratch_pool),
+                                 scratch_pool));
+
+      if (strcmp(relpath, svn_sqlite__column_text(stmt, 1, NULL)))
+        return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
+                                 svn_sqlite__reset(stmt),
+                                 _("Cannot apply update because move source "
+                                   "'%s' is a switched subtree"), 
+                                 svn_dirent_local_style(svn_dirent_join(
+                                                          wcroot->abspath,
+                                                          local_relpath,
+                                                          scratch_pool),
+                                 scratch_pool));
+
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
   SVN_ERR(svn_sqlite__reset(stmt));
