@@ -6587,7 +6587,6 @@ def windows_update_backslash(sbox):
   svntest.actions.run_and_verify_svn(wc_dir, None, expected_error, 'up',
                                      wc_dir)
 
-@XFail()
 def update_moved_away(sbox):
   "update subtree of moved away"
 
