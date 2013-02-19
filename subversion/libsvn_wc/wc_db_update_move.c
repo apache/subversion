@@ -126,8 +126,6 @@ struct tc_editor_baton {
   svn_wc_operation_t operation;
   svn_wc_conflict_version_t *old_version;
   svn_wc_conflict_version_t *new_version;
-  svn_wc_notify_func2_t notify_func;
-  void *notify_baton;
   apr_pool_t *result_pool;
 };
 
@@ -231,8 +229,6 @@ mark_tree_conflict(const char *local_relpath,
                    svn_wc_conflict_reason_t reason,
                    svn_wc_conflict_action_t action,
                    const char *move_src_op_root_relpath,
-                   svn_wc_notify_func2_t notify_func,
-                   void *notify_baton,
                    apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
@@ -361,12 +357,11 @@ mark_tree_conflict(const char *local_relpath,
   SVN_ERR(svn_wc__db_mark_conflict_internal(wcroot, local_relpath,
                                             conflict, scratch_pool));
 
-  if (notify_func)
-    SVN_ERR(update_move_list_add(wcroot, local_relpath,
-                                 svn_wc_notify_tree_conflict,
-                                 new_kind,
-                                 svn_wc_notify_state_inapplicable,
-                                 svn_wc_notify_state_inapplicable));
+  SVN_ERR(update_move_list_add(wcroot, local_relpath,
+                               svn_wc_notify_tree_conflict,
+                               new_kind,
+                               svn_wc_notify_state_inapplicable,
+                               svn_wc_notify_state_inapplicable));
   return SVN_NO_ERROR;
 }
 
@@ -449,7 +444,6 @@ check_tree_conflict(svn_boolean_t *is_conflicted,
                               ? svn_wc_conflict_reason_moved_away
                               : svn_wc_conflict_reason_deleted),
                              action, move_src_op_root_relpath,
-                             b->notify_func, b->notify_baton,
                              scratch_pool));
   b->conflict_root_relpath = apr_pstrdup(b->result_pool, conflict_root_relpath);
 
@@ -521,10 +515,10 @@ tc_editor_add_directory(void *baton,
                                  move_dst_repos_relpath,
                                  svn_wc_conflict_reason_unversioned,
                                  svn_wc_conflict_action_add, NULL,
-                                 b->notify_func, b->notify_baton,
                                  scratch_pool));
       b->conflict_root_relpath = apr_pstrdup(b->result_pool, relpath);
       action = svn_wc_notify_tree_conflict;
+      is_conflicted = TRUE;
       break;
 
     case svn_node_none:
@@ -538,7 +532,7 @@ tc_editor_add_directory(void *baton,
       break;
     }
 
-  if (b->notify_func)
+  if (!is_conflicted)
     SVN_ERR(update_move_list_add(b->wcroot, relpath,
                                  action,
                                  svn_node_dir,
@@ -609,7 +603,6 @@ tc_editor_add_file(void *baton,
                                  move_dst_repos_relpath,
                                  svn_wc_conflict_reason_unversioned,
                                  svn_wc_conflict_action_add, NULL,
-                                 b->notify_func, b->notify_baton,
                                  scratch_pool));
       b->conflict_root_relpath = apr_pstrdup(b->result_pool, relpath);
       return SVN_NO_ERROR;
@@ -628,12 +621,11 @@ tc_editor_add_file(void *baton,
   SVN_ERR(svn_wc__db_wq_add(b->db, b->wcroot->abspath, work_item,
                             scratch_pool));
 
-  if (b->notify_func)
-    SVN_ERR(update_move_list_add(b->wcroot, relpath,
-                                 svn_wc_notify_update_add,
-                                 svn_node_file,
-                                 svn_wc_notify_state_inapplicable,
-                                 svn_wc_notify_state_inapplicable));
+  SVN_ERR(update_move_list_add(b->wcroot, relpath,
+                               svn_wc_notify_update_add,
+                               svn_node_file,
+                               svn_wc_notify_state_inapplicable,
+                               svn_wc_notify_state_inapplicable));
   return SVN_NO_ERROR;
 }
 
@@ -844,12 +836,11 @@ tc_editor_alter_directory(void *baton,
                                                     scratch_pool));
         }
 
-      if (b->notify_func)
-        SVN_ERR(update_move_list_add(b->wcroot, dst_relpath,
-                                     svn_wc_notify_update_update,
-                                     svn_node_dir,
-                                     svn_wc_notify_state_inapplicable,
-                                     prop_state));
+    SVN_ERR(update_move_list_add(b->wcroot, dst_relpath,
+                                 svn_wc_notify_update_update,
+                                 svn_node_dir,
+                                 svn_wc_notify_state_inapplicable,
+                                 prop_state));
     }
 
   return SVN_NO_ERROR;
@@ -879,8 +870,6 @@ update_working_file(svn_skel_t **work_items,
                     const working_node_version_t *new_version,
                     svn_wc__db_wcroot_t *wcroot,
                     svn_wc__db_t *db,
-                    svn_wc_notify_func2_t notify_func,
-                    void *notify_baton,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
@@ -966,12 +955,11 @@ update_working_file(svn_skel_t **work_items,
         content_state = svn_wc_notify_state_changed;
     }
 
-  if (notify_func)
-    SVN_ERR(update_move_list_add(wcroot, local_relpath,
-                                 svn_wc_notify_update_update,
-                                 svn_node_file,
-                                 content_state,
-                                 prop_state));
+  SVN_ERR(update_move_list_add(wcroot, local_relpath,
+                               svn_wc_notify_update_update,
+                               svn_node_file,
+                               content_state,
+                               prop_state));
 
   return SVN_NO_ERROR;
 }
@@ -1030,7 +1018,6 @@ tc_editor_alter_file(void *baton,
                                   move_dst_repos_relpath,
                                   b->operation, &old_version, &new_version,
                                   b->wcroot, b->db,
-                                  b->notify_func, b->notify_baton,
                                   b->result_pool, scratch_pool));
       *b->work_items = svn_wc__wq_merge(*b->work_items, work_items,
                                         b->result_pool);
@@ -1123,7 +1110,6 @@ tc_editor_delete(void *baton,
                                      b->operation, move_dst_kind, svn_node_none,
                                      move_dst_repos_relpath, reason,
                                      svn_wc_conflict_action_delete, NULL,
-                                     b->notify_func, b->notify_baton,
                                      scratch_pool));
           b->conflict_root_relpath = apr_pstrdup(b->result_pool, relpath);
         }
@@ -1188,7 +1174,7 @@ tc_editor_delete(void *baton,
       SVN_ERR(svn_wc__db_wq_add(b->db, b->wcroot->abspath, work_item,
                                 iterpool));
 
-      if (b->notify_func && !is_conflicted)
+      if (!is_conflicted)
         SVN_ERR(update_move_list_add(b->wcroot, relpath,
                                      svn_wc_notify_update_delete,
                                      svn__node_kind_from_kind(del_kind),
@@ -1246,34 +1232,6 @@ static svn_error_t *
 tc_editor_complete(void *baton,
                    apr_pool_t *scratch_pool)
 {
-  struct tc_editor_baton *b = baton;
-
-  /* Send all queued up notifications.
-
-     ### This is notifying too early.  One reason for using the
-     ### update_move_list is to do the notifications after the
-     ### transaction has completeted. */
-  SVN_ERR(svn_wc__db_update_move_list_notify(b->wcroot,
-                                             b->old_version->peg_rev,
-                                             b->new_version->peg_rev,
-                                             b->notify_func, b->notify_baton,
-                                             scratch_pool));
-  if (b->notify_func)
-    {
-      svn_wc_notify_t *notify;
-
-      notify = svn_wc_create_notify(svn_dirent_join(b->wcroot->abspath,
-                                                    b->move_root_dst_relpath,
-                                                    scratch_pool),
-                                    svn_wc_notify_update_completed,
-                                    scratch_pool);
-      notify->kind = svn_node_none;
-      notify->content_state = svn_wc_notify_state_inapplicable;
-      notify->prop_state = svn_wc_notify_state_inapplicable;
-      notify->revision = b->new_version->peg_rev;
-      b->notify_func(b->notify_baton, notify, scratch_pool);
-    }
-
   return SVN_NO_ERROR;
 }
 
@@ -1823,8 +1781,6 @@ update_moved_away_conflict_victim(svn_skel_t **work_items,
                                   const char *move_src_op_root_relpath,
                                   svn_wc_conflict_version_t *old_version,
                                   svn_wc_conflict_version_t *new_version,
-                                  svn_wc_notify_func2_t notify_func,
-                                  void *notify_baton,
                                   svn_cancel_func_t cancel_func,
                                   void *cancel_baton,
                                   apr_pool_t *result_pool,
@@ -1858,8 +1814,6 @@ update_moved_away_conflict_victim(svn_skel_t **work_items,
   tc_editor_baton->db = db;
   tc_editor_baton->wcroot = wcroot;
   tc_editor_baton->work_items = work_items;
-  tc_editor_baton->notify_func = notify_func;
-  tc_editor_baton->notify_baton = notify_baton;
   tc_editor_baton->result_pool = result_pool;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -1948,10 +1902,32 @@ svn_wc__db_update_moved_away_conflict_victim(svn_skel_t **work_items,
       operation, local_change, incoming_change,
       move_src_op_root_relpath,
       old_version, new_version,
-      notify_func, notify_baton,
       cancel_func, cancel_baton,
       result_pool, scratch_pool),
     wcroot);
+
+  /* Send all queued up notifications. */
+  SVN_ERR(svn_wc__db_update_move_list_notify(wcroot,
+                                             old_version->peg_rev,
+                                             new_version->peg_rev,
+                                             notify_func, notify_baton,
+                                             scratch_pool));
+  if (notify_func)
+    {
+      svn_wc_notify_t *notify;
+
+      notify = svn_wc_create_notify(svn_dirent_join(wcroot->abspath,
+                                                    local_relpath,
+                                                    scratch_pool),
+                                    svn_wc_notify_update_completed,
+                                    scratch_pool);
+      notify->kind = svn_node_none;
+      notify->content_state = svn_wc_notify_state_inapplicable;
+      notify->prop_state = svn_wc_notify_state_inapplicable;
+      notify->revision = new_version->peg_rev;
+      notify_func(notify_baton, notify, scratch_pool);
+    }
+
 
   return SVN_NO_ERROR;
 }
@@ -2011,8 +1987,6 @@ bump_mark_tree_conflict(svn_wc__db_wcroot_t *wcroot,
                         const char *move_src_op_root_relpath,
                         const char *move_dst_op_root_relpath,
                         svn_wc__db_t *db,
-                        svn_wc_notify_func2_t notify_func,
-                        void *notify_baton,
                         apr_pool_t *scratch_pool)
 {
   apr_int64_t repos_id;
@@ -2074,7 +2048,6 @@ bump_mark_tree_conflict(svn_wc__db_wcroot_t *wcroot,
                              svn_wc_conflict_reason_moved_away,
                              svn_wc_conflict_action_edit,
                              move_src_op_root_relpath,
-                             notify_func, notify_baton,
                              scratch_pool));
 
   return SVN_NO_ERROR;
@@ -2091,8 +2064,6 @@ bump_moved_away(svn_wc__db_wcroot_t *wcroot,
                 apr_hash_t *src_done,
                 svn_depth_t depth,
                 svn_wc__db_t *db,
-                svn_wc_notify_func2_t notify_func,
-                void *notify_baton,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
@@ -2187,8 +2158,7 @@ bump_moved_away(svn_wc__db_wcroot_t *wcroot,
                 {
                   err = bump_mark_tree_conflict(wcroot, src_relpath,
                                                 src_root_relpath, dst_relpath,
-                                                db, notify_func, notify_baton,
-                                                scratch_pool);
+                                                db, scratch_pool);
                   if (err)
                     return svn_error_compose_create(err,
                                                     svn_sqlite__reset(stmt));
@@ -2218,7 +2188,6 @@ bump_moved_away(svn_wc__db_wcroot_t *wcroot,
                         err = bump_moved_away(wcroot, dst_relpath,
                                               relpath_depth(dst_relpath),
                                               src_done, depth, db,
-                                              notify_func, notify_baton,
                                               result_pool, iterpool);
                     }
                 }
@@ -2242,8 +2211,6 @@ svn_wc__db_bump_moved_away(svn_wc__db_wcroot_t *wcroot,
                            const char *local_relpath,
                            svn_depth_t depth,
                            svn_wc__db_t *db,
-                           svn_wc_notify_func2_t notify_func,
-                           void *notify_baton,
                            apr_pool_t *scratch_pool)
 {
   const char *dummy1, *move_dst_op_root_relpath;
@@ -2266,8 +2233,7 @@ svn_wc__db_bump_moved_away(svn_wc__db_wcroot_t *wcroot,
           SVN_ERR(bump_mark_tree_conflict(wcroot, move_src_root_relpath,
                                           move_src_op_root_relpath,
                                           move_dst_op_root_relpath,
-                                          db, notify_func, notify_baton,
-                                          scratch_pool));
+                                          db, scratch_pool));
           return SVN_NO_ERROR;
         }
 
@@ -2275,7 +2241,6 @@ svn_wc__db_bump_moved_away(svn_wc__db_wcroot_t *wcroot,
 
   src_done = apr_hash_make(scratch_pool);
   SVN_ERR(bump_moved_away(wcroot, local_relpath, 0, src_done, depth, db,
-                          notify_func, notify_baton,
                           scratch_pool, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -2289,8 +2254,6 @@ resolve_delete_raise_moved_away(svn_wc__db_wcroot_t *wcroot,
                                 svn_wc_conflict_action_t action,
                                 svn_wc_conflict_version_t *old_version,
                                 svn_wc_conflict_version_t *new_version,
-                                svn_wc_notify_func2_t notify_func,
-                                void *notify_baton,
                                 apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
@@ -2323,7 +2286,6 @@ resolve_delete_raise_moved_away(svn_wc__db_wcroot_t *wcroot,
                                  moved_dst_repos_relpath,
                                  svn_wc_conflict_reason_moved_away,
                                  action, local_relpath,
-                                 notify_func, notify_baton,
                                  iterpool));
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
@@ -2362,7 +2324,6 @@ svn_wc__db_resolve_delete_raise_moved_away(svn_wc__db_t *db,
     resolve_delete_raise_moved_away(wcroot, local_relpath,
                                     db, operation, action,
                                     old_version, new_version,
-                                    notify_func, notify_baton,
                                     scratch_pool),
     wcroot);
 
