@@ -1175,8 +1175,18 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         ""                                                                   NL
         "### Section for configuring working copies."                        NL
         "[working-copy]"                                                     NL
-        "### Set to true to enable exclusive SQLite locking.  Some clients"  NL
-        "### may not support exclusive locking."                             NL
+        "### Set to a list of the names of specific clients that should use" NL
+        "### exclusive SQLite locking of working copies.  This increases the"NL
+        "### performance of the client but prevents concurrent access by"    NL
+        "### other clients."                                                 NL
+        "### Possible values:"                                               NL
+        "###   svn                (the command line client)"                 NL
+        "### Third-party clients may also support this option."              NL
+        "# exclusive-locking-clients ="                                      NL
+        "### Set to true to enable exclusive SQLite locking of working"      NL
+        "### copies by all clients.  Enabling this may cause some clients"   NL
+        "### to fail to work properly. This does not have to be set for"     NL
+        "### exclusive-locking-clients to work."                             NL
         "# exclusive-locking = false"                                        NL;
 
       err = svn_io_file_open(&f, path,
