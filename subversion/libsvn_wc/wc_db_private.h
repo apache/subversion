@@ -299,6 +299,17 @@ svn_wc__db_depth_get_info(svn_wc__db_status_t *status,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
+/* Look up REPOS_ID in SDB and set *REPOS_ROOT_URL and/or *REPOS_UUID to
+   its root URL and UUID respectively.  If REPOS_ID is INVALID_REPOS_ID,
+   use NULL for both URL and UUID.  Either or both output parameters may be
+   NULL if not wanted.  */
+svn_error_t *
+svn_wc__db_fetch_repos_info(const char **repos_root_url,
+                            const char **repos_uuid,
+                            svn_sqlite__db_t *sdb,
+                            apr_int64_t repos_id,
+                            apr_pool_t *result_pool);
+
 /* Like svn_wc__db_read_conflict(), but with WCROOT+LOCAL_RELPATH instead of
    DB+LOCAL_ABSPATH, and outputting relpaths instead of abspaths. */
 svn_error_t *
