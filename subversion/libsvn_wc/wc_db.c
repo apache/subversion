@@ -10871,7 +10871,7 @@ bump_revisions_post_update(svn_wc__db_wcroot_t *wcroot,
                              scratch_pool));
 
   SVN_ERR(svn_wc__db_bump_moved_away(wcroot, local_relpath, depth, db,
-                                     notify_func, notify_baton, scratch_pool));
+                                     scratch_pool));
 
   SVN_ERR(svn_wc__db_update_move_list_notify(wcroot, SVN_INVALID_REVNUM,
                                              SVN_INVALID_REVNUM, notify_func,
