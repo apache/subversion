@@ -517,7 +517,12 @@ prompt_user(const resolver_option_t **opt,
   SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, prompt_baton, scratch_pool));
   *opt = find_option(conflict_options, answer);
 
-  if (strcmp(answer, "h") == 0 || strcmp(answer, "?") == 0)
+  if (! *opt)
+    {
+      SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+                                  _("Unrecognized option.\n\n")));
+    }
+  else if (strcmp(answer, "h") == 0 || strcmp(answer, "?") == 0)
     {
       SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "\n%s\n",
                                   help_string(conflict_options,
@@ -690,6 +695,10 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
         }
       else if (strcmp(opt->code, "l") == 0 || strcmp(opt->code, ":-l") == 0)
         {
+          /* ### This check should be earlier as it's nasty to offer an option
+           *     and then when the user chooses it say 'Invalid option'. */
+          /* ### 'merged_file' shouldn't be necessary *before* we launch the
+           *     resolver: it should be the *result* of doing so. */
           if (desc->base_abspath && desc->their_abspath &&
               desc->my_abspath && desc->merged_file)
             {
@@ -720,8 +729,10 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
           if (result->choice == svn_wc_conflict_choose_merged
               && ! knows_something)
             {
-              SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
-                                          _("Invalid option.\n\n")));
+              SVN_ERR(svn_cmdline_fprintf(
+                        stderr, iterpool,
+                        _("Invalid option; use diff/edit/merge/launch "
+                          "before choosing 'resolved'.\n\n")));
               continue;
             }
 
