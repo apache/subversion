@@ -2525,30 +2525,30 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                             "svn: ", "--config-option"));
     }
 
-#if !defined(SVN_CL_NO_DEFAULT_EXCLUSIVE_LOCK) && !defined(WIN32)
+#if !defined(SVN_CL_NO_EXCLUSIVE_LOCK)
   {
-    const char *sqlite_exclusive;
+    const char *exclusive_clients_option;
+    apr_array_header_t *exclusive_clients;
 
-    svn_config_get(cfg_config, &sqlite_exclusive,
+    svn_config_get(cfg_config, &exclusive_clients_option,
                    SVN_CONFIG_SECTION_WORKING_COPY,
-                   SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE,
+                   SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE_CLIENTS,
                    NULL);
-  /* #########################################################################
-     This blocks every other application from accessing our wc.db at the same
-     time as this process. So instead of using the working copy lock functions
-     as designed other processes will already block before being able to check
-     that the working copy is locked and without a way to report what blocks
-     it or being able to recover using 'svn cleanup' when a process gets stuck
+    exclusive_clients = svn_cstring_split(exclusive_clients_option,
+                                          " ,", TRUE, pool);
+    for (i = 0; i < exclusive_clients->nelts; ++i)
+      {
+        const char *exclusive_client = APR_ARRAY_IDX(exclusive_clients, i,
+                                                     const char *);
 
-     BH: I call this a breaking change, but let's discuss that on dev@s.a.o.
-         first. This behavior should be opt-in, not opt-out until 2.0.
-     #########################################################################
-   */
-    if (!sqlite_exclusive)
-      svn_config_set(cfg_config,
-                     SVN_CONFIG_SECTION_WORKING_COPY,
-                     SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE,
-                     "true");
+        /* This blocks other clients from accessing the wc.db so it must
+           be explicitly enabled.*/
+        if (!strcmp(exclusive_client, "svn"))
+          svn_config_set(cfg_config,
+                         SVN_CONFIG_SECTION_WORKING_COPY,
+                         SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE,
+                         "true");
+      }
   }
 #endif
 
