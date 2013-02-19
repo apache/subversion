@@ -1986,44 +1986,85 @@ depth_sufficient_to_bump(svn_boolean_t *can_bump,
   return SVN_NO_ERROR;
 }
 
-/* Mark a move-edit conflict on MOVE_SRC_ROOT_RELPATH.
-
-   ### Combine with mark_tree_conflict. */
+/* Mark a move-edit conflict on MOVE_SRC_ROOT_RELPATH. */
 static svn_error_t *
 bump_mark_tree_conflict(svn_wc__db_wcroot_t *wcroot,
                         const char *move_src_root_relpath,
                         const char *move_src_op_root_relpath,
+                        const char *move_dst_op_root_relpath,
                         svn_wc__db_t *db,
                         svn_wc_notify_func2_t notify_func,
                         void *notify_baton,
                         apr_pool_t *scratch_pool)
 {
-  svn_skel_t *conflict = svn_wc__conflict_skel_create(scratch_pool);
+  struct tc_editor_baton fake_baton;
+  apr_int64_t repos_id;
+  const char *repos_root_url;
+  const char *repos_uuid;
+  const char *old_repos_relpath;
+  const char *new_repos_relpath;
+  svn_revnum_t old_rev;
+  svn_revnum_t new_rev;
+  const char *old_repos_url;
+  const char *new_repos_url;
+  svn_kind_t old_kind;
+  svn_kind_t new_kind;
 
-  /* ### Look for existing conflict? */
-  SVN_ERR(svn_wc__conflict_skel_add_tree_conflict(
-            conflict, db,
-            svn_dirent_join(wcroot->abspath, move_src_root_relpath,
-                            scratch_pool),
-            svn_wc_conflict_reason_moved_away,
-            svn_wc_conflict_action_edit,
-            svn_dirent_join(wcroot->abspath, move_src_op_root_relpath,
-                            scratch_pool),
-            scratch_pool, scratch_pool));
+  /* Read new (post-update) information from the new move source BASE node. */
+  SVN_ERR(svn_wc__db_base_get_info_internal(NULL, &new_kind, &new_rev,
+                                            &new_repos_relpath, &repos_id,
+                                            NULL, NULL, NULL, NULL, NULL,
+                                            NULL, NULL, NULL, NULL, NULL,
+                                            wcroot, move_src_op_root_relpath,
+                                            scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_fetch_repos_info(&repos_root_url, &repos_uuid,
+                                      wcroot->sdb, repos_id, scratch_pool));
+  new_repos_url = svn_uri_canonicalize(apr_pstrcat(scratch_pool,
+                                                   repos_root_url, "/",
+                                                   new_repos_relpath,
+                                                   (const char *)NULL),
+                                       scratch_pool);
 
-  /* ### Get proper info for this call. */
-  SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict, NULL, NULL,
-                                              scratch_pool, scratch_pool));
+  /* Read old (pre-update) information from the move destination node. */
+  SVN_ERR(svn_wc__db_depth_get_info(NULL, &old_kind, &old_rev,
+                                    &old_repos_relpath, NULL, NULL, NULL,
+                                    NULL, NULL, NULL, NULL, NULL, NULL,
+                                    wcroot, move_dst_op_root_relpath,
+                                    relpath_depth(move_dst_op_root_relpath),
+                                    scratch_pool, scratch_pool));
+  old_repos_url = svn_uri_canonicalize(apr_pstrcat(scratch_pool,
+                                                   repos_root_url, "/",
+                                                   old_repos_relpath,
+                                                   (const char *)NULL),
+                                       scratch_pool);
 
-  SVN_ERR(svn_wc__db_mark_conflict_internal(wcroot, move_src_root_relpath,
-                                            conflict, scratch_pool));
+  /* ### mark_tree_conflict() should be made more generic
+   * and not expect a tc_editor_baton. */
+  fake_baton.work_items = NULL;
+  fake_baton.db = db;
+  fake_baton.wcroot = wcroot;
+  fake_baton.operation = svn_wc_operation_update;
+  fake_baton.old_version = svn_wc_conflict_version_create2(
+                             old_repos_url, repos_uuid, old_repos_relpath,
+                             old_rev, svn__node_kind_from_kind(old_kind),
+                             scratch_pool);
+  fake_baton.new_version = svn_wc_conflict_version_create2(
+                             new_repos_url, repos_uuid, new_repos_relpath,
+                             new_rev, svn__node_kind_from_kind(new_kind),
+                             scratch_pool);
+  fake_baton.notify_func = notify_func;
+  fake_baton.notify_baton = notify_baton;
+  fake_baton.result_pool = scratch_pool;
 
-  if (notify_func)
-    SVN_ERR(update_move_list_add(wcroot, move_src_root_relpath,
-                                 svn_wc_notify_tree_conflict,
-                                 svn_node_dir,
-                                 svn_wc_notify_state_inapplicable,
-                                 svn_wc_notify_state_inapplicable));
+  SVN_ERR(mark_tree_conflict(&fake_baton, move_src_root_relpath,
+                             svn__node_kind_from_kind(old_kind),
+                             svn__node_kind_from_kind(new_kind),
+                             old_repos_relpath,
+                             svn_wc_conflict_reason_moved_away,
+                             svn_wc_conflict_action_edit,
+                             move_src_op_root_relpath,
+                             scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -2133,7 +2174,7 @@ bump_moved_away(svn_wc__db_wcroot_t *wcroot,
               if (!can_bump)
                 {
                   err = bump_mark_tree_conflict(wcroot, src_relpath,
-                                                src_root_relpath,
+                                                src_root_relpath, dst_relpath,
                                                 db, notify_func, notify_baton,
                                                 scratch_pool);
                   if (err)
@@ -2193,14 +2234,14 @@ svn_wc__db_bump_moved_away(svn_wc__db_wcroot_t *wcroot,
                            void *notify_baton,
                            apr_pool_t *scratch_pool)
 {
-  const char *dummy1, *dummy2;
+  const char *dummy1, *move_dst_op_root_relpath;
   const char *move_src_root_relpath, *move_src_op_root_relpath;
   apr_hash_t *src_done;
 
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
                                       STMT_CREATE_UPDATE_MOVE_LIST));
 
-  SVN_ERR(svn_wc__db_op_depth_moved_to(&dummy1, &dummy2,
+  SVN_ERR(svn_wc__db_op_depth_moved_to(&dummy1, &move_dst_op_root_relpath,
                                        &move_src_root_relpath,
                                        &move_src_op_root_relpath, 0,
                                        wcroot, local_relpath,
@@ -2212,6 +2253,7 @@ svn_wc__db_bump_moved_away(svn_wc__db_wcroot_t *wcroot,
         {
           SVN_ERR(bump_mark_tree_conflict(wcroot, move_src_root_relpath,
                                           move_src_op_root_relpath,
+                                          move_dst_op_root_relpath,
                                           db, notify_func, notify_baton,
                                           scratch_pool));
           return SVN_NO_ERROR;
