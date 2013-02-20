@@ -273,23 +273,7 @@ convert_db_kind_to_node_kind(svn_node_kind_t *node_kind,
                              svn_wc__db_status_t db_status,
                              svn_boolean_t show_hidden)
 {
-  switch (db_kind)
-    {
-      case svn_kind_file:
-        *node_kind = svn_node_file;
-        break;
-      case svn_kind_dir:
-        *node_kind = svn_node_dir;
-        break;
-      case svn_kind_symlink:
-        *node_kind = svn_node_file;
-        break;
-      case svn_kind_unknown:
-        *node_kind = svn_node_unknown;
-        break;
-      default:
-        SVN_ERR_MALFUNCTION();
-    }
+  *node_kind = svn__node_kind_from_kind(db_kind);
 
   /* Make sure hidden nodes return svn_node_none. */
   if (! show_hidden)
@@ -741,13 +725,13 @@ svn_wc__node_get_pre_ng_status_data(svn_revnum_t *revision,
                                      NULL, NULL, NULL, NULL,
                                      wc_ctx->db, local_abspath,
                                      result_pool, scratch_pool));
-  else
-    {
-      /* Sorry, we need a function to peek below the current working and
-         the BASE layer. And we don't have one yet.
-
-         ### Better to report nothing, than the wrong information */
-    }
+  else if (status == svn_wc__db_status_deleted)
+    /* Check the information below a WORKING delete */
+    SVN_ERR(svn_wc__db_read_pristine_info(NULL, NULL, changed_rev,
+                                          changed_date, changed_author, NULL,
+                                          NULL, NULL, NULL, NULL,
+                                          wc_ctx->db, local_abspath,
+                                          result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
