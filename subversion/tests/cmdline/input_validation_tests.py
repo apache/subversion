@@ -252,7 +252,6 @@ def invalid_update_targets(sbox):
   run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'update',
                            "^/")
 
-@XFail()
 def delete_repos_root(sbox):
   "do stupid things with the repository root"
 
@@ -285,7 +284,7 @@ def delete_repos_root(sbox):
 
   # This should produce some error, because we can never commit this
   expected_error = '.*repository root.*'
-  svntest.actions.run_and_verify_svn('Move root', [], expected_error,
+  svntest.actions.run_and_verify_svn('Move root', None, expected_error,
                                      'mv', sbox.ospath('A/D/G'),
                                      sbox.ospath('Z'))
 
