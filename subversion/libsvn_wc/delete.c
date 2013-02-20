@@ -257,7 +257,7 @@ svn_wc__delete_many(svn_wc_context_t *wc_ctx,
                                      svn_dirent_local_style(local_abspath,
                                                             iterpool));
         }
-      if (!repos_relpath[0])
+      if (repos_relpath && !repos_relpath[0])
         return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                                      _("'%s' represents the repository root "
                                        "and cannot be deleted"),
@@ -375,7 +375,7 @@ svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
                                    "cannot be deleted"),
                                  svn_dirent_local_style(local_abspath, pool));
     }
-  if (!repos_relpath[0])
+  if (repos_relpath && !repos_relpath[0])
     return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                              _("'%s' represents the repository root "
                                "and cannot be deleted"),
