@@ -947,6 +947,8 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
 {
   svn_wc__db_t *db = wc_ctx->db;
   svn_boolean_t move_degraded_to_copy = FALSE;
+  svn_kind_t kind;
+  svn_boolean_t conflicted;
 
   /* Verify that we have the required write locks. */
   SVN_ERR(svn_wc__write_check(wc_ctx->db,
@@ -982,26 +984,21 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
   if (!metadata_only)
     SVN_ERR(svn_io_file_rename(src_abspath, dst_abspath, scratch_pool));
 
-  {
-    svn_kind_t kind;
-    svn_boolean_t conflicted;
+  SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               &conflicted, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
+                               db, src_abspath,
+                               scratch_pool, scratch_pool));
 
-    SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL,
-                                 &conflicted, NULL, NULL, NULL,
-                                 NULL, NULL, NULL,
-                                 db, src_abspath,
-                                 scratch_pool, scratch_pool));
+  if (kind == svn_kind_dir)
+    SVN_ERR(remove_all_conflict_markers(db, src_abspath, dst_abspath,
+                                        scratch_pool));
 
-    if (kind == svn_kind_dir)
-      SVN_ERR(remove_all_conflict_markers(db, src_abspath, dst_abspath,
-                                          scratch_pool));
-
-    if (conflicted)
-      SVN_ERR(remove_node_conflict_markers(db, src_abspath, dst_abspath,
-                                           scratch_pool));
-  }
+  if (conflicted)
+    SVN_ERR(remove_node_conflict_markers(db, src_abspath, dst_abspath,
+                                         scratch_pool));
 
   SVN_ERR(svn_wc__delete_internal(wc_ctx, src_abspath, TRUE, FALSE,
                                   move_degraded_to_copy ? NULL : dst_abspath,
