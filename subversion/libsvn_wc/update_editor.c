@@ -1772,7 +1772,9 @@ delete_entry(const char *path,
     deleting_switched = FALSE;
 
   /* Is this path a conflict victim? */
-  if (conflicted)
+  if (pb->shadowed)
+    conflicted = FALSE; /* Conflict applies to WORKING */
+  else if (conflicted)
     SVN_ERR(node_already_conflicted(&conflicted, eb->db, local_abspath,
                                     scratch_pool));
   if (conflicted)
@@ -2372,7 +2374,9 @@ open_directory(const char *path,
   db->was_incomplete = (base_status == svn_wc__db_status_incomplete);
 
   /* Is this path a conflict victim? */
-  if (conflicted)
+  if (db->shadowed)
+    conflicted = FALSE; /* Conflict applies to WORKING */
+  else if (conflicted)
     SVN_ERR(node_already_conflicted(&conflicted, eb->db,
                                     db->local_abspath, pool));
   if (conflicted)
@@ -3171,7 +3175,9 @@ add_file(const char *path,
 
 
   /* Is this path a conflict victim? */
-  if (conflicted)
+  if (fb->shadowed)
+    conflicted = FALSE; /* Conflict applies to WORKING */
+  else if (conflicted)
     {
       if (pb->deletion_conflicts)
         tree_conflict = apr_hash_get(pb->deletion_conflicts, fb->name,
@@ -3438,7 +3444,9 @@ open_file(const char *path,
                                      fb->pool, scratch_pool));
 
   /* Is this path a conflict victim? */
-  if (conflicted)
+  if (fb->shadowed)
+    conflicted = FALSE; /* Conflict applies to WORKING */
+  else if (conflicted)
     SVN_ERR(node_already_conflicted(&conflicted, eb->db,
                                     fb->local_abspath, pool));
   if (conflicted)
