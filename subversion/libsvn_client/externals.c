@@ -1016,12 +1016,12 @@ svn_client__handle_externals(apr_hash_t *externals_new,
        * external and the DEFINING_ABSPATH which we can remove? */
       parent_abspath = item_abspath;
       do {
-        svn_wc_status3_t *parent_status;
+        svn_node_kind_t kind;
 
         parent_abspath = svn_dirent_dirname(parent_abspath, iterpool);
-        SVN_ERR(svn_wc_status3(&parent_status, ctx->wc_ctx, parent_abspath,
-                               iterpool, iterpool));
-        if (parent_status->node_status == svn_wc_status_unversioned)
+        SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, parent_abspath, FALSE,
+                                 iterpool));
+        if (kind == svn_node_none)
           {
             svn_error_t *err;
 
@@ -1076,7 +1076,7 @@ svn_client__export_externals(apr_hash_t *externals,
 
       SVN_ERR(svn_wc_parse_externals_description3(&items, local_abspath,
                                                   desc_text, FALSE,
-                                                  scratch_pool));
+                                                  iterpool));
 
       if (! items->nelts)
         continue;
