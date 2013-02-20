@@ -1193,6 +1193,11 @@ open_root(void *edit_baton,
     }
   else if (already_conflicted)
     {
+      /* Record a skip of both the anchor and target in the skipped tree
+         as the anchor itself might not be updated */
+      SVN_ERR(remember_skipped_tree(eb, db->local_abspath, pool));
+      SVN_ERR(remember_skipped_tree(eb, eb->target_abspath, pool));
+
       db->skip_this = TRUE;
       db->already_notified = TRUE;
 

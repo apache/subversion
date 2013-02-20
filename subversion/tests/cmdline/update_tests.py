@@ -6669,6 +6669,73 @@ def update_moved_away(sbox):
                                         None, None, None,
                                         sbox.ospath('A/B/E'))
 
+@Issues(4323)
+def bump_below_tree_conflict(sbox):
+  "tree conflicts should be skipped during update"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', sbox.repo_url + '/A/B',
+                                     '-m', '')
+
+  sbox.simple_add_text('Q', 'q')
+  sbox.simple_commit()
+  sbox.simple_add_text('R', 'r')
+  sbox.simple_commit()
+
+  sbox.simple_update(revision='1')
+
+  sbox.simple_rm('A')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A'    : Item(status='  ', treeconflict='C'), # The real TC
+    'A/B'  : Item(status='  ', treeconflict='D'), # Shadowed delete
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+
+  expected_status.tweak('A', status='D ', treeconflict='C', wc_rev='2')
+  expected_status.tweak('A/D', 'A/D/G', 'A/D/G/rho', 'A/D/G/tau', 'A/D/G/pi',
+                        'A/D/H', 'A/D/H/omega', 'A/D/H/chi', 'A/D/H/psi',
+                        'A/D/gamma', 'A/mu', 'A/C', status='D ')
+
+  expected_status.remove('A/B', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha',
+                         'A/B/E/beta', 'A/B/F')
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, None,
+                                        '-r', '2', wc_dir)
+
+  # A is tree conflicted, so an update of A/D should be a skip/no-op.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D'               : Item(verb='Skipped'),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, None,
+                                        sbox.ospath('A/D'))
+
+  # A is tree conflicted, so an update of A/D/G should be a skip/no-op.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G'               : Item(verb='Skipped'),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, None,
+                                        sbox.ospath('A/D/G'))
+
+
 
 #######################################################################
 # Run the tests
@@ -6754,6 +6821,7 @@ test_list = [ None,
               move_update_props,
               windows_update_backslash,
               update_moved_away,
+              bump_below_tree_conflict,
              ]
 
 if __name__ == '__main__':
