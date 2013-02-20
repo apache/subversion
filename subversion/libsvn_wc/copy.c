@@ -836,7 +836,7 @@ remove_node_conflict_markers(svn_wc__db_t *db,
   svn_skel_t *conflict;
 
   SVN_ERR(svn_wc__db_read_conflict(&conflict, db, src_abspath,
-                                 scratch_pool, scratch_pool));
+                                   scratch_pool, scratch_pool));
 
   /* Do we have conflict markers that should be removed? */
   if (conflict != NULL)
