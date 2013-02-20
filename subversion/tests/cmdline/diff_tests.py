@@ -3884,7 +3884,6 @@ def no_spurious_conflict(sbox):
   expected_status.tweak('3449_spurious', status='  ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-@XFail()
 def diff_two_working_copies(sbox):
   "diff between two working copies"
   sbox.build()
@@ -3963,7 +3962,10 @@ def diff_two_working_copies(sbox):
                                          src_label, dst_label) + [
                       "@@ -1 +0,0 @@\n",
                       "-This is the file 'pi'.\n",
-                    ] + make_diff_prop_header('A/D/G/pi') + \
+                    ] + make_diff_header('A/D/G/pi', 'working copy',
+                                         'working copy',
+                                         src_label, dst_label) + \
+                        make_diff_prop_header('A/D/G/pi') + \
                         make_diff_prop_added("newprop", "propval") + \
                     make_diff_header('A/D/H/chi', 'working copy',
                                          'working copy',
