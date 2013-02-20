@@ -967,7 +967,7 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
                        notify_func, notify_baton,
                        scratch_pool));
 
-  /* An iterrupt at this point will leave the new copy marked as
+  /* An interrupt at this point will leave the new copy marked as
      moved-here but the source has not yet been deleted or marked as
      moved-to. */
 
