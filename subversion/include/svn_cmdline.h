@@ -159,7 +159,7 @@ svn_cmdline_handle_exit_error(svn_error_t *error,
                               apr_pool_t *pool,
                               const char *prefix);
 
-/** A cancellation function/baton pair, and the path to the configuration
+/** A prompt function/baton pair, and the path to the configuration
  * directory. To be passed as the baton argument to the
  * @c svn_cmdline_*_prompt functions.
  *
