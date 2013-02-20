@@ -33,7 +33,35 @@
 
 #include "private/svn_fspath.h"
 #include "private/svn_ra_private.h"
+#include "private/svn_wc_private.h"
 #include "svn_private_config.h"
+
+/* Prototypes for referencing before declaration */
+static svn_error_t * 
+list_externals(apr_hash_t *externals, 
+               svn_depth_t depth,
+               apr_uint32_t dirent_fields,
+               svn_boolean_t fetch_locks,
+               svn_client_list_func2_t list_func,
+               void *baton,
+               svn_client_ctx_t *ctx,
+               apr_pool_t *scratch_pool);
+
+static svn_error_t *
+list_internal(const char *path_or_url,
+              const svn_opt_revision_t *peg_revision,
+              const svn_opt_revision_t *revision,
+              svn_depth_t depth,
+              apr_uint32_t dirent_fields,
+              svn_boolean_t fetch_locks,
+              svn_boolean_t include_externals,
+              const char *external_parent_url,
+              const char *external_target,
+              svn_client_list_func2_t list_func,
+              void *baton,
+              svn_client_ctx_t *ctx,
+              apr_pool_t *pool);
+
 
 /* Get the directory entries of DIR at REV (relative to the root of
    RA_SESSION), getting at least the fields specified by DIRENT_FIELDS.
@@ -273,20 +301,53 @@ svn_client__ra_stat_compatible(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client__list_internal(const char *path_or_url,
-                          const svn_opt_revision_t *peg_revision,
-                          const svn_opt_revision_t *revision,
-                          svn_depth_t depth,
-                          apr_uint32_t dirent_fields,
-                          svn_boolean_t fetch_locks,
-                          svn_boolean_t include_externals,
-                          const char *external_parent_url,
-                          const char *external_target,
-                          svn_client_list_func2_t list_func,
-                          void *baton,
-                          svn_client_ctx_t *ctx,
-                          apr_pool_t *pool)
+/* List the file/directory entries for PATH_OR_URL at REVISION.
+   The actual node revision selected is determined by the path as 
+   it exists in PEG_REVISION.  
+   
+   If DEPTH is svn_depth_infinity, then list all file and directory entries 
+   recursively.  Else if DEPTH is svn_depth_files, list all files under 
+   PATH_OR_URL (if any), but not subdirectories.  Else if DEPTH is
+   svn_depth_immediates, list all files and include immediate
+   subdirectories (at svn_depth_empty).  Else if DEPTH is
+   svn_depth_empty, just list PATH_OR_URL with none of its entries.
+ 
+   DIRENT_FIELDS controls which fields in the svn_dirent_t's are
+   filled in.  To have them totally filled in use SVN_DIRENT_ALL,
+   otherwise simply bitwise OR together the combination of SVN_DIRENT_*
+   fields you care about.
+ 
+   If FETCH_LOCKS is TRUE, include locks when reporting directory entries.
+ 
+   If INCLUDE_EXTERNALS is TRUE, also list all external items 
+   reached by recursion.  DEPTH value passed to the original list target
+   applies for the externals also.  EXTERNAL_PARENT_URL is url of the 
+   directory which has the externals definitions.  EXTERNAL_TARGET is the
+   target subdirectory of externals definitions.
+
+   Report directory entries by invoking LIST_FUNC/BATON. 
+   Pass EXTERNAL_PARENT_URL and EXTERNAL_TARGET to LIST_FUNC when external
+   items are listed, otherwise both are set to NULL.
+ 
+   Use authentication baton cached in CTX to authenticate against the
+   repository.
+ 
+   Use POOL for all allocations.
+*/
+static svn_error_t *
+list_internal(const char *path_or_url,
+              const svn_opt_revision_t *peg_revision,
+              const svn_opt_revision_t *revision,
+              svn_depth_t depth,
+              apr_uint32_t dirent_fields,
+              svn_boolean_t fetch_locks,
+              svn_boolean_t include_externals,
+              const char *external_parent_url,
+              const char *external_target,
+              svn_client_list_func2_t list_func,
+              void *baton,
+              svn_client_ctx_t *ctx,
+              apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session;
   svn_client__pathrev_t *loc;
@@ -361,13 +422,144 @@ svn_client__list_internal(const char *path_or_url,
     {
       /* The 'externals' hash populated by get_dir_contents() is processed 
          here. */
-      SVN_ERR(svn_client__list_externals(externals, depth, dirent_fields, 
-                                         fetch_locks, list_func, baton,
-                                         ctx, pool));
+      SVN_ERR(list_externals(externals, depth, dirent_fields, 
+                             fetch_locks, list_func, baton,
+                             ctx, pool));
     } 
   
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *
+wrap_list_error(const svn_client_ctx_t *ctx,
+                const char *target_abspath,
+                svn_error_t *err,
+                apr_pool_t *scratch_pool)
+{
+  if (err && err->apr_err != SVN_ERR_CANCELLED)
+    {
+      if (ctx->notify_func2)
+        {
+          svn_wc_notify_t *notifier = svn_wc_create_notify(
+                                            target_abspath,
+                                            svn_wc_notify_failed_external,
+                                            scratch_pool);
+          notifier->err = err;
+          ctx->notify_func2(ctx->notify_baton2, notifier, scratch_pool);
+        }
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+
+  return err;
+}
+
+
+/* Walk through all the external items and list them. */
+static svn_error_t *
+list_external_items(apr_array_header_t *external_items,
+                    const char *externals_parent_url,
+                    svn_depth_t depth,
+                    apr_uint32_t dirent_fields,
+                    svn_boolean_t fetch_locks,
+                    svn_client_list_func2_t list_func,
+                    void *baton,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *scratch_pool)
+{
+  const char *externals_parent_repos_root_url;
+  apr_pool_t *iterpool;
+  int i;
+
+  SVN_ERR(svn_client_get_repos_root(&externals_parent_repos_root_url,
+                                    NULL /* uuid */,
+                                    externals_parent_url, ctx,
+                                    scratch_pool, scratch_pool));
+
+  iterpool = svn_pool_create(scratch_pool);
+
+  for (i = 0; i < external_items->nelts; i++)
+    {
+      const char *resolved_url;
+
+      svn_wc_external_item2_t *item =
+          APR_ARRAY_IDX(external_items, i, svn_wc_external_item2_t *);
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_wc__resolve_relative_external_url(
+                  &resolved_url,
+                  item,
+                  externals_parent_repos_root_url,
+                  externals_parent_url,
+                  iterpool, iterpool));
+
+      /* List the external */
+      SVN_ERR(wrap_list_error(ctx, item->target_dir,
+                              list_internal(resolved_url,
+                                            &item->peg_revision,
+                                            &item->revision,
+                                            depth, dirent_fields,
+                                            fetch_locks,
+                                            TRUE,
+                                            externals_parent_url,
+                                            item->target_dir,
+                                            list_func, baton, ctx,
+                                            iterpool),
+                              iterpool));
+
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* List external items defined on each external in EXTERNALS, a const char *
+   externals_parent_url(url of the directory which has the externals
+   definitions) of all externals mapping to the svn_string_t * externals_desc
+   (externals description text). All other options are the same as those 
+   passed to svn_client_list(). */
+static svn_error_t *
+list_externals(apr_hash_t *externals,
+               svn_depth_t depth,
+               apr_uint32_t dirent_fields,
+               svn_boolean_t fetch_locks,
+               svn_client_list_func2_t list_func,
+               void *baton,
+               svn_client_ctx_t *ctx,
+               apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(scratch_pool, externals);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *externals_parent_url = svn__apr_hash_index_key(hi);
+      svn_string_t *externals_desc = svn__apr_hash_index_val(hi);
+      apr_array_header_t *external_items;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_wc_parse_externals_description3(&external_items,
+                                                  externals_parent_url,
+                                                  externals_desc->data,
+                                                  FALSE, iterpool));
+
+      if (! external_items->nelts)
+        continue;
+
+      SVN_ERR(list_external_items(external_items, externals_parent_url, depth,
+                                  dirent_fields, fetch_locks, list_func,
+                                  baton, ctx, iterpool));
+
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_client_list3(const char *path_or_url,
@@ -383,11 +575,11 @@ svn_client_list3(const char *path_or_url,
                  apr_pool_t *pool)
 {
 
-  return svn_error_trace(svn_client__list_internal(path_or_url, peg_revision,
-                                                   revision, 
-                                                   depth, dirent_fields, 
-                                                   fetch_locks, 
-                                                   include_externals, 
-                                                   NULL, NULL, list_func,
-                                                   baton, ctx, pool));
+  return svn_error_trace(list_internal(path_or_url, peg_revision,
+                                       revision,
+                                       depth, dirent_fields,
+                                       fetch_locks,
+                                       include_externals,
+                                       NULL, NULL, list_func,
+                                       baton, ctx, pool));
 }
