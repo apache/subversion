@@ -2311,6 +2311,12 @@ svn_wc__read_conflicts(const apr_array_header_t **conflicts,
  * to TRUE.  Otherwise, don't change *REMOVED_REJECT_FILES.
  *
  * It is an error if there is no text conflict.
+ *
+ * Note: When there are no conflict markers to remove there is no existing
+ * text conflict; just a database containing old information, which we should
+ * remove to avoid checking all the time. Resolving a text conflict by
+ * removing all the marker files is a fully supported scenario since
+ * Subversion 1.0.
  */
 static svn_error_t *
 resolve_text_conflict_on_node(svn_boolean_t *removed_reject_files,
@@ -2473,6 +2479,14 @@ resolve_text_conflict_on_node(svn_boolean_t *removed_reject_files,
  * to TRUE.  Otherwise, don't change *REMOVED_REJECT_FILE.
  *
  * It is an error if there is no prop conflict.
+ *
+ * Note: When there are no conflict markers on-disk to remove there is
+ * no existing text conflict (unless we are still in the process of
+ * creating the text conflict and we didn't register a marker file yet).
+ * In this case the database contains old information, which we should
+ * remove to avoid checking the next time. Resolving a property conflict
+ * by just removing the marker file is a fully supported scenario since
+ * Subversion 1.0.
  *
  * ### TODO [JAF] The '*_full' and '*_conflict' choices should differ.
  *     In my opinion, 'mine_full'/'theirs_full' should select
