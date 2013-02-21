@@ -4351,6 +4351,7 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
               return SVN_NO_ERROR;
             }
         }
+      /* ### Else what??? (Reproducable with op_depth_tests.py move_to_swap */
       /* else: fall through */
     case svn_wc__db_status_not_present:
     case svn_wc__db_status_excluded:
@@ -4704,11 +4705,15 @@ handle_move_back(svn_boolean_t *moved_back,
 
       if (upper_status == svn_wc__db_status_not_present
           || upper_status == svn_wc__db_status_excluded)
-        continue; /* Nothing to check */
+        {
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+          continue; /* Nothing to check */
+        }
       else if (upper_status != svn_wc__db_status_normal)
         {
           /* Not a normal move. Mixed revision move? */
           different = TRUE;
+          SVN_DBG(("Status: %d %d\n", upper_status, lower_status));
           break;
         }
 
