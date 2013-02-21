@@ -6989,6 +6989,93 @@ update_child_under_add(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+delete_over_moved_away(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "delete_over_moved_away",
+                                   opts, pool));
+
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C"));
+
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+
+  SVN_ERR(sbox_wc_move(&b, "A/B", "B"));
+  SVN_ERR(sbox_wc_delete(&b, "A"));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",       "normal",         1, ""},
+
+      {0, "A",      "normal",         1, "A"},
+      {1, "A",      "base-deleted",   NO_COPY_FROM},
+      {0, "A/B",    "normal",         1, "A/B"},
+      {1, "A/B",    "base-deleted",   NO_COPY_FROM, "B"},
+      {0, "A/B/C",  "normal",         1, "A/B/C"},
+      {1, "A/B/C",  "base-deleted",   NO_COPY_FROM},
+
+      {1, "B",      "normal",         1, "A/B", MOVED_HERE},
+      {1, "B/C",    "normal",         1, "A/B/C", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Now replace A with a similar tree */
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C"));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",       "normal",         1, ""},
+
+      {0, "A",      "normal",         1, "A"},
+      {1, "A",      "normal",         NO_COPY_FROM},
+      {0, "A/B",    "normal",         1, "A/B"},
+      {1, "A/B",    "base-deleted",   NO_COPY_FROM, "B"},
+      {2, "A/B",    "normal",         NO_COPY_FROM},
+      {0, "A/B/C",  "normal",         1, "A/B/C"},
+      {1, "A/B/C",  "base-deleted",   NO_COPY_FROM},
+      {3, "A/B/C",  "normal",         NO_COPY_FROM},
+
+      {1, "B",      "normal",         1, "A/B", MOVED_HERE},
+      {1, "B/C",    "normal",         1, "A/B/C", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* And delete the new A */
+  SVN_ERR(sbox_wc_delete(&b, "A"));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",       "normal",         1, ""},
+
+      {0, "A",      "normal",         1, "A"},
+      {1, "A",      "base-deleted",   NO_COPY_FROM},
+      {0, "A/B",    "normal",         1, "A/B"},
+      /* And here the moved-to information is lost */
+      {1, "A/B",    "base-deleted",   NO_COPY_FROM, "B"},
+      {0, "A/B/C",  "normal",         1, "A/B/C"},
+      {1, "A/B/C",  "base-deleted",   NO_COPY_FROM},
+
+      /* But the moved-here is still there */
+      {1, "B",      "normal",         1, "A/B", MOVED_HERE},
+      {1, "B/C",    "normal",         1, "A/B/C", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
@@ -7123,5 +7210,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move_not_present_variants"),
     SVN_TEST_OPTS_PASS(update_child_under_add,
                        "update_child_under_add (issue 4111)"),
+    SVN_TEST_OPTS_XFAIL(delete_over_moved_away,
+                        "delete_over_moved_away"),
     SVN_TEST_NULL
   };
