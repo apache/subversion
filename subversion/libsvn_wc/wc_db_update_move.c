@@ -494,7 +494,7 @@ tc_editor_add_directory(void *baton,
 
   /* Check for NODES tree-conflict. */
   SVN_ERR(check_tree_conflict(&is_conflicted, b, relpath,
-                              move_dst_kind, svn_node_dir,
+                              old_kind, svn_node_dir,
                               move_dst_repos_relpath,
                               svn_wc_conflict_action_add,
                               scratch_pool));
@@ -574,7 +574,7 @@ tc_editor_add_file(void *baton,
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
       svn_error_clear(err);
-      old_kind = svn_kind_none;
+      old_kind = svn_node_none;
       move_dst_repos_relpath = NULL;
     }
   else
@@ -794,7 +794,8 @@ tc_editor_alter_directory(void *baton,
   SVN_ERR_ASSERT(move_dst_kind == svn_kind_dir);
 
   SVN_ERR(check_tree_conflict(&is_conflicted, b, dst_relpath,
-                              move_dst_kind, svn_node_dir,
+                              svn__node_kind_from_kind(move_dst_kind),
+                              svn_node_dir,
                               move_dst_repos_relpath,
                               svn_wc_conflict_action_edit,
                               scratch_pool));
@@ -995,7 +996,8 @@ tc_editor_alter_file(void *baton,
   SVN_ERR_ASSERT(move_dst_kind == svn_kind_file);
 
   SVN_ERR(check_tree_conflict(&is_conflicted, b, dst_relpath,
-                              move_dst_kind, svn_node_file,
+                              svn__node_kind_from_kind(move_dst_kind),
+                              svn_node_file,
                               move_dst_repos_relpath,
                               svn_wc_conflict_action_edit,
                               scratch_pool));
@@ -1064,7 +1066,8 @@ tc_editor_delete(void *baton,
      conflicts. This catches conflicts on the node itself; deleted
      children are caught as local modifications below.*/
   SVN_ERR(check_tree_conflict(&is_conflicted, b, relpath,
-                              move_dst_kind, svn_node_unknown,
+                              svn__node_kind_from_kind(move_dst_kind),
+                              svn_node_unknown,
                               move_dst_repos_relpath,
                               svn_wc_conflict_action_delete,
                               scratch_pool));
@@ -1107,7 +1110,9 @@ tc_editor_delete(void *baton,
           is_conflicted = TRUE;
           SVN_ERR(mark_tree_conflict(relpath, b->wcroot, b->db, b->old_version,
                                      b->new_version, b->move_root_dst_relpath,
-                                     b->operation, move_dst_kind, svn_node_none,
+                                     b->operation,
+                                     svn__node_kind_from_kind(move_dst_kind),
+                                     svn_node_none,
                                      move_dst_repos_relpath, reason,
                                      svn_wc_conflict_action_delete, NULL,
                                      scratch_pool));
