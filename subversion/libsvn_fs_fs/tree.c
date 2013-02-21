@@ -857,24 +857,21 @@ typedef enum open_path_flags_t {
      has no functional impact.  */
   open_path_uncached = 2,
 
-  /* Assume that the path parameter is already in canonical form. */
-  open_path_is_canonical = 4,
-
   /* The caller does not care about the parent node chain but only
      the final DAG node. */
-  open_path_node_only = 8
+  open_path_node_only = 4
 } open_path_flags_t;
 
 
 /* Open the node identified by PATH in ROOT, allocating in POOL.  Set
    *PARENT_PATH_P to a path from the node up to ROOT.  The resulting
    **PARENT_PATH_P value is guaranteed to contain at least one
-   *element, for the root directory.
+   *element, for the root directory.  PATH must be in canonical form.
 
    If resulting *PARENT_PATH_P will eventually be made mutable and
    modified, or if copy ID inheritance information is otherwise
    needed, TXN_ID should be the ID of the mutability transaction.  If
-   TXN_ID is NULL, no copy ID in heritance information will be
+   TXN_ID is NULL, no copy ID inheritance information will be
    calculated for the *PARENT_PATH_P chain.
 
    If FLAGS & open_path_last_optional is zero, return the error
@@ -887,7 +884,8 @@ typedef enum open_path_flags_t {
 
    The remaining bits in FLAGS are hints that allow this function
    to take shortcuts based on knowledge that the caller provides,
-   such as the fact that PATH is already in canonical form.
+   such as the caller is not actually being interested in PARENT_PATH_P,
+   but only in (*PARENT_PATH_P)->NODE.
 
    NOTE: Public interfaces which only *read* from the filesystem
    should not call this function directly, but should instead use
@@ -907,21 +905,18 @@ open_path(parent_path_t **parent_path_p,
   const char *rest; /* The portion of PATH we haven't traversed yet.  */
 
   /* ensure a canonical path representation */
-  const char *canon_path = (   (flags & open_path_is_canonical)
-                            || svn_fs__is_canonical_abspath(path))
-                         ? path
-                         : svn_fs__canonicalize_abspath(path, pool);
   const char *path_so_far = "/";
   apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* callers often traverse the tree in some path-based order.  That means
-     a sibbling of PATH has been resently accessed.  Try to start the lookup
+     a sibling of PATH has been presently accessed.  Try to start the lookup
      directly at the parent node, if the caller did not requested the full
      parent chain. */
   const char *directory;
+  assert(path == svn_fs__canonicalize_abspath(path, pool));
   if (flags & open_path_node_only)
     {
-      directory = svn_dirent_dirname(canon_path, pool);
+      directory = svn_dirent_dirname(path, pool);
       if (directory[1] != 0) /* root nodes are covered anyway */
         SVN_ERR(dag_node_cache_get(&here, root, directory, TRUE, pool));
     }
@@ -930,14 +925,14 @@ open_path(parent_path_t **parent_path_p,
   if (here)
     {
       path_so_far = directory;
-      rest = canon_path + strlen(directory) + 1;
+      rest = path + strlen(directory) + 1;
     }
   else
     {
       /* Make a parent_path item for the root node, using its own current
          copy id.  */
       SVN_ERR(root_node(&here, root, pool));
-      rest = canon_path + 1; /* skip the leading '/', it saves in iteration */
+      rest = path + 1; /* skip the leading '/', it saves in iteration */
     }
  
   parent_path = make_parent_path(here, 0, 0, pool);
@@ -1182,9 +1177,10 @@ get_dag(dag_node_t **dag_node_p,
   if (! node)
     {
       /* Canonicalize the input PATH. */
-      if (!svn_fs__is_canonical_abspath(path))
+      const char *canon_path = svn_fs__canonicalize_abspath(path, pool);
+      if (canon_path != path)
         {
-          path = svn_fs__canonicalize_abspath(path, pool);
+          path = canon_path;
 
           /* Try again with the corrected path. */
           SVN_ERR(dag_node_cache_get(&node, root, path, needs_lock_cache,
@@ -1196,8 +1192,8 @@ get_dag(dag_node_t **dag_node_p,
           /* Call open_path with no flags, as we want this to return an
            * error if the node for which we are searching doesn't exist. */
           SVN_ERR(open_path(&parent_path, root, path,
-                            open_path_uncached | open_path_is_canonical
-                            | open_path_node_only, NULL, pool));
+                            open_path_uncached | open_path_node_only,
+                            NULL, pool));
           node = parent_path->node;
 
           /* No need to cache our find -- open_path() will do that for us. */
@@ -1424,6 +1420,7 @@ fs_change_node_prop(svn_fs_root_t *root,
     return SVN_FS__NOT_TXN(root);
   txn_id = root->txn;
 
+  path = svn_fs__canonicalize_abspath(path, pool);
   SVN_ERR(open_path(&parent_path, root, path, 0, txn_id, pool));
 
   /* Check (non-recursively) to see if path is locked; if so, check
@@ -2195,6 +2192,7 @@ fs_make_dir(svn_fs_root_t *root,
   dag_node_t *sub_dir;
   const char *txn_id = root->txn;
 
+  path = svn_fs__canonicalize_abspath(path, pool);
   SVN_ERR(open_path(&parent_path, root, path, open_path_last_optional,
                     txn_id, pool));
 
@@ -2246,6 +2244,7 @@ fs_delete_node(svn_fs_root_t *root,
   if (! root->is_txn_root)
     return SVN_FS__NOT_TXN(root);
 
+  path = svn_fs__canonicalize_abspath(path, pool);
   SVN_ERR(open_path(&parent_path, root, path, 0, txn_id, pool));
   kind = svn_fs_fs__dag_node_kind(parent_path->node);
 
@@ -2537,8 +2536,9 @@ fs_make_file(svn_fs_root_t *root,
   dag_node_t *child;
   const char *txn_id = root->txn;
 
+  path = svn_fs__canonicalize_abspath(path, pool);
   SVN_ERR(open_path(&parent_path, root, path, open_path_last_optional,
-                    txn_id, pool));
+                   txn_id, pool));
 
   /* If there's already a file by that name, complain.
      This also catches the case of trying to make a file named `/'.  */
@@ -2846,7 +2846,7 @@ fs_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
   txdelta_baton_t *tb = apr_pcalloc(pool, sizeof(*tb));
 
   tb->root = root;
-  tb->path = path;
+  tb->path = svn_fs__canonicalize_abspath(path, pool);
   tb->pool = pool;
   tb->base_checksum = svn_checksum_dup(base_checksum, pool);
   tb->result_checksum = svn_checksum_dup(result_checksum, pool);
@@ -2979,7 +2979,7 @@ fs_apply_text(svn_stream_t **contents_p,
   struct text_baton_t *tb = apr_pcalloc(pool, sizeof(*tb));
 
   tb->root = root;
-  tb->path = path;
+  tb->path = svn_fs__canonicalize_abspath(path, pool);
   tb->pool = pool;
   tb->result_checksum = svn_checksum_dup(result_checksum, pool);
 
@@ -3199,6 +3199,7 @@ static svn_error_t *fs_closest_copy(svn_fs_root_t **root_p,
   *root_p = NULL;
   *path_p = NULL;
 
+  path = svn_fs__canonicalize_abspath(path, pool);
   SVN_ERR(open_path(&parent_path, root, path, 0, NULL, pool));
 
   /* Find the youngest copyroot in the path of this node-rev, which
@@ -3677,7 +3678,7 @@ assemble_history(svn_fs_t *fs,
 {
   svn_fs_history_t *history = apr_pcalloc(pool, sizeof(*history));
   fs_history_data_t *fhd = apr_pcalloc(pool, sizeof(*fhd));
-  fhd->path = path;
+  fhd->path = svn_fs__canonicalize_abspath(path, pool);
   fhd->revision = revision;
   fhd->is_interesting = is_interesting;
   fhd->path_hint = path_hint;
@@ -3830,8 +3831,7 @@ get_mergeinfo_for_path_internal(svn_mergeinfo_t *mergeinfo,
 
   path = svn_fs__canonicalize_abspath(path, scratch_pool);
 
-  SVN_ERR(open_path(&parent_path, rev_root, path, open_path_is_canonical,
-                    NULL, scratch_pool));
+  SVN_ERR(open_path(&parent_path, rev_root, path, 0, NULL, scratch_pool));
 
   if (inherit == svn_mergeinfo_nearest_ancestor && ! parent_path->parent)
     return SVN_NO_ERROR;
