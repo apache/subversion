@@ -2444,7 +2444,12 @@ fs_copy(svn_fs_root_t *from_root,
         const char *to_path,
         apr_pool_t *pool)
 {
-  return svn_error_trace(copy_helper(from_root, from_path, to_root, to_path,
+  return svn_error_trace(copy_helper(from_root,
+                                     svn_fs__canonicalize_abspath(from_path,
+                                                                  pool),
+                                     to_root,
+                                     svn_fs__canonicalize_abspath(to_path,
+                                                                  pool),
                                      TRUE, pool));
 }
 
@@ -2461,6 +2466,7 @@ fs_revision_link(svn_fs_root_t *from_root,
   if (! to_root->is_txn_root)
     return SVN_FS__NOT_TXN(to_root);
 
+  path = svn_fs__canonicalize_abspath(path, pool);
   return svn_error_trace(copy_helper(from_root, path, to_root, path,
                                      FALSE, pool));
 }
