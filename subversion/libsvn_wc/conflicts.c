@@ -2497,6 +2497,8 @@ resolve_text_conflict_on_node(svn_boolean_t *removed_reject_files,
  *     each property, selecting hunks.  Or all three kinds of behaviour
  *     should be available (full set of props, full value of conflicting
  *     props, or conflicting text hunks).
+ * ### BH: If we make *_full select the full set of properties, we should
+ *     check if we shouldn't make it also select the full text for files.
  *
  * ### TODO [JAF] All this complexity should not be down here in libsvn_wc
  *     but in a layer above.
