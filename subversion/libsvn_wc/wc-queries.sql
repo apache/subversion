@@ -276,8 +276,11 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 
 -- STMT_SELECT_OP_DEPTH_CHILDREN
 SELECT local_relpath, kind FROM nodes
-WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = ?3
-  AND (?3 != 0 OR file_external is NULL)
+WHERE wc_id = ?1 
+  AND parent_relpath = ?2
+  AND op_depth = ?3
+  AND presence != MAP_BASE_DELETED
+  AND file_external is NULL
 
 /* Used by non-recursive revert to detect higher level children, and
    actual-only rows that would be left orphans, if the revert
