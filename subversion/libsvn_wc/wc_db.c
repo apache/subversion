@@ -4713,7 +4713,6 @@ handle_move_back(svn_boolean_t *moved_back,
         {
           /* Not a normal move. Mixed revision move? */
           different = TRUE;
-          SVN_DBG(("Status: %d %d\n", upper_status, lower_status));
           break;
         }
 
