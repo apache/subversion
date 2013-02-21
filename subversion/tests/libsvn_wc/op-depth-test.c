@@ -4078,6 +4078,7 @@ move_to_swap(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_move(&b, "X/Y", "A/Y"));
 
   {
+    /* Exact the same as before the initial moves */
     nodes_row_t nodes[] = {
       {0, "",    "normal",       1, ""},
       {0, "A",   "normal",       1, "A"},
@@ -4095,7 +4096,6 @@ move_to_swap(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
 
-#if 0
   /* And try to undo the rest */
   SVN_ERR(sbox_wc_move(&b, "A", "A2"));
   SVN_ERR(sbox_wc_move(&b, "X", "A"));
@@ -4108,13 +4108,21 @@ move_to_swap(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0, "A/B", "normal",       1, "A/B"},
       {0, "X",   "normal",       1, "X"},
       {0, "X/Y", "normal",       1, "X/Y"},
+
+      /* We shouldn't see this move, but somehow our move information
+         is lost in this move-back, so we can't find if it is copy-back
+         or a move-back */
+      {1, "A",   "normal",       1, "A"},
+      {1, "A/B", "normal",       1, "A/B", MOVED_HERE},
+
+      {1, "X",   "normal",       1, "X", FALSE, "A"},
+      {1, "X/Y", "normal",       1, "X/Y", MOVED_HERE},
+
       {0}
     };
-    /* ### Currently this breaks hard. Introducing not-present nodes, etc. 
-       ### but that is not caused by this change */
+
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
-#endif
 
   return SVN_NO_ERROR;
 }

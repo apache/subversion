@@ -4051,14 +4051,20 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
   const char *repos_relpath;
   svn_revnum_t revision;
   svn_wc__db_status_t node_status;
+  apr_int64_t repos_id;
+  svn_boolean_t is_op_root;
 
-  SVN_ERR(read_info(&node_status, kind, &revision, &repos_relpath, copyfrom_id,
-                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                    NULL, NULL, NULL, NULL, NULL, op_root, NULL, NULL,
+  SVN_ERR(read_info(&node_status, kind, &revision, &repos_relpath, &repos_id,
+                    NULL, NULL, NULL, NULL, NULL, NULL, copyfrom_relpath,
+                    copyfrom_id, copyfrom_rev, NULL, NULL, NULL, NULL,
+                    NULL, &is_op_root, NULL, NULL,
                     NULL /* have_base */,
                     NULL /* have_more_work */,
                     NULL /* have_work */,
                     wcroot, local_relpath, result_pool, scratch_pool));
+
+  if (op_root)
+    *op_root = is_op_root;
 
   if (node_status == svn_wc__db_status_excluded)
     {
@@ -4078,23 +4084,11 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
     }
   else if (node_status == svn_wc__db_status_added)
     {
-      const char *op_root_relpath;
-
-      SVN_ERR(scan_addition(&node_status, &op_root_relpath,
-                            NULL, NULL, /* repos_* */
-                            copyfrom_relpath, copyfrom_id, copyfrom_rev,
+      SVN_ERR(scan_addition(&node_status, NULL, NULL, NULL, NULL, NULL, NULL,
                             NULL, NULL, NULL, wcroot, local_relpath,
                             scratch_pool, scratch_pool));
-      if (*copyfrom_relpath)
-        {
-          *copyfrom_relpath
-            = svn_relpath_join(*copyfrom_relpath,
-                               svn_relpath_skip_ancestor(op_root_relpath,
-                                                         local_relpath),
-                               result_pool);
-        }
     }
-  else if (node_status == svn_wc__db_status_deleted)
+  else if (node_status == svn_wc__db_status_deleted && is_op_root)
     {
       const char *base_del_relpath, *work_del_relpath;
 
@@ -4135,10 +4129,16 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
       else
         SVN_ERR_MALFUNCTION();
     }
+  else if (node_status == svn_wc__db_status_deleted)
+    {
+      /* Keep original_* from read_info() to allow seeing the difference
+         between base-deleted and not present */
+    }
   else
     {
       *copyfrom_relpath = repos_relpath;
       *copyfrom_rev = revision;
+      *copyfrom_id = repos_id;
     }
 
   if (status)
@@ -4351,8 +4351,24 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
               return SVN_NO_ERROR;
             }
         }
-      /* ### Else what??? (Reproducable with op_depth_tests.py move_to_swap */
-      /* else: fall through */
+      else
+        {
+          /* This node is either a not-present node (which should be copied), or
+             a base-delete of some lower layer (which shouldn't).
+             Subversion <= 1.7 always added a not-present node here, which is
+             safe (as it postpones the hard work until commit time and then we
+             ask the repository), but it breaks some move scenarios.
+             */
+
+           if (! copyfrom_relpath)
+             {
+               SVN_ERR(add_work_items(dst_wcroot->sdb, work_items,
+                                     scratch_pool));
+               return SVN_NO_ERROR;
+             }
+
+           /* Fall through. Install not present node */
+        }
     case svn_wc__db_status_not_present:
     case svn_wc__db_status_excluded:
       /* These presence values should not create a new op depth */
