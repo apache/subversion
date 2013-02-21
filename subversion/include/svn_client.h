@@ -4276,6 +4276,7 @@ svn_client_resolved(const char *path,
  * If @a path is not in a state of conflict to begin with, do nothing.
  * If @a path's conflict state is removed and @a ctx->notify_func2 is non-NULL,
  * call @a ctx->notify_func2 with @a ctx->notify_baton2 and @a path.
+ * ### with what notification parameters?
  *
  * If @a depth is #svn_depth_empty, act only on @a path; if
  * #svn_depth_files, resolve @a path and its conflicted file
