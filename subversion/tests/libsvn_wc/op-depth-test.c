@@ -6939,6 +6939,48 @@ move_not_present_variants(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+update_child_under_add(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  svn_error_t *err;
+  nodes_row_t nodes[] = {
+    {0, "",        "normal",      1, ""},
+    {0, "A",       "normal",      1, "A"},
+    {0, "A/B",     "not-present", 0, "A/B"},
+    {2, "A/B",     "normal",      NO_COPY_FROM},
+    {3, "A/B/C",   "normal",      NO_COPY_FROM},
+    {4, "A/B/C/D", "normal",      NO_COPY_FROM},
+    {0}
+  };
+
+  SVN_ERR(svn_test__sandbox_create(&b, "update_child_under_add",
+                                   opts, pool));
+
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C/D"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+  SVN_ERR(sbox_wc_update(&b, "A/B", 0));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C/D"));
+  SVN_ERR(check_db_rows(&b, "", nodes));
+
+  /* A/B/C/D is skipped as it has no base node parent */
+  SVN_ERR(sbox_wc_update(&b, "A/B/C/D", 1));
+  SVN_ERR(check_db_rows(&b, "", nodes));
+
+  /* A/B/C should be skipped as it has a not-present base node parent */
+  err = sbox_wc_update(&b, "A/B/C", 1);
+  svn_error_clear(err); /* Allow any error and always check NODES. */
+  SVN_ERR(check_db_rows(&b, "", nodes));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
@@ -7071,5 +7113,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move_away_delete_update"),
     SVN_TEST_OPTS_PASS(move_not_present_variants,
                        "move_not_present_variants"),
+    SVN_TEST_OPTS_XFAIL(update_child_under_add,
+                        "update_child_under_add (issue 4111)"),
     SVN_TEST_NULL
   };
