@@ -4109,15 +4109,6 @@ move_to_swap(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0, "X",   "normal",       1, "X"},
       {0, "X/Y", "normal",       1, "X/Y"},
 
-      /* We shouldn't see this move, but somehow our move information
-         is lost in this move-back, so we can't find if it is copy-back
-         or a move-back */
-      {1, "A",   "normal",       1, "A"},
-      {1, "A/B", "normal",       1, "A/B", MOVED_HERE},
-
-      {1, "X",   "normal",       1, "X", FALSE, "A"},
-      {1, "X/Y", "normal",       1, "X/Y", MOVED_HERE},
-
       {0}
     };
 
@@ -7210,7 +7201,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move_not_present_variants"),
     SVN_TEST_OPTS_PASS(update_child_under_add,
                        "update_child_under_add (issue 4111)"),
-    SVN_TEST_OPTS_XFAIL(delete_over_moved_away,
-                        "delete_over_moved_away"),
+    SVN_TEST_OPTS_PASS(delete_over_moved_away,
+                       "delete_over_moved_away"),
     SVN_TEST_NULL
   };

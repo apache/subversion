@@ -7600,7 +7600,6 @@ delete_node(void *baton,
   /* Find children that were moved out of the subtree rooted at this node.
    * We'll need to update their op-depth columns because their deletion
    * is now implied by the deletion of their parent (i.e. this node). */
-  if (kind == svn_kind_dir && !b->moved_to_relpath)
     {
       apr_pool_t *iterpool;
 
@@ -7613,19 +7612,35 @@ delete_node(void *baton,
       iterpool = svn_pool_create(scratch_pool);
       while (have_row)
         {
-          struct moved_node_t *moved_node
-            = apr_palloc(scratch_pool, sizeof(struct moved_node_t));
+          struct moved_node_t *mn;
+          const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+          svn_boolean_t fixup = FALSE;
 
-          moved_node->local_relpath
-            = svn_sqlite__column_text(stmt, 0, scratch_pool);
-          moved_node->moved_to_relpath
-            = svn_sqlite__column_text(stmt, 1, scratch_pool);
-          moved_node->op_depth = b->delete_depth;
+          if (!b->moved_to_relpath)
+            {
+              fixup = TRUE;
+            }
+          else
+            {
+              int child_op_depth = svn_sqlite__column_int(stmt, 2);
 
-          if (!moved_nodes)
-            moved_nodes = apr_array_make(scratch_pool, 1,
-                                         sizeof(struct moved_node_t *));
-          APR_ARRAY_PUSH(moved_nodes, const struct moved_node_t *) = moved_node;
+              fixup = (b->delete_depth == child_op_depth);
+            }
+
+          if (fixup)
+            {
+              mn = apr_pcalloc(scratch_pool, sizeof(struct moved_node_t));
+
+              mn->local_relpath = apr_pstrdup(scratch_pool, child_relpath);
+              mn->moved_to_relpath = svn_sqlite__column_text(stmt, 1,
+                                                             scratch_pool);
+              mn->op_depth = b->delete_depth;
+
+              if (!moved_nodes)
+                moved_nodes = apr_array_make(scratch_pool, 1,
+                                             sizeof(struct moved_node_t *));
+              APR_ARRAY_PUSH(moved_nodes, struct moved_node_t *) = mn;
+            }
 
           SVN_ERR(svn_sqlite__step(&have_row, stmt));
         }
