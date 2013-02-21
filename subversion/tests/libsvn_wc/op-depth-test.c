@@ -4073,6 +4073,49 @@ move_to_swap(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
 
+  /* And move this last bit back and check if the db state is restored */
+  SVN_ERR(sbox_wc_move(&b, "A/B", "X/B"));
+  SVN_ERR(sbox_wc_move(&b, "X/Y", "A/Y"));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",    "normal",       1, ""},
+      {0, "A",   "normal",       1, "A"},
+      {0, "A/B", "normal",       1, "A/B"},
+      {0, "X",   "normal",       1, "X"},
+      {0, "X/Y", "normal",       1, "X/Y"},
+      {1, "A",   "normal",       1, "X",   FALSE, "X", TRUE},
+      {1, "A/Y", "normal",       1, "X/Y", MOVED_HERE},
+      {1, "A/B", "base-deleted", NO_COPY_FROM},
+      {1, "X",   "normal",       1, "A",   FALSE, "A", TRUE},
+      {1, "X/B", "normal",       1, "A/B", MOVED_HERE},
+      {1, "X/Y", "base-deleted", NO_COPY_FROM},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+#if 0
+  /* And try to undo the rest */
+  SVN_ERR(sbox_wc_move(&b, "A", "A2"));
+  SVN_ERR(sbox_wc_move(&b, "X", "A"));
+  SVN_ERR(sbox_wc_move(&b, "A2", "X"));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",    "normal",       1, ""},
+      {0, "A",   "normal",       1, "A"},
+      {0, "A/B", "normal",       1, "A/B"},
+      {0, "X",   "normal",       1, "X"},
+      {0, "X/Y", "normal",       1, "X/Y"},
+      {0}
+    };
+    /* ### Currently this breaks hard. Introducing not-present nodes, etc. 
+       ### but that is not caused by this change */
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+#endif
+
   return SVN_NO_ERROR;
 }
 
@@ -6810,8 +6853,9 @@ struct svn_test_descriptor_t test_funcs[] =
                        "scan_delete"),
     SVN_TEST_OPTS_PASS(test_follow_moved_to,
                        "follow_moved_to"),
-    SVN_TEST_OPTS_PASS(mixed_rev_move,
-                       "mixed_rev_move"),
+    SVN_TEST_OPTS_WIMP(mixed_rev_move,
+                       "mixed_rev_move",
+                       "needs different libsvn_wc entry point"),
     SVN_TEST_OPTS_PASS(update_prop_mod_into_moved,
                        "update_prop_mod_into_moved"),
     SVN_TEST_OPTS_PASS(nested_move_update,

@@ -432,7 +432,39 @@ SELECT moved_here, presence, repos_path, revision
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth >= ?3
 ORDER BY op_depth
-                  
+
+-- STMT_SELECT_MOVED_BACK
+SELECT u.local_relpath,
+       u.presence, u.repos_id, u.repos_path, u.revision,
+       l.presence, l.repos_id, l.repos_path, l.revision,
+       u.moved_here, u.moved_to
+FROM nodes u
+LEFT OUTER JOIN nodes l ON l.wc_id = ?1
+                       AND l.local_relpath = u.local_relpath
+                       AND l.op_depth = ?3
+WHERE u.wc_id = ?1
+  AND u.local_relpath = ?2
+  AND u.op_depth = ?4
+UNION ALL
+SELECT u.local_relpath,
+       u.presence, u.repos_id, u.repos_path, u.revision,
+       l.presence, l.repos_id, l.repos_path, l.revision,
+       u.moved_here, NULL
+FROM nodes u
+LEFT OUTER JOIN nodes l ON l.wc_id=?1
+                       AND l.local_relpath=u.local_relpath
+                       AND l.op_depth=?3
+WHERE u.wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(u.local_relpath, ?2)
+  AND u.op_depth = ?4
+
+-- STMT_DELETE_MOVED_BACK
+DELETE FROM nodes
+WHERE wc_id = ?1
+  AND (local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND op_depth = ?3
+
 -- STMT_DELETE_LOCK
 DELETE FROM lock
 WHERE repos_id = ?1 AND repos_relpath = ?2
