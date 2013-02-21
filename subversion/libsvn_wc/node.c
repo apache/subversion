@@ -653,15 +653,17 @@ svn_wc__node_get_base(svn_revnum_t *revision,
 {
   svn_error_t *err;
   svn_wc__db_lock_t *lock;
+  svn_wc__db_status_t status;
 
-  err = svn_wc__db_base_get_info(NULL, NULL, revision, repos_relpath,
+  err = svn_wc__db_base_get_info(&status, NULL, revision, repos_relpath,
                                  repos_root_url, repos_uuid, NULL,
                                  NULL, NULL, NULL, NULL, NULL,
                                  lock_token ? &lock : NULL,
                                  NULL, NULL, NULL,
                                  wc_ctx->db, local_abspath,
                                  result_pool, scratch_pool);
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+  if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+      || (!err && status == svn_wc__db_status_not_present))
     {
       svn_error_clear(err);
       if (revision)

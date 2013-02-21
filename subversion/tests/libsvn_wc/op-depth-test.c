@@ -7121,7 +7121,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move_away_delete_update"),
     SVN_TEST_OPTS_PASS(move_not_present_variants,
                        "move_not_present_variants"),
-    SVN_TEST_OPTS_XFAIL(update_child_under_add,
-                        "update_child_under_add (issue 4111)"),
+    SVN_TEST_OPTS_PASS(update_child_under_add,
+                       "update_child_under_add (issue 4111)"),
     SVN_TEST_NULL
   };

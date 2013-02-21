@@ -6736,7 +6736,6 @@ def bump_below_tree_conflict(sbox):
                                         sbox.ospath('A/D/G'))
 
 @Issues(4111)
-@XFail()
 def update_child_below_add(sbox):
   "update child below added tree"
 
@@ -6765,6 +6764,11 @@ def update_child_below_add(sbox):
   sbox.simple_mkdir('A/B/E')
   sbox.simple_add_text('the new alpha', 'A/B/E/alpha')
 
+  expected_status.add({
+      'A/B'         : Item(status='A ', wc_rev='-'),
+      'A/B/E'       : Item(status='A ', wc_rev='-'),
+      'A/B/E/alpha' : Item(status='A ', wc_rev='-'),
+  })
   # Update should still skip A/B/E
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
