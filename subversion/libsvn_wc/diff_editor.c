@@ -2158,8 +2158,8 @@ close_file(void *file_baton,
   if (!eb->local_before_remote && !fb->repos_only && !fb->ignoring_ancestry)
     SVN_ERR(handle_local_only(pb, fb->name, scratch_pool));
 
-  svn_pool_destroy(fb->pool); /* destroys scratch_pool */
-  SVN_ERR(maybe_done(fb->parent_baton));
+  svn_pool_destroy(fb->pool); /* destroys scratch_pool and fb */
+  SVN_ERR(maybe_done(pb));
   return SVN_NO_ERROR;
 }
 
