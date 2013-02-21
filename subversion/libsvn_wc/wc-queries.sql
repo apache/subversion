@@ -1562,11 +1562,14 @@ WHERE wc_id = ?1
  * where the source of the move is within the subtree rooted at path ?2, and
  * the destination of the move is outside the subtree rooted at path ?2. */
 -- STMT_SELECT_MOVED_PAIR2
-SELECT local_relpath, moved_to FROM nodes_current
+SELECT local_relpath, moved_to, op_depth FROM nodes
 WHERE wc_id = ?1
-  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND moved_to IS NOT NULL
   AND NOT IS_STRICT_DESCENDANT_OF(moved_to, ?2)
+  AND op_depth >= (SELECT MAX(op_depth) FROM nodes o
+                    WHERE o.wc_id = ?1
+                      AND o.local_relpath = ?2)
 
 -- STMT_SELECT_MOVED_PAIR3
 SELECT local_relpath, moved_to, op_depth, kind FROM nodes
