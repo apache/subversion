@@ -1031,8 +1031,8 @@ _svnadmin ()
 
 	# Possible expansions, without pure-prefix abbreviations such as "h".
 	cmds='crashtest create deltify dump freeze help hotcopy list-dblogs \
-	      list-unused-dblogs load lslocks lstxns pack recover rmlocks \
-	      rmtxns setlog setrevprop setuuid upgrade verify --version'
+	      list-unused-dblogs load lock lslocks lstxns pack recover rmlocks \
+	      rmtxns setlog setrevprop setuuid unlock upgrade verify --version'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
 		COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
@@ -1041,7 +1041,8 @@ _svnadmin ()
 
 	# options that require a parameter
 	# note: continued lines must end '|' continuing lines must start '|'
-	optsParam="-r|--revision|--parent-dir|--fs-type"
+	optsParam="-r|--revision|--parent-dir|--fs-type|-M|--memory-cache-size"
+	optsParam="$optsParam|-F|--file"
 
 	# if not typing an option, or if the previous option required a
 	# parameter, then fallback on ordinary filename expansion
@@ -1056,13 +1057,15 @@ _svnadmin ()
 	case ${COMP_WORDS[1]} in
 	create)
 		cmdOpts="--bdb-txn-nosync --bdb-log-keep --config-dir \
-		         --fs-type --pre-1.4-compatible --pre-1.5-compatible"
+		         --fs-type --pre-1.4-compatible --pre-1.5-compatible \
+		         --pre-1.6-compatible --compatible-version"
 		;;
 	deltify)
 		cmdOpts="-r --revision -q --quiet"
 		;;
 	dump)
-		cmdOpts="-r --revision --incremental -q --quiet --deltas"
+		cmdOpts="-r --revision --incremental -q --quiet --deltas \
+		         -M --memory-cache-size"
 		;;
 	freeze)
 		cmdOpts="-F --file"
@@ -1075,7 +1078,11 @@ _svnadmin ()
 		;;
 	load)
 		cmdOpts="--ignore-uuid --force-uuid --parent-dir -q --quiet \
-		         --use-pre-commit-hook --use-post-commit-hook"
+		         --use-pre-commit-hook --use-post-commit-hook \
+		         --bypass-prop-validation -M --memory-cache-size"
+		;;
+	lock|unlock)
+		cmdOpts="--bypass-hooks"
 		;;
 	recover)
 		cmdOpts="--wait"
@@ -1119,6 +1126,10 @@ _svnadmin ()
 		--help)          cmdOpts=${cmdOpts/ -h / } ;;
 		-r)              cmdOpts=${cmdOpts/ --revision / } ;;
 		--revision)      cmdOpts=${cmdOpts/ -r / } ;;
+		-F)              cmdOpts=${cmdOpts/ --file / } ;;
+		--file)          cmdOpts=${cmdOpts/ -F / } ;;
+		-M)              cmdOpts=${cmdOpts/ --memory-cache-size / } ;;
+		--memory-cache-size) cmdOpts=${cmdOpts/ --M / } ;;
 		esac
 
 		# skip next option if this one requires a parameter
