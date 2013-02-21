@@ -429,7 +429,7 @@ copy_versioned_dir(svn_wc__db_t *db,
              copy as much as possible, or give up early? */
           return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                                    _("Cannot handle status of '%s'"),
-                                   svn_dirent_local_style(src_abspath,
+                                   svn_dirent_local_style(child_src_abspath,
                                                           iterpool));
         }
       else
@@ -438,7 +438,7 @@ copy_versioned_dir(svn_wc__db_t *db,
 
           return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                                    _("Cannot copy '%s' excluded by server"),
-                                   svn_dirent_local_style(src_abspath,
+                                   svn_dirent_local_style(child_src_abspath,
                                                           iterpool));
         }
 
