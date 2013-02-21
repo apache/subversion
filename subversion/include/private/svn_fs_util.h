@@ -37,26 +37,22 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* Return a canonicalized version of a filesystem PATH, allocated in
-   POOL.  While the filesystem API is pretty flexible about the
-   incoming paths (they must be UTF-8 with '/' as separators, but they
-   don't have to begin with '/', and multiple contiguous '/'s are
-   ignored) we want any paths that are physically stored in the
-   underlying database to look consistent.  Specifically, absolute
-   filesystem paths should begin with '/', and all redundant and trailing '/'
-   characters be removed.
+/* If the filesystem PATH is not already in canonical form,  return a
+   canonicalized version of it, allocated in POOL.  Otherwise, return
+   PATH directly.
+
+   While the filesystem API is pretty flexible about the incoming paths
+   (they must be UTF-8 with '/' as separators, but they don't have to
+   begin with '/', and multiple contiguous '/'s are ignored) we want any
+   paths that are physically stored in the underlying database to look
+   consistent.  Specifically, absolute filesystem paths should begin with
+   '/', and all redundant and trailing '/' characters be removed.
 
    This is similar to svn_fspath__canonicalize() but doesn't treat "."
    segments as special.
 */
 const char *
 svn_fs__canonicalize_abspath(const char *path, apr_pool_t *pool);
-
-/* Return FALSE, if a svn_fs__canonicalize_abspath will return a
-   different value than PATH (despite creating a copy).
-*/
-svn_boolean_t
-svn_fs__is_canonical_abspath(const char *path);
 
 /* If EXPECT_OPEN, verify that FS refers to an open database;
    otherwise, verify that FS refers to an unopened database.  Return
