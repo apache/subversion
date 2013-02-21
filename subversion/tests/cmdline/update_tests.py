@@ -6745,7 +6745,7 @@ def update_child_below_add(sbox):
 
   sbox.simple_update('A/B', 0)
 
-  # Update skips A/B/E because A/B doesn't have a BASE node.
+  # Update skips A/B/E because A/B has a not-present BASE node.
   expected_output = svntest.wc.State(wc_dir, {
       'A/B/E' : Item(verb='Skipped'),
   })
