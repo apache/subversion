@@ -6735,6 +6735,44 @@ def bump_below_tree_conflict(sbox):
                                         None, None, None,
                                         sbox.ospath('A/D/G'))
 
+@Issues(4111)
+@XFail()
+def update_child_below_add(sbox):
+  "update child below added tree"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_update('A/B', 0)
+
+  # Update skips A/B/E because A/B doesn't have a BASE node.
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/B/E' : Item(verb='Skipped'),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('A/B', 'A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
+                         'A/B/F', 'A/B/lambda')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, None,
+                                        sbox.ospath('A/B/E'))
+
+  # Add working nodes over A/B
+  sbox.simple_mkdir('A/B')
+  sbox.simple_mkdir('A/B/E')
+  sbox.simple_add_text('the new alpha', 'A/B/E/alpha')
+
+  # Update should still skip A/B/E
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, None,
+                                        sbox.ospath('A/B/E'))
 
 
 #######################################################################
@@ -6822,6 +6860,7 @@ test_list = [ None,
               windows_update_backslash,
               update_moved_away,
               bump_below_tree_conflict,
+              update_child_below_add,
              ]
 
 if __name__ == '__main__':
