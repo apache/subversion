@@ -1303,6 +1303,22 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
                    const svn_skel_t *work_items,
                    apr_pool_t *scratch_pool);
 
+/* Checks if LOCAL_ABSPATH represents a move back to its original location,
+ * and if it is reverts the move while keeping local changes after it has been
+ * moved from MOVED_FROM_ABSPATH.
+ *
+ * If MOVED_BACK is not NULL, set *MOVED_BACK to TRUE when a move was reverted,
+ * otherwise to FALSE.
+ */
+svn_error_t *
+svn_wc__db_op_handle_move_back(svn_boolean_t *moved_back,
+                               svn_wc__db_t *db,
+                               const char *local_abspath,
+                               const char *moved_from_abspath,
+                               const svn_skel_t *work_items,
+                               apr_pool_t *scratch_pool);
+
+
 /* Copy the leaves of the op_depth layer directly shadowed by the operation
  * of SRC_ABSPATH (so SRC_ABSPATH must be an op_root) to dst_abspaths
  * parents layer.

@@ -531,6 +531,7 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
   const char *src_wcroot_abspath;
   const char *dst_wcroot_abspath;
   svn_boolean_t within_one_wc;
+  svn_wc__db_status_t src_status;
   svn_error_t *err;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
@@ -541,7 +542,7 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
   /* Ensure DSTDIR_ABSPATH belongs to the same repository as SRC_ABSPATH;
      throw an error if not. */
   {
-    svn_wc__db_status_t src_status, dstdir_status;
+    svn_wc__db_status_t dstdir_status;
     const char *src_repos_root_url, *dst_repos_root_url;
     const char *src_repos_uuid, *dst_repos_uuid;
 
@@ -728,13 +729,13 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
 
   within_one_wc = (strcmp(src_wcroot_abspath, dst_wcroot_abspath) == 0);
 
-  if (move_degraded_to_copy != NULL)
+  if (is_move
+      && !within_one_wc)
     {
-      /* Cross-WC moves cannot be tracked.
-       * Degrade such moves to a copy+delete. */
-      *move_degraded_to_copy = (is_move && !within_one_wc);
-      if (*move_degraded_to_copy)
-        is_move = FALSE;
+      if (move_degraded_to_copy)
+        *move_degraded_to_copy = TRUE;
+
+      is_move = FALSE;
     }
 
   if (!within_one_wc)
@@ -754,7 +755,8 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
     }
   else
     {
-      if (is_move && !allow_mixed_revisions)
+      if (is_move
+          && src_status == svn_wc__db_status_normal)
         {
           svn_revnum_t min_rev;
           svn_revnum_t max_rev;
@@ -764,12 +766,20 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
                                                src_abspath, FALSE, scratch_pool));
           if (SVN_IS_VALID_REVNUM(min_rev) && SVN_IS_VALID_REVNUM(max_rev) &&
               min_rev != max_rev)
-            return svn_error_createf(SVN_ERR_WC_MIXED_REVISIONS, NULL,
-                                     _("Cannot move mixed-revision subtree '%s' "
-                                       "[%ld:%ld]; try updating it first"),
-                                       svn_dirent_local_style(src_abspath,
-                                                              scratch_pool),
-                                       min_rev, max_rev);
+            {
+              if (!allow_mixed_revisions)
+                return svn_error_createf(SVN_ERR_WC_MIXED_REVISIONS, NULL,
+                                         _("Cannot move mixed-revision "
+                                           "subtree '%s' [%ld:%ld]; "
+                                           "try updating it first"),
+                                         svn_dirent_local_style(src_abspath,
+                                                                scratch_pool),
+                                         min_rev, max_rev);
+
+              is_move = FALSE;
+              if (move_degraded_to_copy)
+                *move_degraded_to_copy = TRUE;
+            }
         }
 
       err = copy_versioned_dir(db, src_abspath, dst_abspath, dst_abspath,
@@ -781,6 +791,13 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
 
   if (err && svn_error_find_cause(err, SVN_ERR_CANCELLED))
     return svn_error_trace(err);
+
+  if (is_move)
+    err = svn_error_compose_create(err,
+                svn_wc__db_op_handle_move_back(move_degraded_to_copy,
+                                               db, dst_abspath, src_abspath,
+                                               NULL /* work_items */,
+                                               scratch_pool));
 
   /* Run the work queue with the remaining work */
   SVN_ERR(svn_error_compose_create(

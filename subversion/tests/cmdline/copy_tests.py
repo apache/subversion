@@ -2432,20 +2432,11 @@ def move_file_back_and_forth(sbox):
 
   # Check expected status before commit
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.add({
-    'A/D/G/rho' : Item(status='R ', copied='+', wc_rev='-',
-                       moved_from='A/D/G/rho', moved_to='A/D/G/rho'),
-    })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # Commit, and check expected output and status
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/D/G/rho' : Item(verb='Replacing'),
-    })
+  # Try to commit and find out that there is nothing to commit.
+  expected_output = []
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.add({
-    'A/D/G/rho' : Item(status='  ', wc_rev=2),
-    })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
@@ -2476,19 +2467,6 @@ def move_dir_back_and_forth(sbox):
 
   # Verify that the status indicates a replace with history
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.add({
-      'A/D'               : Item(status='R ', copied='+', wc_rev='-',
-                                 moved_from='A/D', moved_to='A/D'),
-      'A/D/G'             : Item(status='  ', copied='+', wc_rev='-'),
-      'A/D/G/pi'          : Item(status='  ', copied='+', wc_rev='-'),
-      'A/D/G/rho'         : Item(status='  ', copied='+', wc_rev='-'),
-      'A/D/G/tau'         : Item(status='  ', copied='+', wc_rev='-'),
-      'A/D/gamma'         : Item(status='  ', copied='+', wc_rev='-'),
-      'A/D/H'             : Item(status='  ', copied='+', wc_rev='-'),
-      'A/D/H/chi'         : Item(status='  ', copied='+', wc_rev='-'),
-      'A/D/H/omega'       : Item(status='  ', copied='+', wc_rev='-'),
-      'A/D/H/psi'         : Item(status='  ', copied='+', wc_rev='-'),
-  })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 def copy_move_added_paths(sbox):
