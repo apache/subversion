@@ -82,8 +82,6 @@ static const int schema_statements[] =
 static const int slow_statements[] =
 {
   /* Operate on the entire WC */
-  STMT_HAS_SWITCHED_WCROOT,             /* wc scan op_depth 0 */
-  STMT_HAS_SWITCHED_WCROOT_REPOS_ROOT,  /* wc scan op_depth 0 */
   STMT_SELECT_ALL_NODES,                /* schema validation code */
 
   /* Is there a record? ### Can we somehow check for LIMIT 1? */

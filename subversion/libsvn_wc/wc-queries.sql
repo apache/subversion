@@ -1442,73 +1442,15 @@ WHERE wc_id = ?1
   AND properties IS NOT NULL
 LIMIT 1
 
-/* Determine if there is some switched subtree in just SQL. This looks easy,
-   but it really isn't, because we don't have a simple (and optimizable)
-   path join operation in SQL.
-
-   To work around that we have 4 different cases:
-      * Check on a node that is neither wcroot nor repos root
-      * Check on a node that is repos_root, but not wcroot.
-      * Check on a node that is wcroot, but not repos root.
-      * Check on a node that is both wcroot and repos root.
-
-   To make things easier, our testsuite is usually in that last category,
-   while normal working copies are almost always in one of the others.
-*/
 -- STMT_HAS_SWITCHED
-SELECT o.repos_path || '/' || SUBSTR(s.local_relpath, LENGTH(?2)+2) AS expected
-       /*,s.local_relpath, s.repos_path, o.local_relpath, o.repos_path*/
-FROM nodes AS o
-LEFT JOIN nodes AS s
-ON o.wc_id = s.wc_id
-   AND IS_STRICT_DESCENDANT_OF(s.local_relpath, ?2)
-   AND s.op_depth = 0
-   AND s.repos_id = o.repos_id
-   AND s.file_external IS NULL
-WHERE o.wc_id = ?1 AND o.local_relpath=?2 AND o.op_depth=0
-  AND s.repos_path != expected
-LIMIT 1
-
--- STMT_HAS_SWITCHED_REPOS_ROOT
-SELECT SUBSTR(s.local_relpath, LENGTH(?2)+2) AS expected
-       /*,s.local_relpath, s.repos_path, o.local_relpath, o.repos_path*/
-FROM nodes AS o
-LEFT JOIN nodes AS s
-ON o.wc_id = s.wc_id
-   AND IS_STRICT_DESCENDANT_OF(s.local_relpath, ?2)
-   AND s.op_depth = 0
-   AND s.repos_id = o.repos_id
-   AND s.file_external IS NULL
-WHERE o.wc_id = ?1 AND o.local_relpath=?2 AND o.op_depth=0
-  AND s.repos_path != expected
-LIMIT 1
-
--- STMT_HAS_SWITCHED_WCROOT
-SELECT o.repos_path || '/' || s.local_relpath AS expected
-       /*,s.local_relpath, s.repos_path, o.local_relpath, o.repos_path*/
-FROM nodes AS o
-LEFT JOIN nodes AS s
-ON o.wc_id = s.wc_id
-   AND s.local_relpath != ''
-   AND s.op_depth = 0
-   AND s.repos_id = o.repos_id
-   AND s.file_external IS NULL
-WHERE o.wc_id = ?1 AND o.local_relpath=?2 AND o.op_depth=0
-  AND s.repos_path != expected
-LIMIT 1
-
--- STMT_HAS_SWITCHED_WCROOT_REPOS_ROOT
-SELECT s.local_relpath AS expected
-       /*,s.local_relpath, s.repos_path, o.local_relpath, o.repos_path*/
-FROM nodes AS o
-LEFT JOIN nodes AS s
-ON o.wc_id = s.wc_id
-   AND s.local_relpath != ''
-   AND s.op_depth = 0
-   AND s.repos_id = o.repos_id
-   AND s.file_external IS NULL
-WHERE o.wc_id = ?1 AND o.local_relpath=?2 AND o.op_depth=0
-  AND s.repos_path != expected
+SELECT 1
+FROM nodes
+WHERE wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND op_depth = 0
+  AND file_external IS NULL
+  AND presence IN (MAP_NORMAL, MAP_INCOMPLETE)
+  AND repos_path IS NOT RELPATH_SKIP_JOIN(?2, ?3, local_relpath)
 LIMIT 1
 
 -- STMT_SELECT_BASE_FILES_RECURSIVE
