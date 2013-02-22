@@ -2933,6 +2933,39 @@ def switch_to_spaces(sbox):
                                         repo_url + '/A%20with more%20spaces',
                                         None, None, expected_status)
 
+# When 'switch' of a dir brings in a replacement of a child file with no
+# textual difference, the switch doesn't report any incoming change at all,
+# (and so won't raise a tree conflict if there is a local mod).  'update'
+# on the other hand does report the replacement as expected.
+@XFail()
+def switch_across_replacement(sbox):
+  "switch across a node replacement"
+  sbox.build()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+
+  # replacement
+  sbox.simple_rm('A/mu')
+  sbox.simple_append('A/mu', "This is the file 'mu'.\n", truncate=True)
+  sbox.simple_add('A/mu')
+  sbox.simple_commit()  # r2
+
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'A/mu' : Item(status='A ', prev_status='D '),
+    })
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output, None, None,
+                                        None, None, None, None, None, False,
+                                        '-r1')
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output, None, None,
+                                        None, None, None, None, None, False,
+                                        '-r2')
+  svntest.actions.run_and_verify_switch(sbox.wc_dir, sbox.ospath('A'), '^/A',
+                                        expected_output, None, None,
+                                        None, None, None, None, None, False,
+                                        '-r1')
+
 ########################################################################
 # Run the tests
 
@@ -2974,6 +3007,7 @@ test_list = [ None,
               up_to_old_rev_with_subtree_switched_to_root,
               different_node_kind,
               switch_to_spaces,
+              switch_across_replacement,
               ]
 
 if __name__ == '__main__':
