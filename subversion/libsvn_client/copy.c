@@ -410,7 +410,7 @@ verify_wc_dsts(const apr_array_header_t *copy_pairs,
 
           SVN_ERR(svn_wc__node_is_not_present(&is_not_present, &is_excluded,
                                               &is_server_excluded, ctx->wc_ctx,
-                                              pair->dst_abspath_or_url,
+                                              pair->dst_abspath_or_url, FALSE,
                                               iterpool));
 
           if (is_excluded || is_server_excluded)

@@ -564,6 +564,8 @@ svn_wc__node_get_deleted_ancestor(const char **deleted_ancestor_abspath,
  * @a local_abspath has status svn_wc__db_status_excluded. Set
  * @a *server_excluded to TRUE when @a local_abspath has status
  * svn_wc__db_status_server_excluded. Otherwise set these values to FALSE.
+ * If @a base_only is TRUE then only the base node will be examined,
+ * otherwise the current base or working node will be examined.
  *
  * If a value is not interesting you can pass #NULL.
  *
@@ -577,6 +579,7 @@ svn_wc__node_is_not_present(svn_boolean_t *not_present,
                             svn_boolean_t *server_excluded,
                             svn_wc_context_t *wc_ctx,
                             const char *local_abspath,
+                            svn_boolean_t base_only,
                             apr_pool_t *scratch_pool);
 
 /**
