@@ -132,14 +132,6 @@ if test "$svn_lib_serf" = "yes"; then
             [Defined if support for Serf is enabled])
 fi
 
-dnl Search for GSSAPI
-SVN_LIB_RA_SERF_GSSAPI
-
-if test "$svn_lib_gssapi" = "yes"; then
-  AC_DEFINE([SVN_RA_SERF_HAVE_GSSAPI], 1,
-            [Defined if support for GSSAPI is enabled])
-fi
-
 dnl Search for apr_memcache (only affects fs_fs)
 SVN_LIB_APR_MEMCACHE
 
@@ -891,20 +883,6 @@ AC_CHECK_HEADER(termios.h,[
 ])
 
 dnl Process some configuration options ----------
-
-AC_ARG_WITH(ssl,
-AS_HELP_STRING([--with-ssl],
-               [This option does NOT affect the Subversion build process in any
-                way. It enables OpenSSL support in the Neon HTTP client
-                library. If and only if you are building Neon as an integrated
-                part of the Subversion build process, rather than linking to
-                an already installed version of Neon, you probably want to pass
-                this option so that Neon (and so indirectly, Subversion) will
-                be capable of https:// access via that library. (Note that
-                Subversion may also or alternatively be configured to use
-                the Serf library for http:// and https:// access; see the
-                --with-serf and --with-openssl options.)]),
-[])
 
 AC_ARG_WITH(openssl,
 AS_HELP_STRING([--with-openssl],
