@@ -35,15 +35,15 @@
 #include "private/svn_fspath.h"
 #include "../libsvn_fs/fs-loader.h"
 
-/* Return TRUE, if PATH of PATH_LEN > 0 chars does not end with a '/' and
- * does not contain duplicate '/'.
+/* Return TRUE, if PATH of PATH_LEN > 0 chars starts with a '/' and does
+ * not end with a '/' and does not contain duplicate '/'.
  */
 static svn_boolean_t
 is_canonical_abspath(const char *path, size_t path_len)
 {
   const char *end;
 
-  /* check for trailing '/' */
+  /* check for leading '/' */
   if (path[0] != '/')
     return FALSE;
 
