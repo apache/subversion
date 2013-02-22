@@ -49,6 +49,10 @@ Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 AnyOutput = svntest.verify.AnyOutput
+RegexOutput = svntest.verify.RegexOutput
+RegexListOutput = svntest.verify.RegexListOutput
+UnorderedOutput = svntest.verify.UnorderedOutput
+AlternateOutput = svntest.verify.AlternateOutput
 
 logger = logging.getLogger()
 
@@ -495,9 +499,17 @@ def ensure_tree_conflict(sbox, operation,
       run_and_verify_commit(".", None, None, ".*conflict.*", victim_path)
 
       logger.debug("--- Checking that 'status' reports the conflict")
-      expected_stdout = svntest.verify.RegexOutput("^......C.* " +
-                                                   re.escape(victim_path) + "$",
-                                                   match_all=False)
+      expected_stdout = AlternateOutput([
+                          RegexListOutput([
+                          "^......C.* " + re.escape(victim_path) + "$",
+                          "^      >   .* upon " + operation] +
+                          svntest.main.summary_of_conflicts(tree_conflicts=1)),
+                          RegexListOutput([
+                          "^......C.* " + re.escape(victim_path) + "$",
+                          "^        > moved to .*",
+                          "^      >   .* upon " + operation] +
+                          svntest.main.summary_of_conflicts(tree_conflicts=1))
+                          ])
       run_and_verify_svn(None, expected_stdout, [],
                          'status', victim_path)
 
