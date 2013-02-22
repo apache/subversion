@@ -7400,7 +7400,6 @@ delete_update_movedto(svn_wc__db_wcroot_t *wcroot,
 
 
 struct op_delete_baton_t {
-  int delete_depth;  /* op-depth for root of delete */
   const char *moved_to_relpath; /* NULL if delete is not part of a move */
   svn_skel_t *conflict;
   svn_skel_t *work_items;
@@ -7454,6 +7453,7 @@ delete_node(void *baton,
   svn_boolean_t refetch_depth = FALSE;
   svn_kind_t kind;
   apr_array_header_t *moved_nodes = NULL;
+  int delete_depth = relpath_depth(local_relpath);
 
   SVN_ERR(read_info(&status,
                     &kind, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -7529,7 +7529,7 @@ delete_node(void *baton,
           /* The node is becoming a move-root for the first time,
            * possibly because of a nested move operation. */
           moved_node->local_relpath = local_relpath;
-          moved_node->op_depth = b->delete_depth;
+          moved_node->op_depth = delete_depth;
         }
       moved_node->moved_to_relpath = b->moved_to_relpath;
 
@@ -7581,10 +7581,10 @@ delete_node(void *baton,
                 moved_node->moved_to_relpath
                   = apr_pstrdup(scratch_pool, child_moved_to);
 
-              if (child_op_depth > b->delete_depth
+              if (child_op_depth > delete_depth
                   && svn_relpath_skip_ancestor(local_relpath,
                                                moved_node->local_relpath))
-                moved_node->op_depth = b->delete_depth;
+                moved_node->op_depth = delete_depth;
               else
                 moved_node->op_depth = relpath_depth(moved_node->local_relpath);
 
@@ -7624,7 +7624,7 @@ delete_node(void *baton,
             {
               int child_op_depth = svn_sqlite__column_int(stmt, 2);
 
-              fixup = (b->delete_depth == child_op_depth);
+              fixup = (delete_depth == child_op_depth);
             }
 
           if (fixup)
@@ -7634,7 +7634,7 @@ delete_node(void *baton,
               mn->local_relpath = apr_pstrdup(scratch_pool, child_relpath);
               mn->moved_to_relpath = svn_sqlite__column_text(stmt, 1,
                                                              scratch_pool);
-              mn->op_depth = b->delete_depth;
+              mn->op_depth = delete_depth;
 
               if (!moved_nodes)
                 moved_nodes = apr_array_make(scratch_pool, 1,
@@ -7719,7 +7719,7 @@ delete_node(void *baton,
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_NODES_ABOVE_DEPTH_RECURSIVE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isd",
-                            wcroot->wc_id, local_relpath, b->delete_depth));
+                            wcroot->wc_id, local_relpath, delete_depth));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   if (refetch_depth)
@@ -7754,7 +7754,7 @@ delete_node(void *baton,
                                  STMT_INSERT_DELETE_FROM_NODE_RECURSIVE));
       SVN_ERR(svn_sqlite__bindf(stmt, "isdd",
                                 wcroot->wc_id, local_relpath,
-                                select_depth, b->delete_depth));
+                                select_depth, delete_depth));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
@@ -7821,8 +7821,15 @@ op_delete_many_txn(void *baton,
                    apr_pool_t *scratch_pool)
 {
   struct op_delete_many_baton_t *odmb = baton;
+  struct op_delete_baton_t odb;
   int i;
   apr_pool_t *iterpool;
+
+  odb.moved_to_relpath = NULL;
+  odb.conflict = NULL;
+  odb.work_items = NULL;
+  odb.delete_dir_externals = odmb->delete_dir_externals;
+  odb.notify = TRUE;
 
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb, STMT_CREATE_DELETE_LIST));
   iterpool = svn_pool_create(scratch_pool);
@@ -7830,15 +7837,9 @@ op_delete_many_txn(void *baton,
     {
       const char *target_relpath = APR_ARRAY_IDX(odmb->rel_targets, i,
                                                  const char *);
-      struct op_delete_baton_t odb;
+
 
       svn_pool_clear(iterpool);
-      odb.delete_depth = relpath_depth(target_relpath);
-      odb.moved_to_relpath = NULL;
-      odb.conflict = NULL;
-      odb.work_items = NULL;
-      odb.delete_dir_externals = odmb->delete_dir_externals;
-      odb.notify = TRUE;
       SVN_ERR(delete_node(&odb, wcroot, target_relpath, iterpool));
     }
   svn_pool_destroy(iterpool);
@@ -7948,7 +7949,6 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
   else
     moved_to_relpath = NULL;
 
-  odb.delete_depth = relpath_depth(local_relpath);
   odb.moved_to_relpath = moved_to_relpath;
   odb.conflict = conflict;
   odb.work_items = work_items;
