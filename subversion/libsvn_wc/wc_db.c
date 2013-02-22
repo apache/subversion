@@ -14271,36 +14271,9 @@ has_switched_subtrees(svn_boolean_t *is_switched,
         }
     }
 
-  /* Select the right query based on whether the node is the wcroot, repos root
-     or neither. */
-  if (*local_relpath == '\0')
-    {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                        (*repos_relpath == '\0')
-                            ? STMT_HAS_SWITCHED_WCROOT_REPOS_ROOT
-                            : STMT_HAS_SWITCHED_WCROOT));
-    }
-  else
-    {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                        (*repos_relpath == '\0')
-                            ? STMT_HAS_SWITCHED_REPOS_ROOT
-                            : STMT_HAS_SWITCHED));
-    }
-
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_HAS_SWITCHED));
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath, repos_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  /* ### Please keep this code for a little while or until the code has enough
-         test coverage. These columns are only available in the 4 queries
-         after their selection is uncommented. */
-/*if (have_row)
-    SVN_DBG(("Expected %s for %s, but got %s. Origin=%s with %s\n",
-             svn_sqlite__column_text(stmt, 0, scratch_pool),
-             svn_sqlite__column_text(stmt, 1, scratch_pool),
-             svn_sqlite__column_text(stmt, 2, scratch_pool),
-             svn_sqlite__column_text(stmt, 3, scratch_pool),
-             svn_sqlite__column_text(stmt, 4, scratch_pool)));*/
   if (have_row)
     *is_switched = TRUE;
   SVN_ERR(svn_sqlite__reset(stmt));
