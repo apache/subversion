@@ -358,6 +358,10 @@ def display_lines_diff(expected, actual, expected_label, actual_label):
      and ACTUAL (labeled with ACTUAL_LABEL).
      Each of EXPECTED and ACTUAL is a string or a list of strings.
   """
+  if not isinstance(expected, list):
+    expected = [expected]
+  if not isinstance(actual, list):
+    actual = [actual]
   logger.warn('DIFF ' + expected_label + ':')
   for x in unified_diff(expected, actual,
                         fromfile='EXPECTED ' + expected_label,
