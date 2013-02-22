@@ -30,8 +30,6 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_fs.h"
-#include "svn_dirent_uri.h"
-#include "svn_path.h"
 
 #ifdef __cplusplus
 extern "C" {
