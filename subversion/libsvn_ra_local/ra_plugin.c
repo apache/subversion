@@ -848,10 +848,10 @@ svn_ra_local__do_switch(svn_ra_session_t *session,
                        update_revision,
                        update_target,
                        switch_url,
-                       TRUE,
+                       TRUE /* text_deltas */,
                        depth,
-                       FALSE,   /* ### TODO(sussman): take new arg */
-                       TRUE,
+                       FALSE /* send_copyfrom_args */,
+                       TRUE /* ignore_ancestry */,
                        update_editor,
                        update_baton,
                        pool);
