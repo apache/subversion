@@ -1497,8 +1497,8 @@ fetch_file(report_context_t *ctx, report_info_t *info)
       if (ctx->sess->wc_callbacks->get_wc_contents
           && (info->final_sha1_checksum || info->final_checksum))
         {
-          svn_error_t *err;
-          svn_checksum_t *checksum;
+          svn_error_t *err = NULL;
+          svn_checksum_t *checksum = NULL;
          
           /* Parse our checksum, preferring SHA1 to MD5. */
           if (info->final_sha1_checksum)
@@ -1516,11 +1516,14 @@ fetch_file(report_context_t *ctx, report_info_t *info)
 
           /* Okay so far?  Let's try to get a stream on some readily
              available matching content. */
-          if (!err)
+          if (!err && checksum)
             {
               err = ctx->sess->wc_callbacks->get_wc_contents(
                         ctx->sess->wc_callback_baton, &contents,
                         checksum, info->pool);
+
+              if (! err)
+                info->cached_contents = contents;
             }
 
           if (err)
@@ -1529,11 +1532,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
                  errorful state, but this codepath is optional.  */
               svn_error_clear(err);
             }
-          else
-            {
-              info->cached_contents = contents;
-            }
-        }          
+        }
 
       /* If the working copy can provide cached contents for this
          file, we don't have to fetch them from the server. */
