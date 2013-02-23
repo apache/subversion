@@ -913,7 +913,7 @@ open_path(parent_path_t **parent_path_p,
      directly at the parent node, if the caller did not requested the full
      parent chain. */
   const char *directory;
-  assert(path == svn_fs__canonicalize_abspath(path, pool));
+  assert(svn_fs__is_canonical_abspath(path));
   if (flags & open_path_node_only)
     {
       directory = svn_dirent_dirname(path, pool);
@@ -1177,10 +1177,9 @@ get_dag(dag_node_t **dag_node_p,
   if (! node)
     {
       /* Canonicalize the input PATH. */
-      const char *canon_path = svn_fs__canonicalize_abspath(path, pool);
-      if (canon_path != path)
+      if (! svn_fs__is_canonical_abspath(path))
         {
-          path = canon_path;
+          path = svn_fs__canonicalize_abspath(path, pool);
 
           /* Try again with the corrected path. */
           SVN_ERR(dag_node_cache_get(&node, root, path, needs_lock_cache,

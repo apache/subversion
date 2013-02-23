@@ -35,9 +35,13 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* If the filesystem PATH is not already in canonical form,  return a
-   canonicalized version of it, allocated in POOL.  Otherwise, return
-   PATH directly.
+/* Returns whether PATH is in canonical form as defined by
+   svn_fs__canonicalize_abspath().
+ */
+svn_boolean_t
+svn_fs__is_canonical_abspath(const char *path);
+
+/* Return a canonicalized version of a filesystem PATH, allocated in POOL.
 
    While the filesystem API is pretty flexible about the incoming paths
    (they must be UTF-8 with '/' as separators, but they don't have to
