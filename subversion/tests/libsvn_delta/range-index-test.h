@@ -1,5 +1,5 @@
 /*
- * range-index-test.c: An extension for random-test.
+ * range-index-test.h: An extension for random-test.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
