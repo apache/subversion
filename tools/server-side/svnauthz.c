@@ -68,6 +68,7 @@ static const apr_getopt_option_t options_table[] =
      "   no    no access\n")
   },
   {"groups-file", svnauthz__groups_file, 1, ("path to the global groups file")},
+  {"recursive", 'R', 0, ("recursive access to path")},
   {0, 0, 0, 0}
 };
 
@@ -75,6 +76,7 @@ struct svnauthz_opt_state
 {
   svn_boolean_t help;
   svn_boolean_t version;
+  svn_boolean_t recursive;
   const char *authz_file;
   const char *groups_file;
   const char *username;
@@ -148,7 +150,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "    3   when --is argument doesn't match\n"
     ),
    {'t', svnauthz__username, svnauthz__path, svnauthz__repos, svnauthz__is,
-    svnauthz__groups_file} },
+    svnauthz__groups_file, 'R'} },
   { NULL, NULL, {0}, NULL, {0} }
 };
 
@@ -289,6 +291,11 @@ subcommand_accessof(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   const char *path = opt_state->fspath;
   const char *repos = opt_state->repos_name;
   const char *is = opt_state->is;
+  svn_repos_authz_access_t request;
+
+  if (opt_state->recursive && !path)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                            ("--recursive not valid without --path"));
 
   /* Handle is argument parsing/allowed values */
   if (is) {
@@ -306,13 +313,23 @@ subcommand_accessof(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(get_authz(&authz, opt_state, pool));
 
 
+  request = svn_authz_write;
+  if (opt_state->recursive)
+    request |= svn_authz_recursive;
   err = svn_repos_authz_check_access(authz, repos, path, user,
-                                     svn_authz_write, &write_access,
+                                     request, &write_access,
                                      pool);
+
   if (!write_access && !err)
-    err = svn_repos_authz_check_access(authz, repos, path, user,
-                                       svn_authz_read, &read_access,
-                                       pool);
+    {
+      request = svn_authz_read;
+      if (opt_state->recursive)
+        request |= svn_authz_recursive;
+      err = svn_repos_authz_check_access(authz, repos, path, user,
+                                         request, &read_access,
+                                         pool);
+    }
+
   if (!err)
     {
       const char *access_str = write_access ? "rw" : read_access ? "r" : "no";
@@ -508,6 +525,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
               break;
             case 't':
               SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.txn, arg, pool));
+              break;
+            case 'R':
+              opt_state.recursive = TRUE;
               break;
             case svnauthz__version:
               opt_state.version = TRUE;
