@@ -1578,15 +1578,20 @@ class WinGeneratorBase(GeneratorBase):
     fp = open(header_file)
     txt = fp.read()
     fp.close()
-    vermatch = re.search(r'^\s*#define\s+SQLITE_VERSION\s+"(\d+)\.(\d+)\.(\d+)(?:\.\d)?"', txt, re.M)
+    vermatch = re.search(r'^\s*#define\s+SQLITE_VERSION\s+"(\d+)\.(\d+)\.(\d+)(?:\.(\d))?"', txt, re.M)
 
-    version = tuple(map(int, vermatch.groups()))
+    version = vermatch.groups()
+    
+    # Sqlite doesn't add patch numbers for their ordinary releases
+    if not version[3]:
+      version = version[0:3]
 
+    version = tuple(map(int, version))
 
-    self.sqlite_version = '%d.%d.%d' % version
+    self.sqlite_version = '.'.join(str(v) for v in version)
 
     if version < minimal_sqlite_version:
-      sys.stderr.write("ERROR: aprutil %s or higher is required "
+      sys.stderr.write("ERROR: sqlite %s or higher is required "
                        "(%s found)\n" % (
                           '.'.join(str(v) for v in minimal_sqlite_version),
                           self.sqlite_version))
