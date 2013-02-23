@@ -1862,10 +1862,13 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Default to unknown.  Old clients won't send depth, but we'll
      handle that by converting recurse if necessary. */
   svn_depth_t depth = svn_depth_unknown;
+  apr_uint64_t send_copyfrom_args; /* Optional; default FALSE */
+  apr_uint64_t ignore_ancestry; /* Optional; default TRUE */
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbc?w", &rev, &target,
-                                 &recurse, &switch_url, &depth_word));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbc?w?BB", &rev, &target,
+                                 &recurse, &switch_url, &depth_word,
+                                 &send_copyfrom_args, &ignore_ancestry));
   target = svn_relpath_canonicalize(target, pool);
   switch_url = svn_uri_canonicalize(switch_url, pool);
 
@@ -1892,8 +1895,8 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return accept_report(NULL, NULL,
                        conn, pool, b, rev, target, switch_path, TRUE,
                        depth,
-                       FALSE /* TODO(sussman): no copyfrom args for now */,
-                       TRUE);
+                       (send_copyfrom_args == TRUE) /* send_copyfrom_args */,
+                       (ignore_ancestry != FALSE) /* ignore_ancestry */);
 }
 
 static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,

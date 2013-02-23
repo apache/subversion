@@ -373,6 +373,31 @@ svn_error_t *svn_ra_do_update(svn_ra_session_t *session,
                                     pool);
 }
 
+
+svn_error_t *
+svn_ra_do_switch2(svn_ra_session_t *session,
+                  const svn_ra_reporter3_t **reporter,
+                  void **report_baton,
+                  svn_revnum_t revision_to_switch_to,
+                  const char *switch_target,
+                  svn_depth_t depth,
+                  const char *switch_url,
+                  const svn_delta_editor_t *switch_editor,
+                  void *switch_baton,
+                  apr_pool_t *pool)
+{
+  return svn_error_trace(
+            svn_ra_do_switch3(session,
+                              reporter, report_baton,
+                              revision_to_switch_to, switch_target,
+                              depth,
+                              switch_url,
+                              FALSE /* send_copyfrom_args */,
+                              TRUE /* ignore_ancestry */,
+                              switch_editor, switch_baton,
+                              pool, pool));
+}
+
 svn_error_t *svn_ra_do_switch(svn_ra_session_t *session,
                               const svn_ra_reporter2_t **reporter,
                               void **report_baton,
@@ -393,8 +418,11 @@ svn_error_t *svn_ra_do_switch(svn_ra_session_t *session,
                                     &(b->reporter3), &(b->reporter3_baton),
                                     revision_to_switch_to, switch_target,
                                     SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                                    switch_url, switch_editor, switch_baton,
-                                    pool);
+                                    switch_url,
+                                    FALSE /* send_copyfrom_args */,
+                                    TRUE /* ignore_ancestry */,
+                                    switch_editor, switch_baton,
+                                    pool, pool);
 }
 
 svn_error_t *svn_ra_do_status(svn_ra_session_t *session,

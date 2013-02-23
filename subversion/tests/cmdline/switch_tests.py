@@ -2933,11 +2933,6 @@ def switch_to_spaces(sbox):
                                         repo_url + '/A%20with more%20spaces',
                                         None, None, expected_status)
 
-# When 'switch' of a dir brings in a replacement of a child file with no
-# textual difference, the switch doesn't report any incoming change at all,
-# (and so won't raise a tree conflict if there is a local mod).  'update'
-# on the other hand does report the replacement as expected.
-@XFail()
 def switch_across_replacement(sbox):
   "switch across a node replacement"
   sbox.build()
@@ -2949,6 +2944,14 @@ def switch_across_replacement(sbox):
   sbox.simple_append('A/mu', "This is the file 'mu'.\n", truncate=True)
   sbox.simple_add('A/mu')
   sbox.simple_commit()  # r2
+
+  # When 'switch' of a dir brings in a replacement of a child file with no
+  # textual difference and ignoring ancestry, the switch doesn't report any
+  # incoming change at all, (and so won't raise a tree conflict if there is
+  # a local mod).  'update' on the other hand does report the replacement
+  # as expected.
+
+  # This test FAILs when using a Subversion 1.0-1.7 svnserve.
 
   expected_output = svntest.wc.State(sbox.wc_dir, {
     'A/mu' : Item(status='A ', prev_status='D '),

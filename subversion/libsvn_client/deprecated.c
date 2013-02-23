@@ -2414,7 +2414,9 @@ svn_client_switch2(svn_revnum_t *result_rev,
 {
   return svn_client_switch3(result_rev, path, switch_url, peg_revision,
                             revision, depth, depth_is_sticky, ignore_externals,
-                            allow_unver_obstructions, TRUE, ctx, pool);
+                            allow_unver_obstructions,
+                            TRUE /* ignore_ancestry */,
+                            ctx, pool);
 }
 
 svn_error_t *

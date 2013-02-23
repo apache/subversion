@@ -154,9 +154,12 @@ typedef struct svn_ra__vtable_t {
                             const char *switch_target,
                             svn_depth_t depth,
                             const char *switch_url,
+                            svn_boolean_t send_copyfrom_args,
+                            svn_boolean_t ignore_ancestry,
                             const svn_delta_editor_t *switch_editor,
                             void *switch_baton,
-                            apr_pool_t *pool);
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
   /* See svn_ra_do_status2(). */
   svn_error_t *(*do_status)(svn_ra_session_t *session,
                             const svn_ra_reporter3_t **reporter,
