@@ -173,6 +173,11 @@ svn_cl__propset(apr_getopt_t *os,
             }
         }
 
+      SVN_ERR(svn_cl__propset_print_binary_mime_type_warning(targets,
+                                                             pname_utf8,
+                                                             propval,
+                                                             scratch_pool));
+
       SVN_ERR(svn_client_propset_local(pname_utf8, propval, targets,
                                        opt_state->depth, opt_state->force,
                                        opt_state->changelists, ctx,

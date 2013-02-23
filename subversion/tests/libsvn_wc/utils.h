@@ -131,6 +131,12 @@ svn_error_t *
 sbox_wc_update(svn_test__sandbox_t *b, const char *path, svn_revnum_t revnum);
 
 svn_error_t *
+sbox_wc_update_depth(svn_test__sandbox_t *b,
+                     const char *path,
+                     svn_revnum_t revnum,
+                     svn_depth_t depth);
+
+svn_error_t *
 sbox_wc_switch(svn_test__sandbox_t *b, const char *url);
 
 /* */
@@ -139,7 +145,7 @@ sbox_wc_resolved(svn_test__sandbox_t *b, const char *path);
 
 /* */
 svn_error_t *
-sbox_wc_resolve(svn_test__sandbox_t *b, const char *path,
+sbox_wc_resolve(svn_test__sandbox_t *b, const char *path, svn_depth_t depth,
                 svn_wc_conflict_choice_t conflict_choice);
 
 /* */

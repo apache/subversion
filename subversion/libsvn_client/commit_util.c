@@ -495,7 +495,7 @@ harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
       svn_pool_clear(iterpool);
 
       SVN_ERR(svn_wc__node_is_not_present(&not_present, NULL, NULL, wc_ctx,
-                                          this_abspath, scratch_pool));
+                                          this_abspath, FALSE, scratch_pool));
 
       if (!not_present)
         continue;
@@ -777,7 +777,7 @@ harvest_status_callback(void *status_baton,
       svn_revnum_t dir_rev;
 
       if (!copy_mode_root && !status->switched)
-        SVN_ERR(svn_wc__node_get_base(&dir_rev, NULL, NULL, NULL, wc_ctx,
+        SVN_ERR(svn_wc__node_get_base(&dir_rev, NULL, NULL, NULL, NULL, wc_ctx,
                                       svn_dirent_dirname(local_abspath,
                                                          scratch_pool),
                                       scratch_pool, scratch_pool));
@@ -1251,7 +1251,8 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
   /* Read the entry for this SRC. */
   SVN_ERR_ASSERT(svn_dirent_is_absolute(pair->src_abspath_or_url));
 
-  SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, NULL, btn->ctx->wc_ctx,
+  SVN_ERR(svn_wc__node_get_repos_info(NULL, NULL, &repos_root_url, NULL,
+                                      btn->ctx->wc_ctx,
                                       pair->src_abspath_or_url,
                                       pool, pool));
 

@@ -25,7 +25,7 @@
 
 APR=apr-1.4.6
 APR_UTIL=apr-util-1.5.1
-SERF=serf-1.1.1
+SERF=serf-1.2.0
 ZLIB=zlib-1.2.7
 SQLITE_VERSION=3.7.15.1
 SQLITE=sqlite-amalgamation-$(printf %d%02d%02d%02d $(echo $SQLITE_VERSION | sed -e 's/\./ /g'))
@@ -40,9 +40,9 @@ BASEDIR=`pwd`
 TEMPDIR=$BASEDIR/temp
 
 HTTP_FETCH=
-[ -z "$HTTP_FETCH" ] && type wget  >/dev/null 2>&1 && HTTP_FETCH="wget -nc"
-[ -z "$HTTP_FETCH" ] && type curl  >/dev/null 2>&1 && HTTP_FETCH="curl -O"
-[ -z "$HTTP_FETCH" ] && type fetch >/dev/null 2>&1 && HTTP_FETCH="fetch"
+[ -z "$HTTP_FETCH" ] && type wget  >/dev/null 2>&1 && HTTP_FETCH="wget -q -nc"
+[ -z "$HTTP_FETCH" ] && type curl  >/dev/null 2>&1 && HTTP_FETCH="curl -sO"
+[ -z "$HTTP_FETCH" ] && type fetch >/dev/null 2>&1 && HTTP_FETCH="fetch -q"
 
 # Need this uncommented if any of the specific versions of the ASF tarballs to
 # be downloaded are no longer available on the general mirrors.

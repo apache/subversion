@@ -186,6 +186,24 @@ II.   Configuration
          The "Require" statement in the previous example is not strictly
          needed, but has been included for clarity.
 
+      H. Example 8: Separate authz and groups files.
+
+         This configuration allows storing the groups separately from the
+         main authz file with the authorization rules.
+
+         <Location /svn>
+           DAV svn
+           SVNParentPath /path/to/reposparent
+
+           AuthType Basic
+           AuthName "Subversion repository"
+           AuthUserFile /path/to/htpasswd/file
+
+           AuthzSVNAccessFile /path/to/access/file
+           AuthzSVNGroupsFile /path/to/groups/file
+
+           Require valid-user
+         </Location>
 
    2. Specifying permissions
 

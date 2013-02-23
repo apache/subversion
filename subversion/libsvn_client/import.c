@@ -679,13 +679,10 @@ svn_client_import5(const char *path,
   const char *local_abspath;
   apr_array_header_t *new_entries = apr_array_make(scratch_pool, 4,
                                                    sizeof(const char *));
-  const char *temp;
-  const char *dir;
   apr_hash_t *commit_revprops;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_t *autoprops = NULL;
   apr_array_header_t *global_ignores;
-  apr_hash_t *local_ignores_hash;
   apr_array_header_t *local_ignores_arr;
   const char *edit_relpath;
   const char *repos_root;
@@ -744,11 +741,12 @@ svn_client_import5(const char *path,
 
   while (kind == svn_node_none)
     {
+      const char *dir;
+
       svn_pool_clear(iterpool);
 
-      svn_uri_split(&temp, &dir, url, scratch_pool);
+      svn_uri_split(&url, &dir, url, scratch_pool);
       APR_ARRAY_PUSH(new_entries, const char *) = dir;
-      url = temp;
       SVN_ERR(svn_ra_reparent(ra_session, url, iterpool));
 
       SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM, &kind,
@@ -756,37 +754,21 @@ svn_client_import5(const char *path,
     }
 
   /* Reverse the order of the components we added to our NEW_ENTRIES array. */
-  if (new_entries->nelts)
-    {
-      int i, j;
-      const char *component;
-      for (i = 0; i < (new_entries->nelts / 2); i++)
-        {
-          j = new_entries->nelts - i - 1;
-          component =
-            APR_ARRAY_IDX(new_entries, i, const char *);
-          APR_ARRAY_IDX(new_entries, i, const char *) =
-            APR_ARRAY_IDX(new_entries, j, const char *);
-          APR_ARRAY_IDX(new_entries, j, const char *) =
-            component;
-        }
-    }
+  svn_sort__array_reverse(new_entries, scratch_pool);
 
   /* The repository doesn't know about the reserved administrative
      directory. */
-  if (new_entries->nelts
-      /* What's this, what's this?  This assignment is here because we
-         use the value to construct the error message just below.  It
-         may not be aesthetically pleasing, but it's less ugly than
-         calling APR_ARRAY_IDX twice. */
-      && svn_wc_is_adm_dir(temp = APR_ARRAY_IDX(new_entries,
-                                                new_entries->nelts - 1,
-                                                const char *),
-                           scratch_pool))
-    return svn_error_createf
-      (SVN_ERR_CL_ADM_DIR_RESERVED, NULL,
-       _("'%s' is a reserved name and cannot be imported"),
-       svn_dirent_local_style(temp, scratch_pool));
+  if (new_entries->nelts)
+    {
+      const char *last_component
+        = APR_ARRAY_IDX(new_entries, new_entries->nelts - 1, const char *);
+
+      if (svn_wc_is_adm_dir(last_component, scratch_pool))
+        return svn_error_createf
+          (SVN_ERR_CL_ADM_DIR_RESERVED, NULL,
+           _("'%s' is a reserved name and cannot be imported"),
+           svn_dirent_local_style(last_component, scratch_pool));
+    }
 
   SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
                                            log_msg, ctx, scratch_pool));
@@ -812,6 +794,7 @@ svn_client_import5(const char *path,
     {
       svn_opt_revision_t rev;
       apr_array_header_t *config_ignores;
+      apr_hash_t *local_ignores_hash;
 
       SVN_ERR(svn_client__get_inherited_ignores(&global_ignores, url, ctx,
                                                 scratch_pool, iterpool));

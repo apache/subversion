@@ -1245,7 +1245,11 @@ typedef enum svn_wc_notify_action_t
   /** The current operation left local changes of something that was deleted
    * The changes are available on (and below) the notified path
    * @since New in 1.8. */
-  svn_wc_notify_left_local_modifications
+  svn_wc_notify_left_local_modifications,
+
+  /** A copy from a foreign repository has started 
+   * @since New in 1.8. */
+  svn_wc_notify_foreign_copy_begin
 
 } svn_wc_notify_action_t;
 
@@ -6332,10 +6336,13 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * @a show_copies_as_adds determines whether paths added with history will
  * appear as a diff against their copy source, or whether such paths will
  * appear as if they were newly added in their entirety.
+ * @a show_copies_as_adds implies not @a ignore_ancestry.
  *
  * If @a use_git_diff_format is TRUE, copied paths will be treated as added
  * if they weren't modified after being copied. This allows the callbacks
  * to generate appropriate --git diff headers for such files.
+ * @a use_git_diff_format implies @a show_copies_as_adds, and as such implies
+ * not @a ignore_ancestry.
  *
  * Normally, the difference from repository->working_copy is shown.
  * If @a reverse_order is TRUE, then show working_copy->repository diffs.
@@ -6790,10 +6797,20 @@ typedef enum svn_wc_merge_outcome_t
  * is returned in @a *merge_content_outcome.
  * ### (and what about @a *merge_props_state?)
  *
+ * ### BH: Two kinds of outcome is not how it should be.
+ *
+ * ### For text, we report the outcome as 'merged' if there was some
+ *     incoming change that we dealt with (even if we decided to no-op?)
+ *     but the callers then convert this outcome into a notification
+ *     of 'merged' only if there was already a local modification;
+ *     otherwise they notify it as simply 'updated'.  But for props
+ *     we report a notify state of 'merged' here if there was an
+ *     incoming change regardless of the local-mod state.  Inconsistent.
+ *
  * Use @a scratch_pool for any temporary allocation.
  *
  * @since New in 1.8.
- */ /* ### BH: Two kinds of outcome is not how it should be */
+ */
 svn_error_t *
 svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
               enum svn_wc_notify_state_t *merge_props_state,

@@ -54,8 +54,10 @@
 #include "svn_utf.h"
 #include "svn_subst.h"
 #include "svn_config.h"
+#include "svn_wc.h"
 #include "svn_xml.h"
 #include "svn_time.h"
+#include "svn_props.h"
 #include "svn_private_config.h"
 #include "cl.h"
 
@@ -972,9 +974,7 @@ svn_cl__assert_homogeneous_target_type(const apr_array_header_t *targets)
 
   err = svn_client__assert_homogeneous_target_type(targets);
   if (err && err->apr_err == SVN_ERR_ILLEGAL_TARGET)
-    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, err,
-                             _("Cannot mix repository and working copy "
-                               "targets"));
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, err, NULL);
   return err;
 }
 
@@ -1053,3 +1053,59 @@ svn_cl__check_related_source_and_target(const char *path_or_url1,
     }
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_cl__propset_print_binary_mime_type_warning(apr_array_header_t *targets,
+                                               const char *propname,
+                                               const svn_string_t *propval,
+                                               apr_pool_t *scratch_pool)
+{
+  if (strcmp(propname, SVN_PROP_MIME_TYPE) == 0)
+    {
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+      int i;
+
+      for (i = 0; i < targets->nelts; i++)
+        {
+          const char *detected_mimetype;
+          const char *target = APR_ARRAY_IDX(targets, i, const char *);
+          const char *local_abspath;
+          const svn_string_t *canon_propval;
+          svn_node_kind_t node_kind;
+
+          svn_pool_clear(iterpool);
+
+          SVN_ERR(svn_dirent_get_absolute(&local_abspath, target, iterpool));
+          SVN_ERR(svn_io_check_path(local_abspath, &node_kind, iterpool));
+          if (node_kind != svn_node_file)
+            continue;
+
+          SVN_ERR(svn_wc_canonicalize_svn_prop(&canon_propval,
+                                               propname, propval,
+                                               local_abspath,
+                                               svn_node_file,
+                                               FALSE, NULL, NULL,
+                                               iterpool));
+
+          if (svn_mime_type_is_binary(canon_propval->data))
+            {
+              SVN_ERR(svn_io_detect_mimetype2(&detected_mimetype,
+                                              local_abspath, NULL,
+                                              iterpool));
+              if (detected_mimetype == NULL ||
+                  !svn_mime_type_is_binary(detected_mimetype))
+                svn_error_clear(svn_cmdline_fprintf(stderr, iterpool,
+                  _("svn: warning: '%s' is a binary mime-type but file '%s' "
+                    "looks like text; diff, merge, blame, and other "
+                    "operations will stop working on this file\n"),
+                    canon_propval->data,
+                    svn_dirent_local_style(local_abspath, iterpool)));
+                    
+            }
+        }
+      svn_pool_destroy(iterpool);
+    }
+
+  return SVN_NO_ERROR;
+}
+

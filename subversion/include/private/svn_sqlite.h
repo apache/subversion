@@ -169,8 +169,8 @@ svn_sqlite__get_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
    b     const void *              Blob data
          apr_size_t                Blob length
    r     svn_revnum_t              Revision number
-   t     const svn_token_t *       Token mapping table
-         int value                 Token value
+   t     const svn_token_map_t *   Token mapping table
+         int                       Token value
 
   Each character in FMT maps to one SQL parameter, and one or two function
   parameters, in the order they appear.
@@ -246,17 +246,25 @@ svn_sqlite__bind_checksum(svn_sqlite__stmt_t *stmt,
 */
 
 /* Wrapper around sqlite3_column_blob and sqlite3_column_bytes. The return
-   value will be NULL if the column is null. If RESULT_POOL is not NULL,
-   allocate the return value (if any) in it. Otherwise, the value will
-   become invalid on the next invocation of svn_sqlite__column_* */
+   value will be NULL if the column is null.
+
+   If RESULT_POOL is not NULL, allocate the return value (if any) in it.
+   If RESULT_POOL is NULL, the return value will be valid until an
+   invocation of svn_sqlite__column_* performs a data type conversion (as
+   described in the SQLite documentation) or the statement is stepped or
+   reset or finalized. */
 const void *
 svn_sqlite__column_blob(svn_sqlite__stmt_t *stmt, int column,
                         apr_size_t *len, apr_pool_t *result_pool);
 
 /* Wrapper around sqlite3_column_text. If the column is null, then the
-   return value will be NULL. If RESULT_POOL is not NULL, allocate the
-   return value (if any) in it. Otherwise, the value will become invalid
-   on the next invocation of svn_sqlite__column_* */
+   return value will be NULL.
+
+   If RESULT_POOL is not NULL, allocate the return value (if any) in it.
+   If RESULT_POOL is NULL, the return value will be valid until an
+   invocation of svn_sqlite__column_* performs a data type conversion (as
+   described in the SQLite documentation) or the statement is stepped or
+   reset or finalized. */
 const char *
 svn_sqlite__column_text(svn_sqlite__stmt_t *stmt, int column,
                         apr_pool_t *result_pool);
@@ -298,7 +306,7 @@ svn_sqlite__column_token_null(svn_sqlite__stmt_t *stmt,
                               int null_val);
 
 /* Return the column as a hash of const char * => const svn_string_t *.
-   If the column is null, then NULL will be stored into *PROPS. The
+   If the column is null, then set *PROPS to NULL. The
    results will be allocated in RESULT_POOL, and any temporary allocations
    will be made in SCRATCH_POOL. */
 svn_error_t *
@@ -310,7 +318,7 @@ svn_sqlite__column_properties(apr_hash_t **props,
 
 /* Return the column as an array of depth-first ordered array of
    svn_prop_inherited_item_t * structures.  If the column is null, then
-   *props is set to NULL. The results will be allocated in RESULT_POOL,
+   set *IPROPS to NULL. The results will be allocated in RESULT_POOL,
    and any temporary allocations will be made in SCRATCH_POOL. */
 svn_error_t *
 svn_sqlite__column_iprops(apr_array_header_t **iprops,

@@ -1452,6 +1452,69 @@ def remove_subdir_with_authz_and_tc(sbox):
                                         None, None, False,
                                         wc_dir)
 
+@SkipUnless(svntest.main.is_ra_type_svn)
+def authz_svnserve_groups(sbox):
+  "authz with configured global groups"
+
+  sbox.build(create_wc = False)
+
+  svntest.main.write_restrictive_svnserve_conf_with_groups(sbox.repo_dir)
+
+  svntest.main.write_authz_file(sbox, { "/A/B" : "@senate = r",
+                                        "/A/D" : "@senate = rw",
+                                        "/A/B/E" : "@senate = " })
+
+  svntest.main.write_groups_file(sbox, { "senate" : "jrandom" })
+
+  root_url = sbox.repo_url
+  A_url = root_url + '/A'
+  B_url = A_url + '/B'
+  E_url = B_url + '/E'
+  F_url = B_url + '/F'
+  D_url = A_url + '/D'
+  G_url = D_url + '/G'
+  lambda_url = B_url + '/lambda'
+  pi_url = G_url + '/pi'
+  alpha_url = E_url + '/alpha'
+
+  expected_err = ".*svn: E170001: Authorization failed.*"
+
+  # read a remote file
+  svntest.actions.run_and_verify_svn(None, ["This is the file 'lambda'.\n"],
+                                     [], 'cat',
+                                     lambda_url)
+
+  # read a remote file
+  svntest.actions.run_and_verify_svn(None, ["This is the file 'pi'.\n"],
+                                     [], 'cat',
+                                     pi_url)
+
+  # read a remote file, unreadable: should fail
+  svntest.actions.run_and_verify_svn(None,
+                                     None, expected_err,
+                                     'cat',
+                                     alpha_url)
+
+  # copy a remote file, source is unreadable: should fail
+  svntest.actions.run_and_verify_svn(None,
+                                     None, expected_err,
+                                     'cp',
+                                     '-m', 'logmsg',
+                                     alpha_url, B_url)
+
+  # copy a remote folder
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp',
+                                     '-m', 'logmsg',
+                                     F_url, D_url)
+
+  # copy a remote folder, source is unreadable: should fail
+  svntest.actions.run_and_verify_svn(None,
+                                     None, expected_err,
+                                     'cp',
+                                     '-m', 'logmsg',
+                                     E_url, D_url)
+
 ########################################################################
 # Run the tests
 
@@ -1481,7 +1544,8 @@ test_list = [ None,
               wc_delete,
               wc_commit_error_handling,
               upgrade_absent,
-              remove_subdir_with_authz_and_tc
+              remove_subdir_with_authz_and_tc,
+              authz_svnserve_groups
              ]
 serial_only = True
 

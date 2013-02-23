@@ -29,6 +29,7 @@
 
 #include <apr_lib.h>
 #include <apr_poll.h>
+#include <apr_portable.h>
 
 #include "svn_cmdline.h"
 #include "svn_string.h"
@@ -39,40 +40,384 @@
 #include "private/svn_cmdline_private.h"
 #include "svn_private_config.h"
 
+#ifdef WIN32
+#include <conio.h>
+#elif defined(HAVE_TERMIOS_H)
+#include <termios.h>
+#endif
+
 
 
-/* Wait for input on @a *f.  Doing all allocations
- * in @a pool.  This functions is based on apr_wait_for_io_or_timeout().
- * Note that this will return an EINTR on a signal.
- *
- * ### FIX: When APR gives us a better way of doing this use it. */
-static apr_status_t wait_for_input(apr_file_t *f,
-                                   apr_pool_t *pool)
+/* Descriptor of an open terminal */
+typedef struct terminal_handle_t terminal_handle_t;
+struct terminal_handle_t
 {
-#ifndef WIN32
-  apr_pollfd_t pollset;
-  int srv, n;
+  apr_file_t *infd;              /* input file handle */
+  apr_file_t *outfd;             /* output file handle */
+  svn_boolean_t noecho;          /* terminal echo was turned off */
+  svn_boolean_t close_handles;   /* close handles when closing the terminal */
+  apr_pool_t *pool;              /* pool associated with the file handles */
 
-  pollset.desc_type = APR_POLL_FILE;
-  pollset.desc.f = f;
-  pollset.p = pool;
-  pollset.reqevents = APR_POLLIN;
-
-  srv = apr_poll(&pollset, 1, &n, -1);
-
-  if (n == 1 && pollset.rtnevents & APR_POLLIN)
-    return APR_SUCCESS;
-
-  return srv;
-#else
-  /* APR specs say things that are unimplemented are supposed to return
-   * APR_ENOTIMPL.  But when trying to use APR_POLL_FILE with apr_poll
-   * on Windows it returns APR_EBADF instead.  So just return APR_ENOTIMPL
-   * ourselves here.
-   */
-  return APR_ENOTIMPL;
+#ifdef HAVE_TERMIOS_H
+  svn_boolean_t restore_state;   /* terminal state was changed */
+  apr_os_file_t osinfd;          /* OS-specific handle for infd */
+  struct termios attr;           /* saved terminal attributes */
 #endif
+};
+
+/* Initialize safe state of terminal_handle_t. */
+static void
+terminal_handle_init(terminal_handle_t *terminal,
+                     apr_file_t *infd, apr_file_t *outfd,
+                     svn_boolean_t noecho, svn_boolean_t close_handles,
+                     apr_pool_t *pool)
+{
+  memset(terminal, 0, sizeof(*terminal));
+  terminal->infd = infd;
+  terminal->outfd = outfd;
+  terminal->noecho = noecho;
+  terminal->close_handles = close_handles;
+  terminal->pool = pool;
 }
+
+/*
+ * Common pool cleanup handler for terminal_handle_t. Closes TERMINAL.
+ * If CLOSE_HANDLES is TRUE, close the terminal file handles.
+ * If RESTORE_STATE is TRUE, restores the TERMIOS flags of the terminal.
+ */
+static apr_status_t
+terminal_cleanup_handler(terminal_handle_t *terminal,
+                         svn_boolean_t close_handles,
+                         svn_boolean_t restore_state)
+{
+  apr_status_t status = APR_SUCCESS;
+
+#ifdef HAVE_TERMIOS_H
+  /* Restore terminal state flags. */
+  if (restore_state && terminal->restore_state)
+    tcsetattr(terminal->osinfd, TCSANOW, &terminal->attr);
+#endif
+
+  /* Close terminal handles. */
+  if (close_handles && terminal->close_handles)
+    {
+      apr_file_t *const infd = terminal->infd;
+      apr_file_t *const outfd = terminal->outfd;
+
+      if (infd)
+        {
+          terminal->infd = NULL;
+          status = apr_file_close(infd);
+        }
+
+      if (!status && outfd && outfd != infd)
+        {
+          terminal->outfd = NULL;
+          status = apr_file_close(terminal->outfd);
+        }
+    }
+  return status;
+}
+
+/* Normal pool cleanup for a terminal. */
+static apr_status_t terminal_plain_cleanup(void *baton)
+{
+  return terminal_cleanup_handler(baton, FALSE, TRUE);
+}
+
+/* Child pool cleanup for a terminal -- does not restore echo state. */
+static apr_status_t terminal_child_cleanup(void *baton)
+{
+  return terminal_cleanup_handler(baton, FALSE, FALSE);
+}
+
+/* Explicitly close the terminal, removing its cleanup handlers. */
+static svn_error_t *
+terminal_close(terminal_handle_t *terminal)
+{
+  apr_status_t status;
+
+  /* apr_pool_cleanup_kill() removes both normal and child cleanup */
+  apr_pool_cleanup_kill(terminal->pool, terminal, terminal_plain_cleanup);
+
+  status = terminal_cleanup_handler(terminal, TRUE, TRUE);
+  if (status)
+    return svn_error_create(status, NULL, _("Can't close terminal"));
+  return SVN_NO_ERROR;
+}
+
+/* Allocate and open *TERMINAL. If NOECHO is TRUE, try to turn off
+   terminal echo.  Use POOL for all allocations.*/
+static svn_error_t *
+terminal_open(terminal_handle_t **terminal, svn_boolean_t noecho,
+              apr_pool_t *pool)
+{
+  apr_status_t status;
+
+#ifdef WIN32
+  /* On Windows, we'll use the console API directly if the process has
+     a console attached; otherwise we'll just use stdin and stderr. */
+  const HANDLE conin = CreateFileW(L"CONIN$", GENERIC_READ,
+                                   FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                   NULL, OPEN_EXISTING,
+                                   FILE_ATTRIBUTE_NORMAL, NULL);
+  *terminal = apr_palloc(pool, sizeof(terminal_handle_t));
+  if (conin != INVALID_HANDLE_VALUE)
+    {
+      /* The process has a console. */
+      CloseHandle(conin);
+      terminal_handle_init(*terminal, NULL, NULL, noecho, FALSE, NULL);
+      return SVN_NO_ERROR;
+    }
+#else  /* !WIN32 */
+  /* Without evidence to the contrary, we'll assume this is *nix and
+     try to open /dev/tty. If that fails, we'll use stdin for input
+     and stderr for prompting. */
+  apr_file_t *tmpfd;
+  status = apr_file_open(&tmpfd, "/dev/tty",
+                         APR_FOPEN_READ | APR_FOPEN_WRITE,
+                         APR_OS_DEFAULT, pool);
+  *terminal = apr_palloc(pool, sizeof(terminal_handle_t));
+  if (!status)
+    {
+      /* We have a terminal handle that we can use for input and output. */
+      terminal_handle_init(*terminal, tmpfd, tmpfd, FALSE, TRUE, pool);
+    }
+#endif /* !WIN32 */
+  else
+    {
+      /* There is no terminal. Sigh. */
+      apr_file_t *infd;
+      apr_file_t *outfd;
+
+      status = apr_file_open_stdin(&infd, pool);
+      if (status)
+        return svn_error_wrap_apr(status, _("Can't open stdin"));
+      status = apr_file_open_stderr(&outfd, pool);
+      if (status)
+        return svn_error_wrap_apr(status, _("Can't open stderr"));
+      terminal_handle_init(*terminal, infd, outfd, FALSE, FALSE, pool);
+    }
+
+#ifdef HAVE_TERMIOS_H
+  /* Set terminal state */
+  if (0 == apr_os_file_get(&(*terminal)->osinfd, (*terminal)->infd))
+    {
+      if (0 == tcgetattr((*terminal)->osinfd, &(*terminal)->attr))
+        {
+          struct termios attr = (*terminal)->attr;
+          /* Turn off signal handling and canonical input mode */
+          attr.c_lflag &= ~(ISIG | ICANON);
+          attr.c_cc[VMIN] = 1;          /* Read one byte at a time */
+          attr.c_cc[VTIME] = 0;         /* No timeout, wait indefinitely */
+          if (noecho)
+            attr.c_lflag &= ~(ECHO);    /* Turn off echo */
+          if (0 == tcsetattr((*terminal)->osinfd, TCSAFLUSH, &attr))
+            {
+              (*terminal)->noecho = noecho;
+              (*terminal)->restore_state = TRUE;
+            }
+        }
+    }
+#endif /* HAVE_TERMIOS_H */
+
+  /* Register pool cleanup to close handles and restore echo state. */
+  apr_pool_cleanup_register((*terminal)->pool, *terminal,
+                            terminal_plain_cleanup,
+                            terminal_child_cleanup);
+  return SVN_NO_ERROR;
+}
+
+/* Write a null-terminated STRING to TERMINAL.
+   Use POOL for allocations related to converting STRING from UTF-8. */
+static svn_error_t *
+terminal_puts(const char *string, terminal_handle_t *terminal,
+              apr_pool_t *pool)
+{
+  svn_error_t *err;
+  apr_status_t status;
+  const char *converted;
+
+  err = svn_cmdline_cstring_from_utf8(&converted, string, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      converted = svn_cmdline_cstring_from_utf8_fuzzy(string, pool);
+    }
+
+#ifdef WIN32
+  if (!terminal->outfd)
+    {
+      /* See terminal_open; we're using Console I/O. */
+      _cputs(converted);
+      return SVN_NO_ERROR;
+    }
+#endif
+
+  status = apr_file_write_full(terminal->outfd, converted,
+                               strlen(converted), NULL);
+  if (!status)
+    status = apr_file_flush(terminal->outfd);
+  if (status)
+    return svn_error_wrap_apr(status, _("Can't write to terminal"));
+  return SVN_NO_ERROR;
+}
+
+/* These codes can be returned from terminal_getc instead of a character. */
+#define TERMINAL_NONE  0x80000               /* no character read, retry */
+#define TERMINAL_DEL   (TERMINAL_NONE + 1)   /* the input was a deleteion */
+#define TERMINAL_EOL   (TERMINAL_NONE + 2)   /* end of input/end of line */
+#define TERMINAL_EOF   (TERMINAL_NONE + 3)   /* end of file during input */
+
+/* Read one character or control code from TERMINAL, returning it in CODE.
+   if CAN_ERASE and the input was a deletion, emit codes to erase the
+   last character displayed on the terminal.
+   Use POOL for all allocations. */
+static svn_error_t *
+terminal_getc(int *code, terminal_handle_t *terminal,
+              svn_boolean_t can_erase, apr_pool_t *pool)
+{
+  apr_status_t status = APR_SUCCESS;
+  char ch;
+
+#ifdef WIN32
+  if (!terminal->infd)
+    {
+      /* See terminal_open; we're using Console I/O. */
+      const svn_boolean_t echo = !terminal->noecho;
+
+      /*  The following was hoisted from APR's getpass for Windows. */
+      int concode = _getch();
+      switch (concode)
+        {
+        case '\r':                      /* end-of-line */
+          *code = TERMINAL_EOL;
+          if (echo)
+            _cputs("\r\n");
+          break;
+
+        case EOF:                       /* end-of-file */
+        case 26:                        /* Ctrl+Z */
+          *code = TERMINAL_EOF;
+          if (echo)
+            _cputs((concode == EOF ? "[EOF]\r\n" : "^Z\r\n"));
+          break;
+
+        case 3:                         /* Ctrl+C, Ctrl+Break */
+          /* _getch() bypasses Ctrl+C but not Ctrl+Break detection! */
+          if (echo)
+            _cputs("^C\r\n");
+          return svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
+
+        case 0:                         /* Function code prefix */
+        case 0xE0:
+          concode = (concode << 4) | _getch();
+          /* Catch {DELETE}, {<--}, Num{DEL} and Num{<--} */
+          if (concode == 0xE53 || concode == 0xE4B
+              || concode == 0x053 || concode == 0x04B)
+            {
+              *code = TERMINAL_DEL;
+              if (can_erase)
+                _cputs("\b \b");
+            }
+          else
+            {
+              *code = TERMINAL_NONE;
+              _putch('\a');
+            }
+          break;
+
+        case '\b':                      /* BS */
+        case 127:                       /* DEL */
+          *code = TERMINAL_DEL;
+          if (can_erase)
+            _cputs("\b \b");
+          break;
+
+        default:
+          if (!apr_iscntrl(concode))
+            {
+              *code = (int)(unsigned char)concode;
+              _putch(echo ? concode : '*');
+            }
+          else
+            {
+              *code = TERMINAL_NONE;
+              _putch('\a');
+            }
+        }
+      return SVN_NO_ERROR;
+    }
+#elif defined(HAVE_TERMIOS_H)
+  if (terminal->restore_state)
+    {
+      /* We're using a bytewise-immediate termios input */
+      const struct termios *const attr = &terminal->attr;
+
+      status = apr_file_getc(&ch, terminal->infd);
+      if (status)
+        return svn_error_wrap_apr(status, _("Can't read from terminal"));
+
+      if (ch == attr->c_cc[VINTR] || ch == attr->c_cc[VQUIT])
+        return svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
+      else if (ch == '\r' || ch == '\n' || ch == attr->c_cc[VEOL])
+        *code = TERMINAL_EOL;
+      else if (ch == '\b'
+               || ch == attr->c_cc[VERASE] || ch == attr->c_cc[VKILL])
+        *code = TERMINAL_DEL;
+      else if (ch == attr->c_cc[VEOF])
+        *code = TERMINAL_EOF;
+      else if (!apr_iscntrl(ch))
+        *code = (int)(unsigned char)ch;
+      else
+        {
+          *code = TERMINAL_NONE;
+          apr_file_putc('\a', terminal->outfd);
+        }
+      return SVN_NO_ERROR;
+    }
+#endif /* HAVE_TERMIOS_H */
+
+  /* Fall back to plain stream-based I/O. */
+#ifndef WIN32
+  /* Wait for input on termin. This code is based on
+     apr_wait_for_io_or_timeout().
+     Note that this will return an EINTR on a signal. */
+  {
+    apr_pollfd_t pollset;
+    int n;
+
+    pollset.desc_type = APR_POLL_FILE;
+    pollset.desc.f = terminal->infd;
+    pollset.p = pool;
+    pollset.reqevents = APR_POLLIN;
+
+    status = apr_poll(&pollset, 1, &n, -1);
+
+    if (n == 1 && pollset.rtnevents & APR_POLLIN)
+      status = APR_SUCCESS;
+  }
+#endif /* !WIN32 */
+
+  if (!status)
+    status = apr_file_getc(&ch, terminal->infd);
+  if (APR_STATUS_IS_EINTR(status))
+    {
+      *code = TERMINAL_NONE;
+      return SVN_NO_ERROR;
+    }
+  else if (APR_STATUS_IS_EOF(status))
+    {
+      *code = TERMINAL_EOF;
+      return SVN_NO_ERROR;
+    }
+  else if (status)
+    return svn_error_wrap_apr(status, _("Can't read from terminal"));
+
+  *code = (int)(unsigned char)ch;
+  return SVN_NO_ERROR;
+}
+
 
 /* Set @a *result to the result of prompting the user with @a
  * prompt_msg.  Use @ *pb to get the cancel_func and cancel_baton.
@@ -91,77 +436,91 @@ prompt(const char **result,
   /* XXX: If this functions ever starts using members of *pb
    * which were not included in svn_cmdline_prompt_baton_t,
    * we need to update svn_cmdline_prompt_user2 and its callers. */
-  apr_status_t status;
-  apr_file_t *fp;
+
+  svn_boolean_t saw_first_half_of_eol = FALSE;
+  svn_stringbuf_t *strbuf = svn_stringbuf_create_empty(pool);
+  terminal_handle_t *terminal;
+  int code;
   char c;
 
-  svn_stringbuf_t *strbuf = svn_stringbuf_create_empty(pool);
+  SVN_ERR(terminal_open(&terminal, hide, pool));
+  SVN_ERR(terminal_puts(prompt_msg, terminal, pool));
 
-  status = apr_file_open_stdin(&fp, pool);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't open stdin"));
-
-  if (! hide)
+  while (1)
     {
-      svn_boolean_t saw_first_half_of_eol = FALSE;
-      SVN_ERR(svn_cmdline_fputs(prompt_msg, stderr, pool));
-      fflush(stderr);
+      SVN_ERR(terminal_getc(&code, terminal, (strbuf->len > 0), pool));
 
-      while (1)
+      /* Check for cancellation after a character has been read, some
+         input processing modes may eat ^C and we'll only notice a
+         cancellation signal after characters have been read --
+         sometimes even after a newline. */
+      if (pb)
+        SVN_ERR(pb->cancel_func(pb->cancel_baton));
+
+      switch (code)
         {
-          /* Hack to allow us to not block for io on the prompt, so
-           * we can cancel. */
-          if (pb)
-            SVN_ERR(pb->cancel_func(pb->cancel_baton));
-          status = wait_for_input(fp, pool);
-          if (APR_STATUS_IS_EINTR(status))
-            continue;
-          else if (status && status != APR_ENOTIMPL)
-            return svn_error_wrap_apr(status, _("Can't read stdin"));
+        case TERMINAL_NONE:
+          /* Nothing useful happened; retry. */
+          continue;
 
-          status = apr_file_getc(&c, fp);
-          if (status)
-            return svn_error_wrap_apr(status, _("Can't read stdin"));
+        case TERMINAL_DEL:
+          /* Delete the last input character. terminal_getc takes care
+             of erasing the feedback from the terminal, if applicable. */
+          svn_stringbuf_chop(strbuf, 1);
+          continue;
 
-          if (saw_first_half_of_eol)
-            {
-              if (c == APR_EOL_STR[1])
-                break;
-              else
-                saw_first_half_of_eol = FALSE;
-            }
-          else if (c == APR_EOL_STR[0])
-            {
-              /* GCC might complain here: "warning: will never be executed"
-               * That's fine. This is a compile-time check for "\r\n\0" */
-              if (sizeof(APR_EOL_STR) == 3)
-                {
-                  saw_first_half_of_eol = TRUE;
-                  continue;
-                }
-              else if (sizeof(APR_EOL_STR) == 2)
-                break;
-              else
-                /* ### APR_EOL_STR holds more than two chars?  Who
-                   ever heard of such a thing? */
-                SVN_ERR_MALFUNCTION();
-            }
+        case TERMINAL_EOL:
+          /* End-of-line means end of input. Trick the EOL-detection code
+             below to stop reading. */
+          saw_first_half_of_eol = TRUE;
+          c = APR_EOL_STR[1];   /* Could be \0 but still stops reading. */
+          break;
 
-          svn_stringbuf_appendbyte(strbuf, c);
+        case TERMINAL_EOF:
+          return svn_error_create(
+              APR_EOF,
+              terminal_close(terminal),
+              _("End of file while reading from terminal"));
+
+        default:
+          /* Convert the returned code back to the character. */
+          c = (char)code;
         }
-    }
-  else
-    {
-      const char *prompt_stdout;
-      size_t bufsize = 300;
-      SVN_ERR(svn_cmdline_cstring_from_utf8(&prompt_stdout, prompt_msg,
-                                            pool));
-      svn_stringbuf_ensure(strbuf, bufsize);
 
-      status = apr_password_get(prompt_stdout, strbuf->data, &bufsize);
-      if (status)
-        return svn_error_wrap_apr(status, _("Can't get password"));
+      if (saw_first_half_of_eol)
+        {
+          if (c == APR_EOL_STR[1])
+            break;
+          else
+            saw_first_half_of_eol = FALSE;
+        }
+      else if (c == APR_EOL_STR[0])
+        {
+          /* GCC might complain here: "warning: will never be executed"
+           * That's fine. This is a compile-time check for "\r\n\0" */
+          if (sizeof(APR_EOL_STR) == 3)
+            {
+              saw_first_half_of_eol = TRUE;
+              continue;
+            }
+          else if (sizeof(APR_EOL_STR) == 2)
+            break;
+          else
+            /* ### APR_EOL_STR holds more than two chars?  Who
+               ever heard of such a thing? */
+            SVN_ERR_MALFUNCTION();
+        }
+
+      svn_stringbuf_appendbyte(strbuf, c);
     }
+
+  if (terminal->noecho)
+    {
+      /* If terminal echo was turned off, make sure future output
+         to the terminal starts on a new line, as expected. */
+      terminal_puts(APR_EOL_STR, terminal, pool);
+    }
+  SVN_ERR(terminal_close(terminal));
 
   return svn_cmdline_cstring_to_utf8(result, strbuf->data, pool);
 }
@@ -179,9 +538,13 @@ maybe_print_realm(const char *realm, apr_pool_t *pool)
 {
   if (realm)
     {
-      SVN_ERR(svn_cmdline_fprintf(stderr, pool,
-                                  _("Authentication realm: %s\n"), realm));
-      fflush(stderr);
+      terminal_handle_t *terminal;
+      SVN_ERR(terminal_open(&terminal, FALSE, pool));
+      SVN_ERR(terminal_puts(
+                  apr_psprintf(pool,
+                               _("Authentication realm: %s\n"), realm),
+                  terminal, pool));
+      SVN_ERR(terminal_close(terminal));
     }
 
   return SVN_NO_ERROR;
@@ -396,13 +759,17 @@ plaintext_prompt_helper(svn_boolean_t *may_save_plaintext,
   svn_boolean_t answered = FALSE;
   svn_cmdline_prompt_baton2_t *pb = baton;
   const char *config_path = NULL;
+  terminal_handle_t *terminal;
 
   if (pb)
     SVN_ERR(svn_config_get_user_config_path(&config_path, pb->config_dir,
                                             SVN_CONFIG_CATEGORY_SERVERS, pool));
 
-  SVN_ERR(svn_cmdline_fprintf(stderr, pool, prompt_text, realmstring,
-                              config_path));
+  SVN_ERR(terminal_open(&terminal, FALSE, pool));
+  SVN_ERR(terminal_puts(apr_psprintf(pool, prompt_text,
+                                     realmstring, config_path),
+                        terminal, pool));
+  SVN_ERR(terminal_close(terminal));
 
   do
     {

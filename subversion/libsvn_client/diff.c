@@ -50,6 +50,7 @@
 
 #include "private/svn_wc_private.h"
 #include "private/svn_diff_private.h"
+#include "private/svn_subr_private.h"
 
 #include "svn_private_config.h"
 
@@ -92,9 +93,9 @@ make_repos_relpath(const char **repos_relpath,
                                                       scratch_pool),
                                       scratch_pool));
 
-      err = svn_wc__node_get_repos_relpath(repos_relpath, wc_ctx,
-                                           local_abspath,
-                                           result_pool, scratch_pool);
+      err = svn_wc__node_get_repos_info(NULL, repos_relpath, NULL, NULL,
+                                        wc_ctx, local_abspath,
+                                        result_pool, scratch_pool);
 
       if (!ra_session
           || ! err
@@ -594,6 +595,12 @@ struct diff_cmd_baton {
   /* Whether deletion of a file is summarized versus showing a full diff. */
   svn_boolean_t no_diff_deleted;
 
+  /* Whether to ignore copyfrom information when showing adds */
+  svn_boolean_t no_copyfrom_on_add;
+
+  /* Empty files for creating diffs or NULL if not used yet */
+  const char *empty_file;
+
   svn_wc_context_t *wc_ctx;
 
   /* The RA session used during diffs involving the repository. */
@@ -669,7 +676,9 @@ diff_dir_props_changed(svn_wc_notify_state_t *state,
   return svn_error_trace(diff_props_changed(diff_relpath,
                                             /* ### These revs be filled
                                              * ### with per node info */
-                                            diff_cmd_baton->revnum1,
+                                            dir_was_added
+                                                ? 0 /* Magic legacy value */
+                                                : diff_cmd_baton->revnum1,
                                             diff_cmd_baton->revnum2,
                                             dir_was_added,
                                             propchanges,
@@ -996,6 +1005,30 @@ diff_file_added(svn_wc_notify_state_t *content_state,
         rev2 = diff_cmd_baton->revnum2;
     }
 
+  if (diff_cmd_baton->no_copyfrom_on_add
+      && (copyfrom_path || SVN_IS_VALID_REVNUM(copyfrom_revision)))
+    {
+      apr_hash_t *empty_hash = apr_hash_make(scratch_pool);
+      apr_array_header_t *new_changes;
+
+      /* Rebase changes on having no left source. */
+      if (!diff_cmd_baton->empty_file)
+        SVN_ERR(svn_io_open_unique_file3(NULL, &diff_cmd_baton->empty_file,
+                                         NULL, svn_io_file_del_on_pool_cleanup,
+                                         diff_cmd_baton->pool, scratch_pool));
+
+      SVN_ERR(svn_prop_diffs(&new_changes,
+                             svn_prop__patch(original_props, prop_changes,
+                                             scratch_pool),
+                             empty_hash,
+                             scratch_pool));
+
+      tmpfile1 = diff_cmd_baton->empty_file;
+      prop_changes = new_changes;
+      original_props = empty_hash;
+      copyfrom_revision = SVN_INVALID_REVNUM;
+    }
+
   if (diff_cmd_baton->no_diff_added)
     {
       const char *index_path = diff_relpath;
@@ -1192,37 +1225,6 @@ static const svn_wc_diff_callbacks4_t diff_callbacks =
    the user specifies two dates that resolve to the same revision.  */
 
 
-
-
-/* Helper function: given a working-copy ABSPATH_OR_URL, return its
-   associated url in *URL, allocated in RESULT_POOL.  If ABSPATH_OR_URL is
-   *already* a URL, that's fine, return ABSPATH_OR_URL allocated in
-   RESULT_POOL.
-
-   Use SCRATCH_POOL for temporary allocations. */
-static svn_error_t *
-convert_to_url(const char **url,
-               svn_wc_context_t *wc_ctx,
-               const char *abspath_or_url,
-               apr_pool_t *result_pool,
-               apr_pool_t *scratch_pool)
-{
-  if (svn_path_is_url(abspath_or_url))
-    {
-      *url = apr_pstrdup(result_pool, abspath_or_url);
-      return SVN_NO_ERROR;
-    }
-
-  SVN_ERR(svn_wc__node_get_url(url, wc_ctx, abspath_or_url,
-                               result_pool, scratch_pool));
-  if (! *url)
-    return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                             _("Path '%s' has no URL"),
-                             svn_dirent_local_style(abspath_or_url,
-                                                    scratch_pool));
-  return SVN_NO_ERROR;
-}
-
 /** Check if paths PATH_OR_URL1 and PATH_OR_URL2 are urls and if the
  * revisions REVISION1 and REVISION2 are local. If PEG_REVISION is not
  * unspecified, ensure that at least one of the two revisions is not
@@ -1384,24 +1386,25 @@ diff_prepare_repos_repos(const char **url1,
 {
   const char *abspath_or_url2;
   const char *abspath_or_url1;
+  const char *repos_root_url;
 
   if (!svn_path_is_url(path_or_url2))
-    SVN_ERR(svn_dirent_get_absolute(&abspath_or_url2, path_or_url2,
-                                    pool));
+    {
+      SVN_ERR(svn_dirent_get_absolute(&abspath_or_url2, path_or_url2, pool));
+      SVN_ERR(svn_wc__node_get_url(url2, ctx->wc_ctx, abspath_or_url2,
+                                   pool, pool));
+    }
   else
-    abspath_or_url2 = path_or_url2;
+    *url2 = abspath_or_url2 = apr_pstrdup(pool, path_or_url2);
 
   if (!svn_path_is_url(path_or_url1))
-    SVN_ERR(svn_dirent_get_absolute(&abspath_or_url1, path_or_url1,
-                                    pool));
+    {
+      SVN_ERR(svn_dirent_get_absolute(&abspath_or_url1, path_or_url1, pool));
+      SVN_ERR(svn_wc__node_get_url(url1, ctx->wc_ctx, abspath_or_url1,
+                                   pool, pool));
+    }
   else
-    abspath_or_url1 = path_or_url1;
-
-  /* Figure out URL1 and URL2. */
-  SVN_ERR(convert_to_url(url1, ctx->wc_ctx, abspath_or_url1,
-                         pool, pool));
-  SVN_ERR(convert_to_url(url2, ctx->wc_ctx, abspath_or_url2,
-                         pool, pool));
+    *url1 = abspath_or_url1 = apr_pstrdup(pool, path_or_url1);
 
   /* We need exactly one BASE_PATH, so we'll let the BASE_PATH
      calculated for PATH_OR_URL2 override the one for PATH_OR_URL1
@@ -1488,18 +1491,23 @@ diff_prepare_repos_repos(const char **url1,
   else if (*kind2 == svn_node_none)
     SVN_ERR(check_diff_target_exists(*url2, *rev1, *rev2, *ra_session, pool));
 
+  SVN_ERR(svn_ra_get_repos_root2(*ra_session, &repos_root_url, pool));
+
   /* Choose useful anchors and targets for our two URLs. */
   *anchor1 = *url1;
   *anchor2 = *url2;
   *target1 = "";
   *target2 = "";
 
-  /* If one of the targets is a file, use the parent directory as anchor. */
-  if (*kind1 == svn_node_file || *kind2 == svn_node_file)
+  /* If none of the targets is the repository root open the parent directory
+     to allow describing replacement of the target itself */
+  if (strcmp(*url1, repos_root_url) != 0
+      && strcmp(*url2, repos_root_url) != 0)
     {
       svn_uri_split(anchor1, target1, *url1, pool);
       svn_uri_split(anchor2, target2, *url2, pool);
-      if (*base_path)
+      if (*base_path
+          && (*kind1 == svn_node_file || *kind2 == svn_node_file))
         *base_path = svn_dirent_dirname(*base_path, pool);
       SVN_ERR(svn_ra_reparent(*ra_session, *anchor1, pool));
     }
@@ -1630,300 +1638,6 @@ diff_wc_wc(const char *path1,
   return SVN_NO_ERROR;
 }
 
-/* Create an array of regular properties in PROP_HASH, filtering entry-props
- * and wc-props. Allocate the returned array in RESULT_POOL.
- * Use SCRATCH_POOL for temporary allocations. */
-static apr_array_header_t *
-make_regular_props_array(apr_hash_t *prop_hash,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
-{
-  apr_array_header_t *regular_props;
-  apr_hash_index_t *hi;
-
-  regular_props = apr_array_make(result_pool, 0, sizeof(svn_prop_t));
-  for (hi = apr_hash_first(scratch_pool, prop_hash); hi;
-       hi = apr_hash_next(hi))
-    {
-      const char *name = svn__apr_hash_index_key(hi);
-      svn_string_t *value = svn__apr_hash_index_val(hi);
-      svn_prop_kind_t prop_kind = svn_property_kind2(name);
-
-      if (prop_kind == svn_prop_regular_kind)
-        {
-          svn_prop_t *prop = apr_palloc(scratch_pool, sizeof(svn_prop_t));
-
-          prop->name = name;
-          prop->value = value;
-          APR_ARRAY_PUSH(regular_props, svn_prop_t) = *prop;
-        }
-    }
-
-  return regular_props;
-}
-
-/* Create a hash of regular properties from PROP_HASH, filtering entry-props
- * and wc-props. Allocate the returned hash in RESULT_POOL.
- * Use SCRATCH_POOL for temporary allocations. */
-static apr_hash_t *
-make_regular_props_hash(apr_hash_t *prop_hash,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool)
-{
-  apr_hash_t *regular_props;
-  apr_hash_index_t *hi;
-
-  regular_props = apr_hash_make(result_pool);
-  for (hi = apr_hash_first(scratch_pool, prop_hash); hi;
-       hi = apr_hash_next(hi))
-    {
-      const char *name = svn__apr_hash_index_key(hi);
-      svn_string_t *value = svn__apr_hash_index_val(hi);
-      svn_prop_kind_t prop_kind = svn_property_kind2(name);
-
-      if (prop_kind == svn_prop_regular_kind)
-        apr_hash_set(regular_props, name, APR_HASH_KEY_STRING, value);
-    }
-
-  return regular_props;
-}
-
-/* Handle an added or deleted diff target file for a repos<->repos diff.
- *
- * Using the provided diff CALLBACKS and the CALLBACK_BATON, show the file
- * TARGET@PEG_REVISION as added or deleted, depending on SHOW_DELETION.
- * TARGET is a path relative to RA_SESSION's URL.
- * REV1 and REV2 are the revisions being compared.
- * Use SCRATCH_POOL for temporary allocations. */
-static svn_error_t *
-diff_repos_repos_added_or_deleted_file(const char *target,
-                                       svn_revnum_t peg_revision,
-                                       svn_revnum_t rev1,
-                                       svn_revnum_t rev2,
-                                       svn_boolean_t show_deletion,
-                                      const char *empty_file,
-                                       const svn_wc_diff_callbacks4_t
-                                         *callbacks,
-                                       struct diff_cmd_baton *callback_baton,
-                                       svn_ra_session_t *ra_session,
-                                       apr_pool_t *scratch_pool)
-{
-  const char *file_abspath;
-  svn_stream_t *content;
-  apr_hash_t *prop_hash;
-
-  SVN_ERR(svn_stream_open_unique(&content, &file_abspath, NULL,
-                                 svn_io_file_del_on_pool_cleanup,
-                                 scratch_pool, scratch_pool));
-  SVN_ERR(svn_ra_get_file(ra_session, target, peg_revision, content, NULL,
-                          &prop_hash, scratch_pool));
-  SVN_ERR(svn_stream_close(content));
-
-  if (show_deletion)
-    {
-      SVN_ERR(callbacks->file_deleted(NULL, NULL,
-                                      target, file_abspath, empty_file,
-                                      apr_hash_get(prop_hash,
-                                                   SVN_PROP_MIME_TYPE,
-                                                   APR_HASH_KEY_STRING),
-                                      NULL,
-                                      make_regular_props_hash(
-                                        prop_hash, scratch_pool, scratch_pool),
-                                      callback_baton, scratch_pool));
-    }
-  else
-    {
-      SVN_ERR(callbacks->file_added(NULL, NULL, NULL,
-                                    target, empty_file, file_abspath,
-                                    rev1, rev2, NULL,
-                                    apr_hash_get(prop_hash, SVN_PROP_MIME_TYPE,
-                                                 APR_HASH_KEY_STRING),
-                                    NULL, SVN_INVALID_REVNUM,
-                                    make_regular_props_array(prop_hash,
-                                                             scratch_pool,
-                                                             scratch_pool),
-                                    NULL, callback_baton, scratch_pool));
-    }
-    
-  return SVN_NO_ERROR;
-}
-
-/* Handle an added or deleted diff target directory for a repos<->repos diff.
- *
- * Using the provided diff CALLBACKS and the CALLBACK_BATON, show the
- * directory TARGET@PEG_REVISION, and all of its children, as added or deleted,
- * depending on SHOW_DELETION. TARGET is a path relative to RA_SESSION's URL.
- * REV1 and REV2 are the revisions being compared.
- * Use SCRATCH_POOL for temporary allocations. */
-static svn_error_t *
-diff_repos_repos_added_or_deleted_dir(const char *target,
-                                      svn_revnum_t revision,
-                                      svn_revnum_t rev1,
-                                      svn_revnum_t rev2,
-                                      svn_boolean_t show_deletion,
-                                      const char *empty_file,
-                                      const svn_wc_diff_callbacks4_t
-                                        *callbacks,
-                                      struct diff_cmd_baton *callback_baton,
-                                      svn_ra_session_t *ra_session,
-                                      apr_pool_t *scratch_pool)
-{
-  apr_hash_t *dirents;
-  apr_hash_t *props;
-  apr_pool_t *iterpool;
-  apr_hash_index_t *hi;
-
-  SVN_ERR(svn_ra_get_dir2(ra_session, &dirents, NULL, &props,
-                          target, revision, SVN_DIRENT_KIND,
-                          scratch_pool));
-
-  if (show_deletion)
-    SVN_ERR(callbacks->dir_deleted(NULL, NULL, target, callback_baton,
-                                   scratch_pool));
-  else
-    SVN_ERR(callbacks->dir_added(NULL, NULL, NULL, NULL,
-                                 target, revision,
-                                 NULL, SVN_INVALID_REVNUM,
-                                 callback_baton, scratch_pool));
-  if (props)
-    {
-      if (show_deletion)
-        SVN_ERR(callbacks->dir_props_changed(NULL, NULL, target, FALSE,
-                                             apr_array_make(scratch_pool, 0,
-                                                            sizeof(svn_prop_t)),
-                                             make_regular_props_hash(
-                                               props, scratch_pool,
-                                               scratch_pool),
-                                             callback_baton, scratch_pool));
-      else
-        SVN_ERR(callbacks->dir_props_changed(NULL, NULL, target, TRUE,
-                                             make_regular_props_array(
-                                               props, scratch_pool,
-                                               scratch_pool),
-                                             NULL,
-                                             callback_baton, scratch_pool));
-    }
-
-  iterpool = svn_pool_create(scratch_pool);
-  for (hi = apr_hash_first(scratch_pool, dirents); hi; hi = apr_hash_next(hi))
-    {
-      const char *name = svn__apr_hash_index_key(hi);
-      svn_dirent_t *dirent = svn__apr_hash_index_val(hi);
-      const char *child_target;
-
-      svn_pool_clear(iterpool);
-
-      child_target = svn_relpath_join(target, name, iterpool);
-
-      if (dirent->kind == svn_node_dir)
-        SVN_ERR(diff_repos_repos_added_or_deleted_dir(child_target,
-                                                      revision, rev1, rev2,
-                                                      show_deletion,
-                                                      empty_file,
-                                                      callbacks,
-                                                      callback_baton,
-                                                      ra_session,
-                                                      iterpool));
-      else if (dirent->kind == svn_node_file)
-        SVN_ERR(diff_repos_repos_added_or_deleted_file(child_target,
-                                                       revision, rev1, rev2,
-                                                       show_deletion,
-                                                       empty_file,
-                                                       callbacks,
-                                                       callback_baton,
-                                                       ra_session,
-                                                       iterpool));
-    }
-  svn_pool_destroy(iterpool);
-
-  if (!show_deletion)
-    SVN_ERR(callbacks->dir_closed(NULL, NULL, NULL, target, TRUE,
-                                  callback_baton, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Handle an added or deleted diff target for a repos<->repos diff.
- *
- * Using the provided diff CALLBACKS and the CALLBACK_BATON, show
- * TARGET@PEG_REVISION, and all of its children, if any, as added or deleted.
- * TARGET is a path relative to RA_SESSION's URL.
- * REV1 and REV2 are the revisions being compared.
- * Use SCRATCH_POOL for temporary allocations. */
-static svn_error_t *
-diff_repos_repos_added_or_deleted_target(const char *target1,
-                                         const char *target2,
-                                         svn_revnum_t rev1,
-                                         svn_revnum_t rev2,
-                                         svn_node_kind_t kind1,
-                                         svn_node_kind_t kind2,
-                                         const svn_wc_diff_callbacks4_t
-                                           *callbacks,
-                                         struct diff_cmd_baton *callback_baton,
-                                         svn_ra_session_t *ra_session,
-                                         apr_pool_t *scratch_pool)
-{
-  const char *existing_target;
-  svn_revnum_t existing_rev;
-  svn_node_kind_t existing_kind;
-  svn_boolean_t show_deletion;
-  const char *empty_file;
-
-  SVN_ERR_ASSERT(kind1 == svn_node_none || kind2 == svn_node_none);
-
-  /* Are we showing an addition or deletion? */
-  show_deletion = (kind2 == svn_node_none);
-
-  /* Which target is being added/deleted? Is it a file or a directory? */
-  if (show_deletion)
-    {
-      existing_target = target1;
-      existing_rev = rev1;
-      existing_kind = kind1;
-    }
-  else
-    {
-      existing_target = target2;
-      existing_rev = rev2;
-      existing_kind = kind2;
-    }
-
-  /* All file content will be diffed against the empty file. */
-  SVN_ERR(svn_io_open_unique_file3(NULL, &empty_file, NULL,
-                                   svn_io_file_del_on_pool_cleanup,
-                                   scratch_pool, scratch_pool));
-
-  if (existing_kind == svn_node_file)
-    {
-      /* Get file content and show a diff against the empty file. */
-      SVN_ERR(diff_repos_repos_added_or_deleted_file(existing_target,
-                                                     existing_rev,
-                                                     rev1, rev2,
-                                                     show_deletion,
-                                                     empty_file,
-                                                     callbacks,
-                                                     callback_baton,
-                                                     ra_session,
-                                                     scratch_pool));
-    }
-  else
-    {
-      /* Walk the added/deleted tree and show a diff for each child. */
-      SVN_ERR(diff_repos_repos_added_or_deleted_dir(existing_target,
-                                                    existing_rev,
-                                                    rev1, rev2,
-                                                    show_deletion,
-                                                    empty_file,
-                                                    callbacks,
-                                                    callback_baton,
-                                                    ra_session,
-                                                    scratch_pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Perform a diff between two repository paths.
 
    PATH_OR_URL1 and PATH_OR_URL2 may be either URLs or the working copy paths.
@@ -1954,6 +1668,8 @@ diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
 
+  const svn_diff_tree_processor_t *diff_processor;
+
   const char *url1;
   const char *url2;
   const char *base_path;
@@ -1975,6 +1691,14 @@ diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
                                    revision1, revision2, peg_revision,
                                    pool));
 
+  /* Set up the repos_diff editor on BASE_PATH, if available.
+     Otherwise, we just use "". */
+
+  SVN_ERR(svn_wc__wrap_diff_callbacks(&diff_processor,
+                                      callbacks, callback_baton,
+                                      TRUE /* walk_deleted_dirs */,
+                                      pool, pool));
+
   /* Get actual URLs. */
   callback_baton->orig_path_1 = url1;
   callback_baton->orig_path_2 = url2;
@@ -1986,20 +1710,40 @@ diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
   callback_baton->ra_session = ra_session;
   callback_baton->anchor = base_path;
 
-  if (kind1 == svn_node_none || kind2 == svn_node_none)
+  /* The repository can bring in a new working copy, but not delete
+     everything. Luckily our new diff handler can just be reversed. */
+  if (kind2 == svn_node_none)
     {
-      /* One side of the diff does not exist.
-       * Walk the tree that does exist, showing a series of additions
-       * or deletions. */
-      SVN_ERR(diff_repos_repos_added_or_deleted_target(target1, target2,
-                                                       rev1, rev2,
-                                                       kind1, kind2,
-                                                       callbacks,
-                                                       callback_baton,
-                                                       ra_session,
-                                                       pool));
-      return SVN_NO_ERROR;
+      const char *str_tmp;
+      svn_revnum_t rev_tmp;
+
+      str_tmp = url2;
+      url2 = url1;
+      url1 = str_tmp;
+
+      rev_tmp = rev2;
+      rev2 = rev1;
+      rev1 = rev_tmp;
+
+      str_tmp = anchor2;
+      anchor2 = anchor1;
+      anchor1 = str_tmp;
+
+      str_tmp = target2;
+      target2 = target1;
+      target1 = str_tmp;
+
+      diff_processor = svn_diff__tree_processor_reverse_create(diff_processor,
+                                                               NULL, pool);
     }
+
+  /* Filter the first path component using a filter processor, until we fixed
+     the diff processing to handle this directly */
+  if ((kind1 != svn_node_file && kind2 != svn_node_file) && target1[0] != '\0')
+  {
+    diff_processor = svn_diff__tree_processor_filter_create(diff_processor,
+                                                            target1, pool);
+  }
 
   /* Now, we open an extra RA session to the correct anchor
      location for URL1.  This is used during the editor calls to fetch file
@@ -2008,188 +1752,28 @@ diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
                                                anchor1, NULL, NULL, FALSE,
                                                TRUE, ctx, pool));
 
-  /* Set up the repos_diff editor on BASE_PATH, if available.
-     Otherwise, we just use "". */
-  SVN_ERR(svn_client__get_diff_editor(
+  SVN_ERR(svn_client__get_diff_editor2(
                 &diff_editor, &diff_edit_baton,
-                depth,
-                extra_ra_session, rev1, TRUE /* walk_deleted_dirs */,
+                extra_ra_session, depth,
+                rev1, 
                 TRUE /* text_deltas */,
-                callbacks, callback_baton,
+                diff_processor,
                 ctx->cancel_func, ctx->cancel_baton,
-                NULL /* no notify_func */, NULL /* no notify_baton */,
                 pool));
 
   /* We want to switch our txn into URL2 */
-  SVN_ERR(svn_ra_do_diff3
-          (ra_session, &reporter, &reporter_baton, rev2, target1,
-           depth, ignore_ancestry, TRUE /* text_deltas */,
-           url2, diff_editor, diff_edit_baton, pool));
+  SVN_ERR(svn_ra_do_diff3(ra_session, &reporter, &reporter_baton,
+                          rev2, target1,
+                          depth, ignore_ancestry, TRUE /* text_deltas */,
+                          url2, diff_editor, diff_edit_baton, pool));
 
   /* Drive the reporter; do the diff. */
   SVN_ERR(reporter->set_path(reporter_baton, "", rev1,
                              svn_depth_infinity,
                              FALSE, NULL,
                              pool));
-  return reporter->finish_report(reporter_baton, pool);
-}
 
-
-/* Using CALLBACKS, show a REPOS->WC diff for a file TARGET, which in the
- * working copy is at FILE2_ABSPATH. KIND1 is the node kind of the repository
- * target (either svn_node_file or svn_node_none). REV is the revision the
- * working file is diffed against. RA_SESSION points at the URL of the file
- * in the repository and is used to get the file's repository-version content,
- * if necessary. The other parameters are as in diff_repos_wc(). */
-static svn_error_t *
-diff_repos_wc_file_target(const char *target,
-                          const char *file2_abspath,
-                          svn_node_kind_t kind1,
-                          svn_revnum_t rev,
-                          svn_boolean_t reverse,
-                          svn_boolean_t show_copies_as_adds,
-                          const svn_wc_diff_callbacks4_t *callbacks,
-                          void *callback_baton,
-                          svn_ra_session_t *ra_session,
-                          svn_client_ctx_t *ctx,
-                          apr_pool_t *scratch_pool)
-{
-  const char *file1_abspath;
-  svn_stream_t *file1_content;
-  svn_stream_t *file2_content;
-  apr_hash_t *file1_props = NULL;
-  apr_hash_t *file2_props;
-  svn_boolean_t is_copy = FALSE;
-  apr_hash_t *keywords = NULL;
-  svn_string_t *keywords_prop;
-  svn_subst_eol_style_t eol_style;
-  const char *eol_str;
-
-  /* Get content and props of file 1 (the remote file). */
-  SVN_ERR(svn_stream_open_unique(&file1_content, &file1_abspath, NULL,
-                                 svn_io_file_del_on_pool_cleanup,
-                                 scratch_pool, scratch_pool));
-  if (kind1 == svn_node_file)
-    {
-      if (show_copies_as_adds)
-        SVN_ERR(svn_wc__node_get_origin(&is_copy, 
-                                        NULL, NULL, NULL, NULL, NULL,
-                                        ctx->wc_ctx, file2_abspath,
-                                        FALSE, scratch_pool, scratch_pool));
-      /* If showing copies as adds, diff against the empty file. */
-      if (!(show_copies_as_adds && is_copy))
-        SVN_ERR(svn_ra_get_file(ra_session, "", rev, file1_content,
-                                NULL, &file1_props, scratch_pool));
-    }
-
-  SVN_ERR(svn_stream_close(file1_content));
-
-  SVN_ERR(svn_wc_prop_list2(&file2_props, ctx->wc_ctx, file2_abspath,
-                            scratch_pool, scratch_pool));
-
-  /* We might have to create a normalised version of the working file. */
-  svn_subst_eol_style_from_value(&eol_style, &eol_str,
-                                 apr_hash_get(file2_props,
-                                              SVN_PROP_EOL_STYLE,
-                                              APR_HASH_KEY_STRING));
-  keywords_prop = apr_hash_get(file2_props, SVN_PROP_KEYWORDS,
-                               APR_HASH_KEY_STRING);
-  if (keywords_prop)
-    SVN_ERR(svn_subst_build_keywords2(&keywords, keywords_prop->data,
-                                      NULL, NULL, 0, NULL,
-                                      scratch_pool));
-  if (svn_subst_translation_required(eol_style, SVN_SUBST_NATIVE_EOL_STR,
-                                     keywords, FALSE, TRUE))
-    {
-      svn_stream_t *working_content;
-      svn_stream_t *normalized_content;
-
-      SVN_ERR(svn_stream_open_readonly(&working_content, file2_abspath,
-                                       scratch_pool, scratch_pool));
-
-      /* Create a temporary file and copy normalised data into it. */
-      SVN_ERR(svn_stream_open_unique(&file2_content, &file2_abspath, NULL,
-                                     svn_io_file_del_on_pool_cleanup,
-                                     scratch_pool, scratch_pool));
-      normalized_content = svn_subst_stream_translated(
-                             file2_content, SVN_SUBST_NATIVE_EOL_STR,
-                             TRUE, keywords, FALSE, scratch_pool);
-      SVN_ERR(svn_stream_copy3(working_content, normalized_content,
-                               ctx->cancel_func, ctx->cancel_baton,
-                               scratch_pool));
-    }
-
-  if (kind1 == svn_node_file && !(show_copies_as_adds && is_copy))
-    {
-      SVN_ERR(callbacks->file_opened(NULL, NULL, target,
-                                     reverse ? SVN_INVALID_REVNUM : rev,
-                                     callback_baton, scratch_pool));
-
-      if (reverse)
-        SVN_ERR(callbacks->file_changed(NULL, NULL, NULL, target,
-                                        file2_abspath, file1_abspath,
-                                        SVN_INVALID_REVNUM, rev,
-                                        apr_hash_get(file2_props,
-                                                     SVN_PROP_MIME_TYPE,
-                                                     APR_HASH_KEY_STRING),
-                                        apr_hash_get(file1_props,
-                                                     SVN_PROP_MIME_TYPE,
-                                                     APR_HASH_KEY_STRING),
-                                        make_regular_props_array(
-                                          file1_props, scratch_pool,
-                                          scratch_pool),
-                                        file2_props,
-                                        callback_baton, scratch_pool));
-      else
-        SVN_ERR(callbacks->file_changed(NULL, NULL, NULL, target,
-                                        file1_abspath, file2_abspath,
-                                        rev, SVN_INVALID_REVNUM,
-                                        apr_hash_get(file1_props,
-                                                     SVN_PROP_MIME_TYPE,
-                                                     APR_HASH_KEY_STRING),
-                                        apr_hash_get(file2_props,
-                                                     SVN_PROP_MIME_TYPE,
-                                                     APR_HASH_KEY_STRING),
-                                        make_regular_props_array(
-                                          file2_props, scratch_pool,
-                                          scratch_pool),
-                                        file1_props,
-                                        callback_baton, scratch_pool));
-    }
-  else
-    {
-      if (reverse)
-        {
-          SVN_ERR(callbacks->file_deleted(NULL, NULL,
-                                          target, file2_abspath, file1_abspath,
-                                          apr_hash_get(file2_props,
-                                                       SVN_PROP_MIME_TYPE,
-                                                       APR_HASH_KEY_STRING),
-                                          NULL,
-                                          make_regular_props_hash(
-                                            file2_props, scratch_pool,
-                                            scratch_pool),
-                                          callback_baton, scratch_pool));
-        }
-      else
-        {
-          SVN_ERR(callbacks->file_added(NULL, NULL, NULL, target,
-                                        file1_abspath, file2_abspath,
-                                        rev, SVN_INVALID_REVNUM,
-                                        NULL,
-                                        apr_hash_get(file2_props,
-                                                     SVN_PROP_MIME_TYPE,
-                                                     APR_HASH_KEY_STRING),
-                                        NULL, SVN_INVALID_REVNUM,
-                                        make_regular_props_array(
-                                          file2_props, scratch_pool,
-                                          scratch_pool),
-                                        NULL,
-                                        callback_baton, scratch_pool));
-        }
-    }
-
-  return SVN_NO_ERROR;
+  return svn_error_trace(reporter->finish_report(reporter_baton, pool));
 }
 
 /* Perform a diff between a repository path and a working-copy path.
@@ -2218,8 +1802,9 @@ diff_repos_wc(const char *path_or_url1,
               void *callback_baton,
               struct diff_cmd_baton *cmd_baton,
               svn_client_ctx_t *ctx,
-              apr_pool_t *pool)
+              apr_pool_t *scratch_pool)
 {
+  apr_pool_t *pool = scratch_pool;
   const char *url1, *anchor, *anchor_url, *target;
   svn_revnum_t rev;
   svn_ra_session_t *ra_session;
@@ -2236,22 +1821,27 @@ diff_repos_wc(const char *path_or_url1,
   svn_node_kind_t kind1;
   svn_node_kind_t kind2;
   svn_boolean_t is_copy;
-  svn_revnum_t copyfrom_rev;
-  const char *copy_source_repos_relpath;
-  const char *copy_source_repos_root_url;
+  svn_revnum_t cf_revision;
+  const char *cf_repos_relpath;
+  const char *cf_repos_root_url;
 
   SVN_ERR_ASSERT(! svn_path_is_url(path2));
 
   if (!svn_path_is_url(path_or_url1))
-    SVN_ERR(svn_dirent_get_absolute(&abspath_or_url1, path_or_url1, pool));
+    {
+      SVN_ERR(svn_dirent_get_absolute(&abspath_or_url1, path_or_url1, pool));
+      SVN_ERR(svn_wc__node_get_url(&url1, ctx->wc_ctx, abspath_or_url1,
+                                   pool, pool));
+    }
   else
-    abspath_or_url1 = path_or_url1;
+    {
+      url1 = path_or_url1;
+      abspath_or_url1 = path_or_url1;
+    }
 
   SVN_ERR(svn_dirent_get_absolute(&abspath2, path2, pool));
 
   /* Convert path_or_url1 to a URL to feed to do_diff. */
-  SVN_ERR(convert_to_url(&url1, ctx->wc_ctx, abspath_or_url1, pool, pool));
-
   SVN_ERR(svn_wc_get_actual_target2(&anchor, &target,
                                     ctx->wc_ctx, path2,
                                     pool, pool));
@@ -2260,10 +1850,7 @@ diff_repos_wc(const char *path_or_url1,
   SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, pool));
   SVN_ERR(svn_wc__node_get_url(&anchor_url, ctx->wc_ctx, anchor_abspath,
                                pool, pool));
-  if (! anchor_url)
-    return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                             _("Directory '%s' has no URL"),
-                             svn_dirent_local_style(anchor, pool));
+  SVN_ERR_ASSERT(anchor_url != NULL);
 
   /* If we are performing a pegged diff, we need to find out what our
      actual URLs will be. */
@@ -2301,7 +1888,7 @@ diff_repos_wc(const char *path_or_url1,
   SVN_ERR(svn_ra_check_path(ra_session, "", rev, &kind1, pool));
 
   /* Figure out the node kind of the local target. */
-  SVN_ERR(svn_io_check_resolved_path(abspath2, &kind2, pool));
+  SVN_ERR(svn_wc_read_kind(&kind2, ctx->wc_ctx, abspath2, FALSE, pool));
 
   cmd_baton->ra_session = ra_session;
   cmd_baton->anchor = anchor;
@@ -2312,31 +1899,13 @@ diff_repos_wc(const char *path_or_url1,
     cmd_baton->revnum2 = rev;
 
   /* Check if our diff target is a copied node. */
-  SVN_ERR(svn_wc__node_get_origin(&is_copy, 
-                                  &copyfrom_rev,
-                                  &copy_source_repos_relpath,
-                                  &copy_source_repos_root_url,
+  SVN_ERR(svn_wc__node_get_origin(&is_copy,
+                                  &cf_revision,
+                                  &cf_repos_relpath,
+                                  &cf_repos_root_url,
                                   NULL, NULL,
                                   ctx->wc_ctx, abspath2,
                                   FALSE, pool, pool));
-
-  /* If both diff targets can be diffed as files, fetch the appropriate
-   * file content from the repository and generate a diff against the
-   * local version of the file.
-   * However, if comparing the repository version of the file to the BASE
-   * tree version we can use the diff editor to transmit a delta instead
-   * of potentially huge file content. */
-  if ((!rev2_is_base || is_copy) &&
-      (kind1 == svn_node_file || kind1 == svn_node_none)
-       && kind2 == svn_node_file)
-    {
-      SVN_ERR(diff_repos_wc_file_target(target, abspath2, kind1, rev,
-                                        reverse, show_copies_as_adds,
-                                        callbacks, callback_baton,
-                                        ra_session, ctx, pool));
-
-      return SVN_NO_ERROR;
-    }
 
   /* Use the diff editor to generate the diff. */
   SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
@@ -2346,7 +1915,7 @@ diff_repos_wc(const char *path_or_url1,
                                   anchor_abspath,
                                   target,
                                   depth,
-                                  ignore_ancestry,
+                                  ignore_ancestry || is_copy,
                                   show_copies_as_adds,
                                   use_git_diff_format,
                                   rev2_is_base,
@@ -2365,30 +1934,40 @@ diff_repos_wc(const char *path_or_url1,
 
   if (is_copy)
     {
-      const char *copyfrom_url;
       const char *copyfrom_parent_url;
       const char *copyfrom_basename;
       svn_depth_t copy_depth;
 
       cmd_baton->repos_wc_diff_target_is_copy = TRUE;
 
-      /* We're diffing a locally copied/moved directory.
+      /* We're diffing a locally copied/moved node.
        * Describe the copy source to the reporter instead of the copy itself.
        * Doing the latter would generate a single add_directory() call to the
        * diff editor which results in an unexpected diff (the copy would
        * be shown as deleted). */
 
-      copyfrom_url = apr_pstrcat(pool, copy_source_repos_root_url, "/",
-                                 copy_source_repos_relpath, (char *)NULL);
-      svn_uri_split(&copyfrom_parent_url, &copyfrom_basename,
-                    copyfrom_url, pool);
+      if (cf_repos_relpath[0] == '\0')
+        {
+          copyfrom_parent_url = cf_repos_root_url;
+          copyfrom_basename = "";
+        }
+      else
+        {
+          const char *parent_relpath;
+          svn_relpath_split(&parent_relpath, &copyfrom_basename,
+                            cf_repos_relpath, scratch_pool);
+
+          copyfrom_parent_url = svn_path_url_add_component2(cf_repos_root_url,
+                                                            parent_relpath,
+                                                            scratch_pool);
+        }
       SVN_ERR(svn_ra_reparent(ra_session, copyfrom_parent_url, pool));
 
       /* Tell the RA layer we want a delta to change our txn to URL1 */ 
       SVN_ERR(svn_ra_do_diff3(ra_session,
                               &reporter, &reporter_baton,
                               rev,
-                              copyfrom_basename,
+                              target,
                               diff_depth,
                               ignore_ancestry,
                               TRUE,  /* text_deltas */
@@ -2398,9 +1977,23 @@ diff_repos_wc(const char *path_or_url1,
       /* Report the copy source. */
       SVN_ERR(svn_wc__node_get_depth(&copy_depth, ctx->wc_ctx, abspath2,
                                      pool));
-      SVN_ERR(reporter->set_path(reporter_baton, "", copyfrom_rev,
-                                 copy_depth, FALSE, NULL, pool));
-      
+
+      if (copy_depth == svn_depth_unknown)
+        copy_depth = svn_depth_infinity;
+
+      SVN_ERR(reporter->set_path(reporter_baton, "",
+                                 cf_revision,
+                                 copy_depth, FALSE, NULL, scratch_pool));
+
+      if (strcmp(target, copyfrom_basename) != 0)
+        SVN_ERR(reporter->link_path(reporter_baton, target,
+                                    svn_path_url_add_component2(
+                                                cf_repos_root_url,
+                                                cf_repos_relpath,
+                                                scratch_pool),
+                                    cf_revision,
+                                    copy_depth, FALSE, NULL, scratch_pool));
+
       /* Finish the report to generate the diff. */
       SVN_ERR(reporter->finish_report(reporter_baton, pool));
     }
@@ -2501,6 +2094,7 @@ do_diff(const svn_wc_diff_callbacks4_t *callbacks,
               SVN_ERR(svn_dirent_get_absolute(&abspath2, path_or_url2, pool));
 
               SVN_ERR(svn_client__arbitrary_nodes_diff(abspath1, abspath2,
+                                                       depth,
                                                        callbacks,
                                                        callback_baton,
                                                        ctx, pool));
@@ -2645,6 +2239,8 @@ diff_summarize_repos_repos(svn_client_diff_summarize_func_t summarize_func,
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
 
+  const svn_diff_tree_processor_t *diff_processor;
+
   const char *url1;
   const char *url2;
   const char *base_path;
@@ -2668,27 +2264,43 @@ diff_summarize_repos_repos(svn_client_diff_summarize_func_t summarize_func,
                                    revision1, revision2,
                                    peg_revision, pool));
 
-  if (kind1 == svn_node_none || kind2 == svn_node_none)
-    {
-      /* One side of the diff does not exist.
-       * Walk the tree that does exist, showing a series of additions
-       * or deletions. */
-      SVN_ERR(svn_client__get_diff_summarize_callbacks(
-                &callbacks, &callback_baton, target1, FALSE, 
-                summarize_func, summarize_baton, pool));
-      SVN_ERR(diff_repos_repos_added_or_deleted_target(target1, target2,
-                                                       rev1, rev2,
-                                                       kind1, kind2,
-                                                       callbacks,
-                                                       callback_baton,
-                                                       ra_session,
-                                                       pool));
-      return SVN_NO_ERROR;
-    }
-
+  /* Set up the repos_diff editor. */
   SVN_ERR(svn_client__get_diff_summarize_callbacks(
             &callbacks, &callback_baton,
             target1, FALSE, summarize_func, summarize_baton, pool));
+
+  SVN_ERR(svn_wc__wrap_diff_callbacks(&diff_processor,
+                                      callbacks, callback_baton,
+                                      TRUE /* walk_deleted_dirs */,
+                                      pool, pool));
+
+
+  /* The repository can bring in a new working copy, but not delete
+     everything. Luckily our new diff handler can just be reversed. */
+  if (kind2 == svn_node_none)
+    {
+      const char *str_tmp;
+      svn_revnum_t rev_tmp;
+
+      str_tmp = url2;
+      url2 = url1;
+      url1 = str_tmp;
+
+      rev_tmp = rev2;
+      rev2 = rev1;
+      rev1 = rev_tmp;
+
+      str_tmp = anchor2;
+      anchor2 = anchor1;
+      anchor1 = str_tmp;
+
+      str_tmp = target2;
+      target2 = target1;
+      target1 = str_tmp;
+
+      diff_processor = svn_diff__tree_processor_reverse_create(diff_processor,
+                                                               NULL, pool);
+    }
 
   /* Now, we open an extra RA session to the correct anchor
      location for URL1.  This is used to get the kind of deleted paths.  */
@@ -2696,14 +2308,14 @@ diff_summarize_repos_repos(svn_client_diff_summarize_func_t summarize_func,
                                                anchor1, NULL, NULL, FALSE,
                                                TRUE, ctx, pool));
 
-  /* Set up the repos_diff editor. */
-  SVN_ERR(svn_client__get_diff_editor(&diff_editor, &diff_edit_baton,
-            depth,
-            extra_ra_session, rev1, TRUE /* walk_deleted_dirs */,
-            FALSE /* text_deltas */,
-            callbacks, callback_baton,
-            ctx->cancel_func, ctx->cancel_baton,
-            NULL /* notify_func */, NULL /* notify_baton */, pool));
+  SVN_ERR(svn_client__get_diff_editor2(&diff_editor, &diff_edit_baton,
+                                       extra_ra_session,
+                                       depth,
+                                       rev1,
+                                       FALSE /* text_deltas */,
+                                       diff_processor,
+                                       ctx->cancel_func, ctx->cancel_baton,
+                                       pool));
 
   /* We want to switch our txn into URL2 */
   SVN_ERR(svn_ra_do_diff3
@@ -2716,7 +2328,7 @@ diff_summarize_repos_repos(svn_client_diff_summarize_func_t summarize_func,
   SVN_ERR(reporter->set_path(reporter_baton, "", rev1,
                              svn_depth_infinity,
                              FALSE, NULL, pool));
-  return reporter->finish_report(reporter_baton, pool);
+  return svn_error_trace(reporter->finish_report(reporter_baton, pool));
 }
 
 /* This is basically just the guts of svn_client_diff_summarize[_peg]2(). */
@@ -2797,6 +2409,7 @@ do_diff_summarize(svn_client_diff_summarize_func_t summarize_func,
                      summarize_func, summarize_baton, pool));
 
              SVN_ERR(svn_client__arbitrary_nodes_diff(abspath1, abspath2,
+                                                      depth,
                                                       callbacks,
                                                       callback_baton,
                                                       ctx, pool));
@@ -2969,6 +2582,8 @@ svn_client_diff6(const apr_array_header_t *options,
   diff_cmd_baton.use_git_diff_format = use_git_diff_format;
   diff_cmd_baton.no_diff_added = no_diff_added;
   diff_cmd_baton.no_diff_deleted = no_diff_deleted;
+  diff_cmd_baton.no_copyfrom_on_add = show_copies_as_adds;
+
   diff_cmd_baton.wc_ctx = ctx->wc_ctx;
   diff_cmd_baton.ra_session = NULL;
   diff_cmd_baton.anchor = NULL;
@@ -3030,6 +2645,8 @@ svn_client_diff_peg6(const apr_array_header_t *options,
   diff_cmd_baton.use_git_diff_format = use_git_diff_format;
   diff_cmd_baton.no_diff_added = no_diff_added;
   diff_cmd_baton.no_diff_deleted = no_diff_deleted;
+  diff_cmd_baton.no_copyfrom_on_add = show_copies_as_adds;
+
   diff_cmd_baton.wc_ctx = ctx->wc_ctx;
   diff_cmd_baton.ra_session = NULL;
   diff_cmd_baton.anchor = NULL;

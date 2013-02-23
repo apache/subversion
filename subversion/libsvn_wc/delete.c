@@ -198,13 +198,15 @@ svn_wc__delete_many(svn_wc_context_t *wc_ctx,
   for (i = 0; i < targets->nelts; i++)
     {
       svn_boolean_t conflicted = FALSE;
+      const char *repos_relpath;
 
       svn_pool_clear(iterpool);
 
       local_abspath = APR_ARRAY_IDX(targets, i, const char *);
-      err = svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, &conflicted,
+      err = svn_wc__db_read_info(&status, &kind, NULL, &repos_relpath, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, &conflicted,
                                  NULL, NULL, NULL, NULL, NULL, NULL,
                                  db, local_abspath, iterpool, iterpool);
 
@@ -255,6 +257,12 @@ svn_wc__delete_many(svn_wc_context_t *wc_ctx,
                                      svn_dirent_local_style(local_abspath,
                                                             iterpool));
         }
+      if (repos_relpath && !repos_relpath[0])
+        return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                                     _("'%s' represents the repository root "
+                                       "and cannot be deleted"),
+                                     svn_dirent_local_style(local_abspath,
+                                                            iterpool));
 
       /* Verify if we have a write lock on the parent of this node as we might
          be changing the childlist of that directory. */
@@ -319,10 +327,11 @@ svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
   svn_kind_t kind;
   svn_boolean_t conflicted;
   svn_skel_t *work_items = NULL;
+  const char *repos_relpath;
 
-  err = svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+  err = svn_wc__db_read_info(&status, &kind, NULL, &repos_relpath, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, &conflicted,
+                             NULL, NULL, NULL, NULL, NULL, NULL, &conflicted,
                              NULL, NULL, NULL, NULL, NULL, NULL,
                              db, local_abspath, pool, pool);
 
@@ -366,6 +375,11 @@ svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
                                    "cannot be deleted"),
                                  svn_dirent_local_style(local_abspath, pool));
     }
+  if (repos_relpath && !repos_relpath[0])
+    return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                             _("'%s' represents the repository root "
+                               "and cannot be deleted"),
+                               svn_dirent_local_style(local_abspath, pool));
 
   /* Verify if we have a write lock on the parent of this node as we might
      be changing the childlist of that directory. */

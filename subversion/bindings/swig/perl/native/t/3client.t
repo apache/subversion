@@ -20,7 +20,7 @@
 #
 #
 
-use Test::More tests => 221;
+use Test::More tests => 223;
 use strict;
 
 # shut up about variables that are only used once.
@@ -386,6 +386,28 @@ is($ctx->log("$reposurl/dir1/new",$current_rev,$current_rev,1,0,
              }),
    undef,
    'log returns undef');
+
+# TEST
+my $opt_revision_head = SVN::_Core::new_svn_opt_revision_t();
+$opt_revision_head->kind($SVN::Core::opt_revision_head);
+is_deeply(get_log2($opt_revision_head),      # got
+          get_log2("HEAD"));                 # expected
+# TEST
+my $opt_revision_number = SVN::_Core::new_svn_opt_revision_t();
+$opt_revision_number->kind($SVN::Core::opt_revision_number);
+$opt_revision_number->value->number($current_rev);
+is_deeply(get_log2($opt_revision_number),    # got
+          get_log2($current_rev));           # expected
+
+sub get_log2 {
+    my ($rev) = @_;
+    my @log;
+    $ctx->log2($reposurl, $rev, $rev, 0, 0, 0, sub { 
+        my (undef, $revision, $author, $date, $msg, undef) = @_; 
+        push @log, [ $revision, $author, $date, $msg ];
+    });
+    return \@log;
+}
 
 # TEST
 is($ctx->update($wcpath,'HEAD',1),$current_rev,

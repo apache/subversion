@@ -111,15 +111,15 @@ def invalid_delete_targets(sbox):
   "invalid targets for 'delete'"
   sbox.build(read_only=True)
   for (target1, target2) in [("iota", "^/"), ("file://", "iota")]:
-    run_and_verify_svn_in_wc(sbox, "svn: E205000: Cannot mix repository and working "
+    run_and_verify_svn_in_wc(sbox, "svn: E200009: Cannot mix repository and working "
                              "copy targets", 'delete', target1, target2)
 
 def invalid_diff_targets(sbox):
   "invalid targets for 'diff'"
   sbox.build(read_only=True)
-  for (target1, target2) in [("iota", "^/"), ("file://", "iota")]:
-    run_and_verify_svn_in_wc(sbox, "svn: E205000: Cannot mix repository and working "
-                             "copy targets", 'diff', target1, target2)
+  for (target1, target2, target3) in [("iota", "^/", "A/mu"), ("file://", "iota", "A/mu")]:
+    run_and_verify_svn_in_wc(sbox, "svn: E200009: Cannot mix repository and working "
+                             "copy targets", 'diff', target1, target2, target3)
 
 def invalid_export_targets(sbox):
   "invalid targets for 'export'"
@@ -202,14 +202,14 @@ def invalid_lock_targets(sbox):
   "wc paths and repo URL target mixture for 'lock'"
   sbox.build(read_only=True)
   for (target1, target2) in [("iota", "^/"), ("file://", "iota")]:
-    run_and_verify_svn_in_wc(sbox, "svn: E205000: Cannot mix repository and working "
+    run_and_verify_svn_in_wc(sbox, "svn: E200009: Cannot mix repository and working "
                              "copy targets", 'lock', target1, target2)
 
 def invalid_unlock_targets(sbox):
   "wc paths and repo URL target mixture for 'unlock'"
   sbox.build(read_only=True)
   for (target1, target2) in [("iota", "^/"), ("file://", "iota")]:
-    run_and_verify_svn_in_wc(sbox, "svn: E205000: Cannot mix repository and working "
+    run_and_verify_svn_in_wc(sbox, "svn: E200009: Cannot mix repository and working "
                              "copy targets", 'unlock', target1, target2)
 
 def invalid_status_targets(sbox):
@@ -243,7 +243,7 @@ def invalid_relocate_targets(sbox):
 def invalid_mkdir_targets(sbox):
   "invalid targets for 'mkdir'"
   sbox.build(read_only=True)
-  run_and_verify_svn_in_wc(sbox, "svn: E205000: Cannot mix repository and working "
+  run_and_verify_svn_in_wc(sbox, "svn: E200009: Cannot mix repository and working "
                            "copy targets", 'mkdir', "folder", "^/folder")
 
 def invalid_update_targets(sbox):
@@ -251,6 +251,47 @@ def invalid_update_targets(sbox):
   sbox.build(read_only=True)
   run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'update',
                            "^/")
+
+def delete_repos_root(sbox):
+  "do stupid things with the repository root"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  expected_status.tweak('A/D/G', switched='S')
+  expected_status.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
+  svntest.actions.run_and_verify_switch(sbox.wc_dir, sbox.ospath('A/D/G'),
+                                        repo_url,
+                                        None, None, expected_status,
+                                        None, None, None, None, None, None,
+                                        '--set-depth', 'empty', '--ignore-ancestry')
+
+  expected_status.tweak('A/B/F', switched='S')
+  svntest.actions.run_and_verify_switch(sbox.wc_dir, sbox.ospath('A/B/F'),
+                                        repo_url,
+                                        None, None, expected_status,
+                                        None, None, None, None, None, None,
+                                        '--depth', 'empty', '--ignore-ancestry')
+
+  # Delete the wcroot (which happens to be the repository root)
+  expected_error = 'svn: E155035: \'.*\' is the root of a working copy ' + \
+                   'and cannot be deleted'
+  svntest.actions.run_and_verify_svn('Delete root', [], expected_error,
+                                     'rm', wc_dir)
+
+  # This should produce some error, because we can never commit this
+  expected_error = '.*repository root.*'
+  svntest.actions.run_and_verify_svn('Move root', None, expected_error,
+                                     'mv', sbox.ospath('A/D/G'),
+                                     sbox.ospath('Z'))
+
+  # And this currently fails with another nasty error about a wc-lock
+  expected_error = '.*repository root.*'
+  svntest.actions.run_and_verify_svn('Delete root', [], expected_error,
+                                     'rm', sbox.ospath('A/B/F'))
 
 ########################################################################
 # Run the tests
@@ -281,6 +322,7 @@ test_list = [ None,
               invalid_relocate_targets,
               invalid_mkdir_targets,
               invalid_update_targets,
+              delete_repos_root,
              ]
 
 if __name__ == '__main__':

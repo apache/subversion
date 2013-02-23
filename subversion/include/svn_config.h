@@ -127,6 +127,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_SECTION_WORKING_COPY         "working-copy"
 /** @since New in 1.8. */
 #define SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE      "exclusive-locking"
+#define SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE_CLIENTS  "exclusive-locking-clients"
 /** @} */
 
 /** @name Repository conf directory configuration files strings
@@ -149,6 +150,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_USE_SASL                  "use-sasl"
 #define SVN_CONFIG_OPTION_MIN_SSF                   "min-encryption"
 #define SVN_CONFIG_OPTION_MAX_SSF                   "max-encryption"
+#define SVN_CONFIG_OPTION_GROUPS_DB                 "groups-db"
 
 /* For repository password database */
 #define SVN_CONFIG_SECTION_USERS                "users"

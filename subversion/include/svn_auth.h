@@ -590,19 +590,25 @@ svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 
 /** @brief Indicates whether providers may save passwords to disk in
  * plaintext. Property value can be either SVN_CONFIG_TRUE,
- * SVN_CONFIG_FALSE, or SVN_CONFIG_ASK. */
+ * SVN_CONFIG_FALSE, or SVN_CONFIG_ASK.
+ * @since New in 1.6.
+ */
 #define SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS  SVN_AUTH_PARAM_PREFIX \
                                                   "store-plaintext-passwords"
 
 /** @brief The application doesn't want any providers to save passphrase
  * to disk. Property value is irrelevant; only property's existence
- * matters. */
+ * matters.
+ * @since New in 1.6.
+ */
 #define SVN_AUTH_PARAM_DONT_STORE_SSL_CLIENT_CERT_PP \
   SVN_AUTH_PARAM_PREFIX "dont-store-ssl-client-cert-pp"
 
 /** @brief Indicates whether providers may save passphrase to disk in
  * plaintext. Property value can be either SVN_CONFIG_TRUE,
- * SVN_CONFIG_FALSE, or SVN_CONFIG_ASK. */
+ * SVN_CONFIG_FALSE, or SVN_CONFIG_ASK.
+ * @since New in 1.6.
+ */
 #define SVN_AUTH_PARAM_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT \
   SVN_AUTH_PARAM_PREFIX "store-ssl-client-cert-pp-plaintext"
 
@@ -768,6 +774,40 @@ svn_auth_get_simple_provider2(
   svn_auth_plaintext_prompt_func_t plaintext_prompt_func,
   void *prompt_baton,
   apr_pool_t *pool);
+
+/** Callback for svn_auth_cleanup_walk().
+ *
+ * Called for each credential to allow selectively removing credentials.
+ *
+ * @a cred_kind and @a realmstring specify the key of the credential (see
+ * svn_auth_first_credentials()).
+ *
+ * @a provider specifies which provider currently holds the credential.
+ *
+ * Before returning set @a *delete_cred to TRUE to remove the credential from
+ * the cache; leave @a *delete_cred unchanged or set it to FALSE to keep the
+ * credential.
+ *
+ * @since New in 1.8.
+ */
+typedef svn_error_t * (*svn_auth_cleanup_callback)(svn_boolean_t *delete_cred,
+                                                   void *cleanup_baton,
+                                                   const char *cred_kind,
+                                                   const char *realmstring,
+                                                   const char *provider,
+                                                   apr_pool_t *scratch_pool);
+
+/** Call @a cleanup with information describing each currently cached
+ * credential (in providers that support iterating). If the callback
+ * confirms that the credential should be deleted, delete it.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_auth_cleanup_walk(svn_auth_baton_t *auth_baton,
+                      svn_auth_cleanup_callback cleanup,
+                      void *cleanup_baton,
+                      apr_pool_t *scratch_pool);
 
 /** Like svn_auth_get_simple_provider2, but without the ability to
  * call the svn_auth_plaintext_prompt_func_t callback, and the provider

@@ -66,6 +66,9 @@ extern "C" {
 #define SVN_RA_SVN_CAP_INHERITED_PROPS "inherited-props"
 /* maps to SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS */
 #define SVN_RA_SVN_CAP_EPHEMERAL_TXNPROPS "ephemeral-txnprops"
+/* maps to SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE */
+#define SVN_RA_SVN_CAP_GET_FILE_REVS_REVERSE "file-revs-reverse"
+
 
 /** ra_svn passes @c svn_dirent_t fields over the wire as a list of
  * words, these are the values used to represent each field.

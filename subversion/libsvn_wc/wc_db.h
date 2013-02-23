@@ -229,11 +229,12 @@ typedef struct svn_wc__db_lock_t {
    the administrative operation. It should live at least as long as the
    RESULT_POOL parameter.
 
-   When AUTO_UPGRADE is TRUE, then the working copy databases will be
-   upgraded when possible (when an old database is found/detected during
-   the operation of a wc_db API). If it is detected that a manual upgrade is
-   required, then SVN_ERR_WC_UPGRADE_REQUIRED will be returned from that API.
-   Passing FALSE will allow a bare minimum of APIs to function (most notably,
+   When OPEN_WITHOUT_UPGRADE is TRUE, then the working copy databases will
+   be opened even when an old database format is found/detected during
+   the operation of a wc_db API). If open_without_upgrade is FALSE and an
+   upgrade is required, then SVN_ERR_WC_UPGRADE_REQUIRED will be returned
+   from that API.
+   Passing TRUE will allow a bare minimum of APIs to function (most notably,
    the temp_get_format() function will always return a value) since most of
    these APIs expect a current-format database to be present.
 
@@ -257,7 +258,7 @@ typedef struct svn_wc__db_lock_t {
 svn_error_t *
 svn_wc__db_open(svn_wc__db_t **db,
                 svn_config_t *config,
-                svn_boolean_t auto_upgrade,
+                svn_boolean_t open_without_upgrade,
                 svn_boolean_t enforce_empty_wq,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool);
@@ -315,6 +316,9 @@ svn_wc__db_init(svn_wc__db_t *db,
 
    LOCAL_RELPATH will be allocated in RESULT_POOL. All other (temporary)
    allocations will be made in SCRATCH_POOL.
+
+   This function is available when DB is opened with the OPEN_WITHOUT_UPGRADE
+   option.
 */
 svn_error_t *
 svn_wc__db_to_relpath(const char **local_relpath,
@@ -333,7 +337,10 @@ svn_wc__db_to_relpath(const char **local_relpath,
 
    LOCAL_ABSPATH will be allocated in RESULT_POOL. All other (temporary)
    allocations will be made in SCRATCH_POOL.
-*/
+
+   This function is available when DB is opened with the OPEN_WITHOUT_UPGRADE
+   option.
+ */
 svn_error_t *
 svn_wc__db_from_relpath(const char **local_abspath,
                         svn_wc__db_t *db,
@@ -343,6 +350,9 @@ svn_wc__db_from_relpath(const char **local_abspath,
                         apr_pool_t *scratch_pool);
 
 /* Compute the working copy root WCROOT_ABSPATH for WRI_ABSPATH using DB.
+
+   This function is available when DB is opened with the OPEN_WITHOUT_UPGRADE
+   option.
  */
 svn_error_t *
 svn_wc__db_get_wcroot(const char **wcroot_abspath,
@@ -1292,6 +1302,22 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
                    svn_boolean_t is_move,
                    const svn_skel_t *work_items,
                    apr_pool_t *scratch_pool);
+
+/* Checks if LOCAL_ABSPATH represents a move back to its original location,
+ * and if it is reverts the move while keeping local changes after it has been
+ * moved from MOVED_FROM_ABSPATH.
+ *
+ * If MOVED_BACK is not NULL, set *MOVED_BACK to TRUE when a move was reverted,
+ * otherwise to FALSE.
+ */
+svn_error_t *
+svn_wc__db_op_handle_move_back(svn_boolean_t *moved_back,
+                               svn_wc__db_t *db,
+                               const char *local_abspath,
+                               const char *moved_from_abspath,
+                               const svn_skel_t *work_items,
+                               apr_pool_t *scratch_pool);
+
 
 /* Copy the leaves of the op_depth layer directly shadowed by the operation
  * of SRC_ABSPATH (so SRC_ABSPATH must be an op_root) to dst_abspaths
@@ -2489,6 +2515,8 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
                                          svn_revnum_t new_revision,
                                          apr_hash_t *exclude_relpaths,
                                          apr_hash_t *wcroot_iprops,
+                                         svn_wc_notify_func2_t notify_func,
+                                         void *notify_baton,
                                          apr_pool_t *scratch_pool);
 
 
@@ -3261,6 +3289,21 @@ svn_wc__db_update_moved_away_conflict_victim(svn_skel_t **work_items,
                                              apr_pool_t *result_pool,
                                              apr_pool_t *scratch_pool);
 
+/* LOCAL_ABSPATH is moved to MOVE_DST_ABSPATH.  MOVE_SRC_ROOT_ABSPATH
+ * is the root of the move to MOVE_DST_OP_ROOT_ABSPATH.
+ * MOVE_SRC_OP_ROOT_ABSPATH is the op-root of the move; it's the same
+ * as MOVE_SRC_ROOT_ABSPATH except for moves inside deletes when it is
+ * the op-root of the delete. */
+svn_error_t *
+svn_wc__db_base_moved_to(const char **move_dst_abspath,
+                         const char **move_dst_op_root_abspath,
+                         const char **move_src_root_abspath,
+                         const char **move_src_op_root_abspath,
+                         svn_wc__db_t *db,
+                         const char *local_abspath,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+                         
 /* Recover space from the database file for LOCAL_ABSPATH by running
  * the "vacuum" command. */
 svn_error_t *
@@ -3268,6 +3311,23 @@ svn_wc__db_vacuum(svn_wc__db_t *db,
                   const char *local_abspath,
                   apr_pool_t *scratch_pool);
 
+/* This raises move-edit tree-conflicts on any moves inside the
+   delete-edit conflict on LOCAL_ABSPATH. This is experimental: see
+   comment in resolve_conflict_on_node about combining with another
+   function. */
+svn_error_t *
+svn_wc__db_resolve_delete_raise_moved_away(svn_wc__db_t *db,
+                                           const char *local_abspath,
+                                           svn_wc_notify_func2_t notify_func,
+                                           void *notify_baton,
+                                           apr_pool_t *scratch_pool);
+
+/* Like svn_wc__db_resolve_delete_raise_moved_away this should be
+   combined. */
+svn_error_t *
+svn_wc__db_resolve_break_moved_away(svn_wc__db_t *db,
+                                    const char *local_abspath,
+                                    apr_pool_t *scratch_pool);
 /* @} */
 
 

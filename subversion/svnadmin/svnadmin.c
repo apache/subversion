@@ -289,6 +289,8 @@ static const apr_getopt_option_t options_table[] =
      N_("use repository format compatible with Subversion\n"
         "                             version ARG (\"1.5.5\", \"1.7\", etc.)")},
 
+    {"file", 'F', 1, N_("read repository paths from file ARG")},
+
     {NULL}
   };
 
@@ -336,9 +338,14 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
   {'r', svnadmin__incremental, svnadmin__deltas, 'q', 'M'} },
 
   {"freeze", subcommand_freeze, {0}, N_
-   ("usage: svnadmin freeze REPOS_PATH PROGRAM [ARG...]\n\n"
-    "Run PROGRAM passing ARGS while holding a write-lock on REPOS_PATH.\n"),
-   {0} },
+   ("usage: 1. svnadmin freeze REPOS_PATH PROGRAM [ARG...]\n"
+    "               2. svnadmin freeze -F FILE PROGRAM [ARG...]\n\n"
+    "1. Run PROGRAM passing ARGS while holding a write-lock on REPOS_PATH.\n"
+    "\n"
+    "2. Like 1 except all repositories listed in FILE are locked. The file\n"
+    "   format is repository paths separated by newlines.  Repositories are\n"
+    "   locked in the same order as they are listed in the file.\n"),
+   {'F'} },
 
   {"help", subcommand_help, {"?", "h"}, N_
    ("usage: svnadmin help [SUBCOMMAND...]\n\n"
@@ -506,6 +513,7 @@ struct svnadmin_opt_state
                                                        --force-uuid */
   apr_uint64_t memory_cache_size;                   /* --memory-cache-size M */
   const char *parent_dir;
+  svn_stringbuf_t *filedata;                        /* --file */
 
   const char *config_dir;    /* Overriding Configuration Directory */
 };
@@ -759,10 +767,10 @@ repos_notify_handler(void *baton,
     case  svn_repos_notify_verify_struc_rev:
       if (notify->revision == SVN_INVALID_REVNUM)
         svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                                _("* Verifying global structure ...\n")));
+                                _("* Verifying repository metadata ...\n")));
       else
         svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                        _("* Verifying structure at revision %ld ...\n"),
+                        _("* Verifying metadata at revision %ld ...\n"),
                         notify->revision));
       return;
 
@@ -1028,6 +1036,7 @@ static svn_error_t *
 subcommand_freeze(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
+  apr_array_header_t *paths;
   apr_array_header_t *args;
   int i;
   struct freeze_baton_t b;
@@ -1038,13 +1047,25 @@ subcommand_freeze(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0,
                             _("No program provided"));
 
+  if (!opt_state->filedata)
+    {
+      /* One repository on the command line. */
+      paths = apr_array_make(pool, 1, sizeof(const char *));
+      APR_ARRAY_PUSH(paths, const char *) = opt_state->repository_path;
+    }
+  else
+    {
+      /* All repositories in filedata. */
+      paths = svn_cstring_split(opt_state->filedata->data, "\n", FALSE, pool);
+    }
+
   b.command = APR_ARRAY_IDX(args, 0, const char *);
   b.args = apr_palloc(pool, sizeof(char *) * args->nelts + 1);
   for (i = 0; i < args->nelts; ++i)
     b.args[i] = APR_ARRAY_IDX(args, i, const char *);
   b.args[args->nelts] = NULL;
 
-  SVN_ERR(svn_repos_freeze(opt_state->repository_path, freeze_body, &b, pool));
+  SVN_ERR(svn_repos_freeze(paths, freeze_body, &b, pool));
 
   /* Make any non-zero status visible to the user. */
   if (b.status)
@@ -1902,6 +1923,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   int opt_id;
   apr_array_header_t *received_opts;
   int i;
+  svn_boolean_t dash_F_arg = FALSE;
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
@@ -1981,6 +2003,11 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         opt_state.memory_cache_size
             = 0x100000 * apr_strtoi64(opt_arg, NULL, 0);
         break;
+      case 'F':
+        SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        SVN_INT_ERR(svn_stringbuf_from_file2(&(opt_state.filedata),
+                                             utf8_opt_arg, pool));
+        dash_F_arg = TRUE;
       case svnadmin__version:
         opt_state.version = TRUE;
         break;
@@ -2146,9 +2173,11 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         }
     }
 
-  /* Every subcommand except `help' requires a second argument -- the
-     repository path.  Parse it out here and store it in opt_state. */
-  if (subcommand->cmd_func != subcommand_help)
+  /* Every subcommand except `help' and `freeze' with '-F' require a
+     second argument -- the repository path.  Parse it out here and
+     store it in opt_state. */
+  if (!(subcommand->cmd_func == subcommand_help
+        || (subcommand->cmd_func == subcommand_freeze && dash_F_arg)))
     {
       const char *repos_path = NULL;
 

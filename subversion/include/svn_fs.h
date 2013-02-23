@@ -277,9 +277,13 @@ typedef void (*svn_fs_progress_notify_func_t)(svn_revnum_t revision,
 
 /**
  * Perform backend-specific data consistency and correctness validations
- * to the Subversion filesystem located in the directory @a path.
- * Use @a scratch_pool for temporary allocations.
+ * to the Subversion filesystem (mainly the meta-data) located in the
+ * directory @a path.  Use @a scratch_pool for temporary allocations.
  *
+ * @a start and @a end are used to limit the amount of checks being done
+ * to data that is relevant to that range of revisions.  However, this is
+ * only a lower limit to the actual amount of checks being done.  The
+ * backend may not even be able to limit the errors begin reported.
  * @a start and @a end may be #SVN_INVALID_REVNUM, in which case
  * svn_repos_verify_fs2()'s semantics apply.  When @c r0 is being
  * verified, global invariants may be verified as well.
@@ -289,20 +293,30 @@ typedef void (*svn_fs_progress_notify_func_t)(svn_revnum_t revision,
  * order and more than once for the same revision, i.e. r2, r1, r2 would
  * be a valid sequence.
  *
+ * The optional @a cancel_func callback will be invoked as usual to allow
+ * the user to preempt this potentially lengthy operation.
+ *
  * @note You probably don't want to use this directly.  Take a look at
  * svn_repos_verify_fs2() instead, which does non-backend-specific
  * verifications as well.
+ *
+ * @note To ensure a full verification using all tests and covering all
+ * revisions, you must call this function *and* #svn_fs_verify_rev.
+ * 
+ * @note Implementors, please do tests that can be done efficiently for
+ * a single revision to #svn_fs_verify_rev.  This function is meant for
+ * global checks or tests that require an expensive context setup.
  *
  * @since New in 1.8.
  */
 svn_error_t *
 svn_fs_verify(const char *path,
-              svn_cancel_func_t cancel_func,
-              void *cancel_baton,
-              svn_fs_progress_notify_func_t notify_func,
-              void *notify_baton,
               svn_revnum_t start,
               svn_revnum_t end,
+              svn_fs_progress_notify_func_t notify_func,
+              void *notify_baton,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
               apr_pool_t *scratch_pool);
 
 /**
@@ -313,6 +327,13 @@ svn_fs_verify(const char *path,
  * @note You probably don't want to use this directly.  Take a look at
  * svn_repos_verify_fs2() instead, which does non-backend-specific
  * verifications as well.
+ *
+* @note To ensure a full verification using all tests and covering all
+ * revisions, you must call this function *and* #svn_fs_verify.
+ *
+ * @note Implementors, please do tests that cannot be done efficiently for
+ * a single revision to #svn_fs_verify.  This function is meant for local
+ * checks that don't require an expensive context setup.
  *
  * @since New in 1.8.
  */

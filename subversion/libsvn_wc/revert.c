@@ -369,7 +369,7 @@ revert_restore(svn_wc__db_t *db,
       special = FALSE;
 #endif
     }
-  else
+  else if (!err)
     {
       if (finfo.filetype == APR_REG || finfo.filetype == APR_LNK)
         on_disk = svn_node_file;
@@ -382,6 +382,8 @@ revert_restore(svn_wc__db_t *db,
       special = (finfo.filetype == APR_LNK);
 #endif
     }
+  else
+    return svn_error_trace(err);
 
   if (copied_here)
     {

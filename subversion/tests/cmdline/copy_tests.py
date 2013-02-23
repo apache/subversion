@@ -907,7 +907,7 @@ def wc_to_repos(sbox):
 #----------------------------------------------------------------------
 # Issue 1090: various use-cases of 'svn cp URL wc' where the
 # repositories might be different, or be the same repository.
-@Issues(1090,1444)
+@Issues(1090, 1444, 3590)
 def repos_to_wc(sbox):
   "repository to working-copy copy"
 
@@ -988,17 +988,30 @@ def repos_to_wc(sbox):
   E_url = other_repo_url + "/A/B/E"
   pi_url = other_repo_url + "/A/D/G/pi"
 
-  # Expect an error in the directory case until we allow this copy to succeed.
-  expected_error = "svn: E200007: Source URL '.*foreign repository"
-  svntest.actions.run_and_verify_svn(None, None, expected_error,
+  # Finally, for 1.8 we allow this copy to succeed.
+  expected_output = svntest.verify.UnorderedOutput([
+    '--- Copying from foreign repository URL \'%s\':\n' % E_url,
+    'A         %s\n' % sbox.ospath('E'),
+    'A         %s\n' % sbox.ospath('E/beta'),
+    'A         %s\n' % sbox.ospath('E/alpha'),
+  ])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'copy', E_url, wc_dir)
 
-  # But file case should work fine.
-  svntest.actions.run_and_verify_svn(None, None, [], 'copy', pi_url, wc_dir)
+  expected_output = [
+    '--- Copying from foreign repository URL \'%s\':\n' % pi_url,
+    'A         %s\n' % sbox.ospath('pi'),
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'copy', pi_url, wc_dir)
 
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.add({
     'pi' : Item(status='A ',  wc_rev='0', entry_rev='1'),
+    # And from the foreign repository
+    'E'             : Item(status='A ', wc_rev='0'),
+    'E/beta'        : Item(status='A ', wc_rev='0'),
+    'E/alpha'       : Item(status='A ', wc_rev='0'),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
 
@@ -2419,20 +2432,11 @@ def move_file_back_and_forth(sbox):
 
   # Check expected status before commit
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.add({
-    'A/D/G/rho' : Item(status='R ', copied='+', wc_rev='-',
-                       moved_from='A/D/G/rho', moved_to='A/D/G/rho'),
-    })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # Commit, and check expected output and status
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/D/G/rho' : Item(verb='Replacing'),
-    })
+  # Try to commit and find out that there is nothing to commit.
+  expected_output = []
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.add({
-    'A/D/G/rho' : Item(status='  ', wc_rev=2),
-    })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
@@ -2463,19 +2467,6 @@ def move_dir_back_and_forth(sbox):
 
   # Verify that the status indicates a replace with history
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.add({
-      'A/D'               : Item(status='R ', copied='+', wc_rev='-',
-                                 moved_from='A/D', moved_to='A/D'),
-      'A/D/G'             : Item(status='  ', copied='+', wc_rev='-'),
-      'A/D/G/pi'          : Item(status='  ', copied='+', wc_rev='-'),
-      'A/D/G/rho'         : Item(status='  ', copied='+', wc_rev='-'),
-      'A/D/G/tau'         : Item(status='  ', copied='+', wc_rev='-'),
-      'A/D/gamma'         : Item(status='  ', copied='+', wc_rev='-'),
-      'A/D/H'             : Item(status='  ', copied='+', wc_rev='-'),
-      'A/D/H/chi'         : Item(status='  ', copied='+', wc_rev='-'),
-      'A/D/H/omega'       : Item(status='  ', copied='+', wc_rev='-'),
-      'A/D/H/psi'         : Item(status='  ', copied='+', wc_rev='-'),
-  })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 def copy_move_added_paths(sbox):

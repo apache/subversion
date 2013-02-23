@@ -49,6 +49,10 @@ Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 AnyOutput = svntest.verify.AnyOutput
+RegexOutput = svntest.verify.RegexOutput
+RegexListOutput = svntest.verify.RegexListOutput
+UnorderedOutput = svntest.verify.UnorderedOutput
+AlternateOutput = svntest.verify.AlternateOutput
 
 logger = logging.getLogger()
 
@@ -495,9 +499,17 @@ def ensure_tree_conflict(sbox, operation,
       run_and_verify_commit(".", None, None, ".*conflict.*", victim_path)
 
       logger.debug("--- Checking that 'status' reports the conflict")
-      expected_stdout = svntest.verify.RegexOutput("^......C.* " +
-                                                   re.escape(victim_path) + "$",
-                                                   match_all=False)
+      expected_stdout = AlternateOutput([
+                          RegexListOutput([
+                          "^......C.* " + re.escape(victim_path) + "$",
+                          "^      >   .* upon " + operation] +
+                          svntest.main.summary_of_conflicts(tree_conflicts=1)),
+                          RegexListOutput([
+                          "^......C.* " + re.escape(victim_path) + "$",
+                          "^        > moved to .*",
+                          "^      >   .* upon " + operation] +
+                          svntest.main.summary_of_conflicts(tree_conflicts=1))
+                          ])
       run_and_verify_svn(None, expected_stdout, [],
                          'status', victim_path)
 
@@ -689,7 +701,6 @@ def merge_dir_mod_onto_not_dir(sbox):
   test_tc_merge(sbox2, d_mods, wc_scen = d_dels + d_moves)
 
 # Test for issue #3150 'tree conflicts with directories as victims'.
-@XFail()
 @Issue(3150)
 def merge_dir_del_onto_not_same(sbox):
   "merge dir: del/rpl/mv onto not-same"
@@ -1376,9 +1387,7 @@ def actual_only_node_behaviour(sbox):
   # update (up)
   expected_stdout = [
    "Skipped '%s' -- Node remains in conflict\n" % sbox.ospath('A/foo'),
-   "Summary of conflicts:\n",
-   "  Skipped paths: 1\n",
-  ]
+  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
   expected_stderr = []
   run_and_verify_svn(None, expected_stdout, expected_stderr,
                      "update", foo_path)

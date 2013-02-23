@@ -536,10 +536,13 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
 
       if (!repos_root_url)
         {
-          SVN_ERR(svn_wc__internal_get_repos_info(&repos_root_url,
+          SVN_ERR(svn_wc__internal_get_repos_info(NULL, NULL,
+                                                  &repos_root_url,
                                                   &repos_uuid,
                                                   wc_ctx->db,
-                                                  local_abspath,
+                                                  svn_dirent_dirname(
+                                                            local_abspath,
+                                                            iterpool),
                                                   scratch_pool,
                                                   iterpool));
         }

@@ -163,6 +163,8 @@ svn_wc__conflict_skel_add_text_conflict(svn_skel_t *conflict_skel,
    The DB, WRI_ABSPATH pair specifies in which working copy the conflict
    will be recorded. (Needed for making the paths relative).
 
+   The MARKER_ABSPATH is NULL when raising a conflict in v1.8+.  See below.
+
    The MINE_PROPS, THEIR_OLD_PROPS and THEIR_PROPS are hashes mapping a
    const char * property name to a const svn_string_t* value.
 
@@ -174,8 +176,14 @@ svn_wc__conflict_skel_add_text_conflict(svn_skel_t *conflict_skel,
    ### Maybe useful for calling (legacy) conflict resolvers that expect one
    ### property conflict per invocation.
 
-   It is an error to add another text conflict to a conflict skel that
-   already contains a text conflict.
+   When raising a property conflict in the course of upgrading an old WC,
+   MARKER_ABSPATH is the path to the file containing a human-readable
+   description of the conflict, MINE_PROPS and THEIR_OLD_PROPS and
+   THEIR_PROPS are all NULL, and CONFLICTED_PROP_NAMES is an empty hash.
+
+   It is an error to add another prop conflict to a conflict skel that
+   already contains a prop conflict.  (A single call to this function can
+   record that multiple properties are in conflict.)
 
    Do temporary allocations in SCRATCH_POOL.
 */
@@ -198,10 +206,23 @@ svn_wc__conflict_skel_add_prop_conflict(svn_skel_t *conflict_skel,
    LOCAL_CHANGE is the local tree change made to the node.
    INCOMING_CHANGE is the incoming change made to the node.
 
-   It is an error to add another tree conflict to a conflict skel that
-   already contains a tree conflict.
+   MOVE_SRC_OP_ROOT_ABSPATH must be set when LOCAL_CHANGE is
+   svn_wc_conflict_reason_moved_away and NULL otherwise and the operation
+   is svn_wc_operation_update or svn_wc_operation_switch.  It should be
+   set to the op-root of the move-away unless the move is inside a
+   delete in which case it should be set to the op-root of the delete
+   (the delete can be a replace). So given:
+       A/B/C moved away (1)
+       A deleted and replaced
+       A/B/C moved away (2)
+       A/B deleted
+   MOVE_SRC_OP_ROOT_ABSPATH should be A for a conflict associated
+   with (1), MOVE_SRC_OP_ROOT_ABSPATH should be A/B for a conflict
+   associated with (2).
 
-   ### Is it an error to add a tree conflict to any existing conflict?
+   It is an error to add another tree conflict to a conflict skel that
+   already contains a tree conflict.  (It is not an error, at this level,
+   to add a tree conflict to an existing text or property conflict skel.)
 
    Do temporary allocations in SCRATCH_POOL.
 */
@@ -211,6 +232,7 @@ svn_wc__conflict_skel_add_tree_conflict(svn_skel_t *conflict_skel,
                                         const char *wri_abspath,
                                         svn_wc_conflict_reason_t local_change,
                                         svn_wc_conflict_action_t incoming_change,
+                                        const char *move_src_op_root_abspath,
                                         apr_pool_t *result_pool,
                                         apr_pool_t *scratch_pool);
 
@@ -288,10 +310,10 @@ svn_wc__conflict_read_info(svn_wc_operation_t *operation,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
-/* Reads back the original data stored by svn_wc__conflict_add_text_conflict()
+/* Reads back the original data stored by svn_wc__conflict_skel_add_text_conflict()
  * in CONFLICT_SKEL for a node in DB, WRI_ABSPATH.
  *
- * Values as documented for svn_wc__conflict_add_text_conflict().
+ * Values as documented for svn_wc__conflict_skel_add_text_conflict().
  *
  * Output arguments can be NULL if the value is not necessary.
  *
@@ -308,10 +330,10 @@ svn_wc__conflict_read_text_conflict(const char **mine_abspath,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
 
-/* Reads back the original data stored by svn_wc__conflict_add_prop_conflict()
+/* Reads back the original data stored by svn_wc__conflict_skel_add_prop_conflict()
  * in CONFLICT_SKEL for a node in DB, WRI_ABSPATH.
  *
- * Values as documented for svn_wc__conflict_add_prop_conflict().
+ * Values as documented for svn_wc__conflict_skel_add_prop_conflict().
  *
  * Output arguments can be NULL if the value is not necessary
  * Allocate the result in RESULT_POOL. Perform temporary allocations in
@@ -329,10 +351,10 @@ svn_wc__conflict_read_prop_conflict(const char **marker_abspath,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
 
-/* Reads back the original data stored by svn_wc__conflict_add_tree_conflict()
+/* Reads back the original data stored by svn_wc__conflict_skel_add_tree_conflict()
  * in CONFLICT_SKEL for a node in DB, WRI_ABSPATH.
  *
- * Values as documented for svn_wc__conflict_add_tree_conflict().
+ * Values as documented for svn_wc__conflict_skel_add_tree_conflict().
  *
  * Output arguments can be NULL if the value is not necessary
  * Allocate the result in RESULT_POOL. Perform temporary allocations in
@@ -341,6 +363,7 @@ svn_wc__conflict_read_prop_conflict(const char **marker_abspath,
 svn_error_t *
 svn_wc__conflict_read_tree_conflict(svn_wc_conflict_reason_t *local_change,
                                     svn_wc_conflict_action_t *incoming_change,
+                                    const char **move_src_op_root_abspath,
                                     svn_wc__db_t *db,
                                     const char *wri_abspath,
                                     const svn_skel_t *conflict_skel,
@@ -381,7 +404,11 @@ svn_wc__conflict_create_markers(svn_skel_t **work_item,
 /* Call the interactive conflict resolver RESOLVER_FUNC with RESOLVER_BATON to
    allow resolving the conflicts on LOCAL_ABSPATH.
 
+   Call RESOLVER_FUNC once for each property conflict, and again for any
+   text conflict, and again for any tree conflict on the node.
+
    CONFLICT_SKEL contains the details of the conflicts on LOCAL_ABSPATH.
+
    Resolver actions are directly applied to the in-db state of LOCAL_ABSPATH,
    so the conflict and the state in CONFLICT_SKEL must already be installed in
    wc.db. */
@@ -397,11 +424,17 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
                                  apr_pool_t *scratch_pool);
 
 
-/* Resolve text conflicts on the given node.  */
+/* Mark as resolved any text conflict on the node at DB/LOCAL_ABSPATH.  */
 svn_error_t *
-svn_wc__resolve_text_conflict(svn_wc__db_t *db,
-                              const char *local_abspath,
-                              apr_pool_t *scratch_pool);
+svn_wc__mark_resolved_text_conflict(svn_wc__db_t *db,
+                                    const char *local_abspath,
+                                    apr_pool_t *scratch_pool);
+
+/* Mark as resolved any prop conflicts on the node at DB/LOCAL_ABSPATH.  */
+svn_error_t *
+svn_wc__mark_resolved_prop_conflicts(svn_wc__db_t *db,
+                                     const char *local_abspath,
+                                     apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

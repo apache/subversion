@@ -1025,6 +1025,12 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "### no path-based access control is done."                                  NL
 "### Uncomment the line below to use the default authorization file."        NL
 "# authz-db = " SVN_REPOS__CONF_AUTHZ                                        NL
+"### The groups-db option controls the location of the groups file."         NL
+"### Unless you specify a path starting with a /, the file's location is"    NL
+"### relative to the directory containing this file.  The specified path"    NL
+"### may be a repository relative URL (^/) or an absolute file:// URL to a"  NL
+"### text file in a Subversion repository."                                  NL
+"# groups-db = " SVN_REPOS__CONF_GROUPS                                      NL
 "### This option specifies the authentication realm of the repository."      NL
 "### If two repositories have the same authentication realm, they should"    NL
 "### have the same password database, and vice versa.  The default realm"    NL
@@ -1825,6 +1831,62 @@ svn_repos_recover4(const char *path,
   return SVN_NO_ERROR;
 }
 
+struct freeze_baton_t {
+  apr_array_header_t *paths;
+  int counter;
+  svn_error_t *(*freeze_body)(void *, apr_pool_t *);
+  void *baton;
+};
+
+static svn_error_t *
+multi_freeze(void *baton,
+             apr_pool_t *pool)
+{
+  struct freeze_baton_t *fb = baton;
+
+  if (fb->counter == fb->paths->nelts)
+    {
+      SVN_ERR(fb->freeze_body(fb->baton, pool));
+      return SVN_NO_ERROR;
+    }
+  else
+    {
+      /* Using a subpool as the only way to unlock the repos lock used
+         by BDB is to clear the pool used to take the lock. */
+      apr_pool_t *subpool = svn_pool_create(pool);
+      const char *path = APR_ARRAY_IDX(fb->paths, fb->counter, const char *);
+      svn_repos_t *repos;
+
+      ++fb->counter;
+
+      SVN_ERR(get_repos(&repos, path,
+                        TRUE  /* exclusive (only applies to BDB) */,
+                        FALSE /* non-blocking */,
+                        FALSE /* open-fs */,
+                        NULL, subpool));
+
+
+      if (strcmp(repos->fs_type, SVN_FS_TYPE_BDB) == 0)
+        {
+          svn_error_t *err = multi_freeze(fb, subpool);
+
+          svn_pool_destroy(subpool);
+
+          return err;
+        }
+      else
+        {
+          SVN_ERR(svn_fs_open(&repos->fs, repos->db_path, NULL, subpool));
+          SVN_ERR(svn_fs_freeze(svn_repos_fs(repos), multi_freeze, fb,
+                                subpool));
+        }
+
+      svn_pool_destroy(subpool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* For BDB we fall back on BDB's repos layer lock which means that the
    repository is unreadable while frozen.
 
@@ -1832,36 +1894,19 @@ svn_repos_recover4(const char *path,
    and an SQLite reserved lock which means the repository is readable
    while frozen. */
 svn_error_t *
-svn_repos_freeze(const char *path,
+svn_repos_freeze(apr_array_header_t *paths,
                  svn_error_t *(*freeze_body)(void *, apr_pool_t *),
                  void *baton,
                  apr_pool_t *pool)
 {
-  svn_repos_t *repos;
+  struct freeze_baton_t fb;
 
-  /* Using a subpool as the only way to unlock the repos lock used by
-     BDB is to clear the pool used to take the lock. */
-  apr_pool_t *subpool = svn_pool_create(pool);
+  fb.paths = paths;
+  fb.counter = 0;
+  fb.freeze_body = freeze_body;
+  fb.baton = baton;
 
-  SVN_ERR(get_repos(&repos, path,
-                    TRUE  /* exclusive */,
-                    FALSE /* non-blocking */,
-                    FALSE /* open-fs */,
-                    NULL, subpool));
-
-  if (strcmp(repos->fs_type, SVN_FS_TYPE_BDB) == 0)
-    {
-      svn_error_t *err = freeze_body(baton, subpool);
-      svn_pool_destroy(subpool);
-      return err;
-    }
-  else
-    {
-      SVN_ERR(svn_fs_open(&repos->fs, repos->db_path, NULL, subpool));
-      SVN_ERR(svn_fs_freeze(svn_repos_fs(repos), freeze_body, baton, subpool));
-    }
-
-  svn_pool_destroy(subpool);
+  SVN_ERR(multi_freeze(&fb, pool));
 
   return SVN_NO_ERROR;
 }

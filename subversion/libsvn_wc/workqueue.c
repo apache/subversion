@@ -416,6 +416,8 @@ run_postupgrade(svn_wc__db_t *db,
   if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
     /* No entry, this can happen when the wq item is rerun. */
     svn_error_clear(err);
+  else
+    SVN_ERR(err);
 
   SVN_ERR(svn_wc__db_get_wcroot(&wcroot_abspath, db, wri_abspath,
                                 scratch_pool, scratch_pool));

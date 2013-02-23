@@ -838,11 +838,10 @@ def build_tree_from_commit(lines):
 #             IFF columns non-empty.
 #
 
-def build_tree_from_status(lines, wc_dir_name=None):
+def build_tree_from_status(lines):
   "Return a tree derived by parsing the output LINES from 'st -vuq'."
 
-  return svntest.wc.State.from_status(lines,
-                                       wc_dir_name=wc_dir_name).old_tree()
+  return svntest.wc.State.from_status(lines).old_tree()
 
 
 # Parse merge "skipped" output

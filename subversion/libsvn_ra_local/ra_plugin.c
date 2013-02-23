@@ -848,10 +848,10 @@ svn_ra_local__do_switch(svn_ra_session_t *session,
                        update_revision,
                        update_target,
                        switch_url,
-                       TRUE,
+                       TRUE /* text_deltas */,
                        depth,
-                       FALSE,   /* ### TODO(sussman): take new arg */
-                       TRUE,
+                       FALSE /* send_copyfrom_args */,
+                       TRUE /* ignore_ancestry */,
                        update_editor,
                        update_baton,
                        pool);
@@ -1513,7 +1513,10 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
       || strcmp(capability, SVN_RA_CAPABILITY_PARTIAL_REPLAY) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_COMMIT_REVPROPS) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_ATOMIC_REVPROPS) == 0
-      || strcmp(capability, SVN_RA_CAPABILITY_INHERITED_PROPS) == 0)
+      || strcmp(capability, SVN_RA_CAPABILITY_INHERITED_PROPS) == 0
+      || strcmp(capability, SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS) == 0
+      || strcmp(capability, SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE) == 0
+      )
     {
       *has = TRUE;
     }

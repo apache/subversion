@@ -34,6 +34,8 @@ logger = logging.getLogger()
 # Our testing module
 import svntest
 
+from prop_tests import binary_mime_type_on_text_file_warning
+
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
 SkipUnless = svntest.testcase.SkipUnless_deco
@@ -494,7 +496,9 @@ def binary_tree_conflict(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  sbox.simple_propset('svn:mime-type', 'binary/octet-stream', 'iota')
+  svntest.main.run_svn(binary_mime_type_on_text_file_warning,
+                       'propset', 'svn:mime-type', 'binary/octet-stream',
+                       sbox.ospath('iota'))
   sbox.simple_commit()
 
   iota = sbox.ospath('iota')

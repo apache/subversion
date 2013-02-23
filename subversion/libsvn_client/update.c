@@ -209,9 +209,11 @@ update_internal(svn_revnum_t *result_rev,
   struct svn_client__dirent_fetcher_baton_t dfb;
   svn_boolean_t server_supports_depth;
   svn_boolean_t text_conflicted, prop_conflicted, tree_conflicted;
+  svn_boolean_t cropping_target;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
+  svn_boolean_t is_not_present, is_excluded, is_server_excluded;
 
   if (result_rev)
     *result_rev = SVN_INVALID_REVNUM;
@@ -228,6 +230,16 @@ update_internal(svn_revnum_t *result_rev,
   /* Check if our anchor exists in BASE. If it doesn't we can't update. */
   SVN_ERR(svn_client__wc_node_get_base(&anchor_loc, anchor_abspath,
                                        ctx->wc_ctx, pool, pool));
+  err = svn_wc__node_is_not_present(&is_not_present, &is_excluded,
+                                    &is_server_excluded,
+                                    ctx->wc_ctx, anchor_abspath, TRUE, pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      is_not_present = TRUE;  /* Causes the update to skip */
+    }
+  else
+    SVN_ERR(err);
 
   /* It does not make sense to update conflict victims. */
   err = svn_wc_conflicted_p3(&text_conflicted, &prop_conflicted,
@@ -244,7 +256,8 @@ update_internal(svn_revnum_t *result_rev,
     SVN_ERR(err);
 
   if (! anchor_loc
-      || text_conflicted || prop_conflicted || tree_conflicted)
+      || text_conflicted || prop_conflicted || tree_conflicted
+      || is_not_present || is_excluded || is_server_excluded)
     {
       if (ctx->notify_func2)
         {
@@ -263,7 +276,8 @@ update_internal(svn_revnum_t *result_rev,
     }
 
   /* We may need to crop the tree if the depth is sticky */
-  if (depth_is_sticky && depth < svn_depth_infinity)
+  cropping_target = (depth_is_sticky && depth < svn_depth_infinity);
+  if (cropping_target)
     {
       svn_node_kind_t target_kind;
 
@@ -430,7 +444,8 @@ update_internal(svn_revnum_t *result_rev,
   /* We handle externals after the update is complete, so that
      handling external items (and any errors therefrom) doesn't delay
      the primary operation.  */
-  if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
+  if ((SVN_DEPTH_IS_RECURSIVE(depth) || cropping_target)
+      && (! ignore_externals))
     {
       apr_hash_t *new_externals;
       apr_hash_t *new_depths;

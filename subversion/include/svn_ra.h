@@ -1675,6 +1675,10 @@ svn_ra_get_location_segments(svn_ra_session_t *session,
  * server doesn't implement it, an alternative (but much slower)
  * implementation based on svn_ra_get_log2() is used.
  *
+ * On subversion 1.8 and newer servers this function has been enabled
+ * to support reversion of the revision range for @a include_merged_revision
+ * @c FALSE reporting by switching  @a end with @a start.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
@@ -2036,12 +2040,21 @@ svn_ra_has_capability(svn_ra_session_t *session,
 #define SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS "ephemeral-txnprops"
 
 /**
+ * The capability of a server to walk revisions backwards in
+ * svn_ra_get_file_revs2
+ *
+ * @since New in 1.8.
+ */
+#define SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE "get-file-revs-reversed"
+
+/**
  * The capability to respond to requests using Ev2, as well as accept
  * data provided by Ev2 drivers.  See svn_editor.h for further details.
  *
  * @since New in 1.8 (?)
  */
 #define SVN_RA_CAPABILITY_EDITOR_V2 "editor-v2"
+
 
 /*       *** PLEASE READ THIS IF YOU ADD A NEW CAPABILITY ***
  *

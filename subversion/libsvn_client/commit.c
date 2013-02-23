@@ -848,7 +848,8 @@ svn_client_commit6(const apr_array_header_t *targets,
                 }
             }
         }
-      else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+
+      if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
         {
           const char *moved_to_abspath;
           const char *copy_op_root_abspath;

@@ -1204,9 +1204,7 @@ def upgrade_file_externals(sbox):
       'alpha' : {'pname3' : 'pvalue3' },
       })
 
-
 @Issue(4035)
-@XFail()
 def upgrade_missing_replaced(sbox):
   "upgrade with missing replaced dir"
 
@@ -1221,19 +1219,28 @@ def upgrade_missing_replaced(sbox):
                                      sbox.wc_dir)
 
   expected_output = svntest.wc.State(sbox.wc_dir, {
-      'A/B/E'         : Item(status='  ', treeconflict='C', prev_verb='Restored'),
+      'A/B/E'         : Item(status='  ', treeconflict='C',
+                             prev_verb='Restored'),
       'A/B/E/alpha'   : Item(status='  ', treeconflict='A'),
       'A/B/E/beta'    : Item(status='  ', treeconflict='A'),
       })
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
-  expected_status.tweak('A/B/E', status='! ', treeconflict='C', wc_rev='-')
+  expected_status.tweak('A/B/E', status='! ', treeconflict='C', wc_rev='-',
+                        entry_status='R ', entry_rev='1')
   expected_status.tweak('A/B/E/alpha', 'A/B/E/beta', status='D ')
+
+  # This upgrade installs an INCOMPLETE node in WORKING for E, which makes the
+  # database technically invalid... but we did that for 1.7 and nobody noticed.
+
+  # Pass the old status tree to avoid testing via entries-dump
+  # as fetching the entries crashes on the invalid db state.
   svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output,
                                         None, expected_status)
 
   svntest.actions.run_and_verify_svn(None, 'Reverted.*', [], 'revert', '-R',
                                      sbox.wc_dir)
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  # And verify that the state is now valid in both the entries an status world.
   svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
 
 @Issue(4033)
@@ -1259,6 +1266,17 @@ def upgrade_not_present_replaced(sbox):
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output,
                                         None, expected_status)
+
+@Issue(4307)
+def upgrade_from_1_7_conflict(sbox):
+  "upgrade from 1.7 WC with conflict (format 29)"
+
+  sbox.build(create_wc=False)
+  replace_sbox_with_tarfile(sbox, 'upgrade_from_1_7_wc.tar.bz2')
+
+  # The working copy contains a text conflict, and upgrading such
+  # a working copy used to cause a pointless 'upgrade required' error.
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
 
 ########################################################################
 # Run the tests
@@ -1311,6 +1329,7 @@ test_list = [ None,
               upgrade_file_externals,
               upgrade_missing_replaced,
               upgrade_not_present_replaced,
+              upgrade_from_1_7_conflict,
              ]
 
 

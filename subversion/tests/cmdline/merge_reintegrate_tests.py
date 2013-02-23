@@ -48,6 +48,62 @@ from merge_tests import set_up_branch
 from merge_tests import expected_merge_output
 
 #----------------------------------------------------------------------
+def run_reintegrate(src_url, tgt_path):
+  """Run 'svn merge --reintegrate SRC_URL TGT_PATH'. Raise an error if
+     there is nothing on stdout, anything on stderr, or a non-zero exit
+     code.
+  """
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'merge', '--reintegrate',
+                                     src_url, tgt_path)
+
+def run_reintegrate_expect_error(src_url, tgt_path,
+                                 expected_stdout, expected_stderr):
+  """Run 'svn merge --reintegrate SRC_URL TGT_PATH'. Raise an error
+     unless stdout and stderr both match and the exit code is non-zero.
+     Every line of stderr must match the regex EXPECTED_STDERR.
+  """
+  expected_stderr += "|(.*apr_err.*)"  # In case of debug build
+
+  # The actions.run_and_verify_* methods are happy if one line of the error
+  # matches the regex, but we want to check that every line matches.
+  # So we will pass the stderr to svntest.verify.verify_outputs()
+  # ourselves, but as the 'actual_stdout' argument, that way each line of
+  # error must match the regex.
+  exit_code, out, err = svntest.actions.run_and_verify_svn(
+                          None, expected_stdout, svntest.verify.AnyOutput,
+                          'merge', '--reintegrate',
+                          src_url, tgt_path)
+  assert exit_code
+  svntest.verify.verify_outputs(
+                   "Reintegrate failed but not in the way expected",
+                   err, None,
+                   expected_stderr, None,
+                   True) # Match *all* lines
+
+def run_and_verify_reintegrate(tgt_dir, src_url,
+                               output_tree,
+                               mergeinfo_output_tree,
+                               elision_output_tree,
+                               disk_tree, status_tree, skip_tree,
+                               error_re_string = None,
+                               check_props = True,
+                               dry_run = True):
+  """Run 'svn merge --reintegrate SRC_URL TGT_DIR'. Raise an error if
+     there is nothing on stdout, anything on stderr, or a non-zero exit
+     code, or if the expected ERROR_RE_STRING or any of the given expected
+     trees don't match.
+  """
+  svntest.actions.run_and_verify_merge(
+                    tgt_dir, None, None, src_url, None,
+                    output_tree, mergeinfo_output_tree, elision_output_tree,
+                    disk_tree, status_tree, skip_tree,
+                    error_re_string,
+                    None, None, None, None, check_props, dry_run,
+                    '--reintegrate', tgt_dir)
+
+
+#----------------------------------------------------------------------
 @SkipUnless(server_has_mergeinfo)
 @Issue(3640)
 def basic_reintegrate(sbox):
@@ -204,17 +260,15 @@ def basic_reintegrate(sbox):
   })
   k_expected_disk.tweak('', props={SVN_PROP_MERGEINFO : '/A_COPY:2-8'})
   expected_skip = wc.State(A_path, {})
-  svntest.actions.run_and_verify_merge(A_path, None, None,
-                                       sbox.repo_url + '/A_COPY', None,
+  run_and_verify_reintegrate(A_path,
+                                       sbox.repo_url + '/A_COPY',
                                        expected_output,
                                        expected_mergeinfo_output,
                                        expected_elision_output,
                                        k_expected_disk,
                                        k_expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, True, True,
-                                       '--reintegrate', A_path)
+                                       None, True, True)
 
   # Test issue #3640:
   #
@@ -263,17 +317,15 @@ def basic_reintegrate(sbox):
   expected_status.tweak(wc_rev=9)
   k_expected_disk.tweak('', props={SVN_PROP_MERGEINFO : '/A_COPY:2-9'})
   expected_skip = wc.State(A_MOVED_path, {})
-  svntest.actions.run_and_verify_merge(A_MOVED_path, None, None,
-                                       sbox.repo_url + '/A_COPY', None,
+  run_and_verify_reintegrate(A_MOVED_path,
+                                       sbox.repo_url + '/A_COPY',
                                        expected_output,
                                        expected_mergeinfo_output,
                                        expected_elision_output,
                                        k_expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, True, True,
-                                       '--reintegrate', A_MOVED_path)
+                                       None, True, True)
 
 #----------------------------------------------------------------------
 def reintegrate_with_rename(sbox):
@@ -492,17 +544,15 @@ def reintegrate_with_rename(sbox):
                           contents="This is the file 'tau'.\n")
     })
   expected_skip = wc.State(A_path, {})
-  svntest.actions.run_and_verify_merge(A_path, None, None,
-                                       sbox.repo_url + '/A_COPY', None,
+  run_and_verify_reintegrate(A_path,
+                                       sbox.repo_url + '/A_COPY',
                                        expected_output,
                                        expected_mergeinfo_output,
                                        expected_elision_output,
                                        k_expected_disk,
                                        k_expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, True, True,
-                                       '--reintegrate', A_path)
+                                       None, True, True)
 
   # Finally, commit the result of the merge (r10).
   expected_output = wc.State(wc_dir, {
@@ -625,17 +675,15 @@ def reintegrate_branch_never_merged_to(sbox):
     'D/H/psi'      : Item("New content"),
   })
   expected_skip = wc.State(A_path, {})
-  svntest.actions.run_and_verify_merge(A_path, None, None,
-                                       sbox.repo_url + '/A_COPY', None,
+  run_and_verify_reintegrate(A_path,
+                                       sbox.repo_url + '/A_COPY',
                                        expected_output,
                                        expected_mergeinfo_output,
                                        expected_elision_output,
                                        k_expected_disk,
                                        k_expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, True, True,
-                                       '--reintegrate', A_path)
+                                       None, True, True)
 
   # Finally, commit the result of the merge (r9).
   expected_output = wc.State(wc_dir, {
@@ -656,15 +704,22 @@ def reintegrate_fail_on_modified_wc(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   A_path = sbox.ospath('A')
+  A_COPY_path = sbox.ospath('A_COPY')
   mu_path = os.path.join(A_path, "mu")
   ignored_expected_disk, ignored_expected_status = set_up_branch(sbox)
+
+  # Do a 'sync' merge first so that the following merge really needs to be a
+  # reintegrate, so that an equivalent automatic merge would behave the same.
+  svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path)
+  sbox.simple_commit()
+
   svntest.main.file_write(mu_path, "Changed on 'trunk' (the merge target).")
   sbox.simple_update() # avoid mixed-revision error
-  svntest.actions.run_and_verify_merge(
-    A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,
+  run_and_verify_reintegrate(
+    A_path, sbox.repo_url + '/A_COPY', None, None, None,
     None, None, None,
     ".*Cannot merge into a working copy that has local modifications.*",
-    None, None, None, None, True, False, '--reintegrate', A_path)
+    True, False)
 
 #----------------------------------------------------------------------
 def reintegrate_fail_on_mixed_rev_wc(sbox):
@@ -683,11 +738,11 @@ def reintegrate_fail_on_mixed_rev_wc(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
   # Try merging into that same wc, expecting failure.
-  svntest.actions.run_and_verify_merge(
-    A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,
+  run_and_verify_reintegrate(
+    A_path, sbox.repo_url + '/A_COPY', None, None, None,
     None, None, None,
     ".*Cannot merge into mixed-revision working copy.*",
-    None, None, None, None, True, False, '--reintegrate', A_path)
+    True, False)
 
 #----------------------------------------------------------------------
 def reintegrate_fail_on_switched_wc(sbox):
@@ -695,9 +750,28 @@ def reintegrate_fail_on_switched_wc(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   A_path = sbox.ospath('A')
+  A_COPY_path = sbox.ospath('A_COPY')
   G_path = os.path.join(A_path, "D", "G")
   switch_url = sbox.repo_url + "/A/D/H"
   expected_disk, expected_status = set_up_branch(sbox)
+
+  # Do a 'sync' merge first so that the following merge really needs to be a
+  # reintegrate, so that an equivalent automatic merge would behave the same.
+  expected_disk.tweak(
+    'A_COPY/D/H/psi',
+    'A_COPY/D/G/rho',
+    'A_COPY/B/E/beta',
+    'A_COPY/D/H/omega',
+    contents="New content")
+  expected_status.tweak(
+    'A_COPY/D/H/psi',
+    'A_COPY/D/G/rho',
+    'A_COPY/B/E/beta',
+    'A_COPY/D/H/omega',
+    'A_COPY',
+    wc_rev=7)
+  svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path)
+  sbox.simple_commit()
 
   # Switch a subdir of the target.
   expected_output = svntest.wc.State(wc_dir, {
@@ -716,10 +790,10 @@ def reintegrate_fail_on_switched_wc(sbox):
     })
   expected_status.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
   expected_status.add({
-    'A/D/G'       : Item(status='  ', wc_rev=6, switched='S'),
-    'A/D/G/chi'   : Item(status='  ', wc_rev=6),
-    'A/D/G/psi'   : Item(status='  ', wc_rev=6),
-    'A/D/G/omega' : Item(status='  ', wc_rev=6),
+    'A/D/G'       : Item(status='  ', wc_rev=7, switched='S'),
+    'A/D/G/chi'   : Item(status='  ', wc_rev=7),
+    'A/D/G/psi'   : Item(status='  ', wc_rev=7),
+    'A/D/G/omega' : Item(status='  ', wc_rev=7),
     })
   svntest.actions.run_and_verify_switch(wc_dir,
                                         G_path,
@@ -730,11 +804,11 @@ def reintegrate_fail_on_switched_wc(sbox):
                                         None, None, None, None, None,
                                         False, '--ignore-ancestry')
   sbox.simple_update() # avoid mixed-revision error
-  svntest.actions.run_and_verify_merge(
-    A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,
+  run_and_verify_reintegrate(
+    A_path, sbox.repo_url + '/A_COPY', None, None, None,
     None, None, None,
     ".*Cannot merge into a working copy with a switched subtree.*",
-    None, None, None, None, True, False, '--reintegrate', A_path)
+    True, False)
 
 #----------------------------------------------------------------------
 # Test for issue #3603 'allow reintegrate merges into WCs with
@@ -804,16 +878,15 @@ def reintegrate_on_shallow_wc(sbox):
     'D'         : Item(), # Don't expect anything under D, its depth is empty!
     })
   expected_A_skip = wc.State(A_path, {})
-  svntest.actions.run_and_verify_merge(A_path, None, None,
-                                       sbox.repo_url + '/A_COPY', None,
+  run_and_verify_reintegrate(A_path,
+                                       sbox.repo_url + '/A_COPY',
                                        expected_output,
                                        expected_mergeinfo_output,
                                        expected_elision_output,
                                        expected_A_disk,
                                        expected_A_status,
                                        expected_A_skip,
-                                       None, None, None, None,
-                                       None, 1, 1, "--reintegrate", A_path)
+                                       None, 1, 1)
 
   # Now revert the reintegrate and make a second change on the
   # branch in r4, but this time change a subtree that corresponds
@@ -832,22 +905,25 @@ def reintegrate_on_shallow_wc(sbox):
   expected_A_disk.tweak('D', props={SVN_PROP_MERGEINFO : '/A_COPY/D:2-4*'})
   # ... a depth-restricted item is skipped ...
   expected_A_skip.add({
-      'D/H/psi' : Item(verb='Skipped')
+      'D/H' : Item(verb='Skipped missing target')
+  })
+  expected_output.add({
+    # Below the skip
+    'D/H/psi'           : Item(status='  ', treeconflict='U'),
   })
   # Currently this fails due to r1424469.  For a full explanation see
   # http://svn.haxx.se/dev/archive-2012-12/0472.shtml
   # and http://svn.haxx.se/dev/archive-2012-12/0475.shtml
   expected_A_disk.tweak('', props={SVN_PROP_MERGEINFO : '/A_COPY:2-4'})
-  svntest.actions.run_and_verify_merge(A_path, None, None,
-                                       sbox.repo_url + '/A_COPY', None,
+  run_and_verify_reintegrate(A_path,
+                                       sbox.repo_url + '/A_COPY',
                                        expected_output,
                                        expected_mergeinfo_output,
                                        expected_elision_output,
                                        expected_A_disk,
                                        expected_A_status,
                                        expected_A_skip,
-                                       None, None, None, None,
-                                       None, 1, 1, "--reintegrate", A_path)
+                                       None, 1, 1)
 
 #----------------------------------------------------------------------
 @SkipUnless(server_has_mergeinfo)
@@ -916,16 +992,15 @@ def reintegrate_fail_on_stale_source(sbox):
     'D/H/omega' : Item("New content"),
     })
   expected_skip = wc.State(A_path, { })
-  svntest.actions.run_and_verify_merge(A_path, None, None,
-                                       sbox.repo_url + '/A_COPY', None,
+  run_and_verify_reintegrate(A_path,
+                                       sbox.repo_url + '/A_COPY',
                                        expected_output,
                                        expected_mergeinfo_output,
                                        expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       [], None, None, None, None, True, True,
-                                       '--reintegrate', A_path)
+                                       [], True, True)
 
 #----------------------------------------------------------------------
 def merge_file_with_space_in_its_path(sbox):
@@ -955,9 +1030,7 @@ def merge_file_with_space_in_its_path(sbox):
                                      "ci", "-m", "r4", wc_dir)
 
   target_url = sbox.repo_url + '/some%20dir/file2'
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     "merge", "--reintegrate", target_url,
-                                     file1)
+  run_reintegrate(target_url, file1)
 
 #----------------------------------------------------------------------
 @SkipUnless(server_has_mergeinfo)
@@ -1175,16 +1248,15 @@ def reintegrate_with_subtree_mergeinfo(sbox):
     'D/H/omega' : Item("New content"),
     })
   expected_A_skip = wc.State(A_COPY_path, {})
-  svntest.actions.run_and_verify_merge(A_path, None, None,
-                                       sbox.repo_url + '/A_COPY', None,
+  run_and_verify_reintegrate(A_path,
+                                       sbox.repo_url + '/A_COPY',
                                        expected_output,
                                        expected_mergeinfo_output,
                                        expected_elision_output,
                                        expected_A_disk,
                                        expected_A_status,
                                        expected_A_skip,
-                                       None, None, None, None,
-                                       None, 1, 1, "--reintegrate", A_path)
+                                       None, 1, 1)
 
   # Make some more changes to A_COPY so that the same revisions have *not*
   # been uniformly applied from A to A_COPY.  In this case the reintegrate
@@ -1224,19 +1296,10 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   # to it from A, the merge should fail.  Further we expect an error message
   # that highlights the fact that A_COPY/D is the offending subtree.
   #
-  # The actions.run_and_verify_* methods are happy if one line of the error
-  # matches the regex, but we want to know that the error actually provides
-  # specific information about the paths that are stopping --reintegrate from
-  # working.  So we will pass the stderr to svntest.verify.verify_outputs()
-  # ourselves, but as the 'actual_stdout' argument, that way each line of
-  # error must match the regex.
-  exit_code, out, err = svntest.actions.run_and_verify_svn(
-    None, [], svntest.verify.AnyOutput,
-    'merge', '--reintegrate', sbox.repo_url + '/A_COPY', A_path)
-
-  svntest.verify.verify_outputs("Reintegrate failed but not "
-                                "in the way expected",
-                                err, None,
+  # We want to know that the error provides specific information about the
+  # paths that are stopping --reintegrate from working.
+  run_reintegrate_expect_error(sbox.repo_url + '/A_COPY', A_path,
+                               [],
                                 "(svn: E195016: Reintegrate can only be used if "
                                 "revisions 2 through 15 were previously "
                                 "merged from .*/A to the reintegrate source, "
@@ -1245,10 +1308,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
                                 "|(    Missing ranges: /A/D:8\n)"
                                 "|(  A_COPY/mu\n)"
                                 "|(    Missing ranges: /A/mu:2-12\n)"
-                                "|(\n)"
-                                "|(.*apr_err.*)", # In case of debug build
-                                None,
-                                True) # Match *all* lines of stdout
+                                "|(\n)")
 
   # Test another common situation that can break reintegrate as a result
   # of copies and moves:
@@ -1295,6 +1355,14 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   expected_status.remove('A/D/gamma')
   expected_status.add({'A/D/gamma_moved' : Item(status='  ', wc_rev=16)})
 
+  # Why is gamma_moved notified as ' G' rather than ' U'?  It was
+  # added by the merge and there is only a single editor drive, so
+  # how can any prop changes be merged to it?  The answer is that
+  # the merge code does some quiet housekeeping, merging gamma_moved's
+  # inherited mergeinfo into its incoming mergeinfo, see
+  # http://subversion.tigris.org/issues/show_bug.cgi?id=4309
+  # This test is not covering issue #4309 so we let the current
+  # behavior pass.
   # r17 - B) Synch merge from A to A_COPY
   svntest.actions.run_and_verify_svn(
     None,
@@ -1304,7 +1372,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
                            'D    ' + gamma_COPY_path + '\n',
                            ' U   ' + A_COPY_path     + '\n',
                            ' U   ' + D_COPY_path     + '\n',
-                           ' U   ' + gamma_moved_COPY_path + '\n']),
+                           ' G   ' + gamma_moved_COPY_path + '\n']),
     [], 'merge', sbox.repo_url + '/A',  A_COPY_path)
   expected_output = wc.State(
     wc_dir,
@@ -1374,7 +1442,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
     ''              : Item(status=' U'),
     'mu'            : Item(status=' G'),
     'D'             : Item(status=' U'),
-    'D/gamma_moved' : Item(status=' U'),
+    'D/gamma_moved' : Item(status=' G'), # More issue #4309 (see above)
     })
   expected_elision_output = wc.State(A_path, {
     })
@@ -1418,26 +1486,49 @@ def reintegrate_with_subtree_mergeinfo(sbox):
     'D/G/pi'        : Item("This is the file 'pi'.\n"),
     'D/G/rho'       : Item("New content"),
     'D/G/tau'       : Item("This is the file 'tau'.\n"),
+    # What's with all this mergeinfo?
+    #
+    # '/A/D/gamma_moved:2-7,9-12' - Incoming from the merge source.  Yes,
+    # this mergeinfo describes non-existent path-revs, this is the effect
+    # of issue #3669 'inheritance can result in mergeinfo describing
+    # nonexistent sources', but there is already a test for that issue so
+    # we tolerate it here.
+    #
+    # '/A_COPY/D/gamma_moved:17-19' - Describes the merge performed.
+    #
+    # '/A_COPY_3/D/gamma:9' - Explicit prior to the merge.
+    #
+    #'/A_COPY_3/D/gamma_moved:9' - Incoming from the merge source.
+    # For the curious, this was originally created in r17 when we merged
+    # ^/A to A_COPY.  This merge added A_COPY/D/gamma_moved, which had
+    # explicit mergeinfo and due to issue #4309 'wrong notification and
+    # bogus mergeinfo during merge which adds subtree with mergeinfo'
+    # this file inherited this bogus mergeinfo from A_COPY/D.  Yes, this
+    # is all quite ugly as the intersection or multiple known issues
+    # is likely to be.  However, given that none of this mergeinfo is
+    # particularly harmful and that this test is *not* about issues #3669
+    # or #4309, we are tolerting it.
     'D/gamma_moved' : Item(
       "Even newer content", props={SVN_PROP_MERGEINFO :
+                                   '/A/D/gamma_moved:2-7,9-12\n'
                                    '/A_COPY/D/gamma_moved:17-19\n'
-                                   '/A_COPY_3/D/gamma:9'}),
+                                   '/A_COPY_3/D/gamma:9\n'
+                                   '/A_COPY_3/D/gamma_moved:9'}),
     'D/H'           : Item(),
     'D/H/chi'       : Item("This is the file 'chi'.\n"),
     'D/H/psi'       : Item("New content"),
     'D/H/omega'     : Item("New content"),
     })
   expected_A_skip = wc.State(A_COPY_path, {})
-  svntest.actions.run_and_verify_merge(A_path, None, None,
-                                       sbox.repo_url + '/A_COPY', None,
+  run_and_verify_reintegrate(A_path,
+                                       sbox.repo_url + '/A_COPY',
                                        expected_output,
                                        expected_mergeinfo_output,
                                        expected_elision_output,
                                        expected_A_disk,
                                        expected_A_status,
                                        expected_A_skip,
-                                       None, None, None, None,
-                                       None, 1, 1, "--reintegrate", A_path)
+                                       None, 1, 1)
 
 #----------------------------------------------------------------------
 @SkipUnless(server_has_mergeinfo)
@@ -1494,9 +1585,7 @@ def multiple_reintegrates_from_the_same_branch(sbox):
 
   # r11 - Reintegrate the feature branch back to 'A'.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '--reintegrate',
-                                     sbox.repo_url + '/A_FEATURE_BRANCH',
-                                     A_path)
+  run_reintegrate(sbox.repo_url + '/A_FEATURE_BRANCH', A_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
                                      "Reintegrate feature branch back to 'A'",
                                      wc_dir)
@@ -1588,17 +1677,15 @@ def multiple_reintegrates_from_the_same_branch(sbox):
     'D/H/omega' : Item("New content"),
     })
   expected_skip = wc.State(A_path, { })
-  svntest.actions.run_and_verify_merge(A_path, None, None,
+  run_and_verify_reintegrate(A_path,
                                        sbox.repo_url + '/A_FEATURE_BRANCH',
-                                       None,
                                        expected_output,
                                        expected_mergeinfo_output,
                                        expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1, 1, '--reintegrate', A_path)
+                                       None, 1, 1)
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
                                      "2nd Reintegrate feature branch back to 'A'",
                                      wc_dir)
@@ -1746,16 +1833,15 @@ def reintegrate_with_self_referential_mergeinfo(sbox):
   #  ..\..\..\subversion\libsvn_fs_fs\tree.c:2886: (apr_err=160013)
   #  ..\..\..\subversion\libsvn_fs_fs\tree.c:669: (apr_err=160013)
   #  svn: File not found: revision 4, path '/A2'
-  svntest.actions.run_and_verify_merge(A2_path, None, None,
-                                       sbox.repo_url + '/A2.1', None,
+  run_and_verify_reintegrate(A2_path,
+                                       sbox.repo_url + '/A2.1',
                                        expected_output,
                                        expected_mergeinfo_output,
                                        expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1, 0, '--reintegrate', A2_path)
+                                       None, 1, 0)
 
 #----------------------------------------------------------------------
 # Test for issue #3577 '1.7 subtree mergeinfo recording breaks reintegrate'.
@@ -1878,16 +1964,15 @@ def reintegrate_with_subtree_merges(sbox):
     'D/H/omega' : Item("New content"),
     })
   expected_A_skip = wc.State(A_COPY_path, {})
-  svntest.actions.run_and_verify_merge(A_path, None, None,
-                                       sbox.repo_url + '/A_COPY', None,
+  run_and_verify_reintegrate(A_path,
+                                       sbox.repo_url + '/A_COPY',
                                        expected_output,
                                        expected_mergeinfo_output,
                                        expected_elision_output,
                                        expected_A_disk,
                                        expected_A_status,
                                        expected_A_skip,
-                                       None, None, None, None,
-                                       None, 1, 1, "--reintegrate", A_path)
+                                       None, 1, 1)
 
 #----------------------------------------------------------------------
 # Test for issue #3654 'added subtrees with mergeinfo break reintegrate'.
@@ -1961,9 +2046,7 @@ def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
 
   # r14 - Reintegrate A_COPY to A.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
-                                     'merge', '--reintegrate',
-                                     sbox.repo_url + '/A_COPY', A_path)
+  run_reintegrate(sbox.repo_url + '/A_COPY', A_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
                                      'Reintegrate A_COPY to A.',
                                      wc_dir)
@@ -2073,16 +2156,15 @@ def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
     'D/H/omega' : Item("New content"),
     })
   expected_skip = wc.State(A_COPY_path, {})
-  svntest.actions.run_and_verify_merge(A_path, None, None,
-                                       sbox.repo_url + '/A_COPY', None,
+  run_and_verify_reintegrate(A_path,
+                                       sbox.repo_url + '/A_COPY',
                                        expected_output,
                                        expected_mergeinfo_output,
                                        expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1, 1, "--reintegrate", A_path)
+                                       None, 1, 1)
 
 #----------------------------------------------------------------------
 # Test for issue #3648 '2-URL merges incorrectly reverse-merge mergeinfo
@@ -2322,14 +2404,14 @@ def reintegrate_creates_bogus_mergeinfo(sbox):
     })
   expected_skip = wc.State(A_COPY_path, {})
 
-  svntest.actions.run_and_verify_merge(A_path, None, None,
-                                       A_COPY_url, None,
+  run_and_verify_reintegrate(A_path,
+                                       A_COPY_url,
                                        expected_output,
                                        expected_mergeinfo_output,
                                        expected_elision_output,
                                        expected_disk, None, expected_skip,
-                                       None, None, None, None, None,
-                                       1, 1, "--reintegrate", A_path)
+                                       None,
+                                       1, 1)
 
 
 #----------------------------------------------------------------------
@@ -2391,8 +2473,7 @@ def no_source_subtree_mergeinfo(sbox):
   svntest.main.run_svn(None, 'update', wc_dir)
 
   # Reintegrate branch-1 subtree to trunk subtree
-  svntest.main.run_svn(None, 'merge', '--reintegrate',
-                       '^/A/B1/E', sbox.ospath('A/B/E'))
+  run_reintegrate('^/A/B1/E', sbox.ospath('A/B/E'))
   svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
   svntest.main.run_svn(None, 'update', wc_dir)
 
@@ -2446,22 +2527,13 @@ def no_source_subtree_mergeinfo(sbox):
       })
   expected_skip = wc.State(sbox.ospath('A/B'), {
       })
-  svntest.actions.run_and_verify_merge(sbox.ospath('A/B'),
-                                       None, None, '^/A/B2', None,
+  run_and_verify_reintegrate(sbox.ospath('A/B'),
+                                       '^/A/B2',
                                        expected_output, expected_mergeinfo,
                                        expected_elision, expected_disk,
                                        None, expected_skip,
-                                       None, None, None, None, None,
-                                       1, 1, '--reintegrate',
-                                       sbox.ospath('A/B'))
-  # For 1.6 testsuite use:
-  # svntest.actions.run_and_verify_merge(sbox.ospath('A/B'),
-  #                                      None, None, '^/A/B2',
-  #                                      expected_output,
-  #                                      expected_disk,
-  #                                      None, expected_skip,
-  #                                      None, None, None, None, None,
-  #                                      1, 1, '--reintegrate')
+                                       None,
+                                       1, 1)
 
 #----------------------------------------------------------------------
 @SkipUnless(server_has_mergeinfo)
@@ -2578,16 +2650,15 @@ def reintegrate_replaced_source(sbox):
     'D/H/omega' : Item("New content"),
     })
   expected_skip = wc.State(A_path, { })
-  svntest.actions.run_and_verify_merge(A_path, None, None,
-                                       sbox.repo_url + '/A_COPY', None,
+  run_and_verify_reintegrate(A_path,
+                                       sbox.repo_url + '/A_COPY',
                                        expected_output,
                                        expected_mergeinfo_output,
                                        expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       [], None, None, None, None, True, True,
-                                       '--reintegrate', A_path)
+                                       [], True, True)
 
 #----------------------------------------------------------------------
 @SkipUnless(svntest.main.is_posix_os)
@@ -2624,8 +2695,7 @@ def reintegrate_symlink_deletion(sbox):
 
   ## reintegrate
   # ### TODO: verify something here
-  svntest.main.run_svn(None, 'merge', '--reintegrate',
-                       A_COPY_url, A_path)
+  run_reintegrate(A_COPY_url, A_path)
 
 #----------------------------------------------------------------------
 def no_op_reintegrate(sbox):
@@ -2645,8 +2715,7 @@ def no_op_reintegrate(sbox):
 
   # Reintegrate; there are no relevant changes on the branch.
   # ### TODO: Check the result more carefully than merely that it completed.
-  svntest.main.run_svn(None, 'merge', '--reintegrate',
-                       sbox.repo_url + '/A_COPY', A_path)
+  run_reintegrate(sbox.repo_url + '/A_COPY', A_path)
 
 #----------------------------------------------------------------------
 def renamed_branch_reintegrate(sbox):
@@ -2685,8 +2754,7 @@ def renamed_branch_reintegrate(sbox):
 
   # Reintegrate; there are no relevant changes on the branch.
   # ### TODO: Check the result more carefully than merely that it completed.
-  svntest.main.run_svn(None, 'merge', '--reintegrate',
-                       sbox.repo_url + '/RENAMED@8', A_path)
+  run_reintegrate(sbox.repo_url + '/RENAMED@8', A_path)
 
 ########################################################################
 # Run the tests

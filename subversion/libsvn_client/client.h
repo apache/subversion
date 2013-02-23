@@ -38,6 +38,7 @@
 #include "private/svn_magic.h"
 #include "private/svn_editor.h"
 #include "private/svn_client_private.h"
+#include "private/svn_diff_tree.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -597,58 +598,6 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
 /* ---------------------------------------------------------------- */
 
-/*** List ***/
-
-/* List the file/directory entries for PATH_OR_URL at REVISION.
-   The actual node revision selected is determined by the path as 
-   it exists in PEG_REVISION.  
-   
-   If DEPTH is svn_depth_infinity, then list all file and directory entries 
-   recursively.  Else if DEPTH is svn_depth_files, list all files under 
-   PATH_OR_URL (if any), but not subdirectories.  Else if DEPTH is
-   svn_depth_immediates, list all files and include immediate
-   subdirectories (at svn_depth_empty).  Else if DEPTH is
-   svn_depth_empty, just list PATH_OR_URL with none of its entries.
- 
-   DIRENT_FIELDS controls which fields in the svn_dirent_t's are
-   filled in.  To have them totally filled in use SVN_DIRENT_ALL,
-   otherwise simply bitwise OR together the combination of SVN_DIRENT_*
-   fields you care about.
- 
-   If FETCH_LOCKS is TRUE, include locks when reporting directory entries.
- 
-   If INCLUDE_EXTERNALS is TRUE, also list all external items 
-   reached by recursion.  DEPTH value passed to the original list target
-   applies for the externals also.  EXTERNAL_PARENT_URL is url of the 
-   directory which has the externals definitions.  EXTERNAL_TARGET is the
-   target subdirectory of externals definitions.
-
-   Report directory entries by invoking LIST_FUNC/BATON. 
-   Pass EXTERNAL_PARENT_URL and EXTERNAL_TARGET to LIST_FUNC when external
-   items are listed, otherwise both are set to NULL.
- 
-   Use authentication baton cached in CTX to authenticate against the
-   repository.
- 
-   Use POOL for all allocations.
-*/
-svn_error_t *
-svn_client__list_internal(const char *path_or_url,
-                          const svn_opt_revision_t *peg_revision,
-                          const svn_opt_revision_t *revision,
-                          svn_depth_t depth,
-                          apr_uint32_t dirent_fields,
-                          svn_boolean_t fetch_locks,
-                          svn_boolean_t include_externals,
-                          const char *external_parent_url,
-                          const char *external_target,
-                          svn_client_list_func2_t list_func,
-                          void *baton,
-                          svn_client_ctx_t *ctx,
-                          apr_pool_t *pool);
-
-/* ---------------------------------------------------------------- */
-
 /*** Inheritable Properties ***/
 
 /* Convert any svn_prop_inherited_item_t elements in INHERITED_PROPS which
@@ -710,36 +659,27 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
    is being driven. REVISION is the revision number of the 'old' side of
    the diff.
 
-   For each deleted directory, if WALK_DELETED_DIRS is true then just call
-   the 'dir_deleted' callback once, otherwise call the 'file_deleted' or
-   'dir_deleted' callback for each individual node in that subtree.
-
    If TEXT_DELTAS is FALSE, then do not expect text deltas from the edit
    drive, nor send the 'before' and 'after' texts to the diff callbacks;
    instead, send empty files to the diff callbacks if there was a change.
    This must be FALSE if the edit producer is not sending text deltas,
    otherwise the file content checksum comparisons will fail.
 
-   If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
-   file and directory operated on during the edit.
+   EDITOR/EDIT_BATON return the newly created editor and baton.
 
-   EDITOR/EDIT_BATON return the newly created editor and baton. */
+   @since New in 1.8.
+   */
 svn_error_t *
-svn_client__get_diff_editor(const svn_delta_editor_t **editor,
-                            void **edit_baton,
-                            svn_depth_t depth,
-                            svn_ra_session_t *ra_session,
-                            svn_revnum_t revision,
-                            svn_boolean_t walk_deleted_dirs,
-                            svn_boolean_t text_deltas,
-                            const svn_wc_diff_callbacks4_t *diff_callbacks,
-                            void *diff_cmd_baton,
-                            svn_cancel_func_t cancel_func,
-                            void *cancel_baton,
-                            svn_wc_notify_func2_t notify_func,
-                            void *notify_baton,
-                            apr_pool_t *result_pool);
-
+svn_client__get_diff_editor2(const svn_delta_editor_t **editor,
+                             void **edit_baton,
+                             svn_ra_session_t *ra_session,
+                             svn_depth_t depth,
+                             svn_revnum_t revision,
+                             svn_boolean_t text_deltas,
+                             const svn_diff_tree_processor_t *processor,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *result_pool);
 
 /* ---------------------------------------------------------------- */
 
@@ -1093,43 +1033,6 @@ svn_client__export_externals(apr_hash_t *externals,
                              svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
-
-
-/* Perform status operations on each external in EXTERNAL_MAP, a const char *
-   local_abspath of all externals mapping to the const char* defining_abspath.
-   All other options are the same as those passed to svn_client_status().
-
-   If ANCHOR_ABSPATH and ANCHOR-RELPATH are not null, use them to provide
-   properly formatted relative paths
- */
-svn_error_t *
-svn_client__do_external_status(svn_client_ctx_t *ctx,
-                               apr_hash_t *external_map,
-                               svn_depth_t depth,
-                               svn_boolean_t get_all,
-                               svn_boolean_t update,
-                               svn_boolean_t no_ignore,
-                               const char *anchor_abspath,
-                               const char *anchor_relpath,
-                               svn_client_status_func_t status_func,
-                               void *status_baton,
-                               apr_pool_t *scratch_pool);
-
-
-/* List external items defined on each external in EXTERNALS, a const char *
-   externals_parent_url(url of the directory which has the externals
-   definitions) of all externals mapping to the svn_string_t * externals_desc
-   (externals description text). All other options are the same as those 
-   passed to svn_client_list(). */
-svn_error_t * 
-svn_client__list_externals(apr_hash_t *externals, 
-                           svn_depth_t depth,
-                           apr_uint32_t dirent_fields,
-                           svn_boolean_t fetch_locks,
-                           svn_client_list_func2_t list_func,
-                           void *baton,
-                           svn_client_ctx_t *ctx,
-                           apr_pool_t *scratch_pool);
 
 /* Baton for svn_client__dirent_fetcher */
 struct svn_client__dirent_fetcher_baton_t

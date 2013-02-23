@@ -162,12 +162,14 @@ mergeinfo_diagram(const char *yca_url,
     }
 
   /* Column headings */
-  SVN_ERR(svn_cmdline_fputs(
-            _("    youngest  last               repos.\n"
-              "    common    full     tip of    path of\n"
-              "    ancestor  merge    branch    branch\n"
-              "\n"),
-            stdout, pool));
+  SVN_ERR(svn_cmdline_printf(pool,
+            "    %s\n"
+            "    |         %s\n"
+            "    |         |        %s\n"
+            "    |         |        |         %s\n"
+            "\n",
+            _("youngest common ancestor"), _("last full merge"),
+            _("tip of branch"), _("repository path")));
 
   /* Print the diagram, row by row */
   for (row = 0; row < ROWS; row++)

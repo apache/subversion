@@ -34,6 +34,7 @@ import tempfile
 import textwrap
 import zlib
 import posixpath
+import filecmp
 
 # Our testing module
 import svntest
@@ -265,9 +266,7 @@ def patch_absolute_paths(sbox):
   expected_output = [
     'U         %s\n' % os.path.join('A', 'B', 'E', 'alpha'),
     'Skipped missing target: \'%s\'\n' % lambda_path,
-    'Summary of conflicts:\n',
-    '  Skipped paths: 1\n'
-  ]
+  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
 
   alpha_contents = "This is the file 'alpha'.\nWhoooo whooooo whoooooooo!\n"
 
@@ -971,10 +970,9 @@ def patch_add_new_dir(sbox):
 
   C_path = sbox.ospath('A/C')
   E_path = sbox.ospath('A/B/E')
-  svntest.actions.run_and_verify_svn("Deleting C failed", None, [],
-                                     'rm', C_path)
-  svntest.actions.run_and_verify_svn("Deleting E failed", None, [],
-                                     'rm', E_path)
+
+  svntest.main.safe_rmtree(C_path)
+  svntest.main.safe_rmtree(E_path)
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   A_B_E_Y_new_path = sbox.ospath('A/B/E/Y/new')
@@ -987,9 +985,7 @@ def patch_add_new_dir(sbox):
     'Skipped missing target: \'%s\'\n' % A_B_E_Y_new_path,
     'Skipped missing target: \'%s\'\n' % A_C_new_path,
     'Skipped missing target: \'%s\'\n' % A_Z_new_path,
-    'Summary of conflicts:\n',
-    '  Skipped paths: 3\n',
-  ]
+  ] + svntest.main.summary_of_conflicts(skipped_paths=3)
 
   # Create the unversioned obstructing directory
   os.mkdir(os.path.dirname(A_Z_new_path))
@@ -1003,13 +999,13 @@ def patch_add_new_dir(sbox):
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-           'X'         : Item(status='A ', wc_rev=0),
-           'X/Y'       : Item(status='A ', wc_rev=0),
-           'X/Y/new'   : Item(status='A ', wc_rev=0),
-           'A/B/E'     : Item(status='D ', wc_rev=1),
-           'A/B/E/alpha': Item(status='D ', wc_rev=1),
-           'A/B/E/beta': Item(status='D ', wc_rev=1),
-           'A/C'       : Item(status='D ', wc_rev=1),
+           'X'          : Item(status='A ', wc_rev=0),
+           'X/Y'        : Item(status='A ', wc_rev=0),
+           'X/Y/new'    : Item(status='A ', wc_rev=0),
+           'A/B/E'      : Item(status='! ', wc_rev=1),
+           'A/B/E/alpha': Item(status='! ', wc_rev=1),
+           'A/B/E/beta' : Item(status='! ', wc_rev=1),
+           'A/C'        : Item(status='! ', wc_rev=1),
   })
 
   expected_skip = wc.State(
@@ -1173,9 +1169,7 @@ def patch_reject(sbox):
   expected_output = [
     'C         %s\n' % sbox.ospath('A/D/gamma'),
     '>         rejected hunk @@ -1,1 +1,1 @@\n',
-    'Summary of conflicts:\n',
-    '  Text conflicts: 1\n',
-  ]
+  ] + svntest.main.summary_of_conflicts(text_conflicts=1)
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/D/gamma', contents=gamma_contents)
@@ -2455,9 +2449,7 @@ def patch_same_twice(sbox):
     '>         hunk @@ -6,6 +6,9 @@ already applied\n',
     '>         hunk @@ -14,11 +17,8 @@ already applied\n',
     'Skipped \'%s\'\n' % beta_path,
-    'Summary of conflicts:\n',
-    '  Skipped paths: 1\n',
-  ]
+  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
 
   expected_skip = wc.State('', {beta_path : Item(verb='Skipped')})
 
@@ -2542,9 +2534,7 @@ def patch_dir_properties(sbox):
   expected_output = [
     ' U        %s\n' % wc_dir,
     ' C        %s\n' % sbox.ospath('A/B'),
-    'Summary of conflicts:\n',
-    '  Property conflicts: 1\n',
-  ]
+  ] + svntest.main.summary_of_conflicts(prop_conflicts=1)
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
@@ -3968,9 +3958,7 @@ def patch_delete_and_skip(sbox):
     'D         %s\n' % os.path.join('A', 'B', 'E', 'beta'),
     'D         %s\n' % os.path.join('A', 'B', 'E'),
     'Skipped missing target: \'%s\'\n' % skipped_path,
-    'Summary of conflicts:\n',
-    '  Skipped paths: 1\n'
-  ]
+  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/B/E/alpha')
@@ -4401,9 +4389,7 @@ def single_line_mismatch(sbox):
   expected_output = [
     'C         %s\n' % sbox.ospath('test'),
     '>         rejected hunk @@ -1,1 +1,1 @@\n',
-    'Summary of conflicts:\n',
-    '  Text conflicts: 1\n',
-  ]
+  ] + svntest.main.summary_of_conflicts(text_conflicts=1)
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'patch', patch_file_path, wc_dir)
@@ -4468,6 +4454,168 @@ def patch_empty_file(sbox):
 
   svntest.actions.verify_disk(wc_dir, expected_disk)
 
+@Issue(3362)
+def patch_apply_no_fuz(sbox):
+  "svn diff created patch should apply without fuz"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  svntest.main.file_write(sbox.ospath('test.txt'), '\n'.join([
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4",
+      "line_5",
+      "line_6",
+      "line_7",
+      "line_8",
+      "line_9",
+      "line_10",
+      "line_11",
+      "line_12",
+      "line_13",
+      "line_14",
+      "line_15",
+      "line_16",
+      "line_17",
+      "line_18",
+      "line_19",
+      "line_20",
+      "line_21",
+      "line_22",
+      "line_23",
+      "line_24",
+      "line_25",
+      "line_26",
+      "line_27",
+      "line_28",
+      "line_29",
+      "line_30",
+      ""
+    ]))
+  svntest.main.file_write(sbox.ospath('test_v2.txt'), '\n'.join([
+      "line_1a",
+      "line_1b",
+      "line_1c",
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4",
+      "line_5a",
+      "line_5b",
+      "line_5c",
+      "line_6",
+      "line_7",
+      "line_8",
+      "line_9",
+      "line_10",
+      "line_11a",
+      "line_11b",
+      "line_11c",
+      "line_12",
+      "line_13",
+      "line_14",
+      "line_15",
+      "line_16",
+      "line_17",
+      "line_18",
+      "line_19a",
+      "line_19b",
+      "line_19c",
+      "line_20",
+      "line_21",
+      "line_22",
+      "line_23",
+      "line_24",
+      "line_25",
+      "line_26",
+      "line_27a",
+      "line_27b",
+      "line_27c",
+      "line_28",
+      "line_29",
+      "line_30",
+      ""
+    ]))
+
+  sbox.simple_add('test.txt', 'test_v2.txt')
+
+  result, out_text, err_text = svntest.main.run_svn(None,
+                                                    'diff',
+                                                    '--old',
+                                                    sbox.ospath('test.txt'),
+                                                    '--new',
+                                                    sbox.ospath('test_v2.txt'))
+
+  patch_path = sbox.ospath('patch.diff')
+  svntest.main.file_write(patch_path, ''.join(out_text))
+
+  expected_output = [
+    'G         %s\n' % sbox.ospath('test.txt'),
+  ]
+
+  # Current result: lf.txt patched ok, new created, empty succeeds with offset.
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'patch', patch_path, wc_dir)
+
+  if not filecmp.cmp(sbox.ospath('test.txt'), sbox.ospath('test_v2.txt')):
+    raise svntest.Failure("Patch result not identical")
+
+@XFail()
+def patch_lacking_trailing_eol_on_context(sbox):
+  "patch file lacking trailing eol on context"
+
+  # Apply a patch where a hunk (the only hunk, in this case) ends with a
+  # context line that has no EOL, where this context line is going to
+  # match an existing line that *does* have an EOL.
+  #
+  # Around trunk@1443700, 'svn patch' wrongly removed an EOL from the
+  # target file at that position.
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+
+  # Prepare
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_disk = svntest.main.greek_state.copy()
+
+  # Prepare the patch
+  unidiff_patch = [
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota\t(revision 1)\n",
+    "+++ iota\t(working copy)\n",
+    # TODO: -1 +1
+    "@@ -1 +1,2 @@\n",
+    "+Some more bytes\n",
+    " This is the file 'iota'.", # No trailing \n on this context line!
+  ]
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  iota_contents = "This is the file 'iota'.\n"
+
+  expected_output = [ 'U         %s\n' % sbox.ospath('iota') ]
+
+  # Test where the no-EOL context line is the last line in the target.
+  expected_disk.tweak('iota', contents="Some more bytes\n" + iota_contents)
+  expected_status.tweak('iota', status='M ')
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+  # Test where the no-EOL context line is a non-last line in the target.
+  sbox.simple_revert('iota')
+  sbox.simple_append('iota', "Another line.\n")
+  expected_disk.tweak('iota', contents="Some more bytes\n" + iota_contents +
+                                       "Another line.\n")
+  expected_output = [ 'G         %s\n' % sbox.ospath('iota') ]
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
 
 
 ########################################################################
@@ -4519,6 +4667,8 @@ test_list = [ None,
               patch_replace_dir_with_file_and_vv,
               single_line_mismatch,
               patch_empty_file,
+              patch_apply_no_fuz,
+              patch_lacking_trailing_eol_on_context,
             ]
 
 if __name__ == '__main__':

@@ -2244,7 +2244,7 @@ get_cached_node_revision_body(node_revision_t **noderev_p,
     }
   else
     {
-      pair_cache_key_t key;
+      pair_cache_key_t key = { 0 };
 
       key.revision = svn_fs_fs__id_rev(id);
       key.second = svn_fs_fs__id_offset(id);
@@ -2273,7 +2273,7 @@ set_cached_node_revision_body(node_revision_t *noderev_p,
 
   if (ffd->node_revision_cache && !svn_fs_fs__id_txn_id(id))
     {
-      pair_cache_key_t key;
+      pair_cache_key_t key = { 0 };
 
       key.revision = svn_fs_fs__id_rev(id);
       key.second = svn_fs_fs__id_offset(id);
@@ -3536,7 +3536,7 @@ parse_revprop(apr_hash_t **properties,
   if (has_revprop_cache(fs, pool))
     {
       fs_fs_data_t *ffd = fs->fsap_data;
-      pair_cache_key_t key;
+      pair_cache_key_t key = { 0 };
 
       key.revision = revision;
       key.second = generation;
@@ -3839,7 +3839,7 @@ get_revision_proplist(apr_hash_t **proplist_p,
   if (has_revprop_cache(fs, pool))
     {
       svn_boolean_t is_cached;
-      pair_cache_key_t key;
+      pair_cache_key_t key = { 0 };
 
       SVN_ERR(read_revprop_generation(&generation, fs, pool));
 
@@ -4386,12 +4386,14 @@ create_rep_state_body(struct rep_state **rep_state,
 
   /* If the hint is
    * - given,
+   * - refers to a valid revision,
    * - refers to a packed revision,
    * - as does the rep we want to read, and
    * - refers to the same pack file as the rep
    * ...
    */
   if (   file_hint && rev_hint && *file_hint
+      && SVN_IS_VALID_REVNUM(*rev_hint)
       && *rev_hint < ffd->min_unpacked_rev
       && rep->revision < ffd->min_unpacked_rev
       && (   (*rev_hint / ffd->max_files_per_dir)
@@ -5192,7 +5194,7 @@ read_representation(svn_stream_t **contents_p,
   else
     {
       fs_fs_data_t *ffd = fs->fsap_data;
-      pair_cache_key_t fulltext_cache_key;
+      pair_cache_key_t fulltext_cache_key = { 0 };
       svn_filesize_t len = rep->expanded_size ? rep->expanded_size : rep->size;
       struct rep_read_baton *rb;
 
@@ -5366,7 +5368,7 @@ svn_fs_fs__try_process_file_contents(svn_boolean_t *success,
   if (rep)
     {
       fs_fs_data_t *ffd = fs->fsap_data;
-      pair_cache_key_t fulltext_cache_key;
+      pair_cache_key_t fulltext_cache_key = { 0 };
 
       fulltext_cache_key.revision = rep->revision;
       fulltext_cache_key.second = rep->offset;
@@ -5673,7 +5675,7 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
     {
       fs_fs_data_t *ffd = fs->fsap_data;
       representation_t *rep = noderev->prop_rep;
-      pair_cache_key_t key;
+      pair_cache_key_t key = { 0 };
 
       key.revision = rep->revision;
       key.second = rep->offset;
@@ -10301,6 +10303,15 @@ typedef struct verify_walker_baton_t
   /* number of files opened since the last clean */
   int file_count;
 
+  /* progress notification callback to invoke periodically (may be NULL) */
+  svn_fs_progress_notify_func_t notify_func;
+
+  /* baton to use with NOTIFY_FUNC */
+  void *notify_baton;
+
+  /* remember the last revision for which we called notify_func */
+  svn_revnum_t last_notified_revision;
+
   /* current file handle (or NULL) */
   apr_file_t *file_hint;
 
@@ -10327,10 +10338,19 @@ verify_walker(representation_t *rep,
       verify_walker_baton_t *walker_baton = baton;
       apr_file_t * previous_file;
 
-      /* free resources periodically */
+      /* notify and free resources periodically */
       if (   walker_baton->iteration_count > 1000
           || walker_baton->file_count > 16)
         {
+          if (   walker_baton->notify_func
+              && rep->revision != walker_baton->last_notified_revision)
+            {
+              walker_baton->notify_func(rep->revision,
+                                        walker_baton->notify_baton,
+                                        scratch_pool);
+              walker_baton->last_notified_revision = rep->revision;
+            }
+
           svn_pool_clear(walker_baton->pool);
           
           walker_baton->iteration_count = 0;
@@ -10362,12 +10382,12 @@ verify_walker(representation_t *rep,
 
 svn_error_t *
 svn_fs_fs__verify(svn_fs_t *fs,
-                  svn_cancel_func_t cancel_func,
-                  void *cancel_baton,
-                  svn_fs_progress_notify_func_t notify_func,
-                  void *notify_baton,
                   svn_revnum_t start,
                   svn_revnum_t end,
+                  svn_fs_progress_notify_func_t notify_func,
+                  void *notify_baton,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
                   apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -10394,14 +10414,20 @@ svn_fs_fs__verify(svn_fs_t *fs,
       verify_walker_baton_t *baton = apr_pcalloc(pool, sizeof(*baton));
       baton->rev_hint = SVN_INVALID_REVNUM;
       baton->pool = svn_pool_create(pool);
+      baton->last_notified_revision = SVN_INVALID_REVNUM;
+      baton->notify_func = notify_func;
+      baton->notify_baton = notify_baton;
       
+      /* tell the user that we are now read to do *something* */
+      if (notify_func)
+        notify_func(SVN_INVALID_REVNUM, notify_baton, baton->pool);
+
       /* Do not attempt to walk the rep-cache database if its file does
          not exist,  since doing so would create it --- which may confuse
          the administrator.   Don't take any lock. */
-      SVN_ERR(svn_fs_fs__walk_rep_reference(fs, verify_walker, baton,
+      SVN_ERR(svn_fs_fs__walk_rep_reference(fs, start, end,
+                                            verify_walker, baton,
                                             cancel_func, cancel_baton,
-                                            notify_func, notify_baton,
-                                            start, end,
                                             pool));
 
       /* walker resource cleanup */

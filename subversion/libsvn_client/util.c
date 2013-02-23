@@ -183,6 +183,7 @@ svn_client__wc_node_get_base(svn_client__pathrev_t **base_p,
                                 &relpath,
                                 &(*base_p)->repos_root_url,
                                 &(*base_p)->repos_uuid,
+                                NULL,
                                 wc_ctx, wc_abspath,
                                 result_pool, scratch_pool));
   if ((*base_p)->repos_root_url && relpath)
@@ -241,10 +242,23 @@ svn_client_get_repos_root(const char **repos_root,
   /* If PATH_OR_URL is a local path we can fetch the repos root locally. */
   if (!svn_path_is_url(abspath_or_url))
     {
-      SVN_ERR(svn_wc__node_get_repos_info(repos_root, repos_uuid,
-                                          ctx->wc_ctx, abspath_or_url,
-                                          result_pool, scratch_pool));
+      svn_error_t *err;
+      err = svn_wc__node_get_repos_info(NULL, NULL, repos_root, repos_uuid,
+                                        ctx->wc_ctx, abspath_or_url,
+                                        result_pool, scratch_pool);
 
+      if (err)
+        {
+          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
+              && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+            return svn_error_trace(err);
+
+          svn_error_clear(err);
+          if (repos_root)
+            *repos_root = NULL;
+          if (repos_uuid)
+            *repos_uuid = NULL;
+        }
       return SVN_NO_ERROR;
     }
 
