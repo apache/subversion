@@ -126,7 +126,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     ),
    {'t'} },
   {"accessof", subcommand_accessof, {0} /* no aliases */,
-   ("Print or test the permissions set by an authz file for a specific circumstance.\n"
+   ("Print or test the permissions set by an authz file.\n"
     "usage: 1. svnauthz accessof [--username USER] [--groups-file GROUPS_FILE] TARGET\n"
     "       2. svnauthz accessof [--username USER] [--groups-file GROUPS_FILE] \\\n"
     "                            -t TXN REPOS_PATH FILE_PATH\n\n"
