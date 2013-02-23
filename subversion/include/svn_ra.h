@@ -1181,12 +1181,24 @@ svn_ra_do_update(svn_ra_session_t *session,
  * The working copy will be switched to @a revision_to_switch_to, or the
  * "latest" revision if this arg is invalid.
  *
+ * If @a send_copyfrom_args is TRUE, then ask the server to send
+ * copyfrom arguments to add_file() and add_directory() when possible.
+ * (Note: this means that any subsequent txdeltas coming from the
+ * server are presumed to apply against the copied file!)
+ *
+ * Use @a ignore_ancestry to control whether or not items being
+ * switched will be checked for relatedness first.  Unrelated items
+ * are typically transmitted to the editor as a deletion of one thing
+ * and the addition of another, but if this flag is @c TRUE,
+ * unrelated items will be diffed as if they were related.
+ *
  * The caller may not perform any RA operations using
  * @a session before finishing the report, and may not perform
  * any RA operations using @a session from within the editing
  * operations of @a switch_editor.
  *
- * Use @a pool for memory allocation.
+ * Use @a result_pool for memory allocation and @a scratch_pool for
+ * temporary work.
  *
  * @note The reporter provided by this function does NOT supply copy-
  * from information to the diff editor callbacks.
@@ -1195,8 +1207,34 @@ svn_ra_do_update(svn_ra_session_t *session,
  * needed, and sending too much data back, a pre-1.5 'recurse'
  * directive may be sent to the server, based on @a depth.
  *
- * @since New in 1.5.
+ * @note Pre Subversion 1.8 svnserve based servers always ignore ancestry
+ * and never send copyfrom data.
+ *
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_ra_do_switch3(svn_ra_session_t *session,
+                  const svn_ra_reporter3_t **reporter,
+                  void **report_baton,
+                  svn_revnum_t revision_to_switch_to,
+                  const char *switch_target,
+                  svn_depth_t depth,
+                  const char *switch_url,
+                  svn_boolean_t send_copyfrom_args,
+                  svn_boolean_t ignore_ancestry,
+                  const svn_delta_editor_t *switch_editor,
+                  void *switch_baton,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_ra_do_switch3(), but always ignoring ancestry and
+ * never sending copyfrom_args.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_do_switch2(svn_ra_session_t *session,
                   const svn_ra_reporter3_t **reporter,

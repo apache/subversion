@@ -1537,9 +1537,12 @@ svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
                        const char *switch_target,
                        svn_depth_t depth,
                        const char *switch_url,
+                       svn_boolean_t send_copyfrom_args,
+                       svn_boolean_t ignore_ancestry,
                        const svn_delta_editor_t *switch_editor,
                        void *switch_baton,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
 
 /* Implements svn_ra__vtable_t.get_file_revs(). */
 svn_error_t *

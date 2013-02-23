@@ -838,9 +838,12 @@ svn_ra_local__do_switch(svn_ra_session_t *session,
                         const char *update_target,
                         svn_depth_t depth,
                         const char *switch_url,
+                        svn_boolean_t send_copyfrom_args,
+                        svn_boolean_t ignore_ancestry,
                         const svn_delta_editor_t *update_editor,
                         void *update_baton,
-                        apr_pool_t *pool)
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   return make_reporter(session,
                        reporter,
@@ -850,11 +853,11 @@ svn_ra_local__do_switch(svn_ra_session_t *session,
                        switch_url,
                        TRUE /* text_deltas */,
                        depth,
-                       FALSE /* send_copyfrom_args */,
-                       TRUE /* ignore_ancestry */,
+                       send_copyfrom_args,
+                       ignore_ancestry,
                        update_editor,
                        update_baton,
-                       pool);
+                       result_pool);
 }
 
 

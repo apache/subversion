@@ -3409,9 +3409,12 @@ svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
                        const char *switch_target,
                        svn_depth_t depth,
                        const char *switch_url,
+                       svn_boolean_t send_copyfrom_args,
+                       svn_boolean_t ignore_ancestry,
                        const svn_delta_editor_t *switch_editor,
                        void *switch_baton,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
 
@@ -3419,8 +3422,12 @@ svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
                               revision_to_switch_to,
                               session->session_url.path,
                               switch_url, switch_target,
-                              depth, TRUE, TRUE, FALSE /* TODO(sussman) */,
-                              switch_editor, switch_baton, pool);
+                              depth,
+                              ignore_ancestry,
+                              TRUE /* text_deltas */,
+                              send_copyfrom_args,
+                              switch_editor, switch_baton,
+                              result_pool);
 }
 
 /* Helper svn_ra_serf__get_file(). Attempts to fetch file contents

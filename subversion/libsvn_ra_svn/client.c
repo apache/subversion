@@ -1394,14 +1394,20 @@ static svn_error_t *ra_svn_update(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *ra_svn_switch(svn_ra_session_t *session,
-                                  const svn_ra_reporter3_t **reporter,
-                                  void **report_baton, svn_revnum_t rev,
-                                  const char *target, svn_depth_t depth,
-                                  const char *switch_url,
-                                  const svn_delta_editor_t *update_editor,
-                                  void *update_baton, apr_pool_t *pool)
+static svn_error_t *
+ra_svn_switch(svn_ra_session_t *session,
+              const svn_ra_reporter3_t **reporter,
+              void **report_baton, svn_revnum_t rev,
+              const char *target, svn_depth_t depth,
+              const char *switch_url,
+              svn_boolean_t send_copyfrom_args,
+              svn_boolean_t ignore_ancestry,
+              const svn_delta_editor_t *update_editor,
+              void *update_baton,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
 {
+  apr_pool_t *pool = result_pool;
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   svn_boolean_t recurse = DEPTH_TO_RECURSE(depth);
@@ -1409,7 +1415,8 @@ static svn_error_t *ra_svn_switch(svn_ra_session_t *session,
   /* Tell the server we want to start a switch. */
   SVN_ERR(svn_ra_svn_write_templated_cmd(conn, pool, svn_ra_svn_cmd_switch,
                                          rev, target, recurse, switch_url,
-                                         svn_depth_to_word(depth)));
+                                         svn_depth_to_word(depth),
+                                         send_copyfrom_args, ignore_ancestry));
   SVN_ERR(handle_auth_request(sess_baton, pool));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive

@@ -301,12 +301,15 @@ switch_internal(svn_revnum_t *result_rev,
 
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision. */
-  SVN_ERR(svn_ra_do_switch2(ra_session, &reporter, &report_baton,
+  SVN_ERR(svn_ra_do_switch3(ra_session, &reporter, &report_baton,
                             switch_loc->rev,
                             target,
                             depth_is_sticky ? depth : svn_depth_unknown,
                             switch_loc->url,
-                            switch_editor, switch_edit_baton, pool));
+                            FALSE /* send_copyfrom_args */,
+                            ignore_ancestry,
+                            switch_editor, switch_edit_baton,
+                            pool, pool));
 
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the update_editor
