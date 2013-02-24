@@ -587,20 +587,13 @@ find_existing_parent(const char **existing_parent_abspath,
   const char *parent_abspath;
   svn_wc_context_t *wc_ctx = ctx->wc_ctx;
 
-  SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, local_abspath, FALSE, scratch_pool));
+  SVN_ERR(svn_wc_read_kind2(&kind, wc_ctx, local_abspath,
+                            FALSE, FALSE, scratch_pool));
 
   if (kind == svn_node_dir)
     {
-      svn_boolean_t is_deleted;
-
-      SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted,
-                                             wc_ctx, local_abspath,
-                                             scratch_pool));
-      if (!is_deleted)
-        {
-          *existing_parent_abspath = apr_pstrdup(result_pool, local_abspath);
-          return SVN_NO_ERROR;
-        }
+      *existing_parent_abspath = apr_pstrdup(result_pool, local_abspath);
+      return SVN_NO_ERROR;
     }
 
   if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))

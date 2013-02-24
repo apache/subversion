@@ -1785,11 +1785,10 @@ def rm_of_replaced_file(sbox):
   # which should have no properties.
   svntest.main.run_svn(None, 'rm', '--force', mu_path)
 
-  exit_code, output, errput = svntest.main.run_svn(None,
-                                                   'proplist', '-v', mu_path)
-  if output or errput:
-    raise svntest.Failure('no output/errors expected')
-  svntest.verify.verify_exit_code(None, exit_code, 0)
+  svntest.actions.run_and_verify_svn(
+                        None, [],
+                        'svn: E200009.*some targets are not versioned.*',
+                        'proplist', '-v', mu_path)
 
   # Run it again, but ask for the pristine properties, which should
   # be mu's original props.

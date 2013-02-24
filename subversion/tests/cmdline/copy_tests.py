@@ -3885,8 +3885,8 @@ def double_parents_with_url(sbox):
 
 
 # Used to cause corruption not fixable by 'svn cleanup'.
-def copy_into_absent_dir(sbox):
-  "copy file into absent dir"
+def copy_into_missing_dir(sbox):
+  "copy file into missing dir"
 
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
@@ -5454,14 +5454,21 @@ def copy_deleted_dir(sbox):
   sbox.simple_rm('iota')
   sbox.simple_rm('A')
 
+  # E145000 - SVN_ERR_NODE_UNKNOWN_KIND
+  # E155035 - SVN_ERR_WC_PATH_UNEXPECTED_STATUS
+  # E155010 - SVN_ERR_WC_PATH_NOT_FOUND
+
   svntest.actions.run_and_verify_svn(None, None,
-                                     '(svn: E145000: Path.* does not exist)|' +
-                                      "(svn: E155035: Deleted node .* copied)",
+                                     'svn: (E145000|E155035|E155010): ' +
+                                     '(Path \'.*iota\' does not exist)|' +
+                                     '(Deleted node .*iota\' copied)',
                                      'cp', sbox.ospath('iota'),
                                      sbox.ospath('new_iota'))
+
   svntest.actions.run_and_verify_svn(None, None,
-                                     '(svn: E145000: Path.* does not exist)|' +
-                                      "(svn: E155035: Deleted node .* copied)",
+                                     'svn: (E145000|E155035|E155010): ' +
+                                     '(Path \'.*D\' does not exist)|' +
+                                     '(Deleted node .*D\' copied)',
                                      'cp', sbox.ospath('A/D'),
                                      sbox.ospath('new_D'))
 
@@ -5471,11 +5478,15 @@ def copy_deleted_dir(sbox):
 
   # At one time these two invocations raised an assertion.
   svntest.actions.run_and_verify_svn(None, None,
-                                     'svn: E155035: Deleted node.* can\'t be.*',
+                                     'svn: (E155035|E155010): ' +
+                                     '(Path \'.*iota\' does not exist)|' +
+                                     '(Deleted node.* .*iota\' can\'t be.*)',
                                      'cp', sbox.ospath('iota'),
                                      sbox.ospath('new_iota'))
   svntest.actions.run_and_verify_svn(None, None,
-                                     'svn: E155035: Deleted node.* can\'t be.*',
+                                     'svn: (E155035|E155010): ' +
+                                     '(Path \'.*D\' does not exist)|' +
+                                     '(Deleted node.* .*D\' can\'t be.*)',
                                      'cp', sbox.ospath('A/D'),
                                      sbox.ospath('new_D'))
 
@@ -5843,7 +5854,7 @@ test_list = [ None,
               allow_unversioned_parent_for_copy_src,
               unneeded_parents,
               double_parents_with_url,
-              copy_into_absent_dir,
+              copy_into_missing_dir,
               find_copyfrom_information_upstairs,
               path_move_and_copy_between_wcs_2475,
               path_copy_in_repo_2475,

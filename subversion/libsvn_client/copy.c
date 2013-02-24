@@ -399,16 +399,17 @@ verify_wc_dsts(const apr_array_header_t *copy_pairs,
       /* If DST_PATH does not exist, then its basename will become a new
          file or dir added to its parent (possibly an implicit '.').
          Else, just error out. */
-      SVN_ERR(svn_wc_read_kind(&dst_kind, ctx->wc_ctx,
-                               pair->dst_abspath_or_url, TRUE /* show_hidden */,
-                               iterpool));
+      SVN_ERR(svn_wc_read_kind2(&dst_kind, ctx->wc_ctx,
+                                pair->dst_abspath_or_url,
+                                FALSE /* show_deleted */,
+                                TRUE /* show_hidden */,
+                                iterpool));
       if (dst_kind != svn_node_none)
         {
-          svn_boolean_t is_not_present;
           svn_boolean_t is_excluded;
           svn_boolean_t is_server_excluded;
 
-          SVN_ERR(svn_wc__node_is_not_present(&is_not_present, &is_excluded,
+          SVN_ERR(svn_wc__node_is_not_present(NULL, &is_excluded,
                                               &is_server_excluded, ctx->wc_ctx,
                                               pair->dst_abspath_or_url, FALSE,
                                               iterpool));
@@ -420,22 +421,12 @@ verify_wc_dsts(const apr_array_header_t *copy_pairs,
                   NULL, _("Path '%s' exists, but is excluded"),
                   svn_dirent_local_style(pair->dst_abspath_or_url, iterpool));
             }
-
-          if (! is_not_present)
-            {
-              svn_boolean_t is_deleted;
-
-              SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, ctx->wc_ctx,
-                                                     pair->dst_abspath_or_url,
-                                                     scratch_pool));
-
-              if (! is_deleted)
-                return svn_error_createf(
+          else
+            return svn_error_createf(
                             SVN_ERR_ENTRY_EXISTS, NULL,
                             _("Path '%s' already exists"),
                             svn_dirent_local_style(pair->dst_abspath_or_url,
                                                    scratch_pool));
-            }
         }
 
       /* Check that there is no unversioned obstruction */
@@ -495,30 +486,31 @@ verify_wc_dsts(const apr_array_header_t *copy_pairs,
 
       /* Make sure the destination parent is a directory and produce a clear
          error message if it is not. */
-      SVN_ERR(svn_io_check_path(pair->dst_parent_abspath, &dst_parent_kind,
+      SVN_ERR(svn_wc_read_kind2(&dst_parent_kind,
+                                ctx->wc_ctx, pair->dst_parent_abspath,
+                                FALSE, TRUE,
                                 iterpool));
       if (make_parents && dst_parent_kind == svn_node_none)
         {
           SVN_ERR(svn_client__make_local_parents(pair->dst_parent_abspath,
                                                  TRUE, ctx, iterpool));
         }
-      else if (make_parents && dst_parent_kind == svn_node_dir)
-        {
-          /* Check if parent is already versioned */
-          SVN_ERR(svn_wc_read_kind(&dst_parent_kind, ctx->wc_ctx,
-                                   pair->dst_parent_abspath, FALSE, iterpool));
-
-          if (dst_parent_kind == svn_node_none)
-            SVN_ERR(svn_client__make_local_parents(pair->dst_parent_abspath,
-                                                   TRUE, ctx, iterpool));
-        }
       else if (dst_parent_kind != svn_node_dir)
         {
-          return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
+          return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                    _("Path '%s' is not a directory"),
                                    svn_dirent_local_style(
                                      pair->dst_parent_abspath, scratch_pool));
         }
+
+      SVN_ERR(svn_io_check_path(pair->dst_parent_abspath,
+                                &dst_parent_kind, scratch_pool));
+
+      if (dst_parent_kind != svn_node_dir)
+        return svn_error_createf(SVN_ERR_WC_MISSING, NULL,
+                                 _("Path '%s' is not a directory"),
+                                 svn_dirent_local_style(
+                                     pair->dst_parent_abspath, scratch_pool));
     }
 
   svn_pool_destroy(iterpool);
@@ -540,13 +532,18 @@ verify_wc_srcs_and_dsts(const apr_array_header_t *copy_pairs,
   /* Check that all of our SRCs exist. */
   for (i = 0; i < copy_pairs->nelts; i++)
     {
+      svn_boolean_t deleted_ok;
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
       svn_pool_clear(iterpool);
 
+      deleted_ok = (pair->src_peg_revision.kind == svn_opt_revision_base
+                    || pair->src_op_revision.kind == svn_opt_revision_base);
+
       /* Verify that SRC_PATH exists. */
-      SVN_ERR(svn_wc_read_kind(&pair->src_kind, ctx->wc_ctx,
-                               pair->src_abspath_or_url, FALSE, iterpool));
+      SVN_ERR(svn_wc_read_kind2(&pair->src_kind, ctx->wc_ctx,
+                               pair->src_abspath_or_url,
+                               deleted_ok, FALSE, iterpool));
       if (pair->src_kind == svn_node_none)
         return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                  _("Path '%s' does not exist"),

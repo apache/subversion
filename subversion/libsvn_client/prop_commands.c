@@ -307,7 +307,6 @@ svn_client_propset_local(const char *propname,
     {
       svn_node_kind_t kind;
       const char *target_abspath;
-      svn_error_t *err;
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
 
       svn_pool_clear(iterpool);
@@ -318,11 +317,11 @@ svn_client_propset_local(const char *propname,
 
       SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, iterpool));
 
-      err = svn_wc_read_kind(&kind, ctx->wc_ctx, target_abspath, FALSE,
-                             iterpool);
+      /* Call prop_set for deleted nodes to have special errors */
+      SVN_ERR(svn_wc_read_kind2(&kind, ctx->wc_ctx, target_abspath,
+                                FALSE, FALSE, iterpool));
 
-      if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-          || (!err && (kind == svn_node_unknown || kind == svn_node_none)))
+      if (kind == svn_node_unknown || kind == svn_node_none)
         {
           if (ctx->notify_func2)
             {
@@ -334,8 +333,6 @@ svn_client_propset_local(const char *propname,
               ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
             }
         }
-
-      SVN_ERR(err);
 
       SVN_WC__CALL_WITH_WRITE_LOCK(
         svn_wc_prop_set4(ctx->wc_ctx, target_abspath, propname,
@@ -873,8 +870,9 @@ svn_client_propget5(apr_hash_t **props,
       pristine = (revision->kind == svn_opt_revision_committed
                   || revision->kind == svn_opt_revision_base);
 
-      SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, target, FALSE,
-                               scratch_pool));
+      SVN_ERR(svn_wc_read_kind2(&kind, ctx->wc_ctx, target,
+                                pristine, FALSE,
+                                scratch_pool));
 
       if (kind == svn_node_unknown || kind == svn_node_none)
         {
@@ -1423,8 +1421,8 @@ get_local_props(const char *path_or_url,
   pristine = ((revision->kind == svn_opt_revision_committed)
               || (revision->kind == svn_opt_revision_base));
 
-  SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
-                           scratch_pool));
+  SVN_ERR(svn_wc_read_kind2(&kind, ctx->wc_ctx, local_abspath,
+                            pristine, FALSE, scratch_pool));
 
   if (kind == svn_node_unknown || kind == svn_node_none)
     {
