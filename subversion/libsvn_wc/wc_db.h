@@ -2926,6 +2926,19 @@ svn_wc__db_wq_fetch_next(apr_uint64_t *id,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
+/* Special variant of svn_wc__db_wq_fetch_next(), which in the same transaction
+   also records timestamps and sizes for one or more nodes */
+svn_error_t *
+svn_wc__db_wq_record_and_fetch_next(apr_uint64_t *id,
+                                    svn_skel_t **work_item,
+                                    svn_wc__db_t *db,
+                                    const char *wri_abspath,
+                                    apr_uint64_t completed_id,
+                                    apr_hash_t *record_map,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
+
+
 /* @} */
 
 

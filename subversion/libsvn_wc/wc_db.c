@@ -5569,28 +5569,21 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-/* Baton for passing args to db_record_fileinfo(). */
-struct record_baton_t {
-  svn_filesize_t recorded_size;
-  apr_time_t recorded_time;
-};
-
-
 /* Record RECORDED_SIZE and RECORDED_TIME into top layer in NODES */
 static svn_error_t *
-db_record_fileinfo(void *baton,
-                   svn_wc__db_wcroot_t *wcroot,
+db_record_fileinfo(svn_wc__db_wcroot_t *wcroot,
                    const char *local_relpath,
+                   apr_int64_t recorded_size,
+                   apr_int64_t recorded_time,
                    apr_pool_t *scratch_pool)
 {
-  struct record_baton_t *rb = baton;
   svn_sqlite__stmt_t *stmt;
   int affected_rows;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_UPDATE_NODE_FILEINFO));
   SVN_ERR(svn_sqlite__bindf(stmt, "isii", wcroot->wc_id, local_relpath,
-                            rb->recorded_size, rb->recorded_time));
+                            recorded_size, recorded_time));
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
   SVN_ERR_ASSERT(affected_rows == 1);
@@ -5608,7 +5601,6 @@ svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  struct record_baton_t rb;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -5616,10 +5608,8 @@ svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  rb.recorded_size = recorded_size;
-  rb.recorded_time = recorded_time;
-
-  SVN_ERR(db_record_fileinfo(&rb, wcroot, local_relpath, scratch_pool));
+  SVN_ERR(db_record_fileinfo(wcroot, local_relpath,
+                             recorded_size, recorded_time, scratch_pool));
 
   /* We *totally* monkeyed the entries. Toss 'em.  */
   SVN_ERR(flush_entries(wcroot, local_abspath, svn_depth_empty, scratch_pool));
@@ -5704,10 +5694,9 @@ set_props_txn(svn_wc__db_wcroot_t *wcroot,
 
   if (clear_recorded_info)
     {
-      struct record_baton_t rb;
-      rb.recorded_size = SVN_INVALID_FILESIZE;
-      rb.recorded_time = 0;
-      SVN_ERR(db_record_fileinfo(&rb, wcroot, local_relpath, scratch_pool));
+      SVN_ERR(db_record_fileinfo(wcroot, local_relpath,
+                                 SVN_INVALID_FILESIZE, 0,
+                                 scratch_pool));
     }
 
   /* And finally.  */
@@ -12549,6 +12538,70 @@ svn_wc__db_wq_fetch_next(apr_uint64_t *id,
 
   return SVN_NO_ERROR;
 }
+
+/* Records timestamp and date for one or more files in wcroot */
+static svn_error_t *
+wq_record(svn_wc__db_wcroot_t *wcroot,
+          apr_hash_t *record_map,
+          apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  for (hi = apr_hash_first(scratch_pool, record_map); hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *local_abspath = svn__apr_hash_index_key(hi);
+      const svn_io_dirent2_t *dirent = svn__apr_hash_index_val(hi);
+      const char *local_relpath = svn_dirent_skip_ancestor(wcroot->abspath,
+                                                           local_abspath);
+
+      svn_pool_clear(iterpool);
+
+      if (! local_relpath)
+        continue;
+
+      SVN_ERR(db_record_fileinfo(wcroot, local_relpath,
+                                 dirent->filesize, dirent->mtime,
+                                 iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_wq_record_and_fetch_next(apr_uint64_t *id,
+                                    svn_skel_t **work_item,
+                                    svn_wc__db_t *db,
+                                    const char *wri_abspath,
+                                    apr_uint64_t completed_id,
+                                    apr_hash_t *record_map,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(id != NULL);
+  SVN_ERR_ASSERT(work_item != NULL);
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              wri_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_WC__DB_WITH_TXN(
+    svn_error_compose_create(
+            wq_fetch_next(id, work_item,
+                          wcroot, local_relpath, completed_id,
+                          result_pool, scratch_pool),
+            wq_record(wcroot, record_map, scratch_pool)),
+    wcroot);
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* ### temporary API. remove before release.  */
