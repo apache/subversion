@@ -1286,8 +1286,17 @@ generate_propconflict(svn_boolean_t *conflict_remains,
   svn_kind_t kind;
   const svn_string_t *new_value = NULL;
 
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, FALSE,
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath,
+                               FALSE /* allow_missing */,
+                               FALSE /* show_deleted */,
+                               FALSE /* show_hidden */,
                                scratch_pool));
+
+  if (kind == svn_kind_none)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("The node '%s' was not found."),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
 
   cdesc = svn_wc_conflict_description_create_prop2(
                 local_abspath,
