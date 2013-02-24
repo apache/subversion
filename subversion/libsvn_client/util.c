@@ -373,6 +373,7 @@ fetch_kind_func(svn_kind_t *kind,
                 apr_pool_t *scratch_pool)
 {
   struct shim_callbacks_baton *scb = baton;
+  svn_node_kind_t node_kind;
   const char *local_abspath;
 
   local_abspath = apr_hash_get(scb->relpath_map, path, APR_HASH_KEY_STRING);
@@ -381,10 +382,10 @@ fetch_kind_func(svn_kind_t *kind,
       *kind = svn_kind_unknown;
       return SVN_NO_ERROR;
     }
-
   /* Reads the WORKING kind. Not the BASE kind */
-  SVN_ERR(svn_wc_read_kind2(kind, scb->wc_ctx, local_abspath, TRUE, FALSE,
-                            scratch_pool));
+  SVN_ERR(svn_wc_read_kind2(&node_kind, scb->wc_ctx, local_abspath,
+                            TRUE, FALSE, scratch_pool));
+  *kind = svn__kind_from_node_kind(node_kind, FALSE);
 
   return SVN_NO_ERROR;
 }
