@@ -1866,6 +1866,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                  apr_pool_t *scratch_pool)
 {
   enum svn_prop_kind prop_kind = svn_property_kind2(name);
+  svn_wc__db_status_t status;
   svn_kind_t kind;
   svn_wc__db_t *db = wc_ctx->db;
 
@@ -1882,8 +1883,23 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                                         name, value, scratch_pool));
     }
 
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, FALSE,
-                               scratch_pool));
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               wc_ctx->db, local_abspath,
+                               scratch_pool, scratch_pool));
+
+  if (status != svn_wc__db_status_normal
+      && status != svn_wc__db_status_added
+      && status != svn_wc__db_status_incomplete)
+    {
+      return svn_error_createf(SVN_ERR_WC_INVALID_SCHEDULE, NULL,
+                                  _("Can't set properties on '%s':"
+                                  " invalid status for updating properties."),
+                                  svn_dirent_local_style(local_abspath,
+                                                         scratch_pool));
+    }
 
   /* We have to do this little DIR_ABSPATH dance for backwards compat.
      But from 1.7 onwards, all locks are of infinite depth, and from 1.6
@@ -1909,7 +1925,6 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
   if (depth == svn_depth_empty || kind != svn_kind_dir)
     {
       apr_hash_t *changelist_hash = NULL;
-      svn_error_t *err;
 
       if (changelist_filter && changelist_filter->nelts)
         SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelist_filter,
@@ -1919,23 +1934,13 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                                              changelist_hash, scratch_pool))
         return SVN_NO_ERROR;
 
-      err = do_propset(wc_ctx->db, local_abspath,
+      SVN_ERR(do_propset(wc_ctx->db, local_abspath,
                          kind == svn_kind_dir
                             ? svn_node_dir
                             : svn_node_file,
                          name, value, skip_checks,
-                         notify_func, notify_baton, scratch_pool);
+                         notify_func, notify_baton, scratch_pool));
 
-      if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
-        {
-          err = svn_error_createf(SVN_ERR_WC_INVALID_SCHEDULE, err,
-                                  _("Can't set properties on '%s':"
-                                  " invalid status for updating properties."),
-                                  svn_dirent_local_style(local_abspath,
-                                                         scratch_pool));
-        }
-
-      SVN_ERR(err);
     }
   else
     {
