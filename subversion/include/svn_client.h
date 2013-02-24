@@ -5183,7 +5183,6 @@ svn_client_proplist4(const char *target,
                      svn_proplist_receiver2_t receiver,
                      void *receiver_baton,
                      svn_client_ctx_t *ctx,
-                     apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
 
 /**
