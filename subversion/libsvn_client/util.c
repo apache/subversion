@@ -383,7 +383,7 @@ fetch_kind_func(svn_kind_t *kind,
     }
 
   /* Reads the WORKING kind. Not the BASE kind */
-  SVN_ERR(svn_wc_read_kind2(kind, scb->wc_ctx, local_abspath, FALSE,
+  SVN_ERR(svn_wc_read_kind2(kind, scb->wc_ctx, local_abspath, TRUE, FALSE,
                             scratch_pool));
 
   return SVN_NO_ERROR;
