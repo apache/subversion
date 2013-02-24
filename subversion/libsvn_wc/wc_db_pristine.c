@@ -881,45 +881,41 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  SVN_ERR_ASSERT(present != NULL);
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
   SVN_ERR_ASSERT(sha1_checksum != NULL);
-  /* ### Transitional: accept MD-5 and look up the SHA-1.  Return an error
-   * if the pristine text is not in the store. */
+
   if (sha1_checksum->kind != svn_checksum_sha1)
-    SVN_ERR(svn_wc__db_pristine_get_sha1(&sha1_checksum, db, wri_abspath,
-                                         sha1_checksum,
-                                         scratch_pool, scratch_pool));
-  SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
+    {
+      *present = FALSE;
+      return SVN_NO_ERROR;
+    }
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               wri_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
+
+  /* A filestat is much cheaper than a sqlite transaction especially on NFS,
+     so first check if there is a pristine file and then if we are allowed
+     to use it. */
+  {
+    const char *pristine_abspath;
+    svn_node_kind_t kind_on_disk;
+
+    SVN_ERR(get_pristine_fname(&pristine_abspath, wcroot->abspath,
+                               sha1_checksum, scratch_pool, scratch_pool));
+    SVN_ERR(svn_io_check_path(pristine_abspath, &kind_on_disk, scratch_pool));
+    if (kind_on_disk != svn_node_file)
+      {
+        *present = FALSE;
+        return SVN_NO_ERROR;
+      }
+  }
 
   /* Check that there is an entry in the PRISTINE table. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_SELECT_PRISTINE));
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   SVN_ERR(svn_sqlite__reset(stmt));
-
-#ifdef SVN_DEBUG
-  /* Check that the pristine text file exists iff the DB says it does. */
-  if (have_row)
-    {
-      const char *pristine_abspath;
-      svn_node_kind_t kind_on_disk;
-      SVN_ERR(get_pristine_fname(&pristine_abspath, wcroot->abspath,
-                                 sha1_checksum, scratch_pool, scratch_pool));
-      SVN_ERR(svn_io_check_path(pristine_abspath, &kind_on_disk, scratch_pool));
-
-      if (kind_on_disk != svn_node_file)
-        return svn_error_createf(SVN_ERR_WC_DB_ERROR, svn_sqlite__reset(stmt),
-                                 _("The pristine text with checksum '%s' was "
-                                   "found in the DB but not on disk"),
-                                 svn_checksum_to_cstring_display(sha1_checksum,
-                                                                 scratch_pool));
-    }
-#endif
 
   *present = have_row;
   return SVN_NO_ERROR;
