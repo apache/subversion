@@ -2115,7 +2115,7 @@ svn_client_proplist3(const char *target,
   return svn_error_trace(svn_client_proplist4(target, peg_revision, revision,
                                               depth, changelists, FALSE,
                                               receiver2, receiver2_baton,
-                                              ctx, pool, pool));
+                                              ctx, pool));
 }
 
 /* Receiver baton used by proplist2() */
