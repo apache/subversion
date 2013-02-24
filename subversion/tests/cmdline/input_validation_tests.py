@@ -104,7 +104,7 @@ def invalid_copy_target(sbox):
   sbox.build(read_only=True)
   mu_path = os.path.join('A', 'mu')
   C_path = os.path.join('A', 'C')
-  run_and_verify_svn_in_wc(sbox, "svn: E155007: Path '.*' is not a directory",
+  run_and_verify_svn_in_wc(sbox, "svn: E155(007|010): Path '.*' is not a directory",
                            'copy', mu_path, C_path, "iota")
 
 def invalid_delete_targets(sbox):
