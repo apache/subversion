@@ -887,7 +887,7 @@ def props_only_file_update(sbox):
 def autoprops_inconsistent_eol(sbox):
   "able to handle inconsistent eols on add"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   text = 'line with NL\n' + \
@@ -929,8 +929,28 @@ def autoprops_inconsistent_eol(sbox):
 
   expected_output = ['A         %s\n' % sbox.ospath('auto.c')]
 
+  # Fails with svn: E200009: File '.*auto.c' has inconsistent newlines
   svntest.actions.run_and_verify_svn(None, expected_output,
                                      [], 'add', sbox.ospath('auto.c'))
+
+@XFail()
+def autoprops_inconsistent_mime(sbox):
+  "able to handle inconsistent mime on add"
+
+  sbox.build(read_only = True)
+
+  sbox.simple_propset('svn:auto-props',
+                      '*.c = svn:eol-style=native\n'
+                      'c.* = svn:mime-type=application/octet-stream', '')
+
+  sbox.simple_append('c.iota.c', '')
+
+  expected_output = ['A         %s\n' % sbox.ospath('c.iota.c')]
+
+  # Fails with svn: E200009: File '.*c.iota.c' has binary mime type property
+  svntest.actions.run_and_verify_svn(None, expected_output,
+                                     [], 'add', sbox.ospath('c.iota.c'))
+
 
 ########################################################################
 # Run the tests
@@ -951,6 +971,7 @@ test_list = [ None,
               propset_revert_noerror,
               props_only_file_update,
               autoprops_inconsistent_eol,
+              autoprops_inconsistent_mime,
              ]
 
 if __name__ == '__main__':
