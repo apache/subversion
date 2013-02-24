@@ -2270,8 +2270,18 @@ svn_wc__db_read_conflict(svn_skel_t **conflict,
    If the node is missing and ALLOW_MISSING is FALSE, then it will return
    SVN_ERR_WC_PATH_NOT_FOUND.
 
-   If SHOW_HIDDEN is FALSE and the status of LOCAL_ABSPATH is NOT_PRESENT or
-   EXCLUDED, set KIND to svn_kind_none.
+   The SHOW_HIDDEN and SHOW_DELETED flags report certain states as kind none.
+
+   When nodes have certain statee they are only reported when:
+      svn_wc__db_status_not_present         when show_hidden && show_deleted
+
+      svn_wc__db_status_excluded            when show_hidden
+      svn_wc__db_status_server_excluded     when show_hidden
+
+      svn_wc__db_status_deleted             when show_deleted
+
+   In other cases these nodes are reported with *KIND as svn_kind_none.
+   (See also svn_wc_read_kind2()'s documentation)
 
    Uses SCRATCH_POOL for temporary allocations.  */
 svn_error_t *
@@ -2279,6 +2289,7 @@ svn_wc__db_read_kind(svn_kind_t *kind,
                      svn_wc__db_t *db,
                      const char *local_abspath,
                      svn_boolean_t allow_missing,
+                     svn_boolean_t show_deleted,
                      svn_boolean_t show_hidden,
                      apr_pool_t *scratch_pool);
 

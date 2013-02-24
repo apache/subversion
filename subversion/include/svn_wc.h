@@ -8104,16 +8104,28 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
 /** @} */
 
 /**
- * Set @a kind to the #svn_node_kind_t of @a abspath.  Use @a wc_ctx
- * to access the working copy, and @a scratch_pool for all temporary
- * allocations.
+ * Set @a kind to the #svn_kind_t of @a abspath.  Use @a wc_ctx to access
+ * the working copy, and @a scratch_pool for all temporary allocations.
  *
- * If @a abspath is not under version control, set @a kind to #svn_node_none.
- * If it is versioned but hidden and @a show_hidden is @c FALSE, also return
- * #svn_node_none.
+ * If @a abspath is not under version control, set @a kind to #svn_kind_none.
  *
- * ### What does hidden really mean?
- * ### What happens when show_hidden is TRUE?
+ * If @a show_hidden and @a show_deleted are both @c FALSE, the kind of
+ * scheduled for delete, administrative only 'not present' and excluded
+ * nodes is reported as #svn_kind_node. This is recommended as a check for
+ * 'is there a versioned file or directory here?'
+ *
+ * If @a show_deleted is FALSE, but @a show_hidden is @c TRUE then only
+ * scheduled for delete and administrative only 'not present' nodes are
+ * reported as #svn_kind_none. This is recommended as check for
+ * 'Can I add a node here?'
+ *
+ * If @a show_deleted is TRUE, but @a show_hidden is FALSE, then only
+ * administrative only 'not present' nodes and excluded nodes are reported as
+ * #svn_kind_none. This behavior is the behavior bescribed as 'hidden'
+ * before Subversion 1.7.
+ *
+ * If @a show_hidden and @a show_deleted are both @c TRUE all nodes are
+ * reported.
  *
  * If the node's info is incomplete, it may or may not have a known node kind
  * set. If the kind is not known (yet), set @a kind to #svn_node_unknown.
@@ -8121,6 +8133,21 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
  *
  * @since New in 1.7.
  */
+svn_error_t *
+svn_wc_read_kind2(svn_kind_t *kind,
+                  svn_wc_context_t *wc_ctx,
+                  const char *local_abspath,
+                  svn_boolean_t show_deleted,
+                  svn_boolean_t show_hidden,
+                  apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_read_kind2() but always shows deleted nodes and returns
+ * the result as a #svn_node_kind_t.
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_read_kind(svn_node_kind_t *kind,
                  svn_wc_context_t *wc_ctx,

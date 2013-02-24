@@ -12999,6 +12999,7 @@ svn_wc__db_read_kind(svn_kind_t *kind,
                      svn_wc__db_t *db,
                      const char *local_abspath,
                      svn_boolean_t allow_missing,
+                     svn_boolean_t show_deleted,
                      svn_boolean_t show_hidden,
                      apr_pool_t *scratch_pool)
 {
@@ -13037,22 +13038,39 @@ svn_wc__db_read_kind(svn_kind_t *kind,
         }
     }
 
-  if (!show_hidden)
+  if (!(show_deleted && show_hidden))
     {
       int op_depth = svn_sqlite__column_int(stmt_info, 0);
+      svn_boolean_t report_none = FALSE;
       svn_wc__db_status_t status = svn_sqlite__column_token(stmt_info, 3,
                                                             presence_map);
 
       if (op_depth > 0)
         SVN_ERR(convert_to_working_status(&status, status));
 
-      if (status == svn_wc__db_status_not_present
-          || status == svn_wc__db_status_excluded
-          || status == svn_wc__db_status_server_excluded)
+      switch (status)
+        {
+          case svn_wc__db_status_not_present:
+            if (! (show_hidden && show_deleted))
+              report_none = TRUE;
+            break;
+          case svn_wc__db_status_excluded:
+          case svn_wc__db_status_server_excluded:
+            if (! show_hidden)
+              report_none = TRUE;
+            break;
+          case svn_wc__db_status_deleted:
+            if (! show_deleted)
+              report_none = TRUE;
+            break;
+          default:
+            break;
+        }
+
+      if (report_none)
         {
           *kind = svn_kind_none;
-          SVN_ERR(svn_sqlite__reset(stmt_info));
-          return SVN_NO_ERROR;
+          return svn_error_trace(svn_sqlite__reset(stmt_info));
         }
     }
 

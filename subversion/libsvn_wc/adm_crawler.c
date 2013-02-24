@@ -1207,8 +1207,14 @@ svn_wc__internal_transmit_prop_deltas(svn_wc__db_t *db,
 
   SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath,
                                FALSE /* allow_missing */,
+                               FALSE /* show_deleted */,
                                FALSE /* show_hidden */,
                                iterpool));
+
+  if (kind == svn_kind_none)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("The node '%s' was not found."),
+                             svn_dirent_local_style(local_abspath, iterpool));
 
   /* Get an array of local changes by comparing the hashes. */
   SVN_ERR(svn_wc__internal_propdiff(&propmods, NULL, db, local_abspath,

@@ -924,6 +924,7 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
       err = svn_wc__db_read_kind(&kind, svn_wc__adm_get_db(associated),
                                  local_abspath,
                                  TRUE /* allow_missing */,
+                                 TRUE /* show_deleted */,
                                  FALSE /* show_hidden */, pool);
 
       if (err)
@@ -985,7 +986,9 @@ svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__db_read_kind(&kind, associated->db, local_abspath,
-                               TRUE /* allow_missing */, FALSE /* show_hidden*/,
+                               TRUE /* allow_missing */,
+                               TRUE /* show_deleted */,
+                               FALSE /* show_hidden*/,
                                pool));
 
   if (kind == svn_kind_dir)
@@ -1523,6 +1526,7 @@ svn_wc__acquire_write_lock(const char **lock_root_abspath,
           svn_kind_t parent_kind;
           err = svn_wc__db_read_kind(&parent_kind, db, parent_abspath,
                                      TRUE /* allow_missing */,
+                                     TRUE /* show_deleted */,
                                      FALSE /* show_hidden */,
                                      scratch_pool);
           if (err && SVN_WC__ERR_IS_NOT_CURRENT_WC(err))

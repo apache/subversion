@@ -815,6 +815,7 @@ revert_partial(svn_wc__db_t *db,
 
           SVN_ERR(svn_wc__db_read_kind(&kind, db, child_abspath,
                                        FALSE /* allow_missing */,
+                                       TRUE /* show_deleted */,
                                        FALSE /* show_hidden */,
                                        iterpool));
           if (kind != svn_kind_file)
