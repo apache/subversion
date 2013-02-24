@@ -1562,7 +1562,7 @@ svn_client_add5(const char *path,
                 apr_pool_t *scratch_pool);
 
 /**
- * Similar to svn_client_add3(), but with @a no_autoprops always set to
+ * Similar to svn_client_add5(), but with @a no_autoprops always set to
  * FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
