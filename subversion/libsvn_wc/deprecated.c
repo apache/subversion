@@ -4574,20 +4574,19 @@ svn_wc_read_kind(svn_node_kind_t *kind,
                  svn_boolean_t show_hidden,
                  apr_pool_t *scratch_pool)
 {
-  svn_kind_t db_kind;
-
-  SVN_ERR(svn_wc_read_kind2(&db_kind,
+  return svn_error_trace(
+          svn_wc_read_kind2(kind,
                             wc_ctx, abspath,
                             TRUE /* show_deleted */,
                             show_hidden,
                             scratch_pool));
 
-  if (db_kind == svn_kind_dir)
+  /*if (db_kind == svn_kind_dir)
     *kind = svn_node_dir;
   else if (db_kind == svn_kind_file || db_kind == svn_kind_symlink)
     *kind = svn_node_file;
   else
-    *kind = svn_node_none;
+    *kind = svn_node_none;*/
 
   return SVN_NO_ERROR;
 }

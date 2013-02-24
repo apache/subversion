@@ -8104,37 +8104,33 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
 /** @} */
 
 /**
- * Set @a kind to the #svn_kind_t of @a abspath.  Use @a wc_ctx to access
+ * Set @a kind to the #svn_node_kind_t of @a abspath.  Use @a wc_ctx to access
  * the working copy, and @a scratch_pool for all temporary allocations.
  *
  * If @a abspath is not under version control, set @a kind to #svn_kind_none.
  *
  * If @a show_hidden and @a show_deleted are both @c FALSE, the kind of
  * scheduled for delete, administrative only 'not present' and excluded
- * nodes is reported as #svn_kind_node. This is recommended as a check for
- * 'is there a versioned file or directory here?'
+ * nodes is reported as #svn_node_kind_node. This is recommended as a check
+ * for 'is there a versioned file or directory here?'
  *
  * If @a show_deleted is FALSE, but @a show_hidden is @c TRUE then only
  * scheduled for delete and administrative only 'not present' nodes are
- * reported as #svn_kind_none. This is recommended as check for
+ * reported as #svn_node_kind_none. This is recommended as check for
  * 'Can I add a node here?'
  *
  * If @a show_deleted is TRUE, but @a show_hidden is FALSE, then only
  * administrative only 'not present' nodes and excluded nodes are reported as
- * #svn_kind_none. This behavior is the behavior bescribed as 'hidden'
+ * #svn_node_kind_none. This behavior is the behavior bescribed as 'hidden'
  * before Subversion 1.7.
  *
  * If @a show_hidden and @a show_deleted are both @c TRUE all nodes are
  * reported.
  *
- * If the node's info is incomplete, it may or may not have a known node kind
- * set. If the kind is not known (yet), set @a kind to #svn_node_unknown.
- * Otherwise return the node kind even though the node is marked incomplete.
- *
- * @since New in 1.7.
+ * @since New in 1.8.
  */
 svn_error_t *
-svn_wc_read_kind2(svn_kind_t *kind,
+svn_wc_read_kind2(svn_node_kind_t *kind,
                   svn_wc_context_t *wc_ctx,
                   const char *local_abspath,
                   svn_boolean_t show_deleted,
