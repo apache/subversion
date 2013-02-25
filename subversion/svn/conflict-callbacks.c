@@ -321,19 +321,19 @@ static const resolver_option_t text_conflict_options[] =
   { "df", "diff-full",        N_("show all changes made to merged file"), -1 },
   { "r",  "resolved",         N_("accept merged version of file"),
                               svn_wc_conflict_choose_merged },
-  { "" },
+  { "",   "",                 "", svn_wc_conflict_choose_unspecified },
   { "dc", "display-conflict", N_("show all conflicts (ignoring merged version)"), -1 },
   { "mc", "mine-conflict",    N_("accept my version for all conflicts (same)"),
                               svn_wc_conflict_choose_mine_conflict },
   { "tc", "theirs-conflict",  N_("accept their version for all conflicts (same)"),
                               svn_wc_conflict_choose_theirs_conflict },
-  { "" },
+  { "",   "",                 "", svn_wc_conflict_choose_unspecified },
   { "mf", "mine-full",        N_("accept my version of entire file (even "
                                  "non-conflicts)"),
                               svn_wc_conflict_choose_mine_full },
   { "tf", "theirs-full",      N_("accept their version of entire file (same)"),
                               svn_wc_conflict_choose_theirs_full },
-  { "" },
+  { "",   "",                 "", svn_wc_conflict_choose_unspecified },
   { "p",  "postpone",         N_("mark the conflict to be resolved later"),
                               svn_wc_conflict_choose_postpone },
   { "m",  "merge",            N_("use internal merge tool to resolve conflict"), -1 },
@@ -417,7 +417,8 @@ find_option(const resolver_option_t *options,
 
   for (opt = options; opt->code; opt++)
     {
-      if (strcmp(opt->code, option_code) == 0)
+      /* Ignore code "" (blank lines) which is not a valid answer. */
+      if (opt->code[0] && strcmp(opt->code, option_code) == 0)
         return opt;
     }
   return NULL;
