@@ -2829,6 +2829,18 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                          "(type 'svn help cleanup' for details)"));
         }
 
+      if (err->apr_err == SVN_ERR_SQLITE_BUSY)
+        {
+          err = svn_error_quick_wrap(err,
+                                     _("Another process is blocking the "
+                                       "working copy database, or the "
+                                       "underlying filesystem does not "
+                                       "support file locking; if the working "
+                                       "copy is on a network filesystem, make "
+                                       "sure file locking has been enabled "
+                                       "on the file server"));
+        }
+
       return EXIT_ERROR(err);
     }
   else
