@@ -1410,6 +1410,9 @@ main(int argc, const char **argv)
                      no_auth_cache, base_revision, pool)))
     handle_error(err, pool);
 
+  /* Ensure that stdout is flushed, so the user will see all results. */
+  svn_error_clear(svn_cmdline_fflush(stdout));
+
   svn_pool_destroy(pool);
   return EXIT_SUCCESS;
 }
