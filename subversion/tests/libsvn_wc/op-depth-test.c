@@ -5906,7 +5906,7 @@ move_in_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   SVN_ERR(sbox_wc_update(&b, "", 2));
   SVN_ERR(sbox_wc_resolve(&b, "A/B", svn_depth_empty,
-                          svn_wc_conflict_choose_merged));
+                          svn_wc_conflict_choose_mine_conflict));
   SVN_ERR(sbox_wc_resolve(&b, "A/B/C", svn_depth_empty,
                           svn_wc_conflict_choose_mine_conflict));
   {
@@ -6232,7 +6232,7 @@ layered_moved_to(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
                           svn_wc_conflict_choose_mine_conflict));
   SVN_ERR(sbox_wc_resolve(&b, "X/B/C", svn_depth_empty,
-                          svn_wc_conflict_choose_merged));
+                          svn_wc_conflict_choose_mine_conflict));
   SVN_ERR(sbox_wc_resolve(&b, "X/B/C/D/E", svn_depth_empty,
                           svn_wc_conflict_choose_mine_conflict));
   {
@@ -6389,7 +6389,7 @@ layered_moved_to(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
                           svn_wc_conflict_choose_mine_conflict));
   SVN_ERR(sbox_wc_resolve(&b, "X/B/C", svn_depth_empty,
-                          svn_wc_conflict_choose_merged));
+                          svn_wc_conflict_choose_mine_conflict));
 
   /* Cannot resolve C */
   err = sbox_wc_resolve(&b, "C", svn_depth_empty,
