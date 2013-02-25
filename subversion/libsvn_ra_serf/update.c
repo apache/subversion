@@ -1495,24 +1495,15 @@ fetch_file(report_context_t *ctx, report_info_t *info)
       svn_stream_t *contents = NULL;
 
       if (ctx->sess->wc_callbacks->get_wc_contents
-          && (info->final_sha1_checksum || info->final_checksum))
+          && info->final_sha1_checksum)
         {
           svn_error_t *err = NULL;
           svn_checksum_t *checksum = NULL;
          
-          /* Parse our checksum, preferring SHA1 to MD5. */
-          if (info->final_sha1_checksum)
-            {
-              err = svn_checksum_parse_hex(&checksum, svn_checksum_sha1,
-                                           info->final_sha1_checksum,
-                                           info->pool);
-            }
-          else if (info->final_checksum)
-            {
-              err = svn_checksum_parse_hex(&checksum, svn_checksum_md5,
-                                           info->final_checksum,
-                                           info->pool);
-            }
+          /* Parse the optional SHA1 checksum (1.7+) */
+          err = svn_checksum_parse_hex(&checksum, svn_checksum_sha1,
+                                       info->final_sha1_checksum,
+                                       info->pool);
 
           /* Okay so far?  Let's try to get a stream on some readily
              available matching content. */
