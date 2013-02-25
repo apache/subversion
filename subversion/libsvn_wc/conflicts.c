@@ -2668,6 +2668,19 @@ resolve_tree_conflict_on_node(svn_skel_t **work_items,
         {
           if (conflict_choice == svn_wc_conflict_choose_merged)
             {
+              /* Break moves for any children moved out of this directory,
+               * and leave this directory deleted. */
+              SVN_ERR(svn_wc__db_resolve_break_moved_away_children(
+                        db, local_abspath, scratch_pool));
+              did_resolve = TRUE;
+            }
+
+          if (conflict_choice == svn_wc_conflict_choose_mine_conflict)
+            {
+              /* Raised moved-away conflicts on any children moved out of
+               * this directory, and leave this directory deleted.
+               * The newly conflicted moved-away children will be updated
+               * if they are resolved with 'mine_conflict' as well. */
               SVN_ERR(svn_wc__db_resolve_delete_raise_moved_away(
                         db, local_abspath, notify_func, notify_baton,
                         scratch_pool));
