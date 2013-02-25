@@ -293,8 +293,8 @@ update_internal(svn_revnum_t *result_rev,
           return SVN_NO_ERROR;
         }
 
-      SVN_ERR(svn_wc_read_kind(&target_kind, ctx->wc_ctx, local_abspath, TRUE,
-                               pool));
+      SVN_ERR(svn_wc_read_kind2(&target_kind, ctx->wc_ctx, local_abspath,
+                                TRUE, TRUE, pool));
       if (target_kind == svn_node_dir)
         {
           SVN_ERR(svn_wc_crop_tree2(ctx->wc_ctx, local_abspath, depth,

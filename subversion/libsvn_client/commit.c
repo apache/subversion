@@ -256,8 +256,8 @@ check_nonrecursive_dir_delete(svn_wc_context_t *wc_ctx,
 
   SVN_ERR_ASSERT(depth != svn_depth_infinity);
 
-  SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, target_abspath, FALSE,
-                           scratch_pool));
+  SVN_ERR(svn_wc_read_kind2(&kind, wc_ctx, target_abspath,
+                            TRUE, FALSE, scratch_pool));
 
 
   /* ### TODO(sd): This check is slightly too strict.  It should be
