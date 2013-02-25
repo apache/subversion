@@ -6118,12 +6118,12 @@ def break_moved_dir_edited_leaf_del(sbox):
                                         None, None, None,
                                         None, None, 1)
 
-  # Now resolve the conflict, using --accept=theirs-conflict.
+  # Now resolve the conflict, using --accept=working
   # This should break the move of A/B/E to A/B/E2, leaving A/B/E2
   # as a copy. The deletion of A/B/E is not reverted.
   svntest.actions.run_and_verify_svn("resolve failed", None, [],
                                      'resolve', '--recursive',
-                                     '--accept=theirs-conflict', wc_dir)
+                                     '--accept=working', wc_dir)
   expected_status.tweak('A/B/E', treeconflict=None, moved_to=None)
   expected_status.tweak('A/B/E2', moved_from=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)

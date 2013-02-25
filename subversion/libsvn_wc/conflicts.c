@@ -2704,13 +2704,11 @@ resolve_tree_conflict_on_node(svn_skel_t **work_items,
                         scratch_pool, scratch_pool));
               did_resolve = TRUE;
             }
-          else if (conflict_choice == svn_wc_conflict_choose_theirs_conflict
-                   || conflict_choice == svn_wc_conflict_choose_merged)
+          else if (conflict_choice == svn_wc_conflict_choose_merged)
             {
-              /* We must break the move even if the user accepts
-               * the current working copy state (choose_merged)
-               * instead of updating the move. Else the move would
-               * be left in an invalid state. */
+              /* We must break the move if the user accepts the current
+               * working copy state instead of updating the move.
+               * Else the move would be left in an invalid state. */
 
               /* ### This breaks the move but leaves the conflict
                  ### involving the move until
