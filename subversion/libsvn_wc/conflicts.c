@@ -2664,7 +2664,8 @@ resolve_tree_conflict_on_node(svn_skel_t **work_items,
   if (operation == svn_wc_operation_update
       || operation == svn_wc_operation_switch)
     {
-      if (reason == svn_wc_conflict_reason_deleted)
+      if (reason == svn_wc_conflict_reason_deleted ||
+          reason == svn_wc_conflict_reason_replaced)
         {
           if (conflict_choice == svn_wc_conflict_choose_merged)
             {
