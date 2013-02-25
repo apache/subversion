@@ -884,6 +884,7 @@ def props_only_file_update(sbox):
     raise svntest.Failure
 
 @XFail()
+@Issues(4327)
 def autoprops_inconsistent_eol(sbox):
   "able to handle inconsistent eols on add"
 
@@ -934,6 +935,7 @@ def autoprops_inconsistent_eol(sbox):
                                      [], 'add', sbox.ospath('auto.c'))
 
 @XFail()
+@Issues(4327)
 def autoprops_inconsistent_mime(sbox):
   "able to handle inconsistent mime on add"
 
