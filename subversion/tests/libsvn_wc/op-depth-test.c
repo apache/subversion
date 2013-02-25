@@ -7203,6 +7203,76 @@ movedto_opdepth(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+new_basemove(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "moved_to_op_depth",
+                                   opts, pool));
+
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+
+  /* We keep track of moved children of copies */
+  SVN_ERR(sbox_wc_copy(&b, "A", "Copy"));
+  SVN_ERR(sbox_wc_move(&b, "Copy/B/C", "C"));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",         "normal",         1, ""},
+
+      {0, "A",        "normal",         1, "A"},
+      {0, "A/B",      "normal",         1, "A/B"},
+      {0, "A/B/C",    "normal",         1, "A/B/C"},
+
+      {1, "Copy",     "normal",         1, "A"},
+      {1, "Copy/B",   "normal",         1, "A/B"},
+      {1, "Copy/B/C", "normal",         1, "A/B/C"},
+
+      {3, "Copy/B/C", "base-deleted",   NO_COPY_FROM, "C"},
+
+      /* C is a copy of A/B/C */
+      {1, "C",        "normal",         1, "A/B/C", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  {
+    apr_array_header_t *targets = apr_array_make(pool, 1, sizeof(char *));
+    APR_ARRAY_PUSH(targets, const char*) = sbox_wc_path(&b, "Copy");
+
+    SVN_ERR(sbox_wc_commit_ex(&b, targets, svn_depth_empty));
+  }
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",         "normal",         1, ""},
+
+      {0, "A",        "normal",         1, "A"},
+      {0, "A/B",      "normal",         1, "A/B"},
+      {0, "A/B/C",    "normal",         1, "A/B/C"},
+
+      {0, "Copy",     "normal",         2, "Copy"},
+      {0, "Copy/B",   "normal",         2, "Copy/B"},
+      {0, "Copy/B/C", "normal",         2, "Copy/B/C"},
+
+      {3, "Copy/B/C", "base-deleted",   NO_COPY_FROM, "C"},
+
+      /* And this node is now a copy of Copy/B/C at r2 */
+      {1, "C",        "normal",         2, "Copy/B/C", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* ---------------------------------------------------------------------- */
@@ -7342,5 +7412,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "delete_over_moved_away"),
     SVN_TEST_OPTS_PASS(movedto_opdepth,
                        "moved_to op_depth"),
+    SVN_TEST_OPTS_PASS(new_basemove,
+                       "new_basemove"),
     SVN_TEST_NULL
   };
