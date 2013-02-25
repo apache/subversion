@@ -661,6 +661,8 @@ copy_revprops(svn_ra_session_t *from_session,
      in the property names, but we'll get the values 'for free'. */
   if (sync)
     SVN_ERR(svn_ra_rev_proplist(to_session, rev, &existing_props, subpool));
+  else
+    existing_props = NULL;
 
   /* Get the list of revision properties on REV of SOURCE. */
   SVN_ERR(svn_ra_rev_proplist(from_session, rev, &rev_props, subpool));
@@ -1682,7 +1684,7 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   apr_array_header_t *targets;
   subcommand_baton_t *baton;
   const char *to_url = NULL;
-  const char *from_url;
+  const char *from_url = NULL;
   svn_opt_revision_t start_revision, end_revision;
   svn_revnum_t start_rev = 0, end_rev = SVN_INVALID_REVNUM;
 
