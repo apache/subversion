@@ -876,6 +876,8 @@ handle_tree_conflict(svn_wc_conflict_result_t *result,
             tc_opts = tree_conflict_options_update_moved_away;
           else if (desc->reason == svn_wc_conflict_reason_deleted)
             tc_opts = tree_conflict_options_update_deleted;
+          else
+            tc_opts = tree_conflict_options;
         }
       else
         tc_opts = tree_conflict_options;
