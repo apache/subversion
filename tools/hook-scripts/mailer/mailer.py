@@ -352,7 +352,7 @@ class Commit(Messenger):
     editor = svn.repos.ChangeCollector(repos.fs_ptr, repos.root_this, \
                                        self.pool)
     e_ptr, e_baton = svn.delta.make_editor(editor, self.pool)
-    svn.repos.replay(repos.root_this, e_ptr, e_baton, self.pool)
+    svn.repos.replay2(repos.root_this, "", svn.core.SVN_INVALID_REVNUM, 1, e_ptr, e_baton, None, self.pool)
 
     self.changelist = sorted(editor.get_changes().items())
 
