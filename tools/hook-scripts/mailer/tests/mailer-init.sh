@@ -52,7 +52,7 @@ svn commit -m "initial load"
 svn ps prop1 propval1 file1
 echo change C1 >> file2
 svn ps svn:keywords Id file2
-svn ps svn:new_svn_prop val file2
+svn ps --force svn:new_svn_prop val file2
 svn ps prop1 propval1 file2
 svn ps prop3 propval3 dir1
 echo change C2 >> dir2/file5
@@ -103,6 +103,7 @@ svn commit -m "copy dir, then make a change"
 # add a binary file and set property to binary value
 echo -e "\x00\x01\x02\x03\x04" > file11
 svn add file11
+svn ps svn:mime-type application/octect-stream file11
 svn ps prop2 -F file11 file9 
 svn commit -m "add binary file"
 
