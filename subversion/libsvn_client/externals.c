@@ -416,8 +416,8 @@ switch_file_external(const char *local_abspath,
                                                scratch_pool));
   }
 
-  SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
-                           scratch_pool));
+  SVN_ERR(svn_wc_read_kind2(&kind, ctx->wc_ctx, local_abspath,
+                            TRUE, FALSE, scratch_pool));
 
   SVN_ERR(svn_wc__read_external_info(&external_kind, NULL, NULL, NULL, NULL,
                                      ctx->wc_ctx, local_abspath, local_abspath,
@@ -500,10 +500,13 @@ switch_file_external(const char *local_abspath,
 
     /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision. */
-    SVN_ERR(svn_ra_do_switch2(ra_session, &reporter, &report_baton,
+    SVN_ERR(svn_ra_do_switch3(ra_session, &reporter, &report_baton,
                               switch_loc->rev,
                               target, svn_depth_unknown, url,
-                              switch_editor, switch_baton, scratch_pool));
+                              FALSE /* send_copyfrom */,
+                              TRUE /* ignore_ancestry */,
+                              switch_editor, switch_baton,
+                              scratch_pool, scratch_pool));
 
     SVN_ERR(svn_wc__crawl_file_external(ctx->wc_ctx, local_abspath,
                                         reporter, report_baton,
@@ -606,7 +609,7 @@ handle_external_item_removal(const svn_client_ctx_t *ctx,
                                      local_abspath, FALSE,
                                      scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
+  SVN_ERR(svn_wc_read_kind2(&kind, ctx->wc_ctx, local_abspath, TRUE, FALSE,
                            scratch_pool));
 
   if (external_kind != kind)
@@ -1019,8 +1022,8 @@ svn_client__handle_externals(apr_hash_t *externals_new,
         svn_node_kind_t kind;
 
         parent_abspath = svn_dirent_dirname(parent_abspath, iterpool);
-        SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, parent_abspath, FALSE,
-                                 iterpool));
+        SVN_ERR(svn_wc_read_kind2(&kind, ctx->wc_ctx, parent_abspath,
+                                  TRUE, FALSE, iterpool));
         if (kind == svn_node_none)
           {
             svn_error_t *err;

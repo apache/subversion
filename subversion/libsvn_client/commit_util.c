@@ -525,8 +525,8 @@ harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
             continue; /* This node can't be deleted */
         }
       else
-        SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, this_abspath, TRUE,
-                                 scratch_pool));
+        SVN_ERR(svn_wc_read_kind2(&kind, wc_ctx, this_abspath,
+                                  TRUE, TRUE, scratch_pool));
 
       SVN_ERR(add_committable(committables, this_abspath, kind,
                               repos_root_url,

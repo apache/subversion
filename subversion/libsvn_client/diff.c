@@ -1620,7 +1620,8 @@ diff_wc_wc(const char *path1,
 
   callback_baton->revnum2 = SVN_INVALID_REVNUM;  /* WC */
 
-  SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, abspath1, FALSE, pool));
+  SVN_ERR(svn_wc_read_kind2(&kind, ctx->wc_ctx, abspath1,
+                            TRUE, FALSE, pool));
 
   if (kind != svn_node_dir)
     callback_baton->anchor = svn_dirent_dirname(path1, pool);
@@ -1888,7 +1889,8 @@ diff_repos_wc(const char *path_or_url1,
   SVN_ERR(svn_ra_check_path(ra_session, "", rev, &kind1, pool));
 
   /* Figure out the node kind of the local target. */
-  SVN_ERR(svn_wc_read_kind(&kind2, ctx->wc_ctx, abspath2, FALSE, pool));
+  SVN_ERR(svn_wc_read_kind2(&kind2, ctx->wc_ctx, abspath2,
+                            TRUE, FALSE, pool));
 
   cmd_baton->ra_session = ra_session;
   cmd_baton->anchor = anchor;
@@ -2200,7 +2202,8 @@ diff_summarize_wc_wc(svn_client_diff_summarize_func_t summarize_func,
   /* Find the node kind of PATH1 so that we know whether the diff drive will
      be anchored at PATH1 or its parent dir. */
   SVN_ERR(svn_dirent_get_absolute(&abspath1, path1, pool));
-  SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, abspath1, FALSE, pool));
+  SVN_ERR(svn_wc_read_kind2(&kind, ctx->wc_ctx, abspath1,
+                            TRUE, FALSE, pool));
   target1 = (kind == svn_node_dir) ? "" : svn_dirent_basename(path1, pool);
   SVN_ERR(svn_client__get_diff_summarize_callbacks(
             &callbacks, &callback_baton, target1, FALSE,

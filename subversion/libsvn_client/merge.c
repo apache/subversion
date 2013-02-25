@@ -5976,9 +5976,9 @@ insert_parent_and_sibs_of_sw_absent_del_subtree(
             {
               svn_node_kind_t child_kind;
 
-              SVN_ERR(svn_wc_read_kind(&child_kind,
-                                       ctx->wc_ctx,
-                                       child_abspath, FALSE, iterpool));
+              SVN_ERR(svn_wc_read_kind2(&child_kind,
+                                        ctx->wc_ctx, child_abspath,
+                                        FALSE, FALSE, iterpool));
               if (child_kind != svn_node_file)
                 continue;
             }
@@ -6447,10 +6447,9 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
           svn_node_kind_t immediate_child_kind;
 
           svn_pool_clear(iterpool);
-          SVN_ERR(svn_wc_read_kind(&immediate_child_kind,
-                                   ctx->wc_ctx,
-                                   immediate_child_abspath, FALSE,
-                                   iterpool));
+          SVN_ERR(svn_wc_read_kind2(&immediate_child_kind,
+                                    ctx->wc_ctx, immediate_child_abspath,
+                                    FALSE, FALSE, iterpool));
           if ((immediate_child_kind == svn_node_dir
                && depth == svn_depth_immediates)
               || (immediate_child_kind == svn_node_file
@@ -6547,10 +6546,9 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                   if (depth == svn_depth_files)
                     {
                       svn_node_kind_t child_kind;
-                      SVN_ERR(svn_wc_read_kind(&child_kind,
-                                               ctx->wc_ctx,
-                                               child_abspath, FALSE,
-                                               iterpool));
+                      SVN_ERR(svn_wc_read_kind2(&child_kind,
+                                                ctx->wc_ctx, child_abspath,
+                                                FALSE, FALSE, iterpool));
                       if (child_kind != svn_node_file)
                         continue;
                     }
@@ -7877,15 +7875,9 @@ log_find_operative_subtree_revs(void *baton,
                     svn_dirent_join(log_baton->merge_target_abspath,
                                     rel_path, iterpool);
 
-                  /* ### ptb - svn_wc_read_kind is very tolerant when we ask
-                     ### it about unversioned, non-existent, and missing WC
-                     ### paths, simply setting *NODE_KIND svn_kind_none in
-                     ### those cases.  Is there any legitimate error we
-                     ### might encounter during a merge where we'd want
-                     ### to clear the error and continue? */
-                  SVN_ERR(svn_wc_read_kind(&node_kind, log_baton->wc_ctx,
-                                           wc_child_abspath, FALSE,
-                                           iterpool));
+                  SVN_ERR(svn_wc_read_kind2(&node_kind, log_baton->wc_ctx,
+                                            wc_child_abspath, FALSE, FALSE,
+                                            iterpool));
                 }
               else
                 {
@@ -8145,8 +8137,8 @@ flag_subtrees_needing_mergeinfo(svn_boolean_t operative_merge,
           /* We need to record mergeinfo, but should that mergeinfo be
              non-inheritable? */
           svn_node_kind_t path_kind;
-          SVN_ERR(svn_wc_read_kind(&path_kind, merge_b->ctx->wc_ctx,
-                                   child->abspath, FALSE, iterpool));
+          SVN_ERR(svn_wc_read_kind2(&path_kind, merge_b->ctx->wc_ctx,
+                                    child->abspath, FALSE, FALSE, iterpool));
 
           /* Only directories can have non-inheritable mergeinfo. */
           if (path_kind == svn_node_dir)
@@ -8563,8 +8555,8 @@ record_mergeinfo_for_added_subtrees(
           const char *added_path_mergeinfo_fspath;
           svn_client__pathrev_t *added_path_pathrev;
 
-          SVN_ERR(svn_wc_read_kind(&added_path_kind, merge_b->ctx->wc_ctx,
-                                   added_abspath, FALSE, iterpool));
+          SVN_ERR(svn_wc_read_kind2(&added_path_kind, merge_b->ctx->wc_ctx,
+                                    added_abspath, FALSE, FALSE, iterpool));
 
           /* Calculate the naive mergeinfo describing the merge. */
           merge_mergeinfo = apr_hash_make(iterpool);
@@ -9960,8 +9952,8 @@ ensure_wc_is_suitable_merge_target(const char *target_abspath,
                              _("Path '%s' does not exist"),
                              svn_dirent_local_style(target_abspath,
                                                     scratch_pool));
-  SVN_ERR(svn_wc_read_kind(&target_kind, ctx->wc_ctx, target_abspath, FALSE,
-                           scratch_pool));
+  SVN_ERR(svn_wc_read_kind2(&target_kind, ctx->wc_ctx, target_abspath,
+                            FALSE, FALSE, scratch_pool));
   if (target_kind != svn_node_dir && target_kind != svn_node_file)
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                              _("Merge target '%s' does not exist in the "
@@ -10329,8 +10321,8 @@ get_target_and_lock_abspath(const char **target_abspath,
   svn_node_kind_t kind;
   SVN_ERR(svn_dirent_get_absolute(target_abspath, target_wcpath,
                                   result_pool));
-  SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, *target_abspath, FALSE,
-                           result_pool));
+  SVN_ERR(svn_wc_read_kind2(&kind, ctx->wc_ctx, *target_abspath,
+                            FALSE, FALSE, result_pool));
   if (kind == svn_node_dir)
     *lock_abspath = *target_abspath;
   else

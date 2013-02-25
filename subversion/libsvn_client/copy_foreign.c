@@ -492,8 +492,8 @@ svn_client__copy_foreign(const char *url,
     }
 
   dir_abspath = svn_dirent_dirname(dst_abspath, scratch_pool);
-  SVN_ERR(svn_wc_read_kind(&wc_kind, ctx->wc_ctx, dir_abspath, FALSE,
-                           scratch_pool));
+  SVN_ERR(svn_wc_read_kind2(&wc_kind, ctx->wc_ctx, dir_abspath,
+                            FALSE, FALSE, scratch_pool));
 
   if (wc_kind == svn_node_none)
     {
@@ -501,8 +501,8 @@ svn_client__copy_foreign(const char *url,
         SVN_ERR(svn_client__make_local_parents(dir_abspath, make_parents, ctx,
                                                scratch_pool));
 
-      SVN_ERR(svn_wc_read_kind(&wc_kind, ctx->wc_ctx, dir_abspath, FALSE,
-                           scratch_pool));
+      SVN_ERR(svn_wc_read_kind2(&wc_kind, ctx->wc_ctx, dir_abspath,
+                                FALSE, FALSE, scratch_pool));
     }
 
   if (wc_kind != svn_node_dir)

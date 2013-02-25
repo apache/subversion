@@ -375,8 +375,8 @@ svn_client_status5(svn_revnum_t *result_rev,
 
       svn_node_kind_t kind;
  
-      SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, target_abspath, FALSE,
-                               pool));
+      SVN_ERR(svn_wc_read_kind2(&kind, ctx->wc_ctx, target_abspath,
+                                TRUE, FALSE, pool));
  
       /* Dir must be a working copy directory or the status editor fails */
       if (kind == svn_node_dir)
@@ -398,8 +398,8 @@ svn_client_status5(svn_revnum_t *result_rev,
             }
           else
             {
-              err = svn_wc_read_kind(&kind, ctx->wc_ctx, dir_abspath, FALSE,
-                                     pool);
+              err = svn_wc_read_kind2(&kind, ctx->wc_ctx, dir_abspath,
+                                      FALSE, FALSE, pool);
  
               svn_error_clear(err);
  

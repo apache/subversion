@@ -1109,8 +1109,8 @@ svn_client__ra_get_copysrc_kind(svn_kind_t *kind,
 
   /* ### what to do with SRC_REVISION?  */
 
-  SVN_ERR(svn_wc_read_kind(&node_kind, reb->wc_ctx, local_abspath, FALSE,
-                           scratch_pool));
+  SVN_ERR(svn_wc_read_kind2(&node_kind, reb->wc_ctx, local_abspath,
+                            FALSE, FALSE, scratch_pool));
   *kind = svn__kind_from_node_kind(node_kind, FALSE);
 
   return SVN_NO_ERROR;

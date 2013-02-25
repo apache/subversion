@@ -226,8 +226,8 @@ svn_client_upgrade(const char *path,
            * already been upgraded) and no error is returned.  If it doesn't
            * exist (external that isn't checked out yet), we'll just get
            * svn_node_none. */
-          err = svn_wc_read_kind(&external_kind, ctx->wc_ctx,
-                                 external_abspath, FALSE, iterpool2);
+          err = svn_wc_read_kind2(&external_kind, ctx->wc_ctx,
+                                  external_abspath, TRUE, FALSE, iterpool2);
           if (err && err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED)
             {
               svn_error_clear(err);
@@ -241,8 +241,8 @@ svn_client_upgrade(const char *path,
 
           /* The upgrade of any dir should be done now, get the now reliable
            * kind. */
-          err = svn_wc_read_kind(&external_kind, ctx->wc_ctx, external_abspath,
-                                 FALSE, iterpool2);
+          err = svn_wc_read_kind2(&external_kind, ctx->wc_ctx, external_abspath,
+                                  TRUE, FALSE, iterpool2);
           if (err)
             goto handle_error;
 
