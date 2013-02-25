@@ -1099,13 +1099,6 @@ handle_fetch(serf_request_t *request,
       val = serf_bucket_headers_get(hdrs, "Content-Type");
       info = fetch_ctx->info;
 
-      /* Open the file for editing. */
-      err = open_updated_file(info, FALSE, info->pool);
-      if (err)
-        {
-          return error_fetch(request, fetch_ctx, err);
-        }
-
       if (val && svn_cstring_casecmp(val, SVN_SVNDIFF_MIME_TYPE) == 0)
         {
           fetch_ctx->delta_stream =
@@ -1440,7 +1433,6 @@ static svn_error_t *
 handle_local_content(report_info_t *info,
                      apr_pool_t *scratch_pool)
 {
-  SVN_ERR(open_updated_file(info, TRUE, scratch_pool));
   SVN_ERR(svn_txdelta_send_stream(info->cached_contents, info->textdelta,
                                   info->textdelta_baton, NULL, scratch_pool));
   SVN_ERR(svn_stream_close(info->cached_contents));
@@ -1494,8 +1486,19 @@ fetch_file(report_context_t *ctx, report_info_t *info)
     {
       svn_stream_t *contents = NULL;
 
-      if (ctx->sess->wc_callbacks->get_wc_contents
-          && info->final_sha1_checksum)
+      /* Open the file for editing. */
+      SVN_ERR(open_updated_file(info, FALSE, info->pool));
+
+      if (info->textdelta == svn_delta_noop_window_handler)
+        {
+          /* There is nobody looking for an actual stream.
+
+             Just report an empty stream instead of fetching
+             to be ingored data */
+          info->cached_contents = svn_stream_empty(info->pool);
+        }
+      else if (ctx->sess->wc_callbacks->get_wc_contents
+               && info->final_sha1_checksum)
         {
           svn_error_t *err = NULL;
           svn_checksum_t *checksum = NULL;
