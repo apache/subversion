@@ -140,7 +140,7 @@ struct svn_sqlite__value_t
   int sqlite_err__temp = (x);                                    \
   if (sqlite_err__temp != SQLITE_OK)                             \
     return svn_error_createf(SQLITE_ERROR_CODE(sqlite_err__temp), \
-                             NULL, "sqlite: %s (%d)",             \
+                             NULL, "sqlite: %s (S%d)",             \
                              sqlite3_errmsg((db)->db3),           \
                              sqlite_err__temp);                   \
 } while (0)
@@ -150,7 +150,7 @@ struct svn_sqlite__value_t
   int sqlite_err__temp = (x);                                    \
   if (sqlite_err__temp != SQLITE_OK)                             \
     return svn_error_createf(SQLITE_ERROR_CODE(sqlite_err__temp), \
-                             NULL, "sqlite: %s (%d)", (msg),     \
+                             NULL, "sqlite: %s (S%d)", (msg),     \
                              sqlite_err__temp);                  \
 } while (0)
 
@@ -782,7 +782,7 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
        occurs (except for out-of-memory); thus, we can safely use it to
        extract an error message and construct an svn_error_t. */
     {
-      /* We'd like to use SQLITE_ERR_MSG here, but we can't since it would
+      /* We'd like to use SQLITE_ERR here, but we can't since it would
          just return an error and leave the database open.  So, we need to
          do this manually. */
       /* ### SQLITE_CANTOPEN */
@@ -796,9 +796,7 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
              error than the close error at this point. */
           sqlite3_close(*db3);
 
-          return svn_error_createf(SQLITE_ERROR_CODE(err_code), NULL,
-                                   "sqlite: %s (%d): '%s'",
-                                   msg, err_code, path);
+          SQLITE_ERR_MSG(err_code, msg);
         }
     }
   }
