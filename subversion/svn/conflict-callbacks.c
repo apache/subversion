@@ -417,6 +417,21 @@ static const resolver_option_t tree_conflict_options_update_deleted[] =
   { NULL }
 };
 
+static const resolver_option_t tree_conflict_options_update_replaced[] =
+{
+  { "p",  "postpone",         N_("resolve the conflict later"),
+                              svn_wc_conflict_choose_postpone },
+  { "mc", "mine-conflict",    N_("keep any moves affected by this replacement"),
+                              svn_wc_conflict_choose_mine_conflict },
+  { "r",  "resolved",         N_("mark resolved (any affected moves will "
+                                 "become copies)"),
+                              svn_wc_conflict_choose_merged },
+  { "q",  "quit",             N_("postpone all remaining conflicts"),
+                              svn_wc_conflict_choose_postpone },
+  { "h",  "help",             N_("show this help (also '?')"), -1 },
+  { NULL }
+};
+
 
 /* Return a pointer to the option description in OPTIONS matching the
  * one- or two-character OPTION_CODE.  Return NULL if not found. */
@@ -876,6 +891,8 @@ handle_tree_conflict(svn_wc_conflict_result_t *result,
             tc_opts = tree_conflict_options_update_moved_away;
           else if (desc->reason == svn_wc_conflict_reason_deleted)
             tc_opts = tree_conflict_options_update_deleted;
+          else if (desc->reason == svn_wc_conflict_reason_replaced)
+            tc_opts = tree_conflict_options_update_replaced;
           else
             tc_opts = tree_conflict_options;
         }
