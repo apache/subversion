@@ -2316,6 +2316,17 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                      _("Unknown subcommand: '%s'\n"),
                                      first_arg_utf8));
               svn_cl__help(NULL, NULL, pool);
+
+              /* Be kind to people who try 'svn undo'. */
+              if (strcmp(first_arg_utf8, "undo") == 0)
+                {
+                  svn_error_clear
+                    (svn_cmdline_fprintf(stderr, pool,
+                                         _("Undo is done using either the "
+                                           "'svn revert' or the 'svn merge' "
+                                           "command.\n")));
+                }
+
               return EXIT_FAILURE;
             }
         }
