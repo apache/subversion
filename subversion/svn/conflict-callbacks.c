@@ -884,8 +884,8 @@ handle_tree_conflict(svn_wc_conflict_result_t *result,
 
       svn_pool_clear(iterpool);
 
-      if ((desc->operation == svn_wc_operation_update ||
-           desc->operation == svn_wc_operation_switch))
+      if (desc->operation == svn_wc_operation_update ||
+          desc->operation == svn_wc_operation_switch)
         {
           if (desc->reason == svn_wc_conflict_reason_moved_away)
             tc_opts = tree_conflict_options_update_moved_away;
