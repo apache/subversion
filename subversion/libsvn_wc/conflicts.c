@@ -2674,8 +2674,7 @@ resolve_tree_conflict_on_node(svn_skel_t **work_items,
                         db, local_abspath, scratch_pool));
               did_resolve = TRUE;
             }
-
-          if (conflict_choice == svn_wc_conflict_choose_mine_conflict)
+          else if (conflict_choice == svn_wc_conflict_choose_mine_conflict)
             {
               /* Raised moved-away conflicts on any children moved out of
                * this directory, and leave this directory deleted.
@@ -2686,6 +2685,14 @@ resolve_tree_conflict_on_node(svn_skel_t **work_items,
                         scratch_pool));
               did_resolve = TRUE;
             }
+          else
+            return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
+                                     NULL,
+                                     _("Tree conflict can only be resolved to "
+                                       "'working' or 'mine-conflict' state; "
+                                       "'%s' not resolved"),
+                                     svn_dirent_local_style(local_abspath,
+                                                            scratch_pool));
         }
       else if (reason == svn_wc_conflict_reason_moved_away
               && action == svn_wc_conflict_action_edit)
@@ -2717,6 +2724,14 @@ resolve_tree_conflict_on_node(svn_skel_t **work_items,
                                                           scratch_pool));
               did_resolve = TRUE;
             }
+          else
+            return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
+                                     NULL,
+                                     _("Tree conflict can only be resolved to "
+                                       "'working' or 'mine-conflict' state; "
+                                       "'%s' not resolved"),
+                                     svn_dirent_local_style(local_abspath,
+                                                            scratch_pool));
         }
     }
 
