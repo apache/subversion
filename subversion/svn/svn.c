@@ -1357,11 +1357,15 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {opt_targets, 'R', opt_depth, 'q'} },
 
   { "revert", svn_cl__revert, {0}, N_
-    ("Restore pristine working copy file (undo most local edits).\n"
+    ("Restore pristine working copy state (undo local changes).\n"
      "usage: revert PATH...\n"
      "\n"
-     "  Note:  this subcommand does not require network access, and resolves\n"
-     "  any conflicted states.\n"),
+     "  Revert changes in the working copy at or within PATH, and remove\n"
+     "  conflict markers as well, if any.\n"
+     "\n"
+     "  This subcommand does not revert already committed changes.\n"
+     "  For information about undoing already committed changes, search\n"
+     "  the output of 'svn help merge' for 'undo'.\n"),
     {opt_targets, 'R', opt_depth, 'q', opt_changelist} },
 
   { "status", svn_cl__status, {"stat", "st"}, N_
