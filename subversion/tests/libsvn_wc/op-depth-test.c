@@ -7067,6 +7067,143 @@ delete_over_moved_away(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+movedto_opdepth(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "moved_to_op_depth",
+                                   opts, pool));
+
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+
+  SVN_ERR(sbox_wc_move(&b, "A/B/C", "C"));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",       "normal",         1, ""},
+
+      {0, "A",      "normal",         1, "A"},
+      {0, "A/B",    "normal",         1, "A/B"},
+      {0, "A/B/C",  "normal",         1, "A/B/C"},
+      {3, "A/B/C",  "base-deleted",   NO_COPY_FROM, "C"},
+
+      {1, "C",      "normal",         1, "A/B/C", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* And now the moved_to information has to switch op-depths */
+  SVN_ERR(sbox_wc_delete(&b, "A/B"));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",       "normal",         1, ""},
+
+      {0, "A",      "normal",         1, "A"},
+      {0, "A/B",    "normal",         1, "A/B"},
+      {0, "A/B/C",  "normal",         1, "A/B/C"},
+
+      {2, "A/B",    "base-deleted",   NO_COPY_FROM},
+      {2, "A/B/C",  "base-deleted",   NO_COPY_FROM, "C"},
+
+      {1, "C",      "normal",         1, "A/B/C", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* And again */
+  SVN_ERR(sbox_wc_delete(&b, "A"));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",       "normal",         1, ""},
+
+      {0, "A",      "normal",         1, "A"},
+      {0, "A/B",    "normal",         1, "A/B"},
+      {0, "A/B/C",  "normal",         1, "A/B/C"},
+
+      {1, "A",      "base-deleted",   NO_COPY_FROM},
+      {1, "A/B",    "base-deleted",   NO_COPY_FROM},
+      {1, "A/B/C",  "base-deleted",   NO_COPY_FROM, "C"},
+
+      {1, "C",      "normal",         1, "A/B/C", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* And now stay at the depth of A */
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",       "normal",         1, ""},
+
+      {0, "A",      "normal",         1, "A"},
+      {0, "A/B",    "normal",         1, "A/B"},
+      {0, "A/B/C",  "normal",         1, "A/B/C"},
+
+      {1, "A",      "normal",         NO_COPY_FROM},
+      {1, "A/B",    "base-deleted",   NO_COPY_FROM},
+      {1, "A/B/C",  "base-deleted",   NO_COPY_FROM, "C"},
+
+      {2, "A/B",    "normal",         NO_COPY_FROM},
+
+      {1, "C",      "normal",         1, "A/B/C", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* And see if it can jump back to B again? */
+  SVN_ERR(sbox_wc_delete(&b, "A"));
+  SVN_ERR(sbox_wc_revert(&b, "A", svn_depth_empty));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",       "normal",         1, ""},
+
+      {0, "A",      "normal",         1, "A"},
+      {0, "A/B",    "normal",         1, "A/B"},
+      {0, "A/B/C",  "normal",         1, "A/B/C"},
+
+      {2, "A/B",    "base-deleted",   NO_COPY_FROM},
+      {2, "A/B/C",  "base-deleted",   NO_COPY_FROM, "C"},
+
+      {1, "C",      "normal",         1, "A/B/C", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* And can we bump it back to C itself? */
+  SVN_ERR(sbox_wc_revert(&b, "A", svn_depth_immediates));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",       "normal",         1, ""},
+
+      {0, "A",      "normal",         1, "A"},
+      {0, "A/B",    "normal",         1, "A/B"},
+      {0, "A/B/C",  "normal",         1, "A/B/C"},
+
+      {3, "A/B/C",  "base-deleted",   NO_COPY_FROM, "C"},
+
+      {1, "C",      "normal",         1, "A/B/C", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
@@ -7203,5 +7340,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "update_child_under_add (issue 4111)"),
     SVN_TEST_OPTS_PASS(delete_over_moved_away,
                        "delete_over_moved_away"),
+    SVN_TEST_OPTS_PASS(movedto_opdepth,
+                       "moved_to op_depth"),
     SVN_TEST_NULL
   };
