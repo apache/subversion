@@ -1378,7 +1378,8 @@ HTTPD_START_CMD = $(HTTPD_CMD) -k start
 HTTPD_START_CMD_DEBUG = $(HTTPD_START_CMD) -X
 HTTPD_STOP_CMD = $(HTTPD_CMD) -k stop; sleep 3
 
-SVNSERVE_START_CMD = (ls $(PWD)/svnserve-*.pid | while read pidfile; do \
+SVNSERVE_START_CMD = (test -e $(PWD)/svnserve-*.pid && \
+			ls $(PWD)/svnserve-*.pid | while read pidfile; do \
 				kill `cat "$$pidfile"`; sleep 3; \
 				rm -f $$pidfile; \
 			done); \
