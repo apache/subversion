@@ -1230,7 +1230,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   apr_array_header_t *new_dirs = NULL;
   apr_hash_t *commit_revprops;
   svn_client__copy_pair_t *first_pair;
-  apr_pool_t *session_pool = svn_pool_create(scratch_pool);
+  apr_pool_t *session_pool = scratch_pool; /*svn_pool_create(scratch_pool); */
   int i;
 
   /* Find the common root of all the source paths */
@@ -1474,7 +1474,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
 #endif
 
   /* Close the initial session, to reopen a new session with commit handling */
-  svn_pool_clear(session_pool);
+  /*svn_pool_clear(session_pool);*/
 
   /* Open a new RA session to DST_URL. */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, top_dst_url,
@@ -1501,7 +1501,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
             _("Commit failed (details follow):"));
 
   svn_pool_destroy(iterpool);
-  svn_pool_destroy(session_pool);
+  /*svn_pool_destroy(session_pool);*/
 
   return SVN_NO_ERROR;
 }
