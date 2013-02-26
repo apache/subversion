@@ -621,9 +621,10 @@ svn_wc__node_has_working(svn_boolean_t *has_working,
  * to, regardless of any uncommitted changes (delete, replace and/or copy-here/
  * move-here).
  *
- * If there is no base node at @a local_abspath (such as when there is a
- * locally added/copied/moved-here node that is not part of a replace),
- * return @c SVN_INVALID_REVNUM/NULL/NULL/NULL/NULL.
+ * If there is no BASE node at @a local_abspath or if @a show_hidden is FALSE,
+ * no status 'normal' or 'incomplete' BASE node report
+ * SVN_ERR_WC_PATH_NOT_FOUND, or if @a ignore_enoent is TRUE, @a kind
+ * svn_node_unknown, @a revision SVN_INVALID_REVNUM and all other values NULL.
  *
  * All output arguments may be NULL.
  *
@@ -631,13 +632,16 @@ svn_wc__node_has_working(svn_boolean_t *has_working,
  * @a scratch_pool.
  */
 svn_error_t *
-svn_wc__node_get_base(svn_revnum_t *revision,
+svn_wc__node_get_base(svn_node_kind_t *kind,
+                      svn_revnum_t *revision,
                       const char **repos_relpath,
                       const char **repos_root_url,
                       const char **repos_uuid,
                       const char **lock_token,
                       svn_wc_context_t *wc_ctx,
                       const char *local_abspath,
+                      svn_boolean_t ignore_enoent,
+                      svn_boolean_t show_hidden,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
 

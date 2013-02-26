@@ -762,12 +762,14 @@ harvest_status_callback(void *status_baton,
   else if (copy_mode
            && !(state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
     {
-      svn_revnum_t dir_rev;
+      svn_revnum_t dir_rev = SVN_INVALID_REVNUM;
 
-      if (!copy_mode_root && !status->switched)
-        SVN_ERR(svn_wc__node_get_base(&dir_rev, NULL, NULL, NULL, NULL, wc_ctx,
-                                      svn_dirent_dirname(local_abspath,
-                                                         scratch_pool),
+      if (!copy_mode_root && !status->switched && !is_added)
+        SVN_ERR(svn_wc__node_get_base(NULL, &dir_rev, NULL, NULL, NULL, NULL,
+                                      wc_ctx, svn_dirent_dirname(local_abspath,
+                                                                 scratch_pool),
+                                      FALSE /* ignore_enoent */,
+                                      FALSE /* show_hidden */,
                                       scratch_pool, scratch_pool));
 
       if (copy_mode_root || status->switched || node_rev != dir_rev)

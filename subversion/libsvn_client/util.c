@@ -179,12 +179,15 @@ svn_client__wc_node_get_base(svn_client__pathrev_t **base_p,
 
   *base_p = apr_palloc(result_pool, sizeof(**base_p));
 
-  SVN_ERR(svn_wc__node_get_base(&(*base_p)->rev,
+  SVN_ERR(svn_wc__node_get_base(NULL,
+                                &(*base_p)->rev,
                                 &relpath,
                                 &(*base_p)->repos_root_url,
                                 &(*base_p)->repos_uuid,
                                 NULL,
                                 wc_ctx, wc_abspath,
+                                TRUE /* ignore_enoent */,
+                                TRUE /* show_hidden */,
                                 result_pool, scratch_pool));
   if ((*base_p)->repos_root_url && relpath)
     {

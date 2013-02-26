@@ -658,29 +658,53 @@ svn_wc__node_has_working(svn_boolean_t *has_working,
 
 
 svn_error_t *
-svn_wc__node_get_base(svn_revnum_t *revision,
+svn_wc__node_get_base(svn_node_kind_t *kind,
+                      svn_revnum_t *revision,
                       const char **repos_relpath,
                       const char **repos_root_url,
                       const char **repos_uuid,
                       const char **lock_token,
                       svn_wc_context_t *wc_ctx,
                       const char *local_abspath,
+                      svn_boolean_t ignore_enoent,
+                      svn_boolean_t show_hidden,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
+  svn_wc__db_status_t status;
   svn_wc__db_lock_t *lock;
+  svn_kind_t db_kind;
 
-  err = svn_wc__db_base_get_info(NULL, NULL, revision, repos_relpath,
+  err = svn_wc__db_base_get_info(&status, &db_kind, revision, repos_relpath,
                                  repos_root_url, repos_uuid, NULL,
                                  NULL, NULL, NULL, NULL, NULL,
                                  lock_token ? &lock : NULL,
                                  NULL, NULL, NULL,
                                  wc_ctx->db, local_abspath,
                                  result_pool, scratch_pool);
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+
+  if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+    return svn_error_trace(err);
+  else if (err
+           || (!err && !show_hidden
+               && (status != svn_wc__db_status_normal
+                   && status != svn_wc__db_status_incomplete)))
     {
+      if (!ignore_enoent)
+        {
+          if (err)
+            return svn_error_trace(err);
+          else
+            return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                     _("The node '%s' was not found."),
+                                     svn_dirent_local_style(local_abspath,
+                                                            scratch_pool));
+        }
       svn_error_clear(err);
+
+      if (kind)
+        *kind = svn_node_unknown;
       if (revision)
         *revision = SVN_INVALID_REVNUM;
       if (repos_relpath)
@@ -693,8 +717,9 @@ svn_wc__node_get_base(svn_revnum_t *revision,
         *lock_token = NULL;
       return SVN_NO_ERROR;
     }
-  SVN_ERR(err);
 
+  if (kind)
+    *kind = svn__node_kind_from_kind(db_kind);
   if (lock_token)
     *lock_token = lock ? lock->token : NULL;
 
