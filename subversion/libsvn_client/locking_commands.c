@@ -304,6 +304,7 @@ organize_lock_targets(const char **common_parent_url,
           const char *target_url;
           struct wc_lock_item_t *wli;
           const char *local_abspath;
+          svn_node_kind_t kind;
 
           svn_pool_clear(iterpool);
 
@@ -311,16 +312,17 @@ organize_lock_targets(const char **common_parent_url,
           local_abspath = svn_dirent_join(common_dirent, rel_target, scratch_pool);
           wli = apr_pcalloc(scratch_pool, sizeof(*wli));
 
-          SVN_ERR(svn_wc__node_get_base(&wli->revision, &repos_relpath,
+          SVN_ERR(svn_wc__node_get_base(&kind, &wli->revision, &repos_relpath,
                                         &repos_root_url, NULL,
                                         &wli->lock_token,
                                         wc_ctx, local_abspath,
+                                        FALSE /* ignore_enoent */,
+                                        FALSE /* show_hidden */,
                                         result_pool, iterpool));
 
-          /* Node exists in BASE? */
-          if (! repos_root_url || !repos_relpath)
-            return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                                     _("The node '%s' was not found."),
+          if (kind != svn_node_file)
+            return svn_error_createf(SVN_ERR_WC_NOT_FILE, NULL,
+                                     _("The node '%s' is not a file"),
                                      svn_dirent_local_style(local_abspath,
                                                             iterpool));
 
