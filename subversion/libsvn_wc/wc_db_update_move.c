@@ -2401,6 +2401,9 @@ break_moved_away_children_internal(svn_wc__db_wcroot_t *wcroot,
   svn_boolean_t have_row;
   apr_pool_t *iterpool;
 
+  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
+                                      STMT_CREATE_UPDATE_MOVE_LIST));
+
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_MOVED_PAIR2));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
@@ -2417,6 +2420,11 @@ break_moved_away_children_internal(svn_wc__db_wcroot_t *wcroot,
 
       SVN_ERR(break_move(wcroot, src_relpath, src_op_depth, dst_relpath,
                          relpath_depth(dst_relpath), iterpool));
+      SVN_ERR(update_move_list_add(wcroot, src_relpath,
+                                   svn_wc_notify_move_broken,
+                                   svn_node_unknown,
+                                   svn_wc_notify_state_inapplicable,
+                                   svn_wc_notify_state_inapplicable));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
   svn_pool_destroy(iterpool);
@@ -2429,6 +2437,8 @@ break_moved_away_children_internal(svn_wc__db_wcroot_t *wcroot,
 svn_error_t *
 svn_wc__db_resolve_break_moved_away(svn_wc__db_t *db,
                                     const char *local_abspath,
+                                    svn_wc_notify_func2_t notify_func,
+                                    void *notify_baton,
                                     apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
@@ -2444,12 +2454,30 @@ svn_wc__db_resolve_break_moved_away(svn_wc__db_t *db,
                                                  scratch_pool),
     wcroot);
 
+  if (notify_func)
+    {
+      svn_wc_notify_t *notify;
+
+      notify = svn_wc_create_notify(svn_dirent_join(wcroot->abspath,
+                                                    local_relpath,
+                                                    scratch_pool),
+                                    svn_wc_notify_move_broken,
+                                    scratch_pool);
+      notify->kind = svn_node_unknown;
+      notify->content_state = svn_wc_notify_state_inapplicable;
+      notify->prop_state = svn_wc_notify_state_inapplicable;
+      notify->revision = SVN_INVALID_REVNUM;
+      notify_func(notify_baton, notify, scratch_pool);
+    }
+
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
 svn_wc__db_resolve_break_moved_away_children(svn_wc__db_t *db,
                                              const char *local_abspath,
+                                             svn_wc_notify_func2_t notify_func,
+                                             void *notify_baton,
                                              apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
@@ -2464,5 +2492,10 @@ svn_wc__db_resolve_break_moved_away_children(svn_wc__db_t *db,
     break_moved_away_children_internal(wcroot, local_relpath, scratch_pool),
     wcroot);
 
+  SVN_ERR(svn_wc__db_update_move_list_notify(wcroot,
+                                             SVN_INVALID_REVNUM,
+                                             SVN_INVALID_REVNUM,
+                                             notify_func, notify_baton,
+                                             scratch_pool));
   return SVN_NO_ERROR;
 }

@@ -3351,6 +3351,8 @@ svn_wc__db_resolve_delete_raise_moved_away(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_resolve_break_moved_away(svn_wc__db_t *db,
                                     const char *local_abspath,
+                                    svn_wc_notify_func2_t notify_func,
+                                    void *notify_baton,
                                     apr_pool_t *scratch_pool);
 
 /* Break moves for all moved-away children of LOCAL_ABSPATH, within
@@ -3361,6 +3363,8 @@ svn_wc__db_resolve_break_moved_away(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_resolve_break_moved_away_children(svn_wc__db_t *db,
                                              const char *local_abspath,
+                                             svn_wc_notify_func2_t notify_func,
+                                             void *notify_baton,
                                              apr_pool_t *scratch_pool);
 /* @} */
 

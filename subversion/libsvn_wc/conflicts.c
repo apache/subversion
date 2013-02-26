@@ -2672,7 +2672,8 @@ resolve_tree_conflict_on_node(svn_skel_t **work_items,
               /* Break moves for any children moved out of this directory,
                * and leave this directory deleted. */
               SVN_ERR(svn_wc__db_resolve_break_moved_away_children(
-                        db, local_abspath, scratch_pool));
+                        db, local_abspath, notify_func, notify_baton,
+                        scratch_pool));
               did_resolve = TRUE;
             }
           else if (conflict_choice == svn_wc_conflict_choose_mine_conflict)
@@ -2722,6 +2723,8 @@ resolve_tree_conflict_on_node(svn_skel_t **work_items,
                  ### involving the move until
                  ### svn_wc__db_op_mark_resolved. */
               SVN_ERR(svn_wc__db_resolve_break_moved_away(db, local_abspath,
+                                                          notify_func,
+                                                          notify_baton,
                                                           scratch_pool));
               did_resolve = TRUE;
             }
