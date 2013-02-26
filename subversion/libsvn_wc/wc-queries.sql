@@ -1521,7 +1521,7 @@ WHERE wc_id = ?1
   AND moved_to IS NOT NULL
 
 -- STMT_SELECT_MOVED_OUTSIDE
-SELECT local_relpath FROM nodes
+SELECT local_relpath, moved_to FROM nodes
 WHERE wc_id = ?1
   AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth >= ?3

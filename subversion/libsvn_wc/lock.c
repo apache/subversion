@@ -1604,4 +1604,53 @@ svn_wc__call_with_write_lock(svn_wc__with_write_lock_func_t func,
 }
 
 
+svn_error_t *
+svn_wc__acquire_write_lock_for_resolve(const char **lock_root_abspath,
+                                       svn_wc_context_t *wc_ctx,
+                                       const char *local_abspath,
+                                       apr_pool_t *result_pool,
+                                       apr_pool_t *scratch_pool)
+{
+  svn_boolean_t locked = FALSE;
+  const char *obtained_abspath;
+  const char *requested_abspath = local_abspath;
 
+  while (!locked)
+    {
+      const char *required_abspath;
+      const char *child;
+
+      SVN_ERR(svn_wc__acquire_write_lock(&obtained_abspath, wc_ctx,
+                                         requested_abspath, FALSE,
+                                         scratch_pool, scratch_pool));
+      locked = TRUE;
+
+      SVN_ERR(svn_wc__required_lock_for_resolve(&required_abspath,
+                                                wc_ctx->db, local_abspath,
+                                                scratch_pool, scratch_pool));
+
+      /* It's possible for the required lock path to be an ancestor
+         of, a descendent of, or equal to, the obtained lock path. If
+         it's an ancestor we have to try again, otherwise the obtained
+         lock will do. */
+      child = svn_dirent_skip_ancestor(required_abspath, obtained_abspath);
+      if (child && child[0])
+        {
+          SVN_ERR(svn_wc__release_write_lock(wc_ctx, obtained_abspath,
+                                             scratch_pool));
+          locked = FALSE;
+          requested_abspath = required_abspath;
+        }
+      else
+        {
+          /* required should be a descendent of, or equal to, obtained */
+          SVN_ERR_ASSERT(!strcmp(required_abspath, obtained_abspath)
+                         || svn_dirent_skip_ancestor(obtained_abspath,
+                                                     required_abspath));
+        }
+    }
+
+  *lock_root_abspath = apr_pstrdup(result_pool, obtained_abspath);
+
+  return SVN_NO_ERROR;
+}

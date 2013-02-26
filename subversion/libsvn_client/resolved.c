@@ -48,6 +48,8 @@ svn_client_resolve(const char *path,
                    apr_pool_t *pool)
 {
   const char *local_abspath;
+  svn_error_t *err;
+  const char *lock_abspath;
 
   if (svn_path_is_url(path))
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
@@ -55,19 +57,25 @@ svn_client_resolve(const char *path,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  SVN_WC__CALL_WITH_WRITE_LOCK(
-      svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,
-                                depth,
-                                TRUE /* resolve_text */,
-                                "" /* resolve_prop (ALL props) */,
-                                TRUE /* resolve_tree */,
-                                conflict_choice,
-                                ctx->conflict_func2,
-                                ctx->conflict_baton2,
-                                ctx->cancel_func, ctx->cancel_baton,
-                                ctx->notify_func2, ctx->notify_baton2,
-                                pool),
-      ctx->wc_ctx, local_abspath, TRUE, pool);
+  /* Similar to SVN_WC__CALL_WITH_WRITE_LOCK but using a custom
+     locking function. */
 
-  return SVN_NO_ERROR;
+  SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
+                                                 local_abspath, pool, pool));
+  err = svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,
+                                  depth,
+                                  TRUE /* resolve_text */,
+                                  "" /* resolve_prop (ALL props) */,
+                                  TRUE /* resolve_tree */,
+                                  conflict_choice,
+                                  ctx->conflict_func2,
+                                  ctx->conflict_baton2,
+                                  ctx->cancel_func, ctx->cancel_baton,
+                                  ctx->notify_func2, ctx->notify_baton2,
+                                  pool);
+
+  err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
+                                                                 lock_abspath,
+                                                                 pool));
+  return svn_error_trace(err);
 }
