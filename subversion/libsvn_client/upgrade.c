@@ -63,8 +63,6 @@ fetch_repos_info(const char **repos_root,
                  apr_pool_t *scratch_pool)
 {
   struct repos_info_baton *ri = baton;
-  apr_pool_t *subpool;
-  svn_ra_session_t *ra_session;
 
   /* The same info is likely to retrieved multiple times (e.g. externals) */
   if (ri->last_repos && svn_uri__is_ancestor(ri->last_repos, url))
@@ -74,18 +72,12 @@ fetch_repos_info(const char **repos_root,
       return SVN_NO_ERROR;
     }
 
-  subpool = svn_pool_create(scratch_pool);
-
-  SVN_ERR(svn_client_open_ra_session(&ra_session, url, ri->ctx, subpool));
-
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, repos_root, result_pool));
-  SVN_ERR(svn_ra_get_uuid2(ra_session, repos_uuid, result_pool));
+  SVN_ERR(svn_client_get_repos_root(repos_root, repos_uuid, url, ri->ctx,
+                                    result_pool, scratch_pool));
 
   /* Store data for further calls */
   ri->last_repos = apr_pstrdup(ri->state_pool, *repos_root);
   ri->last_uuid = apr_pstrdup(ri->state_pool, *repos_uuid);
-
-  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
