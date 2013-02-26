@@ -235,17 +235,11 @@ switch_dir_external(const char *local_abspath,
               if (! svn_uri__is_ancestor(repos_root_url, url))
                 {
                   const char *repos_root;
-                  svn_ra_session_t *ra_session;
 
                   /* ... then figure out precisely which repository
                       root URL that target URL *is* a child of ... */
-                  SVN_ERR(svn_client__open_ra_session_internal(&ra_session,
-                                                               NULL, url, NULL,
-                                                               NULL, FALSE,
-                                                               TRUE, ctx,
-                                                               subpool));
-                  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root,
-                                                 subpool));
+                  SVN_ERR(svn_client_get_repos_root(&repos_root, NULL, url,
+                                                    ctx, subpool, subpool));
 
                   /* ... and use that to try to relocate the external
                      working copy to the target location.  */
