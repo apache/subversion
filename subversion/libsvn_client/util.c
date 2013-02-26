@@ -266,10 +266,8 @@ svn_client_get_repos_root(const char **repos_root,
     }
 
   /* If PATH_OR_URL was a URL, we use the RA layer to look it up. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL,
-                                               abspath_or_url,
-                                               NULL, NULL, FALSE, TRUE,
-                                               ctx, scratch_pool));
+  SVN_ERR(svn_client_open_ra_session2(&ra_session,  abspath_or_url, NULL,
+                                      ctx, scratch_pool, scratch_pool));
 
   if (repos_root)
     SVN_ERR(svn_ra_get_repos_root2(ra_session, repos_root, result_pool));

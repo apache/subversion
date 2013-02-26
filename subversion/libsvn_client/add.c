@@ -1182,9 +1182,8 @@ mkdir_urls(const apr_array_header_t *urls,
       const char *first_url = APR_ARRAY_IDX(urls, 0, const char *);
       apr_pool_t *iterpool = svn_pool_create(pool);
 
-      SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL,
-                                                   first_url, NULL, NULL,
-                                                   FALSE, TRUE, ctx, pool));
+      SVN_ERR(svn_client_open_ra_session2(&ra_session, first_url, NULL,
+                                          ctx, pool, iterpool));
 
       for (i = 0; i < urls->nelts; i++)
         {
@@ -1294,9 +1293,11 @@ mkdir_urls(const apr_array_header_t *urls,
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
   if (!ra_session)
-    SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, common,
-                                                 NULL, NULL, FALSE, TRUE,
-                                                 ctx, pool));
+    SVN_ERR(svn_client_open_ra_session2(&ra_session, common, NULL, ctx,
+                                        pool, pool));
+  else
+    SVN_ERR(svn_ra_reparent(ra_session, common, pool));
+
 
   /* Fetch RA commit editor */
   SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,

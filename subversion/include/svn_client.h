@@ -6486,13 +6486,30 @@ svn_client_uuid_from_path(const char **uuid,
 /** Open an RA session rooted at @a url, and return it in @a *session.
  *
  * Use the authentication baton stored in @a ctx for authentication.
- * @a *session is allocated in @a pool.
+ * @a *session is allocated in @a result_pool.
  *
- * @since New in 1.3.
+ * If @a wri_abspath is not NULL, use the working copy identified by @a
+ * wri_abspath to potentially avoid transferring unneeded data.
  *
  * @note This function is similar to svn_ra_open3(), but the caller avoids
  * having to providing its own callback functions.
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_client_open_ra_session2(svn_ra_session_t **session,
+                           const char *url,
+                           const char *wri_abspath,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
+/** Similar to svn_client_open_ra_session(), but doesn't allow passing a
+ * working copy path.
+ *
+ * @since New in 1.3.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_open_ra_session(svn_ra_session_t **session,
                            const char *url,

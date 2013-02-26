@@ -9415,6 +9415,7 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
 static svn_error_t *
 ensure_ra_session_url(svn_ra_session_t **ra_session,
                       const char *url,
+                      const char *wri_abspath,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
@@ -9430,7 +9431,8 @@ ensure_ra_session_url(svn_ra_session_t **ra_session,
   if (! *ra_session || (err && err->apr_err == SVN_ERR_RA_ILLEGAL_URL))
     {
       svn_error_clear(err);
-      err = svn_client_open_ra_session(ra_session, url, ctx, pool);
+      err = svn_client_open_ra_session2(ra_session, url, wri_abspath,
+                                        ctx, pool, pool);
     }
   SVN_ERR(err);
 
@@ -9670,9 +9672,9 @@ do_merge(apr_hash_t **modified_subtrees,
 
       /* Establish RA sessions to our URLs, reuse where possible. */
       SVN_ERR(ensure_ra_session_url(&ra_session1, source->loc1->url,
-                                    ctx, scratch_pool));
+                                    target->abspath, ctx, scratch_pool));
       SVN_ERR(ensure_ra_session_url(&ra_session2, source->loc2->url,
-                                    ctx, scratch_pool));
+                                    target->abspath, ctx, scratch_pool));
 
       /* Populate the portions of the merge context baton that need to
          be reset for each merge source iteration. */
@@ -11375,9 +11377,9 @@ open_reintegrate_source_and_target(svn_ra_session_t **source_ra_session_p,
   SVN_ERR(open_target_wc(&target, target_abspath,
                          FALSE, FALSE, FALSE,
                          ctx, scratch_pool, scratch_pool));
-  SVN_ERR(svn_client_open_ra_session(target_ra_session_p,
-                                     target->loc.url,
-                                     ctx, scratch_pool));
+  SVN_ERR(svn_client_open_ra_session2(target_ra_session_p,
+                                      target->loc.url, target->abspath,
+                                      ctx, result_pool, scratch_pool));
   if (! target->loc.url)
     return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
                              _("Can't reintegrate into '%s' because it is "
@@ -12122,9 +12124,10 @@ svn_client_find_automatic_merge(svn_client_automatic_merge_t **merge_p,
                          ctx, result_pool, scratch_pool));
 
   /* Open RA sessions to the source and target trees. */
-  SVN_ERR(svn_client_open_ra_session(&s_t->target_ra_session,
-                                     s_t->target->loc.url,
-                                     ctx, result_pool));
+  SVN_ERR(svn_client_open_ra_session2(&s_t->target_ra_session,
+                                      s_t->target->loc.url,
+                                      s_t->target->abspath,
+                                      ctx, result_pool, scratch_pool));
   /* ### check for null URL (i.e. added path) here, like in reintegrate? */
   SVN_ERR(svn_client__ra_session_from_path2(
             &s_t->source_ra_session, &s_t->source,
@@ -12229,11 +12232,11 @@ do_automatic_merge_locked(conflict_report_t **conflict_report,
                                   "cannot be used with this kind of merge"));
 
       SVN_ERR(ensure_ra_session_url(&base_ra_session, merge->base->url,
-                                    ctx, scratch_pool));
+                                    target->abspath, ctx, scratch_pool));
       SVN_ERR(ensure_ra_session_url(&right_ra_session, merge->right->url,
-                                    ctx, scratch_pool));
+                                    target->abspath, ctx, scratch_pool));
       SVN_ERR(ensure_ra_session_url(&target_ra_session, target->loc.url,
-                                    ctx, scratch_pool));
+                                    target->abspath, ctx, scratch_pool));
 
       /* Check for and reject any abnormalities -- such as revisions that
        * have not yet been merged in the opposite direction -- that a
@@ -12283,7 +12286,7 @@ do_automatic_merge_locked(conflict_report_t **conflict_report,
       /* Normalize our merge sources, do_merge() requires this.  See the
          'MERGEINFO MERGE SOURCE NORMALIZATION' global comment. */
       SVN_ERR(ensure_ra_session_url(&ra_session, merge->right->url,
-                                    ctx, scratch_pool));
+                                    target->abspath, ctx, scratch_pool));
       SVN_ERR(normalize_merge_sources_internal(
         &merge_sources, merge->right,
         svn_rangelist__initialize(merge->yca->rev, merge->right->rev, TRUE,

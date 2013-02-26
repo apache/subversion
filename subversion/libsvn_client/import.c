@@ -845,9 +845,8 @@ svn_client_import5(const char *path,
 
   SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
 
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, url, NULL,
-                                               NULL, FALSE, TRUE, ctx,
-                                               scratch_pool));
+  SVN_ERR(svn_client_open_ra_session2(&ra_session, url, NULL,
+                                      ctx, scratch_pool, iterpool));
 
   /* Figure out all the path components we need to create just to have
      a place to stick our imported tree. */

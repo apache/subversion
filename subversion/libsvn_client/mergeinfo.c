@@ -685,9 +685,9 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
               if (! ra_session)
                 {
                   sesspool = svn_pool_create(scratch_pool);
-                  SVN_ERR(svn_client__open_ra_session_internal(
-                              &ra_session, NULL, url, NULL, NULL, FALSE,
-                              TRUE, ctx, sesspool));
+                  SVN_ERR(svn_client_open_ra_session2(&ra_session, url, NULL,
+                                                      ctx,
+                                                      sesspool, sesspool));
                 }
 
               SVN_ERR(svn_client__get_repos_mergeinfo_catalog(
