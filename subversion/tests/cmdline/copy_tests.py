@@ -4733,13 +4733,23 @@ def mixed_rev_copy_del(sbox):
   svntest.main.run_svn(None, 'up', wc_dir)
   expected_status.tweak(wc_rev=2)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
-  svntest.main.run_svn(None, 'up', '-r1',
-                       sbox.ospath('A/B/E/alpha'),
-                       sbox.ospath('A/B/E/beta'))
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha' : Item(status='A '),
+  })
+
   expected_status.add({
     'A/B/E/alpha' : Item(status='  ', wc_rev=1),
     })
   expected_status.tweak('A/B/E/beta', wc_rev=1)
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None,
+                                        expected_status, [],
+                                        None, None, None, None, None,
+                                        '-r1',
+                                        sbox.ospath('A/B/E/alpha'),
+                                        sbox.ospath('A/B/E/beta'))
+  
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Copy A/B/E to A/B/E_copy
