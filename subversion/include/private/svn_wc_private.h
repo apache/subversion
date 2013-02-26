@@ -1845,6 +1845,17 @@ svn_wc__complete_directory_add(svn_wc_context_t *wc_ctx,
                                svn_revnum_t copyfrom_rev,
                                apr_pool_t *scratch_pool);
 
+
+/* Acquire a write lock on LOCAL_ABSPATH or an ancestor that covers
+   all possible paths affected by resolving the conflicts in the tree
+   LOCAL_ABSPATH.  Set *LOCK_ROOT_ABSPATH to the path of the lock
+   obtained. */
+svn_error_t * 
+svn_wc__acquire_write_lock_for_resolve(const char **lock_root_abspath,
+                                       svn_wc_context_t *wc_ctx,
+                                       const char *local_abspath,
+                                       apr_pool_t *result_pool,
+                                       apr_pool_t *scratch_pool);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

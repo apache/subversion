@@ -3366,6 +3366,16 @@ svn_wc__db_resolve_break_moved_away_children(svn_wc__db_t *db,
                                              svn_wc_notify_func2_t notify_func,
                                              void *notify_baton,
                                              apr_pool_t *scratch_pool);
+
+/* Set *REQUIRED_ABSPATH to the path that should be locked to ensure
+ * that the lock covers all paths affected by resolving the conflicts
+ * in the tree LOCAL_ABSPATH. */
+svn_error_t *
+svn_wc__required_lock_for_resolve(const char **required_abspath,
+                                  svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 /* @} */
 
 

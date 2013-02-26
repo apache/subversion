@@ -1797,6 +1797,7 @@ update_moved_away_conflict_victim(svn_skel_t **work_items,
   svn_boolean_t have_row;
   const char *dummy1, *dummy2, *dummy3;
   int src_op_depth;
+  const char *move_root_dst_abspath;
 
   /* ### assumes wc write lock already held */
 
@@ -1813,6 +1814,12 @@ update_moved_away_conflict_victim(svn_skel_t **work_items,
                                svn_dirent_join(wcroot->abspath, victim_relpath,
                                                scratch_pool),
                                scratch_pool));
+
+  move_root_dst_abspath
+    = svn_dirent_join(wcroot->abspath, tc_editor_baton->move_root_dst_relpath,
+                      scratch_pool);
+  SVN_ERR(svn_wc__write_check(db, move_root_dst_abspath, scratch_pool));
+
   tc_editor_baton->operation = operation;
   tc_editor_baton->old_version= old_version;
   tc_editor_baton->new_version= new_version;
@@ -1892,6 +1899,8 @@ svn_wc__db_update_moved_away_conflict_victim(svn_skel_t **work_items,
                       &old_version, &new_version,
                       db, victim_abspath,
                       scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_wc__write_check(db, move_src_op_root_abspath, scratch_pool));
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                                                 db, victim_abspath,
@@ -2497,5 +2506,73 @@ svn_wc__db_resolve_break_moved_away_children(svn_wc__db_t *db,
                                              SVN_INVALID_REVNUM,
                                              notify_func, notify_baton,
                                              scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+required_lock_for_resolve(const char **required_relpath,
+                          svn_wc__db_wcroot_t *wcroot,
+                          const char *local_relpath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  *required_relpath = local_relpath;
+
+  /* This simply looks for all moves out of the LOCAL_RELPATH tree. We
+     could attempt to limit it to only those moves that are going to
+     be resolved but that would require second guessing the resolver.
+     This simple algorithm is sufficient although it may give a
+     strictly larger/deeper lock than necessary. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_MOVED_OUTSIDE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath, 0));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  
+  while (have_row)
+    {
+      const char *move_dst_relpath = svn_sqlite__column_text(stmt, 1,
+                                                             NULL);
+      
+      *required_relpath
+        = svn_relpath_get_longest_ancestor(*required_relpath,
+                                           move_dst_relpath,
+                                           scratch_pool);
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  *required_relpath = apr_pstrdup(result_pool, *required_relpath);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__required_lock_for_resolve(const char **required_abspath,
+                                  svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  const char *required_relpath;
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                                                db, local_abspath,
+                                                scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_WC__DB_WITH_TXN(
+    required_lock_for_resolve(&required_relpath, wcroot, local_relpath,
+                              scratch_pool, scratch_pool),
+    wcroot);
+
+  *required_abspath = svn_dirent_join(wcroot->abspath, required_relpath,
+                                      result_pool);
+
   return SVN_NO_ERROR;
 }
