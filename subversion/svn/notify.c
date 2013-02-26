@@ -1016,6 +1016,15 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                                  n->url);
       if (err)
         goto print_error;
+      break;
+
+    case svn_wc_notify_move_broken:
+        err = svn_cmdline_printf(pool,
+                                 _("Breaking move with source path '%s'\n"),
+                                 path_local);
+      if (err)
+        goto print_error;
+      break;
 
     default:
       break;

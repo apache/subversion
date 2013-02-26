@@ -1249,7 +1249,13 @@ typedef enum svn_wc_notify_action_t
 
   /** A copy from a foreign repository has started 
    * @since New in 1.8. */
-  svn_wc_notify_foreign_copy_begin
+  svn_wc_notify_foreign_copy_begin,
+
+  /** A move in the working copy has been broken, i.e. degraded into a
+   * copy + delete. The notified path is the move source (the deleted path).
+   * ### Provide path to move destination as well?
+   * @since New in 1.8. */
+  svn_wc_notify_move_broken
 
 } svn_wc_notify_action_t;
 
