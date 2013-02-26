@@ -1785,7 +1785,7 @@ def run_and_validate_lock(path, username):
                                               'info','-R',
                                               path)
 
-  ### TODO: Leverage RegexOuput([...], match_all=True) here.
+  ### TODO: Leverage RegexOutput([...], match_all=True) here.
   # prepare the regexs to compare against
   token_re = re.compile(".*?Lock Token: opaquelocktoken:.*?", re.DOTALL)
   author_re = re.compile(".*?Lock Owner: %s\n.*?" % username, re.DOTALL)
