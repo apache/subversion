@@ -295,9 +295,8 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
           /* If we haven't found a session yet, we need to open one up.
              Note that we don't have a local directory, nor a place
              to put temp files. */
-          SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, uri,
-                                                       NULL, NULL, FALSE,
-                                                       TRUE, ctx, pool));
+          SVN_ERR(svn_client_open_ra_session2(&ra_session, uri, NULL,
+                                              ctx, pool, pool));
           SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
           SVN_ERR(svn_ra_reparent(ra_session, repos_root, pool));
 

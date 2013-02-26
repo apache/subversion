@@ -346,7 +346,7 @@ update_internal(svn_revnum_t *result_rev,
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
                                                anchor_url,
                                                anchor_abspath, NULL, TRUE,
-                                               TRUE, ctx, pool));
+                                               TRUE, ctx, pool, pool));
 
   /* If we got a corrected URL from the RA subsystem, we'll need to
      relocate our working copy first. */

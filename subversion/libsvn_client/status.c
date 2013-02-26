@@ -189,9 +189,8 @@ reporter_finish_report(void *report_baton, apr_pool_t *pool)
 
   /* Open an RA session to our common ancestor and grab the locks under it.
    */
-  SVN_ERR(svn_client__open_ra_session_internal(&ras, NULL, rb->ancestor, NULL,
-                                               NULL, FALSE, TRUE,
-                                               rb->ctx, subpool));
+  SVN_ERR(svn_client_open_ra_session2(&ras, rb->ancestor, NULL,
+                                      rb->ctx, subpool, subpool));
 
   /* The locks need to live throughout the edit.  Note that if the
      server doesn't support lock discovery, we'll just not do locky
@@ -458,9 +457,9 @@ svn_client_status5(svn_revnum_t *result_rev,
 
       /* Open a repository session to the URL. */
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL,
-                                                   dir_abspath,
-                                                   NULL, FALSE, TRUE,
-                                                   ctx, pool));
+                                                   dir_abspath, NULL,
+                                                   FALSE, TRUE,
+                                                   ctx, pool, pool));
 
       SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
                                     SVN_RA_CAPABILITY_DEPTH, pool));

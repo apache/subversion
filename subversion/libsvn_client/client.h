@@ -265,15 +265,18 @@ svn_client__ensure_ra_session_url(const char **old_session_url,
       - COMMIT_ITEMS is an array of svn_client_commit_item_t *
         structures, present only for working copy commits, NULL otherwise.
 
-      - USE_ADMIN indicates that the RA layer should create tempfiles
-        in the administrative area instead of in the working copy itself,
-        and read properties from the administrative area.
+      - WRITE_DAV_PROPS indicates that the RA layer can clear and write
+        the DAV properties in the working copy of BASE_DIR_ABSPATH.
 
-      - READ_ONLY_WC indicates that the RA layer should not attempt to
-        modify the WC props directly.
+      - READ_DAV_PROPS indicates that the RA layer should not attempt to
+        modify the WC props directly, but is still allowed to read them.
 
    BASE_DIR_ABSPATH may be NULL if the RA operation does not correspond to a
-   working copy (in which case, USE_ADMIN should be FALSE).
+   working copy (in which case, WRITE_DAV_PROPS and READ_DAV_PROPS must be
+   FALSE.
+
+   If WRITE_DAV_PROPS and READ_DAV_PROPS are both FALSE the working copy may
+   still be used for locating pristine files via their SHA1.
 
    The calling application's authentication baton is provided in CTX,
    and allocations related to this session are performed in POOL.
@@ -286,10 +289,11 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                                      const char *base_url,
                                      const char *base_dir_abspath,
                                      const apr_array_header_t *commit_items,
-                                     svn_boolean_t use_admin,
-                                     svn_boolean_t read_only_wc,
+                                     svn_boolean_t write_dav_props,
+                                     svn_boolean_t read_dav_props,
                                      svn_client_ctx_t *ctx,
-                                     apr_pool_t *pool);
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
 
 
 svn_error_t *

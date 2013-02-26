@@ -231,10 +231,9 @@ svn_client__ra_stat_compatible(svn_ra_session_t *ra_session,
                  doesn't support svn_ra_reparent anyway, so don't try it. */
               svn_uri_split(&parent_url, &base_name, session_url, subpool);
 
-              SVN_ERR(svn_client__open_ra_session_internal(&parent_session,
-                                                           NULL, parent_url,
-                                                           NULL, NULL, FALSE,
-                                                           TRUE, ctx, subpool));
+              SVN_ERR(svn_client_open_ra_session2(&parent_session, parent_url,
+                                                  NULL, ctx,
+                                                  subpool, subpool));
 
               /* Get all parent's entries, no props. */
               SVN_ERR(svn_ra_get_dir2(parent_session, &parent_ents, NULL,

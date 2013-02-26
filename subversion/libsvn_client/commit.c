@@ -457,8 +457,8 @@ check_url_kind(void *baton,
   /* If we don't have a session or can't use the session, get one */
   if (!cukb->session || !svn_uri__is_ancestor(cukb->repos_root_url, url))
     {
-      SVN_ERR(svn_client_open_ra_session(&cukb->session, url, cukb->ctx,
-                                         cukb->pool));
+      SVN_ERR(svn_client_open_ra_session2(&cukb->session, url, NULL, cukb->ctx,
+                                          cukb->pool, scratch_pool));
       SVN_ERR(svn_ra_get_repos_root2(cukb->session, &cukb->repos_root_url,
                                      cukb->pool));
     }
@@ -925,7 +925,8 @@ svn_client_commit6(const apr_array_header_t *targets,
                                                                  0,
                                                                  const char *),
                                                    commit_items,
-                                                   TRUE, FALSE, ctx, pool));
+                                                   TRUE, TRUE, ctx,
+                                                   pool, pool));
 
   if (cmt_err)
     goto cleanup;

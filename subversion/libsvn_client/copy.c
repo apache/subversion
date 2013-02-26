@@ -797,10 +797,9 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
      be verifying that every one of our copy source and destination
      URLs is or is beneath this sucker's repository root URL as a form
      of a cheap(ish) sanity check.  */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL,
-                                               first_pair->src_abspath_or_url,
-                                               NULL, NULL, FALSE, TRUE,
-                                               ctx, pool));
+  SVN_ERR(svn_client_open_ra_session2(&ra_session,
+                                      first_pair->src_abspath_or_url, NULL,
+                                      ctx, pool, pool));
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
 
   /* Verify that sources and destinations are all at or under
@@ -1214,8 +1213,9 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
                  svn_commit_callback2_t commit_callback,
                  void *commit_baton,
                  svn_client_ctx_t *ctx,
-                 apr_pool_t *pool)
+                 apr_pool_t *scratch_pool)
 {
+  apr_pool_t *pool = scratch_pool;
   const char *message;
   const char *top_src_path, *top_dst_url;
   struct check_url_kind_baton cukb;
@@ -1230,6 +1230,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   apr_array_header_t *new_dirs = NULL;
   apr_hash_t *commit_revprops;
   svn_client__copy_pair_t *first_pair;
+  apr_pool_t *session_pool = svn_pool_create(scratch_pool);
   int i;
 
   /* Find the common root of all the source paths */
@@ -1262,16 +1263,22 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
     }
 
   SVN_ERR(svn_dirent_get_absolute(&top_src_abspath, top_src_path, pool));
+
+  /* Open a session to help while determining the exact targets */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, top_dst_url,
-                                               top_src_abspath, NULL, TRUE,
-                                               TRUE, ctx, pool));
+                                               top_src_abspath, NULL,
+                                               FALSE /* write_dav_props */,
+                                               TRUE /* read_dav_props */,
+                                               ctx,
+                                               session_pool, scratch_pool));
 
   /* If requested, determine the nearest existing parent of the destination,
      and reparent the ra session there. */
   if (make_parents)
     {
       new_dirs = apr_array_make(pool, 0, sizeof(const char *));
-      SVN_ERR(find_absent_parents2(ra_session, &top_dst_url, new_dirs, pool));
+      SVN_ERR(find_absent_parents2(ra_session, &top_dst_url, new_dirs,
+                                   scratch_pool));
     }
 
   /* Figure out the basename that will result from each copy and check to make
@@ -1466,10 +1473,14 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
     }
 #endif
 
-  /* Open an RA session to DST_URL. */
+  /* Close the initial session, to reopen a new session with commit handling */
+  svn_pool_clear(session_pool);
+
+  /* Open a new RA session to DST_URL. */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, top_dst_url,
                                                NULL, commit_items,
-                                               FALSE, FALSE, ctx, pool));
+                                               FALSE, FALSE, ctx,
+                                               session_pool, scratch_pool));
 
   /* Fetch RA commit editor. */
   SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
@@ -1489,10 +1500,8 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
                                   NULL, ctx, pool, pool),
             _("Commit failed (details follow):"));
 
-  /* Sleep to ensure timestamp integrity. */
-  svn_io_sleep_for_timestamps(top_src_path, pool);
-
   svn_pool_destroy(iterpool);
+  svn_pool_destroy(session_pool);
 
   return SVN_NO_ERROR;
 }
@@ -1813,9 +1822,8 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
   /* Open a repository session to the longest common src ancestor.  We do not
      (yet) have a working copy, so we don't have a corresponding path and
      tempfiles cannot go into the admin area. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, top_src_url,
-                                               NULL, NULL, FALSE, TRUE,
-                                               ctx, pool));
+  SVN_ERR(svn_client_open_ra_session2(&ra_session, top_src_url, lock_abspath,
+                                      ctx, pool, pool));
 
   /* Get the correct src path for the peg revision used, and verify that we
      aren't overwriting an existing path. */

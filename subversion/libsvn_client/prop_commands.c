@@ -156,9 +156,8 @@ propset_on_url(const char *propname,
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, target,
-                                               NULL, NULL, FALSE, TRUE,
-                                               ctx, pool));
+  SVN_ERR(svn_client_open_ra_session2(&ra_session, target, NULL,
+                                      ctx, pool, pool));
 
   SVN_ERR(svn_ra_check_path(ra_session, "", base_revision_for_url,
                             &node_kind, pool));
@@ -468,10 +467,9 @@ svn_client_revprop_set2(const char *propname,
     return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
                              _("Bad property name: '%s'"), propname);
 
-  /* Open an RA session for the URL. Note that we don't have a local
-     directory, nor a place to put temp files. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL, NULL,
-                                               NULL, FALSE, TRUE, ctx, pool));
+  /* Open an RA session for the URL. */
+  SVN_ERR(svn_client_open_ra_session2(&ra_session, URL, NULL,
+                                      ctx, pool, pool));
 
   /* Resolve the revision into something real, and return that to the
      caller as well. */
@@ -992,19 +990,25 @@ svn_client_revprop_get(const char *propname,
                        apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_error_t *err;
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL, NULL,
-                                               NULL, FALSE, TRUE, ctx, pool));
+  SVN_ERR(svn_client_open_ra_session2(&ra_session, URL, NULL,
+                                      ctx, subpool, subpool));
 
   /* Resolve the revision into something real, and return that to the
      caller as well. */
   SVN_ERR(svn_client__get_revision_number(set_rev, NULL, ctx->wc_ctx, NULL,
-                                          ra_session, revision, pool));
+                                          ra_session, revision, subpool));
 
   /* The actual RA call. */
-  return svn_ra_rev_prop(ra_session, *set_rev, propname, propval, pool);
+  err = svn_ra_rev_prop(ra_session, *set_rev, propname, propval, pool);
+
+  /* Close RA session */
+  svn_pool_destroy(subpool);
+  return svn_error_trace(err);
 }
 
 
@@ -1535,20 +1539,23 @@ svn_client_revprop_list(apr_hash_t **props,
 {
   svn_ra_session_t *ra_session;
   apr_hash_t *proplist;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_error_t *err;
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL, NULL,
-                                               NULL, FALSE, TRUE, ctx, pool));
+  SVN_ERR(svn_client_open_ra_session2(&ra_session, URL, NULL,
+                                      ctx, subpool, subpool));
 
   /* Resolve the revision into something real, and return that to the
      caller as well. */
   SVN_ERR(svn_client__get_revision_number(set_rev, NULL, ctx->wc_ctx, NULL,
-                                          ra_session, revision, pool));
+                                          ra_session, revision, subpool));
 
   /* The actual RA call. */
-  SVN_ERR(svn_ra_rev_proplist(ra_session, *set_rev, &proplist, pool));
+  err = svn_ra_rev_proplist(ra_session, *set_rev, &proplist, pool);
 
   *props = proplist;
-  return SVN_NO_ERROR;
+  svn_pool_destroy(subpool); /* Close RA session */
+  return svn_error_trace(err);
 }
