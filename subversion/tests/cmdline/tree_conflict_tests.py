@@ -573,10 +573,7 @@ def up_sw_file_del_onto_mod(sbox):
   sbox2 = sbox.clone_dependent()
   ensure_tree_conflict(sbox, 'update', f_dels + f_moves + f_rpls,
                                        f_mods)
-  # For 'switch', don't test with incoming replacements because 'switch'
-  # ignores ancestry in its repos diff (unlike 'update') and so does not
-  # notice replacements.
-  ensure_tree_conflict(sbox2, 'switch', f_dels + f_moves,
+  ensure_tree_conflict(sbox2, 'switch', f_dels + f_moves + f_rpls,
                                         f_mods)
   # Note: See UC2 in notes/tree-conflicts/use-cases.txt.
 
@@ -585,7 +582,7 @@ def up_sw_file_del_onto_del(sbox):
   sbox2 = sbox.clone_dependent()
   ensure_tree_conflict(sbox, 'update', f_dels + f_moves + f_rpls,
                                        f_dels + f_rpls)
-  ensure_tree_conflict(sbox2, 'switch', f_dels + f_moves,
+  ensure_tree_conflict(sbox2, 'switch', f_dels + f_moves + f_rpls,
                                         f_dels + f_rpls)
   # Note: See UC3 in notes/tree-conflicts/use-cases.txt.
 
@@ -615,7 +612,7 @@ def up_sw_dir_del_onto_mod(sbox):
   sbox2 = sbox.clone_dependent()
   ensure_tree_conflict(sbox, 'update', d_dels + d_moves + d_rpls,
                                        d_mods)
-  ensure_tree_conflict(sbox2, 'switch', d_dels + d_moves,
+  ensure_tree_conflict(sbox2, 'switch', d_dels + d_moves + d_rpls,
                                         d_mods)
 
 def up_sw_dir_del_onto_del(sbox):
@@ -624,7 +621,7 @@ def up_sw_dir_del_onto_del(sbox):
   sbox2 = sbox.clone_dependent()
   ensure_tree_conflict(sbox, 'update', d_dels + d_moves + d_rpls,
                                        d_dels + d_rpls)
-  ensure_tree_conflict(sbox2, 'switch', d_dels + d_moves,
+  ensure_tree_conflict(sbox2, 'switch', d_dels + d_moves + d_rpls,
                                         d_dels + d_rpls)
 
 # This is currently set as XFail over ra_dav because it hits
