@@ -239,7 +239,6 @@ update_internal(svn_revnum_t *result_rev,
   /* It does not make sense to update conflict victims. */
   if (repos_relpath)
     {
-      svn_error_t *err;
       svn_boolean_t text_conflicted, prop_conflicted, tree_conflicted;
 
       anchor_url = svn_path_url_add_component2(repos_root_url, repos_relpath,
