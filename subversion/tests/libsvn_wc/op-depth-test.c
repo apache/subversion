@@ -7283,6 +7283,107 @@ new_basemove(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+move_back(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "move_back", opts, pool));
+
+  /* X just so we don't always test with local_relpath == repos_path */
+  SVN_ERR(sbox_wc_mkdir(&b, "X"));
+  SVN_ERR(sbox_wc_mkdir(&b, "X/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "X/A/B"));
+  SVN_ERR(sbox_wc_mkdir(&b, "X/A/B/C"));
+  SVN_ERR(sbox_wc_mkdir(&b, "X/A/B/D"));
+  SVN_ERR(sbox_wc_mkdir(&b, "X/E"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_switch(&b, "/X"));
+
+  SVN_ERR(sbox_wc_move(&b, "A/B", "A/B2"));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",       "normal",       1, "X"},
+      {0, "A",      "normal",       1, "X/A"},
+      {0, "A/B",    "normal",       1, "X/A/B"},
+      {0, "A/B/C",  "normal",       1, "X/A/B/C"},
+      {0, "A/B/D",  "normal",       1, "X/A/B/D"},
+      {0, "E",      "normal",       1, "X/E"},
+      {2, "A/B",    "base-deleted", NO_COPY_FROM, "A/B2"},
+      {2, "A/B/C",  "base-deleted", NO_COPY_FROM},
+      {2, "A/B/D",  "base-deleted", NO_COPY_FROM},
+      {2, "A/B2",   "normal",       1, "X/A/B", MOVED_HERE},
+      {2, "A/B2/C", "normal",       1, "X/A/B/C", MOVED_HERE},
+      {2, "A/B2/D", "normal",       1, "X/A/B/D", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+  SVN_ERR(sbox_wc_move(&b, "A/B2", "A/B"));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",       "normal",       1, "X"},
+      {0, "A",      "normal",       1, "X/A"},
+      {0, "A/B",    "normal",       1, "X/A/B"},
+      {0, "A/B/C",  "normal",       1, "X/A/B/C"},
+      {0, "A/B/D",  "normal",       1, "X/A/B/D"},
+      {0, "E",      "normal",       1, "X/E"},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  SVN_ERR(sbox_wc_move(&b, "A/B", "A/B2"));
+  SVN_ERR(sbox_wc_move(&b, "A/B2/C", "A/B2/C2"));
+  SVN_ERR(sbox_wc_move(&b, "A/B2/D", "D2"));
+  SVN_ERR(sbox_wc_move(&b, "E", "A/B2/E2"));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",        "normal",       1, "X"},
+      {0, "A",       "normal",       1, "X/A"},
+      {0, "A/B",     "normal",       1, "X/A/B"},
+      {0, "A/B/C",   "normal",       1, "X/A/B/C"},
+      {0, "A/B/D",   "normal",       1, "X/A/B/D"},
+      {0, "E",       "normal",       1, "X/E"},
+      {1, "D2",      "normal",       1, "X/A/B/D", MOVED_HERE},
+      {1, "E",       "base-deleted", NO_COPY_FROM, "A/B2/E2"},
+      {2, "A/B",     "base-deleted", NO_COPY_FROM, "A/B2"},
+      {2, "A/B/C",   "base-deleted", NO_COPY_FROM},
+      {2, "A/B/D",   "base-deleted", NO_COPY_FROM},
+      {2, "A/B2",    "normal",       1, "X/A/B", MOVED_HERE},
+      {2, "A/B2/C",  "normal",       1, "X/A/B/C", MOVED_HERE},
+      {2, "A/B2/D",  "normal",       1, "X/A/B/D", MOVED_HERE},
+      {3, "A/B2/C",  "base-deleted", NO_COPY_FROM, "A/B2/C2"},
+      {3, "A/B2/D",  "base-deleted", NO_COPY_FROM, "D2"},
+      {3, "A/B2/C2", "normal",       1, "X/A/B/C", MOVED_HERE},
+      {3, "A/B2/E2", "normal",       1, "X/E", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+  SVN_ERR(sbox_wc_move(&b, "A/B2", "A/B"));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",       "normal",       1, "X"},
+      {0, "A",      "normal",       1, "X/A"},
+      {0, "A/B",    "normal",       1, "X/A/B"},
+      {0, "A/B/C",  "normal",       1, "X/A/B/C"},
+      {0, "A/B/D",  "normal",       1, "X/A/B/D"},
+      {0, "E",      "normal",       1, "X/E"},
+      {1, "D2",     "normal",       1, "X/A/B/D", MOVED_HERE},
+      {1, "E",      "base-deleted", NO_COPY_FROM, "A/B/E2"},
+      {3, "A/B/C",  "base-deleted", NO_COPY_FROM, "A/B/C2"},
+      {3, "A/B/D",  "base-deleted", NO_COPY_FROM, "D2"},
+      {3, "A/B/C2", "normal",       1, "X/A/B/C", MOVED_HERE},
+      {3, "A/B/E2", "normal",       1, "X/E", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* ---------------------------------------------------------------------- */
@@ -7424,5 +7525,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "moved_to op_depth"),
     SVN_TEST_OPTS_PASS(new_basemove,
                        "new_basemove"),
+    SVN_TEST_OPTS_XFAIL(move_back,
+                       "move_back (issue 4302)"),
     SVN_TEST_NULL
   };
