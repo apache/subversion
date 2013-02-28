@@ -403,9 +403,9 @@ get_repos_root_url_relpath(const char **repos_relpath,
 {
   if (info->repos_relpath && info->repos_root_url)
     {
-      *repos_relpath = info->repos_relpath;
-      *repos_root_url = info->repos_root_url;
-      *repos_uuid = info->repos_uuid;
+      *repos_relpath = apr_pstrdup(result_pool, info->repos_relpath);
+      *repos_root_url = apr_pstrdup(result_pool, info->repos_root_url);
+      *repos_uuid = apr_pstrdup(result_pool, info->repos_uuid);
     }
   else if (parent_repos_relpath && parent_repos_root_url)
     {
@@ -413,8 +413,8 @@ get_repos_root_url_relpath(const char **repos_relpath,
                                         svn_dirent_basename(local_abspath,
                                                             NULL),
                                         result_pool);
-      *repos_root_url = parent_repos_root_url;
-      *repos_uuid = parent_repos_uuid;
+      *repos_root_url = apr_pstrdup(result_pool, parent_repos_root_url);
+      *repos_uuid = apr_pstrdup(result_pool, parent_repos_uuid);
     }
   else if (info->status == svn_wc__db_status_added)
     {
@@ -485,9 +485,6 @@ assemble_status(svn_wc_status3_t **status,
   svn_boolean_t copied = FALSE;
   svn_boolean_t conflicted;
   svn_error_t *err;
-  const char *repos_relpath;
-  const char *repos_root_url;
-  const char *repos_uuid;
   const char *moved_from_abspath = NULL;
   svn_filesize_t filesize = (dirent && (dirent->kind == svn_node_file))
                                 ? dirent->filesize
@@ -725,14 +722,6 @@ assemble_status(svn_wc_status3_t **status,
         return SVN_NO_ERROR;
       }
 
-  SVN_ERR(get_repos_root_url_relpath(&repos_relpath, &repos_root_url,
-                                     &repos_uuid, info,
-                                     parent_repos_relpath,
-                                     parent_repos_root_url,
-                                     parent_repos_uuid,
-                                     db, local_abspath,
-                                     scratch_pool, scratch_pool));
-
   /* 6. Build and return a status structure. */
 
   stat = apr_pcalloc(result_pool, sizeof(**status));
@@ -763,7 +752,8 @@ assemble_status(svn_wc_status3_t **status,
   stat->repos_lock = repos_lock;
   stat->revision = info->revnum;
   stat->changed_rev = info->changed_rev;
-  stat->changed_author = info->changed_author;
+  if (info->changed_author)
+    stat->changed_author = apr_pstrdup(result_pool, info->changed_author);
   stat->changed_date = info->changed_date;
 
   stat->ood_kind = svn_node_none;
@@ -771,10 +761,19 @@ assemble_status(svn_wc_status3_t **status,
   stat->ood_changed_date = 0;
   stat->ood_changed_author = NULL;
 
+  SVN_ERR(get_repos_root_url_relpath(&stat->repos_relpath,
+                                     &stat->repos_root_url,
+                                     &stat->repos_uuid, info,
+                                     parent_repos_relpath,
+                                     parent_repos_root_url,
+                                     parent_repos_uuid,
+                                     db, local_abspath,
+                                     result_pool, scratch_pool));
+
   if (info->lock)
     {
-      svn_lock_t *lck = apr_pcalloc(result_pool, sizeof(*lck));
-      lck->path = repos_relpath;
+      svn_lock_t *lck = svn_lock_create(result_pool);
+      lck->path = stat->repos_relpath;
       lck->token = info->lock->token;
       lck->owner = info->lock->owner;
       lck->comment = info->lock->comment;
@@ -787,13 +786,12 @@ assemble_status(svn_wc_status3_t **status,
   stat->locked = info->locked;
   stat->conflicted = conflicted;
   stat->versioned = TRUE;
-  stat->changelist = info->changelist;
-  stat->repos_root_url = repos_root_url;
-  stat->repos_relpath = repos_relpath;
-  stat->repos_uuid = repos_uuid;
+  if (info->changelist)
+    stat->changelist = apr_pstrdup(result_pool, info->changelist);
 
   stat->moved_from_abspath = moved_from_abspath;
-  stat->moved_to_abspath = info->moved_to_abspath;
+  if (info->moved_to_abspath)
+    stat->moved_to_abspath = apr_pstrdup(result_pool, info->moved_to_abspath);
 
   stat->file_external = info->file_external;
 
