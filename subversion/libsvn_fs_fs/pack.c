@@ -20,7 +20,6 @@
  * ====================================================================
  */
 #include <assert.h>
-#include <apr_poll.h>
 
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
@@ -41,48 +40,164 @@
 #include "svn_private_config.h"
 #include "temp_serializer.h"
 
+/* Format 7 packing logic:
+ *
+ * We pack files on a pack file basis (e.g. 1000 revs) without changing
+ * existing pack files nor the revision files outside the range to pack.
+ *
+ * First, we will scan the revision file indexes to determine the number
+ * of items to "place" (i.e. determine their optimal position within the
+ * future pack file).  For each item, we will need a constant amount of
+ * memory to track it.  A MAX_MEM parameter sets a limit to the number of
+ * items we may place in one go.  That means, we may not be able to add
+ * all revisions at once.  Instead, we will run the placement for a subset
+ * of revisions at a time.  T very unlikely worst case will simply append
+ * all revision data with just a little reshuffling inside each revision.
+ *
+ * In a second step, we read all revisions in the selected range, build
+ * the item tracking information and copy the items themselves from the
+ * revision files to temporary files.  The latter serve as buckets for a
+ * very coarse bucket presort:  Separate change lists, file properties,
+ * directory properties and noderevs + representations from one another.
+ *
+ * The third step will determine an optimized placement for the items in
+ * each of the 4 buckets separately.  The first three will simply order
+ * their items by revision, starting with the newest once.  Placing rep
+ * and noderev items is a more elaborate process documented in the code.
+ *
+ * Step 4 copies the items from the temporary buckets into the final
+ * pack file and write the temporary index files.
+ *
+ * Finally, after the last range of revisions, create the final indexes.
+ */
+
+/* Structure tracking the relations / dependencies between items
+ * (noderevs and representations only).
+ */
 typedef struct rep_info_t
 {
+  /* item being tracked. Will be set to NULL after being copied from
+   * the temp file to the pack file */
   struct svn_fs_fs__p2l_entry_t *entry;
+
+  /* to create the contents of the item, this base item needs to be
+   * read as well.  So, place it near the current item.  May be NULL.
+   * For noderevs, that is the data representation; for representations,
+   * this will be the delta base. */
   struct rep_info_t *base;
+
+  /* given a typical tree traversal, this item will probably be requested
+   * soon after ENTRY.  So, place it near the current item.  May be NULL.
+   * If this is set on a noderev item, it links to a sibbling.  On a
+   * representation item, it links to sub-directory entries. */
   struct rep_info_t *next;
 } rep_info_t;
 
+/* This structure keeps track of all the temporary data and status that
+ * needs to be kept around during the creation of one pack file.  After
+ * each revision range (in case we can't process all revs at once due to
+ * memory restrictions), parts of the data will get re-initialized.
+ */
 typedef struct pack_context_t
 {
+  /* file system that we operate on */
   svn_fs_t *fs;
+
+  /* cancel function to invoke at regular intervals. May be NULL */
   svn_cancel_func_t cancel_func;
+
+  /* baton to pass to CANCEL_FUNC */
   void *cancel_baton;
 
+  /* first revision in the shard (and future pack file) */
   svn_revnum_t shard_rev;
+
+  /* first revision in the range to process (>= SHARD_REV) */
   svn_revnum_t start_rev;
+
+  /* first revision after the range to process (<= SHARD_END_REV) */
   svn_revnum_t end_rev;
+
+  /* first revision after the current shard */
   svn_revnum_t shard_end_rev;
-  
+
+  /* log-to-phys proto index for the whole pack file */
   apr_file_t *proto_l2p_index;
+
+  /* phys-to-log proto index for the whole pack file */
   apr_file_t *proto_p2l_index;
 
+  /* full shard directory path (containing the unpacked revisions) */
   const char *shard_dir;
+
+  /* full packed shard directory path (containing the pack file + indexes) */
   const char *pack_file_dir;
+
+  /* full pack file path (including PACK_FILE_DIR) */
   const char *pack_file_path;
+
+  /* current write position (i.e. file length) in the pack file */
   apr_off_t pack_offset;
+
+  /* the pack file to ultimately write all data to */
   apr_file_t *pack_file;
 
+  /* array of svn_fs_fs__p2l_entry_t *, all referring to change lists.
+   * Will be filled in phase 2 and be cleared after each revision range. */
   apr_array_header_t *changes;
+
+  /* temp file receiving all change list items (referenced by CHANGES).
+   * Will be filled in phase 2 and be cleared after each revision range. */
   apr_file_t *changes_file;
+
+  /* array of svn_fs_fs__p2l_entry_t *, all referring to file properties.
+   * Will be filled in phase 2 and be cleared after each revision range. */
   apr_array_header_t *file_props;
+
+  /* temp file receiving all file prop items (referenced by FILE_PROPS).
+   * Will be filled in phase 2 and be cleared after each revision range.*/
   apr_file_t *file_props_file;
+
+  /* array of svn_fs_fs__p2l_entry_t *, all referring to directory properties.
+   * Will be filled in phase 2 and be cleared after each revision range. */
   apr_array_header_t *dir_props;
+
+  /* temp file receiving all directory prop items (referenced by DIR_PROPS).
+   * Will be filled in phase 2 and be cleared after each revision range.*/
   apr_file_t *dir_props_file;
   
-  apr_array_header_t *rev_offsets;
+  /* array of rep_info_t *, all their ENTRYs referring to node revisions or
+   * representations. Index is be REV_OFFSETS[rev - START_REV] + item offset.
+   * Some entries will be NULL.  Will be filled in phase 2 and be cleared
+   * after each revision range. */
   apr_array_header_t *reps_infos;
+
+  /* array of int, marking for each revision, the which offset their items
+   * begin in REP_INFOS.  Will be filled in phase 2 and be cleared after
+   * each revision range. */
+  apr_array_header_t *rev_offsets;
+
+  /* array of svn_fs_fs__p2l_entry_t* from REPS_INFOS, ordered according to
+   * our placement strategy.  Will be filled in phase 2 and be cleared after
+   * each revision range. */
   apr_array_header_t *reps;
+
+  /* temp file receiving all items referenced by REPS_INFOS.
+   * Will be filled in phase 2 and be cleared after each revision range.*/
   apr_file_t *reps_file;
 
+  /* pool used for temporary data structures that will be cleaned up when
+   * the next range of revisions is being processed */
   apr_pool_t *info_pool;
 } pack_context_t;
 
+/* Create and initialize a new pack context for packing shard SHARD_REV in
+ * SHARD_DIR into PACK_FILE_DIR within filesystem FS.  Allocate it in POOL
+ * and return the structure in *CONTEXT.
+ *
+ * Limit the number of items being copied per iteration to MAX_ITEMS.
+ * Set CANCEL_FUNC and CANCEL_BATON as well.
+ */
 static svn_error_t *
 initialize_pack_context(pack_context_t *context,
                         svn_fs_t *fs,
@@ -101,8 +216,10 @@ initialize_pack_context(pack_context_t *context,
   SVN_ERR_ASSERT(ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT);
   SVN_ERR_ASSERT(shard_rev % ffd->max_files_per_dir == 0);
   
+  /* where we will place our various temp files */
   SVN_ERR(svn_io_temp_dir(&temp_dir, pool));
 
+  /* store parameters */
   context->fs = fs;
   context->cancel_func = cancel_func;
   context->cancel_baton = cancel_baton;
@@ -121,7 +238,7 @@ initialize_pack_context(pack_context_t *context,
                            APR_WRITE | APR_BUFFERED | APR_BINARY | APR_EXCL
                              | APR_CREATE, APR_OS_DEFAULT, pool));
 
-  /* Index information files */
+  /* Proto index files */
   SVN_ERR(svn_fs_fs__l2p_proto_index_open
             (&context->proto_l2p_index,
              svn_dirent_join(pack_file_dir,
@@ -135,6 +252,7 @@ initialize_pack_context(pack_context_t *context,
                              pool),
              pool));
 
+  /* item buckets: one item info array and one temp file per bucket */
   context->changes = apr_array_make(pool, max_items,
                                     sizeof(svn_fs_fs__p2l_entry_t *));
   SVN_ERR(svn_io_open_unique_file3(&context->changes_file, NULL, temp_dir,
@@ -148,6 +266,7 @@ initialize_pack_context(pack_context_t *context,
   SVN_ERR(svn_io_open_unique_file3(&context->dir_props_file, NULL, temp_dir,
                                    svn_io_file_del_on_close, pool, pool));
 
+  /* noderev and representation item bucket */
   context->rev_offsets = apr_array_make(pool, max_revs, sizeof(int));
   context->reps_infos = apr_array_make(pool, max_items, sizeof(rep_info_t *));
   context->reps = apr_array_make(pool, max_items,
@@ -155,11 +274,15 @@ initialize_pack_context(pack_context_t *context,
   SVN_ERR(svn_io_open_unique_file3(&context->reps_file, NULL, temp_dir,
                                    svn_io_file_del_on_close, pool, pool));
 
+  /* the pool used for temp structures */
   context->info_pool = svn_pool_create(pool);
 
   return SVN_NO_ERROR;
 };
 
+/* Clean up / free all revision range specific data and files in CONTEXT.
+ * Use POOL for temporary allocations.
+ */
 static svn_error_t *
 reset_pack_context(pack_context_t *context,
                    apr_pool_t *pool)
@@ -181,6 +304,9 @@ reset_pack_context(pack_context_t *context,
   return SVN_NO_ERROR;
 };
 
+/* Call this after the last revision range.  It will finalize all index files
+ * for CONTEXT and close any open files.  Use POOL for temporary allocations.
+ */
 static svn_error_t *
 close_pack_context(pack_context_t *context,
                    apr_pool_t *pool)
@@ -192,6 +318,7 @@ close_pack_context(pack_context_t *context,
   const char *proto_l2p_index_path;
   const char *proto_p2l_index_path;
 
+  /* need the file names for the actual index creation call further down */
   SVN_ERR(svn_io_file_name_get(&proto_l2p_index_path,
                                context->proto_l2p_index, pool));
   SVN_ERR(svn_io_file_name_get(&proto_p2l_index_path,
@@ -218,6 +345,9 @@ close_pack_context(pack_context_t *context,
   return SVN_NO_ERROR;
 };
 
+/* Efficiently copy SIZE bytes from SOURCE to DEST.  Invoke the CANCEL_FUNC
+ * from CONTEXT at regular intervals.  Use POOL for allocations.
+ */
 static svn_error_t *
 copy_file_data(pack_context_t *context,
                apr_file_t *dest,
@@ -240,7 +370,7 @@ copy_file_data(pack_context_t *context,
     }
   else
     {
-      /* using streaming copies for larger data blocks.  That may require
+      /* use streaming copies for larger data blocks.  That may require
        * the allocation of larger buffers and we should make sure that
        * this extra memory is released asap. */
       fs_fs_data_t *ffd = context->fs->fsap_data;
@@ -289,6 +419,11 @@ write_null_bytes(apr_file_t *dest,
   return SVN_NO_ERROR;
 }
 
+/* Copy the "simple" item (changes list or property representation) from
+ * the current position in REV_FILE to TEMP_FILE using CONTEXT.  Add a
+ * copy of ENTRY to ENTRIES but with an updated offset value that points
+ * to the copy destination in TEMP_FILE.  Use POOL for allocations.
+ */
 static svn_error_t *
 copy_item_to_temp(pack_context_t *context,
                   apr_array_header_t *entries,
@@ -309,6 +444,9 @@ copy_item_to_temp(pack_context_t *context,
   return SVN_NO_ERROR;
 }
 
+/* Return the offset within CONTEXT->REPS_INFOS that corresponds to item
+ * ITEM_INDEX in  REVISION.
+ */
 static int
 get_item_array_index(pack_context_t *context,
                      svn_revnum_t revision,
@@ -320,21 +458,32 @@ get_item_array_index(pack_context_t *context,
                                          int);
 }
 
+/* Write INFO to the correct position in CONTEXT->REP_INFOS.  The latter
+ * may need auto-expanding.  Overwriting an array element is not allowed.
+ */
 static void
 add_item_rep_mapping(pack_context_t *context,
                      rep_info_t *info)
 {
+  /* index of INFO */
   int idx = get_item_array_index(context,
                                  info->entry->revision,
                                  info->entry->item_index);
 
+  /* make sure the index exists in the array */
   while (context->reps_infos->nelts <= idx)
     APR_ARRAY_PUSH(context->reps_infos, rep_info_t *) = NULL;
 
+  /* set the element.  If there is already an entry, there are probably
+   * two items claiming to be the same -> bail out */
   assert(!APR_ARRAY_IDX(context->reps_infos, idx, rep_info_t *));
   APR_ARRAY_IDX(context->reps_infos, idx, rep_info_t *) = info;
 }
 
+/* Copy representation item identified by ENTRY from the current position
+ * in REV_FILE into CONTEXT->REPS_FILE.  Add all tracking into needed by
+ * our placement algorithm to CONTEXT.  Use POOL for temporary allocations.
+ */
 static svn_error_t *
 copy_rep_to_temp(pack_context_t *context,
                  apr_file_t *rev_file,
@@ -345,6 +494,8 @@ copy_rep_to_temp(pack_context_t *context,
   svn_fs_fs__rep_header_t *rep_header;
   svn_stream_t *stream;
 
+  /* create a copy of ENTRY, make it point to the copy destination and
+   * store it in CONTEXT */
   rep_info->entry = apr_palloc(context->info_pool, sizeof(*rep_info->entry));
   *rep_info->entry = *entry;
   rep_info->entry->offset = 0;
@@ -352,10 +503,12 @@ copy_rep_to_temp(pack_context_t *context,
                            &rep_info->entry->offset, pool));
   add_item_rep_mapping(context, rep_info);
 
+  /* read & parse the representation header */
   stream = svn_stream_from_aprfile2(rev_file, TRUE, pool);
   SVN_ERR(svn_fs_fs__read_rep_header(&rep_header, stream, pool));
   svn_stream_close(stream);
 
+  /* if the representation is a delta against some other rep, link the two */
   if (   rep_header->is_delta
       && !rep_header->is_delta_vs_empty
       && rep_header->base_revision >= context->start_rev)
@@ -366,6 +519,7 @@ copy_rep_to_temp(pack_context_t *context,
         rep_info->base = APR_ARRAY_IDX(context->reps_infos, idx, rep_info_t *);
     }
 
+  /* copy the whole rep (including header!) to our temp file */
   SVN_ERR(svn_io_file_seek(rev_file, SEEK_SET, &entry->offset, pool));
   SVN_ERR(copy_file_data(context, context->reps_file, rev_file, entry->size,
                          pool));
@@ -443,6 +597,10 @@ svn_fs_fs__order_dir_entries(svn_fs_t *fs,
   return result;
 }
 
+/* Copy node revision item identified by ENTRY from the current position
+ * in REV_FILE into CONTEXT->REPS_FILE.  Add all tracking into needed by
+ * our placement algorithm to CONTEXT.  Use POOL for temporary allocations.
+ */
 static svn_error_t *
 copy_node_to_temp(pack_context_t *context,
                   apr_file_t *rev_file,
@@ -453,6 +611,8 @@ copy_node_to_temp(pack_context_t *context,
   node_revision_t *noderev;
   svn_stream_t *stream;
 
+  /* create a copy of ENTRY, make it point to the copy destination and
+   * store it in CONTEXT */
   rep_info->entry = apr_palloc(context->info_pool, sizeof(*rep_info->entry));
   *rep_info->entry = *entry;
   rep_info->entry->offset = 0;
@@ -460,10 +620,14 @@ copy_node_to_temp(pack_context_t *context,
                            &rep_info->entry->offset, pool));
   add_item_rep_mapping(context, rep_info);
 
+  /* read & parse noderev */
   stream = svn_stream_from_aprfile2(rev_file, TRUE, pool);
   SVN_ERR(svn_fs_fs__read_noderev(&noderev, stream, pool));
   svn_stream_close(stream);
 
+  /* if the node has a data representation, make that the node's "base".
+   * This will place (often) cause the noderev to be placed right in front
+   * of its data representation. */
   if (noderev->data_rep && noderev->data_rep->revision >= context->start_rev)
     {
       int idx = get_item_array_index(context, noderev->data_rep->revision,
@@ -472,10 +636,17 @@ copy_node_to_temp(pack_context_t *context,
         rep_info->base = APR_ARRAY_IDX(context->reps_infos, idx, rep_info_t *);
     }
 
+  /* copy the noderev to our temp file */
   SVN_ERR(svn_io_file_seek(rev_file, SEEK_SET, &entry->offset, pool));
   SVN_ERR(copy_file_data(context, context->reps_file, rev_file, entry->size,
                          pool));
 
+  /* if this node is a directory, we want all the nodes that it references
+   * to be placed in a known order such that retrieval may use the same
+   * ordering.  Please note that all noderevs referenced by this directory
+   * have already been read from the rev files because directories get
+   * written in a "bottom-up" scheme.
+   */
   if (noderev->kind == svn_node_dir && rep_info->base)
     {
       apr_hash_t *directory;
@@ -483,11 +654,20 @@ copy_node_to_temp(pack_context_t *context,
       apr_array_header_t *sorted;
       int i;
 
+      /* this is a sub-directory -> make the data rep item point to it */
       rep_info = rep_info->base;
+
+      /* read the directory contents and sort it */
       SVN_ERR(svn_fs_fs__rep_contents_dir(&directory, context->fs, noderev,
                                           scratch_pool));
       sorted = svn_fs_fs__order_dir_entries(context->fs, directory,
                                             scratch_pool);
+
+      /* link all items in sorted order.
+       * This may overwrite existing linkage from older revisions.  But we
+       * place data starting with the latest revision, it is only older
+       * data that looses some of its coherence.
+       */
       for (i = 0; i < sorted->nelts; ++i)
         {
           svn_fs_dirent_t *dir_entry
@@ -495,13 +675,20 @@ copy_node_to_temp(pack_context_t *context,
           svn_revnum_t revision = svn_fs_fs__id_rev(dir_entry->id);
           apr_int64_t item_index = svn_fs_fs__id_item(dir_entry->id);
 
+          /* linkage is only possible within the current revision range ... */
           if (revision >= context->start_rev)
             {
               int idx = get_item_array_index(context, revision, item_index);
+
+              /* ... and also only to previous items (in case directories
+               * become able to reference later items in the future). */
               if (idx < context->reps_infos->nelts)
                 {
+                  /* link to the noderev item */
                   rep_info->next = APR_ARRAY_IDX(context->reps_infos, idx,
                                                  rep_info_t *);
+
+                  /* continue linkage at the noderev item level */
                   rep_info = rep_info->next;
                 }
             }
@@ -513,6 +700,8 @@ copy_node_to_temp(pack_context_t *context,
   return SVN_NO_ERROR;
 }
 
+/* implements compare_fn_t. Place LHS before RHS, if the latter is older.
+ */
 static int
 compare_p2l_info(const svn_fs_fs__p2l_entry_t * const * lhs,
                  const svn_fs_fs__p2l_entry_t * const * rhs)
@@ -525,6 +714,9 @@ compare_p2l_info(const svn_fs_fs__p2l_entry_t * const * lhs,
   return (*lhs)->revision > (*rhs)->revision ? -1 : 1;
 }
 
+/* Sort svn_fs_fs__p2l_entry_t * array ENTRIES by age.  Place the latest
+ * items first.
+ */
 static void
 sort_items(apr_array_header_t *entries)
 {
@@ -532,6 +724,9 @@ sort_items(apr_array_header_t *entries)
         (int (*)(const void *, const void *))compare_p2l_info);
 }
 
+/* implements compare_fn_t. Place LHS before RHS, if the latter belongs to
+ * a newer revision.
+ */
 static int
 compare_p2l_info_rev(const svn_fs_fs__p2l_entry_t * const * lhs,
                      const svn_fs_fs__p2l_entry_t * const * rhs)
@@ -544,6 +739,9 @@ compare_p2l_info_rev(const svn_fs_fs__p2l_entry_t * const * lhs,
   return (*lhs)->revision < (*rhs)->revision ? -1 : 1;
 }
 
+/* Sort svn_fs_fs__p2l_entry_t * array ENTRIES by revision alone.
+ * Place the oldest items first.
+ */
 static void
 sort_by_rev(apr_array_header_t *entries)
 {
@@ -551,6 +749,10 @@ sort_by_rev(apr_array_header_t *entries)
         (int (*)(const void *, const void *))compare_p2l_info_rev);
 }
 
+/* Part of the placement algorithm: starting at INFO, place all items
+ * referenced by it that have not been placed yet, in CONTEXT.  I.e.
+ * recursively add them to CONTEXT->REPS.
+ */
 static void
 pick_recursively(pack_context_t *context,
                  rep_info_t *info)
@@ -574,6 +776,8 @@ pick_recursively(pack_context_t *context,
             {
               APR_ARRAY_PUSH(context->reps, svn_fs_fs__p2l_entry_t *)
                 = current->entry;
+
+              /* mark as "placed" */
               current->entry = NULL;
             }
 
@@ -586,7 +790,7 @@ pick_recursively(pack_context_t *context,
       if (below)
         pick_recursively(context, below);
       
-      /* continue with sibbling nodes */
+      /* continue with sibling nodes */
       temp = info->next;
       info->next = NULL;
       info = temp;
@@ -594,12 +798,16 @@ pick_recursively(pack_context_t *context,
   while (info);
 }
 
+/* Apply the placement algorithm for noderevs and data representations to
+ * CONTEXT.  Afterwards, CONTEXT->REPS contains all these items in the
+ * desired order.
+ */
 static void
 sort_reps(pack_context_t *context)
 {
   int i;
 
-  /* Place all root directories and root nodes first */
+  /* Place all root directories and root nodes first (but don't recurse) */
   for (i = context->reps_infos->nelts - 1; i >= 0; --i)
     {
       rep_info_t *info = APR_ARRAY_IDX(context->reps_infos, i, rep_info_t *);
@@ -616,7 +824,7 @@ sort_reps(pack_context_t *context)
         while (info && info->entry);
     }
 
-  /* 2nd run: place nodes along the directory tree structure */
+  /* 2nd run: recursively place nodes along the directory tree structure */
   for (i = context->reps_infos->nelts - 1; i >= 0; --i)
     {
       rep_info_t *info = APR_ARRAY_IDX(context->reps_infos, i, rep_info_t *);
@@ -716,6 +924,9 @@ copy_items_from_temp(pack_context_t *context,
   return SVN_NO_ERROR;
 }
 
+/* Append all entries of svn_fs_fs__p2l_entry_t * array TO_APPEND to
+ * svn_fs_fs__p2l_entry_t * array DEST.
+ */
 static void
 append_entries(apr_array_header_t *dest,
                apr_array_header_t *to_append)
@@ -726,6 +937,10 @@ append_entries(apr_array_header_t *dest,
       = APR_ARRAY_IDX(to_append, i, svn_fs_fs__p2l_entry_t *);
 }
 
+/* Write the log-to-phys proto index file for CONTEXT and use POOL for
+ * temporary allocations.  All items in all buckets must have been placed
+ * by now.
+ */
 static svn_error_t *
 write_l2p_index(pack_context_t *context,
                 apr_pool_t *pool)
@@ -734,16 +949,22 @@ write_l2p_index(pack_context_t *context,
   svn_revnum_t prev_rev = SVN_INVALID_REVNUM;
   int i;
 
+  /* lump all items into one bucket.  As target, use the bucket that
+   * probably has the most entries already. */
   append_entries(context->reps, context->changes);
   append_entries(context->reps, context->file_props);
   append_entries(context->reps, context->dir_props);
+
+  /* we need to write the index in ascending revision order */
   sort_by_rev(context->reps);
-  
+
+  /* write index entries */
   for (i = 0; i < context->reps->nelts; ++i)
     {
       svn_fs_fs__p2l_entry_t *entry
         = APR_ARRAY_IDX(context->reps, i, svn_fs_fs__p2l_entry_t *);
 
+      /* next revision? */
       if (prev_rev != entry->revision)
         {
           prev_rev = entry->revision;
@@ -751,10 +972,12 @@ write_l2p_index(pack_context_t *context,
                       (context->proto_l2p_index, iterpool));
         }
 
+      /* add entry */
       SVN_ERR(svn_fs_fs__l2p_proto_index_add_entry
                   (context->proto_l2p_index,
                    entry->offset, entry->item_index, iterpool));
 
+      /* keep memory usage in check */
       if (i % 256 == 0)
         svn_pool_clear(iterpool);
     }
@@ -764,13 +987,17 @@ write_l2p_index(pack_context_t *context,
   return SVN_NO_ERROR;
 }
 
+/* Pack the current revision range of CONTEXT, i.e. this covers phases 2
+ * to 4.  Use POOL for allocations.
+ */
 static svn_error_t *
-pack_section(pack_context_t *context,
-             apr_pool_t *pool)
+pack_range(pack_context_t *context,
+           apr_pool_t *pool)
 {
   apr_pool_t *revpool = svn_pool_create(pool);
   apr_pool_t *iterpool = svn_pool_create(pool);
 
+  /* Phase 2: Copy items into various buckets and build tracking info */
   svn_revnum_t revision;
   for (revision = context->start_rev; revision < context->end_rev; ++revision)
     {
@@ -789,6 +1016,7 @@ pack_section(pack_context_t *context,
                                APR_READ | APR_BUFFERED | APR_BINARY,
                                APR_OS_DEFAULT, revpool));
 
+      /* store the indirect array index */
       APR_ARRAY_PUSH(context->rev_offsets, int) = context->reps_infos->nelts;
   
       /* read the phys-to-log index file until we covered the whole rev file.
@@ -859,11 +1087,16 @@ pack_section(pack_context_t *context,
 
   svn_pool_destroy(iterpool);
 
+  /* phase 3: placement.
+   * Use "newest first" placement for simple items. */
   sort_items(context->changes);
   sort_items(context->file_props);
   sort_items(context->dir_props);
+
+  /* follow dependencies recursively for noderevs and data representations */
   sort_reps(context);
-  
+
+  /* phase 4: copy bucket data to pack file.  Write P2L index. */
   SVN_ERR(copy_items_from_temp(context, context->changes,
                                context->changes_file, revpool));
   svn_pool_clear(revpool);
@@ -876,6 +1109,8 @@ pack_section(pack_context_t *context,
   SVN_ERR(copy_items_from_temp(context, context->reps,
                                context->reps_file, revpool));
   svn_pool_clear(revpool);
+
+  /* write L2P index as well (now that we know all target offsets) */
   SVN_ERR(write_l2p_index(context, revpool));
 
   svn_pool_destroy(revpool);
@@ -883,6 +1118,10 @@ pack_section(pack_context_t *context,
   return SVN_NO_ERROR;
 }
 
+/* Append CONTEXT->START_REV to the context's pack file with no re-ordering.
+ * This function will only be used for very large revisions (>>100k changes).
+ * Use POOL for temporary allocations.
+ */
 static svn_error_t *
 append_revision(pack_context_t *context,
                 apr_pool_t *pool)
@@ -954,6 +1193,13 @@ append_revision(pack_context_t *context,
   return SVN_NO_ERROR;
 }
 
+/* Format 7 packing logic.
+ *
+ * Pack the revision shard starting at SHARD_REV in filesystem FS from
+ * SHARD_DIR into the PACK_FILE_DIR, using POOL for allocations.  Limit
+ * the extra memory consumption to MAX_MEM bytes.  CANCEL_FUNC and
+ * CANCEL_BATON are what you think they are.
+ */
 static svn_error_t *
 pack_log_addressed(svn_fs_t *fs,
                    const char *pack_file_dir,
@@ -980,14 +1226,17 @@ pack_log_addressed(svn_fs_t *fs,
   apr_size_t item_count = 0;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
+  /* set up a pack context */
   SVN_ERR(initialize_pack_context(&context, fs, pack_file_dir, shard_dir,
                                   shard_rev, max_items, cancel_func,
                                   cancel_baton, pool));
- 
+
+  /* phase 1: determine the size of the revisions to pack */
   SVN_ERR(svn_fs_fs__l2p_get_max_ids(&max_ids, fs, shard_rev,
                                      context.shard_end_rev - shard_rev,
                                      pool));
 
+  /* pack revisions in ranges that don't exceed MAX_MEM */
   for (i = 0; i < max_ids->nelts; ++i)
     if (APR_ARRAY_IDX(max_ids, i, apr_uint64_t) + item_count <= max_items)
       {
@@ -995,16 +1244,20 @@ pack_log_addressed(svn_fs_t *fs,
       }
     else
       {
+        /* some unpacked revisions before this one? */
         if (context.start_rev < context.end_rev)
           {
-            SVN_ERR(pack_section(&context, iterpool));
+            /* pack them intelligently (might be just 1 rev but still ...) */
+            SVN_ERR(pack_range(&context, iterpool));
             SVN_ERR(reset_pack_context(&context, iterpool));
             item_count = 0;
           }
 
+        /* next revision range is to start with the current revision */
         context.start_rev = i + context.shard_rev;
         context.end_rev = context.start_rev + 1;
 
+        /* if this is a very large revision, we must place it as is */
         if (APR_ARRAY_IDX(max_ids, i, apr_uint64_t) > max_items)
           {
             SVN_ERR(append_revision(&context, iterpool));
@@ -1015,10 +1268,12 @@ pack_log_addressed(svn_fs_t *fs,
 
         svn_pool_clear(iterpool);
       }
-      
-  if (context.start_rev < context.end_rev)
-    SVN_ERR(pack_section(&context, iterpool));
 
+  /* non-empty revision range at the end? */
+  if (context.start_rev < context.end_rev)
+    SVN_ERR(pack_range(&context, iterpool));
+
+  /* last phase: finalize indexes and clean up */
   SVN_ERR(reset_pack_context(&context, iterpool));
   SVN_ERR(close_pack_context(&context, iterpool));
   svn_pool_destroy(iterpool);
@@ -1089,9 +1344,16 @@ svn_fs_fs__get_packed_offset(apr_off_t *rev_offset,
   return svn_cache__set(ffd->packed_offset_cache, &shard, manifest, pool);
 }
 
+/* Format 6 and earlier packing logic:  Simply concatenate all revision
+ * contents.
+ * 
+ * Pack the revision shard starting at SHARD_REV containing exactly
+ * MAX_FILES_PER_DIR revisions from SHARD_PATH into the PACK_FILE_DIR,
+ * using POOL for allocations.  CANCEL_FUNC and CANCEL_BATON are what you
+ * think they are.
+ */
 static svn_error_t *
-pack_phys_addressed(svn_fs_t *fs,
-                    const char *pack_file_dir,
+pack_phys_addressed(const char *pack_file_dir,
                     const char *shard_path,
                     svn_revnum_t start_rev,
                     int max_files_per_dir,
@@ -1158,12 +1420,16 @@ pack_phys_addressed(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Pack the revision SHARD containing exactly MAX_FILES_PER_DIR revisions
- * from SHARD_PATH into the PACK_FILE_DIR, using POOL for allocations.
- * CANCEL_FUNC and CANCEL_BATON are what you think they are.
+/* In filesystem FS, pack the revision SHARD containing exactly
+ * MAX_FILES_PER_DIR revisions from SHARD_PATH into the PACK_FILE_DIR,
+ * using POOL for allocations.  Try to limit the amount of temporary
+ * memory needed to MAX_MEM bytes.  CANCEL_FUNC and CANCEL_BATON are what
+ * you think they are.
  *
  * If for some reason we detect a partial packing already performed, we
  * remove the pack file and start again.
+ *
+ * The actual packing will be done in a format-specific sub-function.
  */
 static svn_error_t *
 pack_rev_shard(svn_fs_t *fs,
@@ -1195,7 +1461,7 @@ pack_rev_shard(svn_fs_t *fs,
     SVN_ERR(pack_log_addressed(fs, pack_file_dir, shard_path, shard_rev,
                                max_mem, cancel_func, cancel_baton, pool));
   else
-    SVN_ERR(pack_phys_addressed(fs, pack_file_dir, shard_path, shard_rev,
+    SVN_ERR(pack_phys_addressed(pack_file_dir, shard_path, shard_rev,
                                 max_files_per_dir, cancel_func,
                                 cancel_baton, pool));
   
