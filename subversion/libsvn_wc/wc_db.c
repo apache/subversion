@@ -7517,11 +7517,10 @@ delete_node(void *baton,
                               wcroot, local_relpath,
                               scratch_pool, scratch_pool));
 
-      moved_node = apr_palloc(scratch_pool, sizeof(struct moved_node_t));
-
       if (op_root && moved_from_relpath)
         {
           /* Existing move-root is moved to another location */
+          moved_node = apr_palloc(scratch_pool, sizeof(struct moved_node_t));
           moved_node->local_relpath = moved_from_relpath;
           moved_node->op_depth = move_op_depth;
           moved_node->moved_to_relpath = b->moved_to_relpath;
@@ -7544,65 +7543,7 @@ delete_node(void *baton,
       /* Else: We can't track history of local additions and/or of things we are
                about to delete. */
 
-      /* If a subtree is being moved-away from this subtree,
-       * update moved-to information after the delete */
-      if (kind == svn_kind_dir)
-        {
-          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                            STMT_SELECT_MOVED_PAIR));
-          SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-          SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-          while (have_row)
-            {
-              /* Source of move */
-              const char *move_relpath
-                = svn_sqlite__column_text(stmt, 0, NULL);
-              const char *move_subtree_relpath
-                = svn_relpath_skip_ancestor(local_relpath, move_relpath);
-              /* Destination of move */
-              const char *child_moved_to
-                = svn_sqlite__column_text(stmt, 1, NULL);
-              const char *child_moved_to_subtree_relpath
-                = svn_relpath_skip_ancestor(local_relpath, child_moved_to);
-              int child_op_depth = svn_sqlite__column_int(stmt, 2);
-
-              moved_node = apr_palloc(scratch_pool,
-                                      sizeof(struct moved_node_t));
-              if (move_subtree_relpath)
-                moved_node->local_relpath
-                  = svn_relpath_join(b->moved_to_relpath,
-                                     move_subtree_relpath, scratch_pool);
-              else
-                moved_node->local_relpath
-                  = apr_pstrdup(scratch_pool, move_relpath);
-
-              if (child_moved_to_subtree_relpath)
-                moved_node->moved_to_relpath
-                  = svn_relpath_join(b->moved_to_relpath,
-                                     child_moved_to_subtree_relpath,
-                                     scratch_pool);
-              else
-                moved_node->moved_to_relpath
-                  = apr_pstrdup(scratch_pool, child_moved_to);
-
-              if (child_op_depth > delete_depth
-                  && svn_relpath_skip_ancestor(local_relpath,
-                                               moved_node->local_relpath))
-                moved_node->op_depth = delete_depth;
-              else
-                moved_node->op_depth = relpath_depth(moved_node->local_relpath);
-
-              APR_ARRAY_PUSH(moved_nodes, const struct moved_node_t *)
-                = moved_node;
-
-              SVN_ERR(svn_sqlite__step(&have_row, stmt));
-            }
-          SVN_ERR(svn_sqlite__reset(stmt));
-        }
-
       /* And update all moved_to values still pointing to this location */
-
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_UPDATE_MOVED_TO_DESCENDANTS));
       SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
@@ -7626,27 +7567,54 @@ delete_node(void *baton,
       apr_pool_t *iterpool;
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_SELECT_MOVED_PAIR2));
+                                        STMT_SELECT_MOVED_FOR_DELETE));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
       iterpool = svn_pool_create(scratch_pool);
       while (have_row)
         {
           struct moved_node_t *mn;
           const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+          const char *mv_to_relpath = svn_sqlite__column_text(stmt, 1, NULL);
+          int child_op_depth = svn_sqlite__column_int(stmt, 2);
           svn_boolean_t fixup = FALSE;
 
-          if (!b->moved_to_relpath)
+          if (!b->moved_to_relpath
+              && ! svn_relpath_skip_ancestor(local_relpath, mv_to_relpath))
             {
+              /* Update the op-depth of an moved node below this tree */
               fixup = TRUE;
+              child_op_depth = delete_depth;
             }
-          else
+          else if (b->moved_to_relpath
+                   && delete_depth == child_op_depth)
             {
-              int child_op_depth = svn_sqlite__column_int(stmt, 2);
+              /* Update the op-depth of a tree shadowed by this tree */
+              fixup = TRUE;
+              child_op_depth = delete_depth;
+            }
+          else if (b->moved_to_relpath
+                   && child_op_depth >= delete_depth
+                   && !svn_relpath_skip_ancestor(local_relpath, mv_to_relpath))
+            {
+              /* Update the move destination of something that is now moved
+                 away further */
 
-              fixup = (delete_depth == child_op_depth);
+              child_relpath = svn_relpath_skip_ancestor(local_relpath, child_relpath);
+
+              if (child_relpath)
+                {
+                  child_relpath = svn_relpath_join(b->moved_to_relpath, child_relpath, scratch_pool);
+
+                  if (child_op_depth > delete_depth
+                      && svn_relpath_skip_ancestor(local_relpath, child_relpath))
+                    child_op_depth = delete_depth;
+                  else
+                    child_op_depth = relpath_depth(child_relpath);
+
+                  fixup = TRUE;
+                }
             }
 
           if (fixup)
@@ -7654,9 +7622,8 @@ delete_node(void *baton,
               mn = apr_pcalloc(scratch_pool, sizeof(struct moved_node_t));
 
               mn->local_relpath = apr_pstrdup(scratch_pool, child_relpath);
-              mn->moved_to_relpath = svn_sqlite__column_text(stmt, 1,
-                                                             scratch_pool);
-              mn->op_depth = delete_depth;
+              mn->moved_to_relpath = apr_pstrdup(scratch_pool, mv_to_relpath);
+              mn->op_depth = child_op_depth;
 
               if (!moved_nodes)
                 moved_nodes = apr_array_make(scratch_pool, 1,
