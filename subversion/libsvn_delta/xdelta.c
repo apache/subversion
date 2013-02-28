@@ -28,6 +28,7 @@
 #include <apr_hash.h>
 
 #include "svn_delta.h"
+#include "private/svn_string_private.h"
 #include "delta.h"
 
 /* This is pseudo-adler32. It is adler32 without the prime modulus.
@@ -222,73 +223,6 @@ init_blocks_table(const char *data,
     add_block(blocks, init_adler32(data + i), i);
 }
 
-/* Return the lowest position at which A and B differ. If no difference
- * can be found in the first MAX_LEN characters, MAX_LEN will be returned.
- */
-static apr_size_t
-match_length(const char *a, const char *b, apr_size_t max_len)
-{
-  apr_size_t pos = 0;
-
-#if SVN_UNALIGNED_ACCESS_IS_OK
-
-  /* Chunky processing is so much faster ...
-   *
-   * We can't make this work on architectures that require aligned access
-   * because A and B will probably have different alignment. So, skipping
-   * the first few chars until alignment is reached is not an option.
-   */
-  for (; pos + sizeof(apr_size_t) <= max_len; pos += sizeof(apr_size_t))
-    if (*(const apr_size_t*)(a + pos) != *(const apr_size_t*)(b + pos))
-      break;
-
-#endif
-
-  for (; pos < max_len; ++pos)
-    if (a[pos] != b[pos])
-      break;
-
-  return pos;
-}
-
-/* Return the number of bytes before A and B that don't differ.  If no
- * difference can be found in the first MAX_LEN characters,  MAX_LEN will
- * be returned.  Please note that A-MAX_LEN and B-MAX_LEN must both be
- * valid addresses.
- */
-static apr_size_t
-reverse_match_length(const char *a, const char *b, apr_size_t max_len)
-{
-  apr_size_t pos = 0;
-
-#if SVN_UNALIGNED_ACCESS_IS_OK
-
-  /* Chunky processing is so much faster ...
-   *
-   * We can't make this work on architectures that require aligned access
-   * because A and B will probably have different alignment. So, skipping
-   * the first few chars until alignment is reached is not an option.
-   */
-  for (pos = sizeof(apr_size_t); pos <= max_len; pos += sizeof(apr_size_t))
-    if (*(const apr_size_t*)(a - pos) != *(const apr_size_t*)(b - pos))
-      break;
-
-  pos -= sizeof(apr_size_t);
-
-#endif
-
-  /* If we find a mismatch at -pos, pos-1 characters matched.
-   */
-  while (++pos <= max_len)
-    if (a[0-pos] != b[0-pos])
-      return pos - 1;
-
-  /* No mismatch found -> at least MAX_LEN matching chars.
-   */
-  return max_len;
-}
-
-
 /* Try to find a match for the target data B in BLOCKS, and then
    extend the match as long as data in A and B at the match position
    continues to match.  We set the position in A we ended up in (in
@@ -322,9 +256,9 @@ find_match(const struct blocks *blocks,
   max_delta = asize - apos - MATCH_BLOCKSIZE < bsize - bpos - MATCH_BLOCKSIZE
             ? asize - apos - MATCH_BLOCKSIZE
             : bsize - bpos - MATCH_BLOCKSIZE;
-  delta = match_length(a + apos + MATCH_BLOCKSIZE,
-                       b + bpos + MATCH_BLOCKSIZE,
-                       max_delta);
+  delta = svn_cstring__match_length(a + apos + MATCH_BLOCKSIZE,
+                                    b + bpos + MATCH_BLOCKSIZE,
+                                    max_delta);
 
   /* See if we can extend backwards (max MATCH_BLOCKSIZE-1 steps because A's
      content has been sampled only every MATCH_BLOCKSIZE positions).  */
@@ -361,7 +295,8 @@ store_delta_trailer(svn_txdelta__ops_baton_t *build_baton,
   if (max_len == 0)
     return;
 
-  end_match = reverse_match_length(a + asize, b + bsize, max_len);
+  end_match = svn_cstring__reverse_match_length(a + asize, b + bsize,
+                                                max_len);
   if (end_match <= 4)
     end_match = 0;
 
@@ -413,7 +348,7 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
   /* Optimization: directly compare window starts. If more than 4
    * bytes match, we can immediately create a matching windows.
    * Shorter sequences result in a net data increase. */
-  lo = match_length(a, b, asize > bsize ? bsize : asize);
+  lo = svn_cstring__match_length(a, b, asize > bsize ? bsize : asize);
   if ((lo > 4) || (lo == bsize))
     {
       svn_txdelta__insert_op(build_baton, svn_txdelta_source,
@@ -467,7 +402,8 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
             {
               /* the match borders on the previous op. Maybe, we found a
                * match that is better than / overlapping the previous one. */
-              apr_size_t len = reverse_match_length(a + apos, b + lo, apos < lo ? apos : lo);
+              apr_size_t len = svn_cstring__reverse_match_length
+                                 (a + apos, b + lo, apos < lo ? apos : lo);
               if (len > 0)
                 {
                   len = svn_txdelta__remove_copy(build_baton, len);

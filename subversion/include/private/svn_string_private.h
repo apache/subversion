@@ -210,6 +210,24 @@ svn_string__similarity(const svn_string_t *stringa,
                        svn_membuf_t *buffer, apr_size_t *rlcs);
 
 
+/* Return the lowest position at which A and B differ. If no difference
+ * can be found in the first MAX_LEN characters, MAX_LEN will be returned.
+ */
+apr_size_t
+svn_cstring__match_length(const char *a,
+                          const char *b,
+                          apr_size_t max_len);
+
+/* Return the number of bytes before A and B that don't differ.  If no
+ * difference can be found in the first MAX_LEN characters,  MAX_LEN will
+ * be returned.  Please note that A-MAX_LEN and B-MAX_LEN must both be
+ * valid addresses.
+ */
+apr_size_t
+svn_cstring__reverse_match_length(const char *a,
+                                  const char *b,
+                                  apr_size_t max_len);
+
 /** @} */
 
 /** @} */
