@@ -441,6 +441,8 @@ typedef struct svn_client_commit_info_t
 #define SVN_CLIENT_COMMIT_ITEM_IS_COPY     0x10
 /** @since New in 1.2. */
 #define SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN  0x20
+/** @since New in 1.8. */
+#define SVN_CLIENT_COMMIT_ITEM_MOVED_HERE  0x40
 /** @} */
 
 /** The commit candidate structure.
@@ -508,6 +510,15 @@ typedef struct svn_client_commit_item3_t
    * @since New in 1.7.
    */
   const char *session_relpath;
+
+  /**
+   * When committing a move, this contains the absolute path where
+   * the node was directly moved from. (If an ancestor at the original
+   * location was moved then it points to where the node itself was
+   * moved, from. Not the original location)
+   * @since New in 1.8.
+   */
+  const char *moved_from_abspath;
 } svn_client_commit_item3_t;
 
 /** The commit candidate structure.

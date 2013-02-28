@@ -766,8 +766,9 @@ svn_client_commit6(const apr_array_header_t *targets,
 
       svn_pool_clear(iterpool);
 
-      if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
+      if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_MOVED_HERE)
         {
+          /* ### item->moved_from_abspath contains the move origin */
           const char *moved_from_abspath;
           const char *delete_op_root_abspath;
 
