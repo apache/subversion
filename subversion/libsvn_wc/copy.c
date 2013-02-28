@@ -545,12 +545,14 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
     svn_wc__db_status_t dstdir_status;
     const char *src_repos_root_url, *dst_repos_root_url;
     const char *src_repos_uuid, *dst_repos_uuid;
+    const char *src_repos_relpath;
 
-    err = svn_wc__db_read_info(&src_status, &src_db_kind, NULL, NULL,
-                               &src_repos_root_url, &src_repos_uuid, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, &conflicted,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
+    err = svn_wc__db_read_info(&src_status, &src_db_kind, NULL,
+                               &src_repos_relpath, &src_repos_root_url,
+                               &src_repos_uuid, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, &conflicted, NULL, NULL, NULL, NULL,
+                               NULL, NULL,
                                db, src_abspath, scratch_pool, scratch_pool);
 
     if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
@@ -586,6 +588,23 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
                                                           scratch_pool));
         default:
           break;
+      }
+
+     if (is_move && ! strcmp(src_abspath, src_wcroot_abspath))
+      {
+        return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                                 _("'%s' is the root of a working copy and "
+                                   "cannot be moved"),
+                                   svn_dirent_local_style(src_abspath,
+                                                          scratch_pool));
+      }
+    if (is_move && src_repos_relpath && !src_repos_relpath[0])
+      {
+        return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                                 _("'%s' represents the repository root "
+                                   "and cannot be moved"),
+                                 svn_dirent_local_style(src_abspath,
+                                                        scratch_pool));
       }
 
     err = svn_wc__db_read_info(&dstdir_status, NULL, NULL, NULL,
@@ -1017,11 +1036,13 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
     SVN_ERR(remove_node_conflict_markers(db, src_abspath, dst_abspath,
                                          scratch_pool));
 
-  SVN_ERR(svn_wc__delete_internal(wc_ctx, src_abspath, TRUE, FALSE,
-                                  move_degraded_to_copy ? NULL : dst_abspath,
-                                  cancel_func, cancel_baton,
-                                  notify_func, notify_baton,
-                                  scratch_pool));
+  SVN_ERR(svn_wc__db_op_delete(db, src_abspath,
+                               move_degraded_to_copy ? NULL : dst_abspath,
+                               TRUE /* delete_dir_externals */,
+                               NULL /* conflict */, NULL /* work_items */,
+                               cancel_func, cancel_baton,
+                               notify_func, notify_baton,
+                               scratch_pool));
 
   return SVN_NO_ERROR;
 }
