@@ -144,19 +144,27 @@ build_info_for_node(svn_wc__info2_t **info,
 
           if (op_root)
             {
+              svn_error_t *err;
               wc_info->copyfrom_url =
                     svn_path_url_add_component2(tmpinfo->repos_root_URL,
                                                 original_repos_relpath,
                                                 result_pool);
 
               wc_info->copyfrom_rev = original_revision;
-            }
 
-          SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL,
-                                           &wc_info->moved_from_abspath, NULL,
-                                           db, local_abspath,
-                                           result_pool, scratch_pool));
+              err = svn_wc__db_scan_moved(&wc_info->moved_from_abspath,
+                                          NULL, NULL, NULL,
+                                          db, local_abspath,
+                                          result_pool, scratch_pool);
+
+              if (err)
+                {
+                   if (err->apr_err != SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+                      return svn_error_trace(err);
+                   svn_error_clear(err);
+                   wc_info->moved_from_abspath = NULL;
+                }
+            }
         }
       else if (op_root)
         {
@@ -164,7 +172,7 @@ build_info_for_node(svn_wc__info2_t **info,
           SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &repos_relpath,
                                            &tmpinfo->repos_root_URL,
                                            &tmpinfo->repos_UUID,
-                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL,
                                            db, local_abspath,
                                            result_pool, scratch_pool));
 
@@ -246,7 +254,7 @@ build_info_for_node(svn_wc__info2_t **info,
                                            &tmpinfo->repos_root_URL,
                                            &tmpinfo->repos_UUID,
                                            NULL, NULL, NULL,
-                                           &tmpinfo->rev, NULL, NULL,
+                                           &tmpinfo->rev,
                                            db, added_abspath,
                                            result_pool, scratch_pool));
 

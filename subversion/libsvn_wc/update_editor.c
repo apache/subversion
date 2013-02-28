@@ -1463,7 +1463,7 @@ check_tree_conflict(svn_skel_t **pconflict,
             if (working_status == svn_wc__db_status_added)
               SVN_ERR(svn_wc__db_scan_addition(&working_status, NULL, NULL,
                                                NULL, NULL, NULL, NULL,
-                                               NULL, NULL, NULL, NULL,
+                                               NULL, NULL,
                                                eb->db, local_abspath,
                                                scratch_pool, scratch_pool));
 
@@ -2187,7 +2187,7 @@ add_directory(const char *path,
       /* Is the local add a copy? */
       if (status == svn_wc__db_status_added)
         SVN_ERR(svn_wc__db_scan_addition(&add_status, NULL, NULL, NULL, NULL,
-                                         NULL, NULL, NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL, NULL,
                                          eb->db, db->local_abspath,
                                          pool, pool));
 
@@ -3274,7 +3274,7 @@ add_file(const char *path,
       /* Is the local node a copy or move */
       if (status == svn_wc__db_status_added)
         SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
-                                         NULL, NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL,
                                          eb->db, fb->local_abspath,
                                          scratch_pool, scratch_pool));
 
@@ -5172,7 +5172,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
           /* The parent is an addition, scan upwards to find the right info */
           SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
                                            &repos_root_url, &repos_uuid,
-                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL,
                                            wc_ctx->db, dir_abspath,
                                            scratch_pool, scratch_pool));
         }

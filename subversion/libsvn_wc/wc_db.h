@@ -2641,12 +2641,6 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
        BASE node. And again, the REPOS_* values are implied by this node's
        position in the subtree under the ancestor unshadowed BASE node.
        ORIGINAL_* will indicate the source of the move.
-       Additionally, information about the local move source is provided.
-       If MOVED_FROM_ABSPATH is not NULL, set *MOVED_FROM_ABSPATH to the
-       absolute path of the move source node in the working copy.
-       If MOVED_FROM_OP_ROOT_ABSPATH is not NULL, set
-       *MOVED_FROM_OP_ROOT_ABSPATH to the absolute path of the op-root of the
-       delete-half of the move.
 
    All OUT parameters may be NULL to indicate a lack of interest in
    that piece of information.
@@ -2677,13 +2671,46 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                          const char **original_root_url,
                          const char **original_uuid,
                          svn_revnum_t *original_revision,
-                         const char **moved_from_abspath,
-                         const char **moved_from_oproot_abspath,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
+/* Scan the working copy for move information of the node LOCAL_ABSPATH.
+ * If LOCAL_ABSPATH return a SVN_ERR_WC_PATH_UNEXPECTED_STATUS error.
+ *
+ * If not NULL *MOVED_FROM_ABSPATH will be set to the previous location
+ * of LOCAL_ABSPATH, before it or an ancestror was moved.
+ *
+ * If not NULL *OP_ROOT_ABSPATH will be set to the new location of the
+ * path that was actually moved
+ *
+ * If not NULL *OP_ROOT_MOVED_FROM_ABSPATH will be set to the old location
+ * of the path that was actually moved.
+ *
+ * If not NULL *MOVED_FROM_DELETE_ABSPATH will be set to the ancestor of the
+ * moved from location that deletes the original location
+ *
+ * Given a working copy
+ * A/B/C
+ * svn mv A/B D
+ * svn rm A
+ *
+ * You can call this function on D and D/C. When called on D/C all output
+ *              MOVED_FROM_ABSPATH will be A/B/C
+ *              OP_ROOT_ABSPATH will be D
+ *              OP_ROOT_MOVED_FROM_ABSPATH will be A/B
+ *              MOVED_FROM_DELETE_ABSPATH will be A
+ */
+svn_error_t *
+svn_wc__db_scan_moved(const char **moved_from_abspath,
+                      const char **op_root_abspath,
+                      const char **op_root_moved_from_abspath,
+                      const char **moved_from_delete_abspath,
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
 
 /* Scan upwards for additional information about a deleted node.
 
