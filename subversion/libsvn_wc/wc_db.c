@@ -7599,10 +7599,18 @@ delete_node(void *baton,
       /* And update all moved_to values still pointing to this location */
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_UPDATE_MOVED_TO));
+                                        STMT_UPDATE_MOVED_TO_DESCENDANTS));
       SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
                                              local_relpath,
                                              b->moved_to_relpath));
+      SVN_ERR(svn_sqlite__update(NULL, stmt));
+    }
+  else
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_CLEAR_MOVED_TO_DESCENDANTS));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
+                                            local_relpath));
       SVN_ERR(svn_sqlite__update(NULL, stmt));
     }
 
@@ -7676,35 +7684,6 @@ delete_node(void *baton,
         }
 
       select_depth = relpath_depth(local_relpath);
-
-      /* When deleting a moved-here op-root, clear moved-to data at the
-       * pre-move location, transforming the move into a normal delete.
-       * This way, deleting the copied half of a move has the same effect
-       * as reverting it. */
-      if (status == svn_wc__db_status_added ||
-          status == svn_wc__db_status_moved_here)
-        {
-          const char *moved_from_relpath;
-          const char *moved_from_op_root_relpath;
-
-          SVN_ERR(scan_addition(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                                &moved_from_relpath,
-                                &moved_from_op_root_relpath, NULL,
-                                wcroot, local_relpath,
-                                scratch_pool, scratch_pool));
-          if (status == svn_wc__db_status_moved_here &&
-              moved_from_relpath && moved_from_op_root_relpath &&
-              strcmp(moved_from_relpath, moved_from_op_root_relpath) == 0)
-            {
-              SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                                STMT_CLEAR_MOVED_TO_RELPATH));
-              SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
-                                        moved_from_op_root_relpath,
-                                        relpath_depth(
-                                          moved_from_op_root_relpath)));
-              SVN_ERR(svn_sqlite__step_done(stmt));
-            }
-        }
     }
   else
     {
