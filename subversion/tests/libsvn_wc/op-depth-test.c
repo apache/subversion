@@ -7218,7 +7218,7 @@ new_basemove(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_test__sandbox_t b;
 
-  SVN_ERR(svn_test__sandbox_create(&b, "moved_to_op_depth",
+  SVN_ERR(svn_test__sandbox_create(&b, "new_basemove",
                                    opts, pool));
 
   SVN_ERR(sbox_wc_mkdir(&b, "A"));
