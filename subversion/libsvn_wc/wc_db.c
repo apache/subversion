@@ -11311,8 +11311,6 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
 /* A helper for scan_addition().
  * Compute moved-from information for the node at LOCAL_RELPATH which
  * has been determined as having been moved-here.
- * If STATUS is not NULL, return an appropriate status in *STATUS (usually
- * "moved-here").
  * If MOVED_FROM_RELPATH is not NULL, set *MOVED_FROM_RELPATH to the
  * path of the move-source node in *MOVED_FROM_RELPATH.
  * If DELETE_OP_ROOT_RELPATH is not NULL, set *DELETE_OP_ROOT_RELPATH
@@ -11322,8 +11320,7 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
  * COPY_OPT_ROOT_RELPATH is the relpath of the op-root of the copied-half
  * of the move. */
 static svn_error_t *
-get_moved_from_info(svn_wc__db_status_t *status,
-                    const char **moved_from_relpath,
+get_moved_from_info(const char **moved_from_relpath,
                     const char **moved_from_op_root_relpath,
                     const char *moved_to_op_root_relpath,
                     int *op_depth,
@@ -11347,8 +11344,6 @@ get_moved_from_info(svn_wc__db_status_t *status,
       /* The move was only recorded at the copy-half, possibly because
        * the move operation was interrupted mid-way between the copy
        * and the delete. Treat this node as a normal copy. */
-      if (status)
-        *status = svn_wc__db_status_copied;
       if (moved_from_relpath)
         *moved_from_relpath = NULL;
       if (moved_from_op_root_relpath)
@@ -11357,10 +11352,6 @@ get_moved_from_info(svn_wc__db_status_t *status,
       SVN_ERR(svn_sqlite__reset(stmt));
       return SVN_NO_ERROR;
     }
-
-  /* It's a properly recorded move. */
-  if (status)
-    *status = svn_wc__db_status_moved_here;
 
   if (op_depth)
     *op_depth = svn_sqlite__column_int(stmt, 1);
@@ -11574,23 +11565,31 @@ scan_addition_txn(svn_wc__db_status_t *status,
           /* If column 10 (original_repos_id) is NULL,
              this is a plain add, not a copy or a move */
           {
+            svn_boolean_t moved_here;
             if (original_repos_id)
               *original_repos_id = svn_sqlite__column_int64(stmt, 10);
 
-            if (status ||
-                moved_from_relpath || moved_from_op_root_relpath)
+            moved_here = svn_sqlite__column_boolean(stmt, 13 /* moved_here */);
+            if (status)
+              *status = moved_here ? svn_wc__db_status_moved_here
+                                   : svn_wc__db_status_copied;
+
+            if (moved_here
+                && (moved_from_relpath || moved_from_op_root_relpath))
               {
-                if (svn_sqlite__column_boolean(stmt, 13 /* moved_here */))
-                  SVN_ERR(get_moved_from_info(status,
-                                              moved_from_relpath,
-                                              moved_from_op_root_relpath,
-                                              op_root_relpath,
-                                              moved_from_op_depth,
-                                              wcroot, local_relpath,
-                                              result_pool,
-                                              scratch_pool));
-                else if (status)
-                  *status = svn_wc__db_status_copied;
+                svn_error_t *err;
+
+                err = get_moved_from_info(moved_from_relpath,
+                                          moved_from_op_root_relpath,
+                                          op_root_relpath,
+                                          moved_from_op_depth,
+                                          wcroot, local_relpath,
+                                          result_pool,
+                                          scratch_pool);
+
+                if (err)
+                  return svn_error_compose_create(
+                                err, svn_sqlite__reset(stmt));
               }
           }
       }
@@ -11600,6 +11599,10 @@ scan_addition_txn(svn_wc__db_status_t *status,
        because base_get_info() doesn't accommodate the scenario that
        we're looking at here; we found the true op_root, which may be inside
        further changed trees. */
+    if (repos_relpath || repos_id)
+      {
+        const char *base_relpath;
+
     while (TRUE)
       {
 
@@ -11634,19 +11637,14 @@ scan_addition_txn(svn_wc__db_status_t *status,
           }
       }
 
-    SVN_ERR(svn_sqlite__reset(stmt));
+      SVN_ERR(svn_sqlite__reset(stmt));
 
-    build_relpath = repos_prefix_path;
-  }
+      build_relpath = repos_prefix_path;
 
-  /* If we're here, then we have an added/copied/moved (start) node, and
-     CURRENT_ABSPATH now points to a BASE node. Figure out the repository
-     information for the current node, and use that to compute the start
-     node's repository information.  */
-  if (repos_relpath || repos_id)
-    {
-      const char *base_relpath;
-
+      /* If we're here, then we have an added/copied/moved (start) node, and
+         CURRENT_ABSPATH now points to a BASE node. Figure out the repository
+         information for the current node, and use that to compute the start
+         node's repository information.  */
       SVN_ERR(svn_wc__db_base_get_info_internal(NULL, NULL, NULL,
                                                 &base_relpath, repos_id,
                                                 NULL, NULL, NULL, NULL, NULL,
@@ -11654,11 +11652,13 @@ scan_addition_txn(svn_wc__db_status_t *status,
                                                 wcroot, op_root_relpath,
                                                 scratch_pool, scratch_pool));
 
-      if (repos_relpath)
-        *repos_relpath = svn_relpath_join(base_relpath, build_relpath,
-                                               result_pool);
-    }
-
+        if (repos_relpath)
+          *repos_relpath = svn_relpath_join(base_relpath, build_relpath,
+                                            result_pool);
+      }
+    else
+      SVN_ERR(svn_sqlite__reset(stmt));
+  }
   /* Postconditions */
 #ifdef SVN_DEBUG
   if (status)
