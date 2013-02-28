@@ -1193,34 +1193,13 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool);
 
-/* Internal version of svn_wc_delete4(). It has one additional parameter,
- * MOVED_TO_ABSPATH. If not NULL, this parameter indicates that the
- * delete operation is the delete-half of a move.
- *
- * ### Inconsistency: if DELETE_UNVERSIONED_TARGET is FALSE and a target is
- *     unversioned, svn_wc__delete_many() will continue whereas
- *     svn_wc__delete_internal() will throw an error.
- */
-svn_error_t *
-svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
-                        const char *local_abspath,
-                        svn_boolean_t keep_local,
-                        svn_boolean_t delete_unversioned_target,
-                        const char *moved_to_abspath,
-                        svn_cancel_func_t cancel_func,
-                        void *cancel_baton,
-                        svn_wc_notify_func2_t notify_func,
-                        void *notify_baton,
-                        apr_pool_t *scratch_pool);
-
-
 /* Alternative version of svn_wc_delete4().
  * It can delete multiple TARGETS more efficiently (within a single sqlite
  * transaction per working copy), but lacks support for moves.
  *
  * ### Inconsistency: if DELETE_UNVERSIONED_TARGET is FALSE and a target is
  *     unversioned, svn_wc__delete_many() will continue whereas
- *     svn_wc__delete_internal() will throw an error.
+ *     svn_wc_delete4() will throw an error.
  */
 svn_error_t *
 svn_wc__delete_many(svn_wc_context_t *wc_ctx,
