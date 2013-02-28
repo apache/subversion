@@ -11738,8 +11738,6 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                          const char **original_root_url,
                          const char **original_uuid,
                          svn_revnum_t *original_revision,
-                         const char **moved_from_abspath,
-                         const char **moved_from_op_root_abspath,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
@@ -11747,15 +11745,13 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  const char *op_root_relpath;
+  const char *op_root_relpath = NULL;
   apr_int64_t repos_id = INVALID_REPOS_ID;
   apr_int64_t original_repos_id = INVALID_REPOS_ID;
   apr_int64_t *repos_id_p
     = (repos_root_url || repos_uuid) ? &repos_id : NULL;
   apr_int64_t *original_repos_id_p
     = (original_root_url || original_uuid) ? &original_repos_id : NULL;
-  const char *moved_from_relpath;
-  const char *moved_from_op_root_relpath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -11763,10 +11759,14 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(scan_addition(status, &op_root_relpath, repos_relpath, repos_id_p,
+  SVN_ERR(scan_addition(status,
+                        op_root_abspath
+                                ? &op_root_relpath
+                                : NULL,
+                        repos_relpath, repos_id_p,
                         original_repos_relpath, original_repos_id_p,
-                        original_revision, &moved_from_relpath,
-                        &moved_from_op_root_relpath, NULL,
+                        original_revision,
+                        NULL, NULL, NULL,
                         wcroot, local_relpath, result_pool, scratch_pool));
 
   if (op_root_abspath)
@@ -11781,25 +11781,82 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                                       wcroot->sdb, original_repos_id,
                                       result_pool));
 
-  if (moved_from_abspath)
-    {
-      if (moved_from_relpath)
-        *moved_from_abspath = svn_dirent_join(wcroot->abspath,
-                                              moved_from_relpath,
-                                              result_pool);
-      else
-        *moved_from_abspath = NULL;
-    }
+  return SVN_NO_ERROR;
+}
 
-  if (moved_from_op_root_abspath)
+svn_error_t *
+svn_wc__db_scan_moved(const char **moved_from_abspath,
+                      const char **op_root_abspath,
+                      const char **op_root_moved_from_abspath,
+                      const char **moved_from_delete_abspath,
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  svn_wc__db_status_t status;
+  const char *op_root_relpath = NULL;
+  const char *moved_from_relpath = NULL;
+  const char *moved_from_op_root_relpath = NULL;
+  int moved_from_op_depth = -1;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              local_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR(scan_addition(&status,
+                        op_root_abspath
+                                ? &op_root_relpath
+                                : NULL,
+                        NULL, NULL,
+                        NULL, NULL, NULL,
+                        moved_from_abspath
+                            ? &moved_from_relpath
+                            : NULL,
+                        (op_root_moved_from_abspath
+                         || moved_from_delete_abspath)
+                            ? &moved_from_op_root_relpath
+                            : NULL,
+                        moved_from_delete_abspath
+                            ? &moved_from_op_depth
+                            : NULL,
+                        wcroot, local_relpath, scratch_pool, scratch_pool));
+
+  if (status != svn_wc__db_status_moved_here)
+    return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                             _("Path '%s' was not moved here"),
+                             path_for_error_message(wcroot, local_relpath,
+                                                    scratch_pool));
+
+  if (op_root_abspath)
+    *op_root_abspath = svn_dirent_join(wcroot->abspath, op_root_relpath,
+                                       result_pool);
+
+  if (moved_from_abspath)
+    *moved_from_abspath = svn_dirent_join(wcroot->abspath, moved_from_relpath,
+                                          result_pool);
+
+  if (op_root_moved_from_abspath)
+    *op_root_moved_from_abspath = svn_dirent_join(wcroot->abspath,
+                                                  moved_from_op_root_relpath,
+                                                  result_pool);
+
+  /* The deleted node is either where we moved from, or one of its ancestors */
+  if (moved_from_delete_abspath)
     {
-      if (moved_from_op_root_relpath)
-        *moved_from_op_root_abspath =
-          svn_dirent_join(wcroot->abspath,
-                          moved_from_op_root_relpath,
-                          result_pool);
-      else
-        *moved_from_op_root_abspath = NULL;
+      const char *tmp = moved_from_op_root_relpath;
+
+      SVN_ERR_ASSERT(moved_from_op_depth >= 0);
+
+      while (relpath_depth(tmp) > moved_from_op_depth)
+        tmp = svn_relpath_dirname(tmp, scratch_pool);
+
+      *moved_from_delete_abspath = svn_dirent_join(wcroot->abspath, tmp,
+                                                   scratch_pool);
     }
 
   return SVN_NO_ERROR;

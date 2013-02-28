@@ -5380,10 +5380,9 @@ nested_move_commit(const svn_test_opts_t *opts, apr_pool_t *pool)
   {
     const char *moved_from;
     const char *expected_from;
-    SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, &moved_from, NULL,
-                                     b.wc_ctx->db, sbox_wc_path(&b, "C2"),
-                                     pool, pool));
+    SVN_ERR(svn_wc__db_scan_moved(&moved_from, NULL, NULL, NULL,
+                                  b.wc_ctx->db, sbox_wc_path(&b, "C2"),
+                                  pool, pool));
 
     expected_from = sbox_wc_path(&b, "A/B/C");
 
@@ -5446,10 +5445,9 @@ nested_move_commit(const svn_test_opts_t *opts, apr_pool_t *pool)
   {
     const char *moved_from;
     const char *expected_from;
-    SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, &moved_from, NULL,
-                                     b.wc_ctx->db, sbox_wc_path(&b, "C2"),
-                                     pool, pool));
+    SVN_ERR(svn_wc__db_scan_moved(&moved_from, NULL, NULL, NULL,
+                                  b.wc_ctx->db, sbox_wc_path(&b, "C2"),
+                                  pool, pool));
 
     /* C2 is the A2/B/C->C2 move. */
     expected_from = sbox_wc_path(&b, "A2/B/C");
@@ -5505,10 +5503,9 @@ nested_move_commit(const svn_test_opts_t *opts, apr_pool_t *pool)
   {
     const char *moved_from;
     const char *expected_from;
-    SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, &moved_from, NULL,
-                                     b.wc_ctx->db, sbox_wc_path(&b, "C2"),
-                                     pool, pool));
+    SVN_ERR(svn_wc__db_scan_moved(&moved_from, NULL, NULL, NULL,
+                                  b.wc_ctx->db, sbox_wc_path(&b, "C2"),
+                                  pool, pool));
 
     expected_from = sbox_wc_path(&b, "A2/B/C");
 
@@ -7507,8 +7504,8 @@ struct svn_test_descriptor_t test_funcs[] =
                        "layered_moved_to"),
     SVN_TEST_OPTS_PASS(update_within_move,
                        "update_within_move"),
-    SVN_TEST_OPTS_XFAIL(commit_moved_descendant,
-                        "commit_moved_descendant"),
+    SVN_TEST_OPTS_PASS(commit_moved_descendant,
+                       "commit_moved_descendant"),
     SVN_TEST_OPTS_XFAIL(commit_moved_away_descendant,
                         "commit_moved_away_descendant"),
     SVN_TEST_OPTS_PASS(finite_move_update_bump,

@@ -626,7 +626,7 @@ check_can_add_to_parent(const char **repos_root_url,
       if (parent_status == svn_wc__db_status_added)
         SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
                                          repos_root_url, repos_uuid, NULL,
-                                         NULL, NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL,
                                          db, parent_abspath,
                                          result_pool, scratch_pool));
       else

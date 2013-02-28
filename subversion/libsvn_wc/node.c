@@ -204,7 +204,6 @@ svn_wc__internal_get_repos_info(svn_revnum_t *revision,
                                                     ? &op_root_abspath : NULL,
                                            repos_relpath, repos_root_url,
                                            repos_uuid, NULL, NULL, NULL, NULL,
-                                           NULL, NULL,
                                            db, svn_dirent_dirname(
                                                    wrk_del_abspath,
                                                    scratch_pool),
@@ -229,7 +228,6 @@ svn_wc__internal_get_repos_info(svn_revnum_t *revision,
                                                     ? &op_root_abspath : NULL,
                                        repos_relpath, repos_root_url,
                                        repos_uuid, NULL, NULL, NULL, NULL,
-                                       NULL, NULL,
                                        db, local_abspath,
                                        result_pool, scratch_pool));
     }
@@ -1024,7 +1022,7 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
         SVN_ERR(svn_wc__db_scan_addition(&status, &op_root_abspath, NULL,
                                          NULL, NULL, &original_repos_relpath,
                                          repos_root_url,
-                                         repos_uuid, revision, NULL, NULL,
+                                         repos_uuid, revision,
                                          db, local_abspath,
                                          result_pool, scratch_pool));
 
@@ -1387,36 +1385,27 @@ svn_wc__node_was_moved_here(const char **moved_from_abspath,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
-  svn_boolean_t is_added;
+  svn_error_t *err;
 
   if (moved_from_abspath)
     *moved_from_abspath = NULL;
   if (delete_op_root_abspath)
     *delete_op_root_abspath = NULL;
 
-  SVN_ERR(svn_wc__node_is_added(&is_added, wc_ctx, local_abspath,
-                                scratch_pool));
-  if (is_added && (moved_from_abspath || delete_op_root_abspath))
-    {
-      svn_wc__db_status_t status;
-      const char *db_moved_from_abspath;
-      const char *db_delete_op_root_abspath;
+  err = svn_wc__db_scan_moved(moved_from_abspath, NULL, NULL,
+                              delete_op_root_abspath,
+                              wc_ctx->db, local_abspath,
+                              result_pool, scratch_pool);
 
-      SVN_ERR(svn_wc__db_scan_addition(&status, NULL,
-                                       NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, &db_moved_from_abspath,
-                                       &db_delete_op_root_abspath,
-                                       wc_ctx->db, local_abspath,
-                                       scratch_pool, scratch_pool));
-      if (status == svn_wc__db_status_moved_here)
-        {
-          if (moved_from_abspath)
-            *moved_from_abspath = apr_pstrdup(result_pool,
-                                              db_moved_from_abspath);
-          if (delete_op_root_abspath)
-            *delete_op_root_abspath = apr_pstrdup(result_pool,
-                                                  db_delete_op_root_abspath);
-        }
+  if (err)
+    {
+      /* Return error for not added nodes */
+      if (err->apr_err != SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+        return svn_error_trace(err);
+
+      /* Path not moved here */
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
     }
 
   return SVN_NO_ERROR;

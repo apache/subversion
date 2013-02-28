@@ -346,16 +346,14 @@ read_info(const struct svn_wc__db_info_t **info,
    * cheaply as svn_wc__db_read_children_info() does. */
   if (mtb->status == svn_wc__db_status_added)
     {
-      const char *moved_from_abspath = NULL;
       svn_wc__db_status_t status;
 
       SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL,
-                                       &moved_from_abspath,
-                                       NULL,
                                        db, local_abspath,
                                        result_pool, scratch_pool));
-      mtb->moved_here = (moved_from_abspath != NULL);
+
+      mtb->moved_here = (status == svn_wc__db_status_moved_here);
       mtb->incomplete = (status == svn_wc__db_status_incomplete);
     }
 
@@ -421,7 +419,7 @@ get_repos_root_url_relpath(const char **repos_relpath,
       SVN_ERR(svn_wc__db_scan_addition(NULL, NULL,
                                        repos_relpath, repos_root_url,
                                        repos_uuid, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, db, local_abspath,
+                                       db, local_abspath,
                                        result_pool, scratch_pool));
     }
   else if (info->have_base)
@@ -484,7 +482,6 @@ assemble_status(svn_wc_status3_t **status,
   svn_boolean_t switched_p = FALSE;
   svn_boolean_t copied = FALSE;
   svn_boolean_t conflicted;
-  svn_error_t *err;
   const char *moved_from_abspath = NULL;
   svn_filesize_t filesize = (dirent && (dirent->kind == svn_node_file))
                                 ? dirent->filesize
@@ -605,6 +602,7 @@ assemble_status(svn_wc_status3_t **status,
             text_modified_p = FALSE;
           else
             {
+              svn_error_t *err;
               err = svn_wc__internal_file_modified_p(&text_modified_p,
                                                      db, local_abspath,
                                                      FALSE, scratch_pool);
@@ -687,12 +685,24 @@ assemble_status(svn_wc_status3_t **status,
 
           /* Get moved-from info (only for potential op-roots of a move). */
           if (info->moved_here && info->op_root)
-            SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL,
-                                             NULL, NULL, NULL, NULL,
-                                             &moved_from_abspath,
-                                             NULL,
-                                             db, local_abspath,
-                                             result_pool, scratch_pool));
+            {
+              svn_error_t *err;
+              err = svn_wc__db_scan_moved(&moved_from_abspath, NULL, NULL, NULL,
+                                          db, local_abspath,
+                                          result_pool, scratch_pool);
+
+              if (err)
+                {
+                  if (err->apr_err != SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+                    svn_error_trace(err);
+
+                  svn_error_clear(err);
+                  /* We are no longer moved... So most likely we are somehow
+                     changing the db for things like resolving conflicts. */
+
+                  moved_from_abspath = NULL;
+                }
+            }
         }
     }
 
