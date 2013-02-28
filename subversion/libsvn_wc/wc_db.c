@@ -7373,6 +7373,7 @@ delete_update_movedto(svn_wc__db_wcroot_t *wcroot,
                       apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
+  int affected;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_UPDATE_MOVED_TO_RELPATH));
@@ -7382,7 +7383,8 @@ delete_update_movedto(svn_wc__db_wcroot_t *wcroot,
                             child_moved_from_relpath,
                             op_depth,
                             new_moved_to_relpath));
-  SVN_ERR(svn_sqlite__step_done(stmt));
+  SVN_ERR(svn_sqlite__update(&affected, stmt));
+  assert(affected == 1);
 
   return SVN_NO_ERROR;
 }
@@ -7498,7 +7500,6 @@ delete_node(void *baton,
   if (b->moved_to_relpath)
     {
       const char *moved_from_relpath = NULL;
-      const char *moved_from_op_root_relpath = NULL;
       struct moved_node_t *moved_node;
       int move_op_depth;
 
@@ -7511,15 +7512,25 @@ delete_node(void *baton,
       if (status == svn_wc__db_status_added)
         SVN_ERR(scan_addition(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                               &moved_from_relpath,
-                              &moved_from_op_root_relpath,
+                              NULL,
                               &move_op_depth,
                               wcroot, local_relpath,
                               scratch_pool, scratch_pool));
 
       moved_node = apr_palloc(scratch_pool, sizeof(struct moved_node_t));
-      if (!moved_from_relpath
-          || status != svn_wc__db_status_moved_here
-          || strcmp(moved_from_op_root_relpath, moved_from_relpath))
+
+      if (op_root && moved_from_relpath)
+        {
+          /* Existing move-root is moved to another location */
+          moved_node->local_relpath = moved_from_relpath;
+          moved_node->op_depth = move_op_depth;
+          moved_node->moved_to_relpath = b->moved_to_relpath;
+
+          APR_ARRAY_PUSH(moved_nodes, const struct moved_node_t *) = moved_node;
+        }
+      else if (!op_root && (status == svn_wc__db_status_normal
+                            || status == svn_wc__db_status_copied
+                            || status == svn_wc__db_status_moved_here))
         {
           /* The node is becoming a move-root for the first time,
            * possibly because of a nested move operation. */
@@ -7530,14 +7541,8 @@ delete_node(void *baton,
 
           APR_ARRAY_PUSH(moved_nodes, const struct moved_node_t *) = moved_node;
         }
-      else
-        {
-          moved_node->local_relpath = moved_from_relpath;
-          moved_node->op_depth = move_op_depth;
-          moved_node->moved_to_relpath = b->moved_to_relpath;
-
-          APR_ARRAY_PUSH(moved_nodes, const struct moved_node_t *) = moved_node;
-        }
+      /* Else: We can't track history of local additions and/or of things we are
+               about to delete. */
 
       /* If a subtree is being moved-away from this subtree,
        * update moved-to information after the delete */
