@@ -1496,9 +1496,13 @@ WHERE wc_id = ?1 AND op_depth > 0
 -- STMT_SELECT_MOVED_PAIR
 SELECT local_relpath, moved_to, op_depth FROM nodes_current
 WHERE wc_id = ?1
-  AND (IS_STRICT_DESCENDANT_OF(moved_to, ?2)
-       OR (IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
-           AND moved_to IS NOT NULL))
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND moved_to IS NOT NULL
+
+-- STMT_UPDATE_MOVED_TO
+UPDATE nodes SET moved_to = RELPATH_SKIP_JOIN(?2, ?3, moved_to)
+ WHERE wc_id = ?1
+   AND IS_STRICT_DESCENDANT_OF(moved_to, ?2)
 
 /* This statement returns pairs of move-roots below the path ?2 in WC_ID ?1,
  * where the source of the move is within the subtree rooted at path ?2, and
