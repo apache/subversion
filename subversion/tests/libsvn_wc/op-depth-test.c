@@ -7522,7 +7522,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "moved_to op_depth"),
     SVN_TEST_OPTS_PASS(new_basemove,
                        "new_basemove"),
-    SVN_TEST_OPTS_XFAIL(move_back,
+    SVN_TEST_OPTS_PASS(move_back,
                        "move_back (issue 4302)"),
     SVN_TEST_NULL
   };

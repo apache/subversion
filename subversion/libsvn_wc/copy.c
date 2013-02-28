@@ -813,7 +813,7 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
 
   if (is_move)
     err = svn_error_compose_create(err,
-                svn_wc__db_op_handle_move_back(move_degraded_to_copy,
+                svn_wc__db_op_handle_move_back(NULL,
                                                db, dst_abspath, src_abspath,
                                                NULL /* work_items */,
                                                scratch_pool));
