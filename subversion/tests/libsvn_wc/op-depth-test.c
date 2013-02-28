@@ -5425,8 +5425,19 @@ nested_move_commit(const svn_test_opts_t *opts, apr_pool_t *pool)
                                      b.wc_ctx->db, sbox_wc_path(&b, "A/B/C"),
                                      pool, pool));
 
-    expected_to = sbox_wc_path(&b, "A2" /* ### I would have expected "C2" */);
+    /* A/B/C is part of the A->A2 move. */
+    expected_to = sbox_wc_path(&b, "A2");
+    if (strcmp(moved_to, expected_to) != 0)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "Expected moved to %s, but was %s",
+                                 expected_to, moved_to);
 
+    SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL, NULL, &moved_to,
+                                     b.wc_ctx->db, sbox_wc_path(&b, "A2/B/C"),
+                                     pool, pool));
+
+    /* A2/B/C is the A2/B/C->C2 move. */
+    expected_to = sbox_wc_path(&b, "C2");
     if (strcmp(moved_to, expected_to) != 0)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "Expected moved to %s, but was %s",
@@ -5440,9 +5451,8 @@ nested_move_commit(const svn_test_opts_t *opts, apr_pool_t *pool)
                                      b.wc_ctx->db, sbox_wc_path(&b, "C2"),
                                      pool, pool));
 
-    expected_from = sbox_wc_path(&b, "A2/B/C"
-                                 /* ### I would have expected "A/B/C" */);
-
+    /* C2 is the A2/B/C->C2 move. */
+    expected_from = sbox_wc_path(&b, "A2/B/C");
     if (strcmp(moved_from, expected_from) != 0)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "Expected moved from %s, but was %s",
@@ -7377,7 +7387,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_OPTS_PASS(nested_move_update,
                        "nested_move_update"),
     SVN_TEST_OPTS_PASS(nested_move_commit,
-                       "nested_move_commit"),
+                       "nested_move_commit (issue 4291)"),
     SVN_TEST_OPTS_PASS(nested_move_update2,
                        "nested_move_update2"),
     SVN_TEST_OPTS_PASS(move_update_conflicts,
