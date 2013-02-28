@@ -527,10 +527,12 @@ copy_rep_to_temp(pack_context_t *context,
   return SVN_NO_ERROR;
 }
 
-/* Directories first, dirs / files sorted by name.  This maximizes the
- * chance of two items being located close to one another in *all* pack
- * files independent of their change order.  It also groups multi-project
- * repos nicely according to their sub-projects.
+/* Directories first, dirs / files sorted by name in reverse lexical order.
+ * This maximizes the chance of two items being located close to one another
+ * in *all* pack files independent of their change order.  It also groups
+ * multi-project repos nicely according to their sub-projects.  The reverse
+ * order aspect gives "trunk" preference over "tags" and "branches", so
+ * trunk-related items are more likely to be contiguous.
  */
 static int
 compare_dir_entries_format7(const svn_sort__item_t *a,
@@ -542,7 +544,7 @@ compare_dir_entries_format7(const svn_sort__item_t *a,
   if (lhs->kind != rhs->kind)
     return lhs->kind == svn_node_dir ? -1 : 1;
 
-  return strcmp(lhs->name, rhs->name);
+  return 0 - strcmp(lhs->name, rhs->name);
 }
 
 /* Directories entries sorted by revision (decreasing - to max cache hits)
