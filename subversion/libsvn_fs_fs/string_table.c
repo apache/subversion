@@ -205,9 +205,13 @@ insert_string(builder_table_t *table,
           to_insert->next_match_len
             = match_length(&current->string, &to_insert->string);
           current->previous_match_len = to_insert->next_match_len;
-          
-          table->max_data_size -= MIN(to_insert->previous_match_len,
-                                      to_insert->next_match_len);
+
+          table->max_data_size -= to_insert->string.len;
+          if (to_insert->previous == NULL)
+            table->max_data_size += to_insert->next_match_len;
+          else
+            table->max_data_size += MIN(to_insert->previous_match_len,
+                                        to_insert->next_match_len);
 
           return to_insert->position;
         }
@@ -242,8 +246,12 @@ insert_string(builder_table_t *table,
             = match_length(&current->string, &to_insert->string);
           current->next_match_len = to_insert->previous_match_len;
 
-          table->max_data_size -= MIN(to_insert->previous_match_len,
-                                      to_insert->next_match_len);
+          table->max_data_size -= to_insert->string.len;
+          if (to_insert->next == NULL)
+            table->max_data_size += to_insert->previous_match_len;
+          else
+            table->max_data_size += MIN(to_insert->previous_match_len,
+                                        to_insert->next_match_len);
 
           return to_insert->position;
         }
@@ -295,8 +303,8 @@ svn_fs_fs__string_table_builder_add(string_table_builder_t *builder,
       builder_string_t *item = apr_pcalloc(builder->pool, sizeof(*item));
       item->string.data = string;
       item->string.len = len;
-      item->previous_match_len = APR_SIZE_MAX;
-      item->next_match_len = APR_SIZE_MAX;
+      item->previous_match_len = 0;
+      item->next_match_len = 0;
 
       if (   table->long_strings->nelts == MAX_STRINGS_PER_TABLE
           || table->max_data_size < len)
@@ -349,13 +357,8 @@ create_table(string_sub_table_t *target,
       string_header_t *tail_match;
       apr_size_t head_length = string->previous_match_len;
 
-      int base = i - 1;
-      if (head_length)
-        while (   base >= 0
-               && target->short_strings[i].head_length >= head_length)
-          --base;
-          
-      entry->head_string = (apr_uint16_t)base;
+      entry->head_string
+        = (apr_uint16_t)(head_length ? string->previous->position : 0);
       entry->head_length = (apr_uint16_t)head_length;
       entry->tail_length
         = (apr_uint16_t)(string->string.len - entry->head_length);
@@ -418,10 +421,14 @@ table_copy_string(char *buffer,
 
   while (to_copy)
     {
-      memcpy(buffer + header->head_length,
-             table->data + header->tail_start,
-             len - header->head_length);
-      to_copy = header->head_length;
+      if (header->head_length < to_copy)
+        {
+          memcpy(buffer + header->head_length,
+                 table->data + header->tail_start,
+                 to_copy - header->head_length);
+          to_copy = header->head_length;
+        }
+
       header = &table->short_strings[header->head_string];
     }
 
@@ -455,6 +462,8 @@ svn_fs_fs__string_table_get(const string_table_t *table,
               apr_size_t len = header->head_length + header->tail_length + 1;
               char *result = apr_palloc(pool, len);
               table_copy_string(result, len, sub_table, header);
+
+              return result;
             }
         }
     }
