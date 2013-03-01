@@ -1021,13 +1021,11 @@ tc_editor_alter_file(void *baton,
     {
       svn_skel_t *work_items;
 
-      SVN_ERR(update_working_file(&work_items, dst_relpath,
+      SVN_ERR(update_working_file(b->work_items, dst_relpath,
                                   move_dst_repos_relpath,
                                   b->operation, &old_version, &new_version,
                                   b->wcroot, b->db,
                                   b->result_pool, scratch_pool));
-      *b->work_items = svn_wc__wq_merge(*b->work_items, work_items,
-                                        b->result_pool);
     }
 
   return SVN_NO_ERROR;
