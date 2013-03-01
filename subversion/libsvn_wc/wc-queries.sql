@@ -1012,7 +1012,7 @@ INSERT OR REPLACE INTO nodes (
     last_mod_time, symlink_target, moved_to )
 SELECT wc_id, ?3 /*local_relpath*/, ?4 /*op_depth*/, ?5 /*parent_relpath*/,
     repos_id, repos_path, revision, ?6 /*presence*/, depth,
-    ?7 /*moved_here*/, kind, changed_revision, changed_date,
+    ?8 /*moved_here*/, kind, changed_revision, changed_date,
     changed_author, checksum, properties, translated_size,
     last_mod_time, symlink_target,
     (SELECT dst.moved_to FROM nodes AS dst
@@ -1020,7 +1020,7 @@ SELECT wc_id, ?3 /*local_relpath*/, ?4 /*op_depth*/, ?5 /*parent_relpath*/,
                          AND dst.local_relpath = ?3
                          AND dst.op_depth = ?4)
 FROM nodes
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?8
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?7
 
 -- STMT_UPDATE_BASE_REVISION
 UPDATE nodes SET revision = ?3
