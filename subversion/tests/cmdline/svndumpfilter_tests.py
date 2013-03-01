@@ -705,6 +705,67 @@ def dumpfilter_targets_expect_leading_slash_prefixes(sbox):
     os.close(fd)
     os.remove(targets_file)
 
+@Issue(3681)
+def drop_all_empty_revisions(sbox):
+  "drop all empty revisions except revision 0"
+
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svndumpfilter_tests_data',
+                                   'empty_revisions.dump')
+  dump_contents = open(dumpfile_location).read()
+
+  filtered_dumpfile, filtered_err = filter_and_return_output(
+      dump_contents,
+      8192, # Set a sufficiently large bufsize to avoid a deadlock
+      "include", "branch1",
+      "--drop-all-empty-revs")
+
+  expected_err = [
+       "Including (and dropping empty revisions for) prefixes:\n",
+       "   '/branch1'\n",
+       "\n",
+       "Revision 0 committed as 0.\n",
+       "Revision 1 skipped.\n",
+       "Revision 2 committed as 2.\n",
+       "Revision 3 skipped.\n",
+       "\n",
+       "Dropped 2 revisions.\n",
+       "\n"]
+
+  svntest.verify.verify_outputs(
+      "Actual svndumpfilter stderr does not agree with expected stderr",
+      None, filtered_err, None, expected_err)
+
+  # Test with --renumber-revs option.
+  filtered_dumpfile, filtered_err = filter_and_return_output(
+      dump_contents,
+      8192, # Set a sufficiently large bufsize to avoid a deadlock
+      "include", "branch1",
+      "--drop-all-empty-revs",
+      "--renumber-revs")
+
+  expected_err = [
+       "Including (and dropping empty revisions for) prefixes:\n",
+       "   '/branch1'\n",
+       "\n",
+       "Revision 0 committed as 0.\n",
+       "Revision 1 skipped.\n",
+       "Revision 2 committed as 1.\n",
+       "Revision 3 skipped.\n",
+       "\n",
+       "Dropped 2 revisions.\n",
+       "\n",
+       "Revisions renumbered as follows:\n",
+       "   3 => (dropped)\n",
+       "   2 => 1\n",
+       "   1 => (dropped)\n",
+       "   0 => 0\n",
+       "\n"]
+
+  svntest.verify.verify_outputs(
+      "Actual svndumpfilter stderr does not agree with expected stderr",
+      None, filtered_err, None, expected_err)
+
 
 ########################################################################
 # Run the tests
@@ -721,6 +782,7 @@ test_list = [ None,
               match_empty_prefix,
               accepts_deltas,
               dumpfilter_targets_expect_leading_slash_prefixes,
+              drop_all_empty_revisions,
               ]
 
 if __name__ == '__main__':
