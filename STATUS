@@ -255,6 +255,13 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1451678
+   Make get-deps.sh use sh style command substitution.
+   Justification:
+     Make get-deps.sh work on platforms where sh is not bash.
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
