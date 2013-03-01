@@ -1027,6 +1027,83 @@ def deeper_move_file_test(sbox):
   move_file_tests(sbox, source, dest, move_func, tests)
 
 
+@Wimp("SEGV in add_single_work_item")
+def prop_test1(sbox):
+  "test property merging on move-update"
+
+  #    pristine  local  incoming  outcome
+  # 1            p1 v2  p2 v2     p1 v2, p2 v2
+  # 2  p1 v1     p1 v2  p2 v2     p1 v2, p2 v2
+  # 3  p1 v1     p1 v2  p1 v2     p1 v2
+  # 4            p1 v2  p1 v3     p1 v2 conflict
+  # 5  p1 v1     p1 v2  p1 v3     p1 v2 conflict
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_mkdir('A/C/D1')
+  sbox.simple_mkdir('A/C/D2')
+  sbox.simple_mkdir('A/C/D3')
+  sbox.simple_mkdir('A/C/D4')
+  sbox.simple_mkdir('A/C/D5')
+  sbox.simple_add_text('content of f1', 'A/C/f1')
+  sbox.simple_add_text('content of f2', 'A/C/f2')
+  sbox.simple_add_text('content of f3', 'A/C/f3')
+  sbox.simple_add_text('content of f4', 'A/C/f4')
+  sbox.simple_add_text('content of f5', 'A/C/f5')
+  sbox.simple_propset('key1', 'value1',
+                      'A/C/D2', 'A/C/D3', 'A/C/D5',
+                      'A/C/f1', 'A/C/f2', 'A/C/f5')
+  sbox.simple_commit()
+  sbox.simple_propset('key2', 'value2',
+                      'A/C/D1', 'A/C/D2',
+                      'A/C/f1', 'A/C/f2')
+  sbox.simple_propset('key1', 'value2',
+                      'A/C/D3',
+                      'A/C/f3')
+  sbox.simple_propset('key1', 'value3',
+                      'A/C/D4', 'A/C/D5',
+                      'A/C/f3', 'A/C/f5')
+  sbox.simple_commit()
+  sbox.simple_update('', 2)
+  sbox.simple_propset('key1', 'value2',
+                      'A/C/D1', 'A/C/D2', 'A/C/D3', 'A/C/D4', 'A/C/D5',
+                      'A/C/f1', 'A/C/f2', 'A/C/f3', 'A/C/f4', 'A/C/f5')
+  sbox.simple_move('A/C', 'A/C2')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/C', status='D ', moved_to='A/C2')
+  expected_status.add({
+      'A/C/D1'  : Item(status='D ', wc_rev =2),
+      'A/C/D2'  : Item(status='D ', wc_rev =2),
+      'A/C/D3'  : Item(status='D ', wc_rev =2),
+      'A/C/D4'  : Item(status='D ', wc_rev =2),
+      'A/C/D5'  : Item(status='D ', wc_rev =2),
+      'A/C/f1'  : Item(status='D ', wc_rev =2),
+      'A/C/f2'  : Item(status='D ', wc_rev =2),
+      'A/C/f3'  : Item(status='D ', wc_rev =2),
+      'A/C/f4'  : Item(status='D ', wc_rev =2),
+      'A/C/f5'  : Item(status='D ', wc_rev =2),
+      'A/C2'    : Item(status='A ', copied='+', wc_rev ='-', moved_from='A/C'),
+      'A/C2/D1' : Item(status=' M', copied='+', wc_rev ='-'),
+      'A/C2/D2' : Item(status=' M', copied='+', wc_rev ='-'),
+      'A/C2/D3' : Item(status=' M', copied='+', wc_rev ='-'),
+      'A/C2/D4' : Item(status=' M', copied='+', wc_rev ='-'),
+      'A/C2/D5' : Item(status=' M', copied='+', wc_rev ='-'),
+      'A/C2/f1' : Item(status=' M', copied='+', wc_rev ='-'),
+      'A/C2/f2' : Item(status=' M', copied='+', wc_rev ='-'),
+      'A/C2/f3' : Item(status=' M', copied='+', wc_rev ='-'),
+      'A/C2/f4' : Item(status=' M', copied='+', wc_rev ='-'),
+      'A/C2/f5' : Item(status=' M', copied='+', wc_rev ='-'),
+      })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  sbox.simple_update()
+  svntest.actions.run_and_verify_svn("resolve failed", None, [],
+                                     'resolve',
+                                     '--accept=mine-conflict',
+                                     sbox.ospath('A/C'))
+
 
 #######################################################################
 # Run the tests
@@ -1037,6 +1114,7 @@ test_list = [ None,
               sibling_move_file_test,
               shallower_move_file_test,
               deeper_move_file_test,
+              prop_test1,
             ]
 
 if __name__ == '__main__':
