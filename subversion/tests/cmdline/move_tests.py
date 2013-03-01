@@ -1027,7 +1027,7 @@ def deeper_move_file_test(sbox):
   move_file_tests(sbox, source, dest, move_func, tests)
 
 
-@Wimp("SEGV in add_single_work_item")
+@XFail()
 def prop_test1(sbox):
   "test property merging on move-update"
 
@@ -1074,27 +1074,27 @@ def prop_test1(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/C', status='D ', moved_to='A/C2')
   expected_status.add({
-      'A/C/D1'  : Item(status='D ', wc_rev =2),
-      'A/C/D2'  : Item(status='D ', wc_rev =2),
-      'A/C/D3'  : Item(status='D ', wc_rev =2),
-      'A/C/D4'  : Item(status='D ', wc_rev =2),
-      'A/C/D5'  : Item(status='D ', wc_rev =2),
-      'A/C/f1'  : Item(status='D ', wc_rev =2),
-      'A/C/f2'  : Item(status='D ', wc_rev =2),
-      'A/C/f3'  : Item(status='D ', wc_rev =2),
-      'A/C/f4'  : Item(status='D ', wc_rev =2),
-      'A/C/f5'  : Item(status='D ', wc_rev =2),
-      'A/C2'    : Item(status='A ', copied='+', wc_rev ='-', moved_from='A/C'),
-      'A/C2/D1' : Item(status=' M', copied='+', wc_rev ='-'),
-      'A/C2/D2' : Item(status=' M', copied='+', wc_rev ='-'),
-      'A/C2/D3' : Item(status=' M', copied='+', wc_rev ='-'),
-      'A/C2/D4' : Item(status=' M', copied='+', wc_rev ='-'),
-      'A/C2/D5' : Item(status=' M', copied='+', wc_rev ='-'),
-      'A/C2/f1' : Item(status=' M', copied='+', wc_rev ='-'),
-      'A/C2/f2' : Item(status=' M', copied='+', wc_rev ='-'),
-      'A/C2/f3' : Item(status=' M', copied='+', wc_rev ='-'),
-      'A/C2/f4' : Item(status=' M', copied='+', wc_rev ='-'),
-      'A/C2/f5' : Item(status=' M', copied='+', wc_rev ='-'),
+      'A/C/D1'  : Item(status='D ', wc_rev=2),
+      'A/C/D2'  : Item(status='D ', wc_rev=2),
+      'A/C/D3'  : Item(status='D ', wc_rev=2),
+      'A/C/D4'  : Item(status='D ', wc_rev=2),
+      'A/C/D5'  : Item(status='D ', wc_rev=2),
+      'A/C/f1'  : Item(status='D ', wc_rev=2),
+      'A/C/f2'  : Item(status='D ', wc_rev=2),
+      'A/C/f3'  : Item(status='D ', wc_rev=2),
+      'A/C/f4'  : Item(status='D ', wc_rev=2),
+      'A/C/f5'  : Item(status='D ', wc_rev=2),
+      'A/C2'    : Item(status='A ', copied='+', wc_rev='-', moved_from='A/C'),
+      'A/C2/D1' : Item(status=' M', copied='+', wc_rev='-'),
+      'A/C2/D2' : Item(status=' M', copied='+', wc_rev='-'),
+      'A/C2/D3' : Item(status=' M', copied='+', wc_rev='-'),
+      'A/C2/D4' : Item(status=' M', copied='+', wc_rev='-'),
+      'A/C2/D5' : Item(status=' M', copied='+', wc_rev='-'),
+      'A/C2/f1' : Item(status=' M', copied='+', wc_rev='-'),
+      'A/C2/f2' : Item(status=' M', copied='+', wc_rev='-'),
+      'A/C2/f3' : Item(status=' M', copied='+', wc_rev='-'),
+      'A/C2/f4' : Item(status=' M', copied='+', wc_rev='-'),
+      'A/C2/f5' : Item(status=' M', copied='+', wc_rev='-'),
       })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -1103,6 +1103,19 @@ def prop_test1(sbox):
                                      'resolve',
                                      '--accept=mine-conflict',
                                      sbox.ospath('A/C'))
+
+  expected_status.tweak(wc_rev=3)
+  expected_status.tweak('A/C2',
+                        'A/C2/D1', 'A/C2/D2', 'A/C2/D3', 'A/C2/D4', 'A/C2/D5',
+                        'A/C2/f1', 'A/C2/f2', 'A/C2/f3', 'A/C2/f4', 'A/C2/f5',
+                        wc_rev='-')
+  expected_status.tweak('A/C2/D3', 'A/C2/D3',
+                        status='  ')
+  expected_status.tweak('A/C2/D4', 'A/C2/D5',
+                        'A/C2/f4', 'A/C2/f5',
+                        status=' C')
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
 #######################################################################
