@@ -970,7 +970,7 @@ insert_working_node(void *baton,
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_INSERT_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isdsnnntstrisn"
                 "nnnn" /* properties translated_size last_mod_time dav_cache */
-                "snsd", /* symlink_target, file_external, moved_to, moved_here */
+                "sns", /* symlink_target, file_external, moved_to */
                 wcroot->wc_id, local_relpath,
                 piwb->op_depth,
                 parent_relpath,
@@ -984,8 +984,12 @@ insert_working_node(void *baton,
                 /* Note: incomplete nodes may have a NULL target.  */
                 (piwb->kind == svn_kind_symlink)
                             ? piwb->target : NULL,
-                moved_to_relpath,
-                piwb->moved_here));
+                moved_to_relpath));
+
+  if (piwb->moved_here)
+    {
+      SVN_ERR(svn_sqlite__bind_int(stmt, 8, TRUE));
+    }
 
   if (piwb->kind == svn_kind_file)
     {
@@ -4980,14 +4984,17 @@ db_op_copy_shadowed_layer(svn_wc__db_wcroot_t *src_wcroot,
       SVN_ERR(svn_sqlite__get_statement(&stmt, src_wcroot->sdb,
                              STMT_INSERT_WORKING_NODE_COPY_FROM_DEPTH));
 
-      SVN_ERR(svn_sqlite__bindf(stmt, "issdstdd",
+      SVN_ERR(svn_sqlite__bindf(stmt, "issdstd",
                         src_wcroot->wc_id, src_relpath,
                         dst_relpath,
                         dst_op_depth,
                         svn_relpath_dirname(dst_relpath, iterpool),
                         presence_map, dst_presence,
-                        (dst_op_depth == move_op_depth), /* moved_here */
                         src_op_depth));
+
+      /* moved_here */
+      if (dst_op_depth == move_op_depth)
+        SVN_ERR(svn_sqlite__bind_int(stmt, 8, TRUE));
 
       SVN_ERR(svn_sqlite__step_done(stmt));
 
