@@ -472,6 +472,15 @@ bdb_write_config(svn_fs_t *fs)
 }
 
 static svn_error_t *
+base_bdb_verify_rev(svn_fs_t *fs,
+                    svn_revnum_t revision,
+                    apr_pool_t *scratch_pool)
+{
+  /* Verifying is currently a no op for BDB. */
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 base_bdb_freeze(svn_fs_t *fs,
                 svn_error_t *(*freeze_body)(void *, apr_pool_t *),
                 void *baton,
@@ -500,6 +509,7 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__unlock,
   svn_fs_base__get_lock,
   svn_fs_base__get_locks,
+  base_bdb_verify_rev,
   base_bdb_freeze,
   base_bdb_set_errcall,
 };
@@ -892,10 +902,12 @@ base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
 
 static svn_error_t *
 base_verify(svn_fs_t *fs, const char *path,
-            svn_cancel_func_t cancel_func,
-            void *cancel_baton,
             svn_revnum_t start,
             svn_revnum_t end,
+            svn_fs_progress_notify_func_t notify_func,
+            void *notify_baton,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
             apr_pool_t *pool,
             apr_pool_t *common_pool)
 {
@@ -1016,7 +1028,7 @@ svn_fs_base__clean_logs(const char *live_path,
                                                  sub_pool));
 
           /* If log files do not match, go to the next log file. */
-          if (files_match == FALSE)
+          if (!files_match)
             continue;
         }
 
@@ -1124,7 +1136,7 @@ copy_db_file_safely(const char *src_dir,
   /* Open source file.  If it's missing and that's allowed, there's
      nothing more to do here. */
   err = svn_io_file_open(&s, file_src_path,
-                         (APR_READ | APR_LARGEFILE | APR_BINARY),
+                         (APR_READ | APR_LARGEFILE),
                          APR_OS_DEFAULT, pool);
   if (err && APR_STATUS_IS_ENOENT(err->apr_err) && allow_missing)
     {
@@ -1135,7 +1147,7 @@ copy_db_file_safely(const char *src_dir,
 
   /* Open destination file. */
   SVN_ERR(svn_io_file_open(&d, file_dst_path, (APR_WRITE | APR_CREATE |
-                                               APR_LARGEFILE | APR_BINARY),
+                                               APR_LARGEFILE),
                            APR_OS_DEFAULT, pool));
 
   /* Allocate our read/write buffer. */

@@ -25,7 +25,7 @@
 ######################################################################
 
 # General modules
-import sys, os, re
+import sys, os, re, copy
 
 # Our testing module
 import svntest
@@ -49,7 +49,6 @@ Item = svntest.wc.StateItem
 
 
 #----------------------------------------------------------------------
-@SkipUnless(svntest.main.is_posix_os)
 def general_symlink(sbox):
   "general symlink handling"
 
@@ -57,11 +56,11 @@ def general_symlink(sbox):
   wc_dir = sbox.wc_dir
 
   # First try to just commit a symlink
-  newfile_path = os.path.join(wc_dir, 'newfile')
-  linktarget_path = os.path.join(wc_dir, 'linktarget')
-  svntest.main.file_append(linktarget_path, 'this is just a link target')
-  os.symlink('linktarget', newfile_path)
-  svntest.main.run_svn(None, 'add', newfile_path, linktarget_path)
+  newfile_path = sbox.ospath('newfile')
+
+  sbox.simple_append('linktarget', 'this is just a link target')
+  sbox.simple_add('linktarget')
+  sbox.simple_add_symlink('linktarget', 'newfile')
 
   expected_output = svntest.wc.State(wc_dir, {
     'newfile' : Item(verb='Adding'),
@@ -104,14 +103,18 @@ def general_symlink(sbox):
                                      'up', '-r', '2', wc_dir)
 
   # Is the symlink back?
-  new_target = os.readlink(newfile_path)
-  if new_target != 'linktarget':
-    raise svntest.Failure
+  if svntest.main.is_posix_os():
+    new_target = os.readlink(newfile_path)
+    if new_target != 'linktarget':
+      raise svntest.Failure
 
   ## Now change the target of the symlink, verify that it is shown as
   ## modified and that a commit succeeds.
   os.remove(newfile_path)
-  os.symlink('A', newfile_path)
+  if svntest.main.is_posix_os():
+    os.symlink('A', newfile_path)
+  else:
+    sbox.simple_append('newfile', 'link A', truncate = True)
 
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
@@ -223,7 +226,6 @@ def import_export_symlink(sbox):
 #----------------------------------------------------------------------
 # Regression test for issue 1986
 @Issue(1986)
-@SkipUnless(svntest.main.is_posix_os)
 def copy_tree_with_symlink(sbox):
   "'svn cp dir1 dir2' which contains a symlink"
 
@@ -231,11 +233,10 @@ def copy_tree_with_symlink(sbox):
   wc_dir = sbox.wc_dir
 
   # Create a versioned symlink within directory 'A/D/H'.
-  newfile_path = os.path.join(wc_dir, 'A', 'D', 'H', 'newfile')
-  linktarget_path = os.path.join(wc_dir, 'A', 'D', 'H', 'linktarget')
-  svntest.main.file_append(linktarget_path, 'this is just a link target')
-  os.symlink('linktarget', newfile_path)
-  svntest.main.run_svn(None, 'add', newfile_path, linktarget_path)
+  newfile_path = sbox.ospath('A/D/H/newfile')
+  sbox.simple_append('A/D/H/linktarget', 'this is just a link target')
+  sbox.simple_add('A/D/H/linktarget')
+  sbox.simple_add_symlink('linktarget', 'A/D/H/newfile')
 
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/H/newfile' : Item(verb='Adding'),
@@ -301,8 +302,8 @@ def replace_symlink_with_file(sbox):
 
   # Now replace the symlink with a normal file and try to commit, we
   # should get an error
-  os.remove(newfile_path);
-  svntest.main.file_append(newfile_path, "text of actual file");
+  os.remove(newfile_path)
+  svntest.main.file_append(newfile_path, "text of actual file")
 
   # Does status show the obstruction?
   was_cwd = os.getcwd()
@@ -323,7 +324,7 @@ def replace_symlink_with_file(sbox):
     raise svntest.Failure
 
 
-@SkipUnless(svntest.main.is_posix_os)
+#----------------------------------------------------------------------
 def remove_symlink(sbox):
   "remove a symlink"
 
@@ -334,8 +335,8 @@ def remove_symlink(sbox):
   newfile_path = os.path.join(wc_dir, 'newfile')
   linktarget_path = os.path.join(wc_dir, 'linktarget')
   svntest.main.file_append(linktarget_path, 'this is just a link target')
-  os.symlink('linktarget', newfile_path)
-  svntest.main.run_svn(None, 'add', newfile_path, linktarget_path)
+  sbox.simple_add_symlink('linktarget', 'newfile')
+  sbox.simple_add('linktarget')
 
   expected_output = svntest.wc.State(wc_dir, {
     'newfile' : Item(verb='Adding'),
@@ -367,7 +368,7 @@ def remove_symlink(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
-@SkipUnless(svntest.main.is_posix_os)
+#----------------------------------------------------------------------
 @SkipUnless(server_has_mergeinfo)
 @Issue(2530)
 def merge_symlink_into_file(sbox):
@@ -378,8 +379,8 @@ def merge_symlink_into_file(sbox):
   d_url = sbox.repo_url + '/A/D'
   dprime_url = sbox.repo_url + '/A/Dprime'
 
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
-  gamma_prime_path = os.path.join(wc_dir, 'A', 'Dprime', 'gamma')
+  gamma_path = sbox.ospath('A/D/gamma')
+  gamma_prime_path = sbox.ospath('A/Dprime/gamma')
 
   # create a copy of the D directory to play with
   svntest.main.run_svn(None,
@@ -400,8 +401,7 @@ def merge_symlink_into_file(sbox):
   # Commit a symlink in its place
   linktarget_path = os.path.join(wc_dir, 'linktarget')
   svntest.main.file_append(linktarget_path, 'this is just a link target')
-  os.symlink('linktarget', gamma_prime_path)
-  svntest.main.run_svn(None, 'add', gamma_prime_path)
+  sbox.simple_add_symlink('linktarget', 'A/Dprime/gamma')
 
   expected_output = svntest.wc.State(wc_dir, {
     'A/Dprime/gamma' : Item(verb='Adding'),
@@ -435,7 +435,7 @@ def merge_symlink_into_file(sbox):
 
 
 
-@SkipUnless(svntest.main.is_posix_os)
+#----------------------------------------------------------------------
 def merge_file_into_symlink(sbox):
   "merge file into symlink"
 
@@ -466,8 +466,7 @@ def merge_file_into_symlink(sbox):
   # Commit a symlink in its place
   linktarget_path = os.path.join(wc_dir, 'linktarget')
   svntest.main.file_append(linktarget_path, 'this is just a link target')
-  os.symlink('linktarget', gamma_prime_path)
-  svntest.main.run_svn(None, 'add', gamma_prime_path)
+  sbox.simple_add_symlink('linktarget', 'A/Dprime/gamma')
 
   expected_output = svntest.wc.State(wc_dir, {
     'A/Dprime/gamma' : Item(verb='Adding'),
@@ -520,22 +519,19 @@ def checkout_repo_with_symlinks(sbox):
                                           expected_output,
                                           expected_wc)
 
+#----------------------------------------------------------------------
 # Issue 2716: 'svn diff' against a symlink to a directory within the wc
 @Issue(2716)
-@SkipUnless(svntest.main.is_posix_os)
 def diff_symlink_to_dir(sbox):
   "diff a symlink to a directory"
 
   sbox.build(read_only = True)
-  os.chdir(sbox.wc_dir)
 
-  # Create a symlink to A/D/.
+  # Create a symlink to A/D as link.
   d_path = os.path.join('A', 'D')
-  link_path = 'link'
-  os.symlink(d_path, link_path)
+  sbox.simple_add_symlink('A/D', 'link')
 
-  # Add the symlink.
-  svntest.main.run_svn(None, 'add', link_path)
+  os.chdir(sbox.wc_dir)
 
   # Now diff the wc itself and check the results.
   expected_output = [
@@ -544,7 +540,7 @@ def diff_symlink_to_dir(sbox):
     "--- link\t(revision 0)\n",
     "+++ link\t(working copy)\n",
     "@@ -0,0 +1 @@\n",
-    "+link " + d_path + "\n",
+    "+link A/D\n",
     "\ No newline at end of file\n",
     "\n",
     "Property changes on: link\n",
@@ -557,9 +553,9 @@ def diff_symlink_to_dir(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
                                      '.')
   # We should get the same output if we the diff the symlink itself.
-  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
-                                     link_path)
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', 'link')
 
+#----------------------------------------------------------------------
 # Issue 2692 (part of): Check that the client can check out a repository
 # that contains an unknown special file type.
 @Issue(2692)
@@ -593,8 +589,8 @@ def replace_symlink_with_dir(sbox):
 
   # Now replace the symlink with a directory and try to commit, we
   # should get an error
-  os.remove(from_path);
-  os.mkdir(from_path);
+  os.remove(from_path)
+  os.mkdir(from_path)
 
   # Does status show the obstruction?
   was_cwd = os.getcwd()
@@ -710,9 +706,8 @@ def unrelated_changed_special_status(sbox):
                                      '--changelist', 'chi cl',
                                      '-m', 'psi changed special status')
 
-
+#----------------------------------------------------------------------
 @Issue(3972)
-@SkipUnless(svntest.main.is_posix_os)
 def symlink_destination_change(sbox):
   "revert a symlink destination change"
 
@@ -721,8 +716,7 @@ def symlink_destination_change(sbox):
 
   # Create a new symlink and commit it.
   newfile_path = os.path.join(wc_dir, 'newfile')
-  os.symlink('linktarget', newfile_path)
-  svntest.main.run_svn(None, 'add', newfile_path)
+  sbox.simple_add_symlink('linktarget', 'newfile')
 
   expected_output = svntest.wc.State(wc_dir, {
     'newfile' : Item(verb='Adding'),
@@ -738,7 +732,10 @@ def symlink_destination_change(sbox):
 
   # Modify the symlink to point somewhere else
   os.remove(newfile_path)
-  os.symlink('linktarget2', newfile_path)
+  if svntest.main.is_posix_os():
+    os.symlink('linktarget2', newfile_path)
+  else:
+    sbox.simple_append('newfile', 'link linktarget2', truncate = True)
 
   expected_status.tweak('newfile', status='M ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -758,7 +755,6 @@ def symlink_destination_change(sbox):
 # This used to lose the special status in the target working copy
 # (disk and metadata).
 @Issue(3884)
-@SkipUnless(svntest.main.is_posix_os)
 def merge_foreign_symlink(sbox):
   "merge symlink-add from foreign repos"
 
@@ -777,8 +773,7 @@ def merge_foreign_symlink(sbox):
   zeta2_path = sbox2.ospath('A/zeta')
 
   # sbox2 r2: create zeta2 in sbox2
-  os.symlink('target', zeta2_path)
-  sbox2.simple_add('A/zeta')
+  sbox2.simple_add_symlink('target', 'A/zeta')
   sbox2.simple_commit('A/zeta')
 
 
@@ -859,8 +854,8 @@ def symlink_to_wc_svnversion(sbox):
                                             symlink_path, sbox.repo_url,
                                             [ "1\n" ], [])
 
+#----------------------------------------------------------------------
 # Regression in 1.7.0: Update fails to change a symlink
-@SkipUnless(svntest.main.is_posix_os)
 def update_symlink(sbox):
   "update a symlink"
 
@@ -873,13 +868,15 @@ def update_symlink(sbox):
   symlink_path = sbox.ospath('symlink')
 
   # create a symlink to /A/mu
-  os.symlink("A/mu", symlink_path)
-  sbox.simple_add('symlink')
+  sbox.simple_add_symlink("A/mu", 'symlink')
   sbox.simple_commit()
 
   # change the symlink to /iota
   os.remove(symlink_path)
-  os.symlink("iota", symlink_path)
+  if svntest.main.is_posix_os():
+    os.symlink("iota", symlink_path)
+  else:
+    file_write(symlink_path, 'link iota')
   sbox.simple_commit()
 
   # update back to r2
@@ -896,6 +893,10 @@ def update_symlink(sbox):
   expected_status.add({
     'symlink'           : Item(status='  ', wc_rev='3'),
   })
+
+  if not svntest.main.is_posix_os():
+    expected_disk = None
+
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
@@ -903,9 +904,8 @@ def update_symlink(sbox):
                                         None, None, None,
                                         None, None, 1)
 
-@XFail()
+#----------------------------------------------------------------------
 @Issue(4091)
-@SkipUnless(svntest.main.is_posix_os)
 def replace_symlinks(sbox):
   "replace symlinks"
   sbox.build()
@@ -922,10 +922,8 @@ def replace_symlinks(sbox):
   sbox.simple_mkdir('A/D/Y')
   sbox.simple_mkdir('Ax')
 
-  os.symlink('../Y', wc('A/D/H/Z'))
-  os.symlink('../Y', wc('A/D/Hx/Z'))
-  sbox.simple_add('A/D/H/Z',
-                  'A/D/Hx/Z')
+  sbox.simple_add_symlink('../Y', 'A/D/H/Z')
+  sbox.simple_add_symlink('../Y', 'A/D/Hx/Z')
 
   for p in ['Ax/mu',
             'A/D/Gx/pi',
@@ -946,6 +944,8 @@ def replace_symlinks(sbox):
       file_write(wc(p), '#!/bin/sh\necho "hello, svn!"\n')
       os.chmod(wc(p), 0775)
       sbox.simple_add(p)
+      if not svntest.main.is_posix_os():
+        sbox.simple_propset('svn:executable', 'X', p)
   sbox.simple_commit() # r2
   sbox.simple_update()
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 2)
@@ -971,19 +971,17 @@ def replace_symlinks(sbox):
     'A/mu.sh'       : Item(status='  ', wc_rev=2),
     'iota.sh'       : Item(status='  ', wc_rev=2),
     })
-  expected_status_r2 = expected_status
+  expected_status_r2 = copy.deepcopy(expected_status)
   svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status_r2)
 
   # Failing git-svn test: 'new symlink is added to a file that was
   # also just made executable', i.e., in the same revision.
-  sbox.simple_propset("svn:executable", "*", 'A/B/E/alpha')
-  os.symlink('alpha', wc('A/B/E/sym-alpha'))
-  sbox.simple_add('A/B/E/sym-alpha')
+  sbox.simple_propset("svn:executable", "X", 'A/B/E/alpha')
+  sbox.simple_add_symlink('alpha', 'A/B/E/sym-alpha')
 
   # Add a symlink to a file made non-executable in the same revision.
   sbox.simple_propdel("svn:executable", 'A/B/E/beta.sh')
-  os.symlink('beta.sh', wc('A/B/E/sym-beta.sh'))
-  sbox.simple_add('A/B/E/sym-beta.sh')
+  sbox.simple_add_symlink('beta.sh', 'A/B/E/sym-beta.sh')
 
   # Replace a normal {file, exec, dir} with a symlink to the same kind
   # via Subversion replacement.
@@ -991,13 +989,9 @@ def replace_symlinks(sbox):
                  'A/D/G/rho.sh',
                  #'A/D/G/Z', # Ooops, not compatible with --bin=svn1.6.
                  )
-  os.symlink(wc('../gamma'), wc('A/D/G/pi'))
-  os.symlink(wc('../gamma.sh'), wc('A/D/G/rho.sh'))
-  #os.symlink(wc('../Y'), wc('A/D/G/Z'))
-  sbox.simple_add('A/D/G/pi',
-                  'A/D/G/rho.sh',
-                  #'A/D/G/Z',
-                  )
+  sbox.simple_add_symlink('../gamma', 'A/D/G/pi')
+  sbox.simple_add_symlink('../gamma.sh', 'A/D/G/rho.sh')
+  #sbox.simple_add_symlink('../Y', 'A/D/G/Z')
 
   # Replace a symlink to {file, exec, dir} with a normal item of the
   # same kind via Subversion replacement.
@@ -1005,30 +999,34 @@ def replace_symlinks(sbox):
                  'A/D/H/psi.sh',
                  #'A/D/H/Z',
                  )
-  os.symlink(wc('../gamma'), wc('A/D/H/chi'))
-  os.symlink(wc('../gamma.sh'), wc('A/D/H/psi.sh'))
-  #os.symlink(wc('../Y'), wc('A/D/H/Z'))
-  sbox.simple_add('A/D/H/chi',
-                  'A/D/H/psi.sh',
-                  #'A/D/H/Z',
-                  )
+  sbox.simple_add_symlink('../gamma', 'A/D/H/chi')
+  sbox.simple_add_symlink('../gamma.sh', 'A/D/H/psi.sh')
+  #sbox.simple_add_symlink('../Y', 'A/D/H/Z')
 
   # Replace a normal {file, exec} with a symlink to {exec, file} via
   # Subversion replacement.
   sbox.simple_rm('A/mu',
                  'A/mu.sh')
-  os.symlink('../iota2', wc('A/mu'))
-  os.symlink('../iota', wc('A/mu.sh'))
-  sbox.simple_add('A/mu',
-                  'A/mu.sh')
+  sbox.simple_add_symlink('../iota2', 'A/mu')
+  sbox.simple_add_symlink('../iota', 'A/mu.sh')
 
   # Ditto, without the Subversion replacement.  Failing git-svn test
   # 'executable file becomes a symlink to bar/zzz (file)'.
-  os.remove(wc('Ax/mu'))
-  os.remove(wc('Ax/mu.sh'))
-  os.symlink('../iota2', wc('Ax/mu'))
-  os.symlink('../iota', wc('Ax/mu.sh'))
-  sbox.simple_propset('svn:special', '*',
+  if svntest.main.is_posix_os():
+    os.remove(wc('Ax/mu'))
+    os.remove(wc('Ax/mu.sh'))
+    os.symlink('../iota2', wc('Ax/mu'))
+    os.symlink('../iota', wc('Ax/mu.sh'))
+  else:
+    # At least modify the file a bit
+
+    # ### Somehow this breaks the test when using multiline data?
+    # ### Is that intended behavior?
+
+    file_write(sbox.ospath('Ax/mu'), 'Link to iota2')
+    file_write(sbox.ospath('Ax/mu.sh'), 'Link to iota')
+
+  sbox.simple_propset('svn:special', 'X',
                       'Ax/mu',
                       'Ax/mu.sh')
   sbox.simple_propdel('svn:executable', 'Ax/mu.sh')
@@ -1100,19 +1098,128 @@ def externals_as_symlink_targets(sbox):
 
   sbox.simple_commit()
 
+#----------------------------------------------------------------------
 @XFail()
 @Issue(4119)
-@SkipUnless(svntest.main.is_posix_os)
 def cat_added_symlink(sbox):
   "cat added symlink"
 
   sbox.build(read_only = True)
 
   kappa_path = sbox.ospath('kappa')
-  os.symlink('iota', kappa_path)
-  sbox.simple_add('kappa')
+  sbox.simple_add_symlink('iota', 'kappa')
   svntest.actions.run_and_verify_svn(None, "link iota", [],
                                      "cat", kappa_path)
+
+#----------------------------------------------------------------------
+def incoming_symlink_changes(sbox):
+  "verify incoming symlink change behavior"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_add_symlink('iota', 's-replace')
+  sbox.simple_add_symlink('iota', 's-in-place')
+  sbox.simple_add_symlink('iota', 's-type')
+  sbox.simple_append('s-reverse', 'link iota')
+  sbox.simple_add('s-reverse')
+  sbox.simple_commit() # r2
+
+  # Replace s-replace
+  sbox.simple_rm('s-replace')
+  # Note that we don't use 'A/mu' as the length of that matches 'iota', which
+  # would make us depend on timestamp changes for detecting differences.
+  sbox.simple_add_symlink('A/D/G/pi', 's-replace')
+
+  # Change target of s-in-place
+  if svntest.main.is_posix_os():
+    os.remove(sbox.ospath('s-in-place'))
+    os.symlink('A/D/G/pi', sbox.ospath('s-in-place'))
+  else:
+    sbox.simple_append('s-in-place', 'link A/D/G/pi', truncate = True)
+
+  # r3
+  expected_output = svntest.wc.State(wc_dir, {
+    's-replace'         : Item(verb='Replacing'),
+    's-in-place'        : Item(verb='Sending'),
+  })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, None, None,
+                                        wc_dir)
+
+  # r4
+  svntest.main.run_svnmucc('propdel', 'svn:special',
+                           sbox.repo_url + '/s-type',
+                           '-m', 'Turn s-type into a file')
+
+  # r5
+  svntest.main.run_svnmucc('propset', 'svn:special', 'X',
+                           sbox.repo_url + '/s-reverse',
+                           '-m', 'Turn s-reverse into a symlink')
+
+  # Currently we expect to see 'U'pdates, but we would like to see
+  # replacements
+  expected_output = svntest.wc.State(wc_dir, {
+    's-reverse'         : Item(status=' U'),
+    's-type'            : Item(status=' U'),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 5)
+  expected_status.add({
+    's-type'            : Item(status='  ', wc_rev='5'),
+    's-replace'         : Item(status='  ', wc_rev='5'),
+    's-reverse'         : Item(status='  ', wc_rev='5'),
+    's-in-place'        : Item(status='  ', wc_rev='5'),
+  })
+
+  # Update to HEAD/r5 to fetch the r4 and r5 symlink changes
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        check_props=True)
+
+  # Update back to r2, to prepare some local changes
+  expected_output = svntest.wc.State(wc_dir, {
+    # s-replace is D + A
+    's-replace'         : Item(status='A ', prev_status='D '),
+    's-in-place'        : Item(status='U '),
+    's-reverse'         : Item(status=' U'),
+    's-type'            : Item(status=' U'),
+  })
+  expected_status.tweak(wc_rev=2)
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        True,
+                                        wc_dir, '-r', '2')
+
+  # Ok, now add a property on all of them to make future symlinkness changes
+  # a tree conflict
+  # ### We should also try this with a 'textual change'
+  sbox.simple_propset('x', 'y', 's-replace', 's-in-place', 's-reverse', 's-type')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    's-replace'         : Item(prev_status = '  ', prev_treeconflict='C',
+                               status='  ', treeconflict='A'),
+    's-in-place'        : Item(status='U '),
+    's-reverse'         : Item(status='  ', treeconflict='C'),
+    's-type'            : Item(status='  ', treeconflict='C'),
+  })
+  expected_status.tweak(wc_rev=5)
+  expected_status.tweak('s-replace', 's-reverse', 's-type', status='RM',
+                        copied='+', treeconflict='C', wc_rev='-')
+  expected_status.tweak('s-in-place', status=' M')
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        True)
 
 ########################################################################
 # Run the tests
@@ -1144,6 +1251,7 @@ test_list = [ None,
               replace_symlinks,
               externals_as_symlink_targets,
               cat_added_symlink,
+              incoming_symlink_changes,
              ]
 
 if __name__ == '__main__':

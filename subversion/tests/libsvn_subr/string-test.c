@@ -479,7 +479,7 @@ test21(apr_pool_t *pool)
 
   svn_stringbuf_strip_whitespace(a);
 
-  if (svn_stringbuf_compare(a, b) == TRUE)
+  if (svn_stringbuf_compare(a, b))
     return SVN_NO_ERROR;
   else
     return fail(pool, "test failed");
@@ -612,6 +612,105 @@ test_stringbuf_replace(apr_pool_t *pool)
   return expect_stringbuf_equal(a, "test hello, world!!!", pool);
 }
 
+static svn_error_t *
+test_string_similarity(apr_pool_t *pool)
+{
+  const struct sim_score_test_t
+  {
+    const char *stra;
+    const char *strb;
+    apr_size_t lcs;
+    int score;
+  } tests[] =
+      {
+#define SCORE(lcs, len) ((2000 * (lcs) + (len)/2) / (len))
+
+        /* Equality */
+        {"",       "",          0, 1000},
+        {"quoth",  "quoth",     5, SCORE(5, 5+5)},
+
+        /* Deletion at start */
+        {"quoth",  "uoth",      4, SCORE(4, 5+4)},
+        {"uoth",   "quoth",     4, SCORE(4, 4+5)},
+
+        /* Deletion at end */
+        {"quoth",  "quot",      4, SCORE(4, 5+4)},
+        {"quot",   "quoth",     4, SCORE(4, 4+5)},
+
+        /* Insertion at start */
+        {"quoth",  "Xquoth",    5, SCORE(5, 5+6)},
+        {"Xquoth", "quoth",     5, SCORE(5, 6+5)},
+
+        /* Insertion at end */
+        {"quoth",  "quothX",    5, SCORE(5, 5+6)},
+        {"quothX", "quoth",     5, SCORE(5, 6+5)},
+
+        /* Insertion in middle */
+        {"quoth",  "quoXth",    5, SCORE(5, 5+6)},
+        {"quoXth", "quoth",     5, SCORE(5, 6+5)},
+
+        /* Transposition at start */
+        {"quoth",  "uqoth",     4, SCORE(4, 5+5)},
+        {"uqoth",  "quoth",     4, SCORE(4, 5+5)},
+
+        /* Transposition at end */
+        {"quoth",  "quoht",     4, SCORE(4, 5+5)},
+        {"quoht",  "quoth",     4, SCORE(4, 5+5)},
+
+        /* Transposition in middle */
+        {"quoth",  "qutoh",     4, SCORE(4, 5+5)},
+        {"qutoh",  "quoth",     4, SCORE(4, 5+5)},
+
+        /* Difference */
+        {"quoth",  "raven",     0, SCORE(0, 5+5)},
+        {"raven",  "quoth",     0, SCORE(0, 5+5)},
+        {"x",      "",          0, SCORE(0, 1+0)},
+        {"",       "x",         0, SCORE(0, 0+1)},
+        {"",       "quoth",     0, SCORE(0, 0+5)},
+        {"quoth",  "",          0, SCORE(0, 5+0)},
+        {"quoth",  "the raven", 2, SCORE(2, 5+9)},
+        {"the raven",  "quoth", 2, SCORE(2, 5+9)},
+        {NULL, NULL}
+      };
+
+  const struct sim_score_test_t *t;
+  svn_membuf_t buffer;
+
+  svn_membuf__create(&buffer, 0, pool);
+  for (t = tests; t->stra; ++t)
+    {
+      apr_size_t lcs;
+      const unsigned int score =
+        svn_cstring__similarity(t->stra, t->strb, &buffer, &lcs);
+      /*
+      fprintf(stderr,
+              "lcs %s ~ %s score %.3f (%"APR_SIZE_T_FMT
+              ") expected %.3f (%"APR_SIZE_T_FMT"))\n",
+              t->stra, t->strb, score/1000.0, lcs, t->score/1000.0, t->lcs);
+      */
+      if (score != t->score)
+        return fail(pool, "%s ~ %s score %.3f <> expected %.3f",
+                    t->stra, t->strb, score/1000.0, t->score/1000.0);
+
+      if (lcs != t->lcs)
+        return fail(pool,
+                    "%s ~ %s lcs %"APR_SIZE_T_FMT
+                    " <> expected %"APR_SIZE_T_FMT,
+                    t->stra, t->strb, lcs, t->lcs);
+    }
+
+  /* Test partial similarity */
+  {
+    const svn_string_t foo = {"svn:foo", 4};
+    const svn_string_t bar = {"svn:bar", 4};
+    if (1000 != svn_string__similarity(&foo, &bar, &buffer, NULL))
+      return fail(pool, "'%s'[:4] ~ '%s'[:4] found different",
+                  foo.data, bar.data);
+  }
+
+  return SVN_NO_ERROR;
+}
+
 /*
    ====================================================================
    If you add a new test to this file, update this array.
@@ -677,5 +776,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "check deletion from svn_stringbuf_t"),
     SVN_TEST_PASS2(test_stringbuf_replace,
                    "check replacement in svn_stringbuf_t"),
+    SVN_TEST_PASS2(test_string_similarity,
+                   "test string similarity scores"),
     SVN_TEST_NULL
   };

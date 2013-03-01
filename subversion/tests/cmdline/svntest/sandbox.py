@@ -37,6 +37,7 @@ class Sandbox:
   a test to operate within."""
 
   dependents = None
+  tmp_dir = None
 
   def __init__(self, module, idx):
     self.test_paths = []
@@ -44,10 +45,6 @@ class Sandbox:
     self._set_name("%s-%d" % (module, idx))
     # This flag is set to True by build() and returned by is_built()
     self._is_built = False
-
-    # Create an empty directory for temporary files
-    self.tmp_dir = self.add_wc_path('tmp', remove=True)
-    os.mkdir(self.tmp_dir)
 
   def _set_name(self, name, read_only=False):
     """A convenience method for renaming a sandbox, useful when
@@ -78,12 +75,14 @@ class Sandbox:
       tmp_authz_file = os.path.join(svntest.main.work_dir, "authz-" + self.name)
       open(tmp_authz_file, 'w').write("[/]\n* = rw\n")
       shutil.move(tmp_authz_file, self.authz_file)
+      self.groups_file = os.path.join(svntest.main.work_dir, "groups")
 
     # For svnserve tests we have a per-repository authz file, and it
     # doesn't need to be there in order for things to work, so we don't
     # have any default contents.
     elif self.repo_url.startswith("svn"):
       self.authz_file = os.path.join(self.repo_dir, "conf", "authz")
+      self.groups_file = os.path.join(self.repo_dir, "conf", "groups")
 
   def clone_dependent(self, copy_wc=False):
     """A convenience method for creating a near-duplicate of this
@@ -157,6 +156,11 @@ class Sandbox:
     """Get a stable name for a temporary file that will be removed after
        running the test"""
 
+    if not self.tmp_dir:
+      # Create an empty directory for temporary files
+      self.tmp_dir = self.add_wc_path('tmp', remove=True)
+      os.mkdir(self.tmp_dir)
+
     self.tempname_offs = self.tempname_offs + 1
 
     return os.path.join(self.tmp_dir, '%s-%s' % (prefix, self.tempname_offs))
@@ -188,6 +192,12 @@ class Sandbox:
        path relative to the WC dir of this sbox, or relative to OS-style
        path WC_DIR if supplied."""
     return [self.ospath(rp, wc_dir) for rp in relpaths]
+
+  def path(self, relpath, wc_dir=None):
+    """Return RELPATH converted to an path relative to the WC dir
+       of this sbox, or relative to WC_DIR if supplied, but always
+       using '/' as directory separator."""
+    return self.ospath(relpath, wc_dir=wc_dir).replace(os.path.sep, '/')
 
   def redirected_root_url(self, temporary=False):
     """If TEMPORARY is set, return the URL which should be configured
@@ -231,8 +241,8 @@ class Sandbox:
       target = self.ospath(target)
     if message is None:
       message = svntest.main.make_log_msg()
-    svntest.main.run_svn(False, 'commit', '-m', message,
-                         target)
+    svntest.actions.run_and_verify_commit(self.wc_dir, None, None, [],
+                                          '-m', message, target)
 
   def simple_rm(self, *targets):
     """Schedule TARGETS for deletion.
@@ -306,6 +316,24 @@ class Sandbox:
       else:
         raise Exception("Unexpected line '" + line + "' in proplist output" + str(out))
     return props
+
+  def simple_add_symlink(self, dest, target):
+    """Create a symlink TARGET pointing to DEST and add it to subversion"""
+    if svntest.main.is_posix_os():
+      os.symlink(dest, self.ospath(target))
+    else:
+      svntest.main.file_write(self.ospath(target), "link %s" % dest)
+    self.simple_add(target)
+    if not svntest.main.is_posix_os():
+      # '*' is evaluated on Windows
+      self.simple_propset('svn:special', 'X', target)
+
+  def simple_add_text(self, text, *targets):
+    """Create files containing TEXT as TARGETS"""
+    assert len(targets) > 0
+    for target in targets:
+       svntest.main.file_write(self.ospath(target), text, mode='wb')
+    self.simple_add(*targets)
 
   def simple_copy(self, source, dest):
     """Copy SOURCE to DEST in the WC.

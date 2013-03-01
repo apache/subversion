@@ -41,6 +41,7 @@
 #include "svn_string.h"
 #include "svn_xml.h"
 #include "svn_props.h"
+#include "svn_dirent_uri.h"
 
 #include "../libsvn_ra/ra_loader.h"
 #include "private/svn_dep_compat.h"
@@ -636,6 +637,7 @@ setup_serf_req(serf_request_t *request,
                svn_ra_serf__session_t *session,
                const char *method, const char *url,
                serf_bucket_t *body_bkt, const char *content_type,
+               const char *accept_encoding,
                apr_pool_t *request_pool,
                apr_pool_t *scratch_pool)
 {
@@ -656,6 +658,10 @@ setup_serf_req(serf_request_t *request,
       SVN_ERR(svn_ra_serf__copy_into_spillbuf(&buf, body_bkt,
                                               request_pool,
                                               scratch_pool));
+      /* Destroy original bucket since it content is already copied 
+         to spillbuf. */
+      serf_bucket_destroy(body_bkt);
+
       body_bkt = svn_ra_serf__create_sb_bucket(buf, allocator,
                                                request_pool,
                                                scratch_pool);
@@ -696,6 +702,11 @@ setup_serf_req(serf_request_t *request,
       serf_bucket_headers_setn(*hdrs_bkt, "Connection", "keep-alive");
 #endif
 
+  if (accept_encoding)
+    {
+      serf_bucket_headers_setn(*hdrs_bkt, "Accept-Encoding", accept_encoding);
+    }
+
   /* These headers need to be sent with every request; see issue #3255
      ("mod_dav_svn does not pass client capabilities to start-commit
      hooks") for why. */
@@ -712,7 +723,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
                               apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool;
-  apr_short_interval_time_t waittime_left = sess->timeout;
+  apr_interval_time_t waittime_left = sess->timeout;
   
   assert(sess->pending_error == SVN_NO_ERROR);
 
@@ -745,14 +756,17 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
           err = SVN_NO_ERROR;
           status = 0;
 
-          if (waittime_left > SVN_RA_SERF__CONTEXT_RUN_DURATION)
+          if (sess->timeout)
             {
-              waittime_left -= SVN_RA_SERF__CONTEXT_RUN_DURATION;
-            }
-          else
-            {
-              return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT, NULL,
-                                      _("Connection timed out"));
+              if (waittime_left > SVN_RA_SERF__CONTEXT_RUN_DURATION)
+                {
+                  waittime_left -= SVN_RA_SERF__CONTEXT_RUN_DURATION;
+                }
+              else 
+                {
+                  return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT, NULL,
+                                          _("Connection timed out"));
+                }
             }
         }
       else
@@ -974,27 +988,51 @@ svn_ra_serf__response_discard_handler(serf_request_t *request,
 
 
 /* Return the value of the RESPONSE's Location header if any, or NULL
-   otherwise.  All allocations will be made in POOL.  */
+   otherwise.  */
 static const char *
 response_get_location(serf_bucket_t *response,
-                      apr_pool_t *pool)
+                      const char *base_url,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
 {
   serf_bucket_t *headers;
   const char *location;
-  apr_status_t status;
-  apr_uri_t uri;
 
   headers = serf_bucket_response_get_headers(response);
   location = serf_bucket_headers_get(headers, "Location");
   if (location == NULL)
     return NULL;
 
-  /* Ignore the scheme/host/port. Or just return as-is if we can't parse.  */
-  status = apr_uri_parse(pool, location, &uri);
-  if (!status)
-    location = uri.path;
+  /* The RFCs say we should have received a full url in LOCATION, but
+     older apache versions and many custom web handlers just return a
+     relative path here...
 
-  return svn_urlpath__canonicalize(location, pool);
+     And we can't trust anything because it is network data.
+   */
+  if (*location == '/')
+    {
+      apr_uri_t uri;
+      apr_status_t status;
+
+      status = apr_uri_parse(scratch_pool, base_url, &uri);
+
+      if (status != APR_SUCCESS)
+        return NULL;
+
+      /* Replace the path path with what we got */
+      uri.path = (char*)svn_urlpath__canonicalize(location, scratch_pool);
+
+      /* And make APR produce a proper full url for us */
+      location = apr_uri_unparse(scratch_pool, &uri, 0);
+
+      /* Fall through to ensure our canonicalization rules */
+    }
+  else if (!svn_path_is_url(location))
+    {
+      return NULL; /* Any other formats we should support? */
+    }
+
+  return svn_uri_canonicalize(location, result_pool);
 }
 
 
@@ -1389,45 +1427,65 @@ xml_parser_cleanup(void *baton)
   return APR_SUCCESS;
 }
 
+/* Limit the amount of pending content to parse at once to < 100KB per
+   iteration. This number is chosen somewhat arbitrarely. Making it lower
+   will have a drastical negative impact on performance, whereas increasing it
+   increases the risk for connection timeouts.
+ */
+#define PENDING_TO_PARSE PARSE_CHUNK_SIZE * 5
+
 svn_error_t *
 svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
+                             svn_boolean_t *network_eof,
                              apr_pool_t *scratch_pool)
 {
+  svn_boolean_t pending_empty = FALSE;
+  apr_size_t cur_read = 0;
+
   /* Fast path exit: already paused, nothing to do, or already done.  */
   if (parser->paused || parser->pending == NULL || *parser->done)
-    return SVN_NO_ERROR;
+    {
+      *network_eof = parser->pending ? parser->pending->network_eof : FALSE;
+      return SVN_NO_ERROR;
+    }
 
-  /* ### it is possible that the XML parsing of the pending content is
-     ### so slow, and that we don't return to reading the connection
-     ### fast enough... that the server will disconnect us. right now,
-     ### that is highly improbable, but is noted for future's sake.
-     ### should that ever happen, the loops in this function can simply
-     ### terminate after N seconds.  */
-
-  /* Try to read everything from the spillbuf.  */
-  while (TRUE)
+  /* Parsing the pending conten in the spillbuf will result in many disc i/o
+     operations. This can be so slow that we don't run the network event
+     processing loop often enough, resulting in timed out connections.
+   
+     So we limit the amounts of bytes parsed per iteration.
+   */
+  while (cur_read < PENDING_TO_PARSE)
     {
       const char *data;
       apr_size_t len;
 
       /* Get a block of content, stopping the loop when we run out.  */
       SVN_ERR(svn_spillbuf__read(&data, &len, parser->pending->buf,
-                                 scratch_pool));
-      if (data == NULL)
-        break;
+                             scratch_pool));
+      if (data)
+        {
+          /* Inject the content into the XML parser.  */
+          SVN_ERR(inject_to_parser(parser, data, len, NULL));
 
-      /* Inject the content into the XML parser.  */
-      SVN_ERR(inject_to_parser(parser, data, len, NULL));
+          /* If the XML parsing callbacks paused us, then we're done for now.  */
+          if (parser->paused)
+            break;
 
-      /* If the XML parsing callbacks paused us, then we're done for now.  */
-      if (parser->paused)
-        return SVN_NO_ERROR;
+          cur_read += len;
+        }
+      else
+        {
+          /* The buffer is empty. */
+          pending_empty = TRUE;
+          break;
+        }
     }
-  /* All stored content (memory and file) has now been exhausted.  */
 
   /* If the PENDING structures are empty *and* we consumed all content from
      the network, then we're completely done with the parsing.  */
-  if (parser->pending->network_eof)
+  if (pending_empty &&
+      parser->pending->network_eof)
     {
       SVN_ERR_ASSERT(parser->xmlp != NULL);
 
@@ -1440,8 +1498,11 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
       add_done_item(parser);
     }
 
+  *network_eof = parser->pending ? parser->pending->network_eof : FALSE;
+
   return SVN_NO_ERROR;
 }
+#undef PENDING_TO_PARSE
 
 
 /* ### this is still broken conceptually. just shifting incrementally... */
@@ -1523,7 +1584,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
     }
 
   /* Woo-hoo.  Nothing here to see.  */
-  if (sl.code == 404 && ctx->ignore_errors == FALSE)
+  if (sl.code == 404 && !ctx->ignore_errors)
     {
       err = handle_server_error(request, response, pool);
 
@@ -1860,7 +1921,10 @@ handle_response(serf_request_t *request,
     }
 
   /* ... and set up the header fields in HANDLER.  */
-  handler->location = response_get_location(response, handler->handler_pool);
+  handler->location = response_get_location(response,
+                                            handler->session->session_url_str,
+                                            handler->handler_pool,
+                                            scratch_pool);
 
   /* On the last request, we failed authentication. We succeeded this time,
      so let's save away these credentials.  */
@@ -1874,10 +1938,12 @@ handle_response(serf_request_t *request,
   handler->conn->last_status_code = handler->sline.code;
 
   if (handler->sline.code == 405
+      || handler->sline.code == 408
       || handler->sline.code == 409
       || handler->sline.code >= 500)
     {
       /* 405 Method Not allowed.
+         408 Request Timeout
          409 Conflict: can indicate a hook error.
          5xx (Internal) Server error. */
       serf_bucket_t *hdrs;
@@ -2051,6 +2117,7 @@ setup_request(serf_request_t *request,
 {
   serf_bucket_t *body_bkt;
   serf_bucket_t *headers_bkt;
+  const char *accept_encoding;
 
   if (handler->body_delegate)
     {
@@ -2065,9 +2132,23 @@ setup_request(serf_request_t *request,
       body_bkt = NULL;
     }
 
+  if (handler->custom_accept_encoding)
+    {
+      accept_encoding = NULL;
+    }
+  else if (handler->session->using_compression)
+    {
+      /* Accept gzip compression if enabled. */
+      accept_encoding = "gzip";
+    }
+  else
+    {
+      accept_encoding = NULL;
+    }
+
   SVN_ERR(setup_serf_req(request, req_bkt, &headers_bkt,
                          handler->session, handler->method, handler->path,
-                         body_bkt, handler->body_type,
+                         body_bkt, handler->body_type, accept_encoding,
                          request_pool, scratch_pool));
 
   if (handler->header_delegate)

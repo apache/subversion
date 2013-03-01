@@ -127,8 +127,7 @@ def copy_replace_with_props(sbox, wc_copy):
   expected_disk.tweak('A/D/G/rho',
                       props={ 'svn:eol-style': 'LF' })
 
-  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk, True)
 
   # Commit props
   expected_output = svntest.wc.State(wc_dir, {
@@ -172,8 +171,7 @@ def copy_replace_with_props(sbox, wc_copy):
   expected_disk.tweak('A/D/G/rho',
                       contents="This is the file 'pi'.\n",
                       props=props)
-  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
   # Now commit and verify
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
@@ -769,9 +767,11 @@ def mv_and_revert_directory(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'move',
                                      E_path, F_path)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
+  expected_status.tweak('A/B/E/alpha', 'A/B/E/beta', status='D ')
+  expected_status.tweak('A/B/E', status='D ', moved_to='A/B/F/E')
   expected_status.add({
-    'A/B/F/E' : Item(status='A ', wc_rev='-', copied='+'),
+    'A/B/F/E' : Item(status='A ', wc_rev='-', copied='+',
+                     moved_from='A/B/E'),
     'A/B/F/E/alpha' : Item(status='  ', wc_rev='-', copied='+'),
     'A/B/F/E/beta' : Item(status='  ', wc_rev='-', copied='+'),
     })
@@ -781,6 +781,7 @@ def mv_and_revert_directory(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', '--recursive',
                                      new_E_path)
   expected_status.remove('A/B/F/E', 'A/B/F/E/alpha', 'A/B/F/E/beta')
+  expected_status.tweak('A/B/E', moved_to=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
@@ -906,7 +907,7 @@ def wc_to_repos(sbox):
 #----------------------------------------------------------------------
 # Issue 1090: various use-cases of 'svn cp URL wc' where the
 # repositories might be different, or be the same repository.
-@Issues(1090,1444)
+@Issues(1090, 1444, 3590)
 def repos_to_wc(sbox):
   "repository to working-copy copy"
 
@@ -987,17 +988,30 @@ def repos_to_wc(sbox):
   E_url = other_repo_url + "/A/B/E"
   pi_url = other_repo_url + "/A/D/G/pi"
 
-  # Expect an error in the directory case until we allow this copy to succeed.
-  expected_error = "svn: E200007: Source URL '.*foreign repository"
-  svntest.actions.run_and_verify_svn(None, None, expected_error,
+  # Finally, for 1.8 we allow this copy to succeed.
+  expected_output = svntest.verify.UnorderedOutput([
+    '--- Copying from foreign repository URL \'%s\':\n' % E_url,
+    'A         %s\n' % sbox.ospath('E'),
+    'A         %s\n' % sbox.ospath('E/beta'),
+    'A         %s\n' % sbox.ospath('E/alpha'),
+  ])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'copy', E_url, wc_dir)
 
-  # But file case should work fine.
-  svntest.actions.run_and_verify_svn(None, None, [], 'copy', pi_url, wc_dir)
+  expected_output = [
+    '--- Copying from foreign repository URL \'%s\':\n' % pi_url,
+    'A         %s\n' % sbox.ospath('pi'),
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'copy', pi_url, wc_dir)
 
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.add({
     'pi' : Item(status='A ',  wc_rev='0', entry_rev='1'),
+    # And from the foreign repository
+    'E'             : Item(status='A ', wc_rev='0'),
+    'E/beta'        : Item(status='A ', wc_rev='0'),
+    'E/alpha'       : Item(status='A ', wc_rev='0'),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
 
@@ -1373,8 +1387,7 @@ def revision_kinds_local_source(sbox):
       raise svntest.Failure
 
   # Check that the new files have the right contents
-  actual_disk = svntest.tree.build_tree_from_wc(wc_dir)
-  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
 
 #-------------------------------------------------------------
@@ -2110,7 +2123,7 @@ def move_moved_file_and_dir(sbox):
   # Create expected status tree
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'A/D/G/E_move_moved/'      : Item(status='  ', wc_rev=2),
+    'A/D/G/E_move_moved'       : Item(status='  ', wc_rev=2),
     'A/D/G/E_move_moved/alpha' : Item(status='  ', wc_rev=2),
     'A/D/G/E_move_moved/beta'  : Item(status='  ', wc_rev=2),
     'A/B/F/rho_move_moved'     : Item(status='  ', wc_rev=2),
@@ -2419,19 +2432,11 @@ def move_file_back_and_forth(sbox):
 
   # Check expected status before commit
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.add({
-    'A/D/G/rho' : Item(status='R ', copied='+', wc_rev='-'),
-    })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # Commit, and check expected output and status
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/D/G/rho' : Item(verb='Replacing'),
-    })
+  # Try to commit and find out that there is nothing to commit.
+  expected_output = []
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.add({
-    'A/D/G/rho' : Item(status='  ', wc_rev=2),
-    })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
@@ -2458,34 +2463,11 @@ def move_dir_back_and_forth(sbox):
   # Move the moved dir: D_moved back to its starting
   # location at A/D.
 
-  if svntest.main.wc_is_singledb(wc_dir):
-    # In single-db target is gone on-disk after it was moved away, so this
-    # move works ok
-    expected_err = []
-  else:
-    # In !SINGLE_DB the target of the copy exists on-dir, so svn tries
-    # to move the file below the deleted directory
-    expected_err = '.*Cannot copy to .*as it is scheduled for deletion'
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv', D_move_path, D_path)
 
-  svntest.actions.run_and_verify_svn(None, None, expected_err,
-                                     'mv', D_move_path, D_path)
-
-  if svntest.main.wc_is_singledb(wc_dir):
-    # Verify that the status indicates a replace with history
-    expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-    expected_status.add({
-      'A/D'               : Item(status='R ', copied='+', wc_rev='-'),
-      'A/D/G'             : Item(status='  ', copied='+', wc_rev='-'),
-      'A/D/G/pi'          : Item(status='  ', copied='+', wc_rev='-'),
-      'A/D/G/rho'         : Item(status='  ', copied='+', wc_rev='-'),
-      'A/D/G/tau'         : Item(status='  ', copied='+', wc_rev='-'),
-      'A/D/gamma'         : Item(status='  ', copied='+', wc_rev='-'),
-      'A/D/H'             : Item(status='  ', copied='+', wc_rev='-'),
-      'A/D/H/chi'         : Item(status='  ', copied='+', wc_rev='-'),
-      'A/D/H/omega'       : Item(status='  ', copied='+', wc_rev='-'),
-      'A/D/H/psi'         : Item(status='  ', copied='+', wc_rev='-'),
-      })
-    svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  # Verify that the status indicates a replace with history
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 def copy_move_added_paths(sbox):
   "copy and move added paths without commits"
@@ -2659,12 +2641,7 @@ def copy_added_paths_with_props(sbox):
     'A/D/I'       : Item(props={'foo' : 'bar'}),
     })
 
-  # Read disk state with props
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
-
-  # Compare actual vs. expected disk trees.
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
   # Copy added dir I to dir A/C
   I_copy_path = sbox.ospath('A/C/I')
@@ -2705,12 +2682,7 @@ def copy_added_paths_with_props(sbox):
                                         expected_status,
                                         None,
                                         wc_dir)
-  # Read disk state with props
-  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
-
-  # Compare actual vs. expected disk trees.
-  svntest.tree.compare_trees("disk", actual_disk_tree,
-                             expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
 def copy_added_paths_to_URL(sbox):
   "copy added path to URL"
@@ -2871,8 +2843,9 @@ def move_to_relative_paths(sbox):
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'beta'        : Item(status='A ', copied='+', wc_rev='-'),
-    'A/B/E/beta'  : Item(status='D ', wc_rev='1')
+    'beta'        : Item(status='A ', copied='+', wc_rev='-',
+                         moved_from='A/B/E/beta'),
+    'A/B/E/beta'  : Item(status='D ', wc_rev='1', moved_to='beta')
   })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -2893,8 +2866,9 @@ def move_from_relative_paths(sbox):
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'A/B/F/beta'  : Item(status='A ', copied='+', wc_rev='-'),
-    'A/B/E/beta'  : Item(status='D ', wc_rev='1')
+    'A/B/F/beta'  : Item(status='A ', copied='+', wc_rev='-',
+                         moved_from='A/B/E/beta'),
+    'A/B/E/beta'  : Item(status='D ', wc_rev='1', moved_to='A/B/F/beta')
   })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -3327,8 +3301,7 @@ def copy_peg_rev_local_files(sbox):
     'sigma'     : Item(contents=psi_text, props={}),
     })
 
-  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 3)
-  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
 
 #----------------------------------------------------------------------
@@ -3410,8 +3383,7 @@ def copy_peg_rev_local_dirs(sbox):
     'A/J/beta'  : Item(contents="This is the file 'beta'.\n"),
     })
 
-  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 5)
-  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
 
 
 #----------------------------------------------------------------------
@@ -3913,8 +3885,8 @@ def double_parents_with_url(sbox):
 
 
 # Used to cause corruption not fixable by 'svn cleanup'.
-def copy_into_absent_dir(sbox):
-  "copy file into absent dir"
+def copy_into_missing_dir(sbox):
+  "copy file into missing dir"
 
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
@@ -4359,13 +4331,14 @@ def nonrecursive_commit_of_copy(sbox):
 # and then renaming the subdir, breaks history of the moved files.
 @Issue(3474)
 def copy_added_dir_with_copy(sbox):
-  """copy of new dir with copied file keeps history"""
+  """copy/mv of new dir with copied file keeps history"""
 
-  sbox.build()
+  sbox.build(read_only=True)
   wc_dir = sbox.wc_dir
 
-  new_dir = sbox.ospath('NewDir');
-  new_dir2 = sbox.ospath('NewDir2');
+  new_dir = sbox.ospath('NewDir')
+  new_dir2 = sbox.ospath('NewDir2')
+  new_dir3 = sbox.ospath('NewDir3')
 
   # Alias for svntest.actions.run_and_verify_svn
   rav_svn = svntest.actions.run_and_verify_svn
@@ -4386,8 +4359,17 @@ def copy_added_dir_with_copy(sbox):
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+  # move of added dir also retains copy history of children
+  rav_svn(None, None, [], 'mv', new_dir, new_dir3)
+  expected_status.remove('NewDir', 'NewDir/mu')
+  expected_status.add(
+    {
+      'NewDir3'           : Item(status='A ', wc_rev='0'),
+      'NewDir3/mu'        : Item(status='A ', copied='+', wc_rev='-'),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-@SkipUnless(svntest.main.is_posix_os)
+
 @Issue(3303)
 def copy_broken_symlink(sbox):
   """copy broken symlink"""
@@ -4397,14 +4379,14 @@ def copy_broken_symlink(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  new_symlink = sbox.ospath('new_symlink');
-  copied_symlink = sbox.ospath('copied_symlink');
-  os.symlink('linktarget', new_symlink)
+  new_symlink = sbox.ospath('new_symlink')
+  copied_symlink = sbox.ospath('copied_symlink')
 
   # Alias for svntest.actions.run_and_verify_svn
   rav_svn = svntest.actions.run_and_verify_svn
 
-  rav_svn(None, None, [], 'add', new_symlink)
+  sbox.simple_add_symlink('linktarget', 'new_symlink')
+
   rav_svn(None, None, [], 'cp', new_symlink, copied_symlink)
 
   # Check whether both new_symlink and copied_symlink are added to the
@@ -4437,22 +4419,27 @@ def move_dir_containing_move(sbox):
                                      sbox.ospath('A/B_tmp'))
 
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
-  expected_status.tweak('A/B',
-                        'A/B/E',
+  expected_status.tweak('A/B', status='D ', moved_to='A/B_tmp')
+  expected_status.tweak('A/B/E',
                         'A/B/E/alpha',
                         'A/B/E/beta',
                         'A/B/F',
                         'A/B/lambda',
                         status='D ')
   expected_status.add({
-      'A/B_tmp'               : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_tmp'               : Item(status='A ', copied='+', wc_rev='-',
+                                     moved_from='A/B'),
       # alpha has a revision that isn't reported by status.
       'A/B_tmp/E'             : Item(status='  ', copied='+', wc_rev='-'),
-      'A/B_tmp/E/alpha'       : Item(status='D ', copied='+', wc_rev='-'),
-      'A/B_tmp/E/alpha_moved' : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_tmp/E/alpha'       : Item(status='D ', copied='+', wc_rev='-',
+                                     moved_to='A/B_tmp/E/alpha_moved'),
+      'A/B_tmp/E/alpha_moved' : Item(status='A ', copied='+', wc_rev='-',
+                                     moved_from='A/B_tmp/E/alpha'),
       'A/B_tmp/E/beta'        : Item(status='  ', copied='+', wc_rev='-'),
-      'A/B_tmp/F'             : Item(status='D ', copied='+', wc_rev='-'),
-      'A/B_tmp/F_moved'       : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_tmp/F'             : Item(status='D ', copied='+', wc_rev='-',
+                                     moved_to='A/B_tmp/F_moved'),
+      'A/B_tmp/F_moved'       : Item(status='A ', copied='+', wc_rev='-',
+                                     moved_from='A/B_tmp/F'),
       'A/B_tmp/lambda'        : Item(status='  ', copied='+', wc_rev='-'),
     })
 
@@ -4461,6 +4448,7 @@ def move_dir_containing_move(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
                                      sbox.ospath('A/B_tmp'),
                                      sbox.ospath('A/B_moved'))
+  expected_status.tweak('A/B', moved_to='A/B_moved')
   expected_status.remove('A/B_tmp',
                          'A/B_tmp/E',
                          'A/B_tmp/E/alpha',
@@ -4470,13 +4458,18 @@ def move_dir_containing_move(sbox):
                          'A/B_tmp/F_moved',
                          'A/B_tmp/lambda')
   expected_status.add({
-      'A/B_moved'               : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_moved'               : Item(status='A ', copied='+', wc_rev='-',
+                                       moved_from='A/B'),
       'A/B_moved/E'             : Item(status='  ', copied='+', wc_rev='-'),
-      'A/B_moved/E/alpha'       : Item(status='D ', copied='+', wc_rev='-'),
-      'A/B_moved/E/alpha_moved' : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_moved/E/alpha'       : Item(status='D ', copied='+', wc_rev='-',
+                                       moved_to='A/B_moved/E/alpha_moved'),
+      'A/B_moved/E/alpha_moved' : Item(status='A ', copied='+', wc_rev='-',
+                                       moved_from='A/B_moved/E/alpha'),
       'A/B_moved/E/beta'        : Item(status='  ', copied='+', wc_rev='-'),
-      'A/B_moved/F'             : Item(status='D ', copied='+', wc_rev='-'),
-      'A/B_moved/F_moved'       : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_moved/F'             : Item(status='D ', copied='+', wc_rev='-',
+                                       moved_to='A/B_moved/F_moved'),
+      'A/B_moved/F_moved'       : Item(status='A ', copied='+', wc_rev='-',
+                                       moved_from='A/B_moved/F'),
       'A/B_moved/lambda'        : Item(status='  ', copied='+', wc_rev='-'),
     })
 
@@ -4506,6 +4499,8 @@ def move_dir_containing_move(sbox):
                          'A/B/lambda',
                          'A/B_moved/E/alpha',
                          'A/B_moved/F')
+  expected_status.tweak('A/B_moved', 'A/B_moved/E/alpha_moved',
+                        'A/B_moved/F_moved', moved_from=None)
   svntest.actions.run_and_verify_commit(sbox.wc_dir,
                                         expected_output,
                                         expected_status,
@@ -4670,7 +4665,7 @@ def changed_dir_data_should_match_checkout(sbox):
 def move_added_nodes(sbox):
   """move added nodes"""
 
-  sbox.build()
+  sbox.build(read_only=True)
 
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir',
                                      sbox.ospath('X'),
@@ -4738,13 +4733,23 @@ def mixed_rev_copy_del(sbox):
   svntest.main.run_svn(None, 'up', wc_dir)
   expected_status.tweak(wc_rev=2)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
-  svntest.main.run_svn(None, 'up', '-r1',
-                       sbox.ospath('A/B/E/alpha'),
-                       sbox.ospath('A/B/E/beta'))
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha' : Item(status='A '),
+  })
+
   expected_status.add({
     'A/B/E/alpha' : Item(status='  ', wc_rev=1),
     })
   expected_status.tweak('A/B/E/beta', wc_rev=1)
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None,
+                                        expected_status, [],
+                                        None, None, None, None, None,
+                                        '-r1',
+                                        sbox.ospath('A/B/E/alpha'),
+                                        sbox.ospath('A/B/E/beta'))
+  
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Copy A/B/E to A/B/E_copy
@@ -4784,7 +4789,7 @@ def mixed_rev_copy_del(sbox):
 def copy_delete_undo(sbox, use_revert):
   "copy, delete child, undo"
 
-  sbox.build()
+  sbox.build(read_only=True)
   wc_dir = sbox.wc_dir
 
   # Copy directory with children
@@ -4839,7 +4844,7 @@ def copy_delete_revert(sbox):
 def delete_replace_delete(sbox):
   "delete a directory scheduled for replacement"
 
-  sbox.build()
+  sbox.build(read_only=True)
   wc_dir = sbox.wc_dir
 
   # Delete directory with children
@@ -5149,8 +5154,8 @@ def deleted_file_with_case_clash(sbox):
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'iota' : Item(status='D ', wc_rev=1),
-    'IOTA' : Item(status='A ', copied='+', wc_rev='-'),
+    'iota' : Item(status='D ', wc_rev=1, moved_to='IOTA'),
+    'IOTA' : Item(status='A ', copied='+', wc_rev='-', moved_from='iota'),
     })
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -5212,15 +5217,16 @@ def case_only_rename(sbox):
   # Create expected status.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'iota'              : Item(status='D ', wc_rev=1),
-    'IoTa'              : Item(status='A ', copied='+', wc_rev='-'),
-    'A/B'               : Item(status='D ', wc_rev='1'),
+  
+    'iota'              : Item(status='D ', wc_rev=1, moved_to='IoTa'),
+    'IoTa'              : Item(status='A ', copied='+', wc_rev='-', moved_from='iota'),
+    'A/B'               : Item(status='D ', wc_rev='1', moved_to='A/b'),
     'A/B/lambda'        : Item(status='D ', wc_rev='1'),
     'A/B/E'             : Item(status='D ', wc_rev='1'),
     'A/B/E/alpha'       : Item(status='D ', wc_rev='1'),
     'A/B/E/beta'        : Item(status='D ', wc_rev='1'),
     'A/B/F'             : Item(status='D ', wc_rev='1'),
-    'A/b'               : Item(status='A ', copied='+', wc_rev='-'),
+    'A/b'               : Item(status='A ', copied='+', wc_rev='-', moved_from='A/B'),
     'A/b/E'             : Item(status='  ', copied='+', wc_rev='-'),
     'A/b/E/beta'        : Item(status='  ', copied='+', wc_rev='-'),
     'A/b/E/alpha'       : Item(status='  ', copied='+', wc_rev='-'),
@@ -5458,14 +5464,21 @@ def copy_deleted_dir(sbox):
   sbox.simple_rm('iota')
   sbox.simple_rm('A')
 
+  # E145000 - SVN_ERR_NODE_UNKNOWN_KIND
+  # E155035 - SVN_ERR_WC_PATH_UNEXPECTED_STATUS
+  # E155010 - SVN_ERR_WC_PATH_NOT_FOUND
+
   svntest.actions.run_and_verify_svn(None, None,
-                                     '(svn: E145000: Path.* does not exist)|' +
-                                      "(svn: E155035: Deleted node .* copied)",
+                                     'svn: (E145000|E155035|E155010): ' +
+                                     '(Path \'.*iota\' does not exist)|' +
+                                     '(Deleted node .*iota\' copied)',
                                      'cp', sbox.ospath('iota'),
                                      sbox.ospath('new_iota'))
+
   svntest.actions.run_and_verify_svn(None, None,
-                                     '(svn: E145000: Path.* does not exist)|' +
-                                      "(svn: E155035: Deleted node .* copied)",
+                                     'svn: (E145000|E155035|E155010): ' +
+                                     '(Path \'.*D\' does not exist)|' +
+                                     '(Deleted node .*D\' copied)',
                                      'cp', sbox.ospath('A/D'),
                                      sbox.ospath('new_D'))
 
@@ -5475,11 +5488,15 @@ def copy_deleted_dir(sbox):
 
   # At one time these two invocations raised an assertion.
   svntest.actions.run_and_verify_svn(None, None,
-                                     'svn: E155035: Deleted node.* can\'t be.*',
+                                     'svn: (E155035|E155010): ' +
+                                     '(Path \'.*iota\' does not exist)|' +
+                                     '(Deleted node.* .*iota\' can\'t be.*)',
                                      'cp', sbox.ospath('iota'),
                                      sbox.ospath('new_iota'))
   svntest.actions.run_and_verify_svn(None, None,
-                                     'svn: E155035: Deleted node.* can\'t be.*',
+                                     'svn: (E155035|E155010): ' +
+                                     '(Path \'.*D\' does not exist)|' +
+                                     '(Deleted node.* .*D\' can\'t be.*)',
                                      'cp', sbox.ospath('A/D'),
                                      sbox.ospath('new_D'))
 
@@ -5847,7 +5864,7 @@ test_list = [ None,
               allow_unversioned_parent_for_copy_src,
               unneeded_parents,
               double_parents_with_url,
-              copy_into_absent_dir,
+              copy_into_missing_dir,
               find_copyfrom_information_upstairs,
               path_move_and_copy_between_wcs_2475,
               path_copy_in_repo_2475,

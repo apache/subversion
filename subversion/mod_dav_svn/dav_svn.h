@@ -52,6 +52,12 @@ extern "C" {
 /* a pool-key for the shared dav_svn_root used by autoversioning  */
 #define DAV_SVN__AUTOVERSIONING_ACTIVITY "svn-autoversioning-activity"
 
+/* Option values for SVNAllowBulkUpdates */
+typedef enum dav_svn__bulk_upd_conf {
+    CONF_BULKUPD_ON,
+    CONF_BULKUPD_OFF,
+    CONF_BULKUPD_PREFER
+} dav_svn__bulk_upd_conf;
 
 /* dav_svn_repos
  *
@@ -110,7 +116,7 @@ typedef struct dav_svn_repos {
   svn_boolean_t autoversioning;
 
   /* Whether bulk updates are allowed for this repository. */
-  svn_boolean_t bulk_updates;
+  dav_svn__bulk_upd_conf bulk_updates;
 
   /* Whether HTTP protocol version 2 is allowed to be used. */
   svn_boolean_t v2_protocol;
@@ -302,7 +308,7 @@ const char *dav_svn__get_fs_parent_path(request_rec *r);
 svn_boolean_t dav_svn__get_autoversioning_flag(request_rec *r);
 
 /* for the repository referred to by this request, are bulk updates allowed? */
-svn_boolean_t dav_svn__get_bulk_updates_flag(request_rec *r);
+dav_svn__bulk_upd_conf dav_svn__get_bulk_updates_flag(request_rec *r);
 
 /* for the repository referred to by this request, are subrequests active? */
 svn_boolean_t dav_svn__get_pathauthz_flag(request_rec *r);
@@ -745,6 +751,20 @@ dav_svn__allow_read_resource(const dav_resource *resource,
                              svn_revnum_t rev,
                              apr_pool_t *pool);
 
+
+/* Return TRUE iff the current user (as determined by Apache's
+   authentication system) has permission to read repository REPOS_NAME.
+   This will invoke any authz modules loaded into Apache unless this
+   Subversion location has been configured to bypass those in favor of a
+   direct lookup in the Subversion authz subsystem. Use POOL for any
+   temporary allocation.
+   IMPORTANT: R must be request for DAV_SVN_RESTYPE_PARENTPATH_COLLECTION
+   resource.
+*/
+svn_boolean_t
+dav_svn__allow_list_repos(request_rec *r,
+                          const char *repos_name,
+                          apr_pool_t *pool);
 
 /* If authz is enabled in the specified BATON, return a read authorization
    function. Otherwise, return NULL. */

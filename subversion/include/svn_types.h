@@ -550,8 +550,7 @@ svn_depth_from_word(const char *word);
  * non-recursive (which in turn usually translates to #svn_depth_files).
  */
 #define SVN_DEPTH_IS_RECURSIVE(depth)                              \
-  (((depth) == svn_depth_infinity || (depth) == svn_depth_unknown) \
-   ? TRUE : FALSE)
+  ((depth) == svn_depth_infinity || (depth) == svn_depth_unknown)
 
 
 
@@ -588,7 +587,13 @@ svn_depth_from_word(const char *word);
 
 /** @} */
 
-/** A general subversion directory entry. */
+/** A general subversion directory entry.
+ *
+ * @note To allow for extending the #svn_dirent_t structure in future
+ * releases, always use svn_dirent_create() to allocate the stucture.
+ *
+ * @since New in 1.6.
+ */
 typedef struct svn_dirent_t
 {
   /** node kind */
@@ -620,6 +625,14 @@ svn_dirent_t *
 svn_dirent_dup(const svn_dirent_t *dirent,
                apr_pool_t *pool);
 
+/**
+ * Create a new svn_dirent_t instance with all values initialized to their
+ * not-available values.
+ *
+ * @since New in 1.8.
+ */
+svn_dirent_t *
+svn_dirent_create(apr_pool_t *result_pool);
 
 
 /** Keyword substitution.
@@ -1212,7 +1225,7 @@ svn_merge_range_contains_rev(const svn_merge_range_t *range, svn_revnum_t rev);
  *  @{ */
 
 /**
- * A representation of a segment of a object's version history with an
+ * A representation of a segment of an object's version history with an
  * emphasis on the object's location in the repository as of various
  * revisions.
  *
@@ -1221,7 +1234,7 @@ svn_merge_range_contains_rev(const svn_merge_range_t *range, svn_revnum_t rev);
 typedef struct svn_location_segment_t
 {
   /** The beginning (oldest) and ending (youngest) revisions for this
-      segment. */
+      segment, both inclusive. */
   svn_revnum_t range_start;
   svn_revnum_t range_end;
 

@@ -181,8 +181,8 @@ CREATE TABLE ACTUAL_NODE (
   PRIMARY KEY (wc_id, local_relpath)
   );
 
-CREATE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath);
-CREATE INDEX I_ACTUAL_CHANGELIST ON ACTUAL_NODE (changelist);
+CREATE UNIQUE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath,
+                                                    local_relpath);
 
 
 /* ------------------------------------------------------------------------- */
@@ -253,18 +253,9 @@ PRAGMA user_version =
    op_depth values are not normally visible to the user but may become
    visible after reverting local changes.
 
-   ### The following text needs revision
-
-   Each row in BASE_NODE has an associated row NODE_DATA. Additionally, each
-   row in WORKING_NODE has one or more associated rows in NODE_DATA.
-
    This table contains full node descriptions for nodes in either the BASE
    or WORKING trees as described in notes/wc-ng/design. Fields relate
    both to BASE and WORKING trees, unless documented otherwise.
-
-   ### This table is to be integrated into the SCHEMA statement as soon
-       the experimental status of NODES is lifted.
-   ### This table superseeds NODE_DATA
 
    For illustration, with a scenario like this:
 
@@ -275,12 +266,11 @@ PRAGMA user_version =
      touch foo/bar
      svn add foo/bar    # (2)
 
-   , these are the NODES for the path foo/bar (before single-db, the
-   numbering of op_depth is still a bit different):
+   , these are the NODES table rows for the path foo/bar:
 
-   (0)  BASE_NODE ----->  NODES (op_depth == 0)
-   (1)                    NODES (op_depth == 1) ( <----_ )
-   (2)                    NODES (op_depth == 2)   <----- WORKING_NODE
+   (0)  "BASE" --->  NODES (op_depth == 0)
+   (1)               NODES (op_depth == 1)
+   (2)               NODES (op_depth == 2)
 
    0 is the original data for foo/bar before 'svn rm foo' (if it existed).
    1 is the data for foo/bar copied in from ^/moo/bar.
@@ -408,8 +398,11 @@ CREATE TABLE NODES (
   /* the kind of the new node. may be "unknown" if the node is not present. */
   kind  TEXT NOT NULL,
 
-  /* serialized skel of this node's properties. NULL if we
-     have no information about the properties (a non-present node). */
+  /* serialized skel of this node's properties (when presence is 'normal' or
+     'incomplete'); an empty skel or NULL indicates no properties.  NULL if
+     we have no information about the properties (any other presence).
+     TODO: Choose & require a single representation for 'no properties'.
+  */
   properties  BLOB,
 
   /* NULL depth means "default" (typically svn_depth_infinity) */
@@ -483,7 +476,8 @@ CREATE TABLE NODES (
 
   );
 
-CREATE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath, op_depth);
+CREATE UNIQUE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath,
+                                             local_relpath, op_depth);
 /* I_NODES_MOVED is introduced in format 30 */
 CREATE UNIQUE INDEX I_NODES_MOVED ON NODES (wc_id, moved_to, op_depth);
 
@@ -553,7 +547,7 @@ CREATE TABLE EXTERNALS (
   /* Repository location fields */
   repos_id  INTEGER NOT NULL REFERENCES REPOSITORY (id),
 
-  /* Either 'normal' or 'excluded' */
+  /* Either MAP_NORMAL or MAP_EXCLUDED */
   presence  TEXT NOT NULL,
 
   /* the kind of the external. */
@@ -574,7 +568,6 @@ CREATE TABLE EXTERNALS (
   PRIMARY KEY (wc_id, local_relpath)
 );
 
-CREATE INDEX I_EXTERNALS_PARENT ON EXTERNALS (wc_id, parent_relpath);
 CREATE UNIQUE INDEX I_EXTERNALS_DEFINED ON EXTERNALS (wc_id,
                                                       def_local_relpath,
                                                       local_relpath);
@@ -585,13 +578,14 @@ CREATE UNIQUE INDEX I_EXTERNALS_DEFINED ON EXTERNALS (wc_id,
 
 -- STMT_UPGRADE_TO_20
 
-UPDATE BASE_NODE SET checksum=(SELECT checksum FROM pristine
-                           WHERE md5_checksum=BASE_NODE.checksum)
-WHERE EXISTS(SELECT 1 FROM pristine WHERE md5_checksum=BASE_NODE.checksum);
+UPDATE BASE_NODE SET checksum = (SELECT checksum FROM pristine
+                                 WHERE md5_checksum = BASE_NODE.checksum)
+WHERE EXISTS (SELECT 1 FROM pristine WHERE md5_checksum = BASE_NODE.checksum);
 
-UPDATE WORKING_NODE SET checksum=(SELECT checksum FROM pristine
-                           WHERE md5_checksum=WORKING_NODE.checksum)
-WHERE EXISTS(SELECT 1 FROM pristine WHERE md5_checksum=WORKING_NODE.checksum);
+UPDATE WORKING_NODE SET checksum = (SELECT checksum FROM pristine
+                                    WHERE md5_checksum = WORKING_NODE.checksum)
+WHERE EXISTS (SELECT 1 FROM pristine
+              WHERE md5_checksum = WORKING_NODE.checksum);
 
 INSERT INTO NODES (
        wc_id, local_relpath, op_depth, parent_relpath,
@@ -666,6 +660,9 @@ PRAGMA user_version = 22;
 -- STMT_UPGRADE_TO_23
 PRAGMA user_version = 23;
 
+-- STMT_UPGRADE_23_HAS_WORKING_NODES
+SELECT 1 FROM nodes WHERE op_depth > 0
+LIMIT 1
 
 /* ------------------------------------------------------------------------- */
 
@@ -731,9 +728,9 @@ LIMIT 1
 
 -- STMT_UPGRADE_TO_28
 
-UPDATE NODES SET checksum=(SELECT checksum FROM pristine
-                           WHERE md5_checksum=nodes.checksum)
-WHERE EXISTS(SELECT 1 FROM pristine WHERE md5_checksum=nodes.checksum);
+UPDATE NODES SET checksum = (SELECT checksum FROM pristine
+                             WHERE md5_checksum = nodes.checksum)
+WHERE EXISTS (SELECT 1 FROM pristine WHERE md5_checksum = nodes.checksum);
 
 PRAGMA user_version = 28;
 
@@ -819,6 +816,8 @@ WHERE wc_id = ?1 and local_relpath = ?2
    inherited properties */
 -- STMT_UPGRADE_TO_31
 ALTER TABLE NODES ADD COLUMN inherited_props BLOB;
+DROP INDEX IF EXISTS I_ACTUAL_CHANGELIST;
+DROP INDEX IF EXISTS I_EXTERNALS_PARENT;
 
 PRAGMA user_version = 31;
 
@@ -843,6 +842,23 @@ WHERE (l.local_relpath = '' AND l.repos_path != '')
                                                  length(l.parent_relpath) + 1),
                                           '/'),
                                  '/'))
+
+/* ------------------------------------------------------------------------- */
+/* Format 32 ....  */
+-- STMT_UPGRADE_TO_32
+
+/* Drop old index. ### Remove this part from the upgrade to 31 once bumped */
+DROP INDEX IF EXISTS I_ACTUAL_CHANGELIST;
+DROP INDEX IF EXISTS I_EXTERNALS_PARENT;
+CREATE INDEX I_EXTERNALS_PARENT ON EXTERNALS (wc_id, parent_relpath);
+
+DROP INDEX I_NODES_PARENT;
+CREATE UNIQUE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath,
+                                             local_relpath, op_depth);
+
+DROP INDEX I_ACTUAL_PARENT;
+CREATE UNIQUE INDEX I_ACTUAL_PARENT ON ACTUAL (wc_id, parent_relpath,
+                                               local_relpath);
 
 /* ------------------------------------------------------------------------- */
 
@@ -901,8 +917,8 @@ CREATE TABLE ACTUAL_NODE (
   PRIMARY KEY (wc_id, local_relpath)
   );
 
-CREATE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath);
-CREATE INDEX I_ACTUAL_CHANGELIST ON ACTUAL_NODE (changelist);
+CREATE UNIQUE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath,
+                                                    local_relpath);
 
 INSERT INTO ACTUAL_NODE SELECT
   wc_id, local_relpath, parent_relpath, properties, conflict_old,

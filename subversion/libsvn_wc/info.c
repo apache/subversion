@@ -94,6 +94,7 @@ build_info_for_node(svn_wc__info2_t **info,
   svn_boolean_t conflicted;
   svn_boolean_t op_root;
   svn_boolean_t have_base;
+  svn_boolean_t have_more_work;
   svn_wc_info_t *wc_info;
 
   tmpinfo = apr_pcalloc(result_pool, sizeof(*tmpinfo));
@@ -118,7 +119,7 @@ build_info_for_node(svn_wc__info2_t **info,
                                &wc_info->recorded_time,
                                &wc_info->changelist,
                                &conflicted, &op_root, NULL, NULL,
-                               &have_base, NULL, NULL,
+                               &have_base, &have_more_work, NULL,
                                db, local_abspath,
                                result_pool, scratch_pool));
 
@@ -143,19 +144,27 @@ build_info_for_node(svn_wc__info2_t **info,
 
           if (op_root)
             {
+              svn_error_t *err;
               wc_info->copyfrom_url =
                     svn_path_url_add_component2(tmpinfo->repos_root_URL,
                                                 original_repos_relpath,
                                                 result_pool);
 
               wc_info->copyfrom_rev = original_revision;
-            }
 
-          SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL,
-                                           &wc_info->moved_from_abspath, NULL,
-                                           db, local_abspath,
-                                           result_pool, scratch_pool));
+              err = svn_wc__db_scan_moved(&wc_info->moved_from_abspath,
+                                          NULL, NULL, NULL,
+                                          db, local_abspath,
+                                          result_pool, scratch_pool);
+
+              if (err)
+                {
+                   if (err->apr_err != SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+                      return svn_error_trace(err);
+                   svn_error_clear(err);
+                   wc_info->moved_from_abspath = NULL;
+                }
+            }
         }
       else if (op_root)
         {
@@ -163,7 +172,7 @@ build_info_for_node(svn_wc__info2_t **info,
           SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &repos_relpath,
                                            &tmpinfo->repos_root_URL,
                                            &tmpinfo->repos_UUID,
-                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL,
                                            db, local_abspath,
                                            result_pool, scratch_pool));
 
@@ -171,7 +180,7 @@ build_info_for_node(svn_wc__info2_t **info,
             SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &tmpinfo->rev, NULL,
                                              NULL, NULL, NULL, NULL, NULL,
                                              NULL, NULL, NULL, NULL, NULL,
-                                             NULL,
+                                             NULL, NULL,
                                              db, local_abspath,
                                              scratch_pool, scratch_pool));
         }
@@ -188,9 +197,30 @@ build_info_for_node(svn_wc__info2_t **info,
 
       /* ### We should be able to avoid both these calls with the information
          from read_info() in most cases */
-      SVN_ERR(svn_wc__internal_node_get_schedule(&wc_info->schedule, NULL,
-                                                 db, local_abspath,
-                                                 scratch_pool));
+      if (! op_root)
+        wc_info->schedule = svn_wc_schedule_normal;
+      else if (! have_more_work && ! have_base)
+        wc_info->schedule = svn_wc_schedule_add;
+      else
+        {
+          svn_wc__db_status_t below_working;
+          svn_boolean_t have_work;
+
+          SVN_ERR(svn_wc__db_info_below_working(&have_base, &have_work,
+                                                &below_working,
+                                                db, local_abspath,
+                                                scratch_pool));
+
+          /* If the node is not present or deleted (read: not present
+             in working), then the node is not a replacement */
+          if (below_working != svn_wc__db_status_not_present
+              && below_working != svn_wc__db_status_deleted)
+            {
+              wc_info->schedule = svn_wc_schedule_replace;
+            }
+          else
+            wc_info->schedule = svn_wc_schedule_add;
+        }
       SVN_ERR(svn_wc__db_read_url(&tmpinfo->URL, db, local_abspath,
                                 result_pool, scratch_pool));
     }
@@ -204,7 +234,7 @@ build_info_for_node(svn_wc__info2_t **info,
                                             &tmpinfo->last_changed_author,
                                             &wc_info->depth,
                                             &wc_info->checksum,
-                                            NULL, NULL,
+                                            NULL, NULL, NULL,
                                             db, local_abspath,
                                             result_pool, scratch_pool));
 
@@ -224,7 +254,7 @@ build_info_for_node(svn_wc__info2_t **info,
                                            &tmpinfo->repos_root_URL,
                                            &tmpinfo->repos_UUID,
                                            NULL, NULL, NULL,
-                                           &tmpinfo->rev, NULL, NULL,
+                                           &tmpinfo->rev,
                                            db, added_abspath,
                                            result_pool, scratch_pool));
 
@@ -243,7 +273,7 @@ build_info_for_node(svn_wc__info2_t **info,
                                            &tmpinfo->repos_root_URL,
                                            &tmpinfo->repos_UUID, NULL, NULL,
                                            NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL,
                                            db, local_abspath,
                                            result_pool, scratch_pool));
 
@@ -514,10 +544,13 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
 
       if (!repos_root_url)
         {
-          SVN_ERR(svn_wc__internal_get_repos_info(&repos_root_url,
+          SVN_ERR(svn_wc__internal_get_repos_info(NULL, NULL,
+                                                  &repos_root_url,
                                                   &repos_uuid,
                                                   wc_ctx->db,
-                                                  local_abspath,
+                                                  svn_dirent_dirname(
+                                                            local_abspath,
+                                                            iterpool),
                                                   scratch_pool,
                                                   iterpool));
         }

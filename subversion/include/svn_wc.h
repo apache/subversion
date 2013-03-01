@@ -795,7 +795,8 @@ typedef struct svn_wc_external_item2_t
       field will often be redundant.) */
   const char *target_dir;
 
-  /** Where to check out from. */
+  /** Where to check out from. This is possibly a relative external URL, as
+   * allowed in externals definitions, but without the peg revision. */
   const char *url;
 
   /** What revision to check out.  The only valid kinds for this are
@@ -899,8 +900,8 @@ svn_wc_external_item_dup(const svn_wc_external_item_t *item,
  * of those objects.  If the @a url member refers to an absolute URL,
  * it will be canonicalized as URL consistent with the way URLs are
  * canonicalized throughout the Subversion API.  If, however, the
- * @a url member makes use of the recognized (and proprietary)
- * relative URL syntax, "canonicalization" is a less easily-defined
+ * @a url member makes use of the recognized (SVN-specific) relative
+ * URL syntax for svn:externals, "canonicalization" is an ill-defined
  * concept which may even result in munging the relative URL syntax
  * beyond recognition.  You've been warned.
  *
@@ -1131,7 +1132,7 @@ typedef enum svn_wc_notify_action_t
    * @since New in 1.7. */
   svn_wc_notify_update_shadowed_add,
 
-  /** A node below an exising node was updated during update.
+  /** A node below an existing node was updated during update.
    * @since New in 1.7. */
   svn_wc_notify_update_shadowed_update,
 
@@ -1244,7 +1245,17 @@ typedef enum svn_wc_notify_action_t
   /** The current operation left local changes of something that was deleted
    * The changes are available on (and below) the notified path
    * @since New in 1.8. */
-  svn_wc_notify_left_local_modifications
+  svn_wc_notify_left_local_modifications,
+
+  /** A copy from a foreign repository has started 
+   * @since New in 1.8. */
+  svn_wc_notify_foreign_copy_begin,
+
+  /** A move in the working copy has been broken, i.e. degraded into a
+   * copy + delete. The notified path is the move source (the deleted path).
+   * ### Provide path to move destination as well?
+   * @since New in 1.8. */
+  svn_wc_notify_move_broken
 
 } svn_wc_notify_action_t;
 
@@ -1661,10 +1672,10 @@ typedef struct svn_wc_conflict_version_t
   const char *path_in_repos;
   /** @} */
 
-  /** Info about this node */
-  svn_node_kind_t node_kind;  /* note that 'none' is a legitimate value */
+  /** The node kind.  Can be any kind, even 'none' or 'unknown'. */
+  svn_node_kind_t node_kind;
 
-  /** UUID of the repository
+  /** UUID of the repository. Can be NULL meaning unknown.
    * @since New in 1.8. */
   const char *repos_uuid;
 
@@ -1679,10 +1690,14 @@ typedef struct svn_wc_conflict_version_t
  * Allocate an #svn_wc_conflict_version_t structure in @a pool,
  * initialize to contain a conflict origin, and return it.
  *
- * Set the @c repos_url field of the created struct to @a repos_url, the
- * @c path_in_repos field to @a path_in_repos, the @c peg_rev field to
- * @a peg_rev and the @c node_kind to @c node_kind. Make only shallow
+ * Set the @c repos_url field of the created struct to @a repos_root_url,
+ * the @c path_in_repos field to @a repos_relpath, the @c peg_rev field to
+ * @a revision and the @c node_kind to @a kind. Make only shallow
  * copies of the pointer arguments.
+ *
+ * @a repos_root_url, @a repos_relpath and @a revision must be valid,
+ * non-null values. @a repos_uuid should be a valid UUID, but can be
+ * NULL if unknown. @a kind can be any kind, even 'none' or 'unknown'.
  *
  * @since New in 1.8.
  */
@@ -4523,7 +4538,16 @@ svn_wc_delete(const char *path,
 
 /**
  * Schedule the single node that exists on disk at @a local_abspath for
- * addition to the working copy.  The added node will have no properties.
+ * addition to the working copy.  The added node will have the properties
+ * provided in @a props, or none if that is NULL.
+ *
+ * Check and canonicalize the properties in the same way as
+ * svn_wc_prop_set4().  Return an error and don't add the node if the
+ * properties are not valid on this node.  Unlike svn_wc_prop_set4()
+ * there is no option to skip some of the checks and canonicalizations.
+ *
+ * ### The error code on validity check failure should be specified, and
+ *     preferably should be a single code.
  *
  * The versioned state of the parent path must be a modifiable directory,
  * and the versioned state of @a local_abspath must be either nonexistent or
@@ -4532,14 +4556,28 @@ svn_wc_delete(const char *path,
  * If @a local_abspath does not exist as file, directory or symlink, return
  * #SVN_ERR_WC_PATH_NOT_FOUND.
  *
- * This is a replacement for svn_wc_add4() case 2a.
- *
- * ### TODO: Allow the caller to provide the node's properties?
- *
  * ### TODO: Split into add_dir, add_file, add_symlink?
  *
- * @since New in 1.7.
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_wc_add_from_disk2(svn_wc_context_t *wc_ctx,
+                      const char *local_abspath,
+                      const apr_hash_t *props,
+                      svn_wc_notify_func2_t notify_func,
+                      void *notify_baton,
+                      apr_pool_t *scratch_pool);
+
+
+/**
+ * Similar to svn_wc_add4(), but gives the new node an empty set of properties.
+ *
+ * This is a replacement for svn_wc_add4() case 2a.
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
                      const char *local_abspath,
@@ -4774,7 +4812,8 @@ svn_wc_add_repos_file(const char *dst_path,
 
 
 /** Remove @a local_abspath from revision control.  @a wc_ctx must
- * hold a write lock.
+ * hold a write lock on the parent of @a local_abspath, or if that is a
+ * WC root then on @a local_abspath itself.
  *
  * If @a local_abspath is a file, all its info will be removed from the
  * administrative area.  If @a local_abspath is a directory, then the
@@ -5401,24 +5440,52 @@ svn_wc_crawl_revisions(const char *path,
  * @{
  */
 
+/** If @a is_wcroot is not @c NULL, set @a *is_wcroot to @c TRUE if @a
+ * local_abspath is the root of the working copy, otherwise to @c FALSE.
+ *
+ * If @a is_switched is not @c NULL, set @a *is_switched to @c TRUE if @a
+ * local_abspath is not the root of the working copy, and switched against its
+ * parent.
+ *
+ * If @a kind is not @c NULL, set @a *kind to the node kind of @a
+ * local_abspath.
+ *
+ * Use @a scratch_pool for any temporary allocations.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_wc_check_root(svn_boolean_t *is_wcroot,
+                  svn_boolean_t *is_switched,
+                  svn_kind_t *kind,
+                  svn_wc_context_t *wc_ctx,
+                  const char *local_abspath,
+                  apr_pool_t *scratch_pool);
+
 /** Set @a *wc_root to @c TRUE if @a local_abspath represents a "working copy
  * root", @c FALSE otherwise. Here, @a local_abspath is a "working copy root"
- * if its parent directory is not a WC or if its parent directory's repository
- * URL is not the parent of its own repository URL. Thus, a switched subtree is
- * considered to be a working copy root. Also, a deleted tree-conflict
- * victim is considered a "working copy root" because it has no URL.
+ * if its parent directory is not a WC or if it is switched. Also, a deleted
+ * tree-conflict victim is considered a "working copy root" because it has no
+ * URL.
  *
  * If @a local_abspath is not found, return the error #SVN_ERR_ENTRY_NOT_FOUND.
  *
  * Use @a scratch_pool for any temporary allocations.
  *
+ * @note For legacy reasons only a directory can be a wc-root. However, this
+ * function will also set wc_root to @c TRUE for a switched file.
+ *
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API. Consider
+ * using svn_wc_check_root() instead.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_is_wc_root2(svn_boolean_t *wc_root,
                    svn_wc_context_t *wc_ctx,
                    const char *local_abspath,
                    apr_pool_t *scratch_pool);
+
 
 /**
  * Similar to svn_wc_is_wc_root2(), but with an access baton and relative
@@ -5999,19 +6066,29 @@ svn_wc_prop_get(const svn_string_t **value,
  * NULL, remove property @a name from @a local_abspath.  Use @a wc_ctx to
  * access @a local_abspath.
  *
- * If @a skip_checks is TRUE, do no validity checking.  But if @a
- * skip_checks is FALSE, and @a name is not a valid property for @a
- * path, return an error, either #SVN_ERR_ILLEGAL_TARGET (if the
+ * @a name may be a regular property or a "wc property".  If @a name is
+ * an "entry property", return the error #SVN_ERR_BAD_PROP_KIND (even if
+ * @a skip_checks is TRUE).
+ *
+ * If @a name is a "wc property", then just update the WC DAV cache for
+ * @a local_abspath with @a name and @a value.  In this case, @a depth
+ * must be #svn_depth_empty.
+ *
+ * The rest of this description applies when @a name is a regular property.
+ *
+ * If @a name is a name in the reserved "svn:" name space, and @a value is
+ * non-null, then canonicalize the property value and check the property
+ * name and value as documented for svn_wc_canonicalize_svn_prop().
+ * @a skip_checks controls the level of checking as documented there.
+ *
+ * Return an error if the canonicalization or the check fails.
+ * The error will be either #SVN_ERR_ILLEGAL_TARGET (if the
  * property is not appropriate for @a path), or
  * #SVN_ERR_BAD_MIME_TYPE (if @a name is "svn:mime-type", but @a value
  * is not a valid mime-type).
+ * ### That is not currently right -- several other errors can be raised.
  *
- * @a depth follows the usual semeatic for depth.  If the property is a
- * wc property, @a depth must be #svn_depth_empty.
- *
- * @a name may be a wc property or a regular property; but if it is an
- * entry property, return the error #SVN_ERR_BAD_PROP_KIND, even if
- * @a skip_checks is TRUE.
+ * @a depth follows the usual semantics for depth.
  *
  * @a changelist_filter is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items whose properties are
@@ -6028,6 +6105,14 @@ svn_wc_prop_get(const svn_string_t **value,
  * if you are not interested in this information.
  *
  * Use @a scratch_pool for temporary allocation.
+ *
+ * @note If the caller is setting both svn:mime-type and svn:eol-style in
+ * separate calls, and @a skip_checks is false, there is an ordering
+ * dependency between them, as the validity check for svn:eol-style makes
+ * use of the current value of svn:mime-type.
+ *
+ * ### The error code on validity check failure should be specified, and
+ *     should be a single code or a very small set of possibilities.
  *
  * @since New in 1.7.
  */
@@ -6047,7 +6132,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
 
 /** Similar to svn_wc_prop_set4(), but with a #svn_wc_adm_access_t /
  * relative path parameter pair, no @a depth parameter, no changelist
- * filtering (for the depth-based property setting), and no cancelation.
+ * filtering (for the depth-based property setting), and no cancellation.
  *
  * @since New in 1.6.
  * @deprecated Provided for backwards compatibility with the 1.6 API.
@@ -6131,6 +6216,8 @@ svn_wc_is_entry_prop(const char *name);
  * (Currently, this is used if you are attempting to set the
  * #SVN_PROP_EOL_STYLE property, to make sure that the value matches
  * the mime type and contents.)
+ *
+ * @since New in 1.5.
  */
 typedef svn_error_t *(*svn_wc_canonicalize_svn_prop_get_file_t)(
   const svn_string_t **mime_type,
@@ -6144,19 +6231,61 @@ typedef svn_error_t *(*svn_wc_canonicalize_svn_prop_get_file_t)(
  *
  * If the property is not appropriate for a node of kind @a kind, or
  * is otherwise invalid, throw an error.  Otherwise, set @a *propval_p
- * to a canonicalized version of the property value.  If @a
- * skip_some_checks is TRUE, only some validity checks are taken.
+ * to a canonicalized version of the property value.
  *
- * Some validity checks require access to the contents and MIME type
- * of the target if it is a file; they will call @a prop_getter with @a
- * getter_baton, which then needs to set the MIME type and print the
- * contents of the file to the given stream.
+ * The exact set of canonicalizations and checks may vary across different
+ * versions of this API.  Currently:
+ *
+ *   - svn:executable
+ *   - svn:needs-lock
+ *   - svn:special
+ *     - set the value to '*'
+ *
+ *   - svn:keywords
+ *     - strip leading and trailing white space
+ *
+ *   - svn:ignore
+ *   - svn:global-ignores
+ *   - svn:auto-props
+ *     - add a final a newline character if missing
+ *
+ *   - svn:externals
+ *     - add a final a newline character if missing
+ *     - check for valid syntax
+ *     - check for no duplicate entries
+ *
+ *   - svn:mergeinfo
+ *     - canonicalize
+ *     - check for validity
+ *
+ * Also, unless @a skip_some_checks is TRUE:
+ *
+ *   - svn:eol-style
+ *     - strip leading and trailing white space
+ *     - check value is recognized
+ *     - check file content has a self-consistent EOL style
+ *       (but not necessarily that it matches @a propval)
+ *
+ *   - svn:mime-type
+ *     - strip white space
+ *     - check for reasonable syntax
+ *
+ * The EOL-style check (if not skipped) requires access to the contents and
+ * MIME type of the target if it is a file.  It will call @a prop_getter with
+ * @a getter_baton.  The callback must set the MIME type and/or write the
+ * contents of the file to the given stream.  If @a skip_some_checks is true,
+ * then @a prop_getter is not used and may be NULL.
  *
  * @a path should be the path of the file in question; it is only used
  * for error messages.
  *
+ * ### The error code on validity check failure should be specified, and
+ *     should be a single code or a very small set of possibilities.
+ *
  * ### This is not actually related to the WC, but it does need to call
- * ### svn_wc_parse_externals_description2.
+ * ### svn_wc_parse_externals_description3.
+ *
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
@@ -6213,10 +6342,13 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * @a show_copies_as_adds determines whether paths added with history will
  * appear as a diff against their copy source, or whether such paths will
  * appear as if they were newly added in their entirety.
+ * @a show_copies_as_adds implies not @a ignore_ancestry.
  *
  * If @a use_git_diff_format is TRUE, copied paths will be treated as added
  * if they weren't modified after being copied. This allows the callbacks
  * to generate appropriate --git diff headers for such files.
+ * @a use_git_diff_format implies @a show_copies_as_adds, and as such implies
+ * not @a ignore_ancestry.
  *
  * Normally, the difference from repository->working_copy is shown.
  * If @a reverse_order is TRUE, then show working_copy->repository diffs.
@@ -6614,7 +6746,7 @@ typedef enum svn_wc_merge_outcome_t
  * return success without merging anything.  (The reasoning is that if
  * the file is not versioned, then it is probably unrelated to the
  * changes being considered, so they should not be merged into it.
- * Furtheremore, merging into an unversioned file is a lossy operation.)
+ * Furthermore, merging into an unversioned file is a lossy operation.)
  *
  * @a dry_run determines whether the working copy is modified.  When it
  * is @c FALSE the merge will cause @a target_abspath to be modified, when
@@ -6628,15 +6760,15 @@ typedef enum svn_wc_merge_outcome_t
  * svn_diff_file_options_parse()).  @a merge_options must contain
  * <tt>const char *</tt> elements.
  *
- * If @a merge_props_state is non-NULL @a propchanges is merged before
- * merging the text. (If @a merge_props_outcome is NULL, no property changes
-*  are merged and @a prop_changes is only used to determine the merge result)
+ * If @a merge_props_state is non-NULL @a prop_diff is merged before
+ * merging the text. (If @a merge_props_state is NULL, no property changes
+ * are merged and @a prop_diff is only used to determine the merge result)
  * The result of the property merge is stored in @a *merge_props_state. If
  * there is a conflict and @a dry_run is @c FALSE, then attempt to call @a
  * conflict_func with @a conflict_baton (if non-NULL).  If the conflict
  * callback cannot resolve the conflict, then a property conflict is installed.
  *
- * The outcome of the text merge is returned in @a *merge_text_outcome. If
+ * The outcome of the text merge is returned in @a *merge_content_outcome. If
  * there is a conflict and @a dry_run is @c FALSE, then attempt to call @a
  * conflict_func with @a conflict_baton (if non-NULL).  If the
  * conflict callback cannot resolve the conflict, then:
@@ -6668,12 +6800,23 @@ typedef enum svn_wc_merge_outcome_t
  *  begins tracking the two backup files and the version information.
  *
  * If @a dry_run is @c TRUE no files are changed.  The outcome of the merge
- * is returned in @a *merge_outcome.
+ * is returned in @a *merge_content_outcome.
+ * ### (and what about @a *merge_props_state?)
+ *
+ * ### BH: Two kinds of outcome is not how it should be.
+ *
+ * ### For text, we report the outcome as 'merged' if there was some
+ *     incoming change that we dealt with (even if we decided to no-op?)
+ *     but the callers then convert this outcome into a notification
+ *     of 'merged' only if there was already a local modification;
+ *     otherwise they notify it as simply 'updated'.  But for props
+ *     we report a notify state of 'merged' here if there was an
+ *     incoming change regardless of the local-mod state.  Inconsistent.
  *
  * Use @a scratch_pool for any temporary allocation.
  *
  * @since New in 1.8.
- */ /* ### BH: Two kinds of outcome is not how it should be */
+ */
 svn_error_t *
 svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
               enum svn_wc_notify_state_t *merge_props_state,
@@ -6697,7 +6840,7 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
               void *cancel_baton,
               apr_pool_t *scratch_pool);
 
-/** Similar to svn_wc_merge4() but doesn't allow property changes. Instead of
+/** Similar to svn_wc_merge5() but doesn't merge property changes. Instead of
  * handling this in a single operation, a separate call to svn_wc_merge_props3()
  * before calling svn_wc_merge4() is needed
  *
@@ -6847,8 +6990,9 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
  *
  * This function has the @a base_merge parameter which (when TRUE) will
  * apply @a propchanges to this node's pristine set of properties. This
- * functionality is not supported on newer APIs -- pristine information
- * should only be changed through an update editor drive.
+ * functionality is not supported since API version 1.7 and will give an
+ * error if requested (unless @a dry_run is TRUE). For details see
+ * 'notes/api-errata/1.7/wc006.txt'.
  *
  * Uses a svn_wc_conflict_resolver_func_t conflict resolver instead of a
  * svn_wc_conflict_resolver_func2_t.
@@ -6857,7 +7001,7 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
  * #SVN_ERR_UNVERSIONED_RESOURCE, when svn_wc_merge_props3 would return either
  * #SVN_ERR_WC_PATH_NOT_FOUND or #SVN_ERR_WC_PATH_UNEXPECTED_STATUS.
  *
- * @since New in 1.5.
+ * @since New in 1.5. The base_merge option is not supported since 1.7.
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
@@ -6878,6 +7022,7 @@ svn_wc_merge_props2(svn_wc_notify_state_t *state,
  * Same as svn_wc_merge_props2(), but with a @a conflict_func (and
  * baton) of NULL.
  *
+ * @since New in 1.3. The base_merge option is not supported since 1.7.
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 SVN_DEPRECATED
@@ -6899,7 +7044,9 @@ svn_wc_merge_props(svn_wc_notify_state_t *state,
  * correct for 'svn update', it's incorrect for 'svn merge', and can
  * cause flawed behavior.  (See issue #2035.)
  *
+ * @since The base_merge option is not supported since 1.7.
  * @deprecated Provided for backward compatibility with the 1.2 API.
+ * Replaced by svn_wc_merge_props().
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -7000,7 +7147,7 @@ svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
 
 /**
  * Similar to svn_wc_cleanup3() but uses relative paths and creates its own
- * swn_wc_context_t.
+ * #svn_wc_context_t.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -7963,23 +8110,46 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
 /** @} */
 
 /**
- * Set @a kind to the #svn_node_kind_t of @a abspath.  Use @a wc_ctx
- * to access the working copy, and @a scratch_pool for all temporary
- * allocations.
+ * Set @a kind to the #svn_node_kind_t of @a abspath.  Use @a wc_ctx to access
+ * the working copy, and @a scratch_pool for all temporary allocations.
  *
- * If @a abspath is not under version control, set @a kind to #svn_node_none.
- * If it is versioned but hidden and @a show_hidden is @c FALSE, also return
- * #svn_node_none.
+ * If @a abspath is not under version control, set @a kind to #svn_kind_none.
  *
- * ### What does hidden really mean?
- * ### What happens when show_hidden is TRUE?
+ * If @a show_hidden and @a show_deleted are both @c FALSE, the kind of
+ * scheduled for delete, administrative only 'not present' and excluded
+ * nodes is reported as #svn_node_kind_node. This is recommended as a check
+ * for 'is there a versioned file or directory here?'
  *
- * If the node's info is incomplete, it may or may not have a known node kind
- * set. If the kind is not known (yet), set @a kind to #svn_node_unknown.
- * Otherwise return the node kind even though the node is marked incomplete.
+ * If @a show_deleted is FALSE, but @a show_hidden is @c TRUE then only
+ * scheduled for delete and administrative only 'not present' nodes are
+ * reported as #svn_node_kind_none. This is recommended as check for
+ * 'Can I add a node here?'
+ *
+ * If @a show_deleted is TRUE, but @a show_hidden is FALSE, then only
+ * administrative only 'not present' nodes and excluded nodes are reported as
+ * #svn_node_kind_none. This behavior is the behavior bescribed as 'hidden'
+ * before Subversion 1.7.
+ *
+ * If @a show_hidden and @a show_deleted are both @c TRUE all nodes are
+ * reported.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_wc_read_kind2(svn_node_kind_t *kind,
+                  svn_wc_context_t *wc_ctx,
+                  const char *local_abspath,
+                  svn_boolean_t show_deleted,
+                  svn_boolean_t show_hidden,
+                  apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_read_kind2() but always shows deleted nodes and returns
+ * the result as a #svn_node_kind_t.
  *
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_read_kind(svn_node_kind_t *kind,
                  svn_wc_context_t *wc_ctx,

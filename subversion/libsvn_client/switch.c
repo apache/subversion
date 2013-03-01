@@ -168,8 +168,8 @@ switch_internal(svn_revnum_t *result_rev,
           return SVN_NO_ERROR;
         }
 
-      SVN_ERR(svn_wc_read_kind(&target_kind, ctx->wc_ctx, local_abspath, TRUE,
-                               pool));
+      SVN_ERR(svn_wc_read_kind2(&target_kind, ctx->wc_ctx, local_abspath,
+                                TRUE, TRUE, pool));
 
       if (target_kind == svn_node_dir)
         SVN_ERR(svn_wc_crop_tree2(ctx->wc_ctx, local_abspath, depth,
@@ -231,10 +231,8 @@ switch_internal(svn_revnum_t *result_rev,
       svn_boolean_t wc_root;
       svn_boolean_t needs_iprop_cache = TRUE;
 
-      SVN_ERR(svn_wc__strictly_is_wc_root(&wc_root,
-                                          ctx->wc_ctx,
-                                          local_abspath,
-                                          pool));
+      SVN_ERR(svn_wc__is_wcroot(&wc_root, ctx->wc_ctx, local_abspath,
+                                pool));
 
       /* Switching the WC root to anything but the repos root means
          we need an iprop cache. */ 
@@ -303,21 +301,19 @@ switch_internal(svn_revnum_t *result_rev,
 
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision. */
-  SVN_ERR(svn_ra_do_switch2(ra_session, &reporter, &report_baton,
+  SVN_ERR(svn_ra_do_switch3(ra_session, &reporter, &report_baton,
                             switch_loc->rev,
                             target,
                             depth_is_sticky ? depth : svn_depth_unknown,
                             switch_loc->url,
-                            switch_editor, switch_edit_baton, pool));
+                            FALSE /* send_copyfrom_args */,
+                            ignore_ancestry,
+                            switch_editor, switch_edit_baton,
+                            pool, pool));
 
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the update_editor
-     will be driven by svn_repos_dir_delta2.
-
-     We pass in an external_func for recording all externals. It
-     shouldn't be needed for a switch if it wasn't for the relative
-     externals of type '../path'. All of those must be resolved to
-     the new location.  */
+     will be driven by svn_repos_dir_delta2. */
   err = svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath, reporter,
                                 report_baton, TRUE, depth, (! depth_is_sticky),
                                 (! server_supports_depth),

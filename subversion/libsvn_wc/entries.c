@@ -64,12 +64,12 @@ typedef struct db_node_t {
   svn_revnum_t revision;
   svn_node_kind_t kind;  /* ### should switch to svn_kind_t */
   svn_checksum_t *checksum;
-  svn_filesize_t translated_size;
+  svn_filesize_t recorded_size;
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
   const char *changed_author;
   svn_depth_t depth;
-  apr_time_t last_mod_time;
+  apr_time_t recorded_time;
   apr_hash_t *properties;
   svn_boolean_t file_external;
 } db_node_t;
@@ -208,6 +208,7 @@ get_info_for_deleted(svn_wc_entry_t *entry,
                      svn_kind_t *kind,
                      const char **repos_relpath,
                      const svn_checksum_t **checksum,
+                     svn_wc__db_lock_t **lock,
                      svn_wc__db_t *db,
                      const char *entry_abspath,
                      const svn_wc_entry_t *parent_entry,
@@ -230,8 +231,8 @@ get_info_for_deleted(svn_wc_entry_t *entry,
                                        &entry->depth,
                                        checksum,
                                        NULL,
-                                       NULL /* lock */,
-                                       &entry->has_props,
+                                       lock,
+                                       &entry->has_props, NULL,
                                        NULL,
                                        db,
                                        entry_abspath,
@@ -255,7 +256,7 @@ get_info_for_deleted(svn_wc_entry_t *entry,
                                             &entry->depth,
                                             checksum,
                                             NULL,
-                                            &entry->has_props,
+                                            &entry->has_props, NULL,
                                             db,
                                             entry_abspath,
                                             result_pool,
@@ -277,7 +278,7 @@ get_info_for_deleted(svn_wc_entry_t *entry,
                                        &parent_repos_relpath,
                                        &entry->repos,
                                        &entry->uuid,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL,
                                        db, parent_abspath,
                                        result_pool, scratch_pool));
 
@@ -296,7 +297,8 @@ get_info_for_deleted(svn_wc_entry_t *entry,
           svn_wc__db_status_t status;
           SVN_ERR(svn_wc__db_base_get_info(&status, NULL, &entry->revision,
                                            NULL, NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, lock, NULL, NULL,
+                                           NULL,
                                            db, entry_abspath,
                                            result_pool, scratch_pool));
 
@@ -565,7 +567,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                                            NULL, NULL, NULL,
                                            NULL, NULL, NULL,
                                            NULL, NULL, NULL,
-                                           NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL,
                                            db, entry_abspath,
                                            scratch_pool,
                                            scratch_pool));
@@ -608,7 +610,6 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                                            &scanned_original_relpath,
                                            NULL, NULL, /* original_root|uuid */
                                            &original_revision,
-                                           NULL, NULL,
                                            db,
                                            entry_abspath,
                                            result_pool, scratch_pool));
@@ -710,7 +711,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                                              NULL, NULL, NULL,
                                              &parent_repos_relpath,
                                              &parent_root_url,
-                                             NULL, NULL, NULL, NULL,
+                                             NULL, NULL,
                                              db, parent_abspath,
                                              scratch_pool,
                                              scratch_pool);
@@ -823,6 +824,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                                    &kind,
                                    &repos_relpath,
                                    &checksum,
+                                   &lock,
                                    db, entry_abspath,
                                    parent_entry,
                                    have_base, have_more_work,
@@ -1463,7 +1465,7 @@ insert_node(svn_sqlite__db_t *sdb,
                             node->changed_rev,
                             node->changed_date,
                             node->changed_author,
-                            node->last_mod_time));
+                            node->recorded_time));
 
   if (node->repos_relpath)
     {
@@ -1513,8 +1515,8 @@ insert_node(svn_sqlite__db_t *sdb,
     SVN_ERR(svn_sqlite__bind_properties(stmt, 15, node->properties,
                                         scratch_pool));
 
-  if (node->translated_size != SVN_INVALID_FILESIZE)
-    SVN_ERR(svn_sqlite__bind_int64(stmt, 16, node->translated_size));
+  if (node->recorded_size != SVN_INVALID_FILESIZE)
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 16, node->recorded_size));
 
   if (node->file_external)
     SVN_ERR(svn_sqlite__bind_int(stmt, 20, 1));
@@ -1777,6 +1779,17 @@ write_entry(struct write_baton **entry_node,
           working_node->revision = parent_node->work->revision;
           working_node->op_depth = parent_node->work->op_depth;
         }
+      else if (parent_node->below_work
+                && parent_node->below_work->repos_relpath)
+        {
+          working_node->repos_id = repos_id;
+          working_node->repos_relpath
+            = svn_relpath_join(parent_node->below_work->repos_relpath,
+                               svn_relpath_basename(local_relpath, NULL),
+                               result_pool);
+          working_node->revision = parent_node->below_work->revision;
+          working_node->op_depth = parent_node->below_work->op_depth;
+        }
       else
         return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                                  _("No copyfrom URL for '%s'"),
@@ -1905,8 +1918,8 @@ write_entry(struct write_baton **entry_node,
       base_node->op_depth = 0;
       base_node->parent_relpath = parent_relpath;
       base_node->revision = entry->revision;
-      base_node->last_mod_time = entry->text_time;
-      base_node->translated_size = entry->working_size;
+      base_node->recorded_time = entry->text_time;
+      base_node->recorded_size = entry->working_size;
 
       if (entry->depth != svn_depth_exclude)
         base_node->depth = entry->depth;
@@ -2081,6 +2094,10 @@ write_entry(struct write_baton **entry_node,
       below_working_node->presence = svn_wc__db_status_normal;
       below_working_node->kind = entry->kind;
       below_working_node->repos_id = work->repos_id;
+
+      /* This is just guessing. If the node below would have been switched
+         or if it was updated to a different version, the guess would 
+         fail. But we don't have better information pre wc-ng :( */
       if (work->repos_relpath)
         below_working_node->repos_relpath
           = svn_relpath_join(work->repos_relpath, entry->name,
@@ -2103,13 +2120,37 @@ write_entry(struct write_baton **entry_node,
             below_working_node->checksum =
               text_base_info->revert_base.sha1_checksum;
         }
-      below_working_node->translated_size = 0;
+      below_working_node->recorded_size = 0;
       below_working_node->changed_rev = SVN_INVALID_REVNUM;
       below_working_node->changed_date = 0;
       below_working_node->changed_author = NULL;
       below_working_node->depth = svn_depth_infinity;
-      below_working_node->last_mod_time = 0;
+      below_working_node->recorded_time = 0;
       below_working_node->properties = NULL;
+
+      if (working_node
+          && entry->schedule == svn_wc_schedule_delete
+          && working_node->repos_relpath)
+        {
+          /* We are lucky, our guesses above are not necessary. The known
+             correct information is in working. But our op_depth design
+             expects more information here */
+          below_working_node->repos_relpath = working_node->repos_relpath;
+          below_working_node->repos_id = working_node->repos_id;
+          below_working_node->revision = working_node->revision;
+
+          /* Nice for 'svn status' */
+          below_working_node->changed_rev = entry->cmt_rev;
+          below_working_node->changed_date = entry->cmt_date;
+          below_working_node->changed_author = entry->cmt_author;
+
+          /* And now remove it from WORKING, because in wc-ng code
+             should read it from the lower layer */
+          working_node->repos_relpath = NULL;
+          working_node->repos_id = 0;
+          working_node->revision = SVN_INVALID_REVNUM;
+        }
+
       SVN_ERR(insert_node(sdb, below_working_node, scratch_pool));
     }
 
@@ -2120,8 +2161,8 @@ write_entry(struct write_baton **entry_node,
       working_node->local_relpath = local_relpath;
       working_node->parent_relpath = parent_relpath;
       working_node->changed_rev = SVN_INVALID_REVNUM;
-      working_node->last_mod_time = entry->text_time;
-      working_node->translated_size = entry->working_size;
+      working_node->recorded_time = entry->text_time;
+      working_node->recorded_size = entry->working_size;
 
       if (entry->depth != svn_depth_exclude)
         working_node->depth = entry->depth;

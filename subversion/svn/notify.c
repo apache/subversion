@@ -54,10 +54,10 @@ struct notify_baton
                                     when we've already had one print error. */
 
   /* Conflict stats for update and merge. */
-  unsigned int text_conflicts;
-  unsigned int prop_conflicts;
-  unsigned int tree_conflicts;
-  unsigned int skipped_paths;
+  int text_conflicts;
+  int prop_conflicts;
+  int tree_conflicts;
+  int skipped_paths;
 
   /* The cwd, for use in decomposing absolute paths. */
   const char *path_prefix;
@@ -65,38 +65,43 @@ struct notify_baton
 
 
 svn_error_t *
-svn_cl__print_conflict_stats(void *notify_baton, apr_pool_t *pool)
+svn_cl__notifier_reset_conflict_stats(void *baton)
 {
-  struct notify_baton *nb = notify_baton;
-  unsigned int text_conflicts;
-  unsigned int prop_conflicts;
-  unsigned int tree_conflicts;
-  unsigned int skipped_paths;
+  struct notify_baton *nb = baton;
 
-  text_conflicts = nb->text_conflicts;
-  prop_conflicts = nb->prop_conflicts;
-  tree_conflicts = nb->tree_conflicts;
-  skipped_paths = nb->skipped_paths;
+  nb->text_conflicts = 0;
+  nb->prop_conflicts = 0;
+  nb->tree_conflicts = 0;
+  nb->skipped_paths = 0;
+  return SVN_NO_ERROR;
+}
 
-  if (text_conflicts > 0 || prop_conflicts > 0
-    || tree_conflicts > 0 || skipped_paths > 0)
-      SVN_ERR(svn_cmdline_printf(pool, "%s", _("Summary of conflicts:\n")));
+svn_error_t *
+svn_cl__notifier_print_conflict_stats(void *baton, apr_pool_t *scratch_pool)
+{
+  struct notify_baton *nb = baton;
 
-  if (text_conflicts > 0)
-    SVN_ERR(svn_cmdline_printf
-      (pool, _("  Text conflicts: %u\n"), text_conflicts));
+  if (nb->text_conflicts > 0 || nb->prop_conflicts > 0
+      || nb->tree_conflicts > 0 || nb->skipped_paths > 0)
+    SVN_ERR(svn_cmdline_printf(scratch_pool,
+                               _("Summary of conflicts:\n")));
 
-  if (prop_conflicts > 0)
-    SVN_ERR(svn_cmdline_printf
-      (pool, _("  Property conflicts: %u\n"), prop_conflicts));
-
-  if (tree_conflicts > 0)
-    SVN_ERR(svn_cmdline_printf
-      (pool, _("  Tree conflicts: %u\n"), tree_conflicts));
-
-  if (skipped_paths > 0)
-    SVN_ERR(svn_cmdline_printf
-      (pool, _("  Skipped paths: %u\n"), skipped_paths));
+  if (nb->text_conflicts > 0)
+    SVN_ERR(svn_cmdline_printf(scratch_pool,
+                               _("  Text conflicts: %d\n"),
+                               nb->text_conflicts));
+  if (nb->prop_conflicts > 0)
+    SVN_ERR(svn_cmdline_printf(scratch_pool,
+                               _("  Property conflicts: %d\n"),
+                               nb->prop_conflicts));
+  if (nb->tree_conflicts > 0)
+    SVN_ERR(svn_cmdline_printf(scratch_pool,
+                               _("  Tree conflicts: %d\n"),
+                               nb->tree_conflicts));
+  if (nb->skipped_paths > 0)
+    SVN_ERR(svn_cmdline_printf(scratch_pool,
+                               _("  Skipped paths: %d\n"),
+                               nb->skipped_paths));
 
   return SVN_NO_ERROR;
 }
@@ -346,7 +351,13 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
           if (n->hunk_matched_line > n->hunk_original_start)
             {
-              off = n->hunk_matched_line - n->hunk_original_start;
+              /* If we are patching from the start of an empty file,
+                 it is nicer to show offset 0 */
+              if (n->hunk_original_start == 0 && n->hunk_matched_line == 1)
+                off = 0; /* No offset, just adding */
+              else
+                off = n->hunk_matched_line - n->hunk_original_start;
+
               minus = "";
             }
           else
@@ -991,10 +1002,28 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_conflict_resolver_starting:
       /* Once all operations invoke the interactive conflict resolution after
-       * they've completed, we can run svn_cl__print_conflict_stats() here. */
+       * they've completed, we can run svn_cl__notifier_print_conflict_stats()
+       * here. */
       break;
 
     case svn_wc_notify_conflict_resolver_done:
+      break;
+
+    case svn_wc_notify_foreign_copy_begin:
+      if (n->merge_range == NULL)
+        err = svn_cmdline_printf(pool,
+                                 _("--- Copying from foreign repository URL '%s':\n"),
+                                 n->url);
+      if (err)
+        goto print_error;
+      break;
+
+    case svn_wc_notify_move_broken:
+        err = svn_cmdline_printf(pool,
+                                 _("Breaking move with source path '%s'\n"),
+                                 path_local);
+      if (err)
+        goto print_error;
       break;
 
     default:

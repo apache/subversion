@@ -35,26 +35,19 @@
 #include "private/svn_fspath.h"
 #include "../libsvn_fs/fs-loader.h"
 
-svn_boolean_t
-svn_fs__is_canonical_abspath(const char *path)
+/* Return TRUE, if PATH of PATH_LEN > 0 chars starts with a '/' and does
+ * not end with a '/' and does not contain duplicate '/'.
+ */
+static svn_boolean_t
+is_canonical_abspath(const char *path, size_t path_len)
 {
-  size_t path_len;
   const char *end;
 
-  /* No PATH?  No problem. */
-  if (! path)
-    return TRUE;
-
-  /* Empty PATH?  That's just "/". */
-  if (! *path)
-    return FALSE;
-
-  /* No leading slash?  Fix that. */
-  if (*path != '/')
+  /* check for leading '/' */
+  if (path[0] != '/')
     return FALSE;
 
   /* check for trailing '/' */
-  path_len = strlen(path);
   if (path_len == 1)
     return TRUE;
   if (path[path_len - 1] == '/')
@@ -67,6 +60,21 @@ svn_fs__is_canonical_abspath(const char *path)
       return FALSE;
 
   return TRUE;
+}
+
+svn_boolean_t
+svn_fs__is_canonical_abspath(const char *path)
+{
+  /* No PATH?  No problem. */
+  if (! path)
+    return TRUE;
+
+  /* Empty PATH?  That's just "/". */
+  if (! *path)
+    return FALSE;
+
+  /* detailed checks */
+  return is_canonical_abspath(path, strlen(path));
 }
 
 const char *
@@ -83,12 +91,16 @@ svn_fs__canonicalize_abspath(const char *path, apr_pool_t *pool)
 
   /* Empty PATH?  That's just "/". */
   if (! *path)
-    return apr_pstrdup(pool, "/");
+    return "/";
+
+  /* Non-trivial cases.  Maybe, the path already is canonical after all? */
+  path_len = strlen(path);
+  if (is_canonical_abspath(path, path_len))
+    return apr_pstrmemdup(pool, path, path_len);
 
   /* Now, the fun begins.  Alloc enough room to hold PATH with an
      added leading '/'. */
-  path_len = strlen(path);
-  newpath = apr_pcalloc(pool, path_len + 2);
+  newpath = apr_palloc(pool, path_len + 2);
 
   /* No leading slash?  Fix that. */
   if (*path != '/')
@@ -123,6 +135,8 @@ svn_fs__canonicalize_abspath(const char *path, apr_pool_t *pool)
      the root directory case)? */
   if ((newpath[newpath_i - 1] == '/') && (newpath_i > 1))
     newpath[newpath_i - 1] = '\0';
+  else
+    newpath[newpath_i] = '\0';
 
   return newpath;
 }

@@ -112,6 +112,20 @@ proc_found(const char *proc, apr_pool_t *pool)
   return result == svn_tristate_true;
 }
 
+/* Remove temporary files from disk.
+ */
+static apr_status_t
+cleanup_test_shm(void *arg)
+{
+  apr_pool_t *pool = arg;
+  
+  svn_error_clear(svn_atomic_namespace__cleanup(name_namespace, pool));
+  svn_error_clear(svn_atomic_namespace__cleanup(name_namespace1, pool));
+  svn_error_clear(svn_atomic_namespace__cleanup(name_namespace2, pool));
+
+  return 0;
+}
+
 /* Bring shared memory to a defined state. This is very useful in case of
  * lingering problems from previous tests or test runs.
  */
@@ -150,6 +164,11 @@ init_test_shm(apr_pool_t *pool)
     return svn_error_wrap_apr(SVN_ERR_TEST_SKIPPED,
                               "user has insufficient privileges");
 
+  /* destroy temp files after usage */
+
+  apr_pool_cleanup_register(pool, pool,
+                            cleanup_test_shm, apr_pool_cleanup_null);
+
   /* get the two I/O atomics for this thread */
   SVN_ERR(svn_atomic_namespace__create(&ns, name_namespace, scratch));
   SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME, TRUE));
@@ -159,17 +178,17 @@ init_test_shm(apr_pool_t *pool)
   SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME "2", TRUE));
   SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
 
-  apr_pool_clear(scratch);
+  svn_pool_clear(scratch);
 
   SVN_ERR(svn_atomic_namespace__create(&ns, name_namespace1, scratch));
   SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME, TRUE));
   SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
-  apr_pool_clear(scratch);
+  svn_pool_clear(scratch);
 
   SVN_ERR(svn_atomic_namespace__create(&ns, name_namespace2, scratch));
   SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME, TRUE));
   SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
-  apr_pool_clear(scratch);
+  svn_pool_clear(scratch);
 
   /* done */
 
@@ -237,7 +256,7 @@ APR_THREAD_FUNC test_thread(apr_thread_t *thread, void *baton)
                                    params->thread_count,
                                    params->iterations,
                                    pool);
-  apr_pool_destroy(pool);
+  svn_pool_destroy(pool);
   apr_thread_exit(thread, APR_SUCCESS);
 
   return NULL;
@@ -382,7 +401,7 @@ calibrate_iterations(apr_pool_t *pool, int count)
       SVN_ERR(run_procs(pool, TEST_PROC, count, calib_iterations));
 
       taken = (double)(apr_time_now() - start);
-      apr_pool_destroy(scratch);
+      svn_pool_destroy(scratch);
     }
 
   /* scale that to 1s */

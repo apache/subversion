@@ -611,6 +611,58 @@ svn_rangelist__parse(svn_rangelist_t **rangelist,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_rangelist__combine_adjacent_ranges(svn_rangelist_t *rangelist,
+                                       apr_pool_t *scratch_pool)
+{
+  int i;
+  svn_merge_range_t *range, *lastrange;
+
+  lastrange = APR_ARRAY_IDX(rangelist, 0, svn_merge_range_t *);
+
+  for (i = 1; i < rangelist->nelts; i++)
+    {
+      range = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
+      if (lastrange->start <= range->end
+          && range->start <= lastrange->end)
+        {
+          /* The ranges are adjacent or intersect. */
+
+          /* svn_mergeinfo_parse promises to combine overlapping
+             ranges as long as their inheritability is the same. */
+          if (range->start < lastrange->end
+              && range->inheritable != lastrange->inheritable)
+            {
+              return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
+                                       _("Unable to parse overlapping "
+                                         "revision ranges '%s' and '%s' "
+                                         "with different inheritance "
+                                         "types"),
+                                       range_to_string(lastrange,
+                                                       scratch_pool),
+                                       range_to_string(range,
+                                                       scratch_pool));
+            }
+
+          /* Combine overlapping or adjacent ranges with the
+             same inheritability. */
+          if (lastrange->inheritable == range->inheritable)
+            {
+              lastrange->end = MAX(range->end, lastrange->end);
+              if (i + 1 < rangelist->nelts)
+                memmove(rangelist->elts + (rangelist->elt_size * i),
+                        rangelist->elts + (rangelist->elt_size * (i + 1)),
+                        rangelist->elt_size * (rangelist->nelts - i));
+              rangelist->nelts--;
+              i--;
+            }
+        }
+      lastrange = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* revisionline -> PATHNAME COLON revisionlist */
 static svn_error_t *
 parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
@@ -648,52 +700,10 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
      and make sure there are no overlapping ranges. */
   if (rangelist->nelts > 1)
     {
-      int i;
-      svn_merge_range_t *range, *lastrange;
-
       qsort(rangelist->elts, rangelist->nelts, rangelist->elt_size,
             svn_sort_compare_ranges);
-      lastrange = APR_ARRAY_IDX(rangelist, 0, svn_merge_range_t *);
 
-      for (i = 1; i < rangelist->nelts; i++)
-        {
-          range = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
-          if (lastrange->start <= range->end
-              && range->start <= lastrange->end)
-            {
-              /* The ranges are adjacent or intersect. */
-
-              /* svn_mergeinfo_parse promises to combine overlapping
-                 ranges as long as their inheritability is the same. */
-              if (range->start < lastrange->end
-                  && range->inheritable != lastrange->inheritable)
-                {
-                  return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
-                                           _("Unable to parse overlapping "
-                                             "revision ranges '%s' and '%s' "
-                                             "with different inheritance "
-                                             "types"),
-                                           range_to_string(lastrange,
-                                                           scratch_pool),
-                                           range_to_string(range,
-                                                           scratch_pool));
-                }
-
-              /* Combine overlapping or adjacent ranges with the
-                 same inheritability. */
-              if (lastrange->inheritable == range->inheritable)
-                {
-                  lastrange->end = MAX(range->end, lastrange->end);
-                  if (i + 1 < rangelist->nelts)
-                    memmove(rangelist->elts + (rangelist->elt_size * i),
-                            rangelist->elts + (rangelist->elt_size * (i + 1)),
-                            rangelist->elt_size * (rangelist->nelts - i));
-                  rangelist->nelts--;
-                  i--;
-                }
-            }
-          lastrange = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
-        }
+      SVN_ERR(svn_rangelist__combine_adjacent_ranges(rangelist, scratch_pool));
     }
 
   /* Handle any funky mergeinfo with relative merge source paths that
@@ -1191,25 +1201,14 @@ range_swap_endpoints(svn_merge_range_t *range)
 svn_error_t *
 svn_rangelist_reverse(svn_rangelist_t *rangelist, apr_pool_t *pool)
 {
-  int i, swap_index;
-  svn_merge_range_t range;
-  for (i = 0; i < rangelist->nelts / 2; i++)
+  int i;
+
+  svn_sort__array_reverse(rangelist, pool);
+
+  for (i = 0; i < rangelist->nelts; i++)
     {
-      swap_index = rangelist->nelts - i - 1;
-      range = *APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
-      *APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *) =
-        *APR_ARRAY_IDX(rangelist, swap_index, svn_merge_range_t *);
-      *APR_ARRAY_IDX(rangelist, swap_index, svn_merge_range_t *) = range;
-      range_swap_endpoints(APR_ARRAY_IDX(rangelist, swap_index,
-                                         svn_merge_range_t *));
       range_swap_endpoints(APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *));
     }
-
-  /* If there's an odd number of elements, we still need to swap the
-     end points of the remaining range. */
-  if (rangelist->nelts % 2 == 1)
-    range_swap_endpoints(APR_ARRAY_IDX(rangelist, rangelist->nelts / 2,
-                                       svn_merge_range_t *));
 
   return SVN_NO_ERROR;
 }
@@ -1753,7 +1752,7 @@ svn_mergeinfo_merge2(svn_mergeinfo_t mergeinfo,
         {
           SVN_ERR(svn_rangelist_merge2(target, to_insert, result_pool,
                                        iterpool));
-          apr_pool_clear(iterpool);
+          svn_pool_clear(iterpool);
         }
       else
         apr_hash_set(mergeinfo, key, klen, to_insert);

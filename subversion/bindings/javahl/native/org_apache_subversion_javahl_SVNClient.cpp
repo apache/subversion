@@ -161,7 +161,8 @@ Java_org_apache_subversion_javahl_SVNClient_list
 
   ListCallback callback(jcallback);
   cl->list(url, revision, pegRevision, EnumMapper::toDepth(jdepth),
-           (int)jdirentFields, jfetchLocks ? true : false, &callback);
+           static_cast<int>(jdirentFields), jfetchLocks ? true : false,
+           &callback);
 }
 
 JNIEXPORT void JNICALL
@@ -306,7 +307,7 @@ Java_org_apache_subversion_javahl_SVNClient_logMessages
   cl->logMessages(path, pegRevision, revisionRanges,
                   jstopOnCopy ? true: false, jdisoverPaths ? true : false,
                   jincludeMergedRevisions ? true : false,
-                  revProps, jlimit, &callback);
+                  revProps, static_cast<long>(jlimit), &callback);
 }
 
 JNIEXPORT jlong JNICALL
@@ -774,7 +775,7 @@ Java_org_apache_subversion_javahl_SVNClient_suggestMergeSources
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2ZLorg_apache_subversion_javahl_types_Depth_2ZZZ
 (JNIEnv *env, jobject jthis, jstring jpath1, jobject jrevision1,
- jstring jpath2, jobject jrevision2, jstring jlocalPath, jboolean jforce,
+ jstring jpath2, jobject jrevision2, jstring jlocalPath, jboolean jforceDelete,
  jobject jdepth, jboolean jignoreAncestry, jboolean jdryRun,
  jboolean jrecordOnly)
 {
@@ -806,7 +807,7 @@ Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apach
     return;
 
   cl->merge(path1, revision1, path2, revision2, localPath,
-            jforce ? true:false, EnumMapper::toDepth(jdepth),
+            jforceDelete ? true:false, EnumMapper::toDepth(jdepth),
             jignoreAncestry ? true:false, jdryRun ? true:false,
             jrecordOnly ? true:false);
 }
@@ -814,7 +815,7 @@ Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apach
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_util_List_2Ljava_lang_String_2ZLorg_apache_subversion_javahl_types_Depth_2ZZZ
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
- jobject jranges, jstring jlocalPath, jboolean jforce, jobject jdepth,
+ jobject jranges, jstring jlocalPath, jboolean jforceDelete, jobject jdepth,
  jboolean jignoreAncestry, jboolean jdryRun, jboolean jrecordOnly)
 {
   JNIEntry(SVNClient, merge);
@@ -856,7 +857,7 @@ Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apach
     }
 
   cl->merge(path, pegRevision, revisionRanges, localPath,
-            jforce ? true:false, EnumMapper::toDepth(jdepth),
+            jforceDelete ? true:false, EnumMapper::toDepth(jdepth),
             jignoreAncestry ? true:false, jdryRun ? true:false,
             jrecordOnly ? true:false);
 }
@@ -958,8 +959,8 @@ Java_org_apache_subversion_javahl_SVNClient_propertySetRemote
     return;
 
   CommitCallback callback(jcallback);
-  cl->propertySetRemote(path, jbaseRev, name, &message, value,
-                        jforce ? true:false,
+  cl->propertySetRemote(path, static_cast<svn_revnum_t>(jbaseRev),
+                        name, &message, value, jforce ? true : false,
                         revprops, jcallback ? &callback : NULL);
 }
 
@@ -1770,7 +1771,8 @@ Java_org_apache_subversion_javahl_SVNClient_patch
     return;
 
   PatchCallback callback(jcallback);
-  cl->patch(patchPath, targetPath, jdryRun ? true : false, (int) jstripCount,
+  cl->patch(patchPath, targetPath,
+            jdryRun ? true : false, static_cast<int>(jstripCount),
             jreverse ? true : false, jignoreWhitespace ? true : false,
             jremoveTempfiles ? true : false, &callback);
 }

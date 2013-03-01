@@ -96,9 +96,7 @@ test_svn_subst_translate_string2(apr_pool_t *pool)
                                                      source_string,
                                                      "ISO-8859-1", FALSE, pool,
                                                      pool);
-      SVN_TEST_ASSERT(err != SVN_NO_ERROR);
-      SVN_TEST_ASSERT(err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL);
-      svn_error_clear(err);
+      SVN_TEST_ASSERT_ERROR(err, SVN_ERR_IO_INCONSISTENT_EOL);
     }
 
   return SVN_NO_ERROR;
@@ -123,8 +121,8 @@ test_svn_subst_translate_string2_null_encoding_helper(apr_pool_t *pool)
                                         source_string, NULL, FALSE,
                                         pool, pool));
     SVN_TEST_STRING_ASSERT(new_value->data, "\xc3\x86");
-    SVN_TEST_ASSERT(translated_to_utf8 == TRUE);
-    SVN_TEST_ASSERT(translated_line_endings == FALSE);
+    SVN_TEST_ASSERT(translated_to_utf8);
+    SVN_TEST_ASSERT(!translated_line_endings);
   }
 
   return SVN_NO_ERROR;

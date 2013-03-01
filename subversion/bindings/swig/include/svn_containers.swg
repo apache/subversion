@@ -492,6 +492,12 @@
   }
 }
 #endif
+#ifdef SWIGPERL
+%typemap(argout) apr_array_header_t **externals_p {
+  %append_output
+    (svn_swig_pl_convert_array(*$1, $descriptor(svn_wc_external_item2_t *)));
+}
+#endif
 #ifdef SWIGRUBY
 %typemap(argout) apr_array_header_t **externals_p {
   %append_output(svn_swig_rb_apr_array_to_array_external_item2(*$1));

@@ -48,7 +48,7 @@ struct print_baton {
   svn_client_ctx_t *ctx;
 };
 
-/* This implements the svn_client_list_func_t API, printing a single
+/* This implements the svn_client_list_func2_t API, printing a single
    directory entry in text format. */
 static svn_error_t *
 print_dirent(void *baton,
@@ -56,6 +56,8 @@ print_dirent(void *baton,
              const svn_dirent_t *dirent,
              const svn_lock_t *lock,
              const char *abs_path,
+             const char *external_parent_url,
+             const char *external_target,
              apr_pool_t *pool)
 {
   struct print_baton *pb = baton;
@@ -123,11 +125,12 @@ svn_cl__null_list(apr_getopt_t *os,
       SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target,
                                  subpool));
 
-      err = svn_client_list2(truepath, &peg_revision,
+      err = svn_client_list3(truepath, &peg_revision,
                              &(opt_state->start_revision),
                              opt_state->depth,
                              dirent_fields,
                              opt_state->verbose,
+                             FALSE, /* include externals */
                              print_dirent,
                              &pb, ctx, subpool);
 

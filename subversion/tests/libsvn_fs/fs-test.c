@@ -1566,6 +1566,7 @@ merging_commit(const svn_test_opts_t *opts,
 
   /* (5) E doesn't exist in ANCESTOR, and has been added to A. */
   {
+    svn_revnum_t failed_rev;
     /* (1) E doesn't exist in ANCESTOR, and has been added to B.
        Conflict. */
     SVN_ERR(svn_fs_begin_txn(&txn, fs, revisions[4], pool));
@@ -1573,7 +1574,7 @@ merging_commit(const svn_test_opts_t *opts,
     SVN_ERR(svn_fs_make_file(txn_root, "theta", pool));
     SVN_ERR(svn_test__set_file_contents
             (txn_root, "theta", "This is another file 'theta'.\n", pool));
-    SVN_ERR(test_commit_txn(&after_rev, txn, "/theta", pool));
+    SVN_ERR(test_commit_txn(&failed_rev, txn, "/theta", pool));
     SVN_ERR(svn_fs_abort_txn(txn, pool));
 
     /* (1) E exists in ANCESTOR, but has been deleted from B.  Can't
@@ -1581,6 +1582,8 @@ merging_commit(const svn_test_opts_t *opts,
 
     /* (3) E exists in both ANCESTOR and B.  Can't occur, by assumption
        that E doesn't exist in ANCESTOR. */
+
+    SVN_TEST_ASSERT(failed_rev == SVN_INVALID_REVNUM);
   }
 
   /* (4) E exists in ANCESTOR, but has been deleted from A */
@@ -1594,15 +1597,16 @@ merging_commit(const svn_test_opts_t *opts,
     SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
     SVN_ERR(svn_fs_delete(txn_root, "A/D/H", pool));
 
-    /* ### FIXME: It is at this point that our test stops being valid,
-       ### hence its expected failure.  The following call will now
-       ### conflict on /A/D/H, causing revision 6 *not* to be created,
-       ### and the remainer of this test (which was written long ago)
-       ### to suffer from a shift in the expected state and behavior
-       ### of the filesystem as a result of this commit not happening.
-    */
+    /* We used to create the revision like this before fixing issue
+       #2751 -- Directory prop mods reverted in overlapping commits scenario.
 
-    SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
+       But we now expect that to fail as out of date */
+    {
+      svn_revnum_t failed_rev;
+      SVN_ERR(test_commit_txn(&failed_rev, txn, "/A/D/H", pool));
+
+      SVN_TEST_ASSERT(failed_rev == SVN_INVALID_REVNUM);
+    }
     /*********************************************************************/
     /* REVISION 6 */
     /*********************************************************************/
@@ -1640,18 +1644,22 @@ merging_commit(const svn_test_opts_t *opts,
     /* Try deleting a file F inside a subtree S where S does not exist
        in the most recent revision, but does exist in the ancestor
        tree.  This should conflict. */
-    SVN_ERR(svn_fs_begin_txn(&txn, fs, revisions[1], pool));
-    SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-    SVN_ERR(svn_fs_delete(txn_root, "A/D/H/omega", pool));
-    SVN_ERR(test_commit_txn(&after_rev, txn, "/A/D/H", pool));
-    SVN_ERR(svn_fs_abort_txn(txn, pool));
+    {
+      svn_revnum_t failed_rev;
+      SVN_ERR(svn_fs_begin_txn(&txn, fs, revisions[1], pool));
+      SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+      SVN_ERR(svn_fs_delete(txn_root, "A/D/H/omega", pool));
+      SVN_ERR(test_commit_txn(&failed_rev, txn, "/A/D/H", pool));
+      SVN_ERR(svn_fs_abort_txn(txn, pool));
+
+      SVN_TEST_ASSERT(failed_rev == SVN_INVALID_REVNUM);
+    }
 
     /* E exists in both ANCESTOR and B ... */
     {
       /* (1) but refers to different nodes.  Conflict. */
-      SVN_ERR(svn_fs_begin_txn(&txn, fs, revisions[1], pool));
+      SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, pool));
       SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-      SVN_ERR(svn_fs_delete(txn_root, "A/D/H", pool));
       SVN_ERR(svn_fs_make_dir(txn_root, "A/D/H", pool));
       SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
       revisions[revision_count++] = after_rev;
@@ -3533,7 +3541,8 @@ static int my_rand(apr_uint64_t scalar, apr_uint32_t *seed)
 {
   static const apr_uint32_t TEST_RAND_MAX = 0xffffffffUL;
   /* Assumes TEST_RAND_MAX+1 can be exactly represented in a double */
-  return (int)(((double)svn_test_rand(seed)
+  apr_uint32_t r = svn_test_rand(seed);
+  return (int)(((double)r
                 / ((double)TEST_RAND_MAX+1.0))
                * (double)scalar);
 }
@@ -4895,6 +4904,36 @@ node_history(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* Test svn_fs_delete_fs(). */
+static svn_error_t *
+delete_fs(const svn_test_opts_t *opts,
+             apr_pool_t *pool)
+{
+  const char *path;
+  svn_node_kind_t kind;
+
+  /* We have to use a subpool to close the svn_fs_t before calling
+     svn_fs_delete_fs.  See issue 4264. */
+  {
+    svn_fs_t *fs;
+    apr_pool_t *subpool = svn_pool_create(pool);
+    SVN_ERR(svn_test__create_fs(&fs, "test-repo-delete-fs", opts, subpool));
+    path = svn_fs_path(fs, pool);
+    svn_pool_destroy(subpool);
+  }
+
+  SVN_ERR(svn_io_check_path(path, &kind, pool));
+  SVN_TEST_ASSERT(kind != svn_node_none);
+  SVN_ERR(svn_fs_delete_fs(path, pool));
+  SVN_ERR(svn_io_check_path(path, &kind, pool));
+  SVN_TEST_ASSERT(kind == svn_node_none);
+
+  /* Recreate dir so that test cleanup doesn't fail. */
+  SVN_ERR(svn_io_dir_make(path, APR_OS_DEFAULT, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* ------------------------------------------------------------------------ */
@@ -4938,10 +4977,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "basic commit"),
     SVN_TEST_OPTS_PASS(test_tree_node_validation,
                        "testing tree validation helper"),
-    SVN_TEST_OPTS_WIMP(merging_commit,
-                       "merging commit",
-                       "needs to be written to match new"
-                       " merge() algorithm expectations"),
+    SVN_TEST_OPTS_PASS(merging_commit, "merging commit"),
     SVN_TEST_OPTS_PASS(copy_test,
                        "copying and tracking copy history"),
     SVN_TEST_OPTS_PASS(commit_date,
@@ -4978,5 +5014,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "create and modify small file"),
     SVN_TEST_OPTS_PASS(node_history,
                        "test svn_fs_node_history"),
+    SVN_TEST_OPTS_PASS(delete_fs,
+                       "test svn_fs_delete_fs"),
     SVN_TEST_NULL
   };

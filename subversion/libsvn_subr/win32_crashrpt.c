@@ -21,6 +21,9 @@
  * ====================================================================
  */
 
+/* prevent "empty compilation unit" warning on e.g. UNIX */
+typedef int win32_crashrpt__dummy;
+
 #ifdef WIN32
 #ifdef SVN_USE_WIN32_CRASHHANDLER
 
@@ -45,6 +48,12 @@ HANDLE dbghelp_dll = INVALID_HANDLE_VALUE;
 #define DBGHELP_DLL "dbghelp.dll"
 
 #define LOGFILE_PREFIX "svn-crash-log"
+
+#if defined(_M_IX86)
+#define FORMAT_PTR "0x%08x"
+#elif defined(_M_X64)
+#define FORMAT_PTR "0x%016I64x"
+#endif
 
 /*** Code. ***/
 
@@ -158,7 +167,7 @@ write_module_info_callback(void *data,
       MINIDUMP_MODULE_CALLBACK module = callback_input->Module;
 
       char *buf = convert_wbcs_to_utf8(module.FullPath);
-      fprintf(log_file, "0x%08x", module.BaseOfImage);
+      fprintf(log_file, FORMAT_PTR, module.BaseOfImage);
       fprintf(log_file, "  %s", buf);
       free(buf);
 
@@ -268,9 +277,9 @@ format_basic_type(char *buf, DWORD basic_type, DWORD64 length, void *address)
             case 2:  /* btChar */
               {
                 if (!IsBadStringPtr(*(PSTR*)address, 32))
-                  sprintf(buf, "\"%.31s\"", *(unsigned long *)address);
+                  sprintf(buf, "\"%.31s\"", *(const char **)address);
                 else
-                  sprintf(buf, "0x%08x", (int)*(unsigned long *)address);
+                  sprintf(buf, FORMAT_PTR, *(DWORD_PTR *)address);
               }
             case 6:  /* btInt */
               sprintf(buf, "%d", *(int *)address);
@@ -279,7 +288,7 @@ format_basic_type(char *buf, DWORD basic_type, DWORD64 length, void *address)
               sprintf(buf, "%f", *(float *)address);
               break;
             default:
-              sprintf(buf, "0x%08x", *(unsigned long *)address);
+              sprintf(buf, FORMAT_PTR, *(DWORD_PTR *)address);
               break;
           }
         break;
@@ -290,7 +299,8 @@ format_basic_type(char *buf, DWORD basic_type, DWORD64 length, void *address)
           sprintf(buf, "0x%016I64X", *(unsigned __int64 *)address);
         break;
       default:
-        sprintf(buf, "[unhandled type 0x%08x of length 0x%08x]", basic_type, length);
+        sprintf(buf, "[unhandled type 0x%08x of length " FORMAT_PTR "]",
+                     basic_type, length);
         break;
     }
 }
@@ -328,14 +338,14 @@ format_value(char *value_str, DWORD64 mod_base, DWORD type, void *value_addr)
               LocalFree(type_name_wbcs);
 
               if (ptr == 0)
-                sprintf(value_str, "(%s) 0x%08x",
-                        type_name, (DWORD *)value_addr);
+                sprintf(value_str, "(%s) " FORMAT_PTR,
+                        type_name, (DWORD_PTR *)value_addr);
               else if (ptr == 1)
-                sprintf(value_str, "(%s *) 0x%08x",
-                        type_name, *(DWORD *)value_addr);
+                sprintf(value_str, "(%s *) " FORMAT_PTR,
+                        type_name, *(DWORD_PTR *)value_addr);
               else
-                sprintf(value_str, "(%s **) 0x%08x",
-                        type_name, *(DWORD *)value_addr);
+                sprintf(value_str, "(%s **) " FORMAT_PTR,
+                        type_name, *(DWORD_PTR *)value_addr);
 
               free(type_name);
             }
@@ -352,12 +362,12 @@ format_value(char *value_str, DWORD64 mod_base, DWORD type, void *value_addr)
           /* print a char * as a string */
           if (ptr == 1 && length == 1)
             {
-              sprintf(value_str, "0x%08x \"%s\"",
-                      *(DWORD *)value_addr, (char *)*(DWORD*)value_addr);
+              sprintf(value_str, FORMAT_PTR " \"%s\"",
+                      *(DWORD_PTR *)value_addr, *(const char **)value_addr);
             }
           else if (ptr >= 1)
             {
-              sprintf(value_str, "0x%08x", *(DWORD *)value_addr);
+              sprintf(value_str, FORMAT_PTR, *(DWORD_PTR *)value_addr);
             }
           else if (SymGetTypeInfo_(proc, mod_base, type, TI_GET_BASETYPE, &bt))
             {
@@ -366,10 +376,10 @@ format_value(char *value_str, DWORD64 mod_base, DWORD type, void *value_addr)
         }
         break;
       case 12: /* SymTagEnum */
-          sprintf(value_str, "%d", *(DWORD *)value_addr);
+          sprintf(value_str, "%d", *(DWORD_PTR *)value_addr);
           break;
       case 13: /* SymTagFunctionType */
-          sprintf(value_str, "0x%08x", *(DWORD *)value_addr);
+          sprintf(value_str, FORMAT_PTR, *(DWORD_PTR *)value_addr);
           break;
       default:
           sprintf(value_str, "[unhandled tag: %d]", tag);
@@ -418,7 +428,7 @@ write_var_values(PSYMBOL_INFO sym_info, ULONG sym_size, void *baton)
                    (void *)var_data);
       fprintf(log_file, "%s=%s", sym_info->Name, value_str);
     }
-  if (log_params == FALSE && sym_info->Flags & SYMFLAG_LOCAL)
+  if (!log_params && sym_info->Flags & SYMFLAG_LOCAL)
     {
       format_value(value_str, sym_info->ModBase, sym_info->TypeIndex,
                    (void *)var_data);
@@ -728,13 +738,13 @@ svn__unhandled_exception_filter(PEXCEPTION_POINTERS ptrs)
     return EXCEPTION_CONTINUE_SEARCH;
 
   /* ... or if we can't create the log files ... */
-  if (get_temp_filename(dmp_filename, LOGFILE_PREFIX, "dmp") == FALSE ||
-      get_temp_filename(log_filename, LOGFILE_PREFIX, "log") == FALSE)
+  if (!get_temp_filename(dmp_filename, LOGFILE_PREFIX, "dmp") ||
+      !get_temp_filename(log_filename, LOGFILE_PREFIX, "log"))
     return EXCEPTION_CONTINUE_SEARCH;
 
   /* If we can't load a recent version of the dbghelp.dll, pass on this
      exception */
-  if (load_dbghelp_dll() == FALSE)
+  if (!load_dbghelp_dll())
     return EXCEPTION_CONTINUE_SEARCH;
 
   /* open log file */

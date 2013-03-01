@@ -77,7 +77,7 @@ RevpropTable::RevpropTable(jobject jrevpropTable)
 
   if (jrevpropTable != NULL)
     {
-      static jmethodID keySet = 0, toArray = 0, get = 0;
+      static jmethodID keySet = 0, get = 0;
       JNIEnv *env = JNIUtil::getEnv();
 
       jclass mapClazz = env->FindClass("java/util/Map");
@@ -120,8 +120,8 @@ RevpropTable::RevpropTable(jobject jrevpropTable)
           if (JNIUtil::isExceptionThrown())
             return;
 
-          m_revprops[std::string((const char *)propname)]
-            = std::string((const char *)propval);
+          m_revprops[std::string(static_cast<const char *>(propname))]
+            = std::string(static_cast<const char *>(propval));
 
           JNIUtil::getEnv()->DeleteLocalRef(jpropval);
         }

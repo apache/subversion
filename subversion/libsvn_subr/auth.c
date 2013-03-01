@@ -36,6 +36,8 @@
 #include "svn_version.h"
 #include "private/svn_auth_private.h"
 
+#include "auth.h"
+
 /* AN OVERVIEW
    ===========
 
@@ -423,9 +425,9 @@ svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
       const char *library_label, *library_name;
       const char *provider_function_name, *version_function_name;
       library_name = apr_psprintf(pool,
-                                  "libsvn_auth_%s-%d.so.0",
+                                  "libsvn_auth_%s-%d.so.%d",
                                   provider_name,
-                                  SVN_VER_MAJOR);
+                                  SVN_VER_MAJOR, SVN_SOVERSION);
       library_label = apr_psprintf(pool, "svn_%s", provider_name);
       provider_function_name = apr_psprintf(pool,
                                             "svn_auth_get_%s_%s_provider",
@@ -614,6 +616,23 @@ svn_auth_get_platform_specific_client_providers(apr_array_header_t **providers,
           SVN__MAYBE_ADD_PROVIDER(*providers, provider);
         }
     }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_auth_cleanup_walk(svn_auth_baton_t *baton,
+                      svn_auth_cleanup_callback cleanup,
+                      void *cleanup_baton,
+                      apr_pool_t *scratch_pool)
+{
+
+  if (apr_hash_get(baton->tables, SVN_AUTH_CRED_SIMPLE, APR_HASH_KEY_STRING))
+    {
+      SVN_ERR(svn_auth__simple_cleanup_walk(baton, cleanup, cleanup_baton,
+                                            baton->creds_cache, scratch_pool));
+    }
+  /* ### Maybe add support for other providers? */
 
   return SVN_NO_ERROR;
 }

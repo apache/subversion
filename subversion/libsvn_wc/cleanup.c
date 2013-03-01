@@ -143,12 +143,17 @@ cleanup_internal(svn_wc__db_t *db,
 {
   int wc_format;
   svn_boolean_t is_wcroot;
+  const char *lock_abspath;
 
   /* Can we even work with this directory?  */
   SVN_ERR(can_be_cleaned(&wc_format, db, dir_abspath, scratch_pool));
 
-  /* ### This fails if ADM_ABSPATH is locked indirectly via a
-     ### recursive lock on an ancestor. */
+  /* We cannot obtain a lock on a directory that's within a locked
+     subtree, so always run cleanup from the lock owner. */
+  SVN_ERR(svn_wc__db_wclock_find_root(&lock_abspath, db, dir_abspath,
+                                      scratch_pool, scratch_pool));
+  if (lock_abspath)
+    dir_abspath = lock_abspath;
   SVN_ERR(svn_wc__db_wclock_obtain(db, dir_abspath, -1, TRUE, scratch_pool));
 
   /* Run our changes before the subdirectories. We may not have to recurse
@@ -206,7 +211,7 @@ svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
   /* We need a DB that allows a non-empty work queue (though it *will*
      auto-upgrade). We'll handle everything manually.  */
   SVN_ERR(svn_wc__db_open(&db,
-                          NULL /* ### config */, TRUE, FALSE,
+                          NULL /* ### config */, FALSE, FALSE,
                           scratch_pool, scratch_pool));
 
   SVN_ERR(cleanup_internal(db, local_abspath, cancel_func, cancel_baton,
@@ -216,6 +221,8 @@ svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
      pre-1.7 prescribed workarounds aren't as user-friendly in WC-NG. */
   SVN_ERR(svn_wc__db_base_clear_dav_cache_recursive(db, local_abspath,
                                                     scratch_pool));
+
+  SVN_ERR(svn_wc__db_vacuum(db, local_abspath, scratch_pool));
 
   /* We're done with this DB, so proactively close it.  */
   SVN_ERR(svn_wc__db_close(db));

@@ -1019,10 +1019,18 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "### The authz-db option controls the location of the authorization"         NL
 "### rules for path-based access control.  Unless you specify a path"        NL
 "### starting with a /, the file's location is relative to the"              NL
-"### directory containing this file.  If you don't specify an"               NL
-"### authz-db, no path-based access control is done."                        NL
+"### directory containing this file.  The specified path may be a"           NL
+"### repository relative URL (^/) or an absolute file:// URL to a text"      NL
+"### file in a Subversion repository.  If you don't specify an authz-db,"    NL
+"### no path-based access control is done."                                  NL
 "### Uncomment the line below to use the default authorization file."        NL
 "# authz-db = " SVN_REPOS__CONF_AUTHZ                                        NL
+"### The groups-db option controls the location of the groups file."         NL
+"### Unless you specify a path starting with a /, the file's location is"    NL
+"### relative to the directory containing this file.  The specified path"    NL
+"### may be a repository relative URL (^/) or an absolute file:// URL to a"  NL
+"### text file in a Subversion repository."                                  NL
+"# groups-db = " SVN_REPOS__CONF_GROUPS                                      NL
 "### This option specifies the authentication realm of the repository."      NL
 "### If two repositories have the same authentication realm, they should"    NL
 "### have the same password database, and vice versa.  The default realm"    NL
@@ -1537,6 +1545,23 @@ get_repos(svn_repos_t **repos_p,
   if (open_fs)
     SVN_ERR(svn_fs_open(&repos->fs, repos->db_path, fs_config, pool));
 
+#ifdef SVN_DEBUG_CRASH_AT_REPOS_OPEN
+  /* If $PATH/config/debug-abort exists, crash the server here.
+     This debugging feature can be used to test client recovery
+     when the server crashes.
+
+     See: Issue #4274 */
+  {
+    svn_node_kind_t kind;
+    svn_error_t *err = svn_io_check_path(
+        svn_dirent_join(repos->conf_path, "debug-abort", pool),
+        &kind, pool);
+    svn_error_clear(err);
+    if (!err && kind == svn_node_file)
+      SVN_ERR_MALFUNCTION_NO_RETURN();
+  }
+#endif /* SVN_DEBUG_CRASH_AT_REPOS_OPEN */
+
   *repos_p = repos;
   return SVN_NO_ERROR;
 }
@@ -1806,6 +1831,62 @@ svn_repos_recover4(const char *path,
   return SVN_NO_ERROR;
 }
 
+struct freeze_baton_t {
+  apr_array_header_t *paths;
+  int counter;
+  svn_error_t *(*freeze_body)(void *, apr_pool_t *);
+  void *baton;
+};
+
+static svn_error_t *
+multi_freeze(void *baton,
+             apr_pool_t *pool)
+{
+  struct freeze_baton_t *fb = baton;
+
+  if (fb->counter == fb->paths->nelts)
+    {
+      SVN_ERR(fb->freeze_body(fb->baton, pool));
+      return SVN_NO_ERROR;
+    }
+  else
+    {
+      /* Using a subpool as the only way to unlock the repos lock used
+         by BDB is to clear the pool used to take the lock. */
+      apr_pool_t *subpool = svn_pool_create(pool);
+      const char *path = APR_ARRAY_IDX(fb->paths, fb->counter, const char *);
+      svn_repos_t *repos;
+
+      ++fb->counter;
+
+      SVN_ERR(get_repos(&repos, path,
+                        TRUE  /* exclusive (only applies to BDB) */,
+                        FALSE /* non-blocking */,
+                        FALSE /* open-fs */,
+                        NULL, subpool));
+
+
+      if (strcmp(repos->fs_type, SVN_FS_TYPE_BDB) == 0)
+        {
+          svn_error_t *err = multi_freeze(fb, subpool);
+
+          svn_pool_destroy(subpool);
+
+          return err;
+        }
+      else
+        {
+          SVN_ERR(svn_fs_open(&repos->fs, repos->db_path, NULL, subpool));
+          SVN_ERR(svn_fs_freeze(svn_repos_fs(repos), multi_freeze, fb,
+                                subpool));
+        }
+
+      svn_pool_destroy(subpool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* For BDB we fall back on BDB's repos layer lock which means that the
    repository is unreadable while frozen.
 
@@ -1813,36 +1894,19 @@ svn_repos_recover4(const char *path,
    and an SQLite reserved lock which means the repository is readable
    while frozen. */
 svn_error_t *
-svn_repos_freeze(const char *path,
+svn_repos_freeze(apr_array_header_t *paths,
                  svn_error_t *(*freeze_body)(void *, apr_pool_t *),
                  void *baton,
                  apr_pool_t *pool)
 {
-  svn_repos_t *repos;
+  struct freeze_baton_t fb;
 
-  /* Using a subpool as the only way to unlock the repos lock used by
-     BDB is to clear the pool used to take the lock. */
-  apr_pool_t *subpool = svn_pool_create(pool);
+  fb.paths = paths;
+  fb.counter = 0;
+  fb.freeze_body = freeze_body;
+  fb.baton = baton;
 
-  SVN_ERR(get_repos(&repos, path,
-                    TRUE  /* exclusive */,
-                    FALSE /* non-blocking */,
-                    FALSE /* open-fs */,
-                    NULL, subpool));
-
-  if (strcmp(repos->fs_type, SVN_FS_TYPE_BDB) == 0)
-    {
-      svn_error_t *err = freeze_body(baton, subpool);
-      svn_pool_destroy(subpool);
-      return err;
-    }
-  else
-    {
-      SVN_ERR(svn_fs_open(&repos->fs, repos->db_path, NULL, subpool));
-      SVN_ERR(svn_fs_freeze(svn_repos_fs(repos), freeze_body, baton, subpool));
-    }
-
-  svn_pool_destroy(subpool);
+  SVN_ERR(multi_freeze(&fb, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2103,7 +2167,7 @@ svn_repos_stat(svn_dirent_t **dirent,
       return SVN_NO_ERROR;
     }
 
-  ent = apr_pcalloc(pool, sizeof(*ent));
+  ent = svn_dirent_create(pool);
   ent->kind = kind;
 
   if (kind == svn_node_file)

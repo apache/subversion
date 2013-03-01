@@ -356,6 +356,7 @@ def export_working_copy_with_property_mods(sbox):
                                         expected_disk)
 
 @XFail()
+@Issue(3798)
 def export_working_copy_at_base_revision(sbox):
   "export working copy at base revision"
   sbox.build(read_only = True)
@@ -369,9 +370,12 @@ def export_working_copy_at_base_revision(sbox):
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
+  phi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'phi')
+  chi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'chi')
 
   # Make some local modifications: modify mu and C, add kappa and K, delete
-  # gamma and E, and replace rho.  (Directories can't yet be replaced.)
+  # gamma and E, and replace rho and H.
   # These modifications should *not* get exported at the base revision.
   svntest.main.file_append(mu_path, 'Appended text')
   svntest.main.run_svn(None, 'propset', 'p', 'v', mu_path, C_path)
@@ -382,6 +386,12 @@ def export_working_copy_at_base_revision(sbox):
   svntest.main.run_svn(None, 'rm', rho_path)
   svntest.main.file_append(rho_path, "Replacement file 'rho'.")
   svntest.main.run_svn(None, 'add', rho_path)
+  svntest.main.run_svn(None, 'rm', H_path)
+  svntest.main.run_svn(None, 'mkdir', H_path)
+  svntest.main.file_append(phi_path, "This is the file 'phi'.")
+  svntest.main.run_svn(None, 'add', phi_path)
+  svntest.main.file_append(chi_path, "Replacement file 'chi'.")
+  svntest.main.run_svn(None, 'add', chi_path)
 
   # Note that we don't tweak the expected disk tree at all,
   # since the modifications should not be present.

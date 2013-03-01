@@ -141,16 +141,17 @@ Note [1]: It would be quite too much to expect those password entries
           ----------------------------
 
 
-[If you want to test with serf instead of neon:
+As a shorthand to all of the above, ./davautocheck.sh will generate
+an Apache configuration listening on a random port on localhost and
+run some tests.  Without arguments, or when invoking 'make davautocheck'
+on the top-level Makefile, it will run all tests.  With arguments,
+it will run just one suite or just one test:
 
-  $ ./basic_tests.py --url=http://localhost --http-library=serf
+     $ ./davautocheck.sh
+     $ ./davautocheck.sh basic
+     $ ./davautocheck.sh basic 15
 
-  or
-
-  $ make check BASE_URL=http://localhost HTTP_LIBRARY=serf
-]
-
-
+It also respects some environment variables.
 
 Running over ra_svn
 -------------------
@@ -187,6 +188,9 @@ $ saslpasswd2 -c -u svntest jrandom
 $ saslpasswd2 -c -u svntest jconstant
 
 As usual, both users should use the password 'rayjandom'.
+
+There are 'make svnserveautocheck' and ./svnserveautocheck.sh commands,
+analogous to davautocheck.sh documented above.
 
 
 Running tests in a RAM disk

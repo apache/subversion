@@ -37,6 +37,7 @@
 
 #include "private/svn_magic.h"
 #include "private/svn_client_private.h"
+#include "private/svn_diff_tree.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -264,15 +265,18 @@ svn_client__ensure_ra_session_url(const char **old_session_url,
       - COMMIT_ITEMS is an array of svn_client_commit_item_t *
         structures, present only for working copy commits, NULL otherwise.
 
-      - USE_ADMIN indicates that the RA layer should create tempfiles
-        in the administrative area instead of in the working copy itself,
-        and read properties from the administrative area.
+      - WRITE_DAV_PROPS indicates that the RA layer can clear and write
+        the DAV properties in the working copy of BASE_DIR_ABSPATH.
 
-      - READ_ONLY_WC indicates that the RA layer should not attempt to
-        modify the WC props directly.
+      - READ_DAV_PROPS indicates that the RA layer should not attempt to
+        modify the WC props directly, but is still allowed to read them.
 
    BASE_DIR_ABSPATH may be NULL if the RA operation does not correspond to a
-   working copy (in which case, USE_ADMIN should be FALSE).
+   working copy (in which case, WRITE_DAV_PROPS and READ_DAV_PROPS must be
+   FALSE.
+
+   If WRITE_DAV_PROPS and READ_DAV_PROPS are both FALSE the working copy may
+   still be used for locating pristine files via their SHA1.
 
    The calling application's authentication baton is provided in CTX,
    and allocations related to this session are performed in POOL.
@@ -285,10 +289,11 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                                      const char *base_url,
                                      const char *base_dir_abspath,
                                      const apr_array_header_t *commit_items,
-                                     svn_boolean_t use_admin,
-                                     svn_boolean_t read_only_wc,
+                                     svn_boolean_t write_dav_props,
+                                     svn_boolean_t read_dav_props,
                                      svn_client_ctx_t *ctx,
-                                     apr_pool_t *pool);
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
 
 
 svn_error_t *
@@ -326,17 +331,18 @@ svn_client__ra_make_cb_baton(svn_wc_context_t *wc_ctx,
 
 /*** Add/delete ***/
 
-/* Read automatic properties matching PATH from AUTOPROPS.  AUTOPROPS
-   is is a hash as per svn_client__get_all_auto_props.
+/* If AUTOPROPS is not null: Then read automatic properties matching PATH
+   from AUTOPROPS.  AUTOPROPS is is a hash as per
+   svn_client__get_all_auto_props.  Set *PROPERTIES to a hash containing
+   propname/value pairs (const char * keys mapping to svn_string_t * values).
 
-   Set *PROPERTIES to a hash containing propname/value pairs
-   (const char * keys mapping to svn_string_t * values).  *PROPERTIES
-   may be an empty hash, but will not be NULL.
+   If AUTOPROPS is null then set *PROPERTIES to an empty hash.
 
-   Set *MIMETYPE to the mimetype, if any, or to NULL.
-
-   If MAGIC_COOKIE is not NULL and no mime-type can be determined
-   via CTX->config try to detect the mime-type with libmagic.
+   If *MIMETYPE is null or "application/octet-stream" then check AUTOPROPS
+   for a matching svn:mime-type.  If AUTOPROPS is null or no match is found
+   and MAGIC_COOKIE is not NULL, then then try to detect the mime-type with
+   libmagic.  If a mimetype is found then add it to *PROPERTIES and set
+   *MIMETYPE to the mimetype value or NULL otherwise.
 
    Allocate the *PROPERTIES and its contents as well as *MIMETYPE, in
    RESULT_POOL.  Use SCRATCH_POOL for temporary allocations. */
@@ -351,11 +357,11 @@ svn_error_t *svn_client__get_paths_auto_props(
   apr_pool_t *scratch_pool);
 
 /* Gather all auto-props from CTX->config (or none if auto-props are
-   disabled) and all svn:inheritable-auto-props explicitly set on or inherited
+   disabled) and all svn:auto-props explicitly set on or inherited
    by PATH_OR_URL.
 
    If PATH_OR_URL is an unversioned WC path then gather the
-   svn:inheritable-auto-props inherited by PATH_OR_URL's nearest versioned
+   svn:auto-props inherited by PATH_OR_URL's nearest versioned
    parent.
 
    If PATH_OR_URL is a URL ask for the properties @HEAD, if it is a WC
@@ -366,10 +372,10 @@ svn_error_t *svn_client__get_paths_auto_props(
    names to const char *property values.
 
    If a given property name exists for the same pattern in both the config
-   file and in an a svn:inheritable-auto-props property, the latter overrides the
+   file and in an a svn:auto-props property, the latter overrides the
    former.  If a given property name exists for the same pattern in two
-   different inherited svn:inheritable-auto-props, then the closer path-wise
-   property overrides the more distant. svn:inheritable-auto-props explicitly set
+   different inherited svn:auto-props, then the closer path-wise
+   property overrides the more distant. svn:auto-props explicitly set
    on PATH_OR_URL have the highest precedence and override inherited props
    and config file settings.
 
@@ -383,7 +389,7 @@ svn_error_t *svn_client__get_all_auto_props(apr_hash_t **autoprops,
 
 /* Get a combined list of ignore patterns from CTX->CONFIG, local ignore
    patterns on LOCAL_ABSPATH (per the svn:ignore property), and from any
-   svn:inheritable-ignores properties set on, or inherited by, LOCAL_ABSPATH.
+   svn:global-ignores properties set on, or inherited by, LOCAL_ABSPATH.
    If LOCAL_ABSPATH is unversioned but is located within a valid working copy,
    then find its nearest versioned parent path, if any, and return the ignore
    patterns for that parent.  Return an SVN_ERR_WC_NOT_WORKING_COPY error if
@@ -393,12 +399,11 @@ svn_error_t *svn_client__get_all_auto_props(apr_hash_t **autoprops,
    RESULT_POOL.  Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *svn_client__get_all_ignores(apr_array_header_t **ignores,
                                          const char *local_abspath,
-                                         svn_boolean_t no_ignore,
                                          svn_client_ctx_t *ctx,
                                          apr_pool_t *result_pool,
                                          apr_pool_t *scratch_pool);
 
-/* Get a list of ignore patterns defined by the svn:inheritable-ignores
+/* Get a list of ignore patterns defined by the svn:global-ignores
    properties set on, or inherited by, PATH_OR_URL.  Store the collected
    patterns as const char * elements in the array *IGNORES.  Allocate
    *IGNORES and its contents in RESULT_POOL.  Use  SCRATCH_POOL for
@@ -420,17 +425,18 @@ svn_error_t *svn_client__get_inherited_ignores(apr_array_header_t **ignores,
    If DRY_RUN is TRUE all the checks are made to ensure that the delete can
    occur, but the working copy is not modified.  If NOTIFY_FUNC is not
    null, it is called with NOTIFY_BATON for each file or directory deleted. */
-svn_error_t * svn_client__wc_delete(const char *path,
-                                    svn_boolean_t force,
-                                    svn_boolean_t dry_run,
-                                    svn_boolean_t keep_local,
-                                    svn_wc_notify_func2_t notify_func,
-                                    void *notify_baton,
-                                    svn_client_ctx_t *ctx,
-                                    apr_pool_t *pool);
+svn_error_t *
+svn_client__wc_delete(const char *local_abspath,
+                      svn_boolean_t force,
+                      svn_boolean_t dry_run,
+                      svn_boolean_t keep_local,
+                      svn_wc_notify_func2_t notify_func,
+                      void *notify_baton,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool);
 
 
-/* Like svn_client__wc_delete(), but deletes mulitple TARGETS efficiently. */
+/* Like svn_client__wc_delete(), but deletes multiple TARGETS efficiently. */
 svn_error_t *
 svn_client__wc_delete_many(const apr_array_header_t *targets,
                            svn_boolean_t force,
@@ -597,19 +603,36 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
 /*** Inheritable Properties ***/
 
+/* Convert any svn_prop_inherited_item_t elements in INHERITED_PROPS which
+   have repository root relative path PATH_OR_URL structure members to URLs
+   using REPOS_ROOT_URL.  Changes to the contents of INHERITED_PROPS are
+   allocated in RESULT_POOL.  SCRATCH_POOL is used for temporary
+   allocations. */
+svn_error_t *
+svn_client__iprop_relpaths_to_urls(apr_array_header_t *inherited_props,
+                                   const char *repos_root_url,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
+
 /* Fetch the inherited properties for the base of LOCAL_ABSPATH as well
    as any WC roots under LOCAL_ABSPATH (as limited by DEPTH) using
    RA_SESSION.  Store the results in *WCROOT_IPROPS, a hash mapping
    const char * absolute working copy paths to depth-first ordered arrays
    of svn_prop_inherited_item_t * structures.
 
+   Any svn_prop_inherited_item_t->path_or_url members returned in
+   *WCROOT_IPROPS are repository relative paths.
+
    If LOCAL_ABSPATH has no base then do nothing.
 
    RA_SESSION should be an open RA session pointing at the URL of PATH,
-   or NULL, in which case this function will open its own temporary session.
+   or NULL, in which case this function will use its own temporary session.
 
    Allocate *WCROOT_IPROPS in RESULT_POOL, use SCRATCH_POOL for temporary
    allocations.
+
+   If one or more of the paths are not available in the repository at the
+   specified revision, these paths will not be added to the hashtable.
 */
 svn_error_t *
 svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
@@ -628,21 +651,16 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
 /* Create an editor for a pure repository comparison, i.e. comparing one
    repository version against the other.
 
-   DIFF_CMD/DIFF_CMD_BATON represent the callback and callback argument that
-   implement the file comparison function
+   DIFF_CALLBACKS/DIFF_CMD_BATON represent the callback that implements
+   the comparison.
 
    DEPTH is the depth to recurse.
 
    RA_SESSION is an RA session through which this editor may fetch
    properties, file contents and directory listings of the 'old' side of the
    diff. It is a separate RA session from the one through which this editor
-   is being driven.
-
-   REVISION is the start revision in the comparison.
-
-   For each deleted directory, if WALK_DELETED_DIRS is true then just call
-   the 'dir_deleted' callback once, otherwise call the 'file_deleted' or
-   'dir_deleted' callback for each individual node in that subtree.
+   is being driven. REVISION is the revision number of the 'old' side of
+   the diff.
 
    If TEXT_DELTAS is FALSE, then do not expect text deltas from the edit
    drive, nor send the 'before' and 'after' texts to the diff callbacks;
@@ -650,26 +668,21 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
    This must be FALSE if the edit producer is not sending text deltas,
    otherwise the file content checksum comparisons will fail.
 
-   If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
-   file and directory operated on during the edit.
+   EDITOR/EDIT_BATON return the newly created editor and baton.
 
-   EDITOR/EDIT_BATON return the newly created editor and baton. */
+   @since New in 1.8.
+   */
 svn_error_t *
-svn_client__get_diff_editor(const svn_delta_editor_t **editor,
-                            void **edit_baton,
-                            svn_depth_t depth,
-                            svn_ra_session_t *ra_session,
-                            svn_revnum_t revision,
-                            svn_boolean_t walk_deleted_dirs,
-                            svn_boolean_t text_deltas,
-                            const svn_wc_diff_callbacks4_t *diff_callbacks,
-                            void *diff_cmd_baton,
-                            svn_cancel_func_t cancel_func,
-                            void *cancel_baton,
-                            svn_wc_notify_func2_t notify_func,
-                            void *notify_baton,
-                            apr_pool_t *result_pool);
-
+svn_client__get_diff_editor2(const svn_delta_editor_t **editor,
+                             void **edit_baton,
+                             svn_ra_session_t *ra_session,
+                             svn_depth_t depth,
+                             svn_revnum_t revision,
+                             svn_boolean_t text_deltas,
+                             const svn_diff_tree_processor_t *processor,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *result_pool);
 
 /* ---------------------------------------------------------------- */
 
@@ -689,6 +702,7 @@ svn_client__get_diff_summarize_callbacks(
                         svn_wc_diff_callbacks4_t **callbacks,
                         void **callback_baton,
                         const char *target,
+                        svn_boolean_t reversed,
                         svn_client_diff_summarize_func_t summarize_func,
                         void *summarize_baton,
                         apr_pool_t *pool);
@@ -839,6 +853,9 @@ typedef svn_error_t *(*svn_client__check_url_kind_t)(void *baton,
    as specified by DEPTH; the behavior is the same as that described
    for svn_client_commit4().
 
+   If DEPTH_EMPTY_START is >= 0, all targets after index DEPTH_EMPTY_START
+   in TARGETS are handled as having svn_depth_empty.
+
    If JUST_LOCKED is TRUE, treat unmodified items with lock tokens as
    commit candidates.
 
@@ -855,6 +872,7 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
                                  apr_hash_t **lock_tokens,
                                  const char *base_dir_abspath,
                                  const apr_array_header_t *targets,
+                                 int depth_empty_start,
                                  svn_depth_t depth,
                                  svn_boolean_t just_locked,
                                  const apr_array_header_t *changelists,
@@ -899,6 +917,17 @@ svn_error_t *
 svn_client__condense_commit_items(const char **base_url,
                                   apr_array_header_t *commit_items,
                                   apr_pool_t *pool);
+
+
+/* Like svn_ra_stat() on the ra session root, but with a compatibility
+   hack for pre-1.2 svnserve that don't support this api. */
+svn_error_t *
+svn_client__ra_stat_compatible(svn_ra_session_t *ra_session,
+                               svn_revnum_t rev,
+                               svn_dirent_t **dirent_p,
+                               apr_uint32_t dirent_fields,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *result_pool);
 
 
 /* Commit the items in the COMMIT_ITEMS array using EDITOR/EDIT_BATON
@@ -1008,21 +1037,6 @@ svn_client__export_externals(apr_hash_t *externals,
                              svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
-
-
-/* Perform status operations on each external in EXTERNAL_MAP, a const char *
-   local_abspath of all externals mapping to the const char* defining_abspath.
-   All other options are the same as those passed to svn_client_status(). */
-svn_error_t *
-svn_client__do_external_status(svn_client_ctx_t *ctx,
-                               apr_hash_t *external_map,
-                               svn_depth_t depth,
-                               svn_boolean_t get_all,
-                               svn_boolean_t update,
-                               svn_boolean_t no_ignore,
-                               svn_client_status_func_t status_func,
-                               void *status_baton,
-                               apr_pool_t *pool);
 
 /* Baton for svn_client__dirent_fetcher */
 struct svn_client__dirent_fetcher_baton_t

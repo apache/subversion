@@ -140,8 +140,8 @@ load_ra_module(svn_ra__init_func_t *func,
     const char *compat_funcname;
     apr_status_t status;
 
-    libname = apr_psprintf(pool, "libsvn_ra_%s-%d.so.0",
-                           ra_name, SVN_VER_MAJOR);
+    libname = apr_psprintf(pool, "libsvn_ra_%s-%d.so.%d",
+                           ra_name, SVN_VER_MAJOR, SVN_SOVERSION);
     funcname = apr_psprintf(pool, "svn_ra_%s__init", ra_name);
     compat_funcname = apr_psprintf(pool, "svn_ra_%s_init", ra_name);
 
@@ -804,24 +804,32 @@ svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
                                     pool);
 }
 
-svn_error_t *svn_ra_do_switch2(svn_ra_session_t *session,
-                               const svn_ra_reporter3_t **reporter,
-                               void **report_baton,
-                               svn_revnum_t revision_to_switch_to,
-                               const char *switch_target,
-                               svn_depth_t depth,
-                               const char *switch_url,
-                               const svn_delta_editor_t *switch_editor,
-                               void *switch_baton,
-                               apr_pool_t *pool)
+svn_error_t *
+svn_ra_do_switch3(svn_ra_session_t *session,
+                  const svn_ra_reporter3_t **reporter,
+                  void **report_baton,
+                  svn_revnum_t revision_to_switch_to,
+                  const char *switch_target,
+                  svn_depth_t depth,
+                  const char *switch_url,
+                  svn_boolean_t send_copyfrom_args,
+                  svn_boolean_t ignore_ancestry,
+                  const svn_delta_editor_t *switch_editor,
+                  void *switch_baton,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
   SVN_ERR_ASSERT(svn_path_is_empty(switch_target)
                  || svn_path_is_single_path_component(switch_target));
   return session->vtable->do_switch(session,
                                     reporter, report_baton,
                                     revision_to_switch_to, switch_target,
-                                    depth, switch_url, switch_editor,
-                                    switch_baton, pool);
+                                    depth, switch_url,
+                                    send_copyfrom_args,
+                                    ignore_ancestry,
+                                    switch_editor,
+                                    switch_baton,
+                                    result_pool, scratch_pool);
 }
 
 svn_error_t *svn_ra_do_status2(svn_ra_session_t *session,
@@ -1522,6 +1530,16 @@ svn_ra_get_ra_library(svn_ra_plugin_t **library,
 /* For each libsvn_ra_foo library that is not linked in, provide a default
    implementation for svn_ra_foo_init which returns a "not implemented"
    error. */
+
+#ifndef SVN_LIBSVN_CLIENT_LINKS_RA_NEON
+svn_error_t *
+svn_ra_dav_init(int abi_version,
+                apr_pool_t *pool,
+                apr_hash_t *hash)
+{
+  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
+}
+#endif /* ! SVN_LIBSVN_CLIENT_LINKS_RA_NEON */
 
 #ifndef SVN_LIBSVN_CLIENT_LINKS_RA_SVN
 svn_error_t *

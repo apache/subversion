@@ -97,6 +97,43 @@ dav_svn__allow_read(request_rec *r,
 }
 
 
+svn_boolean_t
+dav_svn__allow_list_repos(request_rec *r,
+                          const char *repos_name,
+                          apr_pool_t *pool)
+{
+  const char *uri;
+  request_rec *subreq;
+  svn_boolean_t allowed = FALSE;
+
+  /* Easy out:  if the admin has explicitly set 'SVNPathAuthz Off',
+     then this whole callback does nothing. */
+  if (! dav_svn__get_pathauthz_flag(r))
+    {
+      return TRUE;
+    }
+
+  /* Do not use short_circuit mode: bypass provider expects R to be request to
+     the repository to find repository relative authorization file. */
+
+  /* Build a Public Resource uri representing repository root. */
+  uri =  svn_urlpath__join(dav_svn__get_root_dir(r),
+                           svn_path_uri_encode(repos_name, pool), pool);
+
+  /* Check if GET would work against this uri. */
+  subreq = ap_sub_req_method_uri("GET", uri, r, r->output_filters);
+
+  if (subreq)
+    {
+      if (subreq->status == HTTP_OK)
+        allowed = TRUE;
+
+      ap_destroy_sub_req(subreq);
+    }
+
+  return allowed;
+}
+
 /* This function implements 'svn_repos_authz_func_t', specifically
    for read authorization.
 

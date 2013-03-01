@@ -65,15 +65,11 @@ typedef enum svn_cl__accept_t
   svn_cl__accept_working,
 
   /* Resolve the conflicted hunks by choosing the corresponding text
-     from the pre-conflict working copy file.
-
-     Note: this is a placeholder, not actually implemented in 1.5. */
+     from the pre-conflict working copy file. */
   svn_cl__accept_mine_conflict,
 
   /* Resolve the conflicted hunks by choosing the corresponding text
-     from the post-conflict base copy file.
-
-     Note: this is a placeholder, not actually implemented in 1.5. */
+     from the post-conflict base copy file. */
   svn_cl__accept_theirs_conflict,
 
   /* Resolve the conflict by taking the entire pre-conflict working
@@ -186,6 +182,7 @@ typedef struct svn_cl__opt_state_t
     {
   const char *diff_cmd;          /* the external diff command to use */
   svn_boolean_t internal_diff;    /* override diff_cmd in config file */
+  svn_boolean_t no_diff_added; /* do not show diffs for deleted files */
   svn_boolean_t no_diff_deleted; /* do not show diffs for deleted files */
   svn_boolean_t show_copies_as_adds; /* do not diff copies with their source */
   svn_boolean_t notice_ancestry; /* notice ancestry for diff-y operations */
@@ -288,13 +285,13 @@ svn_opt_subcommand_t
   svn_cl__upgrade;
 
 
-/* See definition in main.c for documentation. */
+/* See definition in svn.c for documentation. */
 extern const svn_opt_subcommand_desc2_t svn_cl__cmd_table[];
 
-/* See definition in main.c for documentation. */
+/* See definition in svn.c for documentation. */
 extern const int svn_cl__global_options[];
 
-/* See definition in main.c for documentation. */
+/* See definition in svn.c for documentation. */
 extern const apr_getopt_option_t svn_cl__options[];
 
 
@@ -358,13 +355,18 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
 
-/* Create an return a baton for use with svn_cl__conflict_func_postpone(),
- * allocated in RESULT_POOL. */
+/* Create and return a baton for use with svn_cl__conflict_func_postpone()
+ * and svn_cl__resolve_postponed_conflicts(), allocated in RESULT_POOL.
+ */
 void *
 svn_cl__get_conflict_func_postpone_baton(apr_pool_t *result_pool);
 
 /* A conflict-resolution callback which postpones all conflicts and
- * remembers conflicted paths in BATON. */
+ * remembers conflicted paths in BATON.  BATON must have been obtained
+ * from svn_cl__get_conflict_func_postpone_baton().
+ *
+ * Implements svn_wc_conflict_resolver_func2_t.
+ */
 svn_error_t *
 svn_cl__conflict_func_postpone(svn_wc_conflict_result_t **result,
                                const svn_wc_conflict_description2_t *desc,
@@ -372,12 +374,20 @@ svn_cl__conflict_func_postpone(svn_wc_conflict_result_t **result,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
-/* Run the interactive conflict resolver, obtained internally from
- * svn_cl__get_conflict_func_interactive(), on any conflicted paths
- * stored in the BATON obtained from svn_cl__get_conflict_func_postpone(). */
+/* Perform conflict resolution on any conflicted paths stored in the BATON
+ * which was obtained from svn_cl__get_conflict_func_postpone_baton().
+ *
+ * If CONFLICTS_ALL_RESOLVED is not null, set *CONFLICTS_ALL_RESOLVED to
+ * true if this resolves all the conflicts on the paths that were
+ * recorded (or if none were recorded); or to false if some conflicts
+ * remain.
+ *
+ * The conflict resolution will be interactive if ACCEPT_WHICH is
+ * svn_cl__accept_unspecified.
+ */
 svn_error_t *
-svn_cl__resolve_postponed_conflicts(void *baton,
-                                    svn_depth_t depth,
+svn_cl__resolve_postponed_conflicts(svn_boolean_t *conflicts_all_resolved,
+                                    void *baton,
                                     svn_cl__accept_t accept_which,
                                     const char *editor_cmd,
                                     svn_client_ctx_t *ctx,
@@ -462,33 +472,6 @@ svn_cl__print_status_xml(const char *cwd_abspath,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *pool);
 
-
-/* Print to stdout a hash that maps property names (char *) to property
-   values (svn_string_t *).  The names are assumed to be in UTF-8 format;
-   the values are either in UTF-8 (the special Subversion props) or
-   plain binary values.
-
-   If OUT is not NULL, then write to it rather than stdout.
-
-   If NAMES_ONLY is true, print just names, else print names and
-   values. */
-svn_error_t *
-svn_cl__print_prop_hash(svn_stream_t *out,
-                        apr_hash_t *prop_hash,
-                        svn_boolean_t names_only,
-                        apr_pool_t *pool);
-
-/* Similar to svn_cl__print_prop_hash(), only output xml to *OUTSTR.
-   If INHERITED_PROPS is true, then PROP_HASH contains inherited properties,
-   otherwise PROP_HASH contains explicit properties.  If *OUTSTR is NULL,
-   allocate it first from POOL, otherwise append to it. */
-svn_error_t *
-svn_cl__print_xml_prop_hash(svn_stringbuf_t **outstr,
-                            apr_hash_t *prop_hash,
-                            svn_boolean_t names_only,
-                            svn_boolean_t inherited_props,
-                            apr_pool_t *pool);
-
 /* Output a commit xml element to *OUTSTR.  If *OUTSTR is NULL, allocate it
    first from POOL, otherwise append to it.  If AUTHOR or DATE is
    NULL, it will be omitted. */
@@ -519,60 +502,6 @@ svn_cl__revprop_prepare(const svn_opt_revision_t *revision,
                         const char **URL,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool);
-
-/* Search for a text editor command in standard environment variables,
-   and invoke it to edit CONTENTS (using a temporary file created in
-   directory BASE_DIR).  Return the new contents in *EDITED_CONTENTS,
-   or set *EDITED_CONTENTS to NULL if no edit was performed.
-
-   If EDITOR_CMD is not NULL, it is the name of the external editor
-   command to use, overriding anything else that might determine the
-   editor.
-
-   If TMPFILE_LEFT is NULL, the temporary file will be destroyed.
-   Else, the file will be left on disk, and its path returned in
-   *TMPFILE_LEFT.
-
-   CONFIG is a hash of svn_config_t * items keyed on a configuration
-   category (SVN_CONFIG_CATEGORY_CONFIG et al), and may be NULL.
-
-   If AS_TEXT is TRUE, recode CONTENTS and convert to native eol-style before
-   editing and back again afterwards.  In this case, ENCODING determines the
-   encoding used during editing.  If non-NULL, use the named encoding, else
-   use the system encoding.  If AS_TEXT is FALSE, don't do any translation.
-   In that case, ENCODING is ignored.
-
-   Use POOL for all allocations.  Use PREFIX as the prefix for the
-   temporary file used by the editor.
-
-   If return error, *EDITED_CONTENTS is not touched. */
-svn_error_t *
-svn_cl__edit_string_externally(svn_string_t **edited_contents,
-                               const char **tmpfile_left,
-                               const char *editor_cmd,
-                               const char *base_dir,
-                               const svn_string_t *contents,
-                               const char *prefix,
-                               apr_hash_t *config,
-                               svn_boolean_t as_text,
-                               const char *encoding,
-                               apr_pool_t *pool);
-
-
-/* Search for a text editor command in standard environment variables,
-   and invoke it to edit PATH.  Use POOL for all allocations.
-
-   If EDITOR_CMD is not NULL, it is the name of the external editor
-   command to use, overriding anything else that might determine the
-   editor.
-
-   CONFIG is a hash of svn_config_t * items keyed on a configuration
-   category (SVN_CONFIG_CATEGORY_CONFIG et al), and may be NULL.  */
-svn_error_t *
-svn_cl__edit_file_externally(const char *path,
-                             const char *editor_cmd,
-                             apr_hash_t *config,
-                             apr_pool_t *pool);
 
 /* Search for a merge tool command in environment variables,
    and use it to perform the merge of the four given files.
@@ -654,13 +583,20 @@ svn_cl__check_externals_failed_notify_wrapper(void *baton,
                                               const svn_wc_notify_t *n,
                                               apr_pool_t *pool);
 
-/* Print conflict stats accumulated in NOTIFY_BATON.
- * Return any error encountered during printing.
- * Do all allocations in POOL.*/
+/* Reset to zero the conflict stats accumulated in BATON, which is the
+ * notifier baton from svn_cl__get_notifier().
+ */
 svn_error_t *
-svn_cl__print_conflict_stats(void *notify_baton, apr_pool_t *pool);
+svn_cl__notifier_reset_conflict_stats(void *baton);
 
-
+/* Print the conflict stats accumulated in BATON, which is the
+ * notifier baton from svn_cl__get_notifier().
+ * Return any error encountered during printing.
+ */
+svn_error_t *
+svn_cl__notifier_print_conflict_stats(void *baton, apr_pool_t *scratch_pool);
+
+
 /*** Log message callback stuffs. ***/
 
 /* Allocate in POOL a baton for use with svn_cl__get_log_message().
@@ -767,6 +703,22 @@ const char *
 svn_cl__operation_str_human_readable(svn_wc_operation_t operation,
                                      apr_pool_t *pool);
 
+/* If PROPNAME looks like but is not identical to one of the svn:
+ * poperties, raise an error and suggest a better spelling. Names that
+ * raise errors look like this:
+ *
+ *   - start with svn: but do not exactly match a known property; or,
+ *   - start with a 3-letter prefix that differs in only one letter
+ *     from "svn:", and the rest exactly matches a known propery.
+ *
+ * If REVPROP is TRUE, only check revision property names; otherwise
+ * only check node property names.
+ *
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+svn_error_t *
+svn_cl__check_svn_prop_name(const char *propname, svn_boolean_t revprop,
+                            apr_pool_t *scratch_pool);
 
 /* If PROPNAME is one of the svn: properties with a boolean value, and
  * PROPVAL looks like an attempt to turn the property off (i.e., it's
@@ -803,15 +755,6 @@ svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets_p,
                                             svn_client_ctx_t *ctx,
                                             svn_boolean_t keep_dest_origpath_on_truepath_collision,
                                             apr_pool_t *pool);
-
-/* Return a string allocated in POOL that is a copy of STR but with each
- * line prefixed with INDENT. A line is all characters up to the first
- * CR-LF, LF-CR, CR or LF, or the end of STR if sooner. */
-const char *
-svn_cl__indent_string(const char *str,
-                      const char *indent,
-                      apr_pool_t *pool);
-
 
 /* Return a string showing NODE's kind, URL and revision, to the extent that
  * that information is available in NODE. If NODE itself is NULL, this prints
@@ -885,6 +828,18 @@ svn_cl__check_related_source_and_target(const char *path_or_url1,
                                         const svn_opt_revision_t *revision2,
                                         svn_client_ctx_t *ctx,
                                         apr_pool_t *pool);
+
+/* If the user is setting a mime-type to mark one of the TARGETS as binary,
+ * as determined by property name PROPNAME and value PROPVAL, then check
+ * whether Subversion's own binary-file detection recognizes the target as
+ * a binary file. If Subversion doesn't consider the target to be a binary
+ * file, assume the user is making an error and print a warning to inform
+ * the user that some operations might fail on the file in the future. */
+svn_error_t *
+svn_cl__propset_print_binary_mime_type_warning(apr_array_header_t *targets,
+                                               const char *propname,
+                                               const svn_string_t *propval,
+                                               apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

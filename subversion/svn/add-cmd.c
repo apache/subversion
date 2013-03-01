@@ -75,10 +75,11 @@ svn_cl__add(apr_getopt_t *os,
       svn_pool_clear(iterpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
       SVN_ERR(svn_cl__try
-              (svn_client_add4(target,
+              (svn_client_add5(target,
                                opt_state->depth,
                                opt_state->force, opt_state->no_ignore,
-                               opt_state->parents, ctx, iterpool),
+                               opt_state->no_autoprops, opt_state->parents,
+                               ctx, iterpool),
                errors, opt_state->quiet,
                SVN_ERR_ENTRY_EXISTS,
                SVN_ERR_WC_PATH_NOT_FOUND,

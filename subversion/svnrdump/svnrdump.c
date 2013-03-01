@@ -23,6 +23,7 @@
  */
 
 #include <apr_signal.h>
+#include <apr_uri.h>
 
 #include "svn_pools.h"
 #include "svn_cmdline.h"
@@ -39,6 +40,7 @@
 #include "svnrdump.h"
 
 #include "private/svn_cmdline_private.h"
+#include "private/svn_ra_private.h"
 
 
 
@@ -78,6 +80,7 @@ enum svn_svnrdump__longopt_t
     opt_auth_password,
     opt_auth_nocache,
     opt_non_interactive,
+    opt_force_interactive,
     opt_incremental,
     opt_trust_server_cert,
     opt_version
@@ -89,7 +92,8 @@ enum svn_svnrdump__longopt_t
                                    opt_auth_password, \
                                    opt_auth_nocache, \
                                    opt_trust_server_cert, \
-                                   opt_non_interactive
+                                   opt_non_interactive, \
+                                   opt_force_interactive
 
 static const svn_opt_subcommand_desc2_t svnrdump__cmd_table[] =
 {
@@ -125,7 +129,13 @@ static const apr_getopt_option_t svnrdump__options[] =
     {"password",      opt_auth_password, 1,
                       N_("specify a password ARG")},
     {"non-interactive", opt_non_interactive, 0,
-                      N_("do no interactive prompting")},
+                      N_("do no interactive prompting (default is to prompt\n"
+                         "                             "
+                         "only if standard input is a terminal device)")},
+    {"force-interactive", opt_force_interactive, 0,
+                      N_("do interactive prompting even if standard input\n"
+                         "                             "
+                         "is not a terminal device")},
     {"no-auth-cache", opt_auth_nocache, 0,
                       N_("do not cache authentication tokens")},
     {"help",          'h', 0,
@@ -222,7 +232,7 @@ replay_revstart(svn_revnum_t revision,
 
   SVN_ERR(svn_rdump__get_dump_editor(editor, edit_baton, revision,
                                      rb->stdout_stream, rb->extra_ra_session,
-                                     check_cancel, NULL, pool));
+                                     NULL, check_cancel, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -248,10 +258,87 @@ replay_revend(svn_revnum_t revision,
   return SVN_NO_ERROR;
 }
 
+#ifdef USE_EV2_IMPL
+/* Print dumpstream-formatted information about REVISION.
+ * Implements the `svn_ra_replay_revstart_callback_t' interface.
+ */
+static svn_error_t *
+replay_revstart_v2(svn_revnum_t revision,
+                   void *replay_baton,
+                   svn_editor_t **editor,
+                   apr_hash_t *rev_props,
+                   apr_pool_t *pool)
+{
+  struct replay_baton *rb = replay_baton;
+  apr_hash_t *normal_props;
+  svn_stringbuf_t *propstring;
+  svn_stream_t *stdout_stream;
+  svn_stream_t *revprop_stream;
+
+  SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
+
+  /* Revision-number: 19 */
+  SVN_ERR(svn_stream_printf(stdout_stream, pool,
+                            SVN_REPOS_DUMPFILE_REVISION_NUMBER
+                            ": %ld\n", revision));
+  SVN_ERR(svn_rdump__normalize_props(&normal_props, rev_props, pool));
+  propstring = svn_stringbuf_create_ensure(0, pool);
+  revprop_stream = svn_stream_from_stringbuf(propstring, pool);
+  SVN_ERR(svn_hash_write2(normal_props, revprop_stream, "PROPS-END", pool));
+  SVN_ERR(svn_stream_close(revprop_stream));
+
+  /* Prop-content-length: 13 */
+  SVN_ERR(svn_stream_printf(stdout_stream, pool,
+                            SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
+                            ": %" APR_SIZE_T_FMT "\n", propstring->len));
+
+  /* Content-length: 29 */
+  SVN_ERR(svn_stream_printf(stdout_stream, pool,
+                            SVN_REPOS_DUMPFILE_CONTENT_LENGTH
+                            ": %" APR_SIZE_T_FMT "\n\n", propstring->len));
+
+  /* Property data. */
+  SVN_ERR(svn_stream_write(stdout_stream, propstring->data,
+                           &(propstring->len)));
+
+  SVN_ERR(svn_stream_puts(stdout_stream, "\n"));
+  SVN_ERR(svn_stream_close(stdout_stream));
+
+  SVN_ERR(svn_rdump__get_dump_editor_v2(editor, revision,
+                                        rb->stdout_stream,
+                                        rb->extra_ra_session,
+                                        NULL, check_cancel, NULL, pool, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Print progress information about the dump of REVISION.
+   Implements the `svn_ra_replay_revfinish_callback_t' interface. */
+static svn_error_t *
+replay_revend_v2(svn_revnum_t revision,
+                 void *replay_baton,
+                 svn_editor_t *editor,
+                 apr_hash_t *rev_props,
+                 apr_pool_t *pool)
+{
+  /* No resources left to free. */
+  struct replay_baton *rb = replay_baton;
+
+  SVN_ERR(svn_editor_complete(editor));
+
+  if (! rb->quiet)
+    SVN_ERR(svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu.\n",
+                                revision));
+  return SVN_NO_ERROR;
+}
+#endif
+
 /* Initialize the RA layer, and set *CTX to a new client context baton
  * allocated from POOL.  Use CONFIG_DIR and pass USERNAME, PASSWORD,
  * CONFIG_DIR and NO_AUTH_CACHE to initialize the authorization baton.
  * CONFIG_OPTIONS (if not NULL) is a list of configuration overrides.
+ * REPOS_URL is used to fiddle with server-specific configuration
+ * options.
  */
 static svn_error_t *
 init_client_context(svn_client_ctx_t **ctx_p,
@@ -259,13 +346,14 @@ init_client_context(svn_client_ctx_t **ctx_p,
                     const char *username,
                     const char *password,
                     const char *config_dir,
+                    const char *repos_url,
                     svn_boolean_t no_auth_cache,
                     svn_boolean_t trust_server_cert,
                     apr_array_header_t *config_options,
                     apr_pool_t *pool)
 {
   svn_client_ctx_t *ctx = NULL;
-  svn_config_t *cfg_config;
+  svn_config_t *cfg_config, *cfg_servers;
 
   SVN_ERR(svn_ra_initialize(pool));
 
@@ -280,6 +368,47 @@ init_client_context(svn_client_ctx_t **ctx_p,
 
   cfg_config = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
                             APR_HASH_KEY_STRING);
+
+  /* ### FIXME: This is a hack to work around the fact that our dump
+     ### editor simply can't handle the way ra_serf violates the
+     ### editor v1 drive ordering requirements.
+     ###
+     ### We'll override both the global value and server-specific one
+     ### for the 'http-bulk-updates' and 'http-max-connections'
+     ### options in order to get ra_serf to try a bulk-update if the
+     ### server will allow it, or at least try to limit all its
+     ### auxiliary GETs/PROPFINDs to happening (well-ordered) on a
+     ### single server connection.
+     ### 
+     ### See http://subversion.tigris.org/issues/show_bug.cgi?id=4116.
+  */
+  cfg_servers = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_SERVERS,
+                             APR_HASH_KEY_STRING);
+  svn_config_set_bool(cfg_servers, SVN_CONFIG_SECTION_GLOBAL,
+                      SVN_CONFIG_OPTION_HTTP_BULK_UPDATES, TRUE);
+  svn_config_set_int64(cfg_servers, SVN_CONFIG_SECTION_GLOBAL,
+                       SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS, 2);
+  if (cfg_servers)
+    {
+      apr_status_t status;
+      apr_uri_t parsed_url;
+
+      status = apr_uri_parse(pool, repos_url, &parsed_url);
+      if (! status)
+        {
+          const char *server_group;
+
+          server_group = svn_config_find_group(cfg_servers, parsed_url.hostname,
+                                               SVN_CONFIG_SECTION_GROUPS, pool);
+          if (server_group)
+            {
+              svn_config_set_bool(cfg_servers, server_group,
+                                  SVN_CONFIG_OPTION_HTTP_BULK_UPDATES, TRUE);
+              svn_config_set_int64(cfg_servers, server_group,
+                                   SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS, 2);
+            }
+        }
+    }
 
   /* Set up our cancellation support. */
   ctx->cancel_func = check_cancel;
@@ -337,16 +466,68 @@ dump_revision_header(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+dump_initial_full_revision(svn_ra_session_t *session,
+                           svn_ra_session_t *extra_ra_session,
+                           svn_stream_t *stdout_stream,
+                           svn_revnum_t revision,
+                           svn_boolean_t quiet,
+                           apr_pool_t *pool)
+{
+  const svn_ra_reporter3_t *reporter;
+  void *report_baton;
+  const svn_delta_editor_t *dump_editor;
+  void *dump_baton;
+  const char *session_url, *source_relpath;
+
+  /* Determine whether we're dumping the repository root URL or some
+     child thereof.  If we're dumping a subtree of the repository
+     rather than the root, we have to jump through some hoops to make
+     our update-driven dump generation work the way a replay-driven
+     one would.
+
+     See http://subversion.tigris.org/issues/show_bug.cgi?id=4101
+  */
+  SVN_ERR(svn_ra_get_session_url(session, &session_url, pool));
+  SVN_ERR(svn_ra_get_path_relative_to_root(session, &source_relpath,
+                                           session_url, pool));
+
+  /* Start with a revision record header. */
+  SVN_ERR(dump_revision_header(session, stdout_stream, revision, pool));
+
+  /* Then, we'll drive the dump editor with what would look like a
+     full checkout of the repository as it looked in START_REVISION.
+     We do this by manufacturing a basic 'report' to the update
+     reporter, telling it that we have nothing to start with.  The
+     delta between nothing and everything-at-REV is, effectively, a
+     full dump of REV. */
+  SVN_ERR(svn_rdump__get_dump_editor(&dump_editor, &dump_baton, revision,
+                                     stdout_stream, extra_ra_session,
+                                     source_relpath, check_cancel, NULL, pool));
+  SVN_ERR(svn_ra_do_update2(session, &reporter, &report_baton, revision,
+                            "", svn_depth_infinity, FALSE,
+                            dump_editor, dump_baton, pool));
+  SVN_ERR(reporter->set_path(report_baton, "", revision,
+                             svn_depth_infinity, TRUE, NULL, pool));
+  SVN_ERR(reporter->finish_report(report_baton, pool));
+
+  /* All finished with START_REVISION! */
+  if (! quiet)
+    SVN_ERR(svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu.\n",
+                                revision));
+
+  return SVN_NO_ERROR;
+}
+
 /* Replay revisions START_REVISION thru END_REVISION (inclusive) of
- * the repository located at URL, using callbacks which generate
- * Subversion repository dumpstreams describing the changes made in
- * those revisions.  If QUIET is set, don't generate progress
- * messages.
+ * the repository URL at which SESSION is rooted, using callbacks
+ * which generate Subversion repository dumpstreams describing the
+ * changes made in those revisions.  If QUIET is set, don't generate
+ * progress messages.
  */
 static svn_error_t *
 replay_revisions(svn_ra_session_t *session,
                  svn_ra_session_t *extra_ra_session,
-                 const char *url,
                  svn_revnum_t start_revision,
                  svn_revnum_t end_revision,
                  svn_boolean_t quiet,
@@ -389,52 +570,29 @@ replay_revisions(svn_ra_session_t *session,
       incremental = TRUE;
     }
 
-  if (incremental)
+  /* If what remains to be dumped is not going to be dumped
+     incrementally, then dump the first revision in full. */
+  if (!incremental)
     {
+      SVN_ERR(dump_initial_full_revision(session, extra_ra_session,
+                                         stdout_stream, start_revision,
+                                         quiet, pool));
+      start_revision++;
+    }
+
+  /* If there are still revisions left to be dumped, do so. */
+  if (start_revision <= end_revision)
+    {
+#ifndef USE_EV2_IMPL
       SVN_ERR(svn_ra_replay_range(session, start_revision, end_revision,
                                   0, TRUE, replay_revstart, replay_revend,
                                   replay_baton, pool));
-    }
-  else
-    {
-      const svn_ra_reporter3_t *reporter;
-      void *report_baton;
-      const svn_delta_editor_t *dump_editor;
-      void *dump_baton;
-
-      /* First, we need to dump the start_revision in full.  We'll
-         start with a revision record header. */
-      SVN_ERR(dump_revision_header(session, stdout_stream,
-                                   start_revision, pool));
-
-      /* Then, we'll drive the dump editor with what would look like a
-         full checkout of the repository as it looked in
-         START_REVISION.  We do this by manufacturing a basic 'report'
-         to the update reporter, telling it that we have nothing to
-         start with.  The delta between nothing and everything-at-REV
-         is, effectively, a full dump of REV. */
-      SVN_ERR(svn_rdump__get_dump_editor(&dump_editor, &dump_baton,
-                                         start_revision,
-                                         stdout_stream, extra_ra_session,
-                                         check_cancel, NULL, pool));
-      SVN_ERR(svn_ra_do_update2(session, &reporter, &report_baton,
-                                start_revision, "", svn_depth_infinity,
-                                FALSE, dump_editor, dump_baton, pool));
-      SVN_ERR(reporter->set_path(report_baton, "", start_revision,
-                                 svn_depth_infinity, TRUE, NULL, pool));
-      SVN_ERR(reporter->finish_report(report_baton, pool));
-
-      /* All finished with START_REVISION! */
-      if (! quiet)
-        SVN_ERR(svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu.\n",
-                                    start_revision));
-      start_revision++;
-
-      /* Now go pick up additional revisions in the range, if any. */
-      if (start_revision <= end_revision)
-        SVN_ERR(svn_ra_replay_range(session, start_revision, end_revision,
-                                    0, TRUE, replay_revstart, replay_revend,
-                                    replay_baton, pool));
+#else
+      SVN_ERR(svn_ra__replay_range_ev2(session, start_revision, end_revision,
+                                       0, TRUE, replay_revstart_v2,
+                                       replay_revend_v2, replay_baton,
+                                       NULL, NULL, NULL, NULL, pool));
+#endif
     }
 
   SVN_ERR(svn_stream_close(stdout_stream));
@@ -545,7 +703,6 @@ dump_cmd(apr_getopt_t *os,
   SVN_ERR(svn_ra_reparent(extra_ra_session, repos_root, pool));
 
   return replay_revisions(opt_baton->session, extra_ra_session,
-                          opt_baton->url,
                           opt_baton->start_revision.value.number,
                           opt_baton->end_revision.value.number,
                           opt_baton->quiet, opt_baton->incremental, pool);
@@ -690,6 +847,7 @@ main(int argc, const char **argv)
   svn_boolean_t no_auth_cache = FALSE;
   svn_boolean_t trust_server_cert = FALSE;
   svn_boolean_t non_interactive = FALSE;
+  svn_boolean_t force_interactive = FALSE;
   apr_array_header_t *config_options = NULL;
   apr_getopt_t *os;
   const char *first_arg;
@@ -808,6 +966,9 @@ main(int argc, const char **argv)
         case opt_non_interactive:
           non_interactive = TRUE;
           break;
+        case opt_force_interactive:
+          force_interactive = TRUE;
+          break;
         case opt_incremental:
           opt_baton->incremental = TRUE;
           break;
@@ -825,6 +986,19 @@ main(int argc, const char **argv)
                                                           opt_arg, pool));
         }
     }
+
+  /* The --non-interactive and --force-interactive options are mutually
+   * exclusive. */
+  if (non_interactive && force_interactive)
+    {
+      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("--non-interactive and --force-interactive "
+                               "are mutually exclusive"));
+      return svn_cmdline_handle_exit_error(err, pool, "svnrdump: ");
+    }
+  else
+    non_interactive = !svn_cmdline__be_interactive(non_interactive,
+                                                   force_interactive);
 
   if (opt_baton->help)
     {
@@ -865,9 +1039,10 @@ main(int argc, const char **argv)
               err = svn_utf_cstring_to_utf8(&first_arg_utf8, first_arg, pool);
               if (err)
                 return svn_cmdline_handle_exit_error(err, pool, "svnrdump: ");
-              svn_error_clear(svn_cmdline_fprintf(stderr, pool,
-                                                  _("Unknown command: '%s'\n"),
-                                                  first_arg_utf8));
+              svn_error_clear(
+                svn_cmdline_fprintf(stderr, pool,
+                                    _("Unknown subcommand: '%s'\n"),
+                                    first_arg_utf8));
               SVNRDUMP_ERR(help_cmd(NULL, NULL, pool));
               svn_pool_destroy(pool);
               exit(EXIT_FAILURE);
@@ -960,6 +1135,7 @@ main(int argc, const char **argv)
                                    username,
                                    password,
                                    config_dir,
+                                   opt_baton->url,
                                    no_auth_cache,
                                    trust_server_cert,
                                    config_options,

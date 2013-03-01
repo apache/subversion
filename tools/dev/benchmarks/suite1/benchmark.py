@@ -36,8 +36,11 @@ abbreviated as:
 test runs, you should enter labels matching the selected --svn-bin-dir.
 Later, you can select runs individually by using these labels.
 
-For <revision>, you can provide the keyword 'each', which has the same effect
-as entering each available revision in a separate timings selection.
+For <revision>, you can provide special keywords:
+- 'each' has the same effect as entering each available revision number that
+  is on record in the db in a separate timings selection.
+- 'last' is the same as 'each', but shows only the last 10 revisions. 'last'
+  can be combined with a number, e.g. 'last12'.
 
 For all subcommands except 'run', you can omit some or all of the elements of
 a timings selection to combine all available timings sets. Try that out with
@@ -47,6 +50,7 @@ Examples:
   benchmark.py run 1.7.x@12345,5x5
   benchmark.py show trunk@12345
   benchmark.py compare 1.7.0,1x100 trunk@each,1x100
+  benchmark.py chart compare 1.7.0,5x5 trunk@last12,5x5
 
 
 RUN BENCHMARKS
@@ -285,6 +289,18 @@ def parse_timings_selections(db, *args):
       run_kind.revision = None
       query = TimingQuery(db, run_kind)
       for revision in query.get_sorted_revisions():
+        revision_run_kind = copy(run_kind)
+        revision_run_kind.revision = revision
+        run_kinds.append(revision_run_kind)
+    elif run_kind.revision and run_kind.revision.startswith('last'):
+      Nstr = run_kind.revision[4:]
+      if not Nstr:
+        N = 10
+      else:
+        N = int(Nstr)
+      run_kind.revision = None
+      query = TimingQuery(db, run_kind)
+      for revision in query.get_sorted_revisions()[-N:]:
         revision_run_kind = copy(run_kind)
         revision_run_kind.revision = revision
         run_kinds.append(revision_run_kind)
@@ -946,7 +962,7 @@ def cmdline_list(db, options, *args):
 
 
 def cmdline_show(db, options, *run_kind_strings):
-  run_kinds = parse_timings_selections(db, run_kind_strings)
+  run_kinds = parse_timings_selections(db, *run_kind_strings)
   for run_kind in run_kinds:
     q = TimingQuery(db, run_kind)
     timings = q.get_timings()
@@ -1052,8 +1068,6 @@ def cmdline_chart_compare(db, options, *args):
 
   run_kinds = parse_timings_selections(db, *args)
 
-  all_command_names = set()
-
   # iterate the timings selections and accumulate data
   for run_kind in run_kinds:
     query = TimingQuery(db, run_kind)
@@ -1064,17 +1078,19 @@ def cmdline_chart_compare(db, options, *args):
     labels.append(run_kind.label())
     timing_sets.append(timings)
 
-    all_command_names.update( query.get_sorted_command_names() )
+    # it only makes sense to compare those commands that have timings
+    # in the first selection, because that is the one everything else
+    # is compared to. Remember the first selection's command names.
+    if not command_names:
+      command_names = query.get_sorted_command_names()
+
 
   if len(timing_sets) < 2:
     bail("Not enough timings")
 
   if options.command_names:
-    command_names = [name for name in all_command_names
+    command_names = [name for name in command_names
                      if name in options.command_names]
-  else:
-    command_names = list(all_command_names)
-  command_names = sorted(command_names)
 
   chart_path = options.chart_path
   if not chart_path:
@@ -1082,126 +1098,125 @@ def cmdline_chart_compare(db, options, *args):
       [ filesystem_safe_string(l) for l in labels ]
       ) + '.svg'
                   
-  print '\nwriting chart file:', chart_path
-
   N = len(command_names)
-  M = len(timing_sets) - 1 
+  M = len(timing_sets) - 1
   if M < 2:
     M = 2
 
   group_positions = np.arange(N)  # the y locations for the groups
-  dist = 0.1
-  height = (1. - dist) / (1. + M)     # the height of the bars
+  dist = 1. / (1. + M)
+  height = (1. - dist) / M     # the height of the bars
 
-  fig = plt.figure(figsize=(12, 5 + 0.21*N*M))
+  fig = plt.figure(figsize=(12, 5 + 0.2*N*M))
   plot1 = fig.add_subplot(121)
   plot2 = fig.add_subplot(122)
 
   left = timing_sets[0]
 
-  ofs = (dist + height) / 2.
-
   # Iterate timing sets. Each loop produces one bar for each command name
   # group.
-  for label_i in range(1, len(labels)):
+  for label_i,label in enumerate(labels[1:],1):
     right = timing_sets[label_i]
-    divs = []
-    diffs = []
-    divs_color = []
-    deviations = []
-    for command_name in command_names:
+    if not right:
+      continue
+
+    for cmd_i, command_name in enumerate(command_names):
+      if command_name not in right:
+        #skip
+        continue
+
       left_N, left_min, left_max, left_avg = left[command_name]
       right_N, right_min, right_max, right_avg = right[command_name]
 
-      val = 100. * (do_div(left_avg, right_avg) - 1.0)
-      if val < 0:
+      div_avg = 100. * (do_div(left_avg, right_avg) - 1.0)
+      if div_avg <= 0:
         col = '#55dd55'
       else:
         col = '#dd5555'
-      divs.append(val)
-      divs_color.append(col)
-      diffs.append( do_diff(left_avg, right_avg) )
-      deviations.append(right_max / right_min)
 
-    rects = plot1.barh((group_positions + ofs), divs, height * (1.0 - dist),
-                      color=divs_color, left=0.0, edgecolor='white')
+      diff_val = do_diff(left_avg, right_avg)
 
-    for i in range(len(rects)):
-      y = rects[i].get_y() + height/10.
-      div = divs[i]
-      label = labels[label_i]
+      ofs = (dist + height) / 2. + height * (label_i - 1)
 
-      plot1.text(-1., y,
-                 '%s %+5.1f%%' % (label, div),
-                 ha='right', va='top', size='small',
+      barheight = height * (1.0 - dist)
+
+      y = float(cmd_i) + ofs
+
+      plot1.barh((y, ),
+                 (div_avg, ),
+                 barheight,
+                 color=col, edgecolor='white')
+      plot1.text(0., y + height/2.,
+                 '%s %+5.1f%%' % (label, div_avg),
+                 ha='right', va='center', size='small',
                  rotation=0, family='monospace')
 
-    rects = plot2.barh((group_positions + ofs), diffs, height * 0.9,
-                   color=divs_color, edgecolor='white')
-
-    for i in range(len(rects)):
-      y = rects[i].get_y() + height/10.
-      diff = diffs[i]
-      label = labels[label_i]
-
-      plot2.text(-.5, y,
-                 '%s %+6.2fs' % (label, diff),
-                 ha='right', va='top', size='small',
+      plot2.barh((y, ),
+                 (diff_val, ),
+                 barheight,
+                 color=col, edgecolor='white')
+      plot2.text(0., y + height/2.,
+                 '%s %+6.2fs' % (label, diff_val),
+                 ha='right', va='center', size='small',
                  rotation=0, family='monospace')
 
-    ofs += height
-
-  plot1.set_title('Avg. runtime change from %s in %%' % labels[0],
-                  size='medium')
-  #plot1.axvline(x=0.0, color='#555555', linewidth=0.2)
-  plot1.set_xticks((0,))
-  plot1.set_xticklabels(('+-0%',), rotation=0)
 
   for p in (plot1, plot2):
-    p.set_ylim((len(command_names), 0))
     xlim = list(p.get_xlim())
-    if xlim[1] < 2.:
-      xlim[1] = 2.
-    # make sure the zero line is far enough left so that the annotations
+    if xlim[1] < 10.:
+      xlim[1] = 10.
+    # make sure the zero line is far enough right so that the annotations
     # fit inside the chart. About half the width should suffice.
     if xlim[0] > -xlim[1]:
       xlim[0] = -xlim[1]
     p.set_xlim(*xlim)
+    p.set_xticks((0,))
     p.set_yticks(group_positions + (height / 2.))
     p.set_yticklabels(())
+    p.set_ylim((len(command_names), 0))
     p.grid()
 
-
-  plot2.set_title('Avg. runtime change from %s in seconds' % labels[0],
+  plot1.set_xticklabels(('+-0%',), rotation=0)
+  plot1.set_title('Average runtime change from %s in %%' % labels[0],
                   size='medium')
-  #plot2.axvline(x=0.0, color='#555555', linewidth=0.2)
-  plot2.set_xticks((0,))
+
   plot2.set_xticklabels(('+-0s',), rotation=0)
+  plot2.set_title('Average runtime change from %s in seconds' % labels[0],
+                  size='medium')
 
   margin = 1./(2 + N*M)
-  print margin
+  titlemargin = 0
+  if options.title:
+    titlemargin = margin * 1.5
+
   fig.subplots_adjust(left=0.005, right=0.995, wspace=0.3, bottom=margin,
-                      top=1.0-margin)
+                      top=1.0-margin-titlemargin)
 
-  ystep = (1.0 - 2.*margin) / len(command_names)
+  ystep = (1.0 - 2.*margin - titlemargin) / len(command_names)
 
-  for idx in range(len(command_names)):
+  for idx,command_name in enumerate(command_names):
     ylabel = '%s\nvs. %.1fs' % (
-                     command_names[idx],
-                     left[command_names[idx]][3])
+                     command_name,
+                     left[command_name][3])
 
-    ypos=1.0 - margin - 0.2*ystep - ystep * idx
+    ypos=1.0 - margin - titlemargin - ystep/M - ystep * idx
     plt.figtext(0.5, ypos,
-                command_names[idx],
+                command_name,
                 ha='center', va='top',
                 size='medium', weight='bold')
     plt.figtext(0.5, ypos - ystep/(M+1),
                 '%s\n= %.2fs' % (
-                  labels[0], left[command_names[idx]][3]),
+                  labels[0], left[command_name][3]),
                 ha='center', va='top',
                 size='small')
 
+  if options.title:
+    plt.figtext(0.5, 1. - titlemargin/2, options.title, ha='center',
+                va='center', weight='bold')
+
   plt.savefig(chart_path)
+  print 'wrote chart file:', chart_path
+
 
 # ------------------------------------------------------------ main
 
@@ -1242,6 +1257,9 @@ if __name__ == '__main__':
   parser.add_option('-c', '--command-names', action='store',
                     dest='command_names',
                     help='Comma separated list of command names to limit to.')
+  parser.add_option('-t', '--title', action='store',
+                    dest='title',
+                    help='For charts, a title to print in the chart graphics.')
 
   parser.set_description(__doc__)
   parser.set_usage('')
@@ -1288,4 +1306,4 @@ if __name__ == '__main__':
       usage()
 
   else:
-    usage('Unknown command argument: %s' % cmd)
+    usage('Unknown subcommand argument: %s' % cmd)

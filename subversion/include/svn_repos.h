@@ -245,7 +245,10 @@ typedef enum svn_repos_notify_action_t
   svn_repos_notify_upgrade_start,
 
   /** A revision was skipped during loading. @since New in 1.8. */
-  svn_repos_notify_load_skipped_rev
+  svn_repos_notify_load_skipped_rev,
+
+  /** The structure of a revision is being verified.  @since New in 1.8. */
+  svn_repos_notify_verify_struc_rev
 
 } svn_repos_notify_action_t;
 
@@ -654,15 +657,17 @@ svn_repos_recover(const char *path,
                   apr_pool_t *pool);
 
 /**
- * Take an exclusive lock on @a path to prevent commits and then
- * invoke @a freeze_body passing @a baton.  The repository may be
- * readable by Subversion while frozen, or it may be unreadable,
- * depending on which FS backend the repository uses.
+ * Take an exclusive lock on each of the repositories in @a paths to
+ * prevent commits and then while holding all the locks invoke
+ * @a freeze_body passing @a baton.  The repositories may be readable
+ * by Subversion while frozen, or it may be unreadable, depending on
+ * which FS backend the repository uses.  Repositories are locked
+ * in array order from zero.
  *
  * @since New in 1.8.
  */
 svn_error_t *
-svn_repos_freeze(const char *path,
+svn_repos_freeze(apr_array_header_t *paths,
                  svn_error_t *(*freeze_body)(void *baton, apr_pool_t *pool),
                  void *baton,
                  apr_pool_t *pool);
@@ -1321,7 +1326,8 @@ svn_repos_replay(svn_fs_root_t *root,
  *
  * @a repos is a previously opened repository.  @a repos_url is the
  * decoded URL to the base of the repository, and is used to check
- * copyfrom paths.  @a txn is a filesystem transaction object to use
+ * copyfrom paths.  copyfrom paths passed to the editor must be full,
+ * URI-encoded, URLs.  @a txn is a filesystem transaction object to use
  * during the commit, or @c NULL to indicate that this function should
  * create (and fully manage) a new transaction.
  *
@@ -1904,6 +1910,10 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
  *
  * If @a include_merged_revisions is TRUE, revisions which a included as a
  * result of a merge between @a start and @a end will be included.
+ *
+ * Since Subversion 1.8 this function has been enabled to support reversion
+ * the revision range for @a include_merged_revision @c FALSE reporting by
+ * switching @a start with @a end.
  *
  * @since New in 1.5.
  */
@@ -3147,21 +3157,63 @@ svn_repos_get_fs_build_parser(const svn_repos_parser_fns_t **parser,
  */
 typedef struct svn_authz_t svn_authz_t;
 
-/** Read authz configuration data from @a file (a file or registry
- * path) into @a *authz_p, allocated in @a pool.
- *
- * If @a file is not a valid authz rule file, then return
- * SVN_AUTHZ_INVALID_CONFIG.  The contents of @a *authz_p is then
- * undefined.  If @a must_exist is TRUE, a missing authz file is also
- * an error.
+/** 
+ * Similar to svn_repos_authz_read2(), but without support for
+ * authz files stored in a Subversion repository (absolute or
+ * relative URLs) and without the @a repos_root argument.
  *
  * @since New in 1.3.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_authz_read(svn_authz_t **authz_p,
                      const char *file,
                      svn_boolean_t must_exist,
                      apr_pool_t *pool);
+
+/**
+ * Read authz configuration data from @a path (a file, repos relative
+ * url, an absolute file url, or a registry path) into @a *authz_p,
+ * allocated in @a pool.
+ *
+ * If @a groups_path (a file, repos relative url, an absolute file url,
+ * or a registry path) is set, use the global groups parsed from it.
+ *
+ * If @a path or @a groups_path is not a valid authz rule file, then return
+ * #SVN_ERR_AUTHZ_INVALID_CONFIG.  The contents of @a *authz_p is then
+ * undefined.  If @a must_exist is TRUE, a missing authz or groups file
+ * is also an error other than #SVN_ERR_AUTHZ_INVALID_CONFIG (exact error
+ * depends on the access type).
+ *
+ * If @a path is a repos relative URL then @a repos_root must be set to
+ * the root of the repository the authz configuration will be used with.
+ * The same applies to @a groups_path if it is being used.
+ *
+ * @since New in 1.8
+ */
+svn_error_t *
+svn_repos_authz_read2(svn_authz_t **authz_p,
+                      const char *path,
+                      const char *groups_path,
+                      svn_boolean_t must_exist,
+                      const char *repos_root,
+                      apr_pool_t *pool);
+
+
+/**
+ * Read authz configuration data from @a stream into @a *authz_p,
+ * allocated in @a pool.
+ *
+ * If @a groups_stream is set, use the global groups parsed from it.
+ *
+ * @since New in 1.8
+ */
+svn_error_t *
+svn_repos_authz_parse(svn_authz_t **authz_p,
+                      svn_stream_t *stream, 
+                      svn_stream_t *groups_stream,
+                      apr_pool_t *pool);
 
 /**
  * Check whether @a user can access @a path in the repository @a
@@ -3282,6 +3334,9 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
  * inherited by @a path in @a root.  If no properties are inherited,
  * then set @a *inherited_values to an empty array.
  *
+ * if @a propname is NULL then retrieve all explicit and/or inherited
+ * properties.  Otherwise retrieve only the properties named @a propname.
+ *
  * If optional @a authz_read_func is non-NULL, then use this function
  * (along with optional @a authz_read_baton) to check the readability
  * of each parent path from which properties are inherited. Silently omit
@@ -3296,6 +3351,7 @@ svn_error_t *
 svn_repos_fs_get_inherited_props(apr_array_header_t **inherited_props,
                                  svn_fs_root_t *root,
                                  const char *path,
+                                 const char *propname,
                                  svn_repos_authz_func_t authz_read_func,
                                  void *authz_read_baton,
                                  apr_pool_t *result_pool,

@@ -26,16 +26,26 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_pools.h"
-#include "svn_editor.h"
 #include "svn_dirent_uri.h"
+
+#include "private/svn_editor.h"
 
 #ifdef SVN_DEBUG
 /* This enables runtime checks of the editor API constraints.  This may
    introduce additional memory and runtime overhead, and should not be used
    in production builds.
 
-   ### Remove before release? */
+   ### Remove before release? 
+
+   ### Disabled for now.  If I call svn_editor_alter_directory(A) then
+       svn_editor_add_file(A/f) the latter fails on SHOULD_ALLOW_ADD.
+       If I modify svn_editor_alter_directory to MARK_ALLOW_ADD(child)
+       then if I call svn_editor_alter_directory(A) followed by
+       svn_editor_alter_directory(A/B/C) the latter fails on
+       VERIFY_PARENT_MAY_EXIST. */
+#if 0
 #define ENABLE_ORDERING_CHECK
+#endif
 #endif
 
 
@@ -665,6 +675,7 @@ svn_editor_alter_directory(svn_editor_t *editor,
 
         apr_hash_set(editor->pending_incomplete_children, child,
                      APR_HASH_KEY_STRING, "");
+        /* Perhaps MARK_ALLOW_ADD(editor, child); ? */
       }
   }
 #endif

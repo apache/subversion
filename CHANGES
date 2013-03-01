@@ -22,6 +22,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * new --ignore-properties option for 'svn diff' (r1239553. -617)
     * new --properties-only option for 'svn diff' (r1336110)
     * new --patch-compatible option for 'svn diff' (r1239561)
+    * new --no-diff-added option for 'svn diff' (r1433958)
     * new SvnPubSub distributed commit hooks (tools/server-side/svnpubsub)
     * 'svn diff' can compare arbitrary files and directories (r1310291, et al)
     * ra_serf avoids re-downloading content present in pristine store (r1333936)
@@ -32,14 +33,18 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * new 'svn --version --verbose' option shows runtime environment info
     * new 'svnadmin freeze' subcommand (r1376228)
     * 'svndumpfilter' now supports --delta dumpfiles (r1351009, -3745)
+    * new '--drop-all-emtpy-revs' option for 'svndumpfilter' (issue #3681)
     * client version info now reported to commit hooks (issue #4124)
     * 'svn merge' now uses reintegrate mode automatically when needed
+    * 'svn' is now non-interactive when not run in a terminal device (r1424037)
+    * 'svn propset' checks spelling of reserved property names.
+    * improve working copy performance on network disks (issue #4176) 
 
   - Client-side bugfixes:
-    *
+    * 
 
   - Server-side bugfixes:
-    *
+    * SVNParentPath / repository listing now authz-filtered (r1408184)
 
   - Other tool improvements and bugfixes:
     * 'svnmucc' promoted to first-class supported utility (issue #3308)
@@ -53,6 +58,37 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
   - Bindings:
     * star-imports in swig-py only import 'svn_*' symbols (r1303375)
+
+
+Version 1.7.8
+(17 Dec 2012, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.8
+ User-visible changes
+  - Client- and server-side bugfixes:
+    * Fix typos in pt_BR, es and zh_TW translations (r1402417, r1402421)
+
+  - Client-side bugfixes:
+    * fix crash with --username option on Windows (r1396285)
+    * add missing attributes to "svn log -v --xml" output (r1398100)
+    * fix svn patch ignoring hunks after no trailing newline (r1399174)
+    * fix hang with ra_serf during error processing (r1403583)
+    * ignore file externals with mergeinfo when merging (r1401915)
+    * fix "svnmucc cp" segfault with a missing last argument (issue #4079)
+    * fix conflict handling on symlinks (issue #4091)
+    
+  - Server-side bugfixes:
+    * properly detect threading availability (r1398325)
+    * fix "svnadmin load --bypass-prop-validation" (r1237779)
+    * fix parsing of [groupsfoo] sections in authz file (issue #3531)
+    * add Vary: header to GET responses to improve cacheability (r1390653)
+    * fix fs_fs to cleanup after failed rep transmission (r1403964, et al)
+    * fix mod_dav_svn to complain about revisions > HEAD (r1403588)
+
+ Developer-visible changes:
+  - General:
+    * fix incorrect status returned by 1.6 API (r1403258)
+    * fix compilation with g++ 4.7 (r1345740)
+    * fix svn_uri_get_file_url_from_dirent on Windows (r1409146)
 
 
 Version 1.7.7
@@ -104,7 +140,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.6
   - Client-side bugfixes:
     * Fix "svn status -u --depth empty FILE" (r1348822, r1349215)
     * Fix example output of 'svn help status' (issue #3962)
-    * svn propset of svn:eol-style might not notice related text changes (r1353572)
+    * propset of svn:eol-style might not notice related text changes (r1353572)
     * sort output of 'svn propget -R' (r1355699)
     * sort output of 'svn proplist' (r1355698)
     * sort output of 'svn status' (r1341012)
@@ -532,6 +568,21 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * fixed setting binary properties in JavaHL (issue #3770)
     * fix type mapping of svn_txdelta_window_t in python bindings (issue #3688)
 
+
+Version 1.6.20
+(04 Jan 2013, from /branches/1.6.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.6.20
+
+ User-visible changes
+  - Client- and server-side bugfixes:
+    * Fix typos in pt_BR, es and zh_TW translations (r1402417)
+
+  - Server-side bugfixes:
+    * add Vary: header to GET responses to improve cacheability (r1390653)
+    * fix fs_fs to cleanup after failed rep transmission (r1403964, et al)
+    * fix an assert with SVNAutoVersioning in mod_dav_svn (issue #4231)
+
+
 Version 1.6.19
 (10 Sep 2012, from /branches/1.6.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.6.19
@@ -546,6 +597,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.19
 
   - Developer-visible changes:
     * fix the testsuite to avoid FAILs on APR hash order (r1230714, et al)
+
 
 Version 1.6.18
 (29 Mar 2012, from /branches/1.6.x)
@@ -664,7 +716,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.15
    * improve some swig parameter mapping (r984565, r1035745)
    * improve test accuracy over dav (r991534, r877814)
    * create fails.log for test runs (r964349)
-   * improve detection of 'svnversion' when buildling (r877219, et al)
+   * improve detection of 'svnversion' when building (r877219, et al)
    * don't violate API layering in dumpstream logic (issue #3733)
    * don't report working copy installs as switched (r1033921)
 

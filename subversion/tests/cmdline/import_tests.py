@@ -354,10 +354,13 @@ enable-auto-props = yes
 
   # eol styl of test.dsp is CRLF, so diff will use that too. Make sure we
   # define CRLF in a platform independent way.
+  # CRLF is a string that will match a CRLF sequence read from a text file.
+  # ### On Windows, we assume CRLF will be read as LF, so it's a poor test.
   if os.name == 'nt':
     crlf = '\n'
   else:
     crlf = '\r\n'
+
   expected_output = [
   "Index: test.dsp\n",
   "===================================================================\n",
@@ -458,7 +461,7 @@ def import_inherited_ignores(sbox):
   file2_path = os.path.join('DIR3.foo', 'file2.txt')
   dir4_path  = os.path.join('DIR4.goo')
   file3_path = os.path.join('DIR4.goo', 'file3.txt')
-  file4_path = os.path.join('DIR4.goo', 'file4.txt')
+  file4_path = os.path.join('DIR4.goo', 'file4.noo')
   dir5_path  = os.path.join('DIR5.moo')
   file5_path = os.path.join('DIR5.moo', 'file5.txt')
   dir6_path  = os.path.join('DIR6')
@@ -468,9 +471,9 @@ def import_inherited_ignores(sbox):
   dir8_path  = os.path.join('DIR6', 'DIR7', 'DIR8.noo')
 
   # Import the tree to ^/A/B/E.
-  # We should never see any *.noo paths because those are blocked at the
-  # root of the repository by the svn:inheritable-ignores property.  Likewise
-  # *.doo paths are blocked by the svn:inheritable-ignores on ^/A/B.  Nor
+  # We should not see any *.noo paths because those are blocked at the
+  # root of the repository by the svn:global-ignores property.  Likewise
+  # *.doo paths are blocked by the svn:global-ignores on ^/A/B.  Nor
   # should we see and *.boo or *.goo paths, as those are blocked by the
   # global-ignores config. Lastly, ^/A/B/E should not get any *.foo paths
   # because of the svn:ignore property on ^/A/B/E, but non-immediate children
@@ -517,8 +520,8 @@ def import_inherited_ignores(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'up', wc_dir)
 
   # Import the tree to ^/A/B/F with the --no-ignore option.
-  # Now only the ignores present in the svn:inheritable-ignores property
-  # should be considered.
+  # No ignores should be considered and the whole tree should
+  # be imported.
   svntest.actions.run_and_verify_svn(None, None, [], 'import',
                                      '--config-dir', config_dir,
                                      '--no-ignore', import_tree_dir,
@@ -527,16 +530,21 @@ def import_inherited_ignores(sbox):
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
   expected_output = svntest.verify.UnorderedOutput(
     ["Updating '" + wc_dir + "':\n",
+     'A    ' + os.path.join(F_path, dir1_path)  + '\n',
+     'A    ' + os.path.join(F_path, dir2_path)  + '\n',
+     'A    ' + os.path.join(F_path, file1_path) + '\n',
      'A    ' + os.path.join(F_path, dir3_path)  + '\n',
      'A    ' + os.path.join(F_path, file2_path) + '\n',
      'A    ' + os.path.join(F_path, dir4_path)  + '\n',
      'A    ' + os.path.join(F_path, file3_path) + '\n',
+     'A    ' + os.path.join(F_path, file4_path) + '\n',
      'A    ' + os.path.join(F_path, dir5_path)  + '\n',
      'A    ' + os.path.join(F_path, file5_path) + '\n',
      'A    ' + os.path.join(F_path, dir6_path)  + '\n',
      'A    ' + os.path.join(F_path, file6_path) + '\n',
      'A    ' + os.path.join(F_path, dir7_path)  + '\n',
      'A    ' + os.path.join(F_path, file7_path) + '\n',
+     'A    ' + os.path.join(F_path, dir8_path)  + '\n',
      'Updated to revision 5.\n'])
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'up', wc_dir)
 

@@ -57,7 +57,8 @@ typedef svn_error_t *(*ra_svn_block_handler_t)(svn_ra_svn_conn_t *conn,
                                                void *baton);
 
 /* The default "user agent". */
-#define SVN_RA_SVN__DEFAULT_USERAGENT  "SVN/" SVN_VER_NUMBER
+#define SVN_RA_SVN__DEFAULT_USERAGENT  "SVN/" SVN_VER_NUMBER\
+                                       " (" SVN_BUILD_TARGET ")"
 
 /* The size of our per-connection read and write buffers. */
 #define SVN_RA_SVN__PAGE_SIZE 4096

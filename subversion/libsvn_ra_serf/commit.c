@@ -289,6 +289,8 @@ checkout_node(const char **working_url,
               apr_pool_t *scratch_pool)
 {
   svn_ra_serf__handler_t handler = { 0 };
+  apr_status_t status;
+  apr_uri_t uri;
 
   /* HANDLER_POOL is the scratch pool since we don't need to remember
      anything from the handler. We just want the working resource.  */
@@ -315,7 +317,17 @@ checkout_node(const char **working_url,
     return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                             _("No Location header received"));
 
-  *working_url = apr_pstrdup(result_pool, handler.location);
+  /* We only want the path portion of the Location header.
+     (code.google.com sometimes returns an 'http:' scheme for an
+     'https:' transaction ... we'll work around that by stripping the
+     scheme, host, and port here and re-adding the correct ones
+     later.  */
+  status = apr_uri_parse(scratch_pool, handler.location, &uri);
+  if (status)
+    return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                            _("Error parsing Location header value"));
+
+  *working_url = svn_urlpath__canonicalize(uri.path, result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -1294,9 +1306,9 @@ open_root(void *edit_baton,
     {
       post_response_ctx_t *prc;
       const char *rel_path;
-      svn_boolean_t post_with_revprops =
-        apr_hash_get(ctx->session->supported_posts, "create-txn-with-props",
-                     APR_HASH_KEY_STRING) ? TRUE : FALSE;
+      svn_boolean_t post_with_revprops
+        = (apr_hash_get(ctx->session->supported_posts, "create-txn-with-props",
+                        APR_HASH_KEY_STRING) != NULL);
 
       /* Create our activity URL now on the server. */
       handler = apr_pcalloc(ctx->pool, sizeof(*handler));
@@ -1466,15 +1478,9 @@ open_root(void *edit_baton,
       for (hi = apr_hash_first(ctx->pool, ctx->revprop_table); hi;
            hi = apr_hash_next(hi))
         {
-          const void *key;
-          void *val;
-          const char *name;
-          svn_string_t *value;
+          const char *name = svn__apr_hash_index_key(hi);
+          svn_string_t *value = svn__apr_hash_index_val(hi);
           const char *ns;
-
-          apr_hash_this(hi, &key, NULL, &val);
-          name = key;
-          value = val;
 
           if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
             {
@@ -2267,7 +2273,6 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_delta_editor_t *editor;
   commit_context_t *ctx;
-  apr_hash_index_t *hi;
   const char *repos_root;
   const char *base_relpath;
   svn_boolean_t supports_ephemeral_props;
@@ -2279,17 +2284,7 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
   ctx->session = session;
   ctx->conn = session->conns[0];
 
-  ctx->revprop_table = apr_hash_make(pool);
-  for (hi = apr_hash_first(pool, revprop_table); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      apr_ssize_t klen;
-      void *val;
-
-      apr_hash_this(hi, &key, &klen, &val);
-      apr_hash_set(ctx->revprop_table, apr_pstrdup(pool, key), klen,
-                   svn_string_dup(val, pool));
-    }
+  ctx->revprop_table = svn_prop_hash_dup(revprop_table, pool);
 
   /* If the server supports ephemeral properties, add some carrying
      interesting version information. */

@@ -28,7 +28,7 @@
             [--url=<base-url>] [--http-library=<http-library>] [--enable-sasl]
             [--fs-type=<fs-type>] [--fsfs-packing] [--fsfs-sharding=<n>]
             [--list] [--milestone-filter=<regex>] [--mode-filter=<type>]
-            [--server-minor-version=<version>]
+            [--server-minor-version=<version>] [--http-proxy=<host>:<port>]
             [--config-file=<file>] [--ssl-cert=<file>]
             <abs_srcdir> <abs_builddir>
             <prog ...>
@@ -124,7 +124,8 @@ class TestHarness:
                cleanup=None, enable_sasl=None, parallel=None, config_file=None,
                fsfs_sharding=None, fsfs_packing=None,
                list_tests=None, svn_bin=None, mode_filter=None,
-               milestone_filter=None, set_log_level=None, ssl_cert=None):
+               milestone_filter=None, set_log_level=None, ssl_cert=None,
+               http_proxy=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
@@ -176,6 +177,7 @@ class TestHarness:
     self.mode_filter = mode_filter
     self.log = None
     self.ssl_cert = ssl_cert
+    self.http_proxy = http_proxy
     if not sys.stdout.isatty() or sys.platform == 'win32':
       TextColors.disable()
 
@@ -352,7 +354,7 @@ class TestHarness:
       if self.config_file is not None:
         cmdline.append('--config-file=' + self.config_file)
     else:
-      print('Don\'t know what to do about ' + progbase)
+      print("Don't know what to do about " + progbase)
       sys.exit(1)
 
     if self.verbose is not None:
@@ -431,8 +433,8 @@ class TestHarness:
       prog_mod = imp.load_module(progbase[:-3], open(prog, 'r'), prog,
                                  ('.py', 'U', imp.PY_SOURCE))
     except:
-      print('Don\'t know what to do about ' + progbase)
-      raise
+      print("Don't know what to do about " + progbase)
+      sys.exit(1)
 
     import svntest.main
 
@@ -477,6 +479,8 @@ class TestHarness:
       svntest.main.options.mode_filter = self.mode_filter
     if self.ssl_cert is not None:
       svntest.main.options.ssl_cert = self.ssl_cert
+    if self.http_proxy is not None:
+      svntest.main.options.http_proxy = self.http_proxy
 
     svntest.main.options.srcdir = self.srcdir
 
@@ -561,11 +565,12 @@ class TestHarness:
     progdir, progbase = os.path.split(prog)
     if self.log:
       # Using write here because we don't want even a trailing space
-      test_info = '%s [%d/%d]' % (progbase, test_nr + 1, total_tests)
+      test_info = '[%s/%d] %s' % (str(test_nr + 1).zfill(len(str(total_tests))),
+                                  total_tests, progbase)
       if self.list_tests:
         sys.stdout.write('Listing tests in %s' % (test_info, ))
       else:
-        sys.stdout.write('Running tests in %s' % (test_info, ))
+        sys.stdout.write('%s' % (test_info, ))
       sys.stdout.flush()
     else:
       # ### Hack for --log-to-stdout to work (but not print any dots).
@@ -585,7 +590,6 @@ class TestHarness:
     line_length = _get_term_width()
     dots_needed = line_length \
                     - len(test_info) \
-                    - len('Running tests in ') \
                     - len('success')
     try:
       os.chdir(progdir)
@@ -640,7 +644,8 @@ def main():
                             'fsfs-packing', 'fsfs-sharding=',
                             'enable-sasl', 'parallel', 'config-file=',
                             'log-to-stdout', 'list', 'milestone-filter=',
-                            'mode-filter=', 'set-log-level=', 'ssl-cert='])
+                            'mode-filter=', 'set-log-level=', 'ssl-cert=',
+                            'http-proxy='])
   except getopt.GetoptError:
     args = []
 
@@ -651,9 +656,9 @@ def main():
   base_url, fs_type, verbose, cleanup, enable_sasl, http_library, \
     server_minor_version, fsfs_sharding, fsfs_packing, parallel, \
     config_file, log_to_stdout, list_tests, mode_filter, milestone_filter, \
-    set_log_level, ssl_cert = \
+    set_log_level, ssl_cert, http_proxy = \
             None, None, None, None, None, None, None, None, None, None, None, \
-            None, None, None, None, None, None
+            None, None, None, None, None, None, None
   for opt, val in opts:
     if opt in ['-u', '--url']:
       base_url = val
@@ -689,6 +694,8 @@ def main():
       set_log_level = val
     elif opt in ['--ssl-cert']:
       ssl_cert = val
+    elif opt in ['--http-proxy']:
+      http_proxy = val
     else:
       raise getopt.GetoptError
 
@@ -704,7 +711,8 @@ def main():
                    verbose, cleanup, enable_sasl, parallel, config_file,
                    fsfs_sharding, fsfs_packing, list_tests,
                    mode_filter=mode_filter, milestone_filter=milestone_filter,
-                   set_log_level=set_log_level, ssl_cert=ssl_cert)
+                   set_log_level=set_log_level, ssl_cert=ssl_cert,
+                   http_proxy=http_proxy)
 
   failed = th.run(args[2:])
   if failed:

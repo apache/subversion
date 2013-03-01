@@ -178,6 +178,12 @@ update_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool);
 static svn_error_t *
 get_youngest(svn_revnum_t *youngest_p, const char *fs_path, apr_pool_t *pool);
 
+static svn_error_t *
+verify_walker(representation_t *rep,
+              void *baton,
+              svn_fs_t *fs,
+              apr_pool_t *scratch_pool);
+
 /* Pathname helper functions */
 
 /* Return TRUE is REV is packed in FS, FALSE otherwise. */
@@ -358,6 +364,18 @@ path_txn_dir(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
                               apr_pstrcat(pool, txn_id, PATH_EXT_TXN,
                                           (char *)NULL),
                               NULL);
+}
+
+/* Return the name of the sha1->rep mapping file in transaction TXN_ID
+ * within FS for the given SHA1 checksum.  Use POOL for allocations.
+ */
+static APR_INLINE const char *
+path_txn_sha1(svn_fs_t *fs, const char *txn_id, svn_checksum_t *sha1,
+              apr_pool_t *pool)
+{
+  return svn_dirent_join(path_txn_dir(fs, txn_id, pool),
+                         svn_checksum_to_cstring(sha1, pool),
+                         pool);
 }
 
 static APR_INLINE const char *
@@ -1273,9 +1291,9 @@ write_config(svn_fs_t *fs,
 "###"                                                                        NL
 "### The following parameter enables deltification for properties on files"  NL
 "### and directories.  Overall, this is a minor tuning option but can save"  NL
-"### some disk space if frequently merge or if you frequently change node"   NL
+"### some disk space if you merge frequently or frequently change node"      NL
 "### properties.  You should not activate this if rep-sharing has been"      NL
-"### disabled."                                                              NL
+"### disabled because this may result in a net increase in repository size." NL
 "### property deltification is disabled by default."                         NL
 "# " CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION " = false"                     NL
 "###"                                                                        NL
@@ -2226,8 +2244,10 @@ get_cached_node_revision_body(node_revision_t **noderev_p,
     }
   else
     {
-      pair_cache_key_t key = { svn_fs_fs__id_rev(id),
-                               svn_fs_fs__id_offset(id) };
+      pair_cache_key_t key = { 0 };
+
+      key.revision = svn_fs_fs__id_rev(id);
+      key.second = svn_fs_fs__id_offset(id);
       SVN_ERR(svn_cache__get((void **) noderev_p,
                             is_cached,
                             ffd->node_revision_cache,
@@ -2253,8 +2273,10 @@ set_cached_node_revision_body(node_revision_t *noderev_p,
 
   if (ffd->node_revision_cache && !svn_fs_fs__id_txn_id(id))
     {
-      pair_cache_key_t key = { svn_fs_fs__id_rev(id),
-                               svn_fs_fs__id_offset(id) };
+      pair_cache_key_t key = { 0 };
+
+      key.revision = svn_fs_fs__id_rev(id);
+      key.second = svn_fs_fs__id_offset(id);
       return svn_cache__set(ffd->node_revision_cache,
                             &key,
                             noderev_p,
@@ -2313,10 +2335,6 @@ get_node_revision_body(node_revision_t **noderev_p,
                                   svn_stream_from_aprfile2(revision_file, FALSE,
                                                            pool),
                                   pool));
-  /* Workaround issue #4031: is-fresh-txn-root in revision files. */
-  if (svn_fs_fs__id_txn_id(id) == NULL)
-    (*noderev_p)->is_fresh_txn_root = FALSE;
-
 
   /* The noderev is not in cache, yet. Add it, if caching has been enabled. */
   return set_cached_node_revision_body(*noderev_p, fs, id, pool);
@@ -2509,7 +2527,7 @@ representation_string(representation_t *rep,
     return "-1";
 
 #define DISPLAY_MAYBE_NULL_CHECKSUM(checksum)          \
-  ((may_be_corrupt == FALSE || (checksum) != NULL)     \
+  ((!may_be_corrupt || (checksum) != NULL)     \
    ? svn_checksum_to_cstring_display((checksum), pool) \
    : "(null)")
 
@@ -2613,10 +2631,6 @@ svn_fs_fs__put_node_revision(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_file_t *noderev_file;
   const char *txn_id = svn_fs_fs__id_txn_id(id);
-  const char *sha1 = ffd->rep_sharing_allowed && noderev->data_rep
-                   ? svn_checksum_to_cstring(noderev->data_rep->sha1_checksum,
-                                             pool)
-                   : NULL;
 
   noderev->is_fresh_txn_root = fresh_txn_root;
 
@@ -2637,13 +2651,31 @@ svn_fs_fs__put_node_revision(svn_fs_t *fs,
 
   SVN_ERR(svn_io_file_close(noderev_file, pool));
 
+  return SVN_NO_ERROR;
+}
+
+/* For the in-transaction NODEREV within FS, write the sha1->rep mapping
+ * file in the respective transaction, if rep sharing has been enabled etc.
+ * Use POOL for temporary allocations.
+ */
+static svn_error_t *
+store_sha1_rep_mapping(svn_fs_t *fs,
+                       node_revision_t *noderev,
+                       apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
   /* if rep sharing has been enabled and the noderev has a data rep and
    * its SHA-1 is known, store the rep struct under its SHA1. */
-  if (sha1)
+  if (   ffd->rep_sharing_allowed
+      && noderev->data_rep
+      && noderev->data_rep->sha1_checksum)
     {
       apr_file_t *rep_file;
-      const char *file_name = svn_dirent_join(path_txn_dir(fs, txn_id, pool),
-                                              sha1, pool);
+      const char *file_name = path_txn_sha1(fs,
+                                            svn_fs_fs__id_txn_id(noderev->id),
+                                            noderev->data_rep->sha1_checksum,
+                                            pool);
       const char *rep_string = representation_string(noderev->data_rep,
                                                      ffd->format,
                                                      (noderev->kind
@@ -3160,6 +3192,16 @@ ensure_revprop_namespace(svn_fs_t *fs)
     : SVN_NO_ERROR;
 }
 
+/* Make sure the revprop_namespace member in FS is set. */
+static svn_error_t *
+cleanup_revprop_namespace(svn_fs_t *fs)
+{
+  const char *name = svn_dirent_join(fs->path,
+                                     ATOMIC_REVPROP_NAMESPACE,
+                                     fs->pool);
+  return svn_error_trace(svn_atomic_namespace__cleanup(name, fs->pool));
+}
+
 /* Make sure the revprop_generation member in FS is set and, if necessary,
  * initialized with the latest value stored on disk.
  */
@@ -3493,9 +3535,11 @@ parse_revprop(apr_hash_t **properties,
   SVN_ERR(svn_hash_read2(*properties, stream, SVN_HASH_TERMINATOR, pool));
   if (has_revprop_cache(fs, pool))
     {
-      pair_cache_key_t key = {revision, generation};
       fs_fs_data_t *ffd = fs->fsap_data;
+      pair_cache_key_t key = { 0 };
 
+      key.revision = revision;
+      key.second = generation;
       SVN_ERR(svn_cache__set(ffd->revprop_cache, &key, *properties,
                              scratch_pool));
     }
@@ -3657,7 +3701,7 @@ parse_packed_revprops(svn_fs_t *fs,
 
       /* read & check the serialized size */
       SVN_ERR(read_number_from_stream(&size, NULL, stream, iterpool));
-      if (size + offset > revprops->packed_revprops->len)
+      if (size + offset > (apr_int64_t)revprops->packed_revprops->len)
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                         _("Packed revprop size exceeds pack file size"));
 
@@ -3795,10 +3839,11 @@ get_revision_proplist(apr_hash_t **proplist_p,
   if (has_revprop_cache(fs, pool))
     {
       svn_boolean_t is_cached;
-      pair_cache_key_t key = { rev, 0};
+      pair_cache_key_t key = { 0 };
 
       SVN_ERR(read_revprop_generation(&generation, fs, pool));
 
+      key.revision = rev;
       key.second = generation;
       SVN_ERR(svn_cache__get((void **) proplist_p, &is_cached,
                              ffd->revprop_cache, &key, pool));
@@ -4341,12 +4386,14 @@ create_rep_state_body(struct rep_state **rep_state,
 
   /* If the hint is
    * - given,
+   * - refers to a valid revision,
    * - refers to a packed revision,
    * - as does the rep we want to read, and
    * - refers to the same pack file as the rep
    * ...
    */
   if (   file_hint && rev_hint && *file_hint
+      && SVN_IS_VALID_REVNUM(*rev_hint)
       && *rev_hint < ffd->min_unpacked_rev
       && rep->revision < ffd->min_unpacked_rev
       && (   (*rev_hint / ffd->max_files_per_dir)
@@ -4386,7 +4433,7 @@ create_rep_state_body(struct rep_state **rep_state,
   *rep_state = rs;
   *rep_args = ra;
 
-  if (ra->is_delta == FALSE)
+  if (!ra->is_delta)
     /* This is a plaintext, so just return the current rep_state. */
     return SVN_NO_ERROR;
 
@@ -4739,7 +4786,7 @@ build_rep_list(apr_array_header_t **list,
           return SVN_NO_ERROR;
         }
 
-      if (rep_args->is_delta == FALSE)
+      if (!rep_args->is_delta)
         {
           /* This is a plaintext, so just return the current rep_state. */
           *src_state = rs;
@@ -4812,8 +4859,8 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
 /* Skip forwards to THIS_CHUNK in REP_STATE and then read the next delta
    window into *NWIN. */
 static svn_error_t *
-read_window(svn_txdelta_window_t **nwin, int this_chunk, struct rep_state *rs,
-            apr_pool_t *pool)
+read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
+                  struct rep_state *rs, apr_pool_t *pool)
 {
   svn_stream_t *stream;
   svn_boolean_t is_cached;
@@ -4860,6 +4907,27 @@ read_window(svn_txdelta_window_t **nwin, int this_chunk, struct rep_state *rs,
   return set_cached_window(*nwin, rs, old_offset, pool);
 }
 
+/* Read SIZE bytes from the representation RS and return it in *NWIN. */
+static svn_error_t *
+read_plain_window(svn_stringbuf_t **nwin, struct rep_state *rs,
+                  apr_size_t size, apr_pool_t *pool)
+{
+  /* RS->FILE may be shared between RS instances -> make sure we point
+   * to the right data. */
+  SVN_ERR(svn_io_file_seek(rs->file, APR_SET, &rs->off, pool));
+
+  /* Read the plain data. */
+  *nwin = svn_stringbuf_create_ensure(size, pool);
+  SVN_ERR(svn_io_file_read_full2(rs->file, (*nwin)->data, size, NULL, NULL,
+                                 pool));
+  (*nwin)->data[size] = 0;
+
+  /* Update RS. */
+  rs->off += (apr_off_t)size;
+
+  return SVN_NO_ERROR;
+}
+
 /* Get the undeltified window that is a result of combining all deltas
    from the current desired representation identified in *RB with its
    base representation.  Store the window in *RESULT. */
@@ -4883,7 +4951,7 @@ get_combined_window(svn_stringbuf_t **result,
   for (i = 0; i < rb->rs_list->nelts; ++i)
     {
       rs = APR_ARRAY_IDX(rb->rs_list, i, struct rep_state *);
-      SVN_ERR(read_window(&window, rb->chunk_index, rs, window_pool));
+      SVN_ERR(read_delta_window(&window, rb->chunk_index, rs, window_pool));
 
       APR_ARRAY_PUSH(windows, svn_txdelta_window_t *) = window;
       if (window->src_ops == 0)
@@ -4897,11 +4965,20 @@ get_combined_window(svn_stringbuf_t **result,
   pool = svn_pool_create(rb->pool);
   for (--i; i >= 0; --i)
     {
+
       rs = APR_ARRAY_IDX(rb->rs_list, i, struct rep_state *);
       window = APR_ARRAY_IDX(windows, i, svn_txdelta_window_t *);
 
-      /* Combine this window with the current one. */
+      /* Maybe, we've got a PLAIN start representation.  If we do, read
+         as much data from it as the needed for the txdelta window's source
+         view.
+         Note that BUF / SOURCE may only be NULL in the first iteration. */
       source = buf;
+      if (source == NULL && rb->src_state != NULL)
+        SVN_ERR(read_plain_window(&source, rb->src_state, window->sview_len,
+                                  pool));
+
+      /* Combine this window with the current one. */
       new_pool = svn_pool_create(rb->pool);
       buf = svn_stringbuf_create_ensure(window->tview_len, new_pool);
       buf->len = window->tview_len;
@@ -4960,7 +5037,6 @@ get_contents(struct rep_read_baton *rb,
              apr_size_t *len)
 {
   apr_size_t copy_len, remaining = *len;
-  apr_off_t offset;
   char *cur = buf;
   struct rep_state *rs;
 
@@ -4976,10 +5052,10 @@ get_contents(struct rep_read_baton *rb,
           /* We got the desired rep directly from the cache.
              This is where we need the pseudo rep_state created
              by build_rep_list(). */
-          offset = rs->off - rs->start;
+          apr_size_t offset = (apr_size_t)(rs->off - rs->start);
           if (copy_len + offset > rb->base_window->len)
             copy_len = offset < rb->base_window->len
-                     ? (apr_size_t)(rb->base_window->len - offset)
+                     ? rb->base_window->len - offset
                      : 0ul;
 
           memcpy (cur, rb->base_window->data + offset, copy_len);
@@ -5118,10 +5194,12 @@ read_representation(svn_stream_t **contents_p,
   else
     {
       fs_fs_data_t *ffd = fs->fsap_data;
-      pair_cache_key_t fulltext_cache_key = {rep->revision, rep->offset};
+      pair_cache_key_t fulltext_cache_key = { 0 };
       svn_filesize_t len = rep->expanded_size ? rep->expanded_size : rep->size;
       struct rep_read_baton *rb;
 
+      fulltext_cache_key.revision = rep->revision;
+      fulltext_cache_key.second = rep->offset;
       if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(rep->revision)
           && fulltext_size_is_cachable(ffd, len))
         {
@@ -5178,7 +5256,7 @@ delta_read_next_window(svn_txdelta_window_t **window, void *baton,
       return SVN_NO_ERROR;
     }
 
-  return read_window(window, drb->rs->chunk_index, drb->rs, pool);
+  return read_delta_window(window, drb->rs->chunk_index, drb->rs, pool);
 }
 
 /* This implements the svn_txdelta_md5_digest_fn_t interface. */
@@ -5290,14 +5368,18 @@ svn_fs_fs__try_process_file_contents(svn_boolean_t *success,
   if (rep)
     {
       fs_fs_data_t *ffd = fs->fsap_data;
-      pair_cache_key_t fulltext_cache_key = {rep->revision, rep->offset};
+      pair_cache_key_t fulltext_cache_key = { 0 };
 
+      fulltext_cache_key.revision = rep->revision;
+      fulltext_cache_key.second = rep->offset;
       if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(rep->revision)
           && fulltext_size_is_cachable(ffd, rep->expanded_size))
         {
-          cache_access_wrapper_baton_t wrapper_baton = {processor, baton};
+          cache_access_wrapper_baton_t wrapper_baton;
           void *dummy = NULL;
 
+          wrapper_baton.func = processor;
+          wrapper_baton.baton = baton;
           return svn_cache__get_partial(&dummy, success,
                                         ffd->fulltext_cache,
                                         &fulltext_cache_key,
@@ -5593,8 +5675,10 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
     {
       fs_fs_data_t *ffd = fs->fsap_data;
       representation_t *rep = noderev->prop_rep;
-      
-      pair_cache_key_t key = { rep->revision, rep->offset };
+      pair_cache_key_t key = { 0 };
+
+      key.revision = rep->revision;
+      key.second = rep->offset;
       if (ffd->properties_cache && SVN_IS_VALID_REVNUM(rep->revision))
         {
           svn_boolean_t is_cached;
@@ -7030,6 +7114,7 @@ choose_delta_base(representation_t **rep,
   int walk;
   node_revision_t *base;
   fs_fs_data_t *ffd = fs->fsap_data;
+  svn_boolean_t maybe_shared_rep = FALSE;
 
   /* If we have no predecessors, then use the empty stream as a
      base. */
@@ -7069,14 +7154,117 @@ choose_delta_base(representation_t **rep,
      walk back two predecessors.) */
   base = noderev;
   while ((count++) < noderev->predecessor_count)
-    SVN_ERR(svn_fs_fs__get_node_revision(&base, fs,
-                                         base->predecessor_id, pool));
+    {
+      SVN_ERR(svn_fs_fs__get_node_revision(&base, fs,
+                                           base->predecessor_id, pool));
+
+      /* If there is a shared rep along the way, we need to limit the
+       * length of the deltification chain.
+       * 
+       * Please note that copied nodes - such as branch directories - will
+       * look the same (false positive) while reps shared within the same
+       * revision will not be caught (false negative).
+       */
+      if (props)
+        {
+          if (   base->prop_rep
+              && svn_fs_fs__id_rev(base->id) > base->prop_rep->revision)
+            maybe_shared_rep = TRUE;
+        }
+      else
+        {
+          if (   base->data_rep
+              && svn_fs_fs__id_rev(base->id) > base->data_rep->revision)
+            maybe_shared_rep = TRUE;
+        }
+    }
 
   /* return a suitable base representation */
   *rep = props ? base->prop_rep : base->data_rep;
 
+  /* if we encountered a shared rep, it's parent chain may be different
+   * from the node-rev parent chain. */
+  if (*rep && maybe_shared_rep)
+    {
+      /* Check whether the length of the deltification chain is acceptable.
+       * Otherwise, shared reps may form a non-skipping delta chain in
+       * extreme cases. */
+      apr_pool_t *sub_pool = svn_pool_create(pool);
+      representation_t base_rep = **rep;
+      
+      /* Some reasonable limit, depending on how acceptable longer linear
+       * chains are in this repo.  Also, allow for some minimal chain. */
+      int max_chain_length = 2 * (int)ffd->max_linear_deltification + 2;
+
+      /* re-use open files between iterations */
+      svn_revnum_t rev_hint = SVN_INVALID_REVNUM;
+      apr_file_t *file_hint = NULL;
+
+      /* follow the delta chain towards the end but for at most
+       * MAX_CHAIN_LENGTH steps. */
+      for (; max_chain_length; --max_chain_length)
+        {
+          struct rep_state *rep_state;
+          struct rep_args *rep_args;
+
+          SVN_ERR(create_rep_state_body(&rep_state,
+                                        &rep_args,
+                                        &file_hint,
+                                        &rev_hint,
+                                        &base_rep,
+                                        fs,
+                                        sub_pool));
+          if (!rep_args->is_delta  || !rep_args->base_revision)
+            break;
+
+          base_rep.revision = rep_args->base_revision;
+          base_rep.offset = rep_args->base_offset;
+          base_rep.size = rep_args->base_length;
+          base_rep.txn_id = NULL;
+        }
+
+      /* start new delta chain if the current one has grown too long */
+      if (max_chain_length == 0)
+        *rep = NULL;
+
+      svn_pool_destroy(sub_pool);
+    }
+
+  /* verify that the reps don't form a degenerated '*/
   return SVN_NO_ERROR;
 }
+
+/* Something went wrong and the pool for the rep write is being
+   cleared before we've finished writing the rep.  So we need
+   to remove the rep from the protorevfile and we need to unlock
+   the protorevfile. */
+static apr_status_t
+rep_write_cleanup(void *data)
+{
+  struct rep_write_baton *b = data;
+  const char *txn_id = svn_fs_fs__id_txn_id(b->noderev->id);
+  svn_error_t *err;
+  
+  /* Truncate and close the protorevfile. */
+  err = svn_io_file_trunc(b->file, b->rep_offset, b->pool);
+  err = svn_error_compose_create(err, svn_io_file_close(b->file, b->pool));
+
+  /* Remove our lock regardless of any preceeding errors so that the 
+     being_written flag is always removed and stays consistent with the
+     file lock which will be removed no matter what since the pool is
+     going away. */
+  err = svn_error_compose_create(err, unlock_proto_rev(b->fs, txn_id,
+                                                       b->lockcookie, b->pool));
+  if (err)
+    {
+      apr_status_t rc = err->apr_err;
+      svn_error_clear(err);
+      return rc;
+    }
+
+  return APR_SUCCESS;
+}
+
 
 /* Get a rep_write_baton and store it in *WB_P for the representation
    indicated by NODEREV in filesystem FS.  Perform allocations in
@@ -7141,6 +7329,10 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
   /* Now determine the offset of the actual svndiff data. */
   SVN_ERR(get_file_offset(&b->delta_start, file, b->pool));
 
+  /* Cleanup in case something goes wrong. */
+  apr_pool_cleanup_register(b->pool, b, rep_write_cleanup,
+                            apr_pool_cleanup_null);
+
   /* Prepare to write the svndiff data. */
   svn_txdelta_to_svndiff3(&wh,
                           &whb,
@@ -7194,10 +7386,14 @@ get_shared_rep(representation_t **old_rep,
       err = svn_fs_fs__get_rep_reference(old_rep, fs, rep->sha1_checksum,
                                          pool);
       /* ### Other error codes that we shouldn't mask out? */
-      if (err == SVN_NO_ERROR
-          || err->apr_err == SVN_ERR_FS_CORRUPT
-          || SVN_ERROR_IN_CATEGORY(err->apr_err,
-                                   SVN_ERR_MALFUNC_CATEGORY_START))
+      if (err == SVN_NO_ERROR)
+        {
+          if (*old_rep)
+            SVN_ERR(verify_walker(*old_rep, NULL, fs, pool));
+        }
+      else if (err->apr_err == SVN_ERR_FS_CORRUPT
+               || SVN_ERROR_IN_CATEGORY(err->apr_err,
+                                        SVN_ERR_MALFUNC_CATEGORY_START))
         {
           /* Fatal error; don't mask it.
 
@@ -7226,9 +7422,7 @@ get_shared_rep(representation_t **old_rep,
     {
       svn_node_kind_t kind;
       const char *file_name
-        = svn_dirent_join(path_txn_dir(fs, rep->txn_id, pool),
-                          svn_checksum_to_cstring(rep->sha1_checksum, pool),
-                          pool);
+        = path_txn_sha1(fs, rep->txn_id, rep->sha1_checksum, pool);
 
       /* in our txn, is there a rep file named with the wanted SHA1?
          If so, read it and use that rep.
@@ -7312,9 +7506,14 @@ rep_write_contents_close(void *baton)
       b->noderev->data_rep = rep;
     }
 
+  /* Remove cleanup callback. */
+  apr_pool_cleanup_kill(b->pool, b, rep_write_cleanup);
+
   /* Write out the new node-rev information. */
   SVN_ERR(svn_fs_fs__put_node_revision(b->fs, b->noderev->id, b->noderev, FALSE,
                                        b->pool));
+  if (!old_rep)
+    SVN_ERR(store_sha1_rep_mapping(b->fs, b->noderev, b->pool));
 
   SVN_ERR(svn_io_file_close(b->file, b->pool));
   SVN_ERR(unlock_proto_rev(b->fs, rep->txn_id, b->lockcookie, b->pool));
@@ -7453,7 +7652,7 @@ get_next_revision_ids(const char **node_id,
 
   *node_id = apr_pstrdup(pool, str);
 
-  str = svn_cstring_tokenize(" ", &buf);
+  str = svn_cstring_tokenize(" \n", &buf);
   if (! str)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Corrupt 'current' file"));
@@ -7948,9 +8147,13 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   if (noderev->prop_rep)
     noderev->prop_rep->sha1_checksum = NULL;
 
+  /* Workaround issue #4031: is-fresh-txn-root in revision files. */
+  noderev->is_fresh_txn_root = FALSE;
+
   /* Write out our new node-revision. */
   if (at_root)
     SVN_ERR(validate_root_noderev(fs, noderev, rev, pool));
+
   SVN_ERR(svn_fs_fs__write_noderev(svn_stream_from_aprfile2(file, TRUE, pool),
                                    noderev, ffd->format,
                                    svn_fs_fs__fs_supports_mergeinfo(fs),
@@ -8369,23 +8572,6 @@ write_reps_to_cache(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_sqlite__transaction_callback_t. */
-static svn_error_t *
-commit_sqlite_txn_callback(void *baton, svn_sqlite__db_t *db,
-                           apr_pool_t *scratch_pool)
-{
-  struct commit_baton *cb = baton;
-
-  /* Write new entries to the rep-sharing database.
-   *
-   * We use an sqlite transcation to speed things up;
-   * see <http://www.sqlite.org/faq.html#q19>.
-   */
-  SVN_ERR(write_reps_to_cache(cb->fs, cb->reps_to_cache, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_fs_fs__commit(svn_revnum_t *new_rev_p,
                   svn_fs_t *fs,
@@ -8420,9 +8606,15 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
   if (ffd->rep_sharing_allowed)
     {
       SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
-      SVN_ERR(svn_sqlite__with_transaction(ffd->rep_cache_db,
-                                           commit_sqlite_txn_callback,
-                                           &cb, pool));
+
+      /* Write new entries to the rep-sharing database.
+       *
+       * We use an sqlite transaction to speed things up;
+       * see <http://www.sqlite.org/faq.html#q19>.
+       */
+      SVN_SQLITE__WITH_TXN(
+        write_reps_to_cache(fs, cb.reps_to_cache, pool),
+        ffd->rep_cache_db);
     }
 
   return SVN_NO_ERROR;
@@ -8914,7 +9106,10 @@ recover_body(void *baton, apr_pool_t *pool)
   svn_revnum_t youngest_rev;
   svn_node_kind_t youngest_revprops_kind;
 
-  /* First, we need to know the largest revision in the filesystem. */
+  /* Lose potentially corrupted data in temp files */
+  SVN_ERR(cleanup_revprop_namespace(fs));
+
+  /* We need to know the largest revision in the filesystem. */
   SVN_ERR(recover_get_largest_revision(fs, &max_rev, pool));
 
   /* Get the expected youngest revision */
@@ -9007,7 +9202,7 @@ recover_body(void *baton, apr_pool_t *pool)
     {
       svn_boolean_t missing = TRUE;
       if (!packed_revprop_available(&missing, fs, max_rev, pool))
-	{
+        {
           if (missing)
             {
               return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -10096,6 +10291,37 @@ svn_fs_fs__pack(svn_fs_t *fs,
 
 /** Verifying. **/
 
+/* Baton type expected by verify_walker().  The purpose is to reuse open
+ * rev / pack file handles between calls.  Its contents need to be cleaned
+ * periodically to limit resource usage.
+ */
+typedef struct verify_walker_baton_t
+{
+  /* number of calls to verify_walker() since the last clean */
+  int iteration_count;
+  
+  /* number of files opened since the last clean */
+  int file_count;
+
+  /* progress notification callback to invoke periodically (may be NULL) */
+  svn_fs_progress_notify_func_t notify_func;
+
+  /* baton to use with NOTIFY_FUNC */
+  void *notify_baton;
+
+  /* remember the last revision for which we called notify_func */
+  svn_revnum_t last_notified_revision;
+
+  /* current file handle (or NULL) */
+  apr_file_t *file_hint;
+
+  /* corresponding revision (or SVN_INVALID_REVNUM) */
+  svn_revnum_t rev_hint;
+
+  /* pool to use for the file handles etc. */
+  apr_pool_t *pool;
+} verify_walker_baton_t;
+
 /* Used by svn_fs_fs__verify().
    Implements svn_fs_fs__walk_rep_reference().walker.  */
 static svn_error_t *
@@ -10107,24 +10333,66 @@ verify_walker(representation_t *rep,
   struct rep_state *rs;
   struct rep_args *rep_args;
 
-  /* ### Should this be using read_rep_line() directly? */
-  SVN_ERR(create_rep_state(&rs, &rep_args, NULL, NULL, rep, fs, scratch_pool));
+  if (baton)
+    {
+      verify_walker_baton_t *walker_baton = baton;
+      apr_file_t * previous_file;
+
+      /* notify and free resources periodically */
+      if (   walker_baton->iteration_count > 1000
+          || walker_baton->file_count > 16)
+        {
+          if (   walker_baton->notify_func
+              && rep->revision != walker_baton->last_notified_revision)
+            {
+              walker_baton->notify_func(rep->revision,
+                                        walker_baton->notify_baton,
+                                        scratch_pool);
+              walker_baton->last_notified_revision = rep->revision;
+            }
+
+          svn_pool_clear(walker_baton->pool);
+          
+          walker_baton->iteration_count = 0;
+          walker_baton->file_count = 0;
+          walker_baton->file_hint = NULL;
+          walker_baton->rev_hint = SVN_INVALID_REVNUM;
+        }
+
+      /* access the repo data */
+      previous_file = walker_baton->file_hint;
+      SVN_ERR(create_rep_state(&rs, &rep_args, &walker_baton->file_hint,
+                               &walker_baton->rev_hint, rep, fs,
+                               walker_baton->pool));
+
+      /* update resource usage counters */
+      walker_baton->iteration_count++;
+      if (previous_file != walker_baton->file_hint)
+        walker_baton->file_count++;
+    }
+  else
+    {
+      /* ### Should this be using read_rep_line() directly? */
+      SVN_ERR(create_rep_state(&rs, &rep_args, NULL, NULL, rep, fs,
+                               scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
 svn_fs_fs__verify(svn_fs_t *fs,
-                  svn_cancel_func_t cancel_func,
-                  void *cancel_baton,
                   svn_revnum_t start,
                   svn_revnum_t end,
+                  svn_fs_progress_notify_func_t notify_func,
+                  void *notify_baton,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
                   apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_boolean_t exists;
   svn_revnum_t youngest = ffd->youngest_rev_cache; /* cache is current */
-  apr_pool_t *iterpool = svn_pool_create(pool);
 
   if (ffd->format < SVN_FS_FS__MIN_REP_SHARING_FORMAT)
     return SVN_NO_ERROR;
@@ -10134,42 +10402,60 @@ svn_fs_fs__verify(svn_fs_t *fs,
     start = 0;
   if (! SVN_IS_VALID_REVNUM(end))
     end = youngest;
-  SVN_ERR(ensure_revision_exists(fs, start, iterpool));
-  SVN_ERR(ensure_revision_exists(fs, end, iterpool));
+  SVN_ERR(ensure_revision_exists(fs, start, pool));
+  SVN_ERR(ensure_revision_exists(fs, end, pool));
 
   /* rep-cache verification. */
   SVN_ERR(svn_fs_fs__exists_rep_cache(&exists, fs, pool));
   if (exists)
-    /* Do not attempt to walk the rep-cache database if its file does not exist,
-       since doing so would create it --- which may confuse the administrator.
-       Don't take any lock. */
-    SVN_ERR(svn_fs_fs__walk_rep_reference(fs, verify_walker, NULL,
-                                          cancel_func, cancel_baton,
-                                          start, end,
-                                          pool));
+    {
+      /* provide a baton to allow the reuse of open file handles between
+         iterations (saves 2/3 of OS level file operations). */
+      verify_walker_baton_t *baton = apr_pcalloc(pool, sizeof(*baton));
+      baton->rev_hint = SVN_INVALID_REVNUM;
+      baton->pool = svn_pool_create(pool);
+      baton->last_notified_revision = SVN_INVALID_REVNUM;
+      baton->notify_func = notify_func;
+      baton->notify_baton = notify_baton;
+      
+      /* tell the user that we are now read to do *something* */
+      if (notify_func)
+        notify_func(SVN_INVALID_REVNUM, notify_baton, baton->pool);
+
+      /* Do not attempt to walk the rep-cache database if its file does
+         not exist,  since doing so would create it --- which may confuse
+         the administrator.   Don't take any lock. */
+      SVN_ERR(svn_fs_fs__walk_rep_reference(fs, start, end,
+                                            verify_walker, baton,
+                                            cancel_func, cancel_baton,
+                                            pool));
+
+      /* walker resource cleanup */
+      svn_pool_destroy(baton->pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__verify_rev(svn_fs_t *fs,
+                      svn_revnum_t revision,
+                      apr_pool_t *pool)
+{
+  svn_fs_root_t *root;
 
   /* Issue #4129: bogus pred-counts and minfo-cnt's on the root node-rev
      (and elsewhere).  This code makes more thorough checks than the
      commit-time checks in validate_root_noderev(). */
-  {
-    svn_revnum_t i;
-    for (i = start; i <= end; i++)
-      {
-      	svn_fs_root_t *root;
 
-        svn_pool_clear(iterpool);
+  /* ### TODO: Make sure caches are disabled.
 
-      	/* ### TODO: Make sure caches are disabled.
+     When this code is called in the library, we want to ensure we
+     use the on-disk data --- rather than some data that was read
+     in the possibly-distance past and cached since. */
+  SVN_ERR(svn_fs_fs__revision_root(&root, fs, revision, pool));
+  SVN_ERR(svn_fs_fs__verify_root(root, pool));
 
-      	   When this code is called in the library, we want to ensure we
-      	   use the on-disk data --- rather than some data that was read
-      	   in the possibly-distance past and cached since. */
-      	SVN_ERR(svn_fs_fs__revision_root(&root, fs, i, iterpool));
-      	SVN_ERR(svn_fs_fs__verify_root(root, iterpool));
-      }
-  }
-
-  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -10926,7 +11212,7 @@ hotcopy_body(void *baton, apr_pool_t *pool)
                                       iterpool));
 
       /* After completing a full shard, update 'current'. */
-      if (rev % max_files_per_dir == 0)
+      if (max_files_per_dir && rev % max_files_per_dir == 0)
         SVN_ERR(hotcopy_update_current(&dst_youngest, dst_fs, rev, iterpool));
     }
   svn_pool_destroy(iterpool);
@@ -10988,13 +11274,15 @@ hotcopy_body(void *baton, apr_pool_t *pool)
                                  PATH_TXN_CURRENT, pool));
 
   /* If a revprop generation file exists in the source filesystem,
-   * force a fresh revprop caching namespace for the destination by
-   * setting the generation to zero. We have no idea if the revprops
-   * we copied above really belong to the currently cached generation. */
+   * reset it to zero (since this is on a different path, it will not
+   * overlap with data already in cache).  Also, clean up stale files
+   * used for the named atomics implementation. */
   SVN_ERR(svn_io_check_path(path_revprop_generation(src_fs, pool),
                             &kind, pool));
   if (kind == svn_node_file)
     SVN_ERR(write_revprop_generation_file(dst_fs, 0, pool));
+
+  SVN_ERR(cleanup_revprop_namespace(dst_fs));
 
   /* Hotcopied FS is complete. Stamp it with a format file. */
   SVN_ERR(write_format(svn_dirent_join(dst_fs->path, PATH_FORMAT, pool),

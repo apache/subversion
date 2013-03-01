@@ -248,75 +248,6 @@ wc_info_receiver(void *baton,
                                  abspath_or_url, &client_info, scratch_pool);
 }
 
-/* Like svn_ra_stat() but with a compatibility hack for pre-1.2 svnserve. */
-static svn_error_t *
-ra_stat_compatible(svn_ra_session_t *ra_session,
-                   svn_revnum_t rev,
-                   svn_dirent_t **dirent_p,
-                   apr_uint32_t dirent_fields,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
-{
-  const char *repos_root_URL, *url;
-  svn_error_t *err;
-  svn_dirent_t *the_ent;
-
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_URL, pool));
-  SVN_ERR(svn_ra_get_session_url(ra_session, &url, pool));
-
-  err = svn_ra_stat(ra_session, "", rev, &the_ent, pool);
-
-  /* svn_ra_stat() will work against old versions of mod_dav_svn, but
-     not old versions of svnserve.  In the case of a pre-1.2 svnserve,
-     catch the specific error it throws:*/
-  if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
-    {
-      /* Fall back to pre-1.2 strategy for fetching dirent's URL. */
-      svn_node_kind_t url_kind;
-      svn_ra_session_t *parent_ra_session;
-      apr_hash_t *parent_ents;
-      const char *parent_url, *base_name;
-
-      if (strcmp(url, repos_root_URL) == 0)
-        {
-          /* In this universe, there's simply no way to fetch
-             information about the repository's root directory! */
-          return err;
-        }
-
-      svn_error_clear(err);
-
-      SVN_ERR(svn_ra_check_path(ra_session, "", rev, &url_kind, pool));
-      if (url_kind == svn_node_none)
-        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("URL '%s' non-existent in revision %ld"),
-                                 url, rev);
-
-      /* Open a new RA session to the item's parent. */
-      svn_uri_split(&parent_url, &base_name, url, pool);
-      SVN_ERR(svn_client__open_ra_session_internal(&parent_ra_session, NULL,
-                                                   parent_url, NULL,
-                                                   NULL, FALSE, TRUE,
-                                                   ctx, pool));
-
-      /* Get all parent's entries, and find the item's dirent in the hash. */
-      SVN_ERR(svn_ra_get_dir2(parent_ra_session, &parent_ents, NULL, NULL,
-                              "", rev, dirent_fields, pool));
-      the_ent = apr_hash_get(parent_ents, base_name, APR_HASH_KEY_STRING);
-      if (the_ent == NULL)
-        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("URL '%s' non-existent in revision %ld"),
-                                 url, rev);
-    }
-  else if (err)
-    {
-      return svn_error_trace(err);
-    }
-
-  *dirent_p = the_ent;
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_client_info3(const char *abspath_or_url,
                  const svn_opt_revision_t *peg_revision,
@@ -371,28 +302,8 @@ svn_client_info3(const char *abspath_or_url,
   svn_uri_split(NULL, &base_name, pathrev->url, pool);
 
   /* Get the dirent for the URL itself. */
-  err = ra_stat_compatible(ra_session, pathrev->rev, &the_ent, DIRENT_FIELDS,
-                           ctx, pool);
-  if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
-    {
-      svn_error_clear(err);
-
-      /* If we're recursing, degrade gracefully: rather than
-         throw an error, return no information about the
-         repos root. */
-      if (depth > svn_depth_empty)
-        goto pre_1_2_recurse;
-
-      /* Otherwise, we really are stuck.  Better tell the user
-         what's going on. */
-      return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                               _("Server does not support retrieving "
-                                 "information about the repository root"));
-    }
-  else if (err)
-    {
-      return svn_error_trace(err);
-    }
+  SVN_ERR(svn_client__ra_stat_compatible(ra_session, pathrev->rev, &the_ent,
+                                         DIRENT_FIELDS, ctx, pool));
 
   if (! the_ent)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
@@ -436,7 +347,6 @@ svn_client_info3(const char *abspath_or_url,
     {
       apr_hash_t *locks;
 
-pre_1_2_recurse:
       if (peg_revision->kind == svn_opt_revision_head)
         {
           err = svn_ra_get_locks2(ra_session, &locks, "", depth,
@@ -472,8 +382,8 @@ svn_client_get_wc_root(const char **wcroot_abspath,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
-  return svn_wc__get_wc_root(wcroot_abspath, ctx->wc_ctx, local_abspath,
-                             result_pool, scratch_pool);
+  return svn_wc__get_wcroot(wcroot_abspath, ctx->wc_ctx, local_abspath,
+                            result_pool, scratch_pool);
 }
 
 

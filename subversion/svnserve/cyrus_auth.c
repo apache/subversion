@@ -98,7 +98,7 @@ static int canonicalize_username(sasl_conn_t *conn,
 
 static sasl_callback_t callbacks[] =
 {
-  { SASL_CB_CANON_USER, canonicalize_username, NULL },
+  { SASL_CB_CANON_USER, (int (*)(void))canonicalize_username, NULL },
   { SASL_CB_LIST_END, NULL, NULL }
 };
 

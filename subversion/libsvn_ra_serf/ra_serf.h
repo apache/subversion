@@ -57,7 +57,8 @@ extern "C" {
 #define UNUSED_CTX(x) ((void)(x))
 
 /** Our User-Agent string. */
-#define USER_AGENT "SVN/" SVN_VER_NUMBER " serf/" \
+#define USER_AGENT "SVN/" SVN_VER_NUMBER " (" SVN_BUILD_TARGET ")" \
+                   " serf/" \
                    APR_STRINGIFY(SERF_MAJOR_VERSION) "." \
                    APR_STRINGIFY(SERF_MINOR_VERSION) "." \
                    APR_STRINGIFY(SERF_PATCH_VERSION)
@@ -93,10 +94,12 @@ typedef struct svn_ra_serf__connection_t {
 
 } svn_ra_serf__connection_t;
 
-/** Max. number of connctions we'll open to the server. 
- *  Note: minimum 2 connections are required for ra_serf to function correctly!
+/** Maximum value we'll allow for the http-max-connections config option.
+ *
+ * Note: minimum 2 connections are required for ra_serf to function
+ * correctly!
  */
-#define MAX_NR_OF_CONNS 4
+#define SVN_RA_SERF__MAX_CONNECTIONS_LIMIT 8
 
 /*
  * The master serf RA session.
@@ -110,6 +113,10 @@ struct svn_ra_serf__session_t {
   /* The current context */
   serf_context_t *context;
 
+  /* The maximum number of connections we'll use for parallelized
+     fetch operations (updates, etc.) */
+  apr_int64_t max_connections;
+
   /* Are we using ssl */
   svn_boolean_t using_ssl;
 
@@ -120,7 +127,7 @@ struct svn_ra_serf__session_t {
   const char *useragent;
 
   /* The current connection */
-  svn_ra_serf__connection_t *conns[MAX_NR_OF_CONNS];
+  svn_ra_serf__connection_t *conns[SVN_RA_SERF__MAX_CONNECTIONS_LIMIT];
   int num_conns;
   int cur_conn;
 
@@ -188,7 +195,7 @@ struct svn_ra_serf__session_t {
   const char *uuid;
 
   /* Connection timeout value */
-  apr_short_interval_time_t timeout;
+  apr_interval_time_t timeout;
 
   /* HTTPv1 flags */
   svn_tristate_t supports_deadprop_count;
@@ -222,6 +229,26 @@ struct svn_ra_serf__session_t {
   /*** End HTTP v2 stuff ***/
 
   svn_ra_serf__blncache_t *blncache;
+
+  /* Trisate flag that indicates user preference for using bulk updates
+     (svn_tristate_true) with all the properties and content in the
+     update-report response. If svn_tristate_false, request a skelta
+     update-report with inlined properties. If svn_tristate_unknown then use
+     server preference. */
+  svn_tristate_t bulk_updates;
+
+  /* Indicates if the server wants bulk update requests (Prefer) or only
+     accepts skelta requests (Off). If this value is On both options are 
+     allowed. */
+  const char *server_allows_bulk;
+
+  /* Indicates if the server supports sending inlined props in update editor
+   * in skelta mode (send-all == 'false'). */
+  svn_boolean_t supports_inline_props;
+
+  /* Indicates whether the server supports issuing replay REPORTs
+     against rev resources (children of `rev_stub', elsestruct). */
+  svn_boolean_t supports_rev_rsrc_replay;
 };
 
 #define SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(sess) ((sess)->me_resource != NULL)
@@ -391,6 +418,11 @@ typedef struct svn_ra_serf__handler_t {
 
   /* The content-type of the request body. */
   const char *body_type;
+
+  /* If TRUE then default Accept-Encoding request header is not configured for
+     request. If FALSE then 'gzip' accept encoding will be used if compression
+     enabled. */
+  svn_boolean_t custom_accept_encoding;
 
   /* Has the request/response been completed?  */
   svn_boolean_t done;
@@ -953,6 +985,7 @@ svn_ra_serf__xml_pop_state(svn_ra_serf__xml_parser_t *parser);
 
 svn_error_t *
 svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
+                             svn_boolean_t *network_eof,
                              apr_pool_t *scratch_pool);
 
 
@@ -1504,9 +1537,12 @@ svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
                        const char *switch_target,
                        svn_depth_t depth,
                        const char *switch_url,
+                       svn_boolean_t send_copyfrom_args,
+                       svn_boolean_t ignore_ancestry,
                        const svn_delta_editor_t *switch_editor,
                        void *switch_baton,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
 
 /* Implements svn_ra__vtable_t.get_file_revs(). */
 svn_error_t *

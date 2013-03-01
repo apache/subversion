@@ -362,7 +362,7 @@ typedef struct entry_t
 typedef struct entry_group_t
 {
   /* number of entries used [0 .. USED-1] */
-  apr_size_t used;
+  apr_uint32_t used;
 
   /* the actual entries */
   entry_t entries[GROUP_SIZE];
@@ -614,10 +614,10 @@ get_entry(svn_membuffer_t *cache, apr_uint32_t idx)
 static APR_INLINE apr_uint32_t
 get_index(svn_membuffer_t *cache, entry_t *entry)
 {
-  apr_uint32_t group_index
+  apr_size_t group_index
     = ((char *)entry - (char *)cache->directory) / sizeof(entry_group_t);
 
-  return group_index * GROUP_SIZE
+  return (apr_uint32_t)group_index * GROUP_SIZE
        + (apr_uint32_t)(entry - cache->directory[group_index].entries);
 }
 
@@ -1186,7 +1186,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
              < total_size)
         ++segment_count_shift;
 
-      segment_count = 1 << segment_count_shift;
+      segment_count = (apr_size_t)1 << segment_count_shift;
     }
 
   /* If we have an extremely large cache (>512 GB), the default segment
@@ -1249,7 +1249,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
     {
       /* allocate buffers and initialize cache members
        */
-      c[seg].segment_count = segment_count;
+      c[seg].segment_count = (apr_uint32_t)segment_count;
 
       c[seg].group_count = group_count;
       c[seg].directory = apr_pcalloc(pool,
@@ -1372,7 +1372,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
 
   /* if there is an old version of that entry and the new data fits into
    * the old spot, just re-use that space. */
-  if (buffer && entry && entry->size >= size)
+  if (entry && ALIGN_VALUE(entry->size) >= size && buffer)
     {
       cache->data_used += size - entry->size;
       entry->size = size;
@@ -1430,7 +1430,10 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
   else
     {
       /* if there is already an entry for this key, drop it.
+       * Since ensure_data_insertable may have removed entries from
+       * ENTRY's group, re-do the lookup.
        */
+      entry = find_entry(cache, group_index, to_find, FALSE);
       if (entry)
         drop_entry(cache, entry);
     }
@@ -1967,16 +1970,6 @@ svn_membuffer_cache_get(void **value_p,
                               DEBUG_CACHE_MEMBUFFER_TAG
                               result_pool));
 
-  /* We don't need more the key anymore.
-   * But since we allocate only small amounts of data per get() call and
-   * apr_pool_clear is somewhat expensive, we clear it only now and then.
-   */
-  if (++cache->alloc_counter > ALLOCATIONS_PER_POOL_CLEAR)
-    {
-      apr_pool_clear(cache->pool);
-      cache->alloc_counter = 0;
-    }
-
   /* return result */
   *found = *value_p != NULL;
   return SVN_NO_ERROR;
@@ -2004,7 +1997,7 @@ svn_membuffer_cache_set(void *cache_void,
   cache->alloc_counter += 3;
   if (cache->alloc_counter > ALLOCATIONS_PER_POOL_CLEAR)
     {
-      apr_pool_clear(cache->pool);
+      svn_pool_clear(cache->pool);
       cache->alloc_counter = 0;
     }
 
@@ -2058,12 +2051,6 @@ svn_membuffer_cache_get_partial(void **value_p,
       *found = FALSE;
 
       return SVN_NO_ERROR;
-    }
-
-  if (++cache->alloc_counter > ALLOCATIONS_PER_POOL_CLEAR)
-    {
-      apr_pool_clear(cache->pool);
-      cache->alloc_counter = 0;
     }
 
   combine_key(cache, key, cache->key_len);

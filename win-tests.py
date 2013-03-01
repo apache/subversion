@@ -78,6 +78,7 @@ def _usage_exit():
   print("                           will be used, if not specified")
   print("  --httpd-daemon         : Run Apache httpd as daemon")
   print("  --httpd-service        : Run Apache httpd as Windows service (default)")
+  print("  --httpd-no-log         : Disable httpd logging")
   print("  --http-short-circuit   : Use SVNPathAuthz short_circuit on HTTP server")
   print("  --disable-http-v2      : Do not advertise support for HTTPv2 on server")
   print("  --disable-bulk-updates : Disable bulk updates on HTTP server")
@@ -127,7 +128,7 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                        ['release', 'debug', 'verbose', 'quiet', 'cleanup',
                         'test=', 'url=', 'svnserve-args=', 'fs-type=', 'asp.net-hack',
                         'httpd-dir=', 'httpd-port=', 'httpd-daemon',
-                        'httpd-server', 'http-short-circuit',
+                        'httpd-server', 'http-short-circuit', 'httpd-no-log',
                         'disable-http-v2', 'disable-bulk-updates', 'help',
                         'fsfs-packing', 'fsfs-sharding=', 'javahl',
                         'list', 'enable-sasl', 'bin=', 'parallel',
@@ -148,6 +149,7 @@ svnserve_args = None
 run_httpd = None
 httpd_port = None
 httpd_service = None
+httpd_no_log = None
 http_short_circuit = False
 advertise_httpv2 = True
 http_bulk_updates = True
@@ -200,6 +202,8 @@ for opt, val in opts:
     httpd_service = 0
   elif opt == '--httpd-service':
     httpd_service = 1
+  elif opt == '--httpd-no-log':
+    httpd_no_log = 1
   elif opt == '--http-short-circuit':
     http_short_circuit = True
   elif opt == '--disable-http-v2':
@@ -307,8 +311,7 @@ def copy_changed_file(src, tgt):
 def copy_execs(baton, dirname, names):
   copied_execs = baton
   for name in names:
-    ext = os.path.splitext(name)[1]
-    if ext != ".exe":
+    if not name.endswith('.exe'):
       continue
     src = os.path.join(dirname, name)
     tgt = os.path.join(abs_builddir, dirname, name)
@@ -433,7 +436,7 @@ class Svnserve:
 class Httpd:
   "Run httpd for DAV tests"
   def __init__(self, abs_httpd_dir, abs_objdir, abs_builddir, httpd_port,
-               service, httpv2, short_circuit, bulk_updates):
+               service, no_log, httpv2, short_circuit, bulk_updates):
     self.name = 'apache.exe'
     self.httpd_port = httpd_port
     self.httpd_dir = abs_httpd_dir
@@ -510,10 +513,14 @@ class Httpd:
     fp.write('ServerName   localhost\n')
     fp.write('PidFile      pid\n')
     fp.write('ErrorLog     log\n')
-    fp.write('LogFormat    "%h %l %u %t \\"%r\\" %>s %b" common\n')
-    fp.write('Customlog    log common\n')
-    fp.write('LogLevel     Debug\n')
     fp.write('Listen       ' + str(self.httpd_port) + '\n')
+    
+    if not no_log:
+      fp.write('LogFormat    "%h %l %u %t \\"%r\\" %>s %b" common\n')
+      fp.write('Customlog    log common\n')
+      fp.write('LogLevel     Debug\n')
+    else:
+      fp.write('LogLevel     Crit\n')
 
     # Write LoadModule for minimal system module
     fp.write(self._sys_module('dav_module', 'mod_dav.so'))
@@ -667,7 +674,9 @@ if create_dirs:
     os.chdir(abs_objdir)
     baton = copied_execs
     for dirpath, dirs, files in os.walk('subversion'):
-      copy_execs(baton, dirpath, dirs + files)
+      copy_execs(baton, dirpath, files)
+    for dirpath, dirs, files in os.walk('tools/server-side'):
+      copy_execs(baton, dirpath, files)
   except:
     os.chdir(old_cwd)
     raise
@@ -690,7 +699,8 @@ if not list_tests:
 
   if run_httpd:
     daemon = Httpd(abs_httpd_dir, abs_objdir, abs_builddir, httpd_port,
-                   httpd_service, advertise_httpv2, http_short_circuit,
+                   httpd_service, httpd_no_log,
+                   advertise_httpv2, http_short_circuit,
                    http_bulk_updates)
 
   # Start service daemon, if any

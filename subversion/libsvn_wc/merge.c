@@ -45,7 +45,7 @@ typedef struct merge_target_t
   const char *local_abspath;                /* The absolute path to target */
   const char *wri_abspath;                  /* The working copy of target */
 
-  apr_hash_t *actual_props;                 /* The set of actual properties
+  apr_hash_t *old_actual_props;                 /* The set of actual properties
                                                before merging */
   const apr_array_header_t *prop_diff;      /* The property changes */
 
@@ -58,18 +58,18 @@ typedef struct merge_target_t
 /* Return a pointer to the svn_prop_t structure from PROP_DIFF
    belonging to PROP_NAME, if any.  NULL otherwise.*/
 static const svn_prop_t *
-get_prop(const merge_target_t *mt,
+get_prop(const apr_array_header_t *prop_diff,
          const char *prop_name)
 {
-  if (mt && mt->prop_diff)
+  if (prop_diff)
     {
       int i;
-      for (i = 0; i < mt->prop_diff->nelts; i++)
+      for (i = 0; i < prop_diff->nelts; i++)
         {
-          const svn_prop_t *elt = &APR_ARRAY_IDX(mt->prop_diff, i,
+          const svn_prop_t *elt = &APR_ARRAY_IDX(prop_diff, i,
                                                  svn_prop_t);
 
-          if (strcmp(elt->name,prop_name) == 0)
+          if (strcmp(elt->name, prop_name) == 0)
             return elt;
         }
     }
@@ -85,8 +85,8 @@ get_prop(const merge_target_t *mt,
    3. Retranslate
    4. Detranslate
 
-   in 1 pass to get a file which can be compared with the left and right
-   files which were created with the 'new props' above.
+   in one pass, to get a file which can be compared with the left and right
+   files which are in repository normal form.
 
    Property changes make this a little complex though. Changes in
 
@@ -99,39 +99,48 @@ get_prop(const merge_target_t *mt,
 
    Effect for svn:mime-type:
 
-     The value for svn:mime-type affects the translation wrt keywords
-     and eol-style settings.
+     If svn:mime-type is considered 'binary', we ignore svn:eol-style (but
+     still translate keywords).
 
-   I) both old and new mime-types are texty
-      -> just do the translation dance (as lined out below)
+     I) both old and new mime-types are texty
+        -> just do the translation dance (as lined out below)
+           ### actually we do a shortcut with just one translation:
+           detranslate with the old keywords and ... eol-style
+           (the new re+detranslation is a no-op w.r.t. keywords [1])
 
-   II) the old one is texty, the new one is binary
-      -> detranslate with the old eol-style and keywords
-         (the new re+detranslation is a no-op)
+     II) the old one is texty, the new one is binary
+        -> detranslate with the old eol-style and keywords
+           (the new re+detranslation is a no-op [1])
 
-   III) the old one is binary, the new one texty
-      -> detranslate with the new eol-style
-         (the old detranslation is a no-op)
+     III) the old one is binary, the new one texty
+        -> detranslate with the old keywords and new eol-style
+           (the old detranslation is a no-op w.r.t. eol, and
+            the new re+detranslation is a no-op w.r.t. keywords [1])
 
-   IV) the old and new ones are binary
-      -> don't detranslate, just make a straight copy
-
+     IV) the old and new ones are binary
+        -> detranslate with the old keywords
+           (the new re+detranslation is a no-op [1])
 
    Effect for svn:eol-style
 
-   I) On add or change use the new value
+     I) On add or change of svn:eol-style, use the new value
 
-   II) otherwise: use the old value (absent means 'no translation')
-
+     II) otherwise: use the old value (absent means 'no translation')
 
    Effect for svn:keywords
 
-     Always use old settings (re+detranslation are no-op)
+     Always use the old settings (re+detranslation are no-op [1]).
 
+     [1] Translation of keywords from repository normal form to WC form and
+         back is normally a no-op, but is not a no-op if text contains a kw
+         that is only enabled by the new props and is present in non-
+         contracted form (such as "$Rev: 1234 $").  If we want to catch this
+         case we should detranslate with both the old & the new keywords
+         together.
 
    Effect for svn:special
 
-     Always use the old settings (same reasons as for svn:keywords)
+     Always use the old settings (re+detranslation are no-op).
 
   Sets *DETRANSLATED_ABSPATH to the path to the detranslated file,
   this may be the same as SOURCE_ABSPATH if FORCE_COPY is FALSE and no
@@ -156,54 +165,57 @@ detranslate_wc_file(const char **detranslated_abspath,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
-  svn_boolean_t is_binary;
-  const svn_prop_t *prop;
+  svn_boolean_t old_is_binary, new_is_binary;
   svn_subst_eol_style_t style;
   const char *eol;
   apr_hash_t *keywords;
   svn_boolean_t special;
-  const char *mime_value = svn_prop_get_value(mt->actual_props,
-                                              SVN_PROP_MIME_TYPE);
 
-  is_binary = (mime_value && svn_mime_type_is_binary(mime_value));
+  {
+    const char *old_mime_value
+      = svn_prop_get_value(mt->old_actual_props, SVN_PROP_MIME_TYPE);
+    const svn_prop_t *prop = get_prop(mt->prop_diff, SVN_PROP_MIME_TYPE);
+    const char *new_mime_value
+      = prop ? (prop->value ? prop->value->data : NULL) : old_mime_value;
 
-  /* See if we need to do a straight copy:
-     - old and new mime-types are binary, or
-     - old mime-type is binary and no new mime-type specified */
-  if (is_binary
-      && (((prop = get_prop(mt, SVN_PROP_MIME_TYPE))
-           && prop->value && svn_mime_type_is_binary(prop->value->data))
-          || prop == NULL))
+    old_is_binary = old_mime_value && svn_mime_type_is_binary(old_mime_value);
+    new_is_binary = new_mime_value && svn_mime_type_is_binary(new_mime_value);;
+  }
+
+  /* See what translations we want to do */
+  if (old_is_binary && new_is_binary)
     {
-      /* this is case IV above */
-      keywords = NULL;
+      /* Case IV. Old and new props 'binary': detranslate keywords only */
+      SVN_ERR(svn_wc__get_translate_info(NULL, NULL, &keywords, NULL,
+                                         mt->db, mt->local_abspath,
+                                         mt->old_actual_props, TRUE,
+                                         scratch_pool, scratch_pool));
+      /* ### Why override 'special'? Elsewhere it has precedence. */
       special = FALSE;
       eol = NULL;
       style = svn_subst_eol_style_none;
     }
-  else if ((!is_binary)
-           && (prop = get_prop(mt, SVN_PROP_MIME_TYPE))
-           && prop->value && svn_mime_type_is_binary(prop->value->data))
+  else if (!old_is_binary && new_is_binary)
     {
-      /* Old props indicate texty, new props indicate binary:
+      /* Case II. Old props indicate texty, new props indicate binary:
          detranslate keywords and old eol-style */
       SVN_ERR(svn_wc__get_translate_info(&style, &eol,
                                          &keywords,
                                          &special,
                                          mt->db, mt->local_abspath,
-                                         mt->actual_props, TRUE,
+                                         mt->old_actual_props, TRUE,
                                          scratch_pool, scratch_pool));
     }
   else
     {
-      /* New props indicate texty, regardless of old props */
+      /* Case I & III. New props indicate texty, regardless of old props */
 
       /* In case the file used to be special, detranslate specially */
       SVN_ERR(svn_wc__get_translate_info(&style, &eol,
                                          &keywords,
                                          &special,
                                          mt->db, mt->local_abspath,
-                                         mt->actual_props, TRUE,
+                                         mt->old_actual_props, TRUE,
                                          scratch_pool, scratch_pool));
 
       if (special)
@@ -214,13 +226,15 @@ detranslate_wc_file(const char **detranslated_abspath,
         }
       else
         {
+          const svn_prop_t *prop;
+
           /* In case a new eol style was set, use that for detranslation */
-          if ((prop = get_prop(mt, SVN_PROP_EOL_STYLE)) && prop->value)
+          if ((prop = get_prop(mt->prop_diff, SVN_PROP_EOL_STYLE)) && prop->value)
             {
               /* Value added or changed */
               svn_subst_eol_style_from_value(&style, &eol, prop->value->data);
             }
-          else if (!is_binary)
+          else if (!old_is_binary)
             {
               /* Already fetched */
             }
@@ -229,11 +243,6 @@ detranslate_wc_file(const char **detranslated_abspath,
               eol = NULL;
               style = svn_subst_eol_style_none;
             }
-
-          /* In case there were keywords, detranslate with keywords
-             (iff we were texty) */
-          if (is_binary)
-            keywords = NULL;
         }
     }
 
@@ -288,19 +297,19 @@ detranslate_wc_file(const char **detranslated_abspath,
 }
 
 /* Updates (by copying and translating) the eol style in
-   OLD_TARGET returning the filename containing the
-   correct eol style in NEW_TARGET, if an eol style
-   change is contained in PROP_DIFF */
+   OLD_TARGET_ABSPATH returning the filename containing the
+   correct eol style in NEW_TARGET_ABSPATH, if an eol style
+   change is contained in PROP_DIFF. */
 static svn_error_t *
 maybe_update_target_eols(const char **new_target_abspath,
-                         const merge_target_t *mt,
+                         const apr_array_header_t *prop_diff,
                          const char *old_target_abspath,
                          svn_cancel_func_t cancel_func,
                          void *cancel_baton,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
-  const svn_prop_t *prop = get_prop(mt, SVN_PROP_EOL_STYLE);
+  const svn_prop_t *prop = get_prop(prop_diff, SVN_PROP_EOL_STYLE);
 
   if (prop && prop->value)
     {
@@ -366,16 +375,16 @@ init_conflict_markers(const char **target_marker,
 }
 
 /* Do a 3-way merge of the files at paths LEFT, DETRANSLATED_TARGET,
- * and RIGHT, using diff options provided in OPTIONS.  Store the merge
+ * and RIGHT, using diff options provided in MERGE_OPTIONS.  Store the merge
  * result in the file RESULT_F.
  * If there are conflicts, set *CONTAINS_CONFLICTS to true, and use
  * TARGET_LABEL, LEFT_LABEL, and RIGHT_LABEL as labels for conflict
  * markers.  Else, set *CONTAINS_CONFLICTS to false.
  * Do all allocations in POOL. */
-static svn_error_t*
+static svn_error_t *
 do_text_merge(svn_boolean_t *contains_conflicts,
               apr_file_t *result_f,
-              const merge_target_t *mt,
+              const apr_array_header_t *merge_options,
               const char *detranslated_target,
               const char *left,
               const char *right,
@@ -393,9 +402,9 @@ do_text_merge(svn_boolean_t *contains_conflicts,
 
   diff3_options = svn_diff_file_options_create(pool);
 
-  if (mt->merge_options)
+  if (merge_options)
     SVN_ERR(svn_diff_file_options_parse(diff3_options,
-                                        mt->merge_options, pool));
+                                        merge_options, pool));
 
 
   init_conflict_markers(&target_marker, &left_marker, &right_marker,
@@ -424,10 +433,11 @@ do_text_merge(svn_boolean_t *contains_conflicts,
 /* Same as do_text_merge() above, but use the external diff3
  * command DIFF3_CMD to perform the merge.  Pass MERGE_OPTIONS
  * to the diff3 command.  Do all allocations in POOL. */
-static svn_error_t*
+static svn_error_t *
 do_text_merge_external(svn_boolean_t *contains_conflicts,
                        apr_file_t *result_f,
-                       const merge_target_t *mt,
+                       const char *diff3_cmd,
+                       const apr_array_header_t *merge_options,
                        const char *detranslated_target,
                        const char *left_abspath,
                        const char *right_abspath,
@@ -441,8 +451,8 @@ do_text_merge_external(svn_boolean_t *contains_conflicts,
   SVN_ERR(svn_io_run_diff3_3(&exit_code, ".",
                              detranslated_target, left_abspath, right_abspath,
                              target_label, left_label, right_label,
-                             result_f, mt->diff3_cmd,
-                             mt->merge_options, scratch_pool));
+                             result_f, diff3_cmd,
+                             merge_options, scratch_pool));
 
   *contains_conflicts = exit_code == 1;
 
@@ -467,6 +477,7 @@ do_text_merge_external(svn_boolean_t *contains_conflicts,
 
    If target_abspath is not versioned use detranslated_target_abspath
    as the target file.
+       ### NOT IMPLEMENTED -- 'detranslated_target_abspath' is not used.
 */
 static svn_error_t *
 preserve_pre_merge_files(svn_skel_t **work_items,
@@ -607,16 +618,42 @@ preserve_pre_merge_files(svn_skel_t **work_items,
   return SVN_NO_ERROR;
 }
 
-/* Attempt a trivial merge of LEFT_ABSPATH and RIGHT_ABSPATH to TARGET_ABSPATH.
- * The merge is trivial if the file at LEFT_ABSPATH equals the detranslated
- * form of the target at DETRANSLATED_TARGET_ABSPATH, because in this case
- * the content of RIGHT_ABSPATH can be copied to the target.
- * Another trivial case is if DETRANSLATED_TARGET_ABSPATH is identical to 
- * RIGHT_ABSPATH - we can just accept the existing content as merge result.
+/* Attempt a trivial merge of LEFT_ABSPATH and RIGHT_ABSPATH to
+ * the target file at TARGET_ABSPATH.
+ *
+ * These are the inherently trivial cases:
+ *
+ *   left == right == target         =>  no-op
+ *   left != right, left == target   =>  target := right
+ *
+ * This case is also treated as trivial:
+ *
+ *   left != right, right == target  =>  no-op
+ *
+ *   ### Strictly, this case is a conflict, and the no-op outcome is only
+ *       one of the possible resolutions.
+ *
+ *       TODO: Raise a conflict at this level and implement the 'no-op'
+ *       resolution of that conflict at a higher level, in preparation for
+ *       being able to support stricter conflict detection.
+ *
+ * This case is inherently trivial but not currently handled here:
+ *
+ *   left == right != target         =>  no-op
+ *
+ * The files at LEFT_ABSPATH and RIGHT_ABSPATH are in repository normal
+ * form.  The file at DETRANSLATED_TARGET_ABSPATH is a copy of the target,
+ * 'detranslated' to repository normal form, or may be the target file
+ * itself if no translation is necessary.
+ *
+ * When this function updates the target file, it translates to working copy
+ * form.
+ *
  * On success, set *MERGE_OUTCOME to SVN_WC_MERGE_MERGED in case the
  * target was changed, or to SVN_WC_MERGE_UNCHANGED if the target was not
  * changed. Install work queue items allocated in RESULT_POOL in *WORK_ITEMS.
- * On failure, set *MERGE_OUTCOME to SVN_WC_MERGE_NO_MERGE. */
+ * On failure, set *MERGE_OUTCOME to SVN_WC_MERGE_NO_MERGE.
+ */
 static svn_error_t *
 merge_file_trivial(svn_skel_t **work_items,
                    enum svn_wc_merge_outcome_t *merge_outcome,
@@ -660,9 +697,8 @@ merge_file_trivial(svn_skel_t **work_items,
    * copy RIGHT directly. */
   if (same_left_target)
     {
-      /* Check whether the left side equals the right side.
-       * If it does, there is no change to merge so we leave the target
-       * unchanged. */
+      /* If the left side equals the right side, there is no change to merge
+       * so we leave the target unchanged. */
       if (same_left_right)
         {
           *merge_outcome = svn_wc_merge_unchanged;
@@ -704,8 +740,6 @@ merge_file_trivial(svn_skel_t **work_items,
                                            cancel_func, cancel_baton,
                                            scratch_pool));
 
-                  /* no need to strdup right_abspath, as the wq_build_()
-                     call already does that for us */
                   delete_src = TRUE;
                 }
 
@@ -733,9 +767,8 @@ merge_file_trivial(svn_skel_t **work_items,
     }
   else
     {
-      /* Check whether the existing version equals the right side. If it 
-       * does, the locally existing, changed file equals the incoming
-       * file, so there is no conflict. For binary files, we historically
+      /* If the locally existing, changed file equals the incoming 'right'
+       * file, there is no conflict.  For binary files, we historically
        * conflicted them needlessly, while merge_text_file figured it out 
        * eventually and returned svn_wc_merge_unchanged for them, which
        * is what we do here. */
@@ -751,7 +784,26 @@ merge_file_trivial(svn_skel_t **work_items,
 }
 
 
-/* XXX Insane amount of parameters... */
+/* Handle a non-trivial merge of 'text' files.  (Assume that a trivial
+ * merge was not possible.)
+ *
+ * Set *WORK_ITEMS, *CONFLICT_SKEL and *MERGE_OUTCOME according to the
+ * result -- to install the merged file, or to indicate a conflict.
+ *
+ * On successful merge, leave the result in a temporary file and set
+ * *WORK_ITEMS to hold work items that will translate and install that
+ * file into its proper form and place (unless DRY_RUN) and delete the
+ * temporary file (in any case).  Set *MERGE_OUTCOME to 'merged' or
+ * 'unchanged'.
+ *
+ * If a conflict occurs, set *MERGE_OUTCOME to 'conflicted', and (unless
+ * DRY_RUN) set *WORK_ITEMS and *CONFLICT_SKEL to record the conflict
+ * and copies of the pre-merge files.  See preserve_pre_merge_files()
+ * for details.
+ *
+ * On entry, all of the output pointers must be non-null and *CONFLICT_SKEL
+ * must either point to an existing conflict skel or be NULL.
+ */
 static svn_error_t*
 merge_text_file(svn_skel_t **work_items,
                 svn_skel_t **conflict_skel,
@@ -795,7 +847,8 @@ merge_text_file(svn_skel_t **work_items,
   if (mt->diff3_cmd)
       SVN_ERR(do_text_merge_external(&contains_conflicts,
                                      result_f,
-                                     mt,
+                                     mt->diff3_cmd,
+                                     mt->merge_options,
                                      detranslated_target_abspath,
                                      left_abspath,
                                      right_abspath,
@@ -806,7 +859,7 @@ merge_text_file(svn_skel_t **work_items,
   else /* Use internal merge. */
     SVN_ERR(do_text_merge(&contains_conflicts,
                           result_f,
-                          mt,
+                          mt->merge_options,
                           detranslated_target_abspath,
                           left_abspath,
                           right_abspath,
@@ -817,6 +870,7 @@ merge_text_file(svn_skel_t **work_items,
 
   SVN_ERR(svn_io_file_close(result_f, pool));
 
+  /* Determine the MERGE_OUTCOME, and record any conflict. */
   if (contains_conflicts && ! dry_run)
     {
       *merge_outcome = svn_wc_merge_conflict;
@@ -864,7 +918,7 @@ merge_text_file(svn_skel_t **work_items,
          whatever special file types we may invent in the future. */
       SVN_ERR(svn_wc__get_translate_info(NULL, NULL, NULL,
                                          &special, mt->db, mt->local_abspath,
-                                         mt->actual_props, TRUE,
+                                         mt->old_actual_props, TRUE,
                                          pool, pool));
       SVN_ERR(svn_io_files_contents_same_p(&same, result_target,
                                            (special ?
@@ -898,7 +952,32 @@ done:
   return SVN_NO_ERROR;
 }
 
-/* XXX Insane amount of parameters... */
+/* Handle a non-trivial merge of 'binary' files: don't actually merge, just
+ * flag a conflict.  (Assume that a trivial merge was not possible.)
+ *
+ * Copy* the files at LEFT_ABSPATH and RIGHT_ABSPATH into the same directory
+ * as the target file, giving them unique names that start with the target
+ * file's name and end with LEFT_LABEL and RIGHT_LABEL respectively.
+ * If the merge target has been 'detranslated' to repository normal form,
+ * move the detranslated file similarly to a unique name ending with
+ * TARGET_LABEL.
+ *
+ * ### * Why do we copy the left and right temp files when we could (maybe
+ *     not always?) move them?
+ *
+ * On entry, all of the output pointers must be non-null and *CONFLICT_SKEL
+ * must either point to an existing conflict skel or be NULL.
+ *
+ * Set *WORK_ITEMS, *CONFLICT_SKEL and *MERGE_OUTCOME to indicate the
+ * conflict.
+ *
+ * ### Why do we not use preserve_pre_merge_files() in here?  The
+ *     behaviour would be slightly different, more consistent: the
+ *     preserved 'left' and 'right' files would be translated to working
+ *     copy form, which may make a difference when a binary file
+ *     contains keyword expansions or when some versions of the file are
+ *     not 'binary' even though we're merging in 'binary files' mode.
+ */
 static svn_error_t *
 merge_binary_file(svn_skel_t **work_items,
                   svn_skel_t **conflict_skel,
@@ -924,9 +1003,6 @@ merge_binary_file(svn_skel_t **work_items,
   *work_items = NULL;
 
   svn_dirent_split(&merge_dirpath, &merge_filename, mt->local_abspath, pool);
-
-  /* If we get here the binary files differ. Because we don't know how
-   * to merge binary files in a non-trivial way we always flag a conflict. */
 
   if (dry_run)
     {
@@ -994,7 +1070,6 @@ merge_binary_file(svn_skel_t **work_items,
   return SVN_NO_ERROR;
 }
 
-/* XXX Insane amount of parameters... */
 svn_error_t *
 svn_wc__internal_merge(svn_skel_t **work_items,
                        svn_skel_t **conflict_skel,
@@ -1007,7 +1082,7 @@ svn_wc__internal_merge(svn_skel_t **work_items,
                        const char *left_label,
                        const char *right_label,
                        const char *target_label,
-                       apr_hash_t *actual_props,
+                       apr_hash_t *old_actual_props,
                        svn_boolean_t dry_run,
                        const char *diff3_cmd,
                        const apr_array_header_t *merge_options,
@@ -1033,18 +1108,18 @@ svn_wc__internal_merge(svn_skel_t **work_items,
   mt.db = db;
   mt.local_abspath = target_abspath;
   mt.wri_abspath = wri_abspath;
-  mt.actual_props = actual_props;
+  mt.old_actual_props = old_actual_props;
   mt.prop_diff = prop_diff;
   mt.diff3_cmd = diff3_cmd;
   mt.merge_options = merge_options;
 
   /* Decide if the merge target is a text or binary file. */
-  if ((mimeprop = get_prop(&mt, SVN_PROP_MIME_TYPE))
+  if ((mimeprop = get_prop(prop_diff, SVN_PROP_MIME_TYPE))
       && mimeprop->value)
     is_binary = svn_mime_type_is_binary(mimeprop->value->data);
   else
     {
-      const char *value = svn_prop_get_value(mt.actual_props,
+      const char *value = svn_prop_get_value(mt.old_actual_props,
                                              SVN_PROP_MIME_TYPE);
 
       is_binary = value && svn_mime_type_is_binary(value);
@@ -1059,7 +1134,7 @@ svn_wc__internal_merge(svn_skel_t **work_items,
   /* We cannot depend on the left file to contain the same eols as the
      right file. If the merge target has mods, this will mark the entire
      file as conflicted, so we need to compensate. */
-  SVN_ERR(maybe_update_target_eols(&left_abspath, &mt, left_abspath,
+  SVN_ERR(maybe_update_target_eols(&left_abspath, prop_diff, left_abspath,
                                    cancel_func, cancel_baton,
                                    scratch_pool, scratch_pool));
 
@@ -1070,8 +1145,12 @@ svn_wc__internal_merge(svn_skel_t **work_items,
                              result_pool, scratch_pool));
   if (*merge_outcome == svn_wc_merge_no_merge)
     {
+      /* We have a non-trivial merge.  If we classify it as a merge of
+       * 'binary' files we'll just raise a conflict, otherwise we'll do
+       * the actual merge of 'text' file contents. */
       if (is_binary)
         {
+          /* Raise a text conflict */
           SVN_ERR(merge_binary_file(work_items,
                                     conflict_skel,
                                     merge_outcome,
@@ -1145,7 +1224,7 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
   svn_skel_t *work_items;
   svn_skel_t *conflict_skel = NULL;
   apr_hash_t *pristine_props = NULL;
-  apr_hash_t *actual_props = NULL;
+  apr_hash_t *old_actual_props;
   apr_hash_t *new_actual_props = NULL;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(left_abspath));
@@ -1217,20 +1296,22 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
 
     if (props_mod)
       {
-        SVN_ERR(svn_wc__db_read_props(&actual_props,
+        SVN_ERR(svn_wc__db_read_props(&old_actual_props,
                                       wc_ctx->db, target_abspath,
                                       scratch_pool, scratch_pool));
       }
     else if (pristine_props)
-      actual_props = apr_hash_copy(scratch_pool, pristine_props);
+      old_actual_props = pristine_props;
     else
-      actual_props = apr_hash_make(scratch_pool);
+      old_actual_props = apr_hash_make(scratch_pool);
   }
 
+  /* Merge the properties, if requested.  We merge the properties first
+   * because the properties can affect the text (EOL style, keywords). */
   if (merge_props_outcome)
     {
       int i;
-      apr_hash_t *new_pristine_props;
+
       /* The PROPCHANGES may not have non-"normal" properties in it. If entry
          or wc props were allowed, then the following code would install them
          into the BASE and/or WORKING properties(!).  */
@@ -1249,16 +1330,14 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
 
       SVN_ERR(svn_wc__merge_props(&conflict_skel,
                                   merge_props_outcome,
-                                  &new_pristine_props, &new_actual_props,
-                                  wc_ctx->db, target_abspath, svn_kind_file,
-                                  original_props, pristine_props, actual_props,
-                                  prop_diff, FALSE /* base_merge */,
-                                  dry_run,
-                                  cancel_func, cancel_baton,
+                                  &new_actual_props,
+                                  wc_ctx->db, target_abspath,
+                                  original_props, pristine_props, old_actual_props,
+                                  prop_diff,
                                   scratch_pool, scratch_pool));
     }
 
-  /* Queue all the work.  */
+  /* Merge the text. */
   SVN_ERR(svn_wc__internal_merge(&work_items,
                                  &conflict_skel,
                                  merge_content_outcome,
@@ -1268,7 +1347,7 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
                                  target_abspath,
                                  target_abspath,
                                  left_label, right_label, target_label,
-                                 actual_props,
+                                 old_actual_props,
                                  dry_run,
                                  diff3_cmd,
                                  merge_options,
@@ -1276,7 +1355,8 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
                                  cancel_func, cancel_baton,
                                  scratch_pool, scratch_pool));
 
-  /* If this isn't a dry run, then run the work!  */
+  /* If this isn't a dry run, then update the DB, run the work, and
+   * call the conflict resolver callback.  */
   if (!dry_run)
     {
       if (conflict_skel)
@@ -1317,28 +1397,28 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
                                scratch_pool));
 
       if (conflict_skel && conflict_func)
-        SVN_ERR(svn_wc__conflict_invoke_resolver(wc_ctx->db, target_abspath,
-                                                 conflict_skel, merge_options,
-                                                 conflict_func, conflict_baton,
-                                                 scratch_pool));
+        {
+          svn_boolean_t text_conflicted, prop_conflicted;
+
+          SVN_ERR(svn_wc__conflict_invoke_resolver(
+                    wc_ctx->db, target_abspath,
+                    conflict_skel, merge_options,
+                    conflict_func, conflict_baton,
+                    cancel_func, cancel_baton,
+                    scratch_pool));
+
+          /* Reset *MERGE_CONTENT_OUTCOME etc. if a conflict was resolved. */
+          SVN_ERR(svn_wc__internal_conflicted_p(
+                    &text_conflicted, &prop_conflicted, NULL,
+                    wc_ctx->db, target_abspath, scratch_pool));
+          if (*merge_props_outcome == svn_wc_notify_state_conflicted
+              && ! prop_conflicted)
+            *merge_props_outcome = svn_wc_notify_state_merged;
+          if (*merge_content_outcome == svn_wc_merge_conflict
+              && ! text_conflicted)
+            *merge_content_outcome = svn_wc_merge_merged;
+        }
     }
   
   return SVN_NO_ERROR;
-}
-
-
-/* Constructor for the result-structure returned by conflict callbacks. */
-svn_wc_conflict_result_t *
-svn_wc_create_conflict_result(svn_wc_conflict_choice_t choice,
-                              const char *merged_file,
-                              apr_pool_t *pool)
-{
-  svn_wc_conflict_result_t *result = apr_pcalloc(pool, sizeof(*result));
-  result->choice = choice;
-  result->merged_file = merged_file;
-  result->save_merged = FALSE;
-
-  /* If we add more fields to svn_wc_conflict_result_t, add them here. */
-
-  return result;
 }

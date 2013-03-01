@@ -157,6 +157,15 @@ atomic_ra_revprop_change_binary = os.path.abspath('atomic-ra-revprop-change' + \
 wc_lock_tester_binary = os.path.abspath('../libsvn_wc/wc-lock-tester' + _exe)
 wc_incomplete_tester_binary = os.path.abspath('../libsvn_wc/wc-incomplete-tester' + _exe)
 
+######################################################################
+# The location of svnauthz binary, relative to the only scripts that
+# import this file right now (they live in ../).
+# Use --tools to overide these defaults.
+svnauthz_binary = os.path.abspath('../../../tools/server-side/svnauthz' + _exe)
+svnauthz_validate_binary = os.path.abspath(
+    '../../../tools/server-side/svnauthz-validate' + _exe
+)
+
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
 pristine_greek_repos_url = None
@@ -174,11 +183,11 @@ work_dir = "svn-test-work"
 # Constant for the merge info property.
 SVN_PROP_MERGEINFO = "svn:mergeinfo"
 
-# Constant for the inheritabled auto-props property.
-SVN_PROP_INHERITABLE_AUTOPROPS = "svn:inheritable-auto-props"
+# Constant for the inheritable auto-props property.
+SVN_PROP_INHERITABLE_AUTOPROPS = "svn:auto-props"
 
-# Constant for the inheritabled ignores property.
-SVN_PROP_INHERITABLE_IGNORES = "svn:inheritable-ignores"
+# Constant for the inheritable ignores property.
+SVN_PROP_INHERITABLE_IGNORES = "svn:global-ignores"
 
 # Where we want all the repositories and working copies to live.
 # Each test will have its own!
@@ -337,12 +346,13 @@ def get_fsfs_format_file_path(repo_dir):
   return os.path.join(repo_dir, "db", "format")
 
 def filter_dbg(lines):
-  for line in lines:
-    if not line.startswith('DBG:'):
-      yield line
+  excluded = filter(lambda line: line.startswith('DBG:'), lines)
+  included = filter(lambda line: not line.startswith('DBG:'), lines)
+  sys.stdout.write(''.join(excluded))
+  return included
 
 # Run any binary, logging the command line and return code
-def run_command(command, error_expected, binary_mode=0, *varargs):
+def run_command(command, error_expected, binary_mode=False, *varargs):
   """Run COMMAND with VARARGS. Return exit code as int; stdout, stderr
   as lists of lines (including line terminators).  See run_command_stdin()
   for details.  If ERROR_EXPECTED is None, any stderr output will be
@@ -450,17 +460,20 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
       logger.info("CMD: %s exited with %d" % (command_string, exit_code))
     return stdout_lines, stderr_lines, exit_code
 
-def spawn_process(command, bufsize=-1, binary_mode=0, stdin_lines=None,
+def spawn_process(command, bufsize=-1, binary_mode=False, stdin_lines=None,
                   *varargs):
   """Run any binary, supplying input text, logging the command line.
+
   BUFSIZE dictates the pipe buffer size used in communication with the
-  subprocess: 0 means unbuffered, 1 means line buffered, any other
-  positive value means use a buffer of (approximately) that size.
-  A negative bufsize means to use the system default, which usually
-  means fully buffered. The default value for bufsize is 0 (unbuffered).
+  subprocess: quoting from subprocess.Popen(), "0 means unbuffered,
+  1 means line buffered, any other positive value means use a buffer of
+  (approximately) that size. A negative bufsize means to use the system
+  default, which usually means fully buffered."
+
   Normalize Windows line endings of stdout and stderr if not BINARY_MODE.
   Return exit code as int; stdout, stderr as lists of lines (including
-  line terminators)."""
+  line terminators).
+  """
   if stdin_lines and not isinstance(stdin_lines, list):
     raise TypeError("stdin_lines should have list type")
 
@@ -483,7 +496,7 @@ def spawn_process(command, bufsize=-1, binary_mode=0, stdin_lines=None,
 
   return exit_code, stdout_lines, stderr_lines
 
-def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=0,
+def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
                       stdin_lines=None, *varargs):
   """Run COMMAND with VARARGS; input STDIN_LINES (a list of strings
   which should include newline characters) to program via stdin - this
@@ -537,11 +550,11 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=0,
     raise Failure
 
   return exit_code, \
-         [line for line in stdout_lines if not line.startswith("DBG:")], \
+         filter_dbg(stdout_lines), \
          stderr_lines
 
 def create_config_dir(cfgdir, config_contents=None, server_contents=None,
-                      ssl_cert=None, ssl_url=None):
+                      ssl_cert=None, ssl_url=None, http_proxy=None):
   "Create config directories and files"
 
   # config file names
@@ -568,13 +581,19 @@ interactive-conflicts = false
     http_library_str = ""
     if options.http_library:
       http_library_str = "http-library=%s" % (options.http_library)
+    http_proxy_str = ""
+    if options.http_proxy:
+      http_proxy_parsed = urlparse("//" + options.http_proxy)
+      http_proxy_str = "http-proxy-host=%s\n" % (http_proxy_parsed.hostname) + \
+                       "http-proxy-port=%d" % (http_proxy_parsed.port or 80)
     server_contents = """
 #
 [global]
 %s
+%s
 store-plaintext-passwords=yes
 store-passwords=yes
-""" % (http_library_str)
+""" % (http_library_str, http_proxy_str)
 
   file_write(cfgfile_cfg, config_contents)
   file_write(cfgfile_srv, server_contents)
@@ -644,13 +663,6 @@ def _with_auth(args):
   else:
     return args + ('--username', wc_author )
 
-def _with_log_message(args):
-
-  if '-m' in args or '--message' in args or '-F' in args:
-    return args
-  else:
-    return args + ('--message', 'default log message')
-
 # For running subversion and returning the output
 def run_svn(error_expected, *varargs):
   """Run svn with VARARGS; return exit code as int; stdout, stderr as
@@ -659,53 +671,63 @@ def run_svn(error_expected, *varargs):
   non-zero exit code will raise an exception.  If
   you're just checking that something does/doesn't come out of
   stdout/stderr, you might want to use actions.run_and_verify_svn()."""
-  return run_command(svn_binary, error_expected, 0,
+  return run_command(svn_binary, error_expected, False,
                      *(_with_auth(_with_config_dir(varargs))))
 
 # For running svnadmin.  Ignores the output.
 def run_svnadmin(*varargs):
   """Run svnadmin with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators)."""
-  return run_command(svnadmin_binary, 1, 0, *varargs)
+  return run_command(svnadmin_binary, 1, False, *varargs)
 
 # For running svnlook.  Ignores the output.
 def run_svnlook(*varargs):
   """Run svnlook with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators)."""
-  return run_command(svnlook_binary, 1, 0, *varargs)
+  return run_command(svnlook_binary, 1, False, *varargs)
 
 def run_svnrdump(stdin_input, *varargs):
   """Run svnrdump with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators).  Use binary mode for output."""
   if stdin_input:
-    return run_command_stdin(svnrdump_binary, 1, 1, 1, stdin_input,
+    return run_command_stdin(svnrdump_binary, 1, 1, True, stdin_input,
                              *(_with_auth(_with_config_dir(varargs))))
   else:
-    return run_command(svnrdump_binary, 1, 1,
+    return run_command(svnrdump_binary, 1, True,
                        *(_with_auth(_with_config_dir(varargs))))
 
 def run_svnsync(*varargs):
   """Run svnsync with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators)."""
-  return run_command(svnsync_binary, 1, 0, *(_with_config_dir(varargs)))
+  return run_command(svnsync_binary, 1, False, *(_with_config_dir(varargs)))
 
 def run_svnversion(*varargs):
   """Run svnversion with VARARGS, returns exit code as int; stdout, stderr
   as list of lines (including line terminators)."""
-  return run_command(svnversion_binary, 1, 0, *varargs)
+  return run_command(svnversion_binary, 1, False, *varargs)
 
 def run_svnmucc(*varargs):
   """Run svnmucc with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators).  Use binary mode for output."""
-  return run_command(svnmucc_binary, 1, 1,
-                     *(_with_auth(_with_config_dir(_with_log_message(varargs)))))
+  return run_command(svnmucc_binary, 1, True,
+                     *(_with_auth(_with_config_dir(varargs))))
+
+def run_svnauthz(*varargs):
+  """Run svnauthz with VARARGS, returns exit code as int; stdout, stderr
+  as list of lines (including line terminators)."""
+  return run_command(svnauthz_binary, 1, False, *varargs)
+
+def run_svnauthz_validate(*varargs):
+  """Run svnauthz-validate with VARARGS, returns exit code as int; stdout,
+  stderr as list of lines (including line terminators)."""
+  return run_command(svnauthz_validate_binary, 1, False, *varargs)
 
 def run_entriesdump(path):
   """Run the entries-dump helper, returning a dict of Entry objects."""
   # use spawn_process rather than run_command to avoid copying all the data
   # to stdout in verbose mode.
   exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
-                                                        0, 0, None, path)
+                                                        0, False, None, path)
   if exit_code or stderr_lines:
     ### report on this? or continue to just skip it?
     return None
@@ -713,7 +735,7 @@ def run_entriesdump(path):
   class Entry(object):
     pass
   entries = { }
-  exec(''.join([line for line in stdout_lines if not line.startswith("DBG:")]))
+  exec(''.join(filter_dbg(stdout_lines)))
   return entries
 
 def run_entriesdump_subdirs(path):
@@ -721,8 +743,25 @@ def run_entriesdump_subdirs(path):
   # use spawn_process rather than run_command to avoid copying all the data
   # to stdout in verbose mode.
   exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
-                                                        0, 0, None, '--subdirs', path)
-  return [line.strip() for line in stdout_lines if not line.startswith("DBG:")]
+                                                        0, False, None, '--subdirs', path)
+  return map(lambda line: line.strip(), filter_dbg(stdout_lines))
+
+def run_entriesdump_tree(path):
+  """Run the entries-dump helper, returning a dict of a dict of Entry objects."""
+  # use spawn_process rather than run_command to avoid copying all the data
+  # to stdout in verbose mode.
+  exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
+                                                        0, False, None,
+                                                        '--tree-dump', path)
+  if exit_code or stderr_lines:
+    ### report on this? or continue to just skip it?
+    return None
+
+  class Entry(object):
+    pass
+  dirs = { }
+  exec(''.join(filter_dbg(stdout_lines)))
+  return dirs
 
 def run_atomic_ra_revprop_change(url, revision, propname, skel, want_error):
   """Run the atomic-ra-revprop-change helper, returning its exit code, stdout,
@@ -730,7 +769,7 @@ def run_atomic_ra_revprop_change(url, revision, propname, skel, want_error):
   # use spawn_process rather than run_command to avoid copying all the data
   # to stdout in verbose mode.
   #exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
-  #                                                      0, 0, None, path)
+  #                                                      0, False, None, path)
 
   # This passes HTTP_LIBRARY in addition to our params.
   return run_command(atomic_ra_revprop_change_binary, True, False,
@@ -752,7 +791,7 @@ def run_wc_incomplete_tester(wc_dir, revision):
 
 def youngest(repos_path):
   "run 'svnlook youngest' on REPOS_PATH, returns revision as int"
-  exit_code, stdout_lines, stderr_lines = run_command(svnlook_binary, None, 0,
+  exit_code, stdout_lines, stderr_lines = run_command(svnlook_binary, None, False,
                                                       'youngest', repos_path)
   if exit_code or stderr_lines:
     raise Failure("Unexpected failure of 'svnlook youngest':\n%s" % stderr_lines)
@@ -829,15 +868,10 @@ def create_repos(path, minor_version = None):
   opts = ("--bdb-txn-nosync",)
   if not minor_version or minor_version > options.server_minor_version:
     minor_version = options.server_minor_version
-  if minor_version < 4:
-    opts += ("--pre-1.4-compatible",)
-  elif minor_version < 5:
-    opts += ("--pre-1.5-compatible",)
-  elif minor_version < 6:
-    opts += ("--pre-1.6-compatible",)
+  opts += ("--compatible-version=1.%d" % (minor_version),)
   if options.fs_type is not None:
     opts += ("--fs-type=" + options.fs_type,)
-  exit_code, stdout, stderr = run_command(svnadmin_binary, 1, 0, "create",
+  exit_code, stdout, stderr = run_command(svnadmin_binary, 1, False, "create",
                                           path, *opts)
 
   # Skip tests if we can't create the repository.
@@ -1031,6 +1065,19 @@ def write_restrictive_svnserve_conf(repo_dir, anon_access="none"):
     fp.write("password-db = passwd\n")
   fp.close()
 
+def write_restrictive_svnserve_conf_with_groups(repo_dir,
+                                                anon_access="none"):
+  "Create a restrictive configuration with groups stored in a separate file."
+
+  fp = open(get_svnserve_conf_file_path(repo_dir), 'w')
+  fp.write("[general]\nanon-access = %s\nauth-access = write\n"
+           "authz-db = authz\ngroups-db = groups\n" % anon_access)
+  if options.enable_sasl:
+    fp.write("realm = svntest\n[sasl]\nuse-sasl = true\n");
+  else:
+    fp.write("password-db = passwd\n")
+  fp.close()
+
 # Warning: because mod_dav_svn uses one shared authz file for all
 # repositories, you *cannot* use write_authz_file in any test that
 # might be run in parallel.
@@ -1064,6 +1111,18 @@ an appropriate list of mappings.
 
   for p, r in rules.items():
     fp.write("[%s%s]\n%s\n" % (prefix, p, r))
+  fp.close()
+
+# See the warning about parallel test execution in write_authz_file
+# method description.
+def write_groups_file(sbox, groups):
+  """Write a groups file to SBOX, appropriate for the RA method used,
+with group contents set to GROUPS."""
+  fp = open(sbox.groups_file, 'w')
+  fp.write("[groups]\n")
+  if groups:
+    for p, r in groups.items():
+      fp.write("%s = %s\n" % (p, r))
   fp.close()
 
 def use_editor(func):
@@ -1126,6 +1185,26 @@ def merge_notify_line(revstart=None, revend=None, same_URL=True,
     else:
       return "--- Merging %sr%ld through r%ld into '%s':\n" \
              % (from_foreign_phrase, revstart, revend, target_re)
+
+def summary_of_conflicts(text_conflicts=0, prop_conflicts=0,
+                         tree_conflicts=0, skipped_paths=0):
+  """Return a list of lines corresponding to the summary of conflicts and
+     skipped paths that is printed by merge and update and switch.  If all
+     parameters are zero, return an empty list.
+  """
+  lines = []
+  if text_conflicts or prop_conflicts or tree_conflicts or skipped_paths:
+    lines.append("Summary of conflicts:\n")
+    if text_conflicts:
+      lines.append("  Text conflicts: %d\n" % text_conflicts)
+    if prop_conflicts:
+      lines.append("  Property conflicts: %d\n" % prop_conflicts)
+    if tree_conflicts:
+      lines.append("  Tree conflicts: %d\n" % tree_conflicts)
+    if skipped_paths:
+      lines.append("  Skipped paths: %d\n" % skipped_paths)
+
+  return lines
 
 
 def make_log_msg():
@@ -1232,6 +1311,17 @@ def server_enforces_date_syntax():
 def server_has_atomic_revprop():
   return options.server_minor_version >= 7
 
+def is_plaintext_password_storage_disabled():
+  try:
+    predicate = re.compile("^WARNING: Plaintext password storage is enabled!")
+    code, out, err = run_svn(False, "--version")
+    for line in out:
+      if predicate.match(line):
+        return False
+  except:
+    return False
+  return True
+
 ######################################################################
 
 
@@ -1287,17 +1377,12 @@ class TestSpawningThread(threading.Thread):
       args.append('--milestone-filter=' + options.milestone_filter)
     if options.ssl_cert:
       args.append('--ssl-cert=' + options.ssl_cert)
+    if options.http_proxy:
+      args.append('--http-proxy=' + options.http_proxy)
 
-    result, stdout_lines, stderr_lines = spawn_process(command, 0, 0, None,
+    result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
     self.results.append((index, result, stdout_lines, stderr_lines))
-
-    if result != 1:
-      sys.stdout.write('.')
-    else:
-      sys.stdout.write('F')
-
-    sys.stdout.flush()
 
 class TestRunner:
   """Encapsulate a single test case (predicate), including logic for
@@ -1309,7 +1394,8 @@ class TestRunner:
 
   def list(self, milestones_dict=None):
     """Print test doc strings.  MILESTONES_DICT is an optional mapping
-    of issue numbers to target milestones."""
+    of issue numbers to an list containing target milestones and who
+    the issue is assigned to."""
     if options.mode_filter.upper() == 'ALL' \
        or options.mode_filter.upper() == self.pred.list_mode().upper() \
        or (options.mode_filter.upper() == 'PASS' \
@@ -1319,6 +1405,7 @@ class TestRunner:
       if self.pred.issues:
         if not options.milestone_filter or milestones_dict is None:
           issues = self.pred.issues
+          tail += " [%s]" % ','.join(['#%s' % str(i) for i in issues])
         else: # Limit listing by requested target milestone(s).
           filter_issues = []
           matches_filter = False
@@ -1327,13 +1414,16 @@ class TestRunner:
           # If any one of them matches the MILESTONE_FILTER then we'll print
           # them all.
           for issue in self.pred.issues:
-            # A safe starting assumption.
+            # Some safe starting assumptions.
             milestone = 'unknown'
+            assigned_to = 'unknown'
             if milestones_dict:
               if milestones_dict.has_key(str(issue)):
-                milestone = milestones_dict[str(issue)]
+                milestone = milestones_dict[str(issue)][0]
+                assigned_to = milestones_dict[str(issue)][1]
 
-            filter_issues.append(str(issue) + '(' + milestone + ')')
+            filter_issues.append(
+              str(issue) + '(' + milestone + '/' + assigned_to + ')')
             pattern = re.compile(options.milestone_filter)
             if pattern.match(milestone):
               matches_filter = True
@@ -1341,9 +1431,12 @@ class TestRunner:
           # Did at least one of the associated issues meet our filter?
           if matches_filter:
             issues = filter_issues
-
-        tail += " [%s]" % ','.join(['#%s' % str(i) for i in issues])
-
+          # Wrap the issue#/target-milestone/assigned-to string
+          # to the next line and add a line break to enhance
+          # readability.
+          tail += "\n               %s" % '\n               '.join(
+            ['#%s' % str(i) for i in issues])
+          tail += '\n'
       # If there is no filter or this test made if through
       # the filter then print it!
       if options.milestone_filter is None or len(issues):
@@ -1530,9 +1623,6 @@ def _internal_run_tests(test_list, testnums, parallel, srcdir, progress_func):
       results += t.results
     results.sort()
 
-    # terminate the line of dots
-    print("")
-
     # all tests are finished, find out the result and print the logs.
     for (index, result, stdout_lines, stderr_lines) in results:
       if stdout_lines:
@@ -1632,6 +1722,10 @@ def _create_parser():
                     help='Source directory.')
   parser.add_option('--ssl-cert', action='store',
                     help='Path to SSL server certificate.')
+  parser.add_option('--http-proxy', action='store',
+                    help='Use the HTTP Proxy at hostname:port.')
+  parser.add_option('--tools-bin', action='store', dest='tools_bin',
+                    help='Use the svn tools installed in this path')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
@@ -1680,7 +1774,12 @@ def run_tests(test_list, serial_only = False):
 
   sys.exit(execute_tests(test_list, serial_only))
 
-def get_target_milestones_for_issues(issue_numbers):
+def get_issue_details(issue_numbers):
+  """For each issue number in ISSUE_NUMBERS query the issue
+     tracker and determine what the target milestone is and
+     who the issue is assigned to.  Return this information
+     as a dictionary mapping issue numbers to a list
+     [target_milestone, assigned_to]"""
   xml_url = "http://subversion.tigris.org/issues/xml.cgi?id="
   issue_dict = {}
 
@@ -1708,14 +1807,17 @@ def get_target_milestones_for_issues(issue_numbers):
     xmldoc = xml.dom.minidom.parse(issue_xml_f)
     issue_xml_f.close()
 
-    # Get the target milestone for each issue.
+    # For each issue: Get the target milestone and who
+    #                 the issue is assigned to.
     issue_element = xmldoc.getElementsByTagName('issue')
     for i in issue_element:
       issue_id_element = i.getElementsByTagName('issue_id')
       issue_id = issue_id_element[0].childNodes[0].nodeValue
       milestone_element = i.getElementsByTagName('target_milestone')
       milestone = milestone_element[0].childNodes[0].nodeValue
-      issue_dict[issue_id] = milestone
+      assignment_element = i.getElementsByTagName('assigned_to')
+      assignment = assignment_element[0].childNodes[0].nodeValue
+      issue_dict[issue_id] = [milestone, assignment]
   except:
     print "ERROR: Unable to parse target milestones from issue tracker"
     raise
@@ -1764,6 +1866,8 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   global svndumpfilter_binary
   global svnversion_binary
   global svnmucc_binary
+  global svnauthz_binary
+  global svnauthz_validate_binary
   global options
 
   if test_name:
@@ -1881,6 +1985,11 @@ def execute_tests(test_list, serial_only = False, test_name = None,
       svnversion_binary = os.path.join(options.svn_bin, 'svnversion' + _exe)
       svnmucc_binary = os.path.join(options.svn_bin, 'svnmucc' + _exe)
 
+  if options.tools_bin:
+    svnauthz_binary = os.path.join(options.tools_bin, 'svnauthz' + _exe)
+    svnauthz_validate_binary = os.path.join(options.tools_bin,
+                                            'svnauthz-validate' + _exe)
+
   ######################################################################
 
   # Cleanup: if a previous run crashed or interrupted the python
@@ -1908,10 +2017,13 @@ def execute_tests(test_list, serial_only = False, test_name = None,
                 options.mode_filter.upper() == test_mode or
                 (options.mode_filter.upper() == 'PASS' and test_mode == '')):
               issues_dict[issue]=issue
-      milestones_dict = get_target_milestones_for_issues(issues_dict.keys())
+      milestones_dict = get_issue_details(issues_dict.keys())
 
-    header = "Test #  Mode   Test Description\n" \
-             "------  -----  ----------------"
+    header = "Test #  Mode   Test Description\n"
+    if options.milestone_filter:
+      header += "               Issue#(Target Mileston/Assigned To)\n"
+    header += "------  -----  ----------------"
+
     printed_header = False
     for testnum in testnums:
       test_mode = TestRunner(test_list[testnum], testnum).get_mode().upper()
@@ -1934,7 +2046,8 @@ def execute_tests(test_list, serial_only = False, test_name = None,
     # Build out the default configuration directory
     create_config_dir(default_config_dir,
                       ssl_cert=options.ssl_cert,
-                      ssl_url=options.test_area_url)
+                      ssl_url=options.test_area_url,
+                      http_proxy=options.http_proxy)
 
     # Setup the pristine repository
     svntest.actions.setup_pristine_greek_repository()

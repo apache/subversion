@@ -42,26 +42,28 @@ def svncmd_uuid(repo):
 def svncmd_info(repo, revision):
     cmd = "%s info -r %s %s" % (SVNLOOK, revision, repo)
     p = svncmd(cmd)
-    data = p.stdout.read().strip().split("\n")
+    data = p.stdout.read().split("\n")
     #print data
-    return {'author': data[0],
-            'date': data[1],
-            'log': "\n".join(data[3:])}
+    return {'author': data[0].strip(),
+            'date': data[1].strip(),
+            'log': "\n".join(data[3:]).strip()}
 
-def svncmd_dirs(repo, revision):
-    cmd = "%s dirs-changed  -r %s %s" % (SVNLOOK, revision, repo)
+def svncmd_changed(repo, revision):
+    cmd = "%s changed -r %s %s" % (SVNLOOK, revision, repo)
     p = svncmd(cmd)
-    dirs = []
+    changed = {} 
     while True:
         line = p.stdout.readline()
         if not line:
             break
-        dirs.append(line.strip())
-    return dirs
+        line = line.strip()
+        (flags, filename) = (line[0:3], line[4:])
+        changed[filename] = {'flags': flags} 
+    return changed
 
 def do_put(body):
     opener = urllib2.build_opener(urllib2.HTTPHandler)
-    request = urllib2.Request("http://%s:%d/dirs-changed" %(HOST, PORT), data=body)
+    request = urllib2.Request("http://%s:%d/commits" %(HOST, PORT), data=body)
     request.add_header('Content-Type', 'application/json')
     request.get_method = lambda: 'PUT'
     url = opener.open(request)
@@ -70,16 +72,17 @@ def do_put(body):
 def main(repo, revision):
     revision = revision.lstrip('r')
     i = svncmd_info(repo, revision)
-    data = {'revision': int(revision),
-            'dirs_changed': [],
-            'repos': svncmd_uuid(repo),
-            'author': i['author'],
+    data = {'type': 'svn',
+            'format': 1,
+            'id': int(revision),
+            'changed': {},
+            'repository': svncmd_uuid(repo),
+            'committer': i['author'],
             'log': i['log'],
             'date': i['date'],
             }
-    data['dirs_changed'].extend(svncmd_dirs(repo, revision))
+    data['changed'].update(svncmd_changed(repo, revision))
     body = json.dumps(data)
-    #print body
     do_put(body)
 
 if __name__ == "__main__":

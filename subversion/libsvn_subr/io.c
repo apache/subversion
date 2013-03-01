@@ -138,6 +138,14 @@
 #endif
 #endif
 
+/* Forward declaration */
+static apr_status_t
+dir_is_empty(const char *dir, apr_pool_t *pool);
+static APR_INLINE svn_error_t *
+do_io_file_wrapper_cleanup(apr_file_t *file, apr_status_t status,
+                           const char *msg, const char *msg_no_name,
+                           apr_pool_t *pool);
+
 /* Local wrapper of svn_path_cstring_to_utf8() that does no copying on
  * operating systems where APR always uses utf-8 as native path format */
 static svn_error_t *
@@ -826,7 +834,7 @@ svn_io_copy_file(const char *src,
     return SVN_NO_ERROR;
 #endif
 
-  SVN_ERR(svn_io_file_open(&from_file, src, APR_READ | APR_BINARY,
+  SVN_ERR(svn_io_file_open(&from_file, src, APR_READ,
                            APR_OS_DEFAULT, pool));
 
   /* For atomicity, we copy to a tmp file and then rename the tmp
@@ -1528,7 +1536,7 @@ io_set_file_perms(const char *path,
 
           /* Get the perms for the original file so we'll have any other bits
            * that were already set (like the execute bits, for example). */
-          SVN_ERR(svn_io_file_open(&fd, path, APR_READ | APR_BINARY,
+          SVN_ERR(svn_io_file_open(&fd, path, APR_READ,
                                    APR_OS_DEFAULT, pool));
           SVN_ERR(merge_default_file_perms(fd, &perms_to_set, pool));
           SVN_ERR(svn_io_file_close(fd, pool));
@@ -2077,11 +2085,6 @@ svn_io_file_lock2(const char *lock_file,
 
 /* Data consistency/coherency operations. */
 
-static APR_INLINE svn_error_t *
-do_io_file_wrapper_cleanup(apr_file_t *file, apr_status_t status,
-                           const char *msg, const char *msg_no_name,
-                           apr_pool_t *pool);
-
 svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
                                        apr_pool_t *pool)
 {
@@ -2259,7 +2262,9 @@ svn_io_remove_file2(const char *path,
 
   apr_err = apr_file_remove(path_apr, scratch_pool);
   if (!apr_err
-      || (ignore_enoent && APR_STATUS_IS_ENOENT(apr_err)))
+      || (ignore_enoent
+          && (APR_STATUS_IS_ENOENT(apr_err)
+              || SVN__APR_STATUS_IS_ENOTDIR(apr_err))))
     return SVN_NO_ERROR;
 
 #ifdef WIN32
@@ -2488,20 +2493,25 @@ svn_io_get_dirents3(apr_hash_t **dirents,
 }
 
 svn_error_t *
-svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
-                   const char *path,
-                   svn_boolean_t ignore_enoent,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool)
+svn_io_stat_dirent2(const svn_io_dirent2_t **dirent_p,
+                    const char *path,
+                    svn_boolean_t verify_truename,
+                    svn_boolean_t ignore_enoent,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
   apr_finfo_t finfo;
   svn_io_dirent2_t *dirent;
   svn_error_t *err;
+  apr_int32_t wanted = APR_FINFO_TYPE | APR_FINFO_LINK
+                       | APR_FINFO_SIZE | APR_FINFO_MTIME;
 
-  err = svn_io_stat(&finfo, path,
-                    APR_FINFO_TYPE | APR_FINFO_LINK
-                    | APR_FINFO_SIZE | APR_FINFO_MTIME,
-                    scratch_pool);
+#if defined(WIN32) || defined(__OS2__)
+  if (verify_truename)
+    wanted |= APR_FINFO_NAME;
+#endif
+
+  err = svn_io_stat(&finfo, path, wanted, scratch_pool);
 
   if (err && ignore_enoent &&
       (APR_STATUS_IS_ENOENT(err->apr_err)
@@ -2515,6 +2525,78 @@ svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
       return SVN_NO_ERROR;
     }
   SVN_ERR(err);
+
+#if defined(WIN32) || defined(__OS2__) || defined(DARWIN)
+  if (verify_truename)
+    {
+      const char *requested_name = svn_dirent_basename(path, NULL);
+
+      if (requested_name[0] == '\0')
+        {
+          /* No parent directory. No need to stat/verify */
+        }
+#if defined(WIN32) || defined(__OS2__)
+      else if (finfo.name)
+        {
+          const char *name_on_disk;
+          SVN_ERR(entry_name_to_utf8(&name_on_disk, finfo.name, path,
+                                     scratch_pool));
+
+          if (strcmp(name_on_disk, requested_name) /* != 0 */)
+            {
+              if (ignore_enoent)
+                {
+                  *dirent_p = svn_io_dirent2_create(result_pool);
+                  return SVN_NO_ERROR;
+                }
+              else
+                return svn_error_createf(APR_ENOENT, NULL,
+                          _("Path '%s' not found, case obstructed by '%s'"),
+                          svn_dirent_local_style(path, scratch_pool),
+                          name_on_disk);
+            }
+        }
+#elif defined(DARWIN)
+      /* Currently apr doesn't set finfo.name on DARWIN, returning
+                   APR_INCOMPLETE.
+         ### Can we optimize this in another way? */
+      else
+        {
+          apr_hash_t *dirents;
+
+          err = svn_io_get_dirents3(&dirents,
+                                    svn_dirent_dirname(path, scratch_pool),
+                                    TRUE /* only_check_type */,
+                                    scratch_pool, scratch_pool);
+
+          if (err && ignore_enoent
+              && (APR_STATUS_IS_ENOENT(err->apr_err)
+                  || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
+            {
+              svn_error_clear(err);
+
+              *dirent_p = svn_io_dirent2_create(result_pool);
+              return SVN_NO_ERROR;
+            }
+          else
+            SVN_ERR(err);
+
+          if (! apr_hash_get(dirents, requested_name, APR_HASH_KEY_STRING))
+            {
+              if (ignore_enoent)
+                {
+                  *dirent_p = svn_io_dirent2_create(result_pool);
+                  return SVN_NO_ERROR;
+                }
+              else
+                return svn_error_createf(APR_ENOENT, NULL,
+                          _("Path '%s' not found"),
+                          svn_dirent_local_style(path, scratch_pool));
+            }
+        }
+#endif
+    }
+#endif
 
   dirent = svn_io_dirent2_create(result_pool);
   map_apr_finfo_to_node_kind(&(dirent->kind), &(dirent->special), &finfo);
@@ -3722,11 +3804,6 @@ svn_io_dir_open(apr_dir_t **new_dir, const char *dirname, apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
-
-/* Forward declaration */
-static apr_status_t
-dir_is_empty(const char *dir, apr_pool_t *pool);
-
 
 svn_error_t *
 svn_io_dir_remove_nonrecursive(const char *dirname, apr_pool_t *pool)

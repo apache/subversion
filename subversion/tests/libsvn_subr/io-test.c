@@ -129,7 +129,7 @@ create_test_file(struct test_file_definition_t* definition,
   int i;
 
   if (definition->size < 5)
-    SVN_ERR_ASSERT(strlen(definition->data) >= definition->size);
+    SVN_ERR_ASSERT(strlen(definition->data) >= (apr_size_t)definition->size);
   else
     SVN_ERR_ASSERT(strlen(definition->data) >= 5);
 

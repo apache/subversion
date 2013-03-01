@@ -77,6 +77,12 @@ kind_to_word(svn_client_diff_summarize_kind_t kind)
     }
 }
 
+/* Baton for summarize_xml and summarize_regular */
+struct summarize_baton_t
+{
+  const char *anchor;
+};
+
 /* Print summary information about a given change as XML, implements the
  * svn_client_diff_summarize_func_t interface. The @a baton is a 'char *'
  * representing the either the path to the working copy root or the url
@@ -86,9 +92,10 @@ summarize_xml(const svn_client_diff_summarize_t *summary,
               void *baton,
               apr_pool_t *pool)
 {
+  struct summarize_baton_t *b = baton;
   /* Full path to the object being diffed.  This is created by taking the
    * baton, and appending the target's relative path. */
-  const char *path = *(const char **)baton;
+  const char *path = b->anchor;
   svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
 
   /* Tack on the target path, so we can differentiate between different parts
@@ -125,7 +132,8 @@ summarize_regular(const svn_client_diff_summarize_t *summary,
                   void *baton,
                   apr_pool_t *pool)
 {
-  const char *path = *(const char **)baton;
+  struct summarize_baton_t *b = baton;
+  const char *path = b->anchor;
 
   /* Tack on the target path, so we can differentiate between different parts
    * of the output when we're given multiple targets. */
@@ -176,6 +184,7 @@ svn_cl__diff(apr_getopt_t *os,
   svn_boolean_t ignore_properties =
     opt_state->diff.patch_compatible || opt_state->diff.ignore_properties;
   int i;
+  struct summarize_baton_t summarize_baton;
   const svn_client_diff_summarize_func_t summarize_func =
     (opt_state->xml ? summarize_xml : summarize_regular);
 
@@ -212,12 +221,13 @@ svn_cl__diff(apr_getopt_t *os,
 
   if (! opt_state->old_target && ! opt_state->new_target
       && (targets->nelts == 2)
-      && svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *))
-      && svn_path_is_url(APR_ARRAY_IDX(targets, 1, const char *))
+      && (svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *))
+          || svn_path_is_url(APR_ARRAY_IDX(targets, 1, const char *)))
       && opt_state->start_revision.kind == svn_opt_revision_unspecified
       && opt_state->end_revision.kind == svn_opt_revision_unspecified)
     {
-      /* The 'svn diff OLD_URL[@OLDREV] NEW_URL[@NEWREV]' case matches. */
+      /* A 2-target diff where one or both targets are URLs. These are
+       * shorthands for some 'svn diff --old X --new Y' invocations. */
 
       SVN_ERR(svn_opt_parse_path(&opt_state->start_revision, &old_target,
                                  APR_ARRAY_IDX(targets, 0, const char *),
@@ -227,10 +237,16 @@ svn_cl__diff(apr_getopt_t *os,
                                  pool));
       targets->nelts = 0;
 
+      /* Set default start/end revisions based on target types, in the same
+       * manner as done for the corresponding '--old X --new Y' cases,
+       * (note that we have an explicit --new target) */
       if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
-        opt_state->start_revision.kind = svn_opt_revision_head;
+        opt_state->start_revision.kind = svn_path_is_url(old_target)
+            ? svn_opt_revision_head : svn_opt_revision_working;
+
       if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
-        opt_state->end_revision.kind = svn_opt_revision_head;
+        opt_state->end_revision.kind = svn_path_is_url(new_target)
+            ? svn_opt_revision_head : svn_opt_revision_working;
     }
   else if (opt_state->old_target)
     {
@@ -243,9 +259,8 @@ svn_cl__diff(apr_getopt_t *os,
       tmp = apr_array_make(pool, 2, sizeof(const char *));
       APR_ARRAY_PUSH(tmp, const char *) = (opt_state->old_target);
       APR_ARRAY_PUSH(tmp, const char *) = (opt_state->new_target
-                                            ? opt_state->new_target
-                                           : APR_ARRAY_IDX(tmp, 0,
-                                                           const char *));
+                                           ? opt_state->new_target
+                                           : opt_state->old_target);
 
       SVN_ERR(svn_cl__args_to_target_array_print_reserved(&tmp2, os, tmp,
                                                           ctx, FALSE, pool));
@@ -266,10 +281,14 @@ svn_cl__diff(apr_getopt_t *os,
       if (new_rev.kind != svn_opt_revision_unspecified)
         opt_state->end_revision = new_rev;
 
+      /* For URLs, default to HEAD. For WC paths, default to WORKING if
+       * new target is explicit; if new target is implicitly the same as
+       * old target, then default the old to BASE and new to WORKING. */
       if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
         opt_state->start_revision.kind = svn_path_is_url(old_target)
-          ? svn_opt_revision_head : svn_opt_revision_base;
-
+          ? svn_opt_revision_head
+          : (opt_state->new_target
+             ? svn_opt_revision_working : svn_opt_revision_base);
       if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
         opt_state->end_revision.kind = svn_path_is_url(new_target)
           ? svn_opt_revision_head : svn_opt_revision_working;
@@ -294,7 +313,10 @@ svn_cl__diff(apr_getopt_t *os,
       old_target = "";
       new_target = "";
 
-      SVN_ERR(svn_cl__assert_homogeneous_target_type(targets));
+      SVN_ERR_W(svn_cl__assert_homogeneous_target_type(targets),
+        _("'svn diff [-r N[:M]] [TARGET[@REV]...]' does not support mixed "
+          "target types. Try using the --old and --new options or one of "
+          "the shorthand invocations listed in 'svn help diff'."));
 
       working_copy_present = ! svn_path_is_url(APR_ARRAY_IDX(targets, 0,
                                                              const char *));
@@ -350,16 +372,20 @@ svn_cl__diff(apr_getopt_t *os,
             target2 = svn_dirent_join(new_target, path, iterpool);
 
           if (opt_state->diff.summarize)
-            SVN_ERR(svn_client_diff_summarize2
-                    (target1,
-                     &opt_state->start_revision,
-                     target2,
-                     &opt_state->end_revision,
-                     opt_state->depth,
-                     ! opt_state->diff.notice_ancestry,
-                     opt_state->changelists,
-                     summarize_func, &target1,
-                     ctx, iterpool));
+            {
+              summarize_baton.anchor = target1;
+
+              SVN_ERR(svn_client_diff_summarize2(
+                                target1,
+                                &opt_state->start_revision,
+                                target2,
+                                &opt_state->end_revision,
+                                opt_state->depth,
+                                ! opt_state->diff.notice_ancestry,
+                                opt_state->changelists,
+                                summarize_func, &summarize_baton,
+                                ctx, iterpool));
+            }
           else
             SVN_ERR(svn_client_diff6(
                      options,
@@ -370,6 +396,7 @@ svn_cl__diff(apr_getopt_t *os,
                      NULL,
                      opt_state->depth,
                      ! opt_state->diff.notice_ancestry,
+                     opt_state->diff.no_diff_added,
                      opt_state->diff.no_diff_deleted,
                      show_copies_as_adds,
                      opt_state->force,
@@ -397,16 +424,19 @@ svn_cl__diff(apr_getopt_t *os,
               ? svn_opt_revision_head : svn_opt_revision_working;
 
           if (opt_state->diff.summarize)
-            SVN_ERR(svn_client_diff_summarize_peg2
-                    (truepath,
-                     &peg_revision,
-                     &opt_state->start_revision,
-                     &opt_state->end_revision,
-                     opt_state->depth,
-                     ! opt_state->diff.notice_ancestry,
-                     opt_state->changelists,
-                     summarize_func, &truepath,
-                     ctx, iterpool));
+            {
+              summarize_baton.anchor = truepath;
+              SVN_ERR(svn_client_diff_summarize_peg2(
+                                truepath,
+                                &peg_revision,
+                                &opt_state->start_revision,
+                                &opt_state->end_revision,
+                                opt_state->depth,
+                                ! opt_state->diff.notice_ancestry,
+                                opt_state->changelists,
+                                summarize_func, &summarize_baton,
+                                ctx, iterpool));
+            }
           else
             SVN_ERR(svn_client_diff_peg6(
                      options,
@@ -417,6 +447,7 @@ svn_cl__diff(apr_getopt_t *os,
                      NULL,
                      opt_state->depth,
                      ! opt_state->diff.notice_ancestry,
+                     opt_state->diff.no_diff_added,
                      opt_state->diff.no_diff_deleted,
                      show_copies_as_adds,
                      opt_state->force,

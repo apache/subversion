@@ -45,6 +45,7 @@
 
 #include "opt.h"
 #include "private/svn_opt_private.h"
+#include "private/svn_mergeinfo_private.h"
 
 #include "svn_private_config.h"
 
@@ -363,7 +364,7 @@ print_command_info(const svn_opt_subcommand_desc_t *cmd,
         {
           if (cmd->valid_options[i])
             {
-              if (have_options == FALSE)
+              if (!have_options)
                 {
                   SVN_ERR(svn_cmdline_fputs(_("\nValid options:\n"),
                                             stream, pool));
@@ -877,6 +878,22 @@ svn_io_dir_walk(const char *dirname,
                                           &baton, pool));
 }
 
+svn_error_t *
+svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
+                   const char *path,
+                   svn_boolean_t ignore_enoent,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(
+            svn_io_stat_dirent2(dirent_p,
+                                path,
+                                FALSE,
+                                ignore_enoent,
+                                result_pool,
+                                scratch_pool));
+}
+
 /*** From constructors.c ***/
 svn_log_changed_path_t *
 svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
@@ -1122,8 +1139,11 @@ svn_rangelist_merge(svn_rangelist_t **rangelist,
                     const svn_rangelist_t *changes,
                     apr_pool_t *pool)
 {
-  return svn_error_trace(svn_rangelist_merge2(*rangelist, changes,
-                                              pool, pool));
+  SVN_ERR(svn_rangelist_merge2(*rangelist, changes,
+                               pool, pool));
+
+  return svn_error_trace(
+            svn_rangelist__combine_adjacent_ranges(*rangelist, pool));
 }
 
 svn_error_t *

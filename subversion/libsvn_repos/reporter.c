@@ -447,7 +447,8 @@ static svn_error_t *
 change_dir_prop(report_baton_t *b, void *dir_baton, const char *name,
                 const svn_string_t *value, apr_pool_t *pool)
 {
-  return b->editor->change_dir_prop(dir_baton, name, value, pool);
+  return svn_error_trace(b->editor->change_dir_prop(dir_baton, name, value,
+                                                    pool));
 }
 
 /* Call the file property-setting function of B->editor to set the
@@ -456,7 +457,8 @@ static svn_error_t *
 change_file_prop(report_baton_t *b, void *file_baton, const char *name,
                  const svn_string_t *value, apr_pool_t *pool)
 {
-  return b->editor->change_file_prop(file_baton, name, value, pool);
+  return svn_error_trace(b->editor->change_file_prop(file_baton, name, value,
+                                                     pool));
 }
 
 /* For the report B, return the relevant revprop data of revision REV in
@@ -685,18 +687,13 @@ delta_files(report_baton_t *b, void *file_baton, svn_revnum_t s_rev,
     {
       SVN_ERR(get_source_root(b, &s_root, s_rev));
 
-      /* Is this delta calculation worth our time?  If we are ignoring
-         ancestry, then our editor implementor isn't concerned by the
-         theoretical differences between "has contents which have not
-         changed with respect to" and "has the same actual contents
-         as".  We'll do everything we can to avoid transmitting even
-         an empty text-delta in that case.  */
-      if (b->ignore_ancestry)
-        SVN_ERR(svn_repos__compare_files(&changed, b->t_root, t_path,
-                                         s_root, s_path, pool));
-      else
-        SVN_ERR(svn_fs_contents_changed(&changed, b->t_root, t_path, s_root,
-                                        s_path, pool));
+      /* We're not interested in the theoretical difference between "has
+         contents which have not changed with respect to" and "has the same
+         actual contents as" when sending text-deltas.  If we know the
+         delta is an empty one, we avoiding sending it in either case. */
+      SVN_ERR(svn_repos__compare_files(&changed, b->t_root, t_path,
+                                       s_root, s_path, pool));
+
       if (!changed)
         return SVN_NO_ERROR;
 
@@ -717,11 +714,13 @@ delta_files(report_baton_t *b, void *file_baton, svn_revnum_t s_rev,
              zero-copy code. */
           if (b->zero_copy_limit > 0 && s_path == NULL)
             {
-              zero_copy_baton_t baton = { b->zero_copy_limit
-                                        , dhandler
-                                        , dbaton
-                                        , FALSE};
+              zero_copy_baton_t baton;
               svn_boolean_t called = FALSE;
+
+              baton.zero_copy_limit = b->zero_copy_limit;
+              baton.dhandler = dhandler;
+              baton.dbaton = dbaton;
+              baton.zero_copy_succeeded = FALSE;
               SVN_ERR(svn_fs_try_process_file_contents(&called,
                                                        b->t_root, t_path,
                                                        send_zero_copy_delta,
@@ -750,8 +749,8 @@ check_auth(report_baton_t *b, svn_boolean_t *allowed, const char *path,
            apr_pool_t *pool)
 {
   if (b->authz_read_func)
-    return b->authz_read_func(allowed, b->t_root, path,
-                              b->authz_read_baton, pool);
+    return svn_error_trace(b->authz_read_func(allowed, b->t_root, path,
+                                              b->authz_read_baton, pool));
   *allowed = TRUE;
   return SVN_NO_ERROR;
 }
@@ -877,9 +876,9 @@ add_file_smartly(report_baton_t *b,
         }
     }
 
-  return b->editor->add_file(path, parent_baton,
-                             *copyfrom_path, *copyfrom_rev,
-                             pool, new_file_baton);
+  return svn_error_trace(b->editor->add_file(path, parent_baton,
+                                             *copyfrom_path, *copyfrom_rev,
+                                             pool, new_file_baton));
 }
 
 
@@ -1014,7 +1013,7 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 
   /* If there's no target, we have nothing more to do. */
   if (!t_entry)
-    return skip_path_info(b, e_path);
+    return svn_error_trace(skip_path_info(b, e_path));
 
   /* Check if the user is authorized to find out about the target. */
   SVN_ERR(check_auth(b, &allowed, t_path, pool));
@@ -1024,7 +1023,7 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
         SVN_ERR(b->editor->absent_directory(e_path, dir_baton, pool));
       else
         SVN_ERR(b->editor->absent_file(e_path, dir_baton, pool));
-      return skip_path_info(b, e_path);
+      return svn_error_trace(skip_path_info(b, e_path));
     }
 
   if (t_entry->kind == svn_node_dir)
@@ -1040,7 +1039,7 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       SVN_ERR(delta_dirs(b, s_rev, s_path, t_path, new_baton, e_path,
                          info ? info->start_empty : FALSE,
                          wc_depth, requested_depth, pool));
-      return b->editor->close_directory(new_baton, pool);
+      return svn_error_trace(b->editor->close_directory(new_baton, pool));
     }
   else
     {
@@ -1072,7 +1071,8 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5, b->t_root,
                                    t_path, TRUE, pool));
       hex_digest = svn_checksum_to_cstring(checksum, pool);
-      return b->editor->close_file(new_baton, hex_digest, pool);
+      return svn_error_trace(b->editor->close_file(new_baton, hex_digest,
+                                                   pool));
     }
 }
 
@@ -1351,8 +1351,6 @@ drive(report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
 
   /* Collect information about the source and target nodes. */
   s_fullpath = svn_fspath__join(b->fs_base, b->s_operand, pool);
-  /* ### Weird: When I have a file external defined as "^/A/a X/xa",
-   * ### S_FULLPATH becomes "/A/a/xa" here, which is complete nonsense. */
   SVN_ERR(get_source_root(b, &s_root, s_rev));
   SVN_ERR(fake_dirent(&s_entry, s_root, s_fullpath, pool));
   SVN_ERR(fake_dirent(&t_entry, b->t_root, b->t_path, pool));
@@ -1390,7 +1388,7 @@ drive(report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
                          t_entry, root_baton, b->s_operand, info,
                          info->depth, b->requested_depth, pool));
 
-  return b->editor->close_directory(root_baton, pool);
+  return svn_error_trace(b->editor->close_directory(root_baton, pool));
 }
 
 /* Initialize the baton fields for editor-driving, and drive the editor. */
@@ -1446,7 +1444,8 @@ finish_report(report_baton_t *b, apr_pool_t *pool)
     b->s_roots[i] = NULL;
 
   {
-    svn_error_t *err = drive(b, s_rev, info, pool);
+    svn_error_t *err = svn_error_trace(drive(b, s_rev, info, pool));
+
     if (err == SVN_NO_ERROR)
       return svn_error_trace(b->editor->close_edit(b->edit_baton, pool));
 
@@ -1498,7 +1497,8 @@ write_path_info(report_baton_t *b, const char *path, const char *lpath,
   rep = apr_psprintf(pool, "+%" APR_SIZE_T_FMT ":%s%s%s%s%c%s",
                      strlen(path), path, lrep, rrep, drep,
                      start_empty ? '+' : '-', ltrep);
-  return svn_spillbuf__reader_write(b->reader, rep, strlen(rep), pool);
+  return svn_error_trace(
+            svn_spillbuf__reader_write(b->reader, rep, strlen(rep), pool));
 }
 
 svn_error_t *
@@ -1506,8 +1506,9 @@ svn_repos_set_path3(void *baton, const char *path, svn_revnum_t rev,
                     svn_depth_t depth, svn_boolean_t start_empty,
                     const char *lock_token, apr_pool_t *pool)
 {
-  return write_path_info(baton, path, NULL, rev, depth, start_empty,
-                         lock_token, pool);
+  return svn_error_trace(
+            write_path_info(baton, path, NULL, rev, depth, start_empty,
+                            lock_token, pool));
 }
 
 svn_error_t *
@@ -1520,8 +1521,9 @@ svn_repos_link_path3(void *baton, const char *path, const char *link_path,
     return svn_error_create(SVN_ERR_REPOS_BAD_ARGS, NULL,
                             _("Depth 'exclude' not supported for link"));
 
-  return write_path_info(baton, path, link_path, rev, depth,
-                         start_empty, lock_token, pool);
+  return svn_error_trace(
+            write_path_info(baton, path, link_path, rev, depth,
+                            start_empty, lock_token, pool));
 }
 
 svn_error_t *
@@ -1529,8 +1531,9 @@ svn_repos_delete_path(void *baton, const char *path, apr_pool_t *pool)
 {
   /* We pass svn_depth_infinity because deletion of a path always
      deletes everything underneath it. */
-  return write_path_info(baton, path, NULL, SVN_INVALID_REVNUM,
-                         svn_depth_infinity, FALSE, NULL, pool);
+  return svn_error_trace(
+            write_path_info(baton, path, NULL, SVN_INVALID_REVNUM,
+                            svn_depth_infinity, FALSE, NULL, pool));
 }
 
 svn_error_t *

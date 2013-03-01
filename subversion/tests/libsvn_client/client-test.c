@@ -636,8 +636,8 @@ test_16k_add(const svn_test_opts_t *opts,
                                        svn_io_file_del_none,
                                        iterpool, iterpool));
 
-      SVN_ERR(svn_client_add4(path, svn_depth_unknown, FALSE, FALSE, FALSE,
-                              ctx, iterpool));
+      SVN_ERR(svn_client_add5(path, svn_depth_unknown, FALSE, FALSE, FALSE,
+                              FALSE, ctx, iterpool));
     }
 
   targets = apr_array_make(pool, 1, sizeof(const char *));
@@ -722,87 +722,52 @@ test_youngest_common_ancestor(const svn_test_opts_t *opts,
 }
 
 static svn_error_t *
-test_externals_parse(const svn_test_opts_t *opts, apr_pool_t *pool)
+test_foreign_repos_copy(const svn_test_opts_t *opts,
+                        apr_pool_t *pool)
 {
-  int i;
-  struct external_info
-    {
-      const char *line;
-      const char *url;
-      const char *local_path;
-      svn_revnum_t peg_rev;
-      svn_revnum_t rev;
-      
-    } items[] = {
-        {
-            "dir http://server/svn/a",
-            "http://server/svn/a",
-            "dir"
-        },
-        {
-            "/svn/home dir",
-            "u://svr/svn/home",
-            "dir"
-        },
-        {
-            "//server/home dir",
-            "u://server/home",
-            "dir"
-        },
-        {
-            "../../../../home dir",
-            "u://svr/svn/home",
-            "dir",
-        },
-        {
-            "^/../repB/tools/scripts scripts",
-            "u://svr/svn/cur/repB/tools/scripts",
-            "scripts"
-        },
-        { 
-            "^/../repB/tools/README.txt scripts/README.txt",
-            "u://svr/svn/cur/repB/tools/README.txt",
-            "scripts/README.txt"
-        },
-    };
-  
+  svn_opt_revision_t rev;
+  svn_opt_revision_t peg_rev;
+  const char *repos_url;
+  const char *repos2_url;
+  const char *wc_path;
+  svn_client_ctx_t *ctx;
+/* Create a filesytem and repository containing the Greek tree. */
+  SVN_ERR(create_greek_repos(&repos_url, "foreign-copy1", opts, pool));
+  SVN_ERR(create_greek_repos(&repos2_url, "foreign-copy2", opts, pool));
 
-  for (i = 0; i < sizeof(items) / sizeof(items[0]); i++)
-    {
-      apr_array_header_t *results;
-      svn_wc_external_item2_t *external_item;
-      const char *resolved_url;
-      SVN_ERR(svn_wc_parse_externals_description3(&results, "/my/current/dir",
-                                                  items[i].line, FALSE, pool));
+  SVN_ERR(svn_dirent_get_absolute(&wc_path, "test-wc-add", pool));
 
-      SVN_TEST_ASSERT(results && results->nelts == 1);
+  wc_path = svn_dirent_join(wc_path, "foreign-wc", pool);
 
-      external_item = APR_ARRAY_IDX(results, 0, svn_wc_external_item2_t *);
+  /* Remove old test data from the previous run */
+  SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool));
 
-      SVN_ERR(svn_wc__resolve_relative_external_url(&resolved_url,
-                                                    external_item,
-                                                    "u://svr/svn/cur/dir",
-                                                    "u://svr/svn/cur/dir/sd/fl",
-                                                    pool, pool));
+  SVN_ERR(svn_io_make_dir_recursively(wc_path, pool));
+  svn_test_add_dir_cleanup(wc_path);
 
-      SVN_TEST_STRING_ASSERT(resolved_url, items[i].url);
-      SVN_TEST_STRING_ASSERT(external_item->target_dir, items[i].local_path);
+  rev.kind = svn_opt_revision_head;
+  peg_rev.kind = svn_opt_revision_unspecified;
+  SVN_ERR(svn_client_create_context(&ctx, pool));
+  /* Checkout greek tree as wc_path */
+  SVN_ERR(svn_client_checkout3(NULL, repos_url, wc_path, &peg_rev, &rev,
+                               svn_depth_infinity, FALSE, FALSE, ctx, pool));
 
-      if (items[i].peg_rev != 0)
-        SVN_TEST_ASSERT(external_item->peg_revision.value.number
-                                == items[i].peg_rev);
-      if (items[i].rev != 0)
-        SVN_TEST_ASSERT(external_item->revision.value.number == items[i].rev);
-      SVN_TEST_ASSERT(svn_uri_is_canonical(resolved_url, pool));
-    }
+  SVN_ERR(svn_client__copy_foreign(svn_path_url_add_component2(repos2_url, "A",
+                                                               pool),
+                                   svn_dirent_join(wc_path, "A-copied", pool),
+                                   &peg_rev, &rev, svn_depth_infinity, FALSE, FALSE,
+                                   ctx, pool));
 
+
+  SVN_ERR(svn_client__copy_foreign(svn_path_url_add_component2(repos2_url,
+                                                               "iota",
+                                                               pool),
+                                   svn_dirent_join(wc_path, "iota-copied", pool),
+                                   &peg_rev, &rev, svn_depth_infinity, FALSE, FALSE,
+                                   ctx, pool));
 
   return SVN_NO_ERROR;
-
 }
-
-
-
 
 /* ========================================================================== */
 
@@ -820,6 +785,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_OPTS_PASS(test_16k_add, "test adding 16k files"),
 #endif
     SVN_TEST_OPTS_PASS(test_youngest_common_ancestor, "test youngest_common_ancestor"),
-    SVN_TEST_OPTS_PASS(test_externals_parse, "test svn_wc_parse_externals_description3"),
+    SVN_TEST_OPTS_PASS(test_foreign_repos_copy, "test foreign repository copy"),
     SVN_TEST_NULL
   };

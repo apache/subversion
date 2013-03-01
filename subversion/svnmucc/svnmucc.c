@@ -55,6 +55,9 @@
 
 #include "private/svn_cmdline_private.h"
 #include "private/svn_ra_private.h"
+#include "private/svn_string_private.h"
+
+#include "svn_private_config.h"
 
 static void handle_error(svn_error_t *err, apr_pool_t *pool)
 {
@@ -203,15 +206,14 @@ change_props(const svn_delta_editor_t *editor,
       for (hi = apr_hash_first(pool, child->prop_mods);
            hi; hi = apr_hash_next(hi))
         {
-          const void *key;
-          void *val;
+          const char *propname = svn__apr_hash_index_key(hi);
+          const svn_string_t *val = svn__apr_hash_index_val(hi);
 
           svn_pool_clear(iterpool);
-          apr_hash_this(hi, &key, NULL, &val);
           if (child->kind == svn_node_dir)
-            SVN_ERR(editor->change_dir_prop(baton, key, val, iterpool));
+            SVN_ERR(editor->change_dir_prop(baton, propname, val, iterpool));
           else
-            SVN_ERR(editor->change_file_prop(baton, key, val, iterpool));
+            SVN_ERR(editor->change_file_prop(baton, propname, val, iterpool));
         }
     }
 
@@ -234,14 +236,11 @@ drive(struct operation *operation,
   for (hi = apr_hash_first(pool, operation->children);
        hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      struct operation *child;
+      const char *key = svn__apr_hash_index_key(hi);
+      struct operation *child = svn__apr_hash_index_val(hi);
       void *file_baton = NULL;
 
       svn_pool_clear(subpool);
-      apr_hash_this(hi, &key, NULL, &val);
-      child = val;
 
       /* Deletes and replacements are simple -- delete something. */
       if (child->operation == OP_DELETE || child->operation == OP_REPLACE)
@@ -284,22 +283,18 @@ drive(struct operation *operation,
           svn_txdelta_window_handler_t handler;
           void *handler_baton;
           svn_stream_t *contents;
-          apr_file_t *f = NULL;
 
           SVN_ERR(editor->apply_textdelta(file_baton, NULL, subpool,
                                           &handler, &handler_baton));
-          if (strcmp(child->src_file, "-"))
+          if (strcmp(child->src_file, "-") != 0)
             {
-              SVN_ERR(svn_io_file_open(&f, child->src_file, APR_READ,
-                                       APR_OS_DEFAULT, pool));
+              SVN_ERR(svn_stream_open_readonly(&contents, child->src_file,
+                                               pool, pool));
             }
           else
             {
-              apr_status_t apr_err = apr_file_open_stdin(&f, pool);
-              if (apr_err)
-                return svn_error_wrap_apr(apr_err, "Can't open stdin");
+              SVN_ERR(svn_stream_for_stdin(&contents, pool));
             }
-          contents = svn_stream_from_aprfile2(f, FALSE, pool);
           SVN_ERR(svn_txdelta_send_stream(contents, handler,
                                           handler_baton, NULL, pool));
         }
@@ -316,15 +311,12 @@ drive(struct operation *operation,
       /* If we opened, added, or replaced a directory, we need to
          recurse, apply outstanding propmods, and then close it. */
       if ((child->kind == svn_node_dir)
-          && (child->operation == OP_OPEN
-              || child->operation == OP_ADD
-              || child->operation == OP_REPLACE))
+          && child->operation != OP_DELETE)
         {
+          SVN_ERR(change_props(editor, child->baton, child, subpool));
+
           SVN_ERR(drive(child, head, editor, subpool));
-          if (child->kind == svn_node_dir)
-            {
-              SVN_ERR(change_props(editor, child->baton, child, subpool));
-            }
+
           SVN_ERR(editor->close_directory(child->baton, subpool));
         }
     }
@@ -761,17 +753,55 @@ execute(const apr_array_header_t *actions,
                                             "svnmucc: ", "--config-option"));
   cfg_config = apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
                             APR_HASH_KEY_STRING);
+
+  if (! apr_hash_get(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING))
+    {
+      svn_string_t *msg = svn_string_create("", pool);
+
+      /* If we can do so, try to pop up $EDITOR to fetch a log message. */
+      if (non_interactive)
+        {
+          return svn_error_create
+            (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
+             _("Cannot invoke editor to get log message "
+               "when non-interactive"));
+        }
+      else
+        {
+          SVN_ERR(svn_cmdline__edit_string_externally(
+                      &msg, NULL, NULL, "", msg, "svnmucc-commit", config,
+                      TRUE, NULL, apr_hash_pool_get(revprops)));
+        }
+
+      apr_hash_set(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING, msg);
+    }
+
   SVN_ERR(create_ra_callbacks(&ra_callbacks, username, password, config_dir,
                               cfg_config, non_interactive, no_auth_cache,
                               pool));
   SVN_ERR(svn_ra_open4(&session, NULL, anchor, NULL, ra_callbacks,
                        NULL, config, pool));
+  /* Open, then reparent to avoid AUTHZ errors when opening the reposroot */
   SVN_ERR(svn_ra_open4(&aux_session, NULL, anchor, NULL, ra_callbacks,
                        NULL, config, pool));
   SVN_ERR(svn_ra_get_repos_root2(aux_session, &repos_root, pool));
   SVN_ERR(svn_ra_reparent(aux_session, repos_root, pool));
-
   SVN_ERR(svn_ra_get_latest_revnum(session, &head, pool));
+
+  /* Reparent to ANCHOR's dir, if ANCHOR is not a directory. */
+  {
+    svn_node_kind_t kind;
+
+    SVN_ERR(svn_ra_check_path(aux_session,
+                              svn_uri_skip_ancestor(repos_root, anchor, pool),
+                              head, &kind, pool));
+    if (kind != svn_node_dir)
+      {
+        anchor = svn_uri_dirname(anchor, pool);
+        SVN_ERR(svn_ra_reparent(session, anchor, pool));
+      }
+  }
+
   if (SVN_IS_VALID_REVNUM(base_revision))
     {
       if (base_revision > head)
@@ -781,8 +811,13 @@ execute(const apr_array_header_t *actions,
       head = base_revision;
     }
 
+  memset(&root, 0, sizeof(root));
   root.children = apr_hash_make(pool);
   root.operation = OP_OPEN;
+  root.kind = svn_node_dir; /* For setting properties */
+  root.prop_mods = apr_hash_make(pool);
+  root.prop_dels = apr_array_make(pool, 1, sizeof(const char *));
+
   for (i = 0; i < actions->nelts; ++i)
     {
       struct action *action = APR_ARRAY_IDX(actions, i, struct action *);
@@ -845,11 +880,17 @@ execute(const apr_array_header_t *actions,
                                     commit_callback, NULL, NULL, FALSE, pool));
 
   SVN_ERR(editor->open_root(editor_baton, head, pool, &root.baton));
-  err = drive(&root, head, editor, pool);
+  err = change_props(editor, root.baton, &root, pool);
+  if (!err)
+    err = drive(&root, head, editor, pool);
+  if (!err)
+    err = editor->close_directory(root.baton, pool);
   if (!err)
     err = editor->close_edit(editor_baton, pool);
+
   if (err)
-    svn_error_clear(editor->abort_edit(editor_baton, pool));
+    err = svn_error_compose_create(err,
+                                   editor->abort_edit(editor_baton, pool));
 
   return err;
 }
@@ -861,11 +902,8 @@ read_propvalue_file(const svn_string_t **value_p,
 {
   svn_stringbuf_t *value;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
-  apr_file_t *f;
 
-  SVN_ERR(svn_io_file_open(&f, filename, APR_READ | APR_BINARY | APR_BUFFERED,
-                           APR_OS_DEFAULT, scratch_pool));
-  SVN_ERR(svn_stringbuf_from_aprfile(&value, f, scratch_pool));
+  SVN_ERR(svn_stringbuf_from_file2(&value, filename, scratch_pool));
   *value_p = svn_string_create_from_buf(value, pool);
   svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
@@ -887,38 +925,43 @@ static void
 usage(apr_pool_t *pool, int exit_val)
 {
   FILE *stream = exit_val == EXIT_SUCCESS ? stdout : stderr;
-  static const char *msg =
-    "Multiple URL Command Client (for Subversion)\n"
-    "\nUsage: svnmucc [OPTION]... [ACTION]...\n"
-    "\nActions:\n"
-    "  cp REV URL1 URL2      copy URL1@REV to URL2\n"
-    "  mkdir URL             create new directory URL\n"
-    "  mv URL1 URL2          move URL1 to URL2\n"
-    "  rm URL                delete URL\n"
-    "  put SRC-FILE URL      add or modify file URL with contents copied from\n"
-    "                        SRC-FILE (use \"-\" to read from standard input)\n"
-    "  propset NAME VAL URL  set property NAME on URL to value VAL\n"
-    "  propsetf NAME VAL URL set property NAME on URL to value from file VAL\n"
-    "  propdel NAME URL      delete property NAME from URL\n"
-    "\nOptions:\n"
-    "  -h, --help, -?        display this text\n"
-    "  -m, --message ARG     use ARG as a log message\n"
-    "  -F, --file ARG        read log message from file ARG\n"
-    "  -u, --username ARG    commit the changes as username ARG\n"
-    "  -p, --password ARG    use ARG as the password\n"
-    "  -U, --root-url ARG    interpret all action URLs are relative to ARG\n"
-    "  -r, --revision ARG    use revision ARG as baseline for changes\n"
-    "  --with-revprop A[=B]  set revision property A in new revision to B\n"
-    "                        if specified, else to the empty string\n"
-    "  -n, --non-interactive don't prompt the user about anything\n"
-    "  -X, --extra-args ARG  append arguments from file ARG (one per line;\n"
-    "                        use \"-\" to read from standard input)\n"
-    "  --config-dir ARG      use ARG to override the config directory\n"
-    "  --config-option ARG   use ARG so override a configuration option\n"
-    "  --no-auth-cache       do not cache authentication tokens\n"
-    "  --version             print version information\n";
-  svn_error_clear(svn_cmdline_fputs(msg, stream, pool));
-  apr_pool_destroy(pool);
+  svn_error_clear(svn_cmdline_fputs(
+    _("Subversion multiple URL command client\n"
+      "usage: svnmucc ACTION...\n"
+      "\n"
+      "  Perform one or more Subversion repository URL-based ACTIONs, committing\n"
+      "  the result as a (single) new revision.\n"
+      "\n"
+      "Actions:\n"
+      "  cp REV SRC-URL DST-URL : copy SRC-URL@REV to DST-URL\n"
+      "  mkdir URL              : create new directory URL\n"
+      "  mv SRC-URL DST-URL     : move SRC-URL to DST-URL\n"
+      "  rm URL                 : delete URL\n"
+      "  put SRC-FILE URL       : add or modify file URL with contents copied from\n"
+      "                           SRC-FILE (use \"-\" to read from standard input)\n"
+      "  propset NAME VALUE URL : set property NAME on URL to VALUE\n"
+      "  propsetf NAME FILE URL : set property NAME on URL to value read from FILE\n"
+      "  propdel NAME URL       : delete property NAME from URL\n"
+      "\n"
+      "Valid options:\n"
+      "  -h, -? [--help]        : display this text\n"
+      "  -m [--message] ARG     : use ARG as a log message\n"
+      "  -F [--file] ARG        : read log message from file ARG\n"
+      "  -u [--username] ARG    : commit the changes as username ARG\n"
+      "  -p [--password] ARG    : use ARG as the password\n"
+      "  -U [--root-url] ARG    : interpret all action URLs relative to ARG\n"
+      "  -r [--revision] ARG    : use revision ARG as baseline for changes\n"
+      "  --with-revprop ARG     : set revision property in the following format:\n"
+      "                               NAME[=VALUE]\n"
+      "  -n [--non-interactive] : don't prompt the user about anything\n"
+      "  -X [--extra-args] ARG  : append arguments from file ARG (one per line;\n"
+      "                         : use \"-\" to read from standard input)\n"
+      "  --config-dir ARG       : use ARG to override the config directory\n"
+      "  --config-option ARG    : use ARG to override a configuration option\n"
+      "  --no-auth-cache        : do not cache authentication tokens\n"
+      "  --version              : print version information\n"),
+                  stream, pool));
+  svn_pool_destroy(pool);
   exit(exit_val);
 }
 
@@ -944,6 +987,53 @@ display_version(apr_getopt_t *os, apr_pool_t *pool)
                               version_footer->data,
                               NULL, NULL, NULL, NULL, NULL, pool));
 
+  return SVN_NO_ERROR;
+}
+
+/* Return an error about the mutual exclusivity of the -m, -F, and
+   --with-revprop=svn:log command-line options. */
+static svn_error_t *
+mutually_exclusive_logs_error(void)
+{
+  return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                          _("--message (-m), --file (-F), and "
+                            "--with-revprop=svn:log are mutually "
+                            "exclusive"));
+}
+
+/* Ensure that the REVPROPS hash contains a command-line-provided log
+   message, if any, and that there was but one source of such a thing
+   provided on that command-line.  */
+static svn_error_t *
+sanitize_log_sources(apr_hash_t *revprops,
+                     const char *message,
+                     svn_stringbuf_t *filedata)
+{
+  apr_pool_t *hash_pool = apr_hash_pool_get(revprops);
+
+  /* If we already have a log message in the revprop hash, then just
+     make sure the user didn't try to also use -m or -F.  Otherwise,
+     we need to consult -m or -F to find a log message, if any. */
+  if (apr_hash_get(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING))
+    {
+      if (filedata || message)
+        return mutually_exclusive_logs_error();
+    }
+  else if (filedata)
+    {
+      if (message)
+        return mutually_exclusive_logs_error();
+
+      SVN_ERR(svn_utf_cstring_to_utf8(&message, filedata->data, hash_pool));
+      apr_hash_set(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
+                   svn_stringbuf__morph_into_string(filedata));
+    }
+  else if (message)
+    {
+      apr_hash_set(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
+                   svn_string_create(message, hash_pool));
+    }
+  
   return SVN_NO_ERROR;
 }
 
@@ -982,6 +1072,7 @@ main(int argc, const char **argv)
     {NULL, 0, 0, NULL}
   };
   const char *message = NULL;
+  svn_stringbuf_t *filedata = NULL;
   const char *username = NULL, *password = NULL;
   const char *root_url = NULL, *extra_args_file = NULL;
   const char *config_dir = NULL;
@@ -1019,12 +1110,9 @@ main(int argc, const char **argv)
         case 'F':
           {
             const char *arg_utf8;
-            svn_stringbuf_t *contents;
             err = svn_utf_cstring_to_utf8(&arg_utf8, arg, pool);
             if (! err)
-              err = svn_stringbuf_from_file2(&contents, arg, pool);
-            if (! err)
-              err = svn_utf_cstring_to_utf8(&message, contents->data, pool);
+              err = svn_stringbuf_from_file2(&filedata, arg, pool);
             if (err)
               handle_error(err, pool);
           }
@@ -1097,6 +1185,11 @@ main(int argc, const char **argv)
         }
     }
 
+  /* Make sure we have a log message to use. */
+  err = sanitize_log_sources(revprops, message, filedata);
+  if (err)
+    handle_error(err, pool);
+
   /* Copy the rest of our command-line arguments to an array,
      UTF-8-ing them along the way. */
   action_args = apr_array_make(pool, opts->argc, sizeof(const char *));
@@ -1133,7 +1226,7 @@ main(int argc, const char **argv)
     {
       int j, num_url_args;
       const char *action_string = APR_ARRAY_IDX(action_args, i, const char *);
-      struct action *action = apr_palloc(pool, sizeof(*action));
+      struct action *action = apr_pcalloc(pool, sizeof(*action));
 
       /* First, parse the action. */
       if (! strcmp(action_string, "mv"))
@@ -1195,8 +1288,8 @@ main(int argc, const char **argv)
       if (action->action == ACTION_PUT)
         {
           action->path[1] =
-            svn_dirent_canonicalize(APR_ARRAY_IDX(action_args, i,
-                                                  const char *), pool);
+            svn_dirent_internal_style(APR_ARRAY_IDX(action_args, i,
+                                                    const char *), pool);
           if (++i == action_args->nelts)
             insufficient(pool);
         }
@@ -1226,8 +1319,8 @@ main(int argc, const char **argv)
           else
             {
               const char *propval_file =
-                svn_dirent_canonicalize(APR_ARRAY_IDX(action_args, i,
-                                                      const char *), pool);
+                svn_dirent_internal_style(APR_ARRAY_IDX(action_args, i,
+                                                        const char *), pool);
 
               if (++i == action_args->nelts)
                 insufficient(pool);
@@ -1291,16 +1384,19 @@ main(int argc, const char **argv)
           url = sanitize_url(url, pool);
           action->path[j] = url;
 
-          /* The cp source could be the anchor, but the other URLs should be
-             children of the anchor. */
-          if (! (action->action == ACTION_CP && j == 0))
+          /* The first URL arguments to 'cp', 'pd', 'ps' could be the anchor,
+             but the other URLs should be children of the anchor. */
+          if (! (action->action == ACTION_CP && j == 0)
+              && action->action != ACTION_PROPDEL
+              && action->action != ACTION_PROPSET
+              && action->action != ACTION_PROPSETF)
             url = svn_uri_dirname(url, pool);
           if (! anchor)
             anchor = url;
           else
             anchor = svn_uri_get_longest_ancestor(anchor, url, pool);
 
-          if ((++i == action_args->nelts) && (j >= num_url_args))
+          if ((++i == action_args->nelts) && (j + 1 < num_url_args))
             insufficient(pool);
         }
       APR_ARRAY_PUSH(actions, struct action *) = action;
@@ -1309,25 +1405,13 @@ main(int argc, const char **argv)
   if (! actions->nelts)
     usage(pool, EXIT_FAILURE);
 
-  if (message == NULL)
-    {
-      if (apr_hash_get(revprops, SVN_PROP_REVISION_LOG,
-                       APR_HASH_KEY_STRING) == NULL)
-        /* None of -F, -m, or --with-revprop=svn:log specified; default. */
-        apr_hash_set(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
-                     svn_string_create("committed using svnmucc", pool));
-    }
-  else
-    {
-      /* -F or -m specified; use that even if --with-revprop=svn:log. */
-      apr_hash_set(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
-                   svn_string_create(message, pool));
-    }
-
   if ((err = execute(actions, anchor, revprops, username, password,
                      config_dir, config_options, non_interactive,
                      no_auth_cache, base_revision, pool)))
     handle_error(err, pool);
+
+  /* Ensure that stdout is flushed, so the user will see all results. */
+  svn_error_clear(svn_cmdline_fflush(stdout));
 
   svn_pool_destroy(pool);
   return EXIT_SUCCESS;

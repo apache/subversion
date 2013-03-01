@@ -160,7 +160,7 @@ svn_cmdline_handle_exit_error(svn_error_t *error,
                               apr_pool_t *pool,
                               const char *prefix);
 
-/** A cancellation function/baton pair, and the path to the configuration
+/** A prompt function/baton pair, and the path to the configuration
  * directory. To be passed as the baton argument to the
  * @c svn_cmdline_*_prompt functions.
  *
@@ -396,6 +396,15 @@ svn_cmdline__getopt_init(apr_getopt_t **os,
                          int argc,
                          const char *argv[],
                          apr_pool_t *pool);
+
+/* Determine whether interactive mode should be enabled, based on whether
+ * the user passed the --non-interactive or --force-interactive options.
+ * If neither option was passed, interactivity is enabled if standard
+ * input is connected to a terminal device.
+ * @since New in 1.8. */
+svn_boolean_t
+svn_cmdline__be_interactive(svn_boolean_t non_interactive,
+                            svn_boolean_t force_interactive);
 
 #ifdef __cplusplus
 }

@@ -254,7 +254,8 @@ kwallet_password_get(svn_boolean_t *done,
         }
     }
 
-  apr_pool_cleanup_register(pool, parameters, kwallet_terminate, NULL);
+  apr_pool_cleanup_register(pool, parameters, kwallet_terminate,
+                            apr_pool_cleanup_null);
 
   return SVN_NO_ERROR;
 }
@@ -328,7 +329,8 @@ kwallet_password_set(svn_boolean_t *done,
         }
     }
 
-  apr_pool_cleanup_register(pool, parameters, kwallet_terminate, NULL);
+  apr_pool_cleanup_register(pool, parameters, kwallet_terminate,
+                            apr_pool_cleanup_null);
 
   return SVN_NO_ERROR;
 }

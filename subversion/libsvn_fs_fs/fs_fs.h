@@ -38,13 +38,26 @@ svn_error_t *svn_fs_fs__open(svn_fs_t *fs,
 svn_error_t *svn_fs_fs__upgrade(svn_fs_t *fs,
                                 apr_pool_t *pool);
 
-/* Verify the fsfs filesystem FS.  Use POOL for temporary allocations. */
+/* Verify metadata in fsfs filesystem FS.  Limit the checks to revisions
+ * START to END where possible.  Indicate progress via the optional
+ * NOTIFY_FUNC callback using NOTIFY_BATON.  The optional CANCEL_FUNC
+ * will periodically be called with CANCEL_BATON to allow for preemption.
+ * Use POOL for temporary allocations. */
 svn_error_t *svn_fs_fs__verify(svn_fs_t *fs,
-                               svn_cancel_func_t cancel_func,
-                               void *cancel_baton,
                                svn_revnum_t start,
                                svn_revnum_t end,
+                               svn_fs_progress_notify_func_t notify_func,
+                               void *notify_baton,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
                                apr_pool_t *pool);
+
+/* Verify metadata of REVISION in filesystem FS.
+ * Use POOL for temporary allocations. */
+svn_error_t *
+svn_fs_fs__verify_rev(svn_fs_t *fs,
+                      svn_revnum_t revision,
+                      apr_pool_t *pool);
 
 /* Copy the fsfs filesystem SRC_FS at SRC_PATH into a new copy DST_FS at
  * DST_PATH. If INCREMENTAL is TRUE, do not re-copy data which already

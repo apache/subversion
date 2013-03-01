@@ -630,7 +630,6 @@ fr_log_message_receiver(void *baton,
 {
   struct fr_log_message_baton *lmb = baton;
   struct rev *rev;
-  apr_hash_index_t *hi;
 
   rev = apr_palloc(lmb->pool, sizeof(*rev));
   rev->revision = log_entry->revision;
@@ -639,17 +638,7 @@ fr_log_message_receiver(void *baton,
   lmb->eldest = rev;
 
   /* Duplicate log_entry revprops into rev->props */
-  rev->props = apr_hash_make(lmb->pool);
-  for (hi = apr_hash_first(pool, log_entry->revprops); hi;
-       hi = apr_hash_next(hi))
-    {
-      void *val;
-      const void *key;
-
-      apr_hash_this(hi, &key, NULL, &val);
-      apr_hash_set(rev->props, apr_pstrdup(lmb->pool, key), APR_HASH_KEY_STRING,
-                   svn_string_dup(val, lmb->pool));
-    }
+  rev->props = svn_prop_hash_dup(log_entry->revprops, lmb->pool);
 
   return prev_log_path(&lmb->path, &lmb->action,
                        &lmb->copyrev, log_entry->changed_paths2,
@@ -903,7 +892,7 @@ svn_ra__get_inherited_props_walk(svn_ra_session_t *session,
       svn_error_t *err;
 
       svn_pool_clear(iterpool);
-      parent_url = svn_uri_dirname(parent_url, iterpool);
+      parent_url = svn_uri_dirname(parent_url, scratch_pool);
       SVN_ERR(svn_ra_reparent(session, parent_url, iterpool));
       err = session->vtable->get_dir(session, NULL, NULL,
                                      &parent_props, "",
@@ -946,7 +935,9 @@ svn_ra__get_inherited_props_walk(svn_ra_session_t *session,
         {
           svn_prop_inherited_item_t *new_iprop =
             apr_palloc(result_pool, sizeof(*new_iprop));
-          new_iprop->path_or_url = apr_pstrdup(result_pool, parent_url);
+          new_iprop->path_or_url = svn_uri_skip_ancestor(repos_root_url,
+                                                         parent_url,
+                                                         result_pool);
           new_iprop->prop_hash = final_hash;
           svn_sort__array_insert(&new_iprop, *inherited_props, 0);
         }

@@ -31,7 +31,7 @@
 const svn_opt_revision_kind Revision::START = svn_opt_revision_unspecified;
 const svn_opt_revision_kind Revision::HEAD = svn_opt_revision_head;
 
-Revision::Revision (const svn_opt_revision_kind kind)
+Revision::Revision(const svn_opt_revision_kind kind)
 {
   m_revision.kind = kind;
   m_revision.value.number = 0;
@@ -149,7 +149,7 @@ Revision::~Revision()
 {
 }
 
-const svn_opt_revision_t *Revision::revision () const
+const svn_opt_revision_t *Revision::revision() const
 {
   return &m_revision;
 }

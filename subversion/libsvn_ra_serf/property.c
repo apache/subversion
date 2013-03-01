@@ -468,10 +468,6 @@ setup_propfind_headers(serf_bucket_t *headers,
 {
   propfind_context_t *ctx = setup_baton;
 
-  if (ctx->sess->using_compression)
-    {
-      serf_bucket_headers_setn(headers, "Accept-Encoding", "gzip");
-    }
   serf_bucket_headers_setn(headers, "Depth", ctx->depth);
   if (ctx->label)
     {
@@ -530,7 +526,7 @@ create_propfind_body(serf_bucket_t **bkt,
     }
 
   /* If we're not doing an allprop, add <prop> tags. */
-  if (requested_allprop == FALSE)
+  if (!requested_allprop)
     {
       tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<prop>",
                                           sizeof("<prop>")-1,
@@ -544,7 +540,7 @@ create_propfind_body(serf_bucket_t **bkt,
 
   serf_bucket_aggregate_prepend(body_bkt, tmp);
 
-  if (requested_allprop == FALSE)
+  if (!requested_allprop)
     {
       tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</prop>",
                                           sizeof("</prop>")-1,
@@ -641,7 +637,7 @@ svn_ra_serf__wait_for_props(svn_ra_serf__handler_t *handler,
 
   err2 = svn_ra_serf__error_on_status(handler->sline.code,
                                       handler->path,
-                                      NULL);
+                                      handler->location);
   if (err2)
     {
       svn_error_clear(err);

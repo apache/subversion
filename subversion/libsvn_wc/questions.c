@@ -148,26 +148,6 @@ compare_and_verify(svn_boolean_t *modified_p,
       return svn_error_trace(svn_stream_close(pristine_stream));
     }
 
-#if 0
-  /* ### On second thought, I think this needs more review before enabling
-     ### This case might break when we have a fixed "\r\n" EOL, because
-     ### we use a repair mode in the compare itself. */
-  if (need_translation
-      && !special
-      && !props_mod
-      && (keywords == NULL)
-      && (versioned_file_size < pristine_file_size))
-    {
-      *modified_p = TRUE; /* The file is < its repository normal form
-                             and the properties didn't change.
-
-                             That must be a change. */
-
-      /* ### Why did we open the pristine? */
-      return svn_error_trace(svn_stream_close(pristine_stream));
-    }
-#endif
-
   /* ### Other checks possible? */
 
   if (need_translation)
@@ -191,7 +171,8 @@ compare_and_verify(svn_boolean_t *modified_p,
                 eol_str = SVN_SUBST_NATIVE_EOL_STR;
               else if (eol_style != svn_subst_eol_style_fixed
                        && eol_style != svn_subst_eol_style_none)
-                return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
+                return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL,
+                                        svn_stream_close(v_stream), NULL);
 
               /* Wrap file stream to detranslate into normal form,
                * "repairing" the EOL style if it is inconsistent. */

@@ -27,6 +27,7 @@
 
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
+#include "svn_version.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -187,20 +188,36 @@ close_wcroot(void *data)
 svn_error_t *
 svn_wc__db_open(svn_wc__db_t **db,
                 svn_config_t *config,
-                svn_boolean_t auto_upgrade,
+                svn_boolean_t open_without_upgrade,
                 svn_boolean_t enforce_empty_wq,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
   *db = apr_pcalloc(result_pool, sizeof(**db));
   (*db)->config = config;
-  (*db)->auto_upgrade = auto_upgrade;
+  (*db)->verify_format = !open_without_upgrade;
   (*db)->enforce_empty_wq = enforce_empty_wq;
   (*db)->dir_data = apr_hash_make(result_pool);
 
-  /* Don't need to initialize (*db)->parse_cache, due to the calloc above */
-
   (*db)->state_pool = result_pool;
+
+  /* Don't need to initialize (*db)->parse_cache, due to the calloc above */
+  if (config)
+    {
+      svn_error_t *err;
+      svn_boolean_t sqlite_exclusive = FALSE;
+
+      err = svn_config_get_bool(config, &sqlite_exclusive,
+                                SVN_CONFIG_SECTION_WORKING_COPY,
+                                SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE,
+                                FALSE);
+      if (err)
+        {
+          svn_error_clear(err);
+        }
+      else
+        (*db)->exclusive = sqlite_exclusive;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -239,7 +256,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
                              svn_sqlite__db_t *sdb,
                              apr_int64_t wc_id,
                              int format,
-                             svn_boolean_t auto_upgrade,
+                             svn_boolean_t verify_format,
                              svn_boolean_t enforce_empty_wq,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
@@ -277,7 +294,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
   /* Verify that no work items exists. If they do, then our integrity is
      suspect and, thus, we cannot use this database.  */
   if (format >= SVN_WC__HAS_WORK_QUEUE
-      && (enforce_empty_wq || (format < SVN_WC__VERSION && auto_upgrade)))
+      && (enforce_empty_wq || (format < SVN_WC__VERSION && verify_format)))
     {
       svn_error_t *err = verify_no_work(sdb);
       if (err)
@@ -285,7 +302,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
           /* Special message for attempts to upgrade a 1.7-dev wc with
              outstanding workqueue items. */
           if (err->apr_err == SVN_ERR_WC_CLEANUP_REQUIRED
-              && format < SVN_WC__VERSION && auto_upgrade)
+              && format < SVN_WC__VERSION && verify_format)
             err = svn_error_quick_wrap(err, _("Cleanup with an older 1.7 "
                                               "client before upgrading with "
                                               "this client"));
@@ -294,9 +311,17 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
     }
 
   /* Auto-upgrade the SDB if possible.  */
-  if (format < SVN_WC__VERSION && auto_upgrade)
-    SVN_ERR(svn_wc__upgrade_sdb(&format, wcroot_abspath, sdb, format,
-                                scratch_pool));
+  if (format < SVN_WC__VERSION && verify_format)
+    {
+      return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
+                               _("The working copy at '%s'\nis too old "
+                                 "(format %d) to work with client version "
+                                 "'%s' (expects format %d). You need to "
+                                 "upgrade the working copy first.\n"),
+                               svn_dirent_local_style(wcroot_abspath,
+                                                      scratch_pool),
+                               format, SVN_VERSION, SVN_WC__VERSION);
+    }
 
   *wcroot = apr_palloc(result_pool, sizeof(**wcroot));
 
@@ -403,7 +428,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
   svn_wc__db_wcroot_t *probe_wcroot;
   svn_wc__db_wcroot_t *found_wcroot = NULL;
   const char *scan_abspath;
-  svn_sqlite__db_t *sdb;
+  svn_sqlite__db_t *sdb = NULL;
   svn_boolean_t moved_upwards = FALSE;
   svn_boolean_t always_check = FALSE;
   int wc_format = 0;
@@ -508,18 +533,6 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
 
       if (adm_subdir_kind == svn_node_dir)
         {
-          svn_boolean_t sqlite_exclusive = FALSE;
-
-          err = svn_config_get_bool(db->config, &sqlite_exclusive,
-                                    SVN_CONFIG_SECTION_WORKING_COPY,
-                                    SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE,
-                                    FALSE);
-          if (err)
-            {
-              svn_error_clear(err);
-              sqlite_exclusive = FALSE;
-            }
-
           /* We always open the database in read/write mode.  If the database
              isn't writable in the filesystem, SQLite will internally open
              it as read-only, and we'll get an error if we try to do a write
@@ -530,7 +543,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
              as the filesystem allows. */
           err = svn_wc__db_util_open_db(&sdb, local_abspath, SDB_FILE,
                                         svn_sqlite__mode_readwrite,
-                                        sqlite_exclusive, NULL,
+                                        db->exclusive, NULL,
                                         db->state_pool, scratch_pool);
           if (err == NULL)
             {
@@ -652,9 +665,10 @@ try_symlink_as_dir:
       err = svn_wc__db_pdh_create_wcroot(wcroot,
                             apr_pstrdup(db->state_pool, local_abspath),
                             sdb, wc_id, FORMAT_FROM_SDB,
-                            db->auto_upgrade, db->enforce_empty_wq,
+                            db->verify_format, db->enforce_empty_wq,
                             db->state_pool, scratch_pool);
-      if (err && err->apr_err == SVN_ERR_WC_UNSUPPORTED_FORMAT &&
+      if (err && (err->apr_err == SVN_ERR_WC_UNSUPPORTED_FORMAT ||
+                  err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED) &&
           kind == svn_kind_symlink)
         {
           /* We found an unsupported WC after traversing upwards from a
@@ -668,11 +682,58 @@ try_symlink_as_dir:
     }
   else
     {
-      /* We found a wc-1 working copy directory.  */
+      /* We found something that looks like a wc-1 working copy directory.
+         However, if the format version is 12 and the .svn/entries file
+         is only 3 bytes long, then it's a breadcrumb in a wc-ng working
+         copy that's missing an .svn/wc.db, or its .svn/wc.db is corrupt. */
+      if (wc_format == SVN_WC__WC_NG_VERSION /* 12 */)
+        {
+          apr_finfo_t info;
+
+          /* Check attributes of .svn/entries */
+          const char *admin_abspath = svn_wc__adm_child(
+              local_abspath, SVN_WC__ADM_ENTRIES, scratch_pool);
+          svn_error_t *err = svn_io_stat(&info, admin_abspath, APR_FINFO_SIZE,
+                                         scratch_pool);
+
+          /* If the former does not succeed, something is seriously wrong. */
+          if (err)
+            return svn_error_createf(
+                SVN_ERR_WC_CORRUPT, err,
+                _("The working copy at '%s' is corrupt."),
+                svn_dirent_local_style(local_abspath, scratch_pool));
+          svn_error_clear(err);
+
+          if (3 == info.size)
+            {
+              /* Check existence of .svn/wc.db */
+              admin_abspath = svn_wc__adm_child(local_abspath, SDB_FILE,
+                                                scratch_pool);
+              err = svn_io_stat(&info, admin_abspath, APR_FINFO_SIZE,
+                                scratch_pool);
+              if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+                {
+                  svn_error_clear(err);
+                  return svn_error_createf(
+                      SVN_ERR_WC_CORRUPT, NULL,
+                      _("The working copy database at '%s' is missing."),
+                      svn_dirent_local_style(local_abspath, scratch_pool));
+                }
+              else
+                /* We should never have reached this point in the code
+                   if .svn/wc.db exists; therefore it's best to assume
+                   it's corrupt. */
+                return svn_error_createf(
+                    SVN_ERR_WC_CORRUPT, err,
+                    _("The working copy database at '%s' is corrupt."),
+                    svn_dirent_local_style(local_abspath, scratch_pool));
+            }
+        }
+
       SVN_ERR(svn_wc__db_pdh_create_wcroot(wcroot,
                             apr_pstrdup(db->state_pool, local_abspath),
                             NULL, UNKNOWN_WC_ID, wc_format,
-                            db->auto_upgrade, db->enforce_empty_wq,
+                            db->verify_format, db->enforce_empty_wq,
                             db->state_pool, scratch_pool));
     }
 
@@ -746,7 +807,8 @@ try_symlink_as_dir:
                                        scratch_pool));
               /* This handle was opened in this function but is not going
                  to be used further so close it. */
-              SVN_ERR(svn_sqlite__close(sdb));
+              if (sdb)
+                SVN_ERR(svn_sqlite__close(sdb));
               goto try_symlink_as_dir;
             }
         }

@@ -179,35 +179,35 @@ static const char * const TESTING_DATA = (
       the value 1 is just 'good enough' to make the nodes WORKING nodes. */
   "insert into nodes values ("
   "  1, 'I', 1, '', 2, 'some/dir', 2, 'normal',"
-  "  0, null, 'dir', '()', 'immediates', null, null, 2, " TIME_2s ", '" AUTHOR_2 "',"
+  "  null, null, 'dir', '()', 'immediates', null, null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J', 1, '', null, null, null, 'normal',"
-  "  0, null, 'dir', '()', 'immediates', null, null, null, null, null,"
+  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-a', 1, 'J', null, null, null, 'normal',"
-  "  0, null, 'file', '()', null, null, null, null, null, null,"
+  "  null, null, 'file', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-b', 1, 'J', 2, 'some/dir', 2, 'normal',"
-  "  0, null, 'dir', '()', 'infinity', null, null, 2, " TIME_2s ", '" AUTHOR_2 "',"
+  "  null, null, 'dir', '()', 'infinity', null, null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-b/J-b-a', 1, 'J/J-b', 2, 'another/dir', 2, 'normal',"
-  "  0, null, 'dir', '()', 'infinity', null, null, 2, " TIME_2s ", '" AUTHOR_2 "',"
+  "  null, null, 'dir', '()', 'infinity', null, null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-b/J-b-b', 1, 'J/J-b', null, null, null, 'normal',"
-  "  0, null, 'file', '()', null, null, null, null, null, null,"
+  "  null, null, 'file', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-c', 1, 'J', null, null, null, 'not-present',"
-  "  0, null, 'dir', '()', null, null, null, null, null, null,"
+  "  null, null, 'dir', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-c/J-c-a', 1, 'J/J-c', null, null, null, 'not-present',"
-  "  0, null, 'dir', '()', null, null, null, null, null, null,"
+  "  null, null, 'dir', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-d', 1, 'J', 2, 'moved/file', 2, 'normal',"
@@ -215,51 +215,51 @@ static const char * const TESTING_DATA = (
   "  10, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e', 1, 'J', null, null, null, 'not-present',"
-  "  0, 'other/place', 'dir', '()', null, null, null, null, null, null,"
+  "  null, 'other/place', 'dir', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e/J-e-a', 1, 'J/J-e', null, null, null, 'not-present',"
-  "  0, null, 'file', '()', null, null, null, null, null, null,"
+  "  null, null, 'file', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e/J-e-b', 1, 'J/J-e', null, null, null, 'not-present',"
-  "  0, null, 'dir', '()', null, null, null, null, null, null,"
+  "  null, null, 'dir', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e/J-e-b/Jeba', 1, 'J/J-e/J-e-b', null, null, null, 'base-deleted',"
-  "  0, null, 'file', '()', null, null, null, null, null, null,"
+  "  null, null, 'file', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-f', 1, 'J', null, null, null, 'normal',"
-  "  0, null, 'dir', '()', 'immediates', null, null, null, null, null,"
+  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-f/J-f-a', 1, 'J/J-f', null, null, null, 'base-deleted',"
-  "  0, null, 'dir', '()', 'immediates', null, null, null, null, null,"
+  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'K', 1, '', null, null, null, 'base-deleted',"
-  "  0, null, 'dir', '()', null, null, null, null, null, null,"
+  "  null, null, 'dir', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'K/K-a', 1, 'K', null, null, null, 'base-deleted',"
-  "  0, null, 'file', '()', null, null, null, null, null, null,"
+  "  null, null, 'file', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'K/K-b', 1, 'K', null, null, null, 'base-deleted',"
-  "  0, 'moved/away', 'file', '()', null, null, null, null, null, null,"
+  "  null, 'moved/away', 'file', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'L', 1, '', null, null, null, 'normal',"
-  "  0, null, 'dir', '()', 'immediates', null, null, null, null, null,"
+  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'L/L-a', 1, 'L', null, null, null, 'not-present',"
-  "  0, null, 'dir', '()', 'immediates', null, null, null, null, null,"
+  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'L/L-a/L-a-a', 1, 'L/L-a', null, null, null, 'not-present',"
-  "  0, null, 'dir', '()', 'immediates', null, null, null, null, null,"
+  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
   "  null, null, null, null, null);"
    "insert into actual_node values ("
    "  1, 'I', '', null, null, null, null, null, 'changelist', null, "
@@ -332,7 +332,7 @@ create_open(svn_wc__db_t **db,
                                   pool));
   SVN_ERR(svn_wc__db_open(db,
                           NULL /* config */,
-                          TRUE /* auto_upgrade */,
+                          FALSE /* not_upgraded_ok */,
                           TRUE /* enforce_empty_wq */,
                           pool, pool));
 
@@ -601,12 +601,14 @@ test_access_baton_like_locking(apr_pool_t *pool)
   {
     const char *url, *repos_root_url, *repos_uuid;
     const char *subdir = svn_dirent_join(local_abspath, "sub-wc", pool);
+    const char *repos_relpath;
 
     svn_boolean_t is_root;
-    SVN_ERR(svn_wc__node_get_url(&url, wc_ctx, local_abspath, pool, pool));
-    SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, &repos_uuid,
+    SVN_ERR(svn_wc__node_get_repos_info(NULL, &repos_relpath,
+                                        &repos_root_url, &repos_uuid,
                                         wc_ctx, local_abspath,
                                         pool, pool));
+    url = svn_path_url_add_component2(repos_root_url, repos_relpath, pool);
 
     SVN_ERR(svn_io_make_dir_recursively(subdir, pool));
     SVN_ERR(svn_wc_ensure_adm3(subdir, repos_uuid,
@@ -614,13 +616,13 @@ test_access_baton_like_locking(apr_pool_t *pool)
                                repos_root_url, 0, svn_depth_infinity,
                                pool));
 
-    SVN_ERR(svn_wc__check_wc_root(&is_root, NULL, NULL, wc_ctx->db, subdir,
-                                  pool));
+    SVN_ERR(svn_wc__db_is_switched(&is_root, NULL, NULL, wc_ctx->db, subdir,
+                                   pool));
 
     SVN_TEST_ASSERT(is_root);
 
-    SVN_ERR(svn_wc__check_wc_root(&is_root, NULL, NULL, wc_ctx2->db, subdir,
-                                  pool));
+    SVN_ERR(svn_wc__db_is_switched(&is_root, NULL, NULL, wc_ctx2->db, subdir,
+                                   pool));
 
     /* This test was added to show a regression where the next check failed,
        but the check above this succeeded */

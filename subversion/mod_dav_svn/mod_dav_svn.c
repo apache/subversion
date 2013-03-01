@@ -93,7 +93,7 @@ typedef struct dir_conf_t {
   const char *xslt_uri;              /* XSL transform URI */
   const char *fs_parent_path;        /* path to parent of SVN FS'es  */
   enum conf_flag autoversioning;     /* whether autoversioning is active */
-  enum conf_flag bulk_updates;       /* whether bulk updates are allowed */
+  dav_svn__bulk_upd_conf bulk_updates; /* whether bulk updates are allowed */
   enum conf_flag v2_protocol;        /* whether HTTP v2 is advertised */
   enum path_authz_conf path_authz_method; /* how GET subrequests are handled */
   enum conf_flag list_parentpath;    /* whether to allow GET of parentpath */
@@ -213,7 +213,7 @@ create_dir_config(apr_pool_t *p, char *dir)
      <Location /blah> directive. So we treat it as a urlpath. */
   if (dir)
     conf->root_dir = svn_urlpath__canonicalize(dir, p);
-  conf->bulk_updates = CONF_FLAG_ON;
+  conf->bulk_updates = CONF_BULKUPD_ON;
   conf->v2_protocol = CONF_FLAG_ON;
   conf->hooks_env = NULL;
 
@@ -357,14 +357,26 @@ SVNAutoversioning_cmd(cmd_parms *cmd, void *config, int arg)
 
 
 static const char *
-SVNAllowBulkUpdates_cmd(cmd_parms *cmd, void *config, int arg)
+SVNAllowBulkUpdates_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
   dir_conf_t *conf = config;
 
-  if (arg)
-    conf->bulk_updates = CONF_FLAG_ON;
+  if (apr_strnatcasecmp("on", arg1) == 0)
+    {
+      conf->bulk_updates = CONF_BULKUPD_ON;
+    }
+  else if (apr_strnatcasecmp("off", arg1) == 0)
+    {
+      conf->bulk_updates = CONF_BULKUPD_OFF;
+    }
+  else if (apr_strnatcasecmp("prefer", arg1) == 0)
+    {
+      conf->bulk_updates = CONF_BULKUPD_PREFER;
+    }
   else
-    conf->bulk_updates = CONF_FLAG_OFF;
+    {
+      return "Unrecognized value for SVNAllowBulkUpdates directive";
+    }
 
   return NULL;
 }
@@ -662,7 +674,7 @@ dav_svn_get_repos_path(request_rec *r,
 
   /* Construct the full path from the parent path base directory
      and the repository name. */
-  *repos_path = svn_urlpath__join(fs_parent_path, repos_name, r->pool);
+  *repos_path = svn_dirent_join(fs_parent_path, repos_name, r->pool);
   return NULL;
 }
 
@@ -793,13 +805,13 @@ dav_svn__get_autoversioning_flag(request_rec *r)
 }
 
 
-svn_boolean_t
+dav_svn__bulk_upd_conf
 dav_svn__get_bulk_updates_flag(request_rec *r)
 {
   dir_conf_t *conf;
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-  return conf->bulk_updates == CONF_FLAG_ON;
+  return conf->bulk_updates;
 }
 
 
@@ -1144,11 +1156,12 @@ static const command_rec cmds[] =
                 "activities database(s) should be stored"),
 
   /* per directory/location */
-  AP_INIT_FLAG("SVNAllowBulkUpdates", SVNAllowBulkUpdates_cmd, NULL,
-               ACCESS_CONF|RSRC_CONF,
-               "enables support for bulk update-style requests (as opposed to "
-               "only skeletal reports that require additional per-file "
-               "downloads."),
+  AP_INIT_TAKE1("SVNAllowBulkUpdates", SVNAllowBulkUpdates_cmd, NULL,
+                ACCESS_CONF|RSRC_CONF,
+                "enables support for bulk update-style requests (On, default), "
+                "as opposed to only skeletal reports that require additional "
+                "per-file downloads (Off). Use Prefer to tell the svn client "
+                "to always use bulk update requests, if supported."),
 
   /* per directory/location */
   AP_INIT_FLAG("SVNAdvertiseV2Protocol", SVNAdvertiseV2Protocol_cmd, NULL,

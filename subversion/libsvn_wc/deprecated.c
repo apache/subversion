@@ -607,6 +607,34 @@ svn_wc_create_tmp_file(apr_file_t **fp,
                                  pool);
 }
 
+svn_error_t *
+svn_wc_create_tmp_file2(apr_file_t **fp,
+                        const char **new_name,
+                        const char *path,
+                        svn_io_file_del_t delete_when,
+                        apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+  const char *local_abspath;
+  const char *temp_dir;
+  svn_error_t *err;
+
+  SVN_ERR_ASSERT(fp || new_name);
+
+  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  err = svn_wc__get_tmpdir(&temp_dir, wc_ctx, local_abspath, pool, pool);
+  err = svn_error_compose_create(err, svn_wc_context_destroy(wc_ctx));
+  if (err)
+    return svn_error_trace(err);
+
+  SVN_ERR(svn_io_open_unique_file3(fp, new_name, temp_dir,
+                                   delete_when, pool, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 /*** From adm_ops.c ***/
 svn_error_t *
@@ -903,6 +931,18 @@ svn_wc_delete(const char *path,
 }
 
 svn_error_t *
+svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
+                     const char *local_abspath,
+                     svn_wc_notify_func2_t notify_func,
+                     void *notify_baton,
+                     apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_wc_add_from_disk2(wc_ctx, local_abspath, NULL,
+                                 notify_func, notify_baton, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_wc_add3(const char *path,
             svn_wc_adm_access_t *parent_access,
             svn_depth_t depth,
@@ -934,6 +974,7 @@ svn_wc_add3(const char *path,
 
       SVN_ERR(svn_wc__db_read_kind(&kind, wc_db, local_abspath,
                                    FALSE /* allow_missing */,
+                                   TRUE /* show_deleted */,
                                    FALSE /* show_hidden */, pool));
       if (kind == svn_kind_dir)
         {
@@ -2471,27 +2512,36 @@ svn_wc_merge_props2(svn_wc_notify_state_t *state,
 {
   const char *local_abspath;
   svn_error_t *err;
+  svn_wc_context_t *wc_ctx;
   struct conflict_func_1to2_baton conflict_wrapper;
+
+  if (base_merge && !dry_run)
+    return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                            U_("base_merge=TRUE is no longer supported; "
+                               "see notes/api-errata/1.7/wc006.txt"));
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
   conflict_wrapper.inner_func = conflict_func;
   conflict_wrapper.inner_baton = conflict_baton;
 
-  err = svn_wc__perform_props_merge(state,
-                                    svn_wc__adm_get_db(adm_access),
-                                    local_abspath,
-                                    NULL /* left_version */,
-                                    NULL /* right_version */,
-                                    baseprops,
-                                    propchanges,
-                                    base_merge,
-                                    dry_run,
-                                    conflict_func ? conflict_func_1to2_wrapper
-                                                  : NULL,
-                                    &conflict_wrapper,
-                                    NULL, NULL,
-                                    scratch_pool);
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
+                                         svn_wc__adm_get_db(adm_access),
+                                         scratch_pool));
+
+  err = svn_wc_merge_props3(state,
+                            wc_ctx,
+                            local_abspath,
+                            NULL /* left_version */,
+                            NULL /* right_version */,
+                            baseprops,
+                            propchanges,
+                            dry_run,
+                            conflict_func ? conflict_func_1to2_wrapper
+                                          : NULL,
+                            &conflict_wrapper,
+                            NULL, NULL,
+                            scratch_pool);
 
   if (err)
     switch(err->apr_err)
@@ -2501,7 +2551,9 @@ svn_wc_merge_props2(svn_wc_notify_state_t *state,
           err->apr_err = SVN_ERR_UNVERSIONED_RESOURCE;
           break;
       }
-  return svn_error_trace(err);
+  return svn_error_trace(
+            svn_error_compose_create(err,
+                                     svn_wc_context_destroy(wc_ctx)));
 }
 
 svn_error_t *
@@ -3194,6 +3246,38 @@ svn_wc_get_actual_target(const char *path,
   SVN_ERR(svn_wc_get_actual_target2(anchor, target, wc_ctx, path, pool, pool));
 
   return svn_error_trace(svn_wc_context_destroy(wc_ctx));
+}
+
+/* This function has no internal variant as its behavior on switched
+   non-directories is not what you would expect. But this happens to
+   be the legacy behavior of this function. */
+svn_error_t *
+svn_wc_is_wc_root2(svn_boolean_t *wc_root,
+                   svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   apr_pool_t *scratch_pool)
+{
+  svn_boolean_t is_root;
+  svn_boolean_t is_switched;
+  svn_kind_t kind;
+  svn_error_t *err;
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  err = svn_wc__db_is_switched(&is_root, &is_switched, &kind,
+                               wc_ctx->db, local_abspath, scratch_pool);
+
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND &&
+          err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+        return svn_error_trace(err);
+
+      return svn_error_create(SVN_ERR_ENTRY_NOT_FOUND, err, err->message);
+    }
+
+  *wc_root = is_root || (kind == svn_kind_dir && is_switched);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -4481,4 +4565,28 @@ svn_wc_move(svn_wc_context_t *wc_ctx,
                                        cancel_func, cancel_baton,
                                        notify_func, notify_baton,
                                        scratch_pool));
+}
+
+svn_error_t *
+svn_wc_read_kind(svn_node_kind_t *kind,
+                 svn_wc_context_t *wc_ctx,
+                 const char *abspath,
+                 svn_boolean_t show_hidden,
+                 apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(
+          svn_wc_read_kind2(kind,
+                            wc_ctx, abspath,
+                            TRUE /* show_deleted */,
+                            show_hidden,
+                            scratch_pool));
+
+  /*if (db_kind == svn_kind_dir)
+    *kind = svn_node_dir;
+  else if (db_kind == svn_kind_file || db_kind == svn_kind_symlink)
+    *kind = svn_node_file;
+  else
+    *kind = svn_node_none;*/
+
+  return SVN_NO_ERROR;
 }

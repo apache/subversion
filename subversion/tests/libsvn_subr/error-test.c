@@ -125,8 +125,9 @@ test_error_purge_tracing(apr_pool_t *pool)
     svn_error_malfunction_handler_t orig_handler;
 
     /* For this test, use a random error status. */
-    err = svn_error_create(SVN_ERR_BAD_UUID, NULL, SVN_ERR__TRACED);
+    err = svn_error_create(SVN_ERR_BAD_UUID, NULL, "");
     err = svn_error_trace(err);
+    err->child->message = err->message;
 
     /* Register a malfunction handler that doesn't call abort() to
        check that a new error chain with an assertion error is

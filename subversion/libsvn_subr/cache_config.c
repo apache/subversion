@@ -124,14 +124,14 @@ svn_cache__get_global_membuffer_cache(void)
           FALSE,
           pool);
 
-      /* Some error occured. Most likely it's an OOM error but we don't
+      /* Some error occurred. Most likely it's an OOM error but we don't
        * really care. Simply release all cache memory and disable caching
        */
       if (err)
         {
           /* Memory and error cleanup */
           svn_error_clear(err);
-          apr_pool_destroy(pool);
+          svn_pool_destroy(pool);
 
           /* Prevent future attempts to create the cache. However, an
            * existing cache instance (see next comment) remains valid.
@@ -155,7 +155,7 @@ svn_cache__get_global_membuffer_cache(void)
        */
       old_cache = apr_atomic_casptr((volatile void **)&cache, new_cache, NULL);
       if (old_cache != NULL)
-        apr_pool_destroy(pool);
+        svn_pool_destroy(pool);
     }
 
   return cache;

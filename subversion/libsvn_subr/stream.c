@@ -173,7 +173,7 @@ svn_stream_reset(svn_stream_t *stream)
 svn_boolean_t
 svn_stream_supports_mark(svn_stream_t *stream)
 {
-  return stream->mark_fn == NULL ? FALSE : TRUE;
+  return stream->mark_fn != NULL;
 }
 
 svn_error_t *
@@ -847,7 +847,7 @@ svn_stream_open_readonly(svn_stream_t **stream,
 {
   apr_file_t *file;
 
-  SVN_ERR(svn_io_file_open(&file, path, APR_READ | APR_BUFFERED | APR_BINARY,
+  SVN_ERR(svn_io_file_open(&file, path, APR_READ | APR_BUFFERED,
                            APR_OS_DEFAULT, result_pool));
   *stream = svn_stream_from_aprfile2(file, FALSE, result_pool);
 
@@ -866,7 +866,6 @@ svn_stream_open_writable(svn_stream_t **stream,
   SVN_ERR(svn_io_file_open(&file, path,
                            APR_WRITE
                              | APR_BUFFERED
-                             | APR_BINARY
                              | APR_CREATE
                              | APR_EXCL,
                            APR_OS_DEFAULT, result_pool));

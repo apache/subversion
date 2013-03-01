@@ -30,7 +30,7 @@ import time
 
 # Our testing module
 import svntest
-from svntest import main, wc, verify, actions
+from svntest import main, wc, verify, actions, deeptrees
 
 # (abbreviation)
 Item = wc.StateItem
@@ -625,7 +625,6 @@ def mergeinfo_recording_in_skipped_merge(sbox):
     'B'        : Item(),
     'B/lambda' : Item(contents="This is the file 'lambda'.\n"),
     'B/F'      : Item(),
-    'B/E'      : Item(),
     'D/gamma'  : Item("This is the file 'gamma'.\n"),
     'D/G'      : Item(),
     'D/G/pi'   : Item("This is the file 'pi'.\n"),
@@ -636,9 +635,6 @@ def mergeinfo_recording_in_skipped_merge(sbox):
     'D/H/omega': Item("This is the file 'omega'.\n"),
     'D/H/psi'  : Item("This is the file 'psi'.\n"),
     })
-  if svntest.main.wc_is_singledb(sbox.wc_dir):
-    # Delete removes directories in single-db
-    expected_disk.remove('B/E')
   expected_skip = wc.State(A_COPY_path, {})
   svntest.actions.run_and_verify_merge(A_COPY_path, None, None,
                                        A_url, None,
@@ -769,7 +765,7 @@ def tree_conflicts_and_obstructions(sbox):
     'beta'        : Item(status='  ', wc_rev=3),
     })
   expected_skip = wc.State(branch_path, {
-    'alpha-moved' : Item(),
+    'alpha-moved' : Item(verb='Skipped'),
     })
 
   svntest.actions.run_and_verify_merge(branch_path,
@@ -793,21 +789,21 @@ def tree_conflicts_and_obstructions(sbox):
 # parent directory.
 
 # convenience definitions
-leaf_edit = svntest.actions.deep_trees_leaf_edit
-tree_del = svntest.actions.deep_trees_tree_del
-leaf_del = svntest.actions.deep_trees_leaf_del
+leaf_edit = svntest.deeptrees.deep_trees_leaf_edit
+tree_del = svntest.deeptrees.deep_trees_tree_del
+leaf_del = svntest.deeptrees.deep_trees_leaf_del
 
-disk_after_leaf_edit = svntest.actions.deep_trees_after_leaf_edit
-disk_after_leaf_del = svntest.actions.deep_trees_after_leaf_del
-disk_after_tree_del = svntest.actions.deep_trees_after_tree_del
-disk_after_leaf_del_no_ci = svntest.actions.deep_trees_after_leaf_del_no_ci
-disk_after_tree_del_no_ci = svntest.actions.deep_trees_after_tree_del_no_ci
+disk_after_leaf_edit = svntest.deeptrees.deep_trees_after_leaf_edit
+disk_after_leaf_del = svntest.deeptrees.deep_trees_after_leaf_del
+disk_after_tree_del = svntest.deeptrees.deep_trees_after_tree_del
+disk_after_leaf_del_no_ci = svntest.deeptrees.deep_trees_after_leaf_del_no_ci
+disk_after_tree_del_no_ci = svntest.deeptrees.deep_trees_after_tree_del_no_ci
 
-deep_trees_conflict_output = svntest.actions.deep_trees_conflict_output
+deep_trees_conflict_output = svntest.deeptrees.deep_trees_conflict_output
 
 j = os.path.join
 
-DeepTreesTestCase = svntest.actions.DeepTreesTestCase
+DeepTreesTestCase = svntest.deeptrees.DeepTreesTestCase
 
 alpha_beta_gamma = svntest.wc.State('', {
   'F/alpha'           : Item(),
@@ -844,7 +840,7 @@ def tree_conflicts_on_merge_local_ci_4_1(sbox):
 
   expected_skip = svntest.wc.State('', { })
 
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_leaf_edit",
                         tree_del,
                         leaf_edit,
@@ -882,7 +878,7 @@ def tree_conflicts_on_merge_local_ci_4_2(sbox):
   expected_skip = svntest.wc.State('', {
     })
 
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_leaf_del",
                         tree_del,
                         leaf_del,
@@ -892,7 +888,6 @@ def tree_conflicts_on_merge_local_ci_4_2(sbox):
                         expected_skip) ], True)
 
 #----------------------------------------------------------------------
-@XFail()
 @Issue(2282)
 def tree_conflicts_on_merge_local_ci_5_1(sbox):
   "tree conflicts 5.1: leaf edit, tree del"
@@ -910,23 +905,23 @@ def tree_conflicts_on_merge_local_ci_5_1(sbox):
     ''                  : Item(status=' M', wc_rev='3'),
     'D'                 : Item(status='  ', wc_rev='3'),
     'D/D1'              : Item(status='  ', treeconflict='C', wc_rev='4'),
-    'D/D1/delta'        : Item(status='D ', wc_rev='4'),
+    'D/D1/delta'        : Item(status='  ', wc_rev='4'),
     'DD'                : Item(status='  ', wc_rev='3'),
-    'DD/D1'             : Item(status='  ', treeconflict='C', wc_rev='4'),
-    'DD/D1/D2'          : Item(status='D ', wc_rev='3'),
-    'DD/D1/D2/epsilon'  : Item(status='D ', wc_rev='4'),
+    'DD/D1'             : Item(status='  ', treeconflict='C', wc_rev='3'),
+    'DD/D1/D2'          : Item(status='  ', wc_rev='4'),
+    'DD/D1/D2/epsilon'  : Item(status='  ', wc_rev='4'),
     'DDD'               : Item(status='  ', wc_rev='3'),
-    'DDD/D1'            : Item(status='  ', treeconflict='C', wc_rev='4'),
-    'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
-    'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='3'),
-    'DDD/D1/D2/D3/zeta' : Item(status='D ', wc_rev='4'),
+    'DDD/D1'            : Item(status='  ', treeconflict='C', wc_rev='3'),
+    'DDD/D1/D2'         : Item(status='  ', wc_rev='3'),
+    'DDD/D1/D2/D3'      : Item(status='  ', wc_rev='4'),
+    'DDD/D1/D2/D3/zeta' : Item(status='  ', wc_rev='4'),
     'DDF'               : Item(status='  ', wc_rev='3'),
-    'DDF/D1'            : Item(status='  ', treeconflict='C', wc_rev='4'),
-    'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
-    'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='4'),
+    'DDF/D1'            : Item(status='  ', treeconflict='C', wc_rev='3'),
+    'DDF/D1/D2'         : Item(status='  ', wc_rev='3'),
+    'DDF/D1/D2/gamma'   : Item(status='  ', wc_rev='4'),
     'DF'                : Item(status='  ', wc_rev='3'),
-    'DF/D1'             : Item(status='  ', treeconflict='C', wc_rev='4'),
-    'DF/D1/beta'        : Item(status='D ', wc_rev='4'),
+    'DF/D1'             : Item(status='  ', treeconflict='C', wc_rev='3'),
+    'DF/D1/beta'        : Item(status='  ', wc_rev='4'),
     'F'                 : Item(status='  ', wc_rev='3'),
     'F/alpha'           : Item(status='  ', treeconflict='C', wc_rev='4'),
 
@@ -935,7 +930,7 @@ def tree_conflicts_on_merge_local_ci_5_1(sbox):
   expected_skip = svntest.wc.State('', {
     })
 
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
                         leaf_edit,
                         tree_del,
@@ -945,7 +940,6 @@ def tree_conflicts_on_merge_local_ci_5_1(sbox):
                         expected_skip) ], True)
 
 #----------------------------------------------------------------------
-@XFail()
 @Issue(2282)
 def tree_conflicts_on_merge_local_ci_5_2(sbox):
   "tree conflicts 5.2: leaf del, tree del"
@@ -961,15 +955,15 @@ def tree_conflicts_on_merge_local_ci_5_2(sbox):
     'D'                 : Item(status='  ', wc_rev='3'),
     'F'                 : Item(status='  ', wc_rev='3'),
     'DD'                : Item(status='  ', wc_rev='3'),
-    'DD/D1'             : Item(status='! ', treeconflict='C'),
+    'DD/D1'             : Item(status='  ', wc_rev='3', treeconflict='C'),
     'DF'                : Item(status='  ', wc_rev='3'),
-    'DF/D1'             : Item(status='! ', treeconflict='C'),
+    'DF/D1'             : Item(status='  ', wc_rev='3', treeconflict='C'),
     'DDD'               : Item(status='  ', wc_rev='3'),
-    'DDD/D1'            : Item(status='! ', treeconflict='C'),
-    'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDD/D1'            : Item(status='  ', wc_rev='3', treeconflict='C'),
+    'DDD/D1/D2'         : Item(status='  ', wc_rev='3'),
     'DDF'               : Item(status='  ', wc_rev='3'),
-    'DDF/D1'            : Item(status='! ', treeconflict='C'),
-    'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDF/D1'            : Item(status='  ', wc_rev='3', treeconflict='C'),
+    'DDF/D1/D2'         : Item(status='  ', wc_rev='3'),
     'D/D1'              : Item(status='! ', treeconflict='C'),
     'F/alpha'           : Item(status='! ', treeconflict='C'),
     })
@@ -977,7 +971,7 @@ def tree_conflicts_on_merge_local_ci_5_2(sbox):
   expected_skip = svntest.wc.State('', {
     })
 
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase("local_leaf_del_incoming_tree_del",
                         leaf_del,
                         tree_del,
@@ -1016,7 +1010,7 @@ def tree_conflicts_on_merge_local_ci_6(sbox):
   expected_skip = svntest.wc.State('', {
     })
 
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_tree_del",
                         tree_del,
                         tree_del,
@@ -1063,7 +1057,7 @@ def tree_conflicts_on_merge_no_local_ci_4_1(sbox):
   expected_skip = svntest.wc.State('', {
     })
 
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase(
                "local_tree_del_incoming_leaf_edit",
                tree_del,
@@ -1111,7 +1105,7 @@ def tree_conflicts_on_merge_no_local_ci_4_2(sbox):
   expected_skip = svntest.wc.State('', {
     })
 
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase(
                "local_tree_del_incoming_leaf_del",
                tree_del,
@@ -1162,7 +1156,7 @@ def tree_conflicts_on_merge_no_local_ci_5_1(sbox):
   expected_skip = svntest.wc.State('', {
     })
 
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase(
                "local_leaf_edit_incoming_tree_del",
                leaf_edit,
@@ -1174,7 +1168,6 @@ def tree_conflicts_on_merge_no_local_ci_5_1(sbox):
              ) ], False)
 
 #----------------------------------------------------------------------
-@XFail()
 @Issue(2282)
 def tree_conflicts_on_merge_no_local_ci_5_2(sbox):
   "tree conflicts 5.2: leaf del (no ci), tree del"
@@ -1192,25 +1185,25 @@ def tree_conflicts_on_merge_no_local_ci_5_2(sbox):
     'F'                 : Item(status='  ', wc_rev='3'),
     'F/alpha'           : Item(status='D ', wc_rev='3', treeconflict='C'),
     'DD'                : Item(status='  ', wc_rev='3'),
-    'DD/D1'             : Item(status='D ', wc_rev='3', treeconflict='C'),
+    'DD/D1'             : Item(status='  ', wc_rev='3', treeconflict='C'),
     'DD/D1/D2'          : Item(status='D ', wc_rev='3'),
     'DF'                : Item(status='  ', wc_rev='3'),
-    'DF/D1'             : Item(status='D ', wc_rev='3', treeconflict='C'),
+    'DF/D1'             : Item(status='  ', wc_rev='3', treeconflict='C'),
     'DF/D1/beta'        : Item(status='D ', wc_rev='3'),
     'DDD'               : Item(status='  ', wc_rev='3'),
-    'DDD/D1'            : Item(status='D ', wc_rev='3', treeconflict='C'),
-    'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDD/D1'            : Item(status='  ', wc_rev='3', treeconflict='C'),
+    'DDD/D1/D2'         : Item(status='  ', wc_rev='3'),
     'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='3'),
     'DDF'               : Item(status='  ', wc_rev='3'),
-    'DDF/D1'            : Item(status='D ', wc_rev='3', treeconflict='C'),
-    'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDF/D1'            : Item(status='  ', wc_rev='3', treeconflict='C'),
+    'DDF/D1/D2'         : Item(status='  ', wc_rev='3'),
     'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='3'),
     })
 
   expected_skip = svntest.wc.State('', {
     })
 
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase(
                "local_leaf_del_incoming_tree_del",
                leaf_del,
@@ -1259,7 +1252,7 @@ def tree_conflicts_on_merge_no_local_ci_6(sbox):
   expected_skip = svntest.wc.State('', {
     })
 
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase(
                "local_tree_del_incoming_tree_del",
                tree_del,
@@ -1288,6 +1281,14 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
 
   sbox.build()
   expected_output = wc.State('', {
+  # Below the skips
+  'DD/D1/D2'          : Item(status='  ', treeconflict='U'),
+  'DD/D1/D2/epsilon'  : Item(status='  ', treeconflict='A'),
+  'DDD/D1/D2/D3'      : Item(status='  ', treeconflict='U'),
+  'DDD/D1/D2/D3/zeta' : Item(status='  ', treeconflict='A'),
+  'DDF/D1/D2/gamma'   : Item(status='  ', treeconflict='U'),
+  'D/D1/delta'        : Item(status='  ', treeconflict='A'),
+  'DF/D1/beta'        : Item(status='  ', treeconflict='U'),
   })
 
   expected_disk = disk_after_tree_del
@@ -1299,52 +1300,40 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
     'F'                 : Item(status='  ', wc_rev=3),
     'F/alpha'           : Item(status='! ', wc_rev=3),
     'D'                 : Item(status='  ', wc_rev=3),
-    'D/D1'              : Item(status='! ', wc_rev='?'),
+    'D/D1'              : Item(status='! ', wc_rev='3', entry_rev='?'),
     'DF'                : Item(status='  ', wc_rev=3),
-    'DF/D1'             : Item(status='! ', wc_rev='?'),
-    'DF/D1/beta'        : Item(status='  '),
+    'DF/D1'             : Item(status='! ', wc_rev=3, entry_rev='?'),
+    'DF/D1/beta'        : Item(status='! ', wc_rev=3),
     'DD'                : Item(status='  ', wc_rev=3),
-    'DD/D1'             : Item(status='! ', wc_rev='?'),
-    'DD/D1/D2'          : Item(status='  '),
+    'DD/D1'             : Item(status='! ', wc_rev=3, entry_rev='?'),
+    'DD/D1/D2'          : Item(status='! ', wc_rev=3),
     'DDF'               : Item(status='  ', wc_rev=3),
-    'DDF/D1'            : Item(status='! ', wc_rev='?'),
-    'DDF/D1/D2'         : Item(status='  '),
-    'DDF/D1/D2/gamma'   : Item(status='  '),
+    'DDF/D1'            : Item(status='! ', wc_rev=3, entry_rev='?'),
+    'DDF/D1/D2'         : Item(status='! ', wc_rev=3),
+    'DDF/D1/D2/gamma'   : Item(status='! ', wc_rev=3),
     'DDD'               : Item(status='  ', wc_rev=3),
-    'DDD/D1'            : Item(status='! ', wc_rev='?'),
-    'DDD/D1/D2'         : Item(status='  '),
-    'DDD/D1/D2/D3'      : Item(status='  '),
+    'DDD/D1'            : Item(status='! ', wc_rev=3, entry_rev='?'),
+    'DDD/D1/D2'         : Item(status='! ', wc_rev=3),
+    'DDD/D1/D2/D3'      : Item(status='! ', wc_rev=3),
     })
-
-  if svntest.main.wc_is_singledb(sbox.wc_dir):
-    expected_status.tweak('D/D1',            wc_rev=3, entry_rev='?')
-    expected_status.tweak('DF/D1',           wc_rev=3, entry_rev='?')
-    expected_status.tweak('DF/D1/beta',      wc_rev=3, status='! ')
-    expected_status.tweak('DD/D1',           wc_rev=3, entry_rev='?')
-    expected_status.tweak('DD/D1/D2',        wc_rev=3, status='! ')
-    expected_status.tweak('DDF/D1',          wc_rev=3, entry_rev='?')
-    expected_status.tweak('DDF/D1/D2',       wc_rev=3, status='! ')
-    expected_status.tweak('DDF/D1/D2/gamma', wc_rev=3, status='! ')
-    expected_status.tweak('DDD/D1',          wc_rev=3, entry_rev='?')
-    expected_status.tweak('DDD/D1/D2',       wc_rev=3, status='! ')
-    expected_status.tweak('DDD/D1/D2/D3',    wc_rev=3, status='! ')
 
   expected_skip = svntest.wc.State('', {
-    'F/alpha'           : Item(),
-    # BH: After fixing several issues in the obstruction handling
-    #     I get the following Skip notifications. Please review!
-    'D/D1'              : Item(),
-    'DD/D1'             : Item(),
-    'DF/D1'             : Item(),
-    'DDD/D1'            : Item(),
-    'DDF/D1'            : Item(),
-    })
+    'F/alpha'           : Item(verb='Skipped missing target'),
+    # Obstruction handling improvements in 1.7 and 1.8 added
+    'DDD/D1'            : Item(verb='Skipped missing target'),
+    'DF/D1'             : Item(verb='Skipped missing target'),
+    'DDF/D1'            : Item(verb='Skipped missing target'),
+    'D/D1'              : Item(verb='Skipped missing target'),
+    'DD/D1'             : Item(verb='Skipped missing target'),
+    'F/alpha'           : Item(verb='Skipped missing target'),
+  })
 
-
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+  # Currently this test fails because some parts of the merge
+  # start succeeding. 
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase(
                "local_tree_missing_incoming_leaf_edit",
-               svntest.actions.deep_trees_rmtree,
+               svntest.deeptrees.deep_trees_rmtree,
                leaf_edit,
                expected_output,
                expected_disk,
@@ -1370,6 +1359,11 @@ def tree_conflicts_merge_del_onto_missing(sbox):
 
   sbox.build()
   expected_output = wc.State('', {
+  # Below the skips
+    'DF/D1/beta'        : Item(status='  ', treeconflict='D'),
+    'DDD/D1/D2/D3'      : Item(status='  ', treeconflict='D'),
+    'DD/D1/D2'          : Item(status='  ', treeconflict='D'),
+    'DDF/D1/D2/gamma'   : Item(status='  ', treeconflict='D'),
   })
 
   expected_disk = disk_after_tree_del
@@ -1381,52 +1375,37 @@ def tree_conflicts_merge_del_onto_missing(sbox):
     'F'                 : Item(status='  ', wc_rev=3),
     'F/alpha'           : Item(status='! ', wc_rev=3),
     'D'                 : Item(status='  ', wc_rev=3),
-    'D/D1'              : Item(status='! ', wc_rev='?'),
+    'D/D1'              : Item(status='! ', wc_rev=3),
     'DF'                : Item(status='  ', wc_rev=3),
-    'DF/D1'             : Item(status='! ', wc_rev='?'),
-    'DF/D1/beta'        : Item(status='  '),
+    'DF/D1'             : Item(status='! ', wc_rev=3),
+    'DF/D1/beta'        : Item(status='! ', wc_rev=3),
     'DD'                : Item(status='  ', wc_rev=3),
-    'DD/D1'             : Item(status='! ', wc_rev='?'),
-    'DD/D1/D2'          : Item(status='  '),
+    'DD/D1'             : Item(status='! ', wc_rev=3),
+    'DD/D1/D2'          : Item(status='! ', wc_rev=3),
     'DDF'               : Item(status='  ', wc_rev=3),
-    'DDF/D1'            : Item(status='! ', wc_rev='?'),
-    'DDF/D1/D2'         : Item(status='  '),
-    'DDF/D1/D2/gamma'   : Item(status='  '),
+    'DDF/D1'            : Item(status='! ', wc_rev=3),
+    'DDF/D1/D2'         : Item(status='! ', wc_rev=3),
+    'DDF/D1/D2/gamma'   : Item(status='! ', wc_rev=3),
     'DDD'               : Item(status='  ', wc_rev=3),
-    'DDD/D1'            : Item(status='! ', wc_rev='?'),
-    'DDD/D1/D2'         : Item(status='  '),
-    'DDD/D1/D2/D3'      : Item(status='  '),
+    'DDD/D1'            : Item(status='! ', wc_rev=3),
+    'DDD/D1/D2'         : Item(status='! ', wc_rev=3),
+    'DDD/D1/D2/D3'      : Item(status='! ', wc_rev=3),
     })
-
-  if svntest.main.wc_is_singledb(sbox.wc_dir):
-    expected_status.tweak('D/D1',            wc_rev=3)
-    expected_status.tweak('DF/D1',           wc_rev=3)
-    expected_status.tweak('DF/D1/beta',      wc_rev=3, status='! ')
-    expected_status.tweak('DD/D1',           wc_rev=3)
-    expected_status.tweak('DD/D1/D2',        wc_rev=3, status='! ')
-    expected_status.tweak('DDF/D1',          wc_rev=3)
-    expected_status.tweak('DDF/D1/D2',       wc_rev=3, status='! ')
-    expected_status.tweak('DDF/D1/D2/gamma', wc_rev=3, status='! ')
-    expected_status.tweak('DDD/D1',          wc_rev=3)
-    expected_status.tweak('DDD/D1/D2',       wc_rev=3, status='! ')
-    expected_status.tweak('DDD/D1/D2/D3',    wc_rev=3, status='! ')
 
   expected_skip = svntest.wc.State('', {
-    'F/alpha'           : Item(),
-    'D/D1'              : Item(),
-    # BH: After fixing several issues in the obstruction handling
-    #     I get the following Skip notifications. Please review!
-    'D/D1'              : Item(),
-    'DD/D1'             : Item(),
-    'DF/D1'             : Item(),
-    'DDD/D1'            : Item(),
-    'DDF/D1'            : Item(),
-    })
+    'F/alpha'           : Item(verb='Skipped missing target'),
+    'D/D1'              : Item(verb='Skipped missing target'),
+    # Obstruction handling improvements in 1.7 and 1.8 added
+    'DDD/D1'            : Item(verb='Skipped missing target'),
+    'DD/D1'             : Item(verb='Skipped missing target'),
+    'DDF/D1'            : Item(verb='Skipped missing target'),
+    'DF/D1'             : Item(verb='Skipped missing target'),
+  })
 
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+  svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase(
                "local_tree_missing_incoming_leaf_del",
-               svntest.actions.deep_trees_rmtree,
+               svntest.deeptrees.deep_trees_rmtree,
                leaf_del,
                expected_output,
                expected_disk,
@@ -1742,7 +1721,6 @@ def merge_replace_causes_tree_conflict(sbox):
   actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
-@XFail()
 @Issue(3806)
 def merge_replace_causes_tree_conflict2(sbox):
   "replace vs. delete tree-conflicts"
@@ -1803,13 +1781,18 @@ def merge_replace_causes_tree_conflict2(sbox):
                         'A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi',
                         status='D ')
 
+  # H is now a file. This hides the status of the descendants.
+  expected_status.remove('A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega')
+
   # Merge them one by one to see all the errors.
 
   ### A file-with-file replacement onto a deleted file.
   # svn merge $URL/A/mu $URL/branch/mu A/mu
   expected_stdout = expected_merge_output(None, [
     '   C ' + A_mu + '\n',  # merge
+    'A    ' + A_mu + '\n',  # merge
     " U   " + A + "\n",     # mergeinfo
+    " U   " + A_mu + "\n",  # mergeinfo -> 'RM' status
   ], target=A, two_url=True, tree_conflicts=1)
 
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
@@ -1821,13 +1804,14 @@ def merge_replace_causes_tree_conflict2(sbox):
   #
   #  D     C merge_tree_conflict_tests-23\A\mu
   #      >   local delete, incoming replace upon merge
-  expected_status.tweak('A/mu', status='R ', wc_rev='-', copied='+',
+  expected_status.tweak('A/mu', status='RM', wc_rev='-', copied='+',
                         treeconflict='C')
 
   ### A dir-with-dir replacement onto a deleted directory.
   # svn merge $URL/A/B $URL/branch/B A/B
   expected_stdout = expected_merge_output(None, [
     '   C ' + A_B_E + '\n',   # merge
+    'A    ' + A_B_E + '\n',   # merge
     " U   " + A_B + "\n",     # mergeinfo
   ], target=A_B, two_url=True, tree_conflicts=1)
 
@@ -1847,8 +1831,8 @@ def merge_replace_causes_tree_conflict2(sbox):
   # svn merge --depth=immediates $URL/A/D $URL/branch/D A/D
   expected_stdout = expected_merge_output(None, [
     '   C ' + A_D_H + '\n',   # merge
+    'A    ' + A_D_H + '\n',   # merge
     " U   " + A_D + "\n",     # mergeinfo
-    " U   " + A_D_G + "\n",
   ], target=A_D, two_url=True, tree_conflicts=1)
 
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
@@ -1867,7 +1851,9 @@ def merge_replace_causes_tree_conflict2(sbox):
   # svn merge $URL/A/D/G $URL/branch/D/G A/D/G
   expected_stdout = expected_merge_output(None, [
     '   C ' + A_D_G_pi + '\n',  # merge
-  ], target=A_D_G, elides=[A_D_G_pi, A_D_G], two_url=True, tree_conflicts=1)
+    'A    ' + A_D_G_pi + '\n',  # merge
+    " U   " + A_D_G + "\n",     # mergeinfo
+  ], target=A_D_G, two_url=True, tree_conflicts=1)
 
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
     url_A_D_G, url_branch_D_G, A_D_G)
@@ -1886,7 +1872,8 @@ def merge_replace_causes_tree_conflict2(sbox):
 
   # Check the tree conflict types:
   expected_stdout = '(R.*)|(Summary of conflicts.*)|(  Tree conflicts.*)' \
-                    '|(.*local delete, incoming replace upon merge.*)'
+                    '|(.*local delete, incoming replace upon merge.*)' \
+                    '|(      \>.*)'
   tree_conflicted_path = [A_B_E, A_mu, A_D_G_pi, A_D_H]
   for path in tree_conflicted_path:
     actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'st',
@@ -1896,7 +1883,6 @@ def merge_replace_causes_tree_conflict2(sbox):
 # Test for issue #4011 'merge of replacement on local delete fails'
 @SkipUnless(server_has_mergeinfo)
 @Issue(4011)
-@XFail()
 def merge_replace_on_del_fails(sbox):
   "merge replace on local delete fails"
 
