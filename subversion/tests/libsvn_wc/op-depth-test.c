@@ -5037,6 +5037,12 @@ mixed_rev_move(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
 
+  /* We don't allow mixed-rev move in 1.8 and the command line client
+     will return an error, but for compatibility with 1.7 move has an
+     allow_mixed_revisions=TRUE flag which is being used here so the
+     move transforms automatically into copy+delete.  This test was
+     written before that transforming was implemented so still expects
+     some move information. */
   SVN_ERR(sbox_wc_move(&b, "A", "X"));
 
   {
