@@ -151,6 +151,7 @@ class SVNClient :public SVNBase
                    bool discoverPaths, bool includeMergedRevisions,
                    StringArray &revProps,
                    long limit, LogMessageCallback *callback);
+  jobject getVersionExtended(bool verbose);
   jstring getAdminDirectoryName();
   jboolean isAdminDirectory(const char *name);
   void addToChangelist(Targets &srcPaths, const char *changelist,

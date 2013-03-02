@@ -51,6 +51,7 @@
 #include "ChangelistCallback.h"
 #include "StringArray.h"
 #include "RevpropTable.h"
+#include "VersionExtended.h"
 #include "svn_version.h"
 #include "svn_private_config.h"
 #include "version.h"
@@ -87,6 +88,20 @@ Java_org_apache_subversion_javahl_SVNClient_finalize
   SVNClient *cl = SVNClient::getCppObject(jthis);
   if (cl != NULL)
     cl->finalize();
+}
+
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_SVNClient_getVersionExtended(
+    JNIEnv *env, jobject jthis, jboolean verbose)
+{
+  JNIEntry(SVNClient, getVersionExtended);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return NULL;
+    }
+  return cl->getVersionExtended(!!verbose);
 }
 
 JNIEXPORT jstring JNICALL
