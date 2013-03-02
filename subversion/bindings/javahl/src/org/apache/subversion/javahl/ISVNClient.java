@@ -51,6 +51,12 @@ public interface ISVNClient
     public Version getVersion();
 
     /**
+     * @return Extended version information about the underlying
+     * native libraries and operating system.
+     */
+    public VersionExtended getVersionExtended(boolean verbose);
+
+    /**
      * @return The name of the working copy's administrative
      * directory, which is usually <code>.svn</code>.
      * @see <a

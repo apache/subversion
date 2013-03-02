@@ -103,6 +103,8 @@ public class SVNClient implements ISVNClient
         return NativeResources.getVersion();
     }
 
+    public native VersionExtended getVersionExtended(boolean verbose);
+
     public native String getAdminDirectoryName();
 
     public native boolean isAdminDirectory(String name);
