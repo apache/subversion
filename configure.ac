@@ -625,6 +625,22 @@ fi
 AC_SUBST(SVN_GNOME_KEYRING_INCLUDES)
 AC_SUBST(SVN_GNOME_KEYRING_LIBS)
 
+dnl gtest -----------------
+AC_ARG_ENABLE([gtest],
+  [AS_HELP_STRING([--enable-gtest],
+                  [Enable tests using the Google C++ Testing Framework.
+                  ])],
+  enable_gtest=yes,
+  [])
+
+if test "$enable_gtest" = "yes"; then
+  AC_MSG_RESULT([yes])
+  AC_DEFINE([HAVE_GTEST], [1], 
+            [Is gtest enabled?])
+else
+  AC_MSG_RESULT([no])
+fi
+AC_SUBST([HAVE_GTEST])
 
 dnl Ev2 experimental features ----------------------
 dnl Note: The Ev2 implementations will be built unconditionally, but by
@@ -829,6 +845,12 @@ if test "$svn_lib_kwallet" = "yes"; then
   BUILD_RULES="$BUILD_RULES kwallet-lib"
   INSTALL_RULES="`echo $INSTALL_RULES | $SED 's/install-lib/install-lib install-kwallet-lib/'`"
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-kwallet-lib"
+fi
+
+if test "$enable_gtest" = "yes"; then
+  BUILD_RULES="$BUILD_RULES libgtest"
+  INSTALL_RULES="`echo $INSTALL_RULES | $SED 's/install-lib/install-lib install-gtest/'`"
+  INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-gtest"
 fi
 
 if test "$found_gnome_keyring" = "yes"; then

@@ -153,6 +153,12 @@ I.    INTRODUCTION
          configured via auto-props or the mime-types-file option
          take precedence.
 
+      * Googletest aka Gtest (OPTIONAL)
+  
+         This optional package is used by the tests for Subversions'
+         C++ bindings.
+
+
   C. Dependencies in Detail
 
       Subversion depends on a number of third party tools and libraries.
@@ -565,6 +571,13 @@ I.    INTRODUCTION
       the default locations should be searched, then use:
 
         --with-libmagic
+
+      22. Googletest (OPTIONAL)
+
+      Googletest can be installed and built in-tree by invoking 
+
+      $ ./get-dep.sh gtest
+      $ ./configure --with-gtest 
 
   D. Documentation
 
