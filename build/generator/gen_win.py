@@ -967,6 +967,9 @@ class WinGeneratorBase(GeneratorBase):
     if target.name == "libsvnjavahl" and self.jdk_path:
       fakeincludes.append(os.path.join(self.jdk_path, 'include'))
       fakeincludes.append(os.path.join(self.jdk_path, 'include', 'win32'))
+      
+    if target.name.find('cxxhl') != -1:
+      fakeincludes.append(self.path("subversion/bindings/cxxhl/include"))
 
     return fakeincludes
 
