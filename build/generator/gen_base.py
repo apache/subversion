@@ -431,6 +431,8 @@ class TargetLinked(Target):
         if glob.glob(src):
           if src[-2:] == '.c':
             objname = src[:-2] + self.objext
+          elif src[-3:] == '.cc':
+            objname = src[:-3] + self.objext
           elif src[-4:] == '.cpp':
             objname = src[:-4] + self.objext
           else:

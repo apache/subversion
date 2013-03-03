@@ -116,7 +116,13 @@ get_gtest() {
 
     unzip -q $TEMPDIR/$GTEST.zip
 
-    mv $GTEST gtest
+    mv $GTEST libgtest
+    echo "Gtest has been installed, please note:"
+    echo "autogen.sh will issue spurious header warnings."
+    echo "./configure --enable-gtest will issue repeated spurious warnings that"
+    echo "the option --enable-gtest is not recognsed."
+    echo "The documentation for the usage of Gtest in Subversion is located in "
+    echo "doc/programmer/gtest-guide.txt"
 }
 
 # main()

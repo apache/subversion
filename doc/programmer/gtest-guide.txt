@@ -1,0 +1,53 @@
+Googletest Suite for Subversion
+---------------------------------
+
+0. Introduction
+1. Setting up 
+2. Literature 
+3. Example test case
+
+0. Introduction
+----------------
+Googletest is an external package that is downloaded and
+compiled on request, as part of a regular compilations.
+
+From the Googletest Project page:
+"Google's framework for writing C++ tests on a variety of platforms
+(Linux, Mac OS X, Windows, Cygwin, Windows CE, and Symbian). Based on
+the xUnit architecture. Supports automatic test discovery, a rich set
+of assertions, user-defined assertions, death tests, fatal and
+non-fatal failures, value- and type-parameterized tests, various
+options for running the tests, and XML test report generation."
+
+1. Setting up 
+--------------
+
+To configure Subversion to use Googletest, type
+
+./get-dep.sh gtest
+./autogen.sh
+./configure --enable-gtest <your other options here>
+
+this sets up gtest in the /trunk/libgtest directory.
+
+Note that currently autogen.sh issues header warnings and the
+configure script prints spurious errormessages of the form ""the
+option --enable-gtest is not recognised."
+
+Please ignore them, this does not interfere with the functionality of
+Googletest at all, and everything is being installed correctly.
+
+
+2. Literature 
+-------------
+
+Googletest homepage: 
+http://code.google.com/p/googletest/
+
+Short tutorial and cheatsheet: 
+http://www.ibm.com/developerworks/aix/library/au-googletestingframework.html
+
+3. Simple example test case
+----------------------------
+
+Please see subversion/bindings/cxxhl/gtests/* for a sample set up.
