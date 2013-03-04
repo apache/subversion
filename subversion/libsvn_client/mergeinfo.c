@@ -161,6 +161,9 @@ svn_client__record_wc_mergeinfo_catalog(apr_hash_t *result_catalog,
       apr_array_header_t *sorted_cat =
         svn_sort__hash(result_catalog, svn_sort_compare_items_as_paths,
                        scratch_pool);
+
+      /* Write the mergeinfo out in sorted order of the paths, so that
+       * notifications are in a predictable and convenient order. */
       for (i = 0; i < sorted_cat->nelts; i++)
         {
           svn_sort__item_t elt = APR_ARRAY_IDX(sorted_cat, i,
