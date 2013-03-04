@@ -114,7 +114,6 @@
  */
 
 struct tc_editor_baton {
-  svn_skel_t **work_items;
   svn_wc__db_t *db;
   svn_wc__db_wcroot_t *wcroot;
   const char *move_root_dst_relpath;
@@ -658,6 +657,7 @@ typedef struct working_node_version_t
   const svn_checksum_t *checksum; /* for files only */
 } working_node_version_t;
 
+/* Return *WORK_ITEMS to create a conflict on LOCAL_ABSPATH. */
 static svn_error_t *
 create_conflict_markers(svn_skel_t **work_items,
                         const char *local_abspath,
@@ -671,7 +671,6 @@ create_conflict_markers(svn_skel_t **work_items,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  svn_skel_t *work_item;
   svn_wc_conflict_version_t *original_version;
   svn_wc_conflict_version_t *conflicted_version;
 
@@ -700,12 +699,11 @@ create_conflict_markers(svn_skel_t **work_items,
 
   /* According to this func's doc string, it is "Currently only used for
    * property conflicts as text conflict markers are just in-wc files." */
-  SVN_ERR(svn_wc__conflict_create_markers(&work_item, db,
+  SVN_ERR(svn_wc__conflict_create_markers(work_items, db,
                                           local_abspath,
                                           conflict_skel,
                                           result_pool,
                                           scratch_pool));
-  *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -826,7 +824,9 @@ tc_editor_alter_directory(void *baton,
 
       if (conflict_skel)
         {
-          SVN_ERR(create_conflict_markers(b->work_items, dst_abspath,
+          svn_skel_t *work_items;
+
+          SVN_ERR(create_conflict_markers(&work_items, dst_abspath,
                                           b->db, move_dst_repos_relpath,
                                           conflict_skel, b->operation,
                                           &old_version, &new_version,
@@ -835,6 +835,8 @@ tc_editor_alter_directory(void *baton,
           SVN_ERR(svn_wc__db_mark_conflict_internal(b->wcroot, dst_relpath,
                                                     conflict_skel,
                                                     scratch_pool));
+          SVN_ERR(svn_wc__db_wq_add(b->db, b->wcroot->abspath, work_items,
+                                    scratch_pool));
         }
 
     SVN_ERR(update_move_list_add(b->wcroot, dst_relpath,
@@ -863,8 +865,7 @@ tc_editor_alter_directory(void *baton,
  * Set *WORK_ITEMS to any required work items, allocated in RESULT_POOL.
  * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
-update_working_file(svn_skel_t **work_items,
-                    const char *local_relpath,
+update_working_file(const char *local_relpath,
                     const char *repos_relpath,
                     svn_wc_operation_t operation,
                     const working_node_version_t *old_version,
@@ -884,9 +885,7 @@ update_working_file(svn_skel_t **work_items,
   apr_array_header_t *propchanges;
   enum svn_wc_merge_outcome_t merge_outcome;
   svn_wc_notify_state_t prop_state, content_state;
-  svn_skel_t *work_item;
-
-  *work_items = NULL;
+  svn_skel_t *work_item, *work_items = NULL;
 
   SVN_ERR(update_working_props(&prop_state, &conflict_skel, &propchanges,
                                &actual_props, db, local_abspath,
@@ -924,7 +923,7 @@ update_working_file(svn_skel_t **work_items,
                                      NULL, NULL, /* cancel_func + baton */
                                      result_pool, scratch_pool));
 
-      *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
+      work_items = svn_wc__wq_merge(work_items, work_item, result_pool);
 
       if (merge_outcome == svn_wc_merge_conflict)
         {
@@ -951,15 +950,20 @@ update_working_file(svn_skel_t **work_items,
    * too. */
   if (conflict_skel)
     {
-      SVN_ERR(create_conflict_markers(work_items, local_abspath, db,
+      SVN_ERR(create_conflict_markers(&work_item, local_abspath, db,
                                       repos_relpath, conflict_skel,
                                       operation, old_version, new_version,
                                       svn_kind_file,
                                       result_pool, scratch_pool));
+
       SVN_ERR(svn_wc__db_mark_conflict_internal(wcroot, local_relpath,
                                                 conflict_skel,
                                                 scratch_pool));
+
+      work_items = svn_wc__wq_merge(work_items, work_item, result_pool);
     }
+
+  SVN_ERR(svn_wc__db_wq_add(db, wcroot->abspath, work_items, scratch_pool));
 
   SVN_ERR(update_move_list_add(wcroot, local_relpath,
                                svn_wc_notify_update_update,
@@ -1019,10 +1023,7 @@ tc_editor_alter_file(void *baton,
   /* Update file and prop contents if the update has changed them. */
   if (!svn_checksum_match(new_checksum, old_version.checksum) || new_props)
     {
-      svn_skel_t *work_items;
-
-      SVN_ERR(update_working_file(b->work_items, dst_relpath,
-                                  move_dst_repos_relpath,
+      SVN_ERR(update_working_file(dst_relpath, move_dst_repos_relpath,
                                   b->operation, &old_version, &new_version,
                                   b->wcroot, b->db,
                                   b->result_pool, scratch_pool));
@@ -1779,8 +1780,7 @@ suitable_for_move(svn_wc__db_wcroot_t *wcroot,
 /* The body of svn_wc__db_update_moved_away_conflict_victim(), which see.
  */
 static svn_error_t *
-update_moved_away_conflict_victim(svn_skel_t **work_items,
-                                  svn_wc__db_t *db,
+update_moved_away_conflict_victim(svn_wc__db_t *db,
                                   svn_wc__db_wcroot_t *wcroot,
                                   const char *victim_relpath,
                                   svn_wc_operation_t operation,
@@ -1828,7 +1828,6 @@ update_moved_away_conflict_victim(svn_skel_t **work_items,
   tc_editor_baton->new_version= new_version;
   tc_editor_baton->db = db;
   tc_editor_baton->wcroot = wcroot;
-  tc_editor_baton->work_items = work_items;
   tc_editor_baton->result_pool = result_pool;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -1878,8 +1877,7 @@ update_moved_away_conflict_victim(svn_skel_t **work_items,
 
 
 svn_error_t *
-svn_wc__db_update_moved_away_conflict_victim(svn_skel_t **work_items,
-                                             svn_wc__db_t *db,
+svn_wc__db_update_moved_away_conflict_victim(svn_wc__db_t *db,
                                              const char *victim_abspath,
                                              svn_wc_notify_func2_t notify_func,
                                              void *notify_baton,
@@ -1915,7 +1913,7 @@ svn_wc__db_update_moved_away_conflict_victim(svn_skel_t **work_items,
 
   SVN_WC__DB_WITH_TXN(
     update_moved_away_conflict_victim(
-      work_items, db, wcroot, local_relpath,
+      db, wcroot, local_relpath,
       operation, local_change, incoming_change,
       move_src_op_root_relpath,
       old_version, new_version,
