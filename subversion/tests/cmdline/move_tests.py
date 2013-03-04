@@ -1027,7 +1027,6 @@ def deeper_move_file_test(sbox):
   move_file_tests(sbox, source, dest, move_func, tests)
 
 
-@XFail()
 def prop_test1(sbox):
   "test property merging on move-update"
 
@@ -1063,7 +1062,7 @@ def prop_test1(sbox):
                       'A/C/f3')
   sbox.simple_propset('key1', 'value3',
                       'A/C/D4', 'A/C/D5',
-                      'A/C/f3', 'A/C/f5')
+                      'A/C/f4', 'A/C/f5')
   sbox.simple_commit()
   sbox.simple_update('', 2)
   sbox.simple_propset('key1', 'value2',
@@ -1109,7 +1108,8 @@ def prop_test1(sbox):
                         'A/C2/D1', 'A/C2/D2', 'A/C2/D3', 'A/C2/D4', 'A/C2/D5',
                         'A/C2/f1', 'A/C2/f2', 'A/C2/f3', 'A/C2/f4', 'A/C2/f5',
                         wc_rev='-')
-  expected_status.tweak('A/C2/D3', 'A/C2/D3',
+  expected_status.tweak('A/C2/D3',
+                        'A/C2/f3',
                         status='  ')
   expected_status.tweak('A/C2/D4', 'A/C2/D5',
                         'A/C2/f4', 'A/C2/f5',
