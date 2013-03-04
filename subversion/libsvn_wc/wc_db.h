@@ -3326,12 +3326,9 @@ svn_wc__db_follow_moved_to(apr_array_header_t **moved_tos,
                            apr_pool_t *scratch_pool);
 
 /* Update a moved-away tree conflict victim at VICTIM_ABSPATH with changes
- * brought in by the update operation which flagged the tree conflict.
- * Set *WORK_ITEMS to a list of work items, allocated in RESULT_POOL, that
- * need to run as part of marking the conflict resolved. */
+ * brought in by the update operation which flagged the tree conflict. */
 svn_error_t *
-svn_wc__db_update_moved_away_conflict_victim(svn_skel_t **work_items,
-                                             svn_wc__db_t *db,
+svn_wc__db_update_moved_away_conflict_victim(svn_wc__db_t *db,
                                              const char *victim_abspath,
                                              svn_wc_notify_func2_t notify_func,
                                              void *notify_baton,

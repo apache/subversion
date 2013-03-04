@@ -2706,7 +2706,6 @@ resolve_tree_conflict_on_node(svn_skel_t **work_items,
           if (conflict_choice == svn_wc_conflict_choose_mine_conflict)
             {
               SVN_ERR(svn_wc__db_update_moved_away_conflict_victim(
-                        work_items,
                         db, local_abspath,
                         notify_func, notify_baton,
                         cancel_func, cancel_baton,
