@@ -125,7 +125,7 @@ struct tc_editor_baton {
   svn_wc_operation_t operation;
   svn_wc_conflict_version_t *old_version;
   svn_wc_conflict_version_t *new_version;
-  apr_pool_t *result_pool;
+  apr_pool_t *result_pool;  /* For things that live as long as the baton. */
 };
 
 /* 
@@ -522,7 +522,7 @@ tc_editor_add_directory(void *baton,
 
     case svn_node_none:
       SVN_ERR(svn_wc__wq_build_dir_install(&work_item, b->db, abspath,
-                                           scratch_pool, b->result_pool));
+                                           scratch_pool, scratch_pool));
 
       SVN_ERR(svn_wc__db_wq_add(b->db, b->wcroot->abspath, work_item,
                                 scratch_pool));
@@ -615,7 +615,7 @@ tc_editor_add_file(void *baton,
                                         NULL,
                                         FALSE /* FIXME: use_commit_times? */,
                                         TRUE  /* record_file_info */,
-                                        scratch_pool, b->result_pool));
+                                        scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__db_wq_add(b->db, b->wcroot->abspath, work_item,
                             scratch_pool));
@@ -820,7 +820,7 @@ tc_editor_alter_directory(void *baton,
                                    &propchanges, &actual_props,
                                    b->db, dst_abspath,
                                    &old_version, &new_version,
-                                   b->result_pool, scratch_pool));
+                                   scratch_pool, scratch_pool));
 
       if (conflict_skel)
         {
@@ -831,7 +831,7 @@ tc_editor_alter_directory(void *baton,
                                           conflict_skel, b->operation,
                                           &old_version, &new_version,
                                           move_dst_kind,
-                                          b->result_pool, scratch_pool));
+                                          scratch_pool, scratch_pool));
           SVN_ERR(svn_wc__db_mark_conflict_internal(b->wcroot, dst_relpath,
                                                     conflict_skel,
                                                     scratch_pool));
@@ -872,7 +872,6 @@ update_working_file(const char *local_relpath,
                     const working_node_version_t *new_version,
                     svn_wc__db_wcroot_t *wcroot,
                     svn_wc__db_t *db,
-                    apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
   const char *local_abspath = svn_dirent_join(wcroot->abspath,
@@ -890,7 +889,7 @@ update_working_file(const char *local_relpath,
   SVN_ERR(update_working_props(&prop_state, &conflict_skel, &propchanges,
                                &actual_props, db, local_abspath,
                                old_version, new_version,
-                               result_pool, scratch_pool));
+                               scratch_pool, scratch_pool));
 
   if (!svn_checksum_match(new_version->checksum, old_version->checksum))
     {
@@ -921,9 +920,9 @@ update_working_file(const char *local_relpath,
                                      NULL, /* merge options */
                                      propchanges,
                                      NULL, NULL, /* cancel_func + baton */
-                                     result_pool, scratch_pool));
+                                     scratch_pool, scratch_pool));
 
-      work_items = svn_wc__wq_merge(work_items, work_item, result_pool);
+      work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
 
       if (merge_outcome == svn_wc_merge_conflict)
         {
@@ -954,13 +953,13 @@ update_working_file(const char *local_relpath,
                                       repos_relpath, conflict_skel,
                                       operation, old_version, new_version,
                                       svn_kind_file,
-                                      result_pool, scratch_pool));
+                                      scratch_pool, scratch_pool));
 
       SVN_ERR(svn_wc__db_mark_conflict_internal(wcroot, local_relpath,
                                                 conflict_skel,
                                                 scratch_pool));
 
-      work_items = svn_wc__wq_merge(work_items, work_item, result_pool);
+      work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
     }
 
   SVN_ERR(svn_wc__db_wq_add(db, wcroot->abspath, work_items, scratch_pool));
@@ -1026,7 +1025,7 @@ tc_editor_alter_file(void *baton,
       SVN_ERR(update_working_file(dst_relpath, move_dst_repos_relpath,
                                   b->operation, &old_version, &new_version,
                                   b->wcroot, b->db,
-                                  b->result_pool, scratch_pool));
+                                  scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1791,7 +1790,6 @@ update_moved_away_conflict_victim(svn_wc__db_t *db,
                                   svn_wc_conflict_version_t *new_version,
                                   svn_cancel_func_t cancel_func,
                                   void *cancel_baton,
-                                  apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)
 {
   svn_editor_t *tc_editor;
@@ -1828,7 +1826,7 @@ update_moved_away_conflict_victim(svn_wc__db_t *db,
   tc_editor_baton->new_version= new_version;
   tc_editor_baton->db = db;
   tc_editor_baton->wcroot = wcroot;
-  tc_editor_baton->result_pool = result_pool;
+  tc_editor_baton->result_pool = scratch_pool;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_HIGHEST_WORKING_NODE));
@@ -1883,7 +1881,6 @@ svn_wc__db_update_moved_away_conflict_victim(svn_wc__db_t *db,
                                              void *notify_baton,
                                              svn_cancel_func_t cancel_func,
                                              void *cancel_baton,
-                                             apr_pool_t *result_pool,
                                              apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
@@ -1918,7 +1915,7 @@ svn_wc__db_update_moved_away_conflict_victim(svn_wc__db_t *db,
       move_src_op_root_relpath,
       old_version, new_version,
       cancel_func, cancel_baton,
-      result_pool, scratch_pool),
+      scratch_pool),
     wcroot);
 
   /* Send all queued up notifications. */

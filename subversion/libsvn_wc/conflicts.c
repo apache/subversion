@@ -2709,7 +2709,7 @@ resolve_tree_conflict_on_node(svn_skel_t **work_items,
                         db, local_abspath,
                         notify_func, notify_baton,
                         cancel_func, cancel_baton,
-                        scratch_pool, scratch_pool));
+                        scratch_pool));
               did_resolve = TRUE;
             }
           else if (conflict_choice == svn_wc_conflict_choose_merged)
