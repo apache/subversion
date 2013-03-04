@@ -1030,12 +1030,12 @@ def deeper_move_file_test(sbox):
 def prop_test1(sbox):
   "test property merging on move-update"
 
-  #    pristine  local  incoming  outcome
-  # 1            p1 v2  p2 v2     p1 v2, p2 v2
-  # 2  p1 v1     p1 v2  p2 v2     p1 v2, p2 v2
-  # 3  p1 v1     p1 v2  p1 v2     p1 v2
-  # 4            p1 v2  p1 v3     p1 v2 conflict
-  # 5  p1 v1     p1 v2  p1 v3     p1 v2 conflict
+  #    pristine  local  incoming  outcome           revert
+  # 1            p1 v2  p2 v2     p1 v2, p2 v2      p2 v2
+  # 2  p1 v1     p1 v2  p2 v2     p1 v2, p2 v2      p1 v1 p2 v2
+  # 3  p1 v1     p1 v2  p1 v2     p1 v2             p1 v2
+  # 4            p1 v2  p1 v3     p1 v2 conflict    p1 v3
+  # 5  p1 v1     p1 v2  p1 v3     p1 v2 conflict    p1 v3
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1052,7 +1052,7 @@ def prop_test1(sbox):
   sbox.simple_add_text('content of f5', 'A/C/f5')
   sbox.simple_propset('key1', 'value1',
                       'A/C/D2', 'A/C/D3', 'A/C/D5',
-                      'A/C/f1', 'A/C/f2', 'A/C/f5')
+                      'A/C/f2', 'A/C/f3', 'A/C/f5')
   sbox.simple_commit()
   sbox.simple_propset('key2', 'value2',
                       'A/C/D1', 'A/C/D2',
@@ -1116,6 +1116,80 @@ def prop_test1(sbox):
                         status=' C')
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/C')
+  expected_disk.add({
+      'A/C2'    : Item(),
+      'A/C2/D1' : Item(props={'key1' : 'value2', 'key2' : 'value2'}),
+      'A/C2/D2' : Item(props={'key1' : 'value2', 'key2' : 'value2'}),
+      'A/C2/D3' : Item(props={'key1' : 'value2'}),
+      'A/C2/D4' : Item(props={'key1' : 'value2'}),
+      'A/C2/D5' : Item(props={'key1' : 'value2'}),
+      'A/C2/f1' : Item(contents='content of f1',
+                       props={'key1' : 'value2', 'key2' : 'value2'}),
+      'A/C2/f2' : Item(contents='content of f2',
+                       props={'key1' : 'value2', 'key2' : 'value2'}),
+      'A/C2/f3' : Item(contents='content of f3',
+                       props={'key1' : 'value2'}),
+      'A/C2/f4' : Item(contents='content of f4',
+                       props={'key1' : 'value2'}),
+      'A/C2/f5' : Item(contents='content of f5',
+                       props={'key1' : 'value2'}),
+      'A/C2/D4/dir_conflicts.prej' : Item(contents=
+"""Trying to add new property 'key1'
+but the property already exists.
+<<<<<<< (local property value)
+value2=======
+value3>>>>>>> (incoming property value)
+"""),
+      'A/C2/D5/dir_conflicts.prej' : Item(contents=
+"""Trying to change property 'key1'
+but the property has already been locally changed to a different value.
+<<<<<<< (local property value)
+value2=======
+value3>>>>>>> (incoming property value)
+"""),
+      'A/C2/f4.prej' : Item(contents=
+"""Trying to add new property 'key1'
+but the property already exists.
+<<<<<<< (local property value)
+value2=======
+value3>>>>>>> (incoming property value)
+"""),
+      'A/C2/f5.prej' : Item(contents=
+"""Trying to change property 'key1'
+but the property has already been locally changed to a different value.
+<<<<<<< (local property value)
+value2=======
+value3>>>>>>> (incoming property value)
+"""),
+      })
+
+  svntest.actions.verify_disk(wc_dir, expected_disk, True)
+
+  sbox.simple_revert('A/C2/D1', 'A/C2/D2', 'A/C2/D4', 'A/C2/D5',
+                     'A/C2/f1', 'A/C2/f2', 'A/C2/f4', 'A/C2/f5')
+
+  expected_status.tweak('A/C2/D1', 'A/C2/D2', 'A/C2/D4', 'A/C2/D5',
+                        'A/C2/f1', 'A/C2/f2', 'A/C2/f4', 'A/C2/f5',
+                        status='  ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_disk.remove('A/C2/D4/dir_conflicts.prej',
+                       'A/C2/D5/dir_conflicts.prej',
+                       'A/C2/f4.prej',
+                       'A/C2/f5.prej')
+  expected_disk.tweak('A/C2/D1',
+                      'A/C2/f1',
+                      props={'key2' : 'value2'})
+  expected_disk.tweak('A/C2/D2',
+                      'A/C2/f2',
+                      props={'key1' : 'value1', 'key2' : 'value2'})
+  expected_disk.tweak('A/C2/D4', 'A/C2/D5',
+                      'A/C2/f4', 'A/C2/f5',
+                      props={'key1' : 'value3'})
+  svntest.actions.verify_disk(wc_dir, expected_disk, True)
 
 
 #######################################################################
