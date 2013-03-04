@@ -3334,7 +3334,6 @@ svn_wc__db_update_moved_away_conflict_victim(svn_wc__db_t *db,
                                              void *notify_baton,
                                              svn_cancel_func_t cancel_func,
                                              void *cancel_baton,
-                                             apr_pool_t *result_pool,
                                              apr_pool_t *scratch_pool);
 
 /* LOCAL_ABSPATH is moved to MOVE_DST_ABSPATH.  MOVE_SRC_ROOT_ABSPATH
