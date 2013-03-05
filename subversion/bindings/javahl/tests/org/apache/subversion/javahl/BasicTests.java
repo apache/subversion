@@ -796,6 +796,49 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Test property inheritance.
+     * @throws Throwable
+     */
+    public void testInheritedProperties() throws Throwable
+    {
+        OneTest thisTest = new OneTest();
+        WC wc = thisTest.getWc();
+
+        String adirPath = fileToSVNPath(new File(thisTest.getWCPath(),
+                                                 "/A"),
+                                        false);
+        String alphaPath = fileToSVNPath(new File(thisTest.getWCPath(),
+                                                  "/A/B/E/alpha"),
+                                         false);
+
+        String propval = "ybg";
+        setprop(adirPath, "ahqrtz", propval.getBytes());
+
+        final Map<String, Collection<InheritedProplistCallback.InheritedItem>> ipropMaps =
+            new HashMap<String, Collection<InheritedProplistCallback.InheritedItem>>();
+
+        client.properties(alphaPath, null, null, Depth.empty, null,
+            new InheritedProplistCallback () {
+                public void singlePath(
+                    String path, Map<String, byte[]> props,
+                    Collection<InheritedProplistCallback.InheritedItem> iprops)
+                { ipropMaps.put(path, iprops); }
+            });
+        Collection<InheritedProplistCallback.InheritedItem> iprops = ipropMaps.get(alphaPath);
+        for (InheritedProplistCallback.InheritedItem item : iprops)
+        {
+            for (String key : item.properties.keySet())
+            {
+                assertEquals("ahqrtz", key);
+                assertEquals(propval, new String(item.properties.get(key)));
+            }
+        }
+
+        wc.setItemPropStatus("A", Status.Kind.modified);
+        thisTest.checkStatus();
+    }
+
+    /**
      * Test the basic SVNClient.update functionality.
      * @throws Throwable
      */

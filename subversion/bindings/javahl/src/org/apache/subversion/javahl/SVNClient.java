@@ -356,6 +356,12 @@ public class SVNClient implements ISVNClient
                                   ProplistCallback callback)
             throws ClientException;
 
+    public native void properties(String path, Revision revision,
+                                  Revision pegRevision, Depth depth,
+                                  Collection<String> changelists,
+                                  InheritedProplistCallback callback)
+            throws ClientException;
+
     public native void propertySetLocal(Set<String> paths, String name,
                                         byte[] value, Depth depth,
                                         Collection<String> changelists,
