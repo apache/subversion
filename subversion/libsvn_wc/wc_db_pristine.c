@@ -122,7 +122,10 @@ svn_wc__db_pristine_get_path(const char **pristine_abspath,
                                     scratch_pool));
   if (! present)
     return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
-                             _("Pristine text not found"));
+                             _("The pristine text with checksum '%s' was "
+                               "not found"),
+                             svn_checksum_to_cstring_display(sha1_checksum,
+                                                             scratch_pool));
 
   SVN_ERR(get_pristine_fname(pristine_abspath, wcroot->abspath,
                              sha1_checksum,
