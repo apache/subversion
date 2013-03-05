@@ -130,7 +130,7 @@ get_deps() {
     done
 
     if [ $# -gt 0 ]; then
-      for target; do
+      for target in "$@"; do
         if [ "$target" != "deps" ]; then
           get_$target || usage
         else
