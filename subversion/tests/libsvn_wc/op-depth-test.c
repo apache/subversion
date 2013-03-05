@@ -7385,6 +7385,91 @@ move_back(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+move_update_subtree(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  svn_error_t *err;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "move_update_subtree", opts, pool));
+
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C/D"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+
+  /* Subtree update is like an interrupted update, it leaves a
+     mixed-revision move source. */
+  SVN_ERR(sbox_wc_move(&b, "A/B", "A/B2"));
+  SVN_ERR(sbox_wc_update(&b, "A/B/C", 2));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",        "normal",       1, ""},
+      {0, "A",       "normal",       1, "A"},
+      {0, "A/B",     "normal",       1, "A/B"},
+      {0, "A/B/C",   "normal",       2, "A/B/C"},
+      {0, "A/B/C/D", "normal",       2, "A/B/C/D"},
+      {2, "A/B",     "base-deleted", NO_COPY_FROM, "A/B2"},
+      {2, "A/B/C",   "base-deleted", NO_COPY_FROM},
+      {2, "A/B/C/D", "base-deleted", NO_COPY_FROM},
+      {2, "A/B2",    "normal",       1, "A/B", MOVED_HERE},
+      {2, "A/B2/C",  "normal",       1, "A/B/C", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Resolve fails because of the mixed-revision. */
+  err = sbox_wc_resolve(&b, "A/B", svn_depth_empty,
+                        svn_wc_conflict_choose_mine_conflict);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE);
+
+  /* Update to single-revision to allow resolve; this requires update
+     while the tree-conflict on A/B is present. */
+  SVN_ERR(sbox_wc_update(&b, "A/B", 2));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",        "normal",       1, ""},
+      {0, "A",       "normal",       1, "A"},
+      {0, "A/B",     "normal",       2, "A/B"},
+      {0, "A/B/C",   "normal",       2, "A/B/C"},
+      {0, "A/B/C/D", "normal",       2, "A/B/C/D"},
+      {2, "A/B",     "base-deleted", NO_COPY_FROM, "A/B2"},
+      {2, "A/B/C",   "base-deleted", NO_COPY_FROM},
+      {2, "A/B/C/D", "base-deleted", NO_COPY_FROM},
+      {2, "A/B2",    "normal",       1, "A/B", MOVED_HERE},
+      {2, "A/B2/C",  "normal",       1, "A/B/C", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Now resolve is possible. */
+  SVN_ERR(sbox_wc_resolve(&b, "A/B", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",         "normal",       1, ""},
+      {0, "A",        "normal",       1, "A"},
+      {0, "A/B",      "normal",       2, "A/B"},
+      {0, "A/B/C",    "normal",       2, "A/B/C"},
+      {0, "A/B/C/D",  "normal",       2, "A/B/C/D"},
+      {2, "A/B",      "base-deleted", NO_COPY_FROM, "A/B2"},
+      {2, "A/B/C",    "base-deleted", NO_COPY_FROM},
+      {2, "A/B/C/D",  "base-deleted", NO_COPY_FROM},
+      {2, "A/B2",     "normal",       2, "A/B", MOVED_HERE},
+      {2, "A/B2/C",   "normal",       2, "A/B/C", MOVED_HERE},
+      {2, "A/B2/C/D", "normal",       2, "A/B/C/D", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  return SVN_NO_ERROR;
+}
 
 
 /* ---------------------------------------------------------------------- */
@@ -7528,5 +7613,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "new_basemove"),
     SVN_TEST_OPTS_PASS(move_back,
                        "move_back (issue 4302)"),
+    SVN_TEST_OPTS_XFAIL(move_update_subtree,
+                       "move_update_subtree (issue 4232)"),
     SVN_TEST_NULL
   };
