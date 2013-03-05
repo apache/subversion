@@ -2626,7 +2626,7 @@ ra_svn_has_capability(svn_ra_session_t *session,
 
   for (i = 0; capabilities[i][0]; i++)
     {
-      if (strcmp(capability, capabilities[i][0]))
+      if (strcmp(capability, capabilities[i][0]) == 0)
         {
           *has = svn_ra_svn_has_capability(sess->conn, capabilities[i][1]);
           return SVN_NO_ERROR;
