@@ -23,19 +23,49 @@
 
 package org.apache.subversion.javahl.callback;
 
+import java.util.Collection;
 import java.util.Map;
 import org.apache.subversion.javahl.ISVNClient;
 
 /**
- * This interface is used to property lists for each path in a
- * {@link ISVNClient#properties} call.
+ * This interface is used to return regular and inherited property
+ * lists for each path in a {@link ISVNClient#properties} call.
+ *
+ * @since 1.8
  */
-public interface ProplistCallback
+public interface InheritedProplistCallback
 {
+
     /**
-     * the method will be called once for every file.
+     * Describes properties inherited from one parent.
+     */
+    public class InheritedItem
+    {
+        /**
+         * The path or URL of the owner of the inherited property.
+         */
+        public final String path_or_url;
+
+        /**
+         * the inherited properties
+         */
+        public final Map<String, byte[]> properties;
+
+        public InheritedItem(String path_or_url, Map<String, byte[]> properties)
+        {
+            this.path_or_url = path_or_url;
+            this.properties = properties;
+        }
+    }
+
+    /**
+     * The method will be called once for every file.
      * @param path        the path.
      * @param properties  the properties on the path.
+     * @param inherited_properties
+     *        depth-first ordered array of inherited properties..
      */
-    public void singlePath(String path, Map<String, byte[]> properties);
+    public void singlePath(String path,
+                           Map<String, byte[]> properties,
+                           Collection<InheritedItem> inherited_properties);
 }

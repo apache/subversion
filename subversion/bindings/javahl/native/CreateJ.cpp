@@ -35,6 +35,7 @@
 #include "../include/org_apache_subversion_javahl_CommitItemStateFlags.h"
 
 #include "svn_path.h"
+#include "svn_props.h"
 #include "private/svn_wc_private.h"
 
 jobject
@@ -1048,6 +1049,87 @@ jobject CreateJ::PropertyMap(apr_hash_t *prop_hash)
 
   return env->PopLocalFrame(map);
 }
+
+jobject CreateJ::InheritedProps(apr_array_header_t *iprops)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+
+  if (iprops == NULL)
+    return NULL;
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  jclass list_cls = env->FindClass("java/util/ArrayList");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  static volatile jmethodID init_mid = 0;
+  if (init_mid == 0)
+    {
+      init_mid = env->GetMethodID(list_cls, "<init>", "(I)V");
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+    }
+
+  static volatile jmethodID add_mid = 0;
+  if (add_mid == 0)
+    {
+      add_mid = env->GetMethodID(list_cls, "add",
+                                 "(Ljava/lang/Object;)Z");
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+    }
+
+  jclass item_cls = env->FindClass(
+      JAVA_PACKAGE"/callback/InheritedProplistCallback$InheritedItem");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  static volatile jmethodID ctor_mid = 0;
+  if (ctor_mid == 0)
+    {
+      ctor_mid = env->GetMethodID(item_cls, "<init>",
+                                  "(Ljava/lang/String;Ljava/util/Map;)V");
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+    }
+
+  jobject array = env->NewObject(list_cls, init_mid, iprops->nelts);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  for (int i = 0; i < iprops->nelts; ++i)
+    {
+      svn_prop_inherited_item_t *iprop =
+        APR_ARRAY_IDX(iprops, i, svn_prop_inherited_item_t*);
+
+      jstring path_or_url = JNIUtil::makeJString(iprop->path_or_url);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      jobject props = PropertyMap(iprop->prop_hash);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      jobject item = env->NewObject(item_cls, ctor_mid, path_or_url, props);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      env->CallBooleanMethod(array, add_mid, item);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      env->DeleteLocalRef(item);
+      env->DeleteLocalRef(props);
+      env->DeleteLocalRef(path_or_url);
+    }
+
+  return env->PopLocalFrame(array);
+}
+
 
 jobject CreateJ::Set(std::vector<jobject> &objects)
 {

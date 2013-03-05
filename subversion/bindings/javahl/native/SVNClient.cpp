@@ -885,7 +885,8 @@ jbyteArray SVNClient::propertyGet(const char *path, const char *name,
 
 void SVNClient::properties(const char *path, Revision &revision,
                            Revision &pegRevision, svn_depth_t depth,
-                           StringArray &changelists, ProplistCallback *callback)
+                           StringArray &changelists,
+                           ProplistCallback *callback)
 {
     SVN::Pool subPool(pool);
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -896,13 +897,12 @@ void SVNClient::properties(const char *path, Revision &revision,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_proplist3(intPath.c_str(), pegRevision.revision(),
+    SVN_JNI_ERR(svn_client_proplist4(intPath.c_str(), pegRevision.revision(),
                                      revision.revision(), depth,
                                      changelists.array(subPool),
+                                     callback->inherited(),
                                      ProplistCallback::callback, callback,
                                      ctx, subPool.getPool()), );
-
-    return;
 }
 
 void SVNClient::propertySetLocal(Targets &targets, const char *name,

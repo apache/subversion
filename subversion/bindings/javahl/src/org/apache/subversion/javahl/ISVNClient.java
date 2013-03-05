@@ -662,6 +662,23 @@ public interface ISVNClient
             throws ClientException;
 
     /**
+     * Retrieves the properties of an item, including inherited properties.
+     *
+     * @param path        the path of the item
+     * @param revision    the revision of the item
+     * @param pegRevision the revision to interpret path
+     * @param depth       the depth to recurse into subdirectories
+     * @param changelists changelists to filter by
+     * @param callback    the callback to use to return the properties
+     * @throws ClientException
+     * @since 1.8
+     */
+    void properties(String path, Revision revision, Revision pegRevision,
+                    Depth depth, Collection<String> changelists,
+                    InheritedProplistCallback callback)
+            throws ClientException;
+
+    /**
      * Sets one property of an item with a String value
      *
      * @param paths   paths of the items
