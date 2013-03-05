@@ -456,6 +456,10 @@ svn_ra_serf__v1_get_activity_collection(const char **activity_url,
   SVN_ERR(create_options_req(&opt_ctx, session, conn, scratch_pool));
   SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, scratch_pool));
 
+  SVN_ERR(svn_ra_serf__error_on_status(opt_ctx->handler->sline.code,
+                                       opt_ctx->handler->path,
+                                       opt_ctx->handler->location));
+
   *activity_url = apr_pstrdup(result_pool, opt_ctx->activity_collection);
 
   return SVN_NO_ERROR;
