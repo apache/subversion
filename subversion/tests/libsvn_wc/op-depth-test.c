@@ -6749,12 +6749,10 @@ move_away_delete_update(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_update(&b, "", 1));
   SVN_ERR(sbox_wc_move(&b, "A/B/C", "C2"));
   SVN_ERR(sbox_wc_move(&b, "P/Q", "Q2"));
+
+  /* Update to r2 removes the move sources and clears moved_here from
+     the move destinations. */
   SVN_ERR(sbox_wc_update(&b, "", 2));
-  SVN_ERR(sbox_wc_resolve(&b, "A/B", svn_depth_empty,
-                          svn_wc_conflict_choose_merged));
-  SVN_ERR(sbox_wc_resolve(&b, "P/Q", svn_depth_empty,
-                          svn_wc_conflict_choose_merged));
-  /* Either update or resolve should clear the moved-here flags */
   {
     nodes_row_t nodes[] = {
       {0, "",   "normal", 2, ""},
