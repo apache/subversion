@@ -262,9 +262,16 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
   handler->body_delegate = create_getlocks_body;
   handler->body_delegate_baton = lock_ctx;
 
-  /* ### use svn_ra_serf__error_on_status() ?  */
-
   SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
+
+  /* We get a 404 when a path doesn't exist in HEAD, but it might
+     have existed earlier (E.g. 'svn ls http://s/svn/trunk/file@1' */
+  if (handler->sline.code != 404)
+    {
+      SVN_ERR(svn_ra_serf__error_on_status(handler->sline.code,
+                                           handler->path,
+                                           handler->location));
+    }
 
   *locks = lock_ctx->hash;
 

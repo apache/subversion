@@ -638,13 +638,8 @@ svn_ra_serf__wait_for_props(svn_ra_serf__handler_t *handler,
   err2 = svn_ra_serf__error_on_status(handler->sline.code,
                                       handler->path,
                                       handler->location);
-  if (err2)
-    {
-      svn_error_clear(err);
-      return err2;
-    }
 
-  return err;
+  return svn_error_compose_create(err2, err);
 }
 
 /*
