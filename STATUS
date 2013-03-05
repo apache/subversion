@@ -262,6 +262,14 @@ Candidate changes:
    Votes:
      +1: breser
 
+ * r1452780
+   Address issue #4331, "working copy permissions change on commit for files
+   with keywords".
+   Justification:
+     Keyword translation should not affect file permission bits.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
