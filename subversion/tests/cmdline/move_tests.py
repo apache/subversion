@@ -1027,7 +1027,7 @@ def deeper_move_file_test(sbox):
   move_file_tests(sbox, source, dest, move_func, tests)
 
 
-def prop_test1(sbox):
+def property_merge(sbox):
   "test property merging on move-update"
 
   #    pristine  local  incoming  outcome           revert
@@ -1201,7 +1201,7 @@ test_list = [ None,
               sibling_move_file_test,
               shallower_move_file_test,
               deeper_move_file_test,
-              prop_test1,
+              property_merge,
             ]
 
 if __name__ == '__main__':
