@@ -667,20 +667,26 @@ create_conflict_markers(svn_skel_t **work_items,
                         svn_wc_operation_t operation,
                         const working_node_version_t *old_version,
                         const working_node_version_t *new_version,
-                        svn_kind_t local_kind,
+                        svn_node_kind_t kind,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
   svn_wc_conflict_version_t *original_version;
   svn_wc_conflict_version_t *conflicted_version;
+  const char *part;
 
   original_version = svn_wc_conflict_version_dup(
                        old_version->location_and_kind, scratch_pool);
-  original_version->path_in_repos = repos_relpath;
-
+  original_version->node_kind = kind;
   conflicted_version = svn_wc_conflict_version_dup(
                          new_version->location_and_kind, scratch_pool);
-  conflicted_version->node_kind = svn__node_kind_from_kind(local_kind);
+  conflicted_version->node_kind = kind;
+
+  part = svn_relpath_skip_ancestor(original_version->path_in_repos,
+                                   repos_relpath);
+  conflicted_version->path_in_repos
+    = svn_relpath_join(conflicted_version->path_in_repos, part, scratch_pool);
+  original_version->path_in_repos = repos_relpath;
 
   if (operation == svn_wc_operation_update)
     {
@@ -830,7 +836,7 @@ tc_editor_alter_directory(void *baton,
                                           b->db, move_dst_repos_relpath,
                                           conflict_skel, b->operation,
                                           &old_version, &new_version,
-                                          move_dst_kind,
+                                          svn_node_dir,
                                           scratch_pool, scratch_pool));
           SVN_ERR(svn_wc__db_mark_conflict_internal(b->wcroot, dst_relpath,
                                                     conflict_skel,
@@ -952,7 +958,7 @@ update_working_file(const char *local_relpath,
       SVN_ERR(create_conflict_markers(&work_item, local_abspath, db,
                                       repos_relpath, conflict_skel,
                                       operation, old_version, new_version,
-                                      svn_kind_file,
+                                      svn_node_file,
                                       scratch_pool, scratch_pool));
 
       SVN_ERR(svn_wc__db_mark_conflict_internal(wcroot, local_relpath,
