@@ -1515,6 +1515,21 @@ def authz_svnserve_groups(sbox):
                                      '-m', 'logmsg',
                                      E_url, D_url)
 
+@Skip(svntest.main.is_ra_type_file)
+@Issue(4332)
+def authz_del_from_subdir(sbox):
+  "delete file without rights on the root"
+
+  sbox.build(create_wc = False)
+
+  write_authz_file(sbox, {"/": "* = ", "/A": "jrandom = rw"})
+
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                      'rm', sbox.repo_url + '/A/mu',
+                                      '-m', '')
+
 ########################################################################
 # Run the tests
 
@@ -1545,7 +1560,8 @@ test_list = [ None,
               wc_commit_error_handling,
               upgrade_absent,
               remove_subdir_with_authz_and_tc,
-              authz_svnserve_groups
+              authz_svnserve_groups,
+              authz_del_from_subdir,
              ]
 serial_only = True
 
