@@ -435,6 +435,9 @@ svn_ra_serf__v2_get_youngest_revnum(svn_revnum_t *youngest,
 
   SVN_ERR(create_options_req(&opt_ctx, session, conn, scratch_pool));
   SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, scratch_pool));
+  SVN_ERR(svn_ra_serf__error_on_status(opt_ctx->handler->sline.code,
+                                       opt_ctx->handler->path,
+                                       opt_ctx->handler->location));
 
   *youngest = opt_ctx->youngest_rev;
 
