@@ -17394,7 +17394,6 @@ def unnecessary_noninheritable_mergeinfo_shallow_merge(sbox):
 #    svn merge -cr1295005 ^/subversion/trunk@1295000 ../src
 #    svn merge -cr1295004 ^/subversion/trunk/@r1295004 ../src
 @Issue(4132)
-@XFail()
 def svnmucc_abuse_1(sbox):
   "svnmucc: merge a replacement"
 
@@ -17429,12 +17428,21 @@ def svnmucc_abuse_1(sbox):
 
   ## Attempt to merge that.
   # This used to assert:
-  #   --- Recording mergeinfo for merge of r5 into 'svn-test-work/working_copies/merge_tests-125/A_COPY':
+  #   --- Recording mergeinfo for merge of r5 into \
+  #     'svn-test-work/working_copies/merge_tests-125/A_COPY':
   #   subversion/libsvn_subr/mergeinfo.c:1172: (apr_err=235000)
-  #   svn: E235000: In file 'subversion/libsvn_subr/mergeinfo.c' line 1172: assertion failed (IS_VALID_FORWARD_RANGE(first))
+  #   svn: E235000: In file 'subversion/libsvn_subr/mergeinfo.c' \
+  #     line 1172: assertion failed (IS_VALID_FORWARD_RANGE(first))
+  #
+  # Then, prior to the fix asserted this way:
+  #
+  #   >svn merge -c5 ^/A@r5 A_COPY
+  #   subversion\libsvn_client\merge.c:4871: (apr_err=235000)
+  #   svn: E235000: In file 'subversion\libsvn_client\merge.c'
+  #     line 4871: assertion failed (*gap_start < *gap_end)
   sbox.simple_update()
   svntest.main.run_svn(None, 'merge', '-c', 'r5', '^/A@r5',
-                             sbox.ospath('A_COPY'))
+                       sbox.ospath('A_COPY'))
 
 #----------------------------------------------------------------------
 # Test for issue #4138 'replacement in merge source not notified correctly'.
