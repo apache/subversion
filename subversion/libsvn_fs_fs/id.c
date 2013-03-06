@@ -29,84 +29,89 @@
 #include "private/svn_string_private.h"
 
 
-typedef struct id_private_t {
+typedef struct fs_fs__id_t
+{
+  /* API visible part */
+  svn_fs_id_t generic_id;
+
+  /* private members */
   const char *node_id;
   const char *copy_id;
   const char *txn_id;
   svn_revnum_t rev;
   apr_uint64_t item;
-} id_private_t;
+} fs_fs__id_t;
 
 
 /* Accessing ID Pieces.  */
 
 const char *
-svn_fs_fs__id_node_id(const svn_fs_id_t *id)
+svn_fs_fs__id_node_id(const svn_fs_id_t *fs_id)
 {
-  id_private_t *pvt = id->fsap_data;
+  fs_fs__id_t *id = (fs_fs__id_t *)fs_id;
 
-  return pvt->node_id;
+  return id->node_id;
 }
 
 
 const char *
-svn_fs_fs__id_copy_id(const svn_fs_id_t *id)
+svn_fs_fs__id_copy_id(const svn_fs_id_t *fs_id)
 {
-  id_private_t *pvt = id->fsap_data;
+  fs_fs__id_t *id = (fs_fs__id_t *)fs_id;
 
-  return pvt->copy_id;
+  return id->copy_id;
 }
 
 
 const char *
-svn_fs_fs__id_txn_id(const svn_fs_id_t *id)
+svn_fs_fs__id_txn_id(const svn_fs_id_t *fs_id)
 {
-  id_private_t *pvt = id->fsap_data;
+  fs_fs__id_t *id = (fs_fs__id_t *)fs_id;
 
-  return pvt->txn_id;
+  return id->txn_id;
 }
 
 
 svn_revnum_t
-svn_fs_fs__id_rev(const svn_fs_id_t *id)
+svn_fs_fs__id_rev(const svn_fs_id_t *fs_id)
 {
-  id_private_t *pvt = id->fsap_data;
+  fs_fs__id_t *id = (fs_fs__id_t *)fs_id;
 
-  return pvt->rev;
+  return id->rev;
 }
 
 
 apr_uint64_t
-svn_fs_fs__id_item(const svn_fs_id_t *id)
+svn_fs_fs__id_item(const svn_fs_id_t *fs_id)
 {
-  id_private_t *pvt = id->fsap_data;
+  fs_fs__id_t *id = (fs_fs__id_t *)fs_id;
 
-  return pvt->item;
+  return id->item;
 }
 
 
 svn_string_t *
-svn_fs_fs__id_unparse(const svn_fs_id_t *id,
+svn_fs_fs__id_unparse(const svn_fs_id_t *fs_id,
                       apr_pool_t *pool)
 {
-  id_private_t *pvt = id->fsap_data;
+  fs_fs__id_t *id = (fs_fs__id_t *)fs_id;
 
-  if ((! pvt->txn_id))
+  if ((! id->txn_id))
     {
       char rev_string[SVN_INT64_BUFFER_SIZE];
       char offset_string[SVN_INT64_BUFFER_SIZE];
 
-      svn__i64toa(rev_string, pvt->rev);
-      svn__i64toa(offset_string, pvt->item);
+      svn__i64toa(rev_string, id->rev);
+      svn__i64toa(offset_string, id->item);
       return svn_string_createf(pool, "%s.%s.r%s/%s",
-                                pvt->node_id, pvt->copy_id,
+                                id->node_id, id->copy_id,
                                 rev_string, offset_string);
     }
   else
     {
       return svn_string_createf(pool, "%s.%s.t%s",
-                                pvt->node_id, pvt->copy_id,
-                                pvt->txn_id);
+                                id->node_id, id->copy_id,
+                                id->txn_id);
     }
 }
 
@@ -117,21 +122,22 @@ svn_boolean_t
 svn_fs_fs__id_eq(const svn_fs_id_t *a,
                  const svn_fs_id_t *b)
 {
-  id_private_t *pvta = a->fsap_data, *pvtb = b->fsap_data;
+  fs_fs__id_t *id_a = (fs_fs__id_t *)a;
+  fs_fs__id_t *id_b = (fs_fs__id_t *)b;
 
   if (a == b)
     return TRUE;
-  if (strcmp(pvta->node_id, pvtb->node_id) != 0)
+  if (strcmp(id_a->node_id, id_b->node_id) != 0)
      return FALSE;
-  if (strcmp(pvta->copy_id, pvtb->copy_id) != 0)
+  if (strcmp(id_a->copy_id, id_b->copy_id) != 0)
     return FALSE;
-  if ((pvta->txn_id == NULL) != (pvtb->txn_id == NULL))
+  if ((id_a->txn_id == NULL) != (id_b->txn_id == NULL))
     return FALSE;
-  if (pvta->txn_id && pvtb->txn_id && strcmp(pvta->txn_id, pvtb->txn_id) != 0)
+  if (id_a->txn_id && id_b->txn_id && strcmp(id_a->txn_id, id_b->txn_id) != 0)
     return FALSE;
-  if (pvta->rev != pvtb->rev)
+  if (id_a->rev != id_b->rev)
     return FALSE;
-  if (pvta->item != pvtb->item)
+  if (id_a->item != id_b->item)
     return FALSE;
   return TRUE;
 }
@@ -141,20 +147,21 @@ svn_boolean_t
 svn_fs_fs__id_check_related(const svn_fs_id_t *a,
                             const svn_fs_id_t *b)
 {
-  id_private_t *pvta = a->fsap_data, *pvtb = b->fsap_data;
+  fs_fs__id_t *id_a = (fs_fs__id_t *)a;
+  fs_fs__id_t *id_b = (fs_fs__id_t *)b;
 
   if (a == b)
     return TRUE;
   /* If both node_ids start with _ and they have differing transaction
      IDs, then it is impossible for them to be related. */
-  if (pvta->node_id[0] == '_')
+  if (id_a->node_id[0] == '_')
     {
-      if (pvta->txn_id && pvtb->txn_id &&
-          (strcmp(pvta->txn_id, pvtb->txn_id) != 0))
+      if (id_a->txn_id && id_b->txn_id &&
+          (strcmp(id_a->txn_id, id_b->txn_id) != 0))
         return FALSE;
     }
 
-  return (strcmp(pvta->node_id, pvtb->node_id) == 0);
+  return (strcmp(id_a->node_id, id_b->node_id) == 0);
 }
 
 
@@ -183,18 +190,18 @@ svn_fs_fs__id_txn_create(const char *node_id,
                          const char *txn_id,
                          apr_pool_t *pool)
 {
-  svn_fs_id_t *id = apr_palloc(pool, sizeof(*id));
-  id_private_t *pvt = apr_palloc(pool, sizeof(*pvt));
+  fs_fs__id_t *id = apr_pcalloc(pool, sizeof(*id));
 
-  pvt->node_id = apr_pstrdup(pool, node_id);
-  pvt->copy_id = apr_pstrdup(pool, copy_id);
-  pvt->txn_id = apr_pstrdup(pool, txn_id);
-  pvt->rev = SVN_INVALID_REVNUM;
-  pvt->item = 0;
+  id->node_id = apr_pstrdup(pool, node_id);
+  id->copy_id = apr_pstrdup(pool, copy_id);
+  id->txn_id = apr_pstrdup(pool, txn_id);
+  id->rev = SVN_INVALID_REVNUM;
+  id->item = 0;
 
-  id->vtable = &id_vtable;
-  id->fsap_data = pvt;
-  return id;
+  id->generic_id.vtable = &id_vtable;
+  id->generic_id.fsap_data = &id;
+
+  return (svn_fs_id_t *)id;
 }
 
 
@@ -205,37 +212,37 @@ svn_fs_fs__id_rev_create(const char *node_id,
                          apr_uint64_t item,
                          apr_pool_t *pool)
 {
-  svn_fs_id_t *id = apr_palloc(pool, sizeof(*id));
-  id_private_t *pvt = apr_palloc(pool, sizeof(*pvt));
+  fs_fs__id_t *id = apr_pcalloc(pool, sizeof(*id));
 
-  pvt->node_id = apr_pstrdup(pool, node_id);
-  pvt->copy_id = apr_pstrdup(pool, copy_id);
-  pvt->txn_id = NULL;
-  pvt->rev = rev;
-  pvt->item = item;
+  id->node_id = apr_pstrdup(pool, node_id);
+  id->copy_id = apr_pstrdup(pool, copy_id);
+  id->txn_id = NULL;
+  id->rev = rev;
+  id->item = item;
 
-  id->vtable = &id_vtable;
-  id->fsap_data = pvt;
-  return id;
+  id->generic_id.vtable = &id_vtable;
+  id->generic_id.fsap_data = &id;
+
+  return (svn_fs_id_t *)id;
 }
 
 
 svn_fs_id_t *
-svn_fs_fs__id_copy(const svn_fs_id_t *id, apr_pool_t *pool)
+svn_fs_fs__id_copy(const svn_fs_id_t *source, apr_pool_t *pool)
 {
-  svn_fs_id_t *new_id = apr_palloc(pool, sizeof(*new_id));
-  id_private_t *new_pvt = apr_palloc(pool, sizeof(*new_pvt));
-  id_private_t *pvt = id->fsap_data;
+  fs_fs__id_t *id = (fs_fs__id_t *)source;
+  fs_fs__id_t *new_id = apr_palloc(pool, sizeof(*new_id));
 
-  new_pvt->node_id = apr_pstrdup(pool, pvt->node_id);
-  new_pvt->copy_id = apr_pstrdup(pool, pvt->copy_id);
-  new_pvt->txn_id = pvt->txn_id ? apr_pstrdup(pool, pvt->txn_id) : NULL;
-  new_pvt->rev = pvt->rev;
-  new_pvt->item = pvt->item;
+  new_id->node_id = apr_pstrdup(pool, id->node_id);
+  new_id->copy_id = apr_pstrdup(pool, id->copy_id);
+  new_id->txn_id = id->txn_id ? apr_pstrdup(pool, id->txn_id) : NULL;
+  new_id->rev = id->rev;
+  new_id->item = id->item;
 
-  new_id->vtable = &id_vtable;
-  new_id->fsap_data = new_pvt;
-  return new_id;
+  new_id->generic_id.vtable = &id_vtable;
+  new_id->generic_id.fsap_data = &new_id;
+
+  return (svn_fs_id_t *)new_id;
 }
 
 
@@ -244,8 +251,7 @@ svn_fs_fs__id_parse(const char *data,
                     apr_size_t len,
                     apr_pool_t *pool)
 {
-  svn_fs_id_t *id;
-  id_private_t *pvt;
+  fs_fs__id_t *id;
   char *data_copy, *str;
 
   /* Dup the ID data into POOL.  Our returned ID will have references
@@ -253,10 +259,9 @@ svn_fs_fs__id_parse(const char *data,
   data_copy = apr_pstrmemdup(pool, data, len);
 
   /* Alloc a new svn_fs_id_t structure. */
-  id = apr_palloc(pool, sizeof(*id));
-  pvt = apr_palloc(pool, sizeof(*pvt));
-  id->vtable = &id_vtable;
-  id->fsap_data = pvt;
+  id = apr_pcalloc(pool, sizeof(*id));
+  id->generic_id.vtable = &id_vtable;
+  id->generic_id.fsap_data = &id;
 
   /* Now, we basically just need to "split" this data on `.'
      characters.  We will use svn_cstring_tokenize, which will put
@@ -268,13 +273,13 @@ svn_fs_fs__id_parse(const char *data,
   str = svn_cstring_tokenize(".", &data_copy);
   if (str == NULL)
     return NULL;
-  pvt->node_id = str;
+  id->node_id = str;
 
   /* Copy Id */
   str = svn_cstring_tokenize(".", &data_copy);
   if (str == NULL)
     return NULL;
-  pvt->copy_id = str;
+  id->copy_id = str;
 
   /* Txn/Rev Id */
   str = svn_cstring_tokenize(".", &data_copy);
@@ -287,13 +292,13 @@ svn_fs_fs__id_parse(const char *data,
       svn_error_t *err;
 
       /* This is a revision type ID */
-      pvt->txn_id = NULL;
+      id->txn_id = NULL;
 
       data_copy = str + 1;
       str = svn_cstring_tokenize("/", &data_copy);
       if (str == NULL)
         return NULL;
-      pvt->rev = SVN_STR_TO_REV(str);
+      id->rev = SVN_STR_TO_REV(str);
 
       str = svn_cstring_tokenize("/", &data_copy);
       if (str == NULL)
@@ -304,102 +309,74 @@ svn_fs_fs__id_parse(const char *data,
           svn_error_clear(err);
           return NULL;
         }
-      pvt->item = (apr_uint32_t)val;
+      id->item = (apr_uint32_t)val;
     }
   else if (str[0] == 't')
     {
       /* This is a transaction type ID */
-      pvt->txn_id = str + 1;
-      pvt->rev = SVN_INVALID_REVNUM;
-      pvt->item = 0;
+      id->txn_id = str + 1;
+      id->rev = SVN_INVALID_REVNUM;
+      id->item = 0;
     }
   else
     return NULL;
 
-  return id;
+  return (svn_fs_id_t *)id;
 }
 
 /* (de-)serialization support */
-
-/* Serialization of the PVT sub-structure within the CONTEXT.
- */
-static void
-serialize_id_private(svn_temp_serializer__context_t *context,
-                     const id_private_t * const *pvt)
-{
-  const id_private_t *private = *pvt;
-
-  /* serialize the pvt data struct itself */
-  svn_temp_serializer__push(context,
-                            (const void * const *)pvt,
-                            sizeof(*private));
-
-  /* append the referenced strings */
-  svn_temp_serializer__add_string(context, &private->node_id);
-  svn_temp_serializer__add_string(context, &private->copy_id);
-  svn_temp_serializer__add_string(context, &private->txn_id);
-
-  /* return to caller's nesting level */
-  svn_temp_serializer__pop(context);
-}
 
 /* Serialize an ID within the serialization CONTEXT.
  */
 void
 svn_fs_fs__id_serialize(svn_temp_serializer__context_t *context,
-                        const struct svn_fs_id_t * const *id)
+                        const struct svn_fs_id_t * const *in)
 {
+  const fs_fs__id_t *id = (const fs_fs__id_t *)*in;
+  
   /* nothing to do for NULL ids */
-  if (*id == NULL)
+  if (id == NULL)
     return;
 
   /* serialize the id data struct itself */
   svn_temp_serializer__push(context,
-                            (const void * const *)id,
-                            sizeof(**id));
+                            (const void * const *)in,
+                            sizeof(fs_fs__id_t));
 
-  /* serialize the id_private_t data sub-struct */
-  serialize_id_private(context,
-                       (const id_private_t * const *)&(*id)->fsap_data);
+  /* append the referenced strings */
+  svn_temp_serializer__add_string(context, &id->node_id);
+  svn_temp_serializer__add_string(context, &id->copy_id);
+  svn_temp_serializer__add_string(context, &id->txn_id);
 
   /* return to caller's nesting level */
   svn_temp_serializer__pop(context);
 }
 
-/* Deserialization of the PVT sub-structure in BUFFER.
- */
-static void
-deserialize_id_private(void *buffer, id_private_t **pvt)
-{
-  /* fixup the reference to the only sub-structure */
-  id_private_t *private;
-  svn_temp_deserializer__resolve(buffer, (void**)pvt);
-
-  /* fixup the sub-structure itself */
-  private = *pvt;
-  svn_temp_deserializer__resolve(private, (void**)&private->node_id);
-  svn_temp_deserializer__resolve(private, (void**)&private->copy_id);
-  svn_temp_deserializer__resolve(private, (void**)&private->txn_id);
-}
-
 /* Deserialize an ID inside the BUFFER.
  */
 void
-svn_fs_fs__id_deserialize(void *buffer, svn_fs_id_t **id)
+svn_fs_fs__id_deserialize(void *buffer, svn_fs_id_t **in_out)
 {
+  fs_fs__id_t *id;
+
   /* The id maybe all what is in the whole buffer.
    * Don't try to fixup the pointer in that case*/
-  if (*id != buffer)
-    svn_temp_deserializer__resolve(buffer, (void**)id);
+  if (*in_out != buffer)
+    svn_temp_deserializer__resolve(buffer, (void**)in_out);
+
+  id = (fs_fs__id_t *)*in_out;
 
   /* no id, no sub-structure fixup necessary */
-  if (*id == NULL)
+  if (id == NULL)
     return;
 
   /* the stored vtable is bogus at best -> set the right one */
-  (*id)->vtable = &id_vtable;
+  id->generic_id.vtable = &id_vtable;
+  id->generic_id.fsap_data = id;
 
   /* handle sub-structures */
-  deserialize_id_private(*id, (id_private_t **)&(*id)->fsap_data);
+  svn_temp_deserializer__resolve(id, (void**)&id->node_id);
+  svn_temp_deserializer__resolve(id, (void**)&id->copy_id);
+  svn_temp_deserializer__resolve(id, (void**)&id->txn_id);
 }
 
