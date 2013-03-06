@@ -167,6 +167,30 @@ svn__ui64toa_sep(apr_uint64_t number, char seperator, apr_pool_t *pool);
 char *
 svn__i64toa_sep(apr_int64_t number, char seperator, apr_pool_t *pool);
 
+
+/** Writes the @a number as base36-encoded string into @a dest. The latter
+ * must provide space for at least #SVN_INT64_BUFFER_SIZE characters.
+ * Returns the number chars written excluding the terminating NUL.
+ *
+ * @note The actual maximum buffer requirement is much shorter than
+ * #SVN_INT64_BUFFER_SIZE but introducing yet another constant is only
+ * marginally useful and may open the door to security issues when e.g.
+ * switching between base10 and base36 encoding.
+ */
+apr_size_t
+svn__ui64tobase36(char *dest, apr_uint64_t number);
+
+/** Returns the value of the base36 encoded unsigned integer starting at
+ * @a source.  If @a next is not NULL, @a *next will be set to the first
+ * position after the integer.
+ *
+ * The data in @a source will be considered part of the number to parse
+ * as long as the characters are within the base36 range.  If there are
+ * no such characters to begin with, 0 is returned.
+ */
+apr_uint64_t
+svn__base36toui64(const char **next, const char *source);
+
 /**
  * Computes the similarity score of STRA and STRB. Returns the ratio
  * of the length of their longest common subsequence and the average

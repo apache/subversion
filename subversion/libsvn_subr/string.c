@@ -1177,6 +1177,85 @@ svn__i64toa_sep(apr_int64_t number, char seperator, apr_pool_t *pool)
   return apr_pstrdup(pool, buffer);
 }
 
+apr_size_t
+svn__ui64tobase36(char *dest, apr_uint64_t value)
+{
+  char *dest_start = dest;
+  if (value < 10)
+    {
+      /* pretty frequent and trivial case. Make it fast. */
+      *(dest++) = (char)(value) + '0';
+    }
+  else
+    {
+      char buffer[SVN_INT64_BUFFER_SIZE];
+      char *p = buffer;
+
+      /* write result as little-endian to buffer */
+      while (value > 0)
+        {
+          char c = (char)(value % 36);
+          value /= 36;
+
+          *p = (c <= 9) ? (c + '0') : (c - 10 + 'a');
+          ++p;
+        }
+
+      /* copy as big-endian to DEST */
+      while (p > buffer)
+        *(dest++) = *(--p);
+    }
+
+  *dest = '\0';
+  return dest - dest_start;
+}
+
+apr_uint64_t
+svn__base36toui64(const char **next, const char *source)
+{
+  apr_uint64_t result = 0;
+  apr_uint64_t factor = 1;
+  int i  = 0;
+  char digits[SVN_INT64_BUFFER_SIZE];
+
+  /* convert digits to numerical values and count the number of places */
+  while (TRUE)
+    {
+      char c = *source;
+      if (c < 'a')
+        {
+          /* includes detection of NUL terminator */
+          if (c < '0' || c > '9')
+            break;
+
+          c -= '0';
+        }
+      else
+        {
+          if (c < 'a' || c > 'z')
+            break;
+
+          c -= 'a' - 10;
+        }
+
+      digits[i++] = c;
+      source++;
+    }
+
+  /* fold digits into the result */
+  while (i > 0)
+    {
+      result += factor * (apr_uint64_t)digits[--i];
+      factor *= 36;
+    }
+
+  if (next)
+    *next = source;
+
+  return result;
+}
+
+
 unsigned int
 svn_cstring__similarity(const char *stra, const char *strb,
                         svn_membuf_t *buffer, apr_size_t *rlcs)
