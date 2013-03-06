@@ -970,10 +970,9 @@ def patch_add_new_dir(sbox):
 
   C_path = sbox.ospath('A/C')
   E_path = sbox.ospath('A/B/E')
-  svntest.actions.run_and_verify_svn("Deleting C failed", None, [],
-                                     'rm', C_path)
-  svntest.actions.run_and_verify_svn("Deleting E failed", None, [],
-                                     'rm', E_path)
+
+  svntest.main.safe_rmtree(C_path)
+  svntest.main.safe_rmtree(E_path)
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   A_B_E_Y_new_path = sbox.ospath('A/B/E/Y/new')
@@ -1000,13 +999,13 @@ def patch_add_new_dir(sbox):
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-           'X'         : Item(status='A ', wc_rev=0),
-           'X/Y'       : Item(status='A ', wc_rev=0),
-           'X/Y/new'   : Item(status='A ', wc_rev=0),
-           'A/B/E'     : Item(status='D ', wc_rev=1),
-           'A/B/E/alpha': Item(status='D ', wc_rev=1),
-           'A/B/E/beta': Item(status='D ', wc_rev=1),
-           'A/C'       : Item(status='D ', wc_rev=1),
+           'X'          : Item(status='A ', wc_rev=0),
+           'X/Y'        : Item(status='A ', wc_rev=0),
+           'X/Y/new'    : Item(status='A ', wc_rev=0),
+           'A/B/E'      : Item(status='! ', wc_rev=1),
+           'A/B/E/alpha': Item(status='! ', wc_rev=1),
+           'A/B/E/beta' : Item(status='! ', wc_rev=1),
+           'A/C'        : Item(status='! ', wc_rev=1),
   })
 
   expected_skip = wc.State(

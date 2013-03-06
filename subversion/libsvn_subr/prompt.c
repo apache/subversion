@@ -32,6 +32,7 @@
 #include <apr_portable.h>
 
 #include "svn_cmdline.h"
+#include "svn_ctype.h"
 #include "svn_string.h"
 #include "svn_auth.h"
 #include "svn_error.h"
@@ -43,6 +44,7 @@
 #ifdef WIN32
 #include <conio.h>
 #elif defined(HAVE_TERMIOS_H)
+#include <signal.h>
 #include <termios.h>
 #endif
 
@@ -210,8 +212,7 @@ terminal_open(terminal_handle_t **terminal, svn_boolean_t noecho,
           attr.c_lflag &= ~(ISIG | ICANON);
           attr.c_cc[VMIN] = 1;          /* Read one byte at a time */
           attr.c_cc[VTIME] = 0;         /* No timeout, wait indefinitely */
-          if (noecho)
-            attr.c_lflag &= ~(ECHO);    /* Turn off echo */
+          attr.c_lflag &= ~(ECHO);      /* Turn off echo */
           if (0 == tcsetattr((*terminal)->osinfd, TCSAFLUSH, &attr))
             {
               (*terminal)->noecho = noecho;
@@ -269,6 +270,31 @@ terminal_puts(const char *string, terminal_handle_t *terminal,
 #define TERMINAL_EOL   (TERMINAL_NONE + 2)   /* end of input/end of line */
 #define TERMINAL_EOF   (TERMINAL_NONE + 3)   /* end of file during input */
 
+/* Helper for terminal_getc: writes CH to OUTFD as a control char. */
+#ifndef WIN32
+static void
+echo_control_char(char ch, apr_file_t *outfd)
+{
+  if (svn_ctype_iscntrl(ch))
+    {
+      const char substitute = (ch < 32? '@' + ch : '?');
+      apr_file_putc('^', outfd);
+      apr_file_putc(substitute, outfd);
+    }
+  else if (svn_ctype_isprint(ch))
+    {
+      /* Pass printable characters unchanged. */
+      apr_file_putc(ch, outfd);
+    }
+  else
+    {
+      /* Everything else is strange. */
+      apr_file_putc('^', outfd);
+      apr_file_putc('!', outfd);
+    }
+}
+#endif /* WIN32 */
+
 /* Read one character or control code from TERMINAL, returning it in CODE.
    if CAN_ERASE and the input was a deletion, emit codes to erase the
    last character displayed on the terminal.
@@ -277,6 +303,7 @@ static svn_error_t *
 terminal_getc(int *code, terminal_handle_t *terminal,
               svn_boolean_t can_erase, apr_pool_t *pool)
 {
+  const svn_boolean_t echo = !terminal->noecho;
   apr_status_t status = APR_SUCCESS;
   char ch;
 
@@ -284,7 +311,6 @@ terminal_getc(int *code, terminal_handle_t *terminal,
   if (!terminal->infd)
     {
       /* See terminal_open; we're using Console I/O. */
-      const svn_boolean_t echo = !terminal->noecho;
 
       /*  The following was hoisted from APR's getpass for Windows. */
       int concode = _getch();
@@ -359,18 +385,49 @@ terminal_getc(int *code, terminal_handle_t *terminal,
         return svn_error_wrap_apr(status, _("Can't read from terminal"));
 
       if (ch == attr->c_cc[VINTR] || ch == attr->c_cc[VQUIT])
-        return svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
+        {
+          /* Break */
+          echo_control_char(ch, terminal->outfd);
+          return svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
+        }
       else if (ch == '\r' || ch == '\n' || ch == attr->c_cc[VEOL])
-        *code = TERMINAL_EOL;
-      else if (ch == '\b'
-               || ch == attr->c_cc[VERASE] || ch == attr->c_cc[VKILL])
-        *code = TERMINAL_DEL;
+        {
+          /* Newline */
+          *code = TERMINAL_EOL;
+          apr_file_putc('\n', terminal->outfd);
+        }
+      else if (ch == '\b' || ch == attr->c_cc[VERASE])
+        {
+          /* Delete */
+          *code = TERMINAL_DEL;
+          if (can_erase)
+            {
+              apr_file_putc('\b', terminal->outfd);
+              apr_file_putc(' ', terminal->outfd);
+              apr_file_putc('\b', terminal->outfd);
+            }
+        }
       else if (ch == attr->c_cc[VEOF])
-        *code = TERMINAL_EOF;
+        {
+          /* End of input */
+          *code = TERMINAL_EOF;
+          echo_control_char(ch, terminal->outfd);
+        }
+      else if (ch == attr->c_cc[VSUSP])
+        {
+          /* Suspend */
+          *code = TERMINAL_NONE;
+          kill(0, SIGTSTP);
+        }
       else if (!apr_iscntrl(ch))
-        *code = (int)(unsigned char)ch;
+        {
+          /* Normal character */
+          *code = (int)(unsigned char)ch;
+          apr_file_putc((echo ? ch : '*'), terminal->outfd);
+        }
       else
         {
+          /* Ignored character */
           *code = TERMINAL_NONE;
           apr_file_putc('\a', terminal->outfd);
         }

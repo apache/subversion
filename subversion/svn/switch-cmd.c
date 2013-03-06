@@ -193,13 +193,13 @@ svn_cl__switch(apr_getopt_t *os,
 
   if (! opt_state->quiet)
     {
-      err = svn_cl__print_conflict_stats(nwb.wrapped_baton, scratch_pool);
+      err = svn_cl__notifier_print_conflict_stats(nwb.wrapped_baton, scratch_pool);
       if (err)
         return svn_error_compose_create(externals_err, err);
     }
 
-  err = svn_cl__resolve_postponed_conflicts(ctx->conflict_baton2,
-                                            opt_state->depth,
+  err = svn_cl__resolve_postponed_conflicts(NULL,
+                                            ctx->conflict_baton2,
                                             opt_state->accept_which,
                                             opt_state->editor_cmd,
                                             ctx, scratch_pool);

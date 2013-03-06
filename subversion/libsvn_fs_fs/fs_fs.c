@@ -27,6 +27,7 @@
 #include "svn_hash.h"
 #include "svn_props.h"
 #include "svn_time.h"
+#include "svn_dirent_uri.h"
 
 #include "cached_data.h"
 #include "id.h"

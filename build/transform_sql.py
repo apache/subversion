@@ -137,16 +137,54 @@ class Processor(object):
       # So for the root we can compare with > '' and < x'FFFF'. (This skips the
       # root itself and selects all descendants)
       #
-      ### RH: I implemented this first with a user defined Sqlite function. But
-      ### when I wrote the documentation for it, I found out I could just
-      ### define it this way, without losing the option of just dropping the
-      ### query in a plain sqlite3.
 
       # '/'+1 == '0'
       line = re.sub(
             r'IS_STRICT_DESCENDANT_OF[(]([A-Za-z_.]+), ([?][0-9]+)[)]',
             r"(((\1) > (CASE (\2) WHEN '' THEN '' ELSE (\2) || '/' END))" +
             r" AND ((\1) < CASE (\2) WHEN '' THEN X'FFFF' ELSE (\2) || '0' END))",
+            line)
+
+      # RELPATH_SKIP_JOIN(x, y, z) skips the x prefix from z and the joins the
+      # result after y. In other words it replaces x with y, but follows the
+      # relpath rules.
+      line = re.sub(
+             r'RELPATH_SKIP_JOIN[(]([?]?[A-Za-z0-9_.]+), ' +
+                                 r'([?]?[A-Za-z0-9_.]+), ' +
+                                 r'([?]?[A-Za-z0-9_.]+)[)]',
+             r"(CASE WHEN (\1) = '' THEN RELPATH_JOIN(\2, \3) " +
+             r"WHEN (\2) = '' THEN RELPATH_SKIP_ANCESTOR(\1, \3) " +
+             r"WHEN SUBSTR((\3), 1, LENGTH(\1)) = (\1) " +
+             r"THEN " +
+                   r"CASE WHEN LENGTH(\1) = LENGTH(\3) THEN (\2) " +
+                        r"WHEN SUBSTR((\3), LENGTH(\1)+1, 1) = '/' " +
+                        r"THEN (\2) || SUBSTR((\3), LENGTH(\1)+1) " +
+                   r"END " +
+             r"END)",
+             line)
+
+      # RELPATH_JOIN(x, y) joins x to y following the svn_relpath_join() rules
+      line = re.sub(
+            r'RELPATH_JOIN[(]([?]?[A-Za-z0-9_.]+), ([?]?[A-Za-z0-9_.]+)[)]',
+            r"(CASE WHEN (\1) = '' THEN (\2) " +
+                  r"WHEN (\2) = '' THEN (\1) " +
+                 r"ELSE (\1) || '/' || (\2) " +
+            r"END)",
+            line)
+
+      # RELPATH_SKIP_ANCESTOR(x, y) skips the x prefix from y following the
+      # svn_relpath_skip_ancestor() rules. Returns NULL when y is not below X.
+      line = re.sub(
+             r'RELPATH_SKIP_ANCESTOR[(]([?]?[A-Za-z0-9_.]+), ' +
+                                     r'([?]?[A-Za-z0-9_.]+)[)]',
+             r"(CASE WHEN (\1) = '' THEN (\2) " +
+             r" WHEN SUBSTR((\2), 1, LENGTH(\1)) = (\1) " +
+             r" THEN " +
+                   r"CASE WHEN LENGTH(\1) = LENGTH(\2) THEN '' " +
+                        r"WHEN SUBSTR((\2), LENGTH(\1)+1, 1) = '/' " +
+                        r"THEN SUBSTR((\2), LENGTH(\1)+2) " +
+                   r"END" +
+             r" END)",
             line)
 
       # Another preprocessing.

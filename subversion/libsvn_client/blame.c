@@ -79,7 +79,6 @@ struct file_rev_baton {
   const char *target;
   svn_client_ctx_t *ctx;
   const svn_diff_file_options_t *diff_options;
-  svn_boolean_t ignore_mime_type;
   /* name of file containing the previous revision of the file */
   const char *last_filename;
   struct rev *rev;     /* the rev for which blame is being assigned
@@ -107,7 +106,6 @@ struct delta_baton {
   svn_txdelta_window_handler_t wrapped_handler;
   void *wrapped_baton;
   struct file_rev_baton *file_rev_baton;
-  svn_stream_t *source_stream;  /* the delta source */
   const char *filename;
 };
 
@@ -327,13 +325,6 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   if (window)
     return SVN_NO_ERROR;
 
-  /* Close the source file used for the delta.
-     It is important to do this early, since otherwise, they will be deleted
-     before all handles are closed, which leads to failures on some platforms
-     when new tempfiles are to be created. */
-  if (dbaton->source_stream)
-    SVN_ERR(svn_stream_close(dbaton->source_stream));
-
   /* If we are including merged revisions, we need to add each rev to the
      merged chain. */
   if (frb->include_merged_revisions)
@@ -383,27 +374,6 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   return SVN_NO_ERROR;
 }
 
-/* Throw an SVN_ERR_CLIENT_IS_BINARY_FILE error if PROP_DIFFS indicates a
-   binary MIME type.  Else, return SVN_NO_ERROR. */
-static svn_error_t *
-check_mimetype(const apr_array_header_t *prop_diffs, const char *target,
-               apr_pool_t *pool)
-{
-  int i;
-
-  for (i = 0; i < prop_diffs->nelts; ++i)
-    {
-      const svn_prop_t *prop = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
-      if (strcmp(prop->name, SVN_PROP_MIME_TYPE) == 0
-          && prop->value
-          && svn_mime_type_is_binary(prop->value->data))
-        return svn_error_createf
-          (SVN_ERR_CLIENT_IS_BINARY_FILE, 0,
-           _("Cannot calculate blame information for binary file '%s'"),
-           svn_dirent_local_style(target, pool));
-    }
-  return SVN_NO_ERROR;
-}
 
 /* Calculate and record blame information for one revision of the file,
  * by comparing the file content against the previously seen revision.
@@ -431,10 +401,6 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
 
   /* Clear the current pool. */
   svn_pool_clear(frb->currpool);
-
-  /* If this file has a non-textual mime-type, bail out. */
-  if (! frb->ignore_mime_type)
-    SVN_ERR(check_mimetype(prop_diffs, frb->target, frb->currpool));
 
   if (frb->ctx->notify_func2)
     {
@@ -472,12 +438,10 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
 
   /* Prepare the text delta window handler. */
   if (frb->last_filename)
-    SVN_ERR(svn_stream_open_readonly(&delta_baton->source_stream, frb->last_filename,
+    SVN_ERR(svn_stream_open_readonly(&last_stream, frb->last_filename,
                                      frb->currpool, pool));
   else
-    /* Means empty stream below. */
-    delta_baton->source_stream = NULL;
-  last_stream = svn_stream_disown(delta_baton->source_stream, pool);
+    last_stream = svn_stream_empty(frb->currpool);
 
   if (frb->include_merged_revisions && !frb->merged_revision)
     filepool = frb->filepool;
@@ -486,7 +450,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
 
   SVN_ERR(svn_stream_open_unique(&cur_stream, &delta_baton->filename, NULL,
                                  svn_io_file_del_on_pool_cleanup,
-                                 filepool, filepool));
+                                 filepool, pool));
 
   /* Get window handler for applying delta. */
   svn_txdelta_apply(last_stream, cur_stream, NULL, NULL,
@@ -640,12 +604,43 @@ svn_client_blame5(const char *target,
       (SVN_ERR_CLIENT_BAD_REVISION, NULL,
        _("Start revision must precede end revision"));
 
+  /* We check the mime-type of the yougest revision before getting all
+     the older revisions. */
+  if (!ignore_mime_type)
+    {
+      apr_hash_t *props;
+      apr_hash_index_t *hi;
+
+      SVN_ERR(svn_client_propget5(&props, NULL, SVN_PROP_MIME_TYPE,
+                                  target_abspath_or_url,  peg_revision,
+                                  end, NULL, svn_depth_empty, NULL, ctx,
+                                  pool, pool));
+
+      /* props could be keyed on URLs or paths depending on the
+         peg_revision and end values so avoid using the key. */
+      hi = apr_hash_first(pool, props);
+      if (hi)
+        {
+          svn_string_t *value;
+
+          /* Should only be one value */
+          SVN_ERR_ASSERT(apr_hash_count(props) == 1);
+
+          value = svn__apr_hash_index_val(hi);
+          if (value && svn_mime_type_is_binary(value->data))
+            return svn_error_createf
+              (SVN_ERR_CLIENT_IS_BINARY_FILE, 0,
+               _("Cannot calculate blame information for binary file '%s'"),
+               (svn_path_is_url(target)
+                ? target : svn_dirent_local_style(target, pool)));
+        }
+    }
+
   frb.start_rev = start_revnum;
   frb.end_rev = end_revnum;
   frb.target = target;
   frb.ctx = ctx;
   frb.diff_options = diff_options;
-  frb.ignore_mime_type = ignore_mime_type;
   frb.include_merged_revisions = include_merged_revisions;
   frb.last_filename = NULL;
   frb.last_original_filename = NULL;

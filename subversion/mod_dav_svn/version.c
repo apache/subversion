@@ -150,6 +150,7 @@ get_vsn_options(apr_pool_t *p, apr_text_header *phdr)
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY);
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_INHERITED_PROPS);
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_INLINE_PROPS);
+  apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_GET_FILE_REVS_REVERSE);
   /* Mergeinfo is a special case: here we merely say that the server
    * knows how to handle mergeinfo -- whether the repository does too
    * is a separate matter.
@@ -240,6 +241,24 @@ get_option(const dav_resource *resource,
           apr_table_set(r->headers_out,
                         SVN_DAV_REPOS_UUID_HEADER, uuid);
         }
+    }
+
+  if (resource->info->repos->repos)
+    {
+        svn_error_t *serr;
+        svn_boolean_t has;
+
+        serr = svn_repos_has_capability(resource->info->repos->repos, &has,
+                                        SVN_REPOS_CAPABILITY_MERGEINFO,
+                                        r->pool);
+        if (serr)
+        return dav_svn__convert_err
+                    (serr, HTTP_INTERNAL_SERVER_ERROR,
+                    "Error fetching repository capabilities",
+                    resource->pool);
+
+        apr_table_set(r->headers_out, SVN_DAV_REPOSITORY_MERGEINFO,
+                    has ? "yes" : "no");
     }
 
   /* Welcome to the 2nd generation of the svn HTTP protocol, now

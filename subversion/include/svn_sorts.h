@@ -208,6 +208,12 @@ svn_sort__array_delete(apr_array_header_t *arr,
                        int delete_index,
                        int elements_to_delete);
 
+/* Reverse the order of elements in @a array, in place.
+ */
+void
+svn_sort__array_reverse(apr_array_header_t *array,
+                        apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -210,6 +210,7 @@ struct parse_baton_t
   svn_boolean_t quiet;
   svn_boolean_t glob;
   svn_boolean_t drop_empty_revs;
+  svn_boolean_t drop_all_empty_revs;
   svn_boolean_t do_renumber_revs;
   svn_boolean_t preserve_revprops;
   svn_boolean_t skip_missing_merge_sources;
@@ -376,6 +377,7 @@ output_revision(struct revision_baton_t *rb)
   int bytes_used;
   char buf[SVN_KEYLINE_MAXLEN];
   apr_hash_index_t *hi;
+  svn_boolean_t write_out_rev = FALSE;
   apr_pool_t *hash_pool = apr_hash_pool_get(rb->props);
   svn_stringbuf_t *props = svn_stringbuf_create_empty(hash_pool);
   apr_pool_t *subpool = svn_pool_create(hash_pool);
@@ -391,7 +393,8 @@ output_revision(struct revision_baton_t *rb)
   if ((! rb->pb->preserve_revprops)
       && (! rb->has_nodes)
       && rb->had_dropped_nodes
-      && (! rb->pb->drop_empty_revs))
+      && (! rb->pb->drop_empty_revs)
+      && (! rb->pb->drop_all_empty_revs))
     {
       apr_hash_t *old_props = rb->props;
       rb->has_props = TRUE;
@@ -439,14 +442,21 @@ output_revision(struct revision_baton_t *rb)
 
   /* write out the revision */
   /* Revision is written out in the following cases:
-     1. No --drop-empty-revs has been supplied.
+     1. If the revision has nodes or
+     it is revision 0 (Special case: To preserve the props on r0).
      2. --drop-empty-revs has been supplied,
-     but revision has not all nodes dropped
-     3. Revision had no nodes to begin with.
+     but revision has not all nodes dropped.
+     3. If no --drop-empty-revs or --drop-all-empty-revs have been supplied,
+     write out the revision which has no nodes to begin with.
   */
-  if (rb->has_nodes
-      || (! rb->pb->drop_empty_revs)
-      || (! rb->had_dropped_nodes))
+  if (rb->has_nodes || (rb->rev_orig == 0))
+    write_out_rev = TRUE;
+  else if (rb->pb->drop_empty_revs)
+    write_out_rev = ! rb->had_dropped_nodes;
+  else if (! rb->pb->drop_all_empty_revs)
+    write_out_rev = TRUE;
+
+  if (write_out_rev)
     {
       /* This revision is a keeper. */
       SVN_ERR(svn_stream_write(rb->pb->out_stream,
@@ -994,6 +1004,7 @@ static svn_opt_subcommand_t
 enum
   {
     svndumpfilter__drop_empty_revs = SVN_OPT_FIRST_LONGOPT_ID,
+    svndumpfilter__drop_all_empty_revs,
     svndumpfilter__renumber_revs,
     svndumpfilter__preserve_revprops,
     svndumpfilter__skip_missing_merge_sources,
@@ -1023,6 +1034,9 @@ static const apr_getopt_option_t options_table[] =
      N_("Treat the path prefixes as file glob patterns.") },
     {"drop-empty-revs",    svndumpfilter__drop_empty_revs, 0,
      N_("Remove revisions emptied by filtering.")},
+    {"drop-all-empty-revs",    svndumpfilter__drop_all_empty_revs, 0,
+     N_("Remove all empty revisions found in dumpstream\n"
+        "                             except revision 0.")},
     {"renumber-revs",      svndumpfilter__renumber_revs, 0,
      N_("Renumber revisions left after filtering.") },
     {"skip-missing-merge-sources",
@@ -1045,7 +1059,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     {"exclude", subcommand_exclude, {0},
      N_("Filter out nodes with given prefixes from dumpstream.\n"
         "usage: svndumpfilter exclude PATH_PREFIX...\n"),
-     {svndumpfilter__drop_empty_revs, svndumpfilter__renumber_revs,
+     {svndumpfilter__drop_empty_revs, svndumpfilter__drop_all_empty_revs,
+      svndumpfilter__renumber_revs,
       svndumpfilter__skip_missing_merge_sources, svndumpfilter__targets,
       svndumpfilter__preserve_revprops, svndumpfilter__quiet,
       svndumpfilter__glob} },
@@ -1053,7 +1068,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     {"include", subcommand_include, {0},
      N_("Filter out nodes without given prefixes from dumpstream.\n"
         "usage: svndumpfilter include PATH_PREFIX...\n"),
-     {svndumpfilter__drop_empty_revs, svndumpfilter__renumber_revs,
+     {svndumpfilter__drop_empty_revs, svndumpfilter__drop_all_empty_revs,
+      svndumpfilter__renumber_revs,
       svndumpfilter__skip_missing_merge_sources, svndumpfilter__targets,
       svndumpfilter__preserve_revprops, svndumpfilter__quiet,
       svndumpfilter__glob} },
@@ -1076,6 +1092,7 @@ struct svndumpfilter_opt_state
   svn_boolean_t glob;                    /* --pattern           */
   svn_boolean_t version;                 /* --version           */
   svn_boolean_t drop_empty_revs;         /* --drop-empty-revs   */
+  svn_boolean_t drop_all_empty_revs;     /* --drop-all-empty-revs */
   svn_boolean_t help;                    /* --help or -?        */
   svn_boolean_t renumber_revs;           /* --renumber-revs     */
   svn_boolean_t preserve_revprops;       /* --preserve-revprops */
@@ -1107,9 +1124,11 @@ parse_baton_initialize(struct parse_baton_t **pb,
   /* Ignore --renumber-revs if there can't possibly be
      anything to renumber. */
   baton->do_renumber_revs =
-    (opt_state->renumber_revs && opt_state->drop_empty_revs);
+    (opt_state->renumber_revs && (opt_state->drop_empty_revs
+                                  || opt_state->drop_all_empty_revs));
 
   baton->drop_empty_revs = opt_state->drop_empty_revs;
+  baton->drop_all_empty_revs = opt_state->drop_all_empty_revs;
   baton->preserve_revprops = opt_state->preserve_revprops;
   baton->quiet = opt_state->quiet;
   baton->glob = opt_state->glob;
@@ -1188,11 +1207,13 @@ do_filter(apr_getopt_t *os,
         {
           SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
                                       do_exclude
-                                      ? opt_state->drop_empty_revs
+                                      ? (opt_state->drop_empty_revs
+                                         || opt_state->drop_all_empty_revs)
                                         ? _("Excluding (and dropping empty "
                                             "revisions for) prefix patterns:\n")
                                         : _("Excluding prefix patterns:\n")
-                                      : opt_state->drop_empty_revs
+                                      : (opt_state->drop_empty_revs
+                                         || opt_state->drop_all_empty_revs)
                                         ? _("Including (and dropping empty "
                                             "revisions for) prefix patterns:\n")
                                         : _("Including prefix patterns:\n")));
@@ -1201,11 +1222,13 @@ do_filter(apr_getopt_t *os,
         {
           SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
                                       do_exclude
-                                      ? opt_state->drop_empty_revs
+                                      ? (opt_state->drop_empty_revs
+                                         || opt_state->drop_all_empty_revs)
                                         ? _("Excluding (and dropping empty "
                                             "revisions for) prefixes:\n")
                                         : _("Excluding prefixes:\n")
-                                      : opt_state->drop_empty_revs
+                                      : (opt_state->drop_empty_revs
+                                         || opt_state->drop_all_empty_revs)
                                         ? _("Including (and dropping empty "
                                             "revisions for) prefixes:\n")
                                         : _("Including prefixes:\n")));
@@ -1427,6 +1450,9 @@ main(int argc, const char *argv[])
         case svndumpfilter__drop_empty_revs:
           opt_state.drop_empty_revs = TRUE;
           break;
+        case svndumpfilter__drop_all_empty_revs:
+          opt_state.drop_all_empty_revs = TRUE;
+          break;
         case svndumpfilter__renumber_revs:
           opt_state.renumber_revs = TRUE;
           break;
@@ -1447,6 +1473,16 @@ main(int argc, const char *argv[])
           }
         }  /* close `switch' */
     }  /* close `while' */
+
+  /* Disallow simultaneous use of both --drop-empty-revs and
+     --drop-all-empty-revs. */
+  if (opt_state.drop_empty_revs && opt_state.drop_all_empty_revs)
+    {
+      err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                             _("--drop-empty-revs cannot be used with "
+                               "--drop-all-empty-revs"));
+      return svn_cmdline_handle_exit_error(err, pool, "svndumpfilter: ");
+    }
 
   /* If the user asked for help, then the rest of the arguments are
      the names of subcommands to get help on (if any), or else they're

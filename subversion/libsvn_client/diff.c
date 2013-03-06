@@ -676,7 +676,9 @@ diff_dir_props_changed(svn_wc_notify_state_t *state,
   return svn_error_trace(diff_props_changed(diff_relpath,
                                             /* ### These revs be filled
                                              * ### with per node info */
-                                            diff_cmd_baton->revnum1,
+                                            dir_was_added
+                                                ? 0 /* Magic legacy value */
+                                                : diff_cmd_baton->revnum1,
                                             diff_cmd_baton->revnum2,
                                             dir_was_added,
                                             propchanges,
@@ -1385,12 +1387,14 @@ diff_prepare_repos_repos(const char **url1,
   const char *abspath_or_url2;
   const char *abspath_or_url1;
   const char *repos_root_url;
+  const char *wri_abspath = NULL;
 
   if (!svn_path_is_url(path_or_url2))
     {
       SVN_ERR(svn_dirent_get_absolute(&abspath_or_url2, path_or_url2, pool));
       SVN_ERR(svn_wc__node_get_url(url2, ctx->wc_ctx, abspath_or_url2,
                                    pool, pool));
+      wri_abspath = abspath_or_url2;
     }
   else
     *url2 = abspath_or_url2 = apr_pstrdup(pool, path_or_url2);
@@ -1400,6 +1404,7 @@ diff_prepare_repos_repos(const char **url1,
       SVN_ERR(svn_dirent_get_absolute(&abspath_or_url1, path_or_url1, pool));
       SVN_ERR(svn_wc__node_get_url(url1, ctx->wc_ctx, abspath_or_url1,
                                    pool, pool));
+      wri_abspath = abspath_or_url1;
     }
   else
     *url1 = abspath_or_url1 = apr_pstrdup(pool, path_or_url1);
@@ -1413,9 +1418,8 @@ diff_prepare_repos_repos(const char **url1,
   if (strcmp(*url2, path_or_url2) != 0)
     *base_path = path_or_url2;
 
-  SVN_ERR(svn_client__open_ra_session_internal(ra_session, NULL, *url2,
-                                               NULL, NULL, FALSE,
-                                               TRUE, ctx, pool));
+  SVN_ERR(svn_client_open_ra_session2(ra_session, *url2, wri_abspath,
+                                      ctx, pool, pool));
 
   /* If we are performing a pegged diff, we need to find out what our
      actual URLs will be. */
@@ -1618,7 +1622,8 @@ diff_wc_wc(const char *path1,
 
   callback_baton->revnum2 = SVN_INVALID_REVNUM;  /* WC */
 
-  SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, abspath1, FALSE, pool));
+  SVN_ERR(svn_wc_read_kind2(&kind, ctx->wc_ctx, abspath1,
+                            TRUE, FALSE, pool));
 
   if (kind != svn_node_dir)
     callback_baton->anchor = svn_dirent_dirname(path1, pool);
@@ -1680,6 +1685,7 @@ diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
   const char *target1;
   const char *target2;
   svn_ra_session_t *ra_session;
+  const char *wri_abspath = NULL;
 
   /* Prepare info for the repos repos diff. */
   SVN_ERR(diff_prepare_repos_repos(&url1, &url2, &base_path, &rev1, &rev2,
@@ -1688,6 +1694,12 @@ diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
                                    ctx, path_or_url1, path_or_url2,
                                    revision1, revision2, peg_revision,
                                    pool));
+
+  /* Find a WC path for the ra session */
+  if (!svn_path_is_url(path_or_url1))
+    SVN_ERR(svn_dirent_get_absolute(&wri_abspath, path_or_url1, pool));
+  else if (!svn_path_is_url(path_or_url2))
+    SVN_ERR(svn_dirent_get_absolute(&wri_abspath, path_or_url2, pool));
 
   /* Set up the repos_diff editor on BASE_PATH, if available.
      Otherwise, we just use "". */
@@ -1746,9 +1758,8 @@ diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
   /* Now, we open an extra RA session to the correct anchor
      location for URL1.  This is used during the editor calls to fetch file
      contents.  */
-  SVN_ERR(svn_client__open_ra_session_internal(&extra_ra_session, NULL,
-                                               anchor1, NULL, NULL, FALSE,
-                                               TRUE, ctx, pool));
+  SVN_ERR(svn_client_open_ra_session2(&extra_ra_session, anchor1, wri_abspath,
+                                      ctx, pool, pool));
 
   SVN_ERR(svn_client__get_diff_editor2(
                 &diff_editor, &diff_edit_baton,
@@ -1875,9 +1886,8 @@ diff_repos_wc(const char *path_or_url1,
     }
 
   /* Open an RA session to URL1 to figure out its node kind. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, url1,
-                                               NULL, NULL, FALSE, TRUE,
-                                               ctx, pool));
+  SVN_ERR(svn_client_open_ra_session2(&ra_session, url1, abspath2,
+                                      ctx, pool, pool));
   /* Resolve the revision to use for URL1. */
   SVN_ERR(svn_client__get_revision_number(&rev, NULL, ctx->wc_ctx,
                                           (strcmp(path_or_url1, url1) == 0)
@@ -1886,7 +1896,8 @@ diff_repos_wc(const char *path_or_url1,
   SVN_ERR(svn_ra_check_path(ra_session, "", rev, &kind1, pool));
 
   /* Figure out the node kind of the local target. */
-  SVN_ERR(svn_io_check_resolved_path(abspath2, &kind2, pool));
+  SVN_ERR(svn_wc_read_kind2(&kind2, ctx->wc_ctx, abspath2,
+                            TRUE, FALSE, pool));
 
   cmd_baton->ra_session = ra_session;
   cmd_baton->anchor = anchor;
@@ -2198,7 +2209,8 @@ diff_summarize_wc_wc(svn_client_diff_summarize_func_t summarize_func,
   /* Find the node kind of PATH1 so that we know whether the diff drive will
      be anchored at PATH1 or its parent dir. */
   SVN_ERR(svn_dirent_get_absolute(&abspath1, path1, pool));
-  SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, abspath1, FALSE, pool));
+  SVN_ERR(svn_wc_read_kind2(&kind, ctx->wc_ctx, abspath1,
+                            TRUE, FALSE, pool));
   target1 = (kind == svn_node_dir) ? "" : svn_dirent_basename(path1, pool);
   SVN_ERR(svn_client__get_diff_summarize_callbacks(
             &callbacks, &callback_baton, target1, FALSE,
@@ -2301,10 +2313,9 @@ diff_summarize_repos_repos(svn_client_diff_summarize_func_t summarize_func,
     }
 
   /* Now, we open an extra RA session to the correct anchor
-     location for URL1.  This is used to get the kind of deleted paths.  */
-  SVN_ERR(svn_client__open_ra_session_internal(&extra_ra_session, NULL,
-                                               anchor1, NULL, NULL, FALSE,
-                                               TRUE, ctx, pool));
+     location for URL1.  This is used to get deleted path information.  */
+  SVN_ERR(svn_client_open_ra_session2(&extra_ra_session, anchor1, NULL,
+                                      ctx, pool, pool));
 
   SVN_ERR(svn_client__get_diff_editor2(&diff_editor, &diff_edit_baton,
                                        extra_ra_session,

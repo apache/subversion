@@ -140,6 +140,126 @@ automatic_merge(const char *source_path_or_url,
   return SVN_NO_ERROR;
 }
 
+/* Run a merge.
+ *
+ * (No docs yet, as this code was just hoisted out of svn_cl__merge().)
+ *
+ * Having FIRST_RANGE_START/_END params is ugly -- we should be able to use
+ * PEG_REVISION1/2 and/or RANGES_TO_MERGE instead, maybe adjusting the caller.
+ */
+static svn_error_t *
+run_merge(svn_boolean_t two_sources_specified,
+          const char *sourcepath1,
+          svn_opt_revision_t peg_revision1,
+          const char *sourcepath2,
+          const char *targetpath,
+          apr_array_header_t *ranges_to_merge,
+          svn_opt_revision_t first_range_start,
+          svn_opt_revision_t first_range_end,
+          svn_cl__opt_state_t *opt_state,
+          apr_array_header_t *options,
+          svn_client_ctx_t *ctx,
+          apr_pool_t *scratch_pool)
+{
+  svn_error_t *merge_err;
+
+  /* Do an automatic merge if just one source and no revisions. */
+  if ((! two_sources_specified)
+      && (! opt_state->reintegrate)
+      && (! opt_state->ignore_ancestry)
+      && first_range_start.kind == svn_opt_revision_unspecified
+      && first_range_end.kind == svn_opt_revision_unspecified)
+    {
+      merge_err = automatic_merge(sourcepath1, &peg_revision1, targetpath,
+                                  opt_state->depth,
+                                  FALSE /*diff_ignore_ancestry*/,
+                                  opt_state->force, /* force_delete */
+                                  opt_state->record_only,
+                                  opt_state->dry_run,
+                                  opt_state->allow_mixed_rev,
+                                  TRUE /*allow_local_mods*/,
+                                  TRUE /*allow_switched_subtrees*/,
+                                  opt_state->verbose,
+                                  options, ctx, scratch_pool);
+    }
+  else if (opt_state->reintegrate)
+    {
+      merge_err = svn_client_merge_reintegrate(
+                    sourcepath1, &peg_revision1, targetpath,
+                    opt_state->dry_run, options, ctx, scratch_pool);
+    }
+  else if (! two_sources_specified)
+    {
+      /* If we don't have at least one valid revision range, pick a
+         good one that spans the entire set of revisions on our
+         source. */
+      if ((first_range_start.kind == svn_opt_revision_unspecified)
+          && (first_range_end.kind == svn_opt_revision_unspecified))
+        {
+          svn_opt_revision_range_t *range = apr_pcalloc(scratch_pool,
+                                                        sizeof(*range));
+          ranges_to_merge = apr_array_make(scratch_pool, 1, sizeof(range));
+          range->start.kind = svn_opt_revision_number;
+          range->start.value.number = 1;
+          range->end = peg_revision1;
+          APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = range;
+
+          /* This must be a 'sync' merge so check branch relationship. */
+          if (opt_state->verbose)
+            SVN_ERR(svn_cmdline_printf(
+                      scratch_pool, _("--- Checking branch relationship\n")));
+          SVN_ERR_W(svn_cl__check_related_source_and_target(
+                      sourcepath1, &peg_revision1,
+                      targetpath, &unspecified_revision, ctx, scratch_pool),
+                _("Source and target must be different but related branches"));
+        }
+
+      if (opt_state->verbose)
+        SVN_ERR(svn_cmdline_printf(scratch_pool, _("--- Merging\n")));
+      merge_err = svn_client_merge_peg5(sourcepath1,
+                                        ranges_to_merge,
+                                        &peg_revision1,
+                                        targetpath,
+                                        opt_state->depth,
+                                        opt_state->ignore_ancestry,
+                                        opt_state->ignore_ancestry,
+                                        opt_state->force, /* force_delete */
+                                        opt_state->record_only,
+                                        opt_state->dry_run,
+                                        opt_state->allow_mixed_rev,
+                                        options,
+                                        ctx,
+                                        scratch_pool);
+    }
+  else
+    {
+      if (svn_path_is_url(sourcepath1) != svn_path_is_url(sourcepath2))
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("Merge sources must both be "
+                                  "either paths or URLs"));
+
+      if (opt_state->verbose)
+        SVN_ERR(svn_cmdline_printf(scratch_pool, _("--- Merging\n")));
+      merge_err = svn_client_merge5(sourcepath1,
+                                    &first_range_start,
+                                    sourcepath2,
+                                    &first_range_end,
+                                    targetpath,
+                                    opt_state->depth,
+                                    opt_state->ignore_ancestry,
+                                    opt_state->ignore_ancestry,
+                                    opt_state->force, /* force_delete */
+                                    opt_state->record_only,
+                                    opt_state->dry_run,
+                                    opt_state->allow_mixed_rev,
+                                    options,
+                                    ctx,
+                                    scratch_pool);
+    }
+
+  return merge_err;
+}
+
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__merge(apr_getopt_t *os,
@@ -151,8 +271,7 @@ svn_cl__merge(apr_getopt_t *os,
   apr_array_header_t *targets;
   const char *sourcepath1 = NULL, *sourcepath2 = NULL, *targetpath = "";
   svn_boolean_t two_sources_specified = TRUE;
-  svn_error_t *err = SVN_NO_ERROR;
-  svn_error_t *merge_err = SVN_NO_ERROR;
+  svn_error_t *merge_err;
   svn_opt_revision_t first_range_start, first_range_end, peg_revision1,
     peg_revision2;
   apr_array_header_t *options, *ranges_to_merge = opt_state->revision_ranges;
@@ -447,125 +566,38 @@ svn_cl__merge(apr_getopt_t *os,
       ctx->conflict_baton2 = b;
     }
 
-  /* Do an automatic merge if just one source and no revisions. */
-  if ((! two_sources_specified)
-      && (! opt_state->reintegrate)
-      && (! opt_state->ignore_ancestry)
-      && first_range_start.kind == svn_opt_revision_unspecified
-      && first_range_end.kind == svn_opt_revision_unspecified)
+  merge_err = run_merge(two_sources_specified,
+                        sourcepath1, peg_revision1,
+                        sourcepath2,
+                        targetpath,
+                        ranges_to_merge, first_range_start, first_range_end,
+                        opt_state, options, ctx, pool);
+  if (merge_err && merge_err->apr_err
+                   == SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING)
     {
-      merge_err = automatic_merge(sourcepath1, &peg_revision1, targetpath,
-                                  opt_state->depth,
-                                  FALSE /*diff_ignore_ancestry*/,
-                                  opt_state->force, /* force_delete */
-                                  opt_state->record_only,
-                                  opt_state->dry_run,
-                                  opt_state->allow_mixed_rev,
-                                  TRUE /*allow_local_mods*/,
-                                  TRUE /*allow_switched_subtrees*/,
-                                  opt_state->verbose,
-                                  options, ctx, pool);
+      return svn_error_quick_wrap(
+               merge_err,
+               _("Merge tracking not possible, use --ignore-ancestry or\n"
+                 "fix invalid mergeinfo in target with 'svn propset'"));
     }
-  else if (opt_state->reintegrate)
+  if (! merge_err || merge_err->apr_err == SVN_ERR_WC_FOUND_CONFLICT)
     {
-      merge_err = svn_client_merge_reintegrate(
-                    sourcepath1, &peg_revision1, targetpath,
-                    opt_state->dry_run, options, ctx, pool);
-    }
-  else if (! two_sources_specified)
-    {
-      /* If we don't have at least one valid revision range, pick a
-         good one that spans the entire set of revisions on our
-         source. */
-      if ((first_range_start.kind == svn_opt_revision_unspecified)
-          && (first_range_end.kind == svn_opt_revision_unspecified))
-        {
-          svn_opt_revision_range_t *range = apr_pcalloc(pool, sizeof(*range));
-          ranges_to_merge = apr_array_make(pool, 1, sizeof(range));
-          range->start.kind = svn_opt_revision_number;
-          range->start.value.number = 1;
-          range->end = peg_revision1;
-          APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = range;
+      svn_error_t *err = SVN_NO_ERROR;
 
-          /* This must be a 'sync' merge so check branch relationship. */
-          if (opt_state->verbose)
-            SVN_ERR(svn_cmdline_printf(pool, _("--- Checking branch relationship\n")));
-          SVN_ERR_W(svn_cl__check_related_source_and_target(
-                      sourcepath1, &peg_revision1,
-                      targetpath, &unspecified_revision, ctx, pool),
-                _("Source and target must be different but related branches"));
-        }
+      if (! opt_state->quiet)
+        err = svn_cl__notifier_print_conflict_stats(ctx->notify_baton2,
+                                                        pool);
 
-      if (opt_state->verbose)
-        SVN_ERR(svn_cmdline_printf(pool, _("--- Merging\n")));
-      merge_err = svn_client_merge_peg5(sourcepath1,
-                                        ranges_to_merge,
-                                        &peg_revision1,
-                                        targetpath,
-                                        opt_state->depth,
-                                        opt_state->ignore_ancestry,
-                                        opt_state->ignore_ancestry,
-                                        opt_state->force, /* force_delete */
-                                        opt_state->record_only,
-                                        opt_state->dry_run,
-                                        opt_state->allow_mixed_rev,
-                                        options,
-                                        ctx,
-                                        pool);
-    }
-  else
-    {
-      if (svn_path_is_url(sourcepath1) != svn_path_is_url(sourcepath2))
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("Merge sources must both be "
-                                  "either paths or URLs"));
-
-      if (opt_state->verbose)
-        SVN_ERR(svn_cmdline_printf(pool, _("--- Merging\n")));
-      merge_err = svn_client_merge5(sourcepath1,
-                                    &first_range_start,
-                                    sourcepath2,
-                                    &first_range_end,
-                                    targetpath,
-                                    opt_state->depth,
-                                    opt_state->ignore_ancestry,
-                                    opt_state->ignore_ancestry,
-                                    opt_state->force, /* force_delete */
-                                    opt_state->record_only,
-                                    opt_state->dry_run,
-                                    opt_state->allow_mixed_rev,
-                                    options,
-                                    ctx,
-                                    pool);
+      /* Resolve any postponed conflicts.  (Only if we've been using the
+       * default 'postpone' resolver which remembers what was postponed.) */
+      if (!err && ctx->conflict_func2 == svn_cl__conflict_func_postpone)
+        err = svn_cl__resolve_postponed_conflicts(NULL,
+                                                  ctx->conflict_baton2,
+                                                  opt_state->accept_which,
+                                                  opt_state->editor_cmd,
+                                                  ctx, pool);
+      merge_err = svn_error_compose_create(merge_err, err);
     }
 
-  if (! opt_state->quiet)
-    err = svn_cl__print_conflict_stats(ctx->notify_baton2, pool);
-
-  /* Resolve any postponed conflicts.  (Only if we've been using the
-   * default 'postpone' resolver which remembers what was postponed.) */
-  if (!err && ctx->conflict_func2 == svn_cl__conflict_func_postpone)
-    err = svn_cl__resolve_postponed_conflicts(ctx->conflict_baton2,
-                                              opt_state->depth,
-                                              opt_state->accept_which,
-                                              opt_state->editor_cmd,
-                                              ctx, pool);
-  if (merge_err)
-    {
-      if (merge_err->apr_err ==
-          SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING)
-        {
-          err = svn_error_quick_wrap(
-            svn_error_compose_create(merge_err, err),
-            _("Merge tracking not possible, use --ignore-ancestry or\n"
-              "fix invalid mergeinfo in target with 'svn propset'"));
-        }
-      else
-        {
-          err = svn_error_compose_create(merge_err, err);
-          return svn_cl__may_need_force(err);
-        }
-    }
-
-  return svn_error_trace(err);
+  return svn_cl__may_need_force(merge_err);
 }

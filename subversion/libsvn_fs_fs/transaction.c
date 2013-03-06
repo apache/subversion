@@ -29,6 +29,7 @@
 #include "svn_props.h"
 #include "svn_sorts.h"
 #include "svn_time.h"
+#include "svn_dirent_uri.h"
 
 #include "fs_fs.h"
 #include "tree.h"

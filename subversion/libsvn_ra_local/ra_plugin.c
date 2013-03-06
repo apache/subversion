@@ -838,9 +838,12 @@ svn_ra_local__do_switch(svn_ra_session_t *session,
                         const char *update_target,
                         svn_depth_t depth,
                         const char *switch_url,
+                        svn_boolean_t send_copyfrom_args,
+                        svn_boolean_t ignore_ancestry,
                         const svn_delta_editor_t *update_editor,
                         void *update_baton,
-                        apr_pool_t *pool)
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   return make_reporter(session,
                        reporter,
@@ -848,13 +851,13 @@ svn_ra_local__do_switch(svn_ra_session_t *session,
                        update_revision,
                        update_target,
                        switch_url,
-                       TRUE,
+                       TRUE /* text_deltas */,
                        depth,
-                       FALSE,   /* ### TODO(sussman): take new arg */
-                       TRUE,
+                       send_copyfrom_args,
+                       ignore_ancestry,
                        update_editor,
                        update_baton,
-                       pool);
+                       result_pool);
 }
 
 
@@ -1513,7 +1516,10 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
       || strcmp(capability, SVN_RA_CAPABILITY_PARTIAL_REPLAY) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_COMMIT_REVPROPS) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_ATOMIC_REVPROPS) == 0
-      || strcmp(capability, SVN_RA_CAPABILITY_INHERITED_PROPS) == 0)
+      || strcmp(capability, SVN_RA_CAPABILITY_INHERITED_PROPS) == 0
+      || strcmp(capability, SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS) == 0
+      || strcmp(capability, SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE) == 0
+      )
     {
       *has = TRUE;
     }

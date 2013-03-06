@@ -103,6 +103,8 @@ public class SVNClient implements ISVNClient
         return NativeResources.getVersion();
     }
 
+    public native VersionExtended getVersionExtended(boolean verbose);
+
     public native String getAdminDirectoryName();
 
     public native boolean isAdminDirectory(String name);
@@ -352,6 +354,12 @@ public class SVNClient implements ISVNClient
                                   Revision pegRevision, Depth depth,
                                   Collection<String> changelists,
                                   ProplistCallback callback)
+            throws ClientException;
+
+    public native void properties(String path, Revision revision,
+                                  Revision pegRevision, Depth depth,
+                                  Collection<String> changelists,
+                                  InheritedProplistCallback callback)
             throws ClientException;
 
     public native void propertySetLocal(Set<String> paths, String name,

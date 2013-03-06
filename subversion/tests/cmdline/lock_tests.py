@@ -1474,9 +1474,12 @@ def lock_path_not_in_head(sbox):
   # svn: In file '..\..\..\subversion\libsvn_ra_serf\util.c' line 1120:
   #  assertion failed (ctx->status_code)
   svntest.actions.run_and_verify_svn2(None, None, expected_lock_fail_err_re,
-                                      0, 'lock', D_path)
-  svntest.actions.run_and_verify_svn2(None, None, expected_lock_fail_err_re,
                                       0, 'lock', lambda_path)
+
+  expected_err = 'svn: E155008: The node \'.*D\' is not a file'
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'lock', D_path)
+
 
 #----------------------------------------------------------------------
 def verify_path_escaping(sbox):

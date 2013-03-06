@@ -51,6 +51,12 @@ public interface ISVNClient
     public Version getVersion();
 
     /**
+     * @return Extended version information about the underlying
+     * native libraries and operating system.
+     */
+    public VersionExtended getVersionExtended(boolean verbose);
+
+    /**
      * @return The name of the working copy's administrative
      * directory, which is usually <code>.svn</code>.
      * @see <a
@@ -653,6 +659,23 @@ public interface ISVNClient
     void properties(String path, Revision revision, Revision pegRevision,
                     Depth depth, Collection<String> changelists,
                     ProplistCallback callback)
+            throws ClientException;
+
+    /**
+     * Retrieves the properties of an item, including inherited properties.
+     *
+     * @param path        the path of the item
+     * @param revision    the revision of the item
+     * @param pegRevision the revision to interpret path
+     * @param depth       the depth to recurse into subdirectories
+     * @param changelists changelists to filter by
+     * @param callback    the callback to use to return the properties
+     * @throws ClientException
+     * @since 1.8
+     */
+    void properties(String path, Revision revision, Revision pegRevision,
+                    Depth depth, Collection<String> changelists,
+                    InheritedProplistCallback callback)
             throws ClientException;
 
     /**

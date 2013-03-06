@@ -647,14 +647,6 @@ _svn()
 	    [[ ${COMPREPLY} ]] && return 0
 	fi
 
-	# force mandatory --accept option for 'resolve' command
-	if [[ $cmd = 'resolve' && ! $acceptOpt ]]
-	then
-	    COMPREPLY=( $( compgen -W '--accept' -- $cur ) )
-	    # force option now! others will be available on later completions
-	    return 0
-	fi
-
 	# maximum number of additional arguments expected in various forms
 	case $cmd in
 	    merge)
@@ -789,7 +781,7 @@ _svn()
 
 	# otherwise build possible options for the command
 	pOpts="--username --password --no-auth-cache --non-interactive \
-	       --trust-server-cert"
+	       --trust-server-cert --force-interactive"
 	mOpts="-m --message -F --file --encoding --force-log --with-revprop"
 	rOpts="-r --revision"
 	qOpts="-q --quiet"
@@ -826,7 +818,8 @@ _svn()
 		;;
 	commit|ci)
 		cmdOpts="$mOpts $qOpts $nOpts --targets --editor-cmd $pOpts \
-		         --no-unlock $cOpts --keep-changelists"
+		         --no-unlock $cOpts --keep-changelists \
+		         --include-externals"
 		;;
 	copy|cp)
 		cmdOpts="$mOpts $rOpts $qOpts --editor-cmd $pOpts --parents \
@@ -840,7 +833,9 @@ _svn()
 		cmdOpts="$rOpts -x --extensions --diff-cmd --no-diff-deleted \
 		         $nOpts $pOpts --force --old --new --notice-ancestry \
 		         -c --change --summarize $cOpts --xml --git \
-		         --internal-diff --show-copies-as-adds"
+		         --internal-diff --show-copies-as-adds \
+		         --ignore-properties --properties-only --no-diff-added \
+		         --patch-compatible"
 		;;
 	export)
 		cmdOpts="$rOpts $qOpts $pOpts $nOpts --force --native-eol \
@@ -859,7 +854,7 @@ _svn()
 		;;
 	list|ls)
 		cmdOpts="$rOpts -v --verbose -R --recursive $pOpts \
-                         --incremental --xml --depth"
+                         --incremental --xml --depth --include-externals"
 		;;
 	lock)
 		cmdOpts="-m --message -F --file --encoding --force-log \
@@ -870,13 +865,13 @@ _svn()
 		         --incremental --xml $qOpts -l --limit -c --change \
                          $gOpts --with-all-revprops --with-revprop --depth \
 		         --diff --diff-cmd -x --extensions --internal-diff \
-		         --with-no-revprops"
+		         --with-no-revprops --search --search-and"
 		;;
 	merge)
 		cmdOpts="$rOpts $nOpts $qOpts --force --dry-run --diff3-cmd \
 		         $pOpts --ignore-ancestry -c --change -x --extensions \
                          --record-only --accept --reintegrate \
-		         --allow-mixed-revisions"
+		         --allow-mixed-revisions -v --verbose"
 		;;
 	mergeinfo)
 	        cmdOpts="$rOpts $pOpts --depth --show-revs -R --recursive"
@@ -886,7 +881,7 @@ _svn()
 		;;
 	move|mv|rename|ren)
 		cmdOpts="$mOpts $rOpts $qOpts --force --editor-cmd $pOpts \
-                         --parents"
+                         --parents --allow-mixed-revisions"
 		;;
 	patch)
 		cmdOpts="$qOpts $pOpts --dry-run --ignore-whitespace \
@@ -903,13 +898,13 @@ _svn()
 		    cmdOpts="$cmdOpts --revprop $rOpts"
 		;;
 	propget|pget|pg)
-	        cmdOpts="-v --verbose -R --recursive $rOpts --strict $pOpts $cOpts \
-                         --depth --xml"
+	        cmdOpts="-v --verbose -R --recursive $rOpts --strict \
+		         $pOpts $cOpts --depth --xml --show-inherited-props"
 		[[ $isRevProp || ! $prop ]] && cmdOpts="$cmdOpts --revprop"
 		;;
 	proplist|plist|pl)
 		cmdOpts="-v --verbose -R --recursive $rOpts --revprop $qOpts \
-		         $pOpts $cOpts --depth --xml"
+		         $pOpts $cOpts --depth --xml --show-inherited-props"
 		;;
 	propset|pset|ps)
 		cmdOpts="$qOpts --targets -R --recursive \
@@ -1035,9 +1030,9 @@ _svnadmin ()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
 	# Possible expansions, without pure-prefix abbreviations such as "h".
-	cmds='crashtest create deltify dump help hotcopy list-dblogs \
-	      list-unused-dblogs load lslocks lstxns pack recover rmlocks \
-	      rmtxns setlog setrevprop setuuid upgrade verify --version'
+	cmds='crashtest create deltify dump freeze help hotcopy list-dblogs \
+	      list-unused-dblogs load lock lslocks lstxns pack recover rmlocks \
+	      rmtxns setlog setrevprop setuuid unlock upgrade verify --version'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
 		COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
@@ -1046,7 +1041,8 @@ _svnadmin ()
 
 	# options that require a parameter
 	# note: continued lines must end '|' continuing lines must start '|'
-	optsParam="-r|--revision|--parent-dir|--fs-type"
+	optsParam="-r|--revision|--parent-dir|--fs-type|-M|--memory-cache-size"
+	optsParam="$optsParam|-F|--file"
 
 	# if not typing an option, or if the previous option required a
 	# parameter, then fallback on ordinary filename expansion
@@ -1061,13 +1057,18 @@ _svnadmin ()
 	case ${COMP_WORDS[1]} in
 	create)
 		cmdOpts="--bdb-txn-nosync --bdb-log-keep --config-dir \
-		         --fs-type --pre-1.4-compatible --pre-1.5-compatible"
+		         --fs-type --pre-1.4-compatible --pre-1.5-compatible \
+		         --pre-1.6-compatible --compatible-version"
 		;;
 	deltify)
 		cmdOpts="-r --revision -q --quiet"
 		;;
 	dump)
-		cmdOpts="-r --revision --incremental -q --quiet --deltas"
+		cmdOpts="-r --revision --incremental -q --quiet --deltas \
+		         -M --memory-cache-size"
+		;;
+	freeze)
+		cmdOpts="-F --file"
 		;;
 	help|h|\?)
 		cmdOpts="$cmds"
@@ -1077,7 +1078,11 @@ _svnadmin ()
 		;;
 	load)
 		cmdOpts="--ignore-uuid --force-uuid --parent-dir -q --quiet \
-		         --use-pre-commit-hook --use-post-commit-hook"
+		         --use-pre-commit-hook --use-post-commit-hook \
+		         --bypass-prop-validation -M --memory-cache-size"
+		;;
+	lock|unlock)
+		cmdOpts="--bypass-hooks"
 		;;
 	recover)
 		cmdOpts="--wait"
@@ -1121,6 +1126,10 @@ _svnadmin ()
 		--help)          cmdOpts=${cmdOpts/ -h / } ;;
 		-r)              cmdOpts=${cmdOpts/ --revision / } ;;
 		--revision)      cmdOpts=${cmdOpts/ -r / } ;;
+		-F)              cmdOpts=${cmdOpts/ --file / } ;;
+		--file)          cmdOpts=${cmdOpts/ -F / } ;;
+		-M)              cmdOpts=${cmdOpts/ --memory-cache-size / } ;;
+		--memory-cache-size) cmdOpts=${cmdOpts/ --M / } ;;
 		esac
 
 		# skip next option if this one requires a parameter

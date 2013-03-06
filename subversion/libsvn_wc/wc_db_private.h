@@ -299,6 +299,17 @@ svn_wc__db_depth_get_info(svn_wc__db_status_t *status,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
+/* Look up REPOS_ID in SDB and set *REPOS_ROOT_URL and/or *REPOS_UUID to
+   its root URL and UUID respectively.  If REPOS_ID is INVALID_REPOS_ID,
+   use NULL for both URL and UUID.  Either or both output parameters may be
+   NULL if not wanted.  */
+svn_error_t *
+svn_wc__db_fetch_repos_info(const char **repos_root_url,
+                            const char **repos_uuid,
+                            svn_sqlite__db_t *sdb,
+                            apr_int64_t repos_id,
+                            apr_pool_t *result_pool);
+
 /* Like svn_wc__db_read_conflict(), but with WCROOT+LOCAL_RELPATH instead of
    DB+LOCAL_ABSPATH, and outputting relpaths instead of abspaths. */
 svn_error_t *
@@ -428,11 +439,20 @@ svn_error_t *
 svn_wc__db_bump_moved_away(svn_wc__db_wcroot_t *wcroot,
                            const char *local_relpath,
                            svn_depth_t depth,
+                           svn_wc__db_t *db,
                            apr_pool_t *scratch_pool);
 
 svn_error_t *
 svn_wc__db_resolve_break_moved_away_internal(svn_wc__db_wcroot_t *wcroot,
                                              const char *local_relpath,
                                              apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__db_update_move_list_notify(svn_wc__db_wcroot_t *wcroot,
+                                   svn_revnum_t old_revision,
+                                   svn_revnum_t new_revision,
+                                   svn_wc_notify_func2_t notify_func,
+                                   void *notify_baton,
+                                   apr_pool_t *scratch_pool);
 
 #endif /* WC_DB_PRIVATE_H */

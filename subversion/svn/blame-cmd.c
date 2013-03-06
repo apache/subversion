@@ -381,6 +381,7 @@ svn_cl__blame(apr_getopt_t *os,
                                           target));
             }
           else if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND ||
+                   err->apr_err == SVN_ERR_ENTRY_NOT_FOUND ||
                    err->apr_err == SVN_ERR_FS_NOT_FILE ||
                    err->apr_err == SVN_ERR_FS_NOT_FOUND)
             {

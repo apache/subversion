@@ -640,6 +640,7 @@ create_rep_state_body(rep_state_t **rep_state,
 
   /* If the hint is
    * - given,
+   * - refers to a valid revision,
    * - refers to a packed revision,
    * - as does the rep we want to read, and
    * - refers to the same pack file as the rep
@@ -647,6 +648,7 @@ create_rep_state_body(rep_state_t **rep_state,
    */
   svn_boolean_t reuse_shared_file
     =    shared_file && *shared_file && (*shared_file)->file
+      && SVN_IS_VALID_REVNUM((*shared_file)->revision)
       && (*shared_file)->revision < ffd->min_unpacked_rev
       && rep->revision < ffd->min_unpacked_rev
       && (   ((*shared_file)->revision / ffd->max_files_per_dir)

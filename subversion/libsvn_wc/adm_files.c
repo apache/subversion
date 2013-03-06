@@ -460,8 +460,8 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                                              &db_repos_relpath,
                                              &db_repos_root_url,
                                              &db_repos_uuid,
-                                             NULL, NULL, NULL, NULL, NULL,
-                                             NULL, db, local_abspath,
+                                             NULL, NULL, NULL, NULL,
+                                             db, local_abspath,
                                              scratch_pool, scratch_pool));
           else
             SVN_ERR(svn_wc__db_scan_base_repos(&db_repos_relpath,

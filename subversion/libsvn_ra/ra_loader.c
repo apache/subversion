@@ -804,24 +804,32 @@ svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
                                     pool);
 }
 
-svn_error_t *svn_ra_do_switch2(svn_ra_session_t *session,
-                               const svn_ra_reporter3_t **reporter,
-                               void **report_baton,
-                               svn_revnum_t revision_to_switch_to,
-                               const char *switch_target,
-                               svn_depth_t depth,
-                               const char *switch_url,
-                               const svn_delta_editor_t *switch_editor,
-                               void *switch_baton,
-                               apr_pool_t *pool)
+svn_error_t *
+svn_ra_do_switch3(svn_ra_session_t *session,
+                  const svn_ra_reporter3_t **reporter,
+                  void **report_baton,
+                  svn_revnum_t revision_to_switch_to,
+                  const char *switch_target,
+                  svn_depth_t depth,
+                  const char *switch_url,
+                  svn_boolean_t send_copyfrom_args,
+                  svn_boolean_t ignore_ancestry,
+                  const svn_delta_editor_t *switch_editor,
+                  void *switch_baton,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
   SVN_ERR_ASSERT(svn_path_is_empty(switch_target)
                  || svn_path_is_single_path_component(switch_target));
   return session->vtable->do_switch(session,
                                     reporter, report_baton,
                                     revision_to_switch_to, switch_target,
-                                    depth, switch_url, switch_editor,
-                                    switch_baton, pool);
+                                    depth, switch_url,
+                                    send_copyfrom_args,
+                                    ignore_ancestry,
+                                    switch_editor,
+                                    switch_baton,
+                                    result_pool, scratch_pool);
 }
 
 svn_error_t *svn_ra_do_status2(svn_ra_session_t *session,

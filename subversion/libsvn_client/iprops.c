@@ -199,12 +199,9 @@ get_inheritable_props(apr_hash_t **wcroot_iprops,
               if (! session_pool)
                 session_pool = svn_pool_create(scratch_pool);
 
-              SVN_ERR(svn_client__open_ra_session_internal(&ra_session,
-                                                           NULL, url,
-                                                           NULL, NULL,
-                                                           FALSE, TRUE,
-                                                           ctx,
-                                                           session_pool));
+              SVN_ERR(svn_client_open_ra_session2(&ra_session, url, NULL,
+                                                  ctx,
+                                                  session_pool, iterpool));
             }
 
           err = svn_ra_get_inherited_props(ra_session, &inherited_props,

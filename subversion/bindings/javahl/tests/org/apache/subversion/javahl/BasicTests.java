@@ -131,6 +131,91 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Test SVNClient.getVersionExtended().
+     * @throws Throwable
+     */
+    public void testVersionExtendedQuiet() throws Throwable
+    {
+        try
+        {
+            VersionExtended vx = client.getVersionExtended(false);
+            String result = vx.getBuildDate();
+            if (result == null || result.trim().length() == 0)
+                throw new Exception("Build date empty");
+            result = vx.getBuildTime();
+            if (result == null || result.trim().length() == 0)
+                throw new Exception("Build time empty");
+            result = vx.getBuildHost();
+            if (result == null || result.trim().length() == 0)
+                throw new Exception("Build host empty");
+            result = vx.getCopyright();
+            if (result == null || result.trim().length() == 0)
+                throw new Exception("Copyright empty");
+        }
+        catch (Exception e)
+        {
+            fail("VersionExtended should always be available unless the " +
+                 "native libraries failed to initialize: " + e);
+        }
+    }
+
+    /**
+     * Test SVNClient.getVersionExtended().
+     * @throws Throwable
+     */
+    public void testVersionExtendedVerbose() throws Throwable
+    {
+        try
+        {
+            VersionExtended vx = client.getVersionExtended(true);
+            String result = vx.getRuntimeHost();
+            if (result == null || result.trim().length() == 0)
+                throw new Exception("Runtime host empty");
+
+            // OS name is allowed to be null, but not empty
+            result = vx.getRuntimeOSName();
+            if (result != null && result.trim().length() == 0)
+                throw new Exception("Runtime OS name empty");
+
+            java.util.Iterator<VersionExtended.LinkedLib> ikl;
+            ikl = vx.getLinkedLibs();
+            if (ikl.hasNext())
+            {
+                VersionExtended.LinkedLib lib = ikl.next();
+                result = lib.getName();
+                if (result == null || result.trim().length() == 0)
+                    throw new Exception("Linked lib name empty");
+                result = lib.getCompiledVersion();
+                if (result == null || result.trim().length() == 0)
+                    throw new Exception("Linked lib compiled version empty");
+                // Runtime version is allowed to be null, but not empty
+                result = lib.getRuntimeVersion();
+                if (result != null && result.trim().length() == 0)
+                    throw new Exception("Linked lib runtime version empty");
+            }
+
+            java.util.Iterator<VersionExtended.LoadedLib> ill;
+            ill = vx.getLoadedLibs();
+            if (ill.hasNext())
+            {
+                VersionExtended.LoadedLib lib = ill.next();
+                result = lib.getName();
+                if (result == null || result.trim().length() == 0)
+                    throw new Exception("Loaded lib name empty");
+                // Version is allowed to be null, but not empty
+                result = lib.getVersion();
+                if (result != null && result.trim().length() == 0)
+                    throw new Exception("Loaded lib version empty");
+            }
+        }
+        catch (Exception e)
+        {
+            fail("VersionExtended should always be available unless the " +
+                 "native libraries failed to initialize: " + e);
+        }
+    }
+
+    /**
      * Test the JNIError class functionality
      * @throws Throwable
      */
@@ -707,6 +792,49 @@ public class BasicTests extends SVNTests
         }
 
         wc.setItemPropStatus("A/B/E/alpha", Status.Kind.modified);
+        thisTest.checkStatus();
+    }
+
+    /**
+     * Test property inheritance.
+     * @throws Throwable
+     */
+    public void testInheritedProperties() throws Throwable
+    {
+        OneTest thisTest = new OneTest();
+        WC wc = thisTest.getWc();
+
+        String adirPath = fileToSVNPath(new File(thisTest.getWCPath(),
+                                                 "/A"),
+                                        false);
+        String alphaPath = fileToSVNPath(new File(thisTest.getWCPath(),
+                                                  "/A/B/E/alpha"),
+                                         false);
+
+        String propval = "ybg";
+        setprop(adirPath, "ahqrtz", propval.getBytes());
+
+        final Map<String, Collection<InheritedProplistCallback.InheritedItem>> ipropMaps =
+            new HashMap<String, Collection<InheritedProplistCallback.InheritedItem>>();
+
+        client.properties(alphaPath, null, null, Depth.empty, null,
+            new InheritedProplistCallback () {
+                public void singlePath(
+                    String path, Map<String, byte[]> props,
+                    Collection<InheritedProplistCallback.InheritedItem> iprops)
+                { ipropMaps.put(path, iprops); }
+            });
+        Collection<InheritedProplistCallback.InheritedItem> iprops = ipropMaps.get(alphaPath);
+        for (InheritedProplistCallback.InheritedItem item : iprops)
+        {
+            for (String key : item.properties.keySet())
+            {
+                assertEquals("ahqrtz", key);
+                assertEquals(propval, new String(item.properties.get(key)));
+            }
+        }
+
+        wc.setItemPropStatus("A", Status.Kind.modified);
         thisTest.checkStatus();
     }
 

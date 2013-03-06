@@ -67,7 +67,9 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
 
   SVN_ERR_ASSERT(SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind));
 
-  SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, local_abspath, FALSE, scratch_pool));
+  SVN_ERR(svn_wc_read_kind2(&kind, wc_ctx, local_abspath,
+                            (revision->kind != svn_opt_revision_working),
+                            FALSE, scratch_pool));
 
   if (kind == svn_node_unknown || kind == svn_node_none)
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
@@ -86,7 +88,7 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
                                             result_pool, scratch_pool));
       if (input == NULL)
         return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                 _("'%s' has no base revision until it is committed"),
+                 _("'%s' has no pristine version until it is committed"),
                  svn_dirent_local_style(local_abspath, scratch_pool));
 
       SVN_ERR(svn_wc_get_pristine_props(&props, wc_ctx, local_abspath,

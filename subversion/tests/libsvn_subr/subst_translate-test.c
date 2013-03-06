@@ -96,9 +96,7 @@ test_svn_subst_translate_string2(apr_pool_t *pool)
                                                      source_string,
                                                      "ISO-8859-1", FALSE, pool,
                                                      pool);
-      SVN_TEST_ASSERT(err != SVN_NO_ERROR);
-      SVN_TEST_ASSERT(err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL);
-      svn_error_clear(err);
+      SVN_TEST_ASSERT_ERROR(err, SVN_ERR_IO_INCONSISTENT_EOL);
     }
 
   return SVN_NO_ERROR;

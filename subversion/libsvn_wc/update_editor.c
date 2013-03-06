@@ -1193,6 +1193,11 @@ open_root(void *edit_baton,
     }
   else if (already_conflicted)
     {
+      /* Record a skip of both the anchor and target in the skipped tree
+         as the anchor itself might not be updated */
+      SVN_ERR(remember_skipped_tree(eb, db->local_abspath, pool));
+      SVN_ERR(remember_skipped_tree(eb, eb->target_abspath, pool));
+
       db->skip_this = TRUE;
       db->already_notified = TRUE;
 
@@ -1458,7 +1463,7 @@ check_tree_conflict(svn_skel_t **pconflict,
             if (working_status == svn_wc__db_status_added)
               SVN_ERR(svn_wc__db_scan_addition(&working_status, NULL, NULL,
                                                NULL, NULL, NULL, NULL,
-                                               NULL, NULL, NULL, NULL,
+                                               NULL, NULL,
                                                eb->db, local_abspath,
                                                scratch_pool, scratch_pool));
 
@@ -1767,7 +1772,9 @@ delete_entry(const char *path,
     deleting_switched = FALSE;
 
   /* Is this path a conflict victim? */
-  if (conflicted)
+  if (pb->shadowed)
+    conflicted = FALSE; /* Conflict applies to WORKING */
+  else if (conflicted)
     SVN_ERR(node_already_conflicted(&conflicted, eb->db, local_abspath,
                                     scratch_pool));
   if (conflicted)
@@ -1785,8 +1792,8 @@ delete_entry(const char *path,
 
 
 
-    /* Receive the remote removal of excluded/server-excluded/not present node.
-       Do not notify, but perform the change even when the node is shadowed */
+  /* Receive the remote removal of excluded/server-excluded/not present node.
+     Do not notify, but perform the change even when the node is shadowed */
   if (base_status == svn_wc__db_status_not_present
       || base_status == svn_wc__db_status_excluded
       || base_status == svn_wc__db_status_server_excluded)
@@ -2180,7 +2187,7 @@ add_directory(const char *path,
       /* Is the local add a copy? */
       if (status == svn_wc__db_status_added)
         SVN_ERR(svn_wc__db_scan_addition(&add_status, NULL, NULL, NULL, NULL,
-                                         NULL, NULL, NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL, NULL,
                                          eb->db, db->local_abspath,
                                          pool, pool));
 
@@ -2367,7 +2374,9 @@ open_directory(const char *path,
   db->was_incomplete = (base_status == svn_wc__db_status_incomplete);
 
   /* Is this path a conflict victim? */
-  if (conflicted)
+  if (db->shadowed)
+    conflicted = FALSE; /* Conflict applies to WORKING */
+  else if (conflicted)
     SVN_ERR(node_already_conflicted(&conflicted, eb->db,
                                     db->local_abspath, pool));
   if (conflicted)
@@ -3166,7 +3175,9 @@ add_file(const char *path,
 
 
   /* Is this path a conflict victim? */
-  if (conflicted)
+  if (fb->shadowed)
+    conflicted = FALSE; /* Conflict applies to WORKING */
+  else if (conflicted)
     {
       if (pb->deletion_conflicts)
         tree_conflict = apr_hash_get(pb->deletion_conflicts, fb->name,
@@ -3263,7 +3274,7 @@ add_file(const char *path,
       /* Is the local node a copy or move */
       if (status == svn_wc__db_status_added)
         SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
-                                         NULL, NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL,
                                          eb->db, fb->local_abspath,
                                          scratch_pool, scratch_pool));
 
@@ -3433,7 +3444,9 @@ open_file(const char *path,
                                      fb->pool, scratch_pool));
 
   /* Is this path a conflict victim? */
-  if (conflicted)
+  if (fb->shadowed)
+    conflicted = FALSE; /* Conflict applies to WORKING */
+  else if (conflicted)
     SVN_ERR(node_already_conflicted(&conflicted, eb->db,
                                     fb->local_abspath, pool));
   if (conflicted)
@@ -4593,6 +4606,8 @@ close_edit(void *edit_baton,
                                                        *(eb->target_revision),
                                                        eb->skipped_trees,
                                                        eb->wcroot_iprops,
+                                                       eb->notify_func,
+                                                       eb->notify_baton,
                                                        eb->pool));
 
       if (*eb->target_basename != '\0')
@@ -5157,7 +5172,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
           /* The parent is an addition, scan upwards to find the right info */
           SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
                                            &repos_root_url, &repos_uuid,
-                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL,
                                            wc_ctx->db, dir_abspath,
                                            scratch_pool, scratch_pool));
         }

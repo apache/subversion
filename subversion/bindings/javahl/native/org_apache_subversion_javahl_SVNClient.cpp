@@ -51,6 +51,7 @@
 #include "ChangelistCallback.h"
 #include "StringArray.h"
 #include "RevpropTable.h"
+#include "VersionExtended.h"
 #include "svn_version.h"
 #include "svn_private_config.h"
 #include "version.h"
@@ -87,6 +88,20 @@ Java_org_apache_subversion_javahl_SVNClient_finalize
   SVNClient *cl = SVNClient::getCppObject(jthis);
   if (cl != NULL)
     cl->finalize();
+}
+
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_SVNClient_getVersionExtended(
+    JNIEnv *env, jobject jthis, jboolean verbose)
+{
+  JNIEntry(SVNClient, getVersionExtended);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return NULL;
+    }
+  return cl->getVersionExtended(!!verbose);
 }
 
 JNIEXPORT jstring JNICALL
@@ -891,13 +906,11 @@ Java_org_apache_subversion_javahl_SVNClient_mergeReintegrate
                        jdryRun ? true:false);
 }
 
-JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_properties
+static void SVNClient_properties
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
  jobject jpegRevision, jobject jdepth, jobject jchangelists,
- jobject jproplistCallback)
+ jobject jproplistCallback, bool inherited)
 {
-  JNIEntry(SVNClient, properties);
   SVNClient *cl = SVNClient::getCppObject(jthis);
   if (cl == NULL)
     {
@@ -920,9 +933,31 @@ Java_org_apache_subversion_javahl_SVNClient_properties
   if (JNIUtil::isExceptionThrown())
     return;
 
-  ProplistCallback callback(jproplistCallback);
+  ProplistCallback callback(jproplistCallback, inherited);
   cl->properties(path, revision, pegRevision, EnumMapper::toDepth(jdepth),
                  changelists, &callback);
+}
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNClient_properties__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Lorg_apache_subversion_javahl_types_Revision_2Lorg_apache_subversion_javahl_types_Depth_2Ljava_util_Collection_2Lorg_apache_subversion_javahl_callback_ProplistCallback_2
+(JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
+ jobject jpegRevision, jobject jdepth, jobject jchangelists,
+ jobject jproplistCallback)
+{
+  JNIEntry(SVNClient, properties);
+  SVNClient_properties(env, jthis, jpath, jrevision, jpegRevision, jdepth,
+                       jchangelists, jproplistCallback, false);
+}
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNClient_properties__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Lorg_apache_subversion_javahl_types_Revision_2Lorg_apache_subversion_javahl_types_Depth_2Ljava_util_Collection_2Lorg_apache_subversion_javahl_callback_InheritedProplistCallback_2
+(JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
+ jobject jpegRevision, jobject jdepth, jobject jchangelists,
+ jobject jproplistCallback)
+{
+  JNIEntry(SVNClient, properties);
+  SVNClient_properties(env, jthis, jpath, jrevision, jpegRevision, jdepth,
+                       jchangelists, jproplistCallback, true);
 }
 
 JNIEXPORT void JNICALL

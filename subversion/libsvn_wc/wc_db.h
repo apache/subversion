@@ -1303,6 +1303,22 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
                    const svn_skel_t *work_items,
                    apr_pool_t *scratch_pool);
 
+/* Checks if LOCAL_ABSPATH represents a move back to its original location,
+ * and if it is reverts the move while keeping local changes after it has been
+ * moved from MOVED_FROM_ABSPATH.
+ *
+ * If MOVED_BACK is not NULL, set *MOVED_BACK to TRUE when a move was reverted,
+ * otherwise to FALSE.
+ */
+svn_error_t *
+svn_wc__db_op_handle_move_back(svn_boolean_t *moved_back,
+                               svn_wc__db_t *db,
+                               const char *local_abspath,
+                               const char *moved_from_abspath,
+                               const svn_skel_t *work_items,
+                               apr_pool_t *scratch_pool);
+
+
 /* Copy the leaves of the op_depth layer directly shadowed by the operation
  * of SRC_ABSPATH (so SRC_ABSPATH must be an op_root) to dst_abspaths
  * parents layer.
@@ -2254,8 +2270,18 @@ svn_wc__db_read_conflict(svn_skel_t **conflict,
    If the node is missing and ALLOW_MISSING is FALSE, then it will return
    SVN_ERR_WC_PATH_NOT_FOUND.
 
-   If SHOW_HIDDEN is FALSE and the status of LOCAL_ABSPATH is NOT_PRESENT or
-   EXCLUDED, set KIND to svn_kind_none.
+   The SHOW_HIDDEN and SHOW_DELETED flags report certain states as kind none.
+
+   When nodes have certain statee they are only reported when:
+      svn_wc__db_status_not_present         when show_hidden && show_deleted
+
+      svn_wc__db_status_excluded            when show_hidden
+      svn_wc__db_status_server_excluded     when show_hidden
+
+      svn_wc__db_status_deleted             when show_deleted
+
+   In other cases these nodes are reported with *KIND as svn_kind_none.
+   (See also svn_wc_read_kind2()'s documentation)
 
    Uses SCRATCH_POOL for temporary allocations.  */
 svn_error_t *
@@ -2263,6 +2289,7 @@ svn_wc__db_read_kind(svn_kind_t *kind,
                      svn_wc__db_t *db,
                      const char *local_abspath,
                      svn_boolean_t allow_missing,
+                     svn_boolean_t show_deleted,
                      svn_boolean_t show_hidden,
                      apr_pool_t *scratch_pool);
 
@@ -2499,6 +2526,8 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
                                          svn_revnum_t new_revision,
                                          apr_hash_t *exclude_relpaths,
                                          apr_hash_t *wcroot_iprops,
+                                         svn_wc_notify_func2_t notify_func,
+                                         void *notify_baton,
                                          apr_pool_t *scratch_pool);
 
 
@@ -2612,12 +2641,6 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
        BASE node. And again, the REPOS_* values are implied by this node's
        position in the subtree under the ancestor unshadowed BASE node.
        ORIGINAL_* will indicate the source of the move.
-       Additionally, information about the local move source is provided.
-       If MOVED_FROM_ABSPATH is not NULL, set *MOVED_FROM_ABSPATH to the
-       absolute path of the move source node in the working copy.
-       If MOVED_FROM_OP_ROOT_ABSPATH is not NULL, set
-       *MOVED_FROM_OP_ROOT_ABSPATH to the absolute path of the op-root of the
-       delete-half of the move.
 
    All OUT parameters may be NULL to indicate a lack of interest in
    that piece of information.
@@ -2648,13 +2671,46 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                          const char **original_root_url,
                          const char **original_uuid,
                          svn_revnum_t *original_revision,
-                         const char **moved_from_abspath,
-                         const char **moved_from_oproot_abspath,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
+/* Scan the working copy for move information of the node LOCAL_ABSPATH.
+ * If LOCAL_ABSPATH return a SVN_ERR_WC_PATH_UNEXPECTED_STATUS error.
+ *
+ * If not NULL *MOVED_FROM_ABSPATH will be set to the previous location
+ * of LOCAL_ABSPATH, before it or an ancestror was moved.
+ *
+ * If not NULL *OP_ROOT_ABSPATH will be set to the new location of the
+ * path that was actually moved
+ *
+ * If not NULL *OP_ROOT_MOVED_FROM_ABSPATH will be set to the old location
+ * of the path that was actually moved.
+ *
+ * If not NULL *MOVED_FROM_DELETE_ABSPATH will be set to the ancestor of the
+ * moved from location that deletes the original location
+ *
+ * Given a working copy
+ * A/B/C
+ * svn mv A/B D
+ * svn rm A
+ *
+ * You can call this function on D and D/C. When called on D/C all output
+ *              MOVED_FROM_ABSPATH will be A/B/C
+ *              OP_ROOT_ABSPATH will be D
+ *              OP_ROOT_MOVED_FROM_ABSPATH will be A/B
+ *              MOVED_FROM_DELETE_ABSPATH will be A
+ */
+svn_error_t *
+svn_wc__db_scan_moved(const char **moved_from_abspath,
+                      const char **op_root_abspath,
+                      const char **op_root_moved_from_abspath,
+                      const char **moved_from_delete_abspath,
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
 
 /* Scan upwards for additional information about a deleted node.
 
@@ -2896,6 +2952,19 @@ svn_wc__db_wq_fetch_next(apr_uint64_t *id,
                          apr_uint64_t completed_id,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
+
+/* Special variant of svn_wc__db_wq_fetch_next(), which in the same transaction
+   also records timestamps and sizes for one or more nodes */
+svn_error_t *
+svn_wc__db_wq_record_and_fetch_next(apr_uint64_t *id,
+                                    svn_skel_t **work_item,
+                                    svn_wc__db_t *db,
+                                    const char *wri_abspath,
+                                    apr_uint64_t completed_id,
+                                    apr_hash_t *record_map,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
+
 
 /* @} */
 
@@ -3257,18 +3326,14 @@ svn_wc__db_follow_moved_to(apr_array_header_t **moved_tos,
                            apr_pool_t *scratch_pool);
 
 /* Update a moved-away tree conflict victim at VICTIM_ABSPATH with changes
- * brought in by the update operation which flagged the tree conflict.
- * Set *WORK_ITEMS to a list of work items, allocated in RESULT_POOL, that
- * need to run as part of marking the conflict resolved. */
+ * brought in by the update operation which flagged the tree conflict. */
 svn_error_t *
-svn_wc__db_update_moved_away_conflict_victim(svn_skel_t **work_items,
-                                             svn_wc__db_t *db,
+svn_wc__db_update_moved_away_conflict_victim(svn_wc__db_t *db,
                                              const char *victim_abspath,
                                              svn_wc_notify_func2_t notify_func,
                                              void *notify_baton,
                                              svn_cancel_func_t cancel_func,
                                              void *cancel_baton,
-                                             apr_pool_t *result_pool,
                                              apr_pool_t *scratch_pool);
 
 /* LOCAL_ABSPATH is moved to MOVE_DST_ABSPATH.  MOVE_SRC_ROOT_ABSPATH
@@ -3300,6 +3365,8 @@ svn_wc__db_vacuum(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_resolve_delete_raise_moved_away(svn_wc__db_t *db,
                                            const char *local_abspath,
+                                           svn_wc_notify_func2_t notify_func,
+                                           void *notify_baton,
                                            apr_pool_t *scratch_pool);
 
 /* Like svn_wc__db_resolve_delete_raise_moved_away this should be
@@ -3307,7 +3374,31 @@ svn_wc__db_resolve_delete_raise_moved_away(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_resolve_break_moved_away(svn_wc__db_t *db,
                                     const char *local_abspath,
+                                    svn_wc_notify_func2_t notify_func,
+                                    void *notify_baton,
                                     apr_pool_t *scratch_pool);
+
+/* Break moves for all moved-away children of LOCAL_ABSPATH, within
+ * a single transaction.
+ *
+ * ### Like svn_wc__db_resolve_delete_raise_moved_away this should be
+ * combined. */
+svn_error_t *
+svn_wc__db_resolve_break_moved_away_children(svn_wc__db_t *db,
+                                             const char *local_abspath,
+                                             svn_wc_notify_func2_t notify_func,
+                                             void *notify_baton,
+                                             apr_pool_t *scratch_pool);
+
+/* Set *REQUIRED_ABSPATH to the path that should be locked to ensure
+ * that the lock covers all paths affected by resolving the conflicts
+ * in the tree LOCAL_ABSPATH. */
+svn_error_t *
+svn_wc__required_lock_for_resolve(const char **required_abspath,
+                                  svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 /* @} */
 
 

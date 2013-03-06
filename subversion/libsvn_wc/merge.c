@@ -1355,7 +1355,8 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
                                  cancel_func, cancel_baton,
                                  scratch_pool, scratch_pool));
 
-  /* If this isn't a dry run, then run the work!  */
+  /* If this isn't a dry run, then update the DB, run the work, and
+   * call the conflict resolver callback.  */
   if (!dry_run)
     {
       if (conflict_skel)

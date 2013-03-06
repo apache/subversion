@@ -31,8 +31,7 @@
 #ifndef SVN_TEMP_SERIALIZER_H
 #define SVN_TEMP_SERIALIZER_H
 
-#include <apr.h>
-#include "svn_types.h"
+#include "svn_string.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,6 +39,14 @@ extern "C" {
 
 /* forward declaration */
 struct svn_stringbuf_t;
+
+/**
+ * The amount of extra memory allocated by #svn_temp_serializer__init for
+ * the internal buffer in addition to its suggested_buffer_size parameter.
+ * To allocate a 512 buffer, including overhead, just specify a size of
+ * 512 - SVN_TEMP_SERIALIZER__OVERHEAD.
+ */
+#define SVN_TEMP_SERIALIZER__OVERHEAD (sizeof(svn_stringbuf_t) + 1)
 
 /**
  * Opaque structure controlling the serialization process and holding the
@@ -68,7 +75,7 @@ typedef struct svn_temp_serializer__context_t svn_temp_serializer__context_t;
  * serialized. This scheme allows only for tree-like, i.e. non-circular
  * data structures.
  *
- * @return the serization context.
+ * @return the serialization context.
  */
 svn_temp_serializer__context_t *
 svn_temp_serializer__init(const void *source_struct,
@@ -94,7 +101,7 @@ svn_temp_serializer__init(const void *source_struct,
  * @a source_struct first, get the result from svn_temp_serializer__get()
  * and call svn_temp_serializer__init_append for the next part.
  *
- * @return the serization context.
+ * @return the serialization context.
  */
 svn_temp_serializer__context_t *
 svn_temp_serializer__init_append(void *buffer,
@@ -126,7 +133,7 @@ svn_temp_serializer__push(svn_temp_serializer__context_t *context,
 
 /**
  * End the serialization of the current sub-structure. The serialization
- * @a context will be focussed back on the parent structure. You may then
+ * @a context will be focused back on the parent structure. You may then
  * add further sub-structures starting from that level.
  *
  * It is not necessary to call this function just for symmetry at the end
@@ -195,7 +202,7 @@ svn_temp_serializer__get(svn_temp_serializer__context_t *context);
  * automatically) and resolve all pointers to sub-structures.
  *
  * To do the latter, call this function for each of these pointers, giving
- * the start address of the copyied buffer in @a buffer and a reference to
+ * the start address of the copied buffer in @a buffer and a reference to
  * the pointer to resolve in @a ptr.
  */
 void

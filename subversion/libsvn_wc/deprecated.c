@@ -974,6 +974,7 @@ svn_wc_add3(const char *path,
 
       SVN_ERR(svn_wc__db_read_kind(&kind, wc_db, local_abspath,
                                    FALSE /* allow_missing */,
+                                   TRUE /* show_deleted */,
                                    FALSE /* show_hidden */, pool));
       if (kind == svn_kind_dir)
         {
@@ -4564,4 +4565,28 @@ svn_wc_move(svn_wc_context_t *wc_ctx,
                                        cancel_func, cancel_baton,
                                        notify_func, notify_baton,
                                        scratch_pool));
+}
+
+svn_error_t *
+svn_wc_read_kind(svn_node_kind_t *kind,
+                 svn_wc_context_t *wc_ctx,
+                 const char *abspath,
+                 svn_boolean_t show_hidden,
+                 apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(
+          svn_wc_read_kind2(kind,
+                            wc_ctx, abspath,
+                            TRUE /* show_deleted */,
+                            show_hidden,
+                            scratch_pool));
+
+  /*if (db_kind == svn_kind_dir)
+    *kind = svn_node_dir;
+  else if (db_kind == svn_kind_file || db_kind == svn_kind_symlink)
+    *kind = svn_node_file;
+  else
+    *kind = svn_node_none;*/
+
+  return SVN_NO_ERROR;
 }

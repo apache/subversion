@@ -265,15 +265,18 @@ svn_client__ensure_ra_session_url(const char **old_session_url,
       - COMMIT_ITEMS is an array of svn_client_commit_item_t *
         structures, present only for working copy commits, NULL otherwise.
 
-      - USE_ADMIN indicates that the RA layer should create tempfiles
-        in the administrative area instead of in the working copy itself,
-        and read properties from the administrative area.
+      - WRITE_DAV_PROPS indicates that the RA layer can clear and write
+        the DAV properties in the working copy of BASE_DIR_ABSPATH.
 
-      - READ_ONLY_WC indicates that the RA layer should not attempt to
-        modify the WC props directly.
+      - READ_DAV_PROPS indicates that the RA layer should not attempt to
+        modify the WC props directly, but is still allowed to read them.
 
    BASE_DIR_ABSPATH may be NULL if the RA operation does not correspond to a
-   working copy (in which case, USE_ADMIN should be FALSE).
+   working copy (in which case, WRITE_DAV_PROPS and READ_DAV_PROPS must be
+   FALSE.
+
+   If WRITE_DAV_PROPS and READ_DAV_PROPS are both FALSE the working copy may
+   still be used for locating pristine files via their SHA1.
 
    The calling application's authentication baton is provided in CTX,
    and allocations related to this session are performed in POOL.
@@ -286,10 +289,11 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                                      const char *base_url,
                                      const char *base_dir_abspath,
                                      const apr_array_header_t *commit_items,
-                                     svn_boolean_t use_admin,
-                                     svn_boolean_t read_only_wc,
+                                     svn_boolean_t write_dav_props,
+                                     svn_boolean_t read_dav_props,
                                      svn_client_ctx_t *ctx,
-                                     apr_pool_t *pool);
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
 
 
 svn_error_t *
@@ -594,58 +598,6 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             svn_boolean_t *timestamp_sleep,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
-
-/* ---------------------------------------------------------------- */
-
-/*** List ***/
-
-/* List the file/directory entries for PATH_OR_URL at REVISION.
-   The actual node revision selected is determined by the path as 
-   it exists in PEG_REVISION.  
-   
-   If DEPTH is svn_depth_infinity, then list all file and directory entries 
-   recursively.  Else if DEPTH is svn_depth_files, list all files under 
-   PATH_OR_URL (if any), but not subdirectories.  Else if DEPTH is
-   svn_depth_immediates, list all files and include immediate
-   subdirectories (at svn_depth_empty).  Else if DEPTH is
-   svn_depth_empty, just list PATH_OR_URL with none of its entries.
- 
-   DIRENT_FIELDS controls which fields in the svn_dirent_t's are
-   filled in.  To have them totally filled in use SVN_DIRENT_ALL,
-   otherwise simply bitwise OR together the combination of SVN_DIRENT_*
-   fields you care about.
- 
-   If FETCH_LOCKS is TRUE, include locks when reporting directory entries.
- 
-   If INCLUDE_EXTERNALS is TRUE, also list all external items 
-   reached by recursion.  DEPTH value passed to the original list target
-   applies for the externals also.  EXTERNAL_PARENT_URL is url of the 
-   directory which has the externals definitions.  EXTERNAL_TARGET is the
-   target subdirectory of externals definitions.
-
-   Report directory entries by invoking LIST_FUNC/BATON. 
-   Pass EXTERNAL_PARENT_URL and EXTERNAL_TARGET to LIST_FUNC when external
-   items are listed, otherwise both are set to NULL.
- 
-   Use authentication baton cached in CTX to authenticate against the
-   repository.
- 
-   Use POOL for all allocations.
-*/
-svn_error_t *
-svn_client__list_internal(const char *path_or_url,
-                          const svn_opt_revision_t *peg_revision,
-                          const svn_opt_revision_t *revision,
-                          svn_depth_t depth,
-                          apr_uint32_t dirent_fields,
-                          svn_boolean_t fetch_locks,
-                          svn_boolean_t include_externals,
-                          const char *external_parent_url,
-                          const char *external_target,
-                          svn_client_list_func2_t list_func,
-                          void *baton,
-                          svn_client_ctx_t *ctx,
-                          apr_pool_t *pool);
 
 /* ---------------------------------------------------------------- */
 
@@ -1085,43 +1037,6 @@ svn_client__export_externals(apr_hash_t *externals,
                              svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
-
-
-/* Perform status operations on each external in EXTERNAL_MAP, a const char *
-   local_abspath of all externals mapping to the const char* defining_abspath.
-   All other options are the same as those passed to svn_client_status().
-
-   If ANCHOR_ABSPATH and ANCHOR-RELPATH are not null, use them to provide
-   properly formatted relative paths
- */
-svn_error_t *
-svn_client__do_external_status(svn_client_ctx_t *ctx,
-                               apr_hash_t *external_map,
-                               svn_depth_t depth,
-                               svn_boolean_t get_all,
-                               svn_boolean_t update,
-                               svn_boolean_t no_ignore,
-                               const char *anchor_abspath,
-                               const char *anchor_relpath,
-                               svn_client_status_func_t status_func,
-                               void *status_baton,
-                               apr_pool_t *scratch_pool);
-
-
-/* List external items defined on each external in EXTERNALS, a const char *
-   externals_parent_url(url of the directory which has the externals
-   definitions) of all externals mapping to the svn_string_t * externals_desc
-   (externals description text). All other options are the same as those 
-   passed to svn_client_list(). */
-svn_error_t * 
-svn_client__list_externals(apr_hash_t *externals, 
-                           svn_depth_t depth,
-                           apr_uint32_t dirent_fields,
-                           svn_boolean_t fetch_locks,
-                           svn_client_list_func2_t list_func,
-                           void *baton,
-                           svn_client_ctx_t *ctx,
-                           apr_pool_t *scratch_pool);
 
 /* Baton for svn_client__dirent_fetcher */
 struct svn_client__dirent_fetcher_baton_t

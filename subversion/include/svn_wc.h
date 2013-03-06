@@ -1249,7 +1249,13 @@ typedef enum svn_wc_notify_action_t
 
   /** A copy from a foreign repository has started 
    * @since New in 1.8. */
-  svn_wc_notify_foreign_copy_begin
+  svn_wc_notify_foreign_copy_begin,
+
+  /** A move in the working copy has been broken, i.e. degraded into a
+   * copy + delete. The notified path is the move source (the deleted path).
+   * ### Provide path to move destination as well?
+   * @since New in 1.8. */
+  svn_wc_notify_move_broken
 
 } svn_wc_notify_action_t;
 
@@ -6336,10 +6342,13 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * @a show_copies_as_adds determines whether paths added with history will
  * appear as a diff against their copy source, or whether such paths will
  * appear as if they were newly added in their entirety.
+ * @a show_copies_as_adds implies not @a ignore_ancestry.
  *
  * If @a use_git_diff_format is TRUE, copied paths will be treated as added
  * if they weren't modified after being copied. This allows the callbacks
  * to generate appropriate --git diff headers for such files.
+ * @a use_git_diff_format implies @a show_copies_as_adds, and as such implies
+ * not @a ignore_ancestry.
  *
  * Normally, the difference from repository->working_copy is shown.
  * If @a reverse_order is TRUE, then show working_copy->repository diffs.
@@ -8101,23 +8110,46 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
 /** @} */
 
 /**
- * Set @a kind to the #svn_node_kind_t of @a abspath.  Use @a wc_ctx
- * to access the working copy, and @a scratch_pool for all temporary
- * allocations.
+ * Set @a kind to the #svn_node_kind_t of @a abspath.  Use @a wc_ctx to access
+ * the working copy, and @a scratch_pool for all temporary allocations.
  *
- * If @a abspath is not under version control, set @a kind to #svn_node_none.
- * If it is versioned but hidden and @a show_hidden is @c FALSE, also return
- * #svn_node_none.
+ * If @a abspath is not under version control, set @a kind to #svn_kind_none.
  *
- * ### What does hidden really mean?
- * ### What happens when show_hidden is TRUE?
+ * If @a show_hidden and @a show_deleted are both @c FALSE, the kind of
+ * scheduled for delete, administrative only 'not present' and excluded
+ * nodes is reported as #svn_node_kind_node. This is recommended as a check
+ * for 'is there a versioned file or directory here?'
  *
- * If the node's info is incomplete, it may or may not have a known node kind
- * set. If the kind is not known (yet), set @a kind to #svn_node_unknown.
- * Otherwise return the node kind even though the node is marked incomplete.
+ * If @a show_deleted is FALSE, but @a show_hidden is @c TRUE then only
+ * scheduled for delete and administrative only 'not present' nodes are
+ * reported as #svn_node_kind_none. This is recommended as check for
+ * 'Can I add a node here?'
+ *
+ * If @a show_deleted is TRUE, but @a show_hidden is FALSE, then only
+ * administrative only 'not present' nodes and excluded nodes are reported as
+ * #svn_node_kind_none. This behavior is the behavior bescribed as 'hidden'
+ * before Subversion 1.7.
+ *
+ * If @a show_hidden and @a show_deleted are both @c TRUE all nodes are
+ * reported.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_wc_read_kind2(svn_node_kind_t *kind,
+                  svn_wc_context_t *wc_ctx,
+                  const char *local_abspath,
+                  svn_boolean_t show_deleted,
+                  svn_boolean_t show_hidden,
+                  apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_read_kind2() but always shows deleted nodes and returns
+ * the result as a #svn_node_kind_t.
  *
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_read_kind(svn_node_kind_t *kind,
                  svn_wc_context_t *wc_ctx,

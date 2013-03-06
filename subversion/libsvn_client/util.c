@@ -179,12 +179,15 @@ svn_client__wc_node_get_base(svn_client__pathrev_t **base_p,
 
   *base_p = apr_palloc(result_pool, sizeof(**base_p));
 
-  SVN_ERR(svn_wc__node_get_base(&(*base_p)->rev,
+  SVN_ERR(svn_wc__node_get_base(NULL,
+                                &(*base_p)->rev,
                                 &relpath,
                                 &(*base_p)->repos_root_url,
                                 &(*base_p)->repos_uuid,
                                 NULL,
                                 wc_ctx, wc_abspath,
+                                TRUE /* ignore_enoent */,
+                                TRUE /* show_hidden */,
                                 result_pool, scratch_pool));
   if ((*base_p)->repos_root_url && relpath)
     {
@@ -263,10 +266,8 @@ svn_client_get_repos_root(const char **repos_root,
     }
 
   /* If PATH_OR_URL was a URL, we use the RA layer to look it up. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL,
-                                               abspath_or_url,
-                                               NULL, NULL, FALSE, TRUE,
-                                               ctx, scratch_pool));
+  SVN_ERR(svn_client_open_ra_session2(&ra_session,  abspath_or_url, NULL,
+                                      ctx, scratch_pool, scratch_pool));
 
   if (repos_root)
     SVN_ERR(svn_ra_get_repos_root2(ra_session, repos_root, result_pool));
@@ -355,6 +356,7 @@ fetch_props_func(apr_hash_t **props,
       return SVN_NO_ERROR;
     }
 
+  /* Reads the pristine properties of WORKING, not those of BASE */
   SVN_ERR(svn_wc_get_pristine_props(props, scb->wc_ctx, local_abspath,
                                     result_pool, scratch_pool));
 
@@ -381,9 +383,9 @@ fetch_kind_func(svn_kind_t *kind,
       *kind = svn_kind_unknown;
       return SVN_NO_ERROR;
     }
-
-  SVN_ERR(svn_wc_read_kind(&node_kind, scb->wc_ctx, local_abspath, FALSE,
-                           scratch_pool));
+  /* Reads the WORKING kind. Not the BASE kind */
+  SVN_ERR(svn_wc_read_kind2(&node_kind, scb->wc_ctx, local_abspath,
+                            TRUE, FALSE, scratch_pool));
   *kind = svn__kind_from_node_kind(node_kind, FALSE);
 
   return SVN_NO_ERROR;
@@ -410,6 +412,7 @@ fetch_base_func(const char **filename,
       return SVN_NO_ERROR;
     }
 
+  /* Reads the pristine of WORKING, not of BASE */
   err = svn_wc_get_pristine_contents2(&pristine_stream, scb->wc_ctx,
                                       local_abspath, scratch_pool,
                                       scratch_pool);

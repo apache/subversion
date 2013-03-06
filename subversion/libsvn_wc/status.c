@@ -346,16 +346,14 @@ read_info(const struct svn_wc__db_info_t **info,
    * cheaply as svn_wc__db_read_children_info() does. */
   if (mtb->status == svn_wc__db_status_added)
     {
-      const char *moved_from_abspath = NULL;
       svn_wc__db_status_t status;
 
       SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL,
-                                       &moved_from_abspath,
-                                       NULL,
                                        db, local_abspath,
                                        result_pool, scratch_pool));
-      mtb->moved_here = (moved_from_abspath != NULL);
+
+      mtb->moved_here = (status == svn_wc__db_status_moved_here);
       mtb->incomplete = (status == svn_wc__db_status_incomplete);
     }
 
@@ -403,9 +401,9 @@ get_repos_root_url_relpath(const char **repos_relpath,
 {
   if (info->repos_relpath && info->repos_root_url)
     {
-      *repos_relpath = info->repos_relpath;
-      *repos_root_url = info->repos_root_url;
-      *repos_uuid = info->repos_uuid;
+      *repos_relpath = apr_pstrdup(result_pool, info->repos_relpath);
+      *repos_root_url = apr_pstrdup(result_pool, info->repos_root_url);
+      *repos_uuid = apr_pstrdup(result_pool, info->repos_uuid);
     }
   else if (parent_repos_relpath && parent_repos_root_url)
     {
@@ -413,15 +411,15 @@ get_repos_root_url_relpath(const char **repos_relpath,
                                         svn_dirent_basename(local_abspath,
                                                             NULL),
                                         result_pool);
-      *repos_root_url = parent_repos_root_url;
-      *repos_uuid = parent_repos_uuid;
+      *repos_root_url = apr_pstrdup(result_pool, parent_repos_root_url);
+      *repos_uuid = apr_pstrdup(result_pool, parent_repos_uuid);
     }
   else if (info->status == svn_wc__db_status_added)
     {
       SVN_ERR(svn_wc__db_scan_addition(NULL, NULL,
                                        repos_relpath, repos_root_url,
                                        repos_uuid, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, db, local_abspath,
+                                       db, local_abspath,
                                        result_pool, scratch_pool));
     }
   else if (info->have_base)
@@ -484,10 +482,6 @@ assemble_status(svn_wc_status3_t **status,
   svn_boolean_t switched_p = FALSE;
   svn_boolean_t copied = FALSE;
   svn_boolean_t conflicted;
-  svn_error_t *err;
-  const char *repos_relpath;
-  const char *repos_root_url;
-  const char *repos_uuid;
   const char *moved_from_abspath = NULL;
   svn_filesize_t filesize = (dirent && (dirent->kind == svn_node_file))
                                 ? dirent->filesize
@@ -608,6 +602,7 @@ assemble_status(svn_wc_status3_t **status,
             text_modified_p = FALSE;
           else
             {
+              svn_error_t *err;
               err = svn_wc__internal_file_modified_p(&text_modified_p,
                                                      db, local_abspath,
                                                      FALSE, scratch_pool);
@@ -690,12 +685,24 @@ assemble_status(svn_wc_status3_t **status,
 
           /* Get moved-from info (only for potential op-roots of a move). */
           if (info->moved_here && info->op_root)
-            SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL,
-                                             NULL, NULL, NULL, NULL,
-                                             &moved_from_abspath,
-                                             NULL,
-                                             db, local_abspath,
-                                             result_pool, scratch_pool));
+            {
+              svn_error_t *err;
+              err = svn_wc__db_scan_moved(&moved_from_abspath, NULL, NULL, NULL,
+                                          db, local_abspath,
+                                          result_pool, scratch_pool);
+
+              if (err)
+                {
+                  if (err->apr_err != SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+                    svn_error_trace(err);
+
+                  svn_error_clear(err);
+                  /* We are no longer moved... So most likely we are somehow
+                     changing the db for things like resolving conflicts. */
+
+                  moved_from_abspath = NULL;
+                }
+            }
         }
     }
 
@@ -724,14 +731,6 @@ assemble_status(svn_wc_status3_t **status,
         *status = NULL;
         return SVN_NO_ERROR;
       }
-
-  SVN_ERR(get_repos_root_url_relpath(&repos_relpath, &repos_root_url,
-                                     &repos_uuid, info,
-                                     parent_repos_relpath,
-                                     parent_repos_root_url,
-                                     parent_repos_uuid,
-                                     db, local_abspath,
-                                     scratch_pool, scratch_pool));
 
   /* 6. Build and return a status structure. */
 
@@ -763,7 +762,8 @@ assemble_status(svn_wc_status3_t **status,
   stat->repos_lock = repos_lock;
   stat->revision = info->revnum;
   stat->changed_rev = info->changed_rev;
-  stat->changed_author = info->changed_author;
+  if (info->changed_author)
+    stat->changed_author = apr_pstrdup(result_pool, info->changed_author);
   stat->changed_date = info->changed_date;
 
   stat->ood_kind = svn_node_none;
@@ -771,10 +771,19 @@ assemble_status(svn_wc_status3_t **status,
   stat->ood_changed_date = 0;
   stat->ood_changed_author = NULL;
 
+  SVN_ERR(get_repos_root_url_relpath(&stat->repos_relpath,
+                                     &stat->repos_root_url,
+                                     &stat->repos_uuid, info,
+                                     parent_repos_relpath,
+                                     parent_repos_root_url,
+                                     parent_repos_uuid,
+                                     db, local_abspath,
+                                     result_pool, scratch_pool));
+
   if (info->lock)
     {
-      svn_lock_t *lck = apr_pcalloc(result_pool, sizeof(*lck));
-      lck->path = repos_relpath;
+      svn_lock_t *lck = svn_lock_create(result_pool);
+      lck->path = stat->repos_relpath;
       lck->token = info->lock->token;
       lck->owner = info->lock->owner;
       lck->comment = info->lock->comment;
@@ -787,13 +796,12 @@ assemble_status(svn_wc_status3_t **status,
   stat->locked = info->locked;
   stat->conflicted = conflicted;
   stat->versioned = TRUE;
-  stat->changelist = info->changelist;
-  stat->repos_root_url = repos_root_url;
-  stat->repos_relpath = repos_relpath;
-  stat->repos_uuid = repos_uuid;
+  if (info->changelist)
+    stat->changelist = apr_pstrdup(result_pool, info->changelist);
 
   stat->moved_from_abspath = moved_from_abspath;
-  stat->moved_to_abspath = info->moved_to_abspath;
+  if (info->moved_to_abspath)
+    stat->moved_to_abspath = apr_pstrdup(result_pool, info->moved_to_abspath);
 
   stat->file_external = info->file_external;
 

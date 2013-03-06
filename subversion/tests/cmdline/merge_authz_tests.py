@@ -122,7 +122,7 @@ def mergeinfo_and_skipped_paths(sbox):
   A_COPY_2_H_path = os.path.join(wc_restricted, "A_COPY_2", "D", "H")
   A_COPY_3_path = os.path.join(wc_restricted, "A_COPY_3")
   omega_path = os.path.join(wc_restricted, "A_COPY", "D", "H", "omega")
-  zeta_path = os.path.join(wc_dir, "A", "D", "H", "zeta")
+  zeta_path = sbox.ospath("A/D/H/zeta")
 
   # Merge r4:8 into the restricted WC's A_COPY.
   #
@@ -503,10 +503,10 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
                              svntest.main.wc_author2 + " = rw")})
 
   # Some paths we'll care about
-  Acopy_path = os.path.join(wc_dir, 'A_copy')
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
-  Acopy_gamma_path = os.path.join(wc_dir, 'A_copy', 'D', 'gamma')
-  Acopy_D_path = os.path.join(wc_dir, 'A_copy', 'D')
+  Acopy_path = sbox.ospath('A_copy')
+  gamma_path = sbox.ospath('A/D/gamma')
+  Acopy_gamma_path = sbox.ospath('A_copy/D/gamma')
+  Acopy_D_path = sbox.ospath('A_copy/D')
   A_url = sbox.repo_url + '/A'
   Acopy_url = sbox.repo_url + '/A_copy'
 
@@ -624,12 +624,12 @@ def reintegrate_fails_if_no_root_access(sbox):
 
   # Some paths we'll care about
   wc_dir = sbox.wc_dir
-  A_path          = os.path.join(wc_dir, 'A')
-  A_COPY_path     = os.path.join(wc_dir, 'A_COPY')
-  beta_COPY_path  = os.path.join(wc_dir, 'A_COPY', 'B', 'E', 'beta')
-  rho_COPY_path   = os.path.join(wc_dir, 'A_COPY', 'D', 'G', 'rho')
-  omega_COPY_path = os.path.join(wc_dir, 'A_COPY', 'D', 'H', 'omega')
-  psi_COPY_path   = os.path.join(wc_dir, 'A_COPY', 'D', 'H', 'psi')
+  A_path          = sbox.ospath('A')
+  A_COPY_path     = sbox.ospath('A_COPY')
+  beta_COPY_path  = sbox.ospath('A_COPY/B/E/beta')
+  rho_COPY_path   = sbox.ospath('A_COPY/D/G/rho')
+  omega_COPY_path = sbox.ospath('A_COPY/D/H/omega')
+  psi_COPY_path   = sbox.ospath('A_COPY/D/H/psi')
 
   # Copy A@1 to A_COPY in r2, and then make some changes to A in r3-6.
   sbox.build()
@@ -637,7 +637,7 @@ def reintegrate_fails_if_no_root_access(sbox):
   expected_disk, expected_status = set_up_branch(sbox)
 
   # Make a change on the branch, to A_COPY/mu, commit in r7.
-  svntest.main.file_write(os.path.join(wc_dir, "A_COPY", "mu"),
+  svntest.main.file_write(sbox.ospath("A_COPY/mu"),
                           "Changed on the branch.")
   expected_output = wc.State(wc_dir, {'A_COPY/mu' : Item(verb='Sending')})
   expected_status.tweak('A_COPY/mu', wc_rev=7)
@@ -737,6 +737,133 @@ def reintegrate_fails_if_no_root_access(sbox):
                                        None, True, True,
                                        '--reintegrate', A_path)
 
+#----------------------------------------------------------------------
+# Test for issue #4319 'faulty merge notifications when target subtree
+# unreadable'.
+@SkipUnless(svntest.main.server_has_mergeinfo)
+@Skip(svntest.main.is_ra_type_file)
+@Issue(4319)
+@XFail()
+def merge_notifications_and_authz_skips(sbox):
+  "merge notifications when target subtree unreadable"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  deep_source_tree = sbox.ospath('A/C/J/K/L/M/N/O/P/Q/R/S/T/U/V/W/X/Y/Z')
+  deep_source_file = sbox.ospath('A/C/J/K/L/M/N/O/P/Q/R/S/T/U/V/W/X/Y/Z/nu')
+  branch_root = sbox.ospath('branch')
+
+  # r2 - branch ^/A to ^/branch
+  sbox.simple_copy('A', 'branch')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # r3 - Add a deep subtree
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir',
+                                     deep_source_tree, '--parents')
+  svntest.main.file_write(deep_source_file, "This is the file 'nu'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', deep_source_file)
+  sbox.simple_commit()
+
+  # 
+  # Create a restrictive authz where part of the merge source and part
+  # of the target are inaccesible.
+  sbox.simple_update(revision=0)
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+  write_authz_file(sbox, {"/" : svntest.main.wc_author +"=rw",
+                          # Make a subtree in the merge target inaccessible.
+                          "/branch/C" : svntest.main.wc_author + "=",
+                          })
+  sbox.simple_update()
+
+  expected_output = wc.State(branch_root, {
+    })
+  expected_mergeinfo_output = wc.State(branch_root, {
+    ''  : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(branch_root, {
+    })
+  expected_status = wc.State(branch_root, {
+    ''          : Item(status=' M', wc_rev=3),
+    'D/H/chi'   : Item(status='  ', wc_rev=3),
+    'D/H/omega' : Item(status='  ', wc_rev=3),
+    'D/H/psi'   : Item(status='  ', wc_rev=3),
+    'D/H'       : Item(status='  ', wc_rev=3),
+    'D/gamma'   : Item(status='  ', wc_rev=3),
+    'D'         : Item(status='  ', wc_rev=3),
+    'D/G'       : Item(status='  ', wc_rev=3),
+    'D/G/pi'    : Item(status='  ', wc_rev=3),
+    'D/G/rho'   : Item(status='  ', wc_rev=3),
+    'D/G/tau'   : Item(status='  ', wc_rev=3),
+    'B/lambda'  : Item(status='  ', wc_rev=3),
+    'B/E'       : Item(status='  ', wc_rev=3),
+    'B/E/alpha' : Item(status='  ', wc_rev=3),
+    'B/E/beta'  : Item(status='  ', wc_rev=3),
+    'B/F'       : Item(status='  ', wc_rev=3),
+    'B'         : Item(status='  ', wc_rev=3),
+    'mu'        : Item(status='  ', wc_rev=3),
+    })
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:2-3*'}),
+    'D/H/omega' : Item("This is the file 'omega'.\n"),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("This is the file 'psi'.\n"),
+    'D/H'       : Item(),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("This is the file 'rho'.\n"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'B/F'       : Item(),
+    'B'         : Item(),
+    'mu'        : Item("This is the file 'mu'.\n"),
+    })
+  expected_skip = wc.State(branch_root,
+                           {'C' : Item(verb='Skipped missing target')})
+  # This fails because notifications for all the added subtrees under
+  # branch/C occur:
+  #
+  #   >svn merge ^^/A branch -r1:3
+  #   Skipped missing target: 'branch\C'
+  #      A branch\C\J\K\L\M\N\O\P\Q\R\S\T\U\V\W\X\Y\Z\nu
+  #      A branch\C\J\K\L\M\N\O\P\Q\R\S\T\U\V\W\X\Y\Z
+  #      A branch\C\J\K\L\M\N\O\P\Q\R\S\T\U\V\W\X\Y
+  #      A branch\C\J\K\L\M\N\O\P\Q\R\S\T\U\V\W\X
+  #      A branch\C\J\K\L\M\N\O\P\Q\R\S\T\U\V\W
+  #      A branch\C\J\K\L\M\N\O\P\Q\R\S\T\U\V
+  #      A branch\C\J\K\L\M\N\O\P\Q\R\S\T\U
+  #      A branch\C\J\K\L\M\N\O\P\Q\R\S\T
+  #      A branch\C\J\K\L\M\N\O\P\Q\R\S
+  #      A branch\C\J\K\L\M\N\O\P\Q\R
+  #      A branch\C\J\K\L\M\N\O\P\Q
+  #      A branch\C\J\K\L\M\N\O\P
+  #      A branch\C\J\K\L\M\N\O
+  #      A branch\C\J\K\L\M\N
+  #      A branch\C\J\K\L\M
+  #      A branch\C\J\K\L
+  #      A branch\C\J\K
+  #      A branch\C\J
+  #   --- Recording mergeinfo for merge of r2 through r3 into 'branch':
+  #    U   branch
+  #   Summary of conflicts:
+  #     Skipped paths: 1
+  svntest.actions.run_and_verify_merge(branch_root, None, None,
+                                       sbox.repo_url + '/A', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1, 0)
+
 ########################################################################
 # Run the tests
 
@@ -746,6 +873,7 @@ test_list = [ None,
               mergeinfo_and_skipped_paths,
               merge_fails_if_subtree_is_deleted_on_src,
               reintegrate_fails_if_no_root_access,
+              merge_notifications_and_authz_skips,
              ]
 serial_only = True
 

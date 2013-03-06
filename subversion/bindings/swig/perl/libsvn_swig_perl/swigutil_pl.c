@@ -315,12 +315,13 @@ SV *svn_swig_pl_revnums_to_list(const apr_array_header_t *array)
 } 
 
 /* perl -> c svn_opt_revision_t conversion */
-void svn_swig_pl_set_revision(svn_opt_revision_t *rev, SV *source)
+svn_opt_revision_t *svn_swig_pl_set_revision(svn_opt_revision_t *rev, SV *source)
 {
     if (source == NULL || source == &PL_sv_undef || !SvOK(source)) {
         rev->kind = svn_opt_revision_unspecified;
     }
     else if (sv_isobject(source) && sv_derived_from(source, "_p_svn_opt_revision_t")) {
+        /* this will assign to rev */
         SWIG_ConvertPtr(source, (void **)&rev, _SWIG_TYPE("svn_opt_revision_t *"), 0);
     }
     else if (looks_like_number(source)) {
@@ -371,6 +372,8 @@ void svn_swig_pl_set_revision(svn_opt_revision_t *rev, SV *source)
               "a string (one of \"BASE\", \"HEAD\", \"WORKING\", "
               "\"COMMITTED\", \"PREV\" or a \"{DATE}\") "
               "or a _p_svn_opt_revision_t object");
+
+    return rev;
 }
 
 /* put the va_arg in stack and invoke caller_func with func.
