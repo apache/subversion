@@ -255,10 +255,10 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1451678
-   Make get-deps.sh use sh style command substitution.
+ * r1451678, r1452617
+   Make get-deps.sh compatible with Solaris /bin/sh.
    Justification:
-     Make get-deps.sh work on platforms where sh is not bash.
+     Make get-deps.sh work on Solaris. 
    Votes:
      +1: breser
 
