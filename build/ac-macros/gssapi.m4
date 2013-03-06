@@ -54,6 +54,17 @@ AC_DEFUN(SVN_LIB_RA_SERF_GSSAPI,
       CFLAGS=""
       SVN_GSSAPI_INCLUDES="`$KRB5_CONFIG --cflags`"
       SVN_GSSAPI_LIBS="`$KRB5_CONFIG --libs gssapi`"
+      if test $? -ne 0; then
+        dnl Some platforms e.g. Solaris 10 don't support the gssapi argument
+        dnl and need krb5 instead.  Since it doesn't tell us about gssapi
+        dnl we have to guess.  So let's try -lgss and /usr/include/gassapi
+        SVN_GSSAPI_INCLUDES="$SVN_GSSAPI_INCLUDES -I/usr/include/gssapi"
+        SVN_GSSAPI_LIBS="`$KRB5_CONFIG --libs krb5` -lgss"
+        if test $? -ne 0; then
+          dnl Both k5b-config commands failed.
+          AC_MSG_ERROR([krb5-config returned an error]) 
+        fi
+      fi
       SVN_GSSAPI_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($SVN_GSSAPI_LIBS)`"
       CPPFLAGS="$CPPFLAGS $SVN_GSSAPI_INCLUDES"
       CFLAGS="$old_CFLAGS"
