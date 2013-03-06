@@ -30,7 +30,6 @@
 
 #include "dag.h"
 #include "fs.h"
-#include "key-gen.h"
 #include "fs_fs.h"
 #include "id.h"
 #include "cached_data.h"
