@@ -270,6 +270,14 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * ^/subversion/branches/1.7.x-gssapi-solaris10
+   Justification:
+     Make it easier to build svn+serf with kerberos support on Solaris10.
+   Branch:
+     ^/subversion/branches/1.7.x-gssapi-solaris10
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
