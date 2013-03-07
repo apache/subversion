@@ -1364,17 +1364,17 @@ svn_ra_neon__do_check_path(svn_ra_session_t *session,
     {
       ne_uri parsed_url;
 
-      /* Split the url into its component pieces (scheme, host, path,
-         etc).  We svn_ra_neon__get_starting_props() wants only the
-         path part. */
+      /* svn_ra_neon__get_starting_props() wants only the path part of URL. */
       ne_uri_parse(url, &parsed_url);
-      if (parsed_url.path == NULL)
+      if (parsed_url.path)
         {
-          ne_uri_free(&parsed_url);
-          return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                   _("Neon was unable to parse URL '%s'"), url);
+          url = apr_pstrdup(pool, parsed_url.path);
         }
-      url = apr_pstrdup(pool, parsed_url.path);
+      else
+        {
+          err = svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                  _("Neon was unable to parse URL '%s'"), url);
+        }
       ne_uri_free(&parsed_url);
     }
 
