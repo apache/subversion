@@ -647,16 +647,13 @@ svn_wc__db_retract_parent_delete(svn_wc__db_wcroot_t *wcroot,
 
 
 
-/* Insert the base row represented by (insert_base_baton_t *) BATON.
- *
- * Implements svn_wc__db_txn_callback_t. */
+/* Insert the base row represented by (insert_base_baton_t *) BATON. */
 static svn_error_t *
-insert_base_node(void *baton,
+insert_base_node(const insert_base_baton_t *pibb,
                  svn_wc__db_wcroot_t *wcroot,
                  const char *local_relpath,
                  apr_pool_t *scratch_pool)
 {
-  const insert_base_baton_t *pibb = baton;
   apr_int64_t repos_id = pibb->repos_id;
   svn_sqlite__stmt_t *stmt;
   svn_filesize_t recorded_size = SVN_INVALID_FILESIZE;
@@ -935,16 +932,13 @@ insert_incomplete_children(svn_sqlite__db_t *sdb,
 }
 
 
-/* Insert the working row represented by (insert_working_baton_t *) BATON.
- *
- * Implements svn_wc__db_txn_callback_t. */
+/* Insert the working row represented by (insert_working_baton_t *) BATON. */
 static svn_error_t *
-insert_working_node(void *baton,
+insert_working_node(const insert_working_baton_t *piwb,
                     svn_wc__db_wcroot_t *wcroot,
                     const char *local_relpath,
                     apr_pool_t *scratch_pool)
 {
-  const insert_working_baton_t *piwb = baton;
   const char *parent_relpath;
   const char *moved_to_relpath = NULL;
   svn_sqlite__stmt_t *stmt;
@@ -1708,8 +1702,9 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
 
      Note: old children can stick around, even if they are no longer present
      in this directory's revision.  */
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, insert_base_node, &ibb,
-                              scratch_pool));
+  SVN_WC__DB_WITH_TXN(
+            insert_base_node(&ibb, wcroot, local_relpath, scratch_pool),
+            wcroot);
 
   SVN_ERR(flush_entries(wcroot, local_abspath, depth, scratch_pool));
   return SVN_NO_ERROR;
@@ -1760,9 +1755,9 @@ svn_wc__db_base_add_incomplete_directory(svn_wc__db_t *db,
   ibb.conflict = conflict;
   ibb.work_items = work_items;
 
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath,
-                              insert_base_node,
-                              &ibb, scratch_pool));
+  SVN_WC__DB_WITH_TXN(
+            insert_base_node(&ibb, wcroot, local_relpath, scratch_pool),
+            wcroot);
 
   SVN_ERR(flush_entries(wcroot, local_abspath, svn_depth_empty, scratch_pool));
 
@@ -1846,8 +1841,9 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
   ibb.conflict = conflict;
   ibb.work_items = work_items;
 
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, insert_base_node, &ibb,
-                              scratch_pool));
+  SVN_WC__DB_WITH_TXN(
+            insert_base_node(&ibb, wcroot, local_relpath, scratch_pool),
+            wcroot);
 
   /* If this used to be a directory we should remove children so pass
    * depth infinity. */
@@ -1932,8 +1928,9 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
   ibb.conflict = conflict;
   ibb.work_items = work_items;
 
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, insert_base_node, &ibb,
-                              scratch_pool));
+  SVN_WC__DB_WITH_TXN(
+            insert_base_node(&ibb, wcroot, local_relpath, scratch_pool),
+            wcroot);
 
   /* If this used to be a directory we should remove children so pass
    * depth infinity. */
@@ -2003,8 +2000,9 @@ add_excluded_or_not_present_node(svn_wc__db_t *db,
   ibb.conflict = conflict;
   ibb.work_items = work_items;
 
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, insert_base_node, &ibb,
-                              scratch_pool));
+  SVN_WC__DB_WITH_TXN(
+            insert_base_node(&ibb, wcroot, local_relpath, scratch_pool),
+            wcroot);
 
   /* If this used to be a directory we should remove children so pass
    * depth infinity. */
@@ -2994,12 +2992,11 @@ blank_ieb(insert_external_baton_t *ieb)
  *
  * Implements svn_wc__db_txn_callback_t. */
 static svn_error_t *
-insert_external_node(void *baton,
+insert_external_node(const insert_external_baton_t *ieb,
                      svn_wc__db_wcroot_t *wcroot,
                      const char *local_relpath,
                      apr_pool_t *scratch_pool)
 {
-  const insert_external_baton_t *ieb = baton;
   svn_wc__db_status_t status;
   svn_error_t *err;
   svn_boolean_t update_root;
@@ -3188,9 +3185,11 @@ svn_wc__db_external_add_file(svn_wc__db_t *db,
   ieb.conflict = conflict;
   ieb.work_items = work_items;
 
-  return svn_error_trace(
-            svn_wc__db_with_txn(wcroot, local_relpath, insert_external_node,
-                                &ieb, scratch_pool));
+  SVN_WC__DB_WITH_TXN(
+            insert_external_node(&ieb, wcroot, local_relpath, scratch_pool),
+            wcroot);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -3272,9 +3271,11 @@ svn_wc__db_external_add_symlink(svn_wc__db_t *db,
 
   ieb.work_items = work_items;
 
-  return svn_error_trace(
-            svn_wc__db_with_txn(wcroot, local_relpath, insert_external_node,
-                                &ieb, scratch_pool));
+  SVN_WC__DB_WITH_TXN(
+            insert_external_node(&ieb, wcroot, local_relpath, scratch_pool),
+            wcroot);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -3327,9 +3328,11 @@ svn_wc__db_external_add_dir(svn_wc__db_t *db,
 
   ieb.work_items = work_items;
 
-  return svn_error_trace(
-            svn_wc__db_with_txn(wcroot, local_relpath, insert_external_node,
-                                &ieb, scratch_pool));
+  SVN_WC__DB_WITH_TXN(
+            insert_external_node(&ieb, wcroot, local_relpath, scratch_pool),
+            wcroot);
+
+  return SVN_NO_ERROR;
 }
 
 /* The body of svn_wc__db_external_remove(). */
@@ -5277,8 +5280,9 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
   iwb.work_items = work_items;
   iwb.conflict = conflict;
 
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, insert_working_node, &iwb,
-                              scratch_pool));
+  SVN_WC__DB_WITH_TXN(
+                insert_working_node(&iwb, wcroot, local_relpath, scratch_pool),
+                wcroot);
   SVN_ERR(flush_entries(wcroot, local_abspath, depth, scratch_pool));
 
   return SVN_NO_ERROR;
