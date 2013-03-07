@@ -1319,7 +1319,6 @@ get_dir_status(const struct walk_status_baton *wb,
   const char *dir_repos_root_url;
   const char *dir_repos_relpath;
   const char *dir_repos_uuid;
-  svn_boolean_t dir_has_props;
   apr_hash_t *dirents, *nodes, *conflicts, *all_children;
   apr_array_header_t *sorted_children;
   apr_array_header_t *collected_ignore_patterns = NULL;
@@ -1417,8 +1416,6 @@ get_dir_status(const struct walk_status_baton *wb,
   /* If the requested depth is empty, we only need status on this-dir. */
   if (depth == svn_depth_empty)
     return SVN_NO_ERROR;
-
-  dir_has_props = (dir_info->had_props || dir_info->props_mod);
 
   /* Walk all the children of this directory. */
   sorted_children = svn_sort__hash(all_children,
