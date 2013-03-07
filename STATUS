@@ -278,6 +278,13 @@ Candidate changes:
    Votes:
      +1: breser
 
+ * r1453780
+   Reject operations on some properties for activity resources.
+   Justification:
+     It's a SEGV.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
