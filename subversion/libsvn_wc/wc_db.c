@@ -5365,8 +5365,9 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
   iwb.work_items = work_items;
   iwb.conflict = conflict;
 
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, insert_working_node, &iwb,
-                              scratch_pool));
+  SVN_WC__DB_WITH_TXN(
+          insert_working_node(&iwb, wcroot, local_relpath, scratch_pool),
+          wcroot);
   SVN_ERR(flush_entries(wcroot, local_abspath, svn_depth_empty, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -5435,8 +5436,9 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
   iwb.work_items = work_items;
   iwb.conflict = conflict;
 
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, insert_working_node, &iwb,
-                              scratch_pool));
+  SVN_WC__DB_WITH_TXN(
+            insert_working_node(&iwb, wcroot, local_relpath, scratch_pool),
+            wcroot);
   SVN_ERR(flush_entries(wcroot, local_abspath, svn_depth_empty, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -5478,8 +5480,9 @@ svn_wc__db_op_add_directory(svn_wc__db_t *db,
 
   iwb.work_items = work_items;
 
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, insert_working_node, &iwb,
-                              scratch_pool));
+  SVN_WC__DB_WITH_TXN(
+            insert_working_node(&iwb, wcroot, local_relpath, scratch_pool),
+            wcroot);
   /* Use depth infinity to make sure we have no invalid cached information
    * about children of this dir. */
   SVN_ERR(flush_entries(wcroot, local_abspath, svn_depth_infinity,
@@ -5524,8 +5527,9 @@ svn_wc__db_op_add_file(svn_wc__db_t *db,
 
   iwb.work_items = work_items;
 
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, insert_working_node, &iwb,
-                              scratch_pool));
+  SVN_WC__DB_WITH_TXN(
+            insert_working_node(&iwb, wcroot, local_relpath, scratch_pool),
+            wcroot);
   SVN_ERR(flush_entries(wcroot, local_abspath, svn_depth_empty, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -5573,8 +5577,9 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
 
   iwb.work_items = work_items;
 
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, insert_working_node, &iwb,
-                              scratch_pool));
+  SVN_WC__DB_WITH_TXN(
+            insert_working_node(&iwb, wcroot, local_relpath, scratch_pool),
+            wcroot);
   SVN_ERR(flush_entries(wcroot, local_abspath, svn_depth_empty, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -6651,8 +6656,8 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
                               db, local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, with_triggers, &wtb,
-                              scratch_pool));
+  SVN_WC__DB_WITH_TXN(with_triggers(&wtb, wcroot, local_relpath, scratch_pool),
+                      wcroot);
 
   SVN_ERR(flush_entries(wcroot, local_abspath, depth, scratch_pool));
 
@@ -7942,9 +7947,9 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
     {
       /* Avoid the trigger work */
       odb.notify = FALSE;
-      SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath,
-                                  delete_node, &odb,
-                                  scratch_pool));
+      SVN_WC__DB_WITH_TXN(
+                    delete_node(&odb, wcroot, local_relpath, scratch_pool),
+                    wcroot);
     }
 
   SVN_ERR(flush_entries(wcroot, local_abspath, svn_depth_infinity,
