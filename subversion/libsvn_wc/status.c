@@ -936,13 +936,10 @@ send_status_structure(const struct walk_status_baton *wb,
 }
 
 
-/* Store in *PATTERNS a list of all svn:ignore properties from
-   the working copy directory, including the default ignores
-   passed in as IGNORES.
-
-   If INHERITED_PATTERNS is not NULL, then store in *INHERITED_PATTERNS
-   a list of all ignore patterns defined by the svn:inherited-ignores
-   properties explicitly set on, or inherited by, LOCAL_ABSPATH.
+/* Store in *PATTERNS a list of ignores collected from svn:ignore properties
+   on LOCAL_ABSPATH and svn:global-ignores on LOCAL_ABSPATH and its
+   repository ancestors (as cached in the working copy), including the default
+   ignores passed in as IGNORES.
 
    Upon return, *PATTERNS will contain zero or more (const char *)
    patterns from the value of the SVN_PROP_IGNORE property set on
@@ -951,10 +948,7 @@ send_status_structure(const struct walk_status_baton *wb,
    IGNORES is a list of patterns to include; typically this will
    be the default ignores as, for example, specified in a config file.
 
-   If MAY_HAVE_PROPS is false, local_abspath is assumed to have no
-   properties.
-
-   LOCAL_ABSPATH and DB control how to access the ignore information.
+   DB, LOCAL_ABSPATH is used to access the working copy.
 
    Allocate results in RESULT_POOL, temporary stuffs in SCRATCH_POOL.
 
@@ -1070,9 +1064,8 @@ is_external_path(apr_hash_t *externals,
    requested.  PATH_KIND is the node kind of NAME as determined by the
    caller.  PATH_SPECIAL is the special status of the path, also determined
    by the caller.
-   PATTERNS and INHERITED_PATTERNS point to a list of filename patterns which
-   are marked as ignored.  None of these parameter may be NULL.  EXTERNALS is
-   a hash of known externals definitions for this status run.
+   PATTERNS points to a list of filename patterns which are marked as ignored.
+   None of these parameter may be NULL.
 
    If NO_IGNORE is TRUE, the item will be added regardless of
    whether it is ignored; otherwise we will only add the item if it
@@ -1169,7 +1162,7 @@ get_dir_status(const struct walk_status_baton *wb,
  * call, then *COLLECTED_IGNORE_PATTERNS will be set to an apr_array_header_t*
  * containing all ignore patterns, as returned by collect_ignore_patterns() on
  * PARENT_ABSPATH and IGNORE_PATTERNS. If *COLLECTED_IGNORE_PATTERNS is passed
- *  non-NULL, it is assumed it already holds those results.
+ * non-NULL, it is assumed it already holds those results.
  * This speeds up repeated calls with the same PARENT_ABSPATH.
  *
  * *COLLECTED_IGNORE_PATTERNS will be allocated in RESULT_POOL. All other
