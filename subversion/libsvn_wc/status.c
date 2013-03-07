@@ -1245,7 +1245,7 @@ one_child_status(const struct walk_status_baton *wb,
       if (depth == svn_depth_files && dirent->kind == svn_node_dir)
         return SVN_NO_ERROR;
 
-      if (svn_wc_is_adm_dir(svn_dirent_basename(local_abspath, scratch_pool),
+      if (svn_wc_is_adm_dir(svn_dirent_basename(local_abspath, NULL),
                             scratch_pool))
         return SVN_NO_ERROR;
     }
