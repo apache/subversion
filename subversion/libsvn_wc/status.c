@@ -1156,8 +1156,6 @@ get_dir_status(const struct walk_status_baton *wb,
  * DIR_REPOS_* should reflect LOCAL_ABSPATH's parent URL, i.e. LOCAL_ABSPATH's
  * URL treated with svn_uri_dirname(). ### TODO verify this (externals)
  *
- * DIR_HAS_PROPS is a boolean indicating whether PARENT_ABSPATH has properties.
- *
  * If *COLLECTED_IGNORE_PATTERNS is NULL and ignore patterns are needed in this
  * call, then *COLLECTED_IGNORE_PATTERNS will be set to an apr_array_header_t*
  * containing all ignore patterns, as returned by collect_ignore_patterns() on
