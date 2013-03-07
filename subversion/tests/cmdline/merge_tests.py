@@ -17479,8 +17479,21 @@ def merge_source_with_replacement(sbox):
   svntest.main.run_svn(None, 'ci', '-m', 'file edit', wc_dir)
 
   # Update and sync merge ^/A to A_COPY.
+  #
+  #         text  text  text  text              text
+  #         edit  edit  edit  edit              edit
+  #         psi   rho   beta  omega             omega
+  #  A@r1---r3----r4----r5----r6---X       r7---r8--------->
+  #    |                 |                 ^          |
+  #    |                 v                 |          |
+  #    |                 +---replacement---+          |
+  #   copy                                            |
+  #    |                                          sync-merge
+  #    |                                              |
+  #    v                                              v
+  #    r2---A_COPY----------------------------------------->
   svntest.main.run_svn(None, 'up', wc_dir)
-  # This previously failed because the merge notifications make it look
+  # This test previously failed because the merge notifications make it look
   # like r6 from ^/A was merged and recorded:
   #
   #   >svn merge ^^/A A_COPY
