@@ -1170,6 +1170,7 @@ open_root(void *edit_baton,
   svn_boolean_t already_conflicted;
   svn_error_t *err;
   svn_wc__db_status_t status;
+  svn_wc__db_status_t base_status;
   svn_kind_t kind;
   svn_boolean_t have_work;
 
@@ -1227,6 +1228,17 @@ open_root(void *edit_baton,
       SVN_ERR(svn_wc__db_base_moved_to(NULL, NULL, &move_src_root_abspath,
                                        NULL, eb->db, db->local_abspath,
                                        pool, pool));
+      if (move_src_root_abspath || *eb->target_basename == '\0')
+        SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL,
+                                         &db->old_revision,
+                                         &db->old_repos_relpath, NULL, NULL,
+                                         &db->changed_rev, &db->changed_date,
+                                         &db->changed_author,
+                                         &db->ambient_depth,
+                                         NULL, NULL, NULL, NULL, NULL, NULL,
+                                         eb->db, db->local_abspath,
+                                         db->pool, pool));
+
       if (move_src_root_abspath)
         {
           /* This is an update anchored inside a move. We need to
@@ -1242,8 +1254,9 @@ open_root(void *edit_baton,
 
           if (strcmp(db->local_abspath, move_src_root_abspath))
             {
-              /* This is some parent of the edit root, we won't be
-                 handling it again so raise the conflict now. */
+              /* We are raising the tree-conflict on some parent of
+                 the edit root, we won't be handling that path again
+                 so raise the conflict now. */
               SVN_ERR(complete_conflict(tree_conflict, eb,
                                         move_src_root_abspath,
                                         db->old_repos_relpath,
@@ -1261,28 +1274,16 @@ open_root(void *edit_baton,
             db->edit_conflict = tree_conflict;
         }
 
-
       db->shadowed = TRUE; /* Needed for the close_directory() on the root, to
                               make sure it doesn't use the ACTUAL tree */
     }
+  else
+    base_status = status;
 
   if (*eb->target_basename == '\0')
     {
-      svn_wc__db_status_t base_status;
       /* For an update with a NULL target, this is equivalent to open_dir(): */
 
-      if (! have_work)
-        base_status = status;
-      else
-        {
-          SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &db->old_revision,
-                                           &db->old_repos_relpath, NULL, NULL,
-                                           &db->changed_rev, &db->changed_date,
-                                           &db->changed_author, &db->ambient_depth,
-                                           NULL, NULL, NULL, NULL, NULL, NULL,
-                                           eb->db, db->local_abspath,
-                                           db->pool, pool));
-        }
       db->was_incomplete = (base_status == svn_wc__db_status_incomplete);
 
       /* ### TODO: Add some tree conflict and obstruction detection, etc. like
