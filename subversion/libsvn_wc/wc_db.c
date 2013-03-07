@@ -9641,7 +9641,8 @@ filter_unwanted_props(apr_hash_t *prop_hash,
 /* The body of svn_wc__db_read_inherited_props().
  */
 static svn_error_t *
-db_read_inherited_props(apr_array_header_t **iprops,
+db_read_inherited_props(const apr_array_header_t **inherited_props,
+                        apr_hash_t **actual_props,
                         svn_wc__db_wcroot_t *wcroot,
                         const char *local_relpath,
                         const char *propname,
@@ -9650,54 +9651,112 @@ db_read_inherited_props(apr_array_header_t **iprops,
 {
   int i;
   apr_array_header_t *cached_iprops = NULL;
-  const char *parent_relpath = local_relpath;
-  svn_boolean_t is_wc_root = FALSE;
+  apr_array_header_t *iprops;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  svn_sqlite__stmt_t *stmt;
+  apr_hash_t *props = NULL;
+  const char *relpath;
+  const char *expected_parent_repos_relpath = NULL;
+  const char *parent_relpath;
 
-  *iprops = apr_array_make(result_pool, 1,
+  iprops = apr_array_make(result_pool, 1,
                            sizeof(svn_prop_inherited_item_t *));
+  *inherited_props = iprops;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_NODE_INFO));
+
+  relpath = local_relpath;
 
   /* Walk up to the root of the WC looking for inherited properties.  When we
      reach the WC root also check for cached inherited properties. */
-  while (TRUE)
+  for (relpath = local_relpath; relpath; relpath = parent_relpath)
     {
       apr_hash_t *actual_props;
-      svn_boolean_t is_switched;
+      svn_boolean_t have_row;
+      int op_depth;
+      svn_wc__db_status_t status;
+
+      parent_relpath = relpath[0] ? svn_relpath_dirname(relpath, scratch_pool)
+                                  : NULL;
 
       svn_pool_clear(iterpool);
 
-      if (*parent_relpath == '\0')
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, relpath));
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+      if (!have_row)
+        return svn_error_createf(
+                    SVN_ERR_WC_PATH_NOT_FOUND, svn_sqlite__reset(stmt),
+                    _("The node '%s' was not found."),
+                    path_for_error_message(wcroot, relpath,
+                                           scratch_pool));
+
+      op_depth = svn_sqlite__column_int(stmt, 0);
+
+      status = svn_sqlite__column_token(stmt, 3, presence_map);
+
+      if (status != svn_wc__db_status_normal
+          && status != svn_wc__db_status_incomplete)
+        return svn_error_createf(
+                    SVN_ERR_WC_PATH_UNEXPECTED_STATUS, svn_sqlite__reset(stmt),
+                    _("The node '%s' has a status that has no properties."),
+                    path_for_error_message(wcroot, relpath,
+                                           scratch_pool));
+
+      if (op_depth > 0)
         {
-          is_switched = FALSE;
-          is_wc_root = TRUE;
+          /* WORKING node. Nothing to check */
+        }
+      else if (expected_parent_repos_relpath)
+        {
+          const char *repos_relpath = svn_sqlite__column_text(stmt, 2, NULL);
+
+          if (strcmp(expected_parent_repos_relpath, repos_relpath) != 0)
+            {
+              /* The child of this node has a different parent than this node
+                 (It is "switched"), so we can stop here. Note that switched
+                 with the same parent is not interesting for us here. */
+              SVN_ERR(svn_sqlite__reset(stmt));
+              break;
+            }
+
+          expected_parent_repos_relpath =
+              svn_relpath_dirname(expected_parent_repos_relpath, scratch_pool);
         }
       else
-        SVN_ERR(db_is_switched(&is_switched, NULL, wcroot, parent_relpath,
-                               scratch_pool));
-
-      if (is_switched || is_wc_root)
         {
-          is_wc_root = TRUE;
+          const char *repos_relpath = svn_sqlite__column_text(stmt, 2, NULL);
 
-          /* If the WC root is also the root of the repository then by
-             definition there are no inheritable properties to be had,
-             but checking for that is just as expensive as fetching them
-             anyway. */
-
-          /* Grab the cached inherited properties for the WC root. */
-          SVN_ERR(db_read_cached_iprops(&cached_iprops,
-                                        wcroot, parent_relpath,
-                                        result_pool, iterpool));
+          expected_parent_repos_relpath =
+              svn_relpath_dirname(repos_relpath, scratch_pool);
         }
 
-      /* If PARENT_ABSPATH is a true parent of LOCAL_ABSPATH, then
-         LOCAL_ABSPATH can inherit properties from it. */
-      if (strcmp(local_relpath, parent_relpath) != 0)
+      if (op_depth == 0
+          && !svn_sqlite__column_is_null(stmt, 16))
         {
-          SVN_ERR(db_read_props(&actual_props, wcroot, parent_relpath,
+          /* The node contains a cache. No reason to look further */
+          SVN_ERR(svn_sqlite__column_iprops(&cached_iprops, stmt, 16,
+                                            result_pool, iterpool));
+
+          parent_relpath = NULL; /* Stop after this */
+        }
+
+      if (relpath == local_relpath && actual_props)
+        SVN_ERR(svn_sqlite__column_properties(&props, stmt, 14,
+                                              result_pool, scratch_pool));
+
+      SVN_ERR(svn_sqlite__reset(stmt));
+
+      /* If PARENT_ABSPATH is a parent of LOCAL_ABSPATH, then LOCAL_ABSPATH
+         can inherit properties from it. */
+      if (relpath != local_relpath)
+        {
+          SVN_ERR(db_read_props(&actual_props, wcroot, relpath,
                                 result_pool, iterpool));
 
-          if (actual_props)
+          if (actual_props && apr_hash_count(actual_props))
             {
               /* If we only want PROPNAME filter out any other properties. */
               if (propname)
@@ -9709,22 +9768,15 @@ db_read_inherited_props(apr_array_header_t **iprops,
                     apr_pcalloc(result_pool,
                                 sizeof(svn_prop_inherited_item_t));
                   iprop_elt->path_or_url = svn_dirent_join(wcroot->abspath,
-                                                           parent_relpath,
+                                                           relpath,
                                                            result_pool);
 
                   iprop_elt->prop_hash = actual_props;
                   /* Build the output array in depth-first order. */
-                  svn_sort__array_insert(&iprop_elt, *iprops, 0);
+                  svn_sort__array_insert(&iprop_elt, iprops, 0);
                 }
             }
         }
-
-      /* Inheritance only goes as far as the nearest WC root. */
-      if (is_wc_root)
-        break;
-
-      /* Keep looking for the WC root. */
-      parent_relpath = svn_relpath_dirname(parent_relpath, scratch_pool);
     }
 
   if (cached_iprops)
@@ -9745,8 +9797,25 @@ db_read_inherited_props(apr_array_header_t **iprops,
 
           /* If we didn't filter everything then keep this iprop. */
           if (apr_hash_count(cached_iprop->prop_hash))
-            svn_sort__array_insert(&cached_iprop, *iprops, 0);
+            svn_sort__array_insert(&cached_iprop, iprops, 0);
         }
+    }
+
+  if (actual_props)
+    {
+      svn_boolean_t have_row;
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_ACTUAL_PROPS));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+      if (have_row && !svn_sqlite__column_is_null(stmt, 0))
+        SVN_ERR(svn_sqlite__column_properties(actual_props, stmt, 0,
+                                              result_pool, iterpool));
+      else
+        *actual_props = props; /* Cached when we read that record */
+
+      SVN_ERR(svn_sqlite__reset(stmt));
     }
 
   svn_pool_destroy(iterpool);
@@ -9754,7 +9823,8 @@ db_read_inherited_props(apr_array_header_t **iprops,
 }
 
 svn_error_t *
-svn_wc__db_read_inherited_props(apr_array_header_t **iprops,
+svn_wc__db_read_inherited_props(const apr_array_header_t **iprops,
+                                apr_hash_t **actual_props,
                                 svn_wc__db_t *db,
                                 const char *local_abspath,
                                 const char *propname,
@@ -9771,7 +9841,7 @@ svn_wc__db_read_inherited_props(apr_array_header_t **iprops,
                                                 scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_WC__DB_WITH_TXN(db_read_inherited_props(iprops,
+  SVN_WC__DB_WITH_TXN(db_read_inherited_props(iprops, actual_props,
                                               wcroot, local_relpath, propname,
                                               result_pool, scratch_pool),
                       wcroot);

@@ -2314,7 +2314,7 @@ svn_wc__get_iprops(apr_array_header_t **inherited_props,
                    apr_pool_t *scratch_pool)
 {
   return svn_error_trace(
-            svn_wc__db_read_inherited_props(inherited_props,
+            svn_wc__db_read_inherited_props(inherited_props, NULL,
                                             wc_ctx->db, local_abspath,
                                             propname,
                                             result_pool, scratch_pool));
