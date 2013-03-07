@@ -497,11 +497,22 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
       return SVN_NO_ERROR;
     }
 
-  return svn_error_compose_create(
-             svn_ra_serf__error_on_status(opt_ctx->handler->sline.code,
-                                          serf_sess->session_url.path,
-                                          opt_ctx->handler->location),
-             err);
+  SVN_ERR(svn_error_compose_create(
+              svn_ra_serf__error_on_status(opt_ctx->handler->sline.code,
+                                           serf_sess->session_url.path,
+                                           opt_ctx->handler->location),
+              err));
+
+  /* Opportunistically cache any reported activity URL.  (We don't
+     want to have to ask for this again later, potentially against an
+     unreadable commit anchor URL.)  */
+  if (opt_ctx->activity_collection)
+    {
+      serf_sess->activity_collection_url =
+        apr_pstrdup(serf_sess->pool, opt_ctx->activity_collection);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
