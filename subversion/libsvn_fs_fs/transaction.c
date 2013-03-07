@@ -1788,6 +1788,7 @@ choose_delta_base(representation_t **rep,
   base = noderev;
   while ((count++) < noderev->predecessor_count)
     {
+      svn_revnum_t base_revision;
       SVN_ERR(svn_fs_fs__get_node_revision(&base, fs,
                                            base->predecessor_id, pool));
 
@@ -1798,16 +1799,15 @@ choose_delta_base(representation_t **rep,
        * look the same (false positive) while reps shared within the same
        * revision will not be caught (false negative).
        */
+      base_revision = svn_fs_fs__id_rev(base->id);
       if (props)
         {
-          if (   base->prop_rep
-              && svn_fs_fs__id_rev(base->id) > base->prop_rep->revision)
+          if (base->prop_rep && base_revision > base->prop_rep->revision)
             maybe_shared_rep = TRUE;
         }
       else
         {
-          if (   base->data_rep
-              && svn_fs_fs__id_rev(base->id) > base->data_rep->revision)
+          if (base->data_rep && base_revision > base->data_rep->revision)
             maybe_shared_rep = TRUE;
         }
     }
