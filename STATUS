@@ -237,14 +237,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-neon-properr
    Votes:
-     +1: cmpilato
-
- * r1443929
-   Introduce a subpool.
-   Justifcation:
-     Better server memory use.
-   Votes:
-     +1: philip, ivan
+     +1: cmpilato, rhuijben
 
  * r1445753
    Fix issue #3741, 'externals not removed when working copy is made shallow'.
@@ -253,7 +246,7 @@ Candidate changes:
      tree conflicts when the working copy is updated back to depth infinity.
      See regression test and also the recipe script attached to issue #3741.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
  * r1451678, r1452617
    Make get-deps.sh compatible with Solaris /bin/sh.
@@ -269,6 +262,7 @@ Candidate changes:
      Keyword translation should not affect file permission bits.
    Votes:
      +1: stsp
+     +0: rhuijben (code looks ok, but is a no-op on Windows)
 
  * ^/subversion/branches/1.7.x-gssapi-solaris10
    Justification:
@@ -298,3 +292,9 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1443929
+   Introduce a subpool.
+   Justifcation:
+     Better server memory use.
+   Votes:
+     +1: philip, ivan, rhuijben
