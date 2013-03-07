@@ -3460,6 +3460,37 @@ notify_merge_completed(const char *target_abspath,
                      || notify->action == svn_wc_notify_tree_conflict)
 
 
+/* Remove merge source gaps from range used for merge notifications.
+   See http://subversion.tigris.org/issues/show_bug.cgi?id=4138
+
+   If IMPLICIT_SRC_GAP is not NULL then it is a rangelist containing a
+   single range (see the implicit_src_gap member of merge_cmd_baton_t).
+   RANGE describes a (possibly reverse) merge.
+
+   If IMPLICIT_SRC_GAP is not NULL and it's sole range intersects with
+   the older revision in *RANGE, then remove IMPLICIT_SRC_GAP's range
+   from *RANGE. */
+static void
+remove_source_gap(svn_merge_range_t *range,
+                  apr_array_header_t *implicit_src_gap)
+{
+  if (implicit_src_gap)
+    {
+      svn_merge_range_t *gap_range =
+        APR_ARRAY_IDX(implicit_src_gap, 0, svn_merge_range_t *);
+      if (range->start < range->end)
+        {
+          if (gap_range->start == range->start)
+            range->start = gap_range->end;
+        }
+      else /* Reverse merge */
+        {
+          if (gap_range->start == range->end)
+            range->end = gap_range->end;
+        }
+    }
+}
+
 /* Notify that we're starting a merge
  *
  * This calls the client's notification receiver (as found in the client
@@ -3551,9 +3582,16 @@ notify_merge_begin(merge_cmd_baton_t *merge_b,
                                 scratch_pool);
 
   if (SVN_IS_VALID_REVNUM(n_range.start))
-    notify->merge_range = &n_range;
+    {
+      /* If the merge source has a gap, then don't mention
+         those gap revisions in the notification. */
+      remove_source_gap(&n_range, merge_b->implicit_src_gap);
+      notify->merge_range = &n_range;
+    }
   else
-    notify->merge_range = NULL;
+    {
+      notify->merge_range = NULL;
+    }
 
   (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2, notify,
                                 scratch_pool);
@@ -8313,8 +8351,13 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
             continue;
 
           if (!squelch_mergeinfo_notifications)
-            notify_mergeinfo_recording(child->abspath, merged_range,
-                                      merge_b->ctx, iterpool);
+            {
+              /* If the merge source has a gap, then don't mention
+                 those gap revisions in the notification. */
+              remove_source_gap(&range, merge_b->implicit_src_gap);
+              notify_mergeinfo_recording(child->abspath, &range,
+                                         merge_b->ctx, iterpool);
+            }
 
           /* If we are here we know we will be recording some mergeinfo, but
              before we do, set override mergeinfo on skipped paths so they

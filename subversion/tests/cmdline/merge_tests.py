@@ -17447,7 +17447,6 @@ def svnmucc_abuse_1(sbox):
 #----------------------------------------------------------------------
 # Test for issue #4138 'replacement in merge source not notified correctly'.
 @SkipUnless(server_has_mergeinfo)
-@XFail()
 @Issue(4138)
 def merge_source_with_replacement(sbox):
   "replacement in merge source not notified correctly"
@@ -17481,8 +17480,8 @@ def merge_source_with_replacement(sbox):
 
   # Update and sync merge ^/A to A_COPY.
   svntest.main.run_svn(None, 'up', wc_dir)
-  # This currently fails because the merge notifications make it look like
-  # r6 from ^/A was merged and recorded:
+  # This previously failed because the merge notifications make it look
+  # like r6 from ^/A was merged and recorded:
   #
   #   >svn merge ^^/A A_COPY
   #   --- Merging r2 through r5 into 'A_COPY':
@@ -17495,13 +17494,14 @@ def merge_source_with_replacement(sbox):
   #   U    A_COPY\D\H\omega
   #   --- Recording mergeinfo for merge of r6 through r8 into 'A_COPY':
   #   G   A_COPY
-  expected_output = expected_merge_output([[2,5],[7,8]],
-                          ['U    ' + beta_COPY_path  + '\n',
-                           'U    ' + rho_COPY_path   + '\n',
-                           'U    ' + omega_COPY_path + '\n',
-                           'U    ' + psi_COPY_path   + '\n',
-                           ' U   ' + A_COPY_path     + '\n',
-                           ' G   ' + A_COPY_path     + '\n',])
+  expected_output = expected_merge_output(
+    [[2,5],[7,8]],
+    ['U    ' + beta_COPY_path  + '\n',
+     'U    ' + rho_COPY_path   + '\n',
+     'U    ' + omega_COPY_path + '\n',
+     'U    ' + psi_COPY_path   + '\n',
+     ' U   ' + A_COPY_path     + '\n',
+     ' G   ' + A_COPY_path     + '\n',])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'merge', sbox.repo_url + '/A',
                                      A_COPY_path)
@@ -17512,6 +17512,23 @@ def merge_source_with_replacement(sbox):
                                      [A_COPY_path + ' - /A:2-5,7-8\n'],
                                      [], 'pg', SVN_PROP_MERGEINFO,
                                      '-R', A_COPY_path)
+
+  # Commit the above merge and then reverse merge it.  Again r6 is not
+  # being merged and should not be part of the notifications.
+  sbox.simple_commit()
+  sbox.simple_update()
+  expected_output = expected_merge_output(
+    [[5,2],[8,7]],
+    ['U    ' + beta_COPY_path  + '\n',
+     'U    ' + rho_COPY_path   + '\n',
+     'U    ' + omega_COPY_path + '\n',
+     'U    ' + psi_COPY_path   + '\n',
+     ' U   ' + A_COPY_path     + '\n',
+     ' G   ' + A_COPY_path     + '\n',],
+    elides=True)
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', sbox.repo_url + '/A',
+                                     A_COPY_path, '-r8:1')
 
 #----------------------------------------------------------------------
 # Test for issue #4144 'Reverse merge with replace in source applies
