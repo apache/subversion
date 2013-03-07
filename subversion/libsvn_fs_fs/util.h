@@ -255,13 +255,13 @@ write_revnum_file(svn_fs_t *fs,
 
 /* Atomically update the 'current' file to hold the specifed REV,
    NEXT_NODE_ID, and NEXT_COPY_ID.  (The two next-ID parameters are
-   ignored and may be NULL if the FS format does not use them.)
+   ignored and may be 0 if the FS format does not use them.)
    Perform temporary allocations in POOL. */
 svn_error_t *
 write_current(svn_fs_t *fs,
               svn_revnum_t rev,
-              const char *next_node_id,
-              const char *next_copy_id,
+              apr_uint64_t next_node_id,
+              apr_uint64_t next_copy_id,
               apr_pool_t *pool);
 
 /* Read the file at PATH and return its content in *CONTENT. *CONTENT will
@@ -286,7 +286,7 @@ get_file_offset(apr_off_t *offset_p,
                 apr_file_t *file,
                 apr_pool_t *pool);
 
-/* Read the 'current' file FNAME and store the contents in *BUF.
+/* Read the file FNAME and store the contents in *BUF.
    Allocations are performed in POOL. */
 svn_error_t *
 read_content(svn_stringbuf_t **content,

@@ -24,6 +24,7 @@
 
 #include "svn_ctype.h"
 #include "svn_dirent_uri.h"
+#include "private/svn_string_private.h"
 
 #include "fs_fs.h"
 #include "id.h"
@@ -449,8 +450,8 @@ write_revnum_file(svn_fs_t *fs,
    ignored and may be NULL if the FS format does not use them.)
    Perform temporary allocations in POOL. */
 svn_error_t *
-write_current(svn_fs_t *fs, svn_revnum_t rev, const char *next_node_id,
-              const char *next_copy_id, apr_pool_t *pool)
+write_current(svn_fs_t *fs, svn_revnum_t rev, apr_uint64_t next_node_id,
+              apr_uint64_t next_copy_id, apr_pool_t *pool)
 {
   char *buf;
   const char *tmp_name, *name;
@@ -458,9 +459,18 @@ write_current(svn_fs_t *fs, svn_revnum_t rev, const char *next_node_id,
 
   /* Now we can just write out this line. */
   if (ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
-    buf = apr_psprintf(pool, "%ld\n", rev);
+    {
+      buf = apr_psprintf(pool, "%ld\n", rev);
+    }
   else
-    buf = apr_psprintf(pool, "%ld %s %s\n", rev, next_node_id, next_copy_id);
+    {
+      char node_id_str[SVN_INT64_BUFFER_SIZE];
+      char copy_id_str[SVN_INT64_BUFFER_SIZE];
+      svn__ui64tobase36(node_id_str, next_node_id);
+      svn__ui64tobase36(copy_id_str, next_copy_id);
+
+      buf = apr_psprintf(pool, "%ld %s %s\n", rev, node_id_str, copy_id_str);
+    }
 
   name = svn_fs_fs__path_current(fs, pool);
   SVN_ERR(svn_io_write_unique(&tmp_name,

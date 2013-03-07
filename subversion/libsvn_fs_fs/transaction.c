@@ -38,7 +38,6 @@
 #include "low_level.h"
 #include "temp_serializer.h"
 #include "cached_data.h"
-#include "key-gen.h"
 #include "lock.h"
 #include "rep-cache.h"
 #include "index.h"
@@ -986,7 +985,7 @@ create_new_txn_noderev_from_rev(svn_fs_t *fs,
 /* A structure used by get_and_increment_txn_key_body(). */
 struct get_and_increment_txn_key_baton {
   svn_fs_t *fs;
-  char *txn_id;
+  apr_uint64_t txn_number;
   apr_pool_t *pool;
 };
 
@@ -999,27 +998,21 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
   struct get_and_increment_txn_key_baton *cb = baton;
   const char *txn_current_filename = path_txn_current(cb->fs, pool);
   const char *tmp_filename;
-  char next_txn_id[MAX_KEY_SIZE+3];
-  apr_size_t len;
+  char new_id_str[SVN_INT64_BUFFER_SIZE];
 
   svn_stringbuf_t *buf;
   SVN_ERR(read_content(&buf, txn_current_filename, cb->pool));
 
   /* remove trailing newlines */
-  svn_stringbuf_strip_whitespace(buf);
-  cb->txn_id = buf->data;
-  len = buf->len;
+  cb->txn_number = svn__base36toui64(NULL, buf->data);
 
   /* Increment the key and add a trailing \n to the string so the
      txn-current file has a newline in it. */
-  svn_fs_fs__next_key(cb->txn_id, &len, next_txn_id);
-  next_txn_id[len] = '\n';
-  ++len;
-  next_txn_id[len] = '\0';
-
   SVN_ERR(svn_io_write_unique(&tmp_filename,
                               svn_dirent_dirname(txn_current_filename, pool),
-                              next_txn_id, len, svn_io_file_del_none, pool));
+                              new_id_str,
+                              svn__ui64tobase36(new_id_str, cb->txn_number+1),
+                              svn_io_file_del_none, pool));
   SVN_ERR(move_into_place(tmp_filename, txn_current_filename,
                           txn_current_filename, pool));
 
@@ -1035,6 +1028,7 @@ create_txn_dir(const char **id_p, svn_fs_t *fs, svn_revnum_t rev,
 {
   struct get_and_increment_txn_key_baton cb;
   const char *txn_dir;
+  char buffer[SVN_INT64_BUFFER_SIZE];
 
   /* Get the current transaction sequence value, which is a base-36
      number, from the txn-current file, and write an
@@ -1046,7 +1040,9 @@ create_txn_dir(const char **id_p, svn_fs_t *fs, svn_revnum_t rev,
                                 get_and_increment_txn_key_body,
                                 &cb,
                                 pool));
-  *id_p = apr_psprintf(pool, "%ld-%s", rev, cb.txn_id);
+
+  svn__ui64tobase36(buffer, cb.txn_number);
+  *id_p = apr_psprintf(pool, "%ld-%s", rev, buffer);
 
   txn_dir = svn_dirent_join_many(pool,
                                  fs->path,
@@ -1274,22 +1270,24 @@ svn_fs_fs__get_txn(transaction_t **txn_p,
 static svn_error_t *
 write_next_ids(svn_fs_t *fs,
                const char *txn_id,
-               const char *node_id,
-               const char *copy_id,
+               apr_uint64_t node_id,
+               apr_uint64_t copy_id,
                apr_pool_t *pool)
 {
   apr_file_t *file;
-  svn_stream_t *out_stream;
+  char buffer[2 * SVN_INT64_BUFFER_SIZE + 2];
+  char *p = buffer;
+  
+  p += svn__ui64tobase36(p, node_id);
+  *(p++) = ' ';
+  p += svn__ui64tobase36(p, copy_id);
+  *(p++) = '\n';
+  *(p++) = '\0';
 
   SVN_ERR(svn_io_file_open(&file, path_txn_next_ids(fs, txn_id, pool),
                            APR_WRITE | APR_TRUNCATE,
                            APR_OS_DEFAULT, pool));
-
-  out_stream = svn_stream_from_aprfile2(file, TRUE, pool);
-
-  SVN_ERR(svn_stream_printf(out_stream, pool, "%s %s\n", node_id, copy_id));
-
-  SVN_ERR(svn_stream_close(out_stream));
+  SVN_ERR(svn_io_file_write_full(file, buffer, p - buffer, NULL, pool));
   return svn_io_file_close(file, pool);
 }
 
@@ -1299,40 +1297,28 @@ write_next_ids(svn_fs_t *fs,
    nodes for the given transaction, as well as uniquifying representations.
    Perform all allocations in POOL. */
 static svn_error_t *
-read_next_ids(const char **node_id,
-              const char **copy_id,
+read_next_ids(apr_uint64_t *node_id,
+              apr_uint64_t *copy_id,
               svn_fs_t *fs,
               const char *txn_id,
               apr_pool_t *pool)
 {
-  apr_file_t *file;
-  char buf[MAX_KEY_SIZE*2+3];
-  apr_size_t limit;
-  char *str, *last_str = buf;
-
-  SVN_ERR(svn_io_file_open(&file, path_txn_next_ids(fs, txn_id, pool),
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
-
-  limit = sizeof(buf);
-  SVN_ERR(svn_io_read_length_line(file, buf, &limit, pool));
-
-  SVN_ERR(svn_io_file_close(file, pool));
+  svn_stringbuf_t *buf;
+  const char *str;
+  SVN_ERR(read_content(&buf, path_txn_next_ids(fs, txn_id, pool), pool));
 
   /* Parse this into two separate strings. */
 
-  str = svn_cstring_tokenize(" ", &last_str);
-  if (! str)
+  str = buf->data;
+  *node_id = svn__base36toui64(&str, str);
+  if (*str != ' ')
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("next-id file corrupt"));
 
-  *node_id = apr_pstrdup(pool, str);
-
-  str = svn_cstring_tokenize(" ", &last_str);
-  if (! str)
+  *copy_id = svn__base36toui64(&str, ++str);
+  if (*str != '\n')
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("next-id file corrupt"));
-
-  *copy_id = apr_pstrdup(pool, str);
 
   return SVN_NO_ERROR;
 }
@@ -1347,21 +1333,16 @@ get_new_txn_node_id(const char **node_id_p,
                     const char *txn_id,
                     apr_pool_t *pool)
 {
-  const char *cur_node_id, *cur_copy_id;
-  char *node_id;
-  apr_size_t len;
+  apr_uint64_t node_id, copy_id;
+  char cur_node_id[SVN_INT64_BUFFER_SIZE];
 
   /* First read in the current next-ids file. */
-  SVN_ERR(read_next_ids(&cur_node_id, &cur_copy_id, fs, txn_id, pool));
+  SVN_ERR(read_next_ids(&node_id, &copy_id, fs, txn_id, pool));
 
-  node_id = apr_pcalloc(pool, strlen(cur_node_id) + 2);
-
-  len = strlen(cur_node_id);
-  svn_fs_fs__next_key(cur_node_id, &len, node_id);
-
-  SVN_ERR(write_next_ids(fs, txn_id, node_id, cur_copy_id, pool));
-
+  svn__ui64tobase36(cur_node_id, node_id);
   *node_id_p = apr_pstrcat(pool, "_", cur_node_id, (char *)NULL);
+
+  SVN_ERR(write_next_ids(fs, txn_id, ++node_id, copy_id, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1372,21 +1353,16 @@ svn_fs_fs__reserve_copy_id(const char **copy_id_p,
                            const char *txn_id,
                            apr_pool_t *pool)
 {
-  const char *cur_node_id, *cur_copy_id;
-  char *copy_id;
-  apr_size_t len;
+  apr_uint64_t node_id, copy_id;
+  char cur_copy_id[SVN_INT64_BUFFER_SIZE];
 
   /* First read in the current next-ids file. */
-  SVN_ERR(read_next_ids(&cur_node_id, &cur_copy_id, fs, txn_id, pool));
+  SVN_ERR(read_next_ids(&node_id, &copy_id, fs, txn_id, pool));
 
-  copy_id = apr_pcalloc(pool, strlen(cur_copy_id) + 2);
-
-  len = strlen(cur_copy_id);
-  svn_fs_fs__next_key(cur_copy_id, &len, copy_id);
-
-  SVN_ERR(write_next_ids(fs, txn_id, cur_node_id, copy_id, pool));
-
+  svn__ui64tobase36(cur_copy_id, copy_id);
   *copy_id_p = apr_pstrcat(pool, "_", cur_copy_id, (char *)NULL);
+
+  SVN_ERR(write_next_ids(fs, txn_id, node_id, ++copy_id, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2259,8 +2235,8 @@ svn_fs_fs__set_proplist(svn_fs_t *fs,
    available node id in *NODE_ID, and the next available copy id in
    *COPY_ID.  Allocations are performed from POOL. */
 static svn_error_t *
-get_next_revision_ids(const char **node_id,
-                      const char **copy_id,
+get_next_revision_ids(apr_uint64_t *node_id,
+                      apr_uint64_t *copy_id,
                       svn_fs_t *fs,
                       apr_pool_t *pool)
 {
@@ -2281,14 +2257,14 @@ get_next_revision_ids(const char **node_id,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Corrupt 'current' file"));
 
-  *node_id = apr_pstrdup(pool, str);
+  *node_id = svn__base36toui64(NULL, str);
 
   str = svn_cstring_tokenize(" \n", &buf);
   if (! str)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Corrupt 'current' file"));
 
-  *copy_id = apr_pstrdup(pool, str);
+  *copy_id = svn__base36toui64(NULL, str);
 
   return SVN_NO_ERROR;
 }
@@ -2590,6 +2566,30 @@ validate_root_noderev(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Given the potentially txn-local ID, return the permanent ID based on
+ * the REVISION currently written and the START_ID for that revision.
+ * Use the repository FORMAT to decide which implementation to use.
+ * Use POOL for allocations.
+ */
+static const char*
+get_final_id(const char *id,
+             svn_revnum_t revision,
+             apr_uint64_t start_id,
+             int format,
+             apr_pool_t *pool)
+{
+  char buffer[SVN_INT64_BUFFER_SIZE];
+  apr_uint64_t global_id;
+  if (*id != '_')
+    return id;
+
+  if (format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
+    return apr_psprintf(pool, "%s-%ld", id + 1, revision);
+
+  global_id = start_id + svn__base36toui64(NULL, id + 1);
+  return apr_pstrmemdup(pool, buffer, svn__ui64tobase36(buffer, global_id));
+}
+
 /* Copy a node-revision specified by id ID in fileystem FS from a
    transaction into the proto-rev-file FILE.  Set *NEW_ID_P to a
    pointer to the new node-id which will be allocated in POOL.
@@ -2622,8 +2622,8 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                 svn_revnum_t rev,
                 svn_fs_t *fs,
                 const svn_fs_id_t *id,
-                const char *start_node_id,
-                const char *start_copy_id,
+                apr_uint64_t start_node_id,
+                apr_uint64_t start_copy_id,
                 apr_off_t initial_offset,
                 apr_array_header_t *reps_to_cache,
                 apr_hash_t *reps_hash,
@@ -2633,10 +2633,8 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 {
   node_revision_t *noderev;
   apr_off_t my_offset;
-  char my_node_id_buf[MAX_KEY_SIZE + 2];
-  char my_copy_id_buf[MAX_KEY_SIZE + 2];
   const svn_fs_id_t *new_id;
-  const char *node_id, *copy_id, *my_node_id, *my_copy_id;
+  const char *node_id, *copy_id;
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_uint64_t item_index;
   const char *txn_id = svn_fs_fs__id_txn_id(id);
@@ -2746,33 +2744,10 @@ write_final_rev(const svn_fs_id_t **new_id_p,
     }
 
   /* Convert our temporary ID into a permanent revision one. */
-  node_id = svn_fs_fs__id_node_id(noderev->id);
-  if (*node_id == '_')
-    {
-      if (ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
-        my_node_id = apr_psprintf(pool, "%s-%ld", node_id + 1, rev);
-      else
-        {
-          svn_fs_fs__add_keys(start_node_id, node_id + 1, my_node_id_buf);
-          my_node_id = my_node_id_buf;
-        }
-    }
-  else
-    my_node_id = node_id;
-
-  copy_id = svn_fs_fs__id_copy_id(noderev->id);
-  if (*copy_id == '_')
-    {
-      if (ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
-        my_copy_id = apr_psprintf(pool, "%s-%ld", copy_id + 1, rev);
-      else
-        {
-          svn_fs_fs__add_keys(start_copy_id, copy_id + 1, my_copy_id_buf);
-          my_copy_id = my_copy_id_buf;
-        }
-    }
-  else
-    my_copy_id = copy_id;
+  node_id = get_final_id(svn_fs_fs__id_node_id(noderev->id),
+                         rev, start_node_id, ffd->format, pool);
+  copy_id = get_final_id(svn_fs_fs__id_copy_id(noderev->id),
+                         rev, start_copy_id, ffd->format, pool);
 
   if (noderev->copyroot_rev == SVN_INVALID_REVNUM)
     noderev->copyroot_rev = rev;
@@ -2786,8 +2761,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
     }
   else
     SVN_ERR(allocate_item_index(&item_index, fs, txn_id, my_offset, pool));
-  new_id = svn_fs_fs__id_rev_create(my_node_id, my_copy_id, rev,
-                                    item_index, pool);
+  new_id = svn_fs_fs__id_rev_create(node_id, copy_id, rev, item_index, pool);
 
   noderev->id = new_id;
 
@@ -2908,26 +2882,25 @@ static svn_error_t *
 write_final_current(svn_fs_t *fs,
                     const char *txn_id,
                     svn_revnum_t rev,
-                    const char *start_node_id,
-                    const char *start_copy_id,
+                    apr_uint64_t start_node_id,
+                    apr_uint64_t start_copy_id,
                     apr_pool_t *pool)
 {
-  const char *txn_node_id, *txn_copy_id;
-  char new_node_id[MAX_KEY_SIZE + 2];
-  char new_copy_id[MAX_KEY_SIZE + 2];
+  apr_uint64_t txn_node_id;
+  apr_uint64_t txn_copy_id;
   fs_fs_data_t *ffd = fs->fsap_data;
 
   if (ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
-    return write_current(fs, rev, NULL, NULL, pool);
+    return write_current(fs, rev, 0, 0, pool);
 
   /* To find the next available ids, we add the id that used to be in
      the 'current' file, to the next ids from the transaction file. */
   SVN_ERR(read_next_ids(&txn_node_id, &txn_copy_id, fs, txn_id, pool));
 
-  svn_fs_fs__add_keys(start_node_id, txn_node_id, new_node_id);
-  svn_fs_fs__add_keys(start_copy_id, txn_copy_id, new_copy_id);
+  start_node_id += txn_node_id;
+  start_copy_id += txn_copy_id;
 
-  return write_current(fs, rev, new_node_id, new_copy_id, pool);
+  return write_current(fs, rev, start_node_id, start_copy_id, pool);
 }
 
 /* Verify that the user registed with FS has all the locks necessary to
@@ -3026,7 +2999,8 @@ commit_body(void *baton, apr_pool_t *pool)
   const char *old_rev_filename, *rev_filename, *proto_filename;
   const char *revprop_filename, *final_revprop;
   const svn_fs_id_t *root_id, *new_root_id;
-  const char *start_node_id = NULL, *start_copy_id = NULL;
+  apr_uint64_t start_node_id = 0;
+  apr_uint64_t start_copy_id = 0;
   svn_revnum_t old_rev, new_rev;
   apr_file_t *proto_file;
   void *proto_file_lockcookie;
