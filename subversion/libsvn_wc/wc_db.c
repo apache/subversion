@@ -9638,8 +9638,31 @@ filter_unwanted_props(apr_hash_t *prop_hash,
   return;
 }
 
-/* The body of svn_wc__db_read_inherited_props().
- */
+/* Get the changed properties as stored in the ACTUAL table */
+static svn_error_t *
+db_get_changed_props(apr_hash_t **actual_props,
+                     svn_wc__db_wcroot_t *wcroot,
+                     const char *local_relpath,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                STMT_SELECT_ACTUAL_PROPS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (have_row && !svn_sqlite__column_is_null(stmt, 0))
+    SVN_ERR(svn_sqlite__column_properties(actual_props, stmt, 0,
+                                          result_pool, scratch_pool));
+  else
+    *actual_props = NULL; /* Cached when we read that record */
+
+  return svn_error_trace(svn_sqlite__reset(stmt));
+}
+
+/* The body of svn_wc__db_read_inherited_props().  */
 static svn_error_t *
 db_read_inherited_props(const apr_array_header_t **inherited_props,
                         apr_hash_t **actual_props,
@@ -9654,7 +9677,6 @@ db_read_inherited_props(const apr_array_header_t **inherited_props,
   apr_array_header_t *iprops;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_sqlite__stmt_t *stmt;
-  apr_hash_t *props = NULL;
   const char *relpath;
   const char *expected_parent_repos_relpath = NULL;
   const char *parent_relpath;
@@ -9662,6 +9684,9 @@ db_read_inherited_props(const apr_array_header_t **inherited_props,
   iprops = apr_array_make(result_pool, 1,
                            sizeof(svn_prop_inherited_item_t *));
   *inherited_props = iprops;
+
+  if (actual_props)
+    *actual_props = NULL;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_NODE_INFO));
@@ -9672,10 +9697,10 @@ db_read_inherited_props(const apr_array_header_t **inherited_props,
      reach the WC root also check for cached inherited properties. */
   for (relpath = local_relpath; relpath; relpath = parent_relpath)
     {
-      apr_hash_t *actual_props;
       svn_boolean_t have_row;
       int op_depth;
       svn_wc__db_status_t status;
+      apr_hash_t *node_props;
 
       parent_relpath = relpath[0] ? svn_relpath_dirname(relpath, scratch_pool)
                                   : NULL;
@@ -9743,9 +9768,8 @@ db_read_inherited_props(const apr_array_header_t **inherited_props,
           parent_relpath = NULL; /* Stop after this */
         }
 
-      if (relpath == local_relpath && actual_props)
-        SVN_ERR(svn_sqlite__column_properties(&props, stmt, 14,
-                                              result_pool, scratch_pool));
+      SVN_ERR(svn_sqlite__column_properties(&node_props, stmt, 14,
+                                            iterpool, iterpool));
 
       SVN_ERR(svn_sqlite__reset(stmt));
 
@@ -9753,16 +9777,23 @@ db_read_inherited_props(const apr_array_header_t **inherited_props,
          can inherit properties from it. */
       if (relpath != local_relpath)
         {
-          SVN_ERR(db_read_props(&actual_props, wcroot, relpath,
-                                result_pool, iterpool));
+          apr_hash_t *changed_props;
 
-          if (actual_props && apr_hash_count(actual_props))
+          SVN_ERR(db_get_changed_props(&changed_props, wcroot, relpath,
+                                       result_pool, iterpool));
+
+          if (changed_props)
+            node_props = changed_props;
+          else if (node_props)
+            node_props = svn_prop_hash_dup(node_props, result_pool);
+
+          if (node_props && apr_hash_count(node_props))
             {
               /* If we only want PROPNAME filter out any other properties. */
               if (propname)
-                filter_unwanted_props(actual_props, propname, iterpool);
+                filter_unwanted_props(node_props, propname, iterpool);
 
-              if (apr_hash_count(actual_props))
+              if (apr_hash_count(node_props))
                 {
                   svn_prop_inherited_item_t *iprop_elt =
                     apr_pcalloc(result_pool,
@@ -9771,11 +9802,23 @@ db_read_inherited_props(const apr_array_header_t **inherited_props,
                                                            relpath,
                                                            result_pool);
 
-                  iprop_elt->prop_hash = actual_props;
+                  iprop_elt->prop_hash = node_props;
                   /* Build the output array in depth-first order. */
                   svn_sort__array_insert(&iprop_elt, iprops, 0);
                 }
             }
+        }
+      else if (actual_props)
+        {
+          apr_hash_t *changed_props;
+
+          SVN_ERR(db_get_changed_props(&changed_props, wcroot, relpath,
+                                       result_pool, iterpool));
+
+          if (changed_props)
+            *actual_props = changed_props;
+          else if (node_props)
+            *actual_props = svn_prop_hash_dup(node_props, result_pool);
         }
     }
 
@@ -9801,22 +9844,8 @@ db_read_inherited_props(const apr_array_header_t **inherited_props,
         }
     }
 
-  if (actual_props)
-    {
-      svn_boolean_t have_row;
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_ACTUAL_PROPS));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-      if (have_row && !svn_sqlite__column_is_null(stmt, 0))
-        SVN_ERR(svn_sqlite__column_properties(actual_props, stmt, 0,
-                                              result_pool, iterpool));
-      else
-        *actual_props = props; /* Cached when we read that record */
-
-      SVN_ERR(svn_sqlite__reset(stmt));
-    }
+  if (actual_props && !*actual_props)
+    *actual_props = apr_hash_make(result_pool);
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
