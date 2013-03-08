@@ -38,6 +38,7 @@
 #include "util.h"
 
 #include "private/svn_fs_util.h"
+#include "private/svn_string_private.h"
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_private_config.h"
@@ -1143,7 +1144,7 @@ get_node_origins_from_file(svn_fs_t *fs,
 svn_error_t *
 svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
                            svn_fs_t *fs,
-                           const char *node_id,
+                           const svn_fs_fs__id_part_t *node_id,
                            apr_pool_t *pool)
 {
   apr_hash_t *node_origins;
@@ -1169,7 +1170,7 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
 static svn_error_t *
 set_node_origins_for_file(svn_fs_t *fs,
                           const char *node_origins_path,
-                          const char *node_id,
+                          const svn_fs_fs__id_part_t *node_id,
                           svn_string_t *node_rev_id,
                           apr_pool_t *pool)
 {
@@ -1177,6 +1178,10 @@ set_node_origins_for_file(svn_fs_t *fs,
   svn_stream_t *stream;
   apr_hash_t *origins_hash;
   svn_string_t *old_node_rev_id;
+
+  /* the hash serialization functions require strings as keys */
+  char node_id_ptr[SVN_INT64_BUFFER_SIZE];
+  apr_size_t len = svn__ui64tobase36(node_id_ptr, node_id->number);
 
   SVN_ERR(svn_fs_fs__ensure_dir_exists(svn_dirent_join(fs->path,
                                                        PATH_NODE_ORIGINS_DIR,
@@ -1190,16 +1195,17 @@ set_node_origins_for_file(svn_fs_t *fs,
   if (! origins_hash)
     origins_hash = apr_hash_make(pool);
 
-  old_node_rev_id = apr_hash_get(origins_hash, node_id, APR_HASH_KEY_STRING);
+  old_node_rev_id = apr_hash_get(origins_hash, node_id_ptr, len);
 
   if (old_node_rev_id && !svn_string_compare(node_rev_id, old_node_rev_id))
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                              _("Node origin for '%s' exists with a different "
                                "value (%s) than what we were about to store "
                                "(%s)"),
-                             node_id, old_node_rev_id->data, node_rev_id->data);
+                             node_id_ptr, old_node_rev_id->data,
+                             node_rev_id->data);
 
-  apr_hash_set(origins_hash, node_id, APR_HASH_KEY_STRING, node_rev_id);
+  apr_hash_set(origins_hash, node_id_ptr, len, node_rev_id);
 
   /* Sure, there's a race condition here.  Two processes could be
      trying to add different cache elements to the same file at the
@@ -1222,7 +1228,7 @@ set_node_origins_for_file(svn_fs_t *fs,
 
 svn_error_t *
 svn_fs_fs__set_node_origin(svn_fs_t *fs,
-                           const char *node_id,
+                           const svn_fs_fs__id_part_t *node_id,
                            const svn_fs_id_t *node_rev_id,
                            apr_pool_t *pool)
 {

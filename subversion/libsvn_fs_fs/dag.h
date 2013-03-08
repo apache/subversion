@@ -27,6 +27,8 @@
 #include "svn_delta.h"
 #include "private/svn_cache.h"
 
+#include "id.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -323,7 +325,7 @@ svn_error_t *svn_fs_fs__dag_clone_child(dag_node_t **child_p,
                                         dag_node_t *parent,
                                         const char *parent_path,
                                         const char *name,
-                                        const char *copy_id,
+                                        const svn_fs_fs__id_part_t *copy_id,
                                         const char *txn_id,
                                         svn_boolean_t is_parent_copyroot,
                                         apr_pool_t *pool);

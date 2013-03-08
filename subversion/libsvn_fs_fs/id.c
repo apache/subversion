@@ -35,31 +35,115 @@ typedef struct fs_fs__id_t
   svn_fs_id_t generic_id;
 
   /* private members */
-  const char *node_id;
-  const char *copy_id;
+  svn_fs_fs__id_part_t node_id;
+  svn_fs_fs__id_part_t copy_id;
   const char *txn_id;
   svn_revnum_t rev;
   apr_uint64_t item;
 } fs_fs__id_t;
 
 
+
+/* Parse the NUL-terminated ID part at DATA and write the result into *PART.
+ * Return TRUE if no errors were detected. */
+static svn_boolean_t
+part_parse(svn_fs_fs__id_part_t *part,
+           const char *data)
+{
+  /* special case: ID inside some transaction */
+  if (data[0] == '_')
+    {
+      part->revision = SVN_INVALID_REVNUM;
+      part->number = svn__base36toui64(&data, data + 1);
+      return *data == '\0';
+    }
+
+  /* special case: 0 / default ID */
+  if (data[0] == '0' && data[1] == '\0')
+    {
+      part->revision = 0;
+      part->number = 0;
+      return TRUE;
+    }
+
+  /* read old style / new style ID */
+  part->number = svn__base36toui64(&data, data);
+  if (data[0] != '-')
+    {
+      part->revision = 0;
+      return *data == '\0';
+    }
+
+  part->revision = SVN_STR_TO_REV(++data);
+
+  return TRUE;
+}
+
+/* Write the textual representation of *PART into P and return a pointer
+ * to the first position behind that string.
+ */
+static char *
+unparse_id_part(char *p,
+                const svn_fs_fs__id_part_t *part)
+{
+  if (SVN_IS_VALID_REVNUM(part->revision))
+    {
+      /* ordinary old style / new style ID */
+      p += svn__ui64tobase36(p, part->number);
+      if (part->revision > 0)
+        {
+          *(p++) = '-';
+          p += svn__i64toa(p, part->revision);
+        }
+    }
+  else
+    {
+      /* in txn: mark with "_" prefix */
+      *(p++) = '_';
+      p += svn__ui64tobase36(p, part->number);
+    }
+
+  *(p++) = '.';
+
+  return p;
+}
+
+
+
+/* Operations on ID parts */
+
+svn_boolean_t
+svn_fs_fs__id_part_is_root(const svn_fs_fs__id_part_t* part)
+{
+  return part->revision == 0 && part->number == 0;
+}
+
+svn_boolean_t
+svn_fs_fs__id_part_eq(const svn_fs_fs__id_part_t *lhs,
+                      const svn_fs_fs__id_part_t *rhs)
+{
+  return lhs->revision == rhs->revision && lhs->number == rhs->number;
+}
+
+
+
 /* Accessing ID Pieces.  */
 
-const char *
+const svn_fs_fs__id_part_t *
 svn_fs_fs__id_node_id(const svn_fs_id_t *fs_id)
 {
   fs_fs__id_t *id = (fs_fs__id_t *)fs_id;
 
-  return id->node_id;
+  return &id->node_id;
 }
 
 
-const char *
+const svn_fs_fs__id_part_t *
 svn_fs_fs__id_copy_id(const svn_fs_id_t *fs_id)
 {
   fs_fs__id_t *id = (fs_fs__id_t *)fs_id;
 
-  return id->copy_id;
+  return &id->copy_id;
 }
 
 
@@ -94,7 +178,12 @@ svn_string_t *
 svn_fs_fs__id_unparse(const svn_fs_id_t *fs_id,
                       apr_pool_t *pool)
 {
+  char string[4 * SVN_INT64_BUFFER_SIZE + 4];
   fs_fs__id_t *id = (fs_fs__id_t *)fs_id;
+
+  char *p = unparse_id_part(string, &id->node_id);
+  p = unparse_id_part(p, &id->copy_id);
+  *p = '\0';
 
   if ((! id->txn_id))
     {
@@ -103,15 +192,12 @@ svn_fs_fs__id_unparse(const svn_fs_id_t *fs_id,
 
       svn__i64toa(rev_string, id->rev);
       svn__i64toa(offset_string, id->item);
-      return svn_string_createf(pool, "%s.%s.r%s/%s",
-                                id->node_id, id->copy_id,
+      return svn_string_createf(pool, "%sr%s/%s", string,
                                 rev_string, offset_string);
     }
   else
     {
-      return svn_string_createf(pool, "%s.%s.t%s",
-                                id->node_id, id->copy_id,
-                                id->txn_id);
+      return svn_string_createf(pool, "%st%s", string, id->txn_id);
     }
 }
 
@@ -127,10 +213,8 @@ svn_fs_fs__id_eq(const svn_fs_id_t *a,
 
   if (a == b)
     return TRUE;
-  if (strcmp(id_a->node_id, id_b->node_id) != 0)
+  if (memcmp(&id_a->node_id, &id_b->node_id, 2 * sizeof(id_a->node_id)) != 0)
      return FALSE;
-  if (strcmp(id_a->copy_id, id_b->copy_id) != 0)
-    return FALSE;
   if ((id_a->txn_id == NULL) != (id_b->txn_id == NULL))
     return FALSE;
   if (id_a->txn_id && id_b->txn_id && strcmp(id_a->txn_id, id_b->txn_id) != 0)
@@ -152,16 +236,17 @@ svn_fs_fs__id_check_related(const svn_fs_id_t *a,
 
   if (a == b)
     return TRUE;
+
   /* If both node_ids start with _ and they have differing transaction
      IDs, then it is impossible for them to be related. */
-  if (id_a->node_id[0] == '_')
+  if (id_a->node_id.revision == SVN_INVALID_REVNUM)
     {
       if (id_a->txn_id && id_b->txn_id &&
           (strcmp(id_a->txn_id, id_b->txn_id) != 0))
         return FALSE;
     }
 
-  return (strcmp(id_a->node_id, id_b->node_id) == 0);
+  return svn_fs_fs__id_part_eq(&id_a->node_id, &id_b->node_id);
 }
 
 
@@ -191,8 +276,6 @@ svn_fs_fs__id_txn_create_root(const char *txn_id,
 
   /* node ID and copy ID are "0" */
   
-  id->node_id = "0";
-  id->copy_id = "0";
   id->txn_id = apr_pstrdup(pool, txn_id);
   id->rev = SVN_INVALID_REVNUM;
 
@@ -203,18 +286,17 @@ svn_fs_fs__id_txn_create_root(const char *txn_id,
 }
 
 svn_fs_id_t *
-svn_fs_fs__id_txn_create(const char *node_id,
-                         const char *copy_id,
+svn_fs_fs__id_txn_create(const svn_fs_fs__id_part_t *node_id,
+                         const svn_fs_fs__id_part_t *copy_id,
                          const char *txn_id,
                          apr_pool_t *pool)
 {
   fs_fs__id_t *id = apr_pcalloc(pool, sizeof(*id));
 
-  id->node_id = apr_pstrdup(pool, node_id);
-  id->copy_id = apr_pstrdup(pool, copy_id);
+  id->node_id = *node_id;
+  id->copy_id = *copy_id;
   id->txn_id = apr_pstrdup(pool, txn_id);
   id->rev = SVN_INVALID_REVNUM;
-  id->item = 0;
 
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = &id;
@@ -224,16 +306,16 @@ svn_fs_fs__id_txn_create(const char *node_id,
 
 
 svn_fs_id_t *
-svn_fs_fs__id_rev_create(const char *node_id,
-                         const char *copy_id,
+svn_fs_fs__id_rev_create(const svn_fs_fs__id_part_t *node_id,
+                         const svn_fs_fs__id_part_t *copy_id,
                          svn_revnum_t rev,
                          apr_uint64_t item,
                          apr_pool_t *pool)
 {
   fs_fs__id_t *id = apr_pcalloc(pool, sizeof(*id));
 
-  id->node_id = apr_pstrdup(pool, node_id);
-  id->copy_id = apr_pstrdup(pool, copy_id);
+  id->node_id = *node_id;
+  id->copy_id = *copy_id;
   id->txn_id = NULL;
   id->rev = rev;
   id->item = item;
@@ -251,14 +333,9 @@ svn_fs_fs__id_copy(const svn_fs_id_t *source, apr_pool_t *pool)
   fs_fs__id_t *id = (fs_fs__id_t *)source;
   fs_fs__id_t *new_id = apr_palloc(pool, sizeof(*new_id));
 
-  new_id->node_id = apr_pstrdup(pool, id->node_id);
-  new_id->copy_id = apr_pstrdup(pool, id->copy_id);
+  *new_id = *id;
   new_id->txn_id = id->txn_id ? apr_pstrdup(pool, id->txn_id) : NULL;
-  new_id->rev = id->rev;
-  new_id->item = id->item;
-
-  new_id->generic_id.vtable = &id_vtable;
-  new_id->generic_id.fsap_data = &new_id;
+  new_id->generic_id.fsap_data = new_id;
 
   return (svn_fs_id_t *)new_id;
 }
@@ -291,13 +368,15 @@ svn_fs_fs__id_parse(const char *data,
   str = svn_cstring_tokenize(".", &data_copy);
   if (str == NULL)
     return NULL;
-  id->node_id = str;
+  if (! part_parse(&id->node_id, str))
+    return NULL;
 
   /* Copy Id */
   str = svn_cstring_tokenize(".", &data_copy);
   if (str == NULL)
     return NULL;
-  id->copy_id = str;
+  if (! part_parse(&id->copy_id, str))
+    return NULL;
 
   /* Txn/Rev Id */
   str = svn_cstring_tokenize(".", &data_copy);
@@ -348,7 +427,7 @@ svn_fs_fs__id_parse(const char *data,
  */
 void
 svn_fs_fs__id_serialize(svn_temp_serializer__context_t *context,
-                        const struct svn_fs_id_t * const *in)
+                        const svn_fs_id_t * const *in)
 {
   const fs_fs__id_t *id = (const fs_fs__id_t *)*in;
   
@@ -362,8 +441,6 @@ svn_fs_fs__id_serialize(svn_temp_serializer__context_t *context,
                             sizeof(fs_fs__id_t));
 
   /* append the referenced strings */
-  svn_temp_serializer__add_string(context, &id->node_id);
-  svn_temp_serializer__add_string(context, &id->copy_id);
   svn_temp_serializer__add_string(context, &id->txn_id);
 
   /* return to caller's nesting level */
@@ -393,8 +470,6 @@ svn_fs_fs__id_deserialize(void *buffer, svn_fs_id_t **in_out)
   id->generic_id.fsap_data = id;
 
   /* handle sub-structures */
-  svn_temp_deserializer__resolve(id, (void**)&id->node_id);
-  svn_temp_deserializer__resolve(id, (void**)&id->copy_id);
   svn_temp_deserializer__resolve(id, (void**)&id->txn_id);
 }
 

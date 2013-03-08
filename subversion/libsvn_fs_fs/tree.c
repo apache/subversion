@@ -752,7 +752,7 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
                      apr_pool_t *pool)
 {
   const svn_fs_id_t *child_id, *parent_id, *copyroot_id;
-  const char *child_copy_id, *parent_copy_id;
+  const svn_fs_fs__id_part_t *child_copy_id, *parent_copy_id;
   const char *id_path = NULL;
   svn_fs_root_t *copyroot_root;
   dag_node_t *copyroot_node;
@@ -782,14 +782,14 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
 
   /* Special case: if the child's copy ID is '0', use the parent's
      copy ID. */
-  if (strcmp(child_copy_id, "0") == 0)
+  if (svn_fs_fs__id_part_is_root(child_copy_id))
     return SVN_NO_ERROR;
 
   /* Compare the copy IDs of the child and its parent.  If they are
      the same, then the child is already on the same branch as the
      parent, and should use the same mutability copy ID that the
      parent will use. */
-  if (strcmp(child_copy_id, parent_copy_id) == 0)
+  if (svn_fs_fs__id_part_eq(child_copy_id, parent_copy_id))
     return SVN_NO_ERROR;
 
   /* If the child is on the same branch that the parent is on, the
@@ -1075,7 +1075,8 @@ make_path_mutable(svn_fs_root_t *root,
   if (parent_path->parent)
     {
       const svn_fs_id_t *parent_id, *child_id, *copyroot_id;
-      const char *copy_id = NULL;
+      svn_fs_fs__id_part_t copy_id = { SVN_INVALID_REVNUM, 0 };
+      svn_fs_fs__id_part_t *copy_id_ptr = &copy_id;
       copy_id_inherit_t inherit = parent_path->copy_inherit;
       const char *clone_path, *copyroot_path;
       svn_revnum_t copyroot_rev;
@@ -1092,7 +1093,7 @@ make_path_mutable(svn_fs_root_t *root,
         {
         case copy_id_inherit_parent:
           parent_id = svn_fs_fs__dag_get_id(parent_path->parent->node);
-          copy_id = svn_fs_fs__id_copy_id(parent_id);
+          copy_id = *svn_fs_fs__id_copy_id(parent_id);
           break;
 
         case copy_id_inherit_new:
@@ -1101,7 +1102,7 @@ make_path_mutable(svn_fs_root_t *root,
           break;
 
         case copy_id_inherit_self:
-          copy_id = NULL;
+          copy_id_ptr = NULL;
           break;
 
         case copy_id_inherit_unknown:
@@ -1120,8 +1121,8 @@ make_path_mutable(svn_fs_root_t *root,
 
       child_id = svn_fs_fs__dag_get_id(parent_path->node);
       copyroot_id = svn_fs_fs__dag_get_id(copyroot_node);
-      if (strcmp(svn_fs_fs__id_node_id(child_id),
-                 svn_fs_fs__id_node_id(copyroot_id)) != 0)
+      if (!svn_fs_fs__id_part_eq(svn_fs_fs__id_node_id(child_id),
+                                 svn_fs_fs__id_node_id(copyroot_id)))
         is_parent_copyroot = TRUE;
 
       /* Now make this node mutable.  */
@@ -1130,7 +1131,7 @@ make_path_mutable(svn_fs_root_t *root,
                                          parent_path->parent->node,
                                          clone_path,
                                          parent_path->entry,
-                                         copy_id, txn_id,
+                                         copy_id_ptr, txn_id,
                                          is_parent_copyroot,
                                          pool));
 
@@ -1808,14 +1809,14 @@ merge(svn_stringbuf_t *conflict_p,
 
           /* If either SOURCE-ENTRY or TARGET-ENTRY is not a direct
              modification of ANCESTOR-ENTRY, declare a conflict. */
-          if (strcmp(svn_fs_fs__id_node_id(s_entry->id),
-                     svn_fs_fs__id_node_id(a_entry->id)) != 0
-              || strcmp(svn_fs_fs__id_copy_id(s_entry->id),
-                        svn_fs_fs__id_copy_id(a_entry->id)) != 0
-              || strcmp(svn_fs_fs__id_node_id(t_entry->id),
-                        svn_fs_fs__id_node_id(a_entry->id)) != 0
-              || strcmp(svn_fs_fs__id_copy_id(t_entry->id),
-                        svn_fs_fs__id_copy_id(a_entry->id)) != 0)
+          if (!svn_fs_fs__id_part_eq(svn_fs_fs__id_node_id(s_entry->id),
+                                     svn_fs_fs__id_node_id(a_entry->id))
+              || !svn_fs_fs__id_part_eq(svn_fs_fs__id_copy_id(s_entry->id),
+                                        svn_fs_fs__id_copy_id(a_entry->id))
+              || !svn_fs_fs__id_part_eq(svn_fs_fs__id_node_id(t_entry->id),
+                                        svn_fs_fs__id_node_id(a_entry->id))
+              || !svn_fs_fs__id_part_eq(svn_fs_fs__id_copy_id(t_entry->id),
+                                        svn_fs_fs__id_copy_id(a_entry->id)))
             return conflict_err(conflict_p,
                                 svn_fspath__join(target_path,
                                                  a_entry->name,
@@ -3329,7 +3330,7 @@ fs_node_origin_rev(svn_revnum_t *revision,
 {
   svn_fs_t *fs = root->fs;
   const svn_fs_id_t *given_noderev_id, *cached_origin_id;
-  const char *node_id, *dash;
+  const svn_fs_fs__id_part_t *node_id;
 
   path = svn_fs__canonicalize_abspath(path, pool);
 
@@ -3337,19 +3338,12 @@ fs_node_origin_rev(svn_revnum_t *revision,
   SVN_ERR(svn_fs_fs__node_id(&given_noderev_id, root, path, pool));
   node_id = svn_fs_fs__id_node_id(given_noderev_id);
 
-  /* Is it a brand new uncommitted node? */
-  if (node_id[0] == '_')
+  /* Is it a brand new uncommitted node or a new-style one?
+   * (committed old-style nodes will have a 0 revision value;
+   * rev 0, number 0 is rev 0 root node) */
+  if (node_id->revision != 0 || node_id->number == 0)
     {
-      *revision = SVN_INVALID_REVNUM;
-      return SVN_NO_ERROR;
-    }
-
-  /* Maybe this is a new-style node ID that just has the revision
-     sitting right in it. */
-  dash = strchr(node_id, '-');
-  if (dash && *(dash+1))
-    {
-      *revision = SVN_STR_TO_REV(dash + 1);
+      *revision = node_id->revision;
       return SVN_NO_ERROR;
     }
 
@@ -3429,7 +3423,7 @@ fs_node_origin_rev(svn_revnum_t *revision,
 
     /* Wow, I don't want to have to do all that again.  Let's cache
        the result. */
-    if (node_id[0] != '_')
+    if (node_id->revision != SVN_INVALID_REVNUM)
       SVN_ERR(svn_fs_fs__set_node_origin(fs, node_id,
                                          svn_fs_fs__dag_get_id(node), pool));
 

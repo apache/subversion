@@ -135,21 +135,6 @@ read_handler_recover(void *baton, char *buffer, apr_size_t *len)
   return svn_stream_read(b->stream, buffer, &bytes_to_read);
 }
 
-/* From the node or copy ID, extract the counter sub-string and return it
- * as integer.
- */
-static apr_uint64_t
-count_from_id(const char *id)
-{
-  if (id == NULL || *id == '\0')
-    return 0;
-
-  if (*id == '_')
-    return svn__base36toui64(NULL, id + 1);
-
-  return svn__base36toui64(NULL, id);
-}
-
 /* Part of the recovery procedure.  Read the directory noderev at offset
    OFFSET of file REV_FILE (the revision file of revision REV of
    filesystem FS), and set MAX_NODE_ID and MAX_COPY_ID to be the node-id
@@ -268,8 +253,8 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
           continue;
         }
 
-      node_id = count_from_id(svn_fs_fs__id_node_id(id));
-      copy_id = count_from_id(svn_fs_fs__id_copy_id(id));
+      node_id = svn_fs_fs__id_node_id(id)->number;
+      copy_id = svn_fs_fs__id_copy_id(id)->number;
 
       if (node_id > *max_node_id)
         *max_node_id = node_id;

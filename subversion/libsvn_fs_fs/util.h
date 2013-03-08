@@ -24,6 +24,7 @@
 #define SVN_LIBSVN_FS__UTIL_H
 
 #include "svn_fs.h"
+#include "id.h"
 
 /* Functions for dealing with recoverable errors on mutable files
  *
@@ -218,7 +219,7 @@ path_txn_node_children(svn_fs_t *fs,
 
 const char *
 path_node_origin(svn_fs_t *fs,
-                 const char *node_id,
+                 const svn_fs_fs__id_part_t *node_id,
                  apr_pool_t *pool);
 
 /* Check that BUF, a nul-terminated buffer of text from file PATH,

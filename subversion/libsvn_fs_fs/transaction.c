@@ -960,7 +960,7 @@ create_new_txn_noderev_from_rev(svn_fs_t *fs,
                                 apr_pool_t *pool)
 {
   node_revision_t *noderev;
-  const char *node_id, *copy_id;
+  const svn_fs_fs__id_part_t *node_id, *copy_id;
 
   SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs, src, pool));
 
@@ -1328,19 +1328,18 @@ read_next_ids(apr_uint64_t *node_id,
    Node-ids are guaranteed to be unique to this transction, but may
    not necessarily be sequential.  Perform all allocations in POOL. */
 static svn_error_t *
-get_new_txn_node_id(const char **node_id_p,
+get_new_txn_node_id(svn_fs_fs__id_part_t *node_id_p,
                     svn_fs_t *fs,
                     const char *txn_id,
                     apr_pool_t *pool)
 {
   apr_uint64_t node_id, copy_id;
-  char cur_node_id[SVN_INT64_BUFFER_SIZE];
 
   /* First read in the current next-ids file. */
   SVN_ERR(read_next_ids(&node_id, &copy_id, fs, txn_id, pool));
 
-  svn__ui64tobase36(cur_node_id, node_id);
-  *node_id_p = apr_pstrcat(pool, "_", cur_node_id, (char *)NULL);
+  node_id_p->revision = SVN_INVALID_REVNUM;
+  node_id_p->number = node_id;
 
   SVN_ERR(write_next_ids(fs, txn_id, ++node_id, copy_id, pool));
 
@@ -1348,19 +1347,18 @@ get_new_txn_node_id(const char **node_id_p,
 }
 
 svn_error_t *
-svn_fs_fs__reserve_copy_id(const char **copy_id_p,
+svn_fs_fs__reserve_copy_id(svn_fs_fs__id_part_t *copy_id_p,
                            svn_fs_t *fs,
                            const char *txn_id,
                            apr_pool_t *pool)
 {
   apr_uint64_t node_id, copy_id;
-  char cur_copy_id[SVN_INT64_BUFFER_SIZE];
 
   /* First read in the current next-ids file. */
   SVN_ERR(read_next_ids(&node_id, &copy_id, fs, txn_id, pool));
 
-  svn__ui64tobase36(cur_copy_id, copy_id);
-  *copy_id_p = apr_pstrcat(pool, "_", cur_copy_id, (char *)NULL);
+  copy_id_p->revision = SVN_INVALID_REVNUM;
+  copy_id_p->number = copy_id;
 
   SVN_ERR(write_next_ids(fs, txn_id, node_id, ++copy_id, pool));
 
@@ -1371,17 +1369,17 @@ svn_error_t *
 svn_fs_fs__create_node(const svn_fs_id_t **id_p,
                        svn_fs_t *fs,
                        node_revision_t *noderev,
-                       const char *copy_id,
+                       const svn_fs_fs__id_part_t *copy_id,
                        const char *txn_id,
                        apr_pool_t *pool)
 {
-  const char *node_id;
+  svn_fs_fs__id_part_t node_id;
   const svn_fs_id_t *id;
 
   /* Get a new node-id for this node. */
   SVN_ERR(get_new_txn_node_id(&node_id, fs, txn_id, pool));
 
-  id = svn_fs_fs__id_txn_create(node_id, copy_id, txn_id, pool);
+  id = svn_fs_fs__id_txn_create(&node_id, copy_id, txn_id, pool);
 
   noderev->id = id;
 
@@ -1433,6 +1431,24 @@ svn_fs_fs__abort_txn(svn_fs_txn_t *txn,
   return SVN_NO_ERROR;
 }
 
+/* Assign the UNIQUIFIER member of REP based on the current state of TXN_ID
+ * in FS.  Allocate the uniquifier in POOL.
+ */
+static svn_error_t *
+set_uniquifier(svn_fs_t *fs,
+               representation_t *rep,
+               const char *txn_id,
+               apr_pool_t *pool)
+{
+  char unique_suffix[SVN_INT64_BUFFER_SIZE];
+  svn_fs_fs__id_part_t temp;
+
+  SVN_ERR(get_new_txn_node_id(&temp, fs, txn_id, pool));
+  svn__ui64tobase36(unique_suffix, temp.number);
+  rep->uniquifier = apr_psprintf(pool, "%s/_%s", txn_id, unique_suffix);
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_fs_fs__set_entry(svn_fs_t *fs,
@@ -1452,7 +1468,6 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
 
   if (!rep || !rep->txn_id)
     {
-      const char *unique_suffix;
       apr_hash_t *entries;
 
       /* Before we can modify the directory, we need to dump its old
@@ -1472,8 +1487,7 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
       rep = apr_pcalloc(pool, sizeof(*rep));
       rep->revision = SVN_INVALID_REVNUM;
       rep->txn_id = txn_id;
-      SVN_ERR(get_new_txn_node_id(&unique_suffix, fs, txn_id, pool));
-      rep->uniquifier = apr_psprintf(pool, "%s/%s", txn_id, unique_suffix);
+      SVN_ERR(set_uniquifier(fs, rep, txn_id, pool));
       parent_noderev->data_rep = rep;
       SVN_ERR(svn_fs_fs__put_node_revision(fs, parent_noderev->id,
                                            parent_noderev, FALSE, pool));
@@ -2050,7 +2064,6 @@ static svn_error_t *
 rep_write_contents_close(void *baton)
 {
   struct rep_write_baton *b = baton;
-  const char *unique_suffix;
   representation_t *rep;
   representation_t *old_rep;
   apr_off_t offset;
@@ -2069,9 +2082,7 @@ rep_write_contents_close(void *baton)
   /* Fill in the rest of the representation field. */
   rep->expanded_size = b->rep_size;
   rep->txn_id = svn_fs_fs__id_txn_id(b->noderev->id);
-  SVN_ERR(get_new_txn_node_id(&unique_suffix, b->fs, rep->txn_id, b->pool));
-  rep->uniquifier = apr_psprintf(b->parent_pool, "%s/%s", rep->txn_id,
-                                 unique_suffix);
+  SVN_ERR(set_uniquifier(b->fs, rep, rep->txn_id, b->pool));
   rep->revision = SVN_INVALID_REVNUM;
 
   /* Finalize the checksum. */
@@ -2174,7 +2185,7 @@ svn_fs_fs__create_successor(const svn_fs_id_t **new_id_p,
                             svn_fs_t *fs,
                             const svn_fs_id_t *old_idp,
                             node_revision_t *new_noderev,
-                            const char *copy_id,
+                            const svn_fs_fs__id_part_t *copy_id,
                             const char *txn_id,
                             apr_pool_t *pool)
 {
@@ -2566,28 +2577,28 @@ validate_root_noderev(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Given the potentially txn-local ID, return the permanent ID based on
- * the REVISION currently written and the START_ID for that revision.
- * Use the repository FORMAT to decide which implementation to use.
- * Use POOL for allocations.
+/* Given the potentially txn-local id PART, update that to a permanent ID
+ * based on the REVISION currently being written and the START_ID for that
+ * revision.  Use the repo FORMAT to decide which implementation to use.
  */
-static const char*
-get_final_id(const char *id,
+static void
+get_final_id(svn_fs_fs__id_part_t *part,
              svn_revnum_t revision,
              apr_uint64_t start_id,
-             int format,
-             apr_pool_t *pool)
+             int format)
 {
-  char buffer[SVN_INT64_BUFFER_SIZE];
-  apr_uint64_t global_id;
-  if (*id != '_')
-    return id;
-
-  if (format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
-    return apr_psprintf(pool, "%s-%ld", id + 1, revision);
-
-  global_id = start_id + svn__base36toui64(NULL, id + 1);
-  return apr_pstrmemdup(pool, buffer, svn__ui64tobase36(buffer, global_id));
+  if (part->revision == SVN_INVALID_REVNUM)
+    {
+      if (format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
+        {
+          part->revision = revision;
+        }
+      else
+        {
+          part->revision = 0;
+          part->number += start_id;
+        }
+    }
 }
 
 /* Copy a node-revision specified by id ID in fileystem FS from a
@@ -2634,7 +2645,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   node_revision_t *noderev;
   apr_off_t my_offset;
   const svn_fs_id_t *new_id;
-  const char *node_id, *copy_id;
+  svn_fs_fs__id_part_t node_id, copy_id;
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_uint64_t item_index;
   const char *txn_id = svn_fs_fs__id_txn_id(id);
@@ -2744,10 +2755,10 @@ write_final_rev(const svn_fs_id_t **new_id_p,
     }
 
   /* Convert our temporary ID into a permanent revision one. */
-  node_id = get_final_id(svn_fs_fs__id_node_id(noderev->id),
-                         rev, start_node_id, ffd->format, pool);
-  copy_id = get_final_id(svn_fs_fs__id_copy_id(noderev->id),
-                         rev, start_copy_id, ffd->format, pool);
+  node_id = *svn_fs_fs__id_node_id(noderev->id);
+  get_final_id(&node_id, rev, start_node_id, ffd->format);
+  copy_id = *svn_fs_fs__id_copy_id(noderev->id);
+  get_final_id(&copy_id, rev, start_copy_id, ffd->format);
 
   if (noderev->copyroot_rev == SVN_INVALID_REVNUM)
     noderev->copyroot_rev = rev;
@@ -2761,7 +2772,8 @@ write_final_rev(const svn_fs_id_t **new_id_p,
     }
   else
     SVN_ERR(allocate_item_index(&item_index, fs, txn_id, my_offset, pool));
-  new_id = svn_fs_fs__id_rev_create(node_id, copy_id, rev, item_index, pool);
+  new_id = svn_fs_fs__id_rev_create(&node_id, &copy_id, rev, item_index,
+                                    pool);
 
   noderev->id = new_id;
 

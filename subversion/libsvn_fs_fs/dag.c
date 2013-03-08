@@ -647,7 +647,7 @@ svn_fs_fs__dag_clone_child(dag_node_t **child_p,
                            dag_node_t *parent,
                            const char *parent_path,
                            const char *name,
-                           const char *copy_id,
+                           const svn_fs_fs__id_part_t *copy_id,
                            const char *txn_id,
                            svn_boolean_t is_parent_copyroot,
                            apr_pool_t *pool)
@@ -1198,7 +1198,7 @@ svn_fs_fs__dag_copy(dag_node_t *to_node,
   if (preserve_history)
     {
       node_revision_t *from_noderev, *to_noderev;
-      const char *copy_id;
+      svn_fs_fs__id_part_t copy_id;
       const svn_fs_id_t *src_id = svn_fs_fs__dag_get_id(from_node);
       svn_fs_t *fs = svn_fs_fs__dag_get_fs(from_node);
 
@@ -1224,7 +1224,7 @@ svn_fs_fs__dag_copy(dag_node_t *to_node,
       to_noderev->copyroot_path = NULL;
 
       SVN_ERR(svn_fs_fs__create_successor(&id, fs, src_id, to_noderev,
-                                          copy_id, txn_id, pool));
+                                          &copy_id, txn_id, pool));
 
     }
   else  /* don't preserve history */

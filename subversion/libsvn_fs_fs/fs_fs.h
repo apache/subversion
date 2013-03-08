@@ -202,7 +202,7 @@ svn_error_t *svn_fs_fs__ensure_dir_exists(const char *path,
  */
 svn_error_t *
 svn_fs_fs__set_node_origin(svn_fs_t *fs,
-                           const char *node_id,
+                           const svn_fs_fs__id_part_t *node_id,
                            const svn_fs_id_t *node_rev_id,
                            apr_pool_t *pool);
 
@@ -216,7 +216,7 @@ svn_fs_fs__set_node_origin(svn_fs_t *fs,
 svn_error_t *
 svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
                            svn_fs_t *fs,
-                           const char *node_id,
+                           const svn_fs_fs__id_part_t *node_id,
                            apr_pool_t *pool);
 
 
