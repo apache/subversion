@@ -298,10 +298,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1443929
-   Introduce a subpool.
-   Justifcation:
-     Better server memory use.
-   Votes:
-     +1: philip, ivan, rhuijben
