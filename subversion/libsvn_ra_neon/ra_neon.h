@@ -1173,6 +1173,13 @@ const char *
 svn_ra_neon__uri_unparse(const ne_uri *uri,
                          apr_pool_t *pool);
 
+/* Wrappre around ne_uri_parse() which parses a URL and returns only
+   the server path portion thereof. */
+svn_error_t *
+svn_ra_neon__get_url_path(const char **urlpath,
+                          const char *url,
+                          apr_pool_t *pool);
+
 /* Sets *SUPPORTS_DEADPROP_COUNT to non-zero if server supports
  * deadprop-count property. Uses FINAL_URL to discover this informationn
  * if it is not already cached. */
