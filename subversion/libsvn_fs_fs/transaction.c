@@ -1249,7 +1249,7 @@ svn_fs_fs__get_txn(transaction_t **txn_p,
   txn->proplist = apr_hash_make(pool);
 
   SVN_ERR(get_txn_proplist(txn->proplist, fs, txn_id, pool));
-  root_id = svn_fs_fs__id_txn_create("0", "0", txn_id, pool);
+  root_id = svn_fs_fs__id_txn_create_root(txn_id, pool);
 
   SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs, root_id, pool));
 
@@ -3039,7 +3039,7 @@ commit_body(void *baton, apr_pool_t *pool)
   SVN_ERR(get_file_offset(&initial_offset, proto_file, pool));
 
   /* Write out all the node-revisions and directory contents. */
-  root_id = svn_fs_fs__id_txn_create("0", "0", cb->txn->id, pool);
+  root_id = svn_fs_fs__id_txn_create_root(cb->txn->id, pool);
   SVN_ERR(write_final_rev(&new_root_id, proto_file, new_rev, cb->fs, root_id,
                           start_node_id, start_copy_id, initial_offset,
                           cb->reps_to_cache, cb->reps_hash, cb->reps_pool,

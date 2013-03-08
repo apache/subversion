@@ -183,6 +183,24 @@ static id_vtable_t id_vtable = {
   svn_fs_fs__id_compare
 };
 
+svn_fs_id_t *
+svn_fs_fs__id_txn_create_root(const char *txn_id,
+                              apr_pool_t *pool)
+{
+  fs_fs__id_t *id = apr_pcalloc(pool, sizeof(*id));
+
+  /* node ID and copy ID are "0" */
+  
+  id->node_id = "0";
+  id->copy_id = "0";
+  id->txn_id = apr_pstrdup(pool, txn_id);
+  id->rev = SVN_INVALID_REVNUM;
+
+  id->generic_id.vtable = &id_vtable;
+  id->generic_id.fsap_data = &id;
+
+  return (svn_fs_id_t *)id;
+}
 
 svn_fs_id_t *
 svn_fs_fs__id_txn_create(const char *node_id,
