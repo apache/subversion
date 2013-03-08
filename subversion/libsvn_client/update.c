@@ -239,20 +239,21 @@ update_internal(svn_revnum_t *result_rev,
   /* It does not make sense to update conflict victims. */
   if (repos_relpath)
     {
-      svn_boolean_t text_conflicted, prop_conflicted, tree_conflicted;
+      svn_boolean_t text_conflicted, prop_conflicted;
 
       anchor_url = svn_path_url_add_component2(repos_root_url, repos_relpath,
                                                pool);
 
       err = svn_wc_conflicted_p3(&text_conflicted, &prop_conflicted,
-                                 &tree_conflicted,
+                                 NULL,
                                  ctx->wc_ctx, local_abspath, pool);
 
       if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
         return svn_error_trace(err);
       svn_error_clear(err);
 
-      if (!err && (text_conflicted || prop_conflicted || tree_conflicted))
+      /* tree-conflicts are handled by the update editor */
+      if (!err && (text_conflicted || prop_conflicted))
         target_conflicted = TRUE;
     }
   else

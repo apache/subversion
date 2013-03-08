@@ -7613,7 +7613,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "new_basemove"),
     SVN_TEST_OPTS_PASS(move_back,
                        "move_back (issue 4302)"),
-    SVN_TEST_OPTS_XFAIL(move_update_subtree,
+    SVN_TEST_OPTS_PASS(move_update_subtree,
                        "move_update_subtree (issue 4232)"),
     SVN_TEST_NULL
   };
