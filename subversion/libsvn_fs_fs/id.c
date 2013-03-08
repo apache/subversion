@@ -180,6 +180,13 @@ svn_fs_fs__id_item(const svn_fs_id_t *fs_id)
   return id->rev_item.number;
 }
 
+svn_boolean_t
+svn_fs_fs__id_is_txn(const svn_fs_id_t *fs_id)
+{
+  fs_fs__id_t *id = (fs_fs__id_t *)fs_id;
+
+  return id->txn_id != NULL;
+}
 
 svn_string_t *
 svn_fs_fs__id_unparse(const svn_fs_id_t *fs_id,

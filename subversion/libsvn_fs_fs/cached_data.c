@@ -293,9 +293,8 @@ get_node_revision_body(node_revision_t **noderev_p,
   svn_error_t *err;
   svn_boolean_t is_cached = FALSE;
   fs_fs_data_t *ffd = fs->fsap_data;
-  const char *txn_id = svn_fs_fs__id_txn_id(id);
 
-  if (txn_id)
+  if (svn_fs_fs__id_is_txn(id))
     {
       /* This is a transaction node-rev.  Its storage logic is very
          different from that of rev / pack files. */
@@ -1954,7 +1953,7 @@ locate_dir_cache(svn_fs_t *fs,
                  apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  if (svn_fs_fs__id_txn_id(noderev->id))
+  if (svn_fs_fs__id_is_txn(noderev->id))
     {
       /* data in txns requires the expensive fs_id-based addressing mode */
       *key = svn_fs_fs__id_unparse(noderev->id, pool)->data;

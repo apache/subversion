@@ -964,7 +964,7 @@ create_new_txn_noderev_from_rev(svn_fs_t *fs,
 
   SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs, src, pool));
 
-  if (svn_fs_fs__id_txn_id(noderev->id))
+  if (svn_fs_fs__id_is_txn(noderev->id))
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Copying from transactions not allowed"));
 
@@ -2652,7 +2652,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   *new_id_p = NULL;
 
   /* Check to see if this is a transaction node. */
-  if (! txn_id)
+  if (! svn_fs_fs__id_is_txn(id))
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs, id, pool));

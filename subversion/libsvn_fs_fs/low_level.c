@@ -1004,7 +1004,7 @@ svn_fs_fs__write_changes(svn_stream_t *stream,
          leave the change entry pointing to the non-existent temporary
          node, since it will never be used. */
       if ((change->change_kind != svn_fs_path_change_delete) &&
-          (! svn_fs_fs__id_txn_id(id)))
+          (! svn_fs_fs__id_is_txn(id)))
         {
           SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs, id, iterpool));
 

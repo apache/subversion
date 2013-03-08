@@ -77,6 +77,9 @@ svn_revnum_t svn_fs_fs__id_rev(const svn_fs_id_t *id);
    ID. */
 apr_uint64_t svn_fs_fs__id_item(const svn_fs_id_t *id);
 
+/* Return TRUE, if this is a transaction ID. */
+svn_boolean_t svn_fs_fs__id_is_txn(const svn_fs_id_t *id);
+
 /* Convert ID into string form, allocated in POOL. */
 svn_string_t *svn_fs_fs__id_unparse(const svn_fs_id_t *id,
                                     apr_pool_t *pool);

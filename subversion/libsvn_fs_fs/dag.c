@@ -174,7 +174,7 @@ get_node_revision(node_revision_t **noderev_p,
 
 svn_boolean_t svn_fs_fs__dag_check_mutable(const dag_node_t *node)
 {
-  return (svn_fs_fs__id_txn_id(svn_fs_fs__dag_get_id(node)) != NULL);
+  return svn_fs_fs__id_is_txn(svn_fs_fs__dag_get_id(node));
 }
 
 
