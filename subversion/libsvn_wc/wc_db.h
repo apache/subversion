@@ -2127,7 +2127,7 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
  * for temporary allocations.
  */
 svn_error_t *
-svn_wc__db_read_inherited_props(const apr_array_header_t **iprops,
+svn_wc__db_read_inherited_props(apr_array_header_t **iprops,
                                 apr_hash_t **actual_props,
                                 svn_wc__db_t *db,
                                 const char *local_abspath,

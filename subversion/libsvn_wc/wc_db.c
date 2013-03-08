@@ -9664,7 +9664,7 @@ db_get_changed_props(apr_hash_t **actual_props,
 
 /* The body of svn_wc__db_read_inherited_props().  */
 static svn_error_t *
-db_read_inherited_props(const apr_array_header_t **inherited_props,
+db_read_inherited_props(apr_array_header_t **inherited_props,
                         apr_hash_t **actual_props,
                         svn_wc__db_wcroot_t *wcroot,
                         const char *local_relpath,
@@ -9852,7 +9852,7 @@ db_read_inherited_props(const apr_array_header_t **inherited_props,
 }
 
 svn_error_t *
-svn_wc__db_read_inherited_props(const apr_array_header_t **iprops,
+svn_wc__db_read_inherited_props(apr_array_header_t **iprops,
                                 apr_hash_t **actual_props,
                                 svn_wc__db_t *db,
                                 const char *local_abspath,
