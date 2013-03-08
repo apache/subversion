@@ -387,22 +387,6 @@ svn_error_t *svn_client__get_all_auto_props(apr_hash_t **autoprops,
                                             apr_pool_t *result_pool,
                                             apr_pool_t *scratch_pool);
 
-/* Get a combined list of ignore patterns from CTX->CONFIG, local ignore
-   patterns on LOCAL_ABSPATH (per the svn:ignore property), and from any
-   svn:global-ignores properties set on, or inherited by, LOCAL_ABSPATH.
-   If LOCAL_ABSPATH is unversioned but is located within a valid working copy,
-   then find its nearest versioned parent path, if any, and return the ignore
-   patterns for that parent.  Return an SVN_ERR_WC_NOT_WORKING_COPY error if
-   LOCAL_ABSPATH is neither a versioned working copy path nor an unversioned
-   path within a working copy.  Store the collected patterns as const char *
-   elements in the array *IGNORES.  Allocate *IGNORES and its contents in
-   RESULT_POOL.  Use SCRATCH_POOL for temporary allocations. */
-svn_error_t *svn_client__get_all_ignores(apr_array_header_t **ignores,
-                                         const char *local_abspath,
-                                         svn_client_ctx_t *ctx,
-                                         apr_pool_t *result_pool,
-                                         apr_pool_t *scratch_pool);
-
 /* Get a list of ignore patterns defined by the svn:global-ignores
    properties set on, or inherited by, PATH_OR_URL.  Store the collected
    patterns as const char * elements in the array *IGNORES.  Allocate
