@@ -273,11 +273,11 @@ Candidate changes:
      completely valid remote deletion operation when Neon is the HTTP
      library in use.  (As a bonus side effect, this shaves one or two
      network turnarounds per deletion target off of this operation,
-     too!)
+     too!)  It's a regression from 1.6.
    Branch:
      ^/subversion/branches/1.7.x-issue4332
    Votes:
-     +1: cmpilato
+     +1: cmpilato, philip
 
  * r1453780
    Reject operations on some properties for activity resources.
