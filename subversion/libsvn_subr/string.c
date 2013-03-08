@@ -1218,8 +1218,9 @@ svn__base36toui64(const char **next, const char *source)
   int i  = 0;
   char digits[SVN_INT64_BUFFER_SIZE];
 
-  /* convert digits to numerical values and count the number of places */
-  while (TRUE)
+  /* convert digits to numerical values and count the number of places.
+   * Also, prevent buffer overflow. */
+  while (i < sizeof(digits))
     {
       char c = *source;
       if (c < 'a')

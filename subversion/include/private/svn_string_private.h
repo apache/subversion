@@ -186,7 +186,9 @@ svn__ui64tobase36(char *dest, apr_uint64_t number);
  *
  * The data in @a source will be considered part of the number to parse
  * as long as the characters are within the base36 range.  If there are
- * no such characters to begin with, 0 is returned.
+ * no such characters to begin with, 0 is returned.  Inputs with more than
+ * #SVN_INT64_BUFFER_SIZE digits will not be fully parsed, i.e. the value
+ * of @a *next as well as the return value are undefined.
  */
 apr_uint64_t
 svn__base36toui64(const char **next, const char *source);
