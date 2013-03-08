@@ -2597,6 +2597,21 @@ def almost_known_prop_names(sbox):
                            " is not a valid svn: property name;"
                            " re-run with '--force' to set it")
 
+@Issue(3231)
+def peg_rev_base_working(sbox):
+  """peg rev @BASE, peg rev @WORKING"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  
+  # set up a local prop mod
+  svntest.actions.set_prop('ordinal', 'ninth\n', sbox.ospath('iota'))
+  sbox.simple_commit(message='r2')
+  svntest.actions.set_prop('cardinal', 'nine\n', sbox.ospath('iota'))
+  svntest.actions.run_and_verify_svn(None, ['ninth\n'], [],
+                                     'propget', '--strict', 'ordinal',
+                                     sbox.ospath('iota') + '@BASE')
+
 ########################################################################
 # Run the tests
 
@@ -2641,6 +2656,7 @@ test_list = [ None,
               pristine_props_listed,
               inheritable_ignores,
               almost_known_prop_names,
+              peg_rev_base_working,
              ]
 
 if __name__ == '__main__':
