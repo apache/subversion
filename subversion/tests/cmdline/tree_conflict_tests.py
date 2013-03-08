@@ -1407,9 +1407,11 @@ def actual_only_node_behaviour(sbox):
                      "unlock", foo_path)
 
   # update (up)
+  # This doesn't skip because the update is anchored at the parent of A,
+  # the parent of A is not in conflict, and the update doesn't attempt to
+  # change foo itself.
   expected_stdout = [
-   "Skipped '%s' -- Node remains in conflict\n" % sbox.ospath('A/foo'),
-  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
+   "Updating '" + foo_path + "':\n", "At revision 4.\n"]
   expected_stderr = []
   run_and_verify_svn(None, expected_stdout, expected_stderr,
                      "update", foo_path)

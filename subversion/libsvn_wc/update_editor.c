@@ -1616,9 +1616,9 @@ check_tree_conflict(svn_skel_t **pconflict,
 }
 
 
-/* If LOCAL_ABSPATH is inside a conflicted tree, set *CONFLICTED to TRUE,
- * Otherwise set *CONFLICTED to FALSE.  Use SCRATCH_POOL for temporary
- * allocations.
+/* If LOCAL_ABSPATH is inside a conflicted tree and the conflict is
+ * not a moved-away-edit conflict, set *CONFLICTED to TRUE.  Otherwise
+ * set *CONFLICTED to FALSE.
  */
 static svn_error_t *
 already_in_a_tree_conflict(svn_boolean_t *conflicted,
@@ -1635,22 +1635,17 @@ already_in_a_tree_conflict(svn_boolean_t *conflicted,
 
   while (TRUE)
     {
-      svn_boolean_t is_wc_root, tree_conflicted;
+      svn_boolean_t is_wc_root;
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_wc__internal_conflicted_p(NULL, NULL, &tree_conflicted,
-                                            db, ancestor_abspath, iterpool));
-
-      if (tree_conflicted)
-        {
-          *conflicted = TRUE;
-          break;
-        }
+      SVN_ERR(svn_wc__conflicted_for_update_p(conflicted, db, ancestor_abspath,
+                                              TRUE, scratch_pool));
+      if (*conflicted)
+        break;
 
       SVN_ERR(svn_wc__db_is_wcroot(&is_wc_root, db, ancestor_abspath,
                                    iterpool));
-
       if (is_wc_root)
         break;
 
@@ -1669,15 +1664,9 @@ node_already_conflicted(svn_boolean_t *conflicted,
                         const char *local_abspath,
                         apr_pool_t *scratch_pool)
 {
-  svn_boolean_t text_conflicted, prop_conflicted, tree_conflicted;
+  SVN_ERR(svn_wc__conflicted_for_update_p(conflicted, db, local_abspath, FALSE,
+                                          scratch_pool));
 
-  SVN_ERR(svn_wc__internal_conflicted_p(&text_conflicted,
-                                        &prop_conflicted,
-                                        &tree_conflicted,
-                                        db, local_abspath,
-                                        scratch_pool));
-
-  *conflicted = (text_conflicted || prop_conflicted || tree_conflicted);
   return SVN_NO_ERROR;
 }
 
