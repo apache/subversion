@@ -964,7 +964,7 @@ collect_ignore_patterns(apr_array_header_t **patterns,
 {
   int i;
   apr_hash_t *props;
-  const apr_array_header_t *inherited_props;
+  apr_array_header_t *inherited_props;
   svn_error_t *err;
 
   /* ### assert we are passed a directory? */
