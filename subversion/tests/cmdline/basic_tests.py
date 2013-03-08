@@ -3042,8 +3042,7 @@ def peg_rev_on_non_existent_wc_path(sbox):
 
   # test something.
   sbox.simple_update()
-  # This currently fails with ENOENT on A/mu3.  When un-XFailing this test,
-  # extend this to verify the specific stdout 
+  # This currently fails with ENOENT on A/mu3.
   svntest.actions.run_and_verify_svn(None, ['r2\n'], [], 
                                      'cat', '-r2', sbox.ospath('A3/mu3') + '@3')
   os.chdir(sbox.ospath('A4'))
