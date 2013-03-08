@@ -226,26 +226,24 @@ open_and_seek_revision(apr_file_t **file,
   return SVN_NO_ERROR;
 }
 
-/* Open the representation for a node-revision in transaction TXN_ID
-   in filesystem FS and store the newly opened file in FILE.  Seek to
-   location OFFSET before returning.  Perform temporary allocations in
-   POOL.  Only appropriate for file contents, nor props or directory
-   contents. */
+/* Open the representation REP for a node-revision in filesystem FS, seek
+   to its position and store the newly opened file in FILE.  Perform
+   temporary allocations in POOL. */
 static svn_error_t *
 open_and_seek_transaction(apr_file_t **file,
                           svn_fs_t *fs,
-                          const char *txn_id,
                           representation_t *rep,
                           apr_pool_t *pool)
 {
   apr_file_t *rev_file;
   apr_off_t offset;
 
-  SVN_ERR(svn_io_file_open(&rev_file, path_txn_proto_rev(fs, txn_id, pool),
+  SVN_ERR(svn_io_file_open(&rev_file,
+                           path_txn_proto_rev(fs, rep->txn_id, pool),
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
-  SVN_ERR(svn_fs_fs__item_offset(&offset, fs, SVN_INVALID_REVNUM, txn_id,
-                                 rep->item_index, pool));
+  SVN_ERR(svn_fs_fs__item_offset(&offset, fs, SVN_INVALID_REVNUM,
+                                 rep->txn_id, rep->item_index, pool));
   SVN_ERR(aligned_seek(fs, rev_file, NULL, offset, pool));
 
   *file = rev_file;
@@ -266,7 +264,7 @@ open_and_seek_representation(apr_file_t **file_p,
     return open_and_seek_revision(file_p, fs, rep->revision, rep->item_index,
                                   pool);
   else
-    return open_and_seek_transaction(file_p, fs, rep->txn_id, rep, pool);
+    return open_and_seek_transaction(file_p, fs, rep, pool);
 }
 
 
