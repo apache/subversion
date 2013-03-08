@@ -557,20 +557,16 @@ compare_dir_entries_format6(const svn_sort__item_t *a,
   const svn_fs_dirent_t *lhs = (const svn_fs_dirent_t *) a->value;
   const svn_fs_dirent_t *rhs = (const svn_fs_dirent_t *) b->value;
 
-  apr_off_t lhs_offset;
-  apr_off_t rhs_offset;
+  const svn_fs_fs__id_part_t *lhs_rev_item = svn_fs_fs__id_rev_item(lhs->id);
+  const svn_fs_fs__id_part_t *rhs_rev_item = svn_fs_fs__id_rev_item(rhs->id);
 
   /* decreasing ("reverse") order on revs */
-  svn_revnum_t lhs_revision = svn_fs_fs__id_rev(lhs->id);
-  svn_revnum_t rhs_revision = svn_fs_fs__id_rev(rhs->id);
-  if (lhs_revision != rhs_revision)
-    return lhs_revision > rhs_revision ? -1 : 1;
+  if (lhs_rev_item->revision != rhs_rev_item->revision)
+    return lhs_rev_item->revision > rhs_rev_item->revision ? -1 : 1;
 
   /* increasing order on offsets */
-  lhs_offset = (apr_off_t)svn_fs_fs__id_item(lhs->id);
-  rhs_offset = (apr_off_t)svn_fs_fs__id_item(rhs->id);
-  if (lhs_offset != rhs_offset)
-    return lhs_offset > rhs_offset ? 1 : -1;
+  if (lhs_rev_item->number != rhs_rev_item->number)
+    return lhs_rev_item->number > rhs_rev_item->number ? 1 : -1;
 
   return 0;
 }
@@ -674,13 +670,15 @@ copy_node_to_temp(pack_context_t *context,
         {
           svn_fs_dirent_t *dir_entry
             = APR_ARRAY_IDX(sorted, i, svn_fs_dirent_t *);
-          svn_revnum_t revision = svn_fs_fs__id_rev(dir_entry->id);
-          apr_int64_t item_index = svn_fs_fs__id_item(dir_entry->id);
+          const svn_fs_fs__id_part_t *rev_item
+            = svn_fs_fs__id_rev_item(dir_entry->id);
 
           /* linkage is only possible within the current revision range ... */
-          if (revision >= context->start_rev)
+          if (rev_item->revision >= context->start_rev)
             {
-              int idx = get_item_array_index(context, revision, item_index);
+              int idx = get_item_array_index(context,
+                                             rev_item->revision,
+                                             rev_item->number);
 
               /* ... and also only to previous items (in case directories
                * become able to reference later items in the future). */

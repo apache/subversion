@@ -216,6 +216,7 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
       char *str;
       svn_node_kind_t kind;
       svn_fs_id_t *id;
+      const svn_fs_fs__id_part_t *rev_item;
       apr_uint64_t node_id, copy_id;
       apr_off_t child_dir_offset;
       const svn_string_t *path = svn__apr_hash_index_val(hi);
@@ -246,7 +247,8 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
 
       id = svn_fs_fs__id_parse(str, strlen(str), iterpool);
 
-      if (svn_fs_fs__id_rev(id) != rev)
+      rev_item = svn_fs_fs__id_rev_item(id);
+      if (rev_item->revision != rev)
         {
           /* If the node wasn't modified in this revision, we've already
              checked the node and copy id. */
@@ -266,9 +268,9 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
 
       SVN_ERR(svn_fs_fs__item_offset(&child_dir_offset,
                                      fs,
-                                     svn_fs_fs__id_rev(id),
+                                     rev_item->revision,
                                      NULL,
-                                     svn_fs_fs__id_item(id),
+                                     rev_item->number,
                                      iterpool));
       SVN_ERR(recover_find_max_ids(fs, rev, rev_file, child_dir_offset,
                                    max_node_id, max_copy_id, iterpool));

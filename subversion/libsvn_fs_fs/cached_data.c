@@ -323,9 +323,11 @@ get_node_revision_body(node_revision_t **noderev_p,
   else
     {
       /* noderevs in rev / pack files can be cached */
+      const svn_fs_fs__id_part_t *rev_item = svn_fs_fs__id_rev_item(id);
+
       pair_cache_key_t key;
-      key.revision = svn_fs_fs__id_rev(id);
-      key.second = svn_fs_fs__id_item(id);
+      key.revision = rev_item->revision;
+      key.second = rev_item->number;
     
       /* First, try a cache lookup. If that succeeds, we are done here. */
       if (ffd->node_revision_cache)
@@ -341,8 +343,8 @@ get_node_revision_body(node_revision_t **noderev_p,
 
       /* someone needs to read the data from this file: */
       err = open_and_seek_revision(&revision_file, fs,
-                                   svn_fs_fs__id_rev(id),
-                                   svn_fs_fs__id_item(id),
+                                   rev_item->revision,
+                                   rev_item->number,
                                    pool);
 
       if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
@@ -350,8 +352,8 @@ get_node_revision_body(node_revision_t **noderev_p,
           /* block-read will parse the whole block and will also return
              the one noderev that we need right now. */
           SVN_ERR(block_read((void **)noderev_p, fs,
-                             svn_fs_fs__id_rev(id),
-                             svn_fs_fs__id_item(id),
+                             rev_item->revision,
+                             rev_item->number,
                              revision_file,
                              pool,
                              pool));
@@ -386,6 +388,8 @@ svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
                              const svn_fs_id_t *id,
                              apr_pool_t *pool)
 {
+  const svn_fs_fs__id_part_t *rev_item = svn_fs_fs__id_rev_item(id);
+
   svn_error_t *err = get_node_revision_body(noderev_p, fs, id, pool);
   if (err && err->apr_err == SVN_ERR_FS_CORRUPT)
     {
@@ -396,8 +400,8 @@ svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
     }
 
   SVN_ERR(dgb__log_access(fs,
-                          svn_fs_fs__id_rev(id),
-                          svn_fs_fs__id_item(id),
+                          rev_item->revision,
+                          rev_item->number,
                           *noderev_p,
                           SVN_FS_FS__ITEM_TYPE_NODEREV,
                           pool));

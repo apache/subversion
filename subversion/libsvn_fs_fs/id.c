@@ -38,8 +38,7 @@ typedef struct fs_fs__id_t
   svn_fs_fs__id_part_t node_id;
   svn_fs_fs__id_part_t copy_id;
   const char *txn_id;
-  svn_revnum_t rev;
-  apr_uint64_t item;
+  svn_fs_fs__id_part_t rev_item;
 } fs_fs__id_t;
 
 
@@ -156,12 +155,20 @@ svn_fs_fs__id_txn_id(const svn_fs_id_t *fs_id)
 }
 
 
+const svn_fs_fs__id_part_t *
+svn_fs_fs__id_rev_item(const svn_fs_id_t *fs_id)
+{
+  fs_fs__id_t *id = (fs_fs__id_t *)fs_id;
+
+  return &id->rev_item;
+}
+
 svn_revnum_t
 svn_fs_fs__id_rev(const svn_fs_id_t *fs_id)
 {
   fs_fs__id_t *id = (fs_fs__id_t *)fs_id;
 
-  return id->rev;
+  return id->rev_item.revision;
 }
 
 
@@ -170,7 +177,7 @@ svn_fs_fs__id_item(const svn_fs_id_t *fs_id)
 {
   fs_fs__id_t *id = (fs_fs__id_t *)fs_id;
 
-  return id->item;
+  return id->rev_item.number;
 }
 
 
@@ -178,27 +185,26 @@ svn_string_t *
 svn_fs_fs__id_unparse(const svn_fs_id_t *fs_id,
                       apr_pool_t *pool)
 {
-  char string[4 * SVN_INT64_BUFFER_SIZE + 4];
+  char string[6 * SVN_INT64_BUFFER_SIZE + 10];
   fs_fs__id_t *id = (fs_fs__id_t *)fs_id;
 
   char *p = unparse_id_part(string, &id->node_id);
   p = unparse_id_part(p, &id->copy_id);
-  *p = '\0';
 
-  if ((! id->txn_id))
+  if (id->txn_id)
     {
-      char rev_string[SVN_INT64_BUFFER_SIZE];
-      char offset_string[SVN_INT64_BUFFER_SIZE];
-
-      svn__i64toa(rev_string, id->rev);
-      svn__i64toa(offset_string, id->item);
-      return svn_string_createf(pool, "%sr%s/%s", string,
-                                rev_string, offset_string);
+      *p = '\0';
+      return svn_string_createf(pool, "%st%s", string, id->txn_id);
     }
   else
     {
-      return svn_string_createf(pool, "%st%s", string, id->txn_id);
+      *(p++) = 'r';
+      p += svn__i64toa(p, id->rev_item.revision);
+      *(p++) = '/';
+      p += svn__i64toa(p, id->rev_item.number);
     }
+
+  return svn_string_ncreate(string, p - string, pool);
 }
 
 
@@ -219,11 +225,9 @@ svn_fs_fs__id_eq(const svn_fs_id_t *a,
     return FALSE;
   if (id_a->txn_id && id_b->txn_id && strcmp(id_a->txn_id, id_b->txn_id) != 0)
     return FALSE;
-  if (id_a->rev != id_b->rev)
-    return FALSE;
-  if (id_a->item != id_b->item)
-    return FALSE;
-  return TRUE;
+
+  return memcmp(&id_a->rev_item, &id_b->rev_item,
+                sizeof(&id_a->rev_item)) == 0;
 }
 
 
@@ -277,7 +281,7 @@ svn_fs_fs__id_txn_create_root(const char *txn_id,
   /* node ID and copy ID are "0" */
   
   id->txn_id = apr_pstrdup(pool, txn_id);
-  id->rev = SVN_INVALID_REVNUM;
+  id->rev_item.revision = SVN_INVALID_REVNUM;
 
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = &id;
@@ -296,7 +300,7 @@ svn_fs_fs__id_txn_create(const svn_fs_fs__id_part_t *node_id,
   id->node_id = *node_id;
   id->copy_id = *copy_id;
   id->txn_id = apr_pstrdup(pool, txn_id);
-  id->rev = SVN_INVALID_REVNUM;
+  id->rev_item.revision = SVN_INVALID_REVNUM;
 
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = &id;
@@ -308,8 +312,7 @@ svn_fs_fs__id_txn_create(const svn_fs_fs__id_part_t *node_id,
 svn_fs_id_t *
 svn_fs_fs__id_rev_create(const svn_fs_fs__id_part_t *node_id,
                          const svn_fs_fs__id_part_t *copy_id,
-                         svn_revnum_t rev,
-                         apr_uint64_t item,
+                         const svn_fs_fs__id_part_t *rev_item,
                          apr_pool_t *pool)
 {
   fs_fs__id_t *id = apr_pcalloc(pool, sizeof(*id));
@@ -317,8 +320,7 @@ svn_fs_fs__id_rev_create(const svn_fs_fs__id_part_t *node_id,
   id->node_id = *node_id;
   id->copy_id = *copy_id;
   id->txn_id = NULL;
-  id->rev = rev;
-  id->item = item;
+  id->rev_item = *rev_item;
 
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = &id;
@@ -395,25 +397,22 @@ svn_fs_fs__id_parse(const char *data,
       str = svn_cstring_tokenize("/", &data_copy);
       if (str == NULL)
         return NULL;
-      id->rev = SVN_STR_TO_REV(str);
+      id->rev_item.revision = SVN_STR_TO_REV(str);
 
-      str = svn_cstring_tokenize("/", &data_copy);
-      if (str == NULL)
-        return NULL;
-      err = svn_cstring_atoi64(&val, str);
+      err = svn_cstring_atoi64(&val, data_copy);
       if (err)
         {
           svn_error_clear(err);
           return NULL;
         }
-      id->item = (apr_uint32_t)val;
+      id->rev_item.number = (apr_uint64_t)val;
     }
   else if (str[0] == 't')
     {
       /* This is a transaction type ID */
+      id->rev_item.revision = SVN_INVALID_REVNUM;
+      id->rev_item.number = 0;
       id->txn_id = str + 1;
-      id->rev = SVN_INVALID_REVNUM;
-      id->item = 0;
     }
   else
     return NULL;

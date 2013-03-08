@@ -66,6 +66,9 @@ const svn_fs_fs__id_part_t *svn_fs_fs__id_copy_id(const svn_fs_id_t *id);
 /* Get the "txn id" portion of ID, or NULL if it is a permanent ID. */
 const char *svn_fs_fs__id_txn_id(const svn_fs_id_t *id);
 
+/* Get the "rev,item" portion of ID. */
+const svn_fs_fs__id_part_t *svn_fs_fs__id_rev_item(const svn_fs_id_t *id);
+
 /* Get the "rev" portion of ID, or SVN_INVALID_REVNUM if it is a
    transaction ID. */
 svn_revnum_t svn_fs_fs__id_rev(const svn_fs_id_t *id);
@@ -101,12 +104,11 @@ svn_fs_id_t *svn_fs_fs__id_txn_create(const svn_fs_fs__id_part_t *node_id,
                                       const char *txn_id,
                                       apr_pool_t *pool);
 
-/* Create a permanent ID based on NODE_ID, COPY_ID, REV, and OFFSET,
+/* Create a permanent ID based on NODE_ID, COPY_ID and REV_ITEM,
    allocated in POOL. */
 svn_fs_id_t *svn_fs_fs__id_rev_create(const svn_fs_fs__id_part_t *node_id,
                                       const svn_fs_fs__id_part_t *copy_id,
-                                      svn_revnum_t rev,
-                                      apr_uint64_t item,
+                                      const svn_fs_fs__id_part_t *rev_item,
                                       apr_pool_t *pool);
 
 /* Return a copy of ID, allocated from POOL. */

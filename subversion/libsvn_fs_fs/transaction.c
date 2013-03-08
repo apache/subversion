@@ -2645,9 +2645,8 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   node_revision_t *noderev;
   apr_off_t my_offset;
   const svn_fs_id_t *new_id;
-  svn_fs_fs__id_part_t node_id, copy_id;
+  svn_fs_fs__id_part_t node_id, copy_id, rev_item;
   fs_fs_data_t *ffd = fs->fsap_data;
-  apr_uint64_t item_index;
   const char *txn_id = svn_fs_fs__id_txn_id(id);
 
   *new_id_p = NULL;
@@ -2767,13 +2766,16 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT && at_root)
     {
       /* reference the root noderev from the log-to-phys index */
-      item_index = SVN_FS_FS__ITEM_INDEX_ROOT_NODE;
-      SVN_ERR(store_l2p_index_entry(fs, txn_id, my_offset, item_index, pool));
+      rev_item.number = SVN_FS_FS__ITEM_INDEX_ROOT_NODE;
+      SVN_ERR(store_l2p_index_entry(fs, txn_id, my_offset, rev_item.number,
+                                    pool));
     }
   else
-    SVN_ERR(allocate_item_index(&item_index, fs, txn_id, my_offset, pool));
-  new_id = svn_fs_fs__id_rev_create(&node_id, &copy_id, rev, item_index,
-                                    pool);
+    SVN_ERR(allocate_item_index(&rev_item.number, fs, txn_id, my_offset,
+                                pool));
+
+  rev_item.revision = rev;
+  new_id = svn_fs_fs__id_rev_create(&node_id, &copy_id, &rev_item, pool);
 
   noderev->id = new_id;
 
@@ -2833,7 +2835,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
       entry.size = my_offset - entry.offset;
       entry.type = SVN_FS_FS__ITEM_TYPE_NODEREV;
       entry.revision = SVN_INVALID_REVNUM;
-      entry.item_index = item_index;
+      entry.item_index = rev_item.number;
 
       SVN_ERR(store_p2l_index_entry(fs, txn_id, &entry, pool));
     }
