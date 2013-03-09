@@ -807,6 +807,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 55,
              "Item index too large for this revision.")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_MALFORMED_TXN_ID,
+             SVN_ERR_FS_CATEGORY_START + 56,
+             "Malformed transaction ID string.")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,

@@ -487,11 +487,12 @@ typedef struct representation_t
   /* For rep-sharing, we need a way of uniquifying node-revs which share the
      same representation (see svn_fs_fs__noderev_same_rep_key() ).  So, we
      store the original txn of the node rev (not the rep!), along with some
-     intra-node uniqification content.
-
-     May be NULL, in which case, it is considered to match other NULL
-     values.*/
-  const char *uniquifier;
+     intra-node uniqification content. */
+  struct
+  {
+    svn_fs_fs__id_part_t txn_id;
+    apr_uint64_t number;
+  } uniquifier;
 } representation_t;
 
 

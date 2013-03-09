@@ -836,13 +836,7 @@ svn_fs_fs__noderev_same_rep_key(representation_t *a,
   if (a->revision != b->revision)
     return FALSE;
 
-  if (a->uniquifier == b->uniquifier)
-    return TRUE;
-
-  if (a->uniquifier == NULL || b->uniquifier == NULL)
-    return FALSE;
-
-  return strcmp(a->uniquifier, b->uniquifier) == 0;
+  return memcmp(&a->uniquifier, &b->uniquifier, sizeof(a->uniquifier)) == 0;
 }
 
 svn_error_t *
@@ -882,12 +876,11 @@ svn_fs_fs__rep_copy(representation_t *rep,
   if (rep == NULL)
     return NULL;
 
-  rep_new = apr_pcalloc(pool, sizeof(*rep_new));
+  rep_new = apr_palloc(pool, sizeof(*rep_new));
 
   memcpy(rep_new, rep, sizeof(*rep_new));
   rep_new->md5_checksum = svn_checksum_dup(rep->md5_checksum, pool);
   rep_new->sha1_checksum = svn_checksum_dup(rep->sha1_checksum, pool);
-  rep_new->uniquifier = apr_pstrdup(pool, rep->uniquifier);
 
   return rep_new;
 }

@@ -35,8 +35,9 @@ extern "C" {
  */
 typedef struct svn_fs_fs__id_part_t
 {
-  /* SVN_INVALID_REVNUM -> not assigned to a revision, yet
-     0                  -> old-style ID or the root in rev 0. */
+  /* SVN_INVALID_REVNUM for txns -> not a txn, COUNTER must be 0.
+     SVN_INVALID_REVNUM for others -> not assigned to a revision, yet.
+     0                  for others -> old-style ID or the root in rev 0. */
   svn_revnum_t revision;
 
   /* some numerical value. */
@@ -53,6 +54,15 @@ svn_boolean_t svn_fs_fs__id_part_is_root(const svn_fs_fs__id_part_t *part);
 /* Return TRUE, if all element values of *LHS and *RHS match. */
 svn_boolean_t svn_fs_fs__id_part_eq(const svn_fs_fs__id_part_t *lhs,
                                     const svn_fs_fs__id_part_t *rhs);
+
+/* Parse the transaction id in DATA and store the result in *TXN_ID */
+svn_error_t *svn_fs_fs__id_txn_parse(svn_fs_fs__id_part_t *txn_id,
+                                     const char *data);
+
+/* Convert the transaction id in *TXN_ID into a textual representation
+ * allocated in POOL. */
+const char *svn_fs_fs__id_txn_unparse(const svn_fs_fs__id_part_t *txn_id,
+                                      apr_pool_t *pool);
 
 
 /*** ID accessor functions. ***/

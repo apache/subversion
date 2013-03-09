@@ -26,6 +26,7 @@
 #include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_sorts.h"
+#include "private/svn_string_private.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
@@ -313,12 +314,19 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
                                  pool));
 
   /* Read the uniquifier. */
+  str = svn_cstring_tokenize("/", &string);
+  if (str == NULL)
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Malformed text representation offset line in node-rev"));
+
+  SVN_ERR(svn_fs_fs__id_txn_parse(&rep->uniquifier.txn_id, str));
+
   str = svn_cstring_tokenize(" ", &string);
   if (str == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text representation offset line in node-rev"));
 
-  rep->uniquifier = apr_pstrdup(pool, str);
+  rep->uniquifier.number = svn__base36toui64(NULL, str);
 
   return SVN_NO_ERROR;
 }
@@ -521,6 +529,7 @@ svn_fs_fs__unparse_representation(representation_t *rep,
                                   svn_boolean_t may_be_corrupt,
                                   apr_pool_t *pool)
 {
+  char buffer[SVN_INT64_BUFFER_SIZE];
   if (rep->txn_id && mutable_rep_truncated)
     return svn_stringbuf_ncreate("-1", 2, pool);
 
@@ -537,14 +546,16 @@ svn_fs_fs__unparse_representation(representation_t *rep,
              rep->expanded_size,
              DISPLAY_MAYBE_NULL_CHECKSUM(rep->md5_checksum));
 
+  svn__ui64tobase36(buffer, rep->uniquifier.number);
   return svn_stringbuf_createf
           (pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
-           " %" SVN_FILESIZE_T_FMT " %s %s %s",
+           " %" SVN_FILESIZE_T_FMT " %s %s %s/%s",
            rep->revision, rep->item_index, rep->size,
            rep->expanded_size,
            DISPLAY_MAYBE_NULL_CHECKSUM(rep->md5_checksum),
            DISPLAY_MAYBE_NULL_CHECKSUM(rep->sha1_checksum),
-           rep->uniquifier);
+           svn_fs_fs__id_txn_unparse(&rep->uniquifier.txn_id, pool),
+           buffer);
 
 #undef DISPLAY_MAYBE_NULL_CHECKSUM
 

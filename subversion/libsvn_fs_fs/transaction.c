@@ -1440,12 +1440,11 @@ set_uniquifier(svn_fs_t *fs,
                const char *txn_id,
                apr_pool_t *pool)
 {
-  char unique_suffix[SVN_INT64_BUFFER_SIZE];
   svn_fs_fs__id_part_t temp;
 
   SVN_ERR(get_new_txn_node_id(&temp, fs, txn_id, pool));
-  svn__ui64tobase36(unique_suffix, temp.number);
-  rep->uniquifier = apr_psprintf(pool, "%s/_%s", txn_id, unique_suffix);
+  SVN_ERR(svn_fs_fs__id_txn_parse(&rep->uniquifier.txn_id, txn_id));
+  rep->uniquifier.number = temp.number;
 
   return SVN_NO_ERROR;
 }
