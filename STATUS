@@ -305,10 +305,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1421380
-   Issue #4272: s/assertion/error/ in the DAV proxy code.
-   Justification:
-     The assertion has been run into in the wild
-   Votes:
-     +1: danielsh, rhuijben, philip
