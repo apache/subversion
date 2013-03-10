@@ -854,6 +854,10 @@ svn_repos_hooks_setenv(svn_repos_t *repos,
  * other clients may get blocked.  Thus, be careful when using larger
  * values here.  0 disables the optimization.
  *
+ * @a note Never activate this optimization if @a editor might access
+ * any FSFS data structures (and, hence, caches).  So, it is basically
+ * safe for networked editors only.
+ *
  * All allocation for the context and collected state will occur in
  * @a pool.
  *
