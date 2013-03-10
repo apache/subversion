@@ -1260,7 +1260,7 @@ l2p_index_lookup(apr_off_t *offset,
 static svn_error_t *
 l2p_proto_index_lookup(apr_off_t *offset,
                        svn_fs_t *fs,
-                       const char *txn_id,
+                       const svn_fs_fs__id_part_t *txn_id,
                        apr_uint64_t item_index,
                        apr_pool_t *pool)
 {
@@ -1910,7 +1910,7 @@ svn_error_t *
 svn_fs_fs__item_offset(apr_off_t *offset,
                        svn_fs_t *fs,
                        svn_revnum_t revision,
-                       const char *txn_id,
+                       const svn_fs_fs__id_part_t *txn_id,
                        apr_uint64_t item_index,
                        apr_pool_t *pool)
 {

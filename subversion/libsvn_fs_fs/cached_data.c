@@ -237,14 +237,13 @@ open_and_seek_transaction(apr_file_t **file,
 {
   apr_file_t *rev_file;
   apr_off_t offset;
-  const char *txn_id = svn_fs_fs__id_txn_unparse(&rep->txn_id, pool);
 
   SVN_ERR(svn_io_file_open(&rev_file,
-                           path_txn_proto_rev(fs, txn_id, pool),
+                           path_txn_proto_rev(fs, &rep->txn_id, pool),
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
   SVN_ERR(svn_fs_fs__item_offset(&offset, fs, SVN_INVALID_REVNUM,
-                                 txn_id, rep->item_index, pool));
+                                 &rep->txn_id, rep->item_index, pool));
   SVN_ERR(aligned_seek(fs, rev_file, NULL, offset, pool));
 
   *file = rev_file;

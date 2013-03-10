@@ -174,13 +174,8 @@ typedef struct fs_fs_shared_txn_data_t
      transaction. */
   struct fs_fs_shared_txn_data_t *next;
 
-  /* This transaction's ID.  For repositories whose format is less
-     than SVN_FS_FS__MIN_TXN_CURRENT_FORMAT, the ID is in the form
-     <rev>-<uniqueifier>, where <uniqueifier> runs from 0-99999 (see
-     create_txn_dir_pre_1_5() in fs_fs.c).  For newer repositories,
-     the form is <rev>-<200 digit base 36 number> (see
-     create_txn_dir() in fs_fs.c). */
-  char txn_id[SVN_FS__TXN_MAX_LEN+1];
+  /* ID of this transaction. */
+  svn_fs_fs__id_part_t txn_id;
 
   /* Whether the transaction's prototype revision file is locked for
      writing by any thread in this process (including the current
