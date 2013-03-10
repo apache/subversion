@@ -1385,16 +1385,26 @@ open_root(void *edit_baton,
     }
   else
     {
-      const char *activity_str;
+      const char *activity_str = ctx->session->activity_collection_url;
 
-      SVN_ERR(svn_ra_serf__v1_get_activity_collection(&activity_str,
-                                                      ctx->session->conns[0],
-                                                      ctx->pool,
-                                                      ctx->pool));
       if (!activity_str)
-        return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                                _("The OPTIONS response did not include the "
-                                  "requested activity-collection-set value"));
+        SVN_ERR(svn_ra_serf__v1_get_activity_collection(&activity_str,
+                                                        ctx->session->conns[0],
+                                                        ctx->pool,
+                                                        ctx->pool));
+
+      /* Cache the result. */
+      if (activity_str)
+        {
+          ctx->session->activity_collection_url =
+            apr_pstrdup(ctx->session->pool, activity_str);
+        }
+      else
+        {
+          return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                                  _("The OPTIONS response did not include the "
+                                    "requested activity-collection-set value"));
+        }
 
       ctx->activity_url =
         svn_path_url_add_component2(activity_str, svn_uuid_generate(ctx->pool),

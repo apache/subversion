@@ -936,13 +936,10 @@ send_status_structure(const struct walk_status_baton *wb,
 }
 
 
-/* Store in *PATTERNS a list of all svn:ignore properties from
-   the working copy directory, including the default ignores
-   passed in as IGNORES.
-
-   If INHERITED_PATTERNS is not NULL, then store in *INHERITED_PATTERNS
-   a list of all ignore patterns defined by the svn:inherited-ignores
-   properties explicitly set on, or inherited by, LOCAL_ABSPATH.
+/* Store in *PATTERNS a list of ignores collected from svn:ignore properties
+   on LOCAL_ABSPATH and svn:global-ignores on LOCAL_ABSPATH and its
+   repository ancestors (as cached in the working copy), including the default
+   ignores passed in as IGNORES.
 
    Upon return, *PATTERNS will contain zero or more (const char *)
    patterns from the value of the SVN_PROP_IGNORE property set on
@@ -951,10 +948,7 @@ send_status_structure(const struct walk_status_baton *wb,
    IGNORES is a list of patterns to include; typically this will
    be the default ignores as, for example, specified in a config file.
 
-   If MAY_HAVE_PROPS is false, local_abspath is assumed to have no
-   properties.
-
-   LOCAL_ABSPATH and DB control how to access the ignore information.
+   DB, LOCAL_ABSPATH is used to access the working copy.
 
    Allocate results in RESULT_POOL, temporary stuffs in SCRATCH_POOL.
 
@@ -962,17 +956,16 @@ send_status_structure(const struct walk_status_baton *wb,
 */
 static svn_error_t *
 collect_ignore_patterns(apr_array_header_t **patterns,
-                        apr_array_header_t **inherited_patterns,
                         svn_wc__db_t *db,
                         const char *local_abspath,
                         const apr_array_header_t *ignores,
-                        svn_boolean_t may_have_props,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
   int i;
-  const svn_string_t *value;
-  apr_hash_t *props = NULL;
+  apr_hash_t *props;
+  apr_array_header_t *inherited_props;
+  svn_error_t *err;
 
   /* ### assert we are passed a directory? */
 
@@ -986,56 +979,46 @@ collect_ignore_patterns(apr_array_header_t **patterns,
                                                             ignore);
     }
 
-  if (may_have_props)
+  err = svn_wc__db_read_inherited_props(&inherited_props, &props,
+                                        db, local_abspath,
+                                        SVN_PROP_INHERITABLE_IGNORES,
+                                        scratch_pool, scratch_pool);
+
+  if (err)
     {
-      /* Add any svn:ignore globs to the PATTERNS array. */
-      SVN_ERR(svn_wc__db_read_props(&props, db, local_abspath,
-                                    scratch_pool, scratch_pool));
+      if (err->apr_err != SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+        return svn_error_trace(err);
 
-      if (!props)
-        return SVN_NO_ERROR;
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
 
-      value = apr_hash_get(props, SVN_PROP_IGNORE, APR_HASH_KEY_STRING);
+  if (props)
+    {
+      const svn_string_t *value;
 
-      if (value != NULL)
+      value = svn_hash_gets(props, SVN_PROP_IGNORE);
+      if (value)
+        svn_cstring_split_append(*patterns, value->data, "\n\r", FALSE,
+                                 result_pool);
+
+      value = svn_hash_gets(props, SVN_PROP_INHERITABLE_IGNORES);
+      if (value)
         svn_cstring_split_append(*patterns, value->data, "\n\r", FALSE,
                                  result_pool);
     }
 
-  if (inherited_patterns)
+  for (i = 0; i < inherited_props->nelts; i++)
     {
-      apr_array_header_t *inherited_props;
+      svn_prop_inherited_item_t *elt = APR_ARRAY_IDX(
+        inherited_props, i, svn_prop_inherited_item_t *);
+      const svn_string_t *value;
 
-      *inherited_patterns = apr_array_make(result_pool, 1,
-                                           sizeof(const char *));
-      if (props)
-        {
-          value = apr_hash_get(props, SVN_PROP_INHERITABLE_IGNORES,
-                               APR_HASH_KEY_STRING);
-          if (value != NULL)
-            svn_cstring_split_append(*inherited_patterns, value->data, "\n\r",
-                                     FALSE, result_pool);      
-        }
+      value = svn_hash_gets(elt->prop_hash, SVN_PROP_INHERITABLE_IGNORES);
 
-      SVN_ERR(svn_wc__db_read_inherited_props(&inherited_props,
-                                              db, local_abspath,
-                                              SVN_PROP_INHERITABLE_IGNORES,
-                                              scratch_pool, scratch_pool));
-      for (i = 0; i < inherited_props->nelts; i++)
-        {
-          apr_hash_index_t *hi;
-          svn_prop_inherited_item_t *elt = APR_ARRAY_IDX(
-            inherited_props, i, svn_prop_inherited_item_t *);
-
-          for (hi = apr_hash_first(scratch_pool, elt->prop_hash);
-               hi;
-               hi = apr_hash_next(hi))
-            {
-              const svn_string_t *propval = svn__apr_hash_index_val(hi);
-              svn_cstring_split_append(*inherited_patterns, propval->data,
-                                       "\n\r", FALSE, result_pool);   
-            }
-        }
+      if (value)
+        svn_cstring_split_append(*patterns, value->data,
+                                 "\n\r", FALSE, result_pool);
     }
 
   return SVN_NO_ERROR;
@@ -1081,9 +1064,8 @@ is_external_path(apr_hash_t *externals,
    requested.  PATH_KIND is the node kind of NAME as determined by the
    caller.  PATH_SPECIAL is the special status of the path, also determined
    by the caller.
-   PATTERNS and INHERITED_PATTERNS point to a list of filename patterns which
-   are marked as ignored.  None of these parameter may be NULL.  EXTERNALS is
-   a hash of known externals definitions for this status run.
+   PATTERNS points to a list of filename patterns which are marked as ignored.
+   None of these parameter may be NULL.
 
    If NO_IGNORE is TRUE, the item will be added regardless of
    whether it is ignored; otherwise we will only add the item if it
@@ -1097,26 +1079,21 @@ send_unversioned_item(const struct walk_status_baton *wb,
                       const svn_io_dirent2_t *dirent,
                       svn_boolean_t tree_conflicted,
                       const apr_array_header_t *patterns,
-                      const apr_array_header_t *inherited_patterns,
                       svn_boolean_t no_ignore,
                       svn_wc_status_func4_t status_func,
                       void *status_baton,
                       apr_pool_t *scratch_pool)
 {
   svn_boolean_t is_ignored;
-  svn_boolean_t is_mandatory_ignored;
   svn_boolean_t is_external;
   svn_wc_status3_t *status;
   const char *base_name = svn_dirent_basename(local_abspath, NULL);
 
   is_ignored = svn_wc_match_ignore_list(base_name, patterns, scratch_pool);
-  is_mandatory_ignored = svn_wc_match_ignore_list(base_name,
-                                                  inherited_patterns,
-                                                  scratch_pool);
   SVN_ERR(assemble_unversioned(&status,
                                wb->db, local_abspath,
                                dirent, tree_conflicted,
-                               is_ignored || is_mandatory_ignored,
+                               is_ignored,
                                scratch_pool, scratch_pool));
 
   is_external = is_external_path(wb->externals, local_abspath, scratch_pool);
@@ -1132,7 +1109,7 @@ send_unversioned_item(const struct walk_status_baton *wb,
   /* If we aren't ignoring it, or if it's an externals path, pass this
      entry to the status func. */
   if (no_ignore
-      || !(is_ignored || is_mandatory_ignored)
+      || !is_ignored
       || is_external)
     return svn_error_trace((*status_func)(status_baton, local_abspath,
                                           status, scratch_pool));
@@ -1179,22 +1156,18 @@ get_dir_status(const struct walk_status_baton *wb,
  * DIR_REPOS_* should reflect LOCAL_ABSPATH's parent URL, i.e. LOCAL_ABSPATH's
  * URL treated with svn_uri_dirname(). ### TODO verify this (externals)
  *
- * DIR_HAS_PROPS is a boolean indicating whether PARENT_ABSPATH has properties.
- *
- * If *COLLECTED_IGNORE_PATTERNS or COLLECTED_INHERITED_IGNORE_PATTERNS are NULL
- * and ignore patterns are needed in this call, then *COLLECTED_IGNORE_PATTERNS
- * *COLLECTED_INHERITED_IGNORE_PATTERNS will be set to an apr_array_header_t*
+ * If *COLLECTED_IGNORE_PATTERNS is NULL and ignore patterns are needed in this
+ * call, then *COLLECTED_IGNORE_PATTERNS will be set to an apr_array_header_t*
  * containing all ignore patterns, as returned by collect_ignore_patterns() on
- * PARENT_ABSPATH and IGNORE_PATTERNS. If *COLLECTED_IGNORE_PATTERNS and 
- * COLLECTED_INHERITED_IGNORE_PATTERNS is passed non-NULL, it is assumed they
- * already hold those results. This speeds up repeated calls with the same
- * PARENT_ABSPATH.
+ * PARENT_ABSPATH and IGNORE_PATTERNS. If *COLLECTED_IGNORE_PATTERNS is passed
+ * non-NULL, it is assumed it already holds those results.
+ * This speeds up repeated calls with the same PARENT_ABSPATH.
  *
- * *COLLECTED_IGNORE_PATTERNS and COLLECTED_INHERITED_IGNORE_PATTERNS will be
- * allocated in RESULT_POOL. All other allocations are made in SCRATCH_POOL.
+ * *COLLECTED_IGNORE_PATTERNS will be allocated in RESULT_POOL. All other
+ * allocations are made in SCRATCH_POOL.
  *
  * The remaining parameters correspond to get_dir_status(). */
-static svn_error_t*
+static svn_error_t *
 one_child_status(const struct walk_status_baton *wb,
                  const char *local_abspath,
                  const char *parent_abspath,
@@ -1203,10 +1176,8 @@ one_child_status(const struct walk_status_baton *wb,
                  const char *dir_repos_root_url,
                  const char *dir_repos_relpath,
                  const char *dir_repos_uuid,
-                 svn_boolean_t dir_has_props,
                  svn_boolean_t unversioned_tree_conflicted,
                  apr_array_header_t **collected_ignore_patterns,
-                 apr_array_header_t **collected_inherited_ignore_patterns,
                  const apr_array_header_t *ignore_patterns,
                  svn_depth_t depth,
                  svn_boolean_t get_all,
@@ -1274,7 +1245,7 @@ one_child_status(const struct walk_status_baton *wb,
       if (depth == svn_depth_files && dirent->kind == svn_node_dir)
         return SVN_NO_ERROR;
 
-      if (svn_wc_is_adm_dir(svn_dirent_basename(local_abspath, scratch_pool),
+      if (svn_wc_is_adm_dir(svn_dirent_basename(local_abspath, NULL),
                             scratch_pool))
         return SVN_NO_ERROR;
     }
@@ -1289,13 +1260,9 @@ one_child_status(const struct walk_status_baton *wb,
    * determined.  For example, in 'svn status', plain unversioned nodes show
    * as '?  C', where ignored ones show as 'I  C'. */
 
-  if ((ignore_patterns && ! *collected_ignore_patterns)
-      || (collected_inherited_ignore_patterns
-          && ! collected_inherited_ignore_patterns))
+  if (ignore_patterns && ! *collected_ignore_patterns)
     SVN_ERR(collect_ignore_patterns(collected_ignore_patterns,
-                                    collected_inherited_ignore_patterns,
                                     wb->db, parent_abspath, ignore_patterns,
-                                    dir_has_props,
                                     result_pool, scratch_pool));
 
   SVN_ERR(send_unversioned_item(wb,
@@ -1303,7 +1270,6 @@ one_child_status(const struct walk_status_baton *wb,
                                 dirent,
                                 conflicted,
                                 *collected_ignore_patterns,
-                                *collected_inherited_ignore_patterns,
                                 no_ignore,
                                 status_func, status_baton,
                                 scratch_pool));
@@ -1353,11 +1319,9 @@ get_dir_status(const struct walk_status_baton *wb,
   const char *dir_repos_root_url;
   const char *dir_repos_relpath;
   const char *dir_repos_uuid;
-  svn_boolean_t dir_has_props;
   apr_hash_t *dirents, *nodes, *conflicts, *all_children;
   apr_array_header_t *sorted_children;
   apr_array_header_t *collected_ignore_patterns = NULL;
-  apr_array_header_t *collected_inherited_ignore_patterns = NULL;
   apr_pool_t *iterpool;
   svn_error_t *err;
   int i;
@@ -1453,8 +1417,6 @@ get_dir_status(const struct walk_status_baton *wb,
   if (depth == svn_depth_empty)
     return SVN_NO_ERROR;
 
-  dir_has_props = (dir_info->had_props || dir_info->props_mod);
-
   /* Walk all the children of this directory. */
   sorted_children = svn_sort__hash(all_children,
                                    svn_sort_compare_items_lexically,
@@ -1486,10 +1448,8 @@ get_dir_status(const struct walk_status_baton *wb,
                                dir_repos_root_url,
                                dir_repos_relpath,
                                dir_repos_uuid,
-                               dir_has_props,
                                apr_hash_get(conflicts, key, klen) != NULL,
                                &collected_ignore_patterns,
-                               &collected_inherited_ignore_patterns,
                                ignore_patterns,
                                depth,
                                get_all,
@@ -1539,7 +1499,6 @@ get_child_status(const struct walk_status_baton *wb,
   const char *dir_repos_uuid;
   const struct svn_wc__db_info_t *dir_info;
   apr_array_header_t *collected_ignore_patterns = NULL;
-  apr_array_header_t *collected_inherited_ignore_patterns = NULL;
   const char *parent_abspath = svn_dirent_dirname(local_abspath,
                                                   scratch_pool);
 
@@ -1571,10 +1530,8 @@ get_child_status(const struct walk_status_baton *wb,
                            dir_repos_root_url,
                            dir_repos_relpath,
                            dir_repos_uuid,
-                           (dir_info->had_props || dir_info->props_mod),
                            FALSE, /* unversioned_tree_conflicted */
                            &collected_ignore_patterns,
-                           &collected_inherited_ignore_patterns,
                            ignore_patterns,
                            svn_depth_empty,
                            get_all,
@@ -3092,8 +3049,8 @@ svn_wc_get_ignores2(apr_array_header_t **patterns,
   apr_array_header_t *default_ignores;
 
   SVN_ERR(svn_wc_get_default_ignores(&default_ignores, config, scratch_pool));
-  return svn_error_trace(collect_ignore_patterns(patterns, NULL, wc_ctx->db,
+  return svn_error_trace(collect_ignore_patterns(patterns, wc_ctx->db,
                                                  local_abspath,
-                                                 default_ignores, TRUE,
+                                                 default_ignores,
                                                  result_pool, scratch_pool));
 }

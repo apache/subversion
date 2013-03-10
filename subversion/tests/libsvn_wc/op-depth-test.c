@@ -5653,7 +5653,7 @@ move_update_conflicts(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_mkdir(&b, "X/A/B/C/D/E"));
   SVN_ERR(sbox_wc_mkdir(&b, "X/A/B/F"));
   SVN_ERR(sbox_wc_commit(&b, ""));
-  SVN_ERR(sbox_wc_switch(&b, "/X"));
+  SVN_ERR(sbox_wc_switch(&b, "", "/X", svn_depth_infinity));
   SVN_ERR(sbox_wc_update(&b, "", 1));
   SVN_ERR(sbox_wc_move(&b, "A", "A2"));
   SVN_ERR(sbox_wc_move(&b, "A2/B/C", "A2/B/C2"));
@@ -6001,7 +6001,7 @@ switch_move(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_commit(&b, ""));
   SVN_ERR(sbox_wc_mkdir(&b, "X/B/D/E/F"));
   SVN_ERR(sbox_wc_commit(&b, ""));
-  SVN_ERR(sbox_wc_switch(&b, "/A"));
+  SVN_ERR(sbox_wc_switch(&b, "", "/A", svn_depth_infinity));
   SVN_ERR(sbox_wc_update(&b, "", 2));
 
   SVN_ERR(sbox_wc_move(&b, "B/C", "C2"));
@@ -6029,7 +6029,7 @@ switch_move(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   /* Switch "bumps" revisions and paths and raises conflicts just like
      update. */
-  SVN_ERR(sbox_wc_switch(&b, "/X"));
+  SVN_ERR(sbox_wc_switch(&b, "", "/X", svn_depth_infinity));
   {
     nodes_row_t nodes[] = {
       {0, "",        "normal",       3, "X"},
@@ -7299,7 +7299,7 @@ move_back(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_mkdir(&b, "X/A/B/D"));
   SVN_ERR(sbox_wc_mkdir(&b, "X/E"));
   SVN_ERR(sbox_wc_commit(&b, ""));
-  SVN_ERR(sbox_wc_switch(&b, "/X"));
+  SVN_ERR(sbox_wc_switch(&b, "", "/X", svn_depth_infinity));
 
   SVN_ERR(sbox_wc_move(&b, "A/B", "A/B2"));
   {
@@ -7399,6 +7399,11 @@ move_update_subtree(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_commit(&b, ""));
   SVN_ERR(sbox_wc_mkdir(&b, "A/B/C/D"));
   SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_mkdir(&b, "X"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_update(&b, "", 3));
+  SVN_ERR(sbox_wc_copy(&b, "A", "P"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
   SVN_ERR(sbox_wc_update(&b, "", 1));
 
   /* Subtree update is like an interrupted update, it leaves a
@@ -7463,6 +7468,138 @@ move_update_subtree(const svn_test_opts_t *opts, apr_pool_t *pool)
       {2, "A/B2",     "normal",       2, "A/B", MOVED_HERE},
       {2, "A/B2/C",   "normal",       2, "A/B/C", MOVED_HERE},
       {2, "A/B2/C/D", "normal",       2, "A/B/C/D", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Subtree update that only bumps. */
+  SVN_ERR(sbox_wc_update(&b, "A/B/C", 3));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",         "normal",       1, ""},
+      {0, "A",        "normal",       1, "A"},
+      {0, "A/B",      "normal",       2, "A/B"},
+      {0, "A/B/C",    "normal",       3, "A/B/C"},
+      {0, "A/B/C/D",  "normal",       3, "A/B/C/D"},
+      {2, "A/B",      "base-deleted", NO_COPY_FROM, "A/B2"},
+      {2, "A/B/C",    "base-deleted", NO_COPY_FROM},
+      {2, "A/B/C/D",  "base-deleted", NO_COPY_FROM},
+      {2, "A/B2",     "normal",       2, "A/B", MOVED_HERE},
+      {2, "A/B2/C",   "normal",       2, "A/B/C", MOVED_HERE},
+      {2, "A/B2/C/D", "normal",       2, "A/B/C/D", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Resolve fails because of the mixed-revision. */
+  err = sbox_wc_resolve(&b, "A/B", svn_depth_empty,
+                        svn_wc_conflict_choose_mine_conflict);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE);
+
+  /* Update allowed while tree-conflict is present. */
+  SVN_ERR(sbox_wc_update(&b, "A/B", 3));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",         "normal",       1, ""},
+      {0, "A",        "normal",       1, "A"},
+      {0, "A/B",      "normal",       3, "A/B"},
+      {0, "A/B/C",    "normal",       3, "A/B/C"},
+      {0, "A/B/C/D",  "normal",       3, "A/B/C/D"},
+      {2, "A/B",      "base-deleted", NO_COPY_FROM, "A/B2"},
+      {2, "A/B/C",    "base-deleted", NO_COPY_FROM},
+      {2, "A/B/C/D",  "base-deleted", NO_COPY_FROM},
+      {2, "A/B2",     "normal",       2, "A/B", MOVED_HERE},
+      {2, "A/B2/C",   "normal",       2, "A/B/C", MOVED_HERE},
+      {2, "A/B2/C/D", "normal",       2, "A/B/C/D", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Now resolve works. */
+  SVN_ERR(sbox_wc_resolve(&b, "A/B", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",         "normal",       1, ""},
+      {0, "A",        "normal",       1, "A"},
+      {0, "A/B",      "normal",       3, "A/B"},
+      {0, "A/B/C",    "normal",       3, "A/B/C"},
+      {0, "A/B/C/D",  "normal",       3, "A/B/C/D"},
+      {2, "A/B",      "base-deleted", NO_COPY_FROM, "A/B2"},
+      {2, "A/B/C",    "base-deleted", NO_COPY_FROM},
+      {2, "A/B/C/D",  "base-deleted", NO_COPY_FROM},
+      {2, "A/B2",     "normal",       3, "A/B", MOVED_HERE},
+      {2, "A/B2/C",   "normal",       3, "A/B/C", MOVED_HERE},
+      {2, "A/B2/C/D", "normal",       3, "A/B/C/D", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Partial switch of source. */
+  SVN_ERR(sbox_wc_switch(&b, "A", "/P", svn_depth_immediates));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",         "normal",       1, ""},
+      {0, "A",        "normal",       4, "P"},
+      {0, "A/B",      "normal",       4, "P/B"},
+      {0, "A/B/C",    "normal",       3, "A/B/C"},
+      {0, "A/B/C/D",  "normal",       3, "A/B/C/D"},
+      {2, "A/B",      "base-deleted", NO_COPY_FROM, "A/B2"},
+      {2, "A/B/C",    "base-deleted", NO_COPY_FROM},
+      {2, "A/B/C/D",  "base-deleted", NO_COPY_FROM},
+      {2, "A/B2",     "normal",       3, "A/B", MOVED_HERE},
+      {2, "A/B2/C",   "normal",       3, "A/B/C", MOVED_HERE},
+      {2, "A/B2/C/D", "normal",       3, "A/B/C/D", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Resolve fails because of the subtree-switch. */
+  err = sbox_wc_resolve(&b, "A/B", svn_depth_empty,
+                        svn_wc_conflict_choose_mine_conflict);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE);
+
+  /* Switch works while tree-conflict is present. */
+  SVN_ERR(sbox_wc_switch(&b, "A", "/P", svn_depth_infinity));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",         "normal",       1, ""},
+      {0, "A",        "normal",       4, "P"},
+      {0, "A/B",      "normal",       4, "P/B"},
+      {0, "A/B/C",    "normal",       4, "P/B/C"},
+      {0, "A/B/C/D",  "normal",       4, "P/B/C/D"},
+      {2, "A/B",      "base-deleted", NO_COPY_FROM, "A/B2"},
+      {2, "A/B/C",    "base-deleted", NO_COPY_FROM},
+      {2, "A/B/C/D",  "base-deleted", NO_COPY_FROM},
+      {2, "A/B2",     "normal",       3, "A/B", MOVED_HERE},
+      {2, "A/B2/C",   "normal",       3, "A/B/C", MOVED_HERE},
+      {2, "A/B2/C/D", "normal",       3, "A/B/C/D", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Now resolve works. */
+  SVN_ERR(sbox_wc_resolve(&b, "A/B", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",         "normal",       1, ""},
+      {0, "A",        "normal",       4, "P"},
+      {0, "A/B",      "normal",       4, "P/B"},
+      {0, "A/B/C",    "normal",       4, "P/B/C"},
+      {0, "A/B/C/D",  "normal",       4, "P/B/C/D"},
+      {2, "A/B",      "base-deleted", NO_COPY_FROM, "A/B2"},
+      {2, "A/B/C",    "base-deleted", NO_COPY_FROM},
+      {2, "A/B/C/D",  "base-deleted", NO_COPY_FROM},
+      {2, "A/B2",     "normal",       4, "P/B", MOVED_HERE},
+      {2, "A/B2/C",   "normal",       4, "P/B/C", MOVED_HERE},
+      {2, "A/B2/C/D", "normal",       4, "P/B/C/D", MOVED_HERE},
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
@@ -7613,7 +7750,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "new_basemove"),
     SVN_TEST_OPTS_PASS(move_back,
                        "move_back (issue 4302)"),
-    SVN_TEST_OPTS_XFAIL(move_update_subtree,
+    SVN_TEST_OPTS_PASS(move_update_subtree,
                        "move_update_subtree (issue 4232)"),
     SVN_TEST_NULL
   };

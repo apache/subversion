@@ -1170,6 +1170,7 @@ open_root(void *edit_baton,
   svn_boolean_t already_conflicted;
   svn_error_t *err;
   svn_wc__db_status_t status;
+  svn_wc__db_status_t base_status;
   svn_kind_t kind;
   svn_boolean_t have_work;
 
@@ -1227,6 +1228,17 @@ open_root(void *edit_baton,
       SVN_ERR(svn_wc__db_base_moved_to(NULL, NULL, &move_src_root_abspath,
                                        NULL, eb->db, db->local_abspath,
                                        pool, pool));
+      if (move_src_root_abspath || *eb->target_basename == '\0')
+        SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL,
+                                         &db->old_revision,
+                                         &db->old_repos_relpath, NULL, NULL,
+                                         &db->changed_rev, &db->changed_date,
+                                         &db->changed_author,
+                                         &db->ambient_depth,
+                                         NULL, NULL, NULL, NULL, NULL, NULL,
+                                         eb->db, db->local_abspath,
+                                         db->pool, pool));
+
       if (move_src_root_abspath)
         {
           /* This is an update anchored inside a move. We need to
@@ -1242,8 +1254,9 @@ open_root(void *edit_baton,
 
           if (strcmp(db->local_abspath, move_src_root_abspath))
             {
-              /* This is some parent of the edit root, we won't be
-                 handling it again so raise the conflict now. */
+              /* We are raising the tree-conflict on some parent of
+                 the edit root, we won't be handling that path again
+                 so raise the conflict now. */
               SVN_ERR(complete_conflict(tree_conflict, eb,
                                         move_src_root_abspath,
                                         db->old_repos_relpath,
@@ -1261,28 +1274,16 @@ open_root(void *edit_baton,
             db->edit_conflict = tree_conflict;
         }
 
-
       db->shadowed = TRUE; /* Needed for the close_directory() on the root, to
                               make sure it doesn't use the ACTUAL tree */
     }
+  else
+    base_status = status;
 
   if (*eb->target_basename == '\0')
     {
-      svn_wc__db_status_t base_status;
       /* For an update with a NULL target, this is equivalent to open_dir(): */
 
-      if (! have_work)
-        base_status = status;
-      else
-        {
-          SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &db->old_revision,
-                                           &db->old_repos_relpath, NULL, NULL,
-                                           &db->changed_rev, &db->changed_date,
-                                           &db->changed_author, &db->ambient_depth,
-                                           NULL, NULL, NULL, NULL, NULL, NULL,
-                                           eb->db, db->local_abspath,
-                                           db->pool, pool));
-        }
       db->was_incomplete = (base_status == svn_wc__db_status_incomplete);
 
       /* ### TODO: Add some tree conflict and obstruction detection, etc. like
@@ -1615,9 +1616,9 @@ check_tree_conflict(svn_skel_t **pconflict,
 }
 
 
-/* If LOCAL_ABSPATH is inside a conflicted tree, set *CONFLICTED to TRUE,
- * Otherwise set *CONFLICTED to FALSE.  Use SCRATCH_POOL for temporary
- * allocations.
+/* If LOCAL_ABSPATH is inside a conflicted tree and the conflict is
+ * not a moved-away-edit conflict, set *CONFLICTED to TRUE.  Otherwise
+ * set *CONFLICTED to FALSE.
  */
 static svn_error_t *
 already_in_a_tree_conflict(svn_boolean_t *conflicted,
@@ -1634,22 +1635,17 @@ already_in_a_tree_conflict(svn_boolean_t *conflicted,
 
   while (TRUE)
     {
-      svn_boolean_t is_wc_root, tree_conflicted;
+      svn_boolean_t is_wc_root;
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_wc__internal_conflicted_p(NULL, NULL, &tree_conflicted,
-                                            db, ancestor_abspath, iterpool));
-
-      if (tree_conflicted)
-        {
-          *conflicted = TRUE;
-          break;
-        }
+      SVN_ERR(svn_wc__conflicted_for_update_p(conflicted, db, ancestor_abspath,
+                                              TRUE, scratch_pool));
+      if (*conflicted)
+        break;
 
       SVN_ERR(svn_wc__db_is_wcroot(&is_wc_root, db, ancestor_abspath,
                                    iterpool));
-
       if (is_wc_root)
         break;
 
@@ -1668,15 +1664,9 @@ node_already_conflicted(svn_boolean_t *conflicted,
                         const char *local_abspath,
                         apr_pool_t *scratch_pool)
 {
-  svn_boolean_t text_conflicted, prop_conflicted, tree_conflicted;
+  SVN_ERR(svn_wc__conflicted_for_update_p(conflicted, db, local_abspath, FALSE,
+                                          scratch_pool));
 
-  SVN_ERR(svn_wc__internal_conflicted_p(&text_conflicted,
-                                        &prop_conflicted,
-                                        &tree_conflicted,
-                                        db, local_abspath,
-                                        scratch_pool));
-
-  *conflicted = (text_conflicted || prop_conflicted || tree_conflicted);
   return SVN_NO_ERROR;
 }
 

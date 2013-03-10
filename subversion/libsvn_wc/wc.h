@@ -501,6 +501,16 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
                               const char *local_abspath,
                               apr_pool_t *scratch_pool);
 
+/* Similar to svn_wc__internal_conflicted_p(), but ignores
+ * moved-away-edit tree conflicts.  Also ignores text and property
+ * conflicts if TREE_ONLY is TRUE */
+svn_error_t *
+svn_wc__conflicted_for_update_p(svn_boolean_t *conflicted_p,
+                                svn_wc__db_t *db,
+                                const char *local_abspath,
+                                svn_boolean_t tree_only,
+                                apr_pool_t *scratch_pool);
+
 
 /* Internal version of svn_wc_transmit_text_deltas3(). */
 svn_error_t *
