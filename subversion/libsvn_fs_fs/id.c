@@ -140,6 +140,19 @@ svn_fs_fs__id_part_eq(const svn_fs_fs__id_part_t *lhs,
   return lhs->revision == rhs->revision && lhs->number == rhs->number;
 }
 
+svn_boolean_t
+svn_fs_fs__id_txn_used(const svn_fs_fs__id_part_t *txn_id)
+{
+  return SVN_IS_VALID_REVNUM(txn_id->revision) || (txn_id->number != 0);
+}
+
+void
+svn_fs_fs__id_txn_reset(svn_fs_fs__id_part_t *txn_id)
+{
+  txn_id->revision = SVN_INVALID_REVNUM;
+  txn_id->number = 0;
+}
+
 svn_error_t *
 svn_fs_fs__id_txn_parse(svn_fs_fs__id_part_t *txn_id,
                         const char *data)

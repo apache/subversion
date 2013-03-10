@@ -55,6 +55,12 @@ svn_boolean_t svn_fs_fs__id_part_is_root(const svn_fs_fs__id_part_t *part);
 svn_boolean_t svn_fs_fs__id_part_eq(const svn_fs_fs__id_part_t *lhs,
                                     const svn_fs_fs__id_part_t *rhs);
 
+/* Return TRUE, if TXN_ID is used, i.e. doesn't contain just the defaults. */
+svn_boolean_t svn_fs_fs__id_txn_used(const svn_fs_fs__id_part_t *txn_id);
+
+/* Reset TXN_ID to the defaults. */
+void svn_fs_fs__id_txn_reset(svn_fs_fs__id_part_t *txn_id);
+
 /* Parse the transaction id in DATA and store the result in *TXN_ID */
 svn_error_t *svn_fs_fs__id_txn_parse(svn_fs_fs__id_part_t *txn_id,
                                      const char *data);

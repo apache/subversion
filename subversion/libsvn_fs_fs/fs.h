@@ -482,7 +482,7 @@ typedef struct representation_t
   svn_filesize_t expanded_size;
 
   /* Is this representation a transaction? */
-  const char *txn_id;
+  svn_fs_fs__id_part_t txn_id;
 
   /* For rep-sharing, we need a way of uniquifying node-revs which share the
      same representation (see svn_fs_fs__noderev_same_rep_key() ).  So, we

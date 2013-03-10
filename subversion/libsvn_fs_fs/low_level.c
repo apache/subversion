@@ -261,6 +261,9 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
 
   rep->revision = SVN_STR_TO_REV(str);
 
+  /* initialize transaction info (never stored) */
+  svn_fs_fs__id_txn_reset(&rep->txn_id);
+  
   /* while in transactions, it is legal to simply write "-1" */
   str = svn_cstring_tokenize(" ", &string);
   if (str == NULL)
@@ -357,7 +360,8 @@ read_rep_offsets(representation_t **rep_p,
 
   if ((*rep_p)->revision == SVN_INVALID_REVNUM)
     if (noderev_id)
-      (*rep_p)->txn_id = svn_fs_fs__id_txn_id(noderev_id);
+      SVN_ERR(svn_fs_fs__id_txn_parse(&(*rep_p)->txn_id,
+                                      svn_fs_fs__id_txn_id(noderev_id)));
 
   return SVN_NO_ERROR;
 }
@@ -530,7 +534,7 @@ svn_fs_fs__unparse_representation(representation_t *rep,
                                   apr_pool_t *pool)
 {
   char buffer[SVN_INT64_BUFFER_SIZE];
-  if (rep->txn_id && mutable_rep_truncated)
+  if (svn_fs_fs__id_txn_used(&rep->txn_id) && mutable_rep_truncated)
     return svn_stringbuf_ncreate("-1", 2, pool);
 
 #define DISPLAY_MAYBE_NULL_CHECKSUM(checksum)          \

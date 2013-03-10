@@ -237,13 +237,14 @@ open_and_seek_transaction(apr_file_t **file,
 {
   apr_file_t *rev_file;
   apr_off_t offset;
+  const char *txn_id = svn_fs_fs__id_txn_unparse(&rep->txn_id, pool);
 
   SVN_ERR(svn_io_file_open(&rev_file,
-                           path_txn_proto_rev(fs, rep->txn_id, pool),
+                           path_txn_proto_rev(fs, txn_id, pool),
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
   SVN_ERR(svn_fs_fs__item_offset(&offset, fs, SVN_INVALID_REVNUM,
-                                 rep->txn_id, rep->item_index, pool));
+                                 txn_id, rep->item_index, pool));
   SVN_ERR(aligned_seek(fs, rev_file, NULL, offset, pool));
 
   *file = rev_file;
@@ -260,7 +261,7 @@ open_and_seek_representation(apr_file_t **file_p,
                              representation_t *rep,
                              apr_pool_t *pool)
 {
-  if (! rep->txn_id)
+  if (! svn_fs_fs__id_txn_used(&rep->txn_id))
     return open_and_seek_revision(file_p, fs, rep->revision, rep->item_index,
                                   pool);
   else
@@ -667,9 +668,10 @@ create_rep_state_body(rep_state_t **rep_state,
   rs->combined_cache = ffd->combined_window_cache;
   rs->ver = -1;
 
-  if (ffd->rep_header_cache && !rep->txn_id)
+  if (ffd->rep_header_cache && !svn_fs_fs__id_txn_used(&rep->txn_id))
     SVN_ERR(svn_cache__get((void **) &rh, &is_cached,
                            ffd->rep_header_cache, &key, pool));
+
   if (is_cached)
     {
       /* we don't know the offset of the item */
@@ -727,7 +729,7 @@ create_rep_state_body(rep_state_t **rep_state,
       SVN_ERR(svn_fs_fs__read_rep_header(&rh, rs->file->stream, pool));
       SVN_ERR(get_file_offset(&rs->start, rs->file->file, pool));
 
-      if (!rep->txn_id)
+      if (! svn_fs_fs__id_txn_used(&rep->txn_id))
         {
           if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
             SVN_ERR(block_read(NULL, fs, rep->revision, rep->item_index,
@@ -851,7 +853,7 @@ svn_fs_fs__rep_chain_length(int *chain_length,
       base_rep.revision = header->base_revision;
       base_rep.item_index = header->base_item_index;
       base_rep.size = header->base_length;
-      base_rep.txn_id = NULL;
+      svn_fs_fs__id_txn_reset(&base_rep.txn_id);
       is_delta = header->is_delta;
 
       ++count;
@@ -1117,8 +1119,9 @@ build_rep_list(apr_array_header_t **list,
         SVN_ERR(create_rep_state(&rs, &rep_header, &shared_file,
                                  &rep, fs, pool));
 
-      if (!rep.txn_id)
+      if (!svn_fs_fs__id_txn_used(&rep.txn_id))
         SVN_ERR(get_cached_combined_window(window_p, rs, &is_cached, pool));
+
       if (is_cached)
         {
           /* We already have a reconstructed window in our cache.
@@ -1148,7 +1151,7 @@ build_rep_list(apr_array_header_t **list,
       rep.revision = rep_header->base_revision;
       rep.item_index = rep_header->base_item_index;
       rep.size = rep_header->base_length;
-      rep.txn_id = NULL;
+      svn_fs_fs__id_txn_reset(&rep.txn_id);
 
       rs = NULL;
     }
@@ -1839,7 +1842,7 @@ get_dir_contents(apr_hash_t *entries,
 {
   svn_stream_t *contents;
 
-  if (noderev->data_rep && noderev->data_rep->txn_id)
+  if (noderev->data_rep && svn_fs_fs__id_txn_used(&noderev->data_rep->txn_id))
     {
       const char *filename = path_txn_node_children(fs, noderev->id, pool);
 
@@ -2078,7 +2081,7 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
   apr_hash_t *proplist;
   svn_stream_t *stream;
 
-  if (noderev->prop_rep && noderev->prop_rep->txn_id)
+  if (noderev->prop_rep && svn_fs_fs__id_txn_used(&noderev->prop_rep->txn_id))
     {
       const char *filename = path_txn_node_props(fs, noderev->id, pool);
       proplist = apr_hash_make(pool);

@@ -193,6 +193,7 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
 
       /* Construct a representation_t. */
       rep = apr_pcalloc(iterpool, sizeof(*rep));
+      svn_fs_fs__id_txn_reset(&rep->txn_id);
       sha1_digest = svn_sqlite__column_text(stmt, 0, iterpool);
       err = svn_checksum_parse_hex(&rep->sha1_checksum,
                                    svn_checksum_sha1, sha1_digest,
@@ -250,6 +251,7 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
   if (have_row)
     {
       *rep = apr_pcalloc(pool, sizeof(**rep));
+      svn_fs_fs__id_txn_reset(&(*rep)->txn_id);
       (*rep)->sha1_checksum = svn_checksum_dup(checksum, pool);
       (*rep)->revision = svn_sqlite__column_revnum(stmt, 0);
       (*rep)->item_index = svn_sqlite__column_int64(stmt, 1);

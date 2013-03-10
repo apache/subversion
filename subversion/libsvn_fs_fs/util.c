@@ -245,10 +245,13 @@ path_txn_dir(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
  * within FS for the given SHA1 checksum.  Use POOL for allocations.
  */
 const char *
-path_txn_sha1(svn_fs_t *fs, const char *txn_id, svn_checksum_t *sha1,
+path_txn_sha1(svn_fs_t *fs,
+              const svn_fs_fs__id_part_t *txn_id,
+              svn_checksum_t *sha1,
               apr_pool_t *pool)
 {
-  return svn_dirent_join(path_txn_dir(fs, txn_id, pool),
+  const char *txn_id_str = svn_fs_fs__id_txn_unparse(txn_id, pool);
+  return svn_dirent_join(path_txn_dir(fs, txn_id_str, pool),
                          svn_checksum_to_cstring(sha1, pool),
                          pool);
 }
