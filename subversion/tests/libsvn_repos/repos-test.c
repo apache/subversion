@@ -2630,7 +2630,7 @@ reporter_depth_exclude(const svn_test_opts_t *opts,
 
   SVN_ERR(svn_repos_begin_report3(&report_baton, 2, repos, "/", "", NULL,
                                   TRUE, svn_depth_infinity, FALSE, FALSE,
-                                  editor, edit_baton, NULL, NULL, 16,
+                                  editor, edit_baton, NULL, NULL, 0,
                                   subpool));
   SVN_ERR(svn_repos_set_path3(report_baton, "", 1,
                               svn_depth_infinity,
@@ -2688,7 +2688,7 @@ reporter_depth_exclude(const svn_test_opts_t *opts,
 
   SVN_ERR(svn_repos_begin_report3(&report_baton, 2, repos, "/", "", NULL,
                                   TRUE, svn_depth_infinity, FALSE, FALSE,
-                                  editor, edit_baton, NULL, NULL, 20,
+                                  editor, edit_baton, NULL, NULL, 0,
                                   subpool));
   SVN_ERR(svn_repos_set_path3(report_baton, "", 1,
                               svn_depth_infinity,
