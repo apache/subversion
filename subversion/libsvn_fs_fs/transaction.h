@@ -56,7 +56,7 @@ svn_fs_fs__put_node_revision(svn_fs_t *fs,
 svn_error_t *
 svn_fs_fs__txn_changes_fetch(apr_hash_t **changed_paths_p,
                              svn_fs_t *fs,
-                             const char *txn_id,
+                             const svn_fs_fs__id_part_t *txn_id,
                              apr_pool_t *pool);
 
 /* Find the paths which were changed in revision REV of filesystem FS
@@ -99,7 +99,7 @@ svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
 svn_error_t *
 svn_fs_fs__get_txn(transaction_t **txn_p,
                    svn_fs_t *fs,
-                   const char *txn_id,
+                   const svn_fs_fs__id_part_t *txn_id,
                    apr_pool_t *pool);
 
 /* Return the next available copy_id in *COPY_ID for the transaction
@@ -107,7 +107,7 @@ svn_fs_fs__get_txn(transaction_t **txn_p,
 svn_error_t *
 svn_fs_fs__reserve_copy_id(svn_fs_fs__id_part_t *copy_id_p,
                            svn_fs_t *fs,
-                           const char *txn_id,
+                           const svn_fs_fs__id_part_t *txn_id,
                            apr_pool_t *pool);
 
 /* Create an entirely new mutable node in the filesystem FS, whose
@@ -120,7 +120,7 @@ svn_fs_fs__create_node(const svn_fs_id_t **id_p,
                        svn_fs_t *fs,
                        node_revision_t *noderev,
                        const svn_fs_fs__id_part_t *copy_id,
-                       const char *txn_id,
+                       const svn_fs_fs__id_part_t *txn_id,
                        apr_pool_t *pool);
 
 /* Remove all references to the transaction TXN_ID from filesystem FS.
@@ -141,7 +141,7 @@ svn_fs_fs__abort_txn(svn_fs_txn_t *txn,
    KIND.  Allocations are done in POOL. */
 svn_error_t *
 svn_fs_fs__set_entry(svn_fs_t *fs,
-                     const char *txn_id,
+                     const svn_fs_fs__id_part_t *txn_id,
                      node_revision_t *parent_noderev,
                      const char *name,
                      const svn_fs_id_t *id,
@@ -158,7 +158,7 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
    from POOL. */
 svn_error_t *
 svn_fs_fs__add_change(svn_fs_t *fs,
-                      const char *txn_id,
+                      const svn_fs_fs__id_part_t *txn_id,
                       const char *path,
                       const svn_fs_id_t *id,
                       svn_fs_path_change_kind_t change_kind,
@@ -198,7 +198,7 @@ svn_fs_fs__create_successor(const svn_fs_id_t **new_id_p,
                             const svn_fs_id_t *old_idp,
                             node_revision_t *new_noderev,
                             const svn_fs_fs__id_part_t *copy_id,
-                            const char *txn_id,
+                            const svn_fs_fs__id_part_t *txn_id,
                             apr_pool_t *pool);
 
 /* Write a new property list PROPLIST for node-revision NODEREV in
@@ -268,7 +268,7 @@ svn_error_t *
 svn_fs_fs__get_txn_ids(const svn_fs_id_t **root_id_p,
                        const svn_fs_id_t **base_root_id_p,
                        svn_fs_t *fs,
-                       const char *txn_name,
+                       const svn_fs_fs__id_part_t *txn_name,
                        apr_pool_t *pool);
 
 /* Find the value of the property named PROPNAME in transaction TXN.

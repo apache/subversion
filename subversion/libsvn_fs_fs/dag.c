@@ -334,7 +334,7 @@ set_entry(dag_node_t *parent,
           const char *name,
           const svn_fs_id_t *id,
           svn_node_kind_t kind,
-          const char *txn_id,
+          const svn_fs_fs__id_part_t *txn_id,
           apr_pool_t *pool)
 {
   node_revision_t *parent_noderev;
@@ -361,7 +361,7 @@ make_entry(dag_node_t **child_p,
            const char *parent_path,
            const char *name,
            svn_boolean_t is_dir,
-           const char *txn_id,
+           const svn_fs_fs__id_part_t *txn_id,
            apr_pool_t *pool)
 {
   const svn_fs_id_t *new_node_id;
@@ -455,7 +455,7 @@ svn_fs_fs__dag_set_entry(dag_node_t *node,
                          const char *entry_name,
                          const svn_fs_id_t *id,
                          svn_node_kind_t kind,
-                         const char *txn_id,
+                         const svn_fs_fs__id_part_t *txn_id,
                          apr_pool_t *pool)
 {
   /* Check it's a directory. */
@@ -619,7 +619,7 @@ svn_fs_fs__dag_revision_root(dag_node_t **node_p,
 svn_error_t *
 svn_fs_fs__dag_txn_root(dag_node_t **node_p,
                         svn_fs_t *fs,
-                        const char *txn_id,
+                        const svn_fs_fs__id_part_t *txn_id,
                         apr_pool_t *pool)
 {
   const svn_fs_id_t *root_id, *ignored;
@@ -632,7 +632,7 @@ svn_fs_fs__dag_txn_root(dag_node_t **node_p,
 svn_error_t *
 svn_fs_fs__dag_txn_base_root(dag_node_t **node_p,
                              svn_fs_t *fs,
-                             const char *txn_id,
+                             const svn_fs_fs__id_part_t *txn_id,
                              apr_pool_t *pool)
 {
   const svn_fs_id_t *base_root_id, *ignored;
@@ -648,7 +648,7 @@ svn_fs_fs__dag_clone_child(dag_node_t **child_p,
                            const char *parent_path,
                            const char *name,
                            const svn_fs_fs__id_part_t *copy_id,
-                           const char *txn_id,
+                           const svn_fs_fs__id_part_t *txn_id,
                            svn_boolean_t is_parent_copyroot,
                            apr_pool_t *pool)
 {
@@ -721,7 +721,7 @@ svn_fs_fs__dag_clone_child(dag_node_t **child_p,
 svn_error_t *
 svn_fs_fs__dag_clone_root(dag_node_t **root_p,
                           svn_fs_t *fs,
-                          const char *txn_id,
+                          const svn_fs_fs__id_part_t *txn_id,
                           apr_pool_t *pool)
 {
   const svn_fs_id_t *base_root_id, *root_id;
@@ -748,7 +748,7 @@ svn_fs_fs__dag_clone_root(dag_node_t **root_p,
 svn_error_t *
 svn_fs_fs__dag_delete(dag_node_t *parent,
                       const char *name,
-                      const char *txn_id,
+                      const svn_fs_fs__id_part_t *txn_id,
                       apr_pool_t *pool)
 {
   node_revision_t *parent_noderev;
@@ -872,7 +872,7 @@ svn_fs_fs__dag_make_file(dag_node_t **child_p,
                          dag_node_t *parent,
                          const char *parent_path,
                          const char *name,
-                         const char *txn_id,
+                         const svn_fs_fs__id_part_t *txn_id,
                          apr_pool_t *pool)
 {
   /* Call our little helper function */
@@ -885,7 +885,7 @@ svn_fs_fs__dag_make_dir(dag_node_t **child_p,
                         dag_node_t *parent,
                         const char *parent_path,
                         const char *name,
-                        const char *txn_id,
+                        const svn_fs_fs__id_part_t *txn_id,
                         apr_pool_t *pool)
 {
   /* Call our little helper function */
@@ -1190,7 +1190,7 @@ svn_fs_fs__dag_copy(dag_node_t *to_node,
                     svn_boolean_t preserve_history,
                     svn_revnum_t from_rev,
                     const char *from_path,
-                    const char *txn_id,
+                    const svn_fs_fs__id_part_t *txn_id,
                     apr_pool_t *pool)
 {
   const svn_fs_id_t *id;
