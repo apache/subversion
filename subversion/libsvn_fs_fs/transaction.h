@@ -25,6 +25,11 @@
 
 #include "fs.h"
 
+/* Return the transaction ID of TXN.
+ */
+const svn_fs_fs__id_part_t *
+svn_fs_fs__txn_get_id(svn_fs_txn_t *txn);
+
 /* Obtain a write lock on the filesystem FS in a subpool of POOL, call
    BODY with BATON and that subpool, destroy the subpool (releasing the write
    lock) and return what BODY returned. */

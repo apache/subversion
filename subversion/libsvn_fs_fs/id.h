@@ -80,7 +80,7 @@ const svn_fs_fs__id_part_t *svn_fs_fs__id_node_id(const svn_fs_id_t *id);
 const svn_fs_fs__id_part_t *svn_fs_fs__id_copy_id(const svn_fs_id_t *id);
 
 /* Get the "txn id" portion of ID, or NULL if it is a permanent ID. */
-const char *svn_fs_fs__id_txn_id(const svn_fs_id_t *id);
+const svn_fs_fs__id_part_t *svn_fs_fs__id_txn_id(const svn_fs_id_t *id);
 
 /* Get the "rev,item" portion of ID. */
 const svn_fs_fs__id_part_t *svn_fs_fs__id_rev_item(const svn_fs_id_t *id);
@@ -113,14 +113,14 @@ int svn_fs_fs__id_compare(const svn_fs_id_t *a,
                           const svn_fs_id_t *b);
 
 /* Create the txn root ID for transaction TXN_ID.  Allocate it in POOL. */
-svn_fs_id_t *svn_fs_fs__id_txn_create_root(const char *txn_id,
+svn_fs_id_t *svn_fs_fs__id_txn_create_root(const svn_fs_fs__id_part_t *txn_id,
                                            apr_pool_t *pool);
 
 /* Create an ID within a transaction based on NODE_ID, COPY_ID, and
    TXN_ID, allocated in POOL. */
 svn_fs_id_t *svn_fs_fs__id_txn_create(const svn_fs_fs__id_part_t *node_id,
                                       const svn_fs_fs__id_part_t *copy_id,
-                                      const char *txn_id,
+                                      const svn_fs_fs__id_part_t *txn_id,
                                       apr_pool_t *pool);
 
 /* Create a permanent ID based on NODE_ID, COPY_ID and REV_ITEM,

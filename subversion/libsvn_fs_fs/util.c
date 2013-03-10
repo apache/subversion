@@ -338,9 +338,11 @@ const char *
 path_txn_node_rev(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
 {
   char *filename = (char *)svn_fs_fs__id_unparse(id, pool)->data;
-  *strrchr(filename, '.') = '\0';
+  char *txn_id = strrchr(filename, '.');
+  *txn_id = '\0';
+  txn_id += 2;
 
-  return svn_dirent_join(path_txn_dir(fs, svn_fs_fs__id_txn_id(id), pool),
+  return svn_dirent_join(path_txn_dir(fs, txn_id, pool),
                          apr_psprintf(pool, PATH_PREFIX_NODE "%s",
                                       filename),
                          pool);
