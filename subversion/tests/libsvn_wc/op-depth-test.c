@@ -7800,7 +7800,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move_back (issue 4302)"),
     SVN_TEST_OPTS_PASS(move_update_subtree,
                        "move_update_subtree (issue 4232)"),
-    SVN_TEST_OPTS_XFAIL(move_parent_into_child,
+    SVN_TEST_OPTS_PASS(move_parent_into_child,
                        "move_parent_into_child (issue 4333)"),
     SVN_TEST_NULL
   };

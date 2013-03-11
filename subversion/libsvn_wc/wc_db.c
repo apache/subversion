@@ -7535,9 +7535,16 @@ delete_node(void *baton,
 
       if (op_root && moved_from_relpath)
         {
+          const char *part = svn_relpath_skip_ancestor(local_relpath,
+                                                       moved_from_relpath);
+            
           /* Existing move-root is moved to another location */
           moved_node = apr_palloc(scratch_pool, sizeof(struct moved_node_t));
-          moved_node->local_relpath = moved_from_relpath;
+          if (!part)
+            moved_node->local_relpath = moved_from_relpath;
+          else
+            moved_node->local_relpath = svn_relpath_join(b->moved_to_relpath,
+                                                         part, scratch_pool);
           moved_node->op_depth = move_op_depth;
           moved_node->moved_to_relpath = b->moved_to_relpath;
 
