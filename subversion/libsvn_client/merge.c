@@ -1595,7 +1595,7 @@ mark_dir_edited(merge_cmd_baton_t *merge_b,
                             local_abspath,
                             (db->tree_conflict_reason == CONFLICT_REASON_SKIP)
                                 ? svn_wc_notify_skip
-                                : svn_wc_notify_state_obstructed,
+                                : svn_wc_notify_update_skip_obstruction,
                             scratch_pool);
           notify->kind = svn_node_dir;
           notify->content_state = notify->prop_state = db->skip_reason;
