@@ -7646,7 +7646,7 @@ move_parent_into_child(const svn_test_opts_t *opts, apr_pool_t *pool)
       {1, "A",     "normal",       1, "A/B", FALSE, "A/A", TRUE},
       {1, "A/B",   "base-deleted", NO_COPY_FROM},
       {2, "A/A",   "normal",       1, "A", MOVED_HERE},
-      {2, "A/A/B", "normal",       1, "A", MOVED_HERE},
+      {2, "A/A/B", "normal",       1, "A/B", MOVED_HERE},
       {3, "A/A/B", "base-deleted", NO_COPY_FROM, "A"},
       {0}
     };
