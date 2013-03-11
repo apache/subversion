@@ -7,7 +7,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     *
 
   - Major new features:
-    *
+    * inheritable properties (r1395109)
 
   - Minor new features and improvements:
     * new 'svnadmin load --revision' load filtering support (issue #3734)
@@ -40,6 +40,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * 'svn' is now non-interactive when not run in a terminal device (r1424037)
     * 'svn propset' checks spelling of reserved property names.
     * improve working copy performance on network disks (issue #4176) 
+    * repos suggested config via svn:auto-props and svn:global-ignores (r1401908)
 
   - Client-side bugfixes:
     * 
