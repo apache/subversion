@@ -66,7 +66,6 @@ ramod_libdir = @libdir@
 bdb_libdir = @libdir@
 gnome_keyring_libdir = @libdir@
 gpg_agent_libdir = @libdir@
-gssapi_libdir = @libdir@
 kwallet_libdir = @libdir@
 serf_libdir = @libdir@
 bindir = @bindir@
