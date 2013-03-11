@@ -482,7 +482,7 @@ tc_editor_add_directory(void *baton,
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
       svn_error_clear(err);
-      old_kind = svn_kind_none;
+      old_kind = svn_node_none;
       move_dst_repos_relpath = NULL;
     }
   else
