@@ -1222,10 +1222,15 @@ INSERT INTO target_prop_cache(local_relpath, kind, properties)
                    AND a.local_relpath = n.local_relpath),
                n.properties)
    FROM targets_list AS t
-   JOIN nodes_current AS n ON t.wc_id= n.wc_id
-                          AND t.local_relpath = n.local_relpath
+   JOIN nodes AS n
+     ON n.wc_id = ?1
+    AND n.local_relpath = t.local_relpath
+    AND n.op_depth = (SELECT MAX(op_depth) FROM nodes AS n3
+                      WHERE n3.wc_id = ?1
+                        AND n3.local_relpath = t.local_relpath)
   WHERE t.wc_id = ?1
     AND (presence=MAP_NORMAL OR presence=MAP_INCOMPLETE)
+  ORDER BY t.local_relpath
 
 -- STMT_CACHE_TARGET_PRISTINE_PROPS
 INSERT INTO target_prop_cache(local_relpath, kind, properties)
@@ -1239,12 +1244,17 @@ INSERT INTO target_prop_cache(local_relpath, kind, properties)
                  ORDER BY p.op_depth DESC /* LIMIT 1 */)
           ELSE properties END
   FROM targets_list AS t
-  JOIN nodes_current AS n ON t.wc_id= n.wc_id
-                          AND t.local_relpath = n.local_relpath
+  JOIN nodes AS n
+    ON n.wc_id = ?1
+   AND n.local_relpath = t.local_relpath
+   AND n.op_depth = (SELECT MAX(op_depth) FROM nodes AS n3
+                     WHERE n3.wc_id = ?1
+                       AND n3.local_relpath = t.local_relpath)
   WHERE t.wc_id = ?1
     AND (presence = MAP_NORMAL
          OR presence = MAP_INCOMPLETE
          OR presence = MAP_BASE_DELETED)
+  ORDER BY t.local_relpath
 
 -- STMT_SELECT_ALL_TARGET_PROP_CACHE
 SELECT local_relpath, properties FROM target_prop_cache
