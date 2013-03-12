@@ -229,9 +229,27 @@ public interface ISVNClient
      *                  ignore patterns
      * @param addParents add any intermediate parents to the working copy
      * @throws ClientException
+     * @note this method behaves like the 1.8 version with noAutoProps=false
      */
     void add(String path, Depth depth, boolean force, boolean noIgnores,
              boolean addParents)
+        throws ClientException;
+
+    /**
+     * Adds a file to the repository.
+     * @param path      path to be added.
+     * @param depth     the depth to recurse into subdirectories
+     * @param force     if adding a directory and recurse true and path is a
+     *                  directory, all not already managed files are added.
+     * @param noIgnores if false, don't add files or directories matching
+     *                  ignore patterns
+     * @param noAutoProps if true, ignore any auto-props configuration
+     * @param addParents add any intermediate parents to the working copy
+     * @throws ClientException
+     * @since 1.8
+     */
+    void add(String path, Depth depth, boolean force,
+             boolean noIgnores, boolean noAutoProps, boolean addParents)
         throws ClientException;
 
     /**

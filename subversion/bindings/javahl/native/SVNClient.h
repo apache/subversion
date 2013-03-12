@@ -137,8 +137,8 @@ class SVNClient :public SVNBase
   jlongArray update(Targets &targets, Revision &revision, svn_depth_t depth,
                     bool depthIsSticky, bool makeParents, bool ignoreExternals,
                     bool allowUnverObstructions);
-  void add(const char *path, svn_depth_t depth, bool force, bool no_ignore,
-           bool add_parents);
+  void add(const char *path, svn_depth_t depth, bool force,
+           bool no_ignore, bool no_autoprops, bool add_parents);
   void revert(const char *path, svn_depth_t depth, StringArray &changelists);
   void remove(Targets &targets, CommitMessage *message, bool force,
               bool keep_local, RevpropTable &revprops,
