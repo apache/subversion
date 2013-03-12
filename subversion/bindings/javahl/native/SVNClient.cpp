@@ -606,7 +606,8 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
 
 void SVNClient::doImport(const char *path, const char *url,
                          CommitMessage *message, svn_depth_t depth,
-                         bool noIgnore, bool ignoreUnknownNodeTypes,
+                         bool noIgnore, bool noAutoProps,
+                         bool ignoreUnknownNodeTypes,
                          RevpropTable &revprops,
                          ImportFilterCallback *ifCallback,
                          CommitCallback *commitCallback)
@@ -624,7 +625,7 @@ void SVNClient::doImport(const char *path, const char *url,
         return;
 
     SVN_JNI_ERR(svn_client_import5(intPath.c_str(), intUrl.c_str(), depth,
-                                   noIgnore, FALSE, ignoreUnknownNodeTypes,
+                                   noIgnore, noAutoProps, ignoreUnknownNodeTypes,
                                    revprops.hash(subPool),
                                    ImportFilterCallback::callback, ifCallback,
                                    CommitCallback::callback, commitCallback,
