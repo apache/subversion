@@ -533,8 +533,8 @@ append_externals_as_explicit_targets(apr_array_header_t *rel_targets,
                          APR_ARRAY_IDX(externals, j,
                                        svn_wc__committable_external_info_t *);
 
-              if ((xinfo->kind == svn_kind_file && ! include_file_externals)
-                  || (xinfo->kind == svn_kind_dir && ! include_dir_externals))
+              if ((xinfo->kind == svn_node_file && ! include_file_externals)
+                  || (xinfo->kind == svn_node_dir && ! include_dir_externals))
                 continue;
 
               rel_target = svn_dirent_skip_ancestor(base_abspath,

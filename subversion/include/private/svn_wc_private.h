@@ -154,8 +154,8 @@ typedef struct svn_wc__committable_external_info_t {
    * from. */
   const char *repos_root_url;
 
-  /* Set to either svn_kind_file or svn_kind_dir. */
-  svn_kind_t kind;
+  /* Set to either svn_node_file or svn_node_dir. */
+  svn_node_kind_t kind;
 
 } svn_wc__committable_external_info_t;
 
@@ -1647,7 +1647,7 @@ typedef svn_error_t *
                                        svn_wc_notify_state_t *state,
                                        svn_wc_notify_state_t *prop_state,
                                        const char *relpath,
-                                       svn_kind_t kind,
+                                       svn_node_kind_t kind,
                                        svn_boolean_t before_op,
                                        svn_boolean_t for_add,
                                        svn_boolean_t for_delete,
@@ -1661,7 +1661,7 @@ typedef svn_error_t *
  */
 typedef svn_error_t *
         (*svn_wc__diff_state_close_t)(const char *relpath,
-                                      svn_kind_t kind,
+                                      svn_node_kind_t kind,
                                       void *state_baton,
                                       apr_pool_t *scratch_pool);
 

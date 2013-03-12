@@ -2302,19 +2302,19 @@ svn_wc__upgrade_add_external_info(svn_wc_context_t *wc_ctx,
                                   svn_revnum_t def_revision,
                                   apr_pool_t *scratch_pool)
 {
-  svn_kind_t db_kind;
+  svn_node_kind_t db_kind;
   switch (kind)
     {
       case svn_node_dir:
-        db_kind = svn_kind_dir;
+        db_kind = svn_node_dir;
         break;
 
       case svn_node_file:
-        db_kind = svn_kind_file;
+        db_kind = svn_node_file;
         break;
 
       case svn_node_unknown:
-        db_kind = svn_kind_unknown;
+        db_kind = svn_node_unknown;
         break;
 
       default:

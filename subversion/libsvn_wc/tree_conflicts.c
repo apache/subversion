@@ -38,6 +38,8 @@
 
 /* ### this should move to a more general location...  */
 /* A map for svn_node_kind_t values. */
+/* FIXME: this mapping defines a different representation of
+          svn_node_unknown than the one defined in token-map.h */
 static const svn_token_map_t node_kind_map[] =
 {
   { "none", svn_node_none },

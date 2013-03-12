@@ -198,7 +198,7 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
 {
   int i;
   svn_wc__db_status_t status;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   apr_hash_t *pristine_props = NULL;
   apr_hash_t *actual_props;
   apr_hash_t *new_actual_props;
@@ -310,7 +310,7 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
   {
     const char *dir_abspath;
 
-    if (kind == svn_kind_dir)
+    if (kind == svn_node_dir)
       dir_abspath = local_abspath;
     else
       dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
@@ -1867,7 +1867,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
 {
   enum svn_prop_kind prop_kind = svn_property_kind2(name);
   svn_wc__db_status_t status;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_wc__db_t *db = wc_ctx->db;
 
   /* we don't do entry properties here */
@@ -1913,7 +1913,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
   {
     const char *dir_abspath;
 
-    if (kind == svn_kind_dir)
+    if (kind == svn_node_dir)
       dir_abspath = local_abspath;
     else
       dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
@@ -1922,7 +1922,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
     SVN_ERR(svn_wc__write_check(db, dir_abspath, scratch_pool));
   }
 
-  if (depth == svn_depth_empty || kind != svn_kind_dir)
+  if (depth == svn_depth_empty || kind != svn_node_dir)
     {
       apr_hash_t *changelist_hash = NULL;
 
@@ -1935,7 +1935,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
         return SVN_NO_ERROR;
 
       SVN_ERR(do_propset(wc_ctx->db, local_abspath,
-                         kind == svn_kind_dir
+                         kind == svn_node_dir
                             ? svn_node_dir
                             : svn_node_file,
                          name, value, skip_checks,

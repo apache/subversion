@@ -673,14 +673,11 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
     }
   else
     {
-      svn_kind_t res_kind;
-
       /* Any other error, raise to caller. */
       if (err)
         return svn_error_trace(err);
 
-      SVN_ERR(svn_ra_serf__get_resource_type(&res_kind, props));
-      *kind = svn__node_kind_from_kind(res_kind);
+      SVN_ERR(svn_ra_serf__get_resource_type(kind, props));
     }
 
   return SVN_NO_ERROR;
@@ -956,11 +953,11 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
 static svn_error_t *
 resource_is_directory(apr_hash_t *props)
 {
-  svn_kind_t kind;
+  svn_node_kind_t kind;
 
   SVN_ERR(svn_ra_serf__get_resource_type(&kind, props));
 
-  if (kind != svn_kind_dir)
+  if (kind != svn_node_dir)
     {
       return svn_error_create(SVN_ERR_FS_NOT_DIRECTORY, NULL,
                               _("Can't get entries of non-directory"));

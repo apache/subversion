@@ -224,7 +224,7 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
   svn_stream_t *pristine_stream;
   svn_filesize_t pristine_size;
   svn_wc__db_status_t status;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   const svn_checksum_t *checksum;
   svn_filesize_t recorded_size;
   apr_time_t recorded_mod_time;
@@ -245,7 +245,7 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
   /* If we don't have a pristine or the node has a status that allows a
      pristine, just say that the node is modified */
   if (!checksum
-      || (kind != svn_kind_file)
+      || (kind != svn_node_file)
       || ((status != svn_wc__db_status_normal)
           && (status != svn_wc__db_status_added)))
     {

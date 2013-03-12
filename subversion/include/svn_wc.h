@@ -5457,7 +5457,7 @@ svn_wc_crawl_revisions(const char *path,
 svn_error_t *
 svn_wc_check_root(svn_boolean_t *is_wcroot,
                   svn_boolean_t *is_switched,
-                  svn_kind_t *kind,
+                  svn_node_kind_t *kind,
                   svn_wc_context_t *wc_ctx,
                   const char *local_abspath,
                   apr_pool_t *scratch_pool);
@@ -8113,7 +8113,7 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
  * Set @a kind to the #svn_node_kind_t of @a abspath.  Use @a wc_ctx to access
  * the working copy, and @a scratch_pool for all temporary allocations.
  *
- * If @a abspath is not under version control, set @a kind to #svn_kind_none.
+ * If @a abspath is not under version control, set @a kind to #svn_node_none.
  *
  * If @a show_hidden and @a show_deleted are both @c FALSE, the kind of
  * scheduled for delete, administrative only 'not present' and excluded

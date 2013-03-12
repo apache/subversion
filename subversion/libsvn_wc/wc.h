@@ -740,7 +740,7 @@ struct svn_wc__shim_fetch_baton_t
 
 /* Using a BATON of struct shim_fetch_baton, return KIND for PATH. */
 svn_error_t *
-svn_wc__fetch_kind_func(svn_kind_t *kind,
+svn_wc__fetch_kind_func(svn_node_kind_t *kind,
                         void *baton,
                         const char *path,
                         svn_revnum_t base_revision,

@@ -542,7 +542,7 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
 
 
 svn_error_t *
-svn_wc__fetch_kind_func(svn_kind_t *kind,
+svn_wc__fetch_kind_func(svn_node_kind_t *kind,
                         void *baton,
                         const char *path,
                         svn_revnum_t base_revision,

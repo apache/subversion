@@ -1131,29 +1131,27 @@ svn_client__ra_provide_props(apr_hash_t **props,
 
 
 svn_error_t *
-svn_client__ra_get_copysrc_kind(svn_kind_t *kind,
+svn_client__ra_get_copysrc_kind(svn_node_kind_t *kind,
                                 void *baton,
                                 const char *repos_relpath,
                                 svn_revnum_t src_revision,
                                 apr_pool_t *scratch_pool)
 {
   struct ra_ev2_baton *reb = baton;
-  svn_node_kind_t node_kind;
   const char *local_abspath;
 
   local_abspath = apr_hash_get(reb->relpath_map, repos_relpath,
                                APR_HASH_KEY_STRING);
   if (!local_abspath)
     {
-      *kind = svn_kind_unknown;
+      *kind = svn_node_unknown;
       return SVN_NO_ERROR;
     }
 
   /* ### what to do with SRC_REVISION?  */
 
-  SVN_ERR(svn_wc_read_kind2(&node_kind, reb->wc_ctx, local_abspath,
+  SVN_ERR(svn_wc_read_kind2(kind, reb->wc_ctx, local_abspath,
                             FALSE, FALSE, scratch_pool));
-  *kind = svn__kind_from_node_kind(node_kind, FALSE);
 
   return SVN_NO_ERROR;
 }

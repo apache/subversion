@@ -315,7 +315,7 @@ svn_client__ra_provide_props(apr_hash_t **props,
 
 
 svn_error_t *
-svn_client__ra_get_copysrc_kind(svn_kind_t *kind,
+svn_client__ra_get_copysrc_kind(svn_node_kind_t *kind,
                                 void *baton,
                                 const char *repos_relpath,
                                 svn_revnum_t src_revision,

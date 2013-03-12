@@ -1301,7 +1301,7 @@ svn_ra_serf__set_prop(apr_hash_t *props, const char *path,
                       const svn_string_t *val, apr_pool_t *pool);
 
 svn_error_t *
-svn_ra_serf__get_resource_type(svn_kind_t *kind,
+svn_ra_serf__get_resource_type(svn_node_kind_t *kind,
                                apr_hash_t *props);
 
 

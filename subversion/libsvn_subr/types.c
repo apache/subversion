@@ -121,37 +121,6 @@ svn_depth_from_word(const char *word)
   return svn_depth_unknown;
 }
 
-svn_node_kind_t
-svn__node_kind_from_kind(svn_kind_t kind)
-{
-  switch (kind)
-    {
-    case svn_kind_unknown:  return svn_node_unknown;
-    case svn_kind_none:     return svn_node_none;
-    case svn_kind_file:     return svn_node_file;
-    case svn_kind_dir:      return svn_node_dir;
-    case svn_kind_symlink:  return svn_node_file;
-    default: SVN_ERR_MALFUNCTION_NO_RETURN();
-    }
-}
-
-svn_kind_t
-svn__kind_from_node_kind(svn_node_kind_t kind,
-                         svn_boolean_t is_symlink)
-{
-  if (is_symlink)
-    return svn_kind_symlink;
-
-  switch (kind)
-    {
-    case svn_node_unknown:  return svn_kind_unknown;
-    case svn_node_none:     return svn_kind_none;
-    case svn_node_file:     return svn_kind_file;
-    case svn_node_dir:      return svn_kind_dir;
-    default: SVN_ERR_MALFUNCTION_NO_RETURN();
-    }
-}
-
 const char *
 svn_node_kind_to_word(svn_node_kind_t kind)
 {
@@ -163,6 +132,8 @@ svn_node_kind_to_word(svn_node_kind_t kind)
       return "file";
     case svn_node_dir:
       return "dir";
+    case svn_node_symlink:
+      return "symlink";
     case svn_node_unknown:
     default:
       return "unknown";
@@ -182,6 +153,8 @@ svn_node_kind_from_word(const char *word)
     return svn_node_file;
   else if (strcmp(word, "dir") == 0)
     return svn_node_dir;
+  else if (strcmp(word, "symlink") == 0)
+    return svn_node_symlink;
   else
     /* This also handles word == "unknown" */
     return svn_node_unknown;
