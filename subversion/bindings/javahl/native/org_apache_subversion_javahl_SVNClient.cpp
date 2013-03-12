@@ -418,7 +418,8 @@ Java_org_apache_subversion_javahl_SVNClient_revert
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_add
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jdepth,
- jboolean jforce, jboolean jnoIgnore, jboolean jaddParents)
+ jboolean jforce, jboolean jnoIgnore, jboolean jnoAutoProps,
+ jboolean jaddParents)
 {
   JNIEntry(SVNClient, add);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -431,8 +432,11 @@ Java_org_apache_subversion_javahl_SVNClient_add
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->add(path, EnumMapper::toDepth(jdepth), jforce ? true : false,
-          jnoIgnore ? true : false, jaddParents ? true : false);
+  cl->add(path, EnumMapper::toDepth(jdepth),
+          jforce ? true : false,
+          jnoIgnore ? true : false,
+          jnoAutoProps ? true : false,
+          jaddParents ? true : false);
 }
 
 JNIEXPORT jlongArray JNICALL

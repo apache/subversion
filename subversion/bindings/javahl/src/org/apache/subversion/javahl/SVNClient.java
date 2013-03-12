@@ -172,8 +172,16 @@ public class SVNClient implements ISVNClient
             throws ClientException;
 
     public native void add(String path, Depth depth, boolean force,
-                           boolean noIgnores, boolean addParents)
+                           boolean noIgnores, boolean noAutoProps,
+                           boolean addParents)
         throws ClientException;
+
+    public void add(String path, Depth depth, boolean force,
+                    boolean noIgnores, boolean addParents)
+        throws ClientException
+    {
+        add(path, depth, force, noIgnores, false, addParents);
+    }
 
     public native long[] update(Set<String> paths, Revision revision,
                                 Depth depth, boolean depthIsSticky,

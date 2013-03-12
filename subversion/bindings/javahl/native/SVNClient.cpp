@@ -352,7 +352,8 @@ void SVNClient::revert(const char *path, svn_depth_t depth,
 }
 
 void SVNClient::add(const char *path,
-                    svn_depth_t depth, bool force, bool no_ignore,
+                    svn_depth_t depth, bool force,
+                    bool no_ignore, bool no_autoprops,
                     bool add_parents)
 {
     SVN::Pool subPool(pool);
@@ -365,8 +366,8 @@ void SVNClient::add(const char *path,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_add4(intPath.c_str(), depth, force,
-                                no_ignore, add_parents, ctx,
+    SVN_JNI_ERR(svn_client_add5(intPath.c_str(), depth, force,
+                                no_ignore, no_autoprops, add_parents, ctx,
                                 subPool.getPool()), );
 }
 
