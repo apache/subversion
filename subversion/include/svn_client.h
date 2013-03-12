@@ -2139,7 +2139,7 @@ svn_client_commit6(const apr_array_header_t *targets,
 
 /**
  * Similar to svn_client_commit6(), but passes @a include_file_externals as
- * TRUE and @a include_dir_externals as FALSE.
+ * FALSE and @a include_dir_externals as FALSE.
  * @since New in 1.7.
  */
 svn_error_t *
