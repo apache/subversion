@@ -734,7 +734,8 @@ Java_org_apache_subversion_javahl_SVNClient_doSwitch
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_doImport
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jurl, jobject jdepth,
- jboolean jnoIgnore, jboolean jignoreUnknownNodeTypes, jobject jrevpropTable,
+ jboolean jnoIgnore, jboolean jnoAutoProps,
+ jboolean jignoreUnknownNodeTypes, jobject jrevpropTable,
  jobject jimportFilterCallback, jobject jmessage, jobject jcommitCallback)
 {
   JNIEntry(SVNClient, doImport);
@@ -764,7 +765,7 @@ Java_org_apache_subversion_javahl_SVNClient_doImport
   CommitCallback commitCallback(jcommitCallback);
 
   cl->doImport(path, url, &message, EnumMapper::toDepth(jdepth),
-               jnoIgnore ? true : false,
+               jnoIgnore ? true : false, jnoAutoProps ? true : false,
                jignoreUnknownNodeTypes ? true : false, revprops,
                jimportFilterCallback ? &importFilterCallback : NULL,
                jcommitCallback ? &commitCallback : NULL);

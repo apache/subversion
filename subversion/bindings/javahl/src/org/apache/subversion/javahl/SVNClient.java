@@ -237,7 +237,7 @@ public class SVNClient implements ISVNClient
             throws ClientException;
 
     public native void doImport(String path, String url, Depth depth,
-                                boolean noIgnore,
+                                boolean noIgnore, boolean noAutoProps,
                                 boolean ignoreUnknownNodeTypes,
                                 Map<String, String> revpropTable,
                                 ImportFilterCallback importFilterCallback,
@@ -252,7 +252,7 @@ public class SVNClient implements ISVNClient
                          CommitCallback callback)
             throws ClientException
     {
-        doImport(path, url, depth, noIgnore, ignoreUnknownNodeTypes,
+        doImport(path, url, depth, noIgnore, false, ignoreUnknownNodeTypes,
                  revpropTable, null, handler, callback);
     }
 

@@ -419,22 +419,45 @@ public interface ISVNClient
      * @param url       the target url
      * @param depth     depth to traverse into subdirectories
      * @param noIgnore  whether to add files matched by ignore patterns
+     * @param noAutoProps if true, ignore any auto-props configuration
+     * @param ignoreUnknownNodeTypes whether to ignore files which
+     *                  the node type is not konwn, just as pipes
+     * @param revpropTable A string-to-string mapping of revision properties
+     *                     to values which will be set if this operation
+     *                     results in a commit.
+     * @param messageHandler   the commit message callback
+     * @param commitCallback   the commit status callback
+     * @throws ClientException
+     * @since 1.8
+     */
+    void doImport(String path, String url, Depth depth,
+                  boolean noIgnore, boolean noAutoProps,
+                  boolean ignoreUnknownNodeTypes,
+                  Map<String, String> revpropTable,
+                  ImportFilterCallback importFilterCallback,
+                  CommitMessageCallback messageHandler,
+                  CommitCallback commitCallback)
+            throws ClientException;
+
+
+    /**
+     * Import a file or directory into a repository directory  at
+     * head.
+     * @param path      the local path
+     * @param url       the target url
+     * @param depth     depth to traverse into subdirectories
+     * @param noIgnore  whether to add files matched by ignore patterns
      * @param ignoreUnknownNodeTypes whether to ignore files which
      *                  the node type is not konwn, just as pipes
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
      * @param handler   the commit message callback
+     * @param callback  the commit status callback
      * @throws ClientException
-     *
+     * @note this method behaves like the 1.8 version with noAutoProps=false
+     *       and without the filtering option.
      */
-    void doImport(String path, String url, Depth depth,
-                  boolean noIgnore, boolean ignoreUnknownNodeTypes,
-                  Map<String, String> revpropTable,
-                  ImportFilterCallback importFilterCallback,
-                  CommitMessageCallback handler, CommitCallback commitCallback)
-            throws ClientException;
-
     void doImport(String path, String url, Depth depth,
                   boolean noIgnore, boolean ignoreUnknownNodeTypes,
                   Map<String, String> revpropTable,

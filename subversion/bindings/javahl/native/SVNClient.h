@@ -107,7 +107,8 @@ class SVNClient :public SVNBase
   void mergeReintegrate(const char *path, Revision &pegRevision,
                         const char *localPath, bool dryRun);
   void doImport(const char *path, const char *url, CommitMessage *message,
-                svn_depth_t depth, bool noIgnore, bool ignoreUnknownNodeTypes,
+                svn_depth_t depth, bool noIgnore, bool noAutoProps,
+                bool ignoreUnknownNodeTypes,
                 RevpropTable &revprops, ImportFilterCallback *ifCallback,
                 CommitCallback *commitCallback);
   jlong doSwitch(const char *path, const char *url, Revision &revision,
