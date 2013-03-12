@@ -206,7 +206,7 @@ public class SVNClient implements ISVNClient
 
     public native void move(Set<String> srcPaths, String destPath,
                             boolean force, boolean moveAsChild,
-                            boolean makeParents,
+                            boolean makeParents, boolean metadataOnly,
                             Map<String, String> revpropTable,
                             CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;

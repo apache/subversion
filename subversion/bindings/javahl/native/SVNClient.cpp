@@ -465,8 +465,8 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
 
 void SVNClient::move(Targets &srcPaths, const char *destPath,
                      CommitMessage *message, bool force, bool moveAsChild,
-                     bool makeParents, RevpropTable &revprops,
-                     CommitCallback *callback)
+                     bool makeParents, bool metadataOnly,
+                     RevpropTable &revprops, CommitCallback *callback)
 {
     SVN::Pool subPool(pool);
 
@@ -480,9 +480,12 @@ void SVNClient::move(Targets &srcPaths, const char *destPath,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_move6((apr_array_header_t *) srcs,
+    SVN_JNI_ERR(svn_client_move7((apr_array_header_t *) srcs,
                                  destinationPath.c_str(), moveAsChild,
-                                 makeParents, revprops.hash(subPool),
+                                 makeParents,
+                                 FALSE /* allow_mixed_revisions */,
+                                 metadataOnly,
+                                 revprops.hash(subPool),
                                  CommitCallback::callback, callback, ctx,
                                  subPool.getPool()), );
 }

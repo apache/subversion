@@ -322,6 +322,7 @@ public interface ISVNClient
      * @param moveAsChild Whether to move <code>srcPaths</code> as
      * children of <code>destPath</code>.
      * @param makeParents Whether to create intermediate parents.
+     * @param metadataOnly Move just the metadata and not the working files/dirs
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
@@ -330,7 +331,7 @@ public interface ISVNClient
      * @throws ClientException If the move operation fails.
      */
     void move(Set<String> srcPaths, String destPath, boolean force,
-              boolean moveAsChild, boolean makeParents,
+              boolean moveAsChild, boolean makeParents, boolean metadataOnly,
               Map<String, String> revpropTable,
               CommitMessageCallback handler, CommitCallback callback)
         throws ClientException;

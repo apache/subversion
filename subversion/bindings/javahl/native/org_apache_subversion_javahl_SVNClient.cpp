@@ -552,7 +552,8 @@ JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_move
 (JNIEnv *env, jobject jthis, jobject jsrcPaths, jstring jdestPath,
  jboolean jforce, jboolean jmoveAsChild, jboolean jmakeParents,
- jobject jrevpropTable, jobject jmessage, jobject jcallback)
+ jboolean jmetadataOnly, jobject jrevpropTable, jobject jmessage,
+ jobject jcallback)
 {
   JNIEntry(SVNClient, move);
 
@@ -582,6 +583,7 @@ Java_org_apache_subversion_javahl_SVNClient_move
   CommitCallback callback(jcallback);
   cl->move(srcPaths, destPath, &message, jforce ? true : false,
            jmoveAsChild ? true : false, jmakeParents ? true : false,
+           jmetadataOnly ? true: false,
            revprops, jcallback ? &callback : NULL);
 }
 
