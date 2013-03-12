@@ -2141,7 +2141,9 @@ svn_client_commit6(const apr_array_header_t *targets,
  * Similar to svn_client_commit6(), but passes @a include_file_externals as
  * FALSE and @a include_dir_externals as FALSE.
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_commit5(const apr_array_header_t *targets,
                    svn_depth_t depth,
