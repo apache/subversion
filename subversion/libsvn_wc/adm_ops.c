@@ -113,7 +113,7 @@ process_committed_leaf(svn_wc__db_t *db,
                        const char *local_abspath,
                        svn_boolean_t via_recurse,
                        svn_wc__db_status_t status,
-                       svn_kind_t kind,
+                       svn_node_kind_t kind,
                        svn_boolean_t prop_mods,
                        const svn_checksum_t *old_checksum,
                        svn_revnum_t new_revnum,
@@ -133,7 +133,7 @@ process_committed_leaf(svn_wc__db_t *db,
   {
     const char *adm_abspath;
 
-    if (kind == svn_kind_dir)
+    if (kind == svn_node_dir)
       adm_abspath = local_abspath;
     else
       adm_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
@@ -167,7 +167,7 @@ process_committed_leaf(svn_wc__db_t *db,
                  || status == svn_wc__db_status_incomplete
                  || status == svn_wc__db_status_added);
 
-  if (kind != svn_kind_dir)
+  if (kind != svn_node_dir)
     {
       /* If we sent a delta (meaning: post-copy modification),
          then this file will appear in the queue and so we should have
@@ -241,7 +241,7 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
                                    apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   const svn_checksum_t *old_checksum;
   svn_boolean_t prop_mods;
 
@@ -264,7 +264,7 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
                                  scratch_pool));
 
   /* Only check for recursion on nodes that have children */
-  if (kind != svn_kind_file
+  if (kind != svn_node_file
       || status == svn_wc__db_status_not_present
       || status == svn_wc__db_status_excluded
       || status == svn_wc__db_status_server_excluded
@@ -579,7 +579,7 @@ check_can_add_to_parent(const char **repos_root_url,
 {
   const char *parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
   svn_wc__db_status_t parent_status;
-  svn_kind_t parent_kind;
+  svn_node_kind_t parent_kind;
   svn_error_t *err;
 
   SVN_ERR(svn_wc__write_check(db, parent_abspath, scratch_pool));
@@ -612,7 +612,7 @@ check_can_add_to_parent(const char **repos_root_url,
                           svn_dirent_local_style(local_abspath,
                                                  scratch_pool));
     }
-  else if (parent_kind != svn_kind_dir)
+  else if (parent_kind != svn_node_dir)
     return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                              _("Can't schedule an addition of '%s'"
                                " below a not-directory node"),

@@ -365,7 +365,7 @@ svn_wc__sync_flags_with_props(svn_boolean_t *did_set,
                               apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_wc__db_lock_t *lock;
   apr_hash_t *props = NULL;
   svn_boolean_t had_props;
@@ -388,7 +388,7 @@ svn_wc__sync_flags_with_props(svn_boolean_t *did_set,
      early-out for all other types.
 
      Also bail if there is no in-wc representation of the file. */
-  if (kind != svn_kind_file
+  if (kind != svn_node_file
       || (status != svn_wc__db_status_normal
           && status != svn_wc__db_status_added))
     return SVN_NO_ERROR;

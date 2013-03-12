@@ -1143,14 +1143,13 @@ fetch_props_func(apr_hash_t **props,
 }
 
 static svn_error_t *
-fetch_kind_func(svn_kind_t *kind,
+fetch_kind_func(svn_node_kind_t *kind,
                 void *baton,
                 const char *path,
                 svn_revnum_t base_revision,
                 apr_pool_t *scratch_pool)
 {
   struct replay_baton_t *rb = baton;
-  svn_node_kind_t node_kind;
 
   if (svn_path_is_url(path))
     path = svn_uri_skip_ancestor(rb->to_root, path, scratch_pool);
@@ -1161,9 +1160,8 @@ fetch_kind_func(svn_kind_t *kind,
     base_revision = rb->current_revision - 1;
 
   SVN_ERR(svn_ra_check_path(rb->extra_to_session, path, base_revision,
-                            &node_kind, scratch_pool));
+                            kind, scratch_pool));
 
-  *kind = svn__kind_from_node_kind(node_kind, FALSE);
   return SVN_NO_ERROR;
 }
 

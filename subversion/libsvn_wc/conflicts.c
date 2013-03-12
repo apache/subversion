@@ -1283,7 +1283,7 @@ generate_propconflict(svn_boolean_t *conflict_remains,
   svn_wc_conflict_result_t *result = NULL;
   svn_wc_conflict_description2_t *cdesc;
   const char *dirpath = svn_dirent_dirname(local_abspath, scratch_pool);
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   const svn_string_t *new_value = NULL;
 
   SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath,
@@ -1292,7 +1292,7 @@ generate_propconflict(svn_boolean_t *conflict_remains,
                                FALSE /* show_hidden */,
                                scratch_pool));
 
-  if (kind == svn_kind_none)
+  if (kind == svn_node_none)
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                              _("The node '%s' was not found."),
                              svn_dirent_local_style(local_abspath,
@@ -1300,7 +1300,7 @@ generate_propconflict(svn_boolean_t *conflict_remains,
 
   cdesc = svn_wc_conflict_description_create_prop2(
                 local_abspath,
-                (kind == svn_kind_dir) ? svn_node_dir : svn_node_file,
+                (kind == svn_node_dir) ? svn_node_dir : svn_node_file,
                 propname, scratch_pool);
 
   cdesc->operation = operation;
@@ -3075,7 +3075,7 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
                           void *notify_baton,
                           apr_pool_t *scratch_pool)
 {
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_boolean_t conflicted;
   struct conflict_status_walker_baton cswb;
 
@@ -3097,7 +3097,7 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
 
   /* When the implementation still used the entry walker, depth
      unknown was translated to infinity. */
-  if (kind != svn_kind_dir)
+  if (kind != svn_node_dir)
     depth = svn_depth_empty;
   else if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;

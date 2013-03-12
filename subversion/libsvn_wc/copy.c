@@ -171,7 +171,7 @@ copy_to_tmpdir(svn_skel_t **work_item,
    versioned file itself.
 
    This also works for versioned symlinks that are stored in the db as
-   svn_kind_file with svn:special set. */
+   svn_node_file with svn:special set. */
 static svn_error_t *
 copy_versioned_file(svn_wc__db_t *db,
                     const char *src_abspath,
@@ -381,7 +381,7 @@ copy_versioned_dir(svn_wc__db_t *db,
           || info->status == svn_wc__db_status_added)
         {
           /* We have more work to do than just changing the DB */
-          if (info->kind == svn_kind_file)
+          if (info->kind == svn_node_file)
             {
               /* We should skip this node if this child is a file external
                  (issues #3589, #4000) */
@@ -397,7 +397,7 @@ copy_versioned_dir(svn_wc__db_t *db,
                                             NULL, NULL,
                                             iterpool));
             }
-          else if (info->kind == svn_kind_dir)
+          else if (info->kind == svn_node_dir)
             SVN_ERR(copy_versioned_dir(db,
                                        child_src_abspath, child_dst_abspath,
                                        dst_op_root_abspath, tmpdir_abspath,
@@ -524,7 +524,7 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
              apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = wc_ctx->db;
-  svn_kind_t src_db_kind;
+  svn_node_kind_t src_db_kind;
   const char *dstdir_abspath;
   svn_boolean_t conflicted;
   const char *tmpdir_abspath;
@@ -762,8 +762,8 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
                                          cancel_func, cancel_baton,
                                          scratch_pool));
 
-  if (src_db_kind == svn_kind_file
-      || src_db_kind == svn_kind_symlink)
+  if (src_db_kind == svn_node_file
+      || src_db_kind == svn_node_symlink)
     {
       err = copy_versioned_file(db, src_abspath, dst_abspath, dst_abspath,
                                 tmpdir_abspath,
@@ -954,7 +954,7 @@ remove_all_conflict_markers(svn_wc__db_t *db,
                             svn_dirent_join(wc_dir_abspath, name, iterpool),
                             iterpool));
         }
-      if (info->kind == svn_kind_dir)
+      if (info->kind == svn_node_dir)
         {
           svn_pool_clear(iterpool);
           SVN_ERR(remove_all_conflict_markers(
@@ -983,7 +983,7 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
 {
   svn_wc__db_t *db = wc_ctx->db;
   svn_boolean_t move_degraded_to_copy = FALSE;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_boolean_t conflicted;
 
   /* Verify that we have the required write locks. */
@@ -1028,7 +1028,7 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
                                db, src_abspath,
                                scratch_pool, scratch_pool));
 
-  if (kind == svn_kind_dir)
+  if (kind == svn_node_dir)
     SVN_ERR(remove_all_conflict_markers(db, src_abspath, dst_abspath,
                                         scratch_pool));
 

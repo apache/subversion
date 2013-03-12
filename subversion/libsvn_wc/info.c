@@ -85,7 +85,7 @@ build_info_for_node(svn_wc__info2_t **info,
   svn_wc__info2_t *tmpinfo;
   const char *repos_relpath;
   svn_wc__db_status_t status;
-  svn_kind_t db_kind;
+  svn_node_kind_t db_kind;
   const char *original_repos_relpath;
   const char *original_repos_root_url;
   const char *original_uuid;

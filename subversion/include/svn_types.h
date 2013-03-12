@@ -216,33 +216,7 @@ svn__apr_hash_index_val(const apr_hash_index_t *hi);
 
 
 
-/** A node kind.
- *
- * @since New in 1.8. Replaces svn_node_kind_t.
- */
-typedef enum svn_kind_t
-{
-  /** something's here, but we don't know what */
-  svn_kind_unknown,
-
-  /** absent */
-  svn_kind_none,
-
-  /** regular file */
-  svn_kind_file,
-
-  /** directory */
-  svn_kind_dir,
-
-  /** symbolic link */
-  svn_kind_symlink
-
-} svn_kind_t;
-
-/** The various types of nodes in the Subversion filesystem.
- *
- * This type is superseded by #svn_kind_t and will be deprecated when
- * transition to the new type is complete. */
+/** The various types of nodes in the Subversion filesystem. */
 typedef enum svn_node_kind_t
 {
   /** absent */
@@ -255,7 +229,14 @@ typedef enum svn_node_kind_t
   svn_node_dir,
 
   /** something's here, but we don't know what */
-  svn_node_unknown
+  svn_node_unknown,
+
+  /**
+   * symbolic link
+   * @note This value is not currently used by the public API.
+   * @since New in 1.8.
+   */
+  svn_node_symlink
 } svn_node_kind_t;
 
 /** Return a constant string expressing @a kind as an English word, e.g.,
@@ -276,24 +257,6 @@ svn_node_kind_to_word(svn_node_kind_t kind);
  */
 svn_node_kind_t
 svn_node_kind_from_word(const char *word);
-
-/** Return the #svn_node_kind_t corresponding to the given #svn_kind_t;
- * #svn_kind_symlink will become #svn_node_file.
- *
- * @since New in 1.8.
- */
-svn_node_kind_t
-svn__node_kind_from_kind(svn_kind_t kind);
-
-/** Return the #svn_kind_t corresponding to the given #svn_node_kind_t,
- * or #svn_kind_symlink if @a is_symlink is true.
- *
- * @since New in 1.8.
- */
-svn_kind_t
-svn__kind_from_node_kind(svn_node_kind_t kind,
-                         svn_boolean_t is_symlink);
-
 
 
 /** Generic three-state property to represent an unknown value for values
