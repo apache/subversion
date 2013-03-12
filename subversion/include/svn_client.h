@@ -5558,7 +5558,7 @@ svn_client_list3(const char *path_or_url,
 
 
 /** Similar to svn_client_list3(), but with @a include_externals set to FALSE, 
- * and using a #svn_client_list_func2_t as callback.
+ * and using a #svn_client_list_func_t as callback.
  *
  * @deprecated Provided for backwards compatibility with the 1.7 API.
  *
