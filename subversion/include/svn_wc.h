@@ -5671,6 +5671,10 @@ typedef svn_error_t *(*svn_wc_dirents_func_t)(void *baton,
  * the ambient depth filtering, so this doesn't have to be handled in the
  * editor.
  *
+ * If @a clean_checkout is TRUE, assume that we are checking out into an
+ * empty directory, and so bypass a number of conflict checks that are
+ * unnecessary in this case.
+ *
  * If @a fetch_dirents_func is not NULL, the update editor may call this
  * callback, when asked to perform a depth restricted update. It will do this
  * before returning the editor to allow using the primary ra session for this.
