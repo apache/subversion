@@ -352,6 +352,10 @@ svn_boolean_t
 svn_utf__cstring_is_valid(const char *data)
 {
   int state = FSM_START;
+
+  if (!data)
+    return FALSE;
+
   data = first_non_fsm_start_char_cstring(data);
 
   while (*data)
@@ -368,6 +372,10 @@ svn_utf__is_valid(const char *data, apr_size_t len)
 {
   const char *end = data + len;
   int state = FSM_START;
+
+  if (!data)
+    return FALSE;
+
   data = first_non_fsm_start_char(data, len);
 
   while (data < end)
