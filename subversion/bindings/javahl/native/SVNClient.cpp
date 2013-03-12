@@ -425,8 +425,9 @@ void SVNClient::commit(Targets &targets, CommitMessage *message,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_commit5(targets2, depth,
-                                   noUnlock, keepChangelist, TRUE,
+    SVN_JNI_ERR(svn_client_commit6(targets2, depth,
+                                   noUnlock, keepChangelist,
+                                   TRUE, TRUE, TRUE,
                                    changelists.array(subPool),
                                    revprops.hash(subPool),
                                    CommitCallback::callback, callback,
