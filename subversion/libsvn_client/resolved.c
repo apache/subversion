@@ -77,5 +77,7 @@ svn_client_resolve(const char *path,
   err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
                                                                  lock_abspath,
                                                                  pool));
+  svn_io_sleep_for_timestamps(path, pool);
+
   return svn_error_trace(err);
 }

@@ -900,53 +900,73 @@ update_working_file(const char *local_relpath,
 
   if (!svn_checksum_match(new_version->checksum, old_version->checksum))
     {
-      /*
-       * Run a 3-way merge to update the file, using the pre-update
-       * pristine text as the merge base, the post-update pristine
-       * text as the merge-left version, and the current content of the
-       * moved-here working file as the merge-right version.
-       */
-      SVN_ERR(svn_wc__db_pristine_get_path(&old_pristine_abspath,
-                                           db, wcroot->abspath,
-                                           old_version->checksum,
-                                           scratch_pool, scratch_pool));
-      SVN_ERR(svn_wc__db_pristine_get_path(&new_pristine_abspath,
-                                           db, wcroot->abspath,
-                                           new_version->checksum,
-                                           scratch_pool, scratch_pool));
-      SVN_ERR(svn_wc__internal_merge(&work_item, &conflict_skel,
-                                     &merge_outcome, db,
-                                     old_pristine_abspath,
-                                     new_pristine_abspath,
-                                     local_abspath,
-                                     local_abspath,
-                                     NULL, NULL, NULL, /* diff labels */
-                                     actual_props,
-                                     FALSE, /* dry-run */
-                                     NULL, /* diff3-cmd */
-                                     NULL, /* merge options */
-                                     propchanges,
-                                     NULL, NULL, /* cancel_func + baton */
-                                     scratch_pool, scratch_pool));
+      svn_boolean_t is_locally_modified;
 
-      work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
-
-      if (merge_outcome == svn_wc_merge_conflict)
+      SVN_ERR(svn_wc__internal_file_modified_p(&is_locally_modified,
+                                               db, local_abspath,
+                                               FALSE /* exact_comparison */,
+                                               scratch_pool));
+      if (!is_locally_modified)
         {
-          content_state = svn_wc_notify_state_conflicted;
+          SVN_ERR(svn_wc__wq_build_file_install(&work_item, db,
+                                                local_abspath,
+                                                NULL,
+                                                FALSE /* FIXME: use_commit_times? */,
+                                                TRUE  /* record_file_info */,
+                                                scratch_pool, scratch_pool));
+
+          work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
+
+          content_state = svn_wc_notify_state_changed;
         }
       else
         {
-          svn_boolean_t is_locally_modified;
-          
-          SVN_ERR(svn_wc__internal_file_modified_p(&is_locally_modified,
-                                                   db, local_abspath,
-                                                   FALSE /* exact_comparison */,
-                                                   scratch_pool));
-          if (is_locally_modified)
-            content_state = svn_wc_notify_state_merged;
+          /*
+           * Run a 3-way merge to update the file, using the pre-update
+           * pristine text as the merge base, the post-update pristine
+           * text as the merge-left version, and the current content of the
+           * moved-here working file as the merge-right version.
+           */
+          SVN_ERR(svn_wc__db_pristine_get_path(&old_pristine_abspath,
+                                               db, wcroot->abspath,
+                                               old_version->checksum,
+                                               scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_pristine_get_path(&new_pristine_abspath,
+                                               db, wcroot->abspath,
+                                               new_version->checksum,
+                                               scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__internal_merge(&work_item, &conflict_skel,
+                                         &merge_outcome, db,
+                                         old_pristine_abspath,
+                                         new_pristine_abspath,
+                                         local_abspath,
+                                         local_abspath,
+                                         NULL, NULL, NULL, /* diff labels */
+                                         actual_props,
+                                         FALSE, /* dry-run */
+                                         NULL, /* diff3-cmd */
+                                         NULL, /* merge options */
+                                         propchanges,
+                                         NULL, NULL, /* cancel_func + baton */
+                                         scratch_pool, scratch_pool));
+
+          work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
+
+          if (merge_outcome == svn_wc_merge_conflict)
+            {
+              content_state = svn_wc_notify_state_conflicted;
+            }
           else
-            content_state = svn_wc_notify_state_changed;
+            {
+              SVN_ERR(svn_wc__internal_file_modified_p(&is_locally_modified,
+                                                       db, local_abspath,
+                                                       FALSE /* exact_comparison */,
+                                                       scratch_pool));
+              if (is_locally_modified)
+                content_state = svn_wc_notify_state_merged;
+              else
+                content_state = svn_wc_notify_state_changed;
+            }
         }
     }
   else
