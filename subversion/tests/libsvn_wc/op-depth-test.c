@@ -6634,8 +6634,8 @@ finite_move_update_bump(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_update(&b, "", 1));
   SVN_ERR(sbox_wc_move(&b, "A/B", "B2"));
   SVN_ERR(sbox_wc_move(&b, "P/Q", "Q2"));
-  SVN_ERR(sbox_wc_update_depth(&b, "A/B", 2, svn_depth_files));
-  SVN_ERR(sbox_wc_update_depth(&b, "P/Q", 2, svn_depth_files));
+  SVN_ERR(sbox_wc_update_depth(&b, "A/B", 2, svn_depth_files, FALSE));
+  SVN_ERR(sbox_wc_update_depth(&b, "P/Q", 2, svn_depth_files, FALSE));
   SVN_ERR(check_tree_conflict_repos_path(&b, "A/B", NULL, NULL));
   err = sbox_wc_resolve(&b, "A/B", svn_depth_empty,
                         svn_wc_conflict_choose_mine_conflict);
@@ -6666,8 +6666,8 @@ finite_move_update_bump(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_update(&b, "", 1));
   SVN_ERR(sbox_wc_move(&b, "A/B", "B2"));
   SVN_ERR(sbox_wc_move(&b, "P", "P2"));
-  SVN_ERR(sbox_wc_update_depth(&b, "A/B", 2, svn_depth_immediates));
-  SVN_ERR(sbox_wc_update_depth(&b, "P", 2, svn_depth_immediates));
+  SVN_ERR(sbox_wc_update_depth(&b, "A/B", 2, svn_depth_immediates, FALSE));
+  SVN_ERR(sbox_wc_update_depth(&b, "P", 2, svn_depth_immediates, FALSE));
   SVN_ERR(check_tree_conflict_repos_path(&b, "P", NULL, NULL));
   err = sbox_wc_resolve(&b, "P", svn_depth_empty,
                         svn_wc_conflict_choose_mine_conflict);
@@ -6700,8 +6700,8 @@ finite_move_update_bump(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_update(&b, "", 1));
   SVN_ERR(sbox_wc_move(&b, "A/B/C", "C2"));
   SVN_ERR(sbox_wc_move(&b, "P/Q", "Q2"));
-  SVN_ERR(sbox_wc_update_depth(&b, "A/B/C", 2, svn_depth_empty));
-  SVN_ERR(sbox_wc_update_depth(&b, "P/Q", 2, svn_depth_empty));
+  SVN_ERR(sbox_wc_update_depth(&b, "A/B/C", 2, svn_depth_empty, FALSE));
+  SVN_ERR(sbox_wc_update_depth(&b, "P/Q", 2, svn_depth_empty, FALSE));
   SVN_ERR(check_tree_conflict_repos_path(&b, "P/Q", NULL, NULL));
   err = sbox_wc_resolve(&b, "P/Q", svn_depth_empty,
                         svn_wc_conflict_choose_mine_conflict);
@@ -7672,6 +7672,43 @@ move_parent_into_child(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+move_depth_expand(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "move_depth_expand", opts, pool));
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A/A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A/A/A/A"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_update(&b, "", 0));
+
+  SVN_ERR(sbox_wc_update_depth(&b, "", 1, svn_depth_immediates, FALSE));
+  SVN_ERR(sbox_wc_update_depth(&b, "A", 1, svn_depth_immediates, FALSE));
+
+  SVN_ERR(sbox_wc_move(&b, "A", "C"));
+  SVN_ERR(sbox_wc_mkdir(&b, "C/A/A"));
+
+  SVN_ERR(sbox_wc_update_depth(&b, "", 1, svn_depth_infinity, TRUE));
+
+  /* This causes a segfault */
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+
+  /*{
+    nodes_row_t nodes[] = {
+      // TODO
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }*/
+
+  return SVN_NO_ERROR;
+}
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
@@ -7818,5 +7855,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move_update_subtree (issue 4232)"),
     SVN_TEST_OPTS_PASS(move_parent_into_child,
                        "move_parent_into_child (issue 4333)"),
+    SVN_TEST_OPTS_XFAIL(move_depth_expand,
+                       "move depth expansion"),
     SVN_TEST_NULL
   };
