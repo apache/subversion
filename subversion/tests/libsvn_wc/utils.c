@@ -333,7 +333,7 @@ sbox_wc_update_depth(svn_test__sandbox_t *b,
   SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
   ctx->wc_ctx = b->wc_ctx;
   return svn_client_update4(&result_revs, paths, &revision, depth,
-                            TRUE, FALSE, FALSE, FALSE, FALSE,
+                            sticky, FALSE, FALSE, FALSE, FALSE,
                             ctx, b->pool);
 }
 
