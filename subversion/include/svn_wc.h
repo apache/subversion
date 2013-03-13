@@ -1604,8 +1604,6 @@ typedef enum svn_wc_conflict_reason_t
   svn_wc_conflict_reason_replaced,
   /** Object is moved away. @since New in 1.8. */
   svn_wc_conflict_reason_moved_away,
-  /** Object is moved away & replaced. @since New in 1.8. */
-  svn_wc_conflict_reason_moved_away_replaced,
   /** Object is moved here. @since New in 1.8. */
   svn_wc_conflict_reason_moved_here
 
