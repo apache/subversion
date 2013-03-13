@@ -7687,8 +7687,8 @@ move_depth_expand(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_commit(&b, ""));
   SVN_ERR(sbox_wc_update(&b, "", 0));
 
-  SVN_ERR(sbox_wc_update_depth(&b, "", 1, svn_depth_immediates, FALSE));
-  SVN_ERR(sbox_wc_update_depth(&b, "A", 1, svn_depth_immediates, FALSE));
+  SVN_ERR(sbox_wc_update_depth(&b, "", 1, svn_depth_immediates, TRUE));
+  SVN_ERR(sbox_wc_update_depth(&b, "A", 1, svn_depth_immediates, TRUE));
 
   SVN_ERR(sbox_wc_move(&b, "A", "C"));
   SVN_ERR(sbox_wc_mkdir(&b, "C/A/A"));
