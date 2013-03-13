@@ -326,6 +326,7 @@ mark_tree_conflict(const char *local_relpath,
 
   if (reason != svn_wc_conflict_reason_unversioned)
     {
+      SVN_ERR_ASSERT(old_repos_relpath != NULL);
       conflict_old_version = svn_wc_conflict_version_create2(
                                old_version->repos_url, old_version->repos_uuid,
                                old_repos_relpath, old_version->peg_rev,

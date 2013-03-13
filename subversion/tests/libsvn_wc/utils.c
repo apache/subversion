@@ -317,7 +317,8 @@ svn_error_t *
 sbox_wc_update_depth(svn_test__sandbox_t *b,
                      const char *path,
                      svn_revnum_t revnum,
-                     svn_depth_t depth)
+                     svn_depth_t depth,
+                     svn_boolean_t sticky)
 {
   svn_client_ctx_t *ctx;
   apr_array_header_t *result_revs;
@@ -332,14 +333,14 @@ sbox_wc_update_depth(svn_test__sandbox_t *b,
   SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
   ctx->wc_ctx = b->wc_ctx;
   return svn_client_update4(&result_revs, paths, &revision, depth,
-                            FALSE, FALSE, FALSE, FALSE, FALSE,
+                            TRUE, FALSE, FALSE, FALSE, FALSE,
                             ctx, b->pool);
 }
 
 svn_error_t *
 sbox_wc_update(svn_test__sandbox_t *b, const char *path, svn_revnum_t revnum)
 {
-  SVN_ERR(sbox_wc_update_depth(b, path, revnum, svn_depth_infinity));
+  SVN_ERR(sbox_wc_update_depth(b, path, revnum, svn_depth_unknown, FALSE));
   return SVN_NO_ERROR;
 }
 
