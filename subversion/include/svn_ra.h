@@ -1078,7 +1078,7 @@ svn_ra_get_mergeinfo(svn_ra_session_t *session,
                      apr_pool_t *pool);
 
 /**
- * Ask the RA layer to update a working copy.
+ * Ask the RA layer to update a working copy to a new revision.
  *
  * The client initially provides an @a update_editor/@a update_baton to the
  * RA layer; this editor contains knowledge of where the change will
@@ -1120,6 +1120,11 @@ svn_ra_get_mergeinfo(svn_ra_session_t *session,
  * needed, and sending too much data back, a pre-1.5 'recurse'
  * directive may be sent to the server, based on @a depth.
  *
+ * @note This differs from calling svn_ra_do_switch3() with the current
+ * URL of the target node.  Update changes only the revision numbers,
+ * leaving any switched subtrees still switched, whereas switch changes
+ * every node in the tree to a child of the same URL.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
@@ -1156,35 +1161,14 @@ svn_ra_do_update(svn_ra_session_t *session,
 
 
 /**
- * Ask the RA layer to 'switch' a working copy to a new
- * @a switch_url;  it's another form of svn_ra_do_update().
+ * Ask the RA layer to switch a working copy to a new revision and URL.
  *
- * The client initially provides a @a switch_editor/@a switch_baton to the RA
- * layer; this editor contains knowledge of where the change will
- * begin in the working copy (when open_root() is called).
+ * This is similar to svn_ra_do_update2(), but also changes the URL of
+ * every node in the target tree to a child of the @a switch_url.  In
+ * contrast, update changes only the revision numbers, leaving any
+ * switched subtrees still switched.
  *
- * In return, the client receives a @a reporter/@a report_baton.  The
- * client then describes its working copy by making calls into the
- * @a reporter.
- *
- * When finished, the client calls @a reporter->finish_report().  The
- * RA layer then does a complete drive of @a switch_editor, ending with
- * close_edit(), to switch the working copy.
- *
- * @a switch_target is an optional single path component will restrict
- * the scope of things affected by the switch to an entry in the
- * directory represented by the @a session's URL, or empty if the
- * entire directory is meant to be switched.
- *
- * Switch the target only as deeply as @a depth indicates.
- *
- * The working copy will be switched to @a revision_to_switch_to, or the
- * "latest" revision if this arg is invalid.
- *
- * If @a send_copyfrom_args is TRUE, then ask the server to send
- * copyfrom arguments to add_file() and add_directory() when possible.
- * (Note: this means that any subsequent txdeltas coming from the
- * server are presumed to apply against the copied file!)
+ * The other differences from svn_ra_do_update2() are:
  *
  * Use @a ignore_ancestry to control whether or not items being
  * switched will be checked for relatedness first.  Unrelated items
@@ -1192,20 +1176,8 @@ svn_ra_do_update(svn_ra_session_t *session,
  * and the addition of another, but if this flag is @c TRUE,
  * unrelated items will be diffed as if they were related.
  *
- * The caller may not perform any RA operations using
- * @a session before finishing the report, and may not perform
- * any RA operations using @a session from within the editing
- * operations of @a switch_editor.
- *
  * Use @a result_pool for memory allocation and @a scratch_pool for
  * temporary work.
- *
- * @note The reporter provided by this function does NOT supply copy-
- * from information to the diff editor callbacks.
- *
- * @note In order to prevent pre-1.5 servers from doing more work than
- * needed, and sending too much data back, a pre-1.5 'recurse'
- * directive may be sent to the server, based on @a depth.
  *
  * @note Pre Subversion 1.8 svnserve based servers always ignore ancestry
  * and never send copyfrom data.
