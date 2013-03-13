@@ -323,6 +323,9 @@ public interface ISVNClient
      * children of <code>destPath</code>.
      * @param makeParents Whether to create intermediate parents.
      * @param metadataOnly Move just the metadata and not the working files/dirs
+     * @param allowMixRev If true use copy and delete without move tracking
+     *                    when a srcPath is mixed-revision, if false return
+     *                    an error when a srcPath is mixed-revision.
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
@@ -332,7 +335,7 @@ public interface ISVNClient
      */
     void move(Set<String> srcPaths, String destPath, boolean force,
               boolean moveAsChild, boolean makeParents, boolean metadataOnly,
-              Map<String, String> revpropTable,
+              boolean allowMixRev, Map<String, String> revpropTable,
               CommitMessageCallback handler, CommitCallback callback)
         throws ClientException;
 

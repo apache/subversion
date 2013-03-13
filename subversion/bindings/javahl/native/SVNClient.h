@@ -126,7 +126,7 @@ class SVNClient :public SVNBase
              RevpropTable &revprops, CommitCallback *callback);
   void move(Targets &srcPaths, const char *destPath,
             CommitMessage *message, bool force, bool moveAsChild,
-            bool makeParents, bool metadataOnly,
+            bool makeParents, bool metadataOnly, bool allowMixRev,
             RevpropTable &revprops, CommitCallback *callback);
   void copy(CopySources &copySources, const char *destPath,
             CommitMessage *message, bool copyAsChild, bool makeParents,
