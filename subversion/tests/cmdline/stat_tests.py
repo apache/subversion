@@ -630,7 +630,16 @@ def get_text_timestamp(path):
     if re.match("^Text Last Updated", line):
       return line
   logger.warn("Didn't find text-time for %s", path)
-  raise svntest.Failure
+  raise svntest.Failure("didn't find text-time")
+
+def no_text_timestamp(path):
+  "ensure no text-time for path using svn info"
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'info', path)
+  for line in out:
+    if re.match("^Text Last Updated", line):
+      logger.warn("Found text-time for %s", path)
+      raise svntest.Failure("found text-time")
 
 # Helper for timestamp_behaviour test
 def text_time_behaviour(wc_dir, wc_path, status_path, expected_status, cmd):
@@ -2015,6 +2024,74 @@ def status_case_changed(sbox):
                                                 expected_status)
 
 
+def move_update_timestamps(sbox):
+  "timestamp behaviour for move-update"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_append('A/B/E/beta', 'X\nY\nZ\n', truncate=True)
+  sbox.simple_commit()
+  sbox.simple_append('A/B/E/alpha', 'modified alpha')
+  sbox.simple_append('A/B/E/beta', 'XX\nY\nZ\n', truncate=True)
+  sbox.simple_commit()
+  sbox.simple_update('', 2)
+
+  sbox.simple_append('A/B/E/beta', 'local beta')
+  src_time = get_text_timestamp(sbox.ospath('A/B/E/alpha'))
+  sbox.simple_move("A/B/E", "A/B/E2")
+  alpha_dst_time = get_text_timestamp(sbox.ospath('A/B/E2/alpha'))
+  beta_dst_time = get_text_timestamp(sbox.ospath('A/B/E2/beta'))
+  if src_time != alpha_dst_time:
+    raise svntest.Failure("move failed to copy timestamp")
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E'       : Item(status='  ', treeconflict='C'),
+    'A/B/E/alpha' : Item(status='  ', treeconflict='U'),
+    'A/B/E/beta'  : Item(status='  ', treeconflict='U'),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak('A/B/E',
+                        status='D ', treeconflict='C', moved_to='A/B/E2')
+  expected_status.tweak('A/B/E/alpha', 'A/B/E/beta', status='D ')
+  expected_status.add({
+      'A/B/E2'       : Item(status='A ', wc_rev='-', copied='+',
+                            moved_from='A/B/E'),
+      'A/B/E2/alpha' : Item(status='  ', wc_rev='-', copied='+'),
+      'A/B/E2/beta'  : Item(status='M ', wc_rev='-', copied='+'),
+      })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
+  expected_disk.add({
+      'A/B/E2'       : Item(),
+      'A/B/E2/alpha' : Item("This is the file 'alpha'.\n"),
+      'A/B/E2/beta'  : Item("X\nY\nZ\nlocal beta"),
+      })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+  time.sleep(1.1)
+  svntest.actions.run_and_verify_svn("resolve failed", None, [],
+                                     'resolve',
+                                     '--accept=mine-conflict',
+                                     sbox.ospath('A/B/E'))
+  expected_status.tweak('A/B/E', treeconflict=None)
+  expected_status.tweak('A/B/E2/beta', status='M ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  expected_disk.tweak('A/B/E2/beta', contents="XX\nY\nZ\nlocal beta")
+  expected_disk.tweak('A/B/E2/alpha', contents="This is the file 'alpha'.\nmodified alpha")
+  svntest.actions.verify_disk(wc_dir, expected_disk)
+
+  # alpha is pristine so gets a new timestamp
+  new_time = get_text_timestamp(sbox.ospath('A/B/E2/alpha'))
+  if new_time == alpha_dst_time:
+    raise svntest.Failure("move failed to update timestamp")
+
+  # beta is modified so timestamp is removed
+  no_text_timestamp(sbox.ospath('A/B/E2/beta'))
+
 ########################################################################
 # Run the tests
 
@@ -2061,6 +2138,7 @@ test_list = [ None,
               status_not_present,
               status_unversioned_dir,
               status_case_changed,
+              move_update_timestamps,
              ]
 
 if __name__ == '__main__':
