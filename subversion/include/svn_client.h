@@ -4561,7 +4561,8 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  * If @a allow_mixed_revisions is @c FALSE, #SVN_ERR_WC_MIXED_REVISIONS
  * will be raised if the move source is a mixed-revision subtree.
  * If @a allow_mixed_revisions is TRUE, a mixed-revision move source is
- * allowed. This parameter should be set to FALSE except where backwards
+ * allowed but the move will degrade to a copy and a delete without local
+ * move tracking. This parameter should be set to FALSE except where backwards
  * compatibility to svn_client_move6() is required.
  *
  * If @a metadata_only is @c TRUE and moving a file in a working copy,
