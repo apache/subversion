@@ -1604,6 +1604,8 @@ typedef enum svn_wc_conflict_reason_t
   svn_wc_conflict_reason_replaced,
   /** Object is moved away. @since New in 1.8. */
   svn_wc_conflict_reason_moved_away,
+  /** Object is moved away & replaced. @since New in 1.8. */
+  svn_wc_conflict_reason_moved_away_replaced,
   /** Object is moved here. @since New in 1.8. */
   svn_wc_conflict_reason_moved_here
 
@@ -6764,13 +6766,13 @@ typedef enum svn_wc_merge_outcome_t
  * svn_diff_file_options_parse()).  @a merge_options must contain
  * <tt>const char *</tt> elements.
  *
- * If @a merge_props_state is non-NULL @a prop_diff is merged before
- * merging the text. (If @a merge_props_state is NULL, no property changes
- * are merged and @a prop_diff is only used to determine the merge result)
- * The result of the property merge is stored in @a *merge_props_state. If
- * there is a conflict and @a dry_run is @c FALSE, then attempt to call @a
- * conflict_func with @a conflict_baton (if non-NULL).  If the conflict
- * callback cannot resolve the conflict, then a property conflict is installed.
+ * If @a merge_props_state is non-NULL, merge @a prop_diff into the
+ * working properties before merging the text.  (If @a merge_props_state
+ * is NULL, do not merge any property changes; in this case, @a prop_diff
+ * is only used to help determine the text merge result.)  Handle any
+ * conflicts as described for svn_wc_merge_props3(), with the parameters
+ * @a dry_run, @a conflict_func and @a conflict_baton.  Return the
+ * outcome of the property merge in @a *merge_props_state.
  *
  * The outcome of the text merge is returned in @a *merge_content_outcome. If
  * there is a conflict and @a dry_run is @c FALSE, then attempt to call @a
@@ -6957,9 +6959,12 @@ svn_wc_merge(const char *left,
  * If @a state is non-NULL, set @a *state to the state of the properties
  * after the merge.
  *
- * If conflicts are found when merging working properties, they are
- * described in a temporary .prej file (or appended to an already-existing
- * .prej file), and the entry is marked "conflicted".
+ * If a conflict is found when merging a property, and @a dry_run is
+ * false and @a conflict_func is not null, then call @a conflict_func
+ * with @a conflict_baton and a description of the conflict.  If any
+ * conflicts are not resolved by such callbacks, describe the unresolved
+ * conflicts in a temporary .prej file (or append to an already-existing
+ * .prej file) and mark the path as conflicted in the WC DB.
  *
  * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at various
  * points during the operation.  If it returns an error (typically
