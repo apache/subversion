@@ -169,12 +169,13 @@ void SVNClient::list(const char *url, Revision &revision,
     Path urlPath(url, subPool);
     SVN_JNI_ERR(urlPath.error_occurred(), );
 
-    SVN_JNI_ERR(svn_client_list2(urlPath.c_str(),
+    SVN_JNI_ERR(svn_client_list3(urlPath.c_str(),
                                  pegRevision.revision(),
                                  revision.revision(),
                                  depth,
                                  direntFields,
                                  fetchLocks,
+                                 FALSE, // include_externals
                                  ListCallback::callback,
                                  callback,
                                  ctx, subPool.getPool()), );
@@ -427,7 +428,9 @@ void SVNClient::commit(Targets &targets, CommitMessage *message,
 
     SVN_JNI_ERR(svn_client_commit6(targets2, depth,
                                    noUnlock, keepChangelist,
-                                   TRUE, TRUE, TRUE,
+                                   TRUE,
+                                   FALSE, // include_file_externals
+                                   FALSE, // include_dir_externals
                                    changelists.array(subPool),
                                    revprops.hash(subPool),
                                    CommitCallback::callback, callback,
