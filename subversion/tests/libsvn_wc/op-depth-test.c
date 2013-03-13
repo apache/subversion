@@ -7682,20 +7682,24 @@ move_depth_expand(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_mkdir(&b, "A/A"));
   SVN_ERR(sbox_wc_mkdir(&b, "A/A/A"));
   SVN_ERR(sbox_wc_mkdir(&b, "A/A/A/A"));
-  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A/A/A"));
-  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A/A/A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/A/A"));
   SVN_ERR(sbox_wc_commit(&b, ""));
   SVN_ERR(sbox_wc_update(&b, "", 0));
 
   SVN_ERR(sbox_wc_update_depth(&b, "", 1, svn_depth_immediates, TRUE));
   SVN_ERR(sbox_wc_update_depth(&b, "A", 1, svn_depth_immediates, TRUE));
+  /* Make A/B not present */
+  SVN_ERR(sbox_wc_update_depth(&b, "A/B", 0, svn_depth_immediates, TRUE));
 
   SVN_ERR(sbox_wc_move(&b, "A", "C"));
-  SVN_ERR(sbox_wc_mkdir(&b, "C/A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "C/A/A")); /* Local addition obstruction */
+  SVN_ERR(sbox_wc_copy(&b, "C/A", "C/B")); /* Copied obstruction */
 
   SVN_ERR(sbox_wc_update_depth(&b, "", 1, svn_depth_infinity, TRUE));
 
-  /* This causes a segfault */
+  /* This used to cause a segfault. Now it asserts in a different place */
   SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
                           svn_wc_conflict_choose_mine_conflict));
 
@@ -7855,7 +7859,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move_update_subtree (issue 4232)"),
     SVN_TEST_OPTS_PASS(move_parent_into_child,
                        "move_parent_into_child (issue 4333)"),
-    SVN_TEST_OPTS_PASS(move_depth_expand,
+    SVN_TEST_OPTS_XFAIL(move_depth_expand,
                        "move depth expansion"),
     SVN_TEST_NULL
   };
