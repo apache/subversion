@@ -795,7 +795,18 @@ tc_editor_alter_directory(void *baton,
                                     b->wcroot, dst_relpath,
                                     relpath_depth(b->move_root_dst_relpath),
                                     scratch_pool, scratch_pool));
-  SVN_ERR_ASSERT(move_dst_revision == expected_move_dst_revision);
+
+  /* If the node would be recorded as svn_wc__db_status_base_deleted it
+     wouldn't have a repos_relpath */
+  /* ### Can svn_wc__db_depth_get_info() do this for us without this hint? */
+  if (status == svn_wc__db_status_deleted && move_dst_repos_relpath)
+    status = svn_wc__db_status_not_present;
+
+  /* There might be not-present nodes of a different revision as the same
+     depth as a copy. This is commonly caused by copying/moving mixed revision
+     directories */
+  SVN_ERR_ASSERT(move_dst_revision == expected_move_dst_revision
+                 || status == svn_wc__db_status_not_present);
   SVN_ERR_ASSERT(move_dst_kind == svn_node_dir);
 
   SVN_ERR(check_tree_conflict(&is_conflicted, b, dst_relpath,
@@ -1019,15 +1030,24 @@ tc_editor_alter_file(void *baton,
   svn_node_kind_t move_dst_kind;
   working_node_version_t old_version, new_version;
   svn_boolean_t is_conflicted;
+  svn_wc__db_status_t status;
 
-  SVN_ERR(svn_wc__db_depth_get_info(NULL, &move_dst_kind, &move_dst_revision,
+  SVN_ERR(svn_wc__db_depth_get_info(&status, &move_dst_kind, &move_dst_revision,
                                     &move_dst_repos_relpath, NULL, NULL, NULL,
                                     NULL, NULL, &old_version.checksum, NULL,
                                     NULL, &old_version.props,
                                     b->wcroot, dst_relpath,
                                     relpath_depth(b->move_root_dst_relpath),
                                     scratch_pool, scratch_pool));
-  SVN_ERR_ASSERT(move_dst_revision == expected_move_dst_revision);
+
+  /* If the node would be recorded as svn_wc__db_status_base_deleted it
+     wouldn't have a repos_relpath */
+  /* ### Can svn_wc__db_depth_get_info() do this for us without this hint? */
+  if (status == svn_wc__db_status_deleted && move_dst_repos_relpath)
+    status = svn_wc__db_status_not_present;
+
+  SVN_ERR_ASSERT(move_dst_revision == expected_move_dst_revision
+                 || status == svn_wc__db_status_not_present);
   SVN_ERR_ASSERT(move_dst_kind == svn_node_file);
 
   SVN_ERR(check_tree_conflict(&is_conflicted, b, dst_relpath,

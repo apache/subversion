@@ -168,12 +168,12 @@ print_row(const nodes_row_t *row,
     props = "";
 
   if (row->repo_revnum == SVN_INVALID_REVNUM)
-    return apr_psprintf(result_pool, "%d, %s, %s%s%s%s%s",
+    return apr_psprintf(result_pool, "%d, \"%s\", \"%s\"%s%s%s%s",
                         row->op_depth, row->local_relpath, row->presence,
                         moved_here_str, moved_to_str,
                         file_external_str, props);
   else
-    return apr_psprintf(result_pool, "%d, %s, %s, %s ^/%s@%d%s%s%s%s",
+    return apr_psprintf(result_pool, "%d, \"%s\", \"%s\", %s ^/%s@%d%s%s%s%s",
                         row->op_depth, row->local_relpath, row->presence,
                         row->op_depth == 0 ? "base" : "copyfrom",
                         row->repo_relpath, (int)row->repo_revnum,
@@ -7722,17 +7722,55 @@ move_depth_expand(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   SVN_ERR(sbox_wc_update_depth(&b, "", 1, svn_depth_infinity, TRUE));
 
-  /* This used to cause a segfault. Now it asserts in a different place */
+  /* This used to cause a segfault. Then it asserted in a different place */
   SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
                           svn_wc_conflict_choose_mine_conflict));
 
-  /*{
+  /* And now verify that there are no not-present nodes left and a
+     consistent working copy */
+  {
     nodes_row_t nodes[] = {
-      // TODO
+      {0, "",        "normal",       1, "" },
+
+      {0, "A",       "normal",       1, "A" },
+      {0, "A/A",     "normal",       1, "A/A" },
+      {0, "A/A/A",   "normal",       1, "A/A/A" },
+      {0, "A/A/A/A", "normal",       1, "A/A/A/A" },
+      {0, "A/B",     "normal",       1, "A/B" },
+      {0, "A/B/A",   "normal",       1, "A/B/A" },
+      {0, "A/B/A/A", "normal",       1, "A/B/A/A" },
+
+      {1, "A",       "base-deleted", NO_COPY_FROM, "C" },
+      {1, "A/A",     "base-deleted", NO_COPY_FROM },
+      {1, "A/A/A",   "base-deleted", NO_COPY_FROM },
+      {1, "A/B",     "base-deleted", NO_COPY_FROM },
+      {1, "A/B/A",   "base-deleted", NO_COPY_FROM },
+      {1, "A/B/A/A", "base-deleted", NO_COPY_FROM },
+      {1, "A/A/A/A", "base-deleted", NO_COPY_FROM },
+
+
+      {1, "C",       "normal",       1, "A", MOVED_HERE },
+      {1, "C/A",     "normal",       1, "A/A", MOVED_HERE },
+      {1, "C/A/A",   "normal",       1, "A/A/A", MOVED_HERE },
+      {1, "C/A/A/A", "normal",       1, "A/A/A/A", MOVED_HERE },
+
+      {3, "C/A/A",   "normal",       NO_COPY_FROM },
+      {3, "C/A/A/A", "base-deleted", NO_COPY_FROM },
+
+      {1, "C/B",     "normal",       1, "A/B", MOVED_HERE },
+      {1, "C/B/A",   "normal",       1, "A/B/A", MOVED_HERE },
+      {1, "C/B/A/A", "normal",       1, "A/B/A/A", MOVED_HERE },
+
+      {2, "C/B",     "normal",       1, "A/A" },
+      {2, "C/B/A",   "base-deleted", NO_COPY_FROM },
+      {2, "C/B/A/A", "base-deleted", NO_COPY_FROM },
+
+      {3, "C/B/A",   "normal",       NO_COPY_FROM },
+
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
-  }*/
+  }
 
   return SVN_NO_ERROR;
 }
@@ -7882,7 +7920,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move_update_subtree (issue 4232)"),
     SVN_TEST_OPTS_PASS(move_parent_into_child,
                        "move_parent_into_child (issue 4333)"),
-    SVN_TEST_OPTS_XFAIL(move_depth_expand,
+    SVN_TEST_OPTS_PASS(move_depth_expand,
                        "move depth expansion"),
     SVN_TEST_NULL
   };
