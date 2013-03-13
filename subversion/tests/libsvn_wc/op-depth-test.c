@@ -7697,6 +7697,29 @@ move_depth_expand(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_mkdir(&b, "C/A/A")); /* Local addition obstruction */
   SVN_ERR(sbox_wc_copy(&b, "C/A", "C/B")); /* Copied obstruction */
 
+  {
+    nodes_row_t nodes[] = {
+      {0, "",       "normal",       1, "" },
+
+      {0, "A",      "normal",       1, "A" },
+      {1, "A",      "base-deleted", NO_COPY_FROM, "C" },
+      {0, "A/A",    "normal",       1, "A/A" },
+      {1, "A/A",    "base-deleted", NO_COPY_FROM },
+      {0, "A/B",    "not-present",  0, "A/B" },
+
+      {1, "C",      "normal",       1, "A", MOVED_HERE },
+
+      {1, "C/A",    "normal",       1, "A/A", MOVED_HERE },
+      {3, "C/A/A",  "normal",       NO_COPY_FROM },
+
+      {1, "C/B",    "not-present",  0, "A/B", MOVED_HERE},
+      {2, "C/B",    "normal",       1, "A/A" },
+      {3, "C/B/A",  "normal",       NO_COPY_FROM },
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
   SVN_ERR(sbox_wc_update_depth(&b, "", 1, svn_depth_infinity, TRUE));
 
   /* This used to cause a segfault. Now it asserts in a different place */
