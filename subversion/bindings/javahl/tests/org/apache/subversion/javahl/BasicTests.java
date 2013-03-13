@@ -1029,6 +1029,23 @@ public class BasicTests extends SVNTests
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
                     false, true, false, false, false, null, null, null);
 
+        MyStatusCallback statusCallback = new MyStatusCallback();
+        String statusPath = new File(thisTest.getWorkingCopy(),
+                                     "A/B").getPath();
+        client.status(statusPath, Depth.infinity, false, true, false, true,
+                      null, statusCallback);
+        Status[] statusList = statusCallback.getStatusArray();
+        String movedFrom = null;
+        String movedTo = null;
+        for (Status statusItem : statusList) {
+            if (statusItem.getPath().equals(statusPath + "/E/alpha"))
+                movedTo = statusItem.getMovedToAbspath();
+            if (statusItem.getPath().equals(statusPath + "/F/beta"))
+                movedFrom = statusItem.getMovedFromAbspath();
+        }
+        assertEquals(movedFrom, statusPath + "/E/beta");
+        assertEquals(movedTo, statusPath + "/F/alpha");
+
         // Commit the changes, and check the state of the WC.
         checkCommitRevision(thisTest,
                             "Unexpected WC revision number after commit", 2,
