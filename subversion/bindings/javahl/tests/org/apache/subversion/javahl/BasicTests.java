@@ -1030,8 +1030,7 @@ public class BasicTests extends SVNTests
                     false, true, false, false, false, null, null, null);
 
         MyStatusCallback statusCallback = new MyStatusCallback();
-        String statusPath = new File(thisTest.getWorkingCopy(),
-                                     "A/B").getPath();
+        String statusPath = thisTest.getWCPath() + "/A/B";
         client.status(statusPath, Depth.infinity, false, true, false, true,
                       null, statusCallback);
         Status[] statusList = statusCallback.getStatusArray();
