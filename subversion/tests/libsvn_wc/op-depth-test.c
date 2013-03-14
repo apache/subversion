@@ -7787,19 +7787,59 @@ move_retract(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_mkdir(&b, "A/A/A"));
   SVN_ERR(sbox_wc_mkdir(&b, "A/A/A/A"));
   SVN_ERR(sbox_wc_mkdir(&b, "A/A/A/C"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/A/A/D"));
   SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
   SVN_ERR(sbox_wc_mkdir(&b, "A/B/A"));
   SVN_ERR(sbox_wc_mkdir(&b, "A/B/A/A"));
   SVN_ERR(sbox_wc_mkdir(&b, "A/B/A/C"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/A/D"));
   SVN_ERR(sbox_wc_commit(&b, ""));
   SVN_ERR(sbox_wc_delete(&b, "A/A/A/A"));
   SVN_ERR(sbox_wc_delete(&b, "A/A/A/C"));
+  SVN_ERR(sbox_wc_delete(&b, "A/A/A/D"));
   SVN_ERR(sbox_wc_delete(&b, "A/B/A/C"));
   SVN_ERR(sbox_wc_commit(&b, ""));
 
   SVN_ERR(sbox_wc_update(&b, "", 1));
+  SVN_ERR(sbox_wc_move(&b, "A/B/A/D", "D"));
   SVN_ERR(sbox_wc_delete(&b, "A/B"));
   SVN_ERR(sbox_wc_move(&b, "A/A", "A/B"));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",        "normal",       1, "" },
+
+      {0, "A",       "normal",       1, "A" },
+      {0, "A/A",     "normal",       1, "A/A" },
+      {0, "A/A/A",   "normal",       1, "A/A/A" },
+      {0, "A/A/A/A", "normal",       1, "A/A/A/A" },
+      {0, "A/A/A/C", "normal",       1, "A/A/A/C" },
+      {0, "A/A/A/D", "normal",       1, "A/A/A/D" },
+
+      {2, "A/A",     "base-deleted", NO_COPY_FROM, "A/B"},
+      {2, "A/A/A",   "base-deleted", NO_COPY_FROM },
+      {2, "A/A/A/A", "base-deleted", NO_COPY_FROM },
+      {2, "A/A/A/C", "base-deleted", NO_COPY_FROM },
+      {2, "A/A/A/D", "base-deleted", NO_COPY_FROM },
+
+      {0, "A/B",     "normal",       1, "A/B" },
+      {0, "A/B/A",   "normal",       1, "A/B/A" },
+      {0, "A/B/A/A", "normal",       1, "A/B/A/A" },
+      {0, "A/B/A/C", "normal",       1, "A/B/A/C" },
+      {0, "A/B/A/D", "normal",       1, "A/B/A/D" },
+
+      {2, "A/B",     "normal",       1, "A/A", MOVED_HERE },
+      {2, "A/B/A",   "normal",       1, "A/A/A", MOVED_HERE },
+      {2, "A/B/A/A", "normal",       1, "A/A/A/A", MOVED_HERE },
+      {2, "A/B/A/C", "normal",       1, "A/A/A/C", MOVED_HERE },
+      {2, "A/B/A/D", "normal",       1, "A/A/A/D", FALSE, "D", TRUE },
+
+      {1, "D",       "normal",       1, "A/B/A/D", MOVED_HERE },
+
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
 
   SVN_ERR(sbox_wc_update(&b, "", 2));
 
@@ -7817,11 +7857,15 @@ move_retract(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0, "A/B",     "normal",       2, "A/B" },
       {0, "A/B/A",   "normal",       2, "A/B/A" },
       {0, "A/B/A/A", "normal",       2, "A/B/A/A" },
+      {0, "A/B/A/D", "normal",       2, "A/B/A/D" },
 
       {2, "A/B",     "normal",       1, "A/A", MOVED_HERE },
       {2, "A/B/A",   "normal",       1, "A/A/A", MOVED_HERE },
       {2, "A/B/A/A", "normal",       1, "A/A/A/A", MOVED_HERE },
       {2, "A/B/A/C", "normal",       1, "A/A/A/C", MOVED_HERE },
+      {2, "A/B/A/D", "normal",       1, "A/A/A/D", FALSE, "D", TRUE },
+
+      {1, "D",       "normal",       1, "A/B/A/D", MOVED_HERE },
 
       {0}
     };
@@ -7843,6 +7887,7 @@ move_retract(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0, "A/B",     "normal",       2, "A/B" },
       {0, "A/B/A",   "normal",       2, "A/B/A" },
       {0, "A/B/A/A", "normal",       2, "A/B/A/A" },
+      {0, "A/B/A/D", "normal",       2, "A/B/A/D" },
 
       {2, "A/A",     "base-deleted", NO_COPY_FROM, "A/B"},
       {2, "A/A/A",   "base-deleted", NO_COPY_FROM },
@@ -7850,10 +7895,28 @@ move_retract(const svn_test_opts_t *opts, apr_pool_t *pool)
       {2, "A/B",     "normal",       2, "A/A", MOVED_HERE },
       {2, "A/B/A",   "normal",       2, "A/A/A", MOVED_HERE },
       {2, "A/B/A/A", "base-deleted", NO_COPY_FROM }, /* ### MISSING! */
+      {2, "A/B/A/D", "base-deleted", NO_COPY_FROM, "D" }, /* ### MISSING! */
+
+      /* Still conflicted */
+      {1, "D",       "normal",       1, "A/B/A/D", MOVED_HERE },
 
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* ### TODO: Resolve via which specific target? */
+  SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity,
+                          svn_wc_conflict_choose_mine_conflict));
+
+  {
+    nodes_row_t nodes[] = {
+
+      {1, "D",       "normal",       2, "A/B/A/D", MOVED_HERE },
+
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "D", nodes));
   }
 
   return SVN_NO_ERROR;
