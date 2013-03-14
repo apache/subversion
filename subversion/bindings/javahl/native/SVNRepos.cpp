@@ -694,7 +694,7 @@ void SVNRepos::rmlocks(File &path, StringArray &locks)
   SVN_JNI_ERR(svn_repos_open2(&repos, path.getInternalStyle(requestPool),
                               NULL, requestPool.getPool()), );
   fs = svn_repos_fs(repos);
-  const char *username;
+  const char *username = NULL;
 
   /* svn_fs_unlock() demands that some username be associated with the
    * filesystem, so just use the UID of the person running 'svnadmin'.*/
