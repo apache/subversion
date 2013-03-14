@@ -42,7 +42,7 @@ static jint get_diff_options_flags(jobject joptions)
         return 0;
     }
 
-  const jint flags = env->GetLongField(joptions, fid);
+  const jint flags = env->GetIntField(joptions, fid);
   if (JNIUtil::isJavaExceptionThrown())
     return 0;
   return flags;
