@@ -3259,7 +3259,7 @@ log_revprop_cache_init_warning(svn_fs_t *fs,
                                svn_error_t *underlying_err,
                                const char *message)
 {
-  svn_error_t *err = svn_error_createf(SVN_ERR_FS_REPPROP_CACHE_INIT_FAILURE,
+  svn_error_t *err = svn_error_createf(SVN_ERR_FS_REVPROP_CACHE_INIT_FAILURE,
                                        underlying_err,
                                        message, fs->path);
 
@@ -3801,7 +3801,7 @@ read_pack_revprop(packed_revprops_t **revprops,
 
   /* the file content should be available now */
   if (!result->packed_revprops)
-    return svn_error_createf(SVN_ERR_FS_PACKED_REPPROP_READ_FAILURE, NULL,
+    return svn_error_createf(SVN_ERR_FS_PACKED_REVPROP_READ_FAILURE, NULL,
                   _("Failed to read revprop pack file for rev %ld"), rev);
 
   /* parse it. RESULT will be complete afterwards. */
