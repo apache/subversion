@@ -29,6 +29,7 @@ import java.io.InputStream;
 import java.io.File;
 
 import org.apache.subversion.javahl.callback.ReposNotifyCallback;
+import org.apache.subversion.javahl.callback.ReposFreezeAction;
 import org.apache.subversion.javahl.types.*;
 
 /**
@@ -173,6 +174,9 @@ public class SVNRepos implements ISVNRepos
             throws ClientException;
 
     public native long recover(File path, ReposNotifyCallback callback)
+            throws ClientException;
+
+    public native void freeze(ReposFreezeAction action, File... paths)
             throws ClientException;
 
     /**

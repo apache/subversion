@@ -317,6 +317,28 @@ Java_org_apache_subversion_javahl_SVNRepos_recover
 }
 
 JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNRepos_freeze
+(JNIEnv *env, jobject jthis, jobject jaction, jobjectArray jpaths)
+{
+  JNIEntry(SVNRepos, freeze);
+  SVNRepos *cl = SVNRepos::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return;
+    }
+
+  if (!jpaths || !env->GetArrayLength(jpaths))
+    {
+      JNIUtil::throwError(_("list of repository paths must not be empty"));
+      return;
+    }
+
+  ReposFreezeAction action(jaction);
+  cl->freeze(jpaths, &action);
+}
+
+JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNRepos_rmtxns
 (JNIEnv *env, jobject jthis, jobject jpath, jobjectArray jtransactions)
 {

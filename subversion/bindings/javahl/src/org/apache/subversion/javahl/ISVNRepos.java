@@ -29,6 +29,7 @@ import java.io.InputStream;
 import java.io.File;
 
 import org.apache.subversion.javahl.callback.ReposNotifyCallback;
+import org.apache.subversion.javahl.callback.ReposFreezeAction;
 import org.apache.subversion.javahl.types.*;
 
 public interface ISVNRepos {
@@ -166,12 +167,32 @@ public interface ISVNRepos {
 			throws ClientException;
 
 	/**
-	 * recover the berkeley db of a repository, returns youngest revision
+	 * recover the filesystem backend of a repository
 	 * @param path              the path to the repository
+         * @return youngest revision
 	 * @throws ClientException  throw in case of problem
 	 */
 	public abstract long recover(File path, ReposNotifyCallback callback)
             throws ClientException;
+
+	/**
+	 * Take an exclusive lock on each of the listed repositories
+	 * to prevent commits; then, while holding all the locks, call
+	 * the action.invoke().
+	 *
+	 * The repositories may or may not be readable by Subversion
+	 * while frozen, depending on implementation details of the
+	 * repository's filesystem backend.
+	 *
+	 * Repositories are locked in the listed order.
+	 * @param action     describes the action to perform
+	 * @param paths	     the set of repository paths
+	 * @throws ClientException
+         * @since 1.8
+	 */
+	public abstract void freeze(ReposFreezeAction action,
+				    File... paths)
+	    throws ClientException;
 
 	/**
 	 * remove open transaction in a repository
