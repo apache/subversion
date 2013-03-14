@@ -964,20 +964,9 @@ update_working_file(const char *local_relpath,
           work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
 
           if (merge_outcome == svn_wc_merge_conflict)
-            {
-              content_state = svn_wc_notify_state_conflicted;
-            }
+            content_state = svn_wc_notify_state_conflicted;
           else
-            {
-              SVN_ERR(svn_wc__internal_file_modified_p(&is_locally_modified,
-                                                       db, local_abspath,
-                                                       FALSE /* exact_comparison */,
-                                                       scratch_pool));
-              if (is_locally_modified)
-                content_state = svn_wc_notify_state_merged;
-              else
-                content_state = svn_wc_notify_state_changed;
-            }
+            content_state = svn_wc_notify_state_merged;
         }
     }
   else
