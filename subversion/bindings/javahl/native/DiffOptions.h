@@ -45,13 +45,13 @@ class DiffOptions
   }
 
  private:
-  static const int IGNORE_ALL_SPACE    = 0x01;
-  static const int IGNORE_SPACE_CHANGE = 0x02;
-  static const int IGNORE_EOL_STYLE    = 0x04;
-  static const int SHOW_C_FUNCTION     = 0x08;
-  static const int USE_GIT_DIFF_FORMAT = 0x10;
+  static const jint IGNORE_ALL_SPACE    = 0x01;
+  static const jint IGNORE_SPACE_CHANGE = 0x02;
+  static const jint IGNORE_EOL_STYLE    = 0x04;
+  static const jint SHOW_C_FUNCTION     = 0x08;
+  static const jint USE_GIT_DIFF_FORMAT = 0x10;
 
-  const int flags;
+  const jint flags;
 };
 
 
