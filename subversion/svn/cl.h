@@ -344,10 +344,16 @@ svn_cl__get_conflict_func_interactive_baton(
   void *cancel_baton,
   apr_pool_t *result_pool);
 
-/* A conflict-resolution callback which prompts the user to choose
-   one of the 3 fulltexts, edit the merged file on the spot, or just
-   skip the conflict (to be resolved later).
-   Implements @c svn_wc_conflict_resolver_func_t. */
+/* A callback capable of doing interactive conflict resolution.
+
+   The BATON must come from svn_cl__get_conflict_func_interactive_baton().
+   Resolves based on the --accept option if one was given to that function,
+   otherwise prompts the user to choose one of the three fulltexts, edit
+   the merged file on the spot, or just skip the conflict (to be resolved
+   later), among other options.
+
+   Implements svn_wc_conflict_resolver_func2_t.
+ */
 svn_error_t *
 svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
                                   const svn_wc_conflict_description2_t *desc,
