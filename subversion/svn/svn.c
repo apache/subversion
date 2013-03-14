@@ -1343,7 +1343,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {opt_targets, 'R', opt_depth, 'q', opt_accept},
     {{opt_accept, N_("specify automatic conflict resolution source\n"
                      "                             "
-                     "('base', 'working', 'mine-conflict',\n"
+                     "('working', 'base', 'working', 'mine-conflict',\n"
                      "                             "
                      "'theirs-conflict', 'mine-full', 'theirs-full')")}} },
 
