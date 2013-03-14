@@ -34,7 +34,7 @@ import java.net.URI;
 import java.util.Map;
 
 /**
- * This class is used for testing the SVNAdmin class
+ * This class is used for testing the ISVNRepos interface
  *
  * More methodes for testing are still needed
  */
@@ -50,7 +50,7 @@ public class SVNReposTests extends SVNTests
     }
 
     /**
-     * Test the basic SVNAdmin.create functionality
+     * Test the basic ISVNRepos.create functionality
      * @throws SubversionException
      */
     public void testCreate()
@@ -100,10 +100,26 @@ public class SVNReposTests extends SVNTests
         admin.pack(thisTest.getRepository(), null);
     }
 
+    /* Check that the freeze() callback gets invoked. */
+    private class FreezeAction implements ReposFreezeAction
+    {
+        int invoked = 0;
+        public void invoke() { ++invoked; }
+    }
+
+    public void testFreeze()
+        throws SubversionException, IOException
+    {
+        OneTest thisTest = new OneTest(false);
+        FreezeAction action = new FreezeAction();
+        admin.freeze(action, thisTest.getRepository());
+        assertEquals("expect freeze callback to be invoked once", 1, action.invoked);
+    }
+
     public void testLoadRepo()
         throws SubversionException, IOException
     {
-        /* Make sure SVNAdmin.load() works, with a repo dump file known
+        /* Make sure ISVNRepos.load() works, with a repo dump file known
          * to provoke bug 2979
          */
         // makes repos with nothing in it

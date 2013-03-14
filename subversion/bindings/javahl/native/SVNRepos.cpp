@@ -408,6 +408,28 @@ jlong SVNRepos::recover(File &path, ReposNotifyCallback *notifyCallback)
   return youngest_rev;
 }
 
+void SVNRepos::freeze(jobjectArray jpaths, ReposFreezeAction* action)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+  SVN::Pool subPool(pool);
+  const jsize num_paths = env->GetArrayLength(jpaths);
+
+  apr_array_header_t *paths = apr_array_make(subPool.getPool(), num_paths,
+                                             sizeof(const char*));
+  for (jsize i = 0; i < num_paths; ++i)
+    {
+      jobject obj = env->GetObjectArrayElement(jpaths, i);
+      APR_ARRAY_PUSH(paths, const char*) =
+        apr_pstrdup(subPool.getPool(), File(obj).getAbsPath());
+      env->DeleteLocalRef(obj);
+    }
+
+  SVN_JNI_ERR(svn_repos_freeze(paths, action->callback, action,
+                               subPool.getPool()),
+              );
+}
+
+
 void SVNRepos::rmtxns(File &path, StringArray &transactions)
 {
   SVN::Pool requestPool;
