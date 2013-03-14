@@ -51,6 +51,7 @@
 #include "EnumMapper.h"
 #include "StringArray.h"
 #include "RevpropTable.h"
+#include "DiffOptions.h"
 #include "CreateJ.h"
 #include "svn_auth.h"
 #include "svn_dso.h"
@@ -980,7 +981,8 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                      OutputStream &outputStream, svn_depth_t depth,
                      StringArray &changelists,
                      bool ignoreAncestry, bool noDiffDelete, bool force,
-                     bool showCopiesAsAdds, bool ignoreProps, bool propsOnly)
+                     bool showCopiesAsAdds, bool ignoreProps, bool propsOnly,
+                     DiffOptions const& options)
 {
     SVN::Pool subPool(pool);
     const char *c_relToDir = relativeToDir ?
@@ -1000,9 +1002,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
     Path path1(target1, subPool);
     SVN_JNI_ERR(path1.error_occurred(), );
 
-    // We don't use any options to diff.
-    apr_array_header_t *diffOptions = apr_array_make(subPool.getPool(),
-                                                     0, sizeof(char *));
+    apr_array_header_t *diffOptions = options.optionsArray(subPool);
 
     if (pegRevision)
     {
@@ -1020,7 +1020,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                    force,
                                    ignoreProps,
                                    propsOnly,
-                                   FALSE, /* use_git_diff_format */
+                                   options.useGitDiffFormat(),
                                    SVN_APR_LOCALE_CHARSET,
                                    outputStream.getStream(subPool),
                                    NULL /* error file */,
@@ -1049,7 +1049,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                force,
                                ignoreProps,
                                propsOnly,
-                               FALSE, /* use_git_diff_format */
+                               options.useGitDiffFormat(),
                                SVN_APR_LOCALE_CHARSET,
                                outputStream.getStream(subPool),
                                NULL /* error stream */,
@@ -1065,11 +1065,12 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                      const char *relativeToDir, OutputStream &outputStream,
                      svn_depth_t depth, StringArray &changelists,
                      bool ignoreAncestry, bool noDiffDelete, bool force,
-                     bool showCopiesAsAdds, bool ignoreProps, bool propsOnly)
+                     bool showCopiesAsAdds, bool ignoreProps, bool propsOnly,
+                     DiffOptions const& options)
 {
     diff(target1, revision1, target2, revision2, NULL, relativeToDir,
          outputStream, depth, changelists, ignoreAncestry, noDiffDelete, force,
-         showCopiesAsAdds, ignoreProps, propsOnly);
+         showCopiesAsAdds, ignoreProps, propsOnly, options);
 }
 
 void SVNClient::diff(const char *target, Revision &pegRevision,
@@ -1077,12 +1078,13 @@ void SVNClient::diff(const char *target, Revision &pegRevision,
                      const char *relativeToDir, OutputStream &outputStream,
                      svn_depth_t depth, StringArray &changelists,
                      bool ignoreAncestry, bool noDiffDelete, bool force,
-                     bool showCopiesAsAdds, bool ignoreProps, bool propsOnly)
+                     bool showCopiesAsAdds, bool ignoreProps, bool propsOnly,
+                     DiffOptions const& options)
 {
     diff(target, startRevision, NULL, endRevision, &pegRevision,
          relativeToDir, outputStream, depth, changelists,
          ignoreAncestry, noDiffDelete, force, showCopiesAsAdds,
-         ignoreProps, propsOnly);
+         ignoreProps, propsOnly, options);
 }
 
 void

@@ -581,6 +581,42 @@ public interface ISVNClient
      *                      entirety, not as diffs from their sources
      * @param ignoreProps   don't show property diffs
      * @param propsOnly     show property changes only
+     * @param options       additional options for controlling the output
+     * @throws ClientException
+     * @since 1.8
+     */
+    void diff(String target1, Revision revision1, String target2,
+              Revision revision2, String relativeToDir, OutputStream outStream,
+              Depth depth, Collection<String> changelists,
+              boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
+              boolean copiesAsAdds, boolean ignoreProps, boolean propsOnly,
+              DiffOptions options)
+            throws ClientException;
+
+    void diff(String target1, Revision revision1, String target2,
+              Revision revision2, String relativeToDir, String outFileName,
+              Depth depth, Collection<String> changelists,
+              boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
+              boolean copiesAsAdds, boolean ignoreProps, boolean propsOnly,
+              DiffOptions options)
+            throws ClientException;
+
+    /**
+     * Display the differences between two paths
+     * @param target1       first path or url
+     * @param revision1     first revision
+     * @param target2       second path or url
+     * @param revision2     second revision
+     * @param relativeToDir index path is relative to this path
+     * @param outFileName   file name where difference are written
+     * @param depth         how deep to traverse into subdirectories
+     * @param ignoreAncestry ignore if files are not related
+     * @param noDiffDeleted no output on deleted files
+     * @param force         diff even on binary files
+     * @param copiesAsAdds  if set, copied files will be shown in their
+     *                      entirety, not as diffs from their sources
+     * @param ignoreProps   don't show property diffs
+     * @param propsOnly     show property changes only
      * @throws ClientException
      */
     void diff(String target1, Revision revision1, String target2,
@@ -595,6 +631,43 @@ public interface ISVNClient
               Depth depth, Collection<String> changelists,
               boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
               boolean copiesAsAdds)
+            throws ClientException;
+
+    /**
+     * Display the differences between two paths.
+     * @param target        path or url
+     * @param pegRevision   revision tointerpret target
+     * @param startRevision first Revision to compare
+     * @param endRevision   second Revision to compare
+     * @param relativeToDir index path is relative to this path
+     * @param outFileName   file name where difference are written
+     * @param depth         how deep to traverse into subdirectories
+     * @param changelists  if non-null, filter paths using changelists
+     * @param ignoreAncestry ignore if files are not related
+     * @param noDiffDeleted no output on deleted files
+     * @param force         diff even on binary files
+     * @param copiesAsAdds  if set, copied files will be shown in their
+     *                      entirety, not as diffs from their sources
+     * @param ignoreProps   don't show property diffs
+     * @param propsOnly     show property changes only
+     * @param options       additional options for controlling the output
+     * @throws ClientException
+     * @since 1.8
+     */
+    void diff(String target, Revision pegRevision, Revision startRevision,
+              Revision endRevision, String relativeToDir, OutputStream outStream,
+              Depth depth, Collection<String> changelists,
+              boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
+              boolean copiesAsAdds, boolean ignoreProps, boolean propsOnly,
+              DiffOptions options)
+            throws ClientException;
+
+    void diff(String target, Revision pegRevision, Revision startRevision,
+              Revision endRevision, String relativeToDir, String outFileName,
+              Depth depth, Collection<String> changelists,
+              boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
+              boolean copiesAsAdds, boolean ignoreProps, boolean propsOnly,
+              DiffOptions options)
             throws ClientException;
 
     /**

@@ -54,6 +54,7 @@ class ChangelistCallback;
 class CommitMessage;
 class StringArray;
 class RevpropTable;
+class DiffOptions;
 #include "svn_types.h"
 #include "svn_client.h"
 #include "SVNBase.h"
@@ -183,13 +184,15 @@ class SVNClient :public SVNBase
             const char *relativeToDir, OutputStream &outputStream,
             svn_depth_t depth, StringArray &changelists,
             bool ignoreAncestry, bool noDiffDelete, bool force,
-            bool showCopiesAsAdds, bool ignoreProps, bool propsOnly);
+            bool showCopiesAsAdds, bool ignoreProps, bool propsOnly,
+            DiffOptions const& options);
   void diff(const char *target, Revision &pegevision,
             Revision &startRevision, Revision &endRevision,
             const char *relativeToDir, OutputStream &outputStream,
             svn_depth_t depth, StringArray &changelists,
             bool ignoreAncestry, bool noDiffDelete, bool force,
-            bool showCopiesAsAdds, bool ignoreProps, bool propsOnly);
+            bool showCopiesAsAdds, bool ignoreProps, bool propsOnly,
+            DiffOptions const& options);
   void diffSummarize(const char *target1, Revision &revision1,
                      const char *target2, Revision &revision2,
                      svn_depth_t depth, StringArray &changelists,
@@ -218,7 +221,8 @@ class SVNClient :public SVNBase
             OutputStream &outputStream, svn_depth_t depth,
             StringArray &changelists,
             bool ignoreAncestry, bool noDiffDelete, bool force,
-            bool showCopiesAsAdds, bool ignoreProps, bool propsOnly);
+            bool showCopiesAsAdds, bool ignoreProps, bool propsOnly,
+            DiffOptions const& options);
 
   Path m_lastPath;
   ClientContext context;

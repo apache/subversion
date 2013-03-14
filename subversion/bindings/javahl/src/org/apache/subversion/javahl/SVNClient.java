@@ -302,7 +302,41 @@ public class SVNClient implements ISVNClient
             OutputStream stream = new FileOutputStream(outFileName);
             diff(target1, revision1, target2, revision2, relativeToDir,
                  stream, depth, changelists, ignoreAncestry, noDiffDeleted,
-                 force, copiesAsAdds, false, false);
+                 force, copiesAsAdds, false, false, null);
+        } catch (FileNotFoundException ex) {
+            throw ClientException.fromException(ex);
+        }
+    }
+
+    public void diff(String target1, Revision revision1, String target2,
+                     Revision revision2, String relativeToDir,
+                     OutputStream stream, Depth depth,
+                     Collection<String> changelists,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force, boolean copiesAsAdds,
+                     boolean ignoreProps, boolean propsOnly)
+            throws ClientException
+    {
+        diff(target1, revision1, target2, revision2, relativeToDir,
+             stream, depth, changelists, ignoreAncestry, noDiffDeleted,
+             force, copiesAsAdds, ignoreProps, propsOnly, null);
+    }
+
+    public void diff(String target1, Revision revision1, String target2,
+                     Revision revision2, String relativeToDir,
+                     String outFileName, Depth depth,
+                     Collection<String> changelists,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force, boolean copiesAsAdds,
+                     boolean ignoreProps, boolean propsOnly,
+                     DiffOptions options)
+            throws ClientException
+    {
+        try {
+            OutputStream stream = new FileOutputStream(outFileName);
+            diff(target1, revision1, target2, revision2, relativeToDir,
+                 stream, depth, changelists, ignoreAncestry, noDiffDeleted,
+                 force, copiesAsAdds, ignoreProps, propsOnly, options);
         } catch (FileNotFoundException ex) {
             throw ClientException.fromException(ex);
         }
@@ -314,8 +348,11 @@ public class SVNClient implements ISVNClient
                             Collection<String> changelists,
                             boolean ignoreAncestry, boolean noDiffDeleted,
                             boolean force, boolean copiesAsAdds,
-                            boolean ignoreProps, boolean propsOnly)
+                            boolean ignoreProps, boolean propsOnly,
+                            DiffOptions options)
             throws ClientException;
+
+
 
     public void diff(String target, Revision pegRevision,
                      Revision startRevision, Revision endRevision,
@@ -329,7 +366,41 @@ public class SVNClient implements ISVNClient
             OutputStream stream = new FileOutputStream(outFileName);
             diff(target, pegRevision, startRevision, endRevision,
                  relativeToDir, stream, depth, changelists, ignoreAncestry,
-                 noDiffDeleted, force, copiesAsAdds, false, false);
+                 noDiffDeleted, force, copiesAsAdds, false, false, null);
+        } catch (FileNotFoundException ex) {
+            throw ClientException.fromException(ex);
+        }
+    }
+
+    public void diff(String target, Revision pegRevision,
+                     Revision startRevision, Revision endRevision,
+                     String relativeToDir, OutputStream stream,
+                     Depth depth, Collection<String> changelists,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force, boolean copiesAsAdds,
+                     boolean ignoreProps, boolean propsOnly)
+            throws ClientException
+    {
+        diff(target, pegRevision, startRevision, endRevision, relativeToDir,
+             stream, depth, changelists, ignoreAncestry, noDiffDeleted,
+             force, copiesAsAdds, ignoreProps, propsOnly, null);
+    }
+
+    public void diff(String target, Revision pegRevision,
+                     Revision startRevision, Revision endRevision,
+                     String relativeToDir, String outFileName,
+                     Depth depth, Collection<String> changelists,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force, boolean copiesAsAdds,
+                     boolean ignoreProps, boolean propsOnly,
+                     DiffOptions options)
+            throws ClientException
+    {
+        try {
+            OutputStream stream = new FileOutputStream(outFileName);
+            diff(target, pegRevision, startRevision, endRevision, relativeToDir,
+                 stream, depth, changelists, ignoreAncestry, noDiffDeleted,
+                 force, copiesAsAdds, ignoreProps, propsOnly, options);
         } catch (FileNotFoundException ex) {
             throw ClientException.fromException(ex);
         }
@@ -341,7 +412,8 @@ public class SVNClient implements ISVNClient
                             Depth depth, Collection<String> changelists,
                             boolean ignoreAncestry, boolean noDiffDeleted,
                             boolean force, boolean copiesAsAdds,
-                            boolean ignoreProps, boolean propsOnly)
+                            boolean ignoreProps, boolean propsOnly,
+                            DiffOptions options)
             throws ClientException;
 
     public native void diffSummarize(String target1, Revision revision1,
