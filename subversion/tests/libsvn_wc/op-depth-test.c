@@ -8070,6 +8070,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_OPTS_PASS(move_depth_expand,
                        "move depth expansion"),
     SVN_TEST_OPTS_XFAIL(move_retract,
-                        "move retract"),
+                        "move retract (issue 4336)"),
     SVN_TEST_NULL
   };
