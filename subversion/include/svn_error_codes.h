@@ -783,12 +783,12 @@ SVN_ERROR_START
              "The filesystem editor completion process was not followed")
 
   /** @since New in 1.8. */
-  SVN_ERRDEF(SVN_ERR_FS_PACKED_REPPROP_READ_FAILURE,
+  SVN_ERRDEF(SVN_ERR_FS_PACKED_REVPROP_READ_FAILURE,
              SVN_ERR_FS_CATEGORY_START + 51,
              "A packed revprop could not be read")
 
   /** @since New in 1.8. */
-  SVN_ERRDEF(SVN_ERR_FS_REPPROP_CACHE_INIT_FAILURE,
+  SVN_ERRDEF(SVN_ERR_FS_REVPROP_CACHE_INIT_FAILURE,
              SVN_ERR_FS_CATEGORY_START + 52,
              "Could not initialize the revprop caching infrastructure.")
 
