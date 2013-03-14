@@ -919,6 +919,27 @@ INSERT OR REPLACE INTO nodes (
     parent_relpath, presence, kind)
 VALUES(?1, ?2, ?3, ?4, MAP_BASE_DELETED, ?5)
 
+-- STMT_DELETE_NO_LOWER_LAYER
+DELETE FROM nodes
+ WHERE wc_id = ?1
+   AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+   AND op_depth = ?3
+   AND NOT EXISTS (SELECT 1 FROM nodes n
+                    WHERE n.wc_id = ?1
+                    AND n.local_relpath = nodes.local_relpath
+                    AND n.op_depth = ?4
+                    AND n.presence IN (MAP_NORMAL, MAP_INCOMPLETE))
+
+-- STMT_REPLACE_WITH_BASE_DELETED
+INSERT OR REPLACE INTO nodes (wc_id, local_relpath, op_depth, parent_relpath,
+                              kind, moved_to, presence)
+SELECT wc_id, local_relpath, op_depth, parent_relpath,
+       kind, moved_to, MAP_BASE_DELETED
+  FROM nodes
+ WHERE wc_id = ?1
+   AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+   AND op_depth = ?3
+
 /* If this query is updated, STMT_INSERT_DELETE_LIST should too. */
 -- STMT_INSERT_DELETE_FROM_NODE_RECURSIVE
 INSERT INTO nodes (
