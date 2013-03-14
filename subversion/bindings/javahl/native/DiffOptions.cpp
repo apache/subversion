@@ -27,7 +27,7 @@
 #include "DiffOptions.h"
 
 namespace {
-static int get_diff_options_flags(jobject joptions)
+static jint get_diff_options_flags(jobject joptions)
 {
   if (!joptions)
     return 0;
@@ -37,12 +37,12 @@ static int get_diff_options_flags(jobject joptions)
   static volatile jfieldID fid = 0;
   if (!fid)
     {
-      env->GetFieldID(env->GetObjectClass(joptions), "flags", "I");
+      fid = env->GetFieldID(env->GetObjectClass(joptions), "flags", "I");
       if (JNIUtil::isJavaExceptionThrown())
         return 0;
     }
 
-  const int flags = env->GetIntField(joptions, fid);
+  const jint flags = env->GetLongField(joptions, fid);
   if (JNIUtil::isJavaExceptionThrown())
     return 0;
   return flags;
