@@ -1093,6 +1093,9 @@ tc_editor_delete(void *baton,
   svn_boolean_t must_delete_working_nodes = FALSE;
   const char *local_abspath = svn_dirent_join(b->wcroot->abspath, relpath,
                                               scratch_pool);
+  const char *parent_relpath = svn_relpath_dirname(relpath, scratch_pool);
+  int op_depth_below;
+  svn_boolean_t have_row;
 
   SVN_ERR(svn_wc__db_depth_get_info(NULL, &move_dst_kind, NULL,
                                     &move_dst_repos_relpath, NULL, NULL, NULL,
@@ -1161,7 +1164,6 @@ tc_editor_delete(void *baton,
 
   if (!is_conflicted || must_delete_working_nodes)
     {
-      svn_boolean_t have_row;
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       svn_skel_t *work_item;
       svn_node_kind_t del_kind;
@@ -1227,17 +1229,42 @@ tc_editor_delete(void *baton,
       svn_pool_destroy(iterpool);
     }
 
-  /* ### We might be shadowing other nodes here, so this delete
-         is not generally safe. See op-depth-test.c move_retract(),
-         for a few cases where this currently breaks the working copy
-         by not adding base-deleted nodes in its place. */
-
   /* Deleting the ROWS is valid so long as we update the parent before
-     committing the transaction. */
+     committing the transaction.  The removed rows could have been
+     replacing a lower layer in which case we need to add base-deleted
+     rows. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
-                                    STMT_DELETE_WORKING_OP_DEPTH));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isd", b->wcroot->wc_id, relpath, op_depth));
-  SVN_ERR(svn_sqlite__step_done(stmt));
+                                    STMT_SELECT_HIGHEST_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", b->wcroot->wc_id, parent_relpath,
+                            op_depth));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    op_depth_below = svn_sqlite__column_int(stmt, 0);
+  SVN_ERR(svn_sqlite__reset(stmt));
+  if (have_row)
+    {
+      /* Remove non-shadowing nodes. */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+                                        STMT_DELETE_NO_LOWER_LAYER));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isdd", b->wcroot->wc_id, relpath,
+                                op_depth, op_depth_below));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+
+      /* Convert remaining shadowing nodes to presence='base-deleted'. */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+                                        STMT_REPLACE_WITH_BASE_DELETED));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isd", b->wcroot->wc_id, relpath,
+                                op_depth));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+  else
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+                                        STMT_DELETE_WORKING_OP_DEPTH));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isd", b->wcroot->wc_id, relpath,
+                                op_depth));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
 
   /* Retract any base-delete. */
   SVN_ERR(svn_wc__db_retract_parent_delete(b->wcroot, relpath, op_depth,

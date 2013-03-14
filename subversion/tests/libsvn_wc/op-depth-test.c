@@ -8069,7 +8069,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move_parent_into_child (issue 4333)"),
     SVN_TEST_OPTS_PASS(move_depth_expand,
                        "move depth expansion"),
-    SVN_TEST_OPTS_XFAIL(move_retract,
-                        "move retract (issue 4336)"),
+    SVN_TEST_OPTS_PASS(move_retract,
+                       "move retract (issue 4336)"),
     SVN_TEST_NULL
   };
