@@ -1227,6 +1227,11 @@ tc_editor_delete(void *baton,
       svn_pool_destroy(iterpool);
     }
 
+  /* ### We might be shadowing other nodes here, so this delete
+         is not generally safe. See op-depth-test.c move_retract(),
+         for a few cases where this currently breaks the working copy
+         by not adding base-deleted nodes in its place. */
+
   /* Deleting the ROWS is valid so long as we update the parent before
      committing the transaction. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
