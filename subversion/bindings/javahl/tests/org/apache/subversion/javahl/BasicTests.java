@@ -1031,19 +1031,17 @@ public class BasicTests extends SVNTests
 
         MyStatusCallback statusCallback = new MyStatusCallback();
         String statusPath = fileToSVNPath(new File(thisTest.getWCPath() + "/A/B"), true);
-        client.status(statusPath, Depth.infinity, false, true, false, true,
+        client.status(statusPath, Depth.infinity, false, false, false, true,
                       null, statusCallback);
         Status[] statusList = statusCallback.getStatusArray();
-        String movedFrom = null;
-        String movedTo = null;
-        for (Status statusItem : statusList) {
-            if (statusItem.getPath().equals(statusPath + "/E/alpha"))
-                movedTo = statusItem.getMovedToAbspath();
-            if (statusItem.getPath().equals(statusPath + "/F/beta"))
-                movedFrom = statusItem.getMovedFromAbspath();
-        }
-        assertEquals(movedFrom, statusPath + "/E/beta");
-        assertEquals(movedTo, statusPath + "/F/alpha");
+        assertEquals(statusPath + "/F/alpha",
+                     statusList[0].getMovedToAbspath());
+        assertEquals(statusPath + "/F/beta",
+                     statusList[1].getMovedToAbspath());
+        assertEquals(statusPath + "/E/alpha",
+                     statusList[2].getMovedFromAbspath());
+        assertEquals(statusPath + "/E/beta",
+                     statusList[3].getMovedFromAbspath());
 
         // Commit the changes, and check the state of the WC.
         checkCommitRevision(thisTest,
