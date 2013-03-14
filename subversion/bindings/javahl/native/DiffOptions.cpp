@@ -54,7 +54,7 @@ DiffOptions::DiffOptions(jobject joptions)
 {}
 
 
-apr_array_header_t *DiffOptions::optionsArray(SVN::Pool resultPool) const
+apr_array_header_t *DiffOptions::optionsArray(SVN::Pool &resultPool) const
 {
   // JavaHL ignores the default diff options from the client config
   // files, so we always have to allocate an array, even if it will

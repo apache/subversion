@@ -37,7 +37,7 @@ class DiffOptions
  public:
   DiffOptions(jobject joptions);
 
-  apr_array_header_t *optionsArray(SVN::Pool resultPool) const;
+  apr_array_header_t *optionsArray(SVN::Pool &resultPool) const;
 
   svn_boolean_t useGitDiffFormat() const
   {
