@@ -734,7 +734,7 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
   if (jhunkFuzz != wcNotify->hunk_fuzz)
     {
       env->ThrowNew(env->FindClass("java.lang.ArithmeticException"),
-                    "Overflow converting C unsigned long to Java int");
+                    "Overflow converting C svn_linenum_t to Java int");
       POP_AND_RETURN_NULL;
     }
 
