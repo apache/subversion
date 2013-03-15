@@ -36,11 +36,6 @@ class ChecksumTestCases(unittest.TestCase):
         self.assertEqual(int(check_val), 0,
                          "Value of initialized digest is not 0")
 
-        val1 = svn.core.svn_checksum_create(svn.core.svn_checksum_md5)
-        val2 = svn.core.svn_checksum_create(svn.core.svn_checksum_md5)
-        val1.digest = 'foo'
-        print svn.core.svn_checksum_match(val1, val2)
-
 def suite():
     return unittest.defaultTestLoader.loadTestsFromTestCase(ChecksumTestCases)
 
