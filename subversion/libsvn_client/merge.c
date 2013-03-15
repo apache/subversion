@@ -7307,11 +7307,12 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
   range.start = source->loc1->rev;
   range.end = source->loc2->rev;
   range.inheritable = TRUE;
+
+  merge_target = svn_client__merge_path_create(target_abspath, scratch_pool);
+
   if (honor_mergeinfo)
     {
       svn_error_t *err;
-      merge_target = svn_client__merge_path_create(target_abspath,
-                                                   scratch_pool);
 
       /* Fetch mergeinfo. */
       err = get_full_mergeinfo(&target_mergeinfo,
