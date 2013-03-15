@@ -1071,8 +1071,6 @@ public class SVNClient implements SVNClientInterface
         {
             aSVNClient.move(new HashSet<String>(Arrays.asList(srcPaths)),
                             destPath, force, moveAsChild, makeParents,
-                            false /* metadataOnly */,
-                            true /* allowMixRev */,
                             revpropTable,
                             message == null ? cachedHandler
                                 : new ConstMsg(message),

@@ -332,10 +332,21 @@ public interface ISVNClient
      * @param handler   the commit message callback, may be <code>null</code>
      *                  if <code>destPath</code> is not a URL
      * @throws ClientException If the move operation fails.
+     * @since 1.8
      */
     void move(Set<String> srcPaths, String destPath, boolean force,
               boolean moveAsChild, boolean makeParents, boolean metadataOnly,
               boolean allowMixRev, Map<String, String> revpropTable,
+              CommitMessageCallback handler, CommitCallback callback)
+        throws ClientException;
+
+    /**
+     * @deprecated Provided for backward compatibility with 1.7. Passes
+     *             metadataOnly false and allowMixRev true.
+     */
+    void move(Set<String> srcPaths, String destPath, boolean force,
+              boolean moveAsChild, boolean makeParents,
+              Map<String, String> revpropTable,
               CommitMessageCallback handler, CommitCallback callback)
         throws ClientException;
 
