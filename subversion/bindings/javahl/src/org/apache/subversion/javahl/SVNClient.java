@@ -212,6 +212,17 @@ public class SVNClient implements ISVNClient
                             CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
+    public void move(Set<String> srcPaths, String destPath,
+                     boolean force, boolean moveAsChild,
+                     boolean makeParents,
+                     Map<String, String> revpropTable,
+                     CommitMessageCallback handler, CommitCallback callback)
+        throws ClientException
+    {
+        move(srcPaths, destPath, force, moveAsChild, makeParents, false, true,
+             revpropTable, handler, callback);
+    }
+
     public native void mkdir(Set<String> paths, boolean makeParents,
                              Map<String, String> revpropTable,
                              CommitMessageCallback handler, CommitCallback callback)
