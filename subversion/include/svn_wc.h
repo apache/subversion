@@ -1672,10 +1672,10 @@ typedef struct svn_wc_conflict_version_t
   const char *path_in_repos;
   /** @} */
 
-  /** The node kind.  Can be any kind, even 'none' or 'unknown'. */
+  /** The node kind.  Can be any kind, including 'none' or 'unknown'. */
   svn_node_kind_t node_kind;
 
-  /** UUID of the repository. Can be NULL meaning unknown.
+  /** UUID of the repository (or NULL if unknown.)
    * @since New in 1.8. */
   const char *repos_uuid;
 
