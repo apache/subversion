@@ -1125,8 +1125,9 @@ path_join_under_root(const char **result_path,
     {
       return svn_error_createf(
           SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-          _("'%s' is not valid as filename in a working copy path"),
-          svn_dirent_local_style(add_path, pool));
+          _("'%s' is not valid as filename in directory '%s'"),
+          svn_dirent_local_style(add_path, pool),
+          svn_dirent_local_style(base_path, pool));
     }
 
   return SVN_NO_ERROR;
