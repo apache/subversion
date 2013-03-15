@@ -127,6 +127,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_SECTION_WORKING_COPY         "working-copy"
 /** @since New in 1.8. */
 #define SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE      "exclusive-locking"
+/** @since New in 1.8. */
 #define SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE_CLIENTS  "exclusive-locking-clients"
 /** @} */
 
