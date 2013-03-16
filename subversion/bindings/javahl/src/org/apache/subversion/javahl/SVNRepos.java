@@ -158,7 +158,19 @@ public class SVNRepos implements ISVNRepos
     public native void listUnusedDBLogs(File path, ISVNRepos.MessageReceiver receiver)
             throws ClientException;
 
+    public void load(File path, InputStream dataInput,
+                     boolean ignoreUUID, boolean forceUUID,
+                     boolean usePreCommitHook, boolean usePostCommitHook,
+                     String relativePath, ReposNotifyCallback callback)
+            throws ClientException
+    {
+        load(path, dataInput, Revision.START, Revision.HEAD,
+             ignoreUUID, forceUUID, usePreCommitHook, usePostCommitHook,
+             relativePath, callback);
+    }
+
     public native void load(File path, InputStream dataInput,
+                            Revision start, Revision end,
                             boolean ignoreUUID, boolean forceUUID,
                             boolean usePreCommitHook, boolean usePostCommitHook,
                             String relativePath, ReposNotifyCallback callback)
