@@ -1776,7 +1776,7 @@ svn_ra_serf__credentials_callback(char **username, char **password,
           (void) save_error(session,
                             svn_error_create(
                               SVN_ERR_AUTHN_FAILED, NULL,
-                              _("No more credentials or we tried too many"
+                              _("No more credentials or we tried too many "
                                 "times.\nAuthentication failed")));
           return SVN_ERR_AUTHN_FAILED;
         }
