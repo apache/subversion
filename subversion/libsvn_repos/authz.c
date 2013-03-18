@@ -826,7 +826,7 @@ authz_retrieve_config_repo(svn_config_t **cfg_p, const char *dirent,
     {
       if (!must_exist)
         {
-          SVN_ERR(svn_config_create(cfg_p, TRUE, scratch_pool));
+          SVN_ERR(svn_config_create(cfg_p, TRUE, result_pool));
           return SVN_NO_ERROR;
         }
       else
@@ -855,7 +855,7 @@ authz_retrieve_config_repo(svn_config_t **cfg_p, const char *dirent,
   return SVN_NO_ERROR;
 }
 
-/* Given a PATH which might be a realative repo URL (^/), an absolute
+/* Given a PATH which might be a relative repo URL (^/), an absolute
  * local repo URL (file://), an absolute path outside of the repo
  * or a location in the Windows registry.
  *

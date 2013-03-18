@@ -850,14 +850,13 @@ fetch_props_func(apr_hash_t **props,
 }
 
 static svn_error_t *
-fetch_kind_func(svn_kind_t *kind,
+fetch_kind_func(svn_node_kind_t *kind,
                 void *baton,
                 const char *path,
                 svn_revnum_t base_revision,
                 apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
-  svn_node_kind_t node_kind;
   svn_fs_root_t *fs_root;
 
   if (!SVN_IS_VALID_REVNUM(base_revision))
@@ -865,8 +864,7 @@ fetch_kind_func(svn_kind_t *kind,
 
   SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision, scratch_pool));
 
-  SVN_ERR(svn_fs_check_path(&node_kind, fs_root, path, scratch_pool));
-  *kind = svn__kind_from_node_kind(node_kind, FALSE);
+  SVN_ERR(svn_fs_check_path(kind, fs_root, path, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1085,7 +1083,7 @@ add_symlink_cb(void *baton,
 static svn_error_t *
 add_absent_cb(void *baton,
               const char *relpath,
-              svn_kind_t kind,
+              svn_node_kind_t kind,
               svn_revnum_t replaces_rev,
               apr_pool_t *scratch_pool)
 {

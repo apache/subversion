@@ -191,6 +191,44 @@ typedef struct largest_changes_t
   large_change_info_t **changes;
 } largest_changes_t;
 
+/* Information we gather per size bracket.
+ */
+typedef struct histogram_line_t
+{
+  /* number of item that fall into this bracket */
+  apr_int64_t count;
+
+  /* sum of values in this bracket */
+  apr_int64_t sum;
+} histogram_line_t;
+
+/* A histogram of 64 bit integer values. 
+ */
+typedef struct histogram_t
+{
+  /* total sum over all brackets */
+  histogram_line_t total;
+
+  /* one bracket per binary step.
+   * line[i] is the 2^(i-1) <= x < 2^i bracket */
+  histogram_line_t lines[64];
+} histogram_t;
+
+/* Information we collect per file ending. 
+ */
+typedef struct extension_info_t
+{
+  /* file extension, including leading "."
+   * "(none)" in the container for files w/o extension. */
+  const char *extension;
+  
+  /* histogram of representation sizes */
+  histogram_t rep_histogram;
+  
+  /* histogram of sizes of changed files */
+  histogram_t node_histogram;
+} extension_info_t;
+
 /* Root data structure containing all information about a given repository.
  */
 typedef struct fs_fs_t
@@ -225,6 +263,42 @@ typedef struct fs_fs_t
 
   /* track the biggest contributors to repo size */
   largest_changes_t *largest_changes;
+
+  /* history of representation sizes */
+  histogram_t rep_size_histogram;
+
+  /* history of sizes of changed nodes */
+  histogram_t node_size_histogram;
+
+  /* history of unused representations */
+  histogram_t unused_rep_histogram;
+
+  /* history of sizes of changed files */
+  histogram_t file_histogram;
+
+  /* history of sizes of file representations */
+  histogram_t file_rep_histogram;
+
+  /* history of sizes of changed file property sets */
+  histogram_t file_prop_histogram;
+
+  /* history of sizes of file property representations */
+  histogram_t file_prop_rep_histogram;
+
+  /* history of sizes of changed directories (in bytes) */
+  histogram_t dir_histogram;
+
+  /* history of sizes of directories representations */
+  histogram_t dir_rep_histogram;
+
+  /* history of sizes of changed directories property sets */
+  histogram_t dir_prop_histogram;
+
+  /* history of sizes of directories property representations */
+  histogram_t dir_prop_rep_histogram;
+
+  /* extension -> extension_info_t* map */
+  apr_hash_t *by_extension;
 } fs_fs_t;
 
 /* Return the rev pack folder for revision REV in FS.
@@ -393,28 +467,48 @@ initialize_largest_changes(fs_fs_t *fs,
     }
 }
 
-/* Update data aggregators in FS with this representation of on-disk SIZE
- * for PATH in REVSION.
+/* Add entry for SIZE to HISTOGRAM.
+ */
+static void
+add_to_histogram(histogram_t *histogram,
+                 apr_int64_t size)
+{
+  apr_int64_t shift = 0;
+
+  while (((apr_int64_t)(1) << shift) <= size)
+    shift++;
+
+  histogram->total.count++;
+  histogram->total.sum += size;
+  histogram->lines[(apr_size_t)shift].count++;
+  histogram->lines[(apr_size_t)shift].sum += size;
+}
+
+/* Update data aggregators in FS with this representation of type KIND, on-
+ * disk REP_SIZE and expanded node size EXPANDED_SIZE for PATH in REVSION.
  */
 static void
 add_change(fs_fs_t *fs,
-           apr_size_t size,
+           apr_int64_t rep_size,
+           apr_int64_t expanded_size,
            svn_revnum_t revision,
-           const char *path)
+           const char *path,
+           rep_kind_t kind)
 {
-  if (size >= fs->largest_changes->min_size)
+  /* identify largest reps */
+  if (rep_size >= fs->largest_changes->min_size)
     {
       apr_size_t i;
       large_change_info_t *info
         = fs->largest_changes->changes[fs->largest_changes->count - 1];
-      info->size = size;
+      info->size = rep_size;
       info->revision = revision;
       svn_stringbuf_set(info->path, path);
 
       /* linear insertion but not too bad since count is low and insertions
        * near the end are more likely than close to front */
       for (i = fs->largest_changes->count - 1; i > 0; --i)
-        if (fs->largest_changes->changes[i-1]->size >= size)
+        if (fs->largest_changes->changes[i-1]->size >= rep_size)
           break;
         else
           fs->largest_changes->changes[i] = fs->largest_changes->changes[i-1];
@@ -422,6 +516,66 @@ add_change(fs_fs_t *fs,
       fs->largest_changes->changes[i] = info;
       fs->largest_changes->min_size
         = fs->largest_changes->changes[fs->largest_changes->count-1]->size;
+    }
+
+  /* global histograms */
+  add_to_histogram(&fs->rep_size_histogram, rep_size);
+  add_to_histogram(&fs->node_size_histogram, expanded_size);
+
+  /* specific histograms by type */
+  switch (kind)
+    {
+      case unused_rep:        add_to_histogram(&fs->unused_rep_histogram,
+                                               rep_size);
+                              break;
+      case dir_property_rep:  add_to_histogram(&fs->dir_prop_rep_histogram,
+                                               rep_size);
+                              add_to_histogram(&fs->dir_prop_histogram,
+                                              expanded_size);
+                              break;
+      case file_property_rep: add_to_histogram(&fs->file_prop_rep_histogram,
+                                               rep_size);
+                              add_to_histogram(&fs->file_prop_histogram,
+                                               expanded_size);
+                              break;
+      case dir_rep:           add_to_histogram(&fs->dir_rep_histogram,
+                                               rep_size);
+                              add_to_histogram(&fs->dir_histogram,
+                                               expanded_size);
+                              break;
+      case file_rep:          add_to_histogram(&fs->file_rep_histogram,
+                                               rep_size);
+                              add_to_histogram(&fs->file_histogram,
+                                               expanded_size);
+                              break;
+    }
+
+  /* by extension */
+  if (kind == file_rep)
+    {
+      /* determine extension */
+      extension_info_t *info;
+      const char * file_name = strrchr(path, '/');
+      const char * extension = file_name ? strrchr(file_name, '.') : NULL;
+
+      if (extension == NULL || extension == file_name + 1)
+        extension = "(none)";
+
+      /* get / auto-insert entry for this extension */
+      info = apr_hash_get(fs->by_extension, extension, APR_HASH_KEY_STRING);
+      if (info == NULL)
+        {
+          apr_pool_t *pool = apr_hash_pool_get(fs->by_extension);
+          info = apr_pcalloc(pool, sizeof(*info));
+          info->extension = apr_pstrdup(pool, extension);
+
+          apr_hash_set(fs->by_extension, info->extension,
+                       APR_HASH_KEY_STRING, info);
+        }
+
+      /* update per-extension histogram */
+      add_to_histogram(&info->node_histogram, expanded_size);
+      add_to_histogram(&info->rep_histogram, rep_size);
     }
 }
 
@@ -1198,7 +1352,11 @@ read_noderev(fs_fs_t *fs,
 
   /* record largest changes */
   if (text && text->ref_count == 1)
-    add_change(fs, text->size, text->revision, path);
+    add_change(fs, (apr_int64_t)text->size, (apr_int64_t)text->expanded_size,
+               text->revision, path, text->kind);
+  if (props && props->ref_count == 1)
+    add_change(fs, (apr_int64_t)props->size, (apr_int64_t)props->expanded_size,
+               props->revision, path, props->kind);
   
   /* if this is a directory and has not been processed, yet, read and
    * process it recursively */
@@ -1409,6 +1567,7 @@ read_revisions(fs_fs_t **fs,
                                     sizeof(revision_info_t *));
   (*fs)->null_base = apr_pcalloc(pool, sizeof(*(*fs)->null_base));
   initialize_largest_changes(*fs, 64, pool);
+  (*fs)->by_extension = apr_hash_make(pool);
 
   SVN_ERR(svn_cache__create_membuffer_cache(&(*fs)->window_cache,
                                             svn_cache__get_global_membuffer_cache(),
@@ -1545,6 +1704,213 @@ print_largest_reps(largest_changes_t *changes,
            changes->changes[i]->path->data);
 }
 
+/* Print the non-zero section of HISTOGRAM to console. 
+ * Use POOL for allocations.
+ */
+static void
+print_histogram(histogram_t *histogram,
+                apr_pool_t *pool)
+{
+  int first = 0;
+  int last = 63;
+  int i;
+
+  /* identify non-zero range */
+  while (last > 0 && histogram->lines[last].count == 0)
+    --last;
+
+  while (first <= last && histogram->lines[first].count == 0)
+    ++first;
+
+  /* display histogram lines */
+  for (i = last; i >= first; --i)
+    printf(_("  [2^%2d, 2^%2d)   %15s (%2d%%) bytes in %12s (%2d%%) items\n"),
+           i-1, i,
+           svn__i64toa_sep(histogram->lines[i].sum, ',', pool),
+           (int)(histogram->lines[i].sum * 100 / histogram->total.sum),
+           svn__i64toa_sep(histogram->lines[i].count, ',', pool),
+           (int)(histogram->lines[i].count * 100 / histogram->total.count));
+}
+
+/* COMPARISON_FUNC for svn_sort__hash.
+ * Sort extension_info_t values by total count in descending order.
+ */
+static int
+compare_count(const svn_sort__item_t *a,
+              const svn_sort__item_t *b)
+{
+  const extension_info_t *lhs = a->value;
+  const extension_info_t *rhs = b->value;
+  apr_int64_t diff = lhs->node_histogram.total.count
+                   - rhs->node_histogram.total.count;
+
+  return diff > 0 ? -1 : (diff < 0 ? 1 : 0);
+}
+
+/* COMPARISON_FUNC for svn_sort__hash.
+ * Sort extension_info_t values by total uncompressed size in descending order.
+ */
+static int
+compare_node_size(const svn_sort__item_t *a,
+                  const svn_sort__item_t *b)
+{
+  const extension_info_t *lhs = a->value;
+  const extension_info_t *rhs = b->value;
+  apr_int64_t diff = lhs->node_histogram.total.sum
+                   - rhs->node_histogram.total.sum;
+
+  return diff > 0 ? -1 : (diff < 0 ? 1 : 0);
+}
+
+/* COMPARISON_FUNC for svn_sort__hash.
+ * Sort extension_info_t values by total prep count in descending order.
+ */
+static int
+compare_rep_size(const svn_sort__item_t *a,
+                 const svn_sort__item_t *b)
+{
+  const extension_info_t *lhs = a->value;
+  const extension_info_t *rhs = b->value;
+  apr_int64_t diff = lhs->rep_histogram.total.sum
+                   - rhs->rep_histogram.total.sum;
+
+  return diff > 0 ? -1 : (diff < 0 ? 1 : 0);
+}
+
+/* Return an array of extension_info_t* for the (up to) 16 most prominent
+ * extensions in FS according to the sort criterion COMPARISON_FUNC.
+ * Allocate results in POOL.
+ */
+static apr_array_header_t *
+get_by_extensions(fs_fs_t *fs,
+                  int (*comparison_func)(const svn_sort__item_t *,
+                                         const svn_sort__item_t *),
+                  apr_pool_t *pool)
+{
+  /* sort all data by extension */
+  apr_array_header_t *sorted
+    = svn_sort__hash(fs->by_extension, comparison_func, pool);
+
+  /* select the top (first) 16 entries */
+  int count = MIN(sorted->nelts, 16);
+  apr_array_header_t *result
+    = apr_array_make(pool, count, sizeof(extension_info_t*));
+  int i;
+
+  for (i = 0; i < count; ++i)
+    APR_ARRAY_PUSH(result, extension_info_t*)
+     = APR_ARRAY_IDX(sorted, i, svn_sort__item_t).value;
+
+  return result;
+}
+
+/* Print the (up to) 16 extensions in FS with the most changes. 
+ * Use POOL for allocations.
+ */
+static void
+print_extensions_by_changes(fs_fs_t *fs,
+                            apr_pool_t *pool)
+{
+  apr_array_header_t *data = get_by_extensions(fs, compare_count, pool);
+  apr_int64_t sum = 0;
+  int i;
+
+  for (i = 0; i < data->nelts; ++i)
+    {
+      extension_info_t *info = APR_ARRAY_IDX(data, i, extension_info_t *);
+      sum += info->node_histogram.total.count;
+      printf(_("  %9s %12s (%2d%%) changes\n"),
+             info->extension,
+             svn__i64toa_sep(info->node_histogram.total.count, ',', pool),
+             (int)(info->node_histogram.total.count * 100 /
+                   fs->file_histogram.total.count));
+    }
+
+  printf(_("  %9s %12s (%2d%%) changes\n"),
+         "(others)",
+         svn__i64toa_sep(fs->file_histogram.total.count - sum, ',', pool),
+         (int)((fs->file_histogram.total.count - sum) * 100 /
+               fs->file_histogram.total.count));
+}
+
+/* Print the (up to) 16 extensions in FS with the largest total size of
+ * changed file content.  Use POOL for allocations.
+ */
+static void
+print_extensions_by_nodes(fs_fs_t *fs,
+                          apr_pool_t *pool)
+{
+  apr_array_header_t *data = get_by_extensions(fs, compare_node_size, pool);
+  apr_int64_t sum = 0;
+  int i;
+
+  for (i = 0; i < data->nelts; ++i)
+    {
+      extension_info_t *info = APR_ARRAY_IDX(data, i, extension_info_t *);
+      sum += info->node_histogram.total.sum;
+      printf(_("  %9s %20s (%2d%%) bytes\n"),
+             info->extension,
+             svn__i64toa_sep(info->node_histogram.total.sum, ',', pool),
+             (int)(info->node_histogram.total.sum * 100 /
+                   fs->file_histogram.total.sum));
+    }
+
+  printf(_("  %9s %20s (%2d%%) bytes\n"),
+         "(others)",
+         svn__i64toa_sep(fs->file_histogram.total.sum - sum, ',', pool),
+         (int)((fs->file_histogram.total.sum - sum) * 100 /
+               fs->file_histogram.total.sum));
+}
+
+/* Print the (up to) 16 extensions in FS with the largest total size of
+ * changed file content.  Use POOL for allocations.
+ */
+static void
+print_extensions_by_reps(fs_fs_t *fs,
+                         apr_pool_t *pool)
+{
+  apr_array_header_t *data = get_by_extensions(fs, compare_rep_size, pool);
+  apr_int64_t sum = 0;
+  int i;
+
+  for (i = 0; i < data->nelts; ++i)
+    {
+      extension_info_t *info = APR_ARRAY_IDX(data, i, extension_info_t *);
+      sum += info->rep_histogram.total.sum;
+      printf(_("  %9s %20s (%2d%%) bytes\n"),
+             info->extension,
+             svn__i64toa_sep(info->rep_histogram.total.sum, ',', pool),
+             (int)(info->rep_histogram.total.sum * 100 /
+                   fs->rep_size_histogram.total.sum));
+    }
+
+  printf(_("  %9s %20s (%2d%%) bytes\n"),
+         "(others)",
+         svn__i64toa_sep(fs->rep_size_histogram.total.sum - sum, ',', pool),
+         (int)((fs->rep_size_histogram.total.sum - sum) * 100 /
+               fs->rep_size_histogram.total.sum));
+}
+
+/* Print per-extension histograms for the most frequent extensions in FS.
+ * Use POOL for allocations. */
+static void
+print_histograms_by_extension(fs_fs_t *fs,
+                              apr_pool_t *pool)
+{
+  apr_array_header_t *data = get_by_extensions(fs, compare_count, pool);
+  int i;
+
+  for (i = 0; i < data->nelts; ++i)
+    {
+      extension_info_t *info = APR_ARRAY_IDX(data, i, extension_info_t *);
+      printf("\nHistogram of '%s' file sizes:\n", info->extension);
+      print_histogram(&info->node_histogram, pool);
+      printf("\nHistogram of '%s' file representation sizes:\n",
+             info->extension);
+      print_histogram(&info->rep_histogram, pool);
+    }
+}
+
 /* Post-process stats for FS and print them to the console.
  * Use POOL for allocations.
  */
@@ -1675,8 +2041,38 @@ print_stats(fs_fs_t *fs,
   print_rep_stats(&dir_prop_rep_stats, pool);
   printf("\nFile property representation statistics:\n");
   print_rep_stats(&file_prop_rep_stats, pool);
+
   printf("\nLargest representations:\n");
   print_largest_reps(fs->largest_changes, pool);
+  printf("\nExtensions by number of changes:\n");
+  print_extensions_by_changes(fs, pool);
+  printf("\nExtensions by size of changed files:\n");
+  print_extensions_by_nodes(fs, pool);
+  printf("\nExtensions by size of representations:\n");
+  print_extensions_by_reps(fs, pool);
+
+  printf("\nHistogram of expanded node sizes:\n");
+  print_histogram(&fs->node_size_histogram, pool);
+  printf("\nHistogram of representation sizes:\n");
+  print_histogram(&fs->rep_size_histogram, pool);
+  printf("\nHistogram of file sizes:\n");
+  print_histogram(&fs->file_histogram, pool);
+  printf("\nHistogram of file representation sizes:\n");
+  print_histogram(&fs->file_rep_histogram, pool);
+  printf("\nHistogram of file property sizes:\n");
+  print_histogram(&fs->file_prop_histogram, pool);
+  printf("\nHistogram of file property representation sizes:\n");
+  print_histogram(&fs->file_prop_rep_histogram, pool);
+  printf("\nHistogram of directory sizes:\n");
+  print_histogram(&fs->dir_histogram, pool);
+  printf("\nHistogram of directory representation sizes:\n");
+  print_histogram(&fs->dir_rep_histogram, pool);
+  printf("\nHistogram of directory property sizes:\n");
+  print_histogram(&fs->dir_prop_histogram, pool);
+  printf("\nHistogram of directory property representation sizes:\n");
+  print_histogram(&fs->dir_prop_rep_histogram, pool);
+
+  print_histograms_by_extension(fs, pool);
 }
 
 /* Write tool usage info text to OSTREAM using PROGNAME as a prefix and

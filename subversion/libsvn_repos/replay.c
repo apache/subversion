@@ -783,14 +783,13 @@ path_driver_cb_func(void **dir_baton,
 
 #ifdef USE_EV2_IMPL
 static svn_error_t *
-fetch_kind_func(svn_kind_t *kind,
+fetch_kind_func(svn_node_kind_t *kind,
                 void *baton,
                 const char *path,
                 svn_revnum_t base_revision,
                 apr_pool_t *scratch_pool)
 {
   svn_fs_root_t *root = baton;
-  svn_node_kind_t node_kind;
   svn_fs_root_t *prev_root;
   svn_fs_t *fs = svn_fs_root_fs(root);
 
@@ -798,9 +797,8 @@ fetch_kind_func(svn_kind_t *kind,
     base_revision = svn_fs_revision_root_revision(root) - 1;
 
   SVN_ERR(svn_fs_revision_root(&prev_root, fs, base_revision, scratch_pool));
-  SVN_ERR(svn_fs_check_path(&node_kind, prev_root, path, scratch_pool));
+  SVN_ERR(svn_fs_check_path(kind, prev_root, path, scratch_pool));
 
-  *kind = svn__kind_from_node_kind(node_kind, FALSE);
   return SVN_NO_ERROR;
 }
 

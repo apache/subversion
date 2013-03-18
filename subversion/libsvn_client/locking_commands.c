@@ -304,6 +304,7 @@ organize_lock_targets(const char **common_parent_url,
           const char *target_url;
           struct wc_lock_item_t *wli;
           const char *local_abspath;
+          svn_node_kind_t kind;
 
           svn_pool_clear(iterpool);
 
@@ -311,16 +312,17 @@ organize_lock_targets(const char **common_parent_url,
           local_abspath = svn_dirent_join(common_dirent, rel_target, scratch_pool);
           wli = apr_pcalloc(scratch_pool, sizeof(*wli));
 
-          SVN_ERR(svn_wc__node_get_base(&wli->revision, &repos_relpath,
+          SVN_ERR(svn_wc__node_get_base(&kind, &wli->revision, &repos_relpath,
                                         &repos_root_url, NULL,
                                         &wli->lock_token,
                                         wc_ctx, local_abspath,
+                                        FALSE /* ignore_enoent */,
+                                        FALSE /* show_hidden */,
                                         result_pool, iterpool));
 
-          /* Node exists in BASE? */
-          if (! repos_root_url || !repos_relpath)
-            return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                                     _("The node '%s' was not found."),
+          if (kind != svn_node_file)
+            return svn_error_createf(SVN_ERR_WC_NOT_FILE, NULL,
+                                     _("The node '%s' is not a file"),
                                      svn_dirent_local_style(local_abspath,
                                                             iterpool));
 
@@ -491,10 +493,8 @@ svn_client_lock(const apr_array_header_t *targets,
   /* Open an RA session to the common parent of TARGETS. */
   if (base_dir)
     SVN_ERR(svn_dirent_get_absolute(&base_dir_abspath, base_dir, pool));
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL,
-                                               common_parent_url, base_dir,
-                                               NULL, FALSE, FALSE,
-                                               ctx, pool));
+  SVN_ERR(svn_client_open_ra_session2(&ra_session, common_parent_url,
+                                      base_dir_abspath, ctx, pool, pool));
 
   cb.base_dir_abspath = base_dir_abspath;
   cb.urls_to_paths = urls_to_paths;
@@ -531,10 +531,8 @@ svn_client_unlock(const apr_array_header_t *targets,
   /* Open an RA session. */
   if (base_dir)
     SVN_ERR(svn_dirent_get_absolute(&base_dir_abspath, base_dir, pool));
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL,
-                                               common_parent_url,
-                                               base_dir_abspath, NULL, FALSE,
-                                               FALSE, ctx, pool));
+  SVN_ERR(svn_client_open_ra_session2(&ra_session, common_parent_url,
+                                      base_dir_abspath, ctx, pool, pool));
 
   /* If break_lock is not set, lock tokens are required by the server.
      If the targets were all URLs, ensure that we provide lock tokens,

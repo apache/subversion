@@ -501,6 +501,16 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
                               const char *local_abspath,
                               apr_pool_t *scratch_pool);
 
+/* Similar to svn_wc__internal_conflicted_p(), but ignores
+ * moved-away-edit tree conflicts.  Also ignores text and property
+ * conflicts if TREE_ONLY is TRUE */
+svn_error_t *
+svn_wc__conflicted_for_update_p(svn_boolean_t *conflicted_p,
+                                svn_wc__db_t *db,
+                                const char *local_abspath,
+                                svn_boolean_t tree_only,
+                                apr_pool_t *scratch_pool);
+
 
 /* Internal version of svn_wc_transmit_text_deltas3(). */
 svn_error_t *
@@ -730,7 +740,7 @@ struct svn_wc__shim_fetch_baton_t
 
 /* Using a BATON of struct shim_fetch_baton, return KIND for PATH. */
 svn_error_t *
-svn_wc__fetch_kind_func(svn_kind_t *kind,
+svn_wc__fetch_kind_func(svn_node_kind_t *kind,
                         void *baton,
                         const char *path,
                         svn_revnum_t base_revision,

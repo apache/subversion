@@ -29,6 +29,7 @@
 
 #include "svn_dirent_uri.h"
 #include "svn_error.h"
+#include "svn_io.h"
 #include "svn_pools.h"
 #include "svn_props.h"
 #include "svn_types.h"
@@ -1112,8 +1113,19 @@ copy_as_changed_file_added(const char *relpath,
   if (copyfrom_source)
     {
       apr_array_header_t *propchanges;
+      svn_boolean_t same;
       SVN_ERR(svn_prop_diffs(&propchanges, right_props, copyfrom_props,
                              scratch_pool));
+
+      /* "" is sometimes a marker for just modified (E.g. no-textdeltas),
+         and it is certainly not a file */
+      if (*copyfrom_file && *right_file)
+        {
+          SVN_ERR(svn_io_files_contents_same_p(&same, copyfrom_file,
+                                               right_file, scratch_pool));
+        }
+      else
+        same = FALSE;
 
       SVN_ERR(cb->processor->file_changed(relpath,
                                           copyfrom_source,
@@ -1122,7 +1134,7 @@ copy_as_changed_file_added(const char *relpath,
                                           right_file,
                                           copyfrom_props,
                                           right_props,
-                                          copyfrom_file && right_file,
+                                          !same,
                                           propchanges,
                                           file_baton,
                                           cb->processor,

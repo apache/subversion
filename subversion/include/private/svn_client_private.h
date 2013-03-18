@@ -121,9 +121,9 @@ svn_client__pathrev_fspath(const svn_client__pathrev_t *pathrev,
    that it is the same node in both PEG_REVISION and REVISION.  If it
    is not, then @c SVN_ERR_CLIENT_UNRELATED_RESOURCES is returned.
 
-   BASE_DIR_ABSPATH is the working copy path the ra_session corresponds to,
-   and should only be used if PATH_OR_URL is a url
-     ### else NULL? what's it for?
+   BASE_DIR_ABSPATH is the working copy path the ra_session corresponds
+   to. If provided it will be used to read and dav props. So if provided
+   this directory MUST match the session anchor.
 
    If PEG_REVISION->kind is 'unspecified', the peg revision is 'head'
    for a URL or 'working' for a WC path.  If REVISION->kind is

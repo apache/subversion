@@ -131,7 +131,17 @@ svn_error_t *
 sbox_wc_update(svn_test__sandbox_t *b, const char *path, svn_revnum_t revnum);
 
 svn_error_t *
-sbox_wc_switch(svn_test__sandbox_t *b, const char *url);
+sbox_wc_update_depth(svn_test__sandbox_t *b,
+                     const char *path,
+                     svn_revnum_t revnum,
+                     svn_depth_t depth,
+                     svn_boolean_t sticky);
+
+svn_error_t *
+sbox_wc_switch(svn_test__sandbox_t *b,
+               const char *path,
+               const char *url,
+               svn_depth_t depth);
 
 /* */
 svn_error_t *

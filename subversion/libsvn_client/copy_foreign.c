@@ -480,25 +480,20 @@ svn_client__copy_foreign(const char *url,
                 _("'%s' is not a valid location inside a repository"),
                 url);
 
-  SVN_ERR(svn_wc_read_kind(&wc_kind, ctx->wc_ctx, dst_abspath, FALSE,
-                           scratch_pool));
+  SVN_ERR(svn_wc_read_kind2(&wc_kind, ctx->wc_ctx, dst_abspath, FALSE, TRUE,
+                            scratch_pool));
 
   if (wc_kind != svn_node_none)
     {
-      svn_boolean_t deleted;
-      SVN_ERR(svn_wc__node_is_status_deleted(&deleted, ctx->wc_ctx,
-                                             dst_abspath, scratch_pool));
-
-      if (! deleted)
-        return svn_error_createf(
+      return svn_error_createf(
                 SVN_ERR_ENTRY_EXISTS, NULL,
                 _("'%s' is already under version control"),
                 svn_dirent_local_style(dst_abspath, scratch_pool));
     }
 
   dir_abspath = svn_dirent_dirname(dst_abspath, scratch_pool);
-  SVN_ERR(svn_wc_read_kind(&wc_kind, ctx->wc_ctx, dir_abspath, FALSE,
-                           scratch_pool));
+  SVN_ERR(svn_wc_read_kind2(&wc_kind, ctx->wc_ctx, dir_abspath,
+                            FALSE, FALSE, scratch_pool));
 
   if (wc_kind == svn_node_none)
     {
@@ -506,8 +501,8 @@ svn_client__copy_foreign(const char *url,
         SVN_ERR(svn_client__make_local_parents(dir_abspath, make_parents, ctx,
                                                scratch_pool));
 
-      SVN_ERR(svn_wc_read_kind(&wc_kind, ctx->wc_ctx, dir_abspath, FALSE,
-                           scratch_pool));
+      SVN_ERR(svn_wc_read_kind2(&wc_kind, ctx->wc_ctx, dir_abspath,
+                                FALSE, FALSE, scratch_pool));
     }
 
   if (wc_kind != svn_node_dir)

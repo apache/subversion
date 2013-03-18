@@ -193,7 +193,10 @@ update_internal(svn_revnum_t *result_rev,
   void *report_baton;
   const char *corrected_url;
   const char *target;
-  svn_client__pathrev_t *anchor_loc;
+  const char *repos_root_url;
+  const char *repos_relpath;
+  const char *repos_uuid;
+  const char *anchor_url;
   svn_error_t *err;
   svn_revnum_t revnum;
   svn_boolean_t use_commit_times;
@@ -208,7 +211,8 @@ update_internal(svn_revnum_t *result_rev,
   apr_array_header_t *preserved_exts;
   struct svn_client__dirent_fetcher_baton_t dfb;
   svn_boolean_t server_supports_depth;
-  svn_boolean_t text_conflicted, prop_conflicted, tree_conflicted;
+  svn_boolean_t cropping_target;
+  svn_boolean_t target_conflicted = FALSE;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
@@ -226,33 +230,43 @@ update_internal(svn_revnum_t *result_rev,
     target = "";
 
   /* Check if our anchor exists in BASE. If it doesn't we can't update. */
-  SVN_ERR(svn_client__wc_node_get_base(&anchor_loc, anchor_abspath,
-                                       ctx->wc_ctx, pool, pool));
+  SVN_ERR(svn_wc__node_get_base(NULL, NULL, &repos_relpath, &repos_root_url,
+                                &repos_uuid, NULL,
+                                ctx->wc_ctx, anchor_abspath,
+                                TRUE, FALSE,
+                                pool, pool));
 
   /* It does not make sense to update conflict victims. */
-  err = svn_wc_conflicted_p3(&text_conflicted, &prop_conflicted,
-                             &tree_conflicted,
-                             ctx->wc_ctx, local_abspath, pool);
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+  if (repos_relpath)
     {
+      svn_boolean_t text_conflicted, prop_conflicted;
+
+      anchor_url = svn_path_url_add_component2(repos_root_url, repos_relpath,
+                                               pool);
+
+      err = svn_wc_conflicted_p3(&text_conflicted, &prop_conflicted,
+                                 NULL,
+                                 ctx->wc_ctx, local_abspath, pool);
+
+      if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_trace(err);
       svn_error_clear(err);
-      text_conflicted = FALSE;
-      prop_conflicted = FALSE;
-      tree_conflicted = FALSE;
+
+      /* tree-conflicts are handled by the update editor */
+      if (!err && (text_conflicted || prop_conflicted))
+        target_conflicted = TRUE;
     }
   else
-    SVN_ERR(err);
+    anchor_url = NULL;
 
-  if (! anchor_loc
-      || text_conflicted || prop_conflicted || tree_conflicted)
+  if (! anchor_url || target_conflicted)
     {
       if (ctx->notify_func2)
         {
           svn_wc_notify_t *nt;
 
           nt = svn_wc_create_notify(local_abspath,
-                                    (text_conflicted || prop_conflicted
-                                                     || tree_conflicted)
+                                    target_conflicted
                                       ? svn_wc_notify_skip_conflicted
                                       : svn_wc_notify_update_skip_working_only,
                                     pool);
@@ -263,7 +277,8 @@ update_internal(svn_revnum_t *result_rev,
     }
 
   /* We may need to crop the tree if the depth is sticky */
-  if (depth_is_sticky && depth < svn_depth_infinity)
+  cropping_target = (depth_is_sticky && depth < svn_depth_infinity);
+  if (cropping_target)
     {
       svn_node_kind_t target_kind;
 
@@ -279,8 +294,8 @@ update_internal(svn_revnum_t *result_rev,
           return SVN_NO_ERROR;
         }
 
-      SVN_ERR(svn_wc_read_kind(&target_kind, ctx->wc_ctx, local_abspath, TRUE,
-                               pool));
+      SVN_ERR(svn_wc_read_kind2(&target_kind, ctx->wc_ctx, local_abspath,
+                                TRUE, TRUE, pool));
       if (target_kind == svn_node_dir)
         {
           SVN_ERR(svn_wc_crop_tree2(ctx->wc_ctx, local_abspath, depth,
@@ -329,9 +344,9 @@ update_internal(svn_revnum_t *result_rev,
 
   /* Open an RA session for the URL */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
-                                               anchor_loc->url,
+                                               anchor_url,
                                                anchor_abspath, NULL, TRUE,
-                                               TRUE, ctx, pool));
+                                               TRUE, ctx, pool, pool));
 
   /* If we got a corrected URL from the RA subsystem, we'll need to
      relocate our working copy first. */
@@ -344,15 +359,15 @@ update_internal(svn_revnum_t *result_rev,
       SVN_ERR(svn_ra_get_repos_root2(ra_session, &new_repos_root_url, pool));
 
       /* svn_client_relocate2() will check the uuid */
-      SVN_ERR(svn_client_relocate2(anchor_abspath, anchor_loc->url,
+      SVN_ERR(svn_client_relocate2(anchor_abspath, anchor_url,
                                    new_repos_root_url, ignore_externals,
                                    ctx, pool));
 
       /* Store updated repository root for externals */
-      anchor_loc->repos_root_url = new_repos_root_url;
+      repos_root_url = new_repos_root_url;
       /* ### We should update anchor_loc->repos_uuid too, although currently
        * we don't use it. */
-      anchor_loc->url = corrected_url;
+      anchor_url = corrected_url;
     }
 
   /* Resolve unspecified REVISION now, because we need to retrieve the
@@ -374,7 +389,7 @@ update_internal(svn_revnum_t *result_rev,
 
   dfb.ra_session = ra_session;
   dfb.target_revision = revnum;
-  dfb.anchor_url = anchor_loc->url;
+  dfb.anchor_url = anchor_url;
 
   SVN_ERR(svn_client__get_inheritable_props(&wcroot_iprops, local_abspath,
                                             revnum, depth, ra_session,
@@ -430,7 +445,8 @@ update_internal(svn_revnum_t *result_rev,
   /* We handle externals after the update is complete, so that
      handling external items (and any errors therefrom) doesn't delay
      the primary operation.  */
-  if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
+  if ((SVN_DEPTH_IS_RECURSIVE(depth) || cropping_target)
+      && (! ignore_externals))
     {
       apr_hash_t *new_externals;
       apr_hash_t *new_depths;
@@ -441,7 +457,7 @@ update_internal(svn_revnum_t *result_rev,
 
       SVN_ERR(svn_client__handle_externals(new_externals,
                                            new_depths,
-                                           anchor_loc->repos_root_url, local_abspath,
+                                           repos_root_url, local_abspath,
                                            depth, use_sleep,
                                            ctx, pool));
     }

@@ -52,6 +52,7 @@ struct svn_cl__interactive_conflict_baton_t {
   svn_boolean_t external_failed;
   svn_cmdline_prompt_baton_t *pb;
   const char *path_prefix;
+  svn_boolean_t quit;
 };
 
 svn_error_t *
@@ -75,6 +76,7 @@ svn_cl__get_conflict_func_interactive_baton(
   (*b)->external_failed = FALSE;
   (*b)->pb = pb;
   SVN_ERR(svn_dirent_get_absolute(&(*b)->path_prefix, "", result_pool));
+  (*b)->quit = FALSE;
 
   return SVN_NO_ERROR;
 }
@@ -319,25 +321,25 @@ static const resolver_option_t text_conflict_options[] =
   { "df", "diff-full",        N_("show all changes made to merged file"), -1 },
   { "r",  "resolved",         N_("accept merged version of file"),
                               svn_wc_conflict_choose_merged },
-  { "" },
+  { "",   "",                 "", svn_wc_conflict_choose_unspecified },
   { "dc", "display-conflict", N_("show all conflicts (ignoring merged version)"), -1 },
   { "mc", "mine-conflict",    N_("accept my version for all conflicts (same)"),
                               svn_wc_conflict_choose_mine_conflict },
   { "tc", "theirs-conflict",  N_("accept their version for all conflicts (same)"),
                               svn_wc_conflict_choose_theirs_conflict },
-  { "" },
+  { "",   "",                 "", svn_wc_conflict_choose_unspecified },
   { "mf", "mine-full",        N_("accept my version of entire file (even "
                                  "non-conflicts)"),
                               svn_wc_conflict_choose_mine_full },
   { "tf", "theirs-full",      N_("accept their version of entire file (same)"),
                               svn_wc_conflict_choose_theirs_full },
-  { "" },
+  { "",   "",                 "", svn_wc_conflict_choose_unspecified },
   { "p",  "postpone",         N_("mark the conflict to be resolved later"),
                               svn_wc_conflict_choose_postpone },
   { "m",  "merge",            N_("use internal merge tool to resolve conflict"), -1 },
   { "l",  "launch",           N_("launch external tool to resolve conflict"), -1 },
   { "q",  "quit",             N_("postpone all remaining conflicts"),
-                              svn_cl__accept_postpone },
+                              svn_wc_conflict_choose_postpone },
   { "s",  "show all options", N_("show this list (also 'h', '?')"), -1 },
   { NULL }
 };
@@ -353,7 +355,7 @@ static const resolver_option_t prop_conflict_options[] =
   { "tf", "theirs-full",      N_("accept their version of entire file (same)"),
                               svn_wc_conflict_choose_theirs_full },
   { "q",  "quit",             N_("postpone all remaining conflicts"),
-                              svn_cl__accept_postpone },
+                              svn_wc_conflict_choose_postpone },
   { "h",  "help",             N_("show this help (also '?')"), -1 },
   { NULL }
 };
@@ -368,7 +370,7 @@ static const resolver_option_t obstructed_add_options[] =
   { "tf", "theirs-full",      N_("accept incoming item (overwrite pre-existing item)"),
                               svn_wc_conflict_choose_theirs_full },
   { "q",  "quit",             N_("postpone all remaining conflicts"),
-                              svn_cl__accept_postpone },
+                              svn_wc_conflict_choose_postpone },
   { "h",  "help",             N_("show this help (also '?')"), -1 },
   { NULL }
 };
@@ -380,12 +382,8 @@ static const resolver_option_t tree_conflict_options[] =
                               svn_wc_conflict_choose_postpone },
   { "r",  "resolved",         N_("accept current working copy state"),
                               svn_wc_conflict_choose_merged },
-  { "mc", "mine-conflict",    N_("prefer local change"),
-                              svn_wc_conflict_choose_mine_conflict },
-  { "tc", "theirs-conflict",  N_("prefer incoming change"),
-                              svn_wc_conflict_choose_theirs_conflict },
   { "q",  "quit",             N_("postpone all remaining conflicts"),
-                              svn_cl__accept_postpone },
+                              svn_wc_conflict_choose_postpone },
   { "h",  "help",             N_("show this help (also '?')"), -1 },
   { NULL }
 };
@@ -394,16 +392,46 @@ static const resolver_option_t tree_conflict_options_update_moved_away[] =
 {
   { "p",  "postpone",         N_("resolve the conflict later"),
                               svn_wc_conflict_choose_postpone },
-  { "mc", "mine-conflict",    N_("apply the update to the move destination"),
+  { "mc", "mine-conflict",    N_("apply update to the move destination"),
                               svn_wc_conflict_choose_mine_conflict },
-  { "tc", "theirs-conflict",  N_("break the move, change move destination into "
-                                 "a copy"),
-                              svn_wc_conflict_choose_theirs_conflict },
+  { "r",  "resolved",         N_("mark resolved (the move will become a copy)"),
+                              svn_wc_conflict_choose_merged },
   { "q",  "quit",             N_("postpone all remaining conflicts"),
-                              svn_cl__accept_postpone },
+                              svn_wc_conflict_choose_postpone },
   { "h",  "help",             N_("show this help (also '?')"), -1 },
   { NULL }
 };
+
+static const resolver_option_t tree_conflict_options_update_deleted[] =
+{
+  { "p",  "postpone",         N_("resolve the conflict later"),
+                              svn_wc_conflict_choose_postpone },
+  { "mc", "mine-conflict",    N_("keep any moves affected by this deletion"),
+                              svn_wc_conflict_choose_mine_conflict },
+  { "r",  "resolved",         N_("mark resolved (any affected moves will "
+                                 "become copies)"),
+                              svn_wc_conflict_choose_merged },
+  { "q",  "quit",             N_("postpone all remaining conflicts"),
+                              svn_wc_conflict_choose_postpone },
+  { "h",  "help",             N_("show this help (also '?')"), -1 },
+  { NULL }
+};
+
+static const resolver_option_t tree_conflict_options_update_replaced[] =
+{
+  { "p",  "postpone",         N_("resolve the conflict later"),
+                              svn_wc_conflict_choose_postpone },
+  { "mc", "mine-conflict",    N_("keep any moves affected by this replacement"),
+                              svn_wc_conflict_choose_mine_conflict },
+  { "r",  "resolved",         N_("mark resolved (any affected moves will "
+                                 "become copies)"),
+                              svn_wc_conflict_choose_merged },
+  { "q",  "quit",             N_("postpone all remaining conflicts"),
+                              svn_wc_conflict_choose_postpone },
+  { "h",  "help",             N_("show this help (also '?')"), -1 },
+  { NULL }
+};
+
 
 /* Return a pointer to the option description in OPTIONS matching the
  * one- or two-character OPTION_CODE.  Return NULL if not found. */
@@ -415,7 +443,8 @@ find_option(const resolver_option_t *options,
 
   for (opt = options; opt->code; opt++)
     {
-      if (strcmp(opt->code, option_code) == 0)
+      /* Ignore code "" (blank lines) which is not a valid answer. */
+      if (opt->code[0] && strcmp(opt->code, option_code) == 0)
         return opt;
     }
   return NULL;
@@ -515,7 +544,12 @@ prompt_user(const resolver_option_t **opt,
   SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, prompt_baton, scratch_pool));
   *opt = find_option(conflict_options, answer);
 
-  if (strcmp(answer, "h") == 0 || strcmp(answer, "?") == 0)
+  if (! *opt)
+    {
+      SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+                                  _("Unrecognized option.\n\n")));
+    }
+  else if (strcmp(answer, "h") == 0 || strcmp(answer, "?") == 0)
     {
       SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "\n%s\n",
                                   help_string(conflict_options,
@@ -602,7 +636,8 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
       if (strcmp(opt->code, "q") == 0)
         {
           result->choice = opt->choice;
-          b->accept_which = opt->choice;
+          b->accept_which = svn_cl__accept_postpone;
+          b->quit = TRUE;
           break;
         }
       else if (strcmp(opt->code, "s") == 0)
@@ -687,6 +722,10 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
         }
       else if (strcmp(opt->code, "l") == 0 || strcmp(opt->code, ":-l") == 0)
         {
+          /* ### This check should be earlier as it's nasty to offer an option
+           *     and then when the user chooses it say 'Invalid option'. */
+          /* ### 'merged_file' shouldn't be necessary *before* we launch the
+           *     resolver: it should be the *result* of doing so. */
           if (desc->base_abspath && desc->their_abspath &&
               desc->my_abspath && desc->merged_file)
             {
@@ -717,8 +756,10 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
           if (result->choice == svn_wc_conflict_choose_merged
               && ! knows_something)
             {
-              SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
-                                          _("Invalid option.\n\n")));
+              SVN_ERR(svn_cmdline_fprintf(
+                        stderr, iterpool,
+                        _("Invalid option; use diff/edit/merge/launch "
+                          "before choosing 'resolved'.\n\n")));
               continue;
             }
 
@@ -797,7 +838,8 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
       if (strcmp(opt->code, "q") == 0)
         {
           result->choice = opt->choice;
-          b->accept_which = opt->choice;
+          b->accept_which = svn_cl__accept_postpone;
+          b->quit = TRUE;
           break;
         }
       else if (opt->choice != -1)
@@ -842,11 +884,17 @@ handle_tree_conflict(svn_wc_conflict_result_t *result,
 
       svn_pool_clear(iterpool);
 
-      if ((desc->operation == svn_wc_operation_update ||
-           desc->operation == svn_wc_operation_switch) &&
-          desc->reason == svn_wc_conflict_reason_moved_away)
+      if (desc->operation == svn_wc_operation_update ||
+          desc->operation == svn_wc_operation_switch)
         {
-          tc_opts = tree_conflict_options_update_moved_away;
+          if (desc->reason == svn_wc_conflict_reason_moved_away)
+            tc_opts = tree_conflict_options_update_moved_away;
+          else if (desc->reason == svn_wc_conflict_reason_deleted)
+            tc_opts = tree_conflict_options_update_deleted;
+          else if (desc->reason == svn_wc_conflict_reason_replaced)
+            tc_opts = tree_conflict_options_update_replaced;
+          else
+            tc_opts = tree_conflict_options;
         }
       else
         tc_opts = tree_conflict_options;
@@ -858,7 +906,8 @@ handle_tree_conflict(svn_wc_conflict_result_t *result,
       if (strcmp(opt->code, "q") == 0)
         {
           result->choice = opt->choice;
-          b->accept_which = opt->choice;
+          b->accept_which = svn_cl__accept_postpone;
+          b->quit = TRUE;
           break;
         }
       else if (opt->choice != -1)
@@ -907,7 +956,8 @@ handle_obstructed_add(svn_wc_conflict_result_t *result,
       if (strcmp(opt->code, "q") == 0)
         {
           result->choice = opt->choice;
-          b->accept_which = opt->choice;
+          b->accept_which = svn_cl__accept_postpone;
+          b->quit = TRUE;
           break;
         }
       else if (opt->choice != -1)
@@ -921,8 +971,6 @@ handle_obstructed_add(svn_wc_conflict_result_t *result,
   return SVN_NO_ERROR;
 }
 
-/* Implement svn_wc_conflict_resolver_func2_t; resolves based on
-   --accept option if given, else by prompting. */
 svn_error_t *
 svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
                                   const svn_wc_conflict_description2_t *desc,
@@ -1137,9 +1185,6 @@ get_postponed_conflicted_paths(void *baton, apr_pool_t *result_pool)
   apr_array_header_t *result_array;
   int i;
 
-  if (apr_hash_count(conflicted_paths) == 0)
-    return NULL;
-
   sorted_array = svn_sort__hash(conflicted_paths,
                                 svn_sort_compare_items_as_paths,
                                 apr_hash_pool_get(conflicted_paths));
@@ -1158,8 +1203,8 @@ get_postponed_conflicted_paths(void *baton, apr_pool_t *result_pool)
 }
 
 svn_error_t *
-svn_cl__resolve_postponed_conflicts(void *baton,
-                                    svn_depth_t depth,
+svn_cl__resolve_postponed_conflicts(svn_boolean_t *conflicts_all_resolved,
+                                    void *baton,
                                     svn_cl__accept_t accept_which,
                                     const char *editor_cmd,
                                     svn_client_ctx_t *ctx,
@@ -1170,8 +1215,9 @@ svn_cl__resolve_postponed_conflicts(void *baton,
   apr_pool_t *iterpool;
 
   targets = get_postponed_conflicted_paths(baton, scratch_pool);
-  if (targets == NULL)
-    return SVN_NO_ERROR;
+
+  if (conflicts_all_resolved != NULL)
+    *conflicts_all_resolved = TRUE;
 
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < targets->nelts; i++)
@@ -1182,6 +1228,7 @@ svn_cl__resolve_postponed_conflicts(void *baton,
       svn_wc_conflict_resolver_func2_t conflict_func2;
       void *conflict_baton2;
       svn_cl__interactive_conflict_baton_t *b;
+      svn_boolean_t text_c, prop_c, tree_c;
 
       svn_pool_clear(iterpool);
 
@@ -1201,7 +1248,7 @@ svn_cl__resolve_postponed_conflicts(void *baton,
                                                           scratch_pool));
       ctx->conflict_baton2 = b;
 
-      err = svn_client_resolve(local_abspath, depth,
+      err = svn_client_resolve(local_abspath, svn_depth_empty,
                                svn_wc_conflict_choose_unspecified,
                                ctx, iterpool);
 
@@ -1217,6 +1264,19 @@ svn_cl__resolve_postponed_conflicts(void *baton,
 
           svn_error_clear(err);
         }
+
+      /* Report if we left any of the conflicts unresolved */
+      if (conflicts_all_resolved != NULL)
+        {
+          SVN_ERR(svn_wc_conflicted_p3(&text_c, &prop_c, &tree_c,
+                                       ctx->wc_ctx, local_abspath,
+                                       scratch_pool));
+          if (text_c || prop_c || tree_c)
+            *conflicts_all_resolved = FALSE;
+        }
+
+      if (b->quit)
+        break;
     }
   svn_pool_destroy(iterpool);
 

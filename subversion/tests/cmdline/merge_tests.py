@@ -1390,6 +1390,13 @@ def merge_in_new_file_and_diff(sbox):
 
   # Finally, run diff.
   expected_output = [
+    "Index: " + url_branch_path + "/newfile\n",
+    "===================================================================\n",
+    "--- "+ url_branch_path + "/newfile	(revision 0)\n",
+    "+++ "+ url_branch_path + "/newfile	(working copy)\n",
+    "@@ -0,0 +1 @@\n",
+    "+newfile\n",
+
     "Index: " + url_branch_path + "\n",
     "===================================================================\n",
     "--- "+ url_branch_path + "\t(revision 2)\n",
@@ -1399,12 +1406,7 @@ def merge_in_new_file_and_diff(sbox):
     "___________________________________________________________________\n",
     "Added: " + SVN_PROP_MERGEINFO + "\n",
     "   Merged /A/B/E:r2-3\n",
-    "Index: " + url_branch_path + "/newfile\n",
-    "===================================================================\n",
-    "--- "+ url_branch_path + "/newfile	(revision 0)\n",
-    "+++ "+ url_branch_path + "/newfile	(working copy)\n",
-    "@@ -0,0 +1 @@\n",
-    "+newfile\n"]
+  ]
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
                                      '--show-copies-as-adds', branch_path)
 
@@ -17392,7 +17394,6 @@ def unnecessary_noninheritable_mergeinfo_shallow_merge(sbox):
 #    svn merge -cr1295005 ^/subversion/trunk@1295000 ../src
 #    svn merge -cr1295004 ^/subversion/trunk/@r1295004 ../src
 @Issue(4132)
-@XFail()
 def svnmucc_abuse_1(sbox):
   "svnmucc: merge a replacement"
 
@@ -17427,17 +17428,25 @@ def svnmucc_abuse_1(sbox):
 
   ## Attempt to merge that.
   # This used to assert:
-  #   --- Recording mergeinfo for merge of r5 into 'svn-test-work/working_copies/merge_tests-125/A_COPY':
+  #   --- Recording mergeinfo for merge of r5 into \
+  #     'svn-test-work/working_copies/merge_tests-125/A_COPY':
   #   subversion/libsvn_subr/mergeinfo.c:1172: (apr_err=235000)
-  #   svn: E235000: In file 'subversion/libsvn_subr/mergeinfo.c' line 1172: assertion failed (IS_VALID_FORWARD_RANGE(first))
+  #   svn: E235000: In file 'subversion/libsvn_subr/mergeinfo.c' \
+  #     line 1172: assertion failed (IS_VALID_FORWARD_RANGE(first))
+  #
+  # Then, prior to the fix asserted this way:
+  #
+  #   >svn merge -c5 ^/A@r5 A_COPY
+  #   subversion\libsvn_client\merge.c:4871: (apr_err=235000)
+  #   svn: E235000: In file 'subversion\libsvn_client\merge.c'
+  #     line 4871: assertion failed (*gap_start < *gap_end)
   sbox.simple_update()
   svntest.main.run_svn(None, 'merge', '-c', 'r5', '^/A@r5',
-                             sbox.ospath('A_COPY'))
+                       sbox.ospath('A_COPY'))
 
 #----------------------------------------------------------------------
 # Test for issue #4138 'replacement in merge source not notified correctly'.
 @SkipUnless(server_has_mergeinfo)
-@XFail()
 @Issue(4138)
 def merge_source_with_replacement(sbox):
   "replacement in merge source not notified correctly"
@@ -17470,9 +17479,22 @@ def merge_source_with_replacement(sbox):
   svntest.main.run_svn(None, 'ci', '-m', 'file edit', wc_dir)
 
   # Update and sync merge ^/A to A_COPY.
+  #
+  #         text  text  text  text              text
+  #         edit  edit  edit  edit              edit
+  #         psi   rho   beta  omega             omega
+  #  A@r1---r3----r4----r5----r6---X       r7---r8--------->
+  #    |                 |                 ^          |
+  #    |                 v                 |          |
+  #    |                 +---replacement---+          |
+  #   copy                                            |
+  #    |                                          sync-merge
+  #    |                                              |
+  #    v                                              v
+  #    r2---A_COPY----------------------------------------->
   svntest.main.run_svn(None, 'up', wc_dir)
-  # This currently fails because the merge notifications make it look like
-  # r6 from ^/A was merged and recorded:
+  # This test previously failed because the merge notifications make it look
+  # like r6 from ^/A was merged and recorded:
   #
   #   >svn merge ^^/A A_COPY
   #   --- Merging r2 through r5 into 'A_COPY':
@@ -17485,13 +17507,14 @@ def merge_source_with_replacement(sbox):
   #   U    A_COPY\D\H\omega
   #   --- Recording mergeinfo for merge of r6 through r8 into 'A_COPY':
   #   G   A_COPY
-  expected_output = expected_merge_output([[2,5],[7,8]],
-                          ['U    ' + beta_COPY_path  + '\n',
-                           'U    ' + rho_COPY_path   + '\n',
-                           'U    ' + omega_COPY_path + '\n',
-                           'U    ' + psi_COPY_path   + '\n',
-                           ' U   ' + A_COPY_path     + '\n',
-                           ' G   ' + A_COPY_path     + '\n',])
+  expected_output = expected_merge_output(
+    [[2,5],[7,8]],
+    ['U    ' + beta_COPY_path  + '\n',
+     'U    ' + rho_COPY_path   + '\n',
+     'U    ' + omega_COPY_path + '\n',
+     'U    ' + psi_COPY_path   + '\n',
+     ' U   ' + A_COPY_path     + '\n',
+     ' G   ' + A_COPY_path     + '\n',])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'merge', sbox.repo_url + '/A',
                                      A_COPY_path)
@@ -17502,6 +17525,23 @@ def merge_source_with_replacement(sbox):
                                      [A_COPY_path + ' - /A:2-5,7-8\n'],
                                      [], 'pg', SVN_PROP_MERGEINFO,
                                      '-R', A_COPY_path)
+
+  # Commit the above merge and then reverse merge it.  Again r6 is not
+  # being merged and should not be part of the notifications.
+  sbox.simple_commit()
+  sbox.simple_update()
+  expected_output = expected_merge_output(
+    [[5,2],[8,7]],
+    ['U    ' + beta_COPY_path  + '\n',
+     'U    ' + rho_COPY_path   + '\n',
+     'U    ' + omega_COPY_path + '\n',
+     'U    ' + psi_COPY_path   + '\n',
+     ' U   ' + A_COPY_path     + '\n',
+     ' G   ' + A_COPY_path     + '\n',],
+    elides=True)
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', sbox.repo_url + '/A',
+                                     A_COPY_path, '-r8:1')
 
 #----------------------------------------------------------------------
 # Test for issue #4144 'Reverse merge with replace in source applies
@@ -18342,7 +18382,6 @@ def simple_merge(src_path, tgt_ospath, rev_args):
 @Issue(4306)
 # Test for issue #4306 'multiple editor drive file merges record wrong
 # mergeinfo during conflicts'
-### TODO: Directory merges. We're only testing single-file merges so far.
 def conflict_aborted_mergeinfo_described_partial_merge(sbox):
   "conflicted split merge can be repeated"
 

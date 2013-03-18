@@ -1743,7 +1743,12 @@ svn_subst_copy_and_translate4(const char *src,
     }
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
-  return svn_error_trace(svn_io_file_rename(dst_tmp, dst, pool));
+  SVN_ERR(svn_io_file_rename(dst_tmp, dst, pool));
+
+  /* Preserve the source file's permission bits. */
+  SVN_ERR(svn_io_copy_perms(src, dst, pool));
+
+  return SVN_NO_ERROR;
 }
 
 

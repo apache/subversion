@@ -156,9 +156,8 @@ propset_on_url(const char *propname,
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, target,
-                                               NULL, NULL, FALSE, TRUE,
-                                               ctx, pool));
+  SVN_ERR(svn_client_open_ra_session2(&ra_session, target, NULL,
+                                      ctx, pool, pool));
 
   SVN_ERR(svn_ra_check_path(ra_session, "", base_revision_for_url,
                             &node_kind, pool));
@@ -307,7 +306,6 @@ svn_client_propset_local(const char *propname,
     {
       svn_node_kind_t kind;
       const char *target_abspath;
-      svn_error_t *err;
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
 
       svn_pool_clear(iterpool);
@@ -318,11 +316,11 @@ svn_client_propset_local(const char *propname,
 
       SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, iterpool));
 
-      err = svn_wc_read_kind(&kind, ctx->wc_ctx, target_abspath, FALSE,
-                             iterpool);
+      /* Call prop_set for deleted nodes to have special errors */
+      SVN_ERR(svn_wc_read_kind2(&kind, ctx->wc_ctx, target_abspath,
+                                FALSE, FALSE, iterpool));
 
-      if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-          || (!err && (kind == svn_node_unknown || kind == svn_node_none)))
+      if (kind == svn_node_unknown || kind == svn_node_none)
         {
           if (ctx->notify_func2)
             {
@@ -334,8 +332,6 @@ svn_client_propset_local(const char *propname,
               ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
             }
         }
-
-      SVN_ERR(err);
 
       SVN_WC__CALL_WITH_WRITE_LOCK(
         svn_wc_prop_set4(ctx->wc_ctx, target_abspath, propname,
@@ -471,10 +467,9 @@ svn_client_revprop_set2(const char *propname,
     return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
                              _("Bad property name: '%s'"), propname);
 
-  /* Open an RA session for the URL. Note that we don't have a local
-     directory, nor a place to put temp files. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL, NULL,
-                                               NULL, FALSE, TRUE, ctx, pool));
+  /* Open an RA session for the URL. */
+  SVN_ERR(svn_client_open_ra_session2(&ra_session, URL, NULL,
+                                      ctx, pool, pool));
 
   /* Resolve the revision into something real, and return that to the
      caller as well. */
@@ -522,51 +517,6 @@ svn_client_revprop_set2(const char *propname,
 
   return SVN_NO_ERROR;
 }
-
-
-/* Set *PROPS to the pristine (base) properties at LOCAL_ABSPATH, if PRISTINE
- * is true, or else the working value if PRISTINE is false.
- *
- * The keys of *PROPS will be 'const char *' property names, and the
- * values 'const svn_string_t *' property values.  Allocate *PROPS
- * and its contents in RESULT_POOL.  Use SCRATCH_POOL for temporary
- * allocations.
- */
-static svn_error_t *
-pristine_or_working_props(apr_hash_t **props,
-                          svn_wc_context_t *wc_ctx,
-                          const char *local_abspath,
-                          svn_boolean_t pristine,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool)
-{
-  if (pristine)
-    {
-      return svn_error_trace(svn_wc_get_pristine_props(props,
-                                                       wc_ctx,
-                                                       local_abspath,
-                                                       result_pool,
-                                                       scratch_pool));
-    }
-
-  /* ### until svn_wc_prop_list2() returns a NULL value for locally-deleted
-     ### nodes, then let's check manually.  */
-  {
-    svn_boolean_t deleted;
-
-    SVN_ERR(svn_wc__node_is_status_deleted(&deleted, wc_ctx, local_abspath,
-                                           scratch_pool));
-    if (deleted)
-      {
-        *props = NULL;
-        return SVN_NO_ERROR;
-      }
-  }
-
-  return svn_error_trace(svn_wc_prop_list2(props, wc_ctx, local_abspath,
-                                           result_pool, scratch_pool));
-}
-
 
 /* Helper for the remote case of svn_client_propget.
  *
@@ -873,8 +823,9 @@ svn_client_propget5(apr_hash_t **props,
       pristine = (revision->kind == svn_opt_revision_committed
                   || revision->kind == svn_opt_revision_base);
 
-      SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, target, FALSE,
-                               scratch_pool));
+      SVN_ERR(svn_wc_read_kind2(&kind, ctx->wc_ctx, target,
+                                pristine, FALSE,
+                                scratch_pool));
 
       if (kind == svn_node_unknown || kind == svn_node_none)
         {
@@ -1039,19 +990,25 @@ svn_client_revprop_get(const char *propname,
                        apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_error_t *err;
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL, NULL,
-                                               NULL, FALSE, TRUE, ctx, pool));
+  SVN_ERR(svn_client_open_ra_session2(&ra_session, URL, NULL,
+                                      ctx, subpool, subpool));
 
   /* Resolve the revision into something real, and return that to the
      caller as well. */
   SVN_ERR(svn_client__get_revision_number(set_rev, NULL, ctx->wc_ctx, NULL,
-                                          ra_session, revision, pool));
+                                          ra_session, revision, subpool));
 
   /* The actual RA call. */
-  return svn_ra_rev_prop(ra_session, *set_rev, propname, propval, pool);
+  err = svn_ra_rev_prop(ra_session, *set_rev, propname, propval, pool);
+
+  /* Close RA session */
+  svn_pool_destroy(subpool);
+  return svn_error_trace(err);
 }
 
 
@@ -1109,12 +1066,12 @@ remote_proplist(const char *target_prefix,
                 svn_depth_t depth,
                 svn_proplist_receiver2_t receiver,
                 void *receiver_baton,
-                apr_pool_t *result_pool,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
                 apr_pool_t *scratch_pool)
 {
   apr_hash_t *dirents;
   apr_hash_t *prop_hash = NULL;
-  apr_hash_t *final_hash = NULL;
   apr_hash_index_t *hi;
   const char *target_full_url =
     svn_path_url_add_component2(target_prefix, target_relative, scratch_pool);
@@ -1148,12 +1105,12 @@ remote_proplist(const char *target_prefix,
 
       SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props,
                                          target_relative, revnum,
-                                         result_pool, scratch_pool));
+                                         scratch_pool, scratch_pool));
       SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url,
                                      scratch_pool));
       SVN_ERR(svn_client__iprop_relpaths_to_urls(inherited_props,
                                                  repos_root_url,
-                                                 result_pool,
+                                                 scratch_pool,
                                                  scratch_pool));
     }
   else
@@ -1161,41 +1118,39 @@ remote_proplist(const char *target_prefix,
       inherited_props = NULL;
     }
 
-  if (get_explicit_props)
+  if (!get_explicit_props)
+    prop_hash = NULL;
+  else
     {
       /* Filter out non-regular properties, since the RA layer returns all
          kinds.  Copy regular properties keys/vals from the prop_hash
          allocated in SCRATCH_POOL to the "final" hash allocated in
          RESULT_POOL. */
-      final_hash = apr_hash_make(result_pool);
       for (hi = apr_hash_first(scratch_pool, prop_hash);
            hi;
            hi = apr_hash_next(hi))
         {
           const char *name = svn__apr_hash_index_key(hi);
           apr_ssize_t klen = svn__apr_hash_index_klen(hi);
-          svn_string_t *value = svn__apr_hash_index_val(hi);
           svn_prop_kind_t prop_kind;
-
+    
           prop_kind = svn_property_kind2(name);
-
-          if (prop_kind == svn_prop_regular_kind)
+    
+          if (prop_kind != svn_prop_regular_kind)
             {
-              name = apr_pstrdup(result_pool, name);
-              value = svn_string_dup(value, result_pool);
-              apr_hash_set(final_hash, name, klen, value);
+              apr_hash_set(prop_hash, name, klen, NULL);
             }
-        }  
+        }
     }
 
-  SVN_ERR(call_receiver(target_full_url, final_hash, inherited_props,
-                        receiver, receiver_baton, result_pool));
+  SVN_ERR(call_receiver(target_full_url, prop_hash, inherited_props,
+                        receiver, receiver_baton, scratch_pool));
 
   if (depth > svn_depth_empty
       && get_explicit_props
       && (kind == svn_node_dir) && (apr_hash_count(dirents) > 0))
     {
-      apr_pool_t *subpool = svn_pool_create(scratch_pool);
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
       for (hi = apr_hash_first(scratch_pool, dirents);
            hi;
@@ -1205,10 +1160,13 @@ remote_proplist(const char *target_prefix,
           svn_dirent_t *this_ent = svn__apr_hash_index_val(hi);
           const char *new_target_relative;
 
-          svn_pool_clear(subpool);
+          if (cancel_func)
+            SVN_ERR(cancel_func(cancel_baton));
+
+          svn_pool_clear(iterpool);
 
           new_target_relative = svn_relpath_join(target_relative,
-                                                 this_name, subpool);
+                                                 this_name, iterpool);
 
           if (this_ent->kind == svn_node_file
               || depth > svn_depth_files)
@@ -1223,17 +1181,16 @@ remote_proplist(const char *target_prefix,
                                       this_ent->kind,
                                       revnum,
                                       ra_session,
-                                      TRUE,
-                                      FALSE,
+                                      TRUE /* get_explicit_props */,
+                                      FALSE /* get_target_inherited_props */,
                                       depth_below_here,
-                                      receiver,
-                                      receiver_baton,
-                                      result_pool,
-                                      subpool));
+                                      receiver, receiver_baton,
+                                      cancel_func, cancel_baton,
+                                      iterpool));
             }
         }
 
-      svn_pool_destroy(subpool);
+      svn_pool_destroy(iterpool);
     }
 
   return SVN_NO_ERROR;
@@ -1294,7 +1251,6 @@ get_remote_props(const char *path_or_url,
                  svn_proplist_receiver2_t receiver,
                  void *receiver_baton,
                  svn_client_ctx_t *ctx,
-                 apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
   svn_ra_session_t *ra_session;
@@ -1331,7 +1287,7 @@ get_remote_props(const char *path_or_url,
                                           ctx->wc_ctx,
                                           local_abspath,
                                           FALSE, /* scan_deleted */
-                                          result_pool,
+                                          scratch_pool,
                                           scratch_pool));
           if (repos_relpath)
             {
@@ -1384,16 +1340,17 @@ get_remote_props(const char *path_or_url,
                                             path_or_url, NULL,
                                             peg_revision,
                                             revision, ctx,
-                                            result_pool));
+                                            scratch_pool));
 
   SVN_ERR(svn_ra_check_path(ra_session, "", loc->rev, &kind,
-                            result_pool));
+                            scratch_pool));
 
   SVN_ERR(remote_proplist(loc->url, "", kind, loc->rev, ra_session,
                           get_explicit_props,
                           get_target_inherited_props,
                           depth, receiver, receiver_baton,
-                          result_pool, scratch_pool));
+                          ctx->cancel_func, ctx->cancel_baton,
+                          scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1409,7 +1366,6 @@ get_local_props(const char *path_or_url,
                 svn_proplist_receiver2_t receiver,
                 void *receiver_baton,
                 svn_client_ctx_t *ctx,
-                apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
   svn_boolean_t pristine;
@@ -1423,8 +1379,8 @@ get_local_props(const char *path_or_url,
   pristine = ((revision->kind == svn_opt_revision_committed)
               || (revision->kind == svn_opt_revision_base));
 
-  SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
-                           scratch_pool));
+  SVN_ERR(svn_wc_read_kind2(&kind, ctx->wc_ctx, local_abspath,
+                            pristine, FALSE, scratch_pool));
 
   if (kind == svn_node_unknown || kind == svn_node_none)
     {
@@ -1479,18 +1435,38 @@ get_local_props(const char *path_or_url,
       SVN_ERR(svn_wc__prop_list_recursive(ctx->wc_ctx, local_abspath, NULL,
                                           depth, pristine, changelists,
                                           recursive_proplist_receiver, &rb,
-                                          ctx->cancel_func,
-                                          ctx->cancel_baton, result_pool));
+                                          ctx->cancel_func, ctx->cancel_baton,
+                                          scratch_pool));
     }
   else if (svn_wc__changelist_match(ctx->wc_ctx, local_abspath,
                                     changelist_hash, scratch_pool))
     {
-      apr_hash_t *hash;
+      apr_hash_t *props;
 
-      SVN_ERR(pristine_or_working_props(&hash, ctx->wc_ctx, local_abspath,
-                                        pristine, result_pool,
-                                        scratch_pool));
-      SVN_ERR(call_receiver(path_or_url, hash, NULL,
+        if (pristine)
+          SVN_ERR(svn_wc_get_pristine_props(&props,
+                                            ctx->wc_ctx, local_abspath,
+                                            scratch_pool, scratch_pool));
+        else
+          {
+            svn_error_t *err;
+
+            err = svn_wc_prop_list2(&props, ctx->wc_ctx, local_abspath,
+                                    scratch_pool, scratch_pool);
+
+
+            if (err)
+              {
+                if (err->apr_err != SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+                  return svn_error_trace(err);
+                /* As svn_wc_prop_list2() doesn't return NULL for locally-deleted
+                   let's do that here.  */
+                svn_error_clear(err);
+                props = apr_hash_make(scratch_pool);
+              }
+          }
+
+      SVN_ERR(call_receiver(path_or_url, props, NULL,
                             receiver, receiver_baton, scratch_pool));
 
     }
@@ -1507,7 +1483,6 @@ svn_client_proplist4(const char *path_or_url,
                      svn_proplist_receiver2_t receiver,
                      void *receiver_baton,
                      svn_client_ctx_t *ctx,
-                     apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
   svn_boolean_t local_explicit_props;
@@ -1526,7 +1501,7 @@ svn_client_proplist4(const char *path_or_url,
      && SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(peg_revision->kind)
      && SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind));
 
-  /* If we want iprops are they avaiable locally? */
+  /* If we want iprops are they available locally? */
   local_iprops =
     (get_target_inherited_props /* We want iprops */
      && local_explicit_props /* No local explicit props means no local iprops. */
@@ -1541,15 +1516,14 @@ svn_client_proplist4(const char *path_or_url,
       SVN_ERR(get_remote_props(path_or_url, peg_revision, revision, depth,
                                !local_explicit_props,
                                (get_target_inherited_props && !local_iprops),
-                               receiver, receiver_baton, ctx, result_pool,
-                               scratch_pool));
+                               receiver, receiver_baton, ctx, scratch_pool));
     }
 
   if (local_explicit_props)
     {
       SVN_ERR(get_local_props(path_or_url, revision, depth, changelists,
                               local_iprops, receiver, receiver_baton, ctx,
-                              result_pool, scratch_pool));
+                              scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1565,20 +1539,23 @@ svn_client_revprop_list(apr_hash_t **props,
 {
   svn_ra_session_t *ra_session;
   apr_hash_t *proplist;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_error_t *err;
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL, NULL,
-                                               NULL, FALSE, TRUE, ctx, pool));
+  SVN_ERR(svn_client_open_ra_session2(&ra_session, URL, NULL,
+                                      ctx, subpool, subpool));
 
   /* Resolve the revision into something real, and return that to the
      caller as well. */
   SVN_ERR(svn_client__get_revision_number(set_rev, NULL, ctx->wc_ctx, NULL,
-                                          ra_session, revision, pool));
+                                          ra_session, revision, subpool));
 
   /* The actual RA call. */
-  SVN_ERR(svn_ra_rev_proplist(ra_session, *set_rev, &proplist, pool));
+  err = svn_ra_rev_proplist(ra_session, *set_rev, &proplist, pool);
 
   *props = proplist;
-  return SVN_NO_ERROR;
+  svn_pool_destroy(subpool); /* Close RA session */
+  return svn_error_trace(err);
 }

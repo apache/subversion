@@ -7,11 +7,12 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     *
 
   - Major new features:
-    *
+    * inheritable properties (r1395109)
 
   - Minor new features and improvements:
     * new 'svnadmin load --revision' load filtering support (issue #3734)
     * new 'commit --include-externals' option (related to issues #1167, #3563)
+    * new '--include-externals' option for 'svn list' (issue #4225)
     * remove extraneous externals output from 'svn status -q' (issue #1935)
     * new 'svnadmin hotcopy --incremental' support for FSFS (issue #3815)
     * reject some attempts to merge between unrelated branches (r1215273)
@@ -33,11 +34,13 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * new 'svn --version --verbose' option shows runtime environment info
     * new 'svnadmin freeze' subcommand (r1376228)
     * 'svndumpfilter' now supports --delta dumpfiles (r1351009, -3745)
+    * new '--drop-all-emtpy-revs' option for 'svndumpfilter' (issue #3681)
     * client version info now reported to commit hooks (issue #4124)
     * 'svn merge' now uses reintegrate mode automatically when needed
     * 'svn' is now non-interactive when not run in a terminal device (r1424037)
     * 'svn propset' checks spelling of reserved property names.
     * improve working copy performance on network disks (issue #4176) 
+    * repos suggested config via svn:auto-props and svn:global-ignores (r1401908)
 
   - Client-side bugfixes:
     * 

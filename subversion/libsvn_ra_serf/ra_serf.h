@@ -180,6 +180,10 @@ struct svn_ra_serf__session_t {
      constants' addresses, therefore). */
   apr_hash_t *capabilities;
 
+  /* Activity collection URL.  (Cached from the initial OPTIONS
+     request when run against HTTPv1 servers.)  */
+  const char *activity_collection_url;
+
   /* Are we using a proxy? */
   int using_proxy;
 
@@ -1297,7 +1301,7 @@ svn_ra_serf__set_prop(apr_hash_t *props, const char *path,
                       const svn_string_t *val, apr_pool_t *pool);
 
 svn_error_t *
-svn_ra_serf__get_resource_type(svn_kind_t *kind,
+svn_ra_serf__get_resource_type(svn_node_kind_t *kind,
                                apr_hash_t *props);
 
 
@@ -1537,9 +1541,12 @@ svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
                        const char *switch_target,
                        svn_depth_t depth,
                        const char *switch_url,
+                       svn_boolean_t send_copyfrom_args,
+                       svn_boolean_t ignore_ancestry,
                        const svn_delta_editor_t *switch_editor,
                        void *switch_baton,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
 
 /* Implements svn_ra__vtable_t.get_file_revs(). */
 svn_error_t *

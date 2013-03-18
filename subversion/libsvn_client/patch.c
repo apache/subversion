@@ -2361,28 +2361,18 @@ create_missing_parents(patch_target_t *target,
     {
       const char *component;
       svn_node_kind_t wc_kind, disk_kind;
-      svn_boolean_t is_deleted;
 
       svn_pool_clear(iterpool);
 
       component = APR_ARRAY_IDX(components, i, const char *);
       local_abspath = svn_dirent_join(local_abspath, component, scratch_pool);
 
-      SVN_ERR(svn_wc_read_kind(&wc_kind, ctx->wc_ctx, local_abspath, TRUE,
-                               iterpool));
+      SVN_ERR(svn_wc_read_kind2(&wc_kind, ctx->wc_ctx, local_abspath,
+                                FALSE, TRUE, iterpool));
 
       SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, iterpool));
 
-      if (wc_kind != svn_node_none)
-        SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted,
-                                               ctx->wc_ctx,
-                                               local_abspath,
-                                               iterpool));
-      else
-        is_deleted = FALSE;
-
-      if (disk_kind == svn_node_file
-          || (wc_kind == svn_node_file && !is_deleted))
+      if (disk_kind == svn_node_file || wc_kind == svn_node_file)
         {
           /* on-disk files and missing files are obstructions */
           target->skipped = TRUE;
@@ -2390,17 +2380,15 @@ create_missing_parents(patch_target_t *target,
         }
       else if (disk_kind == svn_node_dir)
         {
-          if (wc_kind == svn_node_dir && !is_deleted)
+          if (wc_kind == svn_node_dir)
             present_components++;
-          else if (is_deleted)
-            break;
           else
             {
               target->skipped = TRUE;
               break;
             }
         }
-      else if (wc_kind != svn_node_none && !is_deleted)
+      else if (wc_kind != svn_node_none)
         {
           /* Node is missing */
           target->skipped = TRUE;
@@ -2513,22 +2501,15 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
           /* If the target's parent directory does not yet exist
            * we need to create it before we can copy the patched
            * result in place. */
-          SVN_ERR(svn_wc_read_kind(&parent_db_kind, ctx->wc_ctx,
-                                   parent_abspath, FALSE, pool));
+          SVN_ERR(svn_wc_read_kind2(&parent_db_kind, ctx->wc_ctx,
+                                    parent_abspath, FALSE, FALSE, pool));
 
           /* We can't add targets under nodes scheduled for delete, so add
              a new directory if needed. */
           if (parent_db_kind == svn_node_dir
               || parent_db_kind == svn_node_file)
             {
-              svn_boolean_t is_deleted;
-
-              SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, ctx->wc_ctx,
-                                                     parent_abspath, pool));
-              if (is_deleted)
-                SVN_ERR(create_missing_parents(target, abs_wc_path, ctx,
-                                               dry_run, pool));
-              else if (parent_db_kind != svn_node_dir)
+              if (parent_db_kind != svn_node_dir)
                 target->skipped = TRUE;
               else
                 {
@@ -2549,8 +2530,9 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
           svn_node_kind_t wc_kind;
 
           /* The target should exist */
-          SVN_ERR(svn_wc_read_kind(&wc_kind, ctx->wc_ctx,
-                                   target->local_abspath, FALSE, pool));
+          SVN_ERR(svn_wc_read_kind2(&wc_kind, ctx->wc_ctx,
+                                    target->local_abspath,
+                                    FALSE, FALSE, pool));
 
           if (target->kind_on_disk == svn_node_none
               || wc_kind != target->kind_on_disk)

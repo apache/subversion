@@ -70,7 +70,7 @@ svn_dbg__print_props(apr_hash_t *props,
  * usage:
  *
  * <pre>
- *   SVN_DBG(("rev=%ld kind=%s\n", revnum, svn_kind_to_word(kind)));
+ *   SVN_DBG(("rev=%ld kind=%s\n", revnum, svn_node_kind_to_word(kind)));
  * </pre>
  *
  * outputs:

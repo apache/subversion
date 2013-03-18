@@ -38,8 +38,6 @@ SVN_FS_LIB_LINK = @SVN_FS_LIB_LINK@
 SWIG_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig
 SWIG_BUILD_DIR = $(abs_builddir)/subversion/bindings/swig
 
-SVN_EXTERNAL_PROJECT_SUBDIRS = @SVN_EXTERNAL_PROJECT_SUBDIRS@
-
 SCHEMA_DIR = subversion/svn/schema
 
 SVN_APR_LIBS = @SVN_APR_LIBS@
@@ -48,7 +46,6 @@ SVN_APR_MEMCACHE_LIBS = @SVN_APR_MEMCACHE_LIBS@
 SVN_DB_LIBS = @SVN_DB_LIBS@
 SVN_GPG_AGENT_LIBS = @SVN_GPG_AGENT_LIBS@
 SVN_GNOME_KEYRING_LIBS = @SVN_GNOME_KEYRING_LIBS@
-SVN_GSSAPI_LIBS = @SVN_GSSAPI_LIBS@
 SVN_KWALLET_LIBS = @SVN_KWALLET_LIBS@
 SVN_MAGIC_LIBS = @SVN_MAGIC_LIBS@
 SVN_SASL_LIBS = @SVN_SASL_LIBS@
@@ -67,7 +64,6 @@ ramod_libdir = @libdir@
 bdb_libdir = @libdir@
 gnome_keyring_libdir = @libdir@
 gpg_agent_libdir = @libdir@
-gssapi_libdir = @libdir@
 kwallet_libdir = @libdir@
 serf_libdir = @libdir@
 bindir = @bindir@
@@ -126,7 +122,7 @@ LT_CXX_LIBADD = @LT_CXX_LIBADD@
 
 INCLUDES = -I$(top_srcdir)/subversion/include -I$(top_builddir)/subversion \
            @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ @SVN_APR_MEMCACHE_INCLUDES@ \
-           @SVN_DB_INCLUDES@ @SVN_GNOME_KEYRING_INCLUDES@ @SVN_GSSAPI_INCLUDES@ \
+           @SVN_DB_INCLUDES@ @SVN_GNOME_KEYRING_INCLUDES@ \
            @SVN_KWALLET_INCLUDES@ @SVN_MAGIC_INCLUDES@ \
            @SVN_SASL_INCLUDES@ @SVN_SERF_INCLUDES@ @SVN_SQLITE_INCLUDES@ \
            @SVN_XML_INCLUDES@ @SVN_ZLIB_INCLUDES@
@@ -249,7 +245,6 @@ INSTALL_APR_MEMCACHE_LIB = $(INSTALL_LIB)
 INSTALL_BDB_LIB = $(INSTALL_LIB)
 INSTALL_GPG_AGENT_LIB = $(INSTALL_LIB)
 INSTALL_GNOME_KEYRING_LIB = $(INSTALL_LIB)
-INSTALL_GSSAPI_LIB = $(INSTALL_LIB)
 INSTALL_KWALLET_LIB = $(INSTALL_LIB)
 INSTALL_SERF_LIB = $(INSTALL_LIB)
 INSTALL_BIN = $(LIBTOOL) --mode=install $(INSTALL)
@@ -375,11 +370,11 @@ ECHO_N = @ECHO_N@
 
 TESTS = $(TEST_PROGRAMS) @BDB_TEST_PROGRAMS@
 
-all: mkdir-init external-all local-all
-clean: external-clean local-clean
-distclean: external-distclean local-distclean
-extraclean: external-extraclean local-extraclean
-install: external-install local-install revision-install
+all: mkdir-init local-all
+clean: local-clean
+distclean: local-distclean
+extraclean: local-extraclean
+install: local-install revision-install
 
 @INCLUDE_OUTPUTS@
 
@@ -593,8 +588,8 @@ gcov-clean:
 	find . -name "*.gcda" -o -name "*.gcno" -print0 | xargs -0 rm -f --
 
 check-clean: gcov-clean
-	find subversion/tests/cmdline/svn-test-work -print0    \
-	       -mindepth 1 -maxdepth 1 | xargs -0 rm -rf --;   \
+	find subversion/tests/cmdline/svn-test-work -mindepth 1 -maxdepth 1 \
+               -print0 | xargs -0 rm -rf --;   \
 	rm -rf subversion/tests/libsvn_fs/test-repo-*          \
 	       subversion/tests/libsvn_fs_base/test-repo-*     \
 	       subversion/tests/libsvn_fs_fs/test-repo-*       \
@@ -618,32 +613,6 @@ mkdir-init:
                 $(MKDIR) $$i ;                           \
             fi;                                          \
         done
-
-# recursive targets to handle external projects (e.g. APR, Neon)
-external-all external-install:
-	@target=`echo $@ | sed s/external-//`;          \
-        list='$(SVN_EXTERNAL_PROJECT_SUBDIRS)';         \
-        for i in $$list; do                             \
-            echo "------ making $$target in $$i";       \
-            (cd $$i && $(MAKE) $$target) || exit 1;     \
-            echo "------ completed $$target in $$i";    \
-        done;
-
-### apr-util relies on generated files in apr, so reverse the
-### list so that it is cleaned before apr. also note that Neon does
-### not have an extraclean target, so get "close" with distclean
-external-clean external-distclean external-extraclean:
-	@target=`echo $@ | sed s/external-//`;          \
-        list='$(SVN_EXTERNAL_PROJECT_SUBDIRS)';         \
-        for i in $$list; do                             \
-            revlist="$$i $$revlist";                    \
-        done;                                           \
-        for i in $$revlist; do                          \
-            echo "------ making $$target in $$i";       \
-            (cd $$i && $(MAKE) $$target) || exit 1;     \
-            echo "------ completed $$target in $$i";    \
-        done;
-
 
 # DOCUMENTATION RULES
 
@@ -926,4 +895,6 @@ INSTALL_EXTRA_TOOLS=\
   $(MKDIR) $(DESTDIR)$(bindir); \
   test -n "$$SVN_SVNMUCC_IS_SVNSYITF" && \
   ln -sf svnmucc$(EXEEXT) $(DESTDIR)$(bindir)/svnsyitf$(EXEEXT); \
-  ln -sf $(DESTDIR)$(bindir)/svnmucc$(EXEEXT) $(DESTDIR)$(toolsdir)/svnmucc$(EXEEXT)
+  if test "$(DESTDIR)$(bindir)" != "$(DESTDIR)$(toolsdir)"; then \
+    ln -sf $(DESTDIR)$(bindir)/svnmucc$(EXEEXT) $(DESTDIR)$(toolsdir)/svnmucc$(EXEEXT); \
+  fi

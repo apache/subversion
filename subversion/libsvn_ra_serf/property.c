@@ -638,13 +638,8 @@ svn_ra_serf__wait_for_props(svn_ra_serf__handler_t *handler,
   err2 = svn_ra_serf__error_on_status(handler->sline.code,
                                       handler->path,
                                       handler->location);
-  if (err2)
-    {
-      svn_error_clear(err);
-      return err2;
-    }
 
-  return err;
+  return svn_error_compose_create(err2, err);
 }
 
 /*
@@ -1208,7 +1203,7 @@ svn_ra_serf__get_stable_url(const char **stable_url,
 
 
 svn_error_t *
-svn_ra_serf__get_resource_type(svn_kind_t *kind,
+svn_ra_serf__get_resource_type(svn_node_kind_t *kind,
                                apr_hash_t *props)
 {
   apr_hash_t *dav_props;
@@ -1226,11 +1221,11 @@ svn_ra_serf__get_resource_type(svn_kind_t *kind,
 
   if (strcmp(res_type, "collection") == 0)
     {
-      *kind = svn_kind_dir;
+      *kind = svn_node_dir;
     }
   else
     {
-      *kind = svn_kind_file;
+      *kind = svn_node_file;
     }
 
   return SVN_NO_ERROR;

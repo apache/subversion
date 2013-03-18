@@ -3016,7 +3016,39 @@ def delete_conflicts_one_of_many(sbox):
   verify_file_deleted("failed to remove conflict file",
                       sbox.ospath('A/D/G/rho.mine'))
 
+@Issue(3231)
+@XFail()
+def peg_rev_on_non_existent_wc_path(sbox):
+  """peg rev resolution on non-existent wc paths"""
 
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # setup some history
+  sbox.simple_move('A', 'A2')
+  sbox.simple_move('A2/mu', 'A2/mu2')
+  open(sbox.ospath('A2/mu2'), 'w').write('r2\n')
+  sbox.simple_commit(message='r2')
+  #
+  sbox.simple_move('A2/mu2', 'A2/mu3')
+  sbox.simple_move('A2', 'A3')
+  open(sbox.ospath('A3/mu3'), 'w').write('r3\n')
+  sbox.simple_commit(message='r3')
+  #
+  sbox.simple_move('A3/mu3', 'A3/mu4')
+  open(sbox.ospath('A3/mu4'), 'w').write('r4\n')
+  sbox.simple_move('A3', 'A4')
+  sbox.simple_commit(message='r4')
+
+  # test something.
+  sbox.simple_update()
+  # This currently fails with ENOENT on A/mu3.
+  svntest.actions.run_and_verify_svn(None, ['r2\n'], [], 
+                                     'cat', '-r2', sbox.ospath('A3/mu3') + '@3')
+  os.chdir(sbox.ospath('A4'))
+  svntest.actions.run_and_verify_svn(None, ['r2\n'], [], 
+                                     'cat', '-r2', sbox.ospath('mu3') + '@3')
+  
 ########################################################################
 # Run the tests
 
@@ -3084,6 +3116,7 @@ test_list = [ None,
               quiet_commits,
               rm_missing_with_case_clashing_ondisk_item,
               delete_conflicts_one_of_many,
+              peg_rev_on_non_existent_wc_path,
              ]
 
 if __name__ == '__main__':

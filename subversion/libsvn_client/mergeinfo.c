@@ -161,6 +161,9 @@ svn_client__record_wc_mergeinfo_catalog(apr_hash_t *result_catalog,
       apr_array_header_t *sorted_cat =
         svn_sort__hash(result_catalog, svn_sort_compare_items_as_paths,
                        scratch_pool);
+
+      /* Write the mergeinfo out in sorted order of the paths (presumably just
+       * so that the notifications are in a predictable, convenient order). */
       for (i = 0; i < sorted_cat->nelts; i++)
         {
           svn_sort__item_t elt = APR_ARRAY_IDX(sorted_cat, i,
@@ -217,8 +220,10 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
   if (limit_abspath)
     SVN_ERR_ASSERT(svn_dirent_is_absolute(limit_abspath));
 
-  SVN_ERR(svn_wc__node_get_base(&base_revision, NULL, NULL, NULL, NULL,
+  SVN_ERR(svn_wc__node_get_base(NULL, &base_revision, NULL, NULL, NULL, NULL,
                                 ctx->wc_ctx, local_abspath,
+                                TRUE /* ignore_enoent */,
+                                FALSE /* show_hidden */,
                                 scratch_pool, scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);
@@ -286,9 +291,15 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
                                           walk_relpath, result_pool);
           local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
-          SVN_ERR(svn_wc__node_get_base(&parent_base_rev, NULL, NULL, NULL,
-                                        NULL, ctx->wc_ctx, local_abspath,
+          SVN_ERR(svn_wc__node_get_base(NULL, &parent_base_rev, NULL, NULL,
+                                        NULL, NULL,
+                                        ctx->wc_ctx, local_abspath,
+                                        TRUE, FALSE,
                                         scratch_pool, scratch_pool));
+
+          /* ### This checks the WORKING changed_rev, so invalid on replacement
+             ### not even reliable in case an ancestor was copied from a
+             ### different location */
           SVN_ERR(svn_wc__node_get_changed_info(&parent_changed_rev,
                                                 NULL, NULL,
                                                 ctx->wc_ctx, local_abspath,
@@ -677,9 +688,9 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
               if (! ra_session)
                 {
                   sesspool = svn_pool_create(scratch_pool);
-                  SVN_ERR(svn_client__open_ra_session_internal(
-                              &ra_session, NULL, url, NULL, NULL, FALSE,
-                              TRUE, ctx, sesspool));
+                  SVN_ERR(svn_client_open_ra_session2(&ra_session, url, NULL,
+                                                      ctx,
+                                                      sesspool, sesspool));
                 }
 
               SVN_ERR(svn_client__get_repos_mergeinfo_catalog(

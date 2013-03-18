@@ -3259,7 +3259,7 @@ log_revprop_cache_init_warning(svn_fs_t *fs,
                                svn_error_t *underlying_err,
                                const char *message)
 {
-  svn_error_t *err = svn_error_createf(SVN_ERR_FS_REPPROP_CACHE_INIT_FAILURE,
+  svn_error_t *err = svn_error_createf(SVN_ERR_FS_REVPROP_CACHE_INIT_FAILURE,
                                        underlying_err,
                                        message, fs->path);
 
@@ -3801,7 +3801,7 @@ read_pack_revprop(packed_revprops_t **revprops,
 
   /* the file content should be available now */
   if (!result->packed_revprops)
-    return svn_error_createf(SVN_ERR_FS_PACKED_REPPROP_READ_FAILURE, NULL,
+    return svn_error_createf(SVN_ERR_FS_PACKED_REVPROP_READ_FAILURE, NULL,
                   _("Failed to read revprop pack file for rev %ld"), rev);
 
   /* parse it. RESULT will be complete afterwards. */
@@ -4386,12 +4386,14 @@ create_rep_state_body(struct rep_state **rep_state,
 
   /* If the hint is
    * - given,
+   * - refers to a valid revision,
    * - refers to a packed revision,
    * - as does the rep we want to read, and
    * - refers to the same pack file as the rep
    * ...
    */
   if (   file_hint && rev_hint && *file_hint
+      && SVN_IS_VALID_REVNUM(*rev_hint)
       && *rev_hint < ffd->min_unpacked_rev
       && rep->revision < ffd->min_unpacked_rev
       && (   (*rev_hint / ffd->max_files_per_dir)

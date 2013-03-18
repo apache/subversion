@@ -92,7 +92,7 @@ svn_cl__patch(apr_getopt_t *os,
 
 
   if (! opt_state->quiet)
-    SVN_ERR(svn_cl__print_conflict_stats(ctx->notify_baton2, pool));
+    SVN_ERR(svn_cl__notifier_print_conflict_stats(ctx->notify_baton2, pool));
 
   return SVN_NO_ERROR;
 }

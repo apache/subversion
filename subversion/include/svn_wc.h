@@ -1249,7 +1249,13 @@ typedef enum svn_wc_notify_action_t
 
   /** A copy from a foreign repository has started 
    * @since New in 1.8. */
-  svn_wc_notify_foreign_copy_begin
+  svn_wc_notify_foreign_copy_begin,
+
+  /** A move in the working copy has been broken, i.e. degraded into a
+   * copy + delete. The notified path is the move source (the deleted path).
+   * ### Provide path to move destination as well?
+   * @since New in 1.8. */
+  svn_wc_notify_move_broken
 
 } svn_wc_notify_action_t;
 
@@ -1666,10 +1672,10 @@ typedef struct svn_wc_conflict_version_t
   const char *path_in_repos;
   /** @} */
 
-  /** The node kind.  Can be any kind, even 'none' or 'unknown'. */
+  /** The node kind.  Can be any kind, including 'none' or 'unknown'. */
   svn_node_kind_t node_kind;
 
-  /** UUID of the repository. Can be NULL meaning unknown.
+  /** UUID of the repository (or NULL if unknown.)
    * @since New in 1.8. */
   const char *repos_uuid;
 
@@ -5451,7 +5457,7 @@ svn_wc_crawl_revisions(const char *path,
 svn_error_t *
 svn_wc_check_root(svn_boolean_t *is_wcroot,
                   svn_boolean_t *is_switched,
-                  svn_kind_t *kind,
+                  svn_node_kind_t *kind,
                   svn_wc_context_t *wc_ctx,
                   const char *local_abspath,
                   apr_pool_t *scratch_pool);
@@ -5664,6 +5670,10 @@ typedef svn_error_t *(*svn_wc_dirents_func_t)(void *baton,
  * If @a server_performs_filtering is TRUE, assume that the server handles
  * the ambient depth filtering, so this doesn't have to be handled in the
  * editor.
+ *
+ * If @a clean_checkout is TRUE, assume that we are checking out into an
+ * empty directory, and so bypass a number of conflict checks that are
+ * unnecessary in this case.
  *
  * If @a fetch_dirents_func is not NULL, the update editor may call this
  * callback, when asked to perform a depth restricted update. It will do this
@@ -6336,10 +6346,13 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * @a show_copies_as_adds determines whether paths added with history will
  * appear as a diff against their copy source, or whether such paths will
  * appear as if they were newly added in their entirety.
+ * @a show_copies_as_adds implies not @a ignore_ancestry.
  *
  * If @a use_git_diff_format is TRUE, copied paths will be treated as added
  * if they weren't modified after being copied. This allows the callbacks
  * to generate appropriate --git diff headers for such files.
+ * @a use_git_diff_format implies @a show_copies_as_adds, and as such implies
+ * not @a ignore_ancestry.
  *
  * Normally, the difference from repository->working_copy is shown.
  * If @a reverse_order is TRUE, then show working_copy->repository diffs.
@@ -6751,13 +6764,13 @@ typedef enum svn_wc_merge_outcome_t
  * svn_diff_file_options_parse()).  @a merge_options must contain
  * <tt>const char *</tt> elements.
  *
- * If @a merge_props_state is non-NULL @a prop_diff is merged before
- * merging the text. (If @a merge_props_state is NULL, no property changes
- * are merged and @a prop_diff is only used to determine the merge result)
- * The result of the property merge is stored in @a *merge_props_state. If
- * there is a conflict and @a dry_run is @c FALSE, then attempt to call @a
- * conflict_func with @a conflict_baton (if non-NULL).  If the conflict
- * callback cannot resolve the conflict, then a property conflict is installed.
+ * If @a merge_props_state is non-NULL, merge @a prop_diff into the
+ * working properties before merging the text.  (If @a merge_props_state
+ * is NULL, do not merge any property changes; in this case, @a prop_diff
+ * is only used to help determine the text merge result.)  Handle any
+ * conflicts as described for svn_wc_merge_props3(), with the parameters
+ * @a dry_run, @a conflict_func and @a conflict_baton.  Return the
+ * outcome of the property merge in @a *merge_props_state.
  *
  * The outcome of the text merge is returned in @a *merge_content_outcome. If
  * there is a conflict and @a dry_run is @c FALSE, then attempt to call @a
@@ -6944,9 +6957,12 @@ svn_wc_merge(const char *left,
  * If @a state is non-NULL, set @a *state to the state of the properties
  * after the merge.
  *
- * If conflicts are found when merging working properties, they are
- * described in a temporary .prej file (or appended to an already-existing
- * .prej file), and the entry is marked "conflicted".
+ * If a conflict is found when merging a property, and @a dry_run is
+ * false and @a conflict_func is not null, then call @a conflict_func
+ * with @a conflict_baton and a description of the conflict.  If any
+ * conflicts are not resolved by such callbacks, describe the unresolved
+ * conflicts in a temporary .prej file (or append to an already-existing
+ * .prej file) and mark the path as conflicted in the WC DB.
  *
  * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at various
  * points during the operation.  If it returns an error (typically
@@ -8101,23 +8117,46 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
 /** @} */
 
 /**
- * Set @a kind to the #svn_node_kind_t of @a abspath.  Use @a wc_ctx
- * to access the working copy, and @a scratch_pool for all temporary
- * allocations.
+ * Set @a kind to the #svn_node_kind_t of @a abspath.  Use @a wc_ctx to access
+ * the working copy, and @a scratch_pool for all temporary allocations.
  *
  * If @a abspath is not under version control, set @a kind to #svn_node_none.
- * If it is versioned but hidden and @a show_hidden is @c FALSE, also return
- * #svn_node_none.
  *
- * ### What does hidden really mean?
- * ### What happens when show_hidden is TRUE?
+ * If @a show_hidden and @a show_deleted are both @c FALSE, the kind of
+ * scheduled for delete, administrative only 'not present' and excluded
+ * nodes is reported as #svn_node_kind_node. This is recommended as a check
+ * for 'is there a versioned file or directory here?'
  *
- * If the node's info is incomplete, it may or may not have a known node kind
- * set. If the kind is not known (yet), set @a kind to #svn_node_unknown.
- * Otherwise return the node kind even though the node is marked incomplete.
+ * If @a show_deleted is FALSE, but @a show_hidden is @c TRUE then only
+ * scheduled for delete and administrative only 'not present' nodes are
+ * reported as #svn_node_kind_none. This is recommended as check for
+ * 'Can I add a node here?'
+ *
+ * If @a show_deleted is TRUE, but @a show_hidden is FALSE, then only
+ * administrative only 'not present' nodes and excluded nodes are reported as
+ * #svn_node_kind_none. This behavior is the behavior bescribed as 'hidden'
+ * before Subversion 1.7.
+ *
+ * If @a show_hidden and @a show_deleted are both @c TRUE all nodes are
+ * reported.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_wc_read_kind2(svn_node_kind_t *kind,
+                  svn_wc_context_t *wc_ctx,
+                  const char *local_abspath,
+                  svn_boolean_t show_deleted,
+                  svn_boolean_t show_hidden,
+                  apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_read_kind2() but always shows deleted nodes and returns
+ * the result as a #svn_node_kind_t.
  *
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_read_kind(svn_node_kind_t *kind,
                  svn_wc_context_t *wc_ctx,

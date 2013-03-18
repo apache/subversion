@@ -785,7 +785,8 @@ svn_auth_get_simple_provider2(
  * @a provider specifies which provider currently holds the credential.
  *
  * Before returning set @a *delete_cred to TRUE to remove the credential from
- * the cache.
+ * the cache; leave @a *delete_cred unchanged or set it to FALSE to keep the
+ * credential.
  *
  * @since New in 1.8.
  */

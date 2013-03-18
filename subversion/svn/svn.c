@@ -900,7 +900,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "     source and target refer to the same branch, a previously committed\n"
 "     revision can be 'undone'. In a reverse range, N is greater than M in\n"
 "     '-r N:M', or the '-c' option is used with a negative number: '-c -M'\n"
-"     is equivalent to '-r M:<M-1>'.\n"
+"     is equivalent to '-r M:<M-1>'. Undoing changes like this is also known\n"
+"     as performing a 'reverse merge'.\n"
 "\n"
 "     Multiple '-c' and/or '-r' options may be specified and mixing of\n"
 "     forward and reverse ranges is allowed.\n"
@@ -1357,11 +1358,15 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {opt_targets, 'R', opt_depth, 'q'} },
 
   { "revert", svn_cl__revert, {0}, N_
-    ("Restore pristine working copy file (undo most local edits).\n"
+    ("Restore pristine working copy state (undo local changes).\n"
      "usage: revert PATH...\n"
      "\n"
-     "  Note:  this subcommand does not require network access, and resolves\n"
-     "  any conflicted states.\n"),
+     "  Revert changes in the working copy at or within PATH, and remove\n"
+     "  conflict markers as well, if any.\n"
+     "\n"
+     "  This subcommand does not revert already committed changes.\n"
+     "  For information about undoing already committed changes, search\n"
+     "  the output of 'svn help merge' for 'undo'.\n"),
     {opt_targets, 'R', opt_depth, 'q', opt_changelist} },
 
   { "status", svn_cl__status, {"stat", "st"}, N_
@@ -1691,7 +1696,6 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   svn_boolean_t force_interactive = FALSE;
   svn_boolean_t use_notifier = TRUE;
   apr_hash_t *changelists;
-  const char *sqlite_exclusive;
   apr_hash_t *cfg_hash;
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
@@ -2123,7 +2127,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
           {
             err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                    _("Changelist names must not be empty"));
-            return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+            return EXIT_ERROR(err);
           }
         apr_hash_set(changelists, opt_state.changelist,
                      APR_HASH_KEY_STRING, (void *)1);
@@ -2312,6 +2316,17 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                      _("Unknown subcommand: '%s'\n"),
                                      first_arg_utf8));
               svn_cl__help(NULL, NULL, pool);
+
+              /* Be kind to people who try 'svn undo'. */
+              if (strcmp(first_arg_utf8, "undo") == 0)
+                {
+                  svn_error_clear
+                    (svn_cmdline_fprintf(stderr, pool,
+                                         _("Undo is done using either the "
+                                           "'svn revert' or the 'svn merge' "
+                                           "command.\n")));
+                }
+
               return EXIT_FAILURE;
             }
         }
@@ -2456,11 +2471,6 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         return EXIT_ERROR(err);
     }
 
-  /* Create a client context object. */
-  command_baton.opt_state = &opt_state;
-  SVN_INT_ERR(svn_client_create_context2(&ctx, cfg_hash, pool));
-  command_baton.ctx = ctx;
-
   /* Relocation is infinite-depth only. */
   if (opt_state.relocate)
     {
@@ -2519,27 +2529,49 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         }
     }
 
-  cfg_config = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
+  cfg_config = apr_hash_get(cfg_hash, SVN_CONFIG_CATEGORY_CONFIG,
                             APR_HASH_KEY_STRING);
 
   /* Update the options in the config */
   if (opt_state.config_options)
     {
       svn_error_clear(
-          svn_cmdline__apply_config_options(ctx->config,
+          svn_cmdline__apply_config_options(cfg_hash,
                                             opt_state.config_options,
                                             "svn: ", "--config-option"));
     }
 
-  svn_config_get(cfg_config, &sqlite_exclusive,
-                 SVN_CONFIG_SECTION_WORKING_COPY,
-                 SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE,
-                 NULL);
-  if (!sqlite_exclusive)
-    svn_config_set(cfg_config,
+#if !defined(SVN_CL_NO_EXCLUSIVE_LOCK)
+  {
+    const char *exclusive_clients_option;
+    apr_array_header_t *exclusive_clients;
+
+    svn_config_get(cfg_config, &exclusive_clients_option,
                    SVN_CONFIG_SECTION_WORKING_COPY,
-                   SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE,
-                   "true");
+                   SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE_CLIENTS,
+                   NULL);
+    exclusive_clients = svn_cstring_split(exclusive_clients_option,
+                                          " ,", TRUE, pool);
+    for (i = 0; i < exclusive_clients->nelts; ++i)
+      {
+        const char *exclusive_client = APR_ARRAY_IDX(exclusive_clients, i,
+                                                     const char *);
+
+        /* This blocks other clients from accessing the wc.db so it must
+           be explicitly enabled.*/
+        if (!strcmp(exclusive_client, "svn"))
+          svn_config_set(cfg_config,
+                         SVN_CONFIG_SECTION_WORKING_COPY,
+                         SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE,
+                         "true");
+      }
+  }
+#endif
+
+  /* Create a client context object. */
+  command_baton.opt_state = &opt_state;
+  SVN_INT_ERR(svn_client_create_context2(&ctx, cfg_hash, pool));
+  command_baton.ctx = ctx;
 
   /* If we're running a command that could result in a commit, verify
      that any log message we were given on the command line makes
@@ -2811,6 +2843,18 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
           err = svn_error_quick_wrap(
                   err, _("Run 'svn cleanup' to remove locks "
                          "(type 'svn help cleanup' for details)"));
+        }
+
+      if (err->apr_err == SVN_ERR_SQLITE_BUSY)
+        {
+          err = svn_error_quick_wrap(err,
+                                     _("Another process is blocking the "
+                                       "working copy database, or the "
+                                       "underlying filesystem does not "
+                                       "support file locking; if the working "
+                                       "copy is on a network filesystem, make "
+                                       "sure file locking has been enabled "
+                                       "on the file server"));
         }
 
       return EXIT_ERROR(err);

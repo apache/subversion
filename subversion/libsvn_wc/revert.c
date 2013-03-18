@@ -180,7 +180,7 @@ revert_restore_handle_copied_dirs(svn_boolean_t *removed_self,
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
 
-      if (child_info->kind != svn_kind_file)
+      if (child_info->kind != svn_node_file)
         continue;
 
       svn_pool_clear(iterpool);
@@ -210,7 +210,7 @@ revert_restore_handle_copied_dirs(svn_boolean_t *removed_self,
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
 
-      if (child_info->kind != svn_kind_dir)
+      if (child_info->kind != svn_node_dir)
         continue;
 
       svn_pool_clear(iterpool);
@@ -270,7 +270,7 @@ revert_restore(svn_wc__db_t *db,
 {
   svn_error_t *err;
   svn_wc__db_status_t status;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_node_kind_t on_disk;
   svn_boolean_t notify_required;
   const apr_array_header_t *conflict_files;
@@ -281,7 +281,7 @@ revert_restore(svn_wc__db_t *db,
   svn_boolean_t special;
 #endif
   svn_boolean_t copied_here;
-  svn_kind_t reverted_kind;
+  svn_node_kind_t reverted_kind;
   svn_boolean_t is_wcroot;
 
   if (cancel_func)
@@ -345,7 +345,7 @@ revert_restore(svn_wc__db_t *db,
            * ### trying to restore anything to disk.
            * ### 'status' should be status_unknown but that doesn't exist. */
           status = svn_wc__db_status_normal;
-          kind = svn_kind_unknown;
+          kind = svn_node_unknown;
           recorded_size = SVN_INVALID_FILESIZE;
           recorded_time = 0;
         }
@@ -388,12 +388,12 @@ revert_restore(svn_wc__db_t *db,
   if (copied_here)
     {
       /* The revert target itself is the op-root of a copy. */
-      if (reverted_kind == svn_kind_file && on_disk == svn_node_file)
+      if (reverted_kind == svn_node_file && on_disk == svn_node_file)
         {
           SVN_ERR(svn_io_remove_file2(local_abspath, TRUE, scratch_pool));
           on_disk = svn_node_none;
         }
-      else if (reverted_kind == svn_kind_dir && on_disk == svn_node_dir)
+      else if (reverted_kind == svn_node_dir && on_disk == svn_node_dir)
         {
           svn_boolean_t removed;
 
@@ -415,18 +415,18 @@ revert_restore(svn_wc__db_t *db,
       && status != svn_wc__db_status_excluded
       && status != svn_wc__db_status_not_present)
     {
-      if (on_disk == svn_node_dir && kind != svn_kind_dir)
+      if (on_disk == svn_node_dir && kind != svn_node_dir)
         {
           SVN_ERR(svn_io_remove_dir2(local_abspath, FALSE,
                                      cancel_func, cancel_baton, scratch_pool));
           on_disk = svn_node_none;
         }
-      else if (on_disk == svn_node_file && kind != svn_kind_file)
+      else if (on_disk == svn_node_file && kind != svn_node_file)
         {
 #ifdef HAVE_SYMLINK
           /* Preserve symlinks pointing at directories. Changes on the
            * directory node have been reverted. The symlink should remain. */
-          if (!(special && kind == svn_kind_dir))
+          if (!(special && kind == svn_node_dir))
 #endif
             {
               SVN_ERR(svn_io_remove_file2(local_abspath, FALSE, scratch_pool));
@@ -558,10 +558,10 @@ revert_restore(svn_wc__db_t *db,
       && status != svn_wc__db_status_excluded
       && status != svn_wc__db_status_not_present)
     {
-      if (kind == svn_kind_dir)
+      if (kind == svn_node_dir)
         SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, scratch_pool));
 
-      if (kind == svn_kind_file)
+      if (kind == svn_node_file)
         {
           svn_skel_t *work_item;
 
@@ -595,7 +595,7 @@ revert_restore(svn_wc__db_t *db,
                                      scratch_pool),
                 scratch_pool);
 
-  if (depth == svn_depth_infinity && kind == svn_kind_dir)
+  if (depth == svn_depth_infinity && kind == svn_node_dir)
     {
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       const apr_array_header_t *children;
@@ -811,13 +811,14 @@ revert_partial(svn_wc__db_t *db,
       /* For svn_depth_files: don't revert non-files.  */
       if (depth == svn_depth_files)
         {
-          svn_kind_t kind;
+          svn_node_kind_t kind;
 
           SVN_ERR(svn_wc__db_read_kind(&kind, db, child_abspath,
                                        FALSE /* allow_missing */,
+                                       TRUE /* show_deleted */,
                                        FALSE /* show_hidden */,
                                        iterpool));
-          if (kind != svn_kind_file)
+          if (kind != svn_node_file)
             continue;
         }
 

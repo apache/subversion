@@ -2115,7 +2115,7 @@ svn_client_proplist3(const char *target,
   return svn_error_trace(svn_client_proplist4(target, peg_revision, revision,
                                               depth, changelists, FALSE,
                                               receiver2, receiver2_baton,
-                                              ctx, pool, pool));
+                                              ctx, pool));
 }
 
 /* Receiver baton used by proplist2() */
@@ -2414,7 +2414,9 @@ svn_client_switch2(svn_revnum_t *result_rev,
 {
   return svn_client_switch3(result_rev, path, switch_url, peg_revision,
                             revision, depth, depth_is_sticky, ignore_externals,
-                            allow_unver_obstructions, TRUE, ctx, pool);
+                            allow_unver_obstructions,
+                            TRUE /* ignore_ancestry */,
+                            ctx, pool);
 }
 
 svn_error_t *
@@ -2755,26 +2757,32 @@ svn_client_revert(const apr_array_header_t *paths,
 
 /*** From ra.c ***/
 svn_error_t *
+svn_client_open_ra_session(svn_ra_session_t **session,
+                           const char *url,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *pool)
+{
+  return svn_error_trace(
+             svn_client_open_ra_session2(session, url,
+                                         NULL, ctx,
+                                         pool, pool));
+}
+
+svn_error_t *
 svn_client_uuid_from_url(const char **uuid,
                          const char *url,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *pool)
 {
-  svn_ra_session_t *ra_session;
+  svn_error_t *err;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  /* use subpool to create a temporary RA session */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, url,
-                                               NULL, /* no base dir */
-                                               NULL, FALSE, TRUE,
-                                               ctx, subpool));
-
-  SVN_ERR(svn_ra_get_uuid2(ra_session, uuid, pool));
-
+  err = svn_client_get_repos_root(NULL, uuid, url,
+                                  ctx, pool, subpool);
   /* destroy the RA session */
   svn_pool_destroy(subpool);
 
-  return SVN_NO_ERROR;
+  return svn_error_trace(err);;
 }
 
 svn_error_t *
@@ -2811,12 +2819,17 @@ svn_client_root_url_from_path(const char **url,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool)
 {
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_error_t *err;
   if (!svn_path_is_url(path_or_url))
     SVN_ERR(svn_dirent_get_absolute(&path_or_url, path_or_url, pool));
 
-  return svn_error_trace(
-           svn_client_get_repos_root(url, NULL, path_or_url,
-                                     ctx, pool, pool));
+  err = svn_client_get_repos_root(url, NULL, path_or_url,
+                                  ctx, pool, subpool);
+
+  /* close ra session */
+  svn_pool_destroy(subpool);
+  return svn_error_trace(err);
 }
 
 svn_error_t *
@@ -2949,3 +2962,4 @@ svn_client_commit_item2_dup(const svn_client_commit_item2_t *item,
 
   return new_item;
 }
+

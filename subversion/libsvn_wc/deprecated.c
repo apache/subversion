@@ -970,12 +970,13 @@ svn_wc_add3(const char *path,
   /* Make sure the caller gets the new access baton in the set. */
   if (svn_wc__adm_retrieve_internal2(wc_db, local_abspath, pool) == NULL)
     {
-      svn_kind_t kind;
+      svn_node_kind_t kind;
 
       SVN_ERR(svn_wc__db_read_kind(&kind, wc_db, local_abspath,
                                    FALSE /* allow_missing */,
+                                   TRUE /* show_deleted */,
                                    FALSE /* show_hidden */, pool));
-      if (kind == svn_kind_dir)
+      if (kind == svn_node_dir)
         {
           svn_wc_adm_access_t *adm_access;
 
@@ -3258,7 +3259,7 @@ svn_wc_is_wc_root2(svn_boolean_t *wc_root,
 {
   svn_boolean_t is_root;
   svn_boolean_t is_switched;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_error_t *err;
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -3274,7 +3275,7 @@ svn_wc_is_wc_root2(svn_boolean_t *wc_root,
       return svn_error_create(SVN_ERR_ENTRY_NOT_FOUND, err, err->message);
     }
 
-  *wc_root = is_root || (kind == svn_kind_dir && is_switched);
+  *wc_root = is_root || (kind == svn_node_dir && is_switched);
 
   return SVN_NO_ERROR;
 }
@@ -4564,4 +4565,28 @@ svn_wc_move(svn_wc_context_t *wc_ctx,
                                        cancel_func, cancel_baton,
                                        notify_func, notify_baton,
                                        scratch_pool));
+}
+
+svn_error_t *
+svn_wc_read_kind(svn_node_kind_t *kind,
+                 svn_wc_context_t *wc_ctx,
+                 const char *abspath,
+                 svn_boolean_t show_hidden,
+                 apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(
+          svn_wc_read_kind2(kind,
+                            wc_ctx, abspath,
+                            TRUE /* show_deleted */,
+                            show_hidden,
+                            scratch_pool));
+
+  /*if (db_kind == svn_node_dir)
+    *kind = svn_node_dir;
+  else if (db_kind == svn_node_file || db_kind == svn_node_symlink)
+    *kind = svn_node_file;
+  else
+    *kind = svn_node_none;*/
+
+  return SVN_NO_ERROR;
 }

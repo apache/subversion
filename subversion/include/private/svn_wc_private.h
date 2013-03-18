@@ -154,8 +154,8 @@ typedef struct svn_wc__committable_external_info_t {
    * from. */
   const char *repos_root_url;
 
-  /* Set to either svn_kind_file or svn_kind_dir. */
-  svn_kind_t kind;
+  /* Set to either svn_node_file or svn_node_dir. */
+  svn_node_kind_t kind;
 
 } svn_wc__committable_external_info_t;
 
@@ -564,6 +564,8 @@ svn_wc__node_get_deleted_ancestor(const char **deleted_ancestor_abspath,
  * @a local_abspath has status svn_wc__db_status_excluded. Set
  * @a *server_excluded to TRUE when @a local_abspath has status
  * svn_wc__db_status_server_excluded. Otherwise set these values to FALSE.
+ * If @a base_only is TRUE then only the base node will be examined,
+ * otherwise the current base or working node will be examined.
  *
  * If a value is not interesting you can pass #NULL.
  *
@@ -577,6 +579,7 @@ svn_wc__node_is_not_present(svn_boolean_t *not_present,
                             svn_boolean_t *server_excluded,
                             svn_wc_context_t *wc_ctx,
                             const char *local_abspath,
+                            svn_boolean_t base_only,
                             apr_pool_t *scratch_pool);
 
 /**
@@ -618,9 +621,10 @@ svn_wc__node_has_working(svn_boolean_t *has_working,
  * to, regardless of any uncommitted changes (delete, replace and/or copy-here/
  * move-here).
  *
- * If there is no base node at @a local_abspath (such as when there is a
- * locally added/copied/moved-here node that is not part of a replace),
- * return @c SVN_INVALID_REVNUM/NULL/NULL/NULL/NULL.
+ * If there is no BASE node at @a local_abspath or if @a show_hidden is FALSE,
+ * no status 'normal' or 'incomplete' BASE node report
+ * SVN_ERR_WC_PATH_NOT_FOUND, or if @a ignore_enoent is TRUE, @a kind
+ * svn_node_unknown, @a revision SVN_INVALID_REVNUM and all other values NULL.
  *
  * All output arguments may be NULL.
  *
@@ -628,13 +632,16 @@ svn_wc__node_has_working(svn_boolean_t *has_working,
  * @a scratch_pool.
  */
 svn_error_t *
-svn_wc__node_get_base(svn_revnum_t *revision,
+svn_wc__node_get_base(svn_node_kind_t *kind,
+                      svn_revnum_t *revision,
                       const char **repos_relpath,
                       const char **repos_root_url,
                       const char **repos_uuid,
                       const char **lock_token,
                       svn_wc_context_t *wc_ctx,
                       const char *local_abspath,
+                      svn_boolean_t ignore_enoent,
+                      svn_boolean_t show_hidden,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
 
@@ -1186,34 +1193,13 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool);
 
-/* Internal version of svn_wc_delete4(). It has one additional parameter,
- * MOVED_TO_ABSPATH. If not NULL, this parameter indicates that the
- * delete operation is the delete-half of a move.
- *
- * ### Inconsistency: if DELETE_UNVERSIONED_TARGET is FALSE and a target is
- *     unversioned, svn_wc__delete_many() will continue whereas
- *     svn_wc__delete_internal() will throw an error.
- */
-svn_error_t *
-svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
-                        const char *local_abspath,
-                        svn_boolean_t keep_local,
-                        svn_boolean_t delete_unversioned_target,
-                        const char *moved_to_abspath,
-                        svn_cancel_func_t cancel_func,
-                        void *cancel_baton,
-                        svn_wc_notify_func2_t notify_func,
-                        void *notify_baton,
-                        apr_pool_t *scratch_pool);
-
-
 /* Alternative version of svn_wc_delete4().
  * It can delete multiple TARGETS more efficiently (within a single sqlite
  * transaction per working copy), but lacks support for moves.
  *
  * ### Inconsistency: if DELETE_UNVERSIONED_TARGET is FALSE and a target is
  *     unversioned, svn_wc__delete_many() will continue whereas
- *     svn_wc__delete_internal() will throw an error.
+ *     svn_wc_delete4() will throw an error.
  */
 svn_error_t *
 svn_wc__delete_many(svn_wc_context_t *wc_ctx,
@@ -1472,6 +1458,10 @@ svn_wc__get_status_editor(const svn_delta_editor_t **editor,
  * the ambient depth filtering, so this doesn't have to be handled in the
  * editor.
  *
+ * If @a clean_checkout is TRUE, assume that we are checking out into an
+ * empty directory, and so bypass a number of conflict checks that are
+ * unnecessary in this case.
+ *
  * If @a fetch_dirents_func is not NULL, the update editor may call this
  * callback, when asked to perform a depth restricted update. It will do this
  * before returning the editor to allow using the primary ra session for this.
@@ -1661,7 +1651,7 @@ typedef svn_error_t *
                                        svn_wc_notify_state_t *state,
                                        svn_wc_notify_state_t *prop_state,
                                        const char *relpath,
-                                       svn_kind_t kind,
+                                       svn_node_kind_t kind,
                                        svn_boolean_t before_op,
                                        svn_boolean_t for_add,
                                        svn_boolean_t for_delete,
@@ -1675,7 +1665,7 @@ typedef svn_error_t *
  */
 typedef svn_error_t *
         (*svn_wc__diff_state_close_t)(const char *relpath,
-                                      svn_kind_t kind,
+                                      svn_node_kind_t kind,
                                       void *state_baton,
                                       apr_pool_t *scratch_pool);
 
@@ -1792,7 +1782,8 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
  * If @a allow_mixed_revisions is @c FALSE, #SVN_ERR_WC_MIXED_REVISIONS
  * will be raised if the move source is a mixed-revision subtree.
  * If @a allow_mixed_revisions is TRUE, a mixed-revision move source is
- * allowed. This parameter should be set to FALSE except where backwards
+ * allowed but the move will degrade to a copy and a delete without local
+ * move tracking. This parameter should be set to FALSE except where backwards
  * compatibility to svn_wc_move() is required.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton at
@@ -1838,6 +1829,17 @@ svn_wc__complete_directory_add(svn_wc_context_t *wc_ctx,
                                svn_revnum_t copyfrom_rev,
                                apr_pool_t *scratch_pool);
 
+
+/* Acquire a write lock on LOCAL_ABSPATH or an ancestor that covers
+   all possible paths affected by resolving the conflicts in the tree
+   LOCAL_ABSPATH.  Set *LOCK_ROOT_ABSPATH to the path of the lock
+   obtained. */
+svn_error_t * 
+svn_wc__acquire_write_lock_for_resolve(const char **lock_root_abspath,
+                                       svn_wc_context_t *wc_ctx,
+                                       const char *local_abspath,
+                                       apr_pool_t *result_pool,
+                                       apr_pool_t *scratch_pool);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
