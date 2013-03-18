@@ -1219,6 +1219,8 @@ svn_repos_abort_report(void *report_baton,
  * ### reporter instead; there are some stray references to the
  * ### svn_repos_dir_delta[2] in comments which should probably
  * ### actually refer to the reporter.
+ *
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_repos_dir_delta2(svn_fs_root_t *src_root,
