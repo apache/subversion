@@ -86,7 +86,8 @@ def make_no_diff_deleted_header(path, old_tag, new_tag):
 def make_git_diff_header(target_path, repos_relpath,
                          old_tag, new_tag, add=False, src_label=None,
                          dst_label=None, delete=False, text_changes=True,
-                         cp=False, mv=False, copyfrom_path=None):
+                         cp=False, mv=False, copyfrom_path=None,
+                         copyfrom_rev=None):
   """ Generate the expected 'git diff' header for file TARGET_PATH.
   REPOS_RELPATH is the location of the path relative to the repository root.
   The old and new versions ("revision X", or "working copy") must be
@@ -134,9 +135,13 @@ def make_git_diff_header(target_path, repos_relpath,
         "+++ /dev/null\t(" + new_tag + ")\n"
       ])
   elif cp:
+    if copyfrom_rev:
+      copyfrom_rev = '@' + copyfrom_rev
+    else:
+      copyfrom_rev = ''
     output.extend([
       "diff --git a/" + copyfrom_path + " b/" + repos_relpath + "\n",
-      "copy from " + copyfrom_path + "\n",
+      "copy from " + copyfrom_path + copyfrom_rev + "\n",
       "copy to " + repos_relpath + "\n",
     ])
     if text_changes:
@@ -2209,15 +2214,13 @@ def diff_schedule_delete(sbox):
 
   expected_output_r2_base = make_diff_header("foo", "revision 2",
                                                 "working copy") + [
-  "@@ -1 +1,2 @@\n",
-  " xxx\n",
-  "+yyy\n"
+  "@@ -1 +0,0 @@\n",
+  "-xxx\n",
   ]
-  expected_output_base_r2 = make_diff_header("foo", "working copy",
+  expected_output_base_r2 = make_diff_header("foo", "revision 0",
                                                 "revision 2") + [
-  "@@ -1,2 +1 @@\n",
-  " xxx\n",
-  "-yyy\n"
+  "@@ -0,0 +1 @@\n",
+  "+xxx\n",
   ]
 
   expected_output_r1_base = make_diff_header("foo", "revision 0",
@@ -2427,9 +2430,9 @@ def diff_repos_wc_add_with_props(sbox):
     ] + make_diff_prop_header("X/bar") + \
     make_diff_prop_added("propname", "propvalue")
 
-  diff_X_r1_base = make_diff_header("X", "revision 1",
+  diff_X_r1_base = make_diff_header("X", "revision 0",
                                          "working copy") + diff_X
-  diff_X_base_r3 = make_diff_header("X", "working copy",
+  diff_X_base_r3 = make_diff_header("X", "revision 0",
                                          "revision 3") + diff_X
   diff_foo_r1_base = make_diff_header("foo", "revision 0",
                                              "revision 3") + diff_foo
@@ -3009,7 +3012,7 @@ def diff_with_depth(sbox):
       make_diff_prop_header("A") + \
       make_diff_prop_modified("foo3", "bar3", "baz3")
     diff_mu = \
-      make_diff_header("A/mu", "revision 1", "working copy") + [
+      make_diff_header("A/mu", "revision 2", "working copy") + [
       "@@ -1 +1,2 @@\n",
       " This is the file 'mu'.\n",
       "+new text\n",]
@@ -3382,35 +3385,38 @@ def diff_git_format_wc_wc(sbox):
 
   ### We're not testing moved paths
 
-  expected_output = make_git_diff_header(lambda_copied_path,
+  expected_output = make_git_diff_header(
+                         alpha_copied_path, "A/B/E/alpha_copied",
+                         "revision 0", "working copy",
+                         copyfrom_path="A/B/E/alpha", 
+                         copyfrom_rev='1', cp=True,
+                         text_changes=True) + [
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'alpha'.\n",
+    "+This is a copy of 'alpha'.\n",
+  ] + make_git_diff_header(lambda_copied_path,
                                          "A/B/lambda_copied",
                                          "revision 1", "working copy",
-                                         copyfrom_path="A/B/lambda", cp=True,
+                                         copyfrom_path="A/B/lambda",
+                                         copyfrom_rev='1', cp=True,
                                          text_changes=False) \
   + make_git_diff_header(mu_path, "A/mu", "revision 1",
                                          "working copy",
                                          delete=True) + [
     "@@ -1 +0,0 @@\n",
     "-This is the file 'mu'.\n",
-  ] + make_git_diff_header(alpha_copied_path, "A/B/E/alpha_copied",
-                         "revision 0", "working copy",
-                         copyfrom_path="A/B/E/alpha", cp=True,
-                         text_changes=True) + [
-    "@@ -1 +1,2 @@\n",
-    " This is the file 'alpha'.\n",
-    "+This is a copy of 'alpha'.\n",
-  ] + make_git_diff_header(new_path, "new", "revision 0",
-                           "working copy", add=True) + [
-    "@@ -0,0 +1 @@\n",
-    "+This is the file 'new'.\n",
-  ] +  make_git_diff_header(iota_path, "iota", "revision 1",
+  ] + make_git_diff_header(iota_path, "iota", "revision 1",
                             "working copy") + [
     "@@ -1 +1,2 @@\n",
     " This is the file 'iota'.\n",
     "+Changed 'iota'.\n",
+  ] + make_git_diff_header(new_path, "new", "revision 0",
+                           "working copy", add=True) + [
+    "@@ -0,0 +1 @@\n",
+    "+This is the file 'new'.\n",
   ]
 
-  expected = svntest.verify.UnorderedOutput(expected_output)
+  expected = expected_output
 
   svntest.actions.run_and_verify_svn(None, expected, [], 'diff',
                                      '--git', wc_dir)
@@ -3450,13 +3456,13 @@ def diff_git_format_wc_wc_dir_mv(sbox):
     "@@ -1 +0,0 @@\n",
     "-This is the file 'tau'.\n"
   ] + make_git_diff_header(new_pi_path, "A/D/G2/pi", None, None, cp=True,
-                           copyfrom_path="A/D/G/pi", text_changes=False) \
+                           copyfrom_path="A/D/G/pi", copyfrom_rev='1', text_changes=False) \
   + make_git_diff_header(new_rho_path, "A/D/G2/rho", None, None, cp=True,
-                         copyfrom_path="A/D/G/rho", text_changes=False) \
+                         copyfrom_path="A/D/G/rho", copyfrom_rev='1', text_changes=False) \
   + make_git_diff_header(new_tau_path, "A/D/G2/tau", None, None, cp=True,
-                         copyfrom_path="A/D/G/tau", text_changes=False)
+                         copyfrom_path="A/D/G/tau", copyfrom_rev='1', text_changes=False)
 
-  expected = svntest.verify.UnorderedOutput(expected_output)
+  expected = expected_output
 
   svntest.actions.run_and_verify_svn(None, expected, [], 'diff',
                                      '--git', wc_dir)
@@ -3878,7 +3884,6 @@ def no_spurious_conflict(sbox):
   expected_status.tweak('3449_spurious', status='  ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-@XFail()
 def diff_two_working_copies(sbox):
   "diff between two working copies"
   sbox.build()
@@ -3957,7 +3962,10 @@ def diff_two_working_copies(sbox):
                                          src_label, dst_label) + [
                       "@@ -1 +0,0 @@\n",
                       "-This is the file 'pi'.\n",
-                    ] + make_diff_prop_header('A/D/G/pi') + \
+                    ] + make_diff_header('A/D/G/pi', 'working copy',
+                                         'working copy',
+                                         src_label, dst_label) + \
+                        make_diff_prop_header('A/D/G/pi') + \
                         make_diff_prop_added("newprop", "propval") + \
                     make_diff_header('A/D/H/chi', 'working copy',
                                          'working copy',
@@ -4298,7 +4306,6 @@ def simple_ancestry(sbox):
                                         '--show-copies-as-adds',
                                         '--no-diff-added')
 
-@XFail()
 def local_tree_replace(sbox):
   "diff a replaced tree"
 
@@ -4313,15 +4320,6 @@ def local_tree_replace(sbox):
                                      sbox.ospath('A/B'))
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'add', sbox.ospath('A/B'))
-
-  # By default we ignore ancestry, so there are no differences against r1
-  expected_output = []
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     'diff', wc_dir,
-                                     '-r', '2',
-                                     '--show-copies-as-adds')
-  # Note that 'svn diff' without revision diffs against pristine, which would
-  # would show differences!
 
   # And now check with ancestry
 
@@ -4376,6 +4374,7 @@ def local_tree_replace(sbox):
     'D         %s\n' % sbox.ospath('A/B/E/beta'),
     'D         %s\n' % sbox.ospath('A/B/E/alpha'),
     'D         %s\n' % sbox.ospath('A/B/E'),
+    'D         %s\n' % sbox.ospath('A/B/lambda'),
     'D         %s\n' % sbox.ospath('A/B'),
     'A         %s\n' % sbox.ospath('A/B'),
     'A         %s\n' % sbox.ospath('A/B/lambda'),
@@ -4384,13 +4383,142 @@ def local_tree_replace(sbox):
     'A         %s\n' % sbox.ospath('A/B/E'),
     'A         %s\n' % sbox.ospath('A/B/E/beta'),
     'A         %s\n' % sbox.ospath('A/B/E/alpha'),
-    'A         %s\n' % sbox.ospath('A/B/lambda'),
   ])
   # And this currently fails because the ordering is broken, but also
   # because it hits an issue in 'svn patch'
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'patch', patch, wc_dir)
 
+def diff_dir_replaced_by_file(sbox):
+  "diff a directory replaced by a file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_rm('A/B/E')
+  sbox.simple_add_text('text', 'A/B/E')
+
+  expected_output = [
+    'Index: %s\n' % sbox.path('A/B/E/alpha'),
+    '===================================================================\n',
+    '--- %s\t(revision 1)\n' % sbox.path('A/B/E/alpha'),
+    '+++ %s\t(working copy)\n' % sbox.path('A/B/E/alpha'),
+    '@@ -1 +0,0 @@\n',
+    '-This is the file \'alpha\'.\n',
+    'Index: %s\n' % sbox.path('A/B/E/beta'),
+    '===================================================================\n',
+    '--- %s\t(revision 1)\n' % sbox.path('A/B/E/beta'),
+    '+++ %s\t(working copy)\n' % sbox.path('A/B/E/beta'),
+    '@@ -1 +0,0 @@\n',
+    '-This is the file \'beta\'.\n',
+    'Index: %s\n' % sbox.path('A/B/E'),
+    '===================================================================\n',
+    '--- %s\t(revision 0)\n' % sbox.path('A/B/E'),
+    '+++ %s\t(working copy)\n' % sbox.path('A/B/E'),
+    '@@ -0,0 +1 @@\n',
+    '+text\n',
+    '\ No newline at end of file\n',
+  ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', wc_dir)
+
+def diff_dir_replaced_by_dir(sbox):
+  "diff a directory replaced by a directory tree"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_rm('A/B/E')
+  sbox.simple_mkdir('A/B/E')
+  sbox.simple_propset('a', 'b\n', 'A/B/E')
+  sbox.simple_add_text('New beta\n', 'A/B/E/beta')
+
+  # First check with ancestry (Tree replace)
+
+  expected_output = [
+    'Index: %s\n' % sbox.path('A/B/E/alpha'),
+    '===================================================================\n',
+    '--- %s\t(revision 1)\n' % sbox.path('A/B/E/alpha'),
+    '+++ %s\t(working copy)\n' % sbox.path('A/B/E/alpha'),
+    '@@ -1 +0,0 @@\n',
+    '-This is the file \'alpha\'.\n',
+    'Index: %s\n' % sbox.path('A/B/E/beta'),
+    '===================================================================\n',
+    '--- %s\t(revision 1)\n' % sbox.path('A/B/E/beta'),
+    '+++ %s\t(working copy)\n' % sbox.path('A/B/E/beta'),
+    '@@ -1 +0,0 @@\n',
+    '-This is the file \'beta\'.\n',
+    'Index: %s\n' % sbox.path('A/B/E/beta'),
+    '===================================================================\n',
+    '--- %s\t(revision 0)\n' % sbox.path('A/B/E/beta'),
+    '+++ %s\t(working copy)\n' % sbox.path('A/B/E/beta'),
+    '@@ -0,0 +1 @@\n',
+    '+New beta\n',
+    'Index: %s\n' % sbox.path('A/B/E'),
+    '===================================================================\n',
+    '--- %s\t(revision 0)\n' % sbox.path('A/B/E'),
+    '+++ %s\t(working copy)\n' % sbox.path('A/B/E'),
+    '\n',
+    'Property changes on: %s\n' % sbox.path('A/B/E'),
+    '___________________________________________________________________\n',
+    'Added: a\n',
+    '## -0,0 +1 ##\n',
+    '+b\n',
+  ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '--notice-ancestry', wc_dir)
+
+  # And summarized. Currently produces directory adds after their children
+  expected_output = svntest.verify.UnorderedOutput([
+    'D       %s\n' % sbox.ospath('A/B/E/alpha'),
+    'D       %s\n' % sbox.ospath('A/B/E/beta'),
+    'D       %s\n' % sbox.ospath('A/B/E'),
+    'A       %s\n' % sbox.ospath('A/B/E'),
+    'A       %s\n' % sbox.ospath('A/B/E/beta'),
+  ])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '--summarize', wc_dir,
+                                     '--notice-ancestry')
+
+  # And now without (file delete, change + properties)
+  expected_output = [
+    'Index: %s\n' % sbox.path('A/B/E/alpha'),
+    '===================================================================\n',
+    '--- %s\t(revision 1)\n' % sbox.path('A/B/E/alpha'),
+    '+++ %s\t(working copy)\n' % sbox.path('A/B/E/alpha'),
+    '@@ -1 +0,0 @@\n',
+    '-This is the file \'alpha\'.\n',
+    'Index: %s\n' % sbox.path('A/B/E/beta'),
+    '===================================================================\n',
+    '--- %s\t(revision 1)\n' % sbox.path('A/B/E/beta'),
+    '+++ %s\t(working copy)\n' % sbox.path('A/B/E/beta'),
+    '@@ -1 +1 @@\n',
+    '-This is the file \'beta\'.\n',
+    '+New beta\n',
+    'Index: %s\n' % sbox.path('A/B/E'),
+    '===================================================================\n',
+    '--- %s\t(revision 1)\n' % sbox.path('A/B/E'),
+    '+++ %s\t(working copy)\n' % sbox.path('A/B/E'),
+    '\n',
+    'Property changes on: %s\n' % sbox.path('A/B/E'),
+    '___________________________________________________________________\n',
+    'Added: a\n',
+    '## -0,0 +1 ##\n',
+    '+b\n',
+  ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', wc_dir)
+
+  expected_output = [
+    'D       %s\n' % sbox.ospath('A/B/E/alpha'),
+    'M       %s\n' % sbox.ospath('A/B/E/beta'),
+    ' M      %s\n' % sbox.ospath('A/B/E'),
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '--summarize', wc_dir)
 
 ########################################################################
 #Run the tests
@@ -4468,6 +4596,8 @@ test_list = [ None,
               diff_git_format_wc_wc_dir_mv,
               simple_ancestry,
               local_tree_replace,
+              diff_dir_replaced_by_file,
+              diff_dir_replaced_by_dir,
               ]
 
 if __name__ == '__main__':

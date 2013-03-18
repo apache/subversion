@@ -1125,6 +1125,85 @@ def auto_merge_handles_replacements_in_merge_source(sbox):
      " G   " + branch2_path + "\n"],
     [], 'merge', sbox.repo_url + '/A', branch2_path)
 
+# Test for issue #4329 'automatic merge uses reintegrate type merge if
+# source is fully synced'
+@SkipUnless(server_has_mergeinfo)
+@Issue(4329)
+@XFail()
+def effective_sync_results_in_reintegrate(sbox):
+  "an effectively synced branch gets reintegrated"
+
+  sbox.build()
+
+  iota_path = sbox.ospath('iota')
+  A_path = sbox.ospath('A')
+  psi_path = sbox.ospath('A/D/H/psi')
+  mu_path = sbox.ospath('A/mu')
+  branch_path = sbox.ospath('branch')
+  psi_branch_path = sbox.ospath('branch/D/H/psi')
+
+  # r2 - Make a branch.
+  sbox.simple_copy('A', 'branch')
+  sbox.simple_commit()
+
+  # r3 - An edit to a file on the trunk.
+  sbox.simple_append('A/mu', "Trunk edit to 'mu'\n", True)
+  sbox.simple_commit()
+
+  # r4 - An edit to a file on the branch
+  sbox.simple_append('branch/D/H/psi', "Branch edit to 'psi'\n", True)
+  sbox.simple_commit()
+
+  # r5 - Effectively sync all changes on trunk to the branch.  We do this
+  # not via an automatic sync merge, but with a cherry pick that effectively
+  # merges the same changes (i.e. r3).
+  sbox.simple_update()
+  cherry_pick(sbox, 3, A_path, branch_path)
+
+  # r6 - Make another edit to the file on the trunk.
+  sbox.simple_append('A/mu', "2nd trunk edit to 'mu'\n", True)
+  sbox.simple_commit()
+
+  # Now try an explicit --reintegrate merge from ^/branch to A.
+  # This should work because since the resolution of
+  # http://subversion.tigris.org/issues/show_bug.cgi?id=3577
+  # if B is *effectively* synced with A, then B can be reintegrated
+  # to A.  
+  sbox.simple_update()
+  expected_output = [
+    "--- Merging differences between repository URLs into '" +
+    A_path + "':\n",
+    "U    " + psi_path + "\n",
+    "--- Recording mergeinfo for merge between repository URLs into '" +
+    A_path + "':\n",
+    " U   " + A_path + "\n"]
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'merge',
+                                     sbox.repo_url + '/branch', A_path,
+                                     '--reintegrate')
+
+  # Revert the merge and try it again, this time without the --reintegrate
+  # option.  The merge should still work with the same results.
+  #
+  # Currently this fails because the reintegrate code path is not followed,
+  # rather the automatic merge attempts a sync style merge of the yca (^/A@1)
+  # through the HEAD of the branch (^/branch@7).  This results in a spurious
+  # conflict on A/mu as the edit made in r3 is reapplied..
+  #
+  # >svn merge ^/branch A
+  # --- Merging r2 through r6 into 'A':
+  # C    A\mu
+  # U    A\D\H\psi
+  # --- Recording mergeinfo for merge of r2 through r6 into 'A':
+  #  U   A
+  # Summary of conflicts:
+  #   Text conflicts: 1
+  # Conflict discovered in file 'A\mu'.
+  # Select: (p) postpone, (df) diff-full, (e) edit, (m) merge,
+  #         (mc) mine-conflict, (tc) theirs-conflict, (s) show all options: p
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', A_path, '-R')
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'merge',
+                                     sbox.repo_url + '/branch', A_path)
+
 ########################################################################
 # Run the tests
 
@@ -1152,6 +1231,7 @@ test_list = [ None,
               merge_to_reverse_cherry_subtree_to_merge_to,
               merge_replacement,
               auto_merge_handles_replacements_in_merge_source,
+              effective_sync_results_in_reintegrate,
              ]
 
 if __name__ == '__main__':

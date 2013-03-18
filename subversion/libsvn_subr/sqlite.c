@@ -140,8 +140,9 @@ struct svn_sqlite__value_t
   int sqlite_err__temp = (x);                                    \
   if (sqlite_err__temp != SQLITE_OK)                             \
     return svn_error_createf(SQLITE_ERROR_CODE(sqlite_err__temp), \
-                             NULL, "sqlite: %s",                 \
-                             sqlite3_errmsg((db)->db3));         \
+                             NULL, "sqlite: %s (S%d)",             \
+                             sqlite3_errmsg((db)->db3),           \
+                             sqlite_err__temp);                   \
 } while (0)
 
 #define SQLITE_ERR_MSG(x, msg) do                                \
@@ -149,7 +150,8 @@ struct svn_sqlite__value_t
   int sqlite_err__temp = (x);                                    \
   if (sqlite_err__temp != SQLITE_OK)                             \
     return svn_error_createf(SQLITE_ERROR_CODE(sqlite_err__temp), \
-                             NULL, "sqlite: %s", (msg));         \
+                             NULL, "sqlite: %s (S%d)", (msg),     \
+                             sqlite_err__temp);                  \
 } while (0)
 
 
@@ -171,8 +173,9 @@ exec_sql2(svn_sqlite__db_t *db, const char *sql, int ignored_err)
   if (sqlite_err != SQLITE_OK && sqlite_err != ignored_err)
     {
       svn_error_t *err = svn_error_createf(SQLITE_ERROR_CODE(sqlite_err), NULL,
-                                           _("sqlite: %s, executing statement '%s'"),
-                                           err_msg, sql);
+                                           _("sqlite: %s (S%d),"
+                                             " executing statement '%s'"),
+                                           err_msg, sqlite_err, sql);
       sqlite3_free(err_msg);
       return err;
     }
@@ -289,7 +292,8 @@ svn_sqlite__step(svn_boolean_t *got_row, svn_sqlite__stmt_t *stmt)
       svn_error_t *err1, *err2;
 
       err1 = svn_error_createf(SQLITE_ERROR_CODE(sqlite_result), NULL,
-                               "sqlite: %s", sqlite3_errmsg(stmt->db->db3));
+                               "sqlite: %s (S%d)",
+                               sqlite3_errmsg(stmt->db->db3), sqlite_result);
       err2 = svn_sqlite__reset(stmt);
       return svn_error_compose_create(err1, err2);
     }
@@ -739,8 +743,8 @@ init_sqlite(void *baton, apr_pool_t *pool)
   {
     int err = sqlite3_config(SQLITE_CONFIG_MULTITHREAD);
     if (err != SQLITE_OK && err != SQLITE_MISUSE)
-      return svn_error_create(SQLITE_ERROR_CODE(err), NULL,
-                              _("Could not configure SQLite"));
+      return svn_error_createf(SQLITE_ERROR_CODE(err), NULL,
+                               _("Could not configure SQLite (S%d)"), err);
   }
   SQLITE_ERR_MSG(sqlite3_initialize(), _("Could not initialize SQLite"));
 
@@ -778,7 +782,7 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
        occurs (except for out-of-memory); thus, we can safely use it to
        extract an error message and construct an svn_error_t. */
     {
-      /* We'd like to use SQLITE_ERR_MSG here, but we can't since it would
+      /* We'd like to use SQLITE_ERR here, but we can't since it would
          just return an error and leave the database open.  So, we need to
          do this manually. */
       /* ### SQLITE_CANTOPEN */
@@ -792,8 +796,7 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
              error than the close error at this point. */
           sqlite3_close(*db3);
 
-          return svn_error_createf(SQLITE_ERROR_CODE(err_code), NULL,
-                                   "sqlite: %s: '%s'", msg, path);
+          SQLITE_ERR_MSG(err_code, msg);
         }
     }
   }
@@ -863,7 +866,7 @@ close_apr(void *data)
     }
 
   if (result != SQLITE_OK)
-    return SQLITE_ERROR_CODE(result);
+    return SQLITE_ERROR_CODE(result); /* ### lossy */
 
   db->db3 = NULL;
 

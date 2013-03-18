@@ -99,7 +99,7 @@ def main(pool, cmd, config_fname, repos_dir, cmd_args):
     revision = int(cmd_args[0])
     repos = Repository(repos_dir, revision, pool)
     cfg = Config(config_fname, repos,
-                 {'author': author,
+                 {'author': repos.author,
                   'repos_basename': os.path.basename(repos.repos_dir)
                  })
     messenger = Commit(pool, cfg, repos)
@@ -237,6 +237,7 @@ class MailedOutput(OutputBase):
       self.reply_to = self.reply_to[3:]
 
   def mail_headers(self, group, params):
+    from email import Utils
     subject = self.make_subject(group, params)
     try:
       subject.encode('ascii')
@@ -246,6 +247,8 @@ class MailedOutput(OutputBase):
     hdrs = 'From: %s\n'    \
            'To: %s\n'      \
            'Subject: %s\n' \
+           'Date: %s\n' \
+           'Message-ID: %s\n' \
            'MIME-Version: 1.0\n' \
            'Content-Type: text/plain; charset=UTF-8\n' \
            'Content-Transfer-Encoding: 8bit\n' \
@@ -253,8 +256,9 @@ class MailedOutput(OutputBase):
            'X-Svn-Commit-Author: %s\n' \
            'X-Svn-Commit-Revision: %d\n' \
            'X-Svn-Commit-Repository: %s\n' \
-           % (self.from_addr, ', '.join(self.to_addrs), subject,
-              group, self.repos.author or 'no_author', self.repos.rev,
+           % (self.from_addr, ', '.join(self.to_addrs), subject, 
+              Utils.formatdate(), Utils.make_msgid(), group,
+              self.repos.author or 'no_author', self.repos.rev,
               os.path.basename(self.repos.repos_dir))
     if self.reply_to:
       hdrs = '%sReply-To: %s\n' % (hdrs, self.reply_to)
@@ -352,7 +356,7 @@ class Commit(Messenger):
     editor = svn.repos.ChangeCollector(repos.fs_ptr, repos.root_this, \
                                        self.pool)
     e_ptr, e_baton = svn.delta.make_editor(editor, self.pool)
-    svn.repos.replay(repos.root_this, e_ptr, e_baton, self.pool)
+    svn.repos.replay2(repos.root_this, "", svn.core.SVN_INVALID_REVNUM, 1, e_ptr, e_baton, None, self.pool)
 
     self.changelist = sorted(editor.get_changes().items())
 

@@ -104,7 +104,7 @@ def invalid_copy_target(sbox):
   sbox.build(read_only=True)
   mu_path = os.path.join('A', 'mu')
   C_path = os.path.join('A', 'C')
-  run_and_verify_svn_in_wc(sbox, "svn: E155007: Path '.*' is not a directory",
+  run_and_verify_svn_in_wc(sbox, "svn: E155(007|010): Path '.*' is not a directory",
                            'copy', mu_path, C_path, "iota")
 
 def invalid_delete_targets(sbox):
@@ -252,7 +252,6 @@ def invalid_update_targets(sbox):
   run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'update',
                            "^/")
 
-@XFail()
 def delete_repos_root(sbox):
   "do stupid things with the repository root"
 
@@ -285,7 +284,7 @@ def delete_repos_root(sbox):
 
   # This should produce some error, because we can never commit this
   expected_error = '.*repository root.*'
-  svntest.actions.run_and_verify_svn('Move root', [], expected_error,
+  svntest.actions.run_and_verify_svn('Move root', None, expected_error,
                                      'mv', sbox.ospath('A/D/G'),
                                      sbox.ospath('Z'))
 

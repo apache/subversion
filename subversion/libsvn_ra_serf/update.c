@@ -1099,13 +1099,6 @@ handle_fetch(serf_request_t *request,
       val = serf_bucket_headers_get(hdrs, "Content-Type");
       info = fetch_ctx->info;
 
-      /* Open the file for editing. */
-      err = open_updated_file(info, FALSE, info->pool);
-      if (err)
-        {
-          return error_fetch(request, fetch_ctx, err);
-        }
-
       if (val && svn_cstring_casecmp(val, SVN_SVNDIFF_MIME_TYPE) == 0)
         {
           fetch_ctx->delta_stream =
@@ -1440,7 +1433,6 @@ static svn_error_t *
 handle_local_content(report_info_t *info,
                      apr_pool_t *scratch_pool)
 {
-  SVN_ERR(open_updated_file(info, TRUE, scratch_pool));
   SVN_ERR(svn_txdelta_send_stream(info->cached_contents, info->textdelta,
                                   info->textdelta_baton, NULL, scratch_pool));
   SVN_ERR(svn_stream_close(info->cached_contents));
@@ -1494,33 +1486,38 @@ fetch_file(report_context_t *ctx, report_info_t *info)
     {
       svn_stream_t *contents = NULL;
 
-      if (ctx->sess->wc_callbacks->get_wc_contents
-          && (info->final_sha1_checksum || info->final_checksum))
+      /* Open the file for editing. */
+      SVN_ERR(open_updated_file(info, FALSE, info->pool));
+
+      if (info->textdelta == svn_delta_noop_window_handler)
         {
-          svn_error_t *err;
-          svn_checksum_t *checksum;
+          /* There is nobody looking for an actual stream.
+
+             Just report an empty stream instead of fetching
+             to be ingored data */
+          info->cached_contents = svn_stream_empty(info->pool);
+        }
+      else if (ctx->sess->wc_callbacks->get_wc_contents
+               && info->final_sha1_checksum)
+        {
+          svn_error_t *err = NULL;
+          svn_checksum_t *checksum = NULL;
          
-          /* Parse our checksum, preferring SHA1 to MD5. */
-          if (info->final_sha1_checksum)
-            {
-              err = svn_checksum_parse_hex(&checksum, svn_checksum_sha1,
-                                           info->final_sha1_checksum,
-                                           info->pool);
-            }
-          else if (info->final_checksum)
-            {
-              err = svn_checksum_parse_hex(&checksum, svn_checksum_md5,
-                                           info->final_checksum,
-                                           info->pool);
-            }
+          /* Parse the optional SHA1 checksum (1.7+) */
+          err = svn_checksum_parse_hex(&checksum, svn_checksum_sha1,
+                                       info->final_sha1_checksum,
+                                       info->pool);
 
           /* Okay so far?  Let's try to get a stream on some readily
              available matching content. */
-          if (!err)
+          if (!err && checksum)
             {
               err = ctx->sess->wc_callbacks->get_wc_contents(
                         ctx->sess->wc_callback_baton, &contents,
                         checksum, info->pool);
+
+              if (! err)
+                info->cached_contents = contents;
             }
 
           if (err)
@@ -1529,11 +1526,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
                  errorful state, but this codepath is optional.  */
               svn_error_clear(err);
             }
-          else
-            {
-              info->cached_contents = contents;
-            }
-        }          
+        }
 
       /* If the working copy can provide cached contents for this
          file, we don't have to fetch them from the server. */
@@ -3410,9 +3403,12 @@ svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
                        const char *switch_target,
                        svn_depth_t depth,
                        const char *switch_url,
+                       svn_boolean_t send_copyfrom_args,
+                       svn_boolean_t ignore_ancestry,
                        const svn_delta_editor_t *switch_editor,
                        void *switch_baton,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
 
@@ -3420,8 +3416,12 @@ svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
                               revision_to_switch_to,
                               session->session_url.path,
                               switch_url, switch_target,
-                              depth, TRUE, TRUE, FALSE /* TODO(sussman) */,
-                              switch_editor, switch_baton, pool);
+                              depth,
+                              ignore_ancestry,
+                              TRUE /* text_deltas */,
+                              send_copyfrom_args,
+                              switch_editor, switch_baton,
+                              result_pool);
 }
 
 /* Helper svn_ra_serf__get_file(). Attempts to fetch file contents
@@ -3507,7 +3507,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   svn_ra_serf__connection_t *conn;
   const char *fetch_url;
   apr_hash_t *fetch_props;
-  svn_kind_t res_kind;
+  svn_node_kind_t res_kind;
   const svn_ra_serf__dav_props_t *which_props;
 
   /* What connection should we go on? */
@@ -3553,7 +3553,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
 
   /* Verify that resource type is not collection. */
   SVN_ERR(svn_ra_serf__get_resource_type(&res_kind, fetch_props));
-  if (res_kind != svn_kind_file)
+  if (res_kind != svn_node_file)
     {
       return svn_error_create(SVN_ERR_FS_NOT_FILE, NULL,
                               _("Can't get text contents of a directory"));

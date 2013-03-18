@@ -256,8 +256,8 @@ check_nonrecursive_dir_delete(svn_wc_context_t *wc_ctx,
 
   SVN_ERR_ASSERT(depth != svn_depth_infinity);
 
-  SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, target_abspath, FALSE,
-                           scratch_pool));
+  SVN_ERR(svn_wc_read_kind2(&kind, wc_ctx, target_abspath,
+                            TRUE, FALSE, scratch_pool));
 
 
   /* ### TODO(sd): This check is slightly too strict.  It should be
@@ -457,8 +457,8 @@ check_url_kind(void *baton,
   /* If we don't have a session or can't use the session, get one */
   if (!cukb->session || !svn_uri__is_ancestor(cukb->repos_root_url, url))
     {
-      SVN_ERR(svn_client_open_ra_session(&cukb->session, url, cukb->ctx,
-                                         cukb->pool));
+      SVN_ERR(svn_client_open_ra_session2(&cukb->session, url, NULL, cukb->ctx,
+                                          cukb->pool, scratch_pool));
       SVN_ERR(svn_ra_get_repos_root2(cukb->session, &cukb->repos_root_url,
                                      cukb->pool));
     }
@@ -533,8 +533,8 @@ append_externals_as_explicit_targets(apr_array_header_t *rel_targets,
                          APR_ARRAY_IDX(externals, j,
                                        svn_wc__committable_external_info_t *);
 
-              if ((xinfo->kind == svn_kind_file && ! include_file_externals)
-                  || (xinfo->kind == svn_kind_dir && ! include_dir_externals))
+              if ((xinfo->kind == svn_node_file && ! include_file_externals)
+                  || (xinfo->kind == svn_node_dir && ! include_dir_externals))
                 continue;
 
               rel_target = svn_dirent_skip_ancestor(base_abspath,
@@ -766,8 +766,9 @@ svn_client_commit6(const apr_array_header_t *targets,
 
       svn_pool_clear(iterpool);
 
-      if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
+      if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_MOVED_HERE)
         {
+          /* ### item->moved_from_abspath contains the move origin */
           const char *moved_from_abspath;
           const char *delete_op_root_abspath;
 
@@ -848,7 +849,8 @@ svn_client_commit6(const apr_array_header_t *targets,
                 }
             }
         }
-      else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+
+      if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
         {
           const char *moved_to_abspath;
           const char *copy_op_root_abspath;
@@ -924,7 +926,8 @@ svn_client_commit6(const apr_array_header_t *targets,
                                                                  0,
                                                                  const char *),
                                                    commit_items,
-                                                   TRUE, FALSE, ctx, pool));
+                                                   TRUE, TRUE, ctx,
+                                                   pool, pool));
 
   if (cmt_err)
     goto cleanup;

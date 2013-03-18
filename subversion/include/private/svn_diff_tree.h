@@ -34,14 +34,88 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/* 
+ *                   About the diff tree processor.
+ *
+ * Subversion uses two kinds of editors to describe changes. One to
+ * describe changes on how to *exactly* transform one tree to another tree,
+ * as efficiently as possible and one to describe the difference between trees
+ * in order to review the changes, or to allow applying them on a third tree
+ * which is similar to those other trees.
+ *
+ * The first case was originally handled by svn_delta_editor_t and might be
+ * replaced by svn_editor_t in a future version. This diff processor handles
+ * the other case and as such forms the layer below our diff and merge
+ * handling.
+ *
+ * The major difference between this and the other editors is that this diff
+ * always provides access to the full text and/or properties in the left and
+ * right tree when applicable to allow processor implementers to decide how
+ * to interpret changes.
+ *
+ * Originally this diff processor was not formalized explicitly, but
+ * informally handled by the working copy diff callbacks. These callbacks just
+ * provided the information to drive a unified diff and a textual merge. To go
+ * one step further and allow full tree conflict detection we needed a better
+ * defined diff handling. Instead of adding yet a few more functions and
+ * arguments to the already overloaded diff callbacks the api was completely
+ * redesigned with a few points in mind.
+ *
+ *   * It must be able to drive the old callbacks interface without users
+ *     noticing the difference (100% compatible).
+ *     (Implemented as svn_wc__wrap_diff_callbacks())
+ *
+ *   * It should provide the information that was missing in the old interface,
+ *     but required to close existing issues.
+ *
+ *     E.g. - properties and children on deleted directories. 
+ *          - revision numbers and copyfrom information on directories.
+ *
+ * To cleanup the implementation and make it easier on diff processors to
+ * handle the results I also added the following constraints.
+ *
+ *   * Diffs should be fully reversable: anything that is deleted should be
+ *     available, just like something that is added.
+ *     (Proven via svn_diff__tree_processor_reverse_create)
+ *     ### Still in doubt if *_deleted() needs a copy_to argument, for the
+ *     ### 99% -> 100%.
+ *
+ *   * Diff processors should have an easy way to communicate that they are
+ *     not interrested in certain expensive to obtain results.
+ *
+ *   * Directories should have clear open and close events to allow adding them
+ *     before their children, but still allowing property changes to have
+ *     defined behavior.
+ *
+ *   * Files and directories should be handled as similar as possible as in
+ *     many cases they are just nodes in a tree.
+ *
+ *   * It should be easy to create diff wrappers to apply certain transforms.
+ *
+ * During the creation an additional requirement of knowing about 'some
+ * absent' nodes was added, to allow the merge to work on just this processor
+ * api.
+ *
+ * The api describes a clean open-close walk through a tree, depending on the
+ * driver multiple siblings can be described at the same time, but when a
+ * directory is closed all descendants are done.
+ *
+ * Note that it is possible for nodes to be described as a delete followed by
+ * an add at the same place within one parent. (Iff the diff is reversed you
+ * can see an add followed by a delete!)
+ *
+ * The directory batons live between the open and close events of a directory
+ * and are thereby guaranteed to outlive the batons of their descendants.
+ */
+
+/* Describes the source of a merge */
 typedef struct svn_diff_source_t
 {
   /* Always available */
   svn_revnum_t revision;
 
-  /* Depending on the driver */
+  /* Depending on the driver available for copyfrom */
   const char *repos_relpath;
-  const char *local_abspath;
 } svn_diff_source_t;
 
 /**

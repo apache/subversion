@@ -344,10 +344,16 @@ svn_cl__get_conflict_func_interactive_baton(
   void *cancel_baton,
   apr_pool_t *result_pool);
 
-/* A conflict-resolution callback which prompts the user to choose
-   one of the 3 fulltexts, edit the merged file on the spot, or just
-   skip the conflict (to be resolved later).
-   Implements @c svn_wc_conflict_resolver_func_t. */
+/* A callback capable of doing interactive conflict resolution.
+
+   The BATON must come from svn_cl__get_conflict_func_interactive_baton().
+   Resolves based on the --accept option if one was given to that function,
+   otherwise prompts the user to choose one of the three fulltexts, edit
+   the merged file on the spot, or just skip the conflict (to be resolved
+   later), among other options.
+
+   Implements svn_wc_conflict_resolver_func2_t.
+ */
 svn_error_t *
 svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
                                   const svn_wc_conflict_description2_t *desc,
@@ -374,15 +380,20 @@ svn_cl__conflict_func_postpone(svn_wc_conflict_result_t **result,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
-/* Perform conflict resolver on any conflicted paths stored in the BATON
+/* Perform conflict resolution on any conflicted paths stored in the BATON
  * which was obtained from svn_cl__get_conflict_func_postpone_baton().
+ *
+ * If CONFLICTS_ALL_RESOLVED is not null, set *CONFLICTS_ALL_RESOLVED to
+ * true if this resolves all the conflicts on the paths that were
+ * recorded (or if none were recorded); or to false if some conflicts
+ * remain.
  *
  * The conflict resolution will be interactive if ACCEPT_WHICH is
  * svn_cl__accept_unspecified.
  */
 svn_error_t *
-svn_cl__resolve_postponed_conflicts(void *baton,
-                                    svn_depth_t depth,
+svn_cl__resolve_postponed_conflicts(svn_boolean_t *conflicts_all_resolved,
+                                    void *baton,
                                     svn_cl__accept_t accept_which,
                                     const char *editor_cmd,
                                     svn_client_ctx_t *ctx,
@@ -578,13 +589,20 @@ svn_cl__check_externals_failed_notify_wrapper(void *baton,
                                               const svn_wc_notify_t *n,
                                               apr_pool_t *pool);
 
-/* Print conflict stats accumulated in NOTIFY_BATON.
- * Return any error encountered during printing.
- * Do all allocations in POOL.*/
+/* Reset to zero the conflict stats accumulated in BATON, which is the
+ * notifier baton from svn_cl__get_notifier().
+ */
 svn_error_t *
-svn_cl__print_conflict_stats(void *notify_baton, apr_pool_t *pool);
+svn_cl__notifier_reset_conflict_stats(void *baton);
 
-
+/* Print the conflict stats accumulated in BATON, which is the
+ * notifier baton from svn_cl__get_notifier().
+ * Return any error encountered during printing.
+ */
+svn_error_t *
+svn_cl__notifier_print_conflict_stats(void *baton, apr_pool_t *scratch_pool);
+
+
 /*** Log message callback stuffs. ***/
 
 /* Allocate in POOL a baton for use with svn_cl__get_log_message().

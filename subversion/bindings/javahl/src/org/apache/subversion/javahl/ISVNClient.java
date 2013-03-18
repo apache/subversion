@@ -51,6 +51,12 @@ public interface ISVNClient
     public Version getVersion();
 
     /**
+     * @return Extended version information about the underlying
+     * native libraries and operating system.
+     */
+    public VersionExtended getVersionExtended(boolean verbose);
+
+    /**
      * @return The name of the working copy's administrative
      * directory, which is usually <code>.svn</code>.
      * @see <a
@@ -223,9 +229,27 @@ public interface ISVNClient
      *                  ignore patterns
      * @param addParents add any intermediate parents to the working copy
      * @throws ClientException
+     * @note this method behaves like the 1.8 version with noAutoProps=false
      */
     void add(String path, Depth depth, boolean force, boolean noIgnores,
              boolean addParents)
+        throws ClientException;
+
+    /**
+     * Adds a file to the repository.
+     * @param path      path to be added.
+     * @param depth     the depth to recurse into subdirectories
+     * @param force     if adding a directory and recurse true and path is a
+     *                  directory, all not already managed files are added.
+     * @param noIgnores if false, don't add files or directories matching
+     *                  ignore patterns
+     * @param noAutoProps if true, ignore any auto-props configuration
+     * @param addParents add any intermediate parents to the working copy
+     * @throws ClientException
+     * @since 1.8
+     */
+    void add(String path, Depth depth, boolean force,
+             boolean noIgnores, boolean noAutoProps, boolean addParents)
         throws ClientException;
 
     /**
@@ -298,12 +322,27 @@ public interface ISVNClient
      * @param moveAsChild Whether to move <code>srcPaths</code> as
      * children of <code>destPath</code>.
      * @param makeParents Whether to create intermediate parents.
+     * @param metadataOnly Move just the metadata and not the working files/dirs
+     * @param allowMixRev If true use copy and delete without move tracking
+     *                    when a srcPath is mixed-revision, if false return
+     *                    an error when a srcPath is mixed-revision.
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
      * @param handler   the commit message callback, may be <code>null</code>
      *                  if <code>destPath</code> is not a URL
      * @throws ClientException If the move operation fails.
+     * @since 1.8
+     */
+    void move(Set<String> srcPaths, String destPath, boolean force,
+              boolean moveAsChild, boolean makeParents, boolean metadataOnly,
+              boolean allowMixRev, Map<String, String> revpropTable,
+              CommitMessageCallback handler, CommitCallback callback)
+        throws ClientException;
+
+    /**
+     * @deprecated Provided for backward compatibility with 1.7. Passes
+     *             metadataOnly false and allowMixRev true.
      */
     void move(Set<String> srcPaths, String destPath, boolean force,
               boolean moveAsChild, boolean makeParents,
@@ -394,22 +433,45 @@ public interface ISVNClient
      * @param url       the target url
      * @param depth     depth to traverse into subdirectories
      * @param noIgnore  whether to add files matched by ignore patterns
+     * @param noAutoProps if true, ignore any auto-props configuration
+     * @param ignoreUnknownNodeTypes whether to ignore files which
+     *                  the node type is not konwn, just as pipes
+     * @param revpropTable A string-to-string mapping of revision properties
+     *                     to values which will be set if this operation
+     *                     results in a commit.
+     * @param messageHandler   the commit message callback
+     * @param commitCallback   the commit status callback
+     * @throws ClientException
+     * @since 1.8
+     */
+    void doImport(String path, String url, Depth depth,
+                  boolean noIgnore, boolean noAutoProps,
+                  boolean ignoreUnknownNodeTypes,
+                  Map<String, String> revpropTable,
+                  ImportFilterCallback importFilterCallback,
+                  CommitMessageCallback messageHandler,
+                  CommitCallback commitCallback)
+            throws ClientException;
+
+
+    /**
+     * Import a file or directory into a repository directory  at
+     * head.
+     * @param path      the local path
+     * @param url       the target url
+     * @param depth     depth to traverse into subdirectories
+     * @param noIgnore  whether to add files matched by ignore patterns
      * @param ignoreUnknownNodeTypes whether to ignore files which
      *                  the node type is not konwn, just as pipes
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
      * @param handler   the commit message callback
+     * @param callback  the commit status callback
      * @throws ClientException
-     *
+     * @note this method behaves like the 1.8 version with noAutoProps=false
+     *       and without the filtering option.
      */
-    void doImport(String path, String url, Depth depth,
-                  boolean noIgnore, boolean ignoreUnknownNodeTypes,
-                  Map<String, String> revpropTable,
-                  ImportFilterCallback importFilterCallback,
-                  CommitMessageCallback handler, CommitCallback commitCallback)
-            throws ClientException;
-
     void doImport(String path, String url, Depth depth,
                   boolean noIgnore, boolean ignoreUnknownNodeTypes,
                   Map<String, String> revpropTable,
@@ -530,6 +592,42 @@ public interface ISVNClient
      *                      entirety, not as diffs from their sources
      * @param ignoreProps   don't show property diffs
      * @param propsOnly     show property changes only
+     * @param options       additional options for controlling the output
+     * @throws ClientException
+     * @since 1.8
+     */
+    void diff(String target1, Revision revision1, String target2,
+              Revision revision2, String relativeToDir, OutputStream outStream,
+              Depth depth, Collection<String> changelists,
+              boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
+              boolean copiesAsAdds, boolean ignoreProps, boolean propsOnly,
+              DiffOptions options)
+            throws ClientException;
+
+    void diff(String target1, Revision revision1, String target2,
+              Revision revision2, String relativeToDir, String outFileName,
+              Depth depth, Collection<String> changelists,
+              boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
+              boolean copiesAsAdds, boolean ignoreProps, boolean propsOnly,
+              DiffOptions options)
+            throws ClientException;
+
+    /**
+     * Display the differences between two paths
+     * @param target1       first path or url
+     * @param revision1     first revision
+     * @param target2       second path or url
+     * @param revision2     second revision
+     * @param relativeToDir index path is relative to this path
+     * @param outFileName   file name where difference are written
+     * @param depth         how deep to traverse into subdirectories
+     * @param ignoreAncestry ignore if files are not related
+     * @param noDiffDeleted no output on deleted files
+     * @param force         diff even on binary files
+     * @param copiesAsAdds  if set, copied files will be shown in their
+     *                      entirety, not as diffs from their sources
+     * @param ignoreProps   don't show property diffs
+     * @param propsOnly     show property changes only
      * @throws ClientException
      */
     void diff(String target1, Revision revision1, String target2,
@@ -544,6 +642,43 @@ public interface ISVNClient
               Depth depth, Collection<String> changelists,
               boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
               boolean copiesAsAdds)
+            throws ClientException;
+
+    /**
+     * Display the differences between two paths.
+     * @param target        path or url
+     * @param pegRevision   revision tointerpret target
+     * @param startRevision first Revision to compare
+     * @param endRevision   second Revision to compare
+     * @param relativeToDir index path is relative to this path
+     * @param outFileName   file name where difference are written
+     * @param depth         how deep to traverse into subdirectories
+     * @param changelists  if non-null, filter paths using changelists
+     * @param ignoreAncestry ignore if files are not related
+     * @param noDiffDeleted no output on deleted files
+     * @param force         diff even on binary files
+     * @param copiesAsAdds  if set, copied files will be shown in their
+     *                      entirety, not as diffs from their sources
+     * @param ignoreProps   don't show property diffs
+     * @param propsOnly     show property changes only
+     * @param options       additional options for controlling the output
+     * @throws ClientException
+     * @since 1.8
+     */
+    void diff(String target, Revision pegRevision, Revision startRevision,
+              Revision endRevision, String relativeToDir, OutputStream outStream,
+              Depth depth, Collection<String> changelists,
+              boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
+              boolean copiesAsAdds, boolean ignoreProps, boolean propsOnly,
+              DiffOptions options)
+            throws ClientException;
+
+    void diff(String target, Revision pegRevision, Revision startRevision,
+              Revision endRevision, String relativeToDir, String outFileName,
+              Depth depth, Collection<String> changelists,
+              boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
+              boolean copiesAsAdds, boolean ignoreProps, boolean propsOnly,
+              DiffOptions options)
             throws ClientException;
 
     /**
@@ -653,6 +788,23 @@ public interface ISVNClient
     void properties(String path, Revision revision, Revision pegRevision,
                     Depth depth, Collection<String> changelists,
                     ProplistCallback callback)
+            throws ClientException;
+
+    /**
+     * Retrieves the properties of an item, including inherited properties.
+     *
+     * @param path        the path of the item
+     * @param revision    the revision of the item
+     * @param pegRevision the revision to interpret path
+     * @param depth       the depth to recurse into subdirectories
+     * @param changelists changelists to filter by
+     * @param callback    the callback to use to return the properties
+     * @throws ClientException
+     * @since 1.8
+     */
+    void properties(String path, Revision revision, Revision pegRevision,
+                    Depth depth, Collection<String> changelists,
+                    InheritedProplistCallback callback)
             throws ClientException;
 
     /**

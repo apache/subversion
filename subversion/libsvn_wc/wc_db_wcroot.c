@@ -104,7 +104,7 @@ get_old_version(int *version,
    This function may do strange things, but at long as it comes up with the
    Right Answer, we should be happy. */
 static svn_error_t *
-get_path_kind(svn_kind_t *kind,
+get_path_kind(svn_node_kind_t *kind,
               svn_wc__db_t *db,
               const char *local_abspath,
               apr_pool_t *scratch_pool)
@@ -137,7 +137,7 @@ get_path_kind(svn_kind_t *kind,
   SVN_ERR(svn_io_check_special_path(local_abspath, &node_kind,
                                     &special, scratch_pool));
 
-  db->parse_cache.kind = svn__kind_from_node_kind(node_kind, special);
+  db->parse_cache.kind = (special ? svn_node_symlink : node_kind);
   *kind = db->parse_cache.kind;
 
   return SVN_NO_ERROR;
@@ -423,7 +423,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
 {
   const char *local_dir_abspath;
   const char *original_abspath = local_abspath;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   const char *build_relpath;
   svn_wc__db_wcroot_t *probe_wcroot;
   svn_wc__db_wcroot_t *found_wcroot = NULL;
@@ -460,7 +460,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
      ### into wc_db which references a file. calls for directories could
      ### get an early-exit in the hash lookup just above.  */
   SVN_ERR(get_path_kind(&kind, db, local_abspath, scratch_pool));
-  if (kind != svn_kind_dir)
+  if (kind != svn_node_dir)
     {
       /* If the node specified by the path is NOT present, then it cannot
          possibly be a directory containing ".svn/wc.db".
@@ -495,7 +495,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
          many ancestors need to be scanned until we start hitting content
          on the disk. Set ALWAYS_CHECK to keep looking for .svn/entries
          rather than bailing out after the first check.  */
-      if (kind == svn_kind_none)
+      if (kind == svn_node_none)
         always_check = TRUE;
 
       /* Start the scanning at LOCAL_DIR_ABSPATH.  */
@@ -587,7 +587,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
            * (Issue #2557, #3987). If so, try again, this time scanning
            * for a db within the directory the symlink points to,
            * rather than within the symlink's parent directory. */
-          if (kind == svn_kind_symlink)
+          if (kind == svn_node_symlink)
             {
               svn_node_kind_t resolved_kind;
 
@@ -607,7 +607,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
                   SVN_ERR(read_link_target(&local_abspath, local_abspath,
                                            scratch_pool));
 try_symlink_as_dir:
-                  kind = svn_kind_dir;
+                  kind = svn_node_dir;
                   moved_upwards = FALSE;
                   local_dir_abspath = local_abspath;
                   build_relpath = "";
@@ -669,7 +669,7 @@ try_symlink_as_dir:
                             db->state_pool, scratch_pool);
       if (err && (err->apr_err == SVN_ERR_WC_UNSUPPORTED_FORMAT ||
                   err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED) &&
-          kind == svn_kind_symlink)
+          kind == svn_node_symlink)
         {
           /* We found an unsupported WC after traversing upwards from a
            * symlink. Fall through to code below to check if the symlink
@@ -749,7 +749,7 @@ try_symlink_as_dir:
       *local_relpath = svn_relpath_join(dir_relpath, build_relpath, result_pool);
     }
 
-  if (kind == svn_kind_symlink)
+  if (kind == svn_node_symlink)
     {
       svn_boolean_t retry_if_dir = FALSE;
       svn_wc__db_status_t status;

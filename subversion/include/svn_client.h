@@ -441,6 +441,8 @@ typedef struct svn_client_commit_info_t
 #define SVN_CLIENT_COMMIT_ITEM_IS_COPY     0x10
 /** @since New in 1.2. */
 #define SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN  0x20
+/** @since New in 1.8. */
+#define SVN_CLIENT_COMMIT_ITEM_MOVED_HERE  0x40
 /** @} */
 
 /** The commit candidate structure.
@@ -508,6 +510,15 @@ typedef struct svn_client_commit_item3_t
    * @since New in 1.7.
    */
   const char *session_relpath;
+
+  /**
+   * When committing a move, this contains the absolute path where
+   * the node was directly moved from. (If an ancestor at the original
+   * location was moved then it points to where the node itself was
+   * moved, from. Not the original location)
+   * @since New in 1.8.
+   */
+  const char *moved_from_abspath;
 } svn_client_commit_item3_t;
 
 /** The commit candidate structure.
@@ -1562,7 +1573,7 @@ svn_client_add5(const char *path,
                 apr_pool_t *scratch_pool);
 
 /**
- * Similar to svn_client_add3(), but with @a no_autoprops always set to
+ * Similar to svn_client_add5(), but with @a no_autoprops always set to
  * FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
@@ -2128,9 +2139,11 @@ svn_client_commit6(const apr_array_header_t *targets,
 
 /**
  * Similar to svn_client_commit6(), but passes @a include_file_externals as
- * TRUE and @a include_dir_externals as FALSE.
+ * FALSE and @a include_dir_externals as FALSE.
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_commit5(const apr_array_header_t *targets,
                    svn_depth_t depth,
@@ -4276,6 +4289,7 @@ svn_client_resolved(const char *path,
  * If @a path is not in a state of conflict to begin with, do nothing.
  * If @a path's conflict state is removed and @a ctx->notify_func2 is non-NULL,
  * call @a ctx->notify_func2 with @a ctx->notify_baton2 and @a path.
+ * ### with what notification parameters?
  *
  * If @a depth is #svn_depth_empty, act only on @a path; if
  * #svn_depth_files, resolve @a path and its conflicted file
@@ -4547,7 +4561,8 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  * If @a allow_mixed_revisions is @c FALSE, #SVN_ERR_WC_MIXED_REVISIONS
  * will be raised if the move source is a mixed-revision subtree.
  * If @a allow_mixed_revisions is TRUE, a mixed-revision move source is
- * allowed. This parameter should be set to FALSE except where backwards
+ * allowed but the move will degrade to a copy and a delete without local
+ * move tracking. This parameter should be set to FALSE except where backwards
  * compatibility to svn_client_move6() is required.
  *
  * If @a metadata_only is @c TRUE and moving a file in a working copy,
@@ -5182,7 +5197,6 @@ svn_client_proplist4(const char *target,
                      svn_proplist_receiver2_t receiver,
                      void *receiver_baton,
                      svn_client_ctx_t *ctx,
-                     apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
 
 /**
@@ -5547,7 +5561,7 @@ svn_client_list3(const char *path_or_url,
 
 
 /** Similar to svn_client_list3(), but with @a include_externals set to FALSE, 
- * and using a #svn_client_list_func2_t as callback.
+ * and using a #svn_client_list_func_t as callback.
  *
  * @deprecated Provided for backwards compatibility with the 1.7 API.
  *
@@ -6486,13 +6500,30 @@ svn_client_uuid_from_path(const char **uuid,
 /** Open an RA session rooted at @a url, and return it in @a *session.
  *
  * Use the authentication baton stored in @a ctx for authentication.
- * @a *session is allocated in @a pool.
+ * @a *session is allocated in @a result_pool.
  *
- * @since New in 1.3.
+ * If @a wri_abspath is not NULL, use the working copy identified by @a
+ * wri_abspath to potentially avoid transferring unneeded data.
  *
  * @note This function is similar to svn_ra_open3(), but the caller avoids
  * having to providing its own callback functions.
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_client_open_ra_session2(svn_ra_session_t **session,
+                           const char *url,
+                           const char *wri_abspath,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
+/** Similar to svn_client_open_ra_session(), but doesn't allow passing a
+ * working copy path.
+ *
+ * @since New in 1.3.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_open_ra_session(svn_ra_session_t **session,
                            const char *url,

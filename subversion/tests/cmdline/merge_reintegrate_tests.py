@@ -1916,7 +1916,7 @@ def reintegrate_with_subtree_merges(sbox):
     'mu' : Item(status='U '),
     })
   expected_mergeinfo_output = wc.State(A_path, {
-    '' : Item(status=' G'),
+    '' : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_path, {
     })
@@ -1965,14 +1965,14 @@ def reintegrate_with_subtree_merges(sbox):
     })
   expected_A_skip = wc.State(A_COPY_path, {})
   run_and_verify_reintegrate(A_path,
-                                       sbox.repo_url + '/A_COPY',
-                                       expected_output,
-                                       expected_mergeinfo_output,
-                                       expected_elision_output,
-                                       expected_A_disk,
-                                       expected_A_status,
-                                       expected_A_skip,
-                                       None, 1, 1)
+                             sbox.repo_url + '/A_COPY',
+                             expected_output,
+                             expected_mergeinfo_output,
+                             expected_elision_output,
+                             expected_A_disk,
+                             expected_A_status,
+                             expected_A_skip,
+                             None, 1, 1)
 
 #----------------------------------------------------------------------
 # Test for issue #3654 'added subtrees with mergeinfo break reintegrate'.
@@ -2774,6 +2774,7 @@ test_list = [ None,
               reintegrate_with_subtree_mergeinfo,
               multiple_reintegrates_from_the_same_branch,
               reintegrate_with_self_referential_mergeinfo,
+              reintegrate_with_subtree_merges,
               added_subtrees_with_mergeinfo_break_reintegrate,
               two_URL_merge_removes_valid_mergeinfo_from_target,
               reintegrate_creates_bogus_mergeinfo,

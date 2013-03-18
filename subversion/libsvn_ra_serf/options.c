@@ -203,6 +203,13 @@ capabilities_headers_iterator_callback(void *baton,
           svn_hash_sets(session->capabilities,
                         SVN_RA_CAPABILITY_INHERITED_PROPS, capability_yes);
         }
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_GET_FILE_REVS_REVERSE,
+                                 vals))
+        {
+          svn_hash_sets(session->capabilities,
+                        SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE,
+                        capability_yes);
+        }
       if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_EPHEMERAL_TXNPROPS, vals))
         {
           svn_hash_sets(session->capabilities,
@@ -428,6 +435,9 @@ svn_ra_serf__v2_get_youngest_revnum(svn_revnum_t *youngest,
 
   SVN_ERR(create_options_req(&opt_ctx, session, conn, scratch_pool));
   SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, scratch_pool));
+  SVN_ERR(svn_ra_serf__error_on_status(opt_ctx->handler->sline.code,
+                                       opt_ctx->handler->path,
+                                       opt_ctx->handler->location));
 
   *youngest = opt_ctx->youngest_rev;
 
@@ -448,6 +458,10 @@ svn_ra_serf__v1_get_activity_collection(const char **activity_url,
 
   SVN_ERR(create_options_req(&opt_ctx, session, conn, scratch_pool));
   SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, scratch_pool));
+
+  SVN_ERR(svn_ra_serf__error_on_status(opt_ctx->handler->sline.code,
+                                       opt_ctx->handler->path,
+                                       opt_ctx->handler->location));
 
   *activity_url = apr_pstrdup(result_pool, opt_ctx->activity_collection);
 
@@ -483,11 +497,22 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
       return SVN_NO_ERROR;
     }
 
-  return svn_error_compose_create(
-             svn_ra_serf__error_on_status(opt_ctx->handler->sline.code,
-                                          serf_sess->session_url.path,
-                                          opt_ctx->handler->location),
-             err);
+  SVN_ERR(svn_error_compose_create(
+              svn_ra_serf__error_on_status(opt_ctx->handler->sline.code,
+                                           serf_sess->session_url.path,
+                                           opt_ctx->handler->location),
+              err));
+
+  /* Opportunistically cache any reported activity URL.  (We don't
+     want to have to ask for this again later, potentially against an
+     unreadable commit anchor URL.)  */
+  if (opt_ctx->activity_collection)
+    {
+      serf_sess->activity_collection_url =
+        apr_pstrdup(serf_sess->pool, opt_ctx->activity_collection);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 

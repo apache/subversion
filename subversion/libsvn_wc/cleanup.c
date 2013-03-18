@@ -76,7 +76,7 @@ repair_timestamps(svn_wc__db_t *db,
                   void *cancel_baton,
                   apr_pool_t *scratch_pool)
 {
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_wc__db_status_t status;
 
   if (cancel_func)
@@ -95,15 +95,15 @@ repair_timestamps(svn_wc__db_t *db,
       || status == svn_wc__db_status_not_present)
     return SVN_NO_ERROR;
 
-  if (kind == svn_kind_file
-      || kind == svn_kind_symlink)
+  if (kind == svn_node_file
+      || kind == svn_node_symlink)
     {
       svn_boolean_t modified;
       SVN_ERR(svn_wc__internal_file_modified_p(&modified,
                                                db, local_abspath, FALSE,
                                                scratch_pool));
     }
-  else if (kind == svn_kind_dir)
+  else if (kind == svn_node_dir)
     {
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       const apr_array_header_t *children;

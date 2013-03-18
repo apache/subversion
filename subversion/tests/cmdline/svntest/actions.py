@@ -1785,7 +1785,7 @@ def run_and_validate_lock(path, username):
                                               'info','-R',
                                               path)
 
-  ### TODO: Leverage RegexOuput([...], match_all=True) here.
+  ### TODO: Leverage RegexOutput([...], match_all=True) here.
   # prepare the regexs to compare against
   token_re = re.compile(".*?Lock Token: opaquelocktoken:.*?", re.DOTALL)
   author_re = re.compile(".*?Lock Owner: %s\n.*?" % username, re.DOTALL)
@@ -1808,9 +1808,17 @@ def _run_and_verify_resolve(cmd, expected_paths, *args):
   # TODO: verify that the status of PATHS changes accordingly.
   if len(args) == 0:
     args = expected_paths
-  expected_output = verify.UnorderedOutput([
-    "Resolved conflicted state of '" + path + "'\n" for path in
-    expected_paths])
+  expected_output = verify.AlternateOutput([
+      verify.UnorderedOutput([
+        "Resolved conflicted state of '" + path + "'\n" for path in
+        expected_paths]),
+      verify.UnorderedOutput([
+        "Breaking move with source path '" + path + "'\n" for path in
+         expected_paths] + [
+        "Resolved conflicted state of '" + path + "'\n" for path in
+        expected_paths]),
+    ],
+    match_all=False)
   run_and_verify_svn(None, expected_output, [],
                      cmd, *args)
 

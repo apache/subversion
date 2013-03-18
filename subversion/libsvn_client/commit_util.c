@@ -196,6 +196,7 @@ add_committable(svn_client__committables_t *committables,
                 svn_revnum_t revision,
                 const char *copyfrom_relpath,
                 svn_revnum_t copyfrom_rev,
+                const char *moved_from_abspath,
                 apr_byte_t state_flags,
                 apr_hash_t *lock_tokens,
                 const svn_lock_t *lock,
@@ -244,6 +245,10 @@ add_committable(svn_client__committables_t *committables,
   new_item->state_flags    = state_flags;
   new_item->incoming_prop_changes = apr_array_make(result_pool, 1,
                                                    sizeof(svn_prop_t *));
+
+  if (moved_from_abspath)
+    new_item->moved_from_abspath = apr_pstrdup(result_pool,
+                                               moved_from_abspath);
 
   /* Now, add the commit item to the array. */
   APR_ARRAY_PUSH(array, svn_client_commit_item3_t *) = new_item;
@@ -483,7 +488,7 @@ harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
       svn_pool_clear(iterpool);
 
       SVN_ERR(svn_wc__node_is_not_present(&not_present, NULL, NULL, wc_ctx,
-                                          this_abspath, scratch_pool));
+                                          this_abspath, FALSE, scratch_pool));
 
       if (!not_present)
         continue;
@@ -525,8 +530,8 @@ harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
             continue; /* This node can't be deleted */
         }
       else
-        SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, this_abspath, TRUE,
-                                 scratch_pool));
+        SVN_ERR(svn_wc_read_kind2(&kind, wc_ctx, this_abspath,
+                                  TRUE, TRUE, scratch_pool));
 
       SVN_ERR(add_committable(committables, this_abspath, kind,
                               repos_root_url,
@@ -534,6 +539,7 @@ harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
                               SVN_INVALID_REVNUM,
                               NULL /* copyfrom_relpath */,
                               SVN_INVALID_REVNUM /* copyfrom_rev */,
+                              NULL /* moved_from_abspath */,
                               SVN_CLIENT_COMMIT_ITEM_DELETE,
                               NULL, NULL,
                               result_pool, scratch_pool));
@@ -576,6 +582,7 @@ harvest_status_callback(void *status_baton,
   void *notify_baton = baton->notify_baton;
   svn_wc_context_t *wc_ctx = baton->wc_ctx;
   apr_pool_t *result_pool = baton->result_pool;
+  const char *moved_from_abspath = NULL;
 
   if (baton->commit_relpath)
     commit_relpath = svn_relpath_join(
@@ -755,6 +762,12 @@ harvest_status_callback(void *status_baton,
           state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
           cf_relpath = original_relpath;
           cf_rev = original_rev;
+
+          if (status->moved_from_abspath && !copy_mode)
+            {
+              state_flags |= SVN_CLIENT_COMMIT_ITEM_MOVED_HERE;
+              moved_from_abspath = status->moved_from_abspath;
+            }
         }
     }
 
@@ -762,12 +775,14 @@ harvest_status_callback(void *status_baton,
   else if (copy_mode
            && !(state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
     {
-      svn_revnum_t dir_rev;
+      svn_revnum_t dir_rev = SVN_INVALID_REVNUM;
 
-      if (!copy_mode_root && !status->switched)
-        SVN_ERR(svn_wc__node_get_base(&dir_rev, NULL, NULL, NULL, NULL, wc_ctx,
-                                      svn_dirent_dirname(local_abspath,
-                                                         scratch_pool),
+      if (!copy_mode_root && !status->switched && !is_added)
+        SVN_ERR(svn_wc__node_get_base(NULL, &dir_rev, NULL, NULL, NULL, NULL,
+                                      wc_ctx, svn_dirent_dirname(local_abspath,
+                                                                 scratch_pool),
+                                      FALSE /* ignore_enoent */,
+                                      FALSE /* show_hidden */,
                                       scratch_pool, scratch_pool));
 
       if (copy_mode_root || status->switched || node_rev != dir_rev)
@@ -842,6 +857,7 @@ harvest_status_callback(void *status_baton,
                                       : node_rev,
                               cf_relpath,
                               cf_rev,
+                              moved_from_abspath,
                               state_flags,
                               baton->lock_tokens, status->lock,
                               result_pool, scratch_pool));

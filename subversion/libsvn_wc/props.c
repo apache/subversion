@@ -198,7 +198,7 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
 {
   int i;
   svn_wc__db_status_t status;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   apr_hash_t *pristine_props = NULL;
   apr_hash_t *actual_props;
   apr_hash_t *new_actual_props;
@@ -310,7 +310,7 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
   {
     const char *dir_abspath;
 
-    if (kind == svn_kind_dir)
+    if (kind == svn_node_dir)
       dir_abspath = local_abspath;
     else
       dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
@@ -1866,7 +1866,8 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                  apr_pool_t *scratch_pool)
 {
   enum svn_prop_kind prop_kind = svn_property_kind2(name);
-  svn_kind_t kind;
+  svn_wc__db_status_t status;
+  svn_node_kind_t kind;
   svn_wc__db_t *db = wc_ctx->db;
 
   /* we don't do entry properties here */
@@ -1882,8 +1883,23 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                                         name, value, scratch_pool));
     }
 
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, FALSE,
-                               scratch_pool));
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               wc_ctx->db, local_abspath,
+                               scratch_pool, scratch_pool));
+
+  if (status != svn_wc__db_status_normal
+      && status != svn_wc__db_status_added
+      && status != svn_wc__db_status_incomplete)
+    {
+      return svn_error_createf(SVN_ERR_WC_INVALID_SCHEDULE, NULL,
+                                  _("Can't set properties on '%s':"
+                                  " invalid status for updating properties."),
+                                  svn_dirent_local_style(local_abspath,
+                                                         scratch_pool));
+    }
 
   /* We have to do this little DIR_ABSPATH dance for backwards compat.
      But from 1.7 onwards, all locks are of infinite depth, and from 1.6
@@ -1897,7 +1913,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
   {
     const char *dir_abspath;
 
-    if (kind == svn_kind_dir)
+    if (kind == svn_node_dir)
       dir_abspath = local_abspath;
     else
       dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
@@ -1906,10 +1922,9 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
     SVN_ERR(svn_wc__write_check(db, dir_abspath, scratch_pool));
   }
 
-  if (depth == svn_depth_empty || kind != svn_kind_dir)
+  if (depth == svn_depth_empty || kind != svn_node_dir)
     {
       apr_hash_t *changelist_hash = NULL;
-      svn_error_t *err;
 
       if (changelist_filter && changelist_filter->nelts)
         SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelist_filter,
@@ -1919,23 +1934,13 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                                              changelist_hash, scratch_pool))
         return SVN_NO_ERROR;
 
-      err = do_propset(wc_ctx->db, local_abspath,
-                         kind == svn_kind_dir
+      SVN_ERR(do_propset(wc_ctx->db, local_abspath,
+                         kind == svn_node_dir
                             ? svn_node_dir
                             : svn_node_file,
                          name, value, skip_checks,
-                         notify_func, notify_baton, scratch_pool);
+                         notify_func, notify_baton, scratch_pool));
 
-      if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
-        {
-          err = svn_error_createf(SVN_ERR_WC_INVALID_SCHEDULE, err,
-                                  _("Can't set properties on '%s':"
-                                  " invalid status for updating properties."),
-                                  svn_dirent_local_style(local_abspath,
-                                                         scratch_pool));
-        }
-
-      SVN_ERR(err);
     }
   else
     {
@@ -2309,7 +2314,7 @@ svn_wc__get_iprops(apr_array_header_t **inherited_props,
                    apr_pool_t *scratch_pool)
 {
   return svn_error_trace(
-            svn_wc__db_read_inherited_props(inherited_props,
+            svn_wc__db_read_inherited_props(inherited_props, NULL,
                                             wc_ctx->db, local_abspath,
                                             propname,
                                             result_pool, scratch_pool));

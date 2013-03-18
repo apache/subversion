@@ -35,6 +35,7 @@
 #include "../include/org_apache_subversion_javahl_CommitItemStateFlags.h"
 
 #include "svn_path.h"
+#include "svn_props.h"
 #include "private/svn_wc_private.h"
 
 jobject
@@ -506,6 +507,7 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
                              "ZZZZZL"JAVA_PACKAGE"/types/Lock;"
                              "L"JAVA_PACKAGE"/types/Lock;"
                              "JJL"JAVA_PACKAGE"/types/NodeKind;"
+                             "Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
@@ -525,6 +527,8 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
   jstring jLastCommitAuthor = NULL;
   jobject jLocalLock = NULL;
   jstring jChangelist = NULL;
+  jstring jMovedFromAbspath = NULL;
+  jstring jMovedToAbspath = NULL;
 
   enum svn_wc_status_kind text_status = status->node_status;
 
@@ -596,6 +600,20 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
         POP_AND_RETURN_NULL;
     }
 
+  if (status->moved_from_abspath)
+    {
+      jMovedFromAbspath = JNIUtil::makeJString(status->moved_from_abspath);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+    }
+
+  if (status->moved_to_abspath)
+    {
+      jMovedToAbspath = JNIUtil::makeJString(status->moved_to_abspath);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+    }
+
   jobject ret = env->NewObject(clazz, mid, jPath, jUrl, jNodeKind, jRevision,
                                jLastChangedRevision, jLastChangedDate,
                                jLastCommitAuthor, jTextType, jPropType,
@@ -604,7 +622,8 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
                                jIsSwitched, jIsFileExternal, jLocalLock,
                                jReposLock,
                                jOODLastCmtRevision, jOODLastCmtDate,
-                               jOODKind, jOODLastCmtAuthor, jChangelist);
+                               jOODKind, jOODLastCmtAuthor, jChangelist,
+                               jMovedFromAbspath, jMovedToAbspath);
 
   return env->PopLocalFrame(ret);
 }
@@ -711,7 +730,13 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
   jlong jhunkModifiedStart = wcNotify->hunk_modified_start;
   jlong jhunkModifiedLength = wcNotify->hunk_modified_length;
   jlong jhunkMatchedLine = wcNotify->hunk_matched_line;
-  jint jhunkFuzz = wcNotify->hunk_fuzz;
+  jint jhunkFuzz = static_cast<jint>(wcNotify->hunk_fuzz);
+  if (jhunkFuzz != wcNotify->hunk_fuzz)
+    {
+      env->ThrowNew(env->FindClass("java.lang.ArithmeticException"),
+                    "Overflow converting C svn_linenum_t to Java int");
+      POP_AND_RETURN_NULL;
+    }
 
   // call the Java method
   jobject jInfo = env->NewObject(clazz, midCT, jPath, jAction,
@@ -1048,6 +1073,87 @@ jobject CreateJ::PropertyMap(apr_hash_t *prop_hash)
 
   return env->PopLocalFrame(map);
 }
+
+jobject CreateJ::InheritedProps(apr_array_header_t *iprops)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+
+  if (iprops == NULL)
+    return NULL;
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  jclass list_cls = env->FindClass("java/util/ArrayList");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  static volatile jmethodID init_mid = 0;
+  if (init_mid == 0)
+    {
+      init_mid = env->GetMethodID(list_cls, "<init>", "(I)V");
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+    }
+
+  static volatile jmethodID add_mid = 0;
+  if (add_mid == 0)
+    {
+      add_mid = env->GetMethodID(list_cls, "add",
+                                 "(Ljava/lang/Object;)Z");
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+    }
+
+  jclass item_cls = env->FindClass(
+      JAVA_PACKAGE"/callback/InheritedProplistCallback$InheritedItem");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  static volatile jmethodID ctor_mid = 0;
+  if (ctor_mid == 0)
+    {
+      ctor_mid = env->GetMethodID(item_cls, "<init>",
+                                  "(Ljava/lang/String;Ljava/util/Map;)V");
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+    }
+
+  jobject array = env->NewObject(list_cls, init_mid, iprops->nelts);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  for (int i = 0; i < iprops->nelts; ++i)
+    {
+      svn_prop_inherited_item_t *iprop =
+        APR_ARRAY_IDX(iprops, i, svn_prop_inherited_item_t*);
+
+      jstring path_or_url = JNIUtil::makeJString(iprop->path_or_url);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      jobject props = PropertyMap(iprop->prop_hash);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      jobject item = env->NewObject(item_cls, ctor_mid, path_or_url, props);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      env->CallBooleanMethod(array, add_mid, item);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      env->DeleteLocalRef(item);
+      env->DeleteLocalRef(props);
+      env->DeleteLocalRef(path_or_url);
+    }
+
+  return env->PopLocalFrame(array);
+}
+
 
 jobject CreateJ::Set(std::vector<jobject> &objects)
 {

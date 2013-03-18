@@ -28,6 +28,7 @@
 #define PSAPI_VERSION 1
 #include <windows.h>
 #include <psapi.h>
+#include <Ws2tcpip.h>
 #endif
 
 #define APR_WANT_STRFUNC

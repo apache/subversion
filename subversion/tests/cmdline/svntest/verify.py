@@ -315,6 +315,29 @@ class UnorderedRegexListOutput(ExpectedOutput):
                   label + ' (regexp) (unordered)', label)
 
 
+class AlternateOutput(ExpectedOutput):
+  """Matches any one of a list of ExpectedOutput instances.
+  """
+
+  def __init__(self, expected, match_all=True):
+    "EXPECTED is a list of ExpectedOutput instances."
+    assert isinstance(expected, list) and expected != []
+    assert all(isinstance(e, ExpectedOutput) for e in expected)
+    ExpectedOutput.__init__(self, expected)
+
+  def matches(self, actual):
+    assert actual is not None
+    for e in self.expected:
+      if e.matches(actual):
+        return True
+    return False
+
+  def display_differences(self, message, label, actual):
+    # For now, just display differences against the first alternative.
+    e = self.expected[0]
+    e.display_differences(message, label, actual)
+
+
 ######################################################################
 # Displaying expected and actual output
 
@@ -335,6 +358,10 @@ def display_lines_diff(expected, actual, expected_label, actual_label):
      and ACTUAL (labeled with ACTUAL_LABEL).
      Each of EXPECTED and ACTUAL is a string or a list of strings.
   """
+  if not isinstance(expected, list):
+    expected = [expected]
+  if not isinstance(actual, list):
+    actual = [actual]
   logger.warn('DIFF ' + expected_label + ':')
   for x in unified_diff(expected, actual,
                         fromfile='EXPECTED ' + expected_label,

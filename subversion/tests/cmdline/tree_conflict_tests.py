@@ -49,6 +49,10 @@ Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 AnyOutput = svntest.verify.AnyOutput
+RegexOutput = svntest.verify.RegexOutput
+RegexListOutput = svntest.verify.RegexListOutput
+UnorderedOutput = svntest.verify.UnorderedOutput
+AlternateOutput = svntest.verify.AlternateOutput
 
 logger = logging.getLogger()
 
@@ -277,12 +281,15 @@ d_moves = [
 ]
 
 f_rpls = [
-  #( create_f, ['fD','fa','fA'] ),  # replacement - not yet
-  #( create_f, ['fM','fa','fC'] ),  # don't test all combinations, just because it's slow
+  # Don't test all possible combinations, just because it's slow
+  ( create_f, ['fD','fa','fA'] ),
+  ( create_f, ['fM','fC'] ),
 ]
 d_rpls = [
-  #( create_d, ['dD','dA'] ),  # replacement - not yet
-  #( create_d, ['dM','dC'] ),  # don't test all combinations, just because it's slow
+  # We're not testing directory replacements yet.
+  # Don't test all possible combinations, just because it's slow
+  #( create_d, ['dD','dA'] ),
+  #( create_d, ['dM','dC'] ),
   # Note that directory replacement differs from file replacement: the
   # schedule-delete dir is still on disk and is re-used for the re-addition.
 ]
@@ -373,7 +380,7 @@ def set_up_repos(wc_dir, br_dir, scenarios):
 # the target branch before applying the INCOMING_SCENARIOS.
 def ensure_tree_conflict(sbox, operation,
                          incoming_scenarios, localmod_scenarios,
-                         commit_local_mods):
+                         commit_local_mods=False):
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -464,7 +471,7 @@ def ensure_tree_conflict(sbox, operation,
       elif operation == 'merge':
         logger.debug("--- Merging")
         run_and_verify_svn(None, expected_stdout, [],
-                           'merge', '--ignore-ancestry',
+                           'merge',
                            '--allow-mixed-revisions',
                            '-r', str(source_left_rev) + ':' + str(source_right_rev),
                            source_url, target_path)
@@ -495,9 +502,17 @@ def ensure_tree_conflict(sbox, operation,
       run_and_verify_commit(".", None, None, ".*conflict.*", victim_path)
 
       logger.debug("--- Checking that 'status' reports the conflict")
-      expected_stdout = svntest.verify.RegexOutput("^......C.* " +
-                                                   re.escape(victim_path) + "$",
-                                                   match_all=False)
+      expected_stdout = AlternateOutput([
+                          RegexListOutput([
+                          "^......C.* " + re.escape(victim_path) + "$",
+                          "^      >   .* upon " + operation] +
+                          svntest.main.summary_of_conflicts(tree_conflicts=1)),
+                          RegexListOutput([
+                          "^......C.* " + re.escape(victim_path) + "$",
+                          "^        > moved to .*",
+                          "^      >   .* upon " + operation] +
+                          svntest.main.summary_of_conflicts(tree_conflicts=1))
+                          ])
       run_and_verify_svn(None, expected_stdout, [],
                          'status', victim_path)
 
@@ -534,29 +549,6 @@ def ensure_tree_conflict(sbox, operation,
 
 #----------------------------------------------------------------------
 
-# The main entry points for testing a set of scenarios.
-
-# Test 'update' and/or 'switch'
-# See test_wc_merge() for arguments.
-def test_tc_up_sw(sbox, incoming_scen, wc_scen):
-  sbox2 = sbox.clone_dependent()
-  ensure_tree_conflict(sbox, 'update', incoming_scen, wc_scen, False)
-  ensure_tree_conflict(sbox2, 'switch', incoming_scen, wc_scen, False)
-
-# Test 'merge'
-# INCOMING_SCEN is a list of scenarios describing the incoming changes to apply.
-# BR_SCEN  is a list of scenarios describing how the local branch has
-#   been modified relative to the merge-left source.
-# WC_SCEN is a list of scenarios describing the local WC mods.
-# One of BR_SCEN or WC_SCEN must be given but not both.
-def test_tc_merge(sbox, incoming_scen, br_scen=None, wc_scen=None):
-  if br_scen:
-    ensure_tree_conflict(sbox, 'merge', incoming_scen, br_scen, True)
-  else:
-    ensure_tree_conflict(sbox, 'merge', incoming_scen, wc_scen, False)
-
-#----------------------------------------------------------------------
-
 # Tests for update/switch affecting a file, where the incoming change
 # conflicts with a scheduled change in the WC.
 #
@@ -564,7 +556,11 @@ def test_tc_merge(sbox, incoming_scen, br_scen=None, wc_scen=None):
 
 def up_sw_file_mod_onto_del(sbox):
   "up/sw file: modify onto del/rpl"
-  test_tc_up_sw(sbox, f_mods, f_dels + f_rpls)
+  sbox2 = sbox.clone_dependent()
+  ensure_tree_conflict(sbox, 'update', f_mods,
+                                       f_dels + f_rpls)
+  ensure_tree_conflict(sbox2, 'switch', f_mods,
+                                        f_dels + f_rpls)
   # Note: See UC1 in notes/tree-conflicts/use-cases.txt.
 
 def up_sw_file_del_onto_mod(sbox):
@@ -574,17 +570,27 @@ def up_sw_file_del_onto_mod(sbox):
   #          ### OR (see Nico's email <>):
   #          schedule-delete but leave F on disk (can only apply with
   #            text-mod; prop-mod can't be preserved in this way)
-  test_tc_up_sw(sbox, f_dels + f_moves + f_rpls, f_mods)
+  sbox2 = sbox.clone_dependent()
+  ensure_tree_conflict(sbox, 'update', f_dels + f_moves + f_rpls,
+                                       f_mods)
+  ensure_tree_conflict(sbox2, 'switch', f_dels + f_moves + f_rpls,
+                                        f_mods)
   # Note: See UC2 in notes/tree-conflicts/use-cases.txt.
 
 def up_sw_file_del_onto_del(sbox):
   "up/sw file: del/rpl/mv onto del/rpl/mv"
-  test_tc_up_sw(sbox, f_dels + f_moves + f_rpls, f_dels + f_rpls)
+  sbox2 = sbox.clone_dependent()
+  ensure_tree_conflict(sbox, 'update', f_dels + f_moves + f_rpls,
+                                       f_dels + f_rpls)
+  ensure_tree_conflict(sbox2, 'switch', f_dels + f_moves + f_rpls,
+                                        f_dels + f_rpls)
   # Note: See UC3 in notes/tree-conflicts/use-cases.txt.
 
 def up_sw_file_add_onto_add(sbox):
   "up/sw file: add onto add"
-  test_tc_up_sw(sbox, f_adds, f_adds)
+  sbox2 = sbox.clone_dependent()
+  ensure_tree_conflict(sbox, 'update', f_adds, f_adds)
+  ensure_tree_conflict(sbox2, 'switch', f_adds, f_adds)
 
 #----------------------------------------------------------------------
 
@@ -594,17 +600,29 @@ def up_sw_file_add_onto_add(sbox):
 def up_sw_dir_mod_onto_del(sbox):
   "up/sw dir: modify onto del/rpl/mv"
   # WC state: any (D necessarily exists; children may have any state)
-  test_tc_up_sw(sbox, d_mods, d_dels + d_rpls)
+  sbox2 = sbox.clone_dependent()
+  ensure_tree_conflict(sbox, 'update', d_mods,
+                                       d_dels + d_rpls)
+  ensure_tree_conflict(sbox2, 'switch', d_mods,
+                                        d_dels + d_rpls)
 
 def up_sw_dir_del_onto_mod(sbox):
   "up/sw dir: del/rpl/mv onto modify"
   # WC state: any (D necessarily exists; children may have any state)
-  test_tc_up_sw(sbox, d_dels + d_moves + d_rpls, d_mods)
+  sbox2 = sbox.clone_dependent()
+  ensure_tree_conflict(sbox, 'update', d_dels + d_moves + d_rpls,
+                                       d_mods)
+  ensure_tree_conflict(sbox2, 'switch', d_dels + d_moves + d_rpls,
+                                        d_mods)
 
 def up_sw_dir_del_onto_del(sbox):
   "up/sw dir: del/rpl/mv onto del/rpl/mv"
   # WC state: any (D necessarily exists; children may have any state)
-  test_tc_up_sw(sbox, d_dels + d_moves + d_rpls, d_dels + d_rpls)
+  sbox2 = sbox.clone_dependent()
+  ensure_tree_conflict(sbox, 'update', d_dels + d_moves + d_rpls,
+                                       d_dels + d_rpls)
+  ensure_tree_conflict(sbox2, 'switch', d_dels + d_moves + d_rpls,
+                                        d_dels + d_rpls)
 
 # This is currently set as XFail over ra_dav because it hits
 # issue #3314 'DAV can overwrite directories during copy'
@@ -641,7 +659,9 @@ def up_sw_dir_del_onto_del(sbox):
 def up_sw_dir_add_onto_add(sbox):
   "up/sw dir: add onto add"
   # WC state: as scheduled (no obstruction)
-  test_tc_up_sw(sbox, d_adds, d_adds)
+  sbox2 = sbox.clone_dependent()
+  ensure_tree_conflict(sbox, 'update', d_adds, d_adds)
+  ensure_tree_conflict(sbox2, 'switch', d_adds, d_adds)
 
 #----------------------------------------------------------------------
 
@@ -651,31 +671,38 @@ def up_sw_dir_add_onto_add(sbox):
 def merge_file_mod_onto_not_file(sbox):
   "merge file: modify onto not-file"
   sbox2 = sbox.clone_dependent()
-  test_tc_merge(sbox, f_mods, br_scen = f_dels + f_moves + f_rpl_d)
-  test_tc_merge(sbox2, f_mods, wc_scen = f_dels + f_moves)
+  # Test merges where the "local mods" are committed to the target branch.
+  ensure_tree_conflict(sbox, 'merge', f_mods, f_dels + f_moves + f_rpl_d,
+                       commit_local_mods=True)
+  # Test merges where the "local mods" are uncommitted mods in the WC.
+  ensure_tree_conflict(sbox2, 'merge', f_mods, f_dels + f_moves)
   # Note: See UC4 in notes/tree-conflicts/use-cases.txt.
 
 def merge_file_del_onto_not_same(sbox):
   "merge file: del/rpl/mv onto not-same"
   sbox2 = sbox.clone_dependent()
-  test_tc_merge(sbox, f_dels + f_moves + f_rpls, br_scen = f_mods)
-  test_tc_merge(sbox2, f_dels + f_moves + f_rpls, wc_scen = f_mods)
+  ensure_tree_conflict(sbox, 'merge', f_dels + f_moves + f_rpls, f_mods,
+                       commit_local_mods=True)
+  ensure_tree_conflict(sbox2, 'merge', f_dels + f_moves + f_rpls, f_mods)
   # Note: See UC5 in notes/tree-conflicts/use-cases.txt.
 
 def merge_file_del_onto_not_file(sbox):
   "merge file: del/rpl/mv onto not-file"
   sbox2 = sbox.clone_dependent()
-  test_tc_merge(sbox, f_dels + f_moves + f_rpls,
-                br_scen = f_dels + f_moves + f_rpl_d)
-  test_tc_merge(sbox2, f_dels + f_moves + f_rpls,
-                wc_scen = f_dels + f_moves)
+  ensure_tree_conflict(sbox, 'merge', f_dels + f_moves + f_rpls,
+                                      f_dels + f_moves + f_rpl_d,
+                       commit_local_mods=True)
+  ensure_tree_conflict(sbox2, 'merge', f_dels + f_moves + f_rpls,
+                                       f_dels + f_moves)
   # Note: See UC6 in notes/tree-conflicts/use-cases.txt.
 
 def merge_file_add_onto_not_none(sbox):
   "merge file: add onto not-none"
   sbox2 = sbox.clone_dependent()
-  test_tc_merge(sbox, f_adds, br_scen = f_adds)  ### + d_adds (at path "F")
-  test_tc_merge(sbox2, f_adds, wc_scen = f_adds)  ### + d_adds (at path "F")
+  ensure_tree_conflict(sbox, 'merge', f_adds, f_adds,
+                       commit_local_mods=True)
+  ensure_tree_conflict(sbox2, 'merge', f_adds, f_adds)
+  # TODO: Also test directory adds at path "F"?
 
 #----------------------------------------------------------------------
 
@@ -685,28 +712,35 @@ def merge_file_add_onto_not_none(sbox):
 def merge_dir_mod_onto_not_dir(sbox):
   "merge dir: modify onto not-dir"
   sbox2 = sbox.clone_dependent()
-  test_tc_merge(sbox, d_mods, br_scen = d_dels + d_moves + d_rpl_f)
-  test_tc_merge(sbox2, d_mods, wc_scen = d_dels + d_moves)
+  ensure_tree_conflict(sbox, 'merge', d_mods, d_dels + d_moves + d_rpl_f,
+                       commit_local_mods=True)
+  ensure_tree_conflict(sbox2, 'merge', d_mods, d_dels + d_moves)
 
 # Test for issue #3150 'tree conflicts with directories as victims'.
 @Issue(3150)
 def merge_dir_del_onto_not_same(sbox):
   "merge dir: del/rpl/mv onto not-same"
   sbox2 = sbox.clone_dependent()
-  test_tc_merge(sbox, d_dels + d_moves + d_rpls, br_scen = d_mods)
-  test_tc_merge(sbox2, d_dels + d_moves + d_rpls, wc_scen = d_mods)
+  ensure_tree_conflict(sbox, 'merge', d_dels + d_moves + d_rpls, d_mods,
+                       commit_local_mods=True)
+  ensure_tree_conflict(sbox2, 'merge', d_dels + d_moves + d_rpls, d_mods)
 
 def merge_dir_del_onto_not_dir(sbox):
   "merge dir: del/rpl/mv onto not-dir"
   sbox2 = sbox.clone_dependent()
-  test_tc_merge(sbox, d_dels + d_moves + d_rpls, br_scen = d_dels + d_moves + d_rpl_f)
-  test_tc_merge(sbox2, d_dels + d_moves + d_rpls, wc_scen = d_dels + d_moves)
+  ensure_tree_conflict(sbox, 'merge', d_dels + d_moves + d_rpls,
+                                      d_dels + d_moves + d_rpl_f,
+                       commit_local_mods=True)
+  ensure_tree_conflict(sbox2, 'merge', d_dels + d_moves + d_rpls,
+                                       d_dels + d_moves)
 
 def merge_dir_add_onto_not_none(sbox):
   "merge dir: add onto not-none"
   sbox2 = sbox.clone_dependent()
-  test_tc_merge(sbox, d_adds, br_scen = d_adds)  ### + f_adds (at path "D")
-  test_tc_merge(sbox2, d_adds, wc_scen = d_adds)  ### + f_adds (at path "D")
+  ensure_tree_conflict(sbox, 'merge', d_adds, d_adds,
+                       commit_local_mods=True)
+  ensure_tree_conflict(sbox2, 'merge', d_adds, d_adds)
+  # TODO: also try with file adds at path "D"?
 
 #----------------------------------------------------------------------
 
@@ -1373,9 +1407,11 @@ def actual_only_node_behaviour(sbox):
                      "unlock", foo_path)
 
   # update (up)
+  # This doesn't skip because the update is anchored at the parent of A,
+  # the parent of A is not in conflict, and the update doesn't attempt to
+  # change foo itself.
   expected_stdout = [
-   "Skipped '%s' -- Node remains in conflict\n" % sbox.ospath('A/foo'),
-  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
+   "Updating '" + foo_path + "':\n", "At revision 4.\n"]
   expected_stderr = []
   run_and_verify_svn(None, expected_stdout, expected_stderr,
                      "update", foo_path)
