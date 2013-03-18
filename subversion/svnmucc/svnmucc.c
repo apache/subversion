@@ -1048,7 +1048,8 @@ main(int argc, const char **argv)
     config_inline_opt,
     no_auth_cache_opt,
     version_opt,
-    with_revprop_opt
+    with_revprop_opt,
+    force_interactive_opt
   };
   static const apr_getopt_option_t options[] = {
     {"message", 'm', 1, ""},
@@ -1062,6 +1063,7 @@ main(int argc, const char **argv)
     {"help", 'h', 0, ""},
     {NULL, '?', 0, ""},
     {"non-interactive", 'n', 0, ""},
+    {"force-interactive", force_interactive_opt, 0, ""},
     {"config-dir", config_dir_opt, 1, ""},
     {"config-option",  config_inline_opt, 1, ""},
     {"no-auth-cache",  no_auth_cache_opt, 0, ""},
@@ -1075,6 +1077,7 @@ main(int argc, const char **argv)
   const char *config_dir = NULL;
   apr_array_header_t *config_options;
   svn_boolean_t non_interactive = FALSE;
+  svn_boolean_t force_interactive = FALSE;
   svn_boolean_t no_auth_cache = FALSE;
   svn_revnum_t base_revision = SVN_INVALID_REVNUM;
   apr_array_header_t *action_args;
@@ -1153,6 +1156,9 @@ main(int argc, const char **argv)
         case 'n':
           non_interactive = TRUE;
           break;
+        case force_interactive_opt:
+          force_interactive = TRUE;
+          break;
         case config_dir_opt:
           err = svn_utf_cstring_to_utf8(&config_dir, arg, pool);
           if (err)
@@ -1181,6 +1187,17 @@ main(int argc, const char **argv)
           break;
         }
     }
+
+  if (non_interactive && force_interactive)
+    {
+      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("--non-interactive and --force-interactive "
+                               "are mutually exclusive"));
+      return svn_cmdline_handle_exit_error(err, pool, "svnmucc: ");
+    }
+  else
+    non_interactive = !svn_cmdline__be_interactive(non_interactive,
+                                                   force_interactive);
 
   /* Make sure we have a log message to use. */
   err = sanitize_log_sources(revprops, message, filedata);
