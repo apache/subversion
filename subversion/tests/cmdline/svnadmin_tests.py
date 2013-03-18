@@ -1877,13 +1877,13 @@ _0.0.t1-1 Add-dir false false /B
                                                         "--keep-going",
                                                         sbox.repo_dir)
 
-  exp_err = ["* Verifying repository metadata ...\n",
-             "* Verified revision 0.\n",
-             "* Verified revision 1.\n",
-             "* Error verifying revision 2.\n",
-             "svnadmin: E160004: Invalid change kind in rev file\n",
-             "* Verified revision 3.\n",
-             "svnadmin: E165005: Repository 'svn-test-work/repositories/svnadmin_tests-31' failed to verify\n"]
+  exp_err = svntest.verify.RegexListOutput([".*Verifying repository metadata",
+                                           ".*Verified revision 0.",
+                                           ".*Verified revision 1.",
+                                           ".*Error verifying revision 2.",
+                                           ".*svnadmin: E160004:",
+                                           ".*Verified revision 3.",
+                                           "svnadmin: E165005:.*"])
 
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
                                    [], errput, None, exp_err):
@@ -1892,12 +1892,12 @@ _0.0.t1-1 Add-dir false false /B
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
                                                         sbox.repo_dir)
 
-  exp_err = ["* Verifying repository metadata ...\n",
-             "* Verified revision 0.\n",
-             "* Verified revision 1.\n",
-             "* Error verifying revision 2.\n",
-             "svnadmin: E160004: Invalid change kind in rev file\n",
-             "svnadmin: E165005: Repository 'svn-test-work/repositories/svnadmin_tests-31' failed to verify\n"]
+  exp_err = svntest.verify.RegexListOutput([".* Verifying repository metadata",
+                                           ".*Verified revision 0.",
+                                           ".*Verified revision 1.",
+                                           ".*Error verifying revision 2.",
+                                           "svnadmin: E160004:.*",
+                                           "svnadmin: E165005:.*"])
 
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
                                    [], errput, None, exp_err):
