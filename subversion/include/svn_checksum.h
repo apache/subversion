@@ -241,7 +241,8 @@ apr_size_t
 svn_checksum_size(const svn_checksum_t *checksum);
 
 /**
- * Return @c TRUE iff CHECKSUM matches the checksum for the empty string.
+ * Return @c TRUE iff @a checksum matches the checksum for the empty
+ * string.
  *
  * @since New in 1.8.
  */
