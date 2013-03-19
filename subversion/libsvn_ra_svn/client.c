@@ -1641,10 +1641,10 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
           log_entry->has_children = has_children;
           log_entry->subtractive_merge = subtractive_merge;
           if (rplist)
-            SVN_ERR(svn_ra_svn_parse_proplist(rplist, pool,
+            SVN_ERR(svn_ra_svn_parse_proplist(rplist, iterpool,
                                               &log_entry->revprops));
           if (log_entry->revprops == NULL)
-            log_entry->revprops = apr_hash_make(pool);
+            log_entry->revprops = apr_hash_make(iterpool);
           if (revprops == NULL)
             {
               /* Caller requested all revprops; set author/date/log. */
