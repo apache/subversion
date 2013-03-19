@@ -1581,6 +1581,15 @@ struct write_baton {
   apr_hash_t *tree_conflicts;
 };
 
+#define WRITE_ENTRY_ASSERT(expr) \
+  if (!(expr)) \
+    return svn_error_createf(SVN_ERR_ASSERTION_FAIL, NULL,  \
+                             _("Unable to upgrade '%s' at line %d"),    \
+                             svn_dirent_local_style( \
+                               svn_dirent_join(root_abspath, \
+                                               local_relpath,           \
+                                               scratch_pool),           \
+                               scratch_pool), __LINE__)
 
 /* Write the information for ENTRY to WC_DB.  The WC_ID, REPOS_ID and
    REPOS_ROOT will all be used for writing ENTRY.
@@ -1696,9 +1705,10 @@ write_entry(struct write_baton **entry_node,
      replace+copied   replace+copied     [base|work]+work  [base|work]+work
   */
 
-  SVN_ERR_ASSERT(parent_node || entry->schedule == svn_wc_schedule_normal);
-  SVN_ERR_ASSERT(!parent_node || parent_node->base
-                 || parent_node->below_work || parent_node->work);
+  WRITE_ENTRY_ASSERT(parent_node || entry->schedule == svn_wc_schedule_normal);
+                                                                    
+  WRITE_ENTRY_ASSERT(!parent_node || parent_node->base
+                     || parent_node->below_work || parent_node->work);
 
   switch (entry->schedule)
     {
@@ -1743,8 +1753,8 @@ write_entry(struct write_baton **entry_node,
      BASE node to indicate the not-present node.  */
   if (entry->deleted)
     {
-      SVN_ERR_ASSERT(base_node || below_working_node);
-      SVN_ERR_ASSERT(!entry->incomplete);
+      WRITE_ENTRY_ASSERT(base_node || below_working_node);
+      WRITE_ENTRY_ASSERT(!entry->incomplete);
       if (base_node)
         base_node->presence = svn_wc__db_status_not_present;
       else
@@ -1752,8 +1762,8 @@ write_entry(struct write_baton **entry_node,
     }
   else if (entry->absent)
     {
-      SVN_ERR_ASSERT(base_node && !working_node && !below_working_node);
-      SVN_ERR_ASSERT(!entry->incomplete);
+      WRITE_ENTRY_ASSERT(base_node && !working_node && !below_working_node);
+      WRITE_ENTRY_ASSERT(!entry->incomplete);
       base_node->presence = svn_wc__db_status_server_excluded;
     }
 
@@ -1865,7 +1875,7 @@ write_entry(struct write_baton **entry_node,
                                                                scratch_pool),
                                                scratch_pool, scratch_pool));
 
-          SVN_ERR_ASSERT(conflict->kind == svn_wc_conflict_kind_tree);
+          WRITE_ENTRY_ASSERT(conflict->kind == svn_wc_conflict_kind_tree);
 
           /* Fix dubious data stored by old clients, local adds don't have
              a repository URL. */
@@ -1931,14 +1941,15 @@ write_entry(struct write_baton **entry_node,
 
       if (entry->deleted)
         {
-          SVN_ERR_ASSERT(base_node->presence == svn_wc__db_status_not_present);
+          WRITE_ENTRY_ASSERT(base_node->presence
+                             == svn_wc__db_status_not_present);
           /* ### should be svn_node_unknown, but let's store what we have. */
           base_node->kind = entry->kind;
         }
       else if (entry->absent)
         {
-          SVN_ERR_ASSERT(base_node->presence
-                                == svn_wc__db_status_server_excluded);
+          WRITE_ENTRY_ASSERT(base_node->presence
+                             == svn_wc__db_status_server_excluded);
           /* ### should be svn_node_unknown, but let's store what we have. */
           base_node->kind = entry->kind;
 
@@ -1971,8 +1982,8 @@ write_entry(struct write_baton **entry_node,
               else if (entry->incomplete)
                 {
                   /* ### nobody should have set the presence.  */
-                  SVN_ERR_ASSERT(base_node->presence
-                                 == svn_wc__db_status_normal);
+                  WRITE_ENTRY_ASSERT(base_node->presence
+                                     == svn_wc__db_status_normal);
                   base_node->presence = svn_wc__db_status_incomplete;
                 }
             }
@@ -2222,8 +2233,8 @@ write_entry(struct write_baton **entry_node,
               if (entry->incomplete)
                 {
                   /* We shouldn't be overwriting another status.  */
-                  SVN_ERR_ASSERT(working_node->presence
-                                 == svn_wc__db_status_normal);
+                  WRITE_ENTRY_ASSERT(working_node->presence
+                                     == svn_wc__db_status_normal);
                   working_node->presence = svn_wc__db_status_incomplete;
                 }
             }
