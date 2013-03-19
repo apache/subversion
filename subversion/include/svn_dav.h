@@ -349,7 +349,7 @@ extern "C" {
  * a reversed fetch of file versions.
  * @since New in 1.8. */
 #define SVN_DAV_NS_DAV_SVN_GET_FILE_REVS_REVERSE\
-            SVN_DAV_PROP_NS_DAV "svn/get-file-revs-rvrs"
+            SVN_DAV_PROP_NS_DAV "svn/get-file-revs-reverse"
 
 
 /** @} */
