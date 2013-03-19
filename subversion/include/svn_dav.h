@@ -282,6 +282,8 @@ extern "C" {
 
 /** Presence of this in a DAV header in an OPTIONS request or response
  * indicates that the transmitter supports @c svn_depth_t.
+ *
+ * @since New in 1.5.
  */
 #define SVN_DAV_NS_DAV_SVN_DEPTH\
             SVN_DAV_PROP_NS_DAV "svn/depth"
