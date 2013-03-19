@@ -282,7 +282,8 @@ extern "C" {
 
 /** Presence of this in a DAV header in an OPTIONS request or response
  * indicates that the transmitter supports @c svn_depth_t. */
-#define SVN_DAV_NS_DAV_SVN_DEPTH SVN_DAV_PROP_NS_DAV "svn/depth"
+#define SVN_DAV_NS_DAV_SVN_DEPTH\
+            SVN_DAV_PROP_NS_DAV "svn/depth"
 
 /** Presence of this in a DAV header in an OPTIONS request or response
  * indicates that the server knows how to handle merge-tracking
@@ -292,12 +293,14 @@ extern "C" {
  * mergeinfo, only whether the server does.  For more information, see
  * mod_dav_svn/version.c:get_vsn_options().
  */
-#define SVN_DAV_NS_DAV_SVN_MERGEINFO SVN_DAV_PROP_NS_DAV "svn/mergeinfo"
+#define SVN_DAV_NS_DAV_SVN_MERGEINFO\
+            SVN_DAV_PROP_NS_DAV "svn/mergeinfo"
 
 /** Presence of this in a DAV header in an OPTIONS response indicates
  * that the transmitter (in this case, the server) knows how to send
  * custom revprops in log responses. */
-#define SVN_DAV_NS_DAV_SVN_LOG_REVPROPS SVN_DAV_PROP_NS_DAV "svn/log-revprops"
+#define SVN_DAV_NS_DAV_SVN_LOG_REVPROPS\
+            SVN_DAV_PROP_NS_DAV "svn/log-revprops"
 
 /** Presence of this in a DAV header in an OPTIONS response indicates
  * that the transmitter (in this case, the server) knows how to handle
@@ -316,8 +319,8 @@ extern "C" {
  * that the transmitter (in this case, the server) knows how to get
  * inherited properties. 
  * @since New in 1.8. */
-#define SVN_DAV_NS_DAV_SVN_INHERITED_PROPS \
-  SVN_DAV_PROP_NS_DAV "svn/inherited-props"
+#define SVN_DAV_NS_DAV_SVN_INHERITED_PROPS\
+            SVN_DAV_PROP_NS_DAV "svn/inherited-props"
 
 /** Presence of this in a DAV header in an OPTIONS response indicates
  * that the transmitter (in this case, the server) knows how to
@@ -328,8 +331,8 @@ extern "C" {
             SVN_DAV_PROP_NS_DAV "svn/ephemeral-txnprops"
 
 /** Presence of this in a DAV header in an OPTIONS response indicates
- * that the transmitter (in this case, the server) supports serving properties
- * inline in update editor when 'send-all' is 'false'.
+ * that the transmitter (in this case, the server) supports serving
+ * properties inline in update editor when 'send-all' is 'false'.
  * @since New in 1.8. */
 #define SVN_DAV_NS_DAV_SVN_INLINE_PROPS\
             SVN_DAV_PROP_NS_DAV "svn/inline-props"
