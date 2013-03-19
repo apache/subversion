@@ -300,6 +300,13 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r1458341
+   Fix issue 4337, client memory leak in "svn log" for ra_svn.
+   Justification:
+     Client leaks hundreds of MB on large repositories.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
