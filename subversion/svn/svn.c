@@ -2836,6 +2836,14 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                      _("Please see the 'svn upgrade' command"));
         }
 
+      if (err->apr_err == SVN_ERR_AUTHN_FAILED && opt_state.non_interactive)
+        {
+          err = svn_error_quick_wrap(err,
+                                     _("Authentication failed and interactive"
+                                       " prompting is disabled; see the"
+                                       " --force-interactive option"));
+        }
+
       /* Tell the user about 'svn cleanup' if any error on the stack
          was about locked working copies. */
       if (svn_error_find_cause(err, SVN_ERR_WC_LOCKED))
