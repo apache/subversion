@@ -55,6 +55,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_dep_compat.h"
 
 
 struct svn_wc_committed_queue_t
