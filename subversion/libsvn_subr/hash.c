@@ -508,8 +508,8 @@ svn_hash_from_cstring_keys(apr_hash_t **hash_p,
 }
 
 
-svn_error_t *
-svn_hash__clear(apr_hash_t *hash, apr_pool_t *pool)
+void
+svn_hash__clear(apr_hash_t *hash)
 {
 #if APR_VERSION_AT_LEAST(1, 3, 0)
   apr_hash_clear(hash);
@@ -518,13 +518,12 @@ svn_hash__clear(apr_hash_t *hash, apr_pool_t *pool)
   const void *key;
   apr_ssize_t klen;
 
-  for (hi = apr_hash_first(pool, hash); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(NULL, hash); hi; hi = apr_hash_next(hi))
     {
       apr_hash_this(hi, &key, &klen, NULL);
       apr_hash_set(hash, key, klen, NULL);
     }
 #endif
-  return SVN_NO_ERROR;
 }
 
 

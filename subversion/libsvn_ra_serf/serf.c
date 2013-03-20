@@ -1053,8 +1053,8 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
                                                                session, pool),
                                               pool, pool));
 
-          SVN_ERR(svn_hash__clear(dirent_walk.full_paths, pool));
-          SVN_ERR(svn_hash__clear(dirent_walk.base_paths, pool));
+          apr_hash_clear(dirent_walk.full_paths);
+          apr_hash_clear(dirent_walk.base_paths);
 
           SVN_ERR(svn_ra_serf__walk_all_paths(props, SVN_INVALID_REVNUM,
                                               path_dirent_walker,

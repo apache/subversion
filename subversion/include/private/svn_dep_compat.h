@@ -62,6 +62,15 @@ extern "C" {
 #define apr_array_clear(arr)         (arr)->nelts = 0
 #endif
 
+/**
+ * If we don't have a recent enough APR, emulate the behavior of the
+ * apr_hash_clear() API.
+ */
+#if !APR_VERSION_AT_LEAST(1,3,0)
+void svn_hash__clear(struct apr_hash_t *ht);
+#define apr_hash_clear(ht)           svn_hash__clear(ht)
+#endif
+
 #if !APR_VERSION_AT_LEAST(1,0,0)
 #define APR_UINT64_C(val) UINT64_C(val)
 #define APR_FPROT_OS_DEFAULT APR_OS_DEFAULT
