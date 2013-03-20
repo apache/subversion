@@ -36,6 +36,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_sorts.h"
+#include "svn_hash.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -54,9 +55,9 @@ struct notify_baton
                                     when we've already had one print error. */
 
   /* Conflict stats for update and merge. */
-  int text_conflicts;
-  int prop_conflicts;
-  int tree_conflicts;
+  apr_pool_t *stats_pool;
+  apr_hash_t *text_conflicts, *prop_conflicts, *tree_conflicts;
+  int text_conflicts_resolved, prop_conflicts_resolved, tree_conflicts_resolved;
   int skipped_paths;
 
   /* The cwd, for use in decomposing absolute paths. */
@@ -64,14 +65,24 @@ struct notify_baton
 };
 
 
+/* Add the PATH (as a key, with a meaningless value) into the HASH in NB. */
+static void
+store_path(struct notify_baton *nb, apr_hash_t *hash, const char *path)
+{
+  svn_hash_sets(hash, apr_pstrdup(nb->stats_pool, path), "");
+}
+
 svn_error_t *
 svn_cl__notifier_reset_conflict_stats(void *baton)
 {
   struct notify_baton *nb = baton;
 
-  nb->text_conflicts = 0;
-  nb->prop_conflicts = 0;
-  nb->tree_conflicts = 0;
+  apr_hash_clear(nb->text_conflicts);
+  apr_hash_clear(nb->prop_conflicts);
+  apr_hash_clear(nb->tree_conflicts);
+  nb->text_conflicts_resolved = 0;
+  nb->prop_conflicts_resolved = 0;
+  nb->tree_conflicts_resolved = 0;
   nb->skipped_paths = 0;
   return SVN_NO_ERROR;
 }
@@ -80,24 +91,53 @@ svn_error_t *
 svn_cl__notifier_print_conflict_stats(void *baton, apr_pool_t *scratch_pool)
 {
   struct notify_baton *nb = baton;
+  int n_text = apr_hash_count(nb->text_conflicts);
+  int n_prop = apr_hash_count(nb->prop_conflicts);
+  int n_tree = apr_hash_count(nb->tree_conflicts);
+  int n_text_r = nb->text_conflicts_resolved;
+  int n_prop_r = nb->prop_conflicts_resolved;
+  int n_tree_r = nb->tree_conflicts_resolved;
 
-  if (nb->text_conflicts > 0 || nb->prop_conflicts > 0
-      || nb->tree_conflicts > 0 || nb->skipped_paths > 0)
+  if (n_text > 0 || n_text_r > 0
+      || n_prop > 0 || n_prop_r > 0
+      || n_tree > 0 || n_tree_r > 0
+      || nb->skipped_paths > 0)
     SVN_ERR(svn_cmdline_printf(scratch_pool,
                                _("Summary of conflicts:\n")));
 
-  if (nb->text_conflicts > 0)
-    SVN_ERR(svn_cmdline_printf(scratch_pool,
-                               _("  Text conflicts: %d\n"),
-                               nb->text_conflicts));
-  if (nb->prop_conflicts > 0)
-    SVN_ERR(svn_cmdline_printf(scratch_pool,
-                               _("  Property conflicts: %d\n"),
-                               nb->prop_conflicts));
-  if (nb->tree_conflicts > 0)
-    SVN_ERR(svn_cmdline_printf(scratch_pool,
-                               _("  Tree conflicts: %d\n"),
-                               nb->tree_conflicts));
+  if (n_text > 0 || n_text_r > 0)
+    {
+      if (n_text_r == 0)
+        SVN_ERR(svn_cmdline_printf(scratch_pool,
+          _("  Text conflicts: %d\n"),
+          n_text));
+      else
+        SVN_ERR(svn_cmdline_printf(scratch_pool,
+          _("  Text conflicts: %d remaining (and %d already resolved)\n"),
+          n_text, n_text_r));
+    }
+  if (n_prop > 0 || n_prop_r > 0)
+    {
+      if (n_prop_r == 0)
+        SVN_ERR(svn_cmdline_printf(scratch_pool,
+          _("  Property conflicts: %d\n"),
+          n_prop));
+      else
+        SVN_ERR(svn_cmdline_printf(scratch_pool,
+          _("  Property conflicts: %d remaining (and %d already resolved)\n"),
+          n_prop, n_prop_r));
+    }
+  if (n_tree > 0 || n_tree_r > 0)
+    {
+      if (n_tree_r == 0)
+        SVN_ERR(svn_cmdline_printf(scratch_pool,
+          _("  Tree conflicts: %d\n"),
+          n_tree));
+      else
+        SVN_ERR(svn_cmdline_printf(scratch_pool,
+          _("  Tree conflicts: %d remaining (and %d already resolved)\n"),
+          n_tree, n_tree_r));
+    }
   if (nb->skipped_paths > 0)
     SVN_ERR(svn_cmdline_printf(scratch_pool,
                                _("  Skipped paths: %d\n"),
@@ -224,7 +264,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       nb->received_some_change = TRUE;
       if (n->content_state == svn_wc_notify_state_conflicted)
         {
-          nb->text_conflicts++;
+          store_path(nb, nb->text_conflicts, path_local);
           if ((err = svn_cmdline_printf(pool, "C    %s\n", path_local)))
             goto print_error;
         }
@@ -239,7 +279,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       nb->received_some_change = TRUE;
       if (n->content_state == svn_wc_notify_state_conflicted)
         {
-          nb->text_conflicts++;
+          store_path(nb, nb->text_conflicts, path_local);
           statchar_buf[0] = 'C';
         }
       else
@@ -247,7 +287,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
       if (n->prop_state == svn_wc_notify_state_conflicted)
         {
-          nb->prop_conflicts++;
+          store_path(nb, nb->prop_conflicts, path_local);
           statchar_buf[1] = 'C';
         }
       else if (n->prop_state == svn_wc_notify_state_merged)
@@ -277,6 +317,23 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       break;
 
     case svn_wc_notify_resolved:
+      /* All conflicts on this path are resolved, so remove path from
+         each of the text-, prop- and tree-conflict lists. */
+      if (svn_hash_gets(nb->text_conflicts, path_local))
+        {
+          svn_hash_sets(nb->text_conflicts, path_local, NULL);
+          nb->text_conflicts_resolved++;
+        }
+      if (svn_hash_gets(nb->prop_conflicts, path_local))
+        {
+          svn_hash_sets(nb->prop_conflicts, path_local, NULL);
+          nb->prop_conflicts_resolved++;
+        }
+      if (svn_hash_gets(nb->tree_conflicts, path_local))
+        {
+          svn_hash_sets(nb->tree_conflicts, path_local, NULL);
+          nb->tree_conflicts_resolved++;
+        }
       if ((err = svn_cmdline_printf(pool,
                                     _("Resolved conflicted state of '%s'\n"),
                                     path_local)))
@@ -313,7 +370,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         nb->received_some_change = TRUE;
         if (n->content_state == svn_wc_notify_state_conflicted)
           {
-            nb->text_conflicts++;
+            store_path(nb, nb->text_conflicts, path_local);
             statchar_buf[0] = 'C';
           }
         else if (n->kind == svn_node_file)
@@ -326,7 +383,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
         if (n->prop_state == svn_wc_notify_state_conflicted)
           {
-            nb->prop_conflicts++;
+            store_path(nb, nb->prop_conflicts, path_local);
             statchar_buf[1] = 'C';
           }
         else if (n->prop_state == svn_wc_notify_state_changed)
@@ -525,7 +582,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       {
         if (n->content_state == svn_wc_notify_state_conflicted)
           {
-            nb->text_conflicts++;
+            store_path(nb, nb->text_conflicts, path_local);
             statchar_buf[0] = 'C';
           }
         else if (n->kind == svn_node_file)
@@ -538,7 +595,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
         if (n->prop_state == svn_wc_notify_state_conflicted)
           {
-            nb->prop_conflicts++;
+            store_path(nb, nb->prop_conflicts, path_local);
             statchar_buf[1] = 'C';
           }
         else if (n->prop_state == svn_wc_notify_state_merged)
@@ -915,7 +972,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       break;
 
     case svn_wc_notify_tree_conflict:
-      nb->tree_conflicts++;
+      store_path(nb, nb->tree_conflicts, path_local);
       if ((err = svn_cmdline_printf(pool, "   C %s\n", path_local)))
         goto print_error;
       break;
@@ -1070,9 +1127,13 @@ svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
   nb->is_wc_to_repos_copy = FALSE;
   nb->in_external = FALSE;
   nb->had_print_error = FALSE;
-  nb->text_conflicts = 0;
-  nb->prop_conflicts = 0;
-  nb->tree_conflicts = 0;
+  nb->stats_pool = pool;
+  nb->text_conflicts = apr_hash_make(pool);
+  nb->prop_conflicts = apr_hash_make(pool);
+  nb->tree_conflicts = apr_hash_make(pool);
+  nb->text_conflicts_resolved = 0;
+  nb->prop_conflicts_resolved = 0;
+  nb->tree_conflicts_resolved = 0;
   nb->skipped_paths = 0;
   SVN_ERR(svn_dirent_get_absolute(&nb->path_prefix, "", pool));
 
