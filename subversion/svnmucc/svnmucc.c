@@ -108,6 +108,7 @@ create_ra_callbacks(svn_ra_callbacks2_t **callbacks,
                     const char *config_dir,
                     svn_config_t *cfg_config,
                     svn_boolean_t non_interactive,
+                    svn_boolean_t trust_server_cert,
                     svn_boolean_t no_auth_cache,
                     apr_pool_t *pool)
 {
@@ -117,7 +118,7 @@ create_ra_callbacks(svn_ra_callbacks2_t **callbacks,
                                         non_interactive,
                                         username, password, config_dir,
                                         no_auth_cache,
-                                        FALSE /* trust_server_certs */,
+                                        trust_server_cert,
                                         cfg_config, NULL, NULL, pool));
 
   (*callbacks)->open_tmp_file = open_tmp_file;
@@ -728,6 +729,7 @@ execute(const apr_array_header_t *actions,
         const char *config_dir,
         const apr_array_header_t *config_options,
         svn_boolean_t non_interactive,
+        svn_boolean_t trust_server_cert,
         svn_boolean_t no_auth_cache,
         svn_revnum_t base_revision,
         apr_pool_t *pool)
@@ -774,8 +776,8 @@ execute(const apr_array_header_t *actions,
     }
 
   SVN_ERR(create_ra_callbacks(&ra_callbacks, username, password, config_dir,
-                              cfg_config, non_interactive, no_auth_cache,
-                              pool));
+                              cfg_config, non_interactive, trust_server_cert,
+                              no_auth_cache, pool));
   SVN_ERR(svn_ra_open4(&session, NULL, anchor, NULL, ra_callbacks,
                        NULL, config, pool));
   /* Open, then reparent to avoid AUTHZ errors when opening the reposroot */
@@ -954,6 +956,9 @@ usage(apr_pool_t *pool, int exit_val)
       "                           prompt only if standard input is a terminal)\n"
       "  --force-interactive    : do interactive propmting even if standard\n"
       "                           input is not a terminal\n"
+      "  --trust-server-cert    : accept SSL server certificates from unknown\n"
+      "                           certificate authorities without prompting (but\n"
+      "                           only with '--non-interactive')\n"
       "  -X [--extra-args] ARG  : append arguments from file ARG (one per line;\n"
       "                         : use \"-\" to read from standard input)\n"
       "  --config-dir ARG       : use ARG to override the config directory\n"
@@ -1053,7 +1058,8 @@ main(int argc, const char **argv)
     version_opt,
     with_revprop_opt,
     non_interactive_opt,
-    force_interactive_opt
+    force_interactive_opt,
+    trust_server_cert_opt
   };
   static const apr_getopt_option_t options[] = {
     {"message", 'm', 1, ""},
@@ -1068,6 +1074,7 @@ main(int argc, const char **argv)
     {NULL, '?', 0, ""},
     {"non-interactive", non_interactive_opt, 0, ""},
     {"force-interactive", force_interactive_opt, 0, ""},
+    {"trust-server-cert", trust_server_cert_opt, 0, ""},
     {"config-dir", config_dir_opt, 1, ""},
     {"config-option",  config_inline_opt, 1, ""},
     {"no-auth-cache",  no_auth_cache_opt, 0, ""},
@@ -1082,6 +1089,7 @@ main(int argc, const char **argv)
   apr_array_header_t *config_options;
   svn_boolean_t non_interactive = FALSE;
   svn_boolean_t force_interactive = FALSE;
+  svn_boolean_t trust_server_cert = FALSE;
   svn_boolean_t no_auth_cache = FALSE;
   svn_revnum_t base_revision = SVN_INVALID_REVNUM;
   apr_array_header_t *action_args;
@@ -1163,6 +1171,9 @@ main(int argc, const char **argv)
         case force_interactive_opt:
           force_interactive = TRUE;
           break;
+        case trust_server_cert_opt:
+          trust_server_cert = TRUE;
+          break;
         case config_dir_opt:
           err = svn_utf_cstring_to_utf8(&config_dir, arg, pool);
           if (err)
@@ -1202,6 +1213,14 @@ main(int argc, const char **argv)
   else
     non_interactive = !svn_cmdline__be_interactive(non_interactive,
                                                    force_interactive);
+
+  if (trust_server_cert && !non_interactive)
+    {
+      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("--trust-server-cert requires "
+                               "--non-interactive"));
+      return svn_cmdline_handle_exit_error(err, pool, "svnmucc: ");
+    }
 
   /* Make sure we have a log message to use. */
   err = sanitize_log_sources(revprops, message, filedata);
@@ -1425,7 +1444,7 @@ main(int argc, const char **argv)
 
   if ((err = execute(actions, anchor, revprops, username, password,
                      config_dir, config_options, non_interactive,
-                     no_auth_cache, base_revision, pool)))
+                     trust_server_cert, no_auth_cache, base_revision, pool)))
     {
       if (err->apr_err == SVN_ERR_AUTHN_FAILED && non_interactive)
         err = svn_error_quick_wrap(err,
