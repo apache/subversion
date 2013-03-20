@@ -950,7 +950,10 @@ usage(apr_pool_t *pool, int exit_val)
       "  -r [--revision] ARG    : use revision ARG as baseline for changes\n"
       "  --with-revprop ARG     : set revision property in the following format:\n"
       "                               NAME[=VALUE]\n"
-      "  -n [--non-interactive] : don't prompt the user about anything\n"
+      "  --non-interactive      : do no interactive prompting (default it to\n"
+      "                           prompt only if standard input is a terminal)\n"
+      "  --force-interactive    : do interactive propmting even if standard\n"
+      "                           input is not a terminal\n"
       "  -X [--extra-args] ARG  : append arguments from file ARG (one per line;\n"
       "                         : use \"-\" to read from standard input)\n"
       "  --config-dir ARG       : use ARG to override the config directory\n"
@@ -1423,7 +1426,14 @@ main(int argc, const char **argv)
   if ((err = execute(actions, anchor, revprops, username, password,
                      config_dir, config_options, non_interactive,
                      no_auth_cache, base_revision, pool)))
-    handle_error(err, pool);
+    {
+      if (err->apr_err == SVN_ERR_AUTHN_FAILED && non_interactive)
+        err = svn_error_quick_wrap(err,
+                                   _("Authentication failed and interactive"
+                                     " prompting is disabled; see the"
+                                     " --force-interactive option"));
+      handle_error(err, pool);
+    }
 
   /* Ensure that stdout is flushed, so the user will see all results. */
   svn_error_clear(svn_cmdline_fflush(stdout));
