@@ -89,7 +89,7 @@
  * comments in ensure_data_insertable().
  *
  * To limit the entry size and management overhead, not the actual item keys
- * but only their MD5 checksums will not be stored. This is reasonably safe
+ * but only their MD5-based hashes will be stored. This is reasonably safe
  * to do since users have only limited control over the full keys, even if
  * these contain folder paths. So, it is very hard to deliberately construct
  * colliding keys. Random checksum collisions can be shown to be extremely
@@ -789,9 +789,12 @@ get_group_index(svn_membuffer_t **cache,
 {
   svn_membuffer_t *segment0 = *cache;
   
-  /* select the cache segment to use. they have all the same group_count */
-  *cache = &segment0[key[0] & (segment0->segment_count -1)];
-  return key[1] % segment0->group_count;
+  /* select the cache segment to use. they have all the same group_count.
+   * Since key may not be well-distributed, pre-fold it to a smaller but
+   * "denser" ranger.  The divisors are primes larger than the largest
+   * counts. */
+  *cache = &segment0[(key[1] % 2809637ull) & (segment0->segment_count - 1)];
+  return (key[0] % 5030895599ull) % segment0->group_count;
 }
 
 /* Reduce the hit count of ENTRY and update the accumulated hit info
@@ -912,6 +915,8 @@ find_entry(svn_membuffer_t *cache,
        */
       if (group->used == GROUP_SIZE)
         {
+          static int count = 0;
+          
           /* every entry gets the same chance of being removed.
            * Otherwise, we free the first entry, fill it and
            * remove it again on the next occasion without considering
@@ -931,6 +936,7 @@ find_entry(svn_membuffer_t *cache,
               let_entry_age(cache, entry);
 
           drop_entry(cache, entry);
+          printf("%d\n", ++count);
         }
 
       /* initialize entry for the new key
@@ -1826,6 +1832,22 @@ membuffer_cache_set_partial(svn_membuffer_t *cache,
  * svn_cache__t instance.
  */
 
+/* Stores the combined key value for the given key.  It will be used by
+ * combine_key() to short-circuit expensive hash calculations.
+ */
+typedef struct last_access_key_t
+{
+  /* result of key combining */
+  entry_key_t combined_key;
+
+  /* length of the key (or APR_HASH_KEY_STRING if not used) */
+  apr_size_t key_len;
+
+  /* the original key.  Only KEY_LEN bytes are valid.  We use uint32 for
+   * better compatibility with pseudo-md5 functions. */
+  apr_uint32_t key[64];
+} last_access_key_t;
+
 /* Internal cache structure (used in svn_cache__t.cache_internal) basically
  * holding the additional parameters needed to call the respective membuffer
  * functions.
@@ -1873,6 +1895,11 @@ typedef struct svn_membuffer_cache_t
    */
   int alloc_counter;
 
+  /* cache for the last key used.
+   * Will be NULL for caches with short fix-sized keys.
+   */
+  last_access_key_t *last_access;
+  
   /* if enabled, this will serialize the access to this instance.
    */
   svn_mutex__t *mutex;
@@ -1890,6 +1917,81 @@ typedef struct svn_membuffer_cache_t
  */
 #define ALLOCATIONS_PER_POOL_CLEAR 10
 
+/* Basically calculate a hash value for KEY of length KEY_LEN, combine it
+ * with the CACHE->PREFIX and write the result in CACHE->COMBINED_KEY.
+ * This could replace combine_key() entirely but we actually use it only
+ * when the quick path failed.
+ */
+static void
+combine_long_key(svn_membuffer_cache_t *cache,
+                 const void *key,
+                 apr_ssize_t key_len)
+{
+  assert(cache->last_access);
+
+  /* handle variable-length keys */
+  if (key_len == APR_HASH_KEY_STRING)
+    key_len = strlen((const char *) key);
+
+  /* same key as the last time? -> short-circuit */
+  if (   key_len == cache->last_access->key_len
+      && memcmp(key, cache->last_access->key, key_len) == 0)
+    {
+      memcpy(cache->combined_key, cache->last_access->combined_key,
+             sizeof(cache->combined_key));
+    }
+  else if (key_len >= 64)
+    {
+      /* relatively long key.  Use the generic, slow hash code for it */
+      apr_md5((unsigned char*)cache->combined_key, key, key_len);
+      cache->combined_key[0] ^= cache->prefix[0];
+      cache->combined_key[1] ^= cache->prefix[1];
+
+      /* is the key short enough to cache the result? */
+      if (key_len <= sizeof(cache->last_access->key))
+        {
+          memcpy(cache->last_access->combined_key, cache->combined_key,
+                 sizeof(cache->combined_key));
+          cache->last_access->key_len = key_len;
+          memcpy(cache->last_access->key, key, key_len);
+        }
+    }
+  else
+    {
+      /* shorter keys use efficient hash code and *do* cache the results */
+      cache->last_access->key_len = key_len;
+      if (key_len < 16)
+        {
+          memset(cache->last_access->key, 0, 16);
+          memcpy(cache->last_access->key, key, key_len);
+
+          svn__pseudo_md5_15((apr_uint32_t *)cache->combined_key,
+                             cache->last_access->key);
+        }
+      else if (key_len < 32)
+        {
+          memset(cache->last_access->key, 0, 32);
+          memcpy(cache->last_access->key, key, key_len);
+
+          svn__pseudo_md5_31((apr_uint32_t *)cache->combined_key,
+                             cache->last_access->key);
+        }
+      else
+        {
+          memset(cache->last_access->key, 0, 64);
+          memcpy(cache->last_access->key, key, key_len);
+
+          svn__pseudo_md5_63((apr_uint32_t *)cache->combined_key,
+                             cache->last_access->key);
+        }
+
+      cache->combined_key[0] ^= cache->prefix[0];
+      cache->combined_key[1] ^= cache->prefix[1];
+
+      memcpy(cache->last_access->combined_key, cache->combined_key,
+             sizeof(cache->combined_key));
+    }
+}
 
 /* Basically calculate a hash value for KEY of length KEY_LEN, combine it
  * with the CACHE->PREFIX and write the result in CACHE->COMBINED_KEY.
@@ -1899,37 +2001,43 @@ combine_key(svn_membuffer_cache_t *cache,
             const void *key,
             apr_ssize_t key_len)
 {
-  if (key_len == APR_HASH_KEY_STRING)
-    key_len = strlen((const char *) key);
+  /* copy of *key, padded with 0 */
+  apr_uint64_t data[2];
 
-  if (key_len < 16)
+  /* short, fixed-size keys are the most common case */
+  if (key_len == 16)
     {
-      apr_uint32_t data[4] = { 0 };
-      memcpy(data, key, key_len);
-
-      svn__pseudo_md5_15((apr_uint32_t *)cache->combined_key, data);
+      data[0] = ((const apr_uint64_t *)key)[0];
+      data[1] = ((const apr_uint64_t *)key)[1];
     }
-  else if (key_len < 32)
+  else if (key_len == 8)
     {
-      apr_uint32_t data[8] = { 0 };
-      memcpy(data, key, key_len);
-
-      svn__pseudo_md5_31((apr_uint32_t *)cache->combined_key, data);
+      data[0] = ((const apr_uint64_t *)key)[0];
+      data[1] = 0;
     }
-  else if (key_len < 64)
+  else if (key_len != APR_HASH_KEY_STRING && key_len < 16)
     {
-      apr_uint32_t data[16] = { 0 };
+      data[0] = 0;
+      data[1] = 0;
       memcpy(data, key, key_len);
-
-      svn__pseudo_md5_63((apr_uint32_t *)cache->combined_key, data);
     }
   else
     {
-      apr_md5((unsigned char*)cache->combined_key, key, key_len);
+      /* longer or variably sized keys */
+      combine_long_key(cache, key, key_len);
+      return;
     }
 
-  cache->combined_key[0] ^= cache->prefix[0];
-  cache->combined_key[1] ^= cache->prefix[1];
+  /* scramble key DATA.  All of this must be reversible to prevent key
+   * collisions.  So, we limit ourselves to xor and permutations. */
+  data[1] = (data[1] << 27) | (data[1] >> 37);
+  data[1] ^= data[0] & 0xffff;
+  data[0] ^= data[1] & 0xffffffffffff0000ull;
+  data[0] = (data[0] << 43) | (data[0] >> 21);
+
+  /* combine with this cache's namespace */
+  cache->combined_key[0] = data[0] ^ cache->prefix[0];
+  cache->combined_key[1] = data[1] ^ cache->prefix[1];
 }
 
 /* Implement svn_cache__vtable_t.get (not thread-safe)
@@ -2359,6 +2467,18 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
                        strlen(prefix),
                        pool));
   memcpy(cache->prefix, checksum->digest, sizeof(cache->prefix));
+
+  /* fix-length keys of 16 bytes or under don't need a buffer because we
+   * can use a very fast key combining algorithm. */
+  if ((klen == APR_HASH_KEY_STRING) ||  klen > sizeof(entry_key_t))
+    {
+      cache->last_access = apr_pcalloc(pool, sizeof(*cache->last_access));
+      cache->last_access->key_len = APR_HASH_KEY_STRING;
+    }
+  else
+    {
+      cache->last_access = NULL;
+    }
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
 
