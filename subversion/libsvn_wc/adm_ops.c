@@ -496,7 +496,7 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
     }
 
   /* Make sure nothing happens if this function is called again.  */
-  SVN_ERR(svn_hash__clear(queue->queue, iterpool));
+  apr_hash_clear(queue->queue);
 
   /* Ok; everything is committed now. Now we can start calling callbacks */
 

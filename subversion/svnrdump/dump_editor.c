@@ -324,8 +324,8 @@ do_dump_props(svn_stringbuf_t **propstring,
       SVN_ERR(svn_stream_puts(stream, "\n\n"));
 
       /* Cleanup so that data is never dumped twice. */
-      SVN_ERR(svn_hash__clear(props, scratch_pool));
-      SVN_ERR(svn_hash__clear(deleted_props, scratch_pool));
+      apr_hash_clear(props);
+      apr_hash_clear(deleted_props);
       if (trigger_var)
         *trigger_var = FALSE;
     }
@@ -800,7 +800,7 @@ close_directory(void *dir_baton,
     }
 
   /* ### should be unnecessary */
-  SVN_ERR(svn_hash__clear(db->deleted_entries, pool));
+  apr_hash_clear(db->deleted_entries);
 
   return SVN_NO_ERROR;
 }
@@ -1071,8 +1071,8 @@ close_file(void *file_baton,
 
       /* Cleanup */
       fb->dump_props = FALSE;
-      SVN_ERR(svn_hash__clear(fb->props, fb->pool));
-      SVN_ERR(svn_hash__clear(fb->deleted_props, fb->pool));
+      apr_hash_clear(fb->props);
+      apr_hash_clear(fb->deleted_props);
     }
 
   /* Dump the text */
