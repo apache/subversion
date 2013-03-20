@@ -6505,7 +6505,7 @@ svn_client_uuid_from_path(const char **uuid,
  * If @a wri_abspath is not NULL, use the working copy identified by @a
  * wri_abspath to potentially avoid transferring unneeded data.
  *
- * @note This function is similar to svn_ra_open3(), but the caller avoids
+ * @note This function is similar to svn_ra_open4(), but the caller avoids
  * having to providing its own callback functions.
  * @since New in 1.8.
  */
