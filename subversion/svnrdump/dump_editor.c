@@ -31,6 +31,7 @@
 #include "svn_dirent_uri.h"
 
 #include "private/svn_subr_private.h"
+#include "private/svn_dep_compat.h"
 #include "private/svn_editor.h"
 
 #include "svnrdump.h"
