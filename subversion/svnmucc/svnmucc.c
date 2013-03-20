@@ -1049,6 +1049,7 @@ main(int argc, const char **argv)
     no_auth_cache_opt,
     version_opt,
     with_revprop_opt,
+    non_interactive_opt,
     force_interactive_opt
   };
   static const apr_getopt_option_t options[] = {
@@ -1062,7 +1063,7 @@ main(int argc, const char **argv)
     {"extra-args", 'X', 1, ""},
     {"help", 'h', 0, ""},
     {NULL, '?', 0, ""},
-    {"non-interactive", 'n', 0, ""},
+    {"non-interactive", non_interactive_opt, 0, ""},
     {"force-interactive", force_interactive_opt, 0, ""},
     {"config-dir", config_dir_opt, 1, ""},
     {"config-option",  config_inline_opt, 1, ""},
@@ -1153,7 +1154,7 @@ main(int argc, const char **argv)
         case 'X':
           extra_args_file = apr_pstrdup(pool, arg);
           break;
-        case 'n':
+        case non_interactive_opt:
           non_interactive = TRUE;
           break;
         case force_interactive_opt:
