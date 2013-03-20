@@ -9559,7 +9559,6 @@ resolve_conflicts(svn_boolean_t *resolved,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_index_t *hi;
 
-  SVN_DBG(("resolving any conflicts: %lx", (long)merge_b->conflicted_paths));
   *resolved = TRUE;
   for (hi = (merge_b->conflicted_paths
              ? apr_hash_first(scratch_pool, merge_b->conflicted_paths) : NULL);
@@ -9568,7 +9567,6 @@ resolve_conflicts(svn_boolean_t *resolved,
       const char *local_abspath = svn__apr_hash_index_key(hi);
       svn_boolean_t text_c, prop_c, tree_c;
 
-      SVN_DBG(("resolving conflicts on path '%s'", local_abspath));
       svn_pool_clear(iterpool);
       SVN_ERR(svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,
                                         svn_depth_empty,
