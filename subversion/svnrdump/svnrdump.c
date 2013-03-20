@@ -696,9 +696,9 @@ dump_cmd(apr_getopt_t *os,
   svn_ra_session_t *extra_ra_session;
   const char *repos_root;
 
-  SVN_ERR(svn_client_open_ra_session(&extra_ra_session,
-                                     opt_baton->url,
-                                     opt_baton->ctx, pool));
+  SVN_ERR(svn_client_open_ra_session2(&extra_ra_session,
+                                      opt_baton->url, NULL,
+                                      opt_baton->ctx, pool, pool));
   SVN_ERR(svn_ra_get_repos_root2(extra_ra_session, &repos_root, pool));
   SVN_ERR(svn_ra_reparent(extra_ra_session, repos_root, pool));
 
@@ -717,8 +717,8 @@ load_cmd(apr_getopt_t *os,
   opt_baton_t *opt_baton = baton;
   svn_ra_session_t *aux_session;
 
-  SVN_ERR(svn_client_open_ra_session(&aux_session, opt_baton->url,
-                                     opt_baton->ctx, pool));
+  SVN_ERR(svn_client_open_ra_session2(&aux_session, opt_baton->url, NULL,
+                                      opt_baton->ctx, pool, pool));
   return load_revisions(opt_baton->session, aux_session, opt_baton->url,
                         opt_baton->quiet, pool);
 }
@@ -1141,9 +1141,9 @@ main(int argc, const char **argv)
                                    config_options,
                                    pool));
 
-  SVNRDUMP_ERR(svn_client_open_ra_session(&(opt_baton->session),
-                                          opt_baton->url,
-                                          opt_baton->ctx, pool));
+  SVNRDUMP_ERR(svn_client_open_ra_session2(&(opt_baton->session),
+                                           opt_baton->url, NULL,
+                                           opt_baton->ctx, pool, pool));
 
   /* Have sane opt_baton->start_revision and end_revision defaults if
      unspecified.  */
