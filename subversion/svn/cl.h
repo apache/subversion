@@ -180,17 +180,17 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t no_auth_cache;   /* do not cache authentication information */
   struct
     {
-  const char *diff_cmd;          /* the external diff command to use */
-  svn_boolean_t internal_diff;    /* override diff_cmd in config file */
-  svn_boolean_t no_diff_added; /* do not show diffs for deleted files */
-  svn_boolean_t no_diff_deleted; /* do not show diffs for deleted files */
+  const char *diff_cmd;              /* the external diff command to use */
+  svn_boolean_t internal_diff;       /* override diff_cmd in config file */
+  svn_boolean_t no_diff_added;       /* do not show diffs for deleted files */
+  svn_boolean_t no_diff_deleted;     /* do not show diffs for deleted files */
   svn_boolean_t show_copies_as_adds; /* do not diff copies with their source */
-  svn_boolean_t notice_ancestry; /* notice ancestry for diff-y operations */
-  svn_boolean_t summarize;       /* create a summary of a diff */
+  svn_boolean_t notice_ancestry;     /* notice ancestry for diff-y operations */
+  svn_boolean_t summarize;           /* create a summary of a diff */
   svn_boolean_t use_git_diff_format; /* Use git's extended diff format */
-  svn_boolean_t ignore_properties; /* ignore properties */
-  svn_boolean_t properties_only;   /* Show properties only */
-  svn_boolean_t patch_compatible; /* Output compatible with GNU patch */
+  svn_boolean_t ignore_properties;   /* ignore properties */
+  svn_boolean_t properties_only;     /* Show properties only */
+  svn_boolean_t patch_compatible;    /* Output compatible with GNU patch */
     } diff;
   svn_boolean_t ignore_ancestry; /* ignore ancestry for merge-y operations */
   svn_boolean_t ignore_externals;/* ignore externals definitions */
@@ -219,21 +219,21 @@ typedef struct svn_cl__opt_state_t
   apr_hash_t *revprop_table;     /* table of revision properties to get/set */
   svn_boolean_t parents;         /* create intermediate directories */
   svn_boolean_t use_merge_history; /* use/display extra merge information */
-  svn_cl__accept_t accept_which; /* how to handle conflicts */
-  svn_cl__show_revs_t show_revs; /* mergeinfo flavor */
-  svn_depth_t set_depth;         /* new sticky ambient depth value */
-  svn_boolean_t reintegrate;     /* use "reintegrate" merge-source heuristic */
+  svn_cl__accept_t accept_which;   /* how to handle conflicts */
+  svn_cl__show_revs_t show_revs;   /* mergeinfo flavor */
+  svn_depth_t set_depth;           /* new sticky ambient depth value */
+  svn_boolean_t reintegrate;      /* use "reintegrate" merge-source heuristic */
   svn_boolean_t trust_server_cert; /* trust server SSL certs that would
                                       otherwise be rejected as "untrusted" */
   int strip; /* number of leading path components to strip */
-  svn_boolean_t ignore_keywords;  /* do not expand keywords */
-  svn_boolean_t reverse_diff;     /* reverse a diff (e.g. when patching) */
+  svn_boolean_t ignore_keywords;   /* do not expand keywords */
+  svn_boolean_t reverse_diff;      /* reverse a diff (e.g. when patching) */
   svn_boolean_t ignore_whitespace; /* don't account for whitespace when
                                       patching */
-  svn_boolean_t show_diff;        /* produce diff output (maps to --diff) */
-  svn_boolean_t allow_mixed_rev; /* Allow operation on mixed-revision WC */
+  svn_boolean_t show_diff;         /* produce diff output (maps to --diff) */
+  svn_boolean_t allow_mixed_rev;   /* Allow operation on mixed-revision WC */
   svn_boolean_t include_externals; /* Recurses (in)to file & dir externals */
-  svn_boolean_t show_inherited_props; /* get inherited properties */
+  svn_boolean_t show_inherited_props;  /* get inherited properties */
   apr_array_header_t* search_patterns; /* pattern arguments for --search */
 } svn_cl__opt_state_t;
 
