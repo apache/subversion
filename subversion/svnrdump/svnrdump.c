@@ -1141,21 +1141,32 @@ main(int argc, const char **argv)
                                    config_options,
                                    pool));
 
-  SVNRDUMP_ERR(svn_client_open_ra_session2(&(opt_baton->session),
-                                           opt_baton->url, NULL,
-                                           opt_baton->ctx, pool, pool));
+  err = svn_client_open_ra_session2(&(opt_baton->session),
+                                    opt_baton->url, NULL,
+                                    opt_baton->ctx, pool, pool);
 
   /* Have sane opt_baton->start_revision and end_revision defaults if
      unspecified.  */
-  SVNRDUMP_ERR(svn_ra_get_latest_revnum(opt_baton->session,
-                                        &latest_revision, pool));
+  if (!err)
+    err = svn_ra_get_latest_revnum(opt_baton->session, &latest_revision, pool);
 
   /* Make sure any provided revisions make sense. */
-  SVNRDUMP_ERR(validate_and_resolve_revisions(opt_baton,
-                                              latest_revision, pool));
+  if (!err)
+    err = validate_and_resolve_revisions(opt_baton, latest_revision, pool);
 
   /* Dispatch the subcommand */
-  SVNRDUMP_ERR((*subcommand->cmd_func)(os, opt_baton, pool));
+  if (!err)
+    err = (*subcommand->cmd_func)(os, opt_baton, pool);
+
+  if (err && err->apr_err == SVN_ERR_AUTHN_FAILED && non_interactive)
+    {
+      err = svn_error_quick_wrap(err,
+                                 _("Authentication failed and interactive"
+                                   " prompting is disabled; see the"
+                                   " --force-interactive option"));
+    }
+
+  SVNRDUMP_ERR(err);
 
   svn_pool_destroy(pool);
 
