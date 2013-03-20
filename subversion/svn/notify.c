@@ -38,6 +38,7 @@
 #include "svn_sorts.h"
 #include "svn_hash.h"
 #include "cl.h"
+#include "private/svn_subr_private.h"
 
 #include "svn_private_config.h"
 
@@ -77,9 +78,9 @@ svn_cl__notifier_reset_conflict_stats(void *baton)
 {
   struct notify_baton *nb = baton;
 
-  apr_hash_clear(nb->text_conflicts);
-  apr_hash_clear(nb->prop_conflicts);
-  apr_hash_clear(nb->tree_conflicts);
+  SVN_ERR(svn_hash__clear(nb->text_conflicts, nb->stats_pool));
+  SVN_ERR(svn_hash__clear(nb->prop_conflicts, nb->stats_pool));
+  SVN_ERR(svn_hash__clear(nb->tree_conflicts, nb->stats_pool));
   nb->text_conflicts_resolved = 0;
   nb->prop_conflicts_resolved = 0;
   nb->tree_conflicts_resolved = 0;
