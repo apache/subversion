@@ -203,9 +203,10 @@ pre_15_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
             }
 
           if (rb->ra_session == NULL)
-            SVN_ERR(svn_client_open_ra_session(&rb->ra_session,
-                                                rb->ra_session_url,
-                                               rb->ctx, rb->ra_session_pool));
+            SVN_ERR(svn_client_open_ra_session2(&rb->ra_session,
+                                                rb->ra_session_url, NULL,
+                                                rb->ctx, rb->ra_session_pool,
+                                                pool));
 
           SVN_ERR(svn_ra_rev_prop(rb->ra_session, log_entry->revision,
                                   name, &value, pool));
@@ -231,9 +232,10 @@ pre_15_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
   else
     {
       if (rb->ra_session == NULL)
-        SVN_ERR(svn_client_open_ra_session(&rb->ra_session,
-                                           rb->ra_session_url,
-                                           rb->ctx, rb->ra_session_pool));
+        SVN_ERR(svn_client_open_ra_session2(&rb->ra_session,
+                                            rb->ra_session_url, NULL,
+                                            rb->ctx, rb->ra_session_pool,
+                                            pool));
 
       SVN_ERR(svn_ra_rev_proplist(rb->ra_session, log_entry->revision,
                                   &log_entry->revprops, pool));
