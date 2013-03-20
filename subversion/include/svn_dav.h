@@ -277,8 +277,19 @@ extern "C" {
  * @name Custom (extension) values for the DAV header.
  * Note that although these share the SVN_DAV_PROP_NS_DAV namespace
  * prefix, they are not properties; they are header values.
- *
- * @{ **/
+ * @{
+ */
+
+/* ##################################################################
+ * 
+ *    WARNING:  At least some versions of Microsoft's Web Folders
+ *              WebDAV client implementation are unable to handle
+ *              DAV: headers with values longer than 63 characters,
+ *              so please keep these strings within that limit.
+ * 
+ * ##################################################################
+ */
+
 
 /** Presence of this in a DAV header in an OPTIONS request or response
  * indicates that the transmitter supports @c svn_depth_t.
@@ -372,8 +383,8 @@ extern "C" {
  *
  * @since New in 1.8.
  */
-#define SVN_DAV_NS_DAV_SVN_GET_FILE_REVS_REVERSE\
-            SVN_DAV_PROP_NS_DAV "svn/get-file-revs-reverse"
+#define SVN_DAV_NS_DAV_SVN_REVERSE_FILE_REVS\
+            SVN_DAV_PROP_NS_DAV "svn/reverse-file-revs"
 
 
 /** @} */
