@@ -11607,7 +11607,7 @@ merge_reintegrate_locked(conflict_report_t **conflict_report,
   svn_client__pathrev_t *source_loc;
   merge_source_t *source;
   svn_client__pathrev_t *yc_ancestor;
-  svn_boolean_t use_sleep;
+  svn_boolean_t use_sleep = FALSE;
   svn_error_t *err;
 
   SVN_ERR(open_reintegrate_source_and_target(
