@@ -1437,7 +1437,7 @@ svn_repos_verify_fs2(svn_repos_t *repos,
       verify_notify_baton->notify_func = notify_func;
       verify_notify_baton->notify_baton = notify_baton;
       verify_notify_baton->notify
-        = svn_repos_notify_create(svn_repos_notify_verify_struc_rev, pool);
+        = svn_repos_notify_create(svn_repos_notify_verify_structure_rev, pool);
     }
 
   /* Verify global metadata and backend-specific data first. */
