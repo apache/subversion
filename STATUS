@@ -284,7 +284,7 @@ Candidate changes:
    Justification:
      It's a SEGV.
    Votes:
-     +1: philip
+     +1: philip, breser
 
  * ^/subversion/branches/1.7.x-issue4257
    Fix issue #4257 ("neon get_dir leads to bogus NODES rows").
