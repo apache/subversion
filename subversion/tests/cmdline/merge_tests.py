@@ -16781,6 +16781,8 @@ def merge_adds_subtree_with_mergeinfo(sbox):
   "merge adds subtree with mergeinfo"
 
   sbox.build()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
   wc_dir = sbox.wc_dir
   wc_disk, wc_status = set_up_branch(sbox, False, 2)
 
@@ -16909,6 +16911,8 @@ def reverse_merge_adds_subtree(sbox):
   "reverse merge adds subtree"
 
   sbox.build()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
   wc_dir = sbox.wc_dir
   wc_disk, wc_status = set_up_branch(sbox)
 
@@ -17044,6 +17048,8 @@ def merged_deletion_causes_tree_conflict(sbox):
   "merged deletion causes spurious tree conflict"
 
   sbox.build()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
   wc_dir = sbox.wc_dir
 
   A_path        = sbox.ospath('A')
@@ -17116,6 +17122,8 @@ def record_only_merge_adds_new_subtree_mergeinfo(sbox):
   "record only merge adds new subtree mergeinfo"
 
   sbox.build()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
   wc_dir = sbox.wc_dir
   wc_disk, wc_status = set_up_branch(sbox)
 
@@ -17411,6 +17419,8 @@ def svnmucc_abuse_1(sbox):
   "svnmucc: merge a replacement"
 
   sbox.build()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
   wc_dir = sbox.wc_dir
 
   ## Using A/ as our trunk, since one cannot replace the root.
@@ -17465,6 +17475,8 @@ def merge_source_with_replacement(sbox):
   "replacement in merge source not notified correctly"
 
   sbox.build()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
   wc_dir = sbox.wc_dir
 
   # Some paths we'll care about.
@@ -17565,6 +17577,8 @@ def reverse_merge_with_rename(sbox):
   "reverse merge applies revs in reverse order"
 
   sbox.build()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
   wc_dir = sbox.wc_dir
 
   # Some paths we'll care about.
@@ -17647,14 +17661,16 @@ def reverse_merge_with_rename(sbox):
 def merge_adds_then_deletes_subtree(sbox):
   "merge adds then deletes subtree"
 
+  sbox.build()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+  wc_dir = sbox.wc_dir
+
   # Some paths we'll care about.
   A_path         = sbox.ospath('A')
   nu_path        = sbox.ospath('A/C/nu')
   C_branch_path  = sbox.ospath('branch/C')
   nu_branch_path = sbox.ospath('branch/C/nu')
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
 
   # Make a branch.
   svntest.actions.run_and_verify_svn(None, None, [], 'copy',
@@ -17717,6 +17733,11 @@ def merge_adds_then_deletes_subtree(sbox):
 def merge_with_added_subtrees_with_mergeinfo(sbox):
   "merge with added subtrees with mergeinfo"
 
+  sbox.build()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+  wc_dir = sbox.wc_dir
+
   # Some paths we'll care about.
   A_path      = sbox.ospath('A')
   Y_path      = sbox.ospath('A/C/X/Y')
@@ -17726,9 +17747,6 @@ def merge_with_added_subtrees_with_mergeinfo(sbox):
   Y_COPY_path = sbox.ospath('A_COPY/C/X/Y')
   W_COPY_path = sbox.ospath('A_COPY/C/X/Y/Z/W')
   A_COPY2_path = sbox.ospath('A_COPY_2')
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
 
   # Make two branches of ^/A and then make a few edits under A in r4-7:
   wc_disk, wc_status = set_up_branch(sbox, nbr_of_branches=2)
@@ -17889,15 +17907,17 @@ def merge_with_added_subtrees_with_mergeinfo(sbox):
 def merge_with_externals_with_mergeinfo(sbox):
   "merge with externals with mergeinfo"
 
+  sbox.build()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+  wc_dir = sbox.wc_dir
+
   # Some paths we'll care about.
   A_path = sbox.ospath('A')
   A_COPY_path = sbox.ospath('A_COPY')
   file_external_path = sbox.ospath('A/file-external')
   mu_COPY_path = sbox.ospath('A_COPY/mu')
   mu_path = sbox.ospath('A/mu')
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
 
   # Make a branch of ^/A and then make a few edits under A in r3-6:
   wc_disk, wc_status = set_up_branch(sbox)
@@ -18070,6 +18090,8 @@ def merge_target_selection(sbox):
   "merge target selection handling"
 
   sbox.build()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
 
   # r2
   sbox.simple_mkdir('dir')
@@ -18165,6 +18187,8 @@ def merge_properties_on_adds(sbox):
   "merged directory properties are added"
 
   sbox.build()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
 
   sbox.simple_copy('A/D/G', 'G')
 
@@ -18406,6 +18430,8 @@ def conflict_aborted_mergeinfo_described_partial_merge(sbox):
   "conflicted split merge can be repeated"
 
   sbox.build()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
 
   trunk = 'A'
   branch = 'A2'
@@ -18596,6 +18622,8 @@ def multiple_editor_drive_merge_notifications(sbox):
   "each editor drive gets its own notification"
 
   sbox.build()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
 
   iota_branch_path = sbox.ospath('iota-copy')
   C_branch_path = sbox.ospath('branch')
@@ -18684,6 +18712,8 @@ def multiple_editor_drive_merge_notifications(sbox):
 def single_editor_drive_merge_notifications(sbox):
   "single editor drive merge notifications"
   sbox.build()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
   wc_dir = sbox.wc_dir
 
   A_copy_path = sbox.ospath('A_COPY')
@@ -18777,6 +18807,8 @@ def conflicted_split_merge_with_resolve(sbox):
   "conflicted split merge with resolve"
 
   sbox.build()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
 
   trunk = 'A'
   branch = 'A2'
