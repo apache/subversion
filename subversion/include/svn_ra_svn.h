@@ -301,14 +301,17 @@ svn_boolean_t
 svn_ra_svn_has_capability(svn_ra_svn_conn_t *conn,
                           const char *capability);
 
-/** Return the data compression level to use for network transmissions
+/** Return the data compression level to use for network transmissions.
  *
  * @since New in 1.7.
  */
 int
 svn_ra_svn_compression_level(svn_ra_svn_conn_t *conn);
 
-/** Return the zero-copy data block limit to use for network transmissions
+/** Return the zero-copy data block limit to use for network
+ * transmissions.
+ *
+ * @see http://en.wikipedia.org/wiki/Zero-copy
  *
  * @since New in 1.8.
  */
