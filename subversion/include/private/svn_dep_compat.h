@@ -62,12 +62,16 @@ extern "C" {
 #define apr_array_clear(arr)         (arr)->nelts = 0
 #endif
 
+#if !APR_VERSION_AT_LEAST(1,3,0)
+/* Equivalent to the apr_hash_clear() function in APR >= 1.3.0.  Used to
+ * implement the 'apr_hash_clear' macro if the version of APR that
+ * we build against does not provide the apr_hash_clear() function. */
+void svn_hash__clear(struct apr_hash_t *ht);
+
 /**
  * If we don't have a recent enough APR, emulate the behavior of the
  * apr_hash_clear() API.
  */
-void svn_hash__clear(struct apr_hash_t *ht);
-#if !APR_VERSION_AT_LEAST(1,3,0)
 #define apr_hash_clear(ht)           svn_hash__clear(ht)
 #endif
 
