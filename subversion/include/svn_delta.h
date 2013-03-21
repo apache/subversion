@@ -1120,7 +1120,15 @@ svn_delta_editor_t *
 svn_delta_default_editor(apr_pool_t *pool);
 
 /** Callback to retrieve a node's entire set of properties.  This is
- * needed by the various editor shims in order to effect backward compat.
+ * needed by the various editor shims in order to effect backwards
+ * compatibility.
+ *
+ * Implementations should set @a *props to the hash of properties
+ * associated with @a path in @a base_revision, allocating that hash
+ * and its contents in @a result_pool, and should use @a scratch_pool
+ * for temporary allocations.
+ *
+ * @a baton is an implementation-specific closure.
  *
  * @since New in 1.8.
  */
@@ -1133,8 +1141,13 @@ typedef svn_error_t *(*svn_delta_fetch_props_func_t)(
   apr_pool_t *scratch_pool
   );
 
-/** Callback to retrieve a node's kind.  This is needed by the various editor
- * shims in order to effect backward compat.
+/** Callback to retrieve a node's kind.  This is needed by the various
+ * editor shims in order to effect backwards compatibility.
+ *
+ * Implementations should set @a *kind to the node kind of @a path in
+ * @a base_revision, using @a scratch_pool for temporary allocations.
+ *
+ * @a baton is an implementation-specific closure.
  *
  * @since New in 1.8.
  */
@@ -1146,9 +1159,15 @@ typedef svn_error_t *(*svn_delta_fetch_kind_func_t)(
   apr_pool_t *scratch_pool
   );
 
-/** Callback to fetch the FILENAME of a file to use as the delta base for
- * PATH.  The file should last at least as long as RESULT_POOL.  If the base
- * stream is empty, return NULL through FILENAME.
+/** Callback to fetch the name of a file to use as a delta base.
+ *
+ * Implementations should set @a *filename to the name of a file
+ * suitable for use as a delta base for @a path in @a base_revision
+ * (allocating @a *filename from @a result_pool), or to @c NULL if the
+ * base stream is empty.  @a scratch_pool is provided for temporary
+ * allocations.
+ *
+ * @a baton is an implementation-specific closure.
  *
  * @since New in 1.8.
  */
@@ -1161,9 +1180,9 @@ typedef svn_error_t *(*svn_delta_fetch_base_func_t)(
   apr_pool_t *scratch_pool
   );
 
-/** Collection of callbacks used for the shim code.  To enable this struct
- * to grow, always use svn_delta_shim_callbacks_default()
- * to allocate new instances of it.
+/** Collection of callbacks used for the shim code.  This structure
+ * may grow additional fields in the future.  Therefore, always use
+ * svn_delta_shim_callbacks_default() to allocate new instances of it.
  *
  * @since New in 1.8.
  */
