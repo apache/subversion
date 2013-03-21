@@ -765,7 +765,7 @@ repos_notify_handler(void *baton,
                                         notify->revision));
       return;
 
-    case  svn_repos_notify_verify_struc_rev:
+    case  svn_repos_notify_verify_structure_rev:
       if (notify->revision == SVN_INVALID_REVNUM)
         svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
                                 _("* Verifying repository metadata ...\n")));
