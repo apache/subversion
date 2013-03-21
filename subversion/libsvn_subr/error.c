@@ -30,6 +30,9 @@
 
 #include <zlib.h>
 
+#ifndef SVN_ERR__TRACING
+#define SVN_ERR__TRACING
+#endif
 #include "svn_cmdline.h"
 #include "svn_error.h"
 #include "svn_pools.h"
