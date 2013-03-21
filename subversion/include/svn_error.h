@@ -210,7 +210,7 @@ void
 svn_error_clear(svn_error_t *error);
 
 
-#if defined(SVN_DEBUG)
+#if defined(SVN_ERR__TRACING)
 /** Set the error location for debug mode. */
 void
 svn_error__locate(const char *file,
