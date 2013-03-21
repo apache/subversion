@@ -457,7 +457,7 @@ svn_cstring_match_list(const char *str, const apr_array_header_t *list);
  * if no token is left.  Modifies @a str such that the next call will return
  * the next token.
  *
- * Note that the content of @a *str may be modified by this function.
+ * @note The content of @a *str may be modified by this function.
  *
  * @since New in 1.8.
  */
