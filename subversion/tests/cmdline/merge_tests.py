@@ -18824,6 +18824,7 @@ def conflicted_split_merge_with_resolve(sbox):
   sbox.simple_commit()
 
   # r3: branch
+  sbox.simple_update()
   sbox.simple_copy(trunk, branch)
   sbox.simple_commit()
 
