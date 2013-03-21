@@ -666,19 +666,25 @@ svn_prop_name_is_valid(const char *prop_name);
  */
 
 /** The prefix used for all (ephemeral) transaction properties.
- * @since New in 1.8. */
+ *
+ * @since New in 1.8.
+ */
 #define SVN_PROP_TXN_PREFIX  SVN_PROP_PREFIX "txn-"
 
 /** Identifies the client version compability level.  For clients
  * compiled against Subversion libraries, this is @c SVN_VER_NUMBER.
  * Third-party implementations are advised to use similar formatting
  * for values of this property.
- * @since New in 1.8. */
+ *
+ * @since New in 1.8.
+ */
 #define SVN_PROP_TXN_CLIENT_COMPAT_VERSION \
             SVN_PROP_TXN_PREFIX "client-compat-version"
     
 /** Identifies the client's user agent string, if any.
- * @since New in 1.8. */
+ *
+ * @since New in 1.8.
+ */
 #define SVN_PROP_TXN_USER_AGENT \
             SVN_PROP_TXN_PREFIX "user-agent"
 
@@ -689,7 +695,9 @@ svn_prop_name_is_valid(const char *prop_name);
  * to new properties named @c SVN_PROP_REVISION_PREFIX + "something",
  * allowing that information to survive the commit-time removal of
  * ephemeral transaction properties.
- * @since New in 1.8. */
+ *
+ * @since New in 1.8.
+ */
 #define SVN_PROP_REVISION_PREFIX  SVN_PROP_PREFIX "revision-"
 
 
