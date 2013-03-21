@@ -28,7 +28,9 @@
 #include "svn_repos.h"
 #include "svn_utf.h"
 #include "svn_path.h"
+
 #include "private/svn_fspath.h"
+#include "private/svn_cmdline_private.h"
 
 
 /*** Option Processing. ***/

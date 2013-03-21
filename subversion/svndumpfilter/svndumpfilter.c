@@ -44,6 +44,7 @@
 #include "svn_version.h"
 
 #include "private/svn_mergeinfo_private.h"
+#include "private/svn_cmdline_private.h"
 
 #ifdef _WIN32
 typedef apr_status_t (__stdcall *open_fn_t)(apr_file_t **, apr_pool_t *);
