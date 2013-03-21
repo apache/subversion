@@ -66,8 +66,8 @@ extern "C" {
  * If we don't have a recent enough APR, emulate the behavior of the
  * apr_hash_clear() API.
  */
-#if !APR_VERSION_AT_LEAST(1,3,0)
 void svn_hash__clear(struct apr_hash_t *ht);
+#if !APR_VERSION_AT_LEAST(1,3,0)
 #define apr_hash_clear(ht)           svn_hash__clear(ht)
 #endif
 
