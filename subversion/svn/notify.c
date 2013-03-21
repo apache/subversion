@@ -107,35 +107,32 @@ svn_cl__notifier_print_conflict_stats(void *baton, apr_pool_t *scratch_pool)
     SVN_ERR(svn_cmdline_printf(scratch_pool,
                                _("Summary of conflicts:\n")));
 
-  if (n_text > 0 || n_text_r > 0)
+  if (n_text_r == 0 && n_prop_r == 0 && n_tree_r == 0)
     {
-      if (n_text_r == 0)
+      if (n_text > 0)
         SVN_ERR(svn_cmdline_printf(scratch_pool,
           _("  Text conflicts: %d\n"),
           n_text));
-      else
-        SVN_ERR(svn_cmdline_printf(scratch_pool,
-          _("  Text conflicts: %d remaining (and %d already resolved)\n"),
-          n_text, n_text_r));
-    }
-  if (n_prop > 0 || n_prop_r > 0)
-    {
-      if (n_prop_r == 0)
+      if (n_prop > 0)
         SVN_ERR(svn_cmdline_printf(scratch_pool,
           _("  Property conflicts: %d\n"),
           n_prop));
-      else
-        SVN_ERR(svn_cmdline_printf(scratch_pool,
-          _("  Property conflicts: %d remaining (and %d already resolved)\n"),
-          n_prop, n_prop_r));
-    }
-  if (n_tree > 0 || n_tree_r > 0)
-    {
-      if (n_tree_r == 0)
+      if (n_tree > 0)
         SVN_ERR(svn_cmdline_printf(scratch_pool,
           _("  Tree conflicts: %d\n"),
           n_tree));
-      else
+    }
+  else
+    {
+      if (n_text > 0 || n_text_r > 0)
+        SVN_ERR(svn_cmdline_printf(scratch_pool,
+          _("  Text conflicts: %d remaining (and %d already resolved)\n"),
+          n_text, n_text_r));
+      if (n_prop > 0 || n_prop_r > 0)
+        SVN_ERR(svn_cmdline_printf(scratch_pool,
+          _("  Property conflicts: %d remaining (and %d already resolved)\n"),
+          n_prop, n_prop_r));
+      if (n_tree > 0 || n_tree_r > 0)
         SVN_ERR(svn_cmdline_printf(scratch_pool,
           _("  Tree conflicts: %d remaining (and %d already resolved)\n"),
           n_tree, n_tree_r));
