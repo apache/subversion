@@ -7400,6 +7400,26 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
                                              ctx, scratch_pool,
                                              iterpool));
           remaining_ranges = merge_target->remaining_ranges;
+
+          /* We are honoring mergeinfo and this is not a simple record only
+             merge which blindly records mergeinfo describing the merge of
+             SOURCE->LOC1->URL@SOURCE->LOC1->REV through
+             SOURCE->LOC2->URL@SOURCE->LOC2->REV.  This means that the oldest
+             and youngest revisions merged (as determined above by
+             calculate_remaining_ranges) might differ from those described
+             in SOURCE.  To keep the '--- Merging *' notifications consistent
+             with the '--- Recording mergeinfo *' notifications, we adjust
+             RANGE to account for such changes. */
+          if (remaining_ranges->nelts)
+            {
+              svn_merge_range_t *adj_start_range =
+                APR_ARRAY_IDX(remaining_ranges, 0, svn_merge_range_t *);
+              svn_merge_range_t *adj_end_range =
+                APR_ARRAY_IDX(remaining_ranges, remaining_ranges->nelts - 1,
+                              svn_merge_range_t *);
+              range.start = adj_start_range->start;
+              range.end = adj_end_range->end;
+            }
         }
     }
 
