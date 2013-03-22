@@ -110,8 +110,6 @@ typedef struct svn_delta_shim_callbacks_t
 } svn_delta_shim_callbacks_t;
 
 /** Return a collection of default shim functions in @a result_pool.
- *
- * @since New in 1.8.
  */
 svn_delta_shim_callbacks_t *
 svn_delta_shim_callbacks_default(apr_pool_t *result_pool);
