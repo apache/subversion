@@ -38,7 +38,6 @@
 #include "svn_string.h"
 #include "svn_config.h"
 #include "svn_delta.h"
-#include "private/svn_editor.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -224,15 +223,6 @@ typedef enum svn_ra_svn_cmd_t
 
   svn_ra_svn_cmd__last
 } svn_ra_svn_cmd_t;
-
-/**
- * Set the shim callbacks to be used by @a conn to @a shim_callbacks.
- *
- * @note This is a private API, external consumers should not use it.
- */
-svn_error_t *
-svn_ra_svn__set_shim_callbacks(svn_ra_svn_conn_t *conn,
-                               svn_delta_shim_callbacks_t *shim_callbacks);
 
 /** Initialize a connection structure for the given socket or
  * input/output files.
