@@ -38,6 +38,7 @@
 #include "svn_string.h"
 #include "svn_config.h"
 #include "svn_delta.h"
+#include "private/svn_editor.h"
 
 #ifdef __cplusplus
 extern "C" {
