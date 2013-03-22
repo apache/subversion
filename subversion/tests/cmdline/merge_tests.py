@@ -18911,13 +18911,8 @@ def conflicted_split_merge_with_resolve(sbox):
     # repeat the merge at which point the next sub-range(s) can be merged.
     # The mergeinfo on the target then should only reflect that the first
     # sub-range (r3-4) has been merged.
-
-    # ### Bug? The mergeinfo ranges recorded by the merge differ
-    #     slightly for a single-file merge vs. a dir merge.  That's
-    #     incidental to the purpose of this test, so we work around it
-    #     with "target == file and 'X' or 'Y'".
     expect = expected_out_and_err(tgt_ospath,
-                                  target == file and '3-4,5-11' or '3-4,6-11',
+                                  '3-4,6-11',
                                   ['3-4', '6-8,10-11'],
                                   prop_resolved=1, expect_error=False)
     try_merge(target, 4, [], expect, '3-11')
@@ -18925,7 +18920,7 @@ def conflicted_split_merge_with_resolve(sbox):
     # Try a multiple-range merge that raises a conflict in the
     # first sub-range in the first specified range;
     expect = expected_out_and_err(tgt_ospath,
-                                  target == file and '4,5-6,8-10' or '4,6,8-10',
+                                  '4,6,8-10',
                                   ['4', '6', '8,10'],
                                   prop_resolved=1, expect_error=False)
     try_merge(target, 4, ['-c4-6,8-10'], expect, '4-6,8-10')
@@ -18936,7 +18931,7 @@ def conflicted_split_merge_with_resolve(sbox):
     try_merge(target, 6, ['-c4-6,8-10'], expect, '4-6,8-10')
     # first sub-range in the last specified range;
     expect = expected_out_and_err(tgt_ospath,
-                                  target == file and '4-6,8,9-10' or '4-6,8,10',
+                                  '4-6,8,10',
                                   ['4,6', '8', '10'],
                                   prop_resolved=1, expect_error=False)
     try_merge(target, 8, ['-c4-6,8-10'], expect, '4-6,8-10')
@@ -18980,7 +18975,7 @@ def conflicted_split_merge_with_resolve(sbox):
                                   expect_error=False)
     try_merge(target, None, ['-r6:3', '-r10:7'], expect, '7')
     expect = expected_out_and_err(tgt_ospath,
-                                  target == file and '-6,5-4,10-8' or '-6,-4,10-8',
+                                  '-6,-4,10-8',
                                   ['-6', '-4', '-10,-8'],
                                   prop_resolved=1, expect_error=False)
     try_merge(target, 6,  ['-r6:3', '-r10:7'], expect, '7')
@@ -18989,7 +18984,7 @@ def conflicted_split_merge_with_resolve(sbox):
                                   prop_resolved=1, expect_error=False)
     try_merge(target, 4,  ['-r6:3', '-r10:7'], expect, '7')
     expect = expected_out_and_err(tgt_ospath,
-                                  target == file and '6-4,-10,9-8' or '6-4,-10,-8',
+                                  '6-4,-10,-8',
                                   ['-6,-4', '-10', '-8'],
                                   prop_resolved=1, expect_error=False)
     try_merge(target, 10, ['-r6:3', '-r10:7'], expect, '7')
