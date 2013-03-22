@@ -52,6 +52,7 @@
 
 #include "private/svn_log.h"
 #include "private/svn_mergeinfo_private.h"
+#include "private/svn_ra_svn_private.h"
 #include "private/svn_fspath.h"
 
 #ifdef HAVE_UNISTD_H
