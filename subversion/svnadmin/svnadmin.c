@@ -2053,14 +2053,18 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
               return EXIT_ERROR(err);
             }
 
-          /* We can only promise compatibility within the same major line. */
-          if (latest.major != compatible_version->major)
+          /* We can't create repository with a version newer than what
+             the running version of Subversion supports. */
+          if (! svn_version__at_least(&latest,
+                                      compatible_version->major,
+                                      compatible_version->minor,
+                                      compatible_version->patch))
             {
               err = svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                       _("Cannot guarantee compatibility "
-                                        "across major releases "
-                                        "(%s to %s)"),
-                                      SVN_VER_NUM, opt_arg);
+                                        "beyond the current running version "
+                                        "(%s)"),
+                                      SVN_VER_NUM );
               return EXIT_ERROR(err);
             }
 
