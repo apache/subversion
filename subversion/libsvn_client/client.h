@@ -38,6 +38,7 @@
 #include "private/svn_magic.h"
 #include "private/svn_client_private.h"
 #include "private/svn_diff_tree.h"
+#include "private/svn_editor.h"
 
 #ifdef __cplusplus
 extern "C" {
