@@ -238,6 +238,10 @@ svn_version__parse_version_string(svn_version_t **version_p,
                                 err, NULL);
     }
 
+  if (version->major < 0 || version->minor < 0 || version->patch < 0)
+    return svn_error_create(SVN_ERR_MALFORMED_VERSION_STRING,
+                            err, NULL);
+
   *version_p = version;
   return SVN_NO_ERROR;
 }
