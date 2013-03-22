@@ -298,7 +298,7 @@ Candidate changes:
      svn_ra_neon__get_dir(), as this pattern of using full URLs
      was found to be troublesome in issue #4332's research, too.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, breser
 
  * r1458341
    Fix issue 4337, client memory leak in "svn log" for ra_svn.
