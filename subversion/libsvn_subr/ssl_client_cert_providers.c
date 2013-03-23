@@ -29,6 +29,7 @@
 /*** Includes. ***/
 
 #include <apr_pools.h>
+#include "svn_hash.h"
 #include "svn_auth.h"
 #include "svn_error.h"
 #include "svn_config.h"
@@ -48,12 +49,10 @@ ssl_client_cert_file_first_credentials(void **credentials_p,
                                        const char *realmstring,
                                        apr_pool_t *pool)
 {
-  svn_config_t *cfg = apr_hash_get(parameters,
-                                   SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS,
-                                   APR_HASH_KEY_STRING);
-  const char *server_group = apr_hash_get(parameters,
-                                          SVN_AUTH_PARAM_SERVER_GROUP,
-                                          APR_HASH_KEY_STRING);
+  svn_config_t *cfg = svn_hash_gets(parameters,
+                                    SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS);
+  const char *server_group = svn_hash_gets(parameters,
+                                           SVN_AUTH_PARAM_SERVER_GROUP);
   const char *cert_file;
 
   cert_file =
@@ -139,9 +138,8 @@ ssl_client_cert_prompt_first_cred(void **credentials_p,
   ssl_client_cert_prompt_provider_baton_t *pb = provider_baton;
   ssl_client_cert_prompt_iter_baton_t *ib =
     apr_pcalloc(pool, sizeof(*ib));
-  const char *no_auth_cache = apr_hash_get(parameters,
-                                           SVN_AUTH_PARAM_NO_AUTH_CACHE,
-                                           APR_HASH_KEY_STRING);
+  const char *no_auth_cache = svn_hash_gets(parameters,
+                                            SVN_AUTH_PARAM_NO_AUTH_CACHE);
 
   SVN_ERR(pb->prompt_func((svn_auth_cred_ssl_client_cert_t **) credentials_p,
                           pb->prompt_baton, realmstring, ! no_auth_cache,
@@ -165,9 +163,8 @@ ssl_client_cert_prompt_next_cred(void **credentials_p,
                                  apr_pool_t *pool)
 {
   ssl_client_cert_prompt_iter_baton_t *ib = iter_baton;
-  const char *no_auth_cache = apr_hash_get(parameters,
-                                           SVN_AUTH_PARAM_NO_AUTH_CACHE,
-                                           APR_HASH_KEY_STRING);
+  const char *no_auth_cache = svn_hash_gets(parameters,
+                                            SVN_AUTH_PARAM_NO_AUTH_CACHE);
 
   if ((ib->pb->retry_limit >= 0) && (ib->retries >= ib->pb->retry_limit))
     {
