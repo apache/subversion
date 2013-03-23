@@ -891,10 +891,9 @@ svn_wc__conflict_read_prop_conflict(const char **marker_abspath,
 
       for (name = c->children; name; name = name->next)
         {
-          apr_hash_set(*conflicted_prop_names,
-                       apr_pstrmemdup(result_pool, name->data, name->len),
-                       APR_HASH_KEY_STRING,
-                       "");
+          svn_hash_sets(*conflicted_prop_names,
+                        apr_pstrmemdup(result_pool, name->data, name->len),
+                        "");
         }
     }
   c = c->next;
@@ -1217,20 +1216,16 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
             SVN_ERR(prop_conflict_skel_add(
                             prop_data, propname,
                             old_props
-                                    ? apr_hash_get(old_props, propname,
-                                                   APR_HASH_KEY_STRING)
+                                    ? svn_hash_gets(old_props, propname)
                                     : NULL,
                             mine_props
-                                    ? apr_hash_get(mine_props, propname,
-                                                   APR_HASH_KEY_STRING)
+                                    ? svn_hash_gets(mine_props, propname)
                                     : NULL,
                             their_props
-                                    ? apr_hash_get(their_props, propname,
-                                                   APR_HASH_KEY_STRING)
+                                    ? svn_hash_gets(their_props, propname)
                                       : NULL,
                             their_original_props
-                                    ? apr_hash_get(their_original_props, propname,
-                                                   APR_HASH_KEY_STRING)
+                                    ? svn_hash_gets(their_original_props, propname)
                                       : NULL,
                             result_pool, scratch_pool));
           }
@@ -1508,7 +1503,7 @@ generate_propconflict(svn_boolean_t *conflict_remains,
       SVN_ERR(svn_wc__db_read_props(&props, db, local_abspath, scratch_pool,
                                     scratch_pool));
 
-      apr_hash_set(props, propname, APR_HASH_KEY_STRING, new_value);
+      svn_hash_sets(props, propname, new_value);
 
       SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, props,
                                       FALSE, NULL, NULL,
@@ -1948,20 +1943,16 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
                                         right_version,
                                         propname,
                                         old_props
-                                          ? apr_hash_get(old_props, propname,
-                                                         APR_HASH_KEY_STRING)
+                                          ? svn_hash_gets(old_props, propname)
                                           : NULL,
                                         mine_props
-                                          ? apr_hash_get(mine_props, propname,
-                                                         APR_HASH_KEY_STRING)
+                                          ? svn_hash_gets(mine_props, propname)
                                           : NULL,
                                         old_their_props
-                                          ? apr_hash_get(old_their_props, propname,
-                                                         APR_HASH_KEY_STRING)
+                                          ? svn_hash_gets(old_their_props, propname)
                                           : NULL,
                                         their_props
-                                          ? apr_hash_get(their_props, propname,
-                                                         APR_HASH_KEY_STRING)
+                                          ? svn_hash_gets(their_props, propname)
                                           : NULL,
                                         resolver_func, resolver_baton,
                                         iterpool));
@@ -2134,9 +2125,8 @@ read_prop_conflicts(apr_array_header_t *conflicts,
 
       desc->property_name = apr_pstrdup(result_pool, propname);
 
-      my_value = apr_hash_get(my_props, propname, APR_HASH_KEY_STRING);
-      their_value = apr_hash_get(their_props, propname,
-                                 APR_HASH_KEY_STRING);
+      my_value = svn_hash_gets(my_props, propname);
+      their_value = svn_hash_gets(their_props, propname);
 
       /* Compute the incoming side of the conflict ('action'). */
       if (their_value == NULL)
@@ -2192,7 +2182,7 @@ read_prop_conflicts(apr_array_header_t *conflicts,
           SVN_ERR(svn_stream_close(s));
         }
 
-      old_value = apr_hash_get(their_old_props, propname, APR_HASH_KEY_STRING);
+      old_value = svn_hash_gets(their_old_props, propname);
       if (old_value)
         {
           svn_stream_t *s;
@@ -2596,11 +2586,9 @@ resolve_prop_conflict_on_node(svn_boolean_t *removed_reject_file,
           const char *propname = svn__apr_hash_index_key(hi);
           svn_string_t *new_value = NULL;
 
-          new_value = apr_hash_get(resolve_from, propname,
-                                   APR_HASH_KEY_STRING);
+          new_value = svn_hash_gets(resolve_from, propname);
 
-          apr_hash_set(actual_props, propname, APR_HASH_KEY_STRING,
-                       new_value);
+          svn_hash_sets(actual_props, propname, new_value);
         }
       SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, actual_props,
                                       FALSE, NULL, NULL,

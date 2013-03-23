@@ -246,8 +246,7 @@ diff_status_callback(void *baton,
 
   if (eb->changelist_hash != NULL
       && (!status->changelist
-          || ! apr_hash_get(eb->changelist_hash, status->changelist,
-                            APR_HASH_KEY_STRING)))
+          || ! svn_hash_gets(eb->changelist_hash, status->changelist)))
     return SVN_NO_ERROR; /* Filtered via changelist */
 
   /* This code does about the same thing as the inner body of

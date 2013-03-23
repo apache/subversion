@@ -445,8 +445,7 @@ revert_restore(svn_wc__db_t *db,
                                                  scratch_pool, scratch_pool));
 
 #ifdef HAVE_SYMLINK
-          special_prop = apr_hash_get(props, SVN_PROP_SPECIAL,
-                                      APR_HASH_KEY_STRING);
+          special_prop = svn_hash_gets(props, SVN_PROP_SPECIAL);
 
           if ((special_prop != NULL) != special)
             {
@@ -499,8 +498,8 @@ revert_restore(svn_wc__db_t *db,
                       SVN_ERR(svn_io__is_finfo_read_only(&read_only, &finfo,
                                                          scratch_pool));
 
-                      needs_lock_prop = apr_hash_get(props, SVN_PROP_NEEDS_LOCK,
-                                                     APR_HASH_KEY_STRING);
+                      needs_lock_prop = svn_hash_gets(props,
+                                                      SVN_PROP_NEEDS_LOCK);
                       if (needs_lock_prop && !read_only)
                         {
                           SVN_ERR(svn_io_set_file_read_only(local_abspath,
@@ -527,8 +526,8 @@ revert_restore(svn_wc__db_t *db,
 
                       SVN_ERR(svn_io__is_finfo_executable(&executable, &finfo,
                                                           scratch_pool));
-                      executable_prop = apr_hash_get(props, SVN_PROP_EXECUTABLE,
-                                                     APR_HASH_KEY_STRING);
+                      executable_prop = svn_hash_gets(props,
+                                                      SVN_PROP_EXECUTABLE);
                       if (executable_prop && !executable)
                         {
                           SVN_ERR(svn_io_set_file_executable(local_abspath,

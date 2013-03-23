@@ -1142,13 +1142,13 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
         = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
       const char *propname = incoming_change->name;
       const svn_string_t *base_val  /* Pristine in WC */
-        = apr_hash_get(pristine_props, propname, APR_HASH_KEY_STRING);
+        = svn_hash_gets(pristine_props, propname);
       const svn_string_t *from_val  /* Merge left */
-        = apr_hash_get(server_baseprops, propname, APR_HASH_KEY_STRING);
+        = svn_hash_gets(server_baseprops, propname);
       const svn_string_t *to_val    /* Merge right */
         = incoming_change->value;
       const svn_string_t *working_val  /* Mine */
-        = apr_hash_get(actual_props, propname, APR_HASH_KEY_STRING);
+        = svn_hash_gets(actual_props, propname);
       const svn_string_t *result_val;
       svn_boolean_t conflict_remains;
       svn_boolean_t did_merge = FALSE;
@@ -1157,7 +1157,7 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
 
       to_val = to_val ? svn_string_dup(to_val, result_pool) : NULL;
 
-      apr_hash_set(their_props, propname, APR_HASH_KEY_STRING, to_val);
+      svn_hash_sets(their_props, propname, to_val);
       
 
       /* We already know that state is at least `changed', so mark
@@ -1185,8 +1185,7 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
                                          result_pool, iterpool));
 
       if (result_val != working_val)
-        apr_hash_set(*new_actual_props, propname, APR_HASH_KEY_STRING,
-                     result_val);
+        svn_hash_sets(*new_actual_props, propname, result_val);
       if (did_merge)
         set_prop_merge_state(state, svn_wc_notify_state_merged);
 
@@ -1200,7 +1199,7 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
           if (!conflict_props)
             conflict_props = apr_hash_make(scratch_pool);
 
-          apr_hash_set(conflict_props, propname, APR_HASH_KEY_STRING, "");
+          svn_hash_sets(conflict_props, propname, "");
         }
 
     }  /* foreach propchange ... */
@@ -1256,7 +1255,7 @@ wcprop_set(svn_wc__db_t *db,
   if (prophash == NULL)
     prophash = apr_hash_make(scratch_pool);
 
-  apr_hash_set(prophash, name, APR_HASH_KEY_STRING, value);
+  svn_hash_sets(prophash, name, value);
   return svn_error_trace(svn_wc__db_base_set_dav_cache(db, local_abspath,
                                                        prophash,
                                                        scratch_pool));
@@ -1308,13 +1307,12 @@ propname_filter_receiver(void *baton,
                          apr_pool_t *scratch_pool)
 {
   struct propname_filter_baton_t *pfb = baton;
-  const svn_string_t *propval = apr_hash_get(props, pfb->propname,
-                                             APR_HASH_KEY_STRING);
+  const svn_string_t *propval = svn_hash_gets(props, pfb->propname);
 
   if (propval)
     {
       props = apr_hash_make(scratch_pool);
-      apr_hash_set(props, pfb->propname, APR_HASH_KEY_STRING, propval);
+      svn_hash_sets(props, pfb->propname, propval);
 
       SVN_ERR(pfb->receiver_func(pfb->receiver_baton, local_abspath, props,
                                  scratch_pool));
@@ -1510,7 +1508,7 @@ svn_wc__internal_propget(const svn_string_t **value,
     }
 
   if (prophash)
-    *value = apr_hash_get(prophash, name, APR_HASH_KEY_STRING);
+    *value = svn_hash_gets(prophash, name);
   else
     *value = NULL;
 
@@ -1684,8 +1682,7 @@ do_propset(svn_wc__db_t *db,
       const svn_string_t *new_value;
       struct getter_baton gb;
 
-      gb.mime_type = apr_hash_get(prophash,
-                                  SVN_PROP_MIME_TYPE, APR_HASH_KEY_STRING);
+      gb.mime_type = svn_hash_gets(prophash, SVN_PROP_MIME_TYPE);
       gb.local_abspath = local_abspath;
 
       SVN_ERR(svn_wc_canonicalize_svn_prop(&new_value, name, value,
@@ -1714,8 +1711,7 @@ do_propset(svn_wc__db_t *db,
    */
   if (kind == svn_node_file && strcmp(name, SVN_PROP_KEYWORDS) == 0)
     {
-      svn_string_t *old_value = apr_hash_get(prophash, SVN_PROP_KEYWORDS,
-                                             APR_HASH_KEY_STRING);
+      svn_string_t *old_value = svn_hash_gets(prophash, SVN_PROP_KEYWORDS);
       apr_hash_t *old_keywords, *new_keywords;
 
       if (old_value)
@@ -1755,8 +1751,7 @@ do_propset(svn_wc__db_t *db,
     }
   else if (kind == svn_node_file && strcmp(name, SVN_PROP_EOL_STYLE) == 0)
     {
-      svn_string_t *old_value = apr_hash_get(prophash, SVN_PROP_EOL_STYLE,
-                                             APR_HASH_KEY_STRING);
+      svn_string_t *old_value = svn_hash_gets(prophash, SVN_PROP_EOL_STYLE);
 
       if (((value == NULL) != (old_value == NULL))
           || (value && ! svn_string_compare(value, old_value)))
@@ -1767,7 +1762,7 @@ do_propset(svn_wc__db_t *db,
 
   /* Find out what type of property change we are doing: add, modify, or
      delete. */
-  if (apr_hash_get(prophash, name, APR_HASH_KEY_STRING) == NULL)
+  if (svn_hash_gets(prophash, name) == NULL)
     {
       if (value == NULL)
         /* Deleting a non-existent property. */
@@ -1788,7 +1783,7 @@ do_propset(svn_wc__db_t *db,
 
   /* Now we have all the properties in our hash.  Simply merge the new
      property into it. */
-  apr_hash_set(prophash, name, APR_HASH_KEY_STRING, value);
+  svn_hash_sets(prophash, name, value);
 
   /* Drop it right into the db..  */
   SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, prophash,
@@ -2004,16 +1999,14 @@ svn_wc__canonicalize_props(apr_hash_t **prepared_props,
 
   /* Before we can canonicalize svn:eol-style we need to know svn:mime-type,
    * so process that first. */
-  mime_type = apr_hash_get((apr_hash_t *)props,
-                           SVN_PROP_MIME_TYPE, APR_HASH_KEY_STRING);
+  mime_type = svn_hash_gets((apr_hash_t *)props, SVN_PROP_MIME_TYPE);
   if (mime_type)
     {
       SVN_ERR(svn_wc_canonicalize_svn_prop(
                 &mime_type, SVN_PROP_MIME_TYPE, mime_type,
                 local_abspath, node_kind, skip_some_checks,
                 NULL, NULL, scratch_pool));
-      apr_hash_set(*prepared_props, SVN_PROP_MIME_TYPE, APR_HASH_KEY_STRING,
-                   mime_type);
+      svn_hash_sets(*prepared_props, SVN_PROP_MIME_TYPE, mime_type);
     }
 
   /* Set up the context for canonicalizing the other properties. */
@@ -2035,7 +2028,7 @@ svn_wc__canonicalize_props(apr_hash_t **prepared_props,
                 &value, name, value,
                 local_abspath, node_kind, skip_some_checks,
                 get_file_for_validation, &gb, scratch_pool));
-      apr_hash_set(*prepared_props, name, APR_HASH_KEY_STRING, value);
+      svn_hash_sets(*prepared_props, name, value);
     }
 
   return SVN_NO_ERROR;

@@ -32,6 +32,7 @@
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
+#include "svn_hash.h"
 
 #include "wc.h"
 #include "workqueue.h"
@@ -447,7 +448,7 @@ copy_versioned_dir(svn_wc__db_t *db,
               || info->status == svn_wc__db_status_added))
         {
           /* Remove versioned child as it has been handled */
-          apr_hash_set(disk_children, child_name, APR_HASH_KEY_STRING, NULL);
+          svn_hash_sets(disk_children, child_name, NULL);
         }
     }
 
@@ -481,8 +482,7 @@ copy_versioned_dir(svn_wc__db_t *db,
           unver_dst_abspath = svn_dirent_join(dst_abspath, name, iterpool);
 
           if (marker_files &&
-              apr_hash_get(marker_files, unver_src_abspath,
-                           APR_HASH_KEY_STRING))
+              svn_hash_gets(marker_files, unver_src_abspath))
             continue;
 
           SVN_ERR(copy_to_tmpdir(&work_item, NULL, db, unver_src_abspath,
