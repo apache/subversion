@@ -34,6 +34,7 @@ typedef int win32_crypto__dummy;
 #include <apr_base64.h>
 #include "svn_auth.h"
 #include "svn_error.h"
+#include "svn_hash.h"
 #include "svn_utf.h"
 #include "svn_config.h"
 #include "svn_user.h"
