@@ -1022,7 +1022,7 @@ is_path_in_hash(apr_hash_t *duplicate_path_revs,
   const char *key = apr_psprintf(pool, "%s:%ld", path, revision);
   void *ptr;
 
-  ptr = apr_hash_get(duplicate_path_revs, key, APR_HASH_KEY_STRING);
+  ptr = svn_hash_gets(duplicate_path_revs, key);
   return ptr != NULL;
 }
 
