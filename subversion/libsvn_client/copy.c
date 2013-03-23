@@ -28,6 +28,7 @@
 /*** Includes. ***/
 
 #include <string.h>
+#include "svn_hash.h"
 #include "svn_client.h"
 #include "svn_error.h"
 #include "svn_error_codes.h"
@@ -599,9 +600,7 @@ path_driver_cb_func(void **dir_baton,
 {
   struct path_driver_cb_baton *cb_baton = callback_baton;
   svn_boolean_t do_delete = FALSE, do_add = FALSE;
-  path_driver_info_t *path_info = apr_hash_get(cb_baton->action_hash,
-                                               path,
-                                               APR_HASH_KEY_STRING);
+  path_driver_info_t *path_info = svn_hash_gets(cb_baton->action_hash, path);
 
   /* Initialize return value. */
   *dir_baton = NULL;
@@ -1045,9 +1044,9 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       info->src_path = src_rel;
       info->dst_path = dst_rel;
 
-      apr_hash_set(action_hash, info->dst_path, APR_HASH_KEY_STRING, info);
+      svn_hash_sets(action_hash, info->dst_path, info);
       if (is_move && (! info->resurrection))
-        apr_hash_set(action_hash, info->src_path, APR_HASH_KEY_STRING, info);
+        svn_hash_sets(action_hash, info->src_path, info);
     }
 
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
@@ -1115,7 +1114,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
           info->dir_add = TRUE;
 
           APR_ARRAY_PUSH(paths, const char *) = relpath;
-          apr_hash_set(action_hash, relpath, APR_HASH_KEY_STRING, info);
+          svn_hash_sets(action_hash, relpath, info);
         }
     }
 
@@ -1361,9 +1360,8 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
                                             ctx, scratch_pool, iterpool));
 
   /* The committables are keyed by the repository root */
-  commit_items = apr_hash_get(committables->by_repository,
-                              cukb.repos_root_url,
-                              APR_HASH_KEY_STRING);
+  commit_items = svn_hash_gets(committables->by_repository,
+                               cukb.repos_root_url);
   SVN_ERR_ASSERT(commit_items != NULL);
 
   if (cukb.should_reparent)
@@ -1467,7 +1465,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
                                           ctx->wc_ctx, item->path, FALSE,
                                           scratch_pool, iterpool));
           if (relpath)
-            apr_hash_set(relpath_map, relpath, APR_HASH_KEY_STRING, item->path);
+            svn_hash_sets(relpath_map, relpath, item->path);
         }
     }
 #endif
@@ -1668,7 +1666,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
                               &pair->src_revnum, &new_props, pool));
 
       if (new_props && ! same_repositories)
-        apr_hash_set(new_props, SVN_PROP_MERGEINFO, APR_HASH_KEY_STRING, NULL);
+        svn_hash_sets(new_props, SVN_PROP_MERGEINFO, NULL);
 
       SVN_ERR(svn_wc_add_repos_file4(
          ctx->wc_ctx, dst_abspath,

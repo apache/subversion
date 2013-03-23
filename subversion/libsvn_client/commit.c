@@ -114,7 +114,7 @@ get_ra_editor(const svn_delta_editor_t **editor,
                                           ctx->wc_ctx, item->path, FALSE, pool,
                                           iterpool));
           if (relpath)
-            apr_hash_set(relpath_map, relpath, APR_HASH_KEY_STRING, item->path);
+            svn_hash_sets(relpath_map, relpath, item->path);
         }
       svn_pool_destroy(iterpool);
     }
@@ -209,7 +209,7 @@ collect_lock_tokens(apr_hash_t **result,
 
       if (relpath)
         {
-          apr_hash_set(*result, relpath, APR_HASH_KEY_STRING, token);
+          svn_hash_sets(*result, relpath, token);
         }
     }
 
@@ -365,13 +365,13 @@ determine_lock_targets(apr_array_header_t **lock_targets,
           return svn_error_trace(err);
         }
 
-      wc_targets = apr_hash_get(wc_items, wcroot_abspath, APR_HASH_KEY_STRING);
+      wc_targets = svn_hash_gets(wc_items, wcroot_abspath);
 
       if (! wc_targets)
         {
           wc_targets = apr_array_make(scratch_pool, 4, sizeof(const char *));
-          apr_hash_set(wc_items, apr_pstrdup(scratch_pool, wcroot_abspath),
-                       APR_HASH_KEY_STRING, wc_targets);
+          svn_hash_sets(wc_items, apr_pstrdup(scratch_pool, wcroot_abspath),
+                        wc_targets);
         }
 
       APR_ARRAY_PUSH(wc_targets, const char *) = target_abspath;
@@ -786,8 +786,8 @@ svn_client_commit6(const apr_array_header_t *targets,
 
             {
               svn_boolean_t found_delete_half =
-                (apr_hash_get(committables->by_path, delete_op_root_abspath,
-                               APR_HASH_KEY_STRING) != NULL);
+                (svn_hash_gets(committables->by_path, delete_op_root_abspath)
+                 != NULL);
 
               if (!found_delete_half)
                 {
@@ -830,9 +830,9 @@ svn_client_commit6(const apr_array_header_t *targets,
 
                       if (parent_delete_op_root_abspath)
                         found_delete_half =
-                          (apr_hash_get(committables->by_path,
-                                        parent_delete_op_root_abspath,
-                                        APR_HASH_KEY_STRING) != NULL);
+                          (svn_hash_gets(committables->by_path,
+                                         parent_delete_op_root_abspath)
+                           != NULL);
                     }
                 }
 
@@ -866,8 +866,7 @@ svn_client_commit6(const apr_array_header_t *targets,
 
           if (moved_to_abspath && copy_op_root_abspath &&
               strcmp(moved_to_abspath, copy_op_root_abspath) == 0 &&
-              apr_hash_get(committables->by_path, copy_op_root_abspath,
-                           APR_HASH_KEY_STRING) == NULL)
+              svn_hash_gets(committables->by_path, copy_op_root_abspath) == NULL)
             {
               cmt_err = svn_error_createf(
                           SVN_ERR_ILLEGAL_TARGET, NULL,
@@ -969,9 +968,7 @@ svn_client_commit6(const apr_array_header_t *targets,
           bump_err = post_process_commit_item(
                        queue, item, ctx->wc_ctx,
                        keep_changelists, keep_locks, commit_as_operations,
-                       apr_hash_get(sha1_checksums,
-                                    item->path,
-                                    APR_HASH_KEY_STRING),
+                       svn_hash_gets(sha1_checksums, item->path),
                        iterpool);
           if (bump_err)
             goto cleanup;

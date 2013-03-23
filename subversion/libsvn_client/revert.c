@@ -31,6 +31,7 @@
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_dirent_uri.h"
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_time.h"
@@ -135,8 +136,9 @@ svn_client_revert2(const apr_array_header_t *paths,
                                  _("'%s' is not a local path"), path);
     }
 
-  cfg = ctx->config ? apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
-                                   APR_HASH_KEY_STRING) : NULL;
+  cfg = ctx->config
+        ? svn_hash_gets(ctx->config, SVN_CONFIG_CATEGORY_CONFIG)
+        : NULL;
 
   SVN_ERR(svn_config_get_bool(cfg, &use_commit_times,
                               SVN_CONFIG_SECTION_MISCELLANY,

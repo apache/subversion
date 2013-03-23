@@ -29,6 +29,7 @@
 
 #include "svn_client.h"
 #include "svn_error.h"
+#include "svn_hash.h"
 #include "svn_time.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
@@ -90,10 +91,9 @@ switch_internal(svn_revnum_t *result_rev,
   apr_array_header_t *preserved_exts;
   svn_boolean_t server_supports_depth;
   struct svn_client__dirent_fetcher_baton_t dfb;
-  svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
-                                                 SVN_CONFIG_CATEGORY_CONFIG,
-                                                 APR_HASH_KEY_STRING)
-                                  : NULL;
+  svn_config_t *cfg = ctx->config
+                      ? svn_hash_gets(ctx->config, SVN_CONFIG_CATEGORY_CONFIG)
+                      : NULL;
 
   /* An unknown depth can't be sticky. */
   if (depth == svn_depth_unknown)
@@ -269,8 +269,7 @@ switch_internal(svn_revnum_t *result_rev,
           SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props,
                                              "", switch_loc->rev, pool,
                                              pool));
-          apr_hash_set(wcroot_iprops, local_abspath, APR_HASH_KEY_STRING,
-                       inherited_props);
+          svn_hash_sets(wcroot_iprops, local_abspath, inherited_props);
         }
     }
 

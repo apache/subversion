@@ -34,6 +34,7 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
+#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_subst.h"
@@ -68,9 +69,9 @@ add_externals(apr_hash_t *externals,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  apr_hash_set(externals, local_abspath, APR_HASH_KEY_STRING,
-               apr_pstrmemdup(pool, externals_prop_val->data,
-                              externals_prop_val->len));
+  svn_hash_sets(externals, local_abspath,
+                apr_pstrmemdup(pool, externals_prop_val->data,
+                               externals_prop_val->len));
 
   return SVN_NO_ERROR;
 }
@@ -338,8 +339,7 @@ export_node(void *baton,
     }
 
   /* We can early-exit if we're creating a special file. */
-  special = apr_hash_get(props, SVN_PROP_SPECIAL,
-                         APR_HASH_KEY_STRING);
+  special = svn_hash_gets(props, SVN_PROP_SPECIAL);
   if (special != NULL)
     {
       /* Create the destination as a special file, and copy the source
@@ -352,12 +352,9 @@ export_node(void *baton,
     }
 
 
-  eol_style = apr_hash_get(props, SVN_PROP_EOL_STYLE,
-                           APR_HASH_KEY_STRING);
-  keywords = apr_hash_get(props, SVN_PROP_KEYWORDS,
-                          APR_HASH_KEY_STRING);
-  executable = apr_hash_get(props, SVN_PROP_EXECUTABLE,
-                            APR_HASH_KEY_STRING);
+  eol_style = svn_hash_gets(props, SVN_PROP_EOL_STYLE);
+  keywords = svn_hash_gets(props, SVN_PROP_KEYWORDS);
+  executable = svn_hash_gets(props, SVN_PROP_EXECUTABLE);
 
   if (eol_style)
     SVN_ERR(get_eol_style(&style, &eol, eol_style->data, eib->native_eol));
@@ -954,30 +951,26 @@ add_file_ev2(void *baton,
   apr_time_t date = 0; 
 
   /* Look at any properties for additional information. */
-  if ( (val = apr_hash_get(props, SVN_PROP_EOL_STYLE, APR_HASH_KEY_STRING)) )
+  if ( (val = svn_hash_gets(props, SVN_PROP_EOL_STYLE)) )
     eol_style_val = val;
 
-  if ( !eb->ignore_keywords && (val = apr_hash_get(props, SVN_PROP_KEYWORDS,
-                                                   APR_HASH_KEY_STRING)) )
+  if ( !eb->ignore_keywords && (val = svn_hash_gets(props, SVN_PROP_KEYWORDS)) )
     keywords_val = val;
 
-  if ( (val = apr_hash_get(props, SVN_PROP_EXECUTABLE, APR_HASH_KEY_STRING)) )
+  if ( (val = svn_hash_gets(props, SVN_PROP_EXECUTABLE)) )
     executable_val = val;
   
   /* Try to fill out the baton's keywords-structure too. */
-  if ( (val = apr_hash_get(props, SVN_PROP_ENTRY_COMMITTED_REV,
-                           APR_HASH_KEY_STRING)) )
+  if ( (val = svn_hash_gets(props, SVN_PROP_ENTRY_COMMITTED_REV)) )
     revision = val->data;
 
-  if ( (val = apr_hash_get(props, SVN_PROP_ENTRY_COMMITTED_DATE,
-                           APR_HASH_KEY_STRING)) )
+  if ( (val = svn_hash_gets(props, SVN_PROP_ENTRY_COMMITTED_DATE)) )
     SVN_ERR(svn_time_from_cstring(&date, val->data, scratch_pool));
   
-  if ( (val = apr_hash_get(props, SVN_PROP_ENTRY_LAST_AUTHOR,
-                           APR_HASH_KEY_STRING)) )
+  if ( (val = svn_hash_gets(props, SVN_PROP_ENTRY_LAST_AUTHOR)) )
     author = val->data;
 
-  if ( (val = apr_hash_get(props, SVN_PROP_SPECIAL, APR_HASH_KEY_STRING)) )
+  if ( (val = svn_hash_gets(props, SVN_PROP_SPECIAL)) )
     special = TRUE;
 
   if (special)
@@ -1081,7 +1074,7 @@ add_directory_ev2(void *baton,
                              _("'%s' already exists"),
                              svn_dirent_local_style(full_path, scratch_pool));
 
-  if ( (val = apr_hash_get(props, SVN_PROP_EXTERNALS, APR_HASH_KEY_STRING)) )
+  if ( (val = svn_hash_gets(props, SVN_PROP_EXTERNALS)) )
     SVN_ERR(add_externals(eb->externals, full_path, val));
   
   if (eb->notify_func)

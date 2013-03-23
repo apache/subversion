@@ -32,6 +32,7 @@
 #include "svn_compat.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
+#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_sorts.h"
 #include "svn_props.h"
@@ -212,21 +213,18 @@ pre_15_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
                                   name, &value, pool));
           if (log_entry->revprops == NULL)
             log_entry->revprops = apr_hash_make(pool);
-          apr_hash_set(log_entry->revprops, name, APR_HASH_KEY_STRING, value);
+          svn_hash_sets(log_entry->revprops, name, value);
         }
       if (log_entry->revprops)
         {
           /* Pre-1.5 servers send the standard revprops unconditionally;
              clear those the caller doesn't want. */
           if (!want_author)
-            apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_AUTHOR,
-                         APR_HASH_KEY_STRING, NULL);
+            svn_hash_sets(log_entry->revprops, SVN_PROP_REVISION_AUTHOR, NULL);
           if (!want_date)
-            apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_DATE,
-                         APR_HASH_KEY_STRING, NULL);
+            svn_hash_sets(log_entry->revprops, SVN_PROP_REVISION_DATE, NULL);
           if (!want_log)
-            apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_LOG,
-                         APR_HASH_KEY_STRING, NULL);
+            svn_hash_sets(log_entry->revprops, SVN_PROP_REVISION_LOG, NULL);
         }
     }
   else
