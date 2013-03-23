@@ -320,8 +320,7 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
   if (config)
     {
       /* Grab the 'servers' config. */
-      servers = apr_hash_get(config, SVN_CONFIG_CATEGORY_SERVERS,
-                             APR_HASH_KEY_STRING);
+      servers = svn_hash_gets(config, SVN_CONFIG_CATEGORY_SERVERS);
       if (servers)
         {
           /* First, look in the global section. */
@@ -1511,7 +1510,7 @@ svn_ra_get_ra_library(svn_ra_plugin_t **library,
 
           SVN_ERR(compat_initfunc(SVN_RA_ABI_VERSION, load_pool, ht));
 
-          *library = apr_hash_get(ht, scheme, APR_HASH_KEY_STRING);
+          *library = svn_hash_gets(ht, scheme);
 
           /* The library may support just a subset of the schemes listed,
              so we have to check here too. */

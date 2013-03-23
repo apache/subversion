@@ -170,14 +170,14 @@ do_resources(const dav_svn_repos *repos,
         {
           /* If we haven't already sent this path, send it (and then
              remember that we sent it). */
-          if (! apr_hash_get(sent, path, APR_HASH_KEY_STRING))
+          if (! svn_hash_gets(sent, path))
             {
               svn_node_kind_t kind;
               SVN_ERR(svn_fs_check_path(&kind, root, path, subpool));
               SVN_ERR(send_response(repos, root, path,
                                     kind == svn_node_dir,
                                     output, bb, subpool));
-              apr_hash_set(sent, path, APR_HASH_KEY_STRING, (void *)1);
+              svn_hash_sets(sent, path, (void *)1);
             }
         }
       if (send_parent)
@@ -187,11 +187,11 @@ do_resources(const dav_svn_repos *repos,
              pool, not subpool, because it stays in the sent hash
              afterwards. */
           const char *parent = svn_fspath__dirname(path, pool);
-          if (! apr_hash_get(sent, parent, APR_HASH_KEY_STRING))
+          if (! svn_hash_gets(sent, parent))
             {
               SVN_ERR(send_response(repos, root, parent,
                                     TRUE, output, bb, subpool));
-              apr_hash_set(sent, parent, APR_HASH_KEY_STRING, (void *)1);
+              svn_hash_sets(sent, parent, (void *)1);
             }
         }
     }

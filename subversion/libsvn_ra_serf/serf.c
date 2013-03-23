@@ -151,10 +151,8 @@ load_config(svn_ra_serf__session_t *session,
 
   if (config_hash)
     {
-      config = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_SERVERS,
-                            APR_HASH_KEY_STRING);
-      config_client = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_CONFIG,
-                                   APR_HASH_KEY_STRING);
+      config = svn_hash_gets(config_hash, SVN_CONFIG_CATEGORY_SERVERS);
+      config_client = svn_hash_gets(config_hash, SVN_CONFIG_CATEGORY_CONFIG);
     }
   else
     {
@@ -609,7 +607,7 @@ svn_ra_serf__rev_prop(svn_ra_session_t *session,
 
   SVN_ERR(svn_ra_serf__rev_proplist(session, rev, &props, pool));
 
-  *value = apr_hash_get(props, name, APR_HASH_KEY_STRING);
+  *value = svn_hash_gets(props, name);
 
   return SVN_NO_ERROR;
 }
@@ -806,7 +804,7 @@ path_dirent_walker(void *baton,
       base_name = svn_path_uri_decode(svn_urlpath__basename(path, pool),
                                       pool);
 
-      apr_hash_set(dirents->base_paths, base_name, APR_HASH_KEY_STRING, entry);
+      svn_hash_sets(dirents->base_paths, base_name, entry);
     }
 
   dwb.entry = entry;

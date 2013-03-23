@@ -27,6 +27,7 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
+#include "svn_hash.h"
 #include "svn_cmdline.h"
 #include "svn_client.h"
 #include "svn_dirent_uri.h"
@@ -1161,10 +1162,10 @@ svn_cl__conflict_func_postpone(svn_wc_conflict_result_t **result,
 {
   apr_hash_t *conflicted_paths = baton;
   
-  apr_hash_set(conflicted_paths,
-               apr_pstrdup(apr_hash_pool_get(conflicted_paths),
-                           desc->local_abspath),
-               APR_HASH_KEY_STRING, "");
+  svn_hash_sets(conflicted_paths,
+                apr_pstrdup(apr_hash_pool_get(conflicted_paths),
+                            desc->local_abspath),
+                "");
 
   *result = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,
                                           NULL, result_pool);

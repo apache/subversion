@@ -112,8 +112,7 @@ svn_cl__merge_file_externally(const char *base_path,
     {
       struct svn_config_t *cfg;
       merge_tool = NULL;
-      cfg = config ? apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
-                                  APR_HASH_KEY_STRING) : NULL;
+      cfg = config ? svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG) : NULL;
       /* apr_env_get wants char **, this wants const char ** */
       svn_config_get(cfg, (const char **)&merge_tool,
                      SVN_CONFIG_SECTION_HELPERS,
@@ -225,8 +224,7 @@ svn_cl__make_log_msg_baton(void **baton,
     }
   else if (config)
     {
-      svn_config_t *cfg = apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
-                                       APR_HASH_KEY_STRING);
+      svn_config_t *cfg = svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
       svn_config_get(cfg, &(lmb->message_encoding),
                      SVN_CONFIG_SECTION_MISCELLANY,
                      SVN_CONFIG_OPTION_LOG_ENCODING,

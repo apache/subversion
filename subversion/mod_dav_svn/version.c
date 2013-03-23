@@ -28,6 +28,7 @@
 #include <http_log.h>
 #include <mod_dav.h>
 
+#include "svn_hash.h"
 #include "svn_fs.h"
 #include "svn_xml.h"
 #include "svn_repos.h"
@@ -1327,7 +1328,7 @@ dav_svn__build_lock_hash(apr_hash_t **locks,
               lockpath = svn_fspath__join(path_prefix, cdata, pool);
               if (lockpath && locktoken)
                 {
-                  apr_hash_set(hash, lockpath, APR_HASH_KEY_STRING, locktoken);
+                  svn_hash_sets(hash, lockpath, locktoken);
                   lockpath = NULL;
                   locktoken = NULL;
                 }
@@ -1337,7 +1338,7 @@ dav_svn__build_lock_hash(apr_hash_t **locks,
               locktoken = dav_xml_get_cdata(lfchild, pool, 1);
               if (lockpath && *locktoken)
                 {
-                  apr_hash_set(hash, lockpath, APR_HASH_KEY_STRING, locktoken);
+                  svn_hash_sets(hash, lockpath, locktoken);
                   lockpath = NULL;
                   locktoken = NULL;
                 }

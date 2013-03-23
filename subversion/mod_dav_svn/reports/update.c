@@ -29,6 +29,7 @@
 #include <http_log.h>
 #include <mod_dav.h>
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_repos.h"
 #include "svn_fs.h"
@@ -153,7 +154,7 @@ add_to_path_map(apr_hash_t *hash, const char *path, const char *linkpath)
   const char *repos_path = linkpath ? linkpath : norm_path;
 
   /* now, geez, put the path in the map already! */
-  apr_hash_set(hash, path, APR_HASH_KEY_STRING, repos_path);
+  svn_hash_sets(hash, path, repos_path);
 }
 
 
@@ -169,7 +170,7 @@ get_from_path_map(apr_hash_t *hash, const char *path, apr_pool_t *pool)
   if (! hash)
     return apr_pstrdup(pool, path);
 
-  if ((repos_path = apr_hash_get(hash, path, APR_HASH_KEY_STRING)))
+  if ((repos_path = svn_hash_gets(hash, path)))
     {
       /* what luck!  this path is a hash key!  if there is a linkpath,
          use that, else return the path itself. */

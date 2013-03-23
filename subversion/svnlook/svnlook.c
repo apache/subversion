@@ -34,6 +34,7 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
+#include "svn_hash.h"
 #include "svn_cmdline.h"
 #include "svn_types.h"
 #include "svn_pools.h"
@@ -1762,7 +1763,7 @@ do_pget(svnlook_ctxt_t *c,
             {
               apr_hash_t *hash = apr_hash_make(pool);
 
-              apr_hash_set(hash, propname, APR_HASH_KEY_STRING, prop);
+              svn_hash_sets(hash, propname, prop);
               SVN_ERR(svn_stream_printf(stdout_stream, pool,
                       _("Properties on '%s':\n"), path));
               SVN_ERR(svn_cmdline__print_prop_hash(stdout_stream, hash,

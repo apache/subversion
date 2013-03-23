@@ -28,6 +28,7 @@
 #include <httpd.h>
 #include <mod_dav.h>
 
+#include "svn_hash.h"
 #include "svn_checksum.h"
 #include "svn_error.h"
 #include "svn_io.h"
@@ -254,8 +255,9 @@ dav_svn__create_txn(const dav_svn_repos *repos,
 
   if (repos->username)
     {
-      apr_hash_set(revprops, SVN_PROP_REVISION_AUTHOR, APR_HASH_KEY_STRING,
-                   svn_string_create(repos->username, pool));
+      svn_hash_sets(revprops,
+                    SVN_PROP_REVISION_AUTHOR,
+                    svn_string_create(repos->username, pool));
     }
 
   serr = svn_fs_youngest_rev(&rev, repos->fs, pool);

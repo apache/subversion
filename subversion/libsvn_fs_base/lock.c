@@ -21,6 +21,7 @@
  */
 
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
@@ -541,8 +542,7 @@ verify_lock(svn_fs_t *fs,
        _("User '%s' does not own lock on path '%s' (currently locked by '%s')"),
        fs->access_ctx->username, lock->path, lock->owner);
 
-  else if (apr_hash_get(fs->access_ctx->lock_tokens, lock->token,
-                        APR_HASH_KEY_STRING) == NULL)
+  else if (svn_hash_gets(fs->access_ctx->lock_tokens, lock->token) == NULL)
     return svn_error_createf
       (SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
        _("Cannot verify lock on path '%s'; no matching lock-token available"),

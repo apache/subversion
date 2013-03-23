@@ -32,6 +32,7 @@
 #include <apr_network_io.h>
 #include <apr_uri.h>
 
+#include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_dirent_uri.h"
@@ -388,8 +389,7 @@ static svn_error_t *find_tunnel_agent(const char *tunnel,
   int n;
 
   /* Look up the tunnel specification in config. */
-  cfg = config ? apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
-                              APR_HASH_KEY_STRING) : NULL;
+  cfg = config ? svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG) : NULL;
   svn_config_get(cfg, &val, SVN_CONFIG_SECTION_TUNNELS, tunnel, NULL);
 
   /* We have one predefined tunnel scheme, if it isn't overridden by config. */
@@ -750,12 +750,10 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session,
   else
     tunnel_argv = NULL;
 
-  cfg_client = config ? apr_hash_get(config,
-                                     SVN_CONFIG_CATEGORY_CONFIG,
-                                     APR_HASH_KEY_STRING) : NULL;
-  cfg = config ? apr_hash_get(config,
-                              SVN_CONFIG_CATEGORY_SERVERS,
-                              APR_HASH_KEY_STRING) : NULL;
+  cfg_client = config
+               ? svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG)
+               : NULL;
+  cfg = config ? svn_hash_gets(config, SVN_CONFIG_CATEGORY_SERVERS) : NULL;
   svn_auth_set_parameter(callbacks->auth_baton,
                          SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG, cfg_client);
   svn_auth_set_parameter(callbacks->auth_baton,
@@ -990,9 +988,8 @@ static svn_error_t *ra_svn_commit(svn_ra_session_t *session,
   ra_svn_commit_callback_baton_t *ccb;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
-  const svn_string_t *log_msg = apr_hash_get(revprop_table,
-                                             SVN_PROP_REVISION_LOG,
-                                             APR_HASH_KEY_STRING);
+  const svn_string_t *log_msg = svn_hash_gets(revprop_table,
+                                              SVN_PROP_REVISION_LOG);
 
   /* If we're sending revprops other than svn:log, make sure the server won't
      silently ignore them. */
@@ -1007,14 +1004,10 @@ static svn_error_t *ra_svn_commit(svn_ra_session_t *session,
   if (svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_COMMIT_REVPROPS) &&
       svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_EPHEMERAL_TXNPROPS))
     {
-      apr_hash_set(revprop_table,
-                   SVN_PROP_TXN_CLIENT_COMPAT_VERSION,
-                   APR_HASH_KEY_STRING,
-                   svn_string_create(SVN_VER_NUMBER, pool));
-      apr_hash_set(revprop_table,
-                   SVN_PROP_TXN_USER_AGENT,
-                   APR_HASH_KEY_STRING,
-                   svn_string_create(sess_baton->useragent, pool));
+      svn_hash_sets(revprop_table, SVN_PROP_TXN_CLIENT_COMPAT_VERSION,
+                    svn_string_create(SVN_VER_NUMBER, pool));
+      svn_hash_sets(revprop_table, SVN_PROP_TXN_USER_AGENT,
+                    svn_string_create(sess_baton->useragent, pool));
     }
 
   /* Tell the server we're starting the commit.
@@ -1123,10 +1116,9 @@ parse_iproplist(apr_array_header_t **inherited_props,
         {
           const char *name = svn__apr_hash_index_key(hi);
           svn_string_t *value = svn__apr_hash_index_val(hi);
-          apr_hash_set(new_iprop->prop_hash,
-                       apr_pstrdup(result_pool, name),
-                       APR_HASH_KEY_STRING,
-                       svn_string_dup(value, result_pool));
+          svn_hash_sets(new_iprop->prop_hash,
+                        apr_pstrdup(result_pool, name),
+                        svn_string_dup(value, result_pool));
         }
       APR_ARRAY_PUSH(*inherited_props, svn_prop_inherited_item_t *) =
         new_iprop;
@@ -1292,7 +1284,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
       else
         SVN_ERR(svn_time_from_cstring(&dirent->time, cdate, pool));
       dirent->last_author = cauthor;
-      apr_hash_set(*dirents, name, APR_HASH_KEY_STRING, dirent);
+      svn_hash_sets(*dirents, name, dirent);
     }
 
   return SVN_NO_ERROR;
@@ -1360,8 +1352,7 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
           SVN_ERR(svn_mergeinfo_parse(&for_path, to_parse, pool));
           /* Correct for naughty servers that send "relative" paths
              with leading slashes! */
-          apr_hash_set(*catalog, path[0] == '/' ? path + 1 : path,
-                       APR_HASH_KEY_STRING, for_path);
+          svn_hash_sets(*catalog, path[0] == '/' ? path + 1 :path, for_path);
         }
     }
 
@@ -1624,7 +1615,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
               change->node_kind = svn_node_kind_from_word(kind_str);
               change->text_modified = optbool_to_tristate(text_mods);
               change->props_modified = optbool_to_tristate(prop_mods);
-              apr_hash_set(cphash, cpath, APR_HASH_KEY_STRING, change);
+              svn_hash_sets(cphash, cpath, change);
             }
         }
       else
@@ -1649,14 +1640,14 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
             {
               /* Caller requested all revprops; set author/date/log. */
               if (author)
-                apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_AUTHOR,
-                             APR_HASH_KEY_STRING, author);
+                svn_hash_sets(log_entry->revprops, SVN_PROP_REVISION_AUTHOR,
+                              author);
               if (date)
-                apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_DATE,
-                             APR_HASH_KEY_STRING, date);
+                svn_hash_sets(log_entry->revprops, SVN_PROP_REVISION_DATE,
+                              date);
               if (message)
-                apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_LOG,
-                             APR_HASH_KEY_STRING, message);
+                svn_hash_sets(log_entry->revprops, SVN_PROP_REVISION_LOG,
+                              message);
             }
           else
             {
@@ -1665,14 +1656,14 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
                 {
                   name = APR_ARRAY_IDX(revprops, i, char *);
                   if (author && strcmp(name, SVN_PROP_REVISION_AUTHOR) == 0)
-                    apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_AUTHOR,
-                                 APR_HASH_KEY_STRING, author);
+                    svn_hash_sets(log_entry->revprops,
+                                  SVN_PROP_REVISION_AUTHOR, author);
                   if (date && strcmp(name, SVN_PROP_REVISION_DATE) == 0)
-                    apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_DATE,
-                                 APR_HASH_KEY_STRING, date);
+                    svn_hash_sets(log_entry->revprops,
+                                  SVN_PROP_REVISION_DATE, date);
                   if (message && strcmp(name, SVN_PROP_REVISION_LOG) == 0)
-                    apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_LOG,
-                                 APR_HASH_KEY_STRING, message);
+                    svn_hash_sets(log_entry->revprops,
+                                  SVN_PROP_REVISION_LOG, message);
                 }
             }
           SVN_ERR(receiver(receiver_baton, log_entry, iterpool));
@@ -2487,13 +2478,13 @@ static svn_error_t *ra_svn_get_locks(svn_ra_session_t *session,
       */
       if ((strcmp(abs_path, lock->path) == 0) || (depth == svn_depth_infinity))
         {
-          apr_hash_set(*locks, lock->path, APR_HASH_KEY_STRING, lock);
+          svn_hash_sets(*locks, lock->path, lock);
         }
       else if ((depth == svn_depth_files) || (depth == svn_depth_immediates))
         {
           const char *relpath = svn_fspath__skip_ancestor(abs_path, lock->path);
           if (relpath && (svn_path_component_count(relpath) == 1))
-            apr_hash_set(*locks, lock->path, APR_HASH_KEY_STRING, lock);
+            svn_hash_sets(*locks, lock->path, lock);
         }
     }
 

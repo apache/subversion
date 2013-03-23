@@ -2145,8 +2145,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                    _("Changelist names must not be empty"));
             return EXIT_ERROR(err);
           }
-        apr_hash_set(changelists, opt_state.changelist,
-                     APR_HASH_KEY_STRING, (void *)1);
+        svn_hash_sets(changelists, opt_state.changelist, (void *)1);
         break;
       case opt_keep_changelists:
         opt_state.keep_changelists = TRUE;
@@ -2545,8 +2544,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         }
     }
 
-  cfg_config = apr_hash_get(cfg_hash, SVN_CONFIG_CATEGORY_CONFIG,
-                            APR_HASH_KEY_STRING);
+  cfg_config = svn_hash_gets(cfg_hash, SVN_CONFIG_CATEGORY_CONFIG);
 
   /* Update the options in the config */
   if (opt_state.config_options)

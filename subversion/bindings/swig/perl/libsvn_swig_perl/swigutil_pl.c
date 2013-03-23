@@ -34,6 +34,7 @@
 #include <io.h>
 #endif
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_opt.h"
 #include "svn_time.h"
@@ -117,7 +118,7 @@ static apr_hash_t *svn_swig_pl_to_hash(SV *source,
     while (cnt--) {
 	SV* item = hv_iternextsv(h, &key, &retlen);
 	void *val = cv(item, ctx, pool);
-	apr_hash_set(hash, key, APR_HASH_KEY_STRING, val);
+	svn_hash_sets(hash, key, val);
     }
 
     return hash;
