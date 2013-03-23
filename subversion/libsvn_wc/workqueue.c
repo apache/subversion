@@ -620,14 +620,14 @@ run_file_install(work_item_baton_t *wqb,
 
   /* Tweak the on-disk file according to its properties.  */
 #ifndef WIN32
-  if (props && apr_hash_get(props, SVN_PROP_EXECUTABLE, APR_HASH_KEY_STRING))
+  if (props && svn_hash_gets(props, SVN_PROP_EXECUTABLE))
     SVN_ERR(svn_io_set_file_executable(local_abspath, TRUE, FALSE,
                                        scratch_pool));
 #endif
 
   /* Note that this explicitly checks the pristine properties, to make sure
      that when the lock is locally set (=modification) it is not read only */
-  if (props && apr_hash_get(props, SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING))
+  if (props && svn_hash_gets(props, SVN_PROP_NEEDS_LOCK))
     {
       svn_wc__db_status_t status;
       svn_wc__db_lock_t *lock;

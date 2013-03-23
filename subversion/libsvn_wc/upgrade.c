@@ -151,7 +151,7 @@ read_one_proplist(apr_hash_t *all_wcprops,
 
   proplist = apr_hash_make(result_pool);
   SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, result_pool));
-  apr_hash_set(all_wcprops, name, APR_HASH_KEY_STRING, proplist);
+  svn_hash_sets(all_wcprops, name, proplist);
 
   return SVN_NO_ERROR;
 }
@@ -180,8 +180,7 @@ read_many_wcprops(apr_hash_t **all_wcprops,
                                        scratch_pool);
   SVN_ERR(read_propfile(&wcprops, propfile_abspath, result_pool, iterpool));
   if (wcprops != NULL)
-    apr_hash_set(*all_wcprops, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING,
-                 wcprops);
+    svn_hash_sets(*all_wcprops, SVN_WC_ENTRY_THIS_DIR, wcprops);
 
   props_dir_abspath = svn_wc__adm_child(dir_abspath, WCPROPS_SUBDIR_FOR_FILES,
                                         scratch_pool);
@@ -203,9 +202,7 @@ read_many_wcprops(apr_hash_t **all_wcprops,
       SVN_ERR(read_propfile(&wcprops, propfile_abspath,
                             result_pool, iterpool));
       SVN_ERR_ASSERT(wcprops != NULL);
-      apr_hash_set(*all_wcprops,
-                   apr_pstrdup(result_pool, name), APR_HASH_KEY_STRING,
-                   wcprops);
+      svn_hash_sets(*all_wcprops, apr_pstrdup(result_pool, name), wcprops);
     }
 
   svn_pool_destroy(iterpool);
@@ -701,9 +698,9 @@ read_tree_conflicts(apr_hash_t **conflicts,
       SVN_ERR(svn_wc__deserialize_conflict(&conflict, skel, dir_path,
                                            pool, iterpool));
       if (conflict != NULL)
-        apr_hash_set(*conflicts, svn_dirent_basename(conflict->local_abspath,
-                                                     pool),
-                     APR_HASH_KEY_STRING, conflict);
+        svn_hash_sets(*conflicts,
+                      svn_dirent_basename(conflict->local_abspath, pool),
+                      conflict);
     }
   svn_pool_destroy(iterpool);
 
@@ -1121,16 +1118,14 @@ migrate_text_bases(apr_hash_t **text_bases_info,
 
         /* Create a new info struct for this versioned file, or fill in the
          * existing one if this is the second text-base we've found for it. */
-        info = apr_hash_get(*text_bases_info, versioned_file_name,
-                            APR_HASH_KEY_STRING);
+        info = svn_hash_gets(*text_bases_info, versioned_file_name);
         if (info == NULL)
           info = apr_pcalloc(result_pool, sizeof (*info));
         file_info = (is_revert_base ? &info->revert_base : &info->normal_base);
 
         file_info->sha1_checksum = svn_checksum_dup(sha1_checksum, result_pool);
         file_info->md5_checksum = svn_checksum_dup(md5_checksum, result_pool);
-        apr_hash_set(*text_bases_info, versioned_file_name, APR_HASH_KEY_STRING,
-                     info);
+        svn_hash_sets(*text_bases_info, versioned_file_name, info);
       }
     }
 
@@ -1710,21 +1705,20 @@ upgrade_to_wcng(void **dir_baton,
   SVN_ERR(svn_wc__read_entries_old(&entries, dir_abspath,
                                    scratch_pool, scratch_pool));
 
-  this_dir = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
+  this_dir = svn_hash_gets(entries, SVN_WC_ENTRY_THIS_DIR);
   SVN_ERR(ensure_repos_info(this_dir, dir_abspath,
                             repos_info_func, repos_info_baton,
                             repos_cache,
                             scratch_pool, scratch_pool));
 
   /* Cache repos UUID pairs for when a subdir doesn't have this information */
-  if (!apr_hash_get(repos_cache, this_dir->repos, APR_HASH_KEY_STRING))
+  if (!svn_hash_gets(repos_cache, this_dir->repos))
     {
       apr_pool_t *hash_pool = apr_hash_pool_get(repos_cache);
 
-      apr_hash_set(repos_cache,
-                   apr_pstrdup(hash_pool, this_dir->repos),
-                   APR_HASH_KEY_STRING,
-                   apr_pstrdup(hash_pool, this_dir->uuid));
+      svn_hash_sets(repos_cache,
+                    apr_pstrdup(hash_pool, this_dir->repos),
+                    apr_pstrdup(hash_pool, this_dir->uuid));
     }
 
   old_wcroot_abspath = svn_dirent_get_longest_ancestor(dir_abspath,
@@ -2056,7 +2050,7 @@ is_old_wcroot(const char *local_abspath,
       return SVN_NO_ERROR;
     }
 
-  entry = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
+  entry = svn_hash_gets(entries, name);
   if (!entry
       || entry->absent
       || (entry->deleted && entry->schedule != svn_wc_schedule_add)
@@ -2076,7 +2070,7 @@ is_old_wcroot(const char *local_abspath,
           parent_abspath = svn_dirent_join(parent_abspath, name, scratch_pool);
           break;
         }
-      entry = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
+      entry = svn_hash_gets(entries, name);
       if (!entry
           || entry->absent
           || (entry->deleted && entry->schedule != svn_wc_schedule_add)
@@ -2196,18 +2190,16 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__read_entries_old(&entries, local_abspath,
                                    scratch_pool, scratch_pool));
 
-  this_dir = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
-                          APR_HASH_KEY_STRING);
+  this_dir = svn_hash_gets(entries, SVN_WC_ENTRY_THIS_DIR);
   SVN_ERR(ensure_repos_info(this_dir, local_abspath, repos_info_func,
                             repos_info_baton, repos_cache,
                             scratch_pool, scratch_pool));
 
   /* Cache repos UUID pairs for when a subdir doesn't have this information */
-  if (!apr_hash_get(repos_cache, this_dir->repos, APR_HASH_KEY_STRING))
-    apr_hash_set(repos_cache,
-                 apr_pstrdup(scratch_pool, this_dir->repos),
-                 APR_HASH_KEY_STRING,
-                 apr_pstrdup(scratch_pool, this_dir->uuid));
+  if (!svn_hash_gets(repos_cache, this_dir->repos))
+    svn_hash_sets(repos_cache,
+                  apr_pstrdup(scratch_pool, this_dir->repos),
+                  apr_pstrdup(scratch_pool, this_dir->uuid));
 
   /* Create the new DB in the temporary root wc/.svn/tmp/wcng/.svn */
   data.root_abspath = svn_dirent_join(svn_wc__adm_child(local_abspath, "tmp",

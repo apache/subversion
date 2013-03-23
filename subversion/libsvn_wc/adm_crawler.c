@@ -370,7 +370,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
 
       /* Is the entry NOT on the disk? We may be able to restore it.  */
       if (restore_files
-          && apr_hash_get(dirents, child, APR_HASH_KEY_STRING) == NULL)
+          && svn_hash_gets(dirents, child) == NULL)
         {
           svn_wc__db_status_t wrk_status;
           svn_node_kind_t wrk_kind;
