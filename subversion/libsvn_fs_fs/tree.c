@@ -41,6 +41,7 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 
+#include "svn_hash.h"
 #include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"

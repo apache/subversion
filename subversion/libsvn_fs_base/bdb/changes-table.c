@@ -25,6 +25,7 @@
 #include <apr_hash.h>
 #include <apr_tables.h>
 
+#include "svn_hash.h"
 #include "svn_fs.h"
 #include "svn_pools.h"
 #include "svn_path.h"

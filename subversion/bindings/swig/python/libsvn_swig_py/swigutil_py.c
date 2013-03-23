@@ -35,6 +35,7 @@
 #include <apr_portable.h>
 #include <apr_thread_proc.h>
 
+#include "svn_hash.h"
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_opt.h"

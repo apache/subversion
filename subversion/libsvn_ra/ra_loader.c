@@ -33,6 +33,7 @@
 #include <apr_hash.h>
 #include <apr_uri.h>
 
+#include "svn_hash.h"
 #include "svn_version.h"
 #include "svn_types.h"
 #include "svn_error.h"

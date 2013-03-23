@@ -32,6 +32,7 @@
 #include <apr_hash.h>
 #include <apr_md5.h>
 
+#include "svn_hash.h"
 #include "svn_ra.h"
 #include "svn_delta.h"
 #include "svn_subst.h"

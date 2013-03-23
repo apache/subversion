@@ -28,6 +28,7 @@
 #include <httpd.h>
 #include <mod_dav.h>
 
+#include "svn_hash.h"
 #include "svn_xml.h"
 #include "svn_pools.h"
 #include "svn_dav.h"
