@@ -27,6 +27,7 @@
 
 /*** Includes. ***/
 
+#include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_error.h"
@@ -213,9 +214,9 @@ update_internal(svn_revnum_t *result_rev,
   svn_boolean_t server_supports_depth;
   svn_boolean_t cropping_target;
   svn_boolean_t target_conflicted = FALSE;
-  svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
-                                                 SVN_CONFIG_CATEGORY_CONFIG,
-                                                 APR_HASH_KEY_STRING) : NULL;
+  svn_config_t *cfg = ctx->config
+                      ? svn_hash_gets(ctx->config, SVN_CONFIG_CATEGORY_CONFIG)
+                      : NULL;
 
   if (result_rev)
     *result_rev = SVN_INVALID_REVNUM;

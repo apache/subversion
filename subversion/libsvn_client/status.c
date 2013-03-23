@@ -87,8 +87,7 @@ tweak_status(void *baton,
      transmission.  */
   if (sb->changelist_hash
       && (! status->changelist
-          || ! apr_hash_get(sb->changelist_hash, status->changelist,
-                            APR_HASH_KEY_STRING)))
+          || ! svn_hash_gets(sb->changelist_hash, status->changelist)))
     {
       return SVN_NO_ERROR;
     }

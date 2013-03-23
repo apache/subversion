@@ -88,7 +88,7 @@ get_file_for_validation(const svn_string_t **mime_type,
                           pool));
 
   if (mime_type)
-    *mime_type = apr_hash_get(props, SVN_PROP_MIME_TYPE, APR_HASH_KEY_STRING);
+    *mime_type = svn_hash_gets(props, SVN_PROP_MIME_TYPE);
 
   return SVN_NO_ERROR;
 }
@@ -612,8 +612,7 @@ remote_propget(apr_hash_t *props,
         {
           svn_prop_inherited_item_t *iprop =
             APR_ARRAY_IDX((*inherited_props), i, svn_prop_inherited_item_t *);
-          svn_string_t *iprop_val = apr_hash_get(iprop->prop_hash, propname,
-                                                 APR_HASH_KEY_STRING);
+          svn_string_t *iprop_val = svn_hash_gets(iprop->prop_hash, propname);
 
           if (iprop_val)
             {
@@ -622,10 +621,9 @@ remote_propget(apr_hash_t *props,
               new_iprop->path_or_url =
                 apr_pstrdup(result_pool, iprop->path_or_url);
               new_iprop->prop_hash = apr_hash_make(result_pool);
-              apr_hash_set(new_iprop->prop_hash,
-                           apr_pstrdup(result_pool, propname),
-                           APR_HASH_KEY_STRING,
-                           svn_string_dup(iprop_val, result_pool));
+              svn_hash_sets(new_iprop->prop_hash,
+                            apr_pstrdup(result_pool, propname),
+                            svn_string_dup(iprop_val, result_pool));
               APR_ARRAY_PUSH(final_iprops, svn_prop_inherited_item_t *) =
                 new_iprop;
             }
@@ -634,10 +632,11 @@ remote_propget(apr_hash_t *props,
     }
 
   if (prop_hash
-      && (val = apr_hash_get(prop_hash, propname, APR_HASH_KEY_STRING)))
+      && (val = svn_hash_gets(prop_hash, propname)))
     {
-      apr_hash_set(props, apr_pstrdup(result_pool, target_full_url),
-                   APR_HASH_KEY_STRING, svn_string_dup(val, result_pool));
+      svn_hash_sets(props,
+                    apr_pstrdup(result_pool, target_full_url),
+                    svn_string_dup(val, result_pool));
     }
 
   if (depth >= svn_depth_files
@@ -704,9 +703,8 @@ recursive_propget_receiver(void *baton,
   if (apr_hash_count(props))
     {
       apr_hash_index_t *hi = apr_hash_first(scratch_pool, props);
-      apr_hash_set(b->props, apr_pstrdup(b->pool, local_abspath),
-                   APR_HASH_KEY_STRING,
-                   svn_string_dup(svn__apr_hash_index_val(hi), b->pool));
+      svn_hash_sets(b->props, apr_pstrdup(b->pool, local_abspath),
+                    svn_string_dup(svn__apr_hash_index_val(hi), b->pool));
     }
 
   return SVN_NO_ERROR;

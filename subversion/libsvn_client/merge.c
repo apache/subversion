@@ -9761,8 +9761,9 @@ do_merge(apr_hash_t **modified_subtrees,
     depth = svn_depth_infinity;
 
   /* Set up the diff3 command, so various callers don't have to. */
-  cfg = ctx->config ? apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
-                                   APR_HASH_KEY_STRING) : NULL;
+  cfg = ctx->config
+        ? svn_hash_gets(ctx->config, SVN_CONFIG_CATEGORY_CONFIG)
+        : NULL;
   svn_config_get(cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
                  SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
 

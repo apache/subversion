@@ -26,6 +26,7 @@
 #include <apr_pools.h>
 
 #include "svn_error.h"
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_string.h"
 #include "svn_sorts.h"
@@ -409,13 +410,13 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
           *corrected_url = corrected;
 
           /* Make sure we've not attempted this URL before. */
-          if (apr_hash_get(attempted, corrected, APR_HASH_KEY_STRING))
+          if (svn_hash_gets(attempted, corrected))
             return svn_error_createf(SVN_ERR_CLIENT_CYCLE_DETECTED, NULL,
                                      _("Redirect cycle detected for URL '%s'"),
                                      corrected);
 
           /* Remember this CORRECTED_URL so we don't wind up in a loop. */
-          apr_hash_set(attempted, corrected, APR_HASH_KEY_STRING, (void *)1);
+          svn_hash_sets(attempted, corrected, (void *)1);
           base_url = corrected;
         }
     }
@@ -1052,8 +1053,7 @@ svn_client__ra_provide_base(svn_stream_t **contents,
   const char *local_abspath;
   svn_error_t *err;
 
-  local_abspath = apr_hash_get(reb->relpath_map, repos_relpath,
-                               APR_HASH_KEY_STRING);
+  local_abspath = svn_hash_gets(reb->relpath_map, repos_relpath);
   if (!local_abspath)
     {
       *contents = NULL;
@@ -1097,8 +1097,7 @@ svn_client__ra_provide_props(apr_hash_t **props,
   const char *local_abspath;
   svn_error_t *err;
 
-  local_abspath = apr_hash_get(reb->relpath_map, repos_relpath,
-                               APR_HASH_KEY_STRING);
+  local_abspath = svn_hash_gets(reb->relpath_map, repos_relpath);
   if (!local_abspath)
     {
       *props = NULL;
@@ -1140,8 +1139,7 @@ svn_client__ra_get_copysrc_kind(svn_node_kind_t *kind,
   struct ra_ev2_baton *reb = baton;
   const char *local_abspath;
 
-  local_abspath = apr_hash_get(reb->relpath_map, repos_relpath,
-                               APR_HASH_KEY_STRING);
+  local_abspath = svn_hash_gets(reb->relpath_map, repos_relpath);
   if (!local_abspath)
     {
       *kind = svn_node_unknown;

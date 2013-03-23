@@ -28,6 +28,7 @@
 /*** Includes. ***/
 
 #include <apr_file_io.h>
+#include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_wc.h"
@@ -324,8 +325,7 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
           repos_deletables = apr_pcalloc(pool, sizeof(*repos_deletables));
           repos_deletables->ra_session = ra_session;
           repos_deletables->target_uris = target_uris;
-          apr_hash_set(deletables, repos_root,
-                       APR_HASH_KEY_STRING, repos_deletables);
+          svn_hash_sets(deletables, repos_root, repos_deletables);
         }
 
       /* If we get here, we should have been able to calculate a
@@ -530,13 +530,11 @@ svn_client_delete4(const apr_array_header_t *paths,
                                           pool));
           SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
                                      local_abspath, pool, iterpool));
-          targets = apr_hash_get(wcroots, wcroot_abspath,
-                                 APR_HASH_KEY_STRING);
+          targets = svn_hash_gets(wcroots, wcroot_abspath);
           if (targets == NULL)
             {
               targets = apr_array_make(pool, 1, sizeof(const char *));
-              apr_hash_set(wcroots, wcroot_abspath, APR_HASH_KEY_STRING,
-                           targets);
+              svn_hash_sets(wcroots, wcroot_abspath, targets);
              }
 
           /* Make sure targets are unique. */

@@ -176,8 +176,7 @@ get_auto_props_for_pattern(apr_hash_t *properties,
       propval_str->data = propval;
       propval_str->len = strlen(propval);
 
-      apr_hash_set(properties, propname, APR_HASH_KEY_STRING,
-                   propval_str);
+      svn_hash_sets(properties, propname, propval_str);
       if (strcmp(propname, SVN_PROP_MIME_TYPE) == 0)
         *mimetype = propval;
       else if (strcmp(propname, SVN_PROP_EXECUTABLE) == 0)
@@ -287,8 +286,8 @@ add_file(const char *local_abspath,
     {
       mimetype = NULL;
       properties = apr_hash_make(pool);
-      apr_hash_set(properties, SVN_PROP_SPECIAL, APR_HASH_KEY_STRING,
-                   svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool));
+      svn_hash_sets(properties, SVN_PROP_SPECIAL,
+                    svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool));
     }
   else
     {
@@ -544,8 +543,8 @@ all_auto_props_collector(const char *name,
 
       if (len > 0)
         {
-          apr_hash_t *pattern_hash = apr_hash_get(autoprops_baton->autoprops,
-                                                  name, APR_HASH_KEY_STRING);
+          apr_hash_t *pattern_hash = svn_hash_gets(autoprops_baton->autoprops,
+                                                   name);
           svn_string_t *propval;
 
           /* Force reserved boolean property values to '*'. */
@@ -563,13 +562,13 @@ all_auto_props_collector(const char *name,
           if (!pattern_hash)
             {
               pattern_hash = apr_hash_make(autoprops_baton->result_pool);
-              apr_hash_set(autoprops_baton->autoprops,
-                           apr_pstrdup(autoprops_baton->result_pool, name),
-                           APR_HASH_KEY_STRING, pattern_hash);
+              svn_hash_sets(autoprops_baton->autoprops,
+                            apr_pstrdup(autoprops_baton->result_pool, name),
+                            pattern_hash);
             }
-          apr_hash_set(pattern_hash,
-                       apr_pstrdup(autoprops_baton->result_pool, property),
-                       APR_HASH_KEY_STRING, propval->data);
+          svn_hash_sets(pattern_hash,
+                        apr_pstrdup(autoprops_baton->result_pool, property),
+                        propval->data);
         }
     }
   return TRUE;
@@ -636,9 +635,9 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
   svn_error_t *err = NULL;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_boolean_t target_is_url = svn_path_is_url(path_or_url);
-  svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
-                                                 SVN_CONFIG_CATEGORY_CONFIG,
-                                                 APR_HASH_KEY_STRING) : NULL;
+  svn_config_t *cfg = ctx->config ? svn_hash_gets(ctx->config,
+                                                  SVN_CONFIG_CATEGORY_CONFIG)
+                                  : NULL;
   *autoprops = apr_hash_make(result_pool);
   autoprops_baton.result_pool = result_pool;
   autoprops_baton.autoprops = *autoprops;
@@ -689,7 +688,7 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
 
   /* Stash any explicit PROPS for PARENT_PATH into the inherited props array,
      since these are actually inherited props for LOCAL_ABSPATH. */
-  config_auto_prop = apr_hash_get(props, path_or_url, APR_HASH_KEY_STRING);
+  config_auto_prop = svn_hash_gets(props, path_or_url);
 
   if (config_auto_prop)
     {
@@ -697,10 +696,8 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
         apr_palloc(scratch_pool, sizeof(*new_iprop));
       new_iprop->path_or_url = path_or_url;
       new_iprop->prop_hash = apr_hash_make(scratch_pool);
-      apr_hash_set(new_iprop->prop_hash,
-                   SVN_PROP_INHERITABLE_AUTO_PROPS,
-                   APR_HASH_KEY_STRING,
-                   config_auto_prop);
+      svn_hash_sets(new_iprop->prop_hash, SVN_PROP_INHERITABLE_AUTO_PROPS,
+                    config_auto_prop);
       APR_ARRAY_PUSH(inherited_config_auto_props,
                      svn_prop_inherited_item_t *) = new_iprop;
     }
@@ -794,8 +791,7 @@ svn_error_t *svn_client__get_inherited_ignores(apr_array_header_t **ignores,
                               &rev, &rev, NULL, svn_depth_empty, NULL, ctx,
                               scratch_pool, scratch_pool));
 
-  explicit_prop = apr_hash_get(explicit_ignores, path_or_url,
-                               APR_HASH_KEY_STRING);
+  explicit_prop = svn_hash_gets(explicit_ignores, path_or_url);
 
   if (explicit_prop)
     {
@@ -803,10 +799,8 @@ svn_error_t *svn_client__get_inherited_ignores(apr_array_header_t **ignores,
         apr_palloc(scratch_pool, sizeof(*new_iprop));
       new_iprop->path_or_url = path_or_url;
       new_iprop->prop_hash = apr_hash_make(scratch_pool);
-      apr_hash_set(new_iprop->prop_hash,
-                   SVN_PROP_INHERITABLE_IGNORES,
-                   APR_HASH_KEY_STRING,
-                   explicit_prop);
+      svn_hash_sets(new_iprop->prop_hash, SVN_PROP_INHERITABLE_IGNORES,
+                    explicit_prop);
       APR_ARRAY_PUSH(inherited_ignores,
                      svn_prop_inherited_item_t *) = new_iprop;
     }
@@ -817,9 +811,8 @@ svn_error_t *svn_client__get_inherited_ignores(apr_array_header_t **ignores,
     {
       svn_prop_inherited_item_t *elt = APR_ARRAY_IDX(
         inherited_ignores, i, svn_prop_inherited_item_t *);
-      svn_string_t *ignore_val = apr_hash_get(elt->prop_hash,
-                                              SVN_PROP_INHERITABLE_IGNORES,
-                                              APR_HASH_KEY_STRING);
+      svn_string_t *ignore_val = svn_hash_gets(elt->prop_hash,
+                                               SVN_PROP_INHERITABLE_IGNORES);
       if (ignore_val)
         svn_cstring_split_append(*ignores, ignore_val->data, "\n\r\t\v ",
                                  FALSE, result_pool);
