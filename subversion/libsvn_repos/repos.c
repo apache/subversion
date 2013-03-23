@@ -1184,15 +1184,15 @@ parse_hooks_env_option(const char *name, const char *value,
   apr_pool_t *result_pool = apr_hash_pool_get(bo->hooks_env);
   apr_hash_t *hook_env;
   
-  hook_env = apr_hash_get(bo->hooks_env, bo->section, APR_HASH_KEY_STRING);
+  hook_env = svn_hash_gets(bo->hooks_env, bo->section);
   if (hook_env == NULL)
     {
       hook_env = apr_hash_make(result_pool);
-      apr_hash_set(bo->hooks_env, apr_pstrdup(result_pool, bo->section),
-                   APR_HASH_KEY_STRING, hook_env);
+      svn_hash_sets(bo->hooks_env, apr_pstrdup(result_pool, bo->section),
+                    hook_env);
     }
-  apr_hash_set(hook_env, apr_pstrdup(result_pool, name),
-               APR_HASH_KEY_STRING, apr_pstrdup(result_pool, value));
+  svn_hash_sets(hook_env, apr_pstrdup(result_pool, name),
+                apr_pstrdup(result_pool, value));
 
   return TRUE;
 }
@@ -1291,10 +1291,8 @@ create_repos_structure(svn_repos_t *repos,
 
   /* Create the DAV sandbox directory if pre-1.4 or pre-1.5-compatible. */
   if (fs_config
-      && (apr_hash_get(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
-                       APR_HASH_KEY_STRING)
-          || apr_hash_get(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
-                          APR_HASH_KEY_STRING)))
+      && (svn_hash_gets(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE)
+          || svn_hash_gets(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE)))
     {
       const char *dav_path = svn_dirent_join(repos->path,
                                              SVN_REPOS__DAV_DIR, pool);
@@ -1688,8 +1686,7 @@ svn_repos_has_capability(svn_repos_t *repos,
                          const char *capability,
                          apr_pool_t *pool)
 {
-  const char *val = apr_hash_get(repos->repository_capabilities,
-                                 capability, APR_HASH_KEY_STRING);
+  const char *val = svn_hash_gets(repos->repository_capabilities, capability);
 
   if (val == capability_yes)
     {
@@ -1718,9 +1715,8 @@ svn_repos_has_capability(svn_repos_t *repos,
           if (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
             {
               svn_error_clear(err);
-              apr_hash_set(repos->repository_capabilities,
-                           SVN_REPOS_CAPABILITY_MERGEINFO,
-                           APR_HASH_KEY_STRING, capability_no);
+              svn_hash_sets(repos->repository_capabilities,
+                            SVN_REPOS_CAPABILITY_MERGEINFO, capability_no);
               *has = FALSE;
             }
           else if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
@@ -1729,9 +1725,8 @@ svn_repos_has_capability(svn_repos_t *repos,
                  in r0, so we're likely to get this error -- but it
                  means the repository supports mergeinfo! */
               svn_error_clear(err);
-              apr_hash_set(repos->repository_capabilities,
-                           SVN_REPOS_CAPABILITY_MERGEINFO,
-                           APR_HASH_KEY_STRING, capability_yes);
+              svn_hash_sets(repos->repository_capabilities,
+                            SVN_REPOS_CAPABILITY_MERGEINFO, capability_yes);
               *has = TRUE;
             }
           else
@@ -1741,9 +1736,8 @@ svn_repos_has_capability(svn_repos_t *repos,
         }
       else
         {
-          apr_hash_set(repos->repository_capabilities,
-                       SVN_REPOS_CAPABILITY_MERGEINFO,
-                       APR_HASH_KEY_STRING, capability_yes);
+          svn_hash_sets(repos->repository_capabilities,
+                        SVN_REPOS_CAPABILITY_MERGEINFO, capability_yes);
           *has = TRUE;
         }
     }

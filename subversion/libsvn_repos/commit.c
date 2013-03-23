@@ -26,6 +26,7 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
+#include "svn_hash.h"
 #include "svn_compat.h"
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -1333,8 +1334,7 @@ svn_repos__get_commit_ev2(svn_editor_t **editor,
   /* Can the user modify the repository at all?  */
   /* ### check against AUTHZ.  */
 
-  author = apr_hash_get(revprops, SVN_PROP_REVISION_AUTHOR,
-                        APR_HASH_KEY_STRING);
+  author = svn_hash_gets(revprops, SVN_PROP_REVISION_AUTHOR);
 
   eb = apr_palloc(result_pool, sizeof(*eb));
   eb->repos = repos;
