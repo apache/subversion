@@ -366,8 +366,7 @@ init_client_context(svn_client_ctx_t **ctx_p,
     SVN_ERR(svn_cmdline__apply_config_options(ctx->config, config_options,
                                               "svnrdump: ", "--config-option"));
 
-  cfg_config = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
-                            APR_HASH_KEY_STRING);
+  cfg_config = svn_hash_gets(ctx->config, SVN_CONFIG_CATEGORY_CONFIG);
 
   /* ### FIXME: This is a hack to work around the fact that our dump
      ### editor simply can't handle the way ra_serf violates the
@@ -382,8 +381,7 @@ init_client_context(svn_client_ctx_t **ctx_p,
      ### 
      ### See http://subversion.tigris.org/issues/show_bug.cgi?id=4116.
   */
-  cfg_servers = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_SERVERS,
-                             APR_HASH_KEY_STRING);
+  cfg_servers = svn_hash_gets(ctx->config, SVN_CONFIG_CATEGORY_SERVERS);
   svn_config_set_bool(cfg_servers, SVN_CONFIG_SECTION_GLOBAL,
                       SVN_CONFIG_OPTION_HTTP_BULK_UPDATES, TRUE);
   svn_config_set_int64(cfg_servers, SVN_CONFIG_SECTION_GLOBAL,

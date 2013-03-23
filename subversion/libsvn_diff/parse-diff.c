@@ -25,6 +25,7 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_io.h"
@@ -1110,8 +1111,7 @@ add_property_hunk(svn_patch_t *patch, const char *prop_name,
 {
   svn_prop_patch_t *prop_patch;
 
-  prop_patch = apr_hash_get(patch->prop_patches, prop_name,
-                            APR_HASH_KEY_STRING);
+  prop_patch = svn_hash_gets(patch->prop_patches, prop_name);
 
   if (! prop_patch)
     {
@@ -1121,8 +1121,7 @@ add_property_hunk(svn_patch_t *patch, const char *prop_name,
       prop_patch->hunks = apr_array_make(result_pool, 1,
                                          sizeof(svn_diff_hunk_t *));
 
-      apr_hash_set(patch->prop_patches, prop_name, APR_HASH_KEY_STRING,
-                   prop_patch);
+      svn_hash_sets(patch->prop_patches, prop_name, prop_patch);
     }
 
   APR_ARRAY_PUSH(prop_patch->hunks, svn_diff_hunk_t *) = hunk;

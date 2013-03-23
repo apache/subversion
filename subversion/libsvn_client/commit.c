@@ -866,7 +866,8 @@ svn_client_commit6(const apr_array_header_t *targets,
 
           if (moved_to_abspath && copy_op_root_abspath &&
               strcmp(moved_to_abspath, copy_op_root_abspath) == 0 &&
-              svn_hash_gets(committables->by_path, copy_op_root_abspath) == NULL)
+              svn_hash_gets(committables->by_path, copy_op_root_abspath)
+              == NULL)
             {
               cmt_err = svn_error_createf(
                           SVN_ERR_ILLEGAL_TARGET, NULL,

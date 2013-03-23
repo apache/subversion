@@ -177,7 +177,8 @@ capabilities_headers_iterator_callback(void *baton,
         {
           /* The server doesn't know what repository we're referring
              to, so it can't just say capability_yes. */
-          if (!svn_hash_gets(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO))
+          if (!svn_hash_gets(session->capabilities,
+                             SVN_RA_CAPABILITY_MERGEINFO))
             {
               svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
                             capability_server_yes);
@@ -532,17 +533,14 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
       return SVN_NO_ERROR;
     }
 
-  cap_result = apr_hash_get(serf_sess->capabilities,
-                            capability,
-                            APR_HASH_KEY_STRING);
+  cap_result = svn_hash_gets(serf_sess->capabilities, capability);
 
   /* If any capability is unknown, they're all unknown, so ask. */
   if (cap_result == NULL)
     SVN_ERR(svn_ra_serf__exchange_capabilities(serf_sess, NULL, pool));
 
   /* Try again, now that we've fetched the capabilities. */
-  cap_result = apr_hash_get(serf_sess->capabilities,
-                            capability, APR_HASH_KEY_STRING);
+  cap_result = svn_hash_gets(serf_sess->capabilities, capability);
 
   /* Some capabilities depend on the repository as well as the server. */
   if (cap_result == capability_server_yes)

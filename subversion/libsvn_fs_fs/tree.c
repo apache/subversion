@@ -586,12 +586,10 @@ svn_fs_fs__txn_root(svn_fs_root_t **root_p,
   SVN_ERR(svn_fs_fs__txn_proplist(&txnprops, txn, pool));
   if (txnprops)
     {
-      if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_OOD,
-                       APR_HASH_KEY_STRING))
+      if (svn_hash_gets(txnprops, SVN_FS__PROP_TXN_CHECK_OOD))
         flags |= SVN_FS_TXN_CHECK_OOD;
 
-      if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS,
-                       APR_HASH_KEY_STRING))
+      if (svn_hash_gets(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS))
         flags |= SVN_FS_TXN_CHECK_LOCKS;
     }
 
@@ -1360,7 +1358,7 @@ fs_node_prop(svn_string_t **value_p,
   SVN_ERR(svn_fs_fs__dag_get_proplist(&proplist, node, pool));
   *value_p = NULL;
   if (proplist)
-    *value_p = apr_hash_get(proplist, propname, APR_HASH_KEY_STRING);
+    *value_p = svn_hash_gets(proplist, propname);
 
   return SVN_NO_ERROR;
 }
@@ -1461,7 +1459,7 @@ fs_change_node_prop(svn_fs_root_t *root,
     }
 
   /* Set the property. */
-  apr_hash_set(proplist, name, APR_HASH_KEY_STRING, value);
+  svn_hash_sets(proplist, name, value);
 
   /* Overwrite the node's proplist. */
   SVN_ERR(svn_fs_fs__dag_set_proplist(parent_path->node, proplist,
@@ -2491,7 +2489,7 @@ fs_copied_from(svn_revnum_t *rev_p,
      entry. */
   if (! root->is_txn_root) {
     fs_rev_root_data_t *frd = root->fsap_data;
-    copyfrom_str = apr_hash_get(frd->copyfrom_cache, path, APR_HASH_KEY_STRING);
+    copyfrom_str = svn_hash_gets(frd->copyfrom_cache, path);
   }
 
   if (copyfrom_str)
@@ -3752,8 +3750,7 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
           svn_error_t *err;
 
           SVN_ERR(svn_fs_fs__dag_get_proplist(&proplist, kid_dag, iterpool));
-          mergeinfo_string = apr_hash_get(proplist, SVN_PROP_MERGEINFO,
-                                          APR_HASH_KEY_STRING);
+          mergeinfo_string = svn_hash_gets(proplist, SVN_PROP_MERGEINFO);
           if (!mergeinfo_string)
             {
               svn_string_t *idstr = svn_fs_fs__id_unparse(dirent->id, iterpool);
@@ -3778,10 +3775,8 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
               }
           else
             {
-              apr_hash_set(result_catalog,
-                           apr_pstrdup(result_pool, kid_path),
-                           APR_HASH_KEY_STRING,
-                           kid_mergeinfo);
+              svn_hash_sets(result_catalog, apr_pstrdup(result_pool, kid_path),
+                            kid_mergeinfo);
             }
         }
 
@@ -3873,8 +3868,7 @@ get_mergeinfo_for_path_internal(svn_mergeinfo_t *mergeinfo,
 
   SVN_ERR(svn_fs_fs__dag_get_proplist(&proplist, nearest_ancestor->node,
                                       scratch_pool));
-  mergeinfo_string = apr_hash_get(proplist, SVN_PROP_MERGEINFO,
-                                  APR_HASH_KEY_STRING);
+  mergeinfo_string = svn_hash_gets(proplist, SVN_PROP_MERGEINFO);
   if (!mergeinfo_string)
     return svn_error_createf
       (SVN_ERR_FS_CORRUPT, NULL,
@@ -4045,8 +4039,7 @@ get_mergeinfos_for_paths(svn_fs_root_t *root,
         }
 
       if (path_mergeinfo)
-        apr_hash_set(result_catalog, path, APR_HASH_KEY_STRING,
-                     path_mergeinfo);
+        svn_hash_sets(result_catalog, path, path_mergeinfo);
       if (include_descendants)
         SVN_ERR(add_descendant_mergeinfo(result_catalog, root, path,
                                          result_pool, scratch_pool));

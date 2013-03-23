@@ -40,6 +40,7 @@
 
 #include <apr_lib.h>
 
+#include "svn_hash.h"
 #include "svn_client.h"
 #include "svn_cmdline.h"
 #include "svn_config.h"
@@ -335,8 +336,7 @@ get_operation(const char *path,
               struct operation *operation,
               apr_pool_t *pool)
 {
-  struct operation *child = apr_hash_get(operation->children, path,
-                                         APR_HASH_KEY_STRING);
+  struct operation *child = svn_hash_gets(operation->children, path);
   if (! child)
     {
       child = apr_pcalloc(pool, sizeof(*child));
@@ -346,7 +346,7 @@ get_operation(const char *path,
       child->kind = svn_node_dir;
       child->prop_mods = apr_hash_make(pool);
       child->prop_dels = apr_array_make(pool, 1, sizeof(const char *));
-      apr_hash_set(operation->children, path, APR_HASH_KEY_STRING, child);
+      svn_hash_sets(operation->children, path, child);
     }
   return child;
 }
@@ -450,8 +450,7 @@ build(action_code_t action,
       if (! prop_value)
         APR_ARRAY_PUSH(operation->prop_dels, const char *) = prop_name;
       else
-        apr_hash_set(operation->prop_mods, prop_name,
-                     APR_HASH_KEY_STRING, prop_value);
+        svn_hash_sets(operation->prop_mods, prop_name, prop_value);
       if (!operation->rev)
         operation->rev = rev;
       return SVN_NO_ERROR;
@@ -750,10 +749,9 @@ execute(const apr_array_header_t *actions,
   SVN_ERR(svn_config_get_config(&config, config_dir, pool));
   SVN_ERR(svn_cmdline__apply_config_options(config, config_options,
                                             "svnmucc: ", "--config-option"));
-  cfg_config = apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
-                            APR_HASH_KEY_STRING);
+  cfg_config = svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
 
-  if (! apr_hash_get(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING))
+  if (! svn_hash_gets(revprops, SVN_PROP_REVISION_LOG))
     {
       svn_string_t *msg = svn_string_create("", pool);
 
@@ -772,7 +770,7 @@ execute(const apr_array_header_t *actions,
                       TRUE, NULL, apr_hash_pool_get(revprops)));
         }
 
-      apr_hash_set(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING, msg);
+      svn_hash_sets(revprops, SVN_PROP_REVISION_LOG, msg);
     }
 
   SVN_ERR(create_ra_callbacks(&ra_callbacks, username, password, config_dir,
@@ -1019,7 +1017,7 @@ sanitize_log_sources(apr_hash_t *revprops,
   /* If we already have a log message in the revprop hash, then just
      make sure the user didn't try to also use -m or -F.  Otherwise,
      we need to consult -m or -F to find a log message, if any. */
-  if (apr_hash_get(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING))
+  if (svn_hash_gets(revprops, SVN_PROP_REVISION_LOG))
     {
       if (filedata || message)
         return mutually_exclusive_logs_error();
@@ -1030,13 +1028,13 @@ sanitize_log_sources(apr_hash_t *revprops,
         return mutually_exclusive_logs_error();
 
       SVN_ERR(svn_utf_cstring_to_utf8(&message, filedata->data, hash_pool));
-      apr_hash_set(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
-                   svn_stringbuf__morph_into_string(filedata));
+      svn_hash_sets(revprops, SVN_PROP_REVISION_LOG,
+                    svn_stringbuf__morph_into_string(filedata));
     }
   else if (message)
     {
-      apr_hash_set(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
-                   svn_string_create(message, hash_pool));
+      svn_hash_sets(revprops, SVN_PROP_REVISION_LOG,
+                    svn_string_create(message, hash_pool));
     }
   
   return SVN_NO_ERROR;

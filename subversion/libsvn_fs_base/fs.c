@@ -28,6 +28,7 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_fs.h"
 #include "svn_path.h"
@@ -446,9 +447,7 @@ bdb_write_config(svn_fs_t *fs)
 
       if (fs->config)
         {
-          value = apr_hash_get(fs->config,
-                               dbconfig_options[i].config_key,
-                               APR_HASH_KEY_STRING);
+          value = svn_hash_gets(fs->config, dbconfig_options[i].config_key);
         }
 
       SVN_ERR(svn_io_file_write_full(dbconfig_file,
@@ -684,14 +683,11 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   /* See if compatibility with older versions was explicitly requested. */
   if (fs->config)
     {
-      if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
-                                   APR_HASH_KEY_STRING))
+      if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE))
         format = 1;
-      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
-                                        APR_HASH_KEY_STRING))
+      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE))
         format = 2;
-      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
-                                        APR_HASH_KEY_STRING))
+      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE))
         format = 3;
     }
 

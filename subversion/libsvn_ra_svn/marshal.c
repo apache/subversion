@@ -32,6 +32,7 @@
 #include <apr_lib.h>
 #include <apr_strings.h>
 
+#include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -155,7 +156,7 @@ svn_error_t *svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Capability entry is not a word"));
       word = apr_pstrdup(conn->pool, item->u.word);
-      apr_hash_set(conn->capabilities, word, APR_HASH_KEY_STRING, word);
+      svn_hash_sets(conn->capabilities, word, word);
     }
   return SVN_NO_ERROR;
 }
@@ -171,8 +172,7 @@ svn_ra_svn__set_shim_callbacks(svn_ra_svn_conn_t *conn,
 svn_boolean_t svn_ra_svn_has_capability(svn_ra_svn_conn_t *conn,
                                         const char *capability)
 {
-  return (apr_hash_get(conn->capabilities, capability,
-                       APR_HASH_KEY_STRING) != NULL);
+  return (svn_hash_gets(conn->capabilities, capability) != NULL);
 }
 
 int
@@ -1659,7 +1659,7 @@ svn_error_t *svn_ra_svn_parse_proplist(const apr_array_header_t *list,
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Proplist element not a list"));
       SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "cs", &name, &value));
-      apr_hash_set(*props, name, APR_HASH_KEY_STRING, value);
+      svn_hash_sets(*props, name, value);
     }
 
   return SVN_NO_ERROR;
@@ -1777,7 +1777,7 @@ svn_error_t *svn_ra_svn_handle_commands2(svn_ra_svn_conn_t *conn,
   apr_hash_t *cmd_hash = apr_hash_make(subpool);
 
   for (command = commands; command->cmdname; command++)
-    apr_hash_set(cmd_hash, command->cmdname, APR_HASH_KEY_STRING, command);
+    svn_hash_sets(cmd_hash, command->cmdname, command);
 
   while (1)
     {
@@ -1794,7 +1794,7 @@ svn_error_t *svn_ra_svn_handle_commands2(svn_ra_svn_conn_t *conn,
             }
           return err;
         }
-      command = apr_hash_get(cmd_hash, cmdname, APR_HASH_KEY_STRING);
+      command = svn_hash_gets(cmd_hash, cmdname);
 
       if (command)
         err = (*command->handler)(conn, iterpool, params, baton);
