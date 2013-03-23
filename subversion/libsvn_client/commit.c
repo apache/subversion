@@ -30,6 +30,7 @@
 #include <string.h>
 #include <apr_strings.h>
 #include <apr_hash.h>
+#include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_ra.h"
 #include "svn_client.h"

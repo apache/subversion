@@ -30,6 +30,7 @@
 #include <apr_uuid.h>
 #include <apr_strings.h>
 
+#include "svn_hash.h"
 #include "svn_ctype.h"
 #include "svn_types.h"
 #include "svn_dso.h"
@@ -48,7 +49,6 @@
 #include "private/svn_subr_private.h"
 
 #include "fs-loader.h"
-#include "svn_hash.h"
 
 /* This is defined by configure on platforms which use configure, but
    we need to define a fallback for Windows. */

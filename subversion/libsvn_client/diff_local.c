@@ -30,6 +30,7 @@
 #include <apr_strings.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
+#include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_wc.h"
 #include "svn_diff.h"
