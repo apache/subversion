@@ -435,13 +435,10 @@ windows_ssl_server_trust_first_credentials(void **credentials,
                                            const char *realmstring,
                                            apr_pool_t *pool)
 {
-  apr_uint32_t *failures = apr_hash_get(parameters,
-                                        SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
-                                        APR_HASH_KEY_STRING);
+  apr_uint32_t *failures = svn_hash_gets(parameters,
+                                         SVN_AUTH_PARAM_SSL_SERVER_FAILURES);
   const svn_auth_ssl_server_cert_info_t *cert_info =
-    apr_hash_get(parameters,
-                 SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
-                 APR_HASH_KEY_STRING);
+    svn_hash_gets(parameters, SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO);
 
   *credentials = NULL;
   *iter_baton = NULL;

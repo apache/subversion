@@ -29,6 +29,7 @@
 
 #include <apr_general.h>
 #include <apr_lib.h>
+#include "svn_hash.h"
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "config_impl.h"
@@ -589,7 +590,7 @@ svn_config_addsection(svn_config_t *cfg,
   else
     s->hash_key = make_hash_key(apr_pstrdup(cfg->pool, section));
   s->options = apr_hash_make(cfg->pool);
-  apr_hash_set(cfg->sections, s->hash_key, APR_HASH_KEY_STRING, s);
+  svn_hash_sets(cfg->sections, s->hash_key, s);
   
   *sec = s;
 }
@@ -677,7 +678,7 @@ svn_config_set(svn_config_t *cfg,
       svn_config_addsection(cfg, section, &sec);
     }
 
-  apr_hash_set(sec->options, opt->hash_key, APR_HASH_KEY_STRING, opt);
+  svn_hash_sets(sec->options, opt->hash_key, opt);
 }
 
 
@@ -1170,6 +1171,6 @@ svn_config_has_section(svn_config_t *cfg, const char *section)
   if (! cfg->section_names_case_sensitive)
     make_hash_key(cfg->tmp_key->data);
 
-  sec = apr_hash_get(cfg->sections, cfg->tmp_key->data, APR_HASH_KEY_STRING);
+  sec = svn_hash_gets(cfg->sections, cfg->tmp_key->data);
   return sec != NULL;
 }

@@ -65,7 +65,7 @@ svn_dso_initialize2(void)
 static svn_error_t *
 svn_dso_load_internal(apr_dso_handle_t **dso, const char *fname)
 {
-  *dso = apr_hash_get(dso_cache, fname, APR_HASH_KEY_STRING);
+  *dso = svn_hash_gets(dso_cache, fname);
 
   /* First check to see if we've been through this before...  We do this
      to avoid calling apr_dso_load multiple times for a given library,
@@ -92,19 +92,13 @@ svn_dso_load_internal(apr_dso_handle_t **dso, const char *fname)
           *dso = NULL;
 
           /* It wasn't found, so set the special "we didn't find it" value. */
-          apr_hash_set(dso_cache,
-                       apr_pstrdup(dso_pool, fname),
-                       APR_HASH_KEY_STRING,
-                       NOT_THERE);
+          svn_hash_sets(dso_cache, apr_pstrdup(dso_pool, fname), NOT_THERE);
 
           return SVN_NO_ERROR;
         }
 
       /* Stash the dso so we can use it next time. */
-      apr_hash_set(dso_cache,
-                   apr_pstrdup(dso_pool, fname),
-                   APR_HASH_KEY_STRING,
-                   *dso);
+      svn_hash_sets(dso_cache, apr_pstrdup(dso_pool, fname), *dso);
     }
 
   return SVN_NO_ERROR;

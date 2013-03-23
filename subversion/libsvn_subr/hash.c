@@ -501,7 +501,7 @@ svn_hash_from_cstring_keys(apr_hash_t **hash_p,
     {
       const char *key =
         apr_pstrdup(pool, APR_ARRAY_IDX(keys, i, const char *));
-      apr_hash_set(hash, key, APR_HASH_KEY_STRING, key);
+      svn_hash_sets(hash, key, key);
     }
   *hash_p = hash;
   return SVN_NO_ERROR;
@@ -535,7 +535,7 @@ svn_hash__get_cstring(apr_hash_t *hash,
 {
   if (hash)
     {
-      const char *value = apr_hash_get(hash, key, APR_HASH_KEY_STRING);
+      const char *value = svn_hash_gets(hash, key);
       return value ? value : default_value;
     }
 

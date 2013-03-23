@@ -33,6 +33,7 @@
 #include <apr_file_io.h>
 #include <apr_strings.h>
 
+#include "svn_hash.h"
 #include "svn_cmdline.h"
 #include "svn_types.h"
 #include "svn_string.h"
@@ -254,23 +255,23 @@ svn_subst_build_keywords(svn_subst_keywords_t *kw,
    * only if the relevant keyword was present in keywords_val, otherwise
    * leaving that slot untouched. */
 
-  val = apr_hash_get(kwhash, SVN_KEYWORD_REVISION_LONG, APR_HASH_KEY_STRING);
+  val = svn_hash_gets(kwhash, SVN_KEYWORD_REVISION_LONG);
   if (val)
     kw->revision = val;
 
-  val = apr_hash_get(kwhash, SVN_KEYWORD_DATE_LONG, APR_HASH_KEY_STRING);
+  val = svn_hash_gets(kwhash, SVN_KEYWORD_DATE_LONG);
   if (val)
     kw->date = val;
 
-  val = apr_hash_get(kwhash, SVN_KEYWORD_AUTHOR_LONG, APR_HASH_KEY_STRING);
+  val = svn_hash_gets(kwhash, SVN_KEYWORD_AUTHOR_LONG);
   if (val)
     kw->author = val;
 
-  val = apr_hash_get(kwhash, SVN_KEYWORD_URL_LONG, APR_HASH_KEY_STRING);
+  val = svn_hash_gets(kwhash, SVN_KEYWORD_URL_LONG);
   if (val)
     kw->url = val;
 
-  val = apr_hash_get(kwhash, SVN_KEYWORD_ID, APR_HASH_KEY_STRING);
+  val = svn_hash_gets(kwhash, SVN_KEYWORD_ID);
   if (val)
     kw->id = val;
 
@@ -304,12 +305,9 @@ svn_subst_build_keywords2(apr_hash_t **kw,
           svn_string_t *revision_val;
 
           revision_val = keyword_printf("%r", rev, url, date, author, pool);
-          apr_hash_set(*kw, SVN_KEYWORD_REVISION_LONG,
-                       APR_HASH_KEY_STRING, revision_val);
-          apr_hash_set(*kw, SVN_KEYWORD_REVISION_MEDIUM,
-                       APR_HASH_KEY_STRING, revision_val);
-          apr_hash_set(*kw, SVN_KEYWORD_REVISION_SHORT,
-                       APR_HASH_KEY_STRING, revision_val);
+          svn_hash_sets(*kw, SVN_KEYWORD_REVISION_LONG, revision_val);
+          svn_hash_sets(*kw, SVN_KEYWORD_REVISION_MEDIUM, revision_val);
+          svn_hash_sets(*kw, SVN_KEYWORD_REVISION_SHORT, revision_val);
         }
       else if ((! strcmp(keyword, SVN_KEYWORD_DATE_LONG))
                || (! svn_cstring_casecmp(keyword, SVN_KEYWORD_DATE_SHORT)))
@@ -317,10 +315,8 @@ svn_subst_build_keywords2(apr_hash_t **kw,
           svn_string_t *date_val;
 
           date_val = keyword_printf("%D", rev, url, date, author, pool);
-          apr_hash_set(*kw, SVN_KEYWORD_DATE_LONG,
-                       APR_HASH_KEY_STRING, date_val);
-          apr_hash_set(*kw, SVN_KEYWORD_DATE_SHORT,
-                       APR_HASH_KEY_STRING, date_val);
+          svn_hash_sets(*kw, SVN_KEYWORD_DATE_LONG, date_val);
+          svn_hash_sets(*kw, SVN_KEYWORD_DATE_SHORT, date_val);
         }
       else if ((! strcmp(keyword, SVN_KEYWORD_AUTHOR_LONG))
                || (! svn_cstring_casecmp(keyword, SVN_KEYWORD_AUTHOR_SHORT)))
@@ -328,10 +324,8 @@ svn_subst_build_keywords2(apr_hash_t **kw,
           svn_string_t *author_val;
 
           author_val = keyword_printf("%a", rev, url, date, author, pool);
-          apr_hash_set(*kw, SVN_KEYWORD_AUTHOR_LONG,
-                       APR_HASH_KEY_STRING, author_val);
-          apr_hash_set(*kw, SVN_KEYWORD_AUTHOR_SHORT,
-                       APR_HASH_KEY_STRING, author_val);
+          svn_hash_sets(*kw, SVN_KEYWORD_AUTHOR_LONG, author_val);
+          svn_hash_sets(*kw, SVN_KEYWORD_AUTHOR_SHORT, author_val);
         }
       else if ((! strcmp(keyword, SVN_KEYWORD_URL_LONG))
                || (! svn_cstring_casecmp(keyword, SVN_KEYWORD_URL_SHORT)))
@@ -339,10 +333,8 @@ svn_subst_build_keywords2(apr_hash_t **kw,
           svn_string_t *url_val;
 
           url_val = keyword_printf("%u", rev, url, date, author, pool);
-          apr_hash_set(*kw, SVN_KEYWORD_URL_LONG,
-                       APR_HASH_KEY_STRING, url_val);
-          apr_hash_set(*kw, SVN_KEYWORD_URL_SHORT,
-                       APR_HASH_KEY_STRING, url_val);
+          svn_hash_sets(*kw, SVN_KEYWORD_URL_LONG, url_val);
+          svn_hash_sets(*kw, SVN_KEYWORD_URL_SHORT, url_val);
         }
       else if ((! svn_cstring_casecmp(keyword, SVN_KEYWORD_ID)))
         {
@@ -350,8 +342,7 @@ svn_subst_build_keywords2(apr_hash_t **kw,
 
           id_val = keyword_printf("%b %r %d %a", rev, url, date, author,
                                   pool);
-          apr_hash_set(*kw, SVN_KEYWORD_ID,
-                       APR_HASH_KEY_STRING, id_val);
+          svn_hash_sets(*kw, SVN_KEYWORD_ID, id_val);
         }
       else if ((! svn_cstring_casecmp(keyword, SVN_KEYWORD_HEADER)))
         {
@@ -359,8 +350,7 @@ svn_subst_build_keywords2(apr_hash_t **kw,
 
           header_val = keyword_printf("%u %r %d %a", rev, url, date, author,
                                       pool);
-          apr_hash_set(*kw, SVN_KEYWORD_HEADER,
-                       APR_HASH_KEY_STRING, header_val);
+          svn_hash_sets(*kw, SVN_KEYWORD_HEADER, header_val);
         }
     }
 
@@ -559,7 +549,7 @@ match_keyword(char *buf,
     keyword_name[i] = buf[i + 1];
   keyword_name[i] = '\0';
 
-  return apr_hash_get(keywords, keyword_name, APR_HASH_KEY_STRING) != NULL;
+  return svn_hash_gets(keywords, keyword_name) != NULL;
 }
 
 /* Try to translate keyword *KEYWORD_NAME in BUF (whose length is LEN):
@@ -595,7 +585,7 @@ translate_keyword(char *buf,
   if (! keywords)
     return FALSE;
 
-  value = apr_hash_get(keywords, keyword_name, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(keywords, keyword_name);
 
   if (value)
     {
@@ -1448,9 +1438,8 @@ stream_translated(svn_stream_t *stream,
               void *val;
 
               apr_hash_this(hi, &key, NULL, &val);
-              apr_hash_set(copy, apr_pstrdup(result_pool, key),
-                           APR_HASH_KEY_STRING,
-                           svn_string_dup(val, result_pool));
+              svn_hash_sets(copy, apr_pstrdup(result_pool, key),
+                            svn_string_dup(val, result_pool));
             }
           svn_pool_destroy(subpool);
 
