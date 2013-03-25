@@ -652,7 +652,7 @@ svn_rangelist__combine_adjacent_ranges(svn_rangelist_t *rangelist,
               if (i + 1 < rangelist->nelts)
                 memmove(rangelist->elts + (rangelist->elt_size * i),
                         rangelist->elts + (rangelist->elt_size * (i + 1)),
-                        rangelist->elt_size * (rangelist->nelts - i));
+                        rangelist->elt_size * (rangelist->nelts - i - 1));
               rangelist->nelts--;
               i--;
             }
