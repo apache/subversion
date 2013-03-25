@@ -94,7 +94,7 @@ StatusCallback::doStatus(const char *local_abspath,
 
   jstring jPath = JNIUtil::makeJString(local_abspath);
   if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
+    POP_AND_RETURN(SVN_NO_ERROR);
 
   jobject jStatus = CreateJ::Status(wc_ctx, status, pool);
   if (JNIUtil::isJavaExceptionThrown())
