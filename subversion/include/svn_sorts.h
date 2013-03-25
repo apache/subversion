@@ -214,6 +214,71 @@ void
 svn_sort__array_reverse(apr_array_header_t *array,
                         apr_pool_t *scratch_pool);
 
+/** Priority queues.
+ *
+ * @defgroup svn__priority_queue_t Priority Queues
+ * @{
+ */
+
+/**
+ * We implement priority queues on top of existing ELEMENTS arrays.  They
+ * provide us with memory management and very basic element type information.
+ *
+ * The extraction order is being defined by a comparison function similar
+ * to the ones used with qsort.  The first element in the queue is always
+ * on with COMPARISON_FUNC(first,element) <= 0, for all elements in the
+ * queue.
+ */
+
+/**
+ * Opaque data type for priority queues.
+ */
+typedef struct svn__priority_queue_t svn__priority_queue_t;
+
+/**
+ * Return a priority queue containing all provided @a elements and prioritize
+ * them according to @a compare_func.
+ *
+ * @note The priority queue will use the existing @a elements array for data
+ * storage.  So, you must not manipulate that array while using the queue.
+ * Also, the lifetime of the queue is bound to that of the array.
+ */
+svn__priority_queue_t *
+svn__priority_queue_create(apr_array_header_t *elements,
+                           int (*compare_func)(const void *, const void *));
+
+/**
+ * Returns the number of elements in the @a queue.
+ */
+apr_size_t
+svn__priority_queue_size(svn__priority_queue_t *queue);
+
+/**
+ * Returns a reference to the first element in the @a queue.  The queue
+ * contents remains unchanged.  If the @a queue is empty, #NULL will be
+ * returned.
+ */
+void *
+svn__priority_queue_peek(svn__priority_queue_t *queue);
+
+/**
+ * Remove the first element from the @a queue.  This is a no-op for empty
+ * queues.
+ */
+void
+svn__priority_queue_pop(svn__priority_queue_t *queue);
+
+/**
+ * Append the new @a element to the @a queue.  @a element must neither be
+ * #NULL nor the first element as returned by #svn__priority_queue_peek.
+ */
+void
+svn__priority_queue_push(svn__priority_queue_t *queue,
+                         void *element);
+
+/** @} */
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

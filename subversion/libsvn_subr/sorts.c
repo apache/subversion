@@ -306,3 +306,142 @@ svn_sort__array_reverse(apr_array_header_t *array,
         }
     }
 }
+
+/* Our priority queue data structure:
+ * Simply remember the constructor parameters.
+ */
+struct svn__priority_queue_t
+{
+  /* the queue elements, ordered as a heap according to COMPARE_FUNC */
+  apr_array_header_t *elements;
+
+  /* predicate used to order the heap */
+  int (*compare_func)(const void *, const void *);
+};
+
+/* Return TRUE, if heap element number LHS in QUEUE is smaller than element
+ * number RHS according to QUEUE->COMPARE_FUNC
+ */
+static int
+heap_is_less(svn__priority_queue_t *queue,
+             apr_size_t lhs,
+             apr_size_t rhs)
+{
+  char *lhs_value = queue->elements->elts + lhs * queue->elements->elt_size;
+  char *rhs_value = queue->elements->elts + rhs * queue->elements->elt_size;
+
+  assert(lhs < queue->elements->nelts);
+  assert(rhs < queue->elements->nelts);
+  return queue->compare_func((void *)lhs_value, (void *)rhs_value) < 0;
+}
+
+/* Exchange elements number LHS and RHS in QUEUE.
+ */
+static void
+heap_swap(svn__priority_queue_t *queue,
+          apr_size_t lhs,
+          apr_size_t rhs)
+{
+  int i;
+  char *lhs_value = queue->elements->elts + lhs * queue->elements->elt_size;
+  char *rhs_value = queue->elements->elts + rhs * queue->elements->elt_size;
+
+  for (i = 0; i < queue->elements->elt_size; ++i)
+    {
+      char temp = lhs_value[i];
+      lhs_value[i] = rhs_value[i];
+      rhs_value[i] = temp;
+    }
+}
+
+/* Move element number IDX to lower indexes until the heap criterion is
+ * fulfilled again.
+ */
+static void
+heap_bubble_down(svn__priority_queue_t *queue,
+                 int idx)
+{
+  while (idx > 0 && heap_is_less(queue, idx, (idx - 1) / 2))
+    {
+      heap_swap(queue, idx, (idx - 1) / 2);
+      idx = (idx - 1) / 2;
+    }
+}
+
+/* Move element number IDX to higher indexes until the heap criterion is
+ * fulfilled again.
+ */
+static void
+heap_bubble_up(svn__priority_queue_t *queue,
+               int idx)
+{
+  while (2 * idx + 2 < queue->elements->nelts)
+    {
+      int child = heap_is_less(queue, 2 * idx + 1, 2 * idx + 2)
+                ? 2 * idx + 1
+                : 2 * idx + 2;
+
+      if (heap_is_less(queue, idx, child))
+        return;
+
+      heap_swap(queue, idx, child);
+      idx = child;
+    }
+
+  if (   2 * idx + 1 < queue->elements->nelts
+      && heap_is_less(queue, 2 * idx + 1, idx))
+    heap_swap(queue, 2 * idx + 1, idx);
+}
+
+svn__priority_queue_t *
+svn__priority_queue_create(apr_array_header_t *elements,
+                           int (*compare_func)(const void *, const void *))
+{
+  int i;
+
+  svn__priority_queue_t *queue = apr_pcalloc(elements->pool, sizeof(*queue));
+  queue->elements = elements;
+  queue->compare_func = compare_func;
+
+  for (i = elements->nelts - 1; i > 0; --i)
+    heap_bubble_down(queue, i);
+  
+  return queue;
+}
+
+apr_size_t
+svn__priority_queue_size(svn__priority_queue_t *queue)
+{
+  return queue->elements->nelts;
+}
+
+void *
+svn__priority_queue_peek(svn__priority_queue_t *queue)
+{
+  return queue->elements->nelts ? queue->elements->elts : NULL;
+}
+
+void
+svn__priority_queue_pop(svn__priority_queue_t *queue)
+{
+  if (queue->elements->nelts)
+    {
+      memcpy(queue->elements->elts,
+             queue->elements->elts + (queue->elements->nelts - 1)
+                                   * queue->elements->elt_size,
+             queue->elements->elt_size);
+      --queue->elements->nelts;
+      heap_bubble_up(queue, 0);
+    }
+}
+
+void
+svn__priority_queue_push(svn__priority_queue_t *queue,
+                         void *element)
+{
+  /* we cannot duplicate elements due to potential array re-allocs */
+  assert(element && element != queue->elements->elts);
+
+  memcpy(apr_array_push(queue->elements), element, queue->elements->elt_size);
+  heap_bubble_down(queue, queue->elements->nelts - 1);
+}
