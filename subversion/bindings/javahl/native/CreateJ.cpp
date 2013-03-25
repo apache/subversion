@@ -430,7 +430,7 @@ CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
 
   jclass clazzCP = env->FindClass(JAVA_PACKAGE"/types/ChangePath");
   if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN(SVN_NO_ERROR);
+    POP_AND_RETURN_NULL;
 
   static jmethodID midCP = 0;
   if (midCP == 0)
@@ -443,7 +443,7 @@ CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
                                "L"JAVA_PACKAGE"/types/Tristate;"
                                "L"JAVA_PACKAGE"/types/Tristate;)V");
       if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN(SVN_NO_ERROR);
+        POP_AND_RETURN_NULL;
     }
 
   jstring jpath = JNIUtil::makeJString(path);
