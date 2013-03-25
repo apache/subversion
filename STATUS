@@ -72,7 +72,7 @@ Candidate changes:
      Accessing the wrong database from the revert code gives an ugly error
      which might not be easy to work around.
    Votes:
-     +1: rhuijben   
+     +1: rhuijben, pburba
 
  * r1425368
    Use the right api for generating the repository dirent in mod_dav_svn.
@@ -80,7 +80,7 @@ Candidate changes:
      Using dav_svn_get_repos_path() causes an assertion on Windows. This
      public api was unused until the in-repo-authz was merged to trunk.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, pburba
 
  * r1426752
    Fix Issue #4133, an issue in the diff-libraries whitespace normalization
@@ -116,7 +116,7 @@ Candidate changes:
     Justification:
       Improves 'svn diff' handling of local changes.
     Votes:
-      +1: rhuijben
+      +1: rhuijben, pburba
 
  * r1427278
    Fix another issue in the diff-libraries whitespace normalization
