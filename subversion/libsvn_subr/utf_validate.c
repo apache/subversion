@@ -308,6 +308,13 @@ first_non_fsm_start_char_cstring(const char *data)
       return data;
 
   /* Scan the input one machine word at a time. */
+#ifndef SVN_UTF_NO_UNITIALISED_ACCESS
+  /* This may read allocated but initialised bytes beyond the
+     terminating null.  Any such bytes are always readable and this
+     code operates correctly whatever the uninitialised values happen
+     to be.  However memory checking tools such as valgrind and GCC
+     4.8's address santitizer will object so this bit of code can be
+     disabled at compile time. */
   for (; ; data += sizeof(apr_uintptr_t))
     {
       /* Check for non-ASCII chars: */
@@ -320,6 +327,7 @@ first_non_fsm_start_char_cstring(const char *data)
       if ((chunk & SVN__BIT_7_SET) != SVN__BIT_7_SET)
         break;
     }
+#endif
 
   /* The remaining odd bytes will be examined the naive way: */
   for (; ; ++data)
