@@ -38,6 +38,7 @@
 #include "../libsvn_fs/fs-loader.h"
 #include "private/svn_fs_util.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_dep_compat.h"
 
 
 /* Add LOCK and its associated LOCK_TOKEN (associated with PATH) as
