@@ -649,11 +649,7 @@ svn_rangelist__combine_adjacent_ranges(svn_rangelist_t *rangelist,
           if (lastrange->inheritable == range->inheritable)
             {
               lastrange->end = MAX(range->end, lastrange->end);
-              if (i + 1 < rangelist->nelts)
-                memmove(rangelist->elts + (rangelist->elt_size * i),
-                        rangelist->elts + (rangelist->elt_size * (i + 1)),
-                        rangelist->elt_size * (rangelist->nelts - i - 1));
-              rangelist->nelts--;
+              svn_sort__array_delete(rangelist, i, 1);
               i--;
             }
         }
