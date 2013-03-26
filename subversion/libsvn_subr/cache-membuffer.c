@@ -116,11 +116,11 @@
 /* By default, don't create cache segments smaller than this value unless
  * the total cache size itself is smaller.
  */
-#define DEFAULT_MIN_SEGMENT_SIZE 0x2000000ull
+#define DEFAULT_MIN_SEGMENT_SIZE APR_UINT64_C(0x2000000)
 
 /* The minimum segment size we will allow for multi-segmented caches
  */
-#define MIN_SEGMENT_SIZE 0x10000ull
+#define MIN_SEGMENT_SIZE APR_UINT64_C(0x10000)
 
 /* The maximum number of segments allowed. Larger numbers reduce the size
  * of each segment, in turn reducing the max size of a cachable item.
@@ -133,7 +133,7 @@
 /* As of today, APR won't allocate chunks of 4GB or more. So, limit the
  * segment size to slightly below that.
  */
-#define MAX_SEGMENT_SIZE 0xffff0000ull
+#define MAX_SEGMENT_SIZE APR_UINT64_C(0xffff0000)
 
 /* We don't mark the initialization status for every group but initialize
  * a number of groups at once. That will allow for a very small init flags
