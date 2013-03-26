@@ -74,14 +74,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, pburba
 
- * r1425368
-   Use the right api for generating the repository dirent in mod_dav_svn.
-   Justification:
-     Using dav_svn_get_repos_path() causes an assertion on Windows. This
-     public api was unused until the in-repo-authz was merged to trunk.
-   Votes:
-     +1: rhuijben, pburba
-
  * r1426752
    Fix Issue #4133, an issue in the diff-libraries whitespace normalization
    handling that might make diff use the wrong tokens, showing up as
@@ -302,3 +294,11 @@ Approved changes:
      was found to be troublesome in issue #4332's research, too.
    Votes:
      +1: cmpilato, breser, rhuijben
+
+ * r1425368
+   Use the right api for generating the repository dirent in mod_dav_svn.
+   Justification:
+     Using dav_svn_get_repos_path() causes an assertion on Windows. This
+     public api was unused until the in-repo-authz was merged to trunk.
+   Votes:
+     +1: rhuijben, pburba, ivan
