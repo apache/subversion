@@ -261,6 +261,14 @@ Candidate changes:
    Votes:
      +1: breser
 
+ * r1461278
+   Make svnserve log the replayed revision, not the low-water-mark
+   revision, when logging the 'replay' operation.
+   Justification:
+     User-reported bug confusing administrators.
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 =====================
 
