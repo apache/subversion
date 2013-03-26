@@ -247,6 +247,7 @@ Candidate changes:
      Make get-deps.sh work on Solaris. 
    Votes:
      +1: breser
+     +0: rhuijben (untested)
 
  * r1452780
    Address issue #4331, "working copy permissions change on commit for files
@@ -262,8 +263,24 @@ Candidate changes:
      Make it easier to build svn+serf with kerberos support on Solaris10.
    Branch:
      ^/subversion/branches/1.7.x-gssapi-solaris10
+   Notes:
+     rhuijben: Is this necessary for 1.7. I think gssapi was moved to serf
+     with/before serf 1.0, which is a 1.7 requirement?
    Votes:
      +1: breser
+
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
+ * r1458341
+   Fix issue 4337, client memory leak in "svn log" for ra_svn.
+   Justification:
+     Client leaks hundreds of MB on large repositories.
+   Votes:
+     +1: philip, breser, rhuijben
 
  * r1453780
    Reject operations on some properties for activity resources.
@@ -271,7 +288,7 @@ Candidate changes:
      It's a SEGV.
    Votes:
      +1: philip, breser, stefan2
-
+     
  * ^/subversion/branches/1.7.x-issue4257
    Fix issue #4257 ("neon get_dir leads to bogus NODES rows").
    Justification:
@@ -285,17 +302,3 @@ Candidate changes:
      was found to be troublesome in issue #4332's research, too.
    Votes:
      +1: cmpilato, breser
-
- * r1458341
-   Fix issue 4337, client memory leak in "svn log" for ra_svn.
-   Justification:
-     Client leaks hundreds of MB on large repositories.
-   Votes:
-     +1: philip, breser
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
-
