@@ -1469,9 +1469,9 @@ svn_repos_verify_fs2(svn_repos_t *repos,
                                                 &cancel_edit_baton,
                                                 iterpool));
 
-      SVN_ERR(svn_fs_verify_rev(fs, rev, iterpool));
-
       SVN_ERR(svn_fs_revision_root(&to_root, fs, rev, iterpool));
+      SVN_ERR(svn_fs_verify_rev(fs, to_root, iterpool));
+
       SVN_ERR(svn_repos_replay2(to_root, "", SVN_INVALID_REVNUM, FALSE,
                                 cancel_editor, cancel_edit_baton,
                                 NULL, NULL, iterpool));

@@ -472,7 +472,7 @@ bdb_write_config(svn_fs_t *fs)
 
 static svn_error_t *
 base_bdb_verify_rev(svn_fs_t *fs,
-                    svn_revnum_t revision,
+                    svn_fs_root_t *root,
                     apr_pool_t *scratch_pool)
 {
   /* Verifying is currently a no op for BDB. */

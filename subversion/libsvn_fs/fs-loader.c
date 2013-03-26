@@ -630,10 +630,10 @@ svn_fs_recover(const char *path,
 
 svn_error_t *
 svn_fs_verify_rev(svn_fs_t *fs,
-                  svn_revnum_t revision,
+                  svn_fs_root_t *root,
                   apr_pool_t *scratch_pool)
 {
-  SVN_ERR(fs->vtable->verify_rev(fs, revision, scratch_pool));
+  SVN_ERR(fs->vtable->verify_rev(fs, root, scratch_pool));
 
   return SVN_NO_ERROR;
 }
