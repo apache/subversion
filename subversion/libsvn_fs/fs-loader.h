@@ -205,7 +205,7 @@ typedef struct fs_vtable_t
                             void *get_locks_baton,
                             apr_pool_t *pool);
   svn_error_t *(*verify_rev)(svn_fs_t *fs,
-                             svn_revnum_t revision,
+                             svn_fs_root_t *root,
                              apr_pool_t *pool);
   svn_error_t *(*freeze)(svn_fs_t *fs,
                          svn_error_t *(*freeze_body)(void *, apr_pool_t *),

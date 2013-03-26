@@ -2464,7 +2464,7 @@ svn_fs_verify(const char *path,
  */
 svn_error_t *
 svn_fs_verify_rev(svn_fs_t *fs,
-                  svn_revnum_t revision,
+                  svn_fs_root_t *root,
                   apr_pool_t *scratch_pool);
 
 /** @} */
