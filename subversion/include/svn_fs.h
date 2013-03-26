@@ -2446,7 +2446,8 @@ svn_fs_verify(const char *path,
 
 /**
  * Perform backend-specific data consistency and correctness validations
- * to revision @a revision of the Subversion filesystem @a fs.
+ * to @a root the Subversion filesystem @a fs.  @a root is typically
+ * a revision root (see svn_fs_revision_root()).
  * Use @a scratch_pool for temporary allocations.
  *
  * @note You probably don't want to use this directly.  Take a look at
