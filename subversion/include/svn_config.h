@@ -62,6 +62,10 @@ typedef struct svn_config_t svn_config_t;
  * client configuration files.
  * @{
  */
+
+ /* This list of #defines is intentionally presented as a nested list
+    that matches the in-config hierarchy.  */
+
 #define SVN_CONFIG_CATEGORY_SERVERS        "servers"
 #define SVN_CONFIG_SECTION_GROUPS               "groups"
 #define SVN_CONFIG_SECTION_GLOBAL               "global"
