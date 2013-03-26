@@ -1313,9 +1313,7 @@ svn_ra_neon__do_check_path(svn_ra_session_t *session,
 {
   svn_ra_neon__session_t *ras = session->priv;
   const char *url = ras->url->data;
-  const char *bc_url;
-  const char *bc_relative;
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
   svn_boolean_t is_dir;
 
   /* ### For now, using svn_ra_neon__get_starting_props() works because
@@ -1350,18 +1348,42 @@ svn_ra_neon__do_check_path(svn_ra_session_t *session,
   if (path)
     url = svn_path_url_add_component2(url, path, pool);
 
-  err = svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, NULL, ras,
-                                       url, revision, pool);
+  /* If we're querying HEAD, we can do so against the public URL;
+     otherwise, we have to get a revision-specific URL to work with.  */
+  if (SVN_IS_VALID_REVNUM(revision))
+    {
+      const char *bc_url;
+      const char *bc_relative;
+
+      err = svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, NULL, ras,
+                                           url, revision, pool);
+      if (! err)
+        url = svn_path_url_add_component2(bc_url, bc_relative, pool);
+    }
+  else
+    {
+      ne_uri parsed_url;
+
+      /* svn_ra_neon__get_starting_props() wants only the path part of URL. */
+      ne_uri_parse(url, &parsed_url);
+      if (parsed_url.path)
+        {
+          url = apr_pstrdup(pool, parsed_url.path);
+        }
+      else
+        {
+          err = svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                  _("Neon was unable to parse URL '%s'"), url);
+        }
+      ne_uri_free(&parsed_url);
+    }
 
   if (! err)
     {
       svn_ra_neon__resource_t *rsrc;
-      const char *full_bc_url = svn_path_url_add_component2(bc_url,
-                                                            bc_relative,
-                                                            pool);
-
-      /* query the DAV:resourcetype of the full, assembled URL. */
-      err = svn_ra_neon__get_starting_props(&rsrc, ras, full_bc_url, pool);
+          
+      /* Query the DAV:resourcetype.  */
+      err = svn_ra_neon__get_starting_props(&rsrc, ras, url, pool);
       if (! err)
         is_dir = rsrc->is_collection;
     }

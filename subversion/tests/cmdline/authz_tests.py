@@ -1390,6 +1390,21 @@ def upgrade_absent(sbox):
   svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output,
                                         None, None)
 
+@Skip(svntest.main.is_ra_type_file)
+@Issue(4332)
+def authz_del_from_subdir(sbox):
+  "delete file without rights on the root"
+
+  sbox.build(create_wc = False)
+
+  write_authz_file(sbox, {"/": "* = ", "/A": "jrandom = rw"})
+
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                      'rm', sbox.repo_url + '/A/mu',
+                                      '-m', '')
+
 ########################################################################
 # Run the tests
 
@@ -1419,6 +1434,7 @@ test_list = [ None,
               wc_delete,
               wc_commit_error_handling,
               upgrade_absent,
+              authz_del_from_subdir,
              ]
 serial_only = True
 

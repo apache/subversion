@@ -299,17 +299,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * ^/subversion/branches/1.7.x-issue4332
-   Fix issue #4332 ("neon OPTIONS request on repository root causes
-   authz access denied").
-   Justification:
-     This is a user-reported bug preventing what should be a
-     completely valid remote deletion operation when Neon is the HTTP
-     library in use.  (As a bonus side effect, this shaves one or two
-     network turnarounds per deletion target off of this operation,
-     too!)  It's a regression from 1.6.
-   Branch:
-     ^/subversion/branches/1.7.x-issue4332
-   Votes:
-     +1: cmpilato, philip, breser
-
