@@ -63,13 +63,6 @@ Candidate changes:
    Votes:
      +1: philip, stefan2
 
- * r1453780
-   Reject operations on some properties for activity resources.
-   Justification:
-     It's a SEGV.
-   Votes:
-     +1: philip, breser, stefan2
-
  * r1461562, r1461580
    Fix issue #4340, "fs layer should reject filenames with trailing \n"
    Justification:
@@ -99,3 +92,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1453780
+   Reject operations on some properties for activity resources.
+   Justification:
+     It's a SEGV.
+   Votes:
+     +1: philip, breser, stefan2
+
