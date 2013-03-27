@@ -617,6 +617,8 @@ svn_io_filesizes_different_p(svn_boolean_t *different_p,
  * definitely different.  That is, if the size of one or both files
  * cannot be determined (due to stat() returning an error), then the sizes
  * are not known to be different, so @a *different_p12 is set to 0.
+ *
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_io_filesizes_three_different_p(svn_boolean_t *different_p12,
@@ -664,7 +666,10 @@ svn_io_files_contents_same_p(svn_boolean_t *same,
 /** Set @a *same12 to TRUE if @a file1 and @a file2 have the same
  * contents, else set it to FALSE.  Do the similar for @a *same23 
  * with @a file2 and @a file3, and @a *same13 for @a file1 and @a 
- * file3.  Use @a pool for temporary allocations.
+ * file3. The filenames @a file1, @a file2 and @a file3 are
+ * utf8-encoded. Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_io_files_contents_three_same_p(svn_boolean_t *same12,
