@@ -341,6 +341,84 @@ svn_version__at_least(svn_version_t *version,
 
 /** @} */
 
+/**
+ * @defgroup svn_compress Data (de-)compression API
+ * @{
+ */
+
+/* This is at least as big as the largest size of an integer that
+   svn__encode_uint() can generate; it is sufficient for creating buffers
+   for it to write into.  This assumes that integers are at most 64 bits,
+   and so 10 bytes (with 7 bits of information each) are sufficient to
+   represent them. */
+#define SVN__MAX_ENCODED_UINT_LEN 10
+
+/* Compression method parameters for svn__encode_uint. */
+
+/* No compression (but a length prefix will still be added to the buffer) */
+#define SVN__COMPRESSION_NONE         0
+
+/* Fastest, least effective compression method & level provided by zlib. */
+#define SVN__COMPRESSION_ZLIB_MIN     1
+
+/* Default compression method & level provided by zlib. */
+#define SVN__COMPRESSION_ZLIB_DEFAULT 5
+
+/* Slowest, best compression method & level provided by zlib. */
+#define SVN__COMPRESSION_ZLIB_MAX     9
+
+/* Encode VAL into the buffer P using the variable-length 7b/8b unsigned
+   integer format.  Return the incremented value of P after the
+   encoded bytes have been written.  P must point to a buffer of size
+   at least SVN__MAX_ENCODED_UINT_LEN.
+
+   This encoding uses the high bit of each byte as a continuation bit
+   and the other seven bits as data bits.  High-order data bits are
+   encoded first, followed by lower-order bits, so the value can be
+   reconstructed by concatenating the data bits from left to right and
+   interpreting the result as a binary number.  Examples (brackets
+   denote byte boundaries, spaces are for clarity only):
+
+           1 encodes as [0 0000001]
+          33 encodes as [0 0100001]
+         129 encodes as [1 0000001] [0 0000001]
+        2000 encodes as [1 0001111] [0 1010000]
+*/
+unsigned char *
+svn__encode_uint(unsigned char *p, apr_uint64_t val);
+
+/* Decode an unsigned 7b/8b-encoded integer into *VAL and return a pointer
+   to the byte after the integer.  The bytes to be decoded live in the
+   range [P..END-1].  If these bytes do not contain a whole encoded
+   integer, return NULL; in this case *VAL is undefined.
+
+   See the comment for svn__encode_uint() earlier in this file for more
+   detail on the encoding format.  */
+const unsigned char *
+svn__decode_uint(apr_uint64_t *val,
+                 const unsigned char *p,
+                 const unsigned char *end);
+
+/* Get the data from IN, compress it according to the specified
+ * COMPRESSION_METHOD and write the result to OUT.
+ * SVN__COMPRESSION_NONE is valid for COMPRESSION_METHOD.
+ */
+svn_error_t *
+svn__compress(svn_stringbuf_t *in,
+              svn_stringbuf_t *out,
+              int compression_method);
+
+/* Get the compressed data from IN, decompress it and write the result to
+ * OUT.  Return an error if the decompressed size is larger than LIMIT.
+ */
+svn_error_t *
+svn__decompress(svn_stringbuf_t *in,
+                svn_stringbuf_t *out,
+                apr_size_t limit);
+
+/** @} */
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

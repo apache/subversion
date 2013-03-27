@@ -31,7 +31,7 @@
 #include "util.h"
 #include "transaction.h"
 
-#include "private/svn_delta_private.h"
+#include "private/svn_subr_private.h"
 #include "private/svn_string_private.h"
 #include "../libsvn_fs/fs-loader.h"
 
@@ -702,8 +702,7 @@ parse_packed_revprops(svn_fs_t *fs,
 
   /* decompress (even if the data is only "stored", there is still a
    * length header to remove) */
-  svn_string_t *compressed
-      = svn_stringbuf__morph_into_string(revprops->packed_revprops);
+  svn_stringbuf_t *compressed = revprops->packed_revprops;
   svn_stringbuf_t *uncompressed = svn_stringbuf_create_empty(pool);
   SVN_ERR(svn__decompress(compressed, uncompressed, 0x1000000));
 
@@ -1102,7 +1101,7 @@ repack_revprops(svn_fs_t *fs,
   SVN_ERR(svn_stream_close(stream));
 
   /* compress / store the data */
-  SVN_ERR(svn__compress(svn_stringbuf__morph_into_string(uncompressed),
+  SVN_ERR(svn__compress(uncompressed,
                         compressed,
                         ffd->compress_packed_revprops
                           ? SVN_DELTA_COMPRESSION_LEVEL_DEFAULT
@@ -1532,8 +1531,7 @@ copy_revprops(const char *pack_file_dir,
   SVN_ERR(svn_stream_close(pack_stream));
 
   /* compress the content (or just store it for COMPRESSION_LEVEL 0) */
-  SVN_ERR(svn__compress(svn_stringbuf__morph_into_string(uncompressed),
-                        compressed, compression_level));
+  SVN_ERR(svn__compress(uncompressed, compressed, compression_level));
 
   /* write the pack file content to disk */
   stream = svn_stream_from_aprfile2(pack_file, FALSE, scratch_pool);

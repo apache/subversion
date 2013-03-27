@@ -229,6 +229,11 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 15,
              "Invalid atomic")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_BAD_COMPRESSION_METHOD,
+             SVN_ERR_BAD_CATEGORY_START + 16,
+             "Invalid compression method")
+
   /* xml errors */
 
   SVN_ERRDEF(SVN_ERR_XML_ATTRIB_NOT_FOUND,
