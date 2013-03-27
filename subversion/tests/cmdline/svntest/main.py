@@ -547,7 +547,12 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
   if (not error_expected) and ((stderr_lines) or (exit_code != 0)):
     for x in stderr_lines:
       logger.warning(x.rstrip())
-    raise Failure
+    if len(varargs) <= 5:
+      brief_command = ' '.join((command,) + varargs)
+    else:
+      brief_command = ' '.join(((command,) + varargs)[:4]) + ' ...'
+    raise Failure('Command failed: "' + brief_command +
+                  '"; exit code ' + str(exit_code))
 
   return exit_code, \
          filter_dbg(stdout_lines), \
