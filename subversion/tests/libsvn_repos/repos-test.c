@@ -3164,6 +3164,46 @@ test_delete_repos(const svn_test_opts_t *opts,
 
   return SVN_NO_ERROR;
 }
+
+/* Issue 4340, "repos layer should reject filenames with trailing \n" */
+static svn_error_t *
+filename_trailing_newline(const svn_test_opts_t *opts,
+                          apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *root;
+  svn_revnum_t youngest_rev = 0;
+  svn_error_t *err;
+
+  /* Create the repository. */
+  SVN_ERR(svn_test__create_repos(&repos, "test-filename-trailing-newline",
+                                 opts, pool));
+  fs = svn_repos_fs(repos);
+
+  /* Revision 1:  Add a directory /foo  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "/foo", subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  svn_pool_clear(subpool);
+
+  /* Attempt to copy /foo to "/bar\n". This should fail. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, youngest_rev, subpool));
+  err = svn_fs_copy(root, "/foo", txn_root, "/bar\n", subpool);
+  SVN_TEST_ASSERT(err != SVN_NO_ERROR);
+
+  /* Attempt to create a file /foo/baz\n. This should fail. */
+  err = svn_fs_make_file(txn_root, "/foo/baz\n", subpool);
+  SVN_TEST_ASSERT(err != SVN_NO_ERROR);
+
+  return SVN_NO_ERROR;
+}
 
 /* The test table.  */
 
@@ -3208,5 +3248,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test issue 4060"),
     SVN_TEST_OPTS_PASS(test_delete_repos,
                        "test svn_repos_delete"),
+    SVN_TEST_OPTS_XFAIL(filename_trailing_newline,
+                       "filenames with trailing \\n should be rejected"),
     SVN_TEST_NULL
   };
