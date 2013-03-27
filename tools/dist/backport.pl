@@ -257,6 +257,8 @@ sub main {
       }
       # Backport entry?
       when (/^ \*/) {
+        warn "Too many bullets in $lines[0]" and next
+          if grep /^ \*/, @lines[1..$#lines];
         handle_entry @lines;
       }
       default {
