@@ -1658,16 +1658,19 @@ svn_io_dir_walk(const char *dirname,
  *
  * If @a inherit is TRUE, the invoked program inherits its environment from
  * the caller and @a cmd, if not absolute, is searched for in PATH.
- * Otherwise, the invoked program runs with an empty environment and @a cmd
- * must be an absolute path.
  *
- * If @a inherit is FALSE and @a env is not NULL, the invoked program
- * inherits the environment defined by @a env, instead of an empty
- * environment or the caller's environment.
+ * If @a inherit is FALSE @a cmd must be an absolute path and the invoked
+ * program inherits the environment defined by @a env or runs with an empty
+ * environment in @a env is NULL.
  *
  * @note On some platforms, failure to execute @a cmd in the child process
  * will result in error output being written to @a errfile, if non-NULL, and
  * a non-zero exit status being returned to the parent process.
+ *
+ * @note An APR bug affects Windows: passing a NULL @a env does not
+ * guarantee the invoked program to run with an empty environment when 
+ * @a inherits is FALSE, the program may inherit its parent's environment.
+ * Explicitly pass an empty @env to get an empty environment.
  *
  * @since New in 1.8.
  */
