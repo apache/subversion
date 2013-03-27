@@ -740,7 +740,7 @@ svn_io_lock_open_file(apr_file_t *lockfile_handle,
  * Unlock the file @a lockfile_handle.
  *
  * Use @a pool for memory allocations. @a pool must be the pool that
- * @a lockfile_handle has been created in or one of its sub-pools.
+ * was passed to svn_io_lock_open_file().
  *
  * @since New in 1.8.
  */
