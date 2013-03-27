@@ -4987,6 +4987,52 @@ node_origin_rev(const char **msg,
   return SVN_NO_ERROR;
 }
 
+/* Issue 4340, "fs layer should reject filenames with trailing \n" */
+static svn_error_t *
+filename_trailing_newline(const char **msg,
+                          svn_boolean_t msg_only,
+                          svn_test_opts_t *opts,
+                          apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *root;
+  svn_revnum_t youngest_rev = 0;
+  svn_error_t *err;
+
+  *msg = "filenames with trailing \\n should be rejected";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_test__create_fs(&fs, "test-filename-trailing-newline",
+                              opts, pool));
+
+  /* Revision 1:  Add a directory /foo  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "/foo", subpool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  svn_pool_clear(subpool);
+
+  /* Attempt to copy /foo to "/bar\n". This should fail. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, youngest_rev, subpool));
+  err = svn_fs_copy(root, "/foo", txn_root, "/bar\n", subpool);
+  SVN_TEST_ASSERT(err && err->apr_err ==  SVN_ERR_FS_PATH_SYNTAX);
+  svn_error_clear(err);
+
+  /* Attempt to create a file /foo/baz\n. This should fail. */
+  err = svn_fs_make_file(txn_root, "/foo/baz\n", subpool);
+  SVN_TEST_ASSERT(err && err->apr_err ==  SVN_ERR_FS_PATH_SYNTAX);
+  svn_error_clear(err);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -5030,5 +5076,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(set_uuid),
     SVN_TEST_PASS(node_origin_rev),
     SVN_TEST_PASS(small_file_integrity),
+    SVN_TEST_PASS(filename_trailing_newline),
     SVN_TEST_NULL
   };
