@@ -262,6 +262,8 @@ Candidate changes:
      ^/subversion/branches/1.7.x-issue4340
    Votes:
      +1: stsp
+     -1: cmpilato ("How did this expand from 'newlines' to 'control
+                    characters'?!)
 
 Veto-blocked changes:
 =====================
