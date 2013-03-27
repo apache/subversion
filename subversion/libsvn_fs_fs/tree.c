@@ -4325,7 +4325,7 @@ svn_error_t *
 svn_fs_fs__verify_root(svn_fs_root_t *root,
                        apr_pool_t *pool)
 {
-  fs_rev_root_data_t *frd;
+  dag_node_t *root_dir;
 
   /* Issue #4129: bogus pred-counts and minfo-cnt's on the root node-rev
      (and elsewhere).  This code makes more thorough checks than the
@@ -4340,17 +4340,21 @@ svn_fs_fs__verify_root(svn_fs_root_t *root,
   if (root->is_txn_root)
     /* ### Not implemented */
     return SVN_NO_ERROR;
-  frd = root->fsap_data;
+  else
+    {
+      fs_rev_root_data_t *frd = root->fsap_data;
+      root_dir = frd->root_dir;
+    }
 
   /* Recursively verify ROOT_DIR. */
-  SVN_ERR(verify_node(frd->root_dir, root->rev, pool));
+  SVN_ERR(verify_node(root_dir, root->rev, pool));
 
   /* Verify explicitly the predecessor of the root. */
   {
     const svn_fs_id_t *pred_id;
 
     /* Only r0 should have no predecessor. */
-    SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred_id, frd->root_dir));
+    SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred_id, root_dir));
     if (!!pred_id != !!root->rev)
       return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                "r%ld's root node's predecessor is "
