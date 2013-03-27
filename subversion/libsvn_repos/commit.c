@@ -314,9 +314,10 @@ illegal_path_escape(const char *path, apr_pool_t *pool)
   return retstr->data;
 }
 
+/* Reject paths which contain control characters (related to issue #4340). */
 static svn_error_t *
-check_cntrl(const char *path,
-            apr_pool_t *pool)
+check_valid_path(const char *path,
+                 apr_pool_t *pool)
 {
   const char *c;
 
@@ -350,8 +351,7 @@ add_file_or_directory(const char *path,
   svn_boolean_t was_copied = FALSE;
   const char *full_path;
 
-  /* Reject paths which contain control characters (related to issue #4340). */
-  SVN_ERR(check_cntrl(path, pool));
+  SVN_ERR(check_valid_path(path, pool));
 
   full_path = svn_fspath__join(eb->base_path,
                                svn_relpath_canonicalize(path, pool), pool);
