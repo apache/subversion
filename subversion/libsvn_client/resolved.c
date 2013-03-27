@@ -33,12 +33,60 @@
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
+#include "svn_pools.h"
 #include "client.h"
 #include "private/svn_wc_private.h"
 
 #include "svn_private_config.h"
 
 /*** Code. ***/
+
+svn_error_t *
+svn_client__resolve_conflicts(svn_boolean_t *resolved,
+                              apr_hash_t *conflicted_paths,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_hash_index_t *hi;
+
+  if (resolved)
+    *resolved = TRUE;
+
+  for (hi = (conflicted_paths
+             ? apr_hash_first(scratch_pool, conflicted_paths) : NULL);
+       hi; hi = apr_hash_next(hi))
+    {
+      const char *local_abspath = svn__apr_hash_index_key(hi);
+
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,
+                                        svn_depth_empty,
+                                        TRUE /* resolve_text */,
+                                        "" /* resolve_prop (ALL props) */,
+                                        TRUE /* resolve_tree */,
+                                        svn_wc_conflict_choose_unspecified,
+                                        ctx->conflict_func2,
+                                        ctx->conflict_baton2,
+                                        ctx->cancel_func, ctx->cancel_baton,
+                                        ctx->notify_func2, ctx->notify_baton2,
+                                        iterpool));
+
+      if (resolved)
+        {
+          svn_boolean_t text_c, prop_c, tree_c;
+
+          SVN_ERR(svn_wc_conflicted_p3(&text_c, &prop_c, &tree_c,
+                                       ctx->wc_ctx, local_abspath,
+                                       iterpool));
+          if (text_c || prop_c || tree_c)
+            *resolved = FALSE;
+        }
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_client_resolve(const char *path,

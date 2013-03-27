@@ -1113,6 +1113,17 @@ const svn_opt_revision_t *
 svn_cl__rev_default_to_peg(const svn_opt_revision_t *revision,
                            const svn_opt_revision_t *peg_revision);
 
+/* Call the conflict resolver callback in CTX for each conflict recorded
+ * in CONFLICTED_PATHS (const char *abspath keys; ignored values).  If
+ * RESOLVED is not NULL, then set *RESOLVED to true if all of the
+ * conflicts were resolved, else to false.
+ */
+svn_error_t *
+svn_client__resolve_conflicts(svn_boolean_t *resolved,
+                              apr_hash_t *conflicted_paths,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }

@@ -157,9 +157,6 @@ svn_cl__switch(apr_getopt_t *os,
   ctx->notify_func2 = svn_cl__check_externals_failed_notify_wrapper;
   ctx->notify_baton2 = &nwb;
 
-  /* Postpone conflict resolution during the switch operation.
-   * If any conflicts occur we'll run the conflict resolver later. */
-
   /* Do the 'switch' update. */
   err = svn_client_switch3(NULL, target, switch_url, &peg_revision,
                            &(opt_state->start_revision), depth,
@@ -197,12 +194,6 @@ svn_cl__switch(apr_getopt_t *os,
       if (err)
         return svn_error_compose_create(externals_err, err);
     }
-
-  err = svn_cl__resolve_postponed_conflicts(NULL,
-                                            ctx->conflict_baton2,
-                                            opt_state->accept_which,
-                                            opt_state->editor_cmd,
-                                            ctx, scratch_pool);
 
   return svn_error_compose_create(externals_err, err);
 }

@@ -2781,14 +2781,6 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
 
   ctx->auth_baton = ab;
 
-  /* Install the default conflict handler which postpones all conflicts
-   * and remembers the list of conflicted paths to be resolved later.
-   * This is overridden only within the 'resolve' subcommand. */
-  ctx->conflict_func = NULL;
-  ctx->conflict_baton = NULL;
-  ctx->conflict_func2 = svn_cl__conflict_func_postpone;
-  ctx->conflict_baton2 = svn_cl__get_conflict_func_postpone_baton(pool);
-
   if (opt_state.non_interactive)
     {
       if (opt_state.accept_which == svn_cl__accept_edit)
@@ -2829,6 +2821,22 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       if (opt_state.accept_which == svn_cl__accept_unspecified)
         opt_state.accept_which = svn_cl__accept_postpone;
     }
+
+  /* Install the default conflict handler. */
+  {
+    svn_cl__interactive_conflict_baton_t *b;
+
+    ctx->conflict_func = NULL;
+    ctx->conflict_baton = NULL;
+
+    ctx->conflict_func2 = svn_cl__conflict_func_interactive;
+    SVN_INT_ERR(svn_cl__get_conflict_func_interactive_baton(
+                &b,
+                opt_state.accept_which,
+                ctx->config, opt_state.editor_cmd,
+                ctx->cancel_func, ctx->cancel_baton, pool));
+    ctx->conflict_baton2 = b;
+  }
 
   /* And now we finally run the subcommand. */
   err = (*subcommand->cmd_func)(os, &command_baton, pool);

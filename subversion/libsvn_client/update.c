@@ -161,6 +161,27 @@ is_empty_wc(svn_boolean_t *clean_checkout,
   return svn_io_dir_close(dir);
 }
 
+/* A conflict callback that simply records the conflicted path in BATON.
+
+   Implements svn_wc_conflict_resolver_func2_t.
+*/
+static svn_error_t *
+record_conflict(svn_wc_conflict_result_t **result,
+                const svn_wc_conflict_description2_t *description,
+                void *baton,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  apr_hash_t *conflicted_paths = baton;
+
+  svn_hash_sets(conflicted_paths,
+                apr_pstrdup(apr_hash_pool_get(conflicted_paths),
+                            description->local_abspath), "");
+  *result = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,
+                                          NULL, result_pool);
+  return SVN_NO_ERROR;
+}
+
 /* This is a helper for svn_client__update_internal(), which see for
    an explanation of most of these parameters.  Some stuff that's
    unique is as follows:
@@ -172,9 +193,13 @@ is_empty_wc(svn_boolean_t *clean_checkout,
    If NOTIFY_SUMMARY is set (and there's a notification handler in
    CTX), transmit the final update summary upon successful
    completion of the update.
+
+   Add the paths of any conflict victims to CONFLICTED_PATHS, if that
+   is not null.
 */
 static svn_error_t *
 update_internal(svn_revnum_t *result_rev,
+                apr_hash_t *conflicted_paths,
                 const char *local_abspath,
                 const char *anchor_abspath,
                 const svn_opt_revision_t *revision,
@@ -408,7 +433,8 @@ update_internal(svn_revnum_t *result_rev,
                                     clean_checkout,
                                     diff3_cmd, preserved_exts,
                                     svn_client__dirent_fetcher, &dfb,
-                                    ctx->conflict_func2, ctx->conflict_baton2,
+                                    conflicted_paths ? record_conflict : NULL,
+                                    conflicted_paths,
                                     NULL, NULL,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->notify_func2, ctx->notify_baton2,
@@ -505,6 +531,8 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   const char *anchor_abspath, *lockroot_abspath;
   svn_error_t *err;
   svn_opt_revision_t peg_revision = *revision;
+  apr_hash_t *conflicted_paths
+    = ctx->conflict_func2 ? apr_hash_make(pool) : NULL;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(! (innerupdate && make_parents));
@@ -545,7 +573,9 @@ svn_client__update_internal(svn_revnum_t *result_rev,
         {
           const char *missing_parent =
             APR_ARRAY_IDX(missing_parents, i, const char *);
-          err = update_internal(result_rev, missing_parent, anchor_abspath,
+
+          err = update_internal(result_rev, conflicted_paths,
+                                missing_parent, anchor_abspath,
                                 &peg_revision, svn_depth_empty, FALSE,
                                 ignore_externals, allow_unver_obstructions,
                                 adds_as_modification, timestamp_sleep,
@@ -569,11 +599,20 @@ svn_client__update_internal(svn_revnum_t *result_rev,
       anchor_abspath = lockroot_abspath;
     }
 
-  err = update_internal(result_rev, local_abspath, anchor_abspath,
+  err = update_internal(result_rev, conflicted_paths,
+                        local_abspath, anchor_abspath,
                         &peg_revision, depth, depth_is_sticky,
                         ignore_externals, allow_unver_obstructions,
                         adds_as_modification, timestamp_sleep,
                         TRUE, ctx, pool);
+
+  /* Give the conflict resolver callback the opportunity to
+   * resolve any conflicts that were raised. */
+  if (! err && ctx->conflict_func2)
+    {
+      err = svn_client__resolve_conflicts(NULL, conflicted_paths, ctx, pool);
+    }
+
  cleanup:
   err = svn_error_compose_create(
             err,

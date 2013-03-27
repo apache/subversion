@@ -3694,7 +3694,7 @@ def update_copied_and_deleted_prop(sbox):
 
 #----------------------------------------------------------------------
 
-def update_output_with_conflicts(rev, target, paths=None):
+def update_output_with_conflicts(rev, target, paths=None, resolved=False):
   """Return the expected output for an update of TARGET to revision REV, in
      which all of the PATHS are updated and conflicting.
 
@@ -3707,19 +3707,19 @@ def update_output_with_conflicts(rev, target, paths=None):
   for path in paths:
     lines += ['C    %s\n' % path]
   lines += ['Updated to revision %d.\n' % rev]
-  lines += svntest.main.summary_of_conflicts(text_conflicts=len(paths))
+  if resolved:
+    for path in paths:
+      lines += ["Resolved conflicted state of '%s'\n" % path]
+    lines += svntest.main.summary_of_conflicts(text_resolved=len(paths))
+  else:
+    lines += svntest.main.summary_of_conflicts(text_conflicts=len(paths))
   return lines
 
 def update_output_with_conflicts_resolved(rev, target, paths=None):
   """Like update_output_with_conflicts(), but where all of the conflicts are
      resolved within the update.
   """
-  if paths is None:
-    paths = [target]
-
-  lines = update_output_with_conflicts(rev, target, paths)
-  for path in paths:
-    lines += ["Resolved conflicted state of '%s'\n" % path]
+  lines = update_output_with_conflicts(rev, target, paths, resolved=True)
   return lines
 
 #----------------------------------------------------------------------
