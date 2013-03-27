@@ -116,6 +116,8 @@ typedef struct fs_rev_root_data_t
 
 typedef struct fs_txn_root_data_t
 {
+  const char *txn_id;
+
   /* Cache of txn DAG nodes (without their nested noderevs, because
    * it's mutable). Same keys/values as ffd->rev_node_cache. */
   svn_cache__t *txn_node_cache;
@@ -4245,6 +4247,8 @@ make_txn_root(svn_fs_root_t **root_p,
   root->txn_flags = flags;
   root->rev = base_rev;
 
+  frd->txn_id = txn;
+
   /* Because this cache actually tries to invalidate elements, keep
      the number of elements per page down.
 
@@ -4395,6 +4399,7 @@ svn_error_t *
 svn_fs_fs__verify_root(svn_fs_root_t *root,
                        apr_pool_t *pool)
 {
+  svn_fs_t *fs = root->fs;
   dag_node_t *root_dir;
 
   /* Issue #4129: bogus pred-counts and minfo-cnt's on the root node-rev
@@ -4408,8 +4413,10 @@ svn_fs_fs__verify_root(svn_fs_root_t *root,
      in the possibly-distance past and cached since. */
 
   if (root->is_txn_root)
-    /* ### Not implemented */
-    return SVN_NO_ERROR;
+    {
+      fs_txn_root_data_t *frd = root->fsap_data;
+      SVN_ERR(svn_fs_fs__dag_txn_root(&root_dir, fs, frd->txn_id, pool));
+    }
   else
     {
       fs_rev_root_data_t *frd = root->fsap_data;
@@ -4425,7 +4432,7 @@ svn_fs_fs__verify_root(svn_fs_root_t *root,
 
     /* Only r0 should have no predecessor. */
     SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred_id, root_dir));
-    if (!!pred_id != !!root->rev)
+    if (! root->is_txn_root && !!pred_id != !!root->rev)
       return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                "r%ld's root node's predecessor is "
                                "unexpectedly '%s'",
@@ -4433,17 +4440,28 @@ svn_fs_fs__verify_root(svn_fs_root_t *root,
                                (pred_id
                                 ? svn_fs_fs__id_unparse(pred_id, pool)->data
                                 : "(null)"));
+    if (root->is_txn_root && !pred_id)
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                               "Transaction '%s''s root node's predecessor is "
+                               "unexpectedly NULL",
+                               root->txn);
 
     /* Check the predecessor's revision. */
     if (pred_id)
       {
         svn_revnum_t pred_rev = svn_fs_fs__id_rev(pred_id);
-        if (pred_rev+1 != root->rev)
+        if (! root->is_txn_root && pred_rev+1 != root->rev)
           /* Issue #4129. */
           return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                    "r%ld's root node's predecessor is r%ld"
                                    " but should be r%ld",
                                    root->rev, pred_rev, root->rev - 1);
+        if (root->is_txn_root && pred_rev != root->rev)
+          return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                   "Transaction '%s''s root node's predecessor"
+                                   " is r%ld"
+                                   " but should be r%ld",
+                                   root->txn, pred_rev, root->rev);
       }
   }
 
