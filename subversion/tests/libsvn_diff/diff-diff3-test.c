@@ -2571,6 +2571,7 @@ test_token_compare(apr_pool_t *pool)
 
   diff_opts->ignore_space = svn_diff_file_ignore_space_all;
 
+  /* CHUNK_SIZE bytes */
   original = svn_stringbuf_create_ensure(chunk_size, pool);
   while (original->len < chunk_size - 8)
     {
@@ -2578,7 +2579,8 @@ test_token_compare(apr_pool_t *pool)
     }
   svn_stringbuf_appendcstr(original, "    @@@\n");
 
-  modified = svn_stringbuf_create_ensure(chunk_size, pool);
+  /* CHUNK_SIZE+1 bytes, one ' ' more than original */
+  modified = svn_stringbuf_create_ensure(chunk_size + 1, pool);
   while (modified->len < chunk_size - 8)
     {
       svn_stringbuf_appendcstr(modified, pattern);
