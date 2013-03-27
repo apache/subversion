@@ -22,6 +22,8 @@
 
 # control-chars.py: Reject filenames that have control characters. 
 
+# See validate-files.py for more generic validations.
+
 import sys
 import re
 import posixpath
