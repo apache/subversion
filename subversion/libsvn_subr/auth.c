@@ -226,9 +226,11 @@ svn_auth_first_credentials(void **credentials,
         {
           provider = APR_ARRAY_IDX(table->providers, i,
                                    svn_auth_provider_object_t *);
-          SVN_ERR(provider->vtable->first_credentials
-                  (&creds, &iter_baton, provider->provider_baton,
-                   auth_baton->parameters, realmstring, auth_baton->pool));
+          SVN_ERR(provider->vtable->first_credentials(&creds, &iter_baton,
+                                                      provider->provider_baton,
+                                                      auth_baton->parameters,
+                                                      realmstring,
+                                                      auth_baton->pool));
 
           if (creds != NULL)
             {
