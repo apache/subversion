@@ -287,19 +287,18 @@ svn_auth_next_credentials(void **credentials,
                                svn_auth_provider_object_t *);
       if (! state->got_first)
         {
-          SVN_ERR(provider->vtable->first_credentials
-                  (&creds, &(state->provider_iter_baton),
-                   provider->provider_baton, auth_baton->parameters,
-                   state->realmstring, auth_baton->pool));
+          SVN_ERR(provider->vtable->first_credentials(
+                      &creds, &(state->provider_iter_baton),
+                      provider->provider_baton, auth_baton->parameters,
+                      state->realmstring, auth_baton->pool));
           state->got_first = TRUE;
         }
-      else
+      else if (provider->vtable->next_credentials)
         {
-          if (provider->vtable->next_credentials)
-            SVN_ERR(provider->vtable->next_credentials
-                    (&creds, state->provider_iter_baton,
-                     provider->provider_baton, auth_baton->parameters,
-                     state->realmstring, auth_baton->pool));
+          SVN_ERR(provider->vtable->next_credentials(
+                      &creds, state->provider_iter_baton,
+                      provider->provider_baton, auth_baton->parameters,
+                      state->realmstring, auth_baton->pool));
         }
 
       if (creds != NULL)
