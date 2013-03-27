@@ -761,6 +761,8 @@ svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   fs = svn_fs_root_fs(txn_root);
   fs_path = svn_fs_path(fs, pool);
+#elif defined (SVN_DEBUG)
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
 #endif
 
 #ifdef SVN_DEBUG
