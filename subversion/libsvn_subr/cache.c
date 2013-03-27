@@ -75,6 +75,10 @@ svn_cache__get(void **value_p,
   /* In case any errors happen and are quelched, make sure we start
      out with FOUND set to false. */
   *found = FALSE;
+#ifdef SVN_DEBUG
+  if (getenv("SVN_X_DOES_NOT_MARK_THE_SPOT"))
+    return SVN_NO_ERROR;
+#endif
 
   cache->reads++;
   err = handle_error(cache,
@@ -114,6 +118,12 @@ svn_cache__iter(svn_boolean_t *completed,
                 void *user_baton,
                 apr_pool_t *scratch_pool)
 {
+#ifdef SVN_DEBUG
+  if (getenv("SVN_X_DOES_NOT_MARK_THE_SPOT"))
+    /* Pretend CACHE is empty. */
+    return SVN_NO_ERROR;
+#endif
+
   return (cache->vtable->iter)(completed,
                                cache->cache_internal,
                                user_cb,
@@ -135,6 +145,10 @@ svn_cache__get_partial(void **value,
   /* In case any errors happen and are quelched, make sure we start
   out with FOUND set to false. */
   *found = FALSE;
+#ifdef SVN_DEBUG
+  if (getenv("SVN_X_DOES_NOT_MARK_THE_SPOT"))
+    return SVN_NO_ERROR;
+#endif
 
   cache->reads++;
   err = handle_error(cache,
