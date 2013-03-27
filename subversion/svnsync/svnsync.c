@@ -1891,7 +1891,7 @@ main(int argc, const char *argv[])
   const char *password = NULL, *source_password = NULL, *sync_password = NULL;
   apr_array_header_t *config_options = NULL;
   const char *source_prop_encoding = NULL;
-  svn_boolean_t force_interactive;
+  svn_boolean_t force_interactive = FALSE;
 
   if (svn_cmdline_init("svnsync", stderr) != EXIT_SUCCESS)
     {
