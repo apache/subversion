@@ -2230,15 +2230,12 @@ escape_newline(const char *path, apr_pool_t *pool)
 static svn_error_t *
 check_newline(const char *path, apr_pool_t *pool)
 {
-  const char *c;
+  char *c = strchr(path, '\n');
 
-  for (c = path; *c; c++)
-    {
-      if (*c == '\n')
-        return svn_error_createf(SVN_ERR_FS_PATH_SYNTAX, NULL,
-           _("Invalid control character '0x%02x' in path '%s'"),
-           (unsigned char)*c, escape_newline(path, pool));
-    }
+  if (c)
+    return svn_error_createf(SVN_ERR_FS_PATH_SYNTAX, NULL,
+       _("Invalid control character '0x%02x' in path '%s'"),
+       (unsigned char)*c, escape_newline(path, pool));
 
   return SVN_NO_ERROR;
 }
