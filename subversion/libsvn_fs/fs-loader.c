@@ -761,6 +761,12 @@ svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
   fs_path = svn_fs_path(fs, pool);
 #endif
 
+#ifdef SVN_DEBUG
+  /* ### TODO: add db/fs.conf with a knob to enable this in release builds */
+  /* ### TODO: should this run just before incrementing 'current'? */
+  SVN_ERR(svn_fs_verify_root(txn_root, pool));
+#endif
+
   err = txn->vtable->commit(conflict_p, new_rev, txn, pool);
 
 #ifdef SVN_DEBUG
