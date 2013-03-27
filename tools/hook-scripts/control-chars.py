@@ -20,9 +20,14 @@
 #
 #
 
-# control-chars.py: Reject filenames that have control characters. 
+'''control-chars.py: Subversion repository hook script that rejects filenames
+which contain control characters. Expects to be called like a pre-commit hook:
+  control-chars.py <REPOS-PATH> <TXN-NAME>
 
-# See validate-files.py for more generic validations.
+Latest version should be available at
+http://svn.apache.org/repos/asf/subversion/trunk/tools/hook-scripts/
+
+See validate-files.py for more generic validations.'''
 
 import sys
 import re
@@ -33,9 +38,8 @@ import svn.fs
 import svn.repos
 import svn.core
 
-control_chars = set()
-for i in range(1, 32):
-  control_chars.add(chr(i))
+# Can't hurt to disallow chr(0), though the C API will never pass one anyway.
+control_chars = set( [chr(i) for i in range(32)] )
 control_chars.add(chr(127))
 
 def check_node(node, path):
