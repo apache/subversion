@@ -27,6 +27,8 @@
 
 /*** Includes. ***/
 
+#include <stdlib.h>
+
 #include "svn_types.h"
 #include "svn_wc.h"
 #include "svn_client.h"
@@ -34,6 +36,8 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_pools.h"
+#include "svn_hash.h"
+#include "svn_sorts.h"
 #include "client.h"
 #include "private/svn_wc_private.h"
 
@@ -48,16 +52,19 @@ svn_client__resolve_conflicts(svn_boolean_t *conflicts_remain,
                               apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  apr_hash_index_t *hi;
+  apr_array_header_t *array;
+  int i;
 
   if (conflicts_remain)
     *conflicts_remain = FALSE;
 
-  for (hi = (conflicted_paths
-             ? apr_hash_first(scratch_pool, conflicted_paths) : NULL);
-       hi; hi = apr_hash_next(hi))
+  SVN_ERR(svn_hash_keys(&array, conflicted_paths, scratch_pool));
+  qsort(array->elts, array->nelts, array->elt_size,
+        svn_sort_compare_paths);
+
+  for (i = 0; i < array->nelts; i++)
     {
-      const char *local_abspath = svn__apr_hash_index_key(hi);
+      const char *local_abspath = APR_ARRAY_IDX(array, i, const char *);
 
       svn_pool_clear(iterpool);
       SVN_ERR(svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,
