@@ -70,6 +70,17 @@ Candidate changes:
    Votes:
      +1: philip, breser, stefan2
 
+ * r1461562, r1461580
+   Fix issue #4340, "fs layer should reject filenames with trailing \n"
+   Justification:
+     Control characters can severely corrupt FSFS revision files and
+     should never enter the repository for this reason. See discussion
+     linked form issue #4340 for more information.
+   Branch:
+     ^/subversion/branches/1.6.x-issue4340
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
