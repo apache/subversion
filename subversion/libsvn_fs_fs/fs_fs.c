@@ -10431,26 +10431,6 @@ svn_fs_fs__verify(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs_fs__verify_rev(svn_fs_t *fs,
-                      svn_fs_root_t *root,
-                      apr_pool_t *pool)
-{
-  /* Issue #4129: bogus pred-counts and minfo-cnt's on the root node-rev
-     (and elsewhere).  This code makes more thorough checks than the
-     commit-time checks in validate_root_noderev(). */
-
-  /* ### TODO: Make sure caches are disabled.
-
-     When this code is called in the library, we want to ensure we
-     use the on-disk data --- rather than some data that was read
-     in the possibly-distance past and cached since. */
-  SVN_ERR(svn_fs_fs__verify_root(root, pool));
-
-  return SVN_NO_ERROR;
-}
-
-
 
 /** Hotcopy. **/
 
