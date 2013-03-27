@@ -265,6 +265,15 @@ Candidate changes:
      -1: cmpilato ("How did this expand from 'newlines' to 'control
                     characters'?!)
 
+ * r1461743
+   svn_fs_commit_txn: set output parameter in non-maintainer-with-special-flags
+   builds.c
+   Justification:
+     Part of the API contract.
+   Branch: 1.7.x-r1461743
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
