@@ -9861,12 +9861,12 @@ do_merge(apr_hash_t **modified_subtrees,
            * of them, go around again to merge the next sub-range (if any). */
           if (conflicted_range_report && ctx->conflict_func2 && ! dry_run)
             {
-              svn_boolean_t resolved_all;
+              svn_boolean_t conflicts_remain;
 
               SVN_ERR(svn_client__resolve_conflicts(
-                        &resolved_all, merge_cmd_baton.conflicted_paths,
+                        &conflicts_remain, merge_cmd_baton.conflicted_paths,
                         ctx, iterpool));
-              if (! resolved_all)
+              if (conflicts_remain)
                 break;
 
               merge_cmd_baton.conflicted_paths = NULL;
