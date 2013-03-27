@@ -9567,50 +9567,6 @@ ensure_ra_session_url(svn_ra_session_t **ra_session,
   return SVN_NO_ERROR;
 }
 
-/* Call the conflict resolver callback in CTX for each conflict recorded
- * in MERGE_B.  Set *RESOLVED to true if all of the conflicts were
- * resolved, else to false, */
-static svn_error_t *
-resolve_conflicts(svn_boolean_t *resolved,
-                  merge_cmd_baton_t *merge_b,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *scratch_pool)
-{
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  apr_hash_index_t *hi;
-
-  *resolved = TRUE;
-  for (hi = (merge_b->conflicted_paths
-             ? apr_hash_first(scratch_pool, merge_b->conflicted_paths) : NULL);
-       hi; hi = apr_hash_next(hi))
-    {
-      const char *local_abspath = svn__apr_hash_index_key(hi);
-      svn_boolean_t text_c, prop_c, tree_c;
-
-      svn_pool_clear(iterpool);
-      SVN_ERR(svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,
-                                        svn_depth_empty,
-                                        TRUE /* resolve_text */,
-                                        "" /* resolve_prop (ALL props) */,
-                                        TRUE /* resolve_tree */,
-                                        svn_wc_conflict_choose_unspecified,
-                                        ctx->conflict_func2,
-                                        ctx->conflict_baton2,
-                                        ctx->cancel_func, ctx->cancel_baton,
-                                        ctx->notify_func2, ctx->notify_baton2,
-                                        iterpool));
-
-      SVN_ERR(svn_wc_conflicted_p3(&text_c, &prop_c, &tree_c,
-                                   ctx->wc_ctx, local_abspath,
-                                   iterpool));
-      if (text_c || prop_c || tree_c)
-        *resolved = FALSE;
-    }
-  svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
-}
-
 /* Drive a merge of MERGE_SOURCES into working copy node TARGET
    and possibly record mergeinfo describing the merge -- see
    RECORD_MERGEINFO().
@@ -9907,8 +9863,9 @@ do_merge(apr_hash_t **modified_subtrees,
             {
               svn_boolean_t resolved_all;
 
-              SVN_ERR(resolve_conflicts(&resolved_all,
-                                        &merge_cmd_baton, ctx, iterpool));
+              SVN_ERR(svn_client__resolve_conflicts(
+                        &resolved_all, merge_cmd_baton.conflicted_paths,
+                        ctx, iterpool));
               if (! resolved_all)
                 break;
 

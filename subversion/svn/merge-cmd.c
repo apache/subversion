@@ -542,19 +542,6 @@ svn_cl__merge(apr_getopt_t *os,
                                   "with --reintegrate"));
     }
 
-  /* Install the conflict resolver. */
-  {
-    svn_cl__interactive_conflict_baton_t *b;
-
-    ctx->conflict_func2 = svn_cl__conflict_func_interactive;
-    SVN_ERR(svn_cl__get_conflict_func_interactive_baton(
-              &b,
-              opt_state->accept_which,
-              ctx->config, opt_state->editor_cmd,
-              ctx->cancel_func, ctx->cancel_baton, pool));
-    ctx->conflict_baton2 = b;
-  }
-
   merge_err = run_merge(two_sources_specified,
                         sourcepath1, peg_revision1,
                         sourcepath2,
