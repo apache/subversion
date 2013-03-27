@@ -61,7 +61,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-r1443929
    Votes:
-     +1: philip
+     +1: philip, stefan2
 
  * r1453780
    Reject operations on some properties for activity resources.
