@@ -101,7 +101,11 @@ def main(ignored_pool, argv):
     # If we get a file not found error then some file has a newline in it and
     # fsfs's own transaction is now corrupted.
     if e.apr_err == svn.core.SVN_ERR_FS_NOT_FOUND:
-      path = re.search("path '(.*?)'", e.message).group(1)
+      match = re.search("path '(.*?)'", e.message)
+      if not match:
+        sys.stderr.write(repr(e))
+        return 2
+      path = match.group(1)
       sys.stderr.write("Path name that contains '%s' has a newline." % path)
       return 3
     # fs corrupt error probably means that there is probably both
