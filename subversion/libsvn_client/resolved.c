@@ -42,7 +42,7 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_client__resolve_conflicts(svn_boolean_t *resolved,
+svn_client__resolve_conflicts(svn_boolean_t *conflicts_remain,
                               apr_hash_t *conflicted_paths,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *scratch_pool)
@@ -50,8 +50,8 @@ svn_client__resolve_conflicts(svn_boolean_t *resolved,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_index_t *hi;
 
-  if (resolved)
-    *resolved = TRUE;
+  if (conflicts_remain)
+    *conflicts_remain = FALSE;
 
   for (hi = (conflicted_paths
              ? apr_hash_first(scratch_pool, conflicted_paths) : NULL);
@@ -72,7 +72,7 @@ svn_client__resolve_conflicts(svn_boolean_t *resolved,
                                         ctx->notify_func2, ctx->notify_baton2,
                                         iterpool));
 
-      if (resolved)
+      if (conflicts_remain)
         {
           svn_boolean_t text_c, prop_c, tree_c;
 
@@ -80,7 +80,7 @@ svn_client__resolve_conflicts(svn_boolean_t *resolved,
                                        ctx->wc_ctx, local_abspath,
                                        iterpool));
           if (text_c || prop_c || tree_c)
-            *resolved = FALSE;
+            *conflicts_remain = TRUE;
         }
     }
   svn_pool_destroy(iterpool);
