@@ -475,5 +475,10 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Scope:     'make install-tools'
   Purpose:   Symlinks $prefix/bin/svnsyitf to $prefix/bin/svnmucc
 
+7.8 SVN_X_DOES_NOT_MARK_THE_SPOT
+
+  Scope:     svn_cache__t subsystem (used by FSFS, svnserve, etc)
+  Purpose:   Disable the subsystem.  Requires -D SVN_DEBUG.
+
 * (TODO: others)
 
