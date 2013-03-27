@@ -750,8 +750,10 @@ svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
                   svn_fs_txn_t *txn, apr_pool_t *pool)
 {
   svn_error_t *err;
-#ifdef PACK_AFTER_EVERY_COMMIT
+#if defined(PACK_AFTER_EVERY_COMMIT) || defined(SVN_DEBUG)
   svn_fs_root_t *txn_root;
+#endif
+#ifdef PACK_AFTER_EVERY_COMMIT
   svn_fs_t *fs;
   const char *fs_path;
 
