@@ -82,7 +82,7 @@ def main(ignored_pool, argv):
   txn = svn.fs.svn_fs_open_txn(fs, txn_name)
   txn_root = svn.fs.svn_fs_txn_root(txn)
   base_rev = svn.fs.svn_fs_txn_base_revision(txn)
-  if not base_rev or base_rev <= svn.core.SVN_INVALID_REVNUM: 
+  if base_rev is None or base_rev <= svn.core.SVN_INVALID_REVNUM: 
     sys.stderr.write("Transaction '%s' is not based on a revision" % txn_name)
     return 2
   base_root = svn.fs.svn_fs_revision_root(fs, base_rev)
