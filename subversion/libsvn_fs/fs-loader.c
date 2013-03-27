@@ -753,15 +753,10 @@ svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
 #if defined(PACK_AFTER_EVERY_COMMIT) || defined(SVN_DEBUG)
   svn_fs_root_t *txn_root;
 #endif
-#ifdef PACK_AFTER_EVERY_COMMIT
-  svn_fs_t *fs;
-  const char *fs_path;
 
   *new_rev = SVN_INVALID_REVNUM;
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-  fs = svn_fs_root_fs(txn_root);
-  fs_path = svn_fs_path(fs, pool);
-#elif defined (SVN_DEBUG)
+
+#if defined(PACK_AFTER_EVERY_COMMIT) || defined(SVN_DEBUG)
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
 #endif
 
@@ -789,6 +784,8 @@ svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
 
 #ifdef PACK_AFTER_EVERY_COMMIT
   {
+    svn_fs_t *fs = svn_fs_root_fs(txn_root);
+    const char *fs_path = svn_fs_path(fs, pool);
     err = svn_fs_pack(fs_path, NULL, NULL, NULL, NULL, pool);
     if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
       /* Pre-1.6 filesystem. */
