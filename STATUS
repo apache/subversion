@@ -275,13 +275,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1458341
-   Fix issue 4337, client memory leak in "svn log" for ra_svn.
-   Justification:
-     Client leaks hundreds of MB on large repositories.
-   Votes:
-     +1: philip, breser, rhuijben
-
  * r1453780
    Reject operations on some properties for activity resources.
    Justification:
