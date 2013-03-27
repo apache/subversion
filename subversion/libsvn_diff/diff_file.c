@@ -549,6 +549,14 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
           /* Prefix ended in last chunk, so we can reuse the prefix buffer */
           file_for_suffix[i].buffer = file[i].buffer;
         }
+      else if (!length[i] && file_for_suffix[i].chunk == file[i].chunk + 1)
+        {
+          /* Prefix ended at end of last chunk, so we can reuse the
+             prefix buffer */
+          file_for_suffix[i].chunk = file[i].chunk;
+          file_for_suffix[i].buffer = file[i].buffer;
+          length[i] = CHUNK_SIZE;
+        }
       else
         {
           /* There is at least more than 1 chunk,
