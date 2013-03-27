@@ -38,15 +38,21 @@ for i in range(1, 32):
   control_chars.add(chr(i))
 control_chars.add(chr(127))
 
-def check_tree(node, path):
-  "Walk the node checking for control characters"
-  if not node:
-    return 0
- 
+def check_node(node, path):
+  "check NODE for control characters. PATH is used for error messages"
   if node.action == 'A':
     if any((c in control_chars) for c in node.name):
       sys.stderr.write("'%s' contains a control character" % path)
       return 3
+
+def walk_tree(node, path, callback):
+  "Walk NODE"
+  if not node:
+    return 0
+ 
+  ret_val = callback(node, path)
+  if ret_val > 0:
+    return ret_val
 
   node = node.child
   if not node:
@@ -54,7 +60,7 @@ def check_tree(node, path):
 
   while node:
     full_path = posixpath.join(path, node.name)
-    ret_val = check_tree(node, full_path)
+    ret_val = walk_tree(node, full_path, callback)
     # If we ran into an error just return up the stack all the way
     if ret_val > 0:
       return ret_val 
@@ -110,7 +116,7 @@ def main(ignored_pool, argv):
       sys.stderr.write(repr(e))
       return 2
   tree = svn.repos.svn_repos_node_from_baton(editor_baton)
-  return check_tree(tree, "/")
+  return walk_tree(tree, "/", check_node)
 
 if __name__ == '__main__':
   sys.exit(svn.core.run_app(main, sys.argv))
