@@ -222,7 +222,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-neon-properr
    Votes:
-     +1: cmpilato, rhuijben
+     +1: cmpilato, rhuijben, stefan2
 
  * r1445753
    Fix issue #3741, 'externals not removed when working copy is made shallow'.
@@ -267,7 +267,7 @@ Candidate changes:
    Justification:
      User-reported bug confusing administrators.
    Votes:
-     +1: cmpilato, rhuijben
+     +1: cmpilato, rhuijben, stefan2
 
 Veto-blocked changes:
 =====================
