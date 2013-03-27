@@ -4814,7 +4814,6 @@ filename_trailing_newline(const svn_test_opts_t *opts,
   SVN_ERR(svn_test__create_fs(&fs, "test-filename-trailing-newline",
                               opts, pool));
 
-/* ------------------------------------------------------------------------ */
   /* Revision 1:  Add a directory /foo  */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
