@@ -1781,6 +1781,19 @@ seek_handler_lazyopen(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_stream__is_buffered_fn_t */
+static svn_boolean_t
+is_buffered_lazyopen(void *baton)
+{
+  lazyopen_baton_t *b = baton;
+
+  /* No lazy open as we cannot handle an open error. */
+  if (!b->real_stream)
+    return FALSE;
+
+  return svn_stream__is_buffered(b->real_stream);
+}
+
 svn_stream_t *
 svn_stream_lazyopen_create(svn_stream_lazyopen_func_t open_func,
                            void *open_baton,
@@ -1801,6 +1814,7 @@ svn_stream_lazyopen_create(svn_stream_lazyopen_func_t open_func,
   svn_stream_set_close(stream, close_handler_lazyopen);
   svn_stream_set_mark(stream, mark_handler_lazyopen);
   svn_stream_set_seek(stream, seek_handler_lazyopen);
+  svn_stream__set_is_buffered(stream, is_buffered_lazyopen);
   
   return stream;
 }
