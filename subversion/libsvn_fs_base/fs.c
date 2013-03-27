@@ -471,9 +471,8 @@ bdb_write_config(svn_fs_t *fs)
 }
 
 static svn_error_t *
-base_bdb_verify_rev(svn_fs_t *fs,
-                    svn_fs_root_t *root,
-                    apr_pool_t *scratch_pool)
+base_bdb_verify_root(svn_fs_root_t *root,
+                     apr_pool_t *scratch_pool)
 {
   /* Verifying is currently a no op for BDB. */
   return SVN_NO_ERROR;
@@ -508,7 +507,7 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__unlock,
   svn_fs_base__get_lock,
   svn_fs_base__get_locks,
-  base_bdb_verify_rev,
+  base_bdb_verify_root,
   base_bdb_freeze,
   base_bdb_set_errcall,
 };

@@ -4327,6 +4327,16 @@ svn_fs_fs__verify_root(svn_fs_root_t *root,
 {
   fs_rev_root_data_t *frd;
 
+  /* Issue #4129: bogus pred-counts and minfo-cnt's on the root node-rev
+     (and elsewhere).  This code makes more thorough checks than the
+     commit-time checks in validate_root_noderev(). */
+
+  /* ### TODO: Make sure caches are disabled.
+
+     When this code is called in the library, we want to ensure we
+     use the on-disk data --- rather than some data that was read
+     in the possibly-distance past and cached since. */
+
   if (root->is_txn_root)
     /* ### Not implemented */
     return SVN_NO_ERROR;

@@ -52,13 +52,6 @@ svn_error_t *svn_fs_fs__verify(svn_fs_t *fs,
                                void *cancel_baton,
                                apr_pool_t *pool);
 
-/* Verify metadata of REVISION in filesystem FS.
- * Use POOL for temporary allocations. */
-svn_error_t *
-svn_fs_fs__verify_rev(svn_fs_t *fs,
-                      svn_fs_root_t *root,
-                      apr_pool_t *pool);
-
 /* Copy the fsfs filesystem SRC_FS at SRC_PATH into a new copy DST_FS at
  * DST_PATH. If INCREMENTAL is TRUE, do not re-copy data which already
  * exists in DST_FS. Use POOL for temporary allocations. */
