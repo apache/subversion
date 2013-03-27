@@ -3192,15 +3192,26 @@ filename_trailing_newline(const svn_test_opts_t *opts,
   svn_pool_clear(subpool);
 
   /* Attempt to copy /foo to "/bar\n". This should fail. */
+  youngest_rev = 1;
   SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_fs_revision_root(&root, fs, youngest_rev, subpool));
-  err = svn_fs_copy(root, "/foo", txn_root, "/bar\n", subpool);
+  SVN_ERR(svn_fs_copy(root, "/foo", txn_root, "/bar\n", subpool));
+  err = svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool);
   SVN_TEST_ASSERT(err != SVN_NO_ERROR);
+  svn_error_clear(err);
+  svn_pool_clear(subpool);
 
-  /* Attempt to create a file /foo/baz\n. This should fail. */
-  err = svn_fs_make_file(txn_root, "/foo/baz\n", subpool);
+  /* Attempt to commit a file /foo/baz\n. This should fail. */
+  youngest_rev = 1;
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_make_file(txn_root, "/foo/baz\n", subpool));
+  err = svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool);
   SVN_TEST_ASSERT(err != SVN_NO_ERROR);
+  svn_error_clear(err);
+  svn_pool_clear(subpool);
 
   return SVN_NO_ERROR;
 }
