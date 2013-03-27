@@ -1460,6 +1460,11 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 38,
              "Atomic data storage is corrupt")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_CORRUPT_PACKED_DATA,
+             SVN_ERR_MISC_CATEGORY_START + 39,
+             "Packed data stream is corrupt")
+
   /* command-line client errors */
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,
