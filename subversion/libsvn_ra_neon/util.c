@@ -1600,6 +1600,29 @@ svn_ra_neon__uri_unparse(const ne_uri *uri,
   return result;
 }
 
+svn_error_t *
+svn_ra_neon__get_url_path(const char **urlpath,
+                          const char *url,
+                          apr_pool_t *pool)
+{
+  ne_uri parsed_url;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  ne_uri_parse(url, &parsed_url);
+  if (parsed_url.path)
+    {
+      *urlpath = apr_pstrdup(pool, parsed_url.path);
+    }
+  else
+    {
+      err = svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                              _("Neon was unable to parse URL '%s'"), url);
+    }
+  ne_uri_free(&parsed_url);
+
+  return err;
+}
+
 /* Sets *SUPPORTS_DEADPROP_COUNT to non-zero if server supports
  * deadprop-count property. */
 svn_error_t *

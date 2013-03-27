@@ -282,20 +282,6 @@ Approved changes:
    Votes:
      +1: philip, breser, stefan2
      
- * ^/subversion/branches/1.7.x-issue4257
-   Fix issue #4257 ("neon get_dir leads to bogus NODES rows").
-   Justification:
-     Bug can tigger assertions in the WCDB code.
-   Branch:
-     ^/subversion/branches/1.7.x-issue4257
-   Notes:
-     While not strictly related to this issue, svn_ra_neon__do_stat()
-     could probably stand to have the same patch applied as
-     svn_ra_neon__get_dir(), as this pattern of using full URLs
-     was found to be troublesome in issue #4332's research, too.
-   Votes:
-     +1: cmpilato, breser, rhuijben
-
  * r1425368
    Use the right api for generating the repository dirent in mod_dav_svn.
    Justification:
