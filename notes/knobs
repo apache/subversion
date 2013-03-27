@@ -68,6 +68,7 @@ SERF_VERBOSE
 SSL_VERBOSE
 SVN_DEPRECATED
 SVN_FS__TRAIL_DEBUG
+SVN_UTF_NO_UNINITIALISED_ACCESS
 
 2.4 Test-only
 
@@ -390,6 +391,15 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
 
   Scope:     libsvn_fs_base
   Purpose:   
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
+
+5.14 SVN_UTF_NO_UNINITIALISED_ACCESS
+
+  Scope:     libsvn_subr
+  Purpose:   Disables some code that triggers warnings in memory tools
+             such as valgrind and address sanitizer.
   Range:     definedness
   Default:   not defined
   Suggested: defined, not defined
