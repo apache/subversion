@@ -81,11 +81,21 @@ svn_client__resolve_conflicts(svn_boolean_t *conflicts_remain,
 
       if (conflicts_remain)
         {
+          svn_error_t *err;
           svn_boolean_t text_c, prop_c, tree_c;
 
-          SVN_ERR(svn_wc_conflicted_p3(&text_c, &prop_c, &tree_c,
-                                       ctx->wc_ctx, local_abspath,
-                                       iterpool));
+          err = svn_wc_conflicted_p3(&text_c, &prop_c, &tree_c,
+                                     ctx->wc_ctx, local_abspath,
+                                     iterpool);
+          if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+            {
+              svn_error_clear(err);
+              text_c = prop_c = tree_c = FALSE;
+            }
+          else
+            {
+              SVN_ERR(err);
+            }
           if (text_c || prop_c || tree_c)
             *conflicts_remain = TRUE;
         }
