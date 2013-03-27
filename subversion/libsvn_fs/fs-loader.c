@@ -396,9 +396,6 @@ svn_fs__path_valid(const char *path, apr_pool_t *pool)
                                path);
     }
 
-  /* No control characters (see issue #4340). */
-  SVN_ERR(svn_path_check_valid(path, pool));
-
   /* That's good enough. */
   return SVN_NO_ERROR;
 }

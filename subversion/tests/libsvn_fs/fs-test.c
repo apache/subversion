@@ -4945,6 +4945,12 @@ filename_trailing_newline(const svn_test_opts_t *opts,
   svn_fs_root_t *txn_root, *root;
   svn_revnum_t youngest_rev = 0;
   svn_error_t *err;
+  svn_boolean_t allow_newlines;
+  
+  /* Some filesystem implementations can handle newlines in filenames
+   * and can be white-listed here.
+   * Currently, only BDB supports \n in filenames. */
+  allow_newlines = (strcmp(opts->fs_type, "bdb") == 0);
 
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-filename-trailing-newline",
                               opts, pool));
@@ -4957,16 +4963,22 @@ filename_trailing_newline(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   svn_pool_clear(subpool);
 
-  /* Attempt to copy /foo to "/bar\n". This should fail. */
+  /* Attempt to copy /foo to "/bar\n". This should fail on FSFS. */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_fs_revision_root(&root, fs, youngest_rev, subpool));
   err = svn_fs_copy(root, "/foo", txn_root, "/bar\n", subpool);
-  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
+  if (allow_newlines)
+    SVN_TEST_ASSERT(err == SVN_NO_ERROR);
+  else
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
 
-  /* Attempt to create a file /foo/baz\n. This should fail. */
+  /* Attempt to create a file /foo/baz\n. This should fail on FSFS. */
   err = svn_fs_make_file(txn_root, "/foo/baz\n", subpool);
-  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
+  if (allow_newlines)
+    SVN_TEST_ASSERT(err == SVN_NO_ERROR);
+  else
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
 
   return SVN_NO_ERROR;
 }
@@ -5053,6 +5065,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_OPTS_PASS(delete_fs,
                        "test svn_fs_delete_fs"),
     SVN_TEST_OPTS_PASS(filename_trailing_newline,
-                       "filenames with trailing \\n should be rejected"),
+                       "filenames with trailing \\n might be rejected"),
     SVN_TEST_NULL
   };

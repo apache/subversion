@@ -288,9 +288,6 @@ can_create(svn_fs_root_t *txn_root,
   svn_node_kind_t kind;
   const char *cur_fspath;
 
-  /* Reject paths which contain control characters (see issue #4340). */
-  SVN_ERR(svn_path_check_valid(fspath, scratch_pool));
-
   SVN_ERR(svn_fs_check_path(&kind, txn_root, fspath, scratch_pool));
   if (kind == svn_node_none)
     return SVN_NO_ERROR;
