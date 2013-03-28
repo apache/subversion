@@ -755,6 +755,8 @@ svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
 #endif
 
   *new_rev = SVN_INVALID_REVNUM;
+  if (conflict_p)
+    *conflict_p = NULL;
 
 #if defined(PACK_AFTER_EVERY_COMMIT) || defined(SVN_DEBUG)
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
