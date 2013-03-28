@@ -49,8 +49,7 @@ struct dav_db {
 
 
 struct dav_deadprop_rollback {
-  dav_prop_name name;
-  svn_string_t value;
+  int dummy;
 };
 
 
@@ -169,6 +168,14 @@ save_value(dav_db *db, const dav_prop_name *name, const svn_string_t *value)
            db->authz_read_func,
            db->authz_read_baton,
            db->resource->pool);
+
+        /* mod_dav doesn't handle the returned error very well, it
+           generates its own generic error that will be returned to
+           the client.  Cache the detailed error here so that it can
+           be returned a second time when the rollback mechanism
+           triggers. */
+        if (serr)
+          db->resource->info->revprop_error = svn_error_dup(serr);
 
         /* Tell the logging subsystem about the revprop change. */
         dav_svn__operational_log(db->resource->info,
@@ -598,19 +605,14 @@ db_get_rollback(dav_db *db,
                 const dav_prop_name *name,
                 dav_deadprop_rollback **prollback)
 {
-  dav_error *err;
-  dav_deadprop_rollback *ddp;
-  svn_string_t *propval;
+  /* This gets called by mod_dav in preparation for a revprop change.
+     mod_dav_svn doesn't need to make any changes during rollback, but
+     we want the rollback mechanism to trigger.  Making changes in
+     response to post-revprop-change hook errors would be positively
+     wrong. */
 
-  if ((err = get_value(db, name, &propval)) != NULL)
-    return err;
+  *prollback = apr_palloc(db->p, sizeof(dav_deadprop_rollback));
 
-  ddp = apr_palloc(db->p, sizeof(*ddp));
-  ddp->name = *name;
-  ddp->value.data = propval ? propval->data : NULL;
-  ddp->value.len = propval ? propval->len : 0;
-
-  *prollback = ddp;
   return NULL;
 }
 
@@ -618,12 +620,20 @@ db_get_rollback(dav_db *db,
 static dav_error *
 db_apply_rollback(dav_db *db, dav_deadprop_rollback *rollback)
 {
-  if (rollback->value.data == NULL)
-    {
-      return db_remove(db, &rollback->name);
-    }
+  dav_error *derr;
 
-  return save_value(db, &rollback->name, &rollback->value);
+  if (! db->resource->info->revprop_error)
+    return NULL;
+  
+  /* Returning the original revprop change error here will cause this
+     detailed error to get returned to the client in preference to the
+     more generic error created by mod_dav. */
+  derr = dav_svn__convert_err(db->resource->info->revprop_error,
+                              HTTP_INTERNAL_SERVER_ERROR, NULL,
+                              db->resource->pool);
+  db->resource->info->revprop_error = NULL;
+
+  return derr;
 }
 
 

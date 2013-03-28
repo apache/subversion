@@ -254,6 +254,9 @@ struct dav_resource_private {
      interface (ie: /path/to/item?p=PEGREV]? */
   svn_boolean_t pegged;
 
+  /* Cache any revprop change error */
+  svn_error_t *revprop_error;
+
   /* Pool to allocate temporary data from */
   apr_pool_t *pool;
 };
