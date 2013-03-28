@@ -214,6 +214,9 @@ static const apr_getopt_option_t options_table[] =
     {"revision",      'r', 1,
      N_("specify revision number ARG (or X:Y range)")},
 
+    {"transaction",       't', 1,
+     N_("specify transaction name ARG")},
+
     {"incremental",   svnadmin__incremental, 0,
      N_("dump or hotcopy incrementally")},
 
@@ -477,7 +480,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
   {"verify", subcommand_verify, {0}, N_
    ("usage: svnadmin verify REPOS_PATH\n\n"
     "Verifies the data stored in the repository.\n"),
-  {'r', 'q', 'M'} },
+  {'t', 'r', 'q', 'M'} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -493,6 +496,7 @@ struct svnadmin_opt_state
   svn_boolean_t pre_1_6_compatible;                 /* --pre-1.6-compatible */
   svn_version_t *compatible_version;                /* --compatible-version */
   svn_opt_revision_t start_revision, end_revision;  /* -r X[:Y] */
+  const char *txn_id;                               /* -t TXN */
   svn_boolean_t help;                               /* --help or -? */
   svn_boolean_t version;                            /* --version */
   svn_boolean_t incremental;                        /* --incremental */
@@ -1534,9 +1538,33 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
 
+  if (opt_state->txn_id
+      && (opt_state->start_revision.kind != svn_opt_revision_unspecified
+          || opt_state->end_revision.kind != svn_opt_revision_unspecified))
+    {
+      return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                               _("--revision (-r) and --transaction (-t) "
+                                 "are mutually exclusive"));
+    }
+
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs(repos);
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
+
+  /* Usage 2. */
+  if (opt_state->txn_id)
+    {
+      svn_fs_txn_t *txn;
+      svn_fs_root_t *root;
+
+      SVN_ERR(svn_fs_open_txn(&txn, fs, opt_state->txn_id, pool));
+      SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+      SVN_ERR(svn_fs_verify_root(root, pool));
+      return SVN_NO_ERROR;
+    }
+  else
+    /* Usage 1. */
+    ;
 
   /* Find the revision numbers at which to start and end. */
   SVN_ERR(get_revnum(&lower, &opt_state->start_revision,
@@ -1980,6 +2008,10 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
             }
         }
         break;
+      case 't':
+        opt_state.txn_id = opt_arg;
+        break;
+
       case 'q':
         opt_state.quiet = TRUE;
         break;
