@@ -2766,8 +2766,7 @@ static svn_error_t *replay_one_revision(svn_ra_svn_conn_t *conn,
   svn_error_t *err;
 
   SVN_ERR(log_command(b, conn, pool,
-                      svn_log__replay(b->fs_path->data, low_water_mark,
-                                      pool)));
+                      svn_log__replay(b->fs_path->data, rev, pool)));
 
   svn_ra_svn_get_editor(&editor, &edit_baton, conn, pool, NULL, NULL);
 
