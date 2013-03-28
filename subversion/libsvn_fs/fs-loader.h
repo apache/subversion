@@ -407,6 +407,9 @@ struct svn_fs_t
 
   /* UUID, stored by open(), create(), and set_uuid(). */
   const char *uuid;
+
+  /* Parsed contents of fs.conf */
+  svn_boolean_t verify_at_commit;
 };
 
 
