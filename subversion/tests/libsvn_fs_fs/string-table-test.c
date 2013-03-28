@@ -82,7 +82,27 @@ generate_string(apr_uint64_t key, apr_size_t len, apr_pool_t *pool)
 }
 
 static svn_error_t *
-create_empty_table(apr_pool_t *pool)
+store_and_load_table(string_table_t **table, apr_pool_t *pool)
+{
+  svn_stringbuf_t *stream_buffer = svn_stringbuf_create_empty(pool);
+  svn_stream_t *stream;
+
+  stream = svn_stream_from_stringbuf(stream_buffer, pool);
+  SVN_ERR(svn_fs_fs__write_string_table(stream, *table, pool));
+  SVN_ERR(svn_stream_close(stream));
+
+  *table = NULL;
+
+  stream = svn_stream_from_stringbuf(stream_buffer, pool);
+  SVN_ERR(svn_fs_fs__read_string_table(table, stream, pool, pool));
+  SVN_ERR(svn_stream_close(stream));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+create_empty_table_body(svn_boolean_t do_load_store,
+                        apr_pool_t *pool)
 {
   string_table_builder_t *builder
     = svn_fs_fs__string_table_builder_create(pool);
@@ -90,13 +110,18 @@ create_empty_table(apr_pool_t *pool)
     = svn_fs_fs__string_table_create(builder, pool);
 
   SVN_TEST_STRING_ASSERT(svn_fs_fs__string_table_get(table, 0, pool), "");
+
+  if (do_load_store)
+    SVN_ERR(store_and_load_table(&table, pool));
+
   SVN_TEST_ASSERT(svn_fs_fs__string_table_copy_string(NULL, 0, table, 0) == 0);
 
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
-short_string_table(apr_pool_t *pool)
+short_string_table_body(svn_boolean_t do_load_store,
+                        apr_pool_t *pool)
 {
   apr_size_t indexes[STRING_COUNT] = { 0 };
     
@@ -109,6 +134,8 @@ short_string_table(apr_pool_t *pool)
     indexes[i] = svn_fs_fs__string_table_builder_add(builder, basic_strings[i], 0);
   
   table = svn_fs_fs__string_table_create(builder, pool);
+  if (do_load_store)
+    SVN_ERR(store_and_load_table(&table, pool));
   
   SVN_TEST_ASSERT(indexes[2] == indexes[6]);
   for (i = 0; i < STRING_COUNT; ++i)
@@ -144,7 +171,8 @@ short_string_table(apr_pool_t *pool)
 }
 
 static svn_error_t *
-large_string_table(apr_pool_t *pool)
+large_string_table_body(svn_boolean_t do_load_store,
+                        apr_pool_t *pool)
 {
   enum { COUNT = 10 };
 
@@ -163,6 +191,9 @@ large_string_table(apr_pool_t *pool)
     }
 
   table = svn_fs_fs__string_table_create(builder, pool);
+  if (do_load_store)
+    SVN_ERR(store_and_load_table(&table, pool));
+
   for (i = 0; i < COUNT; ++i)
     {
       char long_buffer[73000 + 1000 * COUNT] = { 0 };
@@ -193,7 +224,8 @@ large_string_table(apr_pool_t *pool)
 }
 
 static svn_error_t *
-many_strings_table(apr_pool_t *pool)
+many_strings_table_body(svn_boolean_t do_load_store,
+                        apr_pool_t *pool)
 {
   /* cause multiple sub-tables to be created */
   enum { COUNT = 1000 };
@@ -213,6 +245,9 @@ many_strings_table(apr_pool_t *pool)
     }
 
   table = svn_fs_fs__string_table_create(builder, pool);
+  if (do_load_store)
+    SVN_ERR(store_and_load_table(&table, pool));
+
   for (i = 0; i < COUNT; ++i)
     {
       char long_buffer[23000] = { 0 };
@@ -243,6 +278,55 @@ many_strings_table(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+create_empty_table(apr_pool_t *pool)
+{
+  return svn_error_trace(create_empty_table_body(FALSE, pool));
+}
+
+static svn_error_t *
+short_string_table(apr_pool_t *pool)
+{
+  return svn_error_trace(short_string_table_body(FALSE, pool));
+}
+
+static svn_error_t *
+large_string_table(apr_pool_t *pool)
+{
+  return svn_error_trace(large_string_table_body(FALSE, pool));
+}
+
+static svn_error_t *
+many_strings_table(apr_pool_t *pool)
+{
+  return svn_error_trace(many_strings_table_body(FALSE, pool));
+}
+
+static svn_error_t *
+store_load_short_string_table(apr_pool_t *pool)
+{
+  return svn_error_trace(short_string_table_body(TRUE, pool));
+}
+
+static svn_error_t *
+store_load_large_string_table(apr_pool_t *pool)
+{
+  return svn_error_trace(large_string_table_body(TRUE, pool));
+}
+
+static svn_error_t *
+store_load_empty_table(apr_pool_t *pool)
+{
+  return svn_error_trace(create_empty_table_body(TRUE, pool));
+}
+
+static svn_error_t *
+store_load_many_strings_table(apr_pool_t *pool)
+{
+  return svn_error_trace(many_strings_table_body(TRUE, pool));
+}
+
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -258,5 +342,13 @@ struct svn_test_descriptor_t test_funcs[] =
                    "string table with large strings only"),
     SVN_TEST_PASS2(many_strings_table,
                    "string table with many strings"),
+    SVN_TEST_PASS2(store_load_empty_table,
+                   "store and load an empty string table"),
+    SVN_TEST_PASS2(store_load_short_string_table,
+                   "store and load table with short strings only"),
+    SVN_TEST_PASS2(store_load_large_string_table,
+                   "store and load table with large strings only"),
+    SVN_TEST_PASS2(store_load_many_strings_table,
+                   "store and load string table with many strings"),
     SVN_TEST_NULL
   };

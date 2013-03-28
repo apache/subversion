@@ -60,6 +60,13 @@ svn_fs_fs__string_table_builder_add(string_table_builder_t *builder,
                                     const char *string,
                                     apr_size_t len);
 
+/* Return an estimate for the on-disk size of the resulting string table.
+ * The estimate may err in both directions but tends to overestimate the
+ * space requirements for larger tables.
+ */
+apr_size_t
+svn_fs_fs__string_table_builder_estimate_size(string_table_builder_t *builder);
+
 /* From the given BUILDER object, create a string table object allocated
  * in POOL that contains all strings previously added to BUILDER.
  */
@@ -91,6 +98,24 @@ svn_fs_fs__string_table_copy_string(char *buffer,
                                     apr_size_t size,
                                     const string_table_t *table,
                                     apr_size_t index);
+
+/* Write a serialized representation of the string table TABLE to STREAM.
+ * Use POOL for temporary allocations.
+ */
+svn_error_t *
+svn_fs_fs__write_string_table(svn_stream_t *stream,
+                              const string_table_t *table,
+                              apr_pool_t *pool);
+
+/* Read the serialized string table representation from STREAM and return
+ * the resulting runtime representation in *TABLE_P.  Allocate it in
+ * RESULT_POOL and use SCRATCH_POOL for temporary allocations.
+ */
+svn_error_t *
+svn_fs_fs__read_string_table(string_table_t **table_p,
+                             svn_stream_t *stream,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool); 
 
 #ifdef __cplusplus
 }

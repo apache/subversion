@@ -27,6 +27,8 @@
 #include "svn_sorts.h"
 #include "private/svn_string_private.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_delta_private.h"
+#include "private/svn_packed_data.h"
 #include "string_table.h"
 
 
@@ -61,6 +63,7 @@ typedef struct builder_table_t
   apr_array_header_t *short_strings;
   apr_array_header_t *long_strings;
   apr_hash_t *long_string_dict;
+  apr_size_t long_string_size;
 } builder_table_t;
 
 struct string_table_builder_t
@@ -79,7 +82,7 @@ typedef struct string_header_t
 
 typedef struct string_sub_table_t
 {
-  char *data;
+  const char *data;
   apr_size_t data_size;
 
   string_header_t *short_strings;
@@ -297,6 +300,8 @@ svn_fs_fs__string_table_builder_add(string_table_builder_t *builder,
       APR_ARRAY_PUSH(table->long_strings, svn_string_t) = item;
       apr_hash_set(table->long_string_dict, string, len,
                    (void*)(apr_uintptr_t)table->long_strings->nelts);
+
+      table->long_string_size += len;
     }
   else
     {
@@ -332,9 +337,40 @@ svn_fs_fs__string_table_builder_add(string_table_builder_t *builder,
   return result;
 }
 
+apr_size_t
+svn_fs_fs__string_table_builder_estimate_size(string_table_builder_t *builder)
+{
+  apr_size_t total = 0;
+  int i;
+
+  for (i = 0; i < builder->tables->nelts; ++i)
+    {
+      builder_table_t *table
+        = APR_ARRAY_IDX(builder->tables, i, builder_table_t*);
+
+      /* total number of chars to store,
+       * 8 bytes per short string table entry
+       * 4 bytes per long string table entry
+       * some static overhead */
+      apr_size_t table_size
+        = MAX_DATA_SIZE - table->max_data_size
+        + table->long_string_size
+        + table->short_strings->nelts * 8
+        + table->long_strings->nelts * 4
+        + 10;
+
+      total += table_size;
+    }
+
+  /* ZIP compression should give us a 50% reduction.
+   * add some static overhead */
+  return 200 + total / 2;
+ 
+}
+
 static void
 create_table(string_sub_table_t *target,
-             builder_table_t* source,
+             builder_table_t *source,
              apr_pool_t *pool,
              apr_pool_t *scratch_pool)
 {
@@ -515,4 +551,164 @@ svn_fs_fs__string_table_copy_string(char *buffer,
     buffer[0] = '\0';
 
   return 0; 
+}
+
+svn_error_t *
+svn_fs_fs__write_string_table(svn_stream_t *stream,
+                              const string_table_t *table,
+                              apr_pool_t *pool)
+{
+  apr_size_t i, k;
+
+  svn__packed_data_root_t *root = svn__packed_data_create_root(pool);
+
+  svn__packed_int_stream_t *table_sizes
+    = svn__packed_create_int_stream(root, FALSE, FALSE);
+  svn__packed_int_stream_t *small_strings_headers
+    = svn__packed_create_int_stream(root, FALSE, FALSE);
+  svn__packed_byte_stream_t *large_strings
+    = svn__packed_create_bytes_stream(root);
+  svn__packed_byte_stream_t *small_strings_data
+    = svn__packed_create_bytes_stream(root);
+
+  svn__packed_create_int_substream(small_strings_headers, TRUE, FALSE);
+  svn__packed_create_int_substream(small_strings_headers, FALSE, FALSE);
+  svn__packed_create_int_substream(small_strings_headers, TRUE, FALSE);
+  svn__packed_create_int_substream(small_strings_headers, FALSE, FALSE);
+
+  /* number of sub-tables */
+
+  svn__packed_add_uint(table_sizes, table->size);
+
+  /* all short-string char data sizes */
+  
+  for (i = 0; i < table->size; ++i)
+    svn__packed_add_uint(table_sizes,
+                         table->sub_tables[i].short_string_count);
+
+  for (i = 0; i < table->size; ++i)
+    svn__packed_add_uint(table_sizes,
+                         table->sub_tables[i].long_string_count);
+
+  /* all strings */
+
+  for (i = 0; i < table->size; ++i)
+    {
+      string_sub_table_t *sub_table = &table->sub_tables[i];
+      svn__packed_add_bytes(small_strings_data,
+                            sub_table->data,
+                            sub_table->data_size);
+
+      for (k = 0; k < sub_table->short_string_count; ++k)
+        {
+          string_header_t *string = &sub_table->short_strings[k];
+
+          svn__packed_add_uint(small_strings_headers, string->head_string);
+          svn__packed_add_uint(small_strings_headers, string->head_length);
+          svn__packed_add_uint(small_strings_headers, string->tail_start);
+          svn__packed_add_uint(small_strings_headers, string->tail_length);
+        }
+
+      for (k = 0; k < sub_table->long_string_count; ++k)
+        svn__packed_add_bytes(large_strings,
+                              sub_table->long_strings[k].data,
+                              sub_table->long_strings[k].len + 1);
+    }
+
+  /* write to target stream */
+
+  SVN_ERR(svn__packed_data_write(stream, root, pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__read_string_table(string_table_t **table_p,
+                             svn_stream_t *stream,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  apr_size_t i, k;
+
+  string_table_t *table = apr_palloc(result_pool, sizeof(*table));
+ 
+  svn__packed_data_root_t *root;
+  svn__packed_int_stream_t *table_sizes;
+  svn__packed_byte_stream_t *large_strings;
+  svn__packed_byte_stream_t *small_strings_data;
+  svn__packed_int_stream_t *headers;
+
+  SVN_ERR(svn__packed_data_read(&root, stream, result_pool, scratch_pool));
+  table_sizes = svn__packed_first_int_stream(root);
+  headers = svn__packed_next_int_stream(table_sizes);
+  large_strings = svn__packed_first_byte_stream(root);
+  small_strings_data = svn__packed_next_byte_stream(large_strings);
+
+  /* create sub-tables */
+
+  table->size = svn__packed_get_uint(table_sizes);
+  table->sub_tables = apr_pcalloc(result_pool,
+                                  table->size * sizeof(*table->sub_tables));
+
+  /* read short strings */
+
+  for (i = 0; i < table->size; ++i)
+    {
+      string_sub_table_t *sub_table = &table->sub_tables[i];
+
+      sub_table->short_string_count = svn__packed_get_uint(table_sizes);
+      if (sub_table->short_string_count)
+        {
+          sub_table->short_strings
+            = apr_pcalloc(result_pool, sub_table->short_string_count
+                                    * sizeof(*sub_table->short_strings));
+
+          /* read short string headers */
+
+          for (k = 0; k < sub_table->short_string_count; ++k)
+            {
+              string_header_t *string = &sub_table->short_strings[k];
+
+              string->head_string = svn__packed_get_uint(headers);
+              string->head_length = svn__packed_get_uint(headers);
+              string->tail_start = svn__packed_get_uint(headers);
+              string->tail_length = svn__packed_get_uint(headers);
+            }
+        }
+
+      sub_table->data = svn__packed_get_bytes(small_strings_data,
+                                              &sub_table->data_size);
+    }
+
+  /* read long strings */
+
+  for (i = 0; i < table->size; ++i)
+    {
+      /* initialize long string table */
+      string_sub_table_t *sub_table = &table->sub_tables[i];
+
+      sub_table->long_string_count = svn__packed_get_uint(table_sizes);
+      if (sub_table->long_string_count)
+        {
+          sub_table->long_strings
+            = apr_pcalloc(result_pool, sub_table->long_string_count
+                                    * sizeof(*sub_table->long_strings));
+
+          /* read long strings */
+
+          for (k = 0; k < sub_table->long_string_count; ++k)
+            {
+              svn_string_t *string = &sub_table->long_strings[k];
+              string->data = svn__packed_get_bytes(large_strings,
+                                                   &string->len);
+              string->len--;
+            }
+        }
+    }
+
+  /* done */
+
+  *table_p = table;
+
+  return SVN_NO_ERROR;
 }
