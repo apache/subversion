@@ -1381,6 +1381,15 @@ base_get_description(void)
   return _("Module for working with a Berkeley DB repository.");
 }
 
+static svn_error_t *
+base_set_svn_fs_open(svn_fs_t *fs,
+                     svn_error_t *(*svn_fs_open_)(svn_fs_t **,
+                                                  const char *,
+                                                  apr_hash_t *,
+                                                  apr_pool_t *))
+{
+  return SVN_NO_ERROR;
+}
 
 
 /* Base FS library vtable, used by the FS loader library. */
@@ -1397,7 +1406,8 @@ static fs_library_vtable_t library_vtable = {
   base_bdb_recover,
   base_bdb_pack,
   base_bdb_logfiles,
-  svn_fs_base__id_parse
+  svn_fs_base__id_parse,
+  base_set_svn_fs_open
 };
 
 svn_error_t *

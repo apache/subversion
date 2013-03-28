@@ -400,6 +400,17 @@ fs_get_description(void)
   return _("Module for working with a plain file (FSFS) repository.");
 }
 
+static svn_error_t *
+fs_set_svn_fs_open(svn_fs_t *fs,
+                   svn_error_t *(*svn_fs_open_)(svn_fs_t **,
+                                                const char *,
+                                                apr_hash_t *,
+                                                apr_pool_t *))
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  ffd->svn_fs_open_ = svn_fs_open_;
+  return SVN_NO_ERROR;
+}
 
 
 /* Base FS library vtable, used by the FS loader library. */
@@ -417,7 +428,8 @@ static fs_library_vtable_t library_vtable = {
   svn_fs_fs__recover,
   fs_pack,
   fs_logfiles,
-  NULL /* parse_id */
+  NULL /* parse_id */,
+  fs_set_svn_fs_open
 };
 
 svn_error_t *
