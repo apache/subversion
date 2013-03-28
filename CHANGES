@@ -81,7 +81,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.9
     
   - Server-side bugfixes:
     * svnserve will log the replayed rev not the low-water rev. (r1461278)
-    * mod_dav_svn will omit values on some properties for activty resources (r1453780)
+    * mod_dav_svn will omit some property values for activity urls (r1453780)
     * fix an assertion in mod_dav_svn when acting as a proxy on / (issue #4272)
     * improve memory usage when committing properties in mod_dav_svn (r1443929)
     * fix svnrdump to load dump files with non-LF line endings (issue #4263)
@@ -613,7 +613,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.21
 
  User-visible changes
   - Server-side bugfixes:
-    * mod_dav_svn will omit values on some properties for activity resources (r1453780)
+    * mod_dav_svn will omit some property values for activity urls (r1453780)
 
  Developer-visible changes:
   - General:
