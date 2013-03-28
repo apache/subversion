@@ -200,7 +200,7 @@ public class ReposNotifyInformation extends EventObject
          * The structure of a revision is being verified.
          * @since 1.8
          */
-        verify_struc_rev;
+        verify_rev_structure;
     }
 
     public enum NodeAction
