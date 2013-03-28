@@ -241,6 +241,12 @@ two_way_diff(const char *filename1,
   svn_stringbuf_t *actual;
   char *diff_name = apr_psprintf(pool, "diff-%s-%s", filename1, filename2);
 
+  /* Some of the tests have lots of lines, although not much data as
+     the lines are short, and the in-memory diffs allocate a lot of
+     memory.  Since we are doing multiple diff in a single test we use
+     a subpool to reuse that memory. */
+  apr_pool_t *subpool = svn_pool_create(pool);
+
   /* We have an EXPECTED string we can match, because we don't support
      any other combinations (yet) than the ones above. */
   svn_string_t *original = svn_string_create(contents1, pool);
@@ -248,7 +254,8 @@ two_way_diff(const char *filename1,
 
   options = options ? options : svn_diff_file_options_create(pool);
 
-  SVN_ERR(svn_diff_mem_string_diff(&diff, original, modified, options, pool));
+  SVN_ERR(svn_diff_mem_string_diff(&diff, original, modified, options,
+                                   subpool));
 
   actual = svn_stringbuf_create_empty(pool);
   ostream = svn_stream_from_stringbuf(actual, pool);
@@ -256,7 +263,8 @@ two_way_diff(const char *filename1,
   SVN_ERR(svn_diff_mem_string_output_unified(ostream, diff,
                                              filename1, filename2,
                                              SVN_APR_LOCALE_CHARSET,
-                                             original, modified, pool));
+                                             original, modified, subpool));
+  svn_pool_clear(subpool);
   SVN_ERR(svn_stream_close(ostream));
   if (strcmp(actual->data, expected) != 0)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
@@ -311,11 +319,13 @@ two_way_diff(const char *filename1,
   SVN_ERR(three_way_merge(filename1, filename2, filename1,
                           contents1, contents2, contents1, contents2, NULL,
                           svn_diff_conflict_display_modified_latest,
-                          pool));
+                          subpool));
+  svn_pool_clear(subpool);
   SVN_ERR(three_way_merge(filename2, filename1, filename2,
                           contents2, contents1, contents2, contents1, NULL,
                           svn_diff_conflict_display_modified_latest,
-                          pool));
+                          subpool));
+  svn_pool_destroy(subpool);
 
   SVN_ERR(svn_io_remove_file2(diff_name, TRUE, pool));
 
@@ -2565,22 +2575,22 @@ static svn_error_t *
 test_token_compare(apr_pool_t *pool)
 {
   apr_size_t chunk_size = 1 << 17;
-  const char *pattern = "\n\n\n\n\n\n\n\n";
+  const char *pattern = "ABCDEFG\n";
   svn_stringbuf_t *original, *modified;
   svn_diff_file_options_t *diff_opts = svn_diff_file_options_create(pool);
 
   diff_opts->ignore_space = svn_diff_file_ignore_space_all;
 
+  original = svn_stringbuf_create_ensure(chunk_size * 2 + 8, pool);
   /* CHUNK_SIZE bytes */
-  original = svn_stringbuf_create_ensure(chunk_size, pool);
   while (original->len < chunk_size - 8)
     {
       svn_stringbuf_appendcstr(original, pattern);
     }
   svn_stringbuf_appendcstr(original, "    @@@\n");
 
+  modified = svn_stringbuf_create_ensure(chunk_size * 2 + 9, pool);
   /* CHUNK_SIZE+1 bytes, one ' ' more than original */
-  modified = svn_stringbuf_create_ensure(chunk_size + 1, pool);
   while (modified->len < chunk_size - 8)
     {
       svn_stringbuf_appendcstr(modified, pattern);
@@ -2602,13 +2612,43 @@ test_token_compare(apr_pool_t *pool)
                                     "--- token-compare-original2" NL
                                     "+++ token-compare-modified2" NL
                                     "@@ -%u,4 +%u,4 @@"  NL
-                                    " \n"
-                                    " \n"
+                                    " ABCDEFG\n"
+                                    " ABCDEFG\n"
                                     "     @@@\n"
                                     "-aaaaaaa\n"
                                     "+bbbbbbb\n",
-                                    1 +(unsigned int)chunk_size - 8 + 1 - 3,
-                                    1 +(unsigned int)chunk_size - 8 + 1 - 3),
+                                    (unsigned int)chunk_size/8 - 2,
+                                    (unsigned int)chunk_size/8 - 2),
+                       diff_opts, pool));
+
+  /* CHUNK_SIZE*2 bytes */
+  while (original->len <= chunk_size * 2 - 8)
+    {
+      svn_stringbuf_appendcstr(original, pattern);
+    }
+
+  /* CHUNK_SIZE*2+1 bytes, one ' ' more than original */
+  while (modified->len <= chunk_size * 2 - 7)
+    {
+      svn_stringbuf_appendcstr(modified, pattern);
+    }
+
+  SVN_ERR(two_way_diff("token-compare-original2", "token-compare-modified2",
+                       original->data, modified->data,
+                       apr_psprintf(pool,
+                                    "--- token-compare-original2" NL
+                                    "+++ token-compare-modified2" NL
+                                    "@@ -%u,7 +%u,7 @@"  NL
+                                    " ABCDEFG\n"
+                                    " ABCDEFG\n"
+                                    "     @@@\n"
+                                    "-aaaaaaa\n"
+                                    "+bbbbbbb\n"
+                                    " ABCDEFG\n"
+                                    " ABCDEFG\n"
+                                    " ABCDEFG\n",
+                                    (unsigned int)chunk_size/8 - 2,
+                                    (unsigned int)chunk_size/8 - 2),
                        diff_opts, pool));
 
   return SVN_NO_ERROR;
