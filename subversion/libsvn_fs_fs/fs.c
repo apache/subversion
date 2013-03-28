@@ -416,7 +416,8 @@ static fs_library_vtable_t library_vtable = {
   fs_get_description,
   svn_fs_fs__recover,
   fs_pack,
-  fs_logfiles
+  fs_logfiles,
+  NULL /* parse_id */
 };
 
 svn_error_t *
