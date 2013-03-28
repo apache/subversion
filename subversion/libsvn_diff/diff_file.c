@@ -544,18 +544,17 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
       file_for_suffix[i].chunk =
         (int) offset_to_chunk(file_for_suffix[i].size); /* last chunk */
       length[i] = offset_in_chunk(file_for_suffix[i].size);
+      if (length[i] == 0)
+        {
+          /* last chunk is an empty chunk -> start at next-to-last chunk */
+          file_for_suffix[i].chunk = file_for_suffix[i].chunk - 1;
+          length[i] = CHUNK_SIZE;
+        }
+
       if (file_for_suffix[i].chunk == file[i].chunk)
         {
           /* Prefix ended in last chunk, so we can reuse the prefix buffer */
           file_for_suffix[i].buffer = file[i].buffer;
-        }
-      else if (!length[i] && file_for_suffix[i].chunk == file[i].chunk + 1)
-        {
-          /* Prefix ended at end of last chunk, so we can reuse the
-             prefix buffer */
-          file_for_suffix[i].chunk = file[i].chunk;
-          file_for_suffix[i].buffer = file[i].buffer;
-          length[i] = CHUNK_SIZE;
         }
       else
         {

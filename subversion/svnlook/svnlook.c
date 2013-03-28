@@ -2664,6 +2664,16 @@ main(int argc, const char *argv[])
                                     _("Unknown subcommand: '%s'\n"),
                                     first_arg_utf8));
               SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
+
+              /* Be kind to people who try 'svn undo'. */
+              if (strcmp(first_arg_utf8, "verify") == 0)
+                {
+                  svn_error_clear(
+                    svn_cmdline_fprintf(stderr, pool,
+                                        _("Try 'svnadmin verify' instead.\n")));
+                }
+
+
               svn_pool_destroy(pool);
               return EXIT_FAILURE;
             }

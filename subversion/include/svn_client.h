@@ -3458,7 +3458,7 @@ typedef struct svn_client_automatic_merge_t svn_client_automatic_merge_t;
  * @a allow_switched_subtrees enable merging into a WC that is in any or all
  * of the states described by their names, but only if this function decides
  * that the merge will be in the same direction as the last automatic merge.
- * If, on the other hand, the merge turns out to be in the opposite
+ * If, on the other hand, the last automatic merge was in the opposite
  * direction (that is, if svn_client_automatic_merge_is_reintegrate_like()
  * would return true), then such states of the WC are not allowed regardless
  * of these flags.  This function merely records these flags in the
@@ -3484,8 +3484,9 @@ svn_client_find_automatic_merge(svn_client_automatic_merge_t **merge_p,
 /** Find out what kind of automatic merge would be needed, when the target
  * is only known as a repository location rather than a WC.
  *
- * Like svn_client_find_automatic_merge() except that @a source_path_or_url
- * at @a source_revision should refer to a repository location and not a WC.
+ * Like svn_client_find_automatic_merge() except that the target is
+ * specified by @a target_path_or_url at @a target_revision, which must
+ * refer to a repository location, instead of by a WC path argument.
  *
  * @note The result, @a *merge_p, is not intended for passing to
  * svn_client_do_automatic_merge().
@@ -3512,10 +3513,15 @@ svn_client_find_automatic_merge_no_wc(
 /** Perform an automatic merge.
  *
  * Perform a merge, according to the information stored in @a merge, into
- * the WC at @a target_wcpath.  The @a merge structure would typically come
- * from calling svn_client_find_automatic_merge().
+ * the WC at @a target_wcpath.  The @a merge structure must be obtained
+ * from svn_client_find_automatic_merge().
  *
  * The other parameters are as in svn_client_merge5().
+ *
+ * Return an error if the WC contains local modifications, mixed revisions
+ * and/or switched subtrees, unless such states are allowed by the
+ * corresponding parameters passed to svn_client_find_automatic_merge()
+ * and the required merge is not reintegrate-like.
  *
  * @since New in 1.8.
  */
@@ -4985,8 +4991,9 @@ svn_client_revprop_set(const char *propname,
  * #svn_prop_inherited_item_t->path_or_url members are absolute working copy
  * paths.
  *
- * Allocate @a *props, its keys, and its values in @a pool, use
- * @a scratch_pool for temporary allocations.
+ * Allocate @a *props (including keys and values) and @a *inherited_props
+ * (including its elements) in @a result_pool, use @a scratch_pool for
+ * temporary allocations.
  *
  * @a target is a WC absolute path or a URL.
  *
