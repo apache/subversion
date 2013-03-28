@@ -494,12 +494,9 @@ svn_fs_fs__id_serialize(svn_temp_serializer__context_t *context,
     return;
 
   /* serialize the id data struct itself */
-  svn_temp_serializer__push(context,
-                            (const void * const *)in,
-                            sizeof(fs_fs__id_t));
-
-  /* return to caller's nesting level */
-  svn_temp_serializer__pop(context);
+  svn_temp_serializer__add_leaf(context,
+                                (const void * const *)in,
+                                sizeof(fs_fs__id_t));
 }
 
 /* Deserialize an ID inside the BUFFER.
