@@ -2575,7 +2575,7 @@ static svn_error_t *
 test_token_compare(apr_pool_t *pool)
 {
   apr_size_t chunk_size = 1 << 17;
-  const char *pattern = "\n\n\n\n\n\n\n\n";
+  const char *pattern = "ABCDEFG\n";
   svn_stringbuf_t *original, *modified;
   svn_diff_file_options_t *diff_opts = svn_diff_file_options_create(pool);
 
@@ -2612,13 +2612,13 @@ test_token_compare(apr_pool_t *pool)
                                     "--- token-compare-original2" NL
                                     "+++ token-compare-modified2" NL
                                     "@@ -%u,4 +%u,4 @@"  NL
-                                    " \n"
-                                    " \n"
+                                    " ABCDEFG\n"
+                                    " ABCDEFG\n"
                                     "     @@@\n"
                                     "-aaaaaaa\n"
                                     "+bbbbbbb\n",
-                                    1 +(unsigned int)chunk_size - 8 + 1 - 3,
-                                    1 +(unsigned int)chunk_size - 8 + 1 - 3),
+                                    (unsigned int)chunk_size/8 - 2,
+                                    (unsigned int)chunk_size/8 - 2),
                        diff_opts, pool));
 
   /* CHUNK_SIZE*2 bytes */
@@ -2639,16 +2639,16 @@ test_token_compare(apr_pool_t *pool)
                                     "--- token-compare-original2" NL
                                     "+++ token-compare-modified2" NL
                                     "@@ -%u,7 +%u,7 @@"  NL
-                                    " \n"
-                                    " \n"
+                                    " ABCDEFG\n"
+                                    " ABCDEFG\n"
                                     "     @@@\n"
                                     "-aaaaaaa\n"
                                     "+bbbbbbb\n"
-                                    " \n"
-                                    " \n"
-                                    " \n",
-                                    1 +(unsigned int)chunk_size - 8 + 1 - 3,
-                                    1 +(unsigned int)chunk_size - 8 + 1 - 3),
+                                    " ABCDEFG\n"
+                                    " ABCDEFG\n"
+                                    " ABCDEFG\n",
+                                    (unsigned int)chunk_size/8 - 2,
+                                    (unsigned int)chunk_size/8 - 2),
                        diff_opts, pool));
 
   return SVN_NO_ERROR;
