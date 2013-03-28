@@ -1,3 +1,35 @@
+Version 1.7.9
+(04 Apr 2013, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.9
+ User-visible changes
+  - Client-side bugfixes:
+    * improved error messages about svn:date and svn:author props. (r1440620)
+    * fix local_relpath assertion (issue #4257)
+    * fix memory leak in `svn log` over svn:// (r1458341)
+    * fix incorrect authz failure when using neon http library (issue #4332)
+    * fix segfault when using kwallet (r1421103)
+    
+  - Server-side bugfixes:
+    * svnserve will log the replayed rev not the low-water rev. (r1461278)
+    * mod_dav_svn will omit some property values for activity urls (r1453780)
+    * fix an assertion in mod_dav_svn when acting as a proxy on / (issue #4272)
+    * improve memory usage when committing properties in mod_dav_svn (r1443929)
+    * fix svnrdump to load dump files with non-LF line endings (issue #4263)
+    * fix assertion when rep-cache is inaccessible (r1422100)
+    * improved logic in mod_dav_svn's implementation of lock. (r1455352)
+    * avoid executing unnecessary code in log with limit (r1459599)
+
+ Developer-visible changes:
+  - General:
+    * fix an assertion in dav_svn_get_repos_path() on Windows (r1425368)
+    * fix get-deps.sh to correctly download zlib (r13520131)
+    * doxygen docs will now ignore prefixes when producing the index (r1429201)
+    * fix get-deps.sh on freebsd (r1423646)
+
+  - Bindings:
+    * javahl status api now respects the ignoreExternals boolean (r1435361)
+
+
 Version 1.7.8
 (17 Dec 2012, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.8
@@ -506,6 +538,38 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * fixed setting binary properties in JavaHL (issue #3770)
     * fix type mapping of svn_txdelta_window_t in python bindings (issue #3688)
 
+
+Version 1.6.21
+(04 Apr 2013, from /branches/1.6.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.6.21
+
+ User-visible changes
+  - Server-side bugfixes:
+    * mod_dav_svn will omit some property values for activity urls (r1453780)
+    * improve memory usage when committing properties in mod_dav_svn (r1443929)
+    * fix mod_dav_svn runs pre-revprop-change twice (issue #3085)
+    * fixed: post-revprop-change errors cancel commit (issue #2990)
+    * improved logic in mod_dav_svn's implementation of lock. (r1455352)
+
+ Developer-visible changes:
+  - General:
+    * fix a compatibility issue with g++ 4.7 (r1345740)
+
+
+Version 1.6.20
+(04 Jan 2013, from /branches/1.6.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.6.20
+
+ User-visible changes
+  - Client- and server-side bugfixes:
+    * Fix typos in pt_BR, es and zh_TW translations (r1402417)
+
+  - Server-side bugfixes:
+    * add Vary: header to GET responses to improve cacheability (r1390653)
+    * fix fs_fs to cleanup after failed rep transmission (r1403964, et al)
+    * fix an assert with SVNAutoVersioning in mod_dav_svn (issue #4231)
+
+
 Version 1.6.19
 (10 Sep 2012, from /branches/1.6.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.6.19
@@ -520,6 +584,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.19
 
   - Developer-visible changes:
     * fix the testsuite to avoid FAILs on APR hash order (r1230714, et al)
+
 
 Version 1.6.18
 (29 Mar 2012, from /branches/1.6.x)
@@ -638,7 +703,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.15
    * improve some swig parameter mapping (r984565, r1035745)
    * improve test accuracy over dav (r991534, r877814)
    * create fails.log for test runs (r964349)
-   * improve detection of 'svnversion' when buildling (r877219, et al)
+   * improve detection of 'svnversion' when building (r877219, et al)
    * don't violate API layering in dumpstream logic (issue #3733)
    * don't report working copy installs as switched (r1033921)
 
