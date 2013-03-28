@@ -1,33 +1,3 @@
-Version 1.7.9
-(04 Apr 2013, from /branches/1.7.x)
-http://svn.apache.org/repos/asf/subversion/tags/1.7.9
- User-visible changes
-  - Client-side bugfixes:
-    * improved error messages about svn:date and svn:author props. (r1440620)
-    * fix local_relpath assertion (issue #4257)
-    * fix memory leak in `svn log` over svn:// (r1458341)
-    * fix incorrect authz failure when using neon http library (issue #4332)
-    * fix segfault when using kwallet (r1421103)
-    
-  - Server-side bugfixes:
-    * svnserve will log the replayed rev not the low-water rev. (r1461278)
-    * mod_dav_svn will omit values on some properties for activty resources (r1453780)
-    * fix an assertion in mod_dav_svn when acting as a proxy on / (issue #4272)
-    * improve memory usage when committing properties in mod_dav_svn (r1443929)
-    * fix svnrdump to load dump files with non-LF line endings (issue #4263)
-    * fix assertion when rep-cache is inaccessible (r1422100)
-
- Developer-visible changes:
-  - General:
-    * fix an assertion in dav_svn_get_repos_path() on Windows (r1425368)
-    * fix get-deps.sh to correctly download zlib (r13520131)
-    * doxygen docs will now ignore prefixes when producing the index (r1429201)
-    * fix get-deps.sh on freebsd (r1423646)
-
-  - Bindings:
-    * javahl status api now respects the ignoreExternals boolean (r1435361)
-
-
 Version 1.7.8
 (17 Dec 2012, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.8
