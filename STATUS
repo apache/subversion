@@ -280,13 +280,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1453780
-   Reject operations on some properties for activity resources.
-   Justification:
-     It's a SEGV.
-   Votes:
-     +1: philip, breser, stefan2
-
  * ^/subversion/branches/1.7.x-neon-properr
    Justification:
      Error messages which refer to "date" and "author" (when they mean
