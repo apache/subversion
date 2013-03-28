@@ -62,11 +62,13 @@ typedef struct svn_fs_fs__p2l_entry_t
   /* type of the item (see SVN_FS_FS__ITEM_TYPE_*) defines */
   unsigned type;
 
-  /* revision that the item belongs to */
-  svn_revnum_t revision;
+  /* Number of items in this block / container.  Their list can be found
+   * in *ITEMS.  0 for unused sections.  1 for non-container items,
+   * > 1 for containers. */
+  apr_uint32_t item_count;
 
-  /* logical index of the item within that revision */
-  apr_uint64_t item_index;
+  /* List of items in that block / container */
+  svn_fs_fs__id_part_t *items;
 } svn_fs_fs__p2l_entry_t;
 
 /* Open / create a log-to-phys index file with the full file path name
@@ -85,18 +87,20 @@ svn_error_t *
 svn_fs_fs__l2p_proto_index_add_revision(apr_file_t *proto_index,
                                         apr_pool_t *pool);
 
-/* Add a new mapping, ITEM_INDEX to OFFSET, to log-to-phys index file in
- * PROTO_INDEX.  Please note that mappings may be added in any order but
- * duplicate entries for the same ITEM_INDEX are not supported.  Not all
- * possible index values need to be used.  OFFSET may be -1 to mark
- * 'invalid' item indexes but that is already implied for all item indexes
- * not explicitly given a mapping.
+/* Add a new mapping, ITEM_INDEX to the (OFFSET, SUB_ITEM) pair, to log-to-
+ * phys index file in PROTO_INDEX.  Please note that mappings may be added
+ * in any order but duplicate entries for the same ITEM_INDEX, SUB_ITEM
+ * are not supported.  Not all possible index values need to be used.
+ * (OFFSET, SUB_ITEM) may be (-1, 0) to mark 'invalid' item indexes but
+ * that is already implied for all item indexes not explicitly given a
+ * mapping.
  * 
  * Use POOL for allocations.
  */
 svn_error_t *
 svn_fs_fs__l2p_proto_index_add_entry(apr_file_t *proto_index,
                                      apr_off_t offset,
+                                     apr_uint32_t sub_item,
                                      apr_uint64_t item_index,
                                      apr_pool_t *pool);
 
@@ -160,14 +164,16 @@ svn_fs_fs__p2l_index_lookup(apr_array_header_t **entries,
                             apr_pool_t *pool);
 
 /* Use the log-to-phys mapping files in FS to find the packed / non-packed /
- * proto-rev file offset of either (REVISION, ITEM_INDEX) or (TXN_ID,
- * ITEM_INDEX).  For committed revision, TXN_ID must be NULL.  For format 6
- * and older repositories, we simply map the revision local offset given
- * as ITEM_INDEX to the actual file offset (when packed).
+ * proto-rev file offset and container sub-item of either (REVISION,
+ * ITEM_INDEX) or (TXN_ID, ITEM_INDEX).  *SUB_ITEM will be 0 for non-
+ * container items.  For committed revision, TXN_ID must be NULL.  For
+ * format 6 and older repositories, we simply map the revision local offset
+ * given as ITEM_INDEX to the actual file offset (when packed).
  * Use POOL for allocations.
  */
 svn_error_t *
 svn_fs_fs__item_offset(apr_off_t *offset,
+                       apr_uint32_t *sub_item,
                        svn_fs_t *fs,
                        svn_revnum_t revision,
                        const svn_fs_fs__id_part_t *txn_id,

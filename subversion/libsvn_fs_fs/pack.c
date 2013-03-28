@@ -25,6 +25,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_sorts.h"
 #include "private/svn_temp_serializer.h"
+#include "private/svn_subr_private.h"
 
 #include "fs_fs.h"
 #include "pack.h"
@@ -419,6 +420,23 @@ write_null_bytes(apr_file_t *dest,
   return SVN_NO_ERROR;
 }
 
+/* Return a (deep) copy of ENTRY, allocated in POOL.
+ */
+static svn_fs_fs__p2l_entry_t *
+copy_p2l_entry(svn_fs_fs__p2l_entry_t *entry,
+               apr_pool_t *pool)
+{
+  svn_fs_fs__p2l_entry_t *new_entry = apr_palloc(pool, sizeof(*new_entry));
+  *new_entry = *entry;
+
+  if (new_entry->item_count)
+    new_entry->items = apr_pmemdup(pool,
+                                   entry->items,
+                                   entry->item_count * sizeof(*entry->items));
+
+  return new_entry;
+}
+
 /* Copy the "simple" item (changes list or property representation) from
  * the current position in REV_FILE to TEMP_FILE using CONTEXT.  Add a
  * copy of ENTRY to ENTRIES but with an updated offset value that points
@@ -432,9 +450,8 @@ copy_item_to_temp(pack_context_t *context,
                   svn_fs_fs__p2l_entry_t *entry,
                   apr_pool_t *pool)
 {
-  svn_fs_fs__p2l_entry_t *new_entry = apr_palloc(context->info_pool,
-                                                 sizeof(*new_entry));
-  *new_entry = *entry;
+  svn_fs_fs__p2l_entry_t *new_entry
+    = copy_p2l_entry(entry, context->info_pool);
   new_entry->offset = 0;
   SVN_ERR(svn_io_file_seek(temp_file, SEEK_CUR, &new_entry->offset, pool));
   APR_ARRAY_PUSH(entries, svn_fs_fs__p2l_entry_t *) = new_entry;
@@ -465,19 +482,23 @@ static void
 add_item_rep_mapping(pack_context_t *context,
                      rep_info_t *info)
 {
-  /* index of INFO */
-  int idx = get_item_array_index(context,
-                                 info->entry->revision,
-                                 info->entry->item_index);
+  apr_uint32_t i;
+  for (i = 0; i < info->entry->item_count; ++i)
+    {
+      /* index of INFO */
+      int idx = get_item_array_index(context,
+                                     info->entry->items[i].revision,
+                                     info->entry->items[i].number);
 
-  /* make sure the index exists in the array */
-  while (context->reps_infos->nelts <= idx)
-    APR_ARRAY_PUSH(context->reps_infos, rep_info_t *) = NULL;
+      /* make sure the index exists in the array */
+      while (context->reps_infos->nelts <= idx)
+        APR_ARRAY_PUSH(context->reps_infos, rep_info_t *) = NULL;
 
-  /* set the element.  If there is already an entry, there are probably
-   * two items claiming to be the same -> bail out */
-  assert(!APR_ARRAY_IDX(context->reps_infos, idx, rep_info_t *));
-  APR_ARRAY_IDX(context->reps_infos, idx, rep_info_t *) = info;
+      /* set the element.  If there is already an entry, there are probably
+       * two items claiming to be the same -> bail out */
+      assert(!APR_ARRAY_IDX(context->reps_infos, idx, rep_info_t *));
+      APR_ARRAY_IDX(context->reps_infos, idx, rep_info_t *) = info;
+    }
 }
 
 /* Copy representation item identified by ENTRY from the current position
@@ -496,8 +517,7 @@ copy_rep_to_temp(pack_context_t *context,
 
   /* create a copy of ENTRY, make it point to the copy destination and
    * store it in CONTEXT */
-  rep_info->entry = apr_palloc(context->info_pool, sizeof(*rep_info->entry));
-  *rep_info->entry = *entry;
+  rep_info->entry = copy_p2l_entry(entry, context->info_pool);
   rep_info->entry->offset = 0;
   SVN_ERR(svn_io_file_seek(context->reps_file, SEEK_CUR,
                            &rep_info->entry->offset, pool));
@@ -611,8 +631,7 @@ copy_node_to_temp(pack_context_t *context,
 
   /* create a copy of ENTRY, make it point to the copy destination and
    * store it in CONTEXT */
-  rep_info->entry = apr_palloc(context->info_pool, sizeof(*rep_info->entry));
-  *rep_info->entry = *entry;
+  rep_info->entry = copy_p2l_entry(entry, context->info_pool);
   rep_info->entry->offset = 0;
   SVN_ERR(svn_io_file_seek(context->reps_file, SEEK_CUR,
                            &rep_info->entry->offset, pool));
@@ -707,11 +726,15 @@ compare_p2l_info(const svn_fs_fs__p2l_entry_t * const * lhs,
                  const svn_fs_fs__p2l_entry_t * const * rhs)
 {
   assert(*lhs != *rhs);
+  if ((*lhs)->item_count == 0)
+    return (*lhs)->item_count == 0 ? 0 : -1;
+  if ((*lhs)->item_count == 0)
+    return 1;
   
-  if ((*lhs)->revision == (*rhs)->revision)
-    return (*lhs)->item_index > (*rhs)->item_index ? -1 : 1;
+  if ((*lhs)->items[0].revision == (*rhs)->items[0].revision)
+    return (*lhs)->items[0].number > (*rhs)->items[0].number ? -1 : 1;
 
-  return (*lhs)->revision > (*rhs)->revision ? -1 : 1;
+  return (*lhs)->items[0].revision > (*rhs)->items[0].revision ? -1 : 1;
 }
 
 /* Sort svn_fs_fs__p2l_entry_t * array ENTRIES by age.  Place the latest
@@ -732,21 +755,15 @@ compare_p2l_info_rev(const svn_fs_fs__p2l_entry_t * const * lhs,
                      const svn_fs_fs__p2l_entry_t * const * rhs)
 {
   assert(*lhs != *rhs);
+  if ((*lhs)->item_count == 0)
+    return (*lhs)->item_count == 0 ? 0 : -1;
+  if ((*lhs)->item_count == 0)
+    return 1;
 
-  if ((*lhs)->revision == (*rhs)->revision)
+  if ((*lhs)->items[0].revision == (*rhs)->items[0].revision)
     return 0;
 
-  return (*lhs)->revision < (*rhs)->revision ? -1 : 1;
-}
-
-/* Sort svn_fs_fs__p2l_entry_t * array ENTRIES by revision alone.
- * Place the oldest items first.
- */
-static void
-sort_by_rev(apr_array_header_t *entries)
-{
-  qsort(entries->elts, entries->nelts, entries->elt_size,
-        (int (*)(const void *, const void *))compare_p2l_info_rev);
+  return (*lhs)->items[0].revision < (*rhs)->items[0].revision ? -1 : 1;
 }
 
 /* Part of the placement algorithm: starting at INFO, place all items
@@ -813,7 +830,8 @@ sort_reps(pack_context_t *context)
       rep_info_t *info = APR_ARRAY_IDX(context->reps_infos, i, rep_info_t *);
       if (   info
           && info->entry
-          && info->entry->item_index == SVN_FS_FS__ITEM_INDEX_ROOT_NODE)
+          && info->entry->item_count == 1
+          && info->entry->items[0].number == SVN_FS_FS__ITEM_INDEX_ROOT_NODE)
         do
           {
             APR_ARRAY_PUSH(context->reps, svn_fs_fs__p2l_entry_t *)
@@ -890,11 +908,14 @@ copy_items_from_temp(pack_context_t *context,
               /* Yes. To up with NUL bytes and don't forget to create
                * an P2L index entry marking this section as unused. */
               svn_fs_fs__p2l_entry_t null_entry;
+              svn_fs_fs__id_part_t rev_item
+                = { 0, SVN_FS_FS__ITEM_INDEX_UNUSED };
+              
               null_entry.offset = context->pack_offset;
               null_entry.size = bytes_to_alignment;
               null_entry.type = SVN_FS_FS__ITEM_TYPE_UNUSED;
-              null_entry.revision = 0;
-              null_entry.item_index = SVN_FS_FS__ITEM_INDEX_UNUSED;
+              null_entry.item_count = 1;
+              null_entry.items = &rev_item;
               
               SVN_ERR(write_null_bytes(context->pack_file,
                                        bytes_to_alignment, iterpool));
@@ -948,6 +969,8 @@ write_l2p_index(pack_context_t *context,
   apr_pool_t *iterpool = svn_pool_create(pool);
   svn_revnum_t prev_rev = SVN_INVALID_REVNUM;
   int i;
+  svn__priority_queue_t *queue;
+  apr_size_t count = 0;
 
   /* lump all items into one bucket.  As target, use the bucket that
    * probably has the most entries already. */
@@ -955,27 +978,54 @@ write_l2p_index(pack_context_t *context,
   append_entries(context->reps, context->file_props);
   append_entries(context->reps, context->dir_props);
 
-  /* we need to write the index in ascending revision order */
-  sort_by_rev(context->reps);
-
-  /* write index entries */
+  /* somewhat uncleanly re-purpose the SIZE field (the current content is
+     no longer needed):  store the initial item count of each sub-container
+     in its size value.  We will need that info after we decreased ITEM_COUNT
+     to the number of sub-items yet to process. */
   for (i = 0; i < context->reps->nelts; ++i)
     {
       svn_fs_fs__p2l_entry_t *entry
         = APR_ARRAY_IDX(context->reps, i, svn_fs_fs__p2l_entry_t *);
+      entry->size = entry->item_count;
+      count += entry->item_count;
+    }
+
+  /* we need to write the index in ascending revision order */
+  queue = svn__priority_queue_create
+            (context->reps,
+             (int (*)(const void *, const void *))compare_p2l_info_rev);
+
+  /* write index entries */
+  for (i = 0; i < count; ++i)
+    {
+      svn_fs_fs__p2l_entry_t *entry 
+        = *(svn_fs_fs__p2l_entry_t **)svn__priority_queue_peek(queue);
+      svn__priority_queue_pop(queue);
+
+      if (entry->item_count == 0)
+        continue;
 
       /* next revision? */
-      if (prev_rev != entry->revision)
+      if (prev_rev != entry->items[0].revision)
         {
-          prev_rev = entry->revision;
+          prev_rev = entry->items[0].revision;
           SVN_ERR(svn_fs_fs__l2p_proto_index_add_revision
                       (context->proto_l2p_index, iterpool));
         }
 
       /* add entry */
       SVN_ERR(svn_fs_fs__l2p_proto_index_add_entry
-                  (context->proto_l2p_index,
-                   entry->offset, entry->item_index, iterpool));
+                  (context->proto_l2p_index, entry->offset,
+                   (apr_uint32_t)(entry->size - entry->item_count),
+                   entry->items[0].number, iterpool));
+
+      /* process remaining sub-items (if any) of that container later */
+      if (--entry->item_count)
+        {
+          SVN_ERR_ASSERT(entry->items[0].revision <= entry->items[1].revision);
+          ++entry->items;
+          svn__priority_queue_push(queue, entry);
+        }
 
       /* keep memory usage in check */
       if (i % 256 == 0)
@@ -1174,11 +1224,14 @@ append_revision(pack_context_t *context,
           offset = entry->offset;
           if (offset < finfo.size)
             {
+              /* there should be true containers */
+              SVN_ERR_ASSERT(entry->item_count == 1);
+
               entry->offset += context->pack_offset;
               offset += entry->size;
               SVN_ERR(svn_fs_fs__l2p_proto_index_add_entry
-                        (context->proto_l2p_index,
-                         entry->offset, entry->item_index, iterpool));
+                        (context->proto_l2p_index, entry->offset, 0,
+                         entry->items[0].number, iterpool));
               SVN_ERR(svn_fs_fs__p2l_proto_index_add_entry
                         (context->proto_p2l_index, entry, iterpool));
             }
@@ -1638,8 +1691,8 @@ pack_body(void *baton,
                          pb->fs, i, ffd->max_files_per_dir,
                          ffd->revprop_pack_size,
                          ffd->compress_packed_revprops
-                           ? SVN_DELTA_COMPRESSION_LEVEL_DEFAULT
-                           : SVN_DELTA_COMPRESSION_LEVEL_NONE,
+                           ? SVN__COMPRESSION_ZLIB_DEFAULT
+                           : SVN__COMPRESSION_NONE,
                          pb->notify_func, pb->notify_baton,
                          pb->cancel_func, pb->cancel_baton, iterpool));
     }

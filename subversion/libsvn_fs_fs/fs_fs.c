@@ -925,9 +925,10 @@ write_revision_zero(svn_fs_t *fs)
       SVN_ERR(svn_io_file_create_binary
                  (path,
                   "\0\1\x80\x40\1\1" /* rev 0, single page */
-                  "\4\4"          /* page size: count, bytes */
-                  "\0\x6b\x12\1", /* phys offsets + 1 */
-                  12,
+                  "\x8\4"            /* page size: bytes, count */
+                  "\0\x6b\x12\1"     /* phys offsets + 1 */
+                  "\0\0\0\0",        /* sub-item indexes (all 0) */
+                  16,
                   fs->pool));
       SVN_ERR(svn_io_set_file_read_only(path, FALSE, fs->pool));
 
@@ -935,13 +936,13 @@ write_revision_zero(svn_fs_t *fs)
       SVN_ERR(svn_io_file_create_binary
                  (path,
                   "\0"                /* start rev */
-                  "\x80\x80\4\1\x13"  /* 64k pages, 1 page using 19 bytes */
+                  "\x80\x80\4\1\x15"  /* 64k pages, 1 page using 21 bytes */
                   "\0"                /* offset entry 0 page 1 */
-                  "\x11\1\0\3"        /* len, type, rev, item */
-                  "\x59\5\0\2"
-                  "\1\6\0\1"
-                  "\x95\xff\3\0\0\0", /* last entry fills up 64k page */
-                  25,
+                  "\x11\1\1\0\3"      /* len, type, count, (rev, item)* */
+                  "\x59\5\1\0\2"
+                  "\1\6\1\0\1"
+                  "\x95\xff\3\0\0",   /* last entry fills up 64k page */
+                  27,
                   fs->pool));
       SVN_ERR(svn_io_set_file_read_only(path, FALSE, fs->pool));
     }

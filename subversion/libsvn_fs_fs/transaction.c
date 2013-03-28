@@ -1631,7 +1631,7 @@ store_l2p_index_entry(svn_fs_t *fs,
       const char *path = path_l2p_proto_index(fs, txn_id, pool);
       apr_file_t *file;
       SVN_ERR(svn_fs_fs__l2p_proto_index_open(&file, path, pool));
-      SVN_ERR(svn_fs_fs__l2p_proto_index_add_entry(file, offset,
+      SVN_ERR(svn_fs_fs__l2p_proto_index_add_entry(file, offset, 0,
                                                    item_index, pool));
       SVN_ERR(svn_io_file_close(file, pool));
     }
@@ -2155,12 +2155,16 @@ rep_write_contents_close(void *baton)
   if (!old_rep)
     {
       svn_fs_fs__p2l_entry_t entry;
+      svn_fs_fs__id_part_t rev_item;
+      rev_item.revision = SVN_INVALID_REVNUM;
+      rev_item.number = rep->item_index;
+
       entry.offset = b->rep_offset;
       SVN_ERR(get_file_offset(&offset, b->file, b->pool));
       entry.size = offset - b->rep_offset;
       entry.type = SVN_FS_FS__ITEM_TYPE_FILE_REP;
-      entry.revision = SVN_INVALID_REVNUM;
-      entry.item_index = rep->item_index;
+      entry.item_count = 1;
+      entry.items = &rev_item;
 
       SVN_ERR(store_sha1_rep_mapping(b->fs, b->noderev, b->pool));
       SVN_ERR(store_p2l_index_entry(b->fs, &rep->txn_id, &entry, b->pool));
@@ -2402,6 +2406,7 @@ write_hash_rep(representation_t *rep,
   else
     {
       svn_fs_fs__p2l_entry_t entry;
+      svn_fs_fs__id_part_t rev_item;
 
       /* Write out our cosmetic end marker. */
       SVN_ERR(svn_stream_puts(whb->stream, "ENDREP\n"));
@@ -2409,12 +2414,15 @@ write_hash_rep(representation_t *rep,
       SVN_ERR(allocate_item_index(&rep->item_index, fs, txn_id, offset,
                                   pool));
       
+      rev_item.revision = SVN_INVALID_REVNUM;
+      rev_item.number = rep->item_index;
+
       entry.offset = offset;
       SVN_ERR(get_file_offset(&offset, file, pool));
       entry.size = offset - entry.offset;
       entry.type = item_type;
-      entry.revision = SVN_INVALID_REVNUM;
-      entry.item_index = rep->item_index;
+      entry.item_count = 1;
+      entry.items = &rev_item;
       SVN_ERR(store_p2l_index_entry(fs, txn_id, &entry, pool));
 
       /* update the representation */
@@ -2526,6 +2534,7 @@ write_hash_delta_rep(representation_t *rep,
   else
     {
       svn_fs_fs__p2l_entry_t entry;
+      svn_fs_fs__id_part_t rev_item;
 
       /* Write out our cosmetic end marker. */
       SVN_ERR(get_file_offset(&rep_end, file, pool));
@@ -2534,12 +2543,15 @@ write_hash_delta_rep(representation_t *rep,
       SVN_ERR(allocate_item_index(&rep->item_index, fs, txn_id, offset,
                                   pool));
 
+      rev_item.revision = SVN_INVALID_REVNUM;
+      rev_item.number = rep->item_index;
+
       entry.offset = offset;
       SVN_ERR(get_file_offset(&offset, file, pool));
       entry.size = offset - entry.offset;
       entry.type = item_type;
-      entry.revision = SVN_INVALID_REVNUM;
-      entry.item_index = rep->item_index;
+      entry.item_count = 1;
+      entry.items = &rev_item;
 
       SVN_ERR(store_p2l_index_entry(fs, txn_id, &entry, pool));
 
@@ -2867,12 +2879,14 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
     {
       svn_fs_fs__p2l_entry_t entry;
+      rev_item.revision = SVN_INVALID_REVNUM;
+
       entry.offset = my_offset;
       SVN_ERR(get_file_offset(&my_offset, file, pool));
       entry.size = my_offset - entry.offset;
       entry.type = SVN_FS_FS__ITEM_TYPE_NODEREV;
-      entry.revision = SVN_INVALID_REVNUM;
-      entry.item_index = rev_item.number;
+      entry.item_count = 1;
+      entry.items = &rev_item;
 
       SVN_ERR(store_p2l_index_entry(fs, txn_id, &entry, pool));
     }
@@ -2911,12 +2925,15 @@ write_final_changed_path_info(apr_off_t *offset_p,
   if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
     {
       svn_fs_fs__p2l_entry_t entry;
+      svn_fs_fs__id_part_t rev_item
+        = {SVN_INVALID_REVNUM, SVN_FS_FS__ITEM_INDEX_CHANGES};
+
       entry.offset = offset;
       SVN_ERR(get_file_offset(&offset, file, pool));
       entry.size = offset - entry.offset;
       entry.type = SVN_FS_FS__ITEM_TYPE_CHANGES;
-      entry.revision = SVN_INVALID_REVNUM;
-      entry.item_index = SVN_FS_FS__ITEM_INDEX_CHANGES;
+      entry.item_count = 1;
+      entry.items = &rev_item;
 
       SVN_ERR(store_p2l_index_entry(fs, txn_id, &entry, pool));
       SVN_ERR(store_l2p_index_entry(fs, txn_id, entry.offset,
@@ -3107,12 +3124,15 @@ commit_body(void *baton, apr_pool_t *pool)
 
       svn_stringbuf_t *trailer;
       apr_off_t root_offset;
+      apr_uint32_t sub_item;
       SVN_ERR(svn_fs_fs__item_offset(&root_offset,
+                                     &sub_item,
                                      cb->fs,
                                      svn_fs_fs__id_rev(new_root_id),
                                      NULL,
                                      svn_fs_fs__id_item(new_root_id),
                                      pool));
+      SVN_ERR_ASSERT(sub_item == 0);
       trailer = svn_fs_fs__unparse_revision_trailer
                   (root_offset,
                    changed_path_offset,
