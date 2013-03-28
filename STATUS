@@ -74,6 +74,15 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r947833
+   Remove deadprops rollback code.
+   Justification:
+     Fixes issue #3085, 2990
+   Branch:
+     ^/subversion/branches/1.6.x-r947833
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
