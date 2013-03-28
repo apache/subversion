@@ -4991,8 +4991,9 @@ svn_client_revprop_set(const char *propname,
  * #svn_prop_inherited_item_t->path_or_url members are absolute working copy
  * paths.
  *
- * Allocate @a *props, its keys, and its values in @a pool, use
- * @a scratch_pool for temporary allocations.
+ * Allocate @a *props and its keys and values, and @a *inherited_props
+ * and its elements, in @a result_pool, use @a scratch_pool for
+ * temporary allocations.
  *
  * @a target is a WC absolute path or a URL.
  *
