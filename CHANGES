@@ -614,6 +614,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.21
  User-visible changes
   - Server-side bugfixes:
     * mod_dav_svn will omit some property values for activity urls (r1453780)
+    * improve memory usage when committing properties in mod_dav_svn (r1443929)
+    * fix mod_dav_svn runs pre-revprop-change twice (issue #3085)
+    * fixed: post-revprop-change errors cancel commit (issue #2990)
 
  Developer-visible changes:
   - General:
