@@ -607,6 +607,19 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * fix type mapping of svn_txdelta_window_t in python bindings (issue #3688)
 
 
+Version 1.6.21
+(04 Apr 2013, from /branches/1.6.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.6.21
+
+ User-visible changes
+  - Server-side bugfixes:
+    * mod_dav_svn will omit values on some properties for activity resources (r1453780)
+
+ Developer-visible changes:
+  - General:
+    * fix a compatibility issue with g++ 4.7 (r1345740)
+
+
 Version 1.6.20
 (04 Jan 2013, from /branches/1.6.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.6.20
