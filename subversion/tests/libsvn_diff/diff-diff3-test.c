@@ -2571,16 +2571,16 @@ test_token_compare(apr_pool_t *pool)
 
   diff_opts->ignore_space = svn_diff_file_ignore_space_all;
 
+  original = svn_stringbuf_create_ensure(chunk_size * 2 + 8, pool);
   /* CHUNK_SIZE bytes */
-  original = svn_stringbuf_create_ensure(chunk_size, pool);
   while (original->len < chunk_size - 8)
     {
       svn_stringbuf_appendcstr(original, pattern);
     }
   svn_stringbuf_appendcstr(original, "    @@@\n");
 
+  modified = svn_stringbuf_create_ensure(chunk_size * 2 + 9, pool);
   /* CHUNK_SIZE+1 bytes, one ' ' more than original */
-  modified = svn_stringbuf_create_ensure(chunk_size + 1, pool);
   while (modified->len < chunk_size - 8)
     {
       svn_stringbuf_appendcstr(modified, pattern);
@@ -2607,6 +2607,36 @@ test_token_compare(apr_pool_t *pool)
                                     "     @@@\n"
                                     "-aaaaaaa\n"
                                     "+bbbbbbb\n",
+                                    1 +(unsigned int)chunk_size - 8 + 1 - 3,
+                                    1 +(unsigned int)chunk_size - 8 + 1 - 3),
+                       diff_opts, pool));
+
+  /* CHUNK_SIZE*2 bytes */
+  while (original->len <= chunk_size * 2 - 8)
+    {
+      svn_stringbuf_appendcstr(original, pattern);
+    }
+
+  /* CHUNK_SIZE*2+1 bytes, one ' ' more than original */
+  while (modified->len <= chunk_size * 2 - 7)
+    {
+      svn_stringbuf_appendcstr(modified, pattern);
+    }
+
+  SVN_ERR(two_way_diff("token-compare-original2", "token-compare-modified2",
+                       original->data, modified->data,
+                       apr_psprintf(pool,
+                                    "--- token-compare-original2" NL
+                                    "+++ token-compare-modified2" NL
+                                    "@@ -%u,7 +%u,7 @@"  NL
+                                    " \n"
+                                    " \n"
+                                    "     @@@\n"
+                                    "-aaaaaaa\n"
+                                    "+bbbbbbb\n"
+                                    " \n"
+                                    " \n"
+                                    " \n",
                                     1 +(unsigned int)chunk_size - 8 + 1 - 3,
                                     1 +(unsigned int)chunk_size - 8 + 1 - 3),
                        diff_opts, pool));
