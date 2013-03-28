@@ -8,6 +8,12 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
   - Major new features:
     * inheritable properties (r1395109)
+    * GPG agent support. (r1151069)
+    * fsfs: Packing of revision property shards (issue #3944)
+    * explicit handling of local moves/renames (issue #3631, #4232)
+    * new more detailed conflict storage
+    * use svn_ra_serf as our new http library.
+    * automatic merge avoids explicit reintegration merges.
 
   - Minor new features and improvements:
     * new 'svnadmin load --revision' load filtering support (issue #3734)
