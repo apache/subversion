@@ -241,6 +241,12 @@ two_way_diff(const char *filename1,
   svn_stringbuf_t *actual;
   char *diff_name = apr_psprintf(pool, "diff-%s-%s", filename1, filename2);
 
+  /* Some of the tests have lots of lines, although not much data as
+     the lines are short, and the in-memory diffs allocate a lot of
+     memory.  Since we are doing multiple diff in a single test we use
+     a subpool to reuse that memory. */
+  apr_pool_t *subpool = svn_pool_create(pool);
+
   /* We have an EXPECTED string we can match, because we don't support
      any other combinations (yet) than the ones above. */
   svn_string_t *original = svn_string_create(contents1, pool);
@@ -248,7 +254,8 @@ two_way_diff(const char *filename1,
 
   options = options ? options : svn_diff_file_options_create(pool);
 
-  SVN_ERR(svn_diff_mem_string_diff(&diff, original, modified, options, pool));
+  SVN_ERR(svn_diff_mem_string_diff(&diff, original, modified, options,
+                                   subpool));
 
   actual = svn_stringbuf_create_empty(pool);
   ostream = svn_stream_from_stringbuf(actual, pool);
@@ -256,7 +263,8 @@ two_way_diff(const char *filename1,
   SVN_ERR(svn_diff_mem_string_output_unified(ostream, diff,
                                              filename1, filename2,
                                              SVN_APR_LOCALE_CHARSET,
-                                             original, modified, pool));
+                                             original, modified, subpool));
+  svn_pool_clear(subpool);
   SVN_ERR(svn_stream_close(ostream));
   if (strcmp(actual->data, expected) != 0)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
@@ -311,11 +319,13 @@ two_way_diff(const char *filename1,
   SVN_ERR(three_way_merge(filename1, filename2, filename1,
                           contents1, contents2, contents1, contents2, NULL,
                           svn_diff_conflict_display_modified_latest,
-                          pool));
+                          subpool));
+  svn_pool_clear(subpool);
   SVN_ERR(three_way_merge(filename2, filename1, filename2,
                           contents2, contents1, contents2, contents1, NULL,
                           svn_diff_conflict_display_modified_latest,
-                          pool));
+                          subpool));
+  svn_pool_destroy(subpool);
 
   SVN_ERR(svn_io_remove_file2(diff_name, TRUE, pool));
 
