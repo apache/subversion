@@ -124,6 +124,14 @@ typedef struct fs_library_vtable_t
      into the FS vtable. */
   svn_fs_id_t *(*parse_id)(const char *data, apr_size_t len,
                            apr_pool_t *pool);
+  /* Allow an FSAP to call svn_fs_open(), which is in a higher-level library
+     (libsvn_fs-1.so) and cannot easily be moved to libsvn_fs_util. */
+  svn_error_t *(*set_svn_fs_open)(svn_fs_t *fs,
+                                  svn_error_t *(*svn_fs_open_)(svn_fs_t **,
+                                                               const char *,
+                                                               apr_hash_t *,
+                                                               apr_pool_t *));
+
 } fs_library_vtable_t;
 
 /* This is the type of symbol an FS module defines to fetch the
