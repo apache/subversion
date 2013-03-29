@@ -331,6 +331,13 @@ svn_string_find_char_backward(const svn_string_t *str, char ch)
 svn_string_t *
 svn_stringbuf__morph_into_string(svn_stringbuf_t *strbuf)
 {
+  /* In debug mode, detect attempts to modify the original STRBUF object.
+   */
+#ifdef SVN_DEBUG
+  strbuf->pool = NULL;
+  strbuf->blocksize = strbuf->len + 1;
+#endif
+
   /* Both, svn_string_t and svn_stringbuf_t are public API structures
    * since the svn epoch. Thus, we can rely on their precise layout not
    * to change.
