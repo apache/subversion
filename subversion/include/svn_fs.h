@@ -1882,11 +1882,11 @@ svn_fs_file_contents(svn_stream_t **contents,
                      apr_pool_t *pool);
 
 /**
- * Callback function type that gets presented with a immutable non-NULL
- * @a contents of @a len bytes.  Further parameters may be passed through
- * in @a baton.
+ * Callback function type used with svn_fs_try_process_file_contents()
+ * that delivers the immutable, non-NULL @a contents of @a len bytes.
+ * @a baton is an implementation-specific closure.
  *
- * Allocations must be made in @a pool.
+ * Use @a scratch_pool for allocations.
  *
  * @since New in 1.8.
  */
@@ -1894,7 +1894,7 @@ typedef svn_error_t *
 (*svn_fs_process_contents_func_t)(const unsigned char *contents,
                                   apr_size_t len,
                                   void *baton,
-                                  apr_pool_t *pool);
+                                  apr_pool_t *scratch_pool);
 
 /** Efficiently deliver the contents of the file @a path in @a root
  * via @a processor (with @a baton), setting @a *success to @c TRUE
