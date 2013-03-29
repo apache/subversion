@@ -344,9 +344,10 @@ svn_fs_delete_fs(const char *path,
  * means deleting copied, unused logfiles for a Berkeley DB source
  * filesystem.
  *
- * If @a incremental is TRUE, make an effort to not re-copy information
- * already present in the destination. If incremental hotcopy is not
- * implemented, raise SVN_ERR_UNSUPPORTED_FEATURE.
+ * If @a incremental is TRUE, make an effort to avoid re-copying
+ * information already present in the destination where possible.  If
+ * incremental hotcopy is not implemented, raise
+ * #SVN_ERR_UNSUPPORTED_FEATURE.
  *
  * Use @a scratch_pool for temporary allocations.
  *
@@ -362,8 +363,8 @@ svn_fs_hotcopy2(const char *src_path,
                 apr_pool_t *scratch_pool);
 
 /**
- * Like svn_fs_hotcopy2(), but without the @a incremental parameter
- * and without cancellation support.
+ * Like svn_fs_hotcopy2(), but with @a incremental always passed as @c
+ * TRUE and without cancellation support.
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
  * @since New in 1.1.
