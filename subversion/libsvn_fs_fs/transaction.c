@@ -2090,6 +2090,21 @@ get_shared_rep(representation_t **old_rep,
   return SVN_NO_ERROR;
 }
 
+/* Copy the hash sum calculation results from MD5_CTX, SHA1_CTX into REP.
+ * Use POOL for allocations.
+ */
+static svn_error_t *
+digests_final(representation_t *rep,
+              const svn_checksum_ctx_t *md5_ctx,
+              const svn_checksum_ctx_t *sha1_ctx,
+              apr_pool_t *pool)
+{
+  SVN_ERR(svn_checksum_final(&rep->md5_checksum, md5_ctx, pool));
+  SVN_ERR(svn_checksum_final(&rep->sha1_checksum, sha1_ctx, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Close handler for the representation write stream.  BATON is a
    rep_write_baton.  Writes out a new node-rev that correctly
    references the representation we just finished writing. */
@@ -2119,10 +2134,8 @@ rep_write_contents_close(void *baton)
   rep->revision = SVN_INVALID_REVNUM;
 
   /* Finalize the checksum. */
-  SVN_ERR(svn_checksum_final(&rep->md5_checksum, b->md5_checksum_ctx,
-                              b->parent_pool));
-  SVN_ERR(svn_checksum_final(&rep->sha1_checksum, b->sha1_checksum_ctx,
-                              b->parent_pool));
+  SVN_ERR(digests_final(rep, b->md5_checksum_ctx, b->sha1_checksum_ctx,
+                        b->parent_pool));
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
@@ -2388,8 +2401,7 @@ write_hash_rep(representation_t *rep,
   SVN_ERR(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool));
 
   /* Store the results. */
-  SVN_ERR(svn_checksum_final(&rep->md5_checksum, whb->md5_ctx, pool));
-  SVN_ERR(svn_checksum_final(&rep->sha1_checksum, whb->sha1_ctx, pool));
+  SVN_ERR(digests_final(rep, whb->md5_ctx, whb->sha1_ctx, pool));
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
@@ -2516,8 +2528,7 @@ write_hash_delta_rep(representation_t *rep,
   SVN_ERR(svn_stream_close(whb->stream));
 
   /* Store the results. */
-  SVN_ERR(svn_checksum_final(&rep->md5_checksum, whb->md5_ctx, pool));
-  SVN_ERR(svn_checksum_final(&rep->sha1_checksum, whb->sha1_ctx, pool));
+  SVN_ERR(digests_final(rep, whb->md5_ctx, whb->sha1_ctx, pool));
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
