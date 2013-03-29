@@ -8282,14 +8282,12 @@ verify_as_revision_before_current_plus_plus(svn_fs_t *fs,
 
   SVN_ERR_ASSERT(ffd->svn_fs_open_);
 
-  fs_config = apr_hash_make(pool);
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS, "0");
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS, "0");
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "0");
-  /* ### TODO: are there any other intra-process caches that FS populated
-               and FT will read from?  Can we disable those (for FT at least)?
+  /* make sure FT does not simply return data cached by other instances
+   * but actually retrieves it from disk at least once.
    */
-
+  fs_config = apr_hash_make(pool);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
+                           svn_uuid_generate(pool));
   SVN_ERR(ffd->svn_fs_open_(&ft, fs->path,
                             fs_config,
                             pool));

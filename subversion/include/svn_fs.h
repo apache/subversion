@@ -95,6 +95,21 @@ typedef struct svn_fs_t svn_fs_t;
  */
 #define SVN_FS_CONFIG_FSFS_CACHE_REVPROPS       "fsfs-cache-revprops"
 
+/** Select the cache namespace.  If you potentially share the cache with
+ * another FS object for the same repository, objects read through one FS
+ * will not need to be read again for the other.  In most cases, that is
+ * a very desirable behavior and the default is, therefore, an empty
+ * namespace.
+ *
+ * If you want to be sure that your FS instance will actually read all
+ * requested data at least once, you need to specify a separate namespace
+ * for it.  All repository verification code, for instance, should use
+ * some GUID here that is different each time you open an FS instance.
+ *
+ * @since New in 1.8.
+ */
+#define SVN_FS_CONFIG_FSFS_CACHE_NS             "fsfs-cache-namespace"               
+
 /* Note to maintainers: if you add further SVN_FS_CONFIG_FSFS_CACHE_* knobs,
    update fs_fs.c:verify_as_revision_before_current_plus_plus(). */
 
