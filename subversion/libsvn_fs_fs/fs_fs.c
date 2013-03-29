@@ -8292,6 +8292,8 @@ verify_as_revision_before_current_plus_plus(svn_fs_t *fs,
                             fs_config,
                             pool));
   ft_ffd = ft->fsap_data;
+  /* Don't let FT consult rep-cache.db, either. */
+  ft_ffd->rep_sharing_allowed = FALSE;
 
   /* Time travel! */
   ft_ffd->youngest_rev_cache = new_rev;
