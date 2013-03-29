@@ -758,23 +758,10 @@ svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
                   svn_fs_txn_t *txn, apr_pool_t *pool)
 {
   svn_error_t *err;
-#if defined(PACK_AFTER_EVERY_COMMIT) || defined(SVN_DEBUG)
-  svn_fs_root_t *txn_root;
-#endif
 
   *new_rev = SVN_INVALID_REVNUM;
   if (conflict_p)
     *conflict_p = NULL;
-
-#if defined(PACK_AFTER_EVERY_COMMIT) || defined(SVN_DEBUG)
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-#endif
-
-#ifdef SVN_DEBUG
-  /* ### TODO: add db/fs.conf with a knob to enable this in release builds */
-  /* ### TODO: should this run just before incrementing 'current'? */
-  SVN_ERR(svn_fs_verify_root(txn_root, pool));
-#endif
 
   err = txn->vtable->commit(conflict_p, new_rev, txn, pool);
 
@@ -794,7 +781,7 @@ svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
 
 #ifdef PACK_AFTER_EVERY_COMMIT
   {
-    svn_fs_t *fs = svn_fs_root_fs(txn_root);
+    svn_fs_t *fs = txn->fs;
     const char *fs_path = svn_fs_path(fs, pool);
     err = svn_fs_pack(fs_path, NULL, NULL, NULL, NULL, pool);
     if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
