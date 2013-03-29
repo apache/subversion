@@ -8273,12 +8273,11 @@ verify_as_revision_before_current_plus_plus(svn_fs_t *fs,
                                             svn_revnum_t new_rev,
                                             apr_pool_t *pool)
 {
+#ifdef SVN_DEBUG
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_fs_t *ft; /* fs++ == ft */
   svn_fs_root_t *root;
   fs_fs_data_t *ft_ffd;
-
-  /* ### TODO: make this logic conditional */
 
   SVN_ERR_ASSERT(ffd->svn_fs_open_);
 
@@ -8294,6 +8293,7 @@ verify_as_revision_before_current_plus_plus(svn_fs_t *fs,
   SVN_ERR_ASSERT(root->is_txn_root == FALSE && root->rev == new_rev);
   SVN_ERR_ASSERT(ft_ffd->youngest_rev_cache == new_rev);
   SVN_ERR(svn_fs_fs__verify_root(root, pool));
+#endif /* SVN_DEBUG */
 
   return SVN_NO_ERROR;
 }
