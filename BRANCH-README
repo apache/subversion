@@ -1,17 +1,7 @@
 This branch teaches the FS layer to optionally run 'verify' just before commit.
 
-It contains two implementations:
-
-1 - in libsvn_fs:svn_fs_commit_txn().
-    TODO: alternatively, consider moving fs.conf knobs to be caller-provided,
-          so a file open() happens per-worker rather than per-connection
-          (in httpd).
-    This one will be retired.  'svnadmin verify -t' has been implemented and
-    can be called from pre-commit to implement this approach.
-
-2 - in libsvn_fs_fs:commit_body().
+The implementation is in libsvn_fs_fs:commit_body().
     TODO: make this not-always-on
 
-TODO: pick which implementation to merge to trunk.  If both remain, the
-backend-agnostic one should be made to be a no-op when a the FSAP backend
-has a specific implementation (like FSFS now has).
+A prior implementation in libsvn_fs:svn_fs_commit_txn() has been removed
+in favour of a 'svnadmin verify -t' feature (avilable in trunk).
