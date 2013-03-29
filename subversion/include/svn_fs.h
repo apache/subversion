@@ -95,6 +95,9 @@ typedef struct svn_fs_t svn_fs_t;
  */
 #define SVN_FS_CONFIG_FSFS_CACHE_REVPROPS       "fsfs-cache-revprops"
 
+/* Note to maintainers: if you add further SVN_FS_CONFIG_FSFS_CACHE_* knobs,
+   update fs_fs.c:verify_as_revision_before_current_plus_plus(). */
+
 /* See also svn_fs_type(). */
 /** @since New in 1.1. */
 #define SVN_FS_CONFIG_FS_TYPE                   "fs-type"

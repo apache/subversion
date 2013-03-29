@@ -8278,11 +8278,20 @@ verify_as_revision_before_current_plus_plus(svn_fs_t *fs,
   svn_fs_t *ft; /* fs++ == ft */
   svn_fs_root_t *root;
   fs_fs_data_t *ft_ffd;
+  apr_hash_t *fs_config;
 
   SVN_ERR_ASSERT(ffd->svn_fs_open_);
 
+  fs_config = apr_hash_make(pool);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS, "0");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS, "0");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "0");
+  /* ### TODO: are there any other intra-process caches that FS populated
+               and FT will read from?  Can we disable those (for FT at least)?
+   */
+
   SVN_ERR(ffd->svn_fs_open_(&ft, fs->path,
-                            NULL /* ### TODO fs_config */,
+                            fs_config,
                             pool));
   ft_ffd = ft->fsap_data;
 
