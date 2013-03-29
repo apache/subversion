@@ -32,7 +32,6 @@
 
 #include "svn_hash.h"
 #include "svn_ctype.h"
-#include "svn_config.h"
 #include "svn_types.h"
 #include "svn_dso.h"
 #include "svn_version.h"
@@ -58,7 +57,6 @@
 #endif
 
 #define FS_TYPE_FILENAME "fs-type"
-#define CONFIG_FILENAME "fs.conf"
 
 /* A pool common to all FS objects.  See the documentation on the
    open/create functions in fs-loader.h and for svn_fs_initialize(). */
@@ -340,26 +338,6 @@ write_fs_type(const char *path, const char *fs_type, apr_pool_t *pool)
   return svn_error_trace(svn_io_file_close(file, pool));
 }
 
-static svn_error_t *
-write_config(const char *path, apr_pool_t *pool)
-{
-  static const char * const fs_conf_contents =
-#define NL APR_EOL_STR
-"### This file controls backend-independent filesystem configuration."       NL
-""                                                                           NL
-"[" SVN_FS_CONFIG_SECTION_MISC "]"                                           NL
-"### When set, Subversion will run the equivalent of 'svnadmin verify -r'"   NL
-"### on each transaction (commit-in-progress) just before it becomes"        NL
-"### a revision.  This may slow down commits, since the cost of"             NL
-"### verification is proportional to the size of the commit (e.g., number"   NL
-"### of files 'svn log -q -v -r N' shows)."                                  NL
-"# " SVN_FS_CONFIG_OPTION_VERIFY_AT_COMMIT " = false"                        NL
-;
-#undef NL
-  SVN_ERR(svn_io_file_create(svn_dirent_join(path, CONFIG_FILENAME, pool),
-                             fs_conf_contents, pool));
-  return SVN_NO_ERROR;
-}
 
 /* --- Functions for operating on filesystems by pathname --- */
 
@@ -436,11 +414,6 @@ fs_new(apr_hash_t *fs_config, apr_pool_t *pool)
   fs->vtable = NULL;
   fs->fsap_data = NULL;
   fs->uuid = NULL;
-#ifdef SVN_DEBUG
-  fs->verify_at_commit = TRUE;
-#else
-  fs->verify_at_commit = FALSE;
-#endif
   return fs;
 }
 
@@ -472,7 +445,6 @@ svn_fs_create(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   /* Create the FS directory and write out the fsap-name file. */
   SVN_ERR(svn_io_dir_make_sgid(path, APR_OS_DEFAULT, pool));
   SVN_ERR(write_fs_type(path, fs_type, pool));
-  SVN_ERR(write_config(path, pool));
 
   /* Perform the actual creation. */
   *fs_p = fs_new(fs_config, pool);
@@ -489,20 +461,9 @@ svn_fs_open(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
             apr_pool_t *pool)
 {
   fs_library_vtable_t *vtable;
-  svn_config_t *config;
 
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
   *fs_p = fs_new(fs_config, pool);
-
-  SVN_ERR(svn_config_read2(&config,
-                           svn_dirent_join(path, CONFIG_FILENAME, pool),
-                           FALSE /* must_exist */, TRUE /* case-sensitive */,
-                           pool));
-  SVN_ERR(svn_config_get_bool(config, &(*fs_p)->verify_at_commit,
-                              SVN_FS_CONFIG_SECTION_MISC,
-                              SVN_FS_CONFIG_OPTION_VERIFY_AT_COMMIT,
-                              (*fs_p)->verify_at_commit));
-
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
                        vtable->open_fs(*fs_p, path, pool, common_pool));
   SVN_ERR(vtable->set_svn_fs_open(*fs_p, svn_fs_open));
@@ -797,19 +758,23 @@ svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
                   svn_fs_txn_t *txn, apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_fs_t *fs = txn->fs;
+#if defined(PACK_AFTER_EVERY_COMMIT) || defined(SVN_DEBUG)
+  svn_fs_root_t *txn_root;
+#endif
 
   *new_rev = SVN_INVALID_REVNUM;
   if (conflict_p)
     *conflict_p = NULL;
 
-  if (fs->verify_at_commit)
-    {
-      /* ### TODO: should this run just before incrementing 'current'? */
-      svn_fs_root_t *txn_root;
-      SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-      SVN_ERR(svn_fs_verify_root(txn_root, pool));
-    }
+#if defined(PACK_AFTER_EVERY_COMMIT) || defined(SVN_DEBUG)
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+#endif
+
+#ifdef SVN_DEBUG
+  /* ### TODO: add db/fs.conf with a knob to enable this in release builds */
+  /* ### TODO: should this run just before incrementing 'current'? */
+  SVN_ERR(svn_fs_verify_root(txn_root, pool));
+#endif
 
   err = txn->vtable->commit(conflict_p, new_rev, txn, pool);
 
@@ -829,6 +794,7 @@ svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
 
 #ifdef PACK_AFTER_EVERY_COMMIT
   {
+    svn_fs_t *fs = svn_fs_root_fs(txn_root);
     const char *fs_path = svn_fs_path(fs, pool);
     err = svn_fs_pack(fs_path, NULL, NULL, NULL, NULL, pool);
     if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)

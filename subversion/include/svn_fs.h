@@ -130,13 +130,6 @@ typedef struct svn_fs_t svn_fs_t;
  * @since New in 1.8.
  */
 #define SVN_FS_CONFIG_PRE_1_8_COMPATIBLE        "pre-1.8-compatible"
-
-
-/** @since New in 1.8. */
-#define SVN_FS_CONFIG_SECTION_MISC "miscellany"
-/** @since New in 1.8. */
-#define SVN_FS_CONFIG_OPTION_VERIFY_AT_COMMIT "verify-at-commit"
-
 /** @} */
 
 

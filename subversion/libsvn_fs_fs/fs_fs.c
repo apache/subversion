@@ -8278,9 +8278,7 @@ verify_as_revision_before_current_plus_plus(svn_fs_t *fs,
   svn_fs_root_t *root;
   fs_fs_data_t *ft_ffd;
 
-  /* ### TODO: skip the call at svn_fs_commit_txn() */
-  if (! fs->verify_at_commit)
-    return SVN_NO_ERROR;
+  /* ### TODO: make this logic conditional */
 
   SVN_ERR_ASSERT(ffd->svn_fs_open_);
 
