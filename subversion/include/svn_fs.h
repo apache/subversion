@@ -2464,20 +2464,25 @@ svn_fs_verify(const char *path,
 
 /**
  * Perform backend-specific data consistency and correctness validations
- * to @a root the Subversion filesystem @a fs.  @a root is typically
- * a revision root (see svn_fs_revision_root()).
- * Use @a scratch_pool for temporary allocations.
+ * of @a root in the Subversion filesystem @a fs.  @a root is typically
+ * a revision root (see svn_fs_revision_root()), but may be a
+ * transaction root.  Use @a scratch_pool for temporary allocations.
  *
  * @note You probably don't want to use this directly.  Take a look at
  * svn_repos_verify_fs2() instead, which does non-backend-specific
  * verifications as well.
  *
-* @note To ensure a full verification using all tests and covering all
- * revisions, you must call this function *and* #svn_fs_verify.
+ * @note To ensure a full verification using all available tests and
+ * covering all revisions, you must call both this function and
+ * #svn_fs_verify.
  *
- * @note Implementors, please do tests that cannot be done efficiently for
- * a single revision to #svn_fs_verify.  This function is meant for local
- * checks that don't require an expensive context setup.
+ * @note Implementors, please perform tests that cannot be done
+ * efficiently for a single revision in #svn_fs_verify.  This function
+ * is intended for local checks that don't require an expensive context
+ * setup.
+ *
+ * @see svn_repos_verify_fs2()
+ * @see svn_fs_verify()
  *
  * @since New in 1.8.
  */
