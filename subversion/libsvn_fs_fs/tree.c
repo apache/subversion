@@ -4403,7 +4403,8 @@ svn_fs_fs__verify_root(svn_fs_root_t *root,
      (and elsewhere).  This code makes more thorough checks than the
      commit-time checks in validate_root_noderev(). */
 
-  /* ### TODO: Make sure caches are disabled.
+  /* Callers should disable caches by setting SVN_FS_CONFIG_FSFS_CACHE_NS;
+     see r1462436.
 
      When this code is called in the library, we want to ensure we
      use the on-disk data --- rather than some data that was read
