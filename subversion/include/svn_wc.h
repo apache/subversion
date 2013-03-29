@@ -1253,7 +1253,7 @@ typedef enum svn_wc_notify_action_t
 
   /** A move in the working copy has been broken, i.e. degraded into a
    * copy + delete. The notified path is the move source (the deleted path).
-   * ### Provide path to move destination as well?
+   * ### TODO: Provide path to move destination as well?
    * @since New in 1.8. */
   svn_wc_notify_move_broken
 
@@ -3740,7 +3740,7 @@ typedef struct svn_wc_status3_t
    * @since New in 1.8. */
   const char *moved_to_abspath;
 
-  /** TRUE iff the item is a file brought in by an svn:externals definition.
+  /** @c TRUE iff the item is a file brought in by an svn:externals definition.
    * @since New in 1.8. */
   svn_boolean_t file_external;
 
@@ -4570,9 +4570,13 @@ svn_wc_add_from_disk2(svn_wc_context_t *wc_ctx,
 
 
 /**
- * Similar to svn_wc_add4(), but gives the new node an empty set of properties.
+ * Similar to svn_wc_add_from_disk2(), but always passes NULL for @a
+ * props.
  *
- * This is a replacement for svn_wc_add4() case 2a.
+ * This is a replacement for svn_wc_add4() case 2a (which see for
+ * details).
+
+ * @see svn_wc_add4()
  *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.7 API.
@@ -6844,9 +6848,12 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
               void *cancel_baton,
               apr_pool_t *scratch_pool);
 
-/** Similar to svn_wc_merge5() but doesn't merge property changes. Instead of
- * handling this in a single operation, a separate call to svn_wc_merge_props3()
- * before calling svn_wc_merge4() is needed
+/** Similar to svn_wc_merge5() but with @a merge_props_state and @a
+ * original_props always passed as NULL.
+ *
+ * Unlike svn_wc_merge5(), this function doesn't merge property
+ * changes.  Callers of this function must first use
+ * svn_wc_merge_props3() to get this functionality.
  *
  * @since New in 1.7.
  * @deprecated Provided for backwards compatibility with the 1.7 API.
@@ -8150,8 +8157,8 @@ svn_wc_read_kind2(svn_node_kind_t *kind,
                   svn_boolean_t show_hidden,
                   apr_pool_t *scratch_pool);
 
-/** Similar to svn_wc_read_kind2() but always shows deleted nodes and returns
- * the result as a #svn_node_kind_t.
+/** Similar to svn_wc_read_kind2() but with @a show_deleted always
+ * passed as TRUE.
  *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.7 API.
