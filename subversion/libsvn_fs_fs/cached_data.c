@@ -802,7 +802,7 @@ create_rep_state(rep_state_t **rep_state,
                                "Corrupt representation '%s'",
                                rep
                                ? svn_fs_fs__unparse_representation
-                                   (rep, ffd->format, TRUE, TRUE, pool)->data
+                                   (rep, ffd->format, TRUE, pool)->data
                                : "(null)");
     }
   /* ### Call representation_string() ? */

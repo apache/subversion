@@ -529,7 +529,6 @@ svn_stringbuf_t *
 svn_fs_fs__unparse_representation(representation_t *rep,
                                   int format,
                                   svn_boolean_t mutable_rep_truncated,
-                                  svn_boolean_t may_be_corrupt,
                                   apr_pool_t *pool)
 {
   char buffer[SVN_INT64_BUFFER_SIZE];
@@ -537,7 +536,7 @@ svn_fs_fs__unparse_representation(representation_t *rep,
     return svn_stringbuf_ncreate("-1", 2, pool);
 
 #define DISPLAY_MAYBE_NULL_CHECKSUM(checksum)          \
-  ((!may_be_corrupt || (checksum) != NULL)     \
+  ((checksum != NULL)     \
    ? svn_checksum_to_cstring_display((checksum), pool) \
    : "(null)")
 
@@ -594,14 +593,13 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
                                 (noderev->data_rep,
                                  format,
                                  noderev->kind == svn_node_dir,
-                                 FALSE,
                                  pool)->data));
 
   if (noderev->prop_rep)
     SVN_ERR(svn_stream_printf(outfile, pool, HEADER_PROPS ": %s\n",
                               svn_fs_fs__unparse_representation
                                 (noderev->prop_rep, format,
-                                 TRUE, FALSE, pool)->data));
+                                 TRUE, pool)->data));
 
   SVN_ERR(svn_stream_printf(outfile, pool, HEADER_CPATH ": %s\n",
                             noderev->created_path));

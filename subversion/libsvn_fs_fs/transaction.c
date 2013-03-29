@@ -586,7 +586,6 @@ store_sha1_rep_mapping(svn_fs_t *fs,
         = svn_fs_fs__unparse_representation(noderev->data_rep,
                                             ffd->format,
                                             (noderev->kind == svn_node_dir),
-                                            FALSE,
                                             pool);
       SVN_ERR(svn_io_file_open(&rep_file, file_name,
                                APR_WRITE | APR_CREATE | APR_TRUNCATE
