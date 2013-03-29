@@ -424,7 +424,9 @@ svn_fs_recover(const char *path,
  *
  * @note The BDB backend doesn't implement this feature so most
  * callers should not call this function directly but should use the
- * higher level #svn_repos_freeze instead.
+ * higher level svn_repos_freeze() instead.
+ *
+ * @see svn_repos_freeze()
  *
  * @since New in 1.8.
  */
@@ -1600,10 +1602,10 @@ svn_fs_closest_copy(svn_fs_root_t **root_p,
  * @a inherit indicates whether to retrieve explicit,
  * explicit-or-inherited, or only inherited mergeinfo.
  *
- * If @a adjust_inherited_mergeinfo is TRUE, then any inherited
+ * If @a adjust_inherited_mergeinfo is @c TRUE, then any inherited
  * mergeinfo returned in @a *catalog is normalized to represent the
- * inherited mergeinfo on the path doing the inheriting.  If
- * @a adjust_inherited_mergeinfo is FALSE, then any inherited
+ * inherited mergeinfo on the path which inherits it.  If
+ * @a adjust_inherited_mergeinfo is @c FALSE, then any inherited
  * mergeinfo is the raw explicit mergeinfo from the nearest parent
  * of the path with explicit mergeinfo, unadjusted for the path-wise
  * difference between the path and its parent.  This may include
@@ -1633,7 +1635,7 @@ svn_fs_get_mergeinfo2(svn_mergeinfo_catalog_t *catalog,
 
 /**
  * Same as svn_fs_get_mergeinfo2(), but with @a adjust_inherited_mergeinfo
- * set always set to TRUE and only one pool.
+ * set always set to @c TRUE and with only one pool.
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
@@ -1894,16 +1896,15 @@ typedef svn_error_t *
                                   void *baton,
                                   apr_pool_t *pool);
 
-/** Attempts to efficiently provide the contents of the file @a path in
- * @a root.  If that succeeds, @a *success will be set to #TRUE and the
- * contents will be passed to the the @a processor along with the given
- * @a baton.  Allocations take place in @a pool.
+/** Efficiently deliver the contents of the file @a path in @a root
+ * via @a processor (with @a baton), setting @a *success to @c TRUE
+ * upon doing so.  Use @a pool for allocations.
  *
  * This function is intended to support zero copy data processing.  It may
  * not be implemented for all data backends or not applicable for certain
- * content.  In that case, @a *success will always be #FALSE.  Also, this
- * is a best-effort function which means there is no guarantee that e.g.
- * @a processor gets called at for any content.
+ * content.  In that case, @a *success will always be @c FALSE.  Also, this
+ * is a best-effort function which means that there is no guarantee that
+ * @a processor gets called at all for some content.
  *
  * @note @a processor is expected to be relatively short function with
  * at most O(content size) runtime.
