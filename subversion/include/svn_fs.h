@@ -2425,13 +2425,17 @@ svn_fs_pack(const char *db_path,
  * to the Subversion filesystem (mainly the meta-data) located in the
  * directory @a path.  Use @a scratch_pool for temporary allocations.
  *
- * @a start and @a end are used to limit the amount of checks being done
- * to data that is relevant to that range of revisions.  However, this is
- * only a lower limit to the actual amount of checks being done.  The
- * backend may not even be able to limit the errors begin reported.
- * @a start and @a end may be #SVN_INVALID_REVNUM, in which case
- * svn_repos_verify_fs2()'s semantics apply.  When @c r0 is being
- * verified, global invariants may be verified as well.
+ * Repository (meta) data forms a tightly knit network of references.
+ * A full check can be expensive and may not always be required.  If not
+ * equal to #SVN_INVALID_REVNUM, @a start and @a end define the range of
+ * revisions to check, @c r0 and @a HEAD being the respective defaults.
+ * Due to the references among repository (meta) data, the implementation
+ * may however need to also check elements that are not strictly part of
+ * the selected range of revisions.  Thus, it is perfectly legal for a FS
+ * implementation to ignore the @a start and @a end parameters entirely.
+ * 
+ * Only if @c r0 has been included in the range of revisions to check,
+ * are global invariants guaranteed to get verified.
  *
  * The optional @a notify_func callback is only a general feedback that
  * the operation is still in process but may be called in random revisions
@@ -2449,8 +2453,11 @@ svn_fs_pack(const char *db_path,
  * revisions, you must call this function *and* #svn_fs_verify_rev.
  * 
  * @note Implementors, please do tests that can be done efficiently for
- * a single revision to #svn_fs_verify_rev.  This function is meant for
+ * a single revision in #svn_fs_verify_root.  This function is meant for
  * global checks or tests that require an expensive context setup.
+ *
+ * @see svn_repos_verify_fs2()
+ * @see svn_fs_verify_root()
  *
  * @since New in 1.8.
  */
