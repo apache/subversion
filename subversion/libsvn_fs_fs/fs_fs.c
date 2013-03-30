@@ -10458,7 +10458,7 @@ svn_fs_fs__verify(svn_fs_t *fs,
       baton->notify_func = notify_func;
       baton->notify_baton = notify_baton;
       
-      /* tell the user that we are now read to do *something* */
+      /* tell the user that we are now ready to do *something* */
       if (notify_func)
         notify_func(SVN_INVALID_REVNUM, notify_baton, baton->pool);
 
