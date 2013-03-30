@@ -335,26 +335,26 @@ svn_fs_fs__write_changes_container(svn_stream_t *stream,
 {
   int i;
 
-  svn__packed_data_root_t *root = svn__packed_data_create_root(pool);
+  svn_packed__data_root_t *root = svn_packed__data_create_root(pool);
 
   /* one top-level stream for each array */
-  svn__packed_int_stream_t *offsets_stream
-    = svn__packed_create_int_stream(root, TRUE, FALSE);
-  svn__packed_int_stream_t *changes_stream
-    = svn__packed_create_int_stream(root, FALSE, FALSE);
+  svn_packed__int_stream_t *offsets_stream
+    = svn_packed__create_int_stream(root, TRUE, FALSE);
+  svn_packed__int_stream_t *changes_stream
+    = svn_packed__create_int_stream(root, FALSE, FALSE);
 
   /* structure the CHANGES_STREAM such we can extract much of the redundancy
    * from the binary_change_t structs */
-  svn__packed_create_int_substream(changes_stream, TRUE, FALSE);
-  svn__packed_create_int_substream(changes_stream, TRUE, FALSE);
-  svn__packed_create_int_substream(changes_stream, TRUE, TRUE);
-  svn__packed_create_int_substream(changes_stream, TRUE, FALSE);
-  svn__packed_create_int_substream(changes_stream, TRUE, TRUE);
-  svn__packed_create_int_substream(changes_stream, TRUE, FALSE);
-  svn__packed_create_int_substream(changes_stream, TRUE, TRUE);
-  svn__packed_create_int_substream(changes_stream, TRUE, FALSE);
-  svn__packed_create_int_substream(changes_stream, TRUE, TRUE);
-  svn__packed_create_int_substream(changes_stream, TRUE, FALSE);
+  svn_packed__create_int_substream(changes_stream, TRUE, FALSE);
+  svn_packed__create_int_substream(changes_stream, TRUE, FALSE);
+  svn_packed__create_int_substream(changes_stream, TRUE, TRUE);
+  svn_packed__create_int_substream(changes_stream, TRUE, FALSE);
+  svn_packed__create_int_substream(changes_stream, TRUE, TRUE);
+  svn_packed__create_int_substream(changes_stream, TRUE, FALSE);
+  svn_packed__create_int_substream(changes_stream, TRUE, TRUE);
+  svn_packed__create_int_substream(changes_stream, TRUE, FALSE);
+  svn_packed__create_int_substream(changes_stream, TRUE, TRUE);
+  svn_packed__create_int_substream(changes_stream, TRUE, FALSE);
   
   /* CHANGES must be in 'finalized' mode */
   SVN_ERR_ASSERT(changes->builder == NULL);
@@ -362,7 +362,7 @@ svn_fs_fs__write_changes_container(svn_stream_t *stream,
 
   /* serialize offsets array */
   for (i = 0; i < changes->offsets->nelts; ++i)
-    svn__packed_add_uint(offsets_stream,
+    svn_packed__add_uint(offsets_stream,
                          APR_ARRAY_IDX(changes->offsets, i, int));
 
   /* serialize changes array */
@@ -371,23 +371,23 @@ svn_fs_fs__write_changes_container(svn_stream_t *stream,
       const binary_change_t *change
         = &APR_ARRAY_IDX(changes->changes, i, binary_change_t);
 
-      svn__packed_add_uint(changes_stream, change->flags);
-      svn__packed_add_uint(changes_stream, change->path);
+      svn_packed__add_uint(changes_stream, change->flags);
+      svn_packed__add_uint(changes_stream, change->path);
 
-      svn__packed_add_uint(changes_stream, change->copyfrom_rev);
-      svn__packed_add_uint(changes_stream, change->copyfrom_path);
+      svn_packed__add_uint(changes_stream, change->copyfrom_rev);
+      svn_packed__add_uint(changes_stream, change->copyfrom_path);
 
-      svn__packed_add_uint(changes_stream, change->node_id.revision);
-      svn__packed_add_uint(changes_stream, change->node_id.number);
-      svn__packed_add_uint(changes_stream, change->copy_id.revision);
-      svn__packed_add_uint(changes_stream, change->copy_id.number);
-      svn__packed_add_uint(changes_stream, change->rev_id.revision);
-      svn__packed_add_uint(changes_stream, change->rev_id.number);
+      svn_packed__add_uint(changes_stream, change->node_id.revision);
+      svn_packed__add_uint(changes_stream, change->node_id.number);
+      svn_packed__add_uint(changes_stream, change->copy_id.revision);
+      svn_packed__add_uint(changes_stream, change->copy_id.number);
+      svn_packed__add_uint(changes_stream, change->rev_id.revision);
+      svn_packed__add_uint(changes_stream, change->rev_id.number);
     }
 
   /* write to disk */
   SVN_ERR(svn_fs_fs__write_string_table(stream, changes->paths, pool));
-  SVN_ERR(svn__packed_data_write(stream, root, pool));
+  SVN_ERR(svn_packed__data_write(stream, root, pool));
   
   return SVN_NO_ERROR;
 }
@@ -403,46 +403,46 @@ svn_fs_fs__read_changes_container(svn_fs_fs__changes_t **changes_p,
 
   svn_fs_fs__changes_t *changes = apr_pcalloc(result_pool, sizeof(*changes));
 
-  svn__packed_data_root_t *root;
-  svn__packed_int_stream_t *offsets_stream;
-  svn__packed_int_stream_t *changes_stream;
+  svn_packed__data_root_t *root;
+  svn_packed__int_stream_t *offsets_stream;
+  svn_packed__int_stream_t *changes_stream;
 
   /* write from disk */
   SVN_ERR(svn_fs_fs__read_string_table(&changes->paths, stream,
                                        result_pool, scratch_pool));
 
-  SVN_ERR(svn__packed_data_read(&root, stream, result_pool, scratch_pool));
-  offsets_stream = svn__packed_first_int_stream(root);
-  changes_stream = svn__packed_next_int_stream(offsets_stream);
+  SVN_ERR(svn_packed__data_read(&root, stream, result_pool, scratch_pool));
+  offsets_stream = svn_packed__first_int_stream(root);
+  changes_stream = svn_packed__next_int_stream(offsets_stream);
 
   /* read offsets array */
-  count = svn__packed_int_count(offsets_stream);
+  count = svn_packed__int_count(offsets_stream);
   changes->offsets = apr_array_make(result_pool, count, sizeof(int));
   for (i = 0; i < count; ++i)
     APR_ARRAY_PUSH(changes->offsets, int)
-      = (int)svn__packed_get_uint(offsets_stream);
+      = (int)svn_packed__get_uint(offsets_stream);
 
   /* read changes array */
   count
-    = svn__packed_int_count(svn__packed_first_int_substream(changes_stream));
+    = svn_packed__int_count(svn_packed__first_int_substream(changes_stream));
   changes->changes
     = apr_array_make(result_pool, count, sizeof(binary_change_t));
   for (i = 0; i < count; ++i)
     {
       binary_change_t change;
 
-      change.flags = svn__packed_get_uint(changes_stream);
-      change.path = svn__packed_get_uint(changes_stream);
+      change.flags = svn_packed__get_uint(changes_stream);
+      change.path = svn_packed__get_uint(changes_stream);
 
-      change.copyfrom_rev = svn__packed_get_uint(changes_stream);
-      change.copyfrom_path = svn__packed_get_uint(changes_stream);
+      change.copyfrom_rev = svn_packed__get_uint(changes_stream);
+      change.copyfrom_path = svn_packed__get_uint(changes_stream);
 
-      change.node_id.revision = svn__packed_get_uint(changes_stream);
-      change.node_id.number = svn__packed_get_uint(changes_stream);
-      change.copy_id.revision = svn__packed_get_uint(changes_stream);
-      change.copy_id.number = svn__packed_get_uint(changes_stream);
-      change.rev_id.revision = svn__packed_get_uint(changes_stream);
-      change.rev_id.number = svn__packed_get_uint(changes_stream);
+      change.node_id.revision = svn_packed__get_uint(changes_stream);
+      change.node_id.number = svn_packed__get_uint(changes_stream);
+      change.copy_id.revision = svn_packed__get_uint(changes_stream);
+      change.copy_id.number = svn_packed__get_uint(changes_stream);
+      change.rev_id.revision = svn_packed__get_uint(changes_stream);
+      change.rev_id.number = svn_packed__get_uint(changes_stream);
 
       APR_ARRAY_PUSH(changes->changes, binary_change_t) = change;
     }

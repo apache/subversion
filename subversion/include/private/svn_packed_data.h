@@ -84,16 +84,16 @@
 
 /* Opaque type for the root object.
  */
-typedef struct svn__packed_data_root_t svn__packed_data_root_t;
+typedef struct svn_packed__data_root_t svn_packed__data_root_t;
 
 /* Opaque type for byte streams.
  */
-typedef struct svn__packed_byte_stream_t svn__packed_byte_stream_t;
+typedef struct svn_packed__byte_stream_t svn_packed__byte_stream_t;
 
 /* Semi-opaque type for integer streams.  We expose the unpacked buffer
- * to allow for replacing svn__packed_add_uint and friends by macros.
+ * to allow for replacing svn_packed__add_uint and friends by macros.
  */
-typedef struct svn__packed_int_stream_t
+typedef struct svn_packed__int_stream_t
 {
   /* pointer to the remainder of the data structure */
   void *private_data;
@@ -104,15 +104,15 @@ typedef struct svn__packed_int_stream_t
   /* unpacked integers (either yet to be packed or pre-fetched from the
    * packed buffers).  Only the first BUFFER_USED entries are valid. */
   apr_uint64_t buffer[SVN__PACKED_DATA_BUFFER_SIZE];
-} svn__packed_int_stream_t;
+} svn_packed__int_stream_t;
 
 
 /* Writing data. */
 
 /* Return a new serialization root object, allocated in POOL.
  */
-svn__packed_data_root_t *
-svn__packed_data_create_root(apr_pool_t *pool);
+svn_packed__data_root_t *
+svn_packed__data_create_root(apr_pool_t *pool);
 
 /* Create and return a new top-level integer stream in ROOT.  If signed,
  * negative numbers will be put into that stream, SIGNED_INTS should be
@@ -120,8 +120,8 @@ svn__packed_data_create_root(apr_pool_t *pool);
  * DIFF to TRUE if you expect the difference between consecutive numbers
  * to be much smaller (~100 times) than the actual numbers.
  */
-svn__packed_int_stream_t *
-svn__packed_create_int_stream(svn__packed_data_root_t *root,
+svn_packed__int_stream_t *
+svn_packed__create_int_stream(svn_packed__data_root_t *root,
                               svn_boolean_t diff,
                               svn_boolean_t signed_ints);
 
@@ -131,47 +131,47 @@ svn__packed_create_int_stream(svn__packed_data_root_t *root,
  * Set DIFF to TRUE if you expect the difference between consecutive numbers
  * to be much smaller (~100 times) than the actual numbers.
  */
-svn__packed_int_stream_t *
-svn__packed_create_int_substream(svn__packed_int_stream_t *parent,
+svn_packed__int_stream_t *
+svn_packed__create_int_substream(svn_packed__int_stream_t *parent,
                                  svn_boolean_t diff,
                                  svn_boolean_t signed_ints);
 
 /* Create and return a new top-level byte sequence stream in ROOT.
  */
-svn__packed_byte_stream_t *
-svn__packed_create_bytes_stream(svn__packed_data_root_t *root);
+svn_packed__byte_stream_t *
+svn_packed__create_bytes_stream(svn_packed__data_root_t *root);
 
 /* Create and return a new sub-stream to the existing byte sequence stream
  * PARENT.
  */
-svn__packed_byte_stream_t *
-svn__packed_create_bytes_substream(svn__packed_byte_stream_t *parent);
+svn_packed__byte_stream_t *
+svn_packed__create_bytes_substream(svn_packed__byte_stream_t *parent);
 
 /* Empty the unprocessed integer buffer in STREAM by either pushing the
  * data to the sub-streams or writing to the packed data (in case there
  * are no sub-streams).  Users don't need to call this explicitly as it
- * will be called by svn__packed_add_uint, svn__packed_add_int and
- * svn__packed_data_write as necessary.
+ * will be called by svn_packed__add_uint, svn_packed__add_int and
+ * svn_packed__data_write as necessary.
  */
 void
-svn__packed_data_flush_buffer(svn__packed_int_stream_t *stream);
+svn_packed__data_flush_buffer(svn_packed__int_stream_t *stream);
 
 /* Write the unsigned integer VALUE to STEAM.
  */
 void
-svn__packed_add_uint(svn__packed_int_stream_t *stream,
+svn_packed__add_uint(svn_packed__int_stream_t *stream,
                      apr_uint64_t value);
 
 /* Write the signed integer VALUE to STEAM.
  */
 void
-svn__packed_add_int(svn__packed_int_stream_t *stream,
+svn_packed__add_int(svn_packed__int_stream_t *stream,
                     apr_int64_t value);
 
 /* Write the sequence stating at DATA containing LEN bytes to STEAM.
  */
 void
-svn__packed_add_bytes(svn__packed_byte_stream_t *stream,
+svn_packed__add_bytes(svn_packed__byte_stream_t *stream,
                       const char *data,
                       apr_size_t len);
 
@@ -179,8 +179,8 @@ svn__packed_add_bytes(svn__packed_byte_stream_t *stream,
  * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
-svn__packed_data_write(svn_stream_t *stream,
-                       svn__packed_data_root_t *root,
+svn_packed__data_write(svn_stream_t *stream,
+                       svn_packed__data_root_t *root,
                        apr_pool_t *scratch_pool);
 
 
@@ -189,65 +189,65 @@ svn__packed_data_write(svn_stream_t *stream,
 /* Return the first integer stream in ROOT.  Returns NULL in case there
  * aren't any.
  */
-svn__packed_int_stream_t *
-svn__packed_first_int_stream(svn__packed_data_root_t *root);
+svn_packed__int_stream_t *
+svn_packed__first_int_stream(svn_packed__data_root_t *root);
 
 /* Return the first byte sequence stream in ROOT.  Returns NULL in case
  * there aren't any.
  */
-svn__packed_byte_stream_t *
-svn__packed_first_byte_stream(svn__packed_data_root_t *root);
+svn_packed__byte_stream_t *
+svn_packed__first_byte_stream(svn_packed__data_root_t *root);
 
 /* Return the next (sibling) integer stream to STREAM.  Returns NULL in
  * case there isn't any.
  */
-svn__packed_int_stream_t *
-svn__packed_next_int_stream(svn__packed_int_stream_t *stream);
+svn_packed__int_stream_t *
+svn_packed__next_int_stream(svn_packed__int_stream_t *stream);
 
 /* Return the next (sibling) byte sequence stream to STREAM.  Returns NULL
  * in case there isn't any.
  */
-svn__packed_byte_stream_t *
-svn__packed_next_byte_stream(svn__packed_byte_stream_t *stream);
+svn_packed__byte_stream_t *
+svn_packed__next_byte_stream(svn_packed__byte_stream_t *stream);
 
 /* Return the first sub-stream of STREAM.  Returns NULL in case there
  * isn't any.
  */
-svn__packed_int_stream_t *
-svn__packed_first_int_substream(svn__packed_int_stream_t *stream);
+svn_packed__int_stream_t *
+svn_packed__first_int_substream(svn_packed__int_stream_t *stream);
 
 /* Return the first sub-stream of STREAM.  Returns NULL in case there
  * isn't any.
  */
-svn__packed_byte_stream_t *
-svn__packed_first_byte_substream(svn__packed_byte_stream_t *stream);
+svn_packed__byte_stream_t *
+svn_packed__first_byte_substream(svn_packed__byte_stream_t *stream);
 
 /* Return the number of integers left to read from STREAM.
  */
 apr_size_t
-svn__packed_int_count(svn__packed_int_stream_t *stream);
+svn_packed__int_count(svn_packed__int_stream_t *stream);
 
 /* Return the number of bytes left to read from STREAM.
  */
 apr_size_t
-svn__packed_byte_count(svn__packed_byte_stream_t *stream);
+svn_packed__byte_count(svn_packed__byte_stream_t *stream);
 
 /* Return the number of bytes left to read from STREAM.
  */
 void
-svn__packed_data_fill_buffer(svn__packed_int_stream_t *stream);
+svn_packed__data_fill_buffer(svn_packed__int_stream_t *stream);
 
 /* Return the next number from STREAM as unsigned integer.  Returns 0 when
  * reading beyond the end of the stream.
  */
 apr_uint64_t 
-svn__packed_get_uint(svn__packed_int_stream_t *stream);
+svn_packed__get_uint(svn_packed__int_stream_t *stream);
 
 /* Return the next number from STREAM as signed integer.  Returns 0 when
  * reading beyond the end of the stream.
  */
 apr_int64_t
-svn__packed_get_int(svn__packed_int_stream_t *stream,
+svn_packed__get_int(svn_packed__int_stream_t *stream,
                     apr_int64_t value);
 
 /* Return the next byte sequence from STREAM and set *LEN to the length
@@ -255,7 +255,7 @@ svn__packed_get_int(svn__packed_int_stream_t *stream,
  * stream.
  */
 const char *
-svn__packed_get_bytes(svn__packed_byte_stream_t *stream,
+svn_packed__get_bytes(svn_packed__byte_stream_t *stream,
                       apr_size_t *len);
 
 /* Allocate a new packed data root in RESULT_POOL, read its structure and
@@ -263,7 +263,7 @@ svn__packed_get_bytes(svn__packed_byte_stream_t *stream,
  * for temporary allocations.
  */
 svn_error_t *
-svn__packed_data_read(svn__packed_data_root_t **root_p,
+svn_packed__data_read(svn_packed__data_root_t **root_p,
                       svn_stream_t *stream,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);

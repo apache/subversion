@@ -560,34 +560,34 @@ svn_fs_fs__write_string_table(svn_stream_t *stream,
 {
   apr_size_t i, k;
 
-  svn__packed_data_root_t *root = svn__packed_data_create_root(pool);
+  svn_packed__data_root_t *root = svn_packed__data_create_root(pool);
 
-  svn__packed_int_stream_t *table_sizes
-    = svn__packed_create_int_stream(root, FALSE, FALSE);
-  svn__packed_int_stream_t *small_strings_headers
-    = svn__packed_create_int_stream(root, FALSE, FALSE);
-  svn__packed_byte_stream_t *large_strings
-    = svn__packed_create_bytes_stream(root);
-  svn__packed_byte_stream_t *small_strings_data
-    = svn__packed_create_bytes_stream(root);
+  svn_packed__int_stream_t *table_sizes
+    = svn_packed__create_int_stream(root, FALSE, FALSE);
+  svn_packed__int_stream_t *small_strings_headers
+    = svn_packed__create_int_stream(root, FALSE, FALSE);
+  svn_packed__byte_stream_t *large_strings
+    = svn_packed__create_bytes_stream(root);
+  svn_packed__byte_stream_t *small_strings_data
+    = svn_packed__create_bytes_stream(root);
 
-  svn__packed_create_int_substream(small_strings_headers, TRUE, FALSE);
-  svn__packed_create_int_substream(small_strings_headers, FALSE, FALSE);
-  svn__packed_create_int_substream(small_strings_headers, TRUE, FALSE);
-  svn__packed_create_int_substream(small_strings_headers, FALSE, FALSE);
+  svn_packed__create_int_substream(small_strings_headers, TRUE, FALSE);
+  svn_packed__create_int_substream(small_strings_headers, FALSE, FALSE);
+  svn_packed__create_int_substream(small_strings_headers, TRUE, FALSE);
+  svn_packed__create_int_substream(small_strings_headers, FALSE, FALSE);
 
   /* number of sub-tables */
 
-  svn__packed_add_uint(table_sizes, table->size);
+  svn_packed__add_uint(table_sizes, table->size);
 
   /* all short-string char data sizes */
   
   for (i = 0; i < table->size; ++i)
-    svn__packed_add_uint(table_sizes,
+    svn_packed__add_uint(table_sizes,
                          table->sub_tables[i].short_string_count);
 
   for (i = 0; i < table->size; ++i)
-    svn__packed_add_uint(table_sizes,
+    svn_packed__add_uint(table_sizes,
                          table->sub_tables[i].long_string_count);
 
   /* all strings */
@@ -595,7 +595,7 @@ svn_fs_fs__write_string_table(svn_stream_t *stream,
   for (i = 0; i < table->size; ++i)
     {
       string_sub_table_t *sub_table = &table->sub_tables[i];
-      svn__packed_add_bytes(small_strings_data,
+      svn_packed__add_bytes(small_strings_data,
                             sub_table->data,
                             sub_table->data_size);
 
@@ -603,21 +603,21 @@ svn_fs_fs__write_string_table(svn_stream_t *stream,
         {
           string_header_t *string = &sub_table->short_strings[k];
 
-          svn__packed_add_uint(small_strings_headers, string->head_string);
-          svn__packed_add_uint(small_strings_headers, string->head_length);
-          svn__packed_add_uint(small_strings_headers, string->tail_start);
-          svn__packed_add_uint(small_strings_headers, string->tail_length);
+          svn_packed__add_uint(small_strings_headers, string->head_string);
+          svn_packed__add_uint(small_strings_headers, string->head_length);
+          svn_packed__add_uint(small_strings_headers, string->tail_start);
+          svn_packed__add_uint(small_strings_headers, string->tail_length);
         }
 
       for (k = 0; k < sub_table->long_string_count; ++k)
-        svn__packed_add_bytes(large_strings,
+        svn_packed__add_bytes(large_strings,
                               sub_table->long_strings[k].data,
                               sub_table->long_strings[k].len + 1);
     }
 
   /* write to target stream */
 
-  SVN_ERR(svn__packed_data_write(stream, root, pool));
+  SVN_ERR(svn_packed__data_write(stream, root, pool));
 
   return SVN_NO_ERROR;
 }
@@ -632,21 +632,21 @@ svn_fs_fs__read_string_table(string_table_t **table_p,
 
   string_table_t *table = apr_palloc(result_pool, sizeof(*table));
  
-  svn__packed_data_root_t *root;
-  svn__packed_int_stream_t *table_sizes;
-  svn__packed_byte_stream_t *large_strings;
-  svn__packed_byte_stream_t *small_strings_data;
-  svn__packed_int_stream_t *headers;
+  svn_packed__data_root_t *root;
+  svn_packed__int_stream_t *table_sizes;
+  svn_packed__byte_stream_t *large_strings;
+  svn_packed__byte_stream_t *small_strings_data;
+  svn_packed__int_stream_t *headers;
 
-  SVN_ERR(svn__packed_data_read(&root, stream, result_pool, scratch_pool));
-  table_sizes = svn__packed_first_int_stream(root);
-  headers = svn__packed_next_int_stream(table_sizes);
-  large_strings = svn__packed_first_byte_stream(root);
-  small_strings_data = svn__packed_next_byte_stream(large_strings);
+  SVN_ERR(svn_packed__data_read(&root, stream, result_pool, scratch_pool));
+  table_sizes = svn_packed__first_int_stream(root);
+  headers = svn_packed__next_int_stream(table_sizes);
+  large_strings = svn_packed__first_byte_stream(root);
+  small_strings_data = svn_packed__next_byte_stream(large_strings);
 
   /* create sub-tables */
 
-  table->size = svn__packed_get_uint(table_sizes);
+  table->size = svn_packed__get_uint(table_sizes);
   table->sub_tables = apr_pcalloc(result_pool,
                                   table->size * sizeof(*table->sub_tables));
 
@@ -656,7 +656,7 @@ svn_fs_fs__read_string_table(string_table_t **table_p,
     {
       string_sub_table_t *sub_table = &table->sub_tables[i];
 
-      sub_table->short_string_count = svn__packed_get_uint(table_sizes);
+      sub_table->short_string_count = svn_packed__get_uint(table_sizes);
       if (sub_table->short_string_count)
         {
           sub_table->short_strings
@@ -669,14 +669,14 @@ svn_fs_fs__read_string_table(string_table_t **table_p,
             {
               string_header_t *string = &sub_table->short_strings[k];
 
-              string->head_string = svn__packed_get_uint(headers);
-              string->head_length = svn__packed_get_uint(headers);
-              string->tail_start = svn__packed_get_uint(headers);
-              string->tail_length = svn__packed_get_uint(headers);
+              string->head_string = svn_packed__get_uint(headers);
+              string->head_length = svn_packed__get_uint(headers);
+              string->tail_start = svn_packed__get_uint(headers);
+              string->tail_length = svn_packed__get_uint(headers);
             }
         }
 
-      sub_table->data = svn__packed_get_bytes(small_strings_data,
+      sub_table->data = svn_packed__get_bytes(small_strings_data,
                                               &sub_table->data_size);
     }
 
@@ -687,7 +687,7 @@ svn_fs_fs__read_string_table(string_table_t **table_p,
       /* initialize long string table */
       string_sub_table_t *sub_table = &table->sub_tables[i];
 
-      sub_table->long_string_count = svn__packed_get_uint(table_sizes);
+      sub_table->long_string_count = svn_packed__get_uint(table_sizes);
       if (sub_table->long_string_count)
         {
           sub_table->long_strings
@@ -699,7 +699,7 @@ svn_fs_fs__read_string_table(string_table_t **table_p,
           for (k = 0; k < sub_table->long_string_count; ++k)
             {
               svn_string_t *string = &sub_table->long_strings[k];
-              string->data = svn__packed_get_bytes(large_strings,
+              string->data = svn_packed__get_bytes(large_strings,
                                                    &string->len);
               string->len--;
             }

@@ -33,27 +33,27 @@
 
 
 
-/* Private int stream data referenced by svn__packed_int_stream_t.
+/* Private int stream data referenced by svn_packed__int_stream_t.
  */
 typedef struct packed_int_private_t
 {
   /* First sub-stream, if any.  NULL otherwise. */
-  svn__packed_int_stream_t *first_substream;
+  svn_packed__int_stream_t *first_substream;
   
   /* Last sub-stream, if any.  NULL otherwise. */
-  svn__packed_int_stream_t *last_substream;
+  svn_packed__int_stream_t *last_substream;
 
   /* Current sub-stream to read from / write to, if any.  NULL otherwise.
      This will be initialized to FIRST_SUBSTREAM and then advanced in a
      round-robin scheme after each number being read. */
-  svn__packed_int_stream_t *current_substream;
+  svn_packed__int_stream_t *current_substream;
 
   /* Number of sub-streams. */
   apr_size_t substream_count;
 
   /* Next (sibling) integer stream.  If this is the last one, points to
      the first in the list (i.e. this forms a ring list).  Never NULL. */
-  svn__packed_int_stream_t *next;
+  svn_packed__int_stream_t *next;
 
   /* 7b/8b encoded integer values (previously diff'ed and sign-handled,
      if indicated by the flags below).  The contents are disjoint from
@@ -84,22 +84,22 @@ typedef struct packed_int_private_t
 /* A byte sequence stream.  Please note that NEXT is defined different
  * from the NEXT member in integer streams.
  */
-struct svn__packed_byte_stream_t
+struct svn_packed__byte_stream_t
 {
   /* First sub-stream, if any.  NULL otherwise. */
-  svn__packed_byte_stream_t *first_substream;
+  svn_packed__byte_stream_t *first_substream;
 
   /* Last sub-stream, if any.  NULL otherwise. */
-  svn__packed_byte_stream_t *last_substream;
+  svn_packed__byte_stream_t *last_substream;
 
   /* Number of sub-streams. */
   apr_size_t substream_count;
   
   /* Next (sibling) byte sequence stream, if any.  NULL otherwise. */
-  svn__packed_byte_stream_t *next;
+  svn_packed__byte_stream_t *next;
 
   /* Stream to store the sequence lengths. */
-  svn__packed_int_stream_t *lengths_stream;
+  svn_packed__int_stream_t *lengths_stream;
 
   /* It's index (relative to its parent). */
   apr_size_t lengths_stream_index;
@@ -113,22 +113,22 @@ struct svn__packed_byte_stream_t
 
 /* The serialization root object.  It references the top-level streams.
  */
-struct svn__packed_data_root_t
+struct svn_packed__data_root_t
 {
   /* First top-level integer stream, if any.  NULL otherwise. */
-  svn__packed_int_stream_t *first_int_stream;
+  svn_packed__int_stream_t *first_int_stream;
 
   /* Last top-level integer stream, if any.  NULL otherwise. */
-  svn__packed_int_stream_t *last_int_stream;
+  svn_packed__int_stream_t *last_int_stream;
 
   /* Number of top-level integer streams. */
   apr_size_t int_stream_count;
 
   /* First top-level byte sequence stream, if any.  NULL otherwise. */
-  svn__packed_byte_stream_t *first_byte_stream;
+  svn_packed__byte_stream_t *first_byte_stream;
 
   /* Last top-level byte sequence stream, if any.  NULL otherwise. */
-  svn__packed_byte_stream_t *last_byte_stream;
+  svn_packed__byte_stream_t *last_byte_stream;
 
   /* Number of top-level byte sequence streams. */
   apr_size_t byte_stream_count;
@@ -139,24 +139,24 @@ struct svn__packed_data_root_t
 
 /* Write access. */
 
-svn__packed_data_root_t *
-svn__packed_data_create_root(apr_pool_t *pool)
+svn_packed__data_root_t *
+svn_packed__data_create_root(apr_pool_t *pool)
 {
-  svn__packed_data_root_t *root = apr_pcalloc(pool, sizeof(*root));
+  svn_packed__data_root_t *root = apr_pcalloc(pool, sizeof(*root));
   root->pool = pool;
   
   return root;
 }
 
-svn__packed_int_stream_t *
-svn__packed_create_int_stream(svn__packed_data_root_t *root,
+svn_packed__int_stream_t *
+svn_packed__create_int_stream(svn_packed__data_root_t *root,
                               svn_boolean_t diff,
                               svn_boolean_t signed_ints)
 {
   /* allocate and initialize the stream node */
   packed_int_private_t *private_data
     = apr_pcalloc(root->pool, sizeof(*private_data));
-  svn__packed_int_stream_t *stream
+  svn_packed__int_stream_t *stream
     = apr_palloc(root->pool, sizeof(*stream));
 
   private_data->diff = diff;
@@ -186,8 +186,8 @@ svn__packed_create_int_stream(svn__packed_data_root_t *root,
   return stream;
 }
 
-svn__packed_int_stream_t *
-svn__packed_create_int_substream(svn__packed_int_stream_t *parent,
+svn_packed__int_stream_t *
+svn_packed__create_int_substream(svn_packed__int_stream_t *parent,
                                  svn_boolean_t diff,
                                  svn_boolean_t signed_ints)
 {
@@ -196,7 +196,7 @@ svn__packed_create_int_substream(svn__packed_int_stream_t *parent,
   /* allocate and initialize the stream node */
   packed_int_private_t *private_data
     = apr_pcalloc(parent_private->pool, sizeof(*private_data));
-  svn__packed_int_stream_t *stream
+  svn_packed__int_stream_t *stream
     = apr_palloc(parent_private->pool, sizeof(*stream));
 
   private_data->diff = diff;
@@ -231,10 +231,10 @@ svn__packed_create_int_substream(svn__packed_int_stream_t *parent,
 /* Returns a new top-level byte sequence stream for ROOT but does not
  * initialize the LENGTH_STREAM member.
  */
-static svn__packed_byte_stream_t *
-create_bytes_stream_body(svn__packed_data_root_t *root)
+static svn_packed__byte_stream_t *
+create_bytes_stream_body(svn_packed__data_root_t *root)
 {
-  svn__packed_byte_stream_t *stream
+  svn_packed__byte_stream_t *stream
     = apr_pcalloc(root->pool, sizeof(*stream));
 
   stream->packed = svn_stringbuf_create_empty(root->pool);
@@ -250,14 +250,14 @@ create_bytes_stream_body(svn__packed_data_root_t *root)
   return stream;
 }
 
-svn__packed_byte_stream_t *
-svn__packed_create_bytes_stream(svn__packed_data_root_t *root)
+svn_packed__byte_stream_t *
+svn_packed__create_bytes_stream(svn_packed__data_root_t *root)
 {
-  svn__packed_byte_stream_t *stream
+  svn_packed__byte_stream_t *stream
     = create_bytes_stream_body(root);
 
   stream->lengths_stream_index = root->int_stream_count;
-  stream->lengths_stream = svn__packed_create_int_stream(root, FALSE, FALSE);
+  stream->lengths_stream = svn_packed__create_int_stream(root, FALSE, FALSE);
 
   return stream;
 }
@@ -265,10 +265,10 @@ svn__packed_create_bytes_stream(svn__packed_data_root_t *root)
 /* Returns a new sub-stream for PARENT but does not initialize the
  * LENGTH_STREAM member.
  */
-static svn__packed_byte_stream_t *
-packed_data_create_bytes_substream_body(svn__packed_byte_stream_t *parent)
+static svn_packed__byte_stream_t *
+packed_data_create_bytes_substream_body(svn_packed__byte_stream_t *parent)
 {
-  svn__packed_byte_stream_t *stream
+  svn_packed__byte_stream_t *stream
     = apr_pcalloc(parent->pool, sizeof(*stream));
 
   stream->packed = svn_stringbuf_create_empty(parent->pool);
@@ -284,44 +284,44 @@ packed_data_create_bytes_substream_body(svn__packed_byte_stream_t *parent)
   return stream;
 }
 
-svn__packed_byte_stream_t *
-svn__packed_create_bytes_substream(svn__packed_byte_stream_t *parent)
+svn_packed__byte_stream_t *
+svn_packed__create_bytes_substream(svn_packed__byte_stream_t *parent)
 {
   packed_int_private_t *parent_length_private
     = parent->lengths_stream->private_data;
-  svn__packed_byte_stream_t *stream
+  svn_packed__byte_stream_t *stream
     = packed_data_create_bytes_substream_body(parent);
 
   stream->lengths_stream_index = parent_length_private->substream_count;
   stream->lengths_stream
-    = svn__packed_create_int_substream(parent->lengths_stream,
+    = svn_packed__create_int_substream(parent->lengths_stream,
                                             FALSE, FALSE);
 
   return stream;
 }
 
 void
-svn__packed_add_uint(svn__packed_int_stream_t *stream,
+svn_packed__add_uint(svn_packed__int_stream_t *stream,
                      apr_uint64_t value)
 {
   stream->buffer[stream->buffer_used] = value;
   if (++stream->buffer_used == SVN__PACKED_DATA_BUFFER_SIZE)
-    svn__packed_data_flush_buffer(stream);
+    svn_packed__data_flush_buffer(stream);
 }
 
 void
-svn__packed_add_int(svn__packed_int_stream_t *stream,
+svn_packed__add_int(svn_packed__int_stream_t *stream,
                     apr_int64_t value)
 {
-  svn__packed_add_uint(stream, (apr_uint64_t)value);
+  svn_packed__add_uint(stream, (apr_uint64_t)value);
 }
 
 void
-svn__packed_add_bytes(svn__packed_byte_stream_t *stream,
+svn_packed__add_bytes(svn_packed__byte_stream_t *stream,
                       const char *data,
                       apr_size_t len)
 {
-  svn__packed_add_uint(stream->lengths_stream, len);
+  svn_packed__add_uint(stream->lengths_stream, len);
   svn_stringbuf_appendbytes(stream->packed, data, len);
 }
 
@@ -343,7 +343,7 @@ write_packed_uint_body(unsigned char *buffer, apr_uint64_t value)
 }
 
 void
-svn__packed_data_flush_buffer(svn__packed_int_stream_t *stream)
+svn_packed__data_flush_buffer(svn_packed__int_stream_t *stream)
 {
   packed_int_private_t *private_data = stream->private_data;
   apr_size_t i;
@@ -355,7 +355,7 @@ svn__packed_data_flush_buffer(svn__packed_int_stream_t *stream)
         packed_int_private_t *current_private_data
           = private_data->current_substream->private_data;
 
-        svn__packed_add_uint(private_data->current_substream,
+        svn_packed__add_uint(private_data->current_substream,
                              stream->buffer[i]);
         private_data->current_substream = current_private_data->next;
       }
@@ -437,7 +437,7 @@ write_packed_uint(svn_stringbuf_t* packed, apr_uint64_t value)
  */
 static void
 write_int_stream_structure(svn_stringbuf_t* tree_struct,
-                           svn__packed_int_stream_t* stream)
+                           svn_packed__int_stream_t* stream)
 {
   while (stream)
     {
@@ -448,7 +448,7 @@ write_int_stream_structure(svn_stringbuf_t* tree_struct,
                                    + (private_data->is_signed ? 2 : 0));
 
       /* store item count and length their of packed representation */
-      svn__packed_data_flush_buffer(stream);
+      svn_packed__data_flush_buffer(stream);
 
       write_packed_uint(tree_struct, private_data->item_count);
       write_packed_uint(tree_struct, private_data->packed
@@ -468,7 +468,7 @@ write_int_stream_structure(svn_stringbuf_t* tree_struct,
  */
 static void
 write_byte_stream_structure(svn_stringbuf_t* tree_struct,
-                            svn__packed_byte_stream_t* stream)
+                            svn_packed__byte_stream_t* stream)
 {
   /* for this and all siblings */
   for (; stream; stream = stream->next)
@@ -502,7 +502,7 @@ write_stream_uint(svn_stream_t *stream,
  * calling this function.
  */
 static apr_size_t
-packed_int_stream_length(svn__packed_int_stream_t *stream)
+packed_int_stream_length(svn_packed__int_stream_t *stream)
 {
   packed_int_private_t *private_data = stream->private_data;
   apr_size_t result = private_data->packed ? private_data->packed->len : 0;
@@ -522,7 +522,7 @@ packed_int_stream_length(svn__packed_int_stream_t *stream)
  * and all sub-streams.
  */
 static apr_size_t
-packed_byte_stream_length(svn__packed_byte_stream_t *stream)
+packed_byte_stream_length(svn_packed__byte_stream_t *stream)
 {
   apr_size_t result = stream->packed->len;
 
@@ -536,7 +536,7 @@ packed_byte_stream_length(svn__packed_byte_stream_t *stream)
  * COMBINED.
  */
 static void
-append_int_stream(svn__packed_int_stream_t *stream,
+append_int_stream(svn_packed__int_stream_t *stream,
                   svn_stringbuf_t *combined)
 {
   packed_int_private_t *private_data = stream->private_data;
@@ -556,7 +556,7 @@ append_int_stream(svn__packed_int_stream_t *stream,
  * to COMBINED.
  */
 static void
-append_byte_stream(svn__packed_byte_stream_t *stream,
+append_byte_stream(svn_packed__byte_stream_t *stream,
                    svn_stringbuf_t *combined)
 {
   svn_stringbuf_appendstr(combined, stream->packed);
@@ -588,12 +588,12 @@ write_stream_data(svn_stream_t *stream,
 }
 
 svn_error_t *
-svn__packed_data_write(svn_stream_t *stream,
-                       svn__packed_data_root_t *root,
+svn_packed__data_write(svn_stream_t *stream,
+                       svn_packed__data_root_t *root,
                        apr_pool_t *scratch_pool)
 {
-  svn__packed_int_stream_t *int_stream;
-  svn__packed_byte_stream_t *byte_stream;
+  svn_packed__int_stream_t *int_stream;
+  svn_packed__byte_stream_t *byte_stream;
 
   /* re-usable data buffers */
   svn_stringbuf_t *compressed
@@ -644,79 +644,79 @@ svn__packed_data_write(svn_stream_t *stream,
 
 /* Read access. */
 
-svn__packed_int_stream_t *
-svn__packed_first_int_stream(svn__packed_data_root_t *root)
+svn_packed__int_stream_t *
+svn_packed__first_int_stream(svn_packed__data_root_t *root)
 {
   return root->first_int_stream;
 }
 
-svn__packed_byte_stream_t *
-svn__packed_first_byte_stream(svn__packed_data_root_t *root)
+svn_packed__byte_stream_t *
+svn_packed__first_byte_stream(svn_packed__data_root_t *root)
 {
   return root->first_byte_stream;
 }
 
-svn__packed_int_stream_t *
-svn__packed_next_int_stream(svn__packed_int_stream_t *stream)
+svn_packed__int_stream_t *
+svn_packed__next_int_stream(svn_packed__int_stream_t *stream)
 {
   packed_int_private_t *private_data = stream->private_data;
   return private_data->is_last ? NULL : private_data->next;
 }
 
-svn__packed_byte_stream_t *
-svn__packed_next_byte_stream(svn__packed_byte_stream_t *stream)
+svn_packed__byte_stream_t *
+svn_packed__next_byte_stream(svn_packed__byte_stream_t *stream)
 {
   return stream->next;
 }
 
-svn__packed_int_stream_t *
-svn__packed_first_int_substream(svn__packed_int_stream_t *stream)
+svn_packed__int_stream_t *
+svn_packed__first_int_substream(svn_packed__int_stream_t *stream)
 {
   packed_int_private_t *private_data = stream->private_data;
   return private_data->first_substream;
 }
 
-svn__packed_byte_stream_t *
-svn__packed_first_byte_substream(svn__packed_byte_stream_t *stream)
+svn_packed__byte_stream_t *
+svn_packed__first_byte_substream(svn_packed__byte_stream_t *stream)
 {
   return stream->first_substream;
 }
 
 apr_size_t
-svn__packed_int_count(svn__packed_int_stream_t *stream)
+svn_packed__int_count(svn_packed__int_stream_t *stream)
 {
   packed_int_private_t *private_data = stream->private_data;
   return private_data->item_count + stream->buffer_used;
 }
 
 apr_size_t
-svn__packed_byte_count(svn__packed_byte_stream_t *stream)
+svn_packed__byte_count(svn_packed__byte_stream_t *stream)
 {
   return stream->packed->len;
 }
 
 apr_uint64_t 
-svn__packed_get_uint(svn__packed_int_stream_t *stream)
+svn_packed__get_uint(svn_packed__int_stream_t *stream)
 {
   if (stream->buffer_used == 0)
-    svn__packed_data_fill_buffer(stream);
+    svn_packed__data_fill_buffer(stream);
 
   return stream->buffer_used ? stream->buffer[--stream->buffer_used] : 0;
 }
 
 apr_int64_t
-svn__packed_get_int(svn__packed_int_stream_t *stream,
+svn_packed__get_int(svn_packed__int_stream_t *stream,
                          apr_int64_t value)
 {
-  return (apr_int64_t)svn__packed_get_uint(stream);
+  return (apr_int64_t)svn_packed__get_uint(stream);
 }
 
 const char *
-svn__packed_get_bytes(svn__packed_byte_stream_t *stream,
+svn_packed__get_bytes(svn_packed__byte_stream_t *stream,
                       apr_size_t *len)
 {
   const char *result = stream->packed->data;
-  apr_size_t count = svn__packed_get_uint(stream->lengths_stream);
+  apr_size_t count = svn_packed__get_uint(stream->lengths_stream);
 
   if (count > stream->packed->len)
     count = stream->packed->len;
@@ -802,7 +802,7 @@ read_stream_uint(svn_stream_t *stream, apr_uint64_t *result)
 }
 
 void
-svn__packed_data_fill_buffer(svn__packed_int_stream_t *stream)
+svn_packed__data_fill_buffer(svn_packed__int_stream_t *stream)
 {
   packed_int_private_t *private_data = stream->private_data;
   apr_size_t i;
@@ -821,7 +821,7 @@ svn__packed_data_fill_buffer(svn__packed_int_stream_t *stream)
         packed_int_private_t *current_private_data
           = private_data->current_substream->private_data;
         stream->buffer[i-1]
-          = svn__packed_get_uint(private_data->current_substream);
+          = svn_packed__get_uint(private_data->current_substream);
         private_data->current_substream = current_private_data->next;
       }
   else
@@ -910,7 +910,7 @@ read_packed_uint(svn_stringbuf_t *packed)
  */
 static void
 read_int_stream_structure(svn_stringbuf_t *tree_struct,
-                          svn__packed_int_stream_t *stream)
+                          svn_packed__int_stream_t *stream)
 {
   packed_int_private_t *private_data = stream->private_data;
   apr_uint64_t value = read_packed_uint(tree_struct);
@@ -935,7 +935,7 @@ read_int_stream_structure(svn_stringbuf_t *tree_struct,
   /* add sub-streams and read their config, too */
   for (i = 0; i < substream_count; ++i)
     read_int_stream_structure(tree_struct,
-                              svn__packed_create_int_substream(stream,
+                              svn_packed__create_int_substream(stream,
                                                                FALSE,
                                                                FALSE));
 }
@@ -946,8 +946,8 @@ read_int_stream_structure(svn_stringbuf_t *tree_struct,
  */
 static void
 read_byte_stream_structure(svn_stringbuf_t *tree_struct,
-                           svn__packed_byte_stream_t *stream,
-                           svn__packed_int_stream_t *first_int_stream)
+                           svn_packed__byte_stream_t *stream,
+                           svn_packed__int_stream_t *first_int_stream)
 {
   /* read parameters from the TREE_STRUCT buffer */
   apr_size_t substream_count = (apr_size_t)read_packed_uint(tree_struct);
@@ -972,7 +972,7 @@ read_byte_stream_structure(svn_stringbuf_t *tree_struct,
   /* reconstruct sub-streams */
   for (i = 0; i < substream_count; ++i)
     {
-      svn__packed_byte_stream_t *substream
+      svn_packed__byte_stream_t *substream
         = packed_data_create_bytes_substream_body(stream);
       packed_int_private_t *length_private
         = stream->lengths_stream->private_data;
@@ -1013,7 +1013,7 @@ read_stream_data(svn_stream_t *stream,
  * continue with the sub-streams.
  */
 static void
-unflatten_int_stream(svn__packed_int_stream_t *stream,
+unflatten_int_stream(svn_packed__int_stream_t *stream,
                      svn_stringbuf_t *combined,
                      apr_size_t *offset)
 {
@@ -1042,7 +1042,7 @@ unflatten_int_stream(svn__packed_int_stream_t *stream,
  * continue with the sub-streams.
  */
 static void
-unflatten_byte_stream(svn__packed_byte_stream_t *stream,
+unflatten_byte_stream(svn_packed__byte_stream_t *stream,
                       svn_stringbuf_t *combined,
                       apr_size_t *offset)
 {
@@ -1057,7 +1057,7 @@ unflatten_byte_stream(svn__packed_byte_stream_t *stream,
 }
 
 svn_error_t *
-svn__packed_data_read(svn__packed_data_root_t **root_p,
+svn_packed__data_read(svn_packed__data_root_t **root_p,
                       svn_stream_t *stream,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
@@ -1065,9 +1065,9 @@ svn__packed_data_read(svn__packed_data_root_t **root_p,
   apr_size_t i;
   apr_size_t count;
   
-  svn__packed_int_stream_t *int_stream;
-  svn__packed_byte_stream_t *byte_stream;
-  svn__packed_data_root_t *root = svn__packed_data_create_root(result_pool);
+  svn_packed__int_stream_t *int_stream;
+  svn_packed__byte_stream_t *byte_stream;
+  svn_packed__data_root_t *root = svn_packed__data_create_root(result_pool);
   
   svn_stringbuf_t *compressed
     = svn_stringbuf_create_ensure(1024, scratch_pool);
@@ -1092,7 +1092,7 @@ svn__packed_data_read(svn__packed_data_root_t **root_p,
   count = read_packed_uint(tree_struct);
   for (i = 0; i < count; ++i)
     read_int_stream_structure(tree_struct,
-                              svn__packed_create_int_stream(root, FALSE,
+                              svn_packed__create_int_stream(root, FALSE,
                                                                  FALSE));
 
   count = read_packed_uint(tree_struct);
