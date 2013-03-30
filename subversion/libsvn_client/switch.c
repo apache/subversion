@@ -29,6 +29,7 @@
 
 #include "svn_client.h"
 #include "svn_error.h"
+#include "svn_hash.h"
 #include "svn_time.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
@@ -55,8 +56,35 @@
 */
 
 
+/* A conflict callback that simply records the conflicted path in BATON.
+
+   Implements svn_wc_conflict_resolver_func2_t.
+*/
+static svn_error_t *
+record_conflict(svn_wc_conflict_result_t **result,
+                const svn_wc_conflict_description2_t *description,
+                void *baton,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  apr_hash_t *conflicted_paths = baton;
+
+  svn_hash_sets(conflicted_paths,
+                apr_pstrdup(apr_hash_pool_get(conflicted_paths),
+                            description->local_abspath), "");
+  *result = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,
+                                          NULL, result_pool);
+  return SVN_NO_ERROR;
+}
+
+/* ...
+
+   Add the paths of any conflict victims to CONFLICTED_PATHS, if that
+   is not null.
+*/
 static svn_error_t *
 switch_internal(svn_revnum_t *result_rev,
+                apr_hash_t *conflicted_paths,
                 const char *local_abspath,
                 const char *anchor_abspath,
                 const char *switch_url,
@@ -90,10 +118,9 @@ switch_internal(svn_revnum_t *result_rev,
   apr_array_header_t *preserved_exts;
   svn_boolean_t server_supports_depth;
   struct svn_client__dirent_fetcher_baton_t dfb;
-  svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
-                                                 SVN_CONFIG_CATEGORY_CONFIG,
-                                                 APR_HASH_KEY_STRING)
-                                  : NULL;
+  svn_config_t *cfg = ctx->config
+                      ? svn_hash_gets(ctx->config, SVN_CONFIG_CATEGORY_CONFIG)
+                      : NULL;
 
   /* An unknown depth can't be sticky. */
   if (depth == svn_depth_unknown)
@@ -269,8 +296,7 @@ switch_internal(svn_revnum_t *result_rev,
           SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props,
                                              "", switch_loc->rev, pool,
                                              pool));
-          apr_hash_set(wcroot_iprops, local_abspath, APR_HASH_KEY_STRING,
-                       inherited_props);
+          svn_hash_sets(wcroot_iprops, local_abspath, inherited_props);
         }
     }
 
@@ -293,7 +319,8 @@ switch_internal(svn_revnum_t *result_rev,
                                     server_supports_depth,
                                     diff3_cmd, preserved_exts,
                                     svn_client__dirent_fetcher, &dfb,
-                                    ctx->conflict_func2, ctx->conflict_baton2,
+                                    conflicted_paths ? record_conflict : NULL,
+                                    conflicted_paths,
                                     NULL, NULL,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->notify_func2, ctx->notify_baton2,
@@ -398,6 +425,8 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   const char *local_abspath, *anchor_abspath;
   svn_boolean_t acquired_lock;
   svn_error_t *err, *err1, *err2;
+  apr_hash_t *conflicted_paths
+    = ctx->conflict_func2 ? apr_hash_make(pool) : NULL;
 
   SVN_ERR_ASSERT(path);
 
@@ -414,12 +443,20 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   acquired_lock = (err == SVN_NO_ERROR);
   svn_error_clear(err);
 
-  err1 = switch_internal(result_rev, local_abspath, anchor_abspath,
+  err1 = switch_internal(result_rev, conflicted_paths,
+                         local_abspath, anchor_abspath,
                          switch_url, peg_revision, revision,
                          depth, depth_is_sticky,
                          ignore_externals,
                          allow_unver_obstructions, ignore_ancestry,
                          timestamp_sleep, ctx, pool);
+
+  /* Give the conflict resolver callback the opportunity to
+   * resolve any conflicts that were raised. */
+  if (! err1 && ctx->conflict_func2)
+    {
+      err1 = svn_client__resolve_conflicts(NULL, conflicted_paths, ctx, pool);
+    }
 
   if (acquired_lock)
     err2 = svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath, pool);

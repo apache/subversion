@@ -24,6 +24,7 @@
 #include <apr_tables.h>
 #include <apr_xml.h>
 
+#include "svn_hash.h"
 #include "svn_mergeinfo.h"
 #include "svn_path.h"
 #include "svn_ra.h"
@@ -93,8 +94,8 @@ mergeinfo_closed(svn_ra_serf__xml_estate_t *xes,
   if (leaving_state == MERGEINFO_ITEM)
     {
       /* Placed here from the child elements.  */
-      const char *path = apr_hash_get(attrs, "path", APR_HASH_KEY_STRING);
-      const char *info = apr_hash_get(attrs, "info", APR_HASH_KEY_STRING);
+      const char *path = svn_hash_gets(attrs, "path");
+      const char *info = svn_hash_gets(attrs, "info");
 
       if (path != NULL && info != NULL)
         {
@@ -108,10 +109,9 @@ mergeinfo_closed(svn_ra_serf__xml_estate_t *xes,
           SVN_ERR(svn_mergeinfo_parse(&path_mergeinfo, info,
                                       mergeinfo_ctx->pool));
 
-          apr_hash_set(mergeinfo_ctx->result_catalog,
-                       apr_pstrdup(mergeinfo_ctx->pool, path),
-                       APR_HASH_KEY_STRING,
-                       path_mergeinfo);
+          svn_hash_sets(mergeinfo_ctx->result_catalog,
+                        apr_pstrdup(mergeinfo_ctx->pool, path),
+                        path_mergeinfo);
         }
     }
   else

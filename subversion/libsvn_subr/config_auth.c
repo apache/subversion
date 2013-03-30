@@ -128,8 +128,8 @@ svn_config_write_auth_data(apr_hash_t *hash,
 
   /* Add the realmstring to the hash, so programs (or users) can
      verify exactly which set of credentials this file holds.  */
-  apr_hash_set(hash, SVN_CONFIG_REALMSTRING_KEY, APR_HASH_KEY_STRING,
-               svn_string_create(realmstring, pool));
+  svn_hash_sets(hash, SVN_CONFIG_REALMSTRING_KEY,
+                svn_string_create(realmstring, pool));
 
   SVN_ERR_W(svn_io_file_open(&authfile, auth_path,
                              (APR_WRITE | APR_CREATE | APR_TRUNCATE
@@ -146,7 +146,7 @@ svn_config_write_auth_data(apr_hash_t *hash,
 
   /* To be nice, remove the realmstring from the hash again, just in
      case the caller wants their hash unchanged. */
-  apr_hash_set(hash, SVN_CONFIG_REALMSTRING_KEY, APR_HASH_KEY_STRING, NULL);
+  svn_hash_sets(hash, SVN_CONFIG_REALMSTRING_KEY, NULL);
 
   return SVN_NO_ERROR;
 }

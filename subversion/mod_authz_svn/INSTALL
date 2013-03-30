@@ -171,7 +171,7 @@ II.   Configuration
            AuthUserFile /path/to/htpasswd/file
 
            AuthzSVNAccessFile /path/to/access/file
-           # Implicit Satisfy All
+           # implicit Satisfy All
            Require valid-user
          </Location>
          

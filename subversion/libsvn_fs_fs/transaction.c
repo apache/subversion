@@ -1246,7 +1246,7 @@ svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
     {
       svn_prop_t *prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
 
-      apr_hash_set(txn_prop, prop->name, APR_HASH_KEY_STRING, prop->value);
+      svn_hash_sets(txn_prop, prop->name, prop->value);
     }
 
   /* Create a new version of the file and write out the new props. */
@@ -1606,7 +1606,7 @@ svn_fs_fs__add_change(svn_fs_t *fs,
   change->copyfrom_rev = copyfrom_rev;
   change->copyfrom_path = apr_pstrdup(pool, copyfrom_path);
 
-  apr_hash_set(changes, path, APR_HASH_KEY_STRING, change);
+  svn_hash_sets(changes, path, change);
   SVN_ERR(svn_fs_fs__write_changes(svn_stream_from_aprfile2(file, TRUE, pool),
                                    fs, changes, FALSE, pool));
 
@@ -2961,6 +2961,51 @@ write_final_changed_path_info(apr_off_t *offset_p,
   return SVN_NO_ERROR;
 }
 
+/* Open a new svn_fs_t handle to FS, set that handle's concept of "current
+   youngest revision" to NEW_REV, and call svn_fs_fs__verify_root() on
+   NEW_REV's revision root.
+
+   Intended to be called as the very last step in a commit before 'current'
+   is bumped.  This implies that we are holding the write lock. */
+static svn_error_t *
+verify_as_revision_before_current_plus_plus(svn_fs_t *fs,
+                                            svn_revnum_t new_rev,
+                                            apr_pool_t *pool)
+{
+#ifdef SVN_DEBUG
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_fs_t *ft; /* fs++ == ft */
+  svn_fs_root_t *root;
+  fs_fs_data_t *ft_ffd;
+  apr_hash_t *fs_config;
+
+  SVN_ERR_ASSERT(ffd->svn_fs_open_);
+
+  /* make sure FT does not simply return data cached by other instances
+   * but actually retrieves it from disk at least once.
+   */
+  fs_config = apr_hash_make(pool);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
+                           svn_uuid_generate(pool));
+  SVN_ERR(ffd->svn_fs_open_(&ft, fs->path,
+                            fs_config,
+                            pool));
+  ft_ffd = ft->fsap_data;
+  /* Don't let FT consult rep-cache.db, either. */
+  ft_ffd->rep_sharing_allowed = FALSE;
+
+  /* Time travel! */
+  ft_ffd->youngest_rev_cache = new_rev;
+
+  SVN_ERR(svn_fs_fs__revision_root(&root, ft, new_rev, pool));
+  SVN_ERR_ASSERT(root->is_txn_root == FALSE && root->rev == new_rev);
+  SVN_ERR_ASSERT(ft_ffd->youngest_rev_cache == new_rev);
+  SVN_ERR(svn_fs_fs__verify_root(root, pool));
+#endif /* SVN_DEBUG */
+
+  return SVN_NO_ERROR;
+}
+
 /* Update the 'current' file to hold the correct next node and copy_ids
    from transaction TXN_ID in filesystem FS.  The current revision is
    set to REV.  Perform temporary allocations in POOL. */
@@ -3034,7 +3079,7 @@ verify_locks(svn_fs_t *fs,
         continue;
 
       /* Fetch the change associated with our path.  */
-      change = apr_hash_get(changes, path, APR_HASH_KEY_STRING);
+      change = svn_hash_gets(changes, path);
 
       /* What does it mean to succeed at lock verification for a given
          path?  For an existing file or directory getting modified
@@ -3171,14 +3216,13 @@ commit_body(void *baton, apr_pool_t *pool)
   txnprop_list = apr_array_make(pool, 3, sizeof(svn_prop_t));
   prop.value = NULL;
 
-  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_OOD, APR_HASH_KEY_STRING))
+  if (svn_hash_gets(txnprops, SVN_FS__PROP_TXN_CHECK_OOD))
     {
       prop.name = SVN_FS__PROP_TXN_CHECK_OOD;
       APR_ARRAY_PUSH(txnprop_list, svn_prop_t) = prop;
     }
 
-  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS,
-                   APR_HASH_KEY_STRING))
+  if (svn_hash_gets(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS))
     {
       prop.name = SVN_FS__PROP_TXN_CHECK_LOCKS;
       APR_ARRAY_PUSH(txnprop_list, svn_prop_t) = prop;
@@ -3269,6 +3313,7 @@ commit_body(void *baton, apr_pool_t *pool)
                           old_rev_filename, pool));
 
   /* Update the 'current' file. */
+  SVN_ERR(verify_as_revision_before_current_plus_plus(cb->fs, new_rev, pool));
   SVN_ERR(write_final_current(cb->fs, txn_id, new_rev, start_node_id,
                               start_copy_id, pool));
 
@@ -3521,7 +3566,7 @@ svn_fs_fs__txn_prop(svn_string_t **value_p,
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
   SVN_ERR(svn_fs_fs__txn_proplist(&table, txn, pool));
 
-  *value_p = apr_hash_get(table, propname, APR_HASH_KEY_STRING);
+  *value_p = svn_hash_gets(table, propname);
 
   return SVN_NO_ERROR;
 }

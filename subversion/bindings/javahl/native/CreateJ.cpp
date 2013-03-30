@@ -430,7 +430,7 @@ CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
 
   jclass clazzCP = env->FindClass(JAVA_PACKAGE"/types/ChangePath");
   if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN(SVN_NO_ERROR);
+    POP_AND_RETURN_NULL;
 
   static jmethodID midCP = 0;
   if (midCP == 0)
@@ -443,7 +443,7 @@ CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
                                "L"JAVA_PACKAGE"/types/Tristate;"
                                "L"JAVA_PACKAGE"/types/Tristate;)V");
       if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN(SVN_NO_ERROR);
+        POP_AND_RETURN_NULL;
     }
 
   jstring jpath = JNIUtil::makeJString(path);
@@ -507,6 +507,7 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
                              "ZZZZZL"JAVA_PACKAGE"/types/Lock;"
                              "L"JAVA_PACKAGE"/types/Lock;"
                              "JJL"JAVA_PACKAGE"/types/NodeKind;"
+                             "Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
@@ -526,6 +527,8 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
   jstring jLastCommitAuthor = NULL;
   jobject jLocalLock = NULL;
   jstring jChangelist = NULL;
+  jstring jMovedFromAbspath = NULL;
+  jstring jMovedToAbspath = NULL;
 
   enum svn_wc_status_kind text_status = status->node_status;
 
@@ -597,6 +600,20 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
         POP_AND_RETURN_NULL;
     }
 
+  if (status->moved_from_abspath)
+    {
+      jMovedFromAbspath = JNIUtil::makeJString(status->moved_from_abspath);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+    }
+
+  if (status->moved_to_abspath)
+    {
+      jMovedToAbspath = JNIUtil::makeJString(status->moved_to_abspath);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+    }
+
   jobject ret = env->NewObject(clazz, mid, jPath, jUrl, jNodeKind, jRevision,
                                jLastChangedRevision, jLastChangedDate,
                                jLastCommitAuthor, jTextType, jPropType,
@@ -605,7 +622,8 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
                                jIsSwitched, jIsFileExternal, jLocalLock,
                                jReposLock,
                                jOODLastCmtRevision, jOODLastCmtDate,
-                               jOODKind, jOODLastCmtAuthor, jChangelist);
+                               jOODKind, jOODLastCmtAuthor, jChangelist,
+                               jMovedFromAbspath, jMovedToAbspath);
 
   return env->PopLocalFrame(ret);
 }
@@ -712,7 +730,13 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
   jlong jhunkModifiedStart = wcNotify->hunk_modified_start;
   jlong jhunkModifiedLength = wcNotify->hunk_modified_length;
   jlong jhunkMatchedLine = wcNotify->hunk_matched_line;
-  jint jhunkFuzz = wcNotify->hunk_fuzz;
+  jint jhunkFuzz = static_cast<jint>(wcNotify->hunk_fuzz);
+  if (jhunkFuzz != wcNotify->hunk_fuzz)
+    {
+      env->ThrowNew(env->FindClass("java.lang.ArithmeticException"),
+                    "Overflow converting C svn_linenum_t to Java int");
+      POP_AND_RETURN_NULL;
+    }
 
   // call the Java method
   jobject jInfo = env->NewObject(clazz, midCT, jPath, jAction,

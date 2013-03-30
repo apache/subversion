@@ -24,6 +24,7 @@
 
 #include <apr_hash.h>
 
+#include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_delta.h"
 #include "svn_fs.h"
@@ -506,8 +507,7 @@ delta_proplists(struct context *c,
                                            pool));
 
           /* Transmit the committed-date. */
-          committed_date = apr_hash_get(r_props, SVN_PROP_REVISION_DATE,
-                                        APR_HASH_KEY_STRING);
+          committed_date = svn_hash_gets(r_props, SVN_PROP_REVISION_DATE);
           if (committed_date || source_path)
             {
               SVN_ERR(change_fn(c, object, SVN_PROP_ENTRY_COMMITTED_DATE,
@@ -515,8 +515,7 @@ delta_proplists(struct context *c,
             }
 
           /* Transmit the last-author. */
-          last_author = apr_hash_get(r_props, SVN_PROP_REVISION_AUTHOR,
-                                     APR_HASH_KEY_STRING);
+          last_author = svn_hash_gets(r_props, SVN_PROP_REVISION_AUTHOR);
           if (last_author || source_path)
             {
               SVN_ERR(change_fn(c, object, SVN_PROP_ENTRY_LAST_AUTHOR,
@@ -1020,7 +1019,7 @@ delta_dirs(struct context *c,
             }
 
           /*  Remove the entry from the source_hash. */
-          apr_hash_set(s_entries, key, APR_HASH_KEY_STRING, NULL);
+          svn_hash_sets(s_entries, key, NULL);
         }
       else
         {

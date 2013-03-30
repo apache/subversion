@@ -27,6 +27,7 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
+#include "svn_hash.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
@@ -239,11 +240,10 @@ run_hook_cmd(svn_string_t **result,
    * whether a default environment is defined. */
   if (hooks_env)
     {
-      hook_env = apr_hash_get(hooks_env, name, APR_HASH_KEY_STRING);
+      hook_env = svn_hash_gets(hooks_env, name);
       if (hook_env == NULL)
-        hook_env = apr_hash_get(hooks_env,
-                                SVN_REPOS__HOOKS_ENV_DEFAULT_SECTION,
-                                APR_HASH_KEY_STRING);
+        hook_env = svn_hash_gets(hooks_env,
+                                 SVN_REPOS__HOOKS_ENV_DEFAULT_SECTION);
     }
     
   err = svn_io_start_cmd3(&cmd_proc, ".", cmd, args,

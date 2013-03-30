@@ -44,6 +44,7 @@
 #include "svn_version.h"
 
 #include "private/svn_mergeinfo_private.h"
+#include "private/svn_cmdline_private.h"
 
 #ifdef _WIN32
 typedef apr_status_t (__stdcall *open_fn_t)(apr_file_t **, apr_pool_t *);
@@ -332,8 +333,7 @@ new_revision_record(void **revision_baton,
 
   header_stream = svn_stream_from_stringbuf(rb->header, pool);
 
-  rev_orig = apr_hash_get(headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER,
-                          APR_HASH_KEY_STRING);
+  rev_orig = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER);
   rb->rev_orig = SVN_STR_TO_REV(rev_orig);
 
   if (rb->pb->do_renumber_revs)
@@ -399,12 +399,11 @@ output_revision(struct revision_baton_t *rb)
       apr_hash_t *old_props = rb->props;
       rb->has_props = TRUE;
       rb->props = apr_hash_make(hash_pool);
-      apr_hash_set(rb->props, SVN_PROP_REVISION_DATE, APR_HASH_KEY_STRING,
-                   apr_hash_get(old_props, SVN_PROP_REVISION_DATE,
-                                APR_HASH_KEY_STRING));
-      apr_hash_set(rb->props, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
-                   svn_string_create(_("This is an empty revision for "
-                                       "padding."), hash_pool));
+      svn_hash_sets(rb->props, SVN_PROP_REVISION_DATE,
+                    svn_hash_gets(old_props, SVN_PROP_REVISION_DATE));
+      svn_hash_sets(rb->props, SVN_PROP_REVISION_LOG,
+                    svn_string_create(_("This is an empty revision for "
+                                        "padding."), hash_pool));
     }
 
   /* Now, "rasterize" the props to a string, and append the property
@@ -546,11 +545,8 @@ new_node_record(void **node_baton,
   nb->rb      = rev_baton;
   pb          = nb->rb->pb;
 
-  node_path = apr_hash_get(headers, SVN_REPOS_DUMPFILE_NODE_PATH,
-                           APR_HASH_KEY_STRING);
-  copyfrom_path = apr_hash_get(headers,
-                               SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
-                               APR_HASH_KEY_STRING);
+  node_path = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_NODE_PATH);
+  copyfrom_path = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH);
 
   /* Ensure that paths start with a leading '/'. */
   if (node_path[0] != '/')
@@ -565,16 +561,15 @@ new_node_record(void **node_baton,
      rest.  */
   if (nb->do_skip)
     {
-      apr_hash_set(pb->dropped_nodes,
-                   apr_pstrdup(apr_hash_pool_get(pb->dropped_nodes),
-                               node_path),
-                   APR_HASH_KEY_STRING, (void *)1);
+      svn_hash_sets(pb->dropped_nodes,
+                    apr_pstrdup(apr_hash_pool_get(pb->dropped_nodes),
+                                node_path),
+                    (void *)1);
       nb->rb->had_dropped_nodes = TRUE;
     }
   else
     {
-      tcl = apr_hash_get(headers, SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH,
-                         APR_HASH_KEY_STRING);
+      tcl = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH);
 
       /* Test if this node was copied from dropped source. */
       if (copyfrom_path &&
@@ -589,17 +584,16 @@ new_node_record(void **node_baton,
              scenario, we'll just do an add without history using the new
              contents.  */
           const char *kind;
-          kind = apr_hash_get(headers, SVN_REPOS_DUMPFILE_NODE_KIND,
-                              APR_HASH_KEY_STRING);
+          kind = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_NODE_KIND);
 
           /* If there is a Text-content-length header, and the kind is
              "file", we just fallback to an add without history. */
           if (tcl && (strcmp(kind, "file") == 0))
             {
-              apr_hash_set(headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
-                           APR_HASH_KEY_STRING, NULL);
-              apr_hash_set(headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV,
-                           APR_HASH_KEY_STRING, NULL);
+              svn_hash_sets(headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
+                            NULL);
+              svn_hash_sets(headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV,
+                            NULL);
               copyfrom_path = NULL;
             }
           /* Else, this is either a directory or a file whose contents we
@@ -825,8 +819,7 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
               range->end = revmap_end->rev;
             }
         }
-      apr_hash_set(final_mergeinfo, merge_source,
-                   APR_HASH_KEY_STRING, rangelist);
+      svn_hash_sets(final_mergeinfo, merge_source, rangelist);
     }
 
   SVN_ERR(svn_mergeinfo_sort(final_mergeinfo, subpool));
@@ -846,8 +839,9 @@ set_revision_property(void *revision_baton,
   apr_pool_t *hash_pool = apr_hash_pool_get(rb->props);
 
   rb->has_props = TRUE;
-  apr_hash_set(rb->props, apr_pstrdup(hash_pool, name),
-               APR_HASH_KEY_STRING, svn_string_dup(value, hash_pool));
+  svn_hash_sets(rb->props,
+                apr_pstrdup(hash_pool, name),
+                svn_string_dup(value, hash_pool));
   return SVN_NO_ERROR;
 }
 

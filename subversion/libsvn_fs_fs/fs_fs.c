@@ -957,7 +957,7 @@ write_revision_zero(svn_fs_t *fs)
   date.data = svn_time_to_cstring(apr_time_now(), fs->pool);
   date.len = strlen(date.data);
   proplist = apr_hash_make(fs->pool);
-  apr_hash_set(proplist, SVN_PROP_REVISION_DATE, APR_HASH_KEY_STRING, &date);
+  svn_hash_sets(proplist, SVN_PROP_REVISION_DATE, &date);
   return set_revision_proplist(fs, 0, proplist, fs->pool);
 }
 
@@ -973,20 +973,15 @@ svn_fs_fs__create(svn_fs_t *fs,
   /* See if compatibility with older versions was explicitly requested. */
   if (fs->config)
     {
-      if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
-                                   APR_HASH_KEY_STRING))
+      if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE))
         format = 1;
-      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
-                                        APR_HASH_KEY_STRING))
+      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE))
         format = 2;
-      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
-                                        APR_HASH_KEY_STRING))
+      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE))
         format = 3;
-      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE,
-                                        APR_HASH_KEY_STRING))
+      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE))
         format = 4;
-      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_9_COMPATIBLE,
-                                        APR_HASH_KEY_STRING))
+      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_9_COMPATIBLE))
         format = 6;
     }
   ffd->format = format;
@@ -1156,7 +1151,7 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
   if (node_origins)
     {
       svn_string_t *origin_id_str =
-        apr_hash_get(node_origins, node_id, APR_HASH_KEY_STRING);
+        svn_hash_gets(node_origins, node_id);
       if (origin_id_str)
         *origin_id = svn_fs_fs__id_parse(origin_id_str->data,
                                          origin_id_str->len, pool);
@@ -1263,7 +1258,7 @@ svn_fs_fs__revision_prop(svn_string_t **value_p,
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
   SVN_ERR(svn_fs_fs__revision_proplist(&table, fs, rev, pool));
 
-  *value_p = apr_hash_get(table, propname, APR_HASH_KEY_STRING);
+  *value_p = svn_hash_gets(table, propname);
 
   return SVN_NO_ERROR;
 }
@@ -1292,8 +1287,7 @@ change_rev_prop_body(void *baton, apr_pool_t *pool)
   if (cb->old_value_p)
     {
       const svn_string_t *wanted_value = *cb->old_value_p;
-      const svn_string_t *present_value = apr_hash_get(table, cb->name,
-                                                       APR_HASH_KEY_STRING);
+      const svn_string_t *present_value = svn_hash_gets(table, cb->name);
       if ((!wanted_value != !present_value)
           || (wanted_value && present_value
               && !svn_string_compare(wanted_value, present_value)))
@@ -1306,7 +1300,7 @@ change_rev_prop_body(void *baton, apr_pool_t *pool)
         }
       /* Fall through. */
     }
-  apr_hash_set(table, cb->name, APR_HASH_KEY_STRING, cb->value);
+  svn_hash_sets(table, cb->name, cb->value);
 
   return set_revision_proplist(cb->fs, cb->rev, table, pool);
 }
@@ -1445,7 +1439,7 @@ svn_fs_fs__verify(svn_fs_t *fs,
       baton->notify_func = notify_func;
       baton->notify_baton = notify_baton;
       
-      /* tell the user that we are now read to do *something* */
+      /* tell the user that we are now ready to do *something* */
       if (notify_func)
         notify_func(SVN_INVALID_REVNUM, notify_baton, baton->pool);
 
@@ -1460,28 +1454,6 @@ svn_fs_fs__verify(svn_fs_t *fs,
       /* walker resource cleanup */
       svn_pool_destroy(baton->pool);
     }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_fs_fs__verify_rev(svn_fs_t *fs,
-                      svn_revnum_t revision,
-                      apr_pool_t *pool)
-{
-  svn_fs_root_t *root;
-
-  /* Issue #4129: bogus pred-counts and minfo-cnt's on the root node-rev
-     (and elsewhere).  This code makes more thorough checks than the
-     commit-time checks in validate_root_noderev(). */
-
-  /* ### TODO: Make sure caches are disabled.
-
-     When this code is called in the library, we want to ensure we
-     use the on-disk data --- rather than some data that was read
-     in the possibly-distance past and cached since. */
-  SVN_ERR(svn_fs_fs__revision_root(&root, fs, revision, pool));
-  SVN_ERR(svn_fs_fs__verify_root(root, pool));
 
   return SVN_NO_ERROR;
 }

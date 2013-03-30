@@ -20,10 +20,8 @@
  * ====================================================================
  */
 
-#include <apr_md5.h>
-#include <apr_sha1.h>
-
 #include "svn_private_config.h"
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_sorts.h"
 #include "private/svn_string_private.h"
@@ -227,7 +225,7 @@ read_header_block(apr_hash_t **headers,
 
       /* header_str is safely in our pool, so we can use bits of it as
          key and value. */
-      apr_hash_set(*headers, name, APR_HASH_KEY_STRING, value);
+      svn_hash_sets(*headers, name, value);
     }
 
   return SVN_NO_ERROR;
@@ -382,7 +380,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
   noderev = apr_pcalloc(pool, sizeof(*noderev));
 
   /* Read the node-rev id. */
-  value = apr_hash_get(headers, HEADER_ID, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_ID);
   if (value == NULL)
       /* ### More information: filename/offset coordinates */
       return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -394,7 +392,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
   noderev_id = value; /* for error messages later */
 
   /* Read the type. */
-  value = apr_hash_get(headers, HEADER_TYPE, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_TYPE);
 
   if ((value == NULL) ||
       (   strcmp(value, SVN_FS_FS__KIND_FILE)
@@ -409,14 +407,14 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
                 : svn_node_dir;
 
   /* Read the 'count' field. */
-  value = apr_hash_get(headers, HEADER_COUNT, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_COUNT);
   if (value)
     SVN_ERR(svn_cstring_atoi(&noderev->predecessor_count, value));
   else
     noderev->predecessor_count = 0;
 
   /* Get the properties location. */
-  value = apr_hash_get(headers, HEADER_PROPS, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_PROPS);
   if (value)
     {
       SVN_ERR(read_rep_offsets(&noderev->prop_rep, value,
@@ -424,7 +422,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
     }
 
   /* Get the data location. */
-  value = apr_hash_get(headers, HEADER_TEXT, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_TEXT);
   if (value)
     {
       SVN_ERR(read_rep_offsets(&noderev->data_rep, value,
@@ -432,7 +430,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
     }
 
   /* Get the created path. */
-  value = apr_hash_get(headers, HEADER_CPATH, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_CPATH);
   if (value == NULL)
     {
       return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -445,13 +443,13 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
     }
 
   /* Get the predecessor ID. */
-  value = apr_hash_get(headers, HEADER_PRED, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_PRED);
   if (value)
     noderev->predecessor_id = svn_fs_fs__id_parse(value, strlen(value),
                                                   pool);
 
   /* Get the copyroot. */
-  value = apr_hash_get(headers, HEADER_COPYROOT, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_COPYROOT);
   if (value == NULL)
     {
       noderev->copyroot_path = apr_pstrdup(pool, noderev->created_path);
@@ -477,7 +475,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
     }
 
   /* Get the copyfrom. */
-  value = apr_hash_get(headers, HEADER_COPYFROM, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_COPYFROM);
   if (value == NULL)
     {
       noderev->copyfrom_path = NULL;
@@ -501,18 +499,18 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
     }
 
   /* Get whether this is a fresh txn root. */
-  value = apr_hash_get(headers, HEADER_FRESHTXNRT, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_FRESHTXNRT);
   noderev->is_fresh_txn_root = (value != NULL);
 
   /* Get the mergeinfo count. */
-  value = apr_hash_get(headers, HEADER_MINFO_CNT, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_MINFO_CNT);
   if (value)
     SVN_ERR(svn_cstring_atoi64(&noderev->mergeinfo_count, value));
   else
     noderev->mergeinfo_count = 0;
 
   /* Get whether *this* node has mergeinfo. */
-  value = apr_hash_get(headers, HEADER_MINFO_HERE, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_MINFO_HERE);
   noderev->has_mergeinfo = (value != NULL);
 
   *noderev_p = noderev;

@@ -224,21 +224,20 @@ typedef enum svn_ra_svn_cmd_t
   svn_ra_svn_cmd__last
 } svn_ra_svn_cmd_t;
 
-/**
- * Set the shim callbacks to be used by @a conn to @a shim_callbacks.
- *
- * @note This is a private API, external consumers should not use it.
- */
-svn_error_t *
-svn_ra_svn__set_shim_callbacks(svn_ra_svn_conn_t *conn,
-                               svn_delta_shim_callbacks_t *shim_callbacks);
-
 /** Initialize a connection structure for the given socket or
  * input/output files.
  *
  * Either @a sock or @a in_file/@a out_file must be set, not both.
  * @a compression_level specifies the desired network data compression
  * level (zlib) from 0 (no compression) to 9 (best but slowest).
+ *
+ * If @a zero_copy_limit is not 0, cached file contents smaller than the
+ * given limit may be sent directly to the network socket.  Otherwise,
+ * it will be copied into a temporary buffer before being forwarded to
+ * the network stack.  Since the zero-copy code path has to enforce strict
+ * time-outs, the receiver must be able to process @a zero_copy_limit
+ * bytes within one second.  Even temporary failure to do so may cause
+ * the server to cancel the respective operation with a time-out error.
  *
  * To reduce the overhead of checking for cancellation requests from the
  * data receiver, set @a error_check_interval to some non-zero value.
@@ -301,14 +300,17 @@ svn_boolean_t
 svn_ra_svn_has_capability(svn_ra_svn_conn_t *conn,
                           const char *capability);
 
-/** Return the data compression level to use for network transmissions
+/** Return the data compression level to use for network transmissions.
  *
  * @since New in 1.7.
  */
 int
 svn_ra_svn_compression_level(svn_ra_svn_conn_t *conn);
 
-/** Return the zero-copy data block limit to use for network transmissions
+/** Return the zero-copy data block limit to use for network
+ * transmissions.
+ *
+ * @see http://en.wikipedia.org/wiki/Zero-copy
  *
  * @since New in 1.8.
  */

@@ -1027,7 +1027,21 @@ public class BasicTests extends SVNTests
         }
         client.move(srcPaths,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    false, true, false, null, null, null);
+                    false, true, false, false, false, null, null, null);
+
+        MyStatusCallback statusCallback = new MyStatusCallback();
+        String statusPath = fileToSVNPath(new File(thisTest.getWCPath() + "/A/B"), true);
+        client.status(statusPath, Depth.infinity, false, false, false, true,
+                      null, statusCallback);
+        Status[] statusList = statusCallback.getStatusArray();
+        assertEquals(statusPath + "/F/alpha",
+                     statusList[0].getMovedToAbspath());
+        assertEquals(statusPath + "/F/beta",
+                     statusList[1].getMovedToAbspath());
+        assertEquals(statusPath + "/E/alpha",
+                     statusList[2].getMovedFromAbspath());
+        assertEquals(statusPath + "/E/beta",
+                     statusList[3].getMovedFromAbspath());
 
         // Commit the changes, and check the state of the WC.
         checkCommitRevision(thisTest,
@@ -2777,7 +2791,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * Test the {@link SVNClientInterface.diff()} APIs.
+     * Test the {@link ISVNClient.diff()} APIs.
      * @since 1.5
      */
     public void testDiff()
@@ -3012,6 +3026,132 @@ public class BasicTests extends SVNTests
 
     }
 
+    /**
+     * Test the {@link ISVNClient.diff()} with {@link DiffOptions}.
+     * @since 1.8
+     */
+    public void testDiffOptions()
+        throws SubversionException, IOException
+    {
+        OneTest thisTest = new OneTest(true);
+        File diffOutput = new File(super.localTmp, thisTest.testName);
+        final String NL = System.getProperty("line.separator");
+        final String sepLine =
+            "===================================================================" + NL;
+        final String underSepLine =
+            "___________________________________________________________________" + NL;
+        final String iotaPath = thisTest.getWCPath().replace('\\', '/') + "/iota";
+        final String wcPath = fileToSVNPath(new File(thisTest.getWCPath()),
+                false);
+        final String expectedDiffHeader =
+            "Index: iota" + NL + sepLine +
+            "--- iota\t(revision 1)" + NL +
+            "+++ iota\t(working copy)" + NL;
+
+        // make edits to iota
+        PrintWriter writer = new PrintWriter(new FileOutputStream(iotaPath));
+        writer.print("This is  the  file 'iota'.");
+        writer.flush();
+        writer.close();
+
+        try
+        {
+            final String expectedDiffOutput = expectedDiffHeader +
+                "@@ -1 +1 @@" + NL +
+                "-This is the file 'iota'." + NL +
+                "\\ No newline at end of file" + NL +
+                "+This is  the  file 'iota'." + NL +
+                "\\ No newline at end of file" + NL;
+
+            client.diff(iotaPath, Revision.BASE, iotaPath, Revision.WORKING,
+                        wcPath, new FileOutputStream(diffOutput.getPath()),
+                        Depth.infinity, null,
+                        false, false, false, false, false, false, null);
+            assertFileContentsEquals(
+                "Unexpected diff output with no options in file '" +
+                diffOutput.getPath() + '\'',
+                expectedDiffOutput, diffOutput);
+            diffOutput.delete();
+        }
+        catch (ClientException e)
+        {
+            fail(e.getMessage());
+        }
+
+        try
+        {
+            final String expectedDiffOutput = "";
+
+            client.diff(iotaPath, Revision.BASE, iotaPath, Revision.WORKING,
+                        wcPath, new FileOutputStream(diffOutput.getPath()),
+                        Depth.infinity, null,
+                        false, false, false, false, false, false,
+                        new DiffOptions(DiffOptions.Flag.IgnoreWhitespace));
+            assertFileContentsEquals(
+                "Unexpected diff output with Flag.IgnoreWhitespace in file '" +
+                diffOutput.getPath() + '\'',
+                expectedDiffOutput, diffOutput);
+            diffOutput.delete();
+        }
+        catch (ClientException e)
+        {
+            fail("Using Flag.IgnoreWhitespace: "
+                  + e.getMessage());
+        }
+
+        try
+        {
+            final String expectedDiffOutput = "";
+
+            client.diff(iotaPath, Revision.BASE, iotaPath, Revision.WORKING,
+                        wcPath, diffOutput.getPath(), Depth.infinity, null,
+                        false, false, false, false, false, false,
+                        new DiffOptions(DiffOptions.Flag.IgnoreSpaceChange));
+            assertFileContentsEquals(
+                "Unexpected diff output with Flag.IgnoreSpaceChange in file '" +
+                diffOutput.getPath() + '\'',
+                expectedDiffOutput, diffOutput);
+            diffOutput.delete();
+        }
+        catch (ClientException e)
+        {
+            fail("Using Flag.IgnoreSpaceChange: "
+                 + e.getMessage());
+        }
+
+        // make edits to iota
+        writer = new PrintWriter(new FileOutputStream(iotaPath));
+        writer.print("This is  the  file 'io ta'.");
+        writer.flush();
+        writer.close();
+
+        try
+        {
+            final String expectedDiffOutput = expectedDiffHeader +
+                "@@ -1 +1 @@" + NL +
+                "-This is the file 'iota'." + NL +
+                "\\ No newline at end of file" + NL +
+                "+This is  the  file 'io ta'." + NL +
+                "\\ No newline at end of file" + NL;
+
+            client.diff(iotaPath, Revision.BASE, iotaPath, Revision.WORKING,
+                        wcPath, diffOutput.getPath(), Depth.infinity, null,
+                        false, false, false, false, false, false,
+                        new DiffOptions(DiffOptions.Flag.IgnoreSpaceChange));
+            assertFileContentsEquals(
+                "Unexpected diff output with Flag.IgnoreSpaceChange in file '" +
+                diffOutput.getPath() + '\'',
+                expectedDiffOutput, diffOutput);
+            diffOutput.delete();
+        }
+        catch (ClientException e)
+        {
+            fail("Using Flag.IgnoreSpaceChange: "
+                 + e.getMessage());
+        }
+    }
+
+
     private void assertFileContentsEquals(String msg, String expected,
                                           File actual)
         throws IOException
@@ -3190,7 +3330,7 @@ public class BasicTests extends SVNTests
         }
         client.move(srcPaths,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    false, true, false, null, null, null);
+                    false, true, false, false, false, null, null, null);
 
         // Commit the changes, and check the state of the WC.
         checkCommitRevision(thisTest,

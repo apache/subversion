@@ -26,6 +26,7 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
@@ -512,8 +513,7 @@ authz_group_walk(svn_config_t *cfg,
         {
           /* A circular dependency between groups is a Bad Thing.  We
              don't do authz with invalid ACL files. */
-          if (apr_hash_get(checked_groups, &group_user[1],
-                           APR_HASH_KEY_STRING))
+          if (svn_hash_gets(checked_groups, &group_user[1]))
             return svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG,
                                      NULL,
                                      "Circular dependency between "
@@ -521,8 +521,7 @@ authz_group_walk(svn_config_t *cfg,
                                      &group_user[1], group);
 
           /* Add group to hash of checked groups. */
-          apr_hash_set(checked_groups, &group_user[1],
-                       APR_HASH_KEY_STRING, "");
+          svn_hash_sets(checked_groups, &group_user[1], "");
 
           /* Recurse on that group. */
           SVN_ERR(authz_group_walk(cfg, &group_user[1],
@@ -531,8 +530,7 @@ authz_group_walk(svn_config_t *cfg,
           /* Remove group from hash of checked groups, so that we don't
              incorrectly report an error if we see it again as part of
              another group. */
-          apr_hash_set(checked_groups, &group_user[1],
-                       APR_HASH_KEY_STRING, NULL);
+          svn_hash_sets(checked_groups, &group_user[1], NULL);
         }
       else if (*group_user == '&')
         {

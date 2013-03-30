@@ -42,11 +42,18 @@
 /* Return a memcache in *MEMCACHE_P for FS if it's configured to use
    memcached, or NULL otherwise.  Also, sets *FAIL_STOP to a boolean
    indicating whether cache errors should be returned to the caller or
-   just passed to the FS warning handler.  Use FS->pool for allocating
-   the memcache, and POOL for temporary allocations. */
+   just passed to the FS warning handler.
+
+   *CACHE_TXDELTAS, *CACHE_FULLTEXTS and *CACHE_REVPROPS flags will be set
+   according to FS->CONFIG.  *CACHE_NAMESPACE receives the cache prefix
+   to use.
+   
+   Use FS->pool for allocating the memcache and CACHE_NAMESPACE, and POOL
+   for temporary allocations. */
 static svn_error_t *
 read_config(svn_memcache_t **memcache_p,
             svn_boolean_t *fail_stop,
+            const char **cache_namespace,
             svn_boolean_t *cache_txdeltas,
             svn_boolean_t *cache_fulltexts,
             svn_boolean_t *cache_revprops,
@@ -57,6 +64,18 @@ read_config(svn_memcache_t **memcache_p,
 
   SVN_ERR(svn_cache__make_memcache_from_config(memcache_p, ffd->config,
                                               fs->pool));
+
+  /* No cache namespace by default.  I.e. all FS instances share the
+   * cached data.  If you specify different namespaces, the data will
+   * share / compete for the same cache memory but keys will not match
+   * across namespaces and, thus, cached data will not be shared between
+   * namespaces.
+   */
+  *cache_namespace
+    = apr_pstrdup(fs->pool,
+                  svn_hash__get_cstring(fs->config,
+                                        SVN_FS_CONFIG_FSFS_CACHE_NS,
+                                        ""));
 
   /* don't cache text deltas by default.
    * Once we reconstructed the fulltexts from the deltas,
@@ -308,15 +327,19 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   svn_boolean_t cache_txdeltas;
   svn_boolean_t cache_fulltexts;
   svn_boolean_t cache_revprops;
+  const char *cache_namespace;
 
   /* Evaluating the cache configuration. */
   SVN_ERR(read_config(&memcache,
                       &no_handler,
+                      &cache_namespace,
                       &cache_txdeltas,
                       &cache_fulltexts,
                       &cache_revprops,
                       fs,
                       pool));
+
+  prefix = apr_pstrcat(pool, "ns:", cache_namespace, ":", prefix, NULL);
 
   membuffer = svn_cache__get_global_membuffer_cache();
 

@@ -22,6 +22,7 @@
  */
 
 #include "ra_local.h"
+#include "svn_hash.h"
 #include "svn_ra.h"
 #include "svn_fs.h"
 #include "svn_delta.h"
@@ -143,8 +144,7 @@ cache_init(void *baton, apr_pool_t *pool)
   const char *memory_cache_size_str;
 
   if (config_hash)
-    config = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_CONFIG,
-                          APR_HASH_KEY_STRING);
+    config = svn_hash_gets(config_hash, SVN_CONFIG_CATEGORY_CONFIG);
   svn_config_get(config, &memory_cache_size_str, SVN_CONFIG_SECTION_MISCELLANY,
                  SVN_CONFIG_OPTION_MEMORY_CACHE_SIZE, NULL);
   if (memory_cache_size_str)
@@ -752,10 +752,10 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
 
   /* Copy the revprops table so we can add the username. */
   revprop_table = apr_hash_copy(pool, revprop_table);
-  apr_hash_set(revprop_table, SVN_PROP_REVISION_AUTHOR, APR_HASH_KEY_STRING,
-               svn_string_create(sess->username, pool));
-  apr_hash_set(revprop_table, SVN_PROP_TXN_CLIENT_COMPAT_VERSION,
-               APR_HASH_KEY_STRING, svn_string_create(SVN_VER_NUMBER, pool));
+  svn_hash_sets(revprop_table, SVN_PROP_REVISION_AUTHOR,
+                svn_string_create(sess->username, pool));
+  svn_hash_sets(revprop_table, SVN_PROP_TXN_CLIENT_COMPAT_VERSION,
+                svn_string_create(SVN_VER_NUMBER, pool));
 
   /* Get the repos commit-editor */
   return svn_repos_get_commit_editor5
@@ -1078,24 +1078,14 @@ get_node_props(apr_hash_t **props,
                                            &cmt_author, root, path,
                                            scratch_pool));
 
-      apr_hash_set(*props,
-                   SVN_PROP_ENTRY_COMMITTED_REV,
-                   APR_HASH_KEY_STRING,
-                   svn_string_createf(result_pool, "%ld", cmt_rev));
-      apr_hash_set(*props,
-                   SVN_PROP_ENTRY_COMMITTED_DATE,
-                   APR_HASH_KEY_STRING,
-                   cmt_date ? svn_string_create(cmt_date,
-                                                result_pool) : NULL);
-      apr_hash_set(*props,
-                   SVN_PROP_ENTRY_LAST_AUTHOR,
-                   APR_HASH_KEY_STRING,
-                   cmt_author ? svn_string_create(cmt_author,
-                                                  result_pool) : NULL);
-      apr_hash_set(*props,
-                   SVN_PROP_ENTRY_UUID,
-                   APR_HASH_KEY_STRING,
-                   svn_string_create(sess->uuid, result_pool));
+      svn_hash_sets(*props, SVN_PROP_ENTRY_COMMITTED_REV,
+                    svn_string_createf(result_pool, "%ld", cmt_rev));
+      svn_hash_sets(*props, SVN_PROP_ENTRY_COMMITTED_DATE, cmt_date ?
+                    svn_string_create(cmt_date, result_pool) :NULL);
+      svn_hash_sets(*props, SVN_PROP_ENTRY_LAST_AUTHOR, cmt_author ?
+                    svn_string_create(cmt_author, result_pool) :NULL);
+      svn_hash_sets(*props, SVN_PROP_ENTRY_UUID,
+                    svn_string_create(sess->uuid, result_pool));
 
       /* We have no 'wcprops' in ra_local, but might someday. */
     }
@@ -1274,7 +1264,7 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
             }
 
           /* Store. */
-          apr_hash_set(*dirents, entryname, APR_HASH_KEY_STRING, entry);
+          svn_hash_sets(*dirents, entryname, entry);
         }
       svn_pool_destroy(subpool);
     }
@@ -1654,8 +1644,8 @@ svn_ra_local__get_commit_ev2(svn_editor_t **editor,
 
   /* Copy the REVPROPS and insert the author/username.  */
   revprops = apr_hash_copy(scratch_pool, revprops);
-  apr_hash_set(revprops, SVN_PROP_REVISION_AUTHOR, APR_HASH_KEY_STRING,
-               svn_string_create(sess->username, scratch_pool));
+  svn_hash_sets(revprops, SVN_PROP_REVISION_AUTHOR,
+                svn_string_create(sess->username, scratch_pool));
 
   return svn_error_trace(svn_repos__get_commit_ev2(
                            editor, sess->repos, NULL /* authz */,

@@ -51,6 +51,7 @@
 #include "EnumMapper.h"
 #include "StringArray.h"
 #include "RevpropTable.h"
+#include "DiffOptions.h"
 #include "CreateJ.h"
 #include "svn_auth.h"
 #include "svn_dso.h"
@@ -169,12 +170,13 @@ void SVNClient::list(const char *url, Revision &revision,
     Path urlPath(url, subPool);
     SVN_JNI_ERR(urlPath.error_occurred(), );
 
-    SVN_JNI_ERR(svn_client_list2(urlPath.c_str(),
+    SVN_JNI_ERR(svn_client_list3(urlPath.c_str(),
                                  pegRevision.revision(),
                                  revision.revision(),
                                  depth,
                                  direntFields,
                                  fetchLocks,
+                                 FALSE, // include_externals
                                  ListCallback::callback,
                                  callback,
                                  ctx, subPool.getPool()), );
@@ -352,7 +354,8 @@ void SVNClient::revert(const char *path, svn_depth_t depth,
 }
 
 void SVNClient::add(const char *path,
-                    svn_depth_t depth, bool force, bool no_ignore,
+                    svn_depth_t depth, bool force,
+                    bool no_ignore, bool no_autoprops,
                     bool add_parents)
 {
     SVN::Pool subPool(pool);
@@ -365,8 +368,8 @@ void SVNClient::add(const char *path,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_add4(intPath.c_str(), depth, force,
-                                no_ignore, add_parents, ctx,
+    SVN_JNI_ERR(svn_client_add5(intPath.c_str(), depth, force,
+                                no_ignore, no_autoprops, add_parents, ctx,
                                 subPool.getPool()), );
 }
 
@@ -424,8 +427,11 @@ void SVNClient::commit(Targets &targets, CommitMessage *message,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_commit5(targets2, depth,
-                                   noUnlock, keepChangelist, TRUE,
+    SVN_JNI_ERR(svn_client_commit6(targets2, depth,
+                                   noUnlock, keepChangelist,
+                                   TRUE,
+                                   FALSE, // include_file_externals
+                                   FALSE, // include_dir_externals
                                    changelists.array(subPool),
                                    revprops.hash(subPool),
                                    CommitCallback::callback, callback,
@@ -464,8 +470,8 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
 
 void SVNClient::move(Targets &srcPaths, const char *destPath,
                      CommitMessage *message, bool force, bool moveAsChild,
-                     bool makeParents, RevpropTable &revprops,
-                     CommitCallback *callback)
+                     bool makeParents, bool metadataOnly, bool allowMixRev,
+                     RevpropTable &revprops, CommitCallback *callback)
 {
     SVN::Pool subPool(pool);
 
@@ -479,9 +485,12 @@ void SVNClient::move(Targets &srcPaths, const char *destPath,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_move6((apr_array_header_t *) srcs,
+    SVN_JNI_ERR(svn_client_move7((apr_array_header_t *) srcs,
                                  destinationPath.c_str(), moveAsChild,
-                                 makeParents, revprops.hash(subPool),
+                                 makeParents,
+                                 allowMixRev,
+                                 metadataOnly,
+                                 revprops.hash(subPool),
                                  CommitCallback::callback, callback, ctx,
                                  subPool.getPool()), );
 }
@@ -602,7 +611,8 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
 
 void SVNClient::doImport(const char *path, const char *url,
                          CommitMessage *message, svn_depth_t depth,
-                         bool noIgnore, bool ignoreUnknownNodeTypes,
+                         bool noIgnore, bool noAutoProps,
+                         bool ignoreUnknownNodeTypes,
                          RevpropTable &revprops,
                          ImportFilterCallback *ifCallback,
                          CommitCallback *commitCallback)
@@ -620,7 +630,7 @@ void SVNClient::doImport(const char *path, const char *url,
         return;
 
     SVN_JNI_ERR(svn_client_import5(intPath.c_str(), intUrl.c_str(), depth,
-                                   noIgnore, FALSE, ignoreUnknownNodeTypes,
+                                   noIgnore, noAutoProps, ignoreUnknownNodeTypes,
                                    revprops.hash(subPool),
                                    ImportFilterCallback::callback, ifCallback,
                                    CommitCallback::callback, commitCallback,
@@ -971,7 +981,8 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                      OutputStream &outputStream, svn_depth_t depth,
                      StringArray &changelists,
                      bool ignoreAncestry, bool noDiffDelete, bool force,
-                     bool showCopiesAsAdds, bool ignoreProps, bool propsOnly)
+                     bool showCopiesAsAdds, bool ignoreProps, bool propsOnly,
+                     DiffOptions const& options)
 {
     SVN::Pool subPool(pool);
     const char *c_relToDir = relativeToDir ?
@@ -991,9 +1002,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
     Path path1(target1, subPool);
     SVN_JNI_ERR(path1.error_occurred(), );
 
-    // We don't use any options to diff.
-    apr_array_header_t *diffOptions = apr_array_make(subPool.getPool(),
-                                                     0, sizeof(char *));
+    apr_array_header_t *diffOptions = options.optionsArray(subPool);
 
     if (pegRevision)
     {
@@ -1011,7 +1020,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                    force,
                                    ignoreProps,
                                    propsOnly,
-                                   FALSE, /* use_git_diff_format */
+                                   options.useGitDiffFormat(),
                                    SVN_APR_LOCALE_CHARSET,
                                    outputStream.getStream(subPool),
                                    NULL /* error file */,
@@ -1040,7 +1049,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                force,
                                ignoreProps,
                                propsOnly,
-                               FALSE, /* use_git_diff_format */
+                               options.useGitDiffFormat(),
                                SVN_APR_LOCALE_CHARSET,
                                outputStream.getStream(subPool),
                                NULL /* error stream */,
@@ -1056,11 +1065,12 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                      const char *relativeToDir, OutputStream &outputStream,
                      svn_depth_t depth, StringArray &changelists,
                      bool ignoreAncestry, bool noDiffDelete, bool force,
-                     bool showCopiesAsAdds, bool ignoreProps, bool propsOnly)
+                     bool showCopiesAsAdds, bool ignoreProps, bool propsOnly,
+                     DiffOptions const& options)
 {
     diff(target1, revision1, target2, revision2, NULL, relativeToDir,
          outputStream, depth, changelists, ignoreAncestry, noDiffDelete, force,
-         showCopiesAsAdds, ignoreProps, propsOnly);
+         showCopiesAsAdds, ignoreProps, propsOnly, options);
 }
 
 void SVNClient::diff(const char *target, Revision &pegRevision,
@@ -1068,12 +1078,13 @@ void SVNClient::diff(const char *target, Revision &pegRevision,
                      const char *relativeToDir, OutputStream &outputStream,
                      svn_depth_t depth, StringArray &changelists,
                      bool ignoreAncestry, bool noDiffDelete, bool force,
-                     bool showCopiesAsAdds, bool ignoreProps, bool propsOnly)
+                     bool showCopiesAsAdds, bool ignoreProps, bool propsOnly,
+                     DiffOptions const& options)
 {
     diff(target, startRevision, NULL, endRevision, &pegRevision,
          relativeToDir, outputStream, depth, changelists,
          ignoreAncestry, noDiffDelete, force, showCopiesAsAdds,
-         ignoreProps, propsOnly);
+         ignoreProps, propsOnly, options);
 }
 
 void

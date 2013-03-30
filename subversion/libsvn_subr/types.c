@@ -24,6 +24,7 @@
 #include <apr_pools.h>
 #include <apr_uuid.h>
 
+#include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_string.h"
@@ -121,37 +122,6 @@ svn_depth_from_word(const char *word)
   return svn_depth_unknown;
 }
 
-svn_node_kind_t
-svn__node_kind_from_kind(svn_kind_t kind)
-{
-  switch (kind)
-    {
-    case svn_kind_unknown:  return svn_node_unknown;
-    case svn_kind_none:     return svn_node_none;
-    case svn_kind_file:     return svn_node_file;
-    case svn_kind_dir:      return svn_node_dir;
-    case svn_kind_symlink:  return svn_node_file;
-    default: SVN_ERR_MALFUNCTION_NO_RETURN();
-    }
-}
-
-svn_kind_t
-svn__kind_from_node_kind(svn_node_kind_t kind,
-                         svn_boolean_t is_symlink)
-{
-  if (is_symlink)
-    return svn_kind_symlink;
-
-  switch (kind)
-    {
-    case svn_node_unknown:  return svn_kind_unknown;
-    case svn_node_none:     return svn_kind_none;
-    case svn_node_file:     return svn_kind_file;
-    case svn_node_dir:      return svn_kind_dir;
-    default: SVN_ERR_MALFUNCTION_NO_RETURN();
-    }
-}
-
 const char *
 svn_node_kind_to_word(svn_node_kind_t kind)
 {
@@ -163,6 +133,8 @@ svn_node_kind_to_word(svn_node_kind_t kind)
       return "file";
     case svn_node_dir:
       return "dir";
+    case svn_node_symlink:
+      return "symlink";
     case svn_node_unknown:
     default:
       return "unknown";
@@ -182,6 +154,8 @@ svn_node_kind_from_word(const char *word)
     return svn_node_file;
   else if (strcmp(word, "dir") == 0)
     return svn_node_dir;
+  else if (strcmp(word, "symlink") == 0)
+    return svn_node_symlink;
   else
     /* This also handles word == "unknown" */
     return svn_node_unknown;
@@ -339,9 +313,8 @@ svn_log_entry_dup(const svn_log_entry_t *log_entry, apr_pool_t *pool)
 
           apr_hash_this(hi, &key, NULL, &change);
 
-          apr_hash_set(new_entry->changed_paths2, apr_pstrdup(pool, key),
-                       APR_HASH_KEY_STRING,
-                       svn_log_changed_path2_dup(change, pool));
+          svn_hash_sets(new_entry->changed_paths2, apr_pstrdup(pool, key),
+                        svn_log_changed_path2_dup(change, pool));
         }
     }
 

@@ -401,7 +401,6 @@ class WinGeneratorBase(GeneratorBase):
       install_targets = [x for x in install_targets
                                      if not (isinstance(x, gen_base.TargetJava)
                                              or isinstance(x, gen_base.TargetJavaHeaders)
-                                             or isinstance(x, gen_base.TargetSWIGProject)
                                              or x.name == '__JAVAHL__'
                                              or x.name == '__JAVAHL_TESTS__'
                                              or x.name == 'libsvnjavahl')]

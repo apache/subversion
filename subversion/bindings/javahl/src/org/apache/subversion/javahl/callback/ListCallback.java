@@ -29,7 +29,7 @@ import org.apache.subversion.javahl.types.Lock;
 
 /**
  * This interface is used to receive every single line for a file on a
- * the {@link ISVNClient#blame} call.
+ * the {@link ISVNClient#list} call.
  */
 public interface ListCallback
 {

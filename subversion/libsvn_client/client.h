@@ -38,6 +38,7 @@
 #include "private/svn_magic.h"
 #include "private/svn_client_private.h"
 #include "private/svn_diff_tree.h"
+#include "private/svn_editor.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -315,7 +316,7 @@ svn_client__ra_provide_props(apr_hash_t **props,
 
 
 svn_error_t *
-svn_client__ra_get_copysrc_kind(svn_kind_t *kind,
+svn_client__ra_get_copysrc_kind(svn_node_kind_t *kind,
                                 void *baton,
                                 const char *repos_relpath,
                                 svn_revnum_t src_revision,
@@ -1111,6 +1112,18 @@ svn_cl__rev_default_to_head_or_working(const svn_opt_revision_t *revision,
 const svn_opt_revision_t *
 svn_cl__rev_default_to_peg(const svn_opt_revision_t *revision,
                            const svn_opt_revision_t *peg_revision);
+
+/* Call the conflict resolver callback in CTX for each conflict recorded
+ * in CONFLICTED_PATHS (const char *abspath keys; ignored values).  If
+ * CONFLICTS_REMAIN is not NULL, then set *CONFLICTS_REMAIN to true if
+ * there are any conflicts among CONFLICTED_PATHS remaining unresolved
+ * at the end of this operation, else set it to false.
+ */
+svn_error_t *
+svn_client__resolve_conflicts(svn_boolean_t *conflicts_remain,
+                              apr_hash_t *conflicted_paths,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus

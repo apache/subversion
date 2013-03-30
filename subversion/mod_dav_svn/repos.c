@@ -37,6 +37,7 @@
 #define CORE_PRIVATE      /* To make ap_show_mpm public in 2.2 */
 #include <http_config.h>
 
+#include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -2127,8 +2128,9 @@ get_resource(request_rec *r,
            more than that). */
 
         /* Start out assuming no capabilities. */
-        apr_hash_set(repos->client_capabilities, SVN_RA_CAPABILITY_MERGEINFO,
-                     APR_HASH_KEY_STRING, capability_no);
+        svn_hash_sets(repos->client_capabilities,
+                      SVN_RA_CAPABILITY_MERGEINFO,
+                      capability_no);
 
         /* Then see what we can find. */
         val = apr_table_get(r->headers_in, "DAV");
@@ -2139,9 +2141,8 @@ get_resource(request_rec *r,
 
             if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
               {
-                apr_hash_set(repos->client_capabilities,
-                             SVN_RA_CAPABILITY_MERGEINFO,
-                             APR_HASH_KEY_STRING, capability_yes);
+                svn_hash_sets(repos->client_capabilities,
+                              SVN_RA_CAPABILITY_MERGEINFO, capability_yes);
               }
           }
       }
@@ -2157,18 +2158,12 @@ get_resource(request_rec *r,
 
       /* construct FS configuration parameters */
       fs_config = apr_hash_make(r->connection->pool);
-      apr_hash_set(fs_config,
-                   SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
-                   APR_HASH_KEY_STRING,
-                   dav_svn__get_txdelta_cache_flag(r) ? "1" : "0");
-      apr_hash_set(fs_config,
-                   SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
-                   APR_HASH_KEY_STRING,
-                   dav_svn__get_fulltext_cache_flag(r) ? "1" : "0");
-      apr_hash_set(fs_config,
-                   SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
-                   APR_HASH_KEY_STRING,
-                   dav_svn__get_revprop_cache_flag(r) ? "1" : "0");
+      svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
+                    dav_svn__get_txdelta_cache_flag(r) ? "1" :"0");
+      svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
+                    dav_svn__get_fulltext_cache_flag(r) ? "1" :"0");
+      svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
+                    dav_svn__get_revprop_cache_flag(r) ? "1" :"0");
 
       /* Disallow BDB/event until issue 4157 is fixed. */
       if (!strcmp(ap_show_mpm(), "event"))
@@ -3216,7 +3211,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
               ent->id = NULL;     /* ### does it matter? */
               ent->kind = dirent->kind;
 
-              apr_hash_set(entries, key, APR_HASH_KEY_STRING, ent);
+              svn_hash_sets(entries, key, ent);
             }
 
         }

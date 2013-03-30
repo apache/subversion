@@ -512,8 +512,14 @@ void JNIUtil::handleSVNError(svn_error_t *err)
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
 
-  jobjectArray jStackTrace = env->NewObjectArray(newStackTrace.size(), stClazz,
-                                                 NULL);
+  const jsize stSize = static_cast<jsize>(newStackTrace.size());
+  if (stSize != newStackTrace.size())
+    {
+      env->ThrowNew(env->FindClass("java.lang.ArithmeticException"),
+                    "Overflow converting C size_t to JNI jsize");
+      POP_AND_RETURN_NOTHING();
+    }
+  jobjectArray jStackTrace = env->NewObjectArray(stSize, stClazz, NULL);
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
 

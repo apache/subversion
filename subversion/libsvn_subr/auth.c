@@ -26,6 +26,7 @@
 #include <apr_tables.h>
 #include <apr_strings.h>
 
+#include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -151,17 +152,14 @@ svn_auth_open(svn_auth_baton_t **auth_baton,
       provider = APR_ARRAY_IDX(providers, i, svn_auth_provider_object_t *);
 
       /* Add it to the appropriate table in the auth_baton */
-      table = apr_hash_get(ab->tables,
-                           provider->vtable->cred_kind, APR_HASH_KEY_STRING);
+      table = svn_hash_gets(ab->tables, provider->vtable->cred_kind);
       if (! table)
         {
           table = apr_pcalloc(pool, sizeof(*table));
           table->providers
             = apr_array_make(pool, 1, sizeof(svn_auth_provider_object_t *));
 
-          apr_hash_set(ab->tables,
-                       provider->vtable->cred_kind, APR_HASH_KEY_STRING,
-                       table);
+          svn_hash_sets(ab->tables, provider->vtable->cred_kind, table);
         }
       APR_ARRAY_PUSH(table->providers, svn_auth_provider_object_t *)
         = provider;
@@ -177,14 +175,14 @@ svn_auth_set_parameter(svn_auth_baton_t *auth_baton,
                        const char *name,
                        const void *value)
 {
-  apr_hash_set(auth_baton->parameters, name, APR_HASH_KEY_STRING, value);
+  svn_hash_sets(auth_baton->parameters, name, value);
 }
 
 const void *
 svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
                        const char *name)
 {
-  return apr_hash_get(auth_baton->parameters, name, APR_HASH_KEY_STRING);
+  return svn_hash_gets(auth_baton->parameters, name);
 }
 
 
@@ -207,7 +205,7 @@ svn_auth_first_credentials(void **credentials,
   const char *cache_key;
 
   /* Get the appropriate table of providers for CRED_KIND. */
-  table = apr_hash_get(auth_baton->tables, cred_kind, APR_HASH_KEY_STRING);
+  table = svn_hash_gets(auth_baton->tables, cred_kind);
   if (! table)
     return svn_error_createf(SVN_ERR_AUTHN_NO_PROVIDER, NULL,
                              _("No provider registered for '%s' credentials"),
@@ -215,8 +213,7 @@ svn_auth_first_credentials(void **credentials,
 
   /* First, see if we have cached creds in the auth_baton. */
   cache_key = apr_pstrcat(pool, cred_kind, ":", realmstring, (char *)NULL);
-  creds = apr_hash_get(auth_baton->creds_cache,
-                       cache_key, APR_HASH_KEY_STRING);
+  creds = svn_hash_gets(auth_baton->creds_cache, cache_key);
   if (creds)
     {
        got_first = FALSE;
@@ -229,9 +226,11 @@ svn_auth_first_credentials(void **credentials,
         {
           provider = APR_ARRAY_IDX(table->providers, i,
                                    svn_auth_provider_object_t *);
-          SVN_ERR(provider->vtable->first_credentials
-                  (&creds, &iter_baton, provider->provider_baton,
-                   auth_baton->parameters, realmstring, auth_baton->pool));
+          SVN_ERR(provider->vtable->first_credentials(&creds, &iter_baton,
+                                                      provider->provider_baton,
+                                                      auth_baton->parameters,
+                                                      realmstring,
+                                                      auth_baton->pool));
 
           if (creds != NULL)
             {
@@ -257,10 +256,9 @@ svn_auth_first_credentials(void **credentials,
       *state = iterstate;
 
       /* Put the creds in the cache */
-      apr_hash_set(auth_baton->creds_cache,
-                   apr_pstrdup(auth_baton->pool, cache_key),
-                   APR_HASH_KEY_STRING,
-                   creds);
+      svn_hash_sets(auth_baton->creds_cache,
+                    apr_pstrdup(auth_baton->pool, cache_key),
+                    creds);
     }
 
   *credentials = creds;
@@ -289,27 +287,24 @@ svn_auth_next_credentials(void **credentials,
                                svn_auth_provider_object_t *);
       if (! state->got_first)
         {
-          SVN_ERR(provider->vtable->first_credentials
-                  (&creds, &(state->provider_iter_baton),
-                   provider->provider_baton, auth_baton->parameters,
-                   state->realmstring, auth_baton->pool));
+          SVN_ERR(provider->vtable->first_credentials(
+                      &creds, &(state->provider_iter_baton),
+                      provider->provider_baton, auth_baton->parameters,
+                      state->realmstring, auth_baton->pool));
           state->got_first = TRUE;
         }
-      else
+      else if (provider->vtable->next_credentials)
         {
-          if (provider->vtable->next_credentials)
-            SVN_ERR(provider->vtable->next_credentials
-                    (&creds, state->provider_iter_baton,
-                     provider->provider_baton, auth_baton->parameters,
-                     state->realmstring, auth_baton->pool));
+          SVN_ERR(provider->vtable->next_credentials(
+                      &creds, state->provider_iter_baton,
+                      provider->provider_baton, auth_baton->parameters,
+                      state->realmstring, auth_baton->pool));
         }
 
       if (creds != NULL)
         {
           /* Put the creds in the cache */
-          apr_hash_set(auth_baton->creds_cache,
-                       state->cache_key, APR_HASH_KEY_STRING,
-                       creds);
+          svn_hash_sets(auth_baton->creds_cache, state->cache_key, creds);
           break;
         }
 
@@ -337,15 +332,13 @@ svn_auth_save_credentials(svn_auth_iterstate_t *state,
     return SVN_NO_ERROR;
 
   auth_baton = state->auth_baton;
-  creds = apr_hash_get(state->auth_baton->creds_cache,
-                       state->cache_key, APR_HASH_KEY_STRING);
+  creds = svn_hash_gets(state->auth_baton->creds_cache, state->cache_key);
   if (! creds)
     return SVN_NO_ERROR;
 
   /* Do not save the creds if SVN_AUTH_PARAM_NO_AUTH_CACHE is set */
-  no_auth_cache = apr_hash_get(auth_baton->parameters,
-                               SVN_AUTH_PARAM_NO_AUTH_CACHE,
-                               APR_HASH_KEY_STRING);
+  no_auth_cache = svn_hash_gets(auth_baton->parameters,
+                                SVN_AUTH_PARAM_NO_AUTH_CACHE);
   if (no_auth_cache)
     return SVN_NO_ERROR;
 
@@ -629,7 +622,7 @@ svn_auth_cleanup_walk(svn_auth_baton_t *baton,
                       apr_pool_t *scratch_pool)
 {
 
-  if (apr_hash_get(baton->tables, SVN_AUTH_CRED_SIMPLE, APR_HASH_KEY_STRING))
+  if (svn_hash_gets(baton->tables, SVN_AUTH_CRED_SIMPLE))
     {
       SVN_ERR(svn_auth__simple_cleanup_walk(baton, cleanup, cleanup_baton,
                                             baton->creds_cache, scratch_pool));

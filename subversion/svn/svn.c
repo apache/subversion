@@ -781,8 +781,24 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "     used, and the default value of 'REV' is the base revision (usually the\n"
 "     revision last updated to).\n"
 "\n"
-"     TARGET_WCPATH is a working copy path; if omitted, '.' is assumed. In\n"
-"     normal usage the working copy should be up to date, at a single\n"
+"     TARGET_WCPATH is a working copy path; if omitted, '.' is generally\n"
+"     assumed. There are some special cases:\n"
+"\n"
+"       - If SOURCE is a URL:\n"
+"\n"
+"           - If the basename of the URL and the basename of '.' are the\n"
+"             same, then the differences are applied to '.'. Otherwise,\n"
+"             if a file with the same basename as that of the URL is found\n"
+"             within '.', then the differences are applied to that file.\n"
+"             In all other cases, the target defaults to '.'.\n"
+"\n"
+"       - If SOURCE is a working copy path:\n"
+"\n"
+"           - If the source is a file, then differences are applied to that\n"
+"             file (useful for reverse-merging earlier changes). Otherwise,\n"
+"             if the source is a directory, then the target defaults to '.'.\n"
+"\n"
+"     In normal usage the working copy should be up to date, at a single\n"
 "     revision, with no local modifications and no switched subtrees.\n"
 "\n"
 "       - The 'Feature Branch' Merging Pattern -\n"
@@ -883,7 +899,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "     path, the corresponding URL of the path is used, and the default value\n"
 "     of 'REV' is the base revision (usually the revision last updated to).\n"
 "\n"
-"     TARGET_WCPATH is a working copy path; if omitted, '.' is assumed.\n"
+"     TARGET_WCPATH is a working copy path; if omitted, '.' is generally\n"
+"     assumed. The special cases noted above in the 'automatic' merge form\n"
+"     also apply here.\n"
 "\n"
 "     The revision ranges to be merged are specified by the '-r' and/or '-c'\n"
 "     options. '-r N:M' refers to the difference in the history of the\n"
@@ -900,7 +918,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "     source and target refer to the same branch, a previously committed\n"
 "     revision can be 'undone'. In a reverse range, N is greater than M in\n"
 "     '-r N:M', or the '-c' option is used with a negative number: '-c -M'\n"
-"     is equivalent to '-r M:<M-1>' Undoing changes like this is also known\n"
+"     is equivalent to '-r M:<M-1>'. Undoing changes like this is also known\n"
 "     as performing a 'reverse merge'.\n"
 "\n"
 "     Multiple '-c' and/or '-r' options may be specified and mixing of\n"
@@ -952,11 +970,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "     branch may be the same as one or both sources, or different again.\n"
 "     The three branches involved can be completely unrelated.\n"
 "\n"
-"     If TARGET_WCPATH is omitted, a default value of '.' is assumed.\n"
-"     However, in the special case where both sources refer to a file node\n"
-"     with the same name and a file with the same name is also found within\n"
-"     '.', the differences will be applied to that local file. The source\n"
-"     revisions REV1 and REV2 default to HEAD if omitted.\n"
+"     TARGET_WCPATH is a working copy path; if omitted, '.' is generally\n"
+"     assumed. The special cases noted above in the 'automatic' merge form\n"
+"     also apply here.\n"
 "\n"
 "     SOURCE1 and/or SOURCE2 can also be specified as a working copy path,\n"
 "     in which case the merge source URL is derived from the working copy.\n"
@@ -2129,8 +2145,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                    _("Changelist names must not be empty"));
             return EXIT_ERROR(err);
           }
-        apr_hash_set(changelists, opt_state.changelist,
-                     APR_HASH_KEY_STRING, (void *)1);
+        svn_hash_sets(changelists, opt_state.changelist, (void *)1);
         break;
       case opt_keep_changelists:
         opt_state.keep_changelists = TRUE;
@@ -2529,8 +2544,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         }
     }
 
-  cfg_config = apr_hash_get(cfg_hash, SVN_CONFIG_CATEGORY_CONFIG,
-                            APR_HASH_KEY_STRING);
+  cfg_config = svn_hash_gets(cfg_hash, SVN_CONFIG_CATEGORY_CONFIG);
 
   /* Update the options in the config */
   if (opt_state.config_options)
@@ -2599,8 +2613,8 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
 
           if (!err)
             {
-              err = svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
-                                     pool);
+              err = svn_wc_read_kind2(&kind, ctx->wc_ctx, local_abspath, TRUE,
+                                      FALSE, pool);
 
               if (!err && kind != svn_node_none && kind != svn_node_unknown)
                 {
@@ -2767,14 +2781,6 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
 
   ctx->auth_baton = ab;
 
-  /* Install the default conflict handler which postpones all conflicts
-   * and remembers the list of conflicted paths to be resolved later.
-   * This is overridden only within the 'resolve' subcommand. */
-  ctx->conflict_func = NULL;
-  ctx->conflict_baton = NULL;
-  ctx->conflict_func2 = svn_cl__conflict_func_postpone;
-  ctx->conflict_baton2 = svn_cl__get_conflict_func_postpone_baton(pool);
-
   if (opt_state.non_interactive)
     {
       if (opt_state.accept_which == svn_cl__accept_edit)
@@ -2816,6 +2822,22 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         opt_state.accept_which = svn_cl__accept_postpone;
     }
 
+  /* Install the default conflict handler. */
+  {
+    svn_cl__interactive_conflict_baton_t *b;
+
+    ctx->conflict_func = NULL;
+    ctx->conflict_baton = NULL;
+
+    ctx->conflict_func2 = svn_cl__conflict_func_interactive;
+    SVN_INT_ERR(svn_cl__get_conflict_func_interactive_baton(
+                &b,
+                opt_state.accept_which,
+                ctx->config, opt_state.editor_cmd,
+                ctx->cancel_func, ctx->cancel_baton, pool));
+    ctx->conflict_baton2 = b;
+  }
+
   /* And now we finally run the subcommand. */
   err = (*subcommand->cmd_func)(os, &command_baton, pool);
   if (err)
@@ -2834,6 +2856,14 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         {
           err = svn_error_quick_wrap(err,
                                      _("Please see the 'svn upgrade' command"));
+        }
+
+      if (err->apr_err == SVN_ERR_AUTHN_FAILED && opt_state.non_interactive)
+        {
+          err = svn_error_quick_wrap(err,
+                                     _("Authentication failed and interactive"
+                                       " prompting is disabled; see the"
+                                       " --force-interactive option"));
         }
 
       /* Tell the user about 'svn cleanup' if any error on the stack

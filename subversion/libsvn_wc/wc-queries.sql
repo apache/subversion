@@ -919,6 +919,27 @@ INSERT OR REPLACE INTO nodes (
     parent_relpath, presence, kind)
 VALUES(?1, ?2, ?3, ?4, MAP_BASE_DELETED, ?5)
 
+-- STMT_DELETE_NO_LOWER_LAYER
+DELETE FROM nodes
+ WHERE wc_id = ?1
+   AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+   AND op_depth = ?3
+   AND NOT EXISTS (SELECT 1 FROM nodes n
+                    WHERE n.wc_id = ?1
+                    AND n.local_relpath = nodes.local_relpath
+                    AND n.op_depth = ?4
+                    AND n.presence IN (MAP_NORMAL, MAP_INCOMPLETE))
+
+-- STMT_REPLACE_WITH_BASE_DELETED
+INSERT OR REPLACE INTO nodes (wc_id, local_relpath, op_depth, parent_relpath,
+                              kind, moved_to, presence)
+SELECT wc_id, local_relpath, op_depth, parent_relpath,
+       kind, moved_to, MAP_BASE_DELETED
+  FROM nodes
+ WHERE wc_id = ?1
+   AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+   AND op_depth = ?3
+
 /* If this query is updated, STMT_INSERT_DELETE_LIST should too. */
 -- STMT_INSERT_DELETE_FROM_NODE_RECURSIVE
 INSERT INTO nodes (
@@ -931,6 +952,7 @@ WHERE wc_id = ?1
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = ?3
   AND presence NOT IN (MAP_BASE_DELETED, MAP_NOT_PRESENT, MAP_EXCLUDED, MAP_SERVER_EXCLUDED)
+  AND file_external IS NULL
 
 -- STMT_INSERT_WORKING_NODE_FROM_BASE_COPY
 INSERT INTO nodes (
@@ -1222,10 +1244,15 @@ INSERT INTO target_prop_cache(local_relpath, kind, properties)
                    AND a.local_relpath = n.local_relpath),
                n.properties)
    FROM targets_list AS t
-   JOIN nodes_current AS n ON t.wc_id= n.wc_id
-                          AND t.local_relpath = n.local_relpath
+   JOIN nodes AS n
+     ON n.wc_id = ?1
+    AND n.local_relpath = t.local_relpath
+    AND n.op_depth = (SELECT MAX(op_depth) FROM nodes AS n3
+                      WHERE n3.wc_id = ?1
+                        AND n3.local_relpath = t.local_relpath)
   WHERE t.wc_id = ?1
     AND (presence=MAP_NORMAL OR presence=MAP_INCOMPLETE)
+  ORDER BY t.local_relpath
 
 -- STMT_CACHE_TARGET_PRISTINE_PROPS
 INSERT INTO target_prop_cache(local_relpath, kind, properties)
@@ -1239,12 +1266,17 @@ INSERT INTO target_prop_cache(local_relpath, kind, properties)
                  ORDER BY p.op_depth DESC /* LIMIT 1 */)
           ELSE properties END
   FROM targets_list AS t
-  JOIN nodes_current AS n ON t.wc_id= n.wc_id
-                          AND t.local_relpath = n.local_relpath
+  JOIN nodes AS n
+    ON n.wc_id = ?1
+   AND n.local_relpath = t.local_relpath
+   AND n.op_depth = (SELECT MAX(op_depth) FROM nodes AS n3
+                     WHERE n3.wc_id = ?1
+                       AND n3.local_relpath = t.local_relpath)
   WHERE t.wc_id = ?1
     AND (presence = MAP_NORMAL
          OR presence = MAP_INCOMPLETE
          OR presence = MAP_BASE_DELETED)
+  ORDER BY t.local_relpath
 
 -- STMT_SELECT_ALL_TARGET_PROP_CACHE
 SELECT local_relpath, properties FROM target_prop_cache
@@ -1368,6 +1400,7 @@ WHERE wc_id = ?1
                   WHERE s.wc_id = ?1
                     AND s.local_relpath = n.local_relpath)
   AND presence NOT IN (MAP_BASE_DELETED, MAP_NOT_PRESENT, MAP_EXCLUDED, MAP_SERVER_EXCLUDED)
+  AND file_external IS NULL
 
 -- STMT_SELECT_DELETE_LIST
 SELECT local_relpath FROM delete_list

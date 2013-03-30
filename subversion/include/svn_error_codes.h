@@ -788,12 +788,12 @@ SVN_ERROR_START
              "The filesystem editor completion process was not followed")
 
   /** @since New in 1.8. */
-  SVN_ERRDEF(SVN_ERR_FS_PACKED_REPPROP_READ_FAILURE,
+  SVN_ERRDEF(SVN_ERR_FS_PACKED_REVPROP_READ_FAILURE,
              SVN_ERR_FS_CATEGORY_START + 51,
              "A packed revprop could not be read")
 
   /** @since New in 1.8. */
-  SVN_ERRDEF(SVN_ERR_FS_REPPROP_CACHE_INIT_FAILURE,
+  SVN_ERRDEF(SVN_ERR_FS_REVPROP_CACHE_INIT_FAILURE,
              SVN_ERR_FS_CATEGORY_START + 52,
              "Could not initialize the revprop caching infrastructure.")
 
@@ -1058,7 +1058,8 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED,
              SVN_ERR_RA_SERF_CATEGORY_START + 1,
              "Server SSL certificate untrusted")
-  /** @since New in 1.7. */
+  /** @since New in 1.7.
+      @deprecated GSSAPI now handled by serf rather than libsvn_ra_serf. */
   SVN_ERRDEF(SVN_ERR_RA_SERF_GSSAPI_INITIALISATION_FAILED,
              SVN_ERR_RA_SERF_CATEGORY_START + 2,
              "Initialization of the GSSAPI context failed")
@@ -1453,12 +1454,12 @@ SVN_ERROR_START
   /** @since New in 1.8. */
   SVN_ERRDEF(SVN_ERR_TOO_MANY_MEMCACHED_SERVERS,
              SVN_ERR_MISC_CATEGORY_START + 36,
-             "too many memcached servers configured")
+             "Too many memcached servers configured")
 
   /** @since New in 1.8. */
   SVN_ERRDEF(SVN_ERR_MALFORMED_VERSION_STRING,
              SVN_ERR_MISC_CATEGORY_START + 37,
-             "failed to parse version number string")
+             "Failed to parse version number string")
 
   /** @since New in 1.8. */
   SVN_ERRDEF(SVN_ERR_CORRUPTED_ATOMIC_STORAGE,

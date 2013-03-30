@@ -232,15 +232,6 @@ svn_checksum__from_digest_sha1(const unsigned char *digest,
  * @{
  */
 
-/**
- * Clear any key/value pairs in the hash table.  A wrapper for a
- * apr_hash_clear(), which isn't available until APR 1.3.0.
- *
- * @since New in 1.5.
- */
-svn_error_t *
-svn_hash__clear(apr_hash_t *hash, apr_pool_t *pool);
-
 /** @} */
 
 

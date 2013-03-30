@@ -27,6 +27,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <setjmp.h>
+#ifdef WIN32
+#include <crtdbg.h>
+#endif
 
 #include <apr_pools.h>
 #include <apr_general.h>
@@ -41,8 +44,10 @@
 #include "svn_io.h"
 #include "svn_path.h"
 #include "svn_ctype.h"
-#include "svn_private_config.h"
 
+#include "private/svn_cmdline_private.h"
+
+#include "svn_private_config.h"
 
 /* Some Subversion test programs may want to parse options in the
    argument list, so we remember it here. */
@@ -394,6 +399,27 @@ main(int argc, const char *argv[])
       else
         prog_name = argv[0];
     }
+
+#ifdef WIN32
+#if _MSC_VER >= 1400
+  /* ### This should work for VC++ 2002 (=1300) and later */
+  /* Show the abort message on STDERR instead of a dialog to allow
+     scripts (e.g. our testsuite) to continue after an abort without
+     user intervention. Allow overriding for easier debugging. */
+  if (!getenv("SVN_CMDLINE_USE_DIALOG_FOR_ABORT"))
+    {
+      /* In release mode: Redirect abort() errors to stderr */
+      _set_error_mode(_OUT_TO_STDERR);
+
+      /* In _DEBUG mode: Redirect all debug output (E.g. assert() to stderr.
+         (Ignored in releas builds) */
+      _CrtSetReportFile( _CRT_ASSERT, _CRTDBG_FILE_STDERR);
+      _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
+      _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
+      _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
+    }
+#endif /* _MSC_VER >= 1400 */
+#endif
 
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, prog_name);

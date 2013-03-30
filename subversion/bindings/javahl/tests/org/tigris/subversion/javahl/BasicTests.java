@@ -2176,6 +2176,7 @@ public class BasicTests extends SVNTests
      * are no revisions to return.
      * @since 1.5
      */
+    @SuppressWarnings("unchecked")
     private long[] getMergeinfoRevisions(int kind, String pathOrUrl,
                                          Revision pegRevision,
                                          String mergeSourceUrl,
@@ -3242,6 +3243,7 @@ public class BasicTests extends SVNTests
      * @throws Throwable
      * @since 1.5
      */
+    @SuppressWarnings("unchecked")
     public void testCommitRevprops() throws Throwable
     {
 
@@ -3348,6 +3350,7 @@ public class BasicTests extends SVNTests
         // change made to this class.
         private static final long serialVersionUID = 1L;
 
+        @SuppressWarnings("unchecked")
         public void onSummary(DiffSummary descriptor)
         {
             super.put(descriptor.getPath(), descriptor);
@@ -3357,6 +3360,7 @@ public class BasicTests extends SVNTests
     private class MyChangelistCallback extends HashMap
         implements ChangelistCallback
     {
+        @SuppressWarnings("unchecked")
         public void doChangelist(String path, String changelist)
         {
             if (super.containsKey(path))

@@ -38,8 +38,6 @@ SVN_FS_LIB_LINK = @SVN_FS_LIB_LINK@
 SWIG_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig
 SWIG_BUILD_DIR = $(abs_builddir)/subversion/bindings/swig
 
-SVN_EXTERNAL_PROJECT_SUBDIRS = @SVN_EXTERNAL_PROJECT_SUBDIRS@
-
 SCHEMA_DIR = subversion/svn/schema
 
 SVN_APR_LIBS = @SVN_APR_LIBS@
@@ -66,7 +64,6 @@ ramod_libdir = @libdir@
 bdb_libdir = @libdir@
 gnome_keyring_libdir = @libdir@
 gpg_agent_libdir = @libdir@
-gssapi_libdir = @libdir@
 kwallet_libdir = @libdir@
 serf_libdir = @libdir@
 bindir = @bindir@
@@ -373,11 +370,11 @@ ECHO_N = @ECHO_N@
 
 TESTS = $(TEST_PROGRAMS) @BDB_TEST_PROGRAMS@
 
-all: mkdir-init external-all local-all
-clean: external-clean local-clean
-distclean: external-distclean local-distclean
-extraclean: external-extraclean local-extraclean
-install: external-install local-install revision-install
+all: mkdir-init local-all
+clean: local-clean
+distclean: local-distclean
+extraclean: local-extraclean
+install: local-install revision-install
 
 @INCLUDE_OUTPUTS@
 
@@ -616,32 +613,6 @@ mkdir-init:
                 $(MKDIR) $$i ;                           \
             fi;                                          \
         done
-
-# recursive targets to handle external projects (e.g. APR, Neon)
-external-all external-install:
-	@target=`echo $@ | sed s/external-//`;          \
-        list='$(SVN_EXTERNAL_PROJECT_SUBDIRS)';         \
-        for i in $$list; do                             \
-            echo "------ making $$target in $$i";       \
-            (cd $$i && $(MAKE) $$target) || exit 1;     \
-            echo "------ completed $$target in $$i";    \
-        done;
-
-### apr-util relies on generated files in apr, so reverse the
-### list so that it is cleaned before apr. also note that Neon does
-### not have an extraclean target, so get "close" with distclean
-external-clean external-distclean external-extraclean:
-	@target=`echo $@ | sed s/external-//`;          \
-        list='$(SVN_EXTERNAL_PROJECT_SUBDIRS)';         \
-        for i in $$list; do                             \
-            revlist="$$i $$revlist";                    \
-        done;                                           \
-        for i in $$revlist; do                          \
-            echo "------ making $$target in $$i";       \
-            (cd $$i && $(MAKE) $$target) || exit 1;     \
-            echo "------ completed $$target in $$i";    \
-        done;
-
 
 # DOCUMENTATION RULES
 

@@ -24,6 +24,7 @@
 #include <string.h>
 #include <ctype.h>
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
@@ -108,9 +109,7 @@ svn_repos_fs_begin_txn_for_commit2(svn_fs_txn_t **txn_p,
 {
   apr_array_header_t *revprops;
   const char *txn_name;
-  svn_string_t *author = apr_hash_get(revprop_table,
-                                      SVN_PROP_REVISION_AUTHOR,
-                                      APR_HASH_KEY_STRING);
+  svn_string_t *author = svn_hash_gets(revprop_table, SVN_PROP_REVISION_AUTHOR);
 
   /* Begin the transaction, ask for the fs to do on-the-fly lock checks.
      We fetch its name, too, so the start-commit hook can use it.  */
@@ -142,13 +141,11 @@ svn_repos_fs_begin_txn_for_commit(svn_fs_txn_t **txn_p,
 {
   apr_hash_t *revprop_table = apr_hash_make(pool);
   if (author)
-    apr_hash_set(revprop_table, SVN_PROP_REVISION_AUTHOR,
-                 APR_HASH_KEY_STRING,
-                 svn_string_create(author, pool));
+    svn_hash_sets(revprop_table, SVN_PROP_REVISION_AUTHOR,
+                  svn_string_create(author, pool));
   if (log_msg)
-    apr_hash_set(revprop_table, SVN_PROP_REVISION_LOG,
-                 APR_HASH_KEY_STRING,
-                 svn_string_create(log_msg, pool));
+    svn_hash_sets(revprop_table, SVN_PROP_REVISION_LOG,
+                  svn_string_create(log_msg, pool));
   return svn_repos_fs_begin_txn_for_commit2(txn_p, repos, rev, revprop_table,
                                             pool);
 }
@@ -442,17 +439,13 @@ svn_repos_fs_revision_proplist(apr_hash_t **table_p,
 
       /* If they exist, we only copy svn:author and svn:date into the
          'real' hashtable being returned. */
-      value = apr_hash_get(tmphash, SVN_PROP_REVISION_AUTHOR,
-                           APR_HASH_KEY_STRING);
+      value = svn_hash_gets(tmphash, SVN_PROP_REVISION_AUTHOR);
       if (value)
-        apr_hash_set(*table_p, SVN_PROP_REVISION_AUTHOR,
-                     APR_HASH_KEY_STRING, value);
+        svn_hash_sets(*table_p, SVN_PROP_REVISION_AUTHOR, value);
 
-      value = apr_hash_get(tmphash, SVN_PROP_REVISION_DATE,
-                           APR_HASH_KEY_STRING);
+      value = svn_hash_gets(tmphash, SVN_PROP_REVISION_DATE);
       if (value)
-        apr_hash_set(*table_p, SVN_PROP_REVISION_DATE,
-                     APR_HASH_KEY_STRING, value);
+        svn_hash_sets(*table_p, SVN_PROP_REVISION_DATE, value);
     }
   else /* wholly readable revision */
     {
@@ -587,8 +580,8 @@ get_locks_callback(void *baton,
 
   /* If we can read this lock path, add the lock to the return hash. */
   if (readable)
-    apr_hash_set(b->locks, apr_pstrdup(hash_pool, lock->path),
-                 APR_HASH_KEY_STRING, svn_lock_dup(lock, hash_pool));
+    svn_hash_sets(b->locks, apr_pstrdup(hash_pool, lock->path),
+                  svn_lock_dup(lock, hash_pool));
 
   return SVN_NO_ERROR;
 }
@@ -777,8 +770,7 @@ svn_repos_fs_get_inherited_props(apr_array_header_t **inherited_props_p,
               if (propval)
                 {
                   parent_properties = apr_hash_make(result_pool);
-                  apr_hash_set(parent_properties, propname,
-                               APR_HASH_KEY_STRING, propval);
+                  svn_hash_sets(parent_properties, propname, propval);
                 }
             }
           else

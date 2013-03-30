@@ -277,12 +277,27 @@ extern "C" {
  * @name Custom (extension) values for the DAV header.
  * Note that although these share the SVN_DAV_PROP_NS_DAV namespace
  * prefix, they are not properties; they are header values.
- *
- * @{ **/
+ * @{
+ */
+
+/* ##################################################################
+ * 
+ *    WARNING:  At least some versions of Microsoft's Web Folders
+ *              WebDAV client implementation are unable to handle
+ *              DAV: headers with values longer than 63 characters,
+ *              so please keep these strings within that limit.
+ * 
+ * ##################################################################
+ */
+
 
 /** Presence of this in a DAV header in an OPTIONS request or response
- * indicates that the transmitter supports @c svn_depth_t. */
-#define SVN_DAV_NS_DAV_SVN_DEPTH SVN_DAV_PROP_NS_DAV "svn/depth"
+ * indicates that the transmitter supports @c svn_depth_t.
+ *
+ * @since New in 1.5.
+ */
+#define SVN_DAV_NS_DAV_SVN_DEPTH\
+            SVN_DAV_PROP_NS_DAV "svn/depth"
 
 /** Presence of this in a DAV header in an OPTIONS request or response
  * indicates that the server knows how to handle merge-tracking
@@ -291,62 +306,85 @@ extern "C" {
  * Note that this says nothing about whether the repository can handle
  * mergeinfo, only whether the server does.  For more information, see
  * mod_dav_svn/version.c:get_vsn_options().
+ *
+ * @since New in 1.5.
  */
-#define SVN_DAV_NS_DAV_SVN_MERGEINFO SVN_DAV_PROP_NS_DAV "svn/mergeinfo"
+#define SVN_DAV_NS_DAV_SVN_MERGEINFO\
+            SVN_DAV_PROP_NS_DAV "svn/mergeinfo"
 
 /** Presence of this in a DAV header in an OPTIONS response indicates
  * that the transmitter (in this case, the server) knows how to send
- * custom revprops in log responses. */
-#define SVN_DAV_NS_DAV_SVN_LOG_REVPROPS SVN_DAV_PROP_NS_DAV "svn/log-revprops"
+ * custom revprops in log responses.
+ *
+ * @since New in 1.5.
+ */
+#define SVN_DAV_NS_DAV_SVN_LOG_REVPROPS\
+            SVN_DAV_PROP_NS_DAV "svn/log-revprops"
 
 /** Presence of this in a DAV header in an OPTIONS response indicates
  * that the transmitter (in this case, the server) knows how to handle
- * a replay of a directory in the repository (not root). */
+ * a replay of a directory in the repository (not root).
+ *
+ * @since New in 1.5.
+ */
 #define SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY\
             SVN_DAV_PROP_NS_DAV "svn/partial-replay"
 
 /** Presence of this in a DAV header in an OPTIONS response indicates
  * that the transmitter (in this case, the server) knows how to enforce
  * old-value atomicity in PROPPATCH (for editing revprops).
- * @since New in 1.7 */
+ *
+ * @since New in 1.7.
+ */
 #define SVN_DAV_NS_DAV_SVN_ATOMIC_REVPROPS\
             SVN_DAV_PROP_NS_DAV "svn/atomic-revprops"
 
 /** Presence of this in a DAV header in an OPTIONS response indicates
  * that the transmitter (in this case, the server) knows how to get
  * inherited properties. 
- * @since New in 1.8. */
-#define SVN_DAV_NS_DAV_SVN_INHERITED_PROPS \
-  SVN_DAV_PROP_NS_DAV "svn/inherited-props"
+ *
+ * @since New in 1.8.
+ */
+#define SVN_DAV_NS_DAV_SVN_INHERITED_PROPS\
+            SVN_DAV_PROP_NS_DAV "svn/inherited-props"
 
 /** Presence of this in a DAV header in an OPTIONS response indicates
  * that the transmitter (in this case, the server) knows how to
  * properly handle ephemeral (that is, deleted-just-before-commit) FS
  * transaction properties.
- * @since New in 1.8. */
+ *
+ * @since New in 1.8.
+ */
 #define SVN_DAV_NS_DAV_SVN_EPHEMERAL_TXNPROPS\
             SVN_DAV_PROP_NS_DAV "svn/ephemeral-txnprops"
 
 /** Presence of this in a DAV header in an OPTIONS response indicates
- * that the transmitter (in this case, the server) supports serving properties
- * inline in update editor when 'send-all' is 'false'.
- * @since New in 1.8. */
+ * that the transmitter (in this case, the server) supports serving
+ * properties inline in update editor when 'send-all' is 'false'.
+ *
+ * @since New in 1.8.
+ */
 #define SVN_DAV_NS_DAV_SVN_INLINE_PROPS\
             SVN_DAV_PROP_NS_DAV "svn/inline-props"
 
 /** Presence of this in a DAV header in an OPTIONS response indicates
  * that the transmitter (in this case, the server) knows how to handle
  * a replay of a revision resource.  Transmitters must be
- * HTTP-v2-enabled to support this feature.  */
+ * HTTP-v2-enabled to support this feature.
+ *
+ * @since New in 1.8.
+ */
 #define SVN_DAV_NS_DAV_SVN_REPLAY_REV_RESOURCE\
             SVN_DAV_PROP_NS_DAV "svn/replay-rev-resource"
 
 /** Presence of this in a DAV header in an OPTIONS response indicates
  * that the transmitter (in this case, the server) knows how to handle
  * a reversed fetch of file versions.
- * @since New in 1.8. */
-#define SVN_DAV_NS_DAV_SVN_GET_FILE_REVS_REVERSE\
-            SVN_DAV_PROP_NS_DAV "svn/get-file-revs-rvrs"
+ *
+ * @since New in 1.8.
+ */
+#define SVN_DAV_NS_DAV_SVN_REVERSE_FILE_REVS\
+            SVN_DAV_PROP_NS_DAV "svn/reverse-file-revs"
 
 
 /** @} */

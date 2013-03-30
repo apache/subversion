@@ -28,6 +28,7 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_fs.h"
 #include "svn_path.h"
@@ -446,9 +447,7 @@ bdb_write_config(svn_fs_t *fs)
 
       if (fs->config)
         {
-          value = apr_hash_get(fs->config,
-                               dbconfig_options[i].config_key,
-                               APR_HASH_KEY_STRING);
+          value = svn_hash_gets(fs->config, dbconfig_options[i].config_key);
         }
 
       SVN_ERR(svn_io_file_write_full(dbconfig_file,
@@ -472,9 +471,8 @@ bdb_write_config(svn_fs_t *fs)
 }
 
 static svn_error_t *
-base_bdb_verify_rev(svn_fs_t *fs,
-                    svn_revnum_t revision,
-                    apr_pool_t *scratch_pool)
+base_bdb_verify_root(svn_fs_root_t *root,
+                     apr_pool_t *scratch_pool)
 {
   /* Verifying is currently a no op for BDB. */
   return SVN_NO_ERROR;
@@ -509,7 +507,7 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__unlock,
   svn_fs_base__get_lock,
   svn_fs_base__get_locks,
-  base_bdb_verify_rev,
+  base_bdb_verify_root,
   base_bdb_freeze,
   base_bdb_set_errcall,
 };
@@ -684,14 +682,11 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   /* See if compatibility with older versions was explicitly requested. */
   if (fs->config)
     {
-      if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
-                                   APR_HASH_KEY_STRING))
+      if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE))
         format = 1;
-      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
-                                        APR_HASH_KEY_STRING))
+      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE))
         format = 2;
-      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
-                                        APR_HASH_KEY_STRING))
+      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE))
         format = 3;
     }
 
@@ -1386,6 +1381,15 @@ base_get_description(void)
   return _("Module for working with a Berkeley DB repository.");
 }
 
+static svn_error_t *
+base_set_svn_fs_open(svn_fs_t *fs,
+                     svn_error_t *(*svn_fs_open_)(svn_fs_t **,
+                                                  const char *,
+                                                  apr_hash_t *,
+                                                  apr_pool_t *))
+{
+  return SVN_NO_ERROR;
+}
 
 
 /* Base FS library vtable, used by the FS loader library. */
@@ -1402,7 +1406,8 @@ static fs_library_vtable_t library_vtable = {
   base_bdb_recover,
   base_bdb_pack,
   base_bdb_logfiles,
-  svn_fs_base__id_parse
+  svn_fs_base__id_parse,
+  base_set_svn_fs_open
 };
 
 svn_error_t *

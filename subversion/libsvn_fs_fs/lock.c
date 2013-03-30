@@ -106,7 +106,7 @@ hash_fetch(apr_hash_t *hash,
            const char *key,
            apr_pool_t *pool)
 {
-  svn_string_t *str = apr_hash_get(hash, key, APR_HASH_KEY_STRING);
+  svn_string_t *str = svn_hash_gets(hash, key);
   return str ? str->data : NULL;
 }
 
@@ -325,8 +325,8 @@ read_digest_file(apr_hash_t **children_p,
 
       for (i = 0; i < kiddos->nelts; i++)
         {
-          apr_hash_set(*children_p, APR_ARRAY_IDX(kiddos, i, const char *),
-                       APR_HASH_KEY_STRING, (void *)1);
+          svn_hash_sets(*children_p, APR_ARRAY_IDX(kiddos, i, const char *),
+                        (void *)1);
         }
     }
   return SVN_NO_ERROR;
@@ -388,11 +388,9 @@ set_lock(const char *fs_path,
       else
         {
           /* If we already have an entry for this path, we're done. */
-          if (apr_hash_get(this_children, lock_digest_path,
-                           APR_HASH_KEY_STRING))
+          if (svn_hash_gets(this_children, lock_digest_path))
             break;
-          apr_hash_set(this_children, lock_digest_path,
-                       APR_HASH_KEY_STRING, (void *)1);
+          svn_hash_sets(this_children, lock_digest_path, (void *)1);
         }
       SVN_ERR(write_digest_file(this_children, this_lock, fs_path,
                                 digest_path, perms_reference, subpool));
@@ -449,7 +447,7 @@ delete_lock(svn_fs_t *fs,
         }
 
       if (child_to_kill)
-        apr_hash_set(this_children, child_to_kill, APR_HASH_KEY_STRING, NULL);
+        svn_hash_sets(this_children, child_to_kill, NULL);
 
       if (! (this_lock || apr_hash_count(this_children) != 0))
         {
@@ -691,8 +689,7 @@ verify_lock(svn_fs_t *fs,
        _("User '%s' does not own lock on path '%s' (currently locked by '%s')"),
        fs->access_ctx->username, lock->path, lock->owner);
 
-  else if (apr_hash_get(fs->access_ctx->lock_tokens, lock->token,
-                        APR_HASH_KEY_STRING) == NULL)
+  else if (svn_hash_gets(fs->access_ctx->lock_tokens, lock->token) == NULL)
     return svn_error_createf
       (SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
        _("Cannot verify lock on path '%s'; no matching lock-token available"),

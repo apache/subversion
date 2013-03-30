@@ -35,6 +35,7 @@
 
 #include "svn_compat.h"
 #include "svn_private_config.h"  /* For SVN_PATH_LOCAL_SEPARATOR */
+#include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_pools.h"
@@ -52,6 +53,7 @@
 
 #include "private/svn_log.h"
 #include "private/svn_mergeinfo_private.h"
+#include "private/svn_ra_svn_private.h"
 #include "private/svn_fspath.h"
 
 #ifdef HAVE_UNISTD_H
@@ -1055,19 +1057,16 @@ get_props(apr_hash_t **props,
                                            path, pool));
       str = svn_string_create(apr_psprintf(pool, "%ld", crev),
                               pool);
-      apr_hash_set(*props, SVN_PROP_ENTRY_COMMITTED_REV, APR_HASH_KEY_STRING,
-                   str);
+      svn_hash_sets(*props, SVN_PROP_ENTRY_COMMITTED_REV, str);
       str = (cdate) ? svn_string_create(cdate, pool) : NULL;
-      apr_hash_set(*props, SVN_PROP_ENTRY_COMMITTED_DATE, APR_HASH_KEY_STRING,
-                   str);
+      svn_hash_sets(*props, SVN_PROP_ENTRY_COMMITTED_DATE, str);
       str = (cauthor) ? svn_string_create(cauthor, pool) : NULL;
-      apr_hash_set(*props, SVN_PROP_ENTRY_LAST_AUTHOR, APR_HASH_KEY_STRING,
-                   str);
+      svn_hash_sets(*props, SVN_PROP_ENTRY_LAST_AUTHOR, str);
 
       /* Hardcode the values for the UUID. */
       SVN_ERR(svn_fs_get_uuid(svn_fs_root_fs(root), &uuid, pool));
       str = (uuid) ? svn_string_create(uuid, pool) : NULL;
-      apr_hash_set(*props, SVN_PROP_ENTRY_UUID, APR_HASH_KEY_STRING, str);
+      svn_hash_sets(*props, SVN_PROP_ENTRY_UUID, str);
     }
 
   /* Get any inherited properties the user is authorized to. */
@@ -1437,14 +1436,14 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   else
     {
       revprop_table = apr_hash_make(pool);
-      apr_hash_set(revprop_table, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
-                   svn_string_create(log_msg, pool));
+      svn_hash_sets(revprop_table, SVN_PROP_REVISION_LOG,
+                    svn_string_create(log_msg, pool));
     }
 
   /* Get author from the baton, making sure clients can't circumvent
      the authentication via the revision props. */
-  apr_hash_set(revprop_table, SVN_PROP_REVISION_AUTHOR, APR_HASH_KEY_STRING,
-               b->user ? svn_string_create(b->user, pool) : NULL);
+  svn_hash_sets(revprop_table, SVN_PROP_REVISION_AUTHOR,
+                b->user ? svn_string_create(b->user, pool) : NULL);
 
   ccb.pool = pool;
   ccb.new_rev = &new_rev;
@@ -2952,8 +2951,7 @@ static svn_error_t *replay_one_revision(svn_ra_svn_conn_t *conn,
   ab.conn = conn;
 
   SVN_ERR(log_command(b, conn, pool,
-                      svn_log__replay(b->fs_path->data, low_water_mark,
-                                      pool)));
+                      svn_log__replay(b->fs_path->data, rev, pool)));
 
   svn_ra_svn_get_editor(&editor, &edit_baton, conn, pool, NULL, NULL);
 
@@ -3425,20 +3423,18 @@ fetch_props_func(apr_hash_t **props,
 }
 
 static svn_error_t *
-fetch_kind_func(svn_kind_t *kind,
+fetch_kind_func(svn_node_kind_t *kind,
                 void *baton,
                 const char *path,
                 svn_revnum_t base_revision,
                 apr_pool_t *scratch_pool)
 {
-  svn_node_kind_t node_kind;
   svn_fs_root_t *fs_root;
 
   path = get_normalized_repo_rel_path(baton, path, scratch_pool);
   SVN_ERR(get_revision_root(&fs_root, baton, base_revision, scratch_pool));
 
-  SVN_ERR(svn_fs_check_path(&node_kind, fs_root, path, scratch_pool));
-  *kind = svn__kind_from_node_kind(node_kind, FALSE);
+  SVN_ERR(svn_fs_check_path(kind, fs_root, path, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3508,12 +3504,12 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
 
   /* construct FS configuration parameters */
   b.fs_config = apr_hash_make(pool);
-  apr_hash_set(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
-               APR_HASH_KEY_STRING, params->cache_txdeltas ? "1" : "0");
-  apr_hash_set(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
-               APR_HASH_KEY_STRING, params->cache_fulltexts ? "1" : "0");
-  apr_hash_set(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
-               APR_HASH_KEY_STRING, params->cache_revprops ? "1" : "0");
+  svn_hash_sets(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
+                params->cache_txdeltas ? "1" :"0");
+  svn_hash_sets(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
+                params->cache_fulltexts ? "1" :"0");
+  svn_hash_sets(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
+                params->cache_revprops ? "1" :"0");
 
   /* Send greeting.  We don't support version 1 any more, so we can
    * send an empty mechlist. */

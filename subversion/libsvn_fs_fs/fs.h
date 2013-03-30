@@ -420,6 +420,10 @@ typedef struct fs_fs_data_t
   /* Maximum number of length of the linear part at the top of the
    * deltification history after which skip deltas will be used. */
   apr_int64_t max_linear_deltification;
+
+  /* Pointer to svn_fs_open. */
+  svn_error_t *(*svn_fs_open_)(svn_fs_t **, const char *, apr_hash_t *,
+                               apr_pool_t *);
 } fs_fs_data_t;
 
 

@@ -27,6 +27,7 @@
 
 /*** Includes. ***/
 
+#include "svn_hash.h"
 #include "svn_cmdline.h"
 #include "svn_wc.h"
 #include "svn_pools.h"
@@ -239,7 +240,7 @@ svn_cl__propedit(apr_getopt_t *os,
                                       NULL, ctx, subpool, subpool));
 
           /* Get the property value. */
-          propval = apr_hash_get(props, abspath_or_url, APR_HASH_KEY_STRING);
+          propval = svn_hash_gets(props, abspath_or_url);
           if (! propval)
             propval = svn_string_create_empty(subpool);
 

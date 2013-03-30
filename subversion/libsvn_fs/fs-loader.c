@@ -30,6 +30,7 @@
 #include <apr_uuid.h>
 #include <apr_strings.h>
 
+#include "svn_hash.h"
 #include "svn_ctype.h"
 #include "svn_types.h"
 #include "svn_dso.h"
@@ -48,7 +49,6 @@
 #include "private/svn_subr_private.h"
 
 #include "fs-loader.h"
-#include "svn_hash.h"
 
 /* This is defined by configure on platforms which use configure, but
    we need to define a fallback for Windows. */
@@ -451,6 +451,8 @@ svn_fs_create(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
 
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
                        vtable->create(*fs_p, path, pool, common_pool));
+  SVN_ERR(vtable->set_svn_fs_open(*fs_p, svn_fs_open));
+
   return SVN_NO_ERROR;
 }
 
@@ -464,6 +466,8 @@ svn_fs_open(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   *fs_p = fs_new(fs_config, pool);
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
                        vtable->open_fs(*fs_p, path, pool, common_pool));
+  SVN_ERR(vtable->set_svn_fs_open(*fs_p, svn_fs_open));
+
   return SVN_NO_ERROR;
 }
 
@@ -629,11 +633,11 @@ svn_fs_recover(const char *path,
 }
 
 svn_error_t *
-svn_fs_verify_rev(svn_fs_t *fs,
-                  svn_revnum_t revision,
-                  apr_pool_t *scratch_pool)
+svn_fs_verify_root(svn_fs_root_t *root,
+                   apr_pool_t *scratch_pool)
 {
-  SVN_ERR(fs->vtable->verify_rev(fs, revision, scratch_pool));
+  svn_fs_t *fs = root->fs;
+  SVN_ERR(fs->vtable->verify_root(root, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -666,6 +670,8 @@ svn_fs_create_berkeley(svn_fs_t *fs, const char *path)
   /* Perform the actual creation. */
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
                        vtable->create(fs, path, fs->pool, common_pool));
+  SVN_ERR(vtable->set_svn_fs_open(fs, svn_fs_open));
+
   return SVN_NO_ERROR;
 }
 
@@ -677,6 +683,8 @@ svn_fs_open_berkeley(svn_fs_t *fs, const char *path)
   SVN_ERR(fs_library_vtable(&vtable, path, fs->pool));
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
                        vtable->open_fs(fs, path, fs->pool, common_pool));
+  SVN_ERR(vtable->set_svn_fs_open(fs, svn_fs_open));
+
   return SVN_NO_ERROR;
 }
 
@@ -750,16 +758,10 @@ svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
                   svn_fs_txn_t *txn, apr_pool_t *pool)
 {
   svn_error_t *err;
-#ifdef PACK_AFTER_EVERY_COMMIT
-  svn_fs_root_t *txn_root;
-  svn_fs_t *fs;
-  const char *fs_path;
 
   *new_rev = SVN_INVALID_REVNUM;
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-  fs = svn_fs_root_fs(txn_root);
-  fs_path = svn_fs_path(fs, pool);
-#endif
+  if (conflict_p)
+    *conflict_p = NULL;
 
   err = txn->vtable->commit(conflict_p, new_rev, txn, pool);
 
@@ -779,6 +781,8 @@ svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
 
 #ifdef PACK_AFTER_EVERY_COMMIT
   {
+    svn_fs_t *fs = txn->fs;
+    const char *fs_path = svn_fs_path(fs, pool);
     err = svn_fs_pack(fs_path, NULL, NULL, NULL, NULL, pool);
     if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
       /* Pre-1.6 filesystem. */

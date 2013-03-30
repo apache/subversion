@@ -5,6 +5,25 @@ TRANSLATING PARAMETER LISTS
    The argument-reductions laws of the SWIG bindings something go like
    this:
    
+     - The module prefix can be omitted.  o:
+
+          void *some_C_function = svn_client_foo;
+       
+       becomes:
+
+          import svn.client
+          func = svn.client.foo
+
+       However, the following two alternatives also work:
+
+          # Fully-qualified C name
+          import svn.client
+          func = svn.client.svn_client_foo
+
+          # Star-import imports just svn_* names, not bare 'foo' names.
+          from svn.client import *
+          func = svn_client_foo
+
      - Python functions don't return errors.  They throw exceptions.
        Which means that...
    

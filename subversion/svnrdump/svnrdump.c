@@ -366,8 +366,7 @@ init_client_context(svn_client_ctx_t **ctx_p,
     SVN_ERR(svn_cmdline__apply_config_options(ctx->config, config_options,
                                               "svnrdump: ", "--config-option"));
 
-  cfg_config = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
-                            APR_HASH_KEY_STRING);
+  cfg_config = svn_hash_gets(ctx->config, SVN_CONFIG_CATEGORY_CONFIG);
 
   /* ### FIXME: This is a hack to work around the fact that our dump
      ### editor simply can't handle the way ra_serf violates the
@@ -382,8 +381,7 @@ init_client_context(svn_client_ctx_t **ctx_p,
      ### 
      ### See http://subversion.tigris.org/issues/show_bug.cgi?id=4116.
   */
-  cfg_servers = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_SERVERS,
-                             APR_HASH_KEY_STRING);
+  cfg_servers = svn_hash_gets(ctx->config, SVN_CONFIG_CATEGORY_SERVERS);
   svn_config_set_bool(cfg_servers, SVN_CONFIG_SECTION_GLOBAL,
                       SVN_CONFIG_OPTION_HTTP_BULK_UPDATES, TRUE);
   svn_config_set_int64(cfg_servers, SVN_CONFIG_SECTION_GLOBAL,
@@ -696,9 +694,9 @@ dump_cmd(apr_getopt_t *os,
   svn_ra_session_t *extra_ra_session;
   const char *repos_root;
 
-  SVN_ERR(svn_client_open_ra_session(&extra_ra_session,
-                                     opt_baton->url,
-                                     opt_baton->ctx, pool));
+  SVN_ERR(svn_client_open_ra_session2(&extra_ra_session,
+                                      opt_baton->url, NULL,
+                                      opt_baton->ctx, pool, pool));
   SVN_ERR(svn_ra_get_repos_root2(extra_ra_session, &repos_root, pool));
   SVN_ERR(svn_ra_reparent(extra_ra_session, repos_root, pool));
 
@@ -717,8 +715,8 @@ load_cmd(apr_getopt_t *os,
   opt_baton_t *opt_baton = baton;
   svn_ra_session_t *aux_session;
 
-  SVN_ERR(svn_client_open_ra_session(&aux_session, opt_baton->url,
-                                     opt_baton->ctx, pool));
+  SVN_ERR(svn_client_open_ra_session2(&aux_session, opt_baton->url, NULL,
+                                      opt_baton->ctx, pool, pool));
   return load_revisions(opt_baton->session, aux_session, opt_baton->url,
                         opt_baton->quiet, pool);
 }
@@ -1141,21 +1139,32 @@ main(int argc, const char **argv)
                                    config_options,
                                    pool));
 
-  SVNRDUMP_ERR(svn_client_open_ra_session(&(opt_baton->session),
-                                          opt_baton->url,
-                                          opt_baton->ctx, pool));
+  err = svn_client_open_ra_session2(&(opt_baton->session),
+                                    opt_baton->url, NULL,
+                                    opt_baton->ctx, pool, pool);
 
   /* Have sane opt_baton->start_revision and end_revision defaults if
      unspecified.  */
-  SVNRDUMP_ERR(svn_ra_get_latest_revnum(opt_baton->session,
-                                        &latest_revision, pool));
+  if (!err)
+    err = svn_ra_get_latest_revnum(opt_baton->session, &latest_revision, pool);
 
   /* Make sure any provided revisions make sense. */
-  SVNRDUMP_ERR(validate_and_resolve_revisions(opt_baton,
-                                              latest_revision, pool));
+  if (!err)
+    err = validate_and_resolve_revisions(opt_baton, latest_revision, pool);
 
   /* Dispatch the subcommand */
-  SVNRDUMP_ERR((*subcommand->cmd_func)(os, opt_baton, pool));
+  if (!err)
+    err = (*subcommand->cmd_func)(os, opt_baton, pool);
+
+  if (err && err->apr_err == SVN_ERR_AUTHN_FAILED && non_interactive)
+    {
+      err = svn_error_quick_wrap(err,
+                                 _("Authentication failed and interactive"
+                                   " prompting is disabled; see the"
+                                   " --force-interactive option"));
+    }
+
+  SVNRDUMP_ERR(err);
 
   svn_pool_destroy(pool);
 

@@ -31,6 +31,7 @@
 
 #include <serf.h>
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
 #include "svn_dav.h"
@@ -471,7 +472,7 @@ update_closed(svn_ra_serf__xml_estate_t *xes,
 
   if (leaving_state == TARGET_REVISION)
     {
-      const char *rev = apr_hash_get(attrs, "rev", APR_HASH_KEY_STRING);
+      const char *rev = svn_hash_gets(attrs, "rev");
 
       SVN_ERR(ctx->update_editor->set_target_revision(ctx->update_baton,
                                                       SVN_STR_TO_REV(rev),
@@ -1687,8 +1688,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       info->base_name = info->dir->base_name;
       info->name = info->dir->name;
 
-      info->dir->repos_relpath = apr_hash_get(ctx->switched_paths, "",
-                                              APR_HASH_KEY_STRING);
+      info->dir->repos_relpath = svn_hash_gets(ctx->switched_paths, "");
 
       if (!info->dir->repos_relpath)
         SVN_ERR(svn_ra_serf__get_relative_path(&info->dir->repos_relpath,
@@ -1742,8 +1742,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
                                    dir->pool);
       info->name = dir->name;
 
-      dir->repos_relpath = apr_hash_get(ctx->switched_paths, dir->name,
-                                        APR_HASH_KEY_STRING);
+      dir->repos_relpath = svn_hash_gets(ctx->switched_paths, dir->name);
 
       if (!dir->repos_relpath)
         dir->repos_relpath = svn_relpath_join(dir->parent_dir->repos_relpath,
@@ -2247,8 +2246,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
                                         info->pool);
         }
 
-      info->lock_token = apr_hash_get(ctx->lock_path_tokens, info->name,
-                                      APR_HASH_KEY_STRING);
+      info->lock_token = svn_hash_gets(ctx->lock_path_tokens, info->name);
 
       if (info->lock_token && !info->fetch_props)
         info->fetch_props = TRUE;
@@ -2267,8 +2265,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           /* If this file is switched vs the editor root we should provide
              its real url instead of the one calculated from the session root.
            */
-          repos_relpath = apr_hash_get(ctx->switched_paths, info->name,
-                                       APR_HASH_KEY_STRING);
+          repos_relpath = svn_hash_gets(ctx->switched_paths, info->name);
 
           if (!repos_relpath)
             {
@@ -2279,8 +2276,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
                   SVN_ERR_ASSERT(*svn_relpath_dirname(info->name, info->pool)
                                     == '\0');
 
-                  repos_relpath = apr_hash_get(ctx->switched_paths, "",
-                                               APR_HASH_KEY_STRING);
+                  repos_relpath = svn_hash_gets(ctx->switched_paths, "");
                 }
               else
                 repos_relpath = svn_relpath_join(info->dir->repos_relpath,
@@ -2582,10 +2578,9 @@ set_path(void *report_baton,
 
   if (lock_token)
     {
-      apr_hash_set(report->lock_path_tokens,
-                   apr_pstrdup(report->pool, path),
-                   APR_HASH_KEY_STRING,
-                   apr_pstrdup(report->pool, lock_token));
+      svn_hash_sets(report->lock_path_tokens,
+                    apr_pstrdup(report->pool, path),
+                    apr_pstrdup(report->pool, lock_token));
     }
 
   return SVN_NO_ERROR;
@@ -2657,16 +2652,16 @@ link_path(void *report_baton,
   /* Store the switch roots to allow generating repos_relpaths from just
      the working copy paths. (Needed for HTTPv2) */
   path = apr_pstrdup(report->pool, path);
-  apr_hash_set(report->switched_paths, path, APR_HASH_KEY_STRING,
-               apr_pstrdup(report->pool, link+1));
+  svn_hash_sets(report->switched_paths,
+                path, apr_pstrdup(report->pool, link + 1));
 
   if (!*path)
     report->root_is_switched = TRUE;
 
   if (lock_token)
     {
-      apr_hash_set(report->lock_path_tokens, path, APR_HASH_KEY_STRING,
-                   apr_pstrdup(report->pool, lock_token));
+      svn_hash_sets(report->lock_path_tokens,
+                    path, apr_pstrdup(report->pool, lock_token));
     }
 
   return APR_SUCCESS;
@@ -3455,7 +3450,7 @@ try_get_wc_contents(svn_boolean_t *found_p,
     }
 
 
-  svn_props = apr_hash_get(props, SVN_DAV_PROP_NS_DAV, APR_HASH_KEY_STRING);
+  svn_props = svn_hash_gets(props, SVN_DAV_PROP_NS_DAV);
   if (!svn_props)
     {
       /* No properties -- therefore no checksum property -- in response. */
@@ -3507,7 +3502,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   svn_ra_serf__connection_t *conn;
   const char *fetch_url;
   apr_hash_t *fetch_props;
-  svn_kind_t res_kind;
+  svn_node_kind_t res_kind;
   const svn_ra_serf__dav_props_t *which_props;
 
   /* What connection should we go on? */
@@ -3553,7 +3548,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
 
   /* Verify that resource type is not collection. */
   SVN_ERR(svn_ra_serf__get_resource_type(&res_kind, fetch_props));
-  if (res_kind != svn_kind_file)
+  if (res_kind != svn_node_file)
     {
       return svn_error_create(SVN_ERR_FS_NOT_FILE, NULL,
                               _("Can't get text contents of a directory"));

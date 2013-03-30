@@ -313,8 +313,7 @@ obtain_eol_and_keywords_for_file(apr_hash_t **keywords,
 
   SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, local_abspath,
                             scratch_pool, scratch_pool));
-  keywords_val = apr_hash_get(props, SVN_PROP_KEYWORDS,
-                              APR_HASH_KEY_STRING);
+  keywords_val = svn_hash_gets(props, SVN_PROP_KEYWORDS);
   if (keywords_val)
     {
       svn_revnum_t changed_rev;
@@ -339,8 +338,7 @@ obtain_eol_and_keywords_for_file(apr_hash_t **keywords,
                                         author, result_pool));
     }
 
-  eol_style_val = apr_hash_get(props, SVN_PROP_EOL_STYLE,
-                               APR_HASH_KEY_STRING);
+  eol_style_val = svn_hash_gets(props, SVN_PROP_EOL_STYLE);
   if (eol_style_val)
     {
       svn_subst_eol_style_from_value(eol_style,
@@ -1143,8 +1141,7 @@ init_patch_target(patch_target_t **patch_target,
                                        prop_patch->operation,
                                        wc_ctx, target->local_abspath,
                                        result_pool, scratch_pool));
-              apr_hash_set(target->prop_targets, prop_name,
-                           APR_HASH_KEY_STRING, prop_target);
+              svn_hash_sets(target->prop_targets, prop_name, prop_target);
             }
         }
     }
@@ -2188,8 +2185,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
         target->is_special = TRUE;
 
       /* We'll store matched hunks in prop_content. */
-      prop_target = apr_hash_get(target->prop_targets, prop_name,
-                                 APR_HASH_KEY_STRING);
+      prop_target = svn_hash_gets(target->prop_targets, prop_name);
 
       for (i = 0; i < prop_patch->hunks->nelts; i++)
         {

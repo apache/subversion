@@ -542,30 +542,6 @@ svn_cl__merge(apr_getopt_t *os,
                                   "with --reintegrate"));
     }
 
-  /* Decide how to handle conflicts.  If the user wants interactive
-   * conflict resolution, postpone conflict resolution during the merge
-   * and if any conflicts occur we'll run the conflict resolver later.
-   * Otherwise install the appropriate resolver now. */
-  if (opt_state->accept_which == svn_cl__accept_unspecified
-      || opt_state->accept_which == svn_cl__accept_postpone
-      || opt_state->accept_which == svn_cl__accept_edit
-      || opt_state->accept_which == svn_cl__accept_launch)
-    {
-      /* 'svn.c' has already installed the 'postpone' handler for us. */
-    }
-  else
-    {
-      svn_cl__interactive_conflict_baton_t *b;
-
-      ctx->conflict_func2 = svn_cl__conflict_func_interactive;
-      SVN_ERR(svn_cl__get_conflict_func_interactive_baton(
-                &b,
-                opt_state->accept_which,
-                ctx->config, opt_state->editor_cmd,
-                ctx->cancel_func, ctx->cancel_baton, pool));
-      ctx->conflict_baton2 = b;
-    }
-
   merge_err = run_merge(two_sources_specified,
                         sourcepath1, peg_revision1,
                         sourcepath2,
@@ -580,22 +556,12 @@ svn_cl__merge(apr_getopt_t *os,
                _("Merge tracking not possible, use --ignore-ancestry or\n"
                  "fix invalid mergeinfo in target with 'svn propset'"));
     }
-  if (! merge_err || merge_err->apr_err == SVN_ERR_WC_FOUND_CONFLICT)
+
+  if (!opt_state->quiet)
     {
-      svn_error_t *err = SVN_NO_ERROR;
+      svn_error_t *err = svn_cl__notifier_print_conflict_stats(
+                           ctx->notify_baton2, pool);
 
-      if (! opt_state->quiet)
-        err = svn_cl__notifier_print_conflict_stats(ctx->notify_baton2,
-                                                        pool);
-
-      /* Resolve any postponed conflicts.  (Only if we've been using the
-       * default 'postpone' resolver which remembers what was postponed.) */
-      if (!err && ctx->conflict_func2 == svn_cl__conflict_func_postpone)
-        err = svn_cl__resolve_postponed_conflicts(NULL,
-                                                  ctx->conflict_baton2,
-                                                  opt_state->accept_which,
-                                                  opt_state->editor_cmd,
-                                                  ctx, pool);
       merge_err = svn_error_compose_create(merge_err, err);
     }
 

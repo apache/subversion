@@ -547,7 +547,12 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
   if (not error_expected) and ((stderr_lines) or (exit_code != 0)):
     for x in stderr_lines:
       logger.warning(x.rstrip())
-    raise Failure
+    if len(varargs) <= 5:
+      brief_command = ' '.join((command,) + varargs)
+    else:
+      brief_command = ' '.join(((command,) + varargs)[:4]) + ' ...'
+    raise Failure('Command failed: "' + brief_command +
+                  '"; exit code ' + str(exit_code))
 
   return exit_code, \
          filter_dbg(stdout_lines), \
@@ -1186,24 +1191,46 @@ def merge_notify_line(revstart=None, revend=None, same_URL=True,
       return "--- Merging %sr%ld through r%ld into '%s':\n" \
              % (from_foreign_phrase, revstart, revend, target_re)
 
-def summary_of_conflicts(text_conflicts=0, prop_conflicts=0,
-                         tree_conflicts=0, skipped_paths=0):
+def summary_of_conflicts(text_conflicts=0,
+                         prop_conflicts=0,
+                         tree_conflicts=0,
+                         text_resolved=0,
+                         prop_resolved=0,
+                         tree_resolved=0,
+                         skipped_paths=0,
+                         as_regex=False):
   """Return a list of lines corresponding to the summary of conflicts and
      skipped paths that is printed by merge and update and switch.  If all
      parameters are zero, return an empty list.
   """
   lines = []
-  if text_conflicts or prop_conflicts or tree_conflicts or skipped_paths:
+  if (text_conflicts or prop_conflicts or tree_conflicts
+      or text_resolved or prop_resolved or tree_resolved
+      or skipped_paths):
     lines.append("Summary of conflicts:\n")
-    if text_conflicts:
-      lines.append("  Text conflicts: %d\n" % text_conflicts)
-    if prop_conflicts:
-      lines.append("  Property conflicts: %d\n" % prop_conflicts)
-    if tree_conflicts:
-      lines.append("  Tree conflicts: %d\n" % tree_conflicts)
+    if text_conflicts or text_resolved:
+      if text_resolved == 0:
+        lines.append("  Text conflicts: %d\n" % text_conflicts)
+      else:
+        lines.append("  Text conflicts: %d remaining (and %d already resolved)\n"
+                     % (text_conflicts, text_resolved))
+    if prop_conflicts or prop_resolved:
+      if prop_resolved == 0:
+        lines.append("  Property conflicts: %d\n" % prop_conflicts)
+      else:
+        lines.append("  Property conflicts: %d remaining (and %d already resolved)\n"
+                     % (prop_conflicts, prop_resolved))
+    if tree_conflicts or tree_resolved:
+      if tree_resolved == 0:
+        lines.append("  Tree conflicts: %d\n" % tree_conflicts)
+      else:
+        lines.append("  Tree conflicts: %d remaining (and %d already resolved)\n"
+                     % (tree_conflicts, tree_resolved))
     if skipped_paths:
       lines.append("  Skipped paths: %d\n" % skipped_paths)
 
+  if as_regex:
+    lines = map(re.escape, lines)
   return lines
 
 

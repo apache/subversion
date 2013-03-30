@@ -35,6 +35,8 @@
 /* for svn_fs_fs__id_* (used in assertions only) */
 #include "../../subversion/libsvn_fs_fs/id.h"
 
+#include "private/svn_cmdline_private.h"
+
 #include "svn_private_config.h"
 
 

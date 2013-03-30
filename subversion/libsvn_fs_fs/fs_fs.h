@@ -52,13 +52,6 @@ svn_error_t *svn_fs_fs__verify(svn_fs_t *fs,
                                void *cancel_baton,
                                apr_pool_t *pool);
 
-/* Verify metadata of REVISION in filesystem FS.
- * Use POOL for temporary allocations. */
-svn_error_t *
-svn_fs_fs__verify_rev(svn_fs_t *fs,
-                      svn_revnum_t revision,
-                      apr_pool_t *pool);
-
 /* Set *YOUNGEST to the youngest revision in filesystem FS.  Do any
    temporary allocation in POOL. */
 svn_error_t *svn_fs_fs__youngest_rev(svn_revnum_t *youngest,

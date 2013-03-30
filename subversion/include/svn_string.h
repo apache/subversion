@@ -336,6 +336,8 @@ svn_stringbuf_appendcstr(svn_stringbuf_t *targetstr,
  * Reallocs if necessary. @a str is affected, nothing else is.
  *
  * @note The inserted string may be a sub-range if @a str.
+ *
+ * @since New in 1.8.
  */
 void
 svn_stringbuf_insert(svn_stringbuf_t *str,
@@ -348,17 +350,25 @@ svn_stringbuf_insert(svn_stringbuf_t *str,
  * at @a pos.  If the latter is larger or equal to @c str->pos, this will
  * be a no-op.  Otherwise, the resulting string will be @c str->len-count
  * bytes long.
+ *
+ * @since New in 1.8.
  */
 void
 svn_stringbuf_remove(svn_stringbuf_t *str,
                      apr_size_t pos,
                      apr_size_t count);
 
-/** Faster but functionally equivalent to the following sequence:
+/** Replace in @a str the substring which starts at @a pos and is @a
+ * old_count bytes long with a new substring @a bytes (which is @a
+ * new_count bytes long).
+ *
+ * This is faster but functionally equivalent to the following sequence:
  * @code
- *   svn_stringbuf_remove(str, pos, old_count);
- *   svn_stringbuf_insert(str, pos, bytes, new_count);
+     svn_stringbuf_remove(str, pos, old_count);
+     svn_stringbuf_insert(str, pos, bytes, new_count);
  * @endcode
+ *
+ * @since New in 1.8.
  */
 void
 svn_stringbuf_replace(svn_stringbuf_t *str,
@@ -455,7 +465,7 @@ svn_cstring_match_list(const char *str, const apr_array_header_t *list);
  * if no token is left.  Modifies @a str such that the next call will return
  * the next token.
  *
- * Note that the content of @a *str may be modified by this function.
+ * @note The content of @a *str may be modified by this function.
  *
  * @since New in 1.8.
  */

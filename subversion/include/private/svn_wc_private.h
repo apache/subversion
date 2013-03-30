@@ -154,8 +154,8 @@ typedef struct svn_wc__committable_external_info_t {
    * from. */
   const char *repos_root_url;
 
-  /* Set to either svn_kind_file or svn_kind_dir. */
-  svn_kind_t kind;
+  /* Set to either svn_node_file or svn_node_dir. */
+  svn_node_kind_t kind;
 
 } svn_wc__committable_external_info_t;
 
@@ -1458,6 +1458,10 @@ svn_wc__get_status_editor(const svn_delta_editor_t **editor,
  * the ambient depth filtering, so this doesn't have to be handled in the
  * editor.
  *
+ * If @a clean_checkout is TRUE, assume that we are checking out into an
+ * empty directory, and so bypass a number of conflict checks that are
+ * unnecessary in this case.
+ *
  * If @a fetch_dirents_func is not NULL, the update editor may call this
  * callback, when asked to perform a depth restricted update. It will do this
  * before returning the editor to allow using the primary ra session for this.
@@ -1647,7 +1651,7 @@ typedef svn_error_t *
                                        svn_wc_notify_state_t *state,
                                        svn_wc_notify_state_t *prop_state,
                                        const char *relpath,
-                                       svn_kind_t kind,
+                                       svn_node_kind_t kind,
                                        svn_boolean_t before_op,
                                        svn_boolean_t for_add,
                                        svn_boolean_t for_delete,
@@ -1661,7 +1665,7 @@ typedef svn_error_t *
  */
 typedef svn_error_t *
         (*svn_wc__diff_state_close_t)(const char *relpath,
-                                      svn_kind_t kind,
+                                      svn_node_kind_t kind,
                                       void *state_baton,
                                       apr_pool_t *scratch_pool);
 
@@ -1778,7 +1782,8 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
  * If @a allow_mixed_revisions is @c FALSE, #SVN_ERR_WC_MIXED_REVISIONS
  * will be raised if the move source is a mixed-revision subtree.
  * If @a allow_mixed_revisions is TRUE, a mixed-revision move source is
- * allowed. This parameter should be set to FALSE except where backwards
+ * allowed but the move will degrade to a copy and a delete without local
+ * move tracking. This parameter should be set to FALSE except where backwards
  * compatibility to svn_wc_move() is required.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton at

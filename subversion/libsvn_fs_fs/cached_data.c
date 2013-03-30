@@ -1949,7 +1949,7 @@ parse_dir_entries(apr_hash_t **entries_p,
 
       dirent->id = svn_fs_fs__id_parse(str, strlen(str), pool);
 
-      apr_hash_set(*entries_p, dirent->name, APR_HASH_KEY_STRING, dirent);
+      svn_hash_sets(*entries_p, dirent->name, dirent);
     }
 
   return SVN_NO_ERROR;
@@ -2069,7 +2069,7 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
                                           scratch_pool));
 
       /* find desired entry and return a copy in POOL, if found */
-      entry = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
+      entry = svn_hash_gets(entries, name);
       if (entry != NULL)
         {
           entry_copy = apr_palloc(result_pool, sizeof(*entry_copy));

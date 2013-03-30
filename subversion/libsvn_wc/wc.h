@@ -388,10 +388,12 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
                                  apr_pool_t *scratch_pool);
 
 
-/* Prepare to merge a file content change into the working copy.  This
-   does not merge properties; see svn_wc__merge_props() for that.  This
-   does not change the working file on disk; it returns work items that
-   will replace the working file on disk when they are run.
+/* Prepare to merge a file content change into the working copy.
+
+   This does not merge properties; see svn_wc__merge_props() for that.
+   This does not necessarily change the file TARGET_ABSPATH on disk; it
+   may instead return work items that will replace the file on disk when
+   they are run.  ### Can we be more consistent about this?
 
    Merge the difference between LEFT_ABSPATH and RIGHT_ABSPATH into
    TARGET_ABSPATH.
@@ -740,7 +742,7 @@ struct svn_wc__shim_fetch_baton_t
 
 /* Using a BATON of struct shim_fetch_baton, return KIND for PATH. */
 svn_error_t *
-svn_wc__fetch_kind_func(svn_kind_t *kind,
+svn_wc__fetch_kind_func(svn_node_kind_t *kind,
                         void *baton,
                         const char *path,
                         svn_revnum_t base_revision,
