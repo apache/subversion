@@ -231,6 +231,14 @@ typedef enum svn_ra_svn_cmd_t
  * @a compression_level specifies the desired network data compression
  * level (zlib) from 0 (no compression) to 9 (best but slowest).
  *
+ * If @a zero_copy_limit is not 0, cached file contents smaller than the
+ * given limit may be sent directly to the network socket.  Otherwise,
+ * it will be copied into a temporary buffer before being forwarded to
+ * the network stack.  Since the zero-copy code path has to enforce strict
+ * time-outs, the receiver must be able to process @a zero_copy_limit
+ * bytes within one second.  Even temporary failure to do so may cause
+ * the server to cancel the respective operation with a time-out error.
+ *
  * To reduce the overhead of checking for cancellation requests from the
  * data receiver, set @a error_check_interval to some non-zero value.
  * It defines the number of bytes that must have been sent since the last
