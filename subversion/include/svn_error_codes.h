@@ -817,6 +817,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 56,
              "Malformed transaction ID string.")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_CONTAINER_INDEX,
+             SVN_ERR_FS_CATEGORY_START + 57,
+             "Container index out of range.")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,
