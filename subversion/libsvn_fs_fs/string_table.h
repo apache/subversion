@@ -23,7 +23,7 @@
 #ifndef SVN_LIBSVN_FS_FS_STRING_TABLE_H
 #define SVN_LIBSVN_FS_FS_STRING_TABLE_H
 
-#include <apr_pools.h>    /* for apr_pool_t */
+#include "svn_io.h"
 
 #ifdef __cplusplus
 extern "C" {
