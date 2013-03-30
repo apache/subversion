@@ -181,7 +181,8 @@ struct key_t
 /* What we need to know about a rep. */
 struct value_t
 {
-  svn_checksum_t *sha1_checksum;
+  svn_checksum_t checksum;
+  unsigned char sha1_digest[APR_SHA1_DIGESTSIZE];
   apr_uint64_t refcount;
 };
 
@@ -199,7 +200,7 @@ static svn_error_t *record(apr_hash_t *records,
    * exist or doesn't have the checksum we are after.  (The latter case
    * often corresponds to node_rev->kind == svn_node_dir.)
    */
-  if (records == NULL || rep == NULL || rep->sha1_checksum == NULL)
+  if (records == NULL || rep == NULL || !rep->has_sha1)
     return SVN_NO_ERROR;
 
   /* Construct the key.
@@ -213,18 +214,16 @@ static svn_error_t *record(apr_hash_t *records,
   /* Update or create the value. */
   if ((value = apr_hash_get(records, key, sizeof(*key))))
     {
-      /* Paranoia. */
-      SVN_ERR_ASSERT(value->sha1_checksum != NULL);
-      SVN_ERR_ASSERT(svn_checksum_match(value->sha1_checksum,
-                                        rep->sha1_checksum));
       /* Real work. */
       value->refcount++;
     }
   else
     {
       value = apr_palloc(result_pool, sizeof(*value));
-      value->sha1_checksum = svn_checksum_dup(rep->sha1_checksum, result_pool);
+      value->checksum.digest = value->sha1_digest;
+      value->checksum.kind = svn_checksum_sha1;
       value->refcount = 1;
+      memcpy(value->sha1_digest, rep->sha1_digest, sizeof(value->sha1_digest));
     }
 
   /* Store them. */
@@ -339,7 +338,7 @@ pretty_print(const char *name,
       SVN_ERR(svn_cmdline_printf(scratch_pool, "%s %" APR_UINT64_T_FMT " %s\n",
                                  name, value->refcount,
                                  svn_checksum_to_cstring_display(
-                                   value->sha1_checksum,
+                                   &value->checksum,
                                    scratch_pool)));
     }
 

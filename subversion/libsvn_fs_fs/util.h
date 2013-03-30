@@ -154,7 +154,7 @@ path_txn_dir(svn_fs_t *fs,
 const char *
 path_txn_sha1(svn_fs_t *fs,
               const svn_fs_fs__id_part_t *txn_id,
-              svn_checksum_t *sha1,
+              const unsigned char *sha1,
               apr_pool_t *pool);
 
 const char *

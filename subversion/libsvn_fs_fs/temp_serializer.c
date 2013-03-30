@@ -127,43 +127,6 @@ deserialize_svn_string(void *buffer, svn_string_t **string)
   svn_temp_deserializer__resolve(*string, (void **)&(*string)->data);
 }
 
-/* Utility function to serialize checkum CS within the given serialization
- * CONTEXT.
- */
-static void
-serialize_checksum(svn_temp_serializer__context_t *context,
-                   svn_checksum_t * const *cs)
-{
-  const svn_checksum_t *checksum = *cs;
-  if (checksum == NULL)
-    return;
-
-  svn_temp_serializer__push(context,
-                            (const void * const *)cs,
-                            sizeof(*checksum));
-
-  /* The digest is arbitrary binary data.
-   * Thus, we cannot use svn_temp_serializer__add_string. */
-  svn_temp_serializer__add_leaf(context,
-                                (const void * const *)&checksum->digest,
-                                svn_checksum_size(checksum));
-
-  /* return to the caller's nesting level */
-  svn_temp_serializer__pop(context);
-}
-
-/* Utility function to deserialize the checksum CS inside the BUFFER.
- */
-static void
-deserialize_checksum(void *buffer, svn_checksum_t **cs)
-{
-  svn_temp_deserializer__resolve(buffer, (void **)cs);
-  if (*cs == NULL)
-    return;
-
-  svn_temp_deserializer__resolve(*cs, (void **)&(*cs)->digest);
-}
-
 /* Utility function to serialize the REPRESENTATION within the given
  * serialization CONTEXT.
  */
@@ -176,35 +139,9 @@ serialize_representation(svn_temp_serializer__context_t *context,
     return;
 
   /* serialize the representation struct itself */
-  svn_temp_serializer__push(context,
-                            (const void * const *)representation,
-                            sizeof(*rep));
-
-  /* serialize sub-structures */
-  serialize_checksum(context, &rep->md5_checksum);
-  serialize_checksum(context, &rep->sha1_checksum);
-
-  /* return to the caller's nesting level */
-  svn_temp_serializer__pop(context);
-}
-
-/* Utility function to deserialize the REPRESENTATIONS inside the BUFFER.
- */
-static void
-deserialize_representation(void *buffer,
-                           representation_t **representation)
-{
-  representation_t *rep;
-
-  /* fixup the reference to the representation itself */
-  svn_temp_deserializer__resolve(buffer, (void **)representation);
-  rep = *representation;
-  if (rep == NULL)
-    return;
-
-  /* fixup of sub-structures */
-  deserialize_checksum(rep, &rep->md5_checksum);
-  deserialize_checksum(rep, &rep->sha1_checksum);
+  svn_temp_serializer__add_leaf(context,
+                                (const void * const *)representation,
+                                sizeof(*rep));
 }
 
 /* auxilliary structure representing the content of a directory hash */
@@ -406,8 +343,8 @@ svn_fs_fs__noderev_deserialize(void *buffer,
   /* fixup of sub-structures */
   svn_fs_fs__id_deserialize(noderev, (svn_fs_id_t **)&noderev->id);
   svn_fs_fs__id_deserialize(noderev, (svn_fs_id_t **)&noderev->predecessor_id);
-  deserialize_representation(noderev, &noderev->prop_rep);
-  deserialize_representation(noderev, &noderev->data_rep);
+  svn_temp_deserializer__resolve(noderev, (void **)&noderev->prop_rep);
+  svn_temp_deserializer__resolve(noderev, (void **)&noderev->data_rep);
 
   svn_temp_deserializer__resolve(noderev, (void **)&noderev->copyfrom_path);
   svn_temp_deserializer__resolve(noderev, (void **)&noderev->copyroot_path);

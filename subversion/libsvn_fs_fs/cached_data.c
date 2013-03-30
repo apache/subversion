@@ -914,7 +914,7 @@ struct rep_read_baton
      length, and the amount we've read so far.  Some of this
      information is redundant with rs_list and src_state, but it's
      convenient for the checksumming code to have it here. */
-  svn_checksum_t *md5_checksum;
+  unsigned char md5_digest[APR_MD5_DIGESTSIZE];
 
   svn_filesize_t len;
   svn_filesize_t off;
@@ -1188,7 +1188,7 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
   b->buf = NULL;
   b->md5_checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
   b->checksum_finalized = FALSE;
-  b->md5_checksum = svn_checksum_dup(rep->md5_checksum, pool);
+  memcpy(b->md5_digest, rep->md5_digest, sizeof(rep->md5_digest));
   b->len = rep->expanded_size;
   b->off = 0;
   b->fulltext_cache_key = fulltext_cache_key;
@@ -1612,13 +1612,16 @@ rep_read_contents(void *baton,
       if (rb->off == rb->len)
         {
           svn_checksum_t *md5_checksum;
+          svn_checksum_t expected;
+          expected.kind = svn_checksum_md5;
+          expected.digest = rb->md5_digest;
 
           rb->checksum_finalized = TRUE;
           SVN_ERR(svn_checksum_final(&md5_checksum, rb->md5_checksum_ctx,
                                      rb->pool));
-          if (!svn_checksum_match(md5_checksum, rb->md5_checksum))
+          if (!svn_checksum_match(md5_checksum, &expected))
             return svn_error_create(SVN_ERR_FS_CORRUPT,
-                    svn_checksum_mismatch_err(rb->md5_checksum, md5_checksum,
+                    svn_checksum_mismatch_err(&expected, md5_checksum,
                         rb->pool,
                         _("Checksum mismatch while reading representation")),
                     NULL);
@@ -1756,7 +1759,7 @@ svn_fs_fs__try_process_file_contents(svn_boolean_t *success,
 struct delta_read_baton
 {
   struct rep_state_t *rs;
-  svn_checksum_t *checksum;
+  unsigned char md5_digest[APR_MD5_DIGESTSIZE];
 };
 
 /* This implements the svn_txdelta_next_window_fn_t interface. */
@@ -1781,11 +1784,7 @@ static const unsigned char *
 delta_read_md5_digest(void *baton)
 {
   struct delta_read_baton *drb = baton;
-
-  if (drb->checksum->kind == svn_checksum_md5)
-    return drb->checksum->digest;
-  else
-    return NULL;
+  return drb->md5_digest;
 }
 
 svn_error_t *
@@ -1815,9 +1814,10 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
         {
           /* Create the delta read baton. */
           struct delta_read_baton *drb = apr_pcalloc(pool, sizeof(*drb));
+
           drb->rs = rep_state;
-          drb->checksum = svn_checksum_dup(target->data_rep->md5_checksum,
-                                           pool);
+          memcpy(drb->md5_digest, target->data_rep->md5_digest,
+                 sizeof(drb->md5_digest));
           *stream_p = svn_txdelta_stream_create(drb, delta_read_next_window,
                                                 delta_read_md5_digest, pool);
           return SVN_NO_ERROR;

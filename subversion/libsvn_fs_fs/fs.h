@@ -26,6 +26,8 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_network_io.h>
+#include <apr_md5.h>
+#include <apr_sha1.h>
 
 #include "svn_fs.h"
 #include "svn_config.h"
@@ -447,20 +449,20 @@ typedef struct transaction_t
  * svn_fs_fs__rep_copy. */
 typedef struct representation_t
 {
-  /* Checksums for the contents produced by this representation.
+  /* Checksums digests for the contents produced by this representation.
      This checksum is for the contents the rep shows to consumers,
      regardless of how the rep stores the data under the hood.  It is
      independent of the storage (fulltext, delta, whatever).
 
-     If checksum is NULL, then for compatibility behave as though this
+     If has_sha1 is FALSE, then for compatibility behave as though this
      checksum matches the expected checksum.
 
      The md5 checksum is always filled, unless this is rep which was
      retrieved from the rep-cache.  The sha1 checksum is only computed on
-     a write, for use with rep-sharing; it may be read from an existing
-     representation, but otherwise it is NULL. */
-  svn_checksum_t *md5_checksum;
-  svn_checksum_t *sha1_checksum;
+     a write, for use with rep-sharing. */
+  svn_boolean_t has_sha1;
+  unsigned char sha1_digest[APR_SHA1_DIGESTSIZE];
+  unsigned char md5_digest[APR_MD5_DIGESTSIZE];
 
   /* Revision where this representation is located. */
   svn_revnum_t revision;

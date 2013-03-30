@@ -575,12 +575,12 @@ store_sha1_rep_mapping(svn_fs_t *fs,
    * its SHA-1 is known, store the rep struct under its SHA1. */
   if (   ffd->rep_sharing_allowed
       && noderev->data_rep
-      && noderev->data_rep->sha1_checksum)
+      && noderev->data_rep->has_sha1)
     {
       apr_file_t *rep_file;
       const char *file_name = path_txn_sha1(fs,
                                             &noderev->data_rep->txn_id,
-                                            noderev->data_rep->sha1_checksum,
+                                            noderev->data_rep->sha1_digest,
                                             pool);
       svn_stringbuf_t *rep_string
         = svn_fs_fs__unparse_representation(noderev->data_rep,
@@ -2019,14 +2019,16 @@ get_shared_rep(representation_t **old_rep,
      because it is cheepest. */
   if (reps_hash)
     *old_rep = apr_hash_get(reps_hash,
-                            rep->sha1_checksum->digest,
+                            rep->sha1_digest,
                             APR_SHA1_DIGESTSIZE);
 
   /* If we haven't found anything yet, try harder and consult our DB. */
   if (*old_rep == NULL)
     {
-      err = svn_fs_fs__get_rep_reference(old_rep, fs, rep->sha1_checksum,
-                                         pool);
+      svn_checksum_t checksum;
+      checksum.digest = rep->sha1_digest;
+      checksum.kind = svn_checksum_sha1;
+      err = svn_fs_fs__get_rep_reference(old_rep, fs, &checksum, pool);
       /* ### Other error codes that we shouldn't mask out? */
       if (err == SVN_NO_ERROR)
         {
@@ -2064,7 +2066,7 @@ get_shared_rep(representation_t **old_rep,
     {
       svn_node_kind_t kind;
       const char *file_name
-        = path_txn_sha1(fs, &rep->txn_id, rep->sha1_checksum, pool);
+        = path_txn_sha1(fs, &rep->txn_id, rep->sha1_digest, pool);
 
       /* in our txn, is there a rep file named with the wanted SHA1?
          If so, read it and use that rep.
@@ -2082,7 +2084,7 @@ get_shared_rep(representation_t **old_rep,
   if (*old_rep)
     {
       /* Use the old rep for this content. */
-      (*old_rep)->md5_checksum = rep->md5_checksum;
+      memcpy((*old_rep)->md5_digest, rep->md5_digest, sizeof(rep->md5_digest));
       (*old_rep)->uniquifier = rep->uniquifier;
     }
 
@@ -2098,8 +2100,14 @@ digests_final(representation_t *rep,
               const svn_checksum_ctx_t *sha1_ctx,
               apr_pool_t *pool)
 {
-  SVN_ERR(svn_checksum_final(&rep->md5_checksum, md5_ctx, pool));
-  SVN_ERR(svn_checksum_final(&rep->sha1_checksum, sha1_ctx, pool));
+  svn_checksum_t *checksum;
+
+  SVN_ERR(svn_checksum_final(&checksum, md5_ctx, pool));
+  memcpy(rep->md5_digest, checksum->digest, svn_checksum_size(checksum));
+  SVN_ERR(svn_checksum_final(&checksum, sha1_ctx, pool));
+  rep->has_sha1 = checksum != NULL;
+  if (rep->has_sha1)
+    memcpy(rep->sha1_digest, checksum->digest, svn_checksum_size(checksum));
 
   return SVN_NO_ERROR;
 }
@@ -2859,7 +2867,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
           APR_ARRAY_PUSH(reps_to_cache, representation_t *) = copy;
 
           apr_hash_set(reps_hash,
-                        copy->sha1_checksum->digest,
+                        copy->sha1_digest,
                         APR_SHA1_DIGESTSIZE,
                         copy);
         }
@@ -2867,11 +2875,11 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
   /* don't serialize SHA1 for dirs to disk (waste of space) */
   if (noderev->data_rep && noderev->kind == svn_node_dir)
-    noderev->data_rep->sha1_checksum = NULL;
+    noderev->data_rep->has_sha1 = FALSE;
 
   /* don't serialize SHA1 for props to disk (waste of space) */
   if (noderev->prop_rep)
-    noderev->prop_rep->sha1_checksum = NULL;
+    noderev->prop_rep->has_sha1 = FALSE;
 
   /* Workaround issue #4031: is-fresh-txn-root in revision files. */
   noderev->is_fresh_txn_root = FALSE;

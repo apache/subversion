@@ -178,6 +178,7 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
       representation_t *rep;
       const char *sha1_digest;
       svn_error_t *err;
+      svn_checksum_t *checksum;
 
       /* Clear ITERPOOL occasionally. */
       if (iterations++ % 16 == 0)
@@ -195,11 +196,13 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
       rep = apr_pcalloc(iterpool, sizeof(*rep));
       svn_fs_fs__id_txn_reset(&rep->txn_id);
       sha1_digest = svn_sqlite__column_text(stmt, 0, iterpool);
-      err = svn_checksum_parse_hex(&rep->sha1_checksum,
-                                   svn_checksum_sha1, sha1_digest,
-                                   iterpool);
+      err = svn_checksum_parse_hex(&checksum, svn_checksum_sha1,
+                                   sha1_digest, iterpool);
       if (err)
         return svn_error_compose_create(err, svn_sqlite__reset(stmt));
+
+      rep->has_sha1 = TRUE;
+      memcpy(rep->sha1_digest, checksum->digest, sizeof(rep->sha1_digest));
       rep->revision = svn_sqlite__column_revnum(stmt, 1);
       rep->item_index = svn_sqlite__column_int64(stmt, 2);
       rep->size = svn_sqlite__column_int64(stmt, 3);
@@ -252,7 +255,9 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
     {
       *rep = apr_pcalloc(pool, sizeof(**rep));
       svn_fs_fs__id_txn_reset(&(*rep)->txn_id);
-      (*rep)->sha1_checksum = svn_checksum_dup(checksum, pool);
+      memcpy((*rep)->sha1_digest, checksum->digest,
+             sizeof((*rep)->sha1_digest));
+      (*rep)->has_sha1 = TRUE;
       (*rep)->revision = svn_sqlite__column_revnum(stmt, 0);
       (*rep)->item_index = svn_sqlite__column_int64(stmt, 1);
       (*rep)->size = svn_sqlite__column_int64(stmt, 2);
@@ -278,20 +283,23 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_sqlite__stmt_t *stmt;
   svn_error_t *err;
+  svn_checksum_t checksum;
+  checksum.kind = svn_checksum_sha1;
+  checksum.digest = rep->sha1_digest;
 
   SVN_ERR_ASSERT(ffd->rep_sharing_allowed);
   if (! ffd->rep_cache_db)
     SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
 
   /* We only allow SHA1 checksums in this table. */
-  if (rep->sha1_checksum == NULL)
+  if (! rep->has_sha1)
     return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL,
                             _("Only SHA1 checksums can be used as keys in the "
                               "rep_cache table.\n"));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db, STMT_SET_REP));
   SVN_ERR(svn_sqlite__bindf(stmt, "siiii",
-                            svn_checksum_to_cstring(rep->sha1_checksum, pool),
+                            svn_checksum_to_cstring(&checksum, pool),
                             (apr_int64_t) rep->revision,
                             (apr_int64_t) rep->item_index,
                             (apr_int64_t) rep->size,
@@ -311,8 +319,7 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
          should exist.  If so, and the value is the same one we were
          about to write, that's cool -- just do nothing.  If, however,
          the value is *different*, that's a red flag!  */
-      SVN_ERR(svn_fs_fs__get_rep_reference(&old_rep, fs, rep->sha1_checksum,
-                                           pool));
+      SVN_ERR(svn_fs_fs__get_rep_reference(&old_rep, fs, &checksum, pool));
 
       if (old_rep)
         {
@@ -329,7 +336,7 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
                               APR_OFF_T_FMT, SVN_FILESIZE_T_FMT,
                               SVN_FILESIZE_T_FMT, APR_OFF_T_FMT,
                               SVN_FILESIZE_T_FMT, SVN_FILESIZE_T_FMT),
-                 svn_checksum_to_cstring_display(rep->sha1_checksum, pool),
+                 svn_checksum_to_cstring_display(&checksum, pool),
                  fs->path, old_rep->revision, old_rep->item_index,
                  old_rep->size, old_rep->expanded_size, rep->revision,
                  rep->item_index, rep->size, rep->expanded_size);

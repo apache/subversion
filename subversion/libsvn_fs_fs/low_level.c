@@ -249,6 +249,7 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
   char *str;
   apr_int64_t val;
   char *string = text->data;
+  svn_checksum_t *checksum;
 
   rep = apr_pcalloc(pool, sizeof(*rep));
   *rep_p = rep;
@@ -300,8 +301,8 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text representation offset line in node-rev"));
 
-  SVN_ERR(svn_checksum_parse_hex(&rep->md5_checksum, svn_checksum_md5, str,
-                                 pool));
+  SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_md5, str, pool));
+  memcpy(rep->md5_digest, checksum->digest, sizeof(rep->md5_digest));
 
   /* The remaining fields are only used for formats >= 4, so check that. */
   str = svn_cstring_tokenize(" ", &string);
@@ -313,8 +314,9 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text representation offset line in node-rev"));
 
-  SVN_ERR(svn_checksum_parse_hex(&rep->sha1_checksum, svn_checksum_sha1, str,
-                                 pool));
+  SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_sha1, str, pool));
+  rep->has_sha1 = checksum != NULL;
+  memcpy(rep->sha1_digest, checksum->digest, sizeof(rep->sha1_digest));
 
   /* Read the uniquifier. */
   str = svn_cstring_tokenize("/", &string);
@@ -518,6 +520,25 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
   return SVN_NO_ERROR;
 }
 
+/* Return a textual representation of the DIGEST of given KIND.
+ * If IS_NULL is TRUE, no digest is available.
+ * Use POOL for allocations.
+ */
+static const char *
+format_digest(const unsigned char *digest,
+              svn_checksum_kind_t kind,
+              svn_boolean_t is_null,
+              apr_pool_t *pool)
+{
+  svn_checksum_t checksum;
+  checksum.digest = digest;
+  checksum.kind = kind;
+  
+  if (is_null)
+    return "(null)";
+
+  return svn_checksum_to_cstring_display(&checksum, pool);
+}
 
 /* Return a formatted string, compatible with filesystem format FORMAT,
    that represents the location of representation REP.  If
@@ -535,18 +556,13 @@ svn_fs_fs__unparse_representation(representation_t *rep,
   if (svn_fs_fs__id_txn_used(&rep->txn_id) && mutable_rep_truncated)
     return svn_stringbuf_ncreate("-1", 2, pool);
 
-#define DISPLAY_MAYBE_NULL_CHECKSUM(checksum)          \
-  ((checksum != NULL)     \
-   ? svn_checksum_to_cstring_display((checksum), pool) \
-   : "(null)")
-
-  if (format < SVN_FS_FS__MIN_REP_SHARING_FORMAT || rep->sha1_checksum == NULL)
+  if (format < SVN_FS_FS__MIN_REP_SHARING_FORMAT || !rep->has_sha1)
     return svn_stringbuf_createf
             (pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
              " %" SVN_FILESIZE_T_FMT " %s",
              rep->revision, rep->item_index, rep->size,
              rep->expanded_size,
-             DISPLAY_MAYBE_NULL_CHECKSUM(rep->md5_checksum));
+             format_digest(rep->md5_digest, svn_checksum_md5, FALSE, pool));
 
   svn__ui64tobase36(buffer, rep->uniquifier.number);
   return svn_stringbuf_createf
@@ -554,8 +570,9 @@ svn_fs_fs__unparse_representation(representation_t *rep,
            " %" SVN_FILESIZE_T_FMT " %s %s %s/%s",
            rep->revision, rep->item_index, rep->size,
            rep->expanded_size,
-           DISPLAY_MAYBE_NULL_CHECKSUM(rep->md5_checksum),
-           DISPLAY_MAYBE_NULL_CHECKSUM(rep->sha1_checksum),
+           format_digest(rep->md5_digest, svn_checksum_md5, FALSE, pool),
+           format_digest(rep->sha1_digest, svn_checksum_sha1,
+                         !rep->has_sha1, pool),
            svn_fs_fs__id_txn_unparse(&rep->uniquifier.txn_id, pool),
            buffer);
 

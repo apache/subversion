@@ -845,24 +845,32 @@ svn_fs_fs__file_checksum(svn_checksum_t **checksum,
                          svn_checksum_kind_t kind,
                          apr_pool_t *pool)
 {
+  *checksum = NULL;
+
   if (noderev->data_rep)
     {
+      svn_checksum_t temp;
+      temp.kind = kind;
+      
       switch(kind)
         {
           case svn_checksum_md5:
-            *checksum = svn_checksum_dup(noderev->data_rep->md5_checksum,
-                                         pool);
+            temp.digest = noderev->data_rep->md5_digest;
             break;
+
           case svn_checksum_sha1:
-            *checksum = svn_checksum_dup(noderev->data_rep->sha1_checksum,
-                                         pool);
+            if (! noderev->data_rep->has_sha1)
+              return SVN_NO_ERROR;
+
+            temp.digest = noderev->data_rep->sha1_digest;
             break;
+
           default:
-            *checksum = NULL;
+            return SVN_NO_ERROR;
         }
+
+      *checksum = svn_checksum_dup(&temp, pool);
     }
-  else
-    *checksum = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -879,8 +887,6 @@ svn_fs_fs__rep_copy(representation_t *rep,
   rep_new = apr_palloc(pool, sizeof(*rep_new));
 
   memcpy(rep_new, rep, sizeof(*rep_new));
-  rep_new->md5_checksum = svn_checksum_dup(rep->md5_checksum, pool);
-  rep_new->sha1_checksum = svn_checksum_dup(rep->sha1_checksum, pool);
 
   return rep_new;
 }
