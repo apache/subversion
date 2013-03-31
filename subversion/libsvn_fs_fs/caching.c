@@ -38,6 +38,33 @@
 #include "private/svn_debug.h"
 #include "private/svn_subr_private.h"
 
+/* Take the ORIGINAL string and replace all occurrences of ":" without
+ * limiting the key space.  Allocate the result in POOL.
+ */
+static const char *
+normalize_key_part(const char *original,
+                   apr_pool_t *pool)
+{
+  apr_size_t i;
+  apr_size_t len = strlen(original);
+  svn_stringbuf_t *normalized = svn_stringbuf_create_ensure(len, pool);
+
+  for (i = 0; i < len; ++i)
+    {
+      char c = original[i];
+      switch (c)
+        {
+        case ':': svn_stringbuf_appendbytes(normalized, "%_", 2);
+                  break;
+        case '%': svn_stringbuf_appendbytes(normalized, "%%", 2);
+                  break;
+        default : svn_stringbuf_appendbyte(normalized, c);
+        }
+    }
+
+  return normalized->data;
+}
+
 /* Return a memcache in *MEMCACHE_P for FS if it's configured to use
    memcached, or NULL otherwise.  Also, sets *FAIL_STOP to a boolean
    indicating whether cache errors should be returned to the caller or
@@ -69,12 +96,16 @@ read_config(svn_memcache_t **memcache_p,
    * share / compete for the same cache memory but keys will not match
    * across namespaces and, thus, cached data will not be shared between
    * namespaces.
+   *
+   * Since the namespace will be concatenated with other elements to form
+   * the complete key prefix, we must make sure that the resulting string
+   * is unique and cannot be created by any other combination of elements.
    */
   *cache_namespace
-    = apr_pstrdup(fs->pool,
-                  svn_hash__get_cstring(fs->config,
-                                        SVN_FS_CONFIG_FSFS_CACHE_NS,
-                                        ""));
+    = normalize_key_part(svn_hash__get_cstring(fs->config,
+                                               SVN_FS_CONFIG_FSFS_CACHE_NS,
+                                               ""),
+                         pool);
 
   /* don't cache text deltas by default.
    * Once we reconstructed the fulltexts from the deltas,
@@ -313,7 +344,8 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   const char *prefix = apr_pstrcat(pool,
                                    "fsfs:", fs->uuid,
-                                   "/", fs->path, ":",
+                                   "/", normalize_key_part(fs->path, pool),
+                                   ":",
                                    (char *)NULL);
   svn_memcache_t *memcache;
   svn_membuffer_t *membuffer;
