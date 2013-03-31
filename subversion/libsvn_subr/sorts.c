@@ -404,8 +404,8 @@ svn__priority_queue_create(apr_array_header_t *elements,
   queue->elements = elements;
   queue->compare_func = compare_func;
 
-  for (i = elements->nelts - 1; i > 0; --i)
-    heap_bubble_down(queue, i);
+  for (i = elements->nelts / 2; i >= 0; --i)
+    heap_bubble_up(queue, i);
   
   return queue;
 }
