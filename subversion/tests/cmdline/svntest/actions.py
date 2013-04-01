@@ -1288,7 +1288,6 @@ def run_and_verify_mergeinfo(error_re_string = None,
     return
 
   out = [_f for _f in [x.rstrip()[1:] for x in out] if _f]
-  expected_output.sort()
   extra_out = []
   if out != expected_output:
     exp_hash = dict.fromkeys(expected_output)

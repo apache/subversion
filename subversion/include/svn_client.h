@@ -3984,6 +3984,9 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
  * @c svn_opt_revision_unspecified, no bounding occurs and the entire
  * history of the merge source (up to @a source_peg_revision, per the
  * typical default peg/operative revision behaviors) is considered.
+ * If @a source_start_revision is younger than @a source_end_revision,
+ * then @a receiver is called from youngest to oldest revisions.
+ * Otherwise @a receiver is called from oldest to youngest revisions.
  *
  * If @a depth is #svn_depth_empty consider only the explicit or
  * inherited mergeinfo on @a target_path_or_url when calculating merged

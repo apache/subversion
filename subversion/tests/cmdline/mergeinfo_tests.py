@@ -384,6 +384,14 @@ def recursive_mergeinfo(sbox):
                                            sbox.repo_url + '/A2',
                                            sbox.repo_url + '/A_COPY',
                                            '--show-revs', 'eligible', '-R')
+  # Do the same as above, but test that we can request the revisions
+  # in reverse order.
+  svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
+                                           ['8*', '4*', '3'],
+                                           sbox.repo_url + '/A2',
+                                           sbox.repo_url + '/A_COPY',
+                                           '--show-revs', 'eligible', '-R',
+                                           '-r', '9:0')
 
   # Asking for merged revisions from A2 to A_COPY should show:
   #
@@ -406,6 +414,15 @@ def recursive_mergeinfo(sbox):
                                            A_COPY_path,
                                            '--show-revs', 'merged',
                                            '--depth', 'infinity')
+  # Do the same as above, but test that we can request the revisions
+  # in reverse order.
+  svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
+                                           ['8*', '6', '5', '4*'],
+                                           A2_path,
+                                           A_COPY_path,
+                                           '--show-revs', 'merged',
+                                           '--depth', 'infinity',
+                                           '-r', '9:0')
 
   # A couple tests of problems found with initial issue #3242 fixes.
   # We should be able to check for the merged revs from a URL to a URL
