@@ -375,7 +375,7 @@ svn_packed__data_flush_buffer(svn_packed__int_stream_t *stream)
           for (i = 0; i < stream->buffer_used; ++i)
             {
               apr_uint64_t temp = stream->buffer[i];
-              apr_uint64_t diff = temp - last_value;
+              apr_int64_t diff = (apr_int64_t)(temp - last_value);
               stream->buffer[i] = diff < 0 ? 1 - 2 * diff : 2 * diff;
               last_value = temp;
             }
@@ -389,7 +389,7 @@ svn_packed__data_flush_buffer(svn_packed__int_stream_t *stream)
          63 bits. */
       if (!private_data->diff && private_data->is_signed)
         for (i = 0; i < stream->buffer_used; ++i)
-          stream->buffer[i] = stream->buffer[i] < 0
+          stream->buffer[i] = (apr_int64_t)stream->buffer[i] < 0
                             ? 1 - 2 * stream->buffer[i]
                             : 2 * stream->buffer[i];
 
