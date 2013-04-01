@@ -488,6 +488,30 @@ public interface ISVNClient
     Set<String> suggestMergeSources(String path, Revision pegRevision)
             throws SubversionException;
 
+
+    /**
+     * Merge changes from two paths into a new local path.
+     *
+     * @param path1          first path or url
+     * @param revision1      first revision
+     * @param path2          second path or url
+     * @param revision2      second revision
+     * @param localPath      target local path
+     * @param force          overwrite local changes
+     * @param depth          how deep to traverse into subdirectories
+     * @param ignoreMergeinfo ignore merge history, treat sources as unrelated
+     * @param diffIgnoreAncestry always treat source files as related
+     * @param dryRun         do not change anything
+     * @param recordOnly     record mergeinfo but do not run merge
+     * @throws ClientException
+     * @since 1.8
+     */
+    void merge(String path1, Revision revision1, String path2,
+               Revision revision2, String localPath, boolean force, Depth depth,
+               boolean ignoreMergeinfo, boolean diffIgnoreAncestry,
+               boolean dryRun, boolean recordOnly)
+            throws ClientException;
+
     /**
      * Merge changes from two paths into a new local path.
      *
@@ -502,6 +526,8 @@ public interface ISVNClient
      * @param dryRun         do not change anything
      * @param recordOnly     record mergeinfo but do not run merge
      * @throws ClientException
+     * @note Behaves like the 1.8 where ignoreAncestry maps to
+     *       both ignoreMergeinfo and diffIgnoreAncestry
      */
     void merge(String path1, Revision revision1, String path2,
                Revision revision2, String localPath, boolean force, Depth depth,
@@ -512,7 +538,31 @@ public interface ISVNClient
      * Merge set of revisions into a new local path.
      * @param path          path or url
      * @param pegRevision   revision to interpret path
-     * @param revisions     revisions to merge
+     * @param revisions     revisions to merge; may be null, indicating that
+     *                      the optimal range should be determined automatcially
+     * @param localPath     target local path
+     * @param force         overwrite local changes
+     * @param depth         how deep to traverse into subdirectories
+     * @param ignoreMergeinfo ignore merge history, treat sources as unrelated
+     * @param diffIgnoreAncestry always treat source files as related
+     * @param dryRun        do not change anything
+     * @param recordOnly    record mergeinfo but do not run merge
+     * @throws ClientException
+     * @since 1.8
+     */
+    void merge(String path, Revision pegRevision, List<RevisionRange> revisions,
+               String localPath, boolean force, Depth depth,
+               boolean ignoreMergeinfo, boolean diffIgnoreAncestry,
+               boolean dryRun, boolean recordOnly)
+             throws ClientException;
+
+    /**
+     * Merge set of revisions into a new local path.
+     * @param path          path or url
+     * @param pegRevision   revision to interpret path
+     * @param revisions     revisions to merge;
+     *                      may be null, indicating that the optimal range
+     *                      should be determined automatcially (new in 1.8)
      * @param localPath     target local path
      * @param force         overwrite local changes
      * @param depth         how deep to traverse into subdirectories
@@ -520,6 +570,8 @@ public interface ISVNClient
      * @param dryRun        do not change anything
      * @param recordOnly    record mergeinfo but do not run merge
      * @throws ClientException
+     * @note Behaves like the 1.8 where ignoreAncestry maps to
+     *       both ignoreMergeinfo and diffIgnoreAncestry
      */
     void merge(String path, Revision pegRevision, List<RevisionRange> revisions,
                String localPath, boolean force, Depth depth,

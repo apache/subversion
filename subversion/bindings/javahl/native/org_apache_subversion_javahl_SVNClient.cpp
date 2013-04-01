@@ -796,11 +796,11 @@ Java_org_apache_subversion_javahl_SVNClient_suggestMergeSources
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2ZLorg_apache_subversion_javahl_types_Depth_2ZZZ
+Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2ZLorg_apache_subversion_javahl_types_Depth_2ZZZZ
 (JNIEnv *env, jobject jthis, jstring jpath1, jobject jrevision1,
  jstring jpath2, jobject jrevision2, jstring jlocalPath, jboolean jforceDelete,
- jobject jdepth, jboolean jignoreAncestry, jboolean jdryRun,
- jboolean jrecordOnly)
+ jobject jdepth, jboolean jignoreMergeinfo, jboolean jdiffIgnoreAncestry,
+ jboolean jdryRun, jboolean jrecordOnly)
 {
   JNIEntry(SVNClient, merge);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -830,16 +830,20 @@ Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apach
     return;
 
   cl->merge(path1, revision1, path2, revision2, localPath,
-            jforceDelete ? true:false, EnumMapper::toDepth(jdepth),
-            jignoreAncestry ? true:false, jdryRun ? true:false,
+            jforceDelete ? true:false,
+            EnumMapper::toDepth(jdepth),
+            jignoreMergeinfo ? true:false,
+            jdiffIgnoreAncestry ? true:false,
+            jdryRun ? true:false,
             jrecordOnly ? true:false);
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_util_List_2Ljava_lang_String_2ZLorg_apache_subversion_javahl_types_Depth_2ZZZ
+Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_util_List_2Ljava_lang_String_2ZLorg_apache_subversion_javahl_types_Depth_2ZZZZ
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
  jobject jranges, jstring jlocalPath, jboolean jforceDelete, jobject jdepth,
- jboolean jignoreAncestry, jboolean jdryRun, jboolean jrecordOnly)
+ jboolean jignoreMergeinfo, jboolean jdiffIgnoreAncestry,
+ jboolean jdryRun, jboolean jrecordOnly)
 {
   JNIEntry(SVNClient, merge);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -861,27 +865,35 @@ Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apach
   if (JNIUtil::isExceptionThrown())
     return;
 
+  std::vector<RevisionRange> *revisionRanges = NULL;
+  std::vector<RevisionRange> realRevisionRanges;
   // Build the revision range vector from the Java array.
-  Array ranges(jranges);
-  if (JNIUtil::isExceptionThrown())
-    return;
-
-  std::vector<RevisionRange> revisionRanges;
-  std::vector<jobject> rangeVec = ranges.vector();
-
-  for (std::vector<jobject>::const_iterator it = rangeVec.begin();
-        it < rangeVec.end(); ++it)
+  if (jranges)
     {
-      RevisionRange revisionRange(*it);
+      Array ranges(jranges);
       if (JNIUtil::isExceptionThrown())
         return;
 
-      revisionRanges.push_back(revisionRange);
+      std::vector<jobject> rangeVec = ranges.vector();
+
+      for (std::vector<jobject>::const_iterator it = rangeVec.begin();
+           it < rangeVec.end(); ++it)
+        {
+          RevisionRange revisionRange(*it);
+          if (JNIUtil::isExceptionThrown())
+            return;
+
+          realRevisionRanges.push_back(revisionRange);
+        }
+      revisionRanges = &realRevisionRanges;
     }
 
   cl->merge(path, pegRevision, revisionRanges, localPath,
-            jforceDelete ? true:false, EnumMapper::toDepth(jdepth),
-            jignoreAncestry ? true:false, jdryRun ? true:false,
+            jforceDelete ? true:false,
+            EnumMapper::toDepth(jdepth),
+            jignoreMergeinfo ? true:false,
+            jdiffIgnoreAncestry ? true:false,
+            jdryRun ? true:false,
             jrecordOnly ? true:false);
 }
 
