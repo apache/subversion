@@ -2665,7 +2665,7 @@ main(int argc, const char *argv[])
                                     first_arg_utf8));
               SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
 
-              /* Be kind to people who try 'svn undo'. */
+              /* Be kind to people who try 'svnlook verify'. */
               if (strcmp(first_arg_utf8, "verify") == 0)
                 {
                   svn_error_clear(
