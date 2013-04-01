@@ -79,12 +79,6 @@ svn_fs_fs__changes_append_list(apr_size_t *list_index,
 apr_size_t
 svn_fs_fs__changes_estimate_size(const svn_fs_fs__changes_t *changes);
 
-/* Convert CHANGES from its writable internal representation to its final
- * memory-friendly r/o representation.
- */
-svn_error_t *
-svn_fs_fs__changes_finalize(svn_fs_fs__changes_t *changes);
-
 /* Read changes containers. */
 
 /* From CHANGES, extract the change list with the given INDEX.  Allocate

@@ -241,23 +241,6 @@ svn_fs_fs__changes_estimate_size(const svn_fs_fs__changes_t *changes)
 }
 
 svn_error_t *
-svn_fs_fs__changes_finalize(svn_fs_fs__changes_t *changes)
-{
-  /* CHANGES must be in 'builder' mode */
-  SVN_ERR_ASSERT(changes->builder);
-  SVN_ERR_ASSERT(changes->paths == NULL);
-
-  /* finalize paths string table */
-  changes->paths = svn_fs_fs__string_table_create(changes->builder,
-                                                  changes->offsets->pool);
-
-  /* we are no longer in 'builder' mode */
-  changes->builder = NULL;
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_fs_fs__changes_get_list(apr_array_header_t **list,
                             const svn_fs_fs__changes_t *changes,
                             apr_size_t idx,
@@ -335,6 +318,11 @@ svn_fs_fs__write_changes_container(svn_stream_t *stream,
 {
   int i;
 
+  string_table_t *paths = changes->paths
+                        ? changes->paths
+                        : svn_fs_fs__string_table_create(changes->builder,
+                                                         pool);
+
   svn_packed__data_root_t *root = svn_packed__data_create_root(pool);
 
   /* one top-level stream for each array */
@@ -356,10 +344,6 @@ svn_fs_fs__write_changes_container(svn_stream_t *stream,
   svn_packed__create_int_substream(changes_stream, TRUE, TRUE);
   svn_packed__create_int_substream(changes_stream, TRUE, FALSE);
   
-  /* CHANGES must be in 'finalized' mode */
-  SVN_ERR_ASSERT(changes->builder == NULL);
-  SVN_ERR_ASSERT(changes->paths);
-
   /* serialize offsets array */
   for (i = 0; i < changes->offsets->nelts; ++i)
     svn_packed__add_uint(offsets_stream,
@@ -386,7 +370,7 @@ svn_fs_fs__write_changes_container(svn_stream_t *stream,
     }
 
   /* write to disk */
-  SVN_ERR(svn_fs_fs__write_string_table(stream, changes->paths, pool));
+  SVN_ERR(svn_fs_fs__write_string_table(stream, paths, pool));
   SVN_ERR(svn_packed__data_write(stream, root, pool));
   
   return SVN_NO_ERROR;
