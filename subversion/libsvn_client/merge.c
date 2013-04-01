@@ -11762,13 +11762,43 @@ svn_client_merge_peg5(const char *source_path_or_url,
   conflict_report_t *conflict_report;
 
   /* No ranges to merge?  No problem. */
-  if (ranges_to_merge->nelts == 0)
+  if (ranges_to_merge != NULL && ranges_to_merge->nelts == 0)
     return SVN_NO_ERROR;
 
   SVN_ERR(get_target_and_lock_abspath(&target_abspath, &lock_abspath,
                                       target_wcpath, ctx, pool));
 
-  if (!dry_run)
+  /* Do an automatic merge if no revision ranges are specified. */
+  if (ranges_to_merge == NULL)
+    {
+      svn_client_automatic_merge_t *merge;
+
+      if (ignore_mergeinfo)
+        return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                _("Cannot merge automatically while "
+                                  "ignoring mergeinfo"));
+
+      /* Find the details of the merge needed. */
+      SVN_ERR(svn_client_find_automatic_merge(&merge,
+                                              source_path_or_url,
+                                              source_peg_revision,
+                                              target_wcpath,
+                                              allow_mixed_rev,
+                                              TRUE /*allow_local_mods*/,
+                                              TRUE /*allow_switched_subtrees*/,
+                                              ctx, pool, pool));
+
+      SVN_ERR(svn_client_do_automatic_merge(merge, target_wcpath, depth,
+                                            diff_ignore_ancestry,
+                                            force_delete, record_only,
+                                            dry_run, merge_options,
+                                            ctx, pool));
+
+      /* We already dealt with returning any conflict error, inside the
+       * above calls. */
+      conflict_report = NULL;
+    }
+  else if (!dry_run)
     SVN_WC__CALL_WITH_WRITE_LOCK(
       merge_peg_locked(&conflict_report,
                        source_path_or_url, source_peg_revision,
