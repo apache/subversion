@@ -602,7 +602,7 @@ svn_fs_fs__l2p_index_create(svn_fs_t *fs,
 
           SVN_ERR_ASSERT(APR_ARRAY_IDX(offsets, idx, apr_uint64_t) == 0);
           APR_ARRAY_IDX(offsets, idx, apr_uint64_t) = proto_entry.offset;
-          APR_ARRAY_IDX(sub_items, idx, apr_uint64_t) = proto_entry.sub_item;
+          APR_ARRAY_IDX(sub_items, idx, apr_uint32_t) = proto_entry.sub_item;
         }
     }
 
@@ -2126,21 +2126,23 @@ svn_fs_fs__serialize_l2p_page(void **data,
   l2p_page_t *page = in;
   svn_temp_serializer__context_t *context;
   svn_stringbuf_t *serialized;
-  apr_size_t table_size = page->entry_count * sizeof(*page->offsets);
+  apr_size_t of_table_size = page->entry_count * sizeof(*page->offsets);
+  apr_size_t si_table_size = page->entry_count * sizeof(*page->sub_items);
 
   /* serialize struct and all its elements */
   context = svn_temp_serializer__init(page,
                                       sizeof(*page),
-                                      table_size + sizeof(*page) + 32,
+                                        of_table_size + si_table_size
+                                      + sizeof(*page) + 32,
                                       pool);
 
   /* offsets and sub_items arrays */
   svn_temp_serializer__add_leaf(context,
                                 (const void * const *)&page->offsets,
-                                table_size);
+                                of_table_size);
   svn_temp_serializer__add_leaf(context,
                                 (const void * const *)&page->sub_items,
-                                table_size);
+                                si_table_size);
 
   /* return the serialized result */
   serialized = svn_temp_serializer__get(context);
