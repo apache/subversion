@@ -63,83 +63,6 @@ ensure_wc_path_has_repo_revision(const char *path_or_url,
   return SVN_NO_ERROR;
 }
 
-/* Automatic, merge-tracking merge, used for sync or reintegrate purposes. */
-static svn_error_t *
-automatic_merge(const char *source_path_or_url,
-                const svn_opt_revision_t *source_revision,
-                const char *target_wcpath,
-                svn_depth_t depth,
-                svn_boolean_t diff_ignore_ancestry,
-                svn_boolean_t force_delete,
-                svn_boolean_t record_only,
-                svn_boolean_t dry_run,
-                svn_boolean_t allow_mixed_rev,
-                svn_boolean_t allow_local_mods,
-                svn_boolean_t allow_switched_subtrees,
-                svn_boolean_t verbose,
-                const apr_array_header_t *merge_options,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *scratch_pool)
-{
-  svn_client_automatic_merge_t *merge;
-
-  if (verbose)
-    SVN_ERR(svn_cmdline_printf(scratch_pool, _("--- Checking branch relationship\n")));
-  SVN_ERR_W(svn_cl__check_related_source_and_target(
-              source_path_or_url, source_revision,
-              target_wcpath, &unspecified_revision, ctx, scratch_pool),
-            _("Source and target must be different but related branches"));
-
-  if (verbose)
-    SVN_ERR(svn_cmdline_printf(scratch_pool, _("--- Calculating automatic merge\n")));
-
-  /* Find the 3-way merges needed (and check suitability of the WC). */
-  SVN_ERR(svn_client_find_automatic_merge(&merge,
-                                          source_path_or_url, source_revision,
-                                          target_wcpath, allow_mixed_rev,
-                                          allow_local_mods, allow_switched_subtrees,
-                                          ctx, scratch_pool, scratch_pool));
-
-  if (svn_client_automatic_merge_is_reintegrate_like(merge))
-    {
-      if (record_only)
-        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
-                                _("The required merge is reintegrate-like, "
-                                  "and the --record-only option "
-                                  "cannot be used with this kind of merge"));
-
-      if (depth != svn_depth_unknown)
-        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
-                                _("The required merge is reintegrate-like, "
-                                  "and the --depth option "
-                                  "cannot be used with this kind of merge"));
-
-      if (force_delete)
-        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
-                                _("The required merge is reintegrate-like, "
-                                  "and the --force option "
-                                  "cannot be used with this kind of merge"));
-
-      if (allow_mixed_rev)
-        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
-                                _("The required merge is reintegrate-like, "
-                                  "and the --allow-mixed-revisions option "
-                                  "cannot be used with this kind of merge"));
-    }
-
-  if (verbose)
-    SVN_ERR(svn_cmdline_printf(scratch_pool, _("--- Merging\n")));
-
-  /* Perform the 3-way merges */
-  SVN_ERR(svn_client_do_automatic_merge(merge, target_wcpath, depth,
-                                        diff_ignore_ancestry,
-                                        force_delete, record_only,
-                                        dry_run, merge_options,
-                                        ctx, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 /* Run a merge.
  *
  * (No docs yet, as this code was just hoisted out of svn_cl__merge().)
@@ -163,26 +86,7 @@ run_merge(svn_boolean_t two_sources_specified,
 {
   svn_error_t *merge_err;
 
-  /* Do an automatic merge if just one source and no revisions. */
-  if ((! two_sources_specified)
-      && (! opt_state->reintegrate)
-      && (! opt_state->ignore_ancestry)
-      && first_range_start.kind == svn_opt_revision_unspecified
-      && first_range_end.kind == svn_opt_revision_unspecified)
-    {
-      merge_err = automatic_merge(sourcepath1, &peg_revision1, targetpath,
-                                  opt_state->depth,
-                                  FALSE /*diff_ignore_ancestry*/,
-                                  opt_state->force, /* force_delete */
-                                  opt_state->record_only,
-                                  opt_state->dry_run,
-                                  opt_state->allow_mixed_rev,
-                                  TRUE /*allow_local_mods*/,
-                                  TRUE /*allow_switched_subtrees*/,
-                                  opt_state->verbose,
-                                  options, ctx, scratch_pool);
-    }
-  else if (opt_state->reintegrate)
+  if (opt_state->reintegrate)
     {
       merge_err = svn_client_merge_reintegrate(
                     sourcepath1, &peg_revision1, targetpath,
@@ -196,13 +100,7 @@ run_merge(svn_boolean_t two_sources_specified,
       if ((first_range_start.kind == svn_opt_revision_unspecified)
           && (first_range_end.kind == svn_opt_revision_unspecified))
         {
-          svn_opt_revision_range_t *range = apr_pcalloc(scratch_pool,
-                                                        sizeof(*range));
-          ranges_to_merge = apr_array_make(scratch_pool, 1, sizeof(range));
-          range->start.kind = svn_opt_revision_number;
-          range->start.value.number = 1;
-          range->end = peg_revision1;
-          APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = range;
+          ranges_to_merge = NULL;
 
           /* This must be a 'sync' merge so check branch relationship. */
           if (opt_state->verbose)

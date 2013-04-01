@@ -3792,10 +3792,23 @@ svn_client_merge_reintegrate(const char *source_path_or_url,
                              apr_pool_t *pool);
 
 /**
- * Merge the changes between the filesystem object @a source_path_or_url in peg
- * revision @a source_peg_revision, as it changed between the ranges described
- * in @a ranges_to_merge.
+ * Merge changes from the source branch identified by
+ * @a source_path_or_url in peg revision @a source_peg_revision,
+ * into the target branch working copy at @a target_wcpath.
  *
+ * If @a ranges_to_merge is NULL then perform an automatic merge of
+ * all the eligible changes up to @a source_peg_revision.  Do this in
+ * the same way as calling svn_client_find_automatic_merge() and then
+ * svn_client_do_automatic_merge().  If the merge is determined to be
+ * of the 'reintegrate' kind, then return an error if the WC contains
+ * mixed revisions, local modifications and/or switched subtrees; if
+ * the merge is determined to be of the non-reintegrate kind, then
+ * return an error if @a allow_mixed_rev is false and the WC contains
+ * mixed revisions.
+ *
+ * If @a ranges_to_merge is not NULL then merge the changes specified
+ * by the revision ranges in @a ranges_to_merge, or, when honouring
+ * mergeinfo, only the eligible parts of those revision ranges.
  * @a ranges_to_merge is an array of <tt>svn_opt_revision_range_t
  * *</tt> ranges.  These ranges may describe additive and/or
  * subtractive merge ranges, they may overlap fully or partially,
@@ -3803,6 +3816,8 @@ svn_client_merge_reintegrate(const char *source_path_or_url,
  * rangelist is not required to be sorted.  If any revision in the
  * list of provided ranges has an `unspecified' or unrecognized
  * `kind', return #SVN_ERR_CLIENT_BAD_REVISION.
+ *
+ * If @a ranges_to_merge is an empty array, then do nothing.
  *
  * All other options are handled identically to svn_client_merge5().
  *
@@ -3825,7 +3840,8 @@ svn_client_merge_peg5(const char *source_path_or_url,
                       apr_pool_t *pool);
 
 /**
- * Similar to svn_client_merge_peg5(), but the single @a ignore_ancestry
+ * Similar to svn_client_merge_peg5(), but automatic merge is not available
+ * (@a ranges_to_merge must not be NULL), and the single @a ignore_ancestry
  * parameter maps to both @c ignore_mergeinfo and @c diff_ignore_ancestry.
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
