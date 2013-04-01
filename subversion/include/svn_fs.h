@@ -2426,13 +2426,15 @@ svn_fs_pack(const char *db_path,
  * directory @a path.  Use @a scratch_pool for temporary allocations.
  *
  * Repository (meta) data forms a tightly knit network of references.
- * A full check can be expensive and may not always be required.  If not
- * equal to #SVN_INVALID_REVNUM, @a start and @a end define the range of
- * revisions to check, @c r0 and @a HEAD being the respective defaults.
- * Due to the references among repository (meta) data, the implementation
- * may however need to also check elements that are not strictly part of
- * the selected range of revisions.  Thus, it is perfectly legal for a FS
- * implementation to ignore the @a start and @a end parameters entirely.
+ * A full check can be expensive and may not always be required.  If
+ * not equal to #SVN_INVALID_REVNUM, @a start and @a end define the
+ * range of revisions to check, with 0 and the current youngest
+ * repository revision being the respective default values for these
+ * parameters.  However, due to the references among repository (meta)
+ * data, the implementation may need to also check elements that are
+ * not strictly part of the selected range of revisions.  Thus, it is
+ * perfectly legal for a FS implementation to ignore the @a start and
+ * @a end parameters entirely.
  * 
  * Only if @c r0 has been included in the range of revisions to check,
  * are global invariants guaranteed to get verified.
