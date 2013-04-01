@@ -474,6 +474,18 @@ new_revision_record(void **revision_baton,
   svn_revnum_t head_rev;
 
   rb = make_revision_baton(headers, pb, pool);
+
+  /* ### If we're filtering revisions, and this is one we've skipped,
+     ### and we've skipped it because it has a revision number younger
+     ### than the youngest in our acceptable range, then should we
+     ### just bail out here? */
+  /*
+  if (rb->skipped && (rb->rev > pb->end_rev))
+    return svn_error_createf(SVN_ERR_CEASE_INVOCATION, 0,
+                             _("Finished processing acceptable load "
+                               "revision range"));
+  */
+
   SVN_ERR(svn_fs_youngest_rev(&head_rev, pb->fs, pool));
 
   /* FIXME: This is a lame fallback loading multiple segments of dump in

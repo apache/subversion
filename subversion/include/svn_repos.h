@@ -2696,13 +2696,6 @@ svn_repos_dump_fs(svn_repos_t *repos,
  * @a cancel_baton as argument to see if the client wishes to cancel
  * the load.
  *
- * @note If @a start_rev and @a end_rev are valid revisions, this
- * function presumes the revisions as numbered in @a dumpstream only
- * increase from the beginning of the stream to the end.  Gaps in the
- * number sequence are ignored, but upon finding a revision number
- * younger than the specified range, this function may stop loading
- * new revisions regardless of their number.
- *
  * @since New in 1.8.
  */
 svn_error_t *
@@ -2950,13 +2943,6 @@ svn_repos_parse_dumpstream3(svn_stream_t *stream,
  * If @a parent_dir is not NULL, then the parser will reparent all the
  * loaded nodes, from root to @a parent_dir.  The directory @a parent_dir
  * must be an existing directory in the repository.
- *
- * @note If @a start_rev and @a end_rev are valid revisions, this
- * function presumes the revisions as numbered in @a dumpstream only
- * increase from the beginning of the stream to the end.  Gaps in the
- * number sequence are ignored, but upon finding a revision number
- * younger than the specified range, this function may stop loading
- * new revisions regardless of their number.
  *
  * @since New in 1.8.
  */
