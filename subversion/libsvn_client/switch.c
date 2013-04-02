@@ -105,13 +105,10 @@ switch_internal(svn_revnum_t *result_rev,
   svn_client__pathrev_t *switch_loc;
   svn_ra_session_t *ra_session;
   svn_revnum_t revnum;
-  svn_error_t *err = SVN_NO_ERROR;
   const char *diff3_cmd;
   apr_hash_t *wcroot_iprops;
   apr_array_header_t *inherited_props;
   svn_boolean_t use_commit_times;
-  svn_boolean_t sleep_here = FALSE;
-  svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
   const svn_delta_editor_t *switch_editor;
   void *switch_edit_baton;
   const char *preserved_exts_str;
@@ -338,24 +335,22 @@ switch_internal(svn_revnum_t *result_rev,
                             switch_editor, switch_edit_baton,
                             pool, pool));
 
+  /* Past this point, we assume the WC is going to be modified so we will
+   * need to sleep for timestamps. */
+  if (! use_commit_times)
+    *timestamp_sleep = TRUE;
+
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the update_editor
      will be driven by svn_repos_dir_delta2. */
-  err = svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath, reporter,
-                                report_baton, TRUE, depth, (! depth_is_sticky),
-                                (! server_supports_depth),
-                                use_commit_times,
-                                ctx->cancel_func, ctx->cancel_baton,
-                                ctx->notify_func2, ctx->notify_baton2, pool);
-
-  if (err)
-    {
-      /* Don't rely on the error handling to handle the sleep later, do
-         it now */
-      svn_io_sleep_for_timestamps(local_abspath, pool);
-      return svn_error_trace(err);
-    }
-  *use_sleep = TRUE;
+  SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath, reporter,
+                                  report_baton, TRUE,
+                                  depth, (! depth_is_sticky),
+                                  (! server_supports_depth),
+                                  use_commit_times,
+                                  ctx->cancel_func, ctx->cancel_baton,
+                                  ctx->notify_func2, ctx->notify_baton2,
+                                  pool));
 
   /* We handle externals after the switch is complete, so that
      handling external items (and any errors therefrom) doesn't delay
@@ -373,18 +368,9 @@ switch_internal(svn_revnum_t *result_rev,
                                            new_depths,
                                            switch_loc->repos_root_url,
                                            local_abspath,
-                                           depth, use_sleep,
+                                           depth, timestamp_sleep,
                                            ctx, pool));
     }
-
-  /* Sleep to ensure timestamp integrity (we do this regardless of
-     errors in the actual switch operation(s)). */
-  if (sleep_here)
-    svn_io_sleep_for_timestamps(local_abspath, pool);
-
-  /* Return errors we might have sustained. */
-  if (err)
-    return svn_error_trace(err);
 
   /* Let everyone know we're finished here. */
   if (ctx->notify_func2)
@@ -480,13 +466,23 @@ svn_client_switch3(svn_revnum_t *result_rev,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
+  svn_error_t *err;
+  svn_boolean_t sleep_here = FALSE;
+
   if (svn_path_is_url(path))
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                              _("'%s' is not a local path"), path);
 
-  return svn_client__switch_internal(result_rev, path, switch_url,
-                                     peg_revision, revision, depth,
-                                     depth_is_sticky, ignore_externals,
-                                     allow_unver_obstructions,
-                                     ignore_ancestry, NULL, ctx, pool);
+  err = svn_client__switch_internal(result_rev, path, switch_url,
+                                    peg_revision, revision, depth,
+                                    depth_is_sticky, ignore_externals,
+                                    allow_unver_obstructions,
+                                    ignore_ancestry, &sleep_here, ctx, pool);
+
+  /* Sleep to ensure timestamp integrity (we do this regardless of
+     errors in the actual switch operation(s)). */
+  if (sleep_here)
+    svn_io_sleep_for_timestamps(path, pool);
+
+  return svn_error_trace(err);
 }
