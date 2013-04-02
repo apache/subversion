@@ -309,6 +309,28 @@ log_svn_error(LOG_ARGS_SIGNATURE,
   svn_error_clear(err);
 }
 
+/* Resolve *PATH into an absolute canonical URL iff *PATH is a repos-relative
+ * URL.  If *REPOS_URL is NULL convert REPOS_PATH into a file URL stored
+ * in *REPOS_URL, if *REPOS_URL is not null REPOS_PATH is ignored.  The
+ * resulting *REPOS_URL will be used as the root of the repos-relative URL.
+ * The result will be stored in *PATH. */
+static svn_error_t *
+resolve_repos_relative_url(const char **path, const char **repos_url,
+                           const char *repos_path, apr_pool_t *pool)
+{
+  if (svn_path_is_repos_relative_url(*path))
+    {
+      if (!*repos_url)
+        SVN_ERR(svn_uri_get_file_url_from_dirent(repos_url, repos_path, pool));
+
+      SVN_ERR(svn_path_resolve_repos_relative_url(path, *path,
+                                                  *repos_url, pool));
+      *path = svn_uri_canonicalize(*path, pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /*
  * Get the, possibly cached, svn_authz_t for this request.
  */
@@ -318,7 +340,9 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
 {
   const char *cache_key = NULL;
   const char *access_file;
+  const char *groups_file;
   const char *repos_path;
+  const char *repos_url = NULL;
   void *user_data = NULL;
   svn_authz_t *access_conf = NULL;
   svn_error_t *svn_err = SVN_NO_ERROR;
@@ -346,38 +370,35 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
     {
       access_file = conf->access_file;
     }
+  groups_file = conf->groups_file;
 
-  if (svn_path_is_repos_relative_url(access_file))
+  svn_err = resolve_repos_relative_url(&access_file, &repos_url, repos_path,
+                                       scratch_pool);
+  if (svn_err)
     {
-      const char *repos_url;
-      svn_err = svn_uri_get_file_url_from_dirent(&repos_url, repos_path,
-                                                 scratch_pool);
-
-      if (svn_err == SVN_NO_ERROR)
-        svn_err = svn_path_resolve_repos_relative_url(&access_file,
-                                                      access_file,
-                                                      repos_url,
-                                                      scratch_pool);
-
-      if (svn_err == SVN_NO_ERROR)
-        access_file = svn_uri_canonicalize(access_file, scratch_pool);
-
-      if (svn_err)
-        {
-          log_svn_error(APLOG_MARK, r,
-                        "Failed to load the AuthzSVNAccessFile:",
-                        svn_err, scratch_pool);
-          return NULL;
-        }
+      log_svn_error(APLOG_MARK, r,
+                    "Failed to load the AuthzSVNAccessFile:",
+                    svn_err, scratch_pool);
+      return NULL;
     }
 
   ap_log_rerror(APLOG_MARK, APLOG_DEBUG, 0, r,
                 "Path to authz file is %s", access_file);
 
-  if (conf->groups_file)
+  if (groups_file)
     {
+      svn_err = resolve_repos_relative_url(&groups_file, &repos_url, repos_path,
+                                           scratch_pool);
+      if (svn_err)
+        {
+          log_svn_error(APLOG_MARK, r,
+                        "Failed to load the AuthzSVNGroupsFile:",
+                        svn_err, scratch_pool);
+          return NULL;
+        }
+
       ap_log_rerror(APLOG_MARK, APLOG_DEBUG, 0, r,
-                    "Path to groups file is %s", conf->groups_file);
+                    "Path to groups file is %s", groups_file);
     }
 
   cache_key = apr_pstrcat(scratch_pool, "mod_authz_svn:",
@@ -388,7 +409,7 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
     {
 
       svn_err = svn_repos_authz_read2(&access_conf, access_file,
-                                      conf->groups_file, TRUE,
+                                      groups_file, TRUE,
                                       r->connection->pool);
 
       if (svn_err)
