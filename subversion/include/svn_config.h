@@ -341,7 +341,7 @@ svn_config_set_bool(svn_config_t *cfg,
 
 /** Like svn_config_get(), but for 64-bit signed integers.
  *
- * Parses the @a option in @a section of @cfg as an integer value,
+ * Parses the @a option in @a section of @a cfg as an integer value,
  * setting @a *valuep to the result.  If the option is not found, sets
  * @a *valuep to @a default_value.  If the option is found but cannot
  * be converted to an integer, returns an error.

@@ -1670,7 +1670,7 @@ svn_io_dir_walk(const char *dirname,
  * @note An APR bug affects Windows: passing a NULL @a env does not
  * guarantee the invoked program to run with an empty environment when 
  * @a inherits is FALSE, the program may inherit its parent's environment.
- * Explicitly pass an empty @env to get an empty environment.
+ * Explicitly pass an empty @a env to get an empty environment.
  *
  * @since New in 1.8.
  */
