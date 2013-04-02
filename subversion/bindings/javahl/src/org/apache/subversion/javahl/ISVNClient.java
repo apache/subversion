@@ -488,7 +488,6 @@ public interface ISVNClient
     Set<String> suggestMergeSources(String path, Revision pegRevision)
             throws SubversionException;
 
-
     /**
      * Merge changes from two paths into a new local path.
      *

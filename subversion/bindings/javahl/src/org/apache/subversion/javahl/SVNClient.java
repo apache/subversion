@@ -286,7 +286,7 @@ public class SVNClient implements ISVNClient
                              boolean recordOnly)
             throws ClientException
     {
-        merge(path1, revision2, path2, revision2, localPath, force, depth,
+        merge(path1, revision1, path2, revision2, localPath, force, depth,
               ignoreAncestry, ignoreAncestry, dryRun, recordOnly);
     }
 
