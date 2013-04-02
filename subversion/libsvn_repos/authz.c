@@ -869,29 +869,9 @@ authz_retrieve_config_repo(svn_config_t **cfg_p, const char *dirent,
  * don't have a repos relative URL in PATH. */
 static svn_error_t *
 authz_retrieve_config(svn_config_t **cfg_p, const char *path,
-                      svn_boolean_t must_exist, const char *repos_root,
-                      apr_pool_t *pool)
+                      svn_boolean_t must_exist, apr_pool_t *pool)
 {
-  if (svn_path_is_repos_relative_url(path))
-    {
-      const char *dirent;
-      svn_error_t *err;
-      apr_pool_t *scratch_pool = svn_pool_create(pool);
-
-      err = svn_path_resolve_repos_relative_url(&dirent, path,
-                                                repos_root, scratch_pool);
-      dirent = svn_dirent_canonicalize(dirent, scratch_pool);
-
-      if (err == SVN_NO_ERROR) 
-        err = authz_retrieve_config_repo(cfg_p, dirent, must_exist, pool,
-                                         scratch_pool);
-
-      /* Close the repos and streams we opened. */
-      svn_pool_destroy(scratch_pool);
-
-      return err;
-    }
-  else if (svn_path_is_url(path))
+  if (svn_path_is_url(path))
     {
       const char *dirent;
       svn_error_t *err;
@@ -956,15 +936,13 @@ authz_copy_groups(svn_authz_t *authz, svn_config_t *groups_cfg,
 svn_error_t *
 svn_repos__authz_read(svn_authz_t **authz_p, const char *path,
                       const char *groups_path, svn_boolean_t must_exist,
-                      svn_boolean_t accept_urls, const char *repos_root,
-                      apr_pool_t *pool)
+                      svn_boolean_t accept_urls, apr_pool_t *pool)
 {
   svn_authz_t *authz = apr_palloc(pool, sizeof(*authz));
 
   /* Load the authz file */
   if (accept_urls)
-    SVN_ERR(authz_retrieve_config(&authz->cfg, path, must_exist, repos_root,
-                                  pool));
+    SVN_ERR(authz_retrieve_config(&authz->cfg, path, must_exist, pool));
   else
     SVN_ERR(svn_config_read2(&authz->cfg, path, must_exist, TRUE, pool));
 
@@ -976,7 +954,7 @@ svn_repos__authz_read(svn_authz_t **authz_p, const char *path,
       /* Load the groups file */
       if (accept_urls)
         SVN_ERR(authz_retrieve_config(&groups_cfg, groups_path, must_exist,
-                                      repos_root, pool));
+                                      pool));
       else
         SVN_ERR(svn_config_read2(&groups_cfg, groups_path, must_exist,
                                  TRUE, pool));
@@ -1006,10 +984,10 @@ svn_repos__authz_read(svn_authz_t **authz_p, const char *path,
 svn_error_t *
 svn_repos_authz_read2(svn_authz_t **authz_p, const char *path,
                       const char *groups_path, svn_boolean_t must_exist,
-                      const char *repos_root, apr_pool_t *pool)
+                      apr_pool_t *pool)
 {
   return svn_repos__authz_read(authz_p, path, groups_path, must_exist,
-                               TRUE, repos_root, pool);
+                               TRUE, pool);
 }
 
 

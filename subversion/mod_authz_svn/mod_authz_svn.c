@@ -110,7 +110,7 @@ canonicalize_access_file(const char *access_file,
     }
 
   /* We don't canonicalize repos relative urls since they get
-   * canonicalized inside svn_repos_authz_read2() when they
+   * canonicalized before calling svn_repos_authz_read2() when they
    * are resolved. */
 
   return access_file;
@@ -321,7 +321,7 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
   const char *repos_path;
   void *user_data = NULL;
   svn_authz_t *access_conf = NULL;
-  svn_error_t *svn_err;
+  svn_error_t *svn_err = SVN_NO_ERROR;
   dav_error *dav_err;
 
   dav_err = dav_svn_get_repos_path(r, conf->base_path, &repos_path);
@@ -362,9 +362,27 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
   access_conf = user_data;
   if (access_conf == NULL)
     {
-      svn_err = svn_repos_authz_read2(&access_conf, access_file,
-                                      conf->groups_file, TRUE, repos_path,
-                                      r->connection->pool);
+      if (svn_path_is_repos_relative_url(access_file))
+        {
+          const char *repos_url;
+          svn_err = svn_uri_get_file_url_from_dirent(&repos_url, repos_path,
+                                                     scratch_pool);
+
+          if (svn_err == SVN_NO_ERROR)
+            svn_err = svn_path_resolve_repos_relative_url(&access_file,
+                                                          access_file,
+                                                          repos_url,
+                                                          scratch_pool);
+
+          if (svn_err == SVN_NO_ERROR)
+            access_file = svn_uri_canonicalize(access_file, scratch_pool);
+        }
+
+      if (svn_err == SVN_NO_ERROR)
+        svn_err = svn_repos_authz_read2(&access_conf, access_file,
+                                        conf->groups_file, TRUE,
+                                        r->connection->pool);
+
       if (svn_err)
         {
           log_svn_error(APLOG_MARK, r,

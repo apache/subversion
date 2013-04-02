@@ -3154,22 +3154,17 @@ svn_repos_get_fs_build_parser(const svn_repos_parser_fns_t **parser,
 typedef struct svn_authz_t svn_authz_t;
 
 /**
- * Read authz configuration data from @a path (a file, repos relative
- * url, an absolute file url, or a registry path) into @a *authz_p,
- * allocated in @a pool.
+ * Read authz configuration data from @a path (a dirent, an absolute file url
+ * or a registry path) into @a *authz_p, allocated in @a pool.
  *
- * If @a groups_path (a file, repos relative url, an absolute file url,
- * or a registry path) is set, use the global groups parsed from it.
+ * If @a groups_path (a dirent, an absolute file url, or a registry path) is
+ * set, use the global groups parsed from it.
  *
  * If @a path or @a groups_path is not a valid authz rule file, then return
  * #SVN_ERR_AUTHZ_INVALID_CONFIG.  The contents of @a *authz_p is then
  * undefined.  If @a must_exist is TRUE, a missing authz or groups file
  * is also an error other than #SVN_ERR_AUTHZ_INVALID_CONFIG (exact error
  * depends on the access type).
- *
- * If @a path is a repos relative URL then @a repos_root must be set to
- * the root of the repository the authz configuration will be used with.
- * The same applies to @a groups_path if it is being used.
  *
  * @since New in 1.8.
  */
@@ -3178,7 +3173,6 @@ svn_repos_authz_read2(svn_authz_t **authz_p,
                       const char *path,
                       const char *groups_path,
                       svn_boolean_t must_exist,
-                      const char *repos_root,
                       apr_pool_t *pool);
 
 

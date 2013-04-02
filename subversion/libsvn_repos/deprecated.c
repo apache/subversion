@@ -1013,5 +1013,5 @@ svn_repos_authz_read(svn_authz_t **authz_p, const char *file,
                      svn_boolean_t must_exist, apr_pool_t *pool)
 {
   return svn_repos__authz_read(authz_p, file, NULL, must_exist,
-                               FALSE, NULL, pool);
+                               FALSE, pool);
 }
