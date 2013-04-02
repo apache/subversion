@@ -402,7 +402,7 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
     }
 
   cache_key = apr_pstrcat(scratch_pool, "mod_authz_svn:",
-                          access_file, (char *)NULL);
+                          access_file, groups_file, (char *)NULL);
   apr_pool_userdata_get(&user_data, cache_key, r->connection->pool);
   access_conf = user_data;
   if (access_conf == NULL)
