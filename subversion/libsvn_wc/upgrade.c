@@ -1589,9 +1589,40 @@ bump_to_31(void *baton,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_array_header_t *empty_iprops = apr_array_make(
     scratch_pool, 0, sizeof(svn_prop_inherited_item_t *));
+  svn_boolean_t iprops_column_exists = FALSE;
 
-  /* Add the inherited_props column to NODES. */
-  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_31));
+  /* Add the inherited_props column to NODES if it does not yet exist.
+   *
+   * When using a format >= 31 client to upgrade from old formats which
+   * did not yet have a NODES table, the inherited_props column has
+   * already been created as part of the NODES table. Attemping to add
+   * the inherited_props column will raise an error in this case, so check
+   * if the column exists first.
+   *
+   * Checking for the existence of a column before ALTER TABLE is not
+   * possible within SQLite. We need to run a separate query and evaluate
+   * its result in C first.
+   */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_PRAGMA_TABLE_INFO_NODES));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      const char *column_name = svn_sqlite__column_text(stmt, 1, NULL);
+      
+      if (strcmp(column_name, "inherited_props") == 0)
+        {
+          iprops_column_exists = TRUE;
+          break;
+        }
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+  if (!iprops_column_exists)
+    SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_31_ALTER_TABLE));
+
+  /* Run additional statements to finalize the upgrade to format 31. */
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_31_FINALIZE));
 
   /* Set inherited_props to an empty array for the roots of all
      switched subtrees in the WC.  This allows subsequent updates
