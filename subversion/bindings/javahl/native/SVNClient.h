@@ -100,16 +100,12 @@ class SVNClient :public SVNBase
   void merge(const char *path1, Revision &revision1,
              const char *path2, Revision &revision2,
              const char *localPath, bool forceDelete, svn_depth_t depth,
-             bool ignoreMergeInfo, bool diffIgnoreAncestry,
+             bool ignoreMergeinfo, bool diffIgnoreAncestry,
              bool dryRun, bool recordOnly);
-  void merge(const char *path, Revision &pegRevision,
-             std::vector<RevisionRange> &rangesToMerge,
-             const char *localPath, bool forceDelete, svn_depth_t depth,
-             bool ignoreAncestry, bool dryRun, bool recordOnly);
   void merge(const char *path, Revision &pegRevision,
              std::vector<RevisionRange> *rangesToMerge,
              const char *localPath, bool forceDelete, svn_depth_t depth,
-             bool ignoreMergeInfo, bool diffIgnoreAncestry,
+             bool ignoreMergeinfo, bool diffIgnoreAncestry,
              bool dryRun, bool recordOnly);
   void mergeReintegrate(const char *path, Revision &pegRevision,
                         const char *localPath, bool dryRun);
