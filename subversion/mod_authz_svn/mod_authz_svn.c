@@ -377,6 +377,8 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
   if (svn_err)
     {
       log_svn_error(APLOG_MARK, r,
+                    conf->repo_relative_access_file ? 
+                    "Failed to load the AuthzSVNReposRelativeAccessFile:" :
                     "Failed to load the AuthzSVNAccessFile:",
                     svn_err, scratch_pool);
       return NULL;
@@ -415,7 +417,7 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
       if (svn_err)
         {
           log_svn_error(APLOG_MARK, r,
-                        "Failed to load the AuthzSVNAccessFile:",
+                        "Failed to load the mod_authz_svn config:",
                         svn_err, scratch_pool);
           access_conf = NULL;
         }
