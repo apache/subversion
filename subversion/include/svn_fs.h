@@ -2425,19 +2425,16 @@ svn_fs_pack(const char *db_path,
  * to the Subversion filesystem (mainly the meta-data) located in the
  * directory @a path.  Use @a scratch_pool for temporary allocations.
  *
- * Repository (meta) data forms a tightly knit network of references.
- * A full check can be expensive and may not always be required.  If
- * not equal to #SVN_INVALID_REVNUM, @a start and @a end define the
- * range of revisions to check, with 0 and the current youngest
- * repository revision being the respective default values for these
- * parameters.  However, due to the references among repository (meta)
- * data, the implementation may need to also check elements that are
- * not strictly part of the selected range of revisions.  Thus, it is
- * perfectly legal for a FS implementation to ignore the @a start and
- * @a end parameters entirely.
+ * @a start and @a end define the (minimum) range of revisions to check.
+ * If @a start is #SVN_INVALID_REVNUM, it defaults to @c r0.  Likewise,
+ * @a end will default to the current youngest repository revision when
+ * given as #SVN_INVALID_REVNUM.  Since meta data checks may have to touch
+ * other revisions as well, you may receive notifications for revisions
+ * outside the specified range.   In fact, it is perfectly legal for a FS
+ * implementation to always check all revisions.
  * 
- * Only if @c r0 has been included in the range of revisions to check,
- * are global invariants guaranteed to get verified.
+ * Global invariants are only guaranteed to get verified when @a r0 has
+ * been included in the range of revisions to check.
  *
  * The optional @a notify_func callback is only a general feedback that
  * the operation is still in process but may be called in random revisions
