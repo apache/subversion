@@ -1296,7 +1296,6 @@ export_directory(const char *from_path_or_url,
   const svn_delta_editor_t *export_editor;
   const svn_ra_reporter3_t *reporter;
   void *report_baton;
-  svn_boolean_t use_sleep = FALSE;
   svn_node_kind_t kind;
 
   if (!ENABLE_EV2_IMPL)
@@ -1351,7 +1350,7 @@ export_directory(const char *from_path_or_url,
                                            from_path_or_url,
                                            to_abspath, repos_root_url,
                                            depth, native_eol,
-                                           ignore_keywords, &use_sleep,
+                                           ignore_keywords,
                                            ctx, scratch_pool));
     }
 

@@ -1048,7 +1048,6 @@ svn_client__export_externals(apr_hash_t *externals,
                              svn_depth_t requested_depth,
                              const char *native_eol,
                              svn_boolean_t ignore_keywords,
-                             svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *scratch_pool)
 {

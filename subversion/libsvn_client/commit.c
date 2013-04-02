@@ -985,10 +985,11 @@ svn_client_commit6(const apr_array_header_t *targets,
                    iterpool);
     }
 
-  /* Sleep to ensure timestamp integrity. */
-  svn_io_sleep_for_timestamps(base_abspath, pool);
-
  cleanup:
+  /* Sleep to ensure timestamp integrity. */
+  if (commit_in_progress)
+    svn_io_sleep_for_timestamps(base_abspath, pool);
+
   /* Abort the commit if it is still in progress. */
   svn_pool_clear(iterpool); /* Close open handles before aborting */
   if (commit_in_progress)
