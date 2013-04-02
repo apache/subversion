@@ -814,8 +814,9 @@ WHERE wc_id = ?1 and local_relpath = ?2
 /* Format 31 adds the inherited_props column to the NODES table. C code then
    initializes the update/switch roots to make sure future updates fetch the
    inherited properties */
--- STMT_UPGRADE_TO_31
+-- STMT_UPGRADE_TO_31_ALTER_TABLE
 ALTER TABLE NODES ADD COLUMN inherited_props BLOB;
+-- STMT_UPGRADE_TO_31_FINALIZE
 DROP INDEX IF EXISTS I_ACTUAL_CHANGELIST;
 DROP INDEX IF EXISTS I_EXTERNALS_PARENT;
 

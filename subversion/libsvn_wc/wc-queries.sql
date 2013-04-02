@@ -1219,6 +1219,9 @@ WHERE wc_id = ?1 AND parent_relpath = ?2 AND kind = MAP_FILE
 UPDATE nodes SET properties = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 
+-- STMT_PRAGMA_TABLE_INFO_NODES
+PRAGMA table_info("NODES")
+
 /* --------------------------------------------------------------------------
  * Complex queries for callback walks, caching results in a temporary table.
  *
