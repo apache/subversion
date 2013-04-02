@@ -1520,7 +1520,7 @@ sign-email:
 	@echo "Tested: [bdb | fsfs] x [ra_local | ra_svn | $(NEON_STR)ra_serf]"
 	@echo "        swig bindings"
 ifeq ($(ENABLE_JAVA_BINDINGS),yes)
-	@echo "	       javahl bindings"
+	@echo "        javahl bindings"
 endif
 	@echo ""
 	@echo "Test results: All passed."
