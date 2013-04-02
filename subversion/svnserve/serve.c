@@ -365,7 +365,8 @@ svn_error_t *load_authz_config(server_baton_t *server,
 
       /* Same for the groupsdb_path if it is present. */
       if (groupsdb_path && !err)
-        canonicalize_access_file(&groupsdb_path, server, repos_root, pool);
+        err = canonicalize_access_file(&groupsdb_path, server,
+                                       repos_root, pool);
 
       if (!err)
         err = svn_repos_authz_read2(&server->authzdb, authzdb_path,
