@@ -1164,82 +1164,6 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Baton for parse_hooks_env_option. */
-struct parse_hooks_env_option_baton {
-  /* The name of the section being parsed. If not the default section,
-   * the section name should match the name of a hook to which the
-   * options apply. */
-  const char *section;
-  apr_hash_t *hooks_env;
-} parse_hooks_env_option_baton;
-
-/* An implementation of svn_config_enumerator2_t.
- * Set environment variable NAME to value VALUE in the environment for
- * all hooks (in case the current section is the default section),
- * or the hook with the name corresponding to the current section's name. */
-static svn_boolean_t
-parse_hooks_env_option(const char *name, const char *value,
-                       void *baton, apr_pool_t *pool)
-{
-  struct parse_hooks_env_option_baton *bo = baton;
-  apr_pool_t *result_pool = apr_hash_pool_get(bo->hooks_env);
-  apr_hash_t *hook_env;
-  
-  hook_env = svn_hash_gets(bo->hooks_env, bo->section);
-  if (hook_env == NULL)
-    {
-      hook_env = apr_hash_make(result_pool);
-      svn_hash_sets(bo->hooks_env, apr_pstrdup(result_pool, bo->section),
-                    hook_env);
-    }
-  svn_hash_sets(hook_env, apr_pstrdup(result_pool, name),
-                apr_pstrdup(result_pool, value));
-
-  return TRUE;
-}
-
-struct parse_hooks_env_section_baton {
-  svn_config_t *cfg;
-  apr_hash_t *hooks_env;
-} parse_hooks_env_section_baton;
-
-/* An implementation of svn_config_section_enumerator2_t. */
-static svn_boolean_t
-parse_hooks_env_section(const char *name, void *baton, apr_pool_t *pool)
-{
-  struct parse_hooks_env_section_baton *b = baton;
-  struct parse_hooks_env_option_baton bo;
-
-  bo.section = name;
-  bo.hooks_env = b->hooks_env;
-
-  (void)svn_config_enumerate2(b->cfg, name, parse_hooks_env_option, &bo, pool);
-
-  return TRUE;
-}
-
-/* Parse the hooks env file for this repository. */
-static svn_error_t *
-parse_hooks_env(svn_repos_t *repos,
-                const char *local_abspath,
-                apr_pool_t *result_pool,
-                apr_pool_t *scratch_pool)
-{
-  svn_config_t *cfg;
-  int n;
-  struct parse_hooks_env_section_baton b;
-
-  SVN_ERR(svn_config_read2(&cfg, local_abspath, FALSE, TRUE, scratch_pool));
-  b.cfg = cfg;
-  b.hooks_env = apr_hash_make(result_pool);
-  n = svn_config_enumerate_sections2(cfg, parse_hooks_env_section, &b,
-                                     scratch_pool);
-  if (n > 0)
-    repos->hooks_env = b.hooks_env;
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_repos_hooks_setenv(svn_repos_t *repos,
                        const char *hooks_env_path,
@@ -1247,13 +1171,11 @@ svn_repos_hooks_setenv(svn_repos_t *repos,
                        apr_pool_t *scratch_pool)
 {
   if (hooks_env_path == NULL)
-    hooks_env_path = svn_dirent_join(repos->conf_path,
-                                     SVN_REPOS__CONF_HOOKS_ENV, scratch_pool);
+    repos->hooks_env_path = svn_dirent_join(repos->conf_path,
+                                            SVN_REPOS__CONF_HOOKS_ENV, result_pool);
   else if (!svn_dirent_is_absolute(hooks_env_path))
-    hooks_env_path = svn_dirent_join(repos->conf_path, hooks_env_path,
-                                     scratch_pool);
-
-  SVN_ERR(parse_hooks_env(repos, hooks_env_path, result_pool, scratch_pool));
+    repos->hooks_env_path = svn_dirent_join(repos->conf_path, hooks_env_path,
+                                            result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -1273,8 +1195,8 @@ create_svn_repos_t(const char *path, apr_pool_t *pool)
   repos->conf_path = svn_dirent_join(path, SVN_REPOS__CONF_DIR, pool);
   repos->hook_path = svn_dirent_join(path, SVN_REPOS__HOOK_DIR, pool);
   repos->lock_path = svn_dirent_join(path, SVN_REPOS__LOCK_DIR, pool);
+  repos->hooks_env_path = NULL;
   repos->repository_capabilities = apr_hash_make(pool);
-  repos->hooks_env = NULL;
 
   return repos;
 }

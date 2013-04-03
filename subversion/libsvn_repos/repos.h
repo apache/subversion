@@ -126,6 +126,10 @@ struct svn_repos_t
   /* The format number of this repository. */
   int format;
 
+  /* The path to the repository's hooks enviroment file. If NULL, hooks run
+   * in an empty environment. */
+  const char *hooks_env_path;
+
   /* The FS backend in use within this repository. */
   const char *fs_type;
 
@@ -146,18 +150,6 @@ struct svn_repos_t
      sufficiently well-informed internal code may just compare against
      those constants' addresses, therefore). */
   apr_hash_t *repository_capabilities;
-
-  /* The environment inherited to hook scripts. If NULL, hooks run
-   * in an empty environment.
-   *
-   * This is a nested hash table.
-   * The entry with name SVN_REPOS__HOOKS_ENV_DEFAULT_SECTION contains the
-   * default environment for all hooks in form of an apr_hash_t with keys
-   * and values describing the names and values of environment variables.
-   * Defaults can be overridden by an entry matching the name of a hook.
-   * E.g. an entry with the name SVN_REPOS__HOOK_PRE_COMMIT provides the
-   * environment specific to the pre-commit hook. */
-  apr_hash_t *hooks_env;
 };
 
 
