@@ -586,6 +586,7 @@ svn_client_commit6(const apr_array_header_t *targets,
   svn_error_t *bump_err = SVN_NO_ERROR;
   svn_error_t *unlock_err = SVN_NO_ERROR;
   svn_boolean_t commit_in_progress = FALSE;
+  svn_boolean_t timestamp_sleep = FALSE;
   svn_commit_info_t *commit_info = NULL;
   apr_pool_t *iterpool = svn_pool_create(pool);
   const char *current_abspath;
@@ -945,6 +946,11 @@ svn_client_commit6(const apr_array_header_t *targets,
   /* Make a note that we have a commit-in-progress. */
   commit_in_progress = TRUE;
 
+  /* We'll assume that, once we pass this point, we are going to need to
+   * sleep for timestamps.  Really, we may not need to do unless and until
+   * we reach the point where we post-commit 'bump' the WC metadata. */
+  timestamp_sleep = TRUE;
+
   /* Perform the commit. */
   cmt_err = svn_error_trace(
               svn_client__do_commit(base_url, commit_items, editor, edit_baton,
@@ -987,7 +993,7 @@ svn_client_commit6(const apr_array_header_t *targets,
 
  cleanup:
   /* Sleep to ensure timestamp integrity. */
-  if (commit_in_progress)
+  if (timestamp_sleep)
     svn_io_sleep_for_timestamps(base_abspath, pool);
 
   /* Abort the commit if it is still in progress. */
