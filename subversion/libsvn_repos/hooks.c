@@ -410,29 +410,39 @@ parse_hooks_env_section(const char *name, void *baton, apr_pool_t *pool)
   return TRUE;
 }
 
-/* Parse the hooks env file for this repository. */
+/* Set *HOOKS_ENV_P to the cached hash-form of the parsed hook-env
+   file for REPOS.  (If that information has not yet been cached, then
+   parse the file, cache the results, and *then* return them.)  */
 static svn_error_t *
 parse_hooks_env(apr_hash_t **hooks_env_p,
-                const char *local_abspath,
-                apr_pool_t *result_pool,
+                svn_repos_t *repos,
                 apr_pool_t *scratch_pool)
 {
   svn_config_t *cfg;
   struct parse_hooks_env_section_baton b;
 
-  if (local_abspath)
+  /* Easy out: we've already parsed the sucker! */
+  if (repos->hooks_env)
     {
-      SVN_ERR(svn_config_read2(&cfg, local_abspath, FALSE, TRUE, scratch_pool));
-      b.cfg = cfg;
-      b.hooks_env = apr_hash_make(result_pool);
-      svn_config_enumerate_sections2(cfg, parse_hooks_env_section, &b,
-                                     scratch_pool);
-      *hooks_env_p = b.hooks_env;
+      *hooks_env_p = repos->hooks_env;
+      return SVN_NO_ERROR;
     }
-  else
+
+  /* Easy out: no path to parse. */
+  if (! repos->hooks_env_path)
     {
       *hooks_env_p = NULL;
+      return SVN_NO_ERROR;
     }
+
+  /* Okay, parse the file, then cache and return the results. */
+  SVN_ERR(svn_config_read2(&cfg, repos->hooks_env_path,
+                           FALSE, TRUE, scratch_pool));
+  b.cfg = cfg;
+  b.hooks_env = apr_hash_make(repos->pool);
+  svn_config_enumerate_sections2(cfg, parse_hooks_env_section,
+                                 &b, scratch_pool);
+  *hooks_env_p = repos->hooks_env = b.hooks_env;
 
   return SVN_NO_ERROR;
 }
@@ -479,7 +489,7 @@ svn_repos__hooks_start_commit(svn_repos_t *repos,
           capabilities_string = apr_pstrdup(pool, "");
         }
 
-      SVN_ERR(parse_hooks_env(&hooks_env, repos->hooks_env_path, pool, pool));
+      SVN_ERR(parse_hooks_env(&hooks_env, repos, pool));
 
       args[0] = hook;
       args[1] = svn_dirent_local_style(svn_repos_path(repos, pool), pool);
@@ -568,7 +578,7 @@ svn_repos__hooks_pre_commit(svn_repos_t *repos,
         SVN_ERR(svn_io_file_open(&stdin_handle, SVN_NULL_DEVICE_NAME,
                                  APR_READ, APR_OS_DEFAULT, pool));
 
-      SVN_ERR(parse_hooks_env(&hooks_env, repos->hooks_env_path, pool, pool));
+      SVN_ERR(parse_hooks_env(&hooks_env, repos, pool));
 
       SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_PRE_COMMIT, hook, args,
                            hooks_env, stdin_handle, pool));
@@ -596,7 +606,7 @@ svn_repos__hooks_post_commit(svn_repos_t *repos,
       const char *args[5];
       apr_hash_t *hooks_env;
 
-      SVN_ERR(parse_hooks_env(&hooks_env, repos->hooks_env_path, pool, pool));
+      SVN_ERR(parse_hooks_env(&hooks_env, repos, pool));
 
       args[0] = hook;
       args[1] = svn_dirent_local_style(svn_repos_path(repos, pool), pool);
@@ -642,7 +652,7 @@ svn_repos__hooks_pre_revprop_change(svn_repos_t *repos,
         SVN_ERR(svn_io_file_open(&stdin_handle, SVN_NULL_DEVICE_NAME,
                                  APR_READ, APR_OS_DEFAULT, pool));
 
-      SVN_ERR(parse_hooks_env(&hooks_env, repos->hooks_env_path, pool, pool));
+      SVN_ERR(parse_hooks_env(&hooks_env, repos, pool));
 
       action_string[0] = action;
       action_string[1] = '\0';
@@ -707,7 +717,7 @@ svn_repos__hooks_post_revprop_change(svn_repos_t *repos,
         SVN_ERR(svn_io_file_open(&stdin_handle, SVN_NULL_DEVICE_NAME,
                                  APR_READ, APR_OS_DEFAULT, pool));
 
-      SVN_ERR(parse_hooks_env(&hooks_env, repos->hooks_env_path, pool, pool));
+      SVN_ERR(parse_hooks_env(&hooks_env, repos, pool));
 
       action_string[0] = action;
       action_string[1] = '\0';
@@ -752,7 +762,7 @@ svn_repos__hooks_pre_lock(svn_repos_t *repos,
       svn_string_t *buf;
       apr_hash_t *hooks_env;
 
-      SVN_ERR(parse_hooks_env(&hooks_env, repos->hooks_env_path, pool, pool));
+      SVN_ERR(parse_hooks_env(&hooks_env, repos, pool));
 
       args[0] = hook;
       args[1] = svn_dirent_local_style(svn_repos_path(repos, pool), pool);
@@ -801,7 +811,7 @@ svn_repos__hooks_post_lock(svn_repos_t *repos,
 
       SVN_ERR(create_temp_file(&stdin_handle, paths_str, pool));
 
-      SVN_ERR(parse_hooks_env(&hooks_env, repos->hooks_env_path, pool, pool));
+      SVN_ERR(parse_hooks_env(&hooks_env, repos, pool));
 
       args[0] = hook;
       args[1] = svn_dirent_local_style(svn_repos_path(repos, pool), pool);
@@ -839,7 +849,7 @@ svn_repos__hooks_pre_unlock(svn_repos_t *repos,
       const char *args[7];
       apr_hash_t *hooks_env;
 
-      SVN_ERR(parse_hooks_env(&hooks_env, repos->hooks_env_path, pool, pool));
+      SVN_ERR(parse_hooks_env(&hooks_env, repos, pool));
 
       args[0] = hook;
       args[1] = svn_dirent_local_style(svn_repos_path(repos, pool), pool);
@@ -881,7 +891,7 @@ svn_repos__hooks_post_unlock(svn_repos_t *repos,
 
       SVN_ERR(create_temp_file(&stdin_handle, paths_str, pool));
 
-      SVN_ERR(parse_hooks_env(&hooks_env, repos->hooks_env_path, pool, pool));
+      SVN_ERR(parse_hooks_env(&hooks_env, repos, pool));
 
       args[0] = hook;
       args[1] = svn_dirent_local_style(svn_repos_path(repos, pool), pool);
