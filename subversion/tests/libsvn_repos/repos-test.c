@@ -3187,7 +3187,7 @@ filename_with_control_chars(const svn_test_opts_t *opts,
   const svn_delta_editor_t *editor;
 
   /* Create the repository. */
-  SVN_ERR(svn_test__create_repos(&repos, "test-repos-filename-with-cntrl-chars",
+  SVN_ERR(svn_test__create_repos(&repos, "test-repo-filename-with-cntrl-chars",
                                  opts, pool));
   fs = svn_repos_fs(repos);
 
