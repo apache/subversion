@@ -329,7 +329,7 @@ svn_repos_fs_change_rev_prop4(svn_repos_t *repos,
     {
       const svn_string_t *old_value;
       char action;
-      apr_hash_t *hooks_env = NULL;
+      apr_hash_t *hooks_env;
 
       SVN_ERR(svn_repos__validate_prop(name, new_value, pool));
 
