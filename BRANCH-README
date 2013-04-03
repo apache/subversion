@@ -201,6 +201,20 @@ a large number of revisions, it may be more efficient to start with small
 packs (10-ish) and later pack them into larger and larger ones.
 
 
+Open less files when opening a repository
+-----------------------------------------
+
+Opening a repository reads numerous files in db/ (besides several more in
+../conf): uuid, current, format, fs-type, fsfs.conf, min-unpacked-rev, ...
+
+Combine most of them into one or two files (eg uuid|format(|fs-type?),
+current|min-unpacked-revprop).
+
+(danielsh adds: if we do this, would be nice to have 'svnadmin info' command
+that prints the equivalent of `cat fs-type uuid ../format ../db/format`; but
+that's orthogonal to all backend changes.)
+
+
 DONE
 ====
 
