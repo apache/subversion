@@ -151,10 +151,6 @@ struct svn_repos_t
      those constants' addresses, therefore). */
   apr_hash_t *repository_capabilities;
 
-  /* Parsed form of the 'hooks-env' configuration file (NULL if not
-     yet parsed). */
-  apr_hash_t *hooks_env;
-
   /* Pool from which this structure was allocated.  Also used for
      auxiliary repository-related data that requires a matching
      lifespan.  (As the svn_repos_t structure tends to be relatively
