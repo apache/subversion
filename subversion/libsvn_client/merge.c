@@ -11968,17 +11968,33 @@ branch_history_get_endpoints(svn_client__pathrev_t **oldest_p,
   return SVN_NO_ERROR;
 }
 
+/* Implements the svn_log_entry_receiver_t interface.
+
+  Set *BATON to LOG_ENTRY->revision and return SVN_ERR_CEASE_INVOCATION. */
+static svn_error_t *
+operative_rev_receiver(void *baton,
+                       svn_log_entry_t *log_entry,
+                       apr_pool_t *pool)
+{
+  svn_revnum_t *operative_rev = baton;
+
+  *operative_rev = log_entry->revision;
+
+  /* We've found the youngest merged or oldest eligible revision, so
+     we're done. */
+  return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
+}
+
 /* Set *BASE_P to the last location on SOURCE_BRANCH such that all changes
  * on SOURCE_BRANCH after YCA up to and including *BASE_P have already
- * been merged into the target branch -- or, specifically, are recorded in
- * TARGET_MERGEINFO.
+ * been fully merged into TARGET.
  *
  *               *BASE_P       TIP
  *          o-------o-----------o--- SOURCE_BRANCH
  *         /         \
  *   -----o     prev. \
  *     YCA \    merges \
- *          o-----------o-----------
+ *          o-----------o----------- TARGET branch
  *
  * In terms of mergeinfo:
  *
@@ -11988,7 +12004,10 @@ branch_history_get_endpoints(svn_client__pathrev_t **oldest_p,
  *
  *     Eligible -.eee.eeeeeeeeeeeeeeeeeeee   .=not a source branch location
  *
- *     Tgt-mi   -.mmm.mm-mm-------m-------   m=merged, -=not merged
+ *     Tgt-mi   -.mmm.mm-mm-------m-------   m=merged to root of TARGET or
+ *                                           subtree of TARGET with no
+ *                                           operative changes outside of that
+ *                                           subtree, -=not merged
  *
  *     Eligible -.---.--e--eeeeeee-eeeeeee
  *
@@ -11999,90 +12018,121 @@ branch_history_get_endpoints(svn_client__pathrev_t **oldest_p,
  *         YCA \    merges \
  *              o-----------o-------------
  *
- * If no locations on SOURCE_BRANCH are recorded in TARGET_MERGEINFO, set
- * *BASE_P to the YCA.
+ * If no revisions from SOURCE_BRANCH have been completely merged to TARGET,
+ * then set *BASE_P to the YCA.
  */
 static svn_error_t *
 find_last_merged_location(svn_client__pathrev_t **base_p,
                           svn_client__pathrev_t *yca,
                           const branch_history_t *source_branch,
-                          svn_mergeinfo_t target_mergeinfo,
+                          svn_client__pathrev_t *target,
                           svn_client_ctx_t *ctx,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  /*
-   To find the youngest location on BRANCH_A that is fully merged to BRANCH_B:
+  svn_opt_revision_t source_peg_rev, source_start_rev, source_end_rev,
+    target_opt_rev;
+  svn_revnum_t youngest_merged_rev = SVN_INVALID_REVNUM;
+  svn_error_t *err;
 
-     Find the longest set of locations in BRANCH_A, starting after YCA,
-     such that each location is (any of):
-       (a) in BRANCH_B's mergeinfo; or
-       (b) a merge onto BRANCH_A of logical changes that are all from the
-           target branch or already in BRANCH_B's mergeinfo; or
-       (c) inoperative on BRANCH_A.
+  source_peg_rev.kind = svn_opt_revision_number;
+  source_peg_rev.value.number = source_branch->tip->rev;
+  source_start_rev.kind = svn_opt_revision_number;
+  source_start_rev.value.number = yca->rev;
+  source_end_rev.kind = svn_opt_revision_number;
+  source_end_rev.value.number = source_branch->tip->rev;
+  target_opt_rev.kind = svn_opt_revision_number;
+  target_opt_rev.value.number = target->rev;
 
-     Report the youngest such location, or the YCA if there are none.
+  /* Find the youngest revision fully merged from SOURCE_BRANCH to TARGET,
+     if such a revision exists. */
+  err = svn_client_mergeinfo_log2(
+    TRUE, /* Find merged */
+    target->url, &target_opt_rev,
+    source_branch->tip->url, &source_peg_rev,
+    &source_end_rev, &source_start_rev,
+    operative_rev_receiver, &youngest_merged_rev,
+    TRUE, svn_depth_infinity, /* Consider subtree mergeinfo! */
+    NULL, ctx, scratch_pool);
 
-     Part (b) can perhaps, initially, be simplified to something like:
-     a merge onto BRANCH_A of (including? entirely?) revisions from
-     BRANCH_B's history.
-
-     Part (c) is only necessary if we want to allow sparse mergeinfo --
-     that is, if we don't want to do some partially- or completely-
-     inoperative merges to fill in mergeinfo gaps.
-   */
-  branch_history_t *eligible_locations;
-
-  /* Start with a list of all source locations after YCA up to the tip. */
-  SVN_ERR(branch_history_intersect_range(
-            &eligible_locations,
-            source_branch, yca->rev + 1, source_branch->tip->rev,
-            scratch_pool, scratch_pool));
-
-  /* Remove any locations that match (a), (b) or (c). */
-  /* For (a), remove any locations that are in TARGET's mergeinfo. */
-  SVN_ERR(svn_mergeinfo_remove2(&eligible_locations->history,
-                                target_mergeinfo, eligible_locations->history,
-                                TRUE, scratch_pool, scratch_pool));
-  /* For (b) ... */
-
-  /* For (c) ... */
-
-  /* This leaves a list of source locations that are eligible to merge.
-     The location that we want is the source location just before oldest
-     eligible location remaining in this list; or the youngest source
-     location if there are none left in this list. */
-  if (apr_hash_count(eligible_locations->history) > 0)
+  if (err)
     {
-      /* Find the oldest eligible rev.
-       * Eligible -.---.--e--eeeeeee-eeeeeee
-       *                  ^
-       *                  BASE is just before here.
-       */
+      /* Our operative_rev_receiver svn_log_entry_receiver_t short-circuits
+         the (potentially expensive) log by raising an
+         SVN_ERR_CEASE_INVOCATION.  So we can ignore that error, as long as
+         we actually found the youngest merged revision. */
+      if (SVN_IS_VALID_REVNUM(youngest_merged_rev)
+          && err->apr_err == SVN_ERR_CEASE_INVOCATION)
+        {
+          svn_error_clear(err);
+          err = NULL;
+        }
+      else
+        {
+          return svn_error_trace(err);
+        }
+    }
 
-      svn_client__pathrev_t *oldest_eligible;
-      branch_history_t *contiguous_source;
-
-      SVN_ERR(branch_history_get_endpoints(
-                &oldest_eligible, NULL,
-                eligible_locations, scratch_pool, scratch_pool));
-
-      /* Find the branch location just before the oldest eligible rev.
-       * (We can't just subtract 1 from the rev because the branch might
-       * have a gap there.) */
-      SVN_ERR(branch_history_intersect_range(
-                &contiguous_source,
-                source_branch, yca->rev, oldest_eligible->rev - 1,
-                scratch_pool, scratch_pool));
-      SVN_ERR(branch_history_get_endpoints(
-                NULL, base_p,
-                contiguous_source, result_pool, scratch_pool));
+  if (!SVN_IS_VALID_REVNUM(youngest_merged_rev))
+    {
+      /* No revisions have been completely merged from SOURCE_BRANCH to
+         TARGET so the base for the next merge is the YCA. */
+      *base_p = yca;
     }
   else
     {
-      /* The whole source branch is merged already, so the base for
-       * the next merge is its tip. */
-      *base_p = source_branch->tip;
+      /* One or more revisions have already been completely merged from
+         SOURCE_BRANCH to TARGET, now find the oldest revision which is
+         still eligible to be merged, if such exists. */
+      branch_history_t *contiguous_source;
+      svn_revnum_t base_rev;
+      svn_revnum_t oldest_eligible_rev = SVN_INVALID_REVNUM;
+
+      err = svn_client_mergeinfo_log2(
+        FALSE, /* Find eligible */
+        target->url, &target_opt_rev,
+        source_branch->tip->url, &source_peg_rev,
+        &source_start_rev, &source_end_rev,
+        operative_rev_receiver, &oldest_eligible_rev,
+        TRUE, svn_depth_infinity, /* Consider subtree mergeinfo! */
+        NULL, ctx, scratch_pool);
+
+      if (err)
+        {
+          /* As above, our operative_rev_receiver svn_log_entry_receiver_t
+             short-circuits the log operation when it finds the youngest
+             merged revision.  So again we can ignore that error, as long
+             as we actually found the oldest eligible revision. */
+          if (SVN_IS_VALID_REVNUM(oldest_eligible_rev)
+              && err->apr_err == SVN_ERR_CEASE_INVOCATION)
+            {
+              svn_error_clear(err);
+              err = NULL;
+            }
+          else
+            {
+              return svn_error_trace(err);
+            }
+        }
+
+      /* If there are revisions eligible for merging, use the oldest one
+         to calculate the base.  Otherwise there are no operative revisions
+         to merge and we can simple set the base to the youngest revision
+         already merged. */
+      if (SVN_IS_VALID_REVNUM(oldest_eligible_rev))
+        base_rev = oldest_eligible_rev - 1;
+      else
+        base_rev = youngest_merged_rev;
+
+      /* Find the branch location just before the oldest eligible rev.
+         (We can't just use the base revs calculated above because the branch
+         might have a gap there.) */
+      SVN_ERR(branch_history_intersect_range(&contiguous_source,
+                                             source_branch, yca->rev,
+                                             base_rev,
+                                             scratch_pool, scratch_pool));
+      SVN_ERR(branch_history_get_endpoints(NULL, base_p, contiguous_source,
+                                           result_pool, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -12100,10 +12150,10 @@ find_last_merged_location(svn_client__pathrev_t **base_p,
  *                                  S_T->target
  *
  * Set *BASE_P to BASE, the youngest location in the history of S_T->source
- * (at or after the YCA) at which all revisions up to BASE are recorded as
+ * (at or after the YCA) at which all revisions up to BASE are effectively
  * merged into S_T->target.
  *
- * If no locations on the history of S_T->source are recorded as merged to
+ * If no locations on the history of S_T->source are effectively merged to
  * S_T->target, set *BASE_P to the YCA.
  */
 static svn_error_t *
@@ -12116,7 +12166,7 @@ find_base_on_source(svn_client__pathrev_t **base_p,
   SVN_ERR(find_last_merged_location(base_p,
                                     s_t->yca,
                                     &s_t->source_branch,
-                                    s_t->target_mergeinfo,
+                                    s_t->target_branch.tip,
                                     ctx, result_pool, scratch_pool));
   return SVN_NO_ERROR;
 }
@@ -12133,10 +12183,10 @@ find_base_on_source(svn_client__pathrev_t **base_p,
  *                BASE              S_T->target
  *
  * Set *BASE_P to BASE, the youngest location in the history of S_T->target
- * (at or after the YCA) at which all revisions up to BASE are recorded as
+ * (at or after the YCA) at which all revisions up to BASE are effectively
  * merged into S_T->source.
  *
- * If no locations on the history of S_T->target are recorded as merged to
+ * If no locations on the history of S_T->target are effectively merged to
  * S_T->source, set *BASE_P to the YCA.
  */
 static svn_error_t *
@@ -12149,7 +12199,7 @@ find_base_on_target(svn_client__pathrev_t **base_p,
   SVN_ERR(find_last_merged_location(base_p,
                                     s_t->yca,
                                     &s_t->target_branch,
-                                    s_t->source_mergeinfo,
+                                    s_t->source,
                                     ctx, result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
