@@ -11885,14 +11885,6 @@ typedef struct source_and_target_t
   svn_ra_session_t *target_ra_session;
   branch_history_t target_branch;
 
-  /* The complete mergeinfo on SOURCE.
-     That is, the explicit or inherited mergeinfo.  */
-  svn_mergeinfo_t source_mergeinfo;
-
-  /* The complete mergeinfo on (the current, working version of) TARGET.
-     That is, the explicit or inherited mergeinfo. */
-  svn_mergeinfo_t target_mergeinfo;
-
   /* Repos location of the youngest common ancestor of SOURCE and TARGET. */
   svn_client__pathrev_t *yca;
 } source_and_target_t;
@@ -12216,32 +12208,6 @@ find_automatic_merge(svn_client__pathrev_t **base_p,
                      apr_pool_t *scratch_pool)
 {
   svn_client__pathrev_t *base_on_source, *base_on_target;
-
-  /* Fetch mergeinfo of source branch (tip) and target branch (working). */
-  SVN_ERR(svn_client__get_repos_mergeinfo(&s_t->source_mergeinfo,
-                                          s_t->source_ra_session,
-                                          s_t->source->url,
-                                          s_t->source->rev,
-                                          svn_mergeinfo_inherited,
-                                          FALSE /* squelch_incapable */,
-                                          scratch_pool));
-  if (! s_t->target->abspath)
-    SVN_ERR(svn_client__get_repos_mergeinfo(&s_t->target_mergeinfo,
-                                            s_t->target_ra_session,
-                                            s_t->target->loc.url,
-                                            s_t->target->loc.rev,
-                                            svn_mergeinfo_inherited,
-                                            FALSE /* squelch_incapable */,
-                                            scratch_pool));
-  else
-    SVN_ERR(svn_client__get_wc_or_repos_mergeinfo(&s_t->target_mergeinfo,
-                                                  NULL /* inherited */,
-                                                  NULL /* from_repos */,
-                                                  FALSE /* repos_only */,
-                                                  svn_mergeinfo_inherited,
-                                                  s_t->target_ra_session,
-                                                  s_t->target->abspath,
-                                                  ctx, scratch_pool));
 
   /* Get the location-history of each branch. */
   s_t->source_branch.tip = s_t->source;
