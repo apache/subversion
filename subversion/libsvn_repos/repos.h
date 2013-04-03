@@ -150,6 +150,12 @@ struct svn_repos_t
      sufficiently well-informed internal code may just compare against
      those constants' addresses, therefore). */
   apr_hash_t *repository_capabilities;
+
+  /* Pool from which this structure was allocated.  Also used for
+     auxiliary repository-related data that requires a matching
+     lifespan.  (As the svn_repos_t structure tends to be relatively
+     long-lived, please be careful regarding this pool's usage.)  */
+  apr_pool_t *pool;
 };
 
 

@@ -3328,7 +3328,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
                  SVN_CONFIG_OPTION_HOOKS_ENV, NULL);
   if (hooks_env)
     hooks_env = svn_dirent_internal_style(hooks_env, pool);
-  SVN_ERR(svn_repos_hooks_setenv(b->repos, hooks_env, pool, pool));
+  SVN_ERR(svn_repos_hooks_setenv(b->repos, hooks_env, pool));
 
   return SVN_NO_ERROR;
 }

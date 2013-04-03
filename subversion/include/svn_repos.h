@@ -790,8 +790,7 @@ svn_repos_post_unlock_hook(svn_repos_t *repos,
  * file in its default location within the repository disk structure.
  * If @a hooks_env_path is not absolute, it specifies a path relative
  * to the parent of the file's default location.
- *
- * @a result_pool should be the same pool that @a repos was allocated in.
+ * 
  * Use @a scratch_pool for temporary allocations.
  *
  * If this function is not called, or if the specified configuration
@@ -803,7 +802,6 @@ svn_repos_post_unlock_hook(svn_repos_t *repos,
 svn_error_t *
 svn_repos_hooks_setenv(svn_repos_t *repos,
                        const char *hooks_env_path,
-                       apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 
 /** @} */
