@@ -93,7 +93,9 @@ class SVNClient :public SVNBase
   jobject getMergeinfo(const char *target, Revision &pegRevision);
   void getMergeinfoLog(int type, const char *pathOrURL,
                        Revision &pegRevision, const char *mergeSourceURL,
-                       Revision &srcPegRevision, bool discoverChangedPaths,
+                       Revision &srcPegRevision,
+                       Revision &srcStartRevision, Revision &srcEndRevision,
+                       bool discoverChangedPaths,
                        svn_depth_t depth, StringArray &revProps,
                        LogMessageCallback *callback);
   jobject suggestMergeSources(const char *path, Revision &pegRevision);
