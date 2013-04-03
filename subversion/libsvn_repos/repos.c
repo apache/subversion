@@ -1147,14 +1147,15 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "### With svnserve, the LANG environment variable of the svnserve process"   NL
 "### must be set to the same value as given here."                           NL
 "[default]"                                                                  NL
-"# LANG = en_US.UTF-8"                                                       NL
+"LANG = en_US.UTF-8"                                                         NL
 ""                                                                           NL
 "### This sets the PATH environment variable for the pre-commit hook."       NL
-"# [pre-commit]"                                                             NL
-"# PATH = /usr/local/bin:/usr/bin:/usr/sbin"                                 NL;
+"[pre-commit]"                                                               NL
+"PATH = /usr/local/bin:/usr/bin:/usr/sbin"                                   NL;
 
     SVN_ERR_W(svn_io_file_create(svn_dirent_join(repos->conf_path,
-                                                 SVN_REPOS__CONF_HOOKS_ENV,
+                                                 SVN_REPOS__CONF_HOOKS_ENV \
+                                                 SVN_REPOS__HOOK_DESC_EXT,
                                                  pool),
                                  hooks_env_contents, pool),
               _("Creating hooks-env file"));
