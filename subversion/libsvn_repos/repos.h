@@ -161,8 +161,24 @@ struct svn_repos_t
 
 /*** Hook-running Functions ***/
 
+/* Set *HOOKS_ENV_P to the parsed contents of the hooks-env file
+   LOCAL_ABSPATH, allocated in RESULT_POOL.  (This result is suitable
+   for delivery to the various hook wrapper functions which accept a
+   'hooks_env' parameter.)
+
+   Use SCRATCH_POOL for temporary allocations.  */
+svn_error_t *
+svn_repos__parse_hooks_env(apr_hash_t **hooks_env_p,
+                           const char *local_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
 /* Run the start-commit hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
+
+   HOOKS_ENV is a hash of hook script environment information returned
+   via svn_repos__parse_hooks_env() (or NULL if no such information is
+   available).
 
    USER is the authenticated name of the user starting the commit.
 
@@ -175,6 +191,7 @@ struct svn_repos_t
    created. */
 svn_error_t *
 svn_repos__hooks_start_commit(svn_repos_t *repos,
+                              apr_hash_t *hooks_env,
                               const char *user,
                               const apr_array_header_t *capabilities,
                               const char *txn_name,
@@ -183,18 +200,28 @@ svn_repos__hooks_start_commit(svn_repos_t *repos,
 /* Run the pre-commit hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
 
+   HOOKS_ENV is a hash of hook script environment information returned
+   via svn_repos__parse_hooks_env() (or NULL if no such information is
+   available).
+
    TXN_NAME is the name of the transaction that is being committed.  */
 svn_error_t *
 svn_repos__hooks_pre_commit(svn_repos_t *repos,
+                            apr_hash_t *hooks_env,
                             const char *txn_name,
                             apr_pool_t *pool);
 
 /* Run the post-commit hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, run SVN_ERR_REPOS_HOOK_FAILURE.
 
+   HOOKS_ENV is a hash of hook script environment information returned
+   via svn_repos__parse_hooks_env() (or NULL if no such information is
+   available).
+
    REV is the revision that was created as a result of the commit.  */
 svn_error_t *
 svn_repos__hooks_post_commit(svn_repos_t *repos,
+                             apr_hash_t *hooks_env,
                              svn_revnum_t rev,
                              const char *txn_name,
                              apr_pool_t *pool);
@@ -202,6 +229,10 @@ svn_repos__hooks_post_commit(svn_repos_t *repos,
 /* Run the pre-revprop-change hook for REPOS.  Use POOL for any
    temporary allocations.  If the hook fails, return
    SVN_ERR_REPOS_HOOK_FAILURE.
+
+   HOOKS_ENV is a hash of hook script environment information returned
+   via svn_repos__parse_hooks_env() (or NULL if no such information is
+   available).
 
    REV is the revision whose property is being changed.
    AUTHOR is the authenticated name of the user changing the prop.
@@ -215,6 +246,7 @@ svn_repos__hooks_post_commit(svn_repos_t *repos,
    will be written. */
 svn_error_t *
 svn_repos__hooks_pre_revprop_change(svn_repos_t *repos,
+                                    apr_hash_t *hooks_env,
                                     svn_revnum_t rev,
                                     const char *author,
                                     const char *name,
@@ -225,6 +257,10 @@ svn_repos__hooks_pre_revprop_change(svn_repos_t *repos,
 /* Run the pre-revprop-change hook for REPOS.  Use POOL for any
    temporary allocations.  If the hook fails, return
    SVN_ERR_REPOS_HOOK_FAILURE.
+
+   HOOKS_ENV is a hash of hook script environment information returned
+   via svn_repos__parse_hooks_env() (or NULL if no such information is
+   available).
 
    REV is the revision whose property was changed.
    AUTHOR is the authenticated name of the user who changed the prop.
@@ -237,6 +273,7 @@ svn_repos__hooks_pre_revprop_change(svn_repos_t *repos,
    the property is being created, no data will be written. */
 svn_error_t *
 svn_repos__hooks_post_revprop_change(svn_repos_t *repos,
+                                     apr_hash_t *hooks_env,
                                      svn_revnum_t rev,
                                      const char *author,
                                      const char *name,
@@ -246,6 +283,10 @@ svn_repos__hooks_post_revprop_change(svn_repos_t *repos,
 
 /* Run the pre-lock hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
+
+   HOOKS_ENV is a hash of hook script environment information returned
+   via svn_repos__parse_hooks_env() (or NULL if no such information is
+   available).
 
    PATH is the path being locked, USERNAME is the person doing it,
    COMMENT is the comment of the lock, and is treated as an empty
@@ -259,6 +300,7 @@ svn_repos__hooks_post_revprop_change(svn_repos_t *repos,
 
 svn_error_t *
 svn_repos__hooks_pre_lock(svn_repos_t *repos,
+                          apr_hash_t *hooks_env,
                           const char **token,
                           const char *path,
                           const char *username,
@@ -269,10 +311,15 @@ svn_repos__hooks_pre_lock(svn_repos_t *repos,
 /* Run the post-lock hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
 
+   HOOKS_ENV is a hash of hook script environment information returned
+   via svn_repos__parse_hooks_env() (or NULL if no such information is
+   available).
+
    PATHS is an array of paths being locked, USERNAME is the person
    who did it.  */
 svn_error_t *
 svn_repos__hooks_post_lock(svn_repos_t *repos,
+                           apr_hash_t *hooks_env,
                            const apr_array_header_t *paths,
                            const char *username,
                            apr_pool_t *pool);
@@ -280,11 +327,16 @@ svn_repos__hooks_post_lock(svn_repos_t *repos,
 /* Run the pre-unlock hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
 
+   HOOKS_ENV is a hash of hook script environment information returned
+   via svn_repos__parse_hooks_env() (or NULL if no such information is
+   available).
+
    PATH is the path being unlocked, USERNAME is the person doing it,
    TOKEN is the lock token to be unlocked which should not be NULL,
    and BREAK-LOCK is a flag if the user is breaking the lock.  */
 svn_error_t *
 svn_repos__hooks_pre_unlock(svn_repos_t *repos,
+                            apr_hash_t *hooks_env,
                             const char *path,
                             const char *username,
                             const char *token,
@@ -294,10 +346,15 @@ svn_repos__hooks_pre_unlock(svn_repos_t *repos,
 /* Run the post-unlock hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
 
+   HOOKS_ENV is a hash of hook script environment information returned
+   via svn_repos__parse_hooks_env() (or NULL if no such information is
+   available).
+
    PATHS is an array of paths being unlocked, USERNAME is the person
    who did it.  */
 svn_error_t *
 svn_repos__hooks_post_unlock(svn_repos_t *repos,
+                             apr_hash_t *hooks_env,
                              const apr_array_header_t *paths,
                              const char *username,
                              apr_pool_t *pool);
