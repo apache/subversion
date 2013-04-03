@@ -757,7 +757,6 @@ def cherry3_fwd(sbox):
 #----------------------------------------------------------------------
 # Automatic merges ignore subtree mergeinfo during reintegrate.
 @SkipUnless(server_has_mergeinfo)
-@XFail()
 @Issue(4258)
 def subtree_to_and_fro(sbox):
   "reintegrate considers source subtree mergeinfo"
@@ -799,10 +798,10 @@ def subtree_to_and_fro(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
                                      '-m', 'Edit a file on our trunk')
 
-  # Now reintegrate ^/A_COPY back to A.  To the automatic merge code the
-  # subtree merge to A_COPY/D just looks like any other branch edit, it is
-  # not considered a merge.  So the changes which exist on A/D and were
-  # merged to A_COPY/D, are merged *back* to A, resulting in a conflict:
+  # Now reintegrate ^/A_COPY back to A.  Prior to issue #4258's fix, the
+  # the subtree merge to A_COPY/D just looks like any other branch edit and
+  # was not considered a merge.  So the changes which exist on A/D and were
+  # merged to A_COPY/D, were merged *back* to A, resulting in a conflict:
   #
   #   C:\...\working_copies\merge_automatic_tests-18>svn merge ^^/A_COPY A
   #   DBG: merge.c:11461: base on source: ^/A@1
@@ -826,8 +825,8 @@ def subtree_to_and_fro(sbox):
     None, [], svntest.verify.AnyOutput,
     'merge', sbox.repo_url + '/A_COPY', A_path)
 
-  # The 'old' merge produced a warning that reintegrate could not be used.
-  # Not claiming this is perfect, but it's better(?) than a conflict:
+  # Better to produce the same warning that explicitly using the
+  # --reintegrate option would produce:
   svntest.verify.verify_outputs("Automatic Reintegrate failed, but not "
                                 "in the way expected",
                                 err, None,
@@ -1129,7 +1128,6 @@ def auto_merge_handles_replacements_in_merge_source(sbox):
 # source is fully synced'
 @SkipUnless(server_has_mergeinfo)
 @Issue(4329)
-@XFail()
 def effective_sync_results_in_reintegrate(sbox):
   "an effectively synced branch gets reintegrated"
 
@@ -1184,10 +1182,10 @@ def effective_sync_results_in_reintegrate(sbox):
   # Revert the merge and try it again, this time without the --reintegrate
   # option.  The merge should still work with the same results.
   #
-  # Currently this fails because the reintegrate code path is not followed,
+  # Previously this failed because the reintegrate code path is not followed,
   # rather the automatic merge attempts a sync style merge of the yca (^/A@1)
   # through the HEAD of the branch (^/branch@7).  This results in a spurious
-  # conflict on A/mu as the edit made in r3 is reapplied..
+  # conflict on A/mu as the edit made in r3 is reapplied.
   #
   # >svn merge ^/branch A
   # --- Merging r2 through r6 into 'A':
