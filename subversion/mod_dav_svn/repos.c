@@ -2219,7 +2219,7 @@ get_resource(request_rec *r,
 
       /* Configure hook script environment variables. */
       serr = svn_repos_hooks_setenv(repos->repos, dav_svn__get_hooks_env(r),
-                                    r->connection->pool, r->pool);
+                                    r->pool);
       if (serr)
         return dav_svn__sanitize_error(serr,
                                        "Error settings hooks environment",

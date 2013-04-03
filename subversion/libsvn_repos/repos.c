@@ -1167,15 +1167,16 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 svn_error_t *
 svn_repos_hooks_setenv(svn_repos_t *repos,
                        const char *hooks_env_path,
-                       apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
   if (hooks_env_path == NULL)
     repos->hooks_env_path = svn_dirent_join(repos->conf_path,
-                                            SVN_REPOS__CONF_HOOKS_ENV, result_pool);
+                                            SVN_REPOS__CONF_HOOKS_ENV,
+                                            repos->pool);
   else if (!svn_dirent_is_absolute(hooks_env_path))
-    repos->hooks_env_path = svn_dirent_join(repos->conf_path, hooks_env_path,
-                                            result_pool);
+    repos->hooks_env_path = svn_dirent_join(repos->conf_path,
+                                            hooks_env_path,
+                                            repos->pool);
 
   return SVN_NO_ERROR;
 }
@@ -1197,6 +1198,7 @@ create_svn_repos_t(const char *path, apr_pool_t *pool)
   repos->lock_path = svn_dirent_join(path, SVN_REPOS__LOCK_DIR, pool);
   repos->hooks_env_path = NULL;
   repos->repository_capabilities = apr_hash_make(pool);
+  repos->pool = pool;
 
   return repos;
 }
