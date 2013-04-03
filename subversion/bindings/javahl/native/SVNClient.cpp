@@ -822,6 +822,8 @@ void SVNClient::getMergeinfoLog(int type, const char *pathOrURL,
                                 Revision &pegRevision,
                                 const char *mergeSourceURL,
                                 Revision &srcPegRevision,
+                                Revision &srcStartRevision,
+                                Revision &srcEndRevision,
                                 bool discoverChangedPaths,
                                 svn_depth_t depth,
                                 StringArray &revProps,
@@ -841,18 +843,20 @@ void SVNClient::getMergeinfoLog(int type, const char *pathOrURL,
     Path srcURL(mergeSourceURL, subPool);
     SVN_JNI_ERR(srcURL.error_occurred(), );
 
-    SVN_JNI_ERR(svn_client_mergeinfo_log((type == 1),
-                                         urlPath.c_str(),
-                                         pegRevision.revision(),
-                                         srcURL.c_str(),
-                                         srcPegRevision.revision(),
-                                         LogMessageCallback::callback,
-                                         callback,
-                                         discoverChangedPaths,
-                                         depth,
-                                         revProps.array(subPool),
-                                         ctx,
-                                         subPool.getPool()), );
+    SVN_JNI_ERR(svn_client_mergeinfo_log2((type == 1),
+                                          urlPath.c_str(),
+                                          pegRevision.revision(),
+                                          srcURL.c_str(),
+                                          srcPegRevision.revision(),
+                                          srcStartRevision.revision(),
+                                          srcEndRevision.revision(),
+                                          LogMessageCallback::callback,
+                                          callback,
+                                          discoverChangedPaths,
+                                          depth,
+                                          revProps.array(subPool),
+                                          ctx,
+                                          subPool.getPool()), );
 
     return;
 }

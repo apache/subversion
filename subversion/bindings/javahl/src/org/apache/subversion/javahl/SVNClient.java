@@ -319,10 +319,27 @@ public class SVNClient implements ISVNClient
                                        Revision pegRevision,
                                        String mergeSourceUrl,
                                        Revision srcPegRevision,
+                                       Revision srcStartRevision,
+                                       Revision srcEndRevision,
                                        boolean discoverChangedPaths, Depth depth,
                                        Set<String> revProps,
                                        LogMessageCallback callback)
         throws ClientException;
+
+    public void getMergeinfoLog(Mergeinfo.LogKind kind, String pathOrUrl,
+                                Revision pegRevision,
+                                String mergeSourceUrl,
+                                Revision srcPegRevision,
+                                boolean discoverChangedPaths, Depth depth,
+                                Set<String> revProps,
+                                LogMessageCallback callback)
+        throws ClientException
+    {
+        Revision unspecified = new Revision(Revision.Kind.unspecified);
+        getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
+                        srcPegRevision, unspecified, unspecified,
+                        discoverChangedPaths, depth, revProps, callback);
+    }
 
     public void diff(String target1, Revision revision1, String target2,
                      Revision revision2, String relativeToDir,

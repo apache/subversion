@@ -615,10 +615,35 @@ public interface ISVNClient
      * @param pegRevision            peg rev for pathOrUrl
      * @param mergeSourceUrl         the source of the merge
      * @param srcPegRevision         peg rev for mergeSourceUrl
+     * @param srcStartRevieion       lower bound of the source revision range
+     * @param srcEndRevision         upper bound of the source revision range
      * @param discoverChangedPaths   return paths of changed items
      * @param depth                  the depth to recurse to
      * @param revProps               the revprops to retrieve
      * @param callback               the object to receive the log messages
+     * @since 1.8
+     */
+    void getMergeinfoLog(Mergeinfo.LogKind kind, String pathOrUrl,
+                         Revision pegRevision, String mergeSourceUrl,
+                         Revision srcPegRevision,
+                         Revision srcStartRevision, Revision srcEndRevision,
+                         boolean discoverChangedPaths,
+                         Depth depth, Set<String> revProps,
+                         LogMessageCallback callback)
+        throws ClientException;
+
+    /**
+     * Retrieve either merged or eligible-to-be-merged revisions.
+     * @param kind                   kind of revisions to receive
+     * @param pathOrUrl              target of merge
+     * @param pegRevision            peg rev for pathOrUrl
+     * @param mergeSourceUrl         the source of the merge
+     * @param srcPegRevision         peg rev for mergeSourceUrl
+     * @param discoverChangedPaths   return paths of changed items
+     * @param depth                  the depth to recurse to
+     * @param revProps               the revprops to retrieve
+     * @param callback               the object to receive the log messages
+     * @note Behaves like the 1.8 version, with unspecified revision range.
      */
     void getMergeinfoLog(Mergeinfo.LogKind kind, String pathOrUrl,
                          Revision pegRevision, String mergeSourceUrl,
