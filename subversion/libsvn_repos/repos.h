@@ -164,7 +164,8 @@ struct svn_repos_t
 /* Set *HOOKS_ENV_P to the parsed contents of the hooks-env file
    LOCAL_ABSPATH, allocated in RESULT_POOL.  (This result is suitable
    for delivery to the various hook wrapper functions which accept a
-   'hooks_env' parameter.)
+   'hooks_env' parameter.)  If LOCAL_ABSPATH is NULL, set *HOOKS_ENV_P
+   to NULL.
 
    Use SCRATCH_POOL for temporary allocations.  */
 svn_error_t *
