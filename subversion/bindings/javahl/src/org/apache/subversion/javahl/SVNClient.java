@@ -212,6 +212,7 @@ public class SVNClient implements ISVNClient
                             CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
+    /** @deprecated */
     public void move(Set<String> srcPaths, String destPath,
                      boolean force, boolean moveAsChild,
                      boolean makeParents,
