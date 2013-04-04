@@ -66,6 +66,20 @@ svn_strerror(apr_status_t statcode,
              apr_size_t bufsize);
 
 
+/**
+ * Return the symbolic name of an error code.  If the error code
+ * is not a Subversion error code (from svn_error_codes.h), return @c NULL.
+ *
+ * @note In rare cases, a single numeric code has more than one symbolic name.
+ * (For example, #SVN_ERR_WC_NOT_DIRECTORY and #SVN_ERR_WC_NOT_WORKING_COPY).
+ * In those cases, it is not guaranteed which symbolic name is returned.
+ *
+ * @since New in 1.8.
+ */
+const char *
+svn_error_symbolic_name(apr_status_t statcode);
+
+
 /** If @a err has a custom error message, return that, otherwise
  * store the generic error string associated with @a err->apr_err into
  * @a buf (terminating with NULL) and return @a buf.

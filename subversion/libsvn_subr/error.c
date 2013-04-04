@@ -631,8 +631,9 @@ svn_err_best_message(svn_error_t *err, char *buf, apr_size_t bufsize)
 /* svn_strerror() and helpers */
 
 typedef struct err_defn {
-  svn_errno_t errcode;
-  const char *errdesc;
+  svn_errno_t errcode; /* 160004 */
+  const char *errname; /* SVN_ERR_FS_CORRUPT */
+  const char *errdesc; /* default message */
 } err_defn;
 
 /* To understand what is going on here, read svn_error_codes.h. */
@@ -653,6 +654,23 @@ svn_strerror(apr_status_t statcode, char *buf, apr_size_t bufsize)
 
   return apr_strerror(statcode, buf, bufsize);
 }
+
+const char *
+svn_error_symbolic_name(apr_status_t statcode)
+{
+  const err_defn *defn;
+
+  for (defn = error_table; defn->errdesc != NULL; ++defn)
+    if (defn->errcode == (svn_errno_t)statcode)
+      return defn->errname;
+
+  /* "No error" is not in error_table. */
+  if (statcode == SVN_NO_ERROR)
+    return "SVN_NO_ERROR";
+
+  return NULL;
+}
+
 
 
 /* Malfunctions. */

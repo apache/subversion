@@ -63,9 +63,9 @@ extern "C" {
 
 #define SVN_ERROR_START \
         static const err_defn error_table[] = { \
-          { SVN_WARNING, "Warning" },
-#define SVN_ERRDEF(num, offset, str) { num, str },
-#define SVN_ERROR_END { 0, NULL } };
+          { SVN_WARNING, "SVN_WARNING", "Warning" },
+#define SVN_ERRDEF(num, offset, str) { num, #num, str },
+#define SVN_ERROR_END { 0, NULL, NULL } };
 
 #elif !defined(SVN_ERROR_ENUM_DEFINED)
 
