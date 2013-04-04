@@ -464,19 +464,29 @@ make_string_from_option(const char **valuep, svn_config_t *cfg,
   /* Expand the option value if necessary. */
   if (!opt->expanded)
     {
-      apr_pool_t *tmp_pool = (x_pool ? x_pool : svn_pool_create(cfg->x_pool));
-
-      expand_option_value(cfg, section, opt->value, &opt->x_value, tmp_pool);
-      opt->expanded = TRUE;
-
-      if (!x_pool)
+      /* before attempting to expand an option, check for the placeholder.
+       * If none is there, there is no point in calling expand_option_value.
+       */
+      if (strchr(opt->value, '%'))
         {
-          /* Grab the fully expanded value from tmp_pool before its
-             disappearing act. */
-          if (opt->x_value)
-            opt->x_value = apr_pstrmemdup(cfg->x_pool, opt->x_value,
-                                          strlen(opt->x_value));
-          svn_pool_destroy(tmp_pool);
+          apr_pool_t *tmp_pool = (x_pool ? x_pool : svn_pool_create(cfg->x_pool));
+
+          expand_option_value(cfg, section, opt->value, &opt->x_value, tmp_pool);
+          opt->expanded = TRUE;
+
+          if (!x_pool)
+            {
+              /* Grab the fully expanded value from tmp_pool before its
+                 disappearing act. */
+              if (opt->x_value)
+                opt->x_value = apr_pstrmemdup(cfg->x_pool, opt->x_value,
+                                              strlen(opt->x_value));
+              svn_pool_destroy(tmp_pool);
+            }
+        }
+      else
+        {
+          opt->expanded = TRUE;
         }
     }
 
