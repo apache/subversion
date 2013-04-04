@@ -164,66 +164,6 @@ typedef struct svn_ra_svn_item_t
 
 typedef svn_error_t *(*svn_ra_svn_edit_callback)(void *baton);
 
-/**
- * List of all commands supported by the SVN:// protocol.
- *
- * @since New in 1.8
- */
-typedef enum svn_ra_svn_cmd_t
-{
-  svn_ra_svn_cmd_target_rev,
-  svn_ra_svn_cmd_open_root,
-  svn_ra_svn_cmd_delete_entry,
-  svn_ra_svn_cmd_add_dir,
-  svn_ra_svn_cmd_open_dir,
-  svn_ra_svn_cmd_change_dir_prop,
-  svn_ra_svn_cmd_close_dir,
-  svn_ra_svn_cmd_absent_dir,
-  svn_ra_svn_cmd_add_file,
-  svn_ra_svn_cmd_open_file,
-  svn_ra_svn_cmd_change_file_prop,
-  svn_ra_svn_cmd_close_file,
-  svn_ra_svn_cmd_absent_file,
-  svn_ra_svn_cmd_textdelta_chunk,
-  svn_ra_svn_cmd_textdelta_end,
-  svn_ra_svn_cmd_apply_textdelta,
-  svn_ra_svn_cmd_close_edit,
-  svn_ra_svn_cmd_abort_edit,
-  
-  svn_ra_svn_cmd_set_path,
-  svn_ra_svn_cmd_delete_path,
-  svn_ra_svn_cmd_link_path,
-  svn_ra_svn_cmd_finish_report,
-  svn_ra_svn_cmd_abort_report,
-
-  svn_ra_svn_cmd_reparent,
-  svn_ra_svn_cmd_get_latest_rev,
-  svn_ra_svn_cmd_get_dated_rev,
-  svn_ra_svn_cmd_change_rev_prop2,
-  svn_ra_svn_cmd_change_rev_prop,
-  svn_ra_svn_cmd_rev_proplist,
-  svn_ra_svn_cmd_rev_prop,
-  svn_ra_svn_cmd_get_file,
-  svn_ra_svn_cmd_update,
-  svn_ra_svn_cmd_switch,
-  svn_ra_svn_cmd_status,
-  svn_ra_svn_cmd_diff,
-  svn_ra_svn_cmd_check_path,
-  svn_ra_svn_cmd_stat,
-  svn_ra_svn_cmd_get_file_revs,
-  svn_ra_svn_cmd_lock,
-  svn_ra_svn_cmd_unlock,
-  svn_ra_svn_cmd_get_lock,
-  svn_ra_svn_cmd_get_locks,
-  svn_ra_svn_cmd_replay,
-  svn_ra_svn_cmd_replay_range,
-  svn_ra_svn_cmd_get_deleted_rev,
-  svn_ra_svn_cmd_get_iprops,
-  svn_ra_svn_cmd_finish_replay,
-
-  svn_ra_svn_cmd__last
-} svn_ra_svn_cmd_t;
-
 /** Initialize a connection structure for the given socket or
  * input/output files.
  *
@@ -548,7 +488,7 @@ svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
  * as svn_ra_svn_write_tuple().
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
- * Use svn_ra_svn_write_templated_cmd instead.
+ * Use the svn_ra_svn_write_cmd_* functions instead.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -556,17 +496,6 @@ svn_ra_svn_write_cmd(svn_ra_svn_conn_t *conn,
                      apr_pool_t *pool,
                      const char *cmdname,
                      const char *fmt, ...);
-
-/** Write a command of type @a cmd over the network connection @a conn.
- * The parameters to be provided are command-specific.  @a pool will be
- * used for allocations.
- * 
- * @since New in 1.8.
- */
-svn_error_t *
-svn_ra_svn_write_templated_cmd(svn_ra_svn_conn_t *conn,
-                               apr_pool_t *pool,
-                               svn_ra_svn_cmd_t cmd, ...);
 
 /** Write a successful command response over the network, using the
  * same format string notation as svn_ra_svn_write_tuple().  Do not use
@@ -642,6 +571,547 @@ svn_ra_svn_cram_server(svn_ra_svn_conn_t *conn,
 const svn_version_t *
 svn_ra_svn_version(void);
 
+/**
+ * @defgroup svn_commands sending ra_svn commands
+ * @{
+ */
+
+/** Sets the target revision of connection @a conn to @a rev.  Use @a pool
+ * for allocations.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_target_rev(svn_ra_svn_conn_t *conn,
+                                apr_pool_t *pool,
+                                svn_revnum_t rev);
+
+/** Send a "open-root" command over connection @a conn.  Open the
+ * repository root at revision @a rev and associate it with @a token.
+ * Use @a pool for allocations.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_open_root(svn_ra_svn_conn_t *conn,
+                               apr_pool_t *pool,
+                               svn_revnum_t rev,
+                               const char *token);
+
+/** Send a "delete-entry" command over connection @a conn.  Delete the
+ * @a path at optional revision @a rev below @a parent_token.
+ * Use @a pool for allocations.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_delete_entry(svn_ra_svn_conn_t *conn,
+                                  apr_pool_t *pool,
+                                  const char *path,
+                                  svn_revnum_t rev,
+                                  const char *parent_token);
+
+/** Send a "add-dir" command over connection @a conn.  Add a new directory
+ * node named @a path under the directory identified by @a parent_token.
+ * Associate the new directory with the given @a token.  * @a copy_path
+ * and @a copy_rev are optional and describe the copy source.
+ * Use @a pool for allocations.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_add_dir(svn_ra_svn_conn_t *conn,
+                             apr_pool_t *pool,
+                             const char *path,
+                             const char *parent_token,
+                             const char *token,
+                             const char *copy_path,
+                             svn_revnum_t copy_rev);
+
+/** Send a "open-dir" command over connection @a conn.  Associate to
+ * @a token the directory node named @a path under the directory
+ * identified by @a parent_token in revision @a rev.
+ * Use @a pool for allocations.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_open_dir(svn_ra_svn_conn_t *conn,
+                              apr_pool_t *pool,
+                              const char *path,
+                              const char *parent_token,
+                              const char *token,
+                              svn_revnum_t rev);
+
+/** Send a "change-dir-prop" command over connection @a conn.  Set the
+ * property @a name to the optional @a value on the directory identified
+ * to @a token.  Use @a pool for allocations.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_change_dir_prop(svn_ra_svn_conn_t *conn,
+                                     apr_pool_t *pool,
+                                     const char *token,
+                                     const char *name,
+                                     const svn_string_t *value);
+
+/** Send a "close-dir" command over connection @a conn.  Identify the node
+ * to close with @a token.  The latter will then no longer be associated
+ * with that node.  Use @a pool for allocations.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_close_dir(svn_ra_svn_conn_t *conn,
+                               apr_pool_t *pool,
+                               const char *token);
+
+/** Send a "absent-dir" command over connection @a conn.  Directory node
+ * named @a path under the directory identified by @a parent_token is
+ * absent.  Use @a pool for allocations.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_absent_dir(svn_ra_svn_conn_t *conn,
+                                apr_pool_t *pool,
+                                const char *path,
+                                const char *parent_token);
+
+/** Send a "add-file" command over connection @a conn.  Add a new file
+ * node named @a path under the directory identified by @a parent_token.
+ * Associate the new file with the given @a token.  * @a copy_path and
+ * @a copy_rev are optional and describe the copy source.
+ * Use @a pool for allocations.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_add_file(svn_ra_svn_conn_t *conn,
+                              apr_pool_t *pool,
+                              const char *path,
+                              const char *parent_token,
+                              const char *token,
+                              const char *copy_path,
+                              svn_revnum_t copy_rev);
+
+/** Send a "open-file" command over connection @a conn.  Associate to
+ * @a token the file node named @a path under the directory identified by
+ * @a parent_token in revision @a rev.
+ * Use @a pool for allocations.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_open_file(svn_ra_svn_conn_t *conn,
+                               apr_pool_t *pool,
+                               const char *path,
+                               const char *parent_token,
+                               const char *token,
+                               svn_revnum_t rev);
+
+/** Send a "change-file-prop" command over connection @a conn.  Set the
+ * property @a name to the optional @a value on the file identified to
+ * @a token.  Use @a pool for allocations.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_change_file_prop(svn_ra_svn_conn_t *conn,
+                                      apr_pool_t *pool,
+                                      const char *token,
+                                      const char *name,
+                                      const svn_string_t *value);
+
+/** Send a "close-dir" command over connection @a conn.  Identify the node
+ * to close with @a token and provide an optional @a check_sum.  The token
+ * will then no longer be associated with that node.
+ * Use @a pool for allocations.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_close_file(svn_ra_svn_conn_t *conn,
+                                apr_pool_t *pool,
+                                const char *token,
+                                const char *text_checksum);
+
+/** Send a "absent-file" command over connection @a conn.  File node
+ * named @a path in the directory identified by @a parent_token is
+ * absent.  Use @a pool for allocations.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_absent_file(svn_ra_svn_conn_t *conn,
+                                 apr_pool_t *pool,
+                                 const char *path,
+                                 const char *parent_token);
+
+/** Send a "apply-textdelta" command over connection @a conn.  Starts a
+ * series of text deltas to be applied to the file identified by @a token.
+ * Optionally, specify the file's current checksum in @a base_checksum.
+ * Use @a pool for allocations.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_apply_textdelta(svn_ra_svn_conn_t *conn,
+                                     apr_pool_t *pool,
+                                     const char *token,
+                                     const char *base_checksum);
+
+/** Send a "textdelta-chunk" command over connection @a conn.  Apply
+ * textdelta @a chunk to the file identified by @a token.
+ * Use @a pool for allocations.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_textdelta_chunk(svn_ra_svn_conn_t *conn,
+                                     apr_pool_t *pool,
+                                     const char *token,
+                                     const svn_string_t *chunk);
+
+/** Send a "textdelta-end" command over connection @a conn.  Ends the
+ * series of text deltas to be applied to the file identified by @a token.
+ * Use @a pool for allocations.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_textdelta_end(svn_ra_svn_conn_t *conn,
+                                   apr_pool_t *pool,
+                                   const char *token);
+
+/** Send a "close-edit" command over connection @a conn.  Ends the editor
+ * drive (successfully).  Use @a pool for allocations.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_close_edit(svn_ra_svn_conn_t *conn,
+                                apr_pool_t *pool);
+
+/** Send a "abort-edit" command over connection @a conn.  Prematurely ends
+ * the editor drive, e.g. due to some problem on the other side.
+ * Use @a pool for allocations.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_abort_edit(svn_ra_svn_conn_t *conn,
+                                apr_pool_t *pool);
+
+/** Send a "set-path" command over connection @a conn.
+ * Use @a pool for allocations.
+ * 
+ * @see set_path() in #svn_ra_reporter3_t for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_set_path(svn_ra_svn_conn_t *conn,
+                              apr_pool_t *pool,
+                              const char *path,
+                              svn_revnum_t rev,
+                              svn_boolean_t start_empty,
+                              const char *lock_token,
+                              svn_depth_t depth);
+
+/** Send a "delete-path" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see delete_path() in #svn_ra_reporter3_t for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_delete_path(svn_ra_svn_conn_t *conn,
+                                 apr_pool_t *pool,
+                                 const char *path);
+
+/** Send a "link-path" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see link_path() in #svn_ra_reporter3_t for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_link_path(svn_ra_svn_conn_t *conn,
+                               apr_pool_t *pool,
+                               const char *path,
+                               const char *url,
+                               svn_revnum_t rev,
+                               svn_boolean_t start_empty,
+                               const char *lock_token,
+                               svn_depth_t depth);
+
+/** Send a "finish-report" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see finish_report() in #svn_ra_reporter3_t for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_finish_report(svn_ra_svn_conn_t *conn,
+                                   apr_pool_t *pool);
+
+/** Send a "abort-report" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see abort_report() in #svn_ra_reporter3_t for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_abort_report(svn_ra_svn_conn_t *conn,
+                                  apr_pool_t *pool);
+
+/** Send a "reparent" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see #svn_ra_reparent for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_reparent(svn_ra_svn_conn_t *conn,
+                              apr_pool_t *pool,
+                              const char *url);
+
+/** Send a "get-latest-rev" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see #svn_ra_get_latest_revnum for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_get_latest_rev(svn_ra_svn_conn_t *conn,
+                                  apr_pool_t *pool);
+
+/** Send a "get-dated-rev" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see #svn_ra_get_dated_revision for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_get_dated_rev(svn_ra_svn_conn_t *conn,
+                                   apr_pool_t *pool,
+                                   apr_time_t tm);
+
+/** Send a "change-rev-prop2" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see #svn_ra_change_rev_prop2 for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_change_rev_prop2(svn_ra_svn_conn_t *conn,
+                                      apr_pool_t *pool,
+                                      svn_revnum_t rev,
+                                      const char *name,
+                                      const svn_string_t *value,
+                                      svn_boolean_t dont_care,
+                                      const svn_string_t *old_value);
+
+/** Send a "change-rev-prop" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see #svn_ra_change_rev_prop for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_change_rev_prop(svn_ra_svn_conn_t *conn,
+                                     apr_pool_t *pool,
+                                     svn_revnum_t rev,
+                                     const char *name,
+                                     const svn_string_t *value);
+
+/** Send a "rev-proplist" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see #svn_ra_rev_proplist for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_rev_proplist(svn_ra_svn_conn_t *conn,
+                                  apr_pool_t *pool,
+                                  svn_revnum_t rev);
+
+/** Send a "rev-prop" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see #svn_ra_rev_prop for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_rev_prop(svn_ra_svn_conn_t *conn,
+                              apr_pool_t *pool,
+                              svn_revnum_t rev,
+                              const char *name);
+
+/** Send a "get-file" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see #svn_ra_get_file for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_get_file(svn_ra_svn_conn_t *conn,
+                              apr_pool_t *pool,
+                              const char *path,
+                              svn_revnum_t rev,
+                              svn_boolean_t props,
+                              svn_boolean_t stream);
+
+/** Send a "update" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see #svn_ra_do_update2 for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_update(svn_ra_svn_conn_t *conn,
+                            apr_pool_t *pool,
+                            svn_revnum_t rev,
+                            const char *target,
+                            svn_boolean_t recurse,
+                            svn_depth_t depth,
+                            svn_boolean_t send_copyfrom_args);
+
+/** Send a "switch" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see #svn_ra_do_switch2 for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_switch(svn_ra_svn_conn_t *conn,
+                            apr_pool_t *pool,
+                            svn_revnum_t rev,
+                            const char *target,
+                            svn_boolean_t recurse,
+                            const char *switch_url,
+                            svn_depth_t depth,
+                            svn_boolean_t send_copyfrom_args,
+                            svn_boolean_t ignore_ancestry);
+
+/** Send a "status" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see #svn_ra_do_status2 for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_status(svn_ra_svn_conn_t *conn,
+                            apr_pool_t *pool,
+                            const char *target,
+                            svn_boolean_t recurse,
+                            svn_revnum_t rev,
+                            svn_depth_t depth);
+
+/** Send a "diff" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see #svn_ra_do_diff3 for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_diff(svn_ra_svn_conn_t *conn,
+                          apr_pool_t *pool,
+                          svn_revnum_t rev,
+                          const char *target,
+                          svn_boolean_t recurse,
+                          svn_boolean_t ignore_ancestry,
+                          const char *versus_url,
+                          svn_boolean_t text_deltas,
+                          svn_depth_t depth);
+
+/** Send a "check-path" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see #svn_ra_check_path for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_check_path(svn_ra_svn_conn_t *conn,
+                                apr_pool_t *pool,
+                                const char *path,
+                                svn_revnum_t rev);
+
+/** Send a "stat" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see #svn_ra_stat for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_stat(svn_ra_svn_conn_t *conn,
+                          apr_pool_t *pool,
+                          const char *path,
+                          svn_revnum_t rev);
+
+/** Send a "get-file-revs" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see #svn_ra_get_file_revs2 for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_get_file_revs(svn_ra_svn_conn_t *conn,
+                                   apr_pool_t *pool,
+                                   const char *path,
+                                   svn_revnum_t start,
+                                   svn_revnum_t end,
+                                   svn_boolean_t include_merged_revisions);
+
+/** Send a "lock" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see #svn_ra_lock for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_lock(svn_ra_svn_conn_t *conn,
+                          apr_pool_t *pool,
+                          const char *path,
+                          const char *comment,
+                          svn_boolean_t steal_lock,
+                          svn_revnum_t revnum);
+
+/** Send a "unlock" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see #svn_ra_unlock for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_unlock(svn_ra_svn_conn_t *conn,
+                            apr_pool_t *pool,
+                            const char *path,
+                            const char *token,
+                            svn_boolean_t break_lock);
+
+/** Send a "get-lock" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see #svn_ra_get_lock for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_get_lock(svn_ra_svn_conn_t *conn,
+                              apr_pool_t *pool,
+                              const char *path);
+
+/** Send a "get-locks" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see #svn_ra_get_locks2 for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_get_locks(svn_ra_svn_conn_t *conn,
+                               apr_pool_t *pool,
+                               const char *path,
+                               svn_depth_t depth);
+
+/** Send a "replay" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see #svn_ra_replay for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_replay(svn_ra_svn_conn_t *conn,
+                            apr_pool_t *pool,
+                            svn_revnum_t rev,
+                            svn_revnum_t low_water_mark,
+                            svn_boolean_t send_deltas);
+
+/** Send a "replay-range" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see #svn_ra_replay_range for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_replay_range(svn_ra_svn_conn_t *conn,
+                                  apr_pool_t *pool,
+                                  svn_revnum_t start_revision,
+                                  svn_revnum_t end_revision,
+                                  svn_revnum_t low_water_mark,
+                                  svn_boolean_t send_deltas);
+
+/** Send a "get-deleted-rev" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see #svn_ra_get_deleted_rev for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_get_deleted_rev(svn_ra_svn_conn_t *conn,
+                                     apr_pool_t *pool,
+                                     const char *path,
+                                     svn_revnum_t peg_revision,
+                                     svn_revnum_t end_revision);
+
+/** Send a "get-iprops" command over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @see #svn_ra_get_inherited_props for a description.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_get_iprops(svn_ra_svn_conn_t *conn,
+                                apr_pool_t *pool,
+                                const char *path,
+                                svn_revnum_t revision);
+
+/** Send a "finish-replay" command over connection @a conn.
+ * Use @a pool for allocations.
+ */
+svn_error_t *
+svn_ra_svn_write_cmd_finish_replay(svn_ra_svn_conn_t *conn,
+                                   apr_pool_t *pool);
+
+/**
+ * @}
+ */
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
