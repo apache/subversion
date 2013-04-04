@@ -583,10 +583,9 @@ expand_option_value(svn_config_t *cfg, cfg_section_t *section,
     *opt_x_valuep = NULL;
 }
 
-static void
+static cfg_section_t *
 svn_config_addsection(svn_config_t *cfg,
-                      const char *section,
-                      cfg_section_t **sec)
+                      const char *section)
 {  
   cfg_section_t *s;
   const char *hash_key;
@@ -599,8 +598,8 @@ svn_config_addsection(svn_config_t *cfg,
     hash_key = make_hash_key(apr_pstrdup(cfg->pool, section));
   s->options = apr_hash_make(cfg->pool);
   svn_hash_sets(cfg->sections, hash_key, s);
-  
-  *sec = s;
+
+  return s;
 }
 
 static void
@@ -683,7 +682,7 @@ svn_config_set(svn_config_t *cfg,
   if (sec == NULL)
     {
       /* Even the section doesn't exist. Create it. */
-      svn_config_addsection(cfg, section, &sec);
+      sec = svn_config_addsection(cfg, section);
     }
 
   svn_hash_sets(sec->options, opt->hash_key, opt);
@@ -1062,7 +1061,7 @@ svn_config_dup(svn_config_t **cfgp,
     apr_hash_this(sectidx, &sectkey, &sectkeyLength, &sectval);
     srcsect = sectval;
 
-    svn_config_addsection(*cfgp, srcsect->name, &destsec);
+    destsec = svn_config_addsection(*cfgp, srcsect->name);
 
     for (optidx = apr_hash_first(pool, srcsect->options);
          optidx != NULL;
