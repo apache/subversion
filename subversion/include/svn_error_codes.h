@@ -901,6 +901,11 @@ SVN_ERROR_START
              SVN_ERR_RA_CATEGORY_START + 11,
              "Session URL does not match expected session URL")
 
+  /** @since New in 1.8. */
+  SVN_ERRDEF(SVN_ERR_RA_CANNOT_CREATE_TUNNEL,
+             SVN_ERR_RA_CATEGORY_START + 11,
+             "Can't create tunnel")
+
   /* ra_dav errors */
 
   SVN_ERRDEF(SVN_ERR_RA_DAV_SOCK_INIT,

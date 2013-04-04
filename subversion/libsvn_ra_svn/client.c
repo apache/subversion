@@ -494,7 +494,9 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
   if (status == APR_SUCCESS)
     status = apr_proc_create(proc, *args, args, NULL, attr, pool);
   if (status != APR_SUCCESS)
-    return svn_error_wrap_apr(status, _("Can't create tunnel"));
+    return svn_error_create(SVN_ERR_RA_CANNOT_CREATE_TUNNEL,
+                            svn_error_wrap_apr(status,
+                                               _("Can't create tunnel")), NULL);
 
   /* Arrange for the tunnel agent to get a SIGTERM on pool
    * cleanup.  This is a little extreme, but the alternatives
