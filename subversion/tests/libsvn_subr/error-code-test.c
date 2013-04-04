@@ -27,6 +27,7 @@
 
 #include "svn_error.h"
 
+/* Duplicate of the same typedef in libsvn_subr/error.c */
 typedef struct err_defn {
   svn_errno_t errcode; /* 160004 */
   const char *errname; /* SVN_ERR_FS_CORRUPT */
