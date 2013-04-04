@@ -183,18 +183,17 @@ svn_client_revert2(const apr_array_header_t *paths,
 
  errorful:
 
-  if (!use_commit_times)
-    {
-      /* Sleep to ensure timestamp integrity. */
-      const char* sleep_path = NULL;
+  {
+    /* Sleep to ensure timestamp integrity. */
+    const char *sleep_path = NULL;
 
-      /* Only specify a path if we are certain all paths are on the
-         same filesystem */
-      if (paths->nelts == 1)
-        sleep_path = APR_ARRAY_IDX(paths, 0, const char *);
+    /* Only specify a path if we are certain all paths are on the
+       same filesystem */
+    if (paths->nelts == 1)
+      sleep_path = APR_ARRAY_IDX(paths, 0, const char *);
 
-      svn_io_sleep_for_timestamps(sleep_path, subpool);
-    }
+    svn_io_sleep_for_timestamps(sleep_path, subpool);
+  }
 
   svn_pool_destroy(subpool);
 

@@ -449,8 +449,7 @@ update_internal(svn_revnum_t *result_rev,
 
   /* Past this point, we assume the WC is going to be modified so we will
    * need to sleep for timestamps. */
-  if (! use_commit_times)
-    *timestamp_sleep = TRUE;
+  *timestamp_sleep = TRUE;
 
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the
