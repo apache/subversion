@@ -984,115 +984,6 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED,
              SVN_ERR_RA_LOCAL_CATEGORY_START + 1,
              "Couldn't open a repository")
-  /* ra_svn errors */
-
-  SVN_ERRDEF(SVN_ERR_RA_SVN_CMD_ERR,
-             SVN_ERR_RA_SVN_CATEGORY_START + 0,
-             "Special code for wrapping server errors to report to client")
-
-  SVN_ERRDEF(SVN_ERR_RA_SVN_UNKNOWN_CMD,
-             SVN_ERR_RA_SVN_CATEGORY_START + 1,
-             "Unknown svn protocol command")
-
-  SVN_ERRDEF(SVN_ERR_RA_SVN_CONNECTION_CLOSED,
-             SVN_ERR_RA_SVN_CATEGORY_START + 2,
-             "Network connection closed unexpectedly")
-
-  SVN_ERRDEF(SVN_ERR_RA_SVN_IO_ERROR,
-             SVN_ERR_RA_SVN_CATEGORY_START + 3,
-             "Network read/write error")
-
-  SVN_ERRDEF(SVN_ERR_RA_SVN_MALFORMED_DATA,
-             SVN_ERR_RA_SVN_CATEGORY_START + 4,
-             "Malformed network data")
-
-  SVN_ERRDEF(SVN_ERR_RA_SVN_REPOS_NOT_FOUND,
-             SVN_ERR_RA_SVN_CATEGORY_START + 5,
-             "Couldn't find a repository")
-
-  SVN_ERRDEF(SVN_ERR_RA_SVN_BAD_VERSION,
-             SVN_ERR_RA_SVN_CATEGORY_START + 6,
-             "Client/server version mismatch")
-
-  /** @since New in 1.5. */
-  SVN_ERRDEF(SVN_ERR_RA_SVN_NO_MECHANISMS,
-             SVN_ERR_RA_SVN_CATEGORY_START + 7,
-             "Cannot negotiate authentication mechanism")
-
-  /** @since New in 1.7  */
-  SVN_ERRDEF(SVN_ERR_RA_SVN_EDIT_ABORTED,
-             SVN_ERR_RA_SVN_CATEGORY_START + 8,
-             "Editor drive was aborted")
-
-  /* libsvn_ra_serf errors */
-  /** @since New in 1.5. */
-  SVN_ERRDEF(SVN_ERR_RA_SERF_SSPI_INITIALISATION_FAILED,
-             SVN_ERR_RA_SERF_CATEGORY_START + 0,
-             "Initialization of SSPI library failed")
-  /** @since New in 1.5. */
-  SVN_ERRDEF(SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED,
-             SVN_ERR_RA_SERF_CATEGORY_START + 1,
-             "Server SSL certificate untrusted")
-  /** @since New in 1.7.
-      @deprecated GSSAPI now handled by serf rather than libsvn_ra_serf. */
-  SVN_ERRDEF(SVN_ERR_RA_SERF_GSSAPI_INITIALISATION_FAILED,
-             SVN_ERR_RA_SERF_CATEGORY_START + 2,
-             "Initialization of the GSSAPI context failed")
-
-  /** @since New in 1.7. */
-  SVN_ERRDEF(SVN_ERR_RA_SERF_WRAPPED_ERROR,
-             SVN_ERR_RA_SERF_CATEGORY_START + 3,
-             "While handling serf response:")
-
-  /* libsvn_auth errors */
-
-       /* this error can be used when an auth provider doesn't have
-          the creds, but no other "real" error occurred. */
-  SVN_ERRDEF(SVN_ERR_AUTHN_CREDS_UNAVAILABLE,
-             SVN_ERR_AUTHN_CATEGORY_START + 0,
-             "Credential data unavailable")
-
-  SVN_ERRDEF(SVN_ERR_AUTHN_NO_PROVIDER,
-             SVN_ERR_AUTHN_CATEGORY_START + 1,
-             "No authentication provider available")
-
-  SVN_ERRDEF(SVN_ERR_AUTHN_PROVIDERS_EXHAUSTED,
-             SVN_ERR_AUTHN_CATEGORY_START + 2,
-             "All authentication providers exhausted")
-
-  SVN_ERRDEF(SVN_ERR_AUTHN_CREDS_NOT_SAVED,
-             SVN_ERR_AUTHN_CATEGORY_START + 3,
-             "Credentials not saved")
-
-  /** @since New in 1.5. */
-  SVN_ERRDEF(SVN_ERR_AUTHN_FAILED,
-             SVN_ERR_AUTHN_CATEGORY_START + 4,
-             "Authentication failed")
-
-  /* authorization errors */
-
-  SVN_ERRDEF(SVN_ERR_AUTHZ_ROOT_UNREADABLE,
-             SVN_ERR_AUTHZ_CATEGORY_START + 0,
-             "Read access denied for root of edit")
-
-  /** @since New in 1.1. */
-  SVN_ERRDEF(SVN_ERR_AUTHZ_UNREADABLE,
-             SVN_ERR_AUTHZ_CATEGORY_START + 1,
-             "Item is not readable")
-
-  /** @since New in 1.1. */
-  SVN_ERRDEF(SVN_ERR_AUTHZ_PARTIALLY_READABLE,
-             SVN_ERR_AUTHZ_CATEGORY_START + 2,
-             "Item is partially readable")
-
-  SVN_ERRDEF(SVN_ERR_AUTHZ_INVALID_CONFIG,
-             SVN_ERR_AUTHZ_CATEGORY_START + 3,
-             "Invalid authz configuration")
-
-  /** @since New in 1.3 */
-  SVN_ERRDEF(SVN_ERR_AUTHZ_UNWRITABLE,
-             SVN_ERR_AUTHZ_CATEGORY_START + 4,
-             "Item is not writable")
 
   /* svndiff errors */
 
@@ -1119,12 +1010,6 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_SVNDIFF_INVALID_COMPRESSED_DATA,
              SVN_ERR_SVNDIFF_CATEGORY_START + 5,
              "Svndiff compressed data is invalid")
-
-  /* libsvn_diff errors */
-
-  SVN_ERRDEF(SVN_ERR_DIFF_DATASOURCE_MODIFIED,
-             SVN_ERR_DIFF_CATEGORY_START + 0,
-             "Diff data source modified unexpectedly")
 
   /* mod_dav_svn errors */
 
@@ -1490,6 +1375,123 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS,
              SVN_ERR_CL_CATEGORY_START + 11,
              "Failed processing one or more externals definitions")
+
+  /* ra_svn errors */
+
+  SVN_ERRDEF(SVN_ERR_RA_SVN_CMD_ERR,
+             SVN_ERR_RA_SVN_CATEGORY_START + 0,
+             "Special code for wrapping server errors to report to client")
+
+  SVN_ERRDEF(SVN_ERR_RA_SVN_UNKNOWN_CMD,
+             SVN_ERR_RA_SVN_CATEGORY_START + 1,
+             "Unknown svn protocol command")
+
+  SVN_ERRDEF(SVN_ERR_RA_SVN_CONNECTION_CLOSED,
+             SVN_ERR_RA_SVN_CATEGORY_START + 2,
+             "Network connection closed unexpectedly")
+
+  SVN_ERRDEF(SVN_ERR_RA_SVN_IO_ERROR,
+             SVN_ERR_RA_SVN_CATEGORY_START + 3,
+             "Network read/write error")
+
+  SVN_ERRDEF(SVN_ERR_RA_SVN_MALFORMED_DATA,
+             SVN_ERR_RA_SVN_CATEGORY_START + 4,
+             "Malformed network data")
+
+  SVN_ERRDEF(SVN_ERR_RA_SVN_REPOS_NOT_FOUND,
+             SVN_ERR_RA_SVN_CATEGORY_START + 5,
+             "Couldn't find a repository")
+
+  SVN_ERRDEF(SVN_ERR_RA_SVN_BAD_VERSION,
+             SVN_ERR_RA_SVN_CATEGORY_START + 6,
+             "Client/server version mismatch")
+
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_RA_SVN_NO_MECHANISMS,
+             SVN_ERR_RA_SVN_CATEGORY_START + 7,
+             "Cannot negotiate authentication mechanism")
+
+  /** @since New in 1.7  */
+  SVN_ERRDEF(SVN_ERR_RA_SVN_EDIT_ABORTED,
+             SVN_ERR_RA_SVN_CATEGORY_START + 8,
+             "Editor drive was aborted")
+
+  /* libsvn_auth errors */
+
+       /* this error can be used when an auth provider doesn't have
+          the creds, but no other "real" error occurred. */
+  SVN_ERRDEF(SVN_ERR_AUTHN_CREDS_UNAVAILABLE,
+             SVN_ERR_AUTHN_CATEGORY_START + 0,
+             "Credential data unavailable")
+
+  SVN_ERRDEF(SVN_ERR_AUTHN_NO_PROVIDER,
+             SVN_ERR_AUTHN_CATEGORY_START + 1,
+             "No authentication provider available")
+
+  SVN_ERRDEF(SVN_ERR_AUTHN_PROVIDERS_EXHAUSTED,
+             SVN_ERR_AUTHN_CATEGORY_START + 2,
+             "All authentication providers exhausted")
+
+  SVN_ERRDEF(SVN_ERR_AUTHN_CREDS_NOT_SAVED,
+             SVN_ERR_AUTHN_CATEGORY_START + 3,
+             "Credentials not saved")
+
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_AUTHN_FAILED,
+             SVN_ERR_AUTHN_CATEGORY_START + 4,
+             "Authentication failed")
+
+  /* authorization errors */
+
+  SVN_ERRDEF(SVN_ERR_AUTHZ_ROOT_UNREADABLE,
+             SVN_ERR_AUTHZ_CATEGORY_START + 0,
+             "Read access denied for root of edit")
+
+  /** @since New in 1.1. */
+  SVN_ERRDEF(SVN_ERR_AUTHZ_UNREADABLE,
+             SVN_ERR_AUTHZ_CATEGORY_START + 1,
+             "Item is not readable")
+
+  /** @since New in 1.1. */
+  SVN_ERRDEF(SVN_ERR_AUTHZ_PARTIALLY_READABLE,
+             SVN_ERR_AUTHZ_CATEGORY_START + 2,
+             "Item is partially readable")
+
+  SVN_ERRDEF(SVN_ERR_AUTHZ_INVALID_CONFIG,
+             SVN_ERR_AUTHZ_CATEGORY_START + 3,
+             "Invalid authz configuration")
+
+  /** @since New in 1.3 */
+  SVN_ERRDEF(SVN_ERR_AUTHZ_UNWRITABLE,
+             SVN_ERR_AUTHZ_CATEGORY_START + 4,
+             "Item is not writable")
+
+
+  /* libsvn_diff errors */
+
+  SVN_ERRDEF(SVN_ERR_DIFF_DATASOURCE_MODIFIED,
+             SVN_ERR_DIFF_CATEGORY_START + 0,
+             "Diff data source modified unexpectedly")
+
+  /* libsvn_ra_serf errors */
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_RA_SERF_SSPI_INITIALISATION_FAILED,
+             SVN_ERR_RA_SERF_CATEGORY_START + 0,
+             "Initialization of SSPI library failed")
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED,
+             SVN_ERR_RA_SERF_CATEGORY_START + 1,
+             "Server SSL certificate untrusted")
+  /** @since New in 1.7.
+      @deprecated GSSAPI now handled by serf rather than libsvn_ra_serf. */
+  SVN_ERRDEF(SVN_ERR_RA_SERF_GSSAPI_INITIALISATION_FAILED,
+             SVN_ERR_RA_SERF_CATEGORY_START + 2,
+             "Initialization of the GSSAPI context failed")
+
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_RA_SERF_WRAPPED_ERROR,
+             SVN_ERR_RA_SERF_CATEGORY_START + 3,
+             "While handling serf response:")
 
   /* malfunctions such as assertion failures */
 
