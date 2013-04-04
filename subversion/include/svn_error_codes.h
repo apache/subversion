@@ -46,6 +46,10 @@
    not defined the enumerated constants yet.  */
 #if defined(SVN_ERROR_BUILD_ARRAY) || !defined(SVN_ERROR_ENUM_DEFINED)
 
+/* Note: despite lacking double underscores in its name, the macro
+   SVN_ERROR_BUILD_ARRAY is an implementation detail of Subversion and not
+   a public API. */
+
 
 #include <apr_errno.h>     /* APR's error system */
 
