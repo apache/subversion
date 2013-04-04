@@ -46,7 +46,7 @@ check_error_codes_unique(apr_pool_t *pool)
   int i;
   struct err_defn e = error_table[0];
 
-  /* Ensure error codes a strictly monotonically increasing. */
+  /* Ensure error codes are strictly monotonically increasing. */
   for (i = 1; i < NUM_ERRORS; i++)
     {
       struct err_defn e2 = error_table[i++];
