@@ -654,6 +654,9 @@ svn_strerror(apr_status_t statcode, char *buf, apr_size_t bufsize)
   return apr_strerror(statcode, buf, bufsize);
 }
 
+
+/* Malfunctions. */
+
 svn_error_t *
 svn_error_raise_on_malfunction(svn_boolean_t can_return,
                                const char *file, int line,
@@ -712,6 +715,9 @@ svn_error__malfunction(svn_boolean_t can_return,
 {
   return malfunction_handler(can_return, file, line, expr);
 }
+
+
+/* Misc. */
 
 svn_error_t *
 svn_error__wrap_zlib(int zerr, const char *function, const char *message)
