@@ -440,6 +440,11 @@ svn_repos_create(svn_repos_t **repos_p,
  * It does *not* guarantee the most optimized repository state as a
  * dump and subsequent load would.
  *
+ * @note On some platforms the exclusive lock does not exclude other
+ * threads in the same process so this function should only be called
+ * by a single threaded process, or by a multi-threaded process when
+ * no other threads are accessing the repository.
+ *
  * @since New in 1.7.
  */
 svn_error_t *
@@ -663,6 +668,11 @@ svn_repos_recover(const char *path,
  * Subversion while frozen, or may be unreadable, depending on which
  * FS backend the repository uses.  Repositories are locked in the
  * order in which they are specified in the array.
+ *
+ * @note On some platforms the exclusive lock does not exclude other
+ * threads in the same process so this function should only be called
+ * by a single threaded process, or by a multi-threaded process when
+ * no other threads are accessing the repositories.
  *
  * @since New in 1.8.
  */
