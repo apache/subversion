@@ -47,9 +47,6 @@ struct cfg_section_t
   /* The section name. */
   const char *name;
 
-  /* The section name, converted into a hash key. */
-  const char *hash_key;
-
   /* Table of cfg_option_t's. */
   apr_hash_t *options;
 };
@@ -592,15 +589,16 @@ svn_config_addsection(svn_config_t *cfg,
                       cfg_section_t **sec)
 {  
   cfg_section_t *s;
+  const char *hash_key;
 
   s = apr_palloc(cfg->pool, sizeof(cfg_section_t));
   s->name = apr_pstrdup(cfg->pool, section);
   if(cfg->section_names_case_sensitive)
-    s->hash_key = s->name;
+    hash_key = s->name;
   else
-    s->hash_key = make_hash_key(apr_pstrdup(cfg->pool, section));
+    hash_key = make_hash_key(apr_pstrdup(cfg->pool, section));
   s->options = apr_hash_make(cfg->pool);
-  svn_hash_sets(cfg->sections, s->hash_key, s);
+  svn_hash_sets(cfg->sections, hash_key, s);
   
   *sec = s;
 }
