@@ -2885,6 +2885,15 @@ finish_report(void *report_baton,
           waittime_left = sess->timeout;
         }
 
+      if (status && handler->sline.code != 200)
+        {
+          return svn_error_trace(
+                    svn_error_compose_create(
+                        svn_ra_serf__error_on_status(handler->sline.code,
+                                                     handler->path,
+                                                     handler->location),
+                        err));
+        }
       SVN_ERR(err);
       if (status)
         {
@@ -3092,8 +3101,13 @@ finish_report(void *report_baton,
       err = report->update_editor->close_edit(report->update_baton, iterpool);
     }
   else
-    err = svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                           _("Missing update-report close tag"));
+    {
+      /* Tell the editor that something failed */
+      err = report->update_editor->abort_edit(report->update_baton, iterpool);
+
+      err = svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, err,
+                             _("Missing update-report close tag"));
+    }
 
   svn_pool_destroy(iterpool);
   return svn_error_trace(err);
