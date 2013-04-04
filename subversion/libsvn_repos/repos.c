@@ -1177,6 +1177,8 @@ svn_repos_hooks_setenv(svn_repos_t *repos,
     repos->hooks_env_path = svn_dirent_join(repos->conf_path,
                                             hooks_env_path,
                                             repos->pool);
+  else
+    repos->hooks_env_path = apr_pstrdup(repos->pool, hooks_env_path);
 
   return SVN_NO_ERROR;
 }
