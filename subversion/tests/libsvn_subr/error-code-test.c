@@ -28,8 +28,9 @@
 #include "svn_error.h"
 
 typedef struct err_defn {
-  svn_errno_t errcode;
-  const char *errdesc;
+  svn_errno_t errcode; /* 160004 */
+  const char *errname; /* SVN_ERR_FS_CORRUPT */
+  const char *errdesc; /* default message */
 } err_defn;
 
 /* To understand what is going on here, read svn_error_codes.h. */
