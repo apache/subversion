@@ -199,7 +199,7 @@ test_error_symbolic_name(apr_pool_t *pool)
     { SVN_ERR_FS_CORRUPT, "SVN_ERR_FS_CORRUPT" },
     /* The following two error codes can return either of their names
        as the string. For simplicity, test what the current implementation
-       returns; but if it starts returning "SVN_ERR_WC_NOT_WORKING_COPY",
+       returns; but if it starts returning "SVN_ERR_WC_NOT_DIRECTORY",
        that's fine (and permitted by the API contract). */
     { SVN_ERR_WC_NOT_DIRECTORY, "SVN_ERR_WC_NOT_WORKING_COPY" },
     { SVN_ERR_WC_NOT_WORKING_COPY, "SVN_ERR_WC_NOT_WORKING_COPY" },
