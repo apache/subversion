@@ -11977,6 +11977,58 @@ operative_rev_receiver(void *baton,
   return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
 }
 
+/* Wrapper around svn_client_mergeinfo_log2. All arguments are as per
+   that API.  The discover_changed_paths, depth, and revprops args to
+   svn_client_mergeinfo_log2 are always TRUE, svn_depth_infinity_t,
+   and NULL respectively.
+
+   If RECEIVER raises a SVN_ERR_CEASE_INVOCATION error, but still sets
+   *REVISION to a valid revnum, then clear the error.  Otherwise return
+   any error. */
+static svn_error_t*
+short_circuit_mergeinfo_log(svn_boolean_t finding_merged,
+                            const char *target_path_or_url,
+                            const svn_opt_revision_t *target_peg_revision,
+                            const char *source_path_or_url,
+                            const svn_opt_revision_t *source_peg_revision,
+                            const svn_opt_revision_t *source_start_revision,
+                            const svn_opt_revision_t *source_end_revision,
+                            svn_log_entry_receiver_t receiver,
+                            svn_revnum_t *revision,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *scratch_pool)
+{
+  svn_error_t *err = svn_client_mergeinfo_log2(finding_merged,
+                                               target_path_or_url,
+                                               target_peg_revision,
+                                               source_path_or_url,
+                                               source_peg_revision,
+                                               source_start_revision,
+                                               source_end_revision,
+                                               receiver, revision,
+                                               TRUE, svn_depth_infinity,
+                                               NULL, ctx, scratch_pool);
+
+  if (err)
+    {
+      /* We expect RECEIVER to short-circuit the (potentially expensive) log
+         by raising an SVN_ERR_CEASE_INVOCATION -- see operative_rev_receiver.
+         So we can ignore that error, but only as long as we actually found a
+         valid revision. */
+      if (SVN_IS_VALID_REVNUM(*revision)
+          && err->apr_err == SVN_ERR_CEASE_INVOCATION)
+        {
+          svn_error_clear(err);
+          err = NULL;
+        }
+      else
+        {
+          return svn_error_trace(err);
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
 /* Set *BASE_P to the last location on SOURCE_BRANCH such that all changes
  * on SOURCE_BRANCH after YCA up to and including *BASE_P have already
  * been fully merged into TARGET.
@@ -12025,7 +12077,6 @@ find_last_merged_location(svn_client__pathrev_t **base_p,
   svn_opt_revision_t source_peg_rev, source_start_rev, source_end_rev,
     target_opt_rev;
   svn_revnum_t youngest_merged_rev = SVN_INVALID_REVNUM;
-  svn_error_t *err;
 
   source_peg_rev.kind = svn_opt_revision_number;
   source_peg_rev.value.number = source_branch->tip->rev;
@@ -12038,32 +12089,14 @@ find_last_merged_location(svn_client__pathrev_t **base_p,
 
   /* Find the youngest revision fully merged from SOURCE_BRANCH to TARGET,
      if such a revision exists. */
-  err = svn_client_mergeinfo_log2(
-    TRUE, /* Find merged */
-    target->url, &target_opt_rev,
-    source_branch->tip->url, &source_peg_rev,
-    &source_end_rev, &source_start_rev,
-    operative_rev_receiver, &youngest_merged_rev,
-    TRUE, svn_depth_infinity, /* Consider subtree mergeinfo! */
-    NULL, ctx, scratch_pool);
-
-  if (err)
-    {
-      /* Our operative_rev_receiver svn_log_entry_receiver_t short-circuits
-         the (potentially expensive) log by raising an
-         SVN_ERR_CEASE_INVOCATION.  So we can ignore that error, as long as
-         we actually found the youngest merged revision. */
-      if (SVN_IS_VALID_REVNUM(youngest_merged_rev)
-          && err->apr_err == SVN_ERR_CEASE_INVOCATION)
-        {
-          svn_error_clear(err);
-          err = NULL;
-        }
-      else
-        {
-          return svn_error_trace(err);
-        }
-    }
+  SVN_ERR(short_circuit_mergeinfo_log(TRUE, /* Find merged */
+                                      target->url, &target_opt_rev,
+                                      source_branch->tip->url,
+                                      &source_peg_rev,
+                                      &source_end_rev, &source_start_rev,
+                                      operative_rev_receiver,
+                                      &youngest_merged_rev,
+                                      ctx, scratch_pool));
 
   if (!SVN_IS_VALID_REVNUM(youngest_merged_rev))
     {
@@ -12080,32 +12113,14 @@ find_last_merged_location(svn_client__pathrev_t **base_p,
       svn_revnum_t base_rev;
       svn_revnum_t oldest_eligible_rev = SVN_INVALID_REVNUM;
 
-      err = svn_client_mergeinfo_log2(
-        FALSE, /* Find eligible */
-        target->url, &target_opt_rev,
-        source_branch->tip->url, &source_peg_rev,
-        &source_start_rev, &source_end_rev,
-        operative_rev_receiver, &oldest_eligible_rev,
-        TRUE, svn_depth_infinity, /* Consider subtree mergeinfo! */
-        NULL, ctx, scratch_pool);
-
-      if (err)
-        {
-          /* As above, our operative_rev_receiver svn_log_entry_receiver_t
-             short-circuits the log operation when it finds the youngest
-             merged revision.  So again we can ignore that error, as long
-             as we actually found the oldest eligible revision. */
-          if (SVN_IS_VALID_REVNUM(oldest_eligible_rev)
-              && err->apr_err == SVN_ERR_CEASE_INVOCATION)
-            {
-              svn_error_clear(err);
-              err = NULL;
-            }
-          else
-            {
-              return svn_error_trace(err);
-            }
-        }
+      SVN_ERR(short_circuit_mergeinfo_log(FALSE, /* Find eligible */
+                                          target->url, &target_opt_rev,
+                                          source_branch->tip->url,
+                                          &source_peg_rev,
+                                          &source_start_rev, &source_end_rev,
+                                          operative_rev_receiver,
+                                          &oldest_eligible_rev,
+                                          ctx, scratch_pool));
 
       /* If there are revisions eligible for merging, use the oldest one
          to calculate the base.  Otherwise there are no operative revisions
