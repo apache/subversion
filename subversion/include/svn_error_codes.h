@@ -903,7 +903,7 @@ SVN_ERROR_START
 
   /** @since New in 1.8. */
   SVN_ERRDEF(SVN_ERR_RA_CANNOT_CREATE_TUNNEL,
-             SVN_ERR_RA_CATEGORY_START + 11,
+             SVN_ERR_RA_CATEGORY_START + 12,
              "Can't create tunnel")
 
   /* ra_dav errors */
