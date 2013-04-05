@@ -2496,6 +2496,8 @@ svn_repos_node_from_baton(void *edit_baton);
  * Set @a *supports_version to the version number of the minimum Subversion GA
  * release that can read and write @a repos.
  *
+ * @see svn_fs_info_format()
+ *
  * @since New in 1.8.
  */
 svn_error_t *
