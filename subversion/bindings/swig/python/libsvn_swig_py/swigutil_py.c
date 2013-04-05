@@ -900,7 +900,11 @@ PyObject *svn_swig_py_c_strings_to_list(char **strings)
         if (ob == NULL)
             goto error;
         if (PyList_Append(list, ob) == -1)
+          {
+            Py_DECREF(ob);
             goto error;
+          }
+        Py_DECREF(ob);
       }
 
     return list;
