@@ -215,6 +215,13 @@ apr_array_header_t *svn_swig_py_proparray_from_dict(PyObject *dict,
 SVN_SWIG_SWIGUTIL_EXPORT
 PyObject *svn_swig_py_proparray_to_dict(const apr_array_header_t *array);
 
+/* helper function to convert a 'apr_array_header_t *' of
+   'svn_prop_inherited_item_t' to a Python dictionary mapping strings
+   to dictionary. */
+SVN_SWIG_SWIGUTIL_EXPORT
+PyObject *
+svn_swig_py_propinheriteditemarray_to_dict(const apr_array_header_t *array);
+
 /* helper function to convert a Python dictionary mapping strings to
    strings into an apr_hash_t mapping const char *'s to svn_string_t's,
    allocated in POOL. */
@@ -397,6 +404,14 @@ svn_error_t *svn_swig_py_log_receiver(void *py_receiver,
 SVN_SWIG_SWIGUTIL_EXPORT
 svn_error_t *svn_swig_py_log_entry_receiver(void *baton,
                                             svn_log_entry_t *log_entry,
+                                            apr_pool_t *pool);
+
+/* thunked proplist receiver2 function */
+SVN_SWIG_SWIGUTIL_EXPORT
+svn_error_t *svn_swig_py_proplist_receiver2(void *baton,
+                                            const char *path,
+                                            apr_hash_t *prop_hash,
+                                            apr_array_header_t *inherited_props,
                                             apr_pool_t *pool);
 
 /* thunked info receiver function */
