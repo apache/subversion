@@ -481,8 +481,15 @@ print_error(svn_error_t *err, FILE *stream, const char *prefix)
       svn_error_clear(temp_err);
     }
 
-  svn_error_clear(svn_cmdline_fprintf(stream, err->pool,
-                                      ": (apr_err=%d)\n", err->apr_err));
+  {
+    const char *symbolic_name = svn_error_symbolic_name(err->apr_err);
+    if (symbolic_name)
+      svn_error_clear(svn_cmdline_fprintf(stream, err->pool,
+                                          ": (apr_err=%s)\n", symbolic_name));
+    else
+      svn_error_clear(svn_cmdline_fprintf(stream, err->pool,
+                                          ": (apr_err=%d)\n", err->apr_err));
+  }
 #endif /* SVN_DEBUG */
 
   /* "traced call" */
