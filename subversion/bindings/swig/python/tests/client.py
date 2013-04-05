@@ -397,6 +397,15 @@ class SubversionClientTestCase(unittest.TestCase):
 
     core.svn_auth_set_gnome_keyring_unlock_prompt_func(self.client_ctx.auth_baton, prompt_func)
 
+  def proplist_receiver_trunk(self, path, props, iprops, pool):
+    self.assertEquals(props['svn:global-ignores'], '*.q\n')
+    self.proplist_receiver_trunk_calls += 1
+
+  def proplist_receiver_dir1(self, path, props, iprops, pool):
+    self.assertEquals(iprops[self.proplist_receiver_dir1_key],
+                      {'svn:global-ignores':'*.q\n'})
+    self.proplist_receiver_dir1_calls += 1
+
   def test_inherited_props(self):
     """Test inherited props"""
 
@@ -417,15 +426,16 @@ class SubversionClientTestCase(unittest.TestCase):
                                          None, self.client_ctx)
     self.assertEquals(iprops[trunk_url], {'svn:global-ignores':'*.q\n'})
 
-    def proplist_receiver_trunk(path, props, iprops, pool):
-      self.assertEquals(props['svn:global-ignores'], '*.q\n')
+    self.proplist_receiver_trunk_calls = 0
     client.proplist4(trunk_url, head, head, core.svn_depth_empty, None, True,
-                     proplist_receiver_trunk, self.client_ctx)
+                     self.proplist_receiver_trunk, self.client_ctx)
+    self.assertEquals(self.proplist_receiver_trunk_calls, 1)
 
-    def proplist_receiver_dir1(path, props, iprops, pool):
-      self.assertEquals(iprops[trunk_url], {'svn:global-ignores':'*.q\n'})
+    self.proplist_receiver_dir1_calls = 0
+    self.proplist_receiver_dir1_key = trunk_url
     client.proplist4(dir1_url, head, head, core.svn_depth_empty, None, True,
-                     proplist_receiver_dir1, self.client_ctx)
+                     self.proplist_receiver_dir1, self.client_ctx)
+    self.assertEquals(self.proplist_receiver_dir1_calls, 1)
 
 
 def suite():
