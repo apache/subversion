@@ -513,7 +513,7 @@ simple_save_creds(svn_boolean_t *saved,
 
 svn_error_t *
 svn_auth__simple_cleanup_walk(svn_auth_baton_t *baton,
-                              svn_auth_cleanup_callback cleanup,
+                              svn_auth_cleanup_func_t cleanup_func,
                               void *cleanup_baton,
                               apr_hash_t *creds_cache,
                               apr_pool_t *scratch_pool)
@@ -613,8 +613,8 @@ svn_auth__simple_cleanup_walk(svn_auth_baton_t *baton,
             if (! realm)
               continue; /* Not an auth file */
 
-            SVN_ERR(cleanup(&delete_file, cleanup_baton, cred_kinds[i], realm->data,
-                            SVN_AUTH_CRED_SIMPLE, itempool));
+            SVN_ERR(cleanup_func(&delete_file, cleanup_baton, cred_kinds[i],
+                                 realm->data, SVN_AUTH_CRED_SIMPLE, itempool));
 
             if (delete_file)
               {

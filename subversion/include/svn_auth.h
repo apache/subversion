@@ -790,22 +790,23 @@ svn_auth_get_simple_provider2(
  *
  * @since New in 1.8.
  */
-typedef svn_error_t * (*svn_auth_cleanup_callback)(svn_boolean_t *delete_cred,
-                                                   void *cleanup_baton,
-                                                   const char *cred_kind,
-                                                   const char *realmstring,
-                                                   const char *provider,
-                                                   apr_pool_t *scratch_pool);
+typedef svn_error_t *(*svn_auth_cleanup_func_t)(svn_boolean_t *delete_cred,
+                                                void *cleanup_baton,
+                                                const char *cred_kind,
+                                                const char *realmstring,
+                                                const char *provider,
+                                                apr_pool_t *scratch_pool);
 
-/** Call @a cleanup with information describing each currently cached
- * credential (in providers that support iterating). If the callback
- * confirms that the credential should be deleted, delete it.
+/** Call @a cleanup_func with information describing each currently
+ * cached credential (in providers registered with @a auth_baton that
+ * support iterating). If the callback confirms that the credential
+ * should be deleted, delete it.
  *
  * @since New in 1.8.
  */
 svn_error_t *
 svn_auth_cleanup_walk(svn_auth_baton_t *auth_baton,
-                      svn_auth_cleanup_callback cleanup,
+                      svn_auth_cleanup_func_t cleanup_func,
                       void *cleanup_baton,
                       apr_pool_t *scratch_pool);
 
