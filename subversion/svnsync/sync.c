@@ -19,6 +19,7 @@
  * ====================================================================
  */
 
+#include "svn_hash.h"
 #include "svn_cmdline.h"
 #include "svn_config.h"
 #include "svn_pools.h"
@@ -116,7 +117,7 @@ svnsync_normalize_revprops(apr_hash_t *rev_props,
                   source_prop_encoding, pool, pool));
 
           /* Replace the existing prop value. */
-          apr_hash_set(rev_props, propname, APR_HASH_KEY_STRING, propval);
+          svn_hash_sets(rev_props, propname, propval);
 
           if (was_normalized)
             (*normalized_count)++; /* Count it. */

@@ -1428,12 +1428,12 @@ SVN_ERROR_START
   /** @since New in 1.8. */
   SVN_ERRDEF(SVN_ERR_TOO_MANY_MEMCACHED_SERVERS,
              SVN_ERR_MISC_CATEGORY_START + 36,
-             "too many memcached servers configured")
+             "Too many memcached servers configured")
 
   /** @since New in 1.8. */
   SVN_ERRDEF(SVN_ERR_MALFORMED_VERSION_STRING,
              SVN_ERR_MISC_CATEGORY_START + 37,
-             "failed to parse version number string")
+             "Failed to parse version number string")
 
   /** @since New in 1.8. */
   SVN_ERRDEF(SVN_ERR_CORRUPTED_ATOMIC_STORAGE,

@@ -22,6 +22,7 @@
  */
 
 #include "svn_dirent_uri.h"
+#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_wc.h"
@@ -427,18 +428,17 @@ info_found_node_callback(const char *local_abspath,
         {
           const char *this_basename = APR_ARRAY_IDX(victims, i, const char *);
 
-          apr_hash_set(fe_baton->tree_conflicts,
-                       svn_dirent_join(local_abspath, this_basename,
-                                       fe_baton->pool),
-                       APR_HASH_KEY_STRING, "");
+          svn_hash_sets(fe_baton->tree_conflicts,
+                        svn_dirent_join(local_abspath, this_basename,
+                                        fe_baton->pool),
+                        "");
         }
     }
 
   /* Delete this path which we are currently visiting from the list of tree
    * conflicts.  This relies on the walker visiting a directory before visiting
    * its children. */
-  apr_hash_set(fe_baton->tree_conflicts, local_abspath, APR_HASH_KEY_STRING,
-               NULL);
+  svn_hash_sets(fe_baton->tree_conflicts, local_abspath, NULL);
 
   return SVN_NO_ERROR;
 }
@@ -523,8 +523,7 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
 
       svn_error_clear(err);
 
-      apr_hash_set(fe_baton.tree_conflicts, local_abspath,
-                   APR_HASH_KEY_STRING, "");
+      svn_hash_sets(fe_baton.tree_conflicts, local_abspath, "");
     }
   else
     SVN_ERR(err);

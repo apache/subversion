@@ -38,6 +38,84 @@
 extern "C" {
 #endif /* __cplusplus */
 
+
+/*** Temporarily private stuff (should move to svn_delta.h when Editor
+     V2 is made public) ***/
+
+/** Callback to retrieve a node's entire set of properties.  This is
+ * needed by the various editor shims in order to effect backwards
+ * compatibility.
+ *
+ * Implementations should set @a *props to the hash of properties
+ * associated with @a path in @a base_revision, allocating that hash
+ * and its contents in @a result_pool, and should use @a scratch_pool
+ * for temporary allocations.
+ *
+ * @a baton is an implementation-specific closure.
+ */
+typedef svn_error_t *(*svn_delta_fetch_props_func_t)(
+  apr_hash_t **props,
+  void *baton,
+  const char *path,
+  svn_revnum_t base_revision,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool
+  );
+
+/** Callback to retrieve a node's kind.  This is needed by the various
+ * editor shims in order to effect backwards compatibility.
+ *
+ * Implementations should set @a *kind to the node kind of @a path in
+ * @a base_revision, using @a scratch_pool for temporary allocations.
+ *
+ * @a baton is an implementation-specific closure.
+ */
+typedef svn_error_t *(*svn_delta_fetch_kind_func_t)(
+  svn_node_kind_t *kind,
+  void *baton,
+  const char *path,
+  svn_revnum_t base_revision,
+  apr_pool_t *scratch_pool
+  );
+
+/** Callback to fetch the name of a file to use as a delta base.
+ *
+ * Implementations should set @a *filename to the name of a file
+ * suitable for use as a delta base for @a path in @a base_revision
+ * (allocating @a *filename from @a result_pool), or to @c NULL if the
+ * base stream is empty.  @a scratch_pool is provided for temporary
+ * allocations.
+ *
+ * @a baton is an implementation-specific closure.
+ */
+typedef svn_error_t *(*svn_delta_fetch_base_func_t)(
+  const char **filename,
+  void *baton,
+  const char *path,
+  svn_revnum_t base_revision,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool
+  );
+
+/** Collection of callbacks used for the shim code.  This structure
+ * may grow additional fields in the future.  Therefore, always use
+ * svn_delta_shim_callbacks_default() to allocate new instances of it.
+ */
+typedef struct svn_delta_shim_callbacks_t
+{
+  svn_delta_fetch_props_func_t fetch_props_func;
+  svn_delta_fetch_kind_func_t fetch_kind_func;
+  svn_delta_fetch_base_func_t fetch_base_func;
+  void *fetch_baton;
+} svn_delta_shim_callbacks_t;
+
+/** Return a collection of default shim functions in @a result_pool.
+ */
+svn_delta_shim_callbacks_t *
+svn_delta_shim_callbacks_default(apr_pool_t *result_pool);
+
+
+
 /** Transforming trees ("editing").
  *
  * In Subversion, we have a number of occasions where we transform a tree

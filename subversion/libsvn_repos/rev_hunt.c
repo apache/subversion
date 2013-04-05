@@ -25,6 +25,7 @@
 #include <string.h>
 #include "svn_compat.h"
 #include "svn_private_config.h"
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_error_codes.h"
@@ -1005,7 +1006,7 @@ get_path_mergeinfo(apr_hash_t **mergeinfo,
                                 svn_mergeinfo_inherited, FALSE, TRUE,
                                 result_pool, scratch_pool));
 
-  *mergeinfo = apr_hash_get(tmp_catalog, path, APR_HASH_KEY_STRING);
+  *mergeinfo = svn_hash_gets(tmp_catalog, path);
   if (!*mergeinfo)
     *mergeinfo = apr_hash_make(result_pool);
 
@@ -1021,7 +1022,7 @@ is_path_in_hash(apr_hash_t *duplicate_path_revs,
   const char *key = apr_psprintf(pool, "%s:%ld", path, revision);
   void *ptr;
 
-  ptr = apr_hash_get(duplicate_path_revs, key, APR_HASH_KEY_STRING);
+  ptr = svn_hash_gets(duplicate_path_revs, key);
   return ptr != NULL;
 }
 
@@ -1060,9 +1061,7 @@ get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
   SVN_ERR(svn_fs_paths_changed2(&changed_paths, root, scratch_pool));
   while (1)
     {
-      svn_fs_path_change2_t *changed_path = apr_hash_get(changed_paths,
-                                                         path,
-                                                         APR_HASH_KEY_STRING);
+      svn_fs_path_change2_t *changed_path = svn_hash_gets(changed_paths, path);
       if (changed_path && changed_path->prop_mod)
         break;
       if (svn_fspath__is_root(path, strlen(path)))
@@ -1211,10 +1210,10 @@ find_interesting_revisions(apr_array_header_t *path_revisions,
       /* Add the path/rev pair to the hash, so we can filter out future
          occurrences of it.  We only care about this if including merged
          revisions, 'cause that's the only time we can have duplicates. */
-      apr_hash_set(duplicate_path_revs,
-                   apr_psprintf(result_pool, "%s:%ld", path_rev->path,
-                                path_rev->revnum),
-                   APR_HASH_KEY_STRING, (void *)0xdeadbeef);
+      svn_hash_sets(duplicate_path_revs,
+                    apr_psprintf(result_pool, "%s:%ld", path_rev->path,
+                                 path_rev->revnum),
+                    (void *)0xdeadbeef);
 
       if (path_rev->revnum <= start)
         break;

@@ -41,6 +41,7 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 
+#include "svn_hash.h"
 #include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -115,6 +116,8 @@ typedef struct fs_rev_root_data_t
 
 typedef struct fs_txn_root_data_t
 {
+  const char *txn_id;
+
   /* Cache of txn DAG nodes (without their nested noderevs, because
    * it's mutable). Same keys/values as ffd->rev_node_cache. */
   svn_cache__t *txn_node_cache;
@@ -585,12 +588,10 @@ svn_fs_fs__txn_root(svn_fs_root_t **root_p,
   SVN_ERR(svn_fs_fs__txn_proplist(&txnprops, txn, pool));
   if (txnprops)
     {
-      if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_OOD,
-                       APR_HASH_KEY_STRING))
+      if (svn_hash_gets(txnprops, SVN_FS__PROP_TXN_CHECK_OOD))
         flags |= SVN_FS_TXN_CHECK_OOD;
 
-      if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS,
-                       APR_HASH_KEY_STRING))
+      if (svn_hash_gets(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS))
         flags |= SVN_FS_TXN_CHECK_LOCKS;
     }
 
@@ -1359,7 +1360,7 @@ fs_node_prop(svn_string_t **value_p,
   SVN_ERR(svn_fs_fs__dag_get_proplist(&proplist, node, pool));
   *value_p = NULL;
   if (proplist)
-    *value_p = apr_hash_get(proplist, propname, APR_HASH_KEY_STRING);
+    *value_p = svn_hash_gets(proplist, propname);
 
   return SVN_NO_ERROR;
 }
@@ -1460,7 +1461,7 @@ fs_change_node_prop(svn_fs_root_t *root,
     }
 
   /* Set the property. */
-  apr_hash_set(proplist, name, APR_HASH_KEY_STRING, value);
+  svn_hash_sets(proplist, name, value);
 
   /* Overwrite the node's proplist. */
   SVN_ERR(svn_fs_fs__dag_set_proplist(parent_path->node, proplist,
@@ -2177,6 +2178,67 @@ fs_dir_entries(apr_hash_t **table_p,
   return svn_fs_fs__dag_dir_entries(table_p, node, pool);
 }
 
+/* Return a copy of PATH, allocated from POOL, for which newlines
+   have been escaped using the form \NNN (where NNN is the
+   octal representation of the byte's ordinal value).  */
+static const char *
+escape_newline(const char *path, apr_pool_t *pool)
+{
+  svn_stringbuf_t *retstr;
+  apr_size_t i, copied = 0;
+  int c;
+
+  /* At least one control character:
+      strlen - 1 (control) + \ + N + N + N + null . */
+  retstr = svn_stringbuf_create_ensure(strlen(path) + 4, pool);
+  for (i = 0; path[i]; i++)
+    {
+      c = (unsigned char)path[i];
+      if (c != '\n')
+        continue;
+
+      /* First things first, copy all the good stuff that we haven't
+         yet copied into our output buffer. */
+      if (i - copied)
+        svn_stringbuf_appendbytes(retstr, path + copied,
+                                  i - copied);
+
+      /* Make sure buffer is big enough for '\' 'N' 'N' 'N' (and NUL) */
+      svn_stringbuf_ensure(retstr, retstr->len + 4);
+      /*### The backslash separator doesn't work too great with Windows,
+         but it's what we'll use for consistency with invalid utf8
+         formatting (until someone has a better idea) */
+      apr_snprintf(retstr->data + retstr->len, 5, "\\%03o", (unsigned char)c);
+      retstr->len += 4;
+
+      /* Finally, update our copy counter. */
+      copied = i + 1;
+    }
+
+  /* Anything left to copy? */
+  if (i - copied)
+    svn_stringbuf_appendbytes(retstr, path + copied, i - copied);
+
+  /* retstr is null-terminated either by apr_snprintf or the svn_stringbuf
+     functions. */
+
+  return retstr->data;
+}
+
+/* Raise an error if PATH contains a newline because FSFS cannot handle
+ * such paths. See issue #4340. */
+static svn_error_t *
+check_newline(const char *path, apr_pool_t *pool)
+{
+  char *c = strchr(path, '\n');
+
+  if (c)
+    return svn_error_createf(SVN_ERR_FS_PATH_SYNTAX, NULL,
+       _("Invalid control character '0x%02x' in path '%s'"),
+       (unsigned char)*c, escape_newline(path, pool));
+
+  return SVN_NO_ERROR;
+}
 
 /* Create a new directory named PATH in ROOT.  The new directory has
    no entries, and no properties.  ROOT must be the root of a
@@ -2190,6 +2252,8 @@ fs_make_dir(svn_fs_root_t *root,
   parent_path_t *parent_path;
   dag_node_t *sub_dir;
   const char *txn_id = root->txn;
+
+  SVN_ERR(check_newline(path, pool));
 
   path = svn_fs__canonicalize_abspath(path, pool);
   SVN_ERR(open_path(&parent_path, root, path, open_path_last_optional,
@@ -2443,6 +2507,8 @@ fs_copy(svn_fs_root_t *from_root,
         const char *to_path,
         apr_pool_t *pool)
 {
+  SVN_ERR(check_newline(to_path, pool));
+
   return svn_error_trace(copy_helper(from_root,
                                      svn_fs__canonicalize_abspath(from_path,
                                                                   pool),
@@ -2490,7 +2556,7 @@ fs_copied_from(svn_revnum_t *rev_p,
      entry. */
   if (! root->is_txn_root) {
     fs_rev_root_data_t *frd = root->fsap_data;
-    copyfrom_str = apr_hash_get(frd->copyfrom_cache, path, APR_HASH_KEY_STRING);
+    copyfrom_str = svn_hash_gets(frd->copyfrom_cache, path);
   }
 
   if (copyfrom_str)
@@ -2540,6 +2606,8 @@ fs_make_file(svn_fs_root_t *root,
   parent_path_t *parent_path;
   dag_node_t *child;
   const char *txn_id = root->txn;
+
+  SVN_ERR(check_newline(path, pool));
 
   path = svn_fs__canonicalize_abspath(path, pool);
   SVN_ERR(open_path(&parent_path, root, path, open_path_last_optional,
@@ -3751,8 +3819,7 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
           svn_error_t *err;
 
           SVN_ERR(svn_fs_fs__dag_get_proplist(&proplist, kid_dag, iterpool));
-          mergeinfo_string = apr_hash_get(proplist, SVN_PROP_MERGEINFO,
-                                          APR_HASH_KEY_STRING);
+          mergeinfo_string = svn_hash_gets(proplist, SVN_PROP_MERGEINFO);
           if (!mergeinfo_string)
             {
               svn_string_t *idstr = svn_fs_fs__id_unparse(dirent->id, iterpool);
@@ -3777,10 +3844,8 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
               }
           else
             {
-              apr_hash_set(result_catalog,
-                           apr_pstrdup(result_pool, kid_path),
-                           APR_HASH_KEY_STRING,
-                           kid_mergeinfo);
+              svn_hash_sets(result_catalog, apr_pstrdup(result_pool, kid_path),
+                            kid_mergeinfo);
             }
         }
 
@@ -3872,8 +3937,7 @@ get_mergeinfo_for_path_internal(svn_mergeinfo_t *mergeinfo,
 
   SVN_ERR(svn_fs_fs__dag_get_proplist(&proplist, nearest_ancestor->node,
                                       scratch_pool));
-  mergeinfo_string = apr_hash_get(proplist, SVN_PROP_MERGEINFO,
-                                  APR_HASH_KEY_STRING);
+  mergeinfo_string = svn_hash_gets(proplist, SVN_PROP_MERGEINFO);
   if (!mergeinfo_string)
     return svn_error_createf
       (SVN_ERR_FS_CORRUPT, NULL,
@@ -4044,8 +4108,7 @@ get_mergeinfos_for_paths(svn_fs_root_t *root,
         }
 
       if (path_mergeinfo)
-        apr_hash_set(result_catalog, path, APR_HASH_KEY_STRING,
-                     path_mergeinfo);
+        svn_hash_sets(result_catalog, path, path_mergeinfo);
       if (include_descendants)
         SVN_ERR(add_descendant_mergeinfo(result_catalog, root, path,
                                          result_pool, scratch_pool));
@@ -4180,6 +4243,8 @@ make_txn_root(svn_fs_root_t **root_p,
   root->txn = apr_pstrdup(root->pool, txn);
   root->txn_flags = flags;
   root->rev = base_rev;
+
+  frd->txn_id = txn;
 
   /* Because this cache actually tries to invalidate elements, keep
      the number of elements per page down.
@@ -4331,23 +4396,41 @@ svn_error_t *
 svn_fs_fs__verify_root(svn_fs_root_t *root,
                        apr_pool_t *pool)
 {
-  fs_rev_root_data_t *frd;
+  svn_fs_t *fs = root->fs;
+  dag_node_t *root_dir;
+
+  /* Issue #4129: bogus pred-counts and minfo-cnt's on the root node-rev
+     (and elsewhere).  This code makes more thorough checks than the
+     commit-time checks in validate_root_noderev(). */
+
+  /* Callers should disable caches by setting SVN_FS_CONFIG_FSFS_CACHE_NS;
+     see r1462436.
+
+     When this code is called in the library, we want to ensure we
+     use the on-disk data --- rather than some data that was read
+     in the possibly-distance past and cached since. */
 
   if (root->is_txn_root)
-    /* ### Not implemented */
-    return SVN_NO_ERROR;
-  frd = root->fsap_data;
+    {
+      fs_txn_root_data_t *frd = root->fsap_data;
+      SVN_ERR(svn_fs_fs__dag_txn_root(&root_dir, fs, frd->txn_id, pool));
+    }
+  else
+    {
+      fs_rev_root_data_t *frd = root->fsap_data;
+      root_dir = frd->root_dir;
+    }
 
   /* Recursively verify ROOT_DIR. */
-  SVN_ERR(verify_node(frd->root_dir, root->rev, pool));
+  SVN_ERR(verify_node(root_dir, root->rev, pool));
 
   /* Verify explicitly the predecessor of the root. */
   {
     const svn_fs_id_t *pred_id;
 
     /* Only r0 should have no predecessor. */
-    SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred_id, frd->root_dir));
-    if (!!pred_id != !!root->rev)
+    SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred_id, root_dir));
+    if (! root->is_txn_root && !!pred_id != !!root->rev)
       return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                "r%ld's root node's predecessor is "
                                "unexpectedly '%s'",
@@ -4355,17 +4438,28 @@ svn_fs_fs__verify_root(svn_fs_root_t *root,
                                (pred_id
                                 ? svn_fs_fs__id_unparse(pred_id, pool)->data
                                 : "(null)"));
+    if (root->is_txn_root && !pred_id)
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                               "Transaction '%s''s root node's predecessor is "
+                               "unexpectedly NULL",
+                               root->txn);
 
     /* Check the predecessor's revision. */
     if (pred_id)
       {
         svn_revnum_t pred_rev = svn_fs_fs__id_rev(pred_id);
-        if (pred_rev+1 != root->rev)
+        if (! root->is_txn_root && pred_rev+1 != root->rev)
           /* Issue #4129. */
           return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                    "r%ld's root node's predecessor is r%ld"
                                    " but should be r%ld",
                                    root->rev, pred_rev, root->rev - 1);
+        if (root->is_txn_root && pred_rev != root->rev)
+          return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                   "Transaction '%s''s root node's predecessor"
+                                   " is r%ld"
+                                   " but should be r%ld",
+                                   root->txn, pred_rev, root->rev);
       }
   }
 

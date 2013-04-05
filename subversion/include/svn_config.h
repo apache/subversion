@@ -62,6 +62,10 @@ typedef struct svn_config_t svn_config_t;
  * client configuration files.
  * @{
  */
+
+ /* This list of #defines is intentionally presented as a nested list
+    that matches the in-config hierarchy.  */
+
 #define SVN_CONFIG_CATEGORY_SERVERS        "servers"
 #define SVN_CONFIG_SECTION_GROUPS               "groups"
 #define SVN_CONFIG_SECTION_GLOBAL               "global"
@@ -126,7 +130,7 @@ typedef struct svn_config_t svn_config_t;
 /** @since New in 1.8. */
 #define SVN_CONFIG_SECTION_WORKING_COPY         "working-copy"
 /** @since New in 1.8. */
-#define SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE      "exclusive-locking"
+#define SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE          "exclusive-locking"
 /** @since New in 1.8. */
 #define SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE_CLIENTS  "exclusive-locking-clients"
 /** @} */
@@ -227,8 +231,8 @@ svn_config_create(svn_config_t **cfgp,
  * If @a file does not exist, then if @a must_exist, return an error,
  * otherwise return an empty @c svn_config_t.
  *
- * If @a section_names_case_sensitive is TRUE, populate section name hashes
- * case sensitively, except for the default SVN_CONFIG__DEFAULT_SECTION.
+ * If @a section_names_case_sensitive is @c TRUE, populate section name hashes
+ * case sensitively, except for the default #SVN_CONFIG__DEFAULT_SECTION.
  *
  * @since New in 1.7.
  */
@@ -240,7 +244,7 @@ svn_config_read2(svn_config_t **cfgp,
                  svn_boolean_t section_names_case_sensitive,
                  apr_pool_t *pool);
 
-/** Similar to svn_config_read2, but always passes FALSE to
+/** Similar to svn_config_read2, but always passes @c FALSE to
  * section_names_case_sensitive.
  *
  * @deprecated Provided for backward compatibility with 1.6 API.
@@ -255,8 +259,8 @@ svn_config_read(svn_config_t **cfgp,
 /** Read configuration data from @a stream into @a *cfgp, allocated in
  * @a result_pool.
  *
- * If @a section_names_case_sensitive is TRUE, populate section name hashes
- * case sensitively, except for the default SVN_CONFIG__DEFAULT_SECTION.
+ * If @a section_names_case_sensitive is @c TRUE, populate section name hashes
+ * case sensitively, except for the default #SVN_CONFIG__DEFAULT_SECTION.
  *
  * @since New in 1.8.
  */
@@ -335,12 +339,14 @@ svn_config_set_bool(svn_config_t *cfg,
                     const char *option,
                     svn_boolean_t value);
 
-/** Like svn_config_get(), but for 64 bit signed integers.
+/** Like svn_config_get(), but for 64-bit signed integers.
  *
- * Parses the option as an integer value. Returns an error if the option
- * could not be converted to an integer.
+ * Parses the @a option in @a section of @a cfg as an integer value,
+ * setting @a *valuep to the result.  If the option is not found, sets
+ * @a *valuep to @a default_value.  If the option is found but cannot
+ * be converted to an integer, returns an error.
  *
- * @since New in 1.8
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_config_get_int64(svn_config_t *cfg,
@@ -349,11 +355,12 @@ svn_config_get_int64(svn_config_t *cfg,
                      const char *option,
                      apr_int64_t default_value);
 
-/** Like svn_config_set(), but for 64 bit signed integers.
+/** Like svn_config_set(), but for 64-bit signed integers.
  *
- * Sets the option to the signed decimal @a value.
+ * Sets the value of @a option in @a section of @a cfg to the signed
+ * decimal @a value.
  *
- * @since New in 1.8
+ * @since New in 1.8.
  */
 void
 svn_config_set_int64(svn_config_t *cfg,
@@ -384,17 +391,24 @@ svn_config_get_yes_no_ask(svn_config_t *cfg,
                           const char *option,
                           const char* default_value);
 
-/** Like svn_config_set(), but for tristate values.
+/** Like svn_config_get_bool(), but for tristate values.
  *
- * Sets the option to 'TRUE'/'FALSE'/'UNKNOWN', depending on @a value.
+ * Set @a *valuep to #svn_tristate_true, #svn_tristate_false, or
+ * #svn_tristate_unknown, depending on the value of @a option in @a
+ * section of @a cfg.  True and false values are the same as for
+ * svn_config_get_bool(); @a unknown_value specifies the option value
+ * allowed for third state (#svn_tristate_unknown).
  *
- * @a unknown_value specifies options value value allowed for third state.
+ * Use @a default_value as the default value if @a option cannot be
+ * found.
  *
  * @since New in 1.8.
  */
 svn_error_t *
-svn_config_get_tristate(svn_config_t *cfg, svn_tristate_t *valuep,
-                        const char *section, const char *option,
+svn_config_get_tristate(svn_config_t *cfg,
+                        svn_tristate_t *valuep,
+                        const char *section,
+                        const char *option,
                         const char *unknown_value,
                         svn_tristate_t default_value);
 

@@ -27,6 +27,7 @@
 
 /*** Includes. ***/
 
+#include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_error.h"
@@ -160,6 +161,27 @@ is_empty_wc(svn_boolean_t *clean_checkout,
   return svn_io_dir_close(dir);
 }
 
+/* A conflict callback that simply records the conflicted path in BATON.
+
+   Implements svn_wc_conflict_resolver_func2_t.
+*/
+static svn_error_t *
+record_conflict(svn_wc_conflict_result_t **result,
+                const svn_wc_conflict_description2_t *description,
+                void *baton,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  apr_hash_t *conflicted_paths = baton;
+
+  svn_hash_sets(conflicted_paths,
+                apr_pstrdup(apr_hash_pool_get(conflicted_paths),
+                            description->local_abspath), "");
+  *result = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,
+                                          NULL, result_pool);
+  return SVN_NO_ERROR;
+}
+
 /* This is a helper for svn_client__update_internal(), which see for
    an explanation of most of these parameters.  Some stuff that's
    unique is as follows:
@@ -171,9 +193,13 @@ is_empty_wc(svn_boolean_t *clean_checkout,
    If NOTIFY_SUMMARY is set (and there's a notification handler in
    CTX), transmit the final update summary upon successful
    completion of the update.
+
+   Add the paths of any conflict victims to CONFLICTED_PATHS, if that
+   is not null.
 */
 static svn_error_t *
 update_internal(svn_revnum_t *result_rev,
+                apr_hash_t *conflicted_paths,
                 const char *local_abspath,
                 const char *anchor_abspath,
                 const svn_opt_revision_t *revision,
@@ -197,11 +223,8 @@ update_internal(svn_revnum_t *result_rev,
   const char *repos_relpath;
   const char *repos_uuid;
   const char *anchor_url;
-  svn_error_t *err;
   svn_revnum_t revnum;
   svn_boolean_t use_commit_times;
-  svn_boolean_t sleep_here = FALSE;
-  svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
   svn_boolean_t clean_checkout = FALSE;
   const char *diff3_cmd;
   apr_hash_t *wcroot_iprops;
@@ -213,9 +236,9 @@ update_internal(svn_revnum_t *result_rev,
   svn_boolean_t server_supports_depth;
   svn_boolean_t cropping_target;
   svn_boolean_t target_conflicted = FALSE;
-  svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
-                                                 SVN_CONFIG_CATEGORY_CONFIG,
-                                                 APR_HASH_KEY_STRING) : NULL;
+  svn_config_t *cfg = ctx->config
+                      ? svn_hash_gets(ctx->config, SVN_CONFIG_CATEGORY_CONFIG)
+                      : NULL;
 
   if (result_rev)
     *result_rev = SVN_INVALID_REVNUM;
@@ -239,6 +262,7 @@ update_internal(svn_revnum_t *result_rev,
   /* It does not make sense to update conflict victims. */
   if (repos_relpath)
     {
+      svn_error_t *err;
       svn_boolean_t text_conflicted, prop_conflicted;
 
       anchor_url = svn_path_url_add_component2(repos_root_url, repos_relpath,
@@ -407,7 +431,8 @@ update_internal(svn_revnum_t *result_rev,
                                     clean_checkout,
                                     diff3_cmd, preserved_exts,
                                     svn_client__dirent_fetcher, &dfb,
-                                    ctx->conflict_func2, ctx->conflict_baton2,
+                                    conflicted_paths ? record_conflict : NULL,
+                                    conflicted_paths,
                                     NULL, NULL,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->notify_func2, ctx->notify_baton2,
@@ -422,25 +447,22 @@ update_internal(svn_revnum_t *result_rev,
                              : svn_depth_unknown),
                             FALSE, update_editor, update_edit_baton, pool));
 
+  /* Past this point, we assume the WC is going to be modified so we will
+   * need to sleep for timestamps. */
+  if (! use_commit_times)
+    *timestamp_sleep = TRUE;
+
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the
      update_editor will be driven by svn_repos_dir_delta2. */
-  err = svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath, reporter,
-                                report_baton, TRUE, depth, (! depth_is_sticky),
-                                (! server_supports_depth),
-                                use_commit_times,
-                                ctx->cancel_func, ctx->cancel_baton,
-                                ctx->notify_func2, ctx->notify_baton2,
-                                pool);
-
-  if (err)
-    {
-      /* Don't rely on the error handling to handle the sleep later, do
-         it now */
-      svn_io_sleep_for_timestamps(local_abspath, pool);
-      return svn_error_trace(err);
-    }
-  *use_sleep = TRUE;
+  SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath, reporter,
+                                  report_baton, TRUE,
+                                  depth, (! depth_is_sticky),
+                                  (! server_supports_depth),
+                                  use_commit_times,
+                                  ctx->cancel_func, ctx->cancel_baton,
+                                  ctx->notify_func2, ctx->notify_baton2,
+                                  pool));
 
   /* We handle externals after the update is complete, so that
      handling external items (and any errors therefrom) doesn't delay
@@ -458,12 +480,9 @@ update_internal(svn_revnum_t *result_rev,
       SVN_ERR(svn_client__handle_externals(new_externals,
                                            new_depths,
                                            repos_root_url, local_abspath,
-                                           depth, use_sleep,
+                                           depth, timestamp_sleep,
                                            ctx, pool));
     }
-
-  if (sleep_here)
-    svn_io_sleep_for_timestamps(local_abspath, pool);
 
   /* Let everyone know we're finished here (unless we're asked not to). */
   if (ctx->notify_func2 && notify_summary)
@@ -504,6 +523,8 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   const char *anchor_abspath, *lockroot_abspath;
   svn_error_t *err;
   svn_opt_revision_t peg_revision = *revision;
+  apr_hash_t *conflicted_paths
+    = ctx->conflict_func2 ? apr_hash_make(pool) : NULL;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(! (innerupdate && make_parents));
@@ -544,7 +565,9 @@ svn_client__update_internal(svn_revnum_t *result_rev,
         {
           const char *missing_parent =
             APR_ARRAY_IDX(missing_parents, i, const char *);
-          err = update_internal(result_rev, missing_parent, anchor_abspath,
+
+          err = update_internal(result_rev, conflicted_paths,
+                                missing_parent, anchor_abspath,
                                 &peg_revision, svn_depth_empty, FALSE,
                                 ignore_externals, allow_unver_obstructions,
                                 adds_as_modification, timestamp_sleep,
@@ -568,11 +591,20 @@ svn_client__update_internal(svn_revnum_t *result_rev,
       anchor_abspath = lockroot_abspath;
     }
 
-  err = update_internal(result_rev, local_abspath, anchor_abspath,
+  err = update_internal(result_rev, conflicted_paths,
+                        local_abspath, anchor_abspath,
                         &peg_revision, depth, depth_is_sticky,
                         ignore_externals, allow_unver_obstructions,
                         adds_as_modification, timestamp_sleep,
                         TRUE, ctx, pool);
+
+  /* Give the conflict resolver callback the opportunity to
+   * resolve any conflicts that were raised. */
+  if (! err && ctx->conflict_func2)
+    {
+      err = svn_client__resolve_conflicts(NULL, conflicted_paths, ctx, pool);
+    }
+
  cleanup:
   err = svn_error_compose_create(
             err,
@@ -599,6 +631,7 @@ svn_client_update4(apr_array_header_t **result_revs,
   apr_pool_t *iterpool = svn_pool_create(pool);
   const char *path = NULL;
   svn_boolean_t sleep = FALSE;
+  svn_error_t *err = SVN_NO_ERROR;
 
   if (result_revs)
     *result_revs = apr_array_make(pool, paths->nelts, sizeof(svn_revnum_t));
@@ -614,7 +647,6 @@ svn_client_update4(apr_array_header_t **result_revs,
 
   for (i = 0; i < paths->nelts; ++i)
     {
-      svn_error_t *err = SVN_NO_ERROR;
       svn_revnum_t result_rev;
       const char *local_abspath;
       path = APR_ARRAY_IDX(paths, i, const char *);
@@ -622,9 +654,15 @@ svn_client_update4(apr_array_header_t **result_revs,
       svn_pool_clear(iterpool);
 
       if (ctx->cancel_func)
-        SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+        {
+          err = ctx->cancel_func(ctx->cancel_baton);
+          if (err)
+            goto cleanup;
+        }
 
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, iterpool));
+      err = svn_dirent_get_absolute(&local_abspath, path, iterpool);
+      if (err)
+        goto cleanup;
       err = svn_client__update_internal(&result_rev, local_abspath,
                                         revision, depth, depth_is_sticky,
                                         ignore_externals,
@@ -637,10 +675,11 @@ svn_client_update4(apr_array_header_t **result_revs,
 
       if (err)
         {
-          if(err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
-            return svn_error_trace(err);
+          if (err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+            goto cleanup;
 
           svn_error_clear(err);
+          err = SVN_NO_ERROR;
 
           /* SVN_ERR_WC_NOT_WORKING_COPY: it's not versioned */
 
@@ -659,8 +698,9 @@ svn_client_update4(apr_array_header_t **result_revs,
     }
   svn_pool_destroy(iterpool);
 
+ cleanup:
   if (sleep)
     svn_io_sleep_for_timestamps((paths->nelts == 1) ? path : NULL, pool);
 
-  return SVN_NO_ERROR;
+  return svn_error_trace(err);
 }

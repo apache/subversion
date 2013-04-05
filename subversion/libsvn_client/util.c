@@ -24,6 +24,7 @@
 #include <apr_pools.h>
 #include <apr_strings.h>
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_types.h"
@@ -349,7 +350,7 @@ fetch_props_func(apr_hash_t **props,
   struct shim_callbacks_baton *scb = baton;
   const char *local_abspath;
 
-  local_abspath = apr_hash_get(scb->relpath_map, path, APR_HASH_KEY_STRING);
+  local_abspath = svn_hash_gets(scb->relpath_map, path);
   if (!local_abspath)
     {
       *props = apr_hash_make(result_pool);
@@ -376,7 +377,7 @@ fetch_kind_func(svn_node_kind_t *kind,
   struct shim_callbacks_baton *scb = baton;
   const char *local_abspath;
 
-  local_abspath = apr_hash_get(scb->relpath_map, path, APR_HASH_KEY_STRING);
+  local_abspath = svn_hash_gets(scb->relpath_map, path);
   if (!local_abspath)
     {
       *kind = svn_node_unknown;
@@ -403,7 +404,7 @@ fetch_base_func(const char **filename,
   svn_stream_t *temp_stream;
   svn_error_t *err;
 
-  local_abspath = apr_hash_get(scb->relpath_map, path, APR_HASH_KEY_STRING);
+  local_abspath = svn_hash_gets(scb->relpath_map, path);
   if (!local_abspath)
     {
       *filename = NULL;

@@ -206,7 +206,9 @@ svn_version__parse_version_string(svn_version_t **version_p,
     svn_cstring_split(version_string, ".", FALSE, result_pool);
 
   if ((pieces->nelts < 2) || (pieces->nelts > 3))
-    return svn_error_create(SVN_ERR_MALFORMED_VERSION_STRING, NULL, NULL);
+    return svn_error_createf(SVN_ERR_MALFORMED_VERSION_STRING, NULL,
+                             _("Failed to parse version number string '%s'"),
+                             version_string);
 
   version = apr_pcalloc(result_pool, sizeof(*version));
   version->tag = "";
@@ -215,11 +217,15 @@ svn_version__parse_version_string(svn_version_t **version_p,
   err = svn_cstring_atoi(&(version->major),
                          APR_ARRAY_IDX(pieces, 0, const char *));
   if (err)
-    return svn_error_create(SVN_ERR_MALFORMED_VERSION_STRING, err, NULL);
+    return svn_error_createf(SVN_ERR_MALFORMED_VERSION_STRING, err,
+                             _("Failed to parse version number string '%s'"),
+                             version_string);
   err = svn_cstring_atoi(&(version->minor),
                          APR_ARRAY_IDX(pieces, 1, const char *));
   if (err)
-    return svn_error_create(SVN_ERR_MALFORMED_VERSION_STRING, err, NULL);
+    return svn_error_createf(SVN_ERR_MALFORMED_VERSION_STRING, err,
+                             _("Failed to parse version number string '%s'"),
+                             version_string);
 
   /* If there's a third component, we'll parse it, too.  But we don't
      require that it be present. */
@@ -234,9 +240,16 @@ svn_version__parse_version_string(svn_version_t **version_p,
         }
       err = svn_cstring_atoi(&(version->patch), piece);
       if (err)
-        return svn_error_create(SVN_ERR_MALFORMED_VERSION_STRING,
-                                err, NULL);
+        return svn_error_createf(SVN_ERR_MALFORMED_VERSION_STRING, err,
+                                 _("Failed to parse version number string '%s'"
+                                  ),
+                                 version_string);
     }
+
+  if (version->major < 0 || version->minor < 0 || version->patch < 0)
+    return svn_error_createf(SVN_ERR_MALFORMED_VERSION_STRING, err,
+                             _("Failed to parse version number string '%s'"),
+                             version_string);
 
   *version_p = version;
   return SVN_NO_ERROR;

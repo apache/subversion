@@ -28,6 +28,7 @@
 /*** Includes. ***/
 
 #include "svn_client.h"
+#include "svn_hash.h"
 #include "client.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
@@ -88,8 +89,7 @@ store_locks_callback(void *baton,
 
   if (lb->base_dir_abspath)
     {
-      char *path = apr_hash_get(lb->urls_to_paths, rel_url,
-                                APR_HASH_KEY_STRING);
+      char *path = svn_hash_gets(lb->urls_to_paths, rel_url);
       const char *local_abspath;
 
       local_abspath = svn_dirent_join(lb->base_dir_abspath, path, pool);
@@ -271,11 +271,11 @@ organize_lock_targets(const char **common_parent_url,
          lock token string (if the caller is unlocking). */
       for (i = 0; i < rel_targets->nelts; i++)
         {
-          apr_hash_set(rel_targets_ret,
-                       APR_ARRAY_IDX(rel_targets, i, const char *),
-                       APR_HASH_KEY_STRING,
-                       do_lock ? (const void *)invalid_revnum
-                               : (const void *)"");
+          svn_hash_sets(rel_targets_ret,
+                        APR_ARRAY_IDX(rel_targets, i, const char *),
+                        do_lock
+                        ? (const void *)invalid_revnum
+                        : (const void *)"");
         }
     }
   else
@@ -326,7 +326,7 @@ organize_lock_targets(const char **common_parent_url,
                                      svn_dirent_local_style(local_abspath,
                                                             iterpool));
 
-          apr_hash_set(wc_info, local_abspath, APR_HASH_KEY_STRING, wli);
+          svn_hash_sets(wc_info, local_abspath, wli);
 
           target_url = svn_path_url_add_component2(repos_root_url,
                                                    repos_relpath,
@@ -359,8 +359,8 @@ organize_lock_targets(const char **common_parent_url,
              COMMON_DIRENT). */
           rel_target = APR_ARRAY_IDX(rel_targets, i, const char *);
           rel_url = APR_ARRAY_IDX(rel_urls, i, const char *);
-          apr_hash_set(rel_fs_paths, rel_url, APR_HASH_KEY_STRING,
-                       apr_pstrdup(result_pool, rel_target));
+          svn_hash_sets(rel_fs_paths, rel_url,
+                        apr_pstrdup(result_pool, rel_target));
 
           /* Then, we map our REL_URL (again) to either the base
              revision of the dirent target with which it is associated
@@ -374,14 +374,13 @@ organize_lock_targets(const char **common_parent_url,
               struct wc_lock_item_t *wli;
               revnum = apr_palloc(result_pool, sizeof(* revnum));
 
-              wli = apr_hash_get(wc_info, local_abspath, APR_HASH_KEY_STRING);
+              wli = svn_hash_gets(wc_info, local_abspath);
 
               SVN_ERR_ASSERT(wli != NULL);
 
               *revnum = wli->revision;
 
-              apr_hash_set(rel_targets_ret, rel_url,
-                           APR_HASH_KEY_STRING, revnum);
+              svn_hash_sets(rel_targets_ret, rel_url, revnum);
             }
           else /* Unlock. */
             {
@@ -391,8 +390,7 @@ organize_lock_targets(const char **common_parent_url,
               /* If not forcing the unlock, get the lock token. */
               if (! force)
                 {
-                  wli = apr_hash_get(wc_info, local_abspath,
-                                     APR_HASH_KEY_STRING);
+                  wli = svn_hash_gets(wc_info, local_abspath);
 
                   SVN_ERR_ASSERT(wli != NULL);
 
@@ -411,8 +409,8 @@ organize_lock_targets(const char **common_parent_url,
                 lock_token = NULL;
 
               /* If breaking a lock, we shouldn't pass any lock token. */
-              apr_hash_set(rel_targets_ret, rel_url, APR_HASH_KEY_STRING,
-                           lock_token ? lock_token : "");
+              svn_hash_sets(rel_targets_ret, rel_url,
+                            lock_token ? lock_token : "");
             }
         }
 
@@ -451,8 +449,7 @@ fetch_tokens(svn_ra_session_t *ra_session, apr_hash_t *path_tokens,
           (SVN_ERR_CLIENT_MISSING_LOCK_TOKEN, NULL,
            _("'%s' is not locked"), path);
 
-      apr_hash_set(path_tokens, path, APR_HASH_KEY_STRING,
-                   apr_pstrdup(pool, lock->token));
+      svn_hash_sets(path_tokens, path, apr_pstrdup(pool, lock->token));
     }
 
   svn_pool_destroy(iterpool);

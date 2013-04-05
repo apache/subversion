@@ -2249,10 +2249,10 @@ bump_moved_away(svn_wc__db_wcroot_t *wcroot,
                 src_root_relpath = svn_relpath_dirname(src_root_relpath,
                                                        iterpool);
 
-              if (!apr_hash_get(src_done, src_relpath, APR_HASH_KEY_STRING))
+              if (!svn_hash_gets(src_done, src_relpath))
                 {
-                  apr_hash_set(src_done, apr_pstrdup(result_pool, src_relpath),
-                               APR_HASH_KEY_STRING, "");
+                  svn_hash_sets(src_done,
+                                apr_pstrdup(result_pool, src_relpath), "");
                   err = svn_wc__db_read_conflict_internal(&conflict, wcroot,
                                                           src_root_relpath,
                                                           iterpool, iterpool);

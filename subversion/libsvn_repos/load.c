@@ -22,6 +22,7 @@
 
 
 #include "svn_private_config.h"
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
@@ -127,7 +128,7 @@ read_header_block(svn_stream_t *stream,
       value = header_str->data + i;
 
       /* Store name/value in hash. */
-      apr_hash_set(*headers, name, APR_HASH_KEY_STRING, value);
+      svn_hash_sets(*headers, name, value);
     }
 
   return SVN_NO_ERROR;
@@ -493,8 +494,7 @@ svn_repos_parse_dumpstream3(svn_stream_t *stream,
       /*** Handle the various header blocks. ***/
 
       /* Is this a revision record? */
-      if (apr_hash_get(headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER,
-                       APR_HASH_KEY_STRING))
+      if (svn_hash_gets(headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER))
         {
           /* If we already have a rev_baton open, we need to close it
              and clear the per-revision subpool. */
@@ -509,8 +509,7 @@ svn_repos_parse_dumpstream3(svn_stream_t *stream,
                                                  revpool));
         }
       /* Or is this, perhaps, a node record? */
-      else if (apr_hash_get(headers, SVN_REPOS_DUMPFILE_NODE_PATH,
-                            APR_HASH_KEY_STRING))
+      else if (svn_hash_gets(headers, SVN_REPOS_DUMPFILE_NODE_PATH))
         {
           SVN_ERR(parse_fns->new_node_record(&node_baton,
                                              headers,
@@ -519,16 +518,14 @@ svn_repos_parse_dumpstream3(svn_stream_t *stream,
           found_node = TRUE;
         }
       /* Or is this the repos UUID? */
-      else if ((value = apr_hash_get(headers, SVN_REPOS_DUMPFILE_UUID,
-                                     APR_HASH_KEY_STRING)))
+      else if ((value = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_UUID)))
         {
           SVN_ERR(parse_fns->uuid_record(value, parse_baton, pool));
         }
       /* Or perhaps a dumpfile format? */
       /* ### TODO: use parse_format_version */
-      else if ((value = apr_hash_get(headers,
-                                     SVN_REPOS_DUMPFILE_MAGIC_HEADER,
-                                     APR_HASH_KEY_STRING)))
+      else if ((value = svn_hash_gets(headers,
+                                      SVN_REPOS_DUMPFILE_MAGIC_HEADER)))
         {
           /* ### someday, switch modes of operation here. */
           SVN_ERR(svn_cstring_atoi(&version, value));
@@ -547,24 +544,18 @@ svn_repos_parse_dumpstream3(svn_stream_t *stream,
          and Text-content-length fields, but always have a properties
          block in a block with Content-Length > 0 */
 
-      content_length = apr_hash_get(headers,
-                                    SVN_REPOS_DUMPFILE_CONTENT_LENGTH,
-                                    APR_HASH_KEY_STRING);
-      prop_cl = apr_hash_get(headers,
-                             SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH,
-                             APR_HASH_KEY_STRING);
-      text_cl = apr_hash_get(headers,
-                             SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH,
-                             APR_HASH_KEY_STRING);
+      content_length = svn_hash_gets(headers,
+                                     SVN_REPOS_DUMPFILE_CONTENT_LENGTH);
+      prop_cl = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH);
+      text_cl = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH);
       old_v1_with_cl =
         version == 1 && content_length && ! prop_cl && ! text_cl;
 
       /* Is there a props content-block to parse? */
       if (prop_cl || old_v1_with_cl)
         {
-          const char *delta = apr_hash_get(headers,
-                                           SVN_REPOS_DUMPFILE_PROP_DELTA,
-                                           APR_HASH_KEY_STRING);
+          const char *delta = svn_hash_gets(headers,
+                                            SVN_REPOS_DUMPFILE_PROP_DELTA);
           svn_boolean_t is_delta = (delta && strcmp(delta, "true") == 0);
 
           /* First, remove all node properties, unless this is a delta
@@ -586,9 +577,8 @@ svn_repos_parse_dumpstream3(svn_stream_t *stream,
       /* Is there a text content-block to parse? */
       if (text_cl)
         {
-          const char *delta = apr_hash_get(headers,
-                                           SVN_REPOS_DUMPFILE_TEXT_DELTA,
-                                           APR_HASH_KEY_STRING);
+          const char *delta = svn_hash_gets(headers,
+                                            SVN_REPOS_DUMPFILE_TEXT_DELTA);
           svn_boolean_t is_delta = FALSE;
           if (! deltas_are_text)
             is_delta = (delta && strcmp(delta, "true") == 0);
@@ -623,9 +613,8 @@ svn_repos_parse_dumpstream3(svn_stream_t *stream,
                                     - actual_prop_length;
 
           if (cl_value ||
-              ((node_kind = apr_hash_get(headers,
-                                         SVN_REPOS_DUMPFILE_NODE_KIND,
-                                         APR_HASH_KEY_STRING))
+              ((node_kind = svn_hash_gets(headers,
+                                          SVN_REPOS_DUMPFILE_NODE_KIND))
                && strcmp(node_kind, "file") == 0)
              )
             SVN_ERR(parse_text_block(stream,

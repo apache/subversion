@@ -35,6 +35,7 @@
 #include <apr_portable.h>
 #include <apr_thread_proc.h>
 
+#include "svn_hash.h"
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_opt.h"
@@ -959,7 +960,7 @@ apr_hash_t *svn_swig_py_stringhash_from_dict(PyObject *dict,
           Py_DECREF(keys);
           return NULL;
         }
-      apr_hash_set(hash, propname, APR_HASH_KEY_STRING, propval);
+      svn_hash_sets(hash, propname, propval);
     }
   Py_DECREF(keys);
   return hash;
@@ -1002,7 +1003,7 @@ apr_hash_t *svn_swig_py_mergeinfo_from_dict(PyObject *dict,
           Py_DECREF(keys);
           return NULL;
         }
-      apr_hash_set(hash, pathname, APR_HASH_KEY_STRING, ranges);
+      svn_hash_sets(hash, pathname, ranges);
     }
   Py_DECREF(keys);
   return hash;
@@ -1079,7 +1080,7 @@ apr_hash_t *svn_swig_py_prophash_from_dict(PyObject *dict,
           Py_DECREF(keys);
           return NULL;
         }
-      apr_hash_set(hash, propname, APR_HASH_KEY_STRING, propval);
+      svn_hash_sets(hash, propname, propval);
     }
   Py_DECREF(keys);
   return hash;
@@ -1132,7 +1133,7 @@ apr_hash_t *svn_swig_py_path_revs_hash_from_dict(PyObject *dict,
           return NULL;
         }
 
-      apr_hash_set(hash, path, APR_HASH_KEY_STRING, revnum);
+      svn_hash_sets(hash, path, revnum);
     }
   Py_DECREF(keys);
   return hash;
@@ -1181,7 +1182,7 @@ apr_hash_t *svn_swig_py_struct_ptr_hash_from_dict(PyObject *dict,
           Py_DECREF(keys);
           return NULL;
         }
-      apr_hash_set(hash, c_key, APR_HASH_KEY_STRING, struct_ptr);
+      svn_hash_sets(hash, c_key, struct_ptr);
     }
   Py_DECREF(keys);
   return hash;

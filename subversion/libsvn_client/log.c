@@ -32,6 +32,7 @@
 #include "svn_compat.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
+#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_sorts.h"
 #include "svn_props.h"
@@ -203,37 +204,36 @@ pre_15_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
             }
 
           if (rb->ra_session == NULL)
-            SVN_ERR(svn_client_open_ra_session(&rb->ra_session,
-                                                rb->ra_session_url,
-                                               rb->ctx, rb->ra_session_pool));
+            SVN_ERR(svn_client_open_ra_session2(&rb->ra_session,
+                                                rb->ra_session_url, NULL,
+                                                rb->ctx, rb->ra_session_pool,
+                                                pool));
 
           SVN_ERR(svn_ra_rev_prop(rb->ra_session, log_entry->revision,
                                   name, &value, pool));
           if (log_entry->revprops == NULL)
             log_entry->revprops = apr_hash_make(pool);
-          apr_hash_set(log_entry->revprops, name, APR_HASH_KEY_STRING, value);
+          svn_hash_sets(log_entry->revprops, name, value);
         }
       if (log_entry->revprops)
         {
           /* Pre-1.5 servers send the standard revprops unconditionally;
              clear those the caller doesn't want. */
           if (!want_author)
-            apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_AUTHOR,
-                         APR_HASH_KEY_STRING, NULL);
+            svn_hash_sets(log_entry->revprops, SVN_PROP_REVISION_AUTHOR, NULL);
           if (!want_date)
-            apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_DATE,
-                         APR_HASH_KEY_STRING, NULL);
+            svn_hash_sets(log_entry->revprops, SVN_PROP_REVISION_DATE, NULL);
           if (!want_log)
-            apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_LOG,
-                         APR_HASH_KEY_STRING, NULL);
+            svn_hash_sets(log_entry->revprops, SVN_PROP_REVISION_LOG, NULL);
         }
     }
   else
     {
       if (rb->ra_session == NULL)
-        SVN_ERR(svn_client_open_ra_session(&rb->ra_session,
-                                           rb->ra_session_url,
-                                           rb->ctx, rb->ra_session_pool));
+        SVN_ERR(svn_client_open_ra_session2(&rb->ra_session,
+                                            rb->ra_session_url, NULL,
+                                            rb->ctx, rb->ra_session_pool,
+                                            pool));
 
       SVN_ERR(svn_ra_rev_proplist(rb->ra_session, log_entry->revision,
                                   &log_entry->revprops, pool));
@@ -288,6 +288,7 @@ svn_client_log5(const apr_array_header_t *targets,
   apr_pool_t *iterpool;
   int i;
   svn_opt_revision_t peg_rev;
+  svn_boolean_t url_targets = FALSE;
 
   if (revision_ranges->nelts == 0)
     {
@@ -412,6 +413,9 @@ svn_client_log5(const apr_array_header_t *targets,
              interested in. */
           APR_ARRAY_PUSH(condensed_targets, const char *) = "";
         }
+
+      /* Remember that our targets are URLs. */
+      url_targets = TRUE;
     }
   else
     {
@@ -479,8 +483,14 @@ svn_client_log5(const apr_array_header_t *targets,
      * we use our initial target path to figure out where to root the RA
      * session, otherwise we use our URL. */
     if (SVN_CLIENT__REVKIND_NEEDS_WC(peg_rev.kind))
-      SVN_ERR(svn_dirent_condense_targets(&ra_target, NULL, targets,
-                                          TRUE, pool, pool));
+      {
+        if (url_targets)
+          SVN_ERR(svn_uri_condense_targets(&ra_target, NULL, targets,
+                                           TRUE, pool, pool));
+        else
+          SVN_ERR(svn_dirent_condense_targets(&ra_target, NULL, targets,
+                                              TRUE, pool, pool));
+      }
     else
       ra_target = url_or_path;
 

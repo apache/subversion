@@ -35,6 +35,7 @@
 
 #include "svn_compat.h"
 #include "svn_private_config.h"  /* For SVN_PATH_LOCAL_SEPARATOR */
+#include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_pools.h"
@@ -52,6 +53,7 @@
 
 #include "private/svn_log.h"
 #include "private/svn_mergeinfo_private.h"
+#include "private/svn_ra_svn_private.h"
 #include "private/svn_fspath.h"
 
 #ifdef HAVE_UNISTD_H
@@ -306,29 +308,35 @@ svn_error_t *load_pwdb_config(server_baton_t *server,
   return SVN_NO_ERROR;
 }
 
-/* Canonicalize ACCESS_FILE based on the type of argument.
- * SERVER baton is used to convert relative paths to absolute paths
- * rooted at the server root. */
-static const char *
-canonicalize_access_file(const char *access_file,
-                         server_baton_t *server,
-                         apr_pool_t *pool)
+/* Canonicalize *ACCESS_FILE based on the type of argument.  Results are
+ * placed in *ACCESS_FILE.  SERVER baton is used to convert relative paths to
+ * absolute paths rooted at the server root.  REPOS_ROOT is used to calculate
+ * an absolute URL for repos-relative URLs. */
+static svn_error_t * 
+canonicalize_access_file(const char **access_file, server_baton_t *server,
+                         const char *repos_root, apr_pool_t *pool)
 {
-  if (svn_path_is_url(access_file))
+  if (svn_path_is_url(*access_file))
     {
-      access_file = svn_uri_canonicalize(access_file, pool);
+      *access_file = svn_uri_canonicalize(*access_file, pool);
     }
-  else if (!svn_path_is_repos_relative_url(access_file))
+  else if (svn_path_is_repos_relative_url(*access_file))
     {
-      access_file = svn_dirent_internal_style(access_file, pool);
-      access_file = svn_dirent_join(server->base, access_file, pool);
+      const char *repos_root_url;
+
+      SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_root_url, repos_root,
+                                               pool));
+      SVN_ERR(svn_path_resolve_repos_relative_url(access_file, *access_file,
+                                                  repos_root_url, pool));
+      *access_file = svn_uri_canonicalize(*access_file, pool);
+    }
+  else
+    {
+      *access_file = svn_dirent_internal_style(*access_file, pool);
+      *access_file = svn_dirent_join(server->base, *access_file, pool);
     }
 
-  /* We don't canonicalize repos relative urls since they get
-   * canonicalized inside svn_repos_authz_read2() when they
-   * are resolved. */
-
-  return access_file;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *load_authz_config(server_baton_t *server,
@@ -352,15 +360,18 @@ svn_error_t *load_authz_config(server_baton_t *server,
       const char *case_force_val;
 
       /* Canonicalize and add the base onto the authzdb_path (if needed). */
-      authzdb_path = canonicalize_access_file(authzdb_path, server, pool);
+      err = canonicalize_access_file(&authzdb_path, server,
+                                     repos_root, pool);
 
       /* Same for the groupsdb_path if it is present. */
-      if (groupsdb_path)
-        groupsdb_path = canonicalize_access_file(groupsdb_path,
-                                                 server, pool);
+      if (groupsdb_path && !err)
+        err = canonicalize_access_file(&groupsdb_path, server,
+                                       repos_root, pool);
 
-      err = svn_repos_authz_read2(&server->authzdb, authzdb_path,
-                                  groupsdb_path, TRUE, repos_root, pool);
+      if (!err)
+        err = svn_repos_authz_read2(&server->authzdb, authzdb_path,
+                                    groupsdb_path, TRUE, pool);
+
       if (err)
         {
           log_server_error(err, server, conn, pool);
@@ -1055,19 +1066,16 @@ get_props(apr_hash_t **props,
                                            path, pool));
       str = svn_string_create(apr_psprintf(pool, "%ld", crev),
                               pool);
-      apr_hash_set(*props, SVN_PROP_ENTRY_COMMITTED_REV, APR_HASH_KEY_STRING,
-                   str);
+      svn_hash_sets(*props, SVN_PROP_ENTRY_COMMITTED_REV, str);
       str = (cdate) ? svn_string_create(cdate, pool) : NULL;
-      apr_hash_set(*props, SVN_PROP_ENTRY_COMMITTED_DATE, APR_HASH_KEY_STRING,
-                   str);
+      svn_hash_sets(*props, SVN_PROP_ENTRY_COMMITTED_DATE, str);
       str = (cauthor) ? svn_string_create(cauthor, pool) : NULL;
-      apr_hash_set(*props, SVN_PROP_ENTRY_LAST_AUTHOR, APR_HASH_KEY_STRING,
-                   str);
+      svn_hash_sets(*props, SVN_PROP_ENTRY_LAST_AUTHOR, str);
 
       /* Hardcode the values for the UUID. */
       SVN_ERR(svn_fs_get_uuid(svn_fs_root_fs(root), &uuid, pool));
       str = (uuid) ? svn_string_create(uuid, pool) : NULL;
-      apr_hash_set(*props, SVN_PROP_ENTRY_UUID, APR_HASH_KEY_STRING, str);
+      svn_hash_sets(*props, SVN_PROP_ENTRY_UUID, str);
     }
 
   /* Get any inherited properties the user is authorized to. */
@@ -1437,14 +1445,14 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   else
     {
       revprop_table = apr_hash_make(pool);
-      apr_hash_set(revprop_table, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
-                   svn_string_create(log_msg, pool));
+      svn_hash_sets(revprop_table, SVN_PROP_REVISION_LOG,
+                    svn_string_create(log_msg, pool));
     }
 
   /* Get author from the baton, making sure clients can't circumvent
      the authentication via the revision props. */
-  apr_hash_set(revprop_table, SVN_PROP_REVISION_AUTHOR, APR_HASH_KEY_STRING,
-               b->user ? svn_string_create(b->user, pool) : NULL);
+  svn_hash_sets(revprop_table, SVN_PROP_REVISION_AUTHOR,
+                b->user ? svn_string_create(b->user, pool) : NULL);
 
   ccb.pool = pool;
   ccb.new_rev = &new_rev;
@@ -2952,8 +2960,7 @@ static svn_error_t *replay_one_revision(svn_ra_svn_conn_t *conn,
   ab.conn = conn;
 
   SVN_ERR(log_command(b, conn, pool,
-                      svn_log__replay(b->fs_path->data, low_water_mark,
-                                      pool)));
+                      svn_log__replay(b->fs_path->data, rev, pool)));
 
   svn_ra_svn_get_editor(&editor, &edit_baton, conn, pool, NULL, NULL);
 
@@ -3506,12 +3513,12 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
 
   /* construct FS configuration parameters */
   b.fs_config = apr_hash_make(pool);
-  apr_hash_set(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
-               APR_HASH_KEY_STRING, params->cache_txdeltas ? "1" : "0");
-  apr_hash_set(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
-               APR_HASH_KEY_STRING, params->cache_fulltexts ? "1" : "0");
-  apr_hash_set(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
-               APR_HASH_KEY_STRING, params->cache_revprops ? "1" : "0");
+  svn_hash_sets(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
+                params->cache_txdeltas ? "1" :"0");
+  svn_hash_sets(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
+                params->cache_fulltexts ? "1" :"0");
+  svn_hash_sets(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
+                params->cache_revprops ? "1" :"0");
 
   /* Send greeting.  We don't support version 1 any more, so we can
    * send an empty mechlist. */

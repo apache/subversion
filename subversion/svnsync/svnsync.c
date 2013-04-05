@@ -19,6 +19,7 @@
  * ====================================================================
  */
 
+#include "svn_hash.h"
 #include "svn_cmdline.h"
 #include "svn_config.h"
 #include "svn_pools.h"
@@ -490,7 +491,7 @@ remove_props_not_in_source(svn_ra_session_t *session,
         continue;
 
       /* Delete property if the name can't be found in SOURCE_PROPS. */
-      if (! apr_hash_get(source_props, propname, APR_HASH_KEY_STRING))
+      if (! svn_hash_gets(source_props, propname))
         SVN_ERR(svn_ra_change_rev_prop2(session, rev, propname, NULL,
                                         NULL, subpool));
     }
@@ -533,7 +534,7 @@ filter_props(int *filtered_count, apr_hash_t *props,
           - matching the include pattern if provided */
       if (!filter || !filter(propname))
         {
-          apr_hash_set(filtered, propname, APR_HASH_KEY_STRING, propval);
+          svn_hash_sets(filtered, propname, propval);
         }
       else
         {
@@ -923,12 +924,9 @@ open_source_session(svn_ra_session_t **from_session,
 
   SVN_ERR(svn_ra_rev_proplist(to_session, 0, &props, pool));
 
-  from_url_str = apr_hash_get(props, SVNSYNC_PROP_FROM_URL,
-                              APR_HASH_KEY_STRING);
-  from_uuid_str = apr_hash_get(props, SVNSYNC_PROP_FROM_UUID,
-                               APR_HASH_KEY_STRING);
-  *last_merged_rev = apr_hash_get(props, SVNSYNC_PROP_LAST_MERGED_REV,
-                                  APR_HASH_KEY_STRING);
+  from_url_str = svn_hash_gets(props, SVNSYNC_PROP_FROM_URL);
+  from_uuid_str = svn_hash_gets(props, SVNSYNC_PROP_FROM_UUID);
+  *last_merged_rev = svn_hash_gets(props, SVNSYNC_PROP_LAST_MERGED_REV);
 
   if (! from_url_str || ! from_uuid_str || ! *last_merged_rev)
     return svn_error_create
@@ -1237,9 +1235,9 @@ replay_rev_started(svn_revnum_t revision,
      have to set it to at least the empty string. If there's a svn:log
      property on this revision, we will write the actual value in the
      replay_rev_finished callback. */
-  if (! apr_hash_get(filtered, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING))
-    apr_hash_set(filtered, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
-                 svn_string_create_empty(pool));
+  if (! svn_hash_gets(filtered, SVN_PROP_REVISION_LOG))
+    svn_hash_sets(filtered, SVN_PROP_REVISION_LOG,
+                  svn_string_create_empty(pool));
 
   /* If necessary, normalize encoding and line ending style. Add the number
      of properties that required EOL normalization to the overall count
@@ -1815,18 +1813,15 @@ info_cmd(apr_getopt_t *os, void *b, apr_pool_t * pool)
 
   SVN_ERR(svn_ra_rev_proplist(to_session, 0, &props, pool));
 
-  from_url = apr_hash_get(props, SVNSYNC_PROP_FROM_URL,
-                          APR_HASH_KEY_STRING);
+  from_url = svn_hash_gets(props, SVNSYNC_PROP_FROM_URL);
 
   if (! from_url)
     return svn_error_createf
       (SVN_ERR_BAD_URL, NULL,
        _("Repository '%s' is not initialized for synchronization"), to_url);
 
-  from_uuid = apr_hash_get(props, SVNSYNC_PROP_FROM_UUID,
-                           APR_HASH_KEY_STRING);
-  last_merged_rev = apr_hash_get(props, SVNSYNC_PROP_LAST_MERGED_REV,
-                                 APR_HASH_KEY_STRING);
+  from_uuid = svn_hash_gets(props, SVNSYNC_PROP_FROM_UUID);
+  last_merged_rev = svn_hash_gets(props, SVNSYNC_PROP_LAST_MERGED_REV);
 
   /* Print the info. */
   SVN_ERR(svn_cmdline_printf(pool, _("Source URL: %s\n"), from_url->data));
@@ -1896,7 +1891,7 @@ main(int argc, const char *argv[])
   const char *password = NULL, *source_password = NULL, *sync_password = NULL;
   apr_array_header_t *config_options = NULL;
   const char *source_prop_encoding = NULL;
-  svn_boolean_t force_interactive;
+  svn_boolean_t force_interactive = FALSE;
 
   if (svn_cmdline_init("svnsync", stderr) != EXIT_SUCCESS)
     {
@@ -2235,8 +2230,7 @@ main(int argc, const char *argv[])
                                             "svnsync: ", "--config-option"));
     }
 
-  config = apr_hash_get(opt_baton.config, SVN_CONFIG_CATEGORY_CONFIG,
-                        APR_HASH_KEY_STRING);
+  config = svn_hash_gets(opt_baton.config, SVN_CONFIG_CATEGORY_CONFIG);
 
   opt_baton.source_prop_encoding = source_prop_encoding;
 

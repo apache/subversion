@@ -28,6 +28,7 @@
 /*** Includes. ***/
 
 #include <apr_pools.h>
+#include "svn_hash.h"
 #include "svn_client.h"
 #include "svn_error.h"
 
@@ -93,8 +94,7 @@ svn_client_create_context2(svn_client_ctx_t **ctx,
   (*ctx)->config = cfg_hash;
 
   if (cfg_hash)
-    cfg_config = apr_hash_get(cfg_hash, SVN_CONFIG_CATEGORY_CONFIG,
-                              APR_HASH_KEY_STRING);
+    cfg_config = svn_hash_gets(cfg_hash, SVN_CONFIG_CATEGORY_CONFIG);
   else
     cfg_config = NULL;
 

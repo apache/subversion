@@ -657,7 +657,8 @@ SVNClient::suggestMergeSources(const char *path, Revision &pegRevision)
 void SVNClient::merge(const char *path1, Revision &revision1,
                       const char *path2, Revision &revision2,
                       const char *localPath, bool forceDelete, svn_depth_t depth,
-                      bool ignoreAncestry, bool dryRun, bool recordOnly)
+                      bool ignoreMergeinfo, bool diffIgnoreAncestry,
+                      bool dryRun, bool recordOnly)
 {
     SVN::Pool subPool(pool);
     SVN_JNI_NULL_PTR_EX(path1, "path1", );
@@ -676,19 +677,20 @@ void SVNClient::merge(const char *path1, Revision &revision1,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_merge4(srcPath1.c_str(), revision1.revision(),
+    SVN_JNI_ERR(svn_client_merge5(srcPath1.c_str(), revision1.revision(),
                                   srcPath2.c_str(), revision2.revision(),
                                   intLocalPath.c_str(),
                                   depth,
-                                  ignoreAncestry, forceDelete, recordOnly,
-                                  dryRun,
+                                  ignoreMergeinfo, diffIgnoreAncestry,
+                                  forceDelete, recordOnly, dryRun,
                                   TRUE, NULL, ctx, subPool.getPool()), );
 }
 
 void SVNClient::merge(const char *path, Revision &pegRevision,
-                      std::vector<RevisionRange> &rangesToMerge,
+                      std::vector<RevisionRange> *rangesToMerge,
                       const char *localPath, bool forceDelete, svn_depth_t depth,
-                      bool ignoreAncestry, bool dryRun, bool recordOnly)
+                      bool ignoreMergeinfo, bool diffIgnoreAncestry,
+                      bool dryRun, bool recordOnly)
 {
     SVN::Pool subPool(pool);
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -704,16 +706,18 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
         return;
 
     apr_array_header_t *ranges =
-      rev_range_vector_to_apr_array(rangesToMerge, subPool);
+      (!rangesToMerge ? NULL
+       : rev_range_vector_to_apr_array(*rangesToMerge, subPool));
     if (JNIUtil::isExceptionThrown())
         return;
 
-    SVN_JNI_ERR(svn_client_merge_peg4(srcPath.c_str(),
+    SVN_JNI_ERR(svn_client_merge_peg5(srcPath.c_str(),
                                       ranges,
                                       pegRevision.revision(),
                                       intLocalPath.c_str(),
                                       depth,
-                                      ignoreAncestry, forceDelete, recordOnly,
+                                      ignoreMergeinfo, diffIgnoreAncestry,
+                                      forceDelete, recordOnly,
                                       dryRun, TRUE, NULL, ctx,
                                       subPool.getPool()), );
 }
@@ -818,6 +822,8 @@ void SVNClient::getMergeinfoLog(int type, const char *pathOrURL,
                                 Revision &pegRevision,
                                 const char *mergeSourceURL,
                                 Revision &srcPegRevision,
+                                Revision &srcStartRevision,
+                                Revision &srcEndRevision,
                                 bool discoverChangedPaths,
                                 svn_depth_t depth,
                                 StringArray &revProps,
@@ -837,18 +843,20 @@ void SVNClient::getMergeinfoLog(int type, const char *pathOrURL,
     Path srcURL(mergeSourceURL, subPool);
     SVN_JNI_ERR(srcURL.error_occurred(), );
 
-    SVN_JNI_ERR(svn_client_mergeinfo_log((type == 1),
-                                         urlPath.c_str(),
-                                         pegRevision.revision(),
-                                         srcURL.c_str(),
-                                         srcPegRevision.revision(),
-                                         LogMessageCallback::callback,
-                                         callback,
-                                         discoverChangedPaths,
-                                         depth,
-                                         revProps.array(subPool),
-                                         ctx,
-                                         subPool.getPool()), );
+    SVN_JNI_ERR(svn_client_mergeinfo_log2((type == 1),
+                                          urlPath.c_str(),
+                                          pegRevision.revision(),
+                                          srcURL.c_str(),
+                                          srcPegRevision.revision(),
+                                          srcStartRevision.revision(),
+                                          srcEndRevision.revision(),
+                                          LogMessageCallback::callback,
+                                          callback,
+                                          discoverChangedPaths,
+                                          depth,
+                                          revProps.array(subPool),
+                                          ctx,
+                                          subPool.getPool()), );
 
     return;
 }

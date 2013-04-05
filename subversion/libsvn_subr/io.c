@@ -51,6 +51,7 @@
 #include <arch/win32/apr_arch_file_io.h>
 #endif
 
+#include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
@@ -2476,7 +2477,7 @@ svn_io_get_dirents3(apr_hash_t **dirents,
               dirent->mtime = this_entry.mtime;
             }
 
-          apr_hash_set(*dirents, name, APR_HASH_KEY_STRING, dirent);
+          svn_hash_sets(*dirents, name, dirent);
         }
     }
 
@@ -2581,7 +2582,7 @@ svn_io_stat_dirent2(const svn_io_dirent2_t **dirent_p,
           else
             SVN_ERR(err);
 
-          if (! apr_hash_get(dirents, requested_name, APR_HASH_KEY_STRING))
+          if (! svn_hash_gets(dirents, requested_name))
             {
               if (ignore_enoent)
                 {
@@ -2824,7 +2825,7 @@ svn_io_run_cmd(const char *path,
 {
   apr_proc_t cmd_proc;
 
-  SVN_ERR(svn_io_start_cmd2(&cmd_proc, path, cmd, args, inherit,
+  SVN_ERR(svn_io_start_cmd3(&cmd_proc, path, cmd, args, NULL, inherit,
                             FALSE, infile, FALSE, outfile, FALSE, errfile,
                             pool));
 
@@ -2994,8 +2995,7 @@ svn_io_run_diff3_3(int *exitcode,
     svn_config_t *cfg;
 
     SVN_ERR(svn_config_get_config(&config, pool));
-    cfg = config ? apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
-                                APR_HASH_KEY_STRING) : NULL;
+    cfg = config ? svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG) : NULL;
     SVN_ERR(svn_config_get_bool(cfg, &has_arg, SVN_CONFIG_SECTION_HELPERS,
                                 SVN_CONFIG_OPTION_DIFF3_HAS_PROGRAM_ARG,
                                 TRUE));
@@ -3111,7 +3111,7 @@ svn_io_parse_mimetypes_file(apr_hash_t **type_map,
                * we know svn_cstring_split() allocated it in 'pool' for us. */
               char *ext = APR_ARRAY_IDX(tokens, i, char *);
               fileext_tolower(ext);
-              apr_hash_set(types, ext, APR_HASH_KEY_STRING, type);
+              svn_hash_sets(types, ext, type);
             }
         }
       if (eof)
@@ -3162,8 +3162,7 @@ svn_io_detect_mimetype2(const char **mimetype,
                          svn_path_splitext sets it to "". */
       svn_path_splitext(NULL, (const char **)&path_ext, file, pool);
       fileext_tolower(path_ext);
-      if ((type_from_map = apr_hash_get(mimetype_map, path_ext,
-                                        APR_HASH_KEY_STRING)))
+      if ((type_from_map = svn_hash_gets(mimetype_map, path_ext)))
         {
           *mimetype = type_from_map;
           return SVN_NO_ERROR;

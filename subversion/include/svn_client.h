@@ -515,10 +515,11 @@ typedef struct svn_client_commit_item3_t
    * When committing a move, this contains the absolute path where
    * the node was directly moved from. (If an ancestor at the original
    * location was moved then it points to where the node itself was
-   * moved, from. Not the original location)
+   * moved from; not the original location.)
    * @since New in 1.8.
    */
   const char *moved_from_abspath;
+
 } svn_client_commit_item3_t;
 
 /** The commit candidate structure.
@@ -1857,8 +1858,9 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  * for it when walking the directory tree. Only the kind of node, including
  * special status is available in @a dirent.
  *
- * Implementations can set @a *filtered to TRUE, to make the import filter the
- * node and (if the node is a directory) all its descendants.
+ * Implementations can set @a *filtered to TRUE, to make the import
+ * process omit the node and (if the node is a directory) all its
+ * descendants.
  *
  * @a scratch_pool can be used for temporary allocations.
  *
@@ -2093,9 +2095,9 @@ svn_client_import(svn_client_commit_info_t **commit_info_p,
  *
  * If @a include_file_externals and/or @a include_dir_externals are #TRUE,
  * also commit all file and/or dir externals (respectively) that are reached
- * by recursion, with these exceptions: Never recurse to externals
- * - that have a fixed revision or
- * - that come from a different repository root URL (dir externals).
+ * by recursion, except for those externals which:
+ *     - have a fixed revision, or
+ *     - come from a different repository root URL (dir externals).
  * These flags affect only recursion; externals that directly appear in @a
  * targets are always included in the commit.
  *
@@ -2140,6 +2142,7 @@ svn_client_commit6(const apr_array_header_t *targets,
 /**
  * Similar to svn_client_commit6(), but passes @a include_file_externals as
  * FALSE and @a include_dir_externals as FALSE.
+ * 
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.7 API.
  */
@@ -3031,8 +3034,10 @@ svn_client_diff6(const apr_array_header_t *diff_options,
                  apr_pool_t *pool);
 
 /** Similar to svn_client_diff6(), but with @a outfile and @a errfile,
- * instead of @a outstream and @a errstream, and always showing property
- * changes and additions.
+ * instead of @a outstream and @a errstream, and with @a
+ * no_diff_added, @a ignore_properties, and @a properties_only always
+ * passed as @c FALSE (which means that additions and property changes
+ * are always transmitted).
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
  * @since New in 1.7.
@@ -3192,9 +3197,11 @@ svn_client_diff_peg6(const apr_array_header_t *diff_options,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
-/** Similar to svn_client_diff_peg6(), but with @a outfile and @a errfile,
- * instead of @a outstream and @a errstream, and always showing property
- * changes.
+/** Similar to svn_client_diff6_peg6(), but with @a outfile and @a errfile,
+ * instead of @a outstream and @a errstream, and with @a
+ * no_diff_added, @a ignore_properties, and @a properties_only always
+ * passed as @c FALSE (which means that additions and property changes
+ * are always transmitted).
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
  * @since New in 1.7.
@@ -3458,7 +3465,7 @@ typedef struct svn_client_automatic_merge_t svn_client_automatic_merge_t;
  * @a allow_switched_subtrees enable merging into a WC that is in any or all
  * of the states described by their names, but only if this function decides
  * that the merge will be in the same direction as the last automatic merge.
- * If, on the other hand, the merge turns out to be in the opposite
+ * If, on the other hand, the last automatic merge was in the opposite
  * direction (that is, if svn_client_automatic_merge_is_reintegrate_like()
  * would return true), then such states of the WC are not allowed regardless
  * of these flags.  This function merely records these flags in the
@@ -3484,8 +3491,9 @@ svn_client_find_automatic_merge(svn_client_automatic_merge_t **merge_p,
 /** Find out what kind of automatic merge would be needed, when the target
  * is only known as a repository location rather than a WC.
  *
- * Like svn_client_find_automatic_merge() except that @a source_path_or_url
- * at @a source_revision should refer to a repository location and not a WC.
+ * Like svn_client_find_automatic_merge() except that the target is
+ * specified by @a target_path_or_url at @a target_revision, which must
+ * refer to a repository location, instead of by a WC path argument.
  *
  * @note The result, @a *merge_p, is not intended for passing to
  * svn_client_do_automatic_merge().
@@ -3512,10 +3520,15 @@ svn_client_find_automatic_merge_no_wc(
 /** Perform an automatic merge.
  *
  * Perform a merge, according to the information stored in @a merge, into
- * the WC at @a target_wcpath.  The @a merge structure would typically come
- * from calling svn_client_find_automatic_merge().
+ * the WC at @a target_wcpath.  The @a merge structure must be obtained
+ * from svn_client_find_automatic_merge().
  *
  * The other parameters are as in svn_client_merge5().
+ *
+ * Return an error if the WC contains local modifications, mixed revisions
+ * and/or switched subtrees, unless such states are allowed by the
+ * corresponding parameters passed to svn_client_find_automatic_merge()
+ * and the required merge is not reintegrate-like.
  *
  * @since New in 1.8.
  */
@@ -3779,10 +3792,23 @@ svn_client_merge_reintegrate(const char *source_path_or_url,
                              apr_pool_t *pool);
 
 /**
- * Merge the changes between the filesystem object @a source_path_or_url in peg
- * revision @a source_peg_revision, as it changed between the ranges described
- * in @a ranges_to_merge.
+ * Merge changes from the source branch identified by
+ * @a source_path_or_url in peg revision @a source_peg_revision,
+ * into the target branch working copy at @a target_wcpath.
  *
+ * If @a ranges_to_merge is NULL then perform an automatic merge of
+ * all the eligible changes up to @a source_peg_revision.  Do this in
+ * the same way as calling svn_client_find_automatic_merge() and then
+ * svn_client_do_automatic_merge().  If the merge is determined to be
+ * of the 'reintegrate' kind, then return an error if the WC contains
+ * mixed revisions, local modifications and/or switched subtrees; if
+ * the merge is determined to be of the non-reintegrate kind, then
+ * return an error if @a allow_mixed_rev is false and the WC contains
+ * mixed revisions.
+ *
+ * If @a ranges_to_merge is not NULL then merge the changes specified
+ * by the revision ranges in @a ranges_to_merge, or, when honouring
+ * mergeinfo, only the eligible parts of those revision ranges.
  * @a ranges_to_merge is an array of <tt>svn_opt_revision_range_t
  * *</tt> ranges.  These ranges may describe additive and/or
  * subtractive merge ranges, they may overlap fully or partially,
@@ -3790,6 +3816,8 @@ svn_client_merge_reintegrate(const char *source_path_or_url,
  * rangelist is not required to be sorted.  If any revision in the
  * list of provided ranges has an `unspecified' or unrecognized
  * `kind', return #SVN_ERR_CLIENT_BAD_REVISION.
+ *
+ * If @a ranges_to_merge is an empty array, then do nothing.
  *
  * All other options are handled identically to svn_client_merge5().
  *
@@ -3812,7 +3840,8 @@ svn_client_merge_peg5(const char *source_path_or_url,
                       apr_pool_t *pool);
 
 /**
- * Similar to svn_client_merge_peg5(), but the single @a ignore_ancestry
+ * Similar to svn_client_merge_peg5(), but automatic merge is not available
+ * (@a ranges_to_merge must not be NULL), and the single @a ignore_ancestry
  * parameter maps to both @c ignore_mergeinfo and @c diff_ignore_ancestry.
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
@@ -3971,6 +4000,9 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
  * @c svn_opt_revision_unspecified, no bounding occurs and the entire
  * history of the merge source (up to @a source_peg_revision, per the
  * typical default peg/operative revision behaviors) is considered.
+ * If @a source_start_revision is younger than @a source_end_revision,
+ * then @a receiver is called from youngest to oldest revisions.
+ * Otherwise @a receiver is called from oldest to youngest revisions.
  *
  * If @a depth is #svn_depth_empty consider only the explicit or
  * inherited mergeinfo on @a target_path_or_url when calculating merged
@@ -4607,8 +4639,8 @@ svn_client_move7(const apr_array_header_t *src_paths,
                  apr_pool_t *pool);
 
 /**
- * Similar to svn_client_move7(), but with allow_mixed_revisions always
- * set to @c TRUE and record_only always to @c FALSE.
+ * Similar to svn_client_move7(), but with @a allow_mixed_revisions always
+ * set to @c TRUE and @a metadata_only always to @c FALSE.
  *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.7 API.
@@ -4985,8 +5017,9 @@ svn_client_revprop_set(const char *propname,
  * #svn_prop_inherited_item_t->path_or_url members are absolute working copy
  * paths.
  *
- * Allocate @a *props, its keys, and its values in @a pool, use
- * @a scratch_pool for temporary allocations.
+ * Allocate @a *props (including keys and values) and @a *inherited_props
+ * (including its elements) in @a result_pool, use @a scratch_pool for
+ * temporary allocations.
  *
  * @a target is a WC absolute path or a URL.
  *
@@ -5040,8 +5073,8 @@ svn_client_propget5(apr_hash_t **props,
                     apr_pool_t *scratch_pool);
 
 /**
- * Similar to svn_client_propget5 but doesn't support the retrieval of the
- * properties inherited by @a target.
+ * Similar to svn_client_propget5 but with @a inherited_props always
+ * passed as NULL.
  *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.8 API.
@@ -5200,9 +5233,9 @@ svn_client_proplist4(const char *target,
                      apr_pool_t *scratch_pool);
 
 /**
- * Similar to svn_client_proplist4(), except that the @a receiver type is
- * a #svn_proplist_receiver_t and there is no support for finding the
- * inherited properties for @a target and there is no separate scratch pool.
+ * Similar to svn_client_proplist4(), except that the @a receiver type
+ * is a #svn_proplist_receiver_t, @a get_target_inherited_props is
+ * always passed NULL, and there is no separate scratch pool.
  *
  * @since New in 1.5.
  *
@@ -5477,7 +5510,7 @@ svn_client_export(svn_revnum_t *result_rev,
  * Moreover, we will never mix items which are part of separate
  * externals, and will always finish listing an external before listing
  * the next one.
-
+ *
  * @a scratch_pool may be used for temporary allocations.
  *
  * @since New in 1.8.
@@ -5560,8 +5593,8 @@ svn_client_list3(const char *path_or_url,
                  apr_pool_t *pool);
 
 
-/** Similar to svn_client_list3(), but with @a include_externals set to FALSE, 
- * and using a #svn_client_list_func_t as callback.
+/** Similar to svn_client_list3(), but with @a include_externals set
+ * to FALSE, and using a #svn_client_list_func_t as callback.
  *
  * @deprecated Provided for backwards compatibility with the 1.7 API.
  *
@@ -6505,7 +6538,7 @@ svn_client_uuid_from_path(const char **uuid,
  * If @a wri_abspath is not NULL, use the working copy identified by @a
  * wri_abspath to potentially avoid transferring unneeded data.
  *
- * @note This function is similar to svn_ra_open3(), but the caller avoids
+ * @note This function is similar to svn_ra_open4(), but the caller avoids
  * having to providing its own callback functions.
  * @since New in 1.8.
  */
@@ -6517,8 +6550,9 @@ svn_client_open_ra_session2(svn_ra_session_t **session,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
-/** Similar to svn_client_open_ra_session(), but doesn't allow passing a
- * working copy path.
+/** Similar to svn_client_open_ra_session(), but with @ wri_abspath
+ * always passed as NULL, and with the same pool used as both @a
+ * result_pool and @a scratch_pool.
  *
  * @since New in 1.3.
  * @deprecated Provided for backward compatibility with the 1.7 API.

@@ -163,9 +163,6 @@ svn_cl__update(apr_getopt_t *os,
   ctx->notify_func2 = svn_cl__check_externals_failed_notify_wrapper;
   ctx->notify_baton2 = &nwb;
 
-  /* Postpone conflict resolution during the update operation.
-   * If any conflicts occur we'll run the conflict resolver later. */
-
   SVN_ERR(svn_client_update4(&result_revs, targets,
                              &(opt_state->start_revision),
                              depth, depth_is_sticky,
@@ -194,12 +191,6 @@ svn_cl__update(apr_getopt_t *os,
       if (err)
         return svn_error_compose_create(externals_err, err);
     }
-
-  err = svn_cl__resolve_postponed_conflicts(NULL,
-                                            ctx->conflict_baton2,
-                                            opt_state->accept_which,
-                                            opt_state->editor_cmd,
-                                            ctx, scratch_pool);
 
   return svn_error_compose_create(externals_err, err);
 }

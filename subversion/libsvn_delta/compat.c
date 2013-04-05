@@ -205,8 +205,7 @@ static struct change_node *
 locate_change(struct ev2_edit_baton *eb,
               const char *relpath)
 {
-  struct change_node *change = apr_hash_get(eb->changes, relpath,
-                                            APR_HASH_KEY_STRING);
+  struct change_node *change = svn_hash_gets(eb->changes, relpath);
 
   if (change != NULL)
     return change;
@@ -220,7 +219,7 @@ locate_change(struct ev2_edit_baton *eb,
   change->changing = SVN_INVALID_REVNUM;
   change->deleting = SVN_INVALID_REVNUM;
 
-  apr_hash_set(eb->changes, relpath, APR_HASH_KEY_STRING, change);
+  svn_hash_sets(eb->changes, relpath, change);
 
   return change;
 }
@@ -270,11 +269,11 @@ apply_propedit(struct ev2_edit_baton *eb,
     }
 
   if (value == NULL)
-    apr_hash_set(change->props, name, APR_HASH_KEY_STRING, NULL);
+    svn_hash_sets(change->props, name, NULL);
   else
-    apr_hash_set(change->props,
-                 apr_pstrdup(eb->edit_pool, name), APR_HASH_KEY_STRING,
-                 svn_string_dup(value, eb->edit_pool));
+    svn_hash_sets(change->props,
+                  apr_pstrdup(eb->edit_pool, name),
+                  svn_string_dup(value, eb->edit_pool));
 
   return SVN_NO_ERROR;
 }
@@ -462,9 +461,8 @@ run_ev2_actions(struct ev2_edit_baton *eb,
       const char *repos_relpath = APR_ARRAY_IDX(eb->path_order,
                                                 eb->paths_processed,
                                                 const char *);
-      const struct change_node *change = apr_hash_get(eb->changes,
-                                                      repos_relpath,
-                                                      APR_HASH_KEY_STRING);
+      const struct change_node *change = svn_hash_gets(eb->changes,
+                                                       repos_relpath);
 
       svn_pool_clear(iterpool);
 
@@ -1037,7 +1035,7 @@ insert_change(const char *relpath,
   apr_pool_t *result_pool;
   struct change_node *change;
 
-  change = apr_hash_get(changes, relpath, APR_HASH_KEY_STRING);
+  change = svn_hash_gets(changes, relpath);
   if (change != NULL)
     return change;
 
@@ -1048,9 +1046,7 @@ insert_change(const char *relpath,
   change->changing = SVN_INVALID_REVNUM;
   change->deleting = SVN_INVALID_REVNUM;
 
-  apr_hash_set(changes,
-               apr_pstrdup(result_pool, relpath), APR_HASH_KEY_STRING,
-               change);
+  svn_hash_sets(changes, apr_pstrdup(result_pool, relpath), change);
 
   return change;
 }
@@ -1574,7 +1570,7 @@ apply_change(void **dir_baton,
   *dir_baton = NULL;
 
   relpath = svn_relpath_join(eb->base_relpath, ev1_relpath, scratch_pool);
-  change = apr_hash_get(eb->changes, relpath, APR_HASH_KEY_STRING);
+  change = svn_hash_gets(eb->changes, relpath);
 
   /* The callback should only be called for paths in CHANGES.  */
   SVN_ERR_ASSERT(change != NULL);

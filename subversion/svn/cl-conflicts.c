@@ -22,6 +22,7 @@
  */
 
 #include "cl-conflicts.h"
+#include "svn_hash.h"
 #include "svn_xml.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
@@ -161,23 +162,20 @@ add_conflict_version_xml(svn_stringbuf_t **pstr,
   apr_hash_t *att_hash = apr_hash_make(pool);
 
 
-  apr_hash_set(att_hash, "side", APR_HASH_KEY_STRING, side);
+  svn_hash_sets(att_hash, "side", side);
 
   if (version->repos_url)
-    apr_hash_set(att_hash, "repos-url", APR_HASH_KEY_STRING,
-                 version->repos_url);
+    svn_hash_sets(att_hash, "repos-url", version->repos_url);
 
   if (version->path_in_repos)
-    apr_hash_set(att_hash, "path-in-repos", APR_HASH_KEY_STRING,
-                 version->path_in_repos);
+    svn_hash_sets(att_hash, "path-in-repos", version->path_in_repos);
 
   if (SVN_IS_VALID_REVNUM(version->peg_rev))
-    apr_hash_set(att_hash, "revision", APR_HASH_KEY_STRING,
-                 apr_ltoa(pool, version->peg_rev));
+    svn_hash_sets(att_hash, "revision", apr_ltoa(pool, version->peg_rev));
 
   if (version->node_kind != svn_node_unknown)
-    apr_hash_set(att_hash, "kind", APR_HASH_KEY_STRING,
-                 svn_cl__node_kind_str_xml(version->node_kind));
+    svn_hash_sets(att_hash, "kind",
+                  svn_cl__node_kind_str_xml(version->node_kind));
 
   svn_xml_make_open_tag_hash(pstr, pool, svn_xml_self_closing,
                              "version", att_hash);
@@ -193,20 +191,20 @@ append_tree_conflict_info_xml(svn_stringbuf_t *str,
   apr_hash_t *att_hash = apr_hash_make(pool);
   const char *tmp;
 
-  apr_hash_set(att_hash, "victim", APR_HASH_KEY_STRING,
-               svn_dirent_basename(conflict->local_abspath, pool));
+  svn_hash_sets(att_hash, "victim",
+                svn_dirent_basename(conflict->local_abspath, pool));
 
-  apr_hash_set(att_hash, "kind", APR_HASH_KEY_STRING,
-               svn_cl__node_kind_str_xml(conflict->node_kind));
+  svn_hash_sets(att_hash, "kind",
+                svn_cl__node_kind_str_xml(conflict->node_kind));
 
-  apr_hash_set(att_hash, "operation", APR_HASH_KEY_STRING,
-               svn_cl__operation_str_xml(conflict->operation, pool));
+  svn_hash_sets(att_hash, "operation",
+                svn_cl__operation_str_xml(conflict->operation, pool));
 
   tmp = svn_token__to_word(map_conflict_action_xml, conflict->action);
-  apr_hash_set(att_hash, "action", APR_HASH_KEY_STRING, tmp);
+  svn_hash_sets(att_hash, "action", tmp);
 
   tmp = svn_token__to_word(map_conflict_reason_xml, conflict->reason);
-  apr_hash_set(att_hash, "reason", APR_HASH_KEY_STRING, tmp);
+  svn_hash_sets(att_hash, "reason", tmp);
 
   /* Open the tree-conflict tag. */
   svn_xml_make_open_tag_hash(&str, pool, svn_xml_normal,
@@ -247,15 +245,15 @@ svn_cl__append_conflict_info_xml(svn_stringbuf_t *str,
 
   att_hash = apr_hash_make(scratch_pool);
 
-  apr_hash_set(att_hash, "operation", APR_HASH_KEY_STRING,
-               svn_cl__operation_str_xml(conflict->operation, scratch_pool));
+  svn_hash_sets(att_hash, "operation",
+                svn_cl__operation_str_xml(conflict->operation, scratch_pool));
 
 
   kind = svn_token__to_word(map_conflict_kind_xml, conflict->kind);
-  apr_hash_set(att_hash, "type", APR_HASH_KEY_STRING, kind);
+  svn_hash_sets(att_hash, "type", kind);
 
-  apr_hash_set(att_hash, "operation", APR_HASH_KEY_STRING,
-               svn_cl__operation_str_xml(conflict->operation, scratch_pool));
+  svn_hash_sets(att_hash, "operation",
+                svn_cl__operation_str_xml(conflict->operation, scratch_pool));
 
 
   /* "<conflict>" */

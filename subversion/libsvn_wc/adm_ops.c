@@ -55,6 +55,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_dep_compat.h"
 
 
 struct svn_wc_committed_queue_t
@@ -296,7 +297,7 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
           this_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
           sha1_checksum = NULL;
-          cqi = apr_hash_get(queue->queue, this_abspath, APR_HASH_KEY_STRING);
+          cqi = svn_hash_gets(queue->queue, this_abspath);
 
           if (cqi != NULL)
             sha1_checksum = cqi->sha1_checksum;
@@ -341,7 +342,7 @@ svn_wc__prop_array_to_hash(const apr_array_header_t *props,
     {
       const svn_prop_t *prop = APR_ARRAY_IDX(props, i, const svn_prop_t *);
       if (prop->value != NULL)
-        apr_hash_set(prophash, prop->name, APR_HASH_KEY_STRING, prop->value);
+        svn_hash_sets(prophash, prop->name, prop->value);
     }
 
   return prophash;
@@ -392,7 +393,7 @@ svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
   cqi->sha1_checksum = sha1_checksum;
   cqi->new_dav_cache = svn_wc__prop_array_to_hash(wcprop_changes, queue->pool);
 
-  apr_hash_set(queue->queue, local_abspath, APR_HASH_KEY_STRING, cqi);
+  svn_hash_sets(queue->queue, local_abspath, cqi);
 
   return SVN_NO_ERROR;
 }
@@ -487,16 +488,15 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
                                     wc_ctx->db, cqi->local_abspath,
                                     iterpool, iterpool));
 
-      if (! apr_hash_get(run_wqs, wcroot_abspath, APR_HASH_KEY_STRING))
+      if (! svn_hash_gets(run_wqs, wcroot_abspath))
         {
           wcroot_abspath = apr_pstrdup(scratch_pool, wcroot_abspath);
-          apr_hash_set(run_wqs, wcroot_abspath, APR_HASH_KEY_STRING,
-                       wcroot_abspath);
+          svn_hash_sets(run_wqs, wcroot_abspath, wcroot_abspath);
         }
     }
 
   /* Make sure nothing happens if this function is called again.  */
-  SVN_ERR(svn_hash__clear(queue->queue, iterpool));
+  apr_hash_clear(queue->queue);
 
   /* Ok; everything is committed now. Now we can start calling callbacks */
 
@@ -1385,8 +1385,7 @@ svn_wc__internal_changelist_match(svn_wc__db_t *db,
     }
 
   return (changelist
-            && apr_hash_get((apr_hash_t *)clhash, changelist,
-                            APR_HASH_KEY_STRING) != NULL);
+            && svn_hash_gets((apr_hash_t *)clhash, changelist) != NULL);
 }
 
 

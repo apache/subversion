@@ -360,7 +360,7 @@ deserialize_dir(void *buffer, hash_data_t *hash_data, apr_pool_t *pool)
       svn_fs_fs__id_deserialize(entry, (svn_fs_id_t **)&entry->id);
 
       /* add the entry to the hash */
-      apr_hash_set(result, entry->name, APR_HASH_KEY_STRING, entry);
+      svn_hash_sets(result, entry->name, entry);
     }
 
   /* return the now complete hash */
@@ -949,10 +949,7 @@ slowly_replace_dir_entry(void **data,
                                              *data,
                                              hash_data->len,
                                              pool));
-  apr_hash_set(dir,
-               replace_baton->name,
-               APR_HASH_KEY_STRING,
-               replace_baton->new_entry);
+  svn_hash_sets(dir, replace_baton->name, replace_baton->new_entry);
 
   return svn_fs_fs__serialize_dir_entries(data, data_len, dir, pool);
 }

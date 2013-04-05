@@ -248,7 +248,7 @@ typedef enum svn_repos_notify_action_t
   svn_repos_notify_load_skipped_rev,
 
   /** The structure of a revision is being verified.  @since New in 1.8. */
-  svn_repos_notify_verify_struc_rev,
+  svn_repos_notify_verify_rev_structure,
 
   /** A revision is found with corruption/errors. @since New in 1.8. */
   svn_repos_notify_failure
@@ -544,8 +544,8 @@ svn_repos_hotcopy2(const char *src_path,
                    apr_pool_t *pool);
 
 /**
- * Like svn_repos_hotcopy2(), but without the @a incremental parameter
- * and without cancellation support.
+ * Like svn_repos_hotcopy2(), but with @a incremental always passed as
+ * @c FALSE and without cancellation support.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
@@ -666,11 +666,11 @@ svn_repos_recover(const char *path,
 
 /**
  * Take an exclusive lock on each of the repositories in @a paths to
- * prevent commits and then while holding all the locks invoke
- * @a freeze_body passing @a baton.  The repositories may be readable
- * by Subversion while frozen, or it may be unreadable, depending on
- * which FS backend the repository uses.  Repositories are locked
- * in array order from zero.
+ * prevent commits and then while holding all the locks invoke @a
+ * freeze_body passing @a baton.  Each repository may be readable by
+ * Subversion while frozen, or may be unreadable, depending on which
+ * FS backend the repository uses.  Repositories are locked in the
+ * order in which they are specified in the array.
  *
  * @since New in 1.8.
  */
@@ -791,20 +791,23 @@ const char *
 svn_repos_post_unlock_hook(svn_repos_t *repos,
                            apr_pool_t *pool);
 
-/** Set the environment that @a repos's hooks will inherit.
- * The environment is specified in a file at @a hooks_env_path.
- * If @a hooks_env_path is @c NULL, the file is searched at its
- * default location in the repository. If @a hooks_env_path is
- * not absolute, it specifies a path relative to the parent of
- * the file's default location in the repository.
+/** Specify that Subversion should consult the configuration file
+ * located at @a hooks_env_path to determine how to setup the
+ * environment for hook scripts invoked for the repository @a repos.
+ * As a special case, if @a hooks_env_path is @c NULL, look for the
+ * file in its default location within the repository disk structure.
+ * If @a hooks_env_path is not absolute, it specifies a path relative
+ * to the parent of the file's default location.
  *
- * The @a result_pool should be the same pool that @a repos was allocated in.
- * The @a scratch_pool is used for temporary allocations.
+ * @a result_pool should be the same pool that @a repos was allocated in.
+ * Use @a scratch_pool for temporary allocations.
  *
- * If this function is not called, or if the file does not list any
- * environment variables, hooks will run in an empty environment.
+ * If this function is not called, or if the specified configuration
+ * file does not define any environment variables, hooks will run in
+ * an empty environment.
  *
- * @since New in 1.8. */
+ * @since New in 1.8.
+ */
 svn_error_t *
 svn_repos_hooks_setenv(svn_repos_t *repos,
                        const char *hooks_env_path,
@@ -855,12 +858,13 @@ svn_repos_hooks_setenv(svn_repos_t *repos,
  * avoid sending data through @a editor/@a edit_baton which is not
  * authorized for transmission.
  *
- * @a zero_copy_limit controls up to which size in bytes data blocks may
- * be sent using the zero-copy code path.  On that path, a number of
- * in-memory copy operations have been eliminated to maximize throughput.
- * However, until the whole block has been pushed to the network stack,
- * other clients may get blocked.  Thus, be careful when using larger
- * values here.  0 disables the optimization.
+ * @a zero_copy_limit controls the maximum size (in bytes) at which
+ * data blocks may be sent using the zero-copy code path.  On that
+ * path, a number of in-memory copy operations have been eliminated to
+ * maximize throughput.  However, until the whole block has been
+ * pushed to the network stack, other clients block, so be careful
+ * when using larger values here.  Pass 0 for @a zero_copy_limit to
+ * disable this optimization altogether.
  *
  * @a note Never activate this optimization if @a editor might access
  * any FSFS data structures (and, hence, caches).  So, it is basically
@@ -919,8 +923,8 @@ svn_repos_begin_report3(void **report_baton,
                         apr_pool_t *pool);
 
 /**
- * The same as svn_repos_begin_report3(), but setting the @a zero_copy_limit
- * to 0.
+ * The same as svn_repos_begin_report3(), but with @a zero_copy_limit
+ * always passed as 0.
  *
  * @since New in 1.5.
  * 
@@ -1227,6 +1231,8 @@ svn_repos_abort_report(void *report_baton,
  * ### reporter instead; there are some stray references to the
  * ### svn_repos_dir_delta[2] in comments which should probably
  * ### actually refer to the reporter.
+ *
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_repos_dir_delta2(svn_fs_root_t *src_root,
@@ -2532,7 +2538,8 @@ svn_repos_node_from_baton(void *edit_baton);
  * through the @c HEAD revision.
  *
  * For every verified revision call @a notify_func with @a rev set to
- * the verified revision and @a warning_text @c NULL.
+ * the verified revision and @a warning_text @c NULL. For warnings call @a
+ * notify_func with @a warning_text set.
  *
  * For every revision verification failure, if @a notify_func is not @c NULL,
  * call @a notify_func with @a rev set to the corrupt revision and @err set to
@@ -2559,11 +2566,9 @@ svn_repos_verify_fs3(svn_repos_t *repos,
                      svn_cancel_func_t cancel,
                      void *cancel_baton,
                      apr_pool_t *scratch_pool);
-
 /**
  * Like svn_repos_verify_fs3(), but with @a keep_going set to @c FALSE.
  * @since New in 1.7.
- * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -2722,13 +2727,6 @@ svn_repos_dump_fs(svn_repos_t *repos,
  * If @a cancel_func is not @c NULL, it is called periodically with
  * @a cancel_baton as argument to see if the client wishes to cancel
  * the load.
- *
- * @note If @a start_rev and @a end_rev are valid revisions, this
- * function presumes the revisions as numbered in @a dumpstream only
- * increase from the beginning of the stream to the end.  Gaps in the
- * number sequence are ignored, but upon finding a revision number
- * younger than the specified range, this function may stop loading
- * new revisions regardless of their number.
  *
  * @since New in 1.8.
  */
@@ -2978,13 +2976,6 @@ svn_repos_parse_dumpstream3(svn_stream_t *stream,
  * loaded nodes, from root to @a parent_dir.  The directory @a parent_dir
  * must be an existing directory in the repository.
  *
- * @note If @a start_rev and @a end_rev are valid revisions, this
- * function presumes the revisions as numbered in @a dumpstream only
- * increase from the beginning of the stream to the end.  Gaps in the
- * number sequence are ignored, but upon finding a revision number
- * younger than the specified range, this function may stop loading
- * new revisions regardless of their number.
- *
  * @since New in 1.8.
  */
 svn_error_t *
@@ -3194,10 +3185,32 @@ svn_repos_get_fs_build_parser(const svn_repos_parser_fns_t **parser,
  */
 typedef struct svn_authz_t svn_authz_t;
 
+/**
+ * Read authz configuration data from @a path (a dirent, an absolute file url
+ * or a registry path) into @a *authz_p, allocated in @a pool.
+ *
+ * If @a groups_path (a dirent, an absolute file url, or a registry path) is
+ * set, use the global groups parsed from it.
+ *
+ * If @a path or @a groups_path is not a valid authz rule file, then return
+ * #SVN_ERR_AUTHZ_INVALID_CONFIG.  The contents of @a *authz_p is then
+ * undefined.  If @a must_exist is TRUE, a missing authz or groups file
+ * is also an error other than #SVN_ERR_AUTHZ_INVALID_CONFIG (exact error
+ * depends on the access type).
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_repos_authz_read2(svn_authz_t **authz_p,
+                      const char *path,
+                      const char *groups_path,
+                      svn_boolean_t must_exist,
+                      apr_pool_t *pool);
+
+
 /** 
- * Similar to svn_repos_authz_read2(), but without support for
- * authz files stored in a Subversion repository (absolute or
- * relative URLs) and without the @a repos_root argument.
+ * Similar to svn_repos_authz_read2(), but with @a groups_path and @a
+ * repos_root always passed as @c NULL.
  *
  * @since New in 1.3.
  * @deprecated Provided for backward compatibility with the 1.7 API.
@@ -3210,41 +3223,12 @@ svn_repos_authz_read(svn_authz_t **authz_p,
                      apr_pool_t *pool);
 
 /**
- * Read authz configuration data from @a path (a file, repos relative
- * url, an absolute file url, or a registry path) into @a *authz_p,
- * allocated in @a pool.
- *
- * If @a groups_path (a file, repos relative url, an absolute file url,
- * or a registry path) is set, use the global groups parsed from it.
- *
- * If @a path or @a groups_path is not a valid authz rule file, then return
- * #SVN_ERR_AUTHZ_INVALID_CONFIG.  The contents of @a *authz_p is then
- * undefined.  If @a must_exist is TRUE, a missing authz or groups file
- * is also an error other than #SVN_ERR_AUTHZ_INVALID_CONFIG (exact error
- * depends on the access type).
- *
- * If @a path is a repos relative URL then @a repos_root must be set to
- * the root of the repository the authz configuration will be used with.
- * The same applies to @a groups_path if it is being used.
- *
- * @since New in 1.8
- */
-svn_error_t *
-svn_repos_authz_read2(svn_authz_t **authz_p,
-                      const char *path,
-                      const char *groups_path,
-                      svn_boolean_t must_exist,
-                      const char *repos_root,
-                      apr_pool_t *pool);
-
-
-/**
  * Read authz configuration data from @a stream into @a *authz_p,
  * allocated in @a pool.
  *
  * If @a groups_stream is set, use the global groups parsed from it.
  *
- * @since New in 1.8
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_repos_authz_parse(svn_authz_t **authz_p,

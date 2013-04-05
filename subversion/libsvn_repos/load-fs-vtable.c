@@ -23,6 +23,7 @@
 
 
 #include "svn_private_config.h"
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
@@ -213,7 +214,7 @@ prefix_mergeinfo_paths(svn_string_t **mergeinfo_val,
       path = svn_fspath__canonicalize(svn_relpath_join(parent_dir,
                                                        merge_source, pool),
                                       pool);
-      apr_hash_set(prefixed_mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
+      svn_hash_sets(prefixed_mergeinfo, path, rangelist);
     }
   return svn_mergeinfo_to_string(mergeinfo_val, prefixed_mergeinfo, pool);
 }
@@ -321,8 +322,7 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
           if (SVN_IS_VALID_REVNUM(rev_from_map))
             range->end = rev_from_map;
         }
-      apr_hash_set(final_mergeinfo, merge_source,
-                   APR_HASH_KEY_STRING, rangelist);
+      svn_hash_sets(final_mergeinfo, merge_source, rangelist);
     }
 
   if (predates_stream_mergeinfo)
@@ -366,8 +366,7 @@ make_node_baton(struct node_baton **node_baton_p,
   nb->kind = svn_node_unknown;
 
   /* Then add info from the headers.  */
-  if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_NODE_PATH,
-                          APR_HASH_KEY_STRING)))
+  if ((val = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_NODE_PATH)))
   {
     val = svn_relpath_canonicalize(val, pool);
     if (rb->pb->parent_dir)
@@ -376,8 +375,7 @@ make_node_baton(struct node_baton **node_baton_p,
       nb->path = val;
   }
 
-  if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_NODE_KIND,
-                          APR_HASH_KEY_STRING)))
+  if ((val = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_NODE_KIND)))
     {
       if (! strcmp(val, "file"))
         nb->kind = svn_node_file;
@@ -386,8 +384,7 @@ make_node_baton(struct node_baton **node_baton_p,
     }
 
   nb->action = (enum svn_node_action)(-1);  /* an invalid action code */
-  if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_NODE_ACTION,
-                          APR_HASH_KEY_STRING)))
+  if ((val = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_NODE_ACTION)))
     {
       if (! strcmp(val, "change"))
         nb->action = svn_node_action_change;
@@ -400,13 +397,11 @@ make_node_baton(struct node_baton **node_baton_p,
     }
 
   nb->copyfrom_rev = SVN_INVALID_REVNUM;
-  if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV,
-                          APR_HASH_KEY_STRING)))
+  if ((val = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV)))
     {
       nb->copyfrom_rev = SVN_STR_TO_REV(val);
     }
-  if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
-                          APR_HASH_KEY_STRING)))
+  if ((val = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH)))
     {
       val = svn_relpath_canonicalize(val, pool);
       if (rb->pb->parent_dir)
@@ -415,22 +410,21 @@ make_node_baton(struct node_baton **node_baton_p,
         nb->copyfrom_path = val;
     }
 
-  if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_TEXT_CONTENT_CHECKSUM,
-                          APR_HASH_KEY_STRING)))
+  if ((val = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_TEXT_CONTENT_CHECKSUM)))
     {
       SVN_ERR(svn_checksum_parse_hex(&nb->result_checksum, svn_checksum_md5,
                                      val, pool));
     }
 
-  if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_CHECKSUM,
-                          APR_HASH_KEY_STRING)))
+  if ((val = svn_hash_gets(headers,
+                           SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_CHECKSUM)))
     {
       SVN_ERR(svn_checksum_parse_hex(&nb->base_checksum, svn_checksum_md5, val,
                                      pool));
     }
 
-  if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_CHECKSUM,
-                          APR_HASH_KEY_STRING)))
+  if ((val = svn_hash_gets(headers,
+                           SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_CHECKSUM)))
     {
       SVN_ERR(svn_checksum_parse_hex(&nb->copy_source_checksum,
                                      svn_checksum_md5, val, pool));
@@ -455,8 +449,7 @@ make_revision_baton(apr_hash_t *headers,
   rb->pool = pool;
   rb->rev = SVN_INVALID_REVNUM;
 
-  if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER,
-                          APR_HASH_KEY_STRING)))
+  if ((val = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER)))
     {
       rb->rev = SVN_STR_TO_REV(val);
 
@@ -481,6 +474,18 @@ new_revision_record(void **revision_baton,
   svn_revnum_t head_rev;
 
   rb = make_revision_baton(headers, pb, pool);
+
+  /* ### If we're filtering revisions, and this is one we've skipped,
+     ### and we've skipped it because it has a revision number younger
+     ### than the youngest in our acceptable range, then should we
+     ### just bail out here? */
+  /*
+  if (rb->skipped && (rb->rev > pb->end_rev))
+    return svn_error_createf(SVN_ERR_CEASE_INVOCATION, 0,
+                             _("Finished processing acceptable load "
+                               "revision range"));
+  */
+
   SVN_ERR(svn_fs_youngest_rev(&head_rev, pb->fs, pool));
 
   /* FIXME: This is a lame fallback loading multiple segments of dump in

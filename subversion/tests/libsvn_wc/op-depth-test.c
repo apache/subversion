@@ -7922,6 +7922,119 @@ move_retract(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+move_delete_file_externals(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "move_delete_file_externals", opts,
+                                   pool));
+
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
+  sbox_file_write(&b, "f", "New file");
+  SVN_ERR(sbox_wc_add(&b, "f"));
+  SVN_ERR(sbox_wc_propset(&b, "svn:externals", "^/f B/P/g", "A"));
+  SVN_ERR(sbox_wc_propset(&b, "svn:externals", "^/f Q/g\n^/f g", "A/B"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",        "normal",       1, ""},
+      {0, "A",       "normal",       1, "A"},
+      {0, "A/B",     "normal",       1, "A/B"},
+      {0, "f",       "normal",       1, "f"},
+      {0, "A/B/g",   "normal",       1, "f", TRUE},
+      {0, "A/B/P/g", "normal",       1, "f", TRUE},
+      {0, "A/B/Q/g", "normal",       1, "f", TRUE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Delete removes the file external rows. */
+  SVN_ERR(sbox_wc_delete(&b, "A"));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",    "normal",       1, ""},
+      {0, "A",   "normal",       1, "A"},
+      {0, "A/B", "normal",       1, "A/B"},
+      {0, "f",   "normal",       1, "f"},
+      {1, "A",   "base-deleted", NO_COPY_FROM},
+      {1, "A/B", "base-deleted", NO_COPY_FROM},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Revert doesn't restore the file external rows... */
+  SVN_ERR(sbox_wc_revert(&b, "A", svn_depth_infinity));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",    "normal",       1, ""},
+      {0, "A",   "normal",       1, "A"},
+      {0, "A/B", "normal",       1, "A/B"},
+      {0, "f",   "normal",       1, "f"},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+  /* ... but update does. */
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",        "normal",       1, ""},
+      {0, "A",       "normal",       1, "A"},
+      {0, "A/B",     "normal",       1, "A/B"},
+      {0, "f",       "normal",       1, "f"},
+      {0, "A/B/g",   "normal",       1, "f", TRUE},
+      {0, "A/B/P/g", "normal",       1, "f", TRUE},
+      {0, "A/B/Q/g", "normal",       1, "f", TRUE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Move removes the file external rows. */
+  SVN_ERR(sbox_wc_move(&b, "A", "A2"));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",     "normal",       1, ""},
+      {0, "A",    "normal",       1, "A"},
+      {0, "A/B",  "normal",       1, "A/B"},
+      {0, "f",    "normal",       1, "f"},
+      {1, "A",    "base-deleted", NO_COPY_FROM, "A2"},
+      {1, "A/B",  "base-deleted", NO_COPY_FROM},
+      {1, "A2",   "normal",       1, "A", MOVED_HERE},
+      {1, "A2/B", "normal",       1, "A/B", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+  /* Update adds file external rows to the copy. */
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",         "normal",       1, ""},
+      {0, "A",        "normal",       1, "A"},
+      {0, "A/B",      "normal",       1, "A/B"},
+      {0, "f",        "normal",       1, "f"},
+      {1, "A",        "base-deleted", NO_COPY_FROM, "A2"},
+      {1, "A/B",      "base-deleted", NO_COPY_FROM},
+      {1, "A2",       "normal",       1, "A", MOVED_HERE},
+      {1, "A2/B",     "normal",       1, "A/B", MOVED_HERE},
+      {0, "A2/B/g",   "normal",       1, "f", TRUE},
+      {0, "A2/B/P/g", "normal",       1, "f", TRUE},
+      {0, "A2/B/Q/g", "normal",       1, "f", TRUE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -8071,5 +8184,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move depth expansion"),
     SVN_TEST_OPTS_PASS(move_retract,
                        "move retract (issue 4336)"),
+    SVN_TEST_OPTS_PASS(move_delete_file_externals,
+                       "move/delete file externals (issue 4293)"),
     SVN_TEST_NULL
   };

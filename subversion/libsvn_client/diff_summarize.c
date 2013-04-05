@@ -24,6 +24,7 @@
 
 
 #include "svn_dirent_uri.h"
+#include "svn_hash.h"
 #include "svn_props.h"
 #include "svn_pools.h"
 
@@ -185,7 +186,7 @@ cb_dir_closed(svn_wc_notify_state_t *contentstate,
   if (! svn_relpath_skip_ancestor(b->target, path))
     return SVN_NO_ERROR;
 
-  prop_change = apr_hash_get(b->prop_changes, path, APR_HASH_KEY_STRING) != NULL;
+  prop_change = svn_hash_gets(b->prop_changes, path) != NULL;
   if (dir_was_added || prop_change)
     SVN_ERR(send_summary(b, path,
                          dir_was_added ? svn_client_diff_summarize_kind_added
@@ -275,7 +276,7 @@ cb_dir_props_changed(svn_wc_notify_state_t *propstate,
   struct summarize_baton_t *b = diff_baton;
 
   if (props_changed(propchanges, scratch_pool))
-    apr_hash_set(b->prop_changes, path, APR_HASH_KEY_STRING, path);
+    svn_hash_sets(b->prop_changes, path, path);
 
   return SVN_NO_ERROR;
 }

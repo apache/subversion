@@ -26,6 +26,7 @@
 #include <assert.h>
 
 #include "svn_dirent_uri.h"
+#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_version.h"
 
@@ -239,9 +240,9 @@ svn_wc__db_close(svn_wc__db_t *db)
       const char *local_abspath = svn__apr_hash_index_key(hi);
 
       if (wcroot->sdb)
-        apr_hash_set(roots, wcroot->abspath, APR_HASH_KEY_STRING, wcroot);
+        svn_hash_sets(roots, wcroot->abspath, wcroot);
 
-      apr_hash_set(db->dir_data, local_abspath, APR_HASH_KEY_STRING, NULL);
+      svn_hash_sets(db->dir_data, local_abspath, NULL);
     }
 
   /* Run the cleanup for each WCROOT.  */
@@ -438,8 +439,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
      ### outside of the wcroot) and then managing all of that within DB.
      ### for now: play quick & dirty. */
 
-  probe_wcroot = apr_hash_get(db->dir_data, local_abspath,
-                              APR_HASH_KEY_STRING);
+  probe_wcroot = svn_hash_gets(db->dir_data, local_abspath);
   if (probe_wcroot != NULL)
     {
       *wcroot = probe_wcroot;
@@ -474,8 +474,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
                        scratch_pool);
 
       /* Is this directory in our hash?  */
-      probe_wcroot = apr_hash_get(db->dir_data, local_dir_abspath,
-                                  APR_HASH_KEY_STRING);
+      probe_wcroot = svn_hash_gets(db->dir_data, local_dir_abspath);
       if (probe_wcroot != NULL)
         {
           const char *dir_relpath;
@@ -549,8 +548,17 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
             {
 #ifdef SVN_DEBUG
               /* Install self-verification trigger statements. */
-              SVN_ERR(svn_sqlite__exec_statements(sdb,
-                                                  STMT_VERIFICATION_TRIGGERS));
+              err = svn_sqlite__exec_statements(sdb,
+                                                STMT_VERIFICATION_TRIGGERS);
+              if (err && err->apr_err == SVN_ERR_SQLITE_ERROR)
+                {
+                  /* Verification triggers can fail to install on old 1.7-dev
+                   * formats which didn't have a NODES table yet. Ignore sqlite
+                   * errors so such working copies can be upgraded. */
+                  svn_error_clear(err);
+                }
+              else
+                SVN_ERR(err);
 #endif
               break;
             }
@@ -599,8 +607,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
               if (resolved_kind == svn_node_dir)
                 {
                   /* Is this directory recorded in our hash?  */
-                  found_wcroot = apr_hash_get(db->dir_data, local_abspath,
-                                              APR_HASH_KEY_STRING);
+                  found_wcroot = svn_hash_gets(db->dir_data, local_abspath);
                   if (found_wcroot)
                     break;
 
@@ -627,8 +634,7 @@ try_symlink_as_dir:
       moved_upwards = TRUE;
 
       /* Is the parent directory recorded in our hash?  */
-      found_wcroot = apr_hash_get(db->dir_data, local_abspath,
-                                  APR_HASH_KEY_STRING);
+      found_wcroot = svn_hash_gets(db->dir_data, local_abspath);
       if (found_wcroot != NULL)
         break;
     }
@@ -816,10 +822,9 @@ try_symlink_as_dir:
 
   /* We've found the appropriate WCROOT for the requested path. Stash
      it into that path's directory.  */
-  apr_hash_set(db->dir_data,
-               apr_pstrdup(db->state_pool, local_dir_abspath),
-               APR_HASH_KEY_STRING,
-               *wcroot);
+  svn_hash_sets(db->dir_data,
+                apr_pstrdup(db->state_pool, local_dir_abspath),
+                *wcroot);
 
   /* Did we traverse up to parent directories?  */
   if (!moved_upwards)
@@ -842,12 +847,11 @@ try_symlink_as_dir:
       const char *parent_dir = svn_dirent_dirname(scan_abspath, scratch_pool);
       svn_wc__db_wcroot_t *parent_wcroot;
 
-      parent_wcroot = apr_hash_get(db->dir_data, parent_dir,
-                                   APR_HASH_KEY_STRING);
+      parent_wcroot = svn_hash_gets(db->dir_data, parent_dir);
       if (parent_wcroot == NULL)
         {
-          apr_hash_set(db->dir_data, apr_pstrdup(db->state_pool, parent_dir),
-                       APR_HASH_KEY_STRING, *wcroot);
+          svn_hash_sets(db->dir_data, apr_pstrdup(db->state_pool, parent_dir),
+                        *wcroot);
         }
 
       /* Move up a directory, stopping when we reach the directory where
@@ -865,8 +869,7 @@ svn_wc__db_drop_root(svn_wc__db_t *db,
                      const char *local_abspath,
                      apr_pool_t *scratch_pool)
 {
-  svn_wc__db_wcroot_t *root_wcroot = apr_hash_get(db->dir_data, local_abspath,
-                                                  APR_HASH_KEY_STRING);
+  svn_wc__db_wcroot_t *root_wcroot = svn_hash_gets(db->dir_data, local_abspath);
   apr_hash_index_t *hi;
   apr_status_t result;
 
@@ -886,8 +889,7 @@ svn_wc__db_drop_root(svn_wc__db_t *db,
       svn_wc__db_wcroot_t *wcroot = svn__apr_hash_index_val(hi);
 
       if (wcroot == root_wcroot)
-        apr_hash_set(db->dir_data,
-                     svn__apr_hash_index_key(hi), APR_HASH_KEY_STRING, NULL);
+        svn_hash_sets(db->dir_data, svn__apr_hash_index_key(hi), NULL);
     }
 
   result = apr_pool_cleanup_run(db->state_pool, root_wcroot, close_wcroot);

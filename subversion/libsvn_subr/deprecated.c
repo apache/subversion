@@ -32,6 +32,7 @@
    deprecated functions in this file. */
 #define SVN_DEPRECATED
 
+#include "svn_hash.h"
 #include "svn_subst.h"
 #include "svn_path.h"
 #include "svn_opt.h"
@@ -72,38 +73,28 @@ kwstruct_to_kwhash(const svn_subst_keywords_t *kwstruct,
 
   if (kwstruct->revision)
     {
-      apr_hash_set(kwhash, SVN_KEYWORD_REVISION_LONG,
-                   APR_HASH_KEY_STRING, kwstruct->revision);
-      apr_hash_set(kwhash, SVN_KEYWORD_REVISION_MEDIUM,
-                   APR_HASH_KEY_STRING, kwstruct->revision);
-      apr_hash_set(kwhash, SVN_KEYWORD_REVISION_SHORT,
-                   APR_HASH_KEY_STRING, kwstruct->revision);
+      svn_hash_sets(kwhash, SVN_KEYWORD_REVISION_LONG, kwstruct->revision);
+      svn_hash_sets(kwhash, SVN_KEYWORD_REVISION_MEDIUM, kwstruct->revision);
+      svn_hash_sets(kwhash, SVN_KEYWORD_REVISION_SHORT, kwstruct->revision);
     }
   if (kwstruct->date)
     {
-      apr_hash_set(kwhash, SVN_KEYWORD_DATE_LONG,
-                   APR_HASH_KEY_STRING, kwstruct->date);
-      apr_hash_set(kwhash, SVN_KEYWORD_DATE_SHORT,
-                   APR_HASH_KEY_STRING, kwstruct->date);
+      svn_hash_sets(kwhash, SVN_KEYWORD_DATE_LONG, kwstruct->date);
+      svn_hash_sets(kwhash, SVN_KEYWORD_DATE_SHORT, kwstruct->date);
     }
   if (kwstruct->author)
     {
-      apr_hash_set(kwhash, SVN_KEYWORD_AUTHOR_LONG,
-                   APR_HASH_KEY_STRING, kwstruct->author);
-      apr_hash_set(kwhash, SVN_KEYWORD_AUTHOR_SHORT,
-                   APR_HASH_KEY_STRING, kwstruct->author);
+      svn_hash_sets(kwhash, SVN_KEYWORD_AUTHOR_LONG, kwstruct->author);
+      svn_hash_sets(kwhash, SVN_KEYWORD_AUTHOR_SHORT, kwstruct->author);
     }
   if (kwstruct->url)
     {
-      apr_hash_set(kwhash, SVN_KEYWORD_URL_LONG,
-                   APR_HASH_KEY_STRING, kwstruct->url);
-      apr_hash_set(kwhash, SVN_KEYWORD_URL_SHORT,
-                   APR_HASH_KEY_STRING, kwstruct->url);
+      svn_hash_sets(kwhash, SVN_KEYWORD_URL_LONG, kwstruct->url);
+      svn_hash_sets(kwhash, SVN_KEYWORD_URL_SHORT, kwstruct->url);
     }
   if (kwstruct->id)
     {
-      apr_hash_set(kwhash, SVN_KEYWORD_ID,
-                   APR_HASH_KEY_STRING, kwstruct->id);
+      svn_hash_sets(kwhash, SVN_KEYWORD_ID, kwstruct->id);
     }
 
   return kwhash;

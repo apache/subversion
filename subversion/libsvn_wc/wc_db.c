@@ -888,8 +888,8 @@ insert_incomplete_children(svn_sqlite__db_t *sdb,
                                                      iterpool)));
           SVN_ERR(svn_sqlite__step(&have_row, stmt));
           if (have_row && !svn_sqlite__column_is_null(stmt, 14))
-            apr_hash_set(moved_to_relpaths, name, APR_HASH_KEY_STRING,
-              svn_sqlite__column_text(stmt, 14, scratch_pool));
+            svn_hash_sets(moved_to_relpaths, name,
+                          svn_sqlite__column_text(stmt, 14, scratch_pool));
 
           SVN_ERR(svn_sqlite__reset(stmt));
         }
@@ -913,8 +913,7 @@ insert_incomplete_children(svn_sqlite__db_t *sdb,
                                 "incomplete", /* 8, presence */
                                 "unknown",    /* 10, kind */
                                 /* 21, moved_to */
-                                apr_hash_get(moved_to_relpaths, name,
-                                             APR_HASH_KEY_STRING)));
+                                svn_hash_gets(moved_to_relpaths, name)));
       if (repos_id != INVALID_REPOS_ID)
         {
           SVN_ERR(svn_sqlite__bind_int64(stmt, 5, repos_id));
@@ -1107,7 +1106,7 @@ add_children_to_hash(apr_hash_t *children,
       const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
       const char *name = svn_relpath_basename(child_relpath, result_pool);
 
-      apr_hash_set(children, name, APR_HASH_KEY_STRING, name);
+      svn_hash_sets(children, name, name);
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
@@ -1227,9 +1226,9 @@ svn_wc__db_get_children_op_depth(apr_hash_t **children,
       svn_node_kind_t *child_kind = apr_palloc(result_pool, sizeof(svn_node_kind_t));
 
       *child_kind = svn_sqlite__column_token(stmt, 1, kind_map);
-      apr_hash_set(*children,
-                   svn_relpath_basename(child_relpath, result_pool),
-                   APR_HASH_KEY_STRING, child_kind);
+      svn_hash_sets(*children,
+                    svn_relpath_basename(child_relpath, result_pool),
+                    child_kind);
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
@@ -1260,7 +1259,7 @@ remove_from_access_cache(apr_hash_t *access_cache,
 {
   svn_wc_adm_access_t *adm_access;
 
-  adm_access = apr_hash_get(access_cache, local_abspath, APR_HASH_KEY_STRING);
+  adm_access = svn_hash_gets(access_cache, local_abspath);
   if (adm_access)
     svn_wc__adm_access_set_entries(adm_access, NULL);
 }
@@ -1534,7 +1533,7 @@ svn_wc__db_init(svn_wc__db_t *db,
                         db->state_pool, scratch_pool));
 
   /* The WCROOT is complete. Stash it into DB.  */
-  apr_hash_set(db->dir_data, wcroot->abspath, APR_HASH_KEY_STRING, wcroot);
+  svn_hash_sets(db->dir_data, wcroot->abspath, wcroot);
 
   return SVN_NO_ERROR;
 }
@@ -2610,7 +2609,7 @@ svn_wc__db_base_get_children_info(apr_hash_t **nodes,
                                           svn_sqlite__reset(stmt)));
 
 
-      apr_hash_set(*nodes, name, APR_HASH_KEY_STRING, info);
+      svn_hash_sets(*nodes, name, info);
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
@@ -3567,12 +3566,11 @@ svn_wc__db_externals_defined_below(apr_hash_t **externals,
       local_relpath = svn_sqlite__column_text(stmt, 0, NULL);
       def_local_relpath = svn_sqlite__column_text(stmt, 1, NULL);
 
-      apr_hash_set(*externals,
-                   svn_dirent_join(wcroot->abspath, local_relpath,
-                                   result_pool),
-                   APR_HASH_KEY_STRING,
-                   svn_dirent_join(wcroot->abspath, def_local_relpath,
-                                   result_pool));
+      svn_hash_sets(*externals,
+                    svn_dirent_join(wcroot->abspath, local_relpath,
+                                    result_pool),
+                    svn_dirent_join(wcroot->abspath, def_local_relpath,
+                                    result_pool));
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
@@ -3634,8 +3632,8 @@ svn_wc__db_externals_gather_definitions(apr_hash_t **externals,
           node_abspath = svn_dirent_join(wcroot->abspath, node_relpath,
                                          result_pool);
 
-          apr_hash_set(*externals, node_abspath, APR_HASH_KEY_STRING,
-                       apr_pstrdup(result_pool, external_value));
+          svn_hash_sets(*externals, node_abspath,
+                        apr_pstrdup(result_pool, external_value));
 
           if (depths)
             {
@@ -3643,10 +3641,9 @@ svn_wc__db_externals_gather_definitions(apr_hash_t **externals,
                 = svn_sqlite__column_token_null(stmt, 2, depth_map,
                                                 svn_depth_unknown);
 
-              apr_hash_set(*depths, node_abspath,
-                           APR_HASH_KEY_STRING,
-                           svn_token__to_word(depth_map,
-                                              depth)); /* Use static string */
+              svn_hash_sets(*depths, node_abspath,
+                            /* Use static string */
+                            svn_token__to_word(depth_map, depth));
             }
         }
 
@@ -8511,7 +8508,7 @@ read_children_info(svn_wc__db_wcroot_t *wcroot,
       int op_depth;
       svn_boolean_t new_child;
 
-      child_item = apr_hash_get(nodes, name, APR_HASH_KEY_STRING);
+      child_item = svn_hash_gets(nodes, name);
       if (child_item)
         new_child = FALSE;
       else
@@ -8628,8 +8625,7 @@ read_children_info(svn_wc__db_wcroot_t *wcroot,
                 SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
 
               child->special = (child->had_props
-                                && apr_hash_get(properties, SVN_PROP_SPECIAL,
-                                              APR_HASH_KEY_STRING));
+                                && svn_hash_gets(properties, SVN_PROP_SPECIAL));
             }
 #endif
           if (op_depth == 0)
@@ -8637,8 +8633,7 @@ read_children_info(svn_wc__db_wcroot_t *wcroot,
           else
             child->op_root = (op_depth == relpath_depth(child_relpath));
 
-          apr_hash_set(nodes, apr_pstrdup(result_pool, name),
-                       APR_HASH_KEY_STRING, child);
+          svn_hash_sets(nodes, apr_pstrdup(result_pool, name), child);
         }
 
       if (op_depth == 0)
@@ -8691,7 +8686,7 @@ read_children_info(svn_wc__db_wcroot_t *wcroot,
       const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
       const char *name = svn_relpath_basename(child_relpath, NULL);
 
-      child_item = apr_hash_get(nodes, name, APR_HASH_KEY_STRING);
+      child_item = svn_hash_gets(nodes, name);
       if (!child_item)
         {
           child_item = apr_pcalloc(result_pool, sizeof(*child_item));
@@ -8713,16 +8708,15 @@ read_children_info(svn_wc__db_wcroot_t *wcroot,
                                               scratch_pool, scratch_pool);
           if (err)
             SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
-          child->special = (NULL != apr_hash_get(properties, SVN_PROP_SPECIAL,
-                                                 APR_HASH_KEY_STRING));
+          child->special = (NULL != svn_hash_gets(properties,
+                                                  SVN_PROP_SPECIAL));
         }
 #endif
 
       child->conflicted = !svn_sqlite__column_is_null(stmt, 3); /* conflict */
 
       if (child->conflicted)
-        apr_hash_set(conflicts, apr_pstrdup(result_pool, name),
-                     APR_HASH_KEY_STRING, "");
+        svn_hash_sets(conflicts, apr_pstrdup(result_pool, name), "");
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
@@ -8964,8 +8958,7 @@ svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
             SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
         }
       child->kind = svn_sqlite__column_token(stmt, 3, kind_map);
-      apr_hash_set(*nodes, apr_pstrdup(result_pool, name),
-                   APR_HASH_KEY_STRING, child);
+      svn_hash_sets(*nodes, apr_pstrdup(result_pool, name), child);
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
@@ -9541,17 +9534,16 @@ svn_wc__db_prop_retrieve_recursive(apr_hash_t **values,
                                           iterpool, iterpool));
 
     value = (node_props
-                ? apr_hash_get(node_props, propname, APR_HASH_KEY_STRING)
+                ? svn_hash_gets(node_props, propname)
                 : NULL);
 
     if (value)
       {
-        apr_hash_set(*values,
-                     svn_dirent_join(wcroot->abspath,
-                                     svn_sqlite__column_text(stmt, 1, NULL),
-                                     result_pool),
-                     APR_HASH_KEY_STRING,
-                     svn_string_dup(value, result_pool));
+        svn_hash_sets(*values,
+                      svn_dirent_join(wcroot->abspath,
+                                      svn_sqlite__column_text(stmt, 1, NULL),
+                                      result_pool),
+                      svn_string_dup(value, result_pool));
       }
 
     SVN_ERR(svn_sqlite__step(&have_row, stmt));
@@ -9640,7 +9632,7 @@ filter_unwanted_props(apr_hash_t *prop_hash,
       const char *ipropname = svn__apr_hash_index_key(hi);
 
       if (strcmp(ipropname, propname) != 0)
-        apr_hash_set(prop_hash, ipropname, APR_HASH_KEY_STRING, NULL);
+        svn_hash_sets(prop_hash, ipropname, NULL);
     }
   return;
 }
@@ -9913,8 +9905,8 @@ get_children_with_cached_iprops(apr_hash_t **iprop_paths,
       const char *abspath_with_cache = svn_dirent_join(wcroot->abspath,
                                                        relpath_with_cache,
                                                        result_pool);
-      apr_hash_set(*iprop_paths, abspath_with_cache, APR_HASH_KEY_STRING,
-                   svn_sqlite__column_text(stmt, 1, result_pool));
+      svn_hash_sets(*iprop_paths, abspath_with_cache,
+                    svn_sqlite__column_text(stmt, 1, result_pool));
     }
   SVN_ERR(svn_sqlite__reset(stmt));
 
@@ -9944,8 +9936,8 @@ get_children_with_cached_iprops(apr_hash_t **iprop_paths,
       const char *abspath_with_cache = svn_dirent_join(wcroot->abspath,
                                                        relpath_with_cache,
                                                        result_pool);
-      apr_hash_set(*iprop_paths, abspath_with_cache, APR_HASH_KEY_STRING,
-                   svn_sqlite__column_text(stmt, 1, result_pool));
+      svn_hash_sets(*iprop_paths, abspath_with_cache,
+                    svn_sqlite__column_text(stmt, 1, result_pool));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
 
@@ -9986,8 +9978,7 @@ get_children_with_cached_iprops(apr_hash_t **iprop_paths,
           /* Filter if not a file */
           if (child_kind != svn_node_file)
             {
-              apr_hash_set(*iprop_paths, child_abspath, APR_HASH_KEY_STRING,
-                           NULL);
+              svn_hash_sets(*iprop_paths, child_abspath, NULL);
             }
         }
 
@@ -11036,7 +11027,7 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
   apr_array_header_t *iprops = NULL;
 
   /* Skip an excluded path and its descendants. */
-  if (apr_hash_get(exclude_relpaths, local_relpath, APR_HASH_KEY_STRING))
+  if (svn_hash_gets(exclude_relpaths, local_relpath))
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_wc__db_base_get_info_internal(&status, &db_kind, &revision,
@@ -11076,10 +11067,9 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
     set_repos_relpath = TRUE;
 
   if (wcroot_iprops)
-    iprops = apr_hash_get(wcroot_iprops,
-                          svn_dirent_join(wcroot->abspath, local_relpath,
-                                          scratch_pool),
-                          APR_HASH_KEY_STRING);
+    iprops = svn_hash_gets(wcroot_iprops,
+                           svn_dirent_join(wcroot->abspath, local_relpath,
+                                           scratch_pool));
 
   if (iprops
       || set_repos_relpath
@@ -11234,7 +11224,7 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
 
   VERIFY_USABLE_WCROOT(wcroot);
 
-  if (apr_hash_get(exclude_relpaths, local_relpath, APR_HASH_KEY_STRING))
+  if (svn_hash_gets(exclude_relpaths, local_relpath))
     return SVN_NO_ERROR;
 
   if (depth == svn_depth_unknown)
@@ -12302,7 +12292,7 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                                        wc_db->state_pool, scratch_pool));
 
   /* The WCROOT is complete. Stash it into DB.  */
-  apr_hash_set(wc_db->dir_data, wcroot->abspath, APR_HASH_KEY_STRING, wcroot);
+  svn_hash_sets(wc_db->dir_data, wcroot->abspath, wcroot);
 
   return SVN_NO_ERROR;
 }
@@ -12823,8 +12813,7 @@ svn_wc__db_temp_get_access(svn_wc__db_t *db,
   if (!wcroot)
     return NULL;
 
-  return apr_hash_get(wcroot->access_cache, local_dir_abspath,
-                      APR_HASH_KEY_STRING);
+  return svn_hash_gets(wcroot->access_cache, local_dir_abspath);
 }
 
 
@@ -12852,11 +12841,10 @@ svn_wc__db_temp_set_access(svn_wc__db_t *db,
     }
 
   /* Better not override something already there.  */
-  SVN_ERR_ASSERT_NO_RETURN(apr_hash_get(wcroot->access_cache,
-                                        local_dir_abspath,
-                                        APR_HASH_KEY_STRING) == NULL);
-  apr_hash_set(wcroot->access_cache, local_dir_abspath,
-               APR_HASH_KEY_STRING, adm_access);
+  SVN_ERR_ASSERT_NO_RETURN(
+    svn_hash_gets(wcroot->access_cache, local_dir_abspath) == NULL
+  );
+  svn_hash_sets(wcroot->access_cache, local_dir_abspath, adm_access);
 }
 
 
@@ -12875,8 +12863,7 @@ svn_wc__db_temp_close_access(svn_wc__db_t *db,
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               local_dir_abspath, scratch_pool, scratch_pool));
-  apr_hash_set(wcroot->access_cache, local_dir_abspath,
-               APR_HASH_KEY_STRING, NULL);
+  svn_hash_sets(wcroot->access_cache, local_dir_abspath, NULL);
 
   return SVN_NO_ERROR;
 }
@@ -12903,8 +12890,7 @@ svn_wc__db_temp_clear_access(svn_wc__db_t *db,
       return;
     }
 
-  apr_hash_set(wcroot->access_cache, local_dir_abspath,
-               APR_HASH_KEY_STRING, NULL);
+  svn_hash_sets(wcroot->access_cache, local_dir_abspath, NULL);
 }
 
 
@@ -13034,7 +13020,7 @@ get_conflict_marker_files(apr_hash_t **marker_files_p,
         {
           const char *marker_abspath = APR_ARRAY_IDX(markers, i, const char*);
 
-          apr_hash_set(marker_files, marker_abspath, APR_HASH_KEY_STRING, "");
+          svn_hash_sets(marker_files, marker_abspath, "");
         }
     }
   SVN_ERR(svn_sqlite__reset(stmt));
@@ -13065,7 +13051,7 @@ get_conflict_marker_files(apr_hash_t **marker_files_p,
             {
               const char *marker_abspath = APR_ARRAY_IDX(markers, i, const char*);
 
-              apr_hash_set(marker_files, marker_abspath, APR_HASH_KEY_STRING, "");
+              svn_hash_sets(marker_files, marker_abspath, "");
             }
         }
 
@@ -14561,8 +14547,7 @@ svn_wc__db_get_excluded_subtrees(apr_hash_t **excluded_subtrees,
         svn_dirent_join(wcroot->abspath,
                         svn_sqlite__column_text(stmt, 0, NULL),
                         result_pool);
-      apr_hash_set(*excluded_subtrees, abs_path, APR_HASH_KEY_STRING,
-                   abs_path);
+      svn_hash_sets(*excluded_subtrees, abs_path, abs_path);
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
 
@@ -14883,12 +14868,10 @@ svn_wc__db_base_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
         }
 
       SVN_ERR_ASSERT(last_repos_root_url != NULL);
-      apr_hash_set(*lock_tokens,
-                   svn_path_url_add_component2(last_repos_root_url,
-                                               child_relpath,
-                                               result_pool),
-                   APR_HASH_KEY_STRING,
-                   lock_token);
+      svn_hash_sets(*lock_tokens,
+                    svn_path_url_add_component2(last_repos_root_url,
+                                                child_relpath, result_pool),
+                    lock_token);
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }

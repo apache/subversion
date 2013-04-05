@@ -50,7 +50,10 @@
 #include "svn_io.h"
 
 #include "svn_private_config.h"
+
 #include "private/svn_dep_compat.h"
+#include "private/svn_cmdline_private.h"
+
 #include "winservice.h"
 
 #ifdef HAVE_UNISTD_H

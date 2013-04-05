@@ -223,7 +223,8 @@ sub handle_entry {
 
 sub main {
   usage, exit 0 if @ARGV;
-  usage, exit 1 unless -r $STATUS;
+
+  open STATUS, "<", $STATUS or (usage, exit 1);
 
   # Because we use the ':normal' command in Vim...
   die "A vim with the +ex_extra feature is required"
@@ -232,18 +233,17 @@ sub main {
   # ### TODO: need to run 'revert' here
   # ### TODO: both here and in merge(), unlink files that previous merges added
   die "Local mods to STATUS file $STATUS" if `$SVN status -q $STATUS`;
-  @ARGV = $STATUS;
 
   # Skip most of the file
-  while (<>) {
+  while (<STATUS>) {
     last if /^Approved changes/;
   }
-  while (<>) {
+  while (<STATUS>) {
     last unless /^=+$/;
   }
   $/ = ""; # paragraph mode
 
-  while (<>) {
+  while (<STATUS>) {
     my @lines = split /\n/;
 
     given ($lines[0]) {
@@ -257,6 +257,8 @@ sub main {
       }
       # Backport entry?
       when (/^ \*/) {
+        warn "Too many bullets in $lines[0]" and next
+          if grep /^ \*/, @lines[1..$#lines];
         handle_entry @lines;
       }
       default {

@@ -180,17 +180,17 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t no_auth_cache;   /* do not cache authentication information */
   struct
     {
-  const char *diff_cmd;          /* the external diff command to use */
-  svn_boolean_t internal_diff;    /* override diff_cmd in config file */
-  svn_boolean_t no_diff_added; /* do not show diffs for deleted files */
-  svn_boolean_t no_diff_deleted; /* do not show diffs for deleted files */
+  const char *diff_cmd;              /* the external diff command to use */
+  svn_boolean_t internal_diff;       /* override diff_cmd in config file */
+  svn_boolean_t no_diff_added;       /* do not show diffs for deleted files */
+  svn_boolean_t no_diff_deleted;     /* do not show diffs for deleted files */
   svn_boolean_t show_copies_as_adds; /* do not diff copies with their source */
-  svn_boolean_t notice_ancestry; /* notice ancestry for diff-y operations */
-  svn_boolean_t summarize;       /* create a summary of a diff */
+  svn_boolean_t notice_ancestry;     /* notice ancestry for diff-y operations */
+  svn_boolean_t summarize;           /* create a summary of a diff */
   svn_boolean_t use_git_diff_format; /* Use git's extended diff format */
-  svn_boolean_t ignore_properties; /* ignore properties */
-  svn_boolean_t properties_only;   /* Show properties only */
-  svn_boolean_t patch_compatible; /* Output compatible with GNU patch */
+  svn_boolean_t ignore_properties;   /* ignore properties */
+  svn_boolean_t properties_only;     /* Show properties only */
+  svn_boolean_t patch_compatible;    /* Output compatible with GNU patch */
     } diff;
   svn_boolean_t ignore_ancestry; /* ignore ancestry for merge-y operations */
   svn_boolean_t ignore_externals;/* ignore externals definitions */
@@ -219,21 +219,21 @@ typedef struct svn_cl__opt_state_t
   apr_hash_t *revprop_table;     /* table of revision properties to get/set */
   svn_boolean_t parents;         /* create intermediate directories */
   svn_boolean_t use_merge_history; /* use/display extra merge information */
-  svn_cl__accept_t accept_which; /* how to handle conflicts */
-  svn_cl__show_revs_t show_revs; /* mergeinfo flavor */
-  svn_depth_t set_depth;         /* new sticky ambient depth value */
-  svn_boolean_t reintegrate;     /* use "reintegrate" merge-source heuristic */
+  svn_cl__accept_t accept_which;   /* how to handle conflicts */
+  svn_cl__show_revs_t show_revs;   /* mergeinfo flavor */
+  svn_depth_t set_depth;           /* new sticky ambient depth value */
+  svn_boolean_t reintegrate;      /* use "reintegrate" merge-source heuristic */
   svn_boolean_t trust_server_cert; /* trust server SSL certs that would
                                       otherwise be rejected as "untrusted" */
   int strip; /* number of leading path components to strip */
-  svn_boolean_t ignore_keywords;  /* do not expand keywords */
-  svn_boolean_t reverse_diff;     /* reverse a diff (e.g. when patching) */
+  svn_boolean_t ignore_keywords;   /* do not expand keywords */
+  svn_boolean_t reverse_diff;      /* reverse a diff (e.g. when patching) */
   svn_boolean_t ignore_whitespace; /* don't account for whitespace when
                                       patching */
-  svn_boolean_t show_diff;        /* produce diff output (maps to --diff) */
-  svn_boolean_t allow_mixed_rev; /* Allow operation on mixed-revision WC */
+  svn_boolean_t show_diff;         /* produce diff output (maps to --diff) */
+  svn_boolean_t allow_mixed_rev;   /* Allow operation on mixed-revision WC */
   svn_boolean_t include_externals; /* Recurses (in)to file & dir externals */
-  svn_boolean_t show_inherited_props; /* get inherited properties */
+  svn_boolean_t show_inherited_props;  /* get inherited properties */
   apr_array_header_t* search_patterns; /* pattern arguments for --search */
 } svn_cl__opt_state_t;
 
@@ -360,44 +360,6 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
                                   void *baton,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
-
-/* Create and return a baton for use with svn_cl__conflict_func_postpone()
- * and svn_cl__resolve_postponed_conflicts(), allocated in RESULT_POOL.
- */
-void *
-svn_cl__get_conflict_func_postpone_baton(apr_pool_t *result_pool);
-
-/* A conflict-resolution callback which postpones all conflicts and
- * remembers conflicted paths in BATON.  BATON must have been obtained
- * from svn_cl__get_conflict_func_postpone_baton().
- *
- * Implements svn_wc_conflict_resolver_func2_t.
- */
-svn_error_t *
-svn_cl__conflict_func_postpone(svn_wc_conflict_result_t **result,
-                               const svn_wc_conflict_description2_t *desc,
-                               void *baton,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool);
-
-/* Perform conflict resolution on any conflicted paths stored in the BATON
- * which was obtained from svn_cl__get_conflict_func_postpone_baton().
- *
- * If CONFLICTS_ALL_RESOLVED is not null, set *CONFLICTS_ALL_RESOLVED to
- * true if this resolves all the conflicts on the paths that were
- * recorded (or if none were recorded); or to false if some conflicts
- * remain.
- *
- * The conflict resolution will be interactive if ACCEPT_WHICH is
- * svn_cl__accept_unspecified.
- */
-svn_error_t *
-svn_cl__resolve_postponed_conflicts(svn_boolean_t *conflicts_all_resolved,
-                                    void *baton,
-                                    svn_cl__accept_t accept_which,
-                                    const char *editor_cmd,
-                                    svn_client_ctx_t *ctx,
-                                    apr_pool_t *scratch_pool);
 
 
 /*** Command-line output functions -- printing to the user. ***/

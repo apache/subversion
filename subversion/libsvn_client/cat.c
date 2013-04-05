@@ -27,6 +27,7 @@
 
 /*** Includes. ***/
 
+#include "svn_hash.h"
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -109,12 +110,9 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
         local_mod = TRUE;
     }
 
-  eol_style = apr_hash_get(props, SVN_PROP_EOL_STYLE,
-                           APR_HASH_KEY_STRING);
-  keywords = apr_hash_get(props, SVN_PROP_KEYWORDS,
-                          APR_HASH_KEY_STRING);
-  special = apr_hash_get(props, SVN_PROP_SPECIAL,
-                         APR_HASH_KEY_STRING);
+  eol_style = svn_hash_gets(props, SVN_PROP_EOL_STYLE);
+  keywords = svn_hash_gets(props, SVN_PROP_KEYWORDS);
+  special = svn_hash_gets(props, SVN_PROP_SPECIAL);
 
   if (eol_style)
     svn_subst_eol_style_from_value(&style, &eol, eol_style->data);
@@ -244,8 +242,8 @@ svn_client_cat2(svn_stream_t *out,
         }
     }
 
-  eol_style = apr_hash_get(props, SVN_PROP_EOL_STYLE, APR_HASH_KEY_STRING);
-  keywords = apr_hash_get(props, SVN_PROP_KEYWORDS, APR_HASH_KEY_STRING);
+  eol_style = svn_hash_gets(props, SVN_PROP_EOL_STYLE);
+  keywords = svn_hash_gets(props, SVN_PROP_KEYWORDS);
 
   if (eol_style || keywords)
     {
@@ -268,12 +266,9 @@ svn_client_cat2(svn_stream_t *out,
           svn_string_t *cmt_rev, *cmt_date, *cmt_author;
           apr_time_t when = 0;
 
-          cmt_rev = apr_hash_get(props, SVN_PROP_ENTRY_COMMITTED_REV,
-                                 APR_HASH_KEY_STRING);
-          cmt_date = apr_hash_get(props, SVN_PROP_ENTRY_COMMITTED_DATE,
-                                  APR_HASH_KEY_STRING);
-          cmt_author = apr_hash_get(props, SVN_PROP_ENTRY_LAST_AUTHOR,
-                                    APR_HASH_KEY_STRING);
+          cmt_rev = svn_hash_gets(props, SVN_PROP_ENTRY_COMMITTED_REV);
+          cmt_date = svn_hash_gets(props, SVN_PROP_ENTRY_COMMITTED_DATE);
+          cmt_author = svn_hash_gets(props, SVN_PROP_ENTRY_LAST_AUTHOR);
           if (cmt_date)
             SVN_ERR(svn_time_from_cstring(&when, cmt_date->data, pool));
 
