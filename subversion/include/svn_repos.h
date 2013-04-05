@@ -2394,7 +2394,6 @@ svn_repos_fs_change_txn_props(svn_fs_txn_t *txn,
                               const apr_array_header_t *props,
                               apr_pool_t *pool);
 
-/** @} */
 
 /* ---------------------------------------------------------------*/
 
