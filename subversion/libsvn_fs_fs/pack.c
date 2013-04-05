@@ -35,6 +35,7 @@
 #include "index.h"
 #include "low_level.h"
 #include "cached_data.h"
+#include "changes.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
@@ -859,6 +860,48 @@ sort_reps(pack_context_t *context)
     }
 }
 
+/* To prevent items from overlapping a block boundary, we will usually
+ * put them into the next block and top up the old one with NUL bytes.
+ * Pad CONTEXT's pack file to the end of the current block, if that padding
+ * is short enough.  Use POOL for allocations.
+ */
+static svn_error_t *
+auto_pad_block(pack_context_t *context,
+               apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = context->fs->fsap_data;
+  
+  /* This is the maximum number of bytes "wasted" that way per block.
+   * Larger items will cross the block boundaries. */
+  const apr_off_t max_padding = MAX(ffd->block_size / 50, 512);
+
+  /* Is wasted space small enough to align the current item to the next
+   * block? */
+  apr_off_t padding
+    = ffd->block_size - (context->pack_offset % ffd->block_size);
+
+  if (padding < max_padding)
+    {
+      /* Yes. To up with NUL bytes and don't forget to create
+       * an P2L index entry marking this section as unused. */
+      svn_fs_fs__p2l_entry_t null_entry;
+      svn_fs_fs__id_part_t rev_item = { 0, SVN_FS_FS__ITEM_INDEX_UNUSED };
+
+      null_entry.offset = context->pack_offset;
+      null_entry.size = padding;
+      null_entry.type = SVN_FS_FS__ITEM_TYPE_UNUSED;
+      null_entry.item_count = 1;
+      null_entry.items = &rev_item;
+
+      SVN_ERR(write_null_bytes(context->pack_file, padding, pool));
+      SVN_ERR(svn_fs_fs__p2l_proto_index_add_entry
+                  (context->proto_p2l_index, &null_entry, pool));
+      context->pack_offset += padding;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Copy (append) the items identified by svn_fs_fs__p2l_entry_t * elements
  * in ENTRIES strictly in order from TEMP_FILE into CONTEXT->PACK_FILE.
  * Use POOL for temporary allocations.
@@ -872,12 +915,6 @@ copy_items_from_temp(pack_context_t *context,
   fs_fs_data_t *ffd = context->fs->fsap_data;
   apr_pool_t *iterpool = svn_pool_create(pool);
   int i;
-
-  /* To prevent items from overlapping a block boundary, we will usually
-   * put them into the next block and top up the old one with NUL bytes.
-   * This is the maximum number of bytes "wasted" that way per block.
-   * Larger items will cross the block boundaries. */
-  const apr_off_t alignment_limit = MAX(ffd->block_size / 50, 512);
 
   /* copy all items in strict order */
   for (i = 0; i < entries->nelts; ++i)
@@ -898,32 +935,9 @@ copy_items_from_temp(pack_context_t *context,
         safe_size += 80;
 
       /* still enough space in current block? */
+      /* If not, small sections at the end of a block should be padded. */
       if (in_block_offset + safe_size > ffd->block_size)
-        {
-          /* No.  Is wasted space small enough to align the current item
-           * to the next block? */
-          apr_off_t bytes_to_alignment = ffd->block_size - in_block_offset;
-          if (bytes_to_alignment < alignment_limit)
-            {
-              /* Yes. To up with NUL bytes and don't forget to create
-               * an P2L index entry marking this section as unused. */
-              svn_fs_fs__p2l_entry_t null_entry;
-              svn_fs_fs__id_part_t rev_item
-                = { 0, SVN_FS_FS__ITEM_INDEX_UNUSED };
-              
-              null_entry.offset = context->pack_offset;
-              null_entry.size = bytes_to_alignment;
-              null_entry.type = SVN_FS_FS__ITEM_TYPE_UNUSED;
-              null_entry.item_count = 1;
-              null_entry.items = &rev_item;
-              
-              SVN_ERR(write_null_bytes(context->pack_file,
-                                       bytes_to_alignment, iterpool));
-              SVN_ERR(svn_fs_fs__p2l_proto_index_add_entry
-                          (context->proto_p2l_index, &null_entry, iterpool));
-              context->pack_offset += bytes_to_alignment;
-            }
-        }
+        SVN_ERR(auto_pad_block(context, iterpool));
 
       /* select the item in the source file and copy it into the target
        * pack file */
@@ -941,6 +955,133 @@ copy_items_from_temp(pack_context_t *context,
     }
 
   svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Finalize CONTAINER and write it to CONTEXT's pack file.
+ * Append an P2L entry containing the given SUB_ITEMS to NEW_ENTRIES.
+ * Use POOL for temporary allocations.
+ */
+static svn_error_t *
+write_changes_container(pack_context_t *context,
+                        svn_fs_fs__changes_t *container,
+                        apr_array_header_t *sub_items,
+                        apr_array_header_t *new_entries,
+                        apr_pool_t *pool)
+{
+  apr_off_t offset = 0;
+  svn_fs_fs__p2l_entry_t container_entry;
+
+  svn_stream_t *pack_stream
+    = svn_stream_from_aprfile2(context->pack_file, TRUE, pool);
+
+  SVN_ERR(svn_fs_fs__write_changes_container(pack_stream,
+                                             container,
+                                             pool));
+  SVN_ERR(svn_io_file_seek(context->pack_file, SEEK_CUR, &offset, pool));
+
+  container_entry.offset = context->pack_offset;
+  container_entry.size = offset - container_entry.offset;
+  container_entry.type = SVN_FS_FS__ITEM_TYPE_CHANGES_CONT;
+  container_entry.item_count = sub_items->nelts;
+  container_entry.items = (svn_fs_fs__id_part_t *)sub_items->elts;
+
+  context->pack_offset = offset;
+  APR_ARRAY_PUSH(new_entries, svn_fs_fs__p2l_entry_t *)
+    = copy_p2l_entry(&container_entry, context->info_pool);
+
+  SVN_ERR(svn_fs_fs__p2l_proto_index_add_entry
+            (context->proto_p2l_index, &container_entry, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Return the remaining unused bytes in the current block in CONTEXT's
+ * pack file.
+ */
+static apr_ssize_t
+get_block_left(pack_context_t *context)
+{
+  fs_fs_data_t *ffd = context->fs->fsap_data;
+  return ffd->block_size - (context->pack_offset % ffd->block_size);
+}
+
+/* Read the change lists identified by svn_fs_fs__p2l_entry_t * elements
+ * in ENTRIES strictly in from TEMP_FILE, aggregate them and write them
+ * into CONTEXT->PACK_FILE.  Use POOL for temporary allocations.
+ */
+static svn_error_t *
+write_changes_containers(pack_context_t *context,
+                         apr_array_header_t *entries,
+                         apr_file_t *temp_file,
+                         apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = context->fs->fsap_data;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *container_pool = svn_pool_create(pool);
+  int i;
+
+  apr_ssize_t block_left = get_block_left(context);
+  svn_fs_fs__changes_t *container
+    = svn_fs_fs__changes_create(1000, container_pool);
+  apr_array_header_t *sub_items
+    = apr_array_make(pool, 64, sizeof(svn_fs_fs__id_part_t));
+  apr_array_header_t *new_entries
+    = apr_array_make(context->info_pool, 16, entries->elt_size);
+  svn_stream_t *temp_stream
+    = svn_stream_from_aprfile2(temp_file, TRUE, pool);
+
+  /* copy all items in strict order */
+  for (i = entries->nelts-1; i >= 0; --i)
+    {
+      apr_array_header_t *changes;
+      apr_size_t list_index;
+      svn_fs_fs__p2l_entry_t *entry
+        = APR_ARRAY_IDX(entries, i, svn_fs_fs__p2l_entry_t *);
+
+      if (block_left < entry->size)
+        block_left = get_block_left(context)
+                   - svn_fs_fs__changes_estimate_size(container);
+
+      if ((block_left < entry->size) && sub_items->elts)
+        {
+          SVN_ERR(write_changes_container(context, container, sub_items,
+                                          new_entries, iterpool));
+
+          apr_array_clear(sub_items);
+          svn_pool_clear(container_pool);
+          container = svn_fs_fs__changes_create(1000, container_pool);
+          block_left = get_block_left(context);
+        }
+
+      /* still enough space in current block? */
+      if (block_left < entry->size)
+        {
+          SVN_ERR(auto_pad_block(context, iterpool));
+          block_left = get_block_left(context);
+        }
+
+      /* select the change list in the source file, parse it and add it to
+       * the container */
+      SVN_ERR(svn_io_file_seek(temp_file, SEEK_SET, &entry->offset,
+                               iterpool));
+      SVN_ERR(svn_fs_fs__read_changes(&changes, temp_stream, iterpool));
+      SVN_ERR(svn_fs_fs__changes_append_list(&list_index, container, changes));
+      SVN_ERR_ASSERT(list_index == sub_items->nelts);
+      
+      APR_ARRAY_PUSH(sub_items, svn_fs_fs__id_part_t) = entry->items[0];
+
+      svn_pool_clear(iterpool);
+    }
+
+  if (sub_items->elts)
+    SVN_ERR(write_changes_container(context, container, sub_items,
+                                    new_entries, iterpool));
+
+  *entries = *new_entries;
+  svn_pool_destroy(iterpool);
+  svn_pool_destroy(container_pool);
 
   return SVN_NO_ERROR;
 }
@@ -1024,7 +1165,7 @@ write_l2p_index(pack_context_t *context,
         {
           SVN_ERR_ASSERT(entry->items[0].revision <= entry->items[1].revision);
           ++entry->items;
-          svn__priority_queue_push(queue, entry);
+          svn__priority_queue_push(queue, &entry);
         }
 
       /* keep memory usage in check */
@@ -1147,8 +1288,8 @@ pack_range(pack_context_t *context,
   sort_reps(context);
 
   /* phase 4: copy bucket data to pack file.  Write P2L index. */
-  SVN_ERR(copy_items_from_temp(context, context->changes,
-                               context->changes_file, revpool));
+  SVN_ERR(write_changes_containers(context, context->changes,
+                                   context->changes_file, revpool));
   svn_pool_clear(revpool);
   SVN_ERR(copy_items_from_temp(context, context->file_props,
                                context->file_props_file, revpool));

@@ -47,6 +47,8 @@
 #define SVN_FS_FS__ITEM_TYPE_ANY_REP    7  /* item is any representation.
                                               Only used in pre-format7. */
 
+#define SVN_FS_FS__ITEM_TYPE_CHANGES_CONT 8  /* item is a changes container */
+
 /* (user visible) entry in the phys-to-log index.  It describes a section
  * of some packed / non-packed rev file as containing a specific item.
  * There must be no overlapping / conflicting entries.

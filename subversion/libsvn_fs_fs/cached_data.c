@@ -33,6 +33,7 @@
 #include "pack.h"
 #include "temp_serializer.h"
 #include "index.h"
+#include "changes.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
@@ -2425,6 +2426,34 @@ block_read_changes(apr_array_header_t **changes,
 }
 
 static svn_error_t *
+block_read_changes_container(apr_array_header_t **changes,
+                             svn_fs_t *fs,
+                             apr_file_t *file,
+                             svn_stream_t *file_stream,
+                             svn_fs_fs__p2l_entry_t* entry,
+                             apr_uint32_t sub_item,
+                             svn_boolean_t must_read,
+                             apr_pool_t *pool)
+{
+  svn_fs_fs__changes_t *container;
+  svn_stream_t *stream;
+  if (!must_read)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(auto_select_stream(&stream, fs, file, file_stream, entry, pool));
+
+  /* read changes from revision file */
+
+  SVN_ERR(svn_fs_fs__read_changes_container(&container, stream, pool, pool));
+
+  /* extract requested data */
+
+  SVN_ERR(svn_fs_fs__changes_get_list(changes, container, sub_item, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 block_read_noderev(node_revision_t **noderev_p,
                    svn_fs_t *fs,
                    apr_file_t *file,
@@ -2518,9 +2547,6 @@ block_read(void **result,
           if (entry->type == SVN_FS_FS__ITEM_TYPE_UNUSED)
             continue;
 
-          /* we don't support containers, yet */
-          SVN_ERR_ASSERT(entry->item_count == 1);
-
           is_result = result && entry->item_count
                              && entry->items[0].revision == revision
                              && entry->items[0].number == item_index;
@@ -2564,6 +2590,14 @@ block_read(void **result,
                     SVN_ERR(block_read_changes((apr_array_header_t **)&item,
                                                fs, revision_file,  stream,
                                                entry, is_result, pool));
+                    break;
+
+                  case SVN_FS_FS__ITEM_TYPE_CHANGES_CONT:
+                    SVN_ERR(block_read_changes_container
+                                            ((apr_array_header_t **)&item,
+                                              fs, revision_file,  stream,
+                                              entry, sub_item, is_result,
+                                              pool));
                     break;
 
                   default:
