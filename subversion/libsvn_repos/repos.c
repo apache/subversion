@@ -1677,6 +1677,15 @@ svn_repos_has_capability(svn_repos_t *repos,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_repos_capabilities(apr_hash_t **capabilities,
+                       svn_repos_t *repos,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  SVN__NOT_IMPLEMENTED();
+}
+
 
 svn_fs_t *
 svn_repos_fs(svn_repos_t *repos)
@@ -2130,4 +2139,24 @@ svn_repos__fs_type(const char **fs_type,
   return svn_fs_type(fs_type,
                      svn_dirent_join(repos_path, SVN_REPOS__DB_DIR, pool),
                      pool);
+}
+
+
+/** info **/
+svn_error_t *
+svn_repos_info(const svn_repos_info_t **info,
+               svn_repos_t *repos,
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
+{
+  SVN__NOT_IMPLEMENTED();
+}
+
+svn_repos_info_t *
+svn_repos_info_dup(const svn_repos_info_t *info,
+                   apr_pool_t *result_pool)
+{
+  /* Not implemented. */
+  SVN_ERR_MALFUNCTION_NO_RETURN();
+  return NULL;
 }

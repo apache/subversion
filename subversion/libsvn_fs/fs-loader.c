@@ -1590,3 +1590,24 @@ svn_fs_version(void)
 {
   SVN_VERSION_BODY;
 }
+
+
+/** info **/
+svn_error_t *
+svn_fs_info(const svn_fs_info_t **info,
+            svn_fs_t *fs,
+            apr_pool_t *result_pool,
+            apr_pool_t *scratch_pool)
+{
+  SVN__NOT_IMPLEMENTED();
+}
+
+svn_fs_info_t *
+svn_fs_info_dup(const svn_fs_info_t *info,
+                apr_pool_t *result_pool)
+{
+  /* Not implemented. */
+  SVN_ERR_MALFUNCTION_NO_RETURN();
+  return NULL;
+}
+

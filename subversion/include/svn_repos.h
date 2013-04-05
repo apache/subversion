@@ -495,6 +495,26 @@ svn_repos_has_capability(svn_repos_t *repos,
                          apr_pool_t *pool);
 
 /**
+ * Return a set capabilities supported by the running Subversion library and by
+ * @a repos.  (Capabilities supported by this version of Subversion but not by
+ * @a repos are not listed.  This may happen when svn_repos_upgrade2() has not
+ * been called after a software upgrade.)
+ *
+ * The set is represented as a hash whose keys are the set members.  The values
+ * are not defined.
+ *
+ * @see svn_repos_info()
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_repos_capabilities(apr_hash_t **capabilities,
+                       svn_repos_t *repos,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
+/** @} */
+
+/**
  * The capability of doing the right thing with merge-tracking
  * information, both storing it and responding to queries about it.
  *
@@ -3386,6 +3406,76 @@ svn_error_t *
 svn_repos_remember_client_capabilities(svn_repos_t *repos,
                                        const apr_array_header_t *capabilities);
 
+
+
+/** Info. **/
+/**
+ * @defgroup repos_info Repository information subsystem
+ * @{
+ */
+
+/**
+ * A structure that provides some information about a repository.
+ * Returned by svn_repos_info().
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, users shouldn't allocate structures of this
+ * type, to preserve binary compatibility.
+ *
+ * @since New in 1.8.
+ */
+typedef struct svn_repos_info_t {
+
+  /** Repository format number: an integer that increases when incompatible
+   * changes are made (such as by #svn_repos_upgrade). */
+  int repos_format;
+
+  /** The oldest Subversion GA release that can read and write this
+   * repository. */
+  svn_version_t *supports_version;
+
+  /** Set of basenames of hook scripts which have been installed.
+   * Keys are C strings such as "post-commit", values are undefined. */
+  apr_hash_t *hooks_enabled;
+
+  /** Set of basenames of hook scripts which are respected by this version of
+   * Subversion.  Keys are C strings such as "post-commit", values are
+   * undefined.
+   *
+   * @note Hooks are sometimes extended (e.g., by passing additional arguments
+   * to them).  In the future we might extend the semantics of this hash to
+   * describe that case, for example by adding keys or defining a meaning for
+   * the values.
+   */
+  apr_hash_t *hooks_known;
+
+  /** @see svn_fs_info(), svn_repos_fs() */
+  svn_fs_info_t *fs_info;
+
+} svn_repos_info_t;
+
+/**
+ * Set @a *info to an info struct describing @a repos.
+ *
+ * @see #svn_repos_info_t, svn_repos_capabilities()
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_repos_info(const svn_repos_info_t **info,
+               svn_repos_t *repos,
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool);
+
+/**
+ * Return a duplicate of @a info, allocated in @a pool. No part of the new
+ * structure will be shared with @a info.
+ *
+ * @since New in 1.8.
+ */
+svn_repos_info_t *
+svn_repos_info_dup(const svn_repos_info_t *info,
+                   apr_pool_t *result_pool);
 
 
 #ifdef __cplusplus
