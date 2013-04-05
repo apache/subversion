@@ -2040,6 +2040,28 @@ svn_fs_youngest_rev(svn_revnum_t *youngest_p,
                     apr_pool_t *pool);
 
 
+/**
+ * Return filesystem format information for @a fs.
+ *
+ * Set @a *fs_format to the filesystem format number of @a fs, which is
+ * an integer that increases when incompatible changes are made (such as
+ * by #svn_fs_upgrade).
+ *
+ * Set @a *supports_version to the version number of the minimum Subversion GA
+ * release that can read and write @a fs.
+ *
+ * @see svn_repos_info_format()
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_info_format(int *fs_format,
+                   svn_version_t **supports_version,
+                   svn_fs_t *fs,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool);
+
+
 /** Provide filesystem @a fs the opportunity to compress storage relating to
  * associated with  @a revision in filesystem @a fs.  Use @a pool for all
  * allocations.
@@ -2516,23 +2538,6 @@ svn_fs_verify_root(svn_fs_root_t *root,
  * @since New in 1.8.
  */
 typedef struct svn_fs_info_t {
-
-  /** @see svn_fs_type() */
-  const char *fs_type;
-
-  /** @see svn_fs_get_uuid() */
-  const char *uuid;
-
-  /** @see svn_fs_youngest_rev() */
-  svn_revnum_t youngest;
-
-  /** Filesystem format number: an integer that increases when incompatible
-   * changes are made (such as by #svn_fs_upgrade). */
-  int fs_format;
-
-  /** The oldest Subversion GA release that can read and write this
-   * filesystem. */
-  svn_version_t *supports_version;
 
 #if 0
   /* Potential future feature. */

@@ -91,6 +91,13 @@ svn_error_t *
 svn_fs_fs__verify_root(svn_fs_root_t *root,
                        apr_pool_t *pool);
 
+svn_error_t *
+svn_fs_fs__info_format(int *fs_format,
+                       svn_version_t **supports_version,
+                       svn_fs_t *fs,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
