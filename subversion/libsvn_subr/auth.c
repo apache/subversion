@@ -617,14 +617,14 @@ svn_auth_get_platform_specific_client_providers(apr_array_header_t **providers,
 
 svn_error_t *
 svn_auth_cleanup_walk(svn_auth_baton_t *baton,
-                      svn_auth_cleanup_callback cleanup,
+                      svn_auth_cleanup_func_t cleanup_func,
                       void *cleanup_baton,
                       apr_pool_t *scratch_pool)
 {
 
   if (svn_hash_gets(baton->tables, SVN_AUTH_CRED_SIMPLE))
     {
-      SVN_ERR(svn_auth__simple_cleanup_walk(baton, cleanup, cleanup_baton,
+      SVN_ERR(svn_auth__simple_cleanup_walk(baton, cleanup_func, cleanup_baton,
                                             baton->creds_cache, scratch_pool));
     }
   /* ### Maybe add support for other providers? */
