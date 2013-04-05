@@ -1001,6 +1001,7 @@ struct freeze_baton_t {
   int status;
 };
 
+/* Implements svn_repos_freeze_func_t */
 static svn_error_t *
 freeze_body(void *baton,
             apr_pool_t *pool)

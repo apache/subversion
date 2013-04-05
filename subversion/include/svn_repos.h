@@ -662,6 +662,13 @@ svn_repos_recover(const char *path,
                   apr_pool_t *pool);
 
 /**
+ * Callback for svn_repos_freeze.
+ *
+ * @since New in 1.8.
+ */
+typedef svn_error_t *(*svn_repos_freeze_func_t)(void *baton, apr_pool_t *pool);
+
+/**
  * Take an exclusive lock on each of the repositories in @a paths to
  * prevent commits and then while holding all the locks invoke @a
  * freeze_body passing @a baton.  Each repository may be readable by
@@ -678,7 +685,7 @@ svn_repos_recover(const char *path,
  */
 svn_error_t *
 svn_repos_freeze(apr_array_header_t *paths,
-                 svn_error_t *(*freeze_body)(void *baton, apr_pool_t *pool),
+                 svn_repos_freeze_func_t freeze_body,
                  void *baton,
                  apr_pool_t *pool);
 
