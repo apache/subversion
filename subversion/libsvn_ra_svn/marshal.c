@@ -616,7 +616,10 @@ svn_error_t *svn_ra_svn_end_list(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
 
 svn_error_t *svn_ra_svn_flush(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
 {
-  return writebuf_flush(conn, pool);
+  SVN_ERR(writebuf_flush(conn, pool));
+  conn->may_check_for_error = TRUE;
+
+  return SVN_NO_ERROR;
 }
 
 /* --- WRITING TUPLES --- */
@@ -745,23 +748,6 @@ write_tuple_end_list(svn_ra_svn_conn_t *conn,
 }
 
 static svn_error_t *
-write_tuple_word(svn_ra_svn_conn_t *conn,
-                 apr_pool_t *pool,
-                 const char *cstr)
-{
-  SVN_ERR_ASSERT(cstr);
-  return svn_ra_svn_write_word(conn, pool, cstr);
-}
-
-static svn_error_t *
-write_tuple_word_opt(svn_ra_svn_conn_t *conn,
-                     apr_pool_t *pool,
-                     const char *cstr)
-{
-  return cstr ? svn_ra_svn_write_word(conn, pool, cstr) : SVN_NO_ERROR;
-}
-
-static svn_error_t *
 write_tuple_revision(svn_ra_svn_conn_t *conn,
                      apr_pool_t *pool,
                      svn_revnum_t rev)
@@ -778,14 +764,6 @@ write_tuple_revision_opt(svn_ra_svn_conn_t *conn,
   return SVN_IS_VALID_REVNUM(rev)
        ? svn_ra_svn_write_number(conn, pool, rev)
        : SVN_NO_ERROR;
-}
-
-static svn_error_t *
-write_tuple_number(svn_ra_svn_conn_t *conn,
-                   apr_pool_t *pool,
-                   apr_uint64_t number)
-{
-  return svn_ra_svn_write_number(conn, pool, number);
 }
 
 static svn_error_t *
