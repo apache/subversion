@@ -2645,6 +2645,44 @@ svn_error_t *svn_swig_py_repos_history_func(void *baton,
   return err;
 }
 
+svn_error_t *svn_swig_py_repos_freeze_func(void *baton,
+                                           apr_pool_t *pool)
+{
+  PyObject *receiver = baton;
+  PyObject *py_pool;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if ((receiver == NULL) || (receiver == Py_None))
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  py_pool = make_ob_pool(pool);
+  if (py_pool == NULL)
+    {
+      err = callback_exception_error();
+      goto finished;
+    }
+
+  result = PyObject_CallFunction(receiver, (char *)"O", py_pool);
+  if (result == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      if (result != Py_None)
+        err = callback_bad_return_error("Not None");
+      Py_DECREF(result);
+    }
+
+  Py_DECREF(py_pool);
+                                 
+finished:
+  svn_swig_py_release_py_lock();
+  return err;
+}
 
 svn_error_t *svn_swig_py_proplist_receiver2(void *baton,
                                             const char *path,
