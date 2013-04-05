@@ -881,12 +881,26 @@ def create_repos(path, minor_version = None):
 
   # Skip tests if we can't create the repository.
   if stderr:
+    stderr_lines = 0
+    using_bdb_backend = (options.fs_type == "bdb")
+    bdb_deprecation_warning = False
     for line in stderr:
+      stderr_lines += 1
       if line.find('Unknown FS type') != -1:
         raise Skip
-    # If the FS type is known, assume the repos couldn't be created
-    # (e.g. due to a missing 'svnadmin' binary).
-    raise SVNRepositoryCreateFailure("".join(stderr).rstrip())
+      if using_bdb_backend:
+        if line.find("The 'bdb' repository back-end is deprecated") != -1:
+          bdb_deprecation_warning = True
+
+    # Creating BDB repositories will cause svnadmin to print a warning
+    # which should be ignored.
+    if using_bdb_backend and bdb_deprecation_warning and stderr_lines == 1:
+      pass
+    else:
+      # If the FS type is known and we noticed more than just the
+      # BDB-specific warning, assume the repos couldn't be created
+      # (e.g. due to a missing 'svnadmin' binary).
+      raise SVNRepositoryCreateFailure("".join(stderr).rstrip())
 
   # Require authentication to write to the repos, for ra_svn testing.
   file_write(get_svnserve_conf_file_path(path),

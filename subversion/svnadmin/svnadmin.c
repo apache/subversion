@@ -643,7 +643,19 @@ subcommand_create(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                 (opt_state->bdb_log_keep ? "0" :"1"));
 
   if (opt_state->fs_type)
-    svn_hash_sets(fs_config, SVN_FS_CONFIG_FS_TYPE, opt_state->fs_type);
+    {
+      /* The non-default Berkeley DB backend is deprecated. */
+      if (0 == strcmp(opt_state->fs_type, "bdb"))
+        {
+          svn_error_t *const warning = svn_error_create(
+              SVN_WARNING, NULL,
+              "The 'bdb' repository back-end is deprecated,"
+              " consider using 'fsfs' instead.");
+          svn_handle_warning2(stderr, warning, "svnadmin: ");
+          svn_error_clear(warning);
+        }
+      svn_hash_sets(fs_config, SVN_FS_CONFIG_FS_TYPE, opt_state->fs_type);
+    }
 
   /* Prior to 1.8, we had explicit options to specify compatibility
      with a handful of prior Subversion releases. */
