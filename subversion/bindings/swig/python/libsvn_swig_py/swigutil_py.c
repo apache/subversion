@@ -742,6 +742,9 @@ svn_swig_py_propinheriteditemarray_to_dict(const apr_array_header_t *array)
             Py_DECREF(py_key);
             goto error;
           }
+
+        Py_DECREF(py_value);
+        Py_DECREF(py_key);
       }
 
     return dict;
@@ -786,7 +789,15 @@ PyObject *svn_swig_py_proparray_to_dict(const apr_array_header_t *array)
                }
           }
 
-        PyDict_SetItem(dict, py_key, py_value);
+        if (PyDict_SetItem(dict, py_key, py_value) == -1)
+          {
+            Py_DECREF(py_key);
+            Py_DECREF(py_value);
+            goto error;
+          }
+
+        Py_DECREF(py_key);
+        Py_DECREF(py_value);
     }
 
     return dict;
@@ -829,6 +840,7 @@ PyObject *svn_swig_py_locationhash_to_dict(apr_hash_t *hash)
           }
         if (PyDict_SetItem(dict, key, value) == -1)
           {
+            Py_DECREF(key);
             Py_DECREF(value);
             Py_DECREF(dict);
             return NULL;
