@@ -913,7 +913,7 @@ close_revision(void *baton)
   svn_revnum_t committed_rev;
   svn_error_t *err;
   const char *txn_name = NULL;
-  apr_hash_t *hooks_env = NULL;
+  apr_hash_t *hooks_env;
 
   /* If we're skipping this revision or it has an invalid revision
      number, we're done here. */
