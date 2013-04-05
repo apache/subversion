@@ -27,7 +27,6 @@
 #include "svn_sorts.h"
 #include "private/svn_string_private.h"
 #include "private/svn_subr_private.h"
-#include "private/svn_delta_private.h"
 #include "private/svn_packed_data.h"
 #include "string_table.h"
 
