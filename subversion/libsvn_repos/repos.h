@@ -47,7 +47,8 @@ extern "C" {
    formats are accepted by some versions of Subversion which do not
    pay attention to the FS format number.
 */
-#define SVN_REPOS__FORMAT_NUMBER         5
+#define SVN_REPOS__FORMAT_NUMBER         SVN_REPOS__FORMAT_NUMBER_1_4
+#define SVN_REPOS__FORMAT_NUMBER_1_4     5
 #define SVN_REPOS__FORMAT_NUMBER_LEGACY  3
 
 
