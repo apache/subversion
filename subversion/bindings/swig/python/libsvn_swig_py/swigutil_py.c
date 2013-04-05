@@ -548,6 +548,19 @@ static PyObject *convert_svn_string_t(void *value, void *ctx,
   return PyString_FromStringAndSize((void *)s->data, s->len);
 }
 
+/* Convert a C string into a Python String object (or a reference to
+   Py_None if CSTRING is NULL). */
+static PyObject *cstring_to_pystring(const char *cstring)
+{
+  if (! cstring)
+    {
+      PyObject *retval = Py_None;
+      Py_INCREF(Py_None);
+      return retval;
+    }
+  return PyString_FromString(cstring);
+}
+
 static PyObject *convert_svn_client_commit_item3_t(void *value, void *ctx)
 {
   PyObject *list;
@@ -559,30 +572,9 @@ static PyObject *convert_svn_client_commit_item3_t(void *value, void *ctx)
 
   list = PyList_New(9);
 
-  if (item->path)
-    path = PyString_FromString(item->path);
-  else
-    {
-      path = Py_None;
-      Py_INCREF(Py_None);
-    }
-
-  if (item->url)
-    url = PyString_FromString(item->url);
-  else
-    {
-      url = Py_None;
-      Py_INCREF(Py_None);
-    }
-
-  if (item->copyfrom_url)
-    cf_url = PyString_FromString(item->copyfrom_url);
-  else
-    {
-      cf_url = Py_None;
-      Py_INCREF(Py_None);
-    }
-
+  path = cstring_to_pystring(item->path);
+  url = cstring_to_pystring(item->url);
+  cf_url = cstring_to_pystring(item->copyfrom_url);
   kind = PyInt_FromLong(item->kind);
   rev = PyInt_FromLong(item->revision);
   cf_rev = PyInt_FromLong(item->copyfrom_rev);
