@@ -11497,9 +11497,6 @@ svn_fs_fs__info_format(int *fs_format,
     case 4:
       (*supports_version)->minor = 6;
       break;
-    case 5:
-      return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
-                              _("FSFS format 5 was never released"));
     case 6:
       (*supports_version)->minor = 8;
       break;
