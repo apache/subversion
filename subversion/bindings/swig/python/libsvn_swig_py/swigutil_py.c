@@ -3284,6 +3284,57 @@ svn_swig_py_auth_ssl_client_cert_pw_prompt_func(
   return err;
 }
 
+svn_error_t *
+svn_swig_py_auth_cleanup_func(svn_boolean_t *delete_cred,
+                              void *cleanup_baton,
+                              const char *cred_kind,
+                              const char *realmstring,
+                              const char *provider,
+                              apr_pool_t *scratch_pool)
+{
+  PyObject *function = cleanup_baton;
+  PyObject *result;
+  PyObject *py_scratch_pool;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  *delete_cred = FALSE;
+
+  if (function == NULL || function == Py_None)
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  py_scratch_pool = make_ob_pool(scratch_pool);
+  if (py_scratch_pool == NULL)
+    {
+      err = callback_exception_error();
+      goto finished;
+    }
+
+  if ((result = PyObject_CallFunction(function,
+                                      (char *)"sssO",
+                                      cred_kind, realmstring,
+                                      provider, py_scratch_pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      if (PyInt_Check(result))
+        *delete_cred = PyInt_AsLong(result) ? TRUE : FALSE;
+      else if (PyLong_Check(result))
+        *delete_cred = PyLong_AsLong(result) ? TRUE : FALSE;
+      else
+        err = callback_bad_return_error("Not an integer");
+      Py_DECREF(result);
+    }
+  Py_DECREF(py_scratch_pool);
+  
+finished:
+  svn_swig_py_release_py_lock();
+  return err;
+}
+
 /* svn_ra_callbacks_t */
 static svn_error_t *
 ra_callbacks_open_tmp_file(apr_file_t **fp,
