@@ -528,6 +528,8 @@ svn_repos_capabilities(apr_hash_t **capabilities,
  * colons for their own reasons.  While this RA limitation has no
  * direct impact on repository capabilities, there's no reason to be
  * gratuitously different either.
+ *
+ * If you add a capability, update svn_repos_capabilities().
  */
 
 
@@ -2484,6 +2486,25 @@ svn_repos_node_editor(const svn_delta_editor_t **editor,
 svn_repos_node_t *
 svn_repos_node_from_baton(void *edit_baton);
 
+/**
+ * Return repository format information for @a repos.
+ *
+ * Set @a *repos_format to the repository format number of @a repos, which is
+ * an integer that increases when incompatible changes are made (such as
+ * by #svn_repos_upgrade).
+ *
+ * Set @a *supports_version to the version number of the minimum Subversion GA
+ * release that can read and write @a repos.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_repos_info_format(int *repos_format,
+                      svn_version_t **supports_version,
+                      svn_repos_t *repos,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
 /** @} */
 
 /* ---------------------------------------------------------------*/
@@ -3404,77 +3425,6 @@ svn_repos_fs_get_inherited_props(apr_array_header_t **inherited_props,
 svn_error_t *
 svn_repos_remember_client_capabilities(svn_repos_t *repos,
                                        const apr_array_header_t *capabilities);
-
-
-
-/** Info. **/
-/**
- * @defgroup repos_info Repository information subsystem
- * @{
- */
-
-/**
- * A structure that provides some information about a repository.
- * Returned by svn_repos_info().
- *
- * @note Fields may be added to the end of this structure in future
- * versions.  Therefore, users shouldn't allocate structures of this
- * type, to preserve binary compatibility.
- *
- * @since New in 1.8.
- */
-typedef struct svn_repos_info_t {
-
-  /** Repository format number: an integer that increases when incompatible
-   * changes are made (such as by #svn_repos_upgrade). */
-  int repos_format;
-
-  /** The oldest Subversion GA release that can read and write this
-   * repository. */
-  svn_version_t *supports_version;
-
-  /** Set of basenames of hook scripts which have been installed.
-   * Keys are C strings such as "post-commit", values are undefined. */
-  apr_hash_t *hooks_enabled;
-
-  /** Set of basenames of hook scripts which are respected by this version of
-   * Subversion.  Keys are C strings such as "post-commit", values are
-   * undefined.
-   *
-   * @note Hooks are sometimes extended (e.g., by passing additional arguments
-   * to them).  In the future we might extend the semantics of this hash to
-   * describe that case, for example by adding keys or defining a meaning for
-   * the values.
-   */
-  apr_hash_t *hooks_known;
-
-  /** @see svn_fs_info(), svn_repos_fs() */
-  svn_fs_info_t *fs_info;
-
-} svn_repos_info_t;
-
-/**
- * Set @a *info to an info struct describing @a repos.
- *
- * @see #svn_repos_info_t, svn_repos_capabilities()
- *
- * @since New in 1.8.
- */
-svn_error_t *
-svn_repos_info(const svn_repos_info_t **info,
-               svn_repos_t *repos,
-               apr_pool_t *result_pool,
-               apr_pool_t *scratch_pool);
-
-/**
- * Return a duplicate of @a info, allocated in @a pool. No part of the new
- * structure will be shared with @a info.
- *
- * @since New in 1.8.
- */
-svn_repos_info_t *
-svn_repos_info_dup(const svn_repos_info_t *info,
-                   apr_pool_t *result_pool);
 
 
 #ifdef __cplusplus

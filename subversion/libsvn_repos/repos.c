@@ -1683,9 +1683,47 @@ svn_repos_capabilities(apr_hash_t **capabilities,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
-  SVN__NOT_IMPLEMENTED();
+  static const char *const queries[] = {
+    SVN_REPOS_CAPABILITY_MERGEINFO,
+    NULL
+  };
+  const char *const *i;
+
+  *capabilities = apr_hash_make(result_pool);
+
+  for (i = queries; *i; i++)
+    {
+      svn_boolean_t has;
+      SVN_ERR(svn_repos_has_capability(repos, &has, *i, scratch_pool));
+      if (has)
+        svn_hash_sets(*capabilities, *i, *i);
+    }
+
+  return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_repos_info_format(int *repos_format,
+                      svn_version_t **supports_version,
+                      svn_repos_t *repos,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  *repos_format = repos->format;
+  *supports_version = apr_palloc(result_pool, sizeof(svn_version_t));
+
+  (*supports_version)->major = SVN_VER_MAJOR;
+  (*supports_version)->minor = 0;
+  (*supports_version)->patch = 0;
+  (*supports_version)->tag = "";
+
+  if (repos->format == SVN_REPOS__FORMAT_NUMBER_1_4)
+    (*supports_version)->minor = 4;
+  else
+    SVN_ERR_ASSERT(repos->format == SVN_REPOS__FORMAT_NUMBER_LEGACY);
+
+  return SVN_NO_ERROR;
+}
 
 svn_fs_t *
 svn_repos_fs(svn_repos_t *repos)
@@ -2139,24 +2177,4 @@ svn_repos__fs_type(const char **fs_type,
   return svn_fs_type(fs_type,
                      svn_dirent_join(repos_path, SVN_REPOS__DB_DIR, pool),
                      pool);
-}
-
-
-/** info **/
-svn_error_t *
-svn_repos_info(const svn_repos_info_t **info,
-               svn_repos_t *repos,
-               apr_pool_t *result_pool,
-               apr_pool_t *scratch_pool)
-{
-  SVN__NOT_IMPLEMENTED();
-}
-
-svn_repos_info_t *
-svn_repos_info_dup(const svn_repos_info_t *info,
-                   apr_pool_t *result_pool)
-{
-  /* Not implemented. */
-  SVN_ERR_MALFUNCTION_NO_RETURN();
-  return NULL;
 }
