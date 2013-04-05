@@ -709,6 +709,48 @@ PyObject *svn_swig_py_mergeinfo_catalog_to_dict(apr_hash_t *hash,
   return convert_hash(hash, convert_mergeinfo_hash, type, py_pool);
 }
 
+PyObject *
+svn_swig_py_propinheriteditemarray_to_dict(const apr_array_header_t *array)
+{
+    PyObject *dict = PyDict_New();
+    int i;
+
+    if (dict == NULL)
+      return NULL;
+
+    for (i = 0; i < array->nelts; ++i)
+      {
+        svn_prop_inherited_item_t *prop_inherited_item
+          = APR_ARRAY_IDX(array, i, svn_prop_inherited_item_t *);
+        apr_hash_t *prop_hash = prop_inherited_item->prop_hash;
+        PyObject *py_key, *py_value;
+
+        py_key = PyString_FromString(prop_inherited_item->path_or_url);
+        if (py_key == NULL)
+          goto error;
+
+        py_value = svn_swig_py_prophash_to_dict(prop_hash);
+        if (py_value == NULL)
+          {
+            Py_DECREF(py_key);
+            goto error;
+          }
+
+        if (PyDict_SetItem(dict, py_key, py_value) == -1)
+          {
+            Py_DECREF(py_value);
+            Py_DECREF(py_key);
+            goto error;
+          }
+      }
+
+    return dict;
+
+  error:
+    Py_DECREF(dict);
+    return NULL;
+}
+
 PyObject *svn_swig_py_proparray_to_dict(const apr_array_header_t *array)
 {
     PyObject *dict = PyDict_New();
@@ -2587,6 +2629,88 @@ svn_error_t *svn_swig_py_repos_history_func(void *baton,
   return err;
 }
 
+
+svn_error_t *svn_swig_py_proplist_receiver2(void *baton,
+                                            const char *path,
+                                            apr_hash_t *prop_hash,
+                                            apr_array_header_t *inherited_props,
+                                            apr_pool_t *pool)
+{
+  PyObject *receiver = baton;
+  PyObject *py_pool;
+  PyObject *py_props;
+  PyObject *py_iprops;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if ((receiver == NULL) || (receiver == Py_None))
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  py_pool = make_ob_pool(pool);
+  if (py_pool == NULL)
+    {
+      err = callback_exception_error();
+      goto finished;
+    }
+
+  if (prop_hash)
+    {
+      py_props = svn_swig_py_prophash_to_dict(prop_hash);
+      if (py_props == NULL)
+        {
+          err = type_conversion_error("apr_hash_t *");
+          Py_DECREF(py_pool);
+          goto finished;
+        }
+    }
+  else
+    {
+      py_props = Py_None;
+      Py_INCREF(Py_None);
+    }
+  
+  if (inherited_props)
+    {
+      py_iprops = svn_swig_py_propinheriteditemarray_to_dict(inherited_props);
+      if (py_iprops == NULL)
+        {
+          err = type_conversion_error("apr_array_header_t *");
+          Py_DECREF(py_props);
+          Py_DECREF(py_pool);
+          goto finished;
+        }
+    }
+  else
+    {
+      py_iprops = Py_None;
+      Py_INCREF(Py_None);
+    }
+
+  result = PyObject_CallFunction(receiver,
+                                 (char *)"sOOO",
+                                 path, py_props, py_iprops, py_pool);
+  if (result == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      if (result != Py_None)
+        err = callback_bad_return_error("Not None");
+      Py_DECREF(result);
+    }
+
+  Py_DECREF(py_props);
+  Py_DECREF(py_iprops);
+  Py_DECREF(py_pool);
+                                 
+finished:
+  svn_swig_py_release_py_lock();
+  return err;
+}
+                                            
 
 svn_error_t *svn_swig_py_log_receiver(void *baton,
                                       apr_hash_t *changed_paths,
