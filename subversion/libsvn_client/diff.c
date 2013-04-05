@@ -2451,8 +2451,7 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
   /* See if there is a diff command and/or diff arguments. */
   if (config)
     {
-      svn_config_t *cfg = apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
-                                       APR_HASH_KEY_STRING);
+      svn_config_t *cfg = svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
       svn_config_get(cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS,
                      SVN_CONFIG_OPTION_DIFF_CMD, NULL);
       if (options == NULL)

@@ -23,6 +23,7 @@
 
 #include "svn_client.h"
 #include "svn_dirent_uri.h"
+#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_time.h"
@@ -129,18 +130,16 @@ get_dir_contents(apr_uint32_t dirent_fields,
  
  /* Filter out svn:externals from all properties hash. */ 
   if (prop_hash) 
-    prop_val = apr_hash_get(prop_hash, SVN_PROP_EXTERNALS, 
-                            APR_HASH_KEY_STRING);
+    prop_val = svn_hash_gets(prop_hash, SVN_PROP_EXTERNALS);
   if (prop_val)
     {
       const char *url;
 
       SVN_ERR(svn_ra_get_session_url(ra_session, &url, scratch_pool));
       
-      apr_hash_set(externals, svn_path_url_add_component2(url, dir, 
-                                                          result_pool),
-                   APR_HASH_KEY_STRING, svn_string_dup(prop_val, 
-                                                       result_pool));
+      svn_hash_sets(externals,
+                    svn_path_url_add_component2(url, dir, result_pool),
+                    svn_string_dup(prop_val, result_pool));
     }
 
   if (ctx->cancel_func)
@@ -163,7 +162,7 @@ get_dir_contents(apr_uint32_t dirent_fields,
       if (locks)
         {
           const char *abs_path = svn_fspath__join(fs_path, path, iterpool);
-          lock = apr_hash_get(locks, abs_path, APR_HASH_KEY_STRING);
+          lock = svn_hash_gets(locks, abs_path);
         }
       else
         lock = NULL;
@@ -240,8 +239,7 @@ svn_client__ra_stat_compatible(svn_ra_session_t *ra_session,
                                       NULL, "", rev, dirent_fields, subpool));
 
               /* Get the relevant entry. */
-              dirent = apr_hash_get(parent_ents, base_name,
-                                    APR_HASH_KEY_STRING);
+              dirent = svn_hash_gets(parent_ents, base_name);
 
               if (dirent)
                 *dirent_p = svn_dirent_dup(dirent, pool);
@@ -275,16 +273,14 @@ svn_client__ra_stat_compatible(svn_ra_session_t *ra_session,
 
                   SVN_ERR(svn_ra_rev_proplist(ra_session, rev, &props,
                                               pool));
-                  val = apr_hash_get(props, SVN_PROP_REVISION_DATE,
-                                     APR_HASH_KEY_STRING);
+                  val = svn_hash_gets(props, SVN_PROP_REVISION_DATE);
                   if (val)
                     SVN_ERR(svn_time_from_cstring(&dirent->time, val->data,
                                                   pool));
                   else
                     dirent->time = 0;
 
-                  val = apr_hash_get(props, SVN_PROP_REVISION_AUTHOR,
-                                     APR_HASH_KEY_STRING);
+                  val = svn_hash_gets(props, SVN_PROP_REVISION_AUTHOR);
                   dirent->last_author = val ? val->data : NULL;
                 }
 
@@ -400,8 +396,7 @@ list_internal(const char *path_or_url,
 
   /* Report the dirent for the target. */
   SVN_ERR(list_func(baton, "", dirent, locks
-                    ? (apr_hash_get(locks, fs_path,
-                                    APR_HASH_KEY_STRING))
+                    ? (svn_hash_gets(locks, fs_path))
                     : NULL, fs_path, external_parent_url, 
                     external_target, pool));
 

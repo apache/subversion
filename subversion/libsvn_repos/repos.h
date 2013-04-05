@@ -310,25 +310,19 @@ svn_repos__hooks_post_unlock(svn_repos_t *repos,
 /* Read authz configuration data from PATH into *AUTHZ_P, allocated
    in POOL.  If GROUPS_PATH is set, use the global groups parsed from it.
 
-   PATH and GROUPS_PATH may be a file or a registry path and iff ACCEPT_URLS
-   is set it may also be a repos relative url or an absolute file url.  When
-   ACCEPT_URLS is FALSE REPOS_ROOT can be NULL.
+   PATH and GROUPS_PATH may be a dirent or a registry path and iff ACCEPT_URLS
+   is set it may also be an absolute file url.
 
    If PATH or GROUPS_PATH is not a valid authz rule file, then return 
    SVN_AUTHZ_INVALID_CONFIG.  The contents of *AUTHZ_P is then
    undefined.  If MUST_EXIST is TRUE, a missing authz or global groups file
-   is also an error.
-
-   If PATH is a repos relative URL then REPOS_ROOT must be set to
-   the root of the repository the authz configuration will be used with.
-   The same applies to GROUPS_PATH if it is being used. */
+   is also an error. */
 svn_error_t *
 svn_repos__authz_read(svn_authz_t **authz_p,
                       const char *path,
                       const char *groups_path,
                       svn_boolean_t must_exist,
                       svn_boolean_t accept_urls,
-                      const char *repos_root,
                       apr_pool_t *pool);
 
 

@@ -360,7 +360,7 @@ svn_wc__externals_find_target_dups(apr_array_header_t **duplicate_targets,
       target = APR_ARRAY_IDX(externals, i,
                                          svn_wc_external_item2_t*)->target_dir;
       len = apr_hash_count(targets);
-      apr_hash_set(targets, target, APR_HASH_KEY_STRING, "");
+      svn_hash_sets(targets, target, "");
       if (len == apr_hash_count(targets))
         {
           /* Hashtable length is unchanged. This must be a duplicate. */
@@ -370,7 +370,7 @@ svn_wc__externals_find_target_dups(apr_array_header_t **duplicate_targets,
           if (! targets2)
             targets2 = apr_hash_make(scratch_pool);
           len2 = apr_hash_count(targets2);
-          apr_hash_set(targets2, target, APR_HASH_KEY_STRING, "");
+          svn_hash_sets(targets2, target, "");
           if (len2 < apr_hash_count(targets2))
             {
               /* The second hash list just got bigger, i.e. this target has
@@ -953,8 +953,7 @@ close_edit(void *edit_baton,
       if (eb->iprops)
         {
           wcroot_iprops = apr_hash_make(pool);
-          apr_hash_set(wcroot_iprops, eb->local_abspath, APR_HASH_KEY_STRING,
-                       eb->iprops);
+          svn_hash_sets(wcroot_iprops, eb->local_abspath, eb->iprops);
         }
 
       /* The node wasn't updated, so we just have to bump its revision */
@@ -1462,8 +1461,7 @@ svn_wc__externals_gather_definitions(apr_hash_t **externals,
         }
 
       if (value)
-        apr_hash_set(*externals, local_abspath, APR_HASH_KEY_STRING,
-                     value->data);
+        svn_hash_sets(*externals, local_abspath, value->data);
 
       if (value && depths)
         {
@@ -1478,8 +1476,7 @@ svn_wc__externals_gather_definitions(apr_hash_t **externals,
                                        wc_ctx->db, local_abspath,
                                        scratch_pool, scratch_pool));
 
-          apr_hash_set(*depths, local_abspath, APR_HASH_KEY_STRING,
-                       svn_depth_to_word(node_depth));
+          svn_hash_sets(*depths, local_abspath, svn_depth_to_word(node_depth));
         }
 
       return SVN_NO_ERROR;

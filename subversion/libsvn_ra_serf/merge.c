@@ -27,6 +27,7 @@
 
 #include <serf.h>
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
 #include "svn_dav.h"
@@ -160,7 +161,7 @@ merge_closed(svn_ra_serf__xml_estate_t *xes,
     {
       const char *rtype;
 
-      rtype = apr_hash_get(attrs, "resourcetype", APR_HASH_KEY_STRING);
+      rtype = svn_hash_gets(attrs, "resourcetype");
 
       /* rtype can only be "baseline" or "collection" (or NULL). We can
          keep this check simple.  */
@@ -168,7 +169,7 @@ merge_closed(svn_ra_serf__xml_estate_t *xes,
         {
           const char *rev_str;
 
-          rev_str = apr_hash_get(attrs, "revision", APR_HASH_KEY_STRING);
+          rev_str = svn_hash_gets(attrs, "revision");
           if (rev_str)
             merge_ctx->commit_info->revision = SVN_STR_TO_REV(rev_str);
           else
@@ -176,16 +177,15 @@ merge_closed(svn_ra_serf__xml_estate_t *xes,
 
           merge_ctx->commit_info->date =
               apr_pstrdup(merge_ctx->pool,
-                          apr_hash_get(attrs, "date", APR_HASH_KEY_STRING));
+                          svn_hash_gets(attrs, "date"));
 
           merge_ctx->commit_info->author =
               apr_pstrdup(merge_ctx->pool,
-                          apr_hash_get(attrs, "author", APR_HASH_KEY_STRING));
+                          svn_hash_gets(attrs, "author"));
 
           merge_ctx->commit_info->post_commit_err =
              apr_pstrdup(merge_ctx->pool,
-                         apr_hash_get(attrs,
-                                      "post-commit-err", APR_HASH_KEY_STRING));
+                         svn_hash_gets(attrs, "post-commit-err"));
         }
       else
         {
@@ -193,7 +193,7 @@ merge_closed(svn_ra_serf__xml_estate_t *xes,
 
           href = svn_urlpath__skip_ancestor(
                    merge_ctx->merge_url,
-                   apr_hash_get(attrs, "href", APR_HASH_KEY_STRING));
+                   svn_hash_gets(attrs, "href"));
 
           if (href == NULL)
             return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
@@ -209,8 +209,7 @@ merge_closed(svn_ra_serf__xml_estate_t *xes,
               const char *checked_in;
               svn_string_t checked_in_str;
 
-              checked_in = apr_hash_get(attrs,
-                                        "checked-in", APR_HASH_KEY_STRING);
+              checked_in = svn_hash_gets(attrs, "checked-in");
               checked_in_str.data = checked_in;
               checked_in_str.len = strlen(checked_in);
 

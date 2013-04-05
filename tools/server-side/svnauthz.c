@@ -28,7 +28,9 @@
 #include "svn_repos.h"
 #include "svn_utf.h"
 #include "svn_path.h"
+
 #include "private/svn_fspath.h"
+#include "private/svn_cmdline_private.h"
 
 
 /*** Option Processing. ***/
@@ -266,7 +268,7 @@ get_authz(svn_authz_t **authz, struct svnauthz_opt_state *opt_state,
   /* Else */
   return svn_repos_authz_read2(authz, opt_state->authz_file,
                                opt_state->groups_file,
-                               TRUE, NULL, pool);
+                               TRUE, pool);
 }
 
 static svn_error_t *

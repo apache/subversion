@@ -34,6 +34,7 @@
 #include <ap_provider.h>
 #include <mod_dav.h>
 
+#include "svn_hash.h"
 #include "svn_version.h"
 #include "svn_cache_config.h"
 #include "svn_utf.h"

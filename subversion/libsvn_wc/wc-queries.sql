@@ -952,6 +952,7 @@ WHERE wc_id = ?1
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = ?3
   AND presence NOT IN (MAP_BASE_DELETED, MAP_NOT_PRESENT, MAP_EXCLUDED, MAP_SERVER_EXCLUDED)
+  AND file_external IS NULL
 
 -- STMT_INSERT_WORKING_NODE_FROM_BASE_COPY
 INSERT INTO nodes (
@@ -1218,6 +1219,9 @@ WHERE wc_id = ?1 AND parent_relpath = ?2 AND kind = MAP_FILE
 UPDATE nodes SET properties = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 
+-- STMT_PRAGMA_TABLE_INFO_NODES
+PRAGMA table_info("NODES")
+
 /* --------------------------------------------------------------------------
  * Complex queries for callback walks, caching results in a temporary table.
  *
@@ -1399,6 +1403,7 @@ WHERE wc_id = ?1
                   WHERE s.wc_id = ?1
                     AND s.local_relpath = n.local_relpath)
   AND presence NOT IN (MAP_BASE_DELETED, MAP_NOT_PRESENT, MAP_EXCLUDED, MAP_SERVER_EXCLUDED)
+  AND file_external IS NULL
 
 -- STMT_SELECT_DELETE_LIST
 SELECT local_relpath FROM delete_list

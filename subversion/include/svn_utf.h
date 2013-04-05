@@ -238,7 +238,9 @@ svn_utf_cstring_from_utf8_string(const char **dest,
 
 /** Return the display width of UTF-8-encoded C string @a cstr.
  * If the string is not printable or invalid UTF-8, return -1.
- * @since New in 1.8. */
+ *
+ * @since New in 1.8.
+ */
 int
 svn_utf_cstring_utf8_width(const char *cstr);
 

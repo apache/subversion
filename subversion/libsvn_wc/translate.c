@@ -33,6 +33,7 @@
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_dirent_uri.h"
+#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_error.h"
 #include "svn_subst.h"
@@ -407,7 +408,7 @@ svn_wc__sync_flags_with_props(svn_boolean_t *did_set,
   /* Handle the read-write bit. */
   if (status != svn_wc__db_status_normal
       || props == NULL
-      || ! apr_hash_get(props, SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING)
+      || ! svn_hash_gets(props, SVN_PROP_NEEDS_LOCK)
       || lock)
     {
       SVN_ERR(svn_io_set_file_read_write(local_abspath, FALSE, scratch_pool));
@@ -427,8 +428,7 @@ svn_wc__sync_flags_with_props(svn_boolean_t *did_set,
         pristine_props = NULL;
 
       if (pristine_props
-            && apr_hash_get(pristine_props,
-                            SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING) )
+            && svn_hash_gets(pristine_props, SVN_PROP_NEEDS_LOCK) )
             /*&& props
             && apr_hash_get(props, SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING) )*/
         SVN_ERR(svn_io_set_file_read_only(local_abspath, FALSE, scratch_pool));
@@ -438,7 +438,7 @@ svn_wc__sync_flags_with_props(svn_boolean_t *did_set,
 #ifndef WIN32
 
   if (props == NULL
-      || ! apr_hash_get(props, SVN_PROP_EXECUTABLE, APR_HASH_KEY_STRING))
+      || ! svn_hash_gets(props, SVN_PROP_EXECUTABLE))
     {
       /* Turn off the execute bit */
       SVN_ERR(svn_io_set_file_executable(local_abspath, FALSE, FALSE,

@@ -26,6 +26,7 @@
    deprecated functions in this file. */
 #define SVN_DEPRECATED
 
+#include "svn_hash.h"
 #include "svn_ra.h"
 #include "svn_path.h"
 #include "svn_compat.h"
@@ -218,9 +219,8 @@ svn_error_t *svn_ra_get_commit_editor2(svn_ra_session_t *session,
 {
   apr_hash_t *revprop_table = apr_hash_make(pool);
   if (log_msg)
-    apr_hash_set(revprop_table, SVN_PROP_REVISION_LOG,
-                 APR_HASH_KEY_STRING,
-                 svn_string_create(log_msg, pool));
+    svn_hash_sets(revprop_table, SVN_PROP_REVISION_LOG,
+                  svn_string_create(log_msg, pool));
   return svn_ra_get_commit_editor3(session, editor, edit_baton, revprop_table,
                                    commit_callback, commit_baton,
                                    lock_tokens, keep_locks, pool);

@@ -395,9 +395,8 @@ remove_non_prop_changes(apr_hash_t *pristine_props,
 
       if (change->value)
         {
-          const svn_string_t *old_val = apr_hash_get(pristine_props,
-                                                     change->name,
-                                                     APR_HASH_KEY_STRING);
+          const svn_string_t *old_val = svn_hash_gets(pristine_props,
+                                                      change->name);
 
           if (old_val && svn_string_compare(old_val, change->value))
             {

@@ -27,6 +27,7 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
+#include "svn_hash.h"
 #include "svn_cmdline.h"
 #include "svn_client.h"
 #include "svn_dirent_uri.h"
@@ -1148,137 +1149,6 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
     {
       (*result)->choice = svn_wc_conflict_choose_postpone;
     }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_cl__conflict_func_postpone(svn_wc_conflict_result_t **result,
-                               const svn_wc_conflict_description2_t *desc,
-                               void *baton,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool)
-{
-  apr_hash_t *conflicted_paths = baton;
-  
-  apr_hash_set(conflicted_paths,
-               apr_pstrdup(apr_hash_pool_get(conflicted_paths),
-                           desc->local_abspath),
-               APR_HASH_KEY_STRING, "");
-
-  *result = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,
-                                          NULL, result_pool);
-  return SVN_NO_ERROR;
-}
-
-void *
-svn_cl__get_conflict_func_postpone_baton(apr_pool_t *result_pool)
-{
-  return apr_hash_make(result_pool);
-}
-
-static apr_array_header_t *
-get_postponed_conflicted_paths(void *baton, apr_pool_t *result_pool)
-{
-  apr_hash_t *conflicted_paths = baton;
-  apr_array_header_t *sorted_array;
-  apr_array_header_t *result_array;
-  int i;
-
-  sorted_array = svn_sort__hash(conflicted_paths,
-                                svn_sort_compare_items_as_paths,
-                                apr_hash_pool_get(conflicted_paths));
-  result_array = apr_array_make(result_pool, sorted_array->nelts,
-                                sizeof(const char *));
-  for (i = 0; i < sorted_array->nelts; i++)
-    {
-      svn_sort__item_t item;
-      
-      item = APR_ARRAY_IDX(sorted_array, i, svn_sort__item_t);
-      APR_ARRAY_PUSH(result_array, const char *) = apr_pstrdup(result_pool,
-                                                               item.key);
-    }
-
-  return result_array;
-}
-
-svn_error_t *
-svn_cl__resolve_postponed_conflicts(svn_boolean_t *conflicts_all_resolved,
-                                    void *baton,
-                                    svn_cl__accept_t accept_which,
-                                    const char *editor_cmd,
-                                    svn_client_ctx_t *ctx,
-                                    apr_pool_t *scratch_pool)
-{
-  apr_array_header_t *targets;
-  int i;
-  apr_pool_t *iterpool;
-
-  targets = get_postponed_conflicted_paths(baton, scratch_pool);
-
-  if (conflicts_all_resolved != NULL)
-    *conflicts_all_resolved = TRUE;
-
-  iterpool = svn_pool_create(scratch_pool);
-  for (i = 0; i < targets->nelts; i++)
-    {
-      const char *target = APR_ARRAY_IDX(targets, i, const char *);
-      svn_error_t *err = SVN_NO_ERROR;
-      const char *local_abspath;
-      svn_wc_conflict_resolver_func2_t conflict_func2;
-      void *conflict_baton2;
-      svn_cl__interactive_conflict_baton_t *b;
-      svn_boolean_t text_c, prop_c, tree_c;
-
-      svn_pool_clear(iterpool);
-
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, target, iterpool));
-
-      /* Store old state */
-      conflict_func2 = ctx->conflict_func2;
-      conflict_baton2 = ctx->conflict_baton2;
-
-      /* Set up the interactive resolver. */
-      ctx->conflict_func2 = svn_cl__conflict_func_interactive;
-      SVN_ERR(svn_cl__get_conflict_func_interactive_baton(&b, accept_which,
-                                                          ctx->config,
-                                                          editor_cmd,
-                                                          ctx->cancel_func,
-                                                          ctx->cancel_baton,
-                                                          scratch_pool));
-      ctx->conflict_baton2 = b;
-
-      err = svn_client_resolve(local_abspath, svn_depth_empty,
-                               svn_wc_conflict_choose_unspecified,
-                               ctx, iterpool);
-
-      /* Restore state */
-      ctx->conflict_func2 = conflict_func2;
-      ctx->conflict_baton2 = conflict_baton2;
-
-      if (err)
-        {
-          if ((err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
-              && (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND))
-            return svn_error_trace(err);
-
-          svn_error_clear(err);
-        }
-
-      /* Report if we left any of the conflicts unresolved */
-      if (conflicts_all_resolved != NULL)
-        {
-          SVN_ERR(svn_wc_conflicted_p3(&text_c, &prop_c, &tree_c,
-                                       ctx->wc_ctx, local_abspath,
-                                       scratch_pool));
-          if (text_c || prop_c || tree_c)
-            *conflicts_all_resolved = FALSE;
-        }
-
-      if (b->quit)
-        break;
-    }
-  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }

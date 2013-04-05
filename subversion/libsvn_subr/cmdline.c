@@ -46,6 +46,7 @@
 #include "svn_ctype.h"
 #include "svn_dso.h"
 #include "svn_dirent_uri.h"
+#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -144,7 +145,9 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
       _set_error_mode(_OUT_TO_STDERR);
 
       /* In _DEBUG mode: Redirect all debug output (E.g. assert() to stderr.
-         (Ignored in releas builds) */
+         (Ignored in release builds) */
+      _CrtSetReportFile( _CRT_WARN, _CRTDBG_FILE_STDERR);
+      _CrtSetReportFile( _CRT_ERROR, _CRTDBG_FILE_STDERR);
       _CrtSetReportFile( _CRT_ASSERT, _CRTDBG_FILE_STDERR);
       _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
       _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
@@ -747,7 +750,7 @@ svn_cmdline__apply_config_options(apr_hash_t *config,
                           APR_ARRAY_IDX(config_options, i,
                                         svn_cmdline__config_argument_t *);
 
-     cfg = apr_hash_get(config, arg->file, APR_HASH_KEY_STRING);
+     cfg = svn_hash_gets(config, arg->file);
 
      if (cfg)
        {
@@ -973,8 +976,7 @@ find_editor_binary(const char **editor,
   /* If not found then fall back on the config file. */
   if (! e)
     {
-      cfg = config ? apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
-                                  APR_HASH_KEY_STRING) : NULL;
+      cfg = config ? svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG) : NULL;
       svn_config_get(cfg, &e, SVN_CONFIG_SECTION_HELPERS,
                      SVN_CONFIG_OPTION_EDITOR_CMD, NULL);
     }

@@ -29,6 +29,7 @@
 
 /* ### this should go away, but it causes too much breakage right now */
 #include <stdlib.h>
+#include <limits.h> /* for ULONG_MAX */
 
 #include <apr.h>         /* for apr_size_t, apr_int64_t, ... */
 #include <apr_errno.h>   /* for apr_status_t */

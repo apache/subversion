@@ -28,6 +28,7 @@
 /*** Includes. ***/
 
 #include "svn_error.h"
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_wc.h"
 #include "svn_ra.h"
@@ -154,7 +155,7 @@ get_inheritable_props(apr_hash_t **wcroot_iprops,
      an external, then svn_wc__get_cached_iprop_children won't return
      LOCAL_ABSPATH in IPROPS_PATHS because the former has no cached iprops
      yet.  So make sure LOCAL_ABSPATH is present if it's a WC root. */
-  if (!apr_hash_get(iprop_paths, local_abspath, APR_HASH_KEY_STRING))
+  if (!svn_hash_gets(iprop_paths, local_abspath))
     {
       svn_boolean_t needs_cached_iprops;
 
@@ -167,8 +168,7 @@ get_inheritable_props(apr_hash_t **wcroot_iprops,
 
           /* As value we set TARGET_ABSPATH, but any string besides ""
              would do */
-          apr_hash_set(iprop_paths, target_abspath,
-                       APR_HASH_KEY_STRING, target_abspath);
+          svn_hash_sets(iprop_paths, target_abspath, target_abspath);
         }
     }
 
@@ -217,10 +217,9 @@ get_inheritable_props(apr_hash_t **wcroot_iprops,
               continue;
             }
 
-          apr_hash_set(*wcroot_iprops,
-                       apr_pstrdup(result_pool, child_abspath),
-                       APR_HASH_KEY_STRING,
-                       inherited_props);
+          svn_hash_sets(*wcroot_iprops,
+                        apr_pstrdup(result_pool, child_abspath),
+                        inherited_props);
         }
 
 

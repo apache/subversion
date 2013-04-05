@@ -40,6 +40,7 @@
 
 #include <apr_lib.h>
 
+#include "svn_hash.h"
 #include "svn_client.h"
 #include "svn_cmdline.h"
 #include "svn_config.h"
@@ -108,6 +109,7 @@ create_ra_callbacks(svn_ra_callbacks2_t **callbacks,
                     const char *config_dir,
                     svn_config_t *cfg_config,
                     svn_boolean_t non_interactive,
+                    svn_boolean_t trust_server_cert,
                     svn_boolean_t no_auth_cache,
                     apr_pool_t *pool)
 {
@@ -117,7 +119,7 @@ create_ra_callbacks(svn_ra_callbacks2_t **callbacks,
                                         non_interactive,
                                         username, password, config_dir,
                                         no_auth_cache,
-                                        FALSE /* trust_server_certs */,
+                                        trust_server_cert,
                                         cfg_config, NULL, NULL, pool));
 
   (*callbacks)->open_tmp_file = open_tmp_file;
@@ -334,8 +336,7 @@ get_operation(const char *path,
               struct operation *operation,
               apr_pool_t *pool)
 {
-  struct operation *child = apr_hash_get(operation->children, path,
-                                         APR_HASH_KEY_STRING);
+  struct operation *child = svn_hash_gets(operation->children, path);
   if (! child)
     {
       child = apr_pcalloc(pool, sizeof(*child));
@@ -345,7 +346,7 @@ get_operation(const char *path,
       child->kind = svn_node_dir;
       child->prop_mods = apr_hash_make(pool);
       child->prop_dels = apr_array_make(pool, 1, sizeof(const char *));
-      apr_hash_set(operation->children, path, APR_HASH_KEY_STRING, child);
+      svn_hash_sets(operation->children, path, child);
     }
   return child;
 }
@@ -449,8 +450,7 @@ build(action_code_t action,
       if (! prop_value)
         APR_ARRAY_PUSH(operation->prop_dels, const char *) = prop_name;
       else
-        apr_hash_set(operation->prop_mods, prop_name,
-                     APR_HASH_KEY_STRING, prop_value);
+        svn_hash_sets(operation->prop_mods, prop_name, prop_value);
       if (!operation->rev)
         operation->rev = rev;
       return SVN_NO_ERROR;
@@ -728,6 +728,7 @@ execute(const apr_array_header_t *actions,
         const char *config_dir,
         const apr_array_header_t *config_options,
         svn_boolean_t non_interactive,
+        svn_boolean_t trust_server_cert,
         svn_boolean_t no_auth_cache,
         svn_revnum_t base_revision,
         apr_pool_t *pool)
@@ -748,10 +749,9 @@ execute(const apr_array_header_t *actions,
   SVN_ERR(svn_config_get_config(&config, config_dir, pool));
   SVN_ERR(svn_cmdline__apply_config_options(config, config_options,
                                             "svnmucc: ", "--config-option"));
-  cfg_config = apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
-                            APR_HASH_KEY_STRING);
+  cfg_config = svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
 
-  if (! apr_hash_get(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING))
+  if (! svn_hash_gets(revprops, SVN_PROP_REVISION_LOG))
     {
       svn_string_t *msg = svn_string_create("", pool);
 
@@ -770,12 +770,12 @@ execute(const apr_array_header_t *actions,
                       TRUE, NULL, apr_hash_pool_get(revprops)));
         }
 
-      apr_hash_set(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING, msg);
+      svn_hash_sets(revprops, SVN_PROP_REVISION_LOG, msg);
     }
 
   SVN_ERR(create_ra_callbacks(&ra_callbacks, username, password, config_dir,
-                              cfg_config, non_interactive, no_auth_cache,
-                              pool));
+                              cfg_config, non_interactive, trust_server_cert,
+                              no_auth_cache, pool));
   SVN_ERR(svn_ra_open4(&session, NULL, anchor, NULL, ra_callbacks,
                        NULL, config, pool));
   /* Open, then reparent to avoid AUTHZ errors when opening the reposroot */
@@ -950,9 +950,15 @@ usage(apr_pool_t *pool, int exit_val)
       "  -r [--revision] ARG    : use revision ARG as baseline for changes\n"
       "  --with-revprop ARG     : set revision property in the following format:\n"
       "                               NAME[=VALUE]\n"
-      "  -n [--non-interactive] : don't prompt the user about anything\n"
+      "  --non-interactive      : do no interactive prompting (default is to\n"
+      "                           prompt only if standard input is a terminal)\n"
+      "  --force-interactive    : do interactive propmting even if standard\n"
+      "                           input is not a terminal\n"
+      "  --trust-server-cert    : accept SSL server certificates from unknown\n"
+      "                           certificate authorities without prompting (but\n"
+      "                           only with '--non-interactive')\n"
       "  -X [--extra-args] ARG  : append arguments from file ARG (one per line;\n"
-      "                         : use \"-\" to read from standard input)\n"
+      "                           use \"-\" to read from standard input)\n"
       "  --config-dir ARG       : use ARG to override the config directory\n"
       "  --config-option ARG    : use ARG to override a configuration option\n"
       "  --no-auth-cache        : do not cache authentication tokens\n"
@@ -1011,7 +1017,7 @@ sanitize_log_sources(apr_hash_t *revprops,
   /* If we already have a log message in the revprop hash, then just
      make sure the user didn't try to also use -m or -F.  Otherwise,
      we need to consult -m or -F to find a log message, if any. */
-  if (apr_hash_get(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING))
+  if (svn_hash_gets(revprops, SVN_PROP_REVISION_LOG))
     {
       if (filedata || message)
         return mutually_exclusive_logs_error();
@@ -1022,13 +1028,13 @@ sanitize_log_sources(apr_hash_t *revprops,
         return mutually_exclusive_logs_error();
 
       SVN_ERR(svn_utf_cstring_to_utf8(&message, filedata->data, hash_pool));
-      apr_hash_set(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
-                   svn_stringbuf__morph_into_string(filedata));
+      svn_hash_sets(revprops, SVN_PROP_REVISION_LOG,
+                    svn_stringbuf__morph_into_string(filedata));
     }
   else if (message)
     {
-      apr_hash_set(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
-                   svn_string_create(message, hash_pool));
+      svn_hash_sets(revprops, SVN_PROP_REVISION_LOG,
+                    svn_string_create(message, hash_pool));
     }
   
   return SVN_NO_ERROR;
@@ -1048,7 +1054,10 @@ main(int argc, const char **argv)
     config_inline_opt,
     no_auth_cache_opt,
     version_opt,
-    with_revprop_opt
+    with_revprop_opt,
+    non_interactive_opt,
+    force_interactive_opt,
+    trust_server_cert_opt
   };
   static const apr_getopt_option_t options[] = {
     {"message", 'm', 1, ""},
@@ -1061,7 +1070,9 @@ main(int argc, const char **argv)
     {"extra-args", 'X', 1, ""},
     {"help", 'h', 0, ""},
     {NULL, '?', 0, ""},
-    {"non-interactive", 'n', 0, ""},
+    {"non-interactive", non_interactive_opt, 0, ""},
+    {"force-interactive", force_interactive_opt, 0, ""},
+    {"trust-server-cert", trust_server_cert_opt, 0, ""},
     {"config-dir", config_dir_opt, 1, ""},
     {"config-option",  config_inline_opt, 1, ""},
     {"no-auth-cache",  no_auth_cache_opt, 0, ""},
@@ -1075,6 +1086,8 @@ main(int argc, const char **argv)
   const char *config_dir = NULL;
   apr_array_header_t *config_options;
   svn_boolean_t non_interactive = FALSE;
+  svn_boolean_t force_interactive = FALSE;
+  svn_boolean_t trust_server_cert = FALSE;
   svn_boolean_t no_auth_cache = FALSE;
   svn_revnum_t base_revision = SVN_INVALID_REVNUM;
   apr_array_header_t *action_args;
@@ -1150,8 +1163,14 @@ main(int argc, const char **argv)
         case 'X':
           extra_args_file = apr_pstrdup(pool, arg);
           break;
-        case 'n':
+        case non_interactive_opt:
           non_interactive = TRUE;
+          break;
+        case force_interactive_opt:
+          force_interactive = TRUE;
+          break;
+        case trust_server_cert_opt:
+          trust_server_cert = TRUE;
           break;
         case config_dir_opt:
           err = svn_utf_cstring_to_utf8(&config_dir, arg, pool);
@@ -1180,6 +1199,25 @@ main(int argc, const char **argv)
           usage(pool, EXIT_SUCCESS);
           break;
         }
+    }
+
+  if (non_interactive && force_interactive)
+    {
+      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("--non-interactive and --force-interactive "
+                               "are mutually exclusive"));
+      return svn_cmdline_handle_exit_error(err, pool, "svnmucc: ");
+    }
+  else
+    non_interactive = !svn_cmdline__be_interactive(non_interactive,
+                                                   force_interactive);
+
+  if (trust_server_cert && !non_interactive)
+    {
+      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("--trust-server-cert requires "
+                               "--non-interactive"));
+      return svn_cmdline_handle_exit_error(err, pool, "svnmucc: ");
     }
 
   /* Make sure we have a log message to use. */
@@ -1404,8 +1442,15 @@ main(int argc, const char **argv)
 
   if ((err = execute(actions, anchor, revprops, username, password,
                      config_dir, config_options, non_interactive,
-                     no_auth_cache, base_revision, pool)))
-    handle_error(err, pool);
+                     trust_server_cert, no_auth_cache, base_revision, pool)))
+    {
+      if (err->apr_err == SVN_ERR_AUTHN_FAILED && non_interactive)
+        err = svn_error_quick_wrap(err,
+                                   _("Authentication failed and interactive"
+                                     " prompting is disabled; see the"
+                                     " --force-interactive option"));
+      handle_error(err, pool);
+    }
 
   /* Ensure that stdout is flushed, so the user will see all results. */
   svn_error_clear(svn_cmdline_fflush(stdout));

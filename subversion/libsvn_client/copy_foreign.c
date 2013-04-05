@@ -26,6 +26,7 @@
 /*** Includes. ***/
 
 #include <string.h>
+#include "svn_hash.h"
 #include "svn_client.h"
 #include "svn_delta.h"
 #include "svn_dirent_uri.h"
@@ -164,9 +165,8 @@ dir_change_prop(void *dir_baton,
         db->properties = apr_hash_make(db->pool);
 
       if (value != NULL)
-        apr_hash_set(db->properties,
-                     apr_pstrdup(db->pool, name), APR_HASH_KEY_STRING,
-                     svn_string_dup(value, db->pool));
+        svn_hash_sets(db->properties, apr_pstrdup(db->pool, name),
+                      svn_string_dup(value, db->pool));
     }
   else
     {
@@ -311,9 +311,8 @@ file_change_prop(void *file_baton,
     fb->properties = apr_hash_make(fb->pool);
 
   if (value != NULL)
-    apr_hash_set(fb->properties,
-                 apr_pstrdup(fb->pool, name), APR_HASH_KEY_STRING,
-                 svn_string_dup(value, fb->pool));
+    svn_hash_sets(fb->properties, apr_pstrdup(fb->pool, name),
+                  svn_string_dup(value, fb->pool));
 
   return SVN_NO_ERROR;
 }
@@ -533,7 +532,7 @@ svn_client__copy_foreign(const char *url,
                 || ! strcmp(name, SVN_PROP_MERGEINFO))
               {
                 /* We can't handle DAV, ENTRY and merge specific props here */
-                apr_hash_set(props, name, APR_HASH_KEY_STRING, NULL);
+                svn_hash_sets(props, name, NULL);
               }
           }
 

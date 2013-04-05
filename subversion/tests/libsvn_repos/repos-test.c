@@ -1402,6 +1402,7 @@ in_repo_authz(const svn_test_opts_t *opts,
   const char *repos_root;
   const char *repos_url;
   const char *authz_url;
+  const char *noent_authz_url;
   svn_error_t *err;
   struct check_access_tests test_set[] = {
     /* reads */
@@ -1448,28 +1449,22 @@ in_repo_authz(const svn_test_opts_t *opts,
                                       pool));
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
-
-  /* repos relative URL */
+  
   repos_root = svn_repos_path(repos, pool);
-  SVN_ERR(svn_repos_authz_read2(&authz_cfg, "^/authz", NULL, TRUE,
-                                repos_root, pool));
-  SVN_ERR(authz_check_access(authz_cfg, test_set, pool));
-
-  /* absolute file URL, repos_root is NULL to validate the contract that it
-   * is not needed except when a repos relative URL is passed. */
   SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_root, pool));
   authz_url = apr_pstrcat(pool, repos_url, "/authz", (char *)NULL);
-  SVN_ERR(svn_repos_authz_read2(&authz_cfg, authz_url, NULL, TRUE,
-                                NULL, pool));
+  noent_authz_url = apr_pstrcat(pool, repos_url, "/A/authz", (char *)NULL);
+
+  /* absolute file URL. */
+  SVN_ERR(svn_repos_authz_read2(&authz_cfg, authz_url, NULL, TRUE, pool));
   SVN_ERR(authz_check_access(authz_cfg, test_set, pool));
   
   /* Non-existant path in the repo with must_exist set to FALSE */ 
-  SVN_ERR(svn_repos_authz_read2(&authz_cfg, "^/A/authz", NULL, FALSE,
-                                repos_root, pool));
+  SVN_ERR(svn_repos_authz_read2(&authz_cfg, noent_authz_url, NULL,
+                                FALSE, pool));
 
   /* Non-existant path in the repo with must_exist set to TRUE */ 
-  err = svn_repos_authz_read2(&authz_cfg, "^/A/authz", NULL, TRUE,
-                              repos_root, pool);
+  err = svn_repos_authz_read2(&authz_cfg, noent_authz_url, NULL, TRUE, pool);
   if (!err || err->apr_err != SVN_ERR_ILLEGAL_TARGET)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
                              "Got %s error instead of expected "
@@ -1479,7 +1474,7 @@ in_repo_authz(const svn_test_opts_t *opts,
 
   /* http:// URL which is unsupported */
   err = svn_repos_authz_read2(&authz_cfg, "http://example.com/repo/authz",
-                              NULL, TRUE, repos_root, pool);
+                              NULL, TRUE, pool);
   if (!err || err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
                              "Got %s error instead of expected "
@@ -1489,7 +1484,7 @@ in_repo_authz(const svn_test_opts_t *opts,
 
   /* svn:// URL which is unsupported */
   err = svn_repos_authz_read2(&authz_cfg, "svn://example.com/repo/authz",
-                              NULL, TRUE, repos_root, pool);
+                              NULL, TRUE, pool);
   if (!err || err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
                              "Got %s error instead of expected "
@@ -1518,7 +1513,10 @@ in_repo_groups_authz(const svn_test_opts_t *opts,
   const char *repos_root;
   const char *repos_url;
   const char *groups_url;
+  const char *noent_groups_url;
   const char *authz_url;
+  const char *empty_authz_url;
+  const char *noent_authz_url;
   svn_error_t *err;
   struct check_access_tests test_set[] = {
     /* reads */
@@ -1590,38 +1588,35 @@ in_repo_groups_authz(const svn_test_opts_t *opts,
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
 
-  /* repos relative URLs */
+  /* Calculate URLs */
   repos_root = svn_repos_path(repos, pool);
-  SVN_ERR(svn_repos_authz_read2(&authz_cfg, "^/authz", "^/groups",
-                                TRUE, repos_root, pool));
-  SVN_ERR(authz_check_access(authz_cfg, test_set, pool));
-
-  /* absolute file URLs, repos_root is NULL to validate the contract that it
-   * is not needed except when a repos relative URLs are passed. */
   SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_root, pool));
   authz_url = apr_pstrcat(pool, repos_url, "/authz", (char *)NULL);
+  empty_authz_url = apr_pstrcat(pool, repos_url, "/empty-authz", (char *)NULL);
+  noent_authz_url = apr_pstrcat(pool, repos_url, "/A/authz", (char *)NULL);
   groups_url = apr_pstrcat(pool, repos_url, "/groups", (char *)NULL);
-  SVN_ERR(svn_repos_authz_read2(&authz_cfg, authz_url, groups_url,
-                                TRUE, NULL, pool));
+  noent_groups_url = apr_pstrcat(pool, repos_url, "/A/groups", (char *)NULL);
+
+
+  /* absolute file URLs. */
+  groups_url = apr_pstrcat(pool, repos_url, "/groups", (char *)NULL);
+  SVN_ERR(svn_repos_authz_read2(&authz_cfg, authz_url, groups_url, TRUE, pool));
   SVN_ERR(authz_check_access(authz_cfg, test_set, pool));
 
   /* Non-existent path for the groups file with must_exist
    * set to TRUE */
-  SVN_ERR(svn_repos_authz_read2(&authz_cfg, "^/empty-authz",
-                                "^/A/groups", FALSE,
-                                repos_root, pool));
+  SVN_ERR(svn_repos_authz_read2(&authz_cfg, empty_authz_url, noent_groups_url,
+                                FALSE, pool));
 
   /* Non-existent paths for both the authz and the groups files
    * with must_exist set to TRUE */
-  SVN_ERR(svn_repos_authz_read2(&authz_cfg, "^/A/authz",
-                                "^/A/groups", FALSE,
-                                repos_root, pool));
+  SVN_ERR(svn_repos_authz_read2(&authz_cfg, noent_authz_url, noent_groups_url,
+                                FALSE, pool));
 
   /* Non-existent path for the groups file with must_exist
    * set to TRUE */
-  err = svn_repos_authz_read2(&authz_cfg, "^/empty-authz",
-                              "^/A/groups", TRUE,
-                              repos_root, pool);
+  err = svn_repos_authz_read2(&authz_cfg, empty_authz_url, noent_groups_url,
+                              TRUE, pool);
   if (!err || err->apr_err != SVN_ERR_ILLEGAL_TARGET)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
                              "Got %s error instead of expected "
@@ -1630,9 +1625,9 @@ in_repo_groups_authz(const svn_test_opts_t *opts,
   svn_error_clear(err);
 
   /* http:// URL which is unsupported */
-  err = svn_repos_authz_read2(&authz_cfg, "^/empty-authz",
+  err = svn_repos_authz_read2(&authz_cfg, empty_authz_url,
                               "http://example.com/repo/groups",
-                              TRUE, repos_root, pool);
+                              TRUE, pool);
   if (!err || err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
                              "Got %s error instead of expected "
@@ -1641,9 +1636,9 @@ in_repo_groups_authz(const svn_test_opts_t *opts,
   svn_error_clear(err);
 
   /* svn:// URL which is unsupported */
-  err = svn_repos_authz_read2(&authz_cfg, "^/empty-authz",
+  err = svn_repos_authz_read2(&authz_cfg, empty_authz_url,
                               "http://example.com/repo/groups",
-                              TRUE, repos_root, pool);
+                              TRUE, pool);
   if (!err || err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
                              "Got %s error instead of expected "
@@ -1687,7 +1682,7 @@ authz_groups_get_handle(svn_authz_t **authz_p,
 
       /* Read the authz configuration back and start testing. */
       SVN_ERR_W(svn_repos_authz_read2(authz_p, authz_file_path,
-                                      groups_file_path, TRUE, NULL, pool),
+                                      groups_file_path, TRUE, pool),
                 "Opening test authz and groups files");
 
       /* Done with the files. */
@@ -3164,6 +3159,101 @@ test_delete_repos(const svn_test_opts_t *opts,
 
   return SVN_NO_ERROR;
 }
+
+/* Related to issue 4340, "fs layer should reject filenames with trailing \n" */
+static svn_error_t *
+filename_with_control_chars(const svn_test_opts_t *opts,
+                            apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_revnum_t youngest_rev = 0;
+  svn_error_t *err;
+  static const char *bad_paths[] = {
+    "/bar\t",
+    "/bar\n",
+    "/\barb\az",
+    "/\x02 baz",
+    NULL,
+  };
+  const char *p;
+  int i;
+  void *edit_baton;
+  void *root_baton;
+  void *out_baton;
+  const svn_delta_editor_t *editor;
+
+  /* Create the repository. */
+  SVN_ERR(svn_test__create_repos(&repos, "test-repos-filename-with-cntrl-chars",
+                                 opts, pool));
+  fs = svn_repos_fs(repos);
+
+  /* Revision 1:  Add a directory /foo  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "/foo", subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  svn_pool_clear(subpool);
+
+  /* Checks for control characters are implemented in the commit editor,
+   * not in the FS API. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, pool));
+  SVN_ERR(svn_repos_get_commit_editor4(&editor, &edit_baton, repos,
+                                       txn, "file://test", "/",
+                                       "plato", "test commit",
+                                       dummy_commit_cb, NULL, NULL, NULL,
+                                       pool));
+
+  SVN_ERR(editor->open_root(edit_baton, 1, pool, &root_baton));
+
+  /* Attempt to copy /foo to a bad path P. This should fail. */
+  i = 0;
+  do
+    {
+      p = bad_paths[i++];
+      if (p == NULL)
+        break;
+      svn_pool_clear(subpool);
+      err = editor->add_directory(p, root_baton, "/foo", 1, subpool,
+                                  &out_baton);
+      SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
+  } while (p);
+
+  /* Attempt to add a file with bad path P. This should fail. */
+  i = 0;
+  do
+    {
+      p = bad_paths[i++];
+      if (p == NULL)
+        break;
+      svn_pool_clear(subpool);
+      err = editor->add_file(p, root_baton, NULL, SVN_INVALID_REVNUM,
+                             subpool, &out_baton);
+      SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
+  } while (p);
+
+
+  /* Attempt to add a directory with bad path P. This should fail. */
+  i = 0;
+  do
+    {
+      p = bad_paths[i++];
+      if (p == NULL)
+        break;
+      svn_pool_clear(subpool);
+      err = editor->add_directory(p, root_baton, NULL, SVN_INVALID_REVNUM,
+                                  subpool, &out_baton);
+      SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
+  } while (p);
+
+  SVN_ERR(editor->abort_edit(edit_baton, subpool));
+
+  return SVN_NO_ERROR;
+}
 
 /* The test table.  */
 
@@ -3208,5 +3298,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test issue 4060"),
     SVN_TEST_OPTS_PASS(test_delete_repos,
                        "test svn_repos_delete"),
+    SVN_TEST_OPTS_PASS(filename_with_control_chars,
+                       "test filenames with control characters"),
     SVN_TEST_NULL
   };

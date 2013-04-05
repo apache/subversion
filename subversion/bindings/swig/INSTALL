@@ -368,7 +368,7 @@ USING SWIG BINDINGS
    3. The APIs available within each module are broadly the same as the
       corresponding C APIs except:
 
-        * omit the module prefix (for example, 'svn_client_')
+        * you may omit the module prefix (for example, 'svn_client_')
         * pool arguments are optional
         * using Python exceptions instead of returning svn_error_t
         * returning a tuple of outputs instead of return-by-pointer

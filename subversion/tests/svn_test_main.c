@@ -44,8 +44,10 @@
 #include "svn_io.h"
 #include "svn_path.h"
 #include "svn_ctype.h"
-#include "svn_private_config.h"
 
+#include "private/svn_cmdline_private.h"
+
+#include "svn_private_config.h"
 
 /* Some Subversion test programs may want to parse options in the
    argument list, so we remember it here. */

@@ -28,6 +28,7 @@
 #include <apr_general.h>
 #include <apr_strings.h>
 
+#include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -499,7 +500,7 @@ static ra_svn_token_entry_t *store_token(ra_svn_driver_state_t *ds,
   entry->is_file = is_file;
   entry->dstream = NULL;
   entry->pool = pool;
-  apr_hash_set(ds->tokens, entry->token, APR_HASH_KEY_STRING, entry);
+  svn_hash_sets(ds->tokens, entry->token, entry);
   return entry;
 }
 
@@ -507,7 +508,7 @@ static svn_error_t *lookup_token(ra_svn_driver_state_t *ds, const char *token,
                                  svn_boolean_t is_file,
                                  ra_svn_token_entry_t **entry)
 {
-  *entry = apr_hash_get(ds->tokens, token, APR_HASH_KEY_STRING);
+  *entry = svn_hash_gets(ds->tokens, token);
   if (!*entry || (*entry)->is_file != is_file)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                             _("Invalid file or dir token during edit"));
@@ -646,7 +647,7 @@ static svn_error_t *ra_svn_handle_close_dir(svn_ra_svn_conn_t *conn,
 
   /* Close the directory and destroy the baton. */
   SVN_CMD_ERR(ds->editor->close_directory(entry->baton, pool));
-  apr_hash_set(ds->tokens, token, APR_HASH_KEY_STRING, NULL);
+  svn_hash_sets(ds->tokens, token, NULL);
   svn_pool_destroy(entry->pool);
   return SVN_NO_ERROR;
 }
@@ -816,7 +817,7 @@ static svn_error_t *ra_svn_handle_close_file(svn_ra_svn_conn_t *conn,
 
   /* Close the file and destroy the baton. */
   SVN_CMD_ERR(ds->editor->close_file(entry->baton, text_checksum, pool));
-  apr_hash_set(ds->tokens, token, APR_HASH_KEY_STRING, NULL);
+  svn_hash_sets(ds->tokens, token, NULL);
   if (--ds->file_refs == 0)
     svn_pool_clear(ds->file_pool);
   return SVN_NO_ERROR;

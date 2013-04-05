@@ -1796,7 +1796,7 @@ static svn_error_t * read_header_block(apr_hash_t **headers,
 
       /* header_str is safely in our pool, so we can use bits of it as
          key and value. */
-      apr_hash_set(*headers, name, APR_HASH_KEY_STRING, value);
+      svn_hash_sets(*headers, name, value);
     }
 
   return SVN_NO_ERROR;
@@ -2355,7 +2355,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
   noderev = apr_pcalloc(pool, sizeof(*noderev));
 
   /* Read the node-rev id. */
-  value = apr_hash_get(headers, HEADER_ID, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_ID);
   if (value == NULL)
       /* ### More information: filename/offset coordinates */
       return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -2367,7 +2367,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
   noderev_id = value; /* for error messages later */
 
   /* Read the type. */
-  value = apr_hash_get(headers, HEADER_TYPE, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_TYPE);
 
   if ((value == NULL) ||
       (strcmp(value, KIND_FILE) != 0 && strcmp(value, KIND_DIR)))
@@ -2380,14 +2380,14 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
     : svn_node_dir;
 
   /* Read the 'count' field. */
-  value = apr_hash_get(headers, HEADER_COUNT, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_COUNT);
   if (value)
     SVN_ERR(svn_cstring_atoi(&noderev->predecessor_count, value));
   else
     noderev->predecessor_count = 0;
 
   /* Get the properties location. */
-  value = apr_hash_get(headers, HEADER_PROPS, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_PROPS);
   if (value)
     {
       SVN_ERR(read_rep_offsets(&noderev->prop_rep, value,
@@ -2395,7 +2395,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
     }
 
   /* Get the data location. */
-  value = apr_hash_get(headers, HEADER_TEXT, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_TEXT);
   if (value)
     {
       SVN_ERR(read_rep_offsets(&noderev->data_rep, value,
@@ -2404,7 +2404,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
     }
 
   /* Get the created path. */
-  value = apr_hash_get(headers, HEADER_CPATH, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_CPATH);
   if (value == NULL)
     {
       return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -2417,13 +2417,13 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
     }
 
   /* Get the predecessor ID. */
-  value = apr_hash_get(headers, HEADER_PRED, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_PRED);
   if (value)
     noderev->predecessor_id = svn_fs_fs__id_parse(value, strlen(value),
                                                   pool);
 
   /* Get the copyroot. */
-  value = apr_hash_get(headers, HEADER_COPYROOT, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_COPYROOT);
   if (value == NULL)
     {
       noderev->copyroot_path = apr_pstrdup(pool, noderev->created_path);
@@ -2449,7 +2449,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
     }
 
   /* Get the copyfrom. */
-  value = apr_hash_get(headers, HEADER_COPYFROM, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_COPYFROM);
   if (value == NULL)
     {
       noderev->copyfrom_path = NULL;
@@ -2473,18 +2473,18 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
     }
 
   /* Get whether this is a fresh txn root. */
-  value = apr_hash_get(headers, HEADER_FRESHTXNRT, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_FRESHTXNRT);
   noderev->is_fresh_txn_root = (value != NULL);
 
   /* Get the mergeinfo count. */
-  value = apr_hash_get(headers, HEADER_MINFO_CNT, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_MINFO_CNT);
   if (value)
     SVN_ERR(svn_cstring_atoi64(&noderev->mergeinfo_count, value));
   else
     noderev->mergeinfo_count = 0;
 
   /* Get whether *this* node has mergeinfo. */
-  value = apr_hash_get(headers, HEADER_MINFO_HERE, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_MINFO_HERE);
   noderev->has_mergeinfo = (value != NULL);
 
   *noderev_p = noderev;
@@ -2801,7 +2801,7 @@ get_fs_id_at_offset(svn_fs_id_t **id_p,
   /* In error messages, the offset is relative to the pack file,
      not to the rev file. */
 
-  node_id_str = apr_hash_get(headers, HEADER_ID, APR_HASH_KEY_STRING);
+  node_id_str = svn_hash_gets(headers, HEADER_ID);
 
   if (node_id_str == NULL)
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -5544,7 +5544,7 @@ parse_dir_entries(apr_hash_t **entries_p,
 
       dirent->id = svn_fs_fs__id_parse(str, strlen(str), pool);
 
-      apr_hash_set(*entries_p, dirent->name, APR_HASH_KEY_STRING, dirent);
+      svn_hash_sets(*entries_p, dirent->name, dirent);
     }
 
   return SVN_NO_ERROR;
@@ -5638,7 +5638,7 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
                                           scratch_pool));
 
       /* find desired entry and return a copy in POOL, if found */
-      entry = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
+      entry = svn_hash_gets(entries, name);
       if (entry != NULL)
         {
           entry_copy = apr_palloc(result_pool, sizeof(*entry_copy));
@@ -6622,7 +6622,7 @@ svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
     {
       svn_prop_t *prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
 
-      apr_hash_set(txn_prop, prop->name, APR_HASH_KEY_STRING, prop->value);
+      svn_hash_sets(txn_prop, prop->name, prop->value);
     }
 
   /* Create a new version of the file and write out the new props. */
@@ -8262,6 +8262,51 @@ write_current(svn_fs_t *fs, svn_revnum_t rev, const char *next_node_id,
   return move_into_place(tmp_name, name, name, pool);
 }
 
+/* Open a new svn_fs_t handle to FS, set that handle's concept of "current
+   youngest revision" to NEW_REV, and call svn_fs_fs__verify_root() on
+   NEW_REV's revision root.
+
+   Intended to be called as the very last step in a commit before 'current'
+   is bumped.  This implies that we are holding the write lock. */
+static svn_error_t *
+verify_as_revision_before_current_plus_plus(svn_fs_t *fs,
+                                            svn_revnum_t new_rev,
+                                            apr_pool_t *pool)
+{
+#ifdef SVN_DEBUG
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_fs_t *ft; /* fs++ == ft */
+  svn_fs_root_t *root;
+  fs_fs_data_t *ft_ffd;
+  apr_hash_t *fs_config;
+
+  SVN_ERR_ASSERT(ffd->svn_fs_open_);
+
+  /* make sure FT does not simply return data cached by other instances
+   * but actually retrieves it from disk at least once.
+   */
+  fs_config = apr_hash_make(pool);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
+                           svn_uuid_generate(pool));
+  SVN_ERR(ffd->svn_fs_open_(&ft, fs->path,
+                            fs_config,
+                            pool));
+  ft_ffd = ft->fsap_data;
+  /* Don't let FT consult rep-cache.db, either. */
+  ft_ffd->rep_sharing_allowed = FALSE;
+
+  /* Time travel! */
+  ft_ffd->youngest_rev_cache = new_rev;
+
+  SVN_ERR(svn_fs_fs__revision_root(&root, ft, new_rev, pool));
+  SVN_ERR_ASSERT(root->is_txn_root == FALSE && root->rev == new_rev);
+  SVN_ERR_ASSERT(ft_ffd->youngest_rev_cache == new_rev);
+  SVN_ERR(svn_fs_fs__verify_root(root, pool));
+#endif /* SVN_DEBUG */
+
+  return SVN_NO_ERROR;
+}
+
 /* Update the 'current' file to hold the correct next node and copy_ids
    from transaction TXN_ID in filesystem FS.  The current revision is
    set to REV.  Perform temporary allocations in POOL. */
@@ -8336,7 +8381,7 @@ verify_locks(svn_fs_t *fs,
         continue;
 
       /* Fetch the change associated with our path.  */
-      change = apr_hash_get(changes, path, APR_HASH_KEY_STRING);
+      change = svn_hash_gets(changes, path);
 
       /* What does it mean to succeed at lock verification for a given
          path?  For an existing file or directory getting modified
@@ -8455,14 +8500,13 @@ commit_body(void *baton, apr_pool_t *pool)
   txnprop_list = apr_array_make(pool, 3, sizeof(svn_prop_t));
   prop.value = NULL;
 
-  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_OOD, APR_HASH_KEY_STRING))
+  if (svn_hash_gets(txnprops, SVN_FS__PROP_TXN_CHECK_OOD))
     {
       prop.name = SVN_FS__PROP_TXN_CHECK_OOD;
       APR_ARRAY_PUSH(txnprop_list, svn_prop_t) = prop;
     }
 
-  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS,
-                   APR_HASH_KEY_STRING))
+  if (svn_hash_gets(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS))
     {
       prop.name = SVN_FS__PROP_TXN_CHECK_LOCKS;
       APR_ARRAY_PUSH(txnprop_list, svn_prop_t) = prop;
@@ -8533,6 +8577,7 @@ commit_body(void *baton, apr_pool_t *pool)
                           old_rev_filename, pool));
 
   /* Update the 'current' file. */
+  SVN_ERR(verify_as_revision_before_current_plus_plus(cb->fs, new_rev, pool));
   SVN_ERR(write_final_current(cb->fs, cb->txn->id, new_rev, start_node_id,
                               start_copy_id, pool));
 
@@ -8670,7 +8715,7 @@ write_revision_zero(svn_fs_t *fs)
   date.data = svn_time_to_cstring(apr_time_now(), fs->pool);
   date.len = strlen(date.data);
   proplist = apr_hash_make(fs->pool);
-  apr_hash_set(proplist, SVN_PROP_REVISION_DATE, APR_HASH_KEY_STRING, &date);
+  svn_hash_sets(proplist, SVN_PROP_REVISION_DATE, &date);
   return set_revision_proplist(fs, 0, proplist, fs->pool);
 }
 
@@ -8686,17 +8731,13 @@ svn_fs_fs__create(svn_fs_t *fs,
   /* See if compatibility with older versions was explicitly requested. */
   if (fs->config)
     {
-      if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
-                                   APR_HASH_KEY_STRING))
+      if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE))
         format = 1;
-      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
-                                        APR_HASH_KEY_STRING))
+      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE))
         format = 2;
-      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
-                                        APR_HASH_KEY_STRING))
+      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE))
         format = 3;
-      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE,
-                                        APR_HASH_KEY_STRING))
+      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE))
         format = 4;
     }
   ffd->format = format;
@@ -8900,13 +8941,13 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
                             pool));
 
   /* Check that this is a directory.  It should be. */
-  value = apr_hash_get(headers, HEADER_TYPE, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_TYPE);
   if (value == NULL || strcmp(value, KIND_DIR) != 0)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Recovery encountered a non-directory node"));
 
   /* Get the data location.  No data location indicates an empty directory. */
-  value = apr_hash_get(headers, HEADER_TEXT, APR_HASH_KEY_STRING);
+  value = svn_hash_gets(headers, HEADER_TEXT);
   if (!value)
     return SVN_NO_ERROR;
   SVN_ERR(read_rep_offsets(&data_rep, value, NULL, FALSE, pool));
@@ -9361,7 +9402,7 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
   if (node_origins)
     {
       svn_string_t *origin_id_str =
-        apr_hash_get(node_origins, node_id, APR_HASH_KEY_STRING);
+        svn_hash_gets(node_origins, node_id);
       if (origin_id_str)
         *origin_id = svn_fs_fs__id_parse(origin_id_str->data,
                                          origin_id_str->len, pool);
@@ -9396,7 +9437,7 @@ set_node_origins_for_file(svn_fs_t *fs,
   if (! origins_hash)
     origins_hash = apr_hash_make(pool);
 
-  old_node_rev_id = apr_hash_get(origins_hash, node_id, APR_HASH_KEY_STRING);
+  old_node_rev_id = svn_hash_gets(origins_hash, node_id);
 
   if (old_node_rev_id && !svn_string_compare(node_rev_id, old_node_rev_id))
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -9405,7 +9446,7 @@ set_node_origins_for_file(svn_fs_t *fs,
                                "(%s)"),
                              node_id, old_node_rev_id->data, node_rev_id->data);
 
-  apr_hash_set(origins_hash, node_id, APR_HASH_KEY_STRING, node_rev_id);
+  svn_hash_sets(origins_hash, node_id, node_rev_id);
 
   /* Sure, there's a race condition here.  Two processes could be
      trying to add different cache elements to the same file at the
@@ -9586,7 +9627,7 @@ svn_fs_fs__revision_prop(svn_string_t **value_p,
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
   SVN_ERR(svn_fs_fs__revision_proplist(&table, fs, rev, pool));
 
-  *value_p = apr_hash_get(table, propname, APR_HASH_KEY_STRING);
+  *value_p = svn_hash_gets(table, propname);
 
   return SVN_NO_ERROR;
 }
@@ -9615,8 +9656,7 @@ change_rev_prop_body(void *baton, apr_pool_t *pool)
   if (cb->old_value_p)
     {
       const svn_string_t *wanted_value = *cb->old_value_p;
-      const svn_string_t *present_value = apr_hash_get(table, cb->name,
-                                                       APR_HASH_KEY_STRING);
+      const svn_string_t *present_value = svn_hash_gets(table, cb->name);
       if ((!wanted_value != !present_value)
           || (wanted_value && present_value
               && !svn_string_compare(wanted_value, present_value)))
@@ -9629,7 +9669,7 @@ change_rev_prop_body(void *baton, apr_pool_t *pool)
         }
       /* Fall through. */
     }
-  apr_hash_set(table, cb->name, APR_HASH_KEY_STRING, cb->value);
+  svn_hash_sets(table, cb->name, cb->value);
 
   return set_revision_proplist(cb->fs, cb->rev, table, pool);
 }
@@ -9688,7 +9728,7 @@ svn_fs_fs__txn_prop(svn_string_t **value_p,
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
   SVN_ERR(svn_fs_fs__txn_proplist(&table, txn, pool));
 
-  *value_p = apr_hash_get(table, propname, APR_HASH_KEY_STRING);
+  *value_p = svn_hash_gets(table, propname);
 
   return SVN_NO_ERROR;
 }
@@ -10418,7 +10458,7 @@ svn_fs_fs__verify(svn_fs_t *fs,
       baton->notify_func = notify_func;
       baton->notify_baton = notify_baton;
       
-      /* tell the user that we are now read to do *something* */
+      /* tell the user that we are now ready to do *something* */
       if (notify_func)
         notify_func(SVN_INVALID_REVNUM, notify_baton, baton->pool);
 
@@ -10436,29 +10476,6 @@ svn_fs_fs__verify(svn_fs_t *fs,
 
   return SVN_NO_ERROR;
 }
-
-svn_error_t *
-svn_fs_fs__verify_rev(svn_fs_t *fs,
-                      svn_revnum_t revision,
-                      apr_pool_t *pool)
-{
-  svn_fs_root_t *root;
-
-  /* Issue #4129: bogus pred-counts and minfo-cnt's on the root node-rev
-     (and elsewhere).  This code makes more thorough checks than the
-     commit-time checks in validate_root_noderev(). */
-
-  /* ### TODO: Make sure caches are disabled.
-
-     When this code is called in the library, we want to ensure we
-     use the on-disk data --- rather than some data that was read
-     in the possibly-distance past and cached since. */
-  SVN_ERR(svn_fs_fs__revision_root(&root, fs, revision, pool));
-  SVN_ERR(svn_fs_fs__verify_root(root, pool));
-
-  return SVN_NO_ERROR;
-}
-
 
 
 /** Hotcopy. **/

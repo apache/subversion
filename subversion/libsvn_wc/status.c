@@ -373,8 +373,7 @@ read_info(const struct svn_wc__db_info_t **info,
         SVN_ERR(svn_wc__db_read_pristine_props(&properties, db, local_abspath,
                                                scratch_pool, scratch_pool));
 
-      mtb->special = (NULL != apr_hash_get(properties, SVN_PROP_SPECIAL,
-                                           APR_HASH_KEY_STRING));
+      mtb->special = (NULL != svn_hash_gets(properties, SVN_PROP_SPECIAL));
     }
 #endif
   *info = mtb;
@@ -915,10 +914,9 @@ send_status_structure(const struct walk_status_baton *wb,
         {
           /* repos_lock still uses the deprecated filesystem absolute path
              format */
-          repos_lock = apr_hash_get(wb->repos_locks,
-                                    svn_fspath__join("/", repos_relpath,
-                                                     scratch_pool),
-                                    APR_HASH_KEY_STRING);
+          repos_lock = svn_hash_gets(wb->repos_locks,
+                                     svn_fspath__join("/", repos_relpath,
+                                                      scratch_pool));
         }
     }
 
@@ -1037,7 +1035,7 @@ is_external_path(apr_hash_t *externals,
   apr_hash_index_t *hi;
 
   /* First try: does the path exist as a key in the hash? */
-  if (apr_hash_get(externals, local_abspath, APR_HASH_KEY_STRING))
+  if (svn_hash_gets(externals, local_abspath))
     return TRUE;
 
   /* Failing that, we need to check if any external is a child of
@@ -1560,9 +1558,9 @@ hash_stash(void *baton,
 {
   apr_hash_t *stat_hash = baton;
   apr_pool_t *hash_pool = apr_hash_pool_get(stat_hash);
-  assert(! apr_hash_get(stat_hash, path, APR_HASH_KEY_STRING));
-  apr_hash_set(stat_hash, apr_pstrdup(hash_pool, path),
-               APR_HASH_KEY_STRING, svn_wc_dup_status3(status, hash_pool));
+  assert(! svn_hash_gets(stat_hash, path));
+  svn_hash_sets(stat_hash, apr_pstrdup(hash_pool, path),
+                svn_wc_dup_status3(status, hash_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1621,7 +1619,7 @@ tweak_statushash(void *baton,
   pool = apr_hash_pool_get(statushash);
 
   /* Is PATH already a hash-key? */
-  statstruct = apr_hash_get(statushash, local_abspath, APR_HASH_KEY_STRING);
+  statstruct = svn_hash_gets(statushash, local_abspath);
 
   /* If not, make it so. */
   if (! statstruct)
@@ -1644,8 +1642,7 @@ tweak_statushash(void *baton,
       SVN_ERR(internal_status(&statstruct, db, local_abspath, pool,
                               scratch_pool));
       statstruct->repos_lock = repos_lock;
-      apr_hash_set(statushash, apr_pstrdup(pool, local_abspath),
-                   APR_HASH_KEY_STRING, statstruct);
+      svn_hash_sets(statushash, apr_pstrdup(pool, local_abspath), statstruct);
     }
 
   /* Merge a repos "delete" + "add" into a single "replace". */
@@ -1747,9 +1744,8 @@ find_dir_repos_relpath(const struct dir_baton *db, apr_pool_t *pool)
     {
       const char *repos_relpath;
       struct dir_baton *pb = db->parent_baton;
-      const svn_wc_status3_t *status = apr_hash_get(pb->statii,
-                                                    db->local_abspath,
-                                                    APR_HASH_KEY_STRING);
+      const svn_wc_status3_t *status = svn_hash_gets(pb->statii,
+                                                     db->local_abspath);
       /* Note that status->repos_relpath could be NULL in the case of a missing
        * directory, which means we need to recurse up another level to get
        * a useful relpath. */
@@ -1829,8 +1825,7 @@ make_dir_baton(void **dir_baton,
   /* Get the status for this path's children.  Of course, we only want
      to do this if the path is versioned as a directory. */
   if (pb)
-    status_in_parent = apr_hash_get(pb->statii, d->local_abspath,
-                                    APR_HASH_KEY_STRING);
+    status_in_parent = svn_hash_gets(pb->statii, d->local_abspath);
   else
     status_in_parent = eb->anchor_status;
 
@@ -1862,8 +1857,7 @@ make_dir_baton(void **dir_baton,
                              dir_pool));
 
       /* If we found a depth here, it should govern. */
-      this_dir_status = apr_hash_get(d->statii, d->local_abspath,
-                                     APR_HASH_KEY_STRING);
+      this_dir_status = svn_hash_gets(d->statii, d->local_abspath);
       if (this_dir_status && this_dir_status->versioned
           && (d->depth == svn_depth_unknown
               || d->depth > status_in_parent->depth))
@@ -2266,8 +2260,7 @@ close_directory(void *dir_baton,
       const svn_wc_status3_t *dir_status;
 
       /* See if the directory was deleted or replaced. */
-      dir_status = apr_hash_get(pb->statii, db->local_abspath,
-                                APR_HASH_KEY_STRING);
+      dir_status = svn_hash_gets(pb->statii, db->local_abspath);
       if (dir_status &&
           ((dir_status->repos_node_status == svn_wc_status_deleted)
            || (dir_status->repos_node_status == svn_wc_status_replaced)))
@@ -2283,7 +2276,7 @@ close_directory(void *dir_baton,
                                            eb->get_all))
         SVN_ERR((eb->status_func)(eb->status_baton, db->local_abspath,
                                   dir_status, scratch_pool));
-      apr_hash_set(pb->statii, db->local_abspath, APR_HASH_KEY_STRING, NULL);
+      svn_hash_sets(pb->statii, db->local_abspath, NULL);
     }
   else if (! pb)
     {
@@ -2293,8 +2286,7 @@ close_directory(void *dir_baton,
         {
           const svn_wc_status3_t *tgt_status;
 
-          tgt_status = apr_hash_get(db->statii, eb->target_abspath,
-                                    APR_HASH_KEY_STRING);
+          tgt_status = svn_hash_gets(db->statii, eb->target_abspath);
           if (tgt_status)
             {
               if (tgt_status->versioned
@@ -2469,10 +2461,9 @@ close_file(void *file_baton,
           const char *repos_relpath = svn_relpath_join(dir_repos_relpath,
                                                        fb->name, pool);
 
-          repos_lock = apr_hash_get(fb->edit_baton->wb.repos_locks,
-                                    svn_fspath__join("/", repos_relpath,
-                                                     pool),
-                                    APR_HASH_KEY_STRING);
+          repos_lock = svn_hash_gets(fb->edit_baton->wb.repos_locks,
+                                     svn_fspath__join("/", repos_relpath,
+                                                      pool));
         }
     }
   else
@@ -2847,9 +2838,9 @@ svn_wc_get_default_ignores(apr_array_header_t **patterns,
                            apr_hash_t *config,
                            apr_pool_t *pool)
 {
-  svn_config_t *cfg = config ? apr_hash_get(config,
-                                            SVN_CONFIG_CATEGORY_CONFIG,
-                                            APR_HASH_KEY_STRING) : NULL;
+  svn_config_t *cfg = config
+                      ? svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG)
+                      : NULL;
   const char *val;
 
   /* Check the Subversion run-time configuration for global ignores.

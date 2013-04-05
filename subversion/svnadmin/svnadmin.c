@@ -25,6 +25,7 @@
 #include <apr_file_io.h>
 #include <apr_signal.h>
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_cmdline.h"
 #include "svn_error.h"
@@ -44,6 +45,7 @@
 
 #include "private/svn_opt_private.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_cmdline_private.h"
 
 #include "svn_private_config.h"
 
@@ -111,12 +113,11 @@ open_repos(svn_repos_t **repos,
 {
   /* construct FS configuration parameters: enable caches for r/o data */
   apr_hash_t *fs_config = apr_hash_make(pool);
-  apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
-               APR_HASH_KEY_STRING, "1");
-  apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
-               APR_HASH_KEY_STRING, "1");
-  apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
-               APR_HASH_KEY_STRING, "2");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS, "1");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS, "1");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "2");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
+                           svn_uuid_generate(pool));
 
   /* now, open the requested repository */
   SVN_ERR(svn_repos_open2(repos, path, fs_config, pool));
@@ -216,6 +217,9 @@ static const apr_getopt_option_t options_table[] =
     {"revision",      'r', 1,
      N_("specify revision number ARG (or X:Y range)")},
 
+    {"transaction",       't', 1,
+     N_("specify transaction name ARG")},
+
     {"incremental",   svnadmin__incremental, 0,
      N_("dump or hotcopy incrementally")},
 
@@ -278,11 +282,11 @@ static const apr_getopt_option_t options_table[] =
     {"pre-1.5-compatible",     svnadmin__pre_1_5_compatible, 0,
      N_("deprecated; see --compatible-version")},
 
-    {"pre-1.6-compatible",     svnadmin__pre_1_6_compatible, 0,
-     N_("deprecated; see --compatible-version")},
-
     {"keep-going",    svnadmin__keep_going, 0,
      N_("continue verifying after detecting a corruption")},
+
+    {"pre-1.6-compatible",     svnadmin__pre_1_6_compatible, 0,
+     N_("deprecated; see --compatible-version")},
 
     {"memory-cache-size",     'M', 1,
      N_("size of the extra in-memory cache in MB used to\n"
@@ -482,7 +486,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
   {"verify", subcommand_verify, {0}, N_
    ("usage: svnadmin verify REPOS_PATH\n\n"
     "Verifies the data stored in the repository.\n"),
-  {'r', 'q', svnadmin__keep_going, 'M'} },
+  {'t', 'r', 'q', svnadmin__keep_going, 'M'} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -498,6 +502,7 @@ struct svnadmin_opt_state
   svn_boolean_t pre_1_6_compatible;                 /* --pre-1.6-compatible */
   svn_version_t *compatible_version;                /* --compatible-version */
   svn_opt_revision_t start_revision, end_revision;  /* -r X[:Y] */
+  const char *txn_id;                               /* -t TXN */
   svn_boolean_t help;                               /* --help or -? */
   svn_boolean_t version;                            /* --version */
   svn_boolean_t incremental;                        /* --incremental */
@@ -636,47 +641,36 @@ subcommand_create(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
 
-  apr_hash_set(fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
-               APR_HASH_KEY_STRING,
-               (opt_state->bdb_txn_nosync ? "1" : "0"));
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
+                (opt_state->bdb_txn_nosync ? "1" :"0"));
 
-  apr_hash_set(fs_config, SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE,
-               APR_HASH_KEY_STRING,
-               (opt_state->bdb_log_keep ? "0" : "1"));
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE,
+                (opt_state->bdb_log_keep ? "0" :"1"));
 
   if (opt_state->fs_type)
-    apr_hash_set(fs_config, SVN_FS_CONFIG_FS_TYPE,
-                 APR_HASH_KEY_STRING,
-                 opt_state->fs_type);
+    svn_hash_sets(fs_config, SVN_FS_CONFIG_FS_TYPE, opt_state->fs_type);
 
   /* Prior to 1.8, we had explicit options to specify compatibility
      with a handful of prior Subversion releases. */
   if (opt_state->pre_1_4_compatible)
-    apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
-                 APR_HASH_KEY_STRING, "1");
+    svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE, "1");
   if (opt_state->pre_1_5_compatible)
-    apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
-                 APR_HASH_KEY_STRING, "1");
+    svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE, "1");
   if (opt_state->pre_1_6_compatible)
-    apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
-                 APR_HASH_KEY_STRING, "1");
+    svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE, "1");
 
   /* In 1.8, we figured out that we didn't have to keep extending this
      madness indefinitely. */
   if (opt_state->compatible_version)
     {
       if (! svn_version__at_least(opt_state->compatible_version, 1, 4, 0))
-        apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
-                     APR_HASH_KEY_STRING, "1");
+        svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE, "1");
       if (! svn_version__at_least(opt_state->compatible_version, 1, 5, 0))
-        apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
-                     APR_HASH_KEY_STRING, "1");
+        svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE, "1");
       if (! svn_version__at_least(opt_state->compatible_version, 1, 6, 0))
-        apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
-                     APR_HASH_KEY_STRING, "1");
+        svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE, "1");
       if (! svn_version__at_least(opt_state->compatible_version, 1, 8, 0))
-        apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE,
-                     APR_HASH_KEY_STRING, "1");
+        svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE, "1");
     }
 
   SVN_ERR(svn_repos_create(&repos, opt_state->repository_path,
@@ -779,7 +773,7 @@ repos_notify_handler(void *baton,
                                         notify->revision));
       return;
 
-    case  svn_repos_notify_verify_struc_rev:
+    case svn_repos_notify_verify_rev_structure:
       if (notify->revision == SVN_INVALID_REVNUM)
         svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
                                 _("* Verifying repository metadata ...\n")));
@@ -1561,9 +1555,33 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
 
+  if (opt_state->txn_id
+      && (opt_state->start_revision.kind != svn_opt_revision_unspecified
+          || opt_state->end_revision.kind != svn_opt_revision_unspecified))
+    {
+      return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                               _("--revision (-r) and --transaction (-t) "
+                                 "are mutually exclusive"));
+    }
+
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs(repos);
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
+
+  /* Usage 2. */
+  if (opt_state->txn_id)
+    {
+      svn_fs_txn_t *txn;
+      svn_fs_root_t *root;
+
+      SVN_ERR(svn_fs_open_txn(&txn, fs, opt_state->txn_id, pool));
+      SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+      SVN_ERR(svn_fs_verify_root(root, pool));
+      return SVN_NO_ERROR;
+    }
+  else
+    /* Usage 1. */
+    ;
 
   /* Find the revision numbers at which to start and end. */
   SVN_ERR(get_revnum(&lower, &opt_state->start_revision,
@@ -2009,6 +2027,10 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
             }
         }
         break;
+      case 't':
+        opt_state.txn_id = opt_arg;
+        break;
+
       case 'q':
         opt_state.quiet = TRUE;
         break;

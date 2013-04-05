@@ -212,6 +212,7 @@ public class SVNClient implements ISVNClient
                             CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
+    /** @deprecated */
     public void move(Set<String> srcPaths, String destPath,
                      boolean force, boolean moveAsChild,
                      boolean makeParents,
@@ -275,15 +276,38 @@ public class SVNClient implements ISVNClient
     public native void merge(String path1, Revision revision1, String path2,
                              Revision revision2, String localPath,
                              boolean force, Depth depth,
+                             boolean ignoreMergeinfo, boolean diffIgnoreAncestry,
+                             boolean dryRun, boolean recordOnly)
+            throws ClientException;
+
+    public void merge(String path1, Revision revision1, String path2,
+                             Revision revision2, String localPath,
+                             boolean force, Depth depth,
                              boolean ignoreAncestry, boolean dryRun,
                              boolean recordOnly)
-            throws ClientException;
+            throws ClientException
+    {
+        merge(path1, revision1, path2, revision2, localPath, force, depth,
+              ignoreAncestry, ignoreAncestry, dryRun, recordOnly);
+    }
 
     public native void merge(String path, Revision pegRevision,
                              List<RevisionRange> revisions, String localPath,
-                             boolean force, Depth depth, boolean ignoreAncestry,
+                             boolean force, Depth depth,
+                             boolean ignoreMergeinfo, boolean diffIgnoreAncestry,
                              boolean dryRun, boolean recordOnly)
             throws ClientException;
+
+    public void merge(String path, Revision pegRevision,
+                      List<RevisionRange> revisions, String localPath,
+                      boolean force, Depth depth, boolean ignoreAncestry,
+                      boolean dryRun, boolean recordOnly)
+            throws ClientException
+    {
+        merge(path, pegRevision, revisions, localPath, force, depth,
+              ignoreAncestry, ignoreAncestry, dryRun, recordOnly);
+    }
+
 
     public native void mergeReintegrate(String path, Revision pegRevision,
                                         String localPath, boolean dryRun)
@@ -296,10 +320,27 @@ public class SVNClient implements ISVNClient
                                        Revision pegRevision,
                                        String mergeSourceUrl,
                                        Revision srcPegRevision,
+                                       Revision srcStartRevision,
+                                       Revision srcEndRevision,
                                        boolean discoverChangedPaths, Depth depth,
                                        Set<String> revProps,
                                        LogMessageCallback callback)
         throws ClientException;
+
+    public void getMergeinfoLog(Mergeinfo.LogKind kind, String pathOrUrl,
+                                Revision pegRevision,
+                                String mergeSourceUrl,
+                                Revision srcPegRevision,
+                                boolean discoverChangedPaths, Depth depth,
+                                Set<String> revProps,
+                                LogMessageCallback callback)
+        throws ClientException
+    {
+        Revision unspecified = new Revision(Revision.Kind.unspecified);
+        getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
+                        srcPegRevision, unspecified, unspecified,
+                        discoverChangedPaths, depth, revProps, callback);
+    }
 
     public void diff(String target1, Revision revision1, String target2,
                      Revision revision2, String relativeToDir,
