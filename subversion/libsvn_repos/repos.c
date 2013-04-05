@@ -1717,10 +1717,19 @@ svn_repos_info_format(int *repos_format,
   (*supports_version)->patch = 0;
   (*supports_version)->tag = "";
 
-  if (repos->format == SVN_REPOS__FORMAT_NUMBER_1_4)
-    (*supports_version)->minor = 4;
-  else
-    SVN_ERR_ASSERT(repos->format == SVN_REPOS__FORMAT_NUMBER_LEGACY);
+  switch (repos->format)
+    {
+    case SVN_REPOS__FORMAT_NUMBER_LEGACY:
+      break;
+    case SVN_REPOS__FORMAT_NUMBER_1_4:
+      (*supports_version)->minor = 4;
+      break;
+#ifdef SVN_DEBUG
+# if SVN_REPOS__FORMAT_NUMBER != SVN_REPOS__FORMAT_NUMBER_1_4
+#  error "Need to add a 'case' statement here"
+# endif
+#endif
+    }
 
   return SVN_NO_ERROR;
 }
