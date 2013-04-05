@@ -621,6 +621,15 @@ svn_auth_cleanup_walk(svn_auth_baton_t *baton,
                       void *cleanup_baton,
                       apr_pool_t *scratch_pool)
 {
+  /* ### FIXME: svn_auth__simple_cleanup_walk() oversteps its reach,
+     ### so this test for an SVN_AUTH_CRED_SIMPLE provider is
+     ### pointless.  Why not allow users to pass in an auth baton with
+     ### no registered providers -- after all, there's nothing
+     ### provider-centric about any of the existing plumbing.  That
+     ### plumbing is just a glorified wrapper around a bunch of shell
+     ### commands exercised on the ~/.subversion/auth tree.  --
+     ### cmpilato
+  */
 
   if (svn_hash_gets(baton->tables, SVN_AUTH_CRED_SIMPLE))
     {

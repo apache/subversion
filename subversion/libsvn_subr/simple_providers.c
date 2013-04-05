@@ -540,6 +540,27 @@ svn_auth__simple_cleanup_walk(svn_auth_baton_t *baton,
     }
 
 
+  /* ### FIXME: This is just plain wrong.  This function has no
+     ### business iterating over any credential type except
+     ### SVN_AUTH_CRED_SIMPLE.  The side-effect of this overreach is
+     ### that today, someone can open an auth baton with just a single
+     ### svn.simple provider, and this function -- which claims to be
+     ### cleaning up creds as supported by the provider -- will
+     ### happily go about peeking into other credential types, too,
+     ### even those for which no provider has been registered.
+     ###
+     ### In my opinion, svn_auth_cleanup_auth() should iterate over
+     ### the registered providers, calling per-provider functions that
+     ### take care of their own cleanup, exactly as the rest of this
+     ### subsystem uses per-provider functions to handle credential
+     ### get/set.  Alternatively, svn_auth_cleanup_auth() should stop
+     ### masquerading as if the auth_baton (and its provider table) is
+     ### valuable at all, and just accept the 'config_dir' as input so
+     ### it can do it's tree crawl, file parsing, and file removal.
+     ###
+     ### --cmpilato
+  */
+
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; cred_kinds[i]; i++)
     {
