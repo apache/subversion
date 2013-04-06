@@ -502,9 +502,9 @@ dump_initial_full_revision(svn_ra_session_t *session,
   SVN_ERR(svn_rdump__get_dump_editor(&dump_editor, &dump_baton, revision,
                                      stdout_stream, extra_ra_session,
                                      source_relpath, check_cancel, NULL, pool));
-  SVN_ERR(svn_ra_do_update2(session, &reporter, &report_baton, revision,
-                            "", svn_depth_infinity, FALSE,
-                            dump_editor, dump_baton, pool));
+  SVN_ERR(svn_ra_do_update3(session, &reporter, &report_baton, revision,
+                            "", svn_depth_infinity, FALSE, FALSE,
+                            dump_editor, dump_baton, pool, pool));
   SVN_ERR(reporter->set_path(report_baton, "", revision,
                              svn_depth_infinity, TRUE, NULL, pool));
   SVN_ERR(reporter->finish_report(report_baton, pool));

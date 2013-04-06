@@ -926,7 +926,8 @@ svn_ra_svn_write_cmd_update(svn_ra_svn_conn_t *conn,
                             const char *target,
                             svn_boolean_t recurse,
                             svn_depth_t depth,
-                            svn_boolean_t send_copyfrom_args);
+                            svn_boolean_t send_copyfrom_args,
+                            svn_boolean_t ignore_ancestry);
 
 /** Send a "switch" command over connection @a conn.
  * Use @a pool for allocations.

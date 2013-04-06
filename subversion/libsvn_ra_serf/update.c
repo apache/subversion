@@ -3346,20 +3346,21 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
                        const char *update_target,
                        svn_depth_t depth,
                        svn_boolean_t send_copyfrom_args,
+                       svn_boolean_t ignore_ancestry,
                        const svn_delta_editor_t *update_editor,
                        void *update_baton,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
-  apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   SVN_ERR(make_update_reporter(ra_session, reporter, report_baton,
                                revision_to_update_to,
                                session->session_url.path, NULL, update_target,
-                               depth, FALSE, TRUE, send_copyfrom_args,
+                               depth, ignore_ancestry, TRUE /* text_deltas */,
+                               send_copyfrom_args,
                                update_editor, update_baton,
-                               pool, scratch_pool));
-  svn_pool_destroy(scratch_pool);
+                               result_pool, scratch_pool));
   return SVN_NO_ERROR;
 }
 

@@ -783,16 +783,19 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
                                         include_descendants, pool);
 }
 
-svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
-                               const svn_ra_reporter3_t **reporter,
-                               void **report_baton,
-                               svn_revnum_t revision_to_update_to,
-                               const char *update_target,
-                               svn_depth_t depth,
-                               svn_boolean_t send_copyfrom_args,
-                               const svn_delta_editor_t *update_editor,
-                               void *update_baton,
-                               apr_pool_t *pool)
+svn_error_t *
+svn_ra_do_update3(svn_ra_session_t *session,
+                  const svn_ra_reporter3_t **reporter,
+                  void **report_baton,
+                  svn_revnum_t revision_to_update_to,
+                  const char *update_target,
+                  svn_depth_t depth,
+                  svn_boolean_t send_copyfrom_args,
+                  svn_boolean_t ignore_ancestry,
+                  const svn_delta_editor_t *update_editor,
+                  void *update_baton,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
   SVN_ERR_ASSERT(svn_path_is_empty(update_target)
                  || svn_path_is_single_path_component(update_target));
@@ -800,8 +803,9 @@ svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
                                     reporter, report_baton,
                                     revision_to_update_to, update_target,
                                     depth, send_copyfrom_args,
+                                    ignore_ancestry,
                                     update_editor, update_baton,
-                                    pool);
+                                    result_pool, scratch_pool);
 }
 
 svn_error_t *

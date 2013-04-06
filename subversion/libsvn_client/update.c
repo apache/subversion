@@ -440,12 +440,14 @@ update_internal(svn_revnum_t *result_rev,
 
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision.  */
-  SVN_ERR(svn_ra_do_update2(ra_session, &reporter, &report_baton,
+  SVN_ERR(svn_ra_do_update3(ra_session, &reporter, &report_baton,
                             revnum, target,
                             (!server_supports_depth || depth_is_sticky
                              ? depth
                              : svn_depth_unknown),
-                            FALSE, update_editor, update_edit_baton, pool));
+                            FALSE /* send_copyfrom_args */,
+                            FALSE /* ignore_ancestry */,
+                            update_editor, update_edit_baton, pool, pool));
 
   /* Past this point, we assume the WC is going to be modified so we will
    * need to sleep for timestamps. */
