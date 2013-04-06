@@ -882,19 +882,21 @@ def create_repos(path, minor_version = None):
   # Skip tests if we can't create the repository.
   if stderr:
     stderr_lines = 0
-    using_bdb_backend = (options.fs_type == "bdb")
-    bdb_deprecation_warning = False
+    not_using_fsfs_backend = (options.fs_type != "fsfs")
+    backend_deprecation_warning = False
     for line in stderr:
       stderr_lines += 1
       if line.find('Unknown FS type') != -1:
         raise Skip
-      if using_bdb_backend:
-        if line.find("The 'bdb' repository back-end is deprecated") != -1:
-          bdb_deprecation_warning = True
+      if not_using_fsfs_backend:
+        if 0 < line.find('repository back-end is deprecated, consider using'):
+          backend_deprecation_warning = True
 
     # Creating BDB repositories will cause svnadmin to print a warning
     # which should be ignored.
-    if using_bdb_backend and bdb_deprecation_warning and stderr_lines == 1:
+    if (stderr_lines == 1
+        and not_using_fsfs_backend
+        and backend_deprecation_warning):
       pass
     else:
       # If the FS type is known and we noticed more than just the
