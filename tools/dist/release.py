@@ -636,7 +636,7 @@ def get_sha1info(args, replace=False):
     else:
         target = get_deploydir(args.base_dir)
 
-    sha1s = glob.glob(os.path.join(target, '*.sha1'))
+    sha1s = glob.glob(os.path.join(target, 'subversion*-%s*.sha1' % args.version))
 
     class info(object):
         pass
