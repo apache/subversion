@@ -1176,8 +1176,8 @@ svn_ra_do_update(svn_ra_session_t *session,
  * and the addition of another, but if this flag is @c TRUE,
  * unrelated items will be diffed as if they were related.
  *
- * Use @a result_pool for memory allocation and @a scratch_pool for
- * temporary work.
+ * Allocate @a *reporter and @a *report_baton in @a result_pool.  Use
+ * @a scratch_pool for temporary allocations.
  *
  * @note Pre Subversion 1.8 svnserve based servers always ignore ancestry
  * and never send copyfrom data.
@@ -1949,7 +1949,7 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
  * paths relative to the repository root URL (of the repository which
  * @a ra_session is associated).
  *
- * Allocated @a *inherited_props in @a result_pool, use @a scratch_pool
+ * Allocate @a *inherited_props in @a result_pool.  Use @a scratch_pool
  * for temporary allocations.
  *
  * @since New in 1.8.
