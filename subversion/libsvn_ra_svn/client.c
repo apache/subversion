@@ -1349,8 +1349,11 @@ static svn_error_t *ra_svn_update(svn_ra_session_t *session,
                                   void **report_baton, svn_revnum_t rev,
                                   const char *target, svn_depth_t depth,
                                   svn_boolean_t send_copyfrom_args,
+                                  svn_boolean_t ignore_ancestry,
                                   const svn_delta_editor_t *update_editor,
-                                  void *update_baton, apr_pool_t *pool)
+                                  void *update_baton,
+                                  apr_pool_t *pool,
+                                  apr_pool_t *scratch_pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
@@ -1358,7 +1361,8 @@ static svn_error_t *ra_svn_update(svn_ra_session_t *session,
 
   /* Tell the server we want to start an update. */
   SVN_ERR(svn_ra_svn_write_cmd_update(conn, pool, rev, target, recurse,
-                                      depth, send_copyfrom_args));
+                                      depth, send_copyfrom_args,
+                                      ignore_ancestry));
   SVN_ERR(handle_auth_request(sess_baton, pool));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive

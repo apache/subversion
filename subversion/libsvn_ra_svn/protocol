@@ -340,7 +340,7 @@ second place for auth-request point as noted below.
 
   update
     params:   ( [ rev:number ] target:string recurse:bool
-                ? depth:word send_copyfrom_args:bool )
+                ? depth:word send_copyfrom_args:bool ? ignore_ancestry:bool )
     Client switches to report command set.
     Upon finish-report, server sends auth-request.
     After auth exchange completes, server switches to editor command set.

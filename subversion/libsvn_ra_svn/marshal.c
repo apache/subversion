@@ -1948,7 +1948,8 @@ svn_ra_svn_write_cmd_update(svn_ra_svn_conn_t *conn,
                             const char *target,
                             svn_boolean_t recurse,
                             svn_depth_t depth,
-                            svn_boolean_t send_copyfrom_args)
+                            svn_boolean_t send_copyfrom_args,
+                            svn_boolean_t ignore_ancestry)
 {
   SVN_ERR(writebuf_write_short_string(conn, pool, "( update ( ", 11));
   SVN_ERR(write_tuple_start_list(conn, pool));
@@ -1958,6 +1959,7 @@ svn_ra_svn_write_cmd_update(svn_ra_svn_conn_t *conn,
   SVN_ERR(write_tuple_boolean(conn, pool, recurse));
   SVN_ERR(write_tuple_depth(conn, pool, depth));
   SVN_ERR(write_tuple_boolean(conn, pool, send_copyfrom_args));
+  SVN_ERR(write_tuple_boolean(conn, pool, ignore_ancestry));
   SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
 
   return SVN_NO_ERROR;

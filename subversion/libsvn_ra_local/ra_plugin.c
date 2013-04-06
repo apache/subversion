@@ -818,9 +818,11 @@ svn_ra_local__do_update(svn_ra_session_t *session,
                         const char *update_target,
                         svn_depth_t depth,
                         svn_boolean_t send_copyfrom_args,
+                        svn_boolean_t ignore_ancestry,
                         const svn_delta_editor_t *update_editor,
                         void *update_baton,
-                        apr_pool_t *pool)
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   return make_reporter(session,
                        reporter,
@@ -831,10 +833,10 @@ svn_ra_local__do_update(svn_ra_session_t *session,
                        TRUE,
                        depth,
                        send_copyfrom_args,
-                       FALSE,
+                       ignore_ancestry,
                        update_editor,
                        update_baton,
-                       pool, pool);
+                       result_pool, scratch_pool);
 }
 
 
