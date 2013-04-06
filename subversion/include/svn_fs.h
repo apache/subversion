@@ -2061,6 +2061,21 @@ svn_fs_info_format(int *fs_format,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool);
 
+/**
+ * Return a list of admin-serviceable config files for @a fs.  @a *files
+ * will be set to an array containing paths as C strings.
+ *
+ * @see svn_repos_info_format()
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_info_config_files(apr_array_header_t **files,
+                         svn_fs_t *fs,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
+
 
 /** Provide filesystem @a fs the opportunity to compress storage relating to
  * associated with  @a revision in filesystem @a fs.  Use @a pool for all
@@ -2547,10 +2562,6 @@ typedef struct svn_fs_info_t {
   /** Filesystem backend (#fs_type) -specific information.
    * @see SVN_FS_FSFS_INFO_* */
   apr_hash_t *fsap_info;
-
-  /** List of user-serviceable config files.
-   * Elements are dirents (as const char *). */
-  apr_array_header_t *config_files;
 
 } svn_fs_info_t;
 

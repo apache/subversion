@@ -217,6 +217,10 @@ typedef struct fs_vtable_t
                               svn_fs_t *fs,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
+  svn_error_t *(*info_config_files)(apr_array_header_t **files,
+                                    svn_fs_t *fs,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
   svn_error_t *(*verify_root)(svn_fs_root_t *root,
                               apr_pool_t *pool);
   svn_error_t *(*freeze)(svn_fs_t *fs,
