@@ -644,16 +644,20 @@ subcommand_create(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   if (opt_state->fs_type)
     {
-      /* The non-default Berkeley DB backend is deprecated. */
+      /* With 1.8 we are announcing that BDB is deprecated.  No support
+       * has been removed and it will continue to work until some future
+       * date.  The purpose here is to discourage people from creating
+       * new BDB repositories which they will need to dump/load into
+       * FSFS or some new FS type in the future. */
       if (0 == strcmp(opt_state->fs_type, SVN_FS_TYPE_BDB))
         {
-          svn_error_t *const warning = svn_error_createf(
-              SVN_WARNING, NULL,
-              _("The '%s' repository back-end is deprecated,"
-              " consider using '%s' instead."),
-              SVN_FS_TYPE_BDB, SVN_FS_TYPE_FSFS);
-          svn_handle_warning2(stderr, warning, "svnadmin: ");
-          svn_error_clear(warning);
+          SVN_ERR(svn_cmdline_fprintf(
+                      stderr, pool,
+                      _("%swarning:"
+                        " The \"%s\" repository back-end is deprecated,"
+                        " consider using \"%s\" instead.\n"),
+                      "svnadmin: ", SVN_FS_TYPE_BDB, SVN_FS_TYPE_FSFS));
+          fflush(stderr);
         }
       svn_hash_sets(fs_config, SVN_FS_CONFIG_FS_TYPE, opt_state->fs_type);
     }
