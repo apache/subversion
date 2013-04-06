@@ -98,6 +98,13 @@ svn_fs_fs__info_format(int *fs_format,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 
+
+svn_error_t *
+svn_fs_fs__info_config_files(apr_array_header_t **files,
+                             svn_fs_t *fs,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -1319,6 +1319,17 @@ svn_fs_info_format(int *fs_format,
 }
 
 svn_error_t *
+svn_fs_info_config_files(apr_array_header_t **files,
+                         svn_fs_t *fs,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(fs->vtable->info_config_files(files, fs,
+                                                       result_pool,
+                                                       scratch_pool));
+}
+
+svn_error_t *
 svn_fs_deltify_revision(svn_fs_t *fs, svn_revnum_t revision, apr_pool_t *pool)
 {
   return svn_error_trace(fs->vtable->deltify(fs, revision, pool));

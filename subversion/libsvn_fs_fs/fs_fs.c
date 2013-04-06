@@ -11509,3 +11509,15 @@ svn_fs_fs__info_format(int *fs_format,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_fs_fs__info_config_files(apr_array_header_t **files,
+                             svn_fs_t *fs,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  *files = apr_array_make(result_pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(*files, const char *) = svn_dirent_join(fs->path, PATH_CONFIG,
+                                                         result_pool);
+  return SVN_NO_ERROR;
+}
