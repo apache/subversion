@@ -917,7 +917,7 @@ svn_ra_svn_write_cmd_get_file(svn_ra_svn_conn_t *conn,
 /** Send a "update" command over connection @a conn.
  * Use @a pool for allocations.
  *
- * @see #svn_ra_do_update2 for a description.
+ * @see #svn_ra_do_update3 for a description.
  */
 svn_error_t *
 svn_ra_svn_write_cmd_update(svn_ra_svn_conn_t *conn,
@@ -932,7 +932,7 @@ svn_ra_svn_write_cmd_update(svn_ra_svn_conn_t *conn,
 /** Send a "switch" command over connection @a conn.
  * Use @a pool for allocations.
  *
- * @see #svn_ra_do_switch2 for a description.
+ * @see #svn_ra_do_switch3 for a description.
  */
 svn_error_t *
 svn_ra_svn_write_cmd_switch(svn_ra_svn_conn_t *conn,
