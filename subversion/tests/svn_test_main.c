@@ -73,7 +73,8 @@ enum svn_test_mode_t mode_filter = svn_test_all;
 
 /* Option parsing enums and structures */
 enum {
-  cleanup_opt = SVN_OPT_FIRST_LONGOPT_ID,
+  help_opt = SVN_OPT_FIRST_LONGOPT_ID,
+  cleanup_opt,
   fstype_opt,
   list_opt,
   verbose_opt,
@@ -87,6 +88,8 @@ enum {
 
 static const apr_getopt_option_t cl_options[] =
 {
+  {"help",          help_opt, 0,
+                    N_("display this help")},
   {"cleanup",       cleanup_opt, 0,
                     N_("remove test directories after success")},
   {"config-file",   config_opt, 1,
@@ -97,11 +100,11 @@ static const apr_getopt_option_t cl_options[] =
                     N_("lists all the tests with their short description")},
   {"mode-filter",   mode_filter_opt, 1,
                     N_("only run/list tests with expected mode ARG = PASS, "
-                       "XFAIL, SKIP, or ALL (default)\n")},
+                       "XFAIL, SKIP, or ALL (default)")},
   {"verbose",       verbose_opt, 0,
                     N_("print extra information")},
   {"server-minor-version", server_minor_version_opt, 1,
-                    N_("set the minor version for the server ('3', '4',\n"
+                    N_("set the minor version for the server ('3', '4', "
                        "'5', or '6')")},
   {"quiet",         quiet_opt, 0,
                     N_("print only unexpected results")},
@@ -343,6 +346,26 @@ do_test_num(const char *progname,
 }
 
 
+static void help(const char *progname, apr_pool_t *pool)
+{
+  int i;
+
+  svn_error_clear(svn_cmdline_fprintf(stdout, pool,
+                                      _("usage: %s [options] [test-numbers]\n"
+                                      "\n"
+                                      "Valid options:\n"),
+                                      progname));
+  for (i = 0; cl_options[i].name && cl_options[i].optch; i++)
+    {
+      const char *optstr;
+
+      svn_opt_format_option(&optstr, cl_options + i, TRUE, pool);
+      svn_error_clear(svn_cmdline_fprintf(stdout, pool, "  %s\n", optstr));
+    }
+  svn_error_clear(svn_cmdline_fprintf(stdout, pool, "\n"));
+}
+
+
 /* Standard svn test program */
 int
 main(int argc, const char *argv[])
@@ -440,6 +463,9 @@ main(int argc, const char *argv[])
         }
 
       switch (opt_id) {
+        case help_opt:
+          help(prog_name, pool);
+          exit(0);
         case cleanup_opt:
           cleanup_mode = TRUE;
           break;
