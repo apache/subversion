@@ -71,10 +71,13 @@ cleanup_access(void *data)
 }
 
 
-/* Fetch a username for use with SESS, and store it in SESS->username. */
+/* Fetch a username for use with SESSION, and store it in SESSION->username.
+ *
+ * Allocate the username in SESSION->pool.  Use SCRATCH_POOL for temporary
+ * allocations. */
 static svn_error_t *
 get_username(svn_ra_session_t *session,
-             apr_pool_t *pool)
+             apr_pool_t *scratch_pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
 
@@ -93,7 +96,7 @@ get_username(svn_ra_session_t *session,
                                              SVN_AUTH_CRED_USERNAME,
                                              sess->uuid, /* realmstring */
                                              sess->callbacks->auth_baton,
-                                             pool));
+                                             scratch_pool));
 
           /* No point in calling next_creds(), since that assumes that the
              first_creds() somehow failed to authenticate.  But there's no
@@ -104,7 +107,8 @@ get_username(svn_ra_session_t *session,
             {
               sess->username = apr_pstrdup(session->pool,
                                            username_creds->username);
-              svn_error_clear(svn_auth_save_credentials(iterstate, pool));
+              svn_error_clear(svn_auth_save_credentials(iterstate,
+                                                        scratch_pool));
             }
           else
             sess->username = "";
@@ -279,7 +283,9 @@ static const svn_ra_reporter3_t ra_local_reporter =
  * they have already wrapped with the same cancellation editor, so it ends
  * up double-wrapped.
  *
- * ... */
+ * Allocate @a *reporter and @a *report_baton in @a result_pool.  Use
+ * @a scratch_pool for temporary allocations.
+ */
 static svn_error_t *
 make_reporter(svn_ra_session_t *session,
               const svn_ra_reporter3_t **reporter,
@@ -293,7 +299,8 @@ make_reporter(svn_ra_session_t *session,
               svn_boolean_t ignore_ancestry,
               const svn_delta_editor_t *editor,
               void *edit_baton,
-              apr_pool_t *pool)
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
   void *rbaton;
@@ -301,14 +308,14 @@ make_reporter(svn_ra_session_t *session,
 
   /* Get the HEAD revision if one is not supplied. */
   if (! SVN_IS_VALID_REVNUM(revision))
-    SVN_ERR(svn_fs_youngest_rev(&revision, sess->fs, pool));
+    SVN_ERR(svn_fs_youngest_rev(&revision, sess->fs, scratch_pool));
 
   /* If OTHER_URL was provided, validate it and convert it into a
      regular filesystem path. */
   if (other_url)
     {
       const char *other_relpath
-        = svn_uri_skip_ancestor(sess->repos_url, other_url, pool);
+        = svn_uri_skip_ancestor(sess->repos_url, other_url, scratch_pool);
 
       /* Sanity check:  the other_url better be in the same repository as
          the original session url! */
@@ -319,13 +326,14 @@ make_reporter(svn_ra_session_t *session,
              "is not the same repository as\n"
              "'%s'"), other_url, sess->repos_url);
 
-      other_fs_path = apr_pstrcat(pool, "/", other_relpath, (char *)NULL);
+      other_fs_path = apr_pstrcat(scratch_pool, "/", other_relpath,
+                                  (char *)NULL);
     }
 
   /* Pass back our reporter */
   *reporter = &ra_local_reporter;
 
-  SVN_ERR(get_username(session, pool));
+  SVN_ERR(get_username(session, scratch_pool));
 
   if (sess->callbacks)
     SVN_ERR(svn_delta_get_cancellation_editor(sess->callbacks->cancel_func,
@@ -334,7 +342,7 @@ make_reporter(svn_ra_session_t *session,
                                               edit_baton,
                                               &editor,
                                               &edit_baton,
-                                              pool));
+                                              result_pool));
 
   /* Build a reporter baton. */
   SVN_ERR(svn_repos_begin_report3(&rbaton,
@@ -353,11 +361,11 @@ make_reporter(svn_ra_session_t *session,
                                   NULL,
                                   1024 * 1024,  /* process-local transfers
                                                    should be fast */
-                                  pool));
+                                  result_pool));
 
   /* Wrap the report baton given us by the repos layer with our own
      reporter baton. */
-  *report_baton = make_reporter_baton(sess, rbaton, pool);
+  *report_baton = make_reporter_baton(sess, rbaton, result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -826,7 +834,7 @@ svn_ra_local__do_update(svn_ra_session_t *session,
                        FALSE,
                        update_editor,
                        update_baton,
-                       pool);
+                       pool, pool);
 }
 
 
@@ -857,7 +865,7 @@ svn_ra_local__do_switch(svn_ra_session_t *session,
                        ignore_ancestry,
                        update_editor,
                        update_baton,
-                       result_pool);
+                       result_pool, scratch_pool);
 }
 
 
@@ -884,7 +892,7 @@ svn_ra_local__do_status(svn_ra_session_t *session,
                        FALSE,
                        status_editor,
                        status_baton,
-                       pool);
+                       pool, pool);
 }
 
 
@@ -914,7 +922,7 @@ svn_ra_local__do_diff(svn_ra_session_t *session,
                        ignore_ancestry,
                        update_editor,
                        update_baton,
-                       pool);
+                       pool, pool);
 }
 
 
