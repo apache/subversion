@@ -2065,8 +2065,6 @@ svn_fs_info_format(int *fs_format,
  * Return a list of admin-serviceable config files for @a fs.  @a *files
  * will be set to an array containing paths as C strings.
  *
- * @see svn_repos_info_format()
- *
  * @since New in 1.8.
  */
 svn_error_t *
