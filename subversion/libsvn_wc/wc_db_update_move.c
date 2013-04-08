@@ -2112,10 +2112,10 @@ bump_mark_tree_conflict(svn_wc__db_wcroot_t *wcroot,
                                        scratch_pool);
 
   old_version = svn_wc_conflict_version_create2(
-                  old_repos_url, repos_uuid, old_repos_relpath, old_rev,
+                  repos_root_url, repos_uuid, old_repos_relpath, old_rev,
                   old_kind, scratch_pool);
   new_version = svn_wc_conflict_version_create2(
-                  new_repos_url, repos_uuid, new_repos_relpath, new_rev,
+                  repos_root_url, repos_uuid, new_repos_relpath, new_rev,
                   new_kind, scratch_pool);
 
   SVN_ERR(mark_tree_conflict(move_src_root_relpath,
