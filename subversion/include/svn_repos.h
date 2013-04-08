@@ -448,6 +448,11 @@ svn_repos_create(svn_repos_t **repos_p,
  * It does *not* guarantee the most optimized repository state as a
  * dump and subsequent load would.
  *
+ * @note On some platforms the exclusive lock does not exclude other
+ * threads in the same process so this function should only be called
+ * by a single threaded process, or by a multi-threaded process when
+ * no other threads are accessing the repository.
+ *
  * @since New in 1.7.
  */
 svn_error_t *
@@ -498,6 +503,26 @@ svn_repos_has_capability(svn_repos_t *repos,
                          apr_pool_t *pool);
 
 /**
+ * Return a set capabilities supported by the running Subversion library and by
+ * @a repos.  (Capabilities supported by this version of Subversion but not by
+ * @a repos are not listed.  This may happen when svn_repos_upgrade2() has not
+ * been called after a software upgrade.)
+ *
+ * The set is represented as a hash whose keys are the set members.  The values
+ * are not defined.
+ *
+ * @see svn_repos_info()
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_repos_capabilities(apr_hash_t **capabilities,
+                       svn_repos_t *repos,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
+/** @} */
+
+/**
  * The capability of doing the right thing with merge-tracking
  * information, both storing it and responding to queries about it.
  *
@@ -511,6 +536,8 @@ svn_repos_has_capability(svn_repos_t *repos,
  * colons for their own reasons.  While this RA limitation has no
  * direct impact on repository capabilities, there's no reason to be
  * gratuitously different either.
+ *
+ * If you add a capability, update svn_repos_capabilities().
  */
 
 
@@ -665,6 +692,13 @@ svn_repos_recover(const char *path,
                   apr_pool_t *pool);
 
 /**
+ * Callback for svn_repos_freeze.
+ *
+ * @since New in 1.8.
+ */
+typedef svn_error_t *(*svn_repos_freeze_func_t)(void *baton, apr_pool_t *pool);
+
+/**
  * Take an exclusive lock on each of the repositories in @a paths to
  * prevent commits and then while holding all the locks invoke @a
  * freeze_body passing @a baton.  Each repository may be readable by
@@ -672,11 +706,16 @@ svn_repos_recover(const char *path,
  * FS backend the repository uses.  Repositories are locked in the
  * order in which they are specified in the array.
  *
+ * @note On some platforms the exclusive lock does not exclude other
+ * threads in the same process so this function should only be called
+ * by a single threaded process, or by a multi-threaded process when
+ * no other threads are accessing the repositories.
+ *
  * @since New in 1.8.
  */
 svn_error_t *
 svn_repos_freeze(apr_array_header_t *paths,
-                 svn_error_t *(*freeze_body)(void *baton, apr_pool_t *pool),
+                 svn_repos_freeze_func_t freeze_body,
                  void *baton,
                  apr_pool_t *pool);
 
@@ -798,8 +837,7 @@ svn_repos_post_unlock_hook(svn_repos_t *repos,
  * file in its default location within the repository disk structure.
  * If @a hooks_env_path is not absolute, it specifies a path relative
  * to the parent of the file's default location.
- *
- * @a result_pool should be the same pool that @a repos was allocated in.
+ * 
  * Use @a scratch_pool for temporary allocations.
  *
  * If this function is not called, or if the specified configuration
@@ -811,7 +849,6 @@ svn_repos_post_unlock_hook(svn_repos_t *repos,
 svn_error_t *
 svn_repos_hooks_setenv(svn_repos_t *repos,
                        const char *hooks_env_path,
-                       apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 
 /** @} */
@@ -2367,7 +2404,6 @@ svn_repos_fs_change_txn_props(svn_fs_txn_t *txn,
                               const apr_array_header_t *props,
                               apr_pool_t *pool);
 
-/** @} */
 
 /* ---------------------------------------------------------------*/
 
@@ -2457,6 +2493,27 @@ svn_repos_node_editor(const svn_delta_editor_t **editor,
  */
 svn_repos_node_t *
 svn_repos_node_from_baton(void *edit_baton);
+
+/**
+ * Return repository format information for @a repos.
+ *
+ * Set @a *repos_format to the repository format number of @a repos, which is
+ * an integer that increases when incompatible changes are made (such as
+ * by #svn_repos_upgrade).
+ *
+ * Set @a *supports_version to the version number of the minimum Subversion GA
+ * release that can read and write @a repos.
+ *
+ * @see svn_fs_info_format()
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_repos_info_format(int *repos_format,
+                      svn_version_t **supports_version,
+                      svn_repos_t *repos,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
 
 /** @} */
 
@@ -2566,9 +2623,12 @@ svn_repos_verify_fs3(svn_repos_t *repos,
                      svn_cancel_func_t cancel,
                      void *cancel_baton,
                      apr_pool_t *scratch_pool);
+
 /**
  * Like svn_repos_verify_fs3(), but with @a keep_going set to @c FALSE.
+ *
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -3402,7 +3462,6 @@ svn_repos_fs_get_inherited_props(apr_array_header_t **inherited_props,
 svn_error_t *
 svn_repos_remember_client_capabilities(svn_repos_t *repos,
                                        const apr_array_header_t *capabilities);
-
 
 
 #ifdef __cplusplus

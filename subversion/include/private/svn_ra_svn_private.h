@@ -1,6 +1,5 @@
-/*
- * auth.h :  shared stuff internal to the subr library.
- *
+/**
+ * @copyright
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -19,35 +18,29 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
+ * @endcopyright
+ *
+ * @file svn_ra_svn_private.h
+ * @brief Functions used by the server - Internal routines
  */
 
-#ifndef SVN_LIBSVN_SUBR_AUTH_H
-#define SVN_LIBSVN_SUBR_AUTH_H
+#ifndef SVN_RA_SVN_PRIVATE_H
+#define SVN_RA_SVN_PRIVATE_H
+
+#include "svn_ra_svn.h"
+#include "svn_editor.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-#include "svn_auth.h"
 
-/* Helper for svn_config_{read|write}_auth_data.  Return a path to a
-   file within ~/.subversion/auth/ that holds CRED_KIND credentials
-   within REALMSTRING.  If no path is available *PATH will be set to
-   NULL. */
+/**
+ * Set the shim callbacks to be used by @a conn to @a shim_callbacks.
+ */
 svn_error_t *
-svn_auth__file_path(const char **path,
-                    const char *cred_kind,
-                    const char *realmstring,
-                    const char *config_dir,
-                    apr_pool_t *pool);
-
-/* Implementation of svn_auth_cleanup_walk() for the "simple" provider */
-svn_error_t *
-svn_auth__simple_cleanup_walk(svn_auth_baton_t *baton,
-                              svn_auth_cleanup_func_t cleanup_func,
-                              void *cleanup_baton,
-                              apr_hash_t *creds_cache,
-                              apr_pool_t *scratch_pool);
+svn_ra_svn__set_shim_callbacks(svn_ra_svn_conn_t *conn,
+                               svn_delta_shim_callbacks_t *shim_callbacks);
 
 
 
@@ -55,4 +48,4 @@ svn_auth__simple_cleanup_walk(svn_auth_baton_t *baton,
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_SUBR_AUTH_H */
+#endif /* SVN_RA_SVN_PRIVATE_H */

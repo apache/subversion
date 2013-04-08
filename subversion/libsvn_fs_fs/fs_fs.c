@@ -49,6 +49,7 @@
 #include "svn_mergeinfo.h"
 #include "svn_config.h"
 #include "svn_ctype.h"
+#include "svn_version.h"
 
 #include "fs.h"
 #include "tree.h"
@@ -11464,5 +11465,59 @@ svn_fs_fs__hotcopy(svn_fs_t *src_fs,
   hbb.cancel_baton = cancel_baton;
   SVN_ERR(svn_fs_fs__with_write_lock(dst_fs, hotcopy_body, &hbb, pool));
 
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__info_format(int *fs_format,
+                       svn_version_t **supports_version,
+                       svn_fs_t *fs,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  *fs_format = ffd->format;
+  *supports_version = apr_palloc(result_pool, sizeof(svn_version_t));
+
+  (*supports_version)->major = SVN_VER_MAJOR;
+  (*supports_version)->minor = 1;
+  (*supports_version)->patch = 0;
+  (*supports_version)->tag = "";
+
+  switch (ffd->format)
+    {
+    case 1:
+      break;
+    case 2:
+      (*supports_version)->minor = 4;
+      break;
+    case 3:
+      (*supports_version)->minor = 5;
+      break;
+    case 4:
+      (*supports_version)->minor = 6;
+      break;
+    case 6:
+      (*supports_version)->minor = 8;
+      break;
+#ifdef SVN_DEBUG
+# if SVN_FS_FS__FORMAT_NUMBER != 6
+#  error "Need to add a 'case' statement here"
+# endif
+#endif
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__info_config_files(apr_array_header_t **files,
+                             svn_fs_t *fs,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  *files = apr_array_make(result_pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(*files, const char *) = svn_dirent_join(fs->path, PATH_CONFIG,
+                                                         result_pool);
   return SVN_NO_ERROR;
 }

@@ -47,9 +47,6 @@ struct cfg_section_t
   /* The section name. */
   const char *name;
 
-  /* The section name, converted into a hash key. */
-  const char *hash_key;
-
   /* Table of cfg_option_t's. */
   apr_hash_t *options;
 };
@@ -464,19 +461,29 @@ make_string_from_option(const char **valuep, svn_config_t *cfg,
   /* Expand the option value if necessary. */
   if (!opt->expanded)
     {
-      apr_pool_t *tmp_pool = (x_pool ? x_pool : svn_pool_create(cfg->x_pool));
-
-      expand_option_value(cfg, section, opt->value, &opt->x_value, tmp_pool);
-      opt->expanded = TRUE;
-
-      if (!x_pool)
+      /* before attempting to expand an option, check for the placeholder.
+       * If none is there, there is no point in calling expand_option_value.
+       */
+      if (strchr(opt->value, '%'))
         {
-          /* Grab the fully expanded value from tmp_pool before its
-             disappearing act. */
-          if (opt->x_value)
-            opt->x_value = apr_pstrmemdup(cfg->x_pool, opt->x_value,
-                                          strlen(opt->x_value));
-          svn_pool_destroy(tmp_pool);
+          apr_pool_t *tmp_pool = (x_pool ? x_pool : svn_pool_create(cfg->x_pool));
+
+          expand_option_value(cfg, section, opt->value, &opt->x_value, tmp_pool);
+          opt->expanded = TRUE;
+
+          if (!x_pool)
+            {
+              /* Grab the fully expanded value from tmp_pool before its
+                 disappearing act. */
+              if (opt->x_value)
+                opt->x_value = apr_pstrmemdup(cfg->x_pool, opt->x_value,
+                                              strlen(opt->x_value));
+              svn_pool_destroy(tmp_pool);
+            }
+        }
+      else
+        {
+          opt->expanded = TRUE;
         }
     }
 
@@ -576,23 +583,23 @@ expand_option_value(svn_config_t *cfg, cfg_section_t *section,
     *opt_x_valuep = NULL;
 }
 
-static void
+static cfg_section_t *
 svn_config_addsection(svn_config_t *cfg,
-                      const char *section,
-                      cfg_section_t **sec)
+                      const char *section)
 {  
   cfg_section_t *s;
+  const char *hash_key;
 
   s = apr_palloc(cfg->pool, sizeof(cfg_section_t));
   s->name = apr_pstrdup(cfg->pool, section);
   if(cfg->section_names_case_sensitive)
-    s->hash_key = s->name;
+    hash_key = s->name;
   else
-    s->hash_key = make_hash_key(apr_pstrdup(cfg->pool, section));
+    hash_key = make_hash_key(apr_pstrdup(cfg->pool, section));
   s->options = apr_hash_make(cfg->pool);
-  svn_hash_sets(cfg->sections, s->hash_key, s);
-  
-  *sec = s;
+  svn_hash_sets(cfg->sections, hash_key, s);
+
+  return s;
 }
 
 static void
@@ -675,7 +682,7 @@ svn_config_set(svn_config_t *cfg,
   if (sec == NULL)
     {
       /* Even the section doesn't exist. Create it. */
-      svn_config_addsection(cfg, section, &sec);
+      sec = svn_config_addsection(cfg, section);
     }
 
   svn_hash_sets(sec->options, opt->hash_key, opt);
@@ -1054,7 +1061,7 @@ svn_config_dup(svn_config_t **cfgp,
     apr_hash_this(sectidx, &sectkey, &sectkeyLength, &sectval);
     srcsect = sectval;
 
-    svn_config_addsection(*cfgp, srcsect->name, &destsec);
+    destsec = svn_config_addsection(*cfgp, srcsect->name);
 
     for (optidx = apr_hash_first(pool, srcsect->options);
          optidx != NULL;

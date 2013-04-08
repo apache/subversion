@@ -215,18 +215,17 @@ svn_config__parse_registry(svn_config_t *cfg, const char *file,
   for (index = 0; ; ++index)
     {
       DWORD section_len = (DWORD)section->blocksize;
-      FILETIME last_write_time;
       HKEY sub_hkey;
 
       err = RegEnumKeyEx(hkey, index, section->data, &section_len,
-                         NULL, NULL, NULL, &last_write_time);
+                         NULL, NULL, NULL, NULL);
       if (err == ERROR_NO_MORE_ITEMS)
           break;
       if (err == ERROR_MORE_DATA)
         {
           svn_stringbuf_ensure(section, section_len);
           err = RegEnumKeyEx(hkey, index, section->data, &section_len,
-                             NULL, NULL, NULL, &last_write_time);
+                             NULL, NULL, NULL, NULL);
         }
       if (err != ERROR_SUCCESS)
         {

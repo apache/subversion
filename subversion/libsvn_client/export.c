@@ -1306,13 +1306,15 @@ export_directory(const char *from_path_or_url,
                            scratch_pool, scratch_pool));
 
   /* Manufacture a basic 'report' to the update reporter. */
-  SVN_ERR(svn_ra_do_update2(ra_session,
+  SVN_ERR(svn_ra_do_update3(ra_session,
                             &reporter, &report_baton,
                             loc->rev,
                             "", /* no sub-target */
                             depth,
                             FALSE, /* don't want copyfrom-args */
-                            export_editor, edit_baton, scratch_pool));
+                            FALSE, /* don't want ignore_ancestry */
+                            export_editor, edit_baton,
+                            scratch_pool, scratch_pool));
 
   SVN_ERR(reporter->set_path(report_baton, "", loc->rev,
                              /* Depth is irrelevant, as we're

@@ -2885,6 +2885,15 @@ finish_report(void *report_baton,
           waittime_left = sess->timeout;
         }
 
+      if (status && handler->sline.code != 200)
+        {
+          return svn_error_trace(
+                    svn_error_compose_create(
+                        svn_ra_serf__error_on_status(handler->sline.code,
+                                                     handler->path,
+                                                     handler->location),
+                        err));
+        }
       SVN_ERR(err);
       if (status)
         {
@@ -3092,8 +3101,13 @@ finish_report(void *report_baton,
       err = report->update_editor->close_edit(report->update_baton, iterpool);
     }
   else
-    err = svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                           _("Missing update-report close tag"));
+    {
+      /* Tell the editor that something failed */
+      err = report->update_editor->abort_edit(report->update_baton, iterpool);
+
+      err = svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, err,
+                             _("Missing update-report close tag"));
+    }
 
   svn_pool_destroy(iterpool);
   return svn_error_trace(err);
@@ -3138,10 +3152,9 @@ make_update_reporter(svn_ra_session_t *ra_session,
                      svn_boolean_t send_copyfrom_args,
                      const svn_delta_editor_t *update_editor,
                      void *update_baton,
-                     apr_pool_t *result_pool)
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
 {
-  /* ### would be nice to get a SCRATCH_POOL passed to us.  */
-  apr_pool_t *scratch_pool = svn_pool_create(result_pool);
   report_context_t *report;
   const svn_delta_editor_t *filter_editor;
   void *filter_baton;
@@ -3322,7 +3335,6 @@ make_update_reporter(svn_ra_session_t *ra_session,
   SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
                                  NULL, scratch_pool));
 
-  svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
 }
 
@@ -3334,17 +3346,22 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
                        const char *update_target,
                        svn_depth_t depth,
                        svn_boolean_t send_copyfrom_args,
+                       svn_boolean_t ignore_ancestry,
                        const svn_delta_editor_t *update_editor,
                        void *update_baton,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
 
-  return make_update_reporter(ra_session, reporter, report_baton,
-                              revision_to_update_to,
-                              session->session_url.path, NULL, update_target,
-                              depth, FALSE, TRUE, send_copyfrom_args,
-                              update_editor, update_baton, pool);
+  SVN_ERR(make_update_reporter(ra_session, reporter, report_baton,
+                               revision_to_update_to,
+                               session->session_url.path, NULL, update_target,
+                               depth, ignore_ancestry, TRUE /* text_deltas */,
+                               send_copyfrom_args,
+                               update_editor, update_baton,
+                               result_pool, scratch_pool));
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -3362,12 +3379,16 @@ svn_ra_serf__do_diff(svn_ra_session_t *ra_session,
                      apr_pool_t *pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
 
-  return make_update_reporter(ra_session, reporter, report_baton,
-                              revision,
-                              session->session_url.path, versus_url, diff_target,
-                              depth, ignore_ancestry, text_deltas, FALSE,
-                              diff_editor, diff_baton, pool);
+  SVN_ERR(make_update_reporter(ra_session, reporter, report_baton,
+                               revision,
+                               session->session_url.path, versus_url, diff_target,
+                               depth, ignore_ancestry, text_deltas, FALSE,
+                               diff_editor, diff_baton,
+                               pool, scratch_pool));
+  svn_pool_destroy(scratch_pool);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -3382,12 +3403,16 @@ svn_ra_serf__do_status(svn_ra_session_t *ra_session,
                        apr_pool_t *pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
 
-  return make_update_reporter(ra_session, reporter, report_baton,
-                              revision,
-                              session->session_url.path, NULL, status_target,
-                              depth, FALSE, FALSE, FALSE,
-                              status_editor, status_baton, pool);
+  SVN_ERR(make_update_reporter(ra_session, reporter, report_baton,
+                               revision,
+                               session->session_url.path, NULL, status_target,
+                               depth, FALSE, FALSE, FALSE,
+                               status_editor, status_baton,
+                               pool, scratch_pool));
+  svn_pool_destroy(scratch_pool);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -3416,7 +3441,7 @@ svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
                               TRUE /* text_deltas */,
                               send_copyfrom_args,
                               switch_editor, switch_baton,
-                              result_pool);
+                              result_pool, scratch_pool);
 }
 
 /* Helper svn_ra_serf__get_file(). Attempts to fetch file contents

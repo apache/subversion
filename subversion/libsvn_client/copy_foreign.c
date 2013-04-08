@@ -428,10 +428,10 @@ copy_foreign_dir(svn_ra_session_t *ra_session,
                                             &wrapped_editor, &wrapped_baton,
                                             scratch_pool));
 
-  SVN_ERR(svn_ra_do_update2(ra_session, &reporter, &reporter_baton,
+  SVN_ERR(svn_ra_do_update3(ra_session, &reporter, &reporter_baton,
                             location->rev, "", svn_depth_infinity,
-                            FALSE, wrapped_editor, wrapped_baton,
-                            scratch_pool));
+                            FALSE, FALSE, wrapped_editor, wrapped_baton,
+                            scratch_pool, scratch_pool));
 
   SVN_ERR(reporter->set_path(reporter_baton, "", location->rev, depth,
                              TRUE /* incomplete */,
