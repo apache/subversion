@@ -12107,12 +12107,22 @@ find_last_merged_location(svn_client__pathrev_t **base_p,
   else
     {
       /* One or more revisions have already been completely merged from
-         SOURCE_BRANCH to TARGET, now find the oldest revision which is
-         still eligible to be merged, if such exists. */
+         SOURCE_BRANCH to TARGET, now find the oldest revision, older
+         than the youngest merged revision, which is still eligible to
+         be merged, if such exists. */
       branch_history_t *contiguous_source;
       svn_revnum_t base_rev;
       svn_revnum_t oldest_eligible_rev = SVN_INVALID_REVNUM;
 
+      /* If the only revisions eligible are younger than the youngest merged
+         revision we can simply assume that the youngest eligible revision
+         is the youngest merged revision.  Obviously this may not be true!
+         The revisions between the youngest merged revision and the tip of
+         the branch may have several inoperative revisions -- they may *all*
+         be inoperative revisions!  But for the purpose of this function
+         (i.e. finding the youngest revision after the YCA where all revs have
+         been merged) that doesn't matter. */
+      source_end_rev.value.number = youngest_merged_rev;
       SVN_ERR(short_circuit_mergeinfo_log(FALSE, /* Find eligible */
                                           target->url, &target_opt_rev,
                                           source_branch->tip->url,
