@@ -1373,8 +1373,6 @@ get_tc_info(svn_wc_operation_t *operation,
   svn_boolean_t tree_conflicted;
   svn_skel_t *conflict_skel;
 
-  /* ### Check for mixed-rev src or dst? */
-
   /* Check for tree conflict on src. */
   SVN_ERR(svn_wc__db_read_conflict(&conflict_skel, db,
                                    src_abspath,
@@ -1959,6 +1957,8 @@ svn_wc__db_update_moved_away_conflict_victim(svn_wc__db_t *db,
   svn_wc_conflict_version_t *old_version;
   svn_wc_conflict_version_t *new_version;
   const char *move_src_op_root_abspath, *move_src_op_root_relpath;
+
+  /* ### Check for mixed-rev src or dst? */
 
   SVN_ERR(get_tc_info(&operation, &local_change, &incoming_change,
                       &move_src_op_root_abspath,
