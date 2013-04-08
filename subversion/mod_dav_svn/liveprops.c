@@ -834,10 +834,10 @@ insert_prop(const dav_resource *resource,
 static int
 is_writable(const dav_resource *resource, int propid)
 {
-  const dav_liveprop_spec *info;
+  const dav_liveprop_spec *info = NULL;
 
-  (void) dav_get_liveprop_info(propid, &dav_svn__liveprop_group, &info);
-  return info->is_writable;
+  dav_get_liveprop_info(propid, &dav_svn__liveprop_group, &info);
+  return info ? info->is_writable : FALSE;
 }
 
 
@@ -962,8 +962,8 @@ dav_svn__insert_all_liveprops(request_rec *r,
   for (spec = props; spec->name != NULL; ++spec)
     {
       svn_pool_clear(iterpool);
-      (void) insert_prop_internal(resource, spec->propid, what, phdr,
-                                  resource->pool, iterpool);
+      insert_prop_internal(resource, spec->propid, what, phdr,
+                           resource->pool, iterpool);
     }
   svn_pool_destroy(iterpool);
 

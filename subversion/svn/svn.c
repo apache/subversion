@@ -2887,6 +2887,16 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                        "on the file server"));
         }
 
+      if (svn_error_find_cause(err, SVN_ERR_RA_CANNOT_CREATE_TUNNEL) &&
+          (opt_state.auth_username || opt_state.auth_password))
+        {
+          err = svn_error_quick_wrap(
+                  err, _("When using svn+ssh:// URLs, keep in mind that the "
+                         "--username and --password options are ignored "
+                         "because authentication is performed by SSH, not "
+                         "Subversion"));
+        }
+
       return EXIT_ERROR(err);
     }
   else

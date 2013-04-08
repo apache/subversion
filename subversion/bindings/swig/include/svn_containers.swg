@@ -421,6 +421,19 @@
 */
 
 /* -----------------------------------------------------------------------
+   Output of apr_array_header_t * <svn_prop_inherited_item_t *>
+*/
+#ifdef SWIGPYTHON
+%typemap(argout) apr_array_header_t **OUTPUT_OF_PROP_INHERITED_ITEM {
+  %append_output(svn_swig_py_propinheriteditemarray_to_dict(*$1));
+}
+
+%apply apr_array_header_t **OUTPUT_OF_PROP_INHERITED_ITEM {
+  apr_array_header_t **inherited_props
+};
+#endif
+
+/* -----------------------------------------------------------------------
    Output of apr_array_header_t * <svn_prop_t *>
 */
 #ifdef SWIGRUBY

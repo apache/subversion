@@ -1295,10 +1295,16 @@ complete_cb(void *baton,
   const char *conflict_path;
   svn_error_t *err;
   const char *post_commit_errstr;
+  apr_hash_t *hooks_env;
+
+  /* Parse the hooks-env file (if any). */
+  SVN_ERR(svn_repos__parse_hooks_env(&hooks_env, eb->repos->hooks_env_path,
+                                     scratch_pool, scratch_pool));
 
   /* The transaction has been fully edited. Let the pre-commit hook
      have a look at the thing.  */
-  SVN_ERR(svn_repos__hooks_pre_commit(eb->repos, eb->txn_name, scratch_pool));
+  SVN_ERR(svn_repos__hooks_pre_commit(eb->repos, hooks_env,
+                                      eb->txn_name, scratch_pool));
 
   /* Hook is done. Let's do the actual commit.  */
   SVN_ERR(svn_fs__editor_commit(&revision, &post_commit_err, &conflict_path,
@@ -1314,8 +1320,8 @@ complete_cb(void *baton,
      Other errors may have occurred within the FS (specified by the
      POST_COMMIT_ERR localvar), but we need to run the hooks.  */
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
-  err = svn_repos__hooks_post_commit(eb->repos, revision, eb->txn_name,
-                                     scratch_pool);
+  err = svn_repos__hooks_post_commit(eb->repos, hooks_env, revision,
+                                     eb->txn_name, scratch_pool);
   if (err)
     err = svn_error_create(SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED, err,
                            _("Commit succeeded, but post-commit hook failed"));
@@ -1405,6 +1411,11 @@ svn_repos__get_commit_ev2(svn_editor_t **editor,
   };
   struct ev2_baton *eb;
   const svn_string_t *author;
+  apr_hash_t *hooks_env;
+
+  /* Parse the hooks-env file (if any). */
+  SVN_ERR(svn_repos__parse_hooks_env(&hooks_env, repos->hooks_env_path,
+                                     scratch_pool, scratch_pool));
 
   /* Can the user modify the repository at all?  */
   /* ### check against AUTHZ.  */
@@ -1428,7 +1439,8 @@ svn_repos__get_commit_ev2(svn_editor_t **editor,
   SVN_ERR(apply_revprops(repos->fs, eb->txn_name, revprops, scratch_pool));
 
   /* Okay... some access is allowed. Let's run the start-commit hook.  */
-  SVN_ERR(svn_repos__hooks_start_commit(repos, author ? author->data : NULL,
+  SVN_ERR(svn_repos__hooks_start_commit(repos, hooks_env,
+                                        author ? author->data : NULL,
                                         repos->client_capabilities,
                                         eb->txn_name, scratch_pool));
 

@@ -790,22 +790,42 @@ svn_auth_get_simple_provider2(
  *
  * @since New in 1.8.
  */
-typedef svn_error_t * (*svn_auth_cleanup_callback)(svn_boolean_t *delete_cred,
-                                                   void *cleanup_baton,
-                                                   const char *cred_kind,
-                                                   const char *realmstring,
-                                                   const char *provider,
-                                                   apr_pool_t *scratch_pool);
 
-/** Call @a cleanup with information describing each currently cached
- * credential (in providers that support iterating). If the callback
- * confirms that the credential should be deleted, delete it.
+/* ### FIXME: The PROVIDER string here is both ill-defined and
+   ### misleading.  First, Subversion's proprietary plaintext password
+   ### cache isn't a "provider" -- it's a data store for several
+   ### different providers.  As such, it doesn't even have a provider
+   ### name.  In fact, the only other public API that uses string
+   ### provider names is svn_auth_get_platform_specific_provider(),
+   ### and the strings it uses aren't even the same ones that we use
+   ### internally to identify third-party password stores.
+*/
+typedef svn_error_t *(*svn_auth_cleanup_func_t)(svn_boolean_t *delete_cred,
+                                                void *cleanup_baton,
+                                                const char *cred_kind,
+                                                const char *realmstring,
+                                                const char *provider,
+                                                apr_pool_t *scratch_pool);
+
+/** Call @a cleanup_func with information describing each currently
+ * cached credential (in providers registered with @a auth_baton that
+ * support iterating). If the callback confirms that the credential
+ * should be deleted, delete it.
+ *
+ * ### FIXME: As it turns out, the above is just false.
+ * ### svn_auth_cleanup_walk() could be just as happy using an
+ * ### auth_baton that has no providers at all, as the plumbing it
+ * ### uses has no provider-centricity to it whatsoever.  It currently
+ * ### does check to ensure that there is at least one provider of
+ * ### kind SVN_AUTH_CRED_SIMPLE registered with the baton, but it's
+ * ### not clear why, since this interface ultimately crawls and
+ * ### deletes credentials of all available kinds.
  *
  * @since New in 1.8.
  */
 svn_error_t *
 svn_auth_cleanup_walk(svn_auth_baton_t *auth_baton,
-                      svn_auth_cleanup_callback cleanup,
+                      svn_auth_cleanup_func_t cleanup_func,
                       void *cleanup_baton,
                       apr_pool_t *scratch_pool);
 

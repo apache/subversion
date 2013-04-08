@@ -2040,6 +2040,41 @@ svn_fs_youngest_rev(svn_revnum_t *youngest_p,
                     apr_pool_t *pool);
 
 
+/**
+ * Return filesystem format information for @a fs.
+ *
+ * Set @a *fs_format to the filesystem format number of @a fs, which is
+ * an integer that increases when incompatible changes are made (such as
+ * by #svn_fs_upgrade).
+ *
+ * Set @a *supports_version to the version number of the minimum Subversion GA
+ * release that can read and write @a fs.
+ *
+ * @see svn_repos_info_format()
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_info_format(int *fs_format,
+                   svn_version_t **supports_version,
+                   svn_fs_t *fs,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool);
+
+/**
+ * Return a list of admin-serviceable config files for @a fs.  @a *files
+ * will be set to an array containing paths as C strings.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_info_config_files(apr_array_header_t **files,
+                         svn_fs_t *fs,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
+
+
 /** Provide filesystem @a fs the opportunity to compress storage relating to
  * associated with  @a revision in filesystem @a fs.  Use @a pool for all
  * allocations.
@@ -2500,6 +2535,77 @@ svn_fs_verify_root(svn_fs_root_t *root,
 
 /** @} */
 
+/**
+ * @defgroup fs_info Filesystem information subsystem
+ * @{
+ */
+
+/**
+ * A structure that provides some information about a filesystem.
+ * Returned by svn_fs_info().
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, users shouldn't allocate structures of this
+ * type, to preserve binary compatibility.
+ *
+ * @since New in 1.8.
+ */
+typedef struct svn_fs_info_t {
+
+#if 0
+  /* Potential future feature. */
+  svn_boolean_t is_write_locked;
+#endif
+
+  /** Filesystem backend (#fs_type) -specific information.
+   * @see SVN_FS_FSFS_INFO_* */
+  apr_hash_t *fsap_info;
+
+} svn_fs_info_t;
+
+/**
+ * Set @a *info to an info struct describing @a fs.
+ *
+ * @see #svn_fs_info_t
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_info(const svn_fs_info_t **info,
+            svn_fs_t *fs,
+            apr_pool_t *result_pool,
+            apr_pool_t *scratch_pool);
+
+/**
+ * Return a duplicate of @a info, allocated in @a pool. No part of the new
+ * structure will be shared with @a info.
+ *
+ * @since New in 1.8.
+ */
+svn_fs_info_t *
+svn_fs_info_dup(const svn_fs_info_t *info,
+                apr_pool_t *result_pool);
+
+/** @name FSFS-specific #svn_fs_info_t information.
+ * @since New in 1.8.
+ * @{
+ */
+
+/** Value: shard size (as int), or 0 if the filesystem is
+ * not currently sharded. */
+#define SVN_FS_FSFS_INFO_SHARDED "sharded"
+
+/** Value: abspath to rep-cache.db, or absent if that doesn't exist.
+ @note Do not modify the db schema or tables!
+ */
+#define SVN_FS_FSFS_INFO_REP_CACHE_PATH "rep-cache-path"
+
+/** The smallest revision (as #svn_revnum_t) which is not in a pack file.
+ * @note Zero (0) if (but not iff) the format does not support packing. */
+#define SVN_FS_FSFS_INFO_MIN_UNPACKED_REV "min-unpacked-rev"
+/** @} */
+
+/** @} */
 
 #ifdef __cplusplus
 }

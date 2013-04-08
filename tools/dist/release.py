@@ -448,7 +448,9 @@ def roll_tarballs(args):
         m.update(open(filename, 'r').read())
         open(filename + '.sha1', 'w').write(m.hexdigest())
 
-    shutil.move('svn_version.h.dist', get_deploydir(args.base_dir))
+    shutil.move('svn_version.h.dist',
+                get_deploydir(args.base_dir) + '/' + 'svn_version.h.dist'
+                + '-' + str(args.version))
 
     # And we're done!
 
@@ -593,7 +595,8 @@ def move_to_dist(args):
                    'Publish Subversion-%s.' % str(args.version)]
     if (args.username):
         svnmucc_cmd += ['--username', args.username]
-    svnmucc_cmd += ['rm', dist_dev_url + '/' + 'svn_version.h.dist']
+    svnmucc_cmd += ['rm', dist_dev_url + '/' + 'svn_version.h.dist'
+                          + '-' + str(args.version)]
     for filename in filenames:
         svnmucc_cmd += ['mv', dist_dev_url + '/' + filename,
                         dist_release_url + '/' + filename]
@@ -633,7 +636,7 @@ def get_sha1info(args, replace=False):
     else:
         target = get_deploydir(args.base_dir)
 
-    sha1s = glob.glob(os.path.join(target, '*.sha1'))
+    sha1s = glob.glob(os.path.join(target, 'subversion*-%s*.sha1' % args.version))
 
     class info(object):
         pass

@@ -73,7 +73,7 @@ svn_ra_local__split_URL(svn_repos_t **repos,
                                            pool));
 
   /* Configure hook script environment variables. */
-  SVN_ERR(svn_repos_hooks_setenv(*repos, NULL, pool, pool));
+  SVN_ERR(svn_repos_hooks_setenv(*repos, NULL, pool));
 
   return SVN_NO_ERROR;
 }

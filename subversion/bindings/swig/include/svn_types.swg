@@ -906,6 +906,28 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #endif
 
 /* -----------------------------------------------------------------------
+   Callback: svn_repos_freeze_func_t
+*/
+#ifdef SWIGPYTHON
+%typemap(in) (svn_repos_freeze_func_t freeze_body, void *baton)
+{
+  $1 = svn_swig_py_repos_freeze_func;
+  $2 = (void *)$input;
+}
+#endif
+
+/* -----------------------------------------------------------------------
+   Callback: svn_proplist_receiver2_t
+*/
+#ifdef SWIGPYTHON
+%typemap(in) (svn_proplist_receiver2_t receiver, void *receiver_baton)
+{
+  $1 = svn_swig_py_proplist_receiver2;
+  $2 = (void *)$input;
+}
+#endif
+
+/* -----------------------------------------------------------------------
    Callback: svn_fs_warning_callback_t
 */
 

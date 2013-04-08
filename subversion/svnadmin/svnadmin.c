@@ -282,11 +282,11 @@ static const apr_getopt_option_t options_table[] =
     {"pre-1.5-compatible",     svnadmin__pre_1_5_compatible, 0,
      N_("deprecated; see --compatible-version")},
 
-    {"keep-going",    svnadmin__keep_going, 0,
-     N_("continue verifying after detecting a corruption")},
-
     {"pre-1.6-compatible",     svnadmin__pre_1_6_compatible, 0,
      N_("deprecated; see --compatible-version")},
+
+    {"keep-going",    svnadmin__keep_going, 0,
+     N_("continue verifying after detecting a corruption")},
 
     {"memory-cache-size",     'M', 1,
      N_("size of the extra in-memory cache in MB used to\n"
@@ -648,7 +648,24 @@ subcommand_create(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                 (opt_state->bdb_log_keep ? "0" :"1"));
 
   if (opt_state->fs_type)
-    svn_hash_sets(fs_config, SVN_FS_CONFIG_FS_TYPE, opt_state->fs_type);
+    {
+      /* With 1.8 we are announcing that BDB is deprecated.  No support
+       * has been removed and it will continue to work until some future
+       * date.  The purpose here is to discourage people from creating
+       * new BDB repositories which they will need to dump/load into
+       * FSFS or some new FS type in the future. */
+      if (0 == strcmp(opt_state->fs_type, SVN_FS_TYPE_BDB))
+        {
+          SVN_ERR(svn_cmdline_fprintf(
+                      stderr, pool,
+                      _("%swarning:"
+                        " The \"%s\" repository back-end is deprecated,"
+                        " consider using \"%s\" instead.\n"),
+                      "svnadmin: ", SVN_FS_TYPE_BDB, SVN_FS_TYPE_FSFS));
+          fflush(stderr);
+        }
+      svn_hash_sets(fs_config, SVN_FS_CONFIG_FS_TYPE, opt_state->fs_type);
+    }
 
   /* Prior to 1.8, we had explicit options to specify compatibility
      with a handful of prior Subversion releases. */
@@ -1016,6 +1033,7 @@ struct freeze_baton_t {
   int status;
 };
 
+/* Implements svn_repos_freeze_func_t */
 static svn_error_t *
 freeze_body(void *baton,
             apr_pool_t *pool)

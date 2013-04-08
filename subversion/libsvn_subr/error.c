@@ -481,8 +481,15 @@ print_error(svn_error_t *err, FILE *stream, const char *prefix)
       svn_error_clear(temp_err);
     }
 
-  svn_error_clear(svn_cmdline_fprintf(stream, err->pool,
-                                      ": (apr_err=%d)\n", err->apr_err));
+  {
+    const char *symbolic_name = svn_error_symbolic_name(err->apr_err);
+    if (symbolic_name)
+      svn_error_clear(svn_cmdline_fprintf(stream, err->pool,
+                                          ": (apr_err=%s)\n", symbolic_name));
+    else
+      svn_error_clear(svn_cmdline_fprintf(stream, err->pool,
+                                          ": (apr_err=%d)\n", err->apr_err));
+  }
 #endif /* SVN_DEBUG */
 
   /* "traced call" */
@@ -630,9 +637,11 @@ svn_err_best_message(svn_error_t *err, char *buf, apr_size_t bufsize)
 
 /* svn_strerror() and helpers */
 
+/* Duplicate of the same typedef in tests/libsvn_subr/error-code-test.c */
 typedef struct err_defn {
-  svn_errno_t errcode;
-  const char *errdesc;
+  svn_errno_t errcode; /* 160004 */
+  const char *errname; /* SVN_ERR_FS_CORRUPT */
+  const char *errdesc; /* default message */
 } err_defn;
 
 /* To understand what is going on here, read svn_error_codes.h. */
@@ -653,6 +662,26 @@ svn_strerror(apr_status_t statcode, char *buf, apr_size_t bufsize)
 
   return apr_strerror(statcode, buf, bufsize);
 }
+
+const char *
+svn_error_symbolic_name(apr_status_t statcode)
+{
+  const err_defn *defn;
+
+  for (defn = error_table; defn->errdesc != NULL; ++defn)
+    if (defn->errcode == (svn_errno_t)statcode)
+      return defn->errname;
+
+  /* "No error" is not in error_table. */
+  if (statcode == SVN_NO_ERROR)
+    return "SVN_NO_ERROR";
+
+  return NULL;
+}
+
+
+
+/* Malfunctions. */
 
 svn_error_t *
 svn_error_raise_on_malfunction(svn_boolean_t can_return,
@@ -712,6 +741,9 @@ svn_error__malfunction(svn_boolean_t can_return,
 {
   return malfunction_handler(can_return, file, line, expr);
 }
+
+
+/* Misc. */
 
 svn_error_t *
 svn_error__wrap_zlib(int zerr, const char *function, const char *message)

@@ -705,6 +705,15 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %authprompt_callback_typemap(ssl_client_cert_pw)
 %authprompt_callback_typemap(gnome_keyring_unlock)
 
+#ifdef SWIGPYTHON
+/* pl and rb aren't yet implemented */
+%callback_typemap_maybenull(svn_auth_cleanup_func_t cleanup_func,
+                            void *cleanup_baton,
+                            svn_swig_py_auth_cleanup_func,
+                            svn_swig_pl_auth_cleanup_func,
+                            svn_swig_rb_auth_cleanup_func)
+#endif
+
 /* -----------------------------------------------------------------------
  * For all the various functions that set a callback baton create a reference
  * for the baton (which in this case is an SV pointing to the callback)

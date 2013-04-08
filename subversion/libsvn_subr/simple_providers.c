@@ -513,13 +513,12 @@ simple_save_creds(svn_boolean_t *saved,
 
 svn_error_t *
 svn_auth__simple_cleanup_walk(svn_auth_baton_t *baton,
-                              svn_auth_cleanup_callback cleanup,
+                              svn_auth_cleanup_func_t cleanup_func,
                               void *cleanup_baton,
                               apr_hash_t *creds_cache,
                               apr_pool_t *scratch_pool)
 {
   const char *config_dir;
-  svn_boolean_t no_auth_cache;
   int i;
   apr_pool_t *iterpool;
 
@@ -534,14 +533,33 @@ svn_auth__simple_cleanup_walk(svn_auth_baton_t *baton,
   };
 
   config_dir = svn_auth_get_parameter(baton, SVN_AUTH_PARAM_CONFIG_DIR);
-  no_auth_cache = (svn_auth_get_parameter(baton, SVN_AUTH_PARAM_NO_AUTH_CACHE)
-                                != NULL);
-
-  if ((! config_dir) || no_auth_cache)
+  if (! config_dir)
     {
       /* Can't locate the cache to clear */
       return SVN_NO_ERROR;
     }
+
+
+  /* ### FIXME: This is just plain wrong.  This function has no
+     ### business iterating over any credential type except
+     ### SVN_AUTH_CRED_SIMPLE.  The side-effect of this overreach is
+     ### that today, someone can open an auth baton with just a single
+     ### svn.simple provider, and this function -- which claims to be
+     ### cleaning up creds as supported by the provider -- will
+     ### happily go about peeking into other credential types, too,
+     ### even those for which no provider has been registered.
+     ###
+     ### In my opinion, svn_auth_cleanup_auth() should iterate over
+     ### the registered providers, calling per-provider functions that
+     ### take care of their own cleanup, exactly as the rest of this
+     ### subsystem uses per-provider functions to handle credential
+     ### get/set.  Alternatively, svn_auth_cleanup_auth() should stop
+     ### masquerading as if the auth_baton (and its provider table) is
+     ### valuable at all, and just accept the 'config_dir' as input so
+     ### it can do it's tree crawl, file parsing, and file removal.
+     ###
+     ### --cmpilato
+  */
 
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; cred_kinds[i]; i++)
@@ -561,7 +579,6 @@ svn_auth__simple_cleanup_walk(svn_auth_baton_t *baton,
       dir_path = svn_dirent_dirname(item_path, iterpool);
 
       err = svn_io_get_dirents3(&nodes, dir_path, TRUE, iterpool, iterpool);
-
       if (err)
         {
           if (!APR_STATUS_IS_ENOENT(err->apr_err)
@@ -577,7 +594,9 @@ svn_auth__simple_cleanup_walk(svn_auth_baton_t *baton,
         {
           svn_io_dirent2_t *dirent = svn__apr_hash_index_val(hi);
           svn_stream_t *stream;
-          apr_hash_t *file_data;
+          apr_hash_t *creds_hash;
+          const svn_string_t *realm, *passtype;
+          svn_boolean_t delete_file = FALSE;
 
           if (dirent->kind != svn_node_file)
             continue;
@@ -595,8 +614,8 @@ svn_auth__simple_cleanup_walk(svn_auth_baton_t *baton,
               continue;
             }
 
-          file_data = apr_hash_make(itempool);
-          err = svn_hash_read2(file_data, stream, SVN_HASH_TERMINATOR, itempool);
+          creds_hash = apr_hash_make(itempool);
+          err = svn_hash_read2(creds_hash, stream, SVN_HASH_TERMINATOR, itempool);
           err = svn_error_compose_create(err, svn_stream_close(stream));
           if (err)
             {
@@ -605,32 +624,41 @@ svn_auth__simple_cleanup_walk(svn_auth_baton_t *baton,
               continue;
             }
 
-          {
-            const svn_string_t *realm = svn_hash_gets(file_data,
-                                                      SVN_CONFIG_REALMSTRING_KEY);
-            svn_boolean_t delete_file = FALSE;
+          realm = svn_hash_gets(creds_hash, SVN_CONFIG_REALMSTRING_KEY);
+          if (! realm)
+            continue; /* Not an auth file */
 
-            if (! realm)
-              continue; /* Not an auth file */
+          /* With the exception of the "windows" and "simple" password
+             types, a non-empty "passtype" value means that this
+             record is just metadata for credentials cached elsewhere.
+             In order to avoid giving the impression that we're able
+             to clear cached data that we really aren't, we'll skip
+             such records. */
+          passtype = svn_hash_gets(creds_hash, AUTHN_PASSTYPE_KEY);
+          if (passtype && passtype->data
+              && (! ((strcmp(passtype->data,
+                             SVN_AUTH__WINCRYPT_PASSWORD_TYPE) == 0)
+                     || (strcmp(passtype->data,
+                                SVN_AUTH__SIMPLE_PASSWORD_TYPE) == 0))))
+            continue; 
+          
+          SVN_ERR(cleanup_func(&delete_file, cleanup_baton, cred_kinds[i],
+                               realm->data,
+                               passtype ? passtype->data 
+                                        : SVN_AUTH__SIMPLE_PASSWORD_TYPE,
+                               itempool));
 
-            SVN_ERR(cleanup(&delete_file, cleanup_baton, cred_kinds[i], realm->data,
-                            SVN_AUTH_CRED_SIMPLE, itempool));
+          if (delete_file)
+            {
+              /* Delete from the credential hash */
+              const char *cache_key = apr_pstrcat(itempool, cred_kinds[0], ":",
+                                                  realm->data, (char *)NULL);
 
-            if (delete_file)
-              {
-                /* Delete from the credential hash */
-                const char *cache_key = apr_pstrcat(itempool,
-                                                    cred_kinds[0],
-                                                    ":",
-                                                    realm->data,
-                                                    (char *)NULL);
-
-                svn_hash_sets(creds_cache, cache_key, NULL);
-
-                /* And the file on disk */
-                SVN_ERR(svn_io_remove_file2(item_path, TRUE, itempool));
-              }
-          }
+              svn_hash_sets(creds_cache, cache_key, NULL);
+              
+              /* And the file on disk */
+              SVN_ERR(svn_io_remove_file2(item_path, TRUE, itempool));
+            }
         }
     }
 

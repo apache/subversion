@@ -1364,18 +1364,18 @@ notify_verification_error(svn_revnum_t rev,
                           void *notify_baton,
                           apr_pool_t *pool)
 {
-   if (notify_func)
-   {
-     svn_repos_notify_t *notify_failure;
-     notify_failure = svn_repos_notify_create(svn_repos_notify_failure, pool);
-     notify_failure->err = err;
-     notify_failure->revision = rev;
-     notify_func(notify_baton, notify_failure, pool);
-   }
+  if (notify_func)
+    {
+      svn_repos_notify_t *notify_failure;
+      notify_failure = svn_repos_notify_create(svn_repos_notify_failure, pool);
+      notify_failure->err = err;
+      notify_failure->revision = rev;
+      notify_func(notify_baton, notify_failure, pool);
+    }
 }
 
 /* Verify revision REV in file system FS. */
-svn_error_t *
+static svn_error_t *
 verify_one_revision(svn_fs_t *fs,
                     svn_revnum_t rev,
                     svn_repos_notify_func_t notify_func,
@@ -1393,7 +1393,7 @@ verify_one_revision(svn_fs_t *fs,
   const svn_delta_editor_t *cancel_editor;
   void *cancel_edit_baton;
 
-  /* Get cancellable dump editor, but with our close_directory handler. */
+  /* Get cancellable dump editor, but with our close_directory handler.*/
   SVN_ERR(get_dump_editor(&dump_editor, &dump_edit_baton,
                           fs, rev, "",
                           svn_stream_empty(scratchpool),
@@ -1412,17 +1412,15 @@ verify_one_revision(svn_fs_t *fs,
   SVN_ERR(svn_repos_replay2(to_root, "", SVN_INVALID_REVNUM, FALSE,
                             cancel_editor, cancel_edit_baton,
                             NULL, NULL, scratchpool));
-
+ 
   /* While our editor close_edit implementation is a no-op, we still
      do this for completeness. */
   SVN_ERR(cancel_editor->close_edit(cancel_edit_baton, scratchpool));
  
   SVN_ERR(svn_fs_revision_proplist(&props, fs, rev, scratchpool));
- 
+
   return SVN_NO_ERROR;
 }
- 
-
 
 /* Baton type used for forwarding notifications from FS API to REPOS API. */
 struct verify_fs2_notify_func_baton_t
@@ -1524,7 +1522,7 @@ svn_repos_verify_fs3(svn_repos_t *repos,
                                svn_dirent_local_style(svn_repos_path(repos,
                                                                      pool),
                                                       pool));
-      }
+    }
   else
     {
       if (err)
@@ -1542,7 +1540,6 @@ svn_repos_verify_fs3(svn_repos_t *repos,
       apr_hash_t *props;
 
       svn_error_t *err;
-
       svn_pool_clear(iterpool);
 
       /* Wrapper function to catch the possible errors. */
@@ -1561,6 +1558,7 @@ svn_repos_verify_fs3(svn_repos_t *repos,
           else
             break;
         }
+
       /* Get cancellable dump editor, but with our close_directory handler. */
       SVN_ERR(get_dump_editor(&dump_editor, &dump_edit_baton,
                               fs, rev, "",

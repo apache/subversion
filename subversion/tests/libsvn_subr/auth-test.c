@@ -217,7 +217,7 @@ cleanup_callback(svn_boolean_t *delete_cred,
                  const char *provider,
                  apr_pool_t *scratch_pool)
 {
-  if (!strcmp(provider, SVN_AUTH__SIMPLE_PASSWORD_TYPE))
+  if (strcmp(provider, SVN_AUTH__SIMPLE_PASSWORD_TYPE))
     return SVN_NO_ERROR;
 
   SVN_TEST_ASSERT(! strcmp(cred_kind, SVN_AUTH_CRED_SIMPLE));

@@ -184,6 +184,8 @@ static fs_vtable_t fs_vtable = {
   svn_fs_fs__unlock,
   svn_fs_fs__get_lock,
   svn_fs_fs__get_locks,
+  svn_fs_fs__info_format,
+  svn_fs_fs__info_config_files,
   svn_fs_fs__verify_root,
   fs_freeze,
   fs_set_errcall
