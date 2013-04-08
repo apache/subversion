@@ -2076,8 +2076,6 @@ bump_mark_tree_conflict(svn_wc__db_wcroot_t *wcroot,
   const char *new_repos_relpath;
   svn_revnum_t old_rev;
   svn_revnum_t new_rev;
-  const char *old_repos_url;
-  const char *new_repos_url;
   svn_node_kind_t old_kind;
   svn_node_kind_t new_kind;
   svn_wc_conflict_version_t *old_version;
@@ -2092,11 +2090,6 @@ bump_mark_tree_conflict(svn_wc__db_wcroot_t *wcroot,
                                             scratch_pool, scratch_pool));
   SVN_ERR(svn_wc__db_fetch_repos_info(&repos_root_url, &repos_uuid,
                                       wcroot->sdb, repos_id, scratch_pool));
-  new_repos_url = svn_uri_canonicalize(apr_pstrcat(scratch_pool,
-                                                   repos_root_url, "/",
-                                                   new_repos_relpath,
-                                                   (const char *)NULL),
-                                       scratch_pool);
 
   /* Read old (pre-update) information from the move destination node. */
   SVN_ERR(svn_wc__db_depth_get_info(NULL, &old_kind, &old_rev,
@@ -2105,11 +2098,6 @@ bump_mark_tree_conflict(svn_wc__db_wcroot_t *wcroot,
                                     wcroot, move_dst_op_root_relpath,
                                     relpath_depth(move_dst_op_root_relpath),
                                     scratch_pool, scratch_pool));
-  old_repos_url = svn_uri_canonicalize(apr_pstrcat(scratch_pool,
-                                                   repos_root_url, "/",
-                                                   old_repos_relpath,
-                                                   (const char *)NULL),
-                                       scratch_pool);
 
   old_version = svn_wc_conflict_version_create2(
                   repos_root_url, repos_uuid, old_repos_relpath, old_rev,
