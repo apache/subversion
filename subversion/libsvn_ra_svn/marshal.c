@@ -56,19 +56,12 @@
 
 #define SUSPICIOUSLY_HUGE_STRING_SIZE_THRESHOLD (0x100000)
 
-/* When zero copy has been enabled, don't use blocking writes.  Instead,
- * time out after this many microseconds. */
-
-#define ZERO_COPY_TIMEOUT 1000000
-
 /* Return the APR socket timeout to be used for the connection depending
  * on whether there is a blockage handler or zero copy has been activated. */
 static apr_interval_time_t
 get_timeout(svn_ra_svn_conn_t *conn)
 {
-  return conn->block_handler ? 0
-                             : (conn->zero_copy_limit ? ZERO_COPY_TIMEOUT
-                                                      : -1);
+  return conn->block_handler ? 0 : -1;
 }
 
 /* --- CONNECTION INITIALIZATION --- */
