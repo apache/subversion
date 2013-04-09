@@ -1012,7 +1012,7 @@ const char *svn_config_find_group(svn_config_t *cfg, const char *key,
   gb.key = key;
   gb.match = NULL;
   gb.pool = pool;
-  svn_config_enumerate2(cfg, master_section, search_groups, &gb, pool);
+  (void) svn_config_enumerate2(cfg, master_section, search_groups, &gb, pool);
   return gb.match;
 }
 

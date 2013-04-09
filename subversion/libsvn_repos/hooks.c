@@ -405,7 +405,7 @@ parse_hooks_env_section(const char *name, void *baton, apr_pool_t *pool)
   bo.section = name;
   bo.hooks_env = b->hooks_env;
 
-  svn_config_enumerate2(b->cfg, name, parse_hooks_env_option, &bo, pool);
+  (void)svn_config_enumerate2(b->cfg, name, parse_hooks_env_option, &bo, pool);
 
   return TRUE;
 }
@@ -424,8 +424,8 @@ svn_repos__parse_hooks_env(apr_hash_t **hooks_env_p,
       SVN_ERR(svn_config_read2(&cfg, local_abspath, FALSE, TRUE, scratch_pool));
       b.cfg = cfg;
       b.hooks_env = apr_hash_make(result_pool);
-      svn_config_enumerate_sections2(cfg, parse_hooks_env_section, &b,
-                                     scratch_pool);
+      (void)svn_config_enumerate_sections2(cfg, parse_hooks_env_section, &b,
+                                           scratch_pool);
       *hooks_env_p = b.hooks_env;
     }
   else
