@@ -217,11 +217,11 @@ cleanup_callback(svn_boolean_t *delete_cred,
                  const char *provider,
                  apr_pool_t *scratch_pool)
 {
-  if (strcmp(provider, SVN_AUTH__SIMPLE_PASSWORD_TYPE))
+  if (strcmp(provider, SVN_AUTH__SIMPLE_PASSWORD_TYPE) != 0)
     return SVN_NO_ERROR;
 
-  SVN_TEST_ASSERT(! strcmp(cred_kind, SVN_AUTH_CRED_SIMPLE));
-  SVN_TEST_ASSERT(! strcmp(realmstring, "<http://my.host> My realm"));
+  SVN_TEST_ASSERT(strcmp(cred_kind, SVN_AUTH_CRED_SIMPLE) == 0);
+  SVN_TEST_ASSERT(strcmp(realmstring, "<http://my.host> My realm") == 0);
 
   *delete_cred = TRUE;
 
@@ -270,7 +270,7 @@ test_auth_clear(apr_pool_t *pool)
                                      pool));
 
   creds = credentials;
-  SVN_TEST_ASSERT(! strcmp(creds->username, "jrandom"));
+  SVN_TEST_ASSERT(strcmp(creds->username, "jrandom") == 0);
   SVN_TEST_ASSERT(creds->may_save);
 
   /* And tell that they are ok and can be saved */
@@ -290,7 +290,7 @@ test_auth_clear(apr_pool_t *pool)
 
   SVN_TEST_ASSERT(credentials);
   creds = credentials;
-  SVN_TEST_ASSERT(! strcmp(creds->username, "jrandom"));
+  SVN_TEST_ASSERT(strcmp(creds->username, "jrandom") == 0);
   SVN_TEST_ASSERT(creds->may_save);
 
 
