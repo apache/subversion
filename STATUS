@@ -54,12 +54,16 @@ Candidate changes:
    Votes:
      +0: rhuijben (Still running some tests)
 
- * r1461562, r1461580
-   Fix issue #4340, "fs layer should reject filenames with trailing \n"
+ * r1461562, r1461580, r1465995, r1465998
+   Fix issue #4340, "filenames containing \n corrupt FSFS repositories"
    Justification:
      Control characters can severely corrupt FSFS revision files and
      should never enter the repository for this reason. See discussion
      linked form issue #4340 for more information.
+   Notes:
+     r1465995 and r1465998 revise the changes made in the earlier revisions,
+     and are the result of a long dev@ discussion that eventually concluded
+     in this subthread: http://svn.haxx.se/dev/archive-2013-04/0056.shtml
    Branch:
      ^/subversion/branches/1.6.x-issue4340
    Votes:
