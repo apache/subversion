@@ -234,7 +234,6 @@ check_cntrl(const char *path,
 }
 
 
-
 /*** Editor functions ***/
 
 static svn_error_t *
