@@ -1810,6 +1810,70 @@ fs_dir_entries(apr_hash_t **table_p,
   return svn_fs_fs__dag_dir_entries(table_p, node, pool, pool);
 }
 
+/* Return a copy of PATH, allocated from POOL, for which newlines
+   have been escaped using the form \NNN (where NNN is the
+   octal representation of the byte's ordinal value).  */
+static const char *
+escape_newline(const char *path, apr_pool_t *pool)
+{
+  svn_stringbuf_t *retstr;
+  apr_size_t i, copied = 0;
+  int c;
+
+  /* At least one control character:
+      strlen - 1 (control) + \ + N + N + N + null . */
+  retstr = svn_stringbuf_create_ensure(strlen(path) + 4, pool);
+  for (i = 0; path[i]; i++)
+    {
+      c = (unsigned char)path[i];
+      if (c != '\n')
+        continue;
+
+      /* First things first, copy all the good stuff that we haven't
+         yet copied into our output buffer. */
+      if (i - copied)
+        svn_stringbuf_appendbytes(retstr, path + copied,
+                                  i - copied);
+
+      /* Make sure buffer is big enough for '\' 'N' 'N' 'N' (and NUL) */
+      svn_stringbuf_ensure(retstr, retstr->len + 4);
+      /*### The backslash separator doesn't work too great with Windows,
+         but it's what we'll use for consistency with invalid utf8
+         formatting (until someone has a better idea) */
+      apr_snprintf(retstr->data + retstr->len, 5, "\\%03o", (unsigned char)c);
+      retstr->len += 4;
+
+      /* Finally, update our copy counter. */
+      copied = i + 1;
+    }
+
+  /* Anything left to copy? */
+  if (i - copied)
+    svn_stringbuf_appendbytes(retstr, path + copied, i - copied);
+
+  /* retstr is null-terminated either by apr_snprintf or the svn_stringbuf
+     functions. */
+
+  return retstr->data;
+}
+
+/* Raise an error if PATH contains a newline because FSFS cannot handle
+ * such paths. See issue #4340. */
+static svn_error_t *
+check_newline(const char *path, apr_pool_t *pool)
+{
+  const char *c;
+
+  for (c = path; *c; c++)
+    {
+      if (*c == '\n')
+        return svn_error_createf(SVN_ERR_FS_PATH_SYNTAX, NULL,
+           _("Invalid control character '0x%02x' in path '%s'"),
+           (unsigned char)*c, escape_newline(path, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
 
 /* Create a new directory named PATH in ROOT.  The new directory has
    no entries, and no properties.  ROOT must be the root of a
@@ -1823,6 +1887,8 @@ fs_make_dir(svn_fs_root_t *root,
   parent_path_t *parent_path;
   dag_node_t *sub_dir;
   const char *txn_id = root->txn;
+
+  SVN_ERR(check_newline(path, pool));
 
   SVN_ERR(open_path(&parent_path, root, path, open_path_last_optional,
                     txn_id, pool));
@@ -2086,6 +2152,8 @@ fs_copy(svn_fs_root_t *from_root,
         const char *to_path,
         apr_pool_t *pool)
 {
+  SVN_ERR(check_newline(to_path, pool));
+
   return copy_helper(from_root, from_path, to_root, to_path, TRUE, pool);
 }
 
@@ -2175,6 +2243,8 @@ fs_make_file(svn_fs_root_t *root,
   parent_path_t *parent_path;
   dag_node_t *child;
   const char *txn_id = root->txn;
+
+  SVN_ERR(check_newline(path, pool));
 
   SVN_ERR(open_path(&parent_path, root, path, open_path_last_optional,
                     txn_id, pool));
