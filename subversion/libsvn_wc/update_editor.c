@@ -618,6 +618,7 @@ make_dir_baton(struct dir_baton **d_p,
 /* Forward declarations. */
 static svn_error_t *
 already_in_a_tree_conflict(svn_boolean_t *conflicted,
+                           svn_boolean_t *ignored,
                            svn_wc__db_t *db,
                            const char *local_abspath,
                            apr_pool_t *scratch_pool);
@@ -1168,7 +1169,7 @@ open_root(void *edit_baton,
 {
   struct edit_baton *eb = edit_baton;
   struct dir_baton *db;
-  svn_boolean_t already_conflicted;
+  svn_boolean_t already_conflicted, conflict_ignored;
   svn_error_t *err;
   svn_wc__db_status_t status;
   svn_wc__db_status_t base_status;
@@ -1182,8 +1183,8 @@ open_root(void *edit_baton,
   SVN_ERR(make_dir_baton(&db, NULL, eb, NULL, FALSE, pool));
   *dir_baton = db;
 
-  err = already_in_a_tree_conflict(&already_conflicted, eb->db,
-                                   db->local_abspath, pool);
+  err = already_in_a_tree_conflict(&already_conflicted, &conflict_ignored,
+                                   eb->db, db->local_abspath, pool);
 
   if (err)
     {
@@ -1191,7 +1192,7 @@ open_root(void *edit_baton,
         return svn_error_trace(err);
 
       svn_error_clear(err);
-      already_conflicted = FALSE;
+      already_conflicted = conflict_ignored = FALSE;
     }
   else if (already_conflicted)
     {
@@ -1222,7 +1223,11 @@ open_root(void *edit_baton,
                                eb->db, db->local_abspath,
                                db->pool, pool));
 
-  if (have_work)
+  if (conflict_ignored)
+    {
+      db->shadowed = TRUE;
+    }
+  else if (have_work)
     {
       const char *move_src_root_abspath;
 
@@ -1636,6 +1641,7 @@ check_tree_conflict(svn_skel_t **pconflict,
  */
 static svn_error_t *
 already_in_a_tree_conflict(svn_boolean_t *conflicted,
+                           svn_boolean_t *ignored,
                            svn_wc__db_t *db,
                            const char *local_abspath,
                            apr_pool_t *scratch_pool)
@@ -1645,7 +1651,7 @@ already_in_a_tree_conflict(svn_boolean_t *conflicted,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  *conflicted = FALSE;
+  *conflicted = *ignored = FALSE;
 
   while (TRUE)
     {
@@ -1653,9 +1659,10 @@ already_in_a_tree_conflict(svn_boolean_t *conflicted,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_wc__conflicted_for_update_p(conflicted, db, ancestor_abspath,
-                                              TRUE, scratch_pool));
-      if (*conflicted)
+      SVN_ERR(svn_wc__conflicted_for_update_p(conflicted, ignored, db,
+                                              ancestor_abspath, TRUE,
+                                              scratch_pool));
+      if (*conflicted || *ignored)
         break;
 
       SVN_ERR(svn_wc__db_is_wcroot(&is_wc_root, db, ancestor_abspath,
@@ -1674,11 +1681,13 @@ already_in_a_tree_conflict(svn_boolean_t *conflicted,
 /* Temporary helper until the new conflict handling is in place */
 static svn_error_t *
 node_already_conflicted(svn_boolean_t *conflicted,
+                        svn_boolean_t *conflict_ignored,
                         svn_wc__db_t *db,
                         const char *local_abspath,
                         apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_wc__conflicted_for_update_p(conflicted, db, local_abspath, FALSE,
+  SVN_ERR(svn_wc__conflicted_for_update_p(conflicted, conflict_ignored, db,
+                                          local_abspath, FALSE,
                                           scratch_pool));
 
   return SVN_NO_ERROR;
@@ -1779,8 +1788,8 @@ delete_entry(const char *path,
   if (pb->shadowed)
     conflicted = FALSE; /* Conflict applies to WORKING */
   else if (conflicted)
-    SVN_ERR(node_already_conflicted(&conflicted, eb->db, local_abspath,
-                                    scratch_pool));
+    SVN_ERR(node_already_conflicted(&conflicted, NULL,
+                                    eb->db, local_abspath, scratch_pool));
   if (conflicted)
     {
       SVN_ERR(remember_skipped_tree(eb, local_abspath, scratch_pool));
@@ -1793,7 +1802,6 @@ delete_entry(const char *path,
 
       return SVN_NO_ERROR;
     }
-
 
 
   /* Receive the remote removal of excluded/server-excluded/not present node.
@@ -1970,6 +1978,7 @@ add_directory(const char *path,
   svn_wc__db_status_t status;
   svn_node_kind_t wc_kind;
   svn_boolean_t conflicted;
+  svn_boolean_t conflict_ignored = FALSE;
   svn_boolean_t versioned_locally_and_present;
   svn_skel_t *tree_conflict = NULL;
   svn_error_t *err;
@@ -2128,8 +2137,8 @@ add_directory(const char *path,
           conflicted = FALSE; /* No skip */
         }
       else
-        SVN_ERR(node_already_conflicted(&conflicted, eb->db,
-                                        db->local_abspath, pool));
+        SVN_ERR(node_already_conflicted(&conflicted, &conflict_ignored,
+                                        eb->db, db->local_abspath, pool));
     }
 
   /* Now the "usual" behaviour if already conflicted. Skip it. */
@@ -2165,6 +2174,10 @@ add_directory(const char *path,
       do_notification(eb, db->local_abspath, svn_node_dir,
                       svn_wc_notify_skip_conflicted, pool);
       return SVN_NO_ERROR;
+    }
+  else if (conflict_ignored)
+    {
+      db->shadowed = TRUE;
     }
 
   if (db->shadowed)
@@ -2318,6 +2331,7 @@ open_directory(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   svn_boolean_t have_work;
   svn_boolean_t conflicted;
+  svn_boolean_t conflict_ignored = FALSE;
   svn_skel_t *tree_conflict = NULL;
   svn_wc__db_status_t status, base_status;
   svn_node_kind_t wc_kind;
@@ -2380,8 +2394,8 @@ open_directory(const char *path,
   if (db->shadowed)
     conflicted = FALSE; /* Conflict applies to WORKING */
   else if (conflicted)
-    SVN_ERR(node_already_conflicted(&conflicted, eb->db,
-                                    db->local_abspath, pool));
+    SVN_ERR(node_already_conflicted(&conflicted, &conflict_ignored,
+                                    eb->db, db->local_abspath, pool));
   if (conflicted)
     {
       SVN_ERR(remember_skipped_tree(eb, db->local_abspath, pool));
@@ -2393,6 +2407,10 @@ open_directory(const char *path,
                       svn_wc_notify_skip_conflicted, pool);
 
       return SVN_NO_ERROR;
+    }
+  else if (conflict_ignored)
+    {
+      db->shadowed = TRUE;
     }
 
   /* Is this path a fresh tree conflict victim?  If so, skip the tree
@@ -3066,6 +3084,7 @@ add_file(const char *path,
   svn_wc__db_status_t status = svn_wc__db_status_normal;
   apr_pool_t *scratch_pool;
   svn_boolean_t conflicted = FALSE;
+  svn_boolean_t conflict_ignored = FALSE;
   svn_boolean_t versioned_locally_and_present = FALSE;
   svn_skel_t *tree_conflict = NULL;
   svn_error_t *err = SVN_NO_ERROR;
@@ -3212,8 +3231,8 @@ add_file(const char *path,
           conflicted = FALSE; /* No skip */
         }
       else
-        SVN_ERR(node_already_conflicted(&conflicted, eb->db,
-                                        fb->local_abspath, pool));
+        SVN_ERR(node_already_conflicted(&conflicted, &conflict_ignored,
+                                        eb->db, fb->local_abspath, pool));
     }
 
   /* Now the usual conflict handling: skip. */
@@ -3244,6 +3263,10 @@ add_file(const char *path,
       svn_pool_destroy(scratch_pool);
 
       return SVN_NO_ERROR;
+    }
+  else if (conflict_ignored)
+    {
+      fb->shadowed = TRUE;
     }
 
   if (fb->shadowed)
@@ -3380,6 +3403,7 @@ open_file(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   struct file_baton *fb;
   svn_boolean_t conflicted;
+  svn_boolean_t conflict_ignored = FALSE;
   svn_boolean_t have_work;
   svn_wc__db_status_t status;
   svn_node_kind_t wc_kind;
@@ -3444,8 +3468,8 @@ open_file(const char *path,
   if (fb->shadowed)
     conflicted = FALSE; /* Conflict applies to WORKING */
   else if (conflicted)
-    SVN_ERR(node_already_conflicted(&conflicted, eb->db,
-                                    fb->local_abspath, pool));
+    SVN_ERR(node_already_conflicted(&conflicted, &conflict_ignored,
+                                    eb->db, fb->local_abspath, pool));
   if (conflicted)
     {
       SVN_ERR(remember_skipped_tree(eb, fb->local_abspath, pool));
@@ -3459,6 +3483,10 @@ open_file(const char *path,
       svn_pool_destroy(scratch_pool);
 
       return SVN_NO_ERROR;
+    }
+  else if (conflict_ignored)
+    {
+      fb->shadowed = TRUE;
     }
 
   /* Check for conflicts only when we haven't already recorded
