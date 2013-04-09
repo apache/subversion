@@ -274,6 +274,14 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1465975
+   Replace assertions that trigger in the wild with proper error messages.
+   Justification:
+     User-friendliness, see http://svn.haxx.se/users/archive-2013-04/0064.shtml
+     Showing the problematic path will help with figuring out the problem.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
