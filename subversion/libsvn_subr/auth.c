@@ -35,6 +35,7 @@
 #include "svn_private_config.h"
 #include "svn_dso.h"
 #include "svn_version.h"
+#include "private/svn_dep_compat.h"
 
 #include "auth.h"
 
