@@ -689,6 +689,26 @@ svn_error_t *
 svn_auth_save_credentials(svn_auth_iterstate_t *state,
                           apr_pool_t *pool);
 
+/** Forget a set (or all) memory-cached credentials.
+ *
+ * Remove references (if any) in @a auth_baton to credentials cached
+ * therein.  If @a cred_kind and @a realmstring are non-NULL, forget
+ * only the credentials associated with those credential types and
+ * realm.  Otherwise @a cred_kind and @a realmstring must both be
+ * NULL, and this function will forget all credentials cached within
+ * @a auth_baton.
+ *
+ * @note This function does not affect persisted authentication
+ * credential storage at all.  It is merely a way to cause Subversion
+ * to forget about credentials already fetched from a provider,
+ * forcing them to be fetched again later should they be required.
+ */
+svn_error_t *
+svn_auth_forget_credentials(svn_auth_baton_t *auth_baton,
+                            const char *cred_kind,
+                            const char *realmstring,
+                            apr_pool_t *pool);
+
 /** @} */
 
 /** Set @a *provider to an authentication provider of type
@@ -774,60 +794,6 @@ svn_auth_get_simple_provider2(
   svn_auth_plaintext_prompt_func_t plaintext_prompt_func,
   void *prompt_baton,
   apr_pool_t *pool);
-
-/** Callback for svn_auth_cleanup_walk().
- *
- * Called for each credential to allow selectively removing credentials.
- *
- * @a cred_kind and @a realmstring specify the key of the credential (see
- * svn_auth_first_credentials()).
- *
- * @a provider specifies which provider currently holds the credential.
- *
- * Before returning set @a *delete_cred to TRUE to remove the credential from
- * the cache; leave @a *delete_cred unchanged or set it to FALSE to keep the
- * credential.
- *
- * @since New in 1.8.
- */
-
-/* ### FIXME: The PROVIDER string here is both ill-defined and
-   ### misleading.  First, Subversion's proprietary plaintext password
-   ### cache isn't a "provider" -- it's a data store for several
-   ### different providers.  As such, it doesn't even have a provider
-   ### name.  In fact, the only other public API that uses string
-   ### provider names is svn_auth_get_platform_specific_provider(),
-   ### and the strings it uses aren't even the same ones that we use
-   ### internally to identify third-party password stores.
-*/
-typedef svn_error_t *(*svn_auth_cleanup_func_t)(svn_boolean_t *delete_cred,
-                                                void *cleanup_baton,
-                                                const char *cred_kind,
-                                                const char *realmstring,
-                                                const char *provider,
-                                                apr_pool_t *scratch_pool);
-
-/** Call @a cleanup_func with information describing each currently
- * cached credential (in providers registered with @a auth_baton that
- * support iterating). If the callback confirms that the credential
- * should be deleted, delete it.
- *
- * ### FIXME: As it turns out, the above is just false.
- * ### svn_auth_cleanup_walk() could be just as happy using an
- * ### auth_baton that has no providers at all, as the plumbing it
- * ### uses has no provider-centricity to it whatsoever.  It currently
- * ### does check to ensure that there is at least one provider of
- * ### kind SVN_AUTH_CRED_SIMPLE registered with the baton, but it's
- * ### not clear why, since this interface ultimately crawls and
- * ### deletes credentials of all available kinds.
- *
- * @since New in 1.8.
- */
-svn_error_t *
-svn_auth_cleanup_walk(svn_auth_baton_t *auth_baton,
-                      svn_auth_cleanup_func_t cleanup_func,
-                      void *cleanup_baton,
-                      apr_pool_t *scratch_pool);
 
 /** Like svn_auth_get_simple_provider2, but without the ability to
  * call the svn_auth_plaintext_prompt_func_t callback, and the provider
