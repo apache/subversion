@@ -1041,7 +1041,7 @@ merge_xml_in_filter(ap_filter_t *f,
       if (rv != APR_SUCCESS)
         {
           /* Clean up the parser. */
-          apr_xml_parser_done(ctx->parser, NULL);
+          (void) apr_xml_parser_done(ctx->parser, NULL);
           break;
         }
     }

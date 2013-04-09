@@ -497,7 +497,7 @@ svn_ra_serf__conn_closed(serf_connection_t *conn,
 
   err = svn_error_trace(connection_closed(ra_conn, why, pool));
 
-  save_error(ra_conn->session, err);
+  (void) save_error(ra_conn->session, err);
 }
 
 
@@ -1419,7 +1419,7 @@ xml_parser_cleanup(void *baton)
 
   if (*xmlp)
     {
-      XML_ParserFree(*xmlp);
+      (void) XML_ParserFree(*xmlp);
       *xmlp = NULL;
     }
 
@@ -1490,7 +1490,7 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
 
       /* Tell the parser that no more content will be parsed. Ignore the
          return status. We just don't care.  */
-      XML_Parse(parser->xmlp, NULL, 0, 1);
+      (void) XML_Parse(parser->xmlp, NULL, 0, 1);
 
       apr_pool_cleanup_run(parser->pool, &parser->xmlp, xml_parser_cleanup);
       parser->xmlp = NULL;
@@ -1711,7 +1711,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
               SVN_ERR_ASSERT(ctx->xmlp != NULL);
 
               /* Ignore the return status. We just don't care.  */
-              XML_Parse(ctx->xmlp, NULL, 0, 1);
+              (void) XML_Parse(ctx->xmlp, NULL, 0, 1);
 
               apr_pool_cleanup_run(ctx->pool, &ctx->xmlp, xml_parser_cleanup);
               add_done_item(ctx);
@@ -1763,7 +1763,7 @@ svn_ra_serf__credentials_callback(char **username, char **password,
 
       if (err)
         {
-          save_error(session, err);
+          (void) save_error(session, err);
           return err->apr_err;
         }
 
@@ -1772,8 +1772,8 @@ svn_ra_serf__credentials_callback(char **username, char **password,
       if (!creds || session->auth_attempts > 4)
         {
           /* No more credentials. */
-          save_error(session,
-                     svn_error_create(
+          (void) save_error(session,
+                            svn_error_create(
                               SVN_ERR_AUTHN_FAILED, NULL,
                               _("No more credentials or we tried too many "
                                 "times.\nAuthentication failed")));
@@ -1794,8 +1794,8 @@ svn_ra_serf__credentials_callback(char **username, char **password,
       if (!session->proxy_username || session->proxy_auth_attempts > 4)
         {
           /* No more credentials. */
-          save_error(session, 
-                     svn_error_create(
+          (void) save_error(session, 
+                            svn_error_create(
                               SVN_ERR_AUTHN_FAILED, NULL,
                               _("Proxy authentication failed")));
           return SVN_ERR_AUTHN_FAILED;
@@ -2217,8 +2217,8 @@ svn_ra_serf__request_create(svn_ra_serf__handler_t *handler)
 
   /* ### do we need to hold onto the returned request object, or just
      ### not worry about it (the serf ctx will manage it).  */
-  serf_connection_request_create(handler->conn->conn,
-                                 setup_request_cb, handler);
+  (void) serf_connection_request_create(handler->conn->conn,
+                                        setup_request_cb, handler);
 }
 
 
@@ -2446,7 +2446,7 @@ expat_start(void *userData, const char *raw_name, const char **attrs)
 
 #ifdef EXPAT_HAS_STOPPARSER
   if (ectx->inner_error)
-    XML_StopParser(ectx->parser, 0 /* resumable */);
+    (void) XML_StopParser(ectx->parser, 0 /* resumable */);
 #endif
 }
 
@@ -2465,7 +2465,7 @@ expat_end(void *userData, const char *raw_name)
 
 #ifdef EXPAT_HAS_STOPPARSER
   if (ectx->inner_error)
-    XML_StopParser(ectx->parser, 0 /* resumable */);
+    (void) XML_StopParser(ectx->parser, 0 /* resumable */);
 #endif
 }
 
@@ -2484,7 +2484,7 @@ expat_cdata(void *userData, const char *data, int len)
 
 #ifdef EXPAT_HAS_STOPPARSER
   if (ectx->inner_error)
-    XML_StopParser(ectx->parser, 0 /* resumable */);
+    (void) XML_StopParser(ectx->parser, 0 /* resumable */);
 #endif
 }
 
@@ -2570,7 +2570,7 @@ expat_response_handler(serf_request_t *request,
         {
           /* Tell expat we've reached the end of the content. Ignore the
              return status. We just don't care.  */
-          XML_Parse(ectx->parser, NULL, 0, 1 /* isFinal */);
+          (void) XML_Parse(ectx->parser, NULL, 0, 1 /* isFinal */);
 
           svn_ra_serf__xml_context_destroy(ectx->xmlctx);
           apr_pool_cleanup_run(ectx->cleanup_pool, &ectx->parser,

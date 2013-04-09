@@ -622,7 +622,7 @@ dav_svn__final_flush_or_error(request_rec *r,
     {
       /* Ask about the length of the bucket brigade, ignoring errors. */
       apr_off_t len = 0;
-      apr_brigade_length(bb, FALSE, &len);
+      (void)apr_brigade_length(bb, FALSE, &len);
       do_flush = (len != 0);
     }
 
