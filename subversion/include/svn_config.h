@@ -662,6 +662,49 @@ svn_config_write_auth_data(apr_hash_t *hash,
                            const char *config_dir,
                            apr_pool_t *pool);
 
+
+/** Callback for svn_config_walk_auth_data().
+ *
+ * Called for each credential walked by that function (and able to be
+ * fully purged) to allow perusal and selective removal of credentials.
+ *
+ * @a cred_kind and @a realmstring specify the key of the credential.
+ * @a hash contains the hash data associated with the record.
+ *
+ * Before returning set @a *delete_cred to TRUE to remove the credential from
+ * the cache; leave @a *delete_cred unchanged or set it to FALSE to keep the
+ * credential.
+ *
+ * @since New in 1.8.
+ */
+typedef svn_error_t *
+(*svn_config_auth_walk_func_t)(svn_boolean_t *delete_cred,
+                               void *cleanup_baton,
+                               const char *cred_kind,
+                               const char *realmstring,
+                               apr_hash_t *hash,
+                               apr_pool_t *scratch_pool);
+
+/** Call @a walk_func with @a walk_baton and information describing
+ * each credential cached within the Subversion auth store located
+ * under @a config_dir.  If the callback sets its delete_cred return
+ * flag, delete the associated credential.
+ *
+ * @note Removing credentials from the config-based disk store will
+ * not purge them from any open svn_auth_baton_t instance.  Consider
+ * using svn_auth_forget_credentials() -- from the @a cleanup_func,
+ * even -- for this purpose.
+ *
+ * @see svn_auth_forget_credentials()
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_config_walk_auth_data(const char *config_dir,
+                          svn_config_auth_walk_func_t walk_func,
+                          void *walk_baton,
+                          apr_pool_t *scratch_pool);
+
 /** Put the absolute path to the user's configuration directory,
  * or to a file within that directory, into @a *path.
  *

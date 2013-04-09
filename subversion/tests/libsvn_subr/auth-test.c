@@ -208,20 +208,21 @@ test_platform_specific_auth_providers(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Helper for test_auth_clear(). Implements svn_auth_cleanup_callback */
+/* Helper for test_auth_clear(). Implements svn_config_auth_walk_func_t */
 static svn_error_t *
 cleanup_callback(svn_boolean_t *delete_cred,
-                 void *cleanup_baton,
+                 void *walk_baton,
                  const char *cred_kind,
                  const char *realmstring,
-                 const char *provider,
+                 apr_hash_t *cred_hash,
                  apr_pool_t *scratch_pool)
 {
-  if (strcmp(provider, SVN_AUTH__SIMPLE_PASSWORD_TYPE) != 0)
-    return SVN_NO_ERROR;
+  svn_auth_baton_t *b = walk_baton;
 
   SVN_TEST_ASSERT(strcmp(cred_kind, SVN_AUTH_CRED_SIMPLE) == 0);
   SVN_TEST_ASSERT(strcmp(realmstring, "<http://my.host> My realm") == 0);
+
+  svn_auth_forget_credentials(b, cred_kind, realmstring, scratch_pool);
 
   *delete_cred = TRUE;
 
@@ -293,11 +294,11 @@ test_auth_clear(apr_pool_t *pool)
   SVN_TEST_ASSERT(strcmp(creds->username, "jrandom") == 0);
   SVN_TEST_ASSERT(creds->may_save);
 
+  /* Use our walker function to delete credentials (and forget them
+     from the auth baton). */
+  SVN_ERR(svn_config_walk_auth_data(auth_dir, cleanup_callback, baton, pool));
 
-  SVN_ERR(svn_auth_cleanup_walk(baton,
-                                cleanup_callback, NULL,
-                                pool));
-
+  /* Finally, they should be gone! */
   SVN_ERR(svn_auth_first_credentials(&credentials,
                                      &state,
                                      SVN_AUTH_CRED_SIMPLE,
