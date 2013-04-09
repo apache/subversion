@@ -1590,17 +1590,30 @@ check_tree_conflict(svn_skel_t **pconflict,
       || reason == svn_wc_conflict_reason_deleted
       || reason == svn_wc_conflict_reason_moved_away
       || reason == svn_wc_conflict_reason_replaced)
-    /* When the node existed before (it was locally deleted, replaced or
-     * edited), then 'update' cannot add it "again". So it can only send
-     * _action_edit, _delete or _replace. */
-    SVN_ERR_ASSERT(action == svn_wc_conflict_action_edit
-                   || action == svn_wc_conflict_action_delete
-                   || action == svn_wc_conflict_action_replace);
+    {
+      /* When the node existed before (it was locally deleted, replaced or
+       * edited), then 'update' cannot add it "again". So it can only send
+       * _action_edit, _delete or _replace. */
+    if (action != svn_wc_conflict_action_edit
+        && action != svn_wc_conflict_action_delete
+        && action != svn_wc_conflict_action_replace)
+      return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
+               _("Unexpected attempt to add a node at path '%s'"),
+               svn_dirent_local_style(local_abspath, scratch_pool));
+    }
   else if (reason == svn_wc_conflict_reason_added ||
            reason == svn_wc_conflict_reason_moved_here)
-    /* When the node did not exist before (it was locally added), then 'update'
-     * cannot want to modify it in any way. It can only send _action_add. */
-    SVN_ERR_ASSERT(action == svn_wc_conflict_action_add);
+    {
+      /* When the node did not exist before (it was locally added),
+       * then 'update' cannot want to modify it in any way.
+       * It can only send _action_add. */
+      if (action != svn_wc_conflict_action_add)
+        return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
+                 _("Unexpected attempt to edit, delete, or replace "
+                   "a node at path '%s'"),
+                 svn_dirent_local_style(local_abspath, scratch_pool));
+ 
+    }
 
 
   /* A conflict was detected. Create a conflict skel to record it. */
