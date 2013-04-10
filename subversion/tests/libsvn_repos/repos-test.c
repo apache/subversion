@@ -2035,6 +2035,9 @@ test_path_authz(svn_repos_t *repos,
                                     path_action->copyfrom_path, youngest_rev,
                                     scratch_pool, &out_baton);
         break;
+
+      default:
+        SVN_TEST_ASSERT(FALSE);
     }
 
   /* Don't worry about closing batons, just abort the edit.  Since errors
