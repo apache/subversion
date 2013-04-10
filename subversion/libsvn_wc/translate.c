@@ -342,15 +342,7 @@ svn_wc__expand_keywords(apr_hash_t **keywords,
       changed_rev = SVN_INVALID_REVNUM;
       changed_date = 0;
       changed_author = "";
-
-      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL,
-                                   &repos_root_url, NULL, NULL,
-                                   NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL,
-                                   db, local_abspath,
-                                   scratch_pool, scratch_pool));
+      repos_root_url = "";
     }
 
   SVN_ERR(svn_subst_build_keywords3(keywords, keyword_list,

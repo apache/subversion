@@ -125,15 +125,17 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
       const char *url;
       apr_time_t tm;
       const char *repos_root_url;
+      const char *repos_relpath;
 
       SVN_ERR(svn_wc__node_get_changed_info(&changed_rev, &tm, &author, wc_ctx,
                                             local_abspath, scratch_pool,
                                             scratch_pool));
-      SVN_ERR(svn_wc__node_get_url(&url, wc_ctx, local_abspath, scratch_pool,
-                                   scratch_pool));
-      SVN_ERR(svn_wc__node_get_repos_info(NULL, NULL, &repos_root_url, NULL,
+      SVN_ERR(svn_wc__node_get_repos_info(NULL, &repos_relpath, &repos_root_url,
+                                          NULL,
                                           wc_ctx, local_abspath, scratch_pool,
                                           scratch_pool));
+      url = svn_path_url_add_component2(repos_root_url, repos_relpath,
+                                        scratch_pool);
 
       if (local_mod)
         {
