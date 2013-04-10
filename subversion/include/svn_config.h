@@ -675,6 +675,12 @@ svn_config_write_auth_data(apr_hash_t *hash,
  * the cache; leave @a *delete_cred unchanged or set it to FALSE to keep the
  * credential.
  *
+ * Implementations may return #SVN_ERR_CEASE_INVOCATION to indicate
+ * that the callback should not be called again.  Note that when that
+ * error is returned, the value of @a delete_cred will still be
+ * honored and action taken if necessary.  (For other returned errors,
+ * @a delete_cred is ignored by svn_config_walk_auth_data().)
+ *
  * @since New in 1.8.
  */
 typedef svn_error_t *

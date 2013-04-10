@@ -162,6 +162,7 @@ svn_config_walk_auth_data(const char *config_dir,
 {
   int i;
   apr_pool_t *iterpool;
+  svn_boolean_t finished = FALSE;
   const char *cred_kinds[] =
     {
       SVN_AUTH_CRED_SIMPLE,
@@ -190,6 +191,9 @@ svn_config_walk_auth_data(const char *config_dir,
 
       svn_pool_clear(iterpool);
 
+      if (finished)
+        break;
+
       SVN_ERR(svn_auth__file_path(&item_path, cred_kinds[i], "!", config_dir,
                                   iterpool));
 
@@ -214,6 +218,9 @@ svn_config_walk_auth_data(const char *config_dir,
           apr_hash_t *creds_hash;
           const svn_string_t *realm;
           svn_boolean_t delete_file = FALSE;
+
+          if (finished)
+            break;
 
           if (dirent->kind != svn_node_file)
             continue;
@@ -247,8 +254,15 @@ svn_config_walk_auth_data(const char *config_dir,
           if (! realm)
             continue; /* Not an auth file */
 
-          SVN_ERR(walk_func(&delete_file, walk_baton, cred_kinds[i],
-                            realm->data, creds_hash, itempool));
+          err = walk_func(&delete_file, walk_baton, cred_kinds[i],
+                          realm->data, creds_hash, itempool);
+          if (err && err->apr_err == SVN_ERR_CEASE_INVOCATION)
+            {
+              svn_error_clear(err);
+              err = SVN_NO_ERROR;
+              finished = TRUE;
+            }
+          SVN_ERR(err);
 
           if (delete_file)
             {
