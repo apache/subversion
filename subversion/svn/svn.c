@@ -1294,6 +1294,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "        %u   - The URL of the file.\n"
      "        %_   - A space (keyword definitions cannot contain a literal space).\n"
      "        %%   - A literal '%'.\n"
+     "        %H   - Equivalent to %P%_%r%_%d%_%a.\n"
+     "        %I   - Equivalent to %b%_%r%_%d%_%a.\n"
      "      Example custom keyword definition: MyKeyword=%r%_%a%_%P\n"
      "      Once a custom keyword has been defined for a file, it can be used\n"
      "      within the file like any other keyword: $MyKeyword$\n"

@@ -143,6 +143,10 @@ svn_subst_translation_required(svn_subst_eol_style_t style,
  * %_ a space
  * %% a literal %
  *
+ * The following special format codes are also recognized:
+ *   %H is equivalent to %P%_%r%_%d%_%a
+ *   %I is equivalent to %b%_%r%_%d%_%a
+ *
  * All memory is allocated out of @a pool.
  */
 static svn_string_t *
@@ -243,6 +247,22 @@ keyword_printf(const char *fmt,
            * want to skip the null terminator entirely and carry on
            * formatting random memory contents. */
           cur--;
+          break;
+        case 'H':
+          {
+            svn_string_t *s = keyword_printf("%P%_%r%_%d%_%a", rev, url,
+                                             repos_root_url, date, author,
+                                             pool);
+            svn_stringbuf_appendcstr(value, s->data);
+          }
+          break;
+        case 'I':
+          {
+            svn_string_t *s = keyword_printf("%b%_%r%_%d%_%a", rev, url,
+                                             repos_root_url, date, author,
+                                             pool);
+            svn_stringbuf_appendcstr(value, s->data);
+          }
           break;
         default: /* Unrecognized code, just print it literally. */
           svn_stringbuf_appendbytes(value, cur, 2);
