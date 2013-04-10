@@ -3260,6 +3260,7 @@ filename_with_control_chars(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+#ifdef SVN_FS_INFO
 static svn_error_t *
 test_repos_info(const svn_test_opts_t *opts,
                 apr_pool_t *pool)
@@ -3297,6 +3298,7 @@ test_repos_info(const svn_test_opts_t *opts,
 
   return SVN_NO_ERROR;
 }
+#endif
 
 
 /* The test table.  */
@@ -3344,7 +3346,9 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test svn_repos_delete"),
     SVN_TEST_OPTS_PASS(filename_with_control_chars,
                        "test filenames with control characters"),
+#ifdef SVN_FS_INFO
     SVN_TEST_OPTS_PASS(test_repos_info,
                        "test svn_repos_info_*"),
+#endif
     SVN_TEST_NULL
   };
