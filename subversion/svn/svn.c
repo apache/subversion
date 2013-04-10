@@ -1293,7 +1293,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "        %R   - The URL to the root of the repository.\n"
      "        %u   - The URL of the file.\n"
      "        %_   - A space (keyword definitions cannot contain a literal space).\n"
-     "        %    - A literal '%'.\n"
+     "        %%   - A literal '%'.\n"
      "      Example custom keyword definition: MyKeyword=%r%_%a%_%P\n"
      "      Once a custom keyword has been defined for a file, it can be used\n"
      "      within the file like any other keyword: $MyKeyword$\n"
