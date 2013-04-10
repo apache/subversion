@@ -1814,7 +1814,7 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *target, *full_path, *depth_word;
   svn_boolean_t recurse;
   apr_uint64_t send_copyfrom_args; /* Optional; default FALSE */
-  apr_uint64_t ignore_ancestry; /* Optional; default TRUE */
+  apr_uint64_t ignore_ancestry; /* Optional; default FALSE */
   /* Default to unknown.  Old clients won't send depth, but we'll
      handle that by converting recurse if necessary. */
   svn_depth_t depth = svn_depth_unknown;
@@ -1842,7 +1842,7 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                         conn, pool, b, rev, target, NULL, TRUE,
                         depth,
                         (send_copyfrom_args == TRUE) /* send_copyfrom_args */,
-                        (ignore_ancestry != FALSE) /* ignore_ancestry */));
+                        (ignore_ancestry == TRUE) /* ignore_ancestry */));
   if (is_checkout)
     {
       SVN_ERR(log_command(b, conn, pool, "%s",
