@@ -136,8 +136,11 @@ svn_subst_translation_required(svn_subst_eol_style_t style,
  * %b basename of the URL of this file
  * %d short format of date of this revision
  * %D long format of date of this revision
+ * %P path relative to root of repos
  * %r number of this revision
+ * %R root url of repository
  * %u URL of this file
+ * %_ a space
  * %% a literal %
  *
  * All memory is allocated out of @a pool.
@@ -146,6 +149,7 @@ static svn_string_t *
 keyword_printf(const char *fmt,
                const char *rev,
                const char *url,
+               const char *repos_root_url,
                apr_time_t date,
                const char *author,
                apr_pool_t *pool)
@@ -204,6 +208,21 @@ keyword_printf(const char *fmt,
             svn_stringbuf_appendcstr(value,
                                      svn_time_to_human_cstring(date, pool));
           break;
+        case 'P': /* relative path of this file */
+          if (repos_root_url && url &&
+              svn_path_is_url(repos_root_url) && svn_path_is_url(url))
+            {
+              const char *repos_relpath;
+
+              repos_relpath = svn_uri_skip_ancestor(repos_root_url, url, pool);
+              if (repos_relpath)
+                svn_stringbuf_appendcstr(value, repos_relpath);
+            }
+          break;
+        case 'R': /* root of repos */
+          if (repos_root_url && svn_path_is_url(repos_root_url))
+            svn_stringbuf_appendcstr(value, repos_root_url);
+          break;
         case 'r': /* number of this revision */
           if (rev)
             svn_stringbuf_appendcstr(value, rev);
@@ -211,6 +230,9 @@ keyword_printf(const char *fmt,
         case 'u': /* URL of this file */
           if (url)
             svn_stringbuf_appendcstr(value, url);
+          break;
+        case '_': /* '%_' => a space */
+          svn_stringbuf_appendbyte(value, ' ');
           break;
         case '%': /* '%%' => a literal % */
           svn_stringbuf_appendbyte(value, *cur);
@@ -278,14 +300,16 @@ svn_subst_build_keywords(svn_subst_keywords_t *kw,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_subst_build_keywords2(apr_hash_t **kw,
-                          const char *keywords_val,
-                          const char *rev,
-                          const char *url,
-                          apr_time_t date,
-                          const char *author,
-                          apr_pool_t *pool)
+static svn_error_t *
+build_keywords(apr_hash_t **kw,
+               svn_boolean_t expand_custom_keywords,
+               const char *keywords_val,
+               const char *rev,
+               const char *url,
+               const char *repos_root_url,
+               apr_time_t date,
+               const char *author,
+               apr_pool_t *pool)
 {
   apr_array_header_t *keyword_tokens;
   int i;
@@ -297,14 +321,36 @@ svn_subst_build_keywords2(apr_hash_t **kw,
   for (i = 0; i < keyword_tokens->nelts; ++i)
     {
       const char *keyword = APR_ARRAY_IDX(keyword_tokens, i, const char *);
+      apr_array_header_t *custom_keyword_tokens = NULL;
+ 
+      if (expand_custom_keywords)
+        custom_keyword_tokens = svn_cstring_split(keyword, "=",
+                                                  TRUE /* chop */, pool);
+      if (expand_custom_keywords && custom_keyword_tokens->nelts == 2)
+        {
+          const char *custom_fmt;
+          svn_string_t *custom_val;
 
-      if ((! strcmp(keyword, SVN_KEYWORD_REVISION_LONG))
-          || (! strcmp(keyword, SVN_KEYWORD_REVISION_MEDIUM))
-          || (! svn_cstring_casecmp(keyword, SVN_KEYWORD_REVISION_SHORT)))
+          /* Custom keywords must be allowed to match the name of an
+           * existing fixed keyword. This is for compatibility purposes,
+           * in case new fixed keywords are added to Subversion which
+           * happen to match a custom keyword defined somewhere.
+           * There is only one global namespace for keyword names. */
+
+          keyword = APR_ARRAY_IDX(custom_keyword_tokens, 0, const char*);
+          custom_fmt = APR_ARRAY_IDX(custom_keyword_tokens, 1, const char*);
+          custom_val = keyword_printf(custom_fmt, rev, url, repos_root_url,
+                                      date, author, pool);
+          svn_hash_sets(*kw, keyword, custom_val);
+        }
+      else if ((! strcmp(keyword, SVN_KEYWORD_REVISION_LONG))
+               || (! strcmp(keyword, SVN_KEYWORD_REVISION_MEDIUM))
+               || (! svn_cstring_casecmp(keyword, SVN_KEYWORD_REVISION_SHORT)))
         {
           svn_string_t *revision_val;
 
-          revision_val = keyword_printf("%r", rev, url, date, author, pool);
+          revision_val = keyword_printf("%r", rev, url, repos_root_url,
+                                        date, author, pool);
           svn_hash_sets(*kw, SVN_KEYWORD_REVISION_LONG, revision_val);
           svn_hash_sets(*kw, SVN_KEYWORD_REVISION_MEDIUM, revision_val);
           svn_hash_sets(*kw, SVN_KEYWORD_REVISION_SHORT, revision_val);
@@ -314,7 +360,8 @@ svn_subst_build_keywords2(apr_hash_t **kw,
         {
           svn_string_t *date_val;
 
-          date_val = keyword_printf("%D", rev, url, date, author, pool);
+          date_val = keyword_printf("%D", rev, url, repos_root_url, date,
+                                    author, pool);
           svn_hash_sets(*kw, SVN_KEYWORD_DATE_LONG, date_val);
           svn_hash_sets(*kw, SVN_KEYWORD_DATE_SHORT, date_val);
         }
@@ -323,7 +370,8 @@ svn_subst_build_keywords2(apr_hash_t **kw,
         {
           svn_string_t *author_val;
 
-          author_val = keyword_printf("%a", rev, url, date, author, pool);
+          author_val = keyword_printf("%a", rev, url, repos_root_url, date,
+                                      author, pool);
           svn_hash_sets(*kw, SVN_KEYWORD_AUTHOR_LONG, author_val);
           svn_hash_sets(*kw, SVN_KEYWORD_AUTHOR_SHORT, author_val);
         }
@@ -332,7 +380,8 @@ svn_subst_build_keywords2(apr_hash_t **kw,
         {
           svn_string_t *url_val;
 
-          url_val = keyword_printf("%u", rev, url, date, author, pool);
+          url_val = keyword_printf("%u", rev, url, repos_root_url, date,
+                                   author, pool);
           svn_hash_sets(*kw, SVN_KEYWORD_URL_LONG, url_val);
           svn_hash_sets(*kw, SVN_KEYWORD_URL_SHORT, url_val);
         }
@@ -340,21 +389,50 @@ svn_subst_build_keywords2(apr_hash_t **kw,
         {
           svn_string_t *id_val;
 
-          id_val = keyword_printf("%b %r %d %a", rev, url, date, author,
-                                  pool);
+          id_val = keyword_printf("%b %r %d %a", rev, url, repos_root_url,
+                                  date, author, pool);
           svn_hash_sets(*kw, SVN_KEYWORD_ID, id_val);
         }
       else if ((! svn_cstring_casecmp(keyword, SVN_KEYWORD_HEADER)))
         {
           svn_string_t *header_val;
 
-          header_val = keyword_printf("%u %r %d %a", rev, url, date, author,
-                                      pool);
+          header_val = keyword_printf("%u %r %d %a", rev, url, repos_root_url,
+                                      date, author, pool);
           svn_hash_sets(*kw, SVN_KEYWORD_HEADER, header_val);
         }
     }
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_subst_build_keywords2(apr_hash_t **kw,
+                          const char *keywords_val,
+                          const char *rev,
+                          const char *url,
+                          apr_time_t date,
+                          const char *author,
+                          apr_pool_t *pool)
+{
+  return svn_error_trace(build_keywords(kw, FALSE, keywords_val, rev, url,
+                                        NULL, date, author, pool));
+}
+
+
+svn_error_t *
+svn_subst_build_keywords3(apr_hash_t **kw,
+                          const char *keywords_val,
+                          const char *rev,
+                          const char *url,
+                          const char *repos_root_url,
+                          apr_time_t date,
+                          const char *author,
+                          apr_pool_t *pool)
+{
+  return svn_error_trace(build_keywords(kw, TRUE, keywords_val,
+                                        rev, url, repos_root_url,
+                                        date, author, pool));
 }
 
 

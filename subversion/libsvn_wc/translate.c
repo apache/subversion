@@ -314,10 +314,10 @@ svn_wc__expand_keywords(apr_hash_t **keywords,
   apr_time_t changed_date;
   const char *changed_author;
   const char *url;
+  const char *repos_root_url;
 
   if (! for_normalization)
     {
-      const char *repos_root_url;
       const char *repos_relpath;
 
       SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, &repos_relpath,
@@ -342,15 +342,22 @@ svn_wc__expand_keywords(apr_hash_t **keywords,
       changed_rev = SVN_INVALID_REVNUM;
       changed_date = 0;
       changed_author = "";
+
+      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL,
+                                   &repos_root_url, NULL, NULL,
+                                   NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
+                                   db, local_abspath,
+                                   scratch_pool, scratch_pool));
     }
 
-  SVN_ERR(svn_subst_build_keywords2(keywords,
-                                    keyword_list,
+  SVN_ERR(svn_subst_build_keywords3(keywords, keyword_list,
                                     apr_psprintf(scratch_pool, "%ld",
                                                  changed_rev),
-                                    url,
-                                    changed_date,
-                                    changed_author,
+                                    url, repos_root_url,
+                                    changed_date, changed_author,
                                     result_pool));
 
   if (apr_hash_count(*keywords) == 0)
