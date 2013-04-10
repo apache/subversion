@@ -127,13 +127,29 @@ typedef struct svn_subst_keywords_t
  * Set @a *kw to a new keywords hash filled with the appropriate contents
  * given a @a keywords_string (the contents of the svn:keywords
  * property for the file in question), the revision @a rev, the @a url,
- * the @a date the file was committed on, and the @a author of the last
- * commit.
+ * the @a date the file was committed on, the @a author of the last
+ * commit, and the URL of the repository root @a repos_root_url.
  *
- * Any of the inputs @a rev, @a url, @a date and @a author can be @c NULL,
- * or @c 0 for @a date, to indicate that the information is not present.
- * Each piece of information that is not present expands to the empty
- * string wherever it appears in an expanded keyword value.  (This can
+ * Custom keywords defined in svn:keywords properties are expanded
+ * using the provided parameters and in accordance with the following
+ * format substitutions in the @a keywords_string:
+ *   %a   - The author.
+ *   %b   - The basename of the URL.
+ *   %d   - Short format of the date.
+ *   %D   - Long format of the date.
+ *   %P   - The file's path, relative to the repository root URL.
+ *   %r   - The revision.
+ *   %R   - The URL to the root of the repository.
+ *   %u   - The URL of the file.
+ *   %_   - A space (keyword definitions cannot contain a literal space).
+ *   %    - A literal '%'.
+ * Custom keywords are defined by appending '=' to the keyword name, followed
+ * by a string containing any combination of the format substitutions.
+ *
+ * Any of the inputs @a rev, @a url, @a date, @a author, and @a repos_root_url
+ * can be @c NULL, or @c 0 for @a date, to indicate that the information is
+ * not present. Each piece of information that is not present expands to the
+ * empty string wherever it appears in an expanded keyword value.  (This can
  * result in multiple adjacent spaces in the expansion of a multi-valued
  * keyword such as "Id".)
  *
@@ -142,8 +158,26 @@ typedef struct svn_subst_keywords_t
  *
  * All memory is allocated out of @a pool.
  *
- * @since New in 1.3.
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_subst_build_keywords3(apr_hash_t **kw,
+                          const char *keywords_string,
+                          const char *rev,
+                          const char *url,
+                          const char *repos_root_url,
+                          apr_time_t date,
+                          const char *author,
+                          apr_pool_t *pool);
+
+/** Similar to svn_subst_build_keywords3() except that it does not accept
+ * the @a repos_root_url parameter and hence supports less substitutions,
+ * and also does not support custom keyword definitions.
+ *
+ * @since New in 1.3.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_subst_build_keywords2(apr_hash_t **kw,
                           const char *keywords_string,

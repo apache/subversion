@@ -392,10 +392,11 @@ export_node(void *baton,
           suffix = "";
         }
 
-      SVN_ERR(svn_subst_build_keywords2
-              (&kw, keywords->data,
-               apr_psprintf(scratch_pool, "%ld%s", changed_rev, suffix),
-               url, tm, author, scratch_pool));
+      SVN_ERR(svn_subst_build_keywords3(&kw, keywords->data,
+                                        apr_psprintf(scratch_pool, "%ld%s",
+                                                     changed_rev, suffix),
+                                        url, status->repos_root_url, tm,
+                                        author, scratch_pool));
     }
 
   /* For atomicity, we translate to a tmp file and then rename the tmp file
@@ -541,6 +542,7 @@ struct file_baton
   /* Any keyword vals to be substituted */
   const char *revision;
   const char *url;
+  const char *repos_root_url;
   const char *author;
   apr_time_t date;
 
@@ -662,6 +664,7 @@ add_file(const char *path,
   fb->edit_baton = eb;
   fb->path = full_path;
   fb->url = full_url;
+  fb->repos_root_url = eb->root_url;
   fb->pool = pool;
 
   *baton = fb;
@@ -827,8 +830,9 @@ close_file(void *file_baton,
         }
 
       if (fb->keywords_val)
-        SVN_ERR(svn_subst_build_keywords2(&final_kw, fb->keywords_val->data,
-                                          fb->revision, fb->url, fb->date,
+        SVN_ERR(svn_subst_build_keywords3(&final_kw, fb->keywords_val->data,
+                                          fb->revision, fb->url,
+                                          fb->repos_root_url, fb->date,
                                           fb->author, pool));
 
       SVN_ERR(svn_subst_copy_and_translate4(fb->tmppath, fb->path,

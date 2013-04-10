@@ -134,9 +134,9 @@ send_file_contents(const char *local_abspath,
     }
 
   if (keywords_val)
-    SVN_ERR(svn_subst_build_keywords2(&keywords, keywords_val->data,
+    SVN_ERR(svn_subst_build_keywords3(&keywords, keywords_val->data,
                                       APR_STRINGIFY(SVN_INVALID_REVNUM),
-                                      "", 0, "", pool));
+                                      "", "", 0, "", pool));
   else
     keywords = NULL;
 

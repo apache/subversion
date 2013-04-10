@@ -23,12 +23,14 @@
 
 #include <locale.h>
 #include <string.h>
+#include <apr_time.h>
 
 #include "../svn_test.h"
 
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_subst.h"
+#include "svn_hash.h"
 
 #define ARRAY_LEN(ary) ((sizeof (ary)) / (sizeof ((ary)[0])))
 
@@ -246,6 +248,51 @@ test_svn_subst_translate_cstring2(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_svn_subst_build_keywords3(apr_pool_t *pool)
+{
+  /* Test expansion of custom keywords. */
+  struct keywords_tests_data
+    {
+      const char *keyword_name;
+      const char *keywords_string;
+      const char *expanded_keyword;
+      const char *rev;
+      const char *url;
+      const char *repos_root_url;
+      /* Can't test date since expanded value depends on local clock. */
+      const char *author;
+    }
+  tests[] =
+    {
+      {"FOO", "FOO=%P%_%a%_%b%_%%",
+       "trunk/foo.txt stsp foo.txt %",
+       "1234", "http://svn.example.com/repos/trunk/foo.txt",
+       "http://svn.example.com/repos", "stsp"},
+      {"MyKeyword", "MyKeyword=%r%_%u%_%_%a",
+       "4567 http://svn.example.com/svn/branches/myfile  jrandom",
+       "4567", "http://svn.example.com/svn/branches/myfile",
+       "http://svn.example.com/svn", "jrandom"},
+      { NULL, NULL, NULL, NULL, NULL, NULL, NULL}
+  };
+
+  const struct keywords_tests_data *t;
+
+  for (t = tests; t->keyword_name != NULL; t++)
+    {
+      apr_hash_t *kw;
+      svn_string_t *expanded_keyword;
+
+      SVN_ERR(svn_subst_build_keywords3(&kw, t->keywords_string,
+                                        t->rev, t->url, t->repos_root_url,
+                                        0 /* date */, t->author, pool));
+      expanded_keyword = svn_hash_gets(kw, t->keyword_name);
+      SVN_TEST_STRING_ASSERT(expanded_keyword->data, t->expanded_keyword);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
@@ -257,5 +304,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test repairing svn_subst_translate_string2()"),
     SVN_TEST_PASS2(test_svn_subst_translate_cstring2,
                    "test svn_subst_translate_cstring2()"),
+    SVN_TEST_PASS2(test_svn_subst_build_keywords3,
+                   "test svn_subst_build_keywords3()"),
     SVN_TEST_NULL
   };
