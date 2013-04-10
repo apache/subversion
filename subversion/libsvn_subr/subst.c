@@ -209,8 +209,7 @@ keyword_printf(const char *fmt,
                                      svn_time_to_human_cstring(date, pool));
           break;
         case 'P': /* relative path of this file */
-          if (repos_root_url && url &&
-              svn_path_is_url(repos_root_url) && svn_path_is_url(url))
+          if (repos_root_url && *repos_root_url != '\0' && url && *url != '\0')
             {
               const char *repos_relpath;
 
@@ -220,7 +219,7 @@ keyword_printf(const char *fmt,
             }
           break;
         case 'R': /* root of repos */
-          if (repos_root_url && svn_path_is_url(repos_root_url))
+          if (repos_root_url && *repos_root_url != '\0')
             svn_stringbuf_appendcstr(value, repos_root_url);
           break;
         case 'r': /* number of this revision */
