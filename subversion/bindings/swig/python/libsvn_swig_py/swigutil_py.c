@@ -3313,6 +3313,7 @@ svn_swig_py_config_auth_walk_func(svn_boolean_t *delete_cred,
   py_hash = svn_swig_py_prophash_to_dict(hash);
   if (py_hash == NULL)
     {
+      Py_DECREF(py_scratch_pool);
       err = callback_exception_error();
       goto finished;
     }
