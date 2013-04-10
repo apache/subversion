@@ -695,6 +695,14 @@ typedef svn_error_t *
  * using svn_auth_forget_credentials() -- from the @a cleanup_func,
  * even -- for this purpose.
  *
+ * @note Removing credentials from the config-based disk store will
+ * not also remove any related credentials from third-party password
+ * stores.  (Implementations of @a walk_func which delete credentials
+ * may wish to consult the "passtype" element of @a hash, if any, to
+ * see if a third-party store -- such as "gnome-keyring" or "kwallet"
+ * is being used to hold the most sensitive portion of the credentials
+ * for this @a cred_kind and @a realmstring.)
+ *
  * @see svn_auth_forget_credentials()
  *
  * @since New in 1.8.
