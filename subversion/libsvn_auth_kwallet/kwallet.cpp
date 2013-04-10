@@ -33,6 +33,17 @@
 
 #include <apr_pools.h>
 #include <apr_strings.h>
+
+#include <dbus/dbus.h>
+#include <QtCore/QCoreApplication>
+#include <QtCore/QString>
+
+#include <kaboutdata.h>
+#include <kcmdlineargs.h>
+#include <kcomponentdata.h>
+#include <klocalizedstring.h>
+#include <kwallet.h>
+
 #include "svn_auth.h"
 #include "svn_config.h"
 #include "svn_error.h"
@@ -45,17 +56,7 @@
 
 #include "svn_private_config.h"
 
-#include <dbus/dbus.h>
-#include <QtCore/QCoreApplication>
-#include <QtCore/QString>
 
-#include <kaboutdata.h>
-#include <kcmdlineargs.h>
-#include <kcomponentdata.h>
-#include <klocalizedstring.h>
-#include <kwallet.h>
-
-
 /*-----------------------------------------------------------------------*/
 /* KWallet simple provider, puts passwords in KWallet                    */
 /*-----------------------------------------------------------------------*/
