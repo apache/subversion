@@ -4984,6 +4984,7 @@ filename_trailing_newline(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+#ifdef SVN_FS_INFO
 static svn_error_t *
 test_fs_info_format(const svn_test_opts_t *opts,
                     apr_pool_t *pool)
@@ -5004,6 +5005,7 @@ test_fs_info_format(const svn_test_opts_t *opts,
 
   return SVN_NO_ERROR;
 }
+#endif
 
 /* ------------------------------------------------------------------------ */
 
@@ -5087,7 +5089,9 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test svn_fs_delete_fs"),
     SVN_TEST_OPTS_PASS(filename_trailing_newline,
                        "filenames with trailing \\n might be rejected"),
+#ifdef SVN_FS_INFO
     SVN_TEST_OPTS_PASS(test_fs_info_format,
                        "test svn_fs_info_format"),
+#endif
     SVN_TEST_NULL
   };
