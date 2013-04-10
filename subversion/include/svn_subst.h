@@ -142,7 +142,7 @@ typedef struct svn_subst_keywords_t
  *   %R   - The URL to the root of the repository.
  *   %u   - The URL of the file.
  *   %_   - A space (keyword definitions cannot contain a literal space).
- *   %    - A literal '%'.
+ *   %%   - A literal '%'.
  * Custom keywords are defined by appending '=' to the keyword name, followed
  * by a string containing any combination of the format substitutions.
  *
