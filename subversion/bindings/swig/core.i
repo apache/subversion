@@ -707,11 +707,11 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 
 #ifdef SWIGPYTHON
 /* pl and rb aren't yet implemented */
-%callback_typemap_maybenull(svn_auth_cleanup_func_t cleanup_func,
-                            void *cleanup_baton,
-                            svn_swig_py_auth_cleanup_func,
-                            svn_swig_pl_auth_cleanup_func,
-                            svn_swig_rb_auth_cleanup_func)
+%callback_typemap_maybenull(svn_config_auth_walk_func_t walk_func,
+                            void *walk_baton,
+                            svn_swig_py_config_auth_walk_func,
+                            svn_swig_pl_config_auth_walk_func,
+                            svn_swig_rb_config_auth_walk_func)
 #endif
 
 /* -----------------------------------------------------------------------

@@ -3285,16 +3285,16 @@ svn_swig_py_auth_ssl_client_cert_pw_prompt_func(
 }
 
 svn_error_t *
-svn_swig_py_auth_cleanup_func(svn_boolean_t *delete_cred,
-                              void *cleanup_baton,
-                              const char *cred_kind,
-                              const char *realmstring,
-                              const char *provider,
-                              apr_pool_t *scratch_pool)
+svn_swig_py_config_auth_walk_func(svn_boolean_t *delete_cred,
+                                  void *walk_baton,
+                                  const char *cred_kind,
+                                  const char *realmstring,
+                                  apr_hash_t *hash,
+                                  apr_pool_t *scratch_pool)
 {
-  PyObject *function = cleanup_baton;
+  PyObject *function = walk_baton;
   PyObject *result;
-  PyObject *py_scratch_pool;
+  PyObject *py_scratch_pool, *py_hash;
   svn_error_t *err = SVN_NO_ERROR;
 
   *delete_cred = FALSE;
@@ -3310,11 +3310,16 @@ svn_swig_py_auth_cleanup_func(svn_boolean_t *delete_cred,
       err = callback_exception_error();
       goto finished;
     }
+  py_hash = svn_swig_py_prophash_to_dict(hash);
+  if (py_hash == NULL)
+    {
+      err = callback_exception_error();
+      goto finished;
+    }
 
-  if ((result = PyObject_CallFunction(function,
-                                      (char *)"sssO",
+  if ((result = PyObject_CallFunction(function, (char *)"ssOO",
                                       cred_kind, realmstring,
-                                      provider, py_scratch_pool)) == NULL)
+                                      py_hash, py_scratch_pool)) == NULL)
     {
       err = callback_exception_error();
     }
@@ -3328,6 +3333,7 @@ svn_swig_py_auth_cleanup_func(svn_boolean_t *delete_cred,
         err = callback_bad_return_error("Not an integer");
       Py_DECREF(result);
     }
+  Py_DECREF(py_hash);
   Py_DECREF(py_scratch_pool);
   
 finished:

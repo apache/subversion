@@ -503,12 +503,12 @@ svn_error_t *svn_swig_py_auth_ssl_client_cert_pw_prompt_func(
 
 /* auth cleanup callback */
 SVN_SWIG_SWIGUTIL_EXPORT
-svn_error_t *svn_swig_py_auth_cleanup_func(svn_boolean_t *delete_cred,
-                                           void *cleanup_baton,
-                                           const char *cred_kind,
-                                           const char *realmstring,
-                                           const char *provider,
-                                           apr_pool_t *scratch_pool);
+svn_error_t *svn_swig_py_config_auth_walk_func(svn_boolean_t *delete_cred,
+                                               void *walk_baton,
+                                               const char *cred_kind,
+                                               const char *realmstring,
+                                               apr_hash_t *hash,
+                                               apr_pool_t *scratch_pool);
 
 SVN_SWIG_SWIGUTIL_EXPORT
 void
