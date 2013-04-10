@@ -35,7 +35,6 @@ AC_DEFUN(SVN_LIB_KWALLET,
     AC_MSG_RESULT([yes])
     if test "$svn_enable_shared" = "yes"; then
       if test "$APR_HAS_DSO" = "yes"; then
-        if test "$USE_NLS" = "yes"; then
           if test -n "$PKG_CONFIG"; then
             if test "$HAVE_DBUS" = "yes"; then
               AC_MSG_CHECKING([for QtCore, QtDBus, QtGui])
@@ -101,9 +100,6 @@ int main()
             AC_MSG_ERROR([cannot find pkg-config])
           fi
         else
-          AC_MSG_ERROR([missing support for internationalization])
-        fi
-      else
         AC_MSG_ERROR([APR does not have support for DSOs])
       fi
     else
