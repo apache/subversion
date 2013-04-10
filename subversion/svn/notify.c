@@ -996,50 +996,50 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_property_modified:
     case svn_wc_notify_property_added:
-        err = svn_cmdline_printf(pool,
-                                 _("property '%s' set on '%s'\n"),
-                                 n->prop_name, path_local);
-        if (err)
-          goto print_error;
+      err = svn_cmdline_printf(pool,
+                               _("property '%s' set on '%s'\n"),
+                               n->prop_name, path_local);
+      if (err)
+        goto print_error;
       break;
 
     case svn_wc_notify_property_deleted:
-        err = svn_cmdline_printf(pool,
-                                 _("property '%s' deleted from '%s'.\n"),
-                                 n->prop_name, path_local);
-        if (err)
-          goto print_error;
+      err = svn_cmdline_printf(pool,
+                               _("property '%s' deleted from '%s'.\n"),
+                               n->prop_name, path_local);
+      if (err)
+        goto print_error;
       break;
 
     case svn_wc_notify_property_deleted_nonexistent:
-        err = svn_cmdline_printf(pool,
-                                 _("Attempting to delete nonexistent "
-                                   "property '%s' on '%s'\n"), n->prop_name,
-                                   path_local);
-        if (err)
-          goto print_error;
+      err = svn_cmdline_printf(pool,
+                               _("Attempting to delete nonexistent "
+                                 "property '%s' on '%s'\n"), n->prop_name,
+                               path_local);
+      if (err)
+        goto print_error;
       break;
 
     case svn_wc_notify_revprop_set:
-        err = svn_cmdline_printf(pool,
-                          _("property '%s' set on repository revision %ld\n"),
-                          n->prop_name, n->revision);
+      err = svn_cmdline_printf(pool,
+                           _("property '%s' set on repository revision %ld\n"),
+                           n->prop_name, n->revision);
         if (err)
           goto print_error;
       break;
 
     case svn_wc_notify_revprop_deleted:
-        err = svn_cmdline_printf(pool,
+      err = svn_cmdline_printf(pool,
                      _("property '%s' deleted from repository revision %ld\n"),
                      n->prop_name, n->revision);
-        if (err)
-          goto print_error;
+      if (err)
+        goto print_error;
       break;
 
     case svn_wc_notify_upgraded_path:
-        err = svn_cmdline_printf(pool, _("Upgraded '%s'\n"), path_local);
-        if (err)
-          goto print_error;
+      err = svn_cmdline_printf(pool, _("Upgraded '%s'\n"), path_local);
+      if (err)
+        goto print_error;
       break;
 
     case svn_wc_notify_url_redirect:
@@ -1078,9 +1078,9 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       break;
 
     case svn_wc_notify_move_broken:
-        err = svn_cmdline_printf(pool,
-                                 _("Breaking move with source path '%s'\n"),
-                                 path_local);
+      err = svn_cmdline_printf(pool,
+                               _("Breaking move with source path '%s'\n"),
+                               path_local);
       if (err)
         goto print_error;
       break;
