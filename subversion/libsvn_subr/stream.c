@@ -21,8 +21,6 @@
  * ====================================================================
  */
 
-#include "svn_private_config.h"
-
 #include <assert.h>
 #include <stdio.h>
 
@@ -42,6 +40,7 @@
 #include "svn_utf.h"
 #include "svn_checksum.h"
 #include "svn_path.h"
+#include "svn_private_config.h"
 #include "private/svn_error_private.h"
 #include "private/svn_eol_private.h"
 #include "private/svn_io_private.h"
