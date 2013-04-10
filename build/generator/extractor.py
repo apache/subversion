@@ -57,6 +57,13 @@ _filter_names = [
   'svn_auth_kwallet_version',
   'svn_auth_get_gpg_agent_simple_provider',
   'svn_auth_gpg_agent_version',
+  # -DSVN_FS_INFO:
+  'svn_repos_capabilities',
+  'svn_repos_info_format',
+  'svn_fs_info_format',
+  'svn_fs_info_config_files',
+  'svn_fs_info',
+  'svn_fs_info_dup',
   ]
 
 if __name__ == '__main__':
