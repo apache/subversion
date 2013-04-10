@@ -273,6 +273,14 @@ test_svn_subst_build_keywords3(apr_pool_t *pool)
        "4567 http://svn.example.com/svn/branches/myfile  jrandom",
        "4567", "http://svn.example.com/svn/branches/myfile",
        "http://svn.example.com/svn", "jrandom"},
+      {"FreeBSD", "FreeBSD=%H",
+       "head/README 222812  joel", /* date is not expanded in this test */
+       "222812", "http://svn.freebsd.org/base/head/README",
+       "http://svn.freebsd.org/base", "joel"},
+      {"FreeBSD", "FreeBSD=%I",
+       "README 222812  joel", /* date is not expanded in this test */
+       "222812", "http://svn.freebsd.org/base/head/README",
+       "http://svn.freebsd.org/base", "joel"},
       { NULL, NULL, NULL, NULL, NULL, NULL, NULL}
   };
 

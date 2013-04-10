@@ -143,6 +143,9 @@ typedef struct svn_subst_keywords_t
  *   %u   - The URL of the file.
  *   %_   - A space (keyword definitions cannot contain a literal space).
  *   %%   - A literal '%'.
+ *   %H   - Equivalent to %P%_%r%_%d%_%a.
+ *   %I   - Equivalent to %b%_%r%_%d%_%a.
+ *
  * Custom keywords are defined by appending '=' to the keyword name, followed
  * by a string containing any combination of the format substitutions.
  *
