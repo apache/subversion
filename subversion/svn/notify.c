@@ -1067,11 +1067,14 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_foreign_copy_begin:
       if (n->merge_range == NULL)
-        err = svn_cmdline_printf(pool,
-                                 _("--- Copying from foreign repository URL '%s':\n"),
-                                 n->url);
-      if (err)
-        goto print_error;
+        {
+          err = svn_cmdline_printf(
+                           pool,
+                           _("--- Copying from foreign repository URL '%s':\n"),
+                           n->url);
+          if (err)
+            goto print_error;
+        }
       break;
 
     case svn_wc_notify_move_broken:
