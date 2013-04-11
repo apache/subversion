@@ -3675,7 +3675,9 @@ svn_client_merge(const char *source1,
  * The depth of the merge is always #svn_depth_infinity.
  *
  * @since New in 1.5.
+ * @deprecated Provided for backwards compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_merge_reintegrate(const char *source_path_or_url,
                              const svn_opt_revision_t *source_peg_revision,
