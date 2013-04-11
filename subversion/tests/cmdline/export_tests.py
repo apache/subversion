@@ -923,10 +923,13 @@ def export_custom_keywords(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  alpha_content ='[$Qq: %s %s $]\n' % (sbox.repo_url,
-                                       sbox.repo_url + '/A/B/E/alpha')
-  sbox.simple_append('A/B/E/alpha', '[$Qq$]\n', truncate=True)
-  sbox.simple_propset('svn:keywords', 'Qq=%R%_%u', 'A/B/E/alpha')
+
+  ### Could do with some python to handle SVN_KEYWORD_MAX_LEN here
+  alpha_content ='[$Qq: %s $ $Pp: %s $]\n' % (sbox.repo_url,
+                                              sbox.repo_url + '/A/B/E/alpha')
+
+  sbox.simple_append('A/B/E/alpha', '[$Qq$ $Pp$]\n', truncate=True)
+  sbox.simple_propset('svn:keywords', 'Qq=%R Pp=%u', 'A/B/E/alpha')
   sbox.simple_commit()
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/B/E/alpha', contents=alpha_content)
