@@ -1904,6 +1904,13 @@ _0.0.t1-1 Add-dir false false /B
     raise svntest.Failure
 
 
+  exit_code, output, errput = svntest.main.run_svnadmin("verify",
+                                                        "--quiet",
+                                                        sbox.repo_dir)
+
+  if svntest.verify.verify_outputs("Output of 'svnadmin verify' is unexpected.",
+                                   None, errput, None, ".*svnadmin: E165005:.*"):
+    raise svntest.Failure
 
 ########################################################################
 # Run the tests
