@@ -4423,6 +4423,7 @@ svn_wc_copy(const char *src,
  * @deprecated Provided for backward compatibility with the 1.7 API.
  * @see svn_client_move7()
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_move(svn_wc_context_t *wc_ctx,
             const char *src_abspath,

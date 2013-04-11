@@ -1584,6 +1584,7 @@ svn_io_stat_dirent2(const svn_io_dirent2_t **dirent_p,
  * @since New in 1.7.
  * @deprecated Provided for backwards compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
                    const char *path,
@@ -1695,6 +1696,7 @@ svn_error_t *svn_io_start_cmd3(apr_proc_t *cmd_proc,
  * @deprecated Provided for backward compatibility with the 1.7 API
  * @since New in 1.7.
  */
+SVN_DEPRECATED
 svn_error_t *svn_io_start_cmd2(apr_proc_t *cmd_proc,
                                const char *path,
                                const char *cmd,

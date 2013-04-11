@@ -958,9 +958,9 @@ svn_repos_begin_report3(void **report_baton,
  * always passed as 0.
  *
  * @since New in 1.5.
- * 
  * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_begin_report2(void **report_baton,
                         svn_revnum_t revnum,

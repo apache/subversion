@@ -67,11 +67,12 @@ svn_utf_initialize2(apr_pool_t *pool,
                     svn_boolean_t assume_native_utf8);
 
 /**
- * Like svn_utf_initialize but without the ability to force the
+ * Like svn_utf_initialize2() but without the ability to force the
  * native encoding to UTF-8.
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 void
 svn_utf_initialize(apr_pool_t *pool);
 

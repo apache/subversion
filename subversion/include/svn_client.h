@@ -4539,6 +4539,7 @@ svn_client_move7(const apr_array_header_t *src_paths,
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_move6(const apr_array_header_t *src_paths,
                  const char *dst_path,
