@@ -324,6 +324,16 @@ svn_cl__mergeinfo(apr_getopt_t *os,
     }
   else
     {
+      if ((opt_state->start_revision.kind != svn_opt_revision_unspecified)
+          || (opt_state->end_revision.kind != svn_opt_revision_unspecified))
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("--revision (-r) option valid only with "
+                                  "--show-revs option"));
+      if (opt_state->depth != svn_depth_unknown)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("Depth specification options valid only "
+                                  "with --show-revs option"));
+             
       SVN_ERR(mergeinfo_summary(source, &src_peg_revision,
                                 target, &tgt_peg_revision,
                                 ctx, pool));
