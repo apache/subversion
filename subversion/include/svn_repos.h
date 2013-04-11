@@ -695,7 +695,7 @@ typedef svn_error_t *(*svn_repos_freeze_func_t)(void *baton, apr_pool_t *pool);
 /**
  * Take an exclusive lock on each of the repositories in @a paths to
  * prevent commits and then while holding all the locks invoke @a
- * freeze_body passing @a baton.  Each repository may be readable by
+ * freeze_func passing @a freeze_baton.  Each repository may be readable by
  * Subversion while frozen, or may be unreadable, depending on which
  * FS backend the repository uses.  Repositories are locked in the
  * order in which they are specified in the array.
@@ -709,8 +709,8 @@ typedef svn_error_t *(*svn_repos_freeze_func_t)(void *baton, apr_pool_t *pool);
  */
 svn_error_t *
 svn_repos_freeze(apr_array_header_t *paths,
-                 svn_repos_freeze_func_t freeze_body,
-                 void *baton,
+                 svn_repos_freeze_func_t freeze_func,
+                 void *freeze_baton,
                  apr_pool_t *pool);
 
 /** This function is a wrapper around svn_fs_berkeley_logfiles(),

@@ -644,11 +644,11 @@ svn_fs_verify_root(svn_fs_root_t *root,
 
 svn_error_t *
 svn_fs_freeze(svn_fs_t *fs,
-              svn_error_t *(*freeze_body)(void *baton, apr_pool_t *pool),
-              void *baton,
+              svn_error_t *(*freeze_func)(void *baton, apr_pool_t *pool),
+              void *freeze_baton,
               apr_pool_t *pool)
 {
-  SVN_ERR(fs->vtable->freeze(fs, freeze_body, baton, pool));
+  SVN_ERR(fs->vtable->freeze(fs, freeze_func, freeze_baton, pool));
 
   return SVN_NO_ERROR;
 }
