@@ -4971,7 +4971,7 @@ svn_client_propget5(apr_hash_t **props,
  * passed as NULL.
  *
  * @since New in 1.7.
- * @deprecated Provided for backward compatibility with the 1.8 API.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -5132,8 +5132,7 @@ svn_client_proplist4(const char *target,
  * always passed NULL, and there is no separate scratch pool.
  *
  * @since New in 1.5.
- *
- * @deprecated Provided for backward compatibility with the 1.8 API.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 SVN_DEPRECATED
 svn_error_t *
