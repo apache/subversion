@@ -3886,17 +3886,22 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
  * @a target_path_or_url (as of @a target_peg_revision).  If @a
  * finding_merged is FALSE then find the revisions eligible for merging.
  *
- * @a source_start_revision and @a source_end_revision bound the
- * operative range of revisions of the merge source which are
- * described to the caller.  If @a source_end_revision is of kind
- * @c svn_opt_revision_unspecified, it is interpreted as the same
- * revision as @a source_start_revision.  If both are of kind
- * @c svn_opt_revision_unspecified, no bounding occurs and the entire
- * history of the merge source (up to @a source_peg_revision, per the
- * typical default peg/operative revision behaviors) is considered.
- * If @a source_start_revision is younger than @a source_end_revision,
- * then @a receiver is called from youngest to oldest revisions.
- * Otherwise @a receiver is called from oldest to youngest revisions.
+ * If both @a source_start_revision and @a source_end_revision are
+ * unspecified (that is, of kind @c svn_opt_revision_unspecified),
+ * @a receiver will be called the requested revisions from 0 to
+ * @a source_peg_revision and in that order (that is, oldest to
+ * youngest).  Otherwise, both @a source_start_revision and
+ * @a source_end_revision must be specified, which has two effects:
+ *
+ *   - @a receiver will be called only with revisions which fall
+ *     within range of @a source_start_revision to
+ *     @a source_end_revision, inclusive, and
+ *
+ *   - those revisions will be ordered in the same "direction" as the
+ *     walk from @a source_start_revision to @a source_end_revision.
+ *     (If @a source_start_revision is the younger of the two, @a
+ *     receiver will be called with revisions in youngest-to-oldest
+ *     order; otherwise, the reverse occurs.)
  *
  * If @a depth is #svn_depth_empty consider only the explicit or
  * inherited mergeinfo on @a target_path_or_url when calculating merged
