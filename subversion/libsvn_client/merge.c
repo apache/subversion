@@ -11742,6 +11742,40 @@ merge_peg_locked(conflict_report_t **conflict_report,
   return SVN_NO_ERROR;
 }
 
+/* Details of an automatic merge. */
+typedef struct automatic_merge_t
+{
+  svn_client__pathrev_t *yca, *base, *right, *target;
+  svn_boolean_t is_reintegrate_like;
+  svn_boolean_t allow_mixed_rev, allow_local_mods, allow_switched_subtrees;
+} automatic_merge_t;
+
+static svn_error_t *
+client_find_automatic_merge(automatic_merge_t **merge_p,
+                            const char *source_path_or_url,
+                            const svn_opt_revision_t *source_revision,
+                            const char *target_abspath,
+                            svn_boolean_t allow_mixed_rev,
+                            svn_boolean_t allow_local_mods,
+                            svn_boolean_t allow_switched_subtrees,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+static svn_error_t *
+do_automatic_merge_locked(conflict_report_t **conflict_report,
+                          const automatic_merge_t *merge,
+                          const char *target_abspath,
+                          svn_depth_t depth,
+                          svn_boolean_t diff_ignore_ancestry,
+                          svn_boolean_t force_delete,
+                          svn_boolean_t record_only,
+                          svn_boolean_t dry_run,
+                          const apr_array_header_t *merge_options,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
 svn_error_t *
 svn_client_merge_peg5(const char *source_path_or_url,
                       const apr_array_header_t *ranges_to_merge,
@@ -11771,7 +11805,7 @@ svn_client_merge_peg5(const char *source_path_or_url,
   /* Do an automatic merge if no revision ranges are specified. */
   if (ranges_to_merge == NULL)
     {
-      svn_client_automatic_merge_t *merge;
+      automatic_merge_t *merge;
 
       if (ignore_mergeinfo)
         return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
@@ -11779,24 +11813,31 @@ svn_client_merge_peg5(const char *source_path_or_url,
                                   "ignoring mergeinfo"));
 
       /* Find the details of the merge needed. */
-      SVN_ERR(svn_client_find_automatic_merge(&merge,
-                                              source_path_or_url,
-                                              source_peg_revision,
-                                              target_wcpath,
-                                              allow_mixed_rev,
-                                              TRUE /*allow_local_mods*/,
-                                              TRUE /*allow_switched_subtrees*/,
-                                              ctx, pool, pool));
+      SVN_ERR(client_find_automatic_merge(
+                                    &merge,
+                                    source_path_or_url, source_peg_revision,
+                                    target_abspath,
+                                    allow_mixed_rev,
+                                    TRUE /*allow_local_mods*/,
+                                    TRUE /*allow_switched_subtrees*/,
+                                    ctx, pool, pool));
 
-      SVN_ERR(svn_client_do_automatic_merge(merge, target_wcpath, depth,
-                                            diff_ignore_ancestry,
-                                            force_delete, record_only,
-                                            dry_run, merge_options,
-                                            ctx, pool));
-
-      /* We already dealt with returning any conflict error, inside the
-       * above calls. */
-      conflict_report = NULL;
+      if (!dry_run)
+        SVN_WC__CALL_WITH_WRITE_LOCK(
+          do_automatic_merge_locked(&conflict_report,
+                                    merge,
+                                    target_abspath, depth,
+                                    diff_ignore_ancestry,
+                                    force_delete, record_only, dry_run,
+                                    merge_options, ctx, pool, pool),
+          ctx->wc_ctx, lock_abspath, FALSE /* lock_anchor */, pool);
+      else
+        SVN_ERR(do_automatic_merge_locked(&conflict_report,
+                                    merge,
+                                    target_abspath, depth,
+                                    diff_ignore_ancestry,
+                                    force_delete, record_only, dry_run,
+                                    merge_options, ctx, pool, pool));
     }
   else if (!dry_run)
     SVN_WC__CALL_WITH_WRITE_LOCK(
@@ -12222,7 +12263,7 @@ find_base_on_target(svn_client__pathrev_t **base_p,
   return SVN_NO_ERROR;
 }
 
-/* The body of svn_client_find_automatic_merge(), which see.
+/* The body of client_find_automatic_merge(), which see.
  */
 static svn_error_t *
 find_automatic_merge(svn_client__pathrev_t **base_p,
@@ -12276,28 +12317,26 @@ find_automatic_merge(svn_client__pathrev_t **base_p,
   return SVN_NO_ERROR;
 }
 
-/* Details of an automatic merge. */
-struct svn_client_automatic_merge_t
-{
-  svn_client__pathrev_t *yca, *base, *right, *target;
-  svn_boolean_t is_reintegrate_like;
-  svn_boolean_t allow_mixed_rev, allow_local_mods, allow_switched_subtrees;
-};
-
-svn_error_t *
-svn_client_find_automatic_merge_no_wc(
-                                 svn_client_automatic_merge_t **merge_p,
-                                 const char *source_path_or_url,
-                                 const svn_opt_revision_t *source_revision,
-                                 const char *target_path_or_url,
-                                 const svn_opt_revision_t *target_revision,
-                                 svn_client_ctx_t *ctx,
-                                 apr_pool_t *result_pool,
-                                 apr_pool_t *scratch_pool)
+/** Find out what kind of automatic merge would be needed, when the target
+ * is only known as a repository location rather than a WC.
+ *
+ * Like find_automatic_merge() except that the target is
+ * specified by @a target_path_or_url at @a target_revision, which must
+ * refer to a repository location, instead of by a WC path argument.
+ */
+static svn_error_t *
+find_automatic_merge_no_wc(automatic_merge_t **merge_p,
+                           const char *source_path_or_url,
+                           const svn_opt_revision_t *source_revision,
+                           const char *target_path_or_url,
+                           const svn_opt_revision_t *target_revision,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
   source_and_target_t *s_t = apr_palloc(scratch_pool, sizeof(*s_t));
   svn_client__pathrev_t *target_loc;
-  svn_client_automatic_merge_t *merge = apr_palloc(result_pool, sizeof(*merge));
+  automatic_merge_t *merge = apr_palloc(result_pool, sizeof(*merge));
 
   /* Source */
   SVN_ERR(svn_client__ra_session_from_path2(
@@ -12325,23 +12364,39 @@ svn_client_find_automatic_merge_no_wc(
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client_find_automatic_merge(svn_client_automatic_merge_t **merge_p,
-                                const char *source_path_or_url,
-                                const svn_opt_revision_t *source_revision,
-                                const char *target_wcpath,
-                                svn_boolean_t allow_mixed_rev,
-                                svn_boolean_t allow_local_mods,
-                                svn_boolean_t allow_switched_subtrees,
-                                svn_client_ctx_t *ctx,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool)
+/* Find the information needed to merge all unmerged changes from a source
+ * branch into a target branch.
+ *
+ * Set @a *merge_p to the information needed to merge all unmerged changes
+ * (up to @a source_revision) from the source branch @a source_path_or_url
+ * at @a source_revision into the target WC at @a target_abspath.
+ *
+ * The flags @a allow_mixed_rev, @a allow_local_mods and
+ * @a allow_switched_subtrees enable merging into a WC that is in any or all
+ * of the states described by their names, but only if this function decides
+ * that the merge will be in the same direction as the last automatic merge.
+ * If, on the other hand, the last automatic merge was in the opposite
+ * direction, then such states of the WC are not allowed regardless
+ * of these flags.  This function merely records these flags in the
+ * @a *merge_p structure; do_automatic_merge_locked() checks the WC
+ * state for compliance.
+ *
+ * Allocate the @a *merge_p structure in @a result_pool.
+ */
+static svn_error_t *
+client_find_automatic_merge(automatic_merge_t **merge_p,
+                            const char *source_path_or_url,
+                            const svn_opt_revision_t *source_revision,
+                            const char *target_abspath,
+                            svn_boolean_t allow_mixed_rev,
+                            svn_boolean_t allow_local_mods,
+                            svn_boolean_t allow_switched_subtrees,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
 {
-  const char *target_abspath;
   source_and_target_t *s_t = apr_palloc(result_pool, sizeof(*s_t));
-  svn_client_automatic_merge_t *merge = apr_palloc(result_pool, sizeof(*merge));
-
-  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_wcpath, scratch_pool));
+  automatic_merge_t *merge = apr_palloc(result_pool, sizeof(*merge));
 
   /* "Open" the target WC.  We're not going to check the target WC for
    * mixed-rev, local mods or switched subtrees yet.  After we find out
@@ -12366,7 +12421,7 @@ svn_client_find_automatic_merge(svn_client_automatic_merge_t **merge_p,
 
   /* Check source is in same repos as target. */
   SVN_ERR(check_same_repos(s_t->source, source_path_or_url,
-                           &s_t->target->loc, target_wcpath,
+                           &s_t->target->loc, target_abspath,
                            TRUE /* strict_urls */, scratch_pool));
 
   SVN_ERR(find_automatic_merge(&merge->base, &merge->is_reintegrate_like, s_t,
@@ -12384,7 +12439,8 @@ svn_client_find_automatic_merge(svn_client_automatic_merge_t **merge_p,
   return SVN_NO_ERROR;
 }
 
-/* The body of svn_client_do_automatic_merge(), which see.
+/* Perform an automatic merge, given the information in MERGE which
+ * must have come from calling client_find_automatic_merge().
  *
  * Four locations are inputs: YCA, BASE, RIGHT, TARGET, as shown
  * depending on whether the base is on the source branch or the target
@@ -12413,7 +12469,7 @@ svn_client_find_automatic_merge(svn_client_automatic_merge_t **merge_p,
  */
 static svn_error_t *
 do_automatic_merge_locked(conflict_report_t **conflict_report,
-                          const svn_client_automatic_merge_t *merge,
+                          const automatic_merge_t *merge,
                           const char *target_abspath,
                           svn_depth_t depth,
                           svn_boolean_t diff_ignore_ancestry,
@@ -12541,65 +12597,42 @@ do_automatic_merge_locked(conflict_report_t **conflict_report,
 }
 
 svn_error_t *
-svn_client_do_automatic_merge(const svn_client_automatic_merge_t *merge,
-                              const char *target_wcpath,
-                              svn_depth_t depth,
-                              svn_boolean_t diff_ignore_ancestry,
-                              svn_boolean_t force_delete,
-                              svn_boolean_t record_only,
-                              svn_boolean_t dry_run,
-                              const apr_array_header_t *merge_options,
-                              svn_client_ctx_t *ctx,
-                              apr_pool_t *pool)
+svn_client_get_merging_summary(svn_boolean_t *needs_reintegration,
+                               const char **yca_url, svn_revnum_t *yca_rev,
+                               const char **base_url, svn_revnum_t *base_rev,
+                               const char **right_url, svn_revnum_t *right_rev,
+                               const char **target_url, svn_revnum_t *target_rev,
+                               const char **repos_root_url,
+                               const char *source_path_or_url,
+                               const svn_opt_revision_t *source_revision,
+                               const char *target_path_or_url,
+                               const svn_opt_revision_t *target_revision,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
 {
-  const char *target_abspath, *lock_abspath;
-  conflict_report_t *conflict_report;
+  svn_boolean_t target_is_wc;
+  automatic_merge_t *merge;
 
-  SVN_ERR(get_target_and_lock_abspath(&target_abspath, &lock_abspath,
-                                      target_wcpath, ctx, pool));
-
-  if (!dry_run)
-    SVN_WC__CALL_WITH_WRITE_LOCK(
-      do_automatic_merge_locked(&conflict_report,
-                                merge,
-                                target_abspath, depth,
-                                diff_ignore_ancestry,
-                                force_delete, record_only, dry_run,
-                                merge_options, ctx, pool, pool),
-      ctx->wc_ctx, lock_abspath, FALSE /* lock_anchor */, pool);
+  target_is_wc = (! svn_path_is_url(target_path_or_url))
+                 && (target_revision->kind == svn_opt_revision_unspecified
+                     || target_revision->kind == svn_opt_revision_working);
+  if (target_is_wc)
+    SVN_ERR(client_find_automatic_merge(
+              &merge,
+              source_path_or_url, source_revision,
+              target_path_or_url,
+              TRUE, TRUE, TRUE,  /* allow_* */
+              ctx, scratch_pool, scratch_pool));
   else
-    SVN_ERR(do_automatic_merge_locked(&conflict_report,
-                                merge,
-                                target_abspath, depth,
-                                diff_ignore_ancestry,
-                                force_delete, record_only, dry_run,
-                                merge_options, ctx, pool, pool));
+    SVN_ERR(find_automatic_merge_no_wc(
+              &merge,
+              source_path_or_url, source_revision,
+              target_path_or_url, target_revision,
+              ctx, scratch_pool, scratch_pool));
 
-  SVN_ERR(make_merge_conflict_error(conflict_report, pool));
-  return SVN_NO_ERROR;
-}
-
-svn_boolean_t
-svn_client_automatic_merge_is_reintegrate_like(
-        const svn_client_automatic_merge_t *merge)
-{
-  return merge->is_reintegrate_like;
-}
-
-svn_error_t *
-svn_client_automatic_merge_get_locations(
-                                const char **yca_url,
-                                svn_revnum_t *yca_rev,
-                                const char **base_url,
-                                svn_revnum_t *base_rev,
-                                const char **right_url,
-                                svn_revnum_t *right_rev,
-                                const char **target_url,
-                                svn_revnum_t *target_rev,
-                                const char **repos_root_url,
-                                const svn_client_automatic_merge_t *merge,
-                                apr_pool_t *result_pool)
-{
+  if (needs_reintegration)
+    *needs_reintegration = merge->is_reintegrate_like;
   if (yca_url)
     *yca_url = apr_pstrdup(result_pool, merge->yca->url);
   if (yca_rev)

@@ -211,41 +211,28 @@ mergeinfo_summary(
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
-  svn_client_automatic_merge_t *the_merge;
   const char *yca_url, *base_url, *right_url, *target_url;
   svn_revnum_t yca_rev, base_rev, right_rev, target_rev;
   const char *repos_root_url;
-  svn_boolean_t target_is_wc, reintegrate_like;
+  svn_boolean_t target_is_wc, is_reintegration;
 
   target_is_wc = (! svn_path_is_url(target_path_or_url))
                  && (target_revision->kind == svn_opt_revision_unspecified
                      || target_revision->kind == svn_opt_revision_working);
-  if (target_is_wc)
-    SVN_ERR(svn_client_find_automatic_merge(
-              &the_merge,
-              source_path_or_url, source_revision,
-              target_path_or_url,
-              TRUE, TRUE, TRUE,  /* allow_* */
-              ctx, pool, pool));
-  else
-    SVN_ERR(svn_client_find_automatic_merge_no_wc(
-              &the_merge,
-              source_path_or_url, source_revision,
-              target_path_or_url, target_revision,
-              ctx, pool, pool));
-
-  SVN_ERR(svn_client_automatic_merge_get_locations(
+  SVN_ERR(svn_client_get_merging_summary(
+            &is_reintegration,
             &yca_url, &yca_rev,
             &base_url, &base_rev,
             &right_url, &right_rev,
             &target_url, &target_rev,
             &repos_root_url,
-            the_merge, pool));
-  reintegrate_like = svn_client_automatic_merge_is_reintegrate_like(the_merge);
+            source_path_or_url, source_revision,
+            target_path_or_url, target_revision,
+            ctx, pool, pool));
 
   SVN_ERR(mergeinfo_diagram(yca_url, base_url, right_url, target_url,
                             yca_rev, base_rev, right_rev, target_rev,
-                            repos_root_url, target_is_wc, reintegrate_like,
+                            repos_root_url, target_is_wc, is_reintegration,
                             pool));
 
   return SVN_NO_ERROR;
