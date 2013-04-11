@@ -241,13 +241,11 @@ static const apr_getopt_option_t svnserve__options[] =
         "                             "
         "[used for FSFS repositories only]")},
     {"client-speed", SVNSERVE_OPT_CLIENT_SPEED, 1,
-     N_("Optimize throughput based on the assumption that\n"
+     N_("Optimize network handling based on the assumption\n"
         "                             "
-        "clients can receive data with a bitrate of at\n"
+        "that most clients are connected with a bitrate of\n"
         "                             "
-        "least ARG Gbit/s.  For clients receiving data at\n"
-        "                             "
-        "less than 1 Gbit/s, zero should be used.\n"
+        "ARG Mbit/s.\n"
         "                             "
         "Default is 0 (optimizations disabled).")},
 #ifdef CONNECTION_HAVE_THREAD_OPTION
@@ -670,11 +668,16 @@ int main(int argc, const char *argv[])
           {
             apr_size_t bandwidth = (apr_size_t)apr_strtoi64(arg, NULL, 0);
 
-            /* block other clients for at most 1 ms (at full bandwidth) */
-            params.zero_copy_limit = bandwidth * 120000;
+            /* for slower clients, don't try anything fancy */
+            if (bandwidth < 1000)
+              {
+                /* block other clients for at most 1 ms (at full bandwidth).
+                   Note that the send buffer is 16kB anyways. */
+                params.zero_copy_limit = bandwidth * 120;
 
-            /* check for aborted connections at the same rate */
-            params.error_check_interval = bandwidth * 120000;
+                /* check for aborted connections at the same rate */
+                params.error_check_interval = bandwidth * 120;
+              }
           }
           break;
 
