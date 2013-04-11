@@ -138,8 +138,8 @@ check_for_error_internal(ra_svn_edit_baton_t *eb, apr_pool_t *pool)
   if (svn_ra_svn__input_waiting(eb->conn, pool))
     {
       eb->got_status = TRUE;
-      SVN_ERR(svn_ra_svn_write_cmd_abort_edit(eb->conn, pool));
-      SVN_ERR(svn_ra_svn_read_cmd_response(eb->conn, pool, ""));
+      SVN_ERR(svn_ra_svn__write_cmd_abort_edit(eb->conn, pool));
+      SVN_ERR(svn_ra_svn__read_cmd_response(eb->conn, pool, ""));
       /* We shouldn't get here if the consumer is doing its job. */
       return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                               _("Successful edit status returned too soon"));
@@ -161,7 +161,7 @@ static svn_error_t *ra_svn_target_rev(void *edit_baton, svn_revnum_t rev,
   ra_svn_edit_baton_t *eb = edit_baton;
 
   SVN_ERR(check_for_error(eb, pool));
-  SVN_ERR(svn_ra_svn_write_cmd_target_rev(eb->conn, pool, rev));
+  SVN_ERR(svn_ra_svn__write_cmd_target_rev(eb->conn, pool, rev));
   return SVN_NO_ERROR;
 }
 
@@ -172,7 +172,7 @@ static svn_error_t *ra_svn_open_root(void *edit_baton, svn_revnum_t rev,
   const char *token = make_token('d', eb, pool);
 
   SVN_ERR(check_for_error(eb, pool));
-  SVN_ERR(svn_ra_svn_write_cmd_open_root(eb->conn, pool, rev, token));
+  SVN_ERR(svn_ra_svn__write_cmd_open_root(eb->conn, pool, rev, token));
   *root_baton = ra_svn_make_baton(eb->conn, pool, eb, token);
   return SVN_NO_ERROR;
 }
@@ -183,8 +183,8 @@ static svn_error_t *ra_svn_delete_entry(const char *path, svn_revnum_t rev,
   ra_svn_baton_t *b = parent_baton;
 
   SVN_ERR(check_for_error(b->eb, pool));
-  SVN_ERR(svn_ra_svn_write_cmd_delete_entry(b->conn, pool,
-                                            path, rev, b->token));
+  SVN_ERR(svn_ra_svn__write_cmd_delete_entry(b->conn, pool,
+                                             path, rev, b->token));
   return SVN_NO_ERROR;
 }
 
@@ -199,8 +199,8 @@ static svn_error_t *ra_svn_add_dir(const char *path, void *parent_baton,
   SVN_ERR_ASSERT((copy_path && SVN_IS_VALID_REVNUM(copy_rev))
                  || (!copy_path && !SVN_IS_VALID_REVNUM(copy_rev)));
   SVN_ERR(check_for_error(b->eb, pool));
-  SVN_ERR(svn_ra_svn_write_cmd_add_dir(b->conn, pool, path, b->token,
-                                       token, copy_path, copy_rev));
+  SVN_ERR(svn_ra_svn__write_cmd_add_dir(b->conn, pool, path, b->token,
+                                        token, copy_path, copy_rev));
   *child_baton = ra_svn_make_baton(b->conn, pool, b->eb, token);
   return SVN_NO_ERROR;
 }
@@ -213,8 +213,8 @@ static svn_error_t *ra_svn_open_dir(const char *path, void *parent_baton,
   const char *token = make_token('d', b->eb, pool);
 
   SVN_ERR(check_for_error(b->eb, pool));
-  SVN_ERR(svn_ra_svn_write_cmd_open_dir(b->conn, pool, path, b->token,
-                                        token, rev));
+  SVN_ERR(svn_ra_svn__write_cmd_open_dir(b->conn, pool, path, b->token,
+                                         token, rev));
   *child_baton = ra_svn_make_baton(b->conn, pool, b->eb, token);
   return SVN_NO_ERROR;
 }
@@ -226,8 +226,8 @@ static svn_error_t *ra_svn_change_dir_prop(void *dir_baton, const char *name,
   ra_svn_baton_t *b = dir_baton;
 
   SVN_ERR(check_for_error(b->eb, pool));
-  SVN_ERR(svn_ra_svn_write_cmd_change_dir_prop(b->conn, pool, b->token,
-                                               name, value));
+  SVN_ERR(svn_ra_svn__write_cmd_change_dir_prop(b->conn, pool, b->token,
+                                                name, value));
   return SVN_NO_ERROR;
 }
 
@@ -236,7 +236,7 @@ static svn_error_t *ra_svn_close_dir(void *dir_baton, apr_pool_t *pool)
   ra_svn_baton_t *b = dir_baton;
 
   SVN_ERR(check_for_error(b->eb, pool));
-  SVN_ERR(svn_ra_svn_write_cmd_close_dir(b->conn, pool, b->token));
+  SVN_ERR(svn_ra_svn__write_cmd_close_dir(b->conn, pool, b->token));
   return SVN_NO_ERROR;
 }
 
@@ -251,7 +251,7 @@ static svn_error_t *ra_svn_absent_dir(const char *path,
     return SVN_NO_ERROR;
 
   SVN_ERR(check_for_error(b->eb, pool));
-  SVN_ERR(svn_ra_svn_write_cmd_absent_dir(b->conn, pool, path, b->token));
+  SVN_ERR(svn_ra_svn__write_cmd_absent_dir(b->conn, pool, path, b->token));
   return SVN_NO_ERROR;
 }
 
@@ -268,8 +268,8 @@ static svn_error_t *ra_svn_add_file(const char *path,
   SVN_ERR_ASSERT((copy_path && SVN_IS_VALID_REVNUM(copy_rev))
                  || (!copy_path && !SVN_IS_VALID_REVNUM(copy_rev)));
   SVN_ERR(check_for_error(b->eb, pool));
-  SVN_ERR(svn_ra_svn_write_cmd_add_file(b->conn, pool,  path, b->token,
-                                        token, copy_path, copy_rev));
+  SVN_ERR(svn_ra_svn__write_cmd_add_file(b->conn, pool,  path, b->token,
+                                         token, copy_path, copy_rev));
   *file_baton = ra_svn_make_baton(b->conn, pool, b->eb, token);
   return SVN_NO_ERROR;
 }
@@ -284,8 +284,8 @@ static svn_error_t *ra_svn_open_file(const char *path,
   const char *token = make_token('c', b->eb, pool);
 
   SVN_ERR(check_for_error(b->eb, b->pool));
-  SVN_ERR(svn_ra_svn_write_cmd_open_file(b->conn, pool, path, b->token,
-                                         token, rev));
+  SVN_ERR(svn_ra_svn__write_cmd_open_file(b->conn, pool, path, b->token,
+                                          token, rev));
   *file_baton = ra_svn_make_baton(b->conn, pool, b->eb, token);
   return SVN_NO_ERROR;
 }
@@ -299,8 +299,8 @@ static svn_error_t *ra_svn_svndiff_handler(void *baton, const char *data,
   SVN_ERR(check_for_error(b->eb, b->pool));
   str.data = data;
   str.len = *len;
-  return svn_ra_svn_write_cmd_textdelta_chunk(b->conn, b->pool,
-                                              b->token, &str);
+  return svn_ra_svn__write_cmd_textdelta_chunk(b->conn, b->pool,
+                                               b->token, &str);
 }
 
 static svn_error_t *ra_svn_svndiff_close_handler(void *baton)
@@ -308,7 +308,7 @@ static svn_error_t *ra_svn_svndiff_close_handler(void *baton)
   ra_svn_baton_t *b = baton;
 
   SVN_ERR(check_for_error(b->eb, b->pool));
-  SVN_ERR(svn_ra_svn_write_cmd_textdelta_end(b->conn, b->pool, b->token));
+  SVN_ERR(svn_ra_svn__write_cmd_textdelta_end(b->conn, b->pool, b->token));
   return SVN_NO_ERROR;
 }
 
@@ -323,8 +323,8 @@ static svn_error_t *ra_svn_apply_textdelta(void *file_baton,
 
   /* Tell the other side we're starting a text delta. */
   SVN_ERR(check_for_error(b->eb, pool));
-  SVN_ERR(svn_ra_svn_write_cmd_apply_textdelta(b->conn, pool, b->token,
-                                               base_checksum));
+  SVN_ERR(svn_ra_svn__write_cmd_apply_textdelta(b->conn, pool, b->token,
+                                                base_checksum));
 
   /* Transform the window stream to an svndiff stream.  Reuse the
    * file baton for the stream handler, since it has all the
@@ -353,8 +353,8 @@ static svn_error_t *ra_svn_change_file_prop(void *file_baton,
   ra_svn_baton_t *b = file_baton;
 
   SVN_ERR(check_for_error(b->eb, pool));
-  SVN_ERR(svn_ra_svn_write_cmd_change_file_prop(b->conn, pool,
-                                                b->token, name, value));
+  SVN_ERR(svn_ra_svn__write_cmd_change_file_prop(b->conn, pool,
+                                                 b->token, name, value));
   return SVN_NO_ERROR;
 }
 
@@ -365,8 +365,8 @@ static svn_error_t *ra_svn_close_file(void *file_baton,
   ra_svn_baton_t *b = file_baton;
 
   SVN_ERR(check_for_error(b->eb, pool));
-  SVN_ERR(svn_ra_svn_write_cmd_close_file(b->conn, pool,
-                                          b->token, text_checksum));
+  SVN_ERR(svn_ra_svn__write_cmd_close_file(b->conn, pool,
+                                           b->token, text_checksum));
   return SVN_NO_ERROR;
 }
 
@@ -381,7 +381,7 @@ static svn_error_t *ra_svn_absent_file(const char *path,
     return SVN_NO_ERROR;
 
   SVN_ERR(check_for_error(b->eb, pool));
-  SVN_ERR(svn_ra_svn_write_cmd_absent_file(b->conn, pool, path, b->token));
+  SVN_ERR(svn_ra_svn__write_cmd_absent_file(b->conn, pool, path, b->token));
   return SVN_NO_ERROR;
 }
 
@@ -392,11 +392,11 @@ static svn_error_t *ra_svn_close_edit(void *edit_baton, apr_pool_t *pool)
 
   SVN_ERR_ASSERT(!eb->got_status);
   eb->got_status = TRUE;
-  SVN_ERR(svn_ra_svn_write_cmd_close_edit(eb->conn, pool));
-  err = svn_ra_svn_read_cmd_response(eb->conn, pool, "");
+  SVN_ERR(svn_ra_svn__write_cmd_close_edit(eb->conn, pool));
+  err = svn_ra_svn__read_cmd_response(eb->conn, pool, "");
   if (err)
     {
-      svn_error_clear(svn_ra_svn_write_cmd_abort_edit(eb->conn, pool));
+      svn_error_clear(svn_ra_svn__write_cmd_abort_edit(eb->conn, pool));
       return err;
     }
   if (eb->callback)
@@ -410,8 +410,8 @@ static svn_error_t *ra_svn_abort_edit(void *edit_baton, apr_pool_t *pool)
 
   if (eb->got_status)
     return SVN_NO_ERROR;
-  SVN_ERR(svn_ra_svn_write_cmd_abort_edit(eb->conn, pool));
-  SVN_ERR(svn_ra_svn_read_cmd_response(eb->conn, pool, ""));
+  SVN_ERR(svn_ra_svn__write_cmd_abort_edit(eb->conn, pool));
+  SVN_ERR(svn_ra_svn__read_cmd_response(eb->conn, pool, ""));
   return SVN_NO_ERROR;
 }
 
@@ -495,7 +495,7 @@ static svn_error_t *ra_svn_handle_target_rev(svn_ra_svn_conn_t *conn,
 {
   svn_revnum_t rev;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "r", &rev));
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "r", &rev));
   SVN_CMD_ERR(ds->editor->set_target_revision(ds->edit_baton, rev, pool));
   return SVN_NO_ERROR;
 }
@@ -510,7 +510,7 @@ static svn_error_t *ra_svn_handle_open_root(svn_ra_svn_conn_t *conn,
   const char *token;
   void *root_baton;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)c", &rev, &token));
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "(?r)c", &rev, &token));
   subpool = svn_pool_create(ds->pool);
   SVN_CMD_ERR(ds->editor->open_root(ds->edit_baton, rev, subpool,
                                     &root_baton));
@@ -527,7 +527,8 @@ static svn_error_t *ra_svn_handle_delete_entry(svn_ra_svn_conn_t *conn,
   svn_revnum_t rev;
   ra_svn_token_entry_t *entry;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)c", &path, &rev, &token));
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "c(?r)c",
+                                  &path, &rev, &token));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   path = svn_relpath_canonicalize(path, pool);
   SVN_CMD_ERR(ds->editor->delete_entry(path, rev, entry->baton, pool));
@@ -545,8 +546,8 @@ static svn_error_t *ra_svn_handle_add_dir(svn_ra_svn_conn_t *conn,
   apr_pool_t *subpool;
   void *child_baton;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccc(?cr)", &path, &token,
-                                 &child_token, &copy_path, &copy_rev));
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "ccc(?cr)", &path, &token,
+                                  &child_token, &copy_path, &copy_rev));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   subpool = svn_pool_create(entry->pool);
   path = svn_relpath_canonicalize(path, pool);
@@ -578,8 +579,8 @@ static svn_error_t *ra_svn_handle_open_dir(svn_ra_svn_conn_t *conn,
   apr_pool_t *subpool;
   void *child_baton;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccc(?r)", &path, &token,
-                                 &child_token, &rev));
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "ccc(?r)", &path, &token,
+                                  &child_token, &rev));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   subpool = svn_pool_create(entry->pool);
   path = svn_relpath_canonicalize(path, pool);
@@ -598,8 +599,8 @@ static svn_error_t *ra_svn_handle_change_dir_prop(svn_ra_svn_conn_t *conn,
   svn_string_t *value;
   ra_svn_token_entry_t *entry;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc(?s)", &token, &name,
-                                 &value));
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "cc(?s)", &token, &name,
+                                  &value));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   SVN_CMD_ERR(ds->editor->change_dir_prop(entry->baton, name, value,
                                           entry->pool));
@@ -615,7 +616,7 @@ static svn_error_t *ra_svn_handle_close_dir(svn_ra_svn_conn_t *conn,
   ra_svn_token_entry_t *entry;
 
   /* Parse and look up the directory token. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &token));
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "c", &token));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
 
   /* Close the directory and destroy the baton. */
@@ -635,7 +636,7 @@ static svn_error_t *ra_svn_handle_absent_dir(svn_ra_svn_conn_t *conn,
   ra_svn_token_entry_t *entry;
 
   /* Parse parameters and look up the directory token. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc", &path, &token));
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "cc", &path, &token));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
 
   /* Call the editor. */
@@ -652,8 +653,8 @@ static svn_error_t *ra_svn_handle_add_file(svn_ra_svn_conn_t *conn,
   svn_revnum_t copy_rev;
   ra_svn_token_entry_t *entry, *file_entry;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccc(?cr)", &path, &token,
-                                 &file_token, &copy_path, &copy_rev));
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "ccc(?cr)", &path, &token,
+                                  &file_token, &copy_path, &copy_rev));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   ds->file_refs++;
   path = svn_relpath_canonicalize(path, pool);
@@ -683,8 +684,8 @@ static svn_error_t *ra_svn_handle_open_file(svn_ra_svn_conn_t *conn,
   svn_revnum_t rev;
   ra_svn_token_entry_t *entry, *file_entry;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccc(?r)", &path, &token,
-                                 &file_token, &rev));
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "ccc(?r)", &path, &token,
+                                  &file_token, &rev));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   ds->file_refs++;
   path = svn_relpath_canonicalize(path, pool);
@@ -706,8 +707,8 @@ static svn_error_t *ra_svn_handle_apply_textdelta(svn_ra_svn_conn_t *conn,
   char *base_checksum;
 
   /* Parse arguments and look up the token. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?c)",
-                                 &token, &base_checksum));
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "c(?c)",
+                                  &token, &base_checksum));
   SVN_ERR(lookup_token(ds, token, TRUE, &entry));
   if (entry->dstream)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -729,7 +730,7 @@ static svn_error_t *ra_svn_handle_textdelta_chunk(svn_ra_svn_conn_t *conn,
   svn_string_t *str;
 
   /* Parse arguments and look up the token. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cs", &token, &str));
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "cs", &token, &str));
   SVN_ERR(lookup_token(ds, token, TRUE, &entry));
   if (!entry->dstream)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -747,7 +748,7 @@ static svn_error_t *ra_svn_handle_textdelta_end(svn_ra_svn_conn_t *conn,
   ra_svn_token_entry_t *entry;
 
   /* Parse arguments and look up the token. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &token));
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "c", &token));
   SVN_ERR(lookup_token(ds, token, TRUE, &entry));
   if (!entry->dstream)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -767,8 +768,8 @@ static svn_error_t *ra_svn_handle_change_file_prop(svn_ra_svn_conn_t *conn,
   svn_string_t *value;
   ra_svn_token_entry_t *entry;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc(?s)", &token, &name,
-                                 &value));
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "cc(?s)", &token, &name,
+                                  &value));
   SVN_ERR(lookup_token(ds, token, TRUE, &entry));
   SVN_CMD_ERR(ds->editor->change_file_prop(entry->baton, name, value, pool));
   return SVN_NO_ERROR;
@@ -784,8 +785,8 @@ static svn_error_t *ra_svn_handle_close_file(svn_ra_svn_conn_t *conn,
   const char *text_checksum;
 
   /* Parse arguments and look up the file token. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?c)",
-                                 &token, &text_checksum));
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "c(?c)",
+                                  &token, &text_checksum));
   SVN_ERR(lookup_token(ds, token, TRUE, &entry));
 
   /* Close the file and destroy the baton. */
@@ -806,7 +807,7 @@ static svn_error_t *ra_svn_handle_absent_file(svn_ra_svn_conn_t *conn,
   ra_svn_token_entry_t *entry;
 
   /* Parse parameters and look up the parent directory token. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc", &path, &token));
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "cc", &path, &token));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
 
   /* Call the editor. */
@@ -823,7 +824,7 @@ static svn_error_t *ra_svn_handle_close_edit(svn_ra_svn_conn_t *conn,
   ds->done = TRUE;
   if (ds->aborted)
     *ds->aborted = FALSE;
-  return svn_ra_svn_write_cmd_response(conn, pool, "");
+  return svn_ra_svn__write_cmd_response(conn, pool, "");
 }
 
 static svn_error_t *ra_svn_handle_abort_edit(svn_ra_svn_conn_t *conn,
@@ -835,7 +836,7 @@ static svn_error_t *ra_svn_handle_abort_edit(svn_ra_svn_conn_t *conn,
   if (ds->aborted)
     *ds->aborted = TRUE;
   SVN_CMD_ERR(ds->editor->abort_edit(ds->edit_baton, pool));
-  return svn_ra_svn_write_cmd_response(conn, pool, "");
+  return svn_ra_svn__write_cmd_response(conn, pool, "");
 }
 
 static svn_error_t *ra_svn_handle_finish_replay(svn_ra_svn_conn_t *conn,
@@ -890,7 +891,7 @@ static svn_error_t *blocked_write(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   /* We blocked trying to send an error.  Read and discard an editing
    * command in order to avoid deadlock. */
-  SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "wl", &cmd, &params));
+  SVN_ERR(svn_ra_svn__read_tuple(conn, pool, "wl", &cmd, &params));
   if (strcmp(cmd, "abort-edit") == 0)
     {
       ds->done = TRUE;
@@ -928,7 +929,7 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
       svn_pool_clear(subpool);
       if (editor)
         {
-          SVN_ERR(svn_ra_svn_read_tuple(conn, subpool, "wl", &cmd, &params));
+          SVN_ERR(svn_ra_svn__read_tuple(conn, subpool, "wl", &cmd, &params));
           for (i = 0; ra_svn_edit_cmds[i].cmd; i++)
               if (strcmp(cmd, ra_svn_edit_cmds[i].cmd) == 0)
                 break;
@@ -963,7 +964,7 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
               state.done = TRUE;
               if (aborted)
                 *aborted = FALSE;
-              err = svn_ra_svn_write_cmd_response(conn, pool, "");
+              err = svn_ra_svn__write_cmd_response(conn, pool, "");
             }
           else
             err = NULL;
@@ -980,11 +981,11 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
                 svn_error_clear(editor->abort_edit(edit_baton, subpool));
               svn_ra_svn__set_block_handler(conn, blocked_write, &state);
             }
-          write_err = svn_ra_svn_write_cmd_failure(
+          write_err = svn_ra_svn__write_cmd_failure(
                           conn, subpool,
                           svn_ra_svn__locate_real_error_child(err));
           if (!write_err)
-            write_err = svn_ra_svn_flush(conn, subpool);
+            write_err = svn_ra_svn__flush(conn, subpool);
           svn_ra_svn__set_block_handler(conn, NULL, NULL);
           svn_error_clear(err);
           SVN_ERR(write_err);
@@ -1011,7 +1012,7 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
   while (!state.done)
     {
       svn_pool_clear(subpool);
-      err = svn_ra_svn_read_tuple(conn, subpool, "wl", &cmd, &params);
+      err = svn_ra_svn__read_tuple(conn, subpool, "wl", &cmd, &params);
       if (err && err->apr_err == SVN_ERR_RA_SVN_CONNECTION_CLOSED)
         {
           /* Other side disconnected; that's no error. */
