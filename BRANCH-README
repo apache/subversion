@@ -8,5 +8,55 @@ svnadmin verify --keep-going /path/to/repo
 
 TODO:
 -----
-  - Continue after verification failure and return the correct exit code.
-  - Add a few more test cases.
+1. Add a few more test cases.
+
+
+2. Show a summary of corruptions by default. So the svnadmin verify
+   --keep-going would look something like,
+
+<MOCK>
+
+$ svnadmin verify --keep-going myrepo
+* Verifying repository metadata ...
+* Verified revision 0.
+* Verified revision 1.
+* Verified revision 2.
+.
+.
+.
+* Error verifying revision 11.
+svnadmin: E160013: File not found: revision 11, path '/Trunk'
+* Verified revision 12.
+* Verified revision 13.
+.
+.
+.
+* Error verifying revision 112.
+svnadmin: E160004: Invalid change kind in rev file
+* Verified revision 113.
+
+Summary of corruptions
+----------------------
+Total corruptions: 2
+rev11: svnadmin: E160013: File not found: revision 1, path '/Trunk'
+rev112: svnadmin: E160004: Invalid change kind in rev file
+svnadmin: E165005: Repository '/tmp/myrepo' failed to verify
+
+</MOCK>
+
+
+3. If --keep-going is used along with --quiet option, show only the corruption
+   summary so that it would look like,
+
+<MOCK>
+
+$ svnadmin verify --keep-going --quiet myrepo
+
+Summary of corruptions
+----------------------
+Total corruptions: 2
+rev11: svnadmin: E160013: File not found: revision 1, path '/Trunk'
+rev112: svnadmin: E160004: Invalid change kind in rev file
+svnadmin: E165005: Repository '/tmp/myrepo' failed to verify
+
+</MOCK>
