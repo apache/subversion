@@ -2894,8 +2894,8 @@ internal_status(svn_wc_status3_t **status,
          on 'hidden' nodes. */
       conflicted = FALSE;
 
-      SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, TRUE,
-                                 scratch_pool, scratch_pool));
+      SVN_ERR(svn_io_stat_dirent2(&dirent, local_abspath, FALSE, TRUE,
+                                  scratch_pool, scratch_pool));
     }
   else
     SVN_ERR(stat_wc_dirent_case_sensitive(&dirent, db, local_abspath,

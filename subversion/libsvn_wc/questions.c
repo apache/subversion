@@ -253,8 +253,8 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, TRUE,
-                             scratch_pool, scratch_pool));
+  SVN_ERR(svn_io_stat_dirent2(&dirent, local_abspath, FALSE, TRUE,
+                              scratch_pool, scratch_pool));
 
   if (dirent->kind != svn_node_file)
     {
