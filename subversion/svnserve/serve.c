@@ -1467,7 +1467,8 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                commit_done, &ccb,
                authz_commit_cb, &ab, pool));
   SVN_ERR(svn_ra_svn__write_cmd_response(conn, pool, ""));
-  SVN_ERR(svn_ra_svn_drive_editor(conn, pool, editor, edit_baton, &aborted));
+  SVN_ERR(svn_ra_svn_drive_editor2(conn, pool, editor, edit_baton,
+                                   &aborted, FALSE));
   if (!aborted)
     {
       SVN_ERR(log_command(b, conn, pool, "%s",

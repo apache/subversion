@@ -203,6 +203,7 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn3(apr_socket_t *sock,
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_ra_svn_conn_t *
 svn_ra_svn_create_conn2(apr_socket_t *sock,
                         apr_file_t *in_file,
@@ -280,6 +281,8 @@ svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
  * with @a edit_baton.  On return, @a *aborted will be set if the edit was
  * aborted.  The drive can be terminated with a finish-replay command only
  * if @a for_replay is TRUE.
+ *
+ * @since New in 1.4.
  */
 svn_error_t *
 svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
@@ -290,7 +293,10 @@ svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
                          svn_boolean_t for_replay);
 
 /** Like svn_ra_svn_drive_editor2, but with @a for_replay always FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_svn_drive_editor(svn_ra_svn_conn_t *conn,
                         apr_pool_t *pool,
