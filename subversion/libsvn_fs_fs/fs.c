@@ -126,8 +126,8 @@ fs_set_errcall(svn_fs_t *fs,
 
 struct fs_freeze_baton_t {
   svn_fs_t *fs;
-  svn_error_t *(*freeze_body)(void *, apr_pool_t *);
-  void *baton;
+  svn_error_t *(*freeze_func)(void *, apr_pool_t *);
+  void *freeze_baton;
 };
 
 static svn_error_t *
@@ -141,22 +141,22 @@ fs_freeze_body(void *baton,
   if (exists)
     SVN_ERR(svn_fs_fs__lock_rep_cache(b->fs, pool));
 
-  SVN_ERR(b->freeze_body(b->baton, pool));
+  SVN_ERR(b->freeze_func(b->freeze_baton, pool));
 
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 fs_freeze(svn_fs_t *fs,
-          svn_error_t *(*freeze_body)(void *, apr_pool_t *),
-          void *baton,
+          svn_error_t *(*freeze_func)(void *, apr_pool_t *),
+          void *freeze_baton,
           apr_pool_t *pool)
 {
   struct fs_freeze_baton_t b;
 
   b.fs = fs;
-  b.freeze_body = freeze_body;
-  b.baton = baton;
+  b.freeze_func = freeze_func;
+  b.freeze_baton = freeze_baton;
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
   SVN_ERR(svn_fs_fs__with_write_lock(fs, fs_freeze_body, &b, pool));

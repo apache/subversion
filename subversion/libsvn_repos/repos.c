@@ -1813,8 +1813,8 @@ svn_repos_recover4(const char *path,
 struct freeze_baton_t {
   apr_array_header_t *paths;
   int counter;
-  svn_repos_freeze_func_t freeze_body;
-  void *baton;
+  svn_repos_freeze_func_t freeze_func;
+  void *freeze_baton;
 };
 
 static svn_error_t *
@@ -1825,7 +1825,7 @@ multi_freeze(void *baton,
 
   if (fb->counter == fb->paths->nelts)
     {
-      SVN_ERR(fb->freeze_body(fb->baton, pool));
+      SVN_ERR(fb->freeze_func(fb->freeze_baton, pool));
       return SVN_NO_ERROR;
     }
   else
@@ -1874,16 +1874,16 @@ multi_freeze(void *baton,
    while frozen. */
 svn_error_t *
 svn_repos_freeze(apr_array_header_t *paths,
-                 svn_repos_freeze_func_t freeze_body,
-                 void *baton,
+                 svn_repos_freeze_func_t freeze_func,
+                 void *freeze_baton,
                  apr_pool_t *pool)
 {
   struct freeze_baton_t fb;
 
   fb.paths = paths;
   fb.counter = 0;
-  fb.freeze_body = freeze_body;
-  fb.baton = baton;
+  fb.freeze_func = freeze_func;
+  fb.freeze_baton = freeze_baton;
 
   SVN_ERR(multi_freeze(&fb, pool));
 

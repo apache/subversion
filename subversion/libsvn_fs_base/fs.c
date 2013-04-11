@@ -533,8 +533,8 @@ base_bdb_verify_root(svn_fs_root_t *root,
 
 static svn_error_t *
 base_bdb_freeze(svn_fs_t *fs,
-                svn_error_t *(*freeze_body)(void *, apr_pool_t *),
-                void *baton,
+                svn_error_t *(*freeze_func)(void *, apr_pool_t *),
+                void *freeze_baton,
                 apr_pool_t *pool)
 {
   SVN__NOT_IMPLEMENTED();
