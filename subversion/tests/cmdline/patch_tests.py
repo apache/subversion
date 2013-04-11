@@ -4617,6 +4617,46 @@ def patch_lacking_trailing_eol_on_context(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
+def patch_with_custom_keywords(sbox):
+  """patch with custom keywords"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_append('A/mu', '$Qq$\nAB\nZZ\n', truncate=True)
+  sbox.simple_propset('svn:keywords', 'Qq=%R', 'A/mu')
+  sbox.simple_commit()
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu',
+                      contents='$Qq: %s $\nAB\nZZ\n' % sbox.repo_url)
+  svntest.actions.verify_disk(sbox.wc_dir, expected_disk)
+
+  unidiff_patch = [
+    "Index: A/mu\n",
+    "===================================================================\n",
+    "--- A/mu\t(revision 2)\n",
+    "+++ A/mu\t(working copy)\n",
+    "@@ -1,3 +1,3 @@\n",
+    " $Qq$\n",
+    "-AB\n",
+    "+ABAB\n",
+    " ZZ\n"
+    ]
+
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [ 'U         %s\n' % sbox.ospath('A/mu') ]
+  expected_disk.tweak('A/mu',
+                      contents='$Qq: %s $\nABAB\nZZ\n' % sbox.repo_url)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', wc_rev=2)
+  expected_status.tweak('A/mu', status='M ')
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+    
 
 ########################################################################
 #Run the tests
@@ -4669,6 +4709,7 @@ test_list = [ None,
               patch_empty_file,
               patch_apply_no_fuz,
               patch_lacking_trailing_eol_on_context,
+              patch_with_custom_keywords,
             ]
 
 if __name__ == '__main__':

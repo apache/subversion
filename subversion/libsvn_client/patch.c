@@ -321,6 +321,7 @@ obtain_eol_and_keywords_for_file(apr_hash_t **keywords,
       const char *rev_str;
       const char *author;
       const char *url;
+      const char *root_url;
 
       SVN_ERR(svn_wc__node_get_changed_info(&changed_rev,
                                             &changed_date,
@@ -332,9 +333,12 @@ obtain_eol_and_keywords_for_file(apr_hash_t **keywords,
       SVN_ERR(svn_wc__node_get_url(&url, wc_ctx,
                                    local_abspath,
                                    scratch_pool, scratch_pool));
-      SVN_ERR(svn_subst_build_keywords2(keywords,
+      SVN_ERR(svn_wc__node_get_repos_info(NULL, NULL, &root_url, NULL,
+                                          wc_ctx, local_abspath,
+                                          scratch_pool, scratch_pool));
+      SVN_ERR(svn_subst_build_keywords3(keywords,
                                         keywords_val->data,
-                                        rev_str, url, changed_date,
+                                        rev_str, url, root_url, changed_date,
                                         author, result_pool));
     }
 
