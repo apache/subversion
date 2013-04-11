@@ -10496,15 +10496,15 @@ hotcopy_io_dir_file_copy(const char *src_path,
 
   /* Does the destination already exist? If not, we must copy it. */
   dst_target = svn_dirent_join(dst_path, file, scratch_pool);
-  SVN_ERR(svn_io_stat_dirent(&dst_dirent, dst_target, TRUE,
-                             scratch_pool, scratch_pool));
+  SVN_ERR(svn_io_stat_dirent2(&dst_dirent, dst_target, FALSE, TRUE,
+                              scratch_pool, scratch_pool));
   if (dst_dirent->kind != svn_node_none)
     {
       /* If the destination's stat information indicates that the file
        * is equal to the source, don't bother copying the file again. */
       src_target = svn_dirent_join(src_path, file, scratch_pool);
-      SVN_ERR(svn_io_stat_dirent(&src_dirent, src_target, FALSE,
-                                 scratch_pool, scratch_pool));
+      SVN_ERR(svn_io_stat_dirent2(&src_dirent, src_target, FALSE, FALSE,
+                                  scratch_pool, scratch_pool));
       if (src_dirent->kind == dst_dirent->kind &&
           src_dirent->special == dst_dirent->special &&
           src_dirent->filesize == dst_dirent->filesize &&

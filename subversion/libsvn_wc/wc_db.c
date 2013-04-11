@@ -6996,8 +6996,8 @@ remove_node_txn(svn_boolean_t *left_changes,
           if (err)
             break;
 
-          err = svn_io_stat_dirent(&dirent, child_abspath, TRUE,
-                                   iterpool, iterpool);
+          err = svn_io_stat_dirent2(&dirent, child_abspath, FALSE, TRUE,
+                                    iterpool, iterpool);
 
           if (err)
             break;
@@ -14638,8 +14638,8 @@ has_local_mods(svn_boolean_t *is_modified,
             {
               const svn_io_dirent2_t *dirent;
 
-              err = svn_io_stat_dirent(&dirent, node_abspath, TRUE,
-                                       iterpool, iterpool);
+              err = svn_io_stat_dirent2(&dirent, node_abspath, FALSE, TRUE,
+                                        iterpool, iterpool);
               if (err)
                 return svn_error_trace(svn_error_compose_create(
                                                     err,

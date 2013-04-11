@@ -669,7 +669,8 @@ import(const char *local_abspath,
                             pool, &root_baton));
 
   /* Import a file or a directory tree. */
-  SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, FALSE, pool, pool));
+  SVN_ERR(svn_io_stat_dirent2(&dirent, local_abspath, FALSE, FALSE,
+                              pool, pool));
 
   /* Make the intermediate directory components necessary for properly
      rooting our import source tree.  */
