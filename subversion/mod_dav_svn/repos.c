@@ -3597,7 +3597,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
             {
               apr_hash_t *kw;
               svn_revnum_t cmt_rev;
-              const char *str_cmt_rev, *str_uri;
+              const char *str_cmt_rev, *str_uri, *str_root;
               const char *cmt_date, *cmt_author;
               apr_time_t when = 0;
 
@@ -3625,9 +3625,15 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                                     ap_escape_uri(resource->pool,
                                                   resource->info->r->uri),
                                     NULL);
-              serr = svn_subst_build_keywords2(&kw, keywords->data,
-                                               str_cmt_rev, str_uri, when,
-                                               cmt_author, resource->pool);
+              str_root = apr_pstrcat(resource->pool,
+                                     resource->info->repos->base_url,
+                                     resource->info->repos->root_path,
+                                     NULL);
+                                     
+              serr = svn_subst_build_keywords3(&kw, keywords->data,
+                                               str_cmt_rev, str_uri, str_root,
+                                               when, cmt_author,
+                                               resource->pool);
               if (serr != NULL)
                 return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                             "could not perform keywords "
