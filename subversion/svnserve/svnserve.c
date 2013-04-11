@@ -669,7 +669,7 @@ int main(int argc, const char *argv[])
             apr_size_t bandwidth = (apr_size_t)apr_strtoi64(arg, NULL, 0);
 
             /* for slower clients, don't try anything fancy */
-            if (bandwidth < 1000)
+            if (bandwidth >= 1000)
               {
                 /* block other clients for at most 1 ms (at full bandwidth).
                    Note that the send buffer is 16kB anyways. */
