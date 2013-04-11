@@ -496,6 +496,7 @@ open_root_internal(const char *path,
 
 struct edit_baton
 {
+  const char *repos_root_url;
   const char *root_path;
   const char *root_url;
   svn_boolean_t force;
@@ -664,7 +665,7 @@ add_file(const char *path,
   fb->edit_baton = eb;
   fb->path = full_path;
   fb->url = full_url;
-  fb->repos_root_url = eb->root_url;
+  fb->repos_root_url = eb->repos_root_url;
   fb->pool = pool;
 
   *baton = fb;
@@ -1016,9 +1017,10 @@ add_file_ev2(void *baton,
             }
 
           if (keywords_val)
-            SVN_ERR(svn_subst_build_keywords2(&final_kw, keywords_val->data,
-                                              revision, full_url, date,
-                                              author, scratch_pool));
+            SVN_ERR(svn_subst_build_keywords3(&final_kw, keywords_val->data,
+                                              revision, full_url,
+                                              eb->repos_root_url,
+                                              date, author, scratch_pool));
 
           /* Writing through a translated stream is more efficient than
              reading through one, so we wrap TMP_STREAM and not CONTENTS. */
@@ -1251,6 +1253,7 @@ export_file(const char *from_path_or_url,
   fb->path = eb->root_path;
   fb->url = eb->root_url;
   fb->pool = scratch_pool;
+  fb->repos_root_url = eb->repos_root_url;
 
   /* Copied from apply_textdelta(). */
   SVN_ERR(svn_stream_open_unique(&fb->tmp_stream, &fb->tmppath,
@@ -1346,15 +1349,12 @@ export_directory(const char *from_path_or_url,
 
   if (! ignore_externals && depth == svn_depth_infinity)
     {
-      const char *repos_root_url;
       const char *to_abspath;
 
-      SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url,
-                                     scratch_pool));
       SVN_ERR(svn_dirent_get_absolute(&to_abspath, to_path, scratch_pool));
       SVN_ERR(svn_client__export_externals(eb->externals,
                                            from_path_or_url,
-                                           to_abspath, repos_root_url,
+                                           to_abspath, eb->repos_root_url,
                                            depth, native_eol,
                                            ignore_keywords,
                                            ctx, scratch_pool));
@@ -1408,6 +1408,7 @@ svn_client_export5(svn_revnum_t *result_rev,
                                                 peg_revision,
                                                 revision, ctx, pool));
 
+      SVN_ERR(svn_ra_get_repos_root2(ra_session, &eb->repos_root_url, pool));
       eb->root_path = to_path;
       eb->root_url = loc->url;
       eb->force = overwrite;
