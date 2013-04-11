@@ -249,6 +249,7 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   apr_array_header_t *targets;
   const char *source, *target;
   svn_opt_revision_t src_peg_revision, tgt_peg_revision;
+  svn_opt_revision_t *src_start_revision, *src_end_revision;
   /* Default to depth empty. */
   svn_depth_t depth = (opt_state->depth == svn_depth_unknown)
                       ? svn_depth_empty : opt_state->depth;
@@ -301,13 +302,19 @@ svn_cl__mergeinfo(apr_getopt_t *os,
                                                     ctx, pool),
             _("Source and target must be different but related branches"));
 
+  src_start_revision = &(opt_state->start_revision);
+  if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
+    src_end_revision = src_start_revision;
+  else
+    src_end_revision = &(opt_state->end_revision);
+  
   /* Do the real work, depending on the requested data flavor. */
   if (opt_state->show_revs == svn_cl__show_revs_merged)
     {
       SVN_ERR(svn_client_mergeinfo_log2(TRUE, target, &tgt_peg_revision,
                                         source, &src_peg_revision,
-                                        &(opt_state->start_revision),
-                                        &(opt_state->end_revision),
+                                        src_start_revision,
+                                        src_end_revision,
                                         print_log_rev, NULL,
                                         TRUE, depth, NULL, ctx,
                                         pool));
@@ -316,8 +323,8 @@ svn_cl__mergeinfo(apr_getopt_t *os,
     {
       SVN_ERR(svn_client_mergeinfo_log2(FALSE, target, &tgt_peg_revision,
                                         source, &src_peg_revision,
-                                        &(opt_state->start_revision),
-                                        &(opt_state->end_revision),
+                                        src_start_revision,
+                                        src_end_revision,
                                         print_log_rev, NULL,
                                         TRUE, depth, NULL, ctx,
                                         pool));

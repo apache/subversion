@@ -1706,9 +1706,12 @@ svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
         (source_end_revision->kind == svn_opt_revision_date) ||
         (source_end_revision->kind == svn_opt_revision_head)))
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
+  if ((source_end_revision->kind != svn_opt_revision_unspecified)
+      && (source_start_revision->kind == svn_opt_revision_unspecified))
+    return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
   if ((source_end_revision->kind == svn_opt_revision_unspecified)
       && (source_start_revision->kind != svn_opt_revision_unspecified))
-    source_end_revision = source_start_revision;
+    return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
 
   /* We need the union of TARGET_PATH_OR_URL@TARGET_PEG_REVISION's mergeinfo
      and MERGE_SOURCE_URL's history.  It's not enough to do path
