@@ -924,9 +924,10 @@ def export_custom_keywords(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  ### Could do with some python to handle SVN_KEYWORD_MAX_LEN here
-  alpha_content ='[$Qq: %s $ $Pp: %s $]\n' % (sbox.repo_url,
-                                              sbox.repo_url + '/A/B/E/alpha')
+  # 248=SVN_KEYWORD_MAX_LEN-7 where 7 is '$', 'Q', 'q', ':', ' ', ' ', '$'
+  alpha_content = ('[$Qq: %s $ $Pp: %s $]\n'
+                   % (sbox.repo_url[:248],
+                      (sbox.repo_url + '/A/B/E/alpha')[:248]))
 
   sbox.simple_append('A/B/E/alpha', '[$Qq$ $Pp$]\n', truncate=True)
   sbox.simple_propset('svn:keywords', 'Qq=%R Pp=%u', 'A/B/E/alpha')
