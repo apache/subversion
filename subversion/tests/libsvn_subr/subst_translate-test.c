@@ -348,12 +348,13 @@ test_one_long_keyword(const char *keyword,
 {
   svn_string_t *src_string;
   svn_stream_t *src_stream, *dst_stream;
-  svn_stringbuf_t *dst_stringbuf;
+  svn_stringbuf_t *dst_stringbuf, *src_stringbuf;
   apr_hash_t *keywords = apr_hash_make(pool);
   svn_string_t *expanded = svn_string_create("abcdefg", pool);
 
   svn_hash_sets(keywords, keyword, expanded);
 
+  /* Expand */
   src_string = svn_string_createf(pool, "$%s$", keyword);
   src_stream = svn_stream_from_string(src_string, pool);
   dst_stringbuf = svn_stringbuf_create_empty(pool);
@@ -363,6 +364,17 @@ test_one_long_keyword(const char *keyword,
   SVN_ERR(svn_stream_copy3(src_stream, dst_stream, NULL, NULL, pool));
 
   SVN_TEST_STRING_ASSERT(dst_stringbuf->data, expected);
+
+  /* Unexpand */
+  src_stringbuf = dst_stringbuf;
+  src_stream = svn_stream_from_stringbuf(src_stringbuf, pool);
+  dst_stringbuf = svn_stringbuf_create_empty(pool);
+  dst_stream = svn_stream_from_stringbuf(dst_stringbuf, pool);
+  dst_stream = svn_subst_stream_translated(dst_stream, NULL, FALSE, keywords,
+                                           FALSE, pool);
+  SVN_ERR(svn_stream_copy3(src_stream, dst_stream, NULL, NULL, pool));
+
+  SVN_TEST_STRING_ASSERT(dst_stringbuf->data, src_string->data);
 
   return SVN_NO_ERROR;
 }
