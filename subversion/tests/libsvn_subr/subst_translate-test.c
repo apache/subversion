@@ -496,7 +496,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_subst_translate_cstring2()"),
     SVN_TEST_PASS2(test_svn_subst_build_keywords3,
                    "test svn_subst_build_keywords3()"),
-    SVN_TEST_XFAIL2(test_svn_subst_truncated_keywords,
+    SVN_TEST_PASS2(test_svn_subst_truncated_keywords,
                    "test truncated keywords (issue 4349)"),
     SVN_TEST_XFAIL2(test_svn_subst_long_keywords,
                    "test long keywords (issue 4350)"),
