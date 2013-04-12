@@ -1,5 +1,30 @@
+Version 1.9.0
+(?? ??? 20??, from /branches/1.9.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.9.0
+
+ User-visible changes:
+  - General:
+
+  - Major new features:
+
+  - Minor new features and improvements:
+
+  - Client-side bugfixes:
+
+  - Server-side bugfixes:
+
+  - Other tool improvements and bugfixes:
+
+ Developer-visible changes:
+  - General:
+
+  - API changes:
+
+  - Bindings:
+
+
 Version 1.8.0
-(?? ??? 2011, from /branches/1.8.x)
+(?? ??? 2013, from /branches/1.8.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
  User-visible changes:
