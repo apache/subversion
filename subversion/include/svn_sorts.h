@@ -264,6 +264,13 @@ void *
 svn__priority_queue_peek(svn__priority_queue_t *queue);
 
 /**
+ * Notify the @a queue after modifying the first item as returned by
+ * #svn__priority_queue_peek.
+ */
+void
+svn__priority_queue_update(svn__priority_queue_t *queue);
+
+/**
  * Remove the first element from the @a queue.  This is a no-op for empty
  * queues.
  */

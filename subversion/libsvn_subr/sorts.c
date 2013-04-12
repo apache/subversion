@@ -423,6 +423,12 @@ svn__priority_queue_peek(svn__priority_queue_t *queue)
 }
 
 void
+svn__priority_queue_update(svn__priority_queue_t *queue)
+{
+  heap_bubble_up(queue, 0);
+}
+
+void
 svn__priority_queue_pop(svn__priority_queue_t *queue)
 {
   if (queue->elements->nelts)
