@@ -77,6 +77,10 @@ svn_strerror(apr_status_t statcode,
  *
  * An error number may be recognised @em incorrectly if the @c apr_status_t
  * value originates in another library (such as libserf) which also uses APR.
+ * (This is a theoretical concern only; the @c apr_err member of #svn_error_t
+ * should never contain a "foreign" @c apr_status_t value, and
+ * in any case Subversion and Serf use non-overlapping subsets of the
+ * @c APR_OS_START_USERERR range.)
  *
  * Support for error codes returned by APR itself (i.e., not in the
  * @c APR_OS_START_USERERR range, as defined in apr_errno.h) may be implemented
