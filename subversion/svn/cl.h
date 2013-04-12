@@ -809,6 +809,16 @@ svn_cl__propset_print_binary_mime_type_warning(apr_array_header_t *targets,
                                                const svn_string_t *propval,
                                                apr_pool_t *scratch_pool);
 
+/* A wrapper around the deprecated svn_client_merge_reintegrate. */
+svn_error_t *
+svn_cl__deprecated_merge_reintegrate(const char *source_path_or_url,
+                                     const svn_opt_revision_t *src_peg_revision,
+                                     const char *target_wcpath,
+                                     svn_boolean_t dry_run,
+                                     const apr_array_header_t *merge_options,
+                                     svn_client_ctx_t *ctx,
+                                     apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
