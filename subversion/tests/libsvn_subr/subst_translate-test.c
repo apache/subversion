@@ -499,6 +499,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_XFAIL2(test_svn_subst_truncated_keywords,
                    "test truncated keywords (issue 4349)"),
     SVN_TEST_XFAIL2(test_svn_subst_long_keywords,
-                   "test long keywords"),
+                   "test long keywords (issue 4350)"),
     SVN_TEST_NULL
   };
