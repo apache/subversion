@@ -494,26 +494,6 @@ svn_repos_has_capability(svn_repos_t *repos,
                          const char *capability,
                          apr_pool_t *pool);
 
-#ifdef SVN_FS_INFO
-/**
- * Return a set capabilities supported by the running Subversion library and by
- * @a repos.  (Capabilities supported by this version of Subversion but not by
- * @a repos are not listed.  This may happen when svn_repos_upgrade2() has not
- * been called after a software upgrade.)
- *
- * The set is represented as a hash whose keys are the set members.  The values
- * are not defined.
- *
- * @see svn_repos_info()
- *
- * @since New in 1.8.
- */
-svn_error_t *
-svn_repos_capabilities(apr_hash_t **capabilities,
-                       svn_repos_t *repos,
-                       apr_pool_t *result_pool,
-                       apr_pool_t *scratch_pool);
-#endif /* SVN_FS_INFO */
 /** @} */
 
 /**
@@ -2487,29 +2467,6 @@ svn_repos_node_editor(const svn_delta_editor_t **editor,
  */
 svn_repos_node_t *
 svn_repos_node_from_baton(void *edit_baton);
-
-#ifdef SVN_FS_INFO
-/**
- * Return repository format information for @a repos.
- *
- * Set @a *repos_format to the repository format number of @a repos, which is
- * an integer that increases when incompatible changes are made (such as
- * by #svn_repos_upgrade).
- *
- * Set @a *supports_version to the version number of the minimum Subversion GA
- * release that can read and write @a repos.
- *
- * @see svn_fs_info_format()
- *
- * @since New in 1.8.
- */
-svn_error_t *
-svn_repos_info_format(int *repos_format,
-                      svn_version_t **supports_version,
-                      svn_repos_t *repos,
-                      apr_pool_t *result_pool,
-                      apr_pool_t *scratch_pool);
-#endif /* SVN_FS_INFO */
 
 /** @} */
 

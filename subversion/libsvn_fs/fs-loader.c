@@ -1306,31 +1306,6 @@ svn_fs_youngest_rev(svn_revnum_t *youngest_p, svn_fs_t *fs, apr_pool_t *pool)
   return svn_error_trace(fs->vtable->youngest_rev(youngest_p, fs, pool));
 }
 
-#ifdef SVN_FS_INFO
-svn_error_t *
-svn_fs_info_format(int *fs_format,
-                   svn_version_t **supports_version,
-                   svn_fs_t *fs,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool)
-{
-  return svn_error_trace(fs->vtable->info_format(fs_format, supports_version,
-                                                 fs,
-                                                 result_pool, scratch_pool));
-}
-
-svn_error_t *
-svn_fs_info_config_files(apr_array_header_t **files,
-                         svn_fs_t *fs,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
-{
-  return svn_error_trace(fs->vtable->info_config_files(files, fs,
-                                                       result_pool,
-                                                       scratch_pool));
-}
-#endif
-
 svn_error_t *
 svn_fs_deltify_revision(svn_fs_t *fs, svn_revnum_t revision, apr_pool_t *pool)
 {
@@ -1615,26 +1590,3 @@ svn_fs_version(void)
 {
   SVN_VERSION_BODY;
 }
-
-
-#ifdef SVN_FS_INFO
-/** info **/
-svn_error_t *
-svn_fs_info(const svn_fs_info_t **info,
-            svn_fs_t *fs,
-            apr_pool_t *result_pool,
-            apr_pool_t *scratch_pool)
-{
-  SVN__NOT_IMPLEMENTED();
-}
-
-svn_fs_info_t *
-svn_fs_info_dup(const svn_fs_info_t *info,
-                apr_pool_t *result_pool)
-{
-  /* Not implemented. */
-  SVN_ERR_MALFUNCTION_NO_RETURN();
-  return NULL;
-}
-#endif
-
