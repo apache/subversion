@@ -1,4 +1,4 @@
-#!/usr/bin/env zsh
+#!/bin/sh
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -18,7 +18,7 @@
 # under the License.
 
  for ext in c h cpp java py pl rb hpp cmd bat; do
-   for i in ./**/*.$ext; do
-     perl -pi -e 's/[ \t]*$//' "$i" # don't use \t to not strip ^L pagebreaks
-   done                                                              
+   find . -name "*.$ext" -exec \
+     perl -pi -e 's/[ \t]*$//' {} + ;
+     # don't use \t to not strip ^L pagebreaks
  done                         
