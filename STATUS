@@ -25,6 +25,20 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1467440, r1467450
+   Unclutter maintainer-mode stack traces.
+   Justification:
+     Code was in flux when the branch was cut.  Maintainer sanity.
+   Votes:
+     +1: danielsh
+
+ * rxxx
+   xxx
+   Justification:
+     xxx
+   Votes:
+     +1: xxx
+
 Veto-blocked changes:
 =====================
 
