@@ -12014,7 +12014,18 @@ operative_rev_receiver(void *baton,
   *operative_rev = log_entry->revision;
 
   /* We've found the youngest merged or oldest eligible revision, so
-     we're done. */
+     we're done...
+
+     ...but wait, shouldn't we care if LOG_ENTRY->NON_INHERITABLE is
+     true?  Because if it is, then LOG_ENTRY->REVISION is only
+     partially merged/elgibile!  And our only caller,
+     find_last_merged_location (via short_circuit_mergeinfo_log) is
+     interested in *fully* merged revisions.  That's all true, but if
+     find_last_merged_location() finds the youngest merged revision it
+     will also check for the oldest eligible revision.  So in the case
+     the youngest merged rev is non-inheritable, the *same* non-inheritable
+     rev will be found as the oldest eligible rev -- and
+     find_last_merged_location() handles that situation. */
   return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
 }
 
