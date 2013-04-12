@@ -450,6 +450,11 @@ translate_keyword_subst(char *buf,
   if (*len < keyword_len + 2)
     return FALSE;
 
+  /* Need at least space for two $'s, two spaces and a colon, and that
+     leaves zero space for the value itself. */
+  if (keyword_len > SVN_KEYWORD_MAX_LEN - 5)
+    return FALSE;
+
   /* The keyword needs to match what we're looking for. */
   if (strncmp(buf + 1, keyword, keyword_len))
     return FALSE;
