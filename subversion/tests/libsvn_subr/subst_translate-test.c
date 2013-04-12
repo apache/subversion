@@ -341,6 +341,148 @@ test_svn_subst_truncated_keywords(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_one_long_keyword(const char *keyword,
+                      const char *expected,
+                      apr_pool_t *pool)
+{
+  svn_string_t *src_string;
+  svn_stream_t *src_stream, *dst_stream;
+  svn_stringbuf_t *dst_stringbuf;
+  apr_hash_t *keywords = apr_hash_make(pool);
+  svn_string_t *expanded = svn_string_create("abcdefg", pool);
+
+  svn_hash_sets(keywords, keyword, expanded);
+
+  src_string = svn_string_createf(pool, "$%s$", keyword);
+  src_stream = svn_stream_from_string(src_string, pool);
+  dst_stringbuf = svn_stringbuf_create_empty(pool);
+  dst_stream = svn_stream_from_stringbuf(dst_stringbuf, pool);
+  dst_stream = svn_subst_stream_translated(dst_stream, NULL, FALSE, keywords,
+                                           TRUE, pool);
+  SVN_ERR(svn_stream_copy3(src_stream, dst_stream, NULL, NULL, pool));
+
+  SVN_TEST_STRING_ASSERT(dst_stringbuf->data, expected);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_svn_subst_long_keywords(apr_pool_t *pool)
+{
+  /* The longest keyword that can be expanded to a value: there is
+     space for one character in the expanded value. */
+  const char keyword_p1[]
+    = "Q"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "012345678901234567890123456789012345678901234567";
+
+  /* The longest keyword that can be expanded: the value is empty. */ 
+  const char keyword_z[]
+    = "Q"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "0123456789012345678901234567890123456789012345678";
+
+  /* One more than the longest keyword that can be expanded. */
+  const char keyword_m1[]
+    = "Q"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789";
+
+  /* Two more than the longest keyword that can be expanded. */
+  const char keyword_m2[]
+    = "Q"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "0";
+
+  /* Three more than the longest keyword that can be expanded. */
+  const char keyword_m3[]
+    = "Q"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01";
+
+  /* Four more than the longest keyword that can be expanded. */
+  const char keyword_m4[]
+    = "Q"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "012";
+
+  /* Five more than the longest keyword that can be expanded. */
+  const char keyword_m5[]
+    = "Q"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "0123";
+
+  /* Six more than the longest keyword that can be expanded. */
+  const char keyword_m6[]
+    = "Q"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234";
+
+  SVN_ERR(test_one_long_keyword(keyword_p1,
+                                apr_psprintf(pool, "$%s: a $", keyword_p1),
+                                pool));
+
+  SVN_ERR(test_one_long_keyword(keyword_z,
+                                apr_psprintf(pool, "$%s:  $", keyword_z),
+                                pool));
+
+  SVN_ERR(test_one_long_keyword(keyword_m1,
+                                apr_psprintf(pool, "$%s$", keyword_m1),
+                                pool));
+
+  SVN_ERR(test_one_long_keyword(keyword_m2,
+                                apr_psprintf(pool, "$%s$", keyword_m2),
+                                pool));
+
+  SVN_ERR(test_one_long_keyword(keyword_m3,
+                                apr_psprintf(pool, "$%s$", keyword_m3),
+                                pool));
+
+  SVN_ERR(test_one_long_keyword(keyword_m4,
+                                apr_psprintf(pool, "$%s$", keyword_m4),
+                                pool));
+
+  SVN_ERR(test_one_long_keyword(keyword_m5,
+                                apr_psprintf(pool, "$%s$", keyword_m5),
+                                pool));
+
+  SVN_ERR(test_one_long_keyword(keyword_m6,
+                                apr_psprintf(pool, "$%s$", keyword_m6),
+                                pool));
+
+  return SVN_NO_ERROR;
+}
+
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
@@ -356,5 +498,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_subst_build_keywords3()"),
     SVN_TEST_XFAIL2(test_svn_subst_truncated_keywords,
                    "test truncated keywords (issue 4349)"),
+    SVN_TEST_XFAIL2(test_svn_subst_long_keywords,
+                   "test long keywords"),
     SVN_TEST_NULL
   };
