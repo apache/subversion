@@ -1804,6 +1804,28 @@ get_by_extensions(fs_fs_t *fs,
   return result;
 }
 
+/* Add all extension_info_t* entries of TO_ADD not already in TARGET to
+ * TARGET.
+ */
+static void
+merge_by_extension(apr_array_header_t *target,
+                   apr_array_header_t *to_add)
+{
+  int i, k, count;
+
+  count = target->nelts;
+  for (i = 0; i < to_add->nelts; ++i)
+    {
+      extension_info_t *info = APR_ARRAY_IDX(to_add, i, extension_info_t *);
+      for (k = 0; k < count; ++k)
+        if (info == APR_ARRAY_IDX(target, k, extension_info_t *))
+          break;
+
+      if (k == count)
+        APR_ARRAY_PUSH(target, extension_info_t*) = info;
+    }
+}
+
 /* Print the (up to) 16 extensions in FS with the most changes. 
  * Use POOL for allocations.
  */
@@ -1899,6 +1921,9 @@ print_histograms_by_extension(fs_fs_t *fs,
 {
   apr_array_header_t *data = get_by_extensions(fs, compare_count, pool);
   int i;
+
+  merge_by_extension(data, get_by_extensions(fs, compare_node_size, pool));
+  merge_by_extension(data, get_by_extensions(fs, compare_rep_size, pool));
 
   for (i = 0; i < data->nelts; ++i)
     {
