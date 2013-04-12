@@ -79,8 +79,8 @@ svn_strerror(apr_status_t statcode,
  * value originates in another library (such as libserf) which also uses APR.
  *
  * Support for error codes returned by APR itself (i.e., not in the
- * @c APR_OS_START_USERERR, as defined in apr_errno.h) may be implemented in
- * the future.
+ * @c APR_OS_START_USERERR range, as defined in apr_errno.h) may be implemented
+ * in the future.
  *
  * @note In rare cases, a single numeric code has more than one symbolic name.
  * (For example, #SVN_ERR_WC_NOT_DIRECTORY and #SVN_ERR_WC_NOT_WORKING_COPY).
