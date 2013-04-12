@@ -251,6 +251,30 @@
 
 %ignore svn_opt_args_to_target_array;
 
+/* svn_cmdline.h */
+%ignore svn_cmdline_auth_plaintext_passphrase_prompt;
+%ignore svn_cmdline_auth_plaintext_prompt;
+%ignore svn_cmdline_auth_simple_prompt;
+%ignore svn_cmdline_auth_ssl_client_cert_prompt;
+%ignore svn_cmdline_auth_ssl_client_cert_pw_prompt;
+%ignore svn_cmdline_auth_ssl_server_trust_prompt;
+%ignore svn_cmdline_auth_username_prompt;
+%ignore svn_cmdline_cstring_from_utf8;
+%ignore svn_cmdline_cstring_from_utf8_fuzzy;
+%ignore svn_cmdline_cstring_to_utf8;
+%ignore svn_cmdline_fflush;
+%ignore svn_cmdline_fprintf;
+%ignore svn_cmdline_fputs;
+%ignore svn_cmdline_handle_exit_error;
+%ignore svn_cmdline_output_encoding;
+%ignore svn_cmdline_path_local_style_from_utf8;
+%ignore svn_cmdline_printf;
+%ignore svn_cmdline_prompt_baton2_t;
+%ignore svn_cmdline_prompt_baton_t;
+%ignore svn_cmdline_prompt_user2;
+%ignore svn_cmdline_prompt_user;
+%ignore svn_cmdline_setup_auth_baton;
+
 /* Ugliness because the constants are typedefed and SWIG ignores them
    as a result. */
 %constant svn_revnum_t SWIG_SVN_INVALID_REVNUM = -1;
@@ -331,19 +355,22 @@
 };
 #endif
 
-
 /* -----------------------------------------------------------------------
-   handle the default value of svn_config_get().and the
-   config directory of svn_config_read_auth_data() and
-   svn_config_write_auth_data().
+   allowable null values
 */
 %apply const char *MAY_BE_NULL {
+    /* svn_config_get */
     const char *default_value,
-    const char *config_dir,
+    /* svn_config_read_auth_data */
+    const char *config_dir, 
+    /* svn_diff_file_output_merge */
     const char *conflict_original,
     const char *conflict_modified,
     const char *conflict_latest,
-    const char *conflict_separator
+    const char *conflict_separator,
+    /* svn_cmdline_create_auth_baton */
+    const char *username,
+    const char *password
 };
 
 /* -----------------------------------------------------------------------
@@ -787,6 +814,7 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 #pragma SWIG nowarn=+305
 
 %include svn_opt_h.swg
+%include svn_cmdline_h.swg
 %include svn_auth_h.swg
 %include svn_config_h.swg
 %include svn_utf_h.swg
