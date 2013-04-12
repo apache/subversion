@@ -2511,9 +2511,9 @@ block_read(void **result,
            apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  apr_off_t offset = 0;
+  apr_off_t offset, wanted_offset = 0;
   apr_off_t block_start = 0;
-  apr_uint32_t sub_item = 0;
+  apr_uint32_t wanted_sub_item = 0;
   apr_array_header_t *entries;
   int run_count = 0;
   int i;
@@ -2526,8 +2526,10 @@ block_read(void **result,
   
   /* index lookup: find the OFFSET of the item we *must* read plus (in the
    * "do-while" block) the list of items in the same block. */
-  SVN_ERR(svn_fs_fs__item_offset(&offset, &sub_item, fs, revision, NULL,
-                                 item_index, iterpool));
+  SVN_ERR(svn_fs_fs__item_offset(&wanted_offset, &wanted_sub_item, fs,
+                                 revision, NULL, item_index, iterpool));
+
+  offset = wanted_offset;
   do
     {
       SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, fs, revision, offset,
@@ -2547,9 +2549,11 @@ block_read(void **result,
           if (entry->type == SVN_FS_FS__ITEM_TYPE_UNUSED)
             continue;
 
-          is_result = result && entry->item_count
-                             && entry->items[0].revision == revision
-                             && entry->items[0].number == item_index;
+          is_result =    result
+                      && entry->offset == wanted_offset
+                      && entry->item_count >= wanted_sub_item
+                      && entry->items[wanted_sub_item].revision == revision
+                      && entry->items[wanted_sub_item].number == item_index;
 
           /* select the pool that we want the item to be allocated in */
           pool = is_result ? result_pool : iterpool;
@@ -2595,9 +2599,9 @@ block_read(void **result,
                   case SVN_FS_FS__ITEM_TYPE_CHANGES_CONT:
                     SVN_ERR(block_read_changes_container
                                             ((apr_array_header_t **)&item,
-                                              fs, revision_file,  stream,
-                                              entry, sub_item, is_result,
-                                              pool));
+                                             fs, revision_file,  stream,
+                                             entry, wanted_sub_item,
+                                             is_result, pool));
                     break;
 
                   default:
