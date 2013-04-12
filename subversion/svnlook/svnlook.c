@@ -962,7 +962,7 @@ print_diff_tree(svn_stream_t *out_stream,
               if (diff_cmd_argc)
                 {
                   int i;
-                  diff_cmd_argv = apr_palloc(pool, 
+                  diff_cmd_argv = apr_palloc(pool,
                                              diff_cmd_argc * sizeof(char *));
                   for (i = 0; i < diff_cmd_argc; i++)
                     SVN_ERR(svn_utf_cstring_to_utf8(&diff_cmd_argv[i],

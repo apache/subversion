@@ -894,7 +894,7 @@ delete_node_property(void *node_baton, const char *name)
                                "are not enabled for node '%s' in original "
                                "revision %ld"),
                              nb->node_path, rb->rev_orig);
- 
+
   nb->has_props = TRUE;
   write_propdel_to_stringbuf(&(nb->props), name);
 

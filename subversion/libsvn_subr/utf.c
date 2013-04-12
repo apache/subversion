@@ -945,7 +945,7 @@ svn_utf_cstring_from_utf8(const char **dest,
   SVN_ERR(get_uton_xlate_handle_node(&node, pool));
   err = convert_cstring(dest, src, node, pool);
   err = svn_error_compose_create(
-          err, 
+          err,
           put_xlate_handle_node(node, SVN_UTF_UTON_XLATE_HANDLE, pool));
 
   return err;

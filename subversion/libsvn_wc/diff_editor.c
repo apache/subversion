@@ -82,7 +82,7 @@
 
 /* Overall crawler editor baton.
  */
-struct edit_baton_t 
+struct edit_baton_t
 {
   /* A wc db. */
   svn_wc__db_t *db;

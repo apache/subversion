@@ -1098,7 +1098,7 @@ svn_cl__propset_print_binary_mime_type_warning(apr_array_header_t *targets,
                     "operations will stop working on this file\n"),
                     canon_propval->data,
                     svn_dirent_local_style(local_abspath, iterpool)));
-                    
+
             }
         }
       svn_pool_destroy(iterpool);

@@ -355,7 +355,7 @@ diff_status_callback(void *baton,
                                                    SVN_INVALID_REVNUM,
                                                    eb->changelist_hash,
                                                    eb->processor,
-                                                   eb->cur 
+                                                   eb->cur
                                                         ? eb->cur->baton
                                                         : NULL,
                                                    FALSE,

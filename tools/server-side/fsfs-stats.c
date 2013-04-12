@@ -101,11 +101,11 @@ typedef struct representation_t
 
   /* classification of the representation. values of rep_kind_t */
   char kind;
-  
+
   /* the source content has a PLAIN header, so we may simply copy the
    * source content into the target */
   char is_plain;
-  
+
 } representation_t;
 
 /* Represents a single revision.
@@ -142,7 +142,7 @@ typedef struct revision_info_t
 
   /* total size of file noderevs (i.e. the structs - not the rep) */
   apr_size_t file_noderev_size;
-  
+
   /* all representation_t of this revision (in no particular order),
    * i.e. those that point back to this struct */
   apr_array_header_t *representations;
@@ -202,7 +202,7 @@ typedef struct histogram_line_t
   apr_int64_t sum;
 } histogram_line_t;
 
-/* A histogram of 64 bit integer values. 
+/* A histogram of 64 bit integer values.
  */
 typedef struct histogram_t
 {
@@ -214,17 +214,17 @@ typedef struct histogram_t
   histogram_line_t lines[64];
 } histogram_t;
 
-/* Information we collect per file ending. 
+/* Information we collect per file ending.
  */
 typedef struct extension_info_t
 {
   /* file extension, including leading "."
    * "(none)" in the container for files w/o extension. */
   const char *extension;
-  
+
   /* histogram of representation sizes */
   histogram_t rep_histogram;
-  
+
   /* histogram of sizes of changed files */
   histogram_t node_histogram;
 } extension_info_t;
@@ -387,7 +387,7 @@ get_content(svn_stringbuf_t **content,
                                    large_buffer_size),
                         large_buffer_size);
 #endif
-    
+
   SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
   SVN_ERR(svn_io_file_read_full2(file, (*content)->data, len,
                                  NULL, NULL, pool));
@@ -444,7 +444,7 @@ initialize_largest_changes(fs_fs_t *fs,
                            apr_pool_t *pool)
 {
   apr_size_t i;
-  
+
   fs->largest_changes = apr_pcalloc(pool, sizeof(*fs->largest_changes));
   fs->largest_changes->count = count;
   fs->largest_changes->min_size = 1;
@@ -640,12 +640,12 @@ read_revision_header(apr_size_t *changes,
   char *space;
   apr_uint64_t val;
   apr_size_t len;
-  
+
   /* Read in this last block, from which we will identify the last line. */
   len = sizeof(buf);
   if (len > file_content->len)
     len = file_content->len;
-  
+
   memcpy(buf, file_content->data + file_content->len - len, len);
 
   /* The last byte should be a newline. */
@@ -775,7 +775,7 @@ read_number(svn_revnum_t *result, const char *path, apr_pool_t *pool)
 {
   svn_stringbuf_t *content;
   apr_uint64_t number;
-  
+
   SVN_ERR(svn_stringbuf_from_file2(&content, path, pool));
 
   content->data[content->len-1] = 0;
@@ -869,7 +869,7 @@ find_representation(int *idx,
   /* not found -> no result */
   if (info == NULL)
     return NULL;
-  
+
   assert(revision == info->revision);
 
   /* look for the representation */
@@ -952,7 +952,7 @@ read_rep_base(representation_t **representation,
 /* Parse the representation reference (text: or props:) in VALUE, look
  * it up in FS and return it in *REPRESENTATION.  To be able to parse the
  * base rep, we pass the FILE_CONTENT as well.
- * 
+ *
  * If necessary, allocate the result in POOL; use SCRATCH_POOL for temp.
  * allocations.
  */
@@ -989,7 +989,7 @@ parse_representation(representation_t **representation,
        */
       apr_size_t header_size;
       svn_boolean_t is_plain;
-      
+
       result = apr_pcalloc(pool, sizeof(*result));
       result->revision = revision;
       result->expanded_size = (apr_size_t)(expanded_size ? expanded_size : size);
@@ -1004,7 +1004,7 @@ parse_representation(representation_t **representation,
       result->is_plain = is_plain;
       svn_sort__array_insert(&result, revision_info->representations, idx);
     }
-    
+
   *representation = result;
 
   return SVN_NO_ERROR;
@@ -1136,7 +1136,7 @@ get_combined_window(svn_stringbuf_t **content,
   SVN_ERR(get_cached_window(content, fs, representation, pool));
   if (*content)
     return SVN_NO_ERROR;
-  
+
   /* read the delta windows for this representation */
   sub_pool = svn_pool_create(pool);
   iter_pool = svn_pool_create(pool);
@@ -1152,7 +1152,7 @@ get_combined_window(svn_stringbuf_t **content,
   /* apply deltas */
   result = svn_stringbuf_create_empty(pool);
   source = base_content->data;
-  
+
   for (i = 0; i < windows->nelts; ++i)
     {
       svn_txdelta_window_t *window
@@ -1173,7 +1173,7 @@ get_combined_window(svn_stringbuf_t **content,
   /* cache result and return it */
   SVN_ERR(set_cached_window(fs, representation, result, sub_pool));
   *content = result;
-  
+
   svn_pool_destroy(iter_pool);
   svn_pool_destroy(sub_pool);
 
@@ -1225,7 +1225,7 @@ parse_dir(fs_fs_t *fs,
   /* calculate some invariants */
   revision_key = apr_psprintf(text_pool, "r%ld/", representation->revision);
   key_len = strlen(revision_key);
-  
+
   /* Parse and process all directory entries. */
   while (*current != 'E')
     {
@@ -1308,7 +1308,7 @@ read_noderev(fs_fs_t *fs,
       /* empty line -> end of noderev data */
       if (line->len == 0)
         break;
-      
+
       sep = strchr(line->data, ':');
       if (sep == NULL)
         continue;
@@ -1319,7 +1319,7 @@ read_noderev(fs_fs_t *fs,
 
       if (key.len + 2 > line->len)
         continue;
-      
+
       value.data = sep + 2;
       value.len = line->len - (key.len + 2);
 
@@ -1331,7 +1331,7 @@ read_noderev(fs_fs_t *fs,
           SVN_ERR(parse_representation(&text, fs, file_content,
                                        &value, revision_info,
                                        pool, scratch_pool));
-          
+
           /* if we are the first to use this rep, mark it as "text rep" */
           if (++text->ref_count == 1)
             text->kind = is_dir ? dir_rep : file_rep;
@@ -1357,7 +1357,7 @@ read_noderev(fs_fs_t *fs,
   if (props && props->ref_count == 1)
     add_change(fs, (apr_int64_t)props->size, (apr_int64_t)props->expanded_size,
                props->revision, path, props->kind);
-  
+
   /* if this is a directory and has not been processed, yet, read and
    * process it recursively */
   if (is_dir && text && text->ref_count == 1)
@@ -1437,7 +1437,7 @@ read_pack_file(fs_fs_t *fs,
     {
       apr_size_t root_node_offset;
       svn_stringbuf_t *rev_content;
-  
+
       /* create the revision info for the current rev */
       revision_info_t *info = apr_pcalloc(pool, sizeof(*info));
       info->representations = apr_array_make(iter_pool, 4, sizeof(representation_t*));
@@ -1452,13 +1452,13 @@ read_pack_file(fs_fs_t *fs,
                           info->offset,
                           info->end - info->offset,
                           iter_pool));
-      
+
       SVN_ERR(read_revision_header(&info->changes,
                                    &info->changes_len,
                                    &root_node_offset,
                                    rev_content,
                                    iter_pool));
-      
+
       info->change_count
         = get_change_count(rev_content->data + info->changes,
                            info->changes_len);
@@ -1467,7 +1467,7 @@ read_pack_file(fs_fs_t *fs,
 
       info->representations = apr_array_copy(pool, info->representations);
       APR_ARRAY_PUSH(fs->revisions, revision_info_t*) = info;
-      
+
       /* destroy temps */
       svn_pool_clear(iter_pool);
     }
@@ -1556,7 +1556,7 @@ read_revisions(fs_fs_t **fs,
 
   cache_config.cache_size = memsize * 1024 * 1024;
   svn_cache_config_set(&cache_config);
-  
+
   SVN_ERR(fs_open(fs, path, pool));
 
   /* create data containers and caches */
@@ -1597,7 +1597,7 @@ typedef struct rep_pack_stats_t
 
   /* total size after deltification (i.e. on disk size) */
   apr_int64_t packed_size;
-  
+
   /* total size after de-deltification (i.e. plain text size) */
   apr_int64_t expanded_size;
 
@@ -1612,13 +1612,13 @@ typedef struct representation_stats_t
 {
   /* stats over all representations */
   rep_pack_stats_t total;
-  
+
   /* stats over those representations with ref_count == 1 */
   rep_pack_stats_t uniques;
 
   /* stats over those representations with ref_count > 1 */
   rep_pack_stats_t shared;
-  
+
   /* sum of all ref_counts */
   apr_int64_t references;
 
@@ -1633,7 +1633,7 @@ typedef struct node_stats_t
 {
   /* number of noderev structs */
   apr_int64_t count;
-  
+
   /* their total size on disk (structs only) */
   apr_int64_t size;
 } node_stats_t;
@@ -1645,7 +1645,7 @@ add_rep_pack_stats(rep_pack_stats_t *stats,
                    representation_t *rep)
 {
   stats->count++;
-  
+
   stats->packed_size += rep->size;
   stats->expanded_size += rep->expanded_size;
   stats->overhead_size += rep->header_size + 7 /* ENDREP\n */;
@@ -1704,7 +1704,7 @@ print_largest_reps(largest_changes_t *changes,
            changes->changes[i]->path->data);
 }
 
-/* Print the non-zero section of HISTOGRAM to console. 
+/* Print the non-zero section of HISTOGRAM to console.
  * Use POOL for allocations.
  */
 static void
@@ -1826,7 +1826,7 @@ merge_by_extension(apr_array_header_t *target,
     }
 }
 
-/* Print the (up to) 16 extensions in FS with the most changes. 
+/* Print the (up to) 16 extensions in FS with the most changes.
  * Use POOL for allocations.
  */
 static void
@@ -2170,7 +2170,7 @@ int main(int argc, const char *argv[])
   printf("\n");
 
   print_stats(fs, pool);
-  
+
   if (svn_err)
     {
       svn_handle_error2(svn_err, stdout, FALSE, ERROR_TAG);

@@ -1834,7 +1834,7 @@ def merge_into_missing(sbox):
   })
   expected_mergeinfo_output = wc.State(F_path, {
     })
-  
+
   svntest.actions.run_and_verify_merge(F_path, '1', '2', F_url, None,
                                        expected_output,
                                        expected_mergeinfo_output,
@@ -17487,8 +17487,8 @@ def merge_source_with_replacement(sbox):
   psi_COPY_path   = sbox.ospath('A_COPY/D/H/psi')
   rho_COPY_path   = sbox.ospath('A_COPY/D/G/rho')
   omega_COPY_path = sbox.ospath('A_COPY/D/H/omega')
-  
-  # branch A@1 to A_COPY in r2, then make a few edits under A in r3-6:  
+
+  # branch A@1 to A_COPY in r2, then make a few edits under A in r3-6:
   wc_disk, wc_status = set_up_branch(sbox)
 
   # r7 Delete A, replace it with A@5, effectively reverting the change
@@ -17590,7 +17590,7 @@ def reverse_merge_with_rename(sbox):
   rho_COPY_path   = sbox.ospath('A_COPY/D/G/rho')
   omega_COPY_path = sbox.ospath('A_COPY/D/H/omega')
 
-  # branch A@1 to A_COPY in r2, then make a few edits under A in r3-6:  
+  # branch A@1 to A_COPY in r2, then make a few edits under A in r3-6:
   wc_disk, wc_status = set_up_branch(sbox)
 
   # r7 - Rename ^/A to ^/trunk.
@@ -17805,7 +17805,7 @@ def merge_with_added_subtrees_with_mergeinfo(sbox):
   #    vvvvvvvvvvvvvvvvvvvv
   #    U   A_COPY_2\C\X\Y\Z
   #    ^^^^^^^^^^^^^^^^^^^^
-  #   
+  #
   #   >svn pl -vR A_COPY_2
   #   Properties on 'A_COPY_2':
   #     svn:mergeinfo
@@ -18247,7 +18247,7 @@ def merge_properties_on_adds(sbox):
   # For fun, also check the status: 'svn status' suppresses the M from AM.
 
   # G = sbox.ospath('G')
-  # 
+  #
   # expected_status = wc.State('G', {
   #   ''           : Item(status=' M', wc_rev='2'),
   #   'pi'         : Item(status='  ', wc_rev='2'),
@@ -18792,7 +18792,7 @@ def single_editor_drive_merge_notifications(sbox):
      D_copy_path + "':\n",
      " U   " + D_copy_path + "\n",
      "--- Eliding mergeinfo from '" + D_copy_path + "':\n",
-     " U   " + D_copy_path + "\n"])     
+     " U   " + D_copy_path + "\n"])
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'merge',
                                      '-r9:2', sbox.repo_url + '/A',
                                      A_copy_path)

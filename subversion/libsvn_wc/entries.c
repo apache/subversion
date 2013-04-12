@@ -1706,7 +1706,7 @@ write_entry(struct write_baton **entry_node,
   */
 
   WRITE_ENTRY_ASSERT(parent_node || entry->schedule == svn_wc_schedule_normal);
-                                                                    
+
   WRITE_ENTRY_ASSERT(!parent_node || parent_node->base
                      || parent_node->below_work || parent_node->work);
 
@@ -2104,7 +2104,7 @@ write_entry(struct write_baton **entry_node,
       below_working_node->repos_id = work->repos_id;
 
       /* This is just guessing. If the node below would have been switched
-         or if it was updated to a different version, the guess would 
+         or if it was updated to a different version, the guess would
          fail. But we don't have better information pre wc-ng :( */
       if (work->repos_relpath)
         below_working_node->repos_relpath

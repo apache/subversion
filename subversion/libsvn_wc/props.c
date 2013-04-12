@@ -1158,7 +1158,7 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
       to_val = to_val ? svn_string_dup(to_val, result_pool) : NULL;
 
       svn_hash_sets(their_props, propname, to_val);
-      
+
 
       /* We already know that state is at least `changed', so mark
          that, but remember that we may later upgrade to `merged' or

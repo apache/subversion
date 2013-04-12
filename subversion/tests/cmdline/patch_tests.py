@@ -4656,7 +4656,7 @@ def patch_with_custom_keywords(sbox):
   svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
-    
+
 
 ########################################################################
 #Run the tests

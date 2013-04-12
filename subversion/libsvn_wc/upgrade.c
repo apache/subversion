@@ -1377,7 +1377,7 @@ svn_wc__upgrade_conflict_skel_from_raw(svn_skel_t **conflicts,
 {
   svn_skel_t *conflict_data = NULL;
   const char *wcroot_abspath;
-  
+
   SVN_ERR(svn_wc__db_get_wcroot(&wcroot_abspath, db, wri_abspath,
                                 scratch_pool, scratch_pool));
 
@@ -1608,7 +1608,7 @@ bump_to_31(void *baton,
   while (have_row)
     {
       const char *column_name = svn_sqlite__column_text(stmt, 1, NULL);
-      
+
       if (strcmp(column_name, "inherited_props") == 0)
         {
           iprops_column_exists = TRUE;

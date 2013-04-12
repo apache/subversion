@@ -520,13 +520,13 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
                                                         *varargs)
 
   def _line_contains_repos_diskpath(line):
-    # ### Note: this assumes that either svn-test-work isn't a symlink, 
+    # ### Note: this assumes that either svn-test-work isn't a symlink,
     # ### or the diskpath isn't realpath()'d somewhere on the way from
     # ### the server's configuration and the client's stderr.  We could
     # ### check for both the symlinked path and the realpath.
     return \
          os.path.join('cmdline', 'svn-test-work', 'repositories') in line \
-      or os.path.join('cmdline', 'svn-test-work', 'local_tmp', 'repos') in line 
+      or os.path.join('cmdline', 'svn-test-work', 'local_tmp', 'repos') in line
 
   for lines, name in [[stdout_lines, "stdout"], [stderr_lines, "stderr"]]:
     if is_ra_type_file() or 'svnadmin' in command or 'svnlook' in command:

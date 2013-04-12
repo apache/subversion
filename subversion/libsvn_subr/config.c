@@ -586,7 +586,7 @@ expand_option_value(svn_config_t *cfg, cfg_section_t *section,
 static cfg_section_t *
 svn_config_addsection(svn_config_t *cfg,
                       const char *section)
-{  
+{
   cfg_section_t *s;
   const char *hash_key;
 
@@ -617,7 +617,7 @@ svn_config_create_option(cfg_option_t **opt,
   o->value = apr_pstrdup(pool, value);
   o->x_value = NULL;
   o->expanded = FALSE;
-  
+
   *opt = o;
 }
 
@@ -1086,7 +1086,7 @@ svn_config_dup(svn_config_t **cfgp,
                    optkeyLength, destopt);
     }
   }
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -1113,7 +1113,7 @@ svn_config_copy_config(apr_hash_t **cfg_hash,
 
     SVN_ERR(svn_config_dup(&destconfig, srcconfig, pool));
 
-    apr_hash_set(*cfg_hash, 
+    apr_hash_set(*cfg_hash,
                  apr_pstrdup(pool, (const char*)ckey),
                  ckeyLength, destconfig);
   }

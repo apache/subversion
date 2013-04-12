@@ -270,7 +270,7 @@ static svn_error_t *writebuf_write(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     {
       if (conn->write_pos > 0)
         SVN_ERR(writebuf_flush(conn, pool));
-      
+
       return writebuf_output(conn, pool, data, len);
     }
 
@@ -1117,7 +1117,7 @@ read_command_only(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       if (item)
         {
           /* This is the word we want to read */
-          
+
           char *buf = apr_palloc(pool, 32);
           apr_size_t len = 1;
           buf[0] = c;

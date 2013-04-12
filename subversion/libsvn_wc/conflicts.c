@@ -1654,7 +1654,7 @@ eval_text_conflict_func_result(svn_skel_t **work_items,
                                           FALSE /* record_fileinfo */,
                                           result_pool, scratch_pool));
     *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
-    
+
     SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item, db, local_abspath,
                                              result_pool, scratch_pool));
     *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
@@ -2068,7 +2068,7 @@ read_prop_conflicts(apr_array_header_t *conflicts,
   apr_hash_t *conflicted_props;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
-  
+
   SVN_ERR(svn_wc__conflict_read_prop_conflict(&prop_reject_file,
                                               &my_props,
                                               &their_old_props,
@@ -2645,7 +2645,7 @@ resolve_tree_conflict_on_node(svn_skel_t **work_items,
   svn_wc_conflict_action_t action;
   svn_boolean_t did_resolve = FALSE;
 
-  SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, &action, NULL, 
+  SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, &action, NULL,
                                               db, local_abspath,
                                               conflicts,
                                               scratch_pool, scratch_pool));

@@ -378,7 +378,7 @@ init_client_context(svn_client_ctx_t **ctx_p,
      ### server will allow it, or at least try to limit all its
      ### auxiliary GETs/PROPFINDs to happening (well-ordered) on a
      ### single server connection.
-     ### 
+     ###
      ### See http://subversion.tigris.org/issues/show_bug.cgi?id=4116.
   */
   cfg_servers = svn_hash_gets(ctx->config, SVN_CONFIG_CATEGORY_SERVERS);

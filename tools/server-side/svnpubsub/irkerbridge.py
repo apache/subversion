@@ -30,7 +30,7 @@
 #   Space separated list of URLs to streams.
 #   This option should only be in the DEFAULT section, is ignored in
 #   all other sections.
-# irker=hostname:port 
+# irker=hostname:port
 #   The hostname/port combination of the irker daemon.  If port is
 #   omitted it defaults to 6659.  Irker is connected to over UDP.
 # match=What to use to decide if the commit should be sent to irker.
@@ -42,7 +42,7 @@
 #   Space separated list of URLs (any URL that Irker will accept) to
 #   send the resulting message to.  At current Irker only supports IRC.
 # template=string
-#   A string to use to format the output.  The string is a Python 
+#   A string to use to format the output.  The string is a Python
 #   string Template.  The following variables are available:
 #   $committer, $id, $date, $repository, $log, $log_firstline,
 #   $log_firstparagraph, $dirs_changed, $dirs_count, $dirs_count_s,
@@ -61,13 +61,13 @@
 # section other than the [DEFAULT] section consists of a configuration that
 # may match and send a message to irker to deliver.  All matching sections
 # will generate a message.
-# 
+#
 # Interpolation of values within the config file is allowed by including
 # %(name)s within a value.  For example I can reference the UUID of a repo
 # repeatedly by doing:
 # [DEFAULT]
 # ASF_REPO=13f79535-47bb-0310-9956-ffa450edef68
-# 
+#
 # [#commits]
 # match=%(ASF_REPO)s/
 #
@@ -143,7 +143,7 @@ class BigDoEverythingClass(object):
     if hasattr(commit, 'dirs_changed') or not hasattr(commit, 'changed'):
       return
 
-    dirs_changed = set() 
+    dirs_changed = set()
     for p in commit.changed:
       if p[-1] == '/' and commit.changed[p]['flags'][1] == 'U':
         # directory with property changes add the directory itself.
@@ -302,14 +302,14 @@ def main(args):
       logfile = os.path.abspath(options.logfile)
     else:
       parser.error('LOGFILE is required when running as a daemon')
-  
+
     if options.pidfile:
       pidfile = os.path.abspath(options.pidfile)
     else:
       parser.error('PIDFILE is required when running as a daemon')
 
 
-  config = ReloadableConfig(config_file) 
+  config = ReloadableConfig(config_file)
   bdec = BigDoEverythingClass(config, options)
 
   d = Daemon(logfile, pidfile, bdec)

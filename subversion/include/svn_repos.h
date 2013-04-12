@@ -831,7 +831,7 @@ svn_repos_post_unlock_hook(svn_repos_t *repos,
  * file in its default location within the repository disk structure.
  * If @a hooks_env_path is not absolute, it specifies a path relative
  * to the parent of the file's default location.
- * 
+ *
  * Use @a scratch_pool for temporary allocations.
  *
  * If this function is not called, or if the specified configuration
@@ -3237,7 +3237,7 @@ svn_repos_authz_read2(svn_authz_t **authz_p,
                       apr_pool_t *pool);
 
 
-/** 
+/**
  * Similar to svn_repos_authz_read2(), but with @a groups_path and @a
  * repos_root always passed as @c NULL.
  *
@@ -3261,7 +3261,7 @@ svn_repos_authz_read(svn_authz_t **authz_p,
  */
 svn_error_t *
 svn_repos_authz_parse(svn_authz_t **authz_p,
-                      svn_stream_t *stream, 
+                      svn_stream_t *stream,
                       svn_stream_t *groups_stream,
                       apr_pool_t *pool);
 

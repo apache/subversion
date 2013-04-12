@@ -281,12 +281,12 @@ extern "C" {
  */
 
 /* ##################################################################
- * 
+ *
  *    WARNING:  At least some versions of Microsoft's Web Folders
  *              WebDAV client implementation are unable to handle
  *              DAV: headers with values longer than 63 characters,
  *              so please keep these strings within that limit.
- * 
+ *
  * ##################################################################
  */
 
@@ -341,7 +341,7 @@ extern "C" {
 
 /** Presence of this in a DAV header in an OPTIONS response indicates
  * that the transmitter (in this case, the server) knows how to get
- * inherited properties. 
+ * inherited properties.
  *
  * @since New in 1.8.
  */

@@ -6015,7 +6015,7 @@ def update_edit_delete_obstruction(sbox):
     'A/D/H'     : Item(status='  ', treeconflict='U'),
     'A/D/H/chi' : Item(status='  ', treeconflict='D'),
     'A/B'       : Item(prev_status='  ', prev_treeconflict='D', # Replacement
-                       status='  ', treeconflict='A'), 
+                       status='  ', treeconflict='A'),
     'iota'      : Item(status='A ', prev_status='D '), # Replacement
   })
 
@@ -6277,7 +6277,7 @@ def update_removes_switched(sbox):
     'C'                 : Item(status='  ', wc_rev='3'),
     'mu'                : Item(status='  ', wc_rev='3'),
   })
-  
+
   # And this final update brings back the node, as it was before switching.
   svntest.actions.run_and_verify_update(wc_dir,
                                        expected_output,

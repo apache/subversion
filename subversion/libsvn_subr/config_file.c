@@ -417,7 +417,7 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
 
   err = svn_config__parse_stream(cfg, stream, result_pool, scratch_pool);
 
-  if (err != SVN_NO_ERROR) 
+  if (err != SVN_NO_ERROR)
     {
       /* Add the filename to the error stack. */
       err = svn_error_createf(err->apr_err, err,

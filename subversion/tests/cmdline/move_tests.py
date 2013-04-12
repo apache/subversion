@@ -95,14 +95,14 @@ def build_incoming_changes_file(sbox, source, dest):
   sbox.simple_propdel("foo", dest)
   sbox.simple_commit(message="Delete property on destination of moved file")
 
-  # r13 = Remove destination again (not needed for any test just cleanup). 
+  # r13 = Remove destination again (not needed for any test just cleanup).
   sbox.simple_rm(dest)
   sbox.simple_commit(message="Remove destination (cleanup)")
 
   # r14 = Add property on source of moved file.
   sbox.simple_propset("foo", "bar", source)
   sbox.simple_commit(message="Add property on source of moved file")
-  
+
   # r15 = Modify property on source of moved file.
   sbox.simple_propset("foo", "baz", source)
   sbox.simple_commit(message="Modify property on source of moved file")
@@ -141,11 +141,11 @@ def move_file_test(sbox, source, dest, move_func, test):
   source_path = sbox.ospath(source)
   dest_path = sbox.ospath(dest)
 
-  # Deal with if there's no resolves key, as in we're not going to 
+  # Deal with if there's no resolves key, as in we're not going to
   # do a resolve.
   if not 'resolves' in test or not test['resolves']:
     test['resolves'] = {None: None}
- 
+
   # Do the test for every type of resolve provided.
   for resolve_accept in test['resolves'].keys():
 
@@ -157,7 +157,7 @@ def move_file_test(sbox, source, dest, move_func, test):
     # execute the move
     move_func(test['start_rev'])
 
-    # update to end_rev, which will create a conflict 
+    # update to end_rev, which will create a conflict
     # TODO: Limit the property checks to only when we're doing something with
     # properties.
     svntest.actions.run_and_verify_update(wc_dir, test['up_output'],
@@ -177,7 +177,7 @@ def move_file_test(sbox, source, dest, move_func, test):
       if not 'output' in resolve:
         resolve['output'] = None
       if not 'error' in resolve:
-        resolve['error'] = [] 
+        resolve['error'] = []
       if not 'disk' in resolve:
         resolve['disk'] = None
       if 'revert_paths' in resolve:
@@ -197,7 +197,7 @@ def move_file_test(sbox, source, dest, move_func, test):
       if resolve['disk']:
         svntest.actions.verify_disk(wc_dir, resolve['disk'], True)
 
-    # revert to preprare for the next test 
+    # revert to preprare for the next test
     svntest.actions.run_and_verify_revert(revert_paths, '-R', wc_dir)
 
 # tests is an array of test dictionaries that move_file_test above will take
@@ -240,11 +240,11 @@ def build_simple_file_move_tests(sbox, source, dest):
   mc['output'] = svntest.verify.ExpectedOutput(
     "Resolved conflicted state of '%s'\n" % source_path, match_all=False
   )
-  mc['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev']) 
+  mc['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
   mc['status'].tweak(source, status='D ', moved_to=dest)
   mc['status'].add({dest: Item(status='A ', moved_from=source,
                                copied='+', wc_rev='-')})
-  mc['disk'] = test['up_disk'].copy() 
+  mc['disk'] = test['up_disk'].copy()
   mc['disk'].tweak(dest, contents="This is the file 'lambda'.\nmodified\n")
   # theirs-conflict doesn't work
   tc = {}
@@ -259,10 +259,10 @@ def build_simple_file_move_tests(sbox, source, dest):
       "Resolved conflicted state of '%s'\n" % source_path,
     ]
   )
-  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev']) 
+  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
   working['status'].tweak(source, status='D ')
   working['status'].add({dest: Item(status='A ', copied='+', wc_rev='-')})
-  working['disk'] = test['up_disk'] 
+  working['disk'] = test['up_disk']
   test['resolves'] = {'mine-conflict': mc, 'theirs-conflict': tc,
                       'working': working}
   test['revert_paths'] = [source_path, dest_path]
@@ -301,7 +301,7 @@ def build_simple_file_move_tests(sbox, source, dest):
     "Resolved conflicted state of '%s'\n" % source_path, match_all=False
   )
   # move is broken now
-  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev']) 
+  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
   working['status'].add({dest: Item(status='A ', copied='+', wc_rev='-')})
   working['status'].remove(source)
   working['disk'] = test['up_disk']
@@ -346,7 +346,7 @@ def build_simple_file_move_tests(sbox, source, dest):
     "Resolved conflicted state of '%s'\n" % source_path, match_all=False
   )
   # XXX: Not sure this status is really correct here
-  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev']) 
+  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
   working['status'].tweak(source, status='! ')
   working['status'].add({dest: Item(status='A ', copied='+', wc_rev='-')})
   working['disk'] = test['up_disk']
@@ -389,7 +389,7 @@ def build_simple_file_move_tests(sbox, source, dest):
     "Resolved conflicted state of '%s'\n" % dest_path, match_all=False
   )
   # working converts the move into a replacement
-  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev']) 
+  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
   working['status'].tweak(source, status='D ', moved_to=dest)
   working['status'].add({dest: Item(status='R ', moved_from=source,
                                     copied='+', wc_rev='-')})
@@ -435,7 +435,7 @@ def build_simple_file_move_tests(sbox, source, dest):
     "Resolved conflicted state of '%s'\n" % dest_path, match_all=False
   )
   # working converts the move into a replacement
-  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev']) 
+  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
   working['status'].tweak(source, status='D ', moved_to=dest)
   working['status'].add({dest: Item(status='R ', moved_from=source,
                                     copied='+', wc_rev='-')})
@@ -503,7 +503,7 @@ def build_simple_file_move_tests(sbox, source, dest):
     "Resolved conflicted state of '%s'\n" % dest_path, match_all=False
   )
   # working converts the move into a replacement
-  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev']) 
+  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
   working['status'].tweak(source, status='D ', moved_to=dest)
   working['status'].add({dest: Item(status='R ', moved_from=source,
                                     copied='+', wc_rev='-')})
@@ -547,7 +547,7 @@ def build_simple_file_move_tests(sbox, source, dest):
     "Resolved conflicted state of '%s'\n" % dest_path, match_all=False
   )
   # working converts the move into a replacement
-  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev']) 
+  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
   working['status'].tweak(source, status='D ', moved_to=dest)
   working['status'].add({dest: Item(status='R ', moved_from=source,
                                     copied='+', wc_rev='-')})
@@ -560,7 +560,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   # move and update with incoming property addition to dest (r7-10)
   test = {}
   test['start_rev'] = 7
-  test['end_rev'] = 10 
+  test['end_rev'] = 10
   test['start_output'] = None
   test['start_disk'] = None
   test['start_status'] = None
@@ -591,7 +591,7 @@ def build_simple_file_move_tests(sbox, source, dest):
     "Resolved conflicted state of '%s'\n" % dest_path, match_all=False
   )
   # working converts the move into a replacement
-  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev']) 
+  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
   working['status'].tweak(source, status='D ', moved_to=dest)
   working['status'].add({dest: Item(status='R ', moved_from=source,
                                     copied='+', wc_rev='-')})
@@ -604,7 +604,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   # move and update with incoming property modification to dest (r7-11)
   test = {}
   test['start_rev'] = 7
-  test['end_rev'] = 11 
+  test['end_rev'] = 11
   test['start_output'] = None
   test['start_disk'] = None
   test['start_status'] = None
@@ -635,7 +635,7 @@ def build_simple_file_move_tests(sbox, source, dest):
     "Resolved conflicted state of '%s'\n" % dest_path, match_all=False
   )
   # working converts the move into a replacement
-  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev']) 
+  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
   working['status'].tweak(source, status='D ', moved_to=dest)
   working['status'].add({dest: Item(status='R ', moved_from=source,
                                     copied='+', wc_rev='-')})
@@ -648,7 +648,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   # move and update with incoming property deletion to dest (r7-12)
   test = {}
   test['start_rev'] = 7
-  test['end_rev'] = 12 
+  test['end_rev'] = 12
   test['start_output'] = None
   test['start_disk'] = None
   test['start_status'] = None
@@ -679,7 +679,7 @@ def build_simple_file_move_tests(sbox, source, dest):
     "Resolved conflicted state of '%s'\n" % dest_path, match_all=False
   )
   # working converts the move into a replacement
-  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev']) 
+  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
   working['status'].tweak(source, status='D ', moved_to=dest)
   working['status'].add({dest: Item(status='R ', moved_from=source,
                                     copied='+', wc_rev='-')})
@@ -692,7 +692,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   # move and update with incoming property addition to source (r13-14)
   test = {}
   test['start_rev'] = 13
-  test['end_rev'] = 14 
+  test['end_rev'] = 14
   test['start_output'] = None
   test['start_disk'] = None
   test['start_status'] = None
@@ -714,7 +714,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   mc['output'] = svntest.verify.ExpectedOutput(
     "Resolved conflicted state of '%s'\n" % source_path, match_all=False
   )
-  mc['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev']) 
+  mc['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
   mc['status'].tweak(source, status='D ', moved_to=dest)
   mc['status'].add({dest: Item(status='A ', moved_from=source,
                                copied='+', wc_rev='-')})
@@ -733,7 +733,7 @@ def build_simple_file_move_tests(sbox, source, dest):
     ]
   )
   # XXX: working breaks the move?  Is that right?
-  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev']) 
+  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
   working['status'].tweak(source, status='D ')
   working['status'].add({dest: Item(status='A ', copied='+', wc_rev='-')})
   working['disk'] = test['up_disk']
@@ -745,7 +745,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   # move and update with incoming property modification to source (r14-15)
   test = {}
   test['start_rev'] = 14
-  test['end_rev'] = 15 
+  test['end_rev'] = 15
   test['start_output'] = None
   test['start_disk'] = None
   test['start_status'] = None
@@ -767,7 +767,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   mc['output'] = svntest.verify.ExpectedOutput(
     "Resolved conflicted state of '%s'\n" % source_path, match_all=False
   )
-  mc['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev']) 
+  mc['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
   mc['status'].tweak(source, status='D ', moved_to=dest)
   mc['status'].add({dest: Item(status='A ', moved_from=source,
                                copied='+', wc_rev='-')})
@@ -786,7 +786,7 @@ def build_simple_file_move_tests(sbox, source, dest):
     ]
   )
   # XXX: working breaks the move?  Is that right?
-  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev']) 
+  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
   working['status'].tweak(source, status='D ')
   working['status'].add({dest: Item(status='A ', copied='+', wc_rev='-')})
   working['disk'] = test['up_disk']
@@ -798,7 +798,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   # move and update with incoming property deletion to source (r15-16)
   test = {}
   test['start_rev'] = 15
-  test['end_rev'] = 16 
+  test['end_rev'] = 16
   test['start_output'] = None
   test['start_disk'] = None
   test['start_status'] = None
@@ -820,7 +820,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   mc['output'] = svntest.verify.ExpectedOutput(
     "Resolved conflicted state of '%s'\n" % source_path, match_all=False
   )
-  mc['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev']) 
+  mc['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
   mc['status'].tweak(source, status='D ', moved_to=dest)
   mc['status'].add({dest: Item(status='A ', moved_from=source,
                                copied='+', wc_rev='-')})
@@ -839,7 +839,7 @@ def build_simple_file_move_tests(sbox, source, dest):
     ]
   )
   # XXX: working breaks the move?  Is that right?
-  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev']) 
+  working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
   working['status'].tweak(source, status='D ')
   working['status'].add({dest: Item(status='A ', copied='+', wc_rev='-')})
   working['disk'] = test['up_disk']
@@ -853,7 +853,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   # showed no conflict at all on udpate.
   test = {}
   test['start_rev'] = 16
-  test['end_rev'] = 17 
+  test['end_rev'] = 17
   test['start_output'] = None
   test['start_disk'] = None
   test['start_status'] = None
@@ -905,9 +905,9 @@ def build_simple_file_move_func(sbox, source, dest):
   def move_func(rev):
     # execute the move
     svntest.actions.run_and_verify_svn(None, None, [], "move",
-                                       source_path, dest_path) 
+                                       source_path, dest_path)
     if move_func.extra_mv_tests:
-      mv_status = svntest.actions.get_virginal_state(wc_dir, rev) 
+      mv_status = svntest.actions.get_virginal_state(wc_dir, rev)
       mv_status.tweak(source, status='D ', moved_to=dest)
       mv_status.add({dest: Item(status='A ', moved_from=source,
                                 copied='+', wc_rev='-')})

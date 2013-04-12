@@ -219,7 +219,7 @@ svn_ra_serf__expand_ns(svn_ra_serf__dav_props_t *returned_prop_name,
               return;
             }
         }
-    }    
+    }
 
   /* If the prefix is not found, then the name is NOT within a
      namespace.  */

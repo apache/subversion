@@ -51,14 +51,14 @@ def svncmd_info(repo, revision):
 def svncmd_changed(repo, revision):
     cmd = "%s changed -r %s %s" % (SVNLOOK, revision, repo)
     p = svncmd(cmd)
-    changed = {} 
+    changed = {}
     while True:
         line = p.stdout.readline()
         if not line:
             break
         line = line.strip()
         (flags, filename) = (line[0:3], line[4:])
-        changed[filename] = {'flags': flags} 
+        changed[filename] = {'flags': flags}
     return changed
 
 def do_put(body):

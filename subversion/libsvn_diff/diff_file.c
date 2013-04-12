@@ -448,7 +448,7 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
             file[i].curp += delta;
 
           /* Skipped data without EOL markers, so last char was not a CR. */
-          had_cr = FALSE; 
+          had_cr = FALSE;
         }
 #endif
 

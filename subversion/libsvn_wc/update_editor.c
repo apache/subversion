@@ -1519,7 +1519,7 @@ check_tree_conflict(svn_skel_t **pconflict,
           {
             /* An edit onto a local edit or onto *no* local changes is no
              * tree-conflict. (It's possibly a text- or prop-conflict,
-             * but we don't handle those here.) 
+             * but we don't handle those here.)
              *
              * Except when there is a local obstruction
              */
@@ -1617,7 +1617,7 @@ check_tree_conflict(svn_skel_t **pconflict,
                  _("Unexpected attempt to edit, delete, or replace "
                    "a node at path '%s'"),
                  svn_dirent_local_style(local_abspath, scratch_pool));
- 
+
     }
 
 
@@ -4214,7 +4214,7 @@ close_file(void *file_baton,
           {
             /* If we lose the lock, but not because we are switching to
                another url, remove the state lock from the wc */
-            if (! eb->switch_relpath 
+            if (! eb->switch_relpath
                 || strcmp(fb->new_relpath, fb->old_repos_relpath) == 0)
               {
                 SVN_ERR_ASSERT(prop->value == NULL);

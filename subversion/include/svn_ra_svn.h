@@ -334,7 +334,7 @@ svn_ra_svn_version(void);
 /** Write a number over the net.
  *
  * Writes will be buffered until the next read or flush.
- * 
+ *
  * @deprecated Provided for backward compatibility with the 1.7 API.
  *             RA_SVN low-level functions are no longer considered public.
  */

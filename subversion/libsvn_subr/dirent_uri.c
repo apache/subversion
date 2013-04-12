@@ -1794,7 +1794,7 @@ svn_uri_is_canonical(const char *uri, apr_pool_t *scratch_pool)
   if (*ptr == '[')
     {
       ptr++;
-      while (*ptr == ':' 
+      while (*ptr == ':'
              || (*ptr >= '0' && *ptr <= '9')
              || (*ptr >= 'a' && *ptr <= 'f'))
         {

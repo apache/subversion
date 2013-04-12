@@ -779,7 +779,7 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
         {
           svn_revnum_t min_rev;
           svn_revnum_t max_rev;
-        
+
           /* Verify that the move source is a single-revision subtree. */
           SVN_ERR(svn_wc__db_min_max_revisions(&min_rev, &max_rev, db,
                                                src_abspath, FALSE, scratch_pool));

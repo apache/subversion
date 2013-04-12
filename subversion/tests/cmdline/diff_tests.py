@@ -3388,7 +3388,7 @@ def diff_git_format_wc_wc(sbox):
   expected_output = make_git_diff_header(
                          alpha_copied_path, "A/B/E/alpha_copied",
                          "revision 0", "working copy",
-                         copyfrom_path="A/B/E/alpha", 
+                         copyfrom_path="A/B/E/alpha",
                          copyfrom_rev='1', cp=True,
                          text_changes=True) + [
     "@@ -1 +1,2 @@\n",
@@ -3983,7 +3983,7 @@ def diff_two_working_copies(sbox):
                       "@@ -1 +0,0 @@\n",
                       "-This is the file 'psi'.\n",
                     ]
-                    
+
   # Files in diff may be in any order.
   expected_output = svntest.verify.UnorderedOutput(expected_output)
   svntest.actions.run_and_verify_svn(None, expected_output, [],

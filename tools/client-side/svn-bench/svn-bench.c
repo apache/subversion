@@ -253,7 +253,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  affected paths for that revision were explicitly requested.  Logs\n"
      "  follow copy history by default.  Use --stop-on-copy to disable this\n"
      "  behavior, which can be useful for determining branchpoints.\n"),
-    {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy, 
+    {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy,
      'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,
      'x',},
     {{opt_with_revprop, N_("retrieve revision property ARG")},

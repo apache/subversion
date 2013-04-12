@@ -229,7 +229,7 @@ match_search_patterns(apr_array_header_t *search_patterns,
           const char *pattern;
 
           svn_pool_clear(iterpool);
-          
+
           pattern = APR_ARRAY_IDX(pattern_group, j, const char *);
           match = match_search_pattern(pattern, author, date, message,
                                        changed_paths, iterpool);

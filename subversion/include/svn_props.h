@@ -680,7 +680,7 @@ svn_prop_name_is_valid(const char *prop_name);
  */
 #define SVN_PROP_TXN_CLIENT_COMPAT_VERSION \
             SVN_PROP_TXN_PREFIX "client-compat-version"
-    
+
 /** Identifies the client's user agent string, if any.
  *
  * @since New in 1.8.

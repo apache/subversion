@@ -141,7 +141,7 @@ change_file_prop(void *file_baton,
   edit_baton_t *eb = file_baton;
   eb->prop_count++;
   eb->prop_byte_count += value->len;
-  
+
   return SVN_NO_ERROR;
 }
 

@@ -1491,7 +1491,7 @@ get_file_revs_backwards(svn_repos_t *repos,
   SVN_ERR(svn_fs_revision_root(&root, repos->fs, end, scratch_pool));
   SVN_ERR(svn_fs_check_path(&kind, root, path, scratch_pool));
   if (kind != svn_node_file)
-    return svn_error_createf(SVN_ERR_FS_NOT_FILE, 
+    return svn_error_createf(SVN_ERR_FS_NOT_FILE,
                              NULL, _("'%s' is not a file in revision %ld"),
                              path, end);
 

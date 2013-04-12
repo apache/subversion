@@ -239,7 +239,7 @@ get_library_vtable(fs_library_vtable_t **vtable, const char *fs_type,
 
 #if defined(SVN_USE_DSO) && APR_HAS_DSO
   /* Third party FS modules that are unknown at compile time.
-     
+
      A third party FS is identified by the file fs-type containing a
      third party name, say "foo".  The loader will load the DSO with
      the name "libsvn_fs_foo" and use the entry point with the name

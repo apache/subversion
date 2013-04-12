@@ -522,7 +522,7 @@ base_bdb_info_config_files(apr_array_header_t **files,
                                                          result_pool);
   return SVN_NO_ERROR;
 }
- 
+
 static svn_error_t *
 base_bdb_verify_root(svn_fs_root_t *root,
                      apr_pool_t *scratch_pool)
@@ -718,7 +718,7 @@ open_databases(svn_fs_t *fs,
 }
 
 
-/* Called by functions that initialize an svn_fs_t struct, after that 
+/* Called by functions that initialize an svn_fs_t struct, after that
    initialization is done, to populate svn_fs_t->uuid. */
 static svn_error_t *
 populate_opened_fs(svn_fs_t *fs, apr_pool_t *scratch_pool)

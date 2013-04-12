@@ -289,7 +289,7 @@ log_svn_error(LOG_ARGS_SIGNATURE,
       else
         {
           char strerr[256];
-          
+
           svn_stringbuf_appendcstr(buff, svn_strerror(err->apr_err, strerr,
                                                        sizeof(strerr)));
         }
@@ -377,7 +377,7 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
   if (svn_err)
     {
       log_svn_error(APLOG_MARK, r,
-                    conf->repo_relative_access_file ? 
+                    conf->repo_relative_access_file ?
                     "Failed to load the AuthzSVNReposRelativeAccessFile:" :
                     "Failed to load the AuthzSVNAccessFile:",
                     svn_err, scratch_pool);
