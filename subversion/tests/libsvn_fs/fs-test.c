@@ -4984,29 +4984,6 @@ filename_trailing_newline(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
-#ifdef SVN_FS_INFO
-static svn_error_t *
-test_fs_info_format(const svn_test_opts_t *opts,
-                    apr_pool_t *pool)
-{
-  svn_fs_t *fs;
-  int fs_format;
-  svn_version_t *supports_version;
-  svn_version_t v1_5_0 = {1, 5, 0, ""};
-  svn_test_opts_t opts2;
-
-  opts2 = *opts;
-  opts2.server_minor_version = 5;
-
-  SVN_ERR(svn_test__create_fs(&fs, "test-fs-format-info", &opts2, pool));
-  SVN_ERR(svn_fs_info_format(&fs_format, &supports_version, fs, pool, pool));
-  SVN_TEST_ASSERT(fs_format == 3); /* happens to be the same for FSFS and BDB */
-  SVN_TEST_ASSERT(svn_ver_equal(supports_version, &v1_5_0));
-
-  return SVN_NO_ERROR;
-}
-#endif
-
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -5089,9 +5066,5 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test svn_fs_delete_fs"),
     SVN_TEST_OPTS_PASS(filename_trailing_newline,
                        "filenames with trailing \\n might be rejected"),
-#ifdef SVN_FS_INFO
-    SVN_TEST_OPTS_PASS(test_fs_info_format,
-                       "test svn_fs_info_format"),
-#endif
     SVN_TEST_NULL
   };

@@ -471,59 +471,6 @@ bdb_write_config(svn_fs_t *fs)
 }
 
 static svn_error_t *
-base_bdb_info_format(int *fs_format,
-                     svn_version_t **supports_version,
-                     svn_fs_t *fs,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
-{
-  base_fs_data_t *bfd = fs->fsap_data;
-
-  *fs_format = bfd->format;
-  *supports_version = apr_palloc(result_pool, sizeof(svn_version_t));
-
-  (*supports_version)->major = SVN_VER_MAJOR;
-  (*supports_version)->minor = 0;
-  (*supports_version)->patch = 0;
-  (*supports_version)->tag = "";
-
-  switch (bfd->format)
-    {
-    case 1:
-      break;
-    case 2:
-      (*supports_version)->minor = 4;
-      break;
-    case 3:
-      (*supports_version)->minor = 5;
-      break;
-    case 4:
-      (*supports_version)->minor = 6;
-      break;
-#ifdef SVN_DEBUG
-# if SVN_FS_BASE__FORMAT_NUMBER != 4
-#  error "Need to add a 'case' statement here"
-# endif
-#endif
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-base_bdb_info_config_files(apr_array_header_t **files,
-                           svn_fs_t *fs,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
-{
-  *files = apr_array_make(result_pool, 1, sizeof(const char *));
-  APR_ARRAY_PUSH(*files, const char *) = svn_dirent_join(fs->path,
-                                                         BDB_CONFIG_FILE,
-                                                         result_pool);
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 base_bdb_verify_root(svn_fs_root_t *root,
                      apr_pool_t *scratch_pool)
 {
@@ -560,8 +507,6 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__unlock,
   svn_fs_base__get_lock,
   svn_fs_base__get_locks,
-  base_bdb_info_format,
-  base_bdb_info_config_files,
   base_bdb_verify_root,
   base_bdb_freeze,
   base_bdb_set_errcall,
