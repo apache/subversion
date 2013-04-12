@@ -53,7 +53,7 @@ import svntest
 from svntest import Failure
 from svntest import Skip
 
-SVN_VER_MINOR = 8
+SVN_VER_MINOR = 9
 
 ######################################################################
 #

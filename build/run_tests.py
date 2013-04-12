@@ -43,7 +43,7 @@ separated list of test numbers; the default is to run all the tests in it.
 '''
 
 # A few useful constants
-SVN_VER_MINOR = 8
+SVN_VER_MINOR = 9
 
 import os, re, subprocess, sys, imp, threading
 from datetime import datetime
