@@ -693,7 +693,7 @@ assemble_status(svn_wc_status3_t **status,
               if (err)
                 {
                   if (err->apr_err != SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
-                    svn_error_trace(err);
+                    return svn_error_trace(err);
 
                   svn_error_clear(err);
                   /* We are no longer moved... So most likely we are somehow
