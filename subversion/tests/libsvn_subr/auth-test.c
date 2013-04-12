@@ -222,7 +222,7 @@ cleanup_callback(svn_boolean_t *delete_cred,
   SVN_TEST_ASSERT(strcmp(cred_kind, SVN_AUTH_CRED_SIMPLE) == 0);
   SVN_TEST_ASSERT(strcmp(realmstring, "<http://my.host> My realm") == 0);
 
-  svn_auth_forget_credentials(b, cred_kind, realmstring, scratch_pool);
+  SVN_ERR(svn_auth_forget_credentials(b, cred_kind, realmstring, scratch_pool));
 
   *delete_cred = TRUE;
 
