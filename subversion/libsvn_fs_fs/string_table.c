@@ -20,6 +20,7 @@
  * ====================================================================
  */
 
+#include <assert.h>
 #include <string.h>
 #include <apr_tables.h>
 
@@ -277,6 +278,7 @@ svn_fs_fs__string_table_builder_add(string_table_builder_t *builder,
   if (len == 0)
     len = strlen(string);
 
+  string = apr_pstrmemdup(builder->pool, string, len);
   if (len > MAX_SHORT_STRING_LEN)
     {
       svn_string_t item;
