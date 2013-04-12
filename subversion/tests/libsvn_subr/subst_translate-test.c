@@ -301,6 +301,46 @@ test_svn_subst_build_keywords3(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_svn_subst_truncated_keywords(apr_pool_t *pool)
+{
+  svn_string_t *src_string
+    = svn_string_create("$Qq: "
+                        "01234567890123456789012345678901234567890123456789"
+                        "01234567890123456789012345678901234567890123456789"
+                        "01234567890123456789012345678901234567890123456789"
+                        "01234567890123456789012345678901234567890123456789"
+                        "012345678901234567890123456789012345678901234567"
+                        " $", pool);
+  svn_stream_t *src_stream = svn_stream_from_string(src_string, pool);
+  svn_stringbuf_t *dst_stringbuf = svn_stringbuf_create_empty(pool);
+  svn_stream_t *dst_stream = svn_stream_from_stringbuf(dst_stringbuf, pool);
+  apr_hash_t *keywords = apr_hash_make(pool);
+  svn_string_t *expanded
+    = svn_string_create("01234567890123456789012345678901234567890123456789"
+                        "01234567890123456789012345678901234567890123456789"
+                        "01234567890123456789012345678901234567890123456789"
+                        "01234567890123456789012345678901234567890123456789"
+                        "012345678901234567890123456789012345678901234567"
+                        "xxxxxxxxxx",
+                        pool);
+
+  /* The source is already at the maximum length. */
+  SVN_TEST_ASSERT(src_string->len == SVN_KEYWORD_MAX_LEN);
+
+  svn_hash_sets(keywords, "Qq", expanded);
+  dst_stream = svn_subst_stream_translated(dst_stream, NULL, FALSE, keywords,
+                                           TRUE, pool);
+  SVN_ERR(svn_stream_copy3(src_stream, dst_stream, NULL, NULL, pool));
+
+  /* The expanded value would make the keyword longer than the maximum
+     allowed so it must be truncated; the remaining part of the
+     expanded value is the same as the source. */
+  SVN_TEST_STRING_ASSERT(dst_stringbuf->data, src_string->data);
+
+  return SVN_NO_ERROR;
+}
+
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
@@ -314,5 +354,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_subst_translate_cstring2()"),
     SVN_TEST_PASS2(test_svn_subst_build_keywords3,
                    "test svn_subst_build_keywords3()"),
+    SVN_TEST_XFAIL2(test_svn_subst_truncated_keywords,
+                   "test truncated keywords (issue 4349)"),
     SVN_TEST_NULL
   };
