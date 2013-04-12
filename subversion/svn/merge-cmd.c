@@ -88,7 +88,7 @@ run_merge(svn_boolean_t two_sources_specified,
 
   if (opt_state->reintegrate)
     {
-      merge_err = svn_client_merge_reintegrate(
+      merge_err = svn_cl__deprecated_merge_reintegrate(
                     sourcepath1, &peg_revision1, targetpath,
                     opt_state->dry_run, options, ctx, scratch_pool);
     }
