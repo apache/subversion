@@ -47,6 +47,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * 'svn propset' checks spelling of reserved property names.
     * improve working copy performance on network disks (issue #4176) 
     * repos suggested config via svn:auto-props and svn:global-ignores (r1401908)
+    * support for custom keyword definitions in svn:keywords (issue #890)
+    * support for server-side keyword expansion in mod_dav_svn (r1466055)
 
   - Client-side bugfixes:
     * 
