@@ -839,7 +839,7 @@ def subtree_to_and_fro(sbox):
                                 "|(\n)"
                                 "|(.*apr_err.*)", # In case of debug build
                                 None,
-                                True) # Match *all* lines of stdout  
+                                True) # Match *all* lines of stdout
 
 #----------------------------------------------------------------------
 # Automatic merges ignore subtree mergeinfo gaps older than the last rev
@@ -888,7 +888,7 @@ def merge_to_reverse_cherry_subtree_to_merge_to(sbox):
   # Try an automatic sync merge from ^/A to A_COPY.  Revision 5 should be
   # merged to A_COPY/B as its subtree mergeinfo reveals that rev is missing,
   # like so:
-  # 
+  #
   #   >svn merge ^/A A_COPY
   #   --- Merging r5 into 'A_COPY\B':
   #   U    A_COPY\B\E\beta
@@ -1166,7 +1166,7 @@ def effective_sync_results_in_reintegrate(sbox):
   # This should work because since the resolution of
   # http://subversion.tigris.org/issues/show_bug.cgi?id=3577
   # if B is *effectively* synced with A, then B can be reintegrated
-  # to A.  
+  # to A.
   sbox.simple_update()
   expected_output = [
     "--- Merging differences between repository URLs into '" +

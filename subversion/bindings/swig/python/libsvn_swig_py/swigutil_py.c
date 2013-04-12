@@ -2670,7 +2670,7 @@ svn_error_t *svn_swig_py_repos_freeze_func(void *baton,
     }
 
   Py_DECREF(py_pool);
-                                 
+
 finished:
   svn_swig_py_release_py_lock();
   return err;
@@ -2716,7 +2716,7 @@ svn_error_t *svn_swig_py_proplist_receiver2(void *baton,
       py_props = Py_None;
       Py_INCREF(Py_None);
     }
-  
+
   if (inherited_props)
     {
       py_iprops = svn_swig_py_propinheriteditemarray_to_dict(inherited_props);
@@ -2751,12 +2751,12 @@ svn_error_t *svn_swig_py_proplist_receiver2(void *baton,
   Py_DECREF(py_props);
   Py_DECREF(py_iprops);
   Py_DECREF(py_pool);
-                                 
+
 finished:
   svn_swig_py_release_py_lock();
   return err;
 }
-                                            
+
 
 svn_error_t *svn_swig_py_log_receiver(void *baton,
                                       apr_hash_t *changed_paths,
@@ -3336,7 +3336,7 @@ svn_swig_py_config_auth_walk_func(svn_boolean_t *delete_cred,
     }
   Py_DECREF(py_hash);
   Py_DECREF(py_scratch_pool);
-  
+
 finished:
   svn_swig_py_release_py_lock();
   return err;

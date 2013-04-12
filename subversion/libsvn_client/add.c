@@ -641,7 +641,7 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
   *autoprops = apr_hash_make(result_pool);
   autoprops_baton.result_pool = result_pool;
   autoprops_baton.autoprops = *autoprops;
-  
+
 
   /* Are "traditional" auto-props enabled?  If so grab them from the
     config.  This is our starting set auto-props, which may be overriden
@@ -1026,7 +1026,7 @@ svn_client_add5(const char *path,
   SVN_WC__CALL_WITH_WRITE_LOCK(
     add(local_abspath, depth, force, no_ignore, no_autoprops,
         existing_parent_abspath, ctx, scratch_pool),
-    ctx->wc_ctx, (existing_parent_abspath ? existing_parent_abspath 
+    ctx->wc_ctx, (existing_parent_abspath ? existing_parent_abspath
                                           : parent_abspath),
     FALSE /* lock_anchor */, scratch_pool);
   return SVN_NO_ERROR;

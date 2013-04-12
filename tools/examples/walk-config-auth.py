@@ -32,7 +32,7 @@ def print_help():
       (n)  continue to next credentials
       (q)  quit the program
       (?)  show this help output
-      
+
 """)
 
 def show_creds(hash):
@@ -52,7 +52,7 @@ def show_creds(hash):
   sys.stdout.write("+")
   sys.stdout.write("-" * (78 - maxkeylen - 2))
   sys.stdout.write("\n")
-  
+
 def walk_func(cred_kind, realmstring, hash, pool):
   show_creds({ 'cred_kind' : cred_kind,
                'realmstring' : realmstring })

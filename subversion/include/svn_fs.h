@@ -108,7 +108,7 @@ typedef struct svn_fs_t svn_fs_t;
  *
  * @since New in 1.8.
  */
-#define SVN_FS_CONFIG_FSFS_CACHE_NS             "fsfs-cache-namespace"               
+#define SVN_FS_CONFIG_FSFS_CACHE_NS             "fsfs-cache-namespace"
 
 /* Note to maintainers: if you add further SVN_FS_CONFIG_FSFS_CACHE_* knobs,
    update fs_fs.c:verify_as_revision_before_current_plus_plus(). */
@@ -1907,7 +1907,7 @@ typedef svn_error_t *
  *
  * @note @a processor is expected to be relatively short function with
  * at most O(content size) runtime.
- * 
+ *
  * @since New in 1.8.
  */
 svn_error_t *
@@ -2468,7 +2468,7 @@ svn_fs_pack(const char *db_path,
  * other revisions as well, you may receive notifications for revisions
  * outside the specified range.   In fact, it is perfectly legal for a FS
  * implementation to always check all revisions.
- * 
+ *
  * Global invariants are only guaranteed to get verified when @a r0 has
  * been included in the range of revisions to check.
  *
@@ -2486,7 +2486,7 @@ svn_fs_pack(const char *db_path,
  *
  * @note To ensure a full verification using all tests and covering all
  * revisions, you must call this function *and* #svn_fs_verify_rev.
- * 
+ *
  * @note Implementors, please do tests that can be done efficiently for
  * a single revision in #svn_fs_verify_root.  This function is meant for
  * global checks or tests that require an expensive context setup.

@@ -2142,7 +2142,7 @@ svn_client_commit6(const apr_array_header_t *targets,
 /**
  * Similar to svn_client_commit6(), but passes @a include_file_externals as
  * FALSE and @a include_dir_externals as FALSE.
- * 
+ *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.7 API.
  */
@@ -5399,8 +5399,8 @@ svn_client_export(svn_revnum_t *result_rev,
  * If svn_client_list3() was called with @a include_externals set to TRUE,
  * @a external_parent_url and @a external_target will be set.
  * @a external_parent_url is url of the directory which has the
- * externals definitions. @a external_target is the target subdirectory of 
- * externals definitions which is relative to the parent directory that holds 
+ * externals definitions. @a external_target is the target subdirectory of
+ * externals definitions which is relative to the parent directory that holds
  * the external item.
  *
  * If external_parent_url and external_target are defined, the item being
@@ -5456,9 +5456,9 @@ typedef svn_error_t *(*svn_client_list_func_t)(void *baton,
  *
  * If @a fetch_locks is TRUE, include locks when reporting directory entries.
  *
- * If @a include_externals is TRUE, also list all external items 
+ * If @a include_externals is TRUE, also list all external items
  * reached by recursion. @a depth value passed to the original list target
- * applies for the externals also. 
+ * applies for the externals also.
  *
  * Use @a pool for temporary allocations.
  *

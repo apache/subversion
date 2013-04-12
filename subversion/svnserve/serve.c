@@ -246,7 +246,7 @@ log_authz_denied(const char *path,
   timestr = svn_time_to_cstring(apr_time_now(), pool);
   remote_host = svn_ra_svn_conn_remote_host(conn);
 
-  line = apr_psprintf(pool, "%" APR_PID_T_FMT 
+  line = apr_psprintf(pool, "%" APR_PID_T_FMT
                       " %s %s %s %s Authorization Failed %s%s %s" APR_EOL_STR,
                       getpid(), timestr,
                       (remote_host ? remote_host : "-"),
@@ -312,7 +312,7 @@ svn_error_t *load_pwdb_config(server_baton_t *server,
  * placed in *ACCESS_FILE.  SERVER baton is used to convert relative paths to
  * absolute paths rooted at the server root.  REPOS_ROOT is used to calculate
  * an absolute URL for repos-relative URLs. */
-static svn_error_t * 
+static svn_error_t *
 canonicalize_access_file(const char **access_file, server_baton_t *server,
                          const char *repos_root, apr_pool_t *pool)
 {
@@ -3123,7 +3123,7 @@ get_inherited_props(svn_ra_svn_conn_t *conn,
       SVN_ERR(svn_ra_svn__write_proplist(conn, iterpool, iprop->prop_hash));
       SVN_ERR(svn_ra_svn__write_tuple(conn, iterpool, "!))!",
                                       iprop->path_or_url));
-    }  
+    }
 
   SVN_ERR(svn_ra_svn__write_tuple(conn, iterpool, "!))"));
   svn_pool_destroy(iterpool);

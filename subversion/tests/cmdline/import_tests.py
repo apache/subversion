@@ -554,7 +554,7 @@ def import_inherited_ignores(sbox):
   svntest.actions.run_and_verify_svn(None, [], [], 'import',
                                      '--config-dir', config_dir,
                                      os.path.join(import_tree_dir,
-                                                  'DIR6', 'file6.foo'), 
+                                                  'DIR6', 'file6.foo'),
                                      sbox.repo_url + '/A/B/E/file6.foo',
                                      '-m', 'This import should fail!')
 
@@ -563,7 +563,7 @@ def import_inherited_ignores(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'import', '--no-ignore',
                                      '--config-dir', config_dir,
                                      os.path.join(import_tree_dir,
-                                                  'DIR6', 'file6.foo'), 
+                                                  'DIR6', 'file6.foo'),
                                      sbox.repo_url + '/A/B/E/file6.foo',
                                      '-m', 'import')
   expected_output = svntest.verify.UnorderedOutput(

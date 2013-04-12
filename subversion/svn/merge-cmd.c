@@ -350,7 +350,7 @@ svn_cl__merge(apr_getopt_t *os,
   /* If no targetpath was specified, see if we can infer it from the
      sourcepaths. */
   if (! has_explicit_target
-      && sourcepath1 && sourcepath2 
+      && sourcepath1 && sourcepath2
       && strcmp(targetpath, "") == 0)
     {
       /* If the sourcepath is a URL, it can only refer to a target in

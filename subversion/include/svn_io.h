@@ -664,8 +664,8 @@ svn_io_files_contents_same_p(svn_boolean_t *same,
                              apr_pool_t *pool);
 
 /** Set @a *same12 to TRUE if @a file1 and @a file2 have the same
- * contents, else set it to FALSE.  Do the similar for @a *same23 
- * with @a file2 and @a file3, and @a *same13 for @a file1 and @a 
+ * contents, else set it to FALSE.  Do the similar for @a *same23
+ * with @a file2 and @a file3, and @a *same13 for @a file1 and @a
  * file3. The filenames @a file1, @a file2 and @a file3 are
  * utf8-encoded. Use @a scratch_pool for temporary allocations.
  *
@@ -1669,7 +1669,7 @@ svn_io_dir_walk(const char *dirname,
  * a non-zero exit status being returned to the parent process.
  *
  * @note An APR bug affects Windows: passing a NULL @a env does not
- * guarantee the invoked program to run with an empty environment when 
+ * guarantee the invoked program to run with an empty environment when
  * @a inherits is FALSE, the program may inherit its parent's environment.
  * Explicitly pass an empty @a env to get an empty environment.
  *

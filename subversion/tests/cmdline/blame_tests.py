@@ -150,7 +150,7 @@ def blame_binary(sbox):
   svntest.main.run_svn(None, 'propdel', 'svn:mime-type', iota)
   svntest.main.run_svn(None, 'ci',
                        '-m', '', iota)
-  
+
   # Blame fails when asking about an old revision where the mime-type is binary
   exit_code, output, errput = svntest.main.run_svn(2, 'blame', iota + '@3')
   if (len(errput) != 1) or (errput[0].find('Skipping') == -1):

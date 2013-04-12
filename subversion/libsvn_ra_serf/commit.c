@@ -809,7 +809,7 @@ maybe_set_lock_token_header(serf_bucket_t *headers,
           serf_bucket_headers_set(headers, "If", token_header);
         }
     }
-  
+
   return SVN_NO_ERROR;
 }
 

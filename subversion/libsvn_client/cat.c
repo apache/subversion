@@ -158,7 +158,7 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
           rev_str = apr_psprintf(scratch_pool, "%ld", changed_rev);
         }
 
-      SVN_ERR(svn_subst_build_keywords3(&kw, keywords->data, rev_str, url, 
+      SVN_ERR(svn_subst_build_keywords3(&kw, keywords->data, rev_str, url,
                                         repos_root_url, tm, author,
                                         scratch_pool));
     }

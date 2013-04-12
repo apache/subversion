@@ -230,10 +230,10 @@ svn_cl__get_human_readable_tree_conflict_description(
          an ordinary user-facing string. */
       *desc = apr_psprintf(pool, _("local: %s %s incoming: %s %s %s"),
                            svn_node_kind_to_word(conflict->node_kind),
-                           svn_token__to_word(map_conflict_reason_xml, 
+                           svn_token__to_word(map_conflict_reason_xml,
                                               conflict->reason),
                            svn_node_kind_to_word(incoming_kind),
-                           svn_token__to_word(map_conflict_action_xml, 
+                           svn_token__to_word(map_conflict_action_xml,
                                               conflict->action),
                            operation);
     }

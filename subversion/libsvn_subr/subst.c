@@ -298,7 +298,7 @@ build_keywords(apr_hash_t **kw,
     {
       const char *keyword = APR_ARRAY_IDX(keyword_tokens, i, const char *);
       apr_array_header_t *custom_keyword_tokens = NULL;
- 
+
       if (expand_custom_keywords)
         custom_keyword_tokens = svn_cstring_split(keyword, "=",
                                                   TRUE /* chop */, pool);

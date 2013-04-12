@@ -2403,7 +2403,7 @@ merge_file_deleted(const char *relpath,
                                    NULL, TRUE,
                                    scratch_pool));
     }
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -2487,7 +2487,7 @@ merge_dir_opened(void **new_dir_baton,
             if (obstr_state == svn_wc_notify_state_obstructed)
               {
                 svn_boolean_t is_wcroot;
-        
+
                 SVN_ERR(svn_wc_check_root(&is_wcroot, NULL, NULL,
                                         merge_b->ctx->wc_ctx,
                                         local_abspath, scratch_pool));
@@ -2652,7 +2652,7 @@ merge_dir_opened(void **new_dir_baton,
               return SVN_NO_ERROR;
             }
         }
-      
+
       if (! (merge_b->dry_run
              && ((pdb && pdb->added) || db->add_is_replace)))
         {
@@ -2676,7 +2676,7 @@ merge_dir_opened(void **new_dir_baton,
             {
               svn_node_kind_t disk_kind;
 
-              SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, 
+              SVN_ERR(svn_io_check_path(local_abspath, &disk_kind,
                                         scratch_pool));
 
               if (disk_kind == svn_node_dir)

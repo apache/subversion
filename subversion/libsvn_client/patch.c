@@ -2276,7 +2276,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
        * will be closed later in write_out_rejected_hunks(). */
       if (target->kind_on_disk == svn_node_file)
         SVN_ERR(svn_io_file_close(target->file, scratch_pool));
-  
+
       SVN_ERR(svn_io_file_close(target->patched_file, scratch_pool));
     }
 
@@ -2826,13 +2826,13 @@ check_ancestor_delete(const char *deleted_target,
       cb.local_abspath = dir_abspath;
       cb.must_keep = FALSE;
       cb.targets_info = targets_info;
-    
+
       err = svn_wc_walk_status(ctx->wc_ctx, dir_abspath, svn_depth_infinity,
                                TRUE, FALSE, FALSE, NULL,
                                can_delete_callback, &cb,
                                ctx->cancel_func, ctx->cancel_baton,
                                iterpool);
-    
+
       if (err)
         {
           if (err->apr_err != SVN_ERR_CEASE_INVOCATION)

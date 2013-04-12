@@ -647,7 +647,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    If locked, the letter 'O'.  (Use 'svn info URL' to see details)\n"
      "    Size (in bytes)\n"
      "    Date and time of the last commit\n"),
-    {'r', 'v', 'R', opt_depth, opt_incremental, opt_xml, 
+    {'r', 'v', 'R', opt_depth, opt_incremental, opt_xml,
      opt_include_externals },
     {{opt_include_externals, N_("include externals definitions")}} },
 
@@ -1146,7 +1146,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  The --allow-mixed-revisions option is provided for backward compatibility.\n"
      "\n"
      "  The --revision option has no use and is deprecated.\n"),
-    {'r', 'q', opt_force, opt_parents, opt_allow_mixed_revisions, 
+    {'r', 'q', opt_force, opt_parents, opt_allow_mixed_revisions,
      SVN_CL__LOG_MSG_OPTIONS} },
 
   { "patch", svn_cl__patch, {0}, N_

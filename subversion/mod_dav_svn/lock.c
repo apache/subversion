@@ -644,7 +644,7 @@ append_locks(dav_lockdb *lockdb,
   svn_error_t *serr;
   dav_error *derr;
   dav_svn_repos *repos = resource->info->repos;
-      
+
   /* We don't allow anonymous locks */
   if (! repos->username)
     return dav_svn__new_error(resource->pool, HTTP_UNAUTHORIZED,

@@ -309,7 +309,7 @@ svn_prop__patch(const apr_hash_t *original_props,
  */
 
 /* Set @a *version to a version structure parsed from the version
- * string representation in @a version_string.  Return 
+ * string representation in @a version_string.  Return
  * @c SVN_ERR_MALFORMED_VERSION_STRING if the string fails to parse
  * cleanly.
  *

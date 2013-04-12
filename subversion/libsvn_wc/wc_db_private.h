@@ -265,7 +265,7 @@ svn_wc__db_base_get_info_internal(svn_wc__db_status_t *status,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
 
-/* Similar to svn_wc__db_base_get_info(), but taking WCROOT+LOCAL_RELPATH 
+/* Similar to svn_wc__db_base_get_info(), but taking WCROOT+LOCAL_RELPATH
  * instead of DB+LOCAL_ABSPATH, an explicit op-depth of the node to get
  * information about, and outputting REPOS_ID instead of URL+UUID, and
  * without the LOCK or UPDATE_ROOT outputs.

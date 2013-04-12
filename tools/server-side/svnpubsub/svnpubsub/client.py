@@ -94,7 +94,7 @@ class Client(asynchat.async_chat):
     except:
       self.handle_error()
       return
-       
+
     self.push(('GET %s HTTP/1.0\r\n\r\n' % resource).encode('ascii'))
 
   def handle_connect(self):
@@ -123,7 +123,7 @@ class Client(asynchat.async_chat):
     self.last_activity = time.time()
 
     if not self.skipping_headers:
-      self.ibuffer.append(data) 
+      self.ibuffer.append(data)
 
 
 class JSONRecordHandler:

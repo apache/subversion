@@ -2069,7 +2069,7 @@ svn_io_file_lock2(const char *lock_file,
 
   /* locktype is never read after this block, so we don't need to bother
      setting it.  If that were to ever change, uncomment the following
-     block. 
+     block.
   if (nonblocking)
     locktype |= APR_FLOCK_NONBLOCK;
   */
@@ -3539,7 +3539,7 @@ svn_io_read_length_line(apr_file_t *file, char *buf, apr_size_t *limit,
       if (eol)
         {
           apr_off_t offset = (eol + 1 - buf) - (apr_off_t)bytes_read;
-          
+
           *eol = 0;
           *limit = total_read + (eol - buf);
 

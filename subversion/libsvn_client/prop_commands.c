@@ -1042,7 +1042,7 @@ call_receiver(const char *path,
  *
  * The 'path' and keys for 'prop_hash' and 'inherited_prop' arguments to
  * RECEIVER are all URLs.
- * 
+ *
  * RESULT_POOL is used to allocated the 'path', 'prop_hash', and
  * 'inherited_prop' arguments to RECEIVER.  SCRATCH_POOL is used for all
  * other (temporary) allocations.
@@ -1131,9 +1131,9 @@ remote_proplist(const char *target_prefix,
           const char *name = svn__apr_hash_index_key(hi);
           apr_ssize_t klen = svn__apr_hash_index_klen(hi);
           svn_prop_kind_t prop_kind;
-    
+
           prop_kind = svn_property_kind2(name);
-    
+
           if (prop_kind != svn_prop_regular_kind)
             {
               apr_hash_set(prop_hash, name, klen, NULL);
@@ -1237,7 +1237,7 @@ recursive_proplist_receiver(void *baton,
 /* Helper for svn_client_proplist4 when retrieving properties and/or
    inherited properties from the repository.  Except as noted below,
    all arguments are as per svn_client_proplist4.
-   
+
    GET_EXPLICIT_PROPS controls if explicit props are retrieved. */
 static svn_error_t *
 get_remote_props(const char *path_or_url,

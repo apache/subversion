@@ -517,7 +517,7 @@ get_best_connection(report_context_t *ctx)
      ### editor implementations (such as svnrdump's dump editor)
      ### simply can't handle the way ra_serf violates the editor v1
      ### drive ordering requirements.
-     ### 
+     ###
      ### See http://subversion.tigris.org/issues/show_bug.cgi?id=4116.
   */
   if (ctx->report_received && (ctx->sess->max_connections > 2))
@@ -1359,7 +1359,7 @@ maybe_close_dir_chain(report_dir_t *dir)
   report_dir_t *cur_dir = dir;
 
   SVN_ERR(ensure_dir_opened(cur_dir));
-                  
+
   while (cur_dir
          && !cur_dir->ref_count
          && cur_dir->tag_closed
@@ -1412,7 +1412,7 @@ handle_propchange_only(report_info_t *info,
 {
   SVN_ERR(open_updated_file(info, FALSE, scratch_pool));
   SVN_ERR(close_updated_file(info, scratch_pool));
-  
+
   /* We're done with our pool. */
   svn_pool_destroy(info->pool);
 
@@ -1503,7 +1503,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
         {
           svn_error_t *err = NULL;
           svn_checksum_t *checksum = NULL;
-         
+
           /* Parse the optional SHA1 checksum (1.7+) */
           err = svn_checksum_parse_hex(&checksum, svn_checksum_sha1,
                                        info->final_sha1_checksum,
@@ -1535,7 +1535,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
         {
           /* If we'll be doing a PROPFIND for this file... */
           if (info->propfind_handler)
-            { 
+            {
               /* ... then we'll just leave ourselves a little "todo"
                  about that fact (and we'll deal with the file content
                  stuff later, after we've handled that PROPFIND
@@ -2197,7 +2197,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
       if (info->dir->fetch_props)
         {
           svn_ra_serf__list_t *list_item;
- 
+
           SVN_ERR(svn_ra_serf__deliver_props(&info->dir->propfind_handler,
                                              info->dir->props, ctx->sess,
                                              get_best_connection(ctx),
@@ -2996,7 +2996,7 @@ finish_report(void *report_baton,
           report->num_active_fetches--;
 
           /* See if the parent directory of this fetched item (and
-             perhaps even parents of that) can be closed now. 
+             perhaps even parents of that) can be closed now.
 
              NOTE:  This could delete cur_dir->pool, from which is
              allocated the list item in report->done_fetches.
@@ -3447,9 +3447,9 @@ svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
 /* Helper svn_ra_serf__get_file(). Attempts to fetch file contents
  * using SESSION->wc_callbacks->get_wc_contents() if sha1 property is
  * present in PROPS.
- * 
+ *
  * Sets *FOUND_P to TRUE if file contents was successfuly fetched.
- * 
+ *
  * Performs all temporary allocations in POOL.
  */
 static svn_error_t *
@@ -3502,7 +3502,7 @@ try_get_wc_contents(svn_boolean_t *found_p,
       /* Ignore errors for now. */
       return SVN_NO_ERROR;
     }
-  
+
   if (wc_stream)
     {
         SVN_ERR(svn_stream_copy3(wc_stream,
@@ -3565,7 +3565,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
     {
       which_props = check_path_props;
     }
-     
+
   SVN_ERR(svn_ra_serf__fetch_node_props(&fetch_props, conn, fetch_url,
                                         SVN_INVALID_REVNUM,
                                         which_props,

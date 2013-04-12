@@ -256,7 +256,7 @@ large_log(svn_revnum_t rev, apr_size_t length, apr_pool_t *pool)
   svn_stringbuf_appendcstr(temp, "A ");
   for (i = 0; i < count; ++i)
     svn_stringbuf_appendcstr(temp, "very, ");
-  
+
   svn_stringbuf_appendcstr(temp,
     apr_psprintf(pool, "very long message for rev %ld, indeed", rev));
 
@@ -762,7 +762,7 @@ file_hint_at_shard_boundary(const svn_test_opts_t *opts,
   subpool = svn_pool_create(pool);
   SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, subpool));
 
-  /* Revision = SHARD_SIZE */ 
+  /* Revision = SHARD_SIZE */
   file_contents = get_rev_contents(SHARD_SIZE, subpool);
   SVN_ERR(svn_fs_begin_txn(&txn, fs, MAX_REV, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
@@ -781,7 +781,7 @@ file_hint_at_shard_boundary(const svn_test_opts_t *opts,
   /* Close the repo. */
   svn_pool_destroy(subpool);
 
-  return err; 
+  return err;
 }
 #undef REPO_NAME
 #undef MAX_REV

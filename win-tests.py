@@ -366,7 +366,7 @@ def locate_libs():
                                       'mod_authz_svn', 'mod_authz_svn.so')
     mod_dontdothat_path = os.path.join(abs_objdir, 'tools', 'server-side',
                                         'mod_dontdothat', 'mod_dontdothat.so')
-                                        
+
     copy_changed_file(mod_dav_svn_path, abs_objdir)
     copy_changed_file(mod_authz_svn_path, abs_objdir)
     copy_changed_file(mod_dontdothat_path, abs_objdir)
@@ -522,7 +522,7 @@ class Httpd:
     fp.write('PidFile      pid\n')
     fp.write('ErrorLog     log\n')
     fp.write('Listen       ' + str(self.httpd_port) + '\n')
-    
+
     if not no_log:
       fp.write('LogFormat    "%h %l %u %t \\"%r\\" %>s %b" common\n')
       fp.write('Customlog    log common\n')
@@ -549,7 +549,7 @@ class Httpd:
     # Write LoadModule for Subversion modules
     fp.write(self._svn_module('dav_svn_module', 'mod_dav_svn.so'))
     fp.write(self._svn_module('authz_svn_module', 'mod_authz_svn.so'))
-    
+
     # And for mod_dontdothat
     fp.write(self._svn_module('dontdothat_module', 'mod_dontdothat.so'))
 
@@ -597,7 +597,7 @@ class Httpd:
     "Create empty mime.types file"
     fp = open(self.httpd_mime_types, 'w')
     fp.close()
-    
+
   def _create_dontdothat_file(self):
     "Create empty mime.types file"
     fp = open(self.dontdothat_file, 'w')
@@ -644,7 +644,7 @@ class Httpd:
       '  AuthUserFile    ' + self._quote(self.httpd_users) + '\n' \
       '  Require         valid-user\n' \
       '  DontDoThatConfigFile ' + self._quote(self.dontdothat_file) + '\n' \
-      '</Location>\n'      
+      '</Location>\n'
 
   def start(self):
     if self.service:

@@ -243,7 +243,7 @@ struct svn_ra_serf__session_t {
   svn_tristate_t bulk_updates;
 
   /* Indicates if the server wants bulk update requests (Prefer) or only
-     accepts skelta requests (Off). If this value is On both options are 
+     accepts skelta requests (Off). If this value is On both options are
      allowed. */
   const char *server_allows_bulk;
 

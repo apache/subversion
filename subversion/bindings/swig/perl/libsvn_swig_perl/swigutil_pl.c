@@ -313,7 +313,7 @@ SV *svn_swig_pl_revnums_to_list(const apr_array_header_t *array)
 {
     return convert_array(array, (element_converter_t)convert_svn_revnum_t,
                          NULL);
-} 
+}
 
 /* perl -> c svn_opt_revision_t conversion */
 svn_opt_revision_t *svn_swig_pl_set_revision(svn_opt_revision_t *rev, SV *source)
@@ -983,7 +983,7 @@ svn_error_t *svn_swig_pl_thunk_commit_callback(svn_revnum_t new_revision,
     return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_swig_pl_thunk_commit_callback2(const svn_commit_info_t *commit_info, 
+svn_error_t *svn_swig_pl_thunk_commit_callback2(const svn_commit_info_t *commit_info,
                                                 void *baton,
                                                 apr_pool_t *pool)
 {

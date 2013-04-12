@@ -34,7 +34,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* 
+/*
  *                   About the diff tree processor.
  *
  * Subversion uses two kinds of editors to describe changes. One to
@@ -68,7 +68,7 @@ extern "C" {
  *   * It should provide the information that was missing in the old interface,
  *     but required to close existing issues.
  *
- *     E.g. - properties and children on deleted directories. 
+ *     E.g. - properties and children on deleted directories.
  *          - revision numbers and copyfrom information on directories.
  *
  * To cleanup the implementation and make it easier on diff processors to

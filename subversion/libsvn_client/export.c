@@ -193,7 +193,7 @@ export_node(void *baton,
   svn_stream_t *dst_stream;
   const char *dst_tmp;
   svn_error_t *err;
-  
+
   const char *to_abspath = svn_dirent_join(
                                 eib->to_path,
                                 svn_dirent_skip_ancestor(eib->origin_abspath,
@@ -903,7 +903,7 @@ get_editor_ev1(const svn_delta_editor_t **export_editor,
                apr_pool_t *scratch_pool)
 {
   svn_delta_editor_t *editor = svn_delta_default_editor(result_pool);
-  
+
   editor->set_target_revision = set_target_revision;
   editor->open_root = open_root;
   editor->add_directory = add_directory;
@@ -953,7 +953,7 @@ add_file_ev2(void *baton,
   /* Any keyword vals to be substituted */
   const char *revision = NULL;
   const char *author = NULL;
-  apr_time_t date = 0; 
+  apr_time_t date = 0;
 
   /* Look at any properties for additional information. */
   if ( (val = svn_hash_gets(props, SVN_PROP_EOL_STYLE)) )
@@ -964,14 +964,14 @@ add_file_ev2(void *baton,
 
   if ( (val = svn_hash_gets(props, SVN_PROP_EXECUTABLE)) )
     executable_val = val;
-  
+
   /* Try to fill out the baton's keywords-structure too. */
   if ( (val = svn_hash_gets(props, SVN_PROP_ENTRY_COMMITTED_REV)) )
     revision = val->data;
 
   if ( (val = svn_hash_gets(props, SVN_PROP_ENTRY_COMMITTED_DATE)) )
     SVN_ERR(svn_time_from_cstring(&date, val->data, scratch_pool));
-  
+
   if ( (val = svn_hash_gets(props, SVN_PROP_ENTRY_LAST_AUTHOR)) )
     author = val->data;
 
@@ -1082,7 +1082,7 @@ add_directory_ev2(void *baton,
 
   if ( (val = svn_hash_gets(props, SVN_PROP_EXTERNALS)) )
     SVN_ERR(add_externals(eb->externals, full_path, val));
-  
+
   if (eb->notify_func)
     {
       svn_wc_notify_t *notify = svn_wc_create_notify(full_path,

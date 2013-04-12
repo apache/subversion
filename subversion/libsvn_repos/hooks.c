@@ -246,7 +246,7 @@ run_hook_cmd(svn_string_t **result,
         hook_env = svn_hash_gets(hooks_env,
                                  SVN_REPOS__HOOKS_ENV_DEFAULT_SECTION);
     }
-    
+
   err = svn_io_start_cmd3(&cmd_proc, ".", cmd, args,
                           env_from_env_hash(hook_env, pool, pool),
                           FALSE, FALSE, stdin_handle, result != NULL,
@@ -376,7 +376,7 @@ parse_hooks_env_option(const char *name, const char *value,
   struct parse_hooks_env_option_baton *bo = baton;
   apr_pool_t *result_pool = apr_hash_pool_get(bo->hooks_env);
   apr_hash_t *hook_env;
-  
+
   hook_env = svn_hash_gets(bo->hooks_env, bo->section);
   if (hook_env == NULL)
     {

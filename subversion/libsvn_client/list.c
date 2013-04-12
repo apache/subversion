@@ -38,8 +38,8 @@
 #include "svn_private_config.h"
 
 /* Prototypes for referencing before declaration */
-static svn_error_t * 
-list_externals(apr_hash_t *externals, 
+static svn_error_t *
+list_externals(apr_hash_t *externals,
                svn_depth_t depth,
                apr_uint32_t dirent_fields,
                svn_boolean_t fetch_locks,
@@ -78,9 +78,9 @@ list_internal(const char *path_or_url,
    objects and FS_PATH is the absolute filesystem path of the RA session.
    Use SCRATCH_POOL for temporary allocations.
 
-   If the caller passes EXTERNALS as non-NULL, populate the EXTERNALS 
+   If the caller passes EXTERNALS as non-NULL, populate the EXTERNALS
    hash table whose keys are URLs of the directory which has externals
-   definitions, and whose values are the externals description text. 
+   definitions, and whose values are the externals description text.
    Allocate the hash's keys and values in RESULT_POOL.
 
    EXTERNAL_PARENT_URL and EXTERNAL_TARGET are set when external items
@@ -113,13 +113,13 @@ get_dir_contents(apr_uint32_t dirent_fields,
 
   if (depth == svn_depth_empty)
     return SVN_NO_ERROR;
-  
+
   /* Get the directory's entries. If externals hash is non-NULL, get its
      properties also. Ignore any not-authorized errors.  */
-  err = svn_ra_get_dir2(ra_session, &tmpdirents, NULL, 
+  err = svn_ra_get_dir2(ra_session, &tmpdirents, NULL,
                         externals ? &prop_hash : NULL,
                         dir, rev, dirent_fields, scratch_pool);
-      
+
   if (err && ((err->apr_err == SVN_ERR_RA_NOT_AUTHORIZED) ||
               (err->apr_err == SVN_ERR_RA_DAV_FORBIDDEN)))
     {
@@ -127,16 +127,16 @@ get_dir_contents(apr_uint32_t dirent_fields,
       return SVN_NO_ERROR;
     }
   SVN_ERR(err);
- 
- /* Filter out svn:externals from all properties hash. */ 
-  if (prop_hash) 
+
+ /* Filter out svn:externals from all properties hash. */
+  if (prop_hash)
     prop_val = svn_hash_gets(prop_hash, SVN_PROP_EXTERNALS);
   if (prop_val)
     {
       const char *url;
 
       SVN_ERR(svn_ra_get_session_url(ra_session, &url, scratch_pool));
-      
+
       svn_hash_sets(externals,
                     svn_path_url_add_component2(url, dir, result_pool),
                     svn_string_dup(prop_val, result_pool));
@@ -146,7 +146,7 @@ get_dir_contents(apr_uint32_t dirent_fields,
     SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
   /* Sort the hash, so we can call the callback in a "deterministic" order. */
-  array = svn_sort__hash(tmpdirents, svn_sort_compare_items_lexically, 
+  array = svn_sort__hash(tmpdirents, svn_sort_compare_items_lexically,
                          scratch_pool);
   for (i = 0; i < array->nelts; ++i)
     {
@@ -172,12 +172,12 @@ get_dir_contents(apr_uint32_t dirent_fields,
           || depth == svn_depth_infinity)
         SVN_ERR(list_func(baton, path, the_ent, lock, fs_path,
                           external_parent_url, external_target, iterpool));
-      
-      /* If externals is non-NULL, populate the externals hash table 
+
+      /* If externals is non-NULL, populate the externals hash table
          recursively for all directory entries. */
       if (depth == svn_depth_infinity && the_ent->kind == svn_node_dir)
         SVN_ERR(get_dir_contents(dirent_fields, path, rev,
-                                 ra_session, locks, fs_path, depth, ctx, 
+                                 ra_session, locks, fs_path, depth, ctx,
                                  externals, external_parent_url,
                                  external_target, list_func, baton,
                                  result_pool, iterpool));
@@ -297,36 +297,36 @@ svn_client__ra_stat_compatible(svn_ra_session_t *ra_session,
 }
 
 /* List the file/directory entries for PATH_OR_URL at REVISION.
-   The actual node revision selected is determined by the path as 
-   it exists in PEG_REVISION.  
-   
-   If DEPTH is svn_depth_infinity, then list all file and directory entries 
-   recursively.  Else if DEPTH is svn_depth_files, list all files under 
+   The actual node revision selected is determined by the path as
+   it exists in PEG_REVISION.
+
+   If DEPTH is svn_depth_infinity, then list all file and directory entries
+   recursively.  Else if DEPTH is svn_depth_files, list all files under
    PATH_OR_URL (if any), but not subdirectories.  Else if DEPTH is
    svn_depth_immediates, list all files and include immediate
    subdirectories (at svn_depth_empty).  Else if DEPTH is
    svn_depth_empty, just list PATH_OR_URL with none of its entries.
- 
+
    DIRENT_FIELDS controls which fields in the svn_dirent_t's are
    filled in.  To have them totally filled in use SVN_DIRENT_ALL,
    otherwise simply bitwise OR together the combination of SVN_DIRENT_*
    fields you care about.
- 
+
    If FETCH_LOCKS is TRUE, include locks when reporting directory entries.
- 
-   If INCLUDE_EXTERNALS is TRUE, also list all external items 
+
+   If INCLUDE_EXTERNALS is TRUE, also list all external items
    reached by recursion.  DEPTH value passed to the original list target
-   applies for the externals also.  EXTERNAL_PARENT_URL is url of the 
+   applies for the externals also.  EXTERNAL_PARENT_URL is url of the
    directory which has the externals definitions.  EXTERNAL_TARGET is the
    target subdirectory of externals definitions.
 
-   Report directory entries by invoking LIST_FUNC/BATON. 
+   Report directory entries by invoking LIST_FUNC/BATON.
    Pass EXTERNAL_PARENT_URL and EXTERNAL_TARGET to LIST_FUNC when external
    items are listed, otherwise both are set to NULL.
- 
+
    Use authentication baton cached in CTX to authenticate against the
    repository.
- 
+
    Use POOL for all allocations.
 */
 static svn_error_t *
@@ -397,7 +397,7 @@ list_internal(const char *path_or_url,
   /* Report the dirent for the target. */
   SVN_ERR(list_func(baton, "", dirent, locks
                     ? (svn_hash_gets(locks, fs_path))
-                    : NULL, fs_path, external_parent_url, 
+                    : NULL, fs_path, external_parent_url,
                     external_target, pool));
 
   if (dirent->kind == svn_node_dir
@@ -405,22 +405,22 @@ list_internal(const char *path_or_url,
           || depth == svn_depth_immediates
           || depth == svn_depth_infinity))
     SVN_ERR(get_dir_contents(dirent_fields, "", loc->rev, ra_session, locks,
-                             fs_path, depth, ctx, externals, 
+                             fs_path, depth, ctx, externals,
                              external_parent_url, external_target, list_func,
                              baton, pool, pool));
-  
+
   /* We handle externals after listing entries under path_or_url, so that
      handling external items (and any errors therefrom) doesn't delay
      the primary operation. */
   if (include_externals && apr_hash_count(externals))
     {
-      /* The 'externals' hash populated by get_dir_contents() is processed 
+      /* The 'externals' hash populated by get_dir_contents() is processed
          here. */
-      SVN_ERR(list_externals(externals, depth, dirent_fields, 
+      SVN_ERR(list_externals(externals, depth, dirent_fields,
                              fetch_locks, list_func, baton,
                              ctx, pool));
-    } 
-  
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -511,7 +511,7 @@ list_external_items(apr_array_header_t *external_items,
 /* List external items defined on each external in EXTERNALS, a const char *
    externals_parent_url(url of the directory which has the externals
    definitions) of all externals mapping to the svn_string_t * externals_desc
-   (externals description text). All other options are the same as those 
+   (externals description text). All other options are the same as those
    passed to svn_client_list(). */
 static svn_error_t *
 list_externals(apr_hash_t *externals,

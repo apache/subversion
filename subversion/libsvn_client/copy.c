@@ -1582,7 +1582,7 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
           /* Find a temporary location in which to check out the copy source. */
           SVN_ERR(svn_wc__get_tmpdir(&tmpdir_abspath, ctx->wc_ctx, dst_abspath,
                                      pool, pool));
-                                     
+
           SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_abspath, tmpdir_abspath,
                                            svn_io_file_del_on_close, pool, pool));
 
@@ -1597,14 +1597,14 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
             void *old_notify_baton2 = ctx->notify_baton2;
             struct notification_adjust_baton nb;
             svn_error_t *err;
-          
+
             nb.inner_func = ctx->notify_func2;
             nb.inner_baton = ctx->notify_baton2;
             nb.checkout_abspath = tmp_abspath;
             nb.final_abspath = dst_abspath;
             ctx->notify_func2 = notification_adjust_func;
             ctx->notify_baton2 = &nb;
-          
+
             err = svn_client__checkout_internal(&pair->src_revnum,
                                                 pair->src_original,
                                                 tmp_abspath,
@@ -1613,7 +1613,7 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
                                                 svn_depth_infinity,
                                                 ignore_externals, FALSE,
                                                 &sleep_needed, ctx, pool);
-          
+
             ctx->notify_func2 = old_notify_func2;
             ctx->notify_baton2 = old_notify_baton2;
 
@@ -1911,7 +1911,7 @@ repos_to_wc_copy(svn_boolean_t *timestamp_sleep,
           && (revision.kind != svn_opt_revision_working))
 
 /* ...
- * 
+ *
  * Set *TIMESTAMP_SLEEP to TRUE if a sleep is required; otherwise do not
  * change *TIMESTAMP_SLEEP.  This output will be valid even if the
  * function returns an error.

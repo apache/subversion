@@ -256,7 +256,7 @@ class MailedOutput(OutputBase):
            'X-Svn-Commit-Author: %s\n' \
            'X-Svn-Commit-Revision: %d\n' \
            'X-Svn-Commit-Repository: %s\n' \
-           % (self.from_addr, ', '.join(self.to_addrs), subject, 
+           % (self.from_addr, ', '.join(self.to_addrs), subject,
               Utils.formatdate(), Utils.make_msgid(), group,
               self.repos.author or 'no_author', self.repos.rev,
               os.path.basename(self.repos.repos_dir))

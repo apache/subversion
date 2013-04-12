@@ -3629,7 +3629,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                                      resource->info->repos->base_url,
                                      resource->info->repos->root_path,
                                      NULL);
-                                     
+
               serr = svn_subst_build_keywords3(&kw, keywords->data,
                                                str_cmt_rev, str_uri, str_root,
                                                when, cmt_author,

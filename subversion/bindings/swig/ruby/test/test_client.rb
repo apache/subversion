@@ -2204,7 +2204,7 @@ class SvnClientTest < Test::Unit::TestCase
     make_context(log) do |ctx|
       items = nil
       ctx.set_log_msg_func do |l_items|
-        # ruby 1.8 will carry the assignment of items out of the 
+        # ruby 1.8 will carry the assignment of items out of the
         # scope of this block, 1.9 will not, so we must assign.
         items = l_items
         [true, log]

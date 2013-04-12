@@ -315,7 +315,7 @@ SVNMasterVersion_cmd(cmd_parms *cmd, void *config, const char *arg1)
       svn_error_clear(err);
       return "Malformed master server version string.";
     }
-  
+
   conf->master_version = version;
   return NULL;
 }
@@ -1150,7 +1150,7 @@ static const command_rec cmds[] =
   AP_INIT_TAKE1("SVNMasterVersion", SVNMasterVersion_cmd, NULL, ACCESS_CONF,
                 "specifies the Subversion release version of a master "
                 "Subversion server "),
-  
+
   /* per directory/location */
   AP_INIT_TAKE1("SVNActivitiesDB", SVNActivitiesDB_cmd, NULL, ACCESS_CONF,
                 "specifies the location in the filesystem in which the "

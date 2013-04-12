@@ -1694,7 +1694,7 @@ svn_wc__wrap_diff_callbacks(const svn_diff_tree_processor_t **diff_processor,
 /**
  * Assuming @a local_abspath itself or any of its children are under version
  * control or a tree conflict victim and in a state of conflict, take these
- * nodes out of this state. 
+ * nodes out of this state.
  *
  * If @a resolve_text is TRUE then any text conflict is resolved,
  * if @a resolve_tree is TRUE then any tree conflicts are resolved.
@@ -1834,7 +1834,7 @@ svn_wc__complete_directory_add(svn_wc_context_t *wc_ctx,
    all possible paths affected by resolving the conflicts in the tree
    LOCAL_ABSPATH.  Set *LOCK_ROOT_ABSPATH to the path of the lock
    obtained. */
-svn_error_t * 
+svn_error_t *
 svn_wc__acquire_write_lock_for_resolve(const char **lock_root_abspath,
                                        svn_wc_context_t *wc_ctx,
                                        const char *local_abspath,

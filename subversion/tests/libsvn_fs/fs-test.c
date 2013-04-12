@@ -4947,7 +4947,7 @@ filename_trailing_newline(const svn_test_opts_t *opts,
   svn_revnum_t youngest_rev = 0;
   svn_error_t *err;
   svn_boolean_t allow_newlines;
-  
+
   /* Some filesystem implementations can handle newlines in filenames
    * and can be white-listed here.
    * Currently, only BDB supports \n in filenames. */

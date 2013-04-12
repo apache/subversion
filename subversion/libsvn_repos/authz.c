@@ -846,7 +846,7 @@ authz_retrieve_config_repo(svn_config_t **cfg_p, const char *dirent,
 
   /* Add the URL to the error stack since the parser doesn't have it. */
   if (err != SVN_NO_ERROR)
-    return svn_error_createf(err->apr_err, err, 
+    return svn_error_createf(err->apr_err, err,
                              "Error while parsing config file: '%s' in repo '%s':",
                              fs_path, repos_root_dirent);
 
@@ -875,7 +875,7 @@ authz_retrieve_config(svn_config_t **cfg_p, const char *path,
     {
       const char *dirent;
       svn_error_t *err;
-      apr_pool_t *scratch_pool = svn_pool_create(pool); 
+      apr_pool_t *scratch_pool = svn_pool_create(pool);
 
       err = svn_uri_get_dirent_from_file_url(&dirent, path, scratch_pool);
 
@@ -992,7 +992,7 @@ svn_repos_authz_read2(svn_authz_t **authz_p, const char *path,
 
 
 svn_error_t *
-svn_repos_authz_parse(svn_authz_t **authz_p, svn_stream_t *stream, 
+svn_repos_authz_parse(svn_authz_t **authz_p, svn_stream_t *stream,
                       svn_stream_t *groups_stream, apr_pool_t *pool)
 {
   svn_authz_t *authz = apr_palloc(pool, sizeof(*authz));

@@ -2603,7 +2603,7 @@ def peg_rev_base_working(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  
+
   # set up a local prop mod
   svntest.actions.set_prop('ordinal', 'ninth\n', sbox.ospath('iota'))
   sbox.simple_commit(message='r2')

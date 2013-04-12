@@ -2220,7 +2220,7 @@ def log_diff_moved(sbox):
   sbox.simple_move('A/mu2', 'A/mu3')
   svntest.main.file_append(sbox.ospath('A/mu3'), "now mu3\n")
   sbox.simple_commit()
-  
+
   mu_at_1 = sbox.repo_url + '/A/mu@1'
   mu3_at_3 = sbox.repo_url + '/A/mu3@3'
 

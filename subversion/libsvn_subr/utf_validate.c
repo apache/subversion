@@ -274,9 +274,9 @@ first_non_fsm_start_char(const char *data, apr_size_t max_len)
         if (*data < 0 || *data >= 0x80)
           return data;
     }
-    
+
 #endif
-    
+
   /* Scan the input one machine word at a time. */
   for (; max_len > sizeof(apr_uintptr_t)
        ; data += sizeof(apr_uintptr_t), max_len -= sizeof(apr_uintptr_t))
