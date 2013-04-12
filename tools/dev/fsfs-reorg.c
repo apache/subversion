@@ -2106,7 +2106,7 @@ add_representation_recursively(fs_fs_t *fs,
       apr_pool_t *text_pool = svn_pool_create(pool);
       svn_stringbuf_t *content;
 
-      get_combined_window(&content, fs, representation, text_pool);
+      SVN_ERR(get_combined_window(&content, fs, representation, text_pool));
       representation->target.size = content->len;
       *current_pos += representation->target.size + 13;
 
