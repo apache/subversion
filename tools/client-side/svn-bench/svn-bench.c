@@ -363,7 +363,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   /* No args?  Show usage. */
   if (argc <= 1)
     {
-      svn_cl__help(NULL, NULL, pool);
+      SVN_INT_ERR(svn_cl__help(NULL, NULL, pool));
       return EXIT_FAILURE;
     }
 
@@ -383,7 +383,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         break;
       else if (apr_err)
         {
-          svn_cl__help(NULL, NULL, pool);
+          SVN_INT_ERR(svn_cl__help(NULL, NULL, pool));
           return EXIT_FAILURE;
         }
 
@@ -668,7 +668,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
               svn_error_clear
                 (svn_cmdline_fprintf(stderr, pool,
                                      _("Subcommand argument required\n")));
-              svn_cl__help(NULL, NULL, pool);
+              SVN_INT_ERR(svn_cl__help(NULL, NULL, pool));
               return EXIT_FAILURE;
             }
         }
@@ -686,7 +686,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                 (svn_cmdline_fprintf(stderr, pool,
                                      _("Unknown subcommand: '%s'\n"),
                                      first_arg_utf8));
-              svn_cl__help(NULL, NULL, pool);
+              SVN_INT_ERR(svn_cl__help(NULL, NULL, pool));
               return EXIT_FAILURE;
             }
         }
@@ -713,7 +713,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                           subcommand, pool);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if (subcommand->name[0] == '-')
-            svn_cl__help(NULL, NULL, pool);
+            SVN_INT_ERR(svn_cl__help(NULL, NULL, pool));
           else
             svn_error_clear
               (svn_cmdline_fprintf
