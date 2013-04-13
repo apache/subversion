@@ -1077,14 +1077,14 @@ main(int argc, const char **argv)
         }
     }
 
-  if (subcommand && strcmp(subcommand->name, "--version") == 0)
+  if (strcmp(subcommand->name, "--version") == 0)
     {
       SVNRDUMP_ERR(version(argv[0], opt_baton->quiet, pool));
       svn_pool_destroy(pool);
       exit(EXIT_SUCCESS);
     }
 
-  if (subcommand && strcmp(subcommand->name, "help") == 0)
+  if (strcmp(subcommand->name, "help") == 0)
     {
       SVNRDUMP_ERR(help_cmd(os, opt_baton, pool));
       svn_pool_destroy(pool);
