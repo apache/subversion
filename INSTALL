@@ -651,7 +651,7 @@ II.   INSTALLATION
 
       This script will make sure you have all the necessary components
       available to build Subversion.  If any are missing, you will be
-      told where to get them from.  (See the 'Build Requirements' in
+      told where to get them from.  (See the 'Dependency Overview' in
       section I.)
 
       Note: if the command "autoconf" on your machine does not run
