@@ -68,6 +68,7 @@ Candidate changes:
      ^/subversion/branches/1.6.x-issue4340
    Votes:
      +1: stsp
+     +0: danielsh (reviewed 1.7.x-issue4340)
 
 Veto-blocked changes:
 =====================
