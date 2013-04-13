@@ -285,6 +285,9 @@ Candidate changes:
      Showing the problematic path will help with figuring out the problem.
    Votes:
      +1: stsp
+     +1: danielsh (should we avoid svn_dirent_local_style in this case, i.e.,
+                   print the literal value that nodes.local_relpath is expected
+                   to contain?)
 
 Veto-blocked changes:
 =====================
