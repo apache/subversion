@@ -52,6 +52,15 @@ Candidate changes:
    Votes:
      +1: stsp
     
+ * r1467675
+   Add missing Doxygen @since marker to svn_auth_forget_credentials().
+   Justification:
+     Friendliness to API consumers.
+   Notes:
+     I didn't check whether other related APIs are also missing @since tags.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
