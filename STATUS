@@ -43,6 +43,17 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1467597
+   Better error message if authentication fails and -F - was used.
+   Justification:
+     Nice-to-have usability fix. Explains a side-effect of the new-in-1.8
+     interactive prompting default behaviour which could be considered a
+     regression from 1.7 (use case now requires --force-interactive).
+     See here for details:
+     http://subversion.tigris.org/issues/show_bug.cgi?id=3913#desc5
+   Votes:
+     +1: stsp
+    
 Veto-blocked changes:
 =====================
 
