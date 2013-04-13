@@ -1730,6 +1730,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   svn_boolean_t interactive_conflicts = FALSE;
   svn_boolean_t force_interactive = FALSE;
   svn_boolean_t use_notifier = TRUE;
+  svn_boolean_t reading_file_from_stdin = FALSE;
   apr_hash_t *changelists;
   apr_hash_t *cfg_hash;
 
@@ -1946,6 +1947,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         SVN_INT_ERR(svn_stringbuf_from_file2(&(opt_state.filedata),
                                              utf8_opt_arg, pool));
+        reading_file_from_stdin = (strcmp(utf8_opt_arg, "-") == 0);
         dash_F_arg = opt_arg;
         break;
       case opt_targets:
@@ -2883,6 +2885,12 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                      _("Authentication failed and interactive"
                                        " prompting is disabled; see the"
                                        " --force-interactive option"));
+          if (reading_file_from_stdin)
+            err = svn_error_quick_wrap(err,
+                                       _("Reading file from standard input "
+                                         "because of -F option; this can "
+                                         "interfere with interactive "
+                                         "prompting"));
         }
 
       /* Tell the user about 'svn cleanup' if any error on the stack
