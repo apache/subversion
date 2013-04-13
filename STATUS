@@ -23,7 +23,7 @@ Candidate changes:
      Deleting dead code.  Will be released in 1.9x.
    Branch: 1.8.x-svn_fs_info-removal
    Votes:
-     +1: danielsh
+     +1: danielsh, stsp
 
  * r1467440, r1467450, r1467481
    Unclutter maintainer-mode stack traces.
