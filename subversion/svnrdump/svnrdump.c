@@ -994,9 +994,6 @@ main(int argc, const char **argv)
                                "are mutually exclusive"));
       return svn_cmdline_handle_exit_error(err, pool, "svnrdump: ");
     }
-  else
-    non_interactive = !svn_cmdline__be_interactive(non_interactive,
-                                                   force_interactive);
 
   if (opt_baton->help)
     {
@@ -1127,6 +1124,22 @@ main(int argc, const char **argv)
         }
       opt_baton->url = svn_uri_canonicalize(repos_url, pool);
     }
+
+  if (strcmp(subcommand->name, "load") == 0)
+    {
+      /* 
+       * By default (no --*-interactive options given), the 'load' subcommand
+       * is interactive unless username and password were provided on the
+       * command line. This allows prompting for auth creds to work without
+       * requiring users to remember to use --force-interactive.
+       * See issue #3913, "svnrdump load is not working in interactive mode".
+       */
+      if (!non_interactive && !force_interactive)
+        force_interactive = (username == NULL || password == NULL);
+    }
+
+  non_interactive = !svn_cmdline__be_interactive(non_interactive,
+                                                 force_interactive);
 
   SVNRDUMP_ERR(init_client_context(&(opt_baton->ctx),
                                    non_interactive,
