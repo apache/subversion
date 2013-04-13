@@ -205,8 +205,11 @@ test_error_symbolic_name(apr_pool_t *pool)
     { SVN_ERR_WC_NOT_WORKING_COPY, "SVN_ERR_WC_NOT_WORKING_COPY" },
     /* Test an implementation detail. */
     { SVN_ERR_BAD_CATEGORY_START, "SVN_ERR_BAD_CONTAINING_POOL" },
+#ifdef SVN_DEBUG
+    { ENOENT, "ENOENT" },
+#endif
     /* Test non-errors. */
-    { 1, NULL },
+    { -1, NULL },
     { SVN_ERR_WC_CATEGORY_START - 1, NULL },
     /* Whitebox-test exceptional cases. */
     { SVN_WARNING, "SVN_WARNING" },
