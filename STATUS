@@ -269,8 +269,9 @@ Candidate changes:
      -1: cmpilato ("How did this expand from 'newlines' to 'control
                     characters'?!
                     <danielsh> that has been addressed in HEAD)
-     +1: danielsh (FSFS escape_newline should escape any control character,
-                   not just '\n')
+     -0: danielsh (FSFS escape_newline should escape any control character,
+                   not just '\n'; libsvn_repos restrictions not suitable
+                   for introduction in a patch release)
 
  * r1461743
    svn_fs_commit_txn: set output parameter in non-maintainer-with-special-flags
