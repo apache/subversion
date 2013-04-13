@@ -37,8 +37,8 @@ def print_help():
 
 def show_creds(hash):
   hash_keys = hash.keys()
-  maxkeylen = max(map(lambda x: len(x), hash_keys))
-  maxvallen = max(map(lambda x: len(x), hash.values()))
+  maxkeylen = max(map(len, hash_keys))
+  maxvallen = max(map(len, hash.values()))
   hash_keys.sort()
   sys.stdout.write("+")
   sys.stdout.write("-" * (maxkeylen + 2))
