@@ -30,10 +30,7 @@ Candidate changes:
    Justification:
      Code was in flux when the branch was cut.  Maintainer sanity.
    Votes:
-     -1: stsp (as stated on dev@, I'd rather have 1.8 use 1.7-style
-               error reporting -- let's settle on a new style for 1.9)
-     +1: danielsh (stsp: this only changes maintainer mode output;
-                   there is no user-visible change)
+     +1: danielsh, stsp
 
  * r1467587
    Fix issue #3913, "svnrdump load" is not working in interactive mode
