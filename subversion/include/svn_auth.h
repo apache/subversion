@@ -702,6 +702,8 @@ svn_auth_save_credentials(svn_auth_iterstate_t *state,
  * credential storage at all.  It is merely a way to cause Subversion
  * to forget about credentials already fetched from a provider,
  * forcing them to be fetched again later should they be required.
+ *
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_auth_forget_credentials(svn_auth_baton_t *auth_baton,
