@@ -32,12 +32,14 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * rxxx
-   xxx
+ * r1467587
+   Fix issue #3913, "svnrdump load" is not working in interactive mode
    Justification:
-     xxx
+     Fixes a UI quirk requiring users to remember typing --force-interactive
+     for auth creds prompting to work, in a situation where we should
+     be prompting for creds by default IMHO.
    Votes:
-     +1: xxx
+     +1: stsp
 
 Veto-blocked changes:
 =====================
