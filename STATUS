@@ -61,6 +61,20 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1467668
+   Update INSTALL about in-tree dependencies (from get-deps.sh)
+   Justification:
+     Less misinformation for anyone building from source.
+   Votes:
+     +1 (non-binding): mattiase
+
+ * r1467803
+   Add missing linefeed in a message.
+   Justification:
+     Avoid embarrassing untidiness in textual output.
+   Votes:
+     +1 (non-binding): mattiase
+
 Veto-blocked changes:
 =====================
 
