@@ -16,15 +16,6 @@ Status of 1.8.0:
 Candidate changes:
 ==================
 
- * 1.8.x-svn_fs_info-removal
-   Remove an API that is #define'd away and not compiled, as well as
-   fs-loader.h parts of it.
-   Justification:
-     Deleting dead code.  Will be released in 1.9x.
-   Branch: 1.8.x-svn_fs_info-removal
-   Votes:
-     +1: danielsh, stsp
-
  * r1467440, r1467450, r1467481
    Unclutter maintainer-mode stack traces.
    Justification:
@@ -39,7 +30,7 @@ Candidate changes:
      for auth creds prompting to work, in a situation where we should
      be prompting for creds by default IMHO.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
  * r1467597
    Better error message if authentication fails and -F - was used.
@@ -59,14 +50,7 @@ Candidate changes:
    Notes:
      I didn't check whether other related APIs are also missing @since tags.
    Votes:
-     +1: danielsh
-
- * r1467668
-   Update INSTALL about in-tree dependencies (from get-deps.sh)
-   Justification:
-     Less misinformation for anyone building from source.
-   Votes:
-     +1 (non-binding): mattiase
+     +1: danielsh, rhuijben
 
  * r1467803
    Add missing linefeed in a message.
@@ -74,6 +58,7 @@ Candidate changes:
      Avoid embarrassing untidiness in textual output.
    Votes:
      +1 (non-binding): mattiase
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
@@ -81,3 +66,19 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1467668
+   Update INSTALL about in-tree dependencies (from get-deps.sh)
+   Justification:
+     Less misinformation for anyone building from source.
+   Votes:
+     +1 (non-binding): mattiase
+     +1: rhuijben (documentation change doesn't need full voting process)
+
+ * 1.8.x-svn_fs_info-removal
+   Remove an API that is #define'd away and not compiled, as well as
+   fs-loader.h parts of it.
+   Justification:
+     Deleting dead code.  Will be released in 1.9x.
+   Branch: 1.8.x-svn_fs_info-removal
+   Votes:
+     +1: danielsh, stsp, rhuijben
