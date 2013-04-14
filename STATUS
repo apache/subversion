@@ -58,7 +58,14 @@ Candidate changes:
      Avoid embarrassing untidiness in textual output.
    Votes:
      +1 (non-binding): mattiase
-     +1: rhuijben
+     +1: rhuijben, breser
+
+ * r1467807
+   Fix segfault when using --internal-diff
+   Justification:
+     It's a segfault.
+   Votes:
+     +1: breser
 
 Veto-blocked changes:
 =====================
