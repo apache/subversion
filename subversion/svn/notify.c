@@ -1050,8 +1050,9 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       break;
 
     case svn_wc_notify_path_nonexistent:
-      err = svn_cmdline_printf(pool, _("'%s' is not under version control"),
-                               path_local);
+      err = svn_cmdline_printf(pool, "%s\n",
+               apr_psprintf(pool, _("'%s' is not under version control"),
+                            path_local));
       if (err)
         goto print_error;
       break;
