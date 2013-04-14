@@ -215,6 +215,14 @@ that prints the equivalent of `cat fs-type uuid ../format ../db/format`; but
 that's orthogonal to all backend changes.)
 
 
+Support for arbitrary chars in path names
+-----------------------------------------
+
+Format 6's textual item representations breaks when path names contain
+newlines.  Format 7 revisions shall escape all control chars (e.g. < 0x20)
+in path names when using them in textual item representations.
+
+
 DONE
 ====
 
