@@ -458,23 +458,6 @@ sub build_pcre {
   chdir_or_die($TOPDIR);
 }
 
-# This is a zlib build that uses cmake.  I prefer it to the Makefile.msc based
-# but there are assumptions in the Subversion build that makes this fail.
-# So we can't use it for the time being.
-sub build_zlib_cmake {
-  chdir_or_die("$SRCLIB\\zlib");
-  my $zlib_generator = 'NMake Makefiles';
-  # Have to use RelWithDebInfo since httpd looks for the pdb files
-  my $zlib_build_type = '-DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo';
-  my $zlib_install_prefix = "-DCMAKE_INSTALL_PREFIX:PATH=$INSTDIR";
-  my $cmake_cmd = qq("$CMAKE" -G "$zlib_generator" "$zlib_build_type" "$zlib_install_prefix" .); 
-  system_or_die("Failure generating zlib Makefiles", $cmake_cmd);
-  system_or_die("Failure building zlib", qq("$NMAKE"));
-  system_or_die("Failure testing zlib", qq("$NMAKE" test));
-  system_or_die("Failure installing zlib", qq("$NMAKE" install));
-  chdir_or_die($TOPDIR);
-}
-
 # This is based roughly off the build_zlib.bat that the Subversion Windows
 # build generates, it it doesn't match that then Subversion will fail to build.
 sub build_zlib {
@@ -558,19 +541,6 @@ sub httpd_fix_makefile {
   modify_file_in_place($file, sub {
       s/\.vcproj/\.vcxproj/i;
     });
-}
-
-# mod_deflate looks for zdll.lib but that file appears to be named
-# zlib.lib now.  The docs for win32 zlib mention both files, but
-# appears that zdll.lib became zlib.lib and the old zlib.lib became
-# zlibstatic.lib (This is only the case for the CMake based build)
-# Using Makefile.msc produces zdll.lib
-sub httpd_fix_mod_deflate {
-  my $file = shift;
-
-  modify_file_in_place($file, sub {
-      s/zdll\.lib/zlib\.lib/g;
-    }, '.zlib');
 }
 
 # This is a poor mans way of inserting a property group into a
@@ -670,9 +640,6 @@ sub build_httpd {
   upgrade_solution('Apache.dsw');
   httpd_enable_bdb();
   httpd_fix_makefile('Makefile.win');
-
-  # Don't do the following unless we're using the cmake zlib build
-  #httpd_fix_mod_deflate('modules\filters\mod_deflate.vcxproj');
 
   # Turn off pre-compiled headers for apr-iconv to avoid:
   # LNK2011: http://msdn.microsoft.com/en-us/library/3ay26wa2(v=vs.110).aspx
