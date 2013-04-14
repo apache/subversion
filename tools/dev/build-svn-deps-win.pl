@@ -480,10 +480,9 @@ sub build_openssl {
   # use this for production they should probably download NASM and
   # remove the no-asm below and use ms\do_nasm.bat instead.
   
-  # TODO: Enable openssl to use zlib.  openssl has to be patched to do needs
-  # some patching to do this since it wants to look for zlib as zlib1.dll and
-  # as the httpd build instructions note you probably don't want to dynamic
-  # link zlib.
+  # TODO: Enable openssl to use zlib.  openssl needs some patching to do
+	# this since it wants to look for zlib as zlib1.dll and as the httpd
+	# build instructions note you probably don't want to dynamic link zlib.
   
   # TODO: OpenSSL requires perl on the path since it uses perl without a full
   # path in the batch file and the makefiles.  Probably should determine
@@ -539,7 +538,7 @@ sub httpd_fix_makefile {
   my $file = shift;
 
   modify_file_in_place($file, sub {
-      s/\.vcproj/\.vcxproj/i;
+      s/\.vcproj/.vcxproj/i;
     });
 }
 
