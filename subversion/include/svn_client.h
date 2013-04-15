@@ -445,7 +445,11 @@ typedef struct svn_client_commit_info_t
  *
  * @since New in 1.2. */
 #define SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN  0x20
-/** @since New in 1.8. */
+/** One of the flags for a commit item.  The node is the 'moved here'
+ * side of a local move.  This is used to check and enforce that the
+ * other side of the move is also included in the commit.
+ *
+ * @since New in 1.8. */
 #define SVN_CLIENT_COMMIT_ITEM_MOVED_HERE  0x40
 /** @} */
 
