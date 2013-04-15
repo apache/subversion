@@ -3260,46 +3260,6 @@ filename_with_control_chars(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
-#ifdef SVN_FS_INFO
-static svn_error_t *
-test_repos_info(const svn_test_opts_t *opts,
-                apr_pool_t *pool)
-{
-  svn_repos_t *repos;
-  svn_test_opts_t opts2;
-  apr_hash_t *capabilities;
-  svn_version_t *supports_version;
-  svn_version_t v1_0_0 = {1, 0, 0, ""};
-  svn_version_t v1_4_0 = {1, 4, 0, ""};
-  int repos_format;
-
-  opts2 = *opts;
-
-  opts2.server_minor_version = 3;
-  SVN_ERR(svn_test__create_repos(&repos, "test-repo-info-3",
-                                 &opts2, pool));
-  SVN_ERR(svn_repos_capabilities(&capabilities, repos, pool, pool));
-  SVN_TEST_ASSERT(apr_hash_count(capabilities) == 0);
-  SVN_ERR(svn_repos_info_format(&repos_format, &supports_version, repos,
-                                pool, pool));
-  SVN_TEST_ASSERT(repos_format == 3);
-  SVN_TEST_ASSERT(svn_ver_equal(supports_version, &v1_0_0));
-
-  opts2.server_minor_version = 8;
-  SVN_ERR(svn_test__create_repos(&repos, "test-repo-info-8",
-                                 &opts2, pool));
-  SVN_ERR(svn_repos_capabilities(&capabilities, repos, pool, pool));
-  SVN_TEST_ASSERT(apr_hash_count(capabilities) == 1);
-  SVN_TEST_ASSERT(svn_hash_gets(capabilities, SVN_REPOS_CAPABILITY_MERGEINFO));
-  SVN_ERR(svn_repos_info_format(&repos_format, &supports_version, repos,
-                                pool, pool));
-  SVN_TEST_ASSERT(repos_format == 5);
-  SVN_TEST_ASSERT(svn_ver_equal(supports_version, &v1_4_0));
-
-  return SVN_NO_ERROR;
-}
-#endif
-
 
 /* The test table.  */
 
@@ -3346,9 +3306,5 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test svn_repos_delete"),
     SVN_TEST_OPTS_PASS(filename_with_control_chars,
                        "test filenames with control characters"),
-#ifdef SVN_FS_INFO
-    SVN_TEST_OPTS_PASS(test_repos_info,
-                       "test svn_repos_info_*"),
-#endif
     SVN_TEST_NULL
   };
