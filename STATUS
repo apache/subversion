@@ -47,12 +47,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * 1.8.x-svn_fs_info-removal
-   Remove an API that is #define'd away and not compiled, as well as
-   fs-loader.h parts of it.
-   Justification:
-     Deleting dead code.  Will be released in 1.9x.
-   Branch: 1.8.x-svn_fs_info-removal
-   Votes:
-     +1: danielsh, stsp, rhuijben
