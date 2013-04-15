@@ -43,23 +43,6 @@ Candidate changes:
    Votes:
      +1: stsp
     
- * r1467675
-   Add missing Doxygen @since marker to svn_auth_forget_credentials().
-   Justification:
-     Friendliness to API consumers.
-   Notes:
-     I didn't check whether other related APIs are also missing @since tags.
-   Votes:
-     +1: danielsh, rhuijben
-
- * r1467803
-   Add missing linefeed in a message.
-   Justification:
-     Avoid embarrassing untidiness in textual output.
-   Votes:
-     +1 (non-binding): mattiase
-     +1: rhuijben, breser
-
 Veto-blocked changes:
 =====================
 
@@ -88,4 +71,23 @@ Approved changes:
    Justification:
      It's a segfault.
    Votes:
-     +1: breser, ivan, philip
+     +1: breser, ivan, philip,
+         pburba (gratuitous 4th vote that I tried to commit seconds
+                 after philip, but what the heck)
+
+ * r1467803
+   Add missing linefeed in a message.
+   Justification:
+     Avoid embarrassing untidiness in textual output.
+   Votes:
+     +1 (non-binding): mattiase
+     +1: rhuijben, breser, pburba
+
+ * r1467675
+   Add missing Doxygen @since marker to svn_auth_forget_credentials().
+   Justification:
+     Friendliness to API consumers.
+   Notes:
+     I didn't check whether other related APIs are also missing @since tags.
+   Votes:
+     +1: danielsh, rhuijben, pburba
