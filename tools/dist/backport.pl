@@ -32,6 +32,8 @@ my $BRANCHES = '^/subversion/branches';
 my $YES = $ENV{YES}; # batch mode: eliminate prompts, add sleeps
 my $WET_RUN = qw[false true][1]; # don't commit
 my $DEBUG = qw[false true][0]; # 'set -x', etc
+$WET_RUN = 'true' if exists $ENV{WET_RUN};
+$DEBUG = 'true' if exists $ENV{DEBUG};
 
 # derived values
 my $SVNq;
