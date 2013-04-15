@@ -60,13 +60,6 @@ Candidate changes:
      +1 (non-binding): mattiase
      +1: rhuijben, breser
 
- * r1467807
-   Fix segfault when using --internal-diff
-   Justification:
-     It's a segfault.
-   Votes:
-     +1: breser, ivan
-
 Veto-blocked changes:
 =====================
 
@@ -89,3 +82,10 @@ Approved changes:
    Branch: 1.8.x-svn_fs_info-removal
    Votes:
      +1: danielsh, stsp, rhuijben
+
+ * r1467807
+   Fix segfault when using --internal-diff
+   Justification:
+     It's a segfault.
+   Votes:
+     +1: breser, ivan, philip
