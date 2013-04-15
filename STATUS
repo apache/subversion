@@ -40,14 +40,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1467668
-   Update INSTALL about in-tree dependencies (from get-deps.sh)
-   Justification:
-     Less misinformation for anyone building from source.
-   Votes:
-     +1 (non-binding): mattiase
-     +1: rhuijben (documentation change doesn't need full voting process)
-
  * 1.8.x-svn_fs_info-removal
    Remove an API that is #define'd away and not compiled, as well as
    fs-loader.h parts of it.
