@@ -49,15 +49,6 @@ Approved changes:
    Votes:
      +1: danielsh, stsp, rhuijben
 
- * r1467807
-   Fix segfault when using --internal-diff
-   Justification:
-     It's a segfault.
-   Votes:
-     +1: breser, ivan, philip,
-         pburba (gratuitous 4th vote that I tried to commit seconds
-                 after philip, but what the heck)
-
  * r1467803
    Add missing linefeed in a message.
    Justification:
