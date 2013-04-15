@@ -49,14 +49,6 @@ Approved changes:
    Votes:
      +1: danielsh, stsp, rhuijben
 
- * r1467803
-   Add missing linefeed in a message.
-   Justification:
-     Avoid embarrassing untidiness in textual output.
-   Votes:
-     +1 (non-binding): mattiase
-     +1: rhuijben, breser, pburba
-
  * r1467675
    Add missing Doxygen @since marker to svn_auth_forget_credentials().
    Justification:
