@@ -917,7 +917,7 @@ svn_stream_empty(apr_pool_t *pool);
 /** Return a stream allocated in @a pool which forwards all requests
  * to @a stream.  Destruction is explicitly excluded from forwarding.
  *
- * @see notes/destruction-of-stacked-resources
+ * @see http://subversion.apache.org/docs/community-guide/conventions.html#destruction-of-stacked-resources
  *
  * @since New in 1.4.
  */
