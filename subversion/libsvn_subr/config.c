@@ -464,7 +464,7 @@ make_string_from_option(const char **valuep, svn_config_t *cfg,
       /* before attempting to expand an option, check for the placeholder.
        * If none is there, there is no point in calling expand_option_value.
        */
-      if (strchr(opt->value, '%'))
+      if (opt->value && strchr(opt->value, '%'))
         {
           apr_pool_t *tmp_pool = (x_pool ? x_pool : svn_pool_create(cfg->x_pool));
 
