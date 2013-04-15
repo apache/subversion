@@ -78,7 +78,7 @@ sub merge {
 
   if ($entry{branch}) {
     # NOTE: This doesn't escape the branch into the pattern.
-    $pattern = sprintf '\V\(%s branch(es)?\|branches\/%s\|Branch(es)?:\n *%s\)', $entry{branch}, $entry{branch}, $entry{branch};
+    $pattern = sprintf '\V\(%s branch(es)?\|branches\/%s\|Branch\(es\)\?: \*\n\? \*%s\)', $entry{branch}, $entry{branch}, $entry{branch};
     $mergeargs = "--reintegrate $BRANCHES/$entry{branch}";
     print $logmsg_fh "Reintegrate the $entry{header}:";
     print $logmsg_fh "";
