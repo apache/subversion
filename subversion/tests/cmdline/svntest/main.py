@@ -135,6 +135,8 @@ wc_passwd = 'rayjandom'
 # scenarios
 wc_author2 = 'jconstant' # use the same password as wc_author
 
+stack_trace_regexp = r'(?:.*subversion[\\//].*\.c:[0-9]*,$|.*apr_err=.*)'
+
 # Set C locale for command line programs
 os.environ['LC_ALL'] = 'C'
 

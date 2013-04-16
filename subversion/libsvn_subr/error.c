@@ -454,6 +454,8 @@ svn_error_purge_tracing(svn_error_t *err)
 #endif /* SVN_ERR__TRACING */
 }
 
+/* ### The logic around omitting (sic) apr_err= in maintainer mode is tightly
+   ### coupled to the current sole caller.*/
 static void
 print_error(svn_error_t *err, FILE *stream, const char *prefix)
 {
@@ -482,8 +484,11 @@ print_error(svn_error_t *err, FILE *stream, const char *prefix)
     }
 
   {
-    const char *symbolic_name = svn_error_symbolic_name(err->apr_err);
-    if (symbolic_name)
+    const char *symbolic_name;
+    if (svn_error__is_tracing_link(err))
+      /* Skip it; the error code will be printed by the real link. */
+      svn_error_clear(svn_cmdline_fprintf(stream, err->pool, ",\n"));
+    else if ((symbolic_name = svn_error_symbolic_name(err->apr_err)))
       svn_error_clear(svn_cmdline_fprintf(stream, err->pool,
                                           ": (apr_err=%s)\n", symbolic_name));
     else
