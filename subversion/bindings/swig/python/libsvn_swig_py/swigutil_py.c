@@ -2637,8 +2637,9 @@ svn_error_t *svn_swig_py_repos_history_func(void *baton,
   return err;
 }
 
-svn_error_t *svn_swig_py_repos_freeze_func(void *baton,
-                                           apr_pool_t *pool)
+static svn_error_t *
+freeze_func(void *baton,
+            apr_pool_t *pool)
 {
   PyObject *receiver = baton;
   PyObject *py_pool;
@@ -2674,6 +2675,18 @@ svn_error_t *svn_swig_py_repos_freeze_func(void *baton,
 finished:
   svn_swig_py_release_py_lock();
   return err;
+}
+
+svn_error_t *svn_swig_py_repos_freeze_func(void *baton,
+                                           apr_pool_t *pool)
+{
+  return freeze_func(baton, pool);
+}
+
+svn_error_t *svn_swig_py_fs_freeze_func(void *baton,
+                                        apr_pool_t *pool)
+{
+  return freeze_func(baton, pool);
 }
 
 svn_error_t *svn_swig_py_proplist_receiver2(void *baton,
