@@ -32,6 +32,14 @@ Candidate changes:
    Votes:
      +1: ivan
 
+ * r1468395, r1468566
+   Introduced typedef for the svn_fs_freeze() callback function type,
+   and give it the requisite the SWIG/Python wrapper treatment.
+   Justification:
+     Without this, the callback is useless in SWIG/Python
+   Votes:
+     +1: cmpilato
+
  * r1468565
    Use correct plural localisation for conflict summary messages.
    Justification:
