@@ -32,6 +32,13 @@ Candidate changes:
    Votes:
      +1: ivan
 
+ * r1468565
+   Use correct plural localisation for conflict summary messages.
+   Justification:
+     Required for several translations.
+   Votes:
+     +1 (non-binding): mattiase
+
 Veto-blocked changes:
 =====================
 
