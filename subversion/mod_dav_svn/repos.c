@@ -4463,6 +4463,32 @@ handle_post_request(request_rec *r,
                             "Unsupported skel POST request flavor.");
 }
 
+
+/* A stripped down version of mod_dav's dav_handle_err so that POST
+   errors, which are not passed via mod_dav, are handled in the same
+   way as errors for requests that are passed via mod_dav. */
+static int
+handle_err(request_rec *r, dav_error *err)
+{
+  dav_error *stackerr = err;
+
+  dav_svn__log_err(r, err, APLOG_ERR);
+
+  /* our error messages are safe; tell Apache this */
+  apr_table_setn(r->notes, "verbose-error-to", "*");
+
+  /* We might be able to generate a standard <D:error> response.
+     Search the error stack for an errortag. */
+  while (stackerr != NULL && stackerr->tagname == NULL)
+    stackerr = stackerr->prev;
+
+  if (stackerr != NULL && stackerr->tagname != NULL)
+    return dav_svn__error_response_tag(r, stackerr);
+
+  return err->status;
+}
+
+
 int dav_svn__method_post(request_rec *r)
 {
   dav_resource *resource;
@@ -4495,9 +4521,8 @@ int dav_svn__method_post(request_rec *r)
   if (derr)
     {
       /* POST is not a DAV method and so mod_dav isn't involved and
-         won't log this error.  Do it explicitly. */
-      dav_svn__log_err(r, derr, APLOG_ERR);
-      return dav_svn__error_response_tag(r, derr);
+         won't handle this error.  Do it explicitly. */
+      return handle_err(r, derr);
     }
 
   return OK;
