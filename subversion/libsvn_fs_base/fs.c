@@ -533,7 +533,7 @@ base_bdb_verify_root(svn_fs_root_t *root,
 
 static svn_error_t *
 base_bdb_freeze(svn_fs_t *fs,
-                svn_error_t *(*freeze_func)(void *, apr_pool_t *),
+                svn_fs_freeze_func_t freeze_func,
                 void *freeze_baton,
                 apr_pool_t *pool)
 {
