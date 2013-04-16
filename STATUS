@@ -30,13 +30,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1467440, r1467450, r1467481
-   Unclutter maintainer-mode stack traces.
-   Justification:
-     Code was in flux when the branch was cut.  Maintainer sanity.
-   Votes:
-     +1: danielsh, stsp, brane
-
  * r1467597
    Better error message if authentication fails and -F - was used.
    Justification:

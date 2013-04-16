@@ -837,7 +837,7 @@ def subtree_to_and_fro(sbox):
                                 "|(  A_COPY\n)"
                                 "|(    Missing ranges: /A:5\n)"
                                 "|(\n)"
-                                "|(.*apr_err.*)", # In case of debug build
+                                "|" + svntest.main.stack_trace_regexp,
                                 None,
                                 True) # Match *all* lines of stdout
 
