@@ -24,6 +24,14 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1468439
+   Fix assertion on checkout from pre-1.8 server over ra_serf with
+   http-bulk-updates=off.
+   Justification:
+     svn checkout fails.
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
