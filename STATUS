@@ -16,14 +16,6 @@ Status of 1.8.0:
 Candidate changes:
 ==================
 
- * r1468439
-   Fix assertion on checkout from pre-1.8 server over ra_serf with
-   http-bulk-updates=off.
-   Justification:
-     svn checkout fails.
-   Votes:
-     +1: ivan, rhuijben
-
  * r1468395, r1468566
    Introduced typedef for the svn_fs_freeze() callback function type,
    and give it the requisite the SWIG/Python wrapper treatment.
@@ -67,3 +59,11 @@ Approved changes:
    Votes:
      +1: brane
      +0: rhuijben (reviewed, not tested)
+
+ * r1468439
+   Fix assertion on checkout from pre-1.8 server over ra_serf with
+   http-bulk-updates=off.
+   Justification:
+     svn checkout fails.
+   Votes:
+     +1: ivan, rhuijben, philip
