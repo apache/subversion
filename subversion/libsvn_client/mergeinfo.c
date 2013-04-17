@@ -1507,10 +1507,6 @@ logs_for_mergeinfo_rangelist(const char *source_url,
   if (! rangelist->nelts)
     return SVN_NO_ERROR;
 
-  /* Sort the rangelist. */
-  qsort(rangelist->elts, rangelist->nelts,
-        rangelist->elt_size, svn_sort_compare_ranges);
-
   /* Build a single-member log target list using SOURCE_URL. */
   target = apr_array_make(scratch_pool, 1, sizeof(const char *));
   APR_ARRAY_PUSH(target, const char *) = source_url;
