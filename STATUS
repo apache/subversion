@@ -47,6 +47,19 @@ Candidate changes:
    Votes:
      +1 (non-binding): mattiase
 
+ * r1468347
+   Handle POST errors like MKACTIVITY errors.
+   Justification:
+     Consistent error reporting for v1 and v2 protocols.
+   Votes:
+     +1: philip
+
+ * r1468487
+   Add SWIG Perl support for svn_client_log3 and svn_client_log4.
+     Bring the perl bindings a little closer to being up-to-date.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
