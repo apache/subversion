@@ -16,21 +16,13 @@ Status of 1.8.0:
 Candidate changes:
 ==================
 
- * r1468151
-   Map missing some missing bits to JavaHL
-   Justification:
-     A few constants and struct members were not mapped to JavaHL,
-     and a newly-deprecated function was being called.
-   Votes:
-     +1: brane
-
  * r1468439
    Fix assertion on checkout from pre-1.8 server over ra_serf with
    http-bulk-updates=off.
    Justification:
      svn checkout fails.
    Votes:
-     +1: ivan
+     +1: ivan, rhuijben
 
  * r1468395, r1468566
    Introduced typedef for the svn_fs_freeze() callback function type,
@@ -38,7 +30,7 @@ Candidate changes:
    Justification:
      Without this, the callback is useless in SWIG/Python
    Votes:
-     +1: cmpilato
+     +1: cmpilato, rhuijben
 
  * r1468565
    Use correct plural localisation for conflict summary messages.
@@ -52,16 +44,25 @@ Candidate changes:
    Justification:
      Consistent error reporting for v1 and v2 protocols.
    Votes:
-     +1: philip
-
- * r1468487
-   Add SWIG Perl support for svn_client_log3 and svn_client_log4.
-     Bring the perl bindings a little closer to being up-to-date.
-   Votes:
-     +1: philip
+     +1: philip, rhuijben
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1468487
+   Add SWIG Perl support for svn_client_log3 and svn_client_log4.
+     Bring the perl bindings a little closer to being up-to-date.
+   Votes:
+     +1: philip, rhuijben
+
+ * r1468151
+   Map missing some missing bits to JavaHL
+   Justification:
+     A few constants and struct members were not mapped to JavaHL,
+     and a newly-deprecated function was being called.
+   Votes:
+     +1: brane
+     +0: rhuijben (reviewed, not tested)
