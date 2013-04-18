@@ -9019,7 +9019,7 @@ svn_wc__db_read_node_install_info(const char **wcroot_abspath,
 
   if (have_row)
     {
-      if (!err && sha1_checksum)
+      if (sha1_checksum)
         err = svn_sqlite__column_checksum(sha1_checksum, stmt, 6, result_pool);
 
       if (!err && pristine_props)
