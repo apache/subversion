@@ -129,18 +129,11 @@ svn_fs_fs__changes_create(apr_size_t initial_count,
   return changes;
 }
 
-apr_size_t
-svn_fs_fs__changes_end_list(svn_fs_fs__changes_t *changes)
-{
-  APR_ARRAY_PUSH(changes->offsets, int) = changes->changes->nelts;
-  return (apr_size_t)(changes->offsets->nelts - 2);
-}
-
 /* Add CHANGE to the latest change list in CHANGES.
  */
 static svn_error_t *
-append_change_body(svn_fs_fs__changes_t *changes,
-                   change_t *change)
+append_change(svn_fs_fs__changes_t *changes,
+              change_t *change)
 {
   binary_change_t binary_change = { 0 };
   svn_boolean_t is_txn_id;
@@ -196,17 +189,6 @@ append_change_body(svn_fs_fs__changes_t *changes,
 }
 
 svn_error_t *
-svn_fs_fs__changes_append_change(svn_fs_fs__changes_t *changes,
-                                 change_t *change)
-{
-  /* CHANGES must be in 'builder' mode */
-  SVN_ERR_ASSERT(changes->builder);
-  SVN_ERR_ASSERT(changes->paths == NULL);
-
-  return append_change_body(changes, change);
-}
-
-svn_error_t *
 svn_fs_fs__changes_append_list(apr_size_t *list_index,
                                svn_fs_fs__changes_t *changes,
                                apr_array_header_t *list)
@@ -219,9 +201,11 @@ svn_fs_fs__changes_append_list(apr_size_t *list_index,
 
   /* simply append the list and all changes */
   for (i = 0; i < list->nelts; ++i)
-    append_change_body(changes, APR_ARRAY_IDX(list, i, change_t *));
+    append_change(changes, APR_ARRAY_IDX(list, i, change_t *));
 
-  *list_index = svn_fs_fs__changes_end_list(changes);
+  /* terminate the list by storing the next changes offset */
+  APR_ARRAY_PUSH(changes->offsets, int) = changes->changes->nelts;
+  *list_index = (apr_size_t)(changes->offsets->nelts - 2);
 
   return SVN_NO_ERROR;
 }
