@@ -45,15 +45,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1468151
-   Map missing some missing bits to JavaHL
-   Justification:
-     A few constants and struct members were not mapped to JavaHL,
-     and a newly-deprecated function was being called.
-   Votes:
-     +1: brane
-     +0: rhuijben (reviewed, not tested)
-
  * r1468439
    Fix assertion on checkout from pre-1.8 server over ra_serf with
    http-bulk-updates=off.
