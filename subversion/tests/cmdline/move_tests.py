@@ -1193,7 +1193,6 @@ value3>>>>>>> (incoming property value)
 
 
 @Issue(4356)
-@XFail()
 def move_missing(sbox):
   "move a missing directory"
 

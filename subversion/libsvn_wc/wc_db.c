@@ -11909,7 +11909,7 @@ svn_wc__db_scan_moved(const char **moved_from_abspath,
                             : NULL,
                         wcroot, local_relpath, scratch_pool, scratch_pool));
 
-  if (status != svn_wc__db_status_moved_here)
+  if (status != svn_wc__db_status_moved_here || !moved_from_relpath)
     return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                              _("Path '%s' was not moved here"),
                              path_for_error_message(wcroot, local_relpath,
