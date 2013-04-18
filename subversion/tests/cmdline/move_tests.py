@@ -1193,6 +1193,7 @@ value3>>>>>>> (incoming property value)
 
 
 @Issue(4356)
+@XFail()
 def move_missing(sbox):
   "move a missing directory"
 
@@ -1225,6 +1226,12 @@ def move_missing(sbox):
   })
 
   # Verify that the status processing doesn't crash
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # The issue is a crash when the destination is present
+  os.mkdir(sbox.ospath('R'))
+  expected_status.tweak('R', status='A ', copied='+')
+
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
