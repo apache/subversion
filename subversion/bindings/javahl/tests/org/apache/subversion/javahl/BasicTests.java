@@ -3408,6 +3408,7 @@ public class BasicTests extends SVNTests
         ConflictDescriptor conflict = conflicts.iterator().next();
 
         assertNotNull("Conflict should not be null", conflict);
+        assertNotNull("Repository UUID must be set", conflict.getSrcLeftVersion().getReposUUID());
 
         assertEquals(conflict.getSrcLeftVersion().getNodeKind(), NodeKind.file);
         assertEquals(conflict.getSrcLeftVersion().getReposURL() + "/" +
@@ -3416,6 +3417,8 @@ public class BasicTests extends SVNTests
 
         if (conflict.getSrcRightVersion() != null)
         {
+            assertEquals(conflict.getSrcLeftVersion().getReposUUID(),
+                         conflict.getSrcRightVersion().getReposUUID());
             assertEquals(conflict.getSrcRightVersion().getNodeKind(), NodeKind.none);
             assertEquals(conflict.getSrcRightVersion().getReposURL(), tcTest.getUrl().toString());
             assertEquals(conflict.getSrcRightVersion().getPegRevision(), 2L);

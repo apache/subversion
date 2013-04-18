@@ -179,7 +179,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
       apr_allocator_max_free_set(allocator, 1);
     }
 
-  svn_utf_initialize(g_pool); /* Optimize character conversions */
+  svn_utf_initialize2(g_pool, FALSE); /* Optimize character conversions */
   svn_fs_initialize(g_pool); /* Avoid some theoretical issues */
   svn_ra_initialize(g_pool);
 
