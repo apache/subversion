@@ -38,6 +38,17 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1469363, r1469515
+   Reparent RA session to correctly handle log requests for multiple
+   discreet revisions which span a rename.
+   Notes:
+     r1468395 is a new test covering the issue, r1469515 is the actual fix.
+   Justification:
+     Fixes issue #4355 'svn_client_log5 broken with multiple revisions
+     which span a rename'.
+   Votes:
+     +1: pburba
+
 Veto-blocked changes:
 =====================
 
