@@ -49,6 +49,13 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r1469519, r1469520
+   Silence compiler warnings.
+   Justification:
+     Clean builds make it more likely to notice real compiler warnings.
+   Votes:
+     +1: blair
+
 Veto-blocked changes:
 =====================
 
