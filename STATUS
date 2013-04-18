@@ -17,8 +17,8 @@ Candidate changes:
 ==================
 
  * r1468395, r1468566
-   Introduced typedef for the svn_fs_freeze() callback function type,
-   and give it the requisite the SWIG/Python wrapper treatment.
+   Introduce typedef for the svn_fs_freeze() callback function type,
+   and give it the requisite SWIG/Python wrapper treatment.
    Justification:
      Without this, the callback is useless in SWIG/Python
    Votes:
@@ -29,18 +29,26 @@ Candidate changes:
    Justification:
      Required for several translations.
    Votes:
-     +1: philip
+     +1: philip, brane
      +1 (non-binding): mattiase
 
- * r1468347
-   Handle POST errors like MKACTIVITY errors.
+ * r1469248
+   Install mod_dontdothat with install-tools into $(APACHE_LIBEXECDIR).
    Justification:
-     Consistent error reporting for v1 and v2 protocols.
+     Fixes issue #4338 which is a 1.8 blocker.
+     See: http://subversion.tigris.org/issues/show_bug.cgi?id=4338
    Votes:
-     +1: philip, rhuijben
+     +1: brane
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1468347
+   Handle POST errors like MKACTIVITY errors.
+   Justification:
+     Consistent error reporting for v1 and v2 protocols.
+   Votes:
+     +1: philip, rhuijben, brane
