@@ -930,11 +930,11 @@ write_revision_zero(svn_fs_t *fs)
       const char *path = path_l2p_index(fs, 0, fs->pool);
       SVN_ERR(svn_io_file_create_binary
                  (path,
-                  "\0\1\x80\x40\1\1" /* rev 0, single page */
-                  "\x8\4"            /* page size: bytes, count */
-                  "\0\x6b\x12\1"     /* phys offsets + 1 */
-                  "\0\0\0\0",        /* sub-item indexes (all 0) */
-                  16,
+                  "\0\1\x80\x40\1\2" /* rev 0, single page */
+                  "\5\4"             /* page size: bytes, count */
+                  "\0"               /* 0 container offsets in list */
+                  "\0\x6b\x12\1",    /* phys offsets + 1 */
+                  13,
                   fs->pool));
       SVN_ERR(svn_io_set_file_read_only(path, FALSE, fs->pool));
 
@@ -942,13 +942,13 @@ write_revision_zero(svn_fs_t *fs)
       SVN_ERR(svn_io_file_create_binary
                  (path,
                   "\0"                /* start rev */
-                  "\x80\x80\4\1\x15"  /* 64k pages, 1 page using 21 bytes */
+                  "\x80\x80\4\1\x11"  /* 64k pages, 1 page using 17 bytes */
                   "\0"                /* offset entry 0 page 1 */
-                  "\x11\1\1\0\3"      /* len, type, count, (rev, item)* */
-                  "\x59\5\1\0\2"
-                  "\1\6\1\0\1"
-                  "\x95\xff\3\0\0",   /* last entry fills up 64k page */
-                  27,
+                  "\x11\x11\0\6"      /* len, type + 16 * count, (rev, item)* */
+                  "\x59\x15\0\4"
+                  "\1\x16\0\2"
+                  "\x95\xff\3\0",     /* last entry fills up 64k page */
+                  23,
                   fs->pool));
       SVN_ERR(svn_io_set_file_read_only(path, FALSE, fs->pool));
     }
