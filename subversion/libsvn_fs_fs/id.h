@@ -116,6 +116,10 @@ int svn_fs_fs__id_compare(const svn_fs_id_t *a,
 svn_fs_id_t *svn_fs_fs__id_txn_create_root(const svn_fs_fs__id_part_t *txn_id,
                                            apr_pool_t *pool);
 
+/* Create the root ID for REVISION.  Allocate it in POOL. */
+svn_fs_id_t *svn_fs_fs__id_create_root(const svn_revnum_t revision,
+                                       apr_pool_t *pool);
+
 /* Create an ID within a transaction based on NODE_ID, COPY_ID, and
    TXN_ID, allocated in POOL. */
 svn_fs_id_t *svn_fs_fs__id_txn_create(const svn_fs_fs__id_part_t *node_id,

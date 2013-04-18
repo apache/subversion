@@ -534,54 +534,37 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
                         apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  apr_file_t *revision_file;
-  apr_off_t root_offset;
-  apr_uint32_t root_sub_item;
-  svn_fs_id_t *root_id = NULL;
-  svn_boolean_t is_cached;
-
   SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, pool));
-
-  SVN_ERR(svn_cache__get((void **) root_id_p, &is_cached,
-                         ffd->rev_root_id_cache, &rev, pool));
-  if (is_cached)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev, pool));
 
   if (ffd->format < SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
     {
+      apr_file_t *revision_file;
+      apr_off_t root_offset;
+      svn_fs_id_t *root_id = NULL;
+      svn_boolean_t is_cached;
+
+      SVN_ERR(svn_cache__get((void **) root_id_p, &is_cached,
+                            ffd->rev_root_id_cache, &rev, pool));
+      if (is_cached)
+        return SVN_NO_ERROR;
+
+      SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev, pool));
+
       SVN_ERR(get_root_changes_offset(&root_offset, NULL, revision_file,
                                       fs, rev, pool));
+      SVN_ERR(get_fs_id_at_offset(&root_id, revision_file, fs, rev,
+                                  root_offset, pool));
+
+      SVN_ERR(svn_io_file_close(revision_file, pool));
+
+      SVN_ERR(svn_cache__set(ffd->rev_root_id_cache, &rev, root_id, pool));
+
+      *root_id_p = root_id;
     }
   else
     {
-      SVN_ERR(block_read(NULL, fs, rev, SVN_FS_FS__ITEM_INDEX_ROOT_NODE,
-                         revision_file, pool, pool));
-
-      /* the root node is most likely still in our caches */
-      SVN_ERR(svn_cache__get((void **) root_id_p, &is_cached,
-                             ffd->rev_root_id_cache, &rev, pool));
-      if (is_cached)
-        {
-          SVN_ERR(svn_io_file_close(revision_file, pool));
-          return SVN_NO_ERROR;
-        }
-
-      SVN_ERR(svn_fs_fs__item_offset(&root_offset, &root_sub_item,
-                                     fs, rev, NULL,
-                                     SVN_FS_FS__ITEM_INDEX_ROOT_NODE, pool));
-      SVN_ERR_ASSERT(root_sub_item == 0);
+      *root_id_p = svn_fs_fs__id_create_root(rev, pool);
     }
-
-  SVN_ERR(get_fs_id_at_offset(&root_id, revision_file, fs, rev,
-                              root_offset, pool));
-
-  SVN_ERR(svn_io_file_close(revision_file, pool));
-
-  SVN_ERR(svn_cache__set(ffd->rev_root_id_cache, &rev, root_id, pool));
-
-  *root_id_p = root_id;
 
   return SVN_NO_ERROR;
 }
@@ -2493,11 +2476,6 @@ block_read_noderev(node_revision_t **noderev_p,
 
   if (ffd->node_revision_cache)
     SVN_ERR(svn_cache__set(ffd->node_revision_cache, key, *noderev_p, pool));
-
-  if (   entry->items[0].number == SVN_FS_FS__ITEM_INDEX_ROOT_NODE
-      && ffd->rev_root_id_cache)
-    SVN_ERR(svn_cache__set(ffd->rev_root_id_cache, &entry->items[0].revision,
-                           (void *)(*noderev_p)->id, pool));
 
   return SVN_NO_ERROR;
 }
