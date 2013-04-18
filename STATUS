@@ -29,14 +29,14 @@ Candidate changes:
    Justification:
      Good document is good.
    Votes:
-     +1: blair
+     +1: blair, rhuijben
 
  * 1469478, r1469489, r1469512
    Fix issue 4356, status SEGV after incomplete move
    Justification:
      It's a SEGV.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
  * r1469363, r1469515
    Reparent RA session to correctly handle log requests for multiple
