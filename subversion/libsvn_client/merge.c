@@ -9012,24 +9012,23 @@ remove_noop_subtree_ranges(const merge_source_t *source,
 
       svn_pool_clear(iterpool);
 
-      /* Issue #4269: Keep track of the longest common ancestor of all the
-         subtrees which require merges.  This may be a child of
-         TARGET->ABSPATH, which will allow us to narrow the log request
-         below. */
+      /* CHILD->REMAINING_RANGES will be NULL if child is absent. */
       if (child->remaining_ranges && child->remaining_ranges->nelts)
         {
+          /* Issue #4269: Keep track of the longest common ancestor of all the
+             subtrees which require merges.  This may be a child of
+             TARGET->ABSPATH, which will allow us to narrow the log request
+             below. */
           if (longest_common_subtree_ancestor)
             longest_common_subtree_ancestor = svn_dirent_get_longest_ancestor(
               longest_common_subtree_ancestor, child->abspath, scratch_pool);
           else
             longest_common_subtree_ancestor = child->abspath;
-        }
 
-      /* CHILD->REMAINING_RANGES will be NULL if child is absent. */
-      if (child->remaining_ranges && child->remaining_ranges->nelts)
-        SVN_ERR(svn_rangelist_merge2(subtree_remaining_ranges,
-                                     child->remaining_ranges,
-                                     scratch_pool, iterpool));
+          SVN_ERR(svn_rangelist_merge2(subtree_remaining_ranges,
+                                       child->remaining_ranges,
+                                       scratch_pool, iterpool));
+        }
     }
   svn_pool_destroy(iterpool);
 
