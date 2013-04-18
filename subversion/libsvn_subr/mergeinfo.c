@@ -2463,15 +2463,8 @@ svn_mergeinfo__adjust_mergeinfo_rangelists(svn_mergeinfo_t *adjusted_mergeinfo,
 
               if (range->start + offset > 0 && range->end + offset > 0)
                 {
-                  if (range->start + offset < 0)
-                    range->start = 0;
-                  else
-                    range->start = range->start + offset;
-
-                  if (range->end + offset < 0)
-                    range->end = 0;
-                  else
-                    range->end = range->end + offset;
+                  range->start = range->start + offset;
+                  range->end = range->end + offset;
                   APR_ARRAY_PUSH(adjusted_rangelist, svn_merge_range_t *) =
                     range;
                 }
