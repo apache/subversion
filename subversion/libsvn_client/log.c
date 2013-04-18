@@ -616,6 +616,17 @@ svn_client_log5(const apr_array_header_t *targets,
           passed_receiver_baton = &lb;
         }
 
+      /* Issue #4355: If multiple REVISION_RANGES were requested we might
+         need to reparent the session to account for renames. */
+      if (i > 0)
+        {
+          const char *old_session_url;
+
+          SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url,
+                                                    ra_session, ra_target,
+                                                    pool));
+        }
+
       SVN_ERR(svn_ra_get_log2(ra_session,
                               condensed_targets,
                               start_revnum,

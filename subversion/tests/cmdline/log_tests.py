@@ -2369,7 +2369,6 @@ def merge_sensitive_log_with_search(sbox):
 # Test for issue #4355 'svn_client_log5 broken with multiple revisions
 # which span a rename'.
 @Issue(4355)
-@XFail()
 @SkipUnless(server_has_mergeinfo)
 def log_multiple_revs_spanning_rename(sbox):
   "log for multiple revs which span a rename"
@@ -2417,7 +2416,7 @@ def log_multiple_revs_spanning_rename(sbox):
 
   # Check that log can handle discrete revisions that span a rename.
   #
-  # Currently this fails with:
+  # Previously this failed with:
   #
   #   >svn log -c2,3 ^/trunk/mu
   #   ------------------------------------------------------------------------
