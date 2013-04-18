@@ -357,7 +357,7 @@ svn_repos_fs_change_rev_prop4(svn_repos_t *repos,
         action = 'M';
 
       /* Parse the hooks-env file (if any, and if to be used). */
-      if (use_post_revprop_change_hook || use_post_revprop_change_hook)
+      if (use_pre_revprop_change_hook || use_post_revprop_change_hook)
         SVN_ERR(svn_repos__parse_hooks_env(&hooks_env, repos->hooks_env_path,
                                            pool, pool));
 
