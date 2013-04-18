@@ -130,7 +130,7 @@ svn_fs_fs__changes_create(apr_size_t initial_count,
 }
 
 apr_size_t
-svn_fs_fs__changes_start_list(svn_fs_fs__changes_t *changes)
+svn_fs_fs__changes_end_list(svn_fs_fs__changes_t *changes)
 {
   APR_ARRAY_PUSH(changes->offsets, int) = changes->changes->nelts;
   return (apr_size_t)(changes->offsets->nelts - 2);
@@ -154,8 +154,8 @@ append_change_body(svn_fs_fs__changes_t *changes,
   binary_change.flags = (change->text_mod ? CHANGE_TEXT_MOD : 0)
                       | (change->prop_mod ? CHANGE_PROP_MOD : 0)
                       | (is_txn_id ? CHANGE_TXN_NODE : 0)
-                      | ((int)change->kind < CHANGE_KIND_SHIFT)
-                      | ((int)change->node_kind < CHANGE_NODE_SHIFT);
+                      | ((int)change->kind << CHANGE_KIND_SHIFT)
+                      | ((int)change->node_kind << CHANGE_NODE_SHIFT);
 
   /* Path of the change. */
   binary_change.path
@@ -218,9 +218,10 @@ svn_fs_fs__changes_append_list(apr_size_t *list_index,
   SVN_ERR_ASSERT(changes->paths == NULL);
 
   /* simply append the list and all changes */
-  *list_index = svn_fs_fs__changes_start_list(changes);
   for (i = 0; i < list->nelts; ++i)
     append_change_body(changes, APR_ARRAY_IDX(list, i, change_t *));
+
+  *list_index = svn_fs_fs__changes_end_list(changes);
 
   return SVN_NO_ERROR;
 }
@@ -301,7 +302,7 @@ svn_fs_fs__changes_get_list(apr_array_header_t **list,
       if (SVN_IS_VALID_REVNUM(binary_change->copyfrom_rev))
         change->copyfrom_path 
           = svn_fs_fs__string_table_get(changes->paths,
-                                        binary_change->copyfrom_rev,
+                                        binary_change->copyfrom_path,
                                         pool);
 
       /* add it to the result */

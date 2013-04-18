@@ -52,18 +52,6 @@ svn_fs_fs__changes_t *
 svn_fs_fs__changes_create(apr_size_t initial_count,
                           apr_pool_t *pool);
 
-/* Begin a new change list in CHANGES and return its index.
- * Implicitly terminates the previous change list (if any).
- */
-apr_size_t
-svn_fs_fs__changes_start_list(svn_fs_fs__changes_t *changes);
-
-/* Add CHANGE to the latest change list in CHANGES.
- */
-svn_error_t *
-svn_fs_fs__changes_append_change(svn_fs_fs__changes_t *changes,
-                                 change_t *change);
-
 /* Start a new change list CHANGES (implicitly terminating the previous one)
  * and return its index in *LIST_INDEX.  Append all changes from LIST to
  * that new change list.
