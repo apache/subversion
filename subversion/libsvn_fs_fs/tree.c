@@ -913,7 +913,7 @@ open_path(parent_path_t **parent_path_p,
      a sibling of PATH has been presently accessed.  Try to start the lookup
      directly at the parent node, if the caller did not requested the full
      parent chain. */
-  const char *directory;
+  const char *directory = NULL;
   assert(svn_fs__is_canonical_abspath(path));
   if (flags & open_path_node_only)
     {
