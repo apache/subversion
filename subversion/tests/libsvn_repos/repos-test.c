@@ -1601,7 +1601,6 @@ in_repo_groups_authz(const svn_test_opts_t *opts,
 
 
   /* absolute file URLs. */
-  groups_url = apr_pstrcat(pool, repos_url, "/groups", (char *)NULL);
   SVN_ERR(svn_repos_authz_read2(&authz_cfg, authz_url, groups_url, TRUE, pool));
   SVN_ERR(authz_check_access(authz_cfg, test_set, pool));
 
