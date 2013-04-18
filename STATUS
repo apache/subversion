@@ -45,6 +45,20 @@ Candidate changes:
    Votes:
      +1: blair
 
+ * r1469550
+   Fix a potential segfault in merge.
+   Justification:
+     It's a segfault (though I haven't bothered to make it happen)
+   Votes:
+     +1: breser
+
+ * r1469556
+   Load hooks env in svn_repos_fs_change_rev_prop4() properly.
+   Justification:
+     Security issue, possible case where hooks environment doesn't get loaded.
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
