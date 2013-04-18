@@ -587,6 +587,9 @@ remote_propget(apr_hash_t *props,
   if (inherited_props)
     {
       const char *repos_root_url;
+      int i;
+      apr_array_header_t *final_iprops =
+        apr_array_make(result_pool, 1, sizeof(svn_prop_inherited_item_t *));
 
       /* We will filter out all but PROPNAME later, making a final copy
          in RESULT_POOL, so pass SCRATCH_POOL for all pools. */
@@ -599,15 +602,8 @@ remote_propget(apr_hash_t *props,
                                                  repos_root_url,
                                                  scratch_pool,
                                                  scratch_pool));
-    }
 
-  /* Make a copy of any inherited PROPNAME properties in RESULT_POOL. */
-  if (inherited_props)
-    {
-      int i;
-      apr_array_header_t *final_iprops =
-        apr_array_make(result_pool, 1, sizeof(svn_prop_inherited_item_t *));
-
+      /* Make a copy of any inherited PROPNAME properties in RESULT_POOL. */
       for (i = 0; i < (*inherited_props)->nelts; i++)
         {
           svn_prop_inherited_item_t *iprop =
