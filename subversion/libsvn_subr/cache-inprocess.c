@@ -214,7 +214,7 @@ inprocess_cache_get(void **value_p,
 {
   inprocess_cache_t *cache = cache_void;
   char* buffer = NULL;
-  apr_size_t size;
+  apr_size_t size = 0;
 
   if (key)
     SVN_MUTEX__WITH_LOCK(cache->mutex,
