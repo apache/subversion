@@ -265,6 +265,20 @@
 
 #endif
 
+#ifdef SWIGPERL
+%typemap(out) apr_hash_t *PROPHASH
+{
+  %append_output(svn_swig_pl_prophash_to_hash($1));
+}
+
+%typemap(out) apr_hash_t *changed_paths2
+{
+  %append_output(
+    ($1) ? svn_swig_pl_convert_hash($1, $descriptor(svn_log_changed_path2_t *))
+         : &PL_sv_undef);
+}
+#endif
+
 #ifdef SWIGRUBY
 %typemap(in) apr_hash_t *PROPHASH
 {
@@ -291,7 +305,6 @@
 }
 #endif
 
-#if defined(SWIGPYTHON) || defined(SWIGRUBY)
 %apply apr_hash_t *PROPHASH {
   apr_hash_t *target_props,
   apr_hash_t *source_props,
@@ -300,7 +313,6 @@
   apr_hash_t *revprop_table,
   apr_hash_t *revprops
 };
-#endif
 
 #ifdef SWIGRUBY
 %typemap(out) apr_hash_t *CHANGED_PATH_HASH
@@ -584,6 +596,10 @@
     $1 = (apr_array_header_t *) svn_swig_pl_strings_to_array($input,
                                                              _global_pool);
 }
+%typemap(in) const apr_array_header_t *STRINGLIST_MAY_BE_NULL {
+    $1 = SvOK($input) ? (apr_array_header_t *) svn_swig_pl_strings_to_array(
+        $input, _global_pool) : NULL;
+}
 #endif
 #ifdef SWIGRUBY
 %typemap(in) const apr_array_header_t *STRINGLIST {
@@ -612,7 +628,7 @@
   apr_array_header_t *preserved_exts
 };
 
-#ifdef SWIGRUBY
+#if defined(SWIGPERL) || defined(SWIGRUBY)
 %apply const apr_array_header_t *STRINGLIST_MAY_BE_NULL {
   apr_array_header_t *revprops
 };

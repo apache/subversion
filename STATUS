@@ -45,12 +45,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1468487
-   Add SWIG Perl support for svn_client_log3 and svn_client_log4.
-     Bring the perl bindings a little closer to being up-to-date.
-   Votes:
-     +1: philip, rhuijben
-
  * r1468151
    Map missing some missing bits to JavaHL
    Justification:
