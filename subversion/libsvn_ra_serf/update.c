@@ -1024,26 +1024,6 @@ open_updated_file(report_info_t *info,
   if (info->lock_token)
     check_lock(info);
 
-  /* Set all of the properties we received */
-  SVN_ERR(svn_ra_serf__walk_all_props(info->props,
-                                      info->base_name,
-                                      info->base_rev,
-                                      set_file_props, info,
-                                      scratch_pool));
-  SVN_ERR(svn_ra_serf__walk_all_props(info->dir->removed_props,
-                                      info->base_name,
-                                      info->base_rev,
-                                      remove_file_props, info,
-                                      scratch_pool));
-  if (info->fetch_props)
-    {
-      SVN_ERR(svn_ra_serf__walk_all_props(info->props,
-                                          info->url,
-                                          ctx->target_rev,
-                                          set_file_props, info,
-                                          scratch_pool));
-    }
-
   /* Get (maybe) a textdelta window handler for transmitting file
      content changes. */
   if (info->fetch_file || force_apply_textdelta)
@@ -1064,6 +1044,28 @@ static svn_error_t *
 close_updated_file(report_info_t *info,
                    apr_pool_t *scratch_pool)
 {
+  report_context_t *ctx = info->dir->report_context;
+
+  /* Set all of the properties we received */
+  SVN_ERR(svn_ra_serf__walk_all_props(info->props,
+                                      info->base_name,
+                                      info->base_rev,
+                                      set_file_props, info,
+                                      scratch_pool));
+  SVN_ERR(svn_ra_serf__walk_all_props(info->dir->removed_props,
+                                      info->base_name,
+                                      info->base_rev,
+                                      remove_file_props, info,
+                                      scratch_pool));
+  if (info->fetch_props)
+    {
+      SVN_ERR(svn_ra_serf__walk_all_props(info->props,
+                                          info->url,
+                                          ctx->target_rev,
+                                          set_file_props, info,
+                                          scratch_pool));
+    }
+
   /* Close the file via the editor. */
   SVN_ERR(info->dir->report_context->update_editor->close_file(
             info->file_baton, info->final_checksum, scratch_pool));
