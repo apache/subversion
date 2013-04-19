@@ -65,14 +65,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1468565
-   Use correct plural localisation for conflict summary messages.
-   Justification:
-     Required for several translations.
-   Votes:
-     +1: philip, brane, rhuijben
-     +1 (non-binding): mattiase
-
  * r1469248
    Install mod_dontdothat with install-tools into $(APACHE_LIBEXECDIR).
    Justification:

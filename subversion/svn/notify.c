@@ -89,6 +89,24 @@ svn_cl__notifier_reset_conflict_stats(void *baton)
   return SVN_NO_ERROR;
 }
 
+static const char *
+remaining_str(apr_pool_t *pool, int n_remaining)
+{
+  return apr_psprintf(pool, Q_("%d remaining", 
+                               "%d remaining",
+                               n_remaining),
+                      n_remaining);
+}
+
+static const char *
+resolved_str(apr_pool_t *pool, int n_resolved)
+{
+  return apr_psprintf(pool, Q_("and %d already resolved",
+                               "and %d already resolved",
+                               n_resolved),
+                      n_resolved);
+}
+
 svn_error_t *
 svn_cl__notifier_print_conflict_stats(void *baton, apr_pool_t *scratch_pool)
 {
@@ -126,16 +144,19 @@ svn_cl__notifier_print_conflict_stats(void *baton, apr_pool_t *scratch_pool)
     {
       if (n_text > 0 || n_text_r > 0)
         SVN_ERR(svn_cmdline_printf(scratch_pool,
-          _("  Text conflicts: %d remaining (and %d already resolved)\n"),
-          n_text, n_text_r));
+                                   _("  Text conflicts: %s (%s)\n"),
+                                   remaining_str(scratch_pool, n_text),
+                                   resolved_str(scratch_pool, n_text_r)));
       if (n_prop > 0 || n_prop_r > 0)
         SVN_ERR(svn_cmdline_printf(scratch_pool,
-          _("  Property conflicts: %d remaining (and %d already resolved)\n"),
-          n_prop, n_prop_r));
+                                   _("  Property conflicts: %s (%s)\n"),
+                                   remaining_str(scratch_pool, n_prop),
+                                   resolved_str(scratch_pool, n_prop_r)));
       if (n_tree > 0 || n_tree_r > 0)
         SVN_ERR(svn_cmdline_printf(scratch_pool,
-          _("  Tree conflicts: %d remaining (and %d already resolved)\n"),
-          n_tree, n_tree_r));
+                                   _("  Tree conflicts: %s (%s)\n"),
+                                   remaining_str(scratch_pool, n_tree),
+                                   resolved_str(scratch_pool, n_tree_r)));
     }
   if (nb->skipped_paths > 0)
     SVN_ERR(svn_cmdline_printf(scratch_pool,
