@@ -2369,6 +2369,7 @@ def merge_sensitive_log_with_search(sbox):
 # Test for issue #4355 'svn_client_log5 broken with multiple revisions
 # which span a rename'.
 @Issue(4355)
+@XFail()
 @SkipUnless(server_has_mergeinfo)
 def log_multiple_revs_spanning_rename(sbox):
   "log for multiple revs which span a rename"
@@ -2416,27 +2417,31 @@ def log_multiple_revs_spanning_rename(sbox):
 
   # Check that log can handle discrete revisions that span a rename.
   #
-  # Previously this failed with:
+  # Currently this fails with:
   #
-  #   >svn log -c2,3 ^/trunk/mu
+  #   >svn log ^/trunk -c2,3,1
   #   ------------------------------------------------------------------------
-  #   r2 | jrandom | 2013-04-18 11:05:56 -0400 (Thu, 18 Apr 2013) | 3 lines
+  #   r2 | jrandom | 2013-04-18 19:58:47 -0400 (Thu, 18 Apr 2013) | 3 lines
   #
   #    Log message for revision 2
   #     but with multiple lines
   #     to test the code
+  #   ------------------------------------------------------------------------
+  #   r3 | jrandom | 2013-04-18 19:58:47 -0400 (Thu, 18 Apr 2013) | 1 line
+  #
+  #   Log message for revision 3
   #   ..\..\..\subversion\svn\log-cmd.c:868,
-  #   ..\..\..\subversion\libsvn_client\log.c:640,
+  #   ..\..\..\subversion\libsvn_client\log.c:641,
   #   ..\..\..\subversion\libsvn_repos\log.c:1931,
   #   ..\..\..\subversion\libsvn_repos\log.c:1358,
   #   ..\..\..\subversion\libsvn_fs\fs-loader.c:979,
   #   ..\..\..\subversion\libsvn_fs_fs\tree.c:3205:
   #     (apr_err=SVN_ERR_FS_NOT_FOUND)
-  #   svn: E160013: File not found: revision 3, path '/A/mu'
+  #   svn: E160013: File not found: revision 1, path '/trunk'
   exit_code, output, err = svntest.actions.run_and_verify_svn(
-    None, None, [], 'log', '-c2,3', sbox.repo_url + '/trunk/mu')
+    None, None, [], 'log', '-c2,3,1', sbox.repo_url + '/trunk/mu')
   log_chain = parse_log_output(output)
-  check_log_chain(log_chain, [2,3])
+  check_log_chain(log_chain, [2,3,1])
 
 ########################################################################
 # Run the tests
