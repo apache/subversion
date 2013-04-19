@@ -57,7 +57,7 @@ Candidate changes:
    Justification:
      Security issue, possible case where hooks environment doesn't get loaded.
    Votes:
-     +1: breser
+     +1: breser, philip
 
 Veto-blocked changes:
 =====================
