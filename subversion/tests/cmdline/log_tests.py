@@ -2442,6 +2442,11 @@ def log_multiple_revs_spanning_rename(sbox):
     None, None, [], 'log', '-c2,3,1', sbox.repo_url + '/trunk/mu')
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [2,3,1])
+  # Should work with a WC target too.
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', '-c2,3,1', mu_path2)
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [2,3,1])
 
 ########################################################################
 # Run the tests
