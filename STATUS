@@ -52,6 +52,15 @@ Candidate changes:
    Votes:
      +1: breser, philip
 
+ * r1469862, r1469866
+   Change configure default to --without-apache-libexecdir.
+   Justification:
+     Before this change, by default, Apache modules would very likely be
+     installed outside of $prefix, while still being linked with shared
+     libraries in $prefix. This is not expected behaviour.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
