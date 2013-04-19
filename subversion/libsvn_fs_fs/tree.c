@@ -904,8 +904,6 @@ open_path(parent_path_t **parent_path_p,
   dag_node_t *here = NULL; /* The directory we're currently looking at.  */
   parent_path_t *parent_path; /* The path from HERE up to the root. */
   const char *rest; /* The portion of PATH we haven't traversed yet.  */
-
-  /* ensure a canonical path representation */
   const char *path_so_far = "/";
   apr_pool_t *iterpool = svn_pool_create(pool);
 
