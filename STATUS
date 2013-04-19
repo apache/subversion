@@ -64,11 +64,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1469248
-   Install mod_dontdothat with install-tools into $(APACHE_LIBEXECDIR).
-   Justification:
-     Fixes issue #4338 which is a 1.8 blocker.
-     See: http://subversion.tigris.org/issues/show_bug.cgi?id=4338
-   Votes:
-     +1: brane, rhuijben, philip
