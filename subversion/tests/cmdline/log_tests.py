@@ -2369,6 +2369,7 @@ def merge_sensitive_log_with_search(sbox):
 # Test for issue #4355 'svn_client_log5 broken with multiple revisions
 # which span a rename'.
 @Issue(4355)
+@XFail()
 @SkipUnless(server_has_mergeinfo)
 def log_multiple_revs_spanning_rename(sbox):
   "log for multiple revs which span a rename"
@@ -2441,11 +2442,38 @@ def log_multiple_revs_spanning_rename(sbox):
     None, None, [], 'log', '-c2,3,1', sbox.repo_url + '/trunk/mu')
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [2,3,1])
+
   # Should work with a WC target too.
   exit_code, output, err = svntest.actions.run_and_verify_svn(
     None, None, [], 'log', '-c2,3,1', mu_path2)
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [2,3,1])
+
+  # Discreet revision *ranges* which span a rename should work too.
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', '-r1:1', '-r4:2', sbox.repo_url + '/trunk')
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [1,4,3,2])
+
+  # As above, but revision ranges from younger to older revs fail:
+  #
+  #  >svn log ^/trunk -r1:1 -r2:4
+  #  ------------------------------------------------------------------------
+  #  r1 | jrandom | 2013-04-18 19:58:46 -0400 (Thu, 18 Apr 2013) | 1 line
+  #
+  #  Log message for revision 1.
+  #  ..\..\..\subversion\svn\log-cmd.c:868,
+  #  ..\..\..\subversion\libsvn_client\log.c:678,
+  #  ..\..\..\subversion\libsvn_repos\log.c:1931,
+  #  ..\..\..\subversion\libsvn_repos\log.c:1358,
+  #  ..\..\..\subversion\libsvn_fs\fs-loader.c:979,
+  #  ..\..\..\subversion\libsvn_fs_fs\tree.c:3205:
+  #    (apr_err=SVN_ERR_FS_NOT_FOUND)
+  #  svn: E160013: File not found: revision 4, path '/A'
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', '-r1:1', '-r2:4', sbox.repo_url + '/trunk')
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [1,2,3,4])
 
 ########################################################################
 # Run the tests
