@@ -50,7 +50,7 @@ Candidate changes:
    Justification:
      It's a segfault (though I haven't bothered to make it happen)
    Votes:
-     +1: breser
+     +1: breser, philip
 
  * r1469556
    Load hooks env in svn_repos_fs_change_rev_prop4() properly.
