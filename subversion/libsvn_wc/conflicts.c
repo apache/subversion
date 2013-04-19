@@ -2127,11 +2127,12 @@ read_prop_conflicts(apr_array_header_t *conflicts,
 
       my_value = svn_hash_gets(my_props, propname);
       their_value = svn_hash_gets(their_props, propname);
+      old_value = svn_hash_gets(their_old_props, propname);
 
       /* Compute the incoming side of the conflict ('action'). */
       if (their_value == NULL)
         desc->action = svn_wc_conflict_action_delete;
-      else if (my_value == NULL)
+      else if (old_value == NULL)
         desc->action = svn_wc_conflict_action_add;
       else
         desc->action = svn_wc_conflict_action_edit;
@@ -2139,7 +2140,7 @@ read_prop_conflicts(apr_array_header_t *conflicts,
       /* Compute the local side of the conflict ('reason'). */
       if (my_value == NULL)
         desc->reason = svn_wc_conflict_reason_deleted;
-      else if (their_value == NULL)
+      else if (old_value == NULL)
         desc->reason = svn_wc_conflict_reason_added;
       else
         desc->reason = svn_wc_conflict_reason_edited;
@@ -2182,7 +2183,6 @@ read_prop_conflicts(apr_array_header_t *conflicts,
           SVN_ERR(svn_stream_close(s));
         }
 
-      old_value = svn_hash_gets(their_old_props, propname);
       if (old_value)
         {
           svn_stream_t *s;
