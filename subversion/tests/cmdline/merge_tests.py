@@ -4481,8 +4481,9 @@ def obey_reporter_api_semantics_while_doing_subtree_merges(sbox):
 #----------------------------------------------------------------------
 def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
   '''Starting with standard greek tree, copy 'A' NBR_OF_BRANCHES times
-  to A_COPY, A_COPY_2, A_COPY_3, and so on.  Then make four modifications
-  (setting file contents to "New content") under A:
+  to A_COPY, A_COPY_2, A_COPY_3, and so on.  Then, unless BRANCH_ONLY is
+  true, make four modifications (setting file contents to "New content")
+  under A:
     r(2 + NBR_OF_BRANCHES) - A/D/H/psi
     r(3 + NBR_OF_BRANCHES) - A/D/G/rho
     r(4 + NBR_OF_BRANCHES) - A/B/E/beta
