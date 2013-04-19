@@ -575,19 +575,21 @@ prompt_user(const resolver_option_t **opt,
   const char *answer;
 
   SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, prompt_baton, scratch_pool));
-  *opt = find_option(conflict_options, answer);
-
-  if (! *opt)
-    {
-      SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
-                                  _("Unrecognized option.\n\n")));
-    }
-  else if (strcmp(answer, "h") == 0 || strcmp(answer, "?") == 0)
+  if (strcmp(answer, "h") == 0 || strcmp(answer, "?") == 0)
     {
       SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "\n%s\n",
                                   help_string(conflict_options,
                                               scratch_pool)));
       *opt = NULL;
+    }
+  else
+    {
+      *opt = find_option(conflict_options, answer);
+      if (! *opt)
+        {
+          SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+                                      _("Unrecognized option.\n\n")));
+        }
     }
   return SVN_NO_ERROR;
 }
