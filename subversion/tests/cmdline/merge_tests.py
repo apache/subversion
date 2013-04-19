@@ -6506,7 +6506,18 @@ def foreign_repos_does_not_update_mergeinfo(sbox):
 def avoid_reflected_revs(sbox):
   "avoid repeated merges for cyclic merging"
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2897. ##
+  # See <http://subversion.tigris.org/issues/show_bug.cgi?id=2897>.
+  #
+  # This test cherry-picks some changes (all of them, in fact) from the
+  # parent branch 'A' to the child branch 'A_COPY', and then tries to
+  # reintegrate 'A_COPY' to 'A' (explicitly specifying a revision range
+  # on the source branch).  It expects the changes that are unique to the
+  # branch 'A_COPY' to be merged to 'A'.
+  #
+  #   A     --1----[3]---[5]----------?
+  #            \     \_____\___      /
+  #             \           \  \    /
+  #   A_COPY     2-[---4-----6--7--8]-
 
   # Create a WC with a single branch
   sbox.build()
