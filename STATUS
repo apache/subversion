@@ -65,13 +65,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1468347
-   Handle POST errors like MKACTIVITY errors.
-   Justification:
-     Consistent error reporting for v1 and v2 protocols.
-   Votes:
-     +1: philip, rhuijben, brane
-
  * r1468565
    Use correct plural localisation for conflict summary messages.
    Justification:
