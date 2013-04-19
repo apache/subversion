@@ -76,6 +76,18 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1470031
+   Correctly set the 'action' and 'reason' fields of a property conflict.
+   API users were seeing the wrong 'action' and 'reason' for some property
+   conflicts. 'svn' does not yet use these fields.
+   Justification:
+     It's wrong.  It's simple.  Fixing it in a 1.x.0 release involves less
+     risk of interfering with any client's work-around for the bug.  We may
+     want to backport changes to 'svn' to report property conflicts better,
+     and then 'svn' may use these fields; I'm working on such a change.
+   Votes:
+     +1: julianfoad
+
 
 Veto-blocked changes:
 =====================
