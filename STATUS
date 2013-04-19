@@ -24,13 +24,6 @@ Candidate changes:
    Votes:
      +1: cmpilato, rhuijben
 
- * r1469513
-   Give the correct command to unpack SQLite's amalgamation .zip file.
-   Justification:
-     Good document is good.
-   Votes:
-     +1: blair, rhuijben
-
  * 1469478, r1469489, r1469512
    Fix issue 4356, status SEGV after incomplete move
    Justification:
@@ -64,3 +57,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1469513
+   Give the correct command to unpack SQLite's amalgamation .zip file.
+   Justification:
+     Good document is good.
+   Votes:
+     +1: blair, rhuijben, philip
