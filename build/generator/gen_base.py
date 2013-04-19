@@ -1133,9 +1133,10 @@ class IncludeDependencyInfo:
     return hdrs
 
 class FileInfo:
-    def __init__(self, filename, when):
+    def __init__(self, filename, when, target=None):
         self.filename = filename
         self.when = when
+        self.target = target
 
 def _sorted_files(graph, area):
   "Given a list of targets, sort them based on their dependencies."
@@ -1173,9 +1174,9 @@ def _sorted_files(graph, area):
           s = graph.get_sources(DT_LINK, t.name)
           for d in s:
             if d not in targets:
-              files.append(FileInfo(d.filename, d.when))
+              files.append(FileInfo(d.filename, d.when, d))
         else:
-          files.append(FileInfo(t.filename, t.when))
+          files.append(FileInfo(t.filename, t.when, t))
 
         # don't consider this target any more
         targets.remove(t)
