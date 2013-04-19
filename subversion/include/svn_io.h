@@ -1578,8 +1578,8 @@ svn_io_stat_dirent2(const svn_io_dirent2_t **dirent_p,
                     apr_pool_t *scratch_pool);
 
 
-/** Similar to svn_io_stat_dirent2, but always passes FALSE for
- * verify_truename.
+/** Similar to svn_io_stat_dirent2(), but always passes FALSE for
+ * @a verify_truename.
  *
  * @since New in 1.7.
  * @deprecated Provided for backwards compatibility with the 1.7 API.
@@ -1670,7 +1670,7 @@ svn_io_dir_walk(const char *dirname,
  *
  * @note An APR bug affects Windows: passing a NULL @a env does not
  * guarantee the invoked program to run with an empty environment when
- * @a inherits is FALSE, the program may inherit its parent's environment.
+ * @a inherit is FALSE, the program may inherit its parent's environment.
  * Explicitly pass an empty @a env to get an empty environment.
  *
  * @since New in 1.8.
