@@ -366,10 +366,10 @@ static const resolver_option_t prop_conflict_options[] =
   { "p",  N_("postpone"),         N_("mark the conflict to be resolved later"
                                      "  [postpone]"),
                                   svn_wc_conflict_choose_postpone },
-  { "mf", N_("my version"),       N_("accept my version of entire file (even "
+  { "mf", N_("my version"),       N_("accept my version of entire property (even "
                                      "non-conflicts)  [mine-full]"),
                                   svn_wc_conflict_choose_mine_full },
-  { "tf", N_("their version"),    N_("accept their version of entire file "
+  { "tf", N_("their version"),    N_("accept their version of entire property "
                                      "(same)  [theirs-full]"),
                                   svn_wc_conflict_choose_theirs_full },
   { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
