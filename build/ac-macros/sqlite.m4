@@ -243,8 +243,8 @@ AC_DEFUN(SVN_DOWNLOAD_SQLITE,
   echo ""
   echo "get the sqlite ${SQLITE_RECOMMENDED_VER} amalgamation from:"
   echo "    ${SQLITE_URL}"
-  echo "unpack the archive using tar/gunzip and rename the"
-  echo "resulting directory to:"
+  echo "unpack the archive using unzip and rename the resulting"
+  echo "directory to:"
   echo "$abs_srcdir/sqlite-amalgamation"
   echo ""
   AC_MSG_ERROR([Subversion requires SQLite])
