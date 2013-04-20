@@ -94,10 +94,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1469513
-   Give the correct command to unpack SQLite's amalgamation .zip file.
-   Justification:
-     Good document is good.
-   Votes:
-     +1: blair, rhuijben, philip

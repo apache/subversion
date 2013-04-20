@@ -144,7 +144,9 @@ fi
 dnl Find Apache with a recent-enough magic module number
 SVN_FIND_APACHE(20020903)
 
-dnl Search for SQLite
+dnl Search for SQLite.  If you change SQLITE_URL from a .zip to
+dnl something else also update build/ac-macros/sqlite.m4 to reflect
+dnl the correct command to unpack the downloaded file.
 SQLITE_MINIMUM_VER="3.7.12"
 SQLITE_RECOMMENDED_VER="3.7.15.1"
 SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-$(printf %d%02d%02d%02d $(echo ${SQLITE_RECOMMENDED_VER} | sed -e 's/\./ /g')).zip"
