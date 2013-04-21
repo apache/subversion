@@ -33,6 +33,7 @@
 #include <apr_hash.h>
 #include <apr_uri.h>
 
+#include "svn_hash.h"
 #include "svn_version.h"
 #include "svn_types.h"
 #include "svn_error.h"
@@ -140,8 +141,8 @@ load_ra_module(svn_ra__init_func_t *func,
     const char *compat_funcname;
     apr_status_t status;
 
-    libname = apr_psprintf(pool, "libsvn_ra_%s-%d.so.0",
-                           ra_name, SVN_VER_MAJOR);
+    libname = apr_psprintf(pool, "libsvn_ra_%s-%d.so.%d",
+                           ra_name, SVN_VER_MAJOR, SVN_SOVERSION);
     funcname = apr_psprintf(pool, "svn_ra_%s__init", ra_name);
     compat_funcname = apr_psprintf(pool, "svn_ra_%s_init", ra_name);
 
@@ -319,8 +320,7 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
   if (config)
     {
       /* Grab the 'servers' config. */
-      servers = apr_hash_get(config, SVN_CONFIG_CATEGORY_SERVERS,
-                             APR_HASH_KEY_STRING);
+      servers = svn_hash_gets(config, SVN_CONFIG_CATEGORY_SERVERS);
       if (servers)
         {
           /* First, look in the global section. */
@@ -733,7 +733,7 @@ svn_error_t *svn_ra_get_file(svn_ra_session_t *session,
                              apr_hash_t **props,
                              apr_pool_t *pool)
 {
-  SVN_ERR_ASSERT(*path != '/');
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
   return session->vtable->get_file(session, path, revision, stream,
                                    fetched_rev, props, pool);
 }
@@ -747,7 +747,7 @@ svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
                              apr_uint32_t dirent_fields,
                              apr_pool_t *pool)
 {
-  SVN_ERR_ASSERT(*path != '/');
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
   return session->vtable->get_dir(session, dirents, fetched_rev, props,
                                   path, revision, dirent_fields, pool);
 }
@@ -767,7 +767,7 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
   for (i = 0; i < paths->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      SVN_ERR_ASSERT(*path != '/');
+      SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
     }
 
   /* Check server Merge Tracking capability. */
@@ -783,16 +783,19 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
                                         include_descendants, pool);
 }
 
-svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
-                               const svn_ra_reporter3_t **reporter,
-                               void **report_baton,
-                               svn_revnum_t revision_to_update_to,
-                               const char *update_target,
-                               svn_depth_t depth,
-                               svn_boolean_t send_copyfrom_args,
-                               const svn_delta_editor_t *update_editor,
-                               void *update_baton,
-                               apr_pool_t *pool)
+svn_error_t *
+svn_ra_do_update3(svn_ra_session_t *session,
+                  const svn_ra_reporter3_t **reporter,
+                  void **report_baton,
+                  svn_revnum_t revision_to_update_to,
+                  const char *update_target,
+                  svn_depth_t depth,
+                  svn_boolean_t send_copyfrom_args,
+                  svn_boolean_t ignore_ancestry,
+                  const svn_delta_editor_t *update_editor,
+                  void *update_baton,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
   SVN_ERR_ASSERT(svn_path_is_empty(update_target)
                  || svn_path_is_single_path_component(update_target));
@@ -800,28 +803,37 @@ svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
                                     reporter, report_baton,
                                     revision_to_update_to, update_target,
                                     depth, send_copyfrom_args,
+                                    ignore_ancestry,
                                     update_editor, update_baton,
-                                    pool);
+                                    result_pool, scratch_pool);
 }
 
-svn_error_t *svn_ra_do_switch2(svn_ra_session_t *session,
-                               const svn_ra_reporter3_t **reporter,
-                               void **report_baton,
-                               svn_revnum_t revision_to_switch_to,
-                               const char *switch_target,
-                               svn_depth_t depth,
-                               const char *switch_url,
-                               const svn_delta_editor_t *switch_editor,
-                               void *switch_baton,
-                               apr_pool_t *pool)
+svn_error_t *
+svn_ra_do_switch3(svn_ra_session_t *session,
+                  const svn_ra_reporter3_t **reporter,
+                  void **report_baton,
+                  svn_revnum_t revision_to_switch_to,
+                  const char *switch_target,
+                  svn_depth_t depth,
+                  const char *switch_url,
+                  svn_boolean_t send_copyfrom_args,
+                  svn_boolean_t ignore_ancestry,
+                  const svn_delta_editor_t *switch_editor,
+                  void *switch_baton,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
   SVN_ERR_ASSERT(svn_path_is_empty(switch_target)
                  || svn_path_is_single_path_component(switch_target));
   return session->vtable->do_switch(session,
                                     reporter, report_baton,
                                     revision_to_switch_to, switch_target,
-                                    depth, switch_url, switch_editor,
-                                    switch_baton, pool);
+                                    depth, switch_url,
+                                    send_copyfrom_args,
+                                    ignore_ancestry,
+                                    switch_editor,
+                                    switch_baton,
+                                    result_pool, scratch_pool);
 }
 
 svn_error_t *svn_ra_do_status2(svn_ra_session_t *session,
@@ -884,7 +896,7 @@ svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
       for (i = 0; i < paths->nelts; i++)
         {
           const char *path = APR_ARRAY_IDX(paths, i, const char *);
-          SVN_ERR_ASSERT(*path != '/');
+          SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
         }
     }
 
@@ -903,7 +915,7 @@ svn_error_t *svn_ra_check_path(svn_ra_session_t *session,
                                svn_node_kind_t *kind,
                                apr_pool_t *pool)
 {
-  SVN_ERR_ASSERT(*path != '/');
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
   return session->vtable->check_path(session, path, revision, kind, pool);
 }
 
@@ -913,7 +925,7 @@ svn_error_t *svn_ra_stat(svn_ra_session_t *session,
                          svn_dirent_t **dirent,
                          apr_pool_t *pool)
 {
-  SVN_ERR_ASSERT(*path != '/');
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
   return session->vtable->stat(session, path, revision, dirent, pool);
 }
 
@@ -958,7 +970,7 @@ svn_error_t *svn_ra_get_locations(svn_ra_session_t *session,
 {
   svn_error_t *err;
 
-  SVN_ERR_ASSERT(*path != '/');
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
   err = session->vtable->get_locations(session, locations, path,
                                        peg_revision, location_revisions, pool);
   if (err && (err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED))
@@ -985,7 +997,7 @@ svn_ra_get_location_segments(svn_ra_session_t *session,
 {
   svn_error_t *err;
 
-  SVN_ERR_ASSERT(*path != '/');
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
   err = session->vtable->get_location_segments(session, path, peg_revision,
                                                start_rev, end_rev,
                                                receiver, receiver_baton, pool);
@@ -1013,7 +1025,7 @@ svn_error_t *svn_ra_get_file_revs2(svn_ra_session_t *session,
 {
   svn_error_t *err;
 
-  SVN_ERR_ASSERT(*path != '/');
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
 
   if (include_merged_revisions)
     SVN_ERR(svn_ra__assert_mergeinfo_capable_server(session, NULL, pool));
@@ -1046,7 +1058,7 @@ svn_error_t *svn_ra_lock(svn_ra_session_t *session,
     {
       const char *path = svn__apr_hash_index_key(hi);
 
-      SVN_ERR_ASSERT(*path != '/');
+      SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
     }
 
   if (comment && ! svn_xml_is_xml_safe(comment, strlen(comment)))
@@ -1071,7 +1083,7 @@ svn_error_t *svn_ra_unlock(svn_ra_session_t *session,
     {
       const char *path = svn__apr_hash_index_key(hi);
 
-      SVN_ERR_ASSERT(*path != '/');
+      SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
     }
 
   return session->vtable->unlock(session, path_tokens, break_lock,
@@ -1083,7 +1095,7 @@ svn_error_t *svn_ra_get_lock(svn_ra_session_t *session,
                              const char *path,
                              apr_pool_t *pool)
 {
-  SVN_ERR_ASSERT(*path != '/');
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
   return session->vtable->get_lock(session, lock, path, pool);
 }
 
@@ -1093,7 +1105,7 @@ svn_error_t *svn_ra_get_locks2(svn_ra_session_t *session,
                                svn_depth_t depth,
                                apr_pool_t *pool)
 {
-  SVN_ERR_ASSERT(*path != '/');
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
   SVN_ERR_ASSERT((depth == svn_depth_empty) ||
                  (depth == svn_depth_files) ||
                  (depth == svn_depth_immediates) ||
@@ -1265,7 +1277,7 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
   svn_error_t *err;
 
   /* Path must be relative. */
-  SVN_ERR_ASSERT(*path != '/');
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
 
   if (!SVN_IS_VALID_REVNUM(peg_revision))
     return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
@@ -1304,7 +1316,7 @@ svn_ra_get_inherited_props(svn_ra_session_t *session,
   svn_boolean_t iprop_capable;
 
   /* Path must be relative. */
-  SVN_ERR_ASSERT(*path != '/');
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
 
   SVN_ERR(svn_ra_has_capability(session, &iprop_capable,
                                 SVN_RA_CAPABILITY_INHERITED_PROPS,
@@ -1502,7 +1514,7 @@ svn_ra_get_ra_library(svn_ra_plugin_t **library,
 
           SVN_ERR(compat_initfunc(SVN_RA_ABI_VERSION, load_pool, ht));
 
-          *library = apr_hash_get(ht, scheme, APR_HASH_KEY_STRING);
+          *library = svn_hash_gets(ht, scheme);
 
           /* The library may support just a subset of the schemes listed,
              so we have to check here too. */

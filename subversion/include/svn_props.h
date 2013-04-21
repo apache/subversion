@@ -91,12 +91,15 @@ svn_prop_array_dup(const apr_array_header_t *array,
  */
 typedef struct svn_prop_inherited_item_t
 {
-  /** The absolute working copy path, relative filesystem path, or URL from
-   * which the properties in @a prop_hash are inherited. */
+  /** The absolute working copy path, relative filesystem path, or URL
+   * from which the properties in @a prop_hash are inherited.  (For
+   * details about which path specification format is in use for a
+   * particular instance of this structure, consult the documentation
+   * for the API which produced it.) */
   const char *path_or_url;
 
-  /** A hash of (const char *) inherited property names, and (svn_string_t *)
-   * property values. */
+  /** A hash of (<tt>const char *</tt>) inherited property names, and
+   * (<tt>svn_string_t *</tt>) property values. */
   apr_hash_t *prop_hash;
 
 } svn_prop_inherited_item_t;
@@ -110,7 +113,7 @@ typedef struct svn_prop_inherited_item_t
  * @since New in 1.5.
  */
 apr_array_header_t *
-svn_prop_hash_to_array(apr_hash_t *hash,
+svn_prop_hash_to_array(const apr_hash_t *hash,
                        apr_pool_t *pool);
 
 /**
@@ -133,7 +136,7 @@ svn_prop_array_to_hash(const apr_array_header_t *properties,
  * @since New in 1.6.
  */
 apr_hash_t *
-svn_prop_hash_dup(apr_hash_t *hash,
+svn_prop_hash_dup(const apr_hash_t *hash,
                   apr_pool_t *pool);
 
 /**
@@ -144,7 +147,7 @@ svn_prop_hash_dup(apr_hash_t *hash,
  * @since New in 1.7.
  */
 const char *
-svn_prop_get_value(apr_hash_t *properties,
+svn_prop_get_value(const apr_hash_t *properties,
                    const char *prop_name);
 
 /**
@@ -169,7 +172,7 @@ typedef enum svn_prop_kind
 
 /** Return the property kind of a property named @a prop_name.
  *
- * @since New in 1.8
+ * @since New in 1.8.
  */
 svn_prop_kind_t
 svn_property_kind2(const char *prop_name);
@@ -208,58 +211,58 @@ svn_prop_has_svn_prop(const apr_hash_t *props,
 /** Return @c TRUE iff @a prop_name is a Subversion property whose
  * value is interpreted as a boolean.
  *
- * @since New in 1.5
+ * @since New in 1.5.
  */
 svn_boolean_t
 svn_prop_is_boolean(const char *prop_name);
 
 /** Return @c TRUE iff @a prop_name is in the "svn:" name space and is a
- * known revision property.  For example, svn:log or svn:date.
+ * known revision property ("svn:log" or "svn:date", e.g.).
  *
- * This will return FALSE for any property name that is not known by this
+ * This will return @c FALSE for any property name that is not known by this
  * version of the library, even though the name may be known to other (for
  * example, later) Subversion software.
  *
- * @since New in 1.8
+ * @since New in 1.8.
  */
 svn_boolean_t
 svn_prop_is_known_svn_rev_prop(const char *prop_name);
 
 /** Return @c TRUE iff @a prop_name is in the "svn:" name space and is a
- * known versioned property that is allowed on a file and/or on a directory.
- * For example, svn:eol-style or svn:ignore or svn:mergeinfo.
+ * known versioned property that is allowed on a file and/or on a
+ * directory ("svn:eol-style", "svn:ignore", or "svn:mergeinfo", e.g.).
  *
- * This will return FALSE for any property name that is not known by this
- * version of the library, even though the name may be known to other (for
- * example, later) Subversion software.
+ * This will return @c FALSE for any property name that is not known
+ * by this version of the library, even though the name may be known
+ * to other (for example, later) Subversion software.
  *
- * @since New in 1.8
+ * @since New in 1.8.
  */
 svn_boolean_t
 svn_prop_is_known_svn_node_prop(const char *prop_name);
 
-/** Return @c TRUE iff @a prop_name is in the "svn:" name space and is a
- * known versioned property that is allowed on a file.  For example,
- * svn:eol-style or svn:mergeinfo.
+/** Return @c TRUE iff @a prop_name is in the "svn:" name space and is
+ * a known versioned property that is allowed on a file
+ * ("svn:eol-style" or "svn:mergeinfo", e.g.).
  *
- * This will return FALSE for any property name that is not known by this
- * version of the library, even though the name may be known to other (for
- * example, later) Subversion software.
+ * This will return @c FALSE for any property name that is not known
+ * by this version of the library, even though the name may be known
+ * to other (for example, later) Subversion software.
  *
- * @since New in 1.8
+ * @since New in 1.8.
  */
 svn_boolean_t
 svn_prop_is_known_svn_file_prop(const char *prop_name);
 
-/** Return @c TRUE iff @a prop_name represents the name of a Subversion
- * known versioned property that is allowed on a directory.  For example,
- * svn:ignore or svn:mergeinfo.
+/** Return @c TRUE iff @a prop_name is in the "svn:" name space and is
+ * a known versioned property that is allowed on a directory
+ * ("svn:ignore" or "svn:mergeinfo", e.g.).
  *
- * This will return FALSE for any property name that is not known by this
- * version of the library, even though the name may be known to other (for
- * example, later) Subversion software.
+ * This will return @c FALSE for any property name that is not known
+ * by this version of the library, even though the name may be known
+ * to other (for example, later) Subversion software.
  *
- * @since New in 1.8
+ * @since New in 1.8.
  */
 svn_boolean_t
 svn_prop_is_known_svn_dir_prop(const char *prop_name);
@@ -317,8 +320,8 @@ svn_categorize_props(const apr_array_header_t *proplist,
  */
 svn_error_t *
 svn_prop_diffs(apr_array_header_t **propdiffs,
-               apr_hash_t *target_props,
-               apr_hash_t *source_props,
+               const apr_hash_t *target_props,
+               const apr_hash_t *source_props,
                apr_pool_t *pool);
 
 
@@ -486,9 +489,10 @@ svn_prop_name_is_valid(const char *prop_name);
 /** @} */ /* Meta-data properties */
 
 /**
- * This is a list of all user-vixible and -settable versioned node properties.
+ * This is a list of all user-visible and -settable versioned node
+ * properties.
  *
- * @since New in 1.8
+ * @since New in 1.8.
  */
 #define SVN_PROP_NODE_ALL_PROPS SVN_PROP_MIME_TYPE, \
                                 SVN_PROP_IGNORE, \
@@ -661,18 +665,26 @@ svn_prop_name_is_valid(const char *prop_name);
  * @{
  */
 
-/** The prefix used for all (ephemeral) transaction properties. */
+/** The prefix used for all (ephemeral) transaction properties.
+ *
+ * @since New in 1.8.
+ */
 #define SVN_PROP_TXN_PREFIX  SVN_PROP_PREFIX "txn-"
 
 /** Identifies the client version compability level.  For clients
  * compiled against Subversion libraries, this is @c SVN_VER_NUMBER.
  * Third-party implementations are advised to use similar formatting
  * for values of this property.
+ *
+ * @since New in 1.8.
  */
 #define SVN_PROP_TXN_CLIENT_COMPAT_VERSION \
             SVN_PROP_TXN_PREFIX "client-compat-version"
-    
-/** Identifies the client's user agent string, if any. */
+
+/** Identifies the client's user agent string, if any.
+ *
+ * @since New in 1.8.
+ */
 #define SVN_PROP_TXN_USER_AGENT \
             SVN_PROP_TXN_PREFIX "user-agent"
 
@@ -683,6 +695,8 @@ svn_prop_name_is_valid(const char *prop_name);
  * to new properties named @c SVN_PROP_REVISION_PREFIX + "something",
  * allowing that information to survive the commit-time removal of
  * ephemeral transaction properties.
+ *
+ * @since New in 1.8.
  */
 #define SVN_PROP_REVISION_PREFIX  SVN_PROP_PREFIX "revision-"
 

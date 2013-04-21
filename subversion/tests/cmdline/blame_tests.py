@@ -31,6 +31,8 @@ import os, sys, re
 import svntest
 from svntest.main import server_has_mergeinfo
 
+from prop_tests import binary_mime_type_on_text_file_warning
+
 # For some basic merge setup used by blame -g tests.
 from merge_tests import set_up_branch
 
@@ -126,9 +128,21 @@ def blame_binary(sbox):
   # Then do it again, but this time we set the mimetype to binary.
   iota = os.path.join(wc_dir, 'iota')
   svntest.main.file_append(iota, "More new contents for iota\n")
-  svntest.main.run_svn(None, 'propset', 'svn:mime-type', 'image/jpeg', iota)
+  svntest.main.run_svn(binary_mime_type_on_text_file_warning,
+                       'propset', 'svn:mime-type', 'image/jpeg', iota)
+
+  # Blame fails when mime-type is locally modified to binary
+  exit_code, output, errput = svntest.main.run_svn(2, 'blame', iota)
+  if (len(errput) != 1) or (errput[0].find('Skipping') == -1):
+    raise svntest.Failure
+
   svntest.main.run_svn(None, 'ci',
                        '-m', '', iota)
+
+  # Blame fails when mime-type is binary
+  exit_code, output, errput = svntest.main.run_svn(2, 'blame', iota)
+  if (len(errput) != 1) or (errput[0].find('Skipping') == -1):
+    raise svntest.Failure
 
   # Once more, but now let's remove that mimetype.
   iota = os.path.join(wc_dir, 'iota')
@@ -137,13 +151,15 @@ def blame_binary(sbox):
   svntest.main.run_svn(None, 'ci',
                        '-m', '', iota)
 
-  exit_code, output, errput = svntest.main.run_svn(2, 'blame', iota)
+  # Blame fails when asking about an old revision where the mime-type is binary
+  exit_code, output, errput = svntest.main.run_svn(2, 'blame', iota + '@3')
   if (len(errput) != 1) or (errput[0].find('Skipping') == -1):
     raise svntest.Failure
 
   # But with --force, it should work.
-  exit_code, output, errput = svntest.main.run_svn(2, 'blame', '--force', iota)
-  if (len(errput) != 0 or len(output) != 4):
+  exit_code, output, errput = svntest.main.run_svn(2, 'blame', '--force',
+                                                   iota + '@3')
+  if (len(errput) != 0 or len(output) != 3):
     raise svntest.Failure
 
 
@@ -599,7 +615,7 @@ def blame_file_not_in_head(sbox):
 
   # Check that a correct error message is printed when blaming a target that
   # doesn't exist (in HEAD).
-  expected_err = ".*notexisting' (is not a file.*|path not found)"
+  expected_err = ".*notexisting' (is not a file.*|path not found|does not exist)"
   svntest.actions.run_and_verify_svn(None, [], expected_err,
                                      'blame', notexisting_url)
 
@@ -802,20 +818,20 @@ def blame_multiple_targets(sbox):
 
   sbox.build()
 
+  # First, make a new revision of iota.
+  iota = os.path.join(sbox.wc_dir, 'iota')
+  svntest.main.file_append(iota, "New contents for iota\n")
+  svntest.main.run_svn(None, 'ci', '-m', '', iota)
+
+  expected_output = [
+    "     1    jrandom This is the file 'iota'.\n",
+    "     2    jrandom New contents for iota\n",
+    ]
+
   def multiple_wc_targets():
     "multiple wc targets"
 
-    # First, make a new revision of iota.
-    iota = os.path.join(sbox.wc_dir, 'iota')
     non_existent = os.path.join(sbox.wc_dir, 'non-existent')
-    svntest.main.file_append(iota, "New contents for iota\n")
-    svntest.main.run_svn(None, 'ci',
-                         '-m', '', iota)
-
-    expected_output = [
-      "     1    jrandom This is the file 'iota'.\n",
-      "     2    jrandom New contents for iota\n",
-      ]
 
     expected_err = ".*W155010.*\n.*E200009.*"
     expected_err_re = re.compile(expected_err, re.DOTALL)
@@ -827,24 +843,15 @@ def blame_multiple_targets(sbox):
     if not expected_err_re.match("".join(error)):
       raise svntest.Failure('blame failed: expected error "%s", but received '
                             '"%s"' % (expected_err, "".join(error)))
+    svntest.verify.verify_outputs(None, output, None, expected_output, None)
 
   def multiple_url_targets():
     "multiple url targets"
 
-    # First, make a new revision of iota.
-    iota = os.path.join(sbox.wc_dir, 'iota')
     iota_url = sbox.repo_url + '/iota'
     non_existent = sbox.repo_url + '/non-existent'
-    svntest.main.file_append(iota, "New contents for iota\n")
-    svntest.main.run_svn(None, 'ci',
-                         '-m', '', iota)
 
-    expected_output = [
-      "     1    jrandom This is the file 'iota'.\n",
-      "     2    jrandom New contents for iota\n",
-      ]
-
-    expected_err = ".*(W160017|W160013).*\n.*E200009.*"
+    expected_err = ".*(W160017|W160013|W150000).*\n.*E200009.*"
     expected_err_re = re.compile(expected_err, re.DOTALL)
 
     exit_code, output, error = svntest.main.run_svn(1, 'blame',
@@ -854,10 +861,103 @@ def blame_multiple_targets(sbox):
     if not expected_err_re.match("".join(error)):
       raise svntest.Failure('blame failed: expected error "%s", but received '
                             '"%s"' % (expected_err, "".join(error)))
+    svntest.verify.verify_outputs(None, output, None, expected_output, None)
 
   # Test one by one
   multiple_wc_targets()
   multiple_url_targets()
+
+@Issue(4034)
+def blame_eol_handling(sbox):
+  "blame it on the eol handling"
+
+  sbox.build()
+
+  if os.name == 'nt':
+    native_eol = '\r\n'
+  else:
+    native_eol = '\n'
+
+  for eol, prop, rev in [ ('\r',   'CR',         2),
+                          ('\n',   'LF',         4),
+                          ('\r\n', 'CRLF',       6),
+                          (native_eol, 'native', 8) ]:
+
+    f1 = sbox.ospath('blame-%s' % prop)
+    f2 = sbox.ospath('blame-%s-prop' % prop)
+
+    file_data = 'line 1 ' + eol + \
+                'line 2 ' + eol + \
+                'line 3 ' + eol + \
+                'line 4 ' + eol + \
+                'line 5 ' + eol
+
+    svntest.main.file_write(f1, file_data, mode='wb')
+    svntest.main.file_write(f2, file_data, mode='wb')
+
+    sbox.simple_add('blame-%s' % prop,
+                    'blame-%s-prop' % prop)
+    sbox.simple_propset('svn:eol-style', prop, 'blame-%s-prop' % prop)
+    sbox.simple_commit()
+
+    file_data = 'line 1 ' + eol + \
+                'line 2 ' + eol + \
+                'line 2a' + eol + \
+                'line 3 ' + eol + \
+                'line 4 ' + eol + \
+                'line 4a' + eol + \
+                'line 5 ' + eol
+
+    svntest.main.file_write(f1, file_data, mode='wb')
+    svntest.main.file_write(f2, file_data, mode='wb')
+
+    sbox.simple_commit()
+
+    expected_output = [
+        '     %d    jrandom line 1 \n' % rev,
+        '     %d    jrandom line 2 \n' % rev,
+        '     %d    jrandom line 2a\n' % (rev + 1),
+        '     %d    jrandom line 3 \n' % rev,
+        '     %d    jrandom line 4 \n' % rev,
+        '     %d    jrandom line 4a\n' % (rev + 1),
+        '     %d    jrandom line 5 \n' % rev,
+    ]
+
+    svntest.actions.run_and_verify_svn(f1 + '-base', expected_output, [],
+                                       'blame', f1)
+
+    svntest.actions.run_and_verify_svn(f2 + '-base', expected_output, [],
+                                       'blame', f2)
+
+    file_data = 'line 1 ' + eol + \
+                'line 2 ' + eol + \
+                'line 2a' + eol + \
+                'line 3 ' + eol + \
+                'line 3b' + eol + \
+                'line 4 ' + eol + \
+                'line 4a' + eol + \
+                'line 5 ' + eol
+
+    svntest.main.file_write(f1, file_data, mode='wb')
+    svntest.main.file_write(f2, file_data, mode='wb')
+
+    expected_output = [
+        '     %d    jrandom line 1 \n' % rev,
+        '     %d    jrandom line 2 \n' % rev,
+        '     %d    jrandom line 2a\n' % (rev + 1),
+        '     %d    jrandom line 3 \n' % rev,
+         '     -          - line 3b\n',
+        '     %d    jrandom line 4 \n' % rev,
+        '     %d    jrandom line 4a\n' % (rev + 1),
+        '     %d    jrandom line 5 \n' % rev,
+    ]
+
+    svntest.actions.run_and_verify_svn(f1 + '-modified', expected_output, [],
+                                       'blame', f1)
+
+    svntest.actions.run_and_verify_svn(f2 + '-modified', expected_output, [],
+                                       'blame', f2)
+
 
 ########################################################################
 # Run the tests
@@ -881,6 +981,7 @@ test_list = [ None,
               blame_output_after_merge,
               merge_sensitive_blame_and_empty_mergeinfo,
               blame_multiple_targets,
+              blame_eol_handling,
              ]
 
 if __name__ == '__main__':

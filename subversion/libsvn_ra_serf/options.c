@@ -28,6 +28,7 @@
 #include <serf.h>
 
 #include "svn_dirent_uri.h"
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
 #include "svn_dav.h"
@@ -169,47 +170,59 @@ capabilities_headers_iterator_callback(void *baton,
 
       if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_DEPTH, vals))
         {
-          apr_hash_set(session->capabilities,
-                       SVN_RA_CAPABILITY_DEPTH, APR_HASH_KEY_STRING,
-                       capability_yes);
+          svn_hash_sets(session->capabilities,
+                        SVN_RA_CAPABILITY_DEPTH, capability_yes);
         }
       if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
         {
           /* The server doesn't know what repository we're referring
              to, so it can't just say capability_yes. */
-          apr_hash_set(session->capabilities,
-                       SVN_RA_CAPABILITY_MERGEINFO, APR_HASH_KEY_STRING,
-                       capability_server_yes);
+          if (!svn_hash_gets(session->capabilities,
+                             SVN_RA_CAPABILITY_MERGEINFO))
+            {
+              svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+                            capability_server_yes);
+            }
         }
       if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
         {
-          apr_hash_set(session->capabilities,
-                       SVN_RA_CAPABILITY_LOG_REVPROPS, APR_HASH_KEY_STRING,
-                       capability_yes);
+          svn_hash_sets(session->capabilities,
+                        SVN_RA_CAPABILITY_LOG_REVPROPS, capability_yes);
         }
       if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_ATOMIC_REVPROPS, vals))
         {
-          apr_hash_set(session->capabilities,
-                       SVN_RA_CAPABILITY_ATOMIC_REVPROPS, APR_HASH_KEY_STRING,
-                       capability_yes);
+          svn_hash_sets(session->capabilities,
+                        SVN_RA_CAPABILITY_ATOMIC_REVPROPS, capability_yes);
         }
       if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY, vals))
         {
-          apr_hash_set(session->capabilities,
-                       SVN_RA_CAPABILITY_PARTIAL_REPLAY, APR_HASH_KEY_STRING,
-                       capability_yes);
+          svn_hash_sets(session->capabilities,
+                        SVN_RA_CAPABILITY_PARTIAL_REPLAY, capability_yes);
         }
       if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_INHERITED_PROPS, vals))
         {
-          apr_hash_set(session->capabilities,
-                       SVN_RA_CAPABILITY_INHERITED_PROPS,
-                       APR_HASH_KEY_STRING, capability_yes);
+          svn_hash_sets(session->capabilities,
+                        SVN_RA_CAPABILITY_INHERITED_PROPS, capability_yes);
+        }
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_REVERSE_FILE_REVS,
+                                 vals))
+        {
+          svn_hash_sets(session->capabilities,
+                        SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE,
+                        capability_yes);
         }
       if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_EPHEMERAL_TXNPROPS, vals))
         {
-          apr_hash_set(session->capabilities,
-                       SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS, APR_HASH_KEY_STRING,
-                       capability_yes);
+          svn_hash_sets(session->capabilities,
+                        SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS, capability_yes);
+        }
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_INLINE_PROPS, vals))
+        {
+          session->supports_inline_props = TRUE;
+        }
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_REPLAY_REV_RESOURCE, vals))
+        {
+          session->supports_rev_rsrc_replay = TRUE;
         }
     }
 
@@ -280,6 +293,10 @@ capabilities_headers_iterator_callback(void *baton,
         {
           opt_ctx->youngest_rev = SVN_STR_TO_REV(val);
         }
+      else if (svn_cstring_casecmp(key, SVN_DAV_ALLOW_BULK_UPDATES) == 0)
+        {
+          session->server_allows_bulk = apr_pstrdup(session->pool, val);
+        }
       else if (svn_cstring_casecmp(key, SVN_DAV_SUPPORTED_POSTS_HEADER) == 0)
         {
           /* May contain multiple values, separated by commas. */
@@ -291,8 +308,20 @@ capabilities_headers_iterator_callback(void *baton,
             {
               const char *post_val = APR_ARRAY_IDX(vals, i, const char *);
 
-              apr_hash_set(session->supported_posts, post_val,
-                           APR_HASH_KEY_STRING, (void *)1);
+              svn_hash_sets(session->supported_posts, post_val, (void *)1);
+            }
+        }
+      else if (svn_cstring_casecmp(key, SVN_DAV_REPOSITORY_MERGEINFO) == 0)
+        {
+          if (svn_cstring_casecmp(val, "yes") == 0)
+            {
+              svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+                            capability_yes);
+            }
+          else if (svn_cstring_casecmp(val, "no") == 0)
+            {
+              svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+                            capability_no);
             }
         }
     }
@@ -319,24 +348,30 @@ options_response_handler(serf_request_t *request,
       serf_bucket_t *hdrs = serf_bucket_response_get_headers(response);
 
       /* Start out assuming all capabilities are unsupported. */
-      apr_hash_set(session->capabilities, SVN_RA_CAPABILITY_PARTIAL_REPLAY,
-                   APR_HASH_KEY_STRING, capability_no);
-      apr_hash_set(session->capabilities, SVN_RA_CAPABILITY_DEPTH,
-                   APR_HASH_KEY_STRING, capability_no);
-      apr_hash_set(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
-                   APR_HASH_KEY_STRING, capability_no);
-      apr_hash_set(session->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
-                   APR_HASH_KEY_STRING, capability_no);
-      apr_hash_set(session->capabilities, SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
-                   APR_HASH_KEY_STRING, capability_no);
-      apr_hash_set(session->capabilities, SVN_RA_CAPABILITY_INHERITED_PROPS,
-                   APR_HASH_KEY_STRING, capability_no);
-      apr_hash_set(session->capabilities, SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS,
-                   APR_HASH_KEY_STRING, capability_no);
+      svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_PARTIAL_REPLAY,
+                    capability_no);
+      svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_DEPTH,
+                    capability_no);
+      svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+                    NULL);
+      svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
+                    capability_no);
+      svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
+                    capability_no);
+      svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_INHERITED_PROPS,
+                    capability_no);
+      svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS,
+                    capability_no);
 
       /* Then see which ones we can discover. */
       serf_bucket_headers_do(hdrs, capabilities_headers_iterator_callback,
                              opt_ctx);
+
+      /* Assume mergeinfo capability unsupported, if didn't recieve information
+         about server or repository mergeinfo capability. */
+      if (!svn_hash_gets(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO))
+        svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+                      capability_no);
 
       opt_ctx->headers_processed = TRUE;
     }
@@ -401,6 +436,9 @@ svn_ra_serf__v2_get_youngest_revnum(svn_revnum_t *youngest,
 
   SVN_ERR(create_options_req(&opt_ctx, session, conn, scratch_pool));
   SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, scratch_pool));
+  SVN_ERR(svn_ra_serf__error_on_status(opt_ctx->handler->sline.code,
+                                       opt_ctx->handler->path,
+                                       opt_ctx->handler->location));
 
   *youngest = opt_ctx->youngest_rev;
 
@@ -421,6 +459,10 @@ svn_ra_serf__v1_get_activity_collection(const char **activity_url,
 
   SVN_ERR(create_options_req(&opt_ctx, session, conn, scratch_pool));
   SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, scratch_pool));
+
+  SVN_ERR(svn_ra_serf__error_on_status(opt_ctx->handler->sline.code,
+                                       opt_ctx->handler->path,
+                                       opt_ctx->handler->location));
 
   *activity_url = apr_pstrdup(result_pool, opt_ctx->activity_collection);
 
@@ -456,11 +498,22 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
       return SVN_NO_ERROR;
     }
 
-  return svn_error_compose_create(
-             svn_ra_serf__error_on_status(opt_ctx->handler->sline.code,
-                                          serf_sess->session_url.path,
-                                          opt_ctx->handler->location),
-             err);
+  SVN_ERR(svn_error_compose_create(
+              svn_ra_serf__error_on_status(opt_ctx->handler->sline.code,
+                                           serf_sess->session_url.path,
+                                           opt_ctx->handler->location),
+              err));
+
+  /* Opportunistically cache any reported activity URL.  (We don't
+     want to have to ask for this again later, potentially against an
+     unreadable commit anchor URL.)  */
+  if (opt_ctx->activity_collection)
+    {
+      serf_sess->activity_collection_url =
+        apr_pstrdup(serf_sess->pool, opt_ctx->activity_collection);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -480,17 +533,14 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
       return SVN_NO_ERROR;
     }
 
-  cap_result = apr_hash_get(serf_sess->capabilities,
-                            capability,
-                            APR_HASH_KEY_STRING);
+  cap_result = svn_hash_gets(serf_sess->capabilities, capability);
 
   /* If any capability is unknown, they're all unknown, so ask. */
   if (cap_result == NULL)
     SVN_ERR(svn_ra_serf__exchange_capabilities(serf_sess, NULL, pool));
 
   /* Try again, now that we've fetched the capabilities. */
-  cap_result = apr_hash_get(serf_sess->capabilities,
-                            capability, APR_HASH_KEY_STRING);
+  cap_result = svn_hash_gets(serf_sess->capabilities, capability);
 
   /* Some capabilities depend on the repository as well as the server. */
   if (cap_result == capability_server_yes)
@@ -536,9 +586,8 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
           else
             cap_result = capability_yes;
 
-          apr_hash_set(serf_sess->capabilities,
-                       SVN_RA_CAPABILITY_MERGEINFO, APR_HASH_KEY_STRING,
-                       cap_result);
+          svn_hash_sets(serf_sess->capabilities,
+                        SVN_RA_CAPABILITY_MERGEINFO,  cap_result);
         }
       else
         {

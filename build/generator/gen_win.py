@@ -159,22 +159,22 @@ class GeneratorBase(gen_base.GeneratorBase):
       elif opt == '--with-static-openssl':
         self.static_openssl = 1
       elif opt == '--vsnet-version':
-        if val == '2002' or re.match('7(\.\d+)?', val):
+        if val == '2002' or re.match('7(\.\d+)?$', val):
           self.vs_version = '2002'
           self.sln_version = '7.00'
           self.vcproj_version = '7.00'
           self.vcproj_extension = '.vcproj'
-        elif val == '2003' or re.match('8(\.\d+)?', val):
+        elif val == '2003' or re.match('8(\.\d+)?$', val):
           self.vs_version = '2003'
           self.sln_version = '8.00'
           self.vcproj_version = '7.10'
           self.vcproj_extension = '.vcproj'
-        elif val == '2005' or re.match('9(\.\d+)?', val):
+        elif val == '2005' or re.match('9(\.\d+)?$', val):
           self.vs_version = '2005'
           self.sln_version = '9.00'
           self.vcproj_version = '8.00'
           self.vcproj_extension = '.vcproj'
-        elif val == '2008' or re.match('10(\.\d+)?', val):
+        elif val == '2008' or re.match('10(\.\d+)?$', val):
           self.vs_version = '2008'
           self.sln_version = '10.00'
           self.vcproj_version = '9.00'
@@ -188,6 +188,11 @@ class GeneratorBase(gen_base.GeneratorBase):
           self.vs_version = '2012'
           self.sln_version = '12.00'
           self.vcproj_version = '11.0'
+          self.vcproj_extension = '.vcxproj'
+        elif re.match('^1\d+$', val):
+          self.vsversion = val
+          self.sln_version = '12.00'
+          self.vcproj_version = val + '.0'
           self.vcproj_extension = '.vcxproj'
         else:
           print('WARNING: Unknown VS.NET version "%s",'
@@ -396,7 +401,6 @@ class WinGeneratorBase(GeneratorBase):
       install_targets = [x for x in install_targets
                                      if not (isinstance(x, gen_base.TargetJava)
                                              or isinstance(x, gen_base.TargetJavaHeaders)
-                                             or isinstance(x, gen_base.TargetSWIGProject)
                                              or x.name == '__JAVAHL__'
                                              or x.name == '__JAVAHL_TESTS__'
                                              or x.name == 'libsvnjavahl')]
@@ -462,7 +466,10 @@ class WinGeneratorBase(GeneratorBase):
       # Link everything except tests against the dll. Tests need to be linked
       # against the static libraries because they sometimes access internal
       # library functions.
-      if dep in deps[key] and key.find("test") == -1:
+
+      # ### The magic behavior for 'test' in a name and 'entries-dump' should
+      # ### move to another option in build.conf
+      if dep in deps[key] and key.find("test") == -1 and key != 'entries-dump':
         deps[key].remove(dep)
         deps[key].append(target)
 
@@ -960,6 +967,9 @@ class WinGeneratorBase(GeneratorBase):
       fakeincludes.append(os.path.join(self.jdk_path, 'include'))
       fakeincludes.append(os.path.join(self.jdk_path, 'include', 'win32'))
 
+    if target.name.find('cxxhl') != -1:
+      fakeincludes.append(self.path("subversion/bindings/cxxhl/include"))
+
     return fakeincludes
 
   def get_win_lib_dirs(self, target, cfg):
@@ -1430,7 +1440,7 @@ class WinGeneratorBase(GeneratorBase):
   def _find_serf(self):
     "Check if serf and its dependencies are available"
 
-    minimal_serf_version = (0, 3, 0)
+    minimal_serf_version = (1, 2, 0)
     self.serf_lib = None
     if self.serf_path and os.path.exists(self.serf_path):
       if self.openssl_path and os.path.exists(self.openssl_path):
@@ -1438,7 +1448,7 @@ class WinGeneratorBase(GeneratorBase):
         version = self._get_serf_version()
         if None in version:
           msg = 'Unknown serf version found; but, will try to build ' \
-                'ra_serf.\n'
+                'ra_serf.'
         else:
           self.serf_ver = '.'.join(str(v) for v in version)
           if version < minimal_serf_version:
@@ -1446,7 +1456,7 @@ class WinGeneratorBase(GeneratorBase):
             msg = 'Found serf %s, but >= %s is required. ra_serf will not be built.\n' % \
                   (self.serf_ver, '.'.join(str(v) for v in minimal_serf_version))
           else:
-            msg = 'Found serf version %s\n' % self.serf_ver
+            msg = 'Found serf %s' % self.serf_ver
         print(msg)
       else:
         print('openssl not found, ra_serf will not be built\n')
@@ -1455,6 +1465,8 @@ class WinGeneratorBase(GeneratorBase):
 
   def _find_apr(self):
     "Find the APR library and version"
+
+    minimal_apr_version = (0, 9, 0)
 
     version_file_path = os.path.join(self.apr_path, 'include',
                                      'apr_version.h')
@@ -1467,22 +1479,41 @@ class WinGeneratorBase(GeneratorBase):
     fp = open(version_file_path)
     txt = fp.read()
     fp.close()
-    vermatch = re.search(r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)', txt, re.M)
 
-    major_ver = int(vermatch.group(1))
+    vermatch = re.search(r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)', txt, re.M)
+    major = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+APR_MINOR_VERSION\s+(\d+)', txt, re.M)
+    minor = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+APR_PATCH_VERSION\s+(\d+)', txt, re.M)
+    patch = int(vermatch.group(1))
+
+    version = (major, minor, patch)
+    self.apr_version = '%d.%d.%d' % version
 
     suffix = ''
-    if major_ver > 0:
-        suffix = '-%d' % major_ver
+    if major > 0:
+        suffix = '-%d' % major
 
     if self.static_apr:
       self.apr_lib = 'apr%s.lib' % suffix
     else:
       self.apr_lib = 'libapr%s.lib' % suffix
 
+    if version < minimal_apr_version:
+      sys.stderr.write("ERROR: apr %s or higher is required "
+                       "(%s found)\n" % (
+                          '.'.join(str(v) for v in minimal_apr_version),
+                          self.apr_version))
+      sys.exit(1)
+    else:
+      print('Found apr %s' % self.apr_version)
+
   def _find_apr_util(self):
     "Find the APR-util library and version"
 
+    minimal_aprutil_version = (0, 9, 0)
     version_file_path = os.path.join(self.apr_util_path, 'include',
                                      'apu_version.h')
 
@@ -1494,21 +1525,41 @@ class WinGeneratorBase(GeneratorBase):
     fp = open(version_file_path)
     txt = fp.read()
     fp.close()
-    vermatch = re.search(r'^\s*#define\s+APU_MAJOR_VERSION\s+(\d+)', txt, re.M)
 
-    major_ver = int(vermatch.group(1))
+    vermatch = re.search(r'^\s*#define\s+APU_MAJOR_VERSION\s+(\d+)', txt, re.M)
+    major = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+APU_MINOR_VERSION\s+(\d+)', txt, re.M)
+    minor = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+APU_PATCH_VERSION\s+(\d+)', txt, re.M)
+    patch = int(vermatch.group(1))
+
+    version = (major, minor, patch)
+    self.aprutil_version = '%d.%d.%d' % version
 
     suffix = ''
-    if major_ver > 0:
-        suffix = '-%d' % major_ver
+    if major > 0:
+        suffix = '-%d' % major
 
     if self.static_apr:
       self.aprutil_lib = 'aprutil%s.lib' % suffix
     else:
       self.aprutil_lib = 'libaprutil%s.lib' % suffix
 
+    if version < minimal_aprutil_version:
+      sys.stderr.write("ERROR: aprutil %s or higher is required "
+                       "(%s found)\n" % (
+                          '.'.join(str(v) for v in minimal_aprutil_version),
+                          self.aprutil_version))
+      sys.exit(1)
+    else:
+      print('Found aprutil %s' % self.aprutil_version)
+
   def _find_sqlite(self):
     "Find the Sqlite library and version"
+
+    minimal_sqlite_version = (3, 7, 12)
 
     header_file = os.path.join(self.sqlite_path, 'inc', 'sqlite3.h')
 
@@ -1534,23 +1585,26 @@ class WinGeneratorBase(GeneratorBase):
     fp = open(header_file)
     txt = fp.read()
     fp.close()
-    vermatch = re.search(r'^\s*#define\s+SQLITE_VERSION\s+"(\d+)\.(\d+)\.(\d+)(?:\.\d)?"', txt, re.M)
+    vermatch = re.search(r'^\s*#define\s+SQLITE_VERSION\s+"(\d+)\.(\d+)\.(\d+)(?:\.(\d))?"', txt, re.M)
 
-    version = tuple(map(int, vermatch.groups()))
+    version = vermatch.groups()
 
+    # Sqlite doesn't add patch numbers for their ordinary releases
+    if not version[3]:
+      version = version[0:3]
 
-    self.sqlite_version = '%d.%d.%d' % version
+    version = tuple(map(int, version))
 
-    msg = 'Found SQLite version %s\n'
+    self.sqlite_version = '.'.join(str(v) for v in version)
 
-    major, minor, patch = version
-    if major < 3 or (major == 3 and minor < 6) \
-                 or (major == 3 and minor == 6 and patch < 18):
-      sys.stderr.write("ERROR: SQLite 3.6.18 or higher is required "
-                       "(%s found)\n" % self.sqlite_version);
+    if version < minimal_sqlite_version:
+      sys.stderr.write("ERROR: sqlite %s or higher is required "
+                       "(%s found)\n" % (
+                          '.'.join(str(v) for v in minimal_sqlite_version),
+                          self.sqlite_version))
       sys.exit(1)
     else:
-      print(msg % self.sqlite_version)
+      print('Found SQLite %s' % self.sqlite_version)
 
   def _find_zlib(self):
     "Find the ZLib library and version"
@@ -1574,9 +1628,7 @@ class WinGeneratorBase(GeneratorBase):
 
     self.zlib_version = '%d.%d.%d' % version
 
-    msg = 'Found ZLib version %s\n'
-
-    print(msg % self.zlib_version)
+    print('Found ZLib %s' % self.zlib_version)
 
 class ProjectItem:
   "A generic item class for holding sources info, config info, etc for a project"

@@ -121,18 +121,18 @@ Step 3:  Install Specific Language Bindings
 
 *  Python
 
-   1.  Run 'make swig-py' from the top of the Subversion source tree,
+   1.  Run 'make swig-py' from the top of the Subversion build tree,
        to build the bindings.
 
        (This will invoke SWIG on the *.i files, resulting in a collection
        of .c source files.  It will then compile and link those .c files into
        Python libraries.)
 
-   2.  Run 'make check-swig-py' from the top of the Subversion source
+   2.  Run 'make check-swig-py' from the top of the Subversion build
        tree, to test the bindings 
 
    3.  Run 'make install-swig-py' (as root, typically)
-       from the top of the Subversion source tree.  This will copy
+       from the top of the Subversion build tree.  This will copy
        your new Python libraries into the appropriate system location.
 
        Note: If you don't have access to install to Python's site-packages
@@ -167,18 +167,18 @@ Step 3:  Install Specific Language Bindings
    is the same one that you configured SWIG to run against during the
    SWIG configure (see above).
 
-   1.  Run `make swig-pl' from the top of the Subversion source tree.
+   1.  Run `make swig-pl' from the top of the Subversion build tree.
 
-   2.  Run `make check-swig-pl' from the top of the Subversion source
+   2.  Run `make check-swig-pl' from the top of the Subversion build
        tree, to test the bindings 
 
    3.  to install run `make install-swig-pl' from the top of the
-       Subversion source tree.
+       Subversion build tree.
 
    If you need to pass extra parameters to Perl build process (Makefile.PL),
    then you need to do this process somewhat different:
 
-   1.  Run `make swig-pl-lib' from the top of the Subversion source tree.
+   1.  Run `make swig-pl-lib' from the top of the Subversion build tree.
 
    2.  Run `make install-swig-pl-lib'
 
@@ -195,14 +195,14 @@ Step 3:  Install Specific Language Bindings
 
 * Ruby
   
-   1. Run `make swig-rb' from the top of the Subversion source tree,
+   1. Run `make swig-rb' from the top of the Subversion build tree,
       to build the bindings.
 
-   2. Run `make check-swig-rb' from the top of the Subversion source
+   2. Run `make check-swig-rb' from the top of the Subversion build
       tree, to test the bindings.
 
    3. To install, run `make install-swig-rb' from the top of the 
-      Subversion source tree.
+      Subversion build tree.
 
    You can specify the ruby binary by passing RUBY=/path/to/ruby as part 
    of the configure command in the top level of the Subversion source 
@@ -332,12 +332,49 @@ BUILDING SWIG BINDINGS FOR SVN ON WINDOWS
         copy Release\subversion\bindings\swig\perl\_Wc.dll %PERL_LIBS%\auto\SVN\_Wc
         copy Release\subversion\bindings\swig\perl\_Wc.pdb %PERL_LIBS%\auto\SVN\_Wc
 
-TESTING AND USING SWIG BINDINGS
+
+TESTING SWIG BINDINGS
 
 *  Python
 
    You can exercise the Python bindings test suite by running 'make
    check-swig-py' as described in the install section.
+
+*  Perl
+
+   The Perl bindings are using the standard module testing facilities
+   to do regression tests. Simply run 'make check-swig-pl' as described in 
+   the install section.
+
+*  Ruby
+
+   To test the Ruby bindings, simply run `make check-swig-rb' as described 
+   in the install section.
+
+
+USING SWIG BINDINGS
+
+*  Python
+
+   1. Ensure Python's module search path includes the 'lib/svn-python'
+      subdirectory of the Subversion installation directory.  For example,
+      include that directory in the 'PYTHONPATH' environment variable or
+      insert it into 'sys.path' at run time.
+
+   2. Import the required modules into your Python program.  For example:
+
+        import svn.client, svn.repos
+
+   3. The APIs available within each module are broadly the same as the
+      corresponding C APIs except:
+
+        * you may omit the module prefix (for example, 'svn_client_')
+        * pool arguments are optional
+        * using Python exceptions instead of returning svn_error_t
+        * returning a tuple of outputs instead of return-by-pointer
+        * do not pass a baton along with a callback function
+
+      See python/README for more details on these differences.
 
    For examples of how to use the Python bindings, check out the
    sample/demo programs found in tools/examples/ in the Subversion
@@ -347,15 +384,10 @@ TESTING AND USING SWIG BINDINGS
 
 *  Perl
 
-   The Perl bindings are using the standard module testing facilities
-   to do regression tests. Simply run 'make check-swig-pl' as described in 
-   the install section.
+   ### TODO
 
-* Ruby
+*  Ruby
 
-   To test the Ruby bindings, simply run `make check-swig-rb' as described 
-   in the install section.
-   
    For examples of how to use the Ruby bindings, take a look at the .rb files
    in the following directory:
      subversion/bindings/swig/test

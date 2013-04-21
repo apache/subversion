@@ -59,6 +59,9 @@ def load_expected_output(basename):
 
   return exp_stdout, exp_stderr
 
+# With plaintext password storage enabled, `svn --version' emits a warning:
+warn_line_re = re.compile("WARNING: Plaintext password storage")
+
 # This is a list of lines to delete.
 del_lines_res = [
                  # In 'svn --version', the date line is variable, for example:
@@ -100,6 +103,7 @@ rep_lines_res = [
 switch_res_line = 'System information:'
 
 # This is a list of lines to delete after having seen switch_res_line.
+switched_warn_line_re = None
 switched_del_lines_res = [
                           # In svn --version --verbose, dependent libs loaded
                           # shared libs are optional.
@@ -119,20 +123,31 @@ switched_rep_lines_res = [
 def process_lines(lines):
   "delete lines that should not be compared and search and replace the rest"
   output = [ ]
+  warn_re = warn_line_re
   del_res = del_lines_res
   rep_res = rep_lines_res
 
+  skip_next_line = 0
   for line in lines:
+    if skip_next_line:
+      skip_next_line = 0
+      continue
+
     if line.startswith(switch_res_line):
+      warn_re = switched_warn_line_re
       del_res = switched_del_lines_res
       rep_res = switched_rep_lines_res
 
     # Skip these lines from the output list.
     delete_line = 0
-    for delete_re in del_res:
-      if delete_re.match(line):
-        delete_line = 1
-        break
+    if warn_re and warn_re.match(line):
+      delete_line = 1
+      skip_next_line = 1     # Ignore the empty line after the warning
+    else:
+      for delete_re in del_res:
+        if delete_re.match(line):
+          delete_line = 1
+          break
     if delete_line:
       continue
 
@@ -157,7 +172,7 @@ def run_one_test(sbox, basename, *varargs):
     exit_code, actual_stdout, actual_stderr = svntest.main.run_svn(1, *varargs)
   else:
     exit_code, actual_stdout, actual_stderr = svntest.main.run_command(svntest.main.svn_binary,
-                                                                       1, 0, *varargs)
+                                                                       1, False, *varargs)
 
   # Delete and perform search and replaces on the lines from the
   # actual and expected output that may differ between build

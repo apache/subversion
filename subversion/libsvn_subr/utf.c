@@ -32,6 +32,7 @@
 #include <apr_xlate.h>
 #include <apr_atomic.h>
 
+#include "svn_hash.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_pools.h"
@@ -292,9 +293,8 @@ get_xlate_handle_node_internal(xlate_handle_node_t **ret,
       xlate_handle_node_t *old_node = NULL;
 
       /* 2nd level: hash lookup */
-      xlate_handle_node_t **old_node_p = apr_hash_get(xlate_handle_hash,
-                                                      userdata_key,
-                                                      APR_HASH_KEY_STRING);
+      xlate_handle_node_t **old_node_p = svn_hash_gets(xlate_handle_hash,
+                                                       userdata_key);
       if (old_node_p)
         old_node = *old_node_p;
       if (old_node)
@@ -388,9 +388,7 @@ static svn_error_t *
 put_xlate_handle_node_internal(xlate_handle_node_t *node,
                                const char *userdata_key)
 {
-  xlate_handle_node_t **node_p = apr_hash_get(xlate_handle_hash,
-                                              userdata_key,
-                                              APR_HASH_KEY_STRING);
+  xlate_handle_node_t **node_p = svn_hash_gets(xlate_handle_hash, userdata_key);
   if (node_p == NULL)
     {
       userdata_key = apr_pstrdup(apr_hash_pool_get(xlate_handle_hash),
@@ -398,8 +396,7 @@ put_xlate_handle_node_internal(xlate_handle_node_t *node,
       node_p = apr_palloc(apr_hash_pool_get(xlate_handle_hash),
                           sizeof(*node_p));
       *node_p = NULL;
-      apr_hash_set(xlate_handle_hash, userdata_key,
-                    APR_HASH_KEY_STRING, node_p);
+      svn_hash_sets(xlate_handle_hash, userdata_key, node_p);
     }
   node->next = *node_p;
   *node_p = node;
@@ -948,7 +945,7 @@ svn_utf_cstring_from_utf8(const char **dest,
   SVN_ERR(get_uton_xlate_handle_node(&node, pool));
   err = convert_cstring(dest, src, node, pool);
   err = svn_error_compose_create(
-          err, 
+          err,
           put_xlate_handle_node(node, SVN_UTF_UTON_XLATE_HANDLE, pool));
 
   return err;

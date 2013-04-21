@@ -233,15 +233,6 @@ svn_checksum__from_digest_sha1(const unsigned char *digest,
  * @{
  */
 
-/**
- * Clear any key/value pairs in the hash table.  A wrapper for a
- * apr_hash_clear(), which isn't available until APR 1.3.0.
- *
- * @since New in 1.5.
- */
-svn_error_t *
-svn_hash__clear(apr_hash_t *hash, apr_pool_t *pool);
-
 /** @} */
 
 
@@ -295,13 +286,30 @@ svn_hash__make(apr_pool_t *pool);
 
 /** @} */
 
+
+/** Apply the changes described by @a prop_changes to @a original_props and
+ * return the result.  The inverse of svn_prop_diffs().
+ *
+ * Allocate the resulting hash from @a pool, but allocate its keys and
+ * values from @a pool and/or by reference to the storage of the inputs.
+ *
+ * Note: some other APIs use an array of pointers to svn_prop_t.
+ *
+ * @since New in 1.8.
+ */
+apr_hash_t *
+svn_prop__patch(const apr_hash_t *original_props,
+                const apr_array_header_t *prop_changes,
+                apr_pool_t *pool);
+
+
 /**
  * @defgroup svn_version Version number dotted triplet parsing
  * @{
  */
 
 /* Set @a *version to a version structure parsed from the version
- * string representation in @a version_string.  Return 
+ * string representation in @a version_string.  Return
  * @c SVN_ERR_MALFORMED_VERSION_STRING if the string fails to parse
  * cleanly.
  *

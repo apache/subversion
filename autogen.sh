@@ -140,6 +140,9 @@ if test -n "$RELEASE_MODE"; then
 
   # Build the SWIG-related files
   make -f autogen-standalone.mk autogen-swig
+
+  # Remove the .swig_checked file
+  rm -f .swig_checked
 fi
 
 if test -n "$SKIP_DEPS"; then
@@ -199,6 +202,8 @@ echo ""
 echo "./configure --enable-maintainer-mode"
 echo "./configure --disable-shared"
 echo "./configure --enable-maintainer-mode --disable-shared"
+echo "./configure --disable-optimize --enable-debug"
+echo "./configure CUSERFLAGS='--flags-for-C' CXXUSERFLAGS='--flags-for-C++'"
 echo ""
 echo "Note:  If you wish to run a Subversion HTTP server, you will need"
 echo "Apache 2.x.  See the INSTALL file for details."

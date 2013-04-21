@@ -315,6 +315,9 @@ svn_rangelist_diff(svn_rangelist_t **deleted, svn_rangelist_t **added,
  * in sorted order and be compacted to the minimal number of ranges
  * needed to represent the merged result.
  *
+ * If the original rangelist contains non-collapsed adjacent ranges,
+ * the final result is not guaranteed to be compacted either.
+ *
  * Use @a scratch_pool for temporary allocations.
  *
  * @since New in 1.8.
@@ -330,6 +333,9 @@ svn_rangelist_merge2(svn_rangelist_t *rangelist,
  * returns its result in @a *rangelist. It does not modify @a *rangelist
  * in place. If not used carefully, this function can use up a lot of memory
  * if called in a loop.
+ *
+ * It performs an extra adjacent range compaction round to make sure non
+ * collapsed input ranges are compacted in the result.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.7 API.

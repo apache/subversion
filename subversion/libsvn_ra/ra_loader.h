@@ -135,7 +135,7 @@ typedef struct svn_ra__vtable_t {
                                 svn_mergeinfo_inheritance_t inherit,
                                 svn_boolean_t include_merged_revisions,
                                 apr_pool_t *pool);
-  /* See svn_ra_do_update2(). */
+  /* See svn_ra_do_update3(). */
   svn_error_t *(*do_update)(svn_ra_session_t *session,
                             const svn_ra_reporter3_t **reporter,
                             void **report_baton,
@@ -143,10 +143,12 @@ typedef struct svn_ra__vtable_t {
                             const char *update_target,
                             svn_depth_t depth,
                             svn_boolean_t send_copyfrom_args,
+                            svn_boolean_t ignore_ancestry,
                             const svn_delta_editor_t *update_editor,
                             void *update_baton,
-                            apr_pool_t *pool);
-  /* See svn_ra_do_switch2(). */
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+  /* See svn_ra_do_switch3(). */
   svn_error_t *(*do_switch)(svn_ra_session_t *session,
                             const svn_ra_reporter3_t **reporter,
                             void **report_baton,
@@ -154,9 +156,12 @@ typedef struct svn_ra__vtable_t {
                             const char *switch_target,
                             svn_depth_t depth,
                             const char *switch_url,
+                            svn_boolean_t send_copyfrom_args,
+                            svn_boolean_t ignore_ancestry,
                             const svn_delta_editor_t *switch_editor,
                             void *switch_baton,
-                            apr_pool_t *pool);
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
   /* See svn_ra_do_status2(). */
   svn_error_t *(*do_status)(svn_ra_session_t *session,
                             const svn_ra_reporter3_t **reporter,
@@ -496,11 +501,11 @@ svn_ra__get_deleted_rev_from_log(svn_ra_session_t *session,
 
 
 /**
- * Fallback logic for svn_ra_get_fileX and svn_ra_get_dirX when those APIs
+ * Fallback logic for svn_ra_get_inherited_props() when that API
  * need to find PATH's inherited properties on a legacy server that
  * doesn't have the SVN_RA_CAPABILITY_INHERITED_PROPS capability.
  *
- * All arguments are as per the two aforementioned APIs.
+ * All arguments are as per svn_ra_get_inherited_props().
  */
 svn_error_t *
 svn_ra__get_inherited_props_walk(svn_ra_session_t *session,

@@ -29,17 +29,19 @@
 
 #include <apr_pools.h>
 #include <apr_strings.h>
+#include <glib.h>
+#include <gnome-keyring.h>
+
 #include "svn_auth.h"
 #include "svn_config.h"
 #include "svn_error.h"
+#include "svn_hash.h"
 #include "svn_pools.h"
 
 #include "private/svn_auth_private.h"
 
 #include "svn_private_config.h"
 
-#include <glib.h>
-#include <gnome-keyring.h>
 
 
 /*-----------------------------------------------------------------------*/
@@ -243,13 +245,11 @@ ensure_gnome_keyring_is_unlocked(svn_boolean_t non_interactive,
   if (! non_interactive)
     {
       svn_auth_gnome_keyring_unlock_prompt_func_t unlock_prompt_func =
-        apr_hash_get(parameters,
-                     SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC,
-                     APR_HASH_KEY_STRING);
+        svn_hash_gets(parameters,
+                      SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC);
       void *unlock_prompt_baton =
-        apr_hash_get(parameters,
-                     SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_BATON,
-                     APR_HASH_KEY_STRING);
+        svn_hash_gets(parameters,
+                      SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_BATON);
 
       char *keyring_password;
 
@@ -298,9 +298,7 @@ password_get_gnome_keyring(svn_boolean_t *done,
 
   SVN_ERR(ensure_gnome_keyring_is_unlocked(non_interactive, parameters, pool));
 
-  if (! apr_hash_get(parameters,
-                     "gnome-keyring-opening-failed",
-                     APR_HASH_KEY_STRING))
+  if (! svn_hash_gets(parameters, "gnome-keyring-opening-failed"))
     {
       result = gnome_keyring_find_network_password_sync(username, realmstring,
                                                         NULL, NULL, NULL, NULL,
@@ -330,10 +328,7 @@ password_get_gnome_keyring(svn_boolean_t *done,
     }
   else
     {
-      apr_hash_set(parameters,
-                   "gnome-keyring-opening-failed",
-                   APR_HASH_KEY_STRING,
-                   "");
+      svn_hash_sets(parameters, "gnome-keyring-opening-failed", "");
     }
 
   return SVN_NO_ERROR;
@@ -358,9 +353,7 @@ password_set_gnome_keyring(svn_boolean_t *done,
 
   SVN_ERR(ensure_gnome_keyring_is_unlocked(non_interactive, parameters, pool));
 
-  if (! apr_hash_get(parameters,
-                     "gnome-keyring-opening-failed",
-                     APR_HASH_KEY_STRING))
+  if (! svn_hash_gets(parameters, "gnome-keyring-opening-failed"))
     {
       result = gnome_keyring_set_network_password_sync(NULL, /* default keyring */
                                                        username, realmstring,
@@ -374,10 +367,7 @@ password_set_gnome_keyring(svn_boolean_t *done,
     }
   if (result != GNOME_KEYRING_RESULT_OK)
     {
-      apr_hash_set(parameters,
-                   "gnome-keyring-opening-failed",
-                   APR_HASH_KEY_STRING,
-                   "");
+      svn_hash_sets(parameters, "gnome-keyring-opening-failed", "");
     }
 
   *done = (result == GNOME_KEYRING_RESULT_OK);

@@ -25,6 +25,7 @@
 
 #include <serf.h>
 
+#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_base64.h"
 #include "svn_xml.h"
@@ -262,8 +263,7 @@ propfind_closed(svn_ra_serf__xml_estate_t *xes,
     }
   else if (leaving_state == PROPVAL)
     {
-      const char *encoding = apr_hash_get(attrs, "V:encoding",
-                                          APR_HASH_KEY_STRING);
+      const char *encoding = svn_hash_gets(attrs, "V:encoding");
       const svn_string_t *val_str;
       apr_hash_t *gathered;
       const char *path;
@@ -303,15 +303,15 @@ propfind_closed(svn_ra_serf__xml_estate_t *xes,
       gathered = svn_ra_serf__xml_gather_since(xes, RESPONSE);
 
       /* These will be dup'd into CTX->POOL, as necessary.  */
-      path = apr_hash_get(gathered, "path", APR_HASH_KEY_STRING);
+      path = svn_hash_gets(gathered, "path");
       if (path == NULL)
         path = ctx->path;
 
-      ns = apr_hash_get(attrs, "ns", APR_HASH_KEY_STRING);
+      ns = svn_hash_gets(attrs, "ns");
       name = apr_pstrdup(ctx->pool,
-                         apr_hash_get(attrs, "name", APR_HASH_KEY_STRING));
+                         svn_hash_gets(attrs, "name"));
 
-      altvalue = apr_hash_get(attrs, "altvalue", APR_HASH_KEY_STRING);
+      altvalue = svn_hash_gets(attrs, "altvalue");
       if (altvalue != NULL)
         val_str = svn_string_create(altvalue, ctx->pool);
 
@@ -330,7 +330,7 @@ propfind_closed(svn_ra_serf__xml_estate_t *xes,
       /* If we've squirreled away a note that says we want to ignore
          these properties, we'll do so.  Otherwise, we need to copy
          them from the temporary hash into the ctx->ret_props hash. */
-      if (! apr_hash_get(gathered, "ignore-prop", APR_HASH_KEY_STRING))
+      if (! svn_hash_gets(gathered, "ignore-prop"))
         {
           SVN_ERR(svn_ra_serf__walk_all_paths(ctx->ps_props, ctx->rev,
                                               copy_into_ret_props, ctx,
@@ -357,14 +357,14 @@ svn_ra_serf__get_ver_prop_string(apr_hash_t *props,
   ver_props = apr_hash_get(props, &rev, sizeof(rev));
   if (ver_props)
     {
-      path_props = apr_hash_get(ver_props, path, APR_HASH_KEY_STRING);
+      path_props = svn_hash_gets(ver_props, path);
 
       if (path_props)
         {
-          ns_props = apr_hash_get(path_props, ns, APR_HASH_KEY_STRING);
+          ns_props = svn_hash_gets(path_props, ns);
           if (ns_props)
             {
-              val = apr_hash_get(ns_props, name, APR_HASH_KEY_STRING);
+              val = svn_hash_gets(ns_props, name);
             }
         }
     }
@@ -426,28 +426,28 @@ svn_ra_serf__set_ver_prop(apr_hash_t *props,
                    ver_props);
     }
 
-  path_props = apr_hash_get(ver_props, path, APR_HASH_KEY_STRING);
+  path_props = svn_hash_gets(ver_props, path);
 
   if (!path_props)
     {
       path_props = apr_hash_make(pool);
       path = apr_pstrdup(pool, path);
-      apr_hash_set(ver_props, path, APR_HASH_KEY_STRING, path_props);
+      svn_hash_sets(ver_props, path, path_props);
 
       /* todo: we know that we'll fail the next check, but fall through
        * for now for simplicity's sake.
        */
     }
 
-  ns_props = apr_hash_get(path_props, ns, APR_HASH_KEY_STRING);
+  ns_props = svn_hash_gets(path_props, ns);
   if (!ns_props)
     {
       ns_props = apr_hash_make(pool);
       ns = apr_pstrdup(pool, ns);
-      apr_hash_set(path_props, ns, APR_HASH_KEY_STRING, ns_props);
+      svn_hash_sets(path_props, ns, ns_props);
     }
 
-  apr_hash_set(ns_props, name, APR_HASH_KEY_STRING, val);
+  svn_hash_sets(ns_props, name, val);
 }
 
 void
@@ -526,7 +526,7 @@ create_propfind_body(serf_bucket_t **bkt,
     }
 
   /* If we're not doing an allprop, add <prop> tags. */
-  if (requested_allprop == FALSE)
+  if (!requested_allprop)
     {
       tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<prop>",
                                           sizeof("<prop>")-1,
@@ -540,7 +540,7 @@ create_propfind_body(serf_bucket_t **bkt,
 
   serf_bucket_aggregate_prepend(body_bkt, tmp);
 
-  if (requested_allprop == FALSE)
+  if (!requested_allprop)
     {
       tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</prop>",
                                           sizeof("</prop>")-1,
@@ -637,14 +637,9 @@ svn_ra_serf__wait_for_props(svn_ra_serf__handler_t *handler,
 
   err2 = svn_ra_serf__error_on_status(handler->sline.code,
                                       handler->path,
-                                      NULL);
-  if (err2)
-    {
-      svn_error_clear(err);
-      return err2;
-    }
+                                      handler->location);
 
-  return err;
+  return svn_error_compose_create(err2, err);
 }
 
 /*
@@ -696,7 +691,7 @@ svn_ra_serf__fetch_node_props(apr_hash_t **results,
   ver_props = apr_hash_get(multiprops, &revision, sizeof(revision));
   if (ver_props != NULL)
     {
-      *results = apr_hash_get(ver_props, url, APR_HASH_KEY_STRING);
+      *results = svn_hash_gets(ver_props, url);
       if (*results != NULL)
         return SVN_NO_ERROR;
     }
@@ -765,7 +760,7 @@ svn_ra_serf__walk_all_props(apr_hash_t *props,
   if (!ver_props)
     return SVN_NO_ERROR;
 
-  path_props = apr_hash_get(ver_props, name, APR_HASH_KEY_STRING);
+  path_props = svn_hash_gets(ver_props, name);
   if (!path_props)
     return SVN_NO_ERROR;
 
@@ -888,7 +883,7 @@ set_flat_props(void *baton,
 
   prop_name = svn_ra_serf__svnname_from_wirename(ns, name, result_pool);
   if (prop_name != NULL)
-    apr_hash_set(props, prop_name, APR_HASH_KEY_STRING, value);
+    svn_hash_sets(props, prop_name, value);
 
   return SVN_NO_ERROR;
 }
@@ -938,7 +933,7 @@ select_revprops(void *baton,
       return SVN_NO_ERROR;
     }
 
-  apr_hash_set(revprops, prop_name, APR_HASH_KEY_STRING, val);
+  svn_hash_sets(revprops, prop_name, val);
 
   return SVN_NO_ERROR;
 }
@@ -1208,7 +1203,7 @@ svn_ra_serf__get_stable_url(const char **stable_url,
 
 
 svn_error_t *
-svn_ra_serf__get_resource_type(svn_kind_t *kind,
+svn_ra_serf__get_resource_type(svn_node_kind_t *kind,
                                apr_hash_t *props)
 {
   apr_hash_t *dav_props;
@@ -1226,11 +1221,11 @@ svn_ra_serf__get_resource_type(svn_kind_t *kind,
 
   if (strcmp(res_type, "collection") == 0)
     {
-      *kind = svn_kind_dir;
+      *kind = svn_node_dir;
     }
   else
     {
-      *kind = svn_kind_file;
+      *kind = svn_node_file;
     }
 
   return SVN_NO_ERROR;

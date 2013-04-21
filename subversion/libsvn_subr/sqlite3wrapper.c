@@ -44,6 +44,8 @@
 #    pragma GCC diagnostic pop
 #  endif
 
-/* Expose the sqlite API vtable */
-const sqlite3_api_routines *const sqlite3_api = &sqlite3Apis;
+/* Expose the sqlite API vtable and the two missing functions */
+const sqlite3_api_routines *const svn_sqlite3__api_funcs = &sqlite3Apis;
+int (*const svn_sqlite3__api_initialize)(void) = sqlite3_initialize;
+int (*const svn_sqlite3__api_config)(int, ...)  = sqlite3_config;
 #endif

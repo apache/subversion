@@ -196,6 +196,7 @@ add_committable(svn_client__committables_t *committables,
                 svn_revnum_t revision,
                 const char *copyfrom_relpath,
                 svn_revnum_t copyfrom_rev,
+                const char *moved_from_abspath,
                 apr_byte_t state_flags,
                 apr_hash_t *lock_tokens,
                 const svn_lock_t *lock,
@@ -212,18 +213,15 @@ add_committable(svn_client__committables_t *committables,
   /* ### todo: Get the canonical repository for this item, which will
      be the real key for the COMMITTABLES hash, instead of the above
      bogosity. */
-  array = apr_hash_get(committables->by_repository,
-                       repos_root_url,
-                       APR_HASH_KEY_STRING);
+  array = svn_hash_gets(committables->by_repository, repos_root_url);
 
   /* E-gads!  There is no array for this repository yet!  Oh, no
      problem, we'll just create (and add to the hash) one. */
   if (array == NULL)
     {
       array = apr_array_make(result_pool, 1, sizeof(new_item));
-      apr_hash_set(committables->by_repository,
-                   apr_pstrdup(result_pool, repos_root_url),
-                   APR_HASH_KEY_STRING, array);
+      svn_hash_sets(committables->by_repository,
+                    apr_pstrdup(result_pool, repos_root_url), array);
     }
 
   /* Now update pointer values, ensuring that their allocations live
@@ -245,23 +243,22 @@ add_committable(svn_client__committables_t *committables,
   new_item->incoming_prop_changes = apr_array_make(result_pool, 1,
                                                    sizeof(svn_prop_t *));
 
+  if (moved_from_abspath)
+    new_item->moved_from_abspath = apr_pstrdup(result_pool,
+                                               moved_from_abspath);
+
   /* Now, add the commit item to the array. */
   APR_ARRAY_PUSH(array, svn_client_commit_item3_t *) = new_item;
 
   /* ... and to the hash. */
-  apr_hash_set(committables->by_path,
-               new_item->path,
-               APR_HASH_KEY_STRING,
-               new_item);
+  svn_hash_sets(committables->by_path, new_item->path, new_item);
 
   if (lock
       && lock_tokens
       && (state_flags & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN))
     {
-      apr_hash_set(lock_tokens,
-                   new_item->url,
-                   APR_HASH_KEY_STRING,
-                   apr_pstrdup(result_pool, lock->token));
+      svn_hash_sets(lock_tokens, new_item->url,
+                    apr_pstrdup(result_pool, lock->token));
     }
 
   return SVN_NO_ERROR;
@@ -275,7 +272,7 @@ look_up_committable(svn_client__committables_t *committables,
                     apr_pool_t *pool)
 {
   return (svn_client_commit_item3_t *)
-      apr_hash_get(committables->by_path, path, APR_HASH_KEY_STRING);
+      svn_hash_gets(committables->by_path, path);
 }
 
 /* Helper function for svn_client__harvest_committables().
@@ -290,8 +287,8 @@ bail_on_tree_conflicted_ancestor(svn_wc_context_t *wc_ctx,
 {
   const char *wcroot_abspath;
 
-  SVN_ERR(svn_wc__get_wc_root(&wcroot_abspath, wc_ctx, local_abspath,
-                              scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, wc_ctx, local_abspath,
+                             scratch_pool, scratch_pool));
 
   local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
@@ -471,7 +468,7 @@ harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__node_get_children_of_working_node(
                                     &children, wc_ctx, local_abspath, TRUE,
                                     scratch_pool, iterpool));
-      
+
   for (i = 0; i < children->nelts; i++)
     {
       const char *this_abspath = APR_ARRAY_IDX(children, i, const char *);
@@ -483,7 +480,7 @@ harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
       svn_pool_clear(iterpool);
 
       SVN_ERR(svn_wc__node_is_not_present(&not_present, NULL, NULL, wc_ctx,
-                                          this_abspath, scratch_pool));
+                                          this_abspath, FALSE, scratch_pool));
 
       if (!not_present)
         continue;
@@ -525,8 +522,8 @@ harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
             continue; /* This node can't be deleted */
         }
       else
-        SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, this_abspath, TRUE,
-                                 scratch_pool));
+        SVN_ERR(svn_wc_read_kind2(&kind, wc_ctx, this_abspath,
+                                  TRUE, TRUE, scratch_pool));
 
       SVN_ERR(add_committable(committables, this_abspath, kind,
                               repos_root_url,
@@ -534,6 +531,7 @@ harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
                               SVN_INVALID_REVNUM,
                               NULL /* copyfrom_relpath */,
                               SVN_INVALID_REVNUM /* copyfrom_rev */,
+                              NULL /* moved_from_abspath */,
                               SVN_CLIENT_COMMIT_ITEM_DELETE,
                               NULL, NULL,
                               result_pool, scratch_pool));
@@ -564,7 +562,7 @@ harvest_status_callback(void *status_baton,
   svn_boolean_t copy_mode;
 
   struct harvest_baton *baton = status_baton;
-  svn_boolean_t is_harvest_root = 
+  svn_boolean_t is_harvest_root =
                 (strcmp(baton->root_abspath, local_abspath) == 0);
   svn_client__committables_t *committables = baton->committables;
   const char *repos_root_url = status->repos_root_url;
@@ -576,6 +574,7 @@ harvest_status_callback(void *status_baton,
   void *notify_baton = baton->notify_baton;
   svn_wc_context_t *wc_ctx = baton->wc_ctx;
   apr_pool_t *result_pool = baton->result_pool;
+  const char *moved_from_abspath = NULL;
 
   if (baton->commit_relpath)
     commit_relpath = svn_relpath_join(
@@ -639,8 +638,8 @@ harvest_status_callback(void *status_baton,
   /* Save the result for reuse. */
   matches_changelists = ((changelists == NULL)
                          || (status->changelist != NULL
-                             && apr_hash_get(changelists, status->changelist,
-                                             APR_HASH_KEY_STRING) != NULL));
+                             && svn_hash_gets(changelists, status->changelist)
+                                != NULL));
 
   /* Early exit. */
   if (status->kind != svn_node_dir && ! matches_changelists)
@@ -755,6 +754,12 @@ harvest_status_callback(void *status_baton,
           state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
           cf_relpath = original_relpath;
           cf_rev = original_rev;
+
+          if (status->moved_from_abspath && !copy_mode)
+            {
+              state_flags |= SVN_CLIENT_COMMIT_ITEM_MOVED_HERE;
+              moved_from_abspath = status->moved_from_abspath;
+            }
         }
     }
 
@@ -762,12 +767,14 @@ harvest_status_callback(void *status_baton,
   else if (copy_mode
            && !(state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
     {
-      svn_revnum_t dir_rev;
+      svn_revnum_t dir_rev = SVN_INVALID_REVNUM;
 
-      if (!copy_mode_root && !status->switched)
-        SVN_ERR(svn_wc__node_get_base(&dir_rev, NULL, NULL, NULL, wc_ctx,
-                                      svn_dirent_dirname(local_abspath,
-                                                         scratch_pool),
+      if (!copy_mode_root && !status->switched && !is_added)
+        SVN_ERR(svn_wc__node_get_base(NULL, &dir_rev, NULL, NULL, NULL, NULL,
+                                      wc_ctx, svn_dirent_dirname(local_abspath,
+                                                                 scratch_pool),
+                                      FALSE /* ignore_enoent */,
+                                      FALSE /* show_hidden */,
                                       scratch_pool, scratch_pool));
 
       if (copy_mode_root || status->switched || node_rev != dir_rev)
@@ -842,6 +849,7 @@ harvest_status_callback(void *status_baton,
                                       : node_rev,
                               cf_relpath,
                               cf_rev,
+                              moved_from_abspath,
                               state_flags,
                               baton->lock_tokens, status->lock,
                               result_pool, scratch_pool));
@@ -876,7 +884,7 @@ harvest_status_callback(void *status_baton,
         }
     }
 
-  /* Make sure we check for dangling children on additions 
+  /* Make sure we check for dangling children on additions
 
      We perform this operation on the harvest root, and on roots caused by
      changelist filtering.
@@ -918,12 +926,10 @@ harvest_status_callback(void *status_baton,
           if (parent_is_copy)
             parent_abspath = copy_root_abspath;
 
-          if (!apr_hash_get(danglers, parent_abspath, APR_HASH_KEY_STRING))
+          if (!svn_hash_gets(danglers, parent_abspath))
             {
-              apr_hash_set(danglers,
-                           apr_pstrdup(result_pool, parent_abspath),
-                           APR_HASH_KEY_STRING,
-                           apr_pstrdup(result_pool, local_abspath));
+              svn_hash_sets(danglers, apr_pstrdup(result_pool, parent_abspath),
+                            apr_pstrdup(result_pool, local_abspath));
             }
         }
     }
@@ -1082,6 +1088,7 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
                                  apr_hash_t **lock_tokens,
                                  const char *base_dir_abspath,
                                  const apr_array_header_t *targets,
+                                 int depth_empty_start,
                                  svn_depth_t depth,
                                  svn_boolean_t just_locked,
                                  const apr_array_header_t *changelists,
@@ -1153,6 +1160,10 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
                                                ctx->notify_func2,
                                                ctx->notify_baton2,
                                                iterpool));
+
+      /* Are the remaining items externals with depth empty? */
+      if (i == depth_empty_start)
+        depth = svn_depth_empty;
 
       SVN_ERR(harvest_committables(target_abspath,
                                    *committables, *lock_tokens,
@@ -1234,7 +1245,8 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
   /* Read the entry for this SRC. */
   SVN_ERR_ASSERT(svn_dirent_is_absolute(pair->src_abspath_or_url));
 
-  SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, NULL, btn->ctx->wc_ctx,
+  SVN_ERR(svn_wc__node_get_repos_info(NULL, NULL, &repos_root_url, NULL,
+                                      btn->ctx->wc_ctx,
                                       pair->src_abspath_or_url,
                                       pool, pool));
 
@@ -1447,9 +1459,8 @@ do_item_commit(void **dir_baton,
                apr_pool_t *pool)
 {
   struct item_commit_baton *icb = callback_baton;
-  const svn_client_commit_item3_t *item = apr_hash_get(icb->commit_items,
-                                                       path,
-                                                       APR_HASH_KEY_STRING);
+  const svn_client_commit_item3_t *item = svn_hash_gets(icb->commit_items,
+                                                        path);
   svn_node_kind_t kind = item->kind;
   void *file_baton = NULL;
   apr_pool_t *file_pool = NULL;
@@ -1726,7 +1737,7 @@ do_item_commit(void **dir_baton,
       /* Add this file mod to the FILE_MODS hash. */
       mod->item = item;
       mod->file_baton = file_baton;
-      apr_hash_set(file_mods, item->session_relpath, APR_HASH_KEY_STRING, mod);
+      svn_hash_sets(file_mods, item->session_relpath, mod);
     }
   else if (file_baton)
     {
@@ -1779,7 +1790,7 @@ svn_client__do_commit(const char *base_url,
       svn_client_commit_item3_t *item =
         APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
       const char *path = item->session_relpath;
-      apr_hash_set(items_hash, path, APR_HASH_KEY_STRING, item);
+      svn_hash_sets(items_hash, path, item);
       APR_ARRAY_PUSH(paths, const char *) = path;
     }
 
@@ -1847,8 +1858,7 @@ svn_client__do_commit(const char *base_url,
         }
 
       if (sha1_checksums)
-        apr_hash_set(*sha1_checksums, item->path, APR_HASH_KEY_STRING,
-                     new_text_base_sha1_checksum);
+        svn_hash_sets(*sha1_checksums, item->path, new_text_base_sha1_checksum);
     }
 
   svn_pool_destroy(iterpool);
@@ -1964,8 +1974,8 @@ svn_client__ensure_revprop_table(apr_hash_t **revprop_table_out,
     {
       new_revprop_table = apr_hash_make(pool);
     }
-  apr_hash_set(new_revprop_table, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
-               svn_string_create(log_msg, pool));
+  svn_hash_sets(new_revprop_table, SVN_PROP_REVISION_LOG,
+                svn_string_create(log_msg, pool));
   *revprop_table_out = new_revprop_table;
   return SVN_NO_ERROR;
 }

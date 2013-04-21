@@ -32,9 +32,15 @@ my $BRANCHES = '^/subversion/branches';
 my $YES = $ENV{YES}; # batch mode: eliminate prompts, add sleeps
 my $WET_RUN = qw[false true][1]; # don't commit
 my $DEBUG = qw[false true][0]; # 'set -x', etc
+$WET_RUN = 'true' if exists $ENV{WET_RUN};
+$DEBUG = 'true' if exists $ENV{DEBUG};
 
 # derived values
 my $SVNq;
+my $SVNvsn = do {
+  my ($major, $minor, $patch) = `$SVN --version -q` =~ /^(\d+)\.(\d+)\.(\d+)/;
+  1e6*$major + 1e3*$minor + $patch;
+};
 
 $SVN .= " --non-interactive" if $YES or not defined ctermid;
 $SVNq = "$SVN -q ";
@@ -78,9 +84,14 @@ sub merge {
 
   if ($entry{branch}) {
     # NOTE: This doesn't escape the branch into the pattern.
-    $pattern = sprintf '\V\(%s branch(es)?\|branches\/%s\|Branch(es)?:\n *%s\)', $entry{branch}, $entry{branch}, $entry{branch};
-    $mergeargs = "--reintegrate $BRANCHES/$entry{branch}";
-    print $logmsg_fh "Reintegrate the $entry{header}:";
+    $pattern = sprintf '\V\(%s branch(es)?\|branches\/%s\|Branch\(es\)\?: \*\n\? \*%s\)', $entry{branch}, $entry{branch}, $entry{branch};
+    if ($SVNvsn >= 1_008_000) {
+      $mergeargs = "$BRANCHES/$entry{branch}";
+      print $logmsg_fh "Merge the $entry{header}:";
+    } else {
+      $mergeargs = "--reintegrate $BRANCHES/$entry{branch}";
+      print $logmsg_fh "Reintegrate the $entry{header}:";
+    }
     print $logmsg_fh "";
   } elsif (@{$entry{revisions}}) {
     $pattern = '^ [*] \V' . 'r' . $entry{revisions}->[0];
@@ -98,6 +109,7 @@ sub merge {
   print $logmsg_fh $_ for @{$entry{entry}};
   close $logmsg_fh or die "Can't close $logmsg_filename: $!";
 
+  my $reintegrated_word = ($SVNvsn >= 1_008_000) ? "merged" : "reintegrated";
   my $script = <<"EOF";
 #!/bin/sh
 set -e
@@ -110,10 +122,6 @@ $SVNq up
 $SVNq merge $mergeargs
 $VIM -e -s -n -N -i NONE -u NONE -c '/$pattern/normal! dap' -c wq $STATUS
 if $WET_RUN; then
-  if [ -n "\$PRINT_SOMETHING_BETWEEN_PROMPTS" ]; then
-    # hack for pw-driver.pl to see some output between prompts
-    head -n1 $logmsg_filename
-  fi
   $SVNq commit -F $logmsg_filename
 else
   echo "Committing:"
@@ -127,10 +135,10 @@ reinteg_rev=\`$SVN info $STATUS | sed -ne 's/Last Changed Rev: //p'\`
 if $WET_RUN; then
   # Sleep to avoid out-of-order commit notifications
   if [ -n "\$YES" ]; then sleep 15; fi
-  $SVNq rm $BRANCHES/$entry{branch} -m "Remove the '$entry{branch}' branch, reintegrated in r\$reinteg_rev."
+  $SVNq rm $BRANCHES/$entry{branch} -m "Remove the '$entry{branch}' branch, $reintegrated_word in r\$reinteg_rev."
   if [ -n "\$YES" ]; then sleep 1; fi
 else
-  echo "Removing reintegrated '$entry{branch}' branch"
+  echo "Removing $reintegrated_word '$entry{branch}' branch"
 fi
 EOF
 
@@ -227,24 +235,27 @@ sub handle_entry {
 
 sub main {
   usage, exit 0 if @ARGV;
-  usage, exit 1 unless -r $STATUS;
+
+  open STATUS, "<", $STATUS or (usage, exit 1);
 
   # Because we use the ':normal' command in Vim...
   die "A vim with the +ex_extra feature is required"
       if `${VIM} --version` !~ /[+]ex_extra/;
 
-  @ARGV = $STATUS;
+  # ### TODO: need to run 'revert' here
+  # ### TODO: both here and in merge(), unlink files that previous merges added
+  die "Local mods to STATUS file $STATUS" if `$SVN status -q $STATUS`;
 
   # Skip most of the file
-  while (<>) {
+  while (<STATUS>) {
     last if /^Approved changes/;
   }
-  while (<>) {
+  while (<STATUS>) {
     last unless /^=+$/;
   }
   $/ = ""; # paragraph mode
 
-  while (<>) {
+  while (<STATUS>) {
     my @lines = split /\n/;
 
     given ($lines[0]) {
@@ -258,6 +269,8 @@ sub main {
       }
       # Backport entry?
       when (/^ \*/) {
+        warn "Too many bullets in $lines[0]" and next
+          if grep /^ \*/, @lines[1..$#lines];
         handle_entry @lines;
       }
       default {

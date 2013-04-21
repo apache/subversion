@@ -125,11 +125,11 @@
   }
 
 /* The idea of the functions below is as follows:
- * 
+ *
  * - The core MD5 algorithm does not assume that the "important" data
  *   is at the begin of the encryption block, followed by e.g. 0.
  *   Instead, all bits are equally relevant.
- * 
+ *
  * - If some bytes in the input are known to be 0, we may hard-code them.
  *   With the previous property, it is safe to move them to the upper end
  *   of the encryption block to maximize the number of steps that can be
@@ -153,7 +153,7 @@
  * - Collisions between pseudo-MD5 and pseudo-MD5 as well as pseudo-MD5
  *   and standard MD5 are as likely as any other MD5 collision.
  */
-  
+
 void svn__pseudo_md5_15(apr_uint32_t digest[4],
                         const apr_uint32_t x[4])
 {
@@ -164,7 +164,7 @@ void svn__pseudo_md5_15(apr_uint32_t digest[4],
 
     /* make sure byte 63 gets the marker independently of BE / LE */
     apr_uint32_t x3n = x[3] ^ 0xffffffff;
-    
+
     /* Round 1 */
     FF(a, b, c, d, 0,    S11, 0xd76aa478); /* 1 */
     FF(d, a, b, c, 0,    S12, 0xe8c7b756); /* 2 */
@@ -253,7 +253,7 @@ void svn__pseudo_md5_31(apr_uint32_t digest[4],
 
     /* make sure byte 63 gets the marker independently of BE / LE */
     apr_uint32_t x7n = x[7] ^ 0xfefefefe;
-    
+
     /* Round 1 */
     FF(a, b, c, d, 0,    S11, 0xd76aa478); /* 1 */
     FF(d, a, b, c, 0,    S12, 0xe8c7b756); /* 2 */
@@ -342,7 +342,7 @@ void svn__pseudo_md5_63(apr_uint32_t digest[4],
 
     /* make sure byte 63 gets the marker independently of BE / LE */
     apr_uint32_t x15n = x[15] ^ 0xfcfcfcfc;
-    
+
     /* Round 1 */
     FF(a, b, c, d, x[0],  S11, 0xd76aa478); /* 1 */
     FF(d, a, b, c, x[1],  S12, 0xe8c7b756); /* 2 */

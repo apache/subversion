@@ -126,8 +126,8 @@ fs_set_errcall(svn_fs_t *fs,
 
 struct fs_freeze_baton_t {
   svn_fs_t *fs;
-  svn_error_t *(*freeze_body)(void *, apr_pool_t *);
-  void *baton;
+  svn_fs_freeze_func_t freeze_func;
+  void *freeze_baton;
 };
 
 static svn_error_t *
@@ -141,22 +141,22 @@ fs_freeze_body(void *baton,
   if (exists)
     SVN_ERR(svn_fs_fs__lock_rep_cache(b->fs, pool));
 
-  SVN_ERR(b->freeze_body(b->baton, pool));
+  SVN_ERR(b->freeze_func(b->freeze_baton, pool));
 
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 fs_freeze(svn_fs_t *fs,
-          svn_error_t *(*freeze_body)(void *, apr_pool_t *),
-          void *baton,
+          svn_fs_freeze_func_t freeze_func,
+          void *freeze_baton,
           apr_pool_t *pool)
 {
   struct fs_freeze_baton_t b;
 
   b.fs = fs;
-  b.freeze_body = freeze_body;
-  b.baton = baton;
+  b.freeze_func = freeze_func;
+  b.freeze_baton = freeze_baton;
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
   SVN_ERR(svn_fs_fs__with_write_lock(fs, fs_freeze_body, &b, pool));
@@ -184,6 +184,9 @@ static fs_vtable_t fs_vtable = {
   svn_fs_fs__unlock,
   svn_fs_fs__get_lock,
   svn_fs_fs__get_locks,
+  svn_fs_fs__info_format,
+  svn_fs_fs__info_config_files,
+  svn_fs_fs__verify_root,
   fs_freeze,
   fs_set_errcall
 };
@@ -283,10 +286,12 @@ fs_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
 
 static svn_error_t *
 fs_verify(svn_fs_t *fs, const char *path,
-          svn_cancel_func_t cancel_func,
-          void *cancel_baton,
           svn_revnum_t start,
           svn_revnum_t end,
+          svn_fs_progress_notify_func_t notify_func,
+          void *notify_baton,
+          svn_cancel_func_t cancel_func,
+          void *cancel_baton,
           apr_pool_t *pool,
           apr_pool_t *common_pool)
 {
@@ -295,7 +300,8 @@ fs_verify(svn_fs_t *fs, const char *path,
   SVN_ERR(svn_fs_fs__open(fs, path, pool));
   SVN_ERR(svn_fs_fs__initialize_caches(fs, pool));
   SVN_ERR(fs_serialized_init(fs, common_pool, pool));
-  return svn_fs_fs__verify(fs, cancel_func, cancel_baton, start, end, pool);
+  return svn_fs_fs__verify(fs, start, end, notify_func, notify_baton,
+                           cancel_func, cancel_baton, pool);
 }
 
 static svn_error_t *
@@ -396,6 +402,17 @@ fs_get_description(void)
   return _("Module for working with a plain file (FSFS) repository.");
 }
 
+static svn_error_t *
+fs_set_svn_fs_open(svn_fs_t *fs,
+                   svn_error_t *(*svn_fs_open_)(svn_fs_t **,
+                                                const char *,
+                                                apr_hash_t *,
+                                                apr_pool_t *))
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  ffd->svn_fs_open_ = svn_fs_open_;
+  return SVN_NO_ERROR;
+}
 
 
 /* Base FS library vtable, used by the FS loader library. */
@@ -412,7 +429,9 @@ static fs_library_vtable_t library_vtable = {
   fs_get_description,
   svn_fs_fs__recover,
   fs_pack,
-  fs_logfiles
+  fs_logfiles,
+  NULL /* parse_id */,
+  fs_set_svn_fs_open
 };
 
 svn_error_t *

@@ -24,6 +24,7 @@
 #include <apr_uri.h>
 #include <serf.h>
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
 #include "svn_dav.h"
@@ -144,10 +145,9 @@ blame_opened(svn_ra_serf__xml_estate_t *xes,
       svn_txdelta_window_handler_t txdelta;
       void *txdelta_baton;
 
-      path = apr_hash_get(gathered, "path", APR_HASH_KEY_STRING);
-      rev = apr_hash_get(gathered, "rev", APR_HASH_KEY_STRING);
-      merged_revision = apr_hash_get(gathered,
-                                     "merged-revision", APR_HASH_KEY_STRING);
+      path = svn_hash_gets(gathered, "path");
+      rev = svn_hash_gets(gathered, "rev");
+      merged_revision = svn_hash_gets(gathered, "merged-revision");
 
       SVN_ERR(blame_ctx->file_rev(blame_ctx->file_rev_baton,
                                   path, SVN_STR_TO_REV(rev),
@@ -188,8 +188,8 @@ blame_closed(svn_ra_serf__xml_estate_t *xes,
           const char *path;
           const char *rev;
 
-          path = apr_hash_get(attrs, "path", APR_HASH_KEY_STRING);
-          rev = apr_hash_get(attrs, "rev", APR_HASH_KEY_STRING);
+          path = svn_hash_gets(attrs, "path");
+          rev = svn_hash_gets(attrs, "rev");
 
           /* Send a "no content" notification.  */
           SVN_ERR(blame_ctx->file_rev(blame_ctx->file_rev_baton,
@@ -219,7 +219,7 @@ blame_closed(svn_ra_serf__xml_estate_t *xes,
                      || leaving_state == REMOVE_PROP);
 
       name = apr_pstrdup(blame_ctx->state_pool,
-                         apr_hash_get(attrs, "name", APR_HASH_KEY_STRING));
+                         svn_hash_gets(attrs, "name"));
 
       if (leaving_state == REMOVE_PROP)
         {
@@ -227,8 +227,7 @@ blame_closed(svn_ra_serf__xml_estate_t *xes,
         }
       else
         {
-          const char *encoding = apr_hash_get(attrs,
-                                              "encoding", APR_HASH_KEY_STRING);
+          const char *encoding = svn_hash_gets(attrs, "encoding");
 
           if (encoding && strcmp(encoding, "base64") == 0)
             value = svn_base64_decode_string(cdata, blame_ctx->state_pool);
@@ -238,7 +237,7 @@ blame_closed(svn_ra_serf__xml_estate_t *xes,
 
       if (leaving_state == REV_PROP)
         {
-          apr_hash_set(blame_ctx->rev_props, name, APR_HASH_KEY_STRING, value);
+          svn_hash_sets(blame_ctx->rev_props, name, value);
         }
       else
         {

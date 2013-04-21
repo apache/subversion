@@ -245,7 +245,10 @@ typedef enum svn_repos_notify_action_t
   svn_repos_notify_upgrade_start,
 
   /** A revision was skipped during loading. @since New in 1.8. */
-  svn_repos_notify_load_skipped_rev
+  svn_repos_notify_load_skipped_rev,
+
+  /** The structure of a revision is being verified.  @since New in 1.8. */
+  svn_repos_notify_verify_rev_structure
 
 } svn_repos_notify_action_t;
 
@@ -437,6 +440,11 @@ svn_repos_create(svn_repos_t **repos_p,
  * It does *not* guarantee the most optimized repository state as a
  * dump and subsequent load would.
  *
+ * @note On some platforms the exclusive lock does not exclude other
+ * threads in the same process so this function should only be called
+ * by a single threaded process, or by a multi-threaded process when
+ * no other threads are accessing the repository.
+ *
  * @since New in 1.7.
  */
 svn_error_t *
@@ -486,6 +494,28 @@ svn_repos_has_capability(svn_repos_t *repos,
                          const char *capability,
                          apr_pool_t *pool);
 
+#ifdef SVN_FS_INFO
+/**
+ * Return a set capabilities supported by the running Subversion library and by
+ * @a repos.  (Capabilities supported by this version of Subversion but not by
+ * @a repos are not listed.  This may happen when svn_repos_upgrade2() has not
+ * been called after a software upgrade.)
+ *
+ * The set is represented as a hash whose keys are the set members.  The values
+ * are not defined.
+ *
+ * @see svn_repos_info()
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_repos_capabilities(apr_hash_t **capabilities,
+                       svn_repos_t *repos,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
+#endif /* SVN_FS_INFO */
+/** @} */
+
 /**
  * The capability of doing the right thing with merge-tracking
  * information, both storing it and responding to queries about it.
@@ -500,6 +530,8 @@ svn_repos_has_capability(svn_repos_t *repos,
  * colons for their own reasons.  While this RA limitation has no
  * direct impact on repository capabilities, there's no reason to be
  * gratuitously different either.
+ *
+ * If you add a capability, update svn_repos_capabilities().
  */
 
 
@@ -533,8 +565,8 @@ svn_repos_hotcopy2(const char *src_path,
                    apr_pool_t *pool);
 
 /**
- * Like svn_repos_hotcopy2(), but without the @a incremental parameter
- * and without cancellation support.
+ * Like svn_repos_hotcopy2(), but with @a incremental always passed as
+ * @c FALSE and without cancellation support.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
@@ -654,17 +686,31 @@ svn_repos_recover(const char *path,
                   apr_pool_t *pool);
 
 /**
- * Take an exclusive lock on @a path to prevent commits and then
- * invoke @a freeze_body passing @a baton.  The repository may be
- * readable by Subversion while frozen, or it may be unreadable,
- * depending on which FS backend the repository uses.
+ * Callback for svn_repos_freeze.
+ *
+ * @since New in 1.8.
+ */
+typedef svn_error_t *(*svn_repos_freeze_func_t)(void *baton, apr_pool_t *pool);
+
+/**
+ * Take an exclusive lock on each of the repositories in @a paths to
+ * prevent commits and then while holding all the locks invoke @a
+ * freeze_func passing @a freeze_baton.  Each repository may be readable by
+ * Subversion while frozen, or may be unreadable, depending on which
+ * FS backend the repository uses.  Repositories are locked in the
+ * order in which they are specified in the array.
+ *
+ * @note On some platforms the exclusive lock does not exclude other
+ * threads in the same process so this function should only be called
+ * by a single threaded process, or by a multi-threaded process when
+ * no other threads are accessing the repositories.
  *
  * @since New in 1.8.
  */
 svn_error_t *
-svn_repos_freeze(const char *path,
-                 svn_error_t *(*freeze_body)(void *baton, apr_pool_t *pool),
-                 void *baton,
+svn_repos_freeze(apr_array_header_t *paths,
+                 svn_repos_freeze_func_t freeze_func,
+                 void *freeze_baton,
                  apr_pool_t *pool);
 
 /** This function is a wrapper around svn_fs_berkeley_logfiles(),
@@ -778,24 +824,25 @@ const char *
 svn_repos_post_unlock_hook(svn_repos_t *repos,
                            apr_pool_t *pool);
 
-/** Set the environment that @a repos's hooks will inherit.
- * The environment is specified in a file at @a hooks_env_path.
- * If @a hooks_env_path is @c NULL, the file is searched at its
- * default location in the repository. If @a hooks_env_path is
- * not absolute, it specifies a path relative to the parent of
- * the file's default location in the repository.
+/** Specify that Subversion should consult the configuration file
+ * located at @a hooks_env_path to determine how to setup the
+ * environment for hook scripts invoked for the repository @a repos.
+ * As a special case, if @a hooks_env_path is @c NULL, look for the
+ * file in its default location within the repository disk structure.
+ * If @a hooks_env_path is not absolute, it specifies a path relative
+ * to the parent of the file's default location.
  *
- * The @a result_pool should be the same pool that @a repos was allocated in.
- * The @a scratch_pool is used for temporary allocations.
+ * Use @a scratch_pool for temporary allocations.
  *
- * If this function is not called, or if the file does not list any
- * environment variables, hooks will run in an empty environment.
+ * If this function is not called, or if the specified configuration
+ * file does not define any environment variables, hooks will run in
+ * an empty environment.
  *
- * @since New in 1.8. */
+ * @since New in 1.8.
+ */
 svn_error_t *
 svn_repos_hooks_setenv(svn_repos_t *repos,
                        const char *hooks_env_path,
-                       apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 
 /** @} */
@@ -842,12 +889,17 @@ svn_repos_hooks_setenv(svn_repos_t *repos,
  * avoid sending data through @a editor/@a edit_baton which is not
  * authorized for transmission.
  *
- * @a zero_copy_limit controls up to which size in bytes data blocks may
- * be sent using the zero-copy code path.  On that path, a number of
- * in-memory copy operations have been eliminated to maximize throughput.
- * However, until the whole block has been pushed to the network stack,
- * other clients may get blocked.  Thus, be careful when using larger
- * values here.  0 disables the optimization.
+ * @a zero_copy_limit controls the maximum size (in bytes) at which
+ * data blocks may be sent using the zero-copy code path.  On that
+ * path, a number of in-memory copy operations have been eliminated to
+ * maximize throughput.  However, until the whole block has been
+ * pushed to the network stack, other clients block, so be careful
+ * when using larger values here.  Pass 0 for @a zero_copy_limit to
+ * disable this optimization altogether.
+ *
+ * @a note Never activate this optimization if @a editor might access
+ * any FSFS data structures (and, hence, caches).  So, it is basically
+ * safe for networked editors only.
  *
  * All allocation for the context and collected state will occur in
  * @a pool.
@@ -902,13 +954,13 @@ svn_repos_begin_report3(void **report_baton,
                         apr_pool_t *pool);
 
 /**
- * The same as svn_repos_begin_report3(), but setting the @a zero_copy_limit
- * to 0.
+ * The same as svn_repos_begin_report3(), but with @a zero_copy_limit
+ * always passed as 0.
  *
  * @since New in 1.5.
- * 
  * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_begin_report2(void **report_baton,
                         svn_revnum_t revnum,
@@ -1210,6 +1262,8 @@ svn_repos_abort_report(void *report_baton,
  * ### reporter instead; there are some stray references to the
  * ### svn_repos_dir_delta[2] in comments which should probably
  * ### actually refer to the reporter.
+ *
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_repos_dir_delta2(svn_fs_root_t *src_root,
@@ -1321,7 +1375,8 @@ svn_repos_replay(svn_fs_root_t *root,
  *
  * @a repos is a previously opened repository.  @a repos_url is the
  * decoded URL to the base of the repository, and is used to check
- * copyfrom paths.  @a txn is a filesystem transaction object to use
+ * copyfrom paths.  copyfrom paths passed to the editor must be full,
+ * URI-encoded, URLs.  @a txn is a filesystem transaction object to use
  * during the commit, or @c NULL to indicate that this function should
  * create (and fully manage) a new transaction.
  *
@@ -1905,6 +1960,10 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
  * If @a include_merged_revisions is TRUE, revisions which a included as a
  * result of a merge between @a start and @a end will be included.
  *
+ * Since Subversion 1.8 this function has been enabled to support reversion
+ * the revision range for @a include_merged_revision @c FALSE reporting by
+ * switching @a start with @a end.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
@@ -2339,7 +2398,6 @@ svn_repos_fs_change_txn_props(svn_fs_txn_t *txn,
                               const apr_array_header_t *props,
                               apr_pool_t *pool);
 
-/** @} */
 
 /* ---------------------------------------------------------------*/
 
@@ -2429,6 +2487,29 @@ svn_repos_node_editor(const svn_delta_editor_t **editor,
  */
 svn_repos_node_t *
 svn_repos_node_from_baton(void *edit_baton);
+
+#ifdef SVN_FS_INFO
+/**
+ * Return repository format information for @a repos.
+ *
+ * Set @a *repos_format to the repository format number of @a repos, which is
+ * an integer that increases when incompatible changes are made (such as
+ * by #svn_repos_upgrade).
+ *
+ * Set @a *supports_version to the version number of the minimum Subversion GA
+ * release that can read and write @a repos.
+ *
+ * @see svn_fs_info_format()
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_repos_info_format(int *repos_format,
+                      svn_version_t **supports_version,
+                      svn_repos_t *repos,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+#endif /* SVN_FS_INFO */
 
 /** @} */
 
@@ -2675,13 +2756,6 @@ svn_repos_dump_fs(svn_repos_t *repos,
  * If @a cancel_func is not @c NULL, it is called periodically with
  * @a cancel_baton as argument to see if the client wishes to cancel
  * the load.
- *
- * @note If @a start_rev and @a end_rev are valid revisions, this
- * function presumes the revisions as numbered in @a dumpstream only
- * increase from the beginning of the stream to the end.  Gaps in the
- * number sequence are ignored, but upon finding a revision number
- * younger than the specified range, this function may stop loading
- * new revisions regardless of their number.
  *
  * @since New in 1.8.
  */
@@ -2931,13 +3005,6 @@ svn_repos_parse_dumpstream3(svn_stream_t *stream,
  * loaded nodes, from root to @a parent_dir.  The directory @a parent_dir
  * must be an existing directory in the repository.
  *
- * @note If @a start_rev and @a end_rev are valid revisions, this
- * function presumes the revisions as numbered in @a dumpstream only
- * increase from the beginning of the stream to the end.  Gaps in the
- * number sequence are ignored, but upon finding a revision number
- * younger than the specified range, this function may stop loading
- * new revisions regardless of their number.
- *
  * @since New in 1.8.
  */
 svn_error_t *
@@ -3147,21 +3214,56 @@ svn_repos_get_fs_build_parser(const svn_repos_parser_fns_t **parser,
  */
 typedef struct svn_authz_t svn_authz_t;
 
-/** Read authz configuration data from @a file (a file or registry
- * path) into @a *authz_p, allocated in @a pool.
+/**
+ * Read authz configuration data from @a path (a dirent, an absolute file url
+ * or a registry path) into @a *authz_p, allocated in @a pool.
  *
- * If @a file is not a valid authz rule file, then return
- * SVN_AUTHZ_INVALID_CONFIG.  The contents of @a *authz_p is then
- * undefined.  If @a must_exist is TRUE, a missing authz file is also
- * an error.
+ * If @a groups_path (a dirent, an absolute file url, or a registry path) is
+ * set, use the global groups parsed from it.
+ *
+ * If @a path or @a groups_path is not a valid authz rule file, then return
+ * #SVN_ERR_AUTHZ_INVALID_CONFIG.  The contents of @a *authz_p is then
+ * undefined.  If @a must_exist is TRUE, a missing authz or groups file
+ * is also an error other than #SVN_ERR_AUTHZ_INVALID_CONFIG (exact error
+ * depends on the access type).
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_repos_authz_read2(svn_authz_t **authz_p,
+                      const char *path,
+                      const char *groups_path,
+                      svn_boolean_t must_exist,
+                      apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_repos_authz_read2(), but with @a groups_path and @a
+ * repos_root always passed as @c NULL.
  *
  * @since New in 1.3.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_authz_read(svn_authz_t **authz_p,
                      const char *file,
                      svn_boolean_t must_exist,
                      apr_pool_t *pool);
+
+/**
+ * Read authz configuration data from @a stream into @a *authz_p,
+ * allocated in @a pool.
+ *
+ * If @a groups_stream is set, use the global groups parsed from it.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_repos_authz_parse(svn_authz_t **authz_p,
+                      svn_stream_t *stream,
+                      svn_stream_t *groups_stream,
+                      apr_pool_t *pool);
 
 /**
  * Check whether @a user can access @a path in the repository @a
@@ -3329,7 +3431,6 @@ svn_repos_fs_get_inherited_props(apr_array_header_t **inherited_props,
 svn_error_t *
 svn_repos_remember_client_capabilities(svn_repos_t *repos,
                                        const apr_array_header_t *capabilities);
-
 
 
 #ifdef __cplusplus

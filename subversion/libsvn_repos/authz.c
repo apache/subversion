@@ -26,6 +26,7 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
@@ -34,6 +35,7 @@
 #include "svn_config.h"
 #include "svn_ctype.h"
 #include "private/svn_fspath.h"
+#include "repos.h"
 
 
 /*** Structures. ***/
@@ -303,10 +305,8 @@ authz_parse_section(const char *section_name, void *baton, apr_pool_t *pool)
   svn_boolean_t conclusive;
 
   /* Does the section apply to us? */
-  if (is_applicable_section(b->qualified_repos_path,
-                            section_name) == FALSE
-      && is_applicable_section(b->repos_path,
-                               section_name) == FALSE)
+  if (!is_applicable_section(b->qualified_repos_path, section_name)
+      && !is_applicable_section(b->repos_path, section_name))
     return TRUE;
 
   /* Work out what this section grants. */
@@ -513,8 +513,7 @@ authz_group_walk(svn_config_t *cfg,
         {
           /* A circular dependency between groups is a Bad Thing.  We
              don't do authz with invalid ACL files. */
-          if (apr_hash_get(checked_groups, &group_user[1],
-                           APR_HASH_KEY_STRING))
+          if (svn_hash_gets(checked_groups, &group_user[1]))
             return svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG,
                                      NULL,
                                      "Circular dependency between "
@@ -522,8 +521,7 @@ authz_group_walk(svn_config_t *cfg,
                                      &group_user[1], group);
 
           /* Add group to hash of checked groups. */
-          apr_hash_set(checked_groups, &group_user[1],
-                       APR_HASH_KEY_STRING, "");
+          svn_hash_sets(checked_groups, &group_user[1], "");
 
           /* Recurse on that group. */
           SVN_ERR(authz_group_walk(cfg, &group_user[1],
@@ -532,8 +530,7 @@ authz_group_walk(svn_config_t *cfg,
           /* Remove group from hash of checked groups, so that we don't
              incorrectly report an error if we see it again as part of
              another group. */
-          apr_hash_set(checked_groups, &group_user[1],
-                       APR_HASH_KEY_STRING, NULL);
+          svn_hash_sets(checked_groups, &group_user[1], NULL);
         }
       else if (*group_user == '&')
         {
@@ -751,26 +748,270 @@ static svn_boolean_t authz_validate_section(const char *name,
 }
 
 
+/* Walk the configuration in AUTHZ looking for any errors. */
+static svn_error_t *
+authz_validate(svn_authz_t *authz, apr_pool_t *pool)
+{
+  struct authz_validate_baton baton = { 0 };
+
+  baton.err = SVN_NO_ERROR;
+  baton.config = authz->cfg;
+
+  /* Step through the entire rule file stopping on error. */
+  svn_config_enumerate_sections2(authz->cfg, authz_validate_section,
+                                 &baton, pool);
+  SVN_ERR(baton.err);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Retrieve the file at DIRENT (contained in a repo) then parse it as a config
+ * file placing the result into CFG_P allocated in POOL.
+ *
+ * If DIRENT cannot be parsed as a config file then an error is returned.  The
+ * contents of CFG_P is then undefined.  If MUST_EXIST is TRUE, a missing
+ * authz file is also an error.
+ *
+ * SCRATCH_POOL will be used for temporary allocations. */
+static svn_error_t *
+authz_retrieve_config_repo(svn_config_t **cfg_p, const char *dirent,
+                          svn_boolean_t must_exist,
+                          apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  svn_repos_t *repos;
+  const char *repos_root_dirent;
+  const char *fs_path;
+  svn_fs_t *fs;
+  svn_fs_root_t *root;
+  svn_revnum_t youngest_rev;
+  svn_node_kind_t node_kind;
+  svn_stream_t *contents;
+
+  /* Search for a repository in the full path. */
+  repos_root_dirent = svn_repos_find_root_path(dirent, scratch_pool);
+  if (!repos_root_dirent)
+    return svn_error_createf(SVN_ERR_RA_LOCAL_REPOS_NOT_FOUND, NULL,
+                             "Unable to find repository at '%s'", dirent);
+
+  /* Attempt to open a repository at repos_root_dirent. */
+  SVN_ERR(svn_repos_open2(&repos, repos_root_dirent, NULL, scratch_pool));
+
+  fs_path = &dirent[strlen(repos_root_dirent)];
+
+  /* Root path is always a directory so no reason to go any further */
+  if (*fs_path == '\0')
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             "'/' is not a file in repo '%s'",
+                             repos_root_dirent);
+
+  /* We skip some things that are non-important for how we're going to use
+   * this repo connection.  We do not set any capabilities since none of
+   * the current ones are important for what we're doing.  We also do not
+   * setup the environment that repos hooks would run under since we won't
+   * be triggering any. */
+
+  /* Get the filesystem. */
+  fs = svn_repos_fs(repos);
+
+  /* Find HEAD and the revision root */
+  SVN_ERR(svn_fs_youngest_rev(&youngest_rev, fs, scratch_pool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, youngest_rev, scratch_pool));
+
+  SVN_ERR(svn_fs_check_path(&node_kind, root, fs_path, scratch_pool));
+  if (node_kind == svn_node_none)
+    {
+      if (!must_exist)
+        {
+          SVN_ERR(svn_config_create(cfg_p, TRUE, result_pool));
+          return SVN_NO_ERROR;
+        }
+      else
+        {
+          return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                   "'%s' path not found in repo '%s'", fs_path,
+                                   repos_root_dirent);
+        }
+    }
+  else if (node_kind != svn_node_file)
+    {
+      return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                               "'%s' is not a file in repo '%s'", fs_path,
+                               repos_root_dirent);
+    }
+
+  SVN_ERR(svn_fs_file_contents(&contents, root, fs_path, scratch_pool));
+  err = svn_config_parse(cfg_p, contents, TRUE, result_pool);
+
+  /* Add the URL to the error stack since the parser doesn't have it. */
+  if (err != SVN_NO_ERROR)
+    return svn_error_createf(err->apr_err, err,
+                             "Error while parsing config file: '%s' in repo '%s':",
+                             fs_path, repos_root_dirent);
+
+  return SVN_NO_ERROR;
+}
+
+/* Given a PATH which might be a relative repo URL (^/), an absolute
+ * local repo URL (file://), an absolute path outside of the repo
+ * or a location in the Windows registry.
+ *
+ * Retrieve the configuration data that PATH points at and parse it into
+ * CFG_P allocated in POOL.
+ *
+ * If PATH cannot be parsed as a config file then an error is returned.  The
+ * contents of CFG_P is then undefined.  If MUST_EXIST is TRUE, a missing
+ * authz file is also an error.
+ *
+ * REPOS_ROOT points at the root of the repos you are
+ * going to apply the authz against, can be NULL if you are sure that you
+ * don't have a repos relative URL in PATH. */
+static svn_error_t *
+authz_retrieve_config(svn_config_t **cfg_p, const char *path,
+                      svn_boolean_t must_exist, apr_pool_t *pool)
+{
+  if (svn_path_is_url(path))
+    {
+      const char *dirent;
+      svn_error_t *err;
+      apr_pool_t *scratch_pool = svn_pool_create(pool);
+
+      err = svn_uri_get_dirent_from_file_url(&dirent, path, scratch_pool);
+
+      if (err == SVN_NO_ERROR)
+        err = authz_retrieve_config_repo(cfg_p, dirent, must_exist, pool,
+                                         scratch_pool);
+
+      /* Close the repos and streams we opened. */
+      svn_pool_destroy(scratch_pool);
+
+      return err;
+    }
+  else
+    {
+      /* Outside of repo file or Windows registry*/
+      SVN_ERR(svn_config_read2(cfg_p, path, must_exist, TRUE, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Callback to copy (name, value) group into the "groups" section
+   of another configuration. */
+static svn_boolean_t
+authz_copy_group(const char *name, const char *value,
+                 void *baton, apr_pool_t *pool)
+{
+  svn_config_t *authz_cfg = baton;
+
+  svn_config_set(authz_cfg, SVN_CONFIG_SECTION_GROUPS, name, value);
+
+  return TRUE;
+}
+
+/* Copy group definitions from GROUPS_CFG to the resulting AUTHZ.
+ * If AUTHZ already contains any group definition, report an error.
+ * Use POOL for temporary allocations. */
+static svn_error_t *
+authz_copy_groups(svn_authz_t *authz, svn_config_t *groups_cfg,
+                  apr_pool_t *pool)
+{
+  /* Easy out: we prohibit local groups in the authz file when global
+     groups are being used. */
+  if (svn_config_has_section(authz->cfg, SVN_CONFIG_SECTION_GROUPS))
+    {
+      return svn_error_create(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+                              "Authz file cannot contain any groups "
+                              "when global groups are being used.");
+    }
+
+  svn_config_enumerate2(groups_cfg, SVN_CONFIG_SECTION_GROUPS,
+                        authz_copy_group, authz->cfg, pool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_repos__authz_read(svn_authz_t **authz_p, const char *path,
+                      const char *groups_path, svn_boolean_t must_exist,
+                      svn_boolean_t accept_urls, apr_pool_t *pool)
+{
+  svn_authz_t *authz = apr_palloc(pool, sizeof(*authz));
+
+  /* Load the authz file */
+  if (accept_urls)
+    SVN_ERR(authz_retrieve_config(&authz->cfg, path, must_exist, pool));
+  else
+    SVN_ERR(svn_config_read2(&authz->cfg, path, must_exist, TRUE, pool));
+
+  if (groups_path)
+    {
+      svn_config_t *groups_cfg;
+      svn_error_t *err;
+
+      /* Load the groups file */
+      if (accept_urls)
+        SVN_ERR(authz_retrieve_config(&groups_cfg, groups_path, must_exist,
+                                      pool));
+      else
+        SVN_ERR(svn_config_read2(&groups_cfg, groups_path, must_exist,
+                                 TRUE, pool));
+
+      /* Copy the groups from groups_cfg into authz. */
+      err = authz_copy_groups(authz, groups_cfg, pool);
+
+      /* Add the paths to the error stack since the authz_copy_groups
+         routine knows nothing about them. */
+      if (err != SVN_NO_ERROR)
+        return svn_error_createf(err->apr_err, err,
+                                 "Error reading authz file '%s' with "
+                                 "groups file '%s':", path, groups_path);
+    }
+
+  /* Make sure there are no errors in the configuration. */
+  SVN_ERR(authz_validate(authz, pool));
+
+  *authz_p = authz;
+  return SVN_NO_ERROR;
+}
+
+
 
 /*** Public functions. ***/
 
 svn_error_t *
-svn_repos_authz_read(svn_authz_t **authz_p, const char *file,
-                     svn_boolean_t must_exist, apr_pool_t *pool)
+svn_repos_authz_read2(svn_authz_t **authz_p, const char *path,
+                      const char *groups_path, svn_boolean_t must_exist,
+                      apr_pool_t *pool)
+{
+  return svn_repos__authz_read(authz_p, path, groups_path, must_exist,
+                               TRUE, pool);
+}
+
+
+svn_error_t *
+svn_repos_authz_parse(svn_authz_t **authz_p, svn_stream_t *stream,
+                      svn_stream_t *groups_stream, apr_pool_t *pool)
 {
   svn_authz_t *authz = apr_palloc(pool, sizeof(*authz));
-  struct authz_validate_baton baton = { 0 };
 
-  baton.err = SVN_NO_ERROR;
+  /* Parse the authz stream */
+  SVN_ERR(svn_config_parse(&authz->cfg, stream, TRUE, pool));
 
-  /* Load the rule file. */
-  SVN_ERR(svn_config_read2(&authz->cfg, file, must_exist, TRUE, pool));
-  baton.config = authz->cfg;
+  if (groups_stream)
+    {
+      svn_config_t *groups_cfg;
 
-  /* Step through the entire rule file, stopping on error. */
-  svn_config_enumerate_sections2(authz->cfg, authz_validate_section,
-                                 &baton, pool);
-  SVN_ERR(baton.err);
+      /* Parse the groups stream */
+      SVN_ERR(svn_config_parse(&groups_cfg, groups_stream, TRUE, pool));
+
+      SVN_ERR(authz_copy_groups(authz, groups_cfg, pool));
+    }
+
+  /* Make sure there are no errors in the configuration. */
+  SVN_ERR(authz_validate(authz, pool));
 
   *authz_p = authz;
   return SVN_NO_ERROR;

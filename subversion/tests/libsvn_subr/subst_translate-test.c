@@ -23,12 +23,14 @@
 
 #include <locale.h>
 #include <string.h>
+#include <apr_time.h>
 
 #include "../svn_test.h"
 
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_subst.h"
+#include "svn_hash.h"
 
 #define ARRAY_LEN(ary) ((sizeof (ary)) / (sizeof ((ary)[0])))
 
@@ -96,9 +98,7 @@ test_svn_subst_translate_string2(apr_pool_t *pool)
                                                      source_string,
                                                      "ISO-8859-1", FALSE, pool,
                                                      pool);
-      SVN_TEST_ASSERT(err != SVN_NO_ERROR);
-      SVN_TEST_ASSERT(err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL);
-      svn_error_clear(err);
+      SVN_TEST_ASSERT_ERROR(err, SVN_ERR_IO_INCONSISTENT_EOL);
     }
 
   return SVN_NO_ERROR;
@@ -123,8 +123,8 @@ test_svn_subst_translate_string2_null_encoding_helper(apr_pool_t *pool)
                                         source_string, NULL, FALSE,
                                         pool, pool));
     SVN_TEST_STRING_ASSERT(new_value->data, "\xc3\x86");
-    SVN_TEST_ASSERT(translated_to_utf8 == TRUE);
-    SVN_TEST_ASSERT(translated_line_endings == FALSE);
+    SVN_TEST_ASSERT(translated_to_utf8);
+    SVN_TEST_ASSERT(!translated_line_endings);
   }
 
   return SVN_NO_ERROR;
@@ -248,6 +248,253 @@ test_svn_subst_translate_cstring2(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_svn_subst_build_keywords3(apr_pool_t *pool)
+{
+  /* Test expansion of custom keywords. */
+  struct keywords_tests_data
+    {
+      const char *keyword_name;
+      const char *keywords_string;
+      const char *expanded_keyword;
+      const char *rev;
+      const char *url;
+      const char *repos_root_url;
+      /* Can't test date since expanded value depends on local clock. */
+      const char *author;
+    }
+  tests[] =
+    {
+      {"FOO", "FOO=%P%_%a%_%b%_%%",
+       "trunk/foo.txt stsp foo.txt %",
+       "1234", "http://svn.example.com/repos/trunk/foo.txt",
+       "http://svn.example.com/repos", "stsp"},
+      {"MyKeyword", "MyKeyword=%r%_%u%_%_%a",
+       "4567 http://svn.example.com/svn/branches/myfile  jrandom",
+       "4567", "http://svn.example.com/svn/branches/myfile",
+       "http://svn.example.com/svn", "jrandom"},
+      {"FreeBSD", "FreeBSD=%H",
+       "head/README 222812  joel", /* date is not expanded in this test */
+       "222812", "http://svn.freebsd.org/base/head/README",
+       "http://svn.freebsd.org/base", "joel"},
+      {"FreeBSD", "FreeBSD=%I",
+       "README 222812  joel", /* date is not expanded in this test */
+       "222812", "http://svn.freebsd.org/base/head/README",
+       "http://svn.freebsd.org/base", "joel"},
+      { NULL, NULL, NULL, NULL, NULL, NULL, NULL}
+  };
+
+  const struct keywords_tests_data *t;
+
+  for (t = tests; t->keyword_name != NULL; t++)
+    {
+      apr_hash_t *kw;
+      svn_string_t *expanded_keyword;
+
+      SVN_ERR(svn_subst_build_keywords3(&kw, t->keywords_string,
+                                        t->rev, t->url, t->repos_root_url,
+                                        0 /* date */, t->author, pool));
+      expanded_keyword = svn_hash_gets(kw, t->keyword_name);
+      SVN_TEST_STRING_ASSERT(expanded_keyword->data, t->expanded_keyword);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_svn_subst_truncated_keywords(apr_pool_t *pool)
+{
+  svn_string_t *src_string
+    = svn_string_create("$Qq: "
+                        "01234567890123456789012345678901234567890123456789"
+                        "01234567890123456789012345678901234567890123456789"
+                        "01234567890123456789012345678901234567890123456789"
+                        "01234567890123456789012345678901234567890123456789"
+                        "012345678901234567890123456789012345678901234567"
+                        " $", pool);
+  svn_stream_t *src_stream = svn_stream_from_string(src_string, pool);
+  svn_stringbuf_t *dst_stringbuf = svn_stringbuf_create_empty(pool);
+  svn_stream_t *dst_stream = svn_stream_from_stringbuf(dst_stringbuf, pool);
+  apr_hash_t *keywords = apr_hash_make(pool);
+  svn_string_t *expanded
+    = svn_string_create("01234567890123456789012345678901234567890123456789"
+                        "01234567890123456789012345678901234567890123456789"
+                        "01234567890123456789012345678901234567890123456789"
+                        "01234567890123456789012345678901234567890123456789"
+                        "012345678901234567890123456789012345678901234567"
+                        "xxxxxxxxxx",
+                        pool);
+
+  /* The source is already at the maximum length. */
+  SVN_TEST_ASSERT(src_string->len == SVN_KEYWORD_MAX_LEN);
+
+  svn_hash_sets(keywords, "Qq", expanded);
+  dst_stream = svn_subst_stream_translated(dst_stream, NULL, FALSE, keywords,
+                                           TRUE, pool);
+  SVN_ERR(svn_stream_copy3(src_stream, dst_stream, NULL, NULL, pool));
+
+  /* The expanded value would make the keyword longer than the maximum
+     allowed so it must be truncated; the remaining part of the
+     expanded value is the same as the source. */
+  SVN_TEST_STRING_ASSERT(dst_stringbuf->data, src_string->data);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_one_long_keyword(const char *keyword,
+                      const char *expected,
+                      apr_pool_t *pool)
+{
+  svn_string_t *src_string;
+  svn_stream_t *src_stream, *dst_stream;
+  svn_stringbuf_t *dst_stringbuf, *src_stringbuf;
+  apr_hash_t *keywords = apr_hash_make(pool);
+  svn_string_t *expanded = svn_string_create("abcdefg", pool);
+
+  svn_hash_sets(keywords, keyword, expanded);
+
+  /* Expand */
+  src_string = svn_string_createf(pool, "$%s$", keyword);
+  src_stream = svn_stream_from_string(src_string, pool);
+  dst_stringbuf = svn_stringbuf_create_empty(pool);
+  dst_stream = svn_stream_from_stringbuf(dst_stringbuf, pool);
+  dst_stream = svn_subst_stream_translated(dst_stream, NULL, FALSE, keywords,
+                                           TRUE, pool);
+  SVN_ERR(svn_stream_copy3(src_stream, dst_stream, NULL, NULL, pool));
+
+  SVN_TEST_STRING_ASSERT(dst_stringbuf->data, expected);
+
+  /* Unexpand */
+  src_stringbuf = dst_stringbuf;
+  src_stream = svn_stream_from_stringbuf(src_stringbuf, pool);
+  dst_stringbuf = svn_stringbuf_create_empty(pool);
+  dst_stream = svn_stream_from_stringbuf(dst_stringbuf, pool);
+  dst_stream = svn_subst_stream_translated(dst_stream, NULL, FALSE, keywords,
+                                           FALSE, pool);
+  SVN_ERR(svn_stream_copy3(src_stream, dst_stream, NULL, NULL, pool));
+
+  SVN_TEST_STRING_ASSERT(dst_stringbuf->data, src_string->data);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_svn_subst_long_keywords(apr_pool_t *pool)
+{
+  /* The longest keyword that can be expanded to a value: there is
+     space for one character in the expanded value. */
+  const char keyword_p1[]
+    = "Q"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "012345678901234567890123456789012345678901234567";
+
+  /* The longest keyword that can be expanded: the value is empty. */ 
+  const char keyword_z[]
+    = "Q"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "0123456789012345678901234567890123456789012345678";
+
+  /* One more than the longest keyword that can be expanded. */
+  const char keyword_m1[]
+    = "Q"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789";
+
+  /* Two more than the longest keyword that can be expanded. */
+  const char keyword_m2[]
+    = "Q"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "0";
+
+  /* Three more than the longest keyword that can be expanded. */
+  const char keyword_m3[]
+    = "Q"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01";
+
+  /* Four more than the longest keyword that can be expanded. */
+  const char keyword_m4[]
+    = "Q"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "012";
+
+  /* Five more than the longest keyword that can be expanded. */
+  const char keyword_m5[]
+    = "Q"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "0123";
+
+  /* Six more than the longest keyword that can be expanded. */
+  const char keyword_m6[]
+    = "Q"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234567890123456789012345678901234567890123456789"
+      "01234";
+
+  SVN_ERR(test_one_long_keyword(keyword_p1,
+                                apr_psprintf(pool, "$%s: a $", keyword_p1),
+                                pool));
+
+  SVN_ERR(test_one_long_keyword(keyword_z,
+                                apr_psprintf(pool, "$%s:  $", keyword_z),
+                                pool));
+
+  SVN_ERR(test_one_long_keyword(keyword_m1,
+                                apr_psprintf(pool, "$%s$", keyword_m1),
+                                pool));
+
+  SVN_ERR(test_one_long_keyword(keyword_m2,
+                                apr_psprintf(pool, "$%s$", keyword_m2),
+                                pool));
+
+  SVN_ERR(test_one_long_keyword(keyword_m3,
+                                apr_psprintf(pool, "$%s$", keyword_m3),
+                                pool));
+
+  SVN_ERR(test_one_long_keyword(keyword_m4,
+                                apr_psprintf(pool, "$%s$", keyword_m4),
+                                pool));
+
+  SVN_ERR(test_one_long_keyword(keyword_m5,
+                                apr_psprintf(pool, "$%s$", keyword_m5),
+                                pool));
+
+  SVN_ERR(test_one_long_keyword(keyword_m6,
+                                apr_psprintf(pool, "$%s$", keyword_m6),
+                                pool));
+
+  return SVN_NO_ERROR;
+}
+
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
@@ -259,5 +506,11 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test repairing svn_subst_translate_string2()"),
     SVN_TEST_PASS2(test_svn_subst_translate_cstring2,
                    "test svn_subst_translate_cstring2()"),
+    SVN_TEST_PASS2(test_svn_subst_build_keywords3,
+                   "test svn_subst_build_keywords3()"),
+    SVN_TEST_PASS2(test_svn_subst_truncated_keywords,
+                   "test truncated keywords (issue 4349)"),
+    SVN_TEST_PASS2(test_svn_subst_long_keywords,
+                   "test long keywords (issue 4350)"),
     SVN_TEST_NULL
   };

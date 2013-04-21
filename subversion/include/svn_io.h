@@ -617,6 +617,8 @@ svn_io_filesizes_different_p(svn_boolean_t *different_p,
  * definitely different.  That is, if the size of one or both files
  * cannot be determined (due to stat() returning an error), then the sizes
  * are not known to be different, so @a *different_p12 is set to 0.
+ *
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_io_filesizes_three_different_p(svn_boolean_t *different_p12,
@@ -662,9 +664,12 @@ svn_io_files_contents_same_p(svn_boolean_t *same,
                              apr_pool_t *pool);
 
 /** Set @a *same12 to TRUE if @a file1 and @a file2 have the same
- * contents, else set it to FALSE.  Do the similar for @a *same23 
- * with @a file2 and @a file3, and @a *same13 for @a file1 and @a 
- * file3.  Use @a pool for temporary allocations.
+ * contents, else set it to FALSE.  Do the similar for @a *same23
+ * with @a file2 and @a file3, and @a *same13 for @a file1 and @a
+ * file3. The filenames @a file1, @a file2 and @a file3 are
+ * utf8-encoded. Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_io_files_contents_three_same_p(svn_boolean_t *same12,
@@ -724,7 +729,7 @@ svn_io_file_lock2(const char *lock_file,
  * is not available: throw an error instead.
  *
  * Lock will be automatically released when @a pool is cleared or destroyed.
- * You may also explicitly call @ref svn_io_unlock_open_file.
+ * You may also explicitly call svn_io_unlock_open_file().
  * Use @a pool for memory allocations. @a pool must be the pool that
  * @a lockfile_handle has been created in or one of its sub-pools.
  *
@@ -740,7 +745,7 @@ svn_io_lock_open_file(apr_file_t *lockfile_handle,
  * Unlock the file @a lockfile_handle.
  *
  * Use @a pool for memory allocations. @a pool must be the pool that
- * @a lockfile_handle has been created in or one of its sub-pools.
+ * was passed to svn_io_lock_open_file().
  *
  * @since New in 1.8.
  */
@@ -912,7 +917,7 @@ svn_stream_empty(apr_pool_t *pool);
 /** Return a stream allocated in @a pool which forwards all requests
  * to @a stream.  Destruction is explicitly excluded from forwarding.
  *
- * @see notes/destruction-of-stacked-resources
+ * @see http://subversion.apache.org/docs/community-guide/conventions.html#destruction-of-stacked-resources
  *
  * @since New in 1.4.
  */
@@ -1553,11 +1558,33 @@ svn_io_get_dirents(apr_hash_t **dirents,
 /** Create a svn_io_dirent2_t instance for path. Specialized variant of
  * svn_io_stat() that directly translates node_kind and special.
  *
+ * If @a verify_truename is @c TRUE, an additional check is performed to
+ * verify the truename of the last path component on case insensitive
+ * filesystems. This check is expensive compared to a just a stat,
+ * but certainly cheaper than a full truename calculation using
+ * apr_filepath_merge() which verifies all path components.
+ *
  * If @a ignore_enoent is set to @c TRUE, set *dirent_p->kind to
  * svn_node_none instead of returning an error.
  *
- * @since New in 1.7.
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_io_stat_dirent2(const svn_io_dirent2_t **dirent_p,
+                    const char *path,
+                    svn_boolean_t verify_truename,
+                    svn_boolean_t ignore_enoent,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
+
+
+/** Similar to svn_io_stat_dirent2(), but always passes FALSE for
+ * @a verify_truename.
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backwards compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
                    const char *path,
@@ -1632,16 +1659,19 @@ svn_io_dir_walk(const char *dirname,
  *
  * If @a inherit is TRUE, the invoked program inherits its environment from
  * the caller and @a cmd, if not absolute, is searched for in PATH.
- * Otherwise, the invoked program runs with an empty environment and @a cmd
- * must be an absolute path.
  *
- * If @a inherit is FALSE and @a env is not NULL, the invoked program
- * inherits the environment defined by @a env, instead of an empty
- * environment or the caller's environment.
+ * If @a inherit is FALSE @a cmd must be an absolute path and the invoked
+ * program inherits the environment defined by @a env or runs with an empty
+ * environment in @a env is NULL.
  *
  * @note On some platforms, failure to execute @a cmd in the child process
  * will result in error output being written to @a errfile, if non-NULL, and
  * a non-zero exit status being returned to the parent process.
+ *
+ * @note An APR bug affects Windows: passing a NULL @a env does not
+ * guarantee the invoked program to run with an empty environment when
+ * @a inherit is FALSE, the program may inherit its parent's environment.
+ * Explicitly pass an empty @a env to get an empty environment.
  *
  * @since New in 1.8.
  */
@@ -1666,6 +1696,7 @@ svn_error_t *svn_io_start_cmd3(apr_proc_t *cmd_proc,
  * @deprecated Provided for backward compatibility with the 1.7 API
  * @since New in 1.7.
  */
+SVN_DEPRECATED
 svn_error_t *svn_io_start_cmd2(apr_proc_t *cmd_proc,
                                const char *path,
                                const char *cmd,
@@ -1935,7 +1966,8 @@ svn_boolean_t
 svn_io_is_binary_data(const void *buf, apr_size_t len);
 
 
-/** Wrapper for apr_file_open().  @a fname is utf8-encoded. */
+/** Wrapper for apr_file_open().  @a fname is utf8-encoded.
+    Always passed flag | APR_BINARY to apr. */
 svn_error_t *
 svn_io_file_open(apr_file_t **new_file,
                  const char *fname,

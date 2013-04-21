@@ -7,9 +7,9 @@ REM   regarding copyright ownership.  The ASF licenses this file
 REM   to you under the Apache License, Version 2.0 (the
 REM   "License"); you may not use this file except in compliance
 REM   with the License.  You may obtain a copy of the License at
-REM  
+REM
 REM     http://www.apache.org/licenses/LICENSE-2.0
-REM  
+REM
 REM   Unless required by applicable law or agreed to in writing,
 REM   software distributed under the License is distributed on an
 REM   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -61,6 +61,7 @@ taskkill /im fs-test.exe /f 2> nul:
 taskkill /im op-depth-test.exe /f 2> nul:
 taskkill /im java.exe /f 2> nul:
 taskkill /im perl.exe /f 2> nul:
+taskkill /im mspdbsrv.exe /f 2> nul:
 IF EXIST "%TESTDIR%\tests\subversion\tests\cmdline\httpd\" (
   rmdir /s /q  "%TESTDIR%\tests\subversion\tests\cmdline\httpd"
 )

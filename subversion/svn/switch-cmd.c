@@ -157,9 +157,6 @@ svn_cl__switch(apr_getopt_t *os,
   ctx->notify_func2 = svn_cl__check_externals_failed_notify_wrapper;
   ctx->notify_baton2 = &nwb;
 
-  /* Postpone conflict resolution during the switch operation.
-   * If any conflicts occur we'll run the conflict resolver later. */
-
   /* Do the 'switch' update. */
   err = svn_client_switch3(NULL, target, switch_url, &peg_revision,
                            &(opt_state->start_revision), depth,
@@ -176,6 +173,12 @@ svn_cl__switch(apr_getopt_t *os,
                                    "disable this check."),
                                    svn_dirent_local_style(target,
                                                           scratch_pool));
+      if (err->apr_err == SVN_ERR_RA_UUID_MISMATCH
+          || err->apr_err == SVN_ERR_WC_INVALID_SWITCH)
+        return svn_error_quick_wrap(
+                 err,
+                 _("'svn switch' does not support switching a working copy to "
+                   "a different repository"));
       return err;
     }
 
@@ -187,16 +190,10 @@ svn_cl__switch(apr_getopt_t *os,
 
   if (! opt_state->quiet)
     {
-      err = svn_cl__print_conflict_stats(nwb.wrapped_baton, scratch_pool);
+      err = svn_cl__notifier_print_conflict_stats(nwb.wrapped_baton, scratch_pool);
       if (err)
         return svn_error_compose_create(externals_err, err);
     }
-
-  err = svn_cl__resolve_postponed_conflicts(ctx->conflict_baton2,
-                                            opt_state->depth,
-                                            opt_state->accept_which,
-                                            opt_state->editor_cmd,
-                                            ctx, scratch_pool);
 
   return svn_error_compose_create(externals_err, err);
 }

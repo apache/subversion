@@ -26,6 +26,7 @@
 #include <apr_uri.h>
 #include <serf.h>
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
 #include "svn_dav.h"
@@ -218,7 +219,7 @@ svn_ra_serf__expand_ns(svn_ra_serf__dav_props_t *returned_prop_name,
               return;
             }
         }
-    }    
+    }
 
   /* If the prefix is not found, then the name is NOT within a
      namespace.  */
@@ -560,9 +561,9 @@ svn_ra_serf__xml_note(svn_ra_serf__xml_estate_t *xes,
   /* In all likelihood, NAME is a string constant. But we can't really
      be sure. And it isn't like we're storing a billion of these into
      the state pool.  */
-  apr_hash_set(scan->attrs,
-               apr_pstrdup(scan->state_pool, name), APR_HASH_KEY_STRING,
-               apr_pstrdup(scan->state_pool, value));
+  svn_hash_sets(scan->attrs,
+                apr_pstrdup(scan->state_pool, name),
+                apr_pstrdup(scan->state_pool, value));
 }
 
 
@@ -675,8 +676,8 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
                 }
 
               if (value)
-                apr_hash_set(new_xes->attrs, name, APR_HASH_KEY_STRING,
-                             apr_pstrdup(new_pool, value));
+                svn_hash_sets(new_xes->attrs, name,
+                              apr_pstrdup(new_pool, value));
             }
         }
     }

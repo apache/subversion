@@ -125,8 +125,9 @@ test_error_purge_tracing(apr_pool_t *pool)
     svn_error_malfunction_handler_t orig_handler;
 
     /* For this test, use a random error status. */
-    err = svn_error_create(SVN_ERR_BAD_UUID, NULL, SVN_ERR__TRACED);
+    err = svn_error_create(SVN_ERR_BAD_UUID, NULL, "");
     err = svn_error_trace(err);
+    err->child->message = err->message;
 
     /* Register a malfunction handler that doesn't call abort() to
        check that a new error chain with an assertion error is
@@ -181,6 +182,49 @@ test_error_purge_tracing(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_error_symbolic_name(apr_pool_t *pool)
+{
+  struct {
+    svn_errno_t errcode;
+    const char *errname;
+  } errors[] = {
+    { SVN_ERR_BAD_CONTAINING_POOL, "SVN_ERR_BAD_CONTAINING_POOL" },
+    { SVN_ERR_BAD_FILENAME, "SVN_ERR_BAD_FILENAME" },
+    { SVN_ERR_XML_ATTRIB_NOT_FOUND, "SVN_ERR_XML_ATTRIB_NOT_FOUND" },
+    { SVN_ERR_ENTRY_NOT_FOUND, "SVN_ERR_ENTRY_NOT_FOUND" },
+    { SVN_ERR_ENTRY_CATEGORY_START + 1, NULL }, /* unused slot */
+    { SVN_ERR_ENTRY_EXISTS, "SVN_ERR_ENTRY_EXISTS" },
+    { SVN_ERR_ASSERTION_ONLY_TRACING_LINKS, "SVN_ERR_ASSERTION_ONLY_TRACING_LINKS" },
+    { SVN_ERR_FS_CORRUPT, "SVN_ERR_FS_CORRUPT" },
+    /* The following two error codes can return either of their names
+       as the string. For simplicity, test what the current implementation
+       returns; but if it starts returning "SVN_ERR_WC_NOT_DIRECTORY",
+       that's fine (and permitted by the API contract). */
+    { SVN_ERR_WC_NOT_DIRECTORY, "SVN_ERR_WC_NOT_WORKING_COPY" },
+    { SVN_ERR_WC_NOT_WORKING_COPY, "SVN_ERR_WC_NOT_WORKING_COPY" },
+    /* Test an implementation detail. */
+    { SVN_ERR_BAD_CATEGORY_START, "SVN_ERR_BAD_CONTAINING_POOL" },
+#ifdef SVN_DEBUG
+    { ENOENT, "ENOENT" },
+#endif
+    /* Test non-errors. */
+    { -1, NULL },
+    { SVN_ERR_WC_CATEGORY_START - 1, NULL },
+    /* Whitebox-test exceptional cases. */
+    { SVN_WARNING, "SVN_WARNING" },
+    { 0, "SVN_NO_ERROR" }
+    /* No sentinel. */
+  };
+  int i;
+
+  for (i = 0; i < sizeof(errors) / sizeof(errors[0]); i++)
+    SVN_TEST_STRING_ASSERT(svn_error_symbolic_name(errors[i].errcode),
+                           errors[i].errname);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -191,5 +235,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_error_root_cause"),
     SVN_TEST_PASS2(test_error_purge_tracing,
                    "test svn_error_purge_tracing"),
+    SVN_TEST_PASS2(test_error_symbolic_name,
+                   "test svn_error_symbolic_name"),
     SVN_TEST_NULL
   };

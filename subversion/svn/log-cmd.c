@@ -21,9 +21,6 @@
  * ====================================================================
  */
 
-#define APR_WANT_STRFUNC
-#define APR_WANT_STDIO
-#include <apr_want.h>
 #include <apr_fnmatch.h>
 
 #include "svn_client.h"
@@ -131,13 +128,14 @@ display_diff(const svn_log_entry_t *log_entry,
                                &start_revision, &end_revision,
                                NULL,
                                depth,
-                               FALSE, /* ignore ancestry */
-                               TRUE, /* no diff deleted */
-                               FALSE, /* show copies as adds */
-                               FALSE, /* ignore content type */
-                               FALSE, /* ignore prop diff */
-                               FALSE, /* properties only */
-                               FALSE, /* use git diff format */
+                               FALSE /* ignore ancestry */,
+                               FALSE /* no diff added */,
+                               TRUE  /* no diff deleted */,
+                               FALSE /* show copies as adds */,
+                               FALSE /* ignore content type */,
+                               FALSE /* ignore prop diff */,
+                               FALSE /* properties only */,
+                               FALSE /* use git diff format */,
                                svn_cmdline_output_encoding(pool),
                                outstream,
                                errstream,
@@ -231,7 +229,7 @@ match_search_patterns(apr_array_header_t *search_patterns,
           const char *pattern;
 
           svn_pool_clear(iterpool);
-          
+
           pattern = APR_ARRAY_IDX(pattern_group, j, const char *);
           match = match_search_pattern(pattern, author, date, message,
                                        changed_paths, iterpool);

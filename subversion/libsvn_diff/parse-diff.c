@@ -25,6 +25,7 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_io.h"
@@ -1110,8 +1111,7 @@ add_property_hunk(svn_patch_t *patch, const char *prop_name,
 {
   svn_prop_patch_t *prop_patch;
 
-  prop_patch = apr_hash_get(patch->prop_patches, prop_name,
-                            APR_HASH_KEY_STRING);
+  prop_patch = svn_hash_gets(patch->prop_patches, prop_name);
 
   if (! prop_patch)
     {
@@ -1121,8 +1121,7 @@ add_property_hunk(svn_patch_t *patch, const char *prop_name,
       prop_patch->hunks = apr_array_make(result_pool, 1,
                                          sizeof(svn_diff_hunk_t *));
 
-      apr_hash_set(patch->prop_patches, prop_name, APR_HASH_KEY_STRING,
-                   prop_patch);
+      svn_hash_sets(patch->prop_patches, prop_name, prop_patch);
     }
 
   APR_ARRAY_PUSH(prop_patch->hunks, svn_diff_hunk_t *) = hunk;
@@ -1147,8 +1146,8 @@ svn_diff_open_patch_file(svn_patch_file_t **patch_file,
   svn_patch_file_t *p;
 
   p = apr_palloc(result_pool, sizeof(*p));
-  SVN_ERR(svn_io_file_open(&p->apr_file, local_abspath,
-                           APR_READ | APR_BINARY, 0, result_pool));
+  SVN_ERR(svn_io_file_open(&p->apr_file, local_abspath, APR_READ,
+                           APR_OS_DEFAULT, result_pool));
   p->next_patch_offset = 0;
   *patch_file = p;
 

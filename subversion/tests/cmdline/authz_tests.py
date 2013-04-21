@@ -137,7 +137,7 @@ def broken_authz_file(sbox):
   exit_code, out, err = svntest.main.run_svn(1,
                                              "delete",
                                              sbox.repo_url + "/A",
-                                             "-m", "a log message");
+                                             "-m", "a log message")
   if out:
     raise svntest.verify.SVNUnexpectedStdout(out)
   if not err:
@@ -1223,12 +1223,13 @@ def authz_tree_conflict(sbox):
   expected_output = svntest.wc.State(wc_dir, {})
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/C', status='A ', wc_rev='0')
+  expected_status.tweak('A', '', status='! ', wc_rev='1')
 
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         None,
                                         expected_status,
-                                        "Failed to mark '.*C' absent:",
+                                        "Failed to mark '.*C' (server|absent):",
                                         None, None, None, None, 0,
                                         '-r', '1', wc_dir)
 
@@ -1451,6 +1452,105 @@ def remove_subdir_with_authz_and_tc(sbox):
                                         None, None, False,
                                         wc_dir)
 
+@SkipUnless(svntest.main.is_ra_type_svn)
+def authz_svnserve_groups(sbox):
+  "authz with configured global groups"
+
+  sbox.build(create_wc = False)
+
+  svntest.main.write_restrictive_svnserve_conf_with_groups(sbox.repo_dir)
+
+  svntest.main.write_authz_file(sbox, { "/A/B" : "@senate = r",
+                                        "/A/D" : "@senate = rw",
+                                        "/A/B/E" : "@senate = " })
+
+  svntest.main.write_groups_file(sbox, { "senate" : "jrandom" })
+
+  root_url = sbox.repo_url
+  A_url = root_url + '/A'
+  B_url = A_url + '/B'
+  E_url = B_url + '/E'
+  F_url = B_url + '/F'
+  D_url = A_url + '/D'
+  G_url = D_url + '/G'
+  lambda_url = B_url + '/lambda'
+  pi_url = G_url + '/pi'
+  alpha_url = E_url + '/alpha'
+
+  expected_err = ".*svn: E170001: Authorization failed.*"
+
+  # read a remote file
+  svntest.actions.run_and_verify_svn(None, ["This is the file 'lambda'.\n"],
+                                     [], 'cat',
+                                     lambda_url)
+
+  # read a remote file
+  svntest.actions.run_and_verify_svn(None, ["This is the file 'pi'.\n"],
+                                     [], 'cat',
+                                     pi_url)
+
+  # read a remote file, unreadable: should fail
+  svntest.actions.run_and_verify_svn(None,
+                                     None, expected_err,
+                                     'cat',
+                                     alpha_url)
+
+  # copy a remote file, source is unreadable: should fail
+  svntest.actions.run_and_verify_svn(None,
+                                     None, expected_err,
+                                     'cp',
+                                     '-m', 'logmsg',
+                                     alpha_url, B_url)
+
+  # copy a remote folder
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp',
+                                     '-m', 'logmsg',
+                                     F_url, D_url)
+
+  # copy a remote folder, source is unreadable: should fail
+  svntest.actions.run_and_verify_svn(None,
+                                     None, expected_err,
+                                     'cp',
+                                     '-m', 'logmsg',
+                                     E_url, D_url)
+
+@Skip(svntest.main.is_ra_type_file)
+@Issue(4332)
+def authz_del_from_subdir(sbox):
+  "delete file without rights on the root"
+
+  sbox.build(create_wc = False)
+
+  write_authz_file(sbox, {"/": "* = ", "/A": "jrandom = rw"})
+
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                      'rm', sbox.repo_url + '/A/mu',
+                                      '-m', '')
+
+
+@XFail()
+@SkipUnless(svntest.main.is_ra_type_dav) # dontdothat is dav only
+@SkipUnless(svntest.main.is_os_windows) # until the buildbots are configured
+def log_diff_dontdothat(sbox):
+  "log --diff on dontdothat"
+  sbox.build(create_wc = False)
+
+  ddt_url = sbox.repo_url.replace('/svn-test-work/', '/ddt-test-work/')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                      'log', sbox.repo_url,
+                                      '-c', 1, '--diff')
+
+  # We should expect a PASS or a proper error message instead of
+  # svn: E175009: XML parsing failed: (403 Forbidden)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                      'log', ddt_url,
+                                      '-c', 1, '--diff')
+
+
 ########################################################################
 # Run the tests
 
@@ -1480,7 +1580,10 @@ test_list = [ None,
               wc_delete,
               wc_commit_error_handling,
               upgrade_absent,
-              remove_subdir_with_authz_and_tc
+              remove_subdir_with_authz_and_tc,
+              authz_svnserve_groups,
+              authz_del_from_subdir,
+              log_diff_dontdothat,
              ]
 serial_only = True
 
