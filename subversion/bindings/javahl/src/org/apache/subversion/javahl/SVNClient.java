@@ -103,6 +103,8 @@ public class SVNClient implements ISVNClient
         return NativeResources.getVersion();
     }
 
+    public native VersionExtended getVersionExtended(boolean verbose);
+
     public native String getAdminDirectoryName();
 
     public native boolean isAdminDirectory(String name);
@@ -170,8 +172,16 @@ public class SVNClient implements ISVNClient
             throws ClientException;
 
     public native void add(String path, Depth depth, boolean force,
-                           boolean noIgnores, boolean addParents)
+                           boolean noIgnores, boolean noAutoProps,
+                           boolean addParents)
         throws ClientException;
+
+    public void add(String path, Depth depth, boolean force,
+                    boolean noIgnores, boolean addParents)
+        throws ClientException
+    {
+        add(path, depth, force, noIgnores, false, addParents);
+    }
 
     public native long[] update(Set<String> paths, Revision revision,
                                 Depth depth, boolean depthIsSticky,
@@ -196,10 +206,23 @@ public class SVNClient implements ISVNClient
 
     public native void move(Set<String> srcPaths, String destPath,
                             boolean force, boolean moveAsChild,
-                            boolean makeParents,
+                            boolean makeParents, boolean metadataOnly,
+                            boolean allowMixRev,
                             Map<String, String> revpropTable,
                             CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
+
+    /** @deprecated */
+    public void move(Set<String> srcPaths, String destPath,
+                     boolean force, boolean moveAsChild,
+                     boolean makeParents,
+                     Map<String, String> revpropTable,
+                     CommitMessageCallback handler, CommitCallback callback)
+        throws ClientException
+    {
+        move(srcPaths, destPath, force, moveAsChild, makeParents, false, true,
+             revpropTable, handler, callback);
+    }
 
     public native void mkdir(Set<String> paths, boolean makeParents,
                              Map<String, String> revpropTable,
@@ -227,7 +250,7 @@ public class SVNClient implements ISVNClient
             throws ClientException;
 
     public native void doImport(String path, String url, Depth depth,
-                                boolean noIgnore,
+                                boolean noIgnore, boolean noAutoProps,
                                 boolean ignoreUnknownNodeTypes,
                                 Map<String, String> revpropTable,
                                 ImportFilterCallback importFilterCallback,
@@ -242,7 +265,7 @@ public class SVNClient implements ISVNClient
                          CommitCallback callback)
             throws ClientException
     {
-        doImport(path, url, depth, noIgnore, ignoreUnknownNodeTypes,
+        doImport(path, url, depth, noIgnore, false, ignoreUnknownNodeTypes,
                  revpropTable, null, handler, callback);
     }
 
@@ -253,16 +276,40 @@ public class SVNClient implements ISVNClient
     public native void merge(String path1, Revision revision1, String path2,
                              Revision revision2, String localPath,
                              boolean force, Depth depth,
-                             boolean ignoreAncestry, boolean dryRun,
-                             boolean recordOnly)
-            throws ClientException;
-
-    public native void merge(String path, Revision pegRevision,
-                             List<RevisionRange> revisions, String localPath,
-                             boolean force, Depth depth, boolean ignoreAncestry,
+                             boolean ignoreMergeinfo, boolean diffIgnoreAncestry,
                              boolean dryRun, boolean recordOnly)
             throws ClientException;
 
+    public void merge(String path1, Revision revision1, String path2,
+                             Revision revision2, String localPath,
+                             boolean force, Depth depth,
+                             boolean ignoreAncestry, boolean dryRun,
+                             boolean recordOnly)
+            throws ClientException
+    {
+        merge(path1, revision1, path2, revision2, localPath, force, depth,
+              ignoreAncestry, ignoreAncestry, dryRun, recordOnly);
+    }
+
+    public native void merge(String path, Revision pegRevision,
+                             List<RevisionRange> revisions, String localPath,
+                             boolean force, Depth depth,
+                             boolean ignoreMergeinfo, boolean diffIgnoreAncestry,
+                             boolean dryRun, boolean recordOnly)
+            throws ClientException;
+
+    public void merge(String path, Revision pegRevision,
+                      List<RevisionRange> revisions, String localPath,
+                      boolean force, Depth depth, boolean ignoreAncestry,
+                      boolean dryRun, boolean recordOnly)
+            throws ClientException
+    {
+        merge(path, pegRevision, revisions, localPath, force, depth,
+              ignoreAncestry, ignoreAncestry, dryRun, recordOnly);
+    }
+
+
+    /** @deprecated */
     public native void mergeReintegrate(String path, Revision pegRevision,
                                         String localPath, boolean dryRun)
             throws ClientException;
@@ -274,10 +321,27 @@ public class SVNClient implements ISVNClient
                                        Revision pegRevision,
                                        String mergeSourceUrl,
                                        Revision srcPegRevision,
+                                       Revision srcStartRevision,
+                                       Revision srcEndRevision,
                                        boolean discoverChangedPaths, Depth depth,
                                        Set<String> revProps,
                                        LogMessageCallback callback)
         throws ClientException;
+
+    public void getMergeinfoLog(Mergeinfo.LogKind kind, String pathOrUrl,
+                                Revision pegRevision,
+                                String mergeSourceUrl,
+                                Revision srcPegRevision,
+                                boolean discoverChangedPaths, Depth depth,
+                                Set<String> revProps,
+                                LogMessageCallback callback)
+        throws ClientException
+    {
+        Revision unspecified = new Revision(Revision.Kind.unspecified);
+        getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
+                        srcPegRevision, unspecified, unspecified,
+                        discoverChangedPaths, depth, revProps, callback);
+    }
 
     public void diff(String target1, Revision revision1, String target2,
                      Revision revision2, String relativeToDir,
@@ -291,7 +355,41 @@ public class SVNClient implements ISVNClient
             OutputStream stream = new FileOutputStream(outFileName);
             diff(target1, revision1, target2, revision2, relativeToDir,
                  stream, depth, changelists, ignoreAncestry, noDiffDeleted,
-                 force, copiesAsAdds, false, false);
+                 force, copiesAsAdds, false, false, null);
+        } catch (FileNotFoundException ex) {
+            throw ClientException.fromException(ex);
+        }
+    }
+
+    public void diff(String target1, Revision revision1, String target2,
+                     Revision revision2, String relativeToDir,
+                     OutputStream stream, Depth depth,
+                     Collection<String> changelists,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force, boolean copiesAsAdds,
+                     boolean ignoreProps, boolean propsOnly)
+            throws ClientException
+    {
+        diff(target1, revision1, target2, revision2, relativeToDir,
+             stream, depth, changelists, ignoreAncestry, noDiffDeleted,
+             force, copiesAsAdds, ignoreProps, propsOnly, null);
+    }
+
+    public void diff(String target1, Revision revision1, String target2,
+                     Revision revision2, String relativeToDir,
+                     String outFileName, Depth depth,
+                     Collection<String> changelists,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force, boolean copiesAsAdds,
+                     boolean ignoreProps, boolean propsOnly,
+                     DiffOptions options)
+            throws ClientException
+    {
+        try {
+            OutputStream stream = new FileOutputStream(outFileName);
+            diff(target1, revision1, target2, revision2, relativeToDir,
+                 stream, depth, changelists, ignoreAncestry, noDiffDeleted,
+                 force, copiesAsAdds, ignoreProps, propsOnly, options);
         } catch (FileNotFoundException ex) {
             throw ClientException.fromException(ex);
         }
@@ -303,8 +401,11 @@ public class SVNClient implements ISVNClient
                             Collection<String> changelists,
                             boolean ignoreAncestry, boolean noDiffDeleted,
                             boolean force, boolean copiesAsAdds,
-                            boolean ignoreProps, boolean propsOnly)
+                            boolean ignoreProps, boolean propsOnly,
+                            DiffOptions options)
             throws ClientException;
+
+
 
     public void diff(String target, Revision pegRevision,
                      Revision startRevision, Revision endRevision,
@@ -318,7 +419,41 @@ public class SVNClient implements ISVNClient
             OutputStream stream = new FileOutputStream(outFileName);
             diff(target, pegRevision, startRevision, endRevision,
                  relativeToDir, stream, depth, changelists, ignoreAncestry,
-                 noDiffDeleted, force, copiesAsAdds, false, false);
+                 noDiffDeleted, force, copiesAsAdds, false, false, null);
+        } catch (FileNotFoundException ex) {
+            throw ClientException.fromException(ex);
+        }
+    }
+
+    public void diff(String target, Revision pegRevision,
+                     Revision startRevision, Revision endRevision,
+                     String relativeToDir, OutputStream stream,
+                     Depth depth, Collection<String> changelists,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force, boolean copiesAsAdds,
+                     boolean ignoreProps, boolean propsOnly)
+            throws ClientException
+    {
+        diff(target, pegRevision, startRevision, endRevision, relativeToDir,
+             stream, depth, changelists, ignoreAncestry, noDiffDeleted,
+             force, copiesAsAdds, ignoreProps, propsOnly, null);
+    }
+
+    public void diff(String target, Revision pegRevision,
+                     Revision startRevision, Revision endRevision,
+                     String relativeToDir, String outFileName,
+                     Depth depth, Collection<String> changelists,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force, boolean copiesAsAdds,
+                     boolean ignoreProps, boolean propsOnly,
+                     DiffOptions options)
+            throws ClientException
+    {
+        try {
+            OutputStream stream = new FileOutputStream(outFileName);
+            diff(target, pegRevision, startRevision, endRevision, relativeToDir,
+                 stream, depth, changelists, ignoreAncestry, noDiffDeleted,
+                 force, copiesAsAdds, ignoreProps, propsOnly, options);
         } catch (FileNotFoundException ex) {
             throw ClientException.fromException(ex);
         }
@@ -330,7 +465,8 @@ public class SVNClient implements ISVNClient
                             Depth depth, Collection<String> changelists,
                             boolean ignoreAncestry, boolean noDiffDeleted,
                             boolean force, boolean copiesAsAdds,
-                            boolean ignoreProps, boolean propsOnly)
+                            boolean ignoreProps, boolean propsOnly,
+                            DiffOptions options)
             throws ClientException;
 
     public native void diffSummarize(String target1, Revision revision1,
@@ -352,6 +488,12 @@ public class SVNClient implements ISVNClient
                                   Revision pegRevision, Depth depth,
                                   Collection<String> changelists,
                                   ProplistCallback callback)
+            throws ClientException;
+
+    public native void properties(String path, Revision revision,
+                                  Revision pegRevision, Depth depth,
+                                  Collection<String> changelists,
+                                  InheritedProplistCallback callback)
             throws ClientException;
 
     public native void propertySetLocal(Set<String> paths, String name,

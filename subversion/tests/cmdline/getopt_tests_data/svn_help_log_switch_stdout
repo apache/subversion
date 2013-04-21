@@ -116,7 +116,10 @@ Global options:
   --username ARG           : specify a username ARG
   --password ARG           : specify a password ARG
   --no-auth-cache          : do not cache authentication tokens
-  --non-interactive        : do no interactive prompting
+  --non-interactive        : do no interactive prompting (default is to prompt
+                             only if standard input is a terminal device)
+  --force-interactive      : do interactive prompting even if standard input
+                             is not a terminal device
   --trust-server-cert      : accept SSL server certificates from unknown
                              certificate authorities without prompting (but only
                              with '--non-interactive')
@@ -184,7 +187,7 @@ Valid options:
   --diff3-cmd ARG          : use ARG as merge command
   --relocate               : relocate via URL-rewriting
   --ignore-externals       : ignore externals definitions
-  --ignore-ancestry        : ignore ancestry when calculating merges
+  --ignore-ancestry        : allow switching to a node with no common ancestor
   --force                  : force operation to run
   --accept ARG             : specify automatic conflict resolution action
                              ('postpone', 'working', 'base', 'mine-conflict',
@@ -196,7 +199,10 @@ Global options:
   --username ARG           : specify a username ARG
   --password ARG           : specify a password ARG
   --no-auth-cache          : do not cache authentication tokens
-  --non-interactive        : do no interactive prompting
+  --non-interactive        : do no interactive prompting (default is to prompt
+                             only if standard input is a terminal device)
+  --force-interactive      : do interactive prompting even if standard input
+                             is not a terminal device
   --trust-server-cert      : accept SSL server certificates from unknown
                              certificate authorities without prompting (but only
                              with '--non-interactive')

@@ -93,8 +93,8 @@ svn_wc__wq_run(svn_wc__db_t *db,
 /* Set *WORK_ITEM to a new work item that will install the working
    copy file at LOCAL_ABSPATH. If USE_COMMIT_TIMES is TRUE, then the newly
    installed file will use the nodes CHANGE_DATE for the file timestamp.
-   If RECORD_FILEINFO is TRUE, then the resulting LAST_MOD_TIME and
-   TRANSLATED_SIZE will be recorded in the database.
+   If RECORD_FILEINFO is TRUE, then the resulting RECORDED_TIME and
+   RECORDED_SIZE will be recorded in the database.
 
    If SOURCE_ABSPATH is NULL, then the pristine contents will be installed
    (with appropriate translation). If SOURCE_ABSPATH is not NULL, then it
@@ -215,6 +215,14 @@ svn_wc__wq_build_file_commit(svn_skel_t **work_item,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
+/* Set *WORK_ITEM to a new work item that will install the working
+   copy directory at LOCAL_ABSPATH. */
+svn_error_t *
+svn_wc__wq_build_dir_install(svn_skel_t **work_item,
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             apr_pool_t *scratch_pool,
+                             apr_pool_t *result_pool);
 
 svn_error_t *
 svn_wc__wq_build_postupgrade(svn_skel_t **work_item,

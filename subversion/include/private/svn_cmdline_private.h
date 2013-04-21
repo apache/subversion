@@ -28,6 +28,7 @@
 #define SVN_CMDLINE_PRIVATE_H
 
 #include <apr_pools.h>
+#include <apr_hash.h>
 
 #include "svn_string.h"
 #include "svn_error.h"
@@ -142,6 +143,83 @@ svn_cmdline__print_xml_prop_hash(svn_stringbuf_t **outstr,
                                  svn_boolean_t names_only,
                                  svn_boolean_t inherited_props,
                                  apr_pool_t *pool);
+
+
+/* Search for a text editor command in standard environment variables,
+   and invoke it to edit PATH.  Use POOL for all allocations.
+
+   If EDITOR_CMD is not NULL, it is the name of the external editor
+   command to use, overriding anything else that might determine the
+   editor.
+
+   CONFIG is a hash of svn_config_t * items keyed on a configuration
+   category (SVN_CONFIG_CATEGORY_CONFIG et al), and may be NULL.  */
+svn_error_t *
+svn_cmdline__edit_file_externally(const char *path,
+                                  const char *editor_cmd,
+                                  apr_hash_t *config,
+                                  apr_pool_t *pool);
+
+/* Search for a text editor command in standard environment variables,
+   and invoke it to edit CONTENTS (using a temporary file created in
+   directory BASE_DIR).  Return the new contents in *EDITED_CONTENTS,
+   or set *EDITED_CONTENTS to NULL if no edit was performed.
+
+   If EDITOR_CMD is not NULL, it is the name of the external editor
+   command to use, overriding anything else that might determine the
+   editor.
+
+   If TMPFILE_LEFT is NULL, the temporary file will be destroyed.
+   Else, the file will be left on disk, and its path returned in
+   *TMPFILE_LEFT.
+
+   CONFIG is a hash of svn_config_t * items keyed on a configuration
+   category (SVN_CONFIG_CATEGORY_CONFIG et al), and may be NULL.
+
+   If AS_TEXT is TRUE, recode CONTENTS and convert to native eol-style before
+   editing and back again afterwards.  In this case, ENCODING determines the
+   encoding used during editing.  If non-NULL, use the named encoding, else
+   use the system encoding.  If AS_TEXT is FALSE, don't do any translation.
+   In that case, ENCODING is ignored.
+
+   Use POOL for all allocations.  Use PREFIX as the prefix for the
+   temporary file used by the editor.
+
+   If return error, *EDITED_CONTENTS is not touched. */
+svn_error_t *
+svn_cmdline__edit_string_externally(svn_string_t **edited_contents,
+                                    const char **tmpfile_left,
+                                    const char *editor_cmd,
+                                    const char *base_dir,
+                                    const svn_string_t *contents,
+                                    const char *prefix,
+                                    apr_hash_t *config,
+                                    svn_boolean_t as_text,
+                                    const char *encoding,
+                                    apr_pool_t *pool);
+
+
+/** Wrapper for apr_getopt_init(), which see.
+ *
+ * @since New in 1.4.
+ */
+svn_error_t *
+svn_cmdline__getopt_init(apr_getopt_t **os,
+                         int argc,
+                         const char *argv[],
+                         apr_pool_t *pool);
+
+/* Determine whether interactive mode should be enabled, based on whether
+ * the user passed the --non-interactive or --force-interactive options.
+ * If neither option was passed, interactivity is enabled if standard
+ * input is connected to a terminal device.
+ *
+ * @since New in 1.8.
+ */
+svn_boolean_t
+svn_cmdline__be_interactive(svn_boolean_t non_interactive,
+                            svn_boolean_t force_interactive);
+
 
 #ifdef __cplusplus
 }

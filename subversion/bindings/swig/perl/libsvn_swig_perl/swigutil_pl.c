@@ -34,8 +34,10 @@
 #include <io.h>
 #endif
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_opt.h"
+#include "svn_time.h"
 #include "svn_private_config.h"
 
 #include "swig_perl_external_runtime.swg"
@@ -116,7 +118,7 @@ static apr_hash_t *svn_swig_pl_to_hash(SV *source,
     while (cnt--) {
 	SV* item = hv_iternextsv(h, &key, &retlen);
 	void *val = cv(item, ctx, pool);
-	apr_hash_set(hash, key, APR_HASH_KEY_STRING, val);
+	svn_hash_sets(hash, key, val);
     }
 
     return hash;
@@ -311,7 +313,69 @@ SV *svn_swig_pl_revnums_to_list(const apr_array_header_t *array)
 {
     return convert_array(array, (element_converter_t)convert_svn_revnum_t,
                          NULL);
-} 
+}
+
+/* perl -> c svn_opt_revision_t conversion */
+svn_opt_revision_t *svn_swig_pl_set_revision(svn_opt_revision_t *rev, SV *source)
+{
+    if (source == NULL || source == &PL_sv_undef || !SvOK(source)) {
+        rev->kind = svn_opt_revision_unspecified;
+    }
+    else if (sv_isobject(source) && sv_derived_from(source, "_p_svn_opt_revision_t")) {
+        /* this will assign to rev */
+        SWIG_ConvertPtr(source, (void **)&rev, _SWIG_TYPE("svn_opt_revision_t *"), 0);
+    }
+    else if (looks_like_number(source)) {
+        rev->kind = svn_opt_revision_number;
+        rev->value.number = SvIV(source);
+    }
+    else if (SvPOK(source)) {
+        char *input = SvPV_nolen(source);
+        if (svn_cstring_casecmp(input, "BASE") == 0)
+            rev->kind = svn_opt_revision_base;
+        else if (svn_cstring_casecmp(input, "HEAD") == 0)
+            rev->kind = svn_opt_revision_head;
+        else if (svn_cstring_casecmp(input, "WORKING") == 0)
+            rev->kind = svn_opt_revision_working;
+        else if (svn_cstring_casecmp(input, "COMMITTED") == 0)
+            rev->kind = svn_opt_revision_committed;
+        else if (svn_cstring_casecmp(input, "PREV") == 0)
+            rev->kind = svn_opt_revision_previous;
+        else if (*input == '{') {
+            svn_boolean_t matched;
+            apr_time_t tm;
+            svn_error_t *err;
+
+            char *end = strchr(input,'}');
+            if (!end)
+                croak("unknown opt_revision_t string \"%s\": "
+                      "missing closing brace for \"{DATE}\"", input);
+            *end = '\0';
+            err = svn_parse_date (&matched, &tm, input + 1, apr_time_now(),
+                                  svn_swig_pl_make_pool ((SV *)NULL));
+            if (err) {
+                svn_error_clear (err);
+                croak("unknown opt_revision_t string \"{%s}\": "
+                      "internal svn_parse_date error", input + 1);
+            }
+            if (!matched)
+                croak("unknown opt_revision_t string \"{%s}\": "
+                      "svn_parse_date failed to parse it", input + 1);
+
+            rev->kind = svn_opt_revision_date;
+            rev->value.date = tm;
+        } else
+            croak("unknown opt_revision_t string \"%s\": must be one of "
+                  "\"BASE\", \"HEAD\", \"WORKING\", \"COMMITTED\", "
+                  "\"PREV\" or a \"{DATE}\"", input);
+    } else
+        croak("unknown opt_revision_t type: must be undef, a number, "
+              "a string (one of \"BASE\", \"HEAD\", \"WORKING\", "
+              "\"COMMITTED\", \"PREV\" or a \"{DATE}\") "
+              "or a _p_svn_opt_revision_t object");
+
+    return rev;
+}
 
 /* put the va_arg in stack and invoke caller_func with func.
    fmt:
@@ -847,6 +911,24 @@ svn_error_t *svn_swig_pl_thunk_log_receiver(void *baton,
     return SVN_NO_ERROR;
 }
 
+svn_error_t *svn_swig_pl_thunk_log_entry_receiver(void *baton,
+                                                  svn_log_entry_t *log_entry,
+                                                  apr_pool_t *pool)
+{
+    SV *receiver = baton;
+
+    if (!SvOK(receiver))
+	return SVN_NO_ERROR;
+
+    svn_swig_pl_callback_thunk(CALL_SV,
+                               receiver, NULL,
+                               "SS", 
+                               log_entry, _SWIG_TYPE("svn_log_entry_t *"),
+                               pool, POOLINFO);
+
+    return SVN_NO_ERROR;
+}
+
 svn_error_t * svn_swig_pl_thunk_client_diff_summarize_func(
                      const svn_client_diff_summarize_t *diff,
                      void *baton,
@@ -919,7 +1001,7 @@ svn_error_t *svn_swig_pl_thunk_commit_callback(svn_revnum_t new_revision,
     return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_swig_pl_thunk_commit_callback2(const svn_commit_info_t *commit_info, 
+svn_error_t *svn_swig_pl_thunk_commit_callback2(const svn_commit_info_t *commit_info,
                                                 void *baton,
                                                 apr_pool_t *pool)
 {

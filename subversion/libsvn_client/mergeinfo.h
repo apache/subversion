@@ -292,9 +292,10 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
 /* Set *MERGEINFO_P to a mergeinfo constructed solely from the
    natural history of PATHREV.
 
-   If RANGE_YOUNGEST and RANGE_OLDEST are valid, use them to bound the
-   revision ranges of returned mergeinfo.  They are governed by the same
-   rules as the PEG_REVISION, START_REV, and END_REV parameters of
+   If RANGE_YOUNGEST and RANGE_OLDEST are valid, use them as inclusive
+   bounds on the revision ranges of returned mergeinfo.  PATHREV->rev,
+   RANGE_YOUNGEST and RANGE_OLDEST are governed by the same rules as the
+   PEG_REVISION, START_REV, and END_REV parameters (respectively) of
    svn_ra_get_location_segments().
 
    If HAS_REV_ZERO_HISTORY is not NULL, then set *HAS_REV_ZERO_HISTORY to
@@ -338,7 +339,12 @@ svn_client__record_wc_mergeinfo(const char *local_abspath,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *scratch_pool);
 
-/* Write mergeinfo into the WC.  RESULT_CATALOG maps (const char *) WC paths
+/* Write mergeinfo into the WC.
+ *
+ * For each path in RESULT_CATALOG, set the SVN_PROP_MERGEINFO
+ * property to represent the given mergeinfo, or remove the property
+ * if the given mergeinfo is null, and notify the change.  Leave
+ * other paths unchanged.  RESULT_CATALOG maps (const char *) WC paths
  * to (svn_mergeinfo_t) mergeinfo. */
 svn_error_t *
 svn_client__record_wc_mergeinfo_catalog(apr_hash_t *result_catalog,

@@ -34,6 +34,7 @@
 #include <apr_lib.h>
 #include <apr_file_info.h>
 
+#include "svn_hash.h"
 #include "svn_cmdline.h"
 #include "svn_version.h"
 #include "svn_types.h"
@@ -296,7 +297,7 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
         {
           if (cmd->valid_options[i])
             {
-              if (have_options == FALSE)
+              if (!have_options)
                 {
                   SVN_ERR(svn_cmdline_fputs(_("\nValid options:\n"),
                                             stream, pool));
@@ -978,7 +979,7 @@ svn_opt_parse_revprop(apr_hash_t **revprop_table_p, const char *revprop_spec,
                              _("'%s' is not a valid Subversion property name"),
                              propname);
 
-  apr_hash_set(*revprop_table_p, propname, APR_HASH_KEY_STRING, propval);
+  svn_hash_sets(*revprop_table_p, propname, propval);
 
   return SVN_NO_ERROR;
 }

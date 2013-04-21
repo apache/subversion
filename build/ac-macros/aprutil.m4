@@ -38,7 +38,7 @@ AC_DEFUN(SVN_LIB_APRUTIL,
 
   AC_MSG_NOTICE([Apache Portable Runtime Utility (APRUTIL) library configuration])
 
-  APR_FIND_APU("$abs_srcdir/apr-util", "$abs_builddir/apr-util", 1, [1 0])
+  APR_FIND_APU("", "", 1, [1 0])
 
   if test $apu_found = "no"; then
     AC_MSG_WARN([APRUTIL not found])
@@ -46,12 +46,12 @@ AC_DEFUN(SVN_LIB_APRUTIL,
   fi
 
   if test $apu_found = "reconfig"; then
-    SVN_EXTERNAL_PROJECT([apr-util], [--with-apr=../apr])
+    AC_MSG_ERROR([Unexpected APRUTIL reconfig])
   fi
 
   dnl check APRUTIL version number against regex  
 
-  AC_MSG_CHECKING([APR-UTIL version])    
+  AC_MSG_CHECKING([APRUTIL version])    
   apu_version="`$apu_config --version`"
   if test $? -ne 0; then
     # This is a hack as suggested by Ben Collins-Sussman.  It can be
@@ -76,7 +76,7 @@ AC_DEFUN(SVN_LIB_APRUTIL,
 
   if test $APU_WANTED_REGEX_MATCH -eq 0; then
     echo "wanted regexes are $APRUTIL_WANTED_REGEXES"
-    AC_MSG_ERROR([invalid apr-util version found])
+    AC_MSG_ERROR([invalid APRUTIL version found])
   fi
 
   dnl Get libraries and thread flags from APRUTIL ---------------------
@@ -121,20 +121,8 @@ dnl no apr-util found, print out a message telling the user what to do
 AC_DEFUN(SVN_DOWNLOAD_APRUTIL,
 [
   echo "The Apache Portable Runtime Utility (APRUTIL) library cannot be found."
-  echo "Either install APRUTIL on this system and supply the appropriate"
-  echo "--with-apr-util option"
-  echo ""
-  echo "or"
-  echo ""
-  echo "get it with SVN and put it in a subdirectory of this source:"
-  echo ""
-  echo "   svn co \\"
-  echo "    http://svn.apache.org/repos/asf/apr/apr-util/branches/1.5.x \\"
-  echo "    apr-util"
-  echo ""
-  echo "Run that right here in the top level of the Subversion tree."
-  echo "Afterwards, run ./buildconf in that subdirectory and"
-  echo "then run configure again here."
+  echo "Install APRUTIL on this system and configure Subversion with the"
+  echo " appropriate --with-apr-util option."
   echo ""
   AC_MSG_ERROR([no suitable APRUTIL found])
 ])

@@ -61,11 +61,13 @@ uses only one section "users"; each variable within the section is a
 username, and each value is a password.
 .PP
 .TP 5
-\fBauthz-db\fP = \fIfilename\fP
+\fBauthz-db\fP = \fIpath\fP
 The authz-db option controls the location of the authorization
-rules for path-based access control.  \fIfilename\fP may be 
-relative to the repository conf directory.  There is no default value.
-If you don't specify an authz-db, no path-based access control is done.
+rules for path-based access control.  \fIpath\fP may be 
+relative to the repository conf directory.  \fIpath\fP may be a repository
+relative URL (^/) or absolute file:// URL to a text file in a Subversion
+repository.  There is no default value.  If you don't specify an authz-db,
+no path-based access control is done.
 .PP
 .TP 5
 \fBrealm\fP = \fIrealm\-name\fP

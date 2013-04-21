@@ -32,6 +32,7 @@
 #include "svn_compat.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
+#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_sorts.h"
 #include "svn_props.h"
@@ -203,37 +204,36 @@ pre_15_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
             }
 
           if (rb->ra_session == NULL)
-            SVN_ERR(svn_client_open_ra_session(&rb->ra_session,
-                                                rb->ra_session_url,
-                                               rb->ctx, rb->ra_session_pool));
+            SVN_ERR(svn_client_open_ra_session2(&rb->ra_session,
+                                                rb->ra_session_url, NULL,
+                                                rb->ctx, rb->ra_session_pool,
+                                                pool));
 
           SVN_ERR(svn_ra_rev_prop(rb->ra_session, log_entry->revision,
                                   name, &value, pool));
           if (log_entry->revprops == NULL)
             log_entry->revprops = apr_hash_make(pool);
-          apr_hash_set(log_entry->revprops, name, APR_HASH_KEY_STRING, value);
+          svn_hash_sets(log_entry->revprops, name, value);
         }
       if (log_entry->revprops)
         {
           /* Pre-1.5 servers send the standard revprops unconditionally;
              clear those the caller doesn't want. */
           if (!want_author)
-            apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_AUTHOR,
-                         APR_HASH_KEY_STRING, NULL);
+            svn_hash_sets(log_entry->revprops, SVN_PROP_REVISION_AUTHOR, NULL);
           if (!want_date)
-            apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_DATE,
-                         APR_HASH_KEY_STRING, NULL);
+            svn_hash_sets(log_entry->revprops, SVN_PROP_REVISION_DATE, NULL);
           if (!want_log)
-            apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_LOG,
-                         APR_HASH_KEY_STRING, NULL);
+            svn_hash_sets(log_entry->revprops, SVN_PROP_REVISION_LOG, NULL);
         }
     }
   else
     {
       if (rb->ra_session == NULL)
-        SVN_ERR(svn_client_open_ra_session(&rb->ra_session,
-                                           rb->ra_session_url,
-                                           rb->ctx, rb->ra_session_pool));
+        SVN_ERR(svn_client_open_ra_session2(&rb->ra_session,
+                                            rb->ra_session_url, NULL,
+                                            rb->ctx, rb->ra_session_pool,
+                                            pool));
 
       SVN_ERR(svn_ra_rev_proplist(rb->ra_session, log_entry->revision,
                                   &log_entry->revprops, pool));
@@ -288,6 +288,9 @@ svn_client_log5(const apr_array_header_t *targets,
   apr_pool_t *iterpool;
   int i;
   svn_opt_revision_t peg_rev;
+  svn_boolean_t url_targets = FALSE;
+  svn_opt_revision_t resolved_peg_rev;
+  const char *resolved_target;
 
   if (revision_ranges->nelts == 0)
     {
@@ -412,6 +415,9 @@ svn_client_log5(const apr_array_header_t *targets,
              interested in. */
           APR_ARRAY_PUSH(condensed_targets, const char *) = "";
         }
+
+      /* Remember that our targets are URLs. */
+      url_targets = TRUE;
     }
   else
     {
@@ -479,8 +485,14 @@ svn_client_log5(const apr_array_header_t *targets,
      * we use our initial target path to figure out where to root the RA
      * session, otherwise we use our URL. */
     if (SVN_CLIENT__REVKIND_NEEDS_WC(peg_rev.kind))
-      SVN_ERR(svn_dirent_condense_targets(&ra_target, NULL, targets,
-                                          TRUE, pool, pool));
+      {
+        if (url_targets)
+          SVN_ERR(svn_uri_condense_targets(&ra_target, NULL, targets,
+                                           TRUE, pool, pool));
+        else
+          SVN_ERR(svn_dirent_condense_targets(&ra_target, NULL, targets,
+                                              TRUE, pool, pool));
+      }
     else
       ra_target = url_or_path;
 
@@ -488,6 +500,22 @@ svn_client_log5(const apr_array_header_t *targets,
                                              ra_target, NULL,
                                              &peg_rev, &session_opt_rev,
                                              ctx, pool));
+
+    if (svn_path_is_url(ra_target))
+      {
+        resolved_target = ra_target;
+        resolved_peg_rev = peg_rev;
+      }
+    else
+      {
+        svn_client__pathrev_t *resolved_target_pathrev;
+
+        SVN_ERR(svn_client__wc_node_get_origin(&resolved_target_pathrev,
+                                               ra_target, ctx, pool, pool));
+        resolved_target = resolved_target_pathrev->url;
+        resolved_peg_rev.kind = svn_opt_revision_number;
+        resolved_peg_rev.value.number = resolved_target_pathrev->rev;
+      }
 
     SVN_ERR(svn_ra_has_capability(ra_session, &has_log_revprops,
                                   SVN_RA_CAPABILITY_LOG_REVPROPS, pool));
@@ -604,6 +632,36 @@ svn_client_log5(const apr_array_header_t *targets,
 
           passed_receiver = limit_receiver;
           passed_receiver_baton = &lb;
+        }
+
+      /* Issue #4355: If multiple REVISION_RANGES were requested we might
+         need to reparent the session to account for renames. */
+      if (i > 0)
+        {
+          const char *old_session_url;
+          svn_client__pathrev_t *resolved_loc;
+
+          /* Ensure session is pointing to our starting target. */
+          SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url,
+                                                    ra_session,
+                                                    resolved_target,
+                                                    pool));
+          /* Find the target's (possibly different) url at the start of
+             RANGE and then reparent the session to that if necessary. */
+          SVN_ERR(svn_client__resolve_rev_and_url(&resolved_loc, ra_session,
+                                                  resolved_target,
+                                                  &resolved_peg_rev,
+                                                  &(range->start),
+                                                  ctx, iterpool));
+          SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url,
+                                                    ra_session,
+                                                    resolved_loc->url,
+                                                    pool));
+          if (!has_log_revprops)
+            {
+              /* See above pre-1.5 notes. */
+              rb.ra_session_url = resolved_loc->url;
+            }
         }
 
       SVN_ERR(svn_ra_get_log2(ra_session,

@@ -179,7 +179,6 @@ def status_type_change(sbox):
 
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
-  single_db = svntest.main.wc_is_singledb(wc_dir)
 
   os.chdir(wc_dir)
 
@@ -189,8 +188,7 @@ def status_type_change(sbox):
   os.rename('A', 'iota')
   os.rename('was_iota', 'A')
 
-  if single_db:
-    expected_output = [
+  expected_output = [
         '~       A\n',
         '!       A/mu\n',
         '!       A/B\n',
@@ -211,14 +209,9 @@ def status_type_change(sbox):
         '!       A/D/H/omega\n',
         '!       A/D/H/psi\n',
         '~       iota\n',
-    ]
+  ]
 
-    expected_output = [s.replace('/', os.path.sep) for s in expected_output]
-  else:
-    expected_output = [
-        '~       A\n',
-        '~       iota\n',
-    ]
+  expected_output = [s.replace('/', os.path.sep) for s in expected_output]
 
   svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
                                      [], 'status')
@@ -228,10 +221,9 @@ def status_type_change(sbox):
   os.remove('A')
   os.mkdir('A')
 
-  if single_db:
-    # A is a directory again, so it is no longer missing, but it's
-    # descendants are
-    expected_output = [
+  # A is a directory again, so it is no longer missing, but it's
+  # descendants are
+  expected_output = [
         '!       A/mu\n',
         '!       A/B\n',
         '!       A/B/lambda\n',
@@ -251,15 +243,9 @@ def status_type_change(sbox):
         '!       A/D/H/omega\n',
         '!       A/D/H/psi\n',
         '~       iota\n',
-    ]
-    # Fix separator for Windows
-    expected_output = [s.replace('/', os.path.sep) for s in expected_output]
-  else:
-    # A misses its administrative area, so it is missing
-    expected_output = [
-        '~       A\n',
-        '~       iota\n',
-    ]
+  ]
+  # Fix separator for Windows
+  expected_output = [s.replace('/', os.path.sep) for s in expected_output]
 
   svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
                                      [], 'status')
@@ -268,14 +254,6 @@ def status_type_change(sbox):
   # unversioned dir.
   svntest.main.safe_rmtree('iota')
   os.mkdir('iota')
-
-  if not svntest.main.wc_is_singledb('.'):
-    # A misses its administrative area, so it is still missing and
-    # iota is still obstructed
-    expected_output = [
-        '~       A\n',
-        '~       iota\n',
-    ]
 
   svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
                                      [], 'status')
@@ -287,7 +265,6 @@ def status_type_change_to_symlink(sbox):
 
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
-  single_db = svntest.main.wc_is_singledb(wc_dir)
 
   os.chdir(wc_dir)
 
@@ -297,8 +274,7 @@ def status_type_change_to_symlink(sbox):
   svntest.main.safe_rmtree('A/D')
   os.symlink('bar', 'A/D')
 
-  if single_db:
-    expected_output = [
+  expected_output = [
         '~       A/D\n',
         '!       A/D/gamma\n',
         '!       A/D/G\n',
@@ -310,12 +286,7 @@ def status_type_change_to_symlink(sbox):
         '!       A/D/H/omega\n',
         '!       A/D/H/psi\n',
         '~       iota\n',
-        ]
-  else:
-    expected_output = [
-        '~       A/D\n',
-        '~       iota\n',
-      ]
+  ]
 
   svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
                                      [], 'status')
@@ -659,7 +630,16 @@ def get_text_timestamp(path):
     if re.match("^Text Last Updated", line):
       return line
   logger.warn("Didn't find text-time for %s", path)
-  raise svntest.Failure
+  raise svntest.Failure("didn't find text-time")
+
+def no_text_timestamp(path):
+  "ensure no text-time for path using svn info"
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'info', path)
+  for line in out:
+    if re.match("^Text Last Updated", line):
+      logger.warn("Found text-time for %s", path)
+      raise svntest.Failure("found text-time")
 
 # Helper for timestamp_behaviour test
 def text_time_behaviour(wc_dir, wc_path, status_path, expected_status, cmd):
@@ -1011,53 +991,40 @@ def status_missing_dir(sbox):
   # ok, blow away the A/D/G directory
   svntest.main.safe_rmtree(a_d_g)
 
-  if svntest.main.wc_is_singledb(wc_dir):
-    expected = [
+  expected = [
                  '!       A/D/G\n',
                  '!       A/D/G/rho\n',
                  '!       A/D/G/pi\n',
                  '!       A/D/G/tau\n',
-               ]
-    expected = [ s.replace('A/D/G', a_d_g).replace('/', os.path.sep)
-                 for s in expected ]
-  else:
-    expected = ["!       " + a_d_g + "\n"]
+  ]
+  expected = [ s.replace('A/D/G', a_d_g).replace('/', os.path.sep)
+               for s in expected ]
 
   svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected), [],
                                      "status", wc_dir)
 
-  if svntest.main.wc_is_singledb(wc_dir):
-    expected = [
+  expected = [
           "!                1   " + a_d_g + "\n",
           "!                1   " + os.path.join(a_d_g, "rho") + "\n",
           "!                1   " + os.path.join(a_d_g, "pi") + "\n",
           "!                1   " + os.path.join(a_d_g, "tau") + "\n",
-          "Status against revision:      1\n" ]
-  else:
-    expected = [
-          "        *            " + os.path.join(a_d_g, "pi") + "\n",
-          "        *            " + os.path.join(a_d_g, "rho") + "\n",
-          "        *            " + os.path.join(a_d_g, "tau") + "\n",
-          "!       *       ?    " + a_d_g + "\n",
-          "        *        1   " + sbox.ospath('A/D') + "\n",
-          "Status against revision:      1\n" ]
+          "Status against revision:      1\n"
+  ]
 
   # now run status -u, we should be able to do this without crashing
   svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected), [],
                                      "status", "-u", wc_dir)
 
   # Finally run an explicit status request directly on the missing directory.
-  if svntest.main.wc_is_singledb(wc_dir):
-    expected = [
+  expected = [
                   "!       A/D/G\n",
                   "!       A/D/G/rho\n",
                   "!       A/D/G/pi\n",
                   "!       A/D/G/tau\n",
                ]
-    expected = [ s.replace('A/D/G', a_d_g).replace('/', os.path.sep)
-                 for s in expected ]
-  else:
-    expected = ["!       " + a_d_g + "\n"]
+  expected = [ s.replace('A/D/G', a_d_g).replace('/', os.path.sep)
+               for s in expected ]
+
   svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected), [],
                                      "status", a_d_g)
 
@@ -1115,9 +1082,7 @@ def status_add_plus_conflict(sbox):
     "?       " + sbox.ospath('trunk/file.merge-right.r5') + "\n",
     "?       " + sbox.ospath('trunk/file.working') + "\n",
     "C  +    " + sbox.ospath('trunk/file') + "\n",
-    "Summary of conflicts:\n",
-    "  Text conflicts: 1\n",
-  ]
+  ] + svntest.main.summary_of_conflicts(text_conflicts=1)
   if svntest.main.server_has_mergeinfo():
     lines.append(" M      " + sbox.ospath('trunk') + "\n")
 
@@ -1563,7 +1528,7 @@ def status_depth_update(sbox):
 #----------------------------------------------------------------------
 def status_depth_update_local_modifications(sbox):
   "run 'status --depth=X -u' with local changes"
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
   A_path = sbox.ospath('A')
@@ -1731,8 +1696,7 @@ def status_dash_u_type_change(sbox):
   svntest.main.safe_rmtree('A')
   os.mkdir('A')
 
-  if svntest.main.wc_is_singledb('.'):
-    output =[
+  output = [
                "!                1   A/mu\n",
                "!                1   A/B\n",
                "!                1   A/B/lambda\n",
@@ -1753,16 +1717,11 @@ def status_dash_u_type_change(sbox):
                "!                1   A/D/H/psi\n",
                "~                1   iota\n",
                "Status against revision:      1\n"
-            ]
+    ]
 
-    expected = svntest.verify.UnorderedOutput(
+  expected = svntest.verify.UnorderedOutput(
                         [s.replace('/', os.path.sep)
                             for s in  output])
-  else:
-    expected = svntest.verify.UnorderedOutput(
-         ["~                1   iota\n",
-          "~               ?    A\n",
-          "Status against revision:      1\n" ])
 
   svntest.actions.run_and_verify_svn(None,
                                      expected,
@@ -1788,14 +1747,12 @@ def status_with_tree_conflicts(sbox):
   # check status of G
   expected = svntest.verify.UnorderedOutput(
          ["A  +  C %s\n" % rho,
-          "      >   local edit, incoming delete upon update\n",
+          "      >   local file edit, incoming file delete upon update\n",
           "D     C %s\n" % pi,
-          "      >   local delete, incoming edit upon update\n",
+          "      >   local file delete, incoming file edit upon update\n",
           "!     C %s\n" % tau,
-          "      >   local delete, incoming delete upon update\n",
-          "Summary of conflicts:\n",
-          "  Tree conflicts: 3\n",
-          ])
+          "      >   local file delete, incoming file delete upon update\n",
+         ] + svntest.main.summary_of_conflicts(tree_conflicts=3))
 
   svntest.actions.run_and_verify_svn(None,
                                      expected,
@@ -1806,15 +1763,12 @@ def status_with_tree_conflicts(sbox):
   expected = svntest.verify.UnorderedOutput(
          ["                 2        2 jrandom      %s\n" % G,
           "D     C          2        2 jrandom      %s\n" % pi,
-          "      >   local delete, incoming edit upon update\n",
+          "      >   local file delete, incoming file edit upon update\n",
           "A  +  C          -        1 jrandom      %s\n" % rho,
-          "      >   local edit, incoming delete upon update\n",
+          "      >   local file edit, incoming file delete upon update\n",
           "!     C                                  %s\n" % tau,
-          "      >   local delete, incoming delete upon update\n",
-          "Summary of conflicts:\n",
-          "  Tree conflicts: 3\n",
-          ])
-
+          "      >   local file delete, incoming file delete upon update\n",
+         ] + svntest.main.summary_of_conflicts(tree_conflicts=3))
 
   svntest.actions.run_and_verify_svn(None,
                                      expected,
@@ -2024,7 +1978,7 @@ def status_not_present(sbox):
                                      sbox.ospath('no-file'))
 
 # Skip this test is a .svn dir exists in the root directory
-@Skip(lambda: os.path.exists("/%s" % svntest.main.get_admin_name())) 
+@Skip(lambda: os.path.exists("/%s" % svntest.main.get_admin_name()))
 def status_unversioned_dir(sbox):
   "status on unversioned dir"
   sbox.build(read_only = True, create_wc = False)
@@ -2035,6 +1989,108 @@ def status_unversioned_dir(sbox):
                  "' is not a working copy"
   svntest.actions.run_and_verify_svn2(None, [], expected_err, 0,
                                       "status", "/")
+
+def status_case_changed(sbox):
+  "status reporting on case changed nodes directly"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  os.rename(sbox.ospath('iota'), sbox.ospath('iOTA'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'iOTA'         : Item(status='? '),
+  })
+  expected_status.tweak('iota', status='! ')
+
+  # First run status on the directory
+  svntest.actions.run_and_verify_unquiet_status(wc_dir,
+                                                expected_status)
+
+  # Now on the missing iota directly, which should give the same
+  # result, even on case insenstive filesystems
+  expected_status = svntest.wc.State(wc_dir, {
+    'iota'         : Item(status='! ', wc_rev=1),
+  })
+  svntest.actions.run_and_verify_unquiet_status(sbox.ospath('iota'),
+                                                expected_status)
+
+  # And on the unversioned iOTA
+  expected_status = svntest.wc.State(wc_dir, {
+    'iOTA'         : Item(status='? '),
+  })
+  svntest.actions.run_and_verify_unquiet_status(sbox.ospath('iOTA'),
+                                                expected_status)
+
+
+def move_update_timestamps(sbox):
+  "timestamp behaviour for move-update"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_append('A/B/E/beta', 'X\nY\nZ\n', truncate=True)
+  sbox.simple_commit()
+  sbox.simple_append('A/B/E/alpha', 'modified alpha')
+  sbox.simple_append('A/B/E/beta', 'XX\nY\nZ\n', truncate=True)
+  sbox.simple_commit()
+  sbox.simple_update('', 2)
+
+  sbox.simple_append('A/B/E/beta', 'local beta')
+  src_time = get_text_timestamp(sbox.ospath('A/B/E/alpha'))
+  sbox.simple_move("A/B/E", "A/B/E2")
+  alpha_dst_time = get_text_timestamp(sbox.ospath('A/B/E2/alpha'))
+  beta_dst_time = get_text_timestamp(sbox.ospath('A/B/E2/beta'))
+  if src_time != alpha_dst_time:
+    raise svntest.Failure("move failed to copy timestamp")
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E'       : Item(status='  ', treeconflict='C'),
+    'A/B/E/alpha' : Item(status='  ', treeconflict='U'),
+    'A/B/E/beta'  : Item(status='  ', treeconflict='U'),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak('A/B/E',
+                        status='D ', treeconflict='C', moved_to='A/B/E2')
+  expected_status.tweak('A/B/E/alpha', 'A/B/E/beta', status='D ')
+  expected_status.add({
+      'A/B/E2'       : Item(status='A ', wc_rev='-', copied='+',
+                            moved_from='A/B/E'),
+      'A/B/E2/alpha' : Item(status='  ', wc_rev='-', copied='+'),
+      'A/B/E2/beta'  : Item(status='M ', wc_rev='-', copied='+'),
+      })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
+  expected_disk.add({
+      'A/B/E2'       : Item(),
+      'A/B/E2/alpha' : Item("This is the file 'alpha'.\n"),
+      'A/B/E2/beta'  : Item("X\nY\nZ\nlocal beta"),
+      })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+  time.sleep(1.1)
+  svntest.actions.run_and_verify_svn("resolve failed", None, [],
+                                     'resolve',
+                                     '--accept=mine-conflict',
+                                     sbox.ospath('A/B/E'))
+  expected_status.tweak('A/B/E', treeconflict=None)
+  expected_status.tweak('A/B/E2/beta', status='M ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  expected_disk.tweak('A/B/E2/beta', contents="XX\nY\nZ\nlocal beta")
+  expected_disk.tweak('A/B/E2/alpha', contents="This is the file 'alpha'.\nmodified alpha")
+  svntest.actions.verify_disk(wc_dir, expected_disk)
+
+  # alpha is pristine so gets a new timestamp
+  new_time = get_text_timestamp(sbox.ospath('A/B/E2/alpha'))
+  if new_time == alpha_dst_time:
+    raise svntest.Failure("move failed to update timestamp")
+
+  # beta is modified so timestamp is removed
+  no_text_timestamp(sbox.ospath('A/B/E2/beta'))
 
 ########################################################################
 # Run the tests
@@ -2081,6 +2137,8 @@ test_list = [ None,
               modified_modulo_translation,
               status_not_present,
               status_unversioned_dir,
+              status_case_changed,
+              move_update_timestamps,
              ]
 
 if __name__ == '__main__':

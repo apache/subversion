@@ -50,11 +50,10 @@
 /* File parsing context */
 typedef struct parse_context_t
 {
-  /* This config struct and file */
+  /* This config struct */
   svn_config_t *cfg;
-  const char *file;
 
-  /* The file descriptor */
+  /* The stream struct */
   svn_stream_t *stream;
 
   /* The current line in the file */
@@ -296,8 +295,7 @@ parse_option(int *pch, parse_context_t *ctx, apr_pool_t *scratch_pool)
     {
       ch = EOF;
       err = svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
-                              "%s:%d: Option must end with ':' or '='",
-                              svn_dirent_local_style(ctx->file, scratch_pool),
+                              "line %d: Option must end with ':' or '='",
                               ctx->line);
     }
   else
@@ -340,8 +338,7 @@ parse_section_name(int *pch, parse_context_t *ctx,
     {
       ch = EOF;
       err = svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
-                              "%s:%d: Section header must end with ']'",
-                              svn_dirent_local_style(ctx->file, scratch_pool),
+                              "line %d: Section header must end with ']'",
                               ctx->line);
     }
   else
@@ -404,8 +401,6 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
                        svn_boolean_t must_exist, apr_pool_t *result_pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
-  parse_context_t *ctx;
-  int ch, count;
   svn_stream_t *stream;
   apr_pool_t *scratch_pool = svn_pool_create(result_pool);
 
@@ -420,10 +415,32 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
   else
     SVN_ERR(err);
 
+  err = svn_config__parse_stream(cfg, stream, result_pool, scratch_pool);
+
+  if (err != SVN_NO_ERROR)
+    {
+      /* Add the filename to the error stack. */
+      err = svn_error_createf(err->apr_err, err,
+                              "Error while parsing config file: %s:",
+                              svn_dirent_local_style(file, scratch_pool));
+    }
+
+  /* Close the streams (and other cleanup): */
+  svn_pool_destroy(scratch_pool);
+
+  return err;
+}
+
+svn_error_t *
+svn_config__parse_stream(svn_config_t *cfg, svn_stream_t *stream,
+                         apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  parse_context_t *ctx;
+  int ch, count;
+
   ctx = apr_palloc(scratch_pool, sizeof(*ctx));
 
   ctx->cfg = cfg;
-  ctx->file = file;
   ctx->stream = stream;
   ctx->line = 1;
   ctx->ungotten_char = EOF;
@@ -444,10 +461,8 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
             SVN_ERR(parse_section_name(&ch, ctx, scratch_pool));
           else
             return svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
-                                     "%s:%d: Section header"
+                                     "line %d: Section header"
                                      " must start in the first column",
-                                     svn_dirent_local_style(file,
-                                                            scratch_pool),
                                      ctx->line);
           break;
 
@@ -459,10 +474,8 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
             }
           else
             return svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
-                                     "%s:%d: Comment"
+                                     "line %d: Comment"
                                      " must start in the first column",
-                                     svn_dirent_local_style(file,
-                                                            scratch_pool),
                                      ctx->line);
           break;
 
@@ -476,15 +489,11 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
         default:
           if (svn_stringbuf_isempty(ctx->section))
             return svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
-                                     "%s:%d: Section header expected",
-                                     svn_dirent_local_style(file,
-                                                            scratch_pool),
+                                     "line %d: Section header expected",
                                      ctx->line);
           else if (count != 0)
             return svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
-                                     "%s:%d: Option expected",
-                                     svn_dirent_local_style(file,
-                                                            scratch_pool),
+                                     "line %d: Option expected",
                                      ctx->line);
           else
             SVN_ERR(parse_option(&ch, ctx, scratch_pool));
@@ -493,8 +502,6 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
     }
   while (ch != EOF);
 
-  /* Close the streams (and other cleanup): */
-  svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
 }
 
@@ -796,6 +803,9 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   http-timeout               Timeout for HTTP requests in seconds"
                                                                              NL
         "###   http-compression           Whether to compress HTTP requests" NL
+        "###   http-max-connections       Maximum number of parallel server" NL
+        "###                              connections to use for any given"  NL
+        "###                              HTTP operation."                   NL
         "###   neon-debug-mask            Debug mask for Neon HTTP library"  NL
         "###   ssl-authority-files        List of files, each of a trusted CA"
                                                                              NL
@@ -807,6 +817,9 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   http-library               Which library to use for http/https"
                                                                              NL
         "###                              connections."                      NL
+        "###   http-bulk-updates          Whether to request bulk update"    NL
+        "###                              responses or to fetch each file"   NL
+        "###                              in an individual request. "        NL
         "###   store-passwords            Specifies whether passwords used"  NL
         "###                              to authenticate against a"         NL
         "###                              Subversion server may be cached"   NL
@@ -826,8 +839,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###                              unencrypted (i.e., as plaintext)." NL
 #endif
         "###   store-auth-creds           Specifies whether any auth info"   NL
-        "###                              (passwords as well as server certs)"
-                                                                             NL
+        "###                              (passwords, server certs, etc.)"   NL
         "###                              may be cached to disk."            NL
         "###   username                   Specifies the default username."   NL
         "###"                                                                NL
@@ -1163,8 +1175,18 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         ""                                                                   NL
         "### Section for configuring working copies."                        NL
         "[working-copy]"                                                     NL
-        "### Set to true to enable exclusive SQLite locking.  Some clients"  NL
-        "### may not support exclusive locking."                             NL
+        "### Set to a list of the names of specific clients that should use" NL
+        "### exclusive SQLite locking of working copies.  This increases the"NL
+        "### performance of the client but prevents concurrent access by"    NL
+        "### other clients.  Third-party clients may also support this"      NL
+        "### option."                                                        NL
+        "### Possible values:"                                               NL
+        "###   svn                (the command line client)"                 NL
+        "# exclusive-locking-clients ="                                      NL
+        "### Set to true to enable exclusive SQLite locking of working"      NL
+        "### copies by all clients using the 1.8 APIs.  Enabling this may"   NL
+        "### cause some clients to fail to work properly. This does not have"NL
+        "### to be set for exclusive-locking-clients to work."               NL
         "# exclusive-locking = false"                                        NL;
 
       err = svn_io_file_open(&f, path,

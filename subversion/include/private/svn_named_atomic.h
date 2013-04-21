@@ -100,7 +100,7 @@ svn_atomic_namespace__cleanup(const char *name,
  * be set to @c NULL. Otherwise, a new atomic will be created, its value
  * set to 0 and the access structure be returned in @a *atomic.
  *
- * Note that @a name must not exceed @ref SVN_NAMED_ATOMIC__MAX_NAME_LENGTH
+ * Note that @a name must not exceed #SVN_NAMED_ATOMIC__MAX_NAME_LENGTH
  * characters and an error will be returned if the specified name is longer
  * than supported.
  *

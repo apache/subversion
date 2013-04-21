@@ -33,6 +33,7 @@
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_dirent_uri.h"
+#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_error.h"
 #include "svn_subst.h"
@@ -313,10 +314,10 @@ svn_wc__expand_keywords(apr_hash_t **keywords,
   apr_time_t changed_date;
   const char *changed_author;
   const char *url;
+  const char *repos_root_url;
 
   if (! for_normalization)
     {
-      const char *repos_root_url;
       const char *repos_relpath;
 
       SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, &repos_relpath,
@@ -341,15 +342,14 @@ svn_wc__expand_keywords(apr_hash_t **keywords,
       changed_rev = SVN_INVALID_REVNUM;
       changed_date = 0;
       changed_author = "";
+      repos_root_url = "";
     }
 
-  SVN_ERR(svn_subst_build_keywords2(keywords,
-                                    keyword_list,
+  SVN_ERR(svn_subst_build_keywords3(keywords, keyword_list,
                                     apr_psprintf(scratch_pool, "%ld",
                                                  changed_rev),
-                                    url,
-                                    changed_date,
-                                    changed_author,
+                                    url, repos_root_url,
+                                    changed_date, changed_author,
                                     result_pool));
 
   if (apr_hash_count(*keywords) == 0)
@@ -365,9 +365,11 @@ svn_wc__sync_flags_with_props(svn_boolean_t *did_set,
                               apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_wc__db_lock_t *lock;
   apr_hash_t *props = NULL;
+  svn_boolean_t had_props;
+  svn_boolean_t props_mod;
 
   if (did_set)
     *did_set = FALSE;
@@ -378,17 +380,24 @@ svn_wc__sync_flags_with_props(svn_boolean_t *did_set,
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, &lock, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
+                               &had_props, &props_mod, NULL, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__db_read_props(&props, db, local_abspath, scratch_pool,
-                                scratch_pool));
-
   /* We actually only care about the following flags on files, so just
-     early-out for all other types. */
-  if (kind != svn_kind_file)
+     early-out for all other types.
+
+     Also bail if there is no in-wc representation of the file. */
+  if (kind != svn_node_file
+      || (status != svn_wc__db_status_normal
+          && status != svn_wc__db_status_added))
     return SVN_NO_ERROR;
+
+  if (props_mod || had_props)
+    SVN_ERR(svn_wc__db_read_props(&props, db, local_abspath, scratch_pool,
+                                  scratch_pool));
+  else
+    props = NULL;
 
   /* If we get this far, we're going to change *something*, so just set
      the flag appropriately. */
@@ -398,7 +407,7 @@ svn_wc__sync_flags_with_props(svn_boolean_t *did_set,
   /* Handle the read-write bit. */
   if (status != svn_wc__db_status_normal
       || props == NULL
-      || ! apr_hash_get(props, SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING)
+      || ! svn_hash_gets(props, SVN_PROP_NEEDS_LOCK)
       || lock)
     {
       SVN_ERR(svn_io_set_file_read_write(local_abspath, FALSE, scratch_pool));
@@ -409,12 +418,16 @@ svn_wc__sync_flags_with_props(svn_boolean_t *did_set,
          set the file read_only just yet.  That happens upon commit. */
       apr_hash_t *pristine_props;
 
-      SVN_ERR(svn_wc__db_read_pristine_props(&pristine_props, db, local_abspath,
-                                             scratch_pool, scratch_pool));
+      if (! props_mod)
+        pristine_props = props;
+      else if (had_props)
+        SVN_ERR(svn_wc__db_read_pristine_props(&pristine_props, db, local_abspath,
+                                                scratch_pool, scratch_pool));
+      else
+        pristine_props = NULL;
 
       if (pristine_props
-            && apr_hash_get(pristine_props,
-                            SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING) )
+            && svn_hash_gets(pristine_props, SVN_PROP_NEEDS_LOCK) )
             /*&& props
             && apr_hash_get(props, SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING) )*/
         SVN_ERR(svn_io_set_file_read_only(local_abspath, FALSE, scratch_pool));
@@ -423,10 +436,8 @@ svn_wc__sync_flags_with_props(svn_boolean_t *did_set,
 /* Windows doesn't care about the execute bit. */
 #ifndef WIN32
 
-  if ( ( status != svn_wc__db_status_normal
-        && status != svn_wc__db_status_added )
-      || props == NULL
-      || ! apr_hash_get(props, SVN_PROP_EXECUTABLE, APR_HASH_KEY_STRING))
+  if (props == NULL
+      || ! svn_hash_gets(props, SVN_PROP_EXECUTABLE))
     {
       /* Turn off the execute bit */
       SVN_ERR(svn_io_set_file_executable(local_abspath, FALSE, FALSE,

@@ -1,5 +1,5 @@
 /*
- * main.c: Subversion server administration tool.
+ * svnadmin.c: Subversion server administration tool main file.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -25,6 +25,7 @@
 #include <apr_file_io.h>
 #include <apr_signal.h>
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_cmdline.h"
 #include "svn_error.h"
@@ -44,6 +45,7 @@
 
 #include "private/svn_opt_private.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_cmdline_private.h"
 
 #include "svn_private_config.h"
 
@@ -111,12 +113,11 @@ open_repos(svn_repos_t **repos,
 {
   /* construct FS configuration parameters: enable caches for r/o data */
   apr_hash_t *fs_config = apr_hash_make(pool);
-  apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
-               APR_HASH_KEY_STRING, "1");
-  apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
-               APR_HASH_KEY_STRING, "1");
-  apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
-               APR_HASH_KEY_STRING, "2");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS, "1");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS, "1");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "2");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
+                           svn_uuid_generate(pool));
 
   /* now, open the requested repository */
   SVN_ERR(svn_repos_open2(repos, path, fs_config, pool));
@@ -215,6 +216,9 @@ static const apr_getopt_option_t options_table[] =
     {"revision",      'r', 1,
      N_("specify revision number ARG (or X:Y range)")},
 
+    {"transaction",       't', 1,
+     N_("specify transaction name ARG")},
+
     {"incremental",   svnadmin__incremental, 0,
      N_("dump or hotcopy incrementally")},
 
@@ -289,6 +293,8 @@ static const apr_getopt_option_t options_table[] =
      N_("use repository format compatible with Subversion\n"
         "                             version ARG (\"1.5.5\", \"1.7\", etc.)")},
 
+    {"file", 'F', 1, N_("read repository paths from file ARG")},
+
     {NULL}
   };
 
@@ -336,9 +342,14 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
   {'r', svnadmin__incremental, svnadmin__deltas, 'q', 'M'} },
 
   {"freeze", subcommand_freeze, {0}, N_
-   ("usage: svnadmin freeze REPOS_PATH PROGRAM [ARG...]\n\n"
-    "Run PROGRAM passing ARGS while holding a write-lock on REPOS_PATH.\n"),
-   {0} },
+   ("usage: 1. svnadmin freeze REPOS_PATH PROGRAM [ARG...]\n"
+    "               2. svnadmin freeze -F FILE PROGRAM [ARG...]\n\n"
+    "1. Run PROGRAM passing ARGS while holding a write-lock on REPOS_PATH.\n"
+    "\n"
+    "2. Like 1 except all repositories listed in FILE are locked. The file\n"
+    "   format is repository paths separated by newlines.  Repositories are\n"
+    "   locked in the same order as they are listed in the file.\n"),
+   {'F'} },
 
   {"help", subcommand_help, {"?", "h"}, N_
    ("usage: svnadmin help [SUBCOMMAND...]\n\n"
@@ -471,7 +482,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
   {"verify", subcommand_verify, {0}, N_
    ("usage: svnadmin verify REPOS_PATH\n\n"
     "Verifies the data stored in the repository.\n"),
-  {'r', 'q', 'M'} },
+  {'t', 'r', 'q', 'M'} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -487,6 +498,7 @@ struct svnadmin_opt_state
   svn_boolean_t pre_1_6_compatible;                 /* --pre-1.6-compatible */
   svn_version_t *compatible_version;                /* --compatible-version */
   svn_opt_revision_t start_revision, end_revision;  /* -r X[:Y] */
+  const char *txn_id;                               /* -t TXN */
   svn_boolean_t help;                               /* --help or -? */
   svn_boolean_t version;                            /* --version */
   svn_boolean_t incremental;                        /* --incremental */
@@ -506,6 +518,7 @@ struct svnadmin_opt_state
                                                        --force-uuid */
   apr_uint64_t memory_cache_size;                   /* --memory-cache-size M */
   const char *parent_dir;
+  svn_stringbuf_t *filedata;                        /* --file */
 
   const char *config_dir;    /* Overriding Configuration Directory */
 };
@@ -623,47 +636,53 @@ subcommand_create(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
 
-  apr_hash_set(fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
-               APR_HASH_KEY_STRING,
-               (opt_state->bdb_txn_nosync ? "1" : "0"));
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
+                (opt_state->bdb_txn_nosync ? "1" :"0"));
 
-  apr_hash_set(fs_config, SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE,
-               APR_HASH_KEY_STRING,
-               (opt_state->bdb_log_keep ? "0" : "1"));
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE,
+                (opt_state->bdb_log_keep ? "0" :"1"));
 
   if (opt_state->fs_type)
-    apr_hash_set(fs_config, SVN_FS_CONFIG_FS_TYPE,
-                 APR_HASH_KEY_STRING,
-                 opt_state->fs_type);
+    {
+      /* With 1.8 we are announcing that BDB is deprecated.  No support
+       * has been removed and it will continue to work until some future
+       * date.  The purpose here is to discourage people from creating
+       * new BDB repositories which they will need to dump/load into
+       * FSFS or some new FS type in the future. */
+      if (0 == strcmp(opt_state->fs_type, SVN_FS_TYPE_BDB))
+        {
+          SVN_ERR(svn_cmdline_fprintf(
+                      stderr, pool,
+                      _("%swarning:"
+                        " The \"%s\" repository back-end is deprecated,"
+                        " consider using \"%s\" instead.\n"),
+                      "svnadmin: ", SVN_FS_TYPE_BDB, SVN_FS_TYPE_FSFS));
+          fflush(stderr);
+        }
+      svn_hash_sets(fs_config, SVN_FS_CONFIG_FS_TYPE, opt_state->fs_type);
+    }
 
   /* Prior to 1.8, we had explicit options to specify compatibility
      with a handful of prior Subversion releases. */
   if (opt_state->pre_1_4_compatible)
-    apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
-                 APR_HASH_KEY_STRING, "1");
+    svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE, "1");
   if (opt_state->pre_1_5_compatible)
-    apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
-                 APR_HASH_KEY_STRING, "1");
+    svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE, "1");
   if (opt_state->pre_1_6_compatible)
-    apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
-                 APR_HASH_KEY_STRING, "1");
+    svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE, "1");
 
   /* In 1.8, we figured out that we didn't have to keep extending this
      madness indefinitely. */
   if (opt_state->compatible_version)
     {
       if (! svn_version__at_least(opt_state->compatible_version, 1, 4, 0))
-        apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
-                     APR_HASH_KEY_STRING, "1");
+        svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE, "1");
       if (! svn_version__at_least(opt_state->compatible_version, 1, 5, 0))
-        apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
-                     APR_HASH_KEY_STRING, "1");
+        svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE, "1");
       if (! svn_version__at_least(opt_state->compatible_version, 1, 6, 0))
-        apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
-                     APR_HASH_KEY_STRING, "1");
+        svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE, "1");
       if (! svn_version__at_least(opt_state->compatible_version, 1, 8, 0))
-        apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE,
-                     APR_HASH_KEY_STRING, "1");
+        svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE, "1");
     }
 
   SVN_ERR(svn_repos_create(&repos, opt_state->repository_path,
@@ -754,6 +773,16 @@ repos_notify_handler(void *baton,
       svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
                                         _("* Verified revision %ld.\n"),
                                         notify->revision));
+      return;
+
+    case svn_repos_notify_verify_rev_structure:
+      if (notify->revision == SVN_INVALID_REVNUM)
+        svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                _("* Verifying repository metadata ...\n")));
+      else
+        svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                        _("* Verifying metadata at revision %ld ...\n"),
+                        notify->revision));
       return;
 
     case svn_repos_notify_pack_shard_start:
@@ -989,6 +1018,7 @@ struct freeze_baton_t {
   int status;
 };
 
+/* Implements svn_repos_freeze_func_t */
 static svn_error_t *
 freeze_body(void *baton,
             apr_pool_t *pool)
@@ -1018,6 +1048,7 @@ static svn_error_t *
 subcommand_freeze(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
+  apr_array_header_t *paths;
   apr_array_header_t *args;
   int i;
   struct freeze_baton_t b;
@@ -1028,13 +1059,25 @@ subcommand_freeze(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0,
                             _("No program provided"));
 
+  if (!opt_state->filedata)
+    {
+      /* One repository on the command line. */
+      paths = apr_array_make(pool, 1, sizeof(const char *));
+      APR_ARRAY_PUSH(paths, const char *) = opt_state->repository_path;
+    }
+  else
+    {
+      /* All repositories in filedata. */
+      paths = svn_cstring_split(opt_state->filedata->data, "\n", FALSE, pool);
+    }
+
   b.command = APR_ARRAY_IDX(args, 0, const char *);
   b.args = apr_palloc(pool, sizeof(char *) * args->nelts + 1);
   for (i = 0; i < args->nelts; ++i)
     b.args[i] = APR_ARRAY_IDX(args, i, const char *);
   b.args[args->nelts] = NULL;
 
-  SVN_ERR(svn_repos_freeze(opt_state->repository_path, freeze_body, &b, pool));
+  SVN_ERR(svn_repos_freeze(paths, freeze_body, &b, pool));
 
   /* Make any non-zero status visible to the user. */
   if (b.status)
@@ -1150,7 +1193,7 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                            opt_state->uuid_action, opt_state->parent_dir,
                            opt_state->use_pre_commit_hook,
                            opt_state->use_post_commit_hook,
-                           opt_state->bypass_prop_validation ? FALSE : TRUE,
+                           !opt_state->bypass_prop_validation,
                            opt_state->quiet ? NULL : repos_notify_handler,
                            stdout_stream, check_cancel, NULL, pool);
   if (err && err->apr_err == SVN_ERR_BAD_PROPERTY_VALUE)
@@ -1515,9 +1558,33 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
 
+  if (opt_state->txn_id
+      && (opt_state->start_revision.kind != svn_opt_revision_unspecified
+          || opt_state->end_revision.kind != svn_opt_revision_unspecified))
+    {
+      return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                               _("--revision (-r) and --transaction (-t) "
+                                 "are mutually exclusive"));
+    }
+
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs(repos);
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
+
+  /* Usage 2. */
+  if (opt_state->txn_id)
+    {
+      svn_fs_txn_t *txn;
+      svn_fs_root_t *root;
+
+      SVN_ERR(svn_fs_open_txn(&txn, fs, opt_state->txn_id, pool));
+      SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+      SVN_ERR(svn_fs_verify_root(root, pool));
+      return SVN_NO_ERROR;
+    }
+  else
+    /* Usage 1. */
+    ;
 
   /* Find the revision numbers at which to start and end. */
   SVN_ERR(get_revnum(&lower, &opt_state->start_revision,
@@ -1892,6 +1959,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   int opt_id;
   apr_array_header_t *received_opts;
   int i;
+  svn_boolean_t dash_F_arg = FALSE;
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
@@ -1960,6 +2028,10 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
             }
         }
         break;
+      case 't':
+        opt_state.txn_id = opt_arg;
+        break;
+
       case 'q':
         opt_state.quiet = TRUE;
         break;
@@ -1971,6 +2043,11 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         opt_state.memory_cache_size
             = 0x100000 * apr_strtoi64(opt_arg, NULL, 0);
         break;
+      case 'F':
+        SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        SVN_INT_ERR(svn_stringbuf_from_file2(&(opt_state.filedata),
+                                             utf8_opt_arg, pool));
+        dash_F_arg = TRUE;
       case svnadmin__version:
         opt_state.version = TRUE;
         break;
@@ -2023,9 +2100,10 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                       compatible_version->patch))
             {
               err = svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                      _("Cannot guaranteed compatibility "
+                                      _("Cannot guarantee compatibility "
                                         "beyond the current running version "
-                                        "(" SVN_VER_NUM ")"));
+                                        "(%s)"),
+                                      SVN_VER_NUM );
               return EXIT_ERROR(err);
             }
 
@@ -2125,18 +2203,21 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
               const char *first_arg_utf8;
               SVN_INT_ERR(svn_utf_cstring_to_utf8(&first_arg_utf8,
                                                   first_arg, pool));
-              svn_error_clear(svn_cmdline_fprintf(stderr, pool,
-                                                  _("Unknown command: '%s'\n"),
-                                                  first_arg_utf8));
+              svn_error_clear(
+                svn_cmdline_fprintf(stderr, pool,
+                                    _("Unknown subcommand: '%s'\n"),
+                                    first_arg_utf8));
               SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
               return EXIT_FAILURE;
             }
         }
     }
 
-  /* Every subcommand except `help' requires a second argument -- the
-     repository path.  Parse it out here and store it in opt_state. */
-  if (subcommand->cmd_func != subcommand_help)
+  /* Every subcommand except `help' and `freeze' with '-F' require a
+     second argument -- the repository path.  Parse it out here and
+     store it in opt_state. */
+  if (!(subcommand->cmd_func == subcommand_help
+        || (subcommand->cmd_func == subcommand_freeze && dash_F_arg)))
     {
       const char *repos_path = NULL;
 

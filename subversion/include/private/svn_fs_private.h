@@ -26,6 +26,7 @@
 #define SVN_FS_PRIVATE_H
 
 #include "svn_fs.h"
+#include "private/svn_editor.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -66,6 +67,120 @@ svn_fs__access_get_lock_tokens(svn_fs_access_t *access_ctx);
  */
 svn_error_t *
 svn_fs__path_valid(const char *path, apr_pool_t *pool);
+
+
+
+/** Editors
+ *
+ * ### docco
+ *
+ * @defgroup svn_fs_editor Transaction editors
+ * @{
+ */
+
+/**
+ * Create a new filesystem transaction, based on based on the youngest
+ * revision of @a fs, and return its name @a *txn_name and an @a *editor
+ * that can be used to make changes into it.
+ *
+ * @a flags determines transaction enforcement behaviors, and is composed
+ * from the constants SVN_FS_TXN_* (#SVN_FS_TXN_CHECK_OOD etc.). It is a
+ * property of the underlying transaction, and will not change if multiple
+ * editors are used to refer to that transaction (see @a autocommit, below).
+ *
+ * @note If you're building a txn for committing, you probably don't want
+ * to call this directly.  Instead, call svn_repos__get_commit_ev2(), which
+ * honors the repository's hook configurations.
+ *
+ * When svn_editor_complete() is called for @a editor, internal resources
+ * will be cleaned and nothing more will happen. If you wish to commit the
+ * transaction, call svn_fs_editor_commit() instead. It is illegal to call
+ * both; the second call will return #SVN_ERR_FS_INCORRECT_EDITOR_COMPLETION.
+ *
+ * @see svn_fs_commit_txn()
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs__editor_create(svn_editor_t **editor,
+                      const char **txn_name,
+                      svn_fs_t *fs,
+                      apr_uint32_t flags,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
+
+/**
+ * Like svn_fs__editor_create(), but open an existing transaction
+ * @a txn_name and continue editing it.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs__editor_create_for(svn_editor_t **editor,
+                          svn_fs_t *fs,
+                          const char *txn_name,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+
+/**
+ * Commit the transaction represented by @a editor.
+ *
+ * If the commit to the filesystem succeeds, then @a *revision will be set
+ * to the resulting revision number. Note that further errors may occur,
+ * as described below. If the commit process does not succeed, for whatever
+ * reason, then @a *revision will be set to #SVN_INVALID_REVNUM.
+ *
+ * If a conflict occurs during the commit, then @a *conflict_path will
+ * be set to a path that caused the conflict. #SVN_NO_ERROR will be returned.
+ * Callers may want to construct an #SVN_ERR_FS_CONFLICT error with a
+ * message that incorporates @a *conflict_path.
+ *
+ * If a non-conflict error occurs during the commit, then that error will
+ * be returned.
+ * As is standard with any Subversion API, @a revision, @a post_commit_err,
+ * and @a conflict_path (the OUT parameters) have an indeterminate value if
+ * an error is returned.
+ *
+ * If the commit completes (and a revision is returned in @a *revision), then
+ * it is still possible for an error to occur during the cleanup process.
+ * Any such error will be returned in @a *post_commit_err. The caller must
+ * properly use or clear that error.
+ *
+ * If svn_editor_complete() has already been called on @a editor, then
+ * #SVN_ERR_FS_INCORRECT_EDITOR_COMPLETION will be returned.
+ *
+ * @note After calling this function, @a editor will be marked as completed
+ * and no further operations may be performed on it. The underlying
+ * transaction will either be committed or aborted once this function is
+ * called. It cannot be recovered for additional work.
+ *
+ * @a result_pool will be used to allocate space for @a conflict_path.
+ * @a scratch_pool will be used for all temporary allocations.
+ *
+ * @note To summarize, there are three possible outcomes of this function:
+ * successful commit (with or without an associated @a *post_commit_err);
+ * failed commit due to a conflict (reported via @a *conflict_path); and
+ * failed commit for some other reason (reported via the returned error.)
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs__editor_commit(svn_revnum_t *revision,
+                      svn_error_t **post_commit_err,
+                      const char **conflict_path,
+                      svn_editor_t *editor,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
+
+/** @} */
+
 
 #ifdef __cplusplus
 }

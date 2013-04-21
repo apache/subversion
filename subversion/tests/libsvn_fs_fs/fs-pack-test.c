@@ -256,7 +256,7 @@ large_log(svn_revnum_t rev, apr_size_t length, apr_pool_t *pool)
   svn_stringbuf_appendcstr(temp, "A ");
   for (i = 0; i < count; ++i)
     svn_stringbuf_appendcstr(temp, "very, ");
-  
+
   svn_stringbuf_appendcstr(temp,
     apr_psprintf(pool, "very long message for rev %ld, indeed", rev));
 
@@ -733,6 +733,61 @@ recover_fully_packed(const svn_test_opts_t *opts,
 #undef SHARD_SIZE
 
 /* ------------------------------------------------------------------------ */
+/* Regression test for issue #4320 (fsfs file-hinting fails when reading a rep
+   from the transaction that is commiting rev = SHARD_SIZE). */
+#define REPO_NAME "test-repo-file-hint-at-shard-boundary"
+#define SHARD_SIZE 4
+#define MAX_REV (SHARD_SIZE - 1)
+static svn_error_t *
+file_hint_at_shard_boundary(const svn_test_opts_t *opts,
+                            apr_pool_t *pool)
+{
+  apr_pool_t *subpool;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  const char *file_contents;
+  svn_stringbuf_t *retrieved_contents;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  /* Bail (with success) on known-untestable scenarios */
+  if ((strcmp(opts->fs_type, "fsfs") != 0)
+      || (opts->server_minor_version && (opts->server_minor_version < 8)))
+    return SVN_NO_ERROR;
+
+  /* Create a packed FS and MAX_REV revisions */
+  SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE, pool));
+
+  /* Reopen the filesystem */
+  subpool = svn_pool_create(pool);
+  SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, subpool));
+
+  /* Revision = SHARD_SIZE */
+  file_contents = get_rev_contents(SHARD_SIZE, subpool);
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, MAX_REV, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "iota", file_contents,
+                                      subpool));
+
+  /* Retrieve the file. */
+  SVN_ERR(svn_test__get_file_contents(txn_root, "iota", &retrieved_contents,
+                                      subpool));
+  if (strcmp(retrieved_contents->data, file_contents))
+    {
+      err = svn_error_create(SVN_ERR_TEST_FAILED, err,
+                              "Retrieved incorrect contents from iota.");
+    }
+
+  /* Close the repo. */
+  svn_pool_destroy(subpool);
+
+  return err;
+}
+#undef REPO_NAME
+#undef MAX_REV
+#undef SHARD_SIZE
+
+/* ------------------------------------------------------------------------ */
 
 /* The test table.  */
 
@@ -755,5 +810,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "get/set huge packed revprops in FSFS"),
     SVN_TEST_OPTS_PASS(recover_fully_packed,
                        "recover a fully packed filesystem"),
+    SVN_TEST_OPTS_PASS(file_hint_at_shard_boundary,
+                       "test file hint at shard boundary"),
     SVN_TEST_NULL
   };

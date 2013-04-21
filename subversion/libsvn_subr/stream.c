@@ -21,8 +21,6 @@
  * ====================================================================
  */
 
-#include "svn_private_config.h"
-
 #include <assert.h>
 #include <stdio.h>
 
@@ -42,6 +40,7 @@
 #include "svn_utf.h"
 #include "svn_checksum.h"
 #include "svn_path.h"
+#include "svn_private_config.h"
 #include "private/svn_error_private.h"
 #include "private/svn_eol_private.h"
 #include "private/svn_io_private.h"
@@ -173,7 +172,7 @@ svn_stream_reset(svn_stream_t *stream)
 svn_boolean_t
 svn_stream_supports_mark(svn_stream_t *stream)
 {
-  return stream->mark_fn == NULL ? FALSE : TRUE;
+  return stream->mark_fn != NULL;
 }
 
 svn_error_t *
@@ -847,7 +846,7 @@ svn_stream_open_readonly(svn_stream_t **stream,
 {
   apr_file_t *file;
 
-  SVN_ERR(svn_io_file_open(&file, path, APR_READ | APR_BUFFERED | APR_BINARY,
+  SVN_ERR(svn_io_file_open(&file, path, APR_READ | APR_BUFFERED,
                            APR_OS_DEFAULT, result_pool));
   *stream = svn_stream_from_aprfile2(file, FALSE, result_pool);
 
@@ -866,7 +865,6 @@ svn_stream_open_writable(svn_stream_t **stream,
   SVN_ERR(svn_io_file_open(&file, path,
                            APR_WRITE
                              | APR_BUFFERED
-                             | APR_BINARY
                              | APR_CREATE
                              | APR_EXCL,
                            APR_OS_DEFAULT, result_pool));
@@ -1782,6 +1780,19 @@ seek_handler_lazyopen(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_stream__is_buffered_fn_t */
+static svn_boolean_t
+is_buffered_lazyopen(void *baton)
+{
+  lazyopen_baton_t *b = baton;
+
+  /* No lazy open as we cannot handle an open error. */
+  if (!b->real_stream)
+    return FALSE;
+
+  return svn_stream__is_buffered(b->real_stream);
+}
+
 svn_stream_t *
 svn_stream_lazyopen_create(svn_stream_lazyopen_func_t open_func,
                            void *open_baton,
@@ -1802,6 +1813,7 @@ svn_stream_lazyopen_create(svn_stream_lazyopen_func_t open_func,
   svn_stream_set_close(stream, close_handler_lazyopen);
   svn_stream_set_mark(stream, mark_handler_lazyopen);
   svn_stream_set_seek(stream, seek_handler_lazyopen);
-  
+  svn_stream__set_is_buffered(stream, is_buffered_lazyopen);
+
   return stream;
 }

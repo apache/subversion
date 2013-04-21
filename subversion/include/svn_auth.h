@@ -590,19 +590,25 @@ svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 
 /** @brief Indicates whether providers may save passwords to disk in
  * plaintext. Property value can be either SVN_CONFIG_TRUE,
- * SVN_CONFIG_FALSE, or SVN_CONFIG_ASK. */
+ * SVN_CONFIG_FALSE, or SVN_CONFIG_ASK.
+ * @since New in 1.6.
+ */
 #define SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS  SVN_AUTH_PARAM_PREFIX \
                                                   "store-plaintext-passwords"
 
 /** @brief The application doesn't want any providers to save passphrase
  * to disk. Property value is irrelevant; only property's existence
- * matters. */
+ * matters.
+ * @since New in 1.6.
+ */
 #define SVN_AUTH_PARAM_DONT_STORE_SSL_CLIENT_CERT_PP \
   SVN_AUTH_PARAM_PREFIX "dont-store-ssl-client-cert-pp"
 
 /** @brief Indicates whether providers may save passphrase to disk in
  * plaintext. Property value can be either SVN_CONFIG_TRUE,
- * SVN_CONFIG_FALSE, or SVN_CONFIG_ASK. */
+ * SVN_CONFIG_FALSE, or SVN_CONFIG_ASK.
+ * @since New in 1.6.
+ */
 #define SVN_AUTH_PARAM_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT \
   SVN_AUTH_PARAM_PREFIX "store-ssl-client-cert-pp-plaintext"
 
@@ -682,6 +688,28 @@ svn_auth_next_credentials(void **credentials,
 svn_error_t *
 svn_auth_save_credentials(svn_auth_iterstate_t *state,
                           apr_pool_t *pool);
+
+/** Forget a set (or all) memory-cached credentials.
+ *
+ * Remove references (if any) in @a auth_baton to credentials cached
+ * therein.  If @a cred_kind and @a realmstring are non-NULL, forget
+ * only the credentials associated with those credential types and
+ * realm.  Otherwise @a cred_kind and @a realmstring must both be
+ * NULL, and this function will forget all credentials cached within
+ * @a auth_baton.
+ *
+ * @note This function does not affect persisted authentication
+ * credential storage at all.  It is merely a way to cause Subversion
+ * to forget about credentials already fetched from a provider,
+ * forcing them to be fetched again later should they be required.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_auth_forget_credentials(svn_auth_baton_t *auth_baton,
+                            const char *cred_kind,
+                            const char *realmstring,
+                            apr_pool_t *pool);
 
 /** @} */
 

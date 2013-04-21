@@ -26,6 +26,7 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
+#include "svn_hash.h"
 #include "svn_compat.h"
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -35,15 +36,17 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_checksum.h"
+#include "svn_ctype.h"
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
 #include "svn_private_config.h"
-#include "svn_editor.h"
 
 #include "repos.h"
 
 #include "private/svn_fspath.h"
+#include "private/svn_fs_private.h"
 #include "private/svn_repos_private.h"
+#include "private/svn_editor.h"
 
 
 
@@ -256,6 +259,78 @@ make_dir_baton(struct edit_baton *edit_baton,
   return db;
 }
 
+/* Return a copy of PATH, allocated from POOL, for which control
+   characters have been escaped using the form \NNN (where NNN is the
+   octal representation of the byte's ordinal value).  */
+static const char *
+illegal_path_escape(const char *path, apr_pool_t *pool)
+{
+  svn_stringbuf_t *retstr;
+  apr_size_t i, copied = 0;
+  int c;
+
+  /* At least one control character:
+      strlen - 1 (control) + \ + N + N + N + null . */
+  retstr = svn_stringbuf_create_ensure(strlen(path) + 4, pool);
+  for (i = 0; path[i]; i++)
+    {
+      c = (unsigned char)path[i];
+      if (! svn_ctype_iscntrl(c))
+        continue;
+
+      /* If we got here, we're looking at a character that isn't
+         supported by the (or at least, our) URI encoding scheme.  We
+         need to escape this character.  */
+
+      /* First things first, copy all the good stuff that we haven't
+         yet copied into our output buffer. */
+      if (i - copied)
+        svn_stringbuf_appendbytes(retstr, path + copied,
+                                  i - copied);
+
+      /* Make sure buffer is big enough for '\' 'N' 'N' 'N' (and NUL) */
+      svn_stringbuf_ensure(retstr, retstr->len + 4);
+      /*### The backslash separator doesn't work too great with Windows,
+         but it's what we'll use for consistency with invalid utf8
+         formatting (until someone has a better idea) */
+      apr_snprintf(retstr->data + retstr->len, 5, "\\%03o", (unsigned char)c);
+      retstr->len += 4;
+
+      /* Finally, update our copy counter. */
+      copied = i + 1;
+    }
+
+  /* If we didn't encode anything, we don't need to duplicate the string. */
+  if (retstr->len == 0)
+    return path;
+
+  /* Anything left to copy? */
+  if (i - copied)
+    svn_stringbuf_appendbytes(retstr, path + copied, i - copied);
+
+  /* retstr is null-terminated either by apr_snprintf or the svn_stringbuf
+     functions. */
+
+  return retstr->data;
+}
+
+/* Reject paths which contain control characters (related to issue #4340). */
+static svn_error_t *
+check_valid_path(const char *path,
+                 apr_pool_t *pool)
+{
+  const char *c;
+
+  for (c = path; *c; c++)
+    {
+      if (svn_ctype_iscntrl(*c))
+        return svn_error_createf(SVN_ERR_FS_PATH_SYNTAX, NULL,
+           _("Invalid control character '0x%02x' in path '%s'"),
+           (unsigned char)*c, illegal_path_escape(path, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
 
 /* This function is the shared guts of add_file() and add_directory(),
    which see for the meanings of the parameters.  The only extra
@@ -275,6 +350,8 @@ add_file_or_directory(const char *path,
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_boolean_t was_copied = FALSE;
   const char *full_path;
+
+  SVN_ERR(check_valid_path(path, pool));
 
   full_path = svn_fspath__join(eb->base_path,
                                svn_relpath_canonicalize(path, pool), pool);
@@ -849,14 +926,13 @@ fetch_props_func(apr_hash_t **props,
 }
 
 static svn_error_t *
-fetch_kind_func(svn_kind_t *kind,
+fetch_kind_func(svn_node_kind_t *kind,
                 void *baton,
                 const char *path,
                 svn_revnum_t base_revision,
                 apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
-  svn_node_kind_t node_kind;
   svn_fs_root_t *fs_root;
 
   if (!SVN_IS_VALID_REVNUM(base_revision))
@@ -864,8 +940,7 @@ fetch_kind_func(svn_kind_t *kind,
 
   SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision, scratch_pool));
 
-  SVN_ERR(svn_fs_check_path(&node_kind, fs_root, path, scratch_pool));
-  *kind = svn__kind_from_node_kind(node_kind, FALSE);
+  SVN_ERR(svn_fs_check_path(kind, fs_root, path, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1084,7 +1159,7 @@ add_symlink_cb(void *baton,
 static svn_error_t *
 add_absent_cb(void *baton,
               const char *relpath,
-              svn_kind_t kind,
+              svn_node_kind_t kind,
               svn_revnum_t replaces_rev,
               apr_pool_t *scratch_pool)
 {
@@ -1220,14 +1295,20 @@ complete_cb(void *baton,
   const char *conflict_path;
   svn_error_t *err;
   const char *post_commit_errstr;
+  apr_hash_t *hooks_env;
+
+  /* Parse the hooks-env file (if any). */
+  SVN_ERR(svn_repos__parse_hooks_env(&hooks_env, eb->repos->hooks_env_path,
+                                     scratch_pool, scratch_pool));
 
   /* The transaction has been fully edited. Let the pre-commit hook
      have a look at the thing.  */
-  SVN_ERR(svn_repos__hooks_pre_commit(eb->repos, eb->txn_name, scratch_pool));
+  SVN_ERR(svn_repos__hooks_pre_commit(eb->repos, hooks_env,
+                                      eb->txn_name, scratch_pool));
 
   /* Hook is done. Let's do the actual commit.  */
-  SVN_ERR(svn_fs_editor_commit(&revision, &post_commit_err, &conflict_path,
-                               eb->inner, scratch_pool, scratch_pool));
+  SVN_ERR(svn_fs__editor_commit(&revision, &post_commit_err, &conflict_path,
+                                eb->inner, scratch_pool, scratch_pool));
 
   /* Did a conflict occur during the commit process?  */
   if (conflict_path != NULL)
@@ -1239,8 +1320,8 @@ complete_cb(void *baton,
      Other errors may have occurred within the FS (specified by the
      POST_COMMIT_ERR localvar), but we need to run the hooks.  */
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
-  err = svn_repos__hooks_post_commit(eb->repos, revision, eb->txn_name,
-                                     scratch_pool);
+  err = svn_repos__hooks_post_commit(eb->repos, hooks_env, revision,
+                                     eb->txn_name, scratch_pool);
   if (err)
     err = svn_error_create(SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED, err,
                            _("Commit succeeded, but post-commit hook failed"));
@@ -1330,12 +1411,16 @@ svn_repos__get_commit_ev2(svn_editor_t **editor,
   };
   struct ev2_baton *eb;
   const svn_string_t *author;
+  apr_hash_t *hooks_env;
+
+  /* Parse the hooks-env file (if any). */
+  SVN_ERR(svn_repos__parse_hooks_env(&hooks_env, repos->hooks_env_path,
+                                     scratch_pool, scratch_pool));
 
   /* Can the user modify the repository at all?  */
   /* ### check against AUTHZ.  */
 
-  author = apr_hash_get(revprops, SVN_PROP_REVISION_AUTHOR,
-                        APR_HASH_KEY_STRING);
+  author = svn_hash_gets(revprops, SVN_PROP_REVISION_AUTHOR);
 
   eb = apr_palloc(result_pool, sizeof(*eb));
   eb->repos = repos;
@@ -1345,16 +1430,17 @@ svn_repos__get_commit_ev2(svn_editor_t **editor,
   eb->commit_cb = commit_cb;
   eb->commit_baton = commit_baton;
 
-  SVN_ERR(svn_fs_editor_create(&eb->inner, &eb->txn_name,
-                               repos->fs, SVN_FS_TXN_CHECK_LOCKS,
-                               cancel_func, cancel_baton,
-                               result_pool, scratch_pool));
+  SVN_ERR(svn_fs__editor_create(&eb->inner, &eb->txn_name,
+                                repos->fs, SVN_FS_TXN_CHECK_LOCKS,
+                                cancel_func, cancel_baton,
+                                result_pool, scratch_pool));
 
   /* The TXN has been created. Go ahead and apply all revision properties.  */
   SVN_ERR(apply_revprops(repos->fs, eb->txn_name, revprops, scratch_pool));
 
   /* Okay... some access is allowed. Let's run the start-commit hook.  */
-  SVN_ERR(svn_repos__hooks_start_commit(repos, author ? author->data : NULL,
+  SVN_ERR(svn_repos__hooks_start_commit(repos, hooks_env,
+                                        author ? author->data : NULL,
                                         repos->client_capabilities,
                                         eb->txn_name, scratch_pool));
 

@@ -19,39 +19,37 @@
 #
 # Watch for events from SvnPubSub and print them to stdout
 #
-# ### usage...
 #
 
 import sys
-import urlparse
 import pprint
+try:
+  import urlparse
+except ImportError:
+  import urllib.parse as urlparse
 
 import svnpubsub.client
-import svnwcsub  ### for ReloadableConfig
 
 
-def _commit(host, port, rev):
-  print 'COMMIT: from %s:%s' % (host, port)
-  pprint.pprint(vars(rev), indent=2)
+def _commit(url, commit):
+  print('COMMIT: from %s' % url)
+  pprint.pprint(vars(commit), indent=2)
 
 
-def _event(host, port, event_name):
-  print 'EVENT: from %s:%s "%s"' % (host, port, event_name)
+def _event(url, event_name, event_arg):
+  if event_arg:
+    print('EVENT: from %s "%s" "%s"' % (url, event_name, event_arg))
+  else:
+    print('EVENT: from %s "%s"' % (url, event_name))
 
 
-def main(config_file):
-  config = svnwcsub.ReloadableConfig(config_file)
-  hostports = [ ]
-  for url in config.get_value('streams').split():
-    parsed = urlparse.urlparse(url)
-    hostports.append((parsed.hostname, parsed.port))
-
-  mc = svnpubsub.client.MultiClient(hostports, _commit, _event)
+def main(urls):
+  mc = svnpubsub.client.MultiClient(urls, _commit, _event)
   mc.run_forever()
 
 
 if __name__ == "__main__":
-  if len(sys.argv) != 2:
-    print "invalid args, read source code"
+  if len(sys.argv) < 2:
+    print("usage: watcher.py URL [URL...]")
     sys.exit(0)
-  main(sys.argv[1])
+  main(sys.argv[1:])

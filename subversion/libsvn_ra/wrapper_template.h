@@ -291,8 +291,10 @@ static svn_error_t *compat_do_update(void *session_baton,
 
   SVN_ERR(VTBL.do_update(session_baton, &reporter3, &baton3,
                          revision_to_update_to, update_target, depth,
-                         FALSE, /* no copyfrom args */
-                         editor, update_baton, pool));
+                         FALSE /* send_copyfrom_args */,
+                         FALSE /* ignore_ancestry */,
+                         editor, update_baton,
+                         pool, pool));
   compat_wrap_reporter(reporter, report_baton, reporter3, baton3, pool);
 
   return SVN_NO_ERROR;
@@ -315,7 +317,11 @@ static svn_error_t *compat_do_switch(void *session_baton,
 
   SVN_ERR(VTBL.do_switch(session_baton, &reporter3, &baton3,
                          revision_to_switch_to, switch_target, depth,
-                         switch_url, editor, switch_baton, pool));
+                         switch_url,
+                         FALSE /* send_copyfrom_args */,
+                         TRUE /* ignore_ancestry */,
+                         editor, switch_baton,
+                         pool /* result_pool */, pool /* scratch_pool */));
 
   compat_wrap_reporter(reporter, report_baton, reporter3, baton3, pool);
 

@@ -76,25 +76,29 @@ open_rep_cache(void *baton,
 {
   svn_fs_t *fs = baton;
   fs_fs_data_t *ffd = fs->fsap_data;
+  svn_sqlite__db_t *sdb;
   const char *db_path;
   int version;
 
   /* Open (or create) the sqlite database.  It will be automatically
      closed when fs->pool is destoyed. */
   db_path = path_rep_cache_db(fs->path, pool);
-  SVN_ERR(svn_sqlite__open(&ffd->rep_cache_db, db_path,
+  SVN_ERR(svn_sqlite__open(&sdb, db_path,
                            svn_sqlite__mode_rwcreate, statements,
                            0, NULL,
                            fs->pool, pool));
 
-  SVN_ERR(svn_sqlite__read_schema_version(&version, ffd->rep_cache_db, pool));
+  SVN_ERR(svn_sqlite__read_schema_version(&version, sdb, pool));
   if (version < REP_CACHE_SCHEMA_FORMAT)
     {
       /* Must be 0 -- an uninitialized (no schema) database. Create
          the schema. Results in schema version of 1.  */
-      SVN_ERR(svn_sqlite__exec_statements(ffd->rep_cache_db,
-                                          STMT_CREATE_SCHEMA));
+      SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_CREATE_SCHEMA));
     }
+
+  /* This is used as a flag that the database is available so don't
+     set it earlier. */
+  ffd->rep_cache_db = sdb;
 
   return SVN_NO_ERROR;
 }
@@ -124,6 +128,8 @@ svn_fs_fs__exists_rep_cache(svn_boolean_t *exists,
 
 svn_error_t *
 svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
+                              svn_revnum_t start,
+                              svn_revnum_t end,
                               svn_error_t *(*walker)(representation_t *,
                                                      void *,
                                                      svn_fs_t *,
@@ -131,8 +137,6 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
                               void *walker_baton,
                               svn_cancel_func_t cancel_func,
                               void *cancel_baton,
-                              svn_revnum_t start,
-                              svn_revnum_t end,
                               apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -151,16 +155,15 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
   /* Check global invariants. */
   if (start == 0)
     {
-      svn_sqlite__stmt_t *stmt2;
       svn_revnum_t max;
 
-      SVN_ERR(svn_sqlite__get_statement(&stmt2, ffd->rep_cache_db,
+      SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db,
                                         STMT_GET_MAX_REV));
-      SVN_ERR(svn_sqlite__step(&have_row, stmt2));
-      max = svn_sqlite__column_revnum(stmt2, 0);
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      max = svn_sqlite__column_revnum(stmt, 0);
+      SVN_ERR(svn_sqlite__reset(stmt));
       if (SVN_IS_VALID_REVNUM(max))  /* The rep-cache could be empty. */
         SVN_ERR(svn_fs_fs__revision_exists(max, fs, iterpool));
-      SVN_ERR(svn_sqlite__reset(stmt2));
     }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db,
@@ -174,6 +177,7 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
     {
       representation_t *rep;
       const char *sha1_digest;
+      svn_error_t *err;
 
       /* Clear ITERPOOL occasionally. */
       if (iterations++ % 16 == 0)
@@ -181,21 +185,29 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
 
       /* Check for cancellation. */
       if (cancel_func)
-        SVN_ERR(cancel_func(cancel_baton));
+        {
+          err = cancel_func(cancel_baton);
+          if (err)
+            return svn_error_compose_create(err, svn_sqlite__reset(stmt));
+        }
 
       /* Construct a representation_t. */
       rep = apr_pcalloc(iterpool, sizeof(*rep));
       sha1_digest = svn_sqlite__column_text(stmt, 0, iterpool);
-      SVN_ERR(svn_checksum_parse_hex(&rep->sha1_checksum,
-                                     svn_checksum_sha1, sha1_digest,
-                                     iterpool));
+      err = svn_checksum_parse_hex(&rep->sha1_checksum,
+                                   svn_checksum_sha1, sha1_digest,
+                                   iterpool);
+      if (err)
+        return svn_error_compose_create(err, svn_sqlite__reset(stmt));
       rep->revision = svn_sqlite__column_revnum(stmt, 1);
       rep->offset = svn_sqlite__column_int64(stmt, 2);
       rep->size = svn_sqlite__column_int64(stmt, 3);
       rep->expanded_size = svn_sqlite__column_int64(stmt, 4);
 
       /* Walk. */
-      SVN_ERR(walker(rep, walker_baton, fs, iterpool));
+      err = walker(rep, walker_baton, fs, iterpool);
+      if (err)
+        return svn_error_compose_create(err, svn_sqlite__reset(stmt));
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
@@ -247,10 +259,12 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
   else
     *rep = NULL;
 
+  SVN_ERR(svn_sqlite__reset(stmt));
+
   if (*rep)
     SVN_ERR(rep_has_been_born(*rep, fs, pool));
 
-  return svn_sqlite__reset(stmt);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

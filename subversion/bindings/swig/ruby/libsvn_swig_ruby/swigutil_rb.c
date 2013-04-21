@@ -53,6 +53,7 @@
 #include <locale.h>
 #include <math.h>
 
+#include "svn_hash.h"
 #include "svn_nls.h"
 #include "svn_pools.h"
 #include "svn_props.h"
@@ -1219,7 +1220,7 @@ r2c_svn_string(VALUE value, void *ctx, apr_pool_t *pool)
 }
 
 void *
-svn_swig_rb_to_swig_type(VALUE value, void *ctx, apr_pool_t *pool)
+svn_swig_rb_to_swig_type(VALUE value, const void *ctx, apr_pool_t *pool)
 {
   void **result = NULL;
   result = apr_palloc(pool, sizeof(void *));
@@ -1516,10 +1517,8 @@ r2c_hash_i(VALUE key, VALUE value, hash_to_apr_hash_data_t *data)
 {
   if (key != Qundef) {
     void *val = data->func(value, data->ctx, data->pool);
-    apr_hash_set(data->apr_hash,
-                 apr_pstrdup(data->pool, StringValuePtr(key)),
-                 APR_HASH_KEY_STRING,
-                 val);
+    svn_hash_sets(data->apr_hash, apr_pstrdup(data->pool, StringValuePtr(key)),
+                  val);
   }
   return ST_CONTINUE;
 }

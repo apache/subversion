@@ -35,12 +35,14 @@
 
 #include <expat.h>
 
+#include "svn_hash.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_private_config.h"
 #include "svn_string.h"
 #include "svn_xml.h"
 #include "svn_props.h"
+#include "svn_dirent_uri.h"
 
 #include "../libsvn_ra/ra_loader.h"
 #include "private/svn_dep_compat.h"
@@ -190,12 +192,12 @@ static char *
 convert_organisation_to_str(apr_hash_t *org, apr_pool_t *pool)
 {
   return apr_psprintf(pool, "%s, %s, %s, %s, %s (%s)",
-                      (char*)apr_hash_get(org, "OU", APR_HASH_KEY_STRING),
-                      (char*)apr_hash_get(org, "O", APR_HASH_KEY_STRING),
-                      (char*)apr_hash_get(org, "L", APR_HASH_KEY_STRING),
-                      (char*)apr_hash_get(org, "ST", APR_HASH_KEY_STRING),
-                      (char*)apr_hash_get(org, "C", APR_HASH_KEY_STRING),
-                      (char*)apr_hash_get(org, "E", APR_HASH_KEY_STRING));
+                      (char*)svn_hash_gets(org, "OU"),
+                      (char*)svn_hash_gets(org, "O"),
+                      (char*)svn_hash_gets(org, "L"),
+                      (char*)svn_hash_gets(org, "ST"),
+                      (char*)svn_hash_gets(org, "C"),
+                      (char*)svn_hash_gets(org, "E"));
 }
 
 /* This function is called on receiving a ssl certificate of a server when
@@ -233,17 +235,15 @@ ssl_server_cert(void *baton, int failures,
   issuer = serf_ssl_cert_issuer(cert, scratch_pool);
   serf_cert = serf_ssl_cert_certificate(cert, scratch_pool);
 
-  cert_info.hostname = apr_hash_get(subject, "CN", APR_HASH_KEY_STRING);
-  san = apr_hash_get(serf_cert, "subjectAltName", APR_HASH_KEY_STRING);
-  cert_info.fingerprint = apr_hash_get(serf_cert, "sha1", APR_HASH_KEY_STRING);
+  cert_info.hostname = svn_hash_gets(subject, "CN");
+  san = svn_hash_gets(serf_cert, "subjectAltName");
+  cert_info.fingerprint = svn_hash_gets(serf_cert, "sha1");
   if (! cert_info.fingerprint)
     cert_info.fingerprint = apr_pstrdup(scratch_pool, "<unknown>");
-  cert_info.valid_from = apr_hash_get(serf_cert, "notBefore",
-                         APR_HASH_KEY_STRING);
+  cert_info.valid_from = svn_hash_gets(serf_cert, "notBefore");
   if (! cert_info.valid_from)
     cert_info.valid_from = apr_pstrdup(scratch_pool, "[invalid date]");
-  cert_info.valid_until = apr_hash_get(serf_cert, "notAfter",
-                          APR_HASH_KEY_STRING);
+  cert_info.valid_until = svn_hash_gets(serf_cert, "notAfter");
   if (! cert_info.valid_until)
     cert_info.valid_until = apr_pstrdup(scratch_pool, "[invalid date]");
   cert_info.issuer_dname = convert_organisation_to_str(issuer, scratch_pool);
@@ -657,7 +657,7 @@ setup_serf_req(serf_request_t *request,
       SVN_ERR(svn_ra_serf__copy_into_spillbuf(&buf, body_bkt,
                                               request_pool,
                                               scratch_pool));
-      /* Destroy original bucket since it content is already copied 
+      /* Destroy original bucket since it content is already copied
          to spillbuf. */
       serf_bucket_destroy(body_bkt);
 
@@ -723,7 +723,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
 {
   apr_pool_t *iterpool;
   apr_interval_time_t waittime_left = sess->timeout;
-  
+
   assert(sess->pending_error == SVN_NO_ERROR);
 
   iterpool = svn_pool_create(scratch_pool);
@@ -761,7 +761,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
                 {
                   waittime_left -= SVN_RA_SERF__CONTEXT_RUN_DURATION;
                 }
-              else 
+              else
                 {
                   return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT, NULL,
                                           _("Connection timed out"));
@@ -987,27 +987,51 @@ svn_ra_serf__response_discard_handler(serf_request_t *request,
 
 
 /* Return the value of the RESPONSE's Location header if any, or NULL
-   otherwise.  All allocations will be made in POOL.  */
+   otherwise.  */
 static const char *
 response_get_location(serf_bucket_t *response,
-                      apr_pool_t *pool)
+                      const char *base_url,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
 {
   serf_bucket_t *headers;
   const char *location;
-  apr_status_t status;
-  apr_uri_t uri;
 
   headers = serf_bucket_response_get_headers(response);
   location = serf_bucket_headers_get(headers, "Location");
   if (location == NULL)
     return NULL;
 
-  /* Ignore the scheme/host/port. Or just return as-is if we can't parse.  */
-  status = apr_uri_parse(pool, location, &uri);
-  if (!status)
-    location = uri.path;
+  /* The RFCs say we should have received a full url in LOCATION, but
+     older apache versions and many custom web handlers just return a
+     relative path here...
 
-  return svn_urlpath__canonicalize(location, pool);
+     And we can't trust anything because it is network data.
+   */
+  if (*location == '/')
+    {
+      apr_uri_t uri;
+      apr_status_t status;
+
+      status = apr_uri_parse(scratch_pool, base_url, &uri);
+
+      if (status != APR_SUCCESS)
+        return NULL;
+
+      /* Replace the path path with what we got */
+      uri.path = (char*)svn_urlpath__canonicalize(location, scratch_pool);
+
+      /* And make APR produce a proper full url for us */
+      location = apr_uri_unparse(scratch_pool, &uri, 0);
+
+      /* Fall through to ensure our canonicalization rules */
+    }
+  else if (!svn_path_is_url(location))
+    {
+      return NULL; /* Any other formats we should support? */
+    }
+
+  return svn_uri_canonicalize(location, result_pool);
 }
 
 
@@ -1395,7 +1419,7 @@ xml_parser_cleanup(void *baton)
 
   if (*xmlp)
     {
-      XML_ParserFree(*xmlp);
+      (void) XML_ParserFree(*xmlp);
       *xmlp = NULL;
     }
 
@@ -1427,7 +1451,7 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
   /* Parsing the pending conten in the spillbuf will result in many disc i/o
      operations. This can be so slow that we don't run the network event
      processing loop often enough, resulting in timed out connections.
-   
+
      So we limit the amounts of bytes parsed per iteration.
    */
   while (cur_read < PENDING_TO_PARSE)
@@ -1559,7 +1583,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
     }
 
   /* Woo-hoo.  Nothing here to see.  */
-  if (sl.code == 404 && ctx->ignore_errors == FALSE)
+  if (sl.code == 404 && !ctx->ignore_errors)
     {
       err = handle_server_error(request, response, pool);
 
@@ -1751,7 +1775,7 @@ svn_ra_serf__credentials_callback(char **username, char **password,
           (void) save_error(session,
                             svn_error_create(
                               SVN_ERR_AUTHN_FAILED, NULL,
-                              _("No more credentials or we tried too many"
+                              _("No more credentials or we tried too many "
                                 "times.\nAuthentication failed")));
           return SVN_ERR_AUTHN_FAILED;
         }
@@ -1770,7 +1794,7 @@ svn_ra_serf__credentials_callback(char **username, char **password,
       if (!session->proxy_username || session->proxy_auth_attempts > 4)
         {
           /* No more credentials. */
-          (void) save_error(session, 
+          (void) save_error(session,
                             svn_error_create(
                               SVN_ERR_AUTHN_FAILED, NULL,
                               _("Proxy authentication failed")));
@@ -1896,7 +1920,10 @@ handle_response(serf_request_t *request,
     }
 
   /* ... and set up the header fields in HANDLER.  */
-  handler->location = response_get_location(response, handler->handler_pool);
+  handler->location = response_get_location(response,
+                                            handler->session->session_url_str,
+                                            handler->handler_pool,
+                                            scratch_pool);
 
   /* On the last request, we failed authentication. We succeeded this time,
      so let's save away these credentials.  */
@@ -2238,8 +2265,7 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
           *vcc_url = svn_prop_get_value(ns_props,
                                         "version-controlled-configuration");
 
-          ns_props = apr_hash_get(props,
-                                  SVN_DAV_PROP_NS_DAV, APR_HASH_KEY_STRING);
+          ns_props = svn_hash_gets(props, SVN_DAV_PROP_NS_DAV);
           relative_path = svn_prop_get_value(ns_props,
                                              "baseline-relative-path");
           uuid = svn_prop_get_value(ns_props, "repository-uuid");

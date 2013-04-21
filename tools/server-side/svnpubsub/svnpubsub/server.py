@@ -28,20 +28,24 @@
 # Currently supports both XML and JSON serialization.
 #
 # Example Sub clients:
-#   curl  -i http://127.0.0.1:2069/dirs-changed/xml
-#   curl  -i http://127.0.0.1:2069/dirs-changed/json
-#   curl  -i http://127.0.0.1:2069/commits/json
-#   curl  -i http://127.0.0.1:2069/commits/13f79535-47bb-0310-9956-ffa450edef68/json
-#   curl  -i http://127.0.0.1:2069/dirs-changed/13f79535-47bb-0310-9956-ffa450edef68/json
+#   curl -sN http://127.0.0.1:2069/commits
+#   curl -sN http://127.0.0.1:2069/commits/svn/*
+#   curl -sN http://127.0.0.1:2069/commits/svn
+#   curl -sN http://127.0.0.1:2069/commits/*/13f79535-47bb-0310-9956-ffa450edef68
+#   curl -sN http://127.0.0.1:2069/commits/svn/13f79535-47bb-0310-9956-ffa450edef68
 #
-#   URL is built into 3 parts:
-#       /${type}/${optional_repo_uuid}/${format}
+#   URL is built into 2 parts:
+#       /commits/${optional_type}/${optional_repository}
 #
-#   If the repository UUID is included in the URl, you will only receive
-#   messages about that repository.
+#   If the type is included in the URL, you will only get commits of that type.
+#   The type can be * and then you will receive commits of any type.
+#
+#   If the repository is included in the URL, you will only receive
+#   messages about that repository.  The repository can be * and then you
+#   will receive messages about all repositories.
 #
 # Example Pub clients:
-#   curl -T revinfo.json -i http://127.0.0.1:2069/commit
+#   curl -T revinfo.json -i http://127.0.0.1:2069/commits
 #
 # TODO:
 #   - Add Real access controls (not just 127.0.0.1)
@@ -61,75 +65,53 @@ import sys
 import twisted
 from twisted.internet import reactor
 from twisted.internet import defer
-from twisted.web import server, static
+from twisted.web import server
 from twisted.web import resource
 from twisted.python import log
 
-try:
-    from xml.etree import cElementTree as ET
-except:
-    from xml.etree import ElementTree as ET
 import time
 
-class Revision:
+class Commit:
     def __init__(self, r):
-        # Don't escape the values; json handles binary values fine.
-        # ET will happily emit literal control characters (eg, NUL),
-        # thus creating invalid XML, so the XML code paths do escaping.
-        self.rev = r.get('revision')
-        self.repos = r.get('repos')
-        self.dirs_changed = [x for x in r.get('dirs_changed')]
-        self.author = r.get('author')
-        self.log = r.get('log')
-        self.date = r.get('date')
+        self.__dict__.update(r)
+        if not self.check_value('repository'):
+            raise ValueError('Invalid Repository Value')
+        if not self.check_value('type'):
+            raise ValueError('Invalid Type Value')
+        if not self.check_value('format'):
+            raise ValueError('Invalid Format Value')
+        if not self.check_value('id'):
+            raise ValueError('Invalid ID Value')
 
-    def render_commit(self, format):
-        if format == "json":
-            return json.dumps({'commit': {'repository': self.repos,
-                                          'revision': self.rev,
-                                          'dirs_changed': self.dirs_changed,
-                                          'author': self.author,
-                                          'log': self.log,
-                                          'date': self.date}}) +","
-        elif format == "xml":
-            c = ET.Element('commit', {'repository': self.repos, 'revision': "%d" % (self.rev)})
-            ET.SubElement(c, 'author').text = self.author.encode('unicode_escape')
-            ET.SubElement(c, 'date').text = self.date.encode('unicode_escape')
-            ET.SubElement(c, 'log').text = self.log.encode('unicode_escape')
-            d = ET.SubElement(c, 'dirs_changed')
-            for p in self.dirs_changed:
-                x = ET.SubElement(d, 'path')
-                x.text = p.encode('unicode_escape')
-            str = ET.tostring(c, 'UTF-8') + "\n"
-            return str[39:]
-        else:
-            raise Exception("Ooops, invalid format")
+    def check_value(self, k):
+        return hasattr(self, k) and self.__dict__[k]
 
-    def render_dirs_changed(self, format):
-        if format == "json":
-            return json.dumps({'commit': {'repository': self.repos,
-                                          'revision': self.rev,
-                                          'dirs_changed': self.dirs_changed}}) +","
-        elif format == "xml":
-            c = ET.Element('commit', {'repository': self.repos, 'revision': "%d" % (self.rev)})
-            d = ET.SubElement(c, 'dirs_changed')
-            for p in self.dirs_changed:
-                x = ET.SubElement(d, 'path')
-                x.text = p.encode('unicode_escape')
-            str = ET.tostring(c, 'UTF-8') + "\n"
-            return str[39:]
-        else:
-            raise Exception("Ooops, invalid format")
+    def render_commit(self):
+        obj = {'commit': {}}
+        obj['commit'].update(self.__dict__)
+        return json.dumps(obj)
+
+    def render_log(self):
+        try:
+            paths_changed = " %d paths changed" % len(self.changed)
+        except:
+            paths_changed = ""
+        return "%s:%s repo '%s' id '%s'%s" % (self.type,
+                                  self.format,
+                                  self.repository,
+                                  self.id,
+                                  paths_changed)
+
 
 HEARTBEAT_TIME = 15
 
 class Client(object):
-    def __init__(self, pubsub, r, repos, fmt):
+    def __init__(self, pubsub, r, type, repository):
         self.pubsub = pubsub
         r.notifyFinish().addErrback(self.finished)
         self.r = r
-        self.format = fmt
-        self.repos = repos
+        self.type = type
+        self.repository = repository
         self.alive = True
         log.msg("OPEN: %s:%d (%d clients online)"% (r.getClientIP(), r.client.port, pubsub.cc()+1))
 
@@ -141,12 +123,14 @@ class Client(object):
         except ValueError:
             pass
 
-    def interested_in(self, uuid):
-        if self.repos is None:
-            return True
-        if uuid == self.repos:
-            return True
-        return False
+    def interested_in(self, commit):
+        if self.type and self.type != commit.type:
+            return False
+
+        if self.repository and self.repository != commit.repository:
+            return False
+
+        return True
 
     def notify(self, data):
         self.write(data)
@@ -161,88 +145,67 @@ class Client(object):
             reactor.callLater(HEARTBEAT_TIME, self.heartbeat, None)
 
     def write_data(self, data):
-        self.write(data[self.format] + "\n")
+        self.write(data + "\n\0")
 
     """ "Data must not be unicode" is what the interfaces.ITransport says... grr. """
     def write(self, input):
         self.r.write(str(input))
 
-class JSONClient(Client):
     def write_start(self):
         self.r.setHeader('content-type', 'application/json')
-        self.write('{"commits": [\n')
+        self.write('{"svnpubsub": {"version": 1}}\n\0')
 
     def write_heartbeat(self):
-        self.write(json.dumps({"stillalive": time.time()}) + ",\n")
+        self.write(json.dumps({"stillalive": time.time()}) + "\n\0")
 
-class XMLClient(Client):
-    def write_start(self):
-        self.r.setHeader('content-type', 'application/xml')
-        self.write("<?xml version='1.0' encoding='UTF-8'?>\n<commits>")
-
-    def write_heartbeat(self):
-        self.write("<stillalive>%f</stillalive>\n" % (time.time()))
 
 class SvnPubSub(resource.Resource):
     isLeaf = True
-    clients = {'commits': [],
-               'dirs-changed': []}
+    clients = []
 
     def cc(self):
-        return reduce(lambda x,y: len(x)+len(y), self.clients.values())
+        return len(self.clients)
 
     def remove(self, c):
-        for k in self.clients.keys():
-            self.clients[k].remove(c)
+        self.clients.remove(c)
 
     def render_GET(self, request):
         log.msg("REQUEST: %s"  % (request.uri))
-        uri = request.uri.split('/')
-
         request.setHeader('content-type', 'text/plain')
-        if len(uri) != 3 and len(uri) != 4:
+
+        repository = None
+        type = None
+
+        uri = request.uri.split('/')
+        uri_len = len(uri)
+        if uri_len < 2 or uri_len > 4:
             request.setResponseCode(400)
             return "Invalid path\n"
 
-        uuid = None
-        fmt = None
-        type = uri[1]
+        if uri_len >= 3:
+          type = uri[2]
 
-        if len(uri) == 3:
-            fmt = uri[2]
-        else:
-            fmt = uri[3]
-            uuid = uri[2]
+        if uri_len == 4:
+          repository = uri[3]
 
-        if type not in self.clients.keys():
-            request.setResponseCode(400)
-            return "Invalid Reuqest Type\n"
+        # Convert wild card to None.
+        if type == '*':
+          type = None
+        if repository == '*':
+          repository = None
 
-        clients = {'json': JSONClient, 'xml': XMLClient}
-        clientCls = clients.get(fmt)
-        if clientCls == None:
-            request.setResponseCode(400)
-            return "Invalid Format Requested\n"
-
-        c = clientCls(self, request, uuid, fmt)
-        self.clients[type].append(c)
+        c = Client(self, request, type, repository)
+        self.clients.append(c)
         c.start()
         return twisted.web.server.NOT_DONE_YET
 
-    def notifyAll(self, rev):
-        data = {'commits': {},
-               'dirs-changed': {}}
-        for x in ['xml', 'json']:
-            data['commits'][x] = rev.render_commit(x)
-            data['dirs-changed'][x] = rev.render_dirs_changed(x)
+    def notifyAll(self, commit):
+        data = commit.render_commit()
 
-        log.msg("COMMIT: r%d in %d paths (%d clients)" % (rev.rev,
-                                                        len(rev.dirs_changed),
-                                                        self.cc()))
-        for k in self.clients.keys():
-            for c in self.clients[k]:
-                if c.interested_in(rev.repos):
-                    c.write_data(data[k])
+        log.msg("COMMIT: %s (%d clients)" % (commit.render_log(), self.cc()))
+        for client in self.clients:
+            if client.interested_in(commit):
+                client.write_data(data)
 
     def render_PUT(self, request):
         request.setHeader('content-type', 'text/plain')
@@ -253,17 +216,20 @@ class SvnPubSub(resource.Resource):
         input = request.content.read()
         #import pdb;pdb.set_trace()
         #print "input: %s" % (input)
-        r = json.loads(input)
-        rev = Revision(r)
-        self.notifyAll(rev)
+        try:
+            c = json.loads(input)
+            commit = Commit(c)
+        except ValueError as e:
+            request.setResponseCode(400)
+            log.msg("COMMIT: failed due to: %s" % str(e))
+            return str(e)
+        self.notifyAll(commit)
         return "Ok"
 
 def svnpubsub_server():
-    root = static.File("/dev/null")
+    root = resource.Resource()
     s = SvnPubSub()
-    root.putChild("dirs-changed", s)
     root.putChild("commits", s)
-    root.putChild("commit", s)
     return server.Site(root)
 
 if __name__ == "__main__":

@@ -124,7 +124,8 @@ sb_bucket_readline(serf_bucket_t *bucket, int acceptable,
                    const char **data, apr_size_t *len)
 {
   /* ### for now, we know callers won't use this function.  */
-  (void)svn_error__malfunction(TRUE, __FILE__, __LINE__, "Not implemented.");
+  svn_error_clear(svn_error__malfunction(TRUE, __FILE__, __LINE__,
+                                         "Not implemented."));
   return APR_ENOTIMPL;
 }
 

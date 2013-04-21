@@ -327,7 +327,7 @@ class SvnWcTest < Test::Unit::TestCase
         callbacks.ignored_errors = ignored_errors
         access.walk_entries(@wc_path, callbacks)
         sorted_ignored_errors = ignored_errors.sort_by {|path, err| path}
-        sorted_ignored_errors = sorted_ignored_errors.collect! do |path, err| 
+        sorted_ignored_errors = sorted_ignored_errors.collect! do |path, err|
           [path, err.class]
         end
         assert_equal([
@@ -650,10 +650,10 @@ EOE
       ctx.add(path)
       ctx.ci(path)
 
-      File.open(path, "w") {|f| f.print("b")}
+      File.open(path, "w") {|f| f.print("bb")}
       ctx.ci(path)
 
-      File.open(path, "w") {|f| f.print("c")}
+      File.open(path, "w") {|f| f.print("ccc")}
       rev = ctx.ci(path).revision
 
       status = Svn::Wc::RevisionStatus.new(path, nil, true)
@@ -742,20 +742,13 @@ EOE
           adm.crawl_revisions(dir_path, reporter)
 
           property_info = {
-            :dir_changed_prop_names => [
-                                        "svn:entry:committed-date",
-                                        "svn:entry:uuid",
-                                        "svn:entry:last-author",
-                                        "svn:entry:committed-rev"
-                                       ],
             :file_changed_prop_name => prop_name,
             :file_changed_prop_value => prop_value,
           }
           sorted_result = callbacks.result.sort_by {|r| r.first.to_s}
           expected_props, actual_result = yield(property_info, sorted_result)
-          dir_changed_props, file_changed_props, empty_changed_props = expected_props
+          file_changed_props, empty_changed_props = expected_props
           assert_equal([
-                        [:dir_props_changed, @wc_path, dir_changed_props],
                         [:file_added, path2, empty_changed_props],
                         [:file_changed, path1, file_changed_props],
                        ],
@@ -767,35 +760,25 @@ EOE
 
   def test_diff_callbacks_for_backward_compatibility
     assert_diff_callbacks(:diff_editor) do |property_info, result|
-      dir_changed_prop_names = property_info[:dir_changed_prop_names]
-      dir_changed_props = dir_changed_prop_names.sort.collect do |name|
-        Svn::Core::Prop.new(name, nil)
-      end
       prop_name = property_info[:file_changed_prop_name]
       prop_value = property_info[:file_changed_prop_value]
       file_changed_props = [Svn::Core::Prop.new(prop_name, prop_value)]
       empty_changed_props = []
 
       sorted_result = result.dup
-      dir_prop_changed = sorted_result.assoc(:dir_props_changed)
-      dir_prop_changed[2] = dir_prop_changed[2].sort_by {|prop| prop.name}
 
-      [[dir_changed_props, file_changed_props, empty_changed_props],
+      [[file_changed_props, empty_changed_props],
        sorted_result]
     end
   end
 
   def test_diff_callbacks
     assert_diff_callbacks(:diff_editor2) do |property_info, result|
-      dir_changed_props = {}
-      property_info[:dir_changed_prop_names].each do |name|
-        dir_changed_props[name] = nil
-      end
       prop_name = property_info[:file_changed_prop_name]
       prop_value = property_info[:file_changed_prop_value]
       file_changed_props = {prop_name => prop_value}
       empty_changed_props = {}
-      [[dir_changed_props, file_changed_props, empty_changed_props],
+      [[file_changed_props, empty_changed_props],
        result]
     end
   end

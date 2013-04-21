@@ -54,7 +54,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
   def setUp(self):
     """Load a Subversion repository"""
     self.temper = utils.Temper()
-    (self.repos, _, _) = self.temper.alloc_known_repo(
+    (self.repos, self.repos_path, _) = self.temper.alloc_known_repo(
       'trac/versioncontrol/tests/svnrepos.dump', suffix='-repository')
     self.fs = repos.fs(self.repos)
     self.rev = fs.youngest_rev(self.fs)
@@ -197,6 +197,16 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     self.assertEqual(repos.fs_revision_prop(self.repos, self.rev, "svn:log",
                                             _authz_callback),
                      "Youngest revision")
+
+  def freeze_body(self, pool):
+    self.freeze_invoked += 1
+
+  def test_freeze(self):
+    """Test repository freeze"""
+
+    self.freeze_invoked = 0
+    repos.freeze([self.repos_path], self.freeze_body)
+    self.assertEqual(self.freeze_invoked, 1)
 
 def suite():
     return unittest.defaultTestLoader.loadTestsFromTestCase(

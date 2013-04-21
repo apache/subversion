@@ -34,6 +34,7 @@
 #include "svn_checksum.h"
 #include "svn_mergeinfo.h"
 #include "svn_props.h"
+#include "svn_version.h"
 
 #include "private/svn_fs_private.h"
 
@@ -1566,6 +1567,7 @@ merging_commit(const svn_test_opts_t *opts,
 
   /* (5) E doesn't exist in ANCESTOR, and has been added to A. */
   {
+    svn_revnum_t failed_rev;
     /* (1) E doesn't exist in ANCESTOR, and has been added to B.
        Conflict. */
     SVN_ERR(svn_fs_begin_txn(&txn, fs, revisions[4], pool));
@@ -1573,7 +1575,7 @@ merging_commit(const svn_test_opts_t *opts,
     SVN_ERR(svn_fs_make_file(txn_root, "theta", pool));
     SVN_ERR(svn_test__set_file_contents
             (txn_root, "theta", "This is another file 'theta'.\n", pool));
-    SVN_ERR(test_commit_txn(&after_rev, txn, "/theta", pool));
+    SVN_ERR(test_commit_txn(&failed_rev, txn, "/theta", pool));
     SVN_ERR(svn_fs_abort_txn(txn, pool));
 
     /* (1) E exists in ANCESTOR, but has been deleted from B.  Can't
@@ -1581,6 +1583,8 @@ merging_commit(const svn_test_opts_t *opts,
 
     /* (3) E exists in both ANCESTOR and B.  Can't occur, by assumption
        that E doesn't exist in ANCESTOR. */
+
+    SVN_TEST_ASSERT(failed_rev == SVN_INVALID_REVNUM);
   }
 
   /* (4) E exists in ANCESTOR, but has been deleted from A */
@@ -1594,15 +1598,16 @@ merging_commit(const svn_test_opts_t *opts,
     SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
     SVN_ERR(svn_fs_delete(txn_root, "A/D/H", pool));
 
-    /* ### FIXME: It is at this point that our test stops being valid,
-       ### hence its expected failure.  The following call will now
-       ### conflict on /A/D/H, causing revision 6 *not* to be created,
-       ### and the remainer of this test (which was written long ago)
-       ### to suffer from a shift in the expected state and behavior
-       ### of the filesystem as a result of this commit not happening.
-    */
+    /* We used to create the revision like this before fixing issue
+       #2751 -- Directory prop mods reverted in overlapping commits scenario.
 
-    SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
+       But we now expect that to fail as out of date */
+    {
+      svn_revnum_t failed_rev;
+      SVN_ERR(test_commit_txn(&failed_rev, txn, "/A/D/H", pool));
+
+      SVN_TEST_ASSERT(failed_rev == SVN_INVALID_REVNUM);
+    }
     /*********************************************************************/
     /* REVISION 6 */
     /*********************************************************************/
@@ -1640,18 +1645,22 @@ merging_commit(const svn_test_opts_t *opts,
     /* Try deleting a file F inside a subtree S where S does not exist
        in the most recent revision, but does exist in the ancestor
        tree.  This should conflict. */
-    SVN_ERR(svn_fs_begin_txn(&txn, fs, revisions[1], pool));
-    SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-    SVN_ERR(svn_fs_delete(txn_root, "A/D/H/omega", pool));
-    SVN_ERR(test_commit_txn(&after_rev, txn, "/A/D/H", pool));
-    SVN_ERR(svn_fs_abort_txn(txn, pool));
+    {
+      svn_revnum_t failed_rev;
+      SVN_ERR(svn_fs_begin_txn(&txn, fs, revisions[1], pool));
+      SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+      SVN_ERR(svn_fs_delete(txn_root, "A/D/H/omega", pool));
+      SVN_ERR(test_commit_txn(&failed_rev, txn, "/A/D/H", pool));
+      SVN_ERR(svn_fs_abort_txn(txn, pool));
+
+      SVN_TEST_ASSERT(failed_rev == SVN_INVALID_REVNUM);
+    }
 
     /* E exists in both ANCESTOR and B ... */
     {
       /* (1) but refers to different nodes.  Conflict. */
-      SVN_ERR(svn_fs_begin_txn(&txn, fs, revisions[1], pool));
+      SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, pool));
       SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-      SVN_ERR(svn_fs_delete(txn_root, "A/D/H", pool));
       SVN_ERR(svn_fs_make_dir(txn_root, "A/D/H", pool));
       SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
       revisions[revision_count++] = after_rev;
@@ -4926,7 +4935,77 @@ delete_fs(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* Issue 4340, "fs layer should reject filenames with trailing \n" */
+static svn_error_t *
+filename_trailing_newline(const svn_test_opts_t *opts,
+                          apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *root;
+  svn_revnum_t youngest_rev = 0;
+  svn_error_t *err;
+  svn_boolean_t allow_newlines;
 
+  /* Some filesystem implementations can handle newlines in filenames
+   * and can be white-listed here.
+   * Currently, only BDB supports \n in filenames. */
+  allow_newlines = (strcmp(opts->fs_type, "bdb") == 0);
+
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-filename-trailing-newline",
+                              opts, pool));
+
+  /* Revision 1:  Add a directory /foo  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "/foo", subpool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  svn_pool_clear(subpool);
+
+  /* Attempt to copy /foo to "/bar\n". This should fail on FSFS. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, youngest_rev, subpool));
+  err = svn_fs_copy(root, "/foo", txn_root, "/bar\n", subpool);
+  if (allow_newlines)
+    SVN_TEST_ASSERT(err == SVN_NO_ERROR);
+  else
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
+
+  /* Attempt to create a file /foo/baz\n. This should fail on FSFS. */
+  err = svn_fs_make_file(txn_root, "/foo/baz\n", subpool);
+  if (allow_newlines)
+    SVN_TEST_ASSERT(err == SVN_NO_ERROR);
+  else
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
+
+  return SVN_NO_ERROR;
+}
+
+#ifdef SVN_FS_INFO
+static svn_error_t *
+test_fs_info_format(const svn_test_opts_t *opts,
+                    apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  int fs_format;
+  svn_version_t *supports_version;
+  svn_version_t v1_5_0 = {1, 5, 0, ""};
+  svn_test_opts_t opts2;
+
+  opts2 = *opts;
+  opts2.server_minor_version = 5;
+
+  SVN_ERR(svn_test__create_fs(&fs, "test-fs-format-info", &opts2, pool));
+  SVN_ERR(svn_fs_info_format(&fs_format, &supports_version, fs, pool, pool));
+  SVN_TEST_ASSERT(fs_format == 3); /* happens to be the same for FSFS and BDB */
+  SVN_TEST_ASSERT(svn_ver_equal(supports_version, &v1_5_0));
+
+  return SVN_NO_ERROR;
+}
+#endif
 
 /* ------------------------------------------------------------------------ */
 
@@ -4969,10 +5048,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "basic commit"),
     SVN_TEST_OPTS_PASS(test_tree_node_validation,
                        "testing tree validation helper"),
-    SVN_TEST_OPTS_WIMP(merging_commit,
-                       "merging commit",
-                       "needs to be written to match new"
-                       " merge() algorithm expectations"),
+    SVN_TEST_OPTS_PASS(merging_commit, "merging commit"),
     SVN_TEST_OPTS_PASS(copy_test,
                        "copying and tracking copy history"),
     SVN_TEST_OPTS_PASS(commit_date,
@@ -5011,5 +5087,11 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test svn_fs_node_history"),
     SVN_TEST_OPTS_PASS(delete_fs,
                        "test svn_fs_delete_fs"),
+    SVN_TEST_OPTS_PASS(filename_trailing_newline,
+                       "filenames with trailing \\n might be rejected"),
+#ifdef SVN_FS_INFO
+    SVN_TEST_OPTS_PASS(test_fs_info_format,
+                       "test svn_fs_info_format"),
+#endif
     SVN_TEST_NULL
   };

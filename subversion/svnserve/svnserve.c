@@ -1,5 +1,5 @@
 /*
- * main.c :  Main control function for svnserve
+ * svnserve.c :  Main control function for svnserve
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -50,7 +50,10 @@
 #include "svn_io.h"
 
 #include "svn_private_config.h"
+
 #include "private/svn_dep_compat.h"
+#include "private/svn_cmdline_private.h"
+
 #include "winservice.h"
 
 #ifdef HAVE_UNISTD_H
@@ -169,11 +172,11 @@ static const apr_getopt_option_t svnserve__options[] =
      N_("read configuration from file ARG")},
     {"listen-port",       SVNSERVE_OPT_LISTEN_PORT, 1,
 #ifdef WIN32
-     N_("listen port. The default port is " APR_STRINGIFY(SVN_RA_SVN_PORT) ".\n"
+     N_("listen port. The default port is 3690.\n"
         "                             "
         "[mode: daemon, service, listen-once]")},
 #else
-     N_("listen port. The default port is " APR_STRINGIFY(SVN_RA_SVN_PORT) ".\n"
+     N_("listen port. The default port is 3690.\n"
         "                             "
         "[mode: daemon, listen-once]")},
 #endif
@@ -238,13 +241,11 @@ static const apr_getopt_option_t svnserve__options[] =
         "                             "
         "[used for FSFS repositories only]")},
     {"client-speed", SVNSERVE_OPT_CLIENT_SPEED, 1,
-     N_("Optimize throughput based on the assumption that\n"
+     N_("Optimize network handling based on the assumption\n"
         "                             "
-        "clients can receive data with a bitrate of at\n"
+        "that most clients are connected with a bitrate of\n"
         "                             "
-        "least ARG Gbit/s.  For clients receiving data at\n"
-        "                             "
-        "less than 1 Gbit/s, zero should be used.\n"
+        "ARG Mbit/s.\n"
         "                             "
         "Default is 0 (optimizations disabled).")},
 #ifdef CONNECTION_HAVE_THREAD_OPTION
@@ -503,9 +504,8 @@ int main(int argc, const char *argv[])
   params.tunnel = FALSE;
   params.tunnel_user = NULL;
   params.read_only = FALSE;
+  params.base = NULL;
   params.cfg = NULL;
-  params.pwdb = NULL;
-  params.authzdb = NULL;
   params.compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
   params.log_file = NULL;
   params.vhost = FALSE;
@@ -668,11 +668,16 @@ int main(int argc, const char *argv[])
           {
             apr_size_t bandwidth = (apr_size_t)apr_strtoi64(arg, NULL, 0);
 
-            /* block other clients for at most 1 ms (at full bandwidth) */
-            params.zero_copy_limit = bandwidth * 120000;
+            /* for slower clients, don't try anything fancy */
+            if (bandwidth >= 1000)
+              {
+                /* block other clients for at most 1 ms (at full bandwidth).
+                   Note that the send buffer is 16kB anyways. */
+                params.zero_copy_limit = bandwidth * 120;
 
-            /* check for aborted connections at the same rate */
-            params.error_check_interval = bandwidth * 120000;
+                /* check for aborted connections at the same rate */
+                params.error_check_interval = bandwidth * 120;
+              }
           }
           break;
 
@@ -747,11 +752,14 @@ int main(int argc, const char *argv[])
   /* If a configuration file is specified, load it and any referenced
    * password and authorization files. */
   if (config_filename)
-    SVN_INT_ERR(load_configs(&params.cfg, &params.pwdb, &params.authzdb,
-                             &params.username_case, config_filename, TRUE,
-                             svn_dirent_dirname(config_filename, pool),
-                             NULL, NULL, /* server baton, conn */
-                             pool));
+    {
+      params.base = svn_dirent_dirname(config_filename, pool);
+
+      SVN_INT_ERR(svn_config_read2(&params.cfg, config_filename,
+                                   TRUE, /* must_exist */
+                                   FALSE, /* section_names_case_sensitive */
+                                   pool));
+    }
 
   if (log_filename)
     SVN_INT_ERR(svn_io_file_open(&params.log_file, log_filename,

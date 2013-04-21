@@ -25,7 +25,7 @@
 ######################################################################
 
 # General modules
-import os, re, logging
+import os, re, logging, sys
 
 logger = logging.getLogger()
 
@@ -883,6 +883,76 @@ def props_only_file_update(sbox):
     logger.warn('Temporary files leftover: %s', (', '.join(temps),))
     raise svntest.Failure
 
+@XFail()
+@Issues(4327)
+def autoprops_inconsistent_eol(sbox):
+  "able to handle inconsistent eols on add"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  text = 'line with NL\n' + \
+         'line with CR\r' + \
+         'line with CRLF\r\n' + \
+         'line with LFCR (or is that not a line? ;-)\n\r'
+
+  # Compensate for python smartness
+  if sys.platform == 'win32':
+    expected_text = text.replace('\r\n', '\n')
+  else:
+    expected_text = text
+
+  sbox.simple_add_text(text, 'add.c')
+  sbox.simple_add_text(text, 'add-force.c')
+
+  svntest.actions.run_and_verify_svn(None, None, '.*inconsistent newlines.*',
+                                     'ps', 'svn:eol-style', 'native',
+                                     sbox.ospath('add.c'))
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ps', 'svn:eol-style', 'native', '--force',
+                                     sbox.ospath('add.c'))
+
+  expected_disk = svntest.main.greek_state.copy()
+
+  expected_disk.add({
+    'add-force.c'  : Item(contents=expected_text),
+    'add.c'        : Item(contents=expected_text),
+  })
+
+  # Verify that both add and add-force haven't been changed
+  svntest.actions.verify_disk(wc_dir, expected_disk)
+
+  sbox.simple_propset('svn:auto-props', '*.c = svn:eol-style=native', '')
+
+
+  svntest.main.file_write(sbox.ospath('auto.c'), text, mode='wb')
+
+  expected_output = ['A         %s\n' % sbox.ospath('auto.c')]
+
+  # Fails with svn: E200009: File '.*auto.c' has inconsistent newlines
+  svntest.actions.run_and_verify_svn(None, expected_output,
+                                     [], 'add', sbox.ospath('auto.c'))
+
+@XFail()
+@Issues(4327)
+def autoprops_inconsistent_mime(sbox):
+  "able to handle inconsistent mime on add"
+
+  sbox.build(read_only = True)
+
+  sbox.simple_propset('svn:auto-props',
+                      '*.c = svn:eol-style=native\n'
+                      'c.* = svn:mime-type=application/octet-stream', '')
+
+  sbox.simple_append('c.iota.c', '')
+
+  expected_output = ['A         %s\n' % sbox.ospath('c.iota.c')]
+
+  # Fails with svn: E200009: File '.*c.iota.c' has binary mime type property
+  svntest.actions.run_and_verify_svn(None, expected_output,
+                                     [], 'add', sbox.ospath('c.iota.c'))
+
 
 ########################################################################
 # Run the tests
@@ -902,6 +972,8 @@ test_list = [ None,
               propset_commit_checkout_nocrash,
               propset_revert_noerror,
               props_only_file_update,
+              autoprops_inconsistent_eol,
+              autoprops_inconsistent_mime,
              ]
 
 if __name__ == '__main__':

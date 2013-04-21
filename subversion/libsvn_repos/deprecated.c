@@ -28,6 +28,7 @@
 
 #include "svn_repos.h"
 #include "svn_compat.h"
+#include "svn_hash.h"
 #include "svn_props.h"
 
 #include "svn_private_config.h"
@@ -56,13 +57,11 @@ svn_repos_get_commit_editor4(const svn_delta_editor_t **editor,
 {
   apr_hash_t *revprop_table = apr_hash_make(pool);
   if (user)
-    apr_hash_set(revprop_table, SVN_PROP_REVISION_AUTHOR,
-                 APR_HASH_KEY_STRING,
-                 svn_string_create(user, pool));
+    svn_hash_sets(revprop_table, SVN_PROP_REVISION_AUTHOR,
+                  svn_string_create(user, pool));
   if (log_msg)
-    apr_hash_set(revprop_table, SVN_PROP_REVISION_LOG,
-                 APR_HASH_KEY_STRING,
-                 svn_string_create(log_msg, pool));
+    svn_hash_sets(revprop_table, SVN_PROP_REVISION_LOG,
+                  svn_string_create(log_msg, pool));
   return svn_repos_get_commit_editor5(editor, edit_baton, repos, txn,
                                       repos_url, base_path, revprop_table,
                                       commit_callback, commit_baton,
@@ -1005,4 +1004,14 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
     }
 
   return SVN_NO_ERROR;
+}
+
+/*** From authz.c ***/
+
+svn_error_t *
+svn_repos_authz_read(svn_authz_t **authz_p, const char *file,
+                     svn_boolean_t must_exist, apr_pool_t *pool)
+{
+  return svn_repos__authz_read(authz_p, file, NULL, must_exist,
+                               FALSE, pool);
 }

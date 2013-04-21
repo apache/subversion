@@ -795,6 +795,7 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
+    @SuppressWarnings("unchecked")
     public void remove(String[] paths, String message, boolean force,
                        boolean keepLocal, Map revpropTable)
             throws ClientException
@@ -964,6 +965,7 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
+    @SuppressWarnings("unchecked")
     public long commit(String[] paths, String message, int depth,
                        boolean noUnlock, boolean keepChangelist,
                        String[] changelists, Map revpropTable)
@@ -998,6 +1000,7 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.7
      */
+    @SuppressWarnings("unchecked")
     public void copy(CopySource[] sources, String destPath, String message,
                      boolean copyAsChild, boolean makeParents,
                      boolean ignoreExternals, Map revpropTable)
@@ -1031,6 +1034,7 @@ public class SVNClient implements SVNClientInterface
      *                              boolean, boolean, Map)} instead.
      * @since 1.5
      */
+    @SuppressWarnings("unchecked")
     public void copy(CopySource[] sources, String destPath, String message,
                      boolean copyAsChild, boolean makeParents,
                      Map revpropTable)
@@ -1057,6 +1061,7 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
+    @SuppressWarnings("unchecked")
     public void move(String[] srcPaths, String destPath, String message,
                      boolean force, boolean moveAsChild,
                      boolean makeParents, Map revpropTable)
@@ -1106,6 +1111,7 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
+    @SuppressWarnings("unchecked")
     public void mkdir(String[] paths, String message,
                       boolean makeParents, Map revpropTable)
             throws ClientException
@@ -1306,6 +1312,7 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
+    @SuppressWarnings("unchecked")
     public void doImport(String path, String url, String message,
                          int depth, boolean noIgnore,
                          boolean ignoreUnknownNodeTypes, Map revpropTable)
@@ -1888,6 +1895,7 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
+    @SuppressWarnings("unchecked")
     public void propertySet(String path, String name, String value, int depth,
                             String[] changelists, boolean force,
                             Map revpropTable)

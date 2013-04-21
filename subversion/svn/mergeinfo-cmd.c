@@ -162,12 +162,14 @@ mergeinfo_diagram(const char *yca_url,
     }
 
   /* Column headings */
-  SVN_ERR(svn_cmdline_fputs(
-            _("    youngest  last               repos.\n"
-              "    common    full     tip of    path of\n"
-              "    ancestor  merge    branch    branch\n"
-              "\n"),
-            stdout, pool));
+  SVN_ERR(svn_cmdline_printf(pool,
+            "    %s\n"
+            "    |         %s\n"
+            "    |         |        %s\n"
+            "    |         |        |         %s\n"
+            "\n",
+            _("youngest common ancestor"), _("last full merge"),
+            _("tip of branch"), _("repository path")));
 
   /* Print the diagram, row by row */
   for (row = 0; row < ROWS; row++)
@@ -209,41 +211,28 @@ mergeinfo_summary(
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
-  svn_client_automatic_merge_t *the_merge;
   const char *yca_url, *base_url, *right_url, *target_url;
   svn_revnum_t yca_rev, base_rev, right_rev, target_rev;
   const char *repos_root_url;
-  svn_boolean_t target_is_wc, reintegrate_like;
+  svn_boolean_t target_is_wc, is_reintegration;
 
   target_is_wc = (! svn_path_is_url(target_path_or_url))
                  && (target_revision->kind == svn_opt_revision_unspecified
                      || target_revision->kind == svn_opt_revision_working);
-  if (target_is_wc)
-    SVN_ERR(svn_client_find_automatic_merge(
-              &the_merge,
-              source_path_or_url, source_revision,
-              target_path_or_url,
-              TRUE, TRUE, TRUE,  /* allow_* */
-              ctx, pool, pool));
-  else
-    SVN_ERR(svn_client_find_automatic_merge_no_wc(
-              &the_merge,
-              source_path_or_url, source_revision,
-              target_path_or_url, target_revision,
-              ctx, pool, pool));
-
-  SVN_ERR(svn_client_automatic_merge_get_locations(
+  SVN_ERR(svn_client_get_merging_summary(
+            &is_reintegration,
             &yca_url, &yca_rev,
             &base_url, &base_rev,
             &right_url, &right_rev,
             &target_url, &target_rev,
             &repos_root_url,
-            the_merge, pool));
-  reintegrate_like = svn_client_automatic_merge_is_reintegrate_like(the_merge);
+            source_path_or_url, source_revision,
+            target_path_or_url, target_revision,
+            ctx, pool, pool));
 
   SVN_ERR(mergeinfo_diagram(yca_url, base_url, right_url, target_url,
                             yca_rev, base_rev, right_rev, target_rev,
-                            repos_root_url, target_is_wc, reintegrate_like,
+                            repos_root_url, target_is_wc, is_reintegration,
                             pool));
 
   return SVN_NO_ERROR;
@@ -260,6 +249,7 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   apr_array_header_t *targets;
   const char *source, *target;
   svn_opt_revision_t src_peg_revision, tgt_peg_revision;
+  svn_opt_revision_t *src_start_revision, *src_end_revision;
   /* Default to depth empty. */
   svn_depth_t depth = (opt_state->depth == svn_depth_unknown)
                       ? svn_depth_empty : opt_state->depth;
@@ -312,13 +302,19 @@ svn_cl__mergeinfo(apr_getopt_t *os,
                                                     ctx, pool),
             _("Source and target must be different but related branches"));
 
+  src_start_revision = &(opt_state->start_revision);
+  if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
+    src_end_revision = src_start_revision;
+  else
+    src_end_revision = &(opt_state->end_revision);
+
   /* Do the real work, depending on the requested data flavor. */
   if (opt_state->show_revs == svn_cl__show_revs_merged)
     {
       SVN_ERR(svn_client_mergeinfo_log2(TRUE, target, &tgt_peg_revision,
                                         source, &src_peg_revision,
-                                        &(opt_state->start_revision),
-                                        &(opt_state->end_revision),
+                                        src_start_revision,
+                                        src_end_revision,
                                         print_log_rev, NULL,
                                         TRUE, depth, NULL, ctx,
                                         pool));
@@ -327,14 +323,24 @@ svn_cl__mergeinfo(apr_getopt_t *os,
     {
       SVN_ERR(svn_client_mergeinfo_log2(FALSE, target, &tgt_peg_revision,
                                         source, &src_peg_revision,
-                                        &(opt_state->start_revision),
-                                        &(opt_state->end_revision),
+                                        src_start_revision,
+                                        src_end_revision,
                                         print_log_rev, NULL,
                                         TRUE, depth, NULL, ctx,
                                         pool));
     }
   else
     {
+      if ((opt_state->start_revision.kind != svn_opt_revision_unspecified)
+          || (opt_state->end_revision.kind != svn_opt_revision_unspecified))
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("--revision (-r) option valid only with "
+                                  "--show-revs option"));
+      if (opt_state->depth != svn_depth_unknown)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("Depth specification options valid only "
+                                  "with --show-revs option"));
+
       SVN_ERR(mergeinfo_summary(source, &src_peg_revision,
                                 target, &tgt_peg_revision,
                                 ctx, pool));

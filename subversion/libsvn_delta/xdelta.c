@@ -27,6 +27,7 @@
 #include <apr_general.h>        /* for APR_INLINE */
 #include <apr_hash.h>
 
+#include "svn_hash.h"
 #include "svn_delta.h"
 #include "delta.h"
 

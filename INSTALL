@@ -173,12 +173,13 @@ I.    INTRODUCTION
       'get-deps.sh', is available in the same directory as this file.
       When run, it will place 'apr', 'apr-util', 'serf', 'zlib', and
       'sqlite-amalgamation' directories directly into your unpacked Subversion
-      distribution, where they will be automatically configured and built by
-      Subversion's build process.
+      distribution.  With the exception of sqlite-amalgamation, they will
+      still need to be configured, built and installed explicitly, and
+      Subversion's own configure script may need to be told where to find
+      them, if they were not installed in standard system locations.
 
       Note: there are optional dependencies (such as openssl, swig, and httpd)
-      which get-deps.sh does not download and Subversion does not attempt to
-      configure or build.
+      which get-deps.sh does not download.
 
       Note: Because previous builds of Subversion may have installed older
       versions of these libraries, you may want to run some of the cleanup
@@ -243,11 +244,10 @@ I.    INTRODUCTION
       be able to find them.
 
       There are a couple of options to "./configure" that tell it where
-      to look for the APR and APR-util libraries. By default, it will first
-      look for bundled versions of APR and APR-util, and then try to locate
-      already installed versions of the libraries using the apr-config and
-      apu-config scripts. These scripts provide all the relevant information
-      for the APR and APR-util installations.
+      to look for the APR and APR-util libraries. By default it will try
+      to locate the libraries using apr-config and apu-config scripts.
+      These scripts provide all the relevant information for the APR and
+      APR-util installations.
 
       If you want to specify the location of the APR library, you can use
       the "--with-apr=" option of "./configure". It should be able to find
@@ -264,10 +264,6 @@ I.    INTRODUCTION
           $ ./configure --with-apr=/usr/local/apache2 \
             --with-apr-util=/usr/local/apache2  ...
 
-      If you want Subversion to build the APR libraries from source
-      code as part of the Subversion build process, you can put their
-      source code into the "./apr" and "./apr-util" directories.
-
       Be sure to use a native Windows SVN client (as opposed to
       Cygwin's version) so that the .dsp files get carriage-returns at
       the ends of their lines.  Otherwise Visual Studio will complain
@@ -278,9 +274,12 @@ I.    INTRODUCTION
       library's directory, to regenerate the configure scripts and
       other files required for compiling the libraries:
 
-      $ cd apr; ./buildconf; cd ..
+      $ cd apr; ./buildconf; ./configure ...; make; make install; cd ..
 
-      $ cd apr-util; ./buildconf; cd ..
+      $ cd apr-util; ./buildconf; ./configure ...; make; make install; cd ..
+
+      Configure build and install both libraries before running Subversion's
+      configure script.
 
 
       2. Zlib  (REQUIRED)
@@ -307,7 +306,7 @@ I.    INTRODUCTION
       newer. The autogen.sh script knows about that.
 
 
-      5.  Serf library 1.1 or newer (http://code.google.com/p/serf/) (OPTIONAL)
+      5.  Serf library 1.2 or newer (http://code.google.com/p/serf/) (OPTIONAL)
 
       If you want your client to be able to speak to an Apache
       server (via a http:// or https:// URL), you must link against
@@ -653,7 +652,7 @@ II.   INSTALLATION
 
       This script will make sure you have all the necessary components
       available to build Subversion.  If any are missing, you will be
-      told where to get them from.  (See the 'Build Requirements' in
+      told where to get them from.  (See the 'Dependency Overview' in
       section I.)
 
       Note: if the command "autoconf" on your machine does not run
@@ -695,19 +694,6 @@ II.   INSTALLATION
       It probably means that the dynamic loader/linker can't find all
       of the libsvn_* libraries.
 
-      Note that if you commonly build with the -jN option to make and
-      have used the get-deps.sh script to fetch dependencies, the make
-      step above may fail, because we don't ensure that third party
-      libraries in our source tree will finish building before
-      subversion itself.  If you want to use -jN, use the following
-      instead:
-
-          $ ./configure
-          $ make -jN external-all
-          $ make -jN local-all
-          $ make check
-          # make install
-
 
   C.  Building under Unix in Different Directories
       --------------------------------------------
@@ -717,7 +703,7 @@ II.   INSTALLATION
 
           $ svn co https://svn.apache.org/repos/asf/subversion/trunk svn
           $ cd svn
-          $ # get any dependencies to be built in-tree, if required
+          $ # get SQLite amalgamation if required
           $ chmod +x autogen.sh
           $ ./autogen.sh
           $ mkdir ../obj

@@ -53,4 +53,15 @@ public interface CommitItemStateFlags
      * the item has been copied
      */
     public static final int IsCopy=16;
+
+    /**
+     * the item has a lock token
+     */
+    public static final int LockToken = 32;
+
+    /**
+     * the item was moved to this location
+     * @since 1.8
+     */
+    public static int MovedHere = 64;
 }
