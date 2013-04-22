@@ -450,14 +450,36 @@ svn_client_open_ra_session2(svn_ra_session_t **session,
 
 
 
-svn_error_t *
-svn_client__resolve_rev_and_url(svn_client__pathrev_t **resolved_loc_p,
-                                svn_ra_session_t *ra_session,
-                                const char *path_or_url,
-                                const svn_opt_revision_t *peg_revision,
-                                const svn_opt_revision_t *revision,
-                                svn_client_ctx_t *ctx,
-                                apr_pool_t *pool)
+/* Given PATH_OR_URL, which contains either a working copy path or an
+   absolute URL, a peg revision PEG_REVISION, and a desired revision
+   REVISION, find the path at which that object exists in REVISION,
+   following copy history if necessary.  If REVISION is younger than
+   PEG_REVISION, then check that PATH_OR_URL is the same node in both
+   PEG_REVISION and REVISION, and return @c
+   SVN_ERR_CLIENT_UNRELATED_RESOURCES if it is not the same node.
+
+   If PEG_REVISION->kind is 'unspecified', the peg revision is 'head'
+   for a URL or 'working' for a WC path.  If REVISION->kind is
+   'unspecified', the operative revision is the peg revision.
+
+   Store the actual location of the object in *RESOLVED_LOC_P.
+
+   RA_SESSION should be an open RA session pointing at the URL of
+   PATH_OR_URL, or NULL, in which case this function will open its own
+   temporary session.
+
+   Use authentication baton cached in CTX to authenticate against the
+   repository.
+
+   Use POOL for all allocations. */
+static svn_error_t *
+resolve_rev_and_url(svn_client__pathrev_t **resolved_loc_p,
+                    svn_ra_session_t *ra_session,
+                    const char *path_or_url,
+                    const svn_opt_revision_t *peg_revision,
+                    const svn_opt_revision_t *revision,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
 {
   svn_opt_revision_t peg_rev = *peg_revision;
   svn_opt_revision_t start_rev = *revision;
@@ -523,9 +545,9 @@ svn_client__ra_session_from_path2(svn_ra_session_t **ra_session_p,
   if (corrected_url && svn_path_is_url(path_or_url))
     path_or_url = corrected_url;
 
-  SVN_ERR(svn_client__resolve_rev_and_url(&resolved_loc, ra_session,
-                                          path_or_url, peg_revision, revision,
-                                          ctx, pool));
+  SVN_ERR(resolve_rev_and_url(&resolved_loc, ra_session,
+                              path_or_url, peg_revision, revision,
+                              ctx, pool));
 
   /* Make the session point to the real URL. */
   SVN_ERR(svn_ra_reparent(ra_session, resolved_loc->url, pool));
@@ -987,9 +1009,9 @@ svn_client__youngest_common_ancestor(const char **ancestor_url,
                                             path_or_url1, NULL,
                                             revision1, revision1,
                                             ctx, sesspool));
-  SVN_ERR(svn_client__resolve_rev_and_url(&loc2, session,
-                                          path_or_url2, revision2, revision2,
-                                          ctx, scratch_pool));
+  SVN_ERR(resolve_rev_and_url(&loc2, session,
+                              path_or_url2, revision2, revision2,
+                              ctx, scratch_pool));
 
   SVN_ERR(svn_client__get_youngest_common_ancestor(
             &ancestor, loc1, loc2, session, ctx, result_pool, scratch_pool));

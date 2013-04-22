@@ -147,37 +147,6 @@ svn_client__ra_session_from_path2(svn_ra_session_t **ra_session_p,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
 
-/* Given PATH_OR_URL, which contains either a working copy path or an
-   absolute URL, a peg revision PEG_REVISION, and a desired revision
-   REVISION, find the path at which that object exists in REVISION,
-   following copy history if necessary.  If REVISION is younger than
-   PEG_REVISION, then check that PATH_OR_URL is the same node in both
-   PEG_REVISION and REVISION, and return @c
-   SVN_ERR_CLIENT_UNRELATED_RESOURCES if it is not the same node.
-
-   If PEG_REVISION->kind is 'unspecified', the peg revision is 'head'
-   for a URL or 'working' for a WC path.  If REVISION->kind is
-   'unspecified', the operative revision is the peg revision.
-
-   Store the actual location of the object in *RESOLVED_LOC_P.
-
-   RA_SESSION should be an open RA session pointing at the URL of
-   PATH_OR_URL, or NULL, in which case this function will open its own
-   temporary session.
-
-   Use authentication baton cached in CTX to authenticate against the
-   repository.
-
-   Use POOL for all allocations. */
-svn_error_t *
-svn_client__resolve_rev_and_url(svn_client__pathrev_t **resolved_loc_p,
-                                svn_ra_session_t *ra_session,
-                                const char *path_or_url,
-                                const svn_opt_revision_t *peg_revision,
-                                const svn_opt_revision_t *revision,
-                                svn_client_ctx_t *ctx,
-                                apr_pool_t *pool);
-
 /** Return @c SVN_ERR_ILLEGAL_TARGET if TARGETS contains a mixture of
  * URLs and paths; otherwise return SVN_NO_ERROR.
  *
