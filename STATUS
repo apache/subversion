@@ -67,7 +67,7 @@ Candidate changes:
      Regression from 1.7.  Needed quickly so translators can get their
      translations done.  <http://svn.haxx.se/dev/archive-2013-04/0429.shtml>
    Votes:
-     +1: julianfoad
+     +1: julianfoad, philip
 
  * r1469994
    Make "h" and "?" work at the conflict prompt as promised by the help text.
