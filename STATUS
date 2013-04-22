@@ -58,7 +58,10 @@ Candidate changes:
      and then 'svn' may use these fields; I'm working on such a change.
    Votes:
      +1: julianfoad
-
+     +0.5: rhuijben (after this patch the situation is better, but I'm not
+                     sure if it is optimal. In merge there are 4 trees to
+                     consider before we can tell the reason. The 4th tree
+                     is available as the pristine version of the local node)
 
 Veto-blocked changes:
 =====================
