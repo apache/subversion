@@ -38,20 +38,6 @@ Candidate changes:
    Votes:
      +1: blair
 
- * r1469550
-   Fix a potential segfault in merge.
-   Justification:
-     It's a segfault (though I haven't bothered to make it happen)
-   Votes:
-     +1: breser, philip
-
- * r1469556
-   Load hooks env in svn_repos_fs_change_rev_prop4() properly.
-   Justification:
-     Security issue, possible case where hooks environment doesn't get loaded.
-   Votes:
-     +1: breser, philip
-
  * r1469862, r1469866
    Change configure default to --without-apache-libexecdir.
    Justification:
@@ -60,21 +46,6 @@ Candidate changes:
      libraries in $prefix. This is not expected behaviour.
    Votes:
      +1: brane
-
- * r1469871
-   Make the conflict prompt correctly localised again.
-   Justification:
-     Regression from 1.7.  Needed quickly so translators can get their
-     translations done.  <http://svn.haxx.se/dev/archive-2013-04/0429.shtml>
-   Votes:
-     +1: julianfoad, philip
-
- * r1469994
-   Make "h" and "?" work at the conflict prompt as promised by the help text.
-   Justification:
-     User annoyance.
-   Votes:
-     +1: julianfoad, philip
 
  * r1470031
    Correctly set the 'action' and 'reason' fields of a property conflict.
@@ -94,3 +65,32 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1469550
+   Fix a potential segfault in merge.
+   Justification:
+     It's a segfault (though I haven't bothered to make it happen)
+   Votes:
+     +1: breser, philip, rhuijben
+
+ * r1469556
+   Load hooks env in svn_repos_fs_change_rev_prop4() properly.
+   Justification:
+     Security issue, possible case where hooks environment doesn't get loaded.
+   Votes:
+     +1: breser, philip, rhuijben
+
+ * r1469871
+   Make the conflict prompt correctly localised again.
+   Justification:
+     Regression from 1.7.  Needed quickly so translators can get their
+     translations done.  <http://svn.haxx.se/dev/archive-2013-04/0429.shtml>
+   Votes:
+     +1: julianfoad, philip, rhuijben
+
+ * r1469994
+   Make "h" and "?" work at the conflict prompt as promised by the help text.
+   Justification:
+     User annoyance.
+   Votes:
+     +1: julianfoad, philip, rhuijben
