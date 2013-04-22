@@ -487,6 +487,7 @@ svn_fs_upgrade(const char *path, apr_pool_t *pool)
 
 svn_error_t *
 svn_fs_verify(const char *path,
+              apr_hash_t *fs_config,
               svn_revnum_t start,
               svn_revnum_t end,
               svn_fs_progress_notify_func_t notify_func,
@@ -499,7 +500,7 @@ svn_fs_verify(const char *path,
   svn_fs_t *fs;
 
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
-  fs = fs_new(NULL, pool);
+  fs = fs_new(fs_config, pool);
 
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
                        vtable->verify_fs(fs, path, start, end,
@@ -513,6 +514,12 @@ const char *
 svn_fs_path(svn_fs_t *fs, apr_pool_t *pool)
 {
   return apr_pstrdup(pool, fs->path);
+}
+
+apr_hash_t *
+svn_fs_config(svn_fs_t *fs, apr_pool_t *pool)
+{
+  return apr_hash_copy(pool, fs->config);
 }
 
 svn_error_t *
