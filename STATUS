@@ -74,7 +74,7 @@ Candidate changes:
    Justification:
      User annoyance.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, philip
 
  * r1470031
    Correctly set the 'action' and 'reason' fields of a property conflict.
