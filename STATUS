@@ -88,13 +88,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1469556
-   Load hooks env in svn_repos_fs_change_rev_prop4() properly.
-   Justification:
-     Security issue, possible case where hooks environment doesn't get loaded.
-   Votes:
-     +1: breser, philip, rhuijben
-
  * r1469871
    Make the conflict prompt correctly localised again.
    Justification:
