@@ -2444,6 +2444,24 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       return EXIT_ERROR(err);
     }
 
+#ifdef SVN_CL__OPTION_WITH_REVPROP_CAN_SET_PROPERTIES_IN_SVN_NAMESPACE
+  /* XXX This is incomplete, since we do not yet check for --force, nor
+     do all the commands that accept --with-revprop also accept --force. */
+
+  /* Check the spelling of the revision properties given by --with-revprop. */
+  if (opt_state.revprop_table)
+    {
+      apr_hash_index_t *hi;
+      for (hi = apr_hash_first(pool, opt_state.revprop_table);
+           hi; hi = apr_hash_next(hi))
+        {
+          SVN_INT_ERR(svn_cl__check_svn_prop_name(svn__apr_hash_index_key(hi),
+                                                  TRUE, svn_cl__prop_use_use,
+                                                  pool));
+        }
+    }
+#endif /* SVN_CL__OPTION_WITH_REVPROP_CAN_SET_PROPERTIES_IN_SVN_NAMESPACE */
+
   /* Disallow simultaneous use of both -m and -F, when they are
      both used to pass a commit message or lock comment.  ('propset'
      takes the property value, not a commit message, from -F.)
