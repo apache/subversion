@@ -113,7 +113,7 @@ Candidate changes:
    Justification:
      Further fix for issue 4352.  A new-in-1.8 API change so best in 1.8.0.
    Votes:
-    +1: philip
+    +1: philip, ivan
 
  * r1471029
    Fix issue 4359, incorrect/missing pack notification.
