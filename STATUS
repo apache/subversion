@@ -72,7 +72,7 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1470238
+ * r1470238, r1471153
    Improve labelling of the file diff in interactive conflict resolution 'df'
    option. Show labels such as "THEIRS" and "MERGED", not just the paths to
    the files on disk.
