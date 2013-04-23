@@ -519,7 +519,10 @@ svn_fs_path(svn_fs_t *fs, apr_pool_t *pool)
 apr_hash_t *
 svn_fs_config(svn_fs_t *fs, apr_pool_t *pool)
 {
-  return apr_hash_copy(pool, fs->config);
+  if (fs->config)
+    return apr_hash_copy(pool, fs->config);
+
+  return NULL;
 }
 
 svn_error_t *
