@@ -34,6 +34,7 @@
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_sorts.h"
+#include "svn_utf.h"
 
 #include "cl.h"
 #include "cl-conflicts.h"
@@ -309,7 +310,7 @@ launch_resolver(svn_boolean_t *performed_edit,
 typedef struct resolver_option_t
 {
   const char *code;        /* one or two characters */
-  const char *short_desc;  /* short description */
+  const char *short_desc;  /* label in prompt (localized) */
   const char *long_desc;   /* longer description (localized) */
   svn_wc_conflict_choice_t choice;  /* or -1 if not a simple choice */
 } resolver_option_t;
@@ -318,118 +319,141 @@ typedef struct resolver_option_t
 /* (opt->code == "" causes a blank line break in help_string()) */
 static const resolver_option_t text_conflict_options[] =
 {
-  { "e",  "edit",             N_("change merged file in an editor"), -1 },
-  { "df", "diff-full",        N_("show all changes made to merged file"), -1 },
-  { "r",  "resolved",         N_("accept merged version of file"),
-                              svn_wc_conflict_choose_merged },
-  { "",   "",                 "", svn_wc_conflict_choose_unspecified },
-  { "dc", "display-conflict", N_("show all conflicts (ignoring merged version)"), -1 },
-  { "mc", "mine-conflict",    N_("accept my version for all conflicts (same)"),
-                              svn_wc_conflict_choose_mine_conflict },
-  { "tc", "theirs-conflict",  N_("accept their version for all conflicts (same)"),
-                              svn_wc_conflict_choose_theirs_conflict },
-  { "",   "",                 "", svn_wc_conflict_choose_unspecified },
-  { "mf", "mine-full",        N_("accept my version of entire file (even "
-                                 "non-conflicts)"),
-                              svn_wc_conflict_choose_mine_full },
-  { "tf", "theirs-full",      N_("accept their version of entire file (same)"),
-                              svn_wc_conflict_choose_theirs_full },
-  { "",   "",                 "", svn_wc_conflict_choose_unspecified },
-  { "p",  "postpone",         N_("mark the conflict to be resolved later"),
-                              svn_wc_conflict_choose_postpone },
-  { "m",  "merge",            N_("use internal merge tool to resolve conflict"), -1 },
-  { "l",  "launch",           N_("launch external tool to resolve conflict"), -1 },
-  { "q",  "quit",             N_("postpone all remaining conflicts"),
-                              svn_wc_conflict_choose_postpone },
-  { "s",  "show all options", N_("show this list (also 'h', '?')"), -1 },
+  /* Translators: keep long_desc below 70 characters (wrap with a left
+     margin of 9 spaces if needed); don't translate the words within square
+     brackets. */
+  { "e",  N_("edit file"),        N_("change merged file in an editor"
+                                     "  [edit]"),
+                                  -1 },
+  { "df", N_("show diff"),        N_("show all changes made to merged file"),
+                                  -1 },
+  { "r",  N_("resolved"),         N_("accept merged version of file"),
+                                  svn_wc_conflict_choose_merged },
+  { "",   "",                     "", svn_wc_conflict_choose_unspecified },
+  { "dc", N_("display conflict"), N_("show all conflicts "
+                                     "(ignoring merged version)"), -1 },
+  { "mc", N_("my side of conflict"), N_("accept my version for all conflicts "
+                                        "(same)  [mine-conflict]"),
+                                  svn_wc_conflict_choose_mine_conflict },
+  { "tc", N_("their side of conflict"), N_("accept their version for all "
+                                           "conflicts (same)"
+                                           "  [theirs-conflict]"),
+                                  svn_wc_conflict_choose_theirs_conflict },
+  { "",   "",                     "", svn_wc_conflict_choose_unspecified },
+  { "mf", N_("my version"),       N_("accept my version of entire file (even "
+                                     "non-conflicts)  [mine-full]"),
+                                  svn_wc_conflict_choose_mine_full },
+  { "tf", N_("their version"),    N_("accept their version of entire file "
+                                     "(same)  [theirs-full]"),
+                                  svn_wc_conflict_choose_theirs_full },
+  { "",   "",                     "", svn_wc_conflict_choose_unspecified },
+  { "p",  N_("postpone"),         N_("mark the conflict to be resolved later"
+                                     "  [postpone]"),
+                                  svn_wc_conflict_choose_postpone },
+  { "m",  N_("merge"),            N_("use internal merge tool to resolve "
+                                     "conflict"), -1 },
+  { "l",  N_("launch tool"),      N_("launch external tool to resolve "
+                                     "conflict  [launch]"), -1 },
+  { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
+                                  svn_wc_conflict_choose_postpone },
+  { "s",  N_("show all options"), N_("show this list (also 'h', '?')"), -1 },
   { NULL }
 };
 
 /* Resolver options for a property conflict */
 static const resolver_option_t prop_conflict_options[] =
 {
-  { "p",  "postpone",         N_("mark the conflict to be resolved later"),
-                              svn_wc_conflict_choose_postpone },
-  { "mf", "mine-full",        N_("accept my version of entire file (even "
-                                "non-conflicts)"),
-                              svn_wc_conflict_choose_mine_full },
-  { "tf", "theirs-full",      N_("accept their version of entire file (same)"),
-                              svn_wc_conflict_choose_theirs_full },
-  { "q",  "quit",             N_("postpone all remaining conflicts"),
-                              svn_wc_conflict_choose_postpone },
-  { "h",  "help",             N_("show this help (also '?')"), -1 },
+  { "p",  N_("postpone"),         N_("mark the conflict to be resolved later"
+                                     "  [postpone]"),
+                                  svn_wc_conflict_choose_postpone },
+  { "mf", N_("my version"),       N_("accept my version of entire file (even "
+                                     "non-conflicts)  [mine-full]"),
+                                  svn_wc_conflict_choose_mine_full },
+  { "tf", N_("their version"),    N_("accept their version of entire file "
+                                     "(same)  [theirs-full]"),
+                                  svn_wc_conflict_choose_theirs_full },
+  { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
+                                  svn_wc_conflict_choose_postpone },
+  { "h",  N_("help"),             N_("show this help (also '?')"), -1 },
   { NULL }
 };
 
 /* Resolver options for an obstructued addition */
 static const resolver_option_t obstructed_add_options[] =
 {
-  { "p",  "postpone",         N_("resolve the conflict later"),
-                              svn_wc_conflict_choose_postpone },
-  { "mf", "mine-full",        N_("accept pre-existing item (ignore upstream addition)"),
-                              svn_wc_conflict_choose_mine_full },
-  { "tf", "theirs-full",      N_("accept incoming item (overwrite pre-existing item)"),
-                              svn_wc_conflict_choose_theirs_full },
-  { "q",  "quit",             N_("postpone all remaining conflicts"),
-                              svn_wc_conflict_choose_postpone },
-  { "h",  "help",             N_("show this help (also '?')"), -1 },
+  { "p",  N_("postpone"),         N_("mark the conflict to be resolved later"
+                                     "  [postpone]"),
+                                  svn_wc_conflict_choose_postpone },
+  { "mf", N_("my version"),       N_("accept pre-existing item (ignore "
+                                     "upstream addition)  [mine-full]"),
+                                  svn_wc_conflict_choose_mine_full },
+  { "tf", N_("their version"),    N_("accept incoming item (overwrite "
+                                     "pre-existing item)  [theirs-full]"),
+                                  svn_wc_conflict_choose_theirs_full },
+  { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
+                                  svn_wc_conflict_choose_postpone },
+  { "h",  N_("help"),             N_("show this help (also '?')"), -1 },
   { NULL }
 };
 
 /* Resolver options for a tree conflict */
 static const resolver_option_t tree_conflict_options[] =
 {
-  { "p",  "postpone",         N_("resolve the conflict later"),
-                              svn_wc_conflict_choose_postpone },
-  { "r",  "resolved",         N_("accept current working copy state"),
-                              svn_wc_conflict_choose_merged },
-  { "q",  "quit",             N_("postpone all remaining conflicts"),
-                              svn_wc_conflict_choose_postpone },
-  { "h",  "help",             N_("show this help (also '?')"), -1 },
+  { "p",  N_("postpone"),         N_("resolve the conflict later  [postpone]"),
+                                  svn_wc_conflict_choose_postpone },
+  { "r",  N_("resolved"),         N_("accept current working copy state"),
+                                  svn_wc_conflict_choose_merged },
+  { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
+                                  svn_wc_conflict_choose_postpone },
+  { "h",  N_("help"),             N_("show this help (also '?')"), -1 },
   { NULL }
 };
 
 static const resolver_option_t tree_conflict_options_update_moved_away[] =
 {
-  { "p",  "postpone",         N_("resolve the conflict later"),
-                              svn_wc_conflict_choose_postpone },
-  { "mc", "mine-conflict",    N_("apply update to the move destination"),
-                              svn_wc_conflict_choose_mine_conflict },
-  { "r",  "resolved",         N_("mark resolved (the move will become a copy)"),
-                              svn_wc_conflict_choose_merged },
-  { "q",  "quit",             N_("postpone all remaining conflicts"),
-                              svn_wc_conflict_choose_postpone },
-  { "h",  "help",             N_("show this help (also '?')"), -1 },
+  { "p",  N_("postpone"),         N_("resolve the conflict later  [postpone]"),
+                                  svn_wc_conflict_choose_postpone },
+  { "mc", N_("my side of conflict"), N_("apply update to the move destination"
+                                        "  [mine-conflict]"),
+                                  svn_wc_conflict_choose_mine_conflict },
+  { "r",  N_("resolved"),         N_("mark resolved "
+                                     "(the move will become a copy)"),
+                                  svn_wc_conflict_choose_merged },
+  { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
+                                  svn_wc_conflict_choose_postpone },
+  { "h",  N_("help"),             N_("show this help (also '?')"), -1 },
   { NULL }
 };
 
 static const resolver_option_t tree_conflict_options_update_deleted[] =
 {
-  { "p",  "postpone",         N_("resolve the conflict later"),
-                              svn_wc_conflict_choose_postpone },
-  { "mc", "mine-conflict",    N_("keep any moves affected by this deletion"),
-                              svn_wc_conflict_choose_mine_conflict },
-  { "r",  "resolved",         N_("mark resolved (any affected moves will "
-                                 "become copies)"),
-                              svn_wc_conflict_choose_merged },
-  { "q",  "quit",             N_("postpone all remaining conflicts"),
-                              svn_wc_conflict_choose_postpone },
-  { "h",  "help",             N_("show this help (also '?')"), -1 },
+  { "p",  N_("postpone"),         N_("resolve the conflict later  [postpone]"),
+                                  svn_wc_conflict_choose_postpone },
+  { "mc", N_("my side of conflict"), N_("keep any moves affected "
+                                        "by this deletion  [mine-conflict]"),
+                                  svn_wc_conflict_choose_mine_conflict },
+  { "r",  N_("resolved"),         N_("mark resolved (any affected moves will "
+                                     "become copies)"),
+                                  svn_wc_conflict_choose_merged },
+  { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
+                                  svn_wc_conflict_choose_postpone },
+  { "h",  N_("help"),             N_("show this help (also '?')"), -1 },
   { NULL }
 };
 
 static const resolver_option_t tree_conflict_options_update_replaced[] =
 {
-  { "p",  "postpone",         N_("resolve the conflict later"),
-                              svn_wc_conflict_choose_postpone },
-  { "mc", "mine-conflict",    N_("keep any moves affected by this replacement"),
-                              svn_wc_conflict_choose_mine_conflict },
-  { "r",  "resolved",         N_("mark resolved (any affected moves will "
-                                 "become copies)"),
-                              svn_wc_conflict_choose_merged },
-  { "q",  "quit",             N_("postpone all remaining conflicts"),
-                              svn_wc_conflict_choose_postpone },
-  { "h",  "help",             N_("show this help (also '?')"), -1 },
+  { "p",  N_("postpone"),         N_("resolve the conflict later  [postpone]"),
+                                  svn_wc_conflict_choose_postpone },
+  { "mc", N_("my side of conflict"), N_("keep any moves affected by this "
+                                        "replacement  [mine-conflict]"),
+                                  svn_wc_conflict_choose_mine_conflict },
+  { "r",  N_("resolved"),         N_("mark resolved (any affected moves will "
+                                     "become copies)"),
+                                  svn_wc_conflict_choose_merged },
+  { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
+                                  svn_wc_conflict_choose_postpone },
+  { "h",  N_("help"),             N_("show this help (also '?')"), -1 },
   { NULL }
 };
 
@@ -458,14 +482,17 @@ prompt_string(const resolver_option_t *options,
               const char *const *option_codes,
               apr_pool_t *pool)
 {
-  const char *result = "Select:";
-  int this_line_len = strlen(result);
+  const char *result = _("Select:");
+  int left_margin = svn_utf_cstring_utf8_width(result);
+  const char *line_sep = apr_psprintf(pool, "\n%*s", left_margin, "");
+  int this_line_len = left_margin;
   svn_boolean_t first = TRUE;
 
   while (1)
     {
       const resolver_option_t *opt;
       const char *s;
+      int slen;
 
       if (option_codes)
         {
@@ -482,16 +509,17 @@ prompt_string(const resolver_option_t *options,
 
       if (! first)
         result = apr_pstrcat(pool, result, ",", (char *)NULL);
+      s = apr_psprintf(pool, _(" (%s) %s"),
+                       opt->code, _(opt->short_desc));
+      slen = svn_utf_cstring_utf8_width(s);
       /* Break the line if adding the next option would make it too long */
-      if ((this_line_len + strlen(opt->short_desc) + 6) > MAX_PROMPT_WIDTH)
+      if (this_line_len + slen > MAX_PROMPT_WIDTH)
         {
-          result = apr_pstrcat(pool, result, "\n       ", (char *)NULL);
-          this_line_len = 7;
+          result = apr_pstrcat(pool, result, line_sep, (char *)NULL);
+          this_line_len = left_margin;
         }
-      s = apr_psprintf(pool, " (%s) %s",
-                       opt->code, opt->short_desc);
       result = apr_pstrcat(pool, result, s, (char *)NULL);
-      this_line_len += strlen(s);
+      this_line_len += slen;
       first = FALSE;
     }
   return apr_pstrcat(pool, result, ": ", (char *)NULL);
@@ -512,14 +540,18 @@ help_string(const resolver_option_t *options,
         {
           const char *s = apr_psprintf(pool, "  (%s)", opt->code);
 
-          result = apr_psprintf(pool, "%s%-6s %-16s - %s\n",
-                                result, s, opt->short_desc, opt->long_desc);
+          result = apr_psprintf(pool, "%s%-6s - %s\n",
+                                result, s, _(opt->long_desc));
         }
       else
         {
           result = apr_pstrcat(pool, result, "\n", (char *)NULL);
         }
     }
+  result = apr_pstrcat(pool, result,
+                       _("Words in square brackets are the corresponding "
+                         "--accept option arguments.\n"),
+                       (char *)NULL);
   return result;
 }
 
