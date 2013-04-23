@@ -69,7 +69,7 @@ svn_cl__propset(apr_getopt_t *os,
                              pname_utf8);
   if (!opt_state->force)
     SVN_ERR(svn_cl__check_svn_prop_name(pname_utf8, opt_state->revprop,
-                                        scratch_pool));
+                                        svn_cl__prop_use_set, scratch_pool));
 
   /* Get the PROPVAL from either an external file, or from the command
      line. */
