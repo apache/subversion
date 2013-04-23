@@ -312,7 +312,7 @@ svn_fs_fs__string_table_builder_add(string_table_builder_t *builder,
       item->previous_match_len = 0;
       item->next_match_len = 0;
 
-      if (   table->long_strings->nelts == MAX_STRINGS_PER_TABLE
+      if (   table->short_strings->nelts == MAX_STRINGS_PER_TABLE
           || table->max_data_size < len)
         table = add_table(builder);
 
