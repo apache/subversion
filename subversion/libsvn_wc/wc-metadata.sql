@@ -820,6 +820,14 @@ ALTER TABLE NODES ADD COLUMN inherited_props BLOB;
 DROP INDEX IF EXISTS I_ACTUAL_CHANGELIST;
 DROP INDEX IF EXISTS I_EXTERNALS_PARENT;
 
+DROP INDEX I_NODES_PARENT;
+CREATE UNIQUE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath,
+                                             local_relpath, op_depth);
+
+DROP INDEX I_ACTUAL_PARENT;
+CREATE UNIQUE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath,
+                                                    local_relpath);
+
 PRAGMA user_version = 31;
 
 -- STMT_UPGRADE_31_SELECT_WCROOT_NODES
@@ -858,8 +866,8 @@ CREATE UNIQUE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath,
                                              local_relpath, op_depth);
 
 DROP INDEX I_ACTUAL_PARENT;
-CREATE UNIQUE INDEX I_ACTUAL_PARENT ON ACTUAL (wc_id, parent_relpath,
-                                               local_relpath);
+CREATE UNIQUE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath,
+                                                    local_relpath);
 
 /* ------------------------------------------------------------------------- */
 
