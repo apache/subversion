@@ -3525,6 +3525,46 @@ open_file(const char *path,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+lazy_open_source(svn_stream_t **stream,
+                 void *baton,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  struct file_baton *fb = baton;
+
+  SVN_ERR(svn_wc__db_pristine_read(stream, NULL, fb->edit_baton->db,
+                                   fb->local_abspath,
+                                   fb->original_checksum,
+                                   result_pool, scratch_pool));
+
+
+  return SVN_NO_ERROR;
+}
+
+struct lazy_target_baton {
+  struct file_baton *fb;
+  struct handler_baton *hb;
+  struct edit_baton *eb;
+};
+
+static svn_error_t *
+lazy_open_target(svn_stream_t **stream,
+                 void *baton,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  struct lazy_target_baton *tb = baton;
+
+  SVN_ERR(svn_wc__open_writable_base(stream, &tb->hb->new_text_base_tmp_abspath,
+                                     NULL, &tb->hb->new_text_base_sha1_checksum,
+                                     tb->fb->edit_baton->db,
+                                     tb->eb->wcroot_abspath,
+                                     result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* An svn_delta_editor_t function. */
 static svn_error_t *
 apply_textdelta(void *file_baton,
@@ -3537,10 +3577,10 @@ apply_textdelta(void *file_baton,
   apr_pool_t *handler_pool = svn_pool_create(fb->pool);
   struct handler_baton *hb = apr_pcalloc(handler_pool, sizeof(*hb));
   struct edit_baton *eb = fb->edit_baton;
-  svn_error_t *err;
   const svn_checksum_t *recorded_base_checksum;
   svn_checksum_t *expected_base_checksum;
   svn_stream_t *source;
+  struct lazy_target_baton *tb;
   svn_stream_t *target;
 
   if (fb->skip_this)
@@ -3607,10 +3647,8 @@ apply_textdelta(void *file_baton,
       SVN_ERR_ASSERT(!fb->original_checksum
                      || fb->original_checksum->kind == svn_checksum_sha1);
 
-      SVN_ERR(svn_wc__db_pristine_read(&source, NULL, fb->edit_baton->db,
-                                       fb->local_abspath,
-                                       fb->original_checksum,
-                                       handler_pool, handler_pool));
+      source = svn_stream_lazyopen_create(lazy_open_source, fb, FALSE,
+                                          handler_pool);
     }
   else
     {
@@ -3636,16 +3674,11 @@ apply_textdelta(void *file_baton,
       hb->source_checksum_stream = source;
     }
 
-  /* Open the text base for writing (this will get us a temporary file).  */
-  err = svn_wc__open_writable_base(&target, &hb->new_text_base_tmp_abspath,
-                                   NULL, &hb->new_text_base_sha1_checksum,
-                                   fb->edit_baton->db, eb->wcroot_abspath,
-                                   handler_pool, pool);
-  if (err)
-    {
-      svn_pool_destroy(handler_pool);
-      return svn_error_trace(err);
-    }
+  tb = apr_palloc(handler_pool, sizeof(struct lazy_target_baton));
+  tb->hb = hb;
+  tb->fb = fb;
+  tb->eb = eb;
+  target = svn_stream_lazyopen_create(lazy_open_target, tb, TRUE, handler_pool);
 
   /* Prepare to apply the delta.  */
   svn_txdelta_apply(source, target,
