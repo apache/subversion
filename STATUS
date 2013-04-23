@@ -63,7 +63,7 @@ Candidate changes:
                      consider before we can tell the reason. The 4th tree
                      is available as the pristine version of the local node)
 
- * r1470738
+ * r1470738, r1470908
    Tweak svn_fs_verify API to have the same config options as svn_fs_open
    and svn_fs_create.  Make svn_repos_verify_fs2 use it for consistency.
    Justification:
@@ -71,8 +71,11 @@ Candidate changes:
      Also, addresses cache performance (use same cache data throughout a
      verfication run) and consistency issues (use separate namespace during
      svnadmin verify instead of the global one).
+   Notes:
+     rhuijben: r1470908 is necessary to avoid a segfault triggered by javahl.
    Votes:
-     +1: stefan2
+     +1: stefan2 (without r1470908)
+     +1: rhuijben (r1470908 only; +0 for the rest until review)
 
  * r1470781
    Make error messages from property spelling checks more aligned with
