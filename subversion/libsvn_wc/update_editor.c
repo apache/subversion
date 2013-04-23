@@ -3525,6 +3525,7 @@ open_file(const char *path,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_stream_lazyopen_func_t. */
 static svn_error_t *
 lazy_open_source(svn_stream_t **stream,
                  void *baton,
@@ -3548,6 +3549,7 @@ struct lazy_target_baton {
   struct edit_baton *eb;
 };
 
+/* Implements svn_stream_lazyopen_func_t. */
 static svn_error_t *
 lazy_open_target(svn_stream_t **stream,
                  void *baton,
