@@ -548,6 +548,8 @@ def verify_windows_paths_in_repos(sbox):
 
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
                                                         sbox.repo_dir)
+  if errput:
+    raise SVNUnexpectedStderr(errput)
 
   # unfortunately, FSFS needs to do more checks than BDB resulting in
   # different progress output
@@ -557,13 +559,13 @@ def verify_windows_paths_in_repos(sbox):
       'STDERR', ["* Verifying repository metadata ...\n",
                  "* Verified revision 0.\n",
                  "* Verified revision 1.\n",
-                 "* Verified revision 2.\n"], errput)
+                 "* Verified revision 2.\n"], output)
   else:
     svntest.verify.compare_and_display_lines(
       "Error while running 'svnadmin verify'.",
       'STDERR', ["* Verified revision 0.\n",
                  "* Verified revision 1.\n",
-                 "* Verified revision 2.\n"], errput)
+                 "* Verified revision 2.\n"], output)
 
 #----------------------------------------------------------------------
 
@@ -1062,8 +1064,10 @@ def verify_with_invalid_revprops(sbox):
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
                                                         sbox.repo_dir)
 
+  if errput:
+    raise SVNUnexpectedStderr(errput)
   if svntest.verify.verify_outputs(
-    "Output of 'svnadmin verify' is unexpected.", None, errput, None,
+    "Output of 'svnadmin verify' is unexpected.", None, output, None,
     ".*Verified revision 0*"):
     raise svntest.Failure
 
