@@ -232,7 +232,7 @@ static const apr_getopt_option_t options_table[] =
      N_("bypass property validation logic")},
 
     {"quiet",         'q', 0,
-     N_("no progress (only errors) to stderr")},
+     N_("no progress (only errors to stderr)")},
 
     {"ignore-uuid",   svnadmin__ignore_uuid, 0,
      N_("ignore any repos UUID found in the stream")},
@@ -1598,7 +1598,7 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     }
 
   if (! opt_state->quiet)
-    progress_stream = recode_stream_create(stderr, pool);
+    progress_stream = recode_stream_create(stdout, pool);
 
   return svn_repos_verify_fs2(repos, lower, upper,
                               !opt_state->quiet
