@@ -74,6 +74,13 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1470781
+   Make error messages from property spelling checks more aligned with
+   the property usage (say, e.g., "edit" instead of "set" for "propedit")
+   Justification:
+     Better error messages, better translations, less user annoyance.
+   Votes:
+     +1: brane
 
 Veto-blocked changes:
 =====================
