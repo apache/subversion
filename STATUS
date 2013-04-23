@@ -81,6 +81,22 @@ Candidate changes:
      Better error messages, better translations, less user annoyance.
    Votes:
      +1: brane
+     
+ * r1470898
+   For issue #4358, make 'svn upgrade' upgrade the indexes of 1.7 working
+   copies to exactly the same definition as new working copies have.
+   Justification:
+     Reduces the number of possible working copies at our users.
+   Votes:
+     +1: rhuijben
+
+ * r1470904
+   Tweak an upgrade Sql statement to be easier to understand and a tiny bit
+   faster
+   Justification:
+     The old variant had some theoretical upgrade problems.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
