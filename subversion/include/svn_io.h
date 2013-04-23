@@ -1370,6 +1370,15 @@ svn_string_from_stream(svn_string_t **result,
 /** A function type provided for use as a callback from
  * @c svn_stream_lazyopen_create().
  *
+ * The callback function shall open a new stream and set @a *stream to
+ * the stream object, allocated in @a result_pool.  @a baton is the
+ * callback baton that was passed to svn_stream_lazyopen_create().
+ *
+ * @a result_pool is the result pool that was passed to
+ * svn_stream_lazyopen_create().  The callback function may use
+ * @a scratch_pool for temporary allocations; the caller may clear or
+ * destroy @a scratch_pool any time after the function returns.
+ *
  * @since New in 1.8.
  */
 typedef svn_error_t *
@@ -1381,13 +1390,14 @@ typedef svn_error_t *
 
 /** Return a generic stream which wraps another primary stream,
  * delaying the "opening" of that stream until the first time the
- * stream is accessed.
+ * returned stream is accessed.
  *
  * @a open_func and @a open_baton are a callback function/baton pair
- * invoked upon the first read of @a *stream which are used to open the
- * "real" source stream.
+ * which will be invoked upon the first access of the returned
+ * stream (read, write, mark, seek, skip, or possibly close).  The
+ * callback shall open the primary stream.
  *
- * @note If the only "access" the returned stream gets is to close it
+ * If the only "access" the returned stream gets is to close it
  * then @a open_func will only be called if @a open_on_close is TRUE.
  *
  * @since New in 1.8.
