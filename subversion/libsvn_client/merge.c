@@ -11444,16 +11444,16 @@ find_reintegrate_merge(merge_source_t **source_p,
             &yc_ancestor, source.loc2, source.loc1, target_ra_session,
             ctx, scratch_pool, scratch_pool));
 
-  /* The source side of a reintegrate merge is not 'ancestral', except in
-   * the degenerate case where source == YCA. */
-  source.ancestral = (loc1->rev == yc_ancestor->rev);
-
   if (! yc_ancestor)
     return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                              _("'%s@%ld' must be ancestrally related to "
                                "'%s@%ld'"),
                              source.loc1->url, source.loc1->rev,
                              source.loc2->url, source.loc2->rev);
+
+  /* The source side of a reintegrate merge is not 'ancestral', except in
+   * the degenerate case where source == YCA. */
+  source.ancestral = (loc1->rev == yc_ancestor->rev);
 
   if (source.loc1->rev > yc_ancestor->rev)
     {
