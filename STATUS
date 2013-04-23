@@ -91,7 +91,7 @@ Candidate changes:
    Justification:
      Reduces the number of possible working copies at our users.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, ivan
 
  * r1470904
    Tweak an upgrade Sql statement to be easier to understand and a tiny bit
