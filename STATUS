@@ -64,6 +64,20 @@ Candidate changes:
                      consider before we can tell the reason. The 4th tree
                      is available as the pristine version of the local node)
 
+ * r1470904
+   Tweak an upgrade Sql statement to be easier to understand and a tiny bit
+   faster
+   Justification:
+     The old variant had some theoretical upgrade problems.
+   Votes:
+     +1: rhuijben
+
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1470738, r1470908
    Tweak svn_fs_verify API to have the same config options as svn_fs_open
    and svn_fs_create.  Make svn_repos_verify_fs2 use it for consistency.
@@ -75,7 +89,7 @@ Candidate changes:
    Notes:
      rhuijben: r1470908 is necessary to avoid a segfault triggered by javahl.
    Votes:
-     +1: stefan2, rhuijben
+     +1: stefan2, rhuijben, cmpilato
 
  * r1470781
    Make error messages from property spelling checks more aligned with
@@ -83,28 +97,7 @@ Candidate changes:
    Justification:
      Better error messages, better translations, less user annoyance.
    Votes:
-     +1: brane, rhuijben
-
- * r1470904
-   Tweak an upgrade Sql statement to be easier to understand and a tiny bit
-   faster
-   Justification:
-     The old variant had some theoretical upgrade problems.
-   Votes:
-     +1: rhuijben
-
- * r1471029
-   Fix issue 4359, incorrect/missing pack notification.
-   Justification:
-     Regression from 1.6.
-   Votes:
-     +1: philip, rhuijben
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: brane, rhuijben, cmpilato
 
  * r1470913
    Reduce number of pipelined requests in ra_serf update reporter.
@@ -128,3 +121,10 @@ Approved changes:
      Reduces the number of possible working copies at our users.
    Votes:
      +1: rhuijben, ivan, philip
+
+ * r1471029
+   Fix issue 4359, incorrect/missing pack notification.
+   Justification:
+     Regression from 1.6.
+   Votes:
+     +1: philip, rhuijben, cmpilato
