@@ -75,7 +75,7 @@ Candidate changes:
      rhuijben: r1470908 is necessary to avoid a segfault triggered by javahl.
    Votes:
      +1: stefan2 (without r1470908)
-     +1: rhuijben (r1470908 only; +0 for the rest until review)
+     +1: rhuijben
 
  * r1470781
    Make error messages from property spelling checks more aligned with
@@ -83,7 +83,7 @@ Candidate changes:
    Justification:
      Better error messages, better translations, less user annoyance.
    Votes:
-     +1: brane
+     +1: brane, rhuijben
      
  * r1470898
    For issue #4358, make 'svn upgrade' upgrade the indexes of 1.7 working
