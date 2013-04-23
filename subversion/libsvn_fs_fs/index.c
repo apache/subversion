@@ -20,7 +20,7 @@
  * ====================================================================
  */
 
-#include "assert.h"
+#include <assert.h>
 
 #include "svn_io.h"
 #include "svn_pools.h"
@@ -403,7 +403,7 @@ packed_stream_offset(packed_number_stream_t *stream)
 }
 
 /*
- * phys-to-log index
+ * log-to-phys index
  */
 svn_error_t *
 svn_fs_fs__l2p_proto_index_open(apr_file_t **proto_index,
@@ -717,8 +717,8 @@ svn_fs_fs__l2p_index_create(svn_fs_t *fs,
           for (i = 0; i < entries->nelts; i += entry_count)
             {
               /* 1 page with up to 8k entries */
-              entry_count = MIN(entries->nelts - i, ffd->l2p_page_size);
               apr_size_t last_buffer_size = svn_spillbuf__get_size(buffer);
+              entry_count = MIN(entries->nelts - i, ffd->l2p_page_size);
 
               SVN_ERR(encode_l2p_page(entries, i, i + entry_count,
                                       buffer, iterpool));
@@ -741,15 +741,15 @@ svn_fs_fs__l2p_index_create(svn_fs_t *fs,
       else
         {
           /* store the mapping in our array */
-          l2p_page_entry_t entry = { 0 };
+          l2p_page_entry_t page_entry = { 0 };
           int idx = (apr_size_t)proto_entry.item_index;
           
           while (idx >= entries->nelts)
-            APR_ARRAY_PUSH(entries, l2p_page_entry_t) = entry;
+            APR_ARRAY_PUSH(entries, l2p_page_entry_t) = page_entry;
 
-          entry.offset = proto_entry.offset;
-          entry.sub_item = proto_entry.sub_item;
-          APR_ARRAY_IDX(entries, idx, l2p_page_entry_t) = entry;
+          page_entry.offset = proto_entry.offset;
+          page_entry.sub_item = proto_entry.sub_item;
+          APR_ARRAY_IDX(entries, idx, l2p_page_entry_t) = page_entry;
         }
     }
 
@@ -1127,7 +1127,6 @@ get_l2p_page(l2p_page_t **page,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_uint64_t value, last_value = 0;
-  apr_int64_t diff;
   apr_uint32_t i;
   l2p_page_t *result = apr_pcalloc(pool, sizeof(*result));
   apr_uint64_t container_count;
