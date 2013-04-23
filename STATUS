@@ -100,21 +100,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1470913
-   Reduce number of pipelined requests in ra_serf update reporter.
-   Justification:
-     Partially fix issue 4352: ra_serf fails: too many open files. Reduce
-     number of open files during update/checkout.
-   Votes:
-    +1: ivan, rhuijben
-
- * r1470936, r1470993, r1470994
-   Reduce number of open files for update/diff with ra_serf.
-   Justification:
-     Further fix for issue 4352.  A new-in-1.8 API change so best in 1.8.0.
-   Votes:
-    +1: philip, ivan
-
  * r1471029
    Fix issue 4359, incorrect/missing pack notification.
    Justification:
@@ -127,3 +112,19 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1470913
+   Reduce number of pipelined requests in ra_serf update reporter.
+   Justification:
+     Partially fix issue 4352: ra_serf fails: too many open files. Reduce
+     number of open files during update/checkout.
+   Votes:
+    +1: ivan, rhuijben, cmpilato
+
+ * r1470936, r1470993, r1470994
+   Reduce number of open files for update/diff with ra_serf.
+   Justification:
+     Further fix for issue 4352.  A new-in-1.8 API change so best in 1.8.0.
+   Votes:
+    +1: philip, ivan, cmpilato
+
