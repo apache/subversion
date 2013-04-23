@@ -37,6 +37,7 @@ Candidate changes:
      Clean builds make it more likely to notice real compiler warnings.
    Votes:
      +1: blair
+     -0: philip (see dev thread: it's a false alarm, wrong value)
 
  * r1469862, r1469866
    Change configure default to --without-apache-libexecdir.
@@ -83,14 +84,6 @@ Candidate changes:
      Better error messages, better translations, less user annoyance.
    Votes:
      +1: brane, rhuijben
-     
- * r1470898
-   For issue #4358, make 'svn upgrade' upgrade the indexes of 1.7 working
-   copies to exactly the same definition as new working copies have.
-   Justification:
-     Reduces the number of possible working copies at our users.
-   Votes:
-     +1: rhuijben, ivan
 
  * r1470904
    Tweak an upgrade Sql statement to be easier to understand and a tiny bit
@@ -119,7 +112,7 @@ Approved changes:
      Partially fix issue 4352: ra_serf fails: too many open files. Reduce
      number of open files during update/checkout.
    Votes:
-    +1: ivan, rhuijben, cmpilato
+    +1: ivan, rhuijben, cmpilato, philip
 
  * r1470936, r1470993, r1470994
    Reduce number of open files for update/diff with ra_serf.
@@ -128,3 +121,10 @@ Approved changes:
    Votes:
     +1: philip, ivan, cmpilato
 
+ * r1470898
+   For issue #4358, make 'svn upgrade' upgrade the indexes of 1.7 working
+   copies to exactly the same definition as new working copies have.
+   Justification:
+     Reduces the number of possible working copies at our users.
+   Votes:
+     +1: rhuijben, ivan, philip
