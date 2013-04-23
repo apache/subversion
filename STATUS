@@ -87,10 +87,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1469994
-   Make "h" and "?" work at the conflict prompt as promised by the help text.
-   Justification:
-     User annoyance.
-   Votes:
-     +1: julianfoad, philip, rhuijben
