@@ -1155,7 +1155,7 @@ svn_wc__get_pristine_contents_by_checksum(svn_stream_t **contents,
       gpl_baton->checksum = checksum;
 
       *contents = svn_stream_lazyopen_create(get_pristine_lazyopen_func,
-                                             gpl_baton, result_pool);
+                                             gpl_baton, FALSE, result_pool);
     }
 
   return SVN_NO_ERROR;
