@@ -96,6 +96,7 @@ Commit access for specific areas:
     jrvernooij   Jelmer Vernooij <jelmer@samba.org>          (Python bindings)
           sage   Sage LaTorra <sagelt@gmail.com>             (Ctypes-Python b.)
           vmpn   Vladimir Berezniker <vmpn@hitechman.com>    (JavaHL bindings)
+       rschupp   Roderich Schupp <roderich.schupp@gmail.com> (Swig-Perl b.)
 
   Packages:
 
