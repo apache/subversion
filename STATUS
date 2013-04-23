@@ -108,6 +108,13 @@ Candidate changes:
    Votes:
     +1: ivan, rhuijben
 
+ * r1470936, r1470993, r1470994
+   Reduce number of open files for update/diff with ra_serf.
+   Justification:
+     Further fix for issue 4352.  A new-in-1.8 API change so best in 1.8.0.
+   Votes:
+    +1: philip
+
 Veto-blocked changes:
 =====================
 
