@@ -72,6 +72,47 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1470238
+   Improve labelling of the file diff in interactive conflict resolution 'df'
+   option. Show labels such as "THEIRS" and "MERGED", not just the paths to
+   the files on disk.
+   Justification:
+     It was confusing because the same 'df' option can show a different pair
+     of files depending on whether the conflicted operation was an update or
+     a merge, and on whether there's a base file or not.
+   Votes:
+     +1: julianfoad
+
+ * r1470246
+   Improve the interactive resolution of property conflicts.  Instead of
+   showing the contents of the '.prej' file once for each prop conflict, show
+   initially a single line such as
+     "local delete, incoming edit upon merge"
+   (similar to resolving a text conflict) and allow the user to display a 3-way
+   diff by adding a 'dc - display conflict' option.
+   Justification:
+     Showing the whole .prej file each time was confusing and ugly when more
+     than one property was in conflict.
+   Votes:
+     +1: julianfoad
+
+ * r1470248
+   Fix a little error in 'svn info' whereby it would print the path to the
+   '.prej' file multiple times if multiple properties were in conflict.
+   Justification:
+     Regression since v1.7.
+   Votes:
+     +1: julianfoad
+
+ * r1471107
+   Improve doc strings of new API svn_stream_lazyopen_create() and its
+   callback.
+   Justification:
+     Doc fix.
+   Votes:
+     +1: julianfoad
+
+
 Veto-blocked changes:
 =====================
 
