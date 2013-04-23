@@ -1242,7 +1242,7 @@ svn_string__similarity(const svn_string_t *stringa,
       /* Calculate LCS length of the remainder */
       for (pstr = stra; pstr < enda; ++pstr)
         {
-          int i;
+          apr_size_t i;
           for (i = 1; i <= slots; ++i)
             {
               if (*pstr == strb[i-1])
