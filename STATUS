@@ -74,8 +74,7 @@ Candidate changes:
    Notes:
      rhuijben: r1470908 is necessary to avoid a segfault triggered by javahl.
    Votes:
-     +1: stefan2 (without r1470908)
-     +1: rhuijben
+     +1: stefan2, rhuijben
 
  * r1470781
    Make error messages from property spelling checks more aligned with
