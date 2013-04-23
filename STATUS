@@ -101,6 +101,14 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1470913
+   Reduce number of pipelined requests in ra_serf update reporter.
+   Justification:
+     Partially fix issue 4352: ra_serf fails: too many open files. Reduce
+     number of open files during update/checkout.
+   Votes:
+    +1: ivan
+
 Veto-blocked changes:
 =====================
 
