@@ -149,35 +149,32 @@ show_diff(const svn_wc_conflict_description2_t *desc,
       if (desc->operation == svn_wc_operation_merge)
         {
           path1 = desc->my_abspath;
-          label1 = apr_psprintf(pool, _("MINE - %s"),
-                                svn_cl__local_style_skip_ancestor(
-                                  path_prefix, path1, pool));
+          label1 = _("MINE");
         }
       else
         {
           path1 = desc->their_abspath;
-          label1 = apr_psprintf(pool, _("THEIRS - %s"),
-                                svn_cl__local_style_skip_ancestor(
-                                  path_prefix, path1, pool));
+          label1 = _("THEIRS");
         }
       path2 = desc->merged_file;
-      label2 = apr_psprintf(pool, _("MERGED - %s"),
-                            svn_cl__local_style_skip_ancestor(
-                              path_prefix, path2, pool));
+      label2 = _("MERGED");
     }
   else
     {
       /* There's no merged file, but we can show the
          difference between mine and theirs. */
       path1 = desc->their_abspath;
-      label1 = apr_psprintf(pool, _("THEIRS - %s"),
-                            svn_cl__local_style_skip_ancestor(
-                              path_prefix, path1, pool));
+      label1 = _("THEIRS");
       path2 = desc->my_abspath;
-      label2 = apr_psprintf(pool, _("MINE - %s"),
-                            svn_cl__local_style_skip_ancestor(
-                              path_prefix, path2, pool));
+      label2 = _("MINE");
     }
+
+  label1 = apr_psprintf(pool, "%s\t- %s",
+                        svn_cl__local_style_skip_ancestor(
+                          path_prefix, path1, pool), label1);
+  label2 = apr_psprintf(pool, "%s\t- %s",
+                        svn_cl__local_style_skip_ancestor(
+                          path_prefix, path2, pool), label2);
 
   options = svn_diff_file_options_create(pool);
   options->ignore_eol_style = TRUE;
