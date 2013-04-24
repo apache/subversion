@@ -16,13 +16,6 @@ Status of 1.8.0:
 Candidate changes:
 ==================
 
- * r1469478, r1469489, r1469512
-   Fix issue 4356, status SEGV after incomplete move
-   Justification:
-     It's a SEGV.
-   Votes:
-     +1: philip, rhuijben
-
  * r1469519, r1469520
    Silence compiler warnings.
    Justification:
@@ -141,3 +134,9 @@ Approved changes:
      +1: cmpilato, rhuijben
      +1 (r1468395 only): danielsh
 
+ * r1469478, r1469489, r1469512
+   Fix issue 4356, status SEGV after incomplete move
+   Justification:
+     It's a SEGV.
+   Votes:
+     +1: philip, rhuijben, pburba
