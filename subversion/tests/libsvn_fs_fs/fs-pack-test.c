@@ -791,6 +791,7 @@ file_hint_at_shard_boundary(const svn_test_opts_t *opts,
 #define REPO_NAME "test-repo-fsfs-info"
 #define SHARD_SIZE 3
 #define MAX_REV 5
+#ifdef SVN_FS_INFO
 static svn_error_t *
 test_info(const svn_test_opts_t *opts,
           apr_pool_t *pool)
@@ -827,6 +828,7 @@ test_info(const svn_test_opts_t *opts,
 
   return SVN_NO_ERROR;
 }
+#endif
 #undef REPO_NAME
 #undef SHARD_SIZE
 #undef MAX_REV
@@ -856,7 +858,9 @@ struct svn_test_descriptor_t test_funcs[] =
                        "recover a fully packed filesystem"),
     SVN_TEST_OPTS_PASS(file_hint_at_shard_boundary,
                        "test file hint at shard boundary"),
+#ifdef SVN_FS_INFO
     SVN_TEST_OPTS_PASS(test_info,
                        "test svn_fs_info"),
+#endif
     SVN_TEST_NULL
   };
