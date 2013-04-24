@@ -82,14 +82,6 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
- * r1470248
-   Fix a little error in 'svn info' whereby it would print the path to the
-   '.prej' file multiple times if multiple properties were in conflict.
-   Justification:
-     Regression since v1.7.
-   Votes:
-     +1: julianfoad, rhuijben
-
  * r1471028
    Fix issue 4359, incorrect/missing pack notification.
    Justification:
@@ -117,3 +109,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1470248
+   Fix a little error in 'svn info' whereby it would print the path to the
+   '.prej' file multiple times if multiple properties were in conflict.
+   Justification:
+     Regression since v1.7.
+   Votes:
+     +1: julianfoad, rhuijben, pburba
