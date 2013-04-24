@@ -181,7 +181,8 @@ sub parse_entry {
   s/^   // for @_;
 
   # revisions
-  $branch = sanitize_branch $1 if $_[0] =~ /^(\S*) branch$/;
+  $branch = sanitize_branch $1
+    if $_[0] =~ /^(\S*) branch$/ or $_[0] =~ m#branches/(\S+)#;
   while ($_[0] =~ /^r/) {
     while ($_[0] =~ s/^r(\d+)(?:$|[,; ]+)//) {
       push @revisions, $1;
