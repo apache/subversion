@@ -30,9 +30,10 @@ my $STATUS = './STATUS';
 my $BRANCHES = '^/subversion/branches';
 
 my $YES = $ENV{YES}; # batch mode: eliminate prompts, add sleeps
-my $MAY_COMMIT = $ENV{MAY_COMMIT} // qw[false true][0];
+my $MAY_COMMIT = qw[false true][0];
 my $DEBUG = qw[false true][0]; # 'set -x', etc
 $DEBUG = 'true' if exists $ENV{DEBUG};
+$MAY_COMMIT = 'true' if ($ENV{MAY_COMMIT} // "false") =~ /^(1|yes|true)$/i;
 
 # derived values
 my $SVNq;
