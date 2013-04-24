@@ -145,20 +145,20 @@ resolved_str(apr_pool_t *pool, int n_resolved)
 }
 
 svn_error_t *
-svn_cl__notifier_print_conflict_stats(void *baton, apr_pool_t *scratch_pool)
+svn_cl__print_conflict_stats(svn_cl__conflict_stats_t *conflict_stats,
+                             apr_pool_t *scratch_pool)
 {
-  struct notify_baton *nb = baton;
-  int n_text = apr_hash_count(nb->conflict_stats->text_conflicts);
-  int n_prop = apr_hash_count(nb->conflict_stats->prop_conflicts);
-  int n_tree = apr_hash_count(nb->conflict_stats->tree_conflicts);
-  int n_text_r = nb->conflict_stats->text_conflicts_resolved;
-  int n_prop_r = nb->conflict_stats->prop_conflicts_resolved;
-  int n_tree_r = nb->conflict_stats->tree_conflicts_resolved;
+  int n_text = apr_hash_count(conflict_stats->text_conflicts);
+  int n_prop = apr_hash_count(conflict_stats->prop_conflicts);
+  int n_tree = apr_hash_count(conflict_stats->tree_conflicts);
+  int n_text_r = conflict_stats->text_conflicts_resolved;
+  int n_prop_r = conflict_stats->prop_conflicts_resolved;
+  int n_tree_r = conflict_stats->tree_conflicts_resolved;
 
   if (n_text > 0 || n_text_r > 0
       || n_prop > 0 || n_prop_r > 0
       || n_tree > 0 || n_tree_r > 0
-      || nb->conflict_stats->skipped_paths > 0)
+      || conflict_stats->skipped_paths > 0)
     SVN_ERR(svn_cmdline_printf(scratch_pool,
                                _("Summary of conflicts:\n")));
 
@@ -195,11 +195,20 @@ svn_cl__notifier_print_conflict_stats(void *baton, apr_pool_t *scratch_pool)
                                    remaining_str(scratch_pool, n_tree),
                                    resolved_str(scratch_pool, n_tree_r)));
     }
-  if (nb->conflict_stats->skipped_paths > 0)
+  if (conflict_stats->skipped_paths > 0)
     SVN_ERR(svn_cmdline_printf(scratch_pool,
                                _("  Skipped paths: %d\n"),
-                               nb->conflict_stats->skipped_paths));
+                               conflict_stats->skipped_paths));
 
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cl__notifier_print_conflict_stats(void *baton, apr_pool_t *scratch_pool)
+{
+  struct notify_baton *nb = baton;
+
+  SVN_ERR(svn_cl__print_conflict_stats(nb->conflict_stats, scratch_pool));
   return SVN_NO_ERROR;
 }
 

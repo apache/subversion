@@ -56,6 +56,7 @@ struct svn_cl__interactive_conflict_baton_t {
   const char *path_prefix;
   svn_boolean_t quit;
   svn_cl__conflict_stats_t *conflict_stats;
+  svn_boolean_t printed_summary;
 };
 
 svn_error_t *
@@ -82,6 +83,7 @@ svn_cl__get_conflict_func_interactive_baton(
   SVN_ERR(svn_dirent_get_absolute(&(*b)->path_prefix, "", result_pool));
   (*b)->quit = FALSE;
   (*b)->conflict_stats = conflict_stats;
+  (*b)->printed_summary = FALSE;
 
   return SVN_NO_ERROR;
 }
@@ -1199,6 +1201,13 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
         }
       /* else, fall through to prompting. */
       break;
+    }
+
+  /* Print a summary of conflicts before starting interactive resolution */
+  if (! b->printed_summary)
+    {
+      SVN_ERR(svn_cl__print_conflict_stats(b->conflict_stats, scratch_pool));
+      b->printed_summary = TRUE;
     }
 
   /* We're in interactive mode and either the user gave no --accept
