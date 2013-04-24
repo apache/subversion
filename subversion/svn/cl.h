@@ -551,13 +551,7 @@ svn_cl__check_externals_failed_notify_wrapper(void *baton,
                                               const svn_wc_notify_t *n,
                                               apr_pool_t *pool);
 
-/* Reset to zero the conflict stats accumulated in BATON, which is the
- * notifier baton from svn_cl__get_notifier().
- */
-svn_error_t *
-svn_cl__notifier_reset_conflict_stats(void *baton);
-
-/* Print the conflict stats accumulated in BATON, which is the
+/* Print the conflict stats accumulated in BATON, which is the
  * notifier baton from svn_cl__get_notifier().
  * Return any error encountered during printing.
  */
@@ -565,7 +559,7 @@ svn_error_t *
 svn_cl__notifier_print_conflict_stats(void *baton, apr_pool_t *scratch_pool);
 
 
-/*** Log message callback stuffs. ***/
+/*** Log message callback stuffs. ***/
 
 /* Allocate in POOL a baton for use with svn_cl__get_log_message().
 
