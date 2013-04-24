@@ -119,13 +119,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1470936, r1470993, r1470994
-   Reduce number of open files for update/diff with ra_serf.
-   Justification:
-     Further fix for issue 4352.  A new-in-1.8 API change so best in 1.8.0.
-   Votes:
-    +1: philip, ivan, cmpilato
-
  * r1470898
    For issue #4358, make 'svn upgrade' upgrade the indexes of 1.7 working
    copies to exactly the same definition as new working copies have.
