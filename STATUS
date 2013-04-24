@@ -102,7 +102,7 @@ Candidate changes:
    Justification:
      Regression since v1.7.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, rhuijben
 
  * r1471107
    Improve doc strings of new API svn_stream_lazyopen_create() and its
@@ -110,7 +110,7 @@ Candidate changes:
    Justification:
      Doc fix.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, rhuijben
 
  * r1471028
    Fix issue 4359, incorrect/missing pack notification.
@@ -119,7 +119,13 @@ Candidate changes:
    Notes:
      We already incorrectly merged r1471029 which is not a ^/subversion commit.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
+
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
 
  * r1471302
    Make svn log --search case-sensitive.
@@ -128,10 +134,4 @@ Candidate changes:
      trigger undefined behaviour when matching UTF-8 data case-insensitively.
      See http://svn.haxx.se/dev/archive-2013-04/0374.shtml
    Votes:
-     +1: stsp, philip
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: stsp, philip, rhuijben
