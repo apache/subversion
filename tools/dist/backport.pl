@@ -219,11 +219,12 @@ sub parse_entry {
 }
 
 sub handle_entry {
+  my $in_approved = shift;
   my %entry = parse_entry @_;
   my @vetoes = grep { /^  -1:/ } @{$entry{votes}};
 
   if ($YES) {
-    merge %entry unless @vetoes;
+    merge %entry if $in_approved and not @vetoes;
   } else {
     print "";
     print "\n>>> The $entry{header}:";
@@ -260,13 +261,11 @@ sub main {
 
   # Skip most of the file
   while (<STATUS>) {
-    last if /^Approved changes/;
-  }
-  while (<STATUS>) {
-    last unless /^=+$/;
+    last if /^Status of \d+\.\d+/;
   }
   $/ = ""; # paragraph mode
 
+  my $in_approved = 0;
   while (<STATUS>) {
     my @lines = split /\n/;
 
@@ -274,6 +273,7 @@ sub main {
       # Section header
       when (/^[A-Z].*:$/i) {
         print "\n\n=== $lines[0]" unless $YES;
+        $in_approved = $lines[0] =~ /^Approved changes/;
       }
       # Separator after section header
       when (/^=+$/i) {
@@ -283,7 +283,7 @@ sub main {
       when (/^ \*/) {
         warn "Too many bullets in $lines[0]" and next
           if grep /^ \*/, @lines[1..$#lines];
-        handle_entry @lines;
+        handle_entry $in_approved, @lines;
       }
       default {
         warn "Unknown entry '$lines[0]' at line $.\n";
