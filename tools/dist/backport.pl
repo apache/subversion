@@ -30,9 +30,8 @@ my $STATUS = './STATUS';
 my $BRANCHES = '^/subversion/branches';
 
 my $YES = $ENV{YES}; # batch mode: eliminate prompts, add sleeps
-my $WET_RUN = qw[false true][1]; # don't commit
+my $MAY_COMMIT = $ENV{MAY_COMMIT} // qw[false true][0];
 my $DEBUG = qw[false true][0]; # 'set -x', etc
-$WET_RUN = 'true' if exists $ENV{WET_RUN};
 $DEBUG = 'true' if exists $ENV{DEBUG};
 
 # derived values
@@ -131,7 +130,7 @@ if [ "`$SVN status -q | wc -l`" -eq 1 ]; then
   fi
 fi
 $VIM -e -s -n -N -i NONE -u NONE -c '/$pattern/normal! dap' -c wq $STATUS
-if $WET_RUN; then
+if $MAY_COMMIT; then
   $SVNq commit -F $logmsg_filename
 else
   echo "Committing:"
@@ -142,7 +141,7 @@ EOF
 
   $script .= <<"EOF" if $entry{branch};
 reinteg_rev=\`$SVN info $STATUS | sed -ne 's/Last Changed Rev: //p'\`
-if $WET_RUN; then
+if $MAY_COMMIT; then
   # Sleep to avoid out-of-order commit notifications
   if [ -n "\$YES" ]; then sleep 15; fi
   $SVNq rm $BRANCHES/$entry{branch} -m "Remove the '$entry{branch}' branch, $reintegrated_word in r\$reinteg_rev."
