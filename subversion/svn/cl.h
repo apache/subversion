@@ -671,6 +671,17 @@ const char *
 svn_cl__operation_str_human_readable(svn_wc_operation_t operation,
                                      apr_pool_t *pool);
 
+
+/* What use is a property name intended for.
+   Used by svn_cl__check_svn_prop_name to customize error messages. */
+typedef enum svn_cl__prop_use_e
+  {
+    svn_cl__prop_use_set,       /* setting the property */
+    svn_cl__prop_use_edit,      /* editing the property */
+    svn_cl__prop_use_use        /* using the property name */
+  }
+svn_cl__prop_use_t;
+
 /* If PROPNAME looks like but is not identical to one of the svn:
  * poperties, raise an error and suggest a better spelling. Names that
  * raise errors look like this:
@@ -685,7 +696,9 @@ svn_cl__operation_str_human_readable(svn_wc_operation_t operation,
  * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
-svn_cl__check_svn_prop_name(const char *propname, svn_boolean_t revprop,
+svn_cl__check_svn_prop_name(const char *propname,
+                            svn_boolean_t revprop,
+                            svn_cl__prop_use_t prop_use,
                             apr_pool_t *scratch_pool);
 
 /* If PROPNAME is one of the svn: properties with a boolean value, and
