@@ -134,9 +134,11 @@ $VIM -e -s -n -N -i NONE -u NONE -c '/$pattern/normal! dap' -c wq $STATUS
 if $MAY_COMMIT; then
   $SVNq commit -F $logmsg_filename
 else
-  echo "Committing:"
+  echo "Would have committed:"
+  echo '[[['
   $SVN status -q
   cat $logmsg_filename
+  echo ']]]'
 fi
 EOF
 
@@ -284,7 +286,7 @@ sub main {
         handle_entry @lines;
       }
       default {
-        warn "Unknown entry '$lines[0]' at $ARGV:$.\n";
+        warn "Unknown entry '$lines[0]' at line $.\n";
       }
     }
   }
