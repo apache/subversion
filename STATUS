@@ -104,14 +104,6 @@ Candidate changes:
    Votes:
      +1: julianfoad, rhuijben
 
- * r1471107
-   Improve doc strings of new API svn_stream_lazyopen_create() and its
-   callback.
-   Justification:
-     Doc fix.
-   Votes:
-     +1: julianfoad, rhuijben
-
  * r1471028
    Fix issue 4359, incorrect/missing pack notification.
    Justification:
@@ -135,3 +127,11 @@ Approved changes:
      See http://svn.haxx.se/dev/archive-2013-04/0374.shtml
    Votes:
      +1: stsp, philip, rhuijben
+
+ * r1471107
+   Improve doc strings of new API svn_stream_lazyopen_create() and its
+   callback.
+   Justification:
+     Doc fix.
+   Votes:
+     +1: julianfoad, rhuijben, ivan
