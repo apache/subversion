@@ -2721,7 +2721,7 @@ create_update_report_body(serf_bucket_t **body_bkt,
   apr_off_t offset;
 
   offset = 0;
-  apr_file_seek(report->body_file, APR_SET, &offset);
+  SVN_ERR(svn_io_file_seek(report->body_file, APR_SET, &offset, pool));
 
   *body_bkt = serf_bucket_file_create(report->body_file, alloc);
 
