@@ -1726,6 +1726,10 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                  APR_ARRAY_IDX(files, i, const char *)));
   }
 
+  /* 'svn info' prints an extra newline here, to support multiple targets.
+     We'll do the same. */
+  SVN_ERR(svn_cmdline_printf(pool, "\n"));
+
   return SVN_NO_ERROR;
 }
 
