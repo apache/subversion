@@ -74,21 +74,6 @@ store_path(struct notify_baton *nb, apr_hash_t *hash, const char *path)
   svn_hash_sets(hash, apr_pstrdup(nb->stats_pool, path), "");
 }
 
-svn_error_t *
-svn_cl__notifier_reset_conflict_stats(void *baton)
-{
-  struct notify_baton *nb = baton;
-
-  apr_hash_clear(nb->text_conflicts);
-  apr_hash_clear(nb->prop_conflicts);
-  apr_hash_clear(nb->tree_conflicts);
-  nb->text_conflicts_resolved = 0;
-  nb->prop_conflicts_resolved = 0;
-  nb->tree_conflicts_resolved = 0;
-  nb->skipped_paths = 0;
-  return SVN_NO_ERROR;
-}
-
 static const char *
 remaining_str(apr_pool_t *pool, int n_remaining)
 {
