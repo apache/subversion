@@ -159,7 +159,7 @@ match_search_pattern(const char *search_pattern,
 {
   /* Match any substring containing the pattern, like UNIX 'grep' does. */
   const char *pattern = apr_psprintf(pool, "*%s*", search_pattern);
-  int flags = APR_FNM_CASE_BLIND;
+  int flags = 0;
 
   /* Does the author match the search pattern? */
   if (author && apr_fnmatch(pattern, author, flags) == APR_SUCCESS)
