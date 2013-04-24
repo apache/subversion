@@ -504,9 +504,9 @@ svn_repos_has_capability(svn_repos_t *repos,
  * The set is represented as a hash whose keys are the set members.  The values
  * are not defined.
  *
- * @see svn_repos_info()
+ * @see svn_repos_info_format()
  *
- * @since New in 1.8.
+ * @since New in 1.9.
  */
 svn_error_t *
 svn_repos_capabilities(apr_hash_t **capabilities,
@@ -2501,7 +2501,7 @@ svn_repos_node_from_baton(void *edit_baton);
  *
  * @see svn_fs_info_format()
  *
- * @since New in 1.8.
+ * @since New in 1.9.
  */
 svn_error_t *
 svn_repos_info_format(int *repos_format,
