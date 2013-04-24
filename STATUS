@@ -48,6 +48,7 @@ Candidate changes:
      libraries in $prefix. This is not expected behaviour.
    Votes:
      +1: brane
+     +0: danielsh (refraining from defaulting to ${httpd_libexecdir} is sane)
 
  * r1470031
    Correctly set the 'action' and 'reason' fields of a property conflict.
