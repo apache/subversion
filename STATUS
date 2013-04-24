@@ -128,7 +128,7 @@ Candidate changes:
      trigger undefined behaviour when matching UTF-8 data case-insensitively.
      See http://svn.haxx.se/dev/archive-2013-04/0374.shtml
    Votes:
-     +1: stsp
+     +1: stsp, philip
 
 Veto-blocked changes:
 =====================
