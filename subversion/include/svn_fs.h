@@ -2073,7 +2073,7 @@ svn_fs_youngest_rev(svn_revnum_t *youngest_p,
  *
  * @see svn_repos_info_format()
  *
- * @since New in 1.8.
+ * @since New in 1.9.
  */
 svn_error_t *
 svn_fs_info_format(int *fs_format,
@@ -2086,7 +2086,7 @@ svn_fs_info_format(int *fs_format,
  * Return a list of admin-serviceable config files for @a fs.  @a *files
  * will be set to an array containing paths as C strings.
  *
- * @since New in 1.8.
+ * @since New in 1.9.
  */
 svn_error_t *
 svn_fs_info_config_files(apr_array_header_t **files,
