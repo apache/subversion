@@ -70,7 +70,7 @@ Candidate changes:
    Justification:
      The old variant had some theoretical upgrade problems.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1470238, r1471153
    Improve labelling of the file diff in interactive conflict resolution 'df'
