@@ -2568,68 +2568,72 @@ svn_fs_verify_root(svn_fs_root_t *root,
 
 /**
  * A structure that provides some information about a filesystem.
- * Returned by svn_fs_info().
+ * Returned by svn_fs_info() for #SVN_FS_TYPE_FSFS filesystems.
  *
  * @note Fields may be added to the end of this structure in future
  * versions.  Therefore, users shouldn't allocate structures of this
  * type, to preserve binary compatibility.
  *
- * @since New in 1.8.
+ * @since New in 1.9.
  */
-typedef struct svn_fs_info_t {
+typedef struct svn_fs_fsfs_info_t {
 
-#if 0
-  /* Potential future feature. */
-  svn_boolean_t is_write_locked;
-#endif
+  /** Filesystem backend (#fs_type), i.e., the string #SVN_FS_TYPE_FSFS. */
+  const char *fs_type;
 
-  /** Filesystem backend (#fs_type) -specific information.
-   * @see SVN_FS_FSFS_INFO_* */
-  apr_hash_t *fsap_info;
+  /** Shard size, or 0 if the filesystem is not currently sharded. */
+  int shard_size;
 
-} svn_fs_info_t;
+  /** The smallest revision (as #svn_revnum_t) which is not in a pack file.
+   * @note Zero (0) if (but not iff) the format does not support packing. */
+  svn_revnum_t min_unpacked_rev;
+
+  /* ### TODO: information about fsfs.conf? rep-cache.db? write locks? */
+
+  /* If you add fields here, check whether you need to extend svn_fs_info()
+     or svn_fs_info_dup(). */
+} svn_fs_fsfs_info_t;
+
+/** @see svn_fs_info()
+ * @since New in 1.9. */
+typedef struct svn_fs_info_placeholder_t {
+  /** @see svn_fs_type() */
+  const char *fs_type;
+
+  /* Do not add new fields here, to maintain compatibility with the first
+     released version of svn_fs_fsfs_info_t. */
+} svn_fs_info_placeholder_t;
 
 /**
- * Set @a *info to an info struct describing @a fs.
+ * Set @a *fs_info to a struct describing @a fs.  The type of the
+ * struct depends on the backend: for #SVN_FS_TYPE_FSFS, the struct will be
+ * of type #svn_fs_fsfs_info_t; otherwise, the struct is guaranteed to be
+ * (compatible with) #svn_fs_info_placeholder_t.
  *
- * @see #svn_fs_info_t
+ * @see #svn_fs_fsfs_info_t
  *
- * @since New in 1.8.
+ * @since New in 1.9.
  */
 svn_error_t *
-svn_fs_info(const svn_fs_info_t **info,
+svn_fs_info(const svn_fs_info_placeholder_t **fs_info,
             svn_fs_t *fs,
             apr_pool_t *result_pool,
             apr_pool_t *scratch_pool);
 
 /**
- * Return a duplicate of @a info, allocated in @a pool. No part of the new
- * structure will be shared with @a info.
+ * Return a duplicate of @a info, allocated in @a pool. The returned struct
+ * will be of the same type as the passed-in struct, which itself must have
+ * been returned from svn_fs_info() or svn_fs_info_dup().  No part of the new
+ * structure will be shared with @a info (except static string constants).
  *
- * @since New in 1.8.
+ * @see #svn_fs_info_placeholder_t, #svn_fs_fsfs_info_t
+ *
+ * @since New in 1.9.
  */
-svn_fs_info_t *
-svn_fs_info_dup(const svn_fs_info_t *info,
-                apr_pool_t *result_pool);
-
-/** @name FSFS-specific #svn_fs_info_t information.
- * @since New in 1.8.
- * @{
- */
-
-/** Value: shard size (as int), or 0 if the filesystem is
- * not currently sharded. */
-#define SVN_FS_FSFS_INFO_SHARDED "sharded"
-
-/** Value: abspath to rep-cache.db, or absent if that doesn't exist.
- @note Do not modify the db schema or tables!
- */
-#define SVN_FS_FSFS_INFO_REP_CACHE_PATH "rep-cache-path"
-
-/** The smallest revision (as #svn_revnum_t) which is not in a pack file.
- * @note Zero (0) if (but not iff) the format does not support packing. */
-#define SVN_FS_FSFS_INFO_MIN_UNPACKED_REV "min-unpacked-rev"
-/** @} */
+void *
+svn_fs_info_dup(const void *info,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool);
 
 /** @} */
 #endif /* SVN_FS_INFO */
