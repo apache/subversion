@@ -174,7 +174,8 @@ svn_sort__hash(apr_hash_t *ht,
 /* Return the lowest index at which the element @a *key should be inserted into
  * the array @a array, according to the ordering defined by @a compare_func.
  * The array must already be sorted in the ordering defined by @a compare_func.
- * @a compare_func is defined as for the C stdlib function bsearch().
+ * @a compare_func is defined as for the C stdlib function bsearch(); the
+ * @a key will always passed to it as the second parameter.
  *
  * @note Private. For use by Subversion's own code only.
  */
