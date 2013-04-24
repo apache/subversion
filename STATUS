@@ -23,6 +23,7 @@ Candidate changes:
      Without this, the callback is useless in SWIG/Python
    Votes:
      +1: cmpilato, rhuijben
+     +1 (r1468395 only): danielsh
 
  * 1469478, r1469489, r1469512
    Fix issue 4356, status SEGV after incomplete move
