@@ -1387,14 +1387,15 @@ typedef svn_error_t *
  * invoked upon the first read of @a *stream which are used to open the
  * "real" source stream.
  *
- * @note If the only "access" the returned stream gets is to close it,
- * @a open_func will not be called.
+ * @note If the only "access" the returned stream gets is to close it
+ * then @a open_func will only be called if @a open_on_close is TRUE.
  *
  * @since New in 1.8.
  */
 svn_stream_t *
 svn_stream_lazyopen_create(svn_stream_lazyopen_func_t open_func,
                            void *open_baton,
+                           svn_boolean_t open_on_close,
                            apr_pool_t *result_pool);
 
 /** @} */

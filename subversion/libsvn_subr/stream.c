@@ -1676,6 +1676,9 @@ typedef struct lazyopen_baton_t {
   svn_stream_t *real_stream;
   apr_pool_t *pool;
 
+  /* Whether to open the wrapped stream on a close call. */
+  svn_boolean_t open_on_close;
+
 } lazyopen_baton_t;
 
 
@@ -1747,7 +1750,9 @@ close_handler_lazyopen(void *baton)
 {
   lazyopen_baton_t *b = baton;
 
-  if (b->real_stream != NULL)
+  if (b->open_on_close)
+    SVN_ERR(lazyopen_if_unopened(b));
+  if (b->real_stream)
     SVN_ERR(svn_stream_close(b->real_stream));
 
   return SVN_NO_ERROR;
@@ -1796,6 +1801,7 @@ is_buffered_lazyopen(void *baton)
 svn_stream_t *
 svn_stream_lazyopen_create(svn_stream_lazyopen_func_t open_func,
                            void *open_baton,
+                           svn_boolean_t open_on_close,
                            apr_pool_t *result_pool)
 {
   lazyopen_baton_t *lob = apr_pcalloc(result_pool, sizeof(*lob));
@@ -1805,6 +1811,7 @@ svn_stream_lazyopen_create(svn_stream_lazyopen_func_t open_func,
   lob->open_baton = open_baton;
   lob->real_stream = NULL;
   lob->pool = result_pool;
+  lob->open_on_close = open_on_close;
 
   stream = svn_stream_create(lob, result_pool);
   svn_stream_set_read(stream, read_handler_lazyopen);
