@@ -65,7 +65,7 @@ EOF
 
 sub prompt {
   local $\; # disable 'perl -l' effects
-  print "Go ahead? ";
+  print "$_[0] ";
 
   # TODO: this part was written by trial-and-error
   ReadMode 'cbreak';
@@ -237,7 +237,12 @@ sub handle_entry {
     print "";
     print "Vetoes found!" if @vetoes;
 
-    merge %entry if prompt;
+    merge %entry if prompt 'Go ahead?';
+    system($ENV{SHELL} // "/bin/sh") == 0
+      or warn "Creating an interactive subshell failed ($?): $!"
+      if prompt "Shall I open a subshell?";
+    # Don't revert.  The next merge() call will do that anyway, or maybe the
+    # user did in his interactive shell.
   }
 
   # TODO: merge() changes ./STATUS, which we're reading below, but
