@@ -812,7 +812,7 @@ test_info(const svn_test_opts_t *opts,
   if (strcmp(opts->fs_type, "fsfs") != 0)
     return SVN_NO_ERROR;
 
-  fsfs_info = (void *)info;
+  fsfs_info = (const void *)info;
   if (opts->server_minor_version && (opts->server_minor_version < 6))
     {
       SVN_TEST_ASSERT(fsfs_info->shard_size == 0);
