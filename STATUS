@@ -67,7 +67,7 @@ Candidate changes:
      of files depending on whether the conflicted operation was an update or
      a merge, and on whether there's a base file or not.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, philip
 
  * r1470246
    Improve the interactive resolution of property conflicts.  Instead of
