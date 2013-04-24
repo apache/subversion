@@ -347,6 +347,14 @@ svn_cl__conflict_stats_resolved(svn_cl__conflict_stats_t *conflict_stats,
                                 const char *path_local,
                                 svn_wc_conflict_kind_t conflict_kind);
 
+/* Print the conflict stats accumulated in CONFLICT_STATS.
+ *
+ * Return any error encountered during printing.
+ * See also svn_cl__notifier_print_conflict_stats().
+ */
+svn_error_t *
+svn_cl__print_conflict_stats(svn_cl__conflict_stats_t *conflict_stats,
+                             apr_pool_t *scratch_pool);
 
 /* Create and return an baton for use with svn_cl__conflict_func_interactive
  * in *B, allocated from RESULT_POOL, and initialised with the values
@@ -571,7 +579,9 @@ svn_cl__check_externals_failed_notify_wrapper(void *baton,
                                               apr_pool_t *pool);
 
 /* Print the conflict stats accumulated in BATON, which is the
- * notifier baton from svn_cl__get_notifier().
+ * notifier baton from svn_cl__get_notifier().  This is just like
+ * calling svn_cl__print_conflict_stats().
+ *
  * Return any error encountered during printing.
  */
 svn_error_t *
