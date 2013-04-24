@@ -50,14 +50,16 @@ Candidate changes:
                      consider before we can tell the reason. The 4th tree
                      is available as the pristine version of the local node)
 
- * r1470904
+ * r1470904, r1471744
    Tweak an upgrade Sql statement to be easier to understand and a tiny bit
    faster
    Justification:
      The old variant had some theoretical upgrade problems.
    Votes:
-     +1: rhuijben, philip
-     -1: pburba (This causes an empty iprops cache to be created on
+     +1: rhuijben
+     +1: philip (without r1471744)
+     -1: pburba (without r1471744)
+                (This causes an empty iprops cache to be created on
                  the root of a WC even when that path points to the root
                  of the repository and can't inherit any properties.
                  See http://svn.haxx.se/dev/archive-2013-04/0542.shtml)
