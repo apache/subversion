@@ -118,10 +118,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1471029
-   Fix issue 4359, incorrect/missing pack notification.
-   Justification:
-     Regression from 1.6.
-   Votes:
-     +1: philip, rhuijben, cmpilato
