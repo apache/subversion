@@ -118,14 +118,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1471107
-   Improve doc strings of new API svn_stream_lazyopen_create() and its
-   callback.
-   Justification:
-     Doc fix.
-   Votes:
-     +1: julianfoad, rhuijben, ivan
-
  * r1468395, r1468566
    Introduce typedef for the svn_fs_freeze() callback function type,
    and give it the requisite SWIG/Python wrapper treatment.
