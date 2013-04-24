@@ -117,7 +117,9 @@ if $DEBUG; then
   set -x
 fi
 $SVN diff > $backupfile
+cp STATUS STATUS.$$
 $SVNq revert -R .
+mv STATUS.$$ STATUS
 $SVNq up
 $SVNq merge $mergeargs
 if [ "`$SVN status -q | wc -l`" -eq 1 ]; then
@@ -130,13 +132,14 @@ if [ "`$SVN status -q | wc -l`" -eq 1 ]; then
     exit 2
   fi
 fi
-$VIM -e -s -n -N -i NONE -u NONE -c '/$pattern/normal! dap' -c wq $STATUS
 if $MAY_COMMIT; then
+  $VIM -e -s -n -N -i NONE -u NONE -c '/$pattern/normal! dap' -c wq $STATUS
   $SVNq commit -F $logmsg_filename
 else
   echo "Would have committed:"
   echo '[[['
   $SVN status -q
+  echo 'M       STATUS (not shown in the diff)'
   cat $logmsg_filename
   echo ']]]'
 fi
@@ -265,7 +268,9 @@ sub main {
 
   # ### TODO: need to run 'revert' here
   # ### TODO: both here and in merge(), unlink files that previous merges added
-  die "Local mods to STATUS file $STATUS" if `$SVN status -q $STATUS`;
+  # When running from cron, there shouldn't be local mods.  (For interactive
+  # usage, we preserve local mods to STATUS.)
+  die "Local mods to STATUS file $STATUS" if $YES and `$SVN status -q $STATUS`;
 
   # Skip most of the file
   while (<STATUS>) {
