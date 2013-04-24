@@ -1646,23 +1646,6 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                              svn_repos_path(repos, pool)));
 
   {
-    apr_hash_t *capabilities_set;
-    apr_array_header_t *capabilities;
-    char *as_string;
-
-    SVN_ERR(svn_repos_capabilities(&capabilities_set, repos, pool, pool));
-    SVN_ERR(svn_hash_keys(&capabilities, capabilities_set, pool));
-    as_string = svn_cstring_join(capabilities, ",", pool);
-
-    /* Delete the trailing comma. */
-    as_string[strlen(as_string)-1] = '\0';
-
-    if (capabilities->nelts)
-      SVN_ERR(svn_cmdline_printf(pool, _("Repository capabilities: %s\n"),
-                                 as_string));
-  }
-
-  {
     int repos_format, fs_format, minor;
     svn_version_t *repos_version, *fs_version;
     SVN_ERR(svn_repos_info_format(&repos_format, &repos_version,
@@ -1687,13 +1670,20 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   }
 
   {
-    apr_array_header_t *files;
-    int i;
+    apr_hash_t *capabilities_set;
+    apr_array_header_t *capabilities;
+    char *as_string;
 
-    SVN_ERR(svn_fs_info_config_files(&files, fs, pool, pool));
-    for (i = 0; i < files->nelts; i++)
-      SVN_ERR(svn_cmdline_printf(pool, _("Config file: %s\n"),
-                                 APR_ARRAY_IDX(files, i, const char *)));
+    SVN_ERR(svn_repos_capabilities(&capabilities_set, repos, pool, pool));
+    SVN_ERR(svn_hash_keys(&capabilities, capabilities_set, pool));
+    as_string = svn_cstring_join(capabilities, ",", pool);
+
+    /* Delete the trailing comma. */
+    as_string[strlen(as_string)-1] = '\0';
+
+    if (capabilities->nelts)
+      SVN_ERR(svn_cmdline_printf(pool, _("Repository capabilities: %s\n"),
+                                 as_string));
   }
 
   {
@@ -1724,6 +1714,16 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
         else
           SVN_ERR(svn_cmdline_printf(pool, _("FSFS packed: no\n")));
       }
+  }
+
+  {
+    apr_array_header_t *files;
+    int i;
+
+    SVN_ERR(svn_fs_info_config_files(&files, fs, pool, pool));
+    for (i = 0; i < files->nelts; i++)
+      SVN_ERR(svn_cmdline_printf(pool, _("Config file: %s\n"),
+                                 APR_ARRAY_IDX(files, i, const char *)));
   }
 
   return SVN_NO_ERROR;
