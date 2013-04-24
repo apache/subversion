@@ -57,6 +57,10 @@ Candidate changes:
      The old variant had some theoretical upgrade problems.
    Votes:
      +1: rhuijben, philip
+     -1: pburba (This causes an empty iprops cache to be created on
+                 the root of a WC even when that path points to the root
+                 of the repository and can't inherit any properties.
+                 See http://svn.haxx.se/dev/archive-2013-04/0542.shtml)
 
  * r1470238, r1471153
    Improve labelling of the file diff in interactive conflict resolution 'df'
