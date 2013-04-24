@@ -215,7 +215,7 @@ typedef struct fs_vtable_t
   svn_error_t *(*verify_root)(svn_fs_root_t *root,
                               apr_pool_t *pool);
   svn_error_t *(*freeze)(svn_fs_t *fs,
-                         svn_error_t *(*freeze_func)(void *, apr_pool_t *),
+                         svn_fs_freeze_func_t freeze_func,
                          void *freeze_baton, apr_pool_t *pool);
   svn_error_t *(*bdb_set_errcall)(svn_fs_t *fs,
                                   void (*handler)(const char *errpfx,

@@ -433,6 +433,13 @@ svn_fs_recover(const char *path,
 
 
 /**
+ * Callback for svn_fs_freeze().
+ *
+ * @since New in 1.8.
+ */
+typedef svn_error_t *(*svn_fs_freeze_func_t)(void *baton, apr_pool_t *pool);
+
+/**
  * Take an exclusive lock on @a fs to prevent commits and then invoke
  * @a freeze_func passing @a freeze_baton.
  *
@@ -446,7 +453,7 @@ svn_fs_recover(const char *path,
  */
 svn_error_t *
 svn_fs_freeze(svn_fs_t *fs,
-              svn_error_t *(*freeze_func)(void *baton, apr_pool_t *pool),
+              svn_fs_freeze_func_t freeze_func,
               void *freeze_baton,
               apr_pool_t *pool);
 

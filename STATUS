@@ -118,18 +118,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1468395, r1468566
-   Introduce typedef for the svn_fs_freeze() callback function type,
-   and give it the requisite SWIG/Python wrapper treatment.
-   Justification:
-     Without this, the callback is useless in SWIG/Python
-   Notes:
-     r1468395 adds the typedef; r1468566 updates the bindings.
-     (A bindings update only needs two votes to approve it.)
-   Votes:
-     +1: cmpilato, rhuijben
-     +1 (r1468395 only): danielsh
-
  * r1469478, r1469489, r1469512
    Fix issue 4356, status SEGV after incomplete move
    Justification:
