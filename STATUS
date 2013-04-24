@@ -119,14 +119,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1470898
-   For issue #4358, make 'svn upgrade' upgrade the indexes of 1.7 working
-   copies to exactly the same definition as new working copies have.
-   Justification:
-     Reduces the number of possible working copies at our users.
-   Votes:
-     +1: rhuijben, ivan, philip
-
  * r1471029
    Fix issue 4359, incorrect/missing pack notification.
    Justification:
