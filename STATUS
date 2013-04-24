@@ -121,6 +121,15 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1471302
+   Make svn log --search case-sensitive.
+   Justification:
+     Case-insensitive matching works only for ASCII, and apr_fnmatch() can
+     trigger undefined behaviour when matching UTF-8 data case-insensitively.
+     See http://svn.haxx.se/dev/archive-2013-04/0374.shtml
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
