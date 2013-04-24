@@ -112,6 +112,14 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1471028
+   Fix issue 4359, incorrect/missing pack notification.
+   Justification:
+     Regression from 1.6.
+   Notes:
+     We already incorrectly merged r1471029 which is not a ^/subversion commit.
+   Votes:
+     +1: philip
 
 Veto-blocked changes:
 =====================
