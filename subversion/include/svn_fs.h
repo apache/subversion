@@ -2060,7 +2060,6 @@ svn_fs_youngest_rev(svn_revnum_t *youngest_p,
                     apr_pool_t *pool);
 
 
-#ifdef SVN_FS_INFO
 /**
  * Return filesystem format information for @a fs.
  *
@@ -2093,7 +2092,6 @@ svn_fs_info_config_files(apr_array_header_t **files,
                          svn_fs_t *fs,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
-#endif /* SVN_FS_INFO */
 
 
 
@@ -2560,7 +2558,6 @@ svn_fs_verify_root(svn_fs_root_t *root,
 
 /** @} */
 
-#ifdef SVN_FS_INFO
 /**
  * @defgroup fs_info Filesystem information subsystem
  * @{
@@ -2636,7 +2633,6 @@ svn_fs_info_dup(const void *info,
                 apr_pool_t *scratch_pool);
 
 /** @} */
-#endif /* SVN_FS_INFO */
 
 #ifdef __cplusplus
 }

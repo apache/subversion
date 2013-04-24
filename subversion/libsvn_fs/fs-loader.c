@@ -1316,7 +1316,6 @@ svn_fs_youngest_rev(svn_revnum_t *youngest_p, svn_fs_t *fs, apr_pool_t *pool)
   return svn_error_trace(fs->vtable->youngest_rev(youngest_p, fs, pool));
 }
 
-#ifdef SVN_FS_INFO
 svn_error_t *
 svn_fs_info_format(int *fs_format,
                    svn_version_t **supports_version,
@@ -1339,7 +1338,6 @@ svn_fs_info_config_files(apr_array_header_t **files,
                                                        result_pool,
                                                        scratch_pool));
 }
-#endif
 
 svn_error_t *
 svn_fs_deltify_revision(svn_fs_t *fs, svn_revnum_t revision, apr_pool_t *pool)
@@ -1627,7 +1625,6 @@ svn_fs_version(void)
 }
 
 
-#ifdef SVN_FS_INFO
 /** info **/
 svn_error_t *
 svn_fs_info(const svn_fs_info_placeholder_t **info_p,
@@ -1665,5 +1662,4 @@ svn_fs_info_dup(const void *info_void,
   else
     return apr_pmemdup(result_pool, info, sizeof(*info));
 }
-#endif
 

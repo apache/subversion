@@ -494,7 +494,6 @@ svn_repos_has_capability(svn_repos_t *repos,
                          const char *capability,
                          apr_pool_t *pool);
 
-#ifdef SVN_FS_INFO
 /**
  * Return a set capabilities supported by the running Subversion library and by
  * @a repos.  (Capabilities supported by this version of Subversion but not by
@@ -513,7 +512,6 @@ svn_repos_capabilities(apr_hash_t **capabilities,
                        svn_repos_t *repos,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
-#endif /* SVN_FS_INFO */
 /** @} */
 
 /**
@@ -2488,7 +2486,6 @@ svn_repos_node_editor(const svn_delta_editor_t **editor,
 svn_repos_node_t *
 svn_repos_node_from_baton(void *edit_baton);
 
-#ifdef SVN_FS_INFO
 /**
  * Return repository format information for @a repos.
  *
@@ -2509,7 +2506,6 @@ svn_repos_info_format(int *repos_format,
                       svn_repos_t *repos,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
-#endif /* SVN_FS_INFO */
 
 /** @} */
 
