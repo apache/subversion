@@ -1650,12 +1650,12 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     svn_version_t *repos_version, *fs_version;
     SVN_ERR(svn_repos_info_format(&repos_format, &repos_version,
                                   repos, pool, pool));
-    SVN_ERR(svn_cmdline_printf(pool, _("Repository format: %d\n"),
+    SVN_ERR(svn_cmdline_printf(pool, _("Repository Format: %d\n"),
                                repos_format));
 
     SVN_ERR(svn_fs_info_format(&fs_format, &fs_version,
                                fs, pool, pool));
-    SVN_ERR(svn_cmdline_printf(pool, _("Filesystem format: %d\n"),
+    SVN_ERR(svn_cmdline_printf(pool, _("Filesystem Format: %d\n"),
                                fs_format));
 
     SVN_ERR_ASSERT(repos_version->major == SVN_VER_MAJOR);
@@ -1665,7 +1665,7 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
     minor = (repos_version->minor > fs_version->minor)
             ? repos_version->minor : fs_version->minor;
-    SVN_ERR(svn_cmdline_printf(pool, _("Compatible with version: %d.%d.0\n"),
+    SVN_ERR(svn_cmdline_printf(pool, _("Compatible With Version: %d.%d.0\n"),
                                SVN_VER_MAJOR, minor));
   }
 
@@ -1682,7 +1682,7 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     as_string[strlen(as_string)-1] = '\0';
 
     if (capabilities->nelts)
-      SVN_ERR(svn_cmdline_printf(pool, _("Repository capabilities: %s\n"),
+      SVN_ERR(svn_cmdline_printf(pool, _("Repository Capabilities: %s\n"),
                                  as_string));
   }
 
@@ -1690,7 +1690,7 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     const svn_fs_info_placeholder_t *info;
 
     SVN_ERR(svn_fs_info(&info, fs, pool, pool));
-    SVN_ERR(svn_cmdline_printf(pool, _("Filesystem type: %s\n"),
+    SVN_ERR(svn_cmdline_printf(pool, _("Filesystem Type: %s\n"),
                                info->fs_type));
     if (!strcmp(info->fs_type, SVN_FS_TYPE_FSFS))
       {
@@ -1699,20 +1699,20 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
         SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
 
         if (fsfs_info->shard_size)
-          SVN_ERR(svn_cmdline_printf(pool, _("FSFS sharded: yes\n")));
+          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Sharded: yes\n")));
         else
-          SVN_ERR(svn_cmdline_printf(pool, _("FSFS sharded: no\n")));
+          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Sharded: no\n")));
 
         if (fsfs_info->shard_size)
-          SVN_ERR(svn_cmdline_printf(pool, _("FSFS shard size: %d\n"),
+          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Shard Size: %d\n"),
                                      fsfs_info->shard_size));
 
         if (fsfs_info->min_unpacked_rev + fsfs_info->shard_size > youngest + 1)
-          SVN_ERR(svn_cmdline_printf(pool, _("FSFS packed: yes\n")));
+          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Packed: yes\n")));
         else if (fsfs_info->min_unpacked_rev)
-          SVN_ERR(svn_cmdline_printf(pool, _("FSFS packed: partly\n")));
+          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Packed: partly\n")));
         else
-          SVN_ERR(svn_cmdline_printf(pool, _("FSFS packed: no\n")));
+          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Packed: no\n")));
       }
   }
 
@@ -1722,7 +1722,7 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
     SVN_ERR(svn_fs_info_config_files(&files, fs, pool, pool));
     for (i = 0; i < files->nelts; i++)
-      SVN_ERR(svn_cmdline_printf(pool, _("Config file: %s\n"),
+      SVN_ERR(svn_cmdline_printf(pool, _("Config File: %s\n"),
                                  APR_ARRAY_IDX(files, i, const char *)));
   }
 
