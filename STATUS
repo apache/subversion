@@ -119,19 +119,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1470738, r1470908
-   Tweak svn_fs_verify API to have the same config options as svn_fs_open
-   and svn_fs_create.  Make svn_repos_verify_fs2 use it for consistency.
-   Justification:
-     Let's get the new API consistent with the old one before releasing it.
-     Also, addresses cache performance (use same cache data throughout a
-     verfication run) and consistency issues (use separate namespace during
-     svnadmin verify instead of the global one).
-   Notes:
-     rhuijben: r1470908 is necessary to avoid a segfault triggered by javahl.
-   Votes:
-     +1: stefan2, rhuijben, cmpilato
-
  * r1470781
    Make error messages from property spelling checks more aligned with
    the property usage (say, e.g., "edit" instead of "set" for "propedit")
