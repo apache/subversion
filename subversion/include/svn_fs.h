@@ -325,6 +325,20 @@ svn_fs_path(svn_fs_t *fs,
             apr_pool_t *pool);
 
 /**
+ * Return a shallow copy of the configuration parameters used to open
+ * @a fs, allocated in @a pool.  It may be @c NULL.  The contents of the
+ * hash contents remains valid only for @a fs's lifetime.
+ * 
+ * @note This is just what was passed to svn_fs_create() or svn_fs_open().
+ * You may not modify it.
+ *
+ * @since New in 1.8.
+ */
+apr_hash_t *
+svn_fs_config(svn_fs_t *fs,
+              apr_pool_t *pool);
+
+/**
  * Delete the filesystem at @a path.
  *
  * @note: Deleting a filesystem that has an open svn_fs_t is not
@@ -2422,7 +2436,9 @@ svn_fs_pack(const char *db_path,
 /**
  * Perform backend-specific data consistency and correctness validations
  * to the Subversion filesystem (mainly the meta-data) located in the
- * directory @a path.  Use @a scratch_pool for temporary allocations.
+ * directory @a path.  Use the backend-specific configuration @a fs_config
+ * when opening the filesystem.  @a NULL is valid for all backends.
+ * Use @a scratch_pool for temporary allocations.
  *
  * @a start and @a end define the (minimum) range of revisions to check.
  * If @a start is #SVN_INVALID_REVNUM, it defaults to @c r0.  Likewise,
@@ -2461,6 +2477,7 @@ svn_fs_pack(const char *db_path,
  */
 svn_error_t *
 svn_fs_verify(const char *path,
+              apr_hash_t *fs_config,
               svn_revnum_t start,
               svn_revnum_t end,
               svn_fs_progress_notify_func_t notify_func,

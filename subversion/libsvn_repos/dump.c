@@ -1438,7 +1438,8 @@ svn_repos_verify_fs2(svn_repos_t *repos,
     }
 
   /* Verify global metadata and backend-specific data first. */
-  SVN_ERR(svn_fs_verify(svn_fs_path(fs, pool), start_rev, end_rev,
+  SVN_ERR(svn_fs_verify(svn_fs_path(fs, pool), svn_fs_config(fs, pool),
+                        start_rev, end_rev,
                         verify_notify, verify_notify_baton,
                         cancel_func, cancel_baton, pool));
 
