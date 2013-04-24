@@ -120,6 +120,16 @@ $SVN diff > $backupfile
 $SVNq revert -R .
 $SVNq up
 $SVNq merge $mergeargs
+if [ "`$SVN status -q | wc -l`" -eq 1 ]; then
+  if [ -n "`$SVN diff | perl -lne 'print if s/^(Added|Deleted|Modified): //' | grep -vx svn:mergeinfo`" ]; then
+    # This check detects STATUS entries that name non-^/subversion/ revnums.
+    # ### Q: What if we actually commit a mergeinfo fix to trunk and then want
+    # ###    to backport it?
+    # ### A: We don't merge it using the script.
+    echo "Bogus merge: includes only svn:mergeinfo changes!" >&2
+    exit 2
+  fi
+fi
 $VIM -e -s -n -N -i NONE -u NONE -c '/$pattern/normal! dap' -c wq $STATUS
 if $WET_RUN; then
   $SVNq commit -F $logmsg_filename
