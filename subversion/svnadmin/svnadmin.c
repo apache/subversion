@@ -1724,7 +1724,7 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
     SVN_ERR(svn_fs_info_config_files(&files, fs, pool, pool));
     for (i = 0; i < files->nelts; i++)
-      SVN_ERR(svn_cmdline_printf(pool, _("Config File: %s\n"),
+      SVN_ERR(svn_cmdline_printf(pool, _("Configuration File: %s\n"),
                                  APR_ARRAY_IDX(files, i, const char *)));
   }
 
