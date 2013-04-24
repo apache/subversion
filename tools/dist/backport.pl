@@ -239,6 +239,7 @@ sub handle_entry {
     print "Vetoes found!" if @vetoes;
 
     if (prompt 'Go ahead?') {
+      merge %entry;
       system($ENV{SHELL} // "/bin/sh") == 0
         or warn "Creating an interactive subshell failed ($?): $!"
         if prompt "Shall I open a subshell?";
