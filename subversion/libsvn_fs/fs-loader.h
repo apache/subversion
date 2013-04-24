@@ -131,7 +131,9 @@ typedef struct fs_library_vtable_t
                                                                const char *,
                                                                apr_hash_t *,
                                                                apr_pool_t *));
-
+  /* For svn_fs_info_fsfs_dup(). */
+  void *(*info_fsap_dup)(const void *fsap_info,
+                         apr_pool_t *result_pool);
 } fs_library_vtable_t;
 
 /* This is the type of symbol an FS module defines to fetch the
@@ -221,6 +223,11 @@ typedef struct fs_vtable_t
                                     svn_fs_t *fs,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
+  svn_error_t *(*info_fsap)(const void **fsap_info,
+                            svn_fs_t *fs,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+  /* info_fsap_dup is in the library vtable. */
   svn_error_t *(*verify_root)(svn_fs_root_t *root,
                               apr_pool_t *pool);
   svn_error_t *(*freeze)(svn_fs_t *fs,

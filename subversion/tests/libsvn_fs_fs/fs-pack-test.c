@@ -788,6 +788,50 @@ file_hint_at_shard_boundary(const svn_test_opts_t *opts,
 #undef SHARD_SIZE
 
 /* ------------------------------------------------------------------------ */
+#define REPO_NAME "test-repo-fsfs-info"
+#define SHARD_SIZE 3
+#define MAX_REV 5
+static svn_error_t *
+test_info(const svn_test_opts_t *opts,
+          apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  const svn_fs_fsfs_info_t *fsfs_info;
+  const svn_fs_info_placeholder_t *info;
+
+  SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE,
+                                   pool));
+
+  SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, pool));
+  SVN_ERR(svn_fs_info(&info, fs, pool, pool));
+  info = svn_fs_info_dup(info, pool, pool);
+
+  SVN_TEST_STRING_ASSERT(opts->fs_type, info->fs_type);
+
+  /* Bail (with success) on known-untestable scenarios */
+  if (strcmp(opts->fs_type, "fsfs") != 0)
+    return SVN_NO_ERROR;
+
+  fsfs_info = (void *)info;
+  if (opts->server_minor_version && (opts->server_minor_version < 6))
+    {
+      SVN_TEST_ASSERT(fsfs_info->shard_size == 0);
+      SVN_TEST_ASSERT(fsfs_info->min_unpacked_rev == 0);
+    }
+  else
+    {
+      SVN_TEST_ASSERT(fsfs_info->shard_size == SHARD_SIZE);
+      SVN_TEST_ASSERT(fsfs_info->min_unpacked_rev
+                      == (MAX_REV + 1) / SHARD_SIZE * SHARD_SIZE);
+    }
+
+  return SVN_NO_ERROR;
+}
+#undef REPO_NAME
+#undef SHARD_SIZE
+#undef MAX_REV
+
+/* ------------------------------------------------------------------------ */
 
 /* The test table.  */
 
@@ -812,5 +856,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "recover a fully packed filesystem"),
     SVN_TEST_OPTS_PASS(file_hint_at_shard_boundary,
                        "test file hint at shard boundary"),
+    SVN_TEST_OPTS_PASS(test_info,
+                       "test svn_fs_info"),
     SVN_TEST_NULL
   };

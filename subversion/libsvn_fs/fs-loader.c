@@ -1630,21 +1630,40 @@ svn_fs_version(void)
 #ifdef SVN_FS_INFO
 /** info **/
 svn_error_t *
-svn_fs_info(const svn_fs_info_t **info,
+svn_fs_info(const svn_fs_info_placeholder_t **info_p,
             svn_fs_t *fs,
             apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
 {
-  SVN__NOT_IMPLEMENTED();
+  if (fs->vtable->info_fsap)
+    {
+      SVN_ERR(fs->vtable->info_fsap((const void **)info_p, fs,
+                                    result_pool, scratch_pool));
+    }
+  else
+    {
+      svn_fs_info_placeholder_t *info = apr_palloc(result_pool, sizeof(*info));
+      /* ### Ask the disk(!), since svn_fs_t doesn't cache the answer. */
+      SVN_ERR(svn_fs_type(&info->fs_type, fs->path, result_pool));
+      *info_p = info;
+    }
+  return SVN_NO_ERROR;
 }
 
-svn_fs_info_t *
-svn_fs_info_dup(const svn_fs_info_t *info,
-                apr_pool_t *result_pool)
+void *
+svn_fs_info_dup(const void *info_void,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
 {
-  /* Not implemented. */
-  SVN_ERR_MALFUNCTION_NO_RETURN();
-  return NULL;
+  const svn_fs_info_placeholder_t *info = info_void;
+  fs_library_vtable_t *vtable;
+
+  SVN_ERR(get_library_vtable(&vtable, info->fs_type, scratch_pool));
+  
+  if (vtable->info_fsap_dup)
+    return vtable->info_fsap_dup(info_void, result_pool);
+  else
+    return apr_pmemdup(result_pool, info, sizeof(*info));
 }
 #endif
 
