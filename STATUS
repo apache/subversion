@@ -117,10 +117,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1469478, r1469489, r1469512
-   Fix issue 4356, status SEGV after incomplete move
-   Justification:
-     It's a SEGV.
-   Votes:
-     +1: philip, rhuijben, pburba

@@ -1192,6 +1192,48 @@ value3>>>>>>> (incoming property value)
   svntest.actions.verify_disk(wc_dir, expected_disk, True)
 
 
+@Issue(4356)
+def move_missing(sbox):
+  "move a missing directory"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  svntest.main.safe_rmtree(sbox.ospath('A/D/G'))
+
+  expected_err = '.*Can\'t move \'.*G\' to \'.*R\':.*'
+
+  # This move currently fails halfway between adding the dest and
+  # deleting the source
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'mv', sbox.ospath('A/D/G'),
+                                           sbox.ospath('R'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/G', 'A/D/G/tau', 'A/D/G/pi', 'A/D/G/rho',
+                        status='! ', entry_status='  ')
+
+  expected_status.add({
+    'R'                 : Item(status='! ', wc_rev='-',
+                               entry_status='A ', entry_copied='+'),
+    'R/pi'              : Item(status='! ', wc_rev='-',
+                               entry_status='  ', entry_copied='+'),
+    'R/tau'             : Item(status='! ', wc_rev='-',
+                               entry_status='  ', entry_copied='+'),
+    'R/rho'             : Item(status='! ', wc_rev='-',
+                               entry_status='  ', entry_copied='+'),
+  })
+
+  # Verify that the status processing doesn't crash
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # The issue is a crash when the destination is present
+  os.mkdir(sbox.ospath('R'))
+  expected_status.tweak('R', status='A ', copied='+')
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
 #######################################################################
 # Run the tests
 
@@ -1202,6 +1244,7 @@ test_list = [ None,
               shallower_move_file_test,
               deeper_move_file_test,
               property_merge,
+              move_missing,
             ]
 
 if __name__ == '__main__':
