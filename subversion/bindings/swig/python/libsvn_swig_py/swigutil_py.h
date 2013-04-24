@@ -406,10 +406,15 @@ svn_error_t *svn_swig_py_log_entry_receiver(void *baton,
                                             svn_log_entry_t *log_entry,
                                             apr_pool_t *pool);
 
-/* thunked freeze function */
+/* thunked repos freeze function */
 SVN_SWIG_SWIGUTIL_EXPORT
 svn_error_t *svn_swig_py_repos_freeze_func(void *baton,
                                            apr_pool_t *pool);
+
+/* thunked fs freeze function */
+SVN_SWIG_SWIGUTIL_EXPORT
+svn_error_t *svn_swig_py_fs_freeze_func(void *baton,
+                                        apr_pool_t *pool);
 
 /* thunked proplist receiver2 function */
 SVN_SWIG_SWIGUTIL_EXPORT

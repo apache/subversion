@@ -888,6 +888,17 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #endif
 
 /* -----------------------------------------------------------------------
+   Callback: svn_fs_freeze_func_t
+*/
+#ifdef SWIGPYTHON
+%typemap(in) (svn_fs_freeze_func_t freeze_func, void *freeze_baton)
+{
+  $1 = svn_swig_py_fs_freeze_func;
+  $2 = (void *)$input;
+}
+#endif
+
+/* -----------------------------------------------------------------------
    Callback: svn_proplist_receiver2_t
 */
 #ifdef SWIGPYTHON

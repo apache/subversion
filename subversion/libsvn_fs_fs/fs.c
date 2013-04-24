@@ -126,7 +126,7 @@ fs_set_errcall(svn_fs_t *fs,
 
 struct fs_freeze_baton_t {
   svn_fs_t *fs;
-  svn_error_t *(*freeze_func)(void *, apr_pool_t *);
+  svn_fs_freeze_func_t freeze_func;
   void *freeze_baton;
 };
 
@@ -148,7 +148,7 @@ fs_freeze_body(void *baton,
 
 static svn_error_t *
 fs_freeze(svn_fs_t *fs,
-          svn_error_t *(*freeze_func)(void *, apr_pool_t *),
+          svn_fs_freeze_func_t freeze_func,
           void *freeze_baton,
           apr_pool_t *pool)
 {
