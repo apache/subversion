@@ -1643,7 +1643,8 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs(repos);
   SVN_ERR(svn_cmdline_printf(pool, _("Path: %s\n"),
-                             svn_repos_path(repos, pool)));
+                             svn_dirent_local_style(svn_repos_path(repos, pool),
+                                                    pool)));
 
   {
     int repos_format, fs_format, minor;
@@ -1679,7 +1680,8 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     as_string = svn_cstring_join(capabilities, ",", pool);
 
     /* Delete the trailing comma. */
-    as_string[strlen(as_string)-1] = '\0';
+    if (as_string[0])
+      as_string[strlen(as_string)-1] = '\0';
 
     if (capabilities->nelts)
       SVN_ERR(svn_cmdline_printf(pool, _("Repository Capabilities: %s\n"),
