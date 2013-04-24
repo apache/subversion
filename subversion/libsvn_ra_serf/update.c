@@ -94,8 +94,8 @@ typedef enum report_state_e {
 
    We measure outstanding requests as the sum of NUM_ACTIVE_FETCHES and
    NUM_ACTIVE_PROPFINDS in the report_context_t structure.  */
-#define REQUEST_COUNT_TO_PAUSE 1000
-#define REQUEST_COUNT_TO_RESUME 100
+#define REQUEST_COUNT_TO_PAUSE 50
+#define REQUEST_COUNT_TO_RESUME 40
 
 
 /* Forward-declare our report context. */
