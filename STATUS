@@ -298,6 +298,7 @@ Candidate changes:
    Justification:
      User-reported buglet that prevents the use of changelist
      filtering altogether for those sorts of changelist names.
+   Branch: 1.7.x-r1475724
    Votes:
      +1: cmpilato
 
