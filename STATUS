@@ -109,6 +109,14 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1475724
+   Fix changelist filtering when --changelist values aren't UTF8.
+   Justification:
+     User-reported buglet that prevents the use of changelist
+     filtering altogether for those sorts of changelist names.
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 =====================
 
