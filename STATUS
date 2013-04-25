@@ -115,7 +115,7 @@ Candidate changes:
      User-reported buglet that prevents the use of changelist
      filtering altogether for those sorts of changelist names.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, philip
 
 Veto-blocked changes:
 =====================
