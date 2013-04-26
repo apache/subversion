@@ -120,6 +120,14 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1476359
+   JavaHL thread safety bug.
+   Justification:
+     Unexpected exceptions can be thrown when thread issues are encountered.
+   Votes:
+     +1: markphip
+
+
 Veto-blocked changes:
 =====================
 
