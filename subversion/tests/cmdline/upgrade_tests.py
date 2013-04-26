@@ -1391,7 +1391,6 @@ def iprops_upgrade(sbox):
                     'iprops_upgrade_root.tar.bz2',
                     sbox)
 
-@XFail()
 def iprops_upgrade1_6(sbox):
   "inherited properties after upgrade from 1.6"
 
