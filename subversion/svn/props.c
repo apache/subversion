@@ -321,7 +321,7 @@ svn_cl__check_svn_prop_name(const char *propname,
     {
     case 0:
       /* The best alternative isn't good enough */
-      return svn_error_createf(
+      return svn_error_create(
         SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
         wrong_prop_error_message(prop_use, propname, scratch_pool));
 
