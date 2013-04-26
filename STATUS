@@ -85,8 +85,7 @@ Candidate changes:
      upgrade test.  r1476181, r1476254 are for 1.6 upgrades.
    Votes:
      +1: rhuijben (only r1470904 and r1471744)
-     +1: philip
-     +1: pburba (not r1476181, r1476254)
+     +1: philip, pburba
 
  * r1471443, r1471490
    Fix a bug in the Summary of Conflicts when using interactive conflict
