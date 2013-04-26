@@ -50,19 +50,6 @@ Candidate changes:
                      consider before we can tell the reason. The 4th tree
                      is available as the pristine version of the local node)
 
- * r1470904, r1471744
-   Tweak an upgrade Sql statement to be easier to understand and a tiny bit
-   faster
-   Justification:
-     The old variant had some theoretical upgrade problems.
-   Votes:
-     +1: rhuijben, philip
-     -1: pburba (without r1471744)
-                (This causes an empty iprops cache to be created on
-                 the root of a WC even when that path points to the root
-                 of the repository and can't inherit any properties.
-                 See http://svn.haxx.se/dev/archive-2013-04/0542.shtml)
-
  * r1470238, r1471153
    Improve labelling of the file diff in interactive conflict resolution 'df'
    option. Show labels such as "THEIRS" and "MERGED", not just the paths to
@@ -100,8 +87,34 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+* r1475772, r1476092
+  Fix a bug in authz file processing where group and user names were
+  not treated case-sensitively, which could lead to unpredictable
+  results depending on the ordering of the authz config entries.
+  See http://subversion.tigris.org/issues/show_bug.cgi?id=4361
+  Justification:
+    See above about unpredictable results. A related fix for
+    repository paths handling was made in 1.7.0.
+  Notes:
+    r1476092 is the CHANGES update.
+  Votes:
+    +1: brane
+
 Veto-blocked changes:
 =====================
+
+ * r1470904, r1471744
+   Tweak an upgrade Sql statement to be easier to understand and a tiny bit
+   faster
+   Justification:
+     The old variant had some theoretical upgrade problems.
+   Votes:
+     +1: rhuijben, philip
+     -1: pburba (without r1471744)
+                (This causes an empty iprops cache to be created on
+                 the root of a WC even when that path points to the root
+                 of the repository and can't inherit any properties.
+                 See http://svn.haxx.se/dev/archive-2013-04/0542.shtml)
 
 Approved changes:
 =================
