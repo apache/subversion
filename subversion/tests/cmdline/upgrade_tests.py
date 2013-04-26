@@ -1278,21 +1278,11 @@ def upgrade_from_1_7_conflict(sbox):
   # a working copy used to cause a pointless 'upgrade required' error.
   svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
 
-def iprops_upgrade(sbox):
-  "inherited properties after upgrade"
+def do_iprops_upgrade(nonrootfile, rootfile, sbox):
 
-  sbox.build()
   wc_dir = sbox.wc_dir
 
-  sbox.simple_copy('A', 'X')
-  sbox.simple_propset('p', 'v', '')
-  sbox.simple_propset('pA', 'vA', 'A')
-  sbox.simple_propset('pX', 'vX', 'X')
-  sbox.simple_commit()
-  svntest.main.run_svnadmin('setuuid', sbox.repo_dir,
-                            '8f4d0ebe-2ebf-4f62-ad11-804fd88c2382')
-
-  replace_sbox_with_tarfile(sbox, 'iprops_upgrade_nonroot.tar.bz2')
+  replace_sbox_with_tarfile(sbox, nonrootfile)
   svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
                                      'file:///tmp/repo', sbox.repo_url, wc_dir)
@@ -1340,7 +1330,7 @@ def iprops_upgrade(sbox):
     sbox.ospath('E'), expected_iprops, expected_explicit_props)
 
   # Now try with a repository root working copy
-  replace_sbox_with_tarfile(sbox, 'iprops_upgrade_root.tar.bz2')
+  replace_sbox_with_tarfile(sbox, rootfile)
   svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
                                      'file:///tmp/repo', sbox.repo_url, wc_dir)
@@ -1383,6 +1373,41 @@ def iprops_upgrade(sbox):
   expected_explicit_props = {}
   svntest.actions.run_and_verify_inherited_prop_xml(
     sbox.ospath('A/B/E'), expected_iprops, expected_explicit_props)
+
+def iprops_upgrade(sbox):
+  "inherited properties after upgrade from 1.7"
+
+  sbox.build()
+
+  sbox.simple_copy('A', 'X')
+  sbox.simple_propset('p', 'v', '')
+  sbox.simple_propset('pA', 'vA', 'A')
+  sbox.simple_propset('pX', 'vX', 'X')
+  sbox.simple_commit()
+  svntest.main.run_svnadmin('setuuid', sbox.repo_dir,
+                            '8f4d0ebe-2ebf-4f62-ad11-804fd88c2382')
+
+  do_iprops_upgrade('iprops_upgrade_nonroot.tar.bz2',
+                    'iprops_upgrade_root.tar.bz2',
+                    sbox)
+
+@XFail()
+def iprops_upgrade1_6(sbox):
+  "inherited properties after upgrade from 1.6"
+
+  sbox.build()
+
+  sbox.simple_copy('A', 'X')
+  sbox.simple_propset('p', 'v', '')
+  sbox.simple_propset('pA', 'vA', 'A')
+  sbox.simple_propset('pX', 'vX', 'X')
+  sbox.simple_commit()
+  svntest.main.run_svnadmin('setuuid', sbox.repo_dir,
+                            '8f4d0ebe-2ebf-4f62-ad11-804fd88c2382')
+
+  do_iprops_upgrade('iprops_upgrade_nonroot1_6.tar.bz2',
+                    'iprops_upgrade_root1_6.tar.bz2',
+                    sbox)
 
 ########################################################################
 # Run the tests
@@ -1437,6 +1462,7 @@ test_list = [ None,
               upgrade_not_present_replaced,
               upgrade_from_1_7_conflict,
               iprops_upgrade,
+              iprops_upgrade1_6,
              ]
 
 
