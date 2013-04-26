@@ -74,6 +74,19 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1470904, r1471744, r1475963, r1476155
+   Tweak an upgrade Sql statement to be easier to understand and a tiny bit
+   faster
+   Justification:
+     The old variant had some theoretical upgrade problems.
+   Notes:
+     r1470904, r1471744, r1475963 are a series of tweaks to the
+     STMT_UPGRADE_31_SELECT_WCROOT_NODES query.  r1476155 is a new
+     upgrade test.
+   Votes:
+     +1: rhuijben, philip (only r1470904 and r1471744)
+     +1: pburba
+
  * r1471443, r1471490
    Fix a bug in the Summary of Conflicts when using interactive conflict
      resolution.  Marking a text conflict as resolved but leaving a prop
@@ -103,18 +116,6 @@ Candidate changes:
 Veto-blocked changes:
 =====================
 
- * r1470904, r1471744
-   Tweak an upgrade Sql statement to be easier to understand and a tiny bit
-   faster
-   Justification:
-     The old variant had some theoretical upgrade problems.
-   Votes:
-     +1: rhuijben, philip
-     -1: pburba (without r1471744)
-                (This causes an empty iprops cache to be created on
-                 the root of a WC even when that path points to the root
-                 of the repository and can't inherit any properties.
-                 See http://svn.haxx.se/dev/archive-2013-04/0542.shtml)
 
 Approved changes:
 =================
