@@ -51,7 +51,11 @@ public class LogDate implements java.io.Serializable
         {
             throw new ParseException("String is not a valid Subversion date", 0);
         }
-        Date date = formatter.parse(datestr.substring(0, 23) + " UTC");
+        Date date;
+        synchronized(formatter)
+        {
+            date = formatter.parse(datestr.substring(0, 23) + " UTC");
+        }
         this.cachedString = datestr;
         cachedDate = Calendar.getInstance(UTC);
         cachedDate.setTime(date);
