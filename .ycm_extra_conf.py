@@ -48,10 +48,10 @@ def FlagsForFile( filename ):
             compilation_info.compiler_flags_,
             compilation_info.compiler_working_dir_ ),
         filename )
-    do_cache = False
+    do_cache = True
   else:
     final_flags = [ ] 
-    do_cache = True
+    do_cache = False 
 
   return {
     'flags': final_flags,
