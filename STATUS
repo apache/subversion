@@ -74,7 +74,7 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
- * r1470904, r1471744, r1475963, r1476155
+ * r1470904, r1471744, r1475963, r1476155, r1476181, r1476254
    Tweak an upgrade Sql statement to be easier to understand and a tiny bit
    faster
    Justification:
@@ -82,10 +82,11 @@ Candidate changes:
    Notes:
      r1470904, r1471744, r1475963 are a series of tweaks to the
      STMT_UPGRADE_31_SELECT_WCROOT_NODES query.  r1476155 is a new
-     upgrade test.
+     upgrade test.  r1476181, r1476254 are for 1.6 upgrades.
    Votes:
-     +1: rhuijben, philip (only r1470904 and r1471744)
-     +1: pburba
+     +1: rhuijben (only r1470904 and r1471744)
+     +1: philip
+     +1: pburba (not r1476181, r1476254)
 
  * r1471443, r1471490
    Fix a bug in the Summary of Conflicts when using interactive conflict
@@ -112,6 +113,13 @@ Candidate changes:
     r1476092 is the CHANGES update.
   Votes:
     +1: brane
+
+ * r1476193
+   Reset SQLite statements on error during 1.7 to 1.8 upgrade.
+   Justification:
+     Avoid SQLITE_MISUSE errors.
+   Votes:
+     +1: philip
 
 Veto-blocked changes:
 =====================
