@@ -158,7 +158,7 @@ typedef struct svn_cl__opt_state_t
   /* Was --no-unlock specified? */
   svn_boolean_t no_unlock;
 
-  const char *message;           /* log message */
+  const char *message;           /* log message (not converted to UTF-8) */
   svn_boolean_t force;           /* be more forceful, as in "svn rm -f ..." */
   svn_boolean_t force_log;       /* force validity of a suspect log msg file */
   svn_boolean_t incremental;     /* yield output suitable for concatenation */
@@ -168,19 +168,22 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t verbose;         /* be verbose */
   svn_boolean_t update;          /* contact the server for the full story */
   svn_boolean_t strict;          /* do strictly what was requested */
-  svn_stringbuf_t *filedata;     /* contents of file used as option data */
-  const char *encoding;          /* the locale/encoding of the data*/
+  svn_stringbuf_t *filedata;     /* contents of file used as option data
+                                    (not converted to UTF-8) */
+  const char *encoding;          /* the locale/encoding of 'message' and of
+                                    'filedata' (not converted to UTF-8) */
   svn_boolean_t help;            /* print usage message */
-  const char *auth_username;     /* auth username */ /* UTF-8! */
-  const char *auth_password;     /* auth password */ /* UTF-8! */
-  const char *extensions;        /* subprocess extension args */ /* UTF-8! */
-  apr_array_header_t *targets;   /* target list from file */ /* UTF-8! */
+  const char *auth_username;     /* auth username */
+  const char *auth_password;     /* auth password */
+  const char *extensions;        /* subprocess extension args */
+  apr_array_header_t *targets;   /* target list from file */
   svn_boolean_t xml;             /* output in xml, e.g., "svn log --xml" */
   svn_boolean_t no_ignore;       /* disregard default ignores & svn:ignore's */
   svn_boolean_t no_auth_cache;   /* do not cache authentication information */
   struct
     {
-  const char *diff_cmd;              /* the external diff command to use */
+  const char *diff_cmd;              /* the external diff command to use
+                                        (not converted to UTF-8) */
   svn_boolean_t internal_diff;       /* override diff_cmd in config file */
   svn_boolean_t no_diff_added;       /* do not show diffs for deleted files */
   svn_boolean_t no_diff_deleted;     /* do not show diffs for deleted files */
@@ -197,8 +200,10 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t stop_on_copy;    /* don't cross copies during processing */
   svn_boolean_t dry_run;         /* try operation but make no changes */
   svn_boolean_t revprop;         /* operate on a revision property */
-  const char *merge_cmd;         /* the external merge command to use */
-  const char *editor_cmd;        /* the external editor command to use */
+  const char *merge_cmd;         /* the external merge command to use
+                                    (not converted to UTF-8) */
+  const char *editor_cmd;        /* the external editor command to use
+                                    (not converted to UTF-8) */
   svn_boolean_t record_only;     /* whether to record mergeinfo */
   const char *old_target;        /* diff target */
   const char *new_target;        /* diff target */
@@ -210,13 +215,12 @@ typedef struct svn_cl__opt_state_t
   const char *native_eol;        /* override system standard eol marker */
   svn_boolean_t remove;          /* deassociate a changelist */
   apr_array_header_t *changelists; /* changelist filters */
-  const char *changelist;        /* operate on this changelist
-                                    THIS IS TEMPORARY (LAST OF CHANGELISTS) */
   svn_boolean_t keep_changelists;/* don't remove changelists after commit */
   svn_boolean_t keep_local;      /* delete path only from repository */
   svn_boolean_t all_revprops;    /* retrieve all revprops */
   svn_boolean_t no_revprops;     /* retrieve no revprops */
-  apr_hash_t *revprop_table;     /* table of revision properties to get/set */
+  apr_hash_t *revprop_table;     /* table of revision properties to get/set
+                                    (not converted to UTF-8) */
   svn_boolean_t parents;         /* create intermediate directories */
   svn_boolean_t use_merge_history; /* use/display extra merge information */
   svn_cl__accept_t accept_which;   /* how to handle conflicts */
