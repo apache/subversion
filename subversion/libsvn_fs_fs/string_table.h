@@ -24,6 +24,7 @@
 #define SVN_LIBSVN_FS_FS_STRING_TABLE_H
 
 #include "svn_io.h"
+#include "private/svn_temp_serializer.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -116,6 +117,18 @@ svn_fs_fs__read_string_table(string_table_t **table_p,
                              svn_stream_t *stream,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool); 
+
+/* Implements svn_cache__serialize_func_t for string_table_t objects.
+ */
+void
+svn_fs_fs__serialize_string_table(svn_temp_serializer__context_t *context,
+                                  string_table_t **st);
+
+/* Implements svn_cache__deserialize_func_t for string_table_t objects.
+ */
+void
+svn_fs_fs__deserialize_string_table(void *buffer,
+                                    string_table_t **table);
 
 #ifdef __cplusplus
 }
