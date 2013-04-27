@@ -100,18 +100,18 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
-* r1475772, r1476092
-  Fix a bug in authz file processing where group and user names were
-  not treated case-sensitively, which could lead to unpredictable
-  results depending on the ordering of the authz config entries.
-  See http://subversion.tigris.org/issues/show_bug.cgi?id=4361
-  Justification:
-    See above about unpredictable results. A related fix for
-    repository paths handling was made in 1.7.0.
-  Notes:
-    r1476092 is the CHANGES update.
-  Votes:
-    +1: brane
+ * r1475772, r1476092
+   Fix a bug in authz file processing where group and user names were
+   not treated case-sensitively, which could lead to unpredictable
+   results depending on the ordering of the authz config entries.
+   See http://subversion.tigris.org/issues/show_bug.cgi?id=4361
+   Justification:
+     See above about unpredictable results. A related fix for
+     repository paths handling was made in 1.7.0.
+   Notes:
+     r1476092 is the CHANGES update.
+   Votes:
+     +1: brane
 
  * r1476193
    Reset SQLite statements on error during 1.7 to 1.8 upgrade.
