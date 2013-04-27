@@ -1230,6 +1230,15 @@ static svn_error_t *vparse_tuple(const apr_array_header_t *items, apr_pool_t *po
           else
             break;
         }
+      else if (**fmt == '3' && elt->kind == SVN_RA_SVN_WORD)
+        {
+          if (strcmp(elt->u.word, "true") == 0)
+            *va_arg(*ap, svn_tristate_t *) = svn_tristate_true;
+          else if (strcmp(elt->u.word, "false") == 0)
+            *va_arg(*ap, svn_tristate_t *) = svn_tristate_false;
+          else
+            break;
+        }
       else if (**fmt == 'l' && elt->kind == SVN_RA_SVN_LIST)
         *va_arg(*ap, apr_array_header_t **) = elt->u.list;
       else if (**fmt == '(' && elt->kind == SVN_RA_SVN_LIST)
@@ -1267,6 +1276,9 @@ static svn_error_t *vparse_tuple(const apr_array_header_t *items, apr_pool_t *po
             case 'B':
             case 'n':
               *va_arg(*ap, apr_uint64_t *) = SVN_RA_SVN_UNSPECIFIED_NUMBER;
+              break;
+            case '3':
+              *va_arg(*ap, svn_tristate_t *) = svn_tristate_unknown;
               break;
             case '(':
               nesting_level++;
