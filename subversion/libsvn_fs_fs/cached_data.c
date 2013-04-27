@@ -327,12 +327,36 @@ get_node_revision_body(node_revision_t **noderev_p,
     {
       /* noderevs in rev / pack files can be cached */
       const svn_fs_fs__id_part_t *rev_item = svn_fs_fs__id_rev_item(id);
-
       pair_cache_key_t key;
+    
+      /* First, try a noderevs container cache lookup. */
+      if (   is_packed_rev(fs, rev_item->revision)
+          && ffd->noderevs_container_cache)
+        {
+          svn_fs_fs__noderevs_t *noderevs;
+          apr_off_t offset;
+          apr_uint32_t sub_item;
+          SVN_ERR(svn_fs_fs__item_offset(&offset, &sub_item, fs,
+                                         rev_item->revision, NULL,
+                                         rev_item->number, pool));
+          key.revision = packed_base_rev(fs, rev_item->revision);
+          key.second = offset;
+
+          SVN_ERR(svn_cache__get((void **)&noderevs, &is_cached,
+                                 ffd->noderevs_container_cache, &key, pool));
+          if (is_cached)
+            {
+              SVN_ERR(svn_fs_fs__noderevs_get(noderev_p, noderevs, sub_item,
+                                              pool));
+              return SVN_NO_ERROR;
+            }
+        }
+
       key.revision = rev_item->revision;
       key.second = rev_item->number;
     
-      /* First, try a cache lookup. If that succeeds, we are done here. */
+      /* Not found or not applicable. Try a noderev cache lookup.
+       * If that succeeds, we are done here. */
       if (ffd->node_revision_cache)
         {
           SVN_ERR(svn_cache__get((void **) noderev_p,
@@ -2522,10 +2546,23 @@ block_read_noderevs_container(node_revision_t **noderev_p,
                               svn_boolean_t must_read,
                               apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   svn_fs_fs__noderevs_t *container;
   svn_stream_t *stream;
-  if (!must_read)
-    return SVN_NO_ERROR;
+  pair_cache_key_t key;
+
+  key.revision = packed_base_rev(fs, entry->items[0].revision);
+  key.second = entry->offset;
+
+  /* already in cache? */
+  if (!must_read && ffd->noderevs_container_cache)
+    {
+      svn_boolean_t is_cached = FALSE;
+      SVN_ERR(svn_cache__has_key(&is_cached, ffd->noderevs_container_cache,
+                                 &key, pool));
+      if (is_cached)
+        return SVN_NO_ERROR;
+    }
 
   SVN_ERR(auto_select_stream(&stream, fs, file, file_stream, entry, pool));
 
@@ -2535,7 +2572,12 @@ block_read_noderevs_container(node_revision_t **noderev_p,
 
   /* extract requested data */
 
-  SVN_ERR(svn_fs_fs__noderevs_get(noderev_p, container, sub_item, pool));
+  if (must_read)
+    SVN_ERR(svn_fs_fs__noderevs_get(noderev_p, container, sub_item, pool));
+
+  if (ffd->noderevs_container_cache)
+    SVN_ERR(svn_cache__set(ffd->noderevs_container_cache, &key, container,
+                           pool));
 
   return SVN_NO_ERROR;
 }

@@ -340,11 +340,15 @@ typedef struct fs_fs_data_t
    * the key is (revision, item index) */
   svn_cache__t *node_revision_cache;
 
+  /* Cache for noderevs_t containers;
+     the key is a (pack file revision, file offset) pair */
+  svn_cache__t *noderevs_container_cache;
+
   /* Cache for change lists as APR arrays of change_t * objects; the key
      is the revision */
   svn_cache__t *changes_cache;
 
-  /* Cache for change_list_t conatiners;
+  /* Cache for change_list_t containers;
      the key is a (pack file revision, file offset) pair */
   svn_cache__t *changes_container_cache;
 

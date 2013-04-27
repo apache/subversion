@@ -24,6 +24,7 @@
 
 #include "private/svn_packed_data.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_temp_serializer.h"
 
 #include "noderevs.h"
 #include "string_table.h"
@@ -836,5 +837,62 @@ svn_fs_fs__read_noderevs_container(svn_fs_fs__noderevs_t **container,
 
   *container = noderevs;
   
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__serialize_noderevs_container(void **data,
+                                        apr_size_t *data_len,
+                                        void *in,
+                                        apr_pool_t *pool)
+{
+  svn_fs_fs__noderevs_t *noderevs = in;
+  svn_stringbuf_t *serialized;
+  apr_size_t size
+    = noderevs->ids->elt_size * noderevs->ids->nelts
+    + noderevs->data_reps->elt_size * noderevs->data_reps->nelts
+    + noderevs->prop_reps->elt_size * noderevs->prop_reps->nelts
+    + noderevs->noderevs->elt_size * noderevs->noderevs->nelts
+    + 10 * noderevs->noderevs->elt_size
+    + 100;
+
+  /* serialize array header and all its elements */
+  svn_temp_serializer__context_t *context
+    = svn_temp_serializer__init(noderevs, sizeof(*noderevs), size, pool);
+
+  /* serialize sub-structures */
+  svn_fs_fs__serialize_string_table(context, &noderevs->paths);
+  svn_fs_fs__serialize_apr_array(context, &noderevs->ids);
+  svn_fs_fs__serialize_apr_array(context, &noderevs->data_reps);
+  svn_fs_fs__serialize_apr_array(context, &noderevs->prop_reps);
+  svn_fs_fs__serialize_apr_array(context, &noderevs->noderevs);
+
+  /* return the serialized result */
+  serialized = svn_temp_serializer__get(context);
+
+  *data = serialized->data;
+  *data_len = serialized->len;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__deserialize_noderevs_container(void **out,
+                                          void *data,
+                                          apr_size_t data_len,
+                                          apr_pool_t *pool)
+{
+  svn_fs_fs__noderevs_t *noderevs = (svn_fs_fs__noderevs_t *)data;
+
+  /* de-serialize sub-structures */
+  svn_fs_fs__deserialize_string_table(noderevs, &noderevs->paths);
+  svn_fs_fs__deserialize_apr_array(noderevs, &noderevs->ids, pool);
+  svn_fs_fs__deserialize_apr_array(noderevs, &noderevs->data_reps, pool);
+  svn_fs_fs__deserialize_apr_array(noderevs, &noderevs->prop_reps, pool);
+  svn_fs_fs__deserialize_apr_array(noderevs, &noderevs->noderevs, pool);
+
+  /* done */
+  *out = noderevs;
+
   return SVN_NO_ERROR;
 }
