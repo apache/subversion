@@ -134,7 +134,7 @@ Candidate changes:
      people see this code. There is no an actual risk AFAICT; see my email
      <http://svn.haxx.se/dev/archive-2013-04/0601.shtml>.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, danielsh
 
  * r1476607
    Some svnadmin command help copy-editing.
@@ -142,6 +142,7 @@ Candidate changes:
      For users, consistency; for translators, fewer mismatches.
    Votes:
      +1 (non-binding): mattiase
+     +1: danielsh
 
 
 Veto-blocked changes:
