@@ -113,7 +113,7 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
                                 "couldn't retrieve revision root",
                                 resource->pool);
 
-  serr = svn_repos_fs_get_inherited_props(&inherited_props, root, path,
+  serr = svn_repos_fs_get_inherited_props(&inherited_props, root, path, NULL,
                                           dav_svn__authz_read_func(&arb),
                                           &arb, resource->pool, iterpool);
   if (serr)
@@ -194,7 +194,7 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
                 }
 
               if (serr)
-                break;              
+                break;
             }
           if (!serr)
             serr = dav_svn__brigade_printf(bb, output,

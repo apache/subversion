@@ -218,10 +218,10 @@ add_subdir(svn_fs_root_t *source_root,
          changed path (because it was modified after the copy but before the
          commit), we remove it from the changed_paths hash so that future
          calls to path_driver_cb_func will ignore it. */
-      change = apr_hash_get(changed_paths, new_edit_path, APR_HASH_KEY_STRING);
+      change = svn_hash_gets(changed_paths, new_edit_path);
       if (change)
         {
-          apr_hash_set(changed_paths, new_edit_path, APR_HASH_KEY_STRING, NULL);
+          svn_hash_sets(changed_paths, new_edit_path, NULL);
 
           /* If it's a delete, skip this entry. */
           if (change->change_kind == svn_fs_path_change_delete)
@@ -491,7 +491,7 @@ path_driver_cb_func(void **dir_baton,
                                      edit_path))
     apr_array_pop(cb->copies);
 
-  change = apr_hash_get(cb->changed_paths, edit_path, APR_HASH_KEY_STRING);
+  change = svn_hash_gets(cb->changed_paths, edit_path);
   if (! change)
     {
       /* This can only happen if the path was removed from cb->changed_paths
@@ -783,14 +783,13 @@ path_driver_cb_func(void **dir_baton,
 
 #ifdef USE_EV2_IMPL
 static svn_error_t *
-fetch_kind_func(svn_kind_t *kind,
+fetch_kind_func(svn_node_kind_t *kind,
                 void *baton,
                 const char *path,
                 svn_revnum_t base_revision,
                 apr_pool_t *scratch_pool)
 {
   svn_fs_root_t *root = baton;
-  svn_node_kind_t node_kind;
   svn_fs_root_t *prev_root;
   svn_fs_t *fs = svn_fs_root_fs(root);
 
@@ -798,9 +797,8 @@ fetch_kind_func(svn_kind_t *kind,
     base_revision = svn_fs_revision_root_revision(root) - 1;
 
   SVN_ERR(svn_fs_revision_root(&prev_root, fs, base_revision, scratch_pool));
-  SVN_ERR(svn_fs_check_path(&node_kind, prev_root, path, scratch_pool));
+  SVN_ERR(svn_fs_check_path(kind, prev_root, path, scratch_pool));
 
-  *kind = svn__kind_from_node_kind(node_kind, FALSE);
   return SVN_NO_ERROR;
 }
 
@@ -1064,11 +1062,10 @@ add_subdir_ev2(svn_fs_root_t *source_root,
          changed path (because it was modified after the copy but before the
          commit), we remove it from the changed_paths hash so that future
          calls to path_driver_cb_func will ignore it. */
-      change = apr_hash_get(changed_paths, child_relpath, APR_HASH_KEY_STRING);
+      change = svn_hash_gets(changed_paths, child_relpath);
       if (change)
         {
-          apr_hash_set(changed_paths, child_relpath, APR_HASH_KEY_STRING,
-                       NULL);
+          svn_hash_sets(changed_paths, child_relpath, NULL);
 
           /* If it's a delete, skip this entry. */
           if (change->change_kind == svn_fs_path_change_delete)
@@ -1193,7 +1190,7 @@ replay_node(svn_fs_root_t *root,
                                        repos_relpath) == NULL) )
     apr_array_pop(copies);
 
-  change = apr_hash_get(changed_paths, repos_relpath, APR_HASH_KEY_STRING);
+  change = svn_hash_gets(changed_paths, repos_relpath);
   if (! change)
     {
       /* This can only happen if the path was removed from changed_paths

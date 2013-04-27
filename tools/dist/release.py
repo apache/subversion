@@ -34,6 +34,9 @@
 # It'd be kind of nice to use the Subversion python bindings in this script,
 # but people.apache.org doesn't currently have them installed
 
+# Futures (Python 2.5 compatibility)
+from __future__ import with_statement
+
 # Stuff we need
 import os
 import re
@@ -88,6 +91,7 @@ secure_repos = 'https://svn.apache.org/repos/asf/subversion'
 dist_repos = 'https://dist.apache.org/repos/dist'
 dist_dev_url = dist_repos + '/dev/subversion'
 dist_release_url = dist_repos + '/release/subversion'
+KEYS = 'https://people.apache.org/keys/group/subversion.asc'
 extns = ['zip', 'tar.gz', 'tar.bz2']
 
 
@@ -374,7 +378,10 @@ def compare_changes(repos, branch, revision):
     if stderr:
       raise RuntimeError('svn mergeinfo failed: %s' % stderr)
     if stdout:
-      raise RuntimeError('CHANGES has unmerged revisions: %s' % stdout)
+      # Treat this as a warning since we are now putting entries for future
+      # minor releases in CHANGES on trunk.
+      logging.warning('CHANGES has unmerged revisions: %s' %
+                      stdout.replace("\n", " "))
 
 def roll_tarballs(args):
     'Create the release artifacts.'
@@ -441,7 +448,9 @@ def roll_tarballs(args):
         m.update(open(filename, 'r').read())
         open(filename + '.sha1', 'w').write(m.hexdigest())
 
-    shutil.move('svn_version.h.dist', get_deploydir(args.base_dir))
+    shutil.move('svn_version.h.dist',
+                get_deploydir(args.base_dir) + '/' + 'svn_version.h.dist'
+                + '-' + str(args.version))
 
     # And we're done!
 
@@ -586,7 +595,8 @@ def move_to_dist(args):
                    'Publish Subversion-%s.' % str(args.version)]
     if (args.username):
         svnmucc_cmd += ['--username', args.username]
-    svnmucc_cmd += ['rm', dist_dev_url + '/' + 'svn_version.h.dist']
+    svnmucc_cmd += ['rm', dist_dev_url + '/' + 'svn_version.h.dist'
+                          + '-' + str(args.version)]
     for filename in filenames:
         svnmucc_cmd += ['mv', dist_dev_url + '/' + filename,
                         dist_release_url + '/' + filename]
@@ -620,7 +630,13 @@ def write_news(args):
 
 def get_sha1info(args, replace=False):
     'Return a list of sha1 info for the release'
-    sha1s = glob.glob(os.path.join(get_deploydir(args.base_dir), '*.sha1'))
+
+    if args.target:
+        target = args.target
+    else:
+        target = get_deploydir(args.base_dir)
+
+    sha1s = glob.glob(os.path.join(target, 'subversion*-%s*.sha1' % args.version))
 
     class info(object):
         pass
@@ -644,10 +660,11 @@ def get_sha1info(args, replace=False):
 def write_announcement(args):
     'Write the release announcement.'
     sha1info = get_sha1info(args)
+    siginfo = "\n".join(get_siginfo(args, True)) + "\n"
 
     data = { 'version'              : str(args.version),
              'sha1info'             : sha1info,
-             'siginfo'              : open('getsigs-output', 'r').read(),
+             'siginfo'              : siginfo,
              'major-minor'          : '%d.%d' % (args.version.major,
                                                  args.version.minor),
              'major-minor-patch'    : args.version.base,
@@ -682,8 +699,8 @@ def write_downloads(args):
 key_start = '-----BEGIN PGP SIGNATURE-----'
 fp_pattern = re.compile(r'^pub\s+(\w+\/\w+)[^\n]*\n\s+Key\sfingerprint\s=((\s+[0-9A-F]{4}){10})\nuid\s+([^<\(]+)\s')
 
-def check_sigs(args):
-    'Check the signatures for the release.'
+def get_siginfo(args, quiet=False):
+    'Returns a list of signatures for the release.'
 
     try:
         import gnupg
@@ -697,13 +714,16 @@ def check_sigs(args):
         target = get_deploydir(args.base_dir)
 
     good_sigs = {}
+    fingerprints = {}
+    output = []
 
     glob_pattern = os.path.join(target, 'subversion*-%s*.asc' % args.version)
     for filename in glob.glob(glob_pattern):
         text = open(filename).read()
         keys = text.split(key_start)
 
-        logging.info("Checking %d sig(s) in %s" % (len(keys[1:]), filename))
+        if not quiet:
+            logging.info("Checking %d sig(s) in %s" % (len(keys[1:]), filename))
         for key in keys[1:]:
             fd, fn = tempfile.mkstemp()
             os.write(fd, key_start + key)
@@ -733,9 +753,30 @@ def check_sigs(args):
                                                      if l[0:7] != 'Warning' ])
 
         fp = fp_pattern.match(gpg_output).groups()
-        print("   %s [%s] with fingerprint:" % (fp[3], fp[0]))
-        print("   %s" % fp[1])
+        fingerprints["%s [%s] %s" % (fp[3], fp[0], fp[1])] = fp
 
+    for entry in sorted(fingerprints.keys()):
+        fp = fingerprints[entry]
+        output.append("   %s [%s] with fingerprint:" % (fp[3], fp[0]))
+        output.append("   %s" % fp[1])
+
+    return output
+
+def check_sigs(args):
+    'Check the signatures for the release.'
+
+    output = get_siginfo(args)
+    for line in output:
+        print(line)
+
+def get_keys(args):
+    'Import the LDAP-based KEYS file to gpg'
+    # We use a tempfile because urlopen() objects don't have a .fileno()
+    with tempfile.SpooledTemporaryFile() as fd:
+        fd.write(urllib2.urlopen(KEYS).read())
+        fd.flush()
+        fd.seek(0)
+        subprocess.check_call(['gpg', '--import'], stdin=fd)
 
 #----------------------------------------------------------------------
 # Main entry point for argument parsing and handling
@@ -844,13 +885,18 @@ def main():
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
 
+    # write-announcement
     subparser = subparsers.add_parser('write-announcement',
                     help='''Output to stdout template text for the emailed
                             release announcement.''')
     subparser.set_defaults(func=write_announcement)
+    subparser.add_argument('--target',
+                    help='''The full path to the directory containing
+                            release artifacts.''')
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
 
+    # write-downloads
     subparser = subparsers.add_parser('write-downloads',
                     help='''Output to stdout template text for the download
                             table for subversion.apache.org''')
@@ -858,7 +904,7 @@ def main():
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
 
-    # The check sigs subcommand
+    # check-sigs
     subparser = subparsers.add_parser('check-sigs',
                     help='''Output to stdout the signatures collected for this
                             release''')
@@ -868,6 +914,11 @@ def main():
     subparser.add_argument('--target',
                     help='''The full path to the directory containing
                             release artifacts.''')
+
+    # get-keys
+    subparser = subparsers.add_parser('get-keys',
+                    help='''Import committers' public keys to ~/.gpg/''')
+    subparser.set_defaults(func=get_keys)
 
     # A meta-target
     subparser = subparsers.add_parser('clean',

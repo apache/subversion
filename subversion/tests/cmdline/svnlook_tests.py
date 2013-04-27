@@ -32,6 +32,7 @@ logger = logging.getLogger()
 # Our testing module
 import svntest
 
+from prop_tests import binary_mime_type_on_text_file_warning
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -48,10 +49,12 @@ Item = svntest.wc.StateItem
 # Convenience functions to make writing more tests easier
 
 def run_svnlook(*varargs):
-  """Run svnlook with VARARGS, returns stdout as list of lines.
-  Raises Failure if any stderr messages."""
+  """Run svnlook with VARARGS, returns exit code as int; stdout, stderr as
+  list of lines (including line terminators).
+  Raises Failure if any stderr messages.
+  """
   exit_code, output, dummy_errput = svntest.main.run_command(
-    svntest.main.svnlook_binary, 0, 0, *varargs)
+    svntest.main.svnlook_binary, 0, False, *varargs)
 
   return output
 
@@ -98,7 +101,7 @@ def test_misc(sbox):
 
   # give the repo a new UUID
   uuid = "01234567-89ab-cdef-89ab-cdef01234567"
-  svntest.main.run_command_stdin(svntest.main.svnadmin_binary, None, 0, 1,
+  svntest.main.run_command_stdin(svntest.main.svnadmin_binary, None, 0, True,
                            ["SVN-fs-dump-format-version: 2\n",
                             "\n",
                             "UUID: ", uuid, "\n",
@@ -504,6 +507,8 @@ def diff_ignore_eolstyle(sbox):
   repo_dir = sbox.repo_dir
   wc_dir = sbox.wc_dir
 
+  # CRLF is a string that will match a CRLF sequence read from a text file.
+  # ### On Windows, we assume CRLF will be read as LF, so it's a poor test.
   if os.name == 'nt':
     crlf = '\n'
   else:
@@ -574,7 +579,8 @@ def diff_binary(sbox):
   # Set A/mu to a binary mime-type, tweak its text, and commit.
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   svntest.main.file_append(mu_path, 'new appended text for mu')
-  svntest.main.run_svn(None, 'propset', 'svn:mime-type',
+  svntest.main.run_svn(binary_mime_type_on_text_file_warning,
+                       'propset', 'svn:mime-type',
                        'application/octet-stream', mu_path)
   svntest.main.run_svn(None, 'ci', '-m', 'log msg', mu_path)
 
@@ -696,6 +702,7 @@ fp.close()"""
   # Now check the logfile
   expected_data = [ 'bogus_val\n',
                     'bogus_rev_val\n',
+                    "Properties on '/A':\n",
                     '  bogus_prop\n',
                     '  svn:log\n', '  svn:author\n',
                     '  svn:check-locks\n', # internal prop, not really expected

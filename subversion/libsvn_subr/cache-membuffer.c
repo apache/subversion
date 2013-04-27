@@ -125,11 +125,11 @@
 /* By default, don't create cache segments smaller than this value unless
  * the total cache size itself is smaller.
  */
-#define DEFAULT_MIN_SEGMENT_SIZE 0x2000000ull
+#define DEFAULT_MIN_SEGMENT_SIZE APR_UINT64_C(0x2000000)
 
 /* The minimum segment size we will allow for multi-segmented caches
  */
-#define MIN_SEGMENT_SIZE 0x10000ull
+#define MIN_SEGMENT_SIZE APR_UINT64_C(0x10000)
 
 /* The maximum number of segments allowed. Larger numbers reduce the size
  * of each segment, in turn reducing the max size of a cachable item.
@@ -142,7 +142,7 @@
 /* As of today, APR won't allocate chunks of 4GB or more. So, limit the
  * segment size to slightly below that.
  */
-#define MAX_SEGMENT_SIZE 0xffff0000ull
+#define MAX_SEGMENT_SIZE APR_UINT64_C(0xffff0000)
 
 /* We don't mark the initialization status for every group but initialize
  * a number of groups at once. That will allow for a very small init flags
@@ -561,7 +561,7 @@ write_lock_cache(svn_membuffer_t *cache, svn_boolean_t *success)
               status = APR_SUCCESS;
             }
         }
-    
+
       if (status)
         return svn_error_wrap_apr(status,
                                   _("Can't write-lock cache mutex"));
@@ -825,7 +825,7 @@ drop_entry(svn_membuffer_t *cache, entry_t *entry)
         level->first = idx;
       else
         get_entry(cache, entry->previous)->next = idx;
-      
+
       if (entry->next == NO_INDEX)
         level->last = idx;
       else
@@ -883,7 +883,7 @@ get_group_index(svn_membuffer_t **cache,
                 entry_key_t key)
 {
   svn_membuffer_t *segment0 = *cache;
-  
+
   /* select the cache segment to use. they have all the same group_count.
    * Since key may not be well-distributed, pre-fold it to a smaller but
    * "denser" ranger.  The divisors are primes larger than the largest
@@ -1362,7 +1362,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
     segment_count = MAX_SEGMENT_COUNT;
   if (segment_count * MIN_SEGMENT_SIZE > total_size)
     segment_count = total_size / MIN_SEGMENT_SIZE;
-    
+
   /* The segment count must be a power of two. Round it down as necessary.
    */
   while ((segment_count & (segment_count-1)) != 0)
@@ -1588,7 +1588,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
 
   /* if there is an old version of that entry and the new data fits into
    * the old spot, just re-use that space. */
-  if (buffer && entry && entry->size >= size)
+  if (entry && ALIGN_VALUE(entry->size) >= size && buffer)
     {
       cache->data_used += size - entry->size;
       entry->size = size;
@@ -1646,7 +1646,10 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
   else
     {
       /* if there is already an entry for this key, drop it.
+       * Since ensure_data_insertable may have removed entries from
+       * ENTRY's group, re-do the lookup.
        */
+      entry = find_entry(cache, group_index, to_find, FALSE);
       if (entry)
         drop_entry(cache, entry);
     }
@@ -2285,16 +2288,6 @@ svn_membuffer_cache_get(void **value_p,
                               DEBUG_CACHE_MEMBUFFER_TAG
                               result_pool));
 
-  /* We don't need more the key anymore.
-   * But since we allocate only small amounts of data per get() call and
-   * apr_pool_clear is somewhat expensive, we clear it only now and then.
-   */
-  if (++cache->alloc_counter > ALLOCATIONS_PER_POOL_CLEAR)
-    {
-      apr_pool_clear(cache->pool);
-      cache->alloc_counter = 0;
-    }
-
   /* return result */
   *found = *value_p != NULL;
   return SVN_NO_ERROR;
@@ -2322,7 +2315,7 @@ svn_membuffer_cache_set(void *cache_void,
   cache->alloc_counter += 3;
   if (cache->alloc_counter > ALLOCATIONS_PER_POOL_CLEAR)
     {
-      apr_pool_clear(cache->pool);
+      svn_pool_clear(cache->pool);
       cache->alloc_counter = 0;
     }
 
@@ -2376,12 +2369,6 @@ svn_membuffer_cache_get_partial(void **value_p,
       *found = FALSE;
 
       return SVN_NO_ERROR;
-    }
-
-  if (++cache->alloc_counter > ALLOCATIONS_PER_POOL_CLEAR)
-    {
-      apr_pool_clear(cache->pool);
-      cache->alloc_counter = 0;
     }
 
   combine_key(cache, key, cache->key_len);
@@ -2705,6 +2692,7 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
   wrapper->cache_internal = cache;
   wrapper->error_handler = 0;
   wrapper->error_baton = 0;
+  wrapper->pretend_empty = !!getenv("SVN_X_DOES_NOT_MARK_THE_SPOT");
 
   *cache_p = wrapper;
   return SVN_NO_ERROR;

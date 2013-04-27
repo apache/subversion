@@ -214,7 +214,7 @@ inprocess_cache_get(void **value_p,
 {
   inprocess_cache_t *cache = cache_void;
   char* buffer = NULL;
-  apr_size_t size;
+  apr_size_t size = 0;
 
   if (key)
     SVN_MUTEX__WITH_LOCK(cache->mutex,
@@ -642,6 +642,7 @@ svn_cache__create_inprocess(svn_cache__t **cache_p,
 
   wrapper->vtable = &inprocess_cache_vtable;
   wrapper->cache_internal = cache;
+  wrapper->pretend_empty = !!getenv("SVN_X_DOES_NOT_MARK_THE_SPOT");
 
   *cache_p = wrapper;
   return SVN_NO_ERROR;

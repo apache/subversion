@@ -45,6 +45,7 @@ def reject_bogus_mergeinfo(sbox):
   # validate the mergeinfo up front then it will only test the client
   svntest.actions.run_and_verify_svnmucc(None, [], expected_error,
                                          'propset', 'svn:mergeinfo', '/B:0',
+                                         '-m', 'log msg',
                                          sbox.repo_url + '/A')
 
 _svnmucc_re = re.compile('^(r[0-9]+) committed by jrandom at (.*)$')
@@ -111,12 +112,14 @@ def basic_svnmucc(sbox):
   test_svnmucc(sbox.repo_url,
                ['A /foo'
                 ], # ---------
+               '-m', 'log msg',
                'mkdir', 'foo')
 
   # revision 3
   test_svnmucc(sbox.repo_url,
                ['A /z.c',
                 ], # ---------
+               '-m', 'log msg',
                'put', empty_file, 'z.c')
 
   # revision 4
@@ -124,6 +127,7 @@ def basic_svnmucc(sbox):
                ['A /foo/z.c (from /z.c:3)',
                 'A /foo/bar (from /foo:3)',
                 ], # ---------
+               '-m', 'log msg',
                'cp', '3', 'z.c', 'foo/z.c',
                'cp', '3', 'foo', 'foo/bar')
 
@@ -134,6 +138,7 @@ def basic_svnmucc(sbox):
                 'D /foo',
                 'A /zig/zag (from /foo:4)',
                 ], # ---------
+               '-m', 'log msg',
                'cp', '4', 'foo', 'zig',
                'rm',             'zig/bar',
                'mv',      'foo', 'zig/zag')
@@ -144,6 +149,7 @@ def basic_svnmucc(sbox):
                 'A /zig/zag/bar/y.c (from /z.c:5)',
                 'A /zig/zag/bar/x.c (from /z.c:3)',
                 ], # ---------
+               '-m', 'log msg',
                'mv',      'z.c', 'zig/zag/bar/y.c',
                'cp', '3', 'z.c', 'zig/zag/bar/x.c')
 
@@ -153,6 +159,7 @@ def basic_svnmucc(sbox):
                 'A /zig/zag/bar/y y.c (from /zig/zag/bar/y.c:6)',
                 'A /zig/zag/bar/y%20y.c (from /zig/zag/bar/y.c:6)',
                 ], # ---------
+               '-m', 'log msg',
                'mv',         'zig/zag/bar/y.c', 'zig/zag/bar/y%20y.c',
                'cp', 'HEAD', 'zig/zag/bar/y.c', 'zig/zag/bar/y%2520y.c')
 
@@ -163,6 +170,7 @@ def basic_svnmucc(sbox):
                 'A /zig/zag/bar/z%20z.c (from /zig/zag/bar/y%20y.c:7)',
                 'A /zig/zag/bar/z z2.c (from /zig/zag/bar/y y.c:7)',
                 ], #---------
+               '-m', 'log msg',
                'mv',         'zig/zag/bar/y%20y.c',   'zig/zag/bar/z z1.c',
                'cp', 'HEAD', 'zig/zag/bar/y%2520y.c', 'zig/zag/bar/z%2520z.c',
                'cp', 'HEAD', 'zig/zag/bar/y y.c',     'zig/zag/bar/z z2.c')
@@ -176,6 +184,7 @@ def basic_svnmucc(sbox):
                 'D /zig/foo/bar/z z2.c',
                 'R /zig/foo/bar/z z1.c (from /zig/zag/bar/x.c:6)',
                 ], #---------
+               '-m', 'log msg',
                'mv',      'zig/zag',         'zig/foo',
                'rm',                         'zig/foo/bar/z z1.c',
                'rm',                         'zig/foo/bar/z%20z2.c',
@@ -186,6 +195,7 @@ def basic_svnmucc(sbox):
   test_svnmucc(sbox.repo_url,
                ['R /zig/foo/bar (from /zig/z.c:9)',
                 ], #---------
+               '-m', 'log msg',
                'rm',                 'zig/foo/bar',
                'cp', '9', 'zig/z.c', 'zig/foo/bar')
 
@@ -194,6 +204,7 @@ def basic_svnmucc(sbox):
                ['R /zig/foo/bar (from /zig/foo/bar:9)',
                 'D /zig/foo/bar/z z1.c',
                 ], #---------
+               '-m', 'log msg',
                'rm',                     'zig/foo/bar',
                'cp', '9', 'zig/foo/bar', 'zig/foo/bar',
                'rm',                     'zig/foo/bar/z%20z1.c')
@@ -202,6 +213,7 @@ def basic_svnmucc(sbox):
   test_svnmucc(sbox.repo_url,
                ['R /zig/foo (from /zig/foo/bar:11)',
                 ], #---------
+               '-m', 'log msg',
                'rm',                        'zig/foo',
                'cp', 'head', 'zig/foo/bar', 'zig/foo')
 
@@ -214,6 +226,7 @@ def basic_svnmucc(sbox):
                 'D /foo/foo/bar',
                 'R /foo/foo/foo/bar (from /foo:4)',
                 ], #---------
+               '-m', 'log msg',
                'rm',             'zig',
                'cp', '4', 'foo', 'foo',
                'cp', '4', 'foo', 'foo/foo',
@@ -228,6 +241,7 @@ def basic_svnmucc(sbox):
                 'A /boozle/buz',
                 'A /boozle/buz/nuz',
                 ], #---------
+               '-m', 'log msg',
                'cp',    '4', 'foo', 'boozle',
                'mkdir',             'boozle/buz',
                'mkdir',             'boozle/buz/nuz')
@@ -238,6 +252,7 @@ def basic_svnmucc(sbox):
                 'A /boozle/guz (from /boozle/buz:14)',
                 'A /boozle/guz/svnmucc-test.py',
                 ], #---------
+               '-m', 'log msg',
                'put',      empty_file,   'boozle/buz/svnmucc-test.py',
                'cp', '14', 'boozle/buz', 'boozle/guz',
                'put',      empty_file,   'boozle/guz/svnmucc-test.py')
@@ -247,20 +262,25 @@ def basic_svnmucc(sbox):
                ['M /boozle/buz/svnmucc-test.py',
                 'R /boozle/guz/svnmucc-test.py',
                 ], #---------
+               '-m', 'log msg',
                'put', empty_file, 'boozle/buz/svnmucc-test.py',
                'rm',              'boozle/guz/svnmucc-test.py',
                'put', empty_file, 'boozle/guz/svnmucc-test.py')
 
   # revision 17
   test_svnmucc(sbox.repo_url,
-               ['R /foo/bar (from /foo/foo:16)'], #---------
+               ['R /foo/bar (from /foo/foo:16)'
+                ], #---------
+               '-m', 'log msg',
                'rm',                            'foo/bar',
                'cp', '16', 'foo/foo',           'foo/bar',
                'propset',  'testprop',  'true', 'foo/bar')
 
   # revision 18
   test_svnmucc(sbox.repo_url,
-               ['M /foo/bar'], #---------
+               ['M /foo/bar'
+                ], #---------
+               '-m', 'log msg',
                'propdel', 'testprop', 'foo/bar')
 
   # revision 19
@@ -268,6 +288,7 @@ def basic_svnmucc(sbox):
                ['M /foo/z.c',
                 'M /foo/foo',
                 ], #---------
+               '-m', 'log msg',
                'propset', 'testprop', 'true', 'foo/z.c',
                'propset', 'testprop', 'true', 'foo/foo')
 
@@ -276,6 +297,7 @@ def basic_svnmucc(sbox):
                ['M /foo/z.c',
                 'M /foo/foo',
                 ], #---------
+               '-m', 'log msg',
                'propsetf', 'testprop', empty_file, 'foo/z.c',
                'propsetf', 'testprop', empty_file, 'foo/foo')
 
@@ -283,6 +305,7 @@ def basic_svnmucc(sbox):
   xtest_svnmucc(sbox.repo_url,
                 ["svnmucc: E200004: 'a' is not a revision"
                  ], #---------
+                '-m', 'log msg',
                 'cp', 'a', 'b')
 
   # Expected cannot be younger error
@@ -290,18 +313,21 @@ def basic_svnmucc(sbox):
                 ['svnmucc: E205000: Copy source revision cannot be younger ' +
                  'than base revision',
                  ], #---------
+                '-m', 'log msg',
                 'cp', '42', 'a', 'b')
 
   # Expected already exists error
   xtest_svnmucc(sbox.repo_url,
                 ["svnmucc: E125002: 'foo' already exists",
                  ], #---------
+                '-m', 'log msg',
                 'cp', '17', 'a', 'foo')
 
   # Expected copy_src already exists error
   xtest_svnmucc(sbox.repo_url,
                 ["svnmucc: E125002: 'a/bar' (from 'foo/bar:17') already exists",
                  ], #---------
+                '-m', 'log msg',
                 'cp', '17', 'foo', 'a',
                 'cp', '17', 'foo/foo', 'a/bar')
 
@@ -309,12 +335,14 @@ def basic_svnmucc(sbox):
   xtest_svnmucc(sbox.repo_url,
                 ["svnmucc: E125002: 'a' not found",
                  ], #---------
+                '-m', 'log msg',
                 'cp', '17', 'a', 'b')
 
 
 def propset_root_internal(sbox, target):
   ## propset on ^/
   svntest.actions.run_and_verify_svnmucc(None, None, [],
+                                         '-m', 'log msg',
                                          'propset', 'foo', 'bar',
                                          target)
   svntest.actions.run_and_verify_svn(None, 'bar', [],
@@ -323,6 +351,7 @@ def propset_root_internal(sbox, target):
 
   ## propdel on ^/
   svntest.actions.run_and_verify_svnmucc(None, None, [],
+                                         '-m', 'log msg',
                                          'propdel', 'foo',
                                          target)
   svntest.actions.run_and_verify_svn(None, [], [],
@@ -338,12 +367,58 @@ def propset_root(sbox):
   propset_root_internal(sbox, sbox.repo_url + '/iota')
 
 
+def too_many_log_messages(sbox):
+  "test log message mutual exclusivity checks"
+
+  sbox.build() # would use read-only=True, but need a place to stuff msg_file
+  msg_file = sbox.ospath('svnmucc_msg')
+  svntest.main.file_append(msg_file, 'some log message')
+  err_msg = ["svnmucc: E205000: --message (-m), --file (-F), and "
+             "--with-revprop=svn:log are mutually exclusive"]
+
+  xtest_svnmucc(sbox.repo_url, err_msg,
+                '--non-interactive',
+                '-m', 'log msg',
+                '-F', msg_file,
+                'mkdir', 'A/subdir')
+  xtest_svnmucc(sbox.repo_url, err_msg,
+                '--non-interactive',
+                '-m', 'log msg',
+                '--with-revprop', 'svn:log=proppy log message',
+                'mkdir', 'A/subdir')
+  xtest_svnmucc(sbox.repo_url, err_msg,
+                '--non-interactive',
+                '-F', msg_file,
+                '--with-revprop', 'svn:log=proppy log message',
+                'mkdir', 'A/subdir')
+  xtest_svnmucc(sbox.repo_url, err_msg,
+                '--non-interactive',
+                '-m', 'log msg',
+                '-F', msg_file,
+                '--with-revprop', 'svn:log=proppy log message',
+                'mkdir', 'A/subdir')
+
+@Issues(3418)
+def no_log_msg_non_interactive(sbox):
+  "test non-interactive without a log message"
+
+  sbox.build(create_wc=False)
+  xtest_svnmucc(sbox.repo_url,
+                ["svnmucc: E205001: Cannot invoke editor to get log message "
+                 "when non-interactive"
+                 ], #---------
+                '--non-interactive',
+                'mkdir', 'A/subdir')
+
+
 ######################################################################
 
 test_list = [ None,
               reject_bogus_mergeinfo,
               basic_svnmucc,
               propset_root,
+              too_many_log_messages,
+              no_log_msg_non_interactive,
             ]
 
 if __name__ == '__main__':

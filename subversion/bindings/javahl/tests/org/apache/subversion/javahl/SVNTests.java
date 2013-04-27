@@ -148,12 +148,12 @@ class SVNTests extends TestCase
      * Username to use in tests
      */
     protected final static String USERNAME = "jrandom";
-    
+
     /**
      * Password to use in tests
      */
     protected final static String PASSWORD = "rayjandom";
-    
+
     /**
      * Create a JUnit <code>TestCase</code> instance.
      */

@@ -34,6 +34,8 @@ logger = logging.getLogger()
 # Our testing module
 import svntest
 
+from prop_tests import binary_mime_type_on_text_file_warning
+
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
 SkipUnless = svntest.testcase.SkipUnless_deco
@@ -173,7 +175,7 @@ def info_with_tree_conflicts(sbox):
     path = os.path.join(G, fname)
 
     # check plain info
-    expected_str1 = ".*local %s, incoming %s.*" % (reason, action)
+    expected_str1 = ".*local file %s, incoming file %s.*" % (reason, action)
     expected_info = { 'Tree conflict' : expected_str1 }
     svntest.actions.run_and_verify_info([expected_info], path)
 
@@ -197,7 +199,7 @@ def info_with_tree_conflicts(sbox):
   expected_infos = [{ 'Path' : re.escape(G) }]
   for fname, action, reason in scenarios:
     path = os.path.join(G, fname)
-    tree_conflict_re = ".*local %s, incoming %s.*" % (reason, action)
+    tree_conflict_re = ".*local file %s, incoming file %s.*" % (reason, action)
     expected_infos.append({ 'Path' : re.escape(path),
                             'Tree conflict' : tree_conflict_re })
   expected_infos.sort(key=lambda info: info['Path'])
@@ -221,6 +223,7 @@ def info_on_added_file(sbox):
   expected = {'Path' : re.escape(new_file),
               'Name' : 'new_file',
               'URL' : '.*/new_file',
+              'Relative URL' : '.*/new_file',
               'Repository Root' : '.*',
               'Node Kind' : 'file',
               'Schedule' : 'add',
@@ -240,6 +243,7 @@ def info_on_added_file(sbox):
                                      'path'     : new_file,
                                      'revision' : 'Resource is not under version control.'}),
                        ('url',      {}, '.*/new_file'),
+                       ('relative-url', {}, '.*/new_file'),
                        ('root',     {}, '.*'),
                        ('uuid',     {}, uuid_regex),
                        ('depth',    {}, 'infinity'),
@@ -259,6 +263,7 @@ def info_on_mkdir(sbox):
   # check that we have a Repository Root and Repository UUID
   expected = {'Path' : re.escape(new_dir),
               'URL' : '.*/new_dir',
+              'Relative URL' : '.*/new_dir',
               'Repository Root' : '.*',
               'Node Kind' : 'directory',
               'Schedule' : 'add',
@@ -277,6 +282,7 @@ def info_on_mkdir(sbox):
                                      'path'     : new_dir,
                                      'revision' : 'Resource is not under version control.'}),
                        ('url',      {}, '.*/new_dir'),
+                       ('relative-url', {}, '.*/new_dir'),
                        ('root',     {}, '.*'),
                        ('uuid',     {}, uuid_regex),
                        ('depth',    {}, 'infinity'),
@@ -396,6 +402,7 @@ def info_repos_root_url(sbox):
         'Path'              : re.escape(os.path.basename(sbox.repo_dir)),
         'Repository Root'   : re.escape(sbox.repo_url),
         'URL'               : re.escape(sbox.repo_url),
+        'Relative URL'      : '\^/', # escape ^ -- this isn't a regexp
         'Revision'          : '1',
         'Node Kind'         : 'directory',
         'Last Changed Rev'  : '1',
@@ -405,6 +412,7 @@ def info_repos_root_url(sbox):
         'Name'              : 'iota',
         'Repository Root'   : re.escape(sbox.repo_url),
         'URL'               : re.escape(sbox.repo_url + '/iota'),
+        'Relative URL'      : '\^/iota', # escape ^ -- this isn't a regexp
         'Revision'          : '1',
         'Node Kind'         : 'file',
         'Last Changed Rev'  : '1',
@@ -488,7 +496,9 @@ def binary_tree_conflict(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  sbox.simple_propset('svn:mime-type', 'binary/octet-stream', 'iota')
+  svntest.main.run_svn(binary_mime_type_on_text_file_warning,
+                       'propset', 'svn:mime-type', 'binary/octet-stream',
+                       sbox.ospath('iota'))
   sbox.simple_commit()
 
   iota = sbox.ospath('iota')
@@ -516,8 +526,65 @@ def binary_tree_conflict(sbox):
   }]
   svntest.actions.run_and_verify_info(expected_info, iota)
 
+def relpath_escaping(sbox):
+  "relpath escaping should be usable as-is"
 
+  sbox.build()
+  wc_dir = sbox.wc_dir
 
+  name = 'path with space, +, % and #'
+  name2 = 'path with %20'
+  sbox.simple_copy('iota', name)
+  sbox.simple_copy('iota', name2)
+  sbox.simple_commit()
+
+  testpath = sbox.ospath(name)
+
+  expected = {'Path' : re.escape(testpath),
+              'URL' : '.*/path.*with.*space.*',
+              'Relative URL' : '.*/path.*with.*space.*',
+             }
+
+  svntest.actions.run_and_verify_info([expected], sbox.ospath(name))
+
+  info = svntest.actions.run_and_parse_info(sbox.ospath(name), sbox.ospath(name2))
+
+  # And now verify that the returned URL and relative url are usable
+
+  # Also test the local path (to help resolving the relative path) and an
+  # unescaped path which the client should automatically encode
+  svntest.actions.run_and_verify_svn(None, None, [], 'info',
+                                     info[0]['Relative URL'],
+                                     info[0]['URL'],
+                                     testpath,
+                                     '^/' + name,
+
+                                     info[1]['Relative URL'],
+                                     info[1]['URL'])
+
+  # And now do the same thing with a the file external handling
+  sbox.simple_propset('svn:externals',
+                        info[0]['Relative URL'] + " f1\n" +
+                        info[0]['URL'] + " f2\n" +
+                        '"^/' + name + "\" f3\n" +
+
+                        info[1]['Relative URL'] + " g1\n" +
+                        info[1]['URL'] + " g2\n",
+                      ''
+                     )
+
+  # And now we expect to see 3 file externals
+  expected_output = svntest.wc.State(wc_dir, {
+    'f1'                : Item(status='A '),
+    'f2'                : Item(status='A '),
+    'f3'                : Item(status='A '),
+
+    'g1'                : Item(status='A '),
+    'g2'                : Item(status='A '),
+  })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None, None)
 
 ########################################################################
 # Run the tests
@@ -533,6 +600,7 @@ test_list = [ None,
               info_repos_root_url,
               info_show_exclude,
               binary_tree_conflict,
+              relpath_escaping,
              ]
 
 if __name__ == '__main__':

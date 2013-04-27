@@ -1055,10 +1055,51 @@ def cannot_move_or_remove_file_externals(sbox):
                          'A/B/F', 'A/B/lambda')
 
   expected_status.add({
-    'A/D/exdir_A'       : Item(status='X '),
-    'A/D/x'             : Item(status='X '),
-    'A/C/exdir_H'       : Item(status='X '),
-    'A/C/exdir_G'       : Item(status='X '),
+    'A/D/exdir_A'           : Item(status='  ', wc_rev='5', prev_status='X '),
+    'A/D/exdir_A/D'         : Item(status='  ', wc_rev='5'),
+    'A/D/exdir_A/D/gamma'   : Item(status='  ', wc_rev='5'),
+    'A/D/exdir_A/D/G'       : Item(status='  ', wc_rev='5'),
+    'A/D/exdir_A/D/G/pi'    : Item(status='  ', wc_rev='5'),
+    'A/D/exdir_A/D/G/rho'   : Item(status='  ', wc_rev='5'),
+    'A/D/exdir_A/D/G/tau'   : Item(status='  ', wc_rev='5'),
+    'A/D/exdir_A/D/H'       : Item(status='  ', wc_rev='5'),
+    'A/D/exdir_A/D/H/chi'   : Item(status='  ', wc_rev='5'),
+    'A/D/exdir_A/D/H/psi'   : Item(status='  ', wc_rev='5'),
+    'A/D/exdir_A/D/H/omega' : Item(status='  ', wc_rev='5'),
+    'A/D/exdir_A/B'         : Item(status='  ', wc_rev='5'),
+    'A/D/exdir_A/B/E'       : Item(status='  ', wc_rev='5'),
+    'A/D/exdir_A/B/E/beta'  : Item(status='  ', wc_rev='5'),
+    'A/D/exdir_A/B/E/alpha' : Item(status='  ', wc_rev='5'),
+    'A/D/exdir_A/B/F'       : Item(status='  ', wc_rev='5'),
+    'A/D/exdir_A/B/lambda'  : Item(status='  ', wc_rev='5'),
+    'A/D/exdir_A/G'         : Item(status='  ', wc_rev='5'),
+    'A/D/exdir_A/G/pi'      : Item(status='  ', wc_rev='5'),
+    'A/D/exdir_A/G/tau'     : Item(status='  ', wc_rev='5'),
+    'A/D/exdir_A/G/rho'     : Item(status='  ', wc_rev='5'),
+    'A/D/exdir_A/H'         : Item(status='  ', wc_rev='1'),
+    'A/D/exdir_A/H/psi'     : Item(status='  ', wc_rev='1'),
+    'A/D/exdir_A/H/omega'   : Item(status='  ', wc_rev='1'),
+    'A/D/exdir_A/H/chi'     : Item(status='  ', wc_rev='1'),
+    'A/D/exdir_A/C'         : Item(status='  ', wc_rev='5'),
+    'A/D/exdir_A/mu'        : Item(status='  ', wc_rev='5'),
+
+    'A/C/exdir_G'           : Item(status='  ', prev_status='X ', wc_rev='5'),
+    'A/C/exdir_G/tau'       : Item(status='  ', wc_rev='5'),
+    'A/C/exdir_G/pi'        : Item(status='  ', wc_rev='5'),
+    'A/C/exdir_G/rho'       : Item(status='  ', wc_rev='5'),
+
+    'A/D/x'                 : Item(status='X '),
+    'A/D/x/y/z/blah'        : Item(status='  ', wc_rev='5'),
+    'A/D/x/y/z/blah/lambda' : Item(status='  ', wc_rev='5'),
+    'A/D/x/y/z/blah/E'      : Item(status='  ', wc_rev='5'),
+    'A/D/x/y/z/blah/E/beta' : Item(status='  ', wc_rev='5'),
+    'A/D/x/y/z/blah/E/alpha': Item(status='  ', wc_rev='5'),
+    'A/D/x/y/z/blah/F'      : Item(status='  ', wc_rev='5'),
+
+    'A/C/exdir_H'           : Item(status='  ', prev_status='X ', wc_rev='1'),
+    'A/C/exdir_H/omega'     : Item(status='  ', wc_rev='1'),
+    'A/C/exdir_H/chi'       : Item(status='  ', wc_rev='1'),
+    'A/C/exdir_H/psi'       : Item(status='  ', wc_rev='1'),
   })
 
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -1433,7 +1474,9 @@ def relegate_external(sbox):
       })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.add({
-    'A/external'        : Item(status='X '),
+    'A/external'        : Item(status='  ', prev_status='X ', wc_rev='2'),
+    'A/external/alpha'  : Item(status='  ', wc_rev='2'),
+    'A/external/beta'   : Item(status='  ', wc_rev='2'),
   })
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -1878,10 +1921,52 @@ def exclude_externals(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 6)
   expected_status.add({
       'A/B/gamma'         : Item(status='  ', wc_rev='6', switched='X'),
-      'A/C/exdir_H'       : Item(status='X '),
-      'A/C/exdir_G'       : Item(status='X '),
-      'A/D/exdir_A'       : Item(status='X '),
+
+      'A/C/exdir_H'       : Item(status='  ', prev_status='X ', wc_rev='1'),
+      'A/C/exdir_H/omega' : Item(status='  ', wc_rev='1'),
+      'A/C/exdir_H/chi'   : Item(status='  ', wc_rev='1'),
+      'A/C/exdir_H/psi'   : Item(status='  ', wc_rev='1'),
+
+      'A/C/exdir_G'       : Item(status='  ', prev_status='X ', wc_rev='5'),
+      'A/C/exdir_G/pi'    : Item(status='  ', wc_rev='5'),
+      'A/C/exdir_G/rho'   : Item(status='  ', wc_rev='5'),
+      'A/C/exdir_G/tau'   : Item(status='  ', wc_rev='5'),
+
+      'A/D/exdir_A'       : Item(status='  ', prev_status='X ', wc_rev='5'),
+      'A/D/exdir_A/H'     : Item(status='  ', wc_rev='1'),
+      'A/D/exdir_A/H/psi' : Item(status='  ', wc_rev='1'),
+      'A/D/exdir_A/H/chi' : Item(status='  ', wc_rev='1'),
+      'A/D/exdir_A/H/omega': Item(status='  ', wc_rev='1'),
+      'A/D/exdir_A/D'     : Item(status='  ', wc_rev='5'),
+      'A/D/exdir_A/D/H'   : Item(status='  ', wc_rev='5'),
+      'A/D/exdir_A/D/H/chi': Item(status='  ', wc_rev='5'),
+      'A/D/exdir_A/D/H/omega': Item(status='  ', wc_rev='5'),
+      'A/D/exdir_A/D/H/psi': Item(status='  ', wc_rev='5'),
+      'A/D/exdir_A/D/G'   : Item(status='  ', wc_rev='5'),
+      'A/D/exdir_A/D/G/pi': Item(status='  ', wc_rev='5'),
+      'A/D/exdir_A/D/G/rho': Item(status='  ', wc_rev='5'),
+      'A/D/exdir_A/D/G/tau': Item(status='  ', wc_rev='5'),
+      'A/D/exdir_A/D/gamma': Item(status='  ', wc_rev='5'),
+      'A/D/exdir_A/B'     : Item(status='  ', wc_rev='5'),
+      'A/D/exdir_A/B/F'   : Item(status='  ', wc_rev='5'),
+      'A/D/exdir_A/B/E'   : Item(status='  ', wc_rev='5'),
+      'A/D/exdir_A/B/E/beta': Item(status='  ', wc_rev='5'),
+      'A/D/exdir_A/B/E/alpha': Item(status='  ', wc_rev='5'),
+      'A/D/exdir_A/B/lambda': Item(status='  ', wc_rev='5'),
+      'A/D/exdir_A/C'     : Item(status='  ', wc_rev='5'),
+      'A/D/exdir_A/G'     : Item(status='  ', wc_rev='5'),
+      'A/D/exdir_A/G/tau' : Item(status='  ', wc_rev='5'),
+      'A/D/exdir_A/G/rho' : Item(status='  ', wc_rev='5'),
+      'A/D/exdir_A/G/pi'  : Item(status='  ', wc_rev='5'),
+      'A/D/exdir_A/mu'    : Item(status='  ', wc_rev='5'),
+
       'A/D/x'             : Item(status='X '),
+      'A/D/x/y/z/blah'    : Item(status='  ', wc_rev='5'),
+      'A/D/x/y/z/blah/E'  : Item(status='  ', wc_rev='5'),
+      'A/D/x/y/z/blah/E/alpha': Item(status='  ', wc_rev='5'),
+      'A/D/x/y/z/blah/E/beta': Item(status='  ', wc_rev='5'),
+      'A/D/x/y/z/blah/lambda': Item(status='  ', wc_rev='5'),
+      'A/D/x/y/z/blah/F'  : Item(status='  ', wc_rev='5'),
   })
   svntest.actions.run_and_verify_update(wc_dir,
                                         None, None, expected_status, None,
@@ -2131,7 +2216,7 @@ def copy_file_externals(sbox):
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
     expected_status, None, None, None, None, None, True, wc_dir)
 
-def include_externals(sbox):
+def commit_include_externals(sbox):
   "commit --include-externals"
   # svntest.factory.make(sbox, """
   #   mkdir Z
@@ -2353,13 +2438,28 @@ def include_externals(sbox):
 
   expected_status.tweak(wc_rev='3')
   expected_status.add({
-    'A/D/H/xZ'          : Item(status='X '),
+    'A/D/H/xZ'          : Item(status='  ', prev_status='X ', wc_rev='3'),
+    'A/D/H/xZ/zeta'     : Item(status='  ', wc_rev='3'),
+
     'Xpegged/xiota'     : Item(status='  ', wc_rev='1', switched='X'),
-    'Xpegged/xE'        : Item(status='X '),
-    'X/Y/xH'            : Item(status='X '),
+    'Xpegged/xE'        : Item(status='  ', prev_status='X ', wc_rev='1'),
+    'Xpegged/xE/alpha'  : Item(status='  ', wc_rev='1'),
+    'Xpegged/xE/beta'   : Item(status='  ', wc_rev='1'),
+
+    'X/Y/xH'            : Item(status='  ', prev_status='X ', wc_rev='3'),
+    'X/Y/xH/psi'        : Item(status='  ', wc_rev='3'),
+    'X/Y/xH/omega'      : Item(status='  ', wc_rev='3'),
+    'X/Y/xH/chi'        : Item(status='  ', wc_rev='3'),
+    'X/Y/xH/xZ'         : Item(status='  ', prev_status='X ', wc_rev='3'),
+    'X/Y/xH/xZ/zeta'    : Item(status='  ', wc_rev='3'),
+
     'X/Y/xlambda'       : Item(status='  ', wc_rev='3', switched='X'),
     'X/xmu'             : Item(status='  ', wc_rev='3', switched='X'),
-    'X/xG'              : Item(status='X '),
+
+    'X/xG'              : Item(status='  ', prev_status='X ', wc_rev='3'),
+    'X/xG/rho'          : Item(status='  ', wc_rev='3'),
+    'X/xG/tau'          : Item(status='  ', wc_rev='3'),
+    'X/xG/pi'           : Item(status='  ', wc_rev='3'),
   })
   expected_status.tweak('Xpegged/xiota', wc_rev='1')
 
@@ -2385,7 +2485,9 @@ def include_externals(sbox):
   main.file_append(X_Y_xH_xZ_zeta, 'mod\n')
 
   # svn status
-  expected_status.tweak('X/Y/xlambda', 'X/xmu', status='M ')
+  expected_status.tweak('X/Y/xlambda', 'X/xmu', 'X/Y/xH/chi',
+                        'X/Y/xH/xZ/zeta', 'Xpegged/xE/alpha',
+                        'X/xG/pi', status='M ')
 
   actions.run_and_verify_unquiet_status(wc_dir, expected_status)
 
@@ -2421,9 +2523,10 @@ def include_externals(sbox):
   })
 
   expected_status.tweak(status='  ')
-  expected_status.tweak('X/Y/xlambda', 'X/xmu', wc_rev='4')
-  expected_status.tweak('X/Y/xH', 'X/xG', 'A/D/H/xZ', 'Xpegged/xE',
-    status='X ')
+  expected_status.tweak('X/xmu', 'X/Y/xlambda', 'X/Y/xH/xZ/zeta',
+                        'X/Y/xH/chi', 'X/xG/pi', wc_rev='4')
+
+  expected_status.tweak('Xpegged/xE/alpha', status='M ')
 
   actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
     None, '--include-externals', wc_dir)
@@ -2451,10 +2554,11 @@ def include_externals(sbox):
   expected_disk.tweak('A/B/lambda', 'X/Y/xlambda',
     contents="This is the file 'lambda'.\nmod\n")
 
+
+  # Assume everything r4, except what is pegged
   expected_status.tweak(wc_rev='4')
-  expected_status.tweak('Xpegged/xiota', wc_rev='1')
-  expected_status.tweak('A/D/H/xZ', 'Xpegged/xE', 'X/Y/xH', 'X/xG',
-                        wc_rev=None)
+  expected_status.tweak('Xpegged/xiota', 'Xpegged/xE', 'Xpegged/xE/alpha',
+                        'Xpegged/xE/beta', wc_rev=1)
 
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
     expected_status, None, None, None, None, None, False, wc_dir)
@@ -2476,7 +2580,8 @@ def include_externals(sbox):
   main.file_append(X_Y_xH_xZ_zeta, 'mod\n')
 
   # svn status
-  expected_status.tweak('X/Y/xlambda', 'X/xmu', status='M ')
+  expected_status.tweak('X/Y/xlambda', 'X/xmu', 'X/xG/pi',
+                        'X/Y/xH/chi', 'X/Y/xH/xZ/zeta', status='M ')
 
   actions.run_and_verify_unquiet_status(wc_dir, expected_status)
 
@@ -2495,9 +2600,8 @@ def include_externals(sbox):
 
   expected_status.tweak(status='  ')
   expected_status.tweak('X/xmu', wc_rev='5')
-  expected_status.tweak('X/Y/xlambda', status='M ')
-  expected_status.tweak('X/Y/xH', 'X/xG', 'A/D/H/xZ', 'Xpegged/xE',
-    status='X ')
+  expected_status.tweak('X/Y/xlambda', 'X/xG/pi', 'X/Y/xH/chi',
+                        'X/Y/xH/xZ/zeta', 'Xpegged/xE/alpha', status='M ')
 
   actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
     None, '--include-externals', '--depth=files', X)
@@ -2523,8 +2627,10 @@ def include_externals(sbox):
 
   expected_status.tweak(wc_rev='5')
   expected_status.tweak('Xpegged/xiota', wc_rev='1')
-  expected_status.tweak('A/D/H/xZ', 'Xpegged/xE', 'X/Y/xH', 'X/xG',
-                        wc_rev=None)
+  expected_status.tweak('Xpegged/xiota', 'Xpegged/xE', 'Xpegged/xE/alpha',
+                        'Xpegged/xE/beta', wc_rev=1)
+
+  expected_status.tweak('X/Y/xH/chi', status='M ')
 
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
     expected_status, None, None, None, None, None, False, wc_dir)
@@ -2543,9 +2649,9 @@ def include_externals(sbox):
   })
 
   expected_status.tweak(status='  ')
-  expected_status.tweak('X/Y/xlambda', wc_rev='6')
-  expected_status.tweak('X/Y/xH', 'X/xG', 'A/D/H/xZ', 'Xpegged/xE',
-    status='X ')
+  expected_status.tweak('X/Y/xlambda', 'X/xG/pi', wc_rev='6')
+  expected_status.tweak('X/Y/xH/chi', 'X/Y/xH/xZ/zeta', 'Xpegged/xE/alpha',
+                        status='M ')
 
   actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
     None, X_Y_xlambda, X_xG)
@@ -2555,7 +2661,6 @@ def include_externals(sbox):
 
 
 @Issue(4252)
-@XFail()
 def include_immediate_dir_externals(sbox):
   "commit --include-externals --depth=immediates"
   # See also comment in append_externals_as_explicit_targets() in
@@ -2646,22 +2751,22 @@ def include_immediate_dir_externals(sbox):
 
   expected_status.tweak(wc_rev='3')
   expected_status.add({
-    'X/XE'              : Item(status='X '),
+    'X/XE'              : Item(status='  ', prev_status='X ', wc_rev='3'),
+    'X/XE/beta'         : Item(status='  ', wc_rev='3'),
+    'X/XE/alpha'        : Item(status='  ', wc_rev='3'),
   })
 
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
     expected_status, None, None, None, None, None, False, wc_dir)
 
-  # svn ps some change X/XE
-  expected_stdout = ["property 'some' set on '" + X_XE + "'\n"]
-
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'ps', 'some',
-    'change', X_XE)
+  sbox.simple_propset('some', 'change', 'X/XE')
 
   # echo mod >> X/XE/alpha
   main.file_append(X_XE_alpha, 'mod\n')
 
   # svn st X/XE
+  expected_status.tweak('X/XE', status=' M')
+  expected_status.tweak('X/XE/alpha', status='M ')
   actions.run_and_verify_unquiet_status(wc_dir, expected_status)
 
   # Expect only the propset on X/XE to be committed.
@@ -2670,12 +2775,13 @@ def include_immediate_dir_externals(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'X/XE'              : Item(verb='Sending'),
   })
+  expected_status.tweak('X/XE', status='  ', wc_rev=4)
 
   # Currently this fails because nothing is committed.
   #
   #   >svn st
   #   X       X\XE
-  #   
+  #
   #   Performing status on external item at 'X\XE':
   #    M      C:\SVN\src-trunk\...\externals_tests-37\X\XE
   #   M       C:\SVN\src-trunk\...\externals_tests-37\X\XE\alpha
@@ -2801,7 +2907,9 @@ def dir_external_with_dash_r_only(sbox):
   expected_status.tweak(wc_rev='2')
   expected_status.tweak('', status=' M')
   expected_status.add({
-    'E_ext'             : Item(status='X '),
+    'E_ext'             : Item(status='  ', prev_status='X ', wc_rev=1),
+    'E_ext/beta'        : Item(status='  ', wc_rev='1'),
+    'E_ext/alpha'       : Item(status='  ', wc_rev='1'),
   })
 
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
@@ -2864,13 +2972,14 @@ def url_to_wc_copy_of_externals(sbox):
   external_tau_path = os.path.join(wc_dir, "External-WC-to-URL-Copy",
                                    "external", "tau")
   expected_stdout = verify.UnorderedOutput([
-    "\n",
     " U   " + external_root_path + "\n",
+    "\n",
     "Fetching external item into '" + external_ex_path + "':\n",
     "A    " + external_pi_path + "\n",
     "A    " + external_rho_path + "\n",
     "A    " + external_tau_path + "\n",
     "Checked out external at revision 2.\n",
+    "\n",
     "Checked out revision 2.\n",
     "A         " + external_root_path + "\n"
   ])
@@ -2939,6 +3048,183 @@ def duplicate_targets(sbox):
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'pg',
     'svn:externals', wc_dir)
 
+@Issue(4225)
+def list_include_externals(sbox):
+  "list with --include-externals"
+
+  externals_test_setup(sbox)
+
+  wc_dir         = sbox.wc_dir
+  repo_url       = sbox.repo_url
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     repo_url, wc_dir)
+
+  B_path = sbox.ospath("A/B")
+  C_path = sbox.ospath("A/C")
+
+  B_url = repo_url + "/A/B"
+  C_url = repo_url + "/A/C"
+
+  def list_external_string(path, url):
+    string = "Listing external" + " '" + path + "' " + "defined on" + " '" + \
+      url + "'" + ":"
+    return string
+
+  expected_stdout = verify.UnorderedOutput([
+    "E/" + "\n",
+    "F/" + "\n",
+    "lambda" + "\n",
+    list_external_string("gamma", B_url ) + "\n",
+    "gamma" + "\n"])
+
+  exit_code, stdout, stderr = svntest.actions.run_and_verify_svn2(
+    "OUTPUT", expected_stdout, [], 0, 'ls', '--include-externals', B_path)
+
+  exit_code, stdout, stderr = svntest.actions.run_and_verify_svn2(
+    "OUTPUT", expected_stdout, [], 0, 'ls', '--include-externals', B_url)
+
+  expected_stdout = verify.UnorderedOutput([
+    list_external_string("exdir_G", C_url)+ "\n",
+    "pi" + "\n",
+    "rho" + "\n",
+    "tau" + "\n",
+    list_external_string("exdir_H", C_url) + "\n",
+    "chi" + "\n",
+    "omega" + "\n",
+    "psi" + "\n"])
+
+  exit_code, stdout, stderr = svntest.actions.run_and_verify_svn2(
+    "OUTPUT", expected_stdout, [], 0, 'ls', '--include-externals', C_path)
+
+  exit_code, stdout, stderr = svntest.actions.run_and_verify_svn2(
+    "OUTPUT", expected_stdout, [], 0, 'ls', '--include-externals', C_url)
+
+@Issue(4293)
+def move_with_file_externals(sbox):
+  "move with file externals"
+
+  sbox.build()
+  wc_dir         = sbox.wc_dir
+  repo_url       = sbox.repo_url
+
+  sbox.simple_propset('svn:externals', '^/A/mu@1 mu-1\n', 'A/D')
+  sbox.simple_commit()
+
+  sbox.simple_update()
+  sbox.simple_move('A/D', 'A/D_moved')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+@Issue(4185)
+def pinned_externals(sbox):
+  "pinned external"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  # Create X in r2
+  sbox.simple_copy('A', 'X')
+  sbox.simple_mkdir('Z')
+  sbox.simple_commit('')
+
+  repo_X_mu = repo_url + '/X/mu'
+
+  expected_output = verify.RegexOutput(
+    '^      1 jrandom            .* mu$'
+  )
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'list', repo_X_mu, '-v')
+
+  # So, we copied A/mu to X/mu in r2, but its last changed revision is
+  # still r1. It existed as A/mu at r1.
+
+  # In the old format the -r is interpreted like an @1 on checkout.
+
+  sbox.simple_propset('svn:externals',
+                          'old-plain           ' + repo_X_mu + '\n' +
+                          'old-rev       -r 1  ' + repo_X_mu + '\n' +
+                                    repo_X_mu + ' new-plain\n' +
+                          '-r1  ' + repo_X_mu + ' new-rev\n' +
+                                    repo_X_mu + '@1 new-peg\n',
+                      'Z')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D'               : Item(status=' U'),
+    'A/D/exdir_E/beta'  : Item(status='A '),
+    'A/D/exdir_E/alpha' : Item(status='A '),
+  })
+  expected_error = "svn: E205011: Failure.*externals"
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    # The interesting values
+    'Z/old-plain'       : Item(contents="This is the file 'mu'.\n"),
+    'Z/new-plain'       : Item(contents="This is the file 'mu'.\n"),
+
+    # And verifying X
+    'X/D/H/psi'         : Item(contents="This is the file 'psi'.\n"),
+    'X/D/H/chi'         : Item(contents="This is the file 'chi'.\n"),
+    'X/D/H/omega'       : Item(contents="This is the file 'omega'.\n"),
+    'X/D/G/tau'         : Item(contents="This is the file 'tau'.\n"),
+    'X/D/G/pi'          : Item(contents="This is the file 'pi'.\n"),
+    'X/D/G/rho'         : Item(contents="This is the file 'rho'.\n"),
+    'X/D/gamma'         : Item(contents="This is the file 'gamma'.\n"),
+    'X/B/E/alpha'       : Item(contents="This is the file 'alpha'.\n"),
+    'X/B/E/beta'        : Item(contents="This is the file 'beta'.\n"),
+    'X/B/lambda'        : Item(contents="This is the file 'lambda'.\n"),
+    'X/B/F'             : Item(),
+    'X/C'               : Item(),
+    'X/mu'              : Item(contents="This is the file 'mu'.\n"),
+  })
+
+
+  # ### Would be nice if verify update would still verify the result
+  # on exiting with an error. Why would you pass it?
+  svntest.actions.run_and_verify_update(wc_dir, None, None, None,
+                                        expected_error)
+
+  svntest.actions.verify_disk(wc_dir, expected_disk)
+
+# Test for issue #3741 'externals not removed when working copy is made shallow'
+@Issue(3741)
+def update_dir_external_shallow(sbox):
+  "shallow update should remove externals"
+
+  sbox.build()
+
+  # Create an external in r2
+  sbox.simple_propset('svn:externals', '^/A/D/H X', 'A/B/E')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Now make A/B/E shallow by updating with "--set-depth empty"
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'A/B/E/alpha' : Item(status='D '),
+    'A/B/E/X'     : Item(verb='Removed external'),
+    'A/B/E/beta'  : Item(status='D '),
+  })
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output, None, None,
+                                        None, None, None, None, None, False,
+                                        '--set-depth=empty',
+                                        sbox.ospath('A/B/E'))
+
+  # And bring the external back by updating with "--set-depth infinity"
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'A/B/E/X/psi'   : Item(status='A '),
+    'A/B/E/X/chi'   : Item(status='A '),
+    'A/B/E/X/omega' : Item(status='A '),
+    'A/B/E/alpha'   : Item(status='A '),
+    'A/B/E/beta'    : Item(status='A '),
+  })
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output, None, None,
+                                        None, None, None, None, None, False,
+                                        '--set-depth=infinity',
+                                        sbox.ospath('A/B/E'))
 
 
 ########################################################################
@@ -2982,13 +3268,17 @@ test_list = [ None,
               file_externals_different_url,
               file_external_in_unversioned,
               copy_file_externals,
-              include_externals,
+              commit_include_externals,
               include_immediate_dir_externals,
               shadowing,
               remap_file_external_with_prop_del,
               dir_external_with_dash_r_only,
               url_to_wc_copy_of_externals,
               duplicate_targets,
+              list_include_externals,
+              move_with_file_externals,
+              pinned_externals,
+              update_dir_external_shallow,
              ]
 
 if __name__ == '__main__':

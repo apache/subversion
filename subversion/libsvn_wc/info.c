@@ -22,6 +22,7 @@
  */
 
 #include "svn_dirent_uri.h"
+#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_wc.h"
@@ -85,7 +86,7 @@ build_info_for_node(svn_wc__info2_t **info,
   svn_wc__info2_t *tmpinfo;
   const char *repos_relpath;
   svn_wc__db_status_t status;
-  svn_kind_t db_kind;
+  svn_node_kind_t db_kind;
   const char *original_repos_relpath;
   const char *original_repos_root_url;
   const char *original_uuid;
@@ -144,19 +145,27 @@ build_info_for_node(svn_wc__info2_t **info,
 
           if (op_root)
             {
+              svn_error_t *err;
               wc_info->copyfrom_url =
                     svn_path_url_add_component2(tmpinfo->repos_root_URL,
                                                 original_repos_relpath,
                                                 result_pool);
 
               wc_info->copyfrom_rev = original_revision;
-            }
 
-          SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL,
-                                           &wc_info->moved_from_abspath, NULL,
-                                           db, local_abspath,
-                                           result_pool, scratch_pool));
+              err = svn_wc__db_scan_moved(&wc_info->moved_from_abspath,
+                                          NULL, NULL, NULL,
+                                          db, local_abspath,
+                                          result_pool, scratch_pool);
+
+              if (err)
+                {
+                   if (err->apr_err != SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+                      return svn_error_trace(err);
+                   svn_error_clear(err);
+                   wc_info->moved_from_abspath = NULL;
+                }
+            }
         }
       else if (op_root)
         {
@@ -164,7 +173,7 @@ build_info_for_node(svn_wc__info2_t **info,
           SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &repos_relpath,
                                            &tmpinfo->repos_root_URL,
                                            &tmpinfo->repos_UUID,
-                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL,
                                            db, local_abspath,
                                            result_pool, scratch_pool));
 
@@ -172,7 +181,7 @@ build_info_for_node(svn_wc__info2_t **info,
             SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &tmpinfo->rev, NULL,
                                              NULL, NULL, NULL, NULL, NULL,
                                              NULL, NULL, NULL, NULL, NULL,
-                                             NULL,
+                                             NULL, NULL,
                                              db, local_abspath,
                                              scratch_pool, scratch_pool));
         }
@@ -226,7 +235,7 @@ build_info_for_node(svn_wc__info2_t **info,
                                             &tmpinfo->last_changed_author,
                                             &wc_info->depth,
                                             &wc_info->checksum,
-                                            NULL, NULL,
+                                            NULL, NULL, NULL,
                                             db, local_abspath,
                                             result_pool, scratch_pool));
 
@@ -246,7 +255,7 @@ build_info_for_node(svn_wc__info2_t **info,
                                            &tmpinfo->repos_root_URL,
                                            &tmpinfo->repos_UUID,
                                            NULL, NULL, NULL,
-                                           &tmpinfo->rev, NULL, NULL,
+                                           &tmpinfo->rev,
                                            db, added_abspath,
                                            result_pool, scratch_pool));
 
@@ -265,7 +274,7 @@ build_info_for_node(svn_wc__info2_t **info,
                                            &tmpinfo->repos_root_URL,
                                            &tmpinfo->repos_UUID, NULL, NULL,
                                            NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL,
                                            db, local_abspath,
                                            result_pool, scratch_pool));
 
@@ -419,18 +428,17 @@ info_found_node_callback(const char *local_abspath,
         {
           const char *this_basename = APR_ARRAY_IDX(victims, i, const char *);
 
-          apr_hash_set(fe_baton->tree_conflicts,
-                       svn_dirent_join(local_abspath, this_basename,
-                                       fe_baton->pool),
-                       APR_HASH_KEY_STRING, "");
+          svn_hash_sets(fe_baton->tree_conflicts,
+                        svn_dirent_join(local_abspath, this_basename,
+                                        fe_baton->pool),
+                        "");
         }
     }
 
   /* Delete this path which we are currently visiting from the list of tree
    * conflicts.  This relies on the walker visiting a directory before visiting
    * its children. */
-  apr_hash_set(fe_baton->tree_conflicts, local_abspath, APR_HASH_KEY_STRING,
-               NULL);
+  svn_hash_sets(fe_baton->tree_conflicts, local_abspath, NULL);
 
   return SVN_NO_ERROR;
 }
@@ -515,8 +523,7 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
 
       svn_error_clear(err);
 
-      apr_hash_set(fe_baton.tree_conflicts, local_abspath,
-                   APR_HASH_KEY_STRING, "");
+      svn_hash_sets(fe_baton.tree_conflicts, local_abspath, "");
     }
   else
     SVN_ERR(err);
@@ -536,10 +543,13 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
 
       if (!repos_root_url)
         {
-          SVN_ERR(svn_wc__internal_get_repos_info(&repos_root_url,
+          SVN_ERR(svn_wc__internal_get_repos_info(NULL, NULL,
+                                                  &repos_root_url,
                                                   &repos_uuid,
                                                   wc_ctx->db,
-                                                  local_abspath,
+                                                  svn_dirent_dirname(
+                                                            local_abspath,
+                                                            iterpool),
                                                   scratch_pool,
                                                   iterpool));
         }

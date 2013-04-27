@@ -1281,3 +1281,34 @@ svn_path_splitext(const char **path_root,
   if (path_ext)
     *path_ext = "";
 }
+
+
+/* Repository relative URLs (^/). */
+
+svn_boolean_t
+svn_path_is_repos_relative_url(const char *path)
+{
+  return (0 == strncmp("^/", path, 2));
+}
+
+svn_error_t *
+svn_path_resolve_repos_relative_url(const char **absolute_url,
+                                    const char *relative_url,
+                                    const char *repos_root_url,
+                                    apr_pool_t *pool)
+{
+  if (! svn_path_is_repos_relative_url(relative_url))
+    return svn_error_createf(SVN_ERR_BAD_URL, NULL,
+                             _("Improper relative URL '%s'"),
+                             relative_url);
+
+  /* No assumptions are made about the canonicalization of the inut
+   * arguments, it is presumed that the output will be canonicalized after
+   * this function, which will remove any duplicate path separator.
+   */
+  *absolute_url = apr_pstrcat(pool, repos_root_url, relative_url + 1,
+                              (char *)NULL);
+
+  return SVN_NO_ERROR;
+}
+

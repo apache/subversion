@@ -91,12 +91,15 @@ svn_prop_array_dup(const apr_array_header_t *array,
  */
 typedef struct svn_prop_inherited_item_t
 {
-  /** The absolute working copy path, relative filesystem path, or URL from
-   * which the properties in @a prop_hash are inherited. */
+  /** The absolute working copy path, relative filesystem path, or URL
+   * from which the properties in @a prop_hash are inherited.  (For
+   * details about which path specification format is in use for a
+   * particular instance of this structure, consult the documentation
+   * for the API which produced it.) */
   const char *path_or_url;
 
-  /** A hash of (const char *) inherited property names, and (svn_string_t *)
-   * property values. */
+  /** A hash of (<tt>const char *</tt>) inherited property names, and
+   * (<tt>svn_string_t *</tt>) property values. */
   apr_hash_t *prop_hash;
 
 } svn_prop_inherited_item_t;
@@ -110,7 +113,7 @@ typedef struct svn_prop_inherited_item_t
  * @since New in 1.5.
  */
 apr_array_header_t *
-svn_prop_hash_to_array(apr_hash_t *hash,
+svn_prop_hash_to_array(const apr_hash_t *hash,
                        apr_pool_t *pool);
 
 /**
@@ -133,7 +136,7 @@ svn_prop_array_to_hash(const apr_array_header_t *properties,
  * @since New in 1.6.
  */
 apr_hash_t *
-svn_prop_hash_dup(apr_hash_t *hash,
+svn_prop_hash_dup(const apr_hash_t *hash,
                   apr_pool_t *pool);
 
 /**
@@ -144,7 +147,7 @@ svn_prop_hash_dup(apr_hash_t *hash,
  * @since New in 1.7.
  */
 const char *
-svn_prop_get_value(apr_hash_t *properties,
+svn_prop_get_value(const apr_hash_t *properties,
                    const char *prop_name);
 
 /**
@@ -169,7 +172,7 @@ typedef enum svn_prop_kind
 
 /** Return the property kind of a property named @a prop_name.
  *
- * @since New in 1.8
+ * @since New in 1.8.
  */
 svn_prop_kind_t
 svn_property_kind2(const char *prop_name);
@@ -187,14 +190,17 @@ svn_property_kind(int *prefix_len,
 
 
 /** Return @c TRUE iff @a prop_name represents the name of a Subversion
- * property.
+ * property.  That is, any property name in Subversion's name space for
+ * versioned or unversioned properties, regardless whether the particular
+ * property name is recognized.
  */
 svn_boolean_t
 svn_prop_is_svn_prop(const char *prop_name);
 
 
 /** Return @c TRUE iff @a props has at least one property whose name
- * represents the name of a Subversion property.
+ * represents the name of a Subversion property, in the sense of
+ * svn_prop_is_svn_prop().
  *
  * @since New in 1.5.
  */
@@ -205,10 +211,61 @@ svn_prop_has_svn_prop(const apr_hash_t *props,
 /** Return @c TRUE iff @a prop_name is a Subversion property whose
  * value is interpreted as a boolean.
  *
- * @since New in 1.5
+ * @since New in 1.5.
  */
 svn_boolean_t
 svn_prop_is_boolean(const char *prop_name);
+
+/** Return @c TRUE iff @a prop_name is in the "svn:" name space and is a
+ * known revision property ("svn:log" or "svn:date", e.g.).
+ *
+ * This will return @c FALSE for any property name that is not known by this
+ * version of the library, even though the name may be known to other (for
+ * example, later) Subversion software.
+ *
+ * @since New in 1.8.
+ */
+svn_boolean_t
+svn_prop_is_known_svn_rev_prop(const char *prop_name);
+
+/** Return @c TRUE iff @a prop_name is in the "svn:" name space and is a
+ * known versioned property that is allowed on a file and/or on a
+ * directory ("svn:eol-style", "svn:ignore", or "svn:mergeinfo", e.g.).
+ *
+ * This will return @c FALSE for any property name that is not known
+ * by this version of the library, even though the name may be known
+ * to other (for example, later) Subversion software.
+ *
+ * @since New in 1.8.
+ */
+svn_boolean_t
+svn_prop_is_known_svn_node_prop(const char *prop_name);
+
+/** Return @c TRUE iff @a prop_name is in the "svn:" name space and is
+ * a known versioned property that is allowed on a file
+ * ("svn:eol-style" or "svn:mergeinfo", e.g.).
+ *
+ * This will return @c FALSE for any property name that is not known
+ * by this version of the library, even though the name may be known
+ * to other (for example, later) Subversion software.
+ *
+ * @since New in 1.8.
+ */
+svn_boolean_t
+svn_prop_is_known_svn_file_prop(const char *prop_name);
+
+/** Return @c TRUE iff @a prop_name is in the "svn:" name space and is
+ * a known versioned property that is allowed on a directory
+ * ("svn:ignore" or "svn:mergeinfo", e.g.).
+ *
+ * This will return @c FALSE for any property name that is not known
+ * by this version of the library, even though the name may be known
+ * to other (for example, later) Subversion software.
+ *
+ * @since New in 1.8.
+ */
+svn_boolean_t
+svn_prop_is_known_svn_dir_prop(const char *prop_name);
 
 /** If @a prop_name requires that its value be stored as UTF8/LF in the
  * repository, then return @c TRUE.  Else return @c FALSE.  This is for
@@ -263,8 +320,8 @@ svn_categorize_props(const apr_array_header_t *proplist,
  */
 svn_error_t *
 svn_prop_diffs(apr_array_header_t **propdiffs,
-               apr_hash_t *target_props,
-               apr_hash_t *source_props,
+               const apr_hash_t *target_props,
+               const apr_hash_t *source_props,
                apr_pool_t *pool);
 
 
@@ -357,19 +414,21 @@ svn_prop_name_is_valid(const char *prop_name);
 
 /** Describes external items to check out into this directory.
  *
- * The format is a series of lines, such as:
- *
- * <pre reason="Should use 'verbatim' instead, but Doxygen v1.6.1 & v1.7.1
- *              then doesn't recognize the #define; presumably a bug.">
-     localdir1           http://url.for.external.source/etc/
-     localdir1/foo       http://url.for.external.source/foo
-     localdir1/bar       http://blah.blah.blah/repositories/theirproj
-     localdir1/bar/baz   http://blorg.blorg.blorg/basement/code
-     localdir2           http://another.url/blah/blah/blah
-     localdir3           http://and.so.on/and/so/forth </pre>
- *
- * The subdir names on the left side are relative to the directory on
- * which this property is set.
+ * The format is a series of lines, each in the following format:
+ *   [-r REV] URL[@PEG] LOCALPATH
+ * LOCALPATH is relative to the directory having this property.
+ * REV pins the external to revision REV.
+ * URL may be a full URL or a relative URL starting with one of:
+ *   ../  to the parent directory of the extracted external
+ *   ^/   to the repository root
+ *   /    to the server root
+ *   //   to the URL scheme
+ * The following format is supported for interoperability with
+ * Subversion 1.4 and earlier clients:
+ *   LOCALPATH [-r PEG] URL
+ * The ambiguous format 'relative_path relative_path' is taken as
+ * 'relative_url relative_path' with peg revision support.
+ * Lines starting with a '#' character are ignored.
  */
 #define SVN_PROP_EXTERNALS  SVN_PROP_PREFIX "externals"
 
@@ -430,9 +489,10 @@ svn_prop_name_is_valid(const char *prop_name);
 /** @} */ /* Meta-data properties */
 
 /**
- * This is a list of all user-vixible and -settable versioned node properties.
+ * This is a list of all user-visible and -settable versioned node
+ * properties.
  *
- * @since New in 1.8
+ * @since New in 1.8.
  */
 #define SVN_PROP_NODE_ALL_PROPS SVN_PROP_MIME_TYPE, \
                                 SVN_PROP_IGNORE, \
@@ -449,7 +509,7 @@ svn_prop_name_is_valid(const char *prop_name);
                                 SVN_PROP_TEXT_TIME, \
                                 SVN_PROP_OWNER, \
                                 SVN_PROP_GROUP, \
-                                SVN_PROP_UNIX_MODE
+                                SVN_PROP_UNIX_MODE,
 
 /** @} */
 
@@ -545,25 +605,37 @@ svn_prop_name_is_valid(const char *prop_name);
 /* More reserved revision props in the 'svn:' namespace, used by the
    svnsync tool:   */
 
-/** Prefix for all svnsync custom properties. */
+/** Prefix for all svnsync custom properties.
+ * @since New in 1.4.
+ */
 #define SVNSYNC_PROP_PREFIX             SVN_PROP_PREFIX "sync-"
 
 /* The following revision properties are set on revision 0 of
  * destination repositories by svnsync:
  */
 
-/** Used to enforce mutually exclusive destination repository access. */
+/** Used to enforce mutually exclusive destination repository access.
+ * @since New in 1.4.
+ */
 #define SVNSYNC_PROP_LOCK               SVNSYNC_PROP_PREFIX "lock"
 
-/** Identifies the repository's source URL. */
+/** Identifies the repository's source URL.
+ * @since New in 1.4.
+ */
 #define SVNSYNC_PROP_FROM_URL           SVNSYNC_PROP_PREFIX "from-url"
-/** Identifies the repository's source UUID. */
+/** Identifies the repository's source UUID.
+ * @since New in 1.4.
+ */
 #define SVNSYNC_PROP_FROM_UUID          SVNSYNC_PROP_PREFIX "from-uuid"
 
-/** Identifies the last completely mirrored revision. */
+/** Identifies the last completely mirrored revision.
+ * @since New in 1.4.
+ */
 #define SVNSYNC_PROP_LAST_MERGED_REV    SVNSYNC_PROP_PREFIX "last-merged-rev"
 
-/** Identifies the revision currently being copied. */
+/** Identifies the revision currently being copied.
+ * @since New in 1.4.
+ */
 #define SVNSYNC_PROP_CURRENTLY_COPYING  SVNSYNC_PROP_PREFIX "currently-copying"
 
 
@@ -593,18 +665,26 @@ svn_prop_name_is_valid(const char *prop_name);
  * @{
  */
 
-/** The prefix used for all (ephemeral) transaction properties. */
+/** The prefix used for all (ephemeral) transaction properties.
+ *
+ * @since New in 1.8.
+ */
 #define SVN_PROP_TXN_PREFIX  SVN_PROP_PREFIX "txn-"
 
 /** Identifies the client version compability level.  For clients
  * compiled against Subversion libraries, this is @c SVN_VER_NUMBER.
  * Third-party implementations are advised to use similar formatting
  * for values of this property.
+ *
+ * @since New in 1.8.
  */
 #define SVN_PROP_TXN_CLIENT_COMPAT_VERSION \
             SVN_PROP_TXN_PREFIX "client-compat-version"
-    
-/** Identifies the client's user agent string, if any. */
+
+/** Identifies the client's user agent string, if any.
+ *
+ * @since New in 1.8.
+ */
 #define SVN_PROP_TXN_USER_AGENT \
             SVN_PROP_TXN_PREFIX "user-agent"
 
@@ -615,6 +695,8 @@ svn_prop_name_is_valid(const char *prop_name);
  * to new properties named @c SVN_PROP_REVISION_PREFIX + "something",
  * allowing that information to survive the commit-time removal of
  * ephemeral transaction properties.
+ *
+ * @since New in 1.8.
  */
 #define SVN_PROP_REVISION_PREFIX  SVN_PROP_PREFIX "revision-"
 

@@ -27,6 +27,7 @@
 
 /*** Includes. ***/
 
+#include "svn_hash.h"
 #include "svn_cmdline.h"
 #include "svn_pools.h"
 #include "svn_client.h"
@@ -209,8 +210,8 @@ print_single_prop(svn_string_t *propval,
       /* Print the property name and value just as "proplist -v" does */
       apr_hash_t *hash = apr_hash_make(scratch_pool);
 
-      apr_hash_set(hash, pname_utf8, APR_HASH_KEY_STRING, propval);
-      SVN_ERR(svn_cl__print_prop_hash(out, hash, FALSE, scratch_pool));
+      svn_hash_sets(hash, pname_utf8, propval);
+      SVN_ERR(svn_cmdline__print_prop_hash(out, hash, FALSE, scratch_pool));
     }
   else
     {

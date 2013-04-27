@@ -179,7 +179,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
       apr_allocator_max_free_set(allocator, 1);
     }
 
-  svn_utf_initialize(g_pool); /* Optimize character conversions */
+  svn_utf_initialize2(g_pool, FALSE); /* Optimize character conversions */
   svn_fs_initialize(g_pool); /* Avoid some theoretical issues */
   svn_ra_initialize(g_pool);
 
@@ -396,7 +396,7 @@ JNIUtil::putErrorsInTrace(svn_error_t *err,
 
   char *tmp_path;
   char *path = svn_dirent_dirname(err->file, err->pool);
-  while (tmp_path = strchr(path, '/'))
+  while ((tmp_path = strchr(path, '/')))
     *tmp_path = '.';
 
   jstring jmethodName = makeJString(path);
@@ -512,8 +512,14 @@ void JNIUtil::handleSVNError(svn_error_t *err)
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
 
-  jobjectArray jStackTrace = env->NewObjectArray(newStackTrace.size(), stClazz,
-                                                 NULL);
+  const jsize stSize = static_cast<jsize>(newStackTrace.size());
+  if (stSize != newStackTrace.size())
+    {
+      env->ThrowNew(env->FindClass("java.lang.ArithmeticException"),
+                    "Overflow converting C size_t to JNI jsize");
+      POP_AND_RETURN_NOTHING();
+    }
+  jobjectArray jStackTrace = env->NewObjectArray(stSize, stClazz, NULL);
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
 

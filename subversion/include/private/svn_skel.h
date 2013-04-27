@@ -213,11 +213,11 @@ svn_skel__parse_prop(svn_string_t **propval,
                      apr_pool_t *result_pool);
 
 /* Unparse a PROPLIST hash (which has const char * property names and
-   svn_stringbuf_t * values) into a `PROPLIST' skel *SKEL_P.  Use POOL
+   svn_string_t * values) into a `PROPLIST' skel *SKEL_P.  Use POOL
    for all allocations.  */
 svn_error_t *
 svn_skel__unparse_proplist(svn_skel_t **skel_p,
-                           apr_hash_t *proplist,
+                           const apr_hash_t *proplist,
                            apr_pool_t *pool);
 
 /* Unparse INHERITED_PROPS, a depth-first ordered array of
@@ -226,7 +226,8 @@ svn_skel__unparse_proplist(svn_skel_t **skel_p,
 svn_error_t *
 svn_skel__unparse_iproplist(svn_skel_t **skel_p,
                             const apr_array_header_t *inherited_props,
-                            apr_pool_t *result_pool);
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

@@ -1,5 +1,5 @@
 /*
- * range-index-test.c: An extension for random-test.
+ * range-index-test.h: An extension for random-test.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -136,8 +136,9 @@ check_copy_count(int src_cp, int tgt_cp)
 static svn_error_t *
 random_range_index_test(apr_pool_t *pool)
 {
-  unsigned long seed, bytes_range;
-  int i, maxlen, iterations, dump_files, print_windows;
+  apr_uint32_t seed, maxlen;
+  apr_size_t bytes_range;
+  int i, iterations, dump_files, print_windows;
   const char *random_bytes;
   range_index_t *ndx;
   int tgt_cp = 0, src_cp = 0;
@@ -153,8 +154,8 @@ random_range_index_test(apr_pool_t *pool)
   ndx = create_range_index(pool);
   for (i = 1; i <= iterations; ++i)
     {
-      apr_off_t offset = myrand(&seed) % 47;
-      apr_off_t limit = offset + myrand(&seed) % 16 + 1;
+      apr_off_t offset = svn_test_rand(&seed) % 47;
+      apr_off_t limit = offset + svn_test_rand(&seed) % 16 + 1;
       range_list_node_t *list, *r;
       apr_off_t ret;
       const char *msg2;
@@ -181,8 +182,7 @@ random_range_index_test(apr_pool_t *pool)
           printf(" Ooops!\n");
           print_range_index(ndx->tree, msg2, ret);
           check_copy_count(src_cp, tgt_cp);
-          return svn_error_create(SVN_ERR_TEST_FAILED, 0, NULL, pool,
-                                  "insert_range");
+          return svn_error_create(SVN_ERR_TEST_FAILED, NULL, "insert_range");
         }
     }
 

@@ -219,7 +219,13 @@ fi
 [ -r "$MOD_AUTHZ_SVN" ] \
   || fail "authz_svn_module not found, please use '--enable-shared --enable-dso --with-apxs' with your 'configure' script"
 
-BUILDDIR_LIBRARY_PATH="$ABS_BUILDDIR/subversion/libsvn_ra_neon/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_local/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_svn/.libs"
+for d in "$ABS_BUILDDIR"/subversion/*/.libs; do
+  if [ -z "$BUILDDIR_LIBRARY_PATH" ]; then
+    BUILDDIR_LIBRARY_PATH="$d"
+  else
+    BUILDDIR_LIBRARY_PATH="$BUILDDIR_LIBRARY_PATH:$d"
+  fi
+done
 
 case "`uname`" in
   Darwin*)
@@ -435,7 +441,10 @@ MaxRequestsPerChild 0
 <IfModule worker.c>
   ThreadsPerChild   8
 </IfModule>
-MaxClients          16
+<IfModule event.c>
+  ThreadsPerChild   8
+</IfModule>
+MaxClients          32
 HostNameLookups     Off
 LogFormat           "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" format
 CustomLog           "$HTTPD_ROOT/req" format
@@ -517,6 +526,12 @@ if [ $# -eq 1 ] && [ "x$1" = 'x--no-tests' ]; then
   exit
 fi
 
+if type time > /dev/null; then
+  TIME_CMD=time
+else
+  TIME_CMD=""
+fi
+
 say "starting the tests..."
 
 CLIENT_CMD="$ABS_BUILDDIR/subversion/svn/svn"
@@ -534,13 +549,13 @@ else
 fi
 
 if [ $# = 0 ]; then
-  time make check "BASE_URL=$BASE_URL" $SSL_MAKE_VAR
+  $TIME_CMD make check "BASE_URL=$BASE_URL" $SSL_MAKE_VAR
   r=$?
 else
   (cd "$ABS_BUILDDIR/subversion/tests/cmdline/"
   TEST="$1"
   shift
-  time "$ABS_SRCDIR/subversion/tests/cmdline/${TEST}_tests.py" "--url=$BASE_URL" $SSL_TEST_ARG "$@")
+  $TIME_CMD "$ABS_SRCDIR/subversion/tests/cmdline/${TEST}_tests.py" "--url=$BASE_URL" $SSL_TEST_ARG "$@")
   r=$?
 fi
 

@@ -159,7 +159,7 @@ svn_cmdline_handle_exit_error(svn_error_t *error,
                               apr_pool_t *pool,
                               const char *prefix);
 
-/** A cancellation function/baton pair, and the path to the configuration
+/** A prompt function/baton pair, and the path to the configuration
  * directory. To be passed as the baton argument to the
  * @c svn_cmdline_*_prompt functions.
  *
@@ -368,18 +368,6 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
                              svn_cancel_func_t cancel_func,
                              void *cancel_baton,
                              apr_pool_t *pool);
-
-/** Wrapper for apr_getopt_init(), which see.
- *
- * @since New in 1.4.
- *
- * This is a private API for Subversion's own use.
- */
-svn_error_t *
-svn_cmdline__getopt_init(apr_getopt_t **os,
-                         int argc,
-                         const char *argv[],
-                         apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

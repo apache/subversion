@@ -51,6 +51,7 @@
 #include <arch/win32/apr_arch_file_io.h>
 #endif
 
+#include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
@@ -834,7 +835,7 @@ svn_io_copy_file(const char *src,
     return SVN_NO_ERROR;
 #endif
 
-  SVN_ERR(svn_io_file_open(&from_file, src, APR_READ | APR_BINARY,
+  SVN_ERR(svn_io_file_open(&from_file, src, APR_READ,
                            APR_OS_DEFAULT, pool));
 
   /* For atomicity, we copy to a tmp file and then rename the tmp
@@ -1536,7 +1537,7 @@ io_set_file_perms(const char *path,
 
           /* Get the perms for the original file so we'll have any other bits
            * that were already set (like the execute bits, for example). */
-          SVN_ERR(svn_io_file_open(&fd, path, APR_READ | APR_BINARY,
+          SVN_ERR(svn_io_file_open(&fd, path, APR_READ,
                                    APR_OS_DEFAULT, pool));
           SVN_ERR(merge_default_file_perms(fd, &perms_to_set, pool));
           SVN_ERR(svn_io_file_close(fd, pool));
@@ -2068,7 +2069,7 @@ svn_io_file_lock2(const char *lock_file,
 
   /* locktype is never read after this block, so we don't need to bother
      setting it.  If that were to ever change, uncomment the following
-     block. 
+     block.
   if (nonblocking)
     locktype |= APR_FLOCK_NONBLOCK;
   */
@@ -2262,7 +2263,9 @@ svn_io_remove_file2(const char *path,
 
   apr_err = apr_file_remove(path_apr, scratch_pool);
   if (!apr_err
-      || (ignore_enoent && APR_STATUS_IS_ENOENT(apr_err)))
+      || (ignore_enoent
+          && (APR_STATUS_IS_ENOENT(apr_err)
+              || SVN__APR_STATUS_IS_ENOTDIR(apr_err))))
     return SVN_NO_ERROR;
 
 #ifdef WIN32
@@ -2474,7 +2477,7 @@ svn_io_get_dirents3(apr_hash_t **dirents,
               dirent->mtime = this_entry.mtime;
             }
 
-          apr_hash_set(*dirents, name, APR_HASH_KEY_STRING, dirent);
+          svn_hash_sets(*dirents, name, dirent);
         }
     }
 
@@ -2491,20 +2494,25 @@ svn_io_get_dirents3(apr_hash_t **dirents,
 }
 
 svn_error_t *
-svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
-                   const char *path,
-                   svn_boolean_t ignore_enoent,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool)
+svn_io_stat_dirent2(const svn_io_dirent2_t **dirent_p,
+                    const char *path,
+                    svn_boolean_t verify_truename,
+                    svn_boolean_t ignore_enoent,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
   apr_finfo_t finfo;
   svn_io_dirent2_t *dirent;
   svn_error_t *err;
+  apr_int32_t wanted = APR_FINFO_TYPE | APR_FINFO_LINK
+                       | APR_FINFO_SIZE | APR_FINFO_MTIME;
 
-  err = svn_io_stat(&finfo, path,
-                    APR_FINFO_TYPE | APR_FINFO_LINK
-                    | APR_FINFO_SIZE | APR_FINFO_MTIME,
-                    scratch_pool);
+#if defined(WIN32) || defined(__OS2__)
+  if (verify_truename)
+    wanted |= APR_FINFO_NAME;
+#endif
+
+  err = svn_io_stat(&finfo, path, wanted, scratch_pool);
 
   if (err && ignore_enoent &&
       (APR_STATUS_IS_ENOENT(err->apr_err)
@@ -2518,6 +2526,78 @@ svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
       return SVN_NO_ERROR;
     }
   SVN_ERR(err);
+
+#if defined(WIN32) || defined(__OS2__) || defined(DARWIN)
+  if (verify_truename)
+    {
+      const char *requested_name = svn_dirent_basename(path, NULL);
+
+      if (requested_name[0] == '\0')
+        {
+          /* No parent directory. No need to stat/verify */
+        }
+#if defined(WIN32) || defined(__OS2__)
+      else if (finfo.name)
+        {
+          const char *name_on_disk;
+          SVN_ERR(entry_name_to_utf8(&name_on_disk, finfo.name, path,
+                                     scratch_pool));
+
+          if (strcmp(name_on_disk, requested_name) /* != 0 */)
+            {
+              if (ignore_enoent)
+                {
+                  *dirent_p = svn_io_dirent2_create(result_pool);
+                  return SVN_NO_ERROR;
+                }
+              else
+                return svn_error_createf(APR_ENOENT, NULL,
+                          _("Path '%s' not found, case obstructed by '%s'"),
+                          svn_dirent_local_style(path, scratch_pool),
+                          name_on_disk);
+            }
+        }
+#elif defined(DARWIN)
+      /* Currently apr doesn't set finfo.name on DARWIN, returning
+                   APR_INCOMPLETE.
+         ### Can we optimize this in another way? */
+      else
+        {
+          apr_hash_t *dirents;
+
+          err = svn_io_get_dirents3(&dirents,
+                                    svn_dirent_dirname(path, scratch_pool),
+                                    TRUE /* only_check_type */,
+                                    scratch_pool, scratch_pool);
+
+          if (err && ignore_enoent
+              && (APR_STATUS_IS_ENOENT(err->apr_err)
+                  || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
+            {
+              svn_error_clear(err);
+
+              *dirent_p = svn_io_dirent2_create(result_pool);
+              return SVN_NO_ERROR;
+            }
+          else
+            SVN_ERR(err);
+
+          if (! svn_hash_gets(dirents, requested_name))
+            {
+              if (ignore_enoent)
+                {
+                  *dirent_p = svn_io_dirent2_create(result_pool);
+                  return SVN_NO_ERROR;
+                }
+              else
+                return svn_error_createf(APR_ENOENT, NULL,
+                          _("Path '%s' not found"),
+                          svn_dirent_local_style(path, scratch_pool));
+            }
+        }
+#endif
+    }
+#endif
 
   dirent = svn_io_dirent2_create(result_pool);
   map_apr_finfo_to_node_kind(&(dirent->kind), &(dirent->special), &finfo);
@@ -2745,7 +2825,7 @@ svn_io_run_cmd(const char *path,
 {
   apr_proc_t cmd_proc;
 
-  SVN_ERR(svn_io_start_cmd2(&cmd_proc, path, cmd, args, inherit,
+  SVN_ERR(svn_io_start_cmd3(&cmd_proc, path, cmd, args, NULL, inherit,
                             FALSE, infile, FALSE, outfile, FALSE, errfile,
                             pool));
 
@@ -2915,8 +2995,7 @@ svn_io_run_diff3_3(int *exitcode,
     svn_config_t *cfg;
 
     SVN_ERR(svn_config_get_config(&config, pool));
-    cfg = config ? apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
-                                APR_HASH_KEY_STRING) : NULL;
+    cfg = config ? svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG) : NULL;
     SVN_ERR(svn_config_get_bool(cfg, &has_arg, SVN_CONFIG_SECTION_HELPERS,
                                 SVN_CONFIG_OPTION_DIFF3_HAS_PROGRAM_ARG,
                                 TRUE));
@@ -3032,7 +3111,7 @@ svn_io_parse_mimetypes_file(apr_hash_t **type_map,
                * we know svn_cstring_split() allocated it in 'pool' for us. */
               char *ext = APR_ARRAY_IDX(tokens, i, char *);
               fileext_tolower(ext);
-              apr_hash_set(types, ext, APR_HASH_KEY_STRING, type);
+              svn_hash_sets(types, ext, type);
             }
         }
       if (eof)
@@ -3083,8 +3162,7 @@ svn_io_detect_mimetype2(const char **mimetype,
                          svn_path_splitext sets it to "". */
       svn_path_splitext(NULL, (const char **)&path_ext, file, pool);
       fileext_tolower(path_ext);
-      if ((type_from_map = apr_hash_get(mimetype_map, path_ext,
-                                        APR_HASH_KEY_STRING)))
+      if ((type_from_map = svn_hash_gets(mimetype_map, path_ext)))
         {
           *mimetype = type_from_map;
           return SVN_NO_ERROR;
@@ -3461,7 +3539,7 @@ svn_io_read_length_line(apr_file_t *file, char *buf, apr_size_t *limit,
       if (eol)
         {
           apr_off_t offset = (eol + 1 - buf) - (apr_off_t)bytes_read;
-          
+
           *eol = 0;
           *limit = total_read + (eol - buf);
 

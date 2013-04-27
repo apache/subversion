@@ -88,10 +88,12 @@ typedef struct fs_library_vtable_t
   svn_error_t *(*upgrade_fs)(svn_fs_t *fs, const char *path, apr_pool_t *pool,
                              apr_pool_t *common_pool);
   svn_error_t *(*verify_fs)(svn_fs_t *fs, const char *path,
-                            /* ### notification? */
-                            svn_cancel_func_t cancel_func, void *cancel_baton,
                             svn_revnum_t start,
                             svn_revnum_t end,
+                            svn_fs_progress_notify_func_t notify_func,
+                            void *notify_baton,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
                             apr_pool_t *pool,
                             apr_pool_t *common_pool);
   svn_error_t *(*delete_fs)(const char *path, apr_pool_t *pool);
@@ -122,6 +124,16 @@ typedef struct fs_library_vtable_t
      into the FS vtable. */
   svn_fs_id_t *(*parse_id)(const char *data, apr_size_t len,
                            apr_pool_t *pool);
+  /* Allow an FSAP to call svn_fs_open(), which is in a higher-level library
+     (libsvn_fs-1.so) and cannot easily be moved to libsvn_fs_util. */
+  svn_error_t *(*set_svn_fs_open)(svn_fs_t *fs,
+                                  svn_error_t *(*svn_fs_open_)(svn_fs_t **,
+                                                               const char *,
+                                                               apr_hash_t *,
+                                                               apr_pool_t *));
+  /* For svn_fs_info_fsfs_dup(). */
+  void *(*info_fsap_dup)(const void *fsap_info,
+                         apr_pool_t *result_pool);
 } fs_library_vtable_t;
 
 /* This is the type of symbol an FS module defines to fetch the
@@ -202,9 +214,25 @@ typedef struct fs_vtable_t
                             svn_fs_get_locks_callback_t get_locks_func,
                             void *get_locks_baton,
                             apr_pool_t *pool);
+  svn_error_t *(*info_format)(int *fs_format,
+                              svn_version_t **supports_version,
+                              svn_fs_t *fs,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+  svn_error_t *(*info_config_files)(apr_array_header_t **files,
+                                    svn_fs_t *fs,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
+  svn_error_t *(*info_fsap)(const void **fsap_info,
+                            svn_fs_t *fs,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+  /* info_fsap_dup is in the library vtable. */
+  svn_error_t *(*verify_root)(svn_fs_root_t *root,
+                              apr_pool_t *pool);
   svn_error_t *(*freeze)(svn_fs_t *fs,
-                         svn_error_t *(*freeze_body)(void *, apr_pool_t *),
-                         void *baton, apr_pool_t *pool);
+                         svn_fs_freeze_func_t freeze_func,
+                         void *freeze_baton, apr_pool_t *pool);
   svn_error_t *(*bdb_set_errcall)(svn_fs_t *fs,
                                   void (*handler)(const char *errpfx,
                                                   char *msg));

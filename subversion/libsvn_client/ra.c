@@ -26,6 +26,7 @@
 #include <apr_pools.h>
 
 #include "svn_error.h"
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_string.h"
 #include "svn_sorts.h"
@@ -58,6 +59,9 @@ typedef struct callback_baton_t
      (or versioned in a foreign wc) path here which sorta kinda
      happens to work most of the time but is ultimately incorrect.  */
   svn_boolean_t base_dir_isversioned;
+
+  /* Used as wri_abspath for obtaining access to the pristine store */
+  const char *wcroot_abspath;
 
   /* An array of svn_client_commit_item3_t * structures, present only
      during working copy commits. */
@@ -250,7 +254,7 @@ get_wc_contents(void *baton,
 {
   callback_baton_t *cb = baton;
 
-  if (! (cb->base_dir_abspath && cb->base_dir_isversioned))
+  if (! cb->wcroot_abspath)
     {
       *contents = NULL;
       return SVN_NO_ERROR;
@@ -259,7 +263,7 @@ get_wc_contents(void *baton,
   return svn_error_trace(
              svn_wc__get_pristine_contents_by_checksum(contents,
                                                        cb->ctx->wc_ctx,
-                                                       cb->base_dir_abspath,
+                                                       cb->wcroot_abspath,
                                                        checksum,
                                                        pool, pool));
 }
@@ -292,41 +296,47 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                                      const char *base_url,
                                      const char *base_dir_abspath,
                                      const apr_array_header_t *commit_items,
-                                     svn_boolean_t use_admin,
-                                     svn_boolean_t read_only_wc,
+                                     svn_boolean_t write_dav_props,
+                                     svn_boolean_t read_dav_props,
                                      svn_client_ctx_t *ctx,
-                                     apr_pool_t *pool)
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool)
 {
   svn_ra_callbacks2_t *cbtable;
-  callback_baton_t *cb = apr_pcalloc(pool, sizeof(*cb));
+  callback_baton_t *cb = apr_pcalloc(result_pool, sizeof(*cb));
   const char *uuid = NULL;
 
-  SVN_ERR_ASSERT(base_dir_abspath != NULL || ! use_admin);
+  SVN_ERR_ASSERT(!write_dav_props || read_dav_props);
+  SVN_ERR_ASSERT(!read_dav_props || base_dir_abspath != NULL);
   SVN_ERR_ASSERT(base_dir_abspath == NULL
                         || svn_dirent_is_absolute(base_dir_abspath));
 
-  SVN_ERR(svn_ra_create_callbacks(&cbtable, pool));
+  SVN_ERR(svn_ra_create_callbacks(&cbtable, result_pool));
   cbtable->open_tmp_file = open_tmp_file;
-  cbtable->get_wc_prop = use_admin ? get_wc_prop : NULL;
-  cbtable->set_wc_prop = read_only_wc ? NULL : set_wc_prop;
+  cbtable->get_wc_prop = read_dav_props ? get_wc_prop : NULL;
+  cbtable->set_wc_prop = (write_dav_props && read_dav_props)
+                          ? set_wc_prop : NULL;
   cbtable->push_wc_prop = commit_items ? push_wc_prop : NULL;
-  cbtable->invalidate_wc_props = read_only_wc ? NULL : invalidate_wc_props;
+  cbtable->invalidate_wc_props = (write_dav_props && read_dav_props)
+                                  ? invalidate_wc_props : NULL;
   cbtable->auth_baton = ctx->auth_baton; /* new-style */
   cbtable->progress_func = ctx->progress_func;
   cbtable->progress_baton = ctx->progress_baton;
   cbtable->cancel_func = ctx->cancel_func ? cancel_callback : NULL;
   cbtable->get_client_string = get_client_string;
-  cbtable->get_wc_contents = get_wc_contents;
+  if (base_dir_abspath)
+    cbtable->get_wc_contents = get_wc_contents;
 
-  cb->base_dir_abspath = base_dir_abspath;
   cb->commit_items = commit_items;
   cb->ctx = ctx;
 
-  if (base_dir_abspath)
+  if (base_dir_abspath && (read_dav_props || write_dav_props))
     {
-      svn_error_t *err = svn_wc__node_get_repos_info(NULL, &uuid, ctx->wc_ctx,
+      svn_error_t *err = svn_wc__node_get_repos_info(NULL, NULL, NULL, &uuid,
+                                                     ctx->wc_ctx,
                                                      base_dir_abspath,
-                                                     pool, pool);
+                                                     result_pool,
+                                                     scratch_pool);
 
       if (err && (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY
                   || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
@@ -340,6 +350,25 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
           SVN_ERR(err);
           cb->base_dir_isversioned = TRUE;
         }
+      cb->base_dir_abspath = apr_pstrdup(result_pool, base_dir_abspath);
+    }
+
+  if (base_dir_abspath)
+    {
+      svn_error_t *err = svn_wc__get_wcroot(&cb->wcroot_abspath,
+                                            ctx->wc_ctx, base_dir_abspath,
+                                            result_pool, scratch_pool);
+
+      if (err)
+        {
+          if (err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY
+              && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
+              && err->apr_err != SVN_ERR_WC_UPGRADE_REQUIRED)
+            return svn_error_trace(err);
+
+          svn_error_clear(err);
+          cb->wcroot_abspath = NULL;
+        }
     }
 
   /* If the caller allows for auto-following redirections, and the
@@ -348,7 +377,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
      attempts.  */
   if (corrected_url)
     {
-      apr_hash_t *attempted = apr_hash_make(pool);
+      apr_hash_t *attempted = apr_hash_make(scratch_pool);
       int attempts_left = SVN_CLIENT__MAX_REDIRECT_ATTEMPTS;
 
       *corrected_url = NULL;
@@ -360,7 +389,8 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
              don't accept corrected URLs from the RA provider. */
           SVN_ERR(svn_ra_open4(ra_session,
                                attempts_left == 0 ? NULL : &corrected,
-                               base_url, uuid, cbtable, cb, ctx->config, pool));
+                               base_url, uuid, cbtable, cb, ctx->config,
+                               result_pool));
 
           /* No error and no corrected URL?  We're done here. */
           if (! corrected)
@@ -371,28 +401,29 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
             {
               svn_wc_notify_t *notify =
                 svn_wc_create_notify_url(corrected,
-                                         svn_wc_notify_url_redirect, pool);
-              (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+                                         svn_wc_notify_url_redirect,
+                                         scratch_pool);
+              (*ctx->notify_func2)(ctx->notify_baton2, notify, scratch_pool);
             }
 
           /* Our caller will want to know what our final corrected URL was. */
           *corrected_url = corrected;
 
           /* Make sure we've not attempted this URL before. */
-          if (apr_hash_get(attempted, corrected, APR_HASH_KEY_STRING))
+          if (svn_hash_gets(attempted, corrected))
             return svn_error_createf(SVN_ERR_CLIENT_CYCLE_DETECTED, NULL,
                                      _("Redirect cycle detected for URL '%s'"),
                                      corrected);
 
           /* Remember this CORRECTED_URL so we don't wind up in a loop. */
-          apr_hash_set(attempted, corrected, APR_HASH_KEY_STRING, (void *)1);
+          svn_hash_sets(attempted, corrected, (void *)1);
           base_url = corrected;
         }
     }
   else
     {
       SVN_ERR(svn_ra_open4(ra_session, NULL, base_url,
-                           uuid, cbtable, cb, ctx->config, pool));
+                           uuid, cbtable, cb, ctx->config, result_pool));
     }
 
   return SVN_NO_ERROR;
@@ -401,15 +432,19 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
 
 
 svn_error_t *
-svn_client_open_ra_session(svn_ra_session_t **session,
-                           const char *url,
-                           svn_client_ctx_t *ctx,
-                           apr_pool_t *pool)
+svn_client_open_ra_session2(svn_ra_session_t **session,
+                            const char *url,
+                            const char *wri_abspath,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
 {
   return svn_error_trace(
              svn_client__open_ra_session_internal(session, NULL, url,
-                                                  NULL, NULL, FALSE, TRUE,
-                                                  ctx, pool));
+                                                  wri_abspath, NULL,
+                                                  FALSE, FALSE,
+                                                  ctx, result_pool,
+                                                  scratch_pool));
 }
 
 
@@ -482,6 +517,7 @@ svn_client__ra_session_from_path2(svn_ra_session_t **ra_session_p,
   const char *initial_url;
   const char *corrected_url;
   svn_client__pathrev_t *resolved_loc;
+  const char *wri_abspath;
 
   SVN_ERR(svn_client_url_from_path2(&initial_url, path_or_url, ctx, pool,
                                     pool));
@@ -489,12 +525,20 @@ svn_client__ra_session_from_path2(svn_ra_session_t **ra_session_p,
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("'%s' has no URL"), path_or_url);
 
+  if (base_dir_abspath)
+    wri_abspath = base_dir_abspath;
+  else if (!svn_path_is_url(path_or_url))
+    SVN_ERR(svn_dirent_get_absolute(&wri_abspath, path_or_url, pool));
+  else
+    wri_abspath = NULL;
+
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
                                                initial_url,
-                                               base_dir_abspath, NULL,
+                                               wri_abspath,
+                                               NULL /* commit_items */,
                                                base_dir_abspath != NULL,
-                                               base_dir_abspath == NULL,
-                                               ctx, pool));
+                                               base_dir_abspath != NULL,
+                                               ctx, pool, pool));
 
   /* If we got a CORRECTED_URL, we'll want to refer to that as the
      URL-ized form of PATH_OR_URL from now on. */
@@ -806,9 +850,8 @@ svn_client__repos_locations(const char **start_url,
 
   /* Open a RA session to this URL if we don't have one already. */
   if (! ra_session)
-    SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, url, NULL,
-                                                 NULL, FALSE, TRUE,
-                                                 ctx, subpool));
+    SVN_ERR(svn_client_open_ra_session2(&ra_session, url, NULL,
+                                        ctx, subpool, subpool));
 
   /* Resolve the opt_revision_ts. */
   if (peg_revnum == SVN_INVALID_REVNUM)
@@ -872,7 +915,8 @@ svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
   if (session == NULL)
     {
       sesspool = svn_pool_create(scratch_pool);
-      SVN_ERR(svn_client_open_ra_session(&session, loc1->url, ctx, sesspool));
+      SVN_ERR(svn_client_open_ra_session2(&session, loc1->url, NULL, ctx,
+                                          sesspool, sesspool));
     }
 
   /* We're going to cheat and use history-as-mergeinfo because it
@@ -1009,8 +1053,7 @@ svn_client__ra_provide_base(svn_stream_t **contents,
   const char *local_abspath;
   svn_error_t *err;
 
-  local_abspath = apr_hash_get(reb->relpath_map, repos_relpath,
-                               APR_HASH_KEY_STRING);
+  local_abspath = svn_hash_gets(reb->relpath_map, repos_relpath);
   if (!local_abspath)
     {
       *contents = NULL;
@@ -1054,8 +1097,7 @@ svn_client__ra_provide_props(apr_hash_t **props,
   const char *local_abspath;
   svn_error_t *err;
 
-  local_abspath = apr_hash_get(reb->relpath_map, repos_relpath,
-                               APR_HASH_KEY_STRING);
+  local_abspath = svn_hash_gets(reb->relpath_map, repos_relpath);
   if (!local_abspath)
     {
       *props = NULL;
@@ -1088,29 +1130,26 @@ svn_client__ra_provide_props(apr_hash_t **props,
 
 
 svn_error_t *
-svn_client__ra_get_copysrc_kind(svn_kind_t *kind,
+svn_client__ra_get_copysrc_kind(svn_node_kind_t *kind,
                                 void *baton,
                                 const char *repos_relpath,
                                 svn_revnum_t src_revision,
                                 apr_pool_t *scratch_pool)
 {
   struct ra_ev2_baton *reb = baton;
-  svn_node_kind_t node_kind;
   const char *local_abspath;
 
-  local_abspath = apr_hash_get(reb->relpath_map, repos_relpath,
-                               APR_HASH_KEY_STRING);
+  local_abspath = svn_hash_gets(reb->relpath_map, repos_relpath);
   if (!local_abspath)
     {
-      *kind = svn_kind_unknown;
+      *kind = svn_node_unknown;
       return SVN_NO_ERROR;
     }
 
   /* ### what to do with SRC_REVISION?  */
 
-  SVN_ERR(svn_wc_read_kind(&node_kind, reb->wc_ctx, local_abspath, FALSE,
-                           scratch_pool));
-  *kind = svn__kind_from_node_kind(node_kind, FALSE);
+  SVN_ERR(svn_wc_read_kind2(kind, reb->wc_ctx, local_abspath,
+                            FALSE, FALSE, scratch_pool));
 
   return SVN_NO_ERROR;
 }

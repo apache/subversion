@@ -21,6 +21,7 @@
  */
 
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
@@ -37,6 +38,7 @@
 #include "../libsvn_fs/fs-loader.h"
 #include "private/svn_fs_util.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_dep_compat.h"
 
 
 /* Add LOCK and its associated LOCK_TOKEN (associated with PATH) as
@@ -474,9 +476,11 @@ svn_fs_base__get_locks(svn_fs_t *fs,
   while (1)
     {
       apr_size_t len, skel_len;
-      char c, *end, *skel_buf;
+      char c, *skel_buf;
       svn_skel_t *lock_skel;
       svn_lock_t *lock;
+      apr_uint64_t ui64;
+      svn_error_t *err;
 
       svn_pool_clear(iterpool);
 
@@ -484,9 +488,10 @@ svn_fs_base__get_locks(svn_fs_t *fs,
       SVN_ERR(svn_stream_readline(stream, &buf, "\n", &eof, iterpool));
       if (eof)
         break;
-      skel_len = (size_t) strtoul(buf->data, &end, 10);
-      if (skel_len == (size_t) ULONG_MAX || *end != '\0')
-        return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, NULL);
+      err = svn_cstring_strtoui64(&ui64, buf->data, 0, APR_SIZE_MAX, 10);
+      if (err)
+        return svn_error_create(SVN_ERR_MALFORMED_FILE, err, NULL);
+      skel_len = (apr_size_t)ui64;
 
       /* Now read that much into a buffer. */
       skel_buf = apr_palloc(pool, skel_len + 1);
@@ -541,8 +546,7 @@ verify_lock(svn_fs_t *fs,
        _("User '%s' does not own lock on path '%s' (currently locked by '%s')"),
        fs->access_ctx->username, lock->path, lock->owner);
 
-  else if (apr_hash_get(fs->access_ctx->lock_tokens, lock->token,
-                        APR_HASH_KEY_STRING) == NULL)
+  else if (svn_hash_gets(fs->access_ctx->lock_tokens, lock->token) == NULL)
     return svn_error_createf
       (SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
        _("Cannot verify lock on path '%s'; no matching lock-token available"),

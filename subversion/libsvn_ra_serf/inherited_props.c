@@ -25,6 +25,7 @@
 #include <apr_tables.h>
 #include <apr_xml.h>
 
+#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_ra.h"
 #include "svn_string.h"
@@ -183,11 +184,10 @@ end_element(svn_ra_serf__xml_parser_t *parser,
                                                 iprops_ctx->pool);
         }
 
-      apr_hash_set(iprops_ctx->curr_iprop->prop_hash,
-                   apr_pstrdup(iprops_ctx->pool,
-                               iprops_ctx->curr_propname->data),
-                   APR_HASH_KEY_STRING,
-                   prop_val);
+      svn_hash_sets(iprops_ctx->curr_iprop->prop_hash,
+                    apr_pstrdup(iprops_ctx->pool,
+                                iprops_ctx->curr_propname->data),
+                    prop_val);
       /* Clear current propname and propval in the event there are
          multiple properties on the current path. */
       svn_stringbuf_setempty(iprops_ctx->curr_propname);
@@ -277,8 +277,7 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
 {
-  svn_error_t *err, *err2;
-
+  svn_error_t *err;
   iprops_context_t *iprops_ctx;
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
@@ -292,6 +291,8 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
                                       NULL /* url */,
                                       revision,
                                       result_pool, scratch_pool));
+
+  SVN_ERR_ASSERT(session->repos_root_str);
 
   iprops_ctx = apr_pcalloc(scratch_pool, sizeof(*iprops_ctx));
   iprops_ctx->done = FALSE;
@@ -329,20 +330,12 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
 
-  svn_ra_serf__request_create(handler);
-
-  err = svn_ra_serf__context_run_wait(&iprops_ctx->done, session,
-                                      scratch_pool);
-
-  err2 = svn_ra_serf__error_on_status(handler->sline.code, handler->path,
-                                      handler->location);
-  if (err2)
-    {
-      svn_error_clear(err);
-      return err2;
-    }
-
-  SVN_ERR(err);
+  err = svn_ra_serf__context_run_one(handler, scratch_pool);
+  SVN_ERR(svn_error_compose_create(
+                    svn_ra_serf__error_on_status(handler->sline.code,
+                                                 handler->path,
+                                                 handler->location),
+                    err));
 
   if (iprops_ctx->done)
     *iprops = iprops_ctx->iprops;

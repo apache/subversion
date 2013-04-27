@@ -106,14 +106,21 @@ SV *svn_swig_pl_convert_array(const apr_array_header_t *array,
 
 SV *svn_swig_pl_revnums_to_list(const apr_array_header_t *array);
 
-/* thunked log receiver function.  */
-svn_error_t * svn_swig_pl_thunk_log_receiver(void *py_receiver,
+svn_opt_revision_t *svn_swig_pl_set_revision(svn_opt_revision_t *rev, SV *source);
+
+/* thunked log_message receiver function.  */
+svn_error_t * svn_swig_pl_thunk_log_receiver(void *baton,
                                              apr_hash_t *changed_paths,
                                              svn_revnum_t rev,
                                              const char *author,
                                              const char *date,
                                              const char *msg,
                                              apr_pool_t *pool);
+
+/* thunked log_entry receiver function.  */
+svn_error_t * svn_swig_pl_thunk_log_entry_receiver(void *baton,
+                                                   svn_log_entry_t *log_entry,
+                                                   apr_pool_t *pool);
 
 /* thunked diff summarize callback.  */
 svn_error_t * svn_swig_pl_thunk_client_diff_summarize_func(

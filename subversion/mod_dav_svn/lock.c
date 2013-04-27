@@ -28,6 +28,7 @@
 #include <http_log.h>
 #include <mod_dav.h>
 
+#include "svn_hash.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_dav.h"
@@ -142,6 +143,8 @@ unescape_xml(const char **output,
   if (apr_err)
     {
       char errbuf[1024];
+
+      errbuf[0] = '\0';
       (void)apr_xml_parser_geterror(xml_parser, errbuf, sizeof(errbuf));
       return dav_svn__new_error(pool, HTTP_INTERNAL_SERVER_ERROR,
                                 DAV_ERR_LOCK_SAVE_LOCK, errbuf);
@@ -640,6 +643,19 @@ append_locks(dav_lockdb *lockdb,
   svn_lock_t *slock;
   svn_error_t *serr;
   dav_error *derr;
+  dav_svn_repos *repos = resource->info->repos;
+
+  /* We don't allow anonymous locks */
+  if (! repos->username)
+    return dav_svn__new_error(resource->pool, HTTP_UNAUTHORIZED,
+                              DAV_ERR_LOCK_SAVE_LOCK,
+                              "Anonymous lock creation is not allowed.");
+
+  /* Not a path in the repository so can't lock it. */
+  if (! resource->info->repos_path)
+    return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST,
+                              DAV_ERR_LOCK_SAVE_LOCK,
+                              "Attempted to lock path not in repository.");
 
   /* If the resource's fs path is unreadable, we don't allow a lock to
      be created on it. */
@@ -663,11 +679,10 @@ append_locks(dav_lockdb *lockdb,
       svn_fs_txn_t *txn;
       svn_fs_root_t *txn_root;
       const char *conflict_msg;
-      dav_svn_repos *repos = resource->info->repos;
       apr_hash_t *revprop_table = apr_hash_make(resource->pool);
-      apr_hash_set(revprop_table, SVN_PROP_REVISION_AUTHOR,
-                   APR_HASH_KEY_STRING, svn_string_create(repos->username,
-                                                          resource->pool));
+      svn_hash_sets(revprop_table,
+                    SVN_PROP_REVISION_AUTHOR,
+                    svn_string_create(repos->username, resource->pool));
 
       if (resource->info->repos->is_svn_client)
         return dav_svn__new_error(resource->pool, HTTP_METHOD_NOT_ALLOWED,
@@ -741,14 +756,14 @@ append_locks(dav_lockdb *lockdb,
 
   /* Convert the dav_lock into an svn_lock_t. */
   derr = dav_lock_to_svn_lock(&slock, lock, resource->info->repos_path,
-                              info, resource->info->repos->is_svn_client,
+                              info, repos->is_svn_client,
                               resource->pool);
   if (derr)
     return derr;
 
   /* Now use the svn_lock_t to actually perform the lock. */
   serr = svn_repos_fs_lock(&slock,
-                           resource->info->repos->repos,
+                           repos->repos,
                            slock->path,
                            slock->token,
                            slock->comment,

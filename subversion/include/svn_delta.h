@@ -41,7 +41,6 @@
 #include "svn_string.h"
 #include "svn_io.h"
 #include "svn_checksum.h"
-#include "svn_editor.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -368,7 +367,7 @@ svn_txdelta_md5_digest(svn_txdelta_stream_t *stream);
  * @a source and @a target are both readable generic streams.  When we call
  * svn_txdelta_next_window() on @a *stream, it will read from @a source and
  * @a target to gather as much data as it needs.  If @a calculate_checksum
- * is set, you may call @ref svn_txdelta_md5_digest to get an MD5 checksum
+ * is set, you may call svn_txdelta_md5_digest() to get an MD5 checksum
  * for @a target.
  *
  * Do any necessary allocation in a sub-pool of @a pool.
@@ -1120,93 +1119,6 @@ typedef struct svn_delta_editor_t
 svn_delta_editor_t *
 svn_delta_default_editor(apr_pool_t *pool);
 
-/** Callback to retrieve a node's entire set of properties.  This is
- * needed by the various editor shims in order to effect backward compat.
- *
- * @since New in 1.8.
- */
-typedef svn_error_t *(*svn_delta_fetch_props_func_t)(
-  apr_hash_t **props,
-  void *baton,
-  const char *path,
-  svn_revnum_t base_revision,
-  apr_pool_t *result_pool,
-  apr_pool_t *scratch_pool
-  );
-
-/** Callback to retrieve a node's kind.  This is needed by the various editor
- * shims in order to effect backward compat.
- *
- * @since New in 1.8.
- */
-typedef svn_error_t *(*svn_delta_fetch_kind_func_t)(
-  svn_kind_t *kind,
-  void *baton,
-  const char *path,
-  svn_revnum_t base_revision,
-  apr_pool_t *scratch_pool
-  );
-
-/** Callback to fetch the FILENAME of a file to use as the delta base for
- * PATH.  The file should last at least as long as RESULT_POOL.  If the base
- * stream is empty, return NULL through FILENAME.
- *
- * @since New in 1.8.
- */
-typedef svn_error_t *(*svn_delta_fetch_base_func_t)(
-  const char **filename,
-  void *baton,
-  const char *path,
-  svn_revnum_t base_revision,
-  apr_pool_t *result_pool,
-  apr_pool_t *scratch_pool
-  );
-
-/** Collection of callbacks used for the shim code.  To enable this struct
- * to grow, always use svn_delta_shim_callbacks_default()
- * to allocate new instances of it.
- *
- * @since New in 1.8.
- */
-typedef struct svn_delta_shim_callbacks_t
-{
-  svn_delta_fetch_props_func_t fetch_props_func;
-  svn_delta_fetch_kind_func_t fetch_kind_func;
-  svn_delta_fetch_base_func_t fetch_base_func;
-  void *fetch_baton;
-} svn_delta_shim_callbacks_t;
-
-/** Return a collection of default shim functions in @a result_pool.
- *
- * @since New in 1.8.
- */
-svn_delta_shim_callbacks_t *
-svn_delta_shim_callbacks_default(apr_pool_t *result_pool);
-
-
-/** A temporary API which conditionally inserts a double editor shim
- * into the chain of delta editors.  Used for testing Editor v2.
- *
- * Whether or not the shims are inserted is controlled by a compile-time
- * option in libsvn_delta/compat.c.
- *
- * @note The use of these shims and this API will likely cause all kinds
- * of performance degredation.  (Which is actually a moot point since they
- * don't even work properly yet anyway.)
- *
- * ### This should not ship in the final release.
- */
-svn_error_t *
-svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
-                         void **dedit_baton_out,
-                         const svn_delta_editor_t *deditor_in,
-                         void *dedit_baton_in,
-                         const char *repos_root,
-                         const char *base_dir,
-                         svn_delta_shim_callbacks_t *shim_callbacks,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool);
-
 /** A text-delta window handler which does nothing.
  *
  * Editors can return this handler from @c apply_textdelta if they don't
@@ -1290,7 +1202,8 @@ svn_delta_depth_filter_editor(const svn_delta_editor_t **editor,
 /** Callback function type for svn_delta_path_driver().
  *
  * The handler of this callback is given the callback baton @a
- * callback_baton, @a path, and the @a parent_baton which represents
+ * callback_baton, @a path which is a relpath relative to the
+ * root of the edit, and the @a parent_baton which represents
  * path's parent directory as created by the editor passed to
  * svn_delta_path_driver().
  *
@@ -1321,7 +1234,8 @@ typedef svn_error_t *(*svn_delta_path_driver_cb_func_t)(
  * @a callback_func and @a callback_baton to allow the caller to handle
  * the portion of the editor drive related to that path.
  *
- * Each path in @a paths is a const char *. The editor drive will be
+ * Each path in @a paths is a (const char *) relpath, relative
+ * to the root path of the @a edit. The editor drive will be
  * performed in the same order as @a paths. The paths should be sorted
  * using something like svn_sort_compare_paths to ensure that a depth-first
  * pattern is observed for directory/file baton creation. If @a sort_paths

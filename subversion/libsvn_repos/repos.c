@@ -1019,10 +1019,18 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "### The authz-db option controls the location of the authorization"         NL
 "### rules for path-based access control.  Unless you specify a path"        NL
 "### starting with a /, the file's location is relative to the"              NL
-"### directory containing this file.  If you don't specify an"               NL
-"### authz-db, no path-based access control is done."                        NL
+"### directory containing this file.  The specified path may be a"           NL
+"### repository relative URL (^/) or an absolute file:// URL to a text"      NL
+"### file in a Subversion repository.  If you don't specify an authz-db,"    NL
+"### no path-based access control is done."                                  NL
 "### Uncomment the line below to use the default authorization file."        NL
 "# authz-db = " SVN_REPOS__CONF_AUTHZ                                        NL
+"### The groups-db option controls the location of the groups file."         NL
+"### Unless you specify a path starting with a /, the file's location is"    NL
+"### relative to the directory containing this file.  The specified path"    NL
+"### may be a repository relative URL (^/) or an absolute file:// URL to a"  NL
+"### text file in a Subversion repository."                                  NL
+"# groups-db = " SVN_REPOS__CONF_GROUPS                                      NL
 "### This option specifies the authentication realm of the repository."      NL
 "### If two repositories have the same authentication realm, they should"    NL
 "### have the same password database, and vice versa.  The default realm"    NL
@@ -1139,14 +1147,15 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "### With svnserve, the LANG environment variable of the svnserve process"   NL
 "### must be set to the same value as given here."                           NL
 "[default]"                                                                  NL
-"# LANG = en_US.UTF-8"                                                       NL
+"LANG = en_US.UTF-8"                                                         NL
 ""                                                                           NL
 "### This sets the PATH environment variable for the pre-commit hook."       NL
-"# [pre-commit]"                                                             NL
-"# PATH = /usr/local/bin:/usr/bin:/usr/sbin"                                 NL;
+"[pre-commit]"                                                               NL
+"PATH = /usr/local/bin:/usr/bin:/usr/sbin"                                   NL;
 
     SVN_ERR_W(svn_io_file_create(svn_dirent_join(repos->conf_path,
-                                                 SVN_REPOS__CONF_HOOKS_ENV,
+                                                 SVN_REPOS__CONF_HOOKS_ENV \
+                                                 SVN_REPOS__HOOK_DESC_EXT,
                                                  pool),
                                  hooks_env_contents, pool),
               _("Creating hooks-env file"));
@@ -1155,96 +1164,21 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Baton for parse_hooks_env_option. */
-struct parse_hooks_env_option_baton {
-  /* The name of the section being parsed. If not the default section,
-   * the section name should match the name of a hook to which the
-   * options apply. */
-  const char *section;
-  apr_hash_t *hooks_env;
-} parse_hooks_env_option_baton;
-
-/* An implementation of svn_config_enumerator2_t.
- * Set environment variable NAME to value VALUE in the environment for
- * all hooks (in case the current section is the default section),
- * or the hook with the name corresponding to the current section's name. */
-static svn_boolean_t
-parse_hooks_env_option(const char *name, const char *value,
-                       void *baton, apr_pool_t *pool)
-{
-  struct parse_hooks_env_option_baton *bo = baton;
-  apr_pool_t *result_pool = apr_hash_pool_get(bo->hooks_env);
-  apr_hash_t *hook_env;
-  
-  hook_env = apr_hash_get(bo->hooks_env, bo->section, APR_HASH_KEY_STRING);
-  if (hook_env == NULL)
-    {
-      hook_env = apr_hash_make(result_pool);
-      apr_hash_set(bo->hooks_env, apr_pstrdup(result_pool, bo->section),
-                   APR_HASH_KEY_STRING, hook_env);
-    }
-  apr_hash_set(hook_env, apr_pstrdup(result_pool, name),
-               APR_HASH_KEY_STRING, apr_pstrdup(result_pool, value));
-
-  return TRUE;
-}
-
-struct parse_hooks_env_section_baton {
-  svn_config_t *cfg;
-  apr_hash_t *hooks_env;
-} parse_hooks_env_section_baton;
-
-/* An implementation of svn_config_section_enumerator2_t. */
-static svn_boolean_t
-parse_hooks_env_section(const char *name, void *baton, apr_pool_t *pool)
-{
-  struct parse_hooks_env_section_baton *b = baton;
-  struct parse_hooks_env_option_baton bo;
-
-  bo.section = name;
-  bo.hooks_env = b->hooks_env;
-
-  (void)svn_config_enumerate2(b->cfg, name, parse_hooks_env_option, &bo, pool);
-
-  return TRUE;
-}
-
-/* Parse the hooks env file for this repository. */
-static svn_error_t *
-parse_hooks_env(svn_repos_t *repos,
-                const char *local_abspath,
-                apr_pool_t *result_pool,
-                apr_pool_t *scratch_pool)
-{
-  svn_config_t *cfg;
-  int n;
-  struct parse_hooks_env_section_baton b;
-
-  SVN_ERR(svn_config_read2(&cfg, local_abspath, FALSE, TRUE, scratch_pool));
-  b.cfg = cfg;
-  b.hooks_env = apr_hash_make(result_pool);
-  n = svn_config_enumerate_sections2(cfg, parse_hooks_env_section, &b,
-                                     scratch_pool);
-  if (n > 0)
-    repos->hooks_env = b.hooks_env;
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_repos_hooks_setenv(svn_repos_t *repos,
                        const char *hooks_env_path,
-                       apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
   if (hooks_env_path == NULL)
-    hooks_env_path = svn_dirent_join(repos->conf_path,
-                                     SVN_REPOS__CONF_HOOKS_ENV, scratch_pool);
+    repos->hooks_env_path = svn_dirent_join(repos->conf_path,
+                                            SVN_REPOS__CONF_HOOKS_ENV,
+                                            repos->pool);
   else if (!svn_dirent_is_absolute(hooks_env_path))
-    hooks_env_path = svn_dirent_join(repos->conf_path, hooks_env_path,
-                                     scratch_pool);
-
-  SVN_ERR(parse_hooks_env(repos, hooks_env_path, result_pool, scratch_pool));
+    repos->hooks_env_path = svn_dirent_join(repos->conf_path,
+                                            hooks_env_path,
+                                            repos->pool);
+  else
+    repos->hooks_env_path = apr_pstrdup(repos->pool, hooks_env_path);
 
   return SVN_NO_ERROR;
 }
@@ -1264,8 +1198,9 @@ create_svn_repos_t(const char *path, apr_pool_t *pool)
   repos->conf_path = svn_dirent_join(path, SVN_REPOS__CONF_DIR, pool);
   repos->hook_path = svn_dirent_join(path, SVN_REPOS__HOOK_DIR, pool);
   repos->lock_path = svn_dirent_join(path, SVN_REPOS__LOCK_DIR, pool);
+  repos->hooks_env_path = NULL;
   repos->repository_capabilities = apr_hash_make(pool);
-  repos->hooks_env = NULL;
+  repos->pool = pool;
 
   return repos;
 }
@@ -1283,10 +1218,8 @@ create_repos_structure(svn_repos_t *repos,
 
   /* Create the DAV sandbox directory if pre-1.4 or pre-1.5-compatible. */
   if (fs_config
-      && (apr_hash_get(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
-                       APR_HASH_KEY_STRING)
-          || apr_hash_get(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
-                          APR_HASH_KEY_STRING)))
+      && (svn_hash_gets(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE)
+          || svn_hash_gets(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE)))
     {
       const char *dav_path = svn_dirent_join(repos->path,
                                              SVN_REPOS__DAV_DIR, pool);
@@ -1537,6 +1470,23 @@ get_repos(svn_repos_t **repos_p,
   if (open_fs)
     SVN_ERR(svn_fs_open(&repos->fs, repos->db_path, fs_config, pool));
 
+#ifdef SVN_DEBUG_CRASH_AT_REPOS_OPEN
+  /* If $PATH/config/debug-abort exists, crash the server here.
+     This debugging feature can be used to test client recovery
+     when the server crashes.
+
+     See: Issue #4274 */
+  {
+    svn_node_kind_t kind;
+    svn_error_t *err = svn_io_check_path(
+        svn_dirent_join(repos->conf_path, "debug-abort", pool),
+        &kind, pool);
+    svn_error_clear(err);
+    if (!err && kind == svn_node_file)
+      SVN_ERR_MALFUNCTION_NO_RETURN();
+  }
+#endif /* SVN_DEBUG_CRASH_AT_REPOS_OPEN */
+
   *repos_p = repos;
   return SVN_NO_ERROR;
 }
@@ -1663,8 +1613,7 @@ svn_repos_has_capability(svn_repos_t *repos,
                          const char *capability,
                          apr_pool_t *pool)
 {
-  const char *val = apr_hash_get(repos->repository_capabilities,
-                                 capability, APR_HASH_KEY_STRING);
+  const char *val = svn_hash_gets(repos->repository_capabilities, capability);
 
   if (val == capability_yes)
     {
@@ -1693,9 +1642,8 @@ svn_repos_has_capability(svn_repos_t *repos,
           if (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
             {
               svn_error_clear(err);
-              apr_hash_set(repos->repository_capabilities,
-                           SVN_REPOS_CAPABILITY_MERGEINFO,
-                           APR_HASH_KEY_STRING, capability_no);
+              svn_hash_sets(repos->repository_capabilities,
+                            SVN_REPOS_CAPABILITY_MERGEINFO, capability_no);
               *has = FALSE;
             }
           else if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
@@ -1704,9 +1652,8 @@ svn_repos_has_capability(svn_repos_t *repos,
                  in r0, so we're likely to get this error -- but it
                  means the repository supports mergeinfo! */
               svn_error_clear(err);
-              apr_hash_set(repos->repository_capabilities,
-                           SVN_REPOS_CAPABILITY_MERGEINFO,
-                           APR_HASH_KEY_STRING, capability_yes);
+              svn_hash_sets(repos->repository_capabilities,
+                            SVN_REPOS_CAPABILITY_MERGEINFO, capability_yes);
               *has = TRUE;
             }
           else
@@ -1716,9 +1663,8 @@ svn_repos_has_capability(svn_repos_t *repos,
         }
       else
         {
-          apr_hash_set(repos->repository_capabilities,
-                       SVN_REPOS_CAPABILITY_MERGEINFO,
-                       APR_HASH_KEY_STRING, capability_yes);
+          svn_hash_sets(repos->repository_capabilities,
+                        SVN_REPOS_CAPABILITY_MERGEINFO, capability_yes);
           *has = TRUE;
         }
     }
@@ -1731,6 +1677,62 @@ svn_repos_has_capability(svn_repos_t *repos,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_repos_capabilities(apr_hash_t **capabilities,
+                       svn_repos_t *repos,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  static const char *const queries[] = {
+    SVN_REPOS_CAPABILITY_MERGEINFO,
+    NULL
+  };
+  const char *const *i;
+
+  *capabilities = apr_hash_make(result_pool);
+
+  for (i = queries; *i; i++)
+    {
+      svn_boolean_t has;
+      SVN_ERR(svn_repos_has_capability(repos, &has, *i, scratch_pool));
+      if (has)
+        svn_hash_sets(*capabilities, *i, *i);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_repos_info_format(int *repos_format,
+                      svn_version_t **supports_version,
+                      svn_repos_t *repos,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  *repos_format = repos->format;
+  *supports_version = apr_palloc(result_pool, sizeof(svn_version_t));
+
+  (*supports_version)->major = SVN_VER_MAJOR;
+  (*supports_version)->minor = 0;
+  (*supports_version)->patch = 0;
+  (*supports_version)->tag = "";
+
+  switch (repos->format)
+    {
+    case SVN_REPOS__FORMAT_NUMBER_LEGACY:
+      break;
+    case SVN_REPOS__FORMAT_NUMBER_1_4:
+      (*supports_version)->minor = 4;
+      break;
+#ifdef SVN_DEBUG
+# if SVN_REPOS__FORMAT_NUMBER != SVN_REPOS__FORMAT_NUMBER_1_4
+#  error "Need to add a 'case' statement here"
+# endif
+#endif
+    }
+
+  return SVN_NO_ERROR;
+}
 
 svn_fs_t *
 svn_repos_fs(svn_repos_t *repos)
@@ -1806,6 +1808,62 @@ svn_repos_recover4(const char *path,
   return SVN_NO_ERROR;
 }
 
+struct freeze_baton_t {
+  apr_array_header_t *paths;
+  int counter;
+  svn_repos_freeze_func_t freeze_func;
+  void *freeze_baton;
+};
+
+static svn_error_t *
+multi_freeze(void *baton,
+             apr_pool_t *pool)
+{
+  struct freeze_baton_t *fb = baton;
+
+  if (fb->counter == fb->paths->nelts)
+    {
+      SVN_ERR(fb->freeze_func(fb->freeze_baton, pool));
+      return SVN_NO_ERROR;
+    }
+  else
+    {
+      /* Using a subpool as the only way to unlock the repos lock used
+         by BDB is to clear the pool used to take the lock. */
+      apr_pool_t *subpool = svn_pool_create(pool);
+      const char *path = APR_ARRAY_IDX(fb->paths, fb->counter, const char *);
+      svn_repos_t *repos;
+
+      ++fb->counter;
+
+      SVN_ERR(get_repos(&repos, path,
+                        TRUE  /* exclusive (only applies to BDB) */,
+                        FALSE /* non-blocking */,
+                        FALSE /* open-fs */,
+                        NULL, subpool));
+
+
+      if (strcmp(repos->fs_type, SVN_FS_TYPE_BDB) == 0)
+        {
+          svn_error_t *err = multi_freeze(fb, subpool);
+
+          svn_pool_destroy(subpool);
+
+          return err;
+        }
+      else
+        {
+          SVN_ERR(svn_fs_open(&repos->fs, repos->db_path, NULL, subpool));
+          SVN_ERR(svn_fs_freeze(svn_repos_fs(repos), multi_freeze, fb,
+                                subpool));
+        }
+
+      svn_pool_destroy(subpool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* For BDB we fall back on BDB's repos layer lock which means that the
    repository is unreadable while frozen.
 
@@ -1813,36 +1871,19 @@ svn_repos_recover4(const char *path,
    and an SQLite reserved lock which means the repository is readable
    while frozen. */
 svn_error_t *
-svn_repos_freeze(const char *path,
-                 svn_error_t *(*freeze_body)(void *, apr_pool_t *),
-                 void *baton,
+svn_repos_freeze(apr_array_header_t *paths,
+                 svn_repos_freeze_func_t freeze_func,
+                 void *freeze_baton,
                  apr_pool_t *pool)
 {
-  svn_repos_t *repos;
+  struct freeze_baton_t fb;
 
-  /* Using a subpool as the only way to unlock the repos lock used by
-     BDB is to clear the pool used to take the lock. */
-  apr_pool_t *subpool = svn_pool_create(pool);
+  fb.paths = paths;
+  fb.counter = 0;
+  fb.freeze_func = freeze_func;
+  fb.freeze_baton = freeze_baton;
 
-  SVN_ERR(get_repos(&repos, path,
-                    TRUE  /* exclusive */,
-                    FALSE /* non-blocking */,
-                    FALSE /* open-fs */,
-                    NULL, subpool));
-
-  if (strcmp(repos->fs_type, SVN_FS_TYPE_BDB) == 0)
-    {
-      svn_error_t *err = freeze_body(baton, subpool);
-      svn_pool_destroy(subpool);
-      return err;
-    }
-  else
-    {
-      SVN_ERR(svn_fs_open(&repos->fs, repos->db_path, NULL, subpool));
-      SVN_ERR(svn_fs_freeze(svn_repos_fs(repos), freeze_body, baton, subpool));
-    }
-
-  svn_pool_destroy(subpool);
+  SVN_ERR(multi_freeze(&fb, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2103,7 +2144,7 @@ svn_repos_stat(svn_dirent_t **dirent,
       return SVN_NO_ERROR;
     }
 
-  ent = apr_pcalloc(pool, sizeof(*ent));
+  ent = svn_dirent_create(pool);
   ent->kind = kind;
 
   if (kind == svn_node_file)

@@ -24,6 +24,7 @@
 #include <apr_uri.h>
 #include <serf.h>
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
 #include "svn_dav.h"
@@ -289,6 +290,8 @@ checkout_node(const char **working_url,
               apr_pool_t *scratch_pool)
 {
   svn_ra_serf__handler_t handler = { 0 };
+  apr_status_t status;
+  apr_uri_t uri;
 
   /* HANDLER_POOL is the scratch pool since we don't need to remember
      anything from the handler. We just want the working resource.  */
@@ -315,7 +318,17 @@ checkout_node(const char **working_url,
     return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                             _("No Location header received"));
 
-  *working_url = apr_pstrdup(result_pool, handler.location);
+  /* We only want the path portion of the Location header.
+     (code.google.com sometimes returns an 'http:' scheme for an
+     'https:' transaction ... we'll work around that by stripping the
+     scheme, host, and port here and re-adding the correct ones
+     later.  */
+  status = apr_uri_parse(scratch_pool, handler.location, &uri);
+  if (status)
+    return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                            _("Error parsing Location header value"));
+
+  *working_url = svn_urlpath__canonicalize(uri.path, result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -785,11 +798,9 @@ maybe_set_lock_token_header(serf_bucket_t *headers,
   if (! (relpath && commit_ctx->lock_tokens))
     return SVN_NO_ERROR;
 
-  if (! apr_hash_get(commit_ctx->deleted_entries, relpath,
-                     APR_HASH_KEY_STRING))
+  if (! svn_hash_gets(commit_ctx->deleted_entries, relpath))
     {
-      token = apr_hash_get(commit_ctx->lock_tokens, relpath,
-                           APR_HASH_KEY_STRING);
+      token = svn_hash_gets(commit_ctx->lock_tokens, relpath);
       if (token)
         {
           const char *token_header;
@@ -798,7 +809,7 @@ maybe_set_lock_token_header(serf_bucket_t *headers,
           serf_bucket_headers_set(headers, "If", token_header);
         }
     }
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -978,7 +989,7 @@ create_put_body(serf_bucket_t **body_bkt,
   apr_file_buffer_set(ctx->svndiff, NULL, 0);
 #endif
   offset = 0;
-  apr_file_seek(ctx->svndiff, APR_SET, &offset);
+  SVN_ERR(svn_io_file_seek(ctx->svndiff, APR_SET, &offset, pool));
 
   *body_bkt = serf_bucket_file_create(ctx->svndiff, alloc);
   return SVN_NO_ERROR;
@@ -1095,8 +1106,7 @@ setup_delete_headers(serf_bucket_t *headers,
 
   if (ctx->lock_token_hash)
     {
-      ctx->lock_token = apr_hash_get(ctx->lock_token_hash, ctx->path,
-                                     APR_HASH_KEY_STRING);
+      ctx->lock_token = svn_hash_gets(ctx->lock_token_hash, ctx->path);
 
       if (ctx->lock_token)
         {
@@ -1294,9 +1304,9 @@ open_root(void *edit_baton,
     {
       post_response_ctx_t *prc;
       const char *rel_path;
-      svn_boolean_t post_with_revprops =
-        apr_hash_get(ctx->session->supported_posts, "create-txn-with-props",
-                     APR_HASH_KEY_STRING) ? TRUE : FALSE;
+      svn_boolean_t post_with_revprops
+        = (NULL != svn_hash_gets(ctx->session->supported_posts,
+                                 "create-txn-with-props"));
 
       /* Create our activity URL now on the server. */
       handler = apr_pcalloc(ctx->pool, sizeof(*handler));
@@ -1373,16 +1383,26 @@ open_root(void *edit_baton,
     }
   else
     {
-      const char *activity_str;
+      const char *activity_str = ctx->session->activity_collection_url;
 
-      SVN_ERR(svn_ra_serf__v1_get_activity_collection(&activity_str,
-                                                      ctx->session->conns[0],
-                                                      ctx->pool,
-                                                      ctx->pool));
       if (!activity_str)
-        return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                                _("The OPTIONS response did not include the "
-                                  "requested activity-collection-set value"));
+        SVN_ERR(svn_ra_serf__v1_get_activity_collection(&activity_str,
+                                                        ctx->session->conns[0],
+                                                        ctx->pool,
+                                                        ctx->pool));
+
+      /* Cache the result. */
+      if (activity_str)
+        {
+          ctx->session->activity_collection_url =
+            apr_pstrdup(ctx->session->pool, activity_str);
+        }
+      else
+        {
+          return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                                  _("The OPTIONS response did not include the "
+                                    "requested activity-collection-set value"));
+        }
 
       ctx->activity_url =
         svn_path_url_add_component2(activity_str, svn_uuid_generate(ctx->pool),
@@ -1466,15 +1486,9 @@ open_root(void *edit_baton,
       for (hi = apr_hash_first(ctx->pool, ctx->revprop_table); hi;
            hi = apr_hash_next(hi))
         {
-          const void *key;
-          void *val;
-          const char *name;
-          svn_string_t *value;
+          const char *name = svn__apr_hash_index_key(hi);
+          svn_string_t *value = svn__apr_hash_index_val(hi);
           const char *ns;
-
-          apr_hash_this(hi, &key, NULL, &val);
-          name = key;
-          value = val;
 
           if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
             {
@@ -1578,9 +1592,8 @@ delete_entry(const char *path,
       return svn_error_trace(return_response_err(handler));
     }
 
-  apr_hash_set(dir->commit->deleted_entries,
-               apr_pstrdup(dir->commit->pool, path), APR_HASH_KEY_STRING,
-               (void*)1);
+  svn_hash_sets(dir->commit->deleted_entries,
+                apr_pstrdup(dir->commit->pool, path), (void *)1);
 
   return SVN_NO_ERROR;
 }
@@ -1874,8 +1887,7 @@ add_file(const char *path,
 
   while (deleted_parent && deleted_parent[0] != '\0')
     {
-      if (apr_hash_get(dir->commit->deleted_entries,
-                       deleted_parent, APR_HASH_KEY_STRING))
+      if (svn_hash_gets(dir->commit->deleted_entries, deleted_parent))
         {
           break;
         }
@@ -2267,7 +2279,6 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_delta_editor_t *editor;
   commit_context_t *ctx;
-  apr_hash_index_t *hi;
   const char *repos_root;
   const char *base_relpath;
   svn_boolean_t supports_ephemeral_props;
@@ -2279,17 +2290,7 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
   ctx->session = session;
   ctx->conn = session->conns[0];
 
-  ctx->revprop_table = apr_hash_make(pool);
-  for (hi = apr_hash_first(pool, revprop_table); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      apr_ssize_t klen;
-      void *val;
-
-      apr_hash_this(hi, &key, &klen, &val);
-      apr_hash_set(ctx->revprop_table, apr_pstrdup(pool, key), klen,
-                   svn_string_dup(val, pool));
-    }
+  ctx->revprop_table = svn_prop_hash_dup(revprop_table, pool);
 
   /* If the server supports ephemeral properties, add some carrying
      interesting version information. */
@@ -2298,14 +2299,12 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
                                       pool));
   if (supports_ephemeral_props)
     {
-      apr_hash_set(ctx->revprop_table,
-                   apr_pstrdup(pool, SVN_PROP_TXN_CLIENT_COMPAT_VERSION),
-                   APR_HASH_KEY_STRING,
-                   svn_string_create(SVN_VER_NUMBER, pool));
-      apr_hash_set(ctx->revprop_table,
-                   apr_pstrdup(pool, SVN_PROP_TXN_USER_AGENT),
-                   APR_HASH_KEY_STRING,
-                   svn_string_create(session->useragent, pool));
+      svn_hash_sets(ctx->revprop_table,
+                    apr_pstrdup(pool, SVN_PROP_TXN_CLIENT_COMPAT_VERSION),
+                    svn_string_create(SVN_VER_NUMBER, pool));
+      svn_hash_sets(ctx->revprop_table,
+                    apr_pstrdup(pool, SVN_PROP_TXN_USER_AGENT),
+                    svn_string_create(session->useragent, pool));
     }
 
   ctx->callback = callback;

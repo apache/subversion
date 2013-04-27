@@ -203,7 +203,7 @@ send_simple_insertion_window(svn_txdelta_window_t *window,
   assert(window->ops[0].offset == 0);
 
   /* write stream header if necessary */
-  if (eb->header_done == FALSE)
+  if (!eb->header_done)
     {
       eb->header_done = TRUE;
       headers[0] = 'S';
@@ -216,7 +216,7 @@ send_simple_insertion_window(svn_txdelta_window_t *window,
     {
       header_current = headers;
     }
-    
+
   /* Encode the action code and length.  */
   if (window->tview_len >> 6 == 0)
     {
@@ -229,10 +229,11 @@ send_simple_insertion_window(svn_txdelta_window_t *window,
       ip_len = encode_int(ibuf + 1, window->tview_len) - ibuf;
     }
 
-  /* encode the window header.  */
-  header_current[0] = 0;  /* source offset == 0 */
-  header_current[1] = 0;  /* source length == 0 */
-  header_current = encode_int(header_current + 2, window->tview_len);
+  /* encode the window header.  Please note that the source window may
+   * have content despite not being used for deltification. */
+  header_current = encode_int(header_current, window->sview_offset);
+  header_current = encode_int(header_current, window->sview_len);
+  header_current = encode_int(header_current, window->tview_len);
   header_current[0] = (unsigned char)ip_len;  /* 1 instruction */
   header_current = encode_int(&header_current[1], len);
 
@@ -241,7 +242,7 @@ send_simple_insertion_window(svn_txdelta_window_t *window,
     header_current[i] = ibuf[i];
 
   header_len = header_current - headers + ip_len;
-    
+
   /* Write out the window.  */
   SVN_ERR(svn_stream_write(eb->output, (const char *)headers, &header_len));
   if (len)
@@ -268,7 +269,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
     return svn_error_trace(send_simple_insertion_window(window, eb));
 
   /* Make sure we write the header.  */
-  if (eb->header_done == FALSE)
+  if (!eb->header_done)
     {
       char svnver[4] = {'S','V','N','\0'};
       len = 4;
@@ -902,6 +903,14 @@ write_handler(void *baton,
   /* NOTREACHED */
 }
 
+/* Minimal svn_stream_t write handler, doing nothing */
+static svn_error_t *
+noop_write_handler(void *baton,
+                   const char *buffer,
+                   apr_size_t *len)
+{
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 close_handler(void *baton)
@@ -943,8 +952,18 @@ svn_txdelta_parse_svndiff(svn_txdelta_window_handler_t handler,
   db->header_bytes = 0;
   db->error_on_early_close = error_on_early_close;
   stream = svn_stream_create(db, pool);
-  svn_stream_set_write(stream, write_handler);
-  svn_stream_set_close(stream, close_handler);
+
+  if (handler != svn_delta_noop_window_handler)
+    {
+      svn_stream_set_write(stream, write_handler);
+      svn_stream_set_close(stream, close_handler);
+    }
+  else
+    {
+      /* And else we just ignore everything as efficiently as we can.
+         by only hooking a no-op handler */
+      svn_stream_set_write(stream, noop_write_handler);
+    }
   return stream;
 }
 

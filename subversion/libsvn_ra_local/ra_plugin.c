@@ -22,6 +22,7 @@
  */
 
 #include "ra_local.h"
+#include "svn_hash.h"
 #include "svn_ra.h"
 #include "svn_fs.h"
 #include "svn_delta.h"
@@ -70,10 +71,13 @@ cleanup_access(void *data)
 }
 
 
-/* Fetch a username for use with SESS, and store it in SESS->username. */
+/* Fetch a username for use with SESSION, and store it in SESSION->username.
+ *
+ * Allocate the username in SESSION->pool.  Use SCRATCH_POOL for temporary
+ * allocations. */
 static svn_error_t *
 get_username(svn_ra_session_t *session,
-             apr_pool_t *pool)
+             apr_pool_t *scratch_pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
 
@@ -92,7 +96,7 @@ get_username(svn_ra_session_t *session,
                                              SVN_AUTH_CRED_USERNAME,
                                              sess->uuid, /* realmstring */
                                              sess->callbacks->auth_baton,
-                                             pool));
+                                             scratch_pool));
 
           /* No point in calling next_creds(), since that assumes that the
              first_creds() somehow failed to authenticate.  But there's no
@@ -103,7 +107,8 @@ get_username(svn_ra_session_t *session,
             {
               sess->username = apr_pstrdup(session->pool,
                                            username_creds->username);
-              svn_error_clear(svn_auth_save_credentials(iterstate, pool));
+              svn_error_clear(svn_auth_save_credentials(iterstate,
+                                                        scratch_pool));
             }
           else
             sess->username = "";
@@ -143,8 +148,7 @@ cache_init(void *baton, apr_pool_t *pool)
   const char *memory_cache_size_str;
 
   if (config_hash)
-    config = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_CONFIG,
-                          APR_HASH_KEY_STRING);
+    config = svn_hash_gets(config_hash, SVN_CONFIG_CATEGORY_CONFIG);
   svn_config_get(config, &memory_cache_size_str, SVN_CONFIG_SECTION_MISCELLANY,
                  SVN_CONFIG_OPTION_MEMORY_CACHE_SIZE, NULL);
   if (memory_cache_size_str)
@@ -279,7 +283,9 @@ static const svn_ra_reporter3_t ra_local_reporter =
  * they have already wrapped with the same cancellation editor, so it ends
  * up double-wrapped.
  *
- * ... */
+ * Allocate @a *reporter and @a *report_baton in @a result_pool.  Use
+ * @a scratch_pool for temporary allocations.
+ */
 static svn_error_t *
 make_reporter(svn_ra_session_t *session,
               const svn_ra_reporter3_t **reporter,
@@ -293,7 +299,8 @@ make_reporter(svn_ra_session_t *session,
               svn_boolean_t ignore_ancestry,
               const svn_delta_editor_t *editor,
               void *edit_baton,
-              apr_pool_t *pool)
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
   void *rbaton;
@@ -301,14 +308,14 @@ make_reporter(svn_ra_session_t *session,
 
   /* Get the HEAD revision if one is not supplied. */
   if (! SVN_IS_VALID_REVNUM(revision))
-    SVN_ERR(svn_fs_youngest_rev(&revision, sess->fs, pool));
+    SVN_ERR(svn_fs_youngest_rev(&revision, sess->fs, scratch_pool));
 
   /* If OTHER_URL was provided, validate it and convert it into a
      regular filesystem path. */
   if (other_url)
     {
       const char *other_relpath
-        = svn_uri_skip_ancestor(sess->repos_url, other_url, pool);
+        = svn_uri_skip_ancestor(sess->repos_url, other_url, scratch_pool);
 
       /* Sanity check:  the other_url better be in the same repository as
          the original session url! */
@@ -319,13 +326,14 @@ make_reporter(svn_ra_session_t *session,
              "is not the same repository as\n"
              "'%s'"), other_url, sess->repos_url);
 
-      other_fs_path = apr_pstrcat(pool, "/", other_relpath, (char *)NULL);
+      other_fs_path = apr_pstrcat(scratch_pool, "/", other_relpath,
+                                  (char *)NULL);
     }
 
   /* Pass back our reporter */
   *reporter = &ra_local_reporter;
 
-  SVN_ERR(get_username(session, pool));
+  SVN_ERR(get_username(session, scratch_pool));
 
   if (sess->callbacks)
     SVN_ERR(svn_delta_get_cancellation_editor(sess->callbacks->cancel_func,
@@ -334,7 +342,7 @@ make_reporter(svn_ra_session_t *session,
                                               edit_baton,
                                               &editor,
                                               &edit_baton,
-                                              pool));
+                                              result_pool));
 
   /* Build a reporter baton. */
   SVN_ERR(svn_repos_begin_report3(&rbaton,
@@ -353,11 +361,11 @@ make_reporter(svn_ra_session_t *session,
                                   NULL,
                                   1024 * 1024,  /* process-local transfers
                                                    should be fast */
-                                  pool));
+                                  result_pool));
 
   /* Wrap the report baton given us by the repos layer with our own
      reporter baton. */
-  *report_baton = make_reporter_baton(sess, rbaton, pool);
+  *report_baton = make_reporter_baton(sess, rbaton, result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -752,10 +760,10 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
 
   /* Copy the revprops table so we can add the username. */
   revprop_table = apr_hash_copy(pool, revprop_table);
-  apr_hash_set(revprop_table, SVN_PROP_REVISION_AUTHOR, APR_HASH_KEY_STRING,
-               svn_string_create(sess->username, pool));
-  apr_hash_set(revprop_table, SVN_PROP_TXN_CLIENT_COMPAT_VERSION,
-               APR_HASH_KEY_STRING, svn_string_create(SVN_VER_NUMBER, pool));
+  svn_hash_sets(revprop_table, SVN_PROP_REVISION_AUTHOR,
+                svn_string_create(sess->username, pool));
+  svn_hash_sets(revprop_table, SVN_PROP_TXN_CLIENT_COMPAT_VERSION,
+                svn_string_create(SVN_VER_NUMBER, pool));
 
   /* Get the repos commit-editor */
   return svn_repos_get_commit_editor5
@@ -810,9 +818,11 @@ svn_ra_local__do_update(svn_ra_session_t *session,
                         const char *update_target,
                         svn_depth_t depth,
                         svn_boolean_t send_copyfrom_args,
+                        svn_boolean_t ignore_ancestry,
                         const svn_delta_editor_t *update_editor,
                         void *update_baton,
-                        apr_pool_t *pool)
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   return make_reporter(session,
                        reporter,
@@ -823,10 +833,10 @@ svn_ra_local__do_update(svn_ra_session_t *session,
                        TRUE,
                        depth,
                        send_copyfrom_args,
-                       FALSE,
+                       ignore_ancestry,
                        update_editor,
                        update_baton,
-                       pool);
+                       result_pool, scratch_pool);
 }
 
 
@@ -838,9 +848,12 @@ svn_ra_local__do_switch(svn_ra_session_t *session,
                         const char *update_target,
                         svn_depth_t depth,
                         const char *switch_url,
+                        svn_boolean_t send_copyfrom_args,
+                        svn_boolean_t ignore_ancestry,
                         const svn_delta_editor_t *update_editor,
                         void *update_baton,
-                        apr_pool_t *pool)
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   return make_reporter(session,
                        reporter,
@@ -848,13 +861,13 @@ svn_ra_local__do_switch(svn_ra_session_t *session,
                        update_revision,
                        update_target,
                        switch_url,
-                       TRUE,
+                       TRUE /* text_deltas */,
                        depth,
-                       FALSE,   /* ### TODO(sussman): take new arg */
-                       TRUE,
+                       send_copyfrom_args,
+                       ignore_ancestry,
                        update_editor,
                        update_baton,
-                       pool);
+                       result_pool, scratch_pool);
 }
 
 
@@ -881,7 +894,7 @@ svn_ra_local__do_status(svn_ra_session_t *session,
                        FALSE,
                        status_editor,
                        status_baton,
-                       pool);
+                       pool, pool);
 }
 
 
@@ -911,7 +924,7 @@ svn_ra_local__do_diff(svn_ra_session_t *session,
                        ignore_ancestry,
                        update_editor,
                        update_baton,
-                       pool);
+                       pool, pool);
 }
 
 
@@ -1058,22 +1071,12 @@ get_node_props(apr_hash_t **props,
       SVN_ERR(svn_fs_node_proplist(props, root, path, result_pool));
     }
 
-  /* Turn FS-path keys into URLs. */
+  /* Get inherited properties if requested. */
   if (inherited_props)
     {
-      int i;
-
       SVN_ERR(svn_repos_fs_get_inherited_props(inherited_props, root, path,
-                                               NULL, NULL,
+                                               NULL, NULL, NULL,
                                                result_pool, scratch_pool));
-
-      for (i = 0; i < (*inherited_props)->nelts; i++)
-        {
-          svn_prop_inherited_item_t *i_props =
-            APR_ARRAY_IDX(*inherited_props, i, svn_prop_inherited_item_t *);
-          i_props->path_or_url = svn_path_url_add_component2(
-            sess->repos_url, i_props->path_or_url, result_pool);
-        }
     }
 
   /* Now add some non-tweakable metadata to the hash as well... */
@@ -1085,24 +1088,14 @@ get_node_props(apr_hash_t **props,
                                            &cmt_author, root, path,
                                            scratch_pool));
 
-      apr_hash_set(*props,
-                   SVN_PROP_ENTRY_COMMITTED_REV,
-                   APR_HASH_KEY_STRING,
-                   svn_string_createf(result_pool, "%ld", cmt_rev));
-      apr_hash_set(*props,
-                   SVN_PROP_ENTRY_COMMITTED_DATE,
-                   APR_HASH_KEY_STRING,
-                   cmt_date ? svn_string_create(cmt_date,
-                                                result_pool) : NULL);
-      apr_hash_set(*props,
-                   SVN_PROP_ENTRY_LAST_AUTHOR,
-                   APR_HASH_KEY_STRING,
-                   cmt_author ? svn_string_create(cmt_author,
-                                                  result_pool) : NULL);
-      apr_hash_set(*props,
-                   SVN_PROP_ENTRY_UUID,
-                   APR_HASH_KEY_STRING,
-                   svn_string_create(sess->uuid, result_pool));
+      svn_hash_sets(*props, SVN_PROP_ENTRY_COMMITTED_REV,
+                    svn_string_createf(result_pool, "%ld", cmt_rev));
+      svn_hash_sets(*props, SVN_PROP_ENTRY_COMMITTED_DATE, cmt_date ?
+                    svn_string_create(cmt_date, result_pool) :NULL);
+      svn_hash_sets(*props, SVN_PROP_ENTRY_LAST_AUTHOR, cmt_author ?
+                    svn_string_create(cmt_author, result_pool) :NULL);
+      svn_hash_sets(*props, SVN_PROP_ENTRY_UUID,
+                    svn_string_create(sess->uuid, result_pool));
 
       /* We have no 'wcprops' in ra_local, but might someday. */
     }
@@ -1230,7 +1223,7 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
           apr_hash_t *prophash;
           const char *datestring, *entryname, *fullpath;
           svn_fs_dirent_t *fs_entry;
-          svn_dirent_t *entry = apr_pcalloc(pool, sizeof(*entry));
+          svn_dirent_t *entry = svn_dirent_create(pool);
 
           svn_pool_clear(subpool);
 
@@ -1281,7 +1274,7 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
             }
 
           /* Store. */
-          apr_hash_set(*dirents, entryname, APR_HASH_KEY_STRING, entry);
+          svn_hash_sets(*dirents, entryname, entry);
         }
       svn_pool_destroy(subpool);
     }
@@ -1523,7 +1516,10 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
       || strcmp(capability, SVN_RA_CAPABILITY_PARTIAL_REPLAY) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_COMMIT_REVPROPS) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_ATOMIC_REVPROPS) == 0
-      || strcmp(capability, SVN_RA_CAPABILITY_INHERITED_PROPS) == 0)
+      || strcmp(capability, SVN_RA_CAPABILITY_INHERITED_PROPS) == 0
+      || strcmp(capability, SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS) == 0
+      || strcmp(capability, SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE) == 0
+      )
     {
       *has = TRUE;
     }
@@ -1658,8 +1654,8 @@ svn_ra_local__get_commit_ev2(svn_editor_t **editor,
 
   /* Copy the REVPROPS and insert the author/username.  */
   revprops = apr_hash_copy(scratch_pool, revprops);
-  apr_hash_set(revprops, SVN_PROP_REVISION_AUTHOR, APR_HASH_KEY_STRING,
-               svn_string_create(sess->username, scratch_pool));
+  svn_hash_sets(revprops, SVN_PROP_REVISION_AUTHOR,
+                svn_string_create(sess->username, scratch_pool));
 
   return svn_error_trace(svn_repos__get_commit_ev2(
                            editor, sess->repos, NULL /* authz */,

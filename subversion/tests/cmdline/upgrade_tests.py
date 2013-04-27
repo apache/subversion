@@ -1143,18 +1143,21 @@ def upgrade_file_externals(sbox):
 
   expected_output = svntest.verify.RegexOutput('r2 committed.*')
   svntest.actions.run_and_verify_svnmucc(None, expected_output, [],
+                                         '-m', 'r2',
                                          'propset', 'svn:externals',
                                          '^/A/B/E EX\n^/A/mu muX',
                                          sbox.repo_url + '/A/B/F')
 
   expected_output = svntest.verify.RegexOutput('r3 committed.*')
   svntest.actions.run_and_verify_svnmucc(None, expected_output, [],
+                                         '-m', 'r3',
                                          'propset', 'svn:externals',
                                          '^/A/B/F FX\n^/A/B/lambda lambdaX',
                                          sbox.repo_url + '/A/C')
 
   expected_output = svntest.verify.RegexOutput('r4 committed.*')
   svntest.actions.run_and_verify_svnmucc(None, expected_output, [],
+                                         '-m', 'r4',
                                          'propset', 'pname1', 'pvalue1',
                                          sbox.repo_url + '/A/mu',
                                          'propset', 'pname2', 'pvalue2',
@@ -1201,7 +1204,6 @@ def upgrade_file_externals(sbox):
       'alpha' : {'pname3' : 'pvalue3' },
       })
 
-
 @Issue(4035)
 def upgrade_missing_replaced(sbox):
   "upgrade with missing replaced dir"
@@ -1217,19 +1219,28 @@ def upgrade_missing_replaced(sbox):
                                      sbox.wc_dir)
 
   expected_output = svntest.wc.State(sbox.wc_dir, {
-      'A/B/E'         : Item(status='  ', treeconflict='C'),
+      'A/B/E'         : Item(status='  ', treeconflict='C',
+                             prev_verb='Restored'),
       'A/B/E/alpha'   : Item(status='  ', treeconflict='A'),
       'A/B/E/beta'    : Item(status='  ', treeconflict='A'),
       })
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
-  expected_status.tweak('A/B/E', status='! ', treeconflict='C', wc_rev='-')
+  expected_status.tweak('A/B/E', status='! ', treeconflict='C', wc_rev='-',
+                        entry_status='R ', entry_rev='1')
   expected_status.tweak('A/B/E/alpha', 'A/B/E/beta', status='D ')
+
+  # This upgrade installs an INCOMPLETE node in WORKING for E, which makes the
+  # database technically invalid... but we did that for 1.7 and nobody noticed.
+
+  # Pass the old status tree to avoid testing via entries-dump
+  # as fetching the entries crashes on the invalid db state.
   svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output,
                                         None, expected_status)
 
   svntest.actions.run_and_verify_svn(None, 'Reverted.*', [], 'revert', '-R',
                                      sbox.wc_dir)
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  # And verify that the state is now valid in both the entries an status world.
   svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
 
 @Issue(4033)
@@ -1255,6 +1266,147 @@ def upgrade_not_present_replaced(sbox):
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output,
                                         None, expected_status)
+
+@Issue(4307)
+def upgrade_from_1_7_conflict(sbox):
+  "upgrade from 1.7 WC with conflict (format 29)"
+
+  sbox.build(create_wc=False)
+  replace_sbox_with_tarfile(sbox, 'upgrade_from_1_7_wc.tar.bz2')
+
+  # The working copy contains a text conflict, and upgrading such
+  # a working copy used to cause a pointless 'upgrade required' error.
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
+
+def do_iprops_upgrade(nonrootfile, rootfile, sbox):
+
+  wc_dir = sbox.wc_dir
+
+  replace_sbox_with_tarfile(sbox, nonrootfile)
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
+                                     'file:///tmp/repo', sbox.repo_url, wc_dir)
+
+  expected_output = []
+  expected_disk = svntest.wc.State('', {
+      'E'       : Item(),
+      'E/alpha' : Item(contents="This is the file 'alpha'.\n"),
+      'E/beta'  : Item(contents="This is the file 'beta'.\n"),
+      'F'       : Item(),
+      'lambda'  : Item(contents="This is the file 'lambda'.\n"),
+      })
+  expected_status = svntest.wc.State(sbox.wc_dir, {
+      ''        : Item(),
+      'E'       : Item(switched='S'),
+      'E/alpha' : Item(),
+      'E/beta'  : Item(),
+      'F'       : Item(),
+      'lambda'  : Item(),
+      })
+  expected_status.tweak(status='  ', wc_rev=2)
+
+  # No inherited props after upgrade until an update
+  expected_iprops = {}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    wc_dir, expected_iprops, expected_explicit_props)
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.ospath('E'), expected_iprops, expected_explicit_props)
+
+  # Update populates the inherited props
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+  expected_iprops = {sbox.repo_url        : {'p'  : 'v'},
+                     sbox.repo_url + '/A' : {'pA' : 'vA'}}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    wc_dir, expected_iprops, expected_explicit_props)
+
+  expected_iprops = {sbox.repo_url        : {'p'  : 'v'},
+                     sbox.repo_url + '/X' : {'pX' : 'vX'}}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.ospath('E'), expected_iprops, expected_explicit_props)
+
+  # Now try with a repository root working copy
+  replace_sbox_with_tarfile(sbox, rootfile)
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
+                                     'file:///tmp/repo', sbox.repo_url, wc_dir)
+
+  # Unswitched inherited props available after upgrade
+  expected_iprops = {wc_dir           : {'p'  : 'v'},
+                     sbox.ospath('A') : {'pA' : 'vA'}}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.ospath('A/B'), expected_iprops, expected_explicit_props)
+
+  # Switched inherited props not populated until update after upgrade
+  expected_iprops = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.ospath('A/B/E'), expected_iprops, expected_explicit_props)
+
+  expected_disk = svntest.wc.State('', {
+      'A'     : Item(),
+      'A/B'   : Item(),
+      'A/B/E' : Item(),
+      })
+  expected_status = svntest.wc.State(sbox.wc_dir, {
+      ''      : Item(),
+      'A'     : Item(),
+      'A/B'   : Item(),
+      'A/B/E' : Item(switched='S'),
+      })
+  expected_status.tweak(status='  ', wc_rev=2)
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+  expected_iprops = {wc_dir           : {'p'  : 'v'},
+                     sbox.ospath('A') : {'pA' : 'vA'}}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.ospath('A/B'), expected_iprops, expected_explicit_props)
+
+  expected_iprops = {sbox.repo_url        : {'p'  : 'v'},
+                     sbox.repo_url + '/X' : {'pX' : 'vX'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.ospath('A/B/E'), expected_iprops, expected_explicit_props)
+
+def iprops_upgrade(sbox):
+  "inherited properties after upgrade from 1.7"
+
+  sbox.build()
+
+  sbox.simple_copy('A', 'X')
+  sbox.simple_propset('p', 'v', '')
+  sbox.simple_propset('pA', 'vA', 'A')
+  sbox.simple_propset('pX', 'vX', 'X')
+  sbox.simple_commit()
+  svntest.main.run_svnadmin('setuuid', sbox.repo_dir,
+                            '8f4d0ebe-2ebf-4f62-ad11-804fd88c2382')
+
+  do_iprops_upgrade('iprops_upgrade_nonroot.tar.bz2',
+                    'iprops_upgrade_root.tar.bz2',
+                    sbox)
+
+def iprops_upgrade1_6(sbox):
+  "inherited properties after upgrade from 1.6"
+
+  sbox.build()
+
+  sbox.simple_copy('A', 'X')
+  sbox.simple_propset('p', 'v', '')
+  sbox.simple_propset('pA', 'vA', 'A')
+  sbox.simple_propset('pX', 'vX', 'X')
+  sbox.simple_commit()
+  svntest.main.run_svnadmin('setuuid', sbox.repo_dir,
+                            '8f4d0ebe-2ebf-4f62-ad11-804fd88c2382')
+
+  do_iprops_upgrade('iprops_upgrade_nonroot1_6.tar.bz2',
+                    'iprops_upgrade_root1_6.tar.bz2',
+                    sbox)
 
 ########################################################################
 # Run the tests
@@ -1307,6 +1459,9 @@ test_list = [ None,
               upgrade_file_externals,
               upgrade_missing_replaced,
               upgrade_not_present_replaced,
+              upgrade_from_1_7_conflict,
+              iprops_upgrade,
+              iprops_upgrade1_6,
              ]
 
 

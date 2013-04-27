@@ -39,7 +39,6 @@
 #include "svn_io.h"
 #include "svn_mergeinfo.h"
 #include "svn_checksum.h"
-#include "svn_editor.h"
 
 
 #ifdef __cplusplus
@@ -95,6 +94,24 @@ typedef struct svn_fs_t svn_fs_t;
  * @since New in 1.8.
  */
 #define SVN_FS_CONFIG_FSFS_CACHE_REVPROPS       "fsfs-cache-revprops"
+
+/** Select the cache namespace.  If you potentially share the cache with
+ * another FS object for the same repository, objects read through one FS
+ * will not need to be read again for the other.  In most cases, that is
+ * a very desirable behavior and the default is, therefore, an empty
+ * namespace.
+ *
+ * If you want to be sure that your FS instance will actually read all
+ * requested data at least once, you need to specify a separate namespace
+ * for it.  All repository verification code, for instance, should use
+ * some GUID here that is different each time you open an FS instance.
+ *
+ * @since New in 1.8.
+ */
+#define SVN_FS_CONFIG_FSFS_CACHE_NS             "fsfs-cache-namespace"
+
+/* Note to maintainers: if you add further SVN_FS_CONFIG_FSFS_CACHE_* knobs,
+   update fs_fs.c:verify_as_revision_before_current_plus_plus(). */
 
 /* See also svn_fs_type(). */
 /** @since New in 1.1. */
@@ -264,27 +281,17 @@ svn_fs_upgrade(const char *path,
                apr_pool_t *pool);
 
 /**
- * Perform backend-specific data consistency and correctness validations
- * to the Subversion filesystem located in the directory @a path.
- * Use @a pool for necessary allocations.
+ * Callback function type for progress notification.
  *
- * @a start and @a end may be #SVN_INVALID_REVNUM, in which case
- * svn_repos_verify_fs2()'s semantics apply.  When @c r0 is being
- * verified, global invariants may be verified as well.
- *
- * @note You probably don't want to use this directly.  Take a look at
- * svn_repos_verify_fs2() instead, which does non-backend-specific
- * verifications as well.
+ * @a revision is the number of the revision currently begin processed,
+ * #SVN_INVALID_REVNUM if the current stage is not linked to any specific
+ * revision. @a baton is the callback baton.
  *
  * @since New in 1.8.
  */
-svn_error_t *
-svn_fs_verify(const char *path,
-              svn_cancel_func_t cancel_func,
-              void *cancel_baton,
-              svn_revnum_t start,
-              svn_revnum_t end,
-              apr_pool_t *scratch_pool);
+typedef void (*svn_fs_progress_notify_func_t)(svn_revnum_t revision,
+                                              void *baton,
+                                              apr_pool_t *pool);
 
 /**
  * Return, in @a *fs_type, a string identifying the back-end type of
@@ -318,7 +325,25 @@ svn_fs_path(svn_fs_t *fs,
             apr_pool_t *pool);
 
 /**
+ * Return a shallow copy of the configuration parameters used to open
+ * @a fs, allocated in @a pool.  It may be @c NULL.  The contents of the
+ * hash contents remains valid only for @a fs's lifetime.
+ * 
+ * @note This is just what was passed to svn_fs_create() or svn_fs_open().
+ * You may not modify it.
+ *
+ * @since New in 1.8.
+ */
+apr_hash_t *
+svn_fs_config(svn_fs_t *fs,
+              apr_pool_t *pool);
+
+/**
  * Delete the filesystem at @a path.
+ *
+ * @note: Deleting a filesystem that has an open svn_fs_t is not
+ * supported.  Clear/destroy all pools used to create/open @a path.
+ * See issue 4264.
  *
  * @since New in 1.1.
  */
@@ -333,9 +358,10 @@ svn_fs_delete_fs(const char *path,
  * means deleting copied, unused logfiles for a Berkeley DB source
  * filesystem.
  *
- * If @a incremental is TRUE, make an effort to not re-copy information
- * already present in the destination. If incremental hotcopy is not
- * implemented, raise SVN_ERR_UNSUPPORTED_FEATURE.
+ * If @a incremental is TRUE, make an effort to avoid re-copying
+ * information already present in the destination where possible.  If
+ * incremental hotcopy is not implemented, raise
+ * #SVN_ERR_UNSUPPORTED_FEATURE.
  *
  * Use @a scratch_pool for temporary allocations.
  *
@@ -351,8 +377,8 @@ svn_fs_hotcopy2(const char *src_path,
                 apr_pool_t *scratch_pool);
 
 /**
- * Like svn_fs_hotcopy2(), but without the @a incremental parameter
- * and without cancellation support.
+ * Like svn_fs_hotcopy2(), but with @a incremental always passed as @c
+ * TRUE and without cancellation support.
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
  * @since New in 1.1.
@@ -407,21 +433,29 @@ svn_fs_recover(const char *path,
 
 
 /**
+ * Callback for svn_fs_freeze().
+ *
+ * @since New in 1.8.
+ */
+typedef svn_error_t *(*svn_fs_freeze_func_t)(void *baton, apr_pool_t *pool);
+
+/**
  * Take an exclusive lock on @a fs to prevent commits and then invoke
- * @a freeze_body passing @a baton.
+ * @a freeze_func passing @a freeze_baton.
  *
  * @note The BDB backend doesn't implement this feature so most
  * callers should not call this function directly but should use the
- * higher level #svn_repos_freeze instead.
+ * higher level svn_repos_freeze() instead.
+ *
+ * @see svn_repos_freeze()
  *
  * @since New in 1.8.
  */
 svn_error_t *
 svn_fs_freeze(svn_fs_t *fs,
-              svn_error_t *(*freeze_body)(void *baton, apr_pool_t *pool),
-              void *baton,
+              svn_fs_freeze_func_t freeze_func,
+              void *freeze_baton,
               apr_pool_t *pool);
-              
 
 
 /** Subversion filesystems based on Berkeley DB.
@@ -1055,118 +1089,6 @@ svn_fs_change_txn_props(svn_fs_txn_t *txn,
 /** @} */
 
 
-/** Editors
- *
- * ### docco
- *
- * @defgroup svn_fs_editor Transaction editors
- * @{
- */
-
-/**
- * Create a new filesystem transaction, based on based on the youngest
- * revision of @a fs, and return its name @a *txn_name and an @a *editor
- * that can be used to make changes into it.
- *
- * @a flags determines transaction enforcement behaviors, and is composed
- * from the constants SVN_FS_TXN_* (#SVN_FS_TXN_CHECK_OOD etc.). It is a
- * property of the underlying transaction, and will not change if multiple
- * editors are used to refer to that transaction (see @a autocommit, below).
- * 
- * @note If you're building a txn for committing, you probably don't want
- * to call this directly.  Instead, call svn_repos__get_commit_ev2(), which
- * honors the repository's hook configurations.
- *
- * When svn_editor_complete() is called for @a editor, internal resources
- * will be cleaned and nothing more will happen. If you wish to commit the
- * transaction, call svn_fs_editor_commit() instead. It is illegal to call
- * both; the second call will return #SVN_ERR_FS_INCORRECT_EDITOR_COMPLETION.
- *
- * @see svn_fs_commit_txn()
- *
- * @since New in 1.8.
- */
-svn_error_t *
-svn_fs_editor_create(svn_editor_t **editor,
-                     const char **txn_name,
-                     svn_fs_t *fs,
-                     apr_uint32_t flags,
-                     svn_cancel_func_t cancel_func,
-                     void *cancel_baton,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool);
-
-
-/**
- * Like svn_fs_editor_create(), but open an existing transaction
- * @a txn_name and continue editing it.
- *
- * @since New in 1.8.
- */
-svn_error_t *
-svn_fs_editor_create_for(svn_editor_t **editor,
-                         svn_fs_t *fs,
-                         const char *txn_name,
-                         svn_cancel_func_t cancel_func,
-                         void *cancel_baton,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool);
-
-
-/**
- * Commit the transaction represented by @a editor.
- *
- * If the commit to the filesystem succeeds, then @a *revision will be set
- * to the resulting revision number. Note that further errors may occur,
- * as described below. If the commit process does not succeed, for whatever
- * reason, then @a *revision will be set to #SVN_INVALID_REVNUM.
- *
- * If a conflict occurs during the commit, then @a *conflict_path will
- * be set to a path that caused the conflict. #SVN_NO_ERROR will be returned.
- * Callers may want to construct an #SVN_ERR_FS_CONFLICT error with a
- * message that incorporates @a *conflict_path.
- *
- * If a non-conflict error occurs during the commit, then that error will
- * be returned.
- * As is standard with any Subversion API, @a revision, @a post_commit_err,
- * and @a conflict_path (the OUT parameters) have an indeterminate value if
- * an error is returned.
- *
- * If the commit completes (and a revision is returned in @a *revision), then
- * it is still possible for an error to occur during the cleanup process.
- * Any such error will be returned in @a *post_commit_err. The caller must
- * properly use or clear that error.
- *
- * If svn_editor_complete() has already been called on @a editor, then
- * #SVN_ERR_FS_INCORRECT_EDITOR_COMPLETION will be returned.
- *
- * @note After calling this function, @a editor will be marked as completed
- * and no further operations may be performed on it. The underlying
- * transaction will either be committed or aborted once this function is
- * called. It cannot be recovered for additional work.
- *
- * @a result_pool will be used to allocate space for @a conflict_path.
- * @a scratch_pool will be used for all temporary allocations.
- *
- * @note To summarize, there are three possible outcomes of this function:
- * successful commit (with or without an associated @a *post_commit_err);
- * failed commit due to a conflict (reported via @a *conflict_path); and
- * failed commit for some other reason (reported via the returned error.)
- *
- * @since New in 1.8.
- */
-svn_error_t *
-svn_fs_editor_commit(svn_revnum_t *revision,
-                     svn_error_t **post_commit_err,
-                     const char **conflict_path,
-                     svn_editor_t *editor,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool);
-
-
-/** @} */
-
-
 /** Roots.
  *
  * An #svn_fs_root_t object represents the root directory of some
@@ -1700,10 +1622,10 @@ svn_fs_closest_copy(svn_fs_root_t **root_p,
  * @a inherit indicates whether to retrieve explicit,
  * explicit-or-inherited, or only inherited mergeinfo.
  *
- * If @a adjust_inherited_mergeinfo is TRUE, then any inherited
+ * If @a adjust_inherited_mergeinfo is @c TRUE, then any inherited
  * mergeinfo returned in @a *catalog is normalized to represent the
- * inherited mergeinfo on the path doing the inheriting.  If
- * @a adjust_inherited_mergeinfo is FALSE, then any inherited
+ * inherited mergeinfo on the path which inherits it.  If
+ * @a adjust_inherited_mergeinfo is @c FALSE, then any inherited
  * mergeinfo is the raw explicit mergeinfo from the nearest parent
  * of the path with explicit mergeinfo, unadjusted for the path-wise
  * difference between the path and its parent.  This may include
@@ -1733,7 +1655,7 @@ svn_fs_get_mergeinfo2(svn_mergeinfo_catalog_t *catalog,
 
 /**
  * Same as svn_fs_get_mergeinfo2(), but with @a adjust_inherited_mergeinfo
- * set always set to TRUE and only one pool.
+ * set always set to @c TRUE and with only one pool.
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
@@ -1980,11 +1902,11 @@ svn_fs_file_contents(svn_stream_t **contents,
                      apr_pool_t *pool);
 
 /**
- * Callback function type that gets presented with a immutable non-NULL
- * @a contents of @a len bytes.  Further parameters may be passed through
- * in @a baton.
+ * Callback function type used with svn_fs_try_process_file_contents()
+ * that delivers the immutable, non-NULL @a contents of @a len bytes.
+ * @a baton is an implementation-specific closure.
  *
- * Allocations must be made in @a pool.
+ * Use @a scratch_pool for allocations.
  *
  * @since New in 1.8.
  */
@@ -1992,22 +1914,21 @@ typedef svn_error_t *
 (*svn_fs_process_contents_func_t)(const unsigned char *contents,
                                   apr_size_t len,
                                   void *baton,
-                                  apr_pool_t *pool);
+                                  apr_pool_t *scratch_pool);
 
-/** Attempts to efficiently provide the contents of the file @a path in
- * @a root.  If that succeeds, @a *success will be set to #TRUE and the
- * contents will be passed to the the @a processor along with the given
- * @a baton.  Allocations take place in @a pool.
+/** Efficiently deliver the contents of the file @a path in @a root
+ * via @a processor (with @a baton), setting @a *success to @c TRUE
+ * upon doing so.  Use @a pool for allocations.
  *
  * This function is intended to support zero copy data processing.  It may
  * not be implemented for all data backends or not applicable for certain
- * content.  In that case, @a *success will always be #FALSE.  Also, this
- * is a best-effort function which means there is no guarantee that e.g.
- * @a processor gets called at for any content.
+ * content.  In that case, @a *success will always be @c FALSE.  Also, this
+ * is a best-effort function which means that there is no guarantee that
+ * @a processor gets called at all for some content.
  *
  * @note @a processor is expected to be relatively short function with
  * at most O(content size) runtime.
- * 
+ *
  * @since New in 1.8.
  */
 svn_error_t *
@@ -2137,6 +2058,41 @@ svn_error_t *
 svn_fs_youngest_rev(svn_revnum_t *youngest_p,
                     svn_fs_t *fs,
                     apr_pool_t *pool);
+
+
+/**
+ * Return filesystem format information for @a fs.
+ *
+ * Set @a *fs_format to the filesystem format number of @a fs, which is
+ * an integer that increases when incompatible changes are made (such as
+ * by #svn_fs_upgrade).
+ *
+ * Set @a *supports_version to the version number of the minimum Subversion GA
+ * release that can read and write @a fs.
+ *
+ * @see svn_repos_info_format()
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_fs_info_format(int *fs_format,
+                   svn_version_t **supports_version,
+                   svn_fs_t *fs,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool);
+
+/**
+ * Return a list of admin-serviceable config files for @a fs.  @a *files
+ * will be set to an array containing paths as C strings.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_fs_info_config_files(apr_array_header_t **files,
+                         svn_fs_t *fs,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
 
 
 /** Provide filesystem @a fs the opportunity to compress storage relating to
@@ -2519,8 +2475,164 @@ svn_fs_pack(const char *db_path,
             apr_pool_t *pool);
 
 
+/**
+ * Perform backend-specific data consistency and correctness validations
+ * to the Subversion filesystem (mainly the meta-data) located in the
+ * directory @a path.  Use the backend-specific configuration @a fs_config
+ * when opening the filesystem.  @a NULL is valid for all backends.
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @a start and @a end define the (minimum) range of revisions to check.
+ * If @a start is #SVN_INVALID_REVNUM, it defaults to @c r0.  Likewise,
+ * @a end will default to the current youngest repository revision when
+ * given as #SVN_INVALID_REVNUM.  Since meta data checks may have to touch
+ * other revisions as well, you may receive notifications for revisions
+ * outside the specified range.   In fact, it is perfectly legal for a FS
+ * implementation to always check all revisions.
+ *
+ * Global invariants are only guaranteed to get verified when @a r0 has
+ * been included in the range of revisions to check.
+ *
+ * The optional @a notify_func callback is only a general feedback that
+ * the operation is still in process but may be called in random revisions
+ * order and more than once for the same revision, i.e. r2, r1, r2 would
+ * be a valid sequence.
+ *
+ * The optional @a cancel_func callback will be invoked as usual to allow
+ * the user to preempt this potentially lengthy operation.
+ *
+ * @note You probably don't want to use this directly.  Take a look at
+ * svn_repos_verify_fs2() instead, which does non-backend-specific
+ * verifications as well.
+ *
+ * @note To ensure a full verification using all tests and covering all
+ * revisions, you must call this function *and* #svn_fs_verify_rev.
+ *
+ * @note Implementors, please do tests that can be done efficiently for
+ * a single revision in #svn_fs_verify_root.  This function is meant for
+ * global checks or tests that require an expensive context setup.
+ *
+ * @see svn_repos_verify_fs2()
+ * @see svn_fs_verify_root()
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_verify(const char *path,
+              apr_hash_t *fs_config,
+              svn_revnum_t start,
+              svn_revnum_t end,
+              svn_fs_progress_notify_func_t notify_func,
+              void *notify_baton,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              apr_pool_t *scratch_pool);
+
+/**
+ * Perform backend-specific data consistency and correctness validations
+ * of @a root in the Subversion filesystem @a fs.  @a root is typically
+ * a revision root (see svn_fs_revision_root()), but may be a
+ * transaction root.  Use @a scratch_pool for temporary allocations.
+ *
+ * @note You probably don't want to use this directly.  Take a look at
+ * svn_repos_verify_fs2() instead, which does non-backend-specific
+ * verifications as well.
+ *
+ * @note To ensure a full verification using all available tests and
+ * covering all revisions, you must call both this function and
+ * #svn_fs_verify.
+ *
+ * @note Implementors, please perform tests that cannot be done
+ * efficiently for a single revision in #svn_fs_verify.  This function
+ * is intended for local checks that don't require an expensive context
+ * setup.
+ *
+ * @see svn_repos_verify_fs2()
+ * @see svn_fs_verify()
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_verify_root(svn_fs_root_t *root,
+                   apr_pool_t *scratch_pool);
+
 /** @} */
 
+/**
+ * @defgroup fs_info Filesystem information subsystem
+ * @{
+ */
+
+/**
+ * A structure that provides some information about a filesystem.
+ * Returned by svn_fs_info() for #SVN_FS_TYPE_FSFS filesystems.
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, users shouldn't allocate structures of this
+ * type, to preserve binary compatibility.
+ *
+ * @since New in 1.9.
+ */
+typedef struct svn_fs_fsfs_info_t {
+
+  /** Filesystem backend (#fs_type), i.e., the string #SVN_FS_TYPE_FSFS. */
+  const char *fs_type;
+
+  /** Shard size, or 0 if the filesystem is not currently sharded. */
+  int shard_size;
+
+  /** The smallest revision (as #svn_revnum_t) which is not in a pack file.
+   * @note Zero (0) if (but not iff) the format does not support packing. */
+  svn_revnum_t min_unpacked_rev;
+
+  /* ### TODO: information about fsfs.conf? rep-cache.db? write locks? */
+
+  /* If you add fields here, check whether you need to extend svn_fs_info()
+     or svn_fs_info_dup(). */
+} svn_fs_fsfs_info_t;
+
+/** @see svn_fs_info()
+ * @since New in 1.9. */
+typedef struct svn_fs_info_placeholder_t {
+  /** @see svn_fs_type() */
+  const char *fs_type;
+
+  /* Do not add new fields here, to maintain compatibility with the first
+     released version of svn_fs_fsfs_info_t. */
+} svn_fs_info_placeholder_t;
+
+/**
+ * Set @a *fs_info to a struct describing @a fs.  The type of the
+ * struct depends on the backend: for #SVN_FS_TYPE_FSFS, the struct will be
+ * of type #svn_fs_fsfs_info_t; otherwise, the struct is guaranteed to be
+ * (compatible with) #svn_fs_info_placeholder_t.
+ *
+ * @see #svn_fs_fsfs_info_t
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_fs_info(const svn_fs_info_placeholder_t **fs_info,
+            svn_fs_t *fs,
+            apr_pool_t *result_pool,
+            apr_pool_t *scratch_pool);
+
+/**
+ * Return a duplicate of @a info, allocated in @a pool. The returned struct
+ * will be of the same type as the passed-in struct, which itself must have
+ * been returned from svn_fs_info() or svn_fs_info_dup().  No part of the new
+ * structure will be shared with @a info (except static string constants).
+ *
+ * @see #svn_fs_info_placeholder_t, #svn_fs_fsfs_info_t
+ *
+ * @since New in 1.9.
+ */
+void *
+svn_fs_info_dup(const void *info,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool);
+
+/** @} */
 
 #ifdef __cplusplus
 }

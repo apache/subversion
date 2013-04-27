@@ -935,28 +935,28 @@ svn_error_t *svn_txdelta_send_stream(svn_stream_t *stream,
   while (1)
     {
       apr_size_t read_len = SVN__STREAM_CHUNK_SIZE;
-      
+
       SVN_ERR(svn_stream_read(stream, read_buf, &read_len));
       if (read_len == 0)
         break;
-      
+
       window_data.data = read_buf;
       window_data.len = read_len;
-      
+
       delta_op.action_code = svn_txdelta_new;
       delta_op.offset = 0;
       delta_op.length = read_len;
-      
+
       delta_window.tview_len = read_len;
       delta_window.num_ops = 1;
       delta_window.ops = &delta_op;
       delta_window.new_data = &window_data;
-      
+
       SVN_ERR(handler(&delta_window, handler_baton));
 
       if (digest)
         SVN_ERR(svn_checksum_update(md5_checksum_ctx, read_buf, read_len));
-      
+
       if (read_len < SVN__STREAM_CHUNK_SIZE)
         break;
     }
@@ -969,7 +969,7 @@ svn_error_t *svn_txdelta_send_stream(svn_stream_t *stream,
       SVN_ERR(svn_checksum_final(&md5_checksum, md5_checksum_ctx, pool));
       memcpy(digest, md5_checksum->digest, APR_MD5_DIGESTSIZE);
     }
-  
+
   return SVN_NO_ERROR;
 }
 

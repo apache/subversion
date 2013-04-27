@@ -360,7 +360,7 @@ deserialize_dir(void *buffer, hash_data_t *hash_data, apr_pool_t *pool)
       svn_fs_fs__id_deserialize(entry, (svn_fs_id_t **)&entry->id);
 
       /* add the entry to the hash */
-      apr_hash_set(result, entry->name, APR_HASH_KEY_STRING, entry);
+      svn_hash_sets(result, entry->name, entry);
     }
 
   /* return the now complete hash */
@@ -739,9 +739,12 @@ svn_fs_fs__serialize_node_revision(void **buffer,
   svn_stringbuf_t *serialized;
   node_revision_t *noderev = item;
 
-  /* create an (empty) serialization context with plenty of buffer space */
+  /* create an (empty) serialization context with plenty of (initial)
+   * buffer space. */
   svn_temp_serializer__context_t *context =
-      svn_temp_serializer__init(NULL, 0, 503, pool);
+      svn_temp_serializer__init(NULL, 0,
+                                1024 - SVN_TEMP_SERIALIZER__OVERHEAD,
+                                pool);
 
   /* serialize the noderev */
   svn_fs_fs__noderev_serialize(context, &noderev);
@@ -946,10 +949,7 @@ slowly_replace_dir_entry(void **data,
                                              *data,
                                              hash_data->len,
                                              pool));
-  apr_hash_set(dir,
-               replace_baton->name,
-               APR_HASH_KEY_STRING,
-               replace_baton->new_entry);
+  svn_hash_sets(dir, replace_baton->name, replace_baton->new_entry);
 
   return svn_fs_fs__serialize_dir_entries(data, data_len, dir, pool);
 }
@@ -1198,13 +1198,13 @@ typedef struct mergeinfo_data_t
 {
   /* number of paths in the hash */
   unsigned count;
-  
+
   /* COUNT keys (paths) */
   const char **keys;
-  
+
   /* COUNT keys lengths (strlen of path) */
   apr_ssize_t *key_lengths;
-  
+
   /* COUNT entries, each giving the number of ranges for the key */
   int *range_counts;
 
@@ -1256,7 +1256,7 @@ svn_fs_fs__serialize_mergeinfo(void **data,
       for (k = 0; k < ranges->nelts; ++k, ++i)
         merges.ranges[i] = *APR_ARRAY_IDX(ranges, k, svn_merge_range_t*);
     }
-  
+
   /* serialize it and all its elements */
   context = svn_temp_serializer__init(&merges,
                                       sizeof(merges),
@@ -1310,7 +1310,7 @@ svn_fs_fs__deserialize_mergeinfo(void **out,
   int k, n;
   mergeinfo_data_t *merges = (mergeinfo_data_t *)data;
   svn_mergeinfo_t mergeinfo;
-  
+
   /* de-serialize our auxiliary data structure */
   svn_temp_deserializer__resolve(merges, (void**)&merges->keys);
   svn_temp_deserializer__resolve(merges, (void**)&merges->key_lengths);
@@ -1327,7 +1327,7 @@ svn_fs_fs__deserialize_mergeinfo(void **out,
                                                sizeof(svn_merge_range_t*));
       for (k = 0; k < merges->range_counts[i]; ++k, ++n)
         APR_ARRAY_PUSH(ranges, svn_merge_range_t*) = &merges->ranges[n];
-      
+
       svn_temp_deserializer__resolve((void*)merges->keys,
                                      (void**)&merges->keys[i]);
       apr_hash_set(mergeinfo, merges->keys[i], merges->key_lengths[i], ranges);

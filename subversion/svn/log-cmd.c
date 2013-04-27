@@ -21,9 +21,6 @@
  * ====================================================================
  */
 
-#define APR_WANT_STRFUNC
-#define APR_WANT_STDIO
-#include <apr_want.h>
 #include <apr_fnmatch.h>
 
 #include "svn_client.h"
@@ -38,6 +35,8 @@
 #include "svn_cmdline.h"
 #include "svn_props.h"
 #include "svn_pools.h"
+
+#include "private/svn_cmdline_private.h"
 
 #include "cl.h"
 
@@ -129,13 +128,14 @@ display_diff(const svn_log_entry_t *log_entry,
                                &start_revision, &end_revision,
                                NULL,
                                depth,
-                               FALSE, /* ignore ancestry */
-                               TRUE, /* no diff deleted */
-                               FALSE, /* show copies as adds */
-                               FALSE, /* ignore content type */
-                               FALSE, /* ignore prop diff */
-                               FALSE, /* properties only */
-                               FALSE, /* use git diff format */
+                               FALSE /* ignore ancestry */,
+                               FALSE /* no diff added */,
+                               TRUE  /* no diff deleted */,
+                               FALSE /* show copies as adds */,
+                               FALSE /* ignore content type */,
+                               FALSE /* ignore prop diff */,
+                               FALSE /* properties only */,
+                               FALSE /* use git diff format */,
                                svn_cmdline_output_encoding(pool),
                                outstream,
                                errstream,
@@ -159,7 +159,7 @@ match_search_pattern(const char *search_pattern,
 {
   /* Match any substring containing the pattern, like UNIX 'grep' does. */
   const char *pattern = apr_psprintf(pool, "*%s*", search_pattern);
-  int flags = APR_FNM_CASE_BLIND;
+  int flags = 0;
 
   /* Does the author match the search pattern? */
   if (author && apr_fnmatch(pattern, author, flags) == APR_SUCCESS)
@@ -229,7 +229,7 @@ match_search_patterns(apr_array_header_t *search_patterns,
           const char *pattern;
 
           svn_pool_clear(iterpool);
-          
+
           pattern = APR_ARRAY_IDX(pattern_group, j, const char *);
           match = match_search_pattern(pattern, author, date, message,
                                        changed_paths, iterpool);
@@ -653,9 +653,9 @@ log_entry_receiver_xml(void *baton,
   if (log_entry->revprops && apr_hash_count(log_entry->revprops) > 0)
     {
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "revprops", NULL);
-      SVN_ERR(svn_cl__print_xml_prop_hash(&sb, log_entry->revprops,
-                                          FALSE, /* name_only */
-                                          FALSE, pool));
+      SVN_ERR(svn_cmdline__print_xml_prop_hash(&sb, log_entry->revprops,
+                                               FALSE, /* name_only */
+                                               FALSE, pool));
       svn_xml_make_close_tag(&sb, pool, "revprops");
     }
 

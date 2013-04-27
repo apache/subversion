@@ -45,6 +45,7 @@
 #include "svn_wc.h"
 
 #include "private/svn_skel.h"
+#include "private/svn_subr_private.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -164,10 +165,8 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
                                     apr_pool_t *pool)
 {
   int i;
-  unsigned int len;
   apr_array_header_t *externals = NULL;
   apr_array_header_t *lines = svn_cstring_split(desc, "\n\r", TRUE, pool);
-  apr_hash_t *duplicate_check = apr_hash_make(pool);
   const char *parent_directory_display = svn_path_is_url(parent_directory) ?
     parent_directory : svn_dirent_local_style(parent_directory, pool);
 
@@ -332,21 +331,6 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
             item->url = svn_dirent_canonicalize(item->url, pool);
         }
 
-      /* Has the same WC target path already been mentioned in this prop? */
-      len = apr_hash_count(duplicate_check);
-      apr_hash_set(duplicate_check, item->target_dir, APR_HASH_KEY_STRING, "");
-      if (len == apr_hash_count(duplicate_check))
-        {
-          /* Hashtable length is unchanged. This must be a duplicate. */
-          return svn_error_createf
-            (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
-             _("Invalid %s property on '%s': "
-               "target '%s' appears more than once"),
-             SVN_PROP_EXTERNALS,
-             parent_directory_display,
-             item->target_dir);
-        }
-
       if (externals)
         APR_ARRAY_PUSH(externals, svn_wc_external_item2_t *) = item;
     }
@@ -357,6 +341,53 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__externals_find_target_dups(apr_array_header_t **duplicate_targets,
+                                   apr_array_header_t *externals,
+                                   apr_pool_t *pool,
+                                   apr_pool_t *scratch_pool)
+{
+  int i;
+  unsigned int len;
+  unsigned int len2;
+  const char *target;
+  apr_hash_t *targets = apr_hash_make(scratch_pool);
+  apr_hash_t *targets2 = NULL;
+  *duplicate_targets = NULL;
+
+  for (i = 0; i < externals->nelts; i++)
+    {
+      target = APR_ARRAY_IDX(externals, i,
+                                         svn_wc_external_item2_t*)->target_dir;
+      len = apr_hash_count(targets);
+      svn_hash_sets(targets, target, "");
+      if (len == apr_hash_count(targets))
+        {
+          /* Hashtable length is unchanged. This must be a duplicate. */
+
+          /* Collapse multiple duplicates of the same target by using a second
+           * hash layer. */
+          if (! targets2)
+            targets2 = apr_hash_make(scratch_pool);
+          len2 = apr_hash_count(targets2);
+          svn_hash_sets(targets2, target, "");
+          if (len2 < apr_hash_count(targets2))
+            {
+              /* The second hash list just got bigger, i.e. this target has
+               * not been counted as duplicate before. */
+              if (! *duplicate_targets)
+                {
+                  *duplicate_targets = apr_array_make(
+                                    pool, 1, sizeof(svn_wc_external_item2_t*));
+                }
+              APR_ARRAY_PUSH((*duplicate_targets), const char *) = target;
+            }
+          /* Else, this same target has already been recorded as a duplicate,
+           * don't count it again. */
+        }
+    }
+  return SVN_NO_ERROR;
+}
 
 struct edit_baton
 {
@@ -382,6 +413,9 @@ struct edit_baton
   const char *recorded_repos_relpath;
   svn_revnum_t recorded_peg_revision;
   svn_revnum_t recorded_revision;
+
+  /* Introducing a new file external */
+  svn_boolean_t added;
 
   svn_wc_conflict_resolver_func2_t conflict_func;
   void *conflict_baton;
@@ -460,6 +494,7 @@ add_file(const char *path,
 
   *file_baton = eb;
   eb->original_revision = SVN_INVALID_REVNUM;
+  eb->added = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -473,7 +508,7 @@ open_file(const char *path,
           void **file_baton)
 {
   struct edit_baton *eb = parent_baton;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   if (strcmp(path, eb->name))
       return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                _("This editor can only update '%s'"),
@@ -485,11 +520,11 @@ open_file(const char *path,
                                    NULL, NULL, NULL, &eb->changed_rev,
                                    &eb->changed_date, &eb->changed_author,
                                    NULL, &eb->original_checksum, NULL, NULL,
-                                   &eb->had_props, NULL,
+                                   &eb->had_props, NULL, NULL,
                                    eb->db, eb->local_abspath,
                                    eb->pool, file_pool));
 
-  if (kind != svn_kind_file)
+  if (kind != svn_node_file)
     return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                                _("Node '%s' is no existing file external"),
                                svn_dirent_local_style(eb->local_abspath,
@@ -586,6 +621,7 @@ close_file(void *file_baton,
 
   eb->file_closed = TRUE; /* We bump the revision here */
 
+  /* Check the checksum, if provided */
   if (expected_md5_digest)
     {
       svn_checksum_t *expected_md5_checksum;
@@ -628,7 +664,6 @@ close_file(void *file_baton,
     }
 
   /* Merge the changes */
-
   {
     svn_skel_t *all_work_items = NULL;
     svn_skel_t *conflict_skel = NULL;
@@ -650,12 +685,11 @@ close_file(void *file_baton,
         new_checksum = eb->original_checksum;
 
         if (eb->had_props)
-          SVN_ERR(svn_wc__db_base_get_props(&base_props, eb->db,
-                                            eb->local_abspath,
-                                            pool, pool));
+          SVN_ERR(svn_wc__db_base_get_props(
+                    &base_props, eb->db, eb->local_abspath, pool, pool));
 
-        SVN_ERR(svn_wc__db_read_props(&actual_props, eb->db,
-                                      eb->local_abspath, pool, pool));
+        SVN_ERR(svn_wc__db_read_props(
+                  &actual_props, eb->db, eb->local_abspath, pool, pool));
       }
 
     if (!base_props)
@@ -667,6 +701,7 @@ close_file(void *file_baton,
     if (eb->new_sha1_checksum)
       new_checksum = eb->new_sha1_checksum;
 
+    /* Merge the properties */
     {
       apr_array_header_t *entry_prop_changes;
       apr_array_header_t *dav_prop_changes;
@@ -677,6 +712,7 @@ close_file(void *file_baton,
                                    &dav_prop_changes, &regular_prop_changes,
                                    pool));
 
+      /* Read the entry-prop changes to update the last-changed info. */
       for (i = 0; i < entry_prop_changes->nelts; i++)
         {
           const svn_prop_t *prop = &APR_ARRAY_IDX(entry_prop_changes, i,
@@ -698,24 +734,25 @@ close_file(void *file_baton,
                                           pool));
         }
 
+      /* Store the DAV-prop (aka WC-prop) changes.  (This treats a list
+       * of changes as a list of new props, but we only use this when
+       * adding a new file and it's equivalent in that case.) */
       if (dav_prop_changes->nelts > 0)
         new_dav_props = svn_prop_array_to_hash(dav_prop_changes, pool);
 
+      /* Merge the regular prop changes. */
       if (regular_prop_changes->nelts > 0)
         {
+          new_pristine_props = svn_prop__patch(base_props, regular_prop_changes,
+                                               pool);
           SVN_ERR(svn_wc__merge_props(&conflict_skel,
                                       &prop_state,
-                                      &new_pristine_props,
                                       &new_actual_props,
                                       eb->db, eb->local_abspath,
-                                      svn_kind_file,
                                       NULL /* server_baseprops*/,
                                       base_props,
                                       actual_props,
                                       regular_prop_changes,
-                                      TRUE /* base_merge */,
-                                      FALSE /* dry_run */,
-                                      eb->cancel_func, eb->cancel_baton,
                                       pool, pool));
         }
       else
@@ -725,6 +762,7 @@ close_file(void *file_baton,
         }
     }
 
+    /* Merge the text */
     if (eb->new_sha1_checksum)
       {
         svn_node_kind_t disk_kind;
@@ -739,7 +777,8 @@ close_file(void *file_baton,
             install_pristine = TRUE;
             content_state = svn_wc_notify_state_changed;
           }
-        else if (disk_kind != svn_node_file)
+        else if (disk_kind != svn_node_file
+                 || (eb->added && disk_kind == svn_node_file))
           {
             /* The node is obstructed; we just change the DB */
             obstructed = TRUE;
@@ -759,11 +798,12 @@ close_file(void *file_baton,
               }
             else
               {
-                enum svn_wc_merge_outcome_t merge_outcome;
+                svn_boolean_t found_text_conflict;
+
                 /* Ok, we have to do some work to merge a local change */
                 SVN_ERR(svn_wc__perform_file_merge(&work_item,
                                                    &conflict_skel,
-                                                   &merge_outcome,
+                                                   &found_text_conflict,
                                                    eb->db,
                                                    eb->local_abspath,
                                                    eb->wri_abspath,
@@ -782,7 +822,7 @@ close_file(void *file_baton,
                 all_work_items = svn_wc__wq_merge(all_work_items, work_item,
                                                   pool);
 
-                if (merge_outcome == svn_wc_merge_conflict)
+                if (found_text_conflict)
                   content_state = svn_wc_notify_state_conflicted;
                 else
                   content_state = svn_wc_notify_state_merged;
@@ -805,6 +845,7 @@ close_file(void *file_baton,
         /* ### Retranslate on magic property changes, etc. */
       }
 
+    /* Generate a conflict description, if needed */
     if (conflict_skel)
       {
         SVN_ERR(svn_wc__conflict_skel_set_op_switch(
@@ -816,18 +857,23 @@ close_file(void *file_baton,
                                     eb->original_revision,
                                     svn_node_file,
                                     pool),
+                            svn_wc_conflict_version_create2(
+                                    eb->repos_root_url,
+                                    eb->repos_uuid,
+                                    repos_relpath,
+                                    *eb->target_revision,
+                                    svn_node_file,
+                                    pool),
                             pool, pool));
-
-
         SVN_ERR(svn_wc__conflict_create_markers(&work_item,
                                                 eb->db, eb->local_abspath,
                                                 conflict_skel,
                                                 pool, pool));
-
         all_work_items = svn_wc__wq_merge(all_work_items, work_item,
                                           pool);
       }
 
+    /* Install the file in the DB */
     SVN_ERR(svn_wc__db_external_add_file(
                         eb->db,
                         eb->local_abspath,
@@ -859,16 +905,18 @@ close_file(void *file_baton,
        clear the iprops so as not to set them again in close_edit. */
     eb->iprops = NULL;
 
+    /* Run the work queue to complete the installation */
     SVN_ERR(svn_wc__wq_run(eb->db, eb->wri_abspath,
                            eb->cancel_func, eb->cancel_baton, pool));
   }
 
+  /* Notify */
   if (eb->notify_func)
     {
       svn_wc_notify_action_t action;
       svn_wc_notify_t *notify;
 
-      if (SVN_IS_VALID_REVNUM(eb->original_revision))
+      if (!eb->added)
         action = obstructed ? svn_wc_notify_update_shadowed_update
                             : svn_wc_notify_update_update;
       else
@@ -886,7 +934,6 @@ close_file(void *file_baton,
 
       eb->notify_func(eb->notify_baton, notify, pool);
     }
-
 
   return SVN_NO_ERROR;
 }
@@ -906,8 +953,7 @@ close_edit(void *edit_baton,
       if (eb->iprops)
         {
           wcroot_iprops = apr_hash_make(pool);
-          apr_hash_set(wcroot_iprops, eb->local_abspath, APR_HASH_KEY_STRING,
-                       eb->iprops);
+          svn_hash_sets(wcroot_iprops, eb->local_abspath, eb->iprops);
         }
 
       /* The node wasn't updated, so we just have to bump its revision */
@@ -918,6 +964,8 @@ close_edit(void *edit_baton,
                                                        *eb->target_revision,
                                                        apr_hash_make(pool),
                                                        wcroot_iprops,
+                                                       eb->notify_func,
+                                                       eb->notify_baton,
                                                        pool));
     }
 
@@ -1031,7 +1079,7 @@ svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
 {
   svn_wc__db_t *db = wc_ctx->db;
   svn_error_t *err;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_wc__db_lock_t *lock;
   svn_revnum_t revision;
   const char *repos_root_url;
@@ -1041,12 +1089,12 @@ svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
   err = svn_wc__db_base_get_info(NULL, &kind, &revision,
                                  &repos_relpath, &repos_root_url, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, &lock,
-                                 NULL, &update_root,
+                                 NULL, NULL, &update_root,
                                  db, local_abspath,
                                  scratch_pool, scratch_pool);
 
   if (err
-      || kind == svn_kind_dir
+      || kind == svn_node_dir
       || !update_root)
     {
       if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
@@ -1130,7 +1178,7 @@ svn_wc__read_external_info(svn_node_kind_t *external_kind,
 {
   const char *repos_root_url;
   svn_wc__db_status_t status;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_error_t *err;
 
   err = svn_wc__db_external_read(&status, &kind, defining_abspath,
@@ -1172,11 +1220,11 @@ svn_wc__read_external_info(svn_node_kind_t *external_kind,
       else
         switch(kind)
           {
-            case svn_kind_file:
-            case svn_kind_symlink:
+            case svn_node_file:
+            case svn_node_symlink:
               *external_kind = svn_node_file;
               break;
-            case svn_kind_dir:
+            case svn_node_dir:
               *external_kind = svn_node_dir;
               break;
             default:
@@ -1208,7 +1256,7 @@ is_external_rolled_out(svn_boolean_t *is_rolled_out,
 
   err = svn_wc__db_base_get_info(NULL, NULL, NULL, &repos_relpath,
                                  &repos_root_url, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  wc_ctx->db, xinfo->local_abspath,
                                  scratch_pool, scratch_pool);
 
@@ -1261,7 +1309,7 @@ svn_wc__committable_externals_below(apr_array_header_t **externals,
 
       /* Discard dirs for svn_depth_files (s.a.). */
       if (depth == svn_depth_files
-          && xinfo->kind == svn_kind_dir)
+          && xinfo->kind == svn_node_dir)
         continue;
 
       svn_pool_clear(iterpool);
@@ -1342,7 +1390,7 @@ svn_wc__external_remove(svn_wc_context_t *wc_ctx,
                         apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
 
   SVN_ERR(svn_wc__db_external_read(&status, &kind, NULL, NULL, NULL, NULL,
                                    NULL, NULL,
@@ -1355,7 +1403,7 @@ svn_wc__external_remove(svn_wc_context_t *wc_ctx,
   if (declaration_only)
     return SVN_NO_ERROR;
 
-  if (kind == svn_kind_dir)
+  if (kind == svn_node_dir)
     SVN_ERR(svn_wc_remove_from_revision_control2(wc_ctx, local_abspath,
                                                  TRUE, TRUE,
                                                  cancel_func, cancel_baton,
@@ -1363,7 +1411,9 @@ svn_wc__external_remove(svn_wc_context_t *wc_ctx,
   else
     {
       SVN_ERR(svn_wc__db_base_remove(wc_ctx->db, local_abspath,
-                                     FALSE, SVN_INVALID_REVNUM,
+                                     FALSE /* keep_as_working */,
+                                     TRUE /* queue_deletes */,
+                                     SVN_INVALID_REVNUM,
                                      NULL, NULL, scratch_pool));
       SVN_ERR(svn_wc__wq_run(wc_ctx->db, local_abspath,
                              cancel_func, cancel_baton,
@@ -1411,8 +1461,7 @@ svn_wc__externals_gather_definitions(apr_hash_t **externals,
         }
 
       if (value)
-        apr_hash_set(*externals, local_abspath, APR_HASH_KEY_STRING,
-                     value->data);
+        svn_hash_sets(*externals, local_abspath, value->data);
 
       if (value && depths)
         {
@@ -1427,8 +1476,7 @@ svn_wc__externals_gather_definitions(apr_hash_t **externals,
                                        wc_ctx->db, local_abspath,
                                        scratch_pool, scratch_pool));
 
-          apr_hash_set(*depths, local_abspath, APR_HASH_KEY_STRING,
-                       svn_depth_to_word(node_depth));
+          svn_hash_sets(*depths, local_abspath, svn_depth_to_word(node_depth));
         }
 
       return SVN_NO_ERROR;

@@ -35,6 +35,7 @@
 #include "InputStream.h"
 #include "MessageReceiver.h"
 #include "ReposNotifyCallback.h"
+#include "ReposFreezeAction.h"
 #include "StringArray.h"
 #include "File.h"
 
@@ -51,8 +52,11 @@ class SVNRepos : public SVNBase
                   bool usePostRevPropChangeHook);
   void rmtxns(File &path, StringArray &transactions);
   jlong recover(File &path, ReposNotifyCallback *notifyCallback);
+  void freeze(jobjectArray jpaths, ReposFreezeAction* action);
   void lstxns(File &path, MessageReceiver &messageReceiver);
-  void load(File &path, InputStream &dataIn, bool ignoreUUID, bool forceUUID,
+  void load(File &path, InputStream &dataIn,
+            Revision &revsionStart, Revision &revisionEnd,
+            bool ignoreUUID, bool forceUUID,
             bool usePreCommitHook, bool usePostCommitHook,
             const char *relativePath, ReposNotifyCallback *notifyCallback);
   void listUnusedDBLogs(File &path,

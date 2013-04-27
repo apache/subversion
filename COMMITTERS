@@ -96,6 +96,7 @@ Commit access for specific areas:
     jrvernooij   Jelmer Vernooij <jelmer@samba.org>          (Python bindings)
           sage   Sage LaTorra <sagelt@gmail.com>             (Ctypes-Python b.)
           vmpn   Vladimir Berezniker <vmpn@hitechman.com>    (JavaHL bindings)
+       rschupp   Roderich Schupp <roderich.schupp@gmail.com> (Swig bindings)
 
   Packages:
 
@@ -131,7 +132,7 @@ Commit access for specific areas:
           nori   Kobayashi Noritada <nori1@dolphin.c.u-tokyo.ac.jp> (Ruby tools,
                                                               po: ja) [EMAIL IS
                                                               BOUNCING]
-            mf   Martin Furter <mf@rola.ch>                  (svnmirror.sh
+            mf   Martin Furter <mf@apache.org>               (svnmirror.sh
                                                           svn-backup-dumps.py)
        adejong   Arthur de Jong <arthur@ch.tudelft.nl>       (svn2cl)
       wsanchez   Wilfredo Sánchez <wsanchez@wsanchez.net>    (various contrib)
@@ -157,6 +158,7 @@ Commit access for specific areas:
       artagnon   Ramkumar Ramachandra <artagnon@gmail.com>   (svnrdump, svntest)
          arwin   Arwin Arni <arwin@collab.net>               (svn-bisect)
           joes   Joe Schaefer <joe_schaefer@yahoo.com>       (svnpubsub)
+      prabhugs   Prabhu Gnana Sundar <prabhugs@collab.net>   (verify-keep-going)
 
 
   Translation of message files:

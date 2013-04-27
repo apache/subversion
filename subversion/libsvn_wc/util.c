@@ -542,7 +542,7 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
 
 
 svn_error_t *
-svn_wc__fetch_kind_func(svn_kind_t *kind,
+svn_wc__fetch_kind_func(svn_node_kind_t *kind,
                         void *baton,
                         const char *path,
                         svn_revnum_t base_revision,
@@ -554,6 +554,7 @@ svn_wc__fetch_kind_func(svn_kind_t *kind,
 
   SVN_ERR(svn_wc__db_read_kind(kind, sfb->db, local_abspath,
                                FALSE /* allow_missing */,
+                               TRUE /* show_deleted */,
                                FALSE /* show_hidden */,
                                scratch_pool));
 
@@ -610,8 +611,9 @@ svn_wc__fetch_base_func(const char **filename,
 
   err = svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, &checksum,
-                                 NULL, NULL, NULL, NULL, sfb->db,
-                                 local_abspath, scratch_pool, scratch_pool);
+                                 NULL, NULL, NULL, NULL, NULL,
+                                 sfb->db, local_abspath,
+                                 scratch_pool, scratch_pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
       svn_error_clear(err);

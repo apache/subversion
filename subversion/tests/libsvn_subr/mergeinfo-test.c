@@ -28,6 +28,7 @@
 
 #define SVN_DEPRECATED
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_types.h"
 #include "svn_mergeinfo.h"
@@ -1117,7 +1118,7 @@ test_rangelist_to_string(apr_pool_t *pool)
 
   SVN_ERR(svn_rangelist_to_string(&output, result, pool));
 
-  if (svn_string_compare(expected, output) != TRUE)
+  if (!svn_string_compare(expected, output))
     return fail(pool, "Rangelist string not what we expected");
 
   return SVN_NO_ERROR;
@@ -1134,7 +1135,7 @@ test_mergeinfo_to_string(apr_pool_t *pool)
 
   SVN_ERR(svn_mergeinfo_to_string(&output, info1, pool));
 
-  if (svn_string_compare(expected, output) != TRUE)
+  if (!svn_string_compare(expected, output))
     return fail(pool, "Mergeinfo string not what we expected");
 
   /* Manually construct some mergeinfo with relative path
@@ -1150,7 +1151,7 @@ test_mergeinfo_to_string(apr_pool_t *pool)
                apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING));
   SVN_ERR(svn_mergeinfo_to_string(&output, info2, pool));
 
-  if (svn_string_compare(expected, output) != TRUE)
+  if (!svn_string_compare(expected, output))
     return fail(pool, "Mergeinfo string not what we expected");
 
   return SVN_NO_ERROR;
@@ -1702,7 +1703,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "turning rangelist back into a string"),
     SVN_TEST_PASS2(test_mergeinfo_to_string,
                    "turning mergeinfo back into a string"),
-    SVN_TEST_XFAIL2(test_rangelist_merge,
+    SVN_TEST_PASS2(test_rangelist_merge,
                    "merge of rangelists"),
     SVN_TEST_PASS2(test_rangelist_diff,
                    "diff of rangelists"),

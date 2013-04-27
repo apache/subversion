@@ -91,7 +91,7 @@ dav_svn__post_create_txn_with_props(const dav_resource *resource,
       return dav_svn__convert_err(err, HTTP_BAD_REQUEST,
                                   "Malformatted request skel", resource->pool);
     }
-  
+
   /* Create a Subversion repository transaction based on HEAD. */
   if ((derr = dav_svn__create_txn(resource->info->repos, &txn_name,
                                   revprops, resource->pool)))

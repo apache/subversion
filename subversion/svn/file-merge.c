@@ -37,6 +37,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_utf_private.h"
+#include "private/svn_cmdline_private.h"
 #include "private/svn_dep_compat.h"
 
 #if APR_HAVE_SYS_IOCTL_H
@@ -56,7 +57,7 @@ struct file_merge_baton {
   apr_file_t *original_file;
   apr_file_t *modified_file;
   apr_file_t *latest_file;
-  
+
   /* Counters to keep track of the current line in each file. */
   svn_linenum_t current_line_original;
   svn_linenum_t current_line_modified;
@@ -306,7 +307,7 @@ static int
 get_term_width(void)
 {
   char *columns_env;
-#ifdef TIOCGWINSZ	
+#ifdef TIOCGWINSZ
   int fd;
 
   fd = open("/dev/tty", O_RDONLY, 0);
@@ -366,12 +367,12 @@ prepare_line_for_display(const char *line, apr_pool_t *pool)
 {
   svn_stringbuf_t *buf = svn_stringbuf_create(line, pool);
   size_t width;
-  int line_width = LINE_DISPLAY_WIDTH;
+  size_t line_width = LINE_DISPLAY_WIDTH;
   apr_pool_t *iterpool;
 
   /* Trim EOL. */
   if (buf->len >= 2 &&
-      buf->data[buf->len - 2] == '\r' && 
+      buf->data[buf->len - 2] == '\r' &&
       buf->data[buf->len - 1] == '\n')
     svn_stringbuf_chop(buf, 2);
   else if (buf->len >= 1 &&
@@ -491,8 +492,8 @@ edit_chunk(apr_array_header_t **merged_chunk,
     }
   SVN_ERR(svn_io_file_flush_to_disk(temp_file, scratch_pool));
 
-  err = svn_cl__edit_file_externally(temp_file_name, editor_cmd,
-                                     config, scratch_pool);
+  err = svn_cmdline__edit_file_externally(temp_file_name, editor_cmd,
+                                          config, scratch_pool);
   if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR))
     {
       svn_error_t *root_err = svn_error_root_cause(err);
@@ -590,7 +591,7 @@ merge_chunks(apr_array_header_t **merged_chunk,
                                                   : chunk2->nelts;
   *abort_merge = FALSE;
 
-  /* 
+  /*
    * Prepare the selection prompt.
    */
 
@@ -644,7 +645,7 @@ merge_chunks(apr_array_header_t **merged_chunk,
         }
       else
         line2 = prepare_line_for_display("", iterpool);
-        
+
       prompt_line = apr_psprintf(iterpool, "%s|%s\n", line1, line2);
 
       svn_stringbuf_appendcstr(prompt, prompt_line);
@@ -861,13 +862,13 @@ svn_cl__merge_file(const char *base_path,
                                    scratch_pool)));
 
   SVN_ERR(svn_io_file_open(&original_file, base_path,
-                           APR_READ|APR_BUFFERED|APR_BINARY,
+                           APR_READ | APR_BUFFERED,
                            APR_OS_DEFAULT, scratch_pool));
   SVN_ERR(svn_io_file_open(&modified_file, their_path,
-                           APR_READ|APR_BUFFERED|APR_BINARY,
+                           APR_READ | APR_BUFFERED,
                            APR_OS_DEFAULT, scratch_pool));
   SVN_ERR(svn_io_file_open(&latest_file, my_path,
-                           APR_READ|APR_BUFFERED|APR_BINARY,
+                           APR_READ | APR_BUFFERED,
                            APR_OS_DEFAULT, scratch_pool));
   SVN_ERR(svn_io_open_unique_file3(&merged_file, &merged_file_name,
                                    NULL, svn_io_file_del_none,
@@ -909,7 +910,7 @@ svn_cl__merge_file(const char *base_path,
                 svn_dirent_local_style(svn_dirent_skip_ancestor(path_prefix,
                                                                 wc_path),
                                        scratch_pool)));
-                
+
       return SVN_NO_ERROR;
     }
 
@@ -949,6 +950,6 @@ svn_cl__merge_file(const char *base_path,
               svn_dirent_local_style(svn_dirent_skip_ancestor(path_prefix,
                                                               wc_path),
                                      scratch_pool)));
-                
+
   return SVN_NO_ERROR;
 }

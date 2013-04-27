@@ -27,11 +27,11 @@
 #include "svn_pools.h"
 #include "svn_ra.h"
 #include "svn_delta.h"
-#include "svn_editor.h"
 #include "svn_dirent_uri.h"
 
 #include "private/svn_ra_private.h"
 #include "private/svn_delta_private.h"
+#include "private/svn_editor.h"
 
 #include "ra_loader.h"
 #include "svn_private_config.h"
@@ -107,7 +107,7 @@ fetch_base(const char **filename,
 
   *filename = apr_pstrdup(result_pool, tmp_filename);
 
- 
+
 
   return SVN_NO_ERROR;
 }

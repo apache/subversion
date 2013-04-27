@@ -199,7 +199,7 @@ prefix_mergeinfo_paths(svn_string_t **mergeinfo_val,
       path = svn_fspath__canonicalize(svn_relpath_join(parent_dir,
                                                        merge_source, pool),
                                       pool);
-      apr_hash_set(prefixed_mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
+      svn_hash_sets(prefixed_mergeinfo, path, rangelist);
     }
   return svn_mergeinfo_to_string(mergeinfo_val, prefixed_mergeinfo, pool);
 }
@@ -465,22 +465,20 @@ fetch_props_func(apr_hash_t **props,
 }
 
 static svn_error_t *
-fetch_kind_func(svn_kind_t *kind,
+fetch_kind_func(svn_node_kind_t *kind,
                 void *baton,
                 const char *path,
                 svn_revnum_t base_revision,
                 apr_pool_t *scratch_pool)
 {
   struct revision_baton *rb = baton;
-  svn_node_kind_t node_kind;
 
   if (! SVN_IS_VALID_REVNUM(base_revision))
     base_revision = rb->rev - 1;
 
   SVN_ERR(svn_ra_check_path(rb->pb->aux_session, path, base_revision,
-                            &node_kind, scratch_pool));
+                            kind, scratch_pool));
 
-  *kind = svn__kind_from_node_kind(node_kind, FALSE);
   return SVN_NO_ERROR;
 }
 
@@ -501,7 +499,8 @@ get_shim_callbacks(struct revision_baton *rb,
 
 /* Acquire a lock (of sorts) on the repository associated with the
  * given RA SESSION. This lock is just a revprop change attempt in a
- * time-delay loop. This function is duplicated by svnsync in main.c.
+ * time-delay loop. This function is duplicated by svnsync in
+ * svnsync/svnsync.c
  *
  * ### TODO: Make this function more generic and
  * expose it through a header for use by other Subversion
@@ -636,10 +635,8 @@ new_node_record(void **node_baton,
          commit_editor. We'll set them separately using the RA API
          after closing the editor (see close_revision). */
 
-      apr_hash_set(rb->revprop_table, SVN_PROP_REVISION_AUTHOR,
-                   APR_HASH_KEY_STRING, NULL);
-      apr_hash_set(rb->revprop_table, SVN_PROP_REVISION_DATE,
-                   APR_HASH_KEY_STRING, NULL);
+      svn_hash_sets(rb->revprop_table, SVN_PROP_REVISION_AUTHOR, NULL);
+      svn_hash_sets(rb->revprop_table, SVN_PROP_REVISION_DATE, NULL);
 
       SVN_ERR(svn_ra__register_editor_shim_callbacks(rb->pb->session,
                                     get_shim_callbacks(rb, rb->pool)));
@@ -855,12 +852,15 @@ set_revision_property(void *baton,
 {
   struct revision_baton *rb = baton;
 
+  SVN_ERR(svn_rdump__normalize_prop(name, &value, rb->pool));
+
   SVN_ERR(svn_repos__validate_prop(name, value, rb->pool));
 
   if (rb->rev > 0)
     {
-      apr_hash_set(rb->revprop_table, apr_pstrdup(rb->pool, name),
-                   APR_HASH_KEY_STRING, svn_string_dup(value, rb->pool));
+      svn_hash_sets(rb->revprop_table,
+                    apr_pstrdup(rb->pool, name),
+                    svn_string_dup(value, rb->pool));
     }
   else if (rb->rev_offset == -1)
     {
@@ -933,6 +933,8 @@ set_node_property(void *baton,
           value = mergeinfo_val;
         }
     }
+
+  SVN_ERR(svn_rdump__normalize_prop(name, &value, pool));
 
   SVN_ERR(svn_repos__validate_prop(name, value, pool));
 
