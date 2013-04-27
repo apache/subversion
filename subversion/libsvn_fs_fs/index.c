@@ -1931,19 +1931,21 @@ p2l_page_info_func(void **out,
  * index page for the rev / pack file offset BATON->OFFSET.
  * 
  * To maximize efficiency, use or return the data stream in *STREAM.
+ * If *STREAM is yet to be constructed, do so in STREAM_POOL.
  * Use POOL for allocations.
  */
 static svn_error_t *
 get_p2l_page_info(p2l_page_info_baton_t *baton,
                   packed_number_stream_t **stream,
                   svn_fs_t *fs,
+                  apr_pool_t *stream_pool,
                   apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_uint64_t value;
   apr_size_t i;
   apr_off_t offset;
-  p2l_header_t *result = apr_pcalloc(pool, sizeof(*result));
+  p2l_header_t *result;
   svn_boolean_t is_cached = FALSE;
   void *dummy = NULL;
 
@@ -1962,10 +1964,13 @@ get_p2l_page_info(p2l_page_info_baton_t *baton,
   if (*stream == NULL)
     SVN_ERR(packed_stream_open(stream,
                                path_p2l_index(fs, baton->revision, pool),
-                               ffd->block_size, pool));
+                               ffd->block_size, stream_pool));
   else
     packed_stream_seek(*stream, 0);
 
+  /* allocate result data structure */
+  result = apr_pcalloc(pool, sizeof(*result));
+  
   /* read table sizes and allocate page array */
   SVN_ERR(packed_stream_get(&value, *stream));
   result->first_revision = (svn_revnum_t)value;
@@ -2057,7 +2062,8 @@ read_entry(packed_number_stream_t *stream,
  * can be found in the index page beginning at START_OFFSET with the next
  * page beginning at NEXT_OFFSET.  Return the relevant index entries in
  * *ENTRIES.  To maximize efficiency, use or return the data stream in
- * STREAM.  Use POOL for allocations.
+ * STREAM.  If the latter is yet to be constructed, do so in STREAM_POOL.
+ * Use POOL for other allocations.
  */
 static svn_error_t *
 get_p2l_page(apr_array_header_t **entries,
@@ -2068,6 +2074,7 @@ get_p2l_page(apr_array_header_t **entries,
              apr_off_t next_offset,
              apr_off_t page_start,
              apr_uint64_t page_size,
+             apr_pool_t *stream_pool,
              apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -2081,7 +2088,7 @@ get_p2l_page(apr_array_header_t **entries,
   if (*stream == NULL)
     SVN_ERR(packed_stream_open(stream,
                                path_p2l_index(fs, start_revision, pool),
-                               ffd->block_size, pool));
+                               ffd->block_size, stream_pool));
   packed_stream_seek(*stream, start_offset);
 
   /* read rev file offset of the first page entry (all page entries will
@@ -2114,28 +2121,35 @@ get_p2l_page(apr_array_header_t **entries,
 }
 
 /* If it cannot be found in FS's caches, read the p2l index page selected
- * by BATON->OFFSET from STREAM.  Don't read it, if it precedes MIN_OFFSET.
+ * by BATON->OFFSET from *STREAM.  If the latter is yet to be constructed,
+ * do so in STREAM_POOL.  Don't read the page if it precedes MIN_OFFSET.
  * Set *END to TRUE if the caller should stop refeching.
  *
  * *BATON will be updated with the selected page's info and SCRATCH_POOL
- * will be used for temporary allocations.
+ * will be used for temporary allocations.  If the data is alread in the
+ * cache, descrease *LEAKING_BUCKET and increase it otherwise.  With that
+ * pattern we will still read all pages from the block even if some of
+ * them survived in the cached.
  */
 static svn_error_t *
 prefetch_p2l_page(svn_boolean_t *end,
+                  int *leaking_bucket,
                   svn_fs_t *fs,
-                  packed_number_stream_t *stream,
+                  packed_number_stream_t **stream,
                   p2l_page_info_baton_t *baton,
                   apr_off_t min_offset,
+                  apr_pool_t *stream_pool,
                   apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
+  svn_boolean_t already_cached;
   apr_array_header_t *page;
   svn_fs_fs__page_cache_key_t key = { 0 };
 
   /* fetch the page info */
   *end = FALSE;
   baton->revision = baton->first_revision;
-  SVN_ERR(get_p2l_page_info(baton, &stream, fs, scratch_pool));
+  SVN_ERR(get_p2l_page_info(baton, stream, fs, stream_pool, scratch_pool));
   if (baton->start_offset < min_offset)
     {
       /* page outside limits -> stop prefetching */
@@ -2147,21 +2161,30 @@ prefetch_p2l_page(svn_boolean_t *end,
   key.revision = baton->first_revision;
   key.is_packed = is_packed_rev(fs, baton->first_revision);
   key.page = baton->page_no;
-  SVN_ERR(svn_cache__has_key(end, ffd->p2l_page_cache,
+  SVN_ERR(svn_cache__has_key(&already_cached, ffd->p2l_page_cache,
                              &key, scratch_pool));
-  if (*end)
+
+  /* yes, already cached */
+  if (already_cached)
     {
-      /* yes, already cached -> stop prefetching */
+      /* stop prefetching if most pages are already cached. */
+      if (!--*leaking_bucket)
+        *end = TRUE;
+
       return SVN_NO_ERROR;
     }
 
+  ++*leaking_bucket;
+
   /* read from disk */
-  SVN_ERR(get_p2l_page(&page, &stream, fs,
+  SVN_ERR(get_p2l_page(&page, stream, fs,
                        baton->first_revision,
                        baton->start_offset,
                        baton->next_offset,
                        baton->page_start,
-                       baton->page_size, scratch_pool));
+                       baton->page_size,
+                       stream_pool,
+                       scratch_pool));
 
   /* and put it into our cache */
   SVN_ERR(svn_cache__set(ffd->p2l_page_cache, &key, page, scratch_pool));
@@ -2186,7 +2209,7 @@ svn_fs_fs__p2l_index_lookup(apr_array_header_t **entries,
    * contents at pack / rev file position OFFSET. */
   page_info.offset = offset;
   page_info.revision = revision;
-  SVN_ERR(get_p2l_page_info(&page_info, &stream, fs, pool));
+  SVN_ERR(get_p2l_page_info(&page_info, &stream, fs, pool, pool));
 
   /* if the offset refers to a non-existent page, bail out */
   if (page_info.page_count <= page_info.page_no)
@@ -2212,6 +2235,30 @@ svn_fs_fs__p2l_index_lookup(apr_array_header_t **entries,
       svn_boolean_t end;
       apr_pool_t *iterpool = svn_pool_create(pool);
       apr_off_t original_page_start = page_info.page_start;
+      int leaking_bucket = 4;
+      p2l_page_info_baton_t prefetch_info = page_info;
+
+      apr_off_t max_offset
+        = APR_ALIGN(page_info.next_offset, ffd->block_size);
+      apr_off_t min_offset
+        = APR_ALIGN(page_info.start_offset, ffd->block_size) - ffd->block_size;
+
+      /* Since we read index data in larger chunks, we probably got more
+       * page data than we requested.  Parse & cache that until either we
+       * encounter pages already cached or reach the end of the buffer.
+       */
+
+      /* pre-fetch preceding pages */
+      end = FALSE;
+      prefetch_info.offset = original_page_start;
+      while (prefetch_info.offset >= prefetch_info.page_size && !end)
+        {
+          prefetch_info.offset -= prefetch_info.page_size;
+          SVN_ERR(prefetch_p2l_page(&end, &leaking_bucket, fs, &stream,
+                                    &prefetch_info, min_offset,
+                                    pool, iterpool));
+          svn_pool_clear(iterpool);
+        }
 
       /* fetch page from disk and put it into the cache */
       SVN_ERR(get_p2l_page(entries, &stream, fs,
@@ -2219,36 +2266,23 @@ svn_fs_fs__p2l_index_lookup(apr_array_header_t **entries,
                            page_info.start_offset,
                            page_info.next_offset,
                            page_info.page_start,
-                           page_info.page_size, pool));
+                           page_info.page_size, pool, pool));
 
       SVN_ERR(svn_cache__set(ffd->p2l_page_cache, &key, *entries, pool));
 
-      /* Since we read index data in larger chunks, we probably got more
-       * page data than we requested.  Parse & cache that until either we
-       * encounter pages already cached or reach the end of the buffer.
-       */
-
       /* pre-fetch following pages */
       end = FALSE;
-      page_info.offset = original_page_start;
-      while (   page_info.next_offset < max_offset
-             && page_info.page_no + 1 < page_info.page_count
+      leaking_bucket = 4;
+      prefetch_info = page_info;
+      prefetch_info.offset = original_page_start;
+      while (   prefetch_info.next_offset < max_offset
+             && prefetch_info.page_no + 1 < prefetch_info.page_count
              && !end)
         {
-          page_info.offset += page_info.page_size;
-          SVN_ERR(prefetch_p2l_page(&end, fs, stream, &page_info,
-                                    min_offset, iterpool));
-          svn_pool_clear(iterpool);
-        }
-
-      /* pre-fetch preceding pages */
-      end = FALSE;
-      page_info.offset = original_page_start;
-      while (page_info.offset >= page_info.page_size && !end)
-        {
-          page_info.offset -= page_info.page_size;
-          SVN_ERR(prefetch_p2l_page(&end, fs, stream, &page_info,
-                                    min_offset, iterpool));
+          prefetch_info.offset += prefetch_info.page_size;
+          SVN_ERR(prefetch_p2l_page(&end, &leaking_bucket, fs, &stream,
+                                    &prefetch_info, min_offset,
+                                    pool, iterpool));
           svn_pool_clear(iterpool);
         }
 
