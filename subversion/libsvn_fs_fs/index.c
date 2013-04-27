@@ -1926,20 +1926,20 @@ p2l_page_info_func(void **out,
   return SVN_NO_ERROR;
 }
 
-/* Read the header data structure of the phys-to-log index for revision
- * BATON->REVISION in FS.  Return in *BATON all info relevant to read the
- * index page for the rev / pack file offset BATON->OFFSET.
+/* Read the header data structure of the phys-to-log index for REVISION in
+ * FS and return it in *HEADER. 
  * 
  * To maximize efficiency, use or return the data stream in *STREAM.
  * If *STREAM is yet to be constructed, do so in STREAM_POOL.
  * Use POOL for allocations.
  */
 static svn_error_t *
-get_p2l_page_info(p2l_page_info_baton_t *baton,
-                  packed_number_stream_t **stream,
-                  svn_fs_t *fs,
-                  apr_pool_t *stream_pool,
-                  apr_pool_t *pool)
+get_p2l_header(p2l_header_t **header,
+               packed_number_stream_t **stream,
+               svn_fs_t *fs,
+               svn_revnum_t revision,
+               apr_pool_t *stream_pool,
+               apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_uint64_t value;
@@ -1947,15 +1947,14 @@ get_p2l_page_info(p2l_page_info_baton_t *baton,
   apr_off_t offset;
   p2l_header_t *result;
   svn_boolean_t is_cached = FALSE;
-  void *dummy = NULL;
 
   /* look for the header data in our cache */
   pair_cache_key_t key;
-  key.revision = base_revision(fs, baton->revision);
-  key.second = is_packed_rev(fs, baton->revision);
+  key.revision = base_revision(fs, revision);
+  key.second = is_packed_rev(fs, revision);
 
-  SVN_ERR(svn_cache__get_partial(&dummy, &is_cached, ffd->p2l_header_cache,
-                                 &key, p2l_page_info_func, baton, pool));
+  SVN_ERR(svn_cache__get((void**)header, &is_cached, ffd->p2l_header_cache,
+                         &key, pool));
   if (is_cached)
     return SVN_NO_ERROR;
 
@@ -1963,7 +1962,7 @@ get_p2l_page_info(p2l_page_info_baton_t *baton,
    * Open index file or position read pointer to the begin of the file */
   if (*stream == NULL)
     SVN_ERR(packed_stream_open(stream,
-                               path_p2l_index(fs, baton->revision, pool),
+                               path_p2l_index(fs, key.revision, pool),
                                ffd->block_size, stream_pool));
   else
     packed_stream_seek(*stream, 0);
@@ -1994,11 +1993,50 @@ get_p2l_page_info(p2l_page_info_baton_t *baton,
   for (i = 0; i <= result->page_count; ++i)
     result->offsets[i] += offset;
 
-  /* copy the requested info into *BATON */
-  p2l_page_info_copy(baton, result, result->offsets);
-
   /* cache the header data */
   SVN_ERR(svn_cache__set(ffd->p2l_header_cache, &key, result, pool));
+
+  /* return the result */
+  *header = result;
+
+  return SVN_NO_ERROR;
+}
+
+/* Read the header data structure of the phys-to-log index for revision
+ * BATON->REVISION in FS.  Return in *BATON all info relevant to read the
+ * index page for the rev / pack file offset BATON->OFFSET.
+ * 
+ * To maximize efficiency, use or return the data stream in *STREAM.
+ * If *STREAM is yet to be constructed, do so in STREAM_POOL.
+ * Use POOL for allocations.
+ */
+static svn_error_t *
+get_p2l_page_info(p2l_page_info_baton_t *baton,
+                  packed_number_stream_t **stream,
+                  svn_fs_t *fs,
+                  apr_pool_t *stream_pool,
+                  apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  p2l_header_t *header;
+  svn_boolean_t is_cached = FALSE;
+  void *dummy = NULL;
+
+  /* look for the header data in our cache */
+  pair_cache_key_t key;
+  key.revision = base_revision(fs, baton->revision);
+  key.second = is_packed_rev(fs, baton->revision);
+
+  SVN_ERR(svn_cache__get_partial(&dummy, &is_cached, ffd->p2l_header_cache,
+                                 &key, p2l_page_info_func, baton, pool));
+  if (is_cached)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(get_p2l_header(&header, stream, fs, baton->revision,
+                         stream_pool, pool));
+
+  /* copy the requested info into *BATON */
+  p2l_page_info_copy(baton, header, header->offsets);
 
   return SVN_NO_ERROR;
 }
@@ -2192,46 +2230,80 @@ prefetch_p2l_page(svn_boolean_t *end,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs_fs__p2l_index_lookup(apr_array_header_t **entries,
-                            svn_fs_t *fs,
-                            svn_revnum_t revision,
-                            apr_off_t offset,
-                            apr_pool_t *pool)
+/* Lookup & construct the baton and key information that we will need for
+ * a P2L page cache lookup.  We want the page covering OFFSET in the rev /
+ * pack file containing REVSION in FS.  Return the results in *PAGE_INFO_P
+ * and *KEY_P.  Read data through the auto-allocated *STREAM.
+ * Use POOL for allocations.
+ */
+static svn_error_t *
+get_p2l_keys(p2l_page_info_baton_t *page_info_p,
+             svn_fs_fs__page_cache_key_t *key_p,
+             packed_number_stream_t **stream,
+             svn_fs_t *fs,
+             svn_revnum_t revision,
+             apr_off_t offset,
+             apr_pool_t *pool)
 {
-  fs_fs_data_t *ffd = fs->fsap_data;
-  packed_number_stream_t *stream = NULL;
-  svn_fs_fs__page_cache_key_t key = { 0 };
-  svn_boolean_t is_cached = FALSE;
   p2l_page_info_baton_t page_info;
-
+  
   /* request info for the index pages that describes the pack / rev file
    * contents at pack / rev file position OFFSET. */
   page_info.offset = offset;
   page_info.revision = revision;
-  SVN_ERR(get_p2l_page_info(&page_info, &stream, fs, pool, pool));
+  SVN_ERR(get_p2l_page_info(&page_info, stream, fs, pool, pool));
 
   /* if the offset refers to a non-existent page, bail out */
   if (page_info.page_count <= page_info.page_no)
     {
-      SVN_ERR(packed_stream_close(stream));
+      SVN_ERR(packed_stream_close(*stream));
       return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
                                _("Offset %" APR_OFF_T_FMT
                                  " too large in revision %ld"),
                                offset, revision);
     }
 
-  /* look for this page in our cache */
-  key.revision = page_info.first_revision;
-  key.is_packed = is_packed_rev(fs, revision);
-  key.page = page_info.page_no;
+  /* return results */
+  if (page_info_p)
+    *page_info_p = page_info;
+  
+  /* construct cache key */
+  if (key_p)
+    {
+      svn_fs_fs__page_cache_key_t key = { 0 };
+      key.revision = page_info.first_revision;
+      key.is_packed = is_packed_rev(fs, revision);
+      key.page = page_info.page_no;
 
+      *key_p = key;  
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Body of svn_fs_fs__p2l_index_lookup.  Use / autoconstruct *STREAM as
+ * your input based on REVISION.
+ */
+svn_error_t *
+p2l_index_lookup(apr_array_header_t **entries,
+                 packed_number_stream_t **stream,
+                 svn_fs_t *fs,
+                 svn_revnum_t revision,
+                 apr_off_t offset,
+                 apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_fs_fs__page_cache_key_t key;
+  svn_boolean_t is_cached = FALSE;
+  p2l_page_info_baton_t page_info;
+
+  /* look for this page in our cache */
+  SVN_ERR(get_p2l_keys(&page_info, &key, stream, fs, revision, offset,
+                       pool));
   SVN_ERR(svn_cache__get((void**)entries, &is_cached, ffd->p2l_page_cache,
                          &key, pool));
   if (!is_cached)
     {
-      apr_off_t max_offset = APR_ALIGN(page_info.next_offset, ffd->block_size);
-      apr_off_t min_offset = max_offset - ffd->block_size;
       svn_boolean_t end;
       apr_pool_t *iterpool = svn_pool_create(pool);
       apr_off_t original_page_start = page_info.page_start;
@@ -2254,14 +2326,14 @@ svn_fs_fs__p2l_index_lookup(apr_array_header_t **entries,
       while (prefetch_info.offset >= prefetch_info.page_size && !end)
         {
           prefetch_info.offset -= prefetch_info.page_size;
-          SVN_ERR(prefetch_p2l_page(&end, &leaking_bucket, fs, &stream,
+          SVN_ERR(prefetch_p2l_page(&end, &leaking_bucket, fs, stream,
                                     &prefetch_info, min_offset,
                                     pool, iterpool));
           svn_pool_clear(iterpool);
         }
 
       /* fetch page from disk and put it into the cache */
-      SVN_ERR(get_p2l_page(entries, &stream, fs,
+      SVN_ERR(get_p2l_page(entries, stream, fs,
                            page_info.first_revision,
                            page_info.start_offset,
                            page_info.next_offset,
@@ -2280,7 +2352,7 @@ svn_fs_fs__p2l_index_lookup(apr_array_header_t **entries,
              && !end)
         {
           prefetch_info.offset += prefetch_info.page_size;
-          SVN_ERR(prefetch_p2l_page(&end, &leaking_bucket, fs, &stream,
+          SVN_ERR(prefetch_p2l_page(&end, &leaking_bucket, fs, stream,
                                     &prefetch_info, min_offset,
                                     pool, iterpool));
           svn_pool_clear(iterpool);
@@ -2289,12 +2361,297 @@ svn_fs_fs__p2l_index_lookup(apr_array_header_t **entries,
       svn_pool_destroy(iterpool);
     }
 
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__p2l_index_lookup(apr_array_header_t **entries,
+                            svn_fs_t *fs,
+                            svn_revnum_t revision,
+                            apr_off_t offset,
+                            apr_pool_t *pool)
+{
+  packed_number_stream_t *stream = NULL;
+
+  /* look for this page in our cache */
+  SVN_ERR(p2l_index_lookup(entries, &stream, fs, revision, offset, pool));
+
   /* make sure we close files after usage */
   SVN_ERR(packed_stream_close(stream));
 
   return SVN_NO_ERROR;
 }
 
+/* compare_fn_t comparing a svn_fs_fs__p2l_entry_t at LHS with an offset
+ * RHS.
+ */
+static int
+compare_p2l_entry_offsets(const void *lhs, const void *rhs)
+{
+  const svn_fs_fs__p2l_entry_t *entry = (const svn_fs_fs__p2l_entry_t *)lhs;
+  apr_off_t offset = *(const apr_off_t *)rhs;
+
+  return entry->offset < offset ? -1 : (entry->offset == offset ? 0 : 1);
+}
+
+/* Cached data extraction utility.  DATA is a P2L index page, e.g. an APR
+ * array of svn_fs_fs__p2l_entry_t elements.  Return the entry for the item
+ * starting at OFFSET or NULL if that's not an the start offset of any item.
+ */
+static svn_fs_fs__p2l_entry_t *
+get_p2l_entry_from_cached_page(const void *data,
+                               apr_off_t offset,
+                               apr_pool_t *pool)
+{
+  /* resolve all pointer values of in-cache data */
+  const apr_array_header_t *page = data;
+  apr_array_header_t *entries = apr_pmemdup(pool, page, sizeof(*page));
+  int idx;
+
+  entries->elts = (char *)svn_temp_deserializer__ptr(page,
+                                     (const void *const *)&page->elts);
+
+  /* search of the offset we want */
+  idx = svn_sort__bsearch_lower_bound(&offset, entries,
+      (int (*)(const void *, const void *))compare_p2l_entry_offsets);
+
+  /* return it, if it is a perfect match */
+  if (idx < entries->nelts)
+    {
+      svn_fs_fs__p2l_entry_t *entry
+        = &APR_ARRAY_IDX(entries, idx, svn_fs_fs__p2l_entry_t);
+      if (entry->offset == offset)
+        {
+          svn_fs_fs__p2l_entry_t *result
+            = apr_pmemdup(pool, entry, sizeof(*result));
+          result->items
+            = (svn_fs_fs__id_part_t *)svn_temp_deserializer__ptr(entries->elts,
+                                     (const void *const *)&entry->items);
+          return result;
+        }
+    }
+
+  return NULL;
+}
+
+/* Implements svn_cache__partial_getter_func_t for P2L index pages, copying
+ * the entry for the apr_off_t at BATON into *OUT.  *OUT will be NULL if
+ * there is no matching entry in the index page at DATA.
+ */
+static svn_error_t *
+p2l_entry_lookup_func(void **out,
+                      const void *data,
+                      apr_size_t data_len,
+                      void *baton,
+                      apr_pool_t *result_pool)
+{
+  svn_fs_fs__p2l_entry_t *entry
+    = get_p2l_entry_from_cached_page(data, *(apr_off_t *)baton, result_pool);
+
+  *out = entry && entry->offset == *(apr_off_t *)baton
+       ? svn_fs_fs__p2l_entry_dup(entry, result_pool)
+       : NULL;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+p2l_entry_lookup(svn_fs_fs__p2l_entry_t **entry_p,
+                 packed_number_stream_t **stream,
+                 svn_fs_t *fs,
+                 svn_revnum_t revision,
+                 apr_off_t offset,
+                 apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_fs_fs__page_cache_key_t key = { 0 };
+  svn_boolean_t is_cached = FALSE;
+  p2l_page_info_baton_t page_info;
+
+  *entry_p = NULL;
+
+  /* look for this info in our cache */
+  SVN_ERR(get_p2l_keys(&page_info, &key, stream, fs, revision, offset, pool));
+  SVN_ERR(svn_cache__get_partial((void**)entry_p, &is_cached,
+                                 ffd->p2l_page_cache, &key,
+                                 p2l_entry_lookup_func, &offset, pool));
+  if (!is_cached)
+    {
+      int idx;
+
+      /* do a standard index lookup.  This is will automatically prefetch
+       * data to speed up future lookups. */
+      apr_array_header_t *entries;
+      SVN_ERR(p2l_index_lookup(&entries, stream, fs, revision, offset, pool));
+
+      /* Find the entry that we want. */
+      idx = svn_sort__bsearch_lower_bound(&offset, entries, 
+          (int (*)(const void *, const void *))compare_p2l_entry_offsets);
+
+      /* return it, if it is a perfect match */
+      if (idx < entries->nelts)
+        {
+          svn_fs_fs__p2l_entry_t *entry
+            = &APR_ARRAY_IDX(entries, idx, svn_fs_fs__p2l_entry_t);
+          if (entry->offset == offset)
+            *entry_p = entry;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__p2l_entry_lookup(svn_fs_fs__p2l_entry_t **entry_p,
+                            svn_fs_t *fs,
+                            svn_revnum_t revision,
+                            apr_off_t offset,
+                            apr_pool_t *pool)
+{
+  packed_number_stream_t *stream = NULL;
+
+  /* look for this info in our cache */
+  SVN_ERR(p2l_entry_lookup(entry_p, &stream, fs, revision, offset, pool));
+
+  /* make sure we close files after usage */
+  SVN_ERR(packed_stream_close(stream));
+
+  return SVN_NO_ERROR;
+}
+
+/* Baton structure for p2l_item_lookup_func.  It describes which sub_item
+ * info shall be returned.
+ */
+typedef struct p2l_item_lookup_baton_t
+{
+  /* file offset to find the P2L index entry for */
+  apr_off_t offset;
+
+  /* return the sub-item at this position within that entry */
+  apr_uint32_t sub_item;
+} p2l_item_lookup_baton_t;
+
+/* Implements svn_cache__partial_getter_func_t for P2L index pages, copying
+ * the svn_fs_fs__id_part_t for the item described 2l_item_lookup_baton_t
+ * *BATON.  *OUT will be NULL if there is no matching index entry or the
+ * sub-item is out of range.
+ */
+static svn_error_t *
+p2l_item_lookup_func(void **out,
+                     const void *data,
+                     apr_size_t data_len,
+                     void *baton,
+                     apr_pool_t *result_pool)
+{
+  p2l_item_lookup_baton_t *lookup_baton = baton;
+  svn_fs_fs__p2l_entry_t *entry
+    = get_p2l_entry_from_cached_page(data, lookup_baton->offset, result_pool);
+
+  *out =    entry
+         && entry->offset == lookup_baton->offset
+         && entry->item_count > lookup_baton->sub_item
+       ? apr_pmemdup(result_pool,
+                     entry->items + lookup_baton->sub_item,
+                     sizeof(*entry->items))
+       : NULL;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__p2l_item_lookup(svn_fs_fs__id_part_t **item,
+                           svn_fs_t *fs,
+                           svn_revnum_t revision,
+                           apr_off_t offset,
+                           apr_uint32_t sub_item,
+                           apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  packed_number_stream_t *stream = NULL;
+  svn_fs_fs__page_cache_key_t key = { 0 };
+  svn_boolean_t is_cached = FALSE;
+  p2l_page_info_baton_t page_info;
+  p2l_item_lookup_baton_t baton;
+
+  *item = NULL;
+
+  /* look for this info in our cache */
+  SVN_ERR(get_p2l_keys(&page_info, &key, &stream, fs, revision, offset,
+                       pool));
+  baton.offset = offset;
+  baton.sub_item = sub_item;
+  SVN_ERR(svn_cache__get_partial((void**)item, &is_cached,
+                                 ffd->p2l_page_cache, &key,
+                                 p2l_item_lookup_func, &baton, pool));
+  if (!is_cached)
+    {
+      /* do a standard index lookup.  This is will automatically prefetch
+       * data to speed up future lookups. */
+      svn_fs_fs__p2l_entry_t *entry;
+      SVN_ERR(p2l_entry_lookup(&entry, &stream, fs, revision, offset, pool));
+
+      /* return result */
+      if (entry && entry->item_count > sub_item)
+        *item = apr_pmemdup(pool, entry->items + sub_item, sizeof(**item));
+    }
+
+  /* make sure we close files after usage */
+  SVN_ERR(packed_stream_close(stream));
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_cache__partial_getter_func_t for P2L headers, setting *OUT
+ * to the largest the first offset not covered by this P2L index.
+ */
+static svn_error_t *
+p2l_get_max_offset_func(void **out,
+                        const void *data,
+                        apr_size_t data_len,
+                        void *baton,
+                        apr_pool_t *result_pool)
+{
+  const p2l_header_t *header = data;
+  apr_off_t max_offset = header->page_size * header->page_count;
+  *out = apr_pmemdup(result_pool, &max_offset, sizeof(max_offset));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__p2l_get_max_offset(apr_off_t *offset,
+                              svn_fs_t *fs,
+                              svn_revnum_t revision,
+                              apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  packed_number_stream_t *stream = NULL;
+  p2l_header_t *header;
+  svn_boolean_t is_cached = FALSE;
+  apr_off_t *offset_p;
+
+  /* look for the header data in our cache */
+  pair_cache_key_t key;
+  key.revision = base_revision(fs, revision);
+  key.second = is_packed_rev(fs, revision);
+
+  SVN_ERR(svn_cache__get_partial((void **)&offset_p, &is_cached,
+                                 ffd->p2l_header_cache, &key,
+                                 p2l_get_max_offset_func, NULL, pool));
+  if (is_cached)
+    {
+      *offset = *offset_p;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(get_p2l_header(&header, &stream, fs, revision, pool, pool));
+  *offset = header->page_count * header->page_size;
+  
+  /* make sure we close files after usage */
+  SVN_ERR(packed_stream_close(stream));
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_fs_fs__item_offset(apr_off_t *offset,

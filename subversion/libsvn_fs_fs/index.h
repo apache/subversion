@@ -172,6 +172,32 @@ svn_fs_fs__p2l_index_lookup(apr_array_header_t **entries,
                             apr_off_t offset,
                             apr_pool_t *pool);
 
+/* Use the phys-to-log mapping files in FS to return the entry for the
+ * container or single item starting at global OFFSET in the rep file
+ * containing REVISION in *ENTRY.  Sets *ENTRY to NULL if no item starts
+ * at exactly that offset.  Use POOL for allocations.
+ */
+svn_error_t *
+svn_fs_fs__p2l_entry_lookup(svn_fs_fs__p2l_entry_t **entry,
+                            svn_fs_t *fs,
+                            svn_revnum_t revision,
+                            apr_off_t offset,
+                            apr_pool_t *pool);
+
+/* Use the phys-to-log mapping files in FS to return the svn_fs_fs__id_part_t
+ * for the SUB_ITEM of the container starting at global OFFSET in the rep /
+ * pack file containing REVISION in *ITEM.  Sets *ITEM to NULL if no element
+ * starts at exactly that offset or if it contains no more than SUB_ITEM
+ * sub-items.  Use POOL for allocations.
+ */
+svn_error_t *
+svn_fs_fs__p2l_item_lookup(svn_fs_fs__id_part_t **item,
+                           svn_fs_t *fs,
+                           svn_revnum_t revision,
+                           apr_off_t offset,
+                           apr_uint32_t sub_item,
+                           apr_pool_t *pool);
+
 /* Use the log-to-phys mapping files in FS to find the packed / non-packed /
  * proto-rev file offset and container sub-item of either (REVISION,
  * ITEM_INDEX) or (TXN_ID, ITEM_INDEX).  *SUB_ITEM will be 0 for non-
@@ -201,6 +227,10 @@ svn_fs_fs__l2p_get_max_ids(apr_array_header_t **max_ids,
                            apr_size_t count,
                            apr_pool_t *pool);
 
+/* In *OFFSET, return the first OFFSET in the pack / rev file containing
+ * REVISION in FS not covered by the log-to-phys index.
+ * Use POOL for allocations.
+ */
 svn_error_t *
 svn_fs_fs__p2l_get_max_offset(apr_off_t *offset,
                               svn_fs_t *fs,
