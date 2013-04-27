@@ -930,7 +930,7 @@ write_revision_zero(svn_fs_t *fs)
       const char *path = path_l2p_index(fs, 0, fs->pool);
       SVN_ERR(svn_io_file_create_binary
                  (path,
-                  "\0\1\x80\x40\1\2" /* rev 0, single page */
+                  "\0\1\x80\x40\1\1" /* rev 0, single page */
                   "\5\4"             /* page size: bytes, count */
                   "\0"               /* 0 container offsets in list */
                   "\0\x6b\x12\1",    /* phys offsets + 1 */
