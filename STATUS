@@ -136,6 +136,13 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1476607
+   Some svnadmin command help copy-editing.
+   Justification:
+     For users, consistency; for translators, fewer mismatches.
+   Votes:
+     +1 (non-binding): mattiase
+
 
 Veto-blocked changes:
 =====================
