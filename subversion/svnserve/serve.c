@@ -1843,8 +1843,8 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(accept_report(&is_checkout, NULL,
                         conn, pool, b, rev, target, NULL, TRUE,
                         depth,
-                        (send_copyfrom_args == TRUE) /* send_copyfrom_args */,
-                        (ignore_ancestry == TRUE) /* ignore_ancestry */));
+                        (send_copyfrom_args != FALSE), /* send_copyfrom_args */
+                        (ignore_ancestry != FALSE)));  /* ignore_ancestry */
   if (is_checkout)
     {
       SVN_ERR(log_command(b, conn, pool, "%s",
@@ -1855,7 +1855,8 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     {
       SVN_ERR(log_command(b, conn, pool, "%s",
                           svn_log__update(full_path, rev, depth,
-                                          send_copyfrom_args, pool)));
+                                          (send_copyfrom_args != FALSE),
+                                          pool)));
     }
 
   return SVN_NO_ERROR;
@@ -1905,7 +1906,7 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return accept_report(NULL, NULL,
                        conn, pool, b, rev, target, switch_path, TRUE,
                        depth,
-                       (send_copyfrom_args == TRUE) /* send_copyfrom_args */,
+                       (send_copyfrom_args != FALSE) /* send_copyfrom_args */,
                        (ignore_ancestry != FALSE) /* ignore_ancestry */);
 }
 
