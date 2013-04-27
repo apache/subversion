@@ -36,6 +36,7 @@
 #include "transaction.h"
 #include "tree.h"
 #include "util.h"
+#include "index.h"
 
 #include "private/svn_fs_util.h"
 #include "private/svn_string_private.h"
@@ -1402,30 +1403,23 @@ verify_walker(representation_t *rep,
   return SVN_NO_ERROR;
 }
 
+/* Verify the rep cache DB's consistency with our rev / pack data.
+ * The function signature is similar to svn_fs_fs__verify.
+ * The values of START and END have already been auto-selected and
+ * verified.
+ */
 svn_error_t *
-svn_fs_fs__verify(svn_fs_t *fs,
-                  svn_revnum_t start,
-                  svn_revnum_t end,
-                  svn_fs_progress_notify_func_t notify_func,
-                  void *notify_baton,
-                  svn_cancel_func_t cancel_func,
-                  void *cancel_baton,
-                  apr_pool_t *pool)
+verify_rep_cache(svn_fs_t *fs,
+                 svn_revnum_t start,
+                 svn_revnum_t end,
+                 svn_fs_progress_notify_func_t notify_func,
+                 void *notify_baton,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_boolean_t exists;
-  svn_revnum_t youngest = ffd->youngest_rev_cache; /* cache is current */
-
-  if (ffd->format < SVN_FS_FS__MIN_REP_SHARING_FORMAT)
-    return SVN_NO_ERROR;
-
-  /* Input validation. */
-  if (! SVN_IS_VALID_REVNUM(start))
-    start = 0;
-  if (! SVN_IS_VALID_REVNUM(end))
-    end = youngest;
-  SVN_ERR(ensure_revision_exists(fs, start, pool));
-  SVN_ERR(ensure_revision_exists(fs, end, pool));
 
   /* rep-cache verification. */
   SVN_ERR(svn_fs_fs__exists_rep_cache(&exists, fs, pool));
@@ -1454,6 +1448,250 @@ svn_fs_fs__verify(svn_fs_t *fs,
       /* walker resource cleanup */
       svn_pool_destroy(baton->pool);
     }
+
+  return SVN_NO_ERROR;
+}
+
+/* Verify that for all log-to-phys index entries for revisions START to
+ * START + COUNT-1 in FS there is a consistent entry in the phys-to-log
+ * index.  If given, invoke CANCEL_FUNC with CANCEL_BATON at regular
+ * intervals. Use POOL for allocations.
+ */
+svn_error_t *
+compare_l2p_to_p2l_index(svn_fs_t *fs,
+                         svn_revnum_t start,
+                         svn_revnum_t count,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         apr_pool_t *pool)
+{
+  svn_revnum_t i;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_array_header_t *max_ids;
+
+  /* determine the range of items to check for each revision */
+  SVN_ERR(svn_fs_fs__l2p_get_max_ids(&max_ids, fs, start, count, pool));
+
+  /* check all items in all revisions if the given range */
+  for (i = 0; i < max_ids->nelts; ++i)
+    {
+      apr_uint64_t k;
+      apr_uint64_t max_id = APR_ARRAY_IDX(max_ids, i, apr_uint64_t);
+      svn_revnum_t revision = start + i;
+
+      for (k = 0; k < max_id; ++k)
+        {
+          apr_off_t offset;
+          apr_uint32_t sub_item;
+          svn_fs_fs__id_part_t *p2l_item;
+
+          /* get L2P entry.  Ignore unused entries. */
+          SVN_ERR(svn_fs_fs__item_offset(&offset, &sub_item, fs,
+                                         revision, NULL, k, iterpool));
+          if (offset == -1)
+            continue;
+
+          /* find the corresponding P2L entry */
+          SVN_ERR(svn_fs_fs__p2l_item_lookup(&p2l_item, fs, start,
+                                             offset, sub_item, iterpool));
+
+          if (p2l_item == NULL)
+            return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_INCONSISTENT,
+                                      NULL,
+                                      _("p2l index entry not found for "
+                                        "PHYS o%" APR_OFF_T_FMT ":s%ld "
+                                        "returned by l2p index for LOG "
+                                        "r%ld:i%" APR_UINT64_T_FMT),
+                                      offset, (long)sub_item, k, revision);
+
+          if (p2l_item->number != k || p2l_item->revision != revision)
+            return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_INCONSISTENT,
+                                      NULL,
+                                      _("p2l index info LOG r%ld:i%"
+                                        APR_UINT64_T_FMT " does not match "
+                                        "l2p index for LOG r%ld:i%"
+                                        APR_UINT64_T_FMT),
+                                      p2l_item->revision,
+                                      (long)p2l_item->number, revision, k);
+
+          svn_pool_clear(iterpool);
+        }
+
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Verify that for all phys-to-log index entries for revisions START to
+ * START + COUNT-1 in FS there is a consistent entry in the log-to-phys
+ * index.  If given, invoke CANCEL_FUNC with CANCEL_BATON at regular
+ * intervals. Use POOL for allocations.
+ *
+ * Please note that we can only check on pack / rev file granularity and
+ * must only be called for a single rev / pack file.
+ */
+svn_error_t *
+compare_p2l_to_l2p_index(svn_fs_t *fs,
+                         svn_revnum_t start,
+                         svn_revnum_t count,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         apr_pool_t *pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_array_header_t *max_ids;
+  apr_off_t max_offset;
+  apr_off_t offset = 0;
+
+  /* get the size of the rev / pack file as covered by the P2L index */
+  SVN_ERR(svn_fs_fs__p2l_get_max_offset(&max_offset, fs, start, pool));
+
+  /* for all offsets in the file, get the P2L index entries and check
+     them against the L2P index */
+  for (offset = 0; offset < max_offset; )
+    {
+      apr_array_header_t *entries;
+      svn_fs_fs__p2l_entry_t *last_entry;
+      int i;
+
+      /* get all entries for the current block */
+      SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, fs, start, offset,
+                                          iterpool));
+      if (entries->nelts == 0)
+        return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_CORRUPTION,
+                                 NULL,
+                                 _("p2l does not cover offset " APR_OFF_T_FMT
+                                   " for revision %ld"),
+                                 offset, start);
+
+      /* process all entries (and later continue with the next block) */
+      last_entry
+        = &APR_ARRAY_IDX(entries, entries->nelts-1, svn_fs_fs__p2l_entry_t);
+      offset = last_entry->offset + last_entry->size;
+      
+      for (i = 0; i < entries->nelts; ++i)
+        {
+          apr_uint32_t k;
+          svn_fs_fs__p2l_entry_t *entry
+            = &APR_ARRAY_IDX(entries, i, svn_fs_fs__p2l_entry_t);
+
+          /* check all sub-items for consist entries in the L2P index */
+          for (k = 0; k < entry->item_count; ++k)
+            {
+              apr_off_t l2p_offset;
+              apr_uint32_t sub_item;
+              svn_fs_fs__id_part_t *p2l_item = &entry->items[k];
+
+              SVN_ERR(svn_fs_fs__item_offset(&l2p_offset, &sub_item, fs,
+                                             p2l_item->revision, NULL,
+                                             p2l_item->number, iterpool));
+
+              if (sub_item != k || l2p_offset != entry->offset)
+                return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_INCONSISTENT,
+                                         NULL,
+                                         _("l2p index entry PHYS o%"
+                                           APR_OFF_T_FMT ":s%ld does not "
+                                           "match p2l index value LOG r%ld:i%"
+                                           APR_UINT64_T_FMT " for PHYS o%"
+                                           APR_OFF_T_FMT ":s%ld"),
+                                         l2p_offset, (long)sub_item,
+                                         p2l_item->revision, p2l_item->number,
+                                         entry->offset, (long)k);
+            }
+        }
+
+      svn_pool_clear(iterpool);
+
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Verify that the log-to-phys indexes and phys-to-log indexes are
+ * consistent with each other.  The function signature is similar to
+ * svn_fs_fs__verify.
+ *
+ * The values of START and END have already been auto-selected and
+ * verified.  You may call this for format7 or higher repos.
+ */
+svn_error_t *
+verify_index_consistency(svn_fs_t *fs,
+                         svn_revnum_t start,
+                         svn_revnum_t end,
+                         svn_fs_progress_notify_func_t notify_func,
+                         void *notify_baton,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_revnum_t revision, pack_start, pack_end;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  for (revision = start; revision <= end; revision = pack_end)
+    {
+      apr_array_header_t *max_ids;
+      pack_start = packed_base_rev(fs, revision);
+      pack_end = pack_start + pack_size(fs, revision);
+
+      if (notify_func && (pack_start % ffd->max_files_per_dir == 0))
+        notify_func(pack_start, notify_baton, iterpool);
+
+      /* two-way index check */
+      SVN_ERR(compare_l2p_to_p2l_index(fs, pack_start, pack_end - pack_start,
+                                       cancel_func, cancel_baton, iterpool));
+      SVN_ERR(compare_p2l_to_l2p_index(fs, pack_start, pack_end - pack_start,
+                                       cancel_func, cancel_baton, iterpool));
+
+      svn_pool_clear(iterpool);
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__verify(svn_fs_t *fs,
+                  svn_revnum_t start,
+                  svn_revnum_t end,
+                  svn_fs_progress_notify_func_t notify_func,
+                  void *notify_baton,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
+                  apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_boolean_t exists;
+  svn_revnum_t youngest = ffd->youngest_rev_cache; /* cache is current */
+
+  /* Input validation. */
+  if (! SVN_IS_VALID_REVNUM(start))
+    start = 0;
+  if (! SVN_IS_VALID_REVNUM(end))
+    end = youngest;
+  SVN_ERR(ensure_revision_exists(fs, start, pool));
+  SVN_ERR(ensure_revision_exists(fs, end, pool));
+
+  /* log/phys index consistency.  We need to check them first to make
+     sure we can access the rev / pack files in format7. */
+  if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+    SVN_ERR(verify_index_consistency(fs, start, end,
+                                     notify_func, notify_baton,
+                                     cancel_func, cancel_baton, pool));
+
+  /* rep cache consistency */
+  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+    SVN_ERR(verify_rep_cache(fs, start, end, notify_func, notify_baton,
+                             cancel_func, cancel_baton, pool));
 
   return SVN_NO_ERROR;
 }

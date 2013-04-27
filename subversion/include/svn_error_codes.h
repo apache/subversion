@@ -822,6 +822,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 57,
              "Container index out of range.")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_ITEM_INDEX_INCONSISTENT,
+             SVN_ERR_FS_CATEGORY_START + 58,
+             "Index files are inconsistent.")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,
