@@ -2362,6 +2362,7 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
   wrapper->cache_internal = cache;
   wrapper->error_handler = 0;
   wrapper->error_baton = 0;
+  wrapper->pretend_empty = !!getenv("SVN_X_DOES_NOT_MARK_THE_SPOT");
 
   *cache_p = wrapper;
   return SVN_NO_ERROR;
