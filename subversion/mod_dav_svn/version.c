@@ -269,7 +269,7 @@ get_option(const dav_resource *resource,
       int i;
       svn_version_t *master_version = dav_svn__get_master_version(r);
       dav_svn__bulk_upd_conf bulk_upd_conf = dav_svn__get_bulk_updates_flag(r);
-      
+
       /* The list of Subversion's custom POSTs and which versions of
          Subversion support them.  We need this latter information
          when acting as a WebDAV slave -- we don't want to claim
@@ -1222,7 +1222,7 @@ make_activity(dav_resource *resource)
                                   SVN_DAV_ERROR_NAMESPACE,
                                   SVN_DAV_ERROR_TAG);
 
-  err = dav_svn__create_txn(resource->info->repos, &txn_name, 
+  err = dav_svn__create_txn(resource->info->repos, &txn_name,
                             NULL, resource->pool);
   if (err != NULL)
     return err;

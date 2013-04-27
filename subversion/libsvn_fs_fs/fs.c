@@ -131,8 +131,8 @@ fs_set_errcall(svn_fs_t *fs,
 
 struct fs_freeze_baton_t {
   svn_fs_t *fs;
-  svn_error_t *(*freeze_body)(void *, apr_pool_t *);
-  void *baton;
+  svn_fs_freeze_func_t freeze_func;
+  void *freeze_baton;
 };
 
 static svn_error_t *
@@ -146,26 +146,41 @@ fs_freeze_body(void *baton,
   if (exists)
     SVN_ERR(svn_fs_fs__lock_rep_cache(b->fs, pool));
 
-  SVN_ERR(b->freeze_body(b->baton, pool));
+  SVN_ERR(b->freeze_func(b->freeze_baton, pool));
 
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 fs_freeze(svn_fs_t *fs,
-          svn_error_t *(*freeze_body)(void *, apr_pool_t *),
-          void *baton,
+          svn_fs_freeze_func_t freeze_func,
+          void *freeze_baton,
           apr_pool_t *pool)
 {
   struct fs_freeze_baton_t b;
 
   b.fs = fs;
-  b.freeze_body = freeze_body;
-  b.baton = baton;
+  b.freeze_func = freeze_func;
+  b.freeze_baton = freeze_baton;
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
   SVN_ERR(svn_fs_fs__with_write_lock(fs, fs_freeze_body, &b, pool));
 
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fs_info(const void **fsfs_info,
+        svn_fs_t *fs,
+        apr_pool_t *result_pool,
+        apr_pool_t *scratch_pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_fs_fsfs_info_t *info = apr_palloc(result_pool, sizeof(*info));
+  info->fs_type = SVN_FS_TYPE_FSFS;
+  info->shard_size = ffd->max_files_per_dir;
+  info->min_unpacked_rev = ffd->min_unpacked_rev;
+  *fsfs_info = info;
   return SVN_NO_ERROR;
 }
 
@@ -189,6 +204,9 @@ static fs_vtable_t fs_vtable = {
   svn_fs_fs__unlock,
   svn_fs_fs__get_lock,
   svn_fs_fs__get_locks,
+  svn_fs_fs__info_format,
+  svn_fs_fs__info_config_files,
+  fs_info,
   svn_fs_fs__verify_root,
   fs_freeze,
   fs_set_errcall
@@ -417,6 +435,15 @@ fs_set_svn_fs_open(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+static void *
+fs_info_dup(const void *fsfs_info_void,
+            apr_pool_t *result_pool)
+{
+  /* All fields are either ints or static strings. */
+  const svn_fs_fsfs_info_t *fsfs_info = fsfs_info_void;
+  return apr_pmemdup(result_pool, fsfs_info, sizeof(*fsfs_info));
+}
+
 
 /* Base FS library vtable, used by the FS loader library. */
 
@@ -434,7 +461,8 @@ static fs_library_vtable_t library_vtable = {
   fs_pack,
   fs_logfiles,
   NULL /* parse_id */,
-  fs_set_svn_fs_open
+  fs_set_svn_fs_open,
+  fs_info_dup
 };
 
 svn_error_t *

@@ -103,7 +103,7 @@ test_pseudo_md5(apr_pool_t *pool)
   /* the checksums shall also be different from "proper" MD5 */
   SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, input, 15, pool));
   SVN_TEST_ASSERT(memcmp(digest_15, checksum->digest, sizeof(digest_15)));
-  
+
   SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, input, 31, pool));
   SVN_TEST_ASSERT(memcmp(digest_31, checksum->digest, sizeof(digest_15)));
 
@@ -122,8 +122,8 @@ zero_match(apr_pool_t *pool)
   svn_checksum_t *B_md5;
   svn_checksum_t *A_sha1;
   svn_checksum_t *B_sha1;
-  
-  
+
+
   zero_md5 = svn_checksum_create(svn_checksum_md5, pool);
   SVN_ERR(svn_checksum_clear(zero_md5));
   SVN_ERR(svn_checksum(&A_md5, svn_checksum_md5, "A", 1, pool));

@@ -30,11 +30,17 @@ my $STATUS = './STATUS';
 my $BRANCHES = '^/subversion/branches';
 
 my $YES = $ENV{YES}; # batch mode: eliminate prompts, add sleeps
-my $WET_RUN = qw[false true][1]; # don't commit
+my $MAY_COMMIT = qw[false true][0];
 my $DEBUG = qw[false true][0]; # 'set -x', etc
+$DEBUG = 'true' if exists $ENV{DEBUG};
+$MAY_COMMIT = 'true' if ($ENV{MAY_COMMIT} // "false") =~ /^(1|yes|true)$/i;
 
 # derived values
 my $SVNq;
+my $SVNvsn = do {
+  my ($major, $minor, $patch) = `$SVN --version -q` =~ /^(\d+)\.(\d+)\.(\d+)/;
+  1e6*$major + 1e3*$minor + $patch;
+};
 
 $SVN .= " --non-interactive" if $YES or not defined ctermid;
 $SVNq = "$SVN -q ";
@@ -59,7 +65,7 @@ EOF
 
 sub prompt {
   local $\; # disable 'perl -l' effects
-  print "Go ahead? ";
+  print "$_[0] ";
 
   # TODO: this part was written by trial-and-error
   ReadMode 'cbreak';
@@ -78,9 +84,14 @@ sub merge {
 
   if ($entry{branch}) {
     # NOTE: This doesn't escape the branch into the pattern.
-    $pattern = sprintf '\V\(%s branch(es)?\|branches\/%s\|Branch(es)?:\n *%s\)', $entry{branch}, $entry{branch}, $entry{branch};
-    $mergeargs = "--reintegrate $BRANCHES/$entry{branch}";
-    print $logmsg_fh "Reintegrate the $entry{header}:";
+    $pattern = sprintf '\V\(%s branch(es)?\|branches\/%s\|Branch\(es\)\?: \*\n\? \*%s\)', $entry{branch}, $entry{branch}, $entry{branch};
+    if ($SVNvsn >= 1_008_000) {
+      $mergeargs = "$BRANCHES/$entry{branch}";
+      print $logmsg_fh "Merge the $entry{header}:";
+    } else {
+      $mergeargs = "--reintegrate $BRANCHES/$entry{branch}";
+      print $logmsg_fh "Reintegrate the $entry{header}:";
+    }
     print $logmsg_fh "";
   } elsif (@{$entry{revisions}}) {
     $pattern = '^ [*] \V' . 'r' . $entry{revisions}->[0];
@@ -98,6 +109,7 @@ sub merge {
   print $logmsg_fh $_ for @{$entry{entry}};
   close $logmsg_fh or die "Can't close $logmsg_filename: $!";
 
+  my $reintegrated_word = ($SVNvsn >= 1_008_000) ? "merged" : "reintegrated";
   my $script = <<"EOF";
 #!/bin/sh
 set -e
@@ -105,28 +117,43 @@ if $DEBUG; then
   set -x
 fi
 $SVN diff > $backupfile
+cp STATUS STATUS.$$
 $SVNq revert -R .
+mv STATUS.$$ STATUS
 $SVNq up
 $SVNq merge $mergeargs
-$VIM -e -s -n -N -i NONE -u NONE -c '/$pattern/normal! dap' -c wq $STATUS
-if $WET_RUN; then
+if [ "`$SVN status -q | wc -l`" -eq 1 ]; then
+  if [ -n "`$SVN diff | perl -lne 'print if s/^(Added|Deleted|Modified): //' | grep -vx svn:mergeinfo`" ]; then
+    # This check detects STATUS entries that name non-^/subversion/ revnums.
+    # ### Q: What if we actually commit a mergeinfo fix to trunk and then want
+    # ###    to backport it?
+    # ### A: We don't merge it using the script.
+    echo "Bogus merge: includes only svn:mergeinfo changes!" >&2
+    exit 2
+  fi
+fi
+if $MAY_COMMIT; then
+  $VIM -e -s -n -N -i NONE -u NONE -c '/$pattern/normal! dap' -c wq $STATUS
   $SVNq commit -F $logmsg_filename
 else
-  echo "Committing:"
+  echo "Would have committed:"
+  echo '[[['
   $SVN status -q
+  echo 'M       STATUS (not shown in the diff)'
   cat $logmsg_filename
+  echo ']]]'
 fi
 EOF
 
   $script .= <<"EOF" if $entry{branch};
 reinteg_rev=\`$SVN info $STATUS | sed -ne 's/Last Changed Rev: //p'\`
-if $WET_RUN; then
+if $MAY_COMMIT; then
   # Sleep to avoid out-of-order commit notifications
   if [ -n "\$YES" ]; then sleep 15; fi
-  $SVNq rm $BRANCHES/$entry{branch} -m "Remove the '$entry{branch}' branch, reintegrated in r\$reinteg_rev."
+  $SVNq rm $BRANCHES/$entry{branch} -m "Remove the '$entry{branch}' branch, $reintegrated_word in r\$reinteg_rev."
   if [ -n "\$YES" ]; then sleep 1; fi
 else
-  echo "Removing reintegrated '$entry{branch}' branch"
+  echo "Removing $reintegrated_word '$entry{branch}' branch"
 fi
 EOF
 
@@ -157,7 +184,8 @@ sub parse_entry {
   s/^   // for @_;
 
   # revisions
-  $branch = sanitize_branch $1 if $_[0] =~ /^(\S*) branch$/;
+  $branch = sanitize_branch $1
+    if $_[0] =~ /^(\S*) branch$/ or $_[0] =~ m#branches/(\S+)#;
   while ($_[0] =~ /^r/) {
     while ($_[0] =~ s/^r(\d+)(?:$|[,; ]+)//) {
       push @revisions, $1;
@@ -195,11 +223,12 @@ sub parse_entry {
 }
 
 sub handle_entry {
+  my $in_approved = shift;
   my %entry = parse_entry @_;
   my @vetoes = grep { /^  -1:/ } @{$entry{votes}};
 
   if ($YES) {
-    merge %entry unless @vetoes;
+    merge %entry if $in_approved and not @vetoes;
   } else {
     print "";
     print "\n>>> The $entry{header}:";
@@ -212,7 +241,14 @@ sub handle_entry {
     print "";
     print "Vetoes found!" if @vetoes;
 
-    merge %entry if prompt;
+    if (prompt 'Go ahead?') {
+      merge %entry;
+      system($ENV{SHELL} // "/bin/sh") == 0
+        or warn "Creating an interactive subshell failed ($?): $!"
+        if prompt "Shall I open a subshell?";
+      # Don't revert.  The next merge() call will do that anyway, or maybe the
+      # user did in his interactive shell.
+    }
   }
 
   # TODO: merge() changes ./STATUS, which we're reading below, but
@@ -232,17 +268,17 @@ sub main {
 
   # ### TODO: need to run 'revert' here
   # ### TODO: both here and in merge(), unlink files that previous merges added
-  die "Local mods to STATUS file $STATUS" if `$SVN status -q $STATUS`;
+  # When running from cron, there shouldn't be local mods.  (For interactive
+  # usage, we preserve local mods to STATUS.)
+  die "Local mods to STATUS file $STATUS" if $YES and `$SVN status -q $STATUS`;
 
   # Skip most of the file
   while (<STATUS>) {
-    last if /^Approved changes/;
-  }
-  while (<STATUS>) {
-    last unless /^=+$/;
+    last if /^Status of \d+\.\d+/;
   }
   $/ = ""; # paragraph mode
 
+  my $in_approved = 0;
   while (<STATUS>) {
     my @lines = split /\n/;
 
@@ -250,6 +286,7 @@ sub main {
       # Section header
       when (/^[A-Z].*:$/i) {
         print "\n\n=== $lines[0]" unless $YES;
+        $in_approved = $lines[0] =~ /^Approved changes/;
       }
       # Separator after section header
       when (/^=+$/i) {
@@ -259,10 +296,10 @@ sub main {
       when (/^ \*/) {
         warn "Too many bullets in $lines[0]" and next
           if grep /^ \*/, @lines[1..$#lines];
-        handle_entry @lines;
+        handle_entry $in_approved, @lines;
       }
       default {
-        warn "Unknown entry '$lines[0]' at $ARGV:$.\n";
+        warn "Unknown entry '$lines[0]' at line $.\n";
       }
     }
   }

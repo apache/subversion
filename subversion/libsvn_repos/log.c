@@ -599,7 +599,7 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
      svn:mergeinfo change and is one of our paths of interest, or a
      child or [grand]parent directory thereof. */
   iterpool = svn_pool_create(scratch_pool);
-  for (hi = apr_hash_first(scratch_pool, *prefetched_changes); 
+  for (hi = apr_hash_first(scratch_pool, *prefetched_changes);
        hi;
        hi = apr_hash_next(hi))
     {

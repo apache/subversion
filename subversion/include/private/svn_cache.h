@@ -275,7 +275,7 @@ svn_cache__make_memcache_from_config(svn_memcache_t **memcache_p,
  * down to next lower power of two. Also, there is an implementation
  * specific upper limit and the setting will be capped there automatically.
  * If the number is 0, a default will be derived from @a total_size.
- * 
+ *
  * If access to the resulting cache object is guaranteed to be serialized,
  * @a thread_safe may be set to @c FALSE for maximum performance.
  *

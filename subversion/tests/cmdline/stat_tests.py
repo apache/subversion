@@ -1528,7 +1528,7 @@ def status_depth_update(sbox):
 #----------------------------------------------------------------------
 def status_depth_update_local_modifications(sbox):
   "run 'status --depth=X -u' with local changes"
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
   A_path = sbox.ospath('A')
@@ -1978,7 +1978,7 @@ def status_not_present(sbox):
                                      sbox.ospath('no-file'))
 
 # Skip this test is a .svn dir exists in the root directory
-@Skip(lambda: os.path.exists("/%s" % svntest.main.get_admin_name())) 
+@Skip(lambda: os.path.exists("/%s" % svntest.main.get_admin_name()))
 def status_unversioned_dir(sbox):
   "status on unversioned dir"
   sbox.build(read_only = True, create_wc = False)

@@ -946,7 +946,7 @@ svn_cmdline__be_interactive(svn_boolean_t non_interactive,
       return (isatty(STDIN_FILENO) != 0);
 #endif
     }
-  else if (force_interactive) 
+  else if (force_interactive)
     return TRUE;
 
   return !non_interactive;

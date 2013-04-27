@@ -35,6 +35,7 @@
 #include "svn_private_config.h"
 #include "svn_dso.h"
 #include "svn_version.h"
+#include "private/svn_dep_compat.h"
 
 #include "auth.h"
 
@@ -186,6 +187,15 @@ svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 }
 
 
+/* Return the key used to address the in-memory cache of auth
+   credentials of type CRED_KIND and associated with REALMSTRING. */
+static const char *
+make_cache_key(const char *cred_kind,
+               const char *realmstring,
+               apr_pool_t *pool)
+{
+  return apr_pstrcat(pool, cred_kind, ":", realmstring, (char *)NULL);
+}
 
 svn_error_t *
 svn_auth_first_credentials(void **credentials,
@@ -212,7 +222,7 @@ svn_auth_first_credentials(void **credentials,
                              cred_kind);
 
   /* First, see if we have cached creds in the auth_baton. */
-  cache_key = apr_pstrcat(pool, cred_kind, ":", realmstring, (char *)NULL);
+  cache_key = make_cache_key(cred_kind, realmstring, pool);
   creds = svn_hash_gets(auth_baton->creds_cache, cache_key);
   if (creds)
     {
@@ -380,6 +390,32 @@ svn_auth_save_credentials(svn_auth_iterstate_t *state,
 
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_auth_forget_credentials(svn_auth_baton_t *auth_baton,
+                            const char *cred_kind,
+                            const char *realmstring,
+                            apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT((cred_kind && realmstring) || (!cred_kind && !realmstring));
+
+  /* If we have a CRED_KIND and REALMSTRING, we clear out just the
+     cached item (if any).  Otherwise, empty the whole hash. */
+  if (cred_kind)
+    {
+      svn_hash_sets(auth_baton->creds_cache,
+                    make_cache_key(cred_kind, realmstring, scratch_pool),
+                    NULL);
+    }
+  else
+    {
+      apr_hash_clear(auth_baton->creds_cache);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_auth_ssl_server_cert_info_t *
 svn_auth_ssl_server_cert_info_dup
@@ -611,23 +647,6 @@ svn_auth_get_platform_specific_client_providers(apr_array_header_t **providers,
           SVN__MAYBE_ADD_PROVIDER(*providers, provider);
         }
     }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_auth_cleanup_walk(svn_auth_baton_t *baton,
-                      svn_auth_cleanup_callback cleanup,
-                      void *cleanup_baton,
-                      apr_pool_t *scratch_pool)
-{
-
-  if (svn_hash_gets(baton->tables, SVN_AUTH_CRED_SIMPLE))
-    {
-      SVN_ERR(svn_auth__simple_cleanup_walk(baton, cleanup, cleanup_baton,
-                                            baton->creds_cache, scratch_pool));
-    }
-  /* ### Maybe add support for other providers? */
 
   return SVN_NO_ERROR;
 }

@@ -664,8 +664,8 @@ svn_io_files_contents_same_p(svn_boolean_t *same,
                              apr_pool_t *pool);
 
 /** Set @a *same12 to TRUE if @a file1 and @a file2 have the same
- * contents, else set it to FALSE.  Do the similar for @a *same23 
- * with @a file2 and @a file3, and @a *same13 for @a file1 and @a 
+ * contents, else set it to FALSE.  Do the similar for @a *same23
+ * with @a file2 and @a file3, and @a *same13 for @a file1 and @a
  * file3. The filenames @a file1, @a file2 and @a file3 are
  * utf8-encoded. Use @a scratch_pool for temporary allocations.
  *
@@ -938,7 +938,7 @@ svn_stream_empty(apr_pool_t *pool);
 /** Return a stream allocated in @a pool which forwards all requests
  * to @a stream.  Destruction is explicitly excluded from forwarding.
  *
- * @see notes/destruction-of-stacked-resources
+ * @see http://subversion.apache.org/docs/community-guide/conventions.html#destruction-of-stacked-resources
  *
  * @since New in 1.4.
  */
@@ -1391,6 +1391,15 @@ svn_string_from_stream(svn_string_t **result,
 /** A function type provided for use as a callback from
  * @c svn_stream_lazyopen_create().
  *
+ * The callback function shall open a new stream and set @a *stream to
+ * the stream object, allocated in @a result_pool.  @a baton is the
+ * callback baton that was passed to svn_stream_lazyopen_create().
+ *
+ * @a result_pool is the result pool that was passed to
+ * svn_stream_lazyopen_create().  The callback function may use
+ * @a scratch_pool for temporary allocations; the caller may clear or
+ * destroy @a scratch_pool any time after the function returns.
+ *
  * @since New in 1.8.
  */
 typedef svn_error_t *
@@ -1402,20 +1411,22 @@ typedef svn_error_t *
 
 /** Return a generic stream which wraps another primary stream,
  * delaying the "opening" of that stream until the first time the
- * stream is accessed.
+ * returned stream is accessed.
  *
  * @a open_func and @a open_baton are a callback function/baton pair
- * invoked upon the first read of @a *stream which are used to open the
- * "real" source stream.
+ * which will be invoked upon the first access of the returned
+ * stream (read, write, mark, seek, skip, or possibly close).  The
+ * callback shall open the primary stream.
  *
- * @note If the only "access" the returned stream gets is to close it,
- * @a open_func will not be called.
+ * If the only "access" the returned stream gets is to close it
+ * then @a open_func will only be called if @a open_on_close is TRUE.
  *
  * @since New in 1.8.
  */
 svn_stream_t *
 svn_stream_lazyopen_create(svn_stream_lazyopen_func_t open_func,
                            void *open_baton,
+                           svn_boolean_t open_on_close,
                            apr_pool_t *result_pool);
 
 /** @} */
@@ -1599,12 +1610,13 @@ svn_io_stat_dirent2(const svn_io_dirent2_t **dirent_p,
                     apr_pool_t *scratch_pool);
 
 
-/** Similar to svn_io_stat_dirent2, but always passes FALSE for
- * verify_truename.
+/** Similar to svn_io_stat_dirent2(), but always passes FALSE for
+ * @a verify_truename.
  *
  * @since New in 1.7.
  * @deprecated Provided for backwards compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
                    const char *path,
@@ -1689,9 +1701,9 @@ svn_io_dir_walk(const char *dirname,
  * a non-zero exit status being returned to the parent process.
  *
  * @note An APR bug affects Windows: passing a NULL @a env does not
- * guarantee the invoked program to run with an empty environment when 
- * @a inherits is FALSE, the program may inherit its parent's environment.
- * Explicitly pass an empty @env to get an empty environment.
+ * guarantee the invoked program to run with an empty environment when
+ * @a inherit is FALSE, the program may inherit its parent's environment.
+ * Explicitly pass an empty @a env to get an empty environment.
  *
  * @since New in 1.8.
  */
@@ -1716,6 +1728,7 @@ svn_error_t *svn_io_start_cmd3(apr_proc_t *cmd_proc,
  * @deprecated Provided for backward compatibility with the 1.7 API
  * @since New in 1.7.
  */
+SVN_DEPRECATED
 svn_error_t *svn_io_start_cmd2(apr_proc_t *cmd_proc,
                                const char *path,
                                const char *cmd,

@@ -1488,6 +1488,7 @@ logs_for_mergeinfo_rangelist(const char *source_url,
                              const apr_array_header_t *merge_source_fspaths,
                              svn_boolean_t filtering_merged,
                              const svn_rangelist_t *rangelist,
+                             svn_boolean_t oldest_revs_first,
                              svn_mergeinfo_catalog_t target_mergeinfo_catalog,
                              const char *target_fspath,
                              svn_boolean_t discover_changed_paths,
@@ -1505,10 +1506,6 @@ logs_for_mergeinfo_rangelist(const char *source_url,
 
   if (! rangelist->nelts)
     return SVN_NO_ERROR;
-
-  /* Sort the rangelist. */
-  qsort(rangelist->elts, rangelist->nelts,
-        rangelist->elt_size, svn_sort_compare_ranges);
 
   /* Build a single-member log target list using SOURCE_URL. */
   target = apr_array_make(scratch_pool, 1, sizeof(const char *));
@@ -1549,8 +1546,12 @@ logs_for_mergeinfo_rangelist(const char *source_url,
   /* Drive the log. */
   revision_ranges = apr_array_make(scratch_pool, 1,
                                    sizeof(svn_opt_revision_range_t *));
-  APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *)
-    = svn_opt__revision_range_create(&oldest_rev, &youngest_rev, scratch_pool);
+  if (oldest_revs_first)
+    APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *)
+      = svn_opt__revision_range_create(&oldest_rev, &youngest_rev, scratch_pool);
+  else
+    APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *)
+      = svn_opt__revision_range_create(&youngest_rev, &oldest_rev, scratch_pool);
   SVN_ERR(svn_client_log5(target, &youngest_rev, revision_ranges,
                           0, discover_changed_paths, FALSE, FALSE, revprops,
                           filter_log_entry_with_rangelist, &fleb, ctx,
@@ -1682,6 +1683,7 @@ svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
   apr_hash_index_t *hi_catalog;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
+  svn_boolean_t oldest_revs_first = TRUE;
 
   /* We currently only support depth = empty | infinity. */
   if (depth != svn_depth_infinity && depth != svn_depth_empty)
@@ -1700,9 +1702,12 @@ svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
         (source_end_revision->kind == svn_opt_revision_date) ||
         (source_end_revision->kind == svn_opt_revision_head)))
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
+  if ((source_end_revision->kind != svn_opt_revision_unspecified)
+      && (source_start_revision->kind == svn_opt_revision_unspecified))
+    return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
   if ((source_end_revision->kind == svn_opt_revision_unspecified)
       && (source_start_revision->kind != svn_opt_revision_unspecified))
-    source_end_revision = source_start_revision;
+    return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
 
   /* We need the union of TARGET_PATH_OR_URL@TARGET_PEG_REVISION's mergeinfo
      and MERGE_SOURCE_URL's history.  It's not enough to do path
@@ -1733,7 +1738,7 @@ svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
 
       /* TARGET_REPOS_REL should be non-NULL, else get_mergeinfo
          should have failed.  */
-      SVN_ERR_ASSERT(target_repos_relpath != NULL); 
+      SVN_ERR_ASSERT(target_repos_relpath != NULL);
     }
 
   if (!target_mergeinfo_cat)
@@ -1767,7 +1772,7 @@ svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
     svn_ra_session_t *source_session, *target_session;
     svn_client__pathrev_t *pathrev;
     svn_revnum_t start_rev, end_rev, youngest_rev = SVN_INVALID_REVNUM;
-    
+
     if (! finding_merged)
       {
         SVN_ERR(svn_client__ra_session_from_path2(&target_session, &pathrev,
@@ -1782,7 +1787,7 @@ svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
                                                      target_session, ctx,
                                                      scratch_pool));
       }
-    
+
     SVN_ERR(svn_client__ra_session_from_path2(&source_session, &pathrev,
                                               source_path_or_url, NULL,
                                               source_peg_revision,
@@ -1799,9 +1804,13 @@ svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
                                             source_end_revision,
                                             sesspool));
     SVN_ERR(svn_client__get_history_as_mergeinfo(&source_history, NULL,
-                                                 pathrev, end_rev, start_rev,
+                                                 pathrev,
+                                                 MAX(end_rev, start_rev),
+                                                 MIN(end_rev, start_rev),
                                                  source_session, ctx,
                                                  scratch_pool));
+    if (start_rev > end_rev)
+      oldest_revs_first = FALSE;
 
     /* Close the source and target sessions. */
     svn_pool_destroy(sesspool);
@@ -2064,6 +2073,7 @@ svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
   SVN_ERR(logs_for_mergeinfo_rangelist(log_target, merge_source_fspaths,
                                        finding_merged,
                                        master_inheritable_rangelist,
+                                       oldest_revs_first,
                                        target_mergeinfo_cat,
                                        svn_fspath__join("/",
                                                         target_repos_relpath,

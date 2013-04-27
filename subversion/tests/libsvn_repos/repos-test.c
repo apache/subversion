@@ -29,11 +29,13 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
+#include "svn_hash.h"
 #include "svn_repos.h"
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_config.h"
 #include "svn_props.h"
+#include "svn_version.h"
 
 #include "../svn_test_fs.h"
 
@@ -1402,6 +1404,7 @@ in_repo_authz(const svn_test_opts_t *opts,
   const char *repos_root;
   const char *repos_url;
   const char *authz_url;
+  const char *noent_authz_url;
   svn_error_t *err;
   struct check_access_tests test_set[] = {
     /* reads */
@@ -1420,15 +1423,15 @@ in_repo_authz(const svn_test_opts_t *opts,
    * Create an authz file and put it in the repository.
    * Verify it can be read with an relative URL.
    * Verify it can be read with an absolute URL.
-   * Verify non-existant path does not error out when must_exist is FALSE. 
+   * Verify non-existant path does not error out when must_exist is FALSE.
    * Verify non-existant path does error out when must_exist is TRUE.
    * Verify that an http:// URL produces an error.
    * Verify that an svn:// URL produces an error.
    */
 
   /* What we'll put in the authz file, it's simple since we're not testing
-   * the parsing, just that we got what we expected. */ 
-  authz_contents = 
+   * the parsing, just that we got what we expected. */
+  authz_contents =
     ""                                                                       NL
     ""                                                                       NL
     "[/]"                                                                    NL
@@ -1449,27 +1452,21 @@ in_repo_authz(const svn_test_opts_t *opts,
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
 
-  /* repos relative URL */
   repos_root = svn_repos_path(repos, pool);
-  SVN_ERR(svn_repos_authz_read2(&authz_cfg, "^/authz", NULL, TRUE,
-                                repos_root, pool));
-  SVN_ERR(authz_check_access(authz_cfg, test_set, pool));
-
-  /* absolute file URL, repos_root is NULL to validate the contract that it
-   * is not needed except when a repos relative URL is passed. */
   SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_root, pool));
   authz_url = apr_pstrcat(pool, repos_url, "/authz", (char *)NULL);
-  SVN_ERR(svn_repos_authz_read2(&authz_cfg, authz_url, NULL, TRUE,
-                                NULL, pool));
-  SVN_ERR(authz_check_access(authz_cfg, test_set, pool));
-  
-  /* Non-existant path in the repo with must_exist set to FALSE */ 
-  SVN_ERR(svn_repos_authz_read2(&authz_cfg, "^/A/authz", NULL, FALSE,
-                                repos_root, pool));
+  noent_authz_url = apr_pstrcat(pool, repos_url, "/A/authz", (char *)NULL);
 
-  /* Non-existant path in the repo with must_exist set to TRUE */ 
-  err = svn_repos_authz_read2(&authz_cfg, "^/A/authz", NULL, TRUE,
-                              repos_root, pool);
+  /* absolute file URL. */
+  SVN_ERR(svn_repos_authz_read2(&authz_cfg, authz_url, NULL, TRUE, pool));
+  SVN_ERR(authz_check_access(authz_cfg, test_set, pool));
+
+  /* Non-existant path in the repo with must_exist set to FALSE */
+  SVN_ERR(svn_repos_authz_read2(&authz_cfg, noent_authz_url, NULL,
+                                FALSE, pool));
+
+  /* Non-existant path in the repo with must_exist set to TRUE */
+  err = svn_repos_authz_read2(&authz_cfg, noent_authz_url, NULL, TRUE, pool);
   if (!err || err->apr_err != SVN_ERR_ILLEGAL_TARGET)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
                              "Got %s error instead of expected "
@@ -1479,7 +1476,7 @@ in_repo_authz(const svn_test_opts_t *opts,
 
   /* http:// URL which is unsupported */
   err = svn_repos_authz_read2(&authz_cfg, "http://example.com/repo/authz",
-                              NULL, TRUE, repos_root, pool);
+                              NULL, TRUE, pool);
   if (!err || err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
                              "Got %s error instead of expected "
@@ -1489,7 +1486,7 @@ in_repo_authz(const svn_test_opts_t *opts,
 
   /* svn:// URL which is unsupported */
   err = svn_repos_authz_read2(&authz_cfg, "svn://example.com/repo/authz",
-                              NULL, TRUE, repos_root, pool);
+                              NULL, TRUE, pool);
   if (!err || err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
                              "Got %s error instead of expected "
@@ -1518,7 +1515,10 @@ in_repo_groups_authz(const svn_test_opts_t *opts,
   const char *repos_root;
   const char *repos_url;
   const char *groups_url;
+  const char *noent_groups_url;
   const char *authz_url;
+  const char *empty_authz_url;
+  const char *noent_authz_url;
   svn_error_t *err;
   struct check_access_tests test_set[] = {
     /* reads */
@@ -1590,38 +1590,34 @@ in_repo_groups_authz(const svn_test_opts_t *opts,
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
 
-  /* repos relative URLs */
+  /* Calculate URLs */
   repos_root = svn_repos_path(repos, pool);
-  SVN_ERR(svn_repos_authz_read2(&authz_cfg, "^/authz", "^/groups",
-                                TRUE, repos_root, pool));
-  SVN_ERR(authz_check_access(authz_cfg, test_set, pool));
-
-  /* absolute file URLs, repos_root is NULL to validate the contract that it
-   * is not needed except when a repos relative URLs are passed. */
   SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_root, pool));
   authz_url = apr_pstrcat(pool, repos_url, "/authz", (char *)NULL);
+  empty_authz_url = apr_pstrcat(pool, repos_url, "/empty-authz", (char *)NULL);
+  noent_authz_url = apr_pstrcat(pool, repos_url, "/A/authz", (char *)NULL);
   groups_url = apr_pstrcat(pool, repos_url, "/groups", (char *)NULL);
-  SVN_ERR(svn_repos_authz_read2(&authz_cfg, authz_url, groups_url,
-                                TRUE, NULL, pool));
+  noent_groups_url = apr_pstrcat(pool, repos_url, "/A/groups", (char *)NULL);
+
+
+  /* absolute file URLs. */
+  SVN_ERR(svn_repos_authz_read2(&authz_cfg, authz_url, groups_url, TRUE, pool));
   SVN_ERR(authz_check_access(authz_cfg, test_set, pool));
 
   /* Non-existent path for the groups file with must_exist
    * set to TRUE */
-  SVN_ERR(svn_repos_authz_read2(&authz_cfg, "^/empty-authz",
-                                "^/A/groups", FALSE,
-                                repos_root, pool));
+  SVN_ERR(svn_repos_authz_read2(&authz_cfg, empty_authz_url, noent_groups_url,
+                                FALSE, pool));
 
   /* Non-existent paths for both the authz and the groups files
    * with must_exist set to TRUE */
-  SVN_ERR(svn_repos_authz_read2(&authz_cfg, "^/A/authz",
-                                "^/A/groups", FALSE,
-                                repos_root, pool));
+  SVN_ERR(svn_repos_authz_read2(&authz_cfg, noent_authz_url, noent_groups_url,
+                                FALSE, pool));
 
   /* Non-existent path for the groups file with must_exist
    * set to TRUE */
-  err = svn_repos_authz_read2(&authz_cfg, "^/empty-authz",
-                              "^/A/groups", TRUE,
-                              repos_root, pool);
+  err = svn_repos_authz_read2(&authz_cfg, empty_authz_url, noent_groups_url,
+                              TRUE, pool);
   if (!err || err->apr_err != SVN_ERR_ILLEGAL_TARGET)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
                              "Got %s error instead of expected "
@@ -1630,9 +1626,9 @@ in_repo_groups_authz(const svn_test_opts_t *opts,
   svn_error_clear(err);
 
   /* http:// URL which is unsupported */
-  err = svn_repos_authz_read2(&authz_cfg, "^/empty-authz",
+  err = svn_repos_authz_read2(&authz_cfg, empty_authz_url,
                               "http://example.com/repo/groups",
-                              TRUE, repos_root, pool);
+                              TRUE, pool);
   if (!err || err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
                              "Got %s error instead of expected "
@@ -1641,9 +1637,9 @@ in_repo_groups_authz(const svn_test_opts_t *opts,
   svn_error_clear(err);
 
   /* svn:// URL which is unsupported */
-  err = svn_repos_authz_read2(&authz_cfg, "^/empty-authz",
+  err = svn_repos_authz_read2(&authz_cfg, empty_authz_url,
                               "http://example.com/repo/groups",
-                              TRUE, repos_root, pool);
+                              TRUE, pool);
   if (!err || err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
                              "Got %s error instead of expected "
@@ -1687,7 +1683,7 @@ authz_groups_get_handle(svn_authz_t **authz_p,
 
       /* Read the authz configuration back and start testing. */
       SVN_ERR_W(svn_repos_authz_read2(authz_p, authz_file_path,
-                                      groups_file_path, TRUE, NULL, pool),
+                                      groups_file_path, TRUE, pool),
                 "Opening test authz and groups files");
 
       /* Done with the files. */
@@ -2038,6 +2034,9 @@ test_path_authz(svn_repos_t *repos,
                                     path_action->copyfrom_path, youngest_rev,
                                     scratch_pool, &out_baton);
         break;
+
+      default:
+        SVN_TEST_ASSERT(FALSE);
     }
 
   /* Don't worry about closing batons, just abort the edit.  Since errors
@@ -3192,7 +3191,7 @@ filename_with_control_chars(const svn_test_opts_t *opts,
   const svn_delta_editor_t *editor;
 
   /* Create the repository. */
-  SVN_ERR(svn_test__create_repos(&repos, "test-repos-filename-with-cntrl-chars",
+  SVN_ERR(svn_test__create_repos(&repos, "test-repo-filename-with-cntrl-chars",
                                  opts, pool));
   fs = svn_repos_fs(repos);
 
@@ -3259,6 +3258,45 @@ filename_with_control_chars(const svn_test_opts_t *opts,
 
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *
+test_repos_info(const svn_test_opts_t *opts,
+                apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_test_opts_t opts2;
+  apr_hash_t *capabilities;
+  svn_version_t *supports_version;
+  svn_version_t v1_0_0 = {1, 0, 0, ""};
+  svn_version_t v1_4_0 = {1, 4, 0, ""};
+  int repos_format;
+
+  opts2 = *opts;
+
+  opts2.server_minor_version = 3;
+  SVN_ERR(svn_test__create_repos(&repos, "test-repo-info-3",
+                                 &opts2, pool));
+  SVN_ERR(svn_repos_capabilities(&capabilities, repos, pool, pool));
+  SVN_TEST_ASSERT(apr_hash_count(capabilities) == 0);
+  SVN_ERR(svn_repos_info_format(&repos_format, &supports_version, repos,
+                                pool, pool));
+  SVN_TEST_ASSERT(repos_format == 3);
+  SVN_TEST_ASSERT(svn_ver_equal(supports_version, &v1_0_0));
+
+  opts2.server_minor_version = 8;
+  SVN_ERR(svn_test__create_repos(&repos, "test-repo-info-8",
+                                 &opts2, pool));
+  SVN_ERR(svn_repos_capabilities(&capabilities, repos, pool, pool));
+  SVN_TEST_ASSERT(apr_hash_count(capabilities) == 1);
+  SVN_TEST_ASSERT(svn_hash_gets(capabilities, SVN_REPOS_CAPABILITY_MERGEINFO));
+  SVN_ERR(svn_repos_info_format(&repos_format, &supports_version, repos,
+                                pool, pool));
+  SVN_TEST_ASSERT(repos_format == 5);
+  SVN_TEST_ASSERT(svn_ver_equal(supports_version, &v1_4_0));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -3305,5 +3343,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test svn_repos_delete"),
     SVN_TEST_OPTS_PASS(filename_with_control_chars,
                        "test filenames with control characters"),
+    SVN_TEST_OPTS_PASS(test_repos_info,
+                       "test svn_repos_info_*"),
     SVN_TEST_NULL
   };

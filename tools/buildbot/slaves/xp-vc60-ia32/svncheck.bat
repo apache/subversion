@@ -5,9 +5,9 @@ REM     regarding copyright ownership.  The ASF licenses this file
 REM     to you under the Apache License, Version 2.0 (the
 REM     "License"); you may not use this file except in compliance
 REM     with the License.  You may obtain a copy of the License at
-REM    
+REM
 REM       http://www.apache.org/licenses/LICENSE-2.0
-REM    
+REM
 REM     Unless required by applicable law or agreed to in writing,
 REM     software distributed under the License is distributed on an
 REM     "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -32,7 +32,7 @@ echo Unknown ra method '%RA_TYPE%'
 EXIT 3
 
 :ra_local
-python win-tests.py %TEST_DIR% -f %FS_TYPE% -c -r 
+python win-tests.py %TEST_DIR% -f %FS_TYPE% -c -r
 if ERRORLEVEL 1 set ERR=1
 EXIT %ERR%
 

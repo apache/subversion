@@ -131,7 +131,9 @@ typedef struct fs_library_vtable_t
                                                                const char *,
                                                                apr_hash_t *,
                                                                apr_pool_t *));
-
+  /* For svn_fs_info_fsfs_dup(). */
+  void *(*info_fsap_dup)(const void *fsap_info,
+                         apr_pool_t *result_pool);
 } fs_library_vtable_t;
 
 /* This is the type of symbol an FS module defines to fetch the
@@ -212,11 +214,25 @@ typedef struct fs_vtable_t
                             svn_fs_get_locks_callback_t get_locks_func,
                             void *get_locks_baton,
                             apr_pool_t *pool);
+  svn_error_t *(*info_format)(int *fs_format,
+                              svn_version_t **supports_version,
+                              svn_fs_t *fs,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+  svn_error_t *(*info_config_files)(apr_array_header_t **files,
+                                    svn_fs_t *fs,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
+  svn_error_t *(*info_fsap)(const void **fsap_info,
+                            svn_fs_t *fs,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+  /* info_fsap_dup is in the library vtable. */
   svn_error_t *(*verify_root)(svn_fs_root_t *root,
                               apr_pool_t *pool);
   svn_error_t *(*freeze)(svn_fs_t *fs,
-                         svn_error_t *(*freeze_body)(void *, apr_pool_t *),
-                         void *baton, apr_pool_t *pool);
+                         svn_fs_freeze_func_t freeze_func,
+                         void *freeze_baton, apr_pool_t *pool);
   svn_error_t *(*bdb_set_errcall)(svn_fs_t *fs,
                                   void (*handler)(const char *errpfx,
                                                   char *msg));

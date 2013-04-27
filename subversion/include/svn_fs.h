@@ -108,7 +108,7 @@ typedef struct svn_fs_t svn_fs_t;
  *
  * @since New in 1.8.
  */
-#define SVN_FS_CONFIG_FSFS_CACHE_NS             "fsfs-cache-namespace"               
+#define SVN_FS_CONFIG_FSFS_CACHE_NS             "fsfs-cache-namespace"
 
 /* Note to maintainers: if you add further SVN_FS_CONFIG_FSFS_CACHE_* knobs,
    update fs_fs.c:verify_as_revision_before_current_plus_plus(). */
@@ -332,6 +332,20 @@ svn_fs_path(svn_fs_t *fs,
             apr_pool_t *pool);
 
 /**
+ * Return a shallow copy of the configuration parameters used to open
+ * @a fs, allocated in @a pool.  It may be @c NULL.  The contents of the
+ * hash contents remains valid only for @a fs's lifetime.
+ * 
+ * @note This is just what was passed to svn_fs_create() or svn_fs_open().
+ * You may not modify it.
+ *
+ * @since New in 1.8.
+ */
+apr_hash_t *
+svn_fs_config(svn_fs_t *fs,
+              apr_pool_t *pool);
+
+/**
  * Delete the filesystem at @a path.
  *
  * @note: Deleting a filesystem that has an open svn_fs_t is not
@@ -426,8 +440,15 @@ svn_fs_recover(const char *path,
 
 
 /**
+ * Callback for svn_fs_freeze().
+ *
+ * @since New in 1.8.
+ */
+typedef svn_error_t *(*svn_fs_freeze_func_t)(void *baton, apr_pool_t *pool);
+
+/**
  * Take an exclusive lock on @a fs to prevent commits and then invoke
- * @a freeze_body passing @a baton.
+ * @a freeze_func passing @a freeze_baton.
  *
  * @note The BDB backend doesn't implement this feature so most
  * callers should not call this function directly but should use the
@@ -439,10 +460,9 @@ svn_fs_recover(const char *path,
  */
 svn_error_t *
 svn_fs_freeze(svn_fs_t *fs,
-              svn_error_t *(*freeze_body)(void *baton, apr_pool_t *pool),
-              void *baton,
+              svn_fs_freeze_func_t freeze_func,
+              void *freeze_baton,
               apr_pool_t *pool);
-              
 
 
 /** Subversion filesystems based on Berkeley DB.
@@ -1926,7 +1946,7 @@ typedef svn_error_t *
  *
  * @note @a processor is expected to be relatively short function with
  * at most O(content size) runtime.
- * 
+ *
  * @since New in 1.8.
  */
 svn_error_t *
@@ -2056,6 +2076,41 @@ svn_error_t *
 svn_fs_youngest_rev(svn_revnum_t *youngest_p,
                     svn_fs_t *fs,
                     apr_pool_t *pool);
+
+
+/**
+ * Return filesystem format information for @a fs.
+ *
+ * Set @a *fs_format to the filesystem format number of @a fs, which is
+ * an integer that increases when incompatible changes are made (such as
+ * by #svn_fs_upgrade).
+ *
+ * Set @a *supports_version to the version number of the minimum Subversion GA
+ * release that can read and write @a fs.
+ *
+ * @see svn_repos_info_format()
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_fs_info_format(int *fs_format,
+                   svn_version_t **supports_version,
+                   svn_fs_t *fs,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool);
+
+/**
+ * Return a list of admin-serviceable config files for @a fs.  @a *files
+ * will be set to an array containing paths as C strings.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_fs_info_config_files(apr_array_header_t **files,
+                         svn_fs_t *fs,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
 
 
 /** Provide filesystem @a fs the opportunity to compress storage relating to
@@ -2441,19 +2496,20 @@ svn_fs_pack(const char *db_path,
 /**
  * Perform backend-specific data consistency and correctness validations
  * to the Subversion filesystem (mainly the meta-data) located in the
- * directory @a path.  Use @a scratch_pool for temporary allocations.
+ * directory @a path.  Use the backend-specific configuration @a fs_config
+ * when opening the filesystem.  @a NULL is valid for all backends.
+ * Use @a scratch_pool for temporary allocations.
  *
- * Repository (meta) data forms a tightly knit network of references.
- * A full check can be expensive and may not always be required.  If not
- * equal to #SVN_INVALID_REVNUM, @a start and @a end define the range of
- * revisions to check, @c r0 and @a HEAD being the respective defaults.
- * Due to the references among repository (meta) data, the implementation
- * may however need to also check elements that are not strictly part of
- * the selected range of revisions.  Thus, it is perfectly legal for a FS
- * implementation to ignore the @a start and @a end parameters entirely.
- * 
- * Only if @c r0 has been included in the range of revisions to check,
- * are global invariants guaranteed to get verified.
+ * @a start and @a end define the (minimum) range of revisions to check.
+ * If @a start is #SVN_INVALID_REVNUM, it defaults to @c r0.  Likewise,
+ * @a end will default to the current youngest repository revision when
+ * given as #SVN_INVALID_REVNUM.  Since meta data checks may have to touch
+ * other revisions as well, you may receive notifications for revisions
+ * outside the specified range.   In fact, it is perfectly legal for a FS
+ * implementation to always check all revisions.
+ *
+ * Global invariants are only guaranteed to get verified when @a r0 has
+ * been included in the range of revisions to check.
  *
  * The optional @a notify_func callback is only a general feedback that
  * the operation is still in process but may be called in random revisions
@@ -2469,7 +2525,7 @@ svn_fs_pack(const char *db_path,
  *
  * @note To ensure a full verification using all tests and covering all
  * revisions, you must call this function *and* #svn_fs_verify_rev.
- * 
+ *
  * @note Implementors, please do tests that can be done efficiently for
  * a single revision in #svn_fs_verify_root.  This function is meant for
  * global checks or tests that require an expensive context setup.
@@ -2481,6 +2537,7 @@ svn_fs_pack(const char *db_path,
  */
 svn_error_t *
 svn_fs_verify(const char *path,
+              apr_hash_t *fs_config,
               svn_revnum_t start,
               svn_revnum_t end,
               svn_fs_progress_notify_func_t notify_func,
@@ -2519,6 +2576,81 @@ svn_fs_verify_root(svn_fs_root_t *root,
 
 /** @} */
 
+/**
+ * @defgroup fs_info Filesystem information subsystem
+ * @{
+ */
+
+/**
+ * A structure that provides some information about a filesystem.
+ * Returned by svn_fs_info() for #SVN_FS_TYPE_FSFS filesystems.
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, users shouldn't allocate structures of this
+ * type, to preserve binary compatibility.
+ *
+ * @since New in 1.9.
+ */
+typedef struct svn_fs_fsfs_info_t {
+
+  /** Filesystem backend (#fs_type), i.e., the string #SVN_FS_TYPE_FSFS. */
+  const char *fs_type;
+
+  /** Shard size, or 0 if the filesystem is not currently sharded. */
+  int shard_size;
+
+  /** The smallest revision (as #svn_revnum_t) which is not in a pack file.
+   * @note Zero (0) if (but not iff) the format does not support packing. */
+  svn_revnum_t min_unpacked_rev;
+
+  /* ### TODO: information about fsfs.conf? rep-cache.db? write locks? */
+
+  /* If you add fields here, check whether you need to extend svn_fs_info()
+     or svn_fs_info_dup(). */
+} svn_fs_fsfs_info_t;
+
+/** @see svn_fs_info()
+ * @since New in 1.9. */
+typedef struct svn_fs_info_placeholder_t {
+  /** @see svn_fs_type() */
+  const char *fs_type;
+
+  /* Do not add new fields here, to maintain compatibility with the first
+     released version of svn_fs_fsfs_info_t. */
+} svn_fs_info_placeholder_t;
+
+/**
+ * Set @a *fs_info to a struct describing @a fs.  The type of the
+ * struct depends on the backend: for #SVN_FS_TYPE_FSFS, the struct will be
+ * of type #svn_fs_fsfs_info_t; otherwise, the struct is guaranteed to be
+ * (compatible with) #svn_fs_info_placeholder_t.
+ *
+ * @see #svn_fs_fsfs_info_t
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_fs_info(const svn_fs_info_placeholder_t **fs_info,
+            svn_fs_t *fs,
+            apr_pool_t *result_pool,
+            apr_pool_t *scratch_pool);
+
+/**
+ * Return a duplicate of @a info, allocated in @a pool. The returned struct
+ * will be of the same type as the passed-in struct, which itself must have
+ * been returned from svn_fs_info() or svn_fs_info_dup().  No part of the new
+ * structure will be shared with @a info (except static string constants).
+ *
+ * @see #svn_fs_info_placeholder_t, #svn_fs_fsfs_info_t
+ *
+ * @since New in 1.9.
+ */
+void *
+svn_fs_info_dup(const void *info,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool);
+
+/** @} */
 
 #ifdef __cplusplus
 }

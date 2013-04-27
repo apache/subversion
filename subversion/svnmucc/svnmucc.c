@@ -1036,7 +1036,7 @@ sanitize_log_sources(apr_hash_t *revprops,
       svn_hash_sets(revprops, SVN_PROP_REVISION_LOG,
                     svn_string_create(message, hash_pool));
     }
-  
+
   return SVN_NO_ERROR;
 }
 

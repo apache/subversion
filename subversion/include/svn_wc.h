@@ -1247,7 +1247,7 @@ typedef enum svn_wc_notify_action_t
    * @since New in 1.8. */
   svn_wc_notify_left_local_modifications,
 
-  /** A copy from a foreign repository has started 
+  /** A copy from a foreign repository has started
    * @since New in 1.8. */
   svn_wc_notify_foreign_copy_begin,
 
@@ -4423,6 +4423,7 @@ svn_wc_copy(const char *src,
  * @deprecated Provided for backward compatibility with the 1.7 API.
  * @see svn_client_move7()
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_move(svn_wc_context_t *wc_ctx,
             const char *src_abspath,

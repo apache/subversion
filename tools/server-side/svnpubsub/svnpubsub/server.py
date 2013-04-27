@@ -36,7 +36,7 @@
 #
 #   URL is built into 2 parts:
 #       /commits/${optional_type}/${optional_repository}
-#  
+#
 #   If the type is included in the URL, you will only get commits of that type.
 #   The type can be * and then you will receive commits of any type.
 #
@@ -82,7 +82,7 @@ class Commit:
             raise ValueError('Invalid Format Value')
         if not self.check_value('id'):
             raise ValueError('Invalid ID Value')
- 
+
     def check_value(self, k):
         return hasattr(self, k) and self.__dict__[k]
 
@@ -130,7 +130,7 @@ class Client(object):
         if self.repository and self.repository != commit.repository:
             return False
 
-        return True 
+        return True
 
     def notify(self, data):
         self.write(data)
@@ -173,18 +173,18 @@ class SvnPubSub(resource.Resource):
         log.msg("REQUEST: %s"  % (request.uri))
         request.setHeader('content-type', 'text/plain')
 
-        repository = None 
-        type = None 
+        repository = None
+        type = None
 
         uri = request.uri.split('/')
         uri_len = len(uri)
-        if uri_len < 2 or uri_len > 4: 
+        if uri_len < 2 or uri_len > 4:
             request.setResponseCode(400)
             return "Invalid path\n"
 
-        if uri_len >= 3: 
+        if uri_len >= 3:
           type = uri[2]
-        
+
         if uri_len == 4:
           repository = uri[3]
 

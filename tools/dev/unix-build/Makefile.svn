@@ -1510,13 +1510,17 @@ svn-check: svn-check-prepare-ramdisk svn-check-local svn-check-svn \
 	svn-check-neon svn-check-serf svn-check-bindings
 
 .PHONY: sign-email
+ifdef NEON_FLAG
+NEON_STR=ra_neon | 
+NEON_VER_LINE=@echo "neon:       $(NEON_VER)"
+endif
 sign-email:
 	@echo "Summary: +1 to release"
 	@echo ""
-	@echo "Tested: [bdb | fsfs] x [ra_local | ra_svn | ra_neon | ra_serf]"
+	@echo "Tested: [bdb | fsfs] x [ra_local | ra_svn | $(NEON_STR)ra_serf]"
 	@echo "        swig bindings"
 ifeq ($(ENABLE_JAVA_BINDINGS),yes)
-	@echo "	       javahl bindings"
+	@echo "        javahl bindings"
 endif
 	@echo ""
 	@echo "Test results: All passed."
@@ -1533,7 +1537,7 @@ endif
 	@echo "apr:        $(APR_VER)"
 	@echo "apr-util:   $(APR_UTIL_VER)"
 	@echo "httpd:      $(HTTPD_VER)"
-	@echo "neon:       $(NEON_VER)"
+	$(NEON_VER_LINE)
 	@echo "serf:       $(SERF_VER)"
 	@echo "cyrus-sasl: $(CYRUS_SASL_VER)"
 	@echo "sqlite:     $(SQLITE_VER)"

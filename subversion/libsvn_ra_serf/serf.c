@@ -219,10 +219,10 @@ load_config(svn_ra_serf__session_t *session,
                                   svn_tristate_unknown));
 
   /* Load the maximum number of parallel session connections. */
-  svn_config_get_int64(config, &session->max_connections,
-                       SVN_CONFIG_SECTION_GLOBAL,
-                       SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
-                       SVN_CONFIG_DEFAULT_OPTION_HTTP_MAX_CONNECTIONS);
+  SVN_ERR(svn_config_get_int64(config, &session->max_connections,
+                               SVN_CONFIG_SECTION_GLOBAL,
+                               SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
+                               SVN_CONFIG_DEFAULT_OPTION_HTTP_MAX_CONNECTIONS));
 
   if (config)
     server_group = svn_config_find_group(config,
@@ -276,9 +276,10 @@ load_config(svn_ra_serf__session_t *session,
 
       /* Load the maximum number of parallel session connections,
          overriding global values. */
-      svn_config_get_int64(config, &session->max_connections,
-                           server_group, SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
-                           session->max_connections);
+      SVN_ERR(svn_config_get_int64(config, &session->max_connections,
+                                   server_group,
+                                   SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
+                                   session->max_connections));
     }
 
   /* Don't allow the http-max-connections value to be larger than our
@@ -450,7 +451,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   /* create the user agent string */
   if (callbacks->get_client_string)
-    callbacks->get_client_string(callback_baton, &client_string, pool);
+    SVN_ERR(callbacks->get_client_string(callback_baton, &client_string, pool));
 
   if (client_string)
     serf_sess->useragent = apr_pstrcat(pool, USER_AGENT, " ",

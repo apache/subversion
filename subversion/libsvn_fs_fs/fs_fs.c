@@ -28,6 +28,7 @@
 #include "svn_props.h"
 #include "svn_time.h"
 #include "svn_dirent_uri.h"
+#include "svn_version.h"
 
 #include "cached_data.h"
 #include "id.h"
@@ -255,9 +256,9 @@ read_config(fs_fs_data_t *ffd,
             const char *fs_path,
             apr_pool_t *pool)
 {
-  SVN_ERR(svn_config_read2(&ffd->config,
+  SVN_ERR(svn_config_read3(&ffd->config,
                            svn_dirent_join(fs_path, PATH_CONFIG, pool),
-                           FALSE, FALSE, pool));
+                           FALSE, FALSE, FALSE, pool));
 
   /* Initialize ffd->rep_sharing_allowed. */
   if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
@@ -1339,7 +1340,7 @@ typedef struct verify_walker_baton_t
 {
   /* number of calls to verify_walker() since the last clean */
   int iteration_count;
-  
+
   /* number of files opened since the last clean */
   int file_count;
 
@@ -1432,7 +1433,7 @@ verify_rep_cache(svn_fs_t *fs,
       baton->last_notified_revision = SVN_INVALID_REVNUM;
       baton->notify_func = notify_func;
       baton->notify_baton = notify_baton;
-      
+
       /* tell the user that we are now ready to do *something* */
       if (notify_func)
         notify_func(SVN_INVALID_REVNUM, notify_baton, baton->pool);
@@ -1693,5 +1694,62 @@ svn_fs_fs__verify(svn_fs_t *fs,
     SVN_ERR(verify_rep_cache(fs, start, end, notify_func, notify_baton,
                              cancel_func, cancel_baton, pool));
 
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__info_format(int *fs_format,
+                       svn_version_t **supports_version,
+                       svn_fs_t *fs,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  *fs_format = ffd->format;
+  *supports_version = apr_palloc(result_pool, sizeof(svn_version_t));
+
+  (*supports_version)->major = SVN_VER_MAJOR;
+  (*supports_version)->minor = 1;
+  (*supports_version)->patch = 0;
+  (*supports_version)->tag = "";
+
+  switch (ffd->format)
+    {
+    case 1:
+      break;
+    case 2:
+      (*supports_version)->minor = 4;
+      break;
+    case 3:
+      (*supports_version)->minor = 5;
+      break;
+    case 4:
+      (*supports_version)->minor = 6;
+      break;
+    case 6:
+      (*supports_version)->minor = 8;
+      break;
+    case 7:
+      (*supports_version)->minor = 9;
+      break;
+#ifdef SVN_DEBUG
+# if SVN_FS_FS__FORMAT_NUMBER != 7
+#  error "Need to add a 'case' statement here"
+# endif
+#endif
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__info_config_files(apr_array_header_t **files,
+                             svn_fs_t *fs,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  *files = apr_array_make(result_pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(*files, const char *) = svn_dirent_join(fs->path, PATH_CONFIG,
+                                                         result_pool);
   return SVN_NO_ERROR;
 }

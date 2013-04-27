@@ -855,7 +855,7 @@ process_changes(apr_hash_t *changed_paths,
   for (i = 0; i < changes->nelts; ++i)
     {
       change_t *change = APR_ARRAY_IDX(changes, i, change_t *);
-      
+
       SVN_ERR(fold_change(changed_paths, change, copyfrom_cache));
 
       /* Now, if our change was a deletion or replacement, we have to
@@ -1839,7 +1839,7 @@ choose_delta_base(representation_t **rep,
 
       /* If there is a shared rep along the way, we need to limit the
        * length of the deltification chain.
-       * 
+       *
        * Please note that copied nodes - such as branch directories - will
        * look the same (false positive) while reps shared within the same
        * revision will not be caught (false negative).
@@ -1866,7 +1866,7 @@ choose_delta_base(representation_t **rep,
     {
       int chain_length = 0;
       SVN_ERR(svn_fs_fs__rep_chain_length(&chain_length, *rep, fs, pool));
-      
+
       /* Some reasonable limit, depending on how acceptable longer linear
        * chains are in this repo.  Also, allow for some minimal chain. */
       if (chain_length >= 2 * (int)ffd->max_linear_deltification + 2)
@@ -1886,12 +1886,12 @@ rep_write_cleanup(void *data)
 {
   svn_error_t *err;
   struct rep_write_baton *b = data;
-  
+
   /* Truncate and close the protorevfile. */
   err = svn_io_file_trunc(b->file, b->rep_offset, b->pool);
   err = svn_error_compose_create(err, svn_io_file_close(b->file, b->pool));
 
-  /* Remove our lock regardless of any preceeding errors so that the 
+  /* Remove our lock regardless of any preceeding errors so that the
      being_written flag is always removed and stays consistent with the
      file lock which will be removed no matter what since the pool is
      going away. */

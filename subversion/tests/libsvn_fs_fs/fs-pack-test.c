@@ -256,7 +256,7 @@ large_log(svn_revnum_t rev, apr_size_t length, apr_pool_t *pool)
   svn_stringbuf_appendcstr(temp, "A ");
   for (i = 0; i < count; ++i)
     svn_stringbuf_appendcstr(temp, "very, ");
-  
+
   svn_stringbuf_appendcstr(temp,
     apr_psprintf(pool, "very long message for rev %ld, indeed", rev));
 
@@ -785,7 +785,7 @@ file_hint_at_shard_boundary(const svn_test_opts_t *opts,
   subpool = svn_pool_create(pool);
   SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, subpool));
 
-  /* Revision = SHARD_SIZE */ 
+  /* Revision = SHARD_SIZE */
   file_contents = get_rev_contents(SHARD_SIZE, subpool);
   SVN_ERR(svn_fs_begin_txn(&txn, fs, MAX_REV, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
@@ -804,11 +804,55 @@ file_hint_at_shard_boundary(const svn_test_opts_t *opts,
   /* Close the repo. */
   svn_pool_destroy(subpool);
 
-  return err; 
+  return err;
 }
 #undef REPO_NAME
 #undef MAX_REV
 #undef SHARD_SIZE
+
+/* ------------------------------------------------------------------------ */
+#define REPO_NAME "test-repo-fsfs-info"
+#define SHARD_SIZE 3
+#define MAX_REV 5
+static svn_error_t *
+test_info(const svn_test_opts_t *opts,
+          apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  const svn_fs_fsfs_info_t *fsfs_info;
+  const svn_fs_info_placeholder_t *info;
+
+  SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE,
+                                   pool));
+
+  SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, pool));
+  SVN_ERR(svn_fs_info(&info, fs, pool, pool));
+  info = svn_fs_info_dup(info, pool, pool);
+
+  SVN_TEST_STRING_ASSERT(opts->fs_type, info->fs_type);
+
+  /* Bail (with success) on known-untestable scenarios */
+  if (strcmp(opts->fs_type, "fsfs") != 0)
+    return SVN_NO_ERROR;
+
+  fsfs_info = (const void *)info;
+  if (opts->server_minor_version && (opts->server_minor_version < 6))
+    {
+      SVN_TEST_ASSERT(fsfs_info->shard_size == 0);
+      SVN_TEST_ASSERT(fsfs_info->min_unpacked_rev == 0);
+    }
+  else
+    {
+      SVN_TEST_ASSERT(fsfs_info->shard_size == SHARD_SIZE);
+      SVN_TEST_ASSERT(fsfs_info->min_unpacked_rev
+                      == (MAX_REV + 1) / SHARD_SIZE * SHARD_SIZE);
+    }
+
+  return SVN_NO_ERROR;
+}
+#undef REPO_NAME
+#undef SHARD_SIZE
+#undef MAX_REV
 
 /* ------------------------------------------------------------------------ */
 
@@ -835,5 +879,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "recover a fully packed filesystem"),
     SVN_TEST_OPTS_PASS(file_hint_at_shard_boundary,
                        "test file hint at shard boundary"),
+    SVN_TEST_OPTS_PASS(test_info,
+                       "test svn_fs_info"),
     SVN_TEST_NULL
   };

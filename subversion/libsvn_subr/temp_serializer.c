@@ -267,7 +267,7 @@ void
 svn_temp_serializer__pop(svn_temp_serializer__context_t *context)
 {
   source_stack_t *old = context->source;
-  
+
   /* we may pop the original struct but not further */
   assert(context->source);
 

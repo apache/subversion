@@ -45,6 +45,8 @@
  *
  * 1. A linear data buffer containing cached items in a serialized
  *    representation. There may be arbitrary gaps between entries.
+ *    This buffer is sub-devided into (currently two) cache levels.
+ *
  * 2. A directory of cache entries. This is organized similar to CPU
  *    data caches: for every possible key, there is exactly one group
  *    of entries that may contain the header info for an item with
@@ -56,23 +58,30 @@
  * between different processes and / or to persist them on disk. These
  * out-of-process features have not been implemented, yet.
  *
+ * Superficially, cache levels are being used as usual: insertion happens
+ * into L1 and evictions will promote items to L2.  But their whole point
+ * is a different one.  L1 uses a circular buffer, i.e. we have perfect
+ * caching for the last N bytes where N is the size of L1.  L2 uses a more
+ * elaborate scheme based on priorities and hit counts as described below.
+ *
  * The data buffer usage information is implicitly given by the directory
  * entries. Every USED entry has a reference to the previous and the next
  * used dictionary entry and this double-linked list is ordered by the
  * offsets of their item data within the data buffer. So removing data,
  * for instance, is done simply by unlinking it from the chain, implicitly
  * marking the entry as well as the data buffer section previously
- * associated to it as unused.
+ * associated to it as unused.  First and last element of that chain are
+ * being referenced from the respective cache level.
  *
- * Insertion can occur at only one, sliding position. It is marked by its
- * offset in the data buffer plus the index of the first used entry at or
- * behind that position. If this gap is too small to accommodate the new
- * item, the insertion window is extended as described below. The new entry
- * will always be inserted at the bottom end of the window and since the
- * next used entry is known, properly sorted insertion is possible.
+ * Insertion can occur at only one, sliding position per cache level.  It is
+ * marked by its offset in the data buffer and the index of the first used
+ * entry at or behind that position.  If this gap is too small to accommodate
+ * the new item, the insertion window is extended as described below. The new
+ * entry will always be inserted at the bottom end of the window and since
+ * the next used entry is known, properly sorted insertion is possible.
  *
  * To make the cache perform robustly in a wide range of usage scenarios,
- * a randomized variant of LFU is used (see ensure_data_insertable for
+ * L2 uses a randomized variant of LFU (see ensure_data_insertable_l2 for
  * details). Every item holds a read hit counter and there is a global read
  * hit counter. The more hits an entry has in relation to the average, the
  * more it is likely to be kept using a rand()-based condition. The test is
@@ -86,7 +95,7 @@
  * they get not used for a while. Also, even a cache thrashing situation
  * about 50% of the content survives every 50% of the cache being re-written
  * with new entries. For details on the fine-tuning involved, see the
- * comments in ensure_data_insertable().
+ * comments in ensure_data_insertable_l2().
  *
  * To limit the entry size and management overhead, not the actual item keys
  * but only their MD5 checksums will not be stored. This is reasonably safe
@@ -313,7 +322,7 @@ static svn_error_t* assert_equal_tags(const entry_tag_t *lhs,
 /* A single dictionary entry. Since all entries will be allocated once
  * during cache creation, those entries might be either used or unused.
  * An entry is used if and only if it is contained in the doubly-linked
- * list of used entries.
+ * list of used entries per cache level.
  */
 typedef struct entry_t
 {
@@ -321,7 +330,8 @@ typedef struct entry_t
    */
   entry_key_t key;
 
-  /* The offset of the cached item's serialized data within the data buffer.
+  /* The offset of the cached item's serialized data within the caches
+   * DATA buffer.
    */
   apr_uint64_t offset;
 
@@ -337,15 +347,15 @@ typedef struct entry_t
 
   /* Reference to the next used entry in the order defined by offset.
    * NO_INDEX indicates the end of the list; this entry must be referenced
-   * by the caches membuffer_cache_t.last member. NO_INDEX also implies
-   * that the data buffer is not used beyond offset+size.
+   * by the caches cache_level_t.last member.  NO_INDEX also implies that
+   * the data buffer is not used beyond offset+size.
    * Only valid for used entries.
    */
   apr_uint32_t next;
 
   /* Reference to the previous used entry in the order defined by offset.
    * NO_INDEX indicates the end of the list; this entry must be referenced
-   * by the caches membuffer_cache_t.first member.
+   * by the caches cache_level_t.first member.
    * Only valid for used entries.
    */
   apr_uint32_t previous;
@@ -372,6 +382,46 @@ typedef struct entry_group_t
   entry_t entries[GROUP_SIZE];
 } entry_group_t;
 
+/* Per-cache level header structure.  Instances of this are members of
+ * svn_membuffer_t and will use non-overlapping sections of its DATA buffer.
+ * All offset values are global / absolute to that whole buffer.
+ */
+typedef struct cache_level_t
+{
+  /* Reference to the first (defined by the order content in the data
+   * buffer) dictionary entry used by any data item.
+   * NO_INDEX for an empty cache.
+   */
+  apr_uint32_t first;
+
+  /* Reference to the last (defined by the order content in the data
+   * buffer) dictionary entry used by any data item.
+   * NO_INDEX for an empty cache.
+   */
+  apr_uint32_t last;
+
+  /* Reference to the first (defined by the order content in the data
+   * buffer) used dictionary entry behind the insertion position
+   * (current_data). If NO_INDEX, the data buffer is free starting at the
+   * current_data offset.
+   */
+  apr_uint32_t next;
+
+
+  /* First offset in the caches DATA buffer that belongs to this level.
+   */
+  apr_uint64_t start_offset;
+
+  /* Size of data buffer allocated to this level in bytes. Must be > 0.
+   */
+  apr_uint64_t size;
+
+  /* Offset in the data buffer where the next insertion shall occur.
+   */
+  apr_uint64_t current_data;
+
+} cache_level_t;
+
 /* The cache header structure.
  */
 struct svn_membuffer_t
@@ -394,37 +444,9 @@ struct svn_membuffer_t
    */
   apr_uint32_t group_count;
 
-  /* Reference to the first (defined by the order content in the data
-   * buffer) dictionary entry used by any data item.
-   * NO_INDEX for an empty cache.
-   */
-  apr_uint32_t first;
-
-  /* Reference to the last (defined by the order content in the data
-   * buffer) dictionary entry used by any data item.
-   * NO_INDEX for an empty cache.
-   */
-  apr_uint32_t last;
-
-  /* Reference to the first (defined by the order content in the data
-   * buffer) used dictionary entry behind the insertion position
-   * (current_data). If NO_INDEX, the data buffer is free starting at the
-   * current_data offset.
-   */
-  apr_uint32_t next;
-
-
   /* Pointer to the data buffer, data_size bytes long. Never NULL.
    */
   unsigned char *data;
-
-  /* Size of data buffer in bytes. Must be > 0.
-   */
-  apr_uint64_t data_size;
-
-  /* Offset in the data buffer where the next insertion shall occur.
-   */
-  apr_uint64_t current_data;
 
   /* Total number of data buffer bytes in use. This is for statistics only.
    */
@@ -435,6 +457,24 @@ struct svn_membuffer_t
    */
   apr_uint64_t max_entry_size;
 
+  /* The cache levels, organized as sub-buffers.  Since entries in the
+   * DIRECTORY use offsets in DATA for addressing, a cache lookup does
+   * not need to know the cache level of a specific item.  Cache levels
+   * are only used to implement a hybrid insertion / eviction strategy.
+   */
+
+  /* First cache level, i.e. most insertions happen here.  Very large
+   * items might get inserted directly into L2.  L1 is a strict FIFO
+   * ring buffer that does not care about item priorities.  All evicted
+   * items get a chance to be promoted to L2.
+   */
+  cache_level_t l1;
+
+  /* Second cache level, i.e. data evicted from L1 will be added here
+   * if the item is "important" enough or the L2 insertion window is large
+   * enough.
+   */
+  cache_level_t l2;
 
   /* Number of used dictionary entries, i.e. number of cached items.
    * In conjunction with hit_count, this is used calculate the average
@@ -525,7 +565,7 @@ write_lock_cache(svn_membuffer_t *cache, svn_boolean_t *success)
               status = APR_SUCCESS;
             }
         }
-    
+
       if (status)
         return svn_error_wrap_apr(status,
                                   _("Can't write-lock cache mutex"));
@@ -625,6 +665,96 @@ get_index(svn_membuffer_t *cache, entry_t *entry)
        + (apr_uint32_t)(entry - cache->directory[group_index].entries);
 }
 
+/* Return the cache level of ENTRY in CACHE.
+ */
+static cache_level_t *
+get_cache_level(svn_membuffer_t *cache, entry_t *entry)
+{
+  return entry->offset < cache->l1.size ? &cache->l1
+                                        : &cache->l2;
+}
+
+/* Insert ENTRY to the chain of items that belong to LEVEL in CACHE.  IDX
+ * is ENTRY's item index and is only given for efficiency.  The insertion
+ * takes place just before LEVEL->NEXT.  *CACHE will not be modified.
+ */
+static void
+chain_entry(svn_membuffer_t *cache,
+            cache_level_t *level,
+            entry_t *entry,
+            apr_uint32_t idx)
+{
+  /* insert ENTRY before this item */
+  entry_t *next = level->next == NO_INDEX
+                ? NULL
+                : get_entry(cache, level->next);
+  assert(idx == get_index(cache, entry));
+
+  /* update entry chain
+   */
+  entry->next = level->next;
+  if (level->first == NO_INDEX)
+    {
+      /* insert as the first entry and only in the chain
+       */
+      entry->previous = NO_INDEX;
+      level->last = idx;
+      level->first = idx;
+    }
+  else if (next == NULL)
+    {
+      /* insert as the last entry in the chain.
+       * Note that it cannot also be at the beginning of the chain.
+       */
+      entry->previous = level->last;
+      get_entry(cache, level->last)->next = idx;
+      level->last = idx;
+    }
+  else
+    {
+      /* insert either at the start of a non-empty list or
+       * somewhere in the middle
+       */
+      entry->previous = next->previous;
+      next->previous = idx;
+
+      if (entry->previous != NO_INDEX)
+        get_entry(cache, entry->previous)->next = idx;
+      else
+        level->first = idx;
+    }
+}
+
+/* Remove ENTRY from the chain of items that belong to LEVEL in CACHE. IDX
+ * is ENTRY's item index and is only given for efficiency.  Please note
+ * that neither *CACHE nor *ENTRY will not be modified.
+ */
+static void
+unchain_entry(svn_membuffer_t *cache,
+              cache_level_t *level,
+              entry_t *entry,
+              apr_uint32_t idx)
+{
+  assert(idx == get_index(cache, entry));
+
+  /* update 
+   */
+  if (level->next == idx)
+    level->next = entry->next;
+  
+  /* unlink it from the chain of used entries
+   */
+  if (entry->previous == NO_INDEX)
+    level->first = entry->next;
+  else
+    get_entry(cache, entry->previous)->next = entry->next;
+
+  if (entry->next == NO_INDEX)
+    level->last = entry->previous;
+  else
+    get_entry(cache, entry->next)->previous = entry->previous;
+}
+
 /* Remove the used ENTRY from the CACHE, i.e. make it "unused".
  * In contrast to insertion, removal is possible for any entry.
  */
@@ -637,6 +767,7 @@ drop_entry(svn_membuffer_t *cache, entry_t *entry)
   apr_uint32_t group_index = idx / GROUP_SIZE;
   entry_group_t *group = &cache->directory[group_index];
   apr_uint32_t last_in_group = group_index * GROUP_SIZE + group->used - 1;
+  cache_level_t *level = get_cache_level(cache, entry);
 
   /* Only valid to be called for used entries.
    */
@@ -650,39 +781,31 @@ drop_entry(svn_membuffer_t *cache, entry_t *entry)
 
   /* extend the insertion window, if the entry happens to border it
    */
-  if (idx == cache->next)
-    cache->next = entry->next;
+  if (idx == level->next)
+    level->next = entry->next;
   else
-    if (entry->next == cache->next)
+    if (entry->next == level->next)
       {
         /* insertion window starts right behind the entry to remove
          */
         if (entry->previous == NO_INDEX)
           {
             /* remove the first entry -> insertion may start at pos 0, now */
-            cache->current_data = 0;
+            level->current_data = level->start_offset;
           }
         else
           {
             /* insertion may start right behind the previous entry */
             entry_t *previous = get_entry(cache, entry->previous);
-            cache->current_data = ALIGN_VALUE(  previous->offset
+            level->current_data = ALIGN_VALUE(  previous->offset
                                               + previous->size);
           }
       }
 
   /* unlink it from the chain of used entries
    */
-  if (entry->previous == NO_INDEX)
-    cache->first = entry->next;
-  else
-    get_entry(cache, entry->previous)->next = entry->next;
-
-  if (entry->next == NO_INDEX)
-    cache->last = entry->previous;
-  else
-    get_entry(cache, entry->next)->previous = entry->previous;
-
+  unchain_entry(cache, level, entry, idx);
+  
   /* Move last entry into hole (if the removed one is not the last used).
    * We need to do this since all used entries are at the beginning of
    * the group's entries array.
@@ -693,18 +816,22 @@ drop_entry(svn_membuffer_t *cache, entry_t *entry)
        */
       *entry = group->entries[group->used-1];
 
+      /* this ENTRY may belong to a different cache level than the entry
+       * we have just removed */
+      level = get_cache_level(cache, entry);
+
       /* update foreign links to new index
        */
-      if (last_in_group == cache->next)
-        cache->next = idx;
+      if (last_in_group == level->next)
+        level->next = idx;
 
       if (entry->previous == NO_INDEX)
-        cache->first = idx;
+        level->first = idx;
       else
         get_entry(cache, entry->previous)->next = idx;
-      
+
       if (entry->next == NO_INDEX)
-        cache->last = idx;
+        level->last = idx;
       else
         get_entry(cache, entry->next)->previous = idx;
     }
@@ -726,16 +853,14 @@ insert_entry(svn_membuffer_t *cache, entry_t *entry)
   apr_uint32_t idx = get_index(cache, entry);
   apr_uint32_t group_index = idx / GROUP_SIZE;
   entry_group_t *group = &cache->directory[group_index];
-  entry_t *next = cache->next == NO_INDEX
-                ? NULL
-                : get_entry(cache, cache->next);
+  cache_level_t *level = get_cache_level(cache, entry);
 
   /* The entry must start at the beginning of the insertion window.
    * It must also be the first unused entry in the group.
    */
-  assert(entry->offset == cache->current_data);
+  assert(entry->offset == level->current_data);
   assert(idx == group_index * GROUP_SIZE + group->used);
-  cache->current_data = ALIGN_VALUE(entry->offset + entry->size);
+  level->current_data = ALIGN_VALUE(entry->offset + entry->size);
 
   /* update usage counters
    */
@@ -746,42 +871,12 @@ insert_entry(svn_membuffer_t *cache, entry_t *entry)
 
   /* update entry chain
    */
-  entry->next = cache->next;
-  if (cache->first == NO_INDEX)
-    {
-      /* insert as the first entry and only in the chain
-       */
-      entry->previous = NO_INDEX;
-      cache->last = idx;
-      cache->first = idx;
-    }
-  else if (next == NULL)
-    {
-      /* insert as the last entry in the chain.
-       * Note that it cannot also be at the beginning of the chain.
-       */
-      entry->previous = cache->last;
-      get_entry(cache, cache->last)->next = idx;
-      cache->last = idx;
-    }
-  else
-    {
-      /* insert either at the start of a non-empty list or
-       * somewhere in the middle
-       */
-      entry->previous = next->previous;
-      next->previous = idx;
-
-      if (entry->previous != NO_INDEX)
-        get_entry(cache, entry->previous)->next = idx;
-      else
-        cache->first = idx;
-    }
+  chain_entry(cache, level, entry, idx);
 
   /* The current insertion position must never point outside our
    * data buffer.
    */
-  assert(cache->current_data <= cache->data_size);
+  assert(level->current_data <= level->start_offset + level->size);
 }
 
 /* Map a KEY of 16 bytes to the CACHE and group that shall contain the
@@ -792,7 +887,7 @@ get_group_index(svn_membuffer_t **cache,
                 entry_key_t key)
 {
   svn_membuffer_t *segment0 = *cache;
-  
+
   /* select the cache segment to use. they have all the same group_count */
   *cache = &segment0[key[0] & (segment0->segment_count -1)];
   return key[1] % segment0->group_count;
@@ -955,6 +1050,7 @@ static void
 move_entry(svn_membuffer_t *cache, entry_t *entry)
 {
   apr_size_t size = ALIGN_VALUE(entry->size);
+  cache_level_t *level = get_cache_level(cache, entry);
 
   /* This entry survived this cleansing run. Reset half of its
    * hit count so that its removal gets more likely in the next
@@ -968,36 +1064,66 @@ move_entry(svn_membuffer_t *cache, entry_t *entry)
    * Size-aligned moves tend to be faster than non-aligned ones
    * because no "odd" bytes at the end need to special treatment.
    */
-  if (entry->offset != cache->current_data)
+  if (entry->offset != level->current_data)
     {
-      memmove(cache->data + cache->current_data,
+      memmove(cache->data + level->current_data,
               cache->data + entry->offset,
               size);
-      entry->offset = cache->current_data;
+      entry->offset = level->current_data;
     }
 
   /* The insertion position is now directly behind this entry.
    */
-  cache->current_data = entry->offset + size;
-  cache->next = entry->next;
+  level->current_data = entry->offset + size;
+  level->next = entry->next;
 
   /* The current insertion position must never point outside our
    * data buffer.
    */
-  assert(cache->current_data <= cache->data_size);
+  assert(level->current_data <= level->start_offset + level->size);
 }
 
-/* If necessary, enlarge the insertion window until it is at least
- * SIZE bytes long.  SIZE must not exceed the data buffer size.  The
- * new item will be of the given PRIORITY class.
- *
- * Return TRUE if enough room could be found or made. A FALSE result
+/* Move ENTRY in CACHE from L1 to L2.
+ */
+static void
+promote_entry(svn_membuffer_t *cache, entry_t *entry)
+{
+  apr_uint32_t idx = get_index(cache, entry);
+  apr_size_t size = ALIGN_VALUE(entry->size);
+  assert(get_cache_level(cache, entry) == &cache->l1);
+
+  /* copy item from the current location in L1 to the start of L2's
+   * insertion window */
+  memmove(cache->data + cache->l2.current_data,
+          cache->data + entry->offset,
+          size);
+  entry->offset = cache->l2.current_data;
+
+  /* The insertion position is now directly behind this entry.
+   */
+  cache->l2.current_data += size;
+
+  /* remove ENTRY from chain of L1 entries and put it into L2
+   */
+  unchain_entry(cache, &cache->l1, entry, idx);
+  chain_entry(cache, &cache->l2, entry, idx);
+}
+
+/* This function implements the cache insertion / eviction strategy for L2.
+ * 
+ * If necessary, enlarge the insertion window of CACHE->L2 until it is at
+ * least TO_FIT_IN->SIZE bytes long. TO_FIT_IN->SIZE must not exceed the
+ * data buffer size allocated to CACHE->L2.  IDX is the item index of
+ * TO_FIT_IN and is given for performance reasons.
+ * 
+ * Return TRUE if enough room could be found or made.  A FALSE result
+>>>>>>> .merge-right.r1476664
  * indicates that the respective item shall not be added.
  */
 static svn_boolean_t
-ensure_data_insertable(svn_membuffer_t *cache,
-                       apr_uint32_t priority,
-                       apr_size_t size)
+ensure_data_insertable_l2(svn_membuffer_t *cache,
+                          entry_t *to_fit_in,
+                          apr_uint32_t idx)
 {
   entry_t *entry;
   apr_uint64_t average_hit_value;
@@ -1007,6 +1133,12 @@ ensure_data_insertable(svn_membuffer_t *cache,
    * room for the new one.
    */
   apr_size_t moved_size = 0;
+
+  /* accumulated "worth" of items dropped so far */
+  apr_size_t drop_hits = 0;
+
+  /* verify parameters */
+  assert(idx == get_index(cache, to_fit_in));
 
   /* This loop will eventually terminate because every cache entry
    * would get dropped eventually:
@@ -1024,38 +1156,44 @@ ensure_data_insertable(svn_membuffer_t *cache,
     {
       /* first offset behind the insertion window
        */
-      apr_uint64_t end = cache->next == NO_INDEX
-                       ? cache->data_size
-                       : get_entry(cache, cache->next)->offset;
+      apr_uint64_t end = cache->l2.next == NO_INDEX
+                       ? cache->l2.start_offset + cache->l2.size
+                       : get_entry(cache, cache->l2.next)->offset;
 
       /* leave function as soon as the insertion window is large enough
        */
-      if (end >= size + cache->current_data)
+      if (end >= to_fit_in->size + cache->l2.current_data)
         return TRUE;
 
       /* Don't be too eager to cache data.  If a lot of data has been 
        * moved around, the current item has probably a relatively low
        * priority.  So, give up after some time.
        */
-      if (moved_size > 16 * size)
+      if (moved_size > 16 * to_fit_in->size)
+        return FALSE;
+
+      /* if the net worth (in hits) of items removed is already larger
+       * than what we want to insert, reject TO_FIT_IN because it still
+       * does not fit in.
+      if (drop_hits > to_fit_in->hit_count)
         return FALSE;
 
       /* try to enlarge the insertion window
        */
-      if (cache->next == NO_INDEX)
+      if (cache->l2.next == NO_INDEX)
         {
           /* We reached the end of the data buffer; restart at the beginning.
            * Due to the randomized nature of our LFU implementation, very
            * large data items may require multiple passes. Therefore, SIZE
            * should be restricted to significantly less than data_size.
            */
-          cache->current_data = 0;
-          cache->next = cache->first;
+          cache->l2.current_data = cache->l2.start_offset;
+          cache->l2.next = cache->l2.first;
         }
       else
         {
           svn_boolean_t keep;
-          entry = get_entry(cache, cache->next);
+          entry = get_entry(cache, cache->l2.next);
 
           /* Keep entries that are very small. Those are likely to be data
            * headers or similar management structures. So, they are probably
@@ -1067,10 +1205,20 @@ ensure_data_insertable(svn_membuffer_t *cache,
             {
               keep = TRUE;
             }
-          else if (priority != entry->priority)
+          else if (cache->l2.next / GROUP_SIZE == idx / GROUP_SIZE)
+            {
+              /* Special case: we cannot drop entries that are in the same
+               * group as TO_FIT_IN because that might the latter to become
+               * invalidated it it happens to be the highest used entry in
+               * the group.  So, we must keep ENTRY unconditionally.
+               * (this is a very rare condition)
+               */
+              keep = TRUE;
+            }
+          else if (to_fit_in->priority != entry->priority)
             {
               /* strictly let the higher priority win */
-              keep = entry->priority > priority;
+              keep = entry->priority > to_fit_in->priority;
             }
           else if (cache->hit_count > cache->used_entries)
             {
@@ -1103,8 +1251,75 @@ ensure_data_insertable(svn_membuffer_t *cache,
                * has been hit less than the threshold. Otherwise, keep it and
                * move the insertion window one entry further.
                */
+              drop_hits += entry->hit_count;
               drop_entry(cache, entry);
             }
+        }
+    }
+
+  /* This will never be reached. But if it was, "can't insert" was the
+   * right answer. */
+}
+
+/* This function implements the cache insertion / eviction strategy for L1.
+ *
+ * If necessary, enlarge the insertion window of CACHE->L1 by promoting
+ * entries to L2 until it is at least SIZE bytes long.
+ *
+ * Return TRUE if enough room could be found or made. A FALSE result
+ *
+ * Return TRUE if enough room could be found or made.  A FALSE result
+ * indicates that the respective item shall not be added because it is
+ * too large.
+ */
+static svn_boolean_t
+ensure_data_insertable_l1(svn_membuffer_t *cache, apr_size_t size)
+{
+  entry_t *entry;
+
+  /* Guarantees that the while loop will terminate. */
+  if (size > cache->l1.size)
+    return FALSE;
+
+  /* This loop will eventually terminate because every cache entry
+   * would get dropped eventually.
+   */
+  while (1)
+    {
+      /* first offset behind the insertion window
+       */
+      apr_uint64_t end = cache->l1.next == NO_INDEX
+                       ? cache->l1.start_offset + cache->l1.size
+                       : get_entry(cache, cache->l1.next)->offset;
+
+      /* leave function as soon as the insertion window is large enough
+       */
+      if (end >= size + cache->l1.current_data)
+        return TRUE;
+
+      /* Enlarge the insertion window
+       */
+      if (cache->l1.next == NO_INDEX)
+        {
+          /* We reached the end of the data buffer; restart at the beginning.
+           * Due to the randomized nature of our LFU implementation, very
+           * large data items may require multiple passes. Therefore, SIZE
+           * should be restricted to significantly less than data_size.
+           */
+          cache->l1.current_data = cache->l1.start_offset;
+          cache->l1.next = cache->l1.first;
+        }
+      else
+        {
+          /* Remove the entry from the end of insertion window and promote
+           * it to L2, if it is important enough.
+           */
+          entry = get_entry(cache, cache->l1.next);
+
+          if (ensure_data_insertable_l2(cache, entry, cache->l1.next))
+            promote_entry(cache, entry);
+          else
+            drop_entry(cache, entry);
         }
     }
 
@@ -1164,7 +1379,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
     segment_count = MAX_SEGMENT_COUNT;
   if (segment_count * MIN_SEGMENT_SIZE > total_size)
     segment_count = total_size / MIN_SEGMENT_SIZE;
-    
+
   /* The segment count must be a power of two. Round it down as necessary.
    */
   while ((segment_count & (segment_count-1)) != 0)
@@ -1231,13 +1446,13 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
    */
   data_size = ALIGN_VALUE(total_size - directory_size + 1) - ITEM_ALIGNMENT;
 
-  /* For cache sizes > 4TB, individual cache segments will be larger
-   * than 16GB allowing for >4GB entries.  But caching chunks larger
-   * than 4GB is simply not supported.
+  /* For cache sizes > 16TB, individual cache segments will be larger
+   * than 32GB allowing for >4GB entries.  But caching chunks larger
+   * than 4GB are simply not supported.
    */
-  max_entry_size = data_size / 4 > MAX_ITEM_SIZE
+  max_entry_size = data_size / 8 > MAX_ITEM_SIZE
                  ? MAX_ITEM_SIZE
-                 : data_size / 4;
+                 : data_size / 8;
 
   /* to keep the entries small, we use 32 bit indexes only
    * -> we need to ensure that no more then 4G entries exist.
@@ -1265,13 +1480,25 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
          hence "unused" */
       c[seg].group_initialized = apr_pcalloc(pool, group_init_size);
 
-      c[seg].first = NO_INDEX;
-      c[seg].last = NO_INDEX;
-      c[seg].next = NO_INDEX;
+      /* Allocate 1/4th of the data buffer to L1
+       */
+      c[seg].l1.first = NO_INDEX;
+      c[seg].l1.last = NO_INDEX;
+      c[seg].l1.next = NO_INDEX;
+      c[seg].l1.start_offset = 0;
+      c[seg].l1.size = ALIGN_VALUE(data_size / 4);
+      c[seg].l1.current_data = 0;
 
-      c[seg].data_size = data_size;
+      /* The remaining 3/4th will be used as L2
+       */
+      c[seg].l2.first = NO_INDEX;
+      c[seg].l2.last = NO_INDEX;
+      c[seg].l2.next = NO_INDEX;
+      c[seg].l2.start_offset = c[seg].l1.size;
+      c[seg].l2.size = data_size - c[seg].l1.size;
+      c[seg].l2.current_data = c[seg].l2.start_offset;
+
       c[seg].data = secure_aligned_alloc(pool, (apr_size_t)data_size, FALSE);
-      c[seg].current_data = 0;
       c[seg].data_used = 0;
       c[seg].max_entry_size = max_entry_size;
 
@@ -1405,7 +1632,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
    */
   if (   buffer != NULL
       && cache->max_entry_size >= size
-      && ensure_data_insertable(cache, priority, size))
+      && ensure_data_insertable_l1(cache, size))
     {
       /* Remove old data for this key, if that exists.
        * Get an unused entry for the key and and initialize it with
@@ -1413,7 +1640,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
        */
       entry = find_entry(cache, group_index, to_find, TRUE);
       entry->size = size;
-      entry->offset = cache->current_data;
+      entry->offset = cache->l1.current_data;
       entry->priority = priority;
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
@@ -1807,13 +2034,13 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
               apr_uint32_t priority = entry->priority;
               drop_entry(cache, entry);
               if (   (cache->max_entry_size >= size)
-                  && ensure_data_insertable(cache, priority, size))
+                  && ensure_data_insertable_l1(cache, size))
                 {
                   /* Write the new entry.
                    */
                   entry = find_entry(cache, group_index, to_find, TRUE);
                   entry->size = size;
-                  entry->offset = cache->current_data;
+                  entry->offset = cache->l1.current_data;
                   if (size)
                     memcpy(cache->data + entry->offset, data, size);
 
@@ -2198,9 +2425,9 @@ static svn_error_t *
 svn_membuffer_get_segment_info(svn_membuffer_t *segment,
                                svn_cache__info_t *info)
 {
-  info->data_size += segment->data_size;
+  info->data_size += segment->l1.size + segment->l2.size;
   info->used_size += segment->data_used;
-  info->total_size += segment->data_size +
+  info->total_size += segment->l1.size + segment->l2.size +
       segment->group_count * GROUP_SIZE * sizeof(entry_t);
 
   info->used_entries += segment->used_entries;
@@ -2470,6 +2697,7 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
   wrapper->cache_internal = cache;
   wrapper->error_handler = 0;
   wrapper->error_baton = 0;
+  wrapper->pretend_empty = !!getenv("SVN_X_DOES_NOT_MARK_THE_SPOT");
 
   *cache_p = wrapper;
   return SVN_NO_ERROR;

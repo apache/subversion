@@ -82,7 +82,7 @@ svn_client_create_context2(svn_client_ctx_t **ctx,
                            apr_pool_t *pool)
 {
   svn_config_t *cfg_config;
-                                   
+
   *ctx = apr_pcalloc(pool, sizeof(svn_client_ctx_t));
 
   (*ctx)->notify_func2 = call_notify_func;

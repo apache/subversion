@@ -239,7 +239,7 @@ get_library_vtable(fs_library_vtable_t **vtable, const char *fs_type,
 
 #if defined(SVN_USE_DSO) && APR_HAS_DSO
   /* Third party FS modules that are unknown at compile time.
-     
+
      A third party FS is identified by the file fs-type containing a
      third party name, say "foo".  The loader will load the DSO with
      the name "libsvn_fs_foo" and use the entry point with the name
@@ -487,6 +487,7 @@ svn_fs_upgrade(const char *path, apr_pool_t *pool)
 
 svn_error_t *
 svn_fs_verify(const char *path,
+              apr_hash_t *fs_config,
               svn_revnum_t start,
               svn_revnum_t end,
               svn_fs_progress_notify_func_t notify_func,
@@ -499,7 +500,7 @@ svn_fs_verify(const char *path,
   svn_fs_t *fs;
 
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
-  fs = fs_new(NULL, pool);
+  fs = fs_new(fs_config, pool);
 
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
                        vtable->verify_fs(fs, path, start, end,
@@ -513,6 +514,15 @@ const char *
 svn_fs_path(svn_fs_t *fs, apr_pool_t *pool)
 {
   return apr_pstrdup(pool, fs->path);
+}
+
+apr_hash_t *
+svn_fs_config(svn_fs_t *fs, apr_pool_t *pool)
+{
+  if (fs->config)
+    return apr_hash_copy(pool, fs->config);
+
+  return NULL;
 }
 
 svn_error_t *
@@ -644,11 +654,11 @@ svn_fs_verify_root(svn_fs_root_t *root,
 
 svn_error_t *
 svn_fs_freeze(svn_fs_t *fs,
-              svn_error_t *(*freeze_body)(void *baton, apr_pool_t *pool),
-              void *baton,
+              svn_fs_freeze_func_t freeze_func,
+              void *freeze_baton,
               apr_pool_t *pool)
 {
-  SVN_ERR(fs->vtable->freeze(fs, freeze_body, baton, pool));
+  SVN_ERR(fs->vtable->freeze(fs, freeze_func, freeze_baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1317,6 +1327,29 @@ svn_fs_youngest_rev(svn_revnum_t *youngest_p, svn_fs_t *fs, apr_pool_t *pool)
 }
 
 svn_error_t *
+svn_fs_info_format(int *fs_format,
+                   svn_version_t **supports_version,
+                   svn_fs_t *fs,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(fs->vtable->info_format(fs_format, supports_version,
+                                                 fs,
+                                                 result_pool, scratch_pool));
+}
+
+svn_error_t *
+svn_fs_info_config_files(apr_array_header_t **files,
+                         svn_fs_t *fs,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(fs->vtable->info_config_files(files, fs,
+                                                       result_pool,
+                                                       scratch_pool));
+}
+
+svn_error_t *
 svn_fs_deltify_revision(svn_fs_t *fs, svn_revnum_t revision, apr_pool_t *pool)
 {
   return svn_error_trace(fs->vtable->deltify(fs, revision, pool));
@@ -1600,3 +1633,43 @@ svn_fs_version(void)
 {
   SVN_VERSION_BODY;
 }
+
+
+/** info **/
+svn_error_t *
+svn_fs_info(const svn_fs_info_placeholder_t **info_p,
+            svn_fs_t *fs,
+            apr_pool_t *result_pool,
+            apr_pool_t *scratch_pool)
+{
+  if (fs->vtable->info_fsap)
+    {
+      SVN_ERR(fs->vtable->info_fsap((const void **)info_p, fs,
+                                    result_pool, scratch_pool));
+    }
+  else
+    {
+      svn_fs_info_placeholder_t *info = apr_palloc(result_pool, sizeof(*info));
+      /* ### Ask the disk(!), since svn_fs_t doesn't cache the answer. */
+      SVN_ERR(svn_fs_type(&info->fs_type, fs->path, result_pool));
+      *info_p = info;
+    }
+  return SVN_NO_ERROR;
+}
+
+void *
+svn_fs_info_dup(const void *info_void,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  const svn_fs_info_placeholder_t *info = info_void;
+  fs_library_vtable_t *vtable;
+
+  SVN_ERR(get_library_vtable(&vtable, info->fs_type, scratch_pool));
+  
+  if (vtable->info_fsap_dup)
+    return vtable->info_fsap_dup(info_void, result_pool);
+  else
+    return apr_pmemdup(result_pool, info, sizeof(*info));
+}
+

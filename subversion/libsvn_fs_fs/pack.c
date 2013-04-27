@@ -1944,7 +1944,7 @@ pack_rev_shard(svn_fs_t *fs,
  * for allocations.  REVPROPS_DIR will be NULL if revprop packing is not
  * supported.  COMPRESSION_LEVEL and MAX_PACK_SIZE will be ignored in that
  * case.
- * 
+ *
  * CANCEL_FUNC and CANCEL_BATON are what you think they are; similarly
  * NOTIFY_FUNC and NOTIFY_BATON.
  *

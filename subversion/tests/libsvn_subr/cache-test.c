@@ -155,8 +155,8 @@ test_memcache_basic(const svn_test_opts_t *opts,
 
   if (opts->config_file)
     {
-      SVN_ERR(svn_config_read2(&config, opts->config_file,
-                               TRUE, FALSE, pool));
+      SVN_ERR(svn_config_read3(&config, opts->config_file,
+                               TRUE, FALSE, FALSE, pool));
       SVN_ERR(svn_cache__make_memcache_from_config(&memcache, config, pool));
     }
 
@@ -224,8 +224,8 @@ test_memcache_long_key(const svn_test_opts_t *opts,
 
   if (opts->config_file)
     {
-      SVN_ERR(svn_config_read2(&config, opts->config_file,
-                               TRUE, FALSE, pool));
+      SVN_ERR(svn_config_read3(&config, opts->config_file,
+                               TRUE, FALSE, FALSE, pool));
       SVN_ERR(svn_cache__make_memcache_from_config(&memcache, config, pool));
     }
 

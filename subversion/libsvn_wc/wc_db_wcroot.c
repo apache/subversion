@@ -397,7 +397,7 @@ read_link_target(const char **link_target_abspath,
                              svn_dirent_local_style(local_abspath, pool));
 
   canon_link_target = svn_dirent_canonicalize(link_target->data, pool);
-                
+
   /* Treat relative symlinks as relative to LOCAL_ABSPATH's parent. */
   if (!svn_dirent_is_absolute(canon_link_target))
     canon_link_target = svn_dirent_join(svn_dirent_dirname(local_abspath,
@@ -548,8 +548,17 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
             {
 #ifdef SVN_DEBUG
               /* Install self-verification trigger statements. */
-              SVN_ERR(svn_sqlite__exec_statements(sdb,
-                                                  STMT_VERIFICATION_TRIGGERS));
+              err = svn_sqlite__exec_statements(sdb,
+                                                STMT_VERIFICATION_TRIGGERS);
+              if (err && err->apr_err == SVN_ERR_SQLITE_ERROR)
+                {
+                  /* Verification triggers can fail to install on old 1.7-dev
+                   * formats which didn't have a NODES table yet. Ignore sqlite
+                   * errors so such working copies can be upgraded. */
+                  svn_error_clear(err);
+                }
+              else
+                SVN_ERR(err);
 #endif
               break;
             }

@@ -8035,6 +8035,119 @@ move_delete_file_externals(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+update_with_tree_conflict(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "update_with_tree_conflict", opts,
+                                   pool));
+
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+  SVN_ERR(sbox_wc_move(&b, "A", "A2"));
+
+  SVN_ERR(sbox_wc_update_depth(&b, "A", 2, svn_depth_empty, FALSE));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",       "normal",       1, ""},
+      {0, "A",      "normal",       2, "A"},
+      {0, "A/B",    "normal",       1, "A/B"},
+      {1, "A",      "base-deleted", NO_COPY_FROM, "A2"},
+      {1, "A/B",    "base-deleted", NO_COPY_FROM},
+      {1, "A2",     "normal",       1, "A", MOVED_HERE},
+      {1, "A2/B",   "normal",       1, "A/B", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  SVN_ERR(sbox_wc_update(&b, "A", 2));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",       "normal",       1, ""},
+      {0, "A",      "normal",       2, "A"},
+      {0, "A/B",    "normal",       2, "A/B"},
+      {0, "A/B/C",  "normal",       2, "A/B/C"},
+      {1, "A",      "base-deleted", NO_COPY_FROM, "A2"},
+      {1, "A/B",    "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C",  "base-deleted", NO_COPY_FROM},
+      {1, "A2",     "normal",       1, "A", MOVED_HERE},
+      {1, "A2/B",   "normal",       1, "A/B", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Second update overwrote the existing tree-conflict and that
+     causes the move-update to assert. */
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_infinity,
+                          svn_wc_conflict_choose_mine_conflict));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",       "normal",       1, ""},
+      {0, "A",      "normal",       2, "A"},
+      {0, "A/B",    "normal",       2, "A/B"},
+      {0, "A/B/C",  "normal",       2, "A/B/C"},
+      {1, "A",      "base-deleted", NO_COPY_FROM, "A2"},
+      {1, "A/B",    "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C",  "base-deleted", NO_COPY_FROM},
+      {1, "A2",     "normal",       2, "A", MOVED_HERE},
+      {1, "A2/B",   "normal",       2, "A/B", MOVED_HERE},
+      {1, "A2/B/C", "normal",       2, "A/B/C", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Same again but second update is A/B rather than A which triggers
+     the problem through open_root rather than open_directory. */
+  SVN_ERR(sbox_wc_revert(&b, "", svn_depth_infinity));
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+  SVN_ERR(sbox_wc_move(&b, "A", "A2"));
+  SVN_ERR(sbox_wc_update_depth(&b, "A", 2, svn_depth_empty, FALSE));
+  SVN_ERR(sbox_wc_update(&b, "A/B", 2));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",       "normal",       1, ""},
+      {0, "A",      "normal",       2, "A"},
+      {0, "A/B",    "normal",       2, "A/B"},
+      {0, "A/B/C",  "normal",       2, "A/B/C"},
+      {1, "A",      "base-deleted", NO_COPY_FROM, "A2"},
+      {1, "A/B",    "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C",  "base-deleted", NO_COPY_FROM},
+      {1, "A2",     "normal",       1, "A", MOVED_HERE},
+      {1, "A2/B",   "normal",       1, "A/B", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_infinity,
+                          svn_wc_conflict_choose_mine_conflict));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",       "normal",       1, ""},
+      {0, "A",      "normal",       2, "A"},
+      {0, "A/B",    "normal",       2, "A/B"},
+      {0, "A/B/C",  "normal",       2, "A/B/C"},
+      {1, "A",      "base-deleted", NO_COPY_FROM, "A2"},
+      {1, "A/B",    "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C",  "base-deleted", NO_COPY_FROM},
+      {1, "A2",     "normal",       2, "A", MOVED_HERE},
+      {1, "A2/B",   "normal",       2, "A/B", MOVED_HERE},
+      {1, "A2/B/C", "normal",       2, "A/B/C", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -8186,5 +8299,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move retract (issue 4336)"),
     SVN_TEST_OPTS_PASS(move_delete_file_externals,
                        "move/delete file externals (issue 4293)"),
+    SVN_TEST_OPTS_PASS(update_with_tree_conflict,
+                       "update with tree conflict (issue 4347)"),
     SVN_TEST_NULL
   };

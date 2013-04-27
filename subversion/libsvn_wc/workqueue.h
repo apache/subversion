@@ -73,7 +73,11 @@ extern "C" {
    These will be combined as appropriate, and returned in one of the
    above three styles.
 
-   The resulting list will be ordered: WORK_ITEM1 first, then WORK_ITEM2  */
+   The resulting list will be ordered: WORK_ITEM1 first, then WORK_ITEM2.
+
+   The result contains a shallow copy of the inputs.  Allocate any
+   additional storage needed in RESULT_POOL.
+ */
 svn_skel_t *
 svn_wc__wq_merge(svn_skel_t *work_item1,
                  svn_skel_t *work_item2,

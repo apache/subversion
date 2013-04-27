@@ -1,5 +1,30 @@
+Version 1.9.0
+(?? ??? 20??, from /branches/1.9.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.9.0
+
+ User-visible changes:
+  - General:
+
+  - Major new features:
+
+  - Minor new features and improvements:
+
+  - Client-side bugfixes:
+
+  - Server-side bugfixes:
+
+  - Other tool improvements and bugfixes:
+
+ Developer-visible changes:
+  - General:
+
+  - API changes:
+
+  - Bindings:
+
+
 Version 1.8.0
-(?? ??? 2011, from /branches/1.8.x)
+(?? ??? 2013, from /branches/1.8.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
  User-visible changes:
@@ -47,12 +72,15 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * 'svn propset' checks spelling of reserved property names.
     * improve working copy performance on network disks (issue #4176) 
     * repos suggested config via svn:auto-props and svn:global-ignores (r1401908)
+    * support for custom keyword definitions in svn:keywords (issue #890)
+    * support for server-side keyword expansion in mod_dav_svn (r1466055)
 
   - Client-side bugfixes:
     * 
 
   - Server-side bugfixes:
     * SVNParentPath / repository listing now authz-filtered (r1408184)
+    * User and group names in the authz config file are case-sensitive (r1475772)
 
   - Other tool improvements and bugfixes:
     * 'svnmucc' promoted to first-class supported utility (issue #3308)
@@ -60,6 +88,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
  Developer-visible changes:
   - General:
     * Now require Python 2.5 for tests and dev tools (r1243627)
+    * configure defaults to --without-apache-libexecdir (r1469862)
 
   - API changes:
     * fix inconsistent handling of log revs without changed paths (issue #3694)

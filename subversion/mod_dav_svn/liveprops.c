@@ -834,10 +834,10 @@ insert_prop(const dav_resource *resource,
 static int
 is_writable(const dav_resource *resource, int propid)
 {
-  const dav_liveprop_spec *info;
+  const dav_liveprop_spec *info = NULL;
 
   (void) dav_get_liveprop_info(propid, &dav_svn__liveprop_group, &info);
-  return info->is_writable;
+  return info ? info->is_writable : FALSE;
 }
 
 

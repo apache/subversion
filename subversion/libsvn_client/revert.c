@@ -160,7 +160,9 @@ svn_client_revert2(const apr_array_header_t *paths,
           && ((err = ctx->cancel_func(ctx->cancel_baton))))
         goto errorful;
 
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+      err = svn_dirent_get_absolute(&local_abspath, path, pool);
+      if (err)
+        goto errorful;
 
       baton.local_abspath = local_abspath;
       baton.depth = depth;
@@ -168,8 +170,9 @@ svn_client_revert2(const apr_array_header_t *paths,
       baton.changelists = changelists;
       baton.ctx = ctx;
 
-      SVN_ERR(svn_wc__is_wcroot(&wc_root, ctx->wc_ctx, local_abspath,
-                                pool));
+      err = svn_wc__is_wcroot(&wc_root, ctx->wc_ctx, local_abspath, pool);
+      if (err)
+        goto errorful;
       lock_target = wc_root ? local_abspath
                             : svn_dirent_dirname(local_abspath, pool);
       err = svn_wc__call_with_write_lock(revert, &baton, ctx->wc_ctx,
@@ -180,18 +183,17 @@ svn_client_revert2(const apr_array_header_t *paths,
 
  errorful:
 
-  if (!use_commit_times)
-    {
-      /* Sleep to ensure timestamp integrity. */
-      const char* sleep_path = NULL;
+  {
+    /* Sleep to ensure timestamp integrity. */
+    const char *sleep_path = NULL;
 
-      /* Only specify a path if we are certain all paths are on the
-         same filesystem */
-      if (paths->nelts == 1)
-        sleep_path = APR_ARRAY_IDX(paths, 0, const char *);
+    /* Only specify a path if we are certain all paths are on the
+       same filesystem */
+    if (paths->nelts == 1)
+      sleep_path = APR_ARRAY_IDX(paths, 0, const char *);
 
-      svn_io_sleep_for_timestamps(sleep_path, subpool);
-    }
+    svn_io_sleep_for_timestamps(sleep_path, subpool);
+  }
 
   svn_pool_destroy(subpool);
 

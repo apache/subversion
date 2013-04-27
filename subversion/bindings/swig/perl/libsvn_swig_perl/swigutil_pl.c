@@ -313,7 +313,7 @@ SV *svn_swig_pl_revnums_to_list(const apr_array_header_t *array)
 {
     return convert_array(array, (element_converter_t)convert_svn_revnum_t,
                          NULL);
-} 
+}
 
 /* perl -> c svn_opt_revision_t conversion */
 svn_opt_revision_t *svn_swig_pl_set_revision(svn_opt_revision_t *rev, SV *source)
@@ -911,6 +911,24 @@ svn_error_t *svn_swig_pl_thunk_log_receiver(void *baton,
     return SVN_NO_ERROR;
 }
 
+svn_error_t *svn_swig_pl_thunk_log_entry_receiver(void *baton,
+                                                  svn_log_entry_t *log_entry,
+                                                  apr_pool_t *pool)
+{
+    SV *receiver = baton;
+
+    if (!SvOK(receiver))
+	return SVN_NO_ERROR;
+
+    svn_swig_pl_callback_thunk(CALL_SV,
+                               receiver, NULL,
+                               "SS", 
+                               log_entry, _SWIG_TYPE("svn_log_entry_t *"),
+                               pool, POOLINFO);
+
+    return SVN_NO_ERROR;
+}
+
 svn_error_t * svn_swig_pl_thunk_client_diff_summarize_func(
                      const svn_client_diff_summarize_t *diff,
                      void *baton,
@@ -983,7 +1001,7 @@ svn_error_t *svn_swig_pl_thunk_commit_callback(svn_revnum_t new_revision,
     return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_swig_pl_thunk_commit_callback2(const svn_commit_info_t *commit_info, 
+svn_error_t *svn_swig_pl_thunk_commit_callback2(const svn_commit_info_t *commit_info,
                                                 void *baton,
                                                 apr_pool_t *pool)
 {

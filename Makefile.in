@@ -571,6 +571,15 @@ svnsshcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 bdbcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	@$(MAKE) check FS_TYPE=bdb
 
+# Produce the clang compilation database as the compile_commands.json file
+# in the srcdir.  This is used by tools such as the YouCompleteMe vim plugin
+# to know the compile flags for various source files so that analysis such
+# as syntax checking, static analysis or symbol completion can be done
+# outside the build system.  To do this it uses the tool called bear:
+# https://github.com/rizsotto/Bear
+compile-commands:
+	@bear -o $(abs_srcdir)/compile_commands.json -- $(MAKE) all
+
 # Create an execution coverage report from the data collected during
 # all execution since the last reset.
 gcov:

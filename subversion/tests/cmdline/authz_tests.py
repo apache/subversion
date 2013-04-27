@@ -1530,6 +1530,27 @@ def authz_del_from_subdir(sbox):
                                       'rm', sbox.repo_url + '/A/mu',
                                       '-m', '')
 
+
+@XFail()
+@SkipUnless(svntest.main.is_ra_type_dav) # dontdothat is dav only
+@SkipUnless(svntest.main.is_os_windows) # until the buildbots are configured
+def log_diff_dontdothat(sbox):
+  "log --diff on dontdothat"
+  sbox.build(create_wc = False)
+
+  ddt_url = sbox.repo_url.replace('/svn-test-work/', '/ddt-test-work/')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                      'log', sbox.repo_url,
+                                      '-c', 1, '--diff')
+
+  # We should expect a PASS or a proper error message instead of
+  # svn: E175009: XML parsing failed: (403 Forbidden)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                      'log', ddt_url,
+                                      '-c', 1, '--diff')
+
+
 ########################################################################
 # Run the tests
 
@@ -1562,6 +1583,7 @@ test_list = [ None,
               remove_subdir_with_authz_and_tc,
               authz_svnserve_groups,
               authz_del_from_subdir,
+              log_diff_dontdothat,
              ]
 serial_only = True
 

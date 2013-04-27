@@ -533,11 +533,11 @@ assemble_status(svn_wc_status3_t **status,
             copied = TRUE; /* Working deletion */
         }
     }
-  else 
+  else
     {
       /* Examine whether our target is missing or obstructed. To detect
        * obstructions, we have to look at the on-disk status in DIRENT. */
-      svn_node_kind_t expected_kind = (info->kind == svn_node_dir) 
+      svn_node_kind_t expected_kind = (info->kind == svn_node_dir)
                                         ? svn_node_dir
                                         : svn_node_file;
 
@@ -693,7 +693,7 @@ assemble_status(svn_wc_status3_t **status,
               if (err)
                 {
                   if (err->apr_err != SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
-                    svn_error_trace(err);
+                    return svn_error_trace(err);
 
                   svn_error_clear(err);
                   /* We are no longer moved... So most likely we are somehow
@@ -2665,7 +2665,7 @@ stat_wc_dirent_case_sensitive(const svn_io_dirent2_t **dirent,
 
   /* Note that for performance this is really just a few hashtable lookups,
      as we just used local_abspath for a db call in both our callers */
-  SVN_ERR(svn_wc__db_is_wcroot(&is_wcroot, db, local_abspath, 
+  SVN_ERR(svn_wc__db_is_wcroot(&is_wcroot, db, local_abspath,
                                scratch_pool));
 
   return svn_error_trace(
@@ -2894,8 +2894,8 @@ internal_status(svn_wc_status3_t **status,
          on 'hidden' nodes. */
       conflicted = FALSE;
 
-      SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, TRUE,
-                                 scratch_pool, scratch_pool));
+      SVN_ERR(svn_io_stat_dirent2(&dirent, local_abspath, FALSE, TRUE,
+                                  scratch_pool, scratch_pool));
     }
   else
     SVN_ERR(stat_wc_dirent_case_sensitive(&dirent, db, local_abspath,

@@ -1654,7 +1654,7 @@ eval_text_conflict_func_result(svn_skel_t **work_items,
                                           FALSE /* record_fileinfo */,
                                           result_pool, scratch_pool));
     *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
-    
+
     SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item, db, local_abspath,
                                              result_pool, scratch_pool));
     *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
@@ -2068,7 +2068,7 @@ read_prop_conflicts(apr_array_header_t *conflicts,
   apr_hash_t *conflicted_props;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
-  
+
   SVN_ERR(svn_wc__conflict_read_prop_conflict(&prop_reject_file,
                                               &my_props,
                                               &their_old_props,
@@ -2127,11 +2127,12 @@ read_prop_conflicts(apr_array_header_t *conflicts,
 
       my_value = svn_hash_gets(my_props, propname);
       their_value = svn_hash_gets(their_props, propname);
+      old_value = svn_hash_gets(their_old_props, propname);
 
       /* Compute the incoming side of the conflict ('action'). */
       if (their_value == NULL)
         desc->action = svn_wc_conflict_action_delete;
-      else if (my_value == NULL)
+      else if (old_value == NULL)
         desc->action = svn_wc_conflict_action_add;
       else
         desc->action = svn_wc_conflict_action_edit;
@@ -2139,7 +2140,7 @@ read_prop_conflicts(apr_array_header_t *conflicts,
       /* Compute the local side of the conflict ('reason'). */
       if (my_value == NULL)
         desc->reason = svn_wc_conflict_reason_deleted;
-      else if (their_value == NULL)
+      else if (old_value == NULL)
         desc->reason = svn_wc_conflict_reason_added;
       else
         desc->reason = svn_wc_conflict_reason_edited;
@@ -2182,7 +2183,6 @@ read_prop_conflicts(apr_array_header_t *conflicts,
           SVN_ERR(svn_stream_close(s));
         }
 
-      old_value = svn_hash_gets(their_old_props, propname);
       if (old_value)
         {
           svn_stream_t *s;
@@ -2645,7 +2645,7 @@ resolve_tree_conflict_on_node(svn_skel_t **work_items,
   svn_wc_conflict_action_t action;
   svn_boolean_t did_resolve = FALSE;
 
-  SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, &action, NULL, 
+  SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, &action, NULL,
                                               db, local_abspath,
                                               conflicts,
                                               scratch_pool, scratch_pool));

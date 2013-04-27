@@ -657,7 +657,7 @@ setup_serf_req(serf_request_t *request,
       SVN_ERR(svn_ra_serf__copy_into_spillbuf(&buf, body_bkt,
                                               request_pool,
                                               scratch_pool));
-      /* Destroy original bucket since it content is already copied 
+      /* Destroy original bucket since it content is already copied
          to spillbuf. */
       serf_bucket_destroy(body_bkt);
 
@@ -723,7 +723,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
 {
   apr_pool_t *iterpool;
   apr_interval_time_t waittime_left = sess->timeout;
-  
+
   assert(sess->pending_error == SVN_NO_ERROR);
 
   iterpool = svn_pool_create(scratch_pool);
@@ -761,7 +761,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
                 {
                   waittime_left -= SVN_RA_SERF__CONTEXT_RUN_DURATION;
                 }
-              else 
+              else
                 {
                   return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT, NULL,
                                           _("Connection timed out"));
@@ -1419,7 +1419,7 @@ xml_parser_cleanup(void *baton)
 
   if (*xmlp)
     {
-      XML_ParserFree(*xmlp);
+      (void) XML_ParserFree(*xmlp);
       *xmlp = NULL;
     }
 
@@ -1451,7 +1451,7 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
   /* Parsing the pending conten in the spillbuf will result in many disc i/o
      operations. This can be so slow that we don't run the network event
      processing loop often enough, resulting in timed out connections.
-   
+
      So we limit the amounts of bytes parsed per iteration.
    */
   while (cur_read < PENDING_TO_PARSE)
@@ -1794,7 +1794,7 @@ svn_ra_serf__credentials_callback(char **username, char **password,
       if (!session->proxy_username || session->proxy_auth_attempts > 4)
         {
           /* No more credentials. */
-          (void) save_error(session, 
+          (void) save_error(session,
                             svn_error_create(
                               SVN_ERR_AUTHN_FAILED, NULL,
                               _("Proxy authentication failed")));

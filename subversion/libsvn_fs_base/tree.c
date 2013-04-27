@@ -3747,8 +3747,7 @@ txn_body_apply_textdelta(void *baton, trail_t *trail)
          we're calculating both SHA1 and MD5 checksums somewhere in
          reps-strings.c.  Could we keep them both around somehow so this
          check could be more comprehensive? */
-      if (tb->base_checksum->kind == checksum->kind
-            && !svn_checksum_match(tb->base_checksum, checksum))
+      if (!svn_checksum_match(tb->base_checksum, checksum))
         return svn_checksum_mismatch_err(tb->base_checksum, checksum,
                             trail->pool,
                             _("Base checksum mismatch on '%s'"),

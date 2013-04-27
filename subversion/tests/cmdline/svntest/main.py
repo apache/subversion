@@ -53,7 +53,7 @@ import svntest
 from svntest import Failure
 from svntest import Skip
 
-SVN_VER_MINOR = 8
+SVN_VER_MINOR = 9
 
 ######################################################################
 #
@@ -134,6 +134,8 @@ wc_passwd = 'rayjandom'
 # Username and password used by the working copies for "second user"
 # scenarios
 wc_author2 = 'jconstant' # use the same password as wc_author
+
+stack_trace_regexp = r'(?:.*subversion[\\//].*\.c:[0-9]*,$|.*apr_err=.*)'
 
 # Set C locale for command line programs
 os.environ['LC_ALL'] = 'C'
@@ -520,13 +522,13 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
                                                         *varargs)
 
   def _line_contains_repos_diskpath(line):
-    # ### Note: this assumes that either svn-test-work isn't a symlink, 
+    # ### Note: this assumes that either svn-test-work isn't a symlink,
     # ### or the diskpath isn't realpath()'d somewhere on the way from
     # ### the server's configuration and the client's stderr.  We could
     # ### check for both the symlinked path and the realpath.
     return \
          os.path.join('cmdline', 'svn-test-work', 'repositories') in line \
-      or os.path.join('cmdline', 'svn-test-work', 'local_tmp', 'repos') in line 
+      or os.path.join('cmdline', 'svn-test-work', 'local_tmp', 'repos') in line
 
   for lines, name in [[stdout_lines, "stdout"], [stderr_lines, "stderr"]]:
     if is_ra_type_file() or 'svnadmin' in command or 'svnlook' in command:
@@ -881,12 +883,28 @@ def create_repos(path, minor_version = None):
 
   # Skip tests if we can't create the repository.
   if stderr:
+    stderr_lines = 0
+    not_using_fsfs_backend = (options.fs_type != "fsfs")
+    backend_deprecation_warning = False
     for line in stderr:
+      stderr_lines += 1
       if line.find('Unknown FS type') != -1:
         raise Skip
-    # If the FS type is known, assume the repos couldn't be created
-    # (e.g. due to a missing 'svnadmin' binary).
-    raise SVNRepositoryCreateFailure("".join(stderr).rstrip())
+      if not_using_fsfs_backend:
+        if 0 < line.find('repository back-end is deprecated, consider using'):
+          backend_deprecation_warning = True
+
+    # Creating BDB repositories will cause svnadmin to print a warning
+    # which should be ignored.
+    if (stderr_lines == 1
+        and not_using_fsfs_backend
+        and backend_deprecation_warning):
+      pass
+    else:
+      # If the FS type is known and we noticed more than just the
+      # BDB-specific warning, assume the repos couldn't be created
+      # (e.g. due to a missing 'svnadmin' binary).
+      raise SVNRepositoryCreateFailure("".join(stderr).rstrip())
 
   # Require authentication to write to the repos, for ra_svn testing.
   file_write(get_svnserve_conf_file_path(path),

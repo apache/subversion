@@ -191,7 +191,7 @@ typedef struct cache_lock_t
 {
   /* pool holding the lock */
   apr_pool_t *pool;
-  
+
   /* cache being locked */
   fs_fs_dag_cache_t *cache;
 
@@ -206,7 +206,7 @@ typedef struct cache_lock_t
    When the number of INSERTIONS (i.e. objects created form that pool)
    exceeds a certain threshold, the pool will be cleared and the cache
    with it.
-   
+
    To ensure that nodes returned from this structure remain valid, the
    cache will get locked for the lifetime of the _receiving_ pools (i.e.
    those in which we would allocate the node if there was no cache.).
@@ -277,7 +277,7 @@ svn_fs_fs__create_dag_cache(apr_pool_t *pool)
                             result,
                             unregister_locks,
                             apr_pool_cleanup_null);
-  
+
   return result;
 }
 
@@ -360,7 +360,7 @@ cache_lookup( fs_fs_dag_cache_t *cache
      (HASH_VALUE has been initialized to REVISION). */
   for (i = 0; i + 4 <= path_len; i += 4)
     hash_value = hash_value * 0xd1f3da69 + *(const apr_uint32_t*)(path + i);
-  
+
   for (; i < path_len; ++i)
     hash_value = hash_value * 33 + path[i];
 
@@ -421,7 +421,7 @@ locate_cache(svn_cache__t **cache,
 
 /* Return NODE for PATH from ROOT's node cache, or NULL if the node
    isn't cached; read it from the FS. *NODE remains valid until either
-   POOL or the FS gets cleared or destroyed (whichever comes first). 
+   POOL or the FS gets cleared or destroyed (whichever comes first).
 
    Since locking can be expensive and POOL may be long-living, for
    nodes that will not need to survive the next call to this function,
@@ -443,7 +443,7 @@ dag_node_cache_get(dag_node_t **node_p,
   if (!root->is_txn_root)
     {
       /* immutable DAG node. use the global caches for it */
-      
+
       fs_fs_data_t *ffd = root->fs->fsap_data;
       cache_entry_t *bucket;
 
@@ -475,7 +475,7 @@ dag_node_cache_get(dag_node_t **node_p,
   else
     {
       /* DAG is mutable / may become invalid. Use the TXN-local cache */
-      
+
       locate_cache(&cache, &key, root, path, pool);
 
       SVN_ERR(svn_cache__get((void **) &node, &found, cache, key, pool));
@@ -921,8 +921,6 @@ open_path(parent_path_t **parent_path_p,
   dag_node_t *here = NULL; /* The directory we're currently looking at.  */
   parent_path_t *parent_path; /* The path from HERE up to the root. */
   const char *rest; /* The portion of PATH we haven't traversed yet.  */
-
-  /* ensure a canonical path representation */
   const char *path_so_far = "/";
   apr_pool_t *iterpool = svn_pool_create(pool);
 
@@ -930,7 +928,7 @@ open_path(parent_path_t **parent_path_p,
      a sibling of PATH has been presently accessed.  Try to start the lookup
      directly at the parent node, if the caller did not requested the full
      parent chain. */
-  const char *directory;
+  const char *directory = NULL;
   assert(svn_fs__is_canonical_abspath(path));
   if (flags & open_path_node_only)
     {
@@ -952,7 +950,7 @@ open_path(parent_path_t **parent_path_p,
       SVN_ERR(root_node(&here, root, pool));
       rest = path + 1; /* skip the leading '/', it saves in iteration */
     }
- 
+
   parent_path = make_parent_path(here, 0, 0, pool);
   parent_path->copy_inherit = copy_id_inherit_self;
 
@@ -3900,7 +3898,7 @@ mergeinfo_cache_key(const char *path,
   number = number * 4
          + (inherit == svn_mergeinfo_nearest_ancestor ? 2 : 0)
          + (adjust_inherited_mergeinfo ? 1 : 0);
-  
+
   return svn_fs_fs__combine_number_and_string(number, path, pool);
 }
 
@@ -4039,7 +4037,7 @@ get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
                               ffd->mergeinfo_cache,
                               cache_key, result_pool));
     }
-    
+
   if (! found)
     {
       SVN_ERR(get_mergeinfo_for_path_internal(mergeinfo, rev_root, path,

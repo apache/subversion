@@ -173,12 +173,13 @@ I.    INTRODUCTION
       'get-deps.sh', is available in the same directory as this file.
       When run, it will place 'apr', 'apr-util', 'serf', 'zlib', and
       'sqlite-amalgamation' directories directly into your unpacked Subversion
-      distribution, where they will be automatically configured and built by
-      Subversion's build process.
+      distribution.  With the exception of sqlite-amalgamation, they will
+      still need to be configured, built and installed explicitly, and
+      Subversion's own configure script may need to be told where to find
+      them, if they were not installed in standard system locations.
 
       Note: there are optional dependencies (such as openssl, swig, and httpd)
-      which get-deps.sh does not download and Subversion does not attempt to
-      configure or build.
+      which get-deps.sh does not download.
 
       Note: Because previous builds of Subversion may have installed older
       versions of these libraries, you may want to run some of the cleanup
@@ -651,7 +652,7 @@ II.   INSTALLATION
 
       This script will make sure you have all the necessary components
       available to build Subversion.  If any are missing, you will be
-      told where to get them from.  (See the 'Build Requirements' in
+      told where to get them from.  (See the 'Dependency Overview' in
       section I.)
 
       Note: if the command "autoconf" on your machine does not run

@@ -498,10 +498,35 @@ public interface ISVNClient
      * @param localPath      target local path
      * @param force          overwrite local changes
      * @param depth          how deep to traverse into subdirectories
+     * @param ignoreMergeinfo ignore merge history, treat sources as unrelated
+     * @param diffIgnoreAncestry always treat source files as related
+     * @param dryRun         do not change anything
+     * @param recordOnly     record mergeinfo but do not run merge
+     * @throws ClientException
+     * @since 1.8
+     */
+    void merge(String path1, Revision revision1, String path2,
+               Revision revision2, String localPath, boolean force, Depth depth,
+               boolean ignoreMergeinfo, boolean diffIgnoreAncestry,
+               boolean dryRun, boolean recordOnly)
+            throws ClientException;
+
+    /**
+     * Merge changes from two paths into a new local path.
+     *
+     * @param path1          first path or url
+     * @param revision1      first revision
+     * @param path2          second path or url
+     * @param revision2      second revision
+     * @param localPath      target local path
+     * @param force          overwrite local changes
+     * @param depth          how deep to traverse into subdirectories
      * @param ignoreAncestry ignore if files are not related
      * @param dryRun         do not change anything
      * @param recordOnly     record mergeinfo but do not run merge
      * @throws ClientException
+     * @note Behaves like the 1.8 where ignoreAncestry maps to
+     *       both ignoreMergeinfo and diffIgnoreAncestry
      */
     void merge(String path1, Revision revision1, String path2,
                Revision revision2, String localPath, boolean force, Depth depth,
@@ -512,7 +537,31 @@ public interface ISVNClient
      * Merge set of revisions into a new local path.
      * @param path          path or url
      * @param pegRevision   revision to interpret path
-     * @param revisions     revisions to merge
+     * @param revisions     revisions to merge; may be null, indicating that
+     *                      the optimal range should be determined automatcially
+     * @param localPath     target local path
+     * @param force         overwrite local changes
+     * @param depth         how deep to traverse into subdirectories
+     * @param ignoreMergeinfo ignore merge history, treat sources as unrelated
+     * @param diffIgnoreAncestry always treat source files as related
+     * @param dryRun        do not change anything
+     * @param recordOnly    record mergeinfo but do not run merge
+     * @throws ClientException
+     * @since 1.8
+     */
+    void merge(String path, Revision pegRevision, List<RevisionRange> revisions,
+               String localPath, boolean force, Depth depth,
+               boolean ignoreMergeinfo, boolean diffIgnoreAncestry,
+               boolean dryRun, boolean recordOnly)
+             throws ClientException;
+
+    /**
+     * Merge set of revisions into a new local path.
+     * @param path          path or url
+     * @param pegRevision   revision to interpret path
+     * @param revisions     revisions to merge;
+     *                      may be null, indicating that the optimal range
+     *                      should be determined automatcially (new in 1.8)
      * @param localPath     target local path
      * @param force         overwrite local changes
      * @param depth         how deep to traverse into subdirectories
@@ -520,6 +569,8 @@ public interface ISVNClient
      * @param dryRun        do not change anything
      * @param recordOnly    record mergeinfo but do not run merge
      * @throws ClientException
+     * @note Behaves like the 1.8 where ignoreAncestry maps to
+     *       both ignoreMergeinfo and diffIgnoreAncestry
      */
     void merge(String path, Revision pegRevision, List<RevisionRange> revisions,
                String localPath, boolean force, Depth depth,
@@ -541,6 +592,7 @@ public interface ISVNClient
      * @param localPath     target local path
      * @param dryRun        do not change anything
      * @throws ClientException
+     * @deprecated Will be removed in a future release
      */
     void mergeReintegrate(String path, Revision pegRevision,
                           String localPath, boolean dryRun)
@@ -564,10 +616,35 @@ public interface ISVNClient
      * @param pegRevision            peg rev for pathOrUrl
      * @param mergeSourceUrl         the source of the merge
      * @param srcPegRevision         peg rev for mergeSourceUrl
+     * @param srcStartRevieion       lower bound of the source revision range
+     * @param srcEndRevision         upper bound of the source revision range
      * @param discoverChangedPaths   return paths of changed items
      * @param depth                  the depth to recurse to
      * @param revProps               the revprops to retrieve
      * @param callback               the object to receive the log messages
+     * @since 1.8
+     */
+    void getMergeinfoLog(Mergeinfo.LogKind kind, String pathOrUrl,
+                         Revision pegRevision, String mergeSourceUrl,
+                         Revision srcPegRevision,
+                         Revision srcStartRevision, Revision srcEndRevision,
+                         boolean discoverChangedPaths,
+                         Depth depth, Set<String> revProps,
+                         LogMessageCallback callback)
+        throws ClientException;
+
+    /**
+     * Retrieve either merged or eligible-to-be-merged revisions.
+     * @param kind                   kind of revisions to receive
+     * @param pathOrUrl              target of merge
+     * @param pegRevision            peg rev for pathOrUrl
+     * @param mergeSourceUrl         the source of the merge
+     * @param srcPegRevision         peg rev for mergeSourceUrl
+     * @param discoverChangedPaths   return paths of changed items
+     * @param depth                  the depth to recurse to
+     * @param revProps               the revprops to retrieve
+     * @param callback               the object to receive the log messages
+     * @note Behaves like the 1.8 version, with unspecified revision range.
      */
     void getMergeinfoLog(Mergeinfo.LogKind kind, String pathOrUrl,
                          Revision pegRevision, String mergeSourceUrl,

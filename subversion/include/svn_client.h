@@ -439,9 +439,17 @@ typedef struct svn_client_commit_info_t
 #define SVN_CLIENT_COMMIT_ITEM_TEXT_MODS   0x04
 #define SVN_CLIENT_COMMIT_ITEM_PROP_MODS   0x08
 #define SVN_CLIENT_COMMIT_ITEM_IS_COPY     0x10
-/** @since New in 1.2. */
+/** One of the flags for a commit item.  The node has a lock token that
+ * should be released after a successful commit and, if the node is also
+ * modified, transferred to the server as part of the commit process.
+ *
+ * @since New in 1.2. */
 #define SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN  0x20
-/** @since New in 1.8. */
+/** One of the flags for a commit item.  The node is the 'moved here'
+ * side of a local move.  This is used to check and enforce that the
+ * other side of the move is also included in the commit.
+ *
+ * @since New in 1.8. */
 #define SVN_CLIENT_COMMIT_ITEM_MOVED_HERE  0x40
 /** @} */
 
@@ -2142,7 +2150,7 @@ svn_client_commit6(const apr_array_header_t *targets,
 /**
  * Similar to svn_client_commit6(), but passes @a include_file_externals as
  * FALSE and @a include_dir_externals as FALSE.
- * 
+ *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.7 API.
  */
@@ -3442,131 +3450,24 @@ svn_client_diff_summarize_peg(const char *path,
  * @{
  */
 
-/** Details of an automatic merge.
+/** Get information about the state of merging between two branches.
  *
- * The information includes the locations of the youngest common ancestor,
- * merge base, and such like.  The details are private to the implementation
- * but some of the information can be retrieved through the public APIs
- * svn_client_automatic_merge_is_reintegrate_like() and
- * svn_client_automatic_merge_get_locations().
+ * The source is specified by @a source_path_or_url at @a source_revision.
+ * The target is specified by @a target_path_or_url at @a target_revision,
+ * which refers to either a WC or a repository location.
  *
- * @since New in 1.8.
- */
-typedef struct svn_client_automatic_merge_t svn_client_automatic_merge_t;
-
-/** Find the information needed to merge all unmerged changes from a source
- * branch into a target branch.
- *
- * Set @a *merge_p to the information needed to merge all unmerged changes
- * (up to @a source_revision) from the source branch @a source_path_or_url
- * at @a source_revision into the target WC at @a target_wcpath.
- *
- * The flags @a allow_mixed_rev, @a allow_local_mods and
- * @a allow_switched_subtrees enable merging into a WC that is in any or all
- * of the states described by their names, but only if this function decides
- * that the merge will be in the same direction as the last automatic merge.
- * If, on the other hand, the last automatic merge was in the opposite
- * direction (that is, if svn_client_automatic_merge_is_reintegrate_like()
- * would return true), then such states of the WC are not allowed regardless
- * of these flags.  This function merely records these flags in the
- * @a *merge_p structure; svn_client_do_automatic_merge() checks the WC
- * state for compliance.
- *
- * Allocate the @a *merge_p structure in @a result_pool.
- *
- * @since New in 1.8.
- */
-svn_error_t *
-svn_client_find_automatic_merge(svn_client_automatic_merge_t **merge_p,
-                                const char *source_path_or_url,
-                                const svn_opt_revision_t *source_revision,
-                                const char *target_wcpath,
-                                svn_boolean_t allow_mixed_rev,
-                                svn_boolean_t allow_local_mods,
-                                svn_boolean_t allow_switched_subtrees,
-                                svn_client_ctx_t *ctx,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool);
-
-/** Find out what kind of automatic merge would be needed, when the target
- * is only known as a repository location rather than a WC.
- *
- * Like svn_client_find_automatic_merge() except that the target is
- * specified by @a target_path_or_url at @a target_revision, which must
- * refer to a repository location, instead of by a WC path argument.
- *
- * @note The result, @a *merge_p, is not intended for passing to
- * svn_client_do_automatic_merge().
- *   ### We should do something about this.  Perhaps ensure
- *       svn_client_do_automatic_merge() will work iff given a WC that
- *       matches the stored repo-location of the target branch and is an
- *       unmodified single-rev WC.
- *
- * Allocate the @a *merge_p structure in @a result_pool.
- *
- * @since New in 1.8.
- */
-svn_error_t *
-svn_client_find_automatic_merge_no_wc(
-                                 svn_client_automatic_merge_t **merge_p,
-                                 const char *source_path_or_url,
-                                 const svn_opt_revision_t *source_revision,
-                                 const char *target_path_or_url,
-                                 const svn_opt_revision_t *target_revision,
-                                 svn_client_ctx_t *ctx,
-                                 apr_pool_t *result_pool,
-                                 apr_pool_t *scratch_pool);
-
-/** Perform an automatic merge.
- *
- * Perform a merge, according to the information stored in @a merge, into
- * the WC at @a target_wcpath.  The @a merge structure must be obtained
- * from svn_client_find_automatic_merge().
- *
- * The other parameters are as in svn_client_merge5().
- *
- * Return an error if the WC contains local modifications, mixed revisions
- * and/or switched subtrees, unless such states are allowed by the
- * corresponding parameters passed to svn_client_find_automatic_merge()
- * and the required merge is not reintegrate-like.
- *
- * @since New in 1.8.
- */
-svn_error_t *
-svn_client_do_automatic_merge(const svn_client_automatic_merge_t *merge,
-                              const char *target_wcpath,
-                              svn_depth_t depth,
-                              svn_boolean_t diff_ignore_ancestry,
-                              svn_boolean_t force_delete,
-                              svn_boolean_t record_only,
-                              svn_boolean_t dry_run,
-                              const apr_array_header_t *merge_options,
-                              svn_client_ctx_t *ctx,
-                              apr_pool_t *scratch_pool);
-
-/** Return TRUE iff the automatic merge represented by @a merge is going to
- * be a reintegrate-like merge: that is, merging in the opposite direction
- * from the last automatic merge.
- *
- * This function exists because the automatic merge is not symmetric and the
- * client can be more friendly if it knows something about the differences.
- *
- * @since New in 1.8.
- */
-svn_boolean_t
-svn_client_automatic_merge_is_reintegrate_like(
-        const svn_client_automatic_merge_t *merge);
-
-/** Retrieve the repository coordinates involved in an automatic merge.
+ * Set @a *needs_reintegration to true if an automatic merge from source
+ * to target would be a reintegration merge: that is, if the last automatic
+ * merge was in the opposite direction; or to false otherwise.
  *
  * Set @a *yca_url, @a *yca_rev, @a *base_url, @a *base_rev, @a *right_url,
  * @a *right_rev, @a *target_url, @a *target_rev to the repository locations
  * of, respectively: the youngest common ancestor of the branches, the base
  * chosen for 3-way merge, the right-hand side of the source diff, and the
- * target WC.
+ * target.
  *
- * Set @a repos_root_url to the URL of the repository root.  The four
- * locations are necessarily in the same repository.
+ * Set @a repos_root_url to the URL of the repository root.  This is a
+ * common prefix of all four URL outputs.
  *
  * Allocate the results in @a result_pool.  Any of the output pointers may
  * be NULL if not wanted.
@@ -3574,18 +3475,19 @@ svn_client_automatic_merge_is_reintegrate_like(
  * @since New in 1.8.
  */
 svn_error_t *
-svn_client_automatic_merge_get_locations(
-                                const char **yca_url,
-                                svn_revnum_t *yca_rev,
-                                const char **base_url,
-                                svn_revnum_t *base_rev,
-                                const char **right_url,
-                                svn_revnum_t *right_rev,
-                                const char **target_url,
-                                svn_revnum_t *target_rev,
-                                const char **repos_root_url,
-                                const svn_client_automatic_merge_t *merge,
-                                apr_pool_t *result_pool);
+svn_client_get_merging_summary(svn_boolean_t *needs_reintegration,
+                               const char **yca_url, svn_revnum_t *yca_rev,
+                               const char **base_url, svn_revnum_t *base_rev,
+                               const char **right_url, svn_revnum_t *right_rev,
+                               const char **target_url, svn_revnum_t *target_rev,
+                               const char **repos_root_url,
+                               const char *source_path_or_url,
+                               const svn_opt_revision_t *source_revision,
+                               const char *target_path_or_url,
+                               const svn_opt_revision_t *target_revision,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
 
 
 /** Merge changes from @a source1/@a revision1 to @a source2/@a revision2 into
@@ -3781,7 +3683,9 @@ svn_client_merge(const char *source1,
  * The depth of the merge is always #svn_depth_infinity.
  *
  * @since New in 1.5.
+ * @deprecated Provided for backwards compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_merge_reintegrate(const char *source_path_or_url,
                              const svn_opt_revision_t *source_peg_revision,
@@ -3792,10 +3696,21 @@ svn_client_merge_reintegrate(const char *source_path_or_url,
                              apr_pool_t *pool);
 
 /**
- * Merge the changes between the filesystem object @a source_path_or_url in peg
- * revision @a source_peg_revision, as it changed between the ranges described
- * in @a ranges_to_merge.
+ * Merge changes from the source branch identified by
+ * @a source_path_or_url in peg revision @a source_peg_revision,
+ * into the target branch working copy at @a target_wcpath.
  *
+ * If @a ranges_to_merge is NULL then perform an automatic merge of
+ * all the eligible changes up to @a source_peg_revision.  If the merge
+ * required is a reintegrate merge, then return an error if the WC has
+ * mixed revisions, local modifications and/or switched subtrees; if
+ * the merge is determined to be of the non-reintegrate kind, then
+ * return an error if @a allow_mixed_rev is false and the WC contains
+ * mixed revisions.
+ *
+ * If @a ranges_to_merge is not NULL then merge the changes specified
+ * by the revision ranges in @a ranges_to_merge, or, when honouring
+ * mergeinfo, only the eligible parts of those revision ranges.
  * @a ranges_to_merge is an array of <tt>svn_opt_revision_range_t
  * *</tt> ranges.  These ranges may describe additive and/or
  * subtractive merge ranges, they may overlap fully or partially,
@@ -3803,6 +3718,8 @@ svn_client_merge_reintegrate(const char *source_path_or_url,
  * rangelist is not required to be sorted.  If any revision in the
  * list of provided ranges has an `unspecified' or unrecognized
  * `kind', return #SVN_ERR_CLIENT_BAD_REVISION.
+ *
+ * If @a ranges_to_merge is an empty array, then do nothing.
  *
  * All other options are handled identically to svn_client_merge5().
  *
@@ -3825,7 +3742,8 @@ svn_client_merge_peg5(const char *source_path_or_url,
                       apr_pool_t *pool);
 
 /**
- * Similar to svn_client_merge_peg5(), but the single @a ignore_ancestry
+ * Similar to svn_client_merge_peg5(), but automatic merge is not available
+ * (@a ranges_to_merge must not be NULL), and the single @a ignore_ancestry
  * parameter maps to both @c ignore_mergeinfo and @c diff_ignore_ancestry.
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
@@ -3976,14 +3894,22 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
  * @a target_path_or_url (as of @a target_peg_revision).  If @a
  * finding_merged is FALSE then find the revisions eligible for merging.
  *
- * @a source_start_revision and @a source_end_revision bound the
- * operative range of revisions of the merge source which are
- * described to the caller.  If @a source_end_revision is of kind
- * @c svn_opt_revision_unspecified, it is interpreted as the same
- * revision as @a source_start_revision.  If both are of kind
- * @c svn_opt_revision_unspecified, no bounding occurs and the entire
- * history of the merge source (up to @a source_peg_revision, per the
- * typical default peg/operative revision behaviors) is considered.
+ * If both @a source_start_revision and @a source_end_revision are
+ * unspecified (that is, of kind @c svn_opt_revision_unspecified),
+ * @a receiver will be called the requested revisions from 0 to
+ * @a source_peg_revision and in that order (that is, oldest to
+ * youngest).  Otherwise, both @a source_start_revision and
+ * @a source_end_revision must be specified, which has two effects:
+ *
+ *   - @a receiver will be called only with revisions which fall
+ *     within range of @a source_start_revision to
+ *     @a source_end_revision, inclusive, and
+ *
+ *   - those revisions will be ordered in the same "direction" as the
+ *     walk from @a source_start_revision to @a source_end_revision.
+ *     (If @a source_start_revision is the younger of the two, @a
+ *     receiver will be called with revisions in youngest-to-oldest
+ *     order; otherwise, the reverse occurs.)
  *
  * If @a depth is #svn_depth_empty consider only the explicit or
  * inherited mergeinfo on @a target_path_or_url when calculating merged
@@ -4626,6 +4552,7 @@ svn_client_move7(const apr_array_header_t *src_paths,
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_move6(const apr_array_header_t *src_paths,
                  const char *dst_path,
@@ -5058,7 +4985,7 @@ svn_client_propget5(apr_hash_t **props,
  * passed as NULL.
  *
  * @since New in 1.7.
- * @deprecated Provided for backward compatibility with the 1.8 API.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -5219,8 +5146,7 @@ svn_client_proplist4(const char *target,
  * always passed NULL, and there is no separate scratch pool.
  *
  * @since New in 1.5.
- *
- * @deprecated Provided for backward compatibility with the 1.8 API.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -5481,8 +5407,8 @@ svn_client_export(svn_revnum_t *result_rev,
  * If svn_client_list3() was called with @a include_externals set to TRUE,
  * @a external_parent_url and @a external_target will be set.
  * @a external_parent_url is url of the directory which has the
- * externals definitions. @a external_target is the target subdirectory of 
- * externals definitions which is relative to the parent directory that holds 
+ * externals definitions. @a external_target is the target subdirectory of
+ * externals definitions which is relative to the parent directory that holds
  * the external item.
  *
  * If external_parent_url and external_target are defined, the item being
@@ -5538,9 +5464,9 @@ typedef svn_error_t *(*svn_client_list_func_t)(void *baton,
  *
  * If @a fetch_locks is TRUE, include locks when reporting directory entries.
  *
- * If @a include_externals is TRUE, also list all external items 
+ * If @a include_externals is TRUE, also list all external items
  * reached by recursion. @a depth value passed to the original list target
- * applies for the externals also. 
+ * applies for the externals also.
  *
  * Use @a pool for temporary allocations.
  *

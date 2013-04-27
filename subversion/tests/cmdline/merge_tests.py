@@ -1834,7 +1834,7 @@ def merge_into_missing(sbox):
   })
   expected_mergeinfo_output = wc.State(F_path, {
     })
-  
+
   svntest.actions.run_and_verify_merge(F_path, '1', '2', F_url, None,
                                        expected_output,
                                        expected_mergeinfo_output,
@@ -4481,8 +4481,9 @@ def obey_reporter_api_semantics_while_doing_subtree_merges(sbox):
 #----------------------------------------------------------------------
 def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
   '''Starting with standard greek tree, copy 'A' NBR_OF_BRANCHES times
-  to A_COPY, A_COPY_2, A_COPY_3, and so on.  Then make four modifications
-  (setting file contents to "New content") under A:
+  to A_COPY, A_COPY_2, A_COPY_3, and so on.  Then, unless BRANCH_ONLY is
+  true, make four modifications (setting file contents to "New content")
+  under A:
     r(2 + NBR_OF_BRANCHES) - A/D/H/psi
     r(3 + NBR_OF_BRANCHES) - A/D/G/rho
     r(4 + NBR_OF_BRANCHES) - A/B/E/beta
@@ -6505,7 +6506,18 @@ def foreign_repos_does_not_update_mergeinfo(sbox):
 def avoid_reflected_revs(sbox):
   "avoid repeated merges for cyclic merging"
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2897. ##
+  # See <http://subversion.tigris.org/issues/show_bug.cgi?id=2897>.
+  #
+  # This test cherry-picks some changes (all of them, in fact) from the
+  # parent branch 'A' to the child branch 'A_COPY', and then tries to
+  # reintegrate 'A_COPY' to 'A' (explicitly specifying a revision range
+  # on the source branch).  It expects the changes that are unique to the
+  # branch 'A_COPY' to be merged to 'A'.
+  #
+  #   A     --1----[3]---[5]----------?
+  #            \     \_____\___      /
+  #             \           \  \    /
+  #   A_COPY     2-[---4-----6--7--8]-
 
   # Create a WC with a single branch
   sbox.build()
@@ -16268,7 +16280,7 @@ def merge_with_os_deleted_subtrees(sbox):
   err_re = "svn: E195016: Merge tracking not allowed with missing subtrees; " + \
            "try restoring these items first:"                        + \
            "|(\n)"                                                   + \
-           "|(.*apr_err.*\n)" # In case of debug build
+           "|" + svntest.main.stack_trace_regexp
 
   # Case 1: Infinite depth merge into infinite depth WC target.
   # Every missing subtree under the target should be reported as missing.
@@ -17487,8 +17499,8 @@ def merge_source_with_replacement(sbox):
   psi_COPY_path   = sbox.ospath('A_COPY/D/H/psi')
   rho_COPY_path   = sbox.ospath('A_COPY/D/G/rho')
   omega_COPY_path = sbox.ospath('A_COPY/D/H/omega')
-  
-  # branch A@1 to A_COPY in r2, then make a few edits under A in r3-6:  
+
+  # branch A@1 to A_COPY in r2, then make a few edits under A in r3-6:
   wc_disk, wc_status = set_up_branch(sbox)
 
   # r7 Delete A, replace it with A@5, effectively reverting the change
@@ -17590,7 +17602,7 @@ def reverse_merge_with_rename(sbox):
   rho_COPY_path   = sbox.ospath('A_COPY/D/G/rho')
   omega_COPY_path = sbox.ospath('A_COPY/D/H/omega')
 
-  # branch A@1 to A_COPY in r2, then make a few edits under A in r3-6:  
+  # branch A@1 to A_COPY in r2, then make a few edits under A in r3-6:
   wc_disk, wc_status = set_up_branch(sbox)
 
   # r7 - Rename ^/A to ^/trunk.
@@ -17805,7 +17817,7 @@ def merge_with_added_subtrees_with_mergeinfo(sbox):
   #    vvvvvvvvvvvvvvvvvvvv
   #    U   A_COPY_2\C\X\Y\Z
   #    ^^^^^^^^^^^^^^^^^^^^
-  #   
+  #
   #   >svn pl -vR A_COPY_2
   #   Properties on 'A_COPY_2':
   #     svn:mergeinfo
@@ -18247,7 +18259,7 @@ def merge_properties_on_adds(sbox):
   # For fun, also check the status: 'svn status' suppresses the M from AM.
 
   # G = sbox.ospath('G')
-  # 
+  #
   # expected_status = wc.State('G', {
   #   ''           : Item(status=' M', wc_rev='2'),
   #   'pi'         : Item(status='  ', wc_rev='2'),
@@ -18792,7 +18804,7 @@ def single_editor_drive_merge_notifications(sbox):
      D_copy_path + "':\n",
      " U   " + D_copy_path + "\n",
      "--- Eliding mergeinfo from '" + D_copy_path + "':\n",
-     " U   " + D_copy_path + "\n"])     
+     " U   " + D_copy_path + "\n"])
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'merge',
                                      '-r9:2', sbox.repo_url + '/A',
                                      A_copy_path)

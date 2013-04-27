@@ -99,26 +99,23 @@ find_undeletables(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* Verify that the path can be deleted without losing stuff,
-   i.e. ensure that there are no modified or unversioned resources
-   under PATH.  This is similar to checking the output of the status
-   command.  CTX is used for the client's config options.  POOL is
-   used for all temporary allocations. */
+/* Check whether LOCAL_ABSPATH is an external and raise an error if it is.
+
+   A file external should not be deleted since the file external is
+   implemented as a switched file and it would delete the file the
+   file external is switched to, which is not the behavior the user
+   would probably want.
+
+   A directory external should not be deleted since it is the root
+   of a different working copy. */
 static svn_error_t *
-can_delete_node(svn_boolean_t *target_missing,
-                const char *local_abspath,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *scratch_pool)
+check_external(const char *local_abspath,
+               svn_client_ctx_t *ctx,
+               apr_pool_t *scratch_pool)
 {
   svn_node_kind_t external_kind;
   const char *defining_abspath;
-  apr_array_header_t *ignores;
-  struct can_delete_baton_t cdt;
 
-  /* A file external should not be deleted since the file external is
-     implemented as a switched file and it would delete the file the
-     file external is switched to, which is not the behavior the user
-     would probably want. */
   SVN_ERR(svn_wc__read_external_info(&external_kind, &defining_abspath, NULL,
                                      NULL, NULL,
                                      ctx->wc_ctx, local_abspath,
@@ -135,6 +132,22 @@ can_delete_node(svn_boolean_t *target_missing,
                              svn_dirent_local_style(defining_abspath,
                                                     scratch_pool));
 
+  return SVN_NO_ERROR;
+}
+
+/* Verify that the path can be deleted without losing stuff,
+   i.e. ensure that there are no modified or unversioned resources
+   under PATH.  This is similar to checking the output of the status
+   command.  CTX is used for the client's config options.  POOL is
+   used for all temporary allocations. */
+static svn_error_t *
+can_delete_node(svn_boolean_t *target_missing,
+                const char *local_abspath,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *ignores;
+  struct can_delete_baton_t cdt;
 
   /* Use an infinite-depth status check to see if there's anything in
      or under PATH which would make it unsafe for deletion.  The
@@ -383,7 +396,7 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
           svn_uri_split(&base_uri, &target_relpath, base_uri, iterpool);
           APR_ARRAY_IDX(target_relpaths, 0, const char *) = target_relpath;
         }
-          
+
       SVN_ERR(svn_ra_reparent(repos_deletables->ra_session, base_uri, pool));
       SVN_ERR(single_repos_delete(repos_deletables->ra_session, repos_root,
                                   target_relpaths,
@@ -408,6 +421,8 @@ svn_client__wc_delete(const char *local_abspath,
   svn_boolean_t target_missing = FALSE;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(check_external(local_abspath, ctx, pool));
 
   if (!force && !keep_local)
     /* Verify that there are no "awkward" files */
@@ -443,6 +458,8 @@ svn_client__wc_delete_many(const apr_array_header_t *targets,
       const char *local_abspath = APR_ARRAY_IDX(targets, i, const char *);
 
       SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+      SVN_ERR(check_external(local_abspath, ctx, pool));
 
       if (!force && !keep_local)
         {

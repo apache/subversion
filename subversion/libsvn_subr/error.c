@@ -454,6 +454,8 @@ svn_error_purge_tracing(svn_error_t *err)
 #endif /* SVN_ERR__TRACING */
 }
 
+/* ### The logic around omitting (sic) apr_err= in maintainer mode is tightly
+   ### coupled to the current sole caller.*/
 static void
 print_error(svn_error_t *err, FILE *stream, const char *prefix)
 {
@@ -481,8 +483,18 @@ print_error(svn_error_t *err, FILE *stream, const char *prefix)
       svn_error_clear(temp_err);
     }
 
-  svn_error_clear(svn_cmdline_fprintf(stream, err->pool,
-                                      ": (apr_err=%d)\n", err->apr_err));
+  {
+    const char *symbolic_name;
+    if (svn_error__is_tracing_link(err))
+      /* Skip it; the error code will be printed by the real link. */
+      svn_error_clear(svn_cmdline_fprintf(stream, err->pool, ",\n"));
+    else if ((symbolic_name = svn_error_symbolic_name(err->apr_err)))
+      svn_error_clear(svn_cmdline_fprintf(stream, err->pool,
+                                          ": (apr_err=%s)\n", symbolic_name));
+    else
+      svn_error_clear(svn_cmdline_fprintf(stream, err->pool,
+                                          ": (apr_err=%d)\n", err->apr_err));
+  }
 #endif /* SVN_DEBUG */
 
   /* "traced call" */
@@ -606,6 +618,16 @@ void
 svn_handle_warning2(FILE *stream, svn_error_t *err, const char *prefix)
 {
   char buf[256];
+#ifdef SVN_DEBUG
+  const char *symbolic_name = svn_error_symbolic_name(err->apr_err);
+#endif
+
+#ifdef SVN_DEBUG
+  if (symbolic_name)
+    svn_error_clear(
+      svn_cmdline_fprintf(stream, err->pool, "%swarning: apr_err=%s\n",
+                          prefix, symbolic_name));
+#endif
 
   svn_error_clear(svn_cmdline_fprintf
                   (stream, err->pool,
@@ -630,9 +652,11 @@ svn_err_best_message(svn_error_t *err, char *buf, apr_size_t bufsize)
 
 /* svn_strerror() and helpers */
 
+/* Duplicate of the same typedef in tests/libsvn_subr/error-code-test.c */
 typedef struct err_defn {
-  svn_errno_t errcode;
-  const char *errdesc;
+  svn_errno_t errcode; /* 160004 */
+  const char *errname; /* SVN_ERR_FS_CORRUPT */
+  const char *errdesc; /* default message */
 } err_defn;
 
 /* To understand what is going on here, read svn_error_codes.h. */
@@ -653,6 +677,44 @@ svn_strerror(apr_status_t statcode, char *buf, apr_size_t bufsize)
 
   return apr_strerror(statcode, buf, bufsize);
 }
+
+#ifdef SVN_DEBUG
+/* Defines svn__errno */
+#include "errorcode.inc"
+#endif
+
+const char *
+svn_error_symbolic_name(apr_status_t statcode)
+{
+  const err_defn *defn;
+#ifdef SVN_DEBUG
+  int i;
+#endif /* SVN_DEBUG */
+
+  for (defn = error_table; defn->errdesc != NULL; ++defn)
+    if (defn->errcode == (svn_errno_t)statcode)
+      return defn->errname;
+
+  /* "No error" is not in error_table. */
+  if (statcode == SVN_NO_ERROR)
+    return "SVN_NO_ERROR";
+
+#ifdef SVN_DEBUG
+  /* Try errno.h symbols. */
+  /* Linear search through a sorted array */
+  for (i = 0; i < sizeof(svn__errno) / sizeof(svn__errno[0]); i++)
+    if (svn__errno[i].errcode == (int)statcode)
+      return svn__errno[i].errname;
+#endif /* SVN_DEBUG */
+
+  /* ### TODO: do we need APR_* error macros?  What about APR_TO_OS_ERROR()? */
+
+  return NULL;
+}
+
+
+
+/* Malfunctions. */
 
 svn_error_t *
 svn_error_raise_on_malfunction(svn_boolean_t can_return,
@@ -712,6 +774,9 @@ svn_error__malfunction(svn_boolean_t can_return,
 {
   return malfunction_handler(can_return, file, line, expr);
 }
+
+
+/* Misc. */
 
 svn_error_t *
 svn_error__wrap_zlib(int zerr, const char *function, const char *message)

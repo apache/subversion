@@ -966,7 +966,7 @@ class WinGeneratorBase(GeneratorBase):
     if target.name == "libsvnjavahl" and self.jdk_path:
       fakeincludes.append(os.path.join(self.jdk_path, 'include'))
       fakeincludes.append(os.path.join(self.jdk_path, 'include', 'win32'))
-      
+
     if target.name.find('cxxhl') != -1:
       fakeincludes.append(self.path("subversion/bindings/cxxhl/include"))
 
@@ -1465,7 +1465,7 @@ class WinGeneratorBase(GeneratorBase):
 
   def _find_apr(self):
     "Find the APR library and version"
-    
+
     minimal_apr_version = (0, 9, 0)
 
     version_file_path = os.path.join(self.apr_path, 'include',
@@ -1479,16 +1479,16 @@ class WinGeneratorBase(GeneratorBase):
     fp = open(version_file_path)
     txt = fp.read()
     fp.close()
-    
+
     vermatch = re.search(r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)', txt, re.M)
     major = int(vermatch.group(1))
-    
+
     vermatch = re.search(r'^\s*#define\s+APR_MINOR_VERSION\s+(\d+)', txt, re.M)
     minor = int(vermatch.group(1))
-    
+
     vermatch = re.search(r'^\s*#define\s+APR_PATCH_VERSION\s+(\d+)', txt, re.M)
     patch = int(vermatch.group(1))
-    
+
     version = (major, minor, patch)
     self.apr_version = '%d.%d.%d' % version
 
@@ -1500,7 +1500,7 @@ class WinGeneratorBase(GeneratorBase):
       self.apr_lib = 'apr%s.lib' % suffix
     else:
       self.apr_lib = 'libapr%s.lib' % suffix
-      
+
     if version < minimal_apr_version:
       sys.stderr.write("ERROR: apr %s or higher is required "
                        "(%s found)\n" % (
@@ -1525,16 +1525,16 @@ class WinGeneratorBase(GeneratorBase):
     fp = open(version_file_path)
     txt = fp.read()
     fp.close()
-    
+
     vermatch = re.search(r'^\s*#define\s+APU_MAJOR_VERSION\s+(\d+)', txt, re.M)
     major = int(vermatch.group(1))
-    
+
     vermatch = re.search(r'^\s*#define\s+APU_MINOR_VERSION\s+(\d+)', txt, re.M)
     minor = int(vermatch.group(1))
-    
+
     vermatch = re.search(r'^\s*#define\s+APU_PATCH_VERSION\s+(\d+)', txt, re.M)
     patch = int(vermatch.group(1))
-   
+
     version = (major, minor, patch)
     self.aprutil_version = '%d.%d.%d' % version
 
@@ -1546,7 +1546,7 @@ class WinGeneratorBase(GeneratorBase):
       self.aprutil_lib = 'aprutil%s.lib' % suffix
     else:
       self.aprutil_lib = 'libaprutil%s.lib' % suffix
-      
+
     if version < minimal_aprutil_version:
       sys.stderr.write("ERROR: aprutil %s or higher is required "
                        "(%s found)\n" % (
@@ -1588,7 +1588,7 @@ class WinGeneratorBase(GeneratorBase):
     vermatch = re.search(r'^\s*#define\s+SQLITE_VERSION\s+"(\d+)\.(\d+)\.(\d+)(?:\.(\d))?"', txt, re.M)
 
     version = vermatch.groups()
-    
+
     # Sqlite doesn't add patch numbers for their ordinary releases
     if not version[3]:
       version = version[0:3]

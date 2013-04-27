@@ -1779,14 +1779,14 @@ def locks_stick_over_switch(sbox):
   switched_status.tweak('iota', writelocked='K')
   switched_status.tweak('A', switched='S')
 
-  svntest.actions.run_and_verify_switch(wc_dir, sbox.ospath('A'), 
+  svntest.actions.run_and_verify_switch(wc_dir, sbox.ospath('A'),
                                         repo_url + '/AA',
                                         expected_output, None, switched_status)
 
   # And now switch back to verify that the locks reappear
   expected_output = svntest.wc.State(wc_dir, {
   })
-  svntest.actions.run_and_verify_switch(wc_dir, sbox.ospath('A'), 
+  svntest.actions.run_and_verify_switch(wc_dir, sbox.ospath('A'),
                                         repo_url + '/A',
                                         expected_output, None, expected_status)
 

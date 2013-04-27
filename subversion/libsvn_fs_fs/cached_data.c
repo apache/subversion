@@ -1092,7 +1092,7 @@ set_cached_combined_window(svn_stringbuf_t *window,
    Also, set *WINDOW_P to the base window content for *LIST, if it
    could be found in cache. Otherwise, *LIST will contain the base
    representation for the whole delta chain.
-   Finally, return the expanded size of the representation in 
+   Finally, return the expanded size of the representation in
    *EXPANDED_SIZE. It will take care of cases where only the on-disk
    size is known.  */
 static svn_error_t *
@@ -1720,7 +1720,7 @@ cache_access_wrapper(void **out,
                               data_len - 1, /* cache adds terminating 0 */
                               wrapper_baton->baton,
                               pool));
-  
+
   /* non-NULL value to signal the calling cache that all went well */
   *out = baton;
 
@@ -2132,7 +2132,7 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
       SVN_ERR(svn_fs_fs__get_contents(&stream, fs, noderev->prop_rep, pool));
       SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool));
       SVN_ERR(svn_stream_close(stream));
-      
+
       if (ffd->properties_cache && SVN_IS_VALID_REVNUM(rep->revision))
         SVN_ERR(svn_cache__set(ffd->properties_cache, &key, proplist, pool));
     }

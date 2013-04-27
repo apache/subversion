@@ -425,7 +425,7 @@ output_unified_token_range(output_baton_t *btn,
         break;
     }
 
-  if (btn->current_token[tokens] == source->tokens->nelts 
+  if (btn->current_token[tokens] == source->tokens->nelts
       && source->ends_without_eol)
     {
       const char *out_str;
@@ -436,7 +436,7 @@ output_unified_token_range(output_baton_t *btn,
       svn_stringbuf_appendcstr(btn->hunk, out_str);
     }
 
-  
+
 
   return SVN_NO_ERROR;
 }

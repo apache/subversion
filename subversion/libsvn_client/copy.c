@@ -180,7 +180,8 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
 
 /* The guts of do_wc_to_wc_copies */
 static svn_error_t *
-do_wc_to_wc_copies_with_write_lock(const apr_array_header_t *copy_pairs,
+do_wc_to_wc_copies_with_write_lock(svn_boolean_t *timestamp_sleep,
+                                   const apr_array_header_t *copy_pairs,
                                    const char *dst_parent,
                                    svn_client_ctx_t *ctx,
                                    apr_pool_t *scratch_pool)
@@ -203,6 +204,7 @@ do_wc_to_wc_copies_with_write_lock(const apr_array_header_t *copy_pairs,
       /* Perform the copy */
       dst_abspath = svn_dirent_join(pair->dst_parent_abspath, pair->base_name,
                                     iterpool);
+      *timestamp_sleep = TRUE;
       err = svn_wc_copy3(ctx->wc_ctx, pair->src_abspath_or_url, dst_abspath,
                          FALSE /* metadata_only */,
                          ctx->cancel_func, ctx->cancel_baton,
@@ -212,7 +214,6 @@ do_wc_to_wc_copies_with_write_lock(const apr_array_header_t *copy_pairs,
     }
   svn_pool_destroy(iterpool);
 
-  svn_io_sleep_for_timestamps(dst_parent, scratch_pool);
   SVN_ERR(err);
   return SVN_NO_ERROR;
 }
@@ -220,7 +221,8 @@ do_wc_to_wc_copies_with_write_lock(const apr_array_header_t *copy_pairs,
 /* Copy each COPY_PAIR->SRC into COPY_PAIR->DST.  Use POOL for temporary
    allocations. */
 static svn_error_t *
-do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
+do_wc_to_wc_copies(svn_boolean_t *timestamp_sleep,
+                   const apr_array_header_t *copy_pairs,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -233,7 +235,8 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
   SVN_ERR(svn_dirent_get_absolute(&dst_parent_abspath, dst_parent, pool));
 
   SVN_WC__CALL_WITH_WRITE_LOCK(
-    do_wc_to_wc_copies_with_write_lock(copy_pairs, dst_parent, ctx, pool),
+    do_wc_to_wc_copies_with_write_lock(timestamp_sleep, copy_pairs, dst_parent,
+                                       ctx, pool),
     ctx->wc_ctx, dst_parent_abspath, FALSE, pool);
 
   return SVN_NO_ERROR;
@@ -295,7 +298,8 @@ do_wc_to_wc_moves_with_locks1(svn_client__copy_pair_t *pair,
 /* Move each COPY_PAIR->SRC into COPY_PAIR->DST, deleting COPY_PAIR->SRC
    afterwards.  Use POOL for temporary allocations. */
 static svn_error_t *
-do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
+do_wc_to_wc_moves(svn_boolean_t *timestamp_sleep,
+                  const apr_array_header_t *copy_pairs,
                   const char *dst_path,
                   svn_boolean_t allow_mixed_revisions,
                   svn_boolean_t metadata_only,
@@ -349,6 +353,8 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
           lock_dst = TRUE;
         }
 
+      *timestamp_sleep = TRUE;
+
       /* Perform the copy and then the delete. */
       if (lock_src)
         SVN_WC__CALL_WITH_WRITE_LOCK(
@@ -368,8 +374,6 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
 
     }
   svn_pool_destroy(iterpool);
-
-  svn_io_sleep_for_timestamps(dst_path, pool);
 
   return svn_error_trace(err);
 }
@@ -1540,7 +1544,8 @@ notification_adjust_func(void *baton,
 
    Resolve PAIR->src_revnum to a real revision number if it isn't already. */
 static svn_error_t *
-repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
+repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
+                        svn_client__copy_pair_t *pair,
                         svn_boolean_t same_repositories,
                         svn_boolean_t ignore_externals,
                         svn_ra_session_t *ra_session,
@@ -1577,7 +1582,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
           /* Find a temporary location in which to check out the copy source. */
           SVN_ERR(svn_wc__get_tmpdir(&tmpdir_abspath, ctx->wc_ctx, dst_abspath,
                                      pool, pool));
-                                     
+
           SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_abspath, tmpdir_abspath,
                                            svn_io_file_del_on_close, pool, pool));
 
@@ -1592,14 +1597,14 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
             void *old_notify_baton2 = ctx->notify_baton2;
             struct notification_adjust_baton nb;
             svn_error_t *err;
-          
+
             nb.inner_func = ctx->notify_func2;
             nb.inner_baton = ctx->notify_baton2;
             nb.checkout_abspath = tmp_abspath;
             nb.final_abspath = dst_abspath;
             ctx->notify_func2 = notification_adjust_func;
             ctx->notify_baton2 = &nb;
-          
+
             err = svn_client__checkout_internal(&pair->src_revnum,
                                                 pair->src_original,
                                                 tmp_abspath,
@@ -1608,12 +1613,14 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
                                                 svn_depth_infinity,
                                                 ignore_externals, FALSE,
                                                 &sleep_needed, ctx, pool);
-          
+
             ctx->notify_func2 = old_notify_func2;
             ctx->notify_baton2 = old_notify_baton2;
 
             SVN_ERR(err);
           }
+
+          *timestamp_sleep = TRUE;
 
       /* Schedule dst_path for addition in parent, with copy history.
          Don't send any notification here.
@@ -1637,6 +1644,8 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
         }
       else
         {
+          *timestamp_sleep = TRUE;
+
           SVN_ERR(svn_client__copy_foreign(pair->src_abspath_or_url,
                                            dst_abspath,
                                            &pair->src_peg_revision,
@@ -1668,6 +1677,8 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
       if (new_props && ! same_repositories)
         svn_hash_sets(new_props, SVN_PROP_MERGEINFO, NULL);
 
+      *timestamp_sleep = TRUE;
+
       SVN_ERR(svn_wc_add_repos_file4(
          ctx->wc_ctx, dst_abspath,
          new_base_contents, NULL, new_props, NULL,
@@ -1697,13 +1708,12 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
       (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
     }
 
-  svn_io_sleep_for_timestamps(dst_abspath, pool);
-
   return SVN_NO_ERROR;
 }
 
-static svn_error_t*
-repos_to_wc_copy_locked(const apr_array_header_t *copy_pairs,
+static svn_error_t *
+repos_to_wc_copy_locked(svn_boolean_t *timestamp_sleep,
+                        const apr_array_header_t *copy_pairs,
                         const char *top_dst_path,
                         svn_boolean_t ignore_externals,
                         svn_ra_session_t *ra_session,
@@ -1766,7 +1776,8 @@ repos_to_wc_copy_locked(const apr_array_header_t *copy_pairs,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(repos_to_wc_copy_single(APR_ARRAY_IDX(copy_pairs, i,
+      SVN_ERR(repos_to_wc_copy_single(timestamp_sleep,
+                                      APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *),
                                       same_repositories,
                                       ignore_externals,
@@ -1778,7 +1789,8 @@ repos_to_wc_copy_locked(const apr_array_header_t *copy_pairs,
 }
 
 static svn_error_t *
-repos_to_wc_copy(const apr_array_header_t *copy_pairs,
+repos_to_wc_copy(svn_boolean_t *timestamp_sleep,
+                 const apr_array_header_t *copy_pairs,
                  svn_boolean_t make_parents,
                  svn_boolean_t ignore_externals,
                  svn_client_ctx_t *ctx,
@@ -1887,7 +1899,8 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
   svn_pool_destroy(iterpool);
 
   SVN_WC__CALL_WITH_WRITE_LOCK(
-    repos_to_wc_copy_locked(copy_pairs, top_dst_path, ignore_externals,
+    repos_to_wc_copy_locked(timestamp_sleep,
+                            copy_pairs, top_dst_path, ignore_externals,
                             ra_session, ctx, pool),
     ctx->wc_ctx, lock_abspath, FALSE, pool);
   return SVN_NO_ERROR;
@@ -1897,9 +1910,17 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
         ((revision.kind != svn_opt_revision_unspecified) \
           && (revision.kind != svn_opt_revision_working))
 
-/* Perform all allocations in POOL. */
+/* ...
+ *
+ * Set *TIMESTAMP_SLEEP to TRUE if a sleep is required; otherwise do not
+ * change *TIMESTAMP_SLEEP.  This output will be valid even if the
+ * function returns an error.
+ *
+ * Perform all allocations in POOL.
+ */
 static svn_error_t *
-try_copy(const apr_array_header_t *sources,
+try_copy(svn_boolean_t *timestamp_sleep,
+         const apr_array_header_t *sources,
          const char *dst_path_in,
          svn_boolean_t is_move,
          svn_boolean_t allow_mixed_revisions,
@@ -2193,7 +2214,8 @@ try_copy(const apr_array_header_t *sources,
 
       /* Copy or move all targets. */
       if (is_move)
-        return svn_error_trace(do_wc_to_wc_moves(copy_pairs, dst_path_in,
+        return svn_error_trace(do_wc_to_wc_moves(timestamp_sleep,
+                                                 copy_pairs, dst_path_in,
                                                  allow_mixed_revisions,
                                                  metadata_only,
                                                  ctx, pool));
@@ -2201,7 +2223,8 @@ try_copy(const apr_array_header_t *sources,
         {
           /* We ignore these values, so assert the default value */
           SVN_ERR_ASSERT(allow_mixed_revisions && !metadata_only);
-          return svn_error_trace(do_wc_to_wc_copies(copy_pairs, ctx, pool));
+          return svn_error_trace(do_wc_to_wc_copies(timestamp_sleep,
+                                                    copy_pairs, ctx, pool));
         }
     }
   else if ((! srcs_are_urls) && (dst_is_url))
@@ -2213,7 +2236,8 @@ try_copy(const apr_array_header_t *sources,
   else if ((srcs_are_urls) && (! dst_is_url))
     {
       return svn_error_trace(
-        repos_to_wc_copy(copy_pairs, make_parents, ignore_externals,
+        repos_to_wc_copy(timestamp_sleep,
+                         copy_pairs, make_parents, ignore_externals,
                          ctx, pool));
     }
   else
@@ -2241,13 +2265,15 @@ svn_client_copy6(const apr_array_header_t *sources,
                  apr_pool_t *pool)
 {
   svn_error_t *err;
+  svn_boolean_t timestamp_sleep = FALSE;
   apr_pool_t *subpool = svn_pool_create(pool);
 
   if (sources->nelts > 1 && !copy_as_child)
     return svn_error_create(SVN_ERR_CLIENT_MULTIPLE_SOURCES_DISALLOWED,
                             NULL, NULL);
 
-  err = try_copy(sources, dst_path,
+  err = try_copy(&timestamp_sleep,
+                 sources, dst_path,
                  FALSE /* is_move */,
                  TRUE /* allow_mixed_revisions */,
                  FALSE /* metadata_only */,
@@ -2275,12 +2301,13 @@ svn_client_copy6(const apr_array_header_t *sources,
 
       src_basename = src_is_url ? svn_uri_basename(src_path, subpool)
                                 : svn_dirent_basename(src_path, subpool);
+      dst_path
+        = dst_is_url ? svn_path_url_add_component2(dst_path, src_basename,
+                                                   subpool)
+                     : svn_dirent_join(dst_path, src_basename, subpool);
 
-      err = try_copy(sources,
-                     dst_is_url
-                         ? svn_path_url_add_component2(dst_path, src_basename,
-                                                       subpool)
-                         : svn_dirent_join(dst_path, src_basename, subpool),
+      err = try_copy(&timestamp_sleep,
+                     sources, dst_path,
                      FALSE /* is_move */,
                      TRUE /* allow_mixed_revisions */,
                      FALSE /* metadata_only */,
@@ -2291,6 +2318,10 @@ svn_client_copy6(const apr_array_header_t *sources,
                      ctx,
                      subpool);
     }
+
+  /* Sleep if required.  DST_PATH is not a URL in these cases. */
+  if (timestamp_sleep)
+    svn_io_sleep_for_timestamps(dst_path, subpool);
 
   svn_pool_destroy(subpool);
   return svn_error_trace(err);
@@ -2313,6 +2344,7 @@ svn_client_move7(const apr_array_header_t *src_paths,
   const svn_opt_revision_t head_revision
     = { svn_opt_revision_head, { 0 } };
   svn_error_t *err;
+  svn_boolean_t timestamp_sleep = FALSE;
   int i;
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_array_header_t *sources = apr_array_make(pool, src_paths->nelts,
@@ -2335,7 +2367,8 @@ svn_client_move7(const apr_array_header_t *src_paths,
       APR_ARRAY_PUSH(sources, svn_client_copy_source_t *) = copy_source;
     }
 
-  err = try_copy(sources, dst_path,
+  err = try_copy(&timestamp_sleep,
+                 sources, dst_path,
                  TRUE /* is_move */,
                  allow_mixed_revisions,
                  metadata_only,
@@ -2362,12 +2395,13 @@ svn_client_move7(const apr_array_header_t *src_paths,
 
       src_basename = src_is_url ? svn_uri_basename(src_path, pool)
                                 : svn_dirent_basename(src_path, pool);
+      dst_path
+        = dst_is_url ? svn_path_url_add_component2(dst_path, src_basename,
+                                                   subpool)
+                     : svn_dirent_join(dst_path, src_basename, subpool);
 
-      err = try_copy(sources,
-                     dst_is_url
-                         ? svn_path_url_add_component2(dst_path,
-                                                       src_basename, pool)
-                         : svn_dirent_join(dst_path, src_basename, pool),
+      err = try_copy(&timestamp_sleep,
+                     sources, dst_path,
                      TRUE /* is_move */,
                      allow_mixed_revisions,
                      metadata_only,
@@ -2378,6 +2412,10 @@ svn_client_move7(const apr_array_header_t *src_paths,
                      ctx,
                      subpool);
     }
+
+  /* Sleep if required.  DST_PATH is not a URL in these cases. */
+  if (timestamp_sleep)
+    svn_io_sleep_for_timestamps(dst_path, subpool);
 
   svn_pool_destroy(subpool);
   return svn_error_trace(err);

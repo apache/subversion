@@ -66,6 +66,36 @@ svn_strerror(apr_status_t statcode,
              apr_size_t bufsize);
 
 
+/**
+ * Return the symbolic name of an error code.  If the error code
+ * is in svn_error_codes.h, return the name of the macro as a string.
+ * If the error number is not recognised, return @c NULL.
+ *
+ * An error number may not be recognised because it was defined in a future
+ * version of Subversion (e.g., a 1.9.x server may transmit a defined-in-1.9.0
+ * error number to a 1.8.x client).
+ *
+ * An error number may be recognised @em incorrectly if the @c apr_status_t
+ * value originates in another library (such as libserf) which also uses APR.
+ * (This is a theoretical concern only: the @c apr_err member of #svn_error_t
+ * should never contain a "foreign" @c apr_status_t value, and
+ * in any case Subversion and Serf use non-overlapping subsets of the
+ * @c APR_OS_START_USERERR range.)
+ *
+ * Support for error codes returned by APR itself (i.e., not in the
+ * @c APR_OS_START_USERERR range, as defined in apr_errno.h) may be implemented
+ * in the future.
+ *
+ * @note In rare cases, a single numeric code has more than one symbolic name.
+ * (For example, #SVN_ERR_WC_NOT_DIRECTORY and #SVN_ERR_WC_NOT_WORKING_COPY).
+ * In those cases, it is not guaranteed which symbolic name is returned.
+ *
+ * @since New in 1.8.
+ */
+const char *
+svn_error_symbolic_name(apr_status_t statcode);
+
+
 /** If @a err has a custom error message, return that, otherwise
  * store the generic error string associated with @a err->apr_err into
  * @a buf (terminating with NULL) and return @a buf.

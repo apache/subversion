@@ -2536,6 +2536,43 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Test merge with automatic source and revision determination
+     * (e.g. 'svn merge -g) with implied revision range.
+     * @throws Throwable
+     * @since 1.8
+     */
+    public void testMergeUsingHistoryImpliedRange() throws Throwable
+    {
+        OneTest thisTest = setupAndPerformMerge();
+
+        // Test that getMergeinfo() returns null.
+        assertNull(client.getMergeinfo(new File(thisTest.getWCPath(), "A")
+                                       .toString(), Revision.HEAD));
+
+        // Merge and commit some changes (r4).
+        appendText(thisTest, "A/mu", "xxx", 4);
+        checkCommitRevision(thisTest, "wrong revision number from commit", 4,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+
+        String branchPath = thisTest.getWCPath() + "/branches/A";
+        String modUrl = thisTest.getUrl() + "/A";
+        client.merge(modUrl, Revision.HEAD, null,
+                     branchPath, true, Depth.infinity, false, false, false);
+
+        // commit the changes so that we can verify merge
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
+                              "branches/A", NodeKind.dir,
+                              CommitItemStateFlags.PropMods);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
+                              "branches/A/mu", NodeKind.file,
+                              CommitItemStateFlags.TextMods);
+        checkCommitRevision(thisTest, "wrong revision number from commit", 5,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+    }
+
+    /**
      * Test reintegrating a branch with trunk
      * (e.g. 'svn merge --reintegrate').
      * @throws Throwable
@@ -3371,6 +3408,7 @@ public class BasicTests extends SVNTests
         ConflictDescriptor conflict = conflicts.iterator().next();
 
         assertNotNull("Conflict should not be null", conflict);
+        assertNotNull("Repository UUID must be set", conflict.getSrcLeftVersion().getReposUUID());
 
         assertEquals(conflict.getSrcLeftVersion().getNodeKind(), NodeKind.file);
         assertEquals(conflict.getSrcLeftVersion().getReposURL() + "/" +
@@ -3379,6 +3417,8 @@ public class BasicTests extends SVNTests
 
         if (conflict.getSrcRightVersion() != null)
         {
+            assertEquals(conflict.getSrcLeftVersion().getReposUUID(),
+                         conflict.getSrcRightVersion().getReposUUID());
             assertEquals(conflict.getSrcRightVersion().getNodeKind(), NodeKind.none);
             assertEquals(conflict.getSrcRightVersion().getReposURL(), tcTest.getUrl().toString());
             assertEquals(conflict.getSrcRightVersion().getPegRevision(), 2L);

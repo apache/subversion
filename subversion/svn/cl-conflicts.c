@@ -33,16 +33,6 @@
 #include "svn_private_config.h"
 
 
-/* A map for svn_wc_conflict_action_t values to human-readable strings */
-static const svn_token_map_t map_conflict_action_human[] =
-{
-  { N_("edit"),         svn_wc_conflict_action_edit },
-  { N_("delete"),       svn_wc_conflict_action_delete },
-  { N_("add"),          svn_wc_conflict_action_add },
-  { N_("replace"),      svn_wc_conflict_action_replace },
-  { NULL,               0 }
-};
-
 /* A map for svn_wc_conflict_action_t values to XML strings */
 static const svn_token_map_t map_conflict_action_xml[] =
 {
@@ -50,21 +40,6 @@ static const svn_token_map_t map_conflict_action_xml[] =
   { "delete",           svn_wc_conflict_action_delete },
   { "add",              svn_wc_conflict_action_add },
   { "replace",          svn_wc_conflict_action_replace },
-  { NULL,               0 }
-};
-
-/* A map for svn_wc_conflict_reason_t values to human-readable strings */
-static const svn_token_map_t map_conflict_reason_human[] =
-{
-  { N_("edit"),         svn_wc_conflict_reason_edited },
-  { N_("delete"),       svn_wc_conflict_reason_deleted },
-  { N_("missing"),      svn_wc_conflict_reason_missing },
-  { N_("obstruction"),  svn_wc_conflict_reason_obstructed },
-  { N_("add"),          svn_wc_conflict_reason_added },
-  { N_("replace"),      svn_wc_conflict_reason_replaced },
-  { N_("unversioned"),  svn_wc_conflict_reason_unversioned },
-  { N_("moved away"),   svn_wc_conflict_reason_moved_away },
-  { N_("moved here"),   svn_wc_conflict_reason_moved_here },
   { NULL,               0 }
 };
 
@@ -91,18 +66,176 @@ static const svn_token_map_t map_conflict_kind_xml[] =
   { NULL,               0 }
 };
 
-/* Return a localized string representation of CONFLICT->action. */
+/* Return a localised string representation of the local part of a conflict;
+   NULL for non-localised odd cases. */
 static const char *
-action_str(const svn_wc_conflict_description2_t *conflict)
+local_reason_str(svn_node_kind_t kind, svn_wc_conflict_reason_t reason)
 {
-  return _(svn_token__to_word(map_conflict_action_human, conflict->action));
+  switch (kind)
+    {
+      case svn_node_file:
+        switch (reason)
+          {
+          case svn_wc_conflict_reason_edited:
+            return _("local file edit");
+          case svn_wc_conflict_reason_obstructed:
+            return _("local file obstruction");
+          case svn_wc_conflict_reason_deleted:
+            return _("local file delete");
+          case svn_wc_conflict_reason_missing:
+            return _("local file missing");
+          case svn_wc_conflict_reason_unversioned:
+            return _("local file unversioned");
+          case svn_wc_conflict_reason_added:
+            return _("local file add");
+          case svn_wc_conflict_reason_replaced:
+            return _("local file replace");
+          case svn_wc_conflict_reason_moved_away:
+            return _("local file moved away");
+          case svn_wc_conflict_reason_moved_here:
+            return _("local file moved here");
+          }
+        break;
+      case svn_node_dir:
+        switch (reason)
+          {
+          case svn_wc_conflict_reason_edited:
+            return _("local dir edit");
+          case svn_wc_conflict_reason_obstructed:
+            return _("local dir obstruction");
+          case svn_wc_conflict_reason_deleted:
+            return _("local dir delete");
+          case svn_wc_conflict_reason_missing:
+            return _("local dir missing");
+          case svn_wc_conflict_reason_unversioned:
+            return _("local dir unversioned");
+          case svn_wc_conflict_reason_added:
+            return _("local dir add");
+          case svn_wc_conflict_reason_replaced:
+            return _("local dir replace");
+          case svn_wc_conflict_reason_moved_away:
+            return _("local dir moved away");
+          case svn_wc_conflict_reason_moved_here:
+            return _("local dir moved here");
+          }
+        break;
+      case svn_node_symlink:
+      case svn_node_none:
+      case svn_node_unknown:
+        break;
+    }
+  return NULL;
 }
 
-/* Return a localized string representation of CONFLICT->reason. */
+/* Return a localised string representation of the incoming part of a
+   conflict; NULL for non-localised odd cases. */
 static const char *
-reason_str(const svn_wc_conflict_description2_t *conflict)
+incoming_action_str(svn_node_kind_t kind, svn_wc_conflict_action_t action)
 {
-  return _(svn_token__to_word(map_conflict_reason_human, conflict->reason));
+  switch (kind)
+    {
+      case svn_node_file:
+        switch (action)
+          {
+            case svn_wc_conflict_action_edit:
+              return _("incoming file edit");
+            case svn_wc_conflict_action_add:
+              return _("incoming file add");
+            case svn_wc_conflict_action_delete:
+              return _("incoming file delete");
+            case svn_wc_conflict_action_replace:
+              return _("incoming file replace");
+          }
+        break;
+      case svn_node_dir:
+        switch (action)
+          {
+            case svn_wc_conflict_action_edit:
+              return _("incoming dir edit");
+            case svn_wc_conflict_action_add:
+              return _("incoming dir add");
+            case svn_wc_conflict_action_delete:
+              return _("incoming dir delete");
+            case svn_wc_conflict_action_replace:
+              return _("incoming dir replace");
+          }
+        break;
+      case svn_node_symlink:
+      case svn_node_none:
+      case svn_node_unknown:
+        break;
+    }
+  return NULL;
+}
+
+/* Return a localised string representation of the operation part of a
+   conflict. */
+static const char *
+operation_str(svn_wc_operation_t operation)
+{
+  switch (operation)
+    {
+    case svn_wc_operation_update: return _("upon update");
+    case svn_wc_operation_switch: return _("upon switch");
+    case svn_wc_operation_merge:  return _("upon merge");
+    case svn_wc_operation_none:   return _("upon none");
+    }
+  SVN_ERR_MALFUNCTION_NO_RETURN();
+  return NULL;
+}
+
+svn_error_t *
+svn_cl__get_human_readable_prop_conflict_description(
+  const char **desc,
+  const svn_wc_conflict_description2_t *conflict,
+  apr_pool_t *pool)
+{
+  const char *reason_str, *action_str;
+
+  /* We provide separately translatable strings for the values that we
+   * know about, and a fall-back in case any other values occur. */
+  switch (conflict->reason)
+    {
+      case svn_wc_conflict_reason_edited:
+        reason_str = _("local edit");
+        break;
+      case svn_wc_conflict_reason_added:
+        reason_str = _("local add");
+        break;
+      case svn_wc_conflict_reason_deleted:
+        reason_str = _("local delete");
+        break;
+      case svn_wc_conflict_reason_obstructed:
+        reason_str = _("local obstruction");
+        break;
+      default:
+        reason_str = apr_psprintf(pool, _("local %s"),
+                                  svn_token__to_word(map_conflict_reason_xml,
+                                                     conflict->reason));
+        break;
+    }
+  switch (conflict->action)
+    {
+      case svn_wc_conflict_action_edit:
+        action_str = _("incoming edit");
+        break;
+      case svn_wc_conflict_action_add:
+        action_str = _("incoming add");
+        break;
+      case svn_wc_conflict_action_delete:
+        action_str = _("incoming delete");
+        break;
+      default:
+        action_str = apr_psprintf(pool, _("incoming %s"),
+                                  svn_token__to_word(map_conflict_action_xml,
+                                                     conflict->action));
+        break;
+    }
+  SVN_ERR_ASSERT(reason_str && action_str);
+  *desc = apr_psprintf(pool, _("%s, %s %s"),
+                       reason_str, action_str,
+                       operation_str(conflict->operation));
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -113,10 +246,6 @@ svn_cl__get_human_readable_tree_conflict_description(
 {
   const char *action, *reason, *operation;
   svn_node_kind_t incoming_kind;
-
-  reason = reason_str(conflict);
-  action = action_str(conflict);
-  operation = svn_cl__operation_str_human_readable(conflict->operation, pool);
 
   /* Determine the node kind of the incoming change. */
   incoming_kind = svn_node_unknown;
@@ -138,13 +267,30 @@ svn_cl__get_human_readable_tree_conflict_description(
         incoming_kind = conflict->src_right_version->node_kind;
     }
 
-  SVN_ERR_ASSERT(action && reason);
-  *desc = apr_psprintf(pool, _("local %s %s, incoming %s %s upon %s"),
-                       svn_node_kind_to_word(conflict->node_kind),
-                       reason,
-                       svn_node_kind_to_word(incoming_kind),
-                       action,
-                       operation);
+  reason = local_reason_str(conflict->node_kind, conflict->reason);
+  action = incoming_action_str(incoming_kind, conflict->action);
+  operation = operation_str(conflict->operation);
+  SVN_ERR_ASSERT(operation);
+
+  if (action && reason)
+    {
+      *desc = apr_psprintf(pool, _("%s, %s %s"),
+                           reason, action, operation);
+    }
+  else
+    {
+      /* A catch-all message for very rare or nominally impossible cases.
+         It will not be pretty, but is closer to an internal error than
+         an ordinary user-facing string. */
+      *desc = apr_psprintf(pool, _("local: %s %s incoming: %s %s %s"),
+                           svn_node_kind_to_word(conflict->node_kind),
+                           svn_token__to_word(map_conflict_reason_xml,
+                                              conflict->reason),
+                           svn_node_kind_to_word(incoming_kind),
+                           svn_token__to_word(map_conflict_action_xml,
+                                              conflict->action),
+                           operation);
+    }
   return SVN_NO_ERROR;
 }
 

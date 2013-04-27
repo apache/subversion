@@ -227,7 +227,7 @@ read_file(int handle, apr_int64_t count)
   if (handle_info)
     {
       /* known file handle -> expand current read sequence */
-      
+
       handle_info->last_read_size += count;
       handle_info->file->read_count++;
       handle_info->file->read_size += count;
@@ -247,7 +247,7 @@ seek_file(int handle, apr_int64_t location)
       apr_size_t cluster = (apr_size_t)(location / cluster_size);
 
       store_read_info(handle_info);
-      
+
       handle_info->last_read_size = 0;
       handle_info->last_read_start = location;
       handle_info->file->seek_count++;
@@ -308,14 +308,14 @@ parse_line(svn_stringbuf_t *line)
   /* (try to) convert the return value into an integer.
    * If that fails, continue anyway as defaulting to 0 will be safe for us. */
   svn_error_clear(svn_cstring_atoi64(&func_return, return_value));
-  
+
   /* process those operations that we care about */
   if (strcmp(func_start, "open") == 0)
     {
       /* remove double quotes from file name parameter */
       *func_end++ = 0;
       *--first_param_end = 0;
-      
+
       open_file(func_end, (int)func_return);
     }
   else if (strcmp(func_start, "read") == 0)
@@ -607,14 +607,14 @@ print_stats(apr_pool_t *pool)
   apr_int64_t clusters_read = 0;
   apr_int64_t unique_clusters_read = 0;
   apr_int64_t uncached_seek_count = 0;
-  
+
   apr_hash_index_t *hi;
   for (hi = apr_hash_first(pool, files); hi; hi = apr_hash_next(hi))
     {
       const char *name = NULL;
       apr_ssize_t len = 0;
       file_stats_t *file = NULL;
-      
+
       apr_hash_this(hi, (const void **)&name, &len, (void**)&file);
 
       open_count += file->open_count;
@@ -656,7 +656,7 @@ int main(int argc, const char *argv[])
 {
   apr_pool_t *pool = NULL;
   apr_file_t *file = NULL;
-  
+
   apr_initialize();
   atexit(apr_terminate);
 
@@ -676,7 +676,7 @@ int main(int argc, const char *argv[])
   apr_file_close(file);
 
   print_stats(pool);
-  
+
   apr_file_open(&file, "access.bmp",
                 APR_WRITE | APR_CREATE | APR_TRUNCATE | APR_BUFFERED,
                 APR_OS_DEFAULT, pool);

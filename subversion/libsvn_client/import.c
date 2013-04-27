@@ -134,9 +134,9 @@ send_file_contents(const char *local_abspath,
     }
 
   if (keywords_val)
-    SVN_ERR(svn_subst_build_keywords2(&keywords, keywords_val->data,
+    SVN_ERR(svn_subst_build_keywords3(&keywords, keywords_val->data,
                                       APR_STRINGIFY(SVN_INVALID_REVNUM),
-                                      "", 0, "", pool));
+                                      "", "", 0, "", pool));
   else
     keywords = NULL;
 
@@ -669,7 +669,8 @@ import(const char *local_abspath,
                             pool, &root_baton));
 
   /* Import a file or a directory tree. */
-  SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, FALSE, pool, pool));
+  SVN_ERR(svn_io_stat_dirent2(&dirent, local_abspath, FALSE, FALSE,
+                              pool, pool));
 
   /* Make the intermediate directory components necessary for properly
      rooting our import source tree.  */
