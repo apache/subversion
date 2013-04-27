@@ -14369,7 +14369,7 @@ msgid ""
 msgstr ""
 "Aktiviert oder deaktiviert die Zwischenspeicherung von\n"
 "                             Deltas zwischen älteren Revisionen.\n"
-"                             Vorgabe ist »yes«.\n"
+"                             Vorgabe ist »no«.\n"
 "                             [nur für FSFS-Projektarchive verwendet]"
 
 #: ../svnserve/svnserve.c:227
