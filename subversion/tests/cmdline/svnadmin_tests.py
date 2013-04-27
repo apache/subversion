@@ -1621,7 +1621,8 @@ def hotcopy_incremental_packed(sbox):
 
   # Pack revisions 0 and 1.
   svntest.actions.run_and_verify_svnadmin(
-    None, None, [], "pack", os.path.join(cwd, sbox.repo_dir))
+    None, ['Packing revisions in shard 0...done.\n'], [], "pack",
+    os.path.join(cwd, sbox.repo_dir))
 
   # Commit 5 more revs, hotcopy and pack after each commit.
   for i in [1, 2, 3, 4, 5]:
@@ -1637,8 +1638,12 @@ def hotcopy_incremental_packed(sbox):
     if i < 5:
       sbox.simple_mkdir("newdir-%i" % i)
       sbox.simple_commit()
+      if not i % 2:
+        expected_output = ['Packing revisions in shard %d...done.\n' % (i/2)]
+      else:
+        expected_output = []
       svntest.actions.run_and_verify_svnadmin(
-        None, None, [], "pack", os.path.join(cwd, sbox.repo_dir))
+        None, expected_output, [], "pack", os.path.join(cwd, sbox.repo_dir))
 
 
 def locking(sbox):
