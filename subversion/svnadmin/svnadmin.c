@@ -1537,7 +1537,7 @@ subcommand_pack(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   /* Progress feedback goes to STDOUT, unless they asked to suppress it. */
   if (! opt_state->quiet)
-    progress_stream = recode_stream_create(stderr, pool);
+    progress_stream = recode_stream_create(stdout, pool);
 
   return svn_error_trace(
     svn_repos_fs_pack2(repos, !opt_state->quiet ? repos_notify_handler : NULL,
