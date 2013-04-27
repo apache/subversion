@@ -514,7 +514,7 @@ rle_array(apr_array_header_t *array, int start, int end)
         {
           int counter;
           for (counter = 1; i + counter < end; ++counter)
-            if (APR_ARRAY_IDX(array, i, apr_uint64_t) != 1)
+            if (APR_ARRAY_IDX(array, i + counter, apr_uint64_t) != 1)
               break;
 
           if (--counter)
