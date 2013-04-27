@@ -351,7 +351,7 @@ svn_cl__get_log_message(const char **log_msg,
                 _("Error normalizing log message to internal format"));
 
       /* Strip off the EOF marker text and the junk that follows it. */
-      truncate_buffer_at_prefix(&(log_msg_buf->len), (char *)log_msg_str->data,
+      truncate_buffer_at_prefix(&(log_msg_str->len), (char *)log_msg_str->data,
                                 EDITOR_EOF_PREFIX);
 
       *log_msg = log_msg_str->data;
