@@ -960,14 +960,70 @@ select_block_entries(int *entries_in_block,
   /* Estimate extra capacity we will gain from container compression. */
   apr_size_t pack_savings = 0;
 
-  /* If the next item does not fit into the current block, auto-pad it. */
+  /* If the next item does not fit into the current block, auto-pad it.
+     Take special care of textual noderevs since their parsers may prefetch
+     up to 80 bytes and we don't want them to cross block boundaries. */
   svn_fs_fs__p2l_entry_t *first_entry
     = APR_ARRAY_IDX(entries, start_index, svn_fs_fs__p2l_entry_t *);
-  if (first_entry->size > capacity_left)
+  apr_off_t safety_margin
+    = first_entry->type == SVN_FS_FS__ITEM_TYPE_NODEREV ? 80 : 0;
+  if (first_entry->size + safety_margin > capacity_left)
     {
       SVN_ERR(auto_pad_block(context, pool));
       capacity_left = ffd->block_size
                     - (context->pack_offset % ffd->block_size);
+    }
+
+  /* try pulling in items from the next block if the first item does not fit
+     but is small enough that it might be packed nicely with the next block.
+   */
+  if (   first_entry->size > capacity_left
+      && first_entry->size < ffd->block_size / 2)
+    {
+      /* frist, try to pull in the first N elements from the next block */
+      apr_off_t pulled_in = 0;
+      for (i = start_index + 1; i < entries->nelts; ++i)
+        {
+          svn_fs_fs__p2l_entry_t *entry
+            = APR_ARRAY_IDX(entries, i, svn_fs_fs__p2l_entry_t *);
+          if (   pulled_in + entry->size > 2 * capacity_left
+              || entry->size > capacity_left)
+            break;
+
+          pulled_in += entry->size;
+        }
+
+      /* if the first one is already to large, look for the largest entry
+         in the next block that still does fit. */
+      if (--i == start_index)
+        {
+          apr_off_t checked = 0;
+          apr_off_t best_size = 0;
+          int best_fit = start_index;
+          for (i = start_index + 1; i < entries->nelts && checked < ffd->block_size; ++i)
+            {
+              svn_fs_fs__p2l_entry_t *entry
+                = APR_ARRAY_IDX(entries, i, svn_fs_fs__p2l_entry_t *);
+              if (entry->size < capacity_left && entry->size > best_size)
+                {
+                  best_fit = i;
+                  best_size = entry->size;
+                }
+
+              checked += entry->size;
+            }
+
+          i = best_fit;
+        }
+
+      /* if we found a such entry(es), swap them with the current one. */
+      if (i != start_index)
+        {
+          APR_ARRAY_IDX(entries, start_index, svn_fs_fs__p2l_entry_t *)
+            = APR_ARRAY_IDX(entries, i, svn_fs_fs__p2l_entry_t *);
+          APR_ARRAY_IDX(entries, i, svn_fs_fs__p2l_entry_t *)
+            = first_entry;
+        }
     }
 
   /* try to fit as many items into the current block as possible */
@@ -1069,6 +1125,15 @@ select_block_entries(int *entries_in_block,
       /* Write P2L index for copied items, i.e. the 1 container */
       SVN_ERR(svn_fs_fs__p2l_proto_index_add_entry
                 (context->proto_p2l_index, container_entry, pool));
+    }
+  else if (*entries_in_block > 1)
+    {
+      /* due to the way our parsers prefetch data, it's a bad idea to end
+       * a block with a textual noderev representations */
+      svn_fs_fs__p2l_entry_t *entry
+        = APR_ARRAY_IDX(entries, i - 1, svn_fs_fs__p2l_entry_t *);
+      if (entry->type == SVN_FS_FS__ITEM_TYPE_NODEREV)
+        --*entries_in_block;
     }
 
   return SVN_NO_ERROR;
