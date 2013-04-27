@@ -1623,6 +1623,21 @@ svn_fs_fs__l2p_get_max_ids(apr_array_header_t **max_ids,
 /*
  * phys-to-log index
  */
+svn_fs_fs__p2l_entry_t *
+svn_fs_fs__p2l_entry_dup(svn_fs_fs__p2l_entry_t *entry,
+                         apr_pool_t *pool)
+{
+  svn_fs_fs__p2l_entry_t *new_entry = apr_palloc(pool, sizeof(*new_entry));
+  *new_entry = *entry;
+
+  if (new_entry->item_count)
+    new_entry->items = apr_pmemdup(pool,
+                                   entry->items,
+                                   entry->item_count * sizeof(*entry->items));
+
+  return new_entry;
+}
+
 svn_error_t *
 svn_fs_fs__p2l_proto_index_open(apr_file_t **proto_index,
                                 const char *file_name,

@@ -74,6 +74,12 @@ typedef struct svn_fs_fs__p2l_entry_t
   svn_fs_fs__id_part_t *items;
 } svn_fs_fs__p2l_entry_t;
 
+/* Return a (deep) copy of ENTRY, allocated in POOL.
+ */
+svn_fs_fs__p2l_entry_t *
+svn_fs_fs__p2l_entry_dup(svn_fs_fs__p2l_entry_t *entry,
+                         apr_pool_t *pool);
+
 /* Open / create a log-to-phys index file with the full file path name
  * FILE_NAME.  Return the open file in *PROTO_INDEX and use POOL for
  * allocations.
@@ -194,6 +200,12 @@ svn_fs_fs__l2p_get_max_ids(apr_array_header_t **max_ids,
                            svn_revnum_t start_rev,
                            apr_size_t count,
                            apr_pool_t *pool);
+
+svn_error_t *
+svn_fs_fs__p2l_get_max_offset(apr_off_t *offset,
+                              svn_fs_t *fs,
+                              svn_revnum_t revision,
+                              apr_pool_t *pool);
 
 /* Serialization and caching interface
  */

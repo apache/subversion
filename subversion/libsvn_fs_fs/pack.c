@@ -422,23 +422,6 @@ write_null_bytes(apr_file_t *dest,
   return SVN_NO_ERROR;
 }
 
-/* Return a (deep) copy of ENTRY, allocated in POOL.
- */
-static svn_fs_fs__p2l_entry_t *
-copy_p2l_entry(svn_fs_fs__p2l_entry_t *entry,
-               apr_pool_t *pool)
-{
-  svn_fs_fs__p2l_entry_t *new_entry = apr_palloc(pool, sizeof(*new_entry));
-  *new_entry = *entry;
-
-  if (new_entry->item_count)
-    new_entry->items = apr_pmemdup(pool,
-                                   entry->items,
-                                   entry->item_count * sizeof(*entry->items));
-
-  return new_entry;
-}
-
 /* Copy the "simple" item (changes list or property representation) from
  * the current position in REV_FILE to TEMP_FILE using CONTEXT.  Add a
  * copy of ENTRY to ENTRIES but with an updated offset value that points
@@ -453,7 +436,7 @@ copy_item_to_temp(pack_context_t *context,
                   apr_pool_t *pool)
 {
   svn_fs_fs__p2l_entry_t *new_entry
-    = copy_p2l_entry(entry, context->info_pool);
+    = svn_fs_fs__p2l_entry_dup(entry, context->info_pool);
   new_entry->offset = 0;
   SVN_ERR(svn_io_file_seek(temp_file, SEEK_CUR, &new_entry->offset, pool));
   APR_ARRAY_PUSH(entries, svn_fs_fs__p2l_entry_t *) = new_entry;
@@ -519,7 +502,7 @@ copy_rep_to_temp(pack_context_t *context,
 
   /* create a copy of ENTRY, make it point to the copy destination and
    * store it in CONTEXT */
-  rep_info->entry = copy_p2l_entry(entry, context->info_pool);
+  rep_info->entry = svn_fs_fs__p2l_entry_dup(entry, context->info_pool);
   rep_info->entry->offset = 0;
   SVN_ERR(svn_io_file_seek(context->reps_file, SEEK_CUR,
                            &rep_info->entry->offset, pool));
@@ -633,7 +616,7 @@ copy_node_to_temp(pack_context_t *context,
 
   /* create a copy of ENTRY, make it point to the copy destination and
    * store it in CONTEXT */
-  rep_info->entry = copy_p2l_entry(entry, context->info_pool);
+  rep_info->entry = svn_fs_fs__p2l_entry_dup(entry, context->info_pool);
   rep_info->entry->offset = 0;
   SVN_ERR(svn_io_file_seek(context->reps_file, SEEK_CUR,
                            &rep_info->entry->offset, pool));
@@ -1191,7 +1174,7 @@ write_changes_container(pack_context_t *context,
 
   context->pack_offset = offset;
   APR_ARRAY_PUSH(new_entries, svn_fs_fs__p2l_entry_t *)
-    = copy_p2l_entry(&container_entry, context->info_pool);
+    = svn_fs_fs__p2l_entry_dup(&container_entry, context->info_pool);
 
   SVN_ERR(svn_fs_fs__p2l_proto_index_add_entry
             (context->proto_p2l_index, &container_entry, pool));
