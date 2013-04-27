@@ -907,8 +907,8 @@ auto_pad_block(pack_context_t *context,
       null_entry.offset = context->pack_offset;
       null_entry.size = padding;
       null_entry.type = SVN_FS_FS__ITEM_TYPE_UNUSED;
-      null_entry.item_count = 1;
-      null_entry.items = &rev_item;
+      null_entry.item_count = 0;
+      null_entry.items = NULL;
 
       SVN_ERR(write_null_bytes(context->pack_file, padding, pool));
       SVN_ERR(svn_fs_fs__p2l_proto_index_add_entry
@@ -1027,7 +1027,7 @@ select_block_entries(int *entries_in_block,
         }
     }
 
-  /* return nubmer of items to copy into the pack file.
+  /* return number of items to copy into the pack file.
    * Must be at least 1 to make progress. */
   *entries_in_block = MAX(1, i - start_index);
 
