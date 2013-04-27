@@ -144,6 +144,43 @@ serialize_representation(svn_temp_serializer__context_t *context,
                                 sizeof(*rep));
 }
 
+void
+svn_fs_fs__serialize_apr_array(svn_temp_serializer__context_t *context,
+                               apr_array_header_t **a)
+{
+  const apr_array_header_t *array = *a;
+
+  /* Nothing to do for NULL string references. */
+  if (array == NULL)
+    return;
+
+  /* array header struct */
+  svn_temp_serializer__push(context,
+                            (const void * const *)a,
+                            sizeof(*array));
+
+  /* contents */
+  svn_temp_serializer__add_leaf(context,
+                                (const void * const *)&array->elts,
+                                (apr_size_t)array->nelts * array->elt_size);
+
+  /* back to the caller's nesting level */
+  svn_temp_serializer__pop(context);
+}
+
+void
+svn_fs_fs__deserialize_apr_array(void *buffer,
+                                 apr_array_header_t **array,
+                                 apr_pool_t *pool)
+{
+  svn_temp_deserializer__resolve(buffer, (void **)array);
+  if (*array == NULL)
+    return;
+
+  svn_temp_deserializer__resolve(*array, (void **)&(*array)->elts);
+  (*array)->pool = pool;
+}
+
 /* auxilliary structure representing the content of a directory hash */
 typedef struct hash_data_t
 {

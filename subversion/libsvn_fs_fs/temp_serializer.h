@@ -50,6 +50,24 @@ svn_fs_fs__noderev_deserialize(void *buffer,
                                node_revision_t **noderev_p);
 
 /**
+ * Serialize APR array @a *a within the serialization @a context.
+ * The elements within the array must not contain pointers.
+ */
+void
+svn_fs_fs__serialize_apr_array(struct svn_temp_serializer__context_t *context,
+                               apr_array_header_t **a);
+
+/**
+ * Deserialize APR @a *array within the @a buffer.  Set its pool member to
+ * @a pool.  The elements within the array must not contain pointers.
+ */
+void
+svn_fs_fs__deserialize_apr_array(void *buffer,
+                                 apr_array_header_t **array,
+                                 apr_pool_t *pool);
+
+
+/**
  * #svn_txdelta_window_t is not sufficient for caching the data it
  * represents because data read process needs auxilliary information.
  */
