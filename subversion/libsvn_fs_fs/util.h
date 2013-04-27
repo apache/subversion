@@ -78,6 +78,15 @@ svn_boolean_t
 is_packed_revprop(svn_fs_t *fs,
                   svn_revnum_t rev);
 
+/* Return the revision number of the pack / rev file in FS containing REV. */
+svn_revnum_t
+packed_base_rev(svn_fs_t *fs, svn_revnum_t rev);
+
+/* Return the number of revisions in the pack / rev file in FS that contains
+ * revision REV. */
+svn_revnum_t
+pack_size(svn_fs_t *fs, svn_revnum_t rev);
+
 const char *
 path_format(svn_fs_t *fs,
             apr_pool_t *pool);

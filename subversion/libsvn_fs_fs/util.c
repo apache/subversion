@@ -72,6 +72,24 @@ is_packed_revprop(svn_fs_t *fs, svn_revnum_t rev)
       && (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT);
 }
 
+svn_revnum_t
+packed_base_rev(svn_fs_t *fs, svn_revnum_t rev)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  return rev < ffd->min_unpacked_rev
+       ? rev - (rev % ffd->max_files_per_dir)
+       : rev;
+}
+
+svn_revnum_t
+pack_size(svn_fs_t *fs, svn_revnum_t rev)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  return rev < ffd->min_unpacked_rev ? ffd->max_files_per_dir : 1;
+}
+
 const char *
 path_format(svn_fs_t *fs, apr_pool_t *pool)
 {
