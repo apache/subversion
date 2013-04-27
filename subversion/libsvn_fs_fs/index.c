@@ -315,7 +315,6 @@ packed_stream_open(packed_number_stream_t **stream,
   SVN_ERR(svn_io_file_open(&result->file, file_name,
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
                            result->pool));
-  SVN_ERR(svn_io_file_aligned_seek(result->file, block_size, NULL, 0, pool));
   
   result->used = 0;
   result->current = 0;
