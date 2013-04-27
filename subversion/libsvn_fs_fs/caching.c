@@ -26,6 +26,7 @@
 #include "dag.h"
 #include "tree.h"
 #include "index.h"
+#include "changes.h"
 #include "temp_serializer.h"
 #include "../libsvn_fs/fs-loader.h"
 
@@ -581,6 +582,20 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
 
   if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
     {
+      SVN_ERR(create_cache(&(ffd->changes_container_cache),
+                           NULL,
+                           membuffer,
+                           0, 0, /* Do not use inprocess cache */
+                           svn_fs_fs__serialize_changes_container,
+                           svn_fs_fs__deserialize_changes_container,
+                           sizeof(pair_cache_key_t),
+                           apr_pstrcat(pool, prefix, "CHANGESCNT",
+                                       (char *)NULL),
+                           SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
+                           fs,
+                           no_handler,
+                           fs->pool));
+
       SVN_ERR(create_cache(&(ffd->l2p_header_cache),
                            NULL,
                            membuffer,
@@ -636,6 +651,8 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
     }
   else
     {
+      ffd->changes_container_cache = NULL;
+
       ffd->l2p_header_cache = NULL;
       ffd->l2p_page_cache = NULL;
       ffd->p2l_header_cache = NULL;

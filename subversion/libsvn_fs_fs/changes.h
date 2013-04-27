@@ -98,4 +98,20 @@ svn_fs_fs__read_changes_container(svn_fs_fs__changes_t **changes_p,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
 
+/* Implements #svn_cache__serialize_func_t for svn_fs_fs__changes_t objects.
+ */
+svn_error_t *
+svn_fs_fs__serialize_changes_container(void **data,
+                                       apr_size_t *data_len,
+                                       void *in,
+                                       apr_pool_t *pool);
+
+/* Implements #svn_cache__deserialize_func_t for svn_fs_fs__changes_t objects.
+ */
+svn_error_t *
+svn_fs_fs__deserialize_changes_container(void **out,
+                                         void *data,
+                                         apr_size_t data_len,
+                                         apr_pool_t *pool);
+
 #endif

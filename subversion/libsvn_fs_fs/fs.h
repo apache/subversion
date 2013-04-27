@@ -344,6 +344,10 @@ typedef struct fs_fs_data_t
      is the revision */
   svn_cache__t *changes_cache;
 
+  /* Cache for change_list_t conatiners;
+     the key is a (pack file revision, file offset) pair */
+  svn_cache__t *changes_container_cache;
+
   /* Cache for svn_fs_fs__rep_header_t objects; the key is a
      (revision, item index) pair */
   svn_cache__t *rep_header_cache;

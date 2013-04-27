@@ -420,3 +420,57 @@ svn_fs_fs__read_changes_container(svn_fs_fs__changes_t **changes_p,
   
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_fs_fs__serialize_changes_container(void **data,
+                                       apr_size_t *data_len,
+                                       void *in,
+                                       apr_pool_t *pool)
+{
+  svn_fs_fs__changes_t *changes = in;
+  svn_stringbuf_t *serialized;
+
+  /* make a guesstimate on the size of the serialized data.  Erring on the
+   * low side will cause the serializer to re-alloc its buffer. */
+  apr_size_t size
+    = changes->changes->elt_size * changes->changes->nelts
+    + changes->offsets->elt_size * changes->offsets->nelts
+    + 10 * changes->changes->elt_size
+    + 100;
+
+  /* serialize array header and all its elements */
+  svn_temp_serializer__context_t *context
+    = svn_temp_serializer__init(changes, sizeof(*changes), size, pool);
+
+  /* serialize sub-structures */
+  svn_fs_fs__serialize_string_table(context, &changes->paths);
+  svn_fs_fs__serialize_apr_array(context, &changes->changes);
+  svn_fs_fs__serialize_apr_array(context, &changes->offsets);
+
+  /* return the serialized result */
+  serialized = svn_temp_serializer__get(context);
+
+  *data = serialized->data;
+  *data_len = serialized->len;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__deserialize_changes_container(void **out,
+                                         void *data,
+                                         apr_size_t data_len,
+                                         apr_pool_t *pool)
+{
+  svn_fs_fs__changes_t *changes = (svn_fs_fs__changes_t *)data;
+
+  /* de-serialize sub-structures */
+  svn_fs_fs__deserialize_string_table(changes, &changes->paths);
+  svn_fs_fs__deserialize_apr_array(changes, &changes->changes, pool);
+  svn_fs_fs__deserialize_apr_array(changes, &changes->offsets, pool);
+
+  /* done */
+  *out = changes;
+
+  return SVN_NO_ERROR;
+}
