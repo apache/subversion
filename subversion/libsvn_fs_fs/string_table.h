@@ -118,13 +118,13 @@ svn_fs_fs__read_string_table(string_table_t **table_p,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool); 
 
-/* Implements svn_cache__serialize_func_t for string_table_t objects.
+/* Serialize string table *ST within the serialization CONTEXT.
  */
 void
 svn_fs_fs__serialize_string_table(svn_temp_serializer__context_t *context,
                                   string_table_t **st);
 
-/* Implements svn_cache__deserialize_func_t for string_table_t objects.
+/* Deserialize string table *TABLE within the BUFFER.
  */
 void
 svn_fs_fs__deserialize_string_table(void *buffer,
