@@ -127,6 +127,15 @@ Candidate changes:
    Votes:
      +1: markphip
 
+ * r1476366
+   Eliminate an unsafe printf format string.
+   Justification:
+     Avoid a compiler warning and avoid fear, uncertainty and doubt when
+     people see this code. There is no an actual risk AFAICT; see my email
+     <http://svn.haxx.se/dev/archive-2013-04/0601.shtml>.
+   Votes:
+     +1: julianfoad
+
 
 Veto-blocked changes:
 =====================
