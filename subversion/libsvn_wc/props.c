@@ -1626,9 +1626,9 @@ validate_eol_prop_against_file(const char *path,
   if (mime_type && svn_mime_type_is_binary(mime_type->data))
     return svn_error_createf
       (SVN_ERR_ILLEGAL_TARGET, NULL,
-       _("Can't set '" SVN_PROP_EOL_STYLE "': "
+       _("Can't set '%s': "
          "file '%s' has binary mime type property"),
-       path_display);
+       SVN_PROP_EOL_STYLE, path_display);
 
   /* Now ask the getter for the contents of the file; this will do a
      newline translation.  All we really care about here is whether or
