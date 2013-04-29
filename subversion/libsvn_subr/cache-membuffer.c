@@ -1012,14 +1012,15 @@ find_entry(svn_membuffer_t *cache,
       if (group->used == GROUP_SIZE)
         {
           /* every entry gets the same chance of being removed.
-           * Otherwise, we free the first entry, fill it and
-           * remove it again on the next occasion without considering
-           * the other entries in this group.
+           * Otherwise, we free the first entry, fill it and remove it
+           * again on the next occasion without considering the other
+           * entries in this group.  Also, apply priorities strictly.
            */
           entry = &group->entries[rand() % GROUP_SIZE];
           for (i = 1; i < GROUP_SIZE; ++i)
-            if (  entry->hit_count * entry->priority
-                > group->entries[i].hit_count * group->entries[i].priority)
+            if (   (entry->priority > group->entries[i].priority)
+                || (   entry->priority == group->entries[i].priority
+                    && entry->hit_count > group->entries[i].hit_count))
               entry = &group->entries[i];
 
           /* for the entries that don't have been removed,
@@ -1117,7 +1118,6 @@ promote_entry(svn_membuffer_t *cache, entry_t *entry)
  * TO_FIT_IN and is given for performance reasons.
  * 
  * Return TRUE if enough room could be found or made.  A FALSE result
->>>>>>> .merge-right.r1476664
  * indicates that the respective item shall not be added.
  */
 static svn_boolean_t
@@ -1133,6 +1133,11 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
    * room for the new one.
    */
   apr_size_t moved_size = 0;
+
+  /* count the number of entries that got moved.  A single large entry
+   * being moved is not enough to reject an insertion.
+   */
+  apr_size_t moved_count = 0;
 
   /* accumulated "worth" of items dropped so far */
   apr_size_t drop_hits = 0;
@@ -1169,12 +1174,12 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
        * moved around, the current item has probably a relatively low
        * priority.  So, give up after some time.
        */
-      if (moved_size > 16 * to_fit_in->size)
+      if (moved_size > 8 * to_fit_in->size && moved_count > 3)
         return FALSE;
 
       /* if the net worth (in hits) of items removed is already larger
        * than what we want to insert, reject TO_FIT_IN because it still
-       * does not fit in.
+       * does not fit in. */
       if (drop_hits > to_fit_in->hit_count)
         return FALSE;
 
@@ -1194,6 +1199,12 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
         {
           svn_boolean_t keep;
           entry = get_entry(cache, cache->l2.next);
+
+          /* Reject insertion for entries with low priority, if the current
+           * entry has seen recent hits. */
+          if (   entry->hit_count
+              && to_fit_in->priority < SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY)
+            return FALSE;
 
           /* Keep entries that are very small. Those are likely to be data
            * headers or similar management structures. So, they are probably
@@ -1215,10 +1226,26 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
                */
               keep = TRUE;
             }
+          else if (   entry->priority < SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY
+                   && to_fit_in->priority > entry->priority)
+            {
+              /* Be quick to evict low-priority entries if the one to insert
+               * is of higher priority.
+               */
+              keep = FALSE;
+            }
           else if (to_fit_in->priority != entry->priority)
             {
-              /* strictly let the higher priority win */
-              keep = entry->priority > to_fit_in->priority;
+              /* Not the same priority but the lower prio side is not a
+               * clear loser either (already checked those cases above).
+               * Keep the current entry if it has seen more hits recently
+               * or is smaller than the one to insert - both relative to
+               * their respective priority.
+               */
+              keep = to_fit_in->hit_count * to_fit_in->priority
+                   < entry->hit_count * entry->priority
+                  || to_fit_in->size * to_fit_in->priority
+                   < entry->size * entry->priority;
             }
           else if (cache->hit_count > cache->used_entries)
             {
@@ -1242,7 +1269,10 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
           /* keepers or destroyers? */
           if (keep)
             {
+              /* Moving entries around is not for free -> track costs. */
               moved_size += entry->size;
+              moved_count++;
+
               move_entry(cache, entry);
             }
           else
