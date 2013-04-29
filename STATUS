@@ -24,26 +24,6 @@ Candidate changes:
      +1: blair
      -0: philip (see dev thread: it's a false alarm, wrong value)
 
- * r1469862, r1469866, r1475704
-   Change configure default to --without-apache-libexecdir.
-   Justification:
-     Before this change, by default, Apache modules would very likely be
-     installed outside of $prefix, while still being linked with shared
-     libraries in $prefix. This is not expected behaviour.
-   Votes:
-     +1: brane, philip
-     +0: danielsh (refraining from defaulting to ${httpd_libexecdir} is sane)
-
- * r1470238, r1471153
-   Improve labelling of the file diff in interactive conflict resolution 'df'
-   option. Show labels such as "THEIRS" and "MERGED", not just the paths to
-   the files on disk.
-   Justification:
-     It was confusing because the same 'df' option can show a different pair
-     of files depending on whether the conflicted operation was an update or
-     a merge, and on whether there's a base file or not.
-   Votes:
-     +1: julianfoad, philip
 
  * r1470246
    Improve the interactive resolution of property conflicts.  Instead of
@@ -89,7 +69,7 @@ Candidate changes:
    Justification:
      Avoid SQLITE_MISUSE errors.
    Votes:
-     +1: philip
+     +1: philip, cmpilato
 
  * r1476359
    JavaHL thread safety bug.
@@ -104,7 +84,7 @@ Candidate changes:
      For users, consistency; for translators, fewer mismatches.
    Votes:
      +1 (non-binding): mattiase
-     +1: danielsh
+     +1: danielsh, cmpilato
 
 Veto-blocked changes:
 =====================
@@ -149,3 +129,24 @@ Approved changes:
                      sure if it is optimal. In merge there are 4 trees to
                      consider before we can tell the reason. The 4th tree
                      is available as the pristine version of the local node)
+
+ * r1469862, r1469866, r1475704
+   Change configure default to --without-apache-libexecdir.
+   Justification:
+     Before this change, by default, Apache modules would very likely be
+     installed outside of $prefix, while still being linked with shared
+     libraries in $prefix. This is not expected behaviour.
+   Votes:
+     +1: brane, philip, cmpilato
+     +0: danielsh (refraining from defaulting to ${httpd_libexecdir} is sane)
+
+ * r1470238, r1471153
+   Improve labelling of the file diff in interactive conflict resolution 'df'
+   option. Show labels such as "THEIRS" and "MERGED", not just the paths to
+   the files on disk.
+   Justification:
+     It was confusing because the same 'df' option can show a different pair
+     of files depending on whether the conflicted operation was an update or
+     a merge, and on whether there's a base file or not.
+   Votes:
+     +1: julianfoad, philip, cmpilato
