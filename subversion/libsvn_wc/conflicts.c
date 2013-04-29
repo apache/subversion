@@ -2302,6 +2302,46 @@ svn_wc__read_conflicts(const apr_array_header_t **conflicts,
 
 /*** Resolving a conflict automatically ***/
 
+/* Prepare to delete an artifact file at ARTIFACT_FILE_ABSPATH in the
+ * working copy at DB/WRI_ABSPATH.
+ *
+ * Set *WORK_ITEMS to a new work item that, when run, will delete the
+ * artifact file; or to NULL if there is no file to delete.
+ *
+ * Set *FILE_FOUND to TRUE if the artifact file is found on disk and its
+ * node kind is 'file'; otherwise do not change *FILE_FOUND.  FILE_FOUND
+ * may be NULL if not required.
+ */
+static svn_error_t *
+remove_artifact_file_if_exists(svn_skel_t **work_items,
+                               svn_boolean_t *file_found,
+                               svn_wc__db_t *db,
+                               const char *wri_abspath,
+                               const char *artifact_file_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  *work_items = NULL;
+  if (artifact_file_abspath)
+    {
+      svn_node_kind_t node_kind;
+
+      SVN_ERR(svn_io_check_path(artifact_file_abspath, &node_kind,
+                                scratch_pool));
+      if (node_kind == svn_node_file)
+        {
+          SVN_ERR(svn_wc__wq_build_file_remove(work_items,
+                                               db, wri_abspath,
+                                               artifact_file_abspath,
+                                               result_pool, scratch_pool));
+          if (file_found)
+            *file_found = TRUE;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /*
  * Resolve the text conflict found in DB/LOCAL_ABSPATH/CONFLICTS
  * according to CONFLICT_CHOICE.  (Don't mark it as resolved.)
@@ -2332,7 +2372,6 @@ resolve_text_conflict_on_node(svn_boolean_t *removed_reject_files,
   const char *conflict_new = NULL;
   const char *conflict_working = NULL;
   const char *auto_resolve_src;
-  svn_node_kind_t node_kind;
   svn_skel_t *work_item;
 
   SVN_ERR(svn_wc__conflict_read_text_conflict(&conflict_working,
@@ -2425,47 +2464,20 @@ resolve_text_conflict_on_node(svn_boolean_t *removed_reject_files,
      If not the UI shows the conflict as already resolved
      (and in this case we just remove the in-db conflict) */
 
-  if (conflict_old)
-    {
-      SVN_ERR(svn_io_check_path(conflict_old, &node_kind, scratch_pool));
-      if (node_kind == svn_node_file)
-        {
-          SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db,
-                                               local_abspath,
-                                               conflict_old,
-                                               scratch_pool, scratch_pool));
-          *work_items = svn_wc__wq_merge(*work_items, work_item, scratch_pool);
-          *removed_reject_files = TRUE;
-        }
-    }
+  SVN_ERR(remove_artifact_file_if_exists(&work_item, removed_reject_files,
+                                         db, local_abspath, conflict_old,
+                                         scratch_pool, scratch_pool));
+  *work_items = svn_wc__wq_merge(*work_items, work_item, scratch_pool);
 
-  if (conflict_new)
-    {
-      SVN_ERR(svn_io_check_path(conflict_new, &node_kind, scratch_pool));
-      if (node_kind == svn_node_file)
-        {
-          SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db,
-                                               local_abspath,
-                                               conflict_new,
-                                               scratch_pool, scratch_pool));
-          *work_items = svn_wc__wq_merge(*work_items, work_item, scratch_pool);
-          *removed_reject_files = TRUE;
-        }
-    }
+  SVN_ERR(remove_artifact_file_if_exists(&work_item, removed_reject_files,
+                                         db, local_abspath, conflict_new,
+                                         scratch_pool, scratch_pool));
+  *work_items = svn_wc__wq_merge(*work_items, work_item, scratch_pool);
 
-  if (conflict_working)
-    {
-      SVN_ERR(svn_io_check_path(conflict_working, &node_kind, scratch_pool));
-      if (node_kind == svn_node_file)
-        {
-          SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db,
-                                               local_abspath,
-                                               conflict_working,
-                                               scratch_pool, scratch_pool));
-          *work_items = svn_wc__wq_merge(*work_items, work_item, scratch_pool);
-          *removed_reject_files = TRUE;
-        }
-    }
+  SVN_ERR(remove_artifact_file_if_exists(&work_item, removed_reject_files,
+                                         db, local_abspath, conflict_working,
+                                         scratch_pool, scratch_pool));
+  *work_items = svn_wc__wq_merge(*work_items, work_item, scratch_pool);
 
   return SVN_NO_ERROR;
 }
@@ -2518,7 +2530,6 @@ resolve_prop_conflict_on_node(svn_boolean_t *removed_reject_file,
                               svn_wc_conflict_choice_t conflict_choice,
                               apr_pool_t *scratch_pool)
 {
-  svn_node_kind_t node_kind;
   const char *prop_reject_file;
   apr_hash_t *mine_props;
   apr_hash_t *their_old_props;
@@ -2601,21 +2612,14 @@ resolve_prop_conflict_on_node(svn_boolean_t *removed_reject_file,
      If not the UI shows the conflict as already resolved
      (and in this case we just remove the in-db conflict) */
 
-  if (prop_reject_file)
-    {
-      SVN_ERR(svn_io_check_path(prop_reject_file, &node_kind, scratch_pool));
-      if (node_kind == svn_node_file)
-        {
-          svn_skel_t *work_item;
+  {
+    svn_skel_t *work_item;
 
-          SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db,
-                                               local_abspath,
-                                               prop_reject_file,
-                                               scratch_pool, scratch_pool));
-          *work_items = svn_wc__wq_merge(*work_items, work_item, scratch_pool);
-          *removed_reject_file = TRUE;
-        }
-    }
+    SVN_ERR(remove_artifact_file_if_exists(&work_item, removed_reject_file,
+                                           db, local_abspath, prop_reject_file,
+                                           scratch_pool, scratch_pool));
+    *work_items = svn_wc__wq_merge(*work_items, work_item, scratch_pool);
+  }
 
   return SVN_NO_ERROR;
 }
