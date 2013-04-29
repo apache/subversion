@@ -381,6 +381,7 @@ create_table(string_sub_table_t *target,
     = svn_stringbuf_create_ensure(MAX_DATA_SIZE - source->max_data_size,
                                   scratch_pool);
 
+  /* pack sub-strings */
   target->short_string_count = (apr_size_t)source->short_strings->nelts;
   target->short_strings = apr_palloc(pool, sizeof(*target->short_strings) *
                                            target->short_string_count);
@@ -394,12 +395,25 @@ create_table(string_sub_table_t *target,
       string_header_t *tail_match;
       apr_size_t head_length = string->previous_match_len;
 
-      entry->head_string
-        = (apr_uint16_t)(head_length ? string->previous->position : 0);
+      /* Minimize the number of strings to visit when reconstructing the
+         string head.  So, skip all predecessors that don't contribute to
+         first HEAD_LENGTH chars of our string. */
+      if (head_length)
+        {
+          const builder_string_t *furthest_prev = string->previous;
+          while (furthest_prev->previous_match_len >= head_length)
+            furthest_prev = furthest_prev->previous;
+          entry->head_string = furthest_prev->position;
+        }
+      else
+        entry->head_string = 0;
+
+      /* head & tail length are known */
       entry->head_length = (apr_uint16_t)head_length;
       entry->tail_length
         = (apr_uint16_t)(string->string.len - entry->head_length);
 
+      /* try to reuse an existing tail segment */
       tail_match = apr_hash_get(tails, tail, entry->tail_length);
       if (tail_match)
         {
@@ -413,6 +427,7 @@ create_table(string_sub_table_t *target,
         }
     }
 
+  /* pack long strings */
   target->long_string_count = (apr_size_t)source->long_strings->nelts;
   target->long_strings = apr_palloc(pool, sizeof(*target->long_strings) *
                                           target->long_string_count);
