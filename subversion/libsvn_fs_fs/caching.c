@@ -377,6 +377,15 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
 
   membuffer = svn_cache__get_global_membuffer_cache();
 
+  /* General rules for assigning cache priorities:
+   *
+   * - Data that can be reconstructed from other elements has low prio
+   *   (e.g. fulltexts, directories etc.)
+   * - Index data required to find any of the other data has high prio
+   *   (e.g. noderevs, L2P and P2L index pages)
+   * - everthing else should use default prio
+   */
+
   /* Make the cache for revision roots.  For the vast majority of
    * commands, this is only going to contain a few entries (svnadmin
    * dump/verify is an exception here), so to reduce overhead let's
@@ -408,7 +417,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        svn_fs_fs__dag_deserialize,
                        APR_HASH_KEY_STRING,
                        apr_pstrcat(pool, prefix, "DAG", (char *)NULL),
-                       0,
+                       SVN_CACHE__MEMBUFFER_LOW_PRIORITY,
                        fs,
                        no_handler,
                        fs->pool));
@@ -425,7 +434,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        svn_fs_fs__deserialize_dir_entries,
                        sizeof(pair_cache_key_t),
                        apr_pstrcat(pool, prefix, "DIR", (char *)NULL),
-                       0,
+                       SVN_CACHE__MEMBUFFER_LOW_PRIORITY,
                        fs,
                        no_handler,
                        fs->pool));
@@ -469,7 +478,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        svn_fs_fs__deserialize_rep_header,
                        sizeof(pair_cache_key_t),
                        apr_pstrcat(pool, prefix, "REPHEADER", (char *)NULL),
-                       0,
+                       SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
                        fs,
                        no_handler,
                        fs->pool));
@@ -513,7 +522,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            sizeof(pair_cache_key_t),
                            apr_pstrcat(pool, prefix, "PROP",
                                        (char *)NULL),
-                           0,
+                           SVN_CACHE__MEMBUFFER_LOW_PRIORITY,
                            fs,
                            no_handler,
                            fs->pool));
@@ -637,7 +646,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            sizeof(pair_cache_key_t),
                            apr_pstrcat(pool, prefix, "CHANGESCNT",
                                        (char *)NULL),
-                           SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
+                           0,
                            fs,
                            no_handler,
                            fs->pool));
@@ -690,7 +699,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            sizeof(svn_fs_fs__page_cache_key_t),
                            apr_pstrcat(pool, prefix, "P2L_PAGE",
                                        (char *)NULL),
-                           0,
+                           SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
                            fs,
                            no_handler,
                            fs->pool));
