@@ -138,7 +138,8 @@ Approved changes:
      libraries in $prefix. This is not expected behaviour.
    Votes:
      +1: brane, philip, cmpilato
-     +0: danielsh (refraining from defaulting to ${httpd_libexecdir} is sane)
+     +0: danielsh (refraining from defaulting to ${httpd_libexecdir} is sane:
+                   e.g., allow install >1 svn's against a single httpd install)
 
  * r1470238, r1471153
    Improve labelling of the file diff in interactive conflict resolution 'df'
