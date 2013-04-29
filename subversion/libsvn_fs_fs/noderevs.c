@@ -505,7 +505,7 @@ svn_fs_fs__noderevs_get(node_revision_t **noderev_p,
   else
     {
       noderev->copyroot_path = NULL;
-      noderev->copyroot_rev = SVN_INVALID_REVNUM;
+      noderev->copyroot_rev = 0;
     }
 
   noderev->predecessor_count = binary_noderev->predecessor_count;
