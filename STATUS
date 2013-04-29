@@ -86,6 +86,13 @@ Candidate changes:
      +1 (non-binding): mattiase
      +1: danielsh, cmpilato
 
+ * r1477359
+   Fix broken localisation of a string.
+   Justification:
+     Allows string to be localised. Fewer translation file mismatches.
+   Votes:
+     +1 (non-binding): mattiase
+
 Veto-blocked changes:
 =====================
 
