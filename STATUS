@@ -34,22 +34,6 @@ Candidate changes:
      +1: brane, philip
      +0: danielsh (refraining from defaulting to ${httpd_libexecdir} is sane)
 
- * r1470031
-   Correctly set the 'action' and 'reason' fields of a property conflict.
-   API users were seeing the wrong 'action' and 'reason' for some property
-   conflicts. 'svn' does not yet use these fields.
-   Justification:
-     It's wrong.  It's simple.  Fixing it in a 1.x.0 release involves less
-     risk of interfering with any client's work-around for the bug.  We may
-     want to backport changes to 'svn' to report property conflicts better,
-     and then 'svn' may use these fields; I'm working on such a change.
-   Votes:
-     +1: julianfoad, philip
-     +0.5: rhuijben (after this patch the situation is better, but I'm not
-                     sure if it is optimal. In merge there are 4 trees to
-                     consider before we can tell the reason. The 4th tree
-                     is available as the pristine version of the local node)
-
  * r1470238, r1471153
    Improve labelling of the file diff in interactive conflict resolution 'df'
    option. Show labels such as "THEIRS" and "MERGED", not just the paths to
@@ -73,19 +57,6 @@ Candidate changes:
      than one property was in conflict.
    Votes:
      +1: julianfoad
-
- * r1470904, r1471744, r1475963, r1476155, r1476181, r1476254
-   Tweak an upgrade Sql statement to be easier to understand and a tiny bit
-   faster
-   Justification:
-     The old variant had some theoretical upgrade problems.
-   Notes:
-     r1470904, r1471744, r1475963 are a series of tweaks to the
-     STMT_UPGRADE_31_SELECT_WCROOT_NODES query.  r1476155 is a new
-     upgrade test.  r1476181, r1476254 are for 1.6 upgrades.
-   Votes:
-     +1: rhuijben (only r1470904 and r1471744)
-     +1: philip, pburba
 
  * r1471443, r1471490
    Fix a bug in the Summary of Conflicts when using interactive conflict
@@ -127,15 +98,6 @@ Candidate changes:
    Votes:
      +1: markphip
 
- * r1476366
-   Eliminate an unsafe printf format string.
-   Justification:
-     Avoid a compiler warning and avoid fear, uncertainty and doubt when
-     people see this code. There is no an actual risk AFAICT; see my email
-     <http://svn.haxx.se/dev/archive-2013-04/0601.shtml>.
-   Votes:
-     +1: julianfoad, danielsh
-
  * r1476607
    Some svnadmin command help copy-editing.
    Justification:
@@ -144,10 +106,46 @@ Candidate changes:
      +1 (non-binding): mattiase
      +1: danielsh
 
-
 Veto-blocked changes:
 =====================
 
 
 Approved changes:
 =================
+
+ * r1476366
+   Eliminate an unsafe printf format string.
+   Justification:
+     Avoid a compiler warning and avoid fear, uncertainty and doubt when
+     people see this code. There is no an actual risk AFAICT; see my email
+     <http://svn.haxx.se/dev/archive-2013-04/0601.shtml>.
+   Votes:
+     +1: julianfoad, danielsh, rhuijben
+
+ * r1470904, r1471744, r1475963, r1476155, r1476181, r1476254
+   Tweak an upgrade Sql statement to be easier to understand and a tiny bit
+   faster
+   Justification:
+     The old variant had some theoretical upgrade problems.
+   Notes:
+     r1470904, r1471744, r1475963 are a series of tweaks to the
+     STMT_UPGRADE_31_SELECT_WCROOT_NODES query.  r1476155 is a new
+     upgrade test.  r1476181, r1476254 are for 1.6 upgrades.
+   Votes:
+     +1: philip, pburba, rhuijben
+
+ * r1470031
+   Correctly set the 'action' and 'reason' fields of a property conflict.
+   API users were seeing the wrong 'action' and 'reason' for some property
+   conflicts. 'svn' does not yet use these fields.
+   Justification:
+     It's wrong.  It's simple.  Fixing it in a 1.x.0 release involves less
+     risk of interfering with any client's work-around for the bug.  We may
+     want to backport changes to 'svn' to report property conflicts better,
+     and then 'svn' may use these fields; I'm working on such a change.
+   Votes:
+     +1: julianfoad, philip
+     +1: rhuijben   (after this patch the situation is better, but I'm not
+                     sure if it is optimal. In merge there are 4 trees to
+                     consider before we can tell the reason. The 4th tree
+                     is available as the pristine version of the local node)
