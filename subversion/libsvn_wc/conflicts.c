@@ -1966,6 +1966,7 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
           SVN_ERR(svn_wc__mark_resolved_prop_conflicts(db, local_abspath,
                                                        scratch_pool));
         }
+      svn_pool_destroy(iterpool);
     }
 
   if (text_conflicted)
