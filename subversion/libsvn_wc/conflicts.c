@@ -2066,8 +2066,8 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
  * If NOT create_tempfiles, always create a legacy property conflict
  * descriptor.
  *
- * Use OPERATION and shallow copies of LEFT_VERSION and RIGHT_VERSION,
- * rather than reading them from CONFLICT_SKEL.
+ * Use NODE_KIND, OPERATION and shallow copies of LEFT_VERSION and
+ * RIGHT_VERSION, rather than reading them from CONFLICT_SKEL.
  *
  * Allocate results in RESULT_POOL. SCRATCH_POOL is used for temporary
  * allocations. */
@@ -2077,6 +2077,7 @@ read_prop_conflict_descs(apr_array_header_t *conflicts,
                          const char *local_abspath,
                          svn_skel_t *conflict_skel,
                          svn_boolean_t create_tempfiles,
+                         svn_node_kind_t node_kind,
                          svn_wc_operation_t operation,
                          const svn_wc_conflict_version_t *left_version,
                          const svn_wc_conflict_version_t *right_version,
@@ -2106,7 +2107,7 @@ read_prop_conflict_descs(apr_array_header_t *conflicts,
       svn_wc_conflict_description2_t *desc;
 
       desc  = svn_wc_conflict_description_create_prop2(local_abspath,
-                                                       svn_node_unknown,
+                                                       node_kind,
                                                        "", result_pool);
 
       /* ### This should be changed. The prej file should be stored
@@ -2137,7 +2138,7 @@ read_prop_conflict_descs(apr_array_header_t *conflicts,
       svn_pool_clear(iterpool);
 
       desc  = svn_wc_conflict_description_create_prop2(local_abspath,
-                                                       svn_node_unknown,
+                                                       node_kind,
                                                        propname,
                                                        result_pool);
 
@@ -2269,9 +2270,12 @@ svn_wc__read_conflicts(const apr_array_header_t **conflicts,
 
   if (prop_conflicted)
     {
+      svn_node_kind_t node_kind
+        = left_version ? left_version->node_kind : svn_node_unknown;
+
       SVN_ERR(read_prop_conflict_descs(cflcts,
                                        db, local_abspath, conflict_skel,
-                                       create_tempfiles,
+                                       create_tempfiles, node_kind,
                                        operation, left_version, right_version,
                                        result_pool, scratch_pool));
     }
