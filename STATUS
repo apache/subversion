@@ -81,6 +81,14 @@ Candidate changes:
      +1 (non-binding): mattiase
      +1: danielsh, philip
 
+ * r1477876
+   Fix a bug whereby a property conflict description always reported
+     'unknown' for the node kind.
+   Justification:
+     Regression from 1.7.
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
