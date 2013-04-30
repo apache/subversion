@@ -1161,6 +1161,7 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_error_t *err;
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
+  apr_file_t *file;
   svn_revnum_t lower = SVN_INVALID_REVNUM, upper = SVN_INVALID_REVNUM;
   svn_stream_t *stdin_stream, *stdout_stream = NULL;
 
@@ -1193,6 +1194,10 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   /* Read the stream from STDIN.  Users can redirect a file. */
   SVN_ERR(svn_stream_for_stdin(&stdin_stream, pool));
+/*  SVN_ERR(svn_io_file_open(&file, "/home/stefan/develop/fsfs-format7/freebsd.dump",
+                           APR_READ |APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+  stdin_stream = svn_stream_from_aprfile2(file, TRUE, pool);*/
 
   /* Progress feedback goes to STDOUT, unless they asked to suppress it. */
   if (! opt_state->quiet)
