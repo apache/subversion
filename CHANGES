@@ -62,6 +62,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
  Developer-visible changes:
   - General:
     * Now require Python 2.5 for tests and dev tools (r1243627)
+    * configure defaults to --without-apache-libexecdir (r1469862)
 
   - API changes:
     * fix inconsistent handling of log revs without changed paths (issue #3694)
