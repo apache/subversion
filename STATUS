@@ -23,7 +23,8 @@ Candidate changes:
    Votes:
      +1: blair
      -0: philip (see dev thread: it's a false alarm, wrong value)
-
+     -0.5: brane (silencing warnings is not a valid reason for a backport,
+                  even for branch stabilization.)
 
  * r1470246
    Improve the interactive resolution of property conflicts.  Instead of
@@ -49,7 +50,7 @@ Candidate changes:
      r1471443 is just a removal of unused code, and is included here in
      order to avoid conflicts.  r1471490 is the main change.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, brane
 
  * r1475772, r1476092
    Fix a bug in authz file processing where group and user names were
@@ -63,13 +64,6 @@ Candidate changes:
      r1476092 is the CHANGES update.
    Votes:
      +1: brane
-
- * r1476193
-   Reset SQLite statements on error during 1.7 to 1.8 upgrade.
-   Justification:
-     Avoid SQLITE_MISUSE errors.
-   Votes:
-     +1: philip, cmpilato
 
  * r1476607
    Some svnadmin command help copy-editing.
@@ -99,4 +93,11 @@ Approved changes:
    Justification:
      Unexpected exceptions can be thrown when thread issues are encountered.
    Votes:
-     +1: markphip, philip
+     +1: markphip, philip, brane
+
+ * r1476193
+   Reset SQLite statements on error during 1.7 to 1.8 upgrade.
+   Justification:
+     Avoid SQLITE_MISUSE errors.
+   Votes:
+     +1: philip, cmpilato, brane
