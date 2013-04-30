@@ -210,7 +210,7 @@ def fix_one_error(repo_dir, rev):
     if handle_one_error(repo_dir, rev, svnlook_err):
       return True
 
-  raise FixError("unfixable error:\n  " + "\n  ".join(svnadmin_err))
+  raise FixError("unrecognized error message, and so unable to fix:\n  " + "\n  ".join(svnadmin_err))
 
 def check_formats(repo_dir):
   """Check that REPO_DIR isn't newer than we know how to handle."""
