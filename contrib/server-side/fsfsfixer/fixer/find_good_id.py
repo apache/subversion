@@ -1,12 +1,5 @@
 #!/usr/bin/env python
 
-# PER-REPOSITORY CONFIGURATION
-#
-# The number of revs per shard of the repository being accessed, or None if
-# it is not sharded.
-# TODO: Read this from the db/format file.
-REVS_PER_SHARD=None
-
 usage = """
 Print the correct FSFS node-rev id, given one that is correct except for
 its byte-offset part.
@@ -21,6 +14,7 @@ Example:
 """
 
 import os, sys
+from fixer_config import *
 
 class FixError(Exception):
   """An exception for any kind of inablility to repair the repository."""
