@@ -101,18 +101,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1470904, r1471744, r1475963, r1476155, r1476181, r1476254
-   Tweak an upgrade Sql statement to be easier to understand and a tiny bit
-   faster
-   Justification:
-     The old variant had some theoretical upgrade problems.
-   Notes:
-     r1470904, r1471744, r1475963 are a series of tweaks to the
-     STMT_UPGRADE_31_SELECT_WCROOT_NODES query.  r1476155 is a new
-     upgrade test.  r1476181, r1476254 are for 1.6 upgrades.
-   Votes:
-     +1: philip, pburba, rhuijben
-
  * r1470031
    Correctly set the 'action' and 'reason' fields of a property conflict.
    API users were seeing the wrong 'action' and 'reason' for some property
