@@ -101,22 +101,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1470031
-   Correctly set the 'action' and 'reason' fields of a property conflict.
-   API users were seeing the wrong 'action' and 'reason' for some property
-   conflicts. 'svn' does not yet use these fields.
-   Justification:
-     It's wrong.  It's simple.  Fixing it in a 1.x.0 release involves less
-     risk of interfering with any client's work-around for the bug.  We may
-     want to backport changes to 'svn' to report property conflicts better,
-     and then 'svn' may use these fields; I'm working on such a change.
-   Votes:
-     +1: julianfoad, philip
-     +1: rhuijben   (after this patch the situation is better, but I'm not
-                     sure if it is optimal. In merge there are 4 trees to
-                     consider before we can tell the reason. The 4th tree
-                     is available as the pristine version of the local node)
-
  * r1469862, r1469866, r1475704
    Change configure default to --without-apache-libexecdir.
    Justification:
