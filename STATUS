@@ -85,7 +85,7 @@ Candidate changes:
      Allows string to be localised. Fewer translation file mismatches.
    Votes:
      +1 (non-binding): mattiase
-     +1: danielsh
+     +1: danielsh, philip
 
 Veto-blocked changes:
 =====================
