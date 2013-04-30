@@ -101,17 +101,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1469862, r1469866, r1475704
-   Change configure default to --without-apache-libexecdir.
-   Justification:
-     Before this change, by default, Apache modules would very likely be
-     installed outside of $prefix, while still being linked with shared
-     libraries in $prefix. This is not expected behaviour.
-   Votes:
-     +1: brane, philip, cmpilato
-     +0: danielsh (refraining from defaulting to ${httpd_libexecdir} is sane:
-                   e.g., allow install >1 svn's against a single httpd install)
-
  * r1470238, r1471153
    Improve labelling of the file diff in interactive conflict resolution 'df'
    option. Show labels such as "THEIRS" and "MERGED", not just the paths to
