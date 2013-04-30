@@ -100,14 +100,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1470238, r1471153
-   Improve labelling of the file diff in interactive conflict resolution 'df'
-   option. Show labels such as "THEIRS" and "MERGED", not just the paths to
-   the files on disk.
-   Justification:
-     It was confusing because the same 'df' option can show a different pair
-     of files depending on whether the conflicted operation was an update or
-     a merge, and on whether there's a base file or not.
-   Votes:
-     +1: julianfoad, philip, cmpilato

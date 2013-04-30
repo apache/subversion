@@ -123,9 +123,11 @@ svn_cl__accept_from_word(const char *word)
  * corresponding to the conflict described in DESC. */
 static svn_error_t *
 show_diff(const svn_wc_conflict_description2_t *desc,
+          const char *path_prefix,
           apr_pool_t *pool)
 {
   const char *path1, *path2;
+  const char *label1, *label2;
   svn_diff_t *diff;
   svn_stream_t *output;
   svn_diff_file_options_t *options;
@@ -145,18 +147,34 @@ show_diff(const svn_wc_conflict_description2_t *desc,
        * This way, the diff is always minimal and clearly identifies changes
        * brought into the working copy by the update/switch/merge operation. */
       if (desc->operation == svn_wc_operation_merge)
-        path1 = desc->my_abspath;
+        {
+          path1 = desc->my_abspath;
+          label1 = _("MINE");
+        }
       else
-        path1 = desc->their_abspath;
+        {
+          path1 = desc->their_abspath;
+          label1 = _("THEIRS");
+        }
       path2 = desc->merged_file;
+      label2 = _("MERGED");
     }
   else
     {
       /* There's no merged file, but we can show the
          difference between mine and theirs. */
       path1 = desc->their_abspath;
+      label1 = _("THEIRS");
       path2 = desc->my_abspath;
+      label2 = _("MINE");
     }
+
+  label1 = apr_psprintf(pool, "%s\t- %s",
+                        svn_cl__local_style_skip_ancestor(
+                          path_prefix, path1, pool), label1);
+  label2 = apr_psprintf(pool, "%s\t- %s",
+                        svn_cl__local_style_skip_ancestor(
+                          path_prefix, path2, pool), label2);
 
   options = svn_diff_file_options_create(pool);
   options->ignore_eol_style = TRUE;
@@ -165,7 +183,7 @@ show_diff(const svn_wc_conflict_description2_t *desc,
                                options, pool));
   return svn_diff_file_output_unified3(output, diff,
                                        path1, path2,
-                                       NULL, NULL,
+                                       label1, label2,
                                        APR_LOCALE_CHARSET,
                                        NULL, FALSE,
                                        pool);
@@ -712,7 +730,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
               continue;
             }
 
-          SVN_ERR(show_diff(desc, iterpool));
+          SVN_ERR(show_diff(desc, b->path_prefix, iterpool));
           knows_something = TRUE;
         }
       else if (strcmp(opt->code, "e") == 0 || strcmp(opt->code, ":-E") == 0)
