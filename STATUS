@@ -101,15 +101,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1476366
-   Eliminate an unsafe printf format string.
-   Justification:
-     Avoid a compiler warning and avoid fear, uncertainty and doubt when
-     people see this code. There is no an actual risk AFAICT; see my email
-     <http://svn.haxx.se/dev/archive-2013-04/0601.shtml>.
-   Votes:
-     +1: julianfoad, danielsh, rhuijben
-
  * r1470904, r1471744, r1475963, r1476155, r1476181, r1476254
    Tweak an upgrade Sql statement to be easier to understand and a tiny bit
    faster
