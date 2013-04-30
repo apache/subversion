@@ -896,3 +896,114 @@ svn_fs_fs__deserialize_noderevs_container(void **out,
 
   return SVN_NO_ERROR;
 }
+
+/* Deserialize the cache serialized APR struct at *IN in BUFFER and write
+ * the result to OUT.  Note that this will only resolve the pointers and
+ * not the array elements themselves. */
+static void
+resolve_apr_array_header(apr_array_header_t *out,
+                         const void *buffer,
+                         apr_array_header_t * const *in)
+{
+  const apr_array_header_t *array
+    = svn_temp_deserializer__ptr(buffer, (const void *const *)in);
+  const char *elements
+    = svn_temp_deserializer__ptr(array, (const void *const *)&array->elts);
+
+  *out = *array;
+  out->elts = (char *)elements;
+  out->pool = NULL;
+}
+
+svn_error_t *
+svn_fs_fs__noderevs_get_func(void **out,
+                             const void *data,
+                             apr_size_t data_len,
+                             void *baton,
+                             apr_pool_t *pool)
+{
+  node_revision_t *noderev;
+  binary_noderev_t *binary_noderev;
+  
+  apr_array_header_t ids;
+  apr_array_header_t data_reps;
+  apr_array_header_t prop_reps;
+  apr_array_header_t noderevs;
+
+  apr_uint32_t idx = *(apr_uint32_t *)baton;
+  const svn_fs_fs__noderevs_t *container = data;
+
+  /* Resolve all container pointers */
+  const string_table_t *paths
+    = svn_temp_deserializer__ptr(container,
+                         (const void *const *)&container->paths);
+
+  resolve_apr_array_header(&ids, container, &container->ids);
+  resolve_apr_array_header(&data_reps, container, &container->data_reps);
+  resolve_apr_array_header(&prop_reps, container, &container->prop_reps);
+  resolve_apr_array_header(&noderevs, container, &container->noderevs);
+  
+  /* allocate result struct and fill it field by field */
+  noderev = apr_pcalloc(pool, sizeof(*noderev));
+  binary_noderev = &APR_ARRAY_IDX(&noderevs, idx, binary_noderev_t);
+  
+  noderev->kind = (svn_node_kind_t)(binary_noderev->flags & NODEREV_KIND_MASK);
+  SVN_ERR(get_id(&noderev->id, &ids, binary_noderev->id, pool));
+  SVN_ERR(get_id(&noderev->predecessor_id, &ids,
+                 binary_noderev->predecessor_id, pool));
+
+  if (binary_noderev->flags & NODEREV_HAS_COPYFROM)
+    {
+      noderev->copyfrom_path
+        = svn_fs_fs__string_table_get_func(paths,
+                                           binary_noderev->copyfrom_path,
+                                           pool);
+      noderev->copyroot_rev = binary_noderev->copyfrom_rev;
+    }
+  else
+    {
+      noderev->copyfrom_path = NULL;
+      noderev->copyfrom_rev = SVN_INVALID_REVNUM;
+    }
+
+  if (binary_noderev->flags & NODEREV_HAS_COPYROOT)
+    {
+      noderev->copyroot_path
+        = svn_fs_fs__string_table_get_func(paths,
+                                           binary_noderev->copyroot_path,
+                                           pool);
+      noderev->copyroot_rev = binary_noderev->copyroot_rev;
+    }
+  else
+    {
+      noderev->copyroot_path = NULL;
+      noderev->copyroot_rev = 0;
+    }
+
+  noderev->predecessor_count = binary_noderev->predecessor_count;
+
+  SVN_ERR(get_representation(&noderev->prop_rep, &prop_reps,
+                             binary_noderev->prop_rep, pool));
+  SVN_ERR(get_representation(&noderev->data_rep, &data_reps,
+                             binary_noderev->data_rep.representation, pool));
+  if (noderev->data_rep)
+    {
+      noderev->data_rep->uniquifier.txn_id
+        = binary_noderev->data_rep.uniquifier.txn_id;
+      noderev->data_rep->uniquifier.number
+        = binary_noderev->data_rep.uniquifier.number;
+    }
+
+  if (binary_noderev->flags & NODEREV_HAS_CPATH)
+    noderev->created_path
+      = svn_fs_fs__string_table_get_func(paths,
+                                         binary_noderev->created_path,
+                                         pool);
+
+  noderev->mergeinfo_count = binary_noderev->mergeinfo_count;
+
+  noderev->has_mergeinfo = (binary_noderev->flags & NODEREV_HAS_MINFO) ? 1 : 0;
+  *out = noderev;
+
+  return SVN_NO_ERROR;
+}

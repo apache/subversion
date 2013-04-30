@@ -333,7 +333,6 @@ get_node_revision_body(node_revision_t **noderev_p,
       if (   is_packed_rev(fs, rev_item->revision)
           && ffd->noderevs_container_cache)
         {
-          svn_fs_fs__noderevs_t *noderevs;
           apr_off_t offset;
           apr_uint32_t sub_item;
           SVN_ERR(svn_fs_fs__item_offset(&offset, &sub_item, fs,
@@ -342,14 +341,12 @@ get_node_revision_body(node_revision_t **noderev_p,
           key.revision = packed_base_rev(fs, rev_item->revision);
           key.second = offset;
 
-          SVN_ERR(svn_cache__get((void **)&noderevs, &is_cached,
-                                 ffd->noderevs_container_cache, &key, pool));
+          SVN_ERR(svn_cache__get_partial((void **)noderev_p, &is_cached,
+                                         ffd->noderevs_container_cache, &key, 
+                                         svn_fs_fs__noderevs_get_func,
+                                         &sub_item, pool));
           if (is_cached)
-            {
-              SVN_ERR(svn_fs_fs__noderevs_get(noderev_p, noderevs, sub_item,
-                                              pool));
-              return SVN_NO_ERROR;
-            }
+            return SVN_NO_ERROR;
         }
 
       key.revision = rev_item->revision;
@@ -2167,7 +2164,6 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
 
   if (ffd->changes_container_cache && is_packed_rev(fs, rev))
     {
-      svn_fs_fs__changes_t *container;
       apr_off_t offset;
       apr_uint32_t sub_item;
       pair_cache_key_t key;
@@ -2177,11 +2173,10 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
       key.revision = packed_base_rev(fs, rev);
       key.second = offset;
 
-      SVN_ERR(svn_cache__get((void **)&container, &found,
-                            ffd->changes_container_cache, &key, pool));
-      if (found)
-        SVN_ERR(svn_fs_fs__changes_get_list(changes, container, sub_item,
-                                            pool));
+      SVN_ERR(svn_cache__get_partial((void **)changes, &found,
+                                     ffd->changes_container_cache, &key,
+                                     svn_fs_fs__changes_get_list_func,
+                                     &sub_item, pool));
     }
   else if (ffd->changes_cache)
     {

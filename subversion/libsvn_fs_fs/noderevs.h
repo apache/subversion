@@ -115,4 +115,16 @@ svn_fs_fs__deserialize_noderevs_container(void **out,
                                           apr_size_t data_len,
                                           apr_pool_t *pool);
 
+/* Implements svn_cache__partial_getter_func_t for svn_fs_fs__noderevs_t,
+ * setting *OUT to the node_revision_t selected by the apr_uint32_t index
+ * passed in as *BATON.  This function is similar to svn_fs_fs__noderevs_get
+ * but operates on the cache serialized representation of the container.
+ */
+svn_error_t *
+svn_fs_fs__noderevs_get_func(void **out,
+                             const void *data,
+                             apr_size_t data_len,
+                             void *baton,
+                             apr_pool_t *pool);
+
 #endif

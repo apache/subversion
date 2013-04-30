@@ -114,4 +114,17 @@ svn_fs_fs__deserialize_changes_container(void **out,
                                          apr_size_t data_len,
                                          apr_pool_t *pool);
 
+/* Implements svn_cache__partial_getter_func_t for svn_fs_fs__changes_t,
+ * setting *OUT to the change list (apr_array_header_t *) selected by
+ * the apr_uint32_t index passed in as *BATON.  This function is similar
+ * to svn_fs_fs__changes_get_list but operates on the cache serialized
+ * representation of the container.
+ */
+svn_error_t *
+svn_fs_fs__changes_get_list_func(void **out,
+                                 const void *data,
+                                 apr_size_t data_len,
+                                 void *baton,
+                                 apr_pool_t *pool);
+
 #endif

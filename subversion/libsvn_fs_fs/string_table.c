@@ -811,3 +811,70 @@ svn_fs_fs__deserialize_string_table(void *buffer,
                                (void **)&sub_table->long_strings[k].data);
     }
 }
+
+const char*
+svn_fs_fs__string_table_get_func(const string_table_t *table,
+                                 apr_size_t idx,
+                                 apr_pool_t *pool)
+{
+  apr_size_t table_number = idx >> TABLE_SHIFT;
+  apr_size_t sub_index = idx & STRING_INDEX_MASK;
+
+  if (table_number < table->size)
+    {
+      /* resolve TABLE->SUB_TABLES pointer and select sub-table */
+      string_sub_table_t *sub_tables
+        = (string_sub_table_t *)svn_temp_deserializer__ptr(table,
+                                   (const void *const *)&table->sub_tables);
+      string_sub_table_t *sub_table = sub_tables + table_number;
+
+      /* pick the right kind of string */
+      if (idx & LONG_STRING_MASK)
+        {
+          if (sub_index < sub_table->long_string_count)
+            {
+              /* resolve SUB_TABLE->LONG_STRINGS, select the string we want
+                 and resolve the pointer to its char data */
+              svn_string_t *long_strings
+                = (svn_string_t *)svn_temp_deserializer__ptr(sub_table,
+                             (const void *const *)&sub_table->long_strings);
+              const char *str_data
+                = (const char*)svn_temp_deserializer__ptr(long_strings,
+                        (const void *const *)&long_strings[sub_index].data);
+
+              /* return a copy of the char data */
+              return apr_pstrmemdup(pool,
+                                    str_data,
+                                    long_strings[sub_index].len);
+            }
+        }
+      else
+        {
+          if (sub_index < sub_table->short_string_count)
+            {
+              /* construct a copy of our sub-table struct with SHORT_STRINGS
+                 and DATA pointers resolved.  Leave all other pointers as
+                 they are.  This allows us to use the same code for string
+                 reconstruction here as in the non-serialized case. */
+              string_sub_table_t table_copy = *sub_table;
+              table_copy.data
+                = (const char *)svn_temp_deserializer__ptr(sub_tables,
+                                     (const void *const *)&sub_table->data);
+              table_copy.short_strings
+                = (string_header_t *)svn_temp_deserializer__ptr(sub_tables,
+                            (const void *const *)&sub_table->short_strings);
+
+              /* reconstruct the char data and return it */
+              string_header_t *header = table_copy.short_strings + sub_index;
+              apr_size_t len = header->head_length + header->tail_length + 1;
+              char *result = apr_palloc(pool, len);
+              
+              table_copy_string(result, len, &table_copy, header);
+
+              return result;
+            }
+        }
+    }
+
+  return "";
+}

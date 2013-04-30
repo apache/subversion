@@ -130,6 +130,15 @@ void
 svn_fs_fs__deserialize_string_table(void *buffer,
                                     string_table_t **table);
 
+/* Extract string number INDEX from the cache serialized representation at
+ * TABLE and return a copy of it allocated in POOL.  Returns an empty string
+ * for invalid indexes.
+ */
+const char*
+svn_fs_fs__string_table_get_func(const string_table_t *table,
+                                 apr_size_t idx,
+                                 apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

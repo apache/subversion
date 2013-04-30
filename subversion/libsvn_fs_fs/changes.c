@@ -474,3 +474,94 @@ svn_fs_fs__deserialize_changes_container(void **out,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_fs_fs__changes_get_list_func(void **out,
+                                 const void *data,
+                                 apr_size_t data_len,
+                                 void *baton,
+                                 apr_pool_t *pool)
+{
+  int first;
+  int last;
+  int i;
+  apr_array_header_t *list;
+
+  apr_uint32_t idx = *(apr_uint32_t *)baton;
+  const svn_fs_fs__changes_t *container = data;
+
+  /* resolve all the sub-container pointers we need */
+  const string_table_t *paths
+    = svn_temp_deserializer__ptr(container,
+                                 (const void *const *)&container->paths);
+  const apr_array_header_t *serialized_offsets
+    = svn_temp_deserializer__ptr(container,
+                                 (const void *const *)&container->offsets);
+  const apr_array_header_t *serialized_changes
+    = svn_temp_deserializer__ptr(container,
+                                 (const void *const *)&container->changes);
+  const int *offsets
+    = svn_temp_deserializer__ptr(serialized_offsets,
+                              (const void *const *)&serialized_offsets->elts);
+  const binary_change_t *changes
+    = svn_temp_deserializer__ptr(serialized_changes,
+                              (const void *const *)&serialized_changes->elts);
+
+  /* validate index */
+  if (idx + 1 >= (apr_size_t)serialized_offsets->nelts)
+    return svn_error_createf(SVN_ERR_FS_CONTAINER_INDEX, NULL,
+                             _("Changes list index %u exceeds container "
+                               "size %d"),
+                             (unsigned)idx, serialized_offsets->nelts - 1);
+
+  /* range of changes to return */
+  first = offsets[idx];
+  last = offsets[idx+1];
+
+  /* construct result */
+  list = apr_array_make(pool, last - first, sizeof(change_t*));
+
+  for (i = first; i < last; ++i)
+    {
+      const binary_change_t *binary_change = &changes[i];
+
+      /* convert BINARY_CHANGE into a standard FSFS change_t */
+      change_t *change = apr_pcalloc(pool, sizeof(*change));
+      change->path = svn_fs_fs__string_table_get_func(paths,
+                                                      binary_change->path,
+                                                      pool);
+
+      if (svn_fs_fs__id_txn_used(&binary_change->rev_id))
+        change->noderev_id
+          = (binary_change->flags & CHANGE_TXN_NODE)
+          ? svn_fs_fs__id_txn_create(&binary_change->node_id,
+                                     &binary_change->copy_id,
+                                     &binary_change->rev_id,
+                                     pool)
+          : svn_fs_fs__id_rev_create(&binary_change->node_id,
+                                     &binary_change->copy_id,
+                                     &binary_change->rev_id,
+                                     pool);
+
+      change->kind = (svn_fs_path_change_kind_t)
+        ((binary_change->flags & CHANGE_KIND_MASK) >> CHANGE_KIND_SHIFT);
+      change->text_mod = (binary_change->flags & CHANGE_TEXT_MOD) != 0;
+      change->prop_mod = (binary_change->flags & CHANGE_PROP_MOD) != 0;
+      change->node_kind = (svn_node_kind_t)
+        ((binary_change->flags & CHANGE_NODE_MASK) >> CHANGE_NODE_SHIFT);
+
+      change->copyfrom_rev = binary_change->copyfrom_rev;
+      if (SVN_IS_VALID_REVNUM(binary_change->copyfrom_rev))
+        change->copyfrom_path 
+          = svn_fs_fs__string_table_get_func(paths,
+                                             binary_change->copyfrom_path,
+                                             pool);
+
+      /* add it to the result */
+      APR_ARRAY_PUSH(list, change_t*) = change;
+    }
+
+  *out = list;
+
+  return SVN_NO_ERROR;
+}
