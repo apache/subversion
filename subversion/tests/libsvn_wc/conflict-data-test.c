@@ -54,42 +54,64 @@ fail(apr_pool_t *pool, const char *fmt, ...)
   return svn_error_create(SVN_ERR_TEST_FAILED, 0, msg);
 }
 
-/* Raise a test error if EXPECTED and ACTUAL differ. */
+/* Assert that two integers are equal. Return an error if not. */
+#define ASSERT_INT_EQ(a, b) \
+  do { \
+    if ((a) != (b)) \
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL, \
+                               "failed: ASSERT_INT_EQ(" #a ", " #b ") " \
+                               "-> (%d == %d)", a, b); \
+  } while (0)
+
+/* Assert that two strings are equal or both null. Return an error if not. */
+#define ASSERT_STR_EQ(a, b) \
+  SVN_TEST_STRING_ASSERT(a, b)
+
+/* Assert that two version_t's are equal or both null. Return an error if not. */
 static svn_error_t *
-compare_version(const svn_wc_conflict_version_t *expected,
-                const svn_wc_conflict_version_t *actual)
+compare_version(const svn_wc_conflict_version_t *actual,
+                const svn_wc_conflict_version_t *expected)
 {
-  SVN_TEST_STRING_ASSERT(expected->repos_url, actual->repos_url);
-  SVN_TEST_ASSERT(expected->peg_rev == actual->peg_rev);
-  SVN_TEST_STRING_ASSERT(expected->path_in_repos, actual->path_in_repos);
-  SVN_TEST_ASSERT(expected->node_kind == actual->node_kind);
+  if (actual == NULL && expected == NULL)
+    return SVN_NO_ERROR;
+
+  SVN_TEST_ASSERT(actual && expected);
+  ASSERT_STR_EQ(actual->repos_url,      expected->repos_url);
+  ASSERT_INT_EQ((int)actual->peg_rev,   (int)expected->peg_rev);
+  ASSERT_STR_EQ(actual->path_in_repos,  expected->path_in_repos);
+  ASSERT_INT_EQ(actual->node_kind,      expected->node_kind);
   return SVN_NO_ERROR;
 }
 
-/* Raise a test error if EXPECTED and ACTUAL differ or if ACTUAL is NULL. */
+/* Assert that two conflict descriptions contain exactly the same data
+ * (including names of temporary files), or are both NULL.  Return an
+ * error if not. */
 static svn_error_t *
-compare_conflict(const svn_wc_conflict_description2_t *expected,
-                 const svn_wc_conflict_description2_t *actual)
+compare_conflict(const svn_wc_conflict_description2_t *actual,
+                 const svn_wc_conflict_description2_t *expected)
 {
-  SVN_TEST_ASSERT(actual != NULL);
+  if (actual == NULL && expected == NULL)
+    return SVN_NO_ERROR;
 
-  SVN_TEST_STRING_ASSERT(expected->local_abspath, actual->local_abspath);
-  SVN_TEST_ASSERT(expected->node_kind == actual->node_kind);
-  SVN_TEST_ASSERT(expected->kind == actual->kind);
-  SVN_TEST_STRING_ASSERT(expected->property_name, actual->property_name);
-  SVN_TEST_ASSERT(expected->is_binary == actual->is_binary);
-  SVN_TEST_STRING_ASSERT(expected->mime_type, actual->mime_type);
-  SVN_TEST_ASSERT(expected->action == actual->action);
-  SVN_TEST_ASSERT(expected->reason == actual->reason);
-  SVN_TEST_STRING_ASSERT(expected->base_abspath, actual->base_abspath);
-  SVN_TEST_STRING_ASSERT(expected->their_abspath, actual->their_abspath);
-  SVN_TEST_STRING_ASSERT(expected->my_abspath, actual->my_abspath);
-  SVN_TEST_STRING_ASSERT(expected->merged_file, actual->merged_file);
-  SVN_TEST_ASSERT(expected->operation == actual->operation);
-  SVN_ERR(compare_version(expected->src_left_version,
-                          actual->src_left_version));
-  SVN_ERR(compare_version(expected->src_right_version,
-                          actual->src_right_version));
+  SVN_TEST_ASSERT(actual && expected);
+
+  ASSERT_INT_EQ(actual->kind,           expected->kind);
+  ASSERT_STR_EQ(actual->local_abspath,  expected->local_abspath);
+  ASSERT_INT_EQ(actual->node_kind,      expected->node_kind);
+  ASSERT_STR_EQ(actual->property_name,  expected->property_name);
+  ASSERT_INT_EQ(actual->is_binary,      expected->is_binary);
+  ASSERT_STR_EQ(actual->mime_type,      expected->mime_type);
+  ASSERT_INT_EQ(actual->action,         expected->action);
+  ASSERT_INT_EQ(actual->reason,         expected->reason);
+  ASSERT_STR_EQ(actual->base_abspath,   expected->base_abspath);
+  ASSERT_STR_EQ(actual->their_abspath,  expected->their_abspath);
+  ASSERT_STR_EQ(actual->my_abspath,     expected->my_abspath);
+  ASSERT_STR_EQ(actual->merged_file,    expected->merged_file);
+  ASSERT_INT_EQ(actual->operation,      expected->operation);
+  SVN_ERR(compare_version(actual->src_left_version,
+                          expected->src_left_version));
+  SVN_ERR(compare_version(actual->src_right_version,
+                          expected->src_right_version));
   return SVN_NO_ERROR;
 }
 
@@ -254,11 +276,11 @@ test_read_write_tree_conflicts(const svn_test_opts_t *opts,
 
     SVN_ERR(svn_wc__get_tree_conflict(&read_conflict, sbox.wc_ctx,
                                       child1_abspath, pool, pool));
-    SVN_ERR(compare_conflict(conflict1, read_conflict));
+    SVN_ERR(compare_conflict(read_conflict, conflict1));
 
     SVN_ERR(svn_wc__get_tree_conflict(&read_conflict, sbox.wc_ctx,
                                       child2_abspath, pool, pool));
-    SVN_ERR(compare_conflict(conflict2, read_conflict));
+    SVN_ERR(compare_conflict(read_conflict, conflict2));
   }
 
   /* Read many */
