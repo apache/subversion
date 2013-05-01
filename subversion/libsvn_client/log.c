@@ -433,7 +433,7 @@ resolve_wc_opt_revs(svn_opt_revision_t *opt_rev,
 {
   if (SVN_CLIENT__REVKIND_NEEDS_WC(opt_rev->kind))
     {
-      svn_revnum_t range_start_as_revnum;// = 0;
+      svn_revnum_t range_start_as_revnum;
 
       SVN_ERR(svn_client__get_revision_number(&range_start_as_revnum,
                                               NULL, ctx->wc_ctx, abspath,
@@ -925,7 +925,6 @@ svn_client_log5(const apr_array_header_t *targets,
                 apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session;
-  const char *url_or_path;
   const char *old_session_url;
   const char *ra_target;
   svn_opt_revision_t youngest_opt_rev;
@@ -950,9 +949,6 @@ svn_client_log5(const apr_array_header_t *targets,
 
   SVN_ERR(resolve_log_targets(&relative_targets, &ra_target, &peg_rev,
                               targets, ctx, pool, pool));
-
-  /* Use the passed URL, if there is one.  */
-  url_or_path = APR_ARRAY_IDX(targets, 0, const char *);
 
   /* Convert OPT_REV_RANGES to an array of rev_range_t and find the youngest
      and oldest revision range that spans all of OPT_REV_RANGES. */
