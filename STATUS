@@ -64,6 +64,7 @@ Candidate changes:
      r1476092 is the CHANGES update.
    Votes:
      +1: brane
+     +1: philip (for 1.8.0 only, not later 1.8.x)
 
  * r1477876
    Fix a bug whereby a property conflict description always reported
