@@ -80,14 +80,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1476607
-   Some svnadmin command help copy-editing.
-   Justification:
-     For users, consistency; for translators, fewer mismatches.
-   Votes:
-     +1 (non-binding): mattiase
-     +1: danielsh, cmpilato, julianfoad
-
  * r1477359
    Fix broken localisation of a string.
    Justification:

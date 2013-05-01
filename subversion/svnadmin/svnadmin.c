@@ -358,7 +358,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
 
   {"hotcopy", subcommand_hotcopy, {0}, N_
    ("usage: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n\n"
-    "Makes a hot copy of a repository.\n"
+    "Make a hot copy of a repository.\n"
     "If --incremental is passed, data which already exists at the destination\n"
     "is not copied again.  Incremental mode is implemented for FSFS repositories.\n"),
    {svnadmin__clean_logs, svnadmin__incremental} },
@@ -461,7 +461,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
 
   {"unlock", subcommand_unlock, {0}, N_
    ("usage: svnadmin unlock REPOS_PATH LOCKED_PATH USERNAME TOKEN\n\n"
-    "Unlocked LOCKED_PATH (as USERNAME) after verifying that the token\n"
+    "Unlock LOCKED_PATH (as USERNAME) after verifying that the token\n"
     "associated with the lock matches TOKEN.  Use --bypass-hooks to avoid\n"
     "triggering the pre-unlock and post-unlock hook scripts.\n"),
    {svnadmin__bypass_hooks} },
@@ -481,7 +481,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
 
   {"verify", subcommand_verify, {0}, N_
    ("usage: svnadmin verify REPOS_PATH\n\n"
-    "Verifies the data stored in the repository.\n"),
+    "Verify the data stored in the repository.\n"),
   {'t', 'r', 'q', 'M'} },
 
   { NULL, NULL, {0}, NULL, {0} }
