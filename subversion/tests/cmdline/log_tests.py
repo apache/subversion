@@ -2369,7 +2369,6 @@ def merge_sensitive_log_with_search(sbox):
 # Test for issue #4355 'svn_client_log5 broken with multiple revisions
 # which span a rename'.
 @Issue(4355)
-@XFail()
 @SkipUnless(server_has_mergeinfo)
 def log_multiple_revs_spanning_rename(sbox):
   "log for multiple revs which span a rename"
@@ -2403,6 +2402,7 @@ def log_multiple_revs_spanning_rename(sbox):
   svntest.main.file_write(msg_file, msg)
   svntest.main.file_append(mu_path2, "4")
   svntest.main.run_svn(None, 'ci', '-F', msg_file, wc_dir)
+  svntest.main.run_svn(None, 'up', wc_dir)
 
   # Check that log can handle a revision range that spans a rename.
   exit_code, output, err = svntest.actions.run_and_verify_svn(
@@ -2456,7 +2456,8 @@ def log_multiple_revs_spanning_rename(sbox):
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [1,4,3,2])
 
-  # As above, but revision ranges from younger to older revs fail:
+  # As above, but revision ranges from younger to older.  Previously this
+  # failed with:
   #
   #  >svn log ^/trunk -r1:1 -r2:4
   #  ------------------------------------------------------------------------
