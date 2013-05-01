@@ -77,7 +77,8 @@ Candidate changes:
      (rather than porting prior changes on which it depended). The test is
      in r1478001, and it depends on the test file changes made in r1477891.
    Votes:
-     +1: julianfoad
+     -1: julianfoad ('svn update' now crashes on interactive resolution of a
+                     prop conflict)
 
 Veto-blocked changes:
 =====================
