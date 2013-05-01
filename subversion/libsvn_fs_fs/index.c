@@ -2284,7 +2284,7 @@ get_p2l_keys(p2l_page_info_baton_t *page_info_p,
 /* Body of svn_fs_fs__p2l_index_lookup.  Use / autoconstruct *STREAM as
  * your input based on REVISION.
  */
-svn_error_t *
+static svn_error_t *
 p2l_index_lookup(apr_array_header_t **entries,
                  packed_number_stream_t **stream,
                  svn_fs_t *fs,
@@ -2455,7 +2455,7 @@ p2l_entry_lookup_func(void **out,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
+static svn_error_t *
 p2l_entry_lookup(svn_fs_fs__p2l_entry_t **entry_p,
                  packed_number_stream_t **stream,
                  svn_fs_t *fs,

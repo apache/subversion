@@ -902,7 +902,6 @@ auto_pad_block(pack_context_t *context,
       /* Yes. To up with NUL bytes and don't forget to create
        * an P2L index entry marking this section as unused. */
       svn_fs_fs__p2l_entry_t null_entry;
-      svn_fs_fs__id_part_t rev_item = { 0, SVN_FS_FS__ITEM_INDEX_UNUSED };
 
       null_entry.offset = context->pack_offset;
       null_entry.size = padding;
@@ -1149,7 +1148,6 @@ copy_items_from_temp(pack_context_t *context,
                      apr_file_t *temp_file,
                      apr_pool_t *pool)
 {
-  fs_fs_data_t *ffd = context->fs->fsap_data;
   apr_pool_t *iterpool = svn_pool_create(pool);
   int i, k;
 
@@ -1166,8 +1164,6 @@ copy_items_from_temp(pack_context_t *context,
       /* Copy the remaining non-NULL, non-container items to the pack file */
       for (k = i; k < i + entries_in_block; ++k)
         {
-          apr_off_t in_block_offset = context->pack_offset % ffd->block_size;
-
           svn_fs_fs__p2l_entry_t *entry
             = APR_ARRAY_IDX(entries, k, svn_fs_fs__p2l_entry_t *);
           if (!entry || entry->type == SVN_FS_FS__ITEM_TYPE_NODEREVS_CONT)
@@ -1267,7 +1263,6 @@ write_changes_containers(pack_context_t *context,
                          apr_file_t *temp_file,
                          apr_pool_t *pool)
 {
-  fs_fs_data_t *ffd = context->fs->fsap_data;
   apr_pool_t *iterpool = svn_pool_create(pool);
   apr_pool_t *container_pool = svn_pool_create(pool);
   int i;

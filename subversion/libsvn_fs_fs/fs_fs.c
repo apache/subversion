@@ -1409,7 +1409,7 @@ verify_walker(representation_t *rep,
  * The values of START and END have already been auto-selected and
  * verified.
  */
-svn_error_t *
+static svn_error_t *
 verify_rep_cache(svn_fs_t *fs,
                  svn_revnum_t start,
                  svn_revnum_t end,
@@ -1419,7 +1419,6 @@ verify_rep_cache(svn_fs_t *fs,
                  void *cancel_baton,
                  apr_pool_t *pool)
 {
-  fs_fs_data_t *ffd = fs->fsap_data;
   svn_boolean_t exists;
 
   /* rep-cache verification. */
@@ -1458,7 +1457,7 @@ verify_rep_cache(svn_fs_t *fs,
  * index.  If given, invoke CANCEL_FUNC with CANCEL_BATON at regular
  * intervals. Use POOL for allocations.
  */
-svn_error_t *
+static svn_error_t *
 compare_l2p_to_p2l_index(svn_fs_t *fs,
                          svn_revnum_t start,
                          svn_revnum_t count,
@@ -1535,7 +1534,7 @@ compare_l2p_to_p2l_index(svn_fs_t *fs,
  * Please note that we can only check on pack / rev file granularity and
  * must only be called for a single rev / pack file.
  */
-svn_error_t *
+static svn_error_t *
 compare_p2l_to_l2p_index(svn_fs_t *fs,
                          svn_revnum_t start,
                          svn_revnum_t count,
@@ -1544,7 +1543,6 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
                          apr_pool_t *pool)
 {
   apr_pool_t *iterpool = svn_pool_create(pool);
-  apr_array_header_t *max_ids;
   apr_off_t max_offset;
   apr_off_t offset = 0;
 
@@ -1565,7 +1563,7 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
       if (entries->nelts == 0)
         return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_CORRUPTION,
                                  NULL,
-                                 _("p2l does not cover offset " APR_OFF_T_FMT
+                                 _("p2l does not cover offset %" APR_OFF_T_FMT
                                    " for revision %ld"),
                                  offset, start);
 
@@ -1623,7 +1621,7 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
  * The values of START and END have already been auto-selected and
  * verified.  You may call this for format7 or higher repos.
  */
-svn_error_t *
+static svn_error_t *
 verify_index_consistency(svn_fs_t *fs,
                          svn_revnum_t start,
                          svn_revnum_t end,
@@ -1639,7 +1637,6 @@ verify_index_consistency(svn_fs_t *fs,
 
   for (revision = start; revision <= end; revision = pack_end)
     {
-      apr_array_header_t *max_ids;
       pack_start = packed_base_rev(fs, revision);
       pack_end = pack_start + pack_size(fs, revision);
 
@@ -1671,7 +1668,6 @@ svn_fs_fs__verify(svn_fs_t *fs,
                   apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  svn_boolean_t exists;
   svn_revnum_t youngest = ffd->youngest_rev_cache; /* cache is current */
 
   /* Input validation. */

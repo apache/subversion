@@ -26,6 +26,7 @@
 
 #include "changes.h"
 #include "string_table.h"
+#include "temp_serializer.h"
 
 /* These flags will be used with the FLAGS field in binary_change_t.
  */

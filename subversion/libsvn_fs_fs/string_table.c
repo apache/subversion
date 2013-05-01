@@ -852,6 +852,10 @@ svn_fs_fs__string_table_get_func(const string_table_t *table,
         {
           if (sub_index < sub_table->short_string_count)
             {
+              string_header_t *header;
+              apr_size_t len;
+              char *result;
+              
               /* construct a copy of our sub-table struct with SHORT_STRINGS
                  and DATA pointers resolved.  Leave all other pointers as
                  they are.  This allows us to use the same code for string
@@ -865,9 +869,9 @@ svn_fs_fs__string_table_get_func(const string_table_t *table,
                             (const void *const *)&sub_table->short_strings);
 
               /* reconstruct the char data and return it */
-              string_header_t *header = table_copy.short_strings + sub_index;
-              apr_size_t len = header->head_length + header->tail_length + 1;
-              char *result = apr_palloc(pool, len);
+              header = table_copy.short_strings + sub_index;
+              len = header->head_length + header->tail_length + 1;
+              result = apr_palloc(pool, len);
               
               table_copy_string(result, len, &table_copy, header);
 

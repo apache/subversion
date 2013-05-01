@@ -28,6 +28,7 @@
 
 #include "noderevs.h"
 #include "string_table.h"
+#include "temp_serializer.h"
 
 /* These flags will be used with the FLAGS field in binary_noderev_t.
  */
@@ -230,7 +231,7 @@ store_id(apr_array_header_t *ids,
          apr_hash_t *dict,
          const svn_fs_id_t *id)
 {
-  binary_id_t bin_id = { 0 };
+  binary_id_t bin_id = { { 0 } };
   int idx;
 
   if (id == NULL)
@@ -292,7 +293,6 @@ svn_fs_fs__noderevs_add(svn_fs_fs__noderevs_t *container,
                         node_revision_t *noderev)
 {
   binary_noderev_t binary_noderev = { 0 };
-  svn_boolean_t is_txn_id;
 
   binary_noderev.flags = (noderev->has_mergeinfo ? NODEREV_HAS_MINFO : 0)
                        | (noderev->copyfrom_path ? NODEREV_HAS_COPYFROM : 0)
@@ -580,11 +580,11 @@ write_reps(svn_packed__int_stream_t *rep_stream,
       svn_packed__add_uint(rep_stream, rep->expanded_size);
       
       svn_packed__add_bytes(digest_stream,
-                            rep->md5_digest,
+                            (const char *)rep->md5_digest,
                             sizeof(rep->md5_digest));
       if (rep->has_sha1)
         svn_packed__add_bytes(digest_stream,
-                              rep->sha1_digest,
+                              (const char *)rep->sha1_digest,
                               sizeof(rep->sha1_digest));
     }
 }
