@@ -65,22 +65,6 @@ Candidate changes:
    Votes:
      +1: brane
 
- * r1476607
-   Some svnadmin command help copy-editing.
-   Justification:
-     For users, consistency; for translators, fewer mismatches.
-   Votes:
-     +1 (non-binding): mattiase
-     +1: danielsh, cmpilato
-
- * r1477359
-   Fix broken localisation of a string.
-   Justification:
-     Allows string to be localised. Fewer translation file mismatches.
-   Votes:
-     +1 (non-binding): mattiase
-     +1: danielsh, philip
-
  * r1477876
    Fix a bug whereby a property conflict description always reported
      'unknown' for the node kind.
@@ -109,3 +93,19 @@ Approved changes:
      Avoid SQLITE_MISUSE errors.
    Votes:
      +1: philip, cmpilato, brane
+
+ * r1476607
+   Some svnadmin command help copy-editing.
+   Justification:
+     For users, consistency; for translators, fewer mismatches.
+   Votes:
+     +1 (non-binding): mattiase
+     +1: danielsh, cmpilato, julianfoad
+
+ * r1477359
+   Fix broken localisation of a string.
+   Justification:
+     Allows string to be localised. Fewer translation file mismatches.
+   Votes:
+     +1 (non-binding): mattiase
+     +1: danielsh, philip, julianfoad
