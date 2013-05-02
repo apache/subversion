@@ -70,13 +70,6 @@
  * various flags. */
 #define MAX_CHANGE_LINE_LEN FSFS_MAX_PATH_LEN + 256
 
-/* Given the last "few" bytes (should be at least 40) of revision REV in
- * TRAILER,  parse the last line and return the offset of the root noderev
- * in *ROOT_OFFSET and the offset of the changes list in *CHANGES_OFFSET.
- * All offsets are relative to the revision's start offset.
- * 
- * Note that REV is only used to construct nicer error objects.
- */
 svn_error_t *
 svn_fs_fs__parse_revision_trailer(apr_off_t *root_offset,
                                   apr_off_t *changes_offset,
@@ -155,10 +148,6 @@ svn_fs_fs__parse_revision_trailer(apr_off_t *root_offset,
   return SVN_NO_ERROR;
 }
 
-/* Given the offset of the root noderev in ROOT_OFFSET and the offset of
- * the changes list in CHANGES_OFFSET,  return the corresponding revision's
- * trailer.  Allocate it in POOL.
- */
 svn_stringbuf_t *
 svn_fs_fs__unparse_revision_trailer(apr_off_t root_offset,
                                     apr_off_t changes_offset,
@@ -231,13 +220,6 @@ read_header_block(apr_hash_t **headers,
   return SVN_NO_ERROR;
 }
 
-/* Parse the description of a representation from STRING and store it
-   into *REP_P.  If the representation is mutable (the revision is
-   given as -1), then use TXN_ID for the representation's txn_id
-   field.  If MUTABLE_REP_TRUNCATED is true, then this representation
-   is for property or directory contents, and no information will be
-   expected except the "-1" revision number for a mutable
-   representation.  Allocate *REP_P in POOL. */
 svn_error_t *
 svn_fs_fs__parse_representation(representation_t **rep_p,
                                 svn_stringbuf_t *text,
@@ -538,12 +520,6 @@ format_digest(const unsigned char *digest,
   return svn_checksum_to_cstring_display(&checksum, pool);
 }
 
-/* Return a formatted string, compatible with filesystem format FORMAT,
-   that represents the location of representation REP.  If
-   MUTABLE_REP_TRUNCATED is given, the rep is for props or dir contents,
-   and only a "-1" revision number will be given for a mutable rep.
-   If MAY_BE_CORRUPT is true, guard for NULL when constructing the string.
-   Perform the allocation from POOL.  */
 svn_stringbuf_t *
 svn_fs_fs__unparse_representation(representation_t *rep,
                                   int format,
@@ -649,9 +625,6 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
   return svn_stream_puts(outfile, "\n");
 }
 
-/* Read the next line from file FILE and parse it as a text
-   representation entry.  Return the parsed entry in *REP_ARGS_P.
-   Perform all allocations in POOL. */
 svn_error_t *
 svn_fs_fs__read_rep_header(svn_fs_fs__rep_header_t **header,
                            svn_stream_t *stream,
@@ -894,8 +867,6 @@ read_change(change_t **change_p,
   return SVN_NO_ERROR;
 }
 
-/* Fetch all the changes from FILE and store them in *CHANGES.  Do all
-   allocations in POOL. */
 svn_error_t *
 svn_fs_fs__read_changes(apr_array_header_t **changes,
                         svn_stream_t *stream,
@@ -987,10 +958,6 @@ write_change_entry(svn_stream_t *stream,
   return svn_error_trace(svn_stream_puts(stream, "\n"));
 }
 
-/* Write the changed path info from transaction TXN_ID in filesystem
-   FS to the permanent rev-file FILE.  *OFFSET_P is set the to offset
-   in the file of the beginning of this information.  Perform
-   temporary allocations in POOL. */
 svn_error_t *
 svn_fs_fs__write_changes(svn_stream_t *stream,
                          svn_fs_t *fs,
