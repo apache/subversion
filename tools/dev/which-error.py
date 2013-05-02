@@ -73,6 +73,8 @@ def get_errors():
   errs.update(errno.errorcode)
   ## APR-defined errors, from apr_errno.h.
   for line in open(os.path.join(os.path.dirname(sys.argv[0]), 'aprerr.txt')):
+    if line.startswith('#'):
+       continue
     key, _, val = line.split()
     errs[int(val)] = key
   ## Subversion errors, from svn_error_codes.h.
