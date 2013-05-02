@@ -1,4 +1,4 @@
-﻿The following people have commit access to the Subversion sources.
+The following people have commit access to the Subversion sources.
 Note that this is not a full list of Subversion's authors, however --
 for that, you'd need to look over the log messages to see all the
 patch contributors.
@@ -187,6 +187,7 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
                                                              IS BOUNCING]
         fabien   Fabien Coelho <fabien@coelho.net>           (po: fr)
        marcelg   Marcel Gosselin <marcel.gosselin@polymtl.ca> (po: fr)
+      mattiase   Mattias Engdegård <mattiase@acm.org>        (po: sv)
 
   Experimental branches:
 
