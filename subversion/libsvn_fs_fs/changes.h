@@ -1,4 +1,4 @@
-/* changes.h --- FSFS changes lists container
+/* changes.h --- FSFS changed paths lists container
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

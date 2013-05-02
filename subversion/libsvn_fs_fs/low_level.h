@@ -31,9 +31,9 @@
 
 /* Given the last "few" bytes (should be at least 40) of revision REV in
  * TRAILER,  parse the last line and return the offset of the root noderev
- * in *ROOT_OFFSET and the offset of the changes list in *CHANGES_OFFSET.
- * All offsets are relative to the revision's start offset.  ROOT_OFFSET
- * and / or CHANGES_OFFSET may be NULL.
+ * in *ROOT_OFFSET and the offset of the changed paths list in
+ * *CHANGES_OFFSET.  Offsets are relative to the revision's start offset.
+ * ROOT_OFFSET and / or CHANGES_OFFSET may be NULL.
  * 
  * Note that REV is only used to construct nicer error objects.
  */
@@ -44,8 +44,8 @@ svn_fs_fs__parse_revision_trailer(apr_off_t *root_offset,
                                   svn_revnum_t rev);
 
 /* Given the offset of the root noderev in ROOT_OFFSET and the offset of
- * the changes list in CHANGES_OFFSET,  return the corresponding revision's
- * trailer.  Allocate it in POOL.
+ * the changed paths list in CHANGES_OFFSET,  return the corresponding
+ * revision's trailer.  Allocate it in POOL.
  */
 svn_stringbuf_t *
 svn_fs_fs__unparse_revision_trailer(apr_off_t root_offset,
@@ -143,7 +143,7 @@ svn_fs_fs__read_changes(apr_array_header_t **changes,
 /* Write the changed path info from CHANGES in filesystem FS to the
    output stream STREAM.  You may call this function multiple time on
    the same stream but the last call should set TERMINATE_LIST to write
-   an extra empty line that marks the end of the changes list.
+   an extra empty line that marks the end of the changed paths list.
    Perform temporary allocations in POOL.
  */
 svn_error_t *

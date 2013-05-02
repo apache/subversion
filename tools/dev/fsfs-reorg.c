@@ -106,10 +106,10 @@ typedef struct revision_location_t
   /* pack file offset (manifest value), 0 for non-packed files */
   apr_size_t offset;
 
-  /* offset of the changes list relative to OFFSET */
+  /* offset of the changed paths list relative to OFFSET */
   apr_size_t changes;
 
-  /* length of the changes list on bytes */
+  /* length of the changed paths list on bytes */
   apr_size_t changes_len;
 
   /* first offset behind the revision data in the pack file (file length
@@ -2003,7 +2003,7 @@ add_revisions_pack_heads(revision_pack_t *pack,
   info = APR_ARRAY_IDX(pack->info, pack->info->nelts - 1, revision_info_t*);
   info->target.offset = pack->target_offset;
 
-  /* followed by the changes list */
+  /* followed by the changed paths list */
 
   for (i = 0; i < pack->info->nelts; ++i)
     {
@@ -2838,7 +2838,7 @@ get_fragment_content(svn_string_t **content,
                                       info->target.changes);
         return SVN_NO_ERROR;
 
-      /* The changes list remains untouched */
+      /* The changed paths list remains untouched */
       case changes_fragment:
         info = fragment->data;
         SVN_ERR(get_content(&revision_content, fs, info->revision, pool));

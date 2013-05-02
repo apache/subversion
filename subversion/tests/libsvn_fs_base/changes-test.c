@@ -210,7 +210,7 @@ changes_fetch_raw(const svn_test_opts_t *opts,
   SVN_ERR(add_standard_changes(fs, pool));
 
   /* For each transaction, fetch that transaction's changes, and
-     compare those changes against the standard changes list.  Order
+     compare those changes against the standard changed paths list.  Order
      matters throughout all the changes code, so we shouldn't have to
      worry about ordering of the arrays.  */
   for (i = 0; i < num_txns; i++)

@@ -118,13 +118,13 @@ typedef struct revision_info_t
   /* pack file offset (manifest value), 0 for non-packed files */
   apr_size_t offset;
 
-  /* offset of the changes list relative to OFFSET */
+  /* offset of the changed paths list relative to OFFSET */
   apr_size_t changes;
 
-  /* length of the changes list on bytes */
+  /* length of the changed paths list on bytes */
   apr_size_t changes_len;
 
-  /* offset of the changes list relative to OFFSET */
+  /* offset of the changed paths list relative to OFFSET */
   apr_size_t change_count;
 
   /* first offset behind the revision data in the pack file (file length
@@ -1380,8 +1380,8 @@ read_noderev(fs_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Given the unparsed changes list in CHANGES with LEN chars, return the
- * number of changed paths encoded in it.
+/* Given the unparsed changed paths list in CHANGES with LEN chars, return
+ * the number of changed paths encoded in it.
  */
 static apr_size_t
 get_change_count(const char *changes,

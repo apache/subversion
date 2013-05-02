@@ -422,9 +422,9 @@ write_null_bytes(apr_file_t *dest,
   return SVN_NO_ERROR;
 }
 
-/* Copy the "simple" item (changes list or property representation) from
- * the current position in REV_FILE to TEMP_FILE using CONTEXT.  Add a
- * copy of ENTRY to ENTRIES but with an updated offset value that points
+/* Copy the "simple" item (changed paths list or property representation)
+ * from the current position in REV_FILE to TEMP_FILE using CONTEXT.  Add
+ * a copy of ENTRY to ENTRIES but with an updated offset value that points
  * to the copy destination in TEMP_FILE.  Use POOL for allocations.
  */
 static svn_error_t *
