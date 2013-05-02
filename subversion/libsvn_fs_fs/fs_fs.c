@@ -1497,22 +1497,22 @@ compare_l2p_to_p2l_index(svn_fs_t *fs,
 
           if (p2l_item == NULL)
             return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_INCONSISTENT,
-                                      NULL,
-                                      _("p2l index entry not found for "
-                                        "PHYS o%" APR_OFF_T_FMT ":s%ld "
-                                        "returned by l2p index for LOG "
-                                        "r%ld:i%" APR_UINT64_T_FMT),
-                                      offset, (long)sub_item, k, revision);
+                                     NULL,
+                                     _("p2l index entry not found for "
+                                       "PHYS o%s:s%ld returned by "
+                                       "l2p index for LOG r%ld:i%ld"),
+                                     apr_off_t_toa(pool, offset),
+                                     (long)sub_item, revision, (long)k);
 
           if (p2l_item->number != k || p2l_item->revision != revision)
             return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_INCONSISTENT,
-                                      NULL,
-                                      _("p2l index info LOG r%ld:i%"
-                                        APR_UINT64_T_FMT " does not match "
-                                        "l2p index for LOG r%ld:i%"
-                                        APR_UINT64_T_FMT),
-                                      p2l_item->revision,
-                                      (long)p2l_item->number, revision, k);
+                                     NULL,
+                                     _("p2l index info LOG r%ld:i%ld"
+                                       " does not match "
+                                       "l2p index for LOG r%ld:i%ld"),
+                                     p2l_item->revision,
+                                     (long)p2l_item->number, revision,
+                                     (long)k);
 
           svn_pool_clear(iterpool);
         }
@@ -1563,9 +1563,9 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
       if (entries->nelts == 0)
         return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_CORRUPTION,
                                  NULL,
-                                 _("p2l does not cover offset %" APR_OFF_T_FMT
+                                 _("p2l does not cover offset %s"
                                    " for revision %ld"),
-                                 offset, start);
+                                  apr_off_t_toa(pool, offset), start);
 
       /* process all entries (and later continue with the next block) */
       last_entry
@@ -1592,14 +1592,15 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
               if (sub_item != k || l2p_offset != entry->offset)
                 return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_INCONSISTENT,
                                          NULL,
-                                         _("l2p index entry PHYS o%"
-                                           APR_OFF_T_FMT ":s%ld does not "
-                                           "match p2l index value LOG r%ld:i%"
-                                           APR_UINT64_T_FMT " for PHYS o%"
-                                           APR_OFF_T_FMT ":s%ld"),
-                                         l2p_offset, (long)sub_item,
-                                         p2l_item->revision, p2l_item->number,
-                                         entry->offset, (long)k);
+                                         _("l2p index entry PHYS o%s:s%ld "
+                                           "does not match p2l index value "
+                                           "LOG r%ld:i%ld for PHYS o%s:s%ld"),
+                                         apr_off_t_toa(pool, l2p_offset),
+                                         (long)sub_item,
+                                         p2l_item->revision,
+                                         (long)p2l_item->number,
+                                         apr_off_t_toa(pool, entry->offset),
+                                         (long)k);
             }
         }
 

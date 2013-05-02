@@ -2258,9 +2258,8 @@ get_p2l_keys(p2l_page_info_baton_t *page_info_p,
     {
       SVN_ERR(packed_stream_close(*stream));
       return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
-                               _("Offset %" APR_OFF_T_FMT
-                                 " too large in revision %ld"),
-                               offset, revision);
+                               _("Offset %s too large in revision %ld"),
+                               apr_off_t_toa(pool, offset), revision);
     }
 
   /* return results */
