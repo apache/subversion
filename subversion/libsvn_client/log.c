@@ -810,7 +810,6 @@ run_ra_get_log(apr_array_header_t *revision_ranges,
       const char *old_session_url;
       const char *path = APR_ARRAY_IDX(targets, 0, const char *);
       const char *local_abspath_or_url;
-      const char *segment_url = actual_loc->url;
       rev_range_t *range;
       limit_receiver_baton_t lb;
       svn_log_entry_receiver_t passed_receiver;
@@ -845,7 +844,7 @@ run_ra_get_log(apr_array_header_t *revision_ranges,
           /* ...but if there is history, then we must account for issue
              #4355 and make sure our RA session is pointing at the correct
              location. */
-          segment_url = svn_path_url_add_component2(
+          const char *segment_url = svn_path_url_add_component2(
             actual_loc->repos_root_url, (*matching_segment)->path,
             scratch_pool);
           SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url,
