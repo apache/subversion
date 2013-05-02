@@ -283,7 +283,9 @@ class GeneratorBase:
     fd.write('};\n')
 
     ## sanity check
-    assert set() == set(errno.errorcode.keys()) & set(dict(aprerr).keys())
+    intersection = set(errno.errorcode.keys()) & set(dict(aprerr).keys())
+    if intersection:
+        print("WARNING: errno intersects APR error codes: %r" % intersection)
 
 class DependencyGraph:
   """Record dependencies between build items.
