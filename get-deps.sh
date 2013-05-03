@@ -23,10 +23,18 @@
 # get-deps.sh -- download the dependencies useful for building Subversion
 #
 
+# If changing this file please take care to try to make your changes as
+# portable as possible.  That means at a minimum only use POSIX supported
+# features and functions.  However, it may be desirable to use an even
+# more narrow set of features than POSIX, e.g. Solaris /bin/sh only has
+# a subset of the POSIX shell features.  If in doubt, limit yourself to
+# features already used in the file.  Reviewing the history of changes
+# may be useful as well.
+
 APR=apr-1.4.6
 APR_UTIL=apr-util-1.5.1
 SERF=serf-1.2.0
-ZLIB=zlib-1.2.7
+ZLIB=zlib-1.2.8
 SQLITE_VERSION=3.7.15.1
 SQLITE_VERSION_LIST=`echo $SQLITE_VERSION | sed -e 's/\./ /g'`
 SQLITE=sqlite-amalgamation-`printf %d%02d%02d%02d $SQLITE_VERSION_LIST`
@@ -86,10 +94,10 @@ get_zlib() {
     test -d $BASEDIR/zlib && return
 
     cd $TEMPDIR
-    $HTTP_FETCH http://www.zlib.net/$ZLIB.tar.bz2
+    $HTTP_FETCH http://www.zlib.net/$ZLIB.tar.gz
     cd $BASEDIR
 
-    bzip2 -dc $TEMPDIR/$ZLIB.tar.bz2 | tar -xf -
+    gzip -dc $TEMPDIR/$ZLIB.tar.gz | tar -xf -
 
     mv $ZLIB zlib
 }
