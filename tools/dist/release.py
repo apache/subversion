@@ -69,9 +69,14 @@ except ImportError:
 # Our required / recommended release tool versions by release branch
 tool_versions = {
   'trunk' : {
-            'autoconf' : '2.68',
-            'libtool'  : '2.4',
-            'swig'     : '2.0.4',
+            'autoconf' : '2.69',
+            'libtool'  : '2.4.2',
+            'swig'     : '2.0.9',
+  },
+  '1.8' : {
+            'autoconf' : '2.69',
+            'libtool'  : '2.4.2',
+            'swig'     : '2.0.9',
   },
   '1.7' : {
             'autoconf' : '2.68',
