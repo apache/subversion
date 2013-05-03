@@ -422,115 +422,6 @@ find_youngest_and_oldest_revs(svn_revnum_t *youngest_rev,
   return;
 }
 
-/* If OPT_REV is of a revision kind that is dependent on the WC then query
-   WC to determine the equivalent svn_revnum_t and set *OPT_REV to a
-   svn_opt_revision_number kind reflecting that revnum. */
-static svn_error_t *
-resolve_wc_opt_revs(svn_opt_revision_t *opt_rev,
-                    const char *abspath,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *scratch_pool)
-{
-  if (SVN_CLIENT__REVKIND_NEEDS_WC(opt_rev->kind))
-    {
-      svn_revnum_t range_start_as_revnum;
-
-      SVN_ERR(svn_client__get_revision_number(&range_start_as_revnum,
-                                              NULL, ctx->wc_ctx, abspath,
-                                              NULL,/* No session needed */
-                                              opt_rev, scratch_pool));
-      opt_rev->kind = svn_opt_revision_number;
-      opt_rev->value.number = range_start_as_revnum;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* Resolve the head revision.
-
-   If OPT_REV is not of svn_opt_revision_head kind, then do nothing.
-
-   Otherwise if *YOUNGEST_REV is valid, then set set *OPT_REV to a
-   svn_opt_revision_number kind reflecting the value of *YOUNGEST_REV.
-   Else contact the repository to determine the head svn_revnum_t and
-   set *OPT_REV to a svn_opt_revision_number kind reflecting that revnum.
-
-   RA_SESSION, RESOLVED_LOC_P, URL_OR_ABSPATH, and PEG_REV are all as per the
-   parameters of the same name in convert_opt_rev_array_to_rev_range_array().
-*/
-static svn_error_t *
-resolve_wc_head_revs(svn_opt_revision_t *opt_rev,
-                     svn_ra_session_t **ra_session,
-                     svn_client__pathrev_t **resolved_loc_p,
-                     svn_revnum_t *head_rev,
-                     const char *url_or_abspath,
-                     const svn_opt_revision_t *peg_rev,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
-{
-  if (opt_rev->kind == svn_opt_revision_head)
-    {
-      svn_opt_revision_t head_opt_rev;
-
-      head_opt_rev.kind = svn_opt_revision_head;
-
-      if (*ra_session == NULL)
-        SVN_ERR(svn_client__ra_session_from_path2(ra_session,
-                                                  resolved_loc_p,
-                                                  url_or_abspath, NULL,
-                                                  peg_rev, &head_opt_rev,
-                                                  ctx, result_pool));
-
-      /* Find HEAD rev, but only do it once! */
-      if (!SVN_IS_VALID_REVNUM(*head_rev))
-        SVN_ERR(svn_ra_get_latest_revnum(*ra_session, head_rev,
-                                         scratch_pool));
-
-      opt_rev->kind = svn_opt_revision_number;
-      opt_rev->value.number = *head_rev;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* If OPT_REV is of svn_opt_revision_date kind, then contact the repository
-   to determine the equivalent svn_revnum_t and set *OPT_REV to a
-   svn_opt_revision_number kind reflecting that revnum.
-
-   RA_SESSION, RESOLVED_LOC_P, URL_OR_ABSPATH, and PEG_REV are all as per the
-   parameters of the same name in convert_opt_rev_array_to_rev_range_array().
-*/
-static svn_error_t *
-resolve_wc_date_revs(svn_opt_revision_t *opt_rev,
-                     svn_ra_session_t **ra_session,
-                     svn_client__pathrev_t **resolved_loc_p,
-                     const char *url_or_abspath,
-                     const svn_opt_revision_t *peg_rev,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
-{
-  if (opt_rev->kind == svn_opt_revision_date)
-    {
-      svn_revnum_t date_as_revnum;
-
-      if (*ra_session == NULL)
-        SVN_ERR(svn_client__ra_session_from_path2(ra_session,
-                                                  resolved_loc_p,
-                                                  url_or_abspath, NULL,
-                                                  peg_rev, opt_rev,
-                                                  ctx, result_pool));
-
-      SVN_ERR(svn_ra_get_dated_revision(*ra_session, &date_as_revnum,
-                                        opt_rev->value.date, scratch_pool));
-      opt_rev->kind = svn_opt_revision_number;
-      opt_rev->value.number = date_as_revnum;
-    }
-
-  return SVN_NO_ERROR;
-}
-
 typedef struct rev_range_t
 {
   svn_revnum_t range_start;
@@ -550,17 +441,14 @@ typedef struct rev_range_t
 
    If the repository needs to be contacted to resolve svn_opt_revision_date or
    svn_opt_revision_head revisions, then the session used to do this is
-   returned in RA_SESSION and the resolved location used to open the session
-   is returned in *RESOLVED_LOC_P (see parameter of the same name in
-   svn_client__ra_session_from_path2).  If the repository is not contacted,
-   then set *RA_SESSION and *RESOLVED_LOC_P to NULL. */
+   RA_SESSION; it must be an open session to any URL in the right repository.
+*/
 static svn_error_t*
 convert_opt_rev_array_to_rev_range_array(
   apr_array_header_t **revision_ranges,
-  svn_ra_session_t **ra_session,
-  svn_client__pathrev_t **resolved_loc_p,
   svn_revnum_t *youngest_rev,
   svn_revnum_t *oldest_rev,
+  svn_ra_session_t *ra_session,
   const char *url_or_abspath,
   const apr_array_header_t *opt_rev_ranges,
   const svn_opt_revision_t *peg_rev,
@@ -569,11 +457,10 @@ convert_opt_rev_array_to_rev_range_array(
   apr_pool_t *scratch_pool)
 {
   int i;
+  svn_revnum_t head_rev = SVN_INVALID_REVNUM;
 
   /* Initialize the input/output parameters. */
   *youngest_rev = *oldest_rev = SVN_INVALID_REVNUM;
-  *ra_session = NULL;
-  *resolved_loc_p = NULL;
 
   /* Convert OPT_REV_RANGES to an array of rev_range_t and find the youngest
      and oldest revision range that spans all of OPT_REV_RANGES. */
@@ -638,52 +525,26 @@ convert_opt_rev_array_to_rev_range_array(
                  sizeof(svn_opt_revision_t)) == 0)
         start_same_as_end = TRUE;
 
-      /* If the caller asked for COMMITTED, PREVIOUS, BASE, or WORKING then
-         resolve those to svn_opt_revision_number opt revs. */
-      SVN_ERR(resolve_wc_opt_revs(&(range->start), url_or_abspath, ctx,
-                                  scratch_pool));
+      rev_range = apr_palloc(result_pool, sizeof(*rev_range));
+      SVN_ERR(svn_client__get_revision_number(
+                &rev_range->range_start, &head_rev,
+                ctx->wc_ctx, url_or_abspath, ra_session,
+                &range->start, scratch_pool));
       if (start_same_as_end)
-        range->end = range->start;
+        rev_range->range_end = rev_range->range_start;
       else
-        SVN_ERR(resolve_wc_opt_revs(&(range->end), url_or_abspath, ctx,
-                                    scratch_pool));
-
-      /* If the caller asked about the head revision we need to resolve that
-         to a revision number and possibly open a RA session. */
-      SVN_ERR(resolve_wc_head_revs(&(range->start), ra_session,
-                                   resolved_loc_p, youngest_rev,
-                                   url_or_abspath, peg_rev, ctx,
-                                   result_pool, scratch_pool));
-      if (start_same_as_end)
-        range->end = range->start;
-      else
-        SVN_ERR(resolve_wc_head_revs(&(range->end), ra_session,
-                                     resolved_loc_p, youngest_rev,
-                                     url_or_abspath, peg_rev, ctx,
-                                     result_pool, scratch_pool));
-
-      /* If the caller gave us dates we need to resolve them to revision
-         numbers and possibly open a RA session. */
-      SVN_ERR(resolve_wc_date_revs(&(range->start), ra_session,
-                                   resolved_loc_p, url_or_abspath, peg_rev,
-                                   ctx, result_pool, scratch_pool));
-      if (start_same_as_end)
-        range->end = range->start;
-      else
-        SVN_ERR(resolve_wc_date_revs(&(range->end), ra_session,
-                                     resolved_loc_p, url_or_abspath, peg_rev,
-                                     ctx, result_pool, scratch_pool));
+        SVN_ERR(svn_client__get_revision_number(
+                  &rev_range->range_end, &head_rev,
+                  ctx->wc_ctx, url_or_abspath, ra_session,
+                  &range->end, scratch_pool));
 
       /* Possibly update the oldest and youngest revisions requested. */
       find_youngest_and_oldest_revs(youngest_rev,
                                     oldest_rev,
-                                    range->start.value.number);
+                                    rev_range->range_start);
       find_youngest_and_oldest_revs(youngest_rev,
                                     oldest_rev,
-                                    range->end.value.number);
-      rev_range = apr_palloc(result_pool, sizeof(*rev_range));
-      rev_range->range_start = range->start.value.number;
-      rev_range->range_end = range->end.value.number;
+                                    rev_range->range_end);
       APR_ARRAY_PUSH(*revision_ranges, rev_range_t *) = rev_range;
     }
 
@@ -949,37 +810,28 @@ svn_client_log5(const apr_array_header_t *targets,
   SVN_ERR(resolve_log_targets(&relative_targets, &ra_target, &peg_rev,
                               targets, ctx, pool, pool));
 
+  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &actual_loc,
+                                            ra_target, NULL, &peg_rev, &peg_rev,
+                                            ctx, pool));
+
   /* Convert OPT_REV_RANGES to an array of rev_range_t and find the youngest
      and oldest revision range that spans all of OPT_REV_RANGES. */
   SVN_ERR(convert_opt_rev_array_to_rev_range_array(&revision_ranges,
-                                                   &ra_session, &actual_loc,
                                                    &youngest_rev,
                                                    &oldest_rev,
+                                                   ra_session,
                                                    ra_target,
                                                    opt_rev_ranges, &peg_rev,
                                                    ctx, pool,  pool));
+
+  /* Make ACTUAL_LOC and RA_SESSION point to the youngest operative rev. */
   youngest_opt_rev.kind = svn_opt_revision_number;
   youngest_opt_rev.value.number = youngest_rev;
-
-  /* If we didn't already open a RA session above, do so now. */
-  if (!ra_session)
-    {
-      SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &actual_loc,
-                                                ra_target, NULL,
-                                                &peg_rev, &youngest_opt_rev,
-                                                ctx, pool));
-    }
-  else
-    {
-      /* We already opened a session above to resolve dates or head to
-         revision numbers.  So just make sure RA_SESSION points to the
-         right URL. */
-      SVN_ERR(svn_client__resolve_rev_and_url(&actual_loc, ra_session,
-                                              ra_target, &peg_rev,
-                                              &youngest_opt_rev, ctx, pool));
-      SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url, ra_session,
-                                                actual_loc->url, pool));
-    }
+  SVN_ERR(svn_client__resolve_rev_and_url(&actual_loc, ra_session,
+                                          ra_target, &peg_rev,
+                                          &youngest_opt_rev, ctx, pool));
+  SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url, ra_session,
+                                            actual_loc->url, pool));
 
   /* Get the svn_location_segment_t's representing the requested log ranges. */
   SVN_ERR(svn_client__repos_location_segments(&log_segments, ra_session,
