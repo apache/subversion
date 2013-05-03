@@ -23,6 +23,14 @@
 # get-deps.sh -- download the dependencies useful for building Subversion
 #
 
+# If changing this file please take care to try to make your changes as
+# portable as possible.  That means at a minimum only use POSIX supported
+# features and functions.  However, it may be desirable to use an even
+# more narrow set of features than POSIX, e.g. Solaris /bin/sh only has
+# a subset of the POSIX shell features.  If in doubt, limit yourself to
+# features already used in the file.  Reviewing the history of changes
+# may be useful as well.
+
 APR=apr-1.4.6
 APR_UTIL=apr-util-1.5.1
 SERF=serf-1.2.0
