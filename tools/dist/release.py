@@ -527,7 +527,8 @@ def create_tag(args):
         svnmucc_cmd += ['--username', args.username]
     svnmucc_cmd += ['cp', str(args.revnum), branch, tag]
     svnmucc_cmd += ['put', os.path.join(get_deploydir(args.base_dir),
-                                        'svn_version.h.dist'),
+                                        'svn_version.h.dist' + '-' +
+                                        str(args.version)),
                     tag + '/subversion/include/svn_version.h']
 
     # don't redirect stdout/stderr since svnmucc might ask for a password
