@@ -8,6 +8,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
   - Major new features:
 
   - Minor new features and improvements:
+    * new 'diff-ignore-content-type' runtime configuration option.
 
   - Client-side bugfixes:
 

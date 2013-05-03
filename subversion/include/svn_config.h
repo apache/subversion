@@ -110,6 +110,8 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_DIFF_CMD                  "diff-cmd"
 /** @since New in 1.7. */
 #define SVN_CONFIG_OPTION_DIFF_EXTENSIONS           "diff-extensions"
+/** @since New in 1.9. */
+#define SVN_CONFIG_OPTION_DIFF_IGNORE_CONTENT_TYPE  "diff-ignore-content-type"
 #define SVN_CONFIG_OPTION_DIFF3_CMD                 "diff3-cmd"
 #define SVN_CONFIG_OPTION_DIFF3_HAS_PROGRAM_ARG     "diff3-has-program-arg"
 #define SVN_CONFIG_OPTION_MERGE_TOOL_CMD            "merge-tool-cmd"
