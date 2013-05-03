@@ -52,20 +52,6 @@ Candidate changes:
    Votes:
      +1: julianfoad, brane
 
- * r1475772, r1476092, r1478897
-   Fix a bug in authz file processing where group and user names were
-   not treated case-sensitively, which could lead to unpredictable
-   results depending on the ordering of the authz config entries.
-   See http://subversion.tigris.org/issues/show_bug.cgi?id=4361
-   Justification:
-     See above about unpredictable results. A related fix for
-     repository paths handling was made in 1.7.0.
-   Notes:
-     r1476092 and r1478897 (obvious fix) are the CHANGES updates.
-   Votes:
-     +1: brane
-     +1: philip (for 1.8.0 only, not later 1.8.x)
-
  * r1477876, r1477891, r1478001
    Fix a bug whereby a property conflict description always reported
      'unknown' for the node kind. Add a test which catches that bug.
@@ -101,3 +87,17 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1475772, r1476092, r1478897
+   Fix a bug in authz file processing where group and user names were
+   not treated case-sensitively, which could lead to unpredictable
+   results depending on the ordering of the authz config entries.
+   See http://subversion.tigris.org/issues/show_bug.cgi?id=4361
+   Justification:
+     See above about unpredictable results. A related fix for
+     repository paths handling was made in 1.7.0.
+   Notes:
+     r1476092 and r1478897 (obvious fix) are the CHANGES updates.
+   Votes:
+     +1: brane
+     +1: philip, cmpilato (for 1.8.0 only, not later 1.8.x)
