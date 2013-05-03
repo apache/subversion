@@ -1152,6 +1152,16 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### ra_local (the file:// scheme). The value represents the number" NL
         "### of MB used by the cache."                                       NL
         "# memory-cache-size = 16"                                           NL
+        "### Set diff-ignore-content-type to 'yes' to cause 'svn diff' to"   NL
+        "### attempt to show differences of all modified files regardless"   NL
+        "### of their MIME content type.  By default, Subversion will only"  NL
+        "### attempt to show differences for files believed to have human-"  NL
+        "### readable (non-binary) content.  This option is especially"      NL
+        "### useful when Subversion is configured (via the 'diff-cmd'"       NL
+        "### option) to employ an external differencing tool which is able"  NL
+        "### to show meaningful differences for binary file formats.  [New"  NL
+        "### in 1.9]"                                                        NL
+        "# diff-ignore-content-type = no"                                    NL
         ""                                                                   NL
         "### Section for configuring automatic properties."                  NL
         "[auto-props]"                                                       NL

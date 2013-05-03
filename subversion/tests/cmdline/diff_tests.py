@@ -1899,7 +1899,7 @@ def diff_keywords(sbox):
 
 
 def diff_force(sbox):
-  "show diffs for binary files with --force"
+  "show diffs for binary files"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1943,34 +1943,20 @@ def diff_force(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
-  # Check that we get diff when the first, the second and both files are
-  # marked as binary.
+  # Check that we get diff when the first, the second and both files
+  # are marked as binary.  First we'll use --force.  Then we'll use
+  # the configuration option 'diff-ignore-content-type'.
 
   re_nodisplay = re.compile('^Cannot display:')
 
-  exit_code, stdout, stderr = svntest.main.run_svn(None,
-                                                   'diff', '-r1:2', iota_path,
-                                                   '--force')
-
-  for line in stdout:
-    if (re_nodisplay.match(line)):
-      raise svntest.Failure
-
-  exit_code, stdout, stderr = svntest.main.run_svn(None,
-                                                   'diff', '-r2:1', iota_path,
-                                                   '--force')
-
-  for line in stdout:
-    if (re_nodisplay.match(line)):
-      raise svntest.Failure
-
-  exit_code, stdout, stderr = svntest.main.run_svn(None,
-                                                   'diff', '-r2:3', iota_path,
-                                                   '--force')
-
-  for line in stdout:
-    if (re_nodisplay.match(line)):
-      raise svntest.Failure
+  for opt in ['--force',
+              '--config-option=config:miscellany:diff-ignore-content-type=yes']:
+    for range in ['-r1:2', '-r2:1', '-r2:3']:
+      exit_code, stdout, stderr = svntest.main.run_svn(None, 'diff', range,
+                                                       iota_path, opt)
+      for line in stdout:
+        if (re_nodisplay.match(line)):
+          raise svntest.Failure
 
 #----------------------------------------------------------------------
 # Regression test for issue #2333: Renaming a directory should produce
