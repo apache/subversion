@@ -52,20 +52,6 @@ Candidate changes:
    Votes:
      +1: julianfoad, brane
 
- * r1477876, r1477891, r1478001
-   Fix a bug whereby a property conflict description always reported
-     'unknown' for the node kind. Add a test which catches that bug.
-   Justification:
-     Regression from 1.7.
-   Branch: ^/subversion/branches/1.8.x-r1477876
-   Notes:
-     The fix is in r1477876, and the branch was needed to resolve conflicts
-     (rather than porting prior changes on which it depended). The test is
-     in r1478001, and it depends on the test file changes made in r1477891.
-   Votes:
-     -1: julianfoad ('svn update' now crashes on interactive resolution of a
-                     prop conflict)
-
  * r1469363, r1469645, r1469674, r1470037, r1470537, r1478220, r1478221,
    r1478465
    Fix issue #4355 'svn_client_log5 broken with multiple revisions which
@@ -84,6 +70,19 @@ Candidate changes:
 Veto-blocked changes:
 =====================
 
+ * r1477876, r1477891, r1478001
+   Fix a bug whereby a property conflict description always reported
+     'unknown' for the node kind. Add a test which catches that bug.
+   Justification:
+     Regression from 1.7.
+   Branch: ^/subversion/branches/1.8.x-r1477876
+   Notes:
+     The fix is in r1477876, and the branch was needed to resolve conflicts
+     (rather than porting prior changes on which it depended). The test is
+     in r1478001, and it depends on the test file changes made in r1477891.
+   Votes:
+     -1: julianfoad ('svn update' now crashes on interactive resolution of a
+                     prop conflict)
 
 Approved changes:
 =================
