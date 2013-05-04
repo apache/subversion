@@ -288,6 +288,10 @@ sub main {
         print "\n\n=== $lines[0]" unless $YES;
         $in_approved = $lines[0] =~ /^Approved changes/;
       }
+      # Comment
+      when (/^[#\x5b]/i) {
+        next;
+      }
       # Separator after section header
       when (/^=+$/i) {
         break;
