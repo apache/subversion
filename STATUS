@@ -67,6 +67,14 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r1479320, r1479321, r1479323, r1479326
+   Silence 'make -s clean distclean'.
+   Justification:
+     'make -s all install distclean' would spam stdout and issue irrelevant
+     warnings on stderr.  (This is user-facing behaviour.)
+   Votes:
+     +1 (for 1.8.1): danielsh
+
 Veto-blocked changes:
 =====================
 
