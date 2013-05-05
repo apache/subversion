@@ -67,7 +67,7 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r1479320, r1479321, r1479323, r1479326
+ * r1479320, r1479321, r1479323, r1479326, r1479329
    Silence 'make -s clean distclean'.
    Justification:
      'make -s all install distclean' would spam stdout and issue irrelevant
