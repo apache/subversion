@@ -890,10 +890,17 @@ check-ctypes-python: ctypes-python
 	cd $(CTYPES_PYTHON_SRC_DIR); \
 	  $(LT_EXECUTE) $(PYTHON) test/run_all.py
 
+# If any of those files exists, run ctypes' 'setup.py clean'.  We don't run
+# it otherwise because it spams stdout+stderr; see r1479326.
+CTYPES_BUILD_OUTPUTS="build csvn/core/functions.py svn_all.py svn_all2.py"
 clean-ctypes-python:
-	cd $(CTYPES_PYTHON_SRC_DIR); \
-	  $(PYTHON) setup.py clean --all
-
+	cd $(CTYPES_PYTHON_SRC_DIR);            \
+	  for b in $(CTYPES_BUILD_OUTPUTS) ; do \
+	    if [ -e "$$b" ] ; then              \
+	      $(PYTHON) setup.py clean --all;   \
+	      break;                            \
+	    fi;                                 \
+	  done
 
 # manually describe a dependency, which we won't otherwise detect
 subversion/libsvn_wc/wc-queries.h: $(abs_srcdir)/subversion/libsvn_wc/wc-metadata.sql
