@@ -15201,7 +15201,7 @@ msgstr ""
 "arbeta med revision ARG (eller området ARG1:ARG2)\n"
 "                             Ett revisionsargument kan vara ett av:\n"
 "                                 TAL          revisionsnummer\n"
-"                                 \"HEAD\"     senaste i arkivet"
+"                                 \"HEAD\"       senaste i arkivet"
 
 #: ../svnsync/svnsync.c:177
 msgid "allow a non-empty destination repository"
