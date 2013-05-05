@@ -87,3 +87,9 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+# 1.8.0-rc1 is being voted on currently and as such 1.8.0 is in the soak phase.
+# Changes that are not intended for 1.8.0 should not be placed here and changes
+# that would restart the soak should not be added unless they are resolving
+# blocking issues.  If in doubt see this link for details:
+# http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
+
