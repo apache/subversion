@@ -1218,7 +1218,7 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
      Conflicting edits on a file's text, or
      Conflicting edits on a property.
   */
-  if (((desc->node_kind == svn_node_file)
+  if (((desc->kind == svn_wc_conflict_kind_text)
        && (desc->action == svn_wc_conflict_action_edit)
        && (desc->reason == svn_wc_conflict_reason_edited)))
     SVN_ERR(handle_text_conflict(*result, desc, b, scratch_pool));
