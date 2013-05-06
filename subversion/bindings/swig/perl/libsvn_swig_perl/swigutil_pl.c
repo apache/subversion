@@ -106,6 +106,63 @@ static void *convert_pl_svn_string_t(SV *value, void *dummy, apr_pool_t *pool)
     return (void *)result;
 }
 
+/* Convert a revision range and return a svn_opt_revision_range_t*.
+ * Value can be:
+ * - a _p_svn_opt_revision_range_t object
+ * - a reference to a two-element array, [start, end],
+ *   where start and end is anything accepted by svn_swig_pl_set_revision
+ * If value is not acceptable and *(svn_boolean_t *)ctx is FALSE,
+ * convert_pl_revision_range returns NULL, otherwise it croak()s.
+ */
+static void *convert_pl_revision_range(SV *value, void *ctx, apr_pool_t *pool)
+{
+    svn_boolean_t croak_on_error = *(svn_boolean_t *)ctx;
+
+    if (sv_isobject(value) && sv_derived_from(value, "_p_svn_opt_revision_range_t")) {
+        svn_opt_revision_range_t *range;
+        /* this will assign to range */
+        SWIG_ConvertPtr(value, (void **)&range, _SWIG_TYPE("svn_opt_revision_range_t *"), 0);
+        return range;
+    } 
+
+    if (SvROK(value) 
+        && SvTYPE(SvRV(value)) == SVt_PVAV
+        && av_len((AV *)SvRV(value)) == 1) {    
+        /* value is a two-element ARRAY */
+        AV* array = (AV *)SvRV(value);
+        svn_opt_revision_t temp_start, temp_end;
+        svn_opt_revision_t *start, *end;
+        svn_opt_revision_range_t *range;
+
+        /* Note: Due to how svn_swig_pl_set_revision works,
+         * either the passed in svn_opt_revision_t is modified
+         * (and the original pointer returned) or a different pointer 
+         * is returned. svn_swig_pl_set_revision may return NULL
+         * only if croak_on_error is FALSE.
+         */
+        start = svn_swig_pl_set_revision(&temp_start, 
+                                         *av_fetch(array, 0, 0), croak_on_error);
+        if (start == NULL)
+            return NULL;
+        end = svn_swig_pl_set_revision(&temp_end, 
+                                       *av_fetch(array, 1, 0), croak_on_error);
+        if (end == NULL)
+            return NULL;
+
+        /* allocate a new range and copy in start and end fields */
+        range = apr_palloc(pool, sizeof(*range));
+        range->start = *start;
+        range->end = *end;
+        return range;
+    } 
+
+    if (croak_on_error)
+        croak("unknown revision range: "
+              "must be an array of length 2 whose elements are acceptable "
+              "as opt_revision_t or a _p_svn_opt_revision_range_t object");
+    return NULL;
+}
+
 /* perl -> c hash convertors */
 static apr_hash_t *svn_swig_pl_to_hash(SV *source,
                                        pl_element_converter_t cv,
@@ -215,6 +272,37 @@ const apr_array_header_t *svn_swig_pl_objs_to_array(SV *source,
   return svn_swig_pl_to_array(source,
                               (pl_element_converter_t)convert_pl_obj,
                               tinfo, pool);
+}
+
+/* Convert a single revision range or an array of revisions ranges
+ * Note: We can't simply use svn_swig_pl_to_array() as is, since 
+ * it immediatley checks whether source is an array reference and then
+ * proceeds to treat this as the "array of ..." case. But a revision range
+ * may be specified as a (two-element) array. Hence we first try to
+ * convert source as a single revision range. Failing that and if it's
+ * an array we then call svn_swig_pl_to_array(). Otherwise we croak().
+ */
+const apr_array_header_t *svn_swig_pl_array_to_apr_array_revision_range(
+        SV *source, apr_pool_t *pool)
+{
+    svn_boolean_t croak_on_error = FALSE;
+    svn_opt_revision_range_t *range;
+
+    if (range = convert_pl_revision_range(source, &croak_on_error, pool)) {
+        apr_array_header_t *temp = apr_array_make(pool, 1, 
+                                                  sizeof(svn_opt_revision_range_t *));
+        temp->nelts = 1;
+        APR_ARRAY_IDX(temp, 0, svn_opt_revision_range_t *) = range;
+        return temp;
+    }
+
+    if (SvROK(source) && SvTYPE(SvRV(source)) == SVt_PVAV) {
+        croak_on_error = TRUE;
+        return svn_swig_pl_to_array(source, convert_pl_revision_range, 
+                                    &croak_on_error, pool);
+    }
+
+    croak("must pass a single revision range or a reference to an array of revision ranges");
 }
 
 /* element convertors for c -> perl */
@@ -329,8 +417,13 @@ SV *svn_swig_pl_revnums_to_list(const apr_array_header_t *array)
 }
 
 /* perl -> c svn_opt_revision_t conversion */
-svn_opt_revision_t *svn_swig_pl_set_revision(svn_opt_revision_t *rev, SV *source)
+svn_opt_revision_t *svn_swig_pl_set_revision(svn_opt_revision_t *rev, 
+                                             SV *source, 
+                                             svn_boolean_t croak_on_error)
 {
+#define maybe_croak(argv) do { if (croak_on_error) croak argv; \
+                               else return NULL; } while (0)
+
     if (source == NULL || source == &PL_sv_undef || !SvOK(source)) {
         rev->kind = svn_opt_revision_unspecified;
     }
@@ -361,33 +454,34 @@ svn_opt_revision_t *svn_swig_pl_set_revision(svn_opt_revision_t *rev, SV *source
 
             char *end = strchr(input,'}');
             if (!end)
-                croak("unknown opt_revision_t string \"%s\": "
-                      "missing closing brace for \"{DATE}\"", input);
+                maybe_croak(("unknown opt_revision_t string \"%s\": "
+                             "missing closing brace for \"{DATE}\"", input));
             *end = '\0';
             err = svn_parse_date (&matched, &tm, input + 1, apr_time_now(),
                                   svn_swig_pl_make_pool ((SV *)NULL));
             if (err) {
                 svn_error_clear (err);
-                croak("unknown opt_revision_t string \"{%s}\": "
-                      "internal svn_parse_date error", input + 1);
+                maybe_croak(("unknown opt_revision_t string \"{%s}\": "
+                             "internal svn_parse_date error", input + 1));
             }
             if (!matched)
-                croak("unknown opt_revision_t string \"{%s}\": "
-                      "svn_parse_date failed to parse it", input + 1);
+                maybe_croak(("unknown opt_revision_t string \"{%s}\": "
+                             "svn_parse_date failed to parse it", input + 1));
 
             rev->kind = svn_opt_revision_date;
             rev->value.date = tm;
         } else
-            croak("unknown opt_revision_t string \"%s\": must be one of "
-                  "\"BASE\", \"HEAD\", \"WORKING\", \"COMMITTED\", "
-                  "\"PREV\" or a \"{DATE}\"", input);
+            maybe_croak(("unknown opt_revision_t string \"%s\": must be one of "
+                         "\"BASE\", \"HEAD\", \"WORKING\", \"COMMITTED\", "
+                         "\"PREV\" or a \"{DATE}\"", input));
     } else
-        croak("unknown opt_revision_t type: must be undef, a number, "
-              "a string (one of \"BASE\", \"HEAD\", \"WORKING\", "
-              "\"COMMITTED\", \"PREV\" or a \"{DATE}\") "
-              "or a _p_svn_opt_revision_t object");
+        maybe_croak(("unknown opt_revision_t type: must be undef, a number, "
+                     "a string (one of \"BASE\", \"HEAD\", \"WORKING\", "
+                     "\"COMMITTED\", \"PREV\" or a \"{DATE}\") "
+                     "or a _p_svn_opt_revision_t object"));
 
     return rev;
+#undef maybe_croak
 }
 
 /* put the va_arg in stack and invoke caller_func with func.
