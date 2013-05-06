@@ -108,7 +108,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: subversion 1.8\n"
+"Project-Id-Version: subversion 1.9\n"
 "Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
 "POT-Creation-Date: 2013-05-04 11:58+0200\n"
 "PO-Revision-Date: 2013-05-04 12:03+0200\n"
