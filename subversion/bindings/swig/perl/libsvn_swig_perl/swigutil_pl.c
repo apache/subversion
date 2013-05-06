@@ -98,6 +98,14 @@ static void *convert_pl_revnum_t(SV *value, void *dummy, apr_pool_t *pool)
   return (void *)result;
 }
 
+static void *convert_pl_svn_string_t(SV *value, void *dummy, apr_pool_t *pool)
+{
+    svn_string_t *result = apr_palloc(pool, sizeof(svn_string_t));
+    /* just the in typemap for svn_string_t */
+    result->data = SvPV(value, result->len);
+    return (void *)result;
+}
+
 /* perl -> c hash convertors */
 static apr_hash_t *svn_swig_pl_to_hash(SV *source,
                                        pl_element_converter_t cv,
@@ -154,6 +162,11 @@ apr_hash_t *svn_swig_pl_objs_to_hash_of_revnum_t(SV *source,
   return svn_swig_pl_to_hash(source,
                              (pl_element_converter_t)convert_pl_revnum_t,
                              NULL, pool);
+}
+
+apr_hash_t *svn_swig_pl_hash_to_prophash(SV *source, apr_pool_t *pool)
+{
+  return svn_swig_pl_to_hash(source, convert_pl_svn_string_t, NULL, pool);
 }
 
 /* perl -> c array convertors */
