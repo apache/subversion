@@ -679,7 +679,7 @@ svn_strerror(apr_status_t statcode, char *buf, apr_size_t bufsize)
 }
 
 #ifdef SVN_DEBUG
-/* Defines svn__errno */
+/* Defines svn__errno and svn__apr_errno */
 #include "errorcode.inc"
 #endif
 
@@ -705,6 +705,12 @@ svn_error_symbolic_name(apr_status_t statcode)
   for (i = 0; i < sizeof(svn__errno) / sizeof(svn__errno[0]); i++)
     if (svn__errno[i].errcode == (int)statcode)
       return svn__errno[i].errname;
+
+  /* Try APR errors. */
+  /* Linear search through a sorted array */
+  for (i = 0; i < sizeof(svn__apr_errno) / sizeof(svn__apr_errno[0]); i++)
+    if (svn__apr_errno[i].errcode == (int)statcode)
+      return svn__apr_errno[i].errname;
 #endif /* SVN_DEBUG */
 
   /* ### TODO: do we need APR_* error macros?  What about APR_TO_OS_ERROR()? */

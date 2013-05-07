@@ -1590,6 +1590,7 @@ bump_to_31(void *baton,
   apr_array_header_t *empty_iprops = apr_array_make(
     scratch_pool, 0, sizeof(svn_prop_inherited_item_t *));
   svn_boolean_t iprops_column_exists = FALSE;
+  svn_error_t *err;
 
   /* Add the inherited_props column to NODES if it does not yet exist.
    *
@@ -1631,23 +1632,42 @@ bump_to_31(void *baton,
                                     STMT_UPGRADE_31_SELECT_WCROOT_NODES));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt_mark_switch_roots, sdb,
-                                    STMT_UPDATE_IPROP));
+  err = svn_sqlite__get_statement(&stmt_mark_switch_roots, sdb,
+                                  STMT_UPDATE_IPROP);
+  if (err)
+    return svn_error_compose_create(err, svn_sqlite__reset(stmt));
+
   while (have_row)
     {
       const char *switched_relpath = svn_sqlite__column_text(stmt, 1, NULL);
       apr_int64_t wc_id = svn_sqlite__column_int64(stmt, 0);
 
-      SVN_ERR(svn_sqlite__bindf(stmt_mark_switch_roots, "is", wc_id,
-                                switched_relpath));
-      SVN_ERR(svn_sqlite__bind_iprops(stmt_mark_switch_roots, 3,
-                                      empty_iprops, iterpool));
-      SVN_ERR(svn_sqlite__step_done(stmt_mark_switch_roots));
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      err = svn_sqlite__bindf(stmt_mark_switch_roots, "is", wc_id,
+                              switched_relpath);
+      if (!err)
+        err = svn_sqlite__bind_iprops(stmt_mark_switch_roots, 3,
+                                      empty_iprops, iterpool);
+      if (!err)
+        err = svn_sqlite__step_done(stmt_mark_switch_roots);
+      if (!err)
+        err = svn_sqlite__step(&have_row, stmt);
+
+      if (err)
+        return svn_error_compose_create(
+                err,
+                svn_error_compose_create(
+                  /* Reset in either order is OK. */
+                  svn_sqlite__reset(stmt),
+                  svn_sqlite__reset(stmt_mark_switch_roots)));
     }
 
+  err = svn_sqlite__reset(stmt_mark_switch_roots);
+  if (err)
+    return svn_error_compose_create(err, svn_sqlite__reset(stmt));
   SVN_ERR(svn_sqlite__reset(stmt));
+
   svn_pool_destroy(iterpool);
+
   return SVN_NO_ERROR;
 }
 

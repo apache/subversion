@@ -447,9 +447,6 @@ svn_client_open_ra_session2(svn_ra_session_t **session,
                                                   scratch_pool));
 }
 
-
-
-
 svn_error_t *
 svn_client__resolve_rev_and_url(svn_client__pathrev_t **resolved_loc_p,
                                 svn_ra_session_t *ra_session,

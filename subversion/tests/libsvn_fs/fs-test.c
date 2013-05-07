@@ -2074,7 +2074,7 @@ copy_test(const svn_test_opts_t *opts,
   svn_revnum_t after_rev;
 
   /* Prepare a filesystem. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-copy-test",
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-copy",
                               opts, pool));
 
   /* In first txn, create and commit the greek tree. */
@@ -4237,7 +4237,7 @@ branch_test(const svn_test_opts_t *opts,
   svn_revnum_t youngest_rev = 0;
 
   /* Create a filesystem and repository. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-branch-test",
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-branch",
                               opts, pool));
 
   /*** Revision 1:  Create the greek tree in revision.  ***/
@@ -4984,7 +4984,6 @@ filename_trailing_newline(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
-#ifdef SVN_FS_INFO
 static svn_error_t *
 test_fs_info_format(const svn_test_opts_t *opts,
                     apr_pool_t *pool)
@@ -5005,7 +5004,6 @@ test_fs_info_format(const svn_test_opts_t *opts,
 
   return SVN_NO_ERROR;
 }
-#endif
 
 /* ------------------------------------------------------------------------ */
 
@@ -5089,9 +5087,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test svn_fs_delete_fs"),
     SVN_TEST_OPTS_PASS(filename_trailing_newline,
                        "filenames with trailing \\n might be rejected"),
-#ifdef SVN_FS_INFO
     SVN_TEST_OPTS_PASS(test_fs_info_format,
                        "test svn_fs_info_format"),
-#endif
     SVN_TEST_NULL
   };

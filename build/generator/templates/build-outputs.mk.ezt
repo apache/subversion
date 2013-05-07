@@ -44,7 +44,9 @@ check-deps test-deps: [for test_helpers] [test_helpers][end]
 MANPAGES =[for manpages] [manpages][end]
 
 CLEAN_FILES =[for cfiles] [cfiles][end]
-EXTRACLEAN_FILES =[for sql] [sql.header][end]
+EXTRACLEAN_FILES =[for sql] [sql.header][end] \
+  $(abs_builddir)/subversion/libsvn_subr/errorcode.inc \
+  $(abs_srcdir)/compile_commands.json
 
 SWIG_INCLUDES = -I$(abs_builddir)/subversion \
   -I$(abs_srcdir)/subversion/include \

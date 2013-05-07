@@ -843,6 +843,37 @@ window_handler(svn_txdelta_window_t *window,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_stream_lazyopen_func_t. */
+static svn_error_t *
+lazy_open_source(svn_stream_t **stream,
+                 void *baton,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  struct file_baton *fb = baton;
+
+  SVN_ERR(svn_stream_open_readonly(stream, fb->path_start_revision,
+                                   result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_stream_lazyopen_func_t. */
+static svn_error_t *
+lazy_open_result(svn_stream_t **stream,
+                 void *baton,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  struct file_baton *fb = baton;
+
+  SVN_ERR(svn_stream_open_unique(stream, &fb->path_end_revision, NULL,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* An svn_delta_editor_t function.  */
 static svn_error_t *
 apply_textdelta(void *file_baton,
@@ -902,14 +933,13 @@ apply_textdelta(void *file_baton,
     }
 
   /* Open the file to be used as the base for second revision */
-  SVN_ERR(svn_stream_open_readonly(&src_stream, fb->path_start_revision,
-                                   scratch_pool, scratch_pool));
+  src_stream = svn_stream_lazyopen_create(lazy_open_source, fb, FALSE,
+                                          scratch_pool);
 
   /* Open the file that will become the second revision after applying the
      text delta, it starts empty */
-  SVN_ERR(svn_stream_open_unique(&result_stream, &fb->path_end_revision, NULL,
-                                 svn_io_file_del_on_pool_cleanup,
-                                 scratch_pool, scratch_pool));
+  result_stream = svn_stream_lazyopen_create(lazy_open_result, fb, FALSE,
+                                             scratch_pool);
 
   svn_txdelta_apply(src_stream,
                     result_stream,

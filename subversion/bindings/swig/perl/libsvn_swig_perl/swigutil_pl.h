@@ -93,9 +93,12 @@ apr_hash_t *svn_swig_pl_objs_to_hash_by_name(SV *source,
                                              apr_pool_t *pool);
 apr_hash_t *svn_swig_pl_objs_to_hash_of_revnum_t(SV *source,
                                                  apr_pool_t *pool);
+apr_hash_t *svn_swig_pl_hash_to_prophash(SV *source, apr_pool_t *pool);
 const apr_array_header_t *svn_swig_pl_objs_to_array(SV *source,
                                                     swig_type_info *tinfo,
                                                     apr_pool_t *pool);
+const apr_array_header_t *svn_swig_pl_array_to_apr_array_revision_range(
+        SV *source, apr_pool_t *pool);
 
 SV *svn_swig_pl_array_to_list(const apr_array_header_t *array);
 /* Formerly used by pre-1.0 APIs. Now unused
@@ -106,7 +109,9 @@ SV *svn_swig_pl_convert_array(const apr_array_header_t *array,
 
 SV *svn_swig_pl_revnums_to_list(const apr_array_header_t *array);
 
-svn_opt_revision_t *svn_swig_pl_set_revision(svn_opt_revision_t *rev, SV *source);
+svn_opt_revision_t *svn_swig_pl_set_revision(svn_opt_revision_t *rev, 
+                                             SV *source,
+                                             svn_boolean_t croak_on_error);
 
 /* thunked log_message receiver function.  */
 svn_error_t * svn_swig_pl_thunk_log_receiver(void *baton,

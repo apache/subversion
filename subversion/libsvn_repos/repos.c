@@ -1677,7 +1677,6 @@ svn_repos_has_capability(svn_repos_t *repos,
   return SVN_NO_ERROR;
 }
 
-#ifdef SVN_FS_INFO
 svn_error_t *
 svn_repos_capabilities(apr_hash_t **capabilities,
                        svn_repos_t *repos,
@@ -1734,7 +1733,6 @@ svn_repos_info_format(int *repos_format,
 
   return SVN_NO_ERROR;
 }
-#endif
 
 svn_fs_t *
 svn_repos_fs(svn_repos_t *repos)

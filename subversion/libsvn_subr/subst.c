@@ -1701,7 +1701,7 @@ create_special_file_from_stream(svn_stream_t *source, const char *dst,
                                 svn_io_file_del_none, pool));
 
   /* Do the atomic rename from our temporary location. */
-  return svn_io_file_rename(dst_tmp, dst, pool);
+  return svn_error_trace(svn_io_file_rename(dst_tmp, dst, pool));
 }
 
 
@@ -1749,8 +1749,9 @@ svn_subst_copy_and_translate4(const char *src,
               SVN_ERR(svn_stream_open_readonly(&src_stream, src, pool, pool));
             }
 
-          return svn_error_trace(create_special_file_from_stream(src_stream,
-                                                                 dst, pool));
+          SVN_ERR(create_special_file_from_stream(src_stream, dst, pool));
+
+          return svn_error_trace(svn_stream_close(src_stream));
         }
       /* else !expand */
 

@@ -703,6 +703,8 @@ use SVN::Base qw(Core svn_log_changed_path2_t_);
 
 =head2 svn_log_changed_path2_t
 
+An object to represent a path that changed for a log entry.
+
 =over 4
 
 =item $lcp-E<gt>action()
@@ -825,10 +827,55 @@ use SVN::Base qw(Core svn_opt_revision_t_);
 
 =head2 svn_opt_revision_t
 
+A revision, specified in one of C<SVN::Core::opt_revision_*> ways.
+
+=over 4
+
+=item $rev-E<gt>kind()
+
+An enum denoting how the revision C<$rev> was specified.  One of 
+C<$VN::Core::opt_revision_unspecified>,
+C<$VN::Core::opt_revision_number>,
+C<$VN::Core::opt_revision_date>,
+C<$VN::Core::opt_revision_committed>,
+C<$VN::Core::opt_revision_previous>,
+C<$VN::Core::opt_revision_base>,
+C<$VN::Core::opt_revision_working>
+or C<$SVN::Core::opt_revision_head>.
+
+=item $rev-E<gt>value()
+
+Extra data about the revision. Only relevant if C<$rev-E<gt>kind> is
+C<$VN::Core::opt_revision_number> (where it contains the revision number)
+or C<$VN::Core::opt_revision_date> (where it contains a date).
+
+=back
+
 =cut
 
 package _p_svn_opt_revision_value_t;
 use SVN::Base qw(Core svn_opt_revision_value_t_);
+
+package _p_svn_opt_revision_range_t;
+use SVN::Base qw(Core svn_opt_revision_range_t_);
+
+=head2 svn_opt_revision_range_t
+
+An object representing a range of revisions.
+
+=over 4
+
+=item $range-E<gt>start()
+
+The first revision in the range, a C<_p_svn_opt_revision_t> object.
+
+=item $range-E<gt>end()
+
+The last revision in the range, a C<_p_svn_opt_revision_t> object.
+
+=back
+
+=cut
 
 package _p_svn_config_t;
 use SVN::Base qw(Core svn_config_);

@@ -989,7 +989,7 @@ create_put_body(serf_bucket_t **body_bkt,
   apr_file_buffer_set(ctx->svndiff, NULL, 0);
 #endif
   offset = 0;
-  apr_file_seek(ctx->svndiff, APR_SET, &offset);
+  SVN_ERR(svn_io_file_seek(ctx->svndiff, APR_SET, &offset, pool));
 
   *body_bkt = serf_bucket_file_create(ctx->svndiff, alloc);
   return SVN_NO_ERROR;
