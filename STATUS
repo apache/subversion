@@ -22,9 +22,7 @@ Candidate changes:
      Clean builds make it more likely to notice real compiler warnings.
    Votes:
      +1: blair
-     -0: philip (see dev thread: it's a false alarm, wrong value)
-     -0.5: brane (silencing warnings is not a valid reason for a backport,
-                  even for branch stabilization.)
+     -0: philip, brane (see dev thread: it's a false alarm, wrong value)
 
  * r1470246
    Improve the interactive resolution of property conflicts.  Instead of
@@ -75,12 +73,31 @@ Candidate changes:
    Votes:
      +1 (for 1.8.1): danielsh
 
- * 1479896
+ * r1479896
    Sort directory entries in output of 'svnlook tree'.
    Justification:
      Unstable APR hash order causes unstable output.
    Votes:
      +1: stsp (for 1.8.1)
+
+ * r1480077
+   Check separately for -flto and -Wno-clobbered with --enable-optimize.
+   Justification:
+     The -flto flag was not used by older compilers that do not
+     suport -Wno-clobbered, even when they do support -flto.
+   Votes:
+     +1: brane (for 1.8.1)
+
+ * r1480080
+   Instruct clang to not warn about unknown warning flags.
+   Justification:
+     Newer versions of clang accept warning flags that they do not
+     support, but emit warnings about them instead -- making the
+     compile output a mess with a warning emitted for every
+     single C and C++ file in an optimized build (because
+     of the -Wno-clobbered, see above).
+   Votes:
+     +1: brane (for 1.8.1)
 
 Veto-blocked changes:
 =====================
