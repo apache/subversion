@@ -1131,7 +1131,7 @@ mkdir_urls(const apr_array_header_t *urls,
 
       if (*bname == '\0')
         return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                                 _("There is no valid uri above '%s'"),
+                                 _("There is no valid URI above '%s'"),
                                  common);
     }
   else
@@ -1158,7 +1158,7 @@ mkdir_urls(const apr_array_header_t *urls,
 
           if (*bname == '\0')
              return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                                      _("There is no valid uri above '%s'"),
+                                      _("There is no valid URI above '%s'"),
                                       common);
 
           for (i = 0; i < targets->nelts; i++)
