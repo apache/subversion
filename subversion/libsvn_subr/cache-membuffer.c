@@ -1501,7 +1501,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
         {
           /* We are OOM. There is no need to proceed with "half a cache".
            */
-          return svn_error_wrap_apr(APR_ENOMEM, _("OOM"));
+          return svn_error_wrap_apr(APR_ENOMEM, "OOM");
         }
 
 #if APR_HAS_THREADS
