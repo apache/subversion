@@ -75,6 +75,13 @@ Candidate changes:
    Votes:
      +1 (for 1.8.1): danielsh
 
+ * 1479896
+   Sort directory entries in output of 'svnlook tree'.
+   Justification:
+     Unstable APR hash order causes unstable output.
+   Votes:
+     +1: stsp (for 1.8.1)
+
 Veto-blocked changes:
 =====================
 
