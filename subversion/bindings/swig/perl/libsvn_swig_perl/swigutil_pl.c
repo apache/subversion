@@ -303,6 +303,11 @@ const apr_array_header_t *svn_swig_pl_array_to_apr_array_revision_range(
     }
 
     croak("must pass a single revision range or a reference to an array of revision ranges");
+
+    /* This return is actually unreachable because of the croak above,
+     * however, Visual Studio's compiler doesn't like if all paths don't have
+     * a return and errors out otherwise. */ 
+    return NULL;
 }
 
 /* element convertors for c -> perl */
