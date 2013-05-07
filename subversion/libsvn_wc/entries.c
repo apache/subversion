@@ -73,6 +73,7 @@ typedef struct db_node_t {
   apr_time_t recorded_time;
   apr_hash_t *properties;
   svn_boolean_t file_external;
+  apr_array_header_t *inherited_props;
 } db_node_t;
 
 typedef struct db_actual_node_t {
@@ -1521,6 +1522,10 @@ insert_node(svn_sqlite__db_t *sdb,
   if (node->file_external)
     SVN_ERR(svn_sqlite__bind_int(stmt, 20, 1));
 
+  if (node->inherited_props)
+    SVN_ERR(svn_sqlite__bind_iprops(stmt, 23, node->inherited_props,
+                                    scratch_pool));
+
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
   return SVN_NO_ERROR;
@@ -1572,6 +1577,31 @@ insert_actual_node(svn_sqlite__db_t *sdb,
 
   /* Execute and reset the insert clause. */
   return svn_error_trace(svn_sqlite__insert(NULL, stmt));
+}
+
+static svn_boolean_t
+is_switched(db_node_t *parent,
+            db_node_t *child,
+            apr_pool_t *scratch_pool)
+{
+  if (parent && child)
+    {
+      if (parent->repos_id != child->repos_id)
+        return TRUE;
+
+      if (parent->repos_relpath && child->repos_relpath)
+        {
+          const char *unswitched
+            = svn_relpath_join(parent->repos_relpath,
+                               svn_relpath_basename(child->local_relpath,
+                                                    scratch_pool),
+                               scratch_pool);
+          if (strcmp(unswitched, child->repos_relpath))
+            return TRUE;
+        }
+    }
+
+  return FALSE;
 }
 
 struct write_baton {
@@ -2070,6 +2100,12 @@ write_entry(struct write_baton **entry_node,
 
       if (entry->file_external_path)
         base_node->file_external = TRUE;
+
+      /* Switched nodes get an empty iprops cache. */
+      if (parent_node
+          && is_switched(parent_node->base, base_node, scratch_pool))
+        base_node->inherited_props
+          = apr_array_make(scratch_pool, 0, sizeof(svn_prop_inherited_item_t*));
 
       SVN_ERR(insert_node(sdb, base_node, scratch_pool));
 

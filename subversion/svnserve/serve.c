@@ -276,7 +276,8 @@ svn_error_t *load_pwdb_config(server_baton_t *server,
       pwdb_path = svn_dirent_internal_style(pwdb_path, pool);
       pwdb_path = svn_dirent_join(server->base, pwdb_path, pool);
 
-      err = svn_config_read2(&server->pwdb, pwdb_path, TRUE, FALSE, pool);
+      err = svn_config_read3(&server->pwdb, pwdb_path, TRUE,
+                             FALSE, FALSE, pool);
       if (err)
         {
           log_server_error(err, server, conn, pool);
@@ -1814,15 +1815,15 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_revnum_t rev;
   const char *target, *full_path, *depth_word;
   svn_boolean_t recurse;
-  apr_uint64_t send_copyfrom_args; /* Optional; default FALSE */
-  apr_uint64_t ignore_ancestry; /* Optional; default FALSE */
+  svn_tristate_t send_copyfrom_args; /* Optional; default FALSE */
+  svn_tristate_t ignore_ancestry; /* Optional; default FALSE */
   /* Default to unknown.  Old clients won't send depth, but we'll
      handle that by converting recurse if necessary. */
   svn_depth_t depth = svn_depth_unknown;
   svn_boolean_t is_checkout;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "(?r)cb?wB?B", &rev, &target,
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "(?r)cb?w3?3", &rev, &target,
                                   &recurse, &depth_word,
                                   &send_copyfrom_args, &ignore_ancestry));
   target = svn_relpath_canonicalize(target, pool);
@@ -1842,8 +1843,8 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(accept_report(&is_checkout, NULL,
                         conn, pool, b, rev, target, NULL, TRUE,
                         depth,
-                        (send_copyfrom_args == TRUE) /* send_copyfrom_args */,
-                        (ignore_ancestry == TRUE) /* ignore_ancestry */));
+                        (send_copyfrom_args == svn_tristate_true),
+                        (ignore_ancestry == svn_tristate_true)));
   if (is_checkout)
     {
       SVN_ERR(log_command(b, conn, pool, "%s",
@@ -1854,7 +1855,9 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     {
       SVN_ERR(log_command(b, conn, pool, "%s",
                           svn_log__update(full_path, rev, depth,
-                                          send_copyfrom_args, pool)));
+                                          (send_copyfrom_args
+                                           == svn_tristate_true),
+                                          pool)));
     }
 
   return SVN_NO_ERROR;
@@ -1871,11 +1874,11 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Default to unknown.  Old clients won't send depth, but we'll
      handle that by converting recurse if necessary. */
   svn_depth_t depth = svn_depth_unknown;
-  apr_uint64_t send_copyfrom_args; /* Optional; default FALSE */
-  apr_uint64_t ignore_ancestry; /* Optional; default TRUE */
+  svn_tristate_t send_copyfrom_args; /* Optional; default FALSE */
+  svn_tristate_t ignore_ancestry; /* Optional; default TRUE */
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "(?r)cbc?w?BB", &rev, &target,
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "(?r)cbc?w?33", &rev, &target,
                                   &recurse, &switch_url, &depth_word,
                                   &send_copyfrom_args, &ignore_ancestry));
   target = svn_relpath_canonicalize(target, pool);
@@ -1904,8 +1907,8 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return accept_report(NULL, NULL,
                        conn, pool, b, rev, target, switch_path, TRUE,
                        depth,
-                       (send_copyfrom_args == TRUE) /* send_copyfrom_args */,
-                       (ignore_ancestry != FALSE) /* ignore_ancestry */);
+                       (send_copyfrom_args == svn_tristate_true),
+                       (ignore_ancestry != svn_tristate_false));
 }
 
 static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -3286,9 +3289,10 @@ static svn_error_t *find_repos(const char *url, const char *root,
     {
       b->base = svn_repos_conf_dir(b->repos, pool);
 
-      SVN_ERR(svn_config_read2(&b->cfg, svn_repos_svnserve_conf(b->repos, pool),
+      SVN_ERR(svn_config_read3(&b->cfg, svn_repos_svnserve_conf(b->repos, pool),
                                FALSE, /* must_exist */
                                FALSE, /* section_names_case_sensitive */
+                               FALSE, /* option_names_case_sensitive */
                                pool));
       SVN_ERR(load_pwdb_config(b, conn, pool));
       SVN_ERR(load_authz_config(b, conn, repos_root, pool));

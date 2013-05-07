@@ -295,8 +295,7 @@ typedef struct svn_repos_notify_t
    * the revision which just completed. */
   svn_revnum_t revision;
 
-  /** For #svn_repos_notify_warning, the warning object. Must be cleared
-      by the consumer of the notification. */
+  /** For #svn_repos_notify_warning, the warning object. */
   const char *warning_str;
   svn_repos_notify_warning_t warning;
 
@@ -494,7 +493,6 @@ svn_repos_has_capability(svn_repos_t *repos,
                          const char *capability,
                          apr_pool_t *pool);
 
-#ifdef SVN_FS_INFO
 /**
  * Return a set capabilities supported by the running Subversion library and by
  * @a repos.  (Capabilities supported by this version of Subversion but not by
@@ -504,16 +502,15 @@ svn_repos_has_capability(svn_repos_t *repos,
  * The set is represented as a hash whose keys are the set members.  The values
  * are not defined.
  *
- * @see svn_repos_info()
+ * @see svn_repos_info_format()
  *
- * @since New in 1.8.
+ * @since New in 1.9.
  */
 svn_error_t *
 svn_repos_capabilities(apr_hash_t **capabilities,
                        svn_repos_t *repos,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
-#endif /* SVN_FS_INFO */
 /** @} */
 
 /**
@@ -2488,7 +2485,6 @@ svn_repos_node_editor(const svn_delta_editor_t **editor,
 svn_repos_node_t *
 svn_repos_node_from_baton(void *edit_baton);
 
-#ifdef SVN_FS_INFO
 /**
  * Return repository format information for @a repos.
  *
@@ -2499,9 +2495,9 @@ svn_repos_node_from_baton(void *edit_baton);
  * Set @a *supports_version to the version number of the minimum Subversion GA
  * release that can read and write @a repos.
  *
- * @see svn_fs_info_format()
+ * @see svn_fs_info_format(), svn_repos_capabilities()
  *
- * @since New in 1.8.
+ * @since New in 1.9.
  */
 svn_error_t *
 svn_repos_info_format(int *repos_format,
@@ -2509,7 +2505,6 @@ svn_repos_info_format(int *repos_format,
                       svn_repos_t *repos,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
-#endif /* SVN_FS_INFO */
 
 /** @} */
 

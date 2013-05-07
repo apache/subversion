@@ -121,7 +121,7 @@ fi
 AC_ARG_WITH(apache-libexecdir,
             [AS_HELP_STRING([[--with-apache-libexecdir[=PATH]]],
                             [Install Apache modules to Apache's configured
-                             modules directory instead of LIBEXECDIIR;
+                             modules directory instead of LIBEXECDIR;
                              if PATH is given, install to PATH.])],
 [APACHE_LIBEXECDIR="$withval"],[APACHE_LIBEXECDIR='no'])
 

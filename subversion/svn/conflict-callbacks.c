@@ -55,6 +55,8 @@ struct svn_cl__interactive_conflict_baton_t {
   svn_cmdline_prompt_baton_t *pb;
   const char *path_prefix;
   svn_boolean_t quit;
+  svn_cl__conflict_stats_t *conflict_stats;
+  svn_boolean_t printed_summary;
 };
 
 svn_error_t *
@@ -63,6 +65,7 @@ svn_cl__get_conflict_func_interactive_baton(
   svn_cl__accept_t accept_which,
   apr_hash_t *config,
   const char *editor_cmd,
+  svn_cl__conflict_stats_t *conflict_stats,
   svn_cancel_func_t cancel_func,
   void *cancel_baton,
   apr_pool_t *result_pool)
@@ -79,6 +82,8 @@ svn_cl__get_conflict_func_interactive_baton(
   (*b)->pb = pb;
   SVN_ERR(svn_dirent_get_absolute(&(*b)->path_prefix, "", result_pool));
   (*b)->quit = FALSE;
+  (*b)->conflict_stats = conflict_stats;
+  (*b)->printed_summary = FALSE;
 
   return SVN_NO_ERROR;
 }
@@ -149,35 +154,32 @@ show_diff(const svn_wc_conflict_description2_t *desc,
       if (desc->operation == svn_wc_operation_merge)
         {
           path1 = desc->my_abspath;
-          label1 = apr_psprintf(pool, _("MINE - %s"),
-                                svn_cl__local_style_skip_ancestor(
-                                  path_prefix, path1, pool));
+          label1 = _("MINE");
         }
       else
         {
           path1 = desc->their_abspath;
-          label1 = apr_psprintf(pool, _("THEIRS - %s"),
-                                svn_cl__local_style_skip_ancestor(
-                                  path_prefix, path1, pool));
+          label1 = _("THEIRS");
         }
       path2 = desc->merged_file;
-      label2 = apr_psprintf(pool, _("MERGED - %s"),
-                            svn_cl__local_style_skip_ancestor(
-                              path_prefix, path2, pool));
+      label2 = _("MERGED");
     }
   else
     {
       /* There's no merged file, but we can show the
          difference between mine and theirs. */
       path1 = desc->their_abspath;
-      label1 = apr_psprintf(pool, _("THEIRS - %s"),
-                            svn_cl__local_style_skip_ancestor(
-                              path_prefix, path1, pool));
+      label1 = _("THEIRS");
       path2 = desc->my_abspath;
-      label2 = apr_psprintf(pool, _("MINE - %s"),
-                            svn_cl__local_style_skip_ancestor(
-                              path_prefix, path2, pool));
+      label2 = _("MINE");
     }
+
+  label1 = apr_psprintf(pool, "%s\t- %s",
+                        svn_cl__local_style_skip_ancestor(
+                          path_prefix, path1, pool), label1);
+  label2 = apr_psprintf(pool, "%s\t- %s",
+                        svn_cl__local_style_skip_ancestor(
+                          path_prefix, path2, pool), label2);
 
   options = svn_diff_file_options_create(pool);
   options->ignore_eol_style = TRUE;
@@ -1067,12 +1069,13 @@ handle_obstructed_add(svn_wc_conflict_result_t *result,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
-                                  const svn_wc_conflict_description2_t *desc,
-                                  void *baton,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool)
+/* The body of svn_cl__conflict_func_interactive(). */
+static svn_error_t *
+conflict_func_interactive(svn_wc_conflict_result_t **result,
+                          const svn_wc_conflict_description2_t *desc,
+                          void *baton,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
   svn_cl__interactive_conflict_baton_t *b = baton;
   svn_error_t *err;
@@ -1200,6 +1203,13 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
       break;
     }
 
+  /* Print a summary of conflicts before starting interactive resolution */
+  if (! b->printed_summary)
+    {
+      SVN_ERR(svn_cl__print_conflict_stats(b->conflict_stats, scratch_pool));
+      b->printed_summary = TRUE;
+    }
+
   /* We're in interactive mode and either the user gave no --accept
      option or the option did not apply; let's prompt. */
 
@@ -1208,7 +1218,7 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
      Conflicting edits on a file's text, or
      Conflicting edits on a property.
   */
-  if (((desc->node_kind == svn_node_file)
+  if (((desc->kind == svn_wc_conflict_kind_text)
        && (desc->action == svn_wc_conflict_action_edit)
        && (desc->reason == svn_wc_conflict_reason_edited)))
     SVN_ERR(handle_text_conflict(*result, desc, b, scratch_pool));
@@ -1245,5 +1255,30 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
       (*result)->choice = svn_wc_conflict_choose_postpone;
     }
 
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
+                                  const svn_wc_conflict_description2_t *desc,
+                                  void *baton,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_cl__interactive_conflict_baton_t *b = baton;
+
+  SVN_ERR(conflict_func_interactive(result, desc, baton,
+                                    result_pool, scratch_pool));
+
+  /* If we are resolving a conflict, adjust the summary of conflicts. */
+  if ((*result)->choice != svn_wc_conflict_choose_postpone)
+    {
+      const char *local_path
+        = svn_cl__local_style_skip_ancestor(
+            b->path_prefix, desc->local_abspath, scratch_pool);
+
+      svn_cl__conflict_stats_resolved(b->conflict_stats, local_path,
+                                             desc->kind);
+    }
   return SVN_NO_ERROR;
 }

@@ -8,6 +8,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
   - Major new features:
 
   - Minor new features and improvements:
+    * new 'diff-ignore-content-type' runtime configuration option.
 
   - Client-side bugfixes:
 
@@ -80,13 +81,14 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
   - Server-side bugfixes:
     * SVNParentPath / repository listing now authz-filtered (r1408184)
+    * user and group names in the authz config file are case-sensitive (r1475772)
 
   - Other tool improvements and bugfixes:
     * 'svnmucc' promoted to first-class supported utility (issue #3308)
   
  Developer-visible changes:
   - General:
-    * Now require Python 2.5 for tests and dev tools (r1243627)
+    * now require Python 2.5 for tests and dev tools (r1243627)
     * configure defaults to --without-apache-libexecdir (r1469862)
 
   - API changes:

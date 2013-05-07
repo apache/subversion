@@ -562,6 +562,7 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__get_locks,
   base_bdb_info_format,
   base_bdb_info_config_files,
+  NULL /* info_fsap */,
   base_bdb_verify_root,
   base_bdb_freeze,
   base_bdb_set_errcall,
@@ -1462,7 +1463,8 @@ static fs_library_vtable_t library_vtable = {
   base_bdb_pack,
   base_bdb_logfiles,
   svn_fs_base__id_parse,
-  base_set_svn_fs_open
+  base_set_svn_fs_open,
+  NULL /* info_fsap_dup */
 };
 
 svn_error_t *

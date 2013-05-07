@@ -125,6 +125,8 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_PRESERVED_CF_EXTS         "preserved-conflict-file-exts"
 #define SVN_CONFIG_OPTION_INTERACTIVE_CONFLICTS     "interactive-conflicts"
 #define SVN_CONFIG_OPTION_MEMORY_CACHE_SIZE         "memory-cache-size"
+/** @since New in 1.9. */
+#define SVN_CONFIG_OPTION_DIFF_IGNORE_CONTENT_TYPE  "diff-ignore-content-type"
 #define SVN_CONFIG_SECTION_TUNNELS              "tunnels"
 #define SVN_CONFIG_SECTION_AUTO_PROPS           "auto-props"
 /** @since New in 1.8. */
@@ -211,15 +213,30 @@ svn_config_get_config(apr_hash_t **cfg_hash,
                       const char *config_dir,
                       apr_pool_t *pool);
 
-
 /** Set @a *cfgp to an empty @c svn_config_t structure,
  * allocated in @a result_pool.
  *
  * Pass TRUE to @a section_names_case_sensitive if
  * section names are to be populated case sensitively.
  *
- * @since New in 1.7.
+ * Pass TRUE to @a option_names_case_sensitive if
+ * option names are to be populated case sensitively.
+ *
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_config_create2(svn_config_t **cfgp,
+                   svn_boolean_t section_names_case_sensitive,
+                   svn_boolean_t option_names_case_sensitive,
+                   apr_pool_t *result_pool);
+
+/** Similar to svn_config_create2, but always passes @c FALSE to
+ * @a option_names_case_sensitive.
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_config_create(svn_config_t **cfgp,
                   svn_boolean_t section_names_case_sensitive,
@@ -234,18 +251,35 @@ svn_config_create(svn_config_t **cfgp,
  * If @a section_names_case_sensitive is @c TRUE, populate section name hashes
  * case sensitively, except for the default #SVN_CONFIG__DEFAULT_SECTION.
  *
- * @since New in 1.7.
+ * If @a option_names_case_sensitive is @c TRUE, populate option name hashes
+ * case sensitively.
+ *
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_config_read3(svn_config_t **cfgp,
+                 const char *file,
+                 svn_boolean_t must_exist,
+                 svn_boolean_t section_names_case_sensitive,
+                 svn_boolean_t option_names_case_sensitive,
+                 apr_pool_t *result_pool);
 
+/** Similar to svn_config_read3, but always passes @c FALSE to
+ * @a option_names_case_sensitive.
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_config_read2(svn_config_t **cfgp,
                  const char *file,
                  svn_boolean_t must_exist,
                  svn_boolean_t section_names_case_sensitive,
-                 apr_pool_t *pool);
+                 apr_pool_t *result_pool);
 
 /** Similar to svn_config_read2, but always passes @c FALSE to
- * section_names_case_sensitive.
+ * @a section_names_case_sensitive.
  *
  * @deprecated Provided for backward compatibility with 1.6 API.
  */
@@ -254,13 +288,16 @@ svn_error_t *
 svn_config_read(svn_config_t **cfgp,
                 const char *file,
                 svn_boolean_t must_exist,
-                apr_pool_t *pool);
+                apr_pool_t *result_pool);
 
 /** Read configuration data from @a stream into @a *cfgp, allocated in
  * @a result_pool.
  *
  * If @a section_names_case_sensitive is @c TRUE, populate section name hashes
  * case sensitively, except for the default #SVN_CONFIG__DEFAULT_SECTION.
+ *
+ * If @a option_names_case_sensitive is @c TRUE, populate option name hashes
+ * case sensitively.
  *
  * @since New in 1.8.
  */
@@ -269,6 +306,7 @@ svn_error_t *
 svn_config_parse(svn_config_t **cfgp,
                  svn_stream_t *stream,
                  svn_boolean_t section_names_case_sensitive,
+                 svn_boolean_t option_names_case_sensitive,
                  apr_pool_t *result_pool);
 
 /** Like svn_config_read(), but merges the configuration data from @a file

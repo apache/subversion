@@ -487,6 +487,7 @@ svn_fs_upgrade(const char *path, apr_pool_t *pool)
 
 svn_error_t *
 svn_fs_verify(const char *path,
+              apr_hash_t *fs_config,
               svn_revnum_t start,
               svn_revnum_t end,
               svn_fs_progress_notify_func_t notify_func,
@@ -499,7 +500,7 @@ svn_fs_verify(const char *path,
   svn_fs_t *fs;
 
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
-  fs = fs_new(NULL, pool);
+  fs = fs_new(fs_config, pool);
 
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
                        vtable->verify_fs(fs, path, start, end,
@@ -513,6 +514,15 @@ const char *
 svn_fs_path(svn_fs_t *fs, apr_pool_t *pool)
 {
   return apr_pstrdup(pool, fs->path);
+}
+
+apr_hash_t *
+svn_fs_config(svn_fs_t *fs, apr_pool_t *pool)
+{
+  if (fs->config)
+    return apr_hash_copy(pool, fs->config);
+
+  return NULL;
 }
 
 svn_error_t *
@@ -1306,7 +1316,6 @@ svn_fs_youngest_rev(svn_revnum_t *youngest_p, svn_fs_t *fs, apr_pool_t *pool)
   return svn_error_trace(fs->vtable->youngest_rev(youngest_p, fs, pool));
 }
 
-#ifdef SVN_FS_INFO
 svn_error_t *
 svn_fs_info_format(int *fs_format,
                    svn_version_t **supports_version,
@@ -1329,7 +1338,6 @@ svn_fs_info_config_files(apr_array_header_t **files,
                                                        result_pool,
                                                        scratch_pool));
 }
-#endif
 
 svn_error_t *
 svn_fs_deltify_revision(svn_fs_t *fs, svn_revnum_t revision, apr_pool_t *pool)
@@ -1617,24 +1625,41 @@ svn_fs_version(void)
 }
 
 
-#ifdef SVN_FS_INFO
 /** info **/
 svn_error_t *
-svn_fs_info(const svn_fs_info_t **info,
+svn_fs_info(const svn_fs_info_placeholder_t **info_p,
             svn_fs_t *fs,
             apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
 {
-  SVN__NOT_IMPLEMENTED();
+  if (fs->vtable->info_fsap)
+    {
+      SVN_ERR(fs->vtable->info_fsap((const void **)info_p, fs,
+                                    result_pool, scratch_pool));
+    }
+  else
+    {
+      svn_fs_info_placeholder_t *info = apr_palloc(result_pool, sizeof(*info));
+      /* ### Ask the disk(!), since svn_fs_t doesn't cache the answer. */
+      SVN_ERR(svn_fs_type(&info->fs_type, fs->path, result_pool));
+      *info_p = info;
+    }
+  return SVN_NO_ERROR;
 }
 
-svn_fs_info_t *
-svn_fs_info_dup(const svn_fs_info_t *info,
-                apr_pool_t *result_pool)
+void *
+svn_fs_info_dup(const void *info_void,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
 {
-  /* Not implemented. */
-  SVN_ERR_MALFUNCTION_NO_RETURN();
-  return NULL;
+  const svn_fs_info_placeholder_t *info = info_void;
+  fs_library_vtable_t *vtable;
+
+  SVN_ERR(get_library_vtable(&vtable, info->fs_type, scratch_pool));
+  
+  if (vtable->info_fsap_dup)
+    return vtable->info_fsap_dup(info_void, result_pool);
+  else
+    return apr_pmemdup(result_pool, info, sizeof(*info));
 }
-#endif
 

@@ -2296,13 +2296,13 @@ def log_search(sbox):
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [7, 6, 3])
 
-  # search is case-insensitive
+  # search is case-sensitive
   exit_code, output, err = svntest.actions.run_and_verify_svn(
                              None, None, [], 'log', '--search',
                              'FOR REVISION [367]')
 
   log_chain = parse_log_output(output)
-  check_log_chain(log_chain, [7, 6, 3])
+  check_log_chain(log_chain, [])
 
   # multi-pattern search
   exit_code, output, err = svntest.actions.run_and_verify_svn(
@@ -2369,7 +2369,6 @@ def merge_sensitive_log_with_search(sbox):
 # Test for issue #4355 'svn_client_log5 broken with multiple revisions
 # which span a rename'.
 @Issue(4355)
-@XFail()
 @SkipUnless(server_has_mergeinfo)
 def log_multiple_revs_spanning_rename(sbox):
   "log for multiple revs which span a rename"
@@ -2380,6 +2379,7 @@ def log_multiple_revs_spanning_rename(sbox):
   msg_file=os.path.abspath(msg_file)
   mu_path1 = os.path.join(wc_dir, 'A', 'mu')
   mu_path2 = os.path.join(wc_dir, 'trunk', 'mu')
+  trunk_path = os.path.join(wc_dir, 'trunk')
 
   # r2 - Change a file.
   msg=""" Log message for revision 2
@@ -2402,6 +2402,7 @@ def log_multiple_revs_spanning_rename(sbox):
   svntest.main.file_write(msg_file, msg)
   svntest.main.file_append(mu_path2, "4")
   svntest.main.run_svn(None, 'ci', '-F', msg_file, wc_dir)
+  svntest.main.run_svn(None, 'up', wc_dir)
 
   # Check that log can handle a revision range that spans a rename.
   exit_code, output, err = svntest.actions.run_and_verify_svn(
@@ -2451,11 +2452,12 @@ def log_multiple_revs_spanning_rename(sbox):
 
   # Discreet revision *ranges* which span a rename should work too.
   exit_code, output, err = svntest.actions.run_and_verify_svn(
-    None, None, [], 'log', '-r1:1', '-r4:2', sbox.repo_url + '/trunk')
+    None, None, [], 'log', '-r1', '-r4:2', sbox.repo_url + '/trunk')
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [1,4,3,2])
 
-  # As above, but revision ranges from younger to older revs fail:
+  # As above, but revision ranges from younger to older.  Previously this
+  # failed with:
   #
   #  >svn log ^/trunk -r1:1 -r2:4
   #  ------------------------------------------------------------------------
@@ -2471,9 +2473,25 @@ def log_multiple_revs_spanning_rename(sbox):
   #    (apr_err=SVN_ERR_FS_NOT_FOUND)
   #  svn: E160013: File not found: revision 4, path '/A'
   exit_code, output, err = svntest.actions.run_and_verify_svn(
-    None, None, [], 'log', '-r1:1', '-r2:4', sbox.repo_url + '/trunk')
+    None, None, [], 'log', '-r1', '-r2:4', sbox.repo_url + '/trunk')
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [1,2,3,4])
+
+  # Discrete revs with WC-only opt revs shouldn't cause any problems.
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', '-r1', '-rPREV', trunk_path)
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [1,3])
+
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', '-r1', '-rCOMMITTED', trunk_path)
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [1,4])
+
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', '-r1', '-rBASE', trunk_path)
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [1,4])
 
 ########################################################################
 # Run the tests

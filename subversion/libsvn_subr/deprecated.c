@@ -1176,16 +1176,39 @@ svn_mergeinfo_intersect(svn_mergeinfo_t *mergeinfo,
 }
 
 /*** From config.c ***/
+svn_error_t *
+svn_config_create(svn_config_t **cfgp,
+                  svn_boolean_t section_names_case_sensitive,
+                  apr_pool_t *result_pool)
+{
+  return svn_error_trace(svn_config_create2(cfgp,
+                                            section_names_case_sensitive,
+                                            FALSE,
+                                            result_pool));
+}
+
+svn_error_t *
+svn_config_read2(svn_config_t **cfgp, const char *file,
+                 svn_boolean_t must_exist,
+                 svn_boolean_t section_names_case_sensitive,
+                 apr_pool_t *result_pool)
+{
+  return svn_error_trace(svn_config_read3(cfgp, file,
+                                          must_exist,
+                                          section_names_case_sensitive,
+                                          FALSE,
+                                          result_pool));
+}
 
 svn_error_t *
 svn_config_read(svn_config_t **cfgp, const char *file,
                 svn_boolean_t must_exist,
-                apr_pool_t *pool)
+                apr_pool_t *result_pool)
 {
-  return svn_error_trace(svn_config_read2(cfgp, file,
+  return svn_error_trace(svn_config_read3(cfgp, file,
                                           must_exist,
-                                          FALSE,
-                                          pool));
+                                          FALSE, FALSE,
+                                          result_pool));
 }
 
 #ifdef SVN_DISABLE_FULL_VERSION_MATCH
