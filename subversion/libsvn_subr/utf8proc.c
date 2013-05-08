@@ -58,8 +58,9 @@ const char *svn_utf__utf8proc_version(void)
  * invalid Unicode codepoints. Any error message comes from utf8proc.
  */
 static svn_error_t *
-decompose_normalized(const char *string, apr_size_t length,
-                     svn_membuf_t *buffer, apr_size_t *result_length)
+decompose_normalized(apr_size_t *result_length,
+                     const char *string, apr_size_t length,
+                     svn_membuf_t *buffer)
 {
   const int nullterm = (length == SVN_UTF__UNKNOWN_LENGTH
                         ? UTF8PROC_NULLTERM : 0);
@@ -112,10 +113,10 @@ ucs4cmp(const apr_int32_t *bufa, apr_size_t lena,
 
 
 svn_error_t *
-svn_utf__normcmp(const char *str1, apr_size_t len1,
+svn_utf__normcmp(int *result,
+                 const char *str1, apr_size_t len1,
                  const char *str2, apr_size_t len2,
-                 svn_membuf_t *buf1, svn_membuf_t *buf2,
-                 int *result)
+                 svn_membuf_t *buf1, svn_membuf_t *buf2)
 {
   apr_size_t buflen1;
   apr_size_t buflen2;
@@ -131,8 +132,8 @@ svn_utf__normcmp(const char *str1, apr_size_t len1,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(decompose_normalized(str1, len1, buf1, &buflen1));
-  SVN_ERR(decompose_normalized(str2, len2, buf2, &buflen2));
+  SVN_ERR(decompose_normalized(&buflen1, str1, len1, buf1));
+  SVN_ERR(decompose_normalized(&buflen2, str2, len2, buf2));
   *result = ucs4cmp(buf1->data, buflen1, buf2->data, buflen2);
   return SVN_NO_ERROR;
 }
@@ -182,14 +183,14 @@ encode_ucs4_string(svn_membuf_t *buffer,
 
 
 svn_error_t *
-svn_utf__glob(const char *pattern, apr_size_t pattern_len,
+svn_utf__glob(svn_boolean_t *match,
+              const char *pattern, apr_size_t pattern_len,
               const char *string, apr_size_t string_len,
               const char *escape, apr_size_t escape_len,
               svn_boolean_t sql_like,
               svn_membuf_t *pattern_buf,
               svn_membuf_t *string_buf,
-              svn_membuf_t *temp_buf,
-              svn_boolean_t *match)
+              svn_membuf_t *temp_buf)
 {
   apr_size_t patternbuf_len;
   apr_size_t tempbuf_len;
@@ -202,7 +203,7 @@ svn_utf__glob(const char *pattern, apr_size_t pattern_len,
 
   /* Convert the patern to NFD UTF-8. We can't use the UCS-4 result
      because apr_fnmatch can't handle it.*/
-  SVN_ERR(decompose_normalized(pattern, pattern_len, temp_buf, &tempbuf_len));
+  SVN_ERR(decompose_normalized(&tempbuf_len, pattern, pattern_len, temp_buf));
   if (!sql_like)
     SVN_ERR(encode_ucs4_string(pattern_buf, temp_buf->data, tempbuf_len,
                                &patternbuf_len));
@@ -273,7 +274,7 @@ svn_utf__glob(const char *pattern, apr_size_t pattern_len,
     }
 
   /* Now normalize the string */
-  SVN_ERR(decompose_normalized(string, string_len, temp_buf, &tempbuf_len));
+  SVN_ERR(decompose_normalized(&tempbuf_len, string, string_len, temp_buf));
   SVN_ERR(encode_ucs4_string(string_buf, temp_buf->data,
                              tempbuf_len, &tempbuf_len));
 
