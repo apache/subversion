@@ -481,8 +481,8 @@ sub build_openssl {
   # remove the no-asm below and use ms\do_nasm.bat instead.
   
   # TODO: Enable openssl to use zlib.  openssl needs some patching to do
-	# this since it wants to look for zlib as zlib1.dll and as the httpd
-	# build instructions note you probably don't want to dynamic link zlib.
+  # this since it wants to look for zlib as zlib1.dll and as the httpd
+  # build instructions note you probably don't want to dynamic link zlib.
   
   # TODO: OpenSSL requires perl on the path since it uses perl without a full
   # path in the batch file and the makefiles.  Probably should determine
@@ -647,17 +647,18 @@ sub build_httpd {
   # ApacheMonitor build fails due a duplicate manifest, turn off
   # GenerateManifest
   insert_property_group('support\win32\ApacheMonitor.vcxproj',
-                        '<GenerateManifest>false</GenerateManifest>');
+                        '<GenerateManifest>false</GenerateManifest>',
+                        '.dupman');
 
-  # Modules randomly fail due to an error about the CL.read.1.tlog file
-  # already existing.  This is really because of the intermediate dirs
-  # being shared between modules, but for the time being this works around
-  # it.
+  # Modules and support projects randomly fail due to an error about the
+  # CL.read.1.tlog file already existing.  This is really because of the
+  # intermediate dirs being shared between modules, but for the time being
+  # this works around it.
   find(sub {
          if (/\.vcxproj$/) {
            insert_property_group($_, '<TrackFileAccess>false</TrackFileAccess>')
          }
-       }, 'modules');
+       }, 'modules', 'support');
 
   # The APR libraries have projects named libapr but produce output named libapr-1
   # The problem with this is in newer versions of Visual Studio TargetName defaults
