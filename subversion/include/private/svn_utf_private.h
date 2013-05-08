@@ -21,7 +21,7 @@
  * @endcopyright
  *
  * @file svn_utf_private.h
- * @brief UTF validation routines
+ * @brief UTF validation and normalization routines
  */
 
 #ifndef SVN_UTF_PRIVATE_H
@@ -31,6 +31,8 @@
 #include <apr_pools.h>
 
 #include "svn_types.h"
+#include "svn_string.h"
+#include "svn_string_private.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -79,6 +81,57 @@ svn_utf__cstring_from_utf8_fuzzy(const char *src,
                                                const char *,
                                                apr_pool_t *));
 
+/* A constant used for many length parameters in the utf8proc wrappers
+ * to indicate that the length of a string is unknonw. */
+#define SVN_UTF__UNKNOWN_LENGTH ((apr_size_t) -1)
+
+
+/* Compare two UTF-8 strings, ignoring normalization, using buffers
+ * BUF1 and BUF2 for temporary storage. If either of LEN1 or LEN2 is
+ * SVN_UTF__UNKNOWN_LENGTH, assume the associated string is
+ * null-terminated; otherwise, consider the string only up to the
+ * given length.
+ *
+ * Return compare value in *RESULT.
+ */
+svn_error_t *
+svn_utf__normcmp(const char *str1, apr_size_t len1,
+                 const char *str2, apr_size_t len2,
+                 svn_membuf_t *buf1, svn_membuf_t *buf2,
+                 int *result);
+
+
+/* Pattern matching similar to the the SQLite LIKE and GLOB
+ * operators. PATTERN, KEY and ESCAPE must all point to UTF-8
+ * strings. Furthermore, ESCAPE, if provided, must be a character from
+ * the ASCII subset.
+ *
+ * If any of PATTERN_LEN, STRING_LEN or ESCAPE_LEN are
+ * SVN_UTF__UNKNOWN_LENGTH, assume the associated string is
+ * null-terminated; otherwise, consider the string only up to the
+ * given length.
+ *
+ * Use buffers PATTERN_BUF, STRING_BUF and TEMP_BUF for temporary storage.
+ *
+ * If SQL_LIKE is true, interpret PATTERN as a pattern used by the SQL
+ * LIKE operator and notice ESCAPE. Otherwise it's a Unix fileglob
+ * pattern, and ESCAPE must be NULL.
+ *
+ * Set *MATCH to the result of the comparison.
+*/
+svn_error_t *
+svn_utf__glob(const char *pattern, apr_size_t pattern_len,
+              const char *string, apr_size_t string_len,
+              const char *escape, apr_size_t escape_len,
+              svn_boolean_t sql_like,
+              svn_membuf_t *pattern_buf,
+              svn_membuf_t *string_buf,
+              svn_membuf_t *temp_buf,
+              svn_boolean_t *match);
+
+/* Return the version of the wrapped utf8proc library. */
+const char *
+svn_utf__utf8proc_version(void);
 
 #ifdef __cplusplus
 }
