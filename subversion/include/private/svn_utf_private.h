@@ -95,10 +95,10 @@ svn_utf__cstring_from_utf8_fuzzy(const char *src,
  * Return compare value in *RESULT.
  */
 svn_error_t *
-svn_utf__normcmp(const char *str1, apr_size_t len1,
+svn_utf__normcmp(int *result,
+                 const char *str1, apr_size_t len1,
                  const char *str2, apr_size_t len2,
-                 svn_membuf_t *buf1, svn_membuf_t *buf2,
-                 int *result);
+                 svn_membuf_t *buf1, svn_membuf_t *buf2);
 
 
 /* Pattern matching similar to the the SQLite LIKE and GLOB
@@ -120,14 +120,14 @@ svn_utf__normcmp(const char *str1, apr_size_t len1,
  * Set *MATCH to the result of the comparison.
 */
 svn_error_t *
-svn_utf__glob(const char *pattern, apr_size_t pattern_len,
+svn_utf__glob(svn_boolean_t *match,
+              const char *pattern, apr_size_t pattern_len,
               const char *string, apr_size_t string_len,
               const char *escape, apr_size_t escape_len,
               svn_boolean_t sql_like,
               svn_membuf_t *pattern_buf,
               svn_membuf_t *string_buf,
-              svn_membuf_t *temp_buf,
-              svn_boolean_t *match);
+              svn_membuf_t *temp_buf);
 
 /* Return the version of the wrapped utf8proc library. */
 const char *
