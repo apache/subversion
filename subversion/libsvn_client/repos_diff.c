@@ -328,7 +328,7 @@ get_file_from_ra(struct file_baton *fb,
                                      fb->pool, scratch_pool));
 
       fstream = svn_stream_checksummed2(fstream, NULL, &fb->start_md5_checksum,
-                                        svn_checksum_md5, TRUE, scratch_pool);
+                                        svn_checksum_md5, TRUE, fb->pool);
 
       /* Retrieve the file and its properties */
       SVN_ERR(svn_ra_get_file(fb->edit_baton->ra_session,
