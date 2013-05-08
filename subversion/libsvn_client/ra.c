@@ -158,7 +158,7 @@ push_wc_prop(void *baton,
   if (! cb->commit_items)
     return svn_error_createf
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-       _("Attempt to set wc property '%s' on '%s' in a non-commit operation"),
+       _("Attempt to set wcprop '%s' on '%s' in a non-commit operation"),
        name, svn_dirent_local_style(relpath, pool));
 
   for (i = 0; i < cb->commit_items->nelts; i++)
