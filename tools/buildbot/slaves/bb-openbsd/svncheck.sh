@@ -24,11 +24,7 @@ set -x
 
 branch="$(basename $(svn info . | grep ^URL  | cut -d' ' -f2))"
 export MALLOC_OPTIONS=S
-(cd .. && gmake BRANCH="$branch" PARALLEL="" THREADING="no" \
-                                  svn-check-local \
-                                  svn-check-svn \
-                                  svn-check-neon \
-                                  svn-check-serf)
+(cd .. && gmake BRANCH="$branch" PARALLEL="" THREADING="no" svn-check-local)
 grep -q "^FAIL:" tests.log.svn-check* && exit 1
 grep -q "^XPASS:" tests.log.svn-check* && exit 1
 exit 0
