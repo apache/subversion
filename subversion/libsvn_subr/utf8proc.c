@@ -24,7 +24,7 @@
 
 
 #define UTF8PROC_INLINE
-#include "utf8proc/utf8proc.c"
+#include "utf8proc/utf8proc.c.inline"
 
 #include <apr_fnmatch.h>
 
@@ -177,6 +177,7 @@ encode_ucs4_string(svn_membuf_t *buffer,
   *result_length = 0;
   while (len-- > 0)
     SVN_ERR(encode_ucs4(buffer, *ucs4str++, result_length));
+  svn_membuf__resize(buffer, *result_length + 1);
   ((char*)buffer->data)[*result_length] = '\0';
   return SVN_NO_ERROR;
 }
@@ -237,10 +238,12 @@ svn_utf__glob(svn_boolean_t *match,
         }
 
       patternbuf_len = 0;
+      svn_membuf__ensure(pattern_buf, tempbuf_len + 1);
       for (i = 0, escaped = FALSE; i < tempbuf_len; ++i, ++like)
         {
           if (*like == ucs4esc && !escaped)
             {
+              svn_membuf__resize(pattern_buf, patternbuf_len + 1);
               ((char*)pattern_buf->data)[patternbuf_len++] = '\\';
               escaped = TRUE;
             }
@@ -255,6 +258,7 @@ svn_utf__glob(svn_boolean_t *match,
                 {
                   /* Escape brackets and backslashes which are always
                      literals in LIKE patterns. */
+                  svn_membuf__resize(pattern_buf, patternbuf_len + 1);
                   ((char*)pattern_buf->data)[patternbuf_len++] = '\\';
                   escaped = TRUE;
                   --i; --like;
@@ -262,14 +266,17 @@ svn_utf__glob(svn_boolean_t *match,
                 }
 
               /* Replace LIKE wildcards with their GLOB equivalents. */
-              if (*like == '%')
-                ((char*)pattern_buf->data)[patternbuf_len++] = '*';
-              else if (*like == '_')
-                ((char*)pattern_buf->data)[patternbuf_len++] = '?';
+              if (*like == '%' || *like == '_')
+                {
+                  const char wildcard = (*like == '%' ? '*' : '?');
+                  svn_membuf__resize(pattern_buf, patternbuf_len + 1);
+                  ((char*)pattern_buf->data)[patternbuf_len++] = wildcard;
+                }
               else
                 SVN_ERR(encode_ucs4(pattern_buf, *like, &patternbuf_len));
             }
         }
+      svn_membuf__resize(pattern_buf, patternbuf_len + 1);
       ((char*)pattern_buf->data)[patternbuf_len] = '\0';
     }
 
