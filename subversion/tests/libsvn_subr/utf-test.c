@@ -25,6 +25,7 @@
 #include "svn_utf.h"
 #include "svn_pools.h"
 
+#include "private/svn_string_private.h"
 #include "private/svn_utf_private.h"
 
 /* Random number seed.  Yes, it's global, just pretend you can't see it. */
@@ -410,9 +411,10 @@ test_utf_collated_compare(apr_pool_t *pool)
   };
 
 
-  svn_stringbuf_t *bufa = svn_stringbuf_create_empty(pool);
-  svn_stringbuf_t *bufb = svn_stringbuf_create_empty(pool);
   const struct utfcmp_test_t *ut;
+  svn_membuf_t bufa, bufb;
+  svn_membuf__create(&bufa, 0, pool);
+  svn_membuf__create(&bufb, 0, pool);
 
   srand(111);
   for (ut = utfcmp_tests; ut->stra; ++ut)
@@ -424,23 +426,24 @@ test_utf_collated_compare(apr_pool_t *pool)
                                ? SVN_UTF__UNKNOWN_LENGTH : strlen(ut->strb));
       int result;
 
-      SVN_ERR(svn_utf__normcmp(ut->stra, lena, ut->strb, lenb,
-                               bufa, bufb, &result));
+      SVN_ERR(svn_utf__normcmp(&result,
+                               ut->stra, lena, ut->strb, lenb,
+                               &bufa, &bufb));
 
       /* UCS-4 debugging dump of the decomposed strings
       {
-        const apr_int32_t *const ucsbufa = (void*)bufa->data;
-        const apr_int32_t *const ucsbufb = (void*)bufb->data;
+        const apr_int32_t *const ucsbufa = bufa.data;
+        const apr_int32_t *const ucsbufb = bufb.data;
         apr_size_t i;
 
         printf("(%c)%7s %c %s\n", ut->op,
                ut->taga, (!result ? '=' : (result < 0 ? '<' : '>')), ut->tagb);
 
-        for (i = 0; i < bufa->len || i < bufb->len; ++i)
+        for (i = 0; i < bufa.size || i < bufb.size; ++i)
         {
-          if (i < bufa->len && i < bufb->len)
+          if (i < bufa.size && i < bufb.size)
             printf("    U+%04X   U+%04X\n", ucsbufa[i], ucsbufb[i]);
-          else if (i < bufa->len)
+          else if (i < bufa.size)
             printf("    U+%04X\n", ucsbufa[i]);
           else
             printf("             U+%04X\n", ucsbufb[i]);
@@ -557,10 +560,11 @@ test_utf_pattern_match(apr_pool_t *pool)
     {FALSE, FALSE, NULL, NULL, NULL}
   };
 
-  svn_stringbuf_t *bufa = svn_stringbuf_create_empty(pool);
-  svn_stringbuf_t *bufb = svn_stringbuf_create_empty(pool);
-  svn_stringbuf_t *bufc = svn_stringbuf_create_empty(pool);
   const struct glob_test_t *gt;
+  svn_membuf_t bufa, bufb, bufc;
+  svn_membuf__create(&bufa, 0, pool);
+  svn_membuf__create(&bufb, 0, pool);
+  svn_membuf__create(&bufc, 0, pool);
 
   srand(79);
   for (gt = glob_tests; gt->pattern; ++gt)
@@ -579,10 +583,11 @@ test_utf_pattern_match(apr_pool_t *pool)
       svn_error_t *err;
 
 
-      err = svn_utf__glob(gt->pattern, lenptn,
+      err = svn_utf__glob(&match,
+                          gt->pattern, lenptn,
                           gt->string, lenstr,
                           gt->escape, lenesc,
-                          gt->sql_like, bufa, bufb, bufc, &match);
+                          gt->sql_like, &bufa, &bufb, &bufc);
 
       if (!gt->sql_like && gt->escape && !err)
         return svn_error_create
@@ -629,6 +634,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test_utf_collated_compare,
                    "test svn_utf__normcmp"),
     SVN_TEST_PASS2(test_utf_pattern_match,
-                   "test svn_utf__match"),
+                   "test svn_utf__glob"),
     SVN_TEST_NULL
   };
