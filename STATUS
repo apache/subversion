@@ -54,7 +54,7 @@ Candidate changes:
      +1: stsp (for 1.8.0, but not any 1.8.x since it changes the UI)
 
  * r1469363, r1469645, r1469674, r1470037, r1470537, r1478220, r1478221,
-   r1478465
+   r1478465, r1478998, r1480723
    Fix issue #4355 'svn_client_log5 broken with multiple revisions which
    span a rename'.
    Justification:
@@ -64,7 +64,8 @@ Candidate changes:
    Notes:
      r1469363, r1469645, r1469674, r1470037, and r1470537 are the creation
      and subsequent tweaks of a single new log test for this issue.  r1478220
-     is the fix.  r1478221 and r1478465 are a minor follow-ups to that fix.
+     is the fix.  r1478221, r1478465, r1478998, and r1480723 are (mostly)
+     minor follow-ups to that fix.
    Votes:
      +1: pburba
 
