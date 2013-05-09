@@ -57,6 +57,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * new --patch-compatible option for 'svn diff' (r1239561)
     * new --no-diff-added option for 'svn diff' (r1433958)
     * new SvnPubSub distributed commit hooks (tools/server-side/svnpubsub)
+    * new light-weight benchmarking client (tools/client-side/svn-bench)
+    * new w/c subtree duplication tool (tools/client-side/detach.py)
+    * new svndumpfilter dependency analysis (tools/server-side/svnpredumpfilter.py)
     * 'svn diff' can compare arbitrary files and directories (r1310291, et al)
     * ra_serf avoids re-downloading content present in pristine store (r1333936)
     * 'svn mergeinfo' now honors the --revision (-r) option (issue #4199)
@@ -83,9 +86,16 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * read FSFS data using fewer fopen calls (issue #3372)
     * 'svnadmin verify' will now check meta data (issues #3956, #4211)
     * new -- client-speed option for svnserve (r1391788)
+    * hook script templates are now marked as executable (r1153414)
+    * svn:ignore __pycache__ directories by default (r1150073)
+    * 'svn diff --git' include copyfrom revision in "copied" headers (r1155279)
+    * 'svn merge' now uses much less memory (r1149519 et al)
+    * get list of supported schemes for RA libraries (r1148134)
+    * 'svn checkout' skips file externals from unintended repositories (r1153110)
+    * return an error when conflicts could not be resolved (r1150439)
 
   - Client-side bugfixes:
-    * 
+    * fix inconsistent 'svn log' output for empty revisions (issue #3964)
 
   - Server-side bugfixes:
     * SVNParentPath / repository listing now authz-filtered (r1408184)
@@ -98,7 +108,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
  Developer-visible changes:
   - General:
     * now require Python 2.5 for tests and dev tools (r1243627)
+    * now require bzip2 for tests and dev tools (r1148512)
     * configure defaults to --without-apache-libexecdir (r1469862)
+    * 'make extraclean' is more thorough now (r1149460)
+    * support for Serf 2 (r1147538)
 
   - API changes:
     * fix inconsistent handling of log revs without changed paths (issue #3694)
