@@ -38,6 +38,21 @@ Candidate changes:
      +1: julianfoad
      +1: stsp (for 1.8.0, but not any 1.8.x since it changes the UI)
 
+ * 1477294, r1480616, r1480641, r1480642, r1480664, r1480669
+   Further improvements for interactive resolution of property conflicts.
+   Allow conflicted properties to be edited and resolved to the edited value.
+   Justification:
+     This is a usability enhancement we could make in 1.8.0.
+     It also fixes a bug in libsvn_wc where it doesn't use results provided
+     by the conflict callback (see r1480641), which might help API consumers.
+   Notes:
+     This group depends on r1470246.
+     r1477294 and r1480616 are merged to avoid text conflicts from refactoring.
+     r1480641 and r1480642 are the main changes.
+     The other revisions are small follow-up fixes.
+   Votes:
+     +1: stsp (for 1.8.0, but not any 1.8.x since it changes the UI)
+
  * r1469363, r1469645, r1469674, r1470037, r1470537, r1478220, r1478221,
    r1478465
    Fix issue #4355 'svn_client_log5 broken with multiple revisions which
