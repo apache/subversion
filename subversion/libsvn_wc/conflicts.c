@@ -1513,6 +1513,71 @@ generate_propconflict(svn_boolean_t *conflict_remains,
   return SVN_NO_ERROR;
 }
 
+/* Perform a 3-way merge in which conflicts are expected, showing the
+ * conflicts in the way specified by STYLE, and using MERGE_OPTIONS.
+ *
+ * The three input files are LEFT_ABSPATH (the base), DETRANSLATED_TARGET
+ * and RIGHT_ABSPATH.  The output is stored in a new temporary file,
+ * whose name is put into *CHOSEN_ABSPATH.
+ *
+ * The output file will be deleted according to DELETE_WHEN.  If
+ * DELETE_WHEN is 'on pool cleanup', it refers to RESULT_POOL.
+ *
+ * DB and WRI_ABSPATH are used to choose a directory for the output file.
+ *
+ * Allocate *CHOSEN_ABSPATH in RESULT_POOL.  Use SCRATCH_POOL for temporary
+ * allocations.
+ */
+static svn_error_t *
+merge_showing_conflicts(const char **chosen_abspath,
+                        svn_wc__db_t *db,
+                        const char *wri_abspath,
+                        svn_diff_conflict_display_style_t style,
+                        const apr_array_header_t *merge_options,
+                        const char *left_abspath,
+                        const char *detranslated_target,
+                        const char *right_abspath,
+                        svn_io_file_del_t delete_when,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  const char *temp_dir;
+  svn_stream_t *chosen_stream;
+  svn_diff_t *diff;
+  svn_diff_file_options_t *diff3_options;
+
+  diff3_options = svn_diff_file_options_create(scratch_pool);
+  if (merge_options)
+    SVN_ERR(svn_diff_file_options_parse(diff3_options,
+                                        merge_options,
+                                        scratch_pool));
+
+  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir, db,
+                                         wri_abspath,
+                                         scratch_pool, scratch_pool));
+  /* We need to open the stream in RESULT_POOL because that controls the
+   * lifetime of the file if DELETE_WHEN is 'on pool cleanup'.  (We also
+   * want to allocate CHOSEN_ABSPATH in RESULT_POOL, but we don't care
+   * about the stream itself.) */
+  SVN_ERR(svn_stream_open_unique(&chosen_stream, chosen_abspath,
+                                 temp_dir, delete_when,
+                                 result_pool, scratch_pool));
+  SVN_ERR(svn_diff_file_diff3_2(&diff,
+                                left_abspath,
+                                detranslated_target, right_abspath,
+                                diff3_options, scratch_pool));
+  SVN_ERR(svn_diff_file_output_merge2(chosen_stream, diff,
+                                      left_abspath,
+                                      detranslated_target,
+                                      right_abspath,
+                                      NULL, NULL, NULL, NULL, /* markers */
+                                      style,
+                                      scratch_pool));
+  SVN_ERR(svn_stream_close(chosen_stream));
+
+  return SVN_NO_ERROR;
+}
+
 /* Resolve the text conflict on DB/LOCAL_ABSPATH in the manner specified
  * by CHOICE.
  *
@@ -1530,6 +1595,8 @@ generate_propconflict(svn_boolean_t *conflict_remains,
  * DETRANSLATED_TARGET is the detranslated version of 'mine' (see
  * detranslate_wc_file() above).  MERGE_OPTIONS are passed to the
  * diff3 implementation in case a 3-way merge has to be carried out.
+ *
+ * ### This is redundantly similar to resolve_text_conflict_on_node().
  */
 static svn_error_t *
 eval_text_conflict_func_result(svn_skel_t **work_items,
@@ -1575,47 +1642,20 @@ eval_text_conflict_func_result(svn_skel_t **work_items,
       case svn_wc_conflict_choose_theirs_conflict:
       case svn_wc_conflict_choose_mine_conflict:
         {
-          const char *chosen_abspath;
-          const char *temp_dir;
-          svn_stream_t *chosen_stream;
-          svn_diff_t *diff;
-          svn_diff_conflict_display_style_t style;
-          svn_diff_file_options_t *diff3_options;
+          svn_diff_conflict_display_style_t style
+            = choice == svn_wc_conflict_choose_theirs_conflict
+                ? svn_diff_conflict_display_latest
+                : svn_diff_conflict_display_modified;
 
-          diff3_options = svn_diff_file_options_create(scratch_pool);
-
-          if (merge_options)
-             SVN_ERR(svn_diff_file_options_parse(diff3_options,
-                                                 merge_options,
-                                                 scratch_pool));
-
-          style = choice == svn_wc_conflict_choose_theirs_conflict
-                    ? svn_diff_conflict_display_latest
-                    : svn_diff_conflict_display_modified;
-
-          SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir, db,
-                                                 local_abspath,
-                                                 scratch_pool, scratch_pool));
-          SVN_ERR(svn_stream_open_unique(&chosen_stream, &chosen_abspath,
-                                         temp_dir, svn_io_file_del_none,
-                                         scratch_pool, scratch_pool));
-
-          SVN_ERR(svn_diff_file_diff3_2(&diff,
-                                        left_abspath,
-                                        detranslated_target, right_abspath,
-                                        diff3_options, scratch_pool));
-          SVN_ERR(svn_diff_file_output_merge2(chosen_stream, diff,
-                                              left_abspath,
-                                              detranslated_target,
-                                              right_abspath,
-                                              /* markers ignored */
-                                              NULL, NULL,
-                                              NULL, NULL,
-                                              style,
-                                              scratch_pool));
-          SVN_ERR(svn_stream_close(chosen_stream));
-
-          install_from_abspath = chosen_abspath;
+          SVN_ERR(merge_showing_conflicts(&install_from_abspath,
+                                          db, local_abspath,
+                                          style, merge_options,
+                                          left_abspath,
+                                          detranslated_target,
+                                          right_abspath,
+                                          /* ### why not same as other caller? */
+                                          svn_io_file_del_none,
+                                          scratch_pool, scratch_pool));
           remove_source = TRUE;
           *is_resolved = TRUE;
           break;
@@ -2363,6 +2403,8 @@ remove_artifact_file_if_exists(svn_skel_t **work_items,
  * remove to avoid checking all the time. Resolving a text conflict by
  * removing all the marker files is a fully supported scenario since
  * Subversion 1.0.
+ *
+ * ### This is redundantly similar to eval_text_conflict_func_result().
  */
 static svn_error_t *
 resolve_text_conflict_on_node(svn_boolean_t *did_resolve,
@@ -2424,40 +2466,21 @@ resolve_text_conflict_on_node(svn_boolean_t *did_resolve,
       {
         if (conflict_old && conflict_working && conflict_new)
           {
-            const char *temp_dir;
-            svn_stream_t *tmp_stream = NULL;
-            svn_diff_t *diff;
-            svn_diff_conflict_display_style_t style =
-              conflict_choice == svn_wc_conflict_choose_theirs_conflict
-              ? svn_diff_conflict_display_latest
-              : svn_diff_conflict_display_modified;
+            svn_diff_conflict_display_style_t style
+              = conflict_choice == svn_wc_conflict_choose_theirs_conflict
+                  ? svn_diff_conflict_display_latest
+                  : svn_diff_conflict_display_modified;
 
-            SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir, db,
-                                                   local_abspath,
-                                                   scratch_pool,
-                                                   scratch_pool));
-            SVN_ERR(svn_stream_open_unique(&tmp_stream,
-                                           &auto_resolve_src,
-                                           temp_dir,
-                                           svn_io_file_del_on_pool_cleanup,
-                                           scratch_pool, scratch_pool));
-
-            SVN_ERR(svn_diff_file_diff3_2(&diff,
-                                          conflict_old,
-                                          conflict_working,
-                                          conflict_new,
-                                          svn_diff_file_options_create(
-                                            scratch_pool),
-                                          scratch_pool));
-            SVN_ERR(svn_diff_file_output_merge2(tmp_stream, diff,
-                                                conflict_old,
-                                                conflict_working,
-                                                conflict_new,
-                                                /* markers ignored */
-                                                NULL, NULL, NULL, NULL,
-                                                style,
-                                                scratch_pool));
-            SVN_ERR(svn_stream_close(tmp_stream));
+            SVN_ERR(merge_showing_conflicts(&auto_resolve_src,
+                                            db, local_abspath,
+                                            style,
+                                            NULL /*merge_options*/,
+                                            conflict_old,
+                                            conflict_working,
+                                            conflict_new,
+                                            /* ### why not same as other caller? */
+                                            svn_io_file_del_on_pool_cleanup,
+                                            scratch_pool, scratch_pool));
           }
         else
           auto_resolve_src = NULL;
