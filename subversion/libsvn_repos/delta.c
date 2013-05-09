@@ -196,17 +196,6 @@ authz_root_check(svn_fs_root_t *root,
 }
 
 
-static svn_error_t *
-not_a_dir_error(const char *role,
-                const char *path)
-{
-  return svn_error_createf
-    (SVN_ERR_FS_NOT_DIRECTORY, 0,
-     "Invalid %s directory '%s'",
-     role, path ? path : "(null)");
-}
-
-
 /* Public interface to computing directory deltas.  */
 svn_error_t *
 svn_repos_dir_delta2(svn_fs_root_t *src_root,
@@ -237,7 +226,8 @@ svn_repos_dir_delta2(svn_fs_root_t *src_root,
   if (src_parent_dir)
     src_parent_dir = svn_relpath_canonicalize(src_parent_dir, pool);
   else
-    return not_a_dir_error("source parent", src_parent_dir);
+    return svn_error_create(SVN_ERR_FS_NOT_DIRECTORY, 0,
+                            "Invalid source parent directory '(null)'");
 
   /* TGT_FULLPATH must be valid. */
   if (tgt_fullpath)
