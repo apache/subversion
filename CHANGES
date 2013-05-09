@@ -122,7 +122,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
   - Other tool improvements and bugfixes:
     * 'svnmucc' promoted to first-class supported utility (issue #3308)
-    * make 'svnauthz-validate' optionally user/path access (r1197588)
+    * rename 'svnauthz-validate' to 'svnauthz' (issue #4284)
+    * make 'svnauthz' optionally validate user/path access (r1197588)
   
  Developer-visible changes:
   - General:
