@@ -35,7 +35,8 @@ Candidate changes:
      Showing the whole .prej file each time was confusing and ugly when more
      than one property was in conflict.
    Votes:
-     +1: julianfoad, stsp
+     +1: julianfoad
+     +1: stsp (for 1.8.0, but not any 1.8.x since it changes the UI)
 
  * r1471443, r1471490
    Fix a bug in the Summary of Conflicts when using interactive conflict
