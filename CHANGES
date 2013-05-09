@@ -85,7 +85,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * FSFS de-duplication now works for properties as well (r1243312)
     * read FSFS data using fewer fopen calls (issue #3372)
     * 'svnadmin verify' will now check meta data (issues #3956, #4211)
-    * new -- client-speed option for svnserve (r1391788)
+    * new --client-speed option for svnserve (r1391788)
     * hook script templates are now marked as executable (r1153414)
     * svn:ignore __pycache__ directories by default (r1150073)
     * 'svn diff --git' include copyfrom revision in "copied" headers (r1155279)
