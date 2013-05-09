@@ -94,7 +94,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * get list of supported schemes for RA libraries (r1148134)
     * 'svn checkout' skips file externals from unintended repositories (r1153110)
     * return an error when conflicts could not be resolved (r1150439)
-    * prefix SASL errors with "SASL authentication error" (r1179767)
     * let HTTPv2-aware clients fetch v2-style resources (r1161202)
     * 'svn status' with better NLS support (r1157537, -682)
     * error out on non-canonical fspaths in the authz file (r1166111)
