@@ -1353,7 +1353,7 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
             b->path_prefix, desc->local_abspath, scratch_pool);
 
       svn_cl__conflict_stats_resolved(b->conflict_stats, local_path,
-                                             desc->kind);
+                                      desc->kind);
     }
   return SVN_NO_ERROR;
 }
