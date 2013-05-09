@@ -52,7 +52,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * new 'svnadmin lock' / 'svnadmin unlock' subcommands (issue #3942, #4092)
     * new SVNUseUTF8 configuration option for mod_dav_svn (issue #2487)
     * new SVNHooksEnv configuration option for mod_dav_svn (r1239966)
-    * new --ignore-properties option for 'svn diff' (r1239553. -617)
+    * new --ignore-properties option for 'svn diff' (r1239553, -617)
     * new --properties-only option for 'svn diff' (r1336110)
     * new --patch-compatible option for 'svn diff' (r1239561)
     * new --no-diff-added option for 'svn diff' (r1433958)
@@ -96,14 +96,14 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * return an error when conflicts could not be resolved (r1150439)
     * prefix SASL errors with "SASL authentication error" (r1179767)
     * let HTTPv2-aware clients fetch v2-style resources (r1161202)
-    * 'svn status' with better NLS support (r1157537, 682)
+    * 'svn status' with better NLS support (r1157537, -682)
     * error out on non-canonical fspaths in the authz file (r1166111)
 
   - Client-side bugfixes:
     * fix inconsistent 'svn log' output for empty revisions (issue #3964)
     * fix 'svn revert' of 'svn move' (issue #876)
     * fix 'wrong 'status' of file externals "resurrecting" a deleted file (#4017)
-    * fix reporting of corrupted 1.6 w/cs by 'svn upgrade' (r1182904, 9)
+    * fix reporting of corrupted 1.6 w/cs by 'svn upgrade' (r1182904, -9)
 
   - Server-side bugfixes:
     * SVNParentPath / repository listing now authz-filtered (r1408184)
