@@ -35,7 +35,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
   - Major new features:
     * inheritable properties (r1395109)
     * GPG agent support. (r1151069)
-    * fsfs: Packing of revision property shards (issue #3944)
+    * FSFS: Packing of revision property shards (issue #3944)
     * explicit handling of local moves/renames (issue #3631, #4232)
     * new more detailed conflict storage
     * use svn_ra_serf as our new http library.
@@ -75,6 +75,14 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * repos suggested config via svn:auto-props and svn:global-ignores (r1401908)
     * support for custom keyword definitions in svn:keywords (issue #890)
     * support for server-side keyword expansion in mod_dav_svn (r1466055)
+    * FSFS now able to cache revision properties (r1326307)
+    * directory and property deltification option in FSFS (issue #4084)
+    * fine-grained control deltification behavior via fsfs.conf (r1311476)
+    * FSFS de-duplication ("rep sharing") now works within a revision (r1397773)
+    * FSFS de-duplication now works for properties as well (r1243312)
+    * read FSFS data using fewer fopen calls (issue #3372)
+    * 'svnadmin verify' will now check meta data (issues #3956, #4211)
+    * new -- client-speed option for svnserve (r1391788)
 
   - Client-side bugfixes:
     * 
@@ -82,6 +90,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
   - Server-side bugfixes:
     * SVNParentPath / repository listing now authz-filtered (r1408184)
     * user and group names in the authz config file are case-sensitive (r1475772)
+    * limit commit runtime for nodes with very deep histories (r1224836)
 
   - Other tool improvements and bugfixes:
     * 'svnmucc' promoted to first-class supported utility (issue #3308)
