@@ -38,19 +38,6 @@ Candidate changes:
      +1: julianfoad
      +1: stsp (for 1.8.0, but not any 1.8.x since it changes the UI)
 
- * r1471443, r1471490
-   Fix a bug in the Summary of Conflicts when using interactive conflict
-     resolution.  Marking a text conflict as resolved but leaving a prop
-     conflict unresolved on the same file, or vice versa, would decrement
-     both the text and prop conflict summary stats.
-   Justification:
-     Regression since 1.7.
-   Notes:
-     r1471443 is just a removal of unused code, and is included here in
-     order to avoid conflicts.  r1471490 is the main change.
-   Votes:
-     +1: julianfoad, brane
-
  * r1469363, r1469645, r1469674, r1470037, r1470537, r1478220, r1478221,
    r1478465
    Fix issue #4355 'svn_client_log5 broken with multiple revisions which
@@ -126,3 +113,15 @@ Approved changes:
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 
+ * r1471443, r1471490
+   Fix a bug in the Summary of Conflicts when using interactive conflict
+   resolution.  Marking a text conflict as resolved but leaving a prop
+   conflict unresolved on the same file, or vice versa, would decrement
+   both the text and prop conflict summary stats.
+   Justification:
+     Regression since 1.7.
+   Notes:
+     r1471443 is just a removal of unused code, and is included here in
+     order to avoid conflicts.  r1471490 is the main change.
+   Votes:
+     +1: julianfoad, brane, stsp
