@@ -230,11 +230,15 @@ show_conflicts(const svn_wc_conflict_description2_t *desc,
 /* Perform a 3-way merge of the conflicting values of a property,
  * and write the result to the OUTPUT stream.
  *
+ * If MERGED_ABSPATH is non-NULL, use it as 'my' version instead of
+ * DESC->MY_ABSPATH.
+ *
  * Assume the values are printable UTF-8 text.
  */
 static svn_error_t *
 merge_prop_conflict(svn_stream_t *output,
                     const svn_wc_conflict_description2_t *desc,
+                    const char *merged_abspath,
                     apr_pool_t *pool)
 {
   const char *base_abspath = desc->base_abspath;
@@ -262,11 +266,14 @@ merge_prop_conflict(svn_stream_t *output,
 
   options->ignore_eol_style = TRUE;
   SVN_ERR(svn_diff_file_diff3_2(&diff,
-                                base_abspath, my_abspath, their_abspath,
+                                base_abspath,
+                                merged_abspath ? merged_abspath : my_abspath,
+                                their_abspath,
                                 options, pool));
   SVN_ERR(svn_diff_file_output_merge2(output, diff,
                                       base_abspath,
-                                      my_abspath,
+                                      merged_abspath ? merged_abspath
+                                                     : my_abspath,
                                       their_abspath,
                                       _("||||||| ORIGINAL"),
                                       _("<<<<<<< MINE"),
@@ -280,16 +287,20 @@ merge_prop_conflict(svn_stream_t *output,
 
 /* Display the conflicting values of a property as a 3-way diff.
  *
+ * If MERGED_ABSPATH is non-NULL, show it as 'my' version instead of
+ * DESC->MY_ABSPATH.
+ *
  * Assume the values are printable UTF-8 text.
  */
 static svn_error_t *
 show_prop_conflict(const svn_wc_conflict_description2_t *desc,
+                   const char *merged_abspath,
                    apr_pool_t *pool)
 {
   svn_stream_t *output;
 
   SVN_ERR(svn_stream_for_stdout(&output, pool));
-  SVN_ERR(merge_prop_conflict(output, desc, pool));
+  SVN_ERR(merge_prop_conflict(output, desc, merged_abspath, pool));
 
   return SVN_NO_ERROR;
 }
@@ -366,7 +377,7 @@ edit_prop_conflict(const char **merged_file_path,
                                    result_pool, scratch_pool));
   merged_prop = svn_stream_from_aprfile2(file, TRUE /* disown */,
                                          scratch_pool);
-  SVN_ERR(merge_prop_conflict(merged_prop, desc, scratch_pool));
+  SVN_ERR(merge_prop_conflict(merged_prop, desc, NULL, scratch_pool));
   SVN_ERR(svn_stream_close(merged_prop));
   SVN_ERR(svn_io_file_flush_to_disk(file, scratch_pool));
   SVN_ERR(open_editor(&performed_edit, file_path, b, scratch_pool));
@@ -1001,7 +1012,7 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
         }
       else if (strcmp(opt->code, "dc") == 0)
         {
-          SVN_ERR(show_prop_conflict(desc, scratch_pool));
+          SVN_ERR(show_prop_conflict(desc, merged_file_path, scratch_pool));
         }
       else if (strcmp(opt->code, "e") == 0)
         {
