@@ -1011,9 +1011,17 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
         }
       else if (strcmp(opt->code, "r") == 0)
         {
-              result->merged_file = merged_file_path;
-              result->choice = svn_wc_conflict_choose_merged;
-              break;
+          if (! resolved_allowed)
+            {
+              SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
+                             _("Invalid option; please edit the property "
+                               "first.\n\n")));
+              continue;
+            }
+
+          result->merged_file = merged_file_path;
+          result->choice = svn_wc_conflict_choose_merged;
+          break;
         }
       else if (opt->choice != -1)
         {
