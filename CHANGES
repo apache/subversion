@@ -60,6 +60,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * new light-weight benchmarking client (tools/client-side/svn-bench)
     * new w/c subtree duplication tool (tools/client-side/detach.py)
     * new svndumpfilter dependency analysis (tools/server-side/svnpredumpfilter.py)
+    * new mergeinfo fixup tool (tools/client-side/mergeinfo-sanitizer.py)
     * 'svn diff' can compare arbitrary files and directories (r1310291, et al)
     * ra_serf avoids re-downloading content present in pristine store (r1333936)
     * 'svn mergeinfo' now honors the --revision (-r) option (issue #4199)
@@ -89,13 +90,20 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * hook script templates are now marked as executable (r1153414)
     * svn:ignore __pycache__ directories by default (r1150073)
     * 'svn diff --git' include copyfrom revision in "copied" headers (r1155279)
-    * 'svn merge' now uses much less memory (r1149519 et al)
+    * svn:mergeinfo related operations now use much less memory (r1149519 et al)
     * get list of supported schemes for RA libraries (r1148134)
     * 'svn checkout' skips file externals from unintended repositories (r1153110)
     * return an error when conflicts could not be resolved (r1150439)
+    * prefix SASL errors with "SASL authentication error" (r1179767)
+    * let HTTPv2-aware clients fetch v2-style resources (r1161202)
+    * 'svn status' with better NLS support (r1157537, 682)
+    * error out on non-canonical fspaths in the authz file (r1166111)
 
   - Client-side bugfixes:
     * fix inconsistent 'svn log' output for empty revisions (issue #3964)
+    * fix 'svn revert' of 'svn move' (issue #876)
+    * fix 'wrong 'status' of file externals "resurrecting" a deleted file (#4017)
+    * fix reporting of corrupted 1.6 w/cs by 'svn upgrade' (r1182904, 9)
 
   - Server-side bugfixes:
     * SVNParentPath / repository listing now authz-filtered (r1408184)
@@ -109,15 +117,23 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
   - General:
     * now require Python 2.5 for tests and dev tools (r1243627)
     * now require bzip2 for tests and dev tools (r1148512)
+    * new require httpd version 2.2.21 for builds with Apache (r1174039)
     * configure defaults to --without-apache-libexecdir (r1469862)
+    * support builds with APR pool debugging (r1176894)
     * 'make extraclean' is more thorough now (r1149460)
     * support for Serf 2 (r1147538)
+    * introduction of editor v2 (r1166332 et al)
+    * improve SQLite setup for compatibility with OS X 10.7. (r1181666)
 
   - API changes:
     * fix inconsistent handling of log revs without changed paths (issue #3694)
+    * new type svn_kind_t to replace svn_node_kind_t (r1181800)
+    * deprecated SVN_ERR_SQLITE_UNSUPPORTED_SCHEMA (r1173240)
 
   - Bindings:
     * star-imports in swig-py only import 'svn_*' symbols (r1303375)
+    * fix compilation of Perl bindings on Mandriva 2007 (issue #2617)
+    * fix Python build on OpenBSD >= 5.0. (r1178846)
 
 
 Version 1.7.9
