@@ -279,7 +279,7 @@ limit_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
    that URL and *RELATIVE_TARGETS to an array with a single element "".
 
    If TARGETS contains a single URL and one or more relative paths, then
-   set *RA_TARGET to a copy of that URL and *CONDENSED_PATHS to a copy of
+   set *RA_TARGET to a copy of that URL and *RELATIVE_TARGETS to a copy of
    each relative path after the URL.
 
    If *PEG_REVISION is svn_opt_revision_unspecified, then *PEG_REVISION is
@@ -308,15 +308,19 @@ resolve_log_targets(apr_array_header_t **relative_targets,
     return svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
                             _("No valid target found"));
 
-  /* Initialize the output array. */
-  *relative_targets = apr_array_make(result_pool, 1, sizeof(const char *));
+  /* Initialize the output array.  At a minimum, we need room for one
+     (possibly empty) relpath.  Otherwise, we have to hold a relpath
+     for every item in TARGETS except the first.  */
+  *relative_targets = apr_array_make(result_pool,
+                                     MAX(1, targets->nelts - 1),
+                                     sizeof(const char *));
 
   if (svn_path_is_url(url_or_path))
     {
       /* An unspecified PEG_REVISION for a URL path defaults
          to svn_opt_revision_head. */
       if (peg_revision->kind == svn_opt_revision_unspecified)
-          (*peg_revision).kind = svn_opt_revision_head;
+        peg_revision->kind = svn_opt_revision_head;
 
       /* The logic here is this: If we get passed one argument, we assume
          it is the full URL to a file/dir we want log info for. If we get
@@ -365,7 +369,7 @@ resolve_log_targets(apr_array_header_t **relative_targets,
       /* An unspecified PEG_REVISION for a working copy path defaults
          to svn_opt_revision_working. */
       if (peg_revision->kind == svn_opt_revision_unspecified)
-          (*peg_revision).kind = svn_opt_revision_working;
+        peg_revision->kind = svn_opt_revision_working;
 
       /* Get URLs for each target */
       target = APR_ARRAY_IDX(targets, 0, const char *);
@@ -418,8 +422,6 @@ find_youngest_and_oldest_revs(svn_revnum_t *youngest_rev,
   if (! SVN_IS_VALID_REVNUM(*oldest_rev)
       || rev < *oldest_rev)
     *oldest_rev = rev;
-
-  return;
 }
 
 typedef struct rev_range_t
@@ -521,9 +523,24 @@ convert_opt_rev_array_to_rev_range_array(
              _("Missing required revision specification"));
         }
 
-      if (memcmp(&(range->start), &(range->end),
-                 sizeof(svn_opt_revision_t)) == 0)
-        start_same_as_end = TRUE;
+      /* Does RANGE describe a single svn_opt_revision_t? */
+      if (range->start.kind == range->end.kind)
+        {
+          if (range->start.kind == svn_opt_revision_number)
+            {
+              if (range->start.value.number == range->end.value.number)
+                start_same_as_end = TRUE;
+            }
+          else if (range->start.kind == svn_opt_revision_date)
+            {
+              if (range->start.value.date == range->end.value.date)
+                start_same_as_end = TRUE;
+            }
+          else
+            {
+              start_same_as_end = TRUE;
+            }
+        }
 
       rev_range = apr_palloc(result_pool, sizeof(*rev_range));
       SVN_ERR(svn_client__get_revision_number(
