@@ -1729,6 +1729,8 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   svn_boolean_t descend = TRUE;
   svn_boolean_t interactive_conflicts = FALSE;
   svn_boolean_t force_interactive = FALSE;
+  svn_cl__conflict_stats_t *conflict_stats
+    = svn_cl__conflict_stats_create(pool);
   svn_boolean_t use_notifier = TRUE;
   svn_boolean_t reading_file_from_stdin = FALSE;
   apr_hash_t *changelists;
@@ -2759,7 +2761,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   if (use_notifier)
     {
       SVN_INT_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                       pool));
+                                       conflict_stats, pool));
     }
 
   /* Set up our cancellation support. */
@@ -2855,7 +2857,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
     SVN_INT_ERR(svn_cl__get_conflict_func_interactive_baton(
                 &b,
                 opt_state.accept_which,
-                ctx->config, opt_state.editor_cmd,
+                ctx->config, opt_state.editor_cmd, conflict_stats,
                 ctx->cancel_func, ctx->cancel_baton, pool));
     ctx->conflict_baton2 = b;
   }
