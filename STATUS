@@ -103,7 +103,7 @@ Candidate changes:
    Votes:
      +1: brane (for 1.8.1)
 
- * 1481010
+ * r1481010
    Fix issue 4365, multi-threaded svnserve pool memory use after clear.
    Justification:
      SEGV, particularly on Windows.
