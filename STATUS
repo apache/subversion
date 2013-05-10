@@ -203,7 +203,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-issue4306
    Votes:
-     +1: stsp (r1438602 and r1438683 only), pburba
+     +1: stsp, pburba
 
  * r1438879
    Make 'show-diff' at the interactive conflict prompt show nicer diffs.
