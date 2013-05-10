@@ -274,12 +274,15 @@ Candidate changes:
                     <danielsh> that has been addressed in HEAD
                     <stsp> and also by splitting that part of the change
                            into a separate backport nomination, see below)
-     -0: danielsh (FSFS escape_newline should escape any control character,
-                   not just '\n'; libsvn_repos restrictions not suitable
-                   for introduction in a patch release
-                   <stsp> this has been discussed on dev@, please raise
-                          this concern there, not just here
-                   <danielsh> done on 2013/05/10 9pm)
+     -0: danielsh (escape_newline() should escape any control character,
+                   not just '\n'; svn_stringbuf_ensure() call should have
+                   "+5", not "+4", in its last argument; suggest to simplify
+                   escape_newline() to
+                   for (c = path; *c; c++)
+                     (0<c<0x20) ? svn_stringbuf_appendbytes("\\%03o" % c)
+                                : svn_stringbuf_appendbyte(c);
+                   that avoids memory bugs and is sufficient for an error path.
+                   +1 once the +4->+5 thing is addressed.)
 
  * r1461760
    Additional fix related to issue #4340, "filenames containing \n corrupt
