@@ -35,7 +35,6 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_checksum.h"
-#include "svn_ctype.h"
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
 #include "repos.h"
@@ -197,77 +196,6 @@ make_dir_baton(struct edit_baton *edit_baton,
   return db;
 }
 
-/* Return a copy of PATH, allocated from POOL, for which control
-   characters have been escaped using the form \NNN (where NNN is the
-   octal representation of the byte's ordinal value).  */
-static const char *
-illegal_path_escape(const char *path, apr_pool_t *pool)
-{
-  svn_stringbuf_t *retstr;
-  apr_size_t i, copied = 0;
-  int c;
-
-  /* At least one control character:
-      strlen - 1 (control) + \ + N + N + N + null . */
-  retstr = svn_stringbuf_create_ensure(strlen(path) + 4, pool);
-  for (i = 0; path[i]; i++)
-    {
-      c = (unsigned char)path[i];
-      if (! svn_ctype_iscntrl(c))
-        continue;
-
-      /* If we got here, we're looking at a character that isn't
-         supported by the (or at least, our) URI encoding scheme.  We
-         need to escape this character.  */
-
-      /* First things first, copy all the good stuff that we haven't
-         yet copied into our output buffer. */
-      if (i - copied)
-        svn_stringbuf_appendbytes(retstr, path + copied,
-                                  i - copied);
-
-      /* Make sure buffer is big enough for '\' 'N' 'N' 'N' (and NUL) */
-      svn_stringbuf_ensure(retstr, retstr->len + 4);
-      /*### The backslash separator doesn't work too great with Windows,
-         but it's what we'll use for consistency with invalid utf8
-         formatting (until someone has a better idea) */
-      apr_snprintf(retstr->data + retstr->len, 5, "\\%03o", (unsigned char)c);
-      retstr->len += 4;
-
-      /* Finally, update our copy counter. */
-      copied = i + 1;
-    }
-
-  /* If we didn't encode anything, we don't need to duplicate the string. */
-  if (retstr->len == 0)
-    return path;
-
-  /* Anything left to copy? */
-  if (i - copied)
-    svn_stringbuf_appendbytes(retstr, path + copied, i - copied);
-
-  /* retstr is null-terminated either by apr_snprintf or the svn_stringbuf
-     functions. */
-
-  return retstr->data;
-}
-
-static svn_error_t *
-check_cntrl(const char *path,
-            apr_pool_t *pool)
-{
-  const char *c;
-
-  for (c = path; *c; c++)
-    {
-      if (svn_ctype_iscntrl(*c))
-        return svn_error_createf(SVN_ERR_FS_PATH_SYNTAX, NULL,
-           _("Invalid control character '0x%02x' in path '%s'"),
-           (unsigned char)*c, illegal_path_escape(path, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
 
 /* This function is the shared guts of add_file() and add_directory(),
    which see for the meanings of the parameters.  The only extra
@@ -287,9 +215,6 @@ add_file_or_directory(const char *path,
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_boolean_t was_copied = FALSE;
   const char *full_path;
-
-  /* Reject paths which contain control characters (related to issue #4340). */
-  SVN_ERR(check_cntrl(path, pool));
 
   full_path = svn_fspath__join(eb->base_path,
                                svn_relpath_canonicalize(path, pool), pool);
