@@ -332,6 +332,14 @@ Candidate changes:
    Votes:
      +1: markphip
 
+ * 1481010
+   Fix issue 4365, multi-threaded svnserve pool memory use after clear.
+   Justification:
+     Possible SEGV.
+   Branch: 1.7.x-1481010
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
