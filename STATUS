@@ -259,7 +259,7 @@ Candidate changes:
      should never enter the repository for this reason. See discussion
      linked form issue #4340 for more information.
    Notes:
-     r1465995 and r1465998 revise the changes made in the earlier revisions,
+     r1461701 and r1461760 revise the changes made in the earlier revisions,
      and are the result of a long dev@ discussion that eventually concluded
      in this subthread: http://svn.haxx.se/dev/archive-2013-04/0056.shtml
    Branch:
