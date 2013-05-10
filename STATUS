@@ -252,26 +252,49 @@ Candidate changes:
    Votes:
      +1: breser
 
- * r1461562, r1461580, r1461701, r1461760
+ * r1461562, r1461580, r1461701
    Fix issue #4340, "filenames containing \n corrupt FSFS repositories"
    Justification:
-     Control characters can severely corrupt FSFS revision files and
+     Newline characters can severely corrupt FSFS revision files and
      should never enter the repository for this reason. See discussion
-     linked form issue #4340 for more information.
+     linked from issue #4340 for more information.
    Notes:
-     r1461701 and r1461760 revise the changes made in the earlier revisions,
-     and are the result of a long dev@ discussion that eventually concluded
+     r1461701 revises the changes made in the earlier revisions,
+     and is the result of a long dev@ discussion that eventually concluded
      in this subthread: http://svn.haxx.se/dev/archive-2013-04/0056.shtml
+     This issue can be exploited by people with commit access to corrupt
+     an FSFS repository, and has been assigned a CVE number: CVE-2013-1968
    Branch:
      ^/subversion/branches/1.7.x-issue4340
    Votes:
      +1: stsp
      -1: cmpilato ("How did this expand from 'newlines' to 'control
                     characters'?!
-                    <danielsh> that has been addressed in HEAD)
+                    <danielsh> that has been addressed in HEAD
+                    <stsp> and also by splitting that part of the change
+                           into a separate backport nomination, see below)
      -0: danielsh (FSFS escape_newline should escape any control character,
                    not just '\n'; libsvn_repos restrictions not suitable
-                   for introduction in a patch release)
+                   for introduction in a patch release
+                   <stsp> this has been discussed on dev@, please raise
+                          this concern there, not just here)
+
+ * r1461760
+   Additional fix related to issue #4340, "filenames containing \n corrupt
+   FSFS repositories"
+   Justification:
+     This change makes libsvn_repos block filenames containing control
+     characters. Control characters in filenames have always been rejected
+     by libsvn_client, but client-side software bypassing libsvn_client
+     could still commit such filenames. Control characters in filenames
+     can cause problems not just in FSFS but also in dump files, unidiff,
+     and possibly elsewhere. It is a good idea to make the client and
+     server consistent.
+     See discussion linked from issue #4340 for more information.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4340-repos
+   Votes:
+     +1: stsp
 
  * r1461743
    svn_fs_commit_txn: set output parameter in non-maintainer-with-special-flags
