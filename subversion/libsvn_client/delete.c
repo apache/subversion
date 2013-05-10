@@ -28,6 +28,7 @@
 /*** Includes. ***/
 
 #include <apr_file_io.h>
+#include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_wc.h"
@@ -98,26 +99,23 @@ find_undeletables(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* Verify that the path can be deleted without losing stuff,
-   i.e. ensure that there are no modified or unversioned resources
-   under PATH.  This is similar to checking the output of the status
-   command.  CTX is used for the client's config options.  POOL is
-   used for all temporary allocations. */
+/* Check whether LOCAL_ABSPATH is an external and raise an error if it is.
+
+   A file external should not be deleted since the file external is
+   implemented as a switched file and it would delete the file the
+   file external is switched to, which is not the behavior the user
+   would probably want.
+
+   A directory external should not be deleted since it is the root
+   of a different working copy. */
 static svn_error_t *
-can_delete_node(svn_boolean_t *target_missing,
-                const char *local_abspath,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *scratch_pool)
+check_external(const char *local_abspath,
+               svn_client_ctx_t *ctx,
+               apr_pool_t *scratch_pool)
 {
   svn_node_kind_t external_kind;
   const char *defining_abspath;
-  apr_array_header_t *ignores;
-  struct can_delete_baton_t cdt;
 
-  /* A file external should not be deleted since the file external is
-     implemented as a switched file and it would delete the file the
-     file external is switched to, which is not the behavior the user
-     would probably want. */
   SVN_ERR(svn_wc__read_external_info(&external_kind, &defining_abspath, NULL,
                                      NULL, NULL,
                                      ctx->wc_ctx, local_abspath,
@@ -134,6 +132,22 @@ can_delete_node(svn_boolean_t *target_missing,
                              svn_dirent_local_style(defining_abspath,
                                                     scratch_pool));
 
+  return SVN_NO_ERROR;
+}
+
+/* Verify that the path can be deleted without losing stuff,
+   i.e. ensure that there are no modified or unversioned resources
+   under PATH.  This is similar to checking the output of the status
+   command.  CTX is used for the client's config options.  POOL is
+   used for all temporary allocations. */
+static svn_error_t *
+can_delete_node(svn_boolean_t *target_missing,
+                const char *local_abspath,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *ignores;
+  struct can_delete_baton_t cdt;
 
   /* Use an infinite-depth status check to see if there's anything in
      or under PATH which would make it unsafe for deletion.  The
@@ -248,6 +262,16 @@ single_repos_delete(svn_ra_session_t *ra_session,
   return svn_error_trace(editor->close_edit(edit_baton, pool));
 }
 
+
+/* Structure for tracking remote delete targets associated with a
+   specific repository. */
+struct repos_deletables_t
+{
+  svn_ra_session_t *ra_session;
+  apr_array_header_t *target_uris;
+};
+
+
 static svn_error_t *
 delete_urls_multi_repos(const apr_array_header_t *uris,
                         const apr_hash_t *revprop_table,
@@ -256,90 +280,130 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool)
 {
-  apr_hash_t *sessions = apr_hash_make(pool);
-  apr_hash_t *relpaths = apr_hash_make(pool);
+  apr_hash_t *deletables = apr_hash_make(pool);
+  apr_pool_t *iterpool;
   apr_hash_index_t *hi;
   int i;
 
-  /* Create a hash of repos_root -> ra_session maps and repos_root -> relpaths
-     maps, used to group the various targets. */
+  /* Create a hash mapping repository root URLs -> repos_deletables_t *
+     structures.  */
   for (i = 0; i < uris->nelts; i++)
     {
       const char *uri = APR_ARRAY_IDX(uris, i, const char *);
-      svn_ra_session_t *ra_session = NULL;
-      const char *repos_root = NULL;
-      const char *repos_relpath = NULL;
-      apr_array_header_t *relpaths_list;
+      struct repos_deletables_t *repos_deletables = NULL;
+      const char *repos_relpath;
       svn_node_kind_t kind;
 
-      for (hi = apr_hash_first(pool, sessions); hi; hi = apr_hash_next(hi))
+      for (hi = apr_hash_first(pool, deletables); hi; hi = apr_hash_next(hi))
         {
-          repos_root = svn__apr_hash_index_key(hi);
-          repos_relpath = svn_uri_skip_ancestor(repos_root, uri, pool);
+          const char *repos_root = svn__apr_hash_index_key(hi);
 
+          repos_relpath = svn_uri_skip_ancestor(repos_root, uri, pool);
           if (repos_relpath)
             {
-              /* Great!  We've found another uri underneath this session,
-                 store it and move on. */
-              ra_session = svn__apr_hash_index_val(hi);
-              relpaths_list = apr_hash_get(relpaths, repos_root,
-                                           APR_HASH_KEY_STRING);
-
-              APR_ARRAY_PUSH(relpaths_list, const char *) = repos_relpath;
+              /* Great!  We've found another URI underneath this
+                 session.  We'll pick out the related RA session for
+                 use later, store the new target, and move on.  */
+              repos_deletables = svn__apr_hash_index_val(hi);
+              APR_ARRAY_PUSH(repos_deletables->target_uris, const char *) =
+                apr_pstrdup(pool, uri);
               break;
             }
         }
 
-      if (!ra_session)
+      /* If we haven't created a repos_deletable structure for this
+         delete target, we need to do.  That means opening up an RA
+         session and initializing its targets list.  */
+      if (!repos_deletables)
         {
-          /* If we haven't found a session yet, we need to open one up.
-             Note that we don't have a local directory, nor a place
-             to put temp files. */
+          svn_ra_session_t *ra_session = NULL;
+          const char *repos_root;
+          apr_array_header_t *target_uris;
+
+          /* Open an RA session to (ultimately) the root of the
+             repository in which URI is found.  */
           SVN_ERR(svn_client_open_ra_session2(&ra_session, uri, NULL,
                                               ctx, pool, pool));
           SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
           SVN_ERR(svn_ra_reparent(ra_session, repos_root, pool));
-
-          apr_hash_set(sessions, repos_root, APR_HASH_KEY_STRING, ra_session);
           repos_relpath = svn_uri_skip_ancestor(repos_root, uri, pool);
 
-          relpaths_list = apr_array_make(pool, 1, sizeof(const char *));
-          apr_hash_set(relpaths, repos_root, APR_HASH_KEY_STRING,
-                       relpaths_list);
-          APR_ARRAY_PUSH(relpaths_list, const char *) = repos_relpath;
+          /* Make a new relpaths list for this repository, and add
+             this URI's relpath to it. */
+          target_uris = apr_array_make(pool, 1, sizeof(const char *));
+          APR_ARRAY_PUSH(target_uris, const char *) = apr_pstrdup(pool, uri);
+
+          /* Build our repos_deletables_t item and stash it in the
+             hash. */
+          repos_deletables = apr_pcalloc(pool, sizeof(*repos_deletables));
+          repos_deletables->ra_session = ra_session;
+          repos_deletables->target_uris = target_uris;
+          svn_hash_sets(deletables, repos_root, repos_deletables);
         }
 
-      /* Check we identified a non-root relpath.  Return an RA error
-         code for 1.6 compatibility. */
+      /* If we get here, we should have been able to calculate a
+         repos_relpath for this URI.  Let's make sure.  (We return an
+         RA error code otherwise for 1.6 compatibility.)  */
       if (!repos_relpath || !*repos_relpath)
         return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                  "URL '%s' not within a repository", uri);
 
-      /* Now, test to see if the thing actually exists. */
-      SVN_ERR(svn_ra_check_path(ra_session, repos_relpath, SVN_INVALID_REVNUM,
-                                &kind, pool));
+      /* Now, test to see if the thing actually exists in HEAD. */
+      SVN_ERR(svn_ra_check_path(repos_deletables->ra_session, repos_relpath,
+                                SVN_INVALID_REVNUM, &kind, pool));
       if (kind == svn_node_none)
         return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
                                  "URL '%s' does not exist", uri);
     }
 
-  /* At this point, we should have two hashs:
-      SESSIONS maps repos_roots to ra_sessions.
-      RELPATHS maps repos_roots to a list of decoded relpaths for that root.
-
-     Now we iterate over the collection of sessions and do a commit for each
-     one with the collected relpaths. */
-  for (hi = apr_hash_first(pool, sessions); hi; hi = apr_hash_next(hi))
+  /* Now we iterate over the DELETABLES hash, issuing a commit for
+     each repository with its associated collected targets. */
+  iterpool = svn_pool_create(pool);
+  for (hi = apr_hash_first(pool, deletables); hi; hi = apr_hash_next(hi))
     {
       const char *repos_root = svn__apr_hash_index_key(hi);
-      svn_ra_session_t *ra_session = svn__apr_hash_index_val(hi);
-      const apr_array_header_t *relpaths_list =
-        apr_hash_get(relpaths, repos_root, APR_HASH_KEY_STRING);
+      struct repos_deletables_t *repos_deletables = svn__apr_hash_index_val(hi);
+      const char *base_uri;
+      apr_array_header_t *target_relpaths;
 
-      SVN_ERR(single_repos_delete(ra_session, repos_root, relpaths_list,
+      svn_pool_clear(iterpool);
+
+      /* We want to anchor the commit on the longest common path
+         across the targets for this one repository.  If, however, one
+         of our targets is that longest common path, we need instead
+         anchor the commit on that path's immediate parent.  Because
+         we're asking svn_uri_condense_targets() to remove
+         redundancies, this situation should be detectable by their
+         being returned either a) only a single, empty-path, target
+         relpath, or b) no target relpaths at all.  */
+      SVN_ERR(svn_uri_condense_targets(&base_uri, &target_relpaths,
+                                       repos_deletables->target_uris,
+                                       TRUE, iterpool, iterpool));
+      SVN_ERR_ASSERT(!svn_path_is_empty(base_uri));
+      if (target_relpaths->nelts == 0)
+        {
+          const char *target_relpath;
+
+          svn_uri_split(&base_uri, &target_relpath, base_uri, iterpool);
+          APR_ARRAY_PUSH(target_relpaths, const char *) = target_relpath;
+        }
+      else if ((target_relpaths->nelts == 1)
+               && (svn_path_is_empty(APR_ARRAY_IDX(target_relpaths, 0,
+                                                   const char *))))
+        {
+          const char *target_relpath;
+
+          svn_uri_split(&base_uri, &target_relpath, base_uri, iterpool);
+          APR_ARRAY_IDX(target_relpaths, 0, const char *) = target_relpath;
+        }
+
+      SVN_ERR(svn_ra_reparent(repos_deletables->ra_session, base_uri, pool));
+      SVN_ERR(single_repos_delete(repos_deletables->ra_session, repos_root,
+                                  target_relpaths,
                                   revprop_table, commit_callback,
-                                  commit_baton, ctx, pool));
+                                  commit_baton, ctx, iterpool));
     }
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -357,6 +421,8 @@ svn_client__wc_delete(const char *local_abspath,
   svn_boolean_t target_missing = FALSE;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(check_external(local_abspath, ctx, pool));
 
   if (!force && !keep_local)
     /* Verify that there are no "awkward" files */
@@ -392,6 +458,8 @@ svn_client__wc_delete_many(const apr_array_header_t *targets,
       const char *local_abspath = APR_ARRAY_IDX(targets, i, const char *);
 
       SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+      SVN_ERR(check_external(local_abspath, ctx, pool));
 
       if (!force && !keep_local)
         {
@@ -479,13 +547,11 @@ svn_client_delete4(const apr_array_header_t *paths,
                                           pool));
           SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
                                      local_abspath, pool, iterpool));
-          targets = apr_hash_get(wcroots, wcroot_abspath,
-                                 APR_HASH_KEY_STRING);
+          targets = svn_hash_gets(wcroots, wcroot_abspath);
           if (targets == NULL)
             {
               targets = apr_array_make(pool, 1, sizeof(const char *));
-              apr_hash_set(wcroots, wcroot_abspath, APR_HASH_KEY_STRING,
-                           targets);
+              svn_hash_sets(wcroots, wcroot_abspath, targets);
              }
 
           /* Make sure targets are unique. */

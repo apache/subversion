@@ -34,6 +34,7 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
+#include "svn_hash.h"
 #include "svn_cmdline.h"
 #include "svn_types.h"
 #include "svn_pools.h"
@@ -46,6 +47,7 @@
 #include "svn_time.h"
 #include "svn_utf.h"
 #include "svn_subst.h"
+#include "svn_sorts.h"
 #include "svn_opt.h"
 #include "svn_props.h"
 #include "svn_diff.h"
@@ -961,7 +963,7 @@ print_diff_tree(svn_stream_t *out_stream,
               if (diff_cmd_argc)
                 {
                   int i;
-                  diff_cmd_argv = apr_palloc(pool, 
+                  diff_cmd_argv = apr_palloc(pool,
                                              diff_cmd_argc * sizeof(char *));
                   for (i = 0; i < diff_cmd_argc; i++)
                     SVN_ERR(svn_utf_cstring_to_utf8(&diff_cmd_argv[i],
@@ -1166,7 +1168,6 @@ print_tree(svn_fs_root_t *root,
 {
   apr_pool_t *subpool;
   apr_hash_t *entries;
-  apr_hash_index_t *hi;
   const char* name;
 
   SVN_ERR(check_cancel(NULL));
@@ -1214,11 +1215,18 @@ print_tree(svn_fs_root_t *root,
   /* Recursively handle the node's children. */
   if (recurse || (indentation == 0))
     {
+      apr_array_header_t *sorted_entries;
+      int i;
+
       SVN_ERR(svn_fs_dir_entries(&entries, root, path, pool));
       subpool = svn_pool_create(pool);
-      for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+      sorted_entries = svn_sort__hash(entries,
+                                      svn_sort_compare_items_lexically, pool);
+      for (i = 0; i < sorted_entries->nelts; i++)
         {
-          svn_fs_dirent_t *entry = svn__apr_hash_index_val(hi);
+          svn_sort__item_t item = APR_ARRAY_IDX(sorted_entries, i,
+                                                svn_sort__item_t);
+          svn_fs_dirent_t *entry = item.value;
 
           svn_pool_clear(subpool);
           SVN_ERR(print_tree(root,
@@ -1762,7 +1770,7 @@ do_pget(svnlook_ctxt_t *c,
             {
               apr_hash_t *hash = apr_hash_make(pool);
 
-              apr_hash_set(hash, propname, APR_HASH_KEY_STRING, prop);
+              svn_hash_sets(hash, propname, prop);
               SVN_ERR(svn_stream_printf(stdout_stream, pool,
                       _("Properties on '%s':\n"), path));
               SVN_ERR(svn_cmdline__print_prop_hash(stdout_stream, hash,
@@ -2663,6 +2671,16 @@ main(int argc, const char *argv[])
                                     _("Unknown subcommand: '%s'\n"),
                                     first_arg_utf8));
               SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
+
+              /* Be kind to people who try 'svnlook verify'. */
+              if (strcmp(first_arg_utf8, "verify") == 0)
+                {
+                  svn_error_clear(
+                    svn_cmdline_fprintf(stderr, pool,
+                                        _("Try 'svnadmin verify' instead.\n")));
+                }
+
+
               svn_pool_destroy(pool);
               return EXIT_FAILURE;
             }

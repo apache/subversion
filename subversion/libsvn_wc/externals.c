@@ -360,7 +360,7 @@ svn_wc__externals_find_target_dups(apr_array_header_t **duplicate_targets,
       target = APR_ARRAY_IDX(externals, i,
                                          svn_wc_external_item2_t*)->target_dir;
       len = apr_hash_count(targets);
-      apr_hash_set(targets, target, APR_HASH_KEY_STRING, "");
+      svn_hash_sets(targets, target, "");
       if (len == apr_hash_count(targets))
         {
           /* Hashtable length is unchanged. This must be a duplicate. */
@@ -370,7 +370,7 @@ svn_wc__externals_find_target_dups(apr_array_header_t **duplicate_targets,
           if (! targets2)
             targets2 = apr_hash_make(scratch_pool);
           len2 = apr_hash_count(targets2);
-          apr_hash_set(targets2, target, APR_HASH_KEY_STRING, "");
+          svn_hash_sets(targets2, target, "");
           if (len2 < apr_hash_count(targets2))
             {
               /* The second hash list just got bigger, i.e. this target has
@@ -508,7 +508,7 @@ open_file(const char *path,
           void **file_baton)
 {
   struct edit_baton *eb = parent_baton;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   if (strcmp(path, eb->name))
       return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                _("This editor can only update '%s'"),
@@ -524,7 +524,7 @@ open_file(const char *path,
                                    eb->db, eb->local_abspath,
                                    eb->pool, file_pool));
 
-  if (kind != svn_kind_file)
+  if (kind != svn_node_file)
     return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                                _("Node '%s' is no existing file external"),
                                svn_dirent_local_style(eb->local_abspath,
@@ -953,8 +953,7 @@ close_edit(void *edit_baton,
       if (eb->iprops)
         {
           wcroot_iprops = apr_hash_make(pool);
-          apr_hash_set(wcroot_iprops, eb->local_abspath, APR_HASH_KEY_STRING,
-                       eb->iprops);
+          svn_hash_sets(wcroot_iprops, eb->local_abspath, eb->iprops);
         }
 
       /* The node wasn't updated, so we just have to bump its revision */
@@ -1080,7 +1079,7 @@ svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
 {
   svn_wc__db_t *db = wc_ctx->db;
   svn_error_t *err;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_wc__db_lock_t *lock;
   svn_revnum_t revision;
   const char *repos_root_url;
@@ -1095,7 +1094,7 @@ svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
                                  scratch_pool, scratch_pool);
 
   if (err
-      || kind == svn_kind_dir
+      || kind == svn_node_dir
       || !update_root)
     {
       if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
@@ -1179,7 +1178,7 @@ svn_wc__read_external_info(svn_node_kind_t *external_kind,
 {
   const char *repos_root_url;
   svn_wc__db_status_t status;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_error_t *err;
 
   err = svn_wc__db_external_read(&status, &kind, defining_abspath,
@@ -1221,11 +1220,11 @@ svn_wc__read_external_info(svn_node_kind_t *external_kind,
       else
         switch(kind)
           {
-            case svn_kind_file:
-            case svn_kind_symlink:
+            case svn_node_file:
+            case svn_node_symlink:
               *external_kind = svn_node_file;
               break;
-            case svn_kind_dir:
+            case svn_node_dir:
               *external_kind = svn_node_dir;
               break;
             default:
@@ -1310,7 +1309,7 @@ svn_wc__committable_externals_below(apr_array_header_t **externals,
 
       /* Discard dirs for svn_depth_files (s.a.). */
       if (depth == svn_depth_files
-          && xinfo->kind == svn_kind_dir)
+          && xinfo->kind == svn_node_dir)
         continue;
 
       svn_pool_clear(iterpool);
@@ -1391,7 +1390,7 @@ svn_wc__external_remove(svn_wc_context_t *wc_ctx,
                         apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
 
   SVN_ERR(svn_wc__db_external_read(&status, &kind, NULL, NULL, NULL, NULL,
                                    NULL, NULL,
@@ -1404,7 +1403,7 @@ svn_wc__external_remove(svn_wc_context_t *wc_ctx,
   if (declaration_only)
     return SVN_NO_ERROR;
 
-  if (kind == svn_kind_dir)
+  if (kind == svn_node_dir)
     SVN_ERR(svn_wc_remove_from_revision_control2(wc_ctx, local_abspath,
                                                  TRUE, TRUE,
                                                  cancel_func, cancel_baton,
@@ -1462,8 +1461,7 @@ svn_wc__externals_gather_definitions(apr_hash_t **externals,
         }
 
       if (value)
-        apr_hash_set(*externals, local_abspath, APR_HASH_KEY_STRING,
-                     value->data);
+        svn_hash_sets(*externals, local_abspath, value->data);
 
       if (value && depths)
         {
@@ -1478,8 +1476,7 @@ svn_wc__externals_gather_definitions(apr_hash_t **externals,
                                        wc_ctx->db, local_abspath,
                                        scratch_pool, scratch_pool));
 
-          apr_hash_set(*depths, local_abspath, APR_HASH_KEY_STRING,
-                       svn_depth_to_word(node_depth));
+          svn_hash_sets(*depths, local_abspath, svn_depth_to_word(node_depth));
         }
 
       return SVN_NO_ERROR;

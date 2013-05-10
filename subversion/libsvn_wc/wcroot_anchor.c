@@ -145,7 +145,7 @@
 svn_error_t *
 svn_wc_check_root(svn_boolean_t *is_wcroot,
                   svn_boolean_t *is_switched,
-                  svn_kind_t *kind,
+                  svn_node_kind_t *kind,
                   svn_wc_context_t *wc_ctx,
                   const char *local_abspath,
                   apr_pool_t *scratch_pool)
@@ -191,7 +191,7 @@ svn_wc_get_actual_target2(const char **anchor,
                           apr_pool_t *scratch_pool)
 {
   svn_boolean_t is_wc_root, is_switched;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   const char *local_abspath;
   svn_error_t *err;
 
@@ -213,7 +213,7 @@ svn_wc_get_actual_target2(const char **anchor,
     }
 
   /* If PATH is not a WC root, or if it is a file, lop off a basename. */
-  if (!(is_wc_root || is_switched) || (kind != svn_kind_dir))
+  if (!(is_wc_root || is_switched) || (kind != svn_node_dir))
     {
       svn_dirent_split(anchor, target, path, result_pool);
     }

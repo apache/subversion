@@ -576,7 +576,7 @@ prompt(const char **result,
     {
       /* If terminal echo was turned off, make sure future output
          to the terminal starts on a new line, as expected. */
-      terminal_puts(APR_EOL_STR, terminal, pool);
+      SVN_ERR(terminal_puts(APR_EOL_STR, terminal, pool));
     }
   SVN_ERR(terminal_close(terminal));
 

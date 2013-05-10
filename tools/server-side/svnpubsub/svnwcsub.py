@@ -452,7 +452,7 @@ def prepare_logging(logfile):
     # Apply the handler to the root logger
     root = logging.getLogger()
     root.addHandler(handler)
-    
+
     ### use logging.INFO for now. switch to cmdline option or a config?
     root.setLevel(logging.INFO)
 

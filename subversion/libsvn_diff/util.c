@@ -25,6 +25,7 @@
 #include <apr.h>
 #include <apr_general.h>
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
 #include "svn_props.h"
@@ -504,8 +505,7 @@ svn_diff__display_prop_diffs(svn_stream_t *outstream,
         = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
 
       if (original_props)
-        original_value = apr_hash_get(original_props,
-                                      propchange->name, APR_HASH_KEY_STRING);
+        original_value = svn_hash_gets(original_props, propchange->name);
       else
         original_value = NULL;
 

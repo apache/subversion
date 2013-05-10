@@ -698,6 +698,47 @@ no previous history.
 
 =cut
 
+package _p_svn_log_changed_path2_t;
+use SVN::Base qw(Core svn_log_changed_path2_t_);
+
+=head2 svn_log_changed_path2_t
+
+An object to represent a path that changed for a log entry.
+
+=over 4
+
+=item $lcp-E<gt>action()
+
+'A'dd, 'D'elete, 'R'eplace, 'M'odify
+
+=item $lcp-E<gt>copyfrom_path()
+
+Source path of copy, or C<undef> if there isn't any previous revision
+history.
+
+=item $lcp-E<gt>copyfrom_rev()
+
+Source revision of copy, or C<$SVN::Core::INVALID_REVNUM> if there is
+no previous history.
+
+=item $lcp-E<gt>node_kind()
+
+The type of the node, a C<$SVN::Node> enum; may be C<$SVN::Node::unknown>.
+
+=item $lcp-E<gt>text_modified()
+
+Is the text modified, a C<SVN::Tristate> enum, 
+may be C<$SVN::Tristate::unknown>.
+
+=item $lcp-E<gt>props_modified()
+
+Are properties modified, a C<SVN::Tristate> enum,
+may be C<$SVN::Tristate::unknown>.
+
+=back
+
+=cut
+
 package SVN::Node;
 use SVN::Base qw(Core svn_node_);
 
@@ -707,6 +748,20 @@ An enum of the following constants:
 
 $SVN::Node::none, $SVN::Node::file,
 $SVN::Node::dir, $SVN::Node::unknown.
+
+=cut
+
+package SVN::Tristate;
+use SVN::Base qw(Core svn_tristate_);
+
+=head2 svn_tristate_t - SVN::Tristate
+
+An enum of the following constants:
+
+$SVN::Tristate::true, $SVN::Tristate::false, $SVN::Tristate::unknown
+
+Note that these true/false values have nothing to do with Perl's concept 
+of truth. In fact, each constant would evaluate to true in a boolean context.
 
 =cut
 
@@ -772,10 +827,55 @@ use SVN::Base qw(Core svn_opt_revision_t_);
 
 =head2 svn_opt_revision_t
 
+A revision, specified in one of C<SVN::Core::opt_revision_*> ways.
+
+=over 4
+
+=item $rev-E<gt>kind()
+
+An enum denoting how the revision C<$rev> was specified.  One of 
+C<$VN::Core::opt_revision_unspecified>,
+C<$VN::Core::opt_revision_number>,
+C<$VN::Core::opt_revision_date>,
+C<$VN::Core::opt_revision_committed>,
+C<$VN::Core::opt_revision_previous>,
+C<$VN::Core::opt_revision_base>,
+C<$VN::Core::opt_revision_working>
+or C<$SVN::Core::opt_revision_head>.
+
+=item $rev-E<gt>value()
+
+Extra data about the revision. Only relevant if C<$rev-E<gt>kind> is
+C<$VN::Core::opt_revision_number> (where it contains the revision number)
+or C<$VN::Core::opt_revision_date> (where it contains a date).
+
+=back
+
 =cut
 
 package _p_svn_opt_revision_value_t;
 use SVN::Base qw(Core svn_opt_revision_value_t_);
+
+package _p_svn_opt_revision_range_t;
+use SVN::Base qw(Core svn_opt_revision_range_t_);
+
+=head2 svn_opt_revision_range_t
+
+An object representing a range of revisions.
+
+=over 4
+
+=item $range-E<gt>start()
+
+The first revision in the range, a C<_p_svn_opt_revision_t> object.
+
+=item $range-E<gt>end()
+
+The last revision in the range, a C<_p_svn_opt_revision_t> object.
+
+=back
+
+=cut
 
 package _p_svn_config_t;
 use SVN::Base qw(Core svn_config_);
@@ -848,9 +948,45 @@ Error message from the post-commit hook, or undef.
 
 =item $commit-E<gt>repos_root()
 
-Repoistory root, may be undef if unknown.
+Repository root, may be C<undef> if unknown.
 
 =back
+
+=cut
+
+package _p_svn_log_entry_t;
+use SVN::Base qw(Core svn_log_entry_t_);
+
+=head2 svn_log_entry_t
+
+=item $entry-E<gt>revision()
+
+The revision of the commit.
+
+=item $entry-E<gt>revprops()
+
+A reference to a hash of requested revision properties, 
+which may be C<undef> if it would contain no revprops. 
+
+=item $entry-E<gt>has_children()
+
+Whether or not this message has children.
+
+=item $entry-E<gt>changed_paths2()
+
+A reference to hash containing as keys every path committed in 
+C<$entry-E<gt>revision()>; the values are C<_p_svn_log_changed_path2_t>
+objects.
+
+=item $entry-E<gt>non_inheritable()
+
+Whether C<$entry-E<gt>revision()> should be interpreted as non-inheritable 
+in the same sense of C<_p_svn_merge_range_t>.
+
+=item $entry-E<gt>subtractive_merge()
+
+Whether C<$entry-E<gt>revision()> is a merged revision resulting 
+from a reverse merge.
 
 =cut
 

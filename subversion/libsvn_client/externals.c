@@ -24,10 +24,11 @@
 /* ==================================================================== */
 
 
- 
+
 /*** Includes. ***/
 
 #include <apr_uri.h>
+#include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_pools.h"
 #include "svn_client.h"
@@ -41,7 +42,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
- 
+
 
 /* Remove the directory at LOCAL_ABSPATH from revision control, and do the
  * same to any revision controlled directories underneath LOCAL_ABSPATH
@@ -358,9 +359,9 @@ switch_file_external(const char *local_abspath,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *scratch_pool)
 {
-  svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
-                                                 SVN_CONFIG_CATEGORY_CONFIG,
-                                                 APR_HASH_KEY_STRING) : NULL;
+  svn_config_t *cfg = ctx->config
+                      ? svn_hash_gets(ctx->config, SVN_CONFIG_CATEGORY_CONFIG)
+                      : NULL;
   svn_boolean_t use_commit_times;
   const char *diff3_cmd;
   const char *preserved_exts_str;
@@ -907,8 +908,7 @@ handle_externals_change(svn_client_ctx_t *ctx,
                         iterpool));
         }
 
-      old_defining_abspath = apr_hash_get(old_externals, target_abspath,
-                                          APR_HASH_KEY_STRING);
+      old_defining_abspath = svn_hash_gets(old_externals, target_abspath);
 
       SVN_ERR(wrap_external_error(
                       ctx, target_abspath,
@@ -924,7 +924,7 @@ handle_externals_change(svn_client_ctx_t *ctx,
 
       /* And remove already processed items from the to-remove hash */
       if (old_defining_abspath)
-        apr_hash_set(old_externals, target_abspath, APR_HASH_KEY_STRING, NULL);
+        svn_hash_sets(old_externals, target_abspath, NULL);
     }
 
   svn_pool_destroy(iterpool);
@@ -1048,7 +1048,6 @@ svn_client__export_externals(apr_hash_t *externals,
                              svn_depth_t requested_depth,
                              const char *native_eol,
                              svn_boolean_t ignore_keywords,
-                             svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *scratch_pool)
 {

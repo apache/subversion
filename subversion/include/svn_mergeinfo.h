@@ -315,8 +315,8 @@ svn_rangelist_diff(svn_rangelist_t **deleted, svn_rangelist_t **added,
  * in sorted order and be compacted to the minimal number of ranges
  * needed to represent the merged result.
  *
- * If the original rangelisted contain non collapsed adjacent ranges, the
- * final result is not guaranteed to be compacted either.
+ * If the original rangelist contains non-collapsed adjacent ranges,
+ * the final result is not guaranteed to be compacted either.
  *
  * Use @a scratch_pool for temporary allocations.
  *

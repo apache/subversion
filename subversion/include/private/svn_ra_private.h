@@ -161,11 +161,11 @@ typedef svn_error_t *(*svn_ra__provide_props_cb_t)(
 /* Using information from BATON, fetch the kind of REPOS_RELPATH at revision
    SRC_REVISION, returning it in *KIND.
 
-   If the kind cannot be determined, then set *KIND to svn_kind_unknown.
+   If the kind cannot be determined, then set *KIND to svn_node_unknown.
 
    Temporary allocations can be made in SCRATCH_POOL.  */
 typedef svn_error_t *(*svn_ra__get_copysrc_kind_cb_t)(
-  svn_kind_t *kind,
+  svn_node_kind_t *kind,
   void *baton,
   const char *repos_relpath,
   svn_revnum_t src_revision,

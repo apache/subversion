@@ -177,7 +177,8 @@ capabilities_headers_iterator_callback(void *baton,
         {
           /* The server doesn't know what repository we're referring
              to, so it can't just say capability_yes. */
-          if (!svn_hash_gets(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO))
+          if (!svn_hash_gets(session->capabilities,
+                             SVN_RA_CAPABILITY_MERGEINFO))
             {
               svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
                             capability_server_yes);
@@ -203,7 +204,7 @@ capabilities_headers_iterator_callback(void *baton,
           svn_hash_sets(session->capabilities,
                         SVN_RA_CAPABILITY_INHERITED_PROPS, capability_yes);
         }
-      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_GET_FILE_REVS_REVERSE,
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_REVERSE_FILE_REVS,
                                  vals))
         {
           svn_hash_sets(session->capabilities,
@@ -435,6 +436,9 @@ svn_ra_serf__v2_get_youngest_revnum(svn_revnum_t *youngest,
 
   SVN_ERR(create_options_req(&opt_ctx, session, conn, scratch_pool));
   SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, scratch_pool));
+  SVN_ERR(svn_ra_serf__error_on_status(opt_ctx->handler->sline.code,
+                                       opt_ctx->handler->path,
+                                       opt_ctx->handler->location));
 
   *youngest = opt_ctx->youngest_rev;
 
@@ -455,6 +459,10 @@ svn_ra_serf__v1_get_activity_collection(const char **activity_url,
 
   SVN_ERR(create_options_req(&opt_ctx, session, conn, scratch_pool));
   SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, scratch_pool));
+
+  SVN_ERR(svn_ra_serf__error_on_status(opt_ctx->handler->sline.code,
+                                       opt_ctx->handler->path,
+                                       opt_ctx->handler->location));
 
   *activity_url = apr_pstrdup(result_pool, opt_ctx->activity_collection);
 
@@ -490,11 +498,22 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
       return SVN_NO_ERROR;
     }
 
-  return svn_error_compose_create(
-             svn_ra_serf__error_on_status(opt_ctx->handler->sline.code,
-                                          serf_sess->session_url.path,
-                                          opt_ctx->handler->location),
-             err);
+  SVN_ERR(svn_error_compose_create(
+              svn_ra_serf__error_on_status(opt_ctx->handler->sline.code,
+                                           serf_sess->session_url.path,
+                                           opt_ctx->handler->location),
+              err));
+
+  /* Opportunistically cache any reported activity URL.  (We don't
+     want to have to ask for this again later, potentially against an
+     unreadable commit anchor URL.)  */
+  if (opt_ctx->activity_collection)
+    {
+      serf_sess->activity_collection_url =
+        apr_pstrdup(serf_sess->pool, opt_ctx->activity_collection);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -514,17 +533,14 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
       return SVN_NO_ERROR;
     }
 
-  cap_result = apr_hash_get(serf_sess->capabilities,
-                            capability,
-                            APR_HASH_KEY_STRING);
+  cap_result = svn_hash_gets(serf_sess->capabilities, capability);
 
   /* If any capability is unknown, they're all unknown, so ask. */
   if (cap_result == NULL)
     SVN_ERR(svn_ra_serf__exchange_capabilities(serf_sess, NULL, pool));
 
   /* Try again, now that we've fetched the capabilities. */
-  cap_result = apr_hash_get(serf_sess->capabilities,
-                            capability, APR_HASH_KEY_STRING);
+  cap_result = svn_hash_gets(serf_sess->capabilities, capability);
 
   /* Some capabilities depend on the repository as well as the server. */
   if (cap_result == capability_server_yes)

@@ -37,6 +37,7 @@
 #include "svn_types.h"
 #include "svn_cmdline.h"
 #include "svn_xml.h"
+#include "svn_hash.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -179,6 +180,7 @@ svn_cl__diff(apr_getopt_t *os,
   const char *old_target, *new_target;
   apr_pool_t *iterpool;
   svn_boolean_t pegged_diff = FALSE;
+  svn_boolean_t ignore_content_type;
   svn_boolean_t show_copies_as_adds =
     opt_state->diff.patch_compatible || opt_state->diff.show_copies_as_adds;
   svn_boolean_t ignore_properties =
@@ -337,6 +339,21 @@ svn_cl__diff(apr_getopt_t *os,
 
     }
 
+  /* Should we ignore the content-type when deciding what to diff? */
+  if (opt_state->force)
+    {
+      ignore_content_type = TRUE;
+    }
+  else
+    {
+      SVN_ERR(svn_config_get_bool(svn_hash_gets(ctx->config,
+                                                SVN_CONFIG_CATEGORY_CONFIG),
+                                  &ignore_content_type,
+                                  SVN_CONFIG_SECTION_MISCELLANY,
+                                  SVN_CONFIG_OPTION_DIFF_IGNORE_CONTENT_TYPE,
+                                  FALSE));
+    }
+
   svn_opt_push_implicit_dot_target(targets, pool);
 
   iterpool = svn_pool_create(pool);
@@ -399,7 +416,7 @@ svn_cl__diff(apr_getopt_t *os,
                      opt_state->diff.no_diff_added,
                      opt_state->diff.no_diff_deleted,
                      show_copies_as_adds,
-                     opt_state->force,
+                     ignore_content_type,
                      ignore_properties,
                      opt_state->diff.properties_only,
                      opt_state->diff.use_git_diff_format,
@@ -450,7 +467,7 @@ svn_cl__diff(apr_getopt_t *os,
                      opt_state->diff.no_diff_added,
                      opt_state->diff.no_diff_deleted,
                      show_copies_as_adds,
-                     opt_state->force,
+                     ignore_content_type,
                      ignore_properties,
                      opt_state->diff.properties_only,
                      opt_state->diff.use_git_diff_format,

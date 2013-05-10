@@ -38,6 +38,7 @@
 #include "private/svn_magic.h"
 #include "private/svn_client_private.h"
 #include "private/svn_diff_tree.h"
+#include "private/svn_editor.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -315,7 +316,7 @@ svn_client__ra_provide_props(apr_hash_t **props,
 
 
 svn_error_t *
-svn_client__ra_get_copysrc_kind(svn_kind_t *kind,
+svn_client__ra_get_copysrc_kind(svn_node_kind_t *kind,
                                 void *baton,
                                 const char *repos_relpath,
                                 svn_revnum_t src_revision,
@@ -386,22 +387,6 @@ svn_error_t *svn_client__get_all_auto_props(apr_hash_t **autoprops,
                                             svn_client_ctx_t *ctx,
                                             apr_pool_t *result_pool,
                                             apr_pool_t *scratch_pool);
-
-/* Get a combined list of ignore patterns from CTX->CONFIG, local ignore
-   patterns on LOCAL_ABSPATH (per the svn:ignore property), and from any
-   svn:global-ignores properties set on, or inherited by, LOCAL_ABSPATH.
-   If LOCAL_ABSPATH is unversioned but is located within a valid working copy,
-   then find its nearest versioned parent path, if any, and return the ignore
-   patterns for that parent.  Return an SVN_ERR_WC_NOT_WORKING_COPY error if
-   LOCAL_ABSPATH is neither a versioned working copy path nor an unversioned
-   path within a working copy.  Store the collected patterns as const char *
-   elements in the array *IGNORES.  Allocate *IGNORES and its contents in
-   RESULT_POOL.  Use SCRATCH_POOL for temporary allocations. */
-svn_error_t *svn_client__get_all_ignores(apr_array_header_t **ignores,
-                                         const char *local_abspath,
-                                         svn_client_ctx_t *ctx,
-                                         apr_pool_t *result_pool,
-                                         apr_pool_t *scratch_pool);
 
 /* Get a list of ignore patterns defined by the svn:global-ignores
    properties set on, or inherited by, PATH_OR_URL.  Store the collected
@@ -482,11 +467,9 @@ svn_client__make_local_parents(const char *path,
 
    If IGNORE_EXTERNALS is true, do no externals processing.
 
-   If TIMESTAMP_SLEEP is NULL this function will sleep before
-   returning to ensure timestamp integrity.  If TIMESTAMP_SLEEP is not
-   NULL then the function will not sleep but will set *TIMESTAMP_SLEEP
-   to TRUE if a sleep is required, and will not change
-   *TIMESTAMP_SLEEP if no sleep is required.
+   Set *TIMESTAMP_SLEEP to TRUE if a sleep is required; otherwise do not
+   change *TIMESTAMP_SLEEP.  The output will be valid even if the function
+   returns an error.
 
    If ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of LOCAL_ABSPATH
    that obstruct items added from the repos are tolerated; if FALSE,
@@ -537,11 +520,11 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 
    If IGNORE_EXTERNALS is true, do no externals processing.
 
-   If TIMESTAMP_SLEEP is NULL this function will sleep before
-   returning to ensure timestamp integrity.  If TIMESTAMP_SLEEP is not
-   NULL then the function will not sleep but will set *TIMESTAMP_SLEEP
-   to TRUE if a sleep is required, and will not change *TIMESTAMP_SLEEP
-   if no sleep is required.  If ALLOW_UNVER_OBSTRUCTIONS is TRUE,
+   Set *TIMESTAMP_SLEEP to TRUE if a sleep is required; otherwise do not
+   change *TIMESTAMP_SLEEP.  The output will be valid even if the function
+   returns an error.
+
+   If ALLOW_UNVER_OBSTRUCTIONS is TRUE,
    unversioned children of LOCAL_ABSPATH that obstruct items added from
    the repos are tolerated; if FALSE, these obstructions cause the checkout
    to fail.
@@ -566,11 +549,9 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
    acquired and released if not held. Only switch as deeply as DEPTH
    indicates.
 
-   If TIMESTAMP_SLEEP is NULL this function will sleep before
-   returning to ensure timestamp integrity.  If TIMESTAMP_SLEEP is not
-   NULL then the function will not sleep but will set *TIMESTAMP_SLEEP
-   to TRUE if a sleep is required, and will not change
-   *TIMESTAMP_SLEEP if no sleep is required.
+   Set *TIMESTAMP_SLEEP to TRUE if a sleep is required; otherwise do not
+   change *TIMESTAMP_SLEEP.  The output will be valid even if the function
+   returns an error.
 
    If IGNORE_EXTERNALS is true, don't process externals.
 
@@ -990,9 +971,9 @@ svn_client__do_commit(const char *base_url,
 
    Pass NOTIFY_FUNC with NOTIFY_BATON along to svn_client_checkout().
 
-   *TIMESTAMP_SLEEP will be set TRUE if a sleep is required to ensure
-   timestamp integrity, *TIMESTAMP_SLEEP will be unchanged if no sleep
-   is required.
+   Set *TIMESTAMP_SLEEP to TRUE if a sleep is required; otherwise do not
+   change *TIMESTAMP_SLEEP.  The output will be valid even if the function
+   returns an error.
 
    Use POOL for temporary allocation. */
 svn_error_t *
@@ -1021,10 +1002,6 @@ svn_client__handle_externals(apr_hash_t *externals_new,
 
    NATIVE_EOL is the value passed as NATIVE_EOL when exporting.
 
-   *TIMESTAMP_SLEEP will be set TRUE if a sleep is required to ensure
-   timestamp integrity, *TIMESTAMP_SLEEP will be unchanged if no sleep
-   is required.
-
    Use POOL for temporary allocation. */
 svn_error_t *
 svn_client__export_externals(apr_hash_t *externals,
@@ -1034,7 +1011,6 @@ svn_client__export_externals(apr_hash_t *externals,
                              svn_depth_t requested_depth,
                              const char *native_eol,
                              svn_boolean_t ignore_keywords,
-                             svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
@@ -1127,6 +1103,18 @@ svn_cl__rev_default_to_head_or_working(const svn_opt_revision_t *revision,
 const svn_opt_revision_t *
 svn_cl__rev_default_to_peg(const svn_opt_revision_t *revision,
                            const svn_opt_revision_t *peg_revision);
+
+/* Call the conflict resolver callback in CTX for each conflict recorded
+ * in CONFLICTED_PATHS (const char *abspath keys; ignored values).  If
+ * CONFLICTS_REMAIN is not NULL, then set *CONFLICTS_REMAIN to true if
+ * there are any conflicts among CONFLICTED_PATHS remaining unresolved
+ * at the end of this operation, else set it to false.
+ */
+svn_error_t *
+svn_client__resolve_conflicts(svn_boolean_t *conflicts_remain,
+                              apr_hash_t *conflicted_paths,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus

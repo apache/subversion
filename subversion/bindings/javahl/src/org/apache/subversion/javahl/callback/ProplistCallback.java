@@ -33,7 +33,7 @@ import org.apache.subversion.javahl.ISVNClient;
 public interface ProplistCallback
 {
     /**
-     * the method will be called for every line in a file.
+     * the method will be called once for every file.
      * @param path        the path.
      * @param properties  the properties on the path.
      */

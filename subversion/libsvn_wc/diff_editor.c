@@ -82,7 +82,7 @@
 
 /* Overall crawler editor baton.
  */
-struct edit_baton_t 
+struct edit_baton_t
 {
   /* A wc db. */
   svn_wc__db_t *db;
@@ -696,7 +696,7 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
           const char *child_relpath;
           svn_boolean_t repos_only;
           svn_boolean_t local_only;
-          svn_kind_t base_kind;
+          svn_node_kind_t base_kind;
 
           if (eb->cancel_func)
             SVN_ERR(eb->cancel_func(eb->cancel_baton));
@@ -772,7 +772,7 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
 
           if (eb->local_before_remote && local_only)
             {
-              if (info->kind == svn_kind_file && diff_files)
+              if (info->kind == svn_node_file && diff_files)
                 SVN_ERR(svn_wc__diff_local_only_file(db, child_abspath,
                                                      child_relpath,
                                                      eb->processor, dir_baton,
@@ -781,7 +781,7 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
                                                      eb->cancel_func,
                                                      eb->cancel_baton,
                                                      iterpool));
-              else if (info->kind == svn_kind_dir && diff_dirs)
+              else if (info->kind == svn_node_dir && diff_dirs)
                 SVN_ERR(svn_wc__diff_local_only_dir(db, child_abspath,
                                                     child_relpath,
                                                     depth_below_here,
@@ -796,12 +796,12 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
           if (repos_only)
             {
               /* Report repository form deleted */
-              if (base_kind == svn_kind_file && diff_files)
+              if (base_kind == svn_node_file && diff_files)
                 SVN_ERR(svn_wc__diff_base_only_file(db, child_abspath,
                                                     child_relpath, eb->revnum,
                                                     eb->processor, dir_baton,
                                                     iterpool));
-              else if (base_kind == svn_kind_dir && diff_dirs)
+              else if (base_kind == svn_node_dir && diff_dirs)
                 SVN_ERR(svn_wc__diff_base_only_dir(db, child_abspath,
                                                    child_relpath, eb->revnum,
                                                    depth_below_here,
@@ -813,7 +813,7 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
           else if (!local_only) /* Not local only nor remote only */
             {
               /* Diff base against actual */
-              if (info->kind == svn_kind_file && diff_files)
+              if (info->kind == svn_node_file && diff_files)
                 {
                   if (info->status != svn_wc__db_status_normal
                       || !eb->diff_pristine)
@@ -830,7 +830,7 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
                                                 scratch_pool));
                     }
                 }
-              else if (info->kind == svn_kind_dir && diff_dirs)
+              else if (info->kind == svn_node_dir && diff_dirs)
                 SVN_ERR(walk_local_nodes_diff(eb, child_abspath,
                                               child_relpath,
                                               depth_below_here,
@@ -841,7 +841,7 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
 
           if (!eb->local_before_remote && local_only)
             {
-              if (info->kind == svn_kind_file && diff_files)
+              if (info->kind == svn_node_file && diff_files)
                 SVN_ERR(svn_wc__diff_local_only_file(db, child_abspath,
                                                      child_relpath,
                                                      eb->processor, dir_baton,
@@ -850,7 +850,7 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
                                                      eb->cancel_func,
                                                      eb->cancel_baton,
                                                      iterpool));
-              else if (info->kind == svn_kind_dir && diff_dirs)
+              else if (info->kind == svn_node_dir && diff_dirs)
                 SVN_ERR(svn_wc__diff_local_only_dir(db, child_abspath,
                                                      child_relpath, depth_below_here,
                                                      eb->processor, dir_baton,
@@ -924,7 +924,7 @@ svn_wc__diff_local_only_file(svn_wc__db_t *db,
   svn_diff_source_t *right_src;
   svn_diff_source_t *copyfrom_src = NULL;
   svn_wc__db_status_t status;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   const svn_checksum_t *checksum;
   const char *original_repos_relpath;
   svn_revnum_t original_revision;
@@ -949,7 +949,7 @@ svn_wc__diff_local_only_file(svn_wc__db_t *db,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
 
-  assert(kind == svn_kind_file
+  assert(kind == svn_node_file
          && (status == svn_wc__db_status_normal
              || status == svn_wc__db_status_added
              || (status == svn_wc__db_status_deleted && diff_pristine)));
@@ -1129,8 +1129,8 @@ svn_wc__diff_local_only_dir(svn_wc__db_t *db,
 
       switch (info->kind)
         {
-        case svn_kind_file:
-        case svn_kind_symlink:
+        case svn_node_file:
+        case svn_node_symlink:
           SVN_ERR(svn_wc__diff_local_only_file(db, child_abspath,
                                                child_relpath,
                                                processor, pdb,
@@ -1140,7 +1140,7 @@ svn_wc__diff_local_only_dir(svn_wc__db_t *db,
                                                scratch_pool));
           break;
 
-        case svn_kind_dir:
+        case svn_node_dir:
           if (depth > svn_depth_files || depth == svn_depth_unknown)
             {
               SVN_ERR(svn_wc__diff_local_only_dir(db, child_abspath,
@@ -1227,7 +1227,7 @@ handle_local_only(struct dir_baton_t *pb,
         break;
     }
 
-  if (info->kind == svn_kind_dir)
+  if (info->kind == svn_node_dir)
     {
       svn_depth_t depth ;
 
@@ -1272,7 +1272,7 @@ svn_wc__diff_base_only_file(svn_wc__db_t *db,
                             apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   const svn_checksum_t *checksum;
   apr_hash_t *props;
   void *file_baton = NULL;
@@ -1289,7 +1289,7 @@ svn_wc__diff_base_only_file(svn_wc__db_t *db,
                                    scratch_pool, scratch_pool));
 
   SVN_ERR_ASSERT(status == svn_wc__db_status_normal
-                 && kind == svn_kind_file
+                 && kind == svn_node_file
                  && checksum);
 
   left_src = svn_diff__source_create(revision, scratch_pool);
@@ -1392,15 +1392,15 @@ svn_wc__diff_base_only_dir(svn_wc__db_t *db,
 
           switch (info->kind)
             {
-              case svn_kind_file:
-              case svn_kind_symlink:
+              case svn_node_file:
+              case svn_node_symlink:
                 SVN_ERR(svn_wc__diff_base_only_file(db, child_abspath,
                                                     child_relpath,
                                                     revision,
                                                     processor, dir_baton,
                                                     iterpool));
                 break;
-              case svn_kind_dir:
+              case svn_node_dir:
                 if (depth > svn_depth_files || depth == svn_depth_unknown)
                   {
                     svn_depth_t depth_below_here = depth;
@@ -1534,7 +1534,7 @@ add_directory(const char *path,
 
       info = svn_hash_gets(pb->local_info, db->name);
 
-      if (!info || info->kind != svn_kind_dir || NOT_PRESENT(info->status))
+      if (!info || info->kind != svn_node_dir || NOT_PRESENT(info->status))
         db->repos_only = TRUE;
 
       if (!db->repos_only && info->status != svn_wc__db_status_added)
@@ -1594,7 +1594,7 @@ open_directory(const char *path,
 
       info = svn_hash_gets(pb->local_info, db->name);
 
-      if (!info || info->kind != svn_kind_dir || NOT_PRESENT(info->status))
+      if (!info || info->kind != svn_node_dir || NOT_PRESENT(info->status))
         db->repos_only = TRUE;
 
       if (!db->repos_only)
@@ -1817,7 +1817,7 @@ add_file(const char *path,
 
       info = svn_hash_gets(pb->local_info, fb->name);
 
-      if (!info || info->kind != svn_kind_file || NOT_PRESENT(info->status))
+      if (!info || info->kind != svn_node_file || NOT_PRESENT(info->status))
         fb->repos_only = TRUE;
 
       if (!fb->repos_only && info->status != svn_wc__db_status_added)
@@ -1874,7 +1874,7 @@ open_file(const char *path,
 
       info = svn_hash_gets(pb->local_info, fb->name);
 
-      if (!info || info->kind != svn_kind_file || NOT_PRESENT(info->status))
+      if (!info || info->kind != svn_node_file || NOT_PRESENT(info->status))
         fb->repos_only = TRUE;
 
       if (!fb->repos_only)
@@ -2431,8 +2431,8 @@ wrap_dir_opened(void **new_dir_baton,
 /* svn_diff_tree_processor_t function */
 static svn_error_t *
 wrap_dir_added(const char *relpath,
-               const svn_diff_source_t *right_source,
                const svn_diff_source_t *copyfrom_source,
+               const svn_diff_source_t *right_source,
                /*const*/ apr_hash_t *copyfrom_props,
                /*const*/ apr_hash_t *right_props,
                void *dir_baton,

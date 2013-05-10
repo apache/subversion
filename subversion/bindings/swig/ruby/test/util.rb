@@ -19,7 +19,7 @@
 
 require "fileutils"
 require "pathname"
-require "svn/util"
+require "./svn/util"
 require "tmpdir"
 
 require "my-assertions"

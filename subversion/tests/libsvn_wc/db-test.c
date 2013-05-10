@@ -378,7 +378,7 @@ static svn_error_t *
 test_getting_info(apr_pool_t *pool)
 {
   const char *local_abspath;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_wc__db_status_t status;
   svn_revnum_t revision;
   const char *repos_relpath;
@@ -408,7 +408,7 @@ test_getting_info(apr_pool_t *pool)
             &update_root,
             db, local_abspath,
             pool, pool));
-  SVN_TEST_ASSERT(kind == svn_kind_dir);
+  SVN_TEST_ASSERT(kind == svn_node_dir);
   SVN_TEST_ASSERT(status == svn_wc__db_status_normal);
   SVN_TEST_ASSERT(revision == 1);
   SVN_TEST_STRING_ASSERT(repos_relpath, "");
@@ -434,7 +434,7 @@ test_getting_info(apr_pool_t *pool)
             NULL, NULL, NULL,
             db, svn_dirent_join(local_abspath, "A", pool),
             pool, pool));
-  SVN_TEST_ASSERT(kind == svn_kind_file);
+  SVN_TEST_ASSERT(kind == svn_node_file);
   SVN_TEST_STRING_ASSERT(SHA1_1, svn_checksum_to_cstring(checksum, pool));
   SVN_TEST_STRING_ASSERT(repos_relpath, "A");
   SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_ONE);
@@ -449,7 +449,7 @@ test_getting_info(apr_pool_t *pool)
             NULL, NULL, NULL,
             db, svn_dirent_join(local_abspath, "B", pool),
             pool, pool));
-  SVN_TEST_ASSERT(kind == svn_kind_symlink);
+  SVN_TEST_ASSERT(kind == svn_node_symlink);
   SVN_TEST_ASSERT(status == svn_wc__db_status_excluded);
   SVN_TEST_ASSERT(!SVN_IS_VALID_REVNUM(revision));
   SVN_TEST_STRING_ASSERT(repos_relpath, "B");
@@ -472,7 +472,7 @@ test_getting_info(apr_pool_t *pool)
             NULL, NULL, NULL, NULL,
             db, svn_dirent_join(local_abspath, "C", pool),
             pool, pool));
-  SVN_TEST_ASSERT(kind == svn_kind_unknown);
+  SVN_TEST_ASSERT(kind == svn_node_unknown);
   SVN_TEST_ASSERT(status == svn_wc__db_status_server_excluded);
 
   /* Test: not-present presence. */
@@ -556,12 +556,12 @@ static svn_error_t *
 validate_node(svn_wc__db_t *db,
               const char *local_abspath,
               const char *relpath,
-              svn_kind_t expected_kind,
+              svn_node_kind_t expected_kind,
               svn_wc__db_status_t expected_status,
               apr_pool_t *scratch_pool)
 {
   const char *path = svn_dirent_join(local_abspath, relpath, scratch_pool);
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_wc__db_status_t status;
   apr_hash_t *props;
   const svn_string_t *value;
@@ -691,7 +691,7 @@ test_inserting_nodes(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_base_add_excluded_node(
             db, svn_dirent_join(local_abspath, "N/N-b", pool),
             "N/N-b", ROOT_ONE, UUID_ONE, 3,
-            svn_kind_file, svn_wc__db_status_server_excluded,
+            svn_node_file, svn_wc__db_status_server_excluded,
             NULL, NULL,
             pool));
 
@@ -699,7 +699,7 @@ test_inserting_nodes(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_base_add_excluded_node(
             db, svn_dirent_join(local_abspath, "P", pool),
             "P", ROOT_ONE, UUID_ONE, 3,
-            svn_kind_dir, svn_wc__db_status_excluded,
+            svn_node_dir, svn_wc__db_status_excluded,
             NULL, NULL,
             pool));
 
@@ -707,7 +707,7 @@ test_inserting_nodes(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_base_add_not_present_node(
             db, svn_dirent_join(local_abspath, "Q", pool),
             "Q", ROOT_ONE, UUID_ONE, 3,
-            svn_kind_symlink,
+            svn_node_symlink,
             NULL, NULL,
             pool));
 
@@ -715,36 +715,36 @@ test_inserting_nodes(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_base_add_excluded_node(
             db, svn_dirent_join(local_abspath, "R", pool),
             "R", ROOT_ONE, UUID_ONE, 3,
-            svn_kind_unknown, svn_wc__db_status_server_excluded,
+            svn_node_unknown, svn_wc__db_status_server_excluded,
             NULL, NULL,
             pool));
 
 
   /* Are all the nodes where we expect them to be? */
   SVN_ERR(validate_node(db, local_abspath, "N",
-                        svn_kind_dir, svn_wc__db_status_normal,
+                        svn_node_dir, svn_wc__db_status_normal,
                         pool));
   SVN_ERR(validate_node(db, local_abspath, "N/N-a",
-                        svn_kind_file, svn_wc__db_status_normal,
+                        svn_node_file, svn_wc__db_status_normal,
                         pool));
   SVN_ERR(validate_node(db, local_abspath, "N/N-b",
-                        svn_kind_file,
+                        svn_node_file,
                         svn_wc__db_status_server_excluded,
                         pool));
   SVN_ERR(validate_node(db, local_abspath, "N/N-c",
-                        svn_kind_unknown, svn_wc__db_status_incomplete,
+                        svn_node_unknown, svn_wc__db_status_incomplete,
                         pool));
   SVN_ERR(validate_node(db, local_abspath, "O",
-                        svn_kind_symlink, svn_wc__db_status_normal,
+                        svn_node_symlink, svn_wc__db_status_normal,
                         pool));
   SVN_ERR(validate_node(db, local_abspath, "P",
-                        svn_kind_dir, svn_wc__db_status_excluded,
+                        svn_node_dir, svn_wc__db_status_excluded,
                         pool));
   SVN_ERR(validate_node(db, local_abspath, "Q",
-                        svn_kind_symlink, svn_wc__db_status_not_present,
+                        svn_node_symlink, svn_wc__db_status_not_present,
                         pool));
   SVN_ERR(validate_node(db, local_abspath, "R",
-                        svn_kind_unknown,
+                        svn_node_unknown,
                         svn_wc__db_status_server_excluded,
                         pool));
 
@@ -800,7 +800,7 @@ static svn_error_t *
 test_working_info(apr_pool_t *pool)
 {
   const char *local_abspath;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_wc__db_status_t status;
   svn_revnum_t revision;
   const char *repos_relpath;
@@ -844,7 +844,7 @@ test_working_info(apr_pool_t *pool)
             db, svn_dirent_join(local_abspath, "I", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_added);
-  SVN_TEST_ASSERT(kind == svn_kind_dir);
+  SVN_TEST_ASSERT(kind == svn_node_dir);
   SVN_TEST_ASSERT(revision == SVN_INVALID_REVNUM);
   SVN_TEST_ASSERT(repos_relpath == NULL);
   SVN_TEST_ASSERT(repos_root_url == NULL);
@@ -895,14 +895,14 @@ test_pdh(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_base_add_excluded_node(
             db, svn_dirent_join(local_abspath, "sub", pool),
             "sub", ROOT_ONE, UUID_ONE, 1,
-            svn_kind_file, svn_wc__db_status_server_excluded,
+            svn_node_file, svn_wc__db_status_server_excluded,
             NULL, NULL,
             pool));
 
   SVN_ERR(svn_wc__db_base_add_excluded_node(
             db, svn_dirent_join(local_abspath, "sub/A", pool),
             "sub/A", ROOT_ONE, UUID_ONE, 1,
-            svn_kind_file, svn_wc__db_status_server_excluded,
+            svn_node_file, svn_wc__db_status_server_excluded,
             NULL, NULL,
             pool));
 
@@ -1459,7 +1459,7 @@ test_externals_store(apr_pool_t *pool)
 
   {
     svn_wc__db_status_t status;
-    svn_kind_t kind;
+    svn_node_kind_t kind;
     const char *repos_root_url;
     const char *repos_uuid;
     const char *defining_abspath;
@@ -1476,7 +1476,7 @@ test_externals_store(apr_pool_t *pool)
                                      pool, pool));
 
     SVN_TEST_ASSERT(status == svn_wc__db_status_normal);
-    SVN_TEST_ASSERT(kind == svn_kind_file);
+    SVN_TEST_ASSERT(kind == svn_node_file);
     SVN_TEST_STRING_ASSERT(repos_root_url, "svn://some-repos/svn");
     SVN_TEST_STRING_ASSERT(repos_uuid, "not-a-uuid");
     SVN_TEST_STRING_ASSERT(defining_abspath, subdir);
@@ -1507,7 +1507,7 @@ test_externals_store(apr_pool_t *pool)
                                      pool, pool));
 
     SVN_TEST_ASSERT(status == svn_wc__db_status_normal);
-    SVN_TEST_ASSERT(kind == svn_kind_dir);
+    SVN_TEST_ASSERT(kind == svn_node_dir);
     SVN_TEST_STRING_ASSERT(repos_root_url, "svn://other-repos/nsv");
     SVN_TEST_STRING_ASSERT(repos_uuid, "no-uuid-either");
     SVN_TEST_STRING_ASSERT(defining_abspath, subdir);

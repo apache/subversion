@@ -328,7 +328,7 @@ get_file_from_ra(struct file_baton *fb,
                                      fb->pool, scratch_pool));
 
       fstream = svn_stream_checksummed2(fstream, NULL, &fb->start_md5_checksum,
-                                        svn_checksum_md5, TRUE, scratch_pool);
+                                        svn_checksum_md5, TRUE, fb->pool);
 
       /* Retrieve the file and its properties */
       SVN_ERR(svn_ra_get_file(fb->edit_baton->ra_session,
@@ -395,9 +395,8 @@ remove_non_prop_changes(apr_hash_t *pristine_props,
 
       if (change->value)
         {
-          const svn_string_t *old_val = apr_hash_get(pristine_props,
-                                                     change->name,
-                                                     APR_HASH_KEY_STRING);
+          const svn_string_t *old_val = svn_hash_gets(pristine_props,
+                                                      change->name);
 
           if (old_val && svn_string_compare(old_val, change->value))
             {
@@ -844,6 +843,37 @@ window_handler(svn_txdelta_window_t *window,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_stream_lazyopen_func_t. */
+static svn_error_t *
+lazy_open_source(svn_stream_t **stream,
+                 void *baton,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  struct file_baton *fb = baton;
+
+  SVN_ERR(svn_stream_open_readonly(stream, fb->path_start_revision,
+                                   result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_stream_lazyopen_func_t. */
+static svn_error_t *
+lazy_open_result(svn_stream_t **stream,
+                 void *baton,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  struct file_baton *fb = baton;
+
+  SVN_ERR(svn_stream_open_unique(stream, &fb->path_end_revision, NULL,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* An svn_delta_editor_t function.  */
 static svn_error_t *
 apply_textdelta(void *file_baton,
@@ -903,14 +933,13 @@ apply_textdelta(void *file_baton,
     }
 
   /* Open the file to be used as the base for second revision */
-  SVN_ERR(svn_stream_open_readonly(&src_stream, fb->path_start_revision,
-                                   scratch_pool, scratch_pool));
+  src_stream = svn_stream_lazyopen_create(lazy_open_source, fb, FALSE,
+                                          scratch_pool);
 
   /* Open the file that will become the second revision after applying the
      text delta, it starts empty */
-  SVN_ERR(svn_stream_open_unique(&result_stream, &fb->path_end_revision, NULL,
-                                 svn_io_file_del_on_pool_cleanup,
-                                 scratch_pool, scratch_pool));
+  result_stream = svn_stream_lazyopen_create(lazy_open_result, fb, FALSE,
+                                             scratch_pool);
 
   svn_txdelta_apply(src_stream,
                     result_stream,
@@ -1213,22 +1242,20 @@ absent_file(const char *path,
 }
 
 static svn_error_t *
-fetch_kind_func(svn_kind_t *kind,
+fetch_kind_func(svn_node_kind_t *kind,
                 void *baton,
                 const char *path,
                 svn_revnum_t base_revision,
                 apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
-  svn_node_kind_t node_kind;
 
   if (!SVN_IS_VALID_REVNUM(base_revision))
     base_revision = eb->revision;
 
-  SVN_ERR(svn_ra_check_path(eb->ra_session, path, base_revision, &node_kind,
+  SVN_ERR(svn_ra_check_path(eb->ra_session, path, base_revision, kind,
                             scratch_pool));
 
-  *kind = svn__kind_from_node_kind(node_kind, FALSE);
   return SVN_NO_ERROR;
 }
 

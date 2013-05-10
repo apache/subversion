@@ -27,6 +27,7 @@
 
 /*** Includes. ***/
 
+#include "svn_hash.h"
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -109,12 +110,9 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
         local_mod = TRUE;
     }
 
-  eol_style = apr_hash_get(props, SVN_PROP_EOL_STYLE,
-                           APR_HASH_KEY_STRING);
-  keywords = apr_hash_get(props, SVN_PROP_KEYWORDS,
-                          APR_HASH_KEY_STRING);
-  special = apr_hash_get(props, SVN_PROP_SPECIAL,
-                         APR_HASH_KEY_STRING);
+  eol_style = svn_hash_gets(props, SVN_PROP_EOL_STYLE);
+  keywords = svn_hash_gets(props, SVN_PROP_KEYWORDS);
+  special = svn_hash_gets(props, SVN_PROP_SPECIAL);
 
   if (eol_style)
     svn_subst_eol_style_from_value(&style, &eol, eol_style->data);
@@ -126,12 +124,18 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
       const char *author;
       const char *url;
       apr_time_t tm;
+      const char *repos_root_url;
+      const char *repos_relpath;
 
       SVN_ERR(svn_wc__node_get_changed_info(&changed_rev, &tm, &author, wc_ctx,
                                             local_abspath, scratch_pool,
                                             scratch_pool));
-      SVN_ERR(svn_wc__node_get_url(&url, wc_ctx, local_abspath, scratch_pool,
-                                   scratch_pool));
+      SVN_ERR(svn_wc__node_get_repos_info(NULL, &repos_relpath, &repos_root_url,
+                                          NULL,
+                                          wc_ctx, local_abspath, scratch_pool,
+                                          scratch_pool));
+      url = svn_path_url_add_component2(repos_root_url, repos_relpath,
+                                        scratch_pool);
 
       if (local_mod)
         {
@@ -154,8 +158,9 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
           rev_str = apr_psprintf(scratch_pool, "%ld", changed_rev);
         }
 
-      SVN_ERR(svn_subst_build_keywords2(&kw, keywords->data, rev_str, url, tm,
-                                        author, scratch_pool));
+      SVN_ERR(svn_subst_build_keywords3(&kw, keywords->data, rev_str, url,
+                                        repos_root_url, tm, author,
+                                        scratch_pool));
     }
 
   /* Wrap the output stream if translation is needed. */
@@ -183,6 +188,7 @@ svn_client_cat2(svn_stream_t *out,
   svn_string_t *eol_style;
   svn_string_t *keywords;
   apr_hash_t *props;
+  const char *repos_root_url;
   svn_stream_t *output = out;
   svn_error_t *err;
 
@@ -227,6 +233,9 @@ svn_client_cat2(svn_stream_t *out,
                                             peg_revision,
                                             revision, ctx, pool));
 
+  /* Find the repos root URL */
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, pool));
+
   /* Grab some properties we need to know in order to figure out if anything
      special needs to be done with this file. */
   err = svn_ra_get_file(ra_session, "", loc->rev, NULL, NULL, &props, pool);
@@ -244,8 +253,8 @@ svn_client_cat2(svn_stream_t *out,
         }
     }
 
-  eol_style = apr_hash_get(props, SVN_PROP_EOL_STYLE, APR_HASH_KEY_STRING);
-  keywords = apr_hash_get(props, SVN_PROP_KEYWORDS, APR_HASH_KEY_STRING);
+  eol_style = svn_hash_gets(props, SVN_PROP_EOL_STYLE);
+  keywords = svn_hash_gets(props, SVN_PROP_KEYWORDS);
 
   if (eol_style || keywords)
     {
@@ -268,22 +277,18 @@ svn_client_cat2(svn_stream_t *out,
           svn_string_t *cmt_rev, *cmt_date, *cmt_author;
           apr_time_t when = 0;
 
-          cmt_rev = apr_hash_get(props, SVN_PROP_ENTRY_COMMITTED_REV,
-                                 APR_HASH_KEY_STRING);
-          cmt_date = apr_hash_get(props, SVN_PROP_ENTRY_COMMITTED_DATE,
-                                  APR_HASH_KEY_STRING);
-          cmt_author = apr_hash_get(props, SVN_PROP_ENTRY_LAST_AUTHOR,
-                                    APR_HASH_KEY_STRING);
+          cmt_rev = svn_hash_gets(props, SVN_PROP_ENTRY_COMMITTED_REV);
+          cmt_date = svn_hash_gets(props, SVN_PROP_ENTRY_COMMITTED_DATE);
+          cmt_author = svn_hash_gets(props, SVN_PROP_ENTRY_LAST_AUTHOR);
           if (cmt_date)
             SVN_ERR(svn_time_from_cstring(&when, cmt_date->data, pool));
 
-          SVN_ERR(svn_subst_build_keywords2
-                  (&kw, keywords->data,
-                   cmt_rev->data,
-                   loc->url,
-                   when,
-                   cmt_author ? cmt_author->data : NULL,
-                   pool));
+          SVN_ERR(svn_subst_build_keywords3(&kw, keywords->data,
+                                            cmt_rev->data, loc->url,
+                                            repos_root_url, when,
+                                            cmt_author ?
+                                              cmt_author->data : NULL,
+                                            pool));
         }
       else
         kw = NULL;

@@ -708,28 +708,10 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
    svn_repos_get_logs()
 */
 
-#ifdef SWIGPYTHON
-%typemap(in) (svn_log_message_receiver_t receiver,
-                      void *receiver_baton) {
-    $1 = svn_swig_py_log_receiver;
-    $2 = (void *)$input;
-}
-#endif
-#ifdef SWIGPERL
-%typemap(in) (svn_log_message_receiver_t receiver,
-                     void *receiver_baton) {
-    $1 = svn_swig_pl_thunk_log_receiver;
-    $2 = (void *)$input;
-}
-#endif
-
-#ifdef SWIGRUBY
-%typemap(in) (svn_log_message_receiver_t receiver,
-                    void *receiver_baton) {
-    $1 = svn_swig_rb_log_receiver;
-    $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
+%callback_typemap(svn_log_message_receiver_t receiver, void *receiver_baton,
+                  svn_swig_py_log_receiver,
+                  svn_swig_pl_thunk_log_receiver,
+                  svn_swig_rb_log_receiver)
 
 /* -----------------------------------------------------------------------
    Callback: svn_log_entry_receiver_t
@@ -738,21 +720,10 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
    svn_repos_get_logs4()
 */
 
-#ifdef SWIGPYTHON
-%typemap(in) (svn_log_entry_receiver_t receiver,
-                      void *receiver_baton) {
-    $1 = svn_swig_py_log_entry_receiver;
-    $2 = (void *)$input;
-}
-#endif
-
-#ifdef SWIGRUBY
-%typemap(in) (svn_log_entry_receiver_t receiver, void *receiver_baton)
-{
-  $1 = svn_swig_rb_log_entry_receiver;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
+%callback_typemap(svn_log_entry_receiver_t receiver, void *receiver_baton,
+                  svn_swig_py_log_entry_receiver,
+                  svn_swig_pl_thunk_log_entry_receiver,
+                  svn_swig_rb_log_entry_receiver)
 
 /* -----------------------------------------------------------------------
    Callback: svn_commit_callback_t
@@ -902,6 +873,39 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 {
   $1 = svn_swig_rb_info_receiver;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+}
+#endif
+
+/* -----------------------------------------------------------------------
+   Callback: svn_repos_freeze_func_t
+*/
+#ifdef SWIGPYTHON
+%typemap(in) (svn_repos_freeze_func_t freeze_func, void *freeze_baton)
+{
+  $1 = svn_swig_py_repos_freeze_func;
+  $2 = (void *)$input;
+}
+#endif
+
+/* -----------------------------------------------------------------------
+   Callback: svn_fs_freeze_func_t
+*/
+#ifdef SWIGPYTHON
+%typemap(in) (svn_fs_freeze_func_t freeze_func, void *freeze_baton)
+{
+  $1 = svn_swig_py_fs_freeze_func;
+  $2 = (void *)$input;
+}
+#endif
+
+/* -----------------------------------------------------------------------
+   Callback: svn_proplist_receiver2_t
+*/
+#ifdef SWIGPYTHON
+%typemap(in) (svn_proplist_receiver2_t receiver, void *receiver_baton)
+{
+  $1 = svn_swig_py_proplist_receiver2;
+  $2 = (void *)$input;
 }
 #endif
 
@@ -1169,7 +1173,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 */
 #ifdef SWIGPERL
 %typemap(in) svn_opt_revision_t * (svn_opt_revision_t rev) {
-    $1 = svn_swig_pl_set_revision(&rev, $input);
+  $1 = svn_swig_pl_set_revision(&rev, $input, TRUE);
 }
 #endif
 

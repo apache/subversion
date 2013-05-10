@@ -120,7 +120,7 @@ svn_sqlite__read_schema_version(int *version,
    The statements will be finalized and the SQLite database will be closed
    when RESULT_POOL is cleaned up. */
 svn_error_t *
-svn_sqlite__open(svn_sqlite__db_t **db, const char *repos_path,
+svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
                  svn_sqlite__mode_t mode, const char * const statements[],
                  int latest_schema, const char * const *upgrade_sql,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool);

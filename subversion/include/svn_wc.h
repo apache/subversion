@@ -1247,13 +1247,13 @@ typedef enum svn_wc_notify_action_t
    * @since New in 1.8. */
   svn_wc_notify_left_local_modifications,
 
-  /** A copy from a foreign repository has started 
+  /** A copy from a foreign repository has started
    * @since New in 1.8. */
   svn_wc_notify_foreign_copy_begin,
 
   /** A move in the working copy has been broken, i.e. degraded into a
    * copy + delete. The notified path is the move source (the deleted path).
-   * ### Provide path to move destination as well?
+   * ### TODO: Provide path to move destination as well?
    * @since New in 1.8. */
   svn_wc_notify_move_broken
 
@@ -1672,10 +1672,10 @@ typedef struct svn_wc_conflict_version_t
   const char *path_in_repos;
   /** @} */
 
-  /** The node kind.  Can be any kind, even 'none' or 'unknown'. */
+  /** The node kind.  Can be any kind, including 'none' or 'unknown'. */
   svn_node_kind_t node_kind;
 
-  /** UUID of the repository. Can be NULL meaning unknown.
+  /** UUID of the repository (or NULL if unknown.)
    * @since New in 1.8. */
   const char *repos_uuid;
 
@@ -2109,9 +2109,8 @@ typedef struct svn_wc_conflict_result_t
  * Allocate an #svn_wc_conflict_result_t structure in @a pool,
  * initialize and return it.
  *
- * Set the @c choice field of the structure to @a choice, and @c
- * merged_file to @a merged_file.  Set all other fields to their @c
- * _unknown, @c NULL or invalid value, respectively. Make only a shallow
+ * Set the @c choice field of the structure to @a choice, @c merged_file
+ * to @a merged_file, and @c save_merged to false.  Make only a shallow
  * copy of the pointer argument @a merged_file.
  *
  * @since New in 1.5.
@@ -3740,7 +3739,7 @@ typedef struct svn_wc_status3_t
    * @since New in 1.8. */
   const char *moved_to_abspath;
 
-  /** TRUE iff the item is a file brought in by an svn:externals definition.
+  /** @c TRUE iff the item is a file brought in by an svn:externals definition.
    * @since New in 1.8. */
   svn_boolean_t file_external;
 
@@ -4423,6 +4422,7 @@ svn_wc_copy(const char *src,
  * @deprecated Provided for backward compatibility with the 1.7 API.
  * @see svn_client_move7()
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_move(svn_wc_context_t *wc_ctx,
             const char *src_abspath,
@@ -4570,9 +4570,13 @@ svn_wc_add_from_disk2(svn_wc_context_t *wc_ctx,
 
 
 /**
- * Similar to svn_wc_add4(), but gives the new node an empty set of properties.
+ * Similar to svn_wc_add_from_disk2(), but always passes NULL for @a
+ * props.
  *
- * This is a replacement for svn_wc_add4() case 2a.
+ * This is a replacement for svn_wc_add4() case 2a (which see for
+ * details).
+
+ * @see svn_wc_add4()
  *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.7 API.
@@ -5457,7 +5461,7 @@ svn_wc_crawl_revisions(const char *path,
 svn_error_t *
 svn_wc_check_root(svn_boolean_t *is_wcroot,
                   svn_boolean_t *is_switched,
-                  svn_kind_t *kind,
+                  svn_node_kind_t *kind,
                   svn_wc_context_t *wc_ctx,
                   const char *local_abspath,
                   apr_pool_t *scratch_pool);
@@ -5670,6 +5674,10 @@ typedef svn_error_t *(*svn_wc_dirents_func_t)(void *baton,
  * If @a server_performs_filtering is TRUE, assume that the server handles
  * the ambient depth filtering, so this doesn't have to be handled in the
  * editor.
+ *
+ * If @a clean_checkout is TRUE, assume that we are checking out into an
+ * empty directory, and so bypass a number of conflict checks that are
+ * unnecessary in this case.
  *
  * If @a fetch_dirents_func is not NULL, the update editor may call this
  * callback, when asked to perform a depth restricted update. It will do this
@@ -6760,13 +6768,13 @@ typedef enum svn_wc_merge_outcome_t
  * svn_diff_file_options_parse()).  @a merge_options must contain
  * <tt>const char *</tt> elements.
  *
- * If @a merge_props_state is non-NULL @a prop_diff is merged before
- * merging the text. (If @a merge_props_state is NULL, no property changes
- * are merged and @a prop_diff is only used to determine the merge result)
- * The result of the property merge is stored in @a *merge_props_state. If
- * there is a conflict and @a dry_run is @c FALSE, then attempt to call @a
- * conflict_func with @a conflict_baton (if non-NULL).  If the conflict
- * callback cannot resolve the conflict, then a property conflict is installed.
+ * If @a merge_props_state is non-NULL, merge @a prop_diff into the
+ * working properties before merging the text.  (If @a merge_props_state
+ * is NULL, do not merge any property changes; in this case, @a prop_diff
+ * is only used to help determine the text merge result.)  Handle any
+ * conflicts as described for svn_wc_merge_props3(), with the parameters
+ * @a dry_run, @a conflict_func and @a conflict_baton.  Return the
+ * outcome of the property merge in @a *merge_props_state.
  *
  * The outcome of the text merge is returned in @a *merge_content_outcome. If
  * there is a conflict and @a dry_run is @c FALSE, then attempt to call @a
@@ -6840,9 +6848,12 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
               void *cancel_baton,
               apr_pool_t *scratch_pool);
 
-/** Similar to svn_wc_merge5() but doesn't merge property changes. Instead of
- * handling this in a single operation, a separate call to svn_wc_merge_props3()
- * before calling svn_wc_merge4() is needed
+/** Similar to svn_wc_merge5() but with @a merge_props_state and @a
+ * original_props always passed as NULL.
+ *
+ * Unlike svn_wc_merge5(), this function doesn't merge property
+ * changes.  Callers of this function must first use
+ * svn_wc_merge_props3() to get this functionality.
  *
  * @since New in 1.7.
  * @deprecated Provided for backwards compatibility with the 1.7 API.
@@ -6953,9 +6964,12 @@ svn_wc_merge(const char *left,
  * If @a state is non-NULL, set @a *state to the state of the properties
  * after the merge.
  *
- * If conflicts are found when merging working properties, they are
- * described in a temporary .prej file (or appended to an already-existing
- * .prej file), and the entry is marked "conflicted".
+ * If a conflict is found when merging a property, and @a dry_run is
+ * false and @a conflict_func is not null, then call @a conflict_func
+ * with @a conflict_baton and a description of the conflict.  If any
+ * conflicts are not resolved by such callbacks, describe the unresolved
+ * conflicts in a temporary .prej file (or append to an already-existing
+ * .prej file) and mark the path as conflicted in the WC DB.
  *
  * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at various
  * points during the operation.  If it returns an error (typically
@@ -8113,7 +8127,7 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
  * Set @a kind to the #svn_node_kind_t of @a abspath.  Use @a wc_ctx to access
  * the working copy, and @a scratch_pool for all temporary allocations.
  *
- * If @a abspath is not under version control, set @a kind to #svn_kind_none.
+ * If @a abspath is not under version control, set @a kind to #svn_node_none.
  *
  * If @a show_hidden and @a show_deleted are both @c FALSE, the kind of
  * scheduled for delete, administrative only 'not present' and excluded
@@ -8143,8 +8157,8 @@ svn_wc_read_kind2(svn_node_kind_t *kind,
                   svn_boolean_t show_hidden,
                   apr_pool_t *scratch_pool);
 
-/** Similar to svn_wc_read_kind2() but always shows deleted nodes and returns
- * the result as a #svn_node_kind_t.
+/** Similar to svn_wc_read_kind2() but with @a show_deleted always
+ * passed as TRUE.
  *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.7 API.

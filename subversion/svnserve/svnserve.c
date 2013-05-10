@@ -50,7 +50,11 @@
 #include "svn_io.h"
 
 #include "svn_private_config.h"
+
 #include "private/svn_dep_compat.h"
+#include "private/svn_cmdline_private.h"
+#include "private/svn_atomic.h"
+
 #include "winservice.h"
 
 #ifdef HAVE_UNISTD_H
@@ -238,13 +242,11 @@ static const apr_getopt_option_t svnserve__options[] =
         "                             "
         "[used for FSFS repositories only]")},
     {"client-speed", SVNSERVE_OPT_CLIENT_SPEED, 1,
-     N_("Optimize throughput based on the assumption that\n"
+     N_("Optimize network handling based on the assumption\n"
         "                             "
-        "clients can receive data with a bitrate of at\n"
+        "that most clients are connected with a bitrate of\n"
         "                             "
-        "least ARG Gbit/s.  For clients receiving data at\n"
-        "                             "
-        "less than 1 Gbit/s, zero should be used.\n"
+        "ARG Mbit/s.\n"
         "                             "
         "Default is 0 (optimizations disabled).")},
 #ifdef CONNECTION_HAVE_THREAD_OPTION
@@ -377,11 +379,44 @@ static apr_status_t redirect_stdout(void *arg)
   return apr_file_dup2(out_file, err_file, pool);
 }
 
+#if APR_HAS_THREADS
+/* The pool passed to apr_thread_create can only be released when both
+
+      A: the call to apr_thread_create has returned to the calling thread
+      B: the new thread has started running and reached apr_thread_start_t
+
+   So we set the atomic counter to 2 then both the calling thread and
+   the new thread decrease it and when it reaches 0 the pool can be
+   released.  */
+struct shared_pool_t {
+  svn_atomic_t count;
+  apr_pool_t *pool;
+};
+
+static struct shared_pool_t *
+attach_shared_pool(apr_pool_t *pool)
+{
+  struct shared_pool_t *shared = apr_palloc(pool, sizeof(struct shared_pool_t));
+
+  shared->pool = pool;
+  svn_atomic_set(&shared->count, 2);
+
+  return shared;
+}
+
+static void
+release_shared_pool(struct shared_pool_t *shared)
+{
+  if (svn_atomic_dec(&shared->count) == 0)
+    svn_pool_destroy(shared->pool);
+}
+#endif
+
 /* "Arguments" passed from the main thread to the connection thread */
 struct serve_thread_t {
   svn_ra_svn_conn_t *conn;
   serve_params_t *params;
-  apr_pool_t *pool;
+  struct shared_pool_t *shared_pool;
 };
 
 #if APR_HAS_THREADS
@@ -389,8 +424,8 @@ static void * APR_THREAD_FUNC serve_thread(apr_thread_t *tid, void *data)
 {
   struct serve_thread_t *d = data;
 
-  svn_error_clear(serve(d->conn, d->params, d->pool));
-  svn_pool_destroy(d->pool);
+  svn_error_clear(serve(d->conn, d->params, d->shared_pool->pool));
+  release_shared_pool(d->shared_pool);
 
   return NULL;
 }
@@ -454,6 +489,7 @@ int main(int argc, const char *argv[])
 #if APR_HAS_THREADS
   apr_threadattr_t *tattr;
   apr_thread_t *tid;
+  struct shared_pool_t *shared_pool;
 
   struct serve_thread_t *thread_data;
 #endif
@@ -667,11 +703,16 @@ int main(int argc, const char *argv[])
           {
             apr_size_t bandwidth = (apr_size_t)apr_strtoi64(arg, NULL, 0);
 
-            /* block other clients for at most 1 ms (at full bandwidth) */
-            params.zero_copy_limit = bandwidth * 120000;
+            /* for slower clients, don't try anything fancy */
+            if (bandwidth >= 1000)
+              {
+                /* block other clients for at most 1 ms (at full bandwidth).
+                   Note that the send buffer is 16kB anyways. */
+                params.zero_copy_limit = bandwidth * 120;
 
-            /* check for aborted connections at the same rate */
-            params.error_check_interval = bandwidth * 120000;
+                /* check for aborted connections at the same rate */
+                params.error_check_interval = bandwidth * 120;
+              }
           }
           break;
 
@@ -749,9 +790,10 @@ int main(int argc, const char *argv[])
     {
       params.base = svn_dirent_dirname(config_filename, pool);
 
-      SVN_INT_ERR(svn_config_read2(&params.cfg, config_filename,
+      SVN_INT_ERR(svn_config_read3(&params.cfg, config_filename,
                                    TRUE, /* must_exist */
                                    FALSE, /* section_names_case_sensitive */
+                                   FALSE, /* option_names_case_sensitive */
                                    pool));
     }
 
@@ -1086,6 +1128,7 @@ int main(int argc, const char *argv[])
              particularly sophisticated strategy for a threaded server, it's
              little different from forking one process per connection. */
 #if APR_HAS_THREADS
+          shared_pool = attach_shared_pool(connection_pool);
           status = apr_threadattr_create(&tattr, connection_pool);
           if (status)
             {
@@ -1105,9 +1148,9 @@ int main(int argc, const char *argv[])
           thread_data = apr_palloc(connection_pool, sizeof(*thread_data));
           thread_data->conn = conn;
           thread_data->params = &params;
-          thread_data->pool = connection_pool;
+          thread_data->shared_pool = shared_pool;
           status = apr_thread_create(&tid, tattr, serve_thread, thread_data,
-                                     connection_pool);
+                                     shared_pool->pool);
           if (status)
             {
               err = svn_error_wrap_apr(status, _("Can't create thread"));
@@ -1115,6 +1158,7 @@ int main(int argc, const char *argv[])
               svn_error_clear(err);
               exit(1);
             }
+          release_shared_pool(shared_pool);
 #endif
           break;
 

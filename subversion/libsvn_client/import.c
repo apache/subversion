@@ -32,6 +32,7 @@
 #include <apr_hash.h>
 #include <apr_md5.h>
 
+#include "svn_hash.h"
 #include "svn_ra.h"
 #include "svn_delta.h"
 #include "svn_subst.h"
@@ -116,7 +117,7 @@ send_file_contents(const char *local_abspath,
                                    sizeof(SVN_PROP_EOL_STYLE) - 1);
       keywords_val = apr_hash_get(properties, SVN_PROP_KEYWORDS,
                                   sizeof(SVN_PROP_KEYWORDS) - 1);
-      if (apr_hash_get(properties, SVN_PROP_SPECIAL, APR_HASH_KEY_STRING))
+      if (svn_hash_gets(properties, SVN_PROP_SPECIAL))
         special = TRUE;
     }
 
@@ -133,9 +134,9 @@ send_file_contents(const char *local_abspath,
     }
 
   if (keywords_val)
-    SVN_ERR(svn_subst_build_keywords2(&keywords, keywords_val->data,
+    SVN_ERR(svn_subst_build_keywords3(&keywords, keywords_val->data,
                                       APR_STRINGIFY(SVN_INVALID_REVNUM),
-                                      "", 0, "", pool));
+                                      "", "", 0, "", pool));
   else
     keywords = NULL;
 
@@ -262,12 +263,11 @@ import_file(const svn_delta_editor_t *editor,
      send to the server. */
   if (dirent->special)
     {
-      apr_hash_set(properties, SVN_PROP_SPECIAL, APR_HASH_KEY_STRING,
-                   svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool));
+      svn_hash_sets(properties, SVN_PROP_SPECIAL,
+                    svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool));
       SVN_ERR(editor->change_file_prop(file_baton, SVN_PROP_SPECIAL,
-                                       apr_hash_get(properties,
-                                                    SVN_PROP_SPECIAL,
-                                                    APR_HASH_KEY_STRING),
+                                       svn_hash_gets(properties,
+                                                     SVN_PROP_SPECIAL),
                                        pool));
     }
 
@@ -341,26 +341,26 @@ get_filtered_children(apr_hash_t **children,
               (*ctx->notify_func2)(ctx->notify_baton2, notify, iterpool);
             }
 
-          apr_hash_set(dirents, base_name, APR_HASH_KEY_STRING, NULL);
+          svn_hash_sets(dirents, base_name, NULL);
           continue;
         }
             /* If this is an excluded path, exclude it. */
-      if (apr_hash_get(excludes, local_abspath, APR_HASH_KEY_STRING))
+      if (svn_hash_gets(excludes, local_abspath))
         {
-          apr_hash_set(dirents, base_name, APR_HASH_KEY_STRING, NULL);
+          svn_hash_sets(dirents, base_name, NULL);
           continue;
         }
 
       if (ignores && svn_wc_match_ignore_list(base_name, ignores, iterpool))
         {
-          apr_hash_set(dirents, base_name, APR_HASH_KEY_STRING, NULL);
+          svn_hash_sets(dirents, base_name, NULL);
           continue;
         }
 
       if (global_ignores &&
           svn_wc_match_ignore_list(base_name, global_ignores, iterpool))
         {
-          apr_hash_set(dirents, base_name, APR_HASH_KEY_STRING, NULL);
+          svn_hash_sets(dirents, base_name, NULL);
           continue;
         }
 
@@ -373,7 +373,7 @@ get_filtered_children(apr_hash_t **children,
 
           if (filter)
             {
-              apr_hash_set(dirents, base_name, APR_HASH_KEY_STRING, NULL);
+              svn_hash_sets(dirents, base_name, NULL);
               continue;
             }
         }
@@ -669,7 +669,8 @@ import(const char *local_abspath,
                             pool, &root_baton));
 
   /* Import a file or a directory tree. */
-  SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, FALSE, pool, pool));
+  SVN_ERR(svn_io_stat_dirent2(&dirent, local_abspath, FALSE, FALSE,
+                              pool, pool));
 
   /* Make the intermediate directory components necessary for properly
      rooting our import source tree.  */
@@ -839,7 +840,7 @@ svn_client_import5(const char *path,
         {
           const char *abs_path;
           SVN_ERR(svn_dirent_get_absolute(&abs_path, tmp_file, scratch_pool));
-          apr_hash_set(excludes, abs_path, APR_HASH_KEY_STRING, (void *)1);
+          svn_hash_sets(excludes, abs_path, (void *)1);
         }
     }
 
@@ -934,8 +935,7 @@ svn_client_import5(const char *path,
 
       if (apr_hash_count(local_ignores_hash))
         {
-          svn_string_t *propval = apr_hash_get(local_ignores_hash, url,
-                                               APR_HASH_KEY_STRING);
+          svn_string_t *propval = svn_hash_gets(local_ignores_hash, url);
           if (propval)
             {
               svn_cstring_split_append(local_ignores_arr, propval->data,

@@ -48,31 +48,19 @@ AC_DEFUN(SVN_LIB_APR_MEMCACHE,
       CPPFLAGS="$save_cppflags"
     fi
   ], [
-    if test -d "$srcdir/apr_memcache"; then
-      apr_memcache_found=reconfig
-    else
 dnl   Try just looking in apr-util (>= 1.3 has it already).
-      AC_MSG_NOTICE([looking for apr_memcache as part of apr-util])
-      save_cppflags="$CPPFLAGS"
-      CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES $SVN_APRUTIL_INCLUDES"
-      AC_CHECK_HEADER(apr_memcache.h,[
-        save_ldflags="$LDFLAGS"
-        LDFLAGS="$LDFLAGS $SVN_APRUTIL_LIBS"
-        AC_CHECK_LIB(aprutil-1, apr_memcache_create,
-          [apr_memcache_found="aprutil"])
-        LDFLAGS="$save_ldflags"])
-      CPPFLAGS="$save_cppflags"
-
-    fi
+    AC_MSG_NOTICE([looking for apr_memcache as part of apr-util])
+    save_cppflags="$CPPFLAGS"
+    CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES $SVN_APRUTIL_INCLUDES"
+    AC_CHECK_HEADER(apr_memcache.h,[
+      save_ldflags="$LDFLAGS"
+      LDFLAGS="$LDFLAGS $SVN_APRUTIL_LIBS"
+      AC_CHECK_LIB(aprutil-1, apr_memcache_create,
+        [apr_memcache_found="aprutil"])
+      LDFLAGS="$save_ldflags"])
+    CPPFLAGS="$save_cppflags"
    ])
 
-
-  if test $apr_memcache_found = "reconfig"; then
-    SVN_EXTERNAL_PROJECT([apr_memcache], [--with-apr=$apr_config --with-apr-util=$apu_config])
-    apr_memcache_prefix=$prefix
-    SVN_APR_MEMCACHE_INCLUDES="-I$srcdir/memcache"
-    SVN_APR_MEMCACHE_LIBS="$abs_builddir/memcache/libapr_memcache.la"
-  fi
 
   if test $apr_memcache_found = "standalone"; then
     SVN_APR_MEMCACHE_INCLUDES="-I$apr_memcache_prefix/include/apr_memcache-0"

@@ -40,6 +40,7 @@
 
 #include "private/svn_dav_protocol.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_editor.h"
 
 #include "blncache.h"
 
@@ -180,6 +181,10 @@ struct svn_ra_serf__session_t {
      constants' addresses, therefore). */
   apr_hash_t *capabilities;
 
+  /* Activity collection URL.  (Cached from the initial OPTIONS
+     request when run against HTTPv1 servers.)  */
+  const char *activity_collection_url;
+
   /* Are we using a proxy? */
   int using_proxy;
 
@@ -238,7 +243,7 @@ struct svn_ra_serf__session_t {
   svn_tristate_t bulk_updates;
 
   /* Indicates if the server wants bulk update requests (Prefer) or only
-     accepts skelta requests (Off). If this value is On both options are 
+     accepts skelta requests (Off). If this value is On both options are
      allowed. */
   const char *server_allows_bulk;
 
@@ -1297,7 +1302,7 @@ svn_ra_serf__set_prop(apr_hash_t *props, const char *path,
                       const svn_string_t *val, apr_pool_t *pool);
 
 svn_error_t *
-svn_ra_serf__get_resource_type(svn_kind_t *kind,
+svn_ra_serf__get_resource_type(svn_node_kind_t *kind,
                                apr_hash_t *props);
 
 
@@ -1524,9 +1529,11 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
                        const char *update_target,
                        svn_depth_t depth,
                        svn_boolean_t send_copyfrom_args,
+                       svn_boolean_t ignore_ancestry,
                        const svn_delta_editor_t *update_editor,
                        void *update_baton,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
 
 /* Implements svn_ra__vtable_t.do_switch(). */
 svn_error_t *

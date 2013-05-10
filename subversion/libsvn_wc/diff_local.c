@@ -246,8 +246,7 @@ diff_status_callback(void *baton,
 
   if (eb->changelist_hash != NULL
       && (!status->changelist
-          || ! apr_hash_get(eb->changelist_hash, status->changelist,
-                            APR_HASH_KEY_STRING)))
+          || ! svn_hash_gets(eb->changelist_hash, status->changelist)))
     return SVN_NO_ERROR; /* Filtered via changelist */
 
   /* This code does about the same thing as the inner body of
@@ -260,8 +259,8 @@ diff_status_callback(void *baton,
     svn_boolean_t local_only;
     svn_wc__db_status_t db_status;
     svn_boolean_t have_base;
-    svn_kind_t base_kind;
-    svn_kind_t db_kind = svn__kind_from_node_kind(status->kind, FALSE);
+    svn_node_kind_t base_kind;
+    svn_node_kind_t db_kind = status->kind;
     svn_depth_t depth_below_here = svn_depth_unknown;
 
     const char *child_abspath = local_abspath;
@@ -328,14 +327,14 @@ diff_status_callback(void *baton,
     if (repos_only)
       {
         /* Report repository form deleted */
-        if (base_kind == svn_kind_file)
+        if (base_kind == svn_node_file)
           SVN_ERR(svn_wc__diff_base_only_file(db, child_abspath,
                                               child_relpath,
                                               SVN_INVALID_REVNUM,
                                               eb->processor,
                                               eb->cur ? eb->cur->baton : NULL,
                                               scratch_pool));
-        else if (base_kind == svn_kind_dir)
+        else if (base_kind == svn_node_dir)
           SVN_ERR(svn_wc__diff_base_only_dir(db, child_abspath,
                                              child_relpath,
                                              SVN_INVALID_REVNUM,
@@ -349,14 +348,14 @@ diff_status_callback(void *baton,
     else if (!local_only)
       {
         /* Diff base against actual */
-        if (db_kind == svn_kind_file)
+        if (db_kind == svn_node_file)
           {
             SVN_ERR(svn_wc__diff_base_working_diff(db, child_abspath,
                                                    child_relpath,
                                                    SVN_INVALID_REVNUM,
                                                    eb->changelist_hash,
                                                    eb->processor,
-                                                   eb->cur 
+                                                   eb->cur
                                                         ? eb->cur->baton
                                                         : NULL,
                                                    FALSE,
@@ -364,7 +363,7 @@ diff_status_callback(void *baton,
                                                    eb->cancel_baton,
                                                    scratch_pool));
           }
-        else if (db_kind == svn_kind_dir)
+        else if (db_kind == svn_node_dir)
           {
             SVN_ERR(ensure_state(eb, local_abspath, FALSE, scratch_pool));
 
@@ -393,7 +392,7 @@ diff_status_callback(void *baton,
 
     if (local_only)
       {
-        if (db_kind == svn_kind_file)
+        if (db_kind == svn_node_file)
           SVN_ERR(svn_wc__diff_local_only_file(db, child_abspath,
                                                child_relpath,
                                                eb->processor,
@@ -403,7 +402,7 @@ diff_status_callback(void *baton,
                                                eb->cancel_func,
                                                eb->cancel_baton,
                                                scratch_pool));
-        else if (db_kind == svn_kind_dir)
+        else if (db_kind == svn_node_dir)
           SVN_ERR(svn_wc__diff_local_only_dir(db, child_abspath,
                                               child_relpath, depth_below_here,
                                               eb->processor,
@@ -415,7 +414,7 @@ diff_status_callback(void *baton,
                                               scratch_pool));
       }
 
-    if (db_kind == svn_kind_dir && (local_only || repos_only))
+    if (db_kind == svn_node_dir && (local_only || repos_only))
       SVN_ERR(ensure_state(eb, local_abspath, TRUE /* skip */, scratch_pool));
   }
 
@@ -439,7 +438,7 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
              apr_pool_t *scratch_pool)
 {
   struct diff_baton eb = { 0 };
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_boolean_t get_all;
   const svn_diff_tree_processor_t *processor;
 
@@ -450,7 +449,7 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
                                FALSE /* show_hidden */,
                                scratch_pool));
 
-  if (kind == svn_kind_dir)
+  if (kind == svn_node_dir)
     eb.anchor_abspath = local_abspath;
   else
     eb.anchor_abspath = svn_dirent_dirname(local_abspath, scratch_pool);

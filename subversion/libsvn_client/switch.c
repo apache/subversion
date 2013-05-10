@@ -29,6 +29,7 @@
 
 #include "svn_client.h"
 #include "svn_error.h"
+#include "svn_hash.h"
 #include "svn_time.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
@@ -55,8 +56,35 @@
 */
 
 
+/* A conflict callback that simply records the conflicted path in BATON.
+
+   Implements svn_wc_conflict_resolver_func2_t.
+*/
+static svn_error_t *
+record_conflict(svn_wc_conflict_result_t **result,
+                const svn_wc_conflict_description2_t *description,
+                void *baton,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  apr_hash_t *conflicted_paths = baton;
+
+  svn_hash_sets(conflicted_paths,
+                apr_pstrdup(apr_hash_pool_get(conflicted_paths),
+                            description->local_abspath), "");
+  *result = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,
+                                          NULL, result_pool);
+  return SVN_NO_ERROR;
+}
+
+/* ...
+
+   Add the paths of any conflict victims to CONFLICTED_PATHS, if that
+   is not null.
+*/
 static svn_error_t *
 switch_internal(svn_revnum_t *result_rev,
+                apr_hash_t *conflicted_paths,
                 const char *local_abspath,
                 const char *anchor_abspath,
                 const char *switch_url,
@@ -77,23 +105,19 @@ switch_internal(svn_revnum_t *result_rev,
   svn_client__pathrev_t *switch_loc;
   svn_ra_session_t *ra_session;
   svn_revnum_t revnum;
-  svn_error_t *err = SVN_NO_ERROR;
   const char *diff3_cmd;
   apr_hash_t *wcroot_iprops;
   apr_array_header_t *inherited_props;
   svn_boolean_t use_commit_times;
-  svn_boolean_t sleep_here = FALSE;
-  svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
   const svn_delta_editor_t *switch_editor;
   void *switch_edit_baton;
   const char *preserved_exts_str;
   apr_array_header_t *preserved_exts;
   svn_boolean_t server_supports_depth;
   struct svn_client__dirent_fetcher_baton_t dfb;
-  svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
-                                                 SVN_CONFIG_CATEGORY_CONFIG,
-                                                 APR_HASH_KEY_STRING)
-                                  : NULL;
+  svn_config_t *cfg = ctx->config
+                      ? svn_hash_gets(ctx->config, SVN_CONFIG_CATEGORY_CONFIG)
+                      : NULL;
 
   /* An unknown depth can't be sticky. */
   if (depth == svn_depth_unknown)
@@ -221,7 +245,7 @@ switch_internal(svn_revnum_t *result_rev,
     }
 
   wcroot_iprops = apr_hash_make(pool);
-  
+
   /* Will the base of LOCAL_ABSPATH require an iprop cache post-switch?
      If we are switching LOCAL_ABSPATH to the root of the repository then
      we don't need to cache inherited properties.  In all other cases we
@@ -235,7 +259,7 @@ switch_internal(svn_revnum_t *result_rev,
                                 pool));
 
       /* Switching the WC root to anything but the repos root means
-         we need an iprop cache. */ 
+         we need an iprop cache. */
       if (!wc_root)
         {
           /* We know we are switching a subtree to something other than the
@@ -269,8 +293,7 @@ switch_internal(svn_revnum_t *result_rev,
           SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props,
                                              "", switch_loc->rev, pool,
                                              pool));
-          apr_hash_set(wcroot_iprops, local_abspath, APR_HASH_KEY_STRING,
-                       inherited_props);
+          svn_hash_sets(wcroot_iprops, local_abspath, inherited_props);
         }
     }
 
@@ -293,7 +316,8 @@ switch_internal(svn_revnum_t *result_rev,
                                     server_supports_depth,
                                     diff3_cmd, preserved_exts,
                                     svn_client__dirent_fetcher, &dfb,
-                                    ctx->conflict_func2, ctx->conflict_baton2,
+                                    conflicted_paths ? record_conflict : NULL,
+                                    conflicted_paths,
                                     NULL, NULL,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->notify_func2, ctx->notify_baton2,
@@ -311,24 +335,21 @@ switch_internal(svn_revnum_t *result_rev,
                             switch_editor, switch_edit_baton,
                             pool, pool));
 
+  /* Past this point, we assume the WC is going to be modified so we will
+   * need to sleep for timestamps. */
+  *timestamp_sleep = TRUE;
+
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the update_editor
      will be driven by svn_repos_dir_delta2. */
-  err = svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath, reporter,
-                                report_baton, TRUE, depth, (! depth_is_sticky),
-                                (! server_supports_depth),
-                                use_commit_times,
-                                ctx->cancel_func, ctx->cancel_baton,
-                                ctx->notify_func2, ctx->notify_baton2, pool);
-
-  if (err)
-    {
-      /* Don't rely on the error handling to handle the sleep later, do
-         it now */
-      svn_io_sleep_for_timestamps(local_abspath, pool);
-      return svn_error_trace(err);
-    }
-  *use_sleep = TRUE;
+  SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath, reporter,
+                                  report_baton, TRUE,
+                                  depth, (! depth_is_sticky),
+                                  (! server_supports_depth),
+                                  use_commit_times,
+                                  ctx->cancel_func, ctx->cancel_baton,
+                                  ctx->notify_func2, ctx->notify_baton2,
+                                  pool));
 
   /* We handle externals after the switch is complete, so that
      handling external items (and any errors therefrom) doesn't delay
@@ -346,18 +367,9 @@ switch_internal(svn_revnum_t *result_rev,
                                            new_depths,
                                            switch_loc->repos_root_url,
                                            local_abspath,
-                                           depth, use_sleep,
+                                           depth, timestamp_sleep,
                                            ctx, pool));
     }
-
-  /* Sleep to ensure timestamp integrity (we do this regardless of
-     errors in the actual switch operation(s)). */
-  if (sleep_here)
-    svn_io_sleep_for_timestamps(local_abspath, pool);
-
-  /* Return errors we might have sustained. */
-  if (err)
-    return svn_error_trace(err);
 
   /* Let everyone know we're finished here. */
   if (ctx->notify_func2)
@@ -398,6 +410,8 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   const char *local_abspath, *anchor_abspath;
   svn_boolean_t acquired_lock;
   svn_error_t *err, *err1, *err2;
+  apr_hash_t *conflicted_paths
+    = ctx->conflict_func2 ? apr_hash_make(pool) : NULL;
 
   SVN_ERR_ASSERT(path);
 
@@ -414,12 +428,20 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   acquired_lock = (err == SVN_NO_ERROR);
   svn_error_clear(err);
 
-  err1 = switch_internal(result_rev, local_abspath, anchor_abspath,
+  err1 = switch_internal(result_rev, conflicted_paths,
+                         local_abspath, anchor_abspath,
                          switch_url, peg_revision, revision,
                          depth, depth_is_sticky,
                          ignore_externals,
                          allow_unver_obstructions, ignore_ancestry,
                          timestamp_sleep, ctx, pool);
+
+  /* Give the conflict resolver callback the opportunity to
+   * resolve any conflicts that were raised. */
+  if (! err1 && ctx->conflict_func2)
+    {
+      err1 = svn_client__resolve_conflicts(NULL, conflicted_paths, ctx, pool);
+    }
 
   if (acquired_lock)
     err2 = svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath, pool);
@@ -443,13 +465,23 @@ svn_client_switch3(svn_revnum_t *result_rev,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
+  svn_error_t *err;
+  svn_boolean_t sleep_here = FALSE;
+
   if (svn_path_is_url(path))
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                              _("'%s' is not a local path"), path);
 
-  return svn_client__switch_internal(result_rev, path, switch_url,
-                                     peg_revision, revision, depth,
-                                     depth_is_sticky, ignore_externals,
-                                     allow_unver_obstructions,
-                                     ignore_ancestry, NULL, ctx, pool);
+  err = svn_client__switch_internal(result_rev, path, switch_url,
+                                    peg_revision, revision, depth,
+                                    depth_is_sticky, ignore_externals,
+                                    allow_unver_obstructions,
+                                    ignore_ancestry, &sleep_here, ctx, pool);
+
+  /* Sleep to ensure timestamp integrity (we do this regardless of
+     errors in the actual switch operation(s)). */
+  if (sleep_here)
+    svn_io_sleep_for_timestamps(path, pool);
+
+  return svn_error_trace(err);
 }

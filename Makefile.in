@@ -38,8 +38,6 @@ SVN_FS_LIB_LINK = @SVN_FS_LIB_LINK@
 SWIG_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig
 SWIG_BUILD_DIR = $(abs_builddir)/subversion/bindings/swig
 
-SVN_EXTERNAL_PROJECT_SUBDIRS = @SVN_EXTERNAL_PROJECT_SUBDIRS@
-
 SCHEMA_DIR = subversion/svn/schema
 
 SVN_APR_LIBS = @SVN_APR_LIBS@
@@ -66,7 +64,6 @@ ramod_libdir = @libdir@
 bdb_libdir = @libdir@
 gnome_keyring_libdir = @libdir@
 gpg_agent_libdir = @libdir@
-gssapi_libdir = @libdir@
 kwallet_libdir = @libdir@
 serf_libdir = @libdir@
 bindir = @bindir@
@@ -373,11 +370,11 @@ ECHO_N = @ECHO_N@
 
 TESTS = $(TEST_PROGRAMS) @BDB_TEST_PROGRAMS@
 
-all: mkdir-init external-all local-all
-clean: external-clean local-clean
-distclean: external-distclean local-distclean
-extraclean: external-extraclean local-extraclean
-install: external-install local-install revision-install
+all: mkdir-init local-all
+clean: local-clean
+distclean: local-distclean
+extraclean: local-extraclean
+install: local-install revision-install
 
 @INCLUDE_OUTPUTS@
 
@@ -401,7 +398,6 @@ locale-gnu-po-update:
 fast-clean: doc-clean
 	@list='$(BUILD_DIRS)'; for i in $$list; do                   \
           if [ -d $$i ]; then                                        \
-            echo "Cleaning $$i ..." ;                                \
             (cd $$i && rm -f *.o *.lo *.la *.la-a *.spo *.mo &&      \
              rm -rf .libs);                                          \
           fi                                                         \
@@ -574,6 +570,15 @@ svnsshcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 bdbcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	@$(MAKE) check FS_TYPE=bdb
 
+# Produce the clang compilation database as the compile_commands.json file
+# in the srcdir.  This is used by tools such as the YouCompleteMe vim plugin
+# to know the compile flags for various source files so that analysis such
+# as syntax checking, static analysis or symbol completion can be done
+# outside the build system.  To do this it uses the tool called bear:
+# https://github.com/rizsotto/Bear
+compile-commands:
+	@bear -o $(abs_srcdir)/compile_commands.json -- $(MAKE) all
+
 # Create an execution coverage report from the data collected during
 # all execution since the last reset.
 gcov:
@@ -591,8 +596,10 @@ gcov-clean:
 	find . -name "*.gcda" -o -name "*.gcno" -print0 | xargs -0 rm -f --
 
 check-clean: gcov-clean
-	find subversion/tests/cmdline/svn-test-work -mindepth 1 -maxdepth 1 \
+	if [ -d subversion/tests/cmdline/svn-test-work ]; then \
+	  find subversion/tests/cmdline/svn-test-work -mindepth 1 -maxdepth 1 \
                -print0 | xargs -0 rm -rf --;   \
+	fi
 	rm -rf subversion/tests/libsvn_fs/test-repo-*          \
 	       subversion/tests/libsvn_fs_base/test-repo-*     \
 	       subversion/tests/libsvn_fs_fs/test-repo-*       \
@@ -616,32 +623,6 @@ mkdir-init:
                 $(MKDIR) $$i ;                           \
             fi;                                          \
         done
-
-# recursive targets to handle external projects (e.g. APR, Neon)
-external-all external-install:
-	@target=`echo $@ | sed s/external-//`;          \
-        list='$(SVN_EXTERNAL_PROJECT_SUBDIRS)';         \
-        for i in $$list; do                             \
-            echo "------ making $$target in $$i";       \
-            (cd $$i && $(MAKE) $$target) || exit 1;     \
-            echo "------ completed $$target in $$i";    \
-        done;
-
-### apr-util relies on generated files in apr, so reverse the
-### list so that it is cleaned before apr. also note that Neon does
-### not have an extraclean target, so get "close" with distclean
-external-clean external-distclean external-extraclean:
-	@target=`echo $@ | sed s/external-//`;          \
-        list='$(SVN_EXTERNAL_PROJECT_SUBDIRS)';         \
-        for i in $$list; do                             \
-            revlist="$$i $$revlist";                    \
-        done;                                           \
-        for i in $$revlist; do                          \
-            echo "------ making $$target in $$i";       \
-            (cd $$i && $(MAKE) $$target) || exit 1;     \
-            echo "------ completed $$target in $$i";    \
-        done;
-
 
 # DOCUMENTATION RULES
 
@@ -909,10 +890,16 @@ check-ctypes-python: ctypes-python
 	cd $(CTYPES_PYTHON_SRC_DIR); \
 	  $(LT_EXECUTE) $(PYTHON) test/run_all.py
 
+# If any of those files exists, run ctypes' 'setup.py clean'.  We don't run
+# it otherwise because it spams stdout+stderr; see r1479326.
 clean-ctypes-python:
-	cd $(CTYPES_PYTHON_SRC_DIR); \
-	  $(PYTHON) setup.py clean --all
-
+	cd $(CTYPES_PYTHON_SRC_DIR);            \
+	  for b in build csvn/core/functions.py svn_all.py svn_all2.py ; do \
+	    if [ -e "$$b" ] ; then              \
+	      $(PYTHON) setup.py clean --all;   \
+	      break;                            \
+	    fi;                                 \
+	  done
 
 # manually describe a dependency, which we won't otherwise detect
 subversion/libsvn_wc/wc-queries.h: $(abs_srcdir)/subversion/libsvn_wc/wc-metadata.sql

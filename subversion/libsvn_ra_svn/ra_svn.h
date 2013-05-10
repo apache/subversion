@@ -36,6 +36,8 @@ extern "C" {
 #include "svn_ra.h"
 #include "svn_ra_svn.h"
 
+#include "private/svn_ra_svn_private.h"
+
 /* Callback function that indicates if a svn_ra_svn__stream_t has pending
  * data.
  */

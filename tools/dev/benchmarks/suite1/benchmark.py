@@ -20,10 +20,10 @@
 """Usage: benchmark.py run|list|compare|show|chart <selection> ...
 
 SELECTING TIMINGS -- B@R,LxS
- 
+
 In the subcommands below, a timings selection consists of a string with up to
 four elements:
-  <branch>@<revision>,<levels>x<spread> 
+  <branch>@<revision>,<levels>x<spread>
 abbreviated as:
   B@R,LxS
 
@@ -214,9 +214,9 @@ def next_unique_basename(prefix):
 
 si_units = [
     (1000 ** 5, 'P'),
-    (1000 ** 4, 'T'), 
-    (1000 ** 3, 'G'), 
-    (1000 ** 2, 'M'), 
+    (1000 ** 4, 'T'),
+    (1000 ** 3, 'G'),
+    (1000 ** 2, 'M'),
     (1000 ** 1, 'K'),
     (1000 ** 0, ''),
     ]
@@ -308,7 +308,7 @@ def parse_timings_selections(db, *args):
       run_kinds.append(run_kind)
 
   return run_kinds
-  
+
 def parse_one_timing_selection(db, *args):
   run_kinds = parse_timings_selections(db, *args)
   if len(run_kinds) != 1:
@@ -433,7 +433,7 @@ class Run:
       kind_id = c.lastrowid
 
     self.started = time_str()
-    
+
     c.execute("""
         INSERT INTO run
           (batch_id, run_kind_id, started)
@@ -595,7 +595,7 @@ class TimingQuery:
     for command_name in self.get_sorted_command_names():
       self.timings[command_name] = self.get_command_timings(command_name)
     return self.timings
-      
+
 
 # ------------------------------------------------------------ run tests
 
@@ -890,10 +890,10 @@ def perform_run(batch, run_kind,
 
 # ---------------------------------------------------------------------
 
-    
+
 def cmdline_run(db, options, run_kind_str, N=1):
   run_kind = parse_one_timing_selection(db, run_kind_str)
-    
+
   N = int(N)
 
   print 'Hi, going to run a Subversion benchmark series of %d runs...' % N
@@ -938,7 +938,7 @@ def cmdline_list(db, options, *args):
     print 'I found:'
 
     d = TimingQuery(db, run_kind)
-    
+
     cmd_names = d.get_sorted_command_names()
     if cmd_names:
       print '\n%d command names:\n ' % len(cmd_names), '\n  '.join(cmd_names)
@@ -1097,7 +1097,7 @@ def cmdline_chart_compare(db, options, *args):
     chart_path = 'compare_' + '_'.join(
       [ filesystem_safe_string(l) for l in labels ]
       ) + '.svg'
-                  
+
   N = len(command_names)
   M = len(timing_sets) - 1
   if M < 2:
@@ -1238,7 +1238,7 @@ class IndentedHelpFormatterWithNL(optparse.IndentedHelpFormatter):
         subsequent_indent=indent)
       for bit in bits]
     result = "\n".join(formatted_bits) + "\n"
-    return result 
+    return result
 
 if __name__ == '__main__':
   parser = optparse.OptionParser(formatter=IndentedHelpFormatterWithNL())

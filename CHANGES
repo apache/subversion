@@ -1,5 +1,31 @@
+Version 1.9.0
+(?? ??? 20??, from /branches/1.9.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.9.0
+
+ User-visible changes:
+  - General:
+
+  - Major new features:
+
+  - Minor new features and improvements:
+    * new 'diff-ignore-content-type' runtime configuration option.
+
+  - Client-side bugfixes:
+
+  - Server-side bugfixes:
+
+  - Other tool improvements and bugfixes:
+
+ Developer-visible changes:
+  - General:
+
+  - API changes:
+
+  - Bindings:
+
+
 Version 1.8.0
-(?? ??? 2011, from /branches/1.8.x)
+(?? ??? 2013, from /branches/1.8.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
  User-visible changes:
@@ -7,11 +33,18 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     *
 
   - Major new features:
-    *
+    * inheritable properties (r1395109)
+    * GPG agent support. (r1151069)
+    * FSFS: Packing of revision property shards (issue #3944)
+    * explicit handling of local moves/renames (issue #3631, #4232)
+    * new more detailed conflict storage
+    * use svn_ra_serf as our new http library.
+    * automatic merge avoids explicit reintegration merges.
 
   - Minor new features and improvements:
     * new 'svnadmin load --revision' load filtering support (issue #3734)
     * new 'commit --include-externals' option (related to issues #1167, #3563)
+    * new '--include-externals' option for 'svn list' (issue #4225)
     * remove extraneous externals output from 'svn status -q' (issue #1935)
     * new 'svnadmin hotcopy --incremental' support for FSFS (issue #3815)
     * reject some attempts to merge between unrelated branches (r1215273)
@@ -19,11 +52,15 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * new 'svnadmin lock' / 'svnadmin unlock' subcommands (issue #3942, #4092)
     * new SVNUseUTF8 configuration option for mod_dav_svn (issue #2487)
     * new SVNHooksEnv configuration option for mod_dav_svn (r1239966)
-    * new --ignore-properties option for 'svn diff' (r1239553. -617)
+    * new --ignore-properties option for 'svn diff' (r1239553, -617)
     * new --properties-only option for 'svn diff' (r1336110)
     * new --patch-compatible option for 'svn diff' (r1239561)
     * new --no-diff-added option for 'svn diff' (r1433958)
     * new SvnPubSub distributed commit hooks (tools/server-side/svnpubsub)
+    * new light-weight benchmarking client (tools/client-side/svn-bench)
+    * new w/c subtree duplication tool (tools/client-side/detach.py)
+    * new svndumpfilter dependency analysis (tools/server-side/svnpredumpfilter.py)
+    * new mergeinfo fixup tool (tools/client-side/mergeinfo-sanitizer.py)
     * 'svn diff' can compare arbitrary files and directories (r1310291, et al)
     * ra_serf avoids re-downloading content present in pristine store (r1333936)
     * 'svn mergeinfo' now honors the --revision (-r) option (issue #4199)
@@ -39,25 +76,112 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * 'svn' is now non-interactive when not run in a terminal device (r1424037)
     * 'svn propset' checks spelling of reserved property names.
     * improve working copy performance on network disks (issue #4176) 
+    * repos suggested config via svn:auto-props and svn:global-ignores (r1401908)
+    * support for custom keyword definitions in svn:keywords (issue #890)
+    * support for server-side keyword expansion in mod_dav_svn (r1466055)
+    * FSFS now able to cache revision properties (r1326307)
+    * directory and property deltification option in FSFS (issue #4084)
+    * fine-grained control deltification behavior via fsfs.conf (r1311476)
+    * FSFS de-duplication ("rep sharing") now works within a revision (r1397773)
+    * FSFS de-duplication now works for properties as well (r1243312)
+    * read FSFS data using fewer fopen calls (issue #3372)
+    * 'svnadmin verify' will now check meta data (issues #3956, #4211)
+    * new --client-speed option for svnserve (r1391788)
+    * hook script templates are now marked as executable (r1153414)
+    * svn:ignore __pycache__ directories by default (r1150073)
+    * 'svn diff --git' include copyfrom revision in "copied" headers (r1155279)
+    * svn:mergeinfo related operations now use much less memory (r1149519 et al)
+    * get list of supported schemes for RA libraries (r1148134)
+    * 'svn checkout' skips file externals from unintended repositories (r1153110)
+    * return an error when conflicts could not be resolved (r1150439)
+    * let HTTPv2-aware clients fetch v2-style resources (r1161202)
+    * 'svn status' with better NLS support (r1157537, -682)
+    * error out on non-canonical fspaths in the authz file (r1166111)
+    * improve error messages (r1212823, r1212463)
+    * better tracking of shallow-yet-complete merges (issues #4056, #4057)
+    * improve performance of mergeinfo elision (r1208739)
+    * make 'svn status --quiet' w/ externals quieter still (issue #1935)
+    * ensure that all paths shown in 'svn status' are relative-ized (r1202425)
+    * improve performance of local multi-target deletions (r1195873)
+    * apply update ops to locally moved-away dirs (r1183358, r1185110, r1185392)
 
   - Client-side bugfixes:
-    * 
+    * fix inconsistent 'svn log' output for empty revisions (issue #3964)
+    * fix 'svn revert' of 'svn move' (issue #876)
+    * fix 'wrong 'status' of file externals "resurrecting" a deleted file (#4017)
+    * fix reporting of corrupted 1.6 w/cs by 'svn upgrade' (r1182904, -9)
+    * fix bug caused by URI-decoding local merge source paths (r1210539)
 
   - Server-side bugfixes:
     * SVNParentPath / repository listing now authz-filtered (r1408184)
+    * user and group names in the authz config file are case-sensitive (r1475772)
+    * limit commit runtime for nodes with very deep histories (r1224836)
+    * 'svnadmin recover' truncates rep-cache at the right point (issue #4077)
+    * fix crashes in dumpstream loading with skipped revs (r1214202, r1214216)
+    * fix 'svn log -g' incorrectly treating rename as merge (issue #4022)
 
   - Other tool improvements and bugfixes:
     * 'svnmucc' promoted to first-class supported utility (issue #3308)
+    * rename 'svnauthz-validate' to 'svnauthz' (issue #4284)
+    * make 'svnauthz' optionally validate user/path access (r1197588)
   
  Developer-visible changes:
   - General:
-    * Now require Python 2.5 for tests and dev tools (r1243627)
+    * now require Python 2.5 for tests and dev tools (r1243627)
+    * now require bzip2 for tests and dev tools (r1148512)
+    * new require httpd version 2.2.21 for builds with Apache (r1174039)
+    * configure defaults to --without-apache-libexecdir (r1469862)
+    * support builds with APR pool debugging (r1176894)
+    * 'make extraclean' is more thorough now (r1149460)
+    * support for Serf 2 (r1147538)
+    * introduction of editor v2 (via private APIs only) (r1166332 et al)
+    * improve SQLite setup for compatibility with OS X 10.7. (r1181666)
+    * rework switch statement to accomodate OWC compiler limitations (r1204407)
+    * new --enable-sqlite-compatibility-version configure option (r1201421)
+    * make test suite LD_LIBRARY_PATH include just-built auth plugins (r1200474)
 
   - API changes:
     * fix inconsistent handling of log revs without changed paths (issue #3694)
+    * new type svn_kind_t to replace svn_node_kind_t (r1181800)
+    * deprecated SVN_ERR_SQLITE_UNSUPPORTED_SCHEMA (r1173240)
 
   - Bindings:
     * star-imports in swig-py only import 'svn_*' symbols (r1303375)
+    * fix compilation of Perl bindings on Mandriva 2007 (issue #2617)
+    * fix Python build on OpenBSD >= 5.0. (r1178846)
+    * new JavaHL testing targets (r1182983)
+
+
+Version 1.7.9
+(04 Apr 2013, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.9
+ User-visible changes
+  - Client-side bugfixes:
+    * improved error messages about svn:date and svn:author props. (r1440620)
+    * fix local_relpath assertion (issue #4257)
+    * fix memory leak in `svn log` over svn:// (r1458341)
+    * fix incorrect authz failure when using neon http library (issue #4332)
+    * fix segfault when using kwallet (r1421103)
+    
+  - Server-side bugfixes:
+    * svnserve will log the replayed rev not the low-water rev. (r1461278)
+    * mod_dav_svn will omit some property values for activity urls (r1453780)
+    * fix an assertion in mod_dav_svn when acting as a proxy on / (issue #4272)
+    * improve memory usage when committing properties in mod_dav_svn (r1443929)
+    * fix svnrdump to load dump files with non-LF line endings (issue #4263)
+    * fix assertion when rep-cache is inaccessible (r1422100)
+    * improved logic in mod_dav_svn's implementation of lock. (r1455352)
+    * avoid executing unnecessary code in log with limit (r1459599)
+
+ Developer-visible changes:
+  - General:
+    * fix an assertion in dav_svn_get_repos_path() on Windows (r1425368)
+    * fix get-deps.sh to correctly download zlib (r13520131)
+    * doxygen docs will now ignore prefixes when producing the index (r1429201)
+    * fix get-deps.sh on freebsd (r1423646)
+
+  - Bindings:
+    * javahl status api now respects the ignoreExternals boolean (r1435361)
 
 
 Version 1.7.8
@@ -567,6 +691,23 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * Deprecate the SVNClientSynchronized class in JavaHL (issue #2755)
     * fixed setting binary properties in JavaHL (issue #3770)
     * fix type mapping of svn_txdelta_window_t in python bindings (issue #3688)
+
+
+Version 1.6.21
+(04 Apr 2013, from /branches/1.6.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.6.21
+
+ User-visible changes
+  - Server-side bugfixes:
+    * mod_dav_svn will omit some property values for activity urls (r1453780)
+    * improve memory usage when committing properties in mod_dav_svn (r1443929)
+    * fix mod_dav_svn runs pre-revprop-change twice (issue #3085)
+    * fixed: post-revprop-change errors cancel commit (issue #2990)
+    * improved logic in mod_dav_svn's implementation of lock. (r1455352)
+
+ Developer-visible changes:
+  - General:
+    * fix a compatibility issue with g++ 4.7 (r1345740)
 
 
 Version 1.6.20

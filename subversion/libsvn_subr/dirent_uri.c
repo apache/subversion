@@ -359,8 +359,24 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
             src = seg;
 
           /* Found a hostname, convert to lowercase and copy to dst. */
-          while (*src && (*src != '/') && (*src != ':'))
-            *(dst++) = canonicalize_to_lower((*src++));
+          if (*src == '[')
+            {
+             *(dst++) = *(src++); /* Copy '[' */
+
+              while (*src == ':'
+                     || (*src >= '0' && (*src <= '9'))
+                     || (*src >= 'a' && (*src <= 'f'))
+                     || (*src >= 'A' && (*src <= 'F')))
+                {
+                  *(dst++) = canonicalize_to_lower((*src++));
+                }
+
+              if (*src == ']')
+                *(dst++) = *(src++); /* Copy ']' */
+            }
+          else
+            while (*src && (*src != '/') && (*src != ':'))
+              *(dst++) = canonicalize_to_lower((*src++));
 
           if (*src == ':')
             {
@@ -1774,12 +1790,28 @@ svn_uri_is_canonical(const char *uri, apr_pool_t *scratch_pool)
 
   /* Found a hostname, check that it's all lowercase. */
   ptr = seg;
-  while (*ptr && *ptr != '/' && *ptr != ':')
+
+  if (*ptr == '[')
     {
-      if (*ptr >= 'A' && *ptr <= 'Z')
+      ptr++;
+      while (*ptr == ':'
+             || (*ptr >= '0' && *ptr <= '9')
+             || (*ptr >= 'a' && *ptr <= 'f'))
+        {
+          ptr++;
+        }
+
+      if (*ptr != ']')
         return FALSE;
       ptr++;
     }
+  else
+    while (*ptr && *ptr != '/' && *ptr != ':')
+      {
+        if (*ptr >= 'A' && *ptr <= 'Z')
+          return FALSE;
+        ptr++;
+      }
 
   /* Found a portnumber */
   if (*ptr == ':')

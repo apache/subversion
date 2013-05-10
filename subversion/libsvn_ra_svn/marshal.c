@@ -32,6 +32,7 @@
 #include <apr_lib.h>
 #include <apr_strings.h>
 
+#include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -39,6 +40,7 @@
 #include "svn_ra_svn.h"
 #include "svn_private_config.h"
 #include "svn_ctype.h"
+#include "svn_time.h"
 
 #include "ra_svn.h"
 
@@ -54,19 +56,12 @@
 
 #define SUSPICIOUSLY_HUGE_STRING_SIZE_THRESHOLD (0x100000)
 
-/* When zero copy has been enabled, don't use blocking writes.  Instead,
- * time out after this many microseconds. */
-
-#define ZERO_COPY_TIMEOUT 1000000
-
 /* Return the APR socket timeout to be used for the connection depending
  * on whether there is a blockage handler or zero copy has been activated. */
 static apr_interval_time_t
 get_timeout(svn_ra_svn_conn_t *conn)
 {
-  return conn->block_handler ? 0
-                             : (conn->zero_copy_limit ? ZERO_COPY_TIMEOUT
-                                                      : -1);
+  return conn->block_handler ? 0 : -1;
 }
 
 /* --- CONNECTION INITIALIZATION --- */
@@ -155,7 +150,7 @@ svn_error_t *svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Capability entry is not a word"));
       word = apr_pstrdup(conn->pool, item->u.word);
-      apr_hash_set(conn->capabilities, word, APR_HASH_KEY_STRING, word);
+      svn_hash_sets(conn->capabilities, word, word);
     }
   return SVN_NO_ERROR;
 }
@@ -171,8 +166,7 @@ svn_ra_svn__set_shim_callbacks(svn_ra_svn_conn_t *conn,
 svn_boolean_t svn_ra_svn_has_capability(svn_ra_svn_conn_t *conn,
                                         const char *capability)
 {
-  return (apr_hash_get(conn->capabilities, capability,
-                       APR_HASH_KEY_STRING) != NULL);
+  return (svn_hash_gets(conn->capabilities, capability) != NULL);
 }
 
 int
@@ -276,7 +270,7 @@ static svn_error_t *writebuf_write(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     {
       if (conn->write_pos > 0)
         SVN_ERR(writebuf_flush(conn, pool));
-      
+
       return writebuf_output(conn, pool, data, len);
     }
 
@@ -509,14 +503,18 @@ static svn_error_t *write_number(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_svn_write_number(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                     apr_uint64_t number)
+svn_error_t *
+svn_ra_svn__write_number(svn_ra_svn_conn_t *conn,
+                         apr_pool_t *pool,
+                         apr_uint64_t number)
 {
   return write_number(conn, pool, number, ' ');
 }
 
-svn_error_t *svn_ra_svn_write_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                     const svn_string_t *str)
+svn_error_t *
+svn_ra_svn__write_string(svn_ra_svn_conn_t *conn,
+                         apr_pool_t *pool,
+                         const svn_string_t *str)
 {
   if (str->len < 10)
     {
@@ -531,8 +529,10 @@ svn_error_t *svn_ra_svn_write_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_svn_write_cstring(svn_ra_svn_conn_t *conn,
-                                      apr_pool_t *pool, const char *s)
+svn_error_t *
+svn_ra_svn__write_cstring(svn_ra_svn_conn_t *conn,
+                          apr_pool_t *pool,
+                          const char *s)
 {
   apr_size_t len = strlen(s);
 
@@ -550,8 +550,10 @@ svn_error_t *svn_ra_svn_write_cstring(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_svn_write_word(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                   const char *word)
+svn_error_t *
+svn_ra_svn__write_word(svn_ra_svn_conn_t *conn,
+                       apr_pool_t *pool,
+                       const char *word)
 {
   SVN_ERR(writebuf_write_short_string(conn, pool, word, strlen(word)));
   SVN_ERR(writebuf_writechar(conn, pool, ' '));
@@ -559,8 +561,10 @@ svn_error_t *svn_ra_svn_write_word(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_svn_write_proplist(svn_ra_svn_conn_t *conn,
-                                       apr_pool_t *pool, apr_hash_t *props)
+svn_error_t *
+svn_ra_svn__write_proplist(svn_ra_svn_conn_t *conn,
+                           apr_pool_t *pool,
+                           apr_hash_t *props)
 {
   apr_pool_t *iterpool;
   apr_hash_index_t *hi;
@@ -578,8 +582,8 @@ svn_error_t *svn_ra_svn_write_proplist(svn_ra_svn_conn_t *conn,
           apr_hash_this(hi, &key, NULL, &val);
           propname = key;
           propval = val;
-          SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "cs",
-                                         propname, propval));
+          SVN_ERR(svn_ra_svn__write_tuple(conn, iterpool, "cs",
+                                          propname, propval));
         }
       svn_pool_destroy(iterpool);
     }
@@ -587,7 +591,9 @@ svn_error_t *svn_ra_svn_write_proplist(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_svn_start_list(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
+svn_error_t *
+svn_ra_svn__start_list(svn_ra_svn_conn_t *conn,
+                       apr_pool_t *pool)
 {
   if (conn->write_pos + 2 <= sizeof(conn->write_buf))
     {
@@ -600,7 +606,9 @@ svn_error_t *svn_ra_svn_start_list(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
   return writebuf_write(conn, pool, "( ", 2);
 }
 
-svn_error_t *svn_ra_svn_end_list(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
+svn_error_t *
+svn_ra_svn__end_list(svn_ra_svn_conn_t *conn,
+                     apr_pool_t *pool)
 {
   if (conn->write_pos + 2 <= sizeof(conn->write_buf))
   {
@@ -613,9 +621,14 @@ svn_error_t *svn_ra_svn_end_list(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
   return writebuf_write(conn, pool, ") ", 2);
 }
 
-svn_error_t *svn_ra_svn_flush(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
+svn_error_t *
+svn_ra_svn__flush(svn_ra_svn_conn_t *conn,
+                  apr_pool_t *pool)
 {
-  return writebuf_flush(conn, pool);
+  SVN_ERR(writebuf_flush(conn, pool));
+  conn->may_check_for_error = TRUE;
+
+  return SVN_NO_ERROR;
 }
 
 /* --- WRITING TUPLES --- */
@@ -625,14 +638,14 @@ vwrite_tuple_cstring(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
 {
   const char *cstr = va_arg(*ap, const char *);
   SVN_ERR_ASSERT(cstr);
-  return svn_ra_svn_write_cstring(conn, pool, cstr);
+  return svn_ra_svn__write_cstring(conn, pool, cstr);
 }
 
 static svn_error_t *
 vwrite_tuple_cstring_opt(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
 {
   const char *cstr = va_arg(*ap, const char *);
-  return cstr ? svn_ra_svn_write_cstring(conn, pool, cstr) : SVN_NO_ERROR;
+  return cstr ? svn_ra_svn__write_cstring(conn, pool, cstr) : SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -640,26 +653,14 @@ vwrite_tuple_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
 {
   const svn_string_t *str = va_arg(*ap, const svn_string_t *);
   SVN_ERR_ASSERT(str);
-  return svn_ra_svn_write_string(conn, pool, str);
+  return svn_ra_svn__write_string(conn, pool, str);
 }
 
 static svn_error_t *
 vwrite_tuple_string_opt(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
 {
   const svn_string_t *str = va_arg(*ap, const svn_string_t *);
-  return str ? svn_ra_svn_write_string(conn, pool, str) : SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_tuple_start_list(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  return svn_ra_svn_start_list(conn, pool);
-}
-
-static svn_error_t *
-vwrite_tuple_end_list(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  return svn_ra_svn_end_list(conn, pool);
+  return str ? svn_ra_svn__write_string(conn, pool, str) : SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -667,14 +668,14 @@ vwrite_tuple_word(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
 {
   const char *cstr = va_arg(*ap, const char *);
   SVN_ERR_ASSERT(cstr);
-  return svn_ra_svn_write_word(conn, pool, cstr);
+  return svn_ra_svn__write_word(conn, pool, cstr);
 }
 
 static svn_error_t *
 vwrite_tuple_word_opt(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
 {
   const char *cstr = va_arg(*ap, const char *);
-  return cstr ? svn_ra_svn_write_word(conn, pool, cstr) : SVN_NO_ERROR;
+  return cstr ? svn_ra_svn__write_word(conn, pool, cstr) : SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -682,7 +683,7 @@ vwrite_tuple_revision(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
 {
   svn_revnum_t rev = va_arg(*ap, svn_revnum_t);
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(rev));
-  return svn_ra_svn_write_number(conn, pool, rev);
+  return svn_ra_svn__write_number(conn, pool, rev);
 }
 
 static svn_error_t *
@@ -690,493 +691,173 @@ vwrite_tuple_revision_opt(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap
 {
   svn_revnum_t rev = va_arg(*ap, svn_revnum_t);
   return SVN_IS_VALID_REVNUM(rev)
-       ? svn_ra_svn_write_number(conn, pool, rev)
+       ? svn_ra_svn__write_number(conn, pool, rev)
        : SVN_NO_ERROR;
 }
 
 static svn_error_t *
 vwrite_tuple_number(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
 {
-  return svn_ra_svn_write_number(conn, pool, va_arg(*ap, apr_uint64_t));
+  return svn_ra_svn__write_number(conn, pool, va_arg(*ap, apr_uint64_t));
 }
 
 static svn_error_t *
 vwrite_tuple_boolean(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
 {
   const char *cstr = va_arg(*ap, svn_boolean_t) ? "true" : "false";
-  return svn_ra_svn_write_word(conn, pool, cstr);
+  return svn_ra_svn__write_word(conn, pool, cstr);
 }
 
 static svn_error_t *
-vwrite_cmd_open_root(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
+write_tuple_cstring(svn_ra_svn_conn_t *conn,
+                    apr_pool_t *pool,
+                    const char *cstr)
 {
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_revision_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
+  SVN_ERR_ASSERT(cstr);
+  return svn_ra_svn__write_cstring(conn, pool, cstr);
+}
+
+static svn_error_t *
+write_tuple_cstring_opt(svn_ra_svn_conn_t *conn,
+                        apr_pool_t *pool,
+                        const char *cstr)
+{
+  return cstr ? svn_ra_svn__write_cstring(conn, pool, cstr) : SVN_NO_ERROR;
+}
+
+static svn_error_t *
+write_tuple_string(svn_ra_svn_conn_t *conn,
+                   apr_pool_t *pool,
+                   const svn_string_t *str)
+{
+  SVN_ERR_ASSERT(str);
+  return svn_ra_svn__write_string(conn, pool, str);
+}
+
+static svn_error_t *
+write_tuple_string_opt(svn_ra_svn_conn_t *conn,
+                       apr_pool_t *pool,
+                       const svn_string_t *str)
+{
+  return str ? svn_ra_svn__write_string(conn, pool, str) : SVN_NO_ERROR;
+}
+
+static svn_error_t *
+write_tuple_start_list(svn_ra_svn_conn_t *conn,
+                       apr_pool_t *pool)
+{
+  return svn_ra_svn__start_list(conn, pool);
+}
+
+static svn_error_t *
+write_tuple_end_list(svn_ra_svn_conn_t *conn,
+                     apr_pool_t *pool)
+{
+  return svn_ra_svn__end_list(conn, pool);
+}
+
+static svn_error_t *
+write_tuple_revision(svn_ra_svn_conn_t *conn,
+                     apr_pool_t *pool,
+                     svn_revnum_t rev)
+{
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(rev));
+  return svn_ra_svn__write_number(conn, pool, rev);
+}
+
+static svn_error_t *
+write_tuple_revision_opt(svn_ra_svn_conn_t *conn,
+                         apr_pool_t *pool,
+                         svn_revnum_t rev)
+{
+  return SVN_IS_VALID_REVNUM(rev)
+       ? svn_ra_svn__write_number(conn, pool, rev)
+       : SVN_NO_ERROR;
+}
+
+static svn_error_t *
+write_tuple_boolean(svn_ra_svn_conn_t *conn,
+                    apr_pool_t *pool,
+                    svn_boolean_t value)
+{
+  const char *cstr = value ? "true" : "false";
+  return svn_ra_svn__write_word(conn, pool, cstr);
+}
+
+static svn_error_t *
+write_tuple_depth(svn_ra_svn_conn_t *conn,
+                  apr_pool_t *pool,
+                  svn_depth_t depth)
+{
+  return svn_ra_svn__write_word(conn, pool, svn_depth_to_word(depth));
+}
+
+
+static svn_error_t *
+write_cmd_add_node(svn_ra_svn_conn_t *conn,
+                   apr_pool_t *pool,
+                   const char *path,
+                   const char *parent_token,
+                   const char *token,
+                   const char *copy_path,
+                   svn_revnum_t copy_rev)
+{
+  SVN_ERR(write_tuple_cstring(conn, pool, path));
+  SVN_ERR(write_tuple_cstring(conn, pool, parent_token));
+  SVN_ERR(write_tuple_cstring(conn, pool, token));
+  SVN_ERR(write_tuple_start_list(conn, pool));
+  SVN_ERR(write_tuple_cstring_opt(conn, pool, copy_path));
+  SVN_ERR(write_tuple_revision_opt(conn, pool, copy_rev));
+  SVN_ERR(write_tuple_end_list(conn, pool));
 
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
-vwrite_cmd_delete_entry(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
+write_cmd_open_node(svn_ra_svn_conn_t *conn,
+                    apr_pool_t *pool,
+                    const char *path,
+                    const char *parent_token,
+                    const char *token,
+                    svn_revnum_t rev)
 {
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_revision_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
+  SVN_ERR(write_tuple_cstring(conn, pool, path));
+  SVN_ERR(write_tuple_cstring(conn, pool, parent_token));
+  SVN_ERR(write_tuple_cstring(conn, pool, token));
+  SVN_ERR(write_tuple_start_list(conn, pool));
+  SVN_ERR(write_tuple_revision_opt(conn, pool, rev));
+  SVN_ERR(write_tuple_end_list(conn, pool));
 
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
-vwrite_cmd_add_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
+write_cmd_change_node_prop(svn_ra_svn_conn_t *conn,
+                           apr_pool_t *pool,
+                           const char *token,
+                           const char *name,
+                           const svn_string_t *value)
 {
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_revision_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
+  SVN_ERR(write_tuple_cstring(conn, pool, token));
+  SVN_ERR(write_tuple_cstring(conn, pool, name));
+  SVN_ERR(write_tuple_start_list(conn, pool));
+  SVN_ERR(write_tuple_string_opt(conn, pool, value));
+  SVN_ERR(write_tuple_end_list(conn, pool));
 
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
-vwrite_cmd_open_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
+write_cmd_absent_node(svn_ra_svn_conn_t *conn,
+                      apr_pool_t *pool,
+                      const char *path,
+                      const char *token)
 {
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_revision_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
+  SVN_ERR(write_tuple_cstring(conn, pool, path));
+  SVN_ERR(write_tuple_cstring(conn, pool, token));
 
   return SVN_NO_ERROR;
 }
-
-static svn_error_t *
-vwrite_cmd_change_dir_prop(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_string_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_absent_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_add_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_revision_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_open_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_revision_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_change_file_prop(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_string_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_close_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_absent_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_textdelta_chunk(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_string(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_apply_textdelta(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_no_op(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_set_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_revision(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_boolean(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_word(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_link_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_revision(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_boolean(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_word(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_change_rev_prop2(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_revision(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_string_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_boolean(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_string_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_change_rev_prop(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_revision(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_string_opt(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_rev_prop(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_revision(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_revision_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_boolean(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_boolean(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_update(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_revision_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_boolean(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_word(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_boolean(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_switch(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_revision_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_boolean(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_word(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_boolean(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_boolean(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_status(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_boolean(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_revision_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_word(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_revision_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_boolean(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_boolean(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_boolean(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_word(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_check_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_revision_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_stat(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_revision_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_get_file_revs(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_revision_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_revision_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_boolean(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_lock(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_boolean(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_revision_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_unlock(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_cstring_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_boolean(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_get_locks(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_word(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_replay(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_revision(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_revision(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_boolean(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_replay_range(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_revision(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_revision(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_revision(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_boolean(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_get_deleted_rev(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_revision(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_revision(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-vwrite_cmd_get_iprops(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
-{
-  SVN_ERR(vwrite_tuple_cstring(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_revision_opt(conn, pool, ap));
-  SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
-
-  return SVN_NO_ERROR;
-}
- 
-typedef svn_error_t *
-(*vwrite_tuple_func)(svn_ra_svn_conn_t *, apr_pool_t *, va_list *);
-
-typedef struct cmd_template_t
-{
-  const char *start_sequence;
-  apr_size_t start_sequence_length;
-  vwrite_tuple_func write_ops;
-} cmd_template_t;
-
-static const cmd_template_t cmd_templates[svn_ra_svn_cmd__last]
-    = { {"( target-rev ( "      , 15, vwrite_tuple_revision },
-        {"( open-root ( "       , 14, vwrite_cmd_open_root },
-        {"( delete-entry ( "    , 17, vwrite_cmd_delete_entry },
-        {"( add-dir ( "         , 12, vwrite_cmd_add_dir },
-        {"( open-dir ( "        , 13, vwrite_cmd_open_dir },
-        {"( change-dir-prop ( " , 20, vwrite_cmd_change_dir_prop },
-        {"( close-dir ( "       , 14, vwrite_tuple_cstring },
-        {"( absent-dir ( "      , 15, vwrite_cmd_absent_dir },
-        {"( add-file ( "        , 13, vwrite_cmd_add_file },
-        {"( open-file ( "       , 14, vwrite_cmd_open_file },
-        {"( change-file-prop ( ", 21, vwrite_cmd_change_file_prop },
-        {"( close-file ( "      , 15, vwrite_cmd_close_file },
-        {"( absent-file ( "     , 16, vwrite_cmd_absent_file },
-        {"( textdelta-chunk ( " , 20, vwrite_cmd_textdelta_chunk },
-        {"( textdelta-end ( "   , 18, vwrite_tuple_cstring },
-        {"( apply-textdelta ( " , 20, vwrite_cmd_apply_textdelta },
-        {"( close-edit ( "      , 15, vwrite_cmd_no_op },
-        {"( abort-edit ( "      , 15, vwrite_cmd_no_op },
-
-        {"( set-path ( "        , 13, vwrite_cmd_set_path },
-        {"( delete-path ( "     , 16, vwrite_tuple_cstring },
-        {"( link-path ( "       , 14, vwrite_cmd_link_path },
-        {"( finish-report ( "   , 18, vwrite_cmd_no_op },
-        {"( abort-report ( "    , 17, vwrite_cmd_no_op },
-
-        {"( reparent ( "        , 13, vwrite_tuple_cstring },
-        {"( get-latest-rev ( "  , 19, vwrite_cmd_no_op },
-        {"( get-dated-rev ( "   , 18, vwrite_tuple_cstring },
-        {"( change-rev-prop2 ( ", 21, vwrite_cmd_change_rev_prop2 },
-        {"( change-rev-prop ( " , 20, vwrite_cmd_change_rev_prop },
-        {"( rev-proplist ( "    , 17, vwrite_tuple_revision },
-        {"( rev-prop ( "        , 13, vwrite_cmd_rev_prop },
-        {"( get-file ( "        , 13, vwrite_cmd_get_file },
-        {"( update ( "          , 11, vwrite_cmd_update },
-        {"( switch ( "          , 11, vwrite_cmd_switch },
-        {"( status ( "          , 11, vwrite_cmd_status },
-        {"( diff ( "            ,  9, vwrite_cmd_diff },
-        {"( check-path ( "      , 15, vwrite_cmd_check_path },
-        {"( stat ( "            ,  9, vwrite_cmd_stat },
-        {"( get-file-revs ( "   , 18, vwrite_cmd_get_file_revs },
-        {"( lock ( "            ,  9, vwrite_cmd_lock },
-        {"( unlock ( "          , 11, vwrite_cmd_unlock },
-        {"( get-lock ( "        , 13, vwrite_tuple_cstring },
-        {"( get-locks ( "       , 14, vwrite_cmd_get_locks },
-        {"( replay ( "          , 11, vwrite_cmd_replay },
-        {"( replay-range ( "    , 17, vwrite_cmd_replay_range },
-        {"( get-deleted-rev ( " , 20, vwrite_cmd_get_deleted_rev },
-        {"( get-iprops ( "      , 15, vwrite_cmd_get_iprops },
-        {"( finish-replay ( "   , 18, vwrite_cmd_no_op }
-    };
 
 
 
@@ -1189,7 +870,7 @@ static svn_error_t *vwrite_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (*fmt == '!')
     fmt++;
   else
-    SVN_ERR(svn_ra_svn_start_list(conn, pool));
+    SVN_ERR(svn_ra_svn__start_list(conn, pool));
   for (; *fmt; fmt++)
     {
       if (*fmt == 'c')
@@ -1199,10 +880,10 @@ static svn_error_t *vwrite_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
         SVN_ERR(opt ? vwrite_tuple_string_opt(conn, pool, ap)
                     : vwrite_tuple_string(conn, pool, ap));
       else if (*fmt == '(' && !opt)
-        SVN_ERR(vwrite_tuple_start_list(conn, pool, ap));
+        SVN_ERR(write_tuple_start_list(conn, pool));
       else if (*fmt == ')')
         {
-          SVN_ERR(vwrite_tuple_end_list(conn, pool, ap));
+          SVN_ERR(write_tuple_end_list(conn, pool));
           opt = FALSE;
         }
       else if (*fmt == '?')
@@ -1222,12 +903,14 @@ static svn_error_t *vwrite_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       else
         SVN_ERR_MALFUNCTION();
     }
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
+  SVN_ERR(svn_ra_svn__end_list(conn, pool));
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_svn_write_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                    const char *fmt, ...)
+svn_error_t *
+svn_ra_svn__write_tuple(svn_ra_svn_conn_t *conn,
+                        apr_pool_t *pool,
+                        const char *fmt, ...)
 {
   svn_error_t *err;
   va_list ap;
@@ -1434,7 +1117,7 @@ read_command_only(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       if (item)
         {
           /* This is the word we want to read */
-          
+
           char *buf = apr_palloc(pool, 32);
           apr_size_t len = 1;
           buf[0] = c;
@@ -1482,8 +1165,10 @@ read_command_only(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_svn_read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                  svn_ra_svn_item_t **item)
+svn_error_t *
+svn_ra_svn__read_item(svn_ra_svn_conn_t *conn,
+                      apr_pool_t *pool,
+                      svn_ra_svn_item_t **item)
 {
   char c;
 
@@ -1494,8 +1179,9 @@ svn_error_t *svn_ra_svn_read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return read_item(conn, pool, *item, c, 0);
 }
 
-svn_error_t *svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,
-                                             apr_pool_t *pool)
+svn_error_t *
+svn_ra_svn__skip_leading_garbage(svn_ra_svn_conn_t *conn,
+                                 apr_pool_t *pool)
 {
   return readbuf_skip_leading_garbage(conn, pool);
 }
@@ -1544,6 +1230,15 @@ static svn_error_t *vparse_tuple(const apr_array_header_t *items, apr_pool_t *po
           else
             break;
         }
+      else if (**fmt == '3' && elt->kind == SVN_RA_SVN_WORD)
+        {
+          if (strcmp(elt->u.word, "true") == 0)
+            *va_arg(*ap, svn_tristate_t *) = svn_tristate_true;
+          else if (strcmp(elt->u.word, "false") == 0)
+            *va_arg(*ap, svn_tristate_t *) = svn_tristate_false;
+          else
+            break;
+        }
       else if (**fmt == 'l' && elt->kind == SVN_RA_SVN_LIST)
         *va_arg(*ap, apr_array_header_t **) = elt->u.list;
       else if (**fmt == '(' && elt->kind == SVN_RA_SVN_LIST)
@@ -1582,6 +1277,9 @@ static svn_error_t *vparse_tuple(const apr_array_header_t *items, apr_pool_t *po
             case 'n':
               *va_arg(*ap, apr_uint64_t *) = SVN_RA_SVN_UNSPECIFIED_NUMBER;
               break;
+            case '3':
+              *va_arg(*ap, svn_tristate_t *) = svn_tristate_unknown;
+              break;
             case '(':
               nesting_level++;
               break;
@@ -1600,9 +1298,10 @@ static svn_error_t *vparse_tuple(const apr_array_header_t *items, apr_pool_t *po
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_svn_parse_tuple(const apr_array_header_t *list,
-                                    apr_pool_t *pool,
-                                    const char *fmt, ...)
+svn_error_t *
+svn_ra_svn__parse_tuple(const apr_array_header_t *list,
+                        apr_pool_t *pool,
+                        const char *fmt, ...)
 {
   svn_error_t *err;
   va_list ap;
@@ -1613,14 +1312,16 @@ svn_error_t *svn_ra_svn_parse_tuple(const apr_array_header_t *list,
   return err;
 }
 
-svn_error_t *svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                   const char *fmt, ...)
+svn_error_t *
+svn_ra_svn__read_tuple(svn_ra_svn_conn_t *conn,
+                       apr_pool_t *pool,
+                       const char *fmt, ...)
 {
   va_list ap;
   svn_ra_svn_item_t *item;
   svn_error_t *err;
 
-  SVN_ERR(svn_ra_svn_read_item(conn, pool, &item));
+  SVN_ERR(svn_ra_svn__read_item(conn, pool, &item));
   if (item->kind != SVN_RA_SVN_LIST)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                             _("Malformed network data"));
@@ -1630,9 +1331,10 @@ svn_error_t *svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return err;
 }
 
-svn_error_t *svn_ra_svn__read_command_only(svn_ra_svn_conn_t *conn,
-                                           apr_pool_t *pool,
-                                           const char **command)
+svn_error_t *
+svn_ra_svn__read_command_only(svn_ra_svn_conn_t *conn,
+                              apr_pool_t *pool,
+                              const char **command)
 {
   char c;
   SVN_ERR(readbuf_getchar_skip_whitespace(conn, pool, &c));
@@ -1642,9 +1344,10 @@ svn_error_t *svn_ra_svn__read_command_only(svn_ra_svn_conn_t *conn,
 }
 
 
-svn_error_t *svn_ra_svn_parse_proplist(const apr_array_header_t *list,
-                                       apr_pool_t *pool,
-                                       apr_hash_t **props)
+svn_error_t *
+svn_ra_svn__parse_proplist(const apr_array_header_t *list,
+                           apr_pool_t *pool,
+                           apr_hash_t **props)
 {
   char *name;
   svn_string_t *value;
@@ -1658,8 +1361,9 @@ svn_error_t *svn_ra_svn_parse_proplist(const apr_array_header_t *list,
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Proplist element not a list"));
-      SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "cs", &name, &value));
-      apr_hash_set(*props, name, APR_HASH_KEY_STRING, value);
+      SVN_ERR(svn_ra_svn__parse_tuple(elt->u.list, pool, "cs",
+                                      &name, &value));
+      svn_hash_sets(*props, name, value);
     }
 
   return SVN_NO_ERROR;
@@ -1705,8 +1409,8 @@ svn_error_t *svn_ra_svn__handle_failure_status(const apr_array_header_t *params,
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Malformed error list"));
-      SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, subpool, "nccn", &apr_err,
-                                      &message, &file, &line));
+      SVN_ERR(svn_ra_svn__parse_tuple(elt->u.list, subpool, "nccn",
+                                      &apr_err, &message, &file, &line));
       /* The message field should have been optional, but we can't
          easily change that, so "" means a nonexistent message. */
       if (!*message)
@@ -1735,16 +1439,17 @@ svn_error_t *svn_ra_svn__handle_failure_status(const apr_array_header_t *params,
   return err;
 }
 
-svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
-                                          apr_pool_t *pool,
-                                          const char *fmt, ...)
+svn_error_t *
+svn_ra_svn__read_cmd_response(svn_ra_svn_conn_t *conn,
+                              apr_pool_t *pool,
+                              const char *fmt, ...)
 {
   va_list ap;
   const char *status;
   apr_array_header_t *params;
   svn_error_t *err;
 
-  SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "wl", &status, &params));
+  SVN_ERR(svn_ra_svn__read_tuple(conn, pool, "wl", &status, &params));
   if (strcmp(status, "success") == 0)
     {
       va_start(ap, fmt);
@@ -1762,11 +1467,12 @@ svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
                            status);
 }
 
-svn_error_t *svn_ra_svn_handle_commands2(svn_ra_svn_conn_t *conn,
-                                         apr_pool_t *pool,
-                                         const svn_ra_svn_cmd_entry_t *commands,
-                                         void *baton,
-                                         svn_boolean_t error_on_disconnect)
+svn_error_t *
+svn_ra_svn__handle_commands2(svn_ra_svn_conn_t *conn,
+                             apr_pool_t *pool,
+                             const svn_ra_svn_cmd_entry_t *commands,
+                             void *baton,
+                             svn_boolean_t error_on_disconnect)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_pool_t *iterpool = svn_pool_create(subpool);
@@ -1777,12 +1483,12 @@ svn_error_t *svn_ra_svn_handle_commands2(svn_ra_svn_conn_t *conn,
   apr_hash_t *cmd_hash = apr_hash_make(subpool);
 
   for (command = commands; command->cmdname; command++)
-    apr_hash_set(cmd_hash, command->cmdname, APR_HASH_KEY_STRING, command);
+    svn_hash_sets(cmd_hash, command->cmdname, command);
 
   while (1)
     {
       svn_pool_clear(iterpool);
-      err = svn_ra_svn_read_tuple(conn, iterpool, "wl", &cmdname, &params);
+      err = svn_ra_svn__read_tuple(conn, iterpool, "wl", &cmdname, &params);
       if (err)
         {
           if (!error_on_disconnect
@@ -1794,7 +1500,7 @@ svn_error_t *svn_ra_svn_handle_commands2(svn_ra_svn_conn_t *conn,
             }
           return err;
         }
-      command = apr_hash_get(cmd_hash, cmdname, APR_HASH_KEY_STRING);
+      command = svn_hash_gets(cmd_hash, cmdname);
 
       if (command)
         err = (*command->handler)(conn, iterpool, params, baton);
@@ -1807,7 +1513,7 @@ svn_error_t *svn_ra_svn_handle_commands2(svn_ra_svn_conn_t *conn,
 
       if (err && err->apr_err == SVN_ERR_RA_SVN_CMD_ERR)
         {
-          write_err = svn_ra_svn_write_cmd_failure(
+          write_err = svn_ra_svn__write_cmd_failure(
                           conn, iterpool,
                           svn_ra_svn__locate_real_error_child(err));
           svn_error_clear(err);
@@ -1825,48 +1531,737 @@ svn_error_t *svn_ra_svn_handle_commands2(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
-                                        apr_pool_t *pool,
-                                        const svn_ra_svn_cmd_entry_t *commands,
-                                        void *baton)
+svn_error_t *
+svn_ra_svn__write_cmd_target_rev(svn_ra_svn_conn_t *conn,
+                                 apr_pool_t *pool,
+                                 svn_revnum_t rev)
 {
-  return svn_ra_svn_handle_commands2(conn, pool, commands, baton, TRUE);
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( target-rev ( ", 15));
+  SVN_ERR(write_tuple_revision(conn, pool, rev));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_svn_write_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                  const char *cmdname, const char *fmt, ...)
+svn_error_t *
+svn_ra_svn__write_cmd_open_root(svn_ra_svn_conn_t *conn,
+                                apr_pool_t *pool,
+                                svn_revnum_t rev,
+                                const char *token)
 {
-  va_list ap;
-  svn_error_t *err;
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( open-root ( ", 14));
+  SVN_ERR(write_tuple_start_list(conn, pool));
+  SVN_ERR(write_tuple_revision_opt(conn, pool, rev));
+  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(write_tuple_cstring(conn, pool, token));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
 
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  SVN_ERR(svn_ra_svn_write_word(conn, pool, cmdname));
-  va_start(ap, fmt);
-  err = vwrite_tuple(conn, pool, fmt, &ap);
-  va_end(ap);
-  return err ? svn_error_trace(err) : svn_ra_svn_end_list(conn, pool);
+  return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_svn_write_templated_cmd(svn_ra_svn_conn_t *conn,
+svn_error_t *
+svn_ra_svn__write_cmd_delete_entry(svn_ra_svn_conn_t *conn,
+                                   apr_pool_t *pool,
+                                   const char *path,
+                                   svn_revnum_t rev,
+                                   const char *token)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( delete-entry ( ", 17));
+  SVN_ERR(write_tuple_cstring(conn, pool, path));
+  SVN_ERR(write_tuple_start_list(conn, pool));
+  SVN_ERR(write_tuple_revision_opt(conn, pool, rev));
+  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(write_tuple_cstring(conn, pool, token));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_add_dir(svn_ra_svn_conn_t *conn,
+                              apr_pool_t *pool,
+                              const char *path,
+                              const char *parent_token,
+                              const char *token,
+                              const char *copy_path,
+                              svn_revnum_t copy_rev)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( add-dir ( ", 12));
+  SVN_ERR(write_cmd_add_node(conn, pool, path, parent_token, token,
+                              copy_path, copy_rev));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_open_dir(svn_ra_svn_conn_t *conn,
+                               apr_pool_t *pool,
+                               const char *path,
+                               const char *parent_token,
+                               const char *token,
+                               svn_revnum_t rev)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( open-dir ( ", 13));
+  SVN_ERR(write_cmd_open_node(conn, pool, path, parent_token, token, rev));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_change_dir_prop(svn_ra_svn_conn_t *conn,
+                                      apr_pool_t *pool,
+                                      const char *token,
+                                      const char *name,
+                                      const svn_string_t *value)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( change-dir-prop ( ", 20));
+  SVN_ERR(write_cmd_change_node_prop(conn, pool, token, name, value));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_close_dir(svn_ra_svn_conn_t *conn,
+                                apr_pool_t *pool,
+                                const char *token)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( close-dir ( ", 14));
+  SVN_ERR(write_tuple_cstring(conn, pool, token));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_absent_dir(svn_ra_svn_conn_t *conn,
+                                 apr_pool_t *pool,
+                                 const char *path,
+                                 const char *parent_token)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( absent-dir ( ", 15));
+  SVN_ERR(write_cmd_absent_node(conn, pool, path, parent_token));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_add_file(svn_ra_svn_conn_t *conn,
+                               apr_pool_t *pool,
+                               const char *path,
+                               const char *parent_token,
+                               const char *token,
+                               const char *copy_path,
+                               svn_revnum_t copy_rev)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( add-file ( ", 13));
+  SVN_ERR(write_cmd_add_node(conn, pool, path, parent_token, token,
+                              copy_path, copy_rev));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_open_file(svn_ra_svn_conn_t *conn,
+                                apr_pool_t *pool,
+                                const char *path,
+                                const char *parent_token,
+                                const char *token,
+                                svn_revnum_t rev)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( open-file ( ", 14));
+  SVN_ERR(write_cmd_open_node(conn, pool, path, parent_token, token, rev));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_change_file_prop(svn_ra_svn_conn_t *conn,
+                                       apr_pool_t *pool,
+                                       const char *token,
+                                       const char *name,
+                                       const svn_string_t *value)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( change-file-prop ( ", 21));
+  SVN_ERR(write_cmd_change_node_prop(conn, pool, token, name, value));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_close_file(svn_ra_svn_conn_t *conn,
+                                 apr_pool_t *pool,
+                                 const char *token,
+                                 const char *text_checksum)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( close-file ( ", 15));
+  SVN_ERR(write_tuple_cstring(conn, pool, token));
+  SVN_ERR(write_tuple_start_list(conn, pool));
+  SVN_ERR(write_tuple_cstring_opt(conn, pool, text_checksum));
+  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_absent_file(svn_ra_svn_conn_t *conn,
+                                  apr_pool_t *pool,
+                                  const char *path,
+                                  const char *parent_token)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( absent-file ( ", 16));
+  SVN_ERR(write_cmd_absent_node(conn, pool, path, parent_token));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_textdelta_chunk(svn_ra_svn_conn_t *conn,
+                                      apr_pool_t *pool,
+                                      const char *token,
+                                      const svn_string_t *chunk)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( textdelta-chunk ( ", 20));
+  SVN_ERR(write_tuple_cstring(conn, pool, token));
+  SVN_ERR(write_tuple_string(conn, pool, chunk));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_textdelta_end(svn_ra_svn_conn_t *conn,
+                                    apr_pool_t *pool,
+                                    const char *token)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( textdelta-end ( ", 18));
+  SVN_ERR(write_tuple_cstring(conn, pool, token));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_apply_textdelta(svn_ra_svn_conn_t *conn,
+                                      apr_pool_t *pool,
+                                      const char *token,
+                                      const char *base_checksum)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( apply-textdelta ( ", 20));
+  SVN_ERR(write_tuple_cstring(conn, pool, token));
+  SVN_ERR(write_tuple_start_list(conn, pool));
+  SVN_ERR(write_tuple_cstring_opt(conn, pool, base_checksum));
+  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_close_edit(svn_ra_svn_conn_t *conn,
+                                 apr_pool_t *pool)
+{
+  return writebuf_write_short_string(conn, pool, "( close-edit ( ) ) ", 19);
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_abort_edit(svn_ra_svn_conn_t *conn,
+                                 apr_pool_t *pool)
+{
+  return writebuf_write_short_string(conn, pool, "( abort-edit ( ) ) ", 19);
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_set_path(svn_ra_svn_conn_t *conn,
+                               apr_pool_t *pool,
+                               const char *path,
+                               svn_revnum_t rev,
+                               svn_boolean_t start_empty,
+                               const char *lock_token,
+                               svn_depth_t depth)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( set-path ( ", 13));
+  SVN_ERR(write_tuple_cstring(conn, pool, path));
+  SVN_ERR(write_tuple_revision(conn, pool, rev));
+  SVN_ERR(write_tuple_boolean(conn, pool, start_empty));
+  SVN_ERR(write_tuple_start_list(conn, pool));
+  SVN_ERR(write_tuple_cstring_opt(conn, pool, lock_token));
+  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(write_tuple_depth(conn, pool, depth));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_delete_path(svn_ra_svn_conn_t *conn,
+                                  apr_pool_t *pool,
+                                  const char *path)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( delete-path ( ", 16));
+  SVN_ERR(write_tuple_cstring(conn, pool, path));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_link_path(svn_ra_svn_conn_t *conn,
+                                apr_pool_t *pool,
+                                const char *path,
+                                const char *url,
+                                svn_revnum_t rev,
+                                svn_boolean_t start_empty,
+                                const char *lock_token,
+                                svn_depth_t depth)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( link-path ( ", 14));
+  SVN_ERR(write_tuple_cstring(conn, pool, path));
+  SVN_ERR(write_tuple_cstring(conn, pool, url));
+  SVN_ERR(write_tuple_revision(conn, pool, rev));
+  SVN_ERR(write_tuple_boolean(conn, pool, start_empty));
+  SVN_ERR(write_tuple_start_list(conn, pool));
+  SVN_ERR(write_tuple_cstring_opt(conn, pool,lock_token));
+  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(write_tuple_depth(conn, pool, depth));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_finish_report(svn_ra_svn_conn_t *conn,
+                                    apr_pool_t *pool)
+{
+  return writebuf_write_short_string(conn, pool, "( finish-report ( ) ) ", 22);
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_abort_report(svn_ra_svn_conn_t *conn,
+                                   apr_pool_t *pool)
+{
+  return writebuf_write_short_string(conn, pool, "( abort-report ( ) ) ", 21);
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_reparent(svn_ra_svn_conn_t *conn,
+                               apr_pool_t *pool,
+                               const char *url)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( reparent ( ", 13));
+  SVN_ERR(write_tuple_cstring(conn, pool, url));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_get_latest_rev(svn_ra_svn_conn_t *conn,
+                                   apr_pool_t *pool)
+{
+  return writebuf_write_short_string(conn, pool, "( get-latest-rev ( ) ) ", 23);
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_get_dated_rev(svn_ra_svn_conn_t *conn,
+                                    apr_pool_t *pool,
+                                    apr_time_t tm)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( get-dated-rev ( ", 18));
+  SVN_ERR(write_tuple_cstring(conn, pool, svn_time_to_cstring(tm, pool)));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_change_rev_prop2(svn_ra_svn_conn_t *conn,
+                                       apr_pool_t *pool,
+                                       svn_revnum_t rev,
+                                       const char *name,
+                                       const svn_string_t *value,
+                                       svn_boolean_t dont_care,
+                                       const svn_string_t *old_value)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( change-rev-prop2 ( ", 21));
+  SVN_ERR(write_tuple_revision(conn, pool, rev));
+  SVN_ERR(write_tuple_cstring(conn, pool, name));
+  SVN_ERR(write_tuple_start_list(conn, pool));
+  SVN_ERR(write_tuple_string_opt(conn, pool, value));
+  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(write_tuple_start_list(conn, pool));
+  SVN_ERR(write_tuple_boolean(conn, pool, dont_care));
+  SVN_ERR(write_tuple_string_opt(conn, pool, old_value));
+  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_change_rev_prop(svn_ra_svn_conn_t *conn,
+                                      apr_pool_t *pool,
+                                      svn_revnum_t rev,
+                                      const char *name,
+                                      const svn_string_t *value)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( change-rev-prop ( ", 20));
+  SVN_ERR(write_tuple_revision(conn, pool, rev));
+  SVN_ERR(write_tuple_cstring(conn, pool, name));
+  SVN_ERR(write_tuple_string_opt(conn, pool, value));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_rev_proplist(svn_ra_svn_conn_t *conn,
+                                   apr_pool_t *pool,
+                                   svn_revnum_t rev)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( rev-proplist ( ", 17));
+  SVN_ERR(write_tuple_revision(conn, pool, rev));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_rev_prop(svn_ra_svn_conn_t *conn,
+                               apr_pool_t *pool,
+                               svn_revnum_t rev,
+                               const char *name)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( rev-prop ( ", 13));
+  SVN_ERR(write_tuple_revision(conn, pool, rev));
+  SVN_ERR(write_tuple_cstring(conn, pool, name));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_get_file(svn_ra_svn_conn_t *conn,
+                               apr_pool_t *pool,
+                               const char *path,
+                               svn_revnum_t rev,
+                               svn_boolean_t props,
+                               svn_boolean_t stream)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( get-file ( ", 13));
+  SVN_ERR(write_tuple_cstring(conn, pool, path));
+  SVN_ERR(write_tuple_start_list(conn, pool));
+  SVN_ERR(write_tuple_revision_opt(conn, pool, rev));
+  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(write_tuple_boolean(conn, pool, props));
+  SVN_ERR(write_tuple_boolean(conn, pool, stream));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_update(svn_ra_svn_conn_t *conn,
+                             apr_pool_t *pool,
+                             svn_revnum_t rev,
+                             const char *target,
+                             svn_boolean_t recurse,
+                             svn_depth_t depth,
+                             svn_boolean_t send_copyfrom_args,
+                             svn_boolean_t ignore_ancestry)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( update ( ", 11));
+  SVN_ERR(write_tuple_start_list(conn, pool));
+  SVN_ERR(write_tuple_revision_opt(conn, pool, rev));
+  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(write_tuple_cstring(conn, pool, target));
+  SVN_ERR(write_tuple_boolean(conn, pool, recurse));
+  SVN_ERR(write_tuple_depth(conn, pool, depth));
+  SVN_ERR(write_tuple_boolean(conn, pool, send_copyfrom_args));
+  SVN_ERR(write_tuple_boolean(conn, pool, ignore_ancestry));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_switch(svn_ra_svn_conn_t *conn,
+                             apr_pool_t *pool,
+                             svn_revnum_t rev,
+                             const char *target,
+                             svn_boolean_t recurse,
+                             const char *switch_url,
+                             svn_depth_t depth,
+                             svn_boolean_t send_copyfrom_args,
+                             svn_boolean_t ignore_ancestry)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( switch ( ", 11));
+  SVN_ERR(write_tuple_start_list(conn, pool));
+  SVN_ERR(write_tuple_revision_opt(conn, pool, rev));
+  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(write_tuple_cstring(conn, pool, target));
+  SVN_ERR(write_tuple_boolean(conn, pool, recurse));
+  SVN_ERR(write_tuple_cstring(conn, pool, switch_url));
+  SVN_ERR(write_tuple_depth(conn, pool, depth));
+  SVN_ERR(write_tuple_boolean(conn, pool, send_copyfrom_args));
+  SVN_ERR(write_tuple_boolean(conn, pool, ignore_ancestry));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_status(svn_ra_svn_conn_t *conn,
+                             apr_pool_t *pool,
+                             const char *target,
+                             svn_boolean_t recurse,
+                             svn_revnum_t rev,
+                             svn_depth_t depth)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( status ( ", 11));
+  SVN_ERR(write_tuple_cstring(conn, pool, target));
+  SVN_ERR(write_tuple_boolean(conn, pool, recurse));
+  SVN_ERR(write_tuple_start_list(conn, pool));
+  SVN_ERR(write_tuple_revision_opt(conn, pool, rev));
+  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(write_tuple_depth(conn, pool, depth));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_diff(svn_ra_svn_conn_t *conn,
+                           apr_pool_t *pool,
+                           svn_revnum_t rev,
+                           const char *target,
+                           svn_boolean_t recurse,
+                           svn_boolean_t ignore_ancestry,
+                           const char *versus_url,
+                           svn_boolean_t text_deltas,
+                           svn_depth_t depth)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( diff ( ", 9));
+  SVN_ERR(write_tuple_start_list(conn, pool));
+  SVN_ERR(write_tuple_revision_opt(conn, pool, rev));
+  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(write_tuple_cstring(conn, pool, target));
+  SVN_ERR(write_tuple_boolean(conn, pool, recurse));
+  SVN_ERR(write_tuple_boolean(conn, pool, ignore_ancestry));
+  SVN_ERR(write_tuple_cstring(conn, pool, versus_url));
+  SVN_ERR(write_tuple_boolean(conn, pool, text_deltas));
+  SVN_ERR(write_tuple_depth(conn, pool, depth));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_check_path(svn_ra_svn_conn_t *conn,
+                                 apr_pool_t *pool,
+                                 const char *path,
+                                 svn_revnum_t rev)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( check-path ( ", 15));
+  SVN_ERR(write_tuple_cstring(conn, pool, path));
+  SVN_ERR(write_tuple_start_list(conn, pool));
+  SVN_ERR(write_tuple_revision_opt(conn, pool, rev));
+  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_stat(svn_ra_svn_conn_t *conn,
+                           apr_pool_t *pool,
+                           const char *path,
+                           svn_revnum_t rev)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( stat ( ", 9));
+  SVN_ERR(write_tuple_cstring(conn, pool, path));
+  SVN_ERR(write_tuple_start_list(conn, pool));
+  SVN_ERR(write_tuple_revision_opt(conn, pool, rev));
+  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_get_file_revs(svn_ra_svn_conn_t *conn,
+                                    apr_pool_t *pool,
+                                    const char *path,
+                                    svn_revnum_t start,
+                                    svn_revnum_t end,
+                                    svn_boolean_t include_merged_revisions)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( get-file-revs ( ", 18));
+  SVN_ERR(write_tuple_cstring(conn, pool, path));
+  SVN_ERR(write_tuple_start_list(conn, pool));
+  SVN_ERR(write_tuple_revision_opt(conn, pool, start));
+  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(write_tuple_start_list(conn, pool));
+  SVN_ERR(write_tuple_revision_opt(conn, pool, end));
+  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(write_tuple_boolean(conn, pool, include_merged_revisions));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_lock(svn_ra_svn_conn_t *conn,
+                           apr_pool_t *pool,
+                           const char *path,
+                           const char *comment,
+                           svn_boolean_t steal_lock,
+                           svn_revnum_t revnum)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( lock ( ", 9));
+  SVN_ERR(write_tuple_cstring(conn, pool, path));
+  SVN_ERR(write_tuple_start_list(conn, pool));
+  SVN_ERR(write_tuple_cstring_opt(conn, pool, comment));
+  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(write_tuple_boolean(conn, pool, steal_lock));
+  SVN_ERR(write_tuple_start_list(conn, pool));
+  SVN_ERR(write_tuple_revision_opt(conn, pool, revnum));
+  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_unlock(svn_ra_svn_conn_t *conn,
+                             apr_pool_t *pool,
+                             const char *path,
+                             const char *token,
+                             svn_boolean_t break_lock)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( unlock ( ", 11));
+  SVN_ERR(write_tuple_cstring(conn, pool, path));
+  SVN_ERR(write_tuple_start_list(conn, pool));
+  SVN_ERR(write_tuple_cstring_opt(conn, pool, token));
+  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(write_tuple_boolean(conn, pool, break_lock));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_get_lock(svn_ra_svn_conn_t *conn,
+                               apr_pool_t *pool,
+                               const char *path)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( get-lock ( ", 13));
+  SVN_ERR(write_tuple_cstring(conn, pool, path));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_get_locks(svn_ra_svn_conn_t *conn,
+                                apr_pool_t *pool,
+                                const char *path,
+                                svn_depth_t depth)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( get-locks ( ", 14));
+  SVN_ERR(write_tuple_cstring(conn, pool, path));
+  SVN_ERR(write_tuple_start_list(conn, pool));
+  SVN_ERR(write_tuple_depth(conn, pool, depth));
+  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_replay(svn_ra_svn_conn_t *conn,
+                             apr_pool_t *pool,
+                             svn_revnum_t rev,
+                             svn_revnum_t low_water_mark,
+                             svn_boolean_t send_deltas)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( replay ( ", 11));
+  SVN_ERR(write_tuple_revision(conn, pool, rev));
+  SVN_ERR(write_tuple_revision(conn, pool, low_water_mark));
+  SVN_ERR(write_tuple_boolean(conn, pool, send_deltas));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_replay_range(svn_ra_svn_conn_t *conn,
+                                   apr_pool_t *pool,
+                                   svn_revnum_t start_revision,
+                                   svn_revnum_t end_revision,
+                                   svn_revnum_t low_water_mark,
+                                   svn_boolean_t send_deltas)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( replay-range ( ", 17));
+  SVN_ERR(write_tuple_revision(conn, pool, start_revision));
+  SVN_ERR(write_tuple_revision(conn, pool, end_revision));
+  SVN_ERR(write_tuple_revision(conn, pool, low_water_mark));
+  SVN_ERR(write_tuple_boolean(conn, pool, send_deltas));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_get_deleted_rev(svn_ra_svn_conn_t *conn,
+                                      apr_pool_t *pool,
+                                      const char *path,
+                                      svn_revnum_t peg_revision,
+                                      svn_revnum_t end_revision)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( get-deleted-rev ( ", 20));
+  SVN_ERR(write_tuple_cstring(conn, pool, path));
+  SVN_ERR(write_tuple_revision(conn, pool, peg_revision));
+  SVN_ERR(write_tuple_revision(conn, pool, end_revision));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_get_iprops(svn_ra_svn_conn_t *conn,
+                                 apr_pool_t *pool,
+                                 const char *path,
+                                 svn_revnum_t revision)
+{
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( get-iprops ( ", 15));
+  SVN_ERR(write_tuple_cstring(conn, pool, path));
+  SVN_ERR(write_tuple_start_list(conn, pool));
+  SVN_ERR(write_tuple_revision_opt(conn, pool, revision));
+  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__write_cmd_finish_replay(svn_ra_svn_conn_t *conn,
+                                    apr_pool_t *pool)
+{
+  return writebuf_write_short_string(conn, pool, "( finish-replay ( ) ) ", 22);
+}
+
+svn_error_t *svn_ra_svn__write_cmd_response(svn_ra_svn_conn_t *conn,
                                             apr_pool_t *pool,
-                                            svn_ra_svn_cmd_t cmd, ...)
-{
-  va_list ap;
-  svn_error_t *err;
-
-  SVN_ERR(writebuf_write_short_string(conn, pool,
-                                      cmd_templates[cmd].start_sequence,
-                                      cmd_templates[cmd].start_sequence_length));
-  va_start(ap, cmd);
-  err = cmd_templates[cmd].write_ops(conn, pool, &ap);
-  va_end(ap);
-
-  return err ? err : writebuf_write_short_string(conn, pool, ") ) ", 4);
-}
-
-svn_error_t *svn_ra_svn_write_cmd_response(svn_ra_svn_conn_t *conn,
-                                           apr_pool_t *pool,
-                                           const char *fmt, ...)
+                                            const char *fmt, ...)
 {
   va_list ap;
   svn_error_t *err;
@@ -1875,11 +2270,11 @@ svn_error_t *svn_ra_svn_write_cmd_response(svn_ra_svn_conn_t *conn,
   va_start(ap, fmt);
   err = vwrite_tuple(conn, pool, fmt, &ap);
   va_end(ap);
-  return err ? svn_error_trace(err) : svn_ra_svn_end_list(conn, pool);
+  return err ? svn_error_trace(err) : svn_ra_svn__end_list(conn, pool);
 }
 
-svn_error_t *svn_ra_svn_write_cmd_failure(svn_ra_svn_conn_t *conn,
-                                          apr_pool_t *pool, svn_error_t *err)
+svn_error_t *svn_ra_svn__write_cmd_failure(svn_ra_svn_conn_t *conn,
+                                           apr_pool_t *pool, svn_error_t *err)
 {
   char buffer[128];
   SVN_ERR(writebuf_write_short_string(conn, pool, "( failure ( ", 12));
@@ -1896,11 +2291,11 @@ svn_error_t *svn_ra_svn_write_cmd_failure(svn_ra_svn_conn_t *conn,
 
       /* The message string should have been optional, but we can't
          easily change that, so marshal nonexistent messages as "". */
-      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "nccn",
-                                     (apr_uint64_t) err->apr_err,
-                                     msg ? msg : "",
-                                     err->file ? err->file : "",
-                                     (apr_uint64_t) err->line));
+      SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "nccn",
+                                      (apr_uint64_t) err->apr_err,
+                                      msg ? msg : "",
+                                      err->file ? err->file : "",
+                                      (apr_uint64_t) err->line));
     }
   return writebuf_write_short_string(conn, pool, ") ) ", 4);
 }

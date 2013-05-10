@@ -53,6 +53,7 @@
 #include <locale.h>
 #include <math.h>
 
+#include "svn_hash.h"
 #include "svn_nls.h"
 #include "svn_pools.h"
 #include "svn_props.h"
@@ -734,7 +735,9 @@ svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self,
 static svn_boolean_t
 rb_set_pool_if_swig_type_object(VALUE target, VALUE pool)
 {
-  VALUE targets[1] = {target};
+  VALUE targets[1];
+  
+  targets[0] = target;
 
   if (!NIL_P(find_swig_type_object(1, targets))) {
     rb_set_pool(target, pool);
@@ -1516,10 +1519,8 @@ r2c_hash_i(VALUE key, VALUE value, hash_to_apr_hash_data_t *data)
 {
   if (key != Qundef) {
     void *val = data->func(value, data->ctx, data->pool);
-    apr_hash_set(data->apr_hash,
-                 apr_pstrdup(data->pool, StringValuePtr(key)),
-                 APR_HASH_KEY_STRING,
-                 val);
+    svn_hash_sets(data->apr_hash, apr_pstrdup(data->pool, StringValuePtr(key)),
+                  val);
   }
   return ST_CONTINUE;
 }
@@ -1531,15 +1532,14 @@ r2c_hash(VALUE hash, r2c_func func, void *ctx, apr_pool_t *pool)
     return NULL;
   } else {
     apr_hash_t *apr_hash;
-    hash_to_apr_hash_data_t data = {
-      NULL,
-      func,
-      ctx,
-      pool
-    };
+    hash_to_apr_hash_data_t data;
 
     apr_hash = apr_hash_make(pool);
     data.apr_hash = apr_hash;
+    data.ctx = ctx;
+    data.func = func;
+    data.pool = pool;
+
     rb_hash_foreach(hash, r2c_hash_i, (VALUE)&data);
 
     return apr_hash;
@@ -1638,8 +1638,9 @@ invoke_callback(VALUE baton, VALUE pool)
 {
   callback_baton_t *cbb = (callback_baton_t *)baton;
   VALUE sub_pool;
-  VALUE argv[] = {pool};
+  VALUE argv[1];
 
+  argv[0] = pool;
   svn_swig_rb_get_pool(1, argv, Qnil, &sub_pool, NULL);
   cbb->pool = sub_pool;
   return rb_ensure(callback, baton, callback_ensure, sub_pool);

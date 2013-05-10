@@ -364,8 +364,12 @@ def locate_libs():
                                     'mod_dav_svn', 'mod_dav_svn.so')
     mod_authz_svn_path = os.path.join(abs_objdir, 'subversion',
                                       'mod_authz_svn', 'mod_authz_svn.so')
+    mod_dontdothat_path = os.path.join(abs_objdir, 'tools', 'server-side',
+                                        'mod_dontdothat', 'mod_dontdothat.so')
+
     copy_changed_file(mod_dav_svn_path, abs_objdir)
     copy_changed_file(mod_authz_svn_path, abs_objdir)
+    copy_changed_file(mod_dontdothat_path, abs_objdir)
 
   os.environ['PATH'] = abs_objdir + os.pathsep + os.environ['PATH']
 
@@ -471,6 +475,9 @@ class Httpd:
     self.authz_file = os.path.join(abs_builddir,
                                    CMDLINE_TEST_SCRIPT_NATIVE_PATH,
                                    'svn-test-work', 'authz')
+    self.dontdothat_file = os.path.join(abs_builddir,
+                                         CMDLINE_TEST_SCRIPT_NATIVE_PATH,
+                                         'svn-test-work', 'dontdothat')
     self.httpd_config = os.path.join(self.root, 'httpd.conf')
     self.httpd_users = os.path.join(self.root, 'users')
     self.httpd_mime_types = os.path.join(self.root, 'mime.types')
@@ -488,6 +495,7 @@ class Httpd:
 
     self._create_users_file()
     self._create_mime_types_file()
+    self._create_dontdothat_file()
 
     # Determine version.
     if os.path.exists(os.path.join(self.httpd_dir,
@@ -514,7 +522,7 @@ class Httpd:
     fp.write('PidFile      pid\n')
     fp.write('ErrorLog     log\n')
     fp.write('Listen       ' + str(self.httpd_port) + '\n')
-    
+
     if not no_log:
       fp.write('LogFormat    "%h %l %u %t \\"%r\\" %>s %b" common\n')
       fp.write('Customlog    log common\n')
@@ -541,6 +549,9 @@ class Httpd:
     # Write LoadModule for Subversion modules
     fp.write(self._svn_module('dav_svn_module', 'mod_dav_svn.so'))
     fp.write(self._svn_module('authz_svn_module', 'mod_authz_svn.so'))
+
+    # And for mod_dontdothat
+    fp.write(self._svn_module('dontdothat_module', 'mod_dontdothat.so'))
 
     # Don't handle .htaccess, symlinks, etc.
     fp.write('<Directory />\n')
@@ -587,6 +598,13 @@ class Httpd:
     fp = open(self.httpd_mime_types, 'w')
     fp.close()
 
+  def _create_dontdothat_file(self):
+    "Create empty mime.types file"
+    fp = open(self.dontdothat_file, 'w')
+    fp.write('[recursive-actions]\n')
+    fp.write('/ = deny\n')
+    fp.close()
+
   def _sys_module(self, name, path):
     full_path = os.path.join(self.httpd_dir, 'modules', path)
     return 'LoadModule ' + name + " " + self._quote(full_path) + '\n'
@@ -600,6 +618,7 @@ class Httpd:
                         CMDLINE_TEST_SCRIPT_NATIVE_PATH,
                         'svn-test-work', name)
     location = '/svn-test-work/' + name
+    ddt_location = '/ddt-test-work/' + name
     return \
       '<Location ' + location + '>\n' \
       '  DAV             svn\n' \
@@ -612,6 +631,19 @@ class Httpd:
       '  AuthName        "Subversion Repository"\n' \
       '  AuthUserFile    ' + self._quote(self.httpd_users) + '\n' \
       '  Require         valid-user\n' \
+      '</Location>\n' \
+      '<Location ' + ddt_location + '>\n' \
+      '  DAV             svn\n' \
+      '  SVNParentPath   ' + self._quote(path) + '\n' \
+      '  SVNAdvertiseV2Protocol ' + self.httpv2_option + '\n' \
+      '  SVNPathAuthz ' + self.path_authz_option + '\n' \
+      '  SVNAllowBulkUpdates ' + self.bulkupdates_option + '\n' \
+      '  AuthzSVNAccessFile ' + self._quote(self.authz_file) + '\n' \
+      '  AuthType        Basic\n' \
+      '  AuthName        "Subversion Repository"\n' \
+      '  AuthUserFile    ' + self._quote(self.httpd_users) + '\n' \
+      '  Require         valid-user\n' \
+      '  DontDoThatConfigFile ' + self._quote(self.dontdothat_file) + '\n' \
       '</Location>\n'
 
   def start(self):

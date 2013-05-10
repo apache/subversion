@@ -44,7 +44,9 @@ check-deps test-deps: [for test_helpers] [test_helpers][end]
 MANPAGES =[for manpages] [manpages][end]
 
 CLEAN_FILES =[for cfiles] [cfiles][end]
-EXTRACLEAN_FILES =[for sql] [sql.header][end]
+EXTRACLEAN_FILES =[for sql] [sql.header][end] \
+  $(abs_builddir)/subversion/libsvn_subr/errorcode.inc \
+  $(abs_srcdir)/compile_commands.json
 
 SWIG_INCLUDES = -I$(abs_builddir)/subversion \
   -I$(abs_srcdir)/subversion/include \
@@ -127,16 +129,13 @@ $([target.varname]_OBJECTS): $([target.varname]_SRC)
 # Section 7: Install-Group install targets
 ########################################
 [for areas]
-[is areas.type "apache-mod"]install-mods-shared:[for areas.files] [areas.files.fullname][end][for areas.files]
-	[if-any areas.files.when]if $([areas.files.when]) ; then [else][end]cd [areas.files.dirname] ; $(MKDIR) "$(APACHE_LIBEXECDIR)" ; $(INSTALL_MOD_SHARED) -n [areas.files.name] [areas.files.filename][if-any areas.files.when] ; fi[else][end][end]
-[else]install-[areas.type]: [for areas.files][if-index areas.files first][else] [end][areas.files.fullname][end] [for areas.apache_files] [areas.apache_files.fullname][end]
-	$(MKDIR) $(DESTDIR)$([areas.varname]dir)[for areas.files][is areas.type "locale"]
-	$(MKDIR) [areas.files.installdir]
-	[if-any areas.files.when]if $([areas.files.when]) ; then [else][end]cd [areas.files.dirname] ; $(INSTALL_[areas.uppervar]) [areas.files.filename] [areas.files.installdir]/$(PACKAGE_NAME)[areas.files.objext][if-any areas.files.when] ; fi[else][end][else]
-	[if-any areas.files.when]if $([areas.files.when]) ; then [else][end]cd [areas.files.dirname] ; $(INSTALL_[areas.uppervar]) [areas.files.filename] $(DESTDIR)[areas.files.install_fname][if-any areas.files.when] ; fi[else][end][end][end][for areas.apache_files]
-	[if-any areas.apache_files.when]if $([areas.apache_files.when]) ; then [else][end]cd [areas.apache_files.dirname] ; $(MKDIR) "$(APACHE_LIBEXECDIR)" ; $(INSTALL_MOD_SHARED) -n [areas.apache_files.name] [areas.apache_files.filename][if-any areas.apache_files.when] ; fi[else][end][end]
-[if-any areas.extra_install]	$(INSTALL_EXTRA_[areas.uppervar])
-[end][end][end]
+install-[areas.type]: [for areas.files][if-index areas.files first][else] [end][areas.files.fullname][end]
+[if-any areas.files][for areas.files]	[is areas.files.mode "apache-mod"][if-any areas.files.when]if $([areas.files.when]) ; then [else][end]cd [areas.files.dirname] ; $(MKDIR) "$(APACHE_LIBEXECDIR)" ; $(INSTALL_MOD_SHARED) -n [areas.files.name] [areas.files.filename][if-any areas.files.when] ; fi[else][end][else][if-index areas.files first]$(MKDIR) $(DESTDIR)$([areas.varname]dir)
+	[else][end][is areas.type "locale"]$(MKDIR) [areas.files.installdir]
+	[if-any areas.files.when]if $([areas.files.when]) ; then [else][end]cd [areas.files.dirname] ; $(INSTALL_[areas.uppervar]) [areas.files.filename] [areas.files.installdir]/$(PACKAGE_NAME)[areas.files.objext][if-any areas.files.when] ; fi[else][end][else][if-any areas.files.when]if $([areas.files.when]) ; then [else][end]cd [areas.files.dirname] ; $(INSTALL_[areas.uppervar]) [areas.files.filename] $(DESTDIR)[areas.files.install_fname][if-any areas.files.when] ; fi[else][end][end][end]
+[end][else]	$(MKDIR) $(DESTDIR)$([areas.varname]dir)
+[end][if-any areas.extra_install]	$(INSTALL_EXTRA_[areas.uppervar])
+[end][end]
 
 ########################################
 # Section 8: The install-include rule

@@ -20,7 +20,7 @@
 #
 #
 
-use Test::More tests => 223;
+use Test::More tests => 297;
 use strict;
 
 # shut up about variables that are only used once.
@@ -346,68 +346,254 @@ isa_ok($svn_error, '_p_svn_error_t',
 $svn_error->clear(); #don't leak this
 
 # test getting the log
-# TEST
+
+sub test_log_message_receiver {
+  my ($changed_paths,$revision,
+      $author,$date,$message,$pool) = @_;
+  # TEST
+  isa_ok($changed_paths,'HASH',
+         'changed_paths param is a HASH');
+  # TEST
+  isa_ok($changed_paths->{'/dir1/new'},
+         '_p_svn_log_changed_path_t',
+         'Hash value is a _p_svn_log_changed_path_t');
+  # TEST
+  is($changed_paths->{'/dir1/new'}->action(),'A',
+     'action returns A for add');
+  # TEST
+  is($changed_paths->{'/dir1/new'}->copyfrom_path(),undef,
+     'copyfrom_path returns undef as it is not a copy');
+  # TEST
+  is($changed_paths->{'/dir1/new'}->copyfrom_rev(),
+     $SVN::Core::INVALID_REVNUM,
+     'copyfrom_rev is set to INVALID as it is not a copy');
+  # TEST
+  is($revision,$current_rev,
+     'revision param matches current rev');
+  # TEST
+  is($author,$username,
+     'author param matches expected username');
+  # TEST
+  ok($date,'date param is defined');
+  # TEST
+  is($message,'Add new',
+     'message param is the expected value');
+  # TEST
+  isa_ok($pool,'_p_apr_pool_t',
+         'pool param is _p_apr_pool_t');
+}
+ 
+# TEST  log range $current_rev:$current_rev
 is($ctx->log("$reposurl/dir1/new",$current_rev,$current_rev,1,0,
-             sub
-             {
-                 my ($changed_paths,$revision,
-                     $author,$date,$message,$pool) = @_;
-                 # TEST
-                 isa_ok($changed_paths,'HASH',
-                        'changed_paths param is a HASH');
-                 # TEST
-                 isa_ok($changed_paths->{'/dir1/new'},
-                        '_p_svn_log_changed_path_t',
-                        'Hash value is a _p_svn_log_changed_path_t');
-                 # TEST
-                 is($changed_paths->{'/dir1/new'}->action(),'A',
-                    'action returns A for add');
-                 # TEST
-                 is($changed_paths->{'/dir1/new'}->copyfrom_path(),undef,
-                    'copyfrom_path returns undef as it is not a copy');
-                 # TEST
-                 is($changed_paths->{'/dir1/new'}->copyfrom_rev(),
-                    $SVN::Core::INVALID_REVNUM,
-                    'copyfrom_rev is set to INVALID as it is not a copy');
-                 # TEST
-                 is($revision,$current_rev,
-                    'revision param matches current rev');
-                 # TEST
-                 is($author,$username,
-                    'author param matches expected username');
-                 # TEST
-                 ok($date,'date param is defined');
-                 # TEST
-                 is($message,'Add new',
-                    'message param is the expected value');
-                 # TEST
-                 isa_ok($pool,'_p_apr_pool_t',
-                        'pool param is _p_apr_pool_t');
-             }),
+             \&test_log_message_receiver), 
    undef,
    'log returns undef');
+# TEST  log2 range $current_rev:0 limit=1
+is($ctx->log2("$reposurl/dir1/new",$current_rev,0,1,1,0,
+              \&test_log_message_receiver), 
+   undef,
+   'log2 returns undef');
+# TEST  log3 range $current_rev:0 limit=1
+is($ctx->log3("$reposurl/dir1/new",'HEAD',$current_rev,0,1,1,0,
+              \&test_log_message_receiver), 
+   undef,
+   'log3 returns undef');
+
+my @new_paths = qw( dir1/new dir1/new2 dir1/new3 dir1/new4 );
+$ctx->log3([ $reposurl, @new_paths ],
+           'HEAD',$current_rev,0,1,1,0, sub {
+               my ($changed_paths,$revision,$author,$date,$message,$pool) = @_;
+               # TEST
+               is_deeply([sort keys %$changed_paths],
+                         [sort map { "/$_" } @new_paths],
+                         "changed_paths for multiple targets");
+});
+
+sub get_full_log {
+    my ($start, $end) = @_;
+    my @log;
+    $ctx->log($reposurl, $start, $end, 1, 0, sub { 
+        my ($changed_paths, $revision, $author, $date, $msg, undef) = @_; 
+        # "unpack" the values of the $changed_paths hash 
+        # (_p_svn_log_changed_path_t objects) so that
+        # we can use is_deeply() to compare results
+        my %hash;
+        while (my ($path, $changed) = each %$changed_paths) {
+            foreach (qw( action copyfrom_path copyfrom_rev )) {
+                $hash{$path}{$_} = $changed->$_()
+            }
+        }
+        push @log, [ \%hash, $revision, $author, $date, $msg ];
+    });
+    return \@log;
+}
+
+# TEST
+my $full_log = get_full_log('HEAD',1);
+is(scalar @$full_log, $current_rev, "history up to 'HEAD'");
 
 # TEST
 my $opt_revision_head = SVN::_Core::new_svn_opt_revision_t();
 $opt_revision_head->kind($SVN::Core::opt_revision_head);
-is_deeply(get_log2($opt_revision_head),      # got
-          get_log2("HEAD"));                 # expected
+is_deeply(get_full_log($opt_revision_head,1),   # got
+          $full_log,                            # expected
+          "history up to svn_opt_revision_t of kind head");
+
+# TEST
+is_deeply(get_full_log($current_rev,1),         # got
+          $full_log,                            # expected
+          "history up to number $current_rev");
+
 # TEST
 my $opt_revision_number = SVN::_Core::new_svn_opt_revision_t();
 $opt_revision_number->kind($SVN::Core::opt_revision_number);
 $opt_revision_number->value->number($current_rev);
-is_deeply(get_log2($opt_revision_number),    # got
-          get_log2($current_rev));           # expected
+is_deeply(get_full_log($opt_revision_number,1), # got
+          $full_log,                            # expected
+          "history up to svn_opt_revision_t of kind number and value $current_rev");
 
-sub get_log2 {
-    my ($rev) = @_;
-    my @log;
-    $ctx->log2($reposurl, $rev, $rev, 0, 0, 0, sub { 
-        my (undef, $revision, $author, $date, $msg, undef) = @_; 
-        push @log, [ $revision, $author, $date, $msg ];
-    });
-    return \@log;
+sub test_log_entry_receiver {
+  my ($log_entry,$pool) = @_;
+  # TEST
+  isa_ok($log_entry, '_p_svn_log_entry_t',
+         'log_entry param');
+  # TEST
+  isa_ok($pool,'_p_apr_pool_t',
+         'pool param');
+  # TEST
+  is($log_entry->revision,$current_rev,
+     'log_entry->revision matches current rev');
+
+  my $revprops = $log_entry->revprops;
+  # TEST
+  isa_ok($revprops,'HASH',
+         'log_entry->revprops');
+  # TEST
+  is($revprops->{"svn:author"},$username,
+     'svn:author revprop matches expected username');
+  # TEST
+  ok($revprops->{"svn:date"},'svn:date revprop is defined');
+  # TEST
+  is($revprops->{"svn:log"},'Add new',
+     'svn:log revprop is the expected value');
+
+  my $changed_paths = $log_entry->changed_paths2;
+  # TEST
+  isa_ok($changed_paths,'HASH',
+         'log_entry->changed_paths2');
+  # TEST
+  isa_ok($changed_paths->{'/dir1/new'},
+         '_p_svn_log_changed_path2_t',
+         'log_entry->changed_paths2 value');
+  # TEST
+  is($changed_paths->{'/dir1/new'}->action(),'A',
+     'action returns A for add');
+  # TEST
+  is($changed_paths->{'/dir1/new'}->node_kind(),$SVN::Node::file,
+     'node_kind returns $SVN::Node::file');
+  # TEST
+  is($changed_paths->{'/dir1/new'}->text_modified(),$SVN::Tristate::true,
+     'text_modified returns true');
+  # TEST
+  is($changed_paths->{'/dir1/new'}->props_modified(),$SVN::Tristate::false,
+     'props_modified returns false');
+  # TEST
+  is($changed_paths->{'/dir1/new'}->copyfrom_path(),undef,
+     'copyfrom_path returns undef as it is not a copy');
+  # TEST
+  is($changed_paths->{'/dir1/new'}->copyfrom_rev(),
+     $SVN::Core::INVALID_REVNUM,
+     'copyfrom_rev is set to INVALID as it is not a copy');
 }
+
+# TEST
+is($ctx->log4("$reposurl/dir1/new",
+              'HEAD',$current_rev,0,1, # peg rev, start rev, end rev, limit
+              1,1,0, # discover_changed_paths, strict_node_history, include_merged_revisions
+              undef, # revprops
+              \&test_log_entry_receiver), 
+   undef,
+   'log4 returns undef');
+
+# TEST
+is($ctx->log5("$reposurl/dir1/new",
+              'HEAD',[$current_rev,0],1, # peg rev, rev ranges, limit
+              1,1,0, # discover_changed_paths, strict_node_history, include_merged_revisions
+              undef, # revprops
+              \&test_log_entry_receiver), 
+   undef,
+   'log5 returns undef');
+
+# test the different forms to specify revision ranges
+sub get_revs {
+    my ($rev_ranges) = @_;
+    my @revs;
+    $ctx->log5($reposurl, 'HEAD', $rev_ranges, 0, 0, 0, 0, undef, sub { 
+        my ($log_entry,$pool) = @_;
+        push @revs, $log_entry->revision;
+    });
+    return \@revs;
+}
+
+my $top = SVN::_Core::new_svn_opt_revision_range_t();
+$top->start('HEAD');
+$top->end('HEAD');
+my $bottom = SVN::_Core::new_svn_opt_revision_range_t();
+$bottom->start(1);
+$bottom->end($current_rev-1);
+
+# TEST
+is_deeply(get_revs($top),   
+          [ $current_rev ], 'single svn_opt_revision_range_t');
+# TEST
+is_deeply(get_revs([$top]), 
+          [ $current_rev ], 'list of svn_opt_revision_range_t');
+# TEST
+is_deeply(get_revs(['HEAD', 'HEAD']),
+          [ $current_rev ], 'single [start, end]');
+# TEST
+is_deeply(get_revs([['HEAD', 'HEAD']]),
+          [ $current_rev ], 'list of [start, end]');
+# TEST
+is_deeply(get_revs([$current_rev, $current_rev]),
+          [ $current_rev ], 'single [start, end]');
+# TEST
+is_deeply(get_revs([[$current_rev, $current_rev]]),
+          [ $current_rev ], 'list of [start, end]');
+# TEST
+is_deeply(get_revs([1, 'HEAD']),
+          [ 1..$current_rev ], 'single [start, end]');
+# TEST
+is_deeply(get_revs([[1, 'HEAD']]),
+          [ 1..$current_rev ], 'list of [start, end]');
+# TEST
+is_deeply(get_revs([1, $opt_revision_head]),
+          [ 1..$current_rev ], 'single [start, end]');
+# TEST
+is_deeply(get_revs([[1, $opt_revision_head]]),
+          [ 1..$current_rev ], 'list of [start, end]');
+# TEST
+is_deeply(get_revs($bottom), 
+          [ 1..$current_rev-1 ], 'single svn_opt_revision_range_t');
+# TEST
+is_deeply(get_revs([$bottom]), 
+          [ 1..$current_rev-1 ], 'list of svn_opt_revision_range_t');
+# TEST
+is_deeply(get_revs([1, $current_rev-1]),
+          [ 1..$current_rev-1 ], 'single [start, end]');
+# TEST
+is_deeply(get_revs([[1, $current_rev-1]]),
+          [ 1..$current_rev-1 ], 'list of [start, end]');
+# TEST
+is_deeply(get_revs([[1, $current_rev-1], $top]),
+          [ 1..$current_rev ], 'mixed list of ranges');
+# TEST
+is_deeply(get_revs([$bottom, ['HEAD', 'HEAD']]),
+          [ 1..$current_rev ], 'mixed list of ranges');
+# TEST
+is_deeply(get_revs([$bottom, $top]),
+          [ 1..$current_rev ], 'mixed list of ranges');
+          
 
 # TEST
 is($ctx->update($wcpath,'HEAD',1),$current_rev,
@@ -461,8 +647,7 @@ is($ctx->status($wcpath, undef, sub {
                                          ' the correct path.');
                                       # TEST
                                       isa_ok($wc_status,'_p_svn_wc_status_t',
-                                             'wc_stats param is a' .
-                                             ' _p_svn_wc_status_t');
+                                             'wc_stats param');
                                       # TEST
                                       is($wc_status->text_status(),
                                          $SVN::Wc::Status::normal,
@@ -783,7 +968,7 @@ my($pl) = $ctx->proplist($reposurl,$current_rev,1);
 isa_ok($pl,'ARRAY','proplist returns an ARRAY');
 # TEST
 isa_ok($pl->[0], '_p_svn_client_proplist_item_t',
-       'array element is a _p_svn_client_proplist_item_t');
+       'proplist array element');
 # TEST
 is($pl->[0]->node_name(),"$reposurl/dir1",
    'node_name is the expected value');
@@ -874,8 +1059,7 @@ is($ctx->blame("$reposurl/foo",'HEAD','HEAD', sub {
                                               }
                                               # TEST
                                               isa_ok($pool,'_p_apr_pool_t',
-                                                     'pool param is ' .
-                                                     '_p_apr_pool_t');
+                                                     'pool param');
                                             }),
    undef,
    'blame returns undef');
@@ -902,7 +1086,7 @@ my ($dirents) = $ctx->ls($reposurl,"$current_rev", 1);
 isa_ok($dirents, 'HASH','ls returns a HASH');
 # TEST
 isa_ok($dirents->{'dir1'},'_p_svn_dirent_t',
-       'hash value is a _p_svn_dirent_t');
+       'dirents hash value');
 # TEST
 is($dirents->{'dir1'}->kind(),$SVN::Core::node_dir,
    'kind() returns a dir node');

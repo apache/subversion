@@ -34,6 +34,7 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
+#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_subst.h"
@@ -68,9 +69,9 @@ add_externals(apr_hash_t *externals,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  apr_hash_set(externals, local_abspath, APR_HASH_KEY_STRING,
-               apr_pstrmemdup(pool, externals_prop_val->data,
-                              externals_prop_val->len));
+  svn_hash_sets(externals, local_abspath,
+                apr_pstrmemdup(pool, externals_prop_val->data,
+                               externals_prop_val->len));
 
   return SVN_NO_ERROR;
 }
@@ -192,7 +193,7 @@ export_node(void *baton,
   svn_stream_t *dst_stream;
   const char *dst_tmp;
   svn_error_t *err;
-  
+
   const char *to_abspath = svn_dirent_join(
                                 eib->to_path,
                                 svn_dirent_skip_ancestor(eib->origin_abspath,
@@ -338,8 +339,7 @@ export_node(void *baton,
     }
 
   /* We can early-exit if we're creating a special file. */
-  special = apr_hash_get(props, SVN_PROP_SPECIAL,
-                         APR_HASH_KEY_STRING);
+  special = svn_hash_gets(props, SVN_PROP_SPECIAL);
   if (special != NULL)
     {
       /* Create the destination as a special file, and copy the source
@@ -352,12 +352,9 @@ export_node(void *baton,
     }
 
 
-  eol_style = apr_hash_get(props, SVN_PROP_EOL_STYLE,
-                           APR_HASH_KEY_STRING);
-  keywords = apr_hash_get(props, SVN_PROP_KEYWORDS,
-                          APR_HASH_KEY_STRING);
-  executable = apr_hash_get(props, SVN_PROP_EXECUTABLE,
-                            APR_HASH_KEY_STRING);
+  eol_style = svn_hash_gets(props, SVN_PROP_EOL_STYLE);
+  keywords = svn_hash_gets(props, SVN_PROP_KEYWORDS);
+  executable = svn_hash_gets(props, SVN_PROP_EXECUTABLE);
 
   if (eol_style)
     SVN_ERR(get_eol_style(&style, &eol, eol_style->data, eib->native_eol));
@@ -395,10 +392,11 @@ export_node(void *baton,
           suffix = "";
         }
 
-      SVN_ERR(svn_subst_build_keywords2
-              (&kw, keywords->data,
-               apr_psprintf(scratch_pool, "%ld%s", changed_rev, suffix),
-               url, tm, author, scratch_pool));
+      SVN_ERR(svn_subst_build_keywords3(&kw, keywords->data,
+                                        apr_psprintf(scratch_pool, "%ld%s",
+                                                     changed_rev, suffix),
+                                        url, status->repos_root_url, tm,
+                                        author, scratch_pool));
     }
 
   /* For atomicity, we translate to a tmp file and then rename the tmp file
@@ -498,6 +496,7 @@ open_root_internal(const char *path,
 
 struct edit_baton
 {
+  const char *repos_root_url;
   const char *root_path;
   const char *root_url;
   svn_boolean_t force;
@@ -544,6 +543,7 @@ struct file_baton
   /* Any keyword vals to be substituted */
   const char *revision;
   const char *url;
+  const char *repos_root_url;
   const char *author;
   apr_time_t date;
 
@@ -665,6 +665,7 @@ add_file(const char *path,
   fb->edit_baton = eb;
   fb->path = full_path;
   fb->url = full_url;
+  fb->repos_root_url = eb->repos_root_url;
   fb->pool = pool;
 
   *baton = fb;
@@ -830,8 +831,9 @@ close_file(void *file_baton,
         }
 
       if (fb->keywords_val)
-        SVN_ERR(svn_subst_build_keywords2(&final_kw, fb->keywords_val->data,
-                                          fb->revision, fb->url, fb->date,
+        SVN_ERR(svn_subst_build_keywords3(&final_kw, fb->keywords_val->data,
+                                          fb->revision, fb->url,
+                                          fb->repos_root_url, fb->date,
                                           fb->author, pool));
 
       SVN_ERR(svn_subst_copy_and_translate4(fb->tmppath, fb->path,
@@ -901,7 +903,7 @@ get_editor_ev1(const svn_delta_editor_t **export_editor,
                apr_pool_t *scratch_pool)
 {
   svn_delta_editor_t *editor = svn_delta_default_editor(result_pool);
-  
+
   editor->set_target_revision = set_target_revision;
   editor->open_root = open_root;
   editor->add_directory = add_directory;
@@ -951,33 +953,29 @@ add_file_ev2(void *baton,
   /* Any keyword vals to be substituted */
   const char *revision = NULL;
   const char *author = NULL;
-  apr_time_t date = 0; 
+  apr_time_t date = 0;
 
   /* Look at any properties for additional information. */
-  if ( (val = apr_hash_get(props, SVN_PROP_EOL_STYLE, APR_HASH_KEY_STRING)) )
+  if ( (val = svn_hash_gets(props, SVN_PROP_EOL_STYLE)) )
     eol_style_val = val;
 
-  if ( !eb->ignore_keywords && (val = apr_hash_get(props, SVN_PROP_KEYWORDS,
-                                                   APR_HASH_KEY_STRING)) )
+  if ( !eb->ignore_keywords && (val = svn_hash_gets(props, SVN_PROP_KEYWORDS)) )
     keywords_val = val;
 
-  if ( (val = apr_hash_get(props, SVN_PROP_EXECUTABLE, APR_HASH_KEY_STRING)) )
+  if ( (val = svn_hash_gets(props, SVN_PROP_EXECUTABLE)) )
     executable_val = val;
-  
+
   /* Try to fill out the baton's keywords-structure too. */
-  if ( (val = apr_hash_get(props, SVN_PROP_ENTRY_COMMITTED_REV,
-                           APR_HASH_KEY_STRING)) )
+  if ( (val = svn_hash_gets(props, SVN_PROP_ENTRY_COMMITTED_REV)) )
     revision = val->data;
 
-  if ( (val = apr_hash_get(props, SVN_PROP_ENTRY_COMMITTED_DATE,
-                           APR_HASH_KEY_STRING)) )
+  if ( (val = svn_hash_gets(props, SVN_PROP_ENTRY_COMMITTED_DATE)) )
     SVN_ERR(svn_time_from_cstring(&date, val->data, scratch_pool));
-  
-  if ( (val = apr_hash_get(props, SVN_PROP_ENTRY_LAST_AUTHOR,
-                           APR_HASH_KEY_STRING)) )
+
+  if ( (val = svn_hash_gets(props, SVN_PROP_ENTRY_LAST_AUTHOR)) )
     author = val->data;
 
-  if ( (val = apr_hash_get(props, SVN_PROP_SPECIAL, APR_HASH_KEY_STRING)) )
+  if ( (val = svn_hash_gets(props, SVN_PROP_SPECIAL)) )
     special = TRUE;
 
   if (special)
@@ -1019,9 +1017,10 @@ add_file_ev2(void *baton,
             }
 
           if (keywords_val)
-            SVN_ERR(svn_subst_build_keywords2(&final_kw, keywords_val->data,
-                                              revision, full_url, date,
-                                              author, scratch_pool));
+            SVN_ERR(svn_subst_build_keywords3(&final_kw, keywords_val->data,
+                                              revision, full_url,
+                                              eb->repos_root_url,
+                                              date, author, scratch_pool));
 
           /* Writing through a translated stream is more efficient than
              reading through one, so we wrap TMP_STREAM and not CONTENTS. */
@@ -1081,9 +1080,9 @@ add_directory_ev2(void *baton,
                              _("'%s' already exists"),
                              svn_dirent_local_style(full_path, scratch_pool));
 
-  if ( (val = apr_hash_get(props, SVN_PROP_EXTERNALS, APR_HASH_KEY_STRING)) )
+  if ( (val = svn_hash_gets(props, SVN_PROP_EXTERNALS)) )
     SVN_ERR(add_externals(eb->externals, full_path, val));
-  
+
   if (eb->notify_func)
     {
       svn_wc_notify_t *notify = svn_wc_create_notify(full_path,
@@ -1254,6 +1253,7 @@ export_file(const char *from_path_or_url,
   fb->path = eb->root_path;
   fb->url = eb->root_url;
   fb->pool = scratch_pool;
+  fb->repos_root_url = eb->repos_root_url;
 
   /* Copied from apply_textdelta(). */
   SVN_ERR(svn_stream_open_unique(&fb->tmp_stream, &fb->tmppath,
@@ -1303,7 +1303,6 @@ export_directory(const char *from_path_or_url,
   const svn_delta_editor_t *export_editor;
   const svn_ra_reporter3_t *reporter;
   void *report_baton;
-  svn_boolean_t use_sleep = FALSE;
   svn_node_kind_t kind;
 
   if (!ENABLE_EV2_IMPL)
@@ -1314,13 +1313,15 @@ export_directory(const char *from_path_or_url,
                            scratch_pool, scratch_pool));
 
   /* Manufacture a basic 'report' to the update reporter. */
-  SVN_ERR(svn_ra_do_update2(ra_session,
+  SVN_ERR(svn_ra_do_update3(ra_session,
                             &reporter, &report_baton,
                             loc->rev,
                             "", /* no sub-target */
                             depth,
                             FALSE, /* don't want copyfrom-args */
-                            export_editor, edit_baton, scratch_pool));
+                            FALSE, /* don't want ignore_ancestry */
+                            export_editor, edit_baton,
+                            scratch_pool, scratch_pool));
 
   SVN_ERR(reporter->set_path(report_baton, "", loc->rev,
                              /* Depth is irrelevant, as we're
@@ -1348,17 +1349,14 @@ export_directory(const char *from_path_or_url,
 
   if (! ignore_externals && depth == svn_depth_infinity)
     {
-      const char *repos_root_url;
       const char *to_abspath;
 
-      SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url,
-                                     scratch_pool));
       SVN_ERR(svn_dirent_get_absolute(&to_abspath, to_path, scratch_pool));
       SVN_ERR(svn_client__export_externals(eb->externals,
                                            from_path_or_url,
-                                           to_abspath, repos_root_url,
+                                           to_abspath, eb->repos_root_url,
                                            depth, native_eol,
-                                           ignore_keywords, &use_sleep,
+                                           ignore_keywords,
                                            ctx, scratch_pool));
     }
 
@@ -1410,6 +1408,7 @@ svn_client_export5(svn_revnum_t *result_rev,
                                                 peg_revision,
                                                 revision, ctx, pool));
 
+      SVN_ERR(svn_ra_get_repos_root2(ra_session, &eb->repos_root_url, pool));
       eb->root_path = to_path;
       eb->root_url = loc->url;
       eb->force = overwrite;

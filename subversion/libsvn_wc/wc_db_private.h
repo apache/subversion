@@ -57,7 +57,7 @@ struct svn_wc__db_t {
   struct
   {
     svn_stringbuf_t *abspath;
-    svn_kind_t kind;
+    svn_node_kind_t kind;
   } parse_cache;
 
   /* As we grow the state of this DB, allocate that state here. */
@@ -213,7 +213,7 @@ svn_wc__db_util_open_db(svn_sqlite__db_t **sdb,
    DB+LOCAL_ABSPATH, and outputting repos ids instead of URL+UUID. */
 svn_error_t *
 svn_wc__db_read_info_internal(svn_wc__db_status_t *status,
-                              svn_kind_t *kind,
+                              svn_node_kind_t *kind,
                               svn_revnum_t *revision,
                               const char **repos_relpath,
                               apr_int64_t *repos_id,
@@ -246,7 +246,7 @@ svn_wc__db_read_info_internal(svn_wc__db_status_t *status,
    DB+LOCAL_ABSPATH and outputting REPOS_ID instead of URL+UUID. */
 svn_error_t *
 svn_wc__db_base_get_info_internal(svn_wc__db_status_t *status,
-                                  svn_kind_t *kind,
+                                  svn_node_kind_t *kind,
                                   svn_revnum_t *revision,
                                   const char **repos_relpath,
                                   apr_int64_t *repos_id,
@@ -265,7 +265,7 @@ svn_wc__db_base_get_info_internal(svn_wc__db_status_t *status,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
 
-/* Similar to svn_wc__db_base_get_info(), but taking WCROOT+LOCAL_RELPATH 
+/* Similar to svn_wc__db_base_get_info(), but taking WCROOT+LOCAL_RELPATH
  * instead of DB+LOCAL_ABSPATH, an explicit op-depth of the node to get
  * information about, and outputting REPOS_ID instead of URL+UUID, and
  * without the LOCK or UPDATE_ROOT outputs.
@@ -281,7 +281,7 @@ svn_wc__db_base_get_info_internal(svn_wc__db_status_t *status,
  */
 svn_error_t *
 svn_wc__db_depth_get_info(svn_wc__db_status_t *status,
-                          svn_kind_t *kind,
+                          svn_node_kind_t *kind,
                           svn_revnum_t *revision,
                           const char **repos_relpath,
                           apr_int64_t *repos_id,
@@ -358,7 +358,7 @@ svn_wc__db_with_txn(svn_wc__db_wcroot_t *wcroot,
   SVN_SQLITE__WITH_LOCK(expr, (wcroot)->sdb)
 
 
-/* Return CHILDREN mapping const char * names to svn_kind_t * for the
+/* Return CHILDREN mapping const char * names to svn_node_kind_t * for the
    children of LOCAL_RELPATH at OP_DEPTH. */
 svn_error_t *
 svn_wc__db_get_children_op_depth(apr_hash_t **children,
@@ -410,7 +410,7 @@ svn_wc__db_get_children_op_depth(apr_hash_t **children,
 svn_error_t *
 svn_wc__db_extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
                                 const char *local_relpath,
-                                svn_kind_t kind,
+                                svn_node_kind_t kind,
                                 int op_depth,
                                 apr_pool_t *scratch_pool);
 

@@ -23,6 +23,7 @@
 
 #include <apr_pools.h>
 
+#include "svn_hash.h"
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_sorts.h"
@@ -91,7 +92,7 @@ prev_log_path(const char **prev_path_p,
   if (changed_paths)
     {
       /* See if PATH was explicitly changed in this revision. */
-      change = apr_hash_get(changed_paths, path, APR_HASH_KEY_STRING);
+      change = svn_hash_gets(changed_paths, path);
       if (change)
         {
           /* If PATH was not newly added in this revision, then it may or may

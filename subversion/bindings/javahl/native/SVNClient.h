@@ -54,6 +54,7 @@ class ChangelistCallback;
 class CommitMessage;
 class StringArray;
 class RevpropTable;
+class DiffOptions;
 #include "svn_types.h"
 #include "svn_client.h"
 #include "SVNBase.h"
@@ -92,22 +93,27 @@ class SVNClient :public SVNBase
   jobject getMergeinfo(const char *target, Revision &pegRevision);
   void getMergeinfoLog(int type, const char *pathOrURL,
                        Revision &pegRevision, const char *mergeSourceURL,
-                       Revision &srcPegRevision, bool discoverChangedPaths,
+                       Revision &srcPegRevision,
+                       Revision &srcStartRevision, Revision &srcEndRevision,
+                       bool discoverChangedPaths,
                        svn_depth_t depth, StringArray &revProps,
                        LogMessageCallback *callback);
   jobject suggestMergeSources(const char *path, Revision &pegRevision);
   void merge(const char *path1, Revision &revision1,
              const char *path2, Revision &revision2,
              const char *localPath, bool forceDelete, svn_depth_t depth,
-             bool ignoreAncestry, bool dryRun, bool recordOnly);
+             bool ignoreMergeinfo, bool diffIgnoreAncestry,
+             bool dryRun, bool recordOnly);
   void merge(const char *path, Revision &pegRevision,
-             std::vector<RevisionRange> &rangesToMerge,
+             std::vector<RevisionRange> *rangesToMerge,
              const char *localPath, bool forceDelete, svn_depth_t depth,
-             bool ignoreAncestry, bool dryRun, bool recordOnly);
+             bool ignoreMergeinfo, bool diffIgnoreAncestry,
+             bool dryRun, bool recordOnly);
   void mergeReintegrate(const char *path, Revision &pegRevision,
                         const char *localPath, bool dryRun);
   void doImport(const char *path, const char *url, CommitMessage *message,
-                svn_depth_t depth, bool noIgnore, bool ignoreUnknownNodeTypes,
+                svn_depth_t depth, bool noIgnore, bool noAutoProps,
+                bool ignoreUnknownNodeTypes,
                 RevpropTable &revprops, ImportFilterCallback *ifCallback,
                 CommitCallback *commitCallback);
   jlong doSwitch(const char *path, const char *url, Revision &revision,
@@ -125,7 +131,8 @@ class SVNClient :public SVNBase
              RevpropTable &revprops, CommitCallback *callback);
   void move(Targets &srcPaths, const char *destPath,
             CommitMessage *message, bool force, bool moveAsChild,
-            bool makeParents, RevpropTable &revprops, CommitCallback *callback);
+            bool makeParents, bool metadataOnly, bool allowMixRev,
+            RevpropTable &revprops, CommitCallback *callback);
   void copy(CopySources &copySources, const char *destPath,
             CommitMessage *message, bool copyAsChild, bool makeParents,
             bool ignoreExternals, RevpropTable &revprops,
@@ -137,8 +144,8 @@ class SVNClient :public SVNBase
   jlongArray update(Targets &targets, Revision &revision, svn_depth_t depth,
                     bool depthIsSticky, bool makeParents, bool ignoreExternals,
                     bool allowUnverObstructions);
-  void add(const char *path, svn_depth_t depth, bool force, bool no_ignore,
-           bool add_parents);
+  void add(const char *path, svn_depth_t depth, bool force,
+           bool no_ignore, bool no_autoprops, bool add_parents);
   void revert(const char *path, svn_depth_t depth, StringArray &changelists);
   void remove(Targets &targets, CommitMessage *message, bool force,
               bool keep_local, RevpropTable &revprops,
@@ -151,6 +158,7 @@ class SVNClient :public SVNBase
                    bool discoverPaths, bool includeMergedRevisions,
                    StringArray &revProps,
                    long limit, LogMessageCallback *callback);
+  jobject getVersionExtended(bool verbose);
   jstring getAdminDirectoryName();
   jboolean isAdminDirectory(const char *name);
   void addToChangelist(Targets &srcPaths, const char *changelist,
@@ -180,13 +188,15 @@ class SVNClient :public SVNBase
             const char *relativeToDir, OutputStream &outputStream,
             svn_depth_t depth, StringArray &changelists,
             bool ignoreAncestry, bool noDiffDelete, bool force,
-            bool showCopiesAsAdds, bool ignoreProps, bool propsOnly);
+            bool showCopiesAsAdds, bool ignoreProps, bool propsOnly,
+            DiffOptions const& options);
   void diff(const char *target, Revision &pegevision,
             Revision &startRevision, Revision &endRevision,
             const char *relativeToDir, OutputStream &outputStream,
             svn_depth_t depth, StringArray &changelists,
             bool ignoreAncestry, bool noDiffDelete, bool force,
-            bool showCopiesAsAdds, bool ignoreProps, bool propsOnly);
+            bool showCopiesAsAdds, bool ignoreProps, bool propsOnly,
+            DiffOptions const& options);
   void diffSummarize(const char *target1, Revision &revision1,
                      const char *target2, Revision &revision2,
                      svn_depth_t depth, StringArray &changelists,
@@ -215,7 +225,8 @@ class SVNClient :public SVNBase
             OutputStream &outputStream, svn_depth_t depth,
             StringArray &changelists,
             bool ignoreAncestry, bool noDiffDelete, bool force,
-            bool showCopiesAsAdds, bool ignoreProps, bool propsOnly);
+            bool showCopiesAsAdds, bool ignoreProps, bool propsOnly,
+            DiffOptions const& options);
 
   Path m_lastPath;
   ClientContext context;

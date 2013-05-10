@@ -25,6 +25,7 @@
 #include <apr_file_io.h>
 #include <apr_signal.h>
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_cmdline.h"
 #include "svn_error.h"
@@ -44,6 +45,7 @@
 
 #include "private/svn_opt_private.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_cmdline_private.h"
 
 #include "svn_private_config.h"
 
@@ -111,12 +113,11 @@ open_repos(svn_repos_t **repos,
 {
   /* construct FS configuration parameters: enable caches for r/o data */
   apr_hash_t *fs_config = apr_hash_make(pool);
-  apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
-               APR_HASH_KEY_STRING, "1");
-  apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
-               APR_HASH_KEY_STRING, "1");
-  apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
-               APR_HASH_KEY_STRING, "2");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS, "1");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS, "1");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "2");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
+                           svn_uuid_generate(pool));
 
   /* now, open the requested repository */
   SVN_ERR(svn_repos_open2(repos, path, fs_config, pool));
@@ -154,6 +155,7 @@ static svn_opt_subcommand_t
   subcommand_freeze,
   subcommand_help,
   subcommand_hotcopy,
+  subcommand_info,
   subcommand_load,
   subcommand_list_dblogs,
   subcommand_list_unused_dblogs,
@@ -215,6 +217,9 @@ static const apr_getopt_option_t options_table[] =
     {"revision",      'r', 1,
      N_("specify revision number ARG (or X:Y range)")},
 
+    {"transaction",       't', 1,
+     N_("specify transaction name ARG")},
+
     {"incremental",   svnadmin__incremental, 0,
      N_("dump or hotcopy incrementally")},
 
@@ -228,7 +233,7 @@ static const apr_getopt_option_t options_table[] =
      N_("bypass property validation logic")},
 
     {"quiet",         'q', 0,
-     N_("no progress (only errors) to stderr")},
+     N_("no progress (only errors to stderr)")},
 
     {"ignore-uuid",   svnadmin__ignore_uuid, 0,
      N_("ignore any repos UUID found in the stream")},
@@ -354,10 +359,15 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
 
   {"hotcopy", subcommand_hotcopy, {0}, N_
    ("usage: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n\n"
-    "Makes a hot copy of a repository.\n"
+    "Make a hot copy of a repository.\n"
     "If --incremental is passed, data which already exists at the destination\n"
     "is not copied again.  Incremental mode is implemented for FSFS repositories.\n"),
    {svnadmin__clean_logs, svnadmin__incremental} },
+
+  {"info", subcommand_info, {0}, N_
+   ("usage: svnadmin info REPOS_PATH\n\n"
+    "Print information about the repository at REPOS_PATH.\n"),
+   {0} },
 
   {"list-dblogs", subcommand_list_dblogs, {0}, N_
    ("usage: svnadmin list-dblogs REPOS_PATH\n\n"
@@ -457,7 +467,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
 
   {"unlock", subcommand_unlock, {0}, N_
    ("usage: svnadmin unlock REPOS_PATH LOCKED_PATH USERNAME TOKEN\n\n"
-    "Unlocked LOCKED_PATH (as USERNAME) after verifying that the token\n"
+    "Unlock LOCKED_PATH (as USERNAME) after verifying that the token\n"
     "associated with the lock matches TOKEN.  Use --bypass-hooks to avoid\n"
     "triggering the pre-unlock and post-unlock hook scripts.\n"),
    {svnadmin__bypass_hooks} },
@@ -477,8 +487,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
 
   {"verify", subcommand_verify, {0}, N_
    ("usage: svnadmin verify REPOS_PATH\n\n"
-    "Verifies the data stored in the repository.\n"),
-  {'r', 'q', 'M'} },
+    "Verify the data stored in the repository.\n"),
+  {'t', 'r', 'q', 'M'} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -494,6 +504,7 @@ struct svnadmin_opt_state
   svn_boolean_t pre_1_6_compatible;                 /* --pre-1.6-compatible */
   svn_version_t *compatible_version;                /* --compatible-version */
   svn_opt_revision_t start_revision, end_revision;  /* -r X[:Y] */
+  const char *txn_id;                               /* -t TXN */
   svn_boolean_t help;                               /* --help or -? */
   svn_boolean_t version;                            /* --version */
   svn_boolean_t incremental;                        /* --incremental */
@@ -631,47 +642,53 @@ subcommand_create(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
 
-  apr_hash_set(fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
-               APR_HASH_KEY_STRING,
-               (opt_state->bdb_txn_nosync ? "1" : "0"));
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
+                (opt_state->bdb_txn_nosync ? "1" :"0"));
 
-  apr_hash_set(fs_config, SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE,
-               APR_HASH_KEY_STRING,
-               (opt_state->bdb_log_keep ? "0" : "1"));
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE,
+                (opt_state->bdb_log_keep ? "0" :"1"));
 
   if (opt_state->fs_type)
-    apr_hash_set(fs_config, SVN_FS_CONFIG_FS_TYPE,
-                 APR_HASH_KEY_STRING,
-                 opt_state->fs_type);
+    {
+      /* With 1.8 we are announcing that BDB is deprecated.  No support
+       * has been removed and it will continue to work until some future
+       * date.  The purpose here is to discourage people from creating
+       * new BDB repositories which they will need to dump/load into
+       * FSFS or some new FS type in the future. */
+      if (0 == strcmp(opt_state->fs_type, SVN_FS_TYPE_BDB))
+        {
+          SVN_ERR(svn_cmdline_fprintf(
+                      stderr, pool,
+                      _("%swarning:"
+                        " The \"%s\" repository back-end is deprecated,"
+                        " consider using \"%s\" instead.\n"),
+                      "svnadmin: ", SVN_FS_TYPE_BDB, SVN_FS_TYPE_FSFS));
+          fflush(stderr);
+        }
+      svn_hash_sets(fs_config, SVN_FS_CONFIG_FS_TYPE, opt_state->fs_type);
+    }
 
   /* Prior to 1.8, we had explicit options to specify compatibility
      with a handful of prior Subversion releases. */
   if (opt_state->pre_1_4_compatible)
-    apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
-                 APR_HASH_KEY_STRING, "1");
+    svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE, "1");
   if (opt_state->pre_1_5_compatible)
-    apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
-                 APR_HASH_KEY_STRING, "1");
+    svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE, "1");
   if (opt_state->pre_1_6_compatible)
-    apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
-                 APR_HASH_KEY_STRING, "1");
+    svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE, "1");
 
   /* In 1.8, we figured out that we didn't have to keep extending this
      madness indefinitely. */
   if (opt_state->compatible_version)
     {
       if (! svn_version__at_least(opt_state->compatible_version, 1, 4, 0))
-        apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
-                     APR_HASH_KEY_STRING, "1");
+        svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE, "1");
       if (! svn_version__at_least(opt_state->compatible_version, 1, 5, 0))
-        apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
-                     APR_HASH_KEY_STRING, "1");
+        svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE, "1");
       if (! svn_version__at_least(opt_state->compatible_version, 1, 6, 0))
-        apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
-                     APR_HASH_KEY_STRING, "1");
+        svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE, "1");
       if (! svn_version__at_least(opt_state->compatible_version, 1, 8, 0))
-        apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE,
-                     APR_HASH_KEY_STRING, "1");
+        svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE, "1");
     }
 
   SVN_ERR(svn_repos_create(&repos, opt_state->repository_path,
@@ -764,7 +781,7 @@ repos_notify_handler(void *baton,
                                         notify->revision));
       return;
 
-    case  svn_repos_notify_verify_struc_rev:
+    case svn_repos_notify_verify_rev_structure:
       if (notify->revision == SVN_INVALID_REVNUM)
         svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
                                 _("* Verifying repository metadata ...\n")));
@@ -1007,6 +1024,7 @@ struct freeze_baton_t {
   int status;
 };
 
+/* Implements svn_repos_freeze_func_t */
 static svn_error_t *
 freeze_body(void *baton,
             apr_pool_t *pool)
@@ -1525,7 +1543,7 @@ subcommand_pack(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   /* Progress feedback goes to STDOUT, unless they asked to suppress it. */
   if (! opt_state->quiet)
-    progress_stream = recode_stream_create(stderr, pool);
+    progress_stream = recode_stream_create(stdout, pool);
 
   return svn_error_trace(
     svn_repos_fs_pack2(repos, !opt_state->quiet ? repos_notify_handler : NULL,
@@ -1546,9 +1564,33 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
 
+  if (opt_state->txn_id
+      && (opt_state->start_revision.kind != svn_opt_revision_unspecified
+          || opt_state->end_revision.kind != svn_opt_revision_unspecified))
+    {
+      return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                               _("--revision (-r) and --transaction (-t) "
+                                 "are mutually exclusive"));
+    }
+
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs(repos);
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
+
+  /* Usage 2. */
+  if (opt_state->txn_id)
+    {
+      svn_fs_txn_t *txn;
+      svn_fs_root_t *root;
+
+      SVN_ERR(svn_fs_open_txn(&txn, fs, opt_state->txn_id, pool));
+      SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+      SVN_ERR(svn_fs_verify_root(root, pool));
+      return SVN_NO_ERROR;
+    }
+  else
+    /* Usage 1. */
+    ;
 
   /* Find the revision numbers at which to start and end. */
   SVN_ERR(get_revnum(&lower, &opt_state->start_revision,
@@ -1562,7 +1604,7 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     }
 
   if (! opt_state->quiet)
-    progress_stream = recode_stream_create(stderr, pool);
+    progress_stream = recode_stream_create(stdout, pool);
 
   return svn_repos_verify_fs2(repos, lower, upper,
                               !opt_state->quiet
@@ -1586,6 +1628,111 @@ subcommand_hotcopy(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   return svn_repos_hotcopy2(opt_state->repository_path, new_repos_path,
                             opt_state->clean_logs, opt_state->incremental,
                             check_cancel, NULL, pool);
+}
+
+svn_error_t *
+subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+
+  /* Expect no more arguments. */
+  SVN_ERR(parse_args(NULL, os, 0, 0, pool));
+
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  fs = svn_repos_fs(repos);
+  SVN_ERR(svn_cmdline_printf(pool, _("Path: %s\n"),
+                             svn_dirent_local_style(svn_repos_path(repos, pool),
+                                                    pool)));
+
+  {
+    int repos_format, fs_format, minor;
+    svn_version_t *repos_version, *fs_version;
+    SVN_ERR(svn_repos_info_format(&repos_format, &repos_version,
+                                  repos, pool, pool));
+    SVN_ERR(svn_cmdline_printf(pool, _("Repository Format: %d\n"),
+                               repos_format));
+
+    SVN_ERR(svn_fs_info_format(&fs_format, &fs_version,
+                               fs, pool, pool));
+    SVN_ERR(svn_cmdline_printf(pool, _("Filesystem Format: %d\n"),
+                               fs_format));
+
+    SVN_ERR_ASSERT(repos_version->major == SVN_VER_MAJOR);
+    SVN_ERR_ASSERT(fs_version->major == SVN_VER_MAJOR);
+    SVN_ERR_ASSERT(repos_version->patch == 0);
+    SVN_ERR_ASSERT(fs_version->patch == 0);
+
+    minor = (repos_version->minor > fs_version->minor)
+            ? repos_version->minor : fs_version->minor;
+    SVN_ERR(svn_cmdline_printf(pool, _("Compatible With Version: %d.%d.0\n"),
+                               SVN_VER_MAJOR, minor));
+  }
+
+  {
+    apr_hash_t *capabilities_set;
+    apr_array_header_t *capabilities;
+    char *as_string;
+
+    SVN_ERR(svn_repos_capabilities(&capabilities_set, repos, pool, pool));
+    SVN_ERR(svn_hash_keys(&capabilities, capabilities_set, pool));
+    as_string = svn_cstring_join(capabilities, ",", pool);
+
+    /* Delete the trailing comma. */
+    if (as_string[0])
+      as_string[strlen(as_string)-1] = '\0';
+
+    if (capabilities->nelts)
+      SVN_ERR(svn_cmdline_printf(pool, _("Repository Capabilities: %s\n"),
+                                 as_string));
+  }
+
+  {
+    const svn_fs_info_placeholder_t *info;
+
+    SVN_ERR(svn_fs_info(&info, fs, pool, pool));
+    SVN_ERR(svn_cmdline_printf(pool, _("Filesystem Type: %s\n"),
+                               info->fs_type));
+    if (!strcmp(info->fs_type, SVN_FS_TYPE_FSFS))
+      {
+        const svn_fs_fsfs_info_t *fsfs_info = (const void *)info;
+        svn_revnum_t youngest;
+        SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
+
+        if (fsfs_info->shard_size)
+          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Sharded: yes\n")));
+        else
+          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Sharded: no\n")));
+
+        if (fsfs_info->shard_size)
+          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Shard Size: %d\n"),
+                                     fsfs_info->shard_size));
+
+        if (fsfs_info->min_unpacked_rev + fsfs_info->shard_size > youngest + 1)
+          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Packed: yes\n")));
+        else if (fsfs_info->min_unpacked_rev)
+          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Packed: partly\n")));
+        else
+          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Packed: no\n")));
+      }
+  }
+
+  {
+    apr_array_header_t *files;
+    int i;
+
+    SVN_ERR(svn_fs_info_config_files(&files, fs, pool, pool));
+    for (i = 0; i < files->nelts; i++)
+      SVN_ERR(svn_cmdline_printf(pool, _("Configuration File: %s\n"),
+                                 APR_ARRAY_IDX(files, i, const char *)));
+  }
+
+  /* 'svn info' prints an extra newline here, to support multiple targets.
+     We'll do the same. */
+  SVN_ERR(svn_cmdline_printf(pool, "\n"));
+
+  return SVN_NO_ERROR;
 }
 
 /* This implements `svn_opt_subcommand_t'. */
@@ -1992,6 +2139,10 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
             }
         }
         break;
+      case 't':
+        opt_state.txn_id = opt_arg;
+        break;
+
       case 'q':
         opt_state.quiet = TRUE;
         break;

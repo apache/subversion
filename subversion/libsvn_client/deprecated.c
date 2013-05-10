@@ -36,6 +36,7 @@
 #include "svn_client.h"
 #include "svn_path.h"
 #include "svn_compat.h"
+#include "svn_hash.h"
 #include "svn_props.h"
 #include "svn_utf.h"
 #include "svn_string.h"
@@ -1327,7 +1328,7 @@ list_func_wrapper(void *baton,
   struct list_func_wrapper_baton *lfwb = baton;
 
   if (lfwb->list_func1)
-    return lfwb->list_func1(lfwb->list_func1_baton, path, dirent, 
+    return lfwb->list_func1(lfwb->list_func1_baton, path, dirent,
                            lock, abs_path, scratch_pool);
 
   return SVN_NO_ERROR;
@@ -1343,7 +1344,7 @@ wrap_list_func(svn_client_list_func2_t *list_func2,
                void *baton,
                apr_pool_t *result_pool)
 {
-  struct list_func_wrapper_baton *lfwb = apr_palloc(result_pool, 
+  struct list_func_wrapper_baton *lfwb = apr_palloc(result_pool,
                                                     sizeof(*lfwb));
 
   /* Set the user provided old format callback in the baton. */
@@ -1371,8 +1372,8 @@ svn_client_list2(const char *path_or_url,
 
   wrap_list_func(&list_func2, &list_func2_baton, list_func, baton, pool);
 
-  return svn_client_list3(path_or_url, peg_revision, revision, depth, 
-                          dirent_fields, fetch_locks, 
+  return svn_client_list3(path_or_url, peg_revision, revision, depth,
+                          dirent_fields, fetch_locks,
                           FALSE /* include externals */,
                           list_func2, list_func2_baton, ctx, pool);
 }
@@ -1431,17 +1432,17 @@ store_dirent(void *baton, const char *path, const svn_dirent_t *dirent,
       if (dirent->kind == svn_node_file)
         {
           const char *base_name = svn_path_basename(abs_path, lb->pool);
-          apr_hash_set(lb->dirents, base_name, APR_HASH_KEY_STRING, dirent);
+          svn_hash_sets(lb->dirents, base_name, dirent);
           if (lock)
-            apr_hash_set(lb->locks, base_name, APR_HASH_KEY_STRING, lock);
+            svn_hash_sets(lb->locks, base_name, lock);
         }
     }
   else
     {
       path = apr_pstrdup(lb->pool, path);
-      apr_hash_set(lb->dirents, path, APR_HASH_KEY_STRING, dirent);
+      svn_hash_sets(lb->dirents, path, dirent);
       if (lock)
-        apr_hash_set(lb->locks, path, APR_HASH_KEY_STRING, lock);
+        svn_hash_sets(lb->locks, path, lock);
     }
 
   return SVN_NO_ERROR;
@@ -1975,7 +1976,7 @@ svn_client_propget3(apr_hash_t **props,
                                      svn_dirent_skip_ancestor(target, abspath),
                                      pool);
 
-          apr_hash_set(*props, relpath, APR_HASH_KEY_STRING, value);
+          svn_hash_sets(*props, relpath, value);
         }
     }
   else

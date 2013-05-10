@@ -284,11 +284,15 @@ struct dav_resource_private {
   svn_boolean_t auto_checked_out;
 
   /* was this resource fetched using our public peg-/working-rev CGI
-     interface (ie: /path/to/item?p=PEGREV]? */
+     interface (ie: /path/to/item?p=PEGREV)? */
   svn_boolean_t pegged;
 
   /* Cache any revprop change error */
   svn_error_t *revprop_error;
+
+  /* was keyword substitution requested using our public CGI interface
+     (ie: /path/to/item?kw=1)? */
+  svn_boolean_t keyword_subst;
 };
 
 

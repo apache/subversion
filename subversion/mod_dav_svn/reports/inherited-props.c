@@ -194,7 +194,7 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
                 }
 
               if (serr)
-                break;              
+                break;
             }
           if (!serr)
             serr = dav_svn__brigade_printf(bb, output,

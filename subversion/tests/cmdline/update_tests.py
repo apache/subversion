@@ -3694,7 +3694,7 @@ def update_copied_and_deleted_prop(sbox):
 
 #----------------------------------------------------------------------
 
-def update_output_with_conflicts(rev, target, paths=None):
+def update_output_with_conflicts(rev, target, paths=None, resolved=False):
   """Return the expected output for an update of TARGET to revision REV, in
      which all of the PATHS are updated and conflicting.
 
@@ -3707,19 +3707,19 @@ def update_output_with_conflicts(rev, target, paths=None):
   for path in paths:
     lines += ['C    %s\n' % path]
   lines += ['Updated to revision %d.\n' % rev]
-  lines += svntest.main.summary_of_conflicts(text_conflicts=len(paths))
+  if resolved:
+    for path in paths:
+      lines += ["Resolved conflicted state of '%s'\n" % path]
+    lines += svntest.main.summary_of_conflicts(text_resolved=len(paths))
+  else:
+    lines += svntest.main.summary_of_conflicts(text_conflicts=len(paths))
   return lines
 
 def update_output_with_conflicts_resolved(rev, target, paths=None):
   """Like update_output_with_conflicts(), but where all of the conflicts are
      resolved within the update.
   """
-  if paths is None:
-    paths = [target]
-
-  lines = update_output_with_conflicts(rev, target, paths)
-  for path in paths:
-    lines += ["Resolved conflicted state of '%s'\n" % path]
+  lines = update_output_with_conflicts(rev, target, paths, resolved=True)
   return lines
 
 #----------------------------------------------------------------------
@@ -6015,7 +6015,7 @@ def update_edit_delete_obstruction(sbox):
     'A/D/H'     : Item(status='  ', treeconflict='U'),
     'A/D/H/chi' : Item(status='  ', treeconflict='D'),
     'A/B'       : Item(prev_status='  ', prev_treeconflict='D', # Replacement
-                       status='  ', treeconflict='A'), 
+                       status='  ', treeconflict='A'),
     'iota'      : Item(status='A ', prev_status='D '), # Replacement
   })
 
@@ -6128,7 +6128,6 @@ def break_moved_dir_edited_leaf_del(sbox):
   expected_status.tweak('A/B/E2', moved_from=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-@XFail()
 @Issue(3144,3630)
 def break_moved_replaced_dir(sbox):
   "break local move of dir plus replace"
@@ -6182,13 +6181,14 @@ def break_moved_replaced_dir(sbox):
                                         None, None, None,
                                         None, None, 1)
 
-  # Now resolve the conflict, using --accept=theirs-conflict.
+  # Now resolve the conflict, using --accept=working
   # This should break the move of A/B/E to A/B/E2, leaving A/B/E2
   # as a copy. A/B/E is not reverted.
   svntest.actions.run_and_verify_svn("resolve failed", None, [],
                                      'resolve', '--recursive',
-                                     '--accept=theirs-conflict', wc_dir)
+                                     '--accept=working', wc_dir)
   expected_status.tweak('A/B/E2', moved_from=None)
+  expected_status.tweak('A/B/E', treeconflict=None, moved_to=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 @Issue(4295)
@@ -6277,7 +6277,7 @@ def update_removes_switched(sbox):
     'C'                 : Item(status='  ', wc_rev='3'),
     'mu'                : Item(status='  ', wc_rev='3'),
   })
-  
+
   # And this final update brings back the node, as it was before switching.
   svntest.actions.run_and_verify_update(wc_dir,
                                        expected_output,

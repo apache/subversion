@@ -620,14 +620,14 @@ run_file_install(work_item_baton_t *wqb,
 
   /* Tweak the on-disk file according to its properties.  */
 #ifndef WIN32
-  if (props && apr_hash_get(props, SVN_PROP_EXECUTABLE, APR_HASH_KEY_STRING))
+  if (props && svn_hash_gets(props, SVN_PROP_EXECUTABLE))
     SVN_ERR(svn_io_set_file_executable(local_abspath, TRUE, FALSE,
                                        scratch_pool));
 #endif
 
   /* Note that this explicitly checks the pristine properties, to make sure
      that when the lock is locally set (=modification) it is not read only */
-  if (props && apr_hash_get(props, SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING))
+  if (props && svn_hash_gets(props, SVN_PROP_NEEDS_LOCK))
     {
       svn_wc__db_status_t status;
       svn_wc__db_lock_t *lock;
@@ -673,19 +673,25 @@ svn_wc__wq_build_file_install(svn_skel_t **work_item,
                               apr_pool_t *scratch_pool)
 {
   const char *local_relpath;
+  const char *wri_abspath;
   *work_item = svn_skel__make_empty_list(result_pool);
 
+  /* Use the directory of the file to install as wri_abspath to avoid
+     filestats on just obtaining the wc-root */
+  wri_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
   /* If a SOURCE_ABSPATH was provided, then put it into the skel. If this
-     value is not provided, then the file's pristine contents will be used.  */
+     value is not provided, then the file's pristine contents will be used. */
   if (source_abspath != NULL)
     {
-      SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
-                                    source_abspath, result_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, wri_abspath,
+                                    source_abspath,
+                                    result_pool, scratch_pool));
 
       svn_skel__prepend_str(local_relpath, *work_item, result_pool);
     }
 
-  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
+  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, wri_abspath,
                                 local_abspath, result_pool, scratch_pool));
 
   svn_skel__prepend_int(record_fileinfo, *work_item, result_pool);

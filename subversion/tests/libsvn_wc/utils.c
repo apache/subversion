@@ -317,7 +317,8 @@ svn_error_t *
 sbox_wc_update_depth(svn_test__sandbox_t *b,
                      const char *path,
                      svn_revnum_t revnum,
-                     svn_depth_t depth)
+                     svn_depth_t depth,
+                     svn_boolean_t sticky)
 {
   svn_client_ctx_t *ctx;
   apr_array_header_t *result_revs;
@@ -332,19 +333,22 @@ sbox_wc_update_depth(svn_test__sandbox_t *b,
   SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
   ctx->wc_ctx = b->wc_ctx;
   return svn_client_update4(&result_revs, paths, &revision, depth,
-                            FALSE, FALSE, FALSE, FALSE, FALSE,
+                            sticky, FALSE, FALSE, FALSE, FALSE,
                             ctx, b->pool);
 }
 
 svn_error_t *
 sbox_wc_update(svn_test__sandbox_t *b, const char *path, svn_revnum_t revnum)
 {
-  SVN_ERR(sbox_wc_update_depth(b, path, revnum, svn_depth_infinity));
+  SVN_ERR(sbox_wc_update_depth(b, path, revnum, svn_depth_unknown, FALSE));
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-sbox_wc_switch(svn_test__sandbox_t *b, const char *url)
+sbox_wc_switch(svn_test__sandbox_t *b,
+               const char *path,
+               const char *url,
+               svn_depth_t depth)
 {
   svn_client_ctx_t *ctx;
   svn_revnum_t result_rev;
@@ -353,8 +357,8 @@ sbox_wc_switch(svn_test__sandbox_t *b, const char *url)
   url = apr_pstrcat(b->pool, b->repos_url, url, (char*)NULL);
   SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
   ctx->wc_ctx = b->wc_ctx;
-  return svn_client_switch3(&result_rev, sbox_wc_path(b, ""), url,
-                            &head_rev, &head_rev, svn_depth_infinity,
+  return svn_client_switch3(&result_rev, sbox_wc_path(b, path), url,
+                            &head_rev, &head_rev, depth,
                             FALSE /* depth_is_sticky */,
                             TRUE /* ignore_externals */,
                             FALSE /* allow_unver_obstructions */,

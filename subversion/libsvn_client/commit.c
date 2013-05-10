@@ -30,6 +30,7 @@
 #include <string.h>
 #include <apr_strings.h>
 #include <apr_hash.h>
+#include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_ra.h"
 #include "svn_client.h"
@@ -113,7 +114,7 @@ get_ra_editor(const svn_delta_editor_t **editor,
                                           ctx->wc_ctx, item->path, FALSE, pool,
                                           iterpool));
           if (relpath)
-            apr_hash_set(relpath_map, relpath, APR_HASH_KEY_STRING, item->path);
+            svn_hash_sets(relpath_map, relpath, item->path);
         }
       svn_pool_destroy(iterpool);
     }
@@ -208,7 +209,7 @@ collect_lock_tokens(apr_hash_t **result,
 
       if (relpath)
         {
-          apr_hash_set(*result, relpath, APR_HASH_KEY_STRING, token);
+          svn_hash_sets(*result, relpath, token);
         }
     }
 
@@ -364,13 +365,13 @@ determine_lock_targets(apr_array_header_t **lock_targets,
           return svn_error_trace(err);
         }
 
-      wc_targets = apr_hash_get(wc_items, wcroot_abspath, APR_HASH_KEY_STRING);
+      wc_targets = svn_hash_gets(wc_items, wcroot_abspath);
 
       if (! wc_targets)
         {
           wc_targets = apr_array_make(scratch_pool, 4, sizeof(const char *));
-          apr_hash_set(wc_items, apr_pstrdup(scratch_pool, wcroot_abspath),
-                       APR_HASH_KEY_STRING, wc_targets);
+          svn_hash_sets(wc_items, apr_pstrdup(scratch_pool, wcroot_abspath),
+                        wc_targets);
         }
 
       APR_ARRAY_PUSH(wc_targets, const char *) = target_abspath;
@@ -533,8 +534,8 @@ append_externals_as_explicit_targets(apr_array_header_t *rel_targets,
                          APR_ARRAY_IDX(externals, j,
                                        svn_wc__committable_external_info_t *);
 
-              if ((xinfo->kind == svn_kind_file && ! include_file_externals)
-                  || (xinfo->kind == svn_kind_dir && ! include_dir_externals))
+              if ((xinfo->kind == svn_node_file && ! include_file_externals)
+                  || (xinfo->kind == svn_node_dir && ! include_dir_externals))
                 continue;
 
               rel_target = svn_dirent_skip_ancestor(base_abspath,
@@ -585,6 +586,7 @@ svn_client_commit6(const apr_array_header_t *targets,
   svn_error_t *bump_err = SVN_NO_ERROR;
   svn_error_t *unlock_err = SVN_NO_ERROR;
   svn_boolean_t commit_in_progress = FALSE;
+  svn_boolean_t timestamp_sleep = FALSE;
   svn_commit_info_t *commit_info = NULL;
   apr_pool_t *iterpool = svn_pool_create(pool);
   const char *current_abspath;
@@ -785,8 +787,8 @@ svn_client_commit6(const apr_array_header_t *targets,
 
             {
               svn_boolean_t found_delete_half =
-                (apr_hash_get(committables->by_path, delete_op_root_abspath,
-                               APR_HASH_KEY_STRING) != NULL);
+                (svn_hash_gets(committables->by_path, delete_op_root_abspath)
+                 != NULL);
 
               if (!found_delete_half)
                 {
@@ -829,9 +831,9 @@ svn_client_commit6(const apr_array_header_t *targets,
 
                       if (parent_delete_op_root_abspath)
                         found_delete_half =
-                          (apr_hash_get(committables->by_path,
-                                        parent_delete_op_root_abspath,
-                                        APR_HASH_KEY_STRING) != NULL);
+                          (svn_hash_gets(committables->by_path,
+                                         parent_delete_op_root_abspath)
+                           != NULL);
                     }
                 }
 
@@ -865,8 +867,8 @@ svn_client_commit6(const apr_array_header_t *targets,
 
           if (moved_to_abspath && copy_op_root_abspath &&
               strcmp(moved_to_abspath, copy_op_root_abspath) == 0 &&
-              apr_hash_get(committables->by_path, copy_op_root_abspath,
-                           APR_HASH_KEY_STRING) == NULL)
+              svn_hash_gets(committables->by_path, copy_op_root_abspath)
+              == NULL)
             {
               cmt_err = svn_error_createf(
                           SVN_ERR_ILLEGAL_TARGET, NULL,
@@ -944,6 +946,11 @@ svn_client_commit6(const apr_array_header_t *targets,
   /* Make a note that we have a commit-in-progress. */
   commit_in_progress = TRUE;
 
+  /* We'll assume that, once we pass this point, we are going to need to
+   * sleep for timestamps.  Really, we may not need to do unless and until
+   * we reach the point where we post-commit 'bump' the WC metadata. */
+  timestamp_sleep = TRUE;
+
   /* Perform the commit. */
   cmt_err = svn_error_trace(
               svn_client__do_commit(base_url, commit_items, editor, edit_baton,
@@ -968,9 +975,7 @@ svn_client_commit6(const apr_array_header_t *targets,
           bump_err = post_process_commit_item(
                        queue, item, ctx->wc_ctx,
                        keep_changelists, keep_locks, commit_as_operations,
-                       apr_hash_get(sha1_checksums,
-                                    item->path,
-                                    APR_HASH_KEY_STRING),
+                       svn_hash_gets(sha1_checksums, item->path),
                        iterpool);
           if (bump_err)
             goto cleanup;
@@ -986,10 +991,11 @@ svn_client_commit6(const apr_array_header_t *targets,
                    iterpool);
     }
 
-  /* Sleep to ensure timestamp integrity. */
-  svn_io_sleep_for_timestamps(base_abspath, pool);
-
  cleanup:
+  /* Sleep to ensure timestamp integrity. */
+  if (timestamp_sleep)
+    svn_io_sleep_for_timestamps(base_abspath, pool);
+
   /* Abort the commit if it is still in progress. */
   svn_pool_clear(iterpool); /* Close open handles before aborting */
   if (commit_in_progress)

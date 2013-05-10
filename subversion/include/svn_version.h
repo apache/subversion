@@ -63,7 +63,7 @@ extern "C" {
  * Modify when new functionality is added or new interfaces are
  * defined, but all changes are backward compatible.
  */
-#define SVN_VER_MINOR      8
+#define SVN_VER_MINOR      9
 
 /**
  * Patch number.
@@ -258,7 +258,7 @@ svn_subr_version(void);
 
 
 /**
- * Extended version infomation, including info about the running system.
+ * Extended version information, including info about the running system.
  *
  * @since New in 1.8.
  */
@@ -266,7 +266,7 @@ typedef struct svn_version_extended_t svn_version_extended_t;
 
 /**
  * Return version information for the running program.  If @a verbose
- * is true, collect extra information that may be expensive to
+ * is #TRUE, collect extra information that may be expensive to
  * retrieve (for example, the OS release name, list of shared
  * libraries, etc.).  Use @a pool for all allocations.
  *

@@ -164,81 +164,20 @@ typedef struct svn_ra_svn_item_t
 
 typedef svn_error_t *(*svn_ra_svn_edit_callback)(void *baton);
 
-/**
- * List of all commands supported by the SVN:// protocol.
- *
- * @since New in 1.8
- */
-typedef enum svn_ra_svn_cmd_t
-{
-  svn_ra_svn_cmd_target_rev,
-  svn_ra_svn_cmd_open_root,
-  svn_ra_svn_cmd_delete_entry,
-  svn_ra_svn_cmd_add_dir,
-  svn_ra_svn_cmd_open_dir,
-  svn_ra_svn_cmd_change_dir_prop,
-  svn_ra_svn_cmd_close_dir,
-  svn_ra_svn_cmd_absent_dir,
-  svn_ra_svn_cmd_add_file,
-  svn_ra_svn_cmd_open_file,
-  svn_ra_svn_cmd_change_file_prop,
-  svn_ra_svn_cmd_close_file,
-  svn_ra_svn_cmd_absent_file,
-  svn_ra_svn_cmd_textdelta_chunk,
-  svn_ra_svn_cmd_textdelta_end,
-  svn_ra_svn_cmd_apply_textdelta,
-  svn_ra_svn_cmd_close_edit,
-  svn_ra_svn_cmd_abort_edit,
-  
-  svn_ra_svn_cmd_set_path,
-  svn_ra_svn_cmd_delete_path,
-  svn_ra_svn_cmd_link_path,
-  svn_ra_svn_cmd_finish_report,
-  svn_ra_svn_cmd_abort_report,
-
-  svn_ra_svn_cmd_reparent,
-  svn_ra_svn_cmd_get_latest_rev,
-  svn_ra_svn_cmd_get_dated_rev,
-  svn_ra_svn_cmd_change_rev_prop2,
-  svn_ra_svn_cmd_change_rev_prop,
-  svn_ra_svn_cmd_rev_proplist,
-  svn_ra_svn_cmd_rev_prop,
-  svn_ra_svn_cmd_get_file,
-  svn_ra_svn_cmd_update,
-  svn_ra_svn_cmd_switch,
-  svn_ra_svn_cmd_status,
-  svn_ra_svn_cmd_diff,
-  svn_ra_svn_cmd_check_path,
-  svn_ra_svn_cmd_stat,
-  svn_ra_svn_cmd_get_file_revs,
-  svn_ra_svn_cmd_lock,
-  svn_ra_svn_cmd_unlock,
-  svn_ra_svn_cmd_get_lock,
-  svn_ra_svn_cmd_get_locks,
-  svn_ra_svn_cmd_replay,
-  svn_ra_svn_cmd_replay_range,
-  svn_ra_svn_cmd_get_deleted_rev,
-  svn_ra_svn_cmd_get_iprops,
-  svn_ra_svn_cmd_finish_replay,
-
-  svn_ra_svn_cmd__last
-} svn_ra_svn_cmd_t;
-
-/**
- * Set the shim callbacks to be used by @a conn to @a shim_callbacks.
- *
- * @note This is a private API, external consumers should not use it.
- */
-svn_error_t *
-svn_ra_svn__set_shim_callbacks(svn_ra_svn_conn_t *conn,
-                               svn_delta_shim_callbacks_t *shim_callbacks);
-
 /** Initialize a connection structure for the given socket or
  * input/output files.
  *
  * Either @a sock or @a in_file/@a out_file must be set, not both.
  * @a compression_level specifies the desired network data compression
  * level (zlib) from 0 (no compression) to 9 (best but slowest).
+ *
+ * If @a zero_copy_limit is not 0, cached file contents smaller than the
+ * given limit may be sent directly to the network socket.  Otherwise,
+ * it will be copied into a temporary buffer before being forwarded to
+ * the network stack.  Since the zero-copy code path has to enforce strict
+ * time-outs, the receiver must be able to process @a zero_copy_limit
+ * bytes within one second.  Even temporary failure to do so may cause
+ * the server to cancel the respective operation with a time-out error.
  *
  * To reduce the overhead of checking for cancellation requests from the
  * data receiver, set @a error_check_interval to some non-zero value.
@@ -264,6 +203,7 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn3(apr_socket_t *sock,
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_ra_svn_conn_t *
 svn_ra_svn_create_conn2(apr_socket_t *sock,
                         apr_file_t *in_file,
@@ -301,14 +241,17 @@ svn_boolean_t
 svn_ra_svn_has_capability(svn_ra_svn_conn_t *conn,
                           const char *capability);
 
-/** Return the data compression level to use for network transmissions
+/** Return the data compression level to use for network transmissions.
  *
  * @since New in 1.7.
  */
 int
 svn_ra_svn_compression_level(svn_ra_svn_conn_t *conn);
 
-/** Return the zero-copy data block limit to use for network transmissions
+/** Return the zero-copy data block limit to use for network
+ * transmissions.
+ *
+ * @see http://en.wikipedia.org/wiki/Zero-copy
  *
  * @since New in 1.8.
  */
@@ -320,10 +263,82 @@ svn_ra_svn_zero_copy_limit(svn_ra_svn_conn_t *conn);
 const char *
 svn_ra_svn_conn_remote_host(svn_ra_svn_conn_t *conn);
 
+/** Set @a *editor and @a *edit_baton to an editor which will pass editing
+ * operations over the network, using @a conn and @a pool.
+ *
+ * Upon successful completion of the edit, the editor will invoke @a callback
+ * with @a callback_baton as an argument.
+ */
+void
+svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
+                      void **edit_baton,
+                      svn_ra_svn_conn_t *conn,
+                      apr_pool_t *pool,
+                      svn_ra_svn_edit_callback callback,
+                      void *callback_baton);
+
+/** Receive edit commands over the network and use them to drive @a editor
+ * with @a edit_baton.  On return, @a *aborted will be set if the edit was
+ * aborted.  The drive can be terminated with a finish-replay command only
+ * if @a for_replay is TRUE.
+ *
+ * @since New in 1.4.
+ */
+svn_error_t *
+svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
+                         apr_pool_t *pool,
+                         const svn_delta_editor_t *editor,
+                         void *edit_baton,
+                         svn_boolean_t *aborted,
+                         svn_boolean_t for_replay);
+
+/** Like svn_ra_svn_drive_editor2, but with @a for_replay always FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
+ */
+SVN_DEPRECATED
+svn_error_t *
+svn_ra_svn_drive_editor(svn_ra_svn_conn_t *conn,
+                        apr_pool_t *pool,
+                        const svn_delta_editor_t *editor,
+                        void *edit_baton,
+                        svn_boolean_t *aborted);
+
+/** This function is only intended for use by svnserve.
+ *
+ * Perform CRAM-MD5 password authentication.  On success, return
+ * SVN_NO_ERROR with *user set to the username and *success set to
+ * TRUE.  On an error which can be reported to the client, report the
+ * error and return SVN_NO_ERROR with *success set to FALSE.  On
+ * communications failure, return an error.
+ */
+svn_error_t *
+svn_ra_svn_cram_server(svn_ra_svn_conn_t *conn,
+                       apr_pool_t *pool,
+                       svn_config_t *pwdb,
+                       const char **user,
+                       svn_boolean_t *success);
+
+/**
+ * Get libsvn_ra_svn version information.
+ * @since New in 1.1.
+ */
+const svn_version_t *
+svn_ra_svn_version(void);
+
+/**
+ * @defgroup ra_svn_deprecated ra_svn low-level functions
+ * @{
+ */
+
 /** Write a number over the net.
  *
  * Writes will be buffered until the next read or flush.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ *             RA_SVN low-level functions are no longer considered public.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_svn_write_number(svn_ra_svn_conn_t *conn,
                         apr_pool_t *pool,
@@ -332,7 +347,11 @@ svn_ra_svn_write_number(svn_ra_svn_conn_t *conn,
 /** Write a string over the net.
  *
  * Writes will be buffered until the next read or flush.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ *             RA_SVN low-level functions are no longer considered public.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_svn_write_string(svn_ra_svn_conn_t *conn,
                         apr_pool_t *pool,
@@ -341,7 +360,11 @@ svn_ra_svn_write_string(svn_ra_svn_conn_t *conn,
 /** Write a cstring over the net.
  *
  * Writes will be buffered until the next read or flush.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ *             RA_SVN low-level functions are no longer considered public.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_svn_write_cstring(svn_ra_svn_conn_t *conn,
                          apr_pool_t *pool,
@@ -350,7 +373,11 @@ svn_ra_svn_write_cstring(svn_ra_svn_conn_t *conn,
 /** Write a word over the net.
  *
  * Writes will be buffered until the next read or flush.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ *             RA_SVN low-level functions are no longer considered public.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_svn_write_word(svn_ra_svn_conn_t *conn,
                       apr_pool_t *pool,
@@ -360,18 +387,32 @@ svn_ra_svn_write_word(svn_ra_svn_conn_t *conn,
  * in which case an empty list will be written out.
  *
  * @since New in 1.5.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ *             RA_SVN low-level functions are no longer considered public.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_svn_write_proplist(svn_ra_svn_conn_t *conn,
                           apr_pool_t *pool,
                           apr_hash_t *props);
 
-/** Begin a list.  Writes will be buffered until the next read or flush. */
+/** Begin a list.  Writes will be buffered until the next read or flush.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ *             RA_SVN low-level functions are no longer considered public.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_svn_start_list(svn_ra_svn_conn_t *conn,
                       apr_pool_t *pool);
 
-/** End a list.  Writes will be buffered until the next read or flush. */
+/** End a list.  Writes will be buffered until the next read or flush.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ *             RA_SVN low-level functions are no longer considered public.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_svn_end_list(svn_ra_svn_conn_t *conn,
                     apr_pool_t *pool);
@@ -380,7 +421,11 @@ svn_ra_svn_end_list(svn_ra_svn_conn_t *conn,
  *
  * Normally this shouldn't be necessary, since the write buffer is flushed
  * when a read is attempted.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ *             RA_SVN low-level functions are no longer considered public.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_svn_flush(svn_ra_svn_conn_t *conn,
                  apr_pool_t *pool);
@@ -423,13 +468,22 @@ svn_ra_svn_flush(svn_ra_svn_conn_t *conn,
      for (i = 0; i < n; i++)
        SVN_ERR(svn_ra_svn_write_word(conn, pool, words[i]));
      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)b", flag)); @endcode
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ *             RA_SVN low-level functions are no longer considered public.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_svn_write_tuple(svn_ra_svn_conn_t *conn,
                        apr_pool_t *pool,
                        const char *fmt, ...);
 
-/** Read an item from the network into @a *item. */
+/** Read an item from the network into @a *item.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ *             RA_SVN low-level functions are no longer considered public.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_svn_read_item(svn_ra_svn_conn_t *conn,
                      apr_pool_t *pool,
@@ -441,7 +495,11 @@ svn_ra_svn_read_item(svn_ra_svn_conn_t *conn,
  * a client connection opened in tunnel mode, since people's dotfiles
  * sometimes write output to stdout.  It may only be called at the
  * beginning of a client connection.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ *             RA_SVN low-level functions are no longer considered public.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,
                                 apr_pool_t *pool);
@@ -477,7 +535,11 @@ svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,
  * SVN_RA_SVN_UNSPECIFIED_NUMBER, and 's', 'c', 'w', and 'l' values
  * will be set to @c NULL.  'b' may not appear inside an optional
  * tuple specification; use 'B' instead.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ *             RA_SVN low-level functions are no longer considered public.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_svn_parse_tuple(const apr_array_header_t *list,
                        apr_pool_t *pool,
@@ -485,7 +547,11 @@ svn_ra_svn_parse_tuple(const apr_array_header_t *list,
 
 /** Read a tuple from the network and parse it as a tuple, using the
  * format string notation from svn_ra_svn_parse_tuple().
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ *             RA_SVN low-level functions are no longer considered public.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn,
                       apr_pool_t *pool,
@@ -495,7 +561,11 @@ svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn,
  * properties, storing the properties in a hash table.
  *
  * @since New in 1.5.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ *             RA_SVN low-level functions are no longer considered public.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_svn_parse_proplist(const apr_array_header_t *list,
                           apr_pool_t *pool,
@@ -503,7 +573,11 @@ svn_ra_svn_parse_proplist(const apr_array_header_t *list,
 
 /** Read a command response from the network and parse it as a tuple, using
  * the format string notation from svn_ra_svn_parse_tuple().
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ *             RA_SVN low-level functions are no longer considered public.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
                              apr_pool_t *pool,
@@ -522,7 +596,10 @@ svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
  *
  * @since New in 1.6.
  *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ *             RA_SVN low-level functions are no longer considered public.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_svn_handle_commands2(svn_ra_svn_conn_t *conn,
                             apr_pool_t *pool,
@@ -546,7 +623,7 @@ svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
  * as svn_ra_svn_write_tuple().
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
- * Use svn_ra_svn_write_templated_cmd instead.
+ *             RA_SVN low-level functions are no longer considered public.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -555,90 +632,34 @@ svn_ra_svn_write_cmd(svn_ra_svn_conn_t *conn,
                      const char *cmdname,
                      const char *fmt, ...);
 
-/** Write a command of type @a cmd over the network connection @a conn.
- * The parameters to be provided are command-specific.  @a pool will be
- * used for allocations.
- * 
- * @since New in 1.8.
- */
-svn_error_t *
-svn_ra_svn_write_templated_cmd(svn_ra_svn_conn_t *conn,
-                               apr_pool_t *pool,
-                               svn_ra_svn_cmd_t cmd, ...);
-
 /** Write a successful command response over the network, using the
  * same format string notation as svn_ra_svn_write_tuple().  Do not use
  * partial tuples with this function; if you need to use partial
  * tuples, just write out the "success" and argument tuple by hand.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ *             RA_SVN low-level functions are no longer considered public.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_svn_write_cmd_response(svn_ra_svn_conn_t *conn,
                               apr_pool_t *pool,
                               const char *fmt, ...);
 
-/** Write an unsuccessful command response over the network. */
+/** Write an unsuccessful command response over the network.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ *             RA_SVN low-level functions are no longer considered public.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_svn_write_cmd_failure(svn_ra_svn_conn_t *conn,
                              apr_pool_t *pool,
                              svn_error_t *err);
 
-/** Set @a *editor and @a *edit_baton to an editor which will pass editing
- * operations over the network, using @a conn and @a pool.
- *
- * Upon successful completion of the edit, the editor will invoke @a callback
- * with @a callback_baton as an argument.
- */
-void
-svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
-                      void **edit_baton,
-                      svn_ra_svn_conn_t *conn,
-                      apr_pool_t *pool,
-                      svn_ra_svn_edit_callback callback,
-                      void *callback_baton);
-
-/** Receive edit commands over the network and use them to drive @a editor
- * with @a edit_baton.  On return, @a *aborted will be set if the edit was
- * aborted.  The drive can be terminated with a finish-replay command only
- * if @a for_replay is TRUE.
- */
-svn_error_t *
-svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
-                         apr_pool_t *pool,
-                         const svn_delta_editor_t *editor,
-                         void *edit_baton,
-                         svn_boolean_t *aborted,
-                         svn_boolean_t for_replay);
-
-/** Like svn_ra_svn_drive_editor2, but with @a for_replay always FALSE.
- */
-svn_error_t *
-svn_ra_svn_drive_editor(svn_ra_svn_conn_t *conn,
-                        apr_pool_t *pool,
-                        const svn_delta_editor_t *editor,
-                        void *edit_baton,
-                        svn_boolean_t *aborted);
-
-/** This function is only intended for use by svnserve.
- *
- * Perform CRAM-MD5 password authentication.  On success, return
- * SVN_NO_ERROR with *user set to the username and *success set to
- * TRUE.  On an error which can be reported to the client, report the
- * error and return SVN_NO_ERROR with *success set to FALSE.  On
- * communications failure, return an error.
- */
-svn_error_t *
-svn_ra_svn_cram_server(svn_ra_svn_conn_t *conn,
-                       apr_pool_t *pool,
-                       svn_config_t *pwdb,
-                       const char **user,
-                       svn_boolean_t *success);
-
 /**
- * Get libsvn_ra_svn version information.
- * @since New in 1.1.
+ * @}
  */
-const svn_version_t *
-svn_ra_svn_version(void);
 
 #ifdef __cplusplus
 }

@@ -1078,7 +1078,7 @@ svn_ra_get_mergeinfo(svn_ra_session_t *session,
                      apr_pool_t *pool);
 
 /**
- * Ask the RA layer to update a working copy.
+ * Ask the RA layer to update a working copy to a new revision.
  *
  * The client initially provides an @a update_editor/@a update_baton to the
  * RA layer; this editor contains knowledge of where the change will
@@ -1104,6 +1104,12 @@ svn_ra_get_mergeinfo(svn_ra_session_t *session,
  * (Note: this means that any subsequent txdeltas coming from the
  * server are presumed to apply against the copied file!)
  *
+ * Use @a ignore_ancestry to control whether or not items being
+ * updated will be checked for relatedness first.  Unrelated items
+ * are typically transmitted to the editor as a deletion of one thing
+ * and the addition of another, but if this flag is @c TRUE,
+ * unrelated items will be diffed as if they were related.
+ *
  * The working copy will be updated to @a revision_to_update_to, or the
  * "latest" revision if this arg is invalid.
  *
@@ -1111,7 +1117,8 @@ svn_ra_get_mergeinfo(svn_ra_session_t *session,
  * finishing the report, and may not perform any RA operations using
  * @a session from within the editing operations of @a update_editor.
  *
- * Use @a pool for memory allocation.
+ * Allocate @a *reporter and @a *report_baton in @a result_pool.  Use
+ * @a scratch_pool for temporary allocations.
  *
  * @note The reporter provided by this function does NOT supply copy-
  * from information to the diff editor callbacks.
@@ -1120,8 +1127,36 @@ svn_ra_get_mergeinfo(svn_ra_session_t *session,
  * needed, and sending too much data back, a pre-1.5 'recurse'
  * directive may be sent to the server, based on @a depth.
  *
- * @since New in 1.5.
+ * @note Pre Subversion 1.8 svnserve based servers never ignore ancestry.
+ *
+ * @note This differs from calling svn_ra_do_switch3() with the current
+ * URL of the target node.  Update changes only the revision numbers,
+ * leaving any switched subtrees still switched, whereas switch changes
+ * every node in the tree to a child of the same URL.
+ *
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_ra_do_update3(svn_ra_session_t *session,
+                  const svn_ra_reporter3_t **reporter,
+                  void **report_baton,
+                  svn_revnum_t revision_to_update_to,
+                  const char *update_target,
+                  svn_depth_t depth,
+                  svn_boolean_t send_copyfrom_args,
+                  svn_boolean_t ignore_ancestry,
+                  const svn_delta_editor_t *update_editor,
+                  void *update_baton,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_ra_do_update3(), but always ignoring ancestry.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for compatibility with the 1.4 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_do_update2(svn_ra_session_t *session,
                   const svn_ra_reporter3_t **reporter,
@@ -1156,56 +1191,12 @@ svn_ra_do_update(svn_ra_session_t *session,
 
 
 /**
- * Ask the RA layer to 'switch' a working copy to a new
- * @a switch_url;  it's another form of svn_ra_do_update().
+ * Ask the RA layer to switch a working copy to a new revision and URL.
  *
- * The client initially provides a @a switch_editor/@a switch_baton to the RA
- * layer; this editor contains knowledge of where the change will
- * begin in the working copy (when open_root() is called).
- *
- * In return, the client receives a @a reporter/@a report_baton.  The
- * client then describes its working copy by making calls into the
- * @a reporter.
- *
- * When finished, the client calls @a reporter->finish_report().  The
- * RA layer then does a complete drive of @a switch_editor, ending with
- * close_edit(), to switch the working copy.
- *
- * @a switch_target is an optional single path component will restrict
- * the scope of things affected by the switch to an entry in the
- * directory represented by the @a session's URL, or empty if the
- * entire directory is meant to be switched.
- *
- * Switch the target only as deeply as @a depth indicates.
- *
- * The working copy will be switched to @a revision_to_switch_to, or the
- * "latest" revision if this arg is invalid.
- *
- * If @a send_copyfrom_args is TRUE, then ask the server to send
- * copyfrom arguments to add_file() and add_directory() when possible.
- * (Note: this means that any subsequent txdeltas coming from the
- * server are presumed to apply against the copied file!)
- *
- * Use @a ignore_ancestry to control whether or not items being
- * switched will be checked for relatedness first.  Unrelated items
- * are typically transmitted to the editor as a deletion of one thing
- * and the addition of another, but if this flag is @c TRUE,
- * unrelated items will be diffed as if they were related.
- *
- * The caller may not perform any RA operations using
- * @a session before finishing the report, and may not perform
- * any RA operations using @a session from within the editing
- * operations of @a switch_editor.
- *
- * Use @a result_pool for memory allocation and @a scratch_pool for
- * temporary work.
- *
- * @note The reporter provided by this function does NOT supply copy-
- * from information to the diff editor callbacks.
- *
- * @note In order to prevent pre-1.5 servers from doing more work than
- * needed, and sending too much data back, a pre-1.5 'recurse'
- * directive may be sent to the server, based on @a depth.
+ * This is similar to svn_ra_do_update3(), but also changes the URL of
+ * every node in the target tree to a child of the @a switch_url.  In
+ * contrast, update changes only the revision numbers, leaving any
+ * switched subtrees still switched.
  *
  * @note Pre Subversion 1.8 svnserve based servers always ignore ancestry
  * and never send copyfrom data.
@@ -1348,7 +1339,7 @@ svn_ra_do_status(svn_ra_session_t *session,
  * it's another form of svn_ra_do_update2().
  *
  * @note This function cannot be used to diff a single file, only a
- * working copy directory.  See the svn_ra_do_switch2() function
+ * working copy directory.  See the svn_ra_do_switch3() function
  * for more details.
  *
  * The client initially provides a @a diff_editor/@a diff_baton to the RA
@@ -1977,7 +1968,7 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
  * paths relative to the repository root URL (of the repository which
  * @a ra_session is associated).
  *
- * Allocated @a *inherited_props in @a result_pool, use @a scratch_pool
+ * Allocate @a *inherited_props in @a result_pool.  Use @a scratch_pool
  * for temporary allocations.
  *
  * @since New in 1.8.
