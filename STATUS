@@ -229,7 +229,7 @@ Candidate changes:
    Justification:
      Make get-deps.sh work on Solaris. 
    Votes:
-     +1: breser
+     +1: breser, danielsh
      +0: rhuijben (untested)
 
  * r1452780
@@ -240,6 +240,7 @@ Candidate changes:
    Votes:
      +1: stsp
      +0: rhuijben (code looks ok, but is a no-op on Windows)
+     -0: danielsh (racy? chmod should be done before dst_tmp written to)
 
  * ^/subversion/branches/1.7.x-gssapi-solaris10
    Justification:
@@ -277,7 +278,8 @@ Candidate changes:
                    not just '\n'; libsvn_repos restrictions not suitable
                    for introduction in a patch release
                    <stsp> this has been discussed on dev@, please raise
-                          this concern there, not just here)
+                          this concern there, not just here
+                   <danielsh> done on 2013/05/10 9pm)
 
  * r1461760
    Additional fix related to issue #4340, "filenames containing \n corrupt
@@ -295,6 +297,8 @@ Candidate changes:
      ^/subversion/branches/1.7.x-issue4340-repos
    Votes:
      +1: stsp
+     -0: danielsh (restrictions not suitable for introduction in patch release;
+                   dev@ thread started 2013/05/10 9pm)
 
  * r1461743
    Set output parameter in non-maintainer builds, in svn_fs_commit_txn().
@@ -335,9 +339,9 @@ Candidate changes:
    Fix issue 4365, multi-threaded svnserve pool memory use after clear.
    Justification:
      Possible SEGV.
-   Branch: 1.7.x-1481010
+   Branch: 1.7.x-r1481010
    Votes:
-     +1: philip
+     +1: philip, danielsh
 
 Veto-blocked changes:
 =====================
