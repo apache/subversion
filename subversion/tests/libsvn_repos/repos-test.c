@@ -3164,7 +3164,7 @@ test_delete_repos(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
-/* Related to issue 4340, "fs layer should reject filenames with trailing \n" */
+/* Related to issue 4340, "filenames containing \n corrupt FSFS repositories" */
 static svn_error_t *
 filename_with_control_chars(const svn_test_opts_t *opts,
                             apr_pool_t *pool)
