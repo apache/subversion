@@ -297,8 +297,7 @@ Candidate changes:
      +1: stsp
 
  * r1461743
-   svn_fs_commit_txn: set output parameter in non-maintainer-with-special-flags
-   builds.c
+   Set output parameter in non-maintainer builds, in svn_fs_commit_txn().
    Justification:
      Part of the API contract.
    Branch: 1.7.x-r1461743
@@ -332,7 +331,7 @@ Candidate changes:
    Votes:
      +1: markphip
 
- * 1481010
+ * r1481010
    Fix issue 4365, multi-threaded svnserve pool memory use after clear.
    Justification:
      Possible SEGV.
