@@ -108,7 +108,7 @@ Candidate changes:
    Justification:
      SEGV, particularly on Windows.
    Votes:
-     +1: philip
+     +1: philip, danielsh
 
 Veto-blocked changes:
 =====================
