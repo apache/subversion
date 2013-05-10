@@ -323,7 +323,7 @@ Candidate changes:
      filtering altogether for those sorts of changelist names.
    Branch: 1.7.x-r1475724
    Votes:
-     +1: cmpilato
+     +1: cmpilato, stsp
 
  * r1476359
    JavaHL thread safety bug.
