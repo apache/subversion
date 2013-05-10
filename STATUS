@@ -38,7 +38,7 @@ Candidate changes:
      +1: julianfoad
      +1: stsp (for 1.8.0, but not any 1.8.x since it changes the UI)
 
- * 1477294, r1480616, r1480641, r1480642, r1480664, r1480669
+ * r1477294, r1480616, r1480641, r1480642, r1480664, r1480669
    Further improvements for interactive resolution of property conflicts.
    Allow conflicted properties to be edited and resolved to the edited value.
    Justification:
