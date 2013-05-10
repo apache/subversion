@@ -63,12 +63,13 @@ extern "C" {
     SVN_ERR_ASSERT((expected));                                           \
     if (err__ == SVN_NO_ERROR || err__->apr_err != (expected))            \
       return err__ ? svn_error_createf(SVN_ERR_TEST_FAILED, err__,        \
-                                       "Expected error %d but got %d",    \
-                                       (expected),                        \
-                                       err__->apr_err)                    \
+                                       "Expected error %s but got %s",    \
+                                       svn_error_symbolic_name(expected), \
+                                       svn_error_symbolic_name(           \
+                                         err__->apr_err))                 \
                    : svn_error_createf(SVN_ERR_TEST_FAILED, err__,        \
-                                        "Expected error %d but got %s",   \
-                                        (expected),                       \
+                                       "Expected error %s but got %s",    \
+                                       svn_error_symbolic_name(expected), \
                                         "SVN_NO_ERROR");                  \
     svn_error_clear(err__);                                               \
   } while (0)
