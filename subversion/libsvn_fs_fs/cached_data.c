@@ -940,6 +940,7 @@ struct rep_read_baton
 static window_cache_key_t *
 get_window_key(window_cache_key_t *key, rep_state_t *rs)
 {
+  assert(rs->revision <= APR_UINT32_MAX);
   key->revision = (apr_uint32_t)rs->revision;
   key->item_index = rs->item_index;
   key->chunk_index = rs->chunk_index;

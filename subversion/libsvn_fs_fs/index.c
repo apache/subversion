@@ -329,6 +329,7 @@ packed_stream_open(packed_number_stream_t **stream,
 
 /* Close STREAM which may be NULL.
  */
+SVN__FORCE_INLINE
 static svn_error_t *
 packed_stream_close(packed_number_stream_t *stream)
 {
@@ -1373,7 +1374,8 @@ prefetch_l2p_pages(svn_boolean_t *end,
   /* prefetch pages individually until all are done or we found one in
    * the cache */
   iterpool = svn_pool_create(scratch_pool);
-  key.revision = revision;
+  assert(revision <= APR_UINT32_MAX);
+  key.revision = (apr_uint32_t)revision;
   key.is_packed = is_packed_rev(fs, revision);
 
   for (i = 0; i < pages->nelts && !*end; ++i)
@@ -1447,7 +1449,8 @@ l2p_index_lookup(apr_off_t *offset,
   page_baton.item_index = item_index;
   page_baton.page_offset = info_baton.page_offset;
 
-  key.revision = revision;
+  assert(revision <= APR_UINT32_MAX);
+  key.revision = (apr_uint32_t)revision;
   key.is_packed = is_packed_rev(fs, revision);
   key.page = info_baton.page_no;
 
@@ -2196,7 +2199,8 @@ prefetch_p2l_page(svn_boolean_t *end,
     }
 
   /* do we have that page in our caches already? */
-  key.revision = baton->first_revision;
+  assert(baton->first_revision <= APR_UINT32_MAX);
+  key.revision = (apr_uint32_t)baton->first_revision;
   key.is_packed = is_packed_rev(fs, baton->first_revision);
   key.page = baton->page_no;
   SVN_ERR(svn_cache__has_key(&already_cached, ffd->p2l_page_cache,
@@ -2270,7 +2274,8 @@ get_p2l_keys(p2l_page_info_baton_t *page_info_p,
   if (key_p)
     {
       svn_fs_fs__page_cache_key_t key = { 0 };
-      key.revision = page_info.first_revision;
+      assert(page_info.first_revision <= APR_UINT32_MAX);
+      key.revision = (apr_uint32_t)page_info.first_revision;
       key.is_packed = is_packed_rev(fs, revision);
       key.page = page_info.page_no;
 

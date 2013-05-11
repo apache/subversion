@@ -246,7 +246,7 @@ typedef struct svn_fs_fs__page_cache_key_t
 {
   /* in l2p: this is the revision of the items being mapped
      in p2l: this is the start revision identifying the pack / rev file */
-  svn_revnum_t revision;
+  apr_uint32_t revision;
 
   /* if TRUE, this is the index to a pack file
    */

@@ -247,13 +247,13 @@ typedef struct pair_cache_key_t
 typedef struct window_cache_key_t
 {
   /* Revision that contains the representation */
-  svn_revnum_t revision;
-
-  /* Item index of the representation */
-  apr_uint64_t item_index;
+  apr_uint32_t revision;
 
   /* Window number within that representation */
   int chunk_index;
+
+  /* Item index of the representation */
+  apr_uint64_t item_index;
 } window_cache_key_t;
 
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object.
