@@ -52,6 +52,7 @@ Candidate changes:
      The other revisions are small follow-up fixes.
    Votes:
      +1: stsp (for 1.8.0, but not any 1.8.x since it changes the UI)
+     +1: steveking
 
  * r1469363, r1469645, r1469674, r1470037, r1470537, r1478220, r1478221,
    r1478465, r1478998, r1480723
