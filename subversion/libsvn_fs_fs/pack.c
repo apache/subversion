@@ -1268,6 +1268,8 @@ write_changes_containers(pack_context_t *context,
   int i;
 
   apr_ssize_t block_left = get_block_left(context);
+  apr_ssize_t estimated_addition = 0;
+
   svn_fs_fs__changes_t *container
     = svn_fs_fs__changes_create(1000, container_pool);
   apr_array_header_t *sub_items
@@ -1285,11 +1287,30 @@ write_changes_containers(pack_context_t *context,
       svn_fs_fs__p2l_entry_t *entry
         = APR_ARRAY_IDX(entries, i, svn_fs_fs__p2l_entry_t *);
 
-      if (block_left < entry->size)
-        block_left = get_block_left(context)
-                   - svn_fs_fs__changes_estimate_size(container);
+      /* zip compression alone will significantly reduce the size of large
+       * change lists. So, we will probably need even less than this estimate.
+       */
+      apr_ssize_t estimated_size = (entry->size / 5) + 250;
 
-      if ((block_left < entry->size) && sub_items->nelts)
+      /* If necessary and enough data has been added to the container since
+       * the last test, try harder by actually serializing the container and
+       * determine current savings due to compression. */
+      if (block_left < estimated_size && estimated_addition > 2000)
+        {
+          svn_stringbuf_t *serialized
+            = svn_stringbuf_create_ensure(get_block_left(context), iterpool);
+          svn_stream_t *temp_stream
+            = svn_stream_from_stringbuf(serialized, iterpool);
+
+          SVN_ERR(svn_fs_fs__write_changes_container(temp_stream, container,
+                                                     iterpool));
+          SVN_ERR(svn_stream_close(temp_stream));
+
+          block_left = get_block_left(context) - serialized->len;
+          estimated_addition = 0;
+        }
+
+      if ((block_left < estimated_size) && sub_items->nelts)
         {
           SVN_ERR(write_changes_container(context, container, sub_items,
                                           new_entries, iterpool));
@@ -1298,10 +1319,11 @@ write_changes_containers(pack_context_t *context,
           svn_pool_clear(container_pool);
           container = svn_fs_fs__changes_create(1000, container_pool);
           block_left = get_block_left(context);
+          estimated_addition = 0;
         }
 
       /* still enough space in current block? */
-      if (block_left < entry->size)
+      if (block_left < estimated_size)
         {
           SVN_ERR(auto_pad_block(context, iterpool));
           block_left = get_block_left(context);
@@ -1314,6 +1336,8 @@ write_changes_containers(pack_context_t *context,
       SVN_ERR(svn_fs_fs__read_changes(&changes, temp_stream, iterpool));
       SVN_ERR(svn_fs_fs__changes_append_list(&list_index, container, changes));
       SVN_ERR_ASSERT(list_index == sub_items->nelts);
+      block_left -= estimated_size;
+      estimated_addition += estimated_size;
       
       APR_ARRAY_PUSH(sub_items, svn_fs_fs__id_part_t) = entry->items[0];
 

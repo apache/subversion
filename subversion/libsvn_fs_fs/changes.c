@@ -219,10 +219,10 @@ svn_fs_fs__changes_estimate_size(const svn_fs_fs__changes_t *changes)
     return 0;
 
   /* string table code makes its own prediction,
-   * changes should be < 20 bytes each,
+   * changes should be < 10 bytes each,
    * some static overhead should be assumed */
   return svn_fs_fs__string_table_builder_estimate_size(changes->builder)
-       + changes->changes->nelts * 20
+       + changes->changes->nelts * 10
        + 100;
 }
 
