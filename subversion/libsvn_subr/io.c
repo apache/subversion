@@ -3464,7 +3464,7 @@ svn_io_file_aligned_seek(apr_file_t *file,
        */
       SVN_ERR(svn_io_file_seek(file, SEEK_CUR, &current, pool));
       fill_buffer = aligned_offset + file_buffer_size <= current
-                 || current + file_buffer_size >= aligned_offset;
+                 || current + file_buffer_size <= aligned_offset;
     }
 
   if (fill_buffer)
