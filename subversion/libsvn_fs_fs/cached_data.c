@@ -81,7 +81,7 @@ dgb__log_access(svn_fs_t *fs,
   svn_fs_fs__p2l_entry_t *entry = NULL;
   int i;
   static const char *types[] = {"<n/a>", "frep ", "drep ", "fprop", "dprop",
-                                "node ", "chgs ", "rep  "};
+                                "node ", "chgs ", "rep  ", "c:", "n:"};
   const char *description = "";
   const char *type = types[item_type];
   const char *pack = "";
@@ -150,22 +150,18 @@ dgb__log_access(svn_fs_t *fs,
   if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
     {
       /* reverse index lookup: get item description in ENTRY */
-      SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, fs, revision, offset,
+      SVN_ERR(svn_fs_fs__p2l_entry_lookup(&entry, fs, revision, offset,
                                           scratch_pool));
-      for (i = 0; !entry && i < entries->nelts; ++i)
-        {
-          svn_fs_fs__p2l_entry_t *current
-            = &APR_ARRAY_IDX(entries, i, svn_fs_fs__p2l_entry_t);
-          if (   current->revision == revision
-              && current->item_index == item_index)
-            entry = current;
-        }
-
       if (entry)
         {
           /* more details */
           end_offset = offset + entry->size;
           type = types[entry->type];
+
+          /* merge the sub-item number with the container type */
+          if (   entry->type == SVN_FS_FS__ITEM_TYPE_CHANGES_CONT
+              || entry->type == SVN_FS_FS__ITEM_TYPE_NODEREVS_CONT)
+            type = apr_psprintf(scratch_pool, "%s%-3d", type, sub_item);
         }
 
       /* line output */
