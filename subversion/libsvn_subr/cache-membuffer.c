@@ -2244,9 +2244,9 @@ combine_key(svn_membuffer_cache_t *cache,
   /* scramble key DATA.  All of this must be reversible to prevent key
    * collisions.  So, we limit ourselves to xor and permutations. */
   data[1] = (data[1] << 27) | (data[1] >> 37);
+  data[0] = (data[0] << 43) | (data[0] >> 21);
   data[1] ^= data[0] & 0xffff;
   data[0] ^= data[1] & 0xffffffffffff0000ull;
-  data[0] = (data[0] << 43) | (data[0] >> 21);
 
   /* combine with this cache's namespace */
   cache->combined_key[0] = data[0] ^ cache->prefix[0];
