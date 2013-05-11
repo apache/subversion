@@ -1014,8 +1014,6 @@ find_entry(svn_membuffer_t *cache,
        */
       if (group->used == GROUP_SIZE)
         {
-          static int count = 0;
-          
           /* every entry gets the same chance of being removed.
            * Otherwise, we free the first entry, fill it and remove it
            * again on the next occasion without considering the other
@@ -1037,7 +1035,6 @@ find_entry(svn_membuffer_t *cache,
               let_entry_age(cache, entry);
 
           drop_entry(cache, entry);
-          printf("%d\n", ++count);
         }
 
       /* initialize entry for the new key
@@ -1551,7 +1548,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
         {
           /* We are OOM. There is no need to proceed with "half a cache".
            */
-          return svn_error_wrap_apr(APR_ENOMEM, _("OOM"));
+          return svn_error_wrap_apr(APR_ENOMEM, "OOM");
         }
 
 #if APR_HAS_THREADS
@@ -2342,9 +2339,9 @@ combine_key(svn_membuffer_cache_t *cache,
   /* scramble key DATA.  All of this must be reversible to prevent key
    * collisions.  So, we limit ourselves to xor and permutations. */
   data[1] = (data[1] << 27) | (data[1] >> 37);
+  data[0] = (data[0] << 43) | (data[0] >> 21);
   data[1] ^= data[0] & 0xffff;
   data[0] ^= data[1] & 0xffffffffffff0000ull;
-  data[0] = (data[0] << 43) | (data[0] >> 21);
 
   /* combine with this cache's namespace */
   cache->combined_key[0] = data[0] ^ cache->prefix[0];

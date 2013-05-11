@@ -1310,7 +1310,7 @@ SVN_ERROR_START
   /** @since New in 1.6. */
   SVN_ERRDEF(SVN_ERR_NO_APR_MEMCACHE,
              SVN_ERR_MISC_CATEGORY_START + 28,
-             "apr memcache library not available")
+             "APR memcache library not available")
 
   /** @since New in 1.6. */
   SVN_ERRDEF(SVN_ERR_ATOMIC_INIT_FAILURE,
@@ -1365,9 +1365,19 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 38,
              "Atomic data storage is corrupt")
 
+  /** @since New in 1.8. */
+  SVN_ERRDEF(SVN_ERR_UTF8PROC_ERROR,
+             SVN_ERR_MISC_CATEGORY_START + 39,
+             "utf8proc library error")
+
+  /** @since New in 1.8. */
+  SVN_ERRDEF(SVN_ERR_UTF8_GLOB,
+             SVN_ERR_MISC_CATEGORY_START + 40,
+             "Bad arguments to SQL operators GLOB or LIKE")
+
   /** @since New in 1.9. */
   SVN_ERRDEF(SVN_ERR_CORRUPT_PACKED_DATA,
-             SVN_ERR_MISC_CATEGORY_START + 39,
+             SVN_ERR_MISC_CATEGORY_START + 41,
              "Packed data stream is corrupt")
 
   /* command-line client errors */

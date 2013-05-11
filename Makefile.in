@@ -398,7 +398,6 @@ locale-gnu-po-update:
 fast-clean: doc-clean
 	@list='$(BUILD_DIRS)'; for i in $$list; do                   \
           if [ -d $$i ]; then                                        \
-            echo "Cleaning $$i ..." ;                                \
             (cd $$i && rm -f *.o *.lo *.la *.la-a *.spo *.mo &&      \
              rm -rf .libs);                                          \
           fi                                                         \
@@ -597,8 +596,10 @@ gcov-clean:
 	find . -name "*.gcda" -o -name "*.gcno" -print0 | xargs -0 rm -f --
 
 check-clean: gcov-clean
-	find subversion/tests/cmdline/svn-test-work -mindepth 1 -maxdepth 1 \
+	if [ -d subversion/tests/cmdline/svn-test-work ]; then \
+	  find subversion/tests/cmdline/svn-test-work -mindepth 1 -maxdepth 1 \
                -print0 | xargs -0 rm -rf --;   \
+	fi
 	rm -rf subversion/tests/libsvn_fs/test-repo-*          \
 	       subversion/tests/libsvn_fs_base/test-repo-*     \
 	       subversion/tests/libsvn_fs_fs/test-repo-*       \
@@ -889,10 +890,16 @@ check-ctypes-python: ctypes-python
 	cd $(CTYPES_PYTHON_SRC_DIR); \
 	  $(LT_EXECUTE) $(PYTHON) test/run_all.py
 
+# If any of those files exists, run ctypes' 'setup.py clean'.  We don't run
+# it otherwise because it spams stdout+stderr; see r1479326.
 clean-ctypes-python:
-	cd $(CTYPES_PYTHON_SRC_DIR); \
-	  $(PYTHON) setup.py clean --all
-
+	cd $(CTYPES_PYTHON_SRC_DIR);            \
+	  for b in build csvn/core/functions.py svn_all.py svn_all2.py ; do \
+	    if [ -e "$$b" ] ; then              \
+	      $(PYTHON) setup.py clean --all;   \
+	      break;                            \
+	    fi;                                 \
+	  done
 
 # manually describe a dependency, which we won't otherwise detect
 subversion/libsvn_wc/wc-queries.h: $(abs_srcdir)/subversion/libsvn_wc/wc-metadata.sql

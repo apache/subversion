@@ -2431,8 +2431,8 @@ wrap_dir_opened(void **new_dir_baton,
 /* svn_diff_tree_processor_t function */
 static svn_error_t *
 wrap_dir_added(const char *relpath,
-               const svn_diff_source_t *right_source,
                const svn_diff_source_t *copyfrom_source,
+               const svn_diff_source_t *right_source,
                /*const*/ apr_hash_t *copyfrom_props,
                /*const*/ apr_hash_t *right_props,
                void *dir_baton,

@@ -4935,7 +4935,7 @@ delete_fs(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
-/* Issue 4340, "fs layer should reject filenames with trailing \n" */
+/* Issue 4340, "filenames containing \n corrupt FSFS repositories" */
 static svn_error_t *
 filename_trailing_newline(const svn_test_opts_t *opts,
                           apr_pool_t *pool)

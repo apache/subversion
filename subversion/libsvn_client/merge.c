@@ -436,7 +436,7 @@ check_repos_match(const merge_target_t *target,
   if (!svn_uri__is_ancestor(target->loc.repos_root_url, url))
     return svn_error_createf(
         SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-         _("Url '%s' of '%s' is not in repository '%s'"),
+         _("URL '%s' of '%s' is not in repository '%s'"),
          url, svn_dirent_local_style(local_abspath, scratch_pool),
          target->loc.repos_root_url);
 
@@ -6229,7 +6229,7 @@ get_wc_explicit_mergeinfo_catalog(apr_hash_t **subtrees_with_mergeinfo,
               err = svn_error_createf(
                 SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING, err,
                 _("Invalid mergeinfo detected on '%s', "
-                  "mergetracking not possible"),
+                  "merge tracking not possible"),
                 svn_dirent_local_style(wc_path, scratch_pool));
             }
           return svn_error_trace(err);
@@ -7378,7 +7378,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
               err = svn_error_createf(
                 SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING, err,
                 _("Invalid mergeinfo detected on merge target '%s', "
-                  "mergetracking not possible"),
+                  "merge tracking not possible"),
                 svn_dirent_local_style(target_abspath, scratch_pool));
             }
           return svn_error_trace(err);
@@ -12028,16 +12028,17 @@ operative_rev_receiver(void *baton,
   return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
 }
 
-/* Wrapper around svn_client_mergeinfo_log2. All arguments are as per
-   that API.  The discover_changed_paths, depth, and revprops args to
-   svn_client_mergeinfo_log2 are always TRUE, svn_depth_infinity_t,
+/* Wrapper around svn_client__mergeinfo_log. All arguments are as per
+   that private API.  The discover_changed_paths, depth, and revprops args to
+   svn_client__mergeinfo_log are always TRUE, svn_depth_infinity_t,
    and NULL respectively.
 
    If RECEIVER raises a SVN_ERR_CEASE_INVOCATION error, but still sets
    *REVISION to a valid revnum, then clear the error.  Otherwise return
    any error. */
 static svn_error_t*
-short_circuit_mergeinfo_log(svn_boolean_t finding_merged,
+short_circuit_mergeinfo_log(svn_mergeinfo_catalog_t *target_mergeinfo_cat,
+                            svn_boolean_t finding_merged,
                             const char *target_path_or_url,
                             const svn_opt_revision_t *target_peg_revision,
                             const char *source_path_or_url,
@@ -12047,18 +12048,21 @@ short_circuit_mergeinfo_log(svn_boolean_t finding_merged,
                             svn_log_entry_receiver_t receiver,
                             svn_revnum_t *revision,
                             svn_client_ctx_t *ctx,
+                            apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
-  svn_error_t *err = svn_client_mergeinfo_log2(finding_merged,
+  svn_error_t *err = svn_client__mergeinfo_log(finding_merged,
                                                target_path_or_url,
                                                target_peg_revision,
+                                               target_mergeinfo_cat,
                                                source_path_or_url,
                                                source_peg_revision,
                                                source_start_revision,
                                                source_end_revision,
                                                receiver, revision,
                                                TRUE, svn_depth_infinity,
-                                               NULL, ctx, scratch_pool);
+                                               NULL, ctx, result_pool,
+                                               scratch_pool);
 
   if (err)
     {
@@ -12128,6 +12132,7 @@ find_last_merged_location(svn_client__pathrev_t **base_p,
   svn_opt_revision_t source_peg_rev, source_start_rev, source_end_rev,
     target_opt_rev;
   svn_revnum_t youngest_merged_rev = SVN_INVALID_REVNUM;
+  svn_mergeinfo_catalog_t target_mergeinfo_cat = NULL;
 
   source_peg_rev.kind = svn_opt_revision_number;
   source_peg_rev.value.number = source_branch->tip->rev;
@@ -12140,14 +12145,15 @@ find_last_merged_location(svn_client__pathrev_t **base_p,
 
   /* Find the youngest revision fully merged from SOURCE_BRANCH to TARGET,
      if such a revision exists. */
-  SVN_ERR(short_circuit_mergeinfo_log(TRUE, /* Find merged */
+  SVN_ERR(short_circuit_mergeinfo_log(&target_mergeinfo_cat,
+                                      TRUE, /* Find merged */
                                       target->url, &target_opt_rev,
                                       source_branch->tip->url,
                                       &source_peg_rev,
                                       &source_end_rev, &source_start_rev,
                                       operative_rev_receiver,
                                       &youngest_merged_rev,
-                                      ctx, scratch_pool));
+                                      ctx, result_pool, scratch_pool));
 
   if (!SVN_IS_VALID_REVNUM(youngest_merged_rev))
     {
@@ -12174,14 +12180,15 @@ find_last_merged_location(svn_client__pathrev_t **base_p,
          (i.e. finding the youngest revision after the YCA where all revs have
          been merged) that doesn't matter. */
       source_end_rev.value.number = youngest_merged_rev;
-      SVN_ERR(short_circuit_mergeinfo_log(FALSE, /* Find eligible */
+      SVN_ERR(short_circuit_mergeinfo_log(&target_mergeinfo_cat,
+                                          FALSE, /* Find eligible */
                                           target->url, &target_opt_rev,
                                           source_branch->tip->url,
                                           &source_peg_rev,
                                           &source_start_rev, &source_end_rev,
                                           operative_rev_receiver,
                                           &oldest_eligible_rev,
-                                          ctx, scratch_pool));
+                                          ctx, scratch_pool, scratch_pool));
 
       /* If there are revisions eligible for merging, use the oldest one
          to calculate the base.  Otherwise there are no operative revisions

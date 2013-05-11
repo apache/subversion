@@ -454,8 +454,8 @@ update_internal(svn_revnum_t *result_rev,
   *timestamp_sleep = TRUE;
 
   /* Drive the reporter structure, describing the revisions within
-     PATH.  When we call reporter->finish_report, the
-     update_editor will be driven by svn_repos_dir_delta2. */
+     LOCAL_ABSPATH.  When this calls reporter->finish_report, the
+     reporter will drive the update_editor. */
   SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath, reporter,
                                   report_baton, TRUE,
                                   depth, (! depth_is_sticky),

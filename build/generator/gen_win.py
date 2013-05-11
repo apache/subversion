@@ -1253,7 +1253,9 @@ class WinGeneratorBase(GeneratorBase):
     self.ruby_version = None
     self.ruby_major_version = None
     self.ruby_minor_version = None
-    proc = os.popen('ruby -rrbconfig -e ' + escape_shell_arg(
+    # Pass -W0 to stifle the "-e:1: Use RbConfig instead of obsolete
+    # and deprecated Config." warning if we are using Ruby 1.9.
+    proc = os.popen('ruby -rrbconfig -W0 -e ' + escape_shell_arg(
                     "puts Config::CONFIG['ruby_version'];"
                     "puts Config::CONFIG['LIBRUBY'];"
                     "puts Config::CONFIG['archdir'];"
