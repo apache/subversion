@@ -1289,7 +1289,7 @@ write_changes_containers(pack_context_t *context,
         block_left = get_block_left(context)
                    - svn_fs_fs__changes_estimate_size(container);
 
-      if ((block_left < entry->size) && sub_items->elts)
+      if ((block_left < entry->size) && sub_items->nelts)
         {
           SVN_ERR(write_changes_container(context, container, sub_items,
                                           new_entries, iterpool));
@@ -1320,7 +1320,7 @@ write_changes_containers(pack_context_t *context,
       svn_pool_clear(iterpool);
     }
 
-  if (sub_items->elts)
+  if (sub_items->nelts)
     SVN_ERR(write_changes_container(context, container, sub_items,
                                     new_entries, iterpool));
 
