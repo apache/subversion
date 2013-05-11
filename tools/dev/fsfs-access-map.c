@@ -629,7 +629,7 @@ print_usage(void)
   printf("Reads strace of some FSFS-based tool from <file>, prints some stats\n");
   printf("and writes a cluster access map to 'access.bmp' the current folder.\n");
   printf("Each pixel corresponds to one 64kB cluster and every line to a rev\n");
-  printf("or packed rev file in the repository.  Turquoise and greed indicate\n");
+  printf("or packed rev file in the repository.  Turquoise and green indicate\n");
   printf("1 and 2 hits, yellow to read-ish colors for up to 20, shares of\n");
   printf("for up to 100 and black for > 200 hits.\n\n");
   printf("A typical strace invocation looks like this:\n");
