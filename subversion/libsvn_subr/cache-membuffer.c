@@ -1010,8 +1010,6 @@ find_entry(svn_membuffer_t *cache,
        */
       if (group->used == GROUP_SIZE)
         {
-          static int count = 0;
-          
           /* every entry gets the same chance of being removed.
            * Otherwise, we free the first entry, fill it and
            * remove it again on the next occasion without considering
@@ -1031,7 +1029,6 @@ find_entry(svn_membuffer_t *cache,
               let_entry_age(cache, entry);
 
           drop_entry(cache, entry);
-          printf("%d\n", ++count);
         }
 
       /* initialize entry for the new key
