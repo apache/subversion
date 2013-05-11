@@ -1379,6 +1379,10 @@ write_l2p_index(pack_context_t *context,
       sub_item_ordered_t *ordered
         = &APR_ARRAY_IDX(sub_item_orders, i, sub_item_ordered_t);
 
+      /* skip unused regions (e.g. padding) */
+      if (entry->item_count == 0)
+        continue;
+      
       ordered->entry = entry;
       count += entry->item_count;
 
