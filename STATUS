@@ -240,7 +240,9 @@ Candidate changes:
    Votes:
      +1: stsp
      +0: rhuijben (code looks ok, but is a no-op on Windows)
-     -0: danielsh (racy? chmod should be done before dst_tmp written to)
+     -0: danielsh (racy? chmod should be done before dst_tmp written to
+                   <stsp> No, I don't think it should, see here:
+                          http://svn.haxx.se/dev/archive-2013-03/0053.shtml)
 
  * ^/subversion/branches/1.7.x-gssapi-solaris10
    Justification:
