@@ -1191,7 +1191,7 @@ svn_path_illegal_path_escape(const char *path, apr_pool_t *pool)
                                   i - copied);
 
       /* Make sure buffer is big enough for '\' 'N' 'N' 'N' (and NUL) */
-      svn_stringbuf_ensure(retstr, retstr->len + 4);
+      svn_stringbuf_ensure(retstr, retstr->len + 5);
       /*### The backslash separator doesn't work too great with Windows,
          but it's what we'll use for consistency with invalid utf8
          formatting (until someone has a better idea) */
