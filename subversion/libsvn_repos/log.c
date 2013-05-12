@@ -311,11 +311,15 @@ detect_changed(apr_hash_t **changed,
 
       if ((action == 'A') || (action == 'R'))
         {
-          const char *copyfrom_path;
-          svn_revnum_t copyfrom_rev;
+          const char *copyfrom_path = change->copyfrom_path;
+          svn_revnum_t copyfrom_rev = change->copyfrom_rev;
 
-          SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
-                                     root, path, subpool));
+          /* the following is a potentially expensive operation since on FSFS
+             we will follow the DAG from ROOT to PATH and that requires
+             actually reading the directories along the way. */
+          if (!change->copyfrom_known)
+            SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
+                                      root, path, subpool));
 
           if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
             {
