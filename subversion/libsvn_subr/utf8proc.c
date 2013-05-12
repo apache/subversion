@@ -156,7 +156,7 @@ encode_ucs4(svn_membuf_t *buffer, apr_int32_t ucs4chr, apr_size_t *length)
   utf8len = utf8proc_encode_char(ucs4chr, ((uint8_t*)buffer->data + *length));
   if (!utf8len)
     return svn_error_createf(SVN_ERR_UTF8PROC_ERROR, NULL,
-                             "Invalid Unicode character U+%04lX",
+                             _("Invalid Unicode character U+%04lX"),
                              (long)ucs4chr);
   *length += utf8len;
   return SVN_NO_ERROR;
@@ -196,11 +196,11 @@ svn_utf__glob(svn_boolean_t *match,
   apr_size_t patternbuf_len;
   apr_size_t tempbuf_len;
 
-  /* If we're in LIKE mode, we don't do custom escape chars. */
+  /* If we're in GLOB mode, we don't do custom escape chars. */
   if (escape && !sql_like)
     return svn_error_create(SVN_ERR_UTF8_GLOB, NULL,
-                            "The GLOB operator does not allow"
-                            " a custom escape character");
+                            _("Cannot use a custom escape token"
+                              " in glob matching mode"));
 
   /* Convert the patern to NFD UTF-8. We can't use the UCS-4 result
      because apr_fnmatch can't handle it.*/
@@ -228,12 +228,12 @@ svn_utf__glob(svn_boolean_t *match,
           if (result < 0)
             return svn_error_create(SVN_ERR_UTF8PROC_ERROR, NULL,
                                     gettext(utf8proc_errmsg(result)));
-          if (result > 1)
+          if (result == 0 || result > 1)
             return svn_error_create(SVN_ERR_UTF8_GLOB, NULL,
-                                    "The ESCAPE parameter is too long");
+                                    _("Escape token must be one character"));
           if ((ucs4esc & 0xFF) != ucs4esc)
             return svn_error_createf(SVN_ERR_UTF8_GLOB, NULL,
-                                     "Invalid ESCAPE character U+%04lX",
+                                     _("Invalid escape character U+%04lX"),
                                      (long)ucs4esc);
         }
 
