@@ -114,11 +114,12 @@ Candidate changes:
  * r1481625, r1481627, r1481628, r1481631, r1481632
    Properly escape control characters in an error message in libsvn_fs_fs.
    Remove duplicated code.
+   Branch: 1.8.x-r1481625
    Justification:
      r1481625 and r1481627 together fix possible problems in error
      message output. The other changes are nice-to-have.
    Votes:
-     +1: stsp (for 1.8.0, not any 1.8.x, since it adds a public API).
+     +1: danielsh, stsp (for 1.8.0, not any 1.8.x, since it adds a public API).
 
 Veto-blocked changes:
 =====================
