@@ -486,7 +486,7 @@ svn_fs_fs__noderevs_get(node_revision_t **noderev_p,
         = svn_fs_fs__string_table_get(container->paths,
                                       binary_noderev->copyfrom_path,
                                       pool);
-      noderev->copyroot_rev = binary_noderev->copyfrom_rev;
+      noderev->copyfrom_rev = binary_noderev->copyfrom_rev;
     }
   else
     {
@@ -658,7 +658,7 @@ svn_fs_fs__write_noderevs_container(svn_stream_t *stream,
       svn_packed__add_uint(noderevs_stream, noderev->copyfrom_path);
       svn_packed__add_uint(noderevs_stream, noderev->copyfrom_rev);
       svn_packed__add_uint(noderevs_stream, noderev->copyroot_path);
-      svn_packed__add_uint(noderevs_stream, noderev->copyroot_path);
+      svn_packed__add_uint(noderevs_stream, noderev->copyroot_rev);
 
       svn_packed__add_uint(noderevs_stream, noderev->prop_rep);
       svn_packed__add_uint(noderevs_stream, noderev->data_rep.representation);
@@ -817,7 +817,7 @@ svn_fs_fs__read_noderevs_container(svn_fs_fs__noderevs_t **container,
       noderev.copyfrom_path = svn_packed__get_uint(noderevs_stream);
       noderev.copyfrom_rev = svn_packed__get_uint(noderevs_stream);
       noderev.copyroot_path = svn_packed__get_uint(noderevs_stream);
-      noderev.copyroot_path = svn_packed__get_uint(noderevs_stream);
+      noderev.copyroot_rev = svn_packed__get_uint(noderevs_stream);
 
       noderev.prop_rep = svn_packed__get_uint(noderevs_stream);
       noderev.data_rep.representation = svn_packed__get_uint(noderevs_stream);
@@ -958,7 +958,7 @@ svn_fs_fs__noderevs_get_func(void **out,
         = svn_fs_fs__string_table_get_func(paths,
                                            binary_noderev->copyfrom_path,
                                            pool);
-      noderev->copyroot_rev = binary_noderev->copyfrom_rev;
+      noderev->copyfrom_rev = binary_noderev->copyfrom_rev;
     }
   else
     {
