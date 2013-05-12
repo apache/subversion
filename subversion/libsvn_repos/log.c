@@ -838,6 +838,11 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
         }
     }
 
+  /* In most revisions, there will be no mergeinfo change at all. */
+  if (   apr_hash_count(deleted_mergeinfo_catalog) == 0
+      && apr_hash_count(added_mergeinfo_catalog) == 0)
+    return SVN_NO_ERROR;
+  
   /* Check our PATHS for any changes to their inherited mergeinfo.
      (We deal with changes to mergeinfo directly *on* the paths in the
      following loop.)  */
