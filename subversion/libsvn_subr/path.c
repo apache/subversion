@@ -1167,8 +1167,8 @@ svn_path_cstring_to_utf8(const char **path_utf8,
 /* Return a copy of PATH, allocated from POOL, for which control
    characters have been escaped using the form \NNN (where NNN is the
    octal representation of the byte's ordinal value).  */
-static const char *
-illegal_path_escape(const char *path, apr_pool_t *pool)
+const char *
+svn_path_illegal_path_escape(const char *path, apr_pool_t *pool)
 {
   svn_stringbuf_t *retstr;
   apr_size_t i, copied = 0;
@@ -1232,7 +1232,8 @@ svn_path_check_valid(const char *path, apr_pool_t *pool)
             (SVN_ERR_FS_PATH_SYNTAX, NULL,
              _("Invalid control character '0x%02x' in path '%s'"),
              (unsigned char)*c,
-             illegal_path_escape(svn_dirent_local_style(path, pool), pool));
+             svn_path_illegal_path_escape(svn_dirent_local_style(path, pool),
+                                          pool));
         }
     }
 
