@@ -259,24 +259,6 @@ make_dir_baton(struct edit_baton *edit_baton,
   return db;
 }
 
-/* Reject paths which contain control characters (related to issue #4340). */
-static svn_error_t *
-check_valid_path(const char *path,
-                 apr_pool_t *pool)
-{
-  const char *c;
-
-  for (c = path; *c; c++)
-    {
-      if (svn_ctype_iscntrl(*c))
-        return svn_error_createf(SVN_ERR_FS_PATH_SYNTAX, NULL,
-           _("Invalid control character '0x%02x' in path '%s'"),
-           (unsigned char)*c, svn_path_illegal_path_escape(path, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* This function is the shared guts of add_file() and add_directory(),
    which see for the meanings of the parameters.  The only extra
    parameter here is IS_DIR, which is TRUE when adding a directory,
@@ -296,7 +278,8 @@ add_file_or_directory(const char *path,
   svn_boolean_t was_copied = FALSE;
   const char *full_path;
 
-  SVN_ERR(check_valid_path(path, pool));
+  /* Reject paths which contain control characters (related to issue #4340). */
+  SVN_ERR(svn_path_check_valid(path, pool));
 
   full_path = svn_fspath__join(eb->base_path,
                                svn_relpath_canonicalize(path, pool), pool);
