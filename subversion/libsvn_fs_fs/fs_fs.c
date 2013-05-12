@@ -8658,6 +8658,9 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
        * We use an sqlite transaction to speed things up;
        * see <http://www.sqlite.org/faq.html#q19>.
        */
+      /* ### A commit that touches thousands of files will starve other
+             (reader/writer) commits for the duration of the below call.
+             Maybe write in batches? */
       SVN_SQLITE__WITH_TXN(
         write_reps_to_cache(fs, cb.reps_to_cache, pool),
         ffd->rep_cache_db);
