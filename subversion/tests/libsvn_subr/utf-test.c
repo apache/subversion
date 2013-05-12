@@ -495,6 +495,7 @@ test_utf_pattern_match(apr_pool_t *pool)
     {GLOB_MATCH, "te\xcc\xa7\xcc\x86st", "t\xe1\xb8\x9dst", NULL},
 
     {LIKE_FAIL,  "test", "test", "\xe1\xb8\x9d"}, /* escape char not ascii */
+    {LIKE_FAIL,  "test", "test", ""},             /* empty escape string */
 
     {LIKE_MATCH, "te#st",    "test",   "#"},
     {LIKE_FAIL,  "te#st",    "test",   NULL},
