@@ -1225,8 +1225,7 @@ svn_path_check_valid(const char *path, apr_pool_t *pool)
     {
       if (svn_ctype_iscntrl(*c))
         {
-          return svn_error_createf
-            (SVN_ERR_FS_PATH_SYNTAX, NULL,
+          return svn_error_createf(SVN_ERR_FS_PATH_SYNTAX, NULL,
              _("Invalid control character '0x%02x' in path '%s'"),
              (unsigned char)*c,
              svn_path_illegal_path_escape(svn_dirent_local_style(path, pool),
