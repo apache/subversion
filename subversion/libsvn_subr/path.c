@@ -1164,9 +1164,6 @@ svn_path_cstring_to_utf8(const char **path_utf8,
 }
 
 
-/* Return a copy of PATH, allocated from POOL, for which control
-   characters have been escaped using the form \NNN (where NNN is the
-   octal representation of the byte's ordinal value).  */
 const char *
 svn_path_illegal_path_escape(const char *path, apr_pool_t *pool)
 {
