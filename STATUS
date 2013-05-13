@@ -16,14 +16,6 @@ Status of 1.8.0:
 Candidate changes:
 ==================
 
- * r1469519, r1469520
-   Silence compiler warnings.
-   Justification:
-     Clean builds make it more likely to notice real compiler warnings.
-   Votes:
-     +1: blair
-     -0: philip, brane (see dev thread: it's a false alarm, wrong value)
-
  * r1470246
    Improve the interactive resolution of property conflicts.  Instead of
    showing the contents of the '.prej' file once for each prop conflict, show
@@ -148,6 +140,17 @@ Veto-blocked changes:
    Votes:
      -1: julianfoad ('svn update' now crashes on interactive resolution of a
                      prop conflict)
+
+ * r1469519, r1469520
+   Silence compiler warnings.
+   Justification:
+     Clean builds make it more likely to notice real compiler warnings.
+   Votes:
+     +1: blair
+     -0: philip (see dev thread: it's a false alarm, wrong value)
+     -1: brane (superseded by r1481848 and 1481870, respectively,
+                which silence the warnings while also avoiding
+                the negative effects noted by philip)
 
 Approved changes:
 =================
