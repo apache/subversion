@@ -67,14 +67,6 @@ Candidate changes:
      -0: rhuijben (Is this needed on this branch?)
      +1: stsp, danielsh (as much as it's needed on trunk)
 
- * r1423837, r1423840, r1423848
-   Fix issue #4168, "no such table: revert_list" for nested wc in sparse wc
-   Justification:
-     Accessing the wrong database from the revert code gives an ugly error
-     which might not be easy to work around.
-   Votes:
-     +1: rhuijben, pburba
-
  * r1426752
    Fix Issue #4133, an issue in the diff-libraries whitespace normalization
    handling that might make diff use the wrong tokens, showing up as
@@ -351,3 +343,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1423837, r1423840, r1423848
+   Fix issue #4168, "no such table: revert_list" for nested wc in sparse wc
+   Justification:
+     Accessing the wrong database from the revert code gives an ugly error
+     which might not be easy to work around.
+   Votes:
+     +1: rhuijben, pburba, stsp
