@@ -103,6 +103,18 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * ensure that all paths shown in 'svn status' are relative-ized (r1202425)
     * improve performance of local multi-target deletions (r1195873)
     * apply update ops to locally moved-away dirs (r1183358, r1185110, r1185392)
+    * various interactive conflict resolver improvements in 'svn' (r1440421 etc)
+    * improved tree diff implementation for diff and merge (r1440599 et al)
+    * tree conflicts on directories detected better during merges (issue #3150)
+    * improve path lookup performance in FSFS (r1442088)
+    * allow reverting unmodified copies with 'svn remove' (r1442611)
+    * make 'svn diff' with mixed URL and local path targets work (r1442640)
+    * make 'svn patch' re-add deleted directories if needed (r1445333)
+    * make repos-wc diffs fully ancestry-aware (r1445904)
+    * 'svn diff --git' now implies 'svn diff --show-copies-as-adds' (r1446279)
+    * 'svn diff --show-copies-as-adds' now implies --notice-ancestry (r1446279)
+    * svnserve now logs explict path and reason for authz failures (r1446542)
+    * improved tree-conflict detection for 'svn switch' (r1449413, r1450582)
 
   - Client-side bugfixes:
     * fix inconsistent 'svn log' output for empty revisions (issue #3964)
@@ -110,6 +122,14 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix file externals wrongly "resurrecting" a deleted file (#4017)
     * fix reporting of corrupted 1.6 w/cs by 'svn upgrade' (r1182904, -9)
     * fix bug caused by URI-decoding local merge source paths (r1210539)
+    * fix properties out of sync with repos after merge and revert (issue #4305)
+    * fix merge of replacement on local delete fails (issue #4011)
+    * fix replacements on deletes produce wrong tree conflicts (issue #3806)
+    * made ra_serf handle location headers that are not RFC-compliant (r1443906)
+    * merge no longer errors out after resolving all conflicts (issue #4316)
+    * fix svn blame miscategorizing file type as binary (issue #2089)
+    * fix externals not removed when working copy is made shallow (issue #3741)
+    * fix update under add with not-present parent (issue #4111)
 
   - Server-side bugfixes:
     * SVNParentPath / repository listing now authz-filtered (r1408184)
@@ -118,11 +138,15 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * 'svnadmin recover' truncates rep-cache at the right point (issue #4077)
     * fix crashes in dumpstream loading with skipped revs (r1214202, r1214216)
     * fix 'svn log -g' incorrectly treating rename as merge (issue #4022)
+    * fix bug where fsfs file-hinting fails (issue #4320)
 
   - Other tool improvements and bugfixes:
     * 'svnmucc' promoted to first-class supported utility (issue #3308)
     * rename 'svnauthz-validate' to 'svnauthz' (issue #4284)
     * make 'svnauthz' optionally validate user/path access (r1197588)
+    * fix mailer.py test suite problems (r1449582)
+    * fix mailer.py not showing dirs with property deletions (r1449582)
+    * make mailer.py generate Date and Message-ID headers (r1449592)
   
  Developer-visible changes:
   - General:
@@ -138,11 +162,18 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * rework switch statement to accomodate OWC compiler limitations (r1204407)
     * new --enable-sqlite-compatibility-version configure option (r1201421)
     * make test suite LD_LIBRARY_PATH include just-built auth plugins (r1200474)
+    * packages/ directory removed, contents were outdated and unused (r1442167)
+    * rename 'makefile.ezt' to 'build-outputs.mk.ezt' (r1444822)
+    * use expensive compiler optimizations with --enable-optimize (r1445063)
+    * in Visual C++ builds, move temp files to different directory (r1446416)
+    * remove --with-ssl and --with-gssapi configure options (r1449023)
+    * require at least serf 1.2.0 as build dependency (issue #4296)
 
   - API changes:
     * fix inconsistent handling of log revs without changed paths (issue #3694)
     * new type svn_kind_t to replace svn_node_kind_t (r1181800)
     * deprecated SVN_ERR_SQLITE_UNSUPPORTED_SCHEMA (r1173240)
+    * provide API to clear cached auth credentials (issue #2775)
 
   - Bindings:
     * star-imports in swig-py only import 'svn_*' symbols (r1303375)
