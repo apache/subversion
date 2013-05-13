@@ -16,25 +16,6 @@ Status of 1.8.0:
 Candidate changes:
 ==================
 
- * r1477294, r1480616, r1480641, r1480642, r1480664, r1480669
-   Further improvements for interactive resolution of property conflicts.
-   Allow conflicted properties to be edited and resolved to the edited value.
-   Justification:
-     This is a usability enhancement we could make in 1.8.0.
-     It also fixes a bug in libsvn_wc where it doesn't use results provided
-     by the conflict callback (see r1480641), which might help API consumers.
-   Notes:
-     This group depends on r1470246.
-     r1477294 and r1480616 are merged to avoid text conflicts from refactoring.
-     r1480641 and r1480642 are the main changes.
-     The other revisions are small follow-up fixes.
-   Votes:
-     +1: stsp (for 1.8.0, but not any 1.8.x since it changes the UI)
-     +1: steveking
-     -0: rhuijben (requires backport branch. I get a merge conflict using 1.7
-                   <stsp> This is because this group requires r1470246 to
-                          be merged first, as noted under Notes:)
-
  * r1469363, r1469645, r1469674, r1470037, r1470537, r1478220, r1478221,
    r1478465, r1478998, r1480723
    Fix issue #4355 'svn_client_log5 broken with multiple revisions which
@@ -199,4 +180,24 @@ Approved changes:
    Votes:
      +1: danielsh, stsp (for 1.8.0, not any 1.8.x, since it adds a public API).
      +1: stefan2
+
+ * r1477294, r1480616, r1480641, r1480642, r1480664, r1480669
+   Further improvements for interactive resolution of property conflicts.
+   Allow conflicted properties to be edited and resolved to the edited value.
+   Justification:
+     This is a usability enhancement we could make in 1.8.0.
+     It also fixes a bug in libsvn_wc where it doesn't use results provided
+     by the conflict callback (see r1480641), which might help API consumers.
+   Notes:
+     This group depends on r1470246.
+     r1477294 and r1480616 are merged to avoid text conflicts from refactoring.
+     r1480641 and r1480642 are the main changes.
+     The other revisions are small follow-up fixes.
+   Votes:
+     +1: stsp (for 1.8.0, but not any 1.8.x since it changes the UI)
+     +1: steveking
+     +1: julianfoad
+     -0: rhuijben (requires backport branch. I get a merge conflict using 1.7
+                   <stsp> This is because this group requires r1470246 to
+                          be merged first, as noted under Notes:)
 
