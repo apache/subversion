@@ -175,7 +175,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix mailer.py test suite problems (r1449582)
     * fix mailer.py not showing dirs with property deletions (r1449582)
     * make mailer.py generate Date and Message-ID headers (r1449592)
-    * new '-?' option support for 'svnmucch' (r1339428)
+    * new '-?' option support for 'svnmucc' (r1339428)
     * provide the repository name to mailer.py (r1439592)
   
  Developer-visible changes:
