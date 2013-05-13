@@ -216,7 +216,7 @@ Candidate changes:
    Votes:
      +1: breser
 
- * r1461562, r1461580, r1461701
+ * r1461562, r1461580, r1461701, r1481627
    Fix issue #4340, "filenames containing \n corrupt FSFS repositories"
    Justification:
      Newline characters can severely corrupt FSFS revision files and
@@ -228,10 +228,12 @@ Candidate changes:
      in this subthread: http://svn.haxx.se/dev/archive-2013-04/0056.shtml
      This issue can be exploited by people with commit access to corrupt
      an FSFS repository, and has been assigned a CVE number: CVE-2013-1968
+     r1481627 addresses concerns raised by danielsh below.
    Branch:
      ^/subversion/branches/1.7.x-issue4340
    Votes:
-     +1: stsp, cmpilato
+     +1: stsp
+     +1: cmpilato (without r1481627)
      -0: danielsh (escape_newline() should escape any control character,
                    not just '\n'; svn_stringbuf_ensure() call should have
                    "+5", not "+4", in its last argument; suggest to simplify
