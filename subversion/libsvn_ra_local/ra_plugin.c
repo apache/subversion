@@ -535,7 +535,8 @@ ignore_warnings(void *baton,
                 svn_error_t *err)
 {
 #ifdef SVN_DEBUG
-  SVN_DBG(("Ignoring FS warning %d\n", err ? err->apr_err : 0));
+  SVN_DBG(("Ignoring FS warning %s\n",
+           svn_error_symbolic_name(err ? err->apr_err : 0)));
 #endif
   return;
 }
