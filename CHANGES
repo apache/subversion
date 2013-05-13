@@ -55,6 +55,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
   - Server-side bugfixes:
     * SVNParentPath / repository listing now authz-filtered (r1408184)
+    * user and group names in the authz config file are case-sensitive (r1475772)
 
   - Other tool improvements and bugfixes:
     * 'svnmucc' promoted to first-class supported utility (issue #3308)

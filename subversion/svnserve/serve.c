@@ -276,7 +276,8 @@ svn_error_t *load_pwdb_config(server_baton_t *server,
       pwdb_path = svn_dirent_internal_style(pwdb_path, pool);
       pwdb_path = svn_dirent_join(server->base, pwdb_path, pool);
 
-      err = svn_config_read2(&server->pwdb, pwdb_path, TRUE, FALSE, pool);
+      err = svn_config_read3(&server->pwdb, pwdb_path, TRUE,
+                             FALSE, FALSE, pool);
       if (err)
         {
           log_server_error(err, server, conn, pool);
@@ -3286,9 +3287,10 @@ static svn_error_t *find_repos(const char *url, const char *root,
     {
       b->base = svn_repos_conf_dir(b->repos, pool);
 
-      SVN_ERR(svn_config_read2(&b->cfg, svn_repos_svnserve_conf(b->repos, pool),
+      SVN_ERR(svn_config_read3(&b->cfg, svn_repos_svnserve_conf(b->repos, pool),
                                FALSE, /* must_exist */
                                FALSE, /* section_names_case_sensitive */
+                               FALSE, /* option_names_case_sensitive */
                                pool));
       SVN_ERR(load_pwdb_config(b, conn, pool));
       SVN_ERR(load_authz_config(b, conn, repos_root, pool));

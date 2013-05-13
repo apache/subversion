@@ -755,9 +755,10 @@ int main(int argc, const char *argv[])
     {
       params.base = svn_dirent_dirname(config_filename, pool);
 
-      SVN_INT_ERR(svn_config_read2(&params.cfg, config_filename,
+      SVN_INT_ERR(svn_config_read3(&params.cfg, config_filename,
                                    TRUE, /* must_exist */
                                    FALSE, /* section_names_case_sensitive */
+                                   FALSE, /* option_names_case_sensitive */
                                    pool));
     }
 

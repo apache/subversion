@@ -952,7 +952,7 @@ usage(apr_pool_t *pool, int exit_val)
       "                               NAME[=VALUE]\n"
       "  --non-interactive      : do no interactive prompting (default is to\n"
       "                           prompt only if standard input is a terminal)\n"
-      "  --force-interactive    : do interactive propmting even if standard\n"
+      "  --force-interactive    : do interactive prompting even if standard\n"
       "                           input is not a terminal\n"
       "  --trust-server-cert    : accept SSL server certificates from unknown\n"
       "                           certificate authorities without prompting (but\n"

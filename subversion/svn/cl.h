@@ -331,6 +331,23 @@ svn_cl__check_cancel(void *baton);
 typedef struct svn_cl__interactive_conflict_baton_t
   svn_cl__interactive_conflict_baton_t;
 
+/* Conflict stats for operations such as update and merge. */
+typedef struct svn_cl__conflict_stats_t svn_cl__conflict_stats_t;
+
+/* Return a new, initialized, conflict stats structure, allocated in
+ * POOL. */
+svn_cl__conflict_stats_t *
+svn_cl__conflict_stats_create(apr_pool_t *pool);
+
+/* Update CONFLICT_STATS to reflect that a conflict on PATH_LOCAL of kind
+ * CONFLICT_KIND is resolved.  (There is no support for updating the
+ * 'skipped paths' stats, since skips cannot be 'resolved'.) */
+void
+svn_cl__conflict_stats_resolved(svn_cl__conflict_stats_t *conflict_stats,
+                                const char *path_local,
+                                svn_wc_conflict_kind_t conflict_kind);
+
+
 /* Create and return an baton for use with svn_cl__conflict_func_interactive
  * in *B, allocated from RESULT_POOL, and initialised with the values
  * ACCEPT_WHICH, CONFIG, EDITOR_CMD, CANCEL_FUNC and CANCEL_BATON. */
@@ -340,6 +357,7 @@ svn_cl__get_conflict_func_interactive_baton(
   svn_cl__accept_t accept_which,
   apr_hash_t *config,
   const char *editor_cmd,
+  svn_cl__conflict_stats_t *conflict_stats,
   svn_cancel_func_t cancel_func,
   void *cancel_baton,
   apr_pool_t *result_pool);
@@ -516,6 +534,7 @@ svn_cl__merge_file(const char *base_path,
 svn_error_t *
 svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
                      void **notify_baton_p,
+                     svn_cl__conflict_stats_t *conflict_stats,
                      apr_pool_t *pool);
 
 /* Make the notifier for use with BATON print the appropriate summary
@@ -551,13 +570,7 @@ svn_cl__check_externals_failed_notify_wrapper(void *baton,
                                               const svn_wc_notify_t *n,
                                               apr_pool_t *pool);
 
-/* Reset to zero the conflict stats accumulated in BATON, which is the
- * notifier baton from svn_cl__get_notifier().
- */
-svn_error_t *
-svn_cl__notifier_reset_conflict_stats(void *baton);
-
-/* Print the conflict stats accumulated in BATON, which is the
+/* Print the conflict stats accumulated in BATON, which is the
  * notifier baton from svn_cl__get_notifier().
  * Return any error encountered during printing.
  */
@@ -565,7 +578,7 @@ svn_error_t *
 svn_cl__notifier_print_conflict_stats(void *baton, apr_pool_t *scratch_pool);
 
 
-/*** Log message callback stuffs. ***/
+/*** Log message callback stuffs. ***/
 
 /* Allocate in POOL a baton for use with svn_cl__get_log_message().
 

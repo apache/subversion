@@ -1275,7 +1275,7 @@ SVN_ERROR_START
   /** @since New in 1.6. */
   SVN_ERRDEF(SVN_ERR_NO_APR_MEMCACHE,
              SVN_ERR_MISC_CATEGORY_START + 28,
-             "apr memcache library not available")
+             "APR memcache library not available")
 
   /** @since New in 1.6. */
   SVN_ERRDEF(SVN_ERR_ATOMIC_INIT_FAILURE,

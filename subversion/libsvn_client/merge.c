@@ -436,7 +436,7 @@ check_repos_match(const merge_target_t *target,
   if (!svn_uri__is_ancestor(target->loc.repos_root_url, url))
     return svn_error_createf(
         SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-         _("Url '%s' of '%s' is not in repository '%s'"),
+         _("URL '%s' of '%s' is not in repository '%s'"),
          url, svn_dirent_local_style(local_abspath, scratch_pool),
          target->loc.repos_root_url);
 
@@ -6229,7 +6229,7 @@ get_wc_explicit_mergeinfo_catalog(apr_hash_t **subtrees_with_mergeinfo,
               err = svn_error_createf(
                 SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING, err,
                 _("Invalid mergeinfo detected on '%s', "
-                  "mergetracking not possible"),
+                  "merge tracking not possible"),
                 svn_dirent_local_style(wc_path, scratch_pool));
             }
           return svn_error_trace(err);
@@ -7378,7 +7378,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
               err = svn_error_createf(
                 SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING, err,
                 _("Invalid mergeinfo detected on merge target '%s', "
-                  "mergetracking not possible"),
+                  "merge tracking not possible"),
                 svn_dirent_local_style(target_abspath, scratch_pool));
             }
           return svn_error_trace(err);

@@ -119,8 +119,9 @@ load_http_auth_types(apr_pool_t *pool, svn_config_t *config,
             *authn_types |= SERF_AUTHN_NEGOTIATE;
           else
             return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
-                                     _("Invalid config: unknown http auth"
-                                       "type '%s'"), token);
+                                     _("Invalid config: unknown %s "
+                                       "'%s'"),
+                                     SVN_CONFIG_OPTION_HTTP_AUTH_TYPES, token);
       }
     }
   else
