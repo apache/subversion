@@ -132,6 +132,12 @@ Candidate changes:
    Votes:
      +1: stefan2 (for 1.8.1)
 
+ * r1481800
+   Use result_pool for items copied to output array.
+   Justification:
+     Allocate output in correct pool to avoid possible memory use after clear.
+   Votes: philip, rhuijben
+
 Veto-blocked changes:
 =====================
 
