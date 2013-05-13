@@ -115,6 +115,14 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * svnserve now logs explicit path and reason for authz failures (r1446542)
     * improved tree-conflict detection for 'svn switch' (r1449413, r1450582)
     * doubled svn:// protocol throughput (r1325899)
+    * allow up to 8 revision number digits in 'svn status -v' output (r1428637)
+    * show node kind (file or dir) in tree conflict descriptions (r1429907)
+    * validate offsets from rep-cache to prevent FSFS corruption (issue #4277)
+    * optimize file/dir truename checks on Windows (r1435527)
+    * restore deleted switched paths upon next update (issue #4295)
+    * add support for copying paths from foreign repositories (issue #3590)
+    * new AuthzSVNGroupsFile option to store authz groups separately (r1438407)
+    * fix merge -cA,B with --accept option aborts if rA conflicts (issue #4238)
 
   - Client-side bugfixes:
     * fix inconsistent 'svn log' output for empty revisions (issue #3964)
@@ -130,6 +138,15 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix svn blame mis-categorizing file type as binary (issue #2089)
     * fix externals not removed when working copy is made shallow (issue #3741)
     * fix update under add with not-present parent (issue #4111)
+    * fix misleading error message printed by 'svn switch' (issue #2337)
+    * fix bug in mergeinfo recording during foreign-repos merge (r1430310)
+    * fix spurious merge conflicts for binary files with keywords (issue #4221)
+    * fix patching symlinks with 'svn patch' (issue #4273)
+    * make 'svn switch' refresh lock information (issue #3376)
+    * fix 'svn diff' output doesn't apply as patch without fuzz (issue #3362)
+    * fix mergeinfo recording for multiple-revision-range merge (issue #4306)
+    * fix diffs shown by 'show-diff' conflict prompt option (r1438879)
+    * don't print an update summary header with no content (r1439480)
 
   - Server-side bugfixes:
     * SVNParentPath / repository listing now authz-filtered (r1408184)
@@ -148,6 +165,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix mailer.py test suite problems (r1449582)
     * fix mailer.py not showing dirs with property deletions (r1449582)
     * make mailer.py generate Date and Message-ID headers (r1449592)
+    * provide the repository name to mailer.py (r1439592)
   
  Developer-visible changes:
   - General:
