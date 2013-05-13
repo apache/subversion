@@ -124,16 +124,6 @@ Candidate changes:
    Votes:
      +1: jcorvel, rhuijben
 
- * r1434405, r1434414, r1434418
-   Fix issue #4294 'diff --git shows wrong copy from'.  Moving a dir
-   causes diff --git to output incorrect sources for the diff.
-   Justification:
-     Diff should show the correct output.  Failiure to do so can lead to
-     incorrect interoperation with other systems.
-   Votes:
-     +1: breser
-     +1: rhuijben (even though it only fixes one of the many --git issues)
-
  * r1434128, r1434435, r1434476
    Fix issue #4034, 'blame on files with non-native eol-style sees every
    line as modified'.
@@ -361,3 +351,13 @@ Approved changes:
    Branch: 1.7.x-r1481010
    Votes:
      +1: philip, danielsh, rhuijben
+
+ * r1434405, r1434414, r1434418
+   Fix issue #4294 'diff --git shows wrong copy from'.  Moving a dir
+   causes diff --git to output incorrect sources for the diff.
+   Justification:
+     Diff should show the correct output.  Failiure to do so can lead to
+     incorrect interoperation with other systems.
+   Votes:
+     +1: breser, stsp
+     +1: rhuijben (even though it only fixes one of the many --git issues)
