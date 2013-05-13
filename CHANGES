@@ -46,7 +46,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * optimize file/dir truename checks on Windows (r1435527)
     * improve performance of config file parsing (r1344347 et al)
 
-  - Minor new side features and improvements (client-side):
+  - Minor new features and improvements (client-side):
     * new 'commit --include-externals' option (related to issues #1167, #3563)
     * new '--include-externals' option for 'svn list' (issue #4225)
     * remove extraneous externals output from 'svn status -q' (issue #1935)
@@ -101,7 +101,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix merge -cA,B with --accept option aborts if rA conflicts (issue #4238)
     * 'svn resolve' interactive support; no longer requires --accept (r1336929)
 
-  - Minor new side features and improvements (server-side):
+  - Minor new features and improvements (server-side):
     * new 'svnadmin load --revision' load filtering support (issue #3734)
     * new 'svnadmin hotcopy --incremental' support for FSFS (issue #3815)
     * new 'svnadmin lock' / 'svnadmin unlock' subcommands (issue #3942, #4092)
