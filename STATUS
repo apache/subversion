@@ -16,22 +16,6 @@ Status of 1.8.0:
 Candidate changes:
 ==================
 
- * r1469363, r1469645, r1469674, r1470037, r1470537, r1478220, r1478221,
-   r1478465, r1478998, r1480723
-   Fix issue #4355 'svn_client_log5 broken with multiple revisions which
-   span a rename'.
-   Justification:
-     svn_client_log5 doesn't deliver what it promises, see
-     http://subversion.tigris.org/issues/show_bug.cgi?id=4355#desc1 for
-     a brief example of the problem.
-   Notes:
-     r1469363, r1469645, r1469674, r1470037, and r1470537 are the creation
-     and subsequent tweaks of a single new log test for this issue.  r1478220
-     is the fix.  r1478221, r1478465, r1478998, and r1480723 are (mostly)
-     minor follow-ups to that fix.
-   Votes:
-     +1: pburba, julianfoad
-
  * r1479320, r1479321, r1479323, r1479326, r1479329
    Silence 'make -s clean distclean'.
    Justification:
@@ -200,4 +184,20 @@ Approved changes:
      -0: rhuijben (requires backport branch. I get a merge conflict using 1.7
                    <stsp> This is because this group requires r1470246 to
                           be merged first, as noted under Notes:)
+
+ * r1469363, r1469645, r1469674, r1470037, r1470537, r1478220, r1478221,
+   r1478465, r1478998, r1480723
+   Fix issue #4355 'svn_client_log5 broken with multiple revisions which
+   span a rename'.
+   Justification:
+     svn_client_log5 doesn't deliver what it promises, see
+     http://subversion.tigris.org/issues/show_bug.cgi?id=4355#desc1 for
+     a brief example of the problem.
+   Notes:
+     r1469363, r1469645, r1469674, r1470037, and r1470537 are the creation
+     and subsequent tweaks of a single new log test for this issue.  r1478220
+     is the fix.  r1478221, r1478465, r1478998, and r1480723 are (mostly)
+     minor follow-ups to that fix.
+   Votes:
+     +1: pburba, julianfoad, breser
 
