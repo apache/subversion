@@ -159,16 +159,16 @@ conflict__read_location(svn_wc_conflict_version_t **location,
     }
   c = c->next;
 
-  repos_root_url = apr_pstrmemdup(scratch_pool, c->data, c->len);
+  repos_root_url = apr_pstrmemdup(result_pool, c->data, c->len);
   c = c->next;
 
   if (c->is_atom)
-    repos_uuid = apr_pstrmemdup(scratch_pool, c->data, c->len);
+    repos_uuid = apr_pstrmemdup(result_pool, c->data, c->len);
   else
     repos_uuid = NULL;
   c = c->next;
 
-  repos_relpath = apr_pstrmemdup(scratch_pool, c->data, c->len);
+  repos_relpath = apr_pstrmemdup(result_pool, c->data, c->len);
   c = c->next;
 
   SVN_ERR(svn_skel__parse_int(&v, c, scratch_pool));
