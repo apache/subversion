@@ -48,7 +48,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * remove extraneous externals output from 'svn status -q' (issue #1935)
     * new 'svnadmin hotcopy --incremental' support for FSFS (issue #3815)
     * reject some attempts to merge between unrelated branches (r1215273)
-    * support GPG agent for password storage on UNIX-like platforms (r1150783)
     * new 'svnadmin lock' / 'svnadmin unlock' subcommands (issue #3942, #4092)
     * new SVNUseUTF8 configuration option for mod_dav_svn (issue #2487)
     * new SVNHooksEnv configuration option for mod_dav_svn (r1239966)
@@ -125,7 +124,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix merge -cA,B with --accept option aborts if rA conflicts (issue #4238)
     * improve performance of config file parsing (r1344347 et al)
     * 'svn resolve' interactive support; no longer requires --accept (r1336929)
-    * new --properties-only option and mode for 'svn diff' (r1336110)
 
   - Client-side bugfixes:
     * fix inconsistent 'svn log' output for empty revisions (issue #3964)
