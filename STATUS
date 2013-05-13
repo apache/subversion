@@ -125,14 +125,6 @@ Approved changes:
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 
- * r1481800, r1481813
-   Use result_pool for items copied to output array.
-   Justification:
-     Allocate output in correct pool to avoid possible memory use after clear.
-   Votes:
-     +1: philip, brane, stsp
-     +1: rhuijben (r1481800 only)
-
  * r1481625, r1481627, r1481628, r1481631, r1481632
    Properly escape control characters in an error message in libsvn_fs_fs.
    Remove duplicated code.
