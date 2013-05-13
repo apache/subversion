@@ -376,9 +376,13 @@ default_warning_func(void *baton, svn_error_t *err)
      processes, since those may both be equivalent to /dev/null.
 
      That said, be a good citizen and print something anyway, in case it goes
-     somewhere.
+     somewhere, and our caller hasn't overridden the abort() call.
    */
-  svn_handle_error2(err, stderr, FALSE /* fatal */, "svn: fs-loader: ");
+  if (svn_error_get_malfunction_handler()
+      == svn_error_abort_on_malfunction)
+    /* ### TODO: extend the malfunction API such that non-abort()ing consumers
+       ### also get the information on ERR. */
+    svn_handle_error2(err, stderr, FALSE /* fatal */, "svn: fs-loader: ");
   SVN_ERR_MALFUNCTION_NO_RETURN();
 }
 
