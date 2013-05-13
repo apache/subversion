@@ -16,20 +16,6 @@ Status of 1.8.0:
 Candidate changes:
 ==================
 
- * r1470246
-   Improve the interactive resolution of property conflicts.  Instead of
-   showing the contents of the '.prej' file once for each prop conflict, show
-   initially a single line such as
-     "local delete, incoming edit upon merge"
-   (similar to resolving a text conflict) and allow the user to display a 3-way
-   diff by adding a 'dc - display conflict' option.
-   Justification:
-     Showing the whole .prej file each time was confusing and ugly when more
-     than one property was in conflict.
-   Votes:
-     +1: julianfoad
-     +1: stsp (for 1.8.0, but not any 1.8.x since it changes the UI)
-
  * r1477294, r1480616, r1480641, r1480642, r1480664, r1480669
    Further improvements for interactive resolution of property conflicts.
    Allow conflicted properties to be edited and resolved to the edited value.
@@ -75,7 +61,7 @@ Candidate changes:
    Justification:
      Unstable APR hash order causes unstable output.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
  * r1480077
    Check separately for -flto and -Wno-clobbered with --enable-optimize.
@@ -84,6 +70,7 @@ Candidate changes:
      suport -Wno-clobbered, even when they do support -flto.
    Votes:
      +1: brane (for 1.8.1)
+     +1: rhuijben
 
  * r1480080, r1481772
    Instruct clang to not warn about unknown warning flags.
@@ -114,6 +101,7 @@ Candidate changes:
      simple change, I've witnessed a ~25% speedup for e.g. the FreeBSD repo.
    Votes:
      +1: stefan2 (for 1.8.1)
+     +1: rhuijben
 
  * r1481596
    For 'svn log -g', eliminate read requests on directories and mergeinfo
@@ -123,6 +111,7 @@ Candidate changes:
      'svn log -g' in the FreeBSD repo with cold and 15x with hot caches.
    Votes:
      +1: stefan2 (for 1.8.1)
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
@@ -160,6 +149,20 @@ Approved changes:
 # that would restart the soak should not be added unless they are resolving
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
+
+ * r1470246
+   Improve the interactive resolution of property conflicts.  Instead of
+   showing the contents of the '.prej' file once for each prop conflict, show
+   initially a single line such as
+     "local delete, incoming edit upon merge"
+   (similar to resolving a text conflict) and allow the user to display a 3-way
+   diff by adding a 'dc - display conflict' option.
+   Justification:
+     Showing the whole .prej file each time was confusing and ugly when more
+     than one property was in conflict.
+   Votes:
+     +1: julianfoad, rhuijben
+     +1: stsp (for 1.8.0, but not any 1.8.x since it changes the UI)
 
  * r1481010
    Fix issue 4365, multi-threaded svnserve pool memory use after clear.
