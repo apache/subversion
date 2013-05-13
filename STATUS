@@ -113,7 +113,7 @@ Candidate changes:
    Justification:
      The .prej files are unreadable.
    Votes:
-     +1: mattiase (non-binding)
+     +1: mattiase (non-binding), stsp
 
  * r1480149
    Fix a build problem on OS X 10.5.
@@ -136,13 +136,6 @@ Candidate changes:
      change.
    Votes:
      +1: julianfoad
-
- * r1481981
-   Fix UTF-8 mangling in .prej file.
-   Justification:
-     Bug that makes .prej files somewhat hard to translate.
-   Votes:
-     +1: stsp
 
 Veto-blocked changes:
 =====================
