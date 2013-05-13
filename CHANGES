@@ -177,7 +177,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
   - Bindings:
     * star-imports in swig-py only import 'svn_*' symbols (r1303375)
     * fix compilation of Perl bindings on Mandriva 2007 (issue #2617)
-    * fix Python build on OpenBSD >= 5.0. (r1178846)
     * new JavaHL testing targets (r1182983)
 
 
