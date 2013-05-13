@@ -34,7 +34,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
   - Major new features:
     * working copy records moves as first-class operation (issue #3631, #4232)
-    * automatic merge makes --reintegrate option unneccessary
+    * new "automatic" merge makes --reintegrate option unneccessary (r1369896)
     * FSFS: Packing of revision property shards (issue #3944)
     * support inheritable properties (r1395109)
     * repository can suggest config for autoprops and ignores (r1401908)
