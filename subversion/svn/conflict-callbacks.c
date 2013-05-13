@@ -225,6 +225,57 @@ show_conflicts(const svn_wc_conflict_description2_t *desc,
                                      pool);
 }
 
+/* Display the conflicting values of a property as a 3-way diff.
+ *
+ * Assume the values are printable UTF-8 text.
+ */
+static svn_error_t *
+show_prop_conflict(const svn_wc_conflict_description2_t *desc,
+                   apr_pool_t *pool)
+{
+  const char *base_abspath = desc->base_abspath;
+  const char *my_abspath = desc->my_abspath;
+  const char *their_abspath = desc->their_abspath;
+  svn_diff_file_options_t *options = svn_diff_file_options_create(pool);
+  svn_diff_t *diff;
+  svn_stream_t *output;
+
+  /* If any of the property values is missing, use an empty file instead
+   * for the purpose of showing a diff. */
+  if (! base_abspath || ! my_abspath || ! their_abspath)
+    {
+      const char *empty_file;
+
+      SVN_ERR(svn_io_open_unique_file3(NULL, &empty_file,
+                                       NULL, svn_io_file_del_on_pool_cleanup,
+                                       pool, pool));
+      if (! base_abspath)
+        base_abspath = empty_file;
+      if (! my_abspath)
+        my_abspath = empty_file;
+      if (! their_abspath)
+        their_abspath = empty_file;
+    }
+
+  options->ignore_eol_style = TRUE;
+  SVN_ERR(svn_stream_for_stdout(&output, pool));
+  SVN_ERR(svn_diff_file_diff3_2(&diff,
+                                base_abspath, my_abspath, their_abspath,
+                                options, pool));
+  SVN_ERR(svn_diff_file_output_merge2(output, diff,
+                                      base_abspath,
+                                      my_abspath,
+                                      their_abspath,
+                                      _("||||||| ORIGINAL"),
+                                      _("<<<<<<< MINE"),
+                                      _(">>>>>>> THEIRS"),
+                                      "=======",
+                                      svn_diff_conflict_display_modified_original_latest,
+                                      pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Run an external editor, passing it the 'merged' file in DESC, or, if the
  * 'merged' file is null, return an error. The tool to use is determined by
@@ -393,6 +444,7 @@ static const resolver_option_t prop_conflict_options[] =
   { "tf", N_("their version"),    N_("accept their version of entire file "
                                      "(same)  [theirs-full]"),
                                   svn_wc_conflict_choose_theirs_full },
+  { "dc", N_("display conflict"), N_("show conflicts in this property"), -1 },
   { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
                                   svn_wc_conflict_choose_postpone },
   { "h",  N_("help"),             N_("show this help (also '?')"), -1 },
@@ -841,6 +893,13 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
                      apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool;
+  const char *message;
+
+  /* ### Work around a historical bug in the provider: the path to the
+   *     conflict description file was put in the 'theirs' field, and
+   *     'theirs' was put in the 'merged' field. */
+  ((svn_wc_conflict_description2_t *)desc)->their_abspath = desc->merged_file;
+  ((svn_wc_conflict_description2_t *)desc)->merged_file = NULL;
 
   SVN_ERR_ASSERT(desc->kind == svn_wc_conflict_kind_property);
 
@@ -852,32 +911,9 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
                                 b->path_prefix, desc->local_abspath,
                                 scratch_pool)));
 
-  /* ### Currently, the only useful information in a prop conflict
-   * ### description is the .prej file path, which, possibly due to
-   * ### deceitful interference from outer space, is stored in the
-   * ### 'their_abspath' field of the description.
-   * ### This needs to be fixed so we can present better options here. */
-  if (desc->their_abspath)
-    {
-      svn_stringbuf_t *prop_reject;
-
-      /* ### The library dumps an svn_string_t into a temp file, and
-       * ### we read it back from the file into an svn_stringbuf_t here.
-       * ### That's rather silly. We should be passed svn_string_t's
-       * ### containing the old/mine/theirs values instead. */
-      SVN_ERR(svn_stringbuf_from_file2(&prop_reject,
-                                       desc->their_abspath,
-                                       scratch_pool));
-      /* Print reject file contents. */
-      SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
-                                  "%s\n", prop_reject->data));
-    }
-  else
-    {
-      /* Nothing much we can do without a prej file... */
-      result->choice = svn_wc_conflict_choose_postpone;
-      return SVN_NO_ERROR;
-    }
+  SVN_ERR(svn_cl__get_human_readable_prop_conflict_description(&message, desc,
+                                                               scratch_pool));
+  SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s\n", message));
 
   iterpool = svn_pool_create(scratch_pool);
   while (TRUE)
@@ -897,6 +933,10 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
           b->accept_which = svn_cl__accept_postpone;
           b->quit = TRUE;
           break;
+        }
+      else if (strcmp(opt->code, "dc") == 0)
+        {
+          SVN_ERR(show_prop_conflict(desc, scratch_pool));
         }
       else if (opt->choice != -1)
         {

@@ -185,6 +185,60 @@ operation_str(svn_wc_operation_t operation)
 }
 
 svn_error_t *
+svn_cl__get_human_readable_prop_conflict_description(
+  const char **desc,
+  const svn_wc_conflict_description2_t *conflict,
+  apr_pool_t *pool)
+{
+  const char *reason_str, *action_str;
+
+  /* We provide separately translatable strings for the values that we
+   * know about, and a fall-back in case any other values occur. */
+  switch (conflict->reason)
+    {
+      case svn_wc_conflict_reason_edited:
+        reason_str = _("local edit");
+        break;
+      case svn_wc_conflict_reason_added:
+        reason_str = _("local add");
+        break;
+      case svn_wc_conflict_reason_deleted:
+        reason_str = _("local delete");
+        break;
+      case svn_wc_conflict_reason_obstructed:
+        reason_str = _("local obstruction");
+        break;
+      default:
+        reason_str = apr_psprintf(pool, _("local %s"),
+                                  svn_token__to_word(map_conflict_reason_xml,
+                                                     conflict->reason));
+        break;
+    }
+  switch (conflict->action)
+    {
+      case svn_wc_conflict_action_edit:
+        action_str = _("incoming edit");
+        break;
+      case svn_wc_conflict_action_add:
+        action_str = _("incoming add");
+        break;
+      case svn_wc_conflict_action_delete:
+        action_str = _("incoming delete");
+        break;
+      default:
+        action_str = apr_psprintf(pool, _("incoming %s"),
+                                  svn_token__to_word(map_conflict_action_xml,
+                                                     conflict->action));
+        break;
+    }
+  SVN_ERR_ASSERT(reason_str && action_str);
+  *desc = apr_psprintf(pool, _("%s, %s %s"),
+                       reason_str, action_str,
+                       operation_str(conflict->operation));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_cl__get_human_readable_tree_conflict_description(
   const char **desc,
   const svn_wc_conflict_description2_t *conflict,
