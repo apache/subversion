@@ -49,7 +49,7 @@ Candidate changes:
      is the fix.  r1478221, r1478465, r1478998, and r1480723 are (mostly)
      minor follow-ups to that fix.
    Votes:
-     +1: pburba
+     +1: pburba, julianfoad
 
  * r1479320, r1479321, r1479323, r1479326, r1479329
    Silence 'make -s clean distclean'.
