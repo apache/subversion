@@ -2365,6 +2365,133 @@ def merge_sensitive_log_with_search(sbox):
   }
   check_merge_results(log_chain, expected_merges)
 
+#----------------------------------------------------------------------
+# Test for issue #4355 'svn_client_log5 broken with multiple revisions
+# which span a rename'.
+@Issue(4355)
+@SkipUnless(server_has_mergeinfo)
+def log_multiple_revs_spanning_rename(sbox):
+  "log for multiple revs which span a rename"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  msg_file=os.path.join(sbox.repo_dir, 'log-msg')
+  msg_file=os.path.abspath(msg_file)
+  mu_path1 = os.path.join(wc_dir, 'A', 'mu')
+  mu_path2 = os.path.join(wc_dir, 'trunk', 'mu')
+  trunk_path = os.path.join(wc_dir, 'trunk')
+
+  # r2 - Change a file.
+  msg=""" Log message for revision 2
+  but with multiple lines
+  to test the code"""
+  svntest.main.file_write(msg_file, msg)
+  svntest.main.file_append(mu_path1, "2")
+  svntest.main.run_svn(None, 'ci', '-F', msg_file, wc_dir)
+
+  # r3 - Rename that file's parent.
+  svntest.main.run_svn(None, 'up', wc_dir)
+  sbox.simple_move('A', 'trunk')
+  svntest.main.run_svn(None, 'ci', '-m', "Log message for revision 3",
+                       wc_dir)
+
+  # r4 - Change the file again.
+  msg=""" Log message for revision 4
+  but with multiple lines
+  to test the code"""
+  svntest.main.file_write(msg_file, msg)
+  svntest.main.file_append(mu_path2, "4")
+  svntest.main.run_svn(None, 'ci', '-F', msg_file, wc_dir)
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  # Check that log can handle a revision range that spans a rename.
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', '-r2:4', sbox.repo_url + '/trunk/mu')
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [2,3,4])
+
+  # Check that log can handle discrete revisions that don't span a rename.
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', '-c3,4', sbox.repo_url + '/trunk/mu')
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [3,4])
+
+  # Check that log can handle discrete revisions that span a rename.
+  #
+  # Currently this fails with:
+  #
+  #   >svn log ^/trunk -c2,3,1
+  #   ------------------------------------------------------------------------
+  #   r2 | jrandom | 2013-04-18 19:58:47 -0400 (Thu, 18 Apr 2013) | 3 lines
+  #
+  #    Log message for revision 2
+  #     but with multiple lines
+  #     to test the code
+  #   ------------------------------------------------------------------------
+  #   r3 | jrandom | 2013-04-18 19:58:47 -0400 (Thu, 18 Apr 2013) | 1 line
+  #
+  #   Log message for revision 3
+  #   ..\..\..\subversion\svn\log-cmd.c:868,
+  #   ..\..\..\subversion\libsvn_client\log.c:641,
+  #   ..\..\..\subversion\libsvn_repos\log.c:1931,
+  #   ..\..\..\subversion\libsvn_repos\log.c:1358,
+  #   ..\..\..\subversion\libsvn_fs\fs-loader.c:979,
+  #   ..\..\..\subversion\libsvn_fs_fs\tree.c:3205:
+  #     (apr_err=SVN_ERR_FS_NOT_FOUND)
+  #   svn: E160013: File not found: revision 1, path '/trunk'
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', '-c2,3,1', sbox.repo_url + '/trunk/mu')
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [2,3,1])
+
+  # Should work with a WC target too.
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', '-c2,3,1', mu_path2)
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [2,3,1])
+
+  # Discreet revision *ranges* which span a rename should work too.
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', '-r1', '-r4:2', sbox.repo_url + '/trunk')
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [1,4,3,2])
+
+  # As above, but revision ranges from younger to older.  Previously this
+  # failed with:
+  #
+  #  >svn log ^/trunk -r1:1 -r2:4
+  #  ------------------------------------------------------------------------
+  #  r1 | jrandom | 2013-04-18 19:58:46 -0400 (Thu, 18 Apr 2013) | 1 line
+  #
+  #  Log message for revision 1.
+  #  ..\..\..\subversion\svn\log-cmd.c:868,
+  #  ..\..\..\subversion\libsvn_client\log.c:678,
+  #  ..\..\..\subversion\libsvn_repos\log.c:1931,
+  #  ..\..\..\subversion\libsvn_repos\log.c:1358,
+  #  ..\..\..\subversion\libsvn_fs\fs-loader.c:979,
+  #  ..\..\..\subversion\libsvn_fs_fs\tree.c:3205:
+  #    (apr_err=SVN_ERR_FS_NOT_FOUND)
+  #  svn: E160013: File not found: revision 4, path '/A'
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', '-r1', '-r2:4', sbox.repo_url + '/trunk')
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [1,2,3,4])
+
+  # Discrete revs with WC-only opt revs shouldn't cause any problems.
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', '-r1', '-rPREV', trunk_path)
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [1,3])
+
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', '-r1', '-rCOMMITTED', trunk_path)
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [1,4])
+
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', '-r1', '-rBASE', trunk_path)
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [1,4])
 
 ########################################################################
 # Run the tests
@@ -2411,6 +2538,7 @@ test_list = [ None,
               log_diff_moved,
               log_search,
               merge_sensitive_log_with_search,
+              log_multiple_revs_spanning_rename,
              ]
 
 if __name__ == '__main__':
