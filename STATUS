@@ -199,6 +199,14 @@ Candidate changes:
      ^/subversion/branches/1.7.x-r1438879
    Votes:
      +1: stsp
+     +0: rhuijben (Shouldn't we provide a three way diff instead of guessing
+                   a base to show a one way diff against based on the
+                   operation?
+
+                   I would prefer to have show-diff always work against
+                   the local pristine version, instead of sometimes against
+                   their or their-old (src-left) version, as that is the final
+                   change I would commit.)
 
  * r1445753
    Fix issue #3741, 'externals not removed when working copy is made shallow'.
@@ -326,7 +334,7 @@ Approved changes:
      Part of the API contract.
    Branch: 1.7.x-r1461743
    Votes:
-     +1: danielsh, stsp
+     +1: danielsh, stsp, rhuijben
 
  * r1476359
    JavaHL thread safety bug.
