@@ -122,10 +122,7 @@ Candidate changes:
    Votes:
      +1: mattiase (non-binding)
 
-Veto-blocked changes:
-=====================
-
- * r1477876, r1477891, r1478001
+ * r1477876, r1477891, r1478001, r1479605
    Fix a bug whereby a property conflict description always reported
      'unknown' for the node kind. Add a test which catches that bug.
    Justification:
@@ -135,9 +132,13 @@ Veto-blocked changes:
      The fix is in r1477876, and the branch was needed to resolve conflicts
      (rather than porting prior changes on which it depended). The test is
      in r1478001, and it depends on the test file changes made in r1477891.
+     r1479605 fixes an interactive conflict resolution bug triggered by this
+     change.
    Votes:
-     -1: julianfoad ('svn update' now crashes on interactive resolution of a
-                     prop conflict)
+     +1: julianfoad
+
+Veto-blocked changes:
+=====================
 
  * r1469519, r1469520
    Silence compiler warnings.
