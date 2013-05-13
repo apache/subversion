@@ -108,6 +108,20 @@ Candidate changes:
      +1: stefan2 (for 1.8.1)
      +1: rhuijben
 
+ * r1481981
+   Don't destroy localised strings in .prej files by converting them to ASCII.
+   Justification:
+     The .prej files are unreadable.
+   Votes:
+     +1: mattiase (non-binding)
+
+ * r1480149
+   Fix a build problem on OS X 10.5.
+   Justification:
+     Necessary for building on PPC Macs.
+   Votes:
+     +1: mattiase (non-binding)
+
 Veto-blocked changes:
 =====================
 
