@@ -125,20 +125,6 @@ Approved changes:
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 
- * r1470246
-   Improve the interactive resolution of property conflicts.  Instead of
-   showing the contents of the '.prej' file once for each prop conflict, show
-   initially a single line such as
-     "local delete, incoming edit upon merge"
-   (similar to resolving a text conflict) and allow the user to display a 3-way
-   diff by adding a 'dc - display conflict' option.
-   Justification:
-     Showing the whole .prej file each time was confusing and ugly when more
-     than one property was in conflict.
-   Votes:
-     +1: julianfoad, rhuijben
-     +1: stsp (for 1.8.0, but not any 1.8.x since it changes the UI)
-
  * r1481800, r1481813
    Use result_pool for items copied to output array.
    Justification:
