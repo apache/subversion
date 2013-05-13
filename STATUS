@@ -142,7 +142,7 @@ Candidate changes:
      all other styles than those with "\n" repository form show up as
      entirely changed.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stsp
 
  * r1434750
    Resolve regression in 'svn status -u' output when running on externals.
