@@ -100,6 +100,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * better tracking of shallow-yet-complete merges (issues #4056, #4057)
     * make 'svn status --quiet' w/ externals quieter still (issue #1935)
     * ensure that all paths shown in 'svn status' are relative-ized (r1202425)
+    * ensure that conflict paths are shown relative-ized (r1337520)
     * improve performance of local multi-target deletions (r1195873)
     * apply update ops to locally moved-away dirs (r1183358, r1185110, r1185392)
     * various interactive conflict resolver improvements in 'svn' (r1440421 etc)
@@ -123,6 +124,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * add support for copying paths from foreign repositories (issue #3590)
     * new AuthzSVNGroupsFile option to store authz groups separately (r1438407)
     * fix merge -cA,B with --accept option aborts if rA conflicts (issue #4238)
+    * improve performance of config file parsing (r1344347 et al)
+    * 'svn resolve' interactive support; no longer requires --accept (r1336929)
+    * new --properties-only option and mode for 'svn diff' (r1336110)
 
   - Client-side bugfixes:
     * fix inconsistent 'svn log' output for empty revisions (issue #3964)
@@ -138,6 +142,12 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix svn blame mis-categorizing file type as binary (issue #2089)
     * fix externals not removed when working copy is made shallow (issue #3741)
     * fix update under add with not-present parent (issue #4111)
+    * fix revert of files with svn:needs-lock under copied dirs (r1343168)
+    * fix repos->wc diff of local copied/moved-here directories (r1341927)
+    * fix repos->wc diff of local copied/moved-here files (r1341544)
+    * fix "svn diff -cN PATH" where PATH was deleted in rN (r1338708)
+    * fix dependency on APR hash order in several logic paths (r1338350 et al)
+    * fix path inconsistencies in 'svn diff' output (r1338291)
     * fix misleading error message printed by 'svn switch' (issue #2337)
     * fix bug in mergeinfo recording during foreign-repos merge (r1430310)
     * fix spurious merge conflicts for binary files with keywords (issue #4221)
@@ -165,6 +175,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix mailer.py test suite problems (r1449582)
     * fix mailer.py not showing dirs with property deletions (r1449582)
     * make mailer.py generate Date and Message-ID headers (r1449592)
+    * new '-?' option support for 'svnmucch' (r1339428)
     * provide the repository name to mailer.py (r1439592)
   
  Developer-visible changes:
@@ -188,6 +199,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * remove --with-ssl and --with-gssapi configure options (r1449023)
     * require at least serf 1.2.0 as build dependency (issue #4296)
     * fix error tracing to record file/line properly (r1331242)
+    * add --log-level argument to win-tests.py (r1335461)
 
   - API changes:
     * fix inconsistent handling of log revs without changed paths (issue #3694)
