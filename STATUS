@@ -132,14 +132,6 @@ Candidate changes:
    Votes:
      +1: stefan2 (for 1.8.1)
 
- * r1481800, r1481813
-   Use result_pool for items copied to output array.
-   Justification:
-     Allocate output in correct pool to avoid possible memory use after clear.
-   Votes:
-     +1: philip, brane
-     +1: rhuijben, stsp (r1481800 only)
-
 Veto-blocked changes:
 =====================
 
@@ -172,3 +164,11 @@ Approved changes:
      SEGV, particularly on Windows.
    Votes:
      +1: philip, danielsh, ivan
+
+ * r1481800, r1481813
+   Use result_pool for items copied to output array.
+   Justification:
+     Allocate output in correct pool to avoid possible memory use after clear.
+   Votes:
+     +1: philip, brane, stsp
+     +1: rhuijben (r1481800 only)
