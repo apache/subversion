@@ -47,18 +47,6 @@ Candidate changes:
    Votes:
      +0: rhuijben (I would like to see some test results before backporting)
 
- * r1409804
-   Add a delimiter between the two chains in svn_error_compose_create().
-   Justification:
-     Allow users to tell where the second error chain starts -- avoids
-     misrepresentation that the first error is caused by the second.
-   Votes:
-     -0: rhuijben (I'm not sure if this should be in a patch release and the
-                   stacktrace where this refers to is maintainer only)
-     +1: danielsh (err->file and err->line are only in maintainer builds.
-                   this is about err->message which is valid in all builds)
-     -1: stsp (not a bug fix, changes output in a patch release)
-
  * r1421541, r1424977
    Fix infinite recursion in './get-deps.sh'.
    Justification:
@@ -228,37 +216,6 @@ Candidate changes:
    Votes:
      +1: breser
 
- * r1461562, r1461580, r1461701
-   Fix issue #4340, "filenames containing \n corrupt FSFS repositories"
-   Justification:
-     Newline characters can severely corrupt FSFS revision files and
-     should never enter the repository for this reason. See discussion
-     linked from issue #4340 for more information.
-   Notes:
-     r1461701 revises the changes made in the earlier revisions,
-     and is the result of a long dev@ discussion that eventually concluded
-     in this subthread: http://svn.haxx.se/dev/archive-2013-04/0056.shtml
-     This issue can be exploited by people with commit access to corrupt
-     an FSFS repository, and has been assigned a CVE number: CVE-2013-1968
-   Branch:
-     ^/subversion/branches/1.7.x-issue4340
-   Votes:
-     +1: stsp
-     -1: cmpilato ("How did this expand from 'newlines' to 'control
-                    characters'?!
-                    <danielsh> that has been addressed in HEAD
-                    <stsp> and also by splitting that part of the change
-                           into a separate backport nomination, see below)
-     -0: danielsh (escape_newline() should escape any control character,
-                   not just '\n'; svn_stringbuf_ensure() call should have
-                   "+5", not "+4", in its last argument; suggest to simplify
-                   escape_newline() to
-                   for (c = path; *c; c++)
-                     (0<c<0x20) ? svn_stringbuf_appendbytes("\\%03o" % c)
-                                : svn_stringbuf_appendbyte(c);
-                   that avoids memory bugs and is sufficient for an error path.
-                   +1 once the +4->+5 thing is addressed.)
-
  * r1461760
    Additional fix related to issue #4340, "filenames containing \n corrupt
    FSFS repositories"
@@ -291,6 +248,49 @@ Candidate changes:
 
 Veto-blocked changes:
 =====================
+
+ * r1409804
+   Add a delimiter between the two chains in svn_error_compose_create().
+   Justification:
+     Allow users to tell where the second error chain starts -- avoids
+     misrepresentation that the first error is caused by the second.
+   Votes:
+     -0: rhuijben (I'm not sure if this should be in a patch release and the
+                   stacktrace where this refers to is maintainer only)
+     +1: danielsh (err->file and err->line are only in maintainer builds.
+                   this is about err->message which is valid in all builds)
+     -1: stsp (not a bug fix, changes output in a patch release)
+
+ * r1461562, r1461580, r1461701
+   Fix issue #4340, "filenames containing \n corrupt FSFS repositories"
+   Justification:
+     Newline characters can severely corrupt FSFS revision files and
+     should never enter the repository for this reason. See discussion
+     linked from issue #4340 for more information.
+   Notes:
+     r1461701 revises the changes made in the earlier revisions,
+     and is the result of a long dev@ discussion that eventually concluded
+     in this subthread: http://svn.haxx.se/dev/archive-2013-04/0056.shtml
+     This issue can be exploited by people with commit access to corrupt
+     an FSFS repository, and has been assigned a CVE number: CVE-2013-1968
+   Branch:
+     ^/subversion/branches/1.7.x-issue4340
+   Votes:
+     +1: stsp
+     -1: cmpilato ("How did this expand from 'newlines' to 'control
+                    characters'?!
+                    <danielsh> that has been addressed in HEAD
+                    <stsp> and also by splitting that part of the change
+                           into a separate backport nomination, see below)
+     -0: danielsh (escape_newline() should escape any control character,
+                   not just '\n'; svn_stringbuf_ensure() call should have
+                   "+5", not "+4", in its last argument; suggest to simplify
+                   escape_newline() to
+                   for (c = path; *c; c++)
+                     (0<c<0x20) ? svn_stringbuf_appendbytes("\\%03o" % c)
+                                : svn_stringbuf_appendbyte(c);
+                   that avoids memory bugs and is sufficient for an error path.
+                   +1 once the +4->+5 thing is addressed.)
 
 Approved changes:
 =================
