@@ -31,7 +31,9 @@ Candidate changes:
    Votes:
      +1: stsp (for 1.8.0, but not any 1.8.x since it changes the UI)
      +1: steveking
-     -0: rhuijben (requires backport branch. I get a merge conflict using 1.7)
+     -0: rhuijben (requires backport branch. I get a merge conflict using 1.7
+                   <stsp> This is because this group requires r1470246 to
+                          be merged first, as noted under Notes:)
 
  * r1469363, r1469645, r1469674, r1470037, r1470537, r1478220, r1478221,
    r1478465, r1478998, r1480723
