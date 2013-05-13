@@ -34,7 +34,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
   - Major new features:
     * working copy records moves as first-class operation (issue #3631, #4232)
-    * new "automatic" merge makes --reintegrate unneccessary (r1369896, et al)
+    * new "automatic" merge makes --reintegrate unnecessary (r1369896, et al)
     * FSFS: Packing of revision property shards (issue #3944)
     * support inheritable properties (r1395109)
     * repository can suggest config for autoprops and ignores (r1401908)
@@ -112,7 +112,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * make repos-wc diffs fully ancestry-aware (r1445904)
     * 'svn diff --git' now implies 'svn diff --show-copies-as-adds' (r1446279)
     * 'svn diff --show-copies-as-adds' now implies --notice-ancestry (r1446279)
-    * svnserve now logs explict path and reason for authz failures (r1446542)
+    * svnserve now logs explicit path and reason for authz failures (r1446542)
     * improved tree-conflict detection for 'svn switch' (r1449413, r1450582)
 
   - Client-side bugfixes:
@@ -126,7 +126,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix replacements on deletes produce wrong tree conflicts (issue #3806)
     * made ra_serf handle location headers that are not RFC-compliant (r1443906)
     * merge no longer errors out after resolving all conflicts (issue #4316)
-    * fix svn blame miscategorizing file type as binary (issue #2089)
+    * fix svn blame mis-categorizing file type as binary (issue #2089)
     * fix externals not removed when working copy is made shallow (issue #3741)
     * fix update under add with not-present parent (issue #4111)
 
