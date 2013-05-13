@@ -225,20 +225,25 @@ show_conflicts(const svn_wc_conflict_description2_t *desc,
                                      pool);
 }
 
-/* Display the conflicting values of a property as a 3-way diff.
+/* Perform a 3-way merge of the conflicting values of a property,
+ * and write the result to the OUTPUT stream.
+ *
+ * If MERGED_ABSPATH is non-NULL, use it as 'my' version instead of
+ * DESC->MY_ABSPATH.
  *
  * Assume the values are printable UTF-8 text.
  */
 static svn_error_t *
-show_prop_conflict(const svn_wc_conflict_description2_t *desc,
-                   apr_pool_t *pool)
+merge_prop_conflict(svn_stream_t *output,
+                    const svn_wc_conflict_description2_t *desc,
+                    const char *merged_abspath,
+                    apr_pool_t *pool)
 {
   const char *base_abspath = desc->base_abspath;
   const char *my_abspath = desc->my_abspath;
   const char *their_abspath = desc->their_abspath;
   svn_diff_file_options_t *options = svn_diff_file_options_create(pool);
   svn_diff_t *diff;
-  svn_stream_t *output;
 
   /* If any of the property values is missing, use an empty file instead
    * for the purpose of showing a diff. */
@@ -258,13 +263,15 @@ show_prop_conflict(const svn_wc_conflict_description2_t *desc,
     }
 
   options->ignore_eol_style = TRUE;
-  SVN_ERR(svn_stream_for_stdout(&output, pool));
   SVN_ERR(svn_diff_file_diff3_2(&diff,
-                                base_abspath, my_abspath, their_abspath,
+                                base_abspath,
+                                merged_abspath ? merged_abspath : my_abspath,
+                                their_abspath,
                                 options, pool));
   SVN_ERR(svn_diff_file_output_merge2(output, diff,
                                       base_abspath,
-                                      my_abspath,
+                                      merged_abspath ? merged_abspath
+                                                     : my_abspath,
                                       their_abspath,
                                       _("||||||| ORIGINAL"),
                                       _("<<<<<<< MINE"),
@@ -276,8 +283,27 @@ show_prop_conflict(const svn_wc_conflict_description2_t *desc,
   return SVN_NO_ERROR;
 }
 
+/* Display the conflicting values of a property as a 3-way diff.
+ *
+ * If MERGED_ABSPATH is non-NULL, show it as 'my' version instead of
+ * DESC->MY_ABSPATH.
+ *
+ * Assume the values are printable UTF-8 text.
+ */
+static svn_error_t *
+show_prop_conflict(const svn_wc_conflict_description2_t *desc,
+                   const char *merged_abspath,
+                   apr_pool_t *pool)
+{
+  svn_stream_t *output;
 
-/* Run an external editor, passing it the 'merged' file in DESC, or, if the
+  SVN_ERR(svn_stream_for_stdout(&output, pool));
+  SVN_ERR(merge_prop_conflict(output, desc, merged_abspath, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Run an external editor, passing it the MERGED_FILE, or, if the
  * 'merged' file is null, return an error. The tool to use is determined by
  * B->editor_cmd, B->config and environment variables; see
  * svn_cl__edit_file_externally() for details.
@@ -288,15 +314,15 @@ show_prop_conflict(const svn_wc_conflict_description2_t *desc,
  * return that error. */
 static svn_error_t *
 open_editor(svn_boolean_t *performed_edit,
-            const svn_wc_conflict_description2_t *desc,
+            const char *merged_file,
             svn_cl__interactive_conflict_baton_t *b,
             apr_pool_t *pool)
 {
   svn_error_t *err;
 
-  if (desc->merged_file)
+  if (merged_file)
     {
-      err = svn_cmdline__edit_file_externally(desc->merged_file, b->editor_cmd,
+      err = svn_cmdline__edit_file_externally(merged_file, b->editor_cmd,
                                               b->config, pool);
       if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR))
         {
@@ -329,6 +355,34 @@ open_editor(svn_boolean_t *performed_edit,
   return SVN_NO_ERROR;
 }
 
+/* Run an external editor, passing it the 'merged' property in DESC.
+ * The tool to use is determined by B->editor_cmd, B->config and
+ * environment variables; see svn_cl__edit_file_externally() for details. */
+static svn_error_t *
+edit_prop_conflict(const char **merged_file_path,
+                   const svn_wc_conflict_description2_t *desc,
+                   svn_cl__interactive_conflict_baton_t *b,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
+{
+  apr_file_t *file;
+  const char *file_path;
+  svn_boolean_t performed_edit = FALSE;
+  svn_stream_t *merged_prop;
+
+  SVN_ERR(svn_io_open_unique_file3(&file, &file_path, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   result_pool, scratch_pool));
+  merged_prop = svn_stream_from_aprfile2(file, TRUE /* disown */,
+                                         scratch_pool);
+  SVN_ERR(merge_prop_conflict(merged_prop, desc, NULL, scratch_pool));
+  SVN_ERR(svn_stream_close(merged_prop));
+  SVN_ERR(svn_io_file_flush_to_disk(file, scratch_pool));
+  SVN_ERR(open_editor(&performed_edit, file_path, b, scratch_pool));
+  *merged_file_path = (performed_edit ? file_path : NULL);
+
+  return SVN_NO_ERROR;
+}
 
 /* Run an external merge tool, passing it the 'base', 'their', 'my' and
  * 'merged' files in DESC. The tool to use is determined by B->config and
@@ -445,6 +499,10 @@ static const resolver_option_t prop_conflict_options[] =
                                      "(same)  [theirs-full]"),
                                   svn_wc_conflict_choose_theirs_full },
   { "dc", N_("display conflict"), N_("show conflicts in this property"), -1 },
+  { "e",  N_("edit property"),    N_("change merged property value in an editor"
+                                     "  [edit]"), -1 },
+  { "r",  N_("resolved"),         N_("accept edited version of property"),
+                                  svn_wc_conflict_choose_merged },
   { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
                                   svn_wc_conflict_choose_postpone },
   { "h",  N_("help"),             N_("show this help (also '?')"), -1 },
@@ -790,7 +848,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
         }
       else if (strcmp(opt->code, "e") == 0 || strcmp(opt->code, ":-E") == 0)
         {
-          SVN_ERR(open_editor(&performed_edit, desc, b, iterpool));
+          SVN_ERR(open_editor(&performed_edit, desc->merged_file, b, iterpool));
           if (performed_edit)
             knows_something = TRUE;
         }
@@ -890,10 +948,13 @@ static svn_error_t *
 handle_prop_conflict(svn_wc_conflict_result_t *result,
                      const svn_wc_conflict_description2_t *desc,
                      svn_cl__interactive_conflict_baton_t *b,
+                     apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool;
   const char *message;
+  const char *merged_file_path = NULL;
+  svn_boolean_t resolved_allowed = FALSE;
 
   /* ### Work around a historical bug in the provider: the path to the
    *     conflict description file was put in the 'theirs' field, and
@@ -919,10 +980,23 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
   while (TRUE)
     {
       const resolver_option_t *opt;
+      const char *options[ARRAY_LEN(prop_conflict_options)];
+      const char **next_option = options;
+
+      *next_option++ = "p";
+      *next_option++ = "mf";
+      *next_option++ = "tf";
+      *next_option++ = "dc";
+      *next_option++ = "e";
+      if (resolved_allowed)
+        *next_option++ = "r";
+      *next_option++ = "q";
+      *next_option++ = "h";
+      *next_option++ = NULL;
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(prompt_user(&opt, prop_conflict_options, NULL, b->pb,
+      SVN_ERR(prompt_user(&opt, prop_conflict_options, options, b->pb,
                           iterpool));
       if (! opt)
         continue;
@@ -936,7 +1010,27 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
         }
       else if (strcmp(opt->code, "dc") == 0)
         {
-          SVN_ERR(show_prop_conflict(desc, scratch_pool));
+          SVN_ERR(show_prop_conflict(desc, merged_file_path, scratch_pool));
+        }
+      else if (strcmp(opt->code, "e") == 0)
+        {
+          SVN_ERR(edit_prop_conflict(&merged_file_path, desc, b,
+                                     result_pool, scratch_pool));
+          resolved_allowed = (merged_file_path != NULL);
+        }
+      else if (strcmp(opt->code, "r") == 0)
+        {
+          if (! resolved_allowed)
+            {
+              SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
+                             _("Invalid option; please edit the property "
+                               "first.\n\n")));
+              continue;
+            }
+
+          result->merged_file = merged_file_path;
+          result->choice = svn_wc_conflict_choose_merged;
+          break;
         }
       else if (opt->choice != -1)
         {
@@ -1214,7 +1308,7 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
        && (desc->reason == svn_wc_conflict_reason_edited)))
     SVN_ERR(handle_text_conflict(*result, desc, b, scratch_pool));
   else if (desc->kind == svn_wc_conflict_kind_property)
-    SVN_ERR(handle_prop_conflict(*result, desc, b, scratch_pool));
+    SVN_ERR(handle_prop_conflict(*result, desc, b, result_pool, scratch_pool));
 
   /*
     Dealing with obstruction of additions can be tricky.  The
