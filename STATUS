@@ -58,6 +58,7 @@ Candidate changes:
      warnings on stderr.  (This is user-facing behaviour.)
    Votes:
      +1 (for 1.8.1): danielsh
+     +1: rhuijben
 
  * r1479896
    Sort directory entries in output of 'svnlook tree'.
@@ -85,6 +86,7 @@ Candidate changes:
      of the -Wno-clobbered, see above).
    Votes:
      +1: brane (for 1.8.1)
+     +0: rhuijben (looks ok, but I can't test or verify via code inspection)
 
  * r1481625, r1481627, r1481628, r1481631, r1481632
    Properly escape control characters in an error message in libsvn_fs_fs.
