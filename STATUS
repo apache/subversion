@@ -167,6 +167,7 @@ Candidate changes:
      ^/subversion/branches/1.7.x-issue-4295
    Votes:
      +1: rhuijben
+     +0: stsp (nice fix, but backport doesn't compile)
 
  * r1438602, r1438683, r1441810
    Fix issue #4306, "multiple editor drive file merges record wrong mergeinfo
