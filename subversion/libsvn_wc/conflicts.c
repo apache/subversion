@@ -2298,7 +2298,7 @@ svn_wc__read_conflicts(const apr_array_header_t **conflicts,
   SVN_ERR(svn_wc__conflict_read_info(&operation, &locations, &text_conflicted,
                                      &prop_conflicted, &tree_conflicted,
                                      db, local_abspath, conflict_skel,
-                                     scratch_pool, scratch_pool));
+                                     result_pool, scratch_pool));
 
   cflcts = apr_array_make(result_pool, 4,
                           sizeof(svn_wc_conflict_description2_t*));
