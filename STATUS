@@ -139,13 +139,6 @@ Approved changes:
      +1: julianfoad, rhuijben
      +1: stsp (for 1.8.0, but not any 1.8.x since it changes the UI)
 
- * r1481010
-   Fix issue 4365, multi-threaded svnserve pool memory use after clear.
-   Justification:
-     SEGV, particularly on Windows.
-   Votes:
-     +1: philip, danielsh, ivan
-
  * r1481800, r1481813
    Use result_pool for items copied to output array.
    Justification:
