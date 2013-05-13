@@ -279,14 +279,6 @@ Candidate changes:
      -0: danielsh (restrictions not suitable for introduction in patch release;
                    dev@ thread started 2013/05/10 9pm)
 
- * r1461743
-   Set output parameter in non-maintainer builds, in svn_fs_commit_txn().
-   Justification:
-     Part of the API contract.
-   Branch: 1.7.x-r1461743
-   Votes:
-     +1: danielsh, stsp
-
  * r1465975
    Replace assertions that trigger in the wild with proper error messages.
    Justification:
@@ -297,30 +289,6 @@ Candidate changes:
      +1: danielsh (should we avoid svn_dirent_local_style in this case, i.e.,
                    print the literal value that nodes.local_relpath is expected
                    to contain?)
-
- * r1475724
-   Fix changelist filtering when --changelist values aren't UTF8.
-   Justification:
-     User-reported buglet that prevents the use of changelist
-     filtering altogether for those sorts of changelist names.
-   Branch: 1.7.x-r1475724
-   Votes:
-     +1: cmpilato, stsp
-
- * r1476359
-   JavaHL thread safety bug.
-   Justification:
-     Unexpected exceptions can be thrown when thread issues are encountered.
-   Votes:
-     +1: markphip, stsp
-
- * r1481010
-   Fix issue 4365, multi-threaded svnserve pool memory use after clear.
-   Justification:
-     Possible SEGV.
-   Branch: 1.7.x-r1481010
-   Votes:
-     +1: philip, danielsh
 
 Veto-blocked changes:
 =====================
@@ -351,3 +319,36 @@ Approved changes:
    Votes:
      +1: breser, danielsh, stsp
      +0: rhuijben (untested)
+
+ * r1461743
+   Set output parameter in non-maintainer builds, in svn_fs_commit_txn().
+   Justification:
+     Part of the API contract.
+   Branch: 1.7.x-r1461743
+   Votes:
+     +1: danielsh, stsp
+
+ * r1476359
+   JavaHL thread safety bug.
+   Justification:
+     Unexpected exceptions can be thrown when thread issues are encountered.
+   Votes:
+     +1: markphip, stsp
+     +0: rhuijben
+
+ * r1475724
+   Fix changelist filtering when --changelist values aren't UTF8.
+   Justification:
+     User-reported buglet that prevents the use of changelist
+     filtering altogether for those sorts of changelist names.
+   Branch: 1.7.x-r1475724
+   Votes:
+     +1: cmpilato, stsp, rhuijben
+
+ * r1481010
+   Fix issue 4365, multi-threaded svnserve pool memory use after clear.
+   Justification:
+     Possible SEGV.
+   Branch: 1.7.x-r1481010
+   Votes:
+     +1: philip, danielsh, rhuijben
