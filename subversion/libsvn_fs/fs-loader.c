@@ -373,7 +373,12 @@ default_warning_func(void *baton, svn_error_t *err)
 {
   /* The one unforgiveable sin is to fail silently.  Dumping to stderr
      or /dev/tty is not acceptable default behavior for server
-     processes, since those may both be equivalent to /dev/null.  */
+     processes, since those may both be equivalent to /dev/null.
+
+     That said, be a good citizen and print something anyway, in case it goes
+     somewhere.
+   */
+  svn_handle_error2(err, stderr, FALSE /* fatal */, "svn: fs-loader: ");
   SVN_ERR_MALFUNCTION_NO_RETURN();
 }
 
