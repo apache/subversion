@@ -104,13 +104,6 @@ Candidate changes:
    Votes:
      +1: brane (for 1.8.1)
 
- * r1481010
-   Fix issue 4365, multi-threaded svnserve pool memory use after clear.
-   Justification:
-     SEGV, particularly on Windows.
-   Votes:
-     +1: philip, danielsh
-
  * r1481625, r1481627, r1481628, r1481631, r1481632
    Properly escape control characters in an error message in libsvn_fs_fs.
    Remove duplicated code.
@@ -146,3 +139,10 @@ Approved changes:
 # that would restart the soak should not be added unless they are resolving
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
+
+ * r1481010
+   Fix issue 4365, multi-threaded svnserve pool memory use after clear.
+   Justification:
+     SEGV, particularly on Windows.
+   Votes:
+     +1: philip, danielsh, ivan
