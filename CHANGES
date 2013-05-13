@@ -34,7 +34,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
   - Major new features:
     * working copy records moves as first-class operation (issue #3631, #4232)
-    * new "automatic" merge makes --reintegrate unnecessary (r1369896, et al)
+    * merge uses reintegrate mode automatically when needed (r1369896 et al)
     * FSFS: Packing of revision property shards (issue #3944)
     * support inheritable properties (r1395109)
     * repository can suggest config for autoprops and ignores (r1401908)
@@ -72,7 +72,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * 'svndumpfilter' now supports --delta dumpfiles (r1351009, -3745)
     * new '--drop-all-emtpy-revs' option for 'svndumpfilter' (issue #3681)
     * client version info now reported to commit hooks (issue #4124)
-    * 'svn merge' now uses reintegrate mode automatically when needed
     * 'svn' is now non-interactive when not run in a terminal device (r1424037)
     * 'svn propset' checks spelling of reserved property names.
     * improve working copy performance on network disks (issue #4176) 
