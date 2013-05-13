@@ -114,6 +114,24 @@ Candidate changes:
    Votes:
      +1: danielsh, stsp (for 1.8.0, not any 1.8.x, since it adds a public API).
 
+ * r1481594
+   Speed up reporting and authz checks on copy-from info in 'svn log'.
+   Justification:
+     The way we implemented merges makes replacements and add-with-history
+     a much more common occurance than they would otherwise be.  With this
+     simple change, I've witnessed a ~25% speedup for e.g. the FreeBSD repo.
+   Votes:
+     +1: stefan2 (for 1.8.1)
+
+ * r1481596
+   For 'svn log -g', eliminate read requests on directories and mergeinfo
+   in revisions that are guaranteed to not change any mergeinfo.
+   Justification:
+     This simple change combined with r1481594 resulted in a 4x speedup for
+     'svn log -g' in the FreeBSD repo with cold and 15x with hot caches.
+   Votes:
+     +1: stefan2 (for 1.8.1)
+
 Veto-blocked changes:
 =====================
 
