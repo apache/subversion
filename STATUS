@@ -276,12 +276,7 @@ Veto-blocked changes:
    Branch:
      ^/subversion/branches/1.7.x-issue4340
    Votes:
-     +1: stsp
-     -1: cmpilato ("How did this expand from 'newlines' to 'control
-                    characters'?!
-                    <danielsh> that has been addressed in HEAD
-                    <stsp> and also by splitting that part of the change
-                           into a separate backport nomination (r1461760))
+     +1: stsp, cmpilato
      -0: danielsh (escape_newline() should escape any control character,
                    not just '\n'; svn_stringbuf_ensure() call should have
                    "+5", not "+4", in its last argument; suggest to simplify
