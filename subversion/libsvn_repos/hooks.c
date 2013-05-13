@@ -421,7 +421,8 @@ svn_repos__parse_hooks_env(apr_hash_t **hooks_env_p,
 
   if (local_abspath)
     {
-      SVN_ERR(svn_config_read2(&cfg, local_abspath, FALSE, TRUE, scratch_pool));
+      SVN_ERR(svn_config_read3(&cfg, local_abspath, FALSE,
+                               TRUE, TRUE, scratch_pool));
       b.cfg = cfg;
       b.hooks_env = apr_hash_make(result_pool);
       (void)svn_config_enumerate_sections2(cfg, parse_hooks_env_section, &b,

@@ -16,6 +16,130 @@ Status of 1.8.0:
 Candidate changes:
 ==================
 
+ * r1477294, r1480616, r1480641, r1480642, r1480664, r1480669
+   Further improvements for interactive resolution of property conflicts.
+   Allow conflicted properties to be edited and resolved to the edited value.
+   Justification:
+     This is a usability enhancement we could make in 1.8.0.
+     It also fixes a bug in libsvn_wc where it doesn't use results provided
+     by the conflict callback (see r1480641), which might help API consumers.
+   Notes:
+     This group depends on r1470246.
+     r1477294 and r1480616 are merged to avoid text conflicts from refactoring.
+     r1480641 and r1480642 are the main changes.
+     The other revisions are small follow-up fixes.
+   Votes:
+     +1: stsp (for 1.8.0, but not any 1.8.x since it changes the UI)
+     +1: steveking
+     -0: rhuijben (requires backport branch. I get a merge conflict using 1.7
+                   <stsp> This is because this group requires r1470246 to
+                          be merged first, as noted under Notes:)
+
+ * r1469363, r1469645, r1469674, r1470037, r1470537, r1478220, r1478221,
+   r1478465, r1478998, r1480723
+   Fix issue #4355 'svn_client_log5 broken with multiple revisions which
+   span a rename'.
+   Justification:
+     svn_client_log5 doesn't deliver what it promises, see
+     http://subversion.tigris.org/issues/show_bug.cgi?id=4355#desc1 for
+     a brief example of the problem.
+   Notes:
+     r1469363, r1469645, r1469674, r1470037, and r1470537 are the creation
+     and subsequent tweaks of a single new log test for this issue.  r1478220
+     is the fix.  r1478221, r1478465, r1478998, and r1480723 are (mostly)
+     minor follow-ups to that fix.
+   Votes:
+     +1: pburba
+
+ * r1479320, r1479321, r1479323, r1479326, r1479329
+   Silence 'make -s clean distclean'.
+   Justification:
+     'make -s all install distclean' would spam stdout and issue irrelevant
+     warnings on stderr.  (This is user-facing behaviour.)
+   Votes:
+     +1 (for 1.8.1): danielsh
+     +1: rhuijben
+
+ * r1479896
+   Sort directory entries in output of 'svnlook tree'.
+   Justification:
+     Unstable APR hash order causes unstable output.
+   Votes:
+     +1: stsp, rhuijben
+
+ * r1480077
+   Check separately for -flto and -Wno-clobbered with --enable-optimize.
+   Justification:
+     The -flto flag was not used by older compilers that do not
+     suport -Wno-clobbered, even when they do support -flto.
+   Votes:
+     +1: brane (for 1.8.1)
+     +1: rhuijben
+
+ * r1480080, r1481772
+   Instruct clang to not warn about unknown warning flags.
+   Justification:
+     Newer versions of clang accept warning flags that they do not
+     support, but emit warnings about them instead -- making the
+     compile output a mess with a warning emitted for every
+     single C and C++ file in an optimized build (because
+     of the -Wno-clobbered, see above).
+   Votes:
+     +1: brane (for 1.8.1)
+     +0: rhuijben (looks ok, but I can't test or verify via code inspection)
+
+ * r1481594
+   Speed up reporting and authz checks on copy-from info in 'svn log'.
+   Justification:
+     The way we implemented merges makes replacements and add-with-history
+     a much more common occurance than they would otherwise be.  With this
+     simple change, I've witnessed a ~25% speedup for e.g. the FreeBSD repo.
+   Votes:
+     +1: stefan2 (for 1.8.1)
+     +1: rhuijben
+
+ * r1481596
+   For 'svn log -g', eliminate read requests on directories and mergeinfo
+   in revisions that are guaranteed to not change any mergeinfo.
+   Justification:
+     This simple change combined with r1481594 resulted in a 4x speedup for
+     'svn log -g' in the FreeBSD repo with cold and 15x with hot caches.
+   Votes:
+     +1: stefan2 (for 1.8.1)
+     +1: rhuijben
+
+ * r1481981
+   Don't destroy localised strings in .prej files by converting them to ASCII.
+   Justification:
+     The .prej files are unreadable.
+   Votes:
+     +1: mattiase (non-binding)
+
+ * r1480149
+   Fix a build problem on OS X 10.5.
+   Justification:
+     Necessary for building on PPC Macs.
+   Votes:
+     +1: mattiase (non-binding)
+
+ * r1477876, r1477891, r1478001, r1479605
+   Fix a bug whereby a property conflict description always reported
+     'unknown' for the node kind. Add a test which catches that bug.
+   Justification:
+     Regression from 1.7.
+   Branch: ^/subversion/branches/1.8.x-r1477876
+   Notes:
+     The fix is in r1477876, and the branch was needed to resolve conflicts
+     (rather than porting prior changes on which it depended). The test is
+     in r1478001, and it depends on the test file changes made in r1477891.
+     r1479605 fixes an interactive conflict resolution bug triggered by this
+     change.
+   Votes:
+     +1: julianfoad
+
+Veto-blocked changes:
+=====================
+
  * r1469519, r1469520
    Silence compiler warnings.
    Justification:
@@ -23,8 +147,18 @@ Candidate changes:
    Votes:
      +1: blair
      -0: philip (see dev thread: it's a false alarm, wrong value)
-     -0.5: brane (silencing warnings is not a valid reason for a backport,
-                  even for branch stabilization.)
+     -1: brane (superseded by r1481848 and 1481870, respectively,
+                which silence the warnings while also avoiding
+                the negative effects noted by philip)
+
+Approved changes:
+=================
+
+# 1.8.0-rc1 is being voted on currently and as such 1.8.0 is in the soak phase.
+# Changes that are not intended for 1.8.0 should not be placed here and changes
+# that would restart the soak should not be added unless they are resolving
+# blocking issues.  If in doubt see this link for details:
+# http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 
  * r1470246
    Improve the interactive resolution of property conflicts.  Instead of
@@ -37,51 +171,32 @@ Candidate changes:
      Showing the whole .prej file each time was confusing and ugly when more
      than one property was in conflict.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, rhuijben
+     +1: stsp (for 1.8.0, but not any 1.8.x since it changes the UI)
 
- * r1471443, r1471490
-   Fix a bug in the Summary of Conflicts when using interactive conflict
-     resolution.  Marking a text conflict as resolved but leaving a prop
-     conflict unresolved on the same file, or vice versa, would decrement
-     both the text and prop conflict summary stats.
+ * r1481010
+   Fix issue 4365, multi-threaded svnserve pool memory use after clear.
    Justification:
-     Regression since 1.7.
-   Notes:
-     r1471443 is just a removal of unused code, and is included here in
-     order to avoid conflicts.  r1471490 is the main change.
+     SEGV, particularly on Windows.
    Votes:
-     +1: julianfoad, brane
+     +1: philip, danielsh, ivan
 
- * r1475772, r1476092
-   Fix a bug in authz file processing where group and user names were
-   not treated case-sensitively, which could lead to unpredictable
-   results depending on the ordering of the authz config entries.
-   See http://subversion.tigris.org/issues/show_bug.cgi?id=4361
+ * r1481800, r1481813
+   Use result_pool for items copied to output array.
    Justification:
-     See above about unpredictable results. A related fix for
-     repository paths handling was made in 1.7.0.
-   Notes:
-     r1476092 is the CHANGES update.
+     Allocate output in correct pool to avoid possible memory use after clear.
    Votes:
-     +1: brane
-     +1: philip (for 1.8.0 only, not later 1.8.x)
+     +1: philip, brane, stsp
+     +1: rhuijben (r1481800 only)
 
- * r1477876, r1477891, r1478001
-   Fix a bug whereby a property conflict description always reported
-     'unknown' for the node kind. Add a test which catches that bug.
+ * r1481625, r1481627, r1481628, r1481631, r1481632
+   Properly escape control characters in an error message in libsvn_fs_fs.
+   Remove duplicated code.
+   Branch: 1.8.x-r1481625
    Justification:
-     Regression from 1.7.
-   Branch: ^/subversion/branches/1.8.x-r1477876
-   Notes:
-     The fix is in r1477876, and the branch was needed to resolve conflicts
-     (rather than porting prior changes on which it depended). The test is
-     in r1478001, and it depends on the test file changes made in r1477891.
+     r1481625 and r1481627 together fix possible problems in error
+     message output. The other changes are nice-to-have.
    Votes:
-     +1: julianfoad
+     +1: danielsh, stsp (for 1.8.0, not any 1.8.x, since it adds a public API).
+     +1: stefan2
 
-Veto-blocked changes:
-=====================
-
-
-Approved changes:
-=================
