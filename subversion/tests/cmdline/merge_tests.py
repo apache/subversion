@@ -18194,7 +18194,7 @@ def merge_target_selection(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'merge', '^/dir', '-c', '4', 'binary-file')
 
-@Issue(3405)
+@Issue(3405) # seems to be the wrong issue number
 def merge_properties_on_adds(sbox):
   "merged directory properties are added"
 
