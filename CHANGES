@@ -170,7 +170,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
   - API changes:
     * fix inconsistent handling of log revs without changed paths (issue #3694)
-    * new type svn_kind_t to replace svn_node_kind_t (r1181800)
     * deprecated SVN_ERR_SQLITE_UNSUPPORTED_SCHEMA (r1173240)
     * provide API to clear cached auth credentials (issue #2775)
 
