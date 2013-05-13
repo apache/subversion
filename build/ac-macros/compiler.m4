@@ -66,14 +66,13 @@ AC_DEFUN([SVN_CC_MODE_SETUP],
     ])
   ])
 
-  dnl clang does not (always?) error out on unknown compiler
-  dnl options so silence the diagnostics emitted for warning options
-  SVN_CFLAGS_ADD_IFELSE([-Wno-unknown-warning-option])
-
   CMODEFLAGS="$CFLAGS"
   CFLAGS="$CFLAGS_KEEP"
   AC_SUBST(CMODEFLAGS)
   AC_SUBST(CMAINTAINERFLAGS)
+
+  dnl Tell clang to not accept unknown warning flags
+  SVN_CFLAGS_ADD_IFELSE([-Werror=unknown-warning-option])
 ])
 
 
@@ -86,12 +85,11 @@ AC_DEFUN([SVN_CXX_MODE_SETUP],
                 dnl g++ and clang++
   SVN_CXXFLAGS_ADD_IFELSE([-std=c++98])
 
-  dnl clang++ does not (always?) error out on unknown compiler
-  dnl options so silence the diagnostics emitted for warning options
-  SVN_CXXFLAGS_ADD_IFELSE([-Wno-unknown-warning-option])
-
   CXXMODEFLAGS="$CXXFLAGS"
   CXXFLAGS="$CXXFLAGS_KEEP"
   AC_SUBST(CXXMODEFLAGS)
   AC_SUBST(CXXMAINTAINERFLAGS)
+
+  dnl Tell clang++ to not accept unknown warning flags
+  SVN_CXXFLAGS_ADD_IFELSE([-Werror=unknown-warning-option])
 ])
