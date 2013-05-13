@@ -57,6 +57,7 @@ Candidate changes:
                    stacktrace where this refers to is maintainer only)
      +1: danielsh (err->file and err->line are only in maintainer builds.
                    this is about err->message which is valid in all builds)
+     -1: stsp (not a bug fix, changes output in a patch release)
 
  * r1421541, r1424977
    Fix infinite recursion in './get-deps.sh'.
@@ -64,7 +65,7 @@ Candidate changes:
      Trivial fix to plug an edge case.
    Votes:
      -0: rhuijben (Is this needed on this branch?)
-     +1: danielsh (as much as it's needed on trunk)
+     +1: stsp, danielsh (as much as it's needed on trunk)
 
  * r1423837, r1423840, r1423848
    Fix issue #4168, "no such table: revert_list" for nested wc in sparse wc
@@ -164,9 +165,9 @@ Candidate changes:
    Without this patch the paths in directory externals are shown as absolute
    while all others are shown relative/as provided by the user.
    Justification:
-     Consistent api behavior is goog
+     Consistent api behavior is good
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stsp
 
  * r1435635, r1435714, r1435722, r1435737
    When svn update removes a switched subtree because it was deleted in the
@@ -308,7 +309,7 @@ Candidate changes:
      Part of the API contract.
    Branch: 1.7.x-r1461743
    Votes:
-     +1: danielsh
+     +1: danielsh, stsp
 
  * r1465975
    Replace assertions that trigger in the wild with proper error messages.
@@ -335,7 +336,7 @@ Candidate changes:
    Justification:
      Unexpected exceptions can be thrown when thread issues are encountered.
    Votes:
-     +1: markphip
+     +1: markphip, stsp
 
  * r1481010
    Fix issue 4365, multi-threaded svnserve pool memory use after clear.
