@@ -281,7 +281,7 @@ Veto-blocked changes:
                     characters'?!
                     <danielsh> that has been addressed in HEAD
                     <stsp> and also by splitting that part of the change
-                           into a separate backport nomination, see below)
+                           into a separate backport nomination (r1461760))
      -0: danielsh (escape_newline() should escape any control character,
                    not just '\n'; svn_stringbuf_ensure() call should have
                    "+5", not "+4", in its last argument; suggest to simplify
