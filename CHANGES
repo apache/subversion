@@ -30,16 +30,16 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
  User-visible changes:
   - General:
-    *
+    * require serf as client-side http library (neon support removed) (r1349694)
 
   - Major new features:
-    * inheritable properties (r1395109)
-    * GPG agent support. (r1151069)
+    * working copy records moves as first-class operation (issue #3631, #4232)
+    * automatic merge makes --reintegrate option unneccessary
     * FSFS: Packing of revision property shards (issue #3944)
-    * explicit handling of local moves/renames (issue #3631, #4232)
-    * new more detailed conflict storage
-    * use svn_ra_serf as our new http library.
-    * automatic merge avoids explicit reintegration merges.
+    * support inheritable properties (r1395109)
+    * repository can suggest config for autoprops and ignores (r1401908)
+    * support gpg-agent for password caching (r1151069)
+    * authz rules can be stored inside the repository (r1424780)
 
   - Minor new features and improvements:
     * new 'svnadmin load --revision' load filtering support (issue #3734)
@@ -76,7 +76,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * 'svn' is now non-interactive when not run in a terminal device (r1424037)
     * 'svn propset' checks spelling of reserved property names.
     * improve working copy performance on network disks (issue #4176) 
-    * repos suggests config via svn:auto-props and svn:global-ignores (r1401908)
     * support for custom keyword definitions in svn:keywords (issue #890)
     * support for server-side keyword expansion in mod_dav_svn (r1466055)
     * FSFS now able to cache revision properties (r1326307)
