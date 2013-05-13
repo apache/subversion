@@ -114,6 +114,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * 'svn diff --show-copies-as-adds' now implies --notice-ancestry (r1446279)
     * svnserve now logs explicit path and reason for authz failures (r1446542)
     * improved tree-conflict detection for 'svn switch' (r1449413, r1450582)
+    * doubled svn:// protocol throughput (r1325899)
 
   - Client-side bugfixes:
     * fix inconsistent 'svn log' output for empty revisions (issue #3964)
@@ -138,6 +139,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix crashes in dumpstream loading with skipped revs (r1214202, r1214216)
     * fix 'svn log -g' incorrectly treating rename as merge (issue #4022)
     * fix bug where fsfs file-hinting fails (issue #4320)
+    * don't leak path of repository on server's disk to clients (r1330906)
 
   - Other tool improvements and bugfixes:
     * 'svnmucc' promoted to first-class supported utility (issue #3308)
@@ -167,11 +169,13 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * in Visual C++ builds, move temp files to different directory (r1446416)
     * remove --with-ssl and --with-gssapi configure options (r1449023)
     * require at least serf 1.2.0 as build dependency (issue #4296)
+    * fix error tracing to record file/line properly (r1331242)
 
   - API changes:
     * fix inconsistent handling of log revs without changed paths (issue #3694)
     * deprecated SVN_ERR_SQLITE_UNSUPPORTED_SCHEMA (r1173240)
     * provide API to clear cached auth credentials (issue #2775)
+    * improve repository location information in various APIs (issue #4170)
 
   - Bindings:
     * star-imports in swig-py only import 'svn_*' symbols (r1303375)
