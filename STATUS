@@ -93,7 +93,7 @@ Candidate changes:
    Votes:
      +1: brane (for 1.8.1)
 
- * r1480080
+ * r1480080, r1481772
    Instruct clang to not warn about unknown warning flags.
    Justification:
      Newer versions of clang accept warning flags that they do not
@@ -169,4 +169,4 @@ Approved changes:
    Use result_pool for items copied to output array.
    Justification:
      Allocate output in correct pool to avoid possible memory use after clear.
-   Votes: philip, rhuijben, stsp
+   Votes: philip, rhuijben, stsp, brane
