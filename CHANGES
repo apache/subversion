@@ -31,6 +31,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
  User-visible changes:
   - General:
     * require serf as client-side http library (neon support removed) (r1349694)
+    * deprecate the Berkeley DB FS backend (libsvn_fs_base) (r1464985 et al)
 
   - Major new features:
     * working copy records moves as first-class operation (issue #3631, #4232)
@@ -100,6 +101,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * add support for copying paths from foreign repositories (issue #3590)
     * fix merge -cA,B with --accept option aborts if rA conflicts (issue #4238)
     * 'svn resolve' interactive support; no longer requires --accept (r1336929)
+    * notify when removing externals leaves behind modified files (r1366021)
 
   - Minor new features and improvements (server-side):
     * new 'svnadmin load --revision' load filtering support (issue #3734)
@@ -128,6 +130,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * svnserve now logs explicit path and reason for authz failures (r1446542)
     * validate offsets from rep-cache to prevent FSFS corruption (issue #4277)
     * new AuthzSVNGroupsFile option to store authz groups separately (r1438407)
+    * FSFS revprop packing support (r1358667 et al)
 
   - Client-side bugfixes:
     * fix inconsistent 'svn log' output for empty revisions (issue #3964)
@@ -158,6 +161,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix mergeinfo recording for multiple-revision-range merge (issue #4306)
     * fix diffs shown by 'show-diff' conflict prompt option (r1438879)
     * don't print an update summary header with no content (r1439480)
+    * make 'svn rm' remove externals registrations below its targets (r1361256)
+    * fix crashes in ra_serf where AVG 2012 Surf-Shield is in use (issue #4175)
+    * don't raise conflicts on identical binary files (issue #4128)
 
   - Server-side bugfixes:
     * SVNParentPath / repository listing now authz-filtered (r1408184)
@@ -201,17 +207,22 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * require at least serf 1.2.0 as build dependency (issue #4296)
     * fix error tracing to record file/line properly (r1331242)
     * add --log-level argument to win-tests.py (r1335461)
+    * improve GDB pretty-printing of svn types (r1351336, r1364750, r1365035)
+    * load third-party FS modules (if --enable-runtime-module-search) (r1362434)
+    * enable running the regression tests over https (r1349699)
 
   - API changes:
     * fix inconsistent handling of log revs without changed paths (issue #3694)
     * deprecated SVN_ERR_SQLITE_UNSUPPORTED_SCHEMA (r1173240)
     * provide API to clear cached auth credentials (issue #2775)
     * improve repository location information in various APIs (issue #4170)
+    * major rewrite of conflict storage and handling APIs (r1354973 et al)
 
   - Bindings:
     * star-imports in swig-py only import 'svn_*' symbols (r1303375)
     * fix compilation of Perl bindings on Mandriva 2007 (issue #2617)
     * new JavaHL testing targets (r1182983)
+    * enable returning an error on malfunctions for JavaHL (r1366215)
 
 
 Version 1.7.9
