@@ -137,6 +137,13 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1481981
+   Fix UTF-8 mangling in .prej file.
+   Justification:
+     Bug that makes .prej files somewhat hard to translate.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
