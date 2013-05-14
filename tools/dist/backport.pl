@@ -65,14 +65,17 @@ EOF
 
 sub prompt {
   local $\; # disable 'perl -l' effects
-  print "$_[0] ";
+  print "$_[0] "; shift;
+  my %args = @_;
 
   die "$0: called prompt() in non-interactive mode!" if $YES;
   # TODO: this part was written by trial-and-error
   ReadMode 'cbreak';
   my $answer = (ReadKey 0);
   print $answer, "\n";
-  return ($answer =~ /^y/i) ? 1 : 0;
+  return $args{verbose}
+         ? $answer
+         : ($answer =~ /^y/i) ? 1 : 0;
 }
 
 sub merge {
@@ -244,9 +247,20 @@ sub handle_entry {
 
     if (prompt 'Go ahead?') {
       merge %entry;
-      system($ENV{SHELL} // "/bin/sh") == 0
-        or warn "Creating an interactive subshell failed ($?): $!"
-        if prompt "Shall I open a subshell?";
+      MAYBE_DIFF: while (1) { 
+        given (prompt "Shall I open a subshell? [ydN]", verbose => 1) {
+          when (/^y/i) {
+            system($ENV{SHELL} // "/bin/sh") == 0
+              or warn "Creating an interactive subshell failed ($?): $!"
+          }
+          when (/^d/) {
+            system($SVN, 'diff') == 0
+              or warn "diff failed ($?): $!";
+            next;
+          }
+        }
+      last;
+      }
       # Don't revert.  The next merge() call will do that anyway, or maybe the
       # user did in his interactive shell.
     }
