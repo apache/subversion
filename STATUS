@@ -82,6 +82,13 @@ Candidate changes:
    Votes:
      +1: breser
 
+ * r1481944
+   Let Windows compile against BDB 5.0, 5.1, 5.2 and 5.3.
+   Justification:
+     No reason to prevent this.
+   Votes:
+     +1: breser (for 1.8.1)
+
 Veto-blocked changes:
 =====================
 
