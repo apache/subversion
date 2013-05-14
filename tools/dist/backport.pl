@@ -307,6 +307,8 @@ sub main {
       }
     }
   }
+
+  system $SVN, qw/revert -R ./ if !$YES and prompt 'Revert? ';
 }
 
 &main
