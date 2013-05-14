@@ -227,10 +227,9 @@ apr_hash_t *svn_swig_pl_hash_to_prophash(SV *source, apr_pool_t *pool)
 }
 
 /* perl -> c array convertors */
-static const
-apr_array_header_t *svn_swig_pl_to_array(SV *source,
-                                         pl_element_converter_t cv,
-                                         void *ctx, apr_pool_t *pool)
+static apr_array_header_t *svn_swig_pl_to_array(SV *source,
+                                                pl_element_converter_t cv,
+                                                void *ctx, apr_pool_t *pool)
 {
     int targlen;
     apr_array_header_t *temp;
@@ -259,15 +258,15 @@ apr_array_header_t *svn_swig_pl_to_array(SV *source,
     return temp;
 }
 
-const apr_array_header_t *svn_swig_pl_strings_to_array(SV *source,
+apr_array_header_t *svn_swig_pl_strings_to_array(SV *source,
                                                        apr_pool_t *pool)
 {
   return svn_swig_pl_to_array(source, convert_pl_string, NULL, pool);
 }
 
-const apr_array_header_t *svn_swig_pl_objs_to_array(SV *source,
-						    swig_type_info *tinfo,
-						    apr_pool_t *pool)
+apr_array_header_t *svn_swig_pl_objs_to_array(SV *source,
+					      swig_type_info *tinfo,
+					      apr_pool_t *pool)
 {
   return svn_swig_pl_to_array(source,
                               (pl_element_converter_t)convert_pl_obj,
@@ -282,7 +281,7 @@ const apr_array_header_t *svn_swig_pl_objs_to_array(SV *source,
  * convert source as a single revision range. Failing that and if it's
  * an array we then call svn_swig_pl_to_array(). Otherwise we croak().
  */
-const apr_array_header_t *svn_swig_pl_array_to_apr_array_revision_range(
+apr_array_header_t *svn_swig_pl_array_to_apr_array_revision_range(
         SV *source, apr_pool_t *pool)
 {
     svn_boolean_t croak_on_error = FALSE;
