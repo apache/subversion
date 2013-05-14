@@ -29,7 +29,8 @@ NEON=neon-0.29.6
 SERF=serf-0.7.2
 ZLIB=zlib-1.2.7
 SQLITE_VERSION=3.7.6.3
-SQLITE=sqlite-amalgamation-$(printf %d%02d%02d%02d $(echo $SQLITE_VERSION | sed -e 's/\./ /g'))
+SQLITE_VERSION_LIST=`echo $SQLITE_VERSION | sed -e 's/\./ /g'`
+SQLITE=sqlite-amalgamation-`printf %d%02d%02d%02d $SQLITE_VERSION_LIST`
 
 
 HTTPD=httpd-2.2.19
@@ -120,7 +121,7 @@ get_deps() {
     done
 
     if [ $# -gt 0 ]; then
-      for target; do
+      for target in "$@"; do
         get_$target || usage
       done
     else
