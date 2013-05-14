@@ -85,17 +85,6 @@ Approved changes:
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 
- * r1482282
-   Don't use unitialized variable to produce an error code.
-   Justification:
-     Silence compiler warning. Getting in this error path is as far as I can
-     tell impossible on Windows 2000 and later, but might be possible on Wine.
-     (Getting into this error path requires an on-disk path of the running
-      application that can't be expressed in unicode, which is very hard if the
-      path itself is stored in Unicode)
-   Votes:
-     +1: rhuijben, breser, stsp
-
  * r1481594
    Speed up reporting and authz checks on copy-from info in 'svn log'.
    Justification:
