@@ -64,6 +64,16 @@ Candidate changes:
                  see dev thread: it's a false alarm, wrong value)
      -0: rhuijben (merge conflict in configure.ac in r1481848)
 
+ * r1482436
+   Resolve regression in svn_ra_replay_range() where it didn't apply
+   the send_changes FALSE flag to property changes.
+   Justification:
+     The replay without changes mode is used by repository viewers
+     to obtain more information about changes. We should keep this
+     behavior stable
+   Votes:
+     +1: rhuijben (for either 1.8.0 or later)
+
 Veto-blocked changes:
 =====================
 
