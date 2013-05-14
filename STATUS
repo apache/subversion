@@ -46,17 +46,6 @@ Candidate changes:
      +1: brane (for 1.8.1)
      +0: rhuijben (looks ok, but I can't test or verify via code inspection)
 
- * r1481596
-   For 'svn log -g', eliminate read requests on directories and mergeinfo
-   in revisions that are guaranteed to not change any mergeinfo.
-   Justification:
-     This simple change combined with r1481594 resulted in a 4x speedup for
-     'svn log -g' in the FreeBSD repo with cold and 15x with hot caches.
-   Votes:
-     +1: stefan2 (for 1.8.1)
-     +1: rhuijben, stsp
-     +0: danielsh
-
  * r1481981
    Don't destroy localised strings in .prej files by converting them to ASCII.
    Justification:
@@ -154,3 +143,14 @@ Approved changes:
      Regression from 1.7.
    Votes:
      +1: philip, breser, rhuijben
+
+ * r1481596
+   For 'svn log -g', eliminate read requests on directories and mergeinfo
+   in revisions that are guaranteed to not change any mergeinfo.
+   Justification:
+     This simple change combined with r1481594 resulted in a 4x speedup for
+     'svn log -g' in the FreeBSD repo with cold and 15x with hot caches.
+   Votes:
+     +1: stefan2 (for 1.8.1)
+     +1: rhuijben, stsp
+     +0: danielsh
