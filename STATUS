@@ -73,15 +73,6 @@ Candidate changes:
    Votes:
      +1: rhuijben (for either 1.8.0 or later)
 
- * r1482554
-   Making ctypes-python tests pass regardless of local timezone.
-   Justification:
-     Tests should not give false negatives.
-   Notes:
-     Bindings change so can go into 1.8.0.
-   Votes:
-     +1: breser
-
  * r1481944
    Let Windows compile against BDB 5.0, 5.1, 5.2 and 5.3.
    Justification:
@@ -100,3 +91,12 @@ Approved changes:
 # that would restart the soak should not be added unless they are resolving
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
+
+ * r1482554, r1482592
+   Making ctypes-python tests pass regardless of local timezone.
+   Justification:
+     Tests should not give false negatives.
+   Notes:
+     Bindings change so can go into 1.8.0.
+   Votes:
+     +1: breser, danielsh
