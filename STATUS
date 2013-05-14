@@ -117,7 +117,7 @@ Candidate changes:
       application that can't be expressed in unicode, which is very hard if the
       path itself is stored in Unicode)
    Votes:
-     +1: rhuijben
+     +1: rhuijben, breser
      
  * r1482327, r1482338
    Resolve segfault on upgrading from pre 1.7 working copies, where there
@@ -126,7 +126,7 @@ Candidate changes:
      Regression from 1.7.
    Votes:
      +1: rhuijben (r1482327 only)
-     +1: philip
+     +1: philip, breser
 
 Veto-blocked changes:
 =====================
