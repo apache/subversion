@@ -131,7 +131,7 @@ Candidate changes:
    new in 1.8 function svn_utf_initialize2() (svn_utf.h) to properly have the
    pool as last argument, as we have with almost every other function.
    Votes:
-     +1: rhuijben (only for 1.8.0)
+     +1: rhuijben (only for 1.8.0), danielsh
      
  * r1482327
    Resolve segfault on upgrading from pre 1.7 working copies, where there
