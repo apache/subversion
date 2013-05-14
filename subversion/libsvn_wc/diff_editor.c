@@ -1281,11 +1281,10 @@ add_directory(const char *path,
                       dir_pool);
   *child_baton = db;
 
-  /* Add this path to the parent directory's list of elements that
-     have been compared. */
-  apr_hash_set(pb->compared, apr_pstrdup(pb->pool, db->path),
-               APR_HASH_KEY_STRING, "");
-
+  /* Issue #3797: Don't add this filename to the parent directory's list of
+     elements that have been compared, to show local additions via the local
+     diff. The repository node is unrelated from the working copy version
+     (similar to not-present in the working copy) */
 
   return SVN_NO_ERROR;
 }
@@ -1430,10 +1429,10 @@ add_file(const char *path,
   fb = make_file_baton(path, TRUE, pb, file_pool);
   *file_baton = fb;
 
-  /* Add this filename to the parent directory's list of elements that
-     have been compared. */
-  apr_hash_set(pb->compared, apr_pstrdup(pb->pool, path),
-               APR_HASH_KEY_STRING, "");
+  /* Issue #3797: Don't add this filename to the parent directory's list of
+     elements that have been compared, to show local additions via the local
+     diff. The repository node is unrelated from the working copy version
+     (similar to not-present in the working copy) */
 
   return SVN_NO_ERROR;
 }

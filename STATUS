@@ -283,14 +283,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1426830
-   Resolve issue #3797, by making sure that local changes at the same path
-   as a not present file are not skipped.
-   Justification:
-     Improves 'svn diff' handling of local changes.
-   Votes:
-     +1: rhuijben, pburba, stsp
-
  * r1451678, r1452617
    Make get-deps.sh compatible with Solaris /bin/sh.
    Justification:
