@@ -100,15 +100,6 @@ Candidate changes:
                  see dev thread: it's a false alarm, wrong value)
      -0: rhuijben (merge conflict in configure.ac in r1481848)
 
- * r1482327, r1482338
-   Resolve segfault on upgrading from pre 1.7 working copies, where there
-   are local property changes or conflicts or changelist, but no tree conflict.
-   Justification:
-     Regression from 1.7.
-   Votes:
-     +1: rhuijben (r1482327 only)
-     +1: philip, breser
-
 Veto-blocked changes:
 =====================
 
@@ -155,3 +146,11 @@ Approved changes:
    Votes:
      +1: stefan2 (for 1.8.1)
      +1: rhuijben, ivan
+
+ * r1482327, r1482338
+   Resolve segfault on upgrading from pre 1.7 working copies, where there
+   are local property changes or conflicts or changelist, but no tree conflict.
+   Justification:
+     Regression from 1.7.
+   Votes:
+     +1: philip, breser, rhuijben
