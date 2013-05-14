@@ -75,7 +75,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * return an error when conflicts could not be resolved (r1150439)
     * let HTTPv2-aware clients fetch v2-style resources (r1161202)
     * 'svn status' with better NLS support (r1157537, -682)
-    * improve error messages (r1212823, r1212463)
     * better tracking of shallow-yet-complete merges (issues #4056, #4057)
     * make 'svn status --quiet' w/ externals quieter still (issue #1935)
     * ensure that all paths shown in 'svn status' are relative-ized (r1202425)
@@ -99,6 +98,12 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix merge -cA,B with --accept option aborts if rA conflicts (issue #4238)
     * 'svn resolve' interactive support; no longer requires --accept (r1336929)
     * notify when removing externals leaves behind modified files (r1366021)
+    * new 'http-max-connections' configuration option for serf (r1421559)
+    * new 'http-bulk-updates' configuration option for serf (r1421490)
+    * 'svn cleanup' now runs SQLite "vacuum" to reclaim space (r1418459)
+    * 'svn info' displays repository relative URL (r1415365)
+    * fix serf memory leak on checkout (issue #4194)
+    * detect duplicate paths setting svn:externals (issue #4227)
 
   - Minor new features and improvements (server-side):
     * improve performance of config file parsing (r1344347 et al)
@@ -129,6 +134,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * validate offsets from rep-cache to prevent FSFS corruption (issue #4277)
     * new AuthzSVNGroupsFile option to store authz groups separately (r1438407)
     * FSFS revprop packing support (r1358667 et al)
+    * new 'SVNAllowBulkUpdates prefer' option for mod_dav_svn (r1417642, et al)
 
   - Client-side bugfixes:
     * fix inconsistent 'svn log' output for empty revisions (issue #3964)
@@ -162,6 +168,14 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * make 'svn rm' remove externals registrations below its targets (r1361256)
     * fix crashes in ra_serf where AVG 2012 Surf-Shield is in use (issue #4175)
     * don't raise conflicts on identical binary files (issue #4128)
+    * improve error messages when wc.db missing (issue #4118)
+    * fix 'svn diff' showing wrong text change (issue #4270)
+    * fix 'svn diff -rN' failing to show local replace (issue #3797)
+    * fix 'svn diff' showing wrong revision (issue #4010)
+    * fix 'svn merge' showing spurious notifications (issue #2910)
+    * parse '.@HEAD' correctly (issue #3606)
+    * fix 'svn revert' after conflict in sparse working copy (issue #4168)
+    * fix bug in global/per-server config handling in serf (r1421516)
 
   - Server-side bugfixes:
     * SVNParentPath / repository listing now authz-filtered (r1408184)
@@ -172,9 +186,11 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix 'svn log -g' incorrectly treating rename as merge (issue #4022)
     * fix bug where fsfs file-hinting fails (issue #4320)
     * don't leak path of repository on server's disk to clients (r1330906)
+    * remove spurious is-fresh-txn-root from empty revision files (issue #4031)
 
   - Other tool improvements and bugfixes:
-    * 'svnmucc' promoted to first-class supported utility (issue #3308)
+    * 'svnmucc' promoted to first-class supported utility (issue #3308, #4279)
+    * make 'svnmucc' prompt for log messages (issue #3418)
     * rename 'svnauthz-validate' to 'svnauthz' (issue #4284)
     * make 'svnauthz' optionally validate user/path access (r1197588)
     * fix mailer.py test suite problems (r1449582)
@@ -182,6 +198,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * make mailer.py generate Date and Message-ID headers (r1449592)
     * new '-?' option support for 'svnmucc' (r1339428)
     * provide the repository name to mailer.py (r1439592)
+    * make 'svnrdump' work with serf (issue #4116)
+    * fix 'svnrdump' on path below repository root (issue #4101)
+    * new '--diff-cmd' option to 'svnlook diff' (r1413449)
   
  Developer-visible changes:
   - General:
@@ -208,6 +227,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * improve GDB pretty-printing of svn types (r1351336, r1364750, r1365035)
     * load third-party FS modules (if --enable-runtime-module-search) (r1362434)
     * enable running the regression tests over https (r1349699)
+    * support 'make davautocheck' on OS X (r1421583)
+    * new '--enable-gcov' configure option (r1416646)
 
   - API changes:
     * fix inconsistent handling of log revs without changed paths (issue #3694)
