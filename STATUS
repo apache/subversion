@@ -85,15 +85,6 @@ Approved changes:
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 
- * r1479320, r1479321, r1479323, r1479326, r1479329
-   Silence 'make -s clean distclean'.
-   Justification:
-     'make -s all install distclean' would spam stdout and issue irrelevant
-     warnings on stderr.  (This is user-facing behaviour.)
-   Votes:
-     +1 (for 1.8.1): danielsh
-     +1: rhuijben, cmpilato
-
  * r1480077
    Check separately for -flto and -Wno-clobbered with --enable-optimize.
    Justification:
