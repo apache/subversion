@@ -25,13 +25,6 @@ Candidate changes:
      +1 (for 1.8.1): danielsh
      +1: rhuijben
 
- * r1479896
-   Sort directory entries in output of 'svnlook tree'.
-   Justification:
-     Unstable APR hash order causes unstable output.
-   Votes:
-     +1: stsp, rhuijben, danielsh
-
  * r1480077
    Check separately for -flto and -Wno-clobbered with --enable-optimize.
    Justification:
@@ -153,3 +146,10 @@ Approved changes:
 # that would restart the soak should not be added unless they are resolving
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
+
+ * r1479896
+   Sort directory entries in output of 'svnlook tree'.
+   Justification:
+     Unstable APR hash order causes unstable output.
+   Votes:
+     +1: stsp, rhuijben, danielsh
