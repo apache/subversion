@@ -283,14 +283,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1481010
-   Fix issue 4365, multi-threaded svnserve pool memory use after clear.
-   Justification:
-     Possible SEGV.
-   Branch: 1.7.x-r1481010
-   Votes:
-     +1: philip, danielsh, rhuijben
-
  * r1434405, r1434414, r1434418
    Fix issue #4294 'diff --git shows wrong copy from'.  Moving a dir
    causes diff --git to output incorrect sources for the diff.

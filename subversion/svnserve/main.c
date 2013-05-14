@@ -51,6 +51,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_atomic.h"
 #include "winservice.h"
 
 #ifdef HAVE_UNISTD_H
@@ -342,11 +343,44 @@ static apr_status_t redirect_stdout(void *arg)
   return apr_file_dup2(out_file, err_file, pool);
 }
 
+#if APR_HAS_THREADS
+/* The pool passed to apr_thread_create can only be released when both
+
+      A: the call to apr_thread_create has returned to the calling thread
+      B: the new thread has started running and reached apr_thread_start_t
+
+   So we set the atomic counter to 2 then both the calling thread and
+   the new thread decrease it and when it reaches 0 the pool can be
+   released.  */
+struct shared_pool_t {
+  svn_atomic_t count;
+  apr_pool_t *pool;
+};
+
+static struct shared_pool_t *
+attach_shared_pool(apr_pool_t *pool)
+{
+  struct shared_pool_t *shared = apr_palloc(pool, sizeof(struct shared_pool_t));
+
+  shared->pool = pool;
+  svn_atomic_set(&shared->count, 2);
+
+  return shared;
+}
+
+static void
+release_shared_pool(struct shared_pool_t *shared)
+{
+  if (svn_atomic_dec(&shared->count) == 0)
+    svn_pool_destroy(shared->pool);
+}
+#endif
+
 /* "Arguments" passed from the main thread to the connection thread */
 struct serve_thread_t {
   svn_ra_svn_conn_t *conn;
   serve_params_t *params;
-  apr_pool_t *pool;
+  struct shared_pool_t *shared_pool;
 };
 
 #if APR_HAS_THREADS
@@ -354,8 +388,8 @@ static void * APR_THREAD_FUNC serve_thread(apr_thread_t *tid, void *data)
 {
   struct serve_thread_t *d = data;
 
-  svn_error_clear(serve(d->conn, d->params, d->pool));
-  svn_pool_destroy(d->pool);
+  svn_error_clear(serve(d->conn, d->params, d->shared_pool->pool));
+  release_shared_pool(d->shared_pool);
 
   return NULL;
 }
@@ -420,6 +454,7 @@ int main(int argc, const char *argv[])
 #if APR_HAS_THREADS
   apr_threadattr_t *tattr;
   apr_thread_t *tid;
+  struct shared_pool_t *shared_pool;
 
   struct serve_thread_t *thread_data;
 #endif
@@ -1011,6 +1046,7 @@ int main(int argc, const char *argv[])
              particularly sophisticated strategy for a threaded server, it's
              little different from forking one process per connection. */
 #if APR_HAS_THREADS
+          shared_pool = attach_shared_pool(connection_pool);
           status = apr_threadattr_create(&tattr, connection_pool);
           if (status)
             {
@@ -1030,9 +1066,9 @@ int main(int argc, const char *argv[])
           thread_data = apr_palloc(connection_pool, sizeof(*thread_data));
           thread_data->conn = conn;
           thread_data->params = &params;
-          thread_data->pool = connection_pool;
+          thread_data->shared_pool = shared_pool;
           status = apr_thread_create(&tid, tattr, serve_thread, thread_data,
-                                     connection_pool);
+                                     shared_pool->pool);
           if (status)
             {
               err = svn_error_wrap_apr(status, _("Can't create thread"));
@@ -1040,6 +1076,7 @@ int main(int argc, const char *argv[])
               svn_error_clear(err);
               exit(1);
             }
+          release_shared_pool(shared_pool);
 #endif
           break;
 
