@@ -142,6 +142,12 @@ module SvnTestUtil
           # Remove optional targets instead of raising below.  If they are really
           # needed, svnserve won't start anyway.
           targets -= %W[libapriconv#{apr_major_version}.dll]
+          # Ditto these four, since svnserve.exe might be a static build.
+          targets -= %W[libsvn_subr-1.dll]
+          targets -= %W[libsvn_repos-1.dll]
+          targets -= %W[libsvn_fs-1.dll]
+          targets -= %W[libsvn_delta-1.dll]
+
           unless targets.empty?
             raise "can't find libraries to work svnserve: #{targets.join(' ')}"
           end
