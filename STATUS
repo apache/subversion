@@ -54,7 +54,7 @@ Candidate changes:
      'svn log -g' in the FreeBSD repo with cold and 15x with hot caches.
    Votes:
      +1: stefan2 (for 1.8.1)
-     +1: rhuijben
+     +1: rhuijben, stsp
      +0: danielsh
 
  * r1481981
