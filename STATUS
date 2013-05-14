@@ -55,8 +55,9 @@ Candidate changes:
    Silence compiler warnings, tighten scopes and improve code.
    Justification:
      Clean builds make it more likely to notice real compiler warnings.
+   Branch: ^/subversion/branches/1.8.x-r1469519-and-friends
    Votes:
-     +1: blair (who has nominated brane's commits after his veto was added)
+     +1: blair
      +1: brane (for 1.8.1)
      -0: philip (see dev thread: false alarm, trades one warning for another)
      -0: rhuijben, breser (merge conflict in configure.ac in r1481848
