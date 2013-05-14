@@ -104,6 +104,12 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * 'svn info' displays repository relative URL (r1415365)
     * fix serf memory leak on checkout (issue #4194)
     * detect duplicate paths setting svn:externals (issue #4227)
+    * make ra_serf work over HTTP/1.0 proxies (r1396147)
+    * make ra_serf accept gzip compression for all responses (r1407454)
+    * double ra_serf performance for checkout and export (r1407545)
+    * improve network and disk i/o interleaving in ra_serf (r1407934)
+    * avoid assert in ra_serf when REPORT response was truncated (r1407935)
+    * rewrite ra_serf XML parser (r1409259 et al)
 
   - Minor new features and improvements (server-side):
     * improve performance of config file parsing (r1344347 et al)
@@ -135,6 +141,12 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * new AuthzSVNGroupsFile option to store authz groups separately (r1438407)
     * FSFS revprop packing support (r1358667 et al)
     * new 'SVNAllowBulkUpdates prefer' option for mod_dav_svn (r1417642, et al)
+    * new 'SVNMasterVersion' option for mod_dav_svn (r1398962)
+    * added virtual-host support to 'svnserve' (r1401296)
+    * new fsfs-stats tool which prints FSFS repository stats (r1410995)
+    * new --compatible-version option for 'svnadmin create' (r1407279 )
+    * new --ignore-properties option for 'svnlook diff' (r1407905)
+    * new --properties-only option for 'svnlook diff' (r1407905)
 
   - Client-side bugfixes:
     * fix inconsistent 'svn log' output for empty revisions (issue #3964)
@@ -176,6 +188,14 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * parse '.@HEAD' correctly (issue #3606)
     * fix 'svn revert' after conflict in sparse working copy (issue #4168)
     * fix bug in global/per-server config handling in serf (r1421516)
+    * properly display errors from serf (r1398742)
+    * fix crash in ra_serf (r1408291)
+    * fixed svnmucc propset and propdel on repository root (issue #3663)
+    * fix 'svn info' output with ancient svnserve servers (pre-1.2) (r1409732)
+    * ra_serf shows error message for 408 Request Timeout response (r1410983)
+    * fix handling of "\ No newline ..." in diff/patch (r1411723, r1412382)
+    * allow infinite http timeout in ra_serf (r1411976)
+    * using unknown svn: property names now requires --force (issue #4261)
 
   - Server-side bugfixes:
     * SVNParentPath / repository listing now authz-filtered (r1408184)
@@ -187,6 +207,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix bug where fsfs file-hinting fails (issue #4320)
     * don't leak path of repository on server's disk to clients (r1330906)
     * remove spurious is-fresh-txn-root from empty revision files (issue #4031)
+    * fix a stdout handling problem in 'svnlook diff' (r1411971)
+    * fix erratic behaviour in 'svnlook diff' showing property diffs (r1412224)
 
   - Other tool improvements and bugfixes:
     * 'svnmucc' promoted to first-class supported utility (issue #3308, #4279)
@@ -201,6 +223,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * make 'svnrdump' work with serf (issue #4116)
     * fix 'svnrdump' on path below repository root (issue #4101)
     * new '--diff-cmd' option to 'svnlook diff' (r1413449)
+    * make Julian happy (r1413030)
   
  Developer-visible changes:
   - General:
@@ -229,6 +252,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * enable running the regression tests over https (r1349699)
     * support 'make davautocheck' on OS X (r1421583)
     * new '--enable-gcov' configure option (r1416646)
+    * fix build with Apache HTTPD 2.5 (r1408985)
+    * allow running the test suite through a http proxy (r1410195)
+    * don't use non-constant initializers in struct variables (r1412911)
 
   - API changes:
     * fix inconsistent handling of log revs without changed paths (issue #3694)
@@ -242,6 +268,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix compilation of Perl bindings on Mandriva 2007 (issue #2617)
     * new JavaHL testing targets (r1182983)
     * enable returning an error on malfunctions for JavaHL (r1366215)
+    * MacOS X build fix to cope with missing GNOME keyring (r1397844)
+    * fix swig bindings tests on MacOS X (r1397846)
+    * fix assertion failure in JavaHL error reporting (r1405922)
+    * support ruby 1.9 (r1407206)
 
 
 Version 1.7.9
