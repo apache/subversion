@@ -85,15 +85,6 @@ Approved changes:
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 
- * r1480077
-   Check separately for -flto and -Wno-clobbered with --enable-optimize.
-   Justification:
-     The -flto flag was not used by older compilers that do not
-     suport -Wno-clobbered, even when they do support -flto.
-   Votes:
-     +1: brane (for 1.8.1)
-     +1: rhuijben, cmpilato
-
  * r1481981
    Don't destroy localised strings in .prej files by converting them to ASCII.
    Justification:
