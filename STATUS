@@ -283,15 +283,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1475724
-   Fix changelist filtering when --changelist values aren't UTF8.
-   Justification:
-     User-reported buglet that prevents the use of changelist
-     filtering altogether for those sorts of changelist names.
-   Branch: 1.7.x-r1475724
-   Votes:
-     +1: cmpilato, stsp, rhuijben
-
  * r1481010
    Fix issue 4365, multi-threaded svnserve pool memory use after clear.
    Justification:
