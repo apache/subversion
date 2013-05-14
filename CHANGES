@@ -42,12 +42,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * support gpg-agent for password caching (r1151069)
     * authz rules can be stored inside the repository (r1424780)
 
-  - Minor new features and improvements (client and server):
+  - Minor new features and improvements (client-side):
     * doubled svn:// protocol throughput (r1325899)
     * optimize file/dir truename checks on Windows (r1435527)
-    * improve performance of config file parsing (r1344347 et al)
-
-  - Minor new features and improvements (client-side):
     * new 'commit --include-externals' option (related to issues #1167, #3563)
     * new '--include-externals' option for 'svn list' (issue #4225)
     * remove extraneous externals output from 'svn status -q' (issue #1935)
@@ -104,6 +101,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * notify when removing externals leaves behind modified files (r1366021)
 
   - Minor new features and improvements (server-side):
+    * improve performance of config file parsing (r1344347 et al)
     * new 'svnadmin load --revision' load filtering support (issue #3734)
     * new 'svnadmin hotcopy --incremental' support for FSFS (issue #3815)
     * new 'svnadmin lock' / 'svnadmin unlock' subcommands (issue #3942, #4092)
