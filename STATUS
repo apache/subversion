@@ -73,6 +73,15 @@ Candidate changes:
    Votes:
      +1: rhuijben (for either 1.8.0 or later)
 
+ * r1482554
+   Making ctypes-python tests pass regardless of local timezone.
+   Justification:
+     Tests should not give false negatives.
+   Notes:
+     Bindings change so can go into 1.8.0.
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
