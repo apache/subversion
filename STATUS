@@ -16,24 +16,6 @@ Status of 1.8.0:
 Candidate changes:
 ==================
 
- * r1479320, r1479321, r1479323, r1479326, r1479329
-   Silence 'make -s clean distclean'.
-   Justification:
-     'make -s all install distclean' would spam stdout and issue irrelevant
-     warnings on stderr.  (This is user-facing behaviour.)
-   Votes:
-     +1 (for 1.8.1): danielsh
-     +1: rhuijben
-
- * r1480077
-   Check separately for -flto and -Wno-clobbered with --enable-optimize.
-   Justification:
-     The -flto flag was not used by older compilers that do not
-     suport -Wno-clobbered, even when they do support -flto.
-   Votes:
-     +1: brane (for 1.8.1)
-     +1: rhuijben
-
  * r1480080, r1481772
    Instruct clang to not warn about unknown warning flags.
    Justification:
@@ -45,13 +27,6 @@ Candidate changes:
    Votes:
      +1: brane (for 1.8.1)
      +0: rhuijben (looks ok, but I can't test or verify via code inspection)
-
- * r1481981
-   Don't destroy localised strings in .prej files by converting them to ASCII.
-   Justification:
-     The .prej files are unreadable.
-   Votes:
-     +1: mattiase (non-binding), stsp, rhuijben
 
  * r1480149
    Fix a build problem on OS X 10.5.
@@ -154,3 +129,28 @@ Approved changes:
      +1: stefan2 (for 1.8.1)
      +1: rhuijben, stsp
      +0: danielsh
+
+ * r1479320, r1479321, r1479323, r1479326, r1479329
+   Silence 'make -s clean distclean'.
+   Justification:
+     'make -s all install distclean' would spam stdout and issue irrelevant
+     warnings on stderr.  (This is user-facing behaviour.)
+   Votes:
+     +1 (for 1.8.1): danielsh
+     +1: rhuijben, cmpilato
+
+ * r1480077
+   Check separately for -flto and -Wno-clobbered with --enable-optimize.
+   Justification:
+     The -flto flag was not used by older compilers that do not
+     suport -Wno-clobbered, even when they do support -flto.
+   Votes:
+     +1: brane (for 1.8.1)
+     +1: rhuijben, cmpilato
+
+ * r1481981
+   Don't destroy localised strings in .prej files by converting them to ASCII.
+   Justification:
+     The .prej files are unreadable.
+   Votes:
+     +1: mattiase (non-binding), stsp, rhuijben, cmpilato
