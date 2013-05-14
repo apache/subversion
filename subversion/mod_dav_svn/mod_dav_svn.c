@@ -137,7 +137,7 @@ init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
 
   /* This returns void, so we can't check for error. */
   conf = ap_get_module_config(s->module_config, &dav_svn_module);
-  svn_utf_initialize2(p, conf->use_utf8);
+  svn_utf_initialize2(conf->use_utf8, p);
 
   return OK;
 }
