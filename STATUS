@@ -80,6 +80,18 @@ Candidate changes:
    Votes:
      +1: breser (for 1.8.1)
 
+ * r1480344, r1480412, r1480442, r1480738, r1480765, r1482479, r1482524,
+   r1482528, r1482536
+   Fix Ruby binding tests on Windows and support Ruby 1.9[1].
+   Justification:
+     Running the test suite is important for, you know, testing.
+   Notes:
+     Bindings changes, so can go into 1.8.0.  [1] Ruby 1.9 doesn't quite
+     yet work on Windows, but this gets us part way there, so there is no
+     compelling reason not to include with this bunch.
+   Votes:
+     +1: pburba
+
 Veto-blocked changes:
 =====================
 
