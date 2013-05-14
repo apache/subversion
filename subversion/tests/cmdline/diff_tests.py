@@ -3360,6 +3360,52 @@ def diff_git_format_wc_wc(sbox):
   svntest.actions.run_and_verify_svn(None, expected, [], 'diff',
                                      '--git', wc_dir)
 
+@Issue(4294)
+def diff_git_format_wc_wc_dir_mv(sbox):
+  "create a diff in git unidff format for wc dir mv"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  g_path = sbox.ospath('A/D/G')
+  g2_path = sbox.ospath('A/D/G2')
+  pi_path = sbox.ospath('A/D/G/pi')
+  rho_path = sbox.ospath('A/D/G/rho')
+  tau_path = sbox.ospath('A/D/G/tau')
+  new_pi_path = sbox.ospath('A/D/G2/pi')
+  new_rho_path = sbox.ospath('A/D/G2/rho')
+  new_tau_path = sbox.ospath('A/D/G2/tau')
+
+  svntest.main.run_svn(None, 'mv', g_path, g2_path)
+
+  expected_output = make_git_diff_header(pi_path, "A/D/G/pi",
+                                         "revision 1", "working copy",
+                                         delete=True) \
+  + [
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'pi'.\n"
+  ] + make_git_diff_header(rho_path, "A/D/G/rho",
+                           "revision 1", "working copy",
+                           delete=True) \
+  + [
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'rho'.\n"
+  ] + make_git_diff_header(tau_path, "A/D/G/tau",
+                           "revision 1", "working copy",
+                           delete=True) \
+  + [
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'tau'.\n"
+  ] + make_git_diff_header(new_pi_path, "A/D/G2/pi", None, None, cp=True,
+                           copyfrom_path="A/D/G/pi", text_changes=False) \
+  + make_git_diff_header(new_rho_path, "A/D/G2/rho", None, None, cp=True,
+                         copyfrom_path="A/D/G/rho", text_changes=False) \
+  + make_git_diff_header(new_tau_path, "A/D/G2/tau", None, None, cp=True,
+                         copyfrom_path="A/D/G/tau", text_changes=False)
+
+  expected = svntest.verify.UnorderedOutput(expected_output)
+
+  svntest.actions.run_and_verify_svn(None, expected, [], 'diff',
+                                     '--git', wc_dir)
+
 def diff_git_format_url_wc(sbox):
   "create a diff in git unidiff format for url-wc"
   sbox.build()
@@ -3799,6 +3845,7 @@ test_list = [ None,
               diff_git_with_props_on_dir,
               diff_abs_localpath_from_wc_folder,
               no_spurious_conflict,
+              diff_git_format_wc_wc_dir_mv,
               ]
 
 if __name__ == '__main__':
