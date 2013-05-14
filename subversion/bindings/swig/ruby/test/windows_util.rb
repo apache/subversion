@@ -105,7 +105,28 @@ module SvnTestUtil
               target_path = "#{path}\\#{target}"
               if File.exists?(target_path)
                 found_targets << target
-                FileUtils.cp(target_path, svnserve_dir)
+                retried = 0
+                begin
+                  FileUtils.cp(target_path, svnserve_dir)
+                rescue Errno::EACCES
+                  # On Windows the tests frequently fail spuriously with a
+                  # 'Errno::EACCES: Permission denied - svnserve.exe' error.
+                  # Sleeping for a few seconds avoids this.
+                  #puts "\nFailed to copy"
+                  #puts $!
+                  #puts "'#{target_path}' to"
+                  #puts "'#{svnserve_dir}'"
+                  #puts "Sleeping for 1 sec, then retrying."
+                  if retried > 5
+                    # Give up!
+                    raise
+                  else
+                    # Wait a sec...
+                    sleep(1)
+                    retried += 1
+                    retry
+                  end
+                end
               end
             end
             targets -= found_targets
