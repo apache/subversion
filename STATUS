@@ -84,10 +84,3 @@ Approved changes:
 # that would restart the soak should not be added unless they are resolving
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
-
- * r1481981
-   Don't destroy localised strings in .prej files by converting them to ASCII.
-   Justification:
-     The .prej files are unreadable.
-   Votes:
-     +1: mattiase (non-binding), stsp, rhuijben, cmpilato, breser, julianfoad
