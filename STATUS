@@ -58,7 +58,7 @@ Candidate changes:
    Votes:
      +1: blair (who has nominated brane's commits after his veto was added)
      +1: brane (for 1.8.1)
-     -0: philip (see dev thread: false alarm, trades one warining for another)
+     -0: philip (see dev thread: false alarm, trades one warning for another)
      -0: rhuijben, breser (merge conflict in configure.ac in r1481848
                            <danielsh> would be resolved by the r1480080 group,
                               or by merging r1481848 without the unintentional
