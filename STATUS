@@ -112,6 +112,7 @@ Candidate changes:
      +1: brane (for 1.8.1)
      -0: philip (on r1469519, r1469520, no vote on r1481848, 1481870;
                  see dev thread: it's a false alarm, wrong value)
+     -0: rhuijben (merge conflict in configure.ac in r1481848)
 
 Veto-blocked changes:
 =====================
