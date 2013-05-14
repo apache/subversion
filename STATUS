@@ -85,13 +85,6 @@ Approved changes:
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 
- * r1482350, r1482354
-   If we are going to reroll I would like to reorganize the arguments of the
-   new in 1.8 function svn_utf_initialize2() (svn_utf.h) to properly have the
-   pool as last argument, as we have with almost every other function.
-   Votes:
-     +1: rhuijben (only for 1.8.0), danielsh, ivan (only for 1.8.0)
-
  * r1482282
    Don't use unitialized variable to produce an error code.
    Justification:
