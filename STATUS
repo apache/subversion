@@ -125,6 +125,13 @@ Candidate changes:
       path itself is stored in Unicode)
    Votes:
      +1: rhuijben
+     
+ * svn_utf_initialize2()
+   If we are going to reroll I would like to reorganize the arguments of the
+   new in 1.8 function svn_utf_initialize2() (svn_utf.h) to properly have the
+   pool as last argument, as we have with almost every other function.
+   Votes:
+     +1: rhuijben (only for 1.8.0)
 
 Veto-blocked changes:
 =====================
