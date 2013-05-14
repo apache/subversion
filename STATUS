@@ -85,14 +85,6 @@ Approved changes:
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 
- * r1482327, r1482338
-   Resolve segfault on upgrading from pre 1.7 working copies, where there
-   are local property changes or conflicts or changelist, but no tree conflict.
-   Justification:
-     Regression from 1.7.
-   Votes:
-     +1: philip, breser, rhuijben
-
  * r1481596
    For 'svn log -g', eliminate read requests on directories and mergeinfo
    in revisions that are guaranteed to not change any mergeinfo.
