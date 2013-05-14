@@ -913,22 +913,24 @@ open_path(parent_path_t **parent_path_p,
      a sibling of PATH has been presently accessed.  Try to start the lookup
      directly at the parent node, if the caller did not requested the full
      parent chain. */
-  const char *directory = NULL;
   assert(svn_fs__is_canonical_abspath(path));
   if (flags & open_path_node_only)
     {
-      directory = svn_dirent_dirname(path, pool);
+      const char *directory = svn_dirent_dirname(path, pool);
       if (directory[1] != 0) /* root nodes are covered anyway */
-        SVN_ERR(dag_node_cache_get(&here, root, directory, TRUE, pool));
+        {
+          SVN_ERR(dag_node_cache_get(&here, root, directory, TRUE, pool));
+          /* did the shortcut work? */
+          if (here)
+            {
+              path_so_far = directory;
+              rest = path + strlen(directory) + 1;
+            }
+        }
     }
 
   /* did the shortcut work? */
-  if (here)
-    {
-      path_so_far = directory;
-      rest = path + strlen(directory) + 1;
-    }
-  else
+  if (!here)
     {
       /* Make a parent_path item for the root node, using its own current
          copy id.  */
