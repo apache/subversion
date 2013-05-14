@@ -85,16 +85,6 @@ Approved changes:
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 
- * r1481594
-   Speed up reporting and authz checks on copy-from info in 'svn log'.
-   Justification:
-     The way we implemented merges makes replacements and add-with-history
-     a much more common occurance than they would otherwise be.  With this
-     simple change, I've witnessed a ~25% speedup for e.g. the FreeBSD repo.
-   Votes:
-     +1: stefan2 (for 1.8.1)
-     +1: rhuijben, ivan
-
  * r1482327, r1482338
    Resolve segfault on upgrading from pre 1.7 working copies, where there
    are local property changes or conflicts or changelist, but no tree conflict.
