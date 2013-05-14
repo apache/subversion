@@ -283,14 +283,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1423837, r1423840, r1423848
-   Fix issue #4168, "no such table: revert_list" for nested wc in sparse wc
-   Justification:
-     Accessing the wrong database from the revert code gives an ugly error
-     which might not be easy to work around.
-   Votes:
-     +1: rhuijben, pburba, stsp
-
  * r1426830
    Resolve issue #3797, by making sure that local changes at the same path
    as a not present file are not skipped.
