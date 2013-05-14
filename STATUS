@@ -133,11 +133,14 @@ Candidate changes:
    Votes:
      +1: rhuijben (only for 1.8.0), danielsh
      
- * r1482327
+ * r1482327, r1482338
    Resolve segfault on upgrading from pre 1.7 working copies, where there
-   are local property changes or conflicts, but no tree conflict.
+   are local property changes or conflicts or changelist, but no tree conflict.
+   Justification:
+     Regression from 1.7.
    Votes:
-     +1: rhuijben
+     +1: rhuijben (r1482327 only)
+     +1: philip
 
 Veto-blocked changes:
 =====================
