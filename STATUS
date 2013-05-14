@@ -61,11 +61,7 @@ Candidate changes:
      +1: brane (for 1.8.1)
      -0: philip (see dev thread: false alarm, trades one warning for another)
      -0: rhuijben, breser (merge conflict in configure.ac in r1481848
-                           <danielsh> would be resolved by the r1480080 group,
-                              or by merging r1481848 without the unintentional
-                              configure.ac part)
-     -0: danielsh (please adjust mergeinfo to exclude r1481848:configure.ac,
-                   that part will be needed for the r1480080 group)
+                           <danielsh> resolved on the branch)
 
  * r1482436
    Resolve regression in svn_ra_replay_range() where it didn't apply
