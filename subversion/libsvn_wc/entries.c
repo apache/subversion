@@ -1565,7 +1565,9 @@ insert_actual_node(svn_sqlite__db_t *sdb,
                                 actual_node->conflict_new,
                                 actual_node->prop_reject,
                                 actual_node->tree_conflict_data,
-                                strlen(actual_node->tree_conflict_data),
+                                actual_node->tree_conflict_data
+                                    ? strlen(actual_node->tree_conflict_data)
+                                    : 0,
                                 scratch_pool, scratch_pool));
 
   if (conflict_data)
