@@ -16,7 +16,7 @@ Status of 1.8.0:
 Candidate changes:
 ==================
 
- * r1480080, r1481772
+ * r1480080, r1481772, r1481847
    Instruct clang to not warn about unknown warning flags.
    Justification:
      Newer versions of clang accept warning flags that they do not
@@ -61,7 +61,10 @@ Candidate changes:
      +1: brane (for 1.8.1)
      -0: philip (on r1469519, r1469520, no vote on r1481848, 1481870;
                  see dev thread: it's a false alarm, wrong value)
-     -0: rhuijben, breser (merge conflict in configure.ac in r1481848)
+     -0: rhuijben, breser (merge conflict in configure.ac in r1481848
+                           <danielsh> would be resolved by the r1480080 group,
+                              or by merging r1481848 without the unintentional
+                              configure.ac part)
 
  * r1482436
    Resolve regression in svn_ra_replay_range() where it didn't apply
