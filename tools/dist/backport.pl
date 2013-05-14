@@ -67,6 +67,7 @@ sub prompt {
   local $\; # disable 'perl -l' effects
   print "$_[0] ";
 
+  die "$0: called prompt() in non-interactive mode!" if $YES;
   # TODO: this part was written by trial-and-error
   ReadMode 'cbreak';
   my $answer = (ReadKey 0);
