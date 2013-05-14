@@ -229,7 +229,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
   - General:
     * now require Python 2.5 for tests and dev tools (r1243627)
     * now require bzip2 for tests and dev tools (r1148512)
-    * new require httpd version 2.2.21 for builds with Apache (r1174039)
     * configure defaults to --without-apache-libexecdir (r1469862)
     * support builds with APR pool debugging (r1176894)
     * 'make extraclean' is more thorough now (r1149460)
