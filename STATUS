@@ -119,13 +119,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
      
- * r1482350, r1482354
-   If we are going to reroll I would like to reorganize the arguments of the
-   new in 1.8 function svn_utf_initialize2() (svn_utf.h) to properly have the
-   pool as last argument, as we have with almost every other function.
-   Votes:
-     +1: rhuijben (only for 1.8.0), danielsh
-     
  * r1482327, r1482338
    Resolve segfault on upgrading from pre 1.7 working copies, where there
    are local property changes or conflicts or changelist, but no tree conflict.
@@ -153,3 +146,10 @@ Approved changes:
      Unstable APR hash order causes unstable output.
    Votes:
      +1: stsp, rhuijben, danielsh
+
+ * r1482350, r1482354
+   If we are going to reroll I would like to reorganize the arguments of the
+   new in 1.8 function svn_utf_initialize2() (svn_utf.h) to properly have the
+   pool as last argument, as we have with almost every other function.
+   Votes:
+     +1: rhuijben (only for 1.8.0), danielsh, ivan (only for 1.8.0)
