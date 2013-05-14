@@ -59,10 +59,9 @@ Candidate changes:
      +1: blair (who has nominated brane's commits after his veto was
                 added.  @philip: what do you mean wrong value?)
      +1: brane (for 1.8.1)
-     +1: breser
      -0: philip (on r1469519, r1469520, no vote on r1481848, 1481870;
                  see dev thread: it's a false alarm, wrong value)
-     -0: rhuijben (merge conflict in configure.ac in r1481848)
+     -0: rhuijben, breser (merge conflict in configure.ac in r1481848)
 
  * r1482436
    Resolve regression in svn_ra_replay_range() where it didn't apply
