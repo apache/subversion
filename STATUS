@@ -54,7 +54,7 @@ Candidate changes:
      simple change, I've witnessed a ~25% speedup for e.g. the FreeBSD repo.
    Votes:
      +1: stefan2 (for 1.8.1)
-     +1: rhuijben
+     +1: rhuijben, ivan
 
  * r1481596
    For 'svn log -g', eliminate read requests on directories and mergeinfo
