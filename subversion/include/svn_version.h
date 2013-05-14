@@ -95,7 +95,7 @@ extern "C" {
  *
  * Always change this at the same time as SVN_VER_NUMTAG.
  */
-#define SVN_VER_TAG        " (under development)"
+#define SVN_VER_TAG        " (Release Candidate 2)"
 
 
 /** Number tag: a string describing the version.
@@ -110,7 +110,7 @@ extern "C" {
  *
  * Always change this at the same time as SVN_VER_TAG.
  */
-#define SVN_VER_NUMTAG     "-dev"
+#define SVN_VER_NUMTAG     "-rc2"
 
 
 /** Revision number: The repository revision number of this release.
@@ -121,7 +121,7 @@ extern "C" {
  * When rolling a tarball, we automatically replace it with what we
  * guess to be the correct revision number.
  */
-#define SVN_VER_REVISION   0
+#define SVN_VER_REVISION   1482456
 
 
 /* Version strings composed from the above definitions. */
