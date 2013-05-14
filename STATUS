@@ -105,13 +105,17 @@ Candidate changes:
 Veto-blocked changes:
 =====================
 
- * r1469519, r1469520
-   Silence compiler warnings.
+ * r1469519, r1469520, r1481848, r1481870
+   Silence compiler warnings, tighten scopes and improve code.
    Justification:
      Clean builds make it more likely to notice real compiler warnings.
    Votes:
-     +1: blair
-     -0: philip (see dev thread: it's a false alarm, wrong value)
+     +1: blair (who has nominated brane's commits after his veto was
+                added.  @philip: what do you mean wrong value?
+                @brane: nominating your commits on top of my commits,
+                that way to avoid a merge conflict)
+     -0: philip (on r1469519, r1469520, no vote on r1481848, 1481870;
+                 see dev thread: it's a false alarm, wrong value)
      -1: brane (superseded by r1481848 and 1481870, respectively,
                 which silence the warnings while also avoiding
                 the negative effects noted by philip)
