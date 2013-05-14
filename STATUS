@@ -64,6 +64,8 @@ Candidate changes:
                            <danielsh> would be resolved by the r1480080 group,
                               or by merging r1481848 without the unintentional
                               configure.ac part)
+     -0: danielsh (please adjust mergeinfo to exclude r1481848:configure.ac,
+                   that part will be needed for the r1480080 group)
 
  * r1482436
    Resolve regression in svn_ra_replay_range() where it didn't apply
