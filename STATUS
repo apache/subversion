@@ -283,14 +283,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1461743
-   Set output parameter in non-maintainer builds, in svn_fs_commit_txn().
-   Justification:
-     Part of the API contract.
-   Branch: 1.7.x-r1461743
-   Votes:
-     +1: danielsh, stsp, rhuijben
-
  * r1476359
    JavaHL thread safety bug.
    Justification:
