@@ -283,14 +283,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1476359
-   JavaHL thread safety bug.
-   Justification:
-     Unexpected exceptions can be thrown when thread issues are encountered.
-   Votes:
-     +1: markphip, stsp
-     +0: rhuijben
-
  * r1475724
    Fix changelist filtering when --changelist values aren't UTF8.
    Justification:
