@@ -122,6 +122,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * tune ra_svn transmit buffer handling (r1391788)
     * make 'svnrdump' work with serf (issue #4116)
     * fix 'svnrdump' on path below repository root (issue #4101)
+    * support ipv6 in URLs (e.g. http://[::1]/svn/repos) (r1454047)
+    * conflict resolver now iterates paths in a sorted order (r1461820)
+    * mod_dav_svn does keyword expansion with 'kw=1' query arg (r1466055)
+    * add support for custom keyword definitions (issue #890)
 
   - Minor new features and improvements (server-side):
     * improve performance of config file parsing (r1344347 et al)
@@ -177,6 +181,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * various server-side performance improvements for 'log -g' (r1395442 et al)
     * many FSFS caching improvements (r1390435, r1390447)
     * allow up to 10Gbit throughput with svnserve (r1391788)
+    * install mod_dontdothat correctly (r1454450)
+    * svnadmin verify can now verify transactions (r1462353)
+    * FSFS verifies revisions as they are added (r1462409)
 
   - Client-side bugfixes:
     * fix inconsistent 'svn log' output for empty revisions (issue #3964)
@@ -234,6 +241,24 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix conflict resolver losing executable bit of a file (r1391019)
     * fix redundant notifications when merging with ra_serf (issue #3802)
     * fix 'svn add --force /path/to/wcroot' should work (issue #4241)
+    * fix file permissions changed after commit (issue #4331)
+    * improve handling of http errors in ra_serf (1452792, 1452870)
+    * include checksum of missing pristines in error message (r1452800)
+    * fix an assert when merging against a replaced source (issue #4132)
+    * fix replacement in merge source has incorrect notification (issue #4138)
+    * improve performance of checkout (r1453791)
+    * fixed documentation regarding merge source (issue #3247)
+    * fix merge errors out after resolving conflicts (issue #4316)
+    * fix delete/move with file external in unversioned dir (issue #4293)
+    * fix resolving tree conflict with local node missing (r1461848)
+    * fix invalid read during diff suffix scanning (issue #4339)
+    * fix assertion when running 'svn log <SOME_URL>@PREV' (r1462134)
+    * optimize enumerating configuration options (r1464478)
+    * revert will now sleep for timestamps if using commit times (r1464769)
+    * don't allow externals to be deleted with 'svn rm' (r1464992)
+    * improved memory usage in ra_serf and ra_local (r1465280)
+    * replace some assertions with more helpful error messages (r1465975)
+    * fixed long keyword expansion truncated (issue #4349)
 
   - Server-side bugfixes:
     * SVNParentPath / repository listing now authz-filtered (r1408184)
@@ -251,6 +276,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix svndumpfilter for empty paths in included or excluded lists (r1294583)
     * make fsfs packing threadsafe (r1376011)
     * don't error out on intermittent memcached failures (r1394470)
+    * fix a ra_svn deadlock with zero-copy server option (r1465622)
 
   - Other tool improvements and bugfixes:
     * 'svnmucc' promoted to first-class supported utility (issue #3308, #4279)
@@ -263,6 +289,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * new '-?' option support for 'svnmucc' (r1339428)
     * provide the repository name to mailer.py (r1439592)
     * make Julian happy (r1413030)
+    * add '--force-interactive' to svnmucc (r1457789)
+    * add '--trust-server-cert' to svnmucc (r1458995)
   
  Developer-visible changes:
   - General:
@@ -301,6 +329,11 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * configure now script auto-detects GNOME keyring (r1387230)
     * allow configure to detect BDB on Debian-based Linux distros (r1390633)
     * auto-detect serf via pkg-config (r1391662)
+    * improve queries for compatability with SQLite 3.7.16 (r1455239)
+    * remove support for in-tree apr, apr-util and apr-memcache (r1456924)
+    * FSFS caching supports prefixes now (r1462436)
+    * maintainer mode now prints symbolic error codes (r1465157)
+    * don't require NLS support for kwallet support (r1466445)
 
   - API changes:
     * fix inconsistent handling of log revs without changed paths (issue #3694)
@@ -310,6 +343,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * major rewrite of conflict storage and handling APIs (r1354973 et al)
     * hide (deprecate) svn_wc APIs that use editors (r1243339)
     * svn_stringbuf_ensure() allocates an extra byte for terminator (r1308966)
+    * switch and update apis are now more consistent (r1465292)
+    * deprecated svn_client_merge_reintegrate (r1466742)
+    * deprecated low level ra_svn apis (r1466907)
 
   - Bindings:
     * star-imports in swig-py only import 'svn_*' symbols (r1303375)
@@ -326,6 +362,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix build of Perl bindings with newer versions of SWIG (r1389658)
     * add missing API functions to Perl bindings (issue #2646)
     * add missing API functions to Python bindings (r1392038 et al)
+    * add missing API functions to JavaHL bindings (issue #4326)
+    * fix some reference counting bugs in swig-py bindings (r1464899, r1466524)
 
 
 Version 1.7.9
