@@ -1043,7 +1043,7 @@ int main(int argc, const char *argv[])
                                          connection_pool) == APR_CHILD_DONE)
             ;
         }
-      if (APR_STATUS_IS_EINTR(status))
+      if (APR_STATUS_IS_EINTR(status) || APR_STATUS_IS_ECONNABORTED(status))
         {
           svn_pool_destroy(connection_pool);
           continue;
