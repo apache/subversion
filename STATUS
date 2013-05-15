@@ -106,6 +106,14 @@ Candidate changes:
    Votes:
      +1: stsp (without r1482779), rhuijben
 
+ * r1482829
+   Reduce diskspace needed by our testsuite when using cleanup mode.
+   Justification:
+     A 256 MB ramdrive should be more than enough for running the
+     tests in parallel mode, but currently isn't.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
