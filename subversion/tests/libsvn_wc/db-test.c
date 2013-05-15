@@ -343,6 +343,8 @@ create_open(svn_wc__db_t **db,
   SVN_ERR(svn_wc__db_open(db, NULL, FALSE, TRUE, pool, pool));
   SVN_ERR(svn_test__create_fake_wc(*local_abspath, TESTING_DATA, pool, pool));
 
+  svn_test_add_dir_cleanup(*local_abspath);
+
   return SVN_NO_ERROR;
 }
 
