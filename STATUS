@@ -114,6 +114,15 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1483116
+   Retry removing test temporary directories when running as deferred deletes
+   using a short delay.
+   Justification:
+     Without this patch running the svnserve-bdb tests on Windows leaves a lot
+     of temporary directories behind, causing testruns to fail on ramdrives.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
