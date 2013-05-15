@@ -207,7 +207,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix handling of "\ No newline ..." in diff/patch (r1411723, r1412382)
     * allow infinite http timeout in ra_serf (r1411976)
     * using unknown svn: property names now requires --force (issue #4261)
-    * fix interaction of mod_dav_svn and locales (issue #2487)
     * fix handling of case insensitive configuration files (r1215089)
 
   - Server-side bugfixes:
@@ -270,7 +269,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * allow running the test suite through a http proxy (r1410195)
     * don't use non-constant initializers in struct variables (r1412911)
     * allow generation of Visual Studio 11 compatible projects (r1245152)
-    * upgrade to libmagic 5.11 in Unix builds (r1292074)
 
   - API changes:
     * fix inconsistent handling of log revs without changed paths (issue #3694)
