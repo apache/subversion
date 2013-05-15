@@ -60,6 +60,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * 'svn mergeinfo' now honors the --revision (-r) option (issue #4199)
     * 'svn mergeinfo' now shows a summary graph by default (issue #4239)
     * new --search and --search-and options for 'svn log' (r1354666, -83518)
+    * 'svn log' reports the node kind even for pre-1.6 revision files (r1242958)
     * new built-in interactive text conflict merge tool (r1357864, et al)
     * new 'svn --version --verbose' option shows runtime environment info
     * 'svn' is now non-interactive when not run in a terminal device (r1424037)
@@ -124,6 +125,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * 'svndumpfilter' now supports --delta dumpfiles (r1351009, -3745)
     * new '--drop-all-emtpy-revs' option for 'svndumpfilter' (issue #3681)
     * client version info now reported to commit hooks (issue #4124)
+    * txn name now reported to post-commit hooks (r1240856)
     * support for server-side keyword expansion in mod_dav_svn (r1466055)
     * FSFS now able to cache revision properties (r1326307)
     * directory and property deltification option in FSFS (issue #4084)
@@ -147,9 +149,11 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * new --compatible-version option for 'svnadmin create' (r1407279 )
     * new --ignore-properties option for 'svnlook diff' (r1407905)
     * new --properties-only option for 'svnlook diff' (r1407905)
+    * allow leading "r"'s in http: ?p= and ?r= query parameters (r1221463)
 
   - Client-side bugfixes:
     * fix inconsistent 'svn log' output for empty revisions (issue #3964)
+    * fix mis-ordered text output of 'svn log --diff' on Windows (r1220783)
     * fix 'svn revert' of 'svn move' (issue #876)
     * fix file externals wrongly "resurrecting" a deleted file (#4017)
     * fix reporting of corrupted 1.6 w/cs by 'svn upgrade' (r1182904, -9)
@@ -196,6 +200,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix handling of "\ No newline ..." in diff/patch (r1411723, r1412382)
     * allow infinite http timeout in ra_serf (r1411976)
     * using unknown svn: property names now requires --force (issue #4261)
+    * fix interaction of mod_dav_svn and locales (issue #2487)
+    * fix handling of case insensitive configuration files (r1215089)
 
   - Server-side bugfixes:
     * SVNParentPath / repository listing now authz-filtered (r1408184)
@@ -209,6 +215,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * remove spurious is-fresh-txn-root from empty revision files (issue #4031)
     * fix a stdout handling problem in 'svnlook diff' (r1411971)
     * fix erratic behaviour in 'svnlook diff' showing property diffs (r1412224)
+    * fix inconsistent authz error messages in 'svn log' in svnserve (r1292462)
 
   - Other tool improvements and bugfixes:
     * 'svnmucc' promoted to first-class supported utility (issue #3308, #4279)
@@ -254,6 +261,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix build with Apache HTTPD 2.5 (r1408985)
     * allow running the test suite through a http proxy (r1410195)
     * don't use non-constant initializers in struct variables (r1412911)
+    * allow generation of Visual Studio 11 compatible projects (r1245152)
+    * upgrade to libmagic 5.11 in Unix builds (r1292074)
 
   - API changes:
     * fix inconsistent handling of log revs without changed paths (issue #3694)
@@ -261,6 +270,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * provide API to clear cached auth credentials (issue #2775)
     * improve repository location information in various APIs (issue #4170)
     * major rewrite of conflict storage and handling APIs (r1354973 et al)
+    * hide (deprecate) svn_wc APIs that use editors (r1243339)
 
   - Bindings:
     * star-imports in swig-py only import 'svn_*' symbols (r1303375)
@@ -271,6 +281,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix swig bindings tests on MacOS X (r1397846)
     * fix assertion failure in JavaHL error reporting (r1405922)
     * support ruby 1.9 (r1407206)
+    * JavaHL: Include OSGI Manifest information in svn-javahl.jar (r1234864)
+    * new svn_auth_set_gnome_keyring_unlock_prompt_func function (r1241554)
 
 
 Version 1.7.9
