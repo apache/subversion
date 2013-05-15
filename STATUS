@@ -120,7 +120,14 @@ Candidate changes:
    Justification:
      SEGFAULTs are consider rude in polite company.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, philip
+
+ * r1482973
+   Avoid using predictable temporary filenames based on "tempfile".
+   Justification:
+     Performance issue if lots of files match.
+   Votes:
+     +1: philip
 
 Veto-blocked changes:
 =====================
