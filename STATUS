@@ -114,6 +114,14 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1482969, r1482970
+   Fix issue #4366 ("client SEGFAULTs diffing a repos rev in which an
+   empty file was added").
+   Justification:
+     SEGFAULTs are consider rude in polite company.
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 =====================
 
