@@ -123,6 +123,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * 'svn mergeinfo' now prints ASCII-art summary diagram (r1388673 et al)
     * make ra_serf raise an error upon delta-base mismatch (issue #4235)
     * tune ra_svn TX buffer handling (r1391788)
+    * make 'svnrdump' work with serf (issue #4116)
+    * fix 'svnrdump' on path below repository root (issue #4101)
 
   - Minor new features and improvements (server-side):
     * improve performance of config file parsing (r1344347 et al)
@@ -263,8 +265,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * make mailer.py generate Date and Message-ID headers (r1449592)
     * new '-?' option support for 'svnmucc' (r1339428)
     * provide the repository name to mailer.py (r1439592)
-    * make 'svnrdump' work with serf (issue #4116)
-    * fix 'svnrdump' on path below repository root (issue #4101)
     * make Julian happy (r1413030)
   
  Developer-visible changes:
