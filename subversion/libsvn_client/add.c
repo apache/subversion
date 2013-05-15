@@ -704,15 +704,12 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
 
   for (i = 0; i < inherited_config_auto_props->nelts; i++)
     {
-      apr_hash_index_t *hi;
       svn_prop_inherited_item_t *elt = APR_ARRAY_IDX(
         inherited_config_auto_props, i, svn_prop_inherited_item_t *);
+      const svn_string_t *propval =
+        svn_hash_gets(elt->prop_hash, SVN_PROP_INHERITABLE_AUTO_PROPS);
 
-      for (hi = apr_hash_first(scratch_pool, elt->prop_hash);
-           hi;
-           hi = apr_hash_next(hi))
         {
-          const svn_string_t *propval = svn__apr_hash_index_val(hi);
           const char *ch = propval->data;
           svn_stringbuf_t *config_auto_prop_pattern;
           svn_stringbuf_t *config_auto_prop_val;
