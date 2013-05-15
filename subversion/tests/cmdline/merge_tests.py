@@ -19005,6 +19005,117 @@ def conflicted_split_merge_with_resolve(sbox):
                                   prop_resolved=1, expect_error=False)
     try_merge(target, 8,  ['-r6:3', '-r10:7'], expect, '7')
 
+#----------------------------------------------------------------------
+# Test for issue 4367 'merge to shallow WC, repeat merge to infinite
+# depth WC is broken'.
+@SkipUnless(server_has_mergeinfo)
+@Issues(4367)
+@XFail()
+def merge_to_empty_target_merge_to_infinite_target(sbox):
+  "repeat merge to infinite depth WC conflicts"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = set_up_branch(sbox)
+  A_COPY_path = sbox.ospath('A_COPY')
+  E_path = sbox.ospath('A/B/E')
+
+  # r2 - Delete A/B/E.
+  sbox.simple_update()
+  svntest.main.run_svn(None, 'del', E_path)
+  sbox.simple_commit()
+
+  # r3 - Set depth of A_COPY to empty, merge the r3 from ^/A.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up',
+                                     '--set-depth=empty', A_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-c7',
+                                     '^/A', A_COPY_path)
+  sbox.simple_commit()
+
+  # Update A_COPY back to depth infinity and retry the prior merge.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up',
+                                     '--set-depth=infinity', A_COPY_path)
+  expected_output = wc.State(A_COPY_path, {
+    'B/E' : Item(status='D '),
+    })
+  expected_mergeinfo_output = wc.State(A_COPY_path, {
+    ''  : Item(status=' U'),
+    'B' : Item(status=' G'),
+    })
+  expected_elision_output = wc.State(A_COPY_path, {
+    'B' : Item(status=' U'),
+    })
+  expected_status = wc.State(A_COPY_path, {
+    ''          : Item(status=' M'),
+    'B'         : Item(status='  '),
+    'mu'        : Item(status='  '),
+    'B/E'       : Item(status='D '),
+    'B/E/alpha' : Item(status='D '),
+    'B/E/beta'  : Item(status='D '),
+    'B/lambda'  : Item(status='  '),
+    'B/F'       : Item(status='  '),
+    'C'         : Item(status='  '),
+    'D'         : Item(status='  '),
+    'D/G'       : Item(status='  '),
+    'D/G/pi'    : Item(status='  '),
+    'D/G/rho'   : Item(status='  '),
+    'D/G/tau'   : Item(status='  '),
+    'D/gamma'   : Item(status='  '),
+    'D/H'       : Item(status='  '),
+    'D/H/chi'   : Item(status='  '),
+    'D/H/psi'   : Item(status='  '),
+    'D/H/omega' : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=8)
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:7'}),
+    'B'         : Item(),
+    'mu'        : Item("This is the file 'mu'.\n"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("This is the file 'rho'.\n"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("This is the file 'psi'.\n"),
+    'D/H/omega' : Item("This is the file 'omega'.\n"),
+    })
+  # This should just delete the now present subtree, but instead it
+  # fails with an unexpected tree conflict:
+  #
+  #   >svn merge ^/A A_COPY -c7
+  #   --- Merging r7 into 'A_COPY\B':
+  #      C A_COPY\B\E
+  #   --- Recording mergeinfo for merge of r7 into 'A_COPY':
+  #    U   A_COPY
+  #   --- Recording mergeinfo for merge of r7 into 'A_COPY\B':
+  #    G   A_COPY\B
+  #   --- Eliding mergeinfo from 'A_COPY\B':
+  #    U   A_COPY\B
+  #   Summary of conflicts:
+  #     Tree conflicts: 1
+  #   Tree conflict on 'A_COPY\B\E'
+  #      > local dir edit, incoming dir delete upon merge
+  #   Select: (p) postpone, (r) resolved, (q) quit resolution, (h) help: p
+  #   Summary of conflicts:
+  #     Tree conflicts: 1
+  expected_skip = wc.State(A_COPY_path, { })
+  svntest.actions.run_and_verify_merge(A_COPY_path, '6', '7',
+                                       sbox.repo_url + '/A', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1)
+
 ########################################################################
 # Run the tests
 
@@ -19149,6 +19260,7 @@ test_list = [ None,
               multiple_editor_drive_merge_notifications,
               single_editor_drive_merge_notifications,
               conflicted_split_merge_with_resolve,
+              merge_to_empty_target_merge_to_infinite_target,
              ]
 
 if __name__ == '__main__':
