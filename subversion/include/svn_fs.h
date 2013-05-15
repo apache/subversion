@@ -2506,7 +2506,7 @@ svn_fs_pack(const char *db_path,
  * verifications as well.
  *
  * @note To ensure a full verification using all tests and covering all
- * revisions, you must call this function *and* #svn_fs_verify_rev.
+ * revisions, you must call this function *and* #svn_fs_verify_root.
  *
  * @note Implementors, please do tests that can be done efficiently for
  * a single revision in #svn_fs_verify_root.  This function is meant for
