@@ -78,7 +78,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * 'svn status' with better NLS support (r1157537, -682)
     * better tracking of shallow-yet-complete merges (issues #4056, #4057)
     * make 'svn status --quiet' w/ externals quieter still (issue #1935)
-    * ensure that all paths shown in 'svn status' are relative-ized (r1202425)
     * ensure that conflict paths are shown relative-ized (r1337520)
     * improve performance of local multi-target deletions (r1195873)
     * apply update ops to locally moved-away dirs (r1183358, r1185110, r1185392)
