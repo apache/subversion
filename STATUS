@@ -34,7 +34,7 @@ Candidate changes:
      Necessary for building on PPC Macs.
    Votes:
      +1: mattiase (non-binding)
-     +1: rhuijben (but I would prefer a cleaner fix for 1.9+)
+     +1: rhuijben
 
  * r1477876, r1477891, r1478001, r1479605
    Fix a bug whereby a property conflict description always reported
@@ -97,14 +97,14 @@ Candidate changes:
    Justification:
      Build fails.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
- * r1482759
+ * r1482759, r1482779
    Prevent svnserve from exiting when a client connection is aborted.
    Justification:
      DoS against svnserve possible.
    Votes:
-     +1: stsp
+     +1: stsp (without r1482779), rhuijben
 
 Veto-blocked changes:
 =====================
