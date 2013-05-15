@@ -120,7 +120,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * ra_serf transmits property changes inline to reduce requests (r1378927)
     * allow client to avoid SSL certificate prompts (issue #2410)
     * improve interactive resolution of property conflicts (r1387678 et al)
-    * 'svn mergeinfo' now prints ASCII-art summary diagram (r1388673 et al)
     * make ra_serf raise an error upon delta-base mismatch (issue #4235)
     * tune ra_svn TX buffer handling (r1391788)
     * make 'svnrdump' work with serf (issue #4116)
