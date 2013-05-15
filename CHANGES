@@ -101,7 +101,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * new 'http-max-connections' configuration option for serf (r1421559)
     * new 'http-bulk-updates' configuration option for serf (r1421490)
     * 'svn cleanup' now runs SQLite "vacuum" to reclaim space (r1418459)
-    * 'svn info' displays repository relative URL (r1415365)
+    * 'svn info' displays repository-relative URL (r1415365)
     * fix serf memory leak on checkout (issue #4194)
     * detect duplicate paths setting svn:externals (issue #4227)
     * make ra_serf work over HTTP/1.0 proxies (issue #3979)
