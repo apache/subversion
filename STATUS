@@ -92,6 +92,13 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r1482724
+   Fix a link error when configured with --enable-runtime-module-search.
+   Justification:
+     Build fails.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
