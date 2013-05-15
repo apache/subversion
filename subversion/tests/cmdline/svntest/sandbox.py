@@ -389,7 +389,7 @@ def _cleanup_test_path(path, retrying=False):
     logger.info("CLEANUP: %s", path)
 
   try:
-    svntest.main.safe_rmtree(path)
+    svntest.main.safe_rmtree(path, retrying)
   except:
     logger.info("WARNING: cleanup failed, will try again later")
     _deferred_test_paths.append(path)
