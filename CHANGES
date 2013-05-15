@@ -110,7 +110,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * improve network and disk i/o interleaving in ra_serf (r1407934)
     * avoid assert in ra_serf when REPORT response was truncated (r1407935)
     * rewrite ra_serf XML parser (r1409259 et al)
-    * master passphrase and encrypted credentials cache (issue #4145)
     * ra_serf can create transaction with inline txnprops (r1375167)
     * partially fix replace+propset of locked file fails over DAV (issue #3674)
     * fix ra_serf doesn't handle bad baseline error from server (issue #4127)
