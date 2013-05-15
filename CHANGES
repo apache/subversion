@@ -66,7 +66,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * 'svn --version' shows build system info (r1368662)
     * 'svn --version --verbose' shows runtime environment info (r1370813 et al)
     * 'svn' is now non-interactive when not run in a terminal device (r1424037)
-    * 'svn propset' checks spelling of reserved property names.
+    * 'svn propset' checks spelling of reserved property names (r1470781)
     * improve working copy performance on network disks (issue #4176) 
     * support for custom keyword definitions in svn:keywords (issue #890)
     * svn:ignore __pycache__ directories by default (r1150073)
