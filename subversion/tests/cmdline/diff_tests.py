@@ -4507,7 +4507,6 @@ def diff_dir_replaced_by_dir(sbox):
                                      'diff', '--summarize', wc_dir)
 
 
-@XFail()
 @Issue(4366)
 def diff_repos_empty_file_addition(sbox):
   "repos diff of rev which adds empty file"
