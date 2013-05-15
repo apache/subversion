@@ -666,9 +666,8 @@ import(const char *local_abspath,
   import_ctx->autoprops = autoprops;
   svn_magic__init(&import_ctx->magic_cookie, pool);
 
-  /* Get a root dir baton.  We pass an invalid revnum to open_root
-     to mean "base this on the youngest revision".  Should we have an
-     SVN_YOUNGEST_REVNUM defined for these purposes? */
+  /* Get a root dir baton.  We pass the revnum we used for testing our
+     assumptions and obtaining inherited properties. */
   SVN_ERR(editor->open_root(edit_baton, base_rev, pool, &root_baton));
 
   /* Import a file or a directory tree. */
