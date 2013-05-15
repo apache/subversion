@@ -81,7 +81,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * make 'svn status --quiet' w/ externals quieter still (issue #1935)
     * ensure that conflict paths are shown relative-ized (r1337520)
     * improve performance of local multi-target deletions (r1195873)
-    * apply update ops to locally moved-away dirs (r1183358, r1185110, r1185392)
     * various interactive conflict resolver improvements in 'svn' (r1440421 etc)
     * improved tree diff implementation for diff and merge (r1440599 et al)
     * tree conflicts on directories detected better during merges (issue #3150)
