@@ -119,7 +119,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * allow client to avoid SSL certificate prompts (issue #2410)
     * improve interactive resolution of property conflicts (r1387678 et al)
     * make ra_serf raise an error upon delta-base mismatch (issue #4235)
-    * tune ra_svn TX buffer handling (r1391788)
+    * tune ra_svn transmit buffer handling (r1391788)
     * make 'svnrdump' work with serf (issue #4116)
     * fix 'svnrdump' on path below repository root (issue #4101)
 
