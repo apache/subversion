@@ -74,7 +74,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * svn:mergeinfo related operations now use much less memory (r1149519 et al)
     * get list of supported schemes for RA libraries (r1148134)
     * 'svn checkout' skips file externals from other repositories (r1153110)
-    * return an error when conflicts could not be resolved (r1150439)
+    * 'svn resolve' exits non-zero if conflicts could not be resolved (r1150439)
     * let HTTPv2-aware clients fetch v2-style resources (r1161202)
     * 'svn status' with better NLS support (r1157537, -682)
     * better tracking of shallow-yet-complete merges (issues #4056, #4057)
