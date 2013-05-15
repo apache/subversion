@@ -104,7 +104,7 @@ Candidate changes:
    Justification:
      DoS against svnserve possible.
    Votes:
-     +1: stsp (without r1482779), rhuijben
+     +1: stsp (without r1482779), rhuijben, philip
 
  * r1482829
    Reduce diskspace needed by our testsuite when using cleanup mode.
