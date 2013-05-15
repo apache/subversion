@@ -937,7 +937,6 @@ svn_client_import5(const char *path,
     }
   else
     {
-      svn_opt_revision_t rev;
       apr_array_header_t *config_ignores;
       svn_string_t *val;
       int i;
@@ -965,7 +964,6 @@ svn_client_import5(const char *path,
             svn_cstring_split_append(global_ignores, val->data, "\n\r\t\v ",
                                      FALSE, scratch_pool);
         }
-      rev.kind = svn_opt_revision_head;
       local_ignores_arr = apr_array_make(scratch_pool, 1, sizeof(const char *));
 
       val = svn_hash_gets(url_props, SVN_PROP_IGNORE);
