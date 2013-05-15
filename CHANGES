@@ -166,6 +166,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * new --compatible-version option for 'svnadmin create' (r1407279 )
     * new --ignore-properties option for 'svnlook diff' (r1407905)
     * new --properties-only option for 'svnlook diff' (r1407905)
+    * new --diff-cmd option for 'svnlook diff' (r1413449)
     * allow leading "r"'s in http: ?p= and ?r= query parameters (r1221463)
     * faster 'svn ls' for large directories (r1296627)
     * mod_dav_svn now advertises supported POST types (r1375123)
@@ -264,7 +265,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * provide the repository name to mailer.py (r1439592)
     * make 'svnrdump' work with serf (issue #4116)
     * fix 'svnrdump' on path below repository root (issue #4101)
-    * new '--diff-cmd' option to 'svnlook diff' (r1413449)
     * make Julian happy (r1413030)
   
  Developer-visible changes:
