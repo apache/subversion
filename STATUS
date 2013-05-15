@@ -99,6 +99,13 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1482759
+   Prevent svnserve from exiting when a client connection is aborted.
+   Justification:
+     DoS against svnserve possible.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
