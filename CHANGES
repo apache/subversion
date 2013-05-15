@@ -179,7 +179,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * cache mergeinfo requested during 'log -g' (r1395439)
     * various server-side performance improvements for 'log -g' (r1395442 et al)
     * many FSFS caching improvements (r1390435, r1390447)
-    * allow up to 10Gbit throughput with svnserve --client-speed (r1391788)
+    * allow up to 10Gbit throughput with svnserve (r1391788)
 
   - Client-side bugfixes:
     * fix inconsistent 'svn log' output for empty revisions (issue #3964)
