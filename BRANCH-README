@@ -1,0 +1,4 @@
+This branch will track certain additions to the 1.8 stable JavaHL API.
+All changes made on this branch will also be on trunk, but unlike trunk,
+this branch will always differ from the 1.8.x branch only in the JavaHL
+bindings and can therefore be considered more stable.
