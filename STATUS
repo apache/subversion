@@ -134,10 +134,3 @@ Approved changes:
 # that would restart the soak should not be added unless they are resolving
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
-
- * r1482973
-   Avoid using predictable temporary filenames based on "tempfile".
-   Justification:
-     Performance issue if lots of files match.
-   Votes:
-     +1: philip, rhuijben, cmpilato

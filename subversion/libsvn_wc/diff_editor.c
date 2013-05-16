@@ -2362,9 +2362,9 @@ wrap_ensure_empty_file(wc_diff_wrap_baton_t *wb,
     return SVN_NO_ERROR;
 
   /* Create a unique file in the tempdir */
-  SVN_ERR(svn_io_open_uniquely_named(NULL, &wb->empty_file, NULL, NULL, NULL,
-                                     svn_io_file_del_on_pool_cleanup,
-                                     wb->result_pool, scratch_pool));
+  SVN_ERR(svn_io_open_unique_file3(NULL, &wb->empty_file, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   wb->result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
