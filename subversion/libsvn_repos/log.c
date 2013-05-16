@@ -1100,21 +1100,47 @@ fill_log_entry(svn_log_entry_t *log_entry,
         }
       else
         {
-          /* Requested only some revprops... */
           int i;
-          for (i = 0; i < revprops->nelts; i++)
+
+          /* Requested only some revprops... */
+          
+          /* often only the standard revprops got requested and delivered.
+             In that case, we can simply pass the hash on. */
+          if (revprops->nelts == apr_hash_count(r_props) && !censor_revprops)
             {
-              char *name = APR_ARRAY_IDX(revprops, i, char *);
-              svn_string_t *value = svn_hash_gets(r_props, name);
-              if (censor_revprops
-                  && !(strcmp(name, SVN_PROP_REVISION_AUTHOR) == 0
-                       || strcmp(name, SVN_PROP_REVISION_DATE) == 0))
-                /* ... but we can only return author/date. */
-                continue;
-              if (log_entry->revprops == NULL)
-                log_entry->revprops = svn_hash__make(pool);
-              svn_hash_sets(log_entry->revprops, name, value);
+              log_entry->revprops = r_props;
+              for (i = 0; i < revprops->nelts; i++)
+                {
+                  const svn_string_t *name
+                    = APR_ARRAY_IDX(revprops, i, const svn_string_t *);
+                  if (!apr_hash_get(r_props, name->data, name->len))
+                    {
+                      /* hash does not match list of revprops we want */
+                      log_entry->revprops = NULL;
+                      break;
+                    }
+                }
             }
+
+          /* slow, revprop-by-revprop filtering */
+          if (log_entry->revprops == NULL)
+            for (i = 0; i < revprops->nelts; i++)
+              {
+                const svn_string_t *name
+                  = APR_ARRAY_IDX(revprops, i, const svn_string_t *);
+                svn_string_t *value
+                  = apr_hash_get(r_props, name->data, name->len);
+                if (censor_revprops
+                    && !(strncmp(name->data, SVN_PROP_REVISION_AUTHOR,
+                                 name->len) == 0
+                         || strncmp(name->data, SVN_PROP_REVISION_DATE,
+                                    name->len) == 0))
+                  /* ... but we can only return author/date. */
+                  continue;
+                if (log_entry->revprops == NULL)
+                  log_entry->revprops = svn_hash__make(pool);
+                apr_hash_set(log_entry->revprops, name->data, name->len, value);
+              }
         }
     }
 
@@ -2256,6 +2282,19 @@ svn_repos_get_logs4(svn_repos_t *repos,
   svn_boolean_t descending_order;
   svn_mergeinfo_t paths_history_mergeinfo = NULL;
 
+  if (revprops)
+    {
+      int i;
+      apr_array_header_t *new_revprops
+        = apr_array_make(pool, revprops->nelts, sizeof(svn_string_t *));
+
+      for (i = 0; i < revprops->nelts; ++i)
+        APR_ARRAY_PUSH(new_revprops, svn_string_t *)
+          = svn_string_create(APR_ARRAY_IDX(revprops, i, const char *), pool);
+
+      revprops = new_revprops;
+    }
+  
   /* Setup log range. */
   SVN_ERR(svn_fs_youngest_rev(&head, fs, pool));
 
