@@ -77,7 +77,7 @@ extern "C" {
 #ifndef SVN_UNALIGNED_ACCESS_IS_OK
 # if defined(_M_IX86) || defined(i386) \
      || defined(_M_X64) || defined(__x86_64) \
-     || defined __powerpc__ || defined __ppc__
+     || defined(__powerpc__) || defined(__ppc__)
 #  define SVN_UNALIGNED_ACCESS_IS_OK 1
 # else
 #  define SVN_UNALIGNED_ACCESS_IS_OK 0
