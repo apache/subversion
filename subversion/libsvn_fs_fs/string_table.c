@@ -491,6 +491,7 @@ table_copy_string(char *buffer,
 const char*
 svn_fs_fs__string_table_get(const string_table_t *table,
                             apr_size_t idx,
+                            apr_size_t *length,
                             apr_pool_t *pool)
 {
   apr_size_t table_number = idx >> TABLE_SHIFT;
@@ -502,9 +503,14 @@ svn_fs_fs__string_table_get(const string_table_t *table,
       if (idx & LONG_STRING_MASK)
         {
           if (sub_index < sub_table->long_string_count)
-            return apr_pstrmemdup(pool,
-                                  sub_table->long_strings[sub_index].data,
-                                  sub_table->long_strings[sub_index].len);
+            {
+              if (length)
+                *length = sub_table->long_strings[sub_index].len;
+
+              return apr_pstrmemdup(pool,
+                                    sub_table->long_strings[sub_index].data,
+                                    sub_table->long_strings[sub_index].len);
+            }
         }
       else
         {
@@ -513,6 +519,9 @@ svn_fs_fs__string_table_get(const string_table_t *table,
               string_header_t *header = sub_table->short_strings + sub_index;
               apr_size_t len = header->head_length + header->tail_length + 1;
               char *result = apr_palloc(pool, len);
+
+              if (length)
+                *length = len - 1;
               table_copy_string(result, len, sub_table, header);
 
               return result;
@@ -521,52 +530,6 @@ svn_fs_fs__string_table_get(const string_table_t *table,
     }
 
   return apr_pstrmemdup(pool, "", 0);
-}
-
-apr_size_t
-svn_fs_fs__string_table_copy_string(char *buffer,
-                                    apr_size_t size,
-                                    const string_table_t *table,
-                                    apr_size_t idx)
-{
-  apr_size_t table_number = idx >> TABLE_SHIFT;
-  apr_size_t sub_index = idx & STRING_INDEX_MASK;
-
-  if (table_number < table->size)
-    {
-      string_sub_table_t *sub_table = &table->sub_tables[table_number];
-      if (idx & LONG_STRING_MASK)
-        {
-          if (sub_index < sub_table->long_string_count)
-            {
-              apr_size_t len = sub_table->long_strings[sub_index].len;
-              if (size > len)
-                memcpy(buffer, sub_table->long_strings[sub_index].data,
-                       len + 1);
-              else if (size == len)
-                memcpy(buffer, sub_table->long_strings[sub_index].data, len);
-
-              return len;
-            }
-        }
-      else
-        {
-          if (sub_index < sub_table->short_string_count)
-            {
-              string_header_t *header = sub_table->short_strings + sub_index;
-              apr_size_t len = header->head_length + header->tail_length;
-              if (size >= len)
-                table_copy_string(buffer, size, sub_table, header);
-
-              return len;
-            }
-        }
-    }
-
-  if (size > 0)
-    buffer[0] = '\0';
-
-  return 0; 
 }
 
 svn_error_t *
@@ -815,6 +778,7 @@ svn_fs_fs__deserialize_string_table(void *buffer,
 const char*
 svn_fs_fs__string_table_get_func(const string_table_t *table,
                                  apr_size_t idx,
+                                 apr_size_t *length,
                                  apr_pool_t *pool)
 {
   apr_size_t table_number = idx >> TABLE_SHIFT;
@@ -843,6 +807,9 @@ svn_fs_fs__string_table_get_func(const string_table_t *table,
                         (const void *const *)&long_strings[sub_index].data);
 
               /* return a copy of the char data */
+              if (length)
+                *length = long_strings[sub_index].len;
+
               return apr_pstrmemdup(pool,
                                     str_data,
                                     long_strings[sub_index].len);
@@ -873,6 +840,9 @@ svn_fs_fs__string_table_get_func(const string_table_t *table,
               len = header->head_length + header->tail_length + 1;
               result = apr_palloc(pool, len);
               
+
+              if (length)
+                *length = len + 1;
               table_copy_string(result, len, &table_copy, header);
 
               return result;

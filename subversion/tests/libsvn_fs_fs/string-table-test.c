@@ -109,12 +109,12 @@ create_empty_table_body(svn_boolean_t do_load_store,
   string_table_t *table
     = svn_fs_fs__string_table_create(builder, pool);
 
-  SVN_TEST_STRING_ASSERT(svn_fs_fs__string_table_get(table, 0, pool), "");
+  SVN_TEST_STRING_ASSERT(svn_fs_fs__string_table_get(table, 0, NULL, pool), "");
 
   if (do_load_store)
     SVN_ERR(store_and_load_table(&table, pool));
 
-  SVN_TEST_ASSERT(svn_fs_fs__string_table_copy_string(NULL, 0, table, 0) == 0);
+  SVN_TEST_STRING_ASSERT(svn_fs_fs__string_table_get(table, 0, NULL, pool), "");
 
   return SVN_NO_ERROR;
 }
@@ -140,32 +140,17 @@ short_string_table_body(svn_boolean_t do_load_store,
   SVN_TEST_ASSERT(indexes[2] == indexes[6]);
   for (i = 0; i < STRING_COUNT; ++i)
     {
-      char long_buffer[100] = { 0 };
-      char short_buffer[10] = { 0 };
+      apr_size_t len;
       const char *string
-        = svn_fs_fs__string_table_get(table, indexes[i], pool);
-      apr_size_t len
-        = svn_fs_fs__string_table_copy_string(NULL, 0, table, indexes[i]);
-      apr_size_t long_len
-        = svn_fs_fs__string_table_copy_string(long_buffer,
-                                              sizeof(long_buffer),
-                                              table, indexes[i]);
-      apr_size_t short_len
-        = svn_fs_fs__string_table_copy_string(short_buffer,
-                                              sizeof(short_buffer),
-                                              table, indexes[i]);
+        = svn_fs_fs__string_table_get(table, indexes[i], &len, pool);
 
       SVN_TEST_STRING_ASSERT(string, basic_strings[i]);
+      SVN_TEST_ASSERT(len == strlen(string));
       SVN_TEST_ASSERT(len == strlen(basic_strings[i]));
-      SVN_TEST_ASSERT(long_len == strlen(basic_strings[i]));
-      SVN_TEST_ASSERT(short_len == strlen(basic_strings[i]));
-
-      SVN_TEST_STRING_ASSERT(long_buffer, basic_strings[i]);
-      SVN_TEST_STRING_ASSERT(short_buffer, "");
     }
 
-  SVN_TEST_STRING_ASSERT(svn_fs_fs__string_table_get(table, STRING_COUNT, pool), "");
-  SVN_TEST_ASSERT(svn_fs_fs__string_table_copy_string(NULL, 0, table, STRING_COUNT) == 0);
+  SVN_TEST_STRING_ASSERT(svn_fs_fs__string_table_get(table, STRING_COUNT,
+                                                     NULL, pool), "");
 
   return SVN_NO_ERROR;
 }
@@ -196,28 +181,13 @@ large_string_table_body(svn_boolean_t do_load_store,
 
   for (i = 0; i < COUNT; ++i)
     {
-      char long_buffer[73000 + 1000 * COUNT] = { 0 };
-      char short_buffer[100] = { 0 };
+      apr_size_t len;
       const char *string
-        = svn_fs_fs__string_table_get(table, indexes[i], pool);
-      apr_size_t len
-        = svn_fs_fs__string_table_copy_string(NULL, 0, table, indexes[i]);
-      apr_size_t long_len
-        = svn_fs_fs__string_table_copy_string(long_buffer,
-                                              sizeof(long_buffer),
-                                              table, indexes[i]);
-      apr_size_t short_len
-        = svn_fs_fs__string_table_copy_string(short_buffer,
-                                              sizeof(short_buffer),
-                                              table, indexes[i]);
+        = svn_fs_fs__string_table_get(table, indexes[i], &len, pool);
 
       SVN_TEST_STRING_ASSERT(string, strings[i]->data);
+      SVN_TEST_ASSERT(len == strlen(string));
       SVN_TEST_ASSERT(len == strings[i]->len);
-      SVN_TEST_ASSERT(long_len == strings[i]->len);
-      SVN_TEST_ASSERT(short_len == strings[i]->len);
-
-      SVN_TEST_STRING_ASSERT(long_buffer, strings[i]->data);
-      SVN_TEST_STRING_ASSERT(short_buffer, "");
     }
 
   return SVN_NO_ERROR;
@@ -250,29 +220,13 @@ many_strings_table_body(svn_boolean_t do_load_store,
 
   for (i = 0; i < COUNT; ++i)
     {
-      char long_buffer[23000] = { 0 };
-      char short_buffer[100] = { 0 };
+      apr_size_t len;
       const char *string
-        = svn_fs_fs__string_table_get(table, indexes[i], pool);
-      apr_size_t len
-        = svn_fs_fs__string_table_copy_string(NULL, 0, table, indexes[i]);
-      apr_size_t long_len
-        = svn_fs_fs__string_table_copy_string(long_buffer,
-                                              sizeof(long_buffer),
-                                              table, indexes[i]);
-      apr_size_t short_len
-        = svn_fs_fs__string_table_copy_string(short_buffer,
-                                              sizeof(short_buffer),
-                                              table, indexes[i]);
+        = svn_fs_fs__string_table_get(table, indexes[i], &len, pool);
 
       SVN_TEST_STRING_ASSERT(string, strings[i]->data);
+      SVN_TEST_ASSERT(len == strlen(string));
       SVN_TEST_ASSERT(len == strings[i]->len);
-      SVN_TEST_ASSERT(long_len == strings[i]->len);
-      SVN_TEST_ASSERT(short_len == strings[i]->len);
-
-      SVN_TEST_STRING_ASSERT(long_buffer, strings[i]->data);
-      if (len > sizeof(short_buffer))
-        SVN_TEST_STRING_ASSERT(short_buffer, "");
     }
 
   return SVN_NO_ERROR;

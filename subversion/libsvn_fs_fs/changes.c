@@ -262,6 +262,7 @@ svn_fs_fs__changes_get_list(apr_array_header_t **list,
       change_t *change = apr_pcalloc(pool, sizeof(*change));
       change->path = svn_fs_fs__string_table_get(changes->paths,
                                                  binary_change->path,
+                                                 NULL,
                                                  pool);
 
       if (svn_fs_fs__id_txn_used(&binary_change->rev_id))
@@ -288,6 +289,7 @@ svn_fs_fs__changes_get_list(apr_array_header_t **list,
         change->copyfrom_path 
           = svn_fs_fs__string_table_get(changes->paths,
                                         binary_change->copyfrom_path,
+                                        NULL,
                                         pool);
 
       /* add it to the result */
@@ -530,6 +532,7 @@ svn_fs_fs__changes_get_list_func(void **out,
       change_t *change = apr_pcalloc(pool, sizeof(*change));
       change->path = svn_fs_fs__string_table_get_func(paths,
                                                       binary_change->path,
+                                                      NULL,
                                                       pool);
 
       if (svn_fs_fs__id_txn_used(&binary_change->rev_id))
@@ -556,6 +559,7 @@ svn_fs_fs__changes_get_list_func(void **out,
         change->copyfrom_path 
           = svn_fs_fs__string_table_get_func(paths,
                                              binary_change->copyfrom_path,
+                                             NULL,
                                              pool);
 
       /* add it to the result */

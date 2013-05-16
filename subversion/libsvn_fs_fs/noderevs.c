@@ -485,6 +485,7 @@ svn_fs_fs__noderevs_get(node_revision_t **noderev_p,
       noderev->copyfrom_path
         = svn_fs_fs__string_table_get(container->paths,
                                       binary_noderev->copyfrom_path,
+                                      NULL,
                                       pool);
       noderev->copyfrom_rev = binary_noderev->copyfrom_rev;
     }
@@ -499,6 +500,7 @@ svn_fs_fs__noderevs_get(node_revision_t **noderev_p,
       noderev->copyroot_path
         = svn_fs_fs__string_table_get(container->paths,
                                       binary_noderev->copyroot_path,
+                                      NULL,
                                       pool);
       noderev->copyroot_rev = binary_noderev->copyroot_rev;
     }
@@ -526,6 +528,7 @@ svn_fs_fs__noderevs_get(node_revision_t **noderev_p,
     noderev->created_path
       = svn_fs_fs__string_table_get(container->paths,
                                     binary_noderev->created_path,
+                                    NULL,
                                     pool);
 
   noderev->mergeinfo_count = binary_noderev->mergeinfo_count;
@@ -957,6 +960,7 @@ svn_fs_fs__noderevs_get_func(void **out,
       noderev->copyfrom_path
         = svn_fs_fs__string_table_get_func(paths,
                                            binary_noderev->copyfrom_path,
+                                           NULL,
                                            pool);
       noderev->copyfrom_rev = binary_noderev->copyfrom_rev;
     }
@@ -971,6 +975,7 @@ svn_fs_fs__noderevs_get_func(void **out,
       noderev->copyroot_path
         = svn_fs_fs__string_table_get_func(paths,
                                            binary_noderev->copyroot_path,
+                                           NULL,
                                            pool);
       noderev->copyroot_rev = binary_noderev->copyroot_rev;
     }
@@ -998,6 +1003,7 @@ svn_fs_fs__noderevs_get_func(void **out,
     noderev->created_path
       = svn_fs_fs__string_table_get_func(paths,
                                          binary_noderev->created_path,
+                                         NULL,
                                          pool);
 
   noderev->mergeinfo_count = binary_noderev->mergeinfo_count;
