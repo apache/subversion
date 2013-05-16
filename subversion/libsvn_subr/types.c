@@ -30,6 +30,8 @@
 #include "svn_string.h"
 #include "svn_props.h"
 #include "svn_private_config.h"
+
+#include "private/svn_dep_compat.h"
 #include "private/svn_string_private.h"
 
 svn_error_t *
