@@ -904,14 +904,20 @@ open_path(parent_path_t **parent_path_p,
   dag_node_t *here = NULL; /* The directory we're currently looking at.  */
   parent_path_t *parent_path; /* The path from HERE up to the root. */
   const char *rest; /* The portion of PATH we haven't traversed yet.  */
-  const char *path_so_far = "/";
   apr_pool_t *iterpool = svn_pool_create(pool);
+
+  /* path to the currently processed entry without trailing '/'.
+     We will reuse this across iterations by simply putting a NUL terminator
+     at the respective position and replacing that with a '/' in the next
+     iteration.  This is correct as we assert() PATH to be canonical. */
+  svn_stringbuf_t *path_so_far = svn_stringbuf_create(path, pool);
 
   /* callers often traverse the tree in some path-based order.  That means
      a sibling of PATH has been presently accessed.  Try to start the lookup
      directly at the parent node, if the caller did not requested the full
      parent chain. */
   assert(svn_fs__is_canonical_abspath(path));
+  path_so_far->len = 0; /* "" */
   if (flags & open_path_node_only)
     {
       const char *directory = svn_dirent_dirname(path, pool);
@@ -921,8 +927,9 @@ open_path(parent_path_t **parent_path_p,
           /* did the shortcut work? */
           if (here)
             {
-              path_so_far = directory;
-              rest = path + strlen(directory) + 1;
+              apr_size_t dirname_len = strlen(directory);
+              path_so_far->len = dirname_len;
+              rest = path + dirname_len + 1;
             }
         }
     }
@@ -936,6 +943,7 @@ open_path(parent_path_t **parent_path_p,
       rest = path + 1; /* skip the leading '/', it saves in iteration */
     }
 
+  path_so_far->data[path_so_far->len] = '\0';
   parent_path = make_parent_path(here, 0, 0, pool);
   parent_path->copy_inherit = copy_id_inherit_self;
 
@@ -955,8 +963,10 @@ open_path(parent_path_t **parent_path_p,
       /* Parse out the next entry from the path.  */
       entry = svn_fs__next_entry_name(&next, rest, pool);
 
-      /* Calculate the path traversed thus far. */
-      path_so_far = svn_fspath__join(path_so_far, entry, pool);
+      /* Update the path traversed thus far. */
+      path_so_far->data[path_so_far->len] = '/';
+      path_so_far->len += strlen(entry) + 1;
+      path_so_far->data[path_so_far->len] = '\0';
 
       if (*entry == '\0')
         {
@@ -979,7 +989,7 @@ open_path(parent_path_t **parent_path_p,
              element if we already know the lookup to fail for the
              complete path. */
           if (next || !(flags & open_path_uncached))
-            SVN_ERR(dag_node_cache_get(&cached_node, root, path_so_far,
+            SVN_ERR(dag_node_cache_get(&cached_node, root, path_so_far->data,
                                        TRUE, pool));
           if (cached_node)
             child = cached_node;
@@ -1033,7 +1043,8 @@ open_path(parent_path_t **parent_path_p,
 
           /* Cache the node we found (if it wasn't already cached). */
           if (! cached_node)
-            SVN_ERR(dag_node_cache_set(root, path_so_far, child, iterpool));
+            SVN_ERR(dag_node_cache_set(root, path_so_far->data, child,
+                                       iterpool));
         }
 
       /* Are we finished traversing the path?  */
@@ -1042,7 +1053,7 @@ open_path(parent_path_t **parent_path_p,
 
       /* The path isn't finished yet; we'd better be in a directory.  */
       if (svn_fs_fs__dag_node_kind(child) != svn_node_dir)
-        SVN_ERR_W(SVN_FS__ERR_NOT_DIRECTORY(fs, path_so_far),
+        SVN_ERR_W(SVN_FS__ERR_NOT_DIRECTORY(fs, path_so_far->data),
                   apr_psprintf(iterpool, _("Failure opening '%s'"), path));
 
       rest = next;
