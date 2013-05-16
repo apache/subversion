@@ -123,6 +123,13 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben, stsp
 
+ * r1483391, r1483397
+   Fix 'svn diff' erroring out on missing tree conflict victims.
+   Justification:
+     Regresion from 1.7.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
