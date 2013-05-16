@@ -99,13 +99,6 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
- * r1482759, r1482779
-   Prevent svnserve from exiting when a client connection is aborted.
-   Justification:
-     DoS against svnserve possible.
-   Votes:
-     +1: stsp (without r1482779), rhuijben, philip
-
  * r1482829
    Reduce diskspace needed by our testsuite when using cleanup mode.
    Justification:
@@ -134,3 +127,10 @@ Approved changes:
 # that would restart the soak should not be added unless they are resolving
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
+
+ * r1482759, r1482779
+   Prevent svnserve from exiting when a client connection is aborted.
+   Justification:
+     DoS against svnserve possible.
+   Votes:
+     +1: stsp, rhuijben, philip
