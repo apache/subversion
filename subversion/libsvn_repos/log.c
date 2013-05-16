@@ -210,19 +210,16 @@ detect_changed(apr_hash_t **changed,
       /* NOTE:  Much of this loop is going to look quite similar to
          svn_repos_check_revision_access(), but we have to do more things
          here, so we'll live with the duplication. */
-      const void *key;
-      void *val;
       svn_fs_path_change2_t *change;
       const char *path;
+      apr_ssize_t path_len;
       char action;
       svn_log_changed_path2_t *item;
 
       svn_pool_clear(subpool);
 
       /* KEY will be the path, VAL the change. */
-      apr_hash_this(hi, &key, NULL, &val);
-      path = (const char *) key;
-      change = val;
+      apr_hash_this(hi, (const void **)&path, &path_len, (void **)&change);
 
       /* Skip path if unreadable. */
       if (authz_read_func)
@@ -345,7 +342,9 @@ detect_changed(apr_hash_t **changed,
                 }
             }
         }
-      svn_hash_sets(*changed, apr_pstrdup(pool, path), item);
+
+      apr_hash_set(*changed, apr_pstrmemdup(pool, path, path_len), path_len,
+                   item);
     }
 
   svn_pool_destroy(subpool);
@@ -1214,32 +1213,33 @@ send_log(svn_revnum_t rev,
       && apr_hash_count(log_target_history_as_mergeinfo))
     {
       apr_hash_index_t *hi;
-      apr_pool_t *subpool = svn_pool_create(pool);
+      apr_pool_t *iterpool = svn_pool_create(pool);
 
       /* REV was merged in, but it might already be part of the log target's
          natural history, so change our starting assumption. */
       found_rev_of_interest = FALSE;
 
       /* Look at each changed path in REV. */
-      for (hi = apr_hash_first(subpool, log_entry->changed_paths2);
+      for (hi = apr_hash_first(pool, log_entry->changed_paths2);
            hi;
            hi = apr_hash_next(hi))
         {
           svn_boolean_t path_is_in_history = FALSE;
           const char *changed_path = svn__apr_hash_index_key(hi);
           apr_hash_index_t *hi2;
-          apr_pool_t *inner_subpool = svn_pool_create(subpool);
+
+          apr_hash_this(hi, (const void**)&changed_path, NULL, NULL);
 
           /* Look at each path on the log target's mergeinfo. */
-          for (hi2 = apr_hash_first(inner_subpool,
+          for (hi2 = apr_hash_first(iterpool,
                                     log_target_history_as_mergeinfo);
                hi2;
                hi2 = apr_hash_next(hi2))
             {
-              const char *mergeinfo_path =
-                svn__apr_hash_index_key(hi2);
-              svn_rangelist_t *rangelist =
-                svn__apr_hash_index_val(hi2);
+              const char *mergeinfo_path;
+              svn_rangelist_t *rangelist;
+              apr_hash_this(hi2, (const void**)&mergeinfo_path, NULL,
+                                 (void **)&rangelist);
 
               /* Check whether CHANGED_PATH at revision REV is a child of
                  a (path, revision) tuple in LOG_TARGET_HISTORY_AS_MERGEINFO. */
@@ -1262,7 +1262,7 @@ send_log(svn_revnum_t rev,
               if (path_is_in_history)
                 break;
             }
-          svn_pool_destroy(inner_subpool);
+          svn_pool_clear(iterpool);
 
           if (!path_is_in_history)
             {
@@ -1273,7 +1273,7 @@ send_log(svn_revnum_t rev,
               break;
             }
         }
-      svn_pool_destroy(subpool);
+      svn_pool_destroy(iterpool);
     }
 
   /* If we only got changed paths the sake of detecting redundant merged
