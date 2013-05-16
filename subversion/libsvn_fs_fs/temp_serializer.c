@@ -1072,10 +1072,10 @@ serialize_change(svn_temp_serializer__context_t *context,
                             sizeof(*change));
 
   /* serialize sub-structures */
-  svn_fs_fs__id_serialize(context, &change->noderev_id);
+  svn_fs_fs__id_serialize(context, &change->info.node_rev_id);
 
-  svn_temp_serializer__add_string(context, &change->path);
-  svn_temp_serializer__add_string(context, &change->copyfrom_path);
+  svn_temp_serializer__add_string(context, &change->path.data);
+  svn_temp_serializer__add_string(context, &change->info.copyfrom_path);
 
   /* return to the caller's nesting level */
   svn_temp_serializer__pop(context);
@@ -1097,10 +1097,10 @@ deserialize_change(void *buffer, change_t **change_p)
     return;
 
   /* fix-up of sub-structures */
-  svn_fs_fs__id_deserialize(change, (svn_fs_id_t **)&change->noderev_id);
+  svn_fs_fs__id_deserialize(change, (svn_fs_id_t **)&change->info.node_rev_id);
 
-  svn_temp_deserializer__resolve(change, (void **)&change->path);
-  svn_temp_deserializer__resolve(change, (void **)&change->copyfrom_path);
+  svn_temp_deserializer__resolve(change, (void **)&change->path.data);
+  svn_temp_deserializer__resolve(change, (void **)&change->info.copyfrom_path);
 }
 
 /* Auxiliary structure representing the content of a change_t array.

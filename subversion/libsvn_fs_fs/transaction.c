@@ -657,17 +657,18 @@ fold_change(apr_hash_t *changes,
 {
   apr_pool_t *pool = apr_hash_pool_get(changes);
   svn_fs_path_change2_t *old_change, *new_change;
-  const char *path;
-  apr_size_t path_len = strlen(change->path);
+  const svn_string_t *path = &change->path;
+  const svn_fs_path_change2_t *info = &change->info;
 
-  if ((old_change = apr_hash_get(changes, change->path, path_len)))
+  if (old_change = apr_hash_get(changes, path->data, path->len))
     {
       /* This path already exists in the hash, so we have to merge
          this change into the already existing one. */
 
       /* Sanity check:  only allow NULL node revision ID in the
          `reset' case. */
-      if ((! change->noderev_id) && (change->kind != svn_fs_path_change_reset))
+      if ((! info->node_rev_id)
+           && (info->change_kind != svn_fs_path_change_reset))
         return svn_error_create
           (SVN_ERR_FS_CORRUPT, NULL,
            _("Missing required node revision ID"));
@@ -675,8 +676,8 @@ fold_change(apr_hash_t *changes,
       /* Sanity check: we should be talking about the same node
          revision ID as our last change except where the last change
          was a deletion. */
-      if (change->noderev_id
-          && (! svn_fs_fs__id_eq(old_change->node_rev_id, change->noderev_id))
+      if (info->node_rev_id
+          && (! svn_fs_fs__id_eq(old_change->node_rev_id, info->node_rev_id))
           && (old_change->change_kind != svn_fs_path_change_delete))
         return svn_error_create
           (SVN_ERR_FS_CORRUPT, NULL,
@@ -686,16 +687,16 @@ fold_change(apr_hash_t *changes,
       /* Sanity check: an add, replacement, or reset must be the first
          thing to follow a deletion. */
       if ((old_change->change_kind == svn_fs_path_change_delete)
-          && (! ((change->kind == svn_fs_path_change_replace)
-                 || (change->kind == svn_fs_path_change_reset)
-                 || (change->kind == svn_fs_path_change_add))))
+          && (! ((info->change_kind == svn_fs_path_change_replace)
+                 || (info->change_kind == svn_fs_path_change_reset)
+                 || (info->change_kind == svn_fs_path_change_add))))
         return svn_error_create
           (SVN_ERR_FS_CORRUPT, NULL,
            _("Invalid change ordering: non-add change on deleted path"));
 
       /* Sanity check: an add can't follow anything except
          a delete or reset.  */
-      if ((change->kind == svn_fs_path_change_add)
+      if ((info->change_kind == svn_fs_path_change_add)
           && (old_change->change_kind != svn_fs_path_change_delete)
           && (old_change->change_kind != svn_fs_path_change_reset))
         return svn_error_create
@@ -703,7 +704,7 @@ fold_change(apr_hash_t *changes,
            _("Invalid change ordering: add change on preexisting path"));
 
       /* Now, merge that change in. */
-      switch (change->kind)
+      switch (info->change_kind)
         {
         case svn_fs_path_change_reset:
           /* A reset here will simply remove the path change from the
@@ -723,8 +724,8 @@ fold_change(apr_hash_t *changes,
             {
               /* A deletion overrules all previous changes. */
               old_change->change_kind = svn_fs_path_change_delete;
-              old_change->text_mod = change->text_mod;
-              old_change->prop_mod = change->prop_mod;
+              old_change->text_mod = info->text_mod;
+              old_change->prop_mod = info->prop_mod;
               old_change->copyfrom_rev = SVN_INVALID_REVNUM;
               old_change->copyfrom_path = NULL;
             }
@@ -735,71 +736,53 @@ fold_change(apr_hash_t *changes,
           /* An add at this point must be following a previous delete,
              so treat it just like a replace. */
           old_change->change_kind = svn_fs_path_change_replace;
-          old_change->node_rev_id = svn_fs_fs__id_copy(change->noderev_id,
+          old_change->node_rev_id = svn_fs_fs__id_copy(info->node_rev_id,
                                                        pool);
-          old_change->text_mod = change->text_mod;
-          old_change->prop_mod = change->prop_mod;
-          if (change->copyfrom_rev == SVN_INVALID_REVNUM)
+          old_change->text_mod = info->text_mod;
+          old_change->prop_mod = info->prop_mod;
+          if (info->copyfrom_rev == SVN_INVALID_REVNUM)
             {
               old_change->copyfrom_rev = SVN_INVALID_REVNUM;
               old_change->copyfrom_path = NULL;
             }
           else
             {
-              old_change->copyfrom_rev = change->copyfrom_rev;
+              old_change->copyfrom_rev = info->copyfrom_rev;
               old_change->copyfrom_path = apr_pstrdup(pool,
-                                                      change->copyfrom_path);
+                                                      info->copyfrom_path);
             }
           break;
 
         case svn_fs_path_change_modify:
         default:
-          if (change->text_mod)
+          if (info->text_mod)
             old_change->text_mod = TRUE;
-          if (change->prop_mod)
+          if (info->prop_mod)
             old_change->prop_mod = TRUE;
           break;
         }
 
-      /* Point our new_change to our (possibly modified) old_change. */
-      new_change = old_change;
+      /* remove old_change from the cache if it is no longer needed. */
+      if (old_change == NULL)
+        apr_hash_set(changes, path->data, path->len, NULL);
     }
   else
     {
       /* This change is new to the hash, so make a new public change
          structure from the internal one (in the hash's pool), and dup
          the path into the hash's pool, too. */
-      new_change = apr_pcalloc(pool, sizeof(*new_change));
-      new_change->node_rev_id = svn_fs_fs__id_copy(change->noderev_id, pool);
-      new_change->change_kind = change->kind;
-      new_change->text_mod = change->text_mod;
-      new_change->prop_mod = change->prop_mod;
-      /* In FSFS, copyfrom_known is *always* true, since we've always
-       * stored copyfroms in changed paths lists. */
-      new_change->copyfrom_known = TRUE;
-      if (change->copyfrom_rev != SVN_INVALID_REVNUM)
-        {
-          new_change->copyfrom_rev = change->copyfrom_rev;
-          new_change->copyfrom_path = apr_pstrdup(pool, change->copyfrom_path);
-        }
-      else
-        {
-          new_change->copyfrom_rev = SVN_INVALID_REVNUM;
-          new_change->copyfrom_path = NULL;
-        }
+      new_change = apr_pmemdup(pool, info, sizeof(*new_change));
+      new_change->node_rev_id = svn_fs_fs__id_copy(info->node_rev_id, pool);
+      if (info->copyfrom_path)
+        new_change->copyfrom_path = apr_pstrdup(pool, info->copyfrom_path);
+
+      /* Add this path.  The API makes no guarantees that this (new) key
+        will not be retained.  Thus, we copy the key into the target pool
+        to ensure a proper lifetime.  */
+      apr_hash_set(changes,
+                   apr_pstrmemdup(pool, path->data, path->len), path->len,
+                   new_change);
     }
-
-  if (new_change)
-    new_change->node_kind = change->node_kind;
-
-  /* Add (or update) this path.
-
-     Note: this key might already be present, and it would be nice to
-     re-use its value, but there is no way to fetch it. The API makes no
-     guarantees that this (new) key will not be retained. Thus, we (again)
-     copy the key into the target pool to ensure a proper lifetime.  */
-  path = apr_pstrmemdup(pool, change->path, path_len);
-  apr_hash_set(changes, path, path_len, new_change);
 
   return SVN_NO_ERROR;
 }
@@ -815,7 +798,6 @@ fold_change(apr_hash_t *changes,
 static svn_error_t *
 process_changes(apr_hash_t *changed_paths,
                 apr_array_header_t *changes,
-                svn_boolean_t prefolded,
                 apr_pool_t *pool)
 {
   apr_pool_t *iterpool = svn_pool_create(pool);
@@ -838,9 +820,8 @@ process_changes(apr_hash_t *changed_paths,
          is already a temporary subpool.
       */
 
-      if (((change->kind == svn_fs_path_change_delete)
-           || (change->kind == svn_fs_path_change_replace))
-          && ! prefolded)
+      if ((change->info.change_kind == svn_fs_path_change_delete)
+           || (change->info.change_kind == svn_fs_path_change_replace))
         {
           apr_hash_index_t *hi;
 
@@ -849,12 +830,12 @@ process_changes(apr_hash_t *changed_paths,
              Also, we should not assume that all paths have been normalized
              i.e. some might have trailing path separators.
           */
-          apr_ssize_t change_path_len = strlen(change->path);
-          apr_ssize_t min_child_len = change_path_len == 0
+          apr_ssize_t path_len = change->path.len;
+          apr_ssize_t min_child_len = path_len == 0
                                     ? 1
-                                    : change->path[change_path_len-1] == '/'
-                                        ? change_path_len + 1
-                                        : change_path_len + 2;
+                                    : change->path.data[path_len-1] == '/'
+                                        ? path_len + 1
+                                        : path_len + 2;
 
           /* CAUTION: This is the inner loop of an O(n^2) algorithm.
              The number of changes to process may be >> 1000.
@@ -874,13 +855,13 @@ process_changes(apr_hash_t *changed_paths,
                  this is actually a sub-path.
                */
               if (   klen >= min_child_len
-                  && svn_dirent_is_child(change->path, path, iterpool))
+                  && svn_dirent_is_child(change->path.data, path, iterpool))
                 apr_hash_set(changed_paths, path, klen, NULL);
             }
-        }
 
-      /* Clear the per-iteration subpool. */
-      svn_pool_clear(iterpool);
+          /* Clear the per-iteration subpool. */
+          svn_pool_clear(iterpool);
+        }
     }
 
   /* Destroy the per-iteration subpool. */
@@ -908,7 +889,7 @@ svn_fs_fs__txn_changes_fetch(apr_hash_t **changed_paths_p,
                                   svn_stream_from_aprfile2(file, TRUE,
                                                            scratch_pool),
                                   scratch_pool));
-  SVN_ERR(process_changes(changed_paths, changes, FALSE, pool));
+  SVN_ERR(process_changes(changed_paths, changes, pool));
   svn_pool_destroy(scratch_pool);
 
   *changed_paths_p = changed_paths;
@@ -925,14 +906,17 @@ svn_fs_fs__paths_changed(apr_hash_t **changed_paths_p,
 {
   apr_hash_t *changed_paths;
   apr_array_header_t *changes;
-  apr_pool_t *scratch_pool = svn_pool_create(pool);
+  int i;
 
-  SVN_ERR(svn_fs_fs__get_changes(&changes, fs, rev, scratch_pool));
+  SVN_ERR(svn_fs_fs__get_changes(&changes, fs, rev, pool));
 
   changed_paths = svn_hash__make(pool);
-
-  SVN_ERR(process_changes(changed_paths, changes, TRUE, pool));
-  svn_pool_destroy(scratch_pool);
+  for (i = 0; i < changes->nelts; ++i)
+    {
+      change_t *change = APR_ARRAY_IDX(changes, i, change_t *);
+      apr_hash_set(changed_paths, change->path.data, change->path.len,
+                   &change->info);
+    }
 
   *changed_paths_p = changed_paths;
 

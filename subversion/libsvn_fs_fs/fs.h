@@ -561,25 +561,10 @@ typedef struct node_revision_t
 typedef struct change_t
 {
   /* Path of the change. */
-  const char *path;
+  svn_string_t path;
 
-  /* Node revision ID of the change. */
-  const svn_fs_id_t *noderev_id;
-
-  /* The kind of change. */
-  svn_fs_path_change_kind_t kind;
-
-  /* Text or property mods? */
-  svn_boolean_t text_mod;
-  svn_boolean_t prop_mod;
-
-  /* Node kind (possibly svn_node_unknown). */
-  svn_node_kind_t node_kind;
-
-  /* Copyfrom revision and path. */
-  svn_revnum_t copyfrom_rev;
-  const char * copyfrom_path;
-
+  /* API compatible change description */
+  svn_fs_path_change2_t info;
 } change_t;
 
 

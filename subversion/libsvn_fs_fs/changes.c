@@ -138,30 +138,34 @@ append_change(svn_fs_fs__changes_t *changes,
 {
   binary_change_t binary_change = { 0 };
   svn_boolean_t is_txn_id;
+  svn_fs_path_change2_t *info;
 
   /* CHANGE must be sufficiently complete */
   SVN_ERR_ASSERT(change);
-  SVN_ERR_ASSERT(change->path);
+  SVN_ERR_ASSERT(change->path.data);
 
   /* define the kind of change and what specific information is present */
-  is_txn_id = change->noderev_id && svn_fs_fs__id_is_txn(change->noderev_id);
-  binary_change.flags = (change->text_mod ? CHANGE_TEXT_MOD : 0)
-                      | (change->prop_mod ? CHANGE_PROP_MOD : 0)
+  info = &change->info;
+  is_txn_id = info->node_rev_id && svn_fs_fs__id_is_txn(info->node_rev_id);
+  binary_change.flags = (info->text_mod ? CHANGE_TEXT_MOD : 0)
+                      | (info->prop_mod ? CHANGE_PROP_MOD : 0)
                       | (is_txn_id ? CHANGE_TXN_NODE : 0)
-                      | ((int)change->kind << CHANGE_KIND_SHIFT)
-                      | ((int)change->node_kind << CHANGE_NODE_SHIFT);
+                      | ((int)info->change_kind << CHANGE_KIND_SHIFT)
+                      | ((int)info->node_kind << CHANGE_NODE_SHIFT);
 
   /* Path of the change. */
   binary_change.path
-    = svn_fs_fs__string_table_builder_add(changes->builder, change->path, 0);
+    = svn_fs_fs__string_table_builder_add(changes->builder,
+                                          change->path.data,
+                                          change->path.len);
 
   /* copy-from information, if presence is indicated by FLAGS */
-  if (SVN_IS_VALID_REVNUM(change->copyfrom_rev))
+  if (SVN_IS_VALID_REVNUM(info->copyfrom_rev))
     {
-      binary_change.copyfrom_rev = change->copyfrom_rev;
+      binary_change.copyfrom_rev = info->copyfrom_rev;
       binary_change.copyfrom_path
         = svn_fs_fs__string_table_builder_add(changes->builder,
-                                              change->copyfrom_path,
+                                              info->copyfrom_path,
                                               0);
     }
   else
@@ -171,13 +175,13 @@ append_change(svn_fs_fs__changes_t *changes,
     }
 
   /* Relevant parts of the revision ID of the change. */
-  if (change->noderev_id)
+  if (info->node_rev_id)
     {
-      binary_change.node_id = *svn_fs_fs__id_node_id(change->noderev_id);
-      binary_change.copy_id = *svn_fs_fs__id_copy_id(change->noderev_id);
+      binary_change.node_id = *svn_fs_fs__id_node_id(info->node_rev_id);
+      binary_change.copy_id = *svn_fs_fs__id_copy_id(info->node_rev_id);
       binary_change.rev_id = is_txn_id
-                           ? *svn_fs_fs__id_txn_id(change->noderev_id)
-                           : *svn_fs_fs__id_rev_item(change->noderev_id);
+                           ? *svn_fs_fs__id_txn_id(info->node_rev_id)
+                           : *svn_fs_fs__id_rev_item(info->node_rev_id);
     }
   else
     {
@@ -260,13 +264,14 @@ svn_fs_fs__changes_get_list(apr_array_header_t **list,
 
       /* convert BINARY_CHANGE into a standard FSFS change_t */
       change_t *change = apr_pcalloc(pool, sizeof(*change));
-      change->path = svn_fs_fs__string_table_get(changes->paths,
-                                                 binary_change->path,
-                                                 NULL,
-                                                 pool);
+      svn_fs_path_change2_t *info = &change->info;
+      change->path.data = svn_fs_fs__string_table_get(changes->paths,
+                                                      binary_change->path,
+                                                      &change->path.len,
+                                                      pool);
 
       if (svn_fs_fs__id_txn_used(&binary_change->rev_id))
-        change->noderev_id
+        info->node_rev_id
           = (binary_change->flags & CHANGE_TXN_NODE)
           ? svn_fs_fs__id_txn_create(&binary_change->node_id,
                                      &binary_change->copy_id,
@@ -277,16 +282,17 @@ svn_fs_fs__changes_get_list(apr_array_header_t **list,
                                      &binary_change->rev_id,
                                      pool);
 
-      change->kind = (svn_fs_path_change_kind_t)
+      info->change_kind = (svn_fs_path_change_kind_t)
         ((binary_change->flags & CHANGE_KIND_MASK) >> CHANGE_KIND_SHIFT);
-      change->text_mod = (binary_change->flags & CHANGE_TEXT_MOD) != 0;
-      change->prop_mod = (binary_change->flags & CHANGE_PROP_MOD) != 0;
-      change->node_kind = (svn_node_kind_t)
+      info->text_mod = (binary_change->flags & CHANGE_TEXT_MOD) != 0;
+      info->prop_mod = (binary_change->flags & CHANGE_PROP_MOD) != 0;
+      info->node_kind = (svn_node_kind_t)
         ((binary_change->flags & CHANGE_NODE_MASK) >> CHANGE_NODE_SHIFT);
 
-      change->copyfrom_rev = binary_change->copyfrom_rev;
+      info->copyfrom_rev = binary_change->copyfrom_rev;
+      info->copyfrom_known = TRUE;
       if (SVN_IS_VALID_REVNUM(binary_change->copyfrom_rev))
-        change->copyfrom_path 
+        info->copyfrom_path 
           = svn_fs_fs__string_table_get(changes->paths,
                                         binary_change->copyfrom_path,
                                         NULL,
@@ -530,13 +536,13 @@ svn_fs_fs__changes_get_list_func(void **out,
 
       /* convert BINARY_CHANGE into a standard FSFS change_t */
       change_t *change = apr_pcalloc(pool, sizeof(*change));
-      change->path = svn_fs_fs__string_table_get_func(paths,
-                                                      binary_change->path,
-                                                      NULL,
-                                                      pool);
+      svn_fs_path_change2_t *info = &change->info;
+      change->path.data
+        = svn_fs_fs__string_table_get_func(paths, binary_change->path,
+                                           &change->path.len, pool);
 
       if (svn_fs_fs__id_txn_used(&binary_change->rev_id))
-        change->noderev_id
+        info->node_rev_id
           = (binary_change->flags & CHANGE_TXN_NODE)
           ? svn_fs_fs__id_txn_create(&binary_change->node_id,
                                      &binary_change->copy_id,
@@ -547,16 +553,17 @@ svn_fs_fs__changes_get_list_func(void **out,
                                      &binary_change->rev_id,
                                      pool);
 
-      change->kind = (svn_fs_path_change_kind_t)
+      info->change_kind = (svn_fs_path_change_kind_t)
         ((binary_change->flags & CHANGE_KIND_MASK) >> CHANGE_KIND_SHIFT);
-      change->text_mod = (binary_change->flags & CHANGE_TEXT_MOD) != 0;
-      change->prop_mod = (binary_change->flags & CHANGE_PROP_MOD) != 0;
-      change->node_kind = (svn_node_kind_t)
+      info->text_mod = (binary_change->flags & CHANGE_TEXT_MOD) != 0;
+      info->prop_mod = (binary_change->flags & CHANGE_PROP_MOD) != 0;
+      info->node_kind = (svn_node_kind_t)
         ((binary_change->flags & CHANGE_NODE_MASK) >> CHANGE_NODE_SHIFT);
 
-      change->copyfrom_rev = binary_change->copyfrom_rev;
+      info->copyfrom_rev = binary_change->copyfrom_rev;
+      info->copyfrom_known = TRUE;
       if (SVN_IS_VALID_REVNUM(binary_change->copyfrom_rev))
-        change->copyfrom_path 
+        info->copyfrom_path 
           = svn_fs_fs__string_table_get_func(paths,
                                              binary_change->copyfrom_path,
                                              NULL,
