@@ -576,20 +576,16 @@ svn_hash__get_bool(apr_hash_t *hash, const char *key,
 
 /*** Optimized hash function ***/
 
-/* Optimized version of apr_hashfunc_default in APR 1.4.5 and earlier.
- * It assumes that the CPU has 32-bit multiplications with high throughput
- * of at least 1 operation every 3 cycles. Latency is not an issue. Another
- * optimization is a mildly unrolled main loop and breaking the dependency
- * chain within the loop.
- *
- * Note that most CPUs including Intel Atom, VIA Nano, ARM feature the
- * assumed pipelined multiplication circuitry. They can do one MUL every
- * or every other cycle.
- *
- * The performance is ultimately limited by the fact that most CPUs can
- * do only one LOAD and only one BRANCH operation per cycle. The best we
- * can do is to process one character per cycle - provided the processor
- * is wide enough to do 1 LOAD, COMPARE, BRANCH, MUL and ADD per cycle.
+/* apr_hashfunc_t optimized for the key that we use in SVN: paths and 
+ * property names.  Its primary goal is speed for keys of known length.
+ * 
+ * Since strings tend to spawn large value spaces (usually differ in many
+ * bits with differences spanning a larger section of the key), we can be
+ * quite sloppy extracting a hash value.  The more keys there are in a
+ * hash container, the more bits of the value returned by this function
+ * will be used.  For a small number of string keys, choosing bits from any 
+ * any fix location close to the tail of those keys would usually be good
+ * enough to prevent high collision rates.
  */
 static unsigned int
 hashfunc_compatible(const char *char_key, apr_ssize_t *klen)
@@ -605,8 +601,11 @@ hashfunc_compatible(const char *char_key, apr_ssize_t *klen)
 #if SVN_UNALIGNED_ACCESS_IS_OK
     for (p = key, i = *klen; i >= 4; i-=4, p+=4)
       {
-        hash = hash * 33 * 33 * 33 * 33
-             + *(apr_uint32_t *)p;
+        apr_uint32_t chunk = *(apr_uint32_t *)p;
+
+        /* the ">> 17" part gives upper bits in the chunk a chance to make
+           some impact as well */
+        hash = hash * 33 * 33 * 33 * 33 + chunk + (chunk >> 17);
       }
 #else
     for (p = key, i = *klen; i >= 4; i-=4, p+=4)
