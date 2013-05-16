@@ -51,6 +51,23 @@ svn_revnum_parse(svn_revnum_t *rev,
                            : _("Invalid revision number found parsing '%s'"),
                str);
 
+  /* a revision number with more than 9 digits is suspicious.
+     Have a closer look at those. */
+  if (str + 10 <= end)
+    {
+      /* we support 32 bit revision numbers only. check for overflows */
+      if (str + 10 < end)
+        return svn_error_createf
+                  (SVN_ERR_REVNUM_PARSE_FAILURE, NULL,
+                  _("Revision number longer than 10 digits '%s'"), str);
+        
+      /* we support 32 bit revision numbers only. check for overflows */
+      if (result < 1000000000 || result > APR_INT32_MAX)
+        return svn_error_createf
+                  (SVN_ERR_REVNUM_PARSE_FAILURE, NULL,
+                  _("Revision number too large or not normalized '%s'"), str);
+    }
+  
   *rev = result;
 
   return SVN_NO_ERROR;
