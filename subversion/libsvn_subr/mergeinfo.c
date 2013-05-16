@@ -611,6 +611,23 @@ svn_rangelist__parse(svn_rangelist_t **rangelist,
   return SVN_NO_ERROR;
 }
 
+/* Return TRUE, if all ranges in RANGELIST are in ascending order and do
+ * not overlap.  If this returns FALSE, you probaly want to qsort() the
+ * ranges and then call svn_rangelist__combine_adjacent_ranges().
+ */
+static svn_boolean_t
+is_rangelist_normalized(svn_rangelist_t *rangelist)
+{
+  int i;
+  svn_merge_range_t **ranges = (svn_merge_range_t **)rangelist->elts;
+
+  for (i = 0; i < rangelist->nelts-1; ++i)
+    if (ranges[i]->end >= ranges[i+1]->start)
+      return FALSE;
+
+  return TRUE;
+}
+
 svn_error_t *
 svn_rangelist__combine_adjacent_ranges(svn_rangelist_t *rangelist,
                                        apr_pool_t *scratch_pool)
@@ -692,9 +709,11 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
   if (*input != end)
     *input = *input + 1;
 
-  /* Sort the rangelist, combine adjacent ranges into single ranges,
-     and make sure there are no overlapping ranges. */
-  if (rangelist->nelts > 1)
+  /* Sort the rangelist, combine adjacent ranges into single ranges, and
+     make sure there are no overlapping ranges.  Luckily, most data in
+     svn:mergeinfo will already be in normalized form and we can skip this.
+   */
+  if (! is_rangelist_normalized(rangelist))
     {
       qsort(rangelist->elts, rangelist->nelts, rangelist->elt_size,
             svn_sort_compare_ranges);
