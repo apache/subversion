@@ -410,10 +410,8 @@ svn_repos_fs_revision_prop(svn_string_t **value_p,
   else if (readability == svn_repos_revision_access_partial)
     {
       /* Only svn:author and svn:date are fetchable. */
-      if ((strncmp(propname, SVN_PROP_REVISION_AUTHOR,
-                   sizeof(SVN_PROP_REVISION_AUTHOR)-1) != 0)
-          && (strncmp(propname, SVN_PROP_REVISION_DATE,
-                      sizeof(SVN_PROP_REVISION_DATE)-1) != 0))
+      if ((strcmp(propname, SVN_PROP_REVISION_AUTHOR) != 0)
+          && (strcmp(propname, SVN_PROP_REVISION_DATE) != 0))
         *value_p = NULL;
 
       else
