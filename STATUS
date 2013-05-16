@@ -49,7 +49,7 @@ Candidate changes:
      r1479605 fixes an interactive conflict resolution bug triggered by this
      change.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, stsp
 
  * r1469519, r1469520, r1481848, r1481870
    Silence compiler warnings, tighten scopes and improve code.
