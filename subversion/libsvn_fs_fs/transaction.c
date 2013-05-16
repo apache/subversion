@@ -653,8 +653,7 @@ unparse_dir_entries(apr_hash_t **str_entries_p,
    the COPYFROM_CACHE up to date with new adds and replaces.  */
 static svn_error_t *
 fold_change(apr_hash_t *changes,
-            const change_t *change,
-            apr_hash_t *copyfrom_cache)
+            const change_t *change)
 {
   apr_pool_t *pool = apr_hash_pool_get(changes);
   svn_fs_path_change2_t *old_change, *new_change;
@@ -802,46 +801,19 @@ fold_change(apr_hash_t *changes,
   path = apr_pstrmemdup(pool, change->path, path_len);
   apr_hash_set(changes, path, path_len, new_change);
 
-  /* Update the copyfrom cache, if any. */
-  if (copyfrom_cache)
-    {
-      apr_pool_t *copyfrom_pool = apr_hash_pool_get(copyfrom_cache);
-      const char *copyfrom_string = NULL, *copyfrom_key = path;
-      if (new_change)
-        {
-          if (SVN_IS_VALID_REVNUM(new_change->copyfrom_rev))
-            copyfrom_string = apr_psprintf(copyfrom_pool, "%ld %s",
-                                           new_change->copyfrom_rev,
-                                           new_change->copyfrom_path);
-          else
-            copyfrom_string = "";
-        }
-      /* We need to allocate a copy of the key in the copyfrom_pool if
-       * we're not doing a deletion and if it isn't already there. */
-      if (   copyfrom_string
-          && (   ! apr_hash_count(copyfrom_cache)
-              || ! apr_hash_get(copyfrom_cache, copyfrom_key, path_len)))
-        copyfrom_key = apr_pstrmemdup(copyfrom_pool, copyfrom_key, path_len);
-
-      apr_hash_set(copyfrom_cache, copyfrom_key, path_len,
-                   copyfrom_string);
-    }
-
   return SVN_NO_ERROR;
 }
 
 
 /* Examine all the changed path entries in CHANGES and store them in
    *CHANGED_PATHS.  Folding is done to remove redundant or unnecessary
-   *data.  Store a hash of paths to copyfrom "REV PATH" strings in
-   COPYFROM_HASH if it is non-NULL.  If PREFOLDED is true, assume that
+   *data.  If PREFOLDED is true, assume that
    the changed-path entries have already been folded (by
    write_final_changed_path_info) and may be out of order, so we shouldn't
    remove children of replaced or deleted directories.  Do all
    allocations in POOL. */
 static svn_error_t *
 process_changes(apr_hash_t *changed_paths,
-                apr_hash_t *copyfrom_cache,
                 apr_array_header_t *changes,
                 svn_boolean_t prefolded,
                 apr_pool_t *pool)
@@ -856,7 +828,7 @@ process_changes(apr_hash_t *changed_paths,
     {
       change_t *change = APR_ARRAY_IDX(changes, i, change_t *);
 
-      SVN_ERR(fold_change(changed_paths, change, copyfrom_cache));
+      SVN_ERR(fold_change(changed_paths, change));
 
       /* Now, if our change was a deletion or replacement, we have to
          blow away any changes thus far on paths that are (or, were)
@@ -936,7 +908,7 @@ svn_fs_fs__txn_changes_fetch(apr_hash_t **changed_paths_p,
                                   svn_stream_from_aprfile2(file, TRUE,
                                                            scratch_pool),
                                   scratch_pool));
-  SVN_ERR(process_changes(changed_paths, NULL, changes, FALSE, pool));
+  SVN_ERR(process_changes(changed_paths, changes, FALSE, pool));
   svn_pool_destroy(scratch_pool);
 
   *changed_paths_p = changed_paths;
@@ -949,7 +921,6 @@ svn_error_t *
 svn_fs_fs__paths_changed(apr_hash_t **changed_paths_p,
                          svn_fs_t *fs,
                          svn_revnum_t rev,
-                         apr_hash_t *copyfrom_cache,
                          apr_pool_t *pool)
 {
   apr_hash_t *changed_paths;
@@ -960,8 +931,7 @@ svn_fs_fs__paths_changed(apr_hash_t **changed_paths_p,
 
   changed_paths = svn_hash__make(pool);
 
-  SVN_ERR(process_changes(changed_paths, copyfrom_cache, changes,
-                          TRUE, pool));
+  SVN_ERR(process_changes(changed_paths, changes, TRUE, pool));
   svn_pool_destroy(scratch_pool);
 
   *changed_paths_p = changed_paths;

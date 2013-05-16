@@ -102,19 +102,7 @@
    kept in the FS object and shared among multiple revision root
    objects.
 */
-typedef struct fs_rev_root_data_t
-{
-  /* A dag node for the revision's root directory. */
-  dag_node_t *root_dir;
-
-  /* Cache structure for mapping const char * PATH to const char
-     *COPYFROM_STRING, so that paths_changed can remember all the
-     copyfrom information in the changes file.
-     COPYFROM_STRING has the format "REV PATH", or is the empty string if
-     the path was added without history. */
-  apr_hash_t *copyfrom_cache;
-
-} fs_rev_root_data_t;
+typedef dag_node_t fs_rev_root_data_t;
 
 typedef struct fs_txn_root_data_t
 {
@@ -653,8 +641,8 @@ root_node(dag_node_t **node_p,
     {
       /* It's a revision root, so we already have its root directory
          opened.  */
-      fs_rev_root_data_t *frd = root->fsap_data;
-      *node_p = svn_fs_fs__dag_dup(frd->root_dir, pool);
+      dag_node_t *root_dir = root->fsap_data;
+      *node_p = svn_fs_fs__dag_dup(root_dir, pool);
       return SVN_NO_ERROR;
     }
 }
@@ -1271,8 +1259,8 @@ svn_fs_fs__node_id(const svn_fs_id_t **id_p,
          The root directory ("" or "/") node is stored in the
          svn_fs_root_t object, and never changes when it's a revision
          root, so we can just reach in and grab it directly. */
-      fs_rev_root_data_t *frd = root->fsap_data;
-      *id_p = svn_fs_fs__id_copy(svn_fs_fs__dag_get_id(frd->root_dir), pool);
+      dag_node_t *root_dir = root->fsap_data;
+      *id_p = svn_fs_fs__id_copy(svn_fs_fs__dag_get_id(root_dir), pool);
     }
   else
     {
@@ -2576,46 +2564,12 @@ fs_copied_from(svn_revnum_t *rev_p,
                apr_pool_t *pool)
 {
   dag_node_t *node;
-  const char *copyfrom_path, *copyfrom_str = NULL;
-  svn_revnum_t copyfrom_rev;
-  char *str, *buf;
 
-  /* Check to see if there is a cached version of this copyfrom
-     entry. */
-  if (! root->is_txn_root) {
-    fs_rev_root_data_t *frd = root->fsap_data;
-    copyfrom_str = svn_hash_gets(frd->copyfrom_cache, path);
-  }
-
-  if (copyfrom_str)
-    {
-      if (*copyfrom_str == 0)
-        {
-          /* We have a cached entry that says there is no copyfrom
-             here. */
-          copyfrom_rev = SVN_INVALID_REVNUM;
-          copyfrom_path = NULL;
-        }
-      else
-        {
-          /* Parse the copyfrom string for our cached entry. */
-          buf = apr_pstrdup(pool, copyfrom_str);
-          str = svn_cstring_tokenize(" ", &buf);
-          copyfrom_rev = SVN_STR_TO_REV(str);
-          copyfrom_path = buf;
-        }
-    }
-  else
-    {
-      /* There is no cached entry, look it up the old-fashioned
-         way. */
-      SVN_ERR(get_dag(&node, root, path, TRUE, pool));
-      SVN_ERR(svn_fs_fs__dag_get_copyfrom_rev(&copyfrom_rev, node));
-      SVN_ERR(svn_fs_fs__dag_get_copyfrom_path(&copyfrom_path, node));
-    }
-
-  *rev_p  = copyfrom_rev;
-  *path_p = copyfrom_path;
+  /* There is no cached entry, look it up the old-fashioned
+      way. */
+  SVN_ERR(get_dag(&node, root, path, TRUE, pool));
+  SVN_ERR(svn_fs_fs__dag_get_copyfrom_rev(rev_p, node));
+  SVN_ERR(svn_fs_fs__dag_get_copyfrom_path(path_p, node));
 
   return SVN_NO_ERROR;
 }
@@ -3175,11 +3129,8 @@ fs_paths_changed(apr_hash_t **changed_paths_p,
     return svn_fs_fs__txn_changes_fetch(changed_paths_p, root->fs,
                                         root_txn_id(root), pool);
   else
-    {
-      fs_rev_root_data_t *frd = root->fsap_data;
-      return svn_fs_fs__paths_changed(changed_paths_p, root->fs, root->rev,
-                                      frd->copyfrom_cache, pool);
-    }
+    return svn_fs_fs__paths_changed(changed_paths_p, root->fs, root->rev,
+                                    pool);
 }
 
 
@@ -4233,15 +4184,10 @@ make_revision_root(svn_fs_t *fs,
                    apr_pool_t *pool)
 {
   svn_fs_root_t *root = make_root(fs, pool);
-  fs_rev_root_data_t *frd = apr_pcalloc(root->pool, sizeof(*frd));
 
   root->is_txn_root = FALSE;
   root->rev = rev;
-
-  frd->root_dir = root_dir;
-  frd->copyfrom_cache = svn_hash__make(root->pool);
-
-  root->fsap_data = frd;
+  root->fsap_data = root_dir;
 
   return root;
 }
@@ -4438,8 +4384,7 @@ svn_fs_fs__verify_root(svn_fs_root_t *root,
     }
   else
     {
-      fs_rev_root_data_t *frd = root->fsap_data;
-      root_dir = frd->root_dir;
+      root_dir = root->fsap_data;
     }
 
   /* Recursively verify ROOT_DIR. */
