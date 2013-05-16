@@ -116,6 +116,14 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
      
+* r1483557
+  Match our revision property names exactly instead by prefix.
+  Justification:
+    While the impact of this bug is certainly low, it is still an easy
+    to fix problem.
+  Votes:
+     +1: stefan2 (for 1.8.1)
+
 Approved for 1.8.1 or when we release a new RC:
 ===============================================
 
@@ -133,6 +141,7 @@ Approved for 1.8.1 or when we release a new RC:
    Votes:
      +1: philip, rhuijben, stsp
 
+>>>>>>> .r1483563
 Veto-blocked changes:
 =====================
 
