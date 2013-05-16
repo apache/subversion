@@ -136,6 +136,12 @@ svn_stringbuf__morph_into_string(svn_stringbuf_t *strbuf);
 apr_status_t
 svn__strtoff(apr_off_t *offset, const char *buf, char **end, int base);
 
+/** Like strtoul but with a fixed base of 10.  This allows the compiler to
+ * generate massively faster (4x on 64bit LINUX) code.
+ */
+unsigned long
+svn__strtoul(const char *buffer, char **end);
+
 /** Number of chars needed to represent signed (19 places + sign + NUL) or
  * unsigned (20 places + NUL) integers as strings.
  */
