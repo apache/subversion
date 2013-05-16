@@ -19016,27 +19016,69 @@ def merge_to_empty_target_merge_to_infinite_target(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  wc_disk, wc_status = set_up_branch(sbox)
+  wc_disk, wc_status = set_up_branch(sbox, branch_only=True)
   A_COPY_path = sbox.ospath('A_COPY')
+  C_COPY_path = sbox.ospath('A_COPY/C')
   E_path = sbox.ospath('A/B/E')
+  J_path = sbox.ospath('A/C/J')
+  K_path = sbox.ospath('A/C/J/K')
+  nu1_path = sbox.ospath('A/C/J/nu1')
+  nu2_path = sbox.ospath('A/C/J/K/nu2')
+  L_path = sbox.ospath('A/B/L')
+  nu3_path = sbox.ospath('A/B/L/nu3')
 
-  # r2 - Delete A/B/E.
-  sbox.simple_update()
-  svntest.main.run_svn(None, 'del', E_path)
+  B1_path = sbox.ospath('A/B/B1')
+  B1a_path = sbox.ospath('A/B/B1/B1a')
+  test1_path = sbox.ospath('A/B/B1/test.txt')
+  test2_path = sbox.ospath('A/B/B1/B1a/test.txt')
+
+  C1_path = sbox.ospath('A/C/C1')
+  test3_path = sbox.ospath('A/C/C1/test.txt')
+  
+  # r3 - Add some subtrees:
+  #   A /A/B/B1
+  #   A /A/B/B1/B1a
+  #   A /A/B/B1/B1a/test.txt
+  #   A /A/B/B1/test.txt
+  svntest.main.run_svn(None, 'mkdir', B1_path)
+  svntest.main.run_svn(None, 'mkdir', B1a_path)
+  svntest.main.file_append(test1_path, "New file.\n")
+  svntest.main.file_append(test2_path, "New file.\n")
+  svntest.main.run_svn(None, 'add', test1_path, test2_path)
   sbox.simple_commit()
 
-  # r3 - Set depth of A_COPY to empty, merge the r3 from ^/A.
+  # r4 - Add some another subtree.
+  #   A /A/C/C1
+  #   A /A/C/C1/test.txt
+  svntest.main.run_svn(None, 'mkdir', C1_path)
+  svntest.main.file_append(test3_path, "New file.\n")
+  svntest.main.run_svn(None, 'add', test3_path)
+  sbox.simple_commit()
+
+  # r5 - Delete part of the subtree added in r3.
+  #  D /A/B/B1/B1a
+  svntest.main.run_svn(None, 'del', B1a_path)
+  sbox.simple_commit()
+
+  # r6 - Set depth of A_COPY to empty, merge all available revs from ^/A.
   svntest.actions.run_and_verify_svn(None, None, [], 'up',
                                      '--set-depth=empty', A_COPY_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-c7',
-                                     '^/A', A_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up',
+                                     '--set-depth=infinity', C_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '^/A',
+                                     A_COPY_path)
   sbox.simple_commit()
 
   # Update A_COPY back to depth infinity and retry the prior merge.
   svntest.actions.run_and_verify_svn(None, None, [], 'up',
                                      '--set-depth=infinity', A_COPY_path)
+
   expected_output = wc.State(A_COPY_path, {
-    'B/E' : Item(status='D '),
+    'B/B1'              : Item(status='A '),
+    'B/B1/test.txt'     : Item(status='A '),
+    'B/B1/B1a'          : Item(status='A '),
+    'B/B1/B1a/test.txt' : Item(status='A '),
+    'B/B1/B1a'          : Item(status='D '),
     })
   expected_mergeinfo_output = wc.State(A_COPY_path, {
     ''  : Item(status=' U'),
@@ -19046,66 +19088,62 @@ def merge_to_empty_target_merge_to_infinite_target(sbox):
     'B' : Item(status=' U'),
     })
   expected_status = wc.State(A_COPY_path, {
-    ''          : Item(status=' M'),
-    'B'         : Item(status='  '),
-    'mu'        : Item(status='  '),
-    'B/E'       : Item(status='D '),
-    'B/E/alpha' : Item(status='D '),
-    'B/E/beta'  : Item(status='D '),
-    'B/lambda'  : Item(status='  '),
-    'B/F'       : Item(status='  '),
-    'C'         : Item(status='  '),
-    'D'         : Item(status='  '),
-    'D/G'       : Item(status='  '),
-    'D/G/pi'    : Item(status='  '),
-    'D/G/rho'   : Item(status='  '),
-    'D/G/tau'   : Item(status='  '),
-    'D/gamma'   : Item(status='  '),
-    'D/H'       : Item(status='  '),
-    'D/H/chi'   : Item(status='  '),
-    'D/H/psi'   : Item(status='  '),
-    'D/H/omega' : Item(status='  '),
+    ''                  : Item(status=' M'),
+    'B'                 : Item(status='  '),
+    'mu'                : Item(status='  '),
+    'B/B1'              : Item(status='A ', copied='+'),
+    'B/B1/test.txt'     : Item(status='  ', copied='+'),
+    'B/B1/B1a'          : Item(status='D ', copied='+'),
+    'B/B1/B1a/test.txt' : Item(status='D ', copied='+'),
+    'B/E'               : Item(status='  '),
+    'B/E/alpha'         : Item(status='  '),
+    'B/E/beta'          : Item(status='  '),
+    'B/lambda'          : Item(status='  '),
+    'B/F'               : Item(status='  '),
+    'C'                 : Item(status='  '),
+    'C/C1'              : Item(status='  '),
+    'C/C1/test.txt'     : Item(status='  '),
+    'D'                 : Item(status='  '),
+    'D/G'               : Item(status='  '),
+    'D/G/pi'            : Item(status='  '),
+    'D/G/rho'           : Item(status='  '),
+    'D/G/tau'           : Item(status='  '),
+    'D/gamma'           : Item(status='  '),
+    'D/H'               : Item(status='  '),
+    'D/H/chi'           : Item(status='  '),
+    'D/H/psi'           : Item(status='  '),
+    'D/H/omega'         : Item(status='  '),
     })
-  expected_status.tweak(wc_rev=8)
+  expected_status.tweak(wc_rev=6)
+  expected_status.tweak('B/B1', 'B/B1/test.txt', 'B/B1/B1a',
+                        'B/B1/B1a/test.txt', wc_rev='-')
   expected_disk = wc.State('', {
-    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:7'}),
-    'B'         : Item(),
-    'mu'        : Item("This is the file 'mu'.\n"),
-    'B/lambda'  : Item("This is the file 'lambda'.\n"),
-    'B/F'       : Item(),
-    'C'         : Item(),
-    'D'         : Item(),
-    'D/G'       : Item(),
-    'D/G/pi'    : Item("This is the file 'pi'.\n"),
-    'D/G/rho'   : Item("This is the file 'rho'.\n"),
-    'D/G/tau'   : Item("This is the file 'tau'.\n"),
-    'D/gamma'   : Item("This is the file 'gamma'.\n"),
-    'D/H'       : Item(),
-    'D/H/chi'   : Item("This is the file 'chi'.\n"),
-    'D/H/psi'   : Item("This is the file 'psi'.\n"),
-    'D/H/omega' : Item("This is the file 'omega'.\n"),
+    ''              : Item(props={SVN_PROP_MERGEINFO : '/A:2-6'}),
+    'B'             : Item(),
+    'mu'            : Item("This is the file 'mu'.\n"),
+    'B/B1'          : Item(),
+    'B/B1/test.txt' : Item("New file.\n"),
+    'B/E'           : Item(),
+    'B/E/alpha'     : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'      : Item("This is the file 'beta'.\n"),
+    'B/lambda'      : Item("This is the file 'lambda'.\n"),
+    'B/F'           : Item(),
+    'C'             : Item(props={SVN_PROP_MERGEINFO : '/A/C:2-5'}),
+    'C/C1'          : Item(),
+    'C/C1/test.txt' : Item("New file.\n"),
+    'D'             : Item(),
+    'D/G'           : Item(),
+    'D/G/pi'        : Item("This is the file 'pi'.\n"),
+    'D/G/rho'       : Item("This is the file 'rho'.\n"),
+    'D/G/tau'       : Item("This is the file 'tau'.\n"),
+    'D/gamma'       : Item("This is the file 'gamma'.\n"),
+    'D/H'           : Item(),
+    'D/H/chi'       : Item("This is the file 'chi'.\n"),
+    'D/H/psi'       : Item("This is the file 'psi'.\n"),
+    'D/H/omega'     : Item("This is the file 'omega'.\n"),
     })
-  # This should just delete the now present subtree, but instead it
-  # fails with an unexpected tree conflict:
-  #
-  #   >svn merge ^/A A_COPY -c7
-  #   --- Merging r7 into 'A_COPY\B':
-  #      C A_COPY\B\E
-  #   --- Recording mergeinfo for merge of r7 into 'A_COPY':
-  #    U   A_COPY
-  #   --- Recording mergeinfo for merge of r7 into 'A_COPY\B':
-  #    G   A_COPY\B
-  #   --- Eliding mergeinfo from 'A_COPY\B':
-  #    U   A_COPY\B
-  #   Summary of conflicts:
-  #     Tree conflicts: 1
-  #   Tree conflict on 'A_COPY\B\E'
-  #      > local dir edit, incoming dir delete upon merge
-  #   Select: (p) postpone, (r) resolved, (q) quit resolution, (h) help: p
-  #   Summary of conflicts:
-  #     Tree conflicts: 1
   expected_skip = wc.State(A_COPY_path, { })
-  svntest.actions.run_and_verify_merge(A_COPY_path, '6', '7',
+  svntest.actions.run_and_verify_merge(A_COPY_path, None, None,
                                        sbox.repo_url + '/A', None,
                                        expected_output,
                                        expected_mergeinfo_output,
@@ -19114,7 +19152,10 @@ def merge_to_empty_target_merge_to_infinite_target(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None,
-                                       None, 1)
+                                       None, 1, 0)
+
+  # Commit the merge.
+  sbox.simple_commit()
 
 ########################################################################
 # Run the tests
