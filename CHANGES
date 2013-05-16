@@ -295,7 +295,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix build with Apache HTTPD 2.5 (r1408985)
     * allow running the test suite through a http proxy (r1410195)
     * don't use non-constant initializers in struct variables (r1412911)
-    * allow generation of Visual Studio 11 compatible projects (r1245152)
+    * allow generation of Visual Studio 2012 compatible projects (r1245152)
     * nicer pretty-printing of Subversion data types in gdb (r1367262 et al)
     * teach serf build on Windows to use static APR/Util and OpenSSL (r1371338)
     * add --ssl-cert option to win-tests.py to run tests over https (r1372760)
