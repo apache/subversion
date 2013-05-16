@@ -276,6 +276,18 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1482759, r1482779 
+   Prevent svnserve from exiting when a client connection is aborted.
+   Justification:
+     DoS against svnserve possible.
+   Notes:
+     To prevent a tree conflict, run a sub-tree merge like this:
+       svn merge -c r1482759,r1482779 \
+         ^/subversion/trunk/subversion/svnserve/svnserve.c \
+         subversion/svnserve/main.c
+   Votes:
+     +1: stsp
+   
 Veto-blocked changes:
 =====================
 
