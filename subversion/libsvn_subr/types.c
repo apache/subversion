@@ -42,7 +42,7 @@ svn_revnum_parse(svn_revnum_t *rev,
   svn_revnum_t result = (svn_revnum_t)svn__strtoul(str, &end);
 
   if (endptr)
-    *endptr = end;
+    *endptr = str;
 
   if (str == end)
     return svn_error_createf
@@ -62,12 +62,15 @@ svn_revnum_parse(svn_revnum_t *rev,
                   _("Revision number longer than 10 digits '%s'"), str);
         
       /* we support 32 bit revision numbers only. check for overflows */
-      if (result < 1000000000 || result > APR_INT32_MAX)
+      if (*str > '2' || (apr_uint32_t)result > APR_INT32_MAX)
         return svn_error_createf
                   (SVN_ERR_REVNUM_PARSE_FAILURE, NULL,
                   _("Revision number too large or not normalized '%s'"), str);
     }
   
+  if (endptr)
+    *endptr = end;
+
   *rev = result;
 
   return SVN_NO_ERROR;
