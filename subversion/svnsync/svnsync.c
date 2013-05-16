@@ -1235,9 +1235,9 @@ replay_rev_started(svn_revnum_t revision,
      have to set it to at least the empty string. If there's a svn:log
      property on this revision, we will write the actual value in the
      replay_rev_finished callback. */
-  if (! svn_hash_gets(filtered, SVN_PROP_REVISION_LOG))
-    svn_hash_sets(filtered, SVN_PROP_REVISION_LOG,
-                  svn_string_create_empty(pool));
+  if (! svn_hash_gets_fixed_key(filtered, SVN_PROP_REVISION_LOG))
+    svn_hash_sets_fixed_key(filtered, SVN_PROP_REVISION_LOG,
+                            svn_string_create_empty(pool));
 
   /* If necessary, normalize encoding and line ending style. Add the number
      of properties that required EOL normalization to the overall count

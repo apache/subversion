@@ -497,7 +497,8 @@ delta_proplists(struct context *c,
                                            pool));
 
           /* Transmit the committed-date. */
-          committed_date = svn_hash_gets(r_props, SVN_PROP_REVISION_DATE);
+          committed_date = svn_hash_gets_fixed_key(r_props,
+                                                   SVN_PROP_REVISION_DATE);
           if (committed_date || source_path)
             {
               SVN_ERR(change_fn(c, object, SVN_PROP_ENTRY_COMMITTED_DATE,
@@ -505,7 +506,8 @@ delta_proplists(struct context *c,
             }
 
           /* Transmit the last-author. */
-          last_author = svn_hash_gets(r_props, SVN_PROP_REVISION_AUTHOR);
+          last_author = svn_hash_gets_fixed_key(r_props,
+                                                SVN_PROP_REVISION_AUTHOR);
           if (last_author || source_path)
             {
               SVN_ERR(change_fn(c, object, SVN_PROP_ENTRY_LAST_AUTHOR,

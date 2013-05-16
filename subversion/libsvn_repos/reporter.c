@@ -487,10 +487,10 @@ get_revision_info(report_baton_t *b,
                                        scratch_pool));
 
       /* Extract the committed-date. */
-      cdate = svn_hash_gets(r_props, SVN_PROP_REVISION_DATE);
+      cdate = svn_hash_gets_fixed_key(r_props, SVN_PROP_REVISION_DATE);
 
       /* Extract the last-author. */
-      author = svn_hash_gets(r_props, SVN_PROP_REVISION_AUTHOR);
+      author = svn_hash_gets_fixed_key(r_props, SVN_PROP_REVISION_AUTHOR);
 
       /* Create a result object */
       info = apr_palloc(b->pool, sizeof(*info));

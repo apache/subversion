@@ -1446,14 +1446,14 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   else
     {
       revprop_table = apr_hash_make(pool);
-      svn_hash_sets(revprop_table, SVN_PROP_REVISION_LOG,
-                    svn_string_create(log_msg, pool));
+      svn_hash_sets_fixed_key(revprop_table, SVN_PROP_REVISION_LOG,
+                              svn_string_create(log_msg, pool));
     }
 
   /* Get author from the baton, making sure clients can't circumvent
      the authentication via the revision props. */
-  svn_hash_sets(revprop_table, SVN_PROP_REVISION_AUTHOR,
-                b->user ? svn_string_create(b->user, pool) : NULL);
+  svn_hash_sets_fixed_key(revprop_table, SVN_PROP_REVISION_AUTHOR,
+                          b->user ? svn_string_create(b->user, pool) : NULL);
 
   ccb.pool = pool;
   ccb.new_rev = &new_rev;
