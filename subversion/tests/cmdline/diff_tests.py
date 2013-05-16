@@ -4520,6 +4520,36 @@ def diff_dir_replaced_by_dir(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '--summarize', wc_dir)
 
+
+@Issue(4366)
+def diff_repos_empty_file_addition(sbox):
+  "repos diff of rev which adds empty file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add and commit an empty file.
+  svntest.main.file_append(sbox.ospath('newfile'), "")
+  svntest.main.run_svn(None, 'add', sbox.ospath('newfile'))
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'newfile': Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.add({
+    'newfile' : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(sbox.wc_dir, expected_output,
+                                        expected_status, None, sbox.wc_dir)
+
+  # Now diff the revision that added the empty file.
+  expected_output = [
+    'Index: newfile\n',
+    '===================================================================\n',
+    ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '-c', '2', sbox.repo_url)
+
+
 ########################################################################
 #Run the tests
 
@@ -4598,6 +4628,7 @@ test_list = [ None,
               local_tree_replace,
               diff_dir_replaced_by_file,
               diff_dir_replaced_by_dir,
+              diff_repos_empty_file_addition,
               ]
 
 if __name__ == '__main__':
