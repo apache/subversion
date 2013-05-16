@@ -219,8 +219,8 @@ svn_error_t *svn_ra_get_commit_editor2(svn_ra_session_t *session,
 {
   apr_hash_t *revprop_table = apr_hash_make(pool);
   if (log_msg)
-    svn_hash_sets_fixed_key(revprop_table, SVN_PROP_REVISION_LOG,
-                            svn_string_create(log_msg, pool));
+    svn_hash_sets(revprop_table, SVN_PROP_REVISION_LOG,
+                  svn_string_create(log_msg, pool));
   return svn_ra_get_commit_editor3(session, editor, edit_baton, revprop_table,
                                    commit_callback, commit_baton,
                                    lock_tokens, keep_locks, pool);

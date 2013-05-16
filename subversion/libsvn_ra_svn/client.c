@@ -974,8 +974,8 @@ static svn_error_t *ra_svn_commit(svn_ra_session_t *session,
   ra_svn_commit_callback_baton_t *ccb;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
-  const svn_string_t *log_msg = svn_hash_gets_fixed_key(revprop_table,
-                                                        SVN_PROP_REVISION_LOG);
+  const svn_string_t *log_msg = svn_hash_gets(revprop_table,
+                                              SVN_PROP_REVISION_LOG);
 
   /* If we're sending revprops other than svn:log, make sure the server won't
      silently ignore them. */
