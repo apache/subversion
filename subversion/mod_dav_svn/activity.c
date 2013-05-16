@@ -255,9 +255,9 @@ dav_svn__create_txn(const dav_svn_repos *repos,
 
   if (repos->username)
     {
-      svn_hash_sets(revprops,
-                    SVN_PROP_REVISION_AUTHOR,
-                    svn_string_create(repos->username, pool));
+      svn_hash_sets_fixed_key(revprops,
+                              SVN_PROP_REVISION_AUTHOR,
+                              svn_string_create(repos->username, pool));
     }
 
   serr = svn_fs_youngest_rev(&rev, repos->fs, pool);

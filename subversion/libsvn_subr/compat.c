@@ -76,9 +76,9 @@ svn_compat_log_revprops_clear(apr_hash_t *revprops)
 {
   if (revprops)
     {
-      svn_hash_sets(revprops, SVN_PROP_REVISION_AUTHOR, NULL);
-      svn_hash_sets(revprops, SVN_PROP_REVISION_DATE, NULL);
-      svn_hash_sets(revprops, SVN_PROP_REVISION_LOG, NULL);
+      svn_hash_sets_fixed_key(revprops, SVN_PROP_REVISION_AUTHOR, NULL);
+      svn_hash_sets_fixed_key(revprops, SVN_PROP_REVISION_DATE, NULL);
+      svn_hash_sets_fixed_key(revprops, SVN_PROP_REVISION_LOG, NULL);
     }
 }
 
@@ -103,11 +103,14 @@ svn_compat_log_revprops_out(const char **author, const char **date,
   *author = *date = *message = NULL;
   if (revprops)
     {
-      if ((author_s = svn_hash_gets(revprops, SVN_PROP_REVISION_AUTHOR)))
+      if ((author_s = svn_hash_gets_fixed_key(revprops,
+                                              SVN_PROP_REVISION_AUTHOR)))
         *author = author_s->data;
-      if ((date_s = svn_hash_gets(revprops, SVN_PROP_REVISION_DATE)))
+      if ((date_s = svn_hash_gets_fixed_key(revprops,
+                                            SVN_PROP_REVISION_DATE)))
         *date = date_s->data;
-      if ((message_s = svn_hash_gets(revprops, SVN_PROP_REVISION_LOG)))
+      if ((message_s = svn_hash_gets_fixed_key(revprops,
+                                               SVN_PROP_REVISION_LOG)))
         *message = message_s->data;
     }
 }

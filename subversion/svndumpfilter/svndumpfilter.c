@@ -399,11 +399,12 @@ output_revision(struct revision_baton_t *rb)
       apr_hash_t *old_props = rb->props;
       rb->has_props = TRUE;
       rb->props = apr_hash_make(hash_pool);
-      svn_hash_sets(rb->props, SVN_PROP_REVISION_DATE,
-                    svn_hash_gets(old_props, SVN_PROP_REVISION_DATE));
-      svn_hash_sets(rb->props, SVN_PROP_REVISION_LOG,
-                    svn_string_create(_("This is an empty revision for "
-                                        "padding."), hash_pool));
+      svn_hash_sets_fixed_key(rb->props, SVN_PROP_REVISION_DATE,
+                              svn_hash_gets_fixed_key(old_props,
+                                                      SVN_PROP_REVISION_DATE));
+      svn_hash_sets_fixed_key(rb->props, SVN_PROP_REVISION_LOG,
+                              svn_string_create(_("This is an empty revision "
+                                                  "for padding."), hash_pool));
     }
 
   /* Now, "rasterize" the props to a string, and append the property

@@ -1085,10 +1085,14 @@ fill_log_entry(svn_log_entry_t *log_entry,
             {
               /* ... but we can only return author/date. */
               log_entry->revprops = svn_hash__make(pool);
-              svn_hash_sets(log_entry->revprops, SVN_PROP_REVISION_AUTHOR,
-                            svn_hash_gets(r_props, SVN_PROP_REVISION_AUTHOR));
-              svn_hash_sets(log_entry->revprops, SVN_PROP_REVISION_DATE,
-                            svn_hash_gets(r_props, SVN_PROP_REVISION_DATE));
+              svn_hash_sets_fixed_key(log_entry->revprops,
+                                      SVN_PROP_REVISION_AUTHOR,
+                            svn_hash_gets_fixed_key(r_props,
+                                                    SVN_PROP_REVISION_AUTHOR));
+              svn_hash_sets_fixed_key(log_entry->revprops,
+                                      SVN_PROP_REVISION_DATE,
+                            svn_hash_gets_fixed_key(r_props,
+                                                    SVN_PROP_REVISION_DATE));
             }
           else
             /* ... so return all we got. */

@@ -273,14 +273,15 @@ svn_client__ra_stat_compatible(svn_ra_session_t *ra_session,
 
                   SVN_ERR(svn_ra_rev_proplist(ra_session, rev, &props,
                                               pool));
-                  val = svn_hash_gets(props, SVN_PROP_REVISION_DATE);
+                  val = svn_hash_gets_fixed_key(props, SVN_PROP_REVISION_DATE);
                   if (val)
                     SVN_ERR(svn_time_from_cstring(&dirent->time, val->data,
                                                   pool));
                   else
                     dirent->time = 0;
 
-                  val = svn_hash_gets(props, SVN_PROP_REVISION_AUTHOR);
+                  val = svn_hash_gets_fixed_key(props,
+                                                SVN_PROP_REVISION_AUTHOR);
                   dirent->last_author = val ? val->data : NULL;
                 }
 

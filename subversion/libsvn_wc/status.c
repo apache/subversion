@@ -995,12 +995,12 @@ collect_ignore_patterns(apr_array_header_t **patterns,
     {
       const svn_string_t *value;
 
-      value = svn_hash_gets(props, SVN_PROP_IGNORE);
+      value = svn_hash_gets_fixed_key(props, SVN_PROP_IGNORE);
       if (value)
         svn_cstring_split_append(*patterns, value->data, "\n\r", FALSE,
                                  result_pool);
 
-      value = svn_hash_gets(props, SVN_PROP_INHERITABLE_IGNORES);
+      value = svn_hash_gets_fixed_key(props, SVN_PROP_INHERITABLE_IGNORES);
       if (value)
         svn_cstring_split_append(*patterns, value->data, "\n\r", FALSE,
                                  result_pool);
