@@ -4535,7 +4535,6 @@ def diff_repos_empty_file_addition(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-c', '2', sbox.repo_url)
 
-@XFail()
 def diff_missing_tree_conflict_victim(sbox):
   "diff with missing tree-conflict victim in wc"
 
@@ -4545,21 +4544,25 @@ def diff_missing_tree_conflict_victim(sbox):
   # Produce an 'incoming edit vs. local missing' tree conflict:
   # r2: edit iota and commit the change
   svntest.main.file_append(sbox.ospath('iota'), "This is a change to iota.\n")
-  sbox.simple_commit('iota')
+  sbox.simple_propset('k', 'v', 'A/C')
+  sbox.simple_commit()
   # now remove iota
-  sbox.simple_rm('iota')
-  sbox.simple_commit('iota')
+  sbox.simple_rm('iota', 'A/C')
+  sbox.simple_commit()
   # update to avoid mixed-rev wc warning
   sbox.simple_update()
   # merge r2 into wc and verify that a tree conflict is flagged on iota
-  expected_output = wc.State(wc_dir, {'iota' : Item(status='  ',
-                                                    treeconflict='C')})
+  expected_output = wc.State(wc_dir, {
+      'iota' : Item(status='  ', treeconflict='C'),
+      'A/C' : Item(status='  ', treeconflict='C')
+  })
   expected_mergeinfo_output = wc.State(wc_dir, {})
   expected_elision_output = wc.State(wc_dir, {})
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.remove('iota')
+  expected_disk.remove('iota','A/C')
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.add({'iota' : Item(status='! ', treeconflict='C')})
+  expected_status.tweak('iota', 'A/C',
+                        status='! ', treeconflict='C', wc_rev=None)
   expected_skip = wc.State('', { })
   svntest.actions.run_and_verify_merge(wc_dir, '1', '2',
                                        sbox.repo_url, None,
