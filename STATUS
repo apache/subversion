@@ -92,13 +92,6 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r1482724
-   Fix a link error when configured with --enable-runtime-module-search.
-   Justification:
-     Build fails.
-   Votes:
-     +1: philip, rhuijben
-
  * r1482829
    Reduce diskspace needed by our testsuite when using cleanup mode.
    Justification:
@@ -134,3 +127,10 @@ Approved changes:
      DoS against svnserve possible.
    Votes:
      +1: stsp, rhuijben, philip
+
+ * r1482724
+   Fix a link error when configured with --enable-runtime-module-search.
+   Justification:
+     Build fails.
+   Votes:
+     +1: philip, rhuijben, stsp
