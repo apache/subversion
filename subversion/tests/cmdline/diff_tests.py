@@ -32,7 +32,7 @@ logger = logging.getLogger()
 
 # Our testing module
 import svntest
-from svntest import err
+from svntest import err, wc
 
 from prop_tests import binary_mime_type_on_text_file_warning
 
@@ -4535,6 +4535,47 @@ def diff_repos_empty_file_addition(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-c', '2', sbox.repo_url)
 
+@XFail()
+def diff_missing_tree_conflict_victim(sbox):
+  "diff with missing tree-conflict victim in wc"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Produce an 'incoming edit vs. local missing' tree conflict:
+  # r2: edit iota and commit the change
+  svntest.main.file_append(sbox.ospath('iota'), "This is a change to iota.\n")
+  sbox.simple_commit('iota')
+  # now remove iota
+  sbox.simple_rm('iota')
+  sbox.simple_commit('iota')
+  # update to avoid mixed-rev wc warning
+  sbox.simple_update()
+  # merge r2 into wc and verify that a tree conflict is flagged on iota
+  expected_output = wc.State(wc_dir, {'iota' : Item(status='  ',
+                                                    treeconflict='C')})
+  expected_mergeinfo_output = wc.State(wc_dir, {})
+  expected_elision_output = wc.State(wc_dir, {})
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('iota')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.add({'iota' : Item(status='! ', treeconflict='C')})
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_merge(wc_dir, '1', '2',
+                                       sbox.repo_url, None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None, None,
+                                       False, '--ignore-ancestry', wc_dir)
+
+  # 'svn diff' should show no change for the working copy
+  # This currently fails because svn errors out with a 'node not found' error
+  expected_output = [ ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', wc_dir)
 
 ########################################################################
 #Run the tests
@@ -4615,6 +4656,7 @@ test_list = [ None,
               diff_dir_replaced_by_file,
               diff_dir_replaced_by_dir,
               diff_repos_empty_file_addition,
+              diff_missing_tree_conflict_victim,
               ]
 
 if __name__ == '__main__':
