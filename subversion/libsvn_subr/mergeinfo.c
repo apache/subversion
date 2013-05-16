@@ -2242,16 +2242,19 @@ svn_rangelist_dup(const svn_rangelist_t *rangelist, apr_pool_t *pool)
 
   /* allocate target range buffer with a single operation */
   svn_merge_range_t *copy = apr_palloc(pool, sizeof(*copy) * rangelist->nelts);
+
+  /* for efficiency, directly address source and target reference buffers */
+  svn_merge_range_t **source = (svn_merge_range_t **)(rangelist->elts);
+  svn_merge_range_t **target = (svn_merge_range_t **)(new_rl->elts);
   int i;
 
-  /* fill it iteratively and link it into the range list */
+  /* copy ranges iteratively and link them into the target range list */
   for (i = 0; i < rangelist->nelts; i++)
     {
-      memcpy(copy + i,
-             APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *),
-             sizeof(*copy));
-      APR_ARRAY_PUSH(new_rl, svn_merge_range_t *) = copy + i;
+      copy[i] = *source[i];
+      target[i] = &copy[i];
     }
+  new_rl->nelts = rangelist->nelts;
 
   return new_rl;
 }
