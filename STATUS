@@ -70,6 +70,15 @@ Candidate changes:
      +1: stsp
      +0: danielsh (reviewed 1.7.x-issue4340)
 
+ * r1482759, r1482779 
+   Prevent svnserve from exiting when a client connection is aborted.
+   Justification:
+     DoS against svnserve possible.
+   Branch:
+     ^/subversion/branches/1.6.x-r1482759
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
