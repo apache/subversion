@@ -635,10 +635,8 @@ new_node_record(void **node_baton,
          commit_editor. We'll set them separately using the RA API
          after closing the editor (see close_revision). */
 
-      svn_hash_sets_fixed_key(rb->revprop_table,
-                              SVN_PROP_REVISION_AUTHOR, NULL);
-      svn_hash_sets_fixed_key(rb->revprop_table,
-                              SVN_PROP_REVISION_DATE, NULL);
+      svn_hash_sets(rb->revprop_table, SVN_PROP_REVISION_AUTHOR, NULL);
+      svn_hash_sets(rb->revprop_table, SVN_PROP_REVISION_DATE, NULL);
 
       SVN_ERR(svn_ra__register_editor_shim_callbacks(rb->pb->session,
                                     get_shim_callbacks(rb, rb->pool)));

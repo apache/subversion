@@ -680,10 +680,9 @@ append_locks(dav_lockdb *lockdb,
       svn_fs_root_t *txn_root;
       const char *conflict_msg;
       apr_hash_t *revprop_table = apr_hash_make(resource->pool);
-      svn_hash_sets_fixed_key(revprop_table,
-                              SVN_PROP_REVISION_AUTHOR,
-                              svn_string_create(repos->username,
-                                                resource->pool));
+      svn_hash_sets(revprop_table,
+                    SVN_PROP_REVISION_AUTHOR,
+                    svn_string_create(repos->username, resource->pool));
 
       if (resource->info->repos->is_svn_client)
         return dav_svn__new_error(resource->pool, HTTP_METHOD_NOT_ALLOWED,

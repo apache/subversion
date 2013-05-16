@@ -3902,7 +3902,7 @@ get_mergeinfo_for_path_internal(svn_mergeinfo_t *mergeinfo,
 
   SVN_ERR(svn_fs_fs__dag_get_proplist(&proplist, nearest_ancestor->node,
                                       scratch_pool));
-  mergeinfo_string = svn_hash_gets_fixed_key(proplist, SVN_PROP_MERGEINFO);
+  mergeinfo_string = svn_hash_gets(proplist, SVN_PROP_MERGEINFO);
   if (!mergeinfo_string)
     return svn_error_createf
       (SVN_ERR_FS_CORRUPT, NULL,
