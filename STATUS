@@ -109,6 +109,16 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1483391, r1483397
+   Fix 'svn diff' erroring out on missing tree conflict victims.
+   Justification:
+     Regresion from 1.7.
+   Votes:
+     +1: stsp, rhuijben
+     
+Approved for 1.8.1 or when we release a new RC:
+===============================================
+
  * r1482759, r1482779
    Prevent svnserve from exiting when a client connection is aborted.
    Justification:
@@ -122,13 +132,6 @@ Candidate changes:
      Build fails.
    Votes:
      +1: philip, rhuijben, stsp
-
- * r1483391, r1483397
-   Fix 'svn diff' erroring out on missing tree conflict victims.
-   Justification:
-     Regresion from 1.7.
-   Votes:
-     +1: stsp, rhuijben
 
 Veto-blocked changes:
 =====================
