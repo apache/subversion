@@ -288,7 +288,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * make mailer.py generate Date and Message-ID headers (r1449592)
     * new '-?' option support for 'svnmucc' (r1339428)
     * provide the repository name to mailer.py (r1439592)
-    * make Julian happy (r1413030)
     * add '--force-interactive' to svnmucc (r1457789)
     * add '--trust-server-cert' to svnmucc (r1458995)
   
@@ -334,6 +333,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * FSFS caching supports prefixes now (r1462436)
     * maintainer mode now prints symbolic error codes (r1465157)
     * don't require NLS support for kwallet support (r1466445)
+    * make Julian happy (r1413030)
 
   - API changes:
     * fix inconsistent handling of log revs without changed paths (issue #3694)
