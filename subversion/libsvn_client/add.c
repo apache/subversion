@@ -696,23 +696,21 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
         apr_palloc(scratch_pool, sizeof(*new_iprop));
       new_iprop->path_or_url = path_or_url;
       new_iprop->prop_hash = apr_hash_make(scratch_pool);
-      svn_hash_sets(new_iprop->prop_hash, SVN_PROP_INHERITABLE_AUTO_PROPS,
-                    config_auto_prop);
+      svn_hash_sets_fixed_key(new_iprop->prop_hash,
+                              SVN_PROP_INHERITABLE_AUTO_PROPS,
+                              config_auto_prop);
       APR_ARRAY_PUSH(inherited_config_auto_props,
                      svn_prop_inherited_item_t *) = new_iprop;
     }
 
   for (i = 0; i < inherited_config_auto_props->nelts; i++)
     {
-      apr_hash_index_t *hi;
       svn_prop_inherited_item_t *elt = APR_ARRAY_IDX(
         inherited_config_auto_props, i, svn_prop_inherited_item_t *);
+      const svn_string_t *propval =
+        svn_hash_gets(elt->prop_hash, SVN_PROP_INHERITABLE_AUTO_PROPS);
 
-      for (hi = apr_hash_first(scratch_pool, elt->prop_hash);
-           hi;
-           hi = apr_hash_next(hi))
         {
-          const svn_string_t *propval = svn__apr_hash_index_val(hi);
           const char *ch = propval->data;
           svn_stringbuf_t *config_auto_prop_pattern;
           svn_stringbuf_t *config_auto_prop_val;
@@ -799,8 +797,8 @@ svn_error_t *svn_client__get_inherited_ignores(apr_array_header_t **ignores,
         apr_palloc(scratch_pool, sizeof(*new_iprop));
       new_iprop->path_or_url = path_or_url;
       new_iprop->prop_hash = apr_hash_make(scratch_pool);
-      svn_hash_sets(new_iprop->prop_hash, SVN_PROP_INHERITABLE_IGNORES,
-                    explicit_prop);
+      svn_hash_sets_fixed_key(new_iprop->prop_hash,
+                              SVN_PROP_INHERITABLE_IGNORES, explicit_prop);
       APR_ARRAY_PUSH(inherited_ignores,
                      svn_prop_inherited_item_t *) = new_iprop;
     }
@@ -811,8 +809,8 @@ svn_error_t *svn_client__get_inherited_ignores(apr_array_header_t **ignores,
     {
       svn_prop_inherited_item_t *elt = APR_ARRAY_IDX(
         inherited_ignores, i, svn_prop_inherited_item_t *);
-      svn_string_t *ignore_val = svn_hash_gets(elt->prop_hash,
-                                               SVN_PROP_INHERITABLE_IGNORES);
+      svn_string_t *ignore_val =
+        svn_hash_gets_fixed_key(elt->prop_hash, SVN_PROP_INHERITABLE_IGNORES);
       if (ignore_val)
         svn_cstring_split_append(*ignores, ignore_val->data, "\n\r\t\v ",
                                  FALSE, result_pool);

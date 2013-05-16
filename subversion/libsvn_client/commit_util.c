@@ -1974,8 +1974,8 @@ svn_client__ensure_revprop_table(apr_hash_t **revprop_table_out,
     {
       new_revprop_table = apr_hash_make(pool);
     }
-  svn_hash_sets(new_revprop_table, SVN_PROP_REVISION_LOG,
-                svn_string_create(log_msg, pool));
+  svn_hash_sets_fixed_key(new_revprop_table, SVN_PROP_REVISION_LOG,
+                          svn_string_create(log_msg, pool));
   *revprop_table_out = new_revprop_table;
   return SVN_NO_ERROR;
 }

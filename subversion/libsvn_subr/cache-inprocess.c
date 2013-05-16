@@ -190,7 +190,6 @@ inprocess_cache_get_internal(char **buffer,
 {
   struct cache_entry *entry = apr_hash_get(cache->hash, key, cache->klen);
 
-  *buffer = NULL;
   if (entry)
     {
       SVN_ERR(move_page_to_front(cache, entry->page));
@@ -200,6 +199,11 @@ inprocess_cache_get_internal(char **buffer,
       memcpy(*buffer, entry->value, entry->size);
 
       *size = entry->size;
+    }
+  else
+    {
+      *buffer = NULL;
+      *size = 0;
     }
 
   return SVN_NO_ERROR;
@@ -213,25 +217,33 @@ inprocess_cache_get(void **value_p,
                     apr_pool_t *result_pool)
 {
   inprocess_cache_t *cache = cache_void;
-  char* buffer = NULL;
-  apr_size_t size = 0;
 
   if (key)
-    SVN_MUTEX__WITH_LOCK(cache->mutex,
-                         inprocess_cache_get_internal(&buffer,
-                                                      &size,
-                                                      cache,
-                                                      key,
-                                                      result_pool));
+    {
+      char* buffer;
+      apr_size_t size;
 
-  /* deserialize the buffer content. Usually, this will directly
-     modify the buffer content directly.
-   */
-  *value_p = NULL;
-  *found = buffer != NULL;
-  return buffer && size
-    ? cache->deserialize_func(value_p, buffer, size, result_pool)
-    : SVN_NO_ERROR;
+      SVN_MUTEX__WITH_LOCK(cache->mutex,
+                           inprocess_cache_get_internal(&buffer,
+                                                        &size,
+                                                        cache,
+                                                        key,
+                                                        result_pool));
+      /* deserialize the buffer content. Usually, this will directly
+         modify the buffer content directly. */
+      *found = (buffer != NULL);
+      if (!buffer || !size)
+        *value_p = NULL;
+      else
+        return cache->deserialize_func(value_p, buffer, size, result_pool);
+    }
+  else
+    {
+      *value_p = NULL;
+      *found = FALSE;
+    }
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *

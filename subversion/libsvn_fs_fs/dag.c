@@ -609,10 +609,24 @@ svn_fs_fs__dag_revision_root(dag_node_t **node_p,
                              svn_revnum_t rev,
                              apr_pool_t *pool)
 {
-  svn_fs_id_t *root_id;
+  dag_node_t *new_node;
 
-  SVN_ERR(svn_fs_fs__rev_get_root(&root_id, fs, rev, pool));
-  return svn_fs_fs__dag_get_node(node_p, fs, root_id, pool);
+  /* Construct the node. */
+  new_node = apr_pcalloc(pool, sizeof(*new_node));
+  new_node->fs = fs;
+  SVN_ERR(svn_fs_fs__rev_get_root(&new_node->id, fs, rev, pool));
+
+  /* Grab the contents so we can inspect the node's kind and created path. */
+  new_node->node_pool = pool;
+
+  /* Initialize the KIND and CREATED_PATH attributes */
+  new_node->kind = svn_node_dir;
+  new_node->created_path = "/";
+  new_node->fresh_root_predecessor_id = NULL;
+
+  /* Return a fresh new node */
+  *node_p = new_node;
+  return SVN_NO_ERROR;
 }
 
 

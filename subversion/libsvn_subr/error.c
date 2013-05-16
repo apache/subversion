@@ -771,6 +771,12 @@ svn_error_set_malfunction_handler(svn_error_malfunction_handler_t func)
   return old_malfunction_handler;
 }
 
+svn_error_malfunction_handler_t
+svn_error_get_malfunction_handler(void)
+{
+  return malfunction_handler;
+}
+
 /* Note: Although this is a "__" function, it is in the public ABI, so
  * we can never remove it or change its signature. */
 svn_error_t *

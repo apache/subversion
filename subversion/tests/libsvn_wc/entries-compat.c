@@ -336,6 +336,8 @@ create_open(svn_wc__db_t **db,
                           TRUE /* enforce_empty_wq */,
                           pool, pool));
 
+  svn_test_add_dir_cleanup(*local_abspath);
+
   return SVN_NO_ERROR;
 }
 

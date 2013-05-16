@@ -1,4 +1,4 @@
-# ====================================================================
+# ==================================================================== 
 #    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
@@ -43,19 +43,20 @@ module SvnTestUtil
 
     @tmp_path = Dir.mktmpdir
     @wc_path = File.join(@tmp_path, "wc")
-    @full_wc_path = File.expand_path(@wc_path)
+    @import_path = File.join(@tmp_path, "import")
     @repos_path = File.join(@tmp_path, "repos")
     @full_repos_path = File.expand_path(@repos_path)
     @repos_uri = "file://#{@full_repos_path.sub(/^\/?/, '/')}"
 
     @config_path = "config"
-    @greek = Greek.new(@tmp_path, @wc_path, @repos_uri)
+    @greek = Greek.new(@tmp_path, @import_path, @wc_path, @repos_uri)
   end
 
   def setup_basic(need_svnserve=false)
     @need_svnserve = need_svnserve
     setup_default_variables
     setup_tmp
+    setup_tmp(@import_path) 
     setup_repository
     add_hooks
     setup_svnserve if @need_svnserve

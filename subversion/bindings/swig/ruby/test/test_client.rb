@@ -334,7 +334,7 @@ class SvnClientTest < Test::Unit::TestCase
     file = "sample.txt"
     deep_dir_path = File.join(@wc_path, deep_dir)
     path = File.join(deep_dir_path, file)
-    tmp_deep_dir_path = File.join(@tmp_path, deep_dir)
+    tmp_deep_dir_path = File.join(@import_path, deep_dir)
     tmp_path = File.join(tmp_deep_dir_path, file)
 
     make_context(log) do |ctx|
@@ -342,7 +342,7 @@ class SvnClientTest < Test::Unit::TestCase
       FileUtils.mkdir_p(tmp_deep_dir_path)
       File.open(tmp_path, "w") {|f| f.print(src)}
 
-      ctx.import(@tmp_path, @repos_uri)
+      ctx.import(@import_path, @repos_uri)
 
       ctx.up(@wc_path)
       assert_equal(src, File.open(path){|f| f.read})
@@ -356,7 +356,7 @@ class SvnClientTest < Test::Unit::TestCase
     file = "sample.txt"
     deep_dir_path = File.join(@wc_path, deep_dir)
     path = File.join(deep_dir_path, file)
-    tmp_deep_dir_path = File.join(@tmp_path, deep_dir)
+    tmp_deep_dir_path = File.join(@import_path, deep_dir)
     tmp_path = File.join(tmp_deep_dir_path, file)
 
     make_context(log) do |ctx|
@@ -364,7 +364,7 @@ class SvnClientTest < Test::Unit::TestCase
       FileUtils.mkdir_p(tmp_deep_dir_path)
       File.open(tmp_path, "w") {|f| f.print(src)}
 
-      new_rev = ctx.import(@tmp_path, @repos_uri, true, false,
+      new_rev = ctx.import(@import_path, @repos_uri, true, false,
                            {"custom-prop" => "some-value"}).revision
       assert_equal(["some-value", new_rev],
                    ctx.revprop_get("custom-prop", @repos_uri, new_rev))

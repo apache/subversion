@@ -790,11 +790,7 @@ fold_change(apr_hash_t *changes,
 
 /* Examine all the changed path entries in CHANGES and store them in
    *CHANGED_PATHS.  Folding is done to remove redundant or unnecessary
-   *data.  If PREFOLDED is true, assume that
-   the changed-path entries have already been folded (by
-   write_final_changed_path_info) and may be out of order, so we shouldn't
-   remove children of replaced or deleted directories.  Do all
-   allocations in POOL. */
+   *data. Do all allocations in POOL. */
 static svn_error_t *
 process_changes(apr_hash_t *changed_paths,
                 apr_array_header_t *changes,
@@ -3347,6 +3343,9 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
        * We use an sqlite transaction to speed things up;
        * see <http://www.sqlite.org/faq.html#q19>.
        */
+      /* ### A commit that touches thousands of files will starve other
+             (reader/writer) commits for the duration of the below call.
+             Maybe write in batches? */
       SVN_SQLITE__WITH_TXN(
         write_reps_to_cache(fs, cb.reps_to_cache, pool),
         ffd->rep_cache_db);

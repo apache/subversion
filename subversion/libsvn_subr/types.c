@@ -31,6 +31,9 @@
 #include "svn_props.h"
 #include "svn_private_config.h"
 
+#include "private/svn_dep_compat.h"
+#include "private/svn_string_private.h"
+
 svn_error_t *
 svn_revnum_parse(svn_revnum_t *rev,
                  const char *str,
@@ -38,28 +41,37 @@ svn_revnum_parse(svn_revnum_t *rev,
 {
   char *end;
 
-  svn_revnum_t result = strtol(str, &end, 10);
+  svn_revnum_t result = (svn_revnum_t)svn__strtoul(str, &end);
 
   if (endptr)
-    *endptr = end;
+    *endptr = str;
 
   if (str == end)
-    return svn_error_createf(SVN_ERR_REVNUM_PARSE_FAILURE, NULL,
-                             _("Invalid revision number found parsing '%s'"),
-                             str);
+    return svn_error_createf
+              (SVN_ERR_REVNUM_PARSE_FAILURE, NULL,
+               *str == '-' ? _("Negative revision number found parsing '%s'")
+                           : _("Invalid revision number found parsing '%s'"),
+               str);
 
-  if (result < 0)
+  /* a revision number with more than 9 digits is suspicious.
+     Have a closer look at those. */
+  if (str + 10 <= end)
     {
-      /* The end pointer from strtol() is valid, but a negative revision
-         number is invalid, so move the end pointer back to the
-         beginning of the string. */
-      if (endptr)
-        *endptr = str;
-
-      return svn_error_createf(SVN_ERR_REVNUM_PARSE_FAILURE, NULL,
-                               _("Negative revision number found parsing '%s'"),
-                               str);
+      /* we support 32 bit revision numbers only. check for overflows */
+      if (str + 10 < end)
+        return svn_error_createf
+                  (SVN_ERR_REVNUM_PARSE_FAILURE, NULL,
+                  _("Revision number longer than 10 digits '%s'"), str);
+        
+      /* we support 32 bit revision numbers only. check for overflows */
+      if (*str > '2' || (apr_uint32_t)result > APR_INT32_MAX)
+        return svn_error_createf
+                  (SVN_ERR_REVNUM_PARSE_FAILURE, NULL,
+                  _("Revision number too large or not normalized '%s'"), str);
     }
+  
+  if (endptr)
+    *endptr = end;
 
   *rev = result;
 

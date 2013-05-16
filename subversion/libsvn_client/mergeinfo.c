@@ -677,7 +677,7 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
           SVN_ERR(svn_wc_get_pristine_props(&original_props,
                                             ctx->wc_ctx, local_abspath,
                                             result_pool, scratch_pool));
-          if (!svn_hash_gets(original_props, SVN_PROP_MERGEINFO))
+          if (!svn_hash_gets_fixed_key(original_props, SVN_PROP_MERGEINFO))
             {
               apr_pool_t *sesspool = NULL;
 

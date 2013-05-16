@@ -600,11 +600,11 @@
 #endif
 #ifdef SWIGPERL
 %typemap(in) const apr_array_header_t *STRINGLIST {
-    $1 = (apr_array_header_t *) svn_swig_pl_strings_to_array($input,
+    $1 = svn_swig_pl_strings_to_array($input,
                                                              _global_pool);
 }
 %typemap(in) const apr_array_header_t *STRINGLIST_MAY_BE_NULL {
-    $1 = SvOK($input) ? (apr_array_header_t *) svn_swig_pl_strings_to_array(
+    $1 = SvOK($input) ? svn_swig_pl_strings_to_array(
         $input, _global_pool) : NULL;
 }
 #endif
@@ -646,7 +646,7 @@
 */
 #ifdef SWIGPERL
 %typemap(in) apr_array_header_t *providers {
-    $1 = (apr_array_header_t *) svn_swig_pl_objs_to_array($input,
+    $1 = svn_swig_pl_objs_to_array($input,
       $descriptor(svn_auth_provider_object_t *), _global_pool);
 }
 #endif

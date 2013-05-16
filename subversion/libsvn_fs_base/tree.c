@@ -5014,7 +5014,7 @@ txn_body_get_mergeinfo_data_and_entries(void *baton, trail_t *trail)
 
           SVN_ERR(svn_fs_base__dag_get_proplist(&plist, child_node,
                                                 trail, iterpool));
-          pval = svn_hash_gets(plist, SVN_PROP_MERGEINFO);
+          pval = svn_hash_gets_fixed_key(plist, SVN_PROP_MERGEINFO);
           if (! pval)
             {
               svn_string_t *id_str = svn_fs_base__id_unparse(child_id,
@@ -5189,7 +5189,7 @@ txn_body_get_mergeinfo_for_path(void *baton, trail_t *trail)
   svn_pool_destroy(iterpool);
 
   SVN_ERR(svn_fs_base__dag_get_proplist(&proplist, node, trail, trail->pool));
-  mergeinfo_string = svn_hash_gets(proplist, SVN_PROP_MERGEINFO);
+  mergeinfo_string = svn_hash_gets_fixed_key(proplist, SVN_PROP_MERGEINFO);
   if (! mergeinfo_string)
     {
       svn_string_t *id_str =

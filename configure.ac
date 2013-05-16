@@ -1137,6 +1137,13 @@ elif test "$enable_optimization" = "no"; then
 #   # do nothing
 fi
 
+dnl Dump the current compiler options
+AC_MSG_NOTICE([C compiler flags: $CFLAGS])
+AC_MSG_NOTICE([    user-defined: $CUSERFLAGS])
+AC_MSG_NOTICE([ maintainer-mode: $CMAINTAINERFLAGS])
+AC_MSG_NOTICE([C++ compiler flags: $CXXFLAGS])
+AC_MSG_NOTICE([      user-defined: $CXXUSERFLAGS])
+AC_MSG_NOTICE([   maintainer-mode: $CXXMAINTAINERFLAGS])
 
 AC_ARG_ENABLE(full-version-match,
 AS_HELP_STRING([--disable-full-version-match],

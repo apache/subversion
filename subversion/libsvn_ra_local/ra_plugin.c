@@ -535,7 +535,8 @@ ignore_warnings(void *baton,
                 svn_error_t *err)
 {
 #ifdef SVN_DEBUG
-  SVN_DBG(("Ignoring FS warning %d\n", err ? err->apr_err : 0));
+  SVN_DBG(("Ignoring FS warning %s\n",
+           svn_error_symbolic_name(err ? err->apr_err : 0)));
 #endif
   return;
 }
@@ -760,10 +761,10 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
 
   /* Copy the revprops table so we can add the username. */
   revprop_table = apr_hash_copy(pool, revprop_table);
-  svn_hash_sets(revprop_table, SVN_PROP_REVISION_AUTHOR,
-                svn_string_create(sess->username, pool));
-  svn_hash_sets(revprop_table, SVN_PROP_TXN_CLIENT_COMPAT_VERSION,
-                svn_string_create(SVN_VER_NUMBER, pool));
+  svn_hash_sets_fixed_key(revprop_table, SVN_PROP_REVISION_AUTHOR,
+                          svn_string_create(sess->username, pool));
+  svn_hash_sets_fixed_key(revprop_table, SVN_PROP_TXN_CLIENT_COMPAT_VERSION,
+                          svn_string_create(SVN_VER_NUMBER, pool));
 
   /* Get the repos commit-editor */
   return svn_repos_get_commit_editor5
@@ -1654,8 +1655,8 @@ svn_ra_local__get_commit_ev2(svn_editor_t **editor,
 
   /* Copy the REVPROPS and insert the author/username.  */
   revprops = apr_hash_copy(scratch_pool, revprops);
-  svn_hash_sets(revprops, SVN_PROP_REVISION_AUTHOR,
-                svn_string_create(sess->username, scratch_pool));
+  svn_hash_sets_fixed_key(revprops, SVN_PROP_REVISION_AUTHOR,
+                          svn_string_create(sess->username, scratch_pool));
 
   return svn_error_trace(svn_repos__get_commit_ev2(
                            editor, sess->repos, NULL /* authz */,

@@ -1255,7 +1255,7 @@ svn_xml_make_header(svn_stringbuf_t **str, apr_pool_t *pool)
 void
 svn_utf_initialize(apr_pool_t *pool)
 {
-  svn_utf_initialize2(pool, FALSE);
+  svn_utf_initialize2(FALSE, pool);
 }
 
 svn_error_t *

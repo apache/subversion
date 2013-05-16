@@ -93,27 +93,61 @@ module SvnTestUtil
           %r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)' =~ apr_version_include.read
           apr_major_version = $1 == '0' ? '' : "-#{$1}"
 
+          cwd = Dir.getwd
           targets = %W(svnserve.exe libsvn_subr-1.dll libsvn_repos-1.dll
                        libsvn_fs-1.dll libsvn_delta-1.dll
                        libaprutil#{apr_major_version}.dll
                        libapr#{apr_major_version}.dll
                        libapriconv#{apr_major_version}.dll
-                       libdb44.dll libdb44d.dll)
+                       libdb??.dll libdb??d.dll)
           ENV["PATH"].split(";").each do |path|
+
+            # Change the cwd to path, but ignore non-existent paths.
+            begin
+              Dir.chdir(path)
+            rescue Errno::ENOENT
+            end
+
             found_targets = []
             targets.each do |target|
-              target_path = "#{path}\\#{target}"
-              if File.exists?(target_path)
-                found_targets << target
-                FileUtils.cp(target_path, svnserve_dir)
+              matching_paths = Dir.glob(target)
+              matching_paths.each do |target_path|
+                target_path = File.join(path.tr('\\', '/'), target_path)
+                if File.exists?(target_path)
+                  found_targets << target
+                  retried = 0
+                  begin
+                    FileUtils.cp(target_path, svnserve_dir)
+                  rescue Errno::EACCES
+                    # On Windows the tests frequently fail spuriously with a
+                    # 'Errno::EACCES: Permission denied - svnserve.exe' error.
+                    # Sleeping for a few seconds avoids this.
+                    if retried > 5
+                      # Give up!
+                      raise
+                    else
+                      # Wait a sec...
+                      sleep(1)
+                      retried += 1
+                      retry
+                    end
+                  end
+                end
               end
             end
             targets -= found_targets
             break if targets.empty?
           end
+          Dir.chdir(cwd)
           # Remove optional targets instead of raising below.  If they are really
           # needed, svnserve won't start anyway.
           targets -= %W[libapriconv#{apr_major_version}.dll]
+          # Ditto these four, since svnserve.exe might be a static build.
+          targets -= %W[libsvn_subr-1.dll]
+          targets -= %W[libsvn_repos-1.dll]
+          targets -= %W[libsvn_fs-1.dll]
+          targets -= %W[libsvn_delta-1.dll]
+
           unless targets.empty?
             raise "can't find libraries to work svnserve: #{targets.join(' ')}"
           end

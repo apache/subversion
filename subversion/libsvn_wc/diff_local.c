@@ -201,6 +201,15 @@ diff_status_callback(void *baton,
       case svn_wc_status_ignored:
         return SVN_NO_ERROR; /* No diff */
 
+      case svn_wc_status_conflicted:
+        if (status->text_status == svn_wc_status_none
+            && status->prop_status == svn_wc_status_none)
+          {
+            /* Node is an actual only node describing a tree conflict */
+            return SVN_NO_ERROR;
+          }
+        break;
+
       default:
         break; /* Go check other conditions */
     }

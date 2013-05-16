@@ -613,6 +613,11 @@ typedef svn_error_t *(*svn_error_malfunction_handler_t)
 svn_error_malfunction_handler_t
 svn_error_set_malfunction_handler(svn_error_malfunction_handler_t func);
 
+/** Return the malfunction handler that is currently in effect.
+ * @since New in 1.9. */
+svn_error_malfunction_handler_t
+svn_error_get_malfunction_handler(void);
+
 /** Handle a malfunction by returning an error object that describes it.
  *
  * When @a can_return is false, abort()

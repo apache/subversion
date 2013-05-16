@@ -121,8 +121,8 @@ xlate_handle_node_cleanup(void *arg)
 }
 
 void
-svn_utf_initialize2(apr_pool_t *pool,
-                    svn_boolean_t assume_native_utf8)
+svn_utf_initialize2(svn_boolean_t assume_native_utf8,
+                    apr_pool_t *pool)
 {
   if (!xlate_handle_hash)
     {

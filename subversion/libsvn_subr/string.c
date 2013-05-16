@@ -1038,6 +1038,36 @@ svn__strtoff(apr_off_t *offset, const char *buf, char **end, int base)
 #endif
 }
 
+unsigned long
+svn__strtoul(const char *buffer, char **end)
+{
+  unsigned long result = 0;
+
+  /* this loop will execute in just 2 CPU cycles, confirmed by measurement:
+     7 macro-ops (max 4 / cycle => 2 cycles)
+       1 load (max 1 / cycle)
+       1 jumps (compare + conditional jump == 1 macro op; max 1 / cycle)
+       2 arithmetic ops (subtract, increment; max 3 / cycle)
+       2 scale-and-add AGU ops (max 3 / cycle)
+       1 compiler-generated move operation
+     dependency chain: temp = result * 4 + result; result = temp * 2 + c
+                       (2 ops with latency 1 => 2 cycles)
+   */
+  while (1)
+    {
+      unsigned long c = *buffer - '0';
+      if (c > 9)
+        break;
+
+      result = result * 10 + c;
+      ++buffer;
+    }
+
+  *end = (char *)buffer;
+  return result;
+}
+
+
 /* "Precalculated" itoa values for 2 places (including leading zeros).
  * For maximum performance, make sure all table entries are word-aligned.
  */

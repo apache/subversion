@@ -47,15 +47,16 @@ module SvnTestUtil
       const_set(path.split("/").last.upcase, path)
     end
 
-    def initialize(tmp_path, wc_path, repos_uri)
+    def initialize(tmp_path, import_path, wc_path, repos_uri)
       @tmp_path = tmp_path
+      @import_path = import_path
       @wc_path = wc_path
       @repos_uri = repos_uri
     end
 
     def setup(context)
       TREE.each do |path, contents|
-        entry = File.expand_path(File.join(@tmp_path, path))
+        entry = File.expand_path(File.join(@import_path, path))
         if contents
           File.open(entry, 'w') {|f| f.print(contents)}
         else
@@ -63,7 +64,7 @@ module SvnTestUtil
         end
       end
 
-      context.import(@tmp_path, @repos_uri)
+      context.import(@import_path, @repos_uri)
       context.update(@wc_path)
     end
 

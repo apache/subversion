@@ -751,7 +751,7 @@ execute(const apr_array_header_t *actions,
                                             "svnmucc: ", "--config-option"));
   cfg_config = svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
 
-  if (! svn_hash_gets(revprops, SVN_PROP_REVISION_LOG))
+  if (! svn_hash_gets_fixed_key(revprops, SVN_PROP_REVISION_LOG))
     {
       svn_string_t *msg = svn_string_create("", pool);
 
@@ -770,7 +770,7 @@ execute(const apr_array_header_t *actions,
                       TRUE, NULL, apr_hash_pool_get(revprops)));
         }
 
-      svn_hash_sets(revprops, SVN_PROP_REVISION_LOG, msg);
+      svn_hash_sets_fixed_key(revprops, SVN_PROP_REVISION_LOG, msg);
     }
 
   SVN_ERR(create_ra_callbacks(&ra_callbacks, username, password, config_dir,
@@ -1028,13 +1028,13 @@ sanitize_log_sources(apr_hash_t *revprops,
         return mutually_exclusive_logs_error();
 
       SVN_ERR(svn_utf_cstring_to_utf8(&message, filedata->data, hash_pool));
-      svn_hash_sets(revprops, SVN_PROP_REVISION_LOG,
-                    svn_stringbuf__morph_into_string(filedata));
+      svn_hash_sets_fixed_key(revprops, SVN_PROP_REVISION_LOG,
+                              svn_stringbuf__morph_into_string(filedata));
     }
   else if (message)
     {
-      svn_hash_sets(revprops, SVN_PROP_REVISION_LOG,
-                    svn_string_create(message, hash_pool));
+      svn_hash_sets_fixed_key(revprops, SVN_PROP_REVISION_LOG,
+                              svn_string_create(message, hash_pool));
     }
 
   return SVN_NO_ERROR;
