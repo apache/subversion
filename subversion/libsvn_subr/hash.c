@@ -600,37 +600,26 @@ hashfunc_compatible(const char *char_key, apr_ssize_t *klen)
     apr_ssize_t i;
 
     if (*klen == APR_HASH_KEY_STRING)
-      {
-        for (p = key; ; p+=4)
-          {
-            unsigned int new_hash = hash * 33 * 33 * 33 * 33;
-            if (!p[0]) break;
-            new_hash += p[0] * 33 * 33 * 33;
-            if (!p[1]) break;
-            new_hash += p[1] * 33 * 33;
-            if (!p[2]) break;
-            new_hash += p[2] * 33;
-            if (!p[3]) break;
-            hash = new_hash + p[3];
-          }
-        for (; *p; p++)
-            hash = hash * 33 + *p;
+      *klen = strlen(char_key);
 
-        *klen = p - key;
-      }
-    else
+#if SVN_UNALIGNED_ACCESS_IS_OK
+    for (p = key, i = *klen; i >= 4; i-=4, p+=4)
       {
-        for (p = key, i = *klen; i >= 4; i-=4, p+=4)
-          {
-            hash = hash * 33 * 33 * 33 * 33
-                 + p[0] * 33 * 33 * 33
-                 + p[1] * 33 * 33
-                 + p[2] * 33
-                 + p[3];
-          }
-        for (; i; i--, p++)
-            hash = hash * 33 + *p;
+        hash = hash * 33 * 33 * 33 * 33
+             + *(apr_uint32_t *)p;
       }
+#else
+    for (p = key, i = *klen; i >= 4; i-=4, p+=4)
+      {
+        hash = hash * 33 * 33 * 33 * 33
+              + p[0] * 33 * 33 * 33
+              + p[1] * 33 * 33
+              + p[2] * 33
+              + p[3];
+      }
+#endif
+    for (; i; i--, p++)
+        hash = hash * 33 + *p;
 
     return hash;
 }
