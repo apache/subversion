@@ -933,12 +933,12 @@ apply_textdelta(void *file_baton,
     }
 
   /* Open the file to be used as the base for second revision */
-  src_stream = svn_stream_lazyopen_create(lazy_open_source, fb, FALSE,
+  src_stream = svn_stream_lazyopen_create(lazy_open_source, fb, TRUE,
                                           scratch_pool);
 
   /* Open the file that will become the second revision after applying the
      text delta, it starts empty */
-  result_stream = svn_stream_lazyopen_create(lazy_open_result, fb, FALSE,
+  result_stream = svn_stream_lazyopen_create(lazy_open_result, fb, TRUE,
                                              scratch_pool);
 
   svn_txdelta_apply(src_stream,
