@@ -69,8 +69,11 @@ enum svn_node_action
 /** The different policies for processing the UUID in the dumpfile. */
 enum svn_repos_load_uuid
 {
+  /** only update uuid if the repos has no revisions. */
   svn_repos_load_uuid_default,
+  /** never update uuid. */
   svn_repos_load_uuid_ignore,
+  /** always update uuid. */
   svn_repos_load_uuid_force
 };
 
