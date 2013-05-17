@@ -2753,7 +2753,7 @@ merge_dir_opened(void **new_dir_baton,
               SVN_ERR(svn_wc_add4(merge_b->ctx->wc_ctx, local_abspath,
                                   svn_depth_infinity,
                                   original_url,
-                                  merge_b->merge_source.loc2->rev,
+                                  right_source->revision,
                                   merge_b->ctx->cancel_func,
                                   merge_b->ctx->cancel_baton,
                                   NULL, NULL /* no notify! */,
@@ -2953,7 +2953,7 @@ merge_dir_added(const char *relpath,
 
       copyfrom_url = svn_path_url_add_component2(merge_b->merge_source.loc2->url,
                                                  child, scratch_pool);
-      copyfrom_rev = merge_b->merge_source.loc2->rev;
+      copyfrom_rev = right_source->revision;
 
       SVN_ERR(check_repos_match(merge_b->target, parent_abspath, copyfrom_url,
                                 scratch_pool));
