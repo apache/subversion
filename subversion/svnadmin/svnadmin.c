@@ -39,6 +39,7 @@
 #include "svn_cache_config.h"
 #include "svn_version.h"
 #include "svn_props.h"
+#include "svn_sorts.h"
 #include "svn_time.h"
 #include "svn_user.h"
 #include "svn_xml.h"
@@ -1673,19 +1674,16 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   {
     apr_hash_t *capabilities_set;
     apr_array_header_t *capabilities;
-    char *as_string;
+    int i;
 
     SVN_ERR(svn_repos_capabilities(&capabilities_set, repos, pool, pool));
-    SVN_ERR(svn_hash_keys(&capabilities, capabilities_set, pool));
-    as_string = svn_cstring_join(capabilities, ",", pool);
+    capabilities = svn_sort__hash(capabilities_set,
+                                  svn_sort_compare_items_lexically,
+                                  pool);
 
-    /* Delete the trailing comma. */
-    if (as_string[0])
-      as_string[strlen(as_string)-1] = '\0';
-
-    if (capabilities->nelts)
-      SVN_ERR(svn_cmdline_printf(pool, _("Repository Capabilities: %s\n"),
-                                 as_string));
+    for (i = 0; i < capabilities->nelts; i++)
+      SVN_ERR(svn_cmdline_printf(pool, _("Repository Capability: %s\n"),
+                                 APR_ARRAY_IDX(capabilities, i, const char *)));
   }
 
   {
