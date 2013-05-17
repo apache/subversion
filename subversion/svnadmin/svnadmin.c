@@ -1709,12 +1709,17 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
           SVN_ERR(svn_cmdline_printf(pool, _("FSFS Shard Size: %d\n"),
                                      fsfs_info->shard_size));
 
-        if (fsfs_info->min_unpacked_rev + fsfs_info->shard_size > youngest + 1)
+        /* "Has 'svnadmin pack' been run?" */
+        if (fsfs_info->min_unpacked_rev)
           SVN_ERR(svn_cmdline_printf(pool, _("FSFS Packed: yes\n")));
-        else if (fsfs_info->min_unpacked_rev)
-          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Packed: partly\n")));
         else
           SVN_ERR(svn_cmdline_printf(pool, _("FSFS Packed: no\n")));
+
+        /* "Would 'svnadmin pack' be a no-op?" */
+        if (fsfs_info->min_unpacked_rev + fsfs_info->shard_size > youngest + 1)
+          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Packable: no\n")));
+        else
+          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Packable: yes\n")));
       }
   }
 
