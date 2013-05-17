@@ -130,7 +130,7 @@ Candidate changes:
   Justification:
     Repository corruption. Regression from 1.6.x
   Votes:
-    +1: ivan
+    +1: ivan, blair
 
 Approved for 1.8.1 or when we release a new RC:
 ===============================================
