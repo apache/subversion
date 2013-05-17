@@ -1717,7 +1717,7 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                      fsfs_info->shard_size));
 
         /* Print packing statistics, if supported by the FS format. */
-        if (fs_format > SVN_FS_FS__MIN_PACKED_FORMAT && fsfs_info->shard_size)
+        if (fs_format >= SVN_FS_FS__MIN_PACKED_FORMAT && fsfs_info->shard_size)
           {
             const int shard_size = fsfs_info->shard_size;
             const int shards_packed = fsfs_info->min_unpacked_rev / shard_size;
