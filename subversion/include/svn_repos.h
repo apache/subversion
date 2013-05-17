@@ -3347,8 +3347,14 @@ svn_repos_authz_check_access(svn_authz_t *authz,
  */
 typedef enum svn_repos_revision_access_level_t
 {
+  /** no access allowed to the revision properties and all changed-paths
+   * information. */ 
   svn_repos_revision_access_none,
+  /** access granted to some (svn:date and svn:author) revision properties and
+   * changed-paths information on paths the read has access to. */
   svn_repos_revision_access_partial,
+  /** access granted to all revision properites and changed-paths
+   * information. */
   svn_repos_revision_access_full
 }
 svn_repos_revision_access_level_t;
