@@ -140,22 +140,8 @@ Candidate changes:
   Votes:
     +1: philip
 
-Approved for 1.8.1 or when we release a new RC:
-===============================================
-
- * r1482759, r1482779
-   Prevent svnserve from exiting when a client connection is aborted.
-   Justification:
-     DoS against svnserve possible.
-   Votes:
-     +1: stsp, rhuijben, philip
-
- * r1482724
-   Fix a link error when configured with --enable-runtime-module-search.
-   Justification:
-     Build fails.
-   Votes:
-     +1: philip, rhuijben, stsp
+Approved for 1.8.1 or if soak is restarted for 1.8.0:
+====================================================
 
 Veto-blocked changes:
 =====================
@@ -168,3 +154,18 @@ Approved changes:
 # that would restart the soak should not be added unless they are resolving
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
+
+ * r1482759, r1482779
+   Prevent svnserve from exiting when a client connection is aborted.
+   Justification:
+     DoS against svnserve possible.
+   Votes:
+     +1: stsp, rhuijben, philip, breser
+
+ * r1482724
+   Fix a link error when configured with --enable-runtime-module-search.
+   Justification:
+     Build fails.
+   Votes:
+     +1: philip, rhuijben, stsp, breser
+
