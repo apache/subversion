@@ -439,7 +439,7 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
    err->apr_err == SVN_ERR_RA_NOT_LOCKED ||                 \
    err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
 
-/** Evaluates to @c TRUE iff @a apr_err (of type #apr_status_t) is in the given
+/** Evaluates to @c TRUE iff @a apr_err (of type apr_status_t) is in the given
  * @a category, which should be one of the @c SVN_ERR_*_CATEGORY_START
  * constants.
  *
