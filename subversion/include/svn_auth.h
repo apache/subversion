@@ -569,11 +569,11 @@ svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 
 /**
  * @name Default credentials defines
- * Any 'default' credentials that came in through the application itself,
- * (e.g. --username and --password options). Property values are
- * const char *.
+ * Property values are const char *.
  * @{ */
+/** Default username provided by the application itself (e.g. --username) */
 #define SVN_AUTH_PARAM_DEFAULT_USERNAME  SVN_AUTH_PARAM_PREFIX "username"
+/** Default password provided by the application itself (e.g. --password) */
 #define SVN_AUTH_PARAM_DEFAULT_PASSWORD  SVN_AUTH_PARAM_PREFIX "password"
 /** @} */
 
