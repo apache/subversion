@@ -984,7 +984,7 @@ create_put_body(serf_bucket_t **body_bkt,
    * check the buffer status; but serf will fall through and create a file
    * bucket for us on the buffered svndiff handle.
    */
-  apr_file_flush(ctx->svndiff);
+  SVN_ERR(svn_io_file_flush(ctx->svndiff, pool));
 #if APR_VERSION_AT_LEAST(1, 3, 0)
   apr_file_buffer_set(ctx->svndiff, NULL, 0);
 #endif

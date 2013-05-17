@@ -2073,6 +2073,14 @@ svn_io_file_write(apr_file_t *file,
                   apr_size_t *nbytes,
                   apr_pool_t *pool);
 
+/** Wrapper for apr_file_flush().
+ * @since New in 1.9
+ */
+svn_error_t *
+svn_io_file_flush(apr_file_t *file,
+                  apr_pool_t *scratch_pool);
+
+
 
 /** Wrapper for apr_file_write_full(). */
 svn_error_t *

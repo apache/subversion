@@ -2777,7 +2777,7 @@ finish_report(void *report_baton,
    * check the buffer status; but serf will fall through and create a file
    * bucket for us on the buffered svndiff handle.
    */
-  apr_file_flush(report->body_file);
+  SVN_ERR(svn_io_file_flush(report->body_file), iterpool);
 #if APR_VERSION_AT_LEAST(1, 3, 0)
   apr_file_buffer_set(report->body_file, NULL, 0);
 #endif
