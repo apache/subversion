@@ -1636,6 +1636,7 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
   svn_fs_t *fs;
+  int fs_format;
 
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
@@ -1647,7 +1648,7 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                                     pool)));
 
   {
-    int repos_format, fs_format, minor;
+    int repos_format, minor;
     svn_version_t *repos_version, *fs_version;
     SVN_ERR(svn_repos_info_format(&repos_format, &repos_version,
                                   repos, pool, pool));
@@ -1656,8 +1657,7 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
     SVN_ERR(svn_fs_info_format(&fs_format, &fs_version,
                                fs, pool, pool));
-    SVN_ERR(svn_cmdline_printf(pool, _("Filesystem Format: %d\n"),
-                               fs_format));
+    /* fs_format will be printed later. */
 
     SVN_ERR_ASSERT(repos_version->major == SVN_VER_MAJOR);
     SVN_ERR_ASSERT(fs_version->major == SVN_VER_MAJOR);
@@ -1694,6 +1694,8 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     SVN_ERR(svn_fs_info(&info, fs, pool, pool));
     SVN_ERR(svn_cmdline_printf(pool, _("Filesystem Type: %s\n"),
                                info->fs_type));
+    SVN_ERR(svn_cmdline_printf(pool, _("Filesystem Format: %d\n"),
+                               fs_format));
     if (!strcmp(info->fs_type, SVN_FS_TYPE_FSFS))
       {
         const svn_fs_fsfs_info_t *fsfs_info = (const void *)info;
