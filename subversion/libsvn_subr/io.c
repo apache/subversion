@@ -3408,6 +3408,16 @@ svn_io_file_write(apr_file_t *file, const void *buf,
      pool));
 }
 
+svn_error_t *
+svn_io_file_flush(apr_file_t *file,
+                  apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(do_io_file_wrapper_cleanup(
+     file, apr_file_flush(file),
+     N_("Can't flush file '%s'"),
+     N_("Can't flush stream"),
+     scratch_pool));
+}
 
 svn_error_t *
 svn_io_file_write_full(apr_file_t *file, const void *buf,
