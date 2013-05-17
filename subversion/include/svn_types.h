@@ -272,8 +272,11 @@ svn_node_kind_from_word(const char *word);
  * @since New in 1.7. */
 typedef enum svn_tristate_t
 {
+  /** state known to be false (the constant does not evaulate to false) */
   svn_tristate_false = 2,
+  /** state known to be true */
   svn_tristate_true,
+  /** state could be true or false */
   svn_tristate_unknown
 } svn_tristate_t;
 
