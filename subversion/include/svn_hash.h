@@ -240,14 +240,14 @@ svn_hash_from_cstring_keys(apr_hash_t **hash,
                            const apr_array_header_t *keys,
                            apr_pool_t *pool);
 
-/* Shortcut for apr_hash_get() with a const char * key.
+/** Shortcut for apr_hash_get() with a const char * key.
  *
  * @since New in 1.8.
  */
 #define svn_hash_gets(ht, key) \
             apr_hash_get(ht, key, APR_HASH_KEY_STRING)
 
-/* Shortcut for apr_hash_set() with a const char * key.
+/** Shortcut for apr_hash_set() with a const char * key.
  *
  * @since New in 1.8.
  */
