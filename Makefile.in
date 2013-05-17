@@ -638,7 +638,7 @@ doc-api: mkdir-init
 
 # Generate API documentation for the JavaHL package.
 doc-javahl:
-	$(JAVADOC) -d $(top_srcdir)/doc/javadoc \
+	$(JAVADOC) -d $(abs_builddir)/doc/javadoc \
 	  -sourcepath $(top_srcdir)/subversion/bindings/javahl/src \
 	  -link http://java.sun.com/javase/6/docs/api/ \
 	  org.tigris.subversion.javahl \
