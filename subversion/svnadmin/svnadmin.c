@@ -1684,8 +1684,13 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                   pool);
 
     for (i = 0; i < capabilities->nelts; i++)
-      SVN_ERR(svn_cmdline_printf(pool, _("Repository Capability: %s\n"),
-                                 APR_ARRAY_IDX(capabilities, i, const char *)));
+      {
+        svn_sort__item_t *item = &APR_ARRAY_IDX(capabilities, i,
+                                                svn_sort__item_t);
+        const char *capability = item->key;
+        SVN_ERR(svn_cmdline_printf(pool, _("Repository Capability: %s\n"),
+                                   capability));
+      }
   }
 
   {
