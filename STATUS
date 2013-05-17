@@ -140,6 +140,18 @@ Candidate changes:
   Votes:
     +1: philip
 
+* r1483125, r1483555, r1483927, r1483947
+  Fix issue #4367 'merge to shallow WC, repeat merge to infinite depth WC is
+  broken'.
+  Justification:
+    Edge case merge can result in incorrect WC state which cannot be
+    committed.
+   Notes:
+     r1483125, r1483555, and r1483927 are a test and some subsequent tweaks
+     for the issue.  r1483947 is the fix proper. 
+  Votes:
+    +1: pburba
+
 Approved for 1.8.1 or if soak is restarted for 1.8.0:
 ====================================================
 
