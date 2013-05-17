@@ -400,7 +400,7 @@ test_patch(const svn_test_opts_t *opts,
       SVN_ERR(svn_io_file_write(patch_file, unidiff_patch[i], &len, pool));
       SVN_TEST_ASSERT(len == strlen(unidiff_patch[i]));
     }
-  SVN_ERR(svn_io_file_flush_to_disk(patch_file, pool));
+  SVN_ERR(svn_io_file_flush(patch_file, pool));
 
   /* Apply the patch. */
   pcb.patched_tempfiles = apr_hash_make(pool);

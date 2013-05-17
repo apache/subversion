@@ -379,7 +379,7 @@ edit_prop_conflict(const char **merged_file_path,
                                          scratch_pool);
   SVN_ERR(merge_prop_conflict(merged_prop, desc, NULL, scratch_pool));
   SVN_ERR(svn_stream_close(merged_prop));
-  SVN_ERR(svn_io_file_flush_to_disk(file, scratch_pool));
+  SVN_ERR(svn_io_file_flush(file, scratch_pool));
   SVN_ERR(open_editor(&performed_edit, file_path, b, scratch_pool));
   *merged_file_path = (performed_edit ? file_path : NULL);
 
