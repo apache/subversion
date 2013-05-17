@@ -2091,6 +2091,10 @@ svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
 {
   apr_os_file_t filehand;
 
+  /* ### In apr 1.4+ we could delegate most of this function to
+         apr_file_sync(). The only major difference is that this doesn't
+         contain the retry loop for EINTR on linux. */
+
   /* First make sure that any user-space buffered data is flushed. */
   SVN_ERR(do_io_file_wrapper_cleanup(file, apr_file_flush(file),
                                      N_("Can't flush file '%s'"),
@@ -3483,7 +3487,15 @@ svn_io_write_unique(const char **tmp_path,
   err = svn_io_file_write_full(new_file, buf, nbytes, NULL, pool);
 
   if (!err)
-    err = svn_io_file_flush_to_disk(new_file, pool);
+    {
+      /* svn_io_file_flush_to_disk() can be very expensive, so use the
+         cheaper standard flush if the file is created as temporary file
+         anyway */
+      if (delete_when == svn_io_file_del_none)
+        err = svn_io_file_flush_to_disk(new_file, pool);
+      else
+        err = svn_io_file_flush(new_file, pool);
+    }
 
   return svn_error_trace(
                   svn_error_compose_create(err,
