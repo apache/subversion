@@ -48,6 +48,8 @@
 #include "private/svn_subr_private.h"
 #include "private/svn_cmdline_private.h"
 
+#include "../libsvn_fs_fs/fs.h" /* for SVN_FS_FS__MIN_PACKED_FORMAT */
+
 #include "svn_private_config.h"
 
 
@@ -1709,17 +1711,15 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
           SVN_ERR(svn_cmdline_printf(pool, _("FSFS Shard Size: %d\n"),
                                      fsfs_info->shard_size));
 
-        /* "Has 'svnadmin pack' been run?" */
-        if (fsfs_info->min_unpacked_rev)
-          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Packed: yes\n")));
-        else
-          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Packed: no\n")));
-
-        /* "Would 'svnadmin pack' be a no-op?" */
-        if (fsfs_info->min_unpacked_rev + fsfs_info->shard_size > youngest + 1)
-          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Packable: no\n")));
-        else
-          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Packable: yes\n")));
+        /* Print packing statistics, if supported by the FS format. */
+        if (fs_format > SVN_FS_FS__MIN_PACKED_FORMAT && fsfs_info->shard_size)
+          {
+            const int shard_size = fsfs_info->shard_size;
+            const int shards_packed = fsfs_info->min_unpacked_rev / shard_size;
+            const int shards_full = (youngest + 1) / shard_size;
+            SVN_ERR(svn_cmdline_printf(pool, _("FSFS Shards Packed: %d/%d\n"),
+                                       shards_packed, shards_full));
+          }
       }
   }
 
