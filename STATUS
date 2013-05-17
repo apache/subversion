@@ -132,6 +132,14 @@ Candidate changes:
   Votes:
     +1: ivan, blair
 
+* r1483913
+  Fix hard-coded version in JavaHL's JNI loader.
+  Justification:
+    We don't want to try to use the 1.7 libraries.
+  Branch: ^/subversion/branches/1.8.x-libsvnjavahl-version
+  Votes:
+    +1: philip
+
 Approved for 1.8.1 or when we release a new RC:
 ===============================================
 
