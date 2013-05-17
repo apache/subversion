@@ -1084,6 +1084,11 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### Set diff3-has-program-arg to 'yes' if your 'diff3' program"     NL
         "###   accepts the '--diff-program' option."                         NL
         "# diff3-has-program-arg = [yes | no]"                               NL
+        "### Set invoke-diff-cmd to the absolute path of your 'diff'"        NL
+        "### program."                                                       NL
+        "###   This will override the compile-time default, which is to use" NL
+        "###   Subversion's internal diff implementation."                   NL
+        "# invoke-diff-cmd = \"diff -y --label %l1% %f1% --label %l2% %f2%\""NL
         "### Set merge-tool-cmd to the command used to invoke your external" NL
         "### merging tool of choice. Subversion will pass 5 arguments to"    NL
         "### the specified command: base theirs mine merged wcfile"          NL

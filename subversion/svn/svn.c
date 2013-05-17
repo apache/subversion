@@ -84,6 +84,7 @@ typedef enum svn_cl__longopt_t {
   opt_ignore_properties,
   opt_properties_only,
   opt_patch_compatible,
+  opt_invoke_diff_cmd,
   /* end of diff options */
   opt_dry_run,
   opt_editor_cmd,
@@ -336,6 +337,25 @@ const apr_getopt_option_t svn_cl__options[] =
   {"diff", opt_diff, 0, N_("produce diff output")}, /* maps to show_diff */
   /* diff options */
   {"diff-cmd",      opt_diff_cmd, 1, N_("use ARG as diff command")},
+  {"invoke-diff-cmd",      opt_invoke_diff_cmd, 1, 
+                   N_("use ARG as format string for external diff command\n"
+                      "                             "
+                      "invocation. \n                                         \n" 
+                      "                             "
+                      "Substitutions: %f1% %f2%  files to compare             \n"
+                      "                             "
+                      "               %l1% %l2%  user defined labels          \n"
+                      "                             "
+                      "Examples: --invoke-diff-cmd=\"diff -y %f1% %f2%        \n"          
+                      "                             "
+                      "   --invoke-diff-cmd=\"kdiff3 -auto -o /home/u/log \\  \n"
+                      "                             "
+                      "     %f1% %f2% --L1 %l1% --L2 \"Custom Label\" \"      \n"
+                      "                             "
+                      "The switch symbol '%' can be escaped in the usual way  \n"          
+                      "                             "
+                      "using the '%' character: %%f1% will be passed as %f1%. \n"          
+     )},
   {"internal-diff", opt_internal_diff, 0,
                        N_("override diff-cmd specified in config file")},
   {"no-diff-added", opt_no_diff_added, 0,
@@ -575,7 +595,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      opt_internal_diff, 'x', opt_no_diff_added, opt_no_diff_deleted,
      opt_ignore_properties, opt_properties_only,
      opt_show_copies_as_adds, opt_notice_ancestry, opt_summarize, opt_changelist,
-     opt_force, opt_xml, opt_use_git_diff_format, opt_patch_compatible} },
+     opt_force, opt_xml, opt_use_git_diff_format, opt_patch_compatible,
+     opt_invoke_diff_cmd} },
   { "export", svn_cl__export, {0}, N_
     ("Create an unversioned copy of a tree.\n"
      "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
@@ -2093,6 +2114,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       case opt_diff_cmd:
         opt_state.diff.diff_cmd = apr_pstrdup(pool, opt_arg);
         break;
+      case opt_invoke_diff_cmd:
+        opt_state.diff.invoke_diff_cmd = apr_pstrdup(pool, opt_arg);
+        break;
       case opt_merge_cmd:
         opt_state.merge_cmd = apr_pstrdup(pool, opt_arg);
         break;
@@ -2502,6 +2526,14 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       return EXIT_ERROR(err);
     }
 
+  if (opt_state.diff.invoke_diff_cmd && opt_state.diff.internal_diff)
+    {
+      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("--invoke-diff-cmd and --internal-diff "
+                               "are mutually exclusive"));
+      return EXIT_ERROR(err);
+    }
+
   /* Ensure that 'revision_ranges' has at least one item, and make
      'start_revision' and 'end_revision' match that item. */
   if (opt_state.revision_ranges->nelts == 0)
@@ -2714,9 +2746,17 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
 
   /* XXX: Only diff_cmd for now, overlay rest later and stop passing
      opt_state altogether? */
-  if (opt_state.diff.diff_cmd)
+  if (opt_state.diff.diff_cmd) 
+   {
     svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
                    SVN_CONFIG_OPTION_DIFF_CMD, opt_state.diff.diff_cmd);
+   }
+  else 
+    {
+      if (opt_state.diff.invoke_diff_cmd)
+        svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
+                       SVN_CONFIG_OPTION_INVOKE_DIFF_CMD, opt_state.diff.invoke_diff_cmd);
+    }
   if (opt_state.merge_cmd)
     svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
                    SVN_CONFIG_OPTION_DIFF3_CMD, opt_state.merge_cmd);

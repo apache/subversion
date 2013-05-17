@@ -2278,6 +2278,38 @@ svn_io_file_readline(apr_file_t *file,
 
 /** @} */
 
+/** Parse a user defined command to contain dynamically created labels
+ *  and filenames.
+ *  
+ * @since New in 1.9.
+ */
+const char **
+svn_io_create_custom_diff_cmd(const char *label1,
+                              const char *label2,
+                              const char *label3,
+                              const char *tmpfile1,
+                              const char *tmpfile2,
+                              const char *base,
+                              const char *cmd,
+                              apr_pool_t *scratch_pool);
+
+/** Run the external diff command defined by the invoke-diff-cmd
+ *  option.
+ *  
+ *  @since New in 1.9.
+ */
+svn_error_t *
+svn_io_run_external_diff(const char *dir,
+                         const char *label1,
+                         const char *label2,
+                         const char *tmpfile1,
+                         const char *tmpfile2,
+                         int *pexitcode,
+                         apr_file_t *outfile,
+                         apr_file_t *errfile,
+                         const char *external_diff_cmd,
+                         apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

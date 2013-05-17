@@ -3260,6 +3260,35 @@ def diff_external_diffcmd(sbox):
                                      'diff', '--diff-cmd', diff_script_path,
                                      iota_path)
 
+# Check the correct parsing of arguments for an external diff tool
+def diff_invoke_external_diffcmd(sbox):
+  "svn diff --diff-invoke-cmd passes correct args"
+
+  diff_script_path = os.path.abspath(".")+"/diff"
+
+  svntest.main.create_python_hook_script(diff_script_path, 'import sys\n'
+                                          'for arg in sys.argv[1:]:\n  print(arg)\n')
+  if sys.platform == 'win32':
+     diff_script_path = "%s.bat" % diff_script_path
+
+  sbox.build(read_only = True)
+  os.chdir(sbox.wc_dir)
+
+  iota_path = 'iota'
+  svntest.main.file_append(iota_path, "new text in iota")
+
+  expected_output = svntest.verify.ExpectedOutput([
+      "Index: iota\n",
+      "===================================================================\n",
+      "iota	(revision 1)\n",
+      os.path.abspath(svntest.wc.text_base_path("iota")) + "\n",
+      "iota	(working copy)\n",
+      os.path.abspath("iota") + "\n"])
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+   'diff',
+   '--invoke-diff-cmd='+diff_script_path+' %l1% %f1% %l2% %f2%',
+   iota_path)
 
 #----------------------------------------------------------------------
 # Diffing an unrelated repository URL against working copy with
@@ -4634,6 +4663,7 @@ test_list = [ None,
               diff_file_depth_empty,
               diff_wrong_extension_type,
               diff_external_diffcmd,
+              diff_invoke_external_diffcmd,
               diff_url_against_local_mods,
               diff_preexisting_rev_against_local_add,
               diff_git_format_wc_wc,

@@ -2921,6 +2921,137 @@ svn_io_run_diff2(const char *dir,
   return SVN_NO_ERROR;
 }
 
+const char **
+svn_io_create_custom_diff_cmd(const char *label1,
+                              const char *label2,
+                              const char *label3,
+                              const char *tmpfile1,
+                              const char *tmpfile2,
+                              const char *base,
+                              const char *cmd,
+                              apr_pool_t *pool)
+{
+  apr_pool_t *subpool; 
+  apr_array_header_t *tmp;
+  const char ** ret;
+  int argv;
+
+  subpool = svn_pool_create(pool);
+  
+  tmp = svn_cstring_split(cmd," ",TRUE, subpool);
+
+  ret = apr_pcalloc(pool, 
+                    tmp->nelts * 
+                    tmp->elt_size*sizeof(char *));  
+
+  for (argv = 0;  argv < tmp->nelts ; argv++)
+   {
+     svn_stringbuf_t *com;
+     int i;
+
+     com = svn_stringbuf_create_empty(subpool);
+     svn_stringbuf_appendcstr(com, APR_ARRAY_IDX(tmp, argv, char *));
+
+     for (i = 0; i < 6 /* sizeof(token_list) */; i++) 
+       {        
+         static const char *token_list[] = 
+           {"%f1%","%f2%", "%f3%", "%l1%", "%l2%","%l3%" };
+         svn_stringbuf_t *token;
+         int len;
+         char *found;
+
+         token = svn_stringbuf_create_empty(subpool);
+         svn_stringbuf_appendcstr(token, token_list[i]);
+         len = 0;
+
+         while ( (found = strstr(com->data, token->data)) && 
+                  (strlen(found) > len) ) 
+           {
+             len = strlen(found); 
+
+             /* if we find a % in front of this, consume it */
+             if (com->data[com->len - strlen(found)-1] == '%')
+               svn_stringbuf_remove(com, strlen(found)-1, 1);
+             else if (i == 0) /* %f1 */
+               svn_stringbuf_replace(com, com->len - strlen(found), token->len,
+                                     tmpfile1, strlen(tmpfile1));
+             else if (i == 1) /* %f2 */
+               svn_stringbuf_replace(com, com->len - strlen(found), token->len, 
+                                     tmpfile2, strlen(tmpfile2));
+             else if (i == 2) /* %f3 */
+               svn_stringbuf_replace(com, com->len - strlen(found), token->len, 
+                                     base, strlen(base));
+             else if (i == 3) /* %l1 */
+               svn_stringbuf_replace(com, com->len - strlen(found), token->len, 
+                                     label1, strlen(label1));
+             else if (i == 4) /* %l2 */
+	       svn_stringbuf_replace(com, com->len - strlen(found), token->len, 
+                                    label2, strlen(label2));
+	     else if (i == 5) /* %l3 */
+	       svn_stringbuf_replace(com, com->len - strlen(found), token->len, 
+                                    label3, strlen(label3));
+	   }
+       }
+     ret[argv] = com->data;
+   }  
+  ret[argv] = NULL;
+
+  svn_pool_destroy(subpool);
+  return ret;
+}
+
+svn_error_t *
+svn_io_run_external_diff(const char *dir,
+                         const char *label1,
+                         const char *label2,
+                         const char *tmpfile1,
+                         const char *tmpfile2,
+                         int *pexitcode,
+                         apr_file_t *outfile,
+                         apr_file_t *errfile,
+                         const char *external_diff_cmd,
+                         apr_pool_t *pool)
+{
+  int exitcode;
+  const char ** cmd;
+
+  if (0 == strlen(external_diff_cmd)) 
+     return svn_error_createf(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
+                        _("The --invoke-diff-cmd string was empty.\n"));
+
+  cmd = svn_io_create_custom_diff_cmd(label1, label2, NULL, 
+                                      tmpfile1, tmpfile2, NULL, 
+                                      external_diff_cmd, pool);
+  if (pexitcode == NULL)
+     pexitcode = &exitcode;
+  
+  SVN_ERR(svn_io_run_cmd(dir, cmd[0], cmd, pexitcode, NULL, TRUE,
+                         NULL, outfile, errfile, pool));
+  
+  if (*pexitcode != 0 && *pexitcode != 1)
+   {
+       int i, size;
+       char * failed_command;
+
+       for (i = 0, size = 0; cmd[i]; i++) 
+         size += strlen(cmd[i]) + 1;
+
+       failed_command = apr_pcalloc(pool, size * sizeof(char *));
+
+       for (i = 0; cmd[i]; i++) 
+        {
+         strcat(failed_command, cmd[i]);
+         strcat(failed_command, " ");
+        }
+       
+       return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
+                                _("'%s' was expanded to '%s' and returned %d\n"),
+                                external_diff_cmd,
+                                svn_dirent_local_style(failed_command, pool),
+                                *pexitcode);
+   }
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_io_run_diff3_3(int *exitcode,

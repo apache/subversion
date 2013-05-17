@@ -184,6 +184,8 @@ typedef struct svn_cl__opt_state_t
     {
   const char *diff_cmd;              /* the external diff command to use
                                         (not converted to UTF-8) */
+  const char *invoke_diff_cmd;       /* the format string to specify args   */
+                                     /* for the external diff cmd           */
   svn_boolean_t internal_diff;       /* override diff_cmd in config file */
   svn_boolean_t no_diff_added;       /* do not show diffs for deleted files */
   svn_boolean_t no_diff_deleted;     /* do not show diffs for deleted files */
