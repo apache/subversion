@@ -275,7 +275,15 @@ Candidate changes:
       path itself is stored in Unicode)
    Votes:
      +1: rhuijben
-   
+
+* r1483781
+  Fix FSFS repository corruption on power or network disk failure on Windows:
+  http://svn.haxx.se/dev/archive-2013-05/0245.shtml
+  Justification:
+    Repository corruption. Regression from 1.6.x
+  Votes:
+    +1: ivan
+
 Veto-blocked changes:
 =====================
 
