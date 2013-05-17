@@ -122,7 +122,7 @@ Candidate changes:
     While the impact of this bug is certainly low, it is still an easy
     to fix problem.
   Votes:
-     +1: stefan2 (for 1.8.1)
+     +1: stefan2 (for 1.8.1), rhuijben
 
 * r1483781
   Fix FSFS repository corruption on power or network disk failure on Windows:
@@ -138,7 +138,7 @@ Candidate changes:
     We don't want to try to use the 1.7 libraries.
   Branch: ^/subversion/branches/1.8.x-libsvnjavahl-version
   Votes:
-    +1: philip
+    +1: philip, rhuijben
 
 * r1483125, r1483555, r1483927, r1483947
   Fix issue #4367 'merge to shallow WC, repeat merge to infinite depth WC is
@@ -150,7 +150,7 @@ Candidate changes:
      r1483125, r1483555, and r1483927 are a test and some subsequent tweaks
      for the issue.  r1483947 is the fix proper. 
   Votes:
-    +1: pburba
+    +1: pburba, rhuijben
 
 Approved for 1.8.1 or if soak is restarted for 1.8.0:
 ====================================================
