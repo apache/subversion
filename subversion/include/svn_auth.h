@@ -628,8 +628,13 @@ svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 #define SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO SVN_AUTH_PARAM_PREFIX \
   "ssl:cert-info"
 
-/** Some providers need access to the @c svn_config_t configuration. */
-#define SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG SVN_AUTH_PARAM_PREFIX "config-category-config"
+/** This provides a pointer to a @c svn_config_t containting the config
+ * category. */
+#define SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG SVN_AUTH_PARAM_PREFIX
+"config-category-config"
+
+/** This provides a pointer to a @c svn_config_t containting the servers
+ * category. */
 #define SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS SVN_AUTH_PARAM_PREFIX "config-category-servers"
 
 /** @deprecated Provided for backward compatibility with the 1.5 API. */
