@@ -249,7 +249,7 @@ svn_config_create(svn_config_t **cfgp,
  * otherwise return an empty @c svn_config_t.
  *
  * If @a section_names_case_sensitive is @c TRUE, populate section name hashes
- * case sensitively, except for the DEFAULT section.
+ * case sensitively, except for the @c "DEFAULT" section.
  *
  * If @a option_names_case_sensitive is @c TRUE, populate option name hashes
  * case sensitively.
@@ -294,7 +294,7 @@ svn_config_read(svn_config_t **cfgp,
  * @a result_pool.
  *
  * If @a section_names_case_sensitive is @c TRUE, populate section name hashes
- * case sensitively, except for the DEFAULT section.
+ * case sensitively, except for the @c "DEFAULT" section.
  *
  * If @a option_names_case_sensitive is @c TRUE, populate option name hashes
  * case sensitively.
