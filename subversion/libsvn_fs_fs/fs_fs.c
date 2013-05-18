@@ -1102,15 +1102,8 @@ write_format(const char *path, int format, int max_files_per_dir,
     }
   else
     {
-      const char *path_tmp;
-
-      SVN_ERR(svn_io_write_unique(&path_tmp,
-                                  svn_dirent_dirname(path, pool),
-                                  sb->data, sb->len,
-                                  svn_io_file_del_none, pool));
-
-      /* rename the temp file as the real destination */
-      SVN_ERR(svn_io_file_rename(path_tmp, path, pool));
+      SVN_ERR(svn_io_write_atomic(path, sb->data, sb->len,
+                                  NULL /* copy_perms_path */, pool));
     }
 
   /* And set the perms to make it read only */
@@ -6401,7 +6394,6 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
 {
   struct get_and_increment_txn_key_baton *cb = baton;
   const char *txn_current_filename = path_txn_current(cb->fs, pool);
-  const char *tmp_filename;
   char next_txn_id[MAX_KEY_SIZE+3];
   apr_size_t len;
 
@@ -6420,11 +6412,8 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
   ++len;
   next_txn_id[len] = '\0';
 
-  SVN_ERR(svn_io_write_unique(&tmp_filename,
-                              svn_dirent_dirname(txn_current_filename, pool),
-                              next_txn_id, len, svn_io_file_del_none, pool));
-  SVN_ERR(move_into_place(tmp_filename, txn_current_filename,
-                          txn_current_filename, pool));
+  SVN_ERR(svn_io_write_atomic(txn_current_filename, next_txn_id, len,
+                              txn_current_filename /* copy_perms path */, pool));
 
   return SVN_NO_ERROR;
 }
@@ -6602,7 +6591,6 @@ svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
                             const apr_array_header_t *props,
                             apr_pool_t *pool)
 {
-  const char *txn_prop_filename;
   svn_stringbuf_t *buf;
   svn_stream_t *stream;
   apr_hash_t *txn_prop = apr_hash_make(pool);
@@ -6632,15 +6620,10 @@ svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
   stream = svn_stream_from_stringbuf(buf, pool);
   SVN_ERR(svn_hash_write2(txn_prop, stream, SVN_HASH_TERMINATOR, pool));
   SVN_ERR(svn_stream_close(stream));
-  SVN_ERR(svn_io_write_unique(&txn_prop_filename,
-                              path_txn_dir(txn->fs, txn->id, pool),
-                              buf->data,
-                              buf->len,
-                              svn_io_file_del_none,
-                              pool));
-  return svn_io_file_rename(txn_prop_filename,
-                            path_txn_props(txn->fs, txn->id, pool),
-                            pool);
+  SVN_ERR(svn_io_write_atomic(path_txn_props(txn->fs, txn->id, pool),
+                              buf->data, buf->len,
+                              NULL /* copy_perms_path */, pool));
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -8245,7 +8228,7 @@ write_current(svn_fs_t *fs, svn_revnum_t rev, const char *next_node_id,
               const char *next_copy_id, apr_pool_t *pool)
 {
   char *buf;
-  const char *tmp_name, *name;
+  const char *name;
   fs_fs_data_t *ffd = fs->fsap_data;
 
   /* Now we can just write out this line. */
@@ -8255,12 +8238,10 @@ write_current(svn_fs_t *fs, svn_revnum_t rev, const char *next_node_id,
     buf = apr_psprintf(pool, "%ld %s %s\n", rev, next_node_id, next_copy_id);
 
   name = svn_fs_fs__path_current(fs, pool);
-  SVN_ERR(svn_io_write_unique(&tmp_name,
-                              svn_dirent_dirname(name, pool),
-                              buf, strlen(buf),
-                              svn_io_file_del_none, pool));
+  SVN_ERR(svn_io_write_atomic(name, buf, strlen(buf),
+                              name /* copy_perms_path */, pool));
 
-  return move_into_place(tmp_name, name, name, pool);
+  return SVN_NO_ERROR;
 }
 
 /* Open a new svn_fs_t handle to FS, set that handle's concept of "current
@@ -9314,7 +9295,6 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
 {
   char *my_uuid;
   apr_size_t my_uuid_len;
-  const char *tmp_path;
   const char *uuid_path = path_uuid(fs, pool);
 
   if (! uuid)
@@ -9324,15 +9304,11 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
   my_uuid = apr_pstrcat(fs->pool, uuid, "\n", (char *)NULL);
   my_uuid_len = strlen(my_uuid);
 
-  SVN_ERR(svn_io_write_unique(&tmp_path,
-                              svn_dirent_dirname(uuid_path, pool),
-                              my_uuid, my_uuid_len,
-                              svn_io_file_del_none, pool));
-
   /* We use the permissions of the 'current' file, because the 'uuid'
      file does not exist during repository creation. */
-  SVN_ERR(move_into_place(tmp_path, uuid_path,
-                          svn_fs_fs__path_current(fs, pool), pool));
+  SVN_ERR(svn_io_write_atomic(uuid_path, my_uuid, my_uuid_len,
+                              svn_fs_fs__path_current(fs, pool) /* perms */,
+                              pool));
 
   /* Remove the newline we added, and stash the UUID. */
   my_uuid[my_uuid_len - 1] = '\0';
