@@ -3783,8 +3783,7 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
           svn_error_t *err;
 
           SVN_ERR(svn_fs_fs__dag_get_proplist(&proplist, kid_dag, iterpool));
-          mergeinfo_string = svn_hash_gets_fixed_key(proplist,
-                                                     SVN_PROP_MERGEINFO);
+          mergeinfo_string = svn_hash_gets(proplist, SVN_PROP_MERGEINFO);
           if (!mergeinfo_string)
             {
               svn_string_t *idstr = svn_fs_fs__id_unparse(dirent->id, iterpool);
