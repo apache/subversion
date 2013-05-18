@@ -1299,11 +1299,11 @@ write_changes_containers(pack_context_t *context,
         {
           svn_stringbuf_t *serialized
             = svn_stringbuf_create_ensure(get_block_left(context), iterpool);
-          svn_stream_t *temp_stream
+          svn_stream_t *memory_stream
             = svn_stream_from_stringbuf(serialized, iterpool);
 
-          SVN_ERR(svn_fs_fs__write_changes_container(temp_stream, container,
-                                                     iterpool));
+          SVN_ERR(svn_fs_fs__write_changes_container(memory_stream,
+                                                     container, iterpool));
           SVN_ERR(svn_stream_close(temp_stream));
 
           block_left = get_block_left(context) - serialized->len;
