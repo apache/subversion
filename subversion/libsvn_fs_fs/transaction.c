@@ -660,7 +660,7 @@ fold_change(apr_hash_t *changes,
   const svn_string_t *path = &change->path;
   const svn_fs_path_change2_t *info = &change->info;
 
-  if (old_change = apr_hash_get(changes, path->data, path->len))
+  if ((old_change = apr_hash_get(changes, path->data, path->len)))
     {
       /* This path already exists in the hash, so we have to merge
          this change into the already existing one. */
