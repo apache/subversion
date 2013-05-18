@@ -38,20 +38,6 @@ svn_error_t *svn_fs_fs__open(svn_fs_t *fs,
 svn_error_t *svn_fs_fs__upgrade(svn_fs_t *fs,
                                 apr_pool_t *pool);
 
-/* Verify metadata in fsfs filesystem FS.  Limit the checks to revisions
- * START to END where possible.  Indicate progress via the optional
- * NOTIFY_FUNC callback using NOTIFY_BATON.  The optional CANCEL_FUNC
- * will periodically be called with CANCEL_BATON to allow for preemption.
- * Use POOL for temporary allocations. */
-svn_error_t *svn_fs_fs__verify(svn_fs_t *fs,
-                               svn_revnum_t start,
-                               svn_revnum_t end,
-                               svn_fs_progress_notify_func_t notify_func,
-                               void *notify_baton,
-                               svn_cancel_func_t cancel_func,
-                               void *cancel_baton,
-                               apr_pool_t *pool);
-
 /* Set *YOUNGEST to the youngest revision in filesystem FS.  Do any
    temporary allocation in POOL. */
 svn_error_t *svn_fs_fs__youngest_rev(svn_revnum_t *youngest,
@@ -67,8 +53,9 @@ svn_fs_fs__open_pack_or_rev_file(apr_file_t **file,
                                  svn_revnum_t rev,
                                  apr_pool_t *pool);
 
-/* Assert that revision REV exists in fileysystem FS.  If it doesn't, return
-   an error.  Use POOL for allocations. */
+/* Return SVN_ERR_FS_NO_SUCH_REVISION if the given revision REV is newer
+   than the current youngest revision in FS or is simply not a valid
+   revision number, else return success. */
 svn_error_t *
 svn_fs_fs__ensure_revision_exists(svn_revnum_t rev,
                                   svn_fs_t *fs,

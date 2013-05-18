@@ -38,6 +38,7 @@
 #include "pack.h"
 #include "recovery.h"
 #include "hotcopy.h"
+#include "verify.h"
 #include "tree.h"
 #include "lock.h"
 #include "id.h"
