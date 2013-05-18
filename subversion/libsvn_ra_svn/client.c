@@ -1624,14 +1624,14 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
             {
               /* Caller requested all revprops; set author/date/log. */
               if (author)
-                svn_hash_sets_fixed_key(log_entry->revprops,
-                                        SVN_PROP_REVISION_AUTHOR, author);
+                svn_hash_sets(log_entry->revprops,
+                              SVN_PROP_REVISION_AUTHOR, author);
               if (date)
-                svn_hash_sets_fixed_key(log_entry->revprops,
-                                        SVN_PROP_REVISION_DATE, date);
+                svn_hash_sets(log_entry->revprops,
+                              SVN_PROP_REVISION_DATE, date);
               if (message)
-                svn_hash_sets_fixed_key(log_entry->revprops,
-                                        SVN_PROP_REVISION_LOG, message);
+                svn_hash_sets(log_entry->revprops,
+                              SVN_PROP_REVISION_LOG, message);
             }
           else
             {
@@ -1640,14 +1640,14 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
                 {
                   name = APR_ARRAY_IDX(revprops, i, char *);
                   if (author && strcmp(name, SVN_PROP_REVISION_AUTHOR) == 0)
-                    svn_hash_sets_fixed_key(log_entry->revprops,
-                                            SVN_PROP_REVISION_AUTHOR, author);
+                    svn_hash_sets(log_entry->revprops,
+                                  SVN_PROP_REVISION_AUTHOR, author);
                   if (date && strcmp(name, SVN_PROP_REVISION_DATE) == 0)
-                    svn_hash_sets_fixed_key(log_entry->revprops,
-                                            SVN_PROP_REVISION_DATE, date);
+                    svn_hash_sets(log_entry->revprops,
+                                  SVN_PROP_REVISION_DATE, date);
                   if (message && strcmp(name, SVN_PROP_REVISION_LOG) == 0)
-                    svn_hash_sets_fixed_key(log_entry->revprops,
-                                            SVN_PROP_REVISION_LOG, message);
+                    svn_hash_sets(log_entry->revprops,
+                                  SVN_PROP_REVISION_LOG, message);
                 }
             }
           SVN_ERR(receiver(receiver_baton, log_entry, iterpool));

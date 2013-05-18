@@ -245,30 +245,14 @@ svn_hash_from_cstring_keys(apr_hash_t **hash,
  * @since New in 1.8.
  */
 #define svn_hash_gets(ht, key) \
-            apr_hash_get(ht, key, APR_HASH_KEY_STRING)
+            apr_hash_get(ht, key, strlen(key))
 
 /** Shortcut for apr_hash_set() with a const char * key.
  *
  * @since New in 1.8.
  */
 #define svn_hash_sets(ht, key, val) \
-            apr_hash_set(ht, key, APR_HASH_KEY_STRING, val)
-
-/** Shortcut for apr_hash_get() with a fixed-size char[] key.
- * @note Do NOT use this with pointer types like const char*.
- *
- * @since New in 1.9.
- */
-#define svn_hash_gets_fixed_key(ht, key) \
-            apr_hash_get(ht, key, sizeof(key)-1)
-
-/** Shortcut for apr_hash_get() with a fixed-size char[] key.
- * @note Do NOT use this with pointer types like const char*.
- *
- * @since New in 1.9.
- */
-#define svn_hash_sets_fixed_key(ht, key, val) \
-            apr_hash_set(ht, key, sizeof(key)-1, val)
+            apr_hash_set(ht, key, strlen(key), val)
 
 /** @} */
 
