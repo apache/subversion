@@ -209,11 +209,9 @@ dav_svn__store_activity(const dav_svn_repos *repos,
   activity_contents = apr_psprintf(repos->pool, "%s\n%s\n",
                                    txn_name, activity_id);
 
-  /* ### is there another directory we already have and can write to? */
-  err = svn_io_write_unique(&tmp_path,
-                            svn_dirent_dirname(final_path, repos->pool),
+  err = svn_io_write_atomic(final_path,
                             activity_contents, strlen(activity_contents),
-                            svn_io_file_del_none, repos->pool);
+                            NULL /* copy_perms path */, repos->pool);
   if (err)
     {
       svn_error_t *serr = svn_error_quick_wrap(err,
@@ -222,15 +220,6 @@ dav_svn__store_activity(const dav_svn_repos *repos,
       /* Try to remove the tmp file, but we already have an error... */
       return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                   "could not write files.",
-                                  repos->pool);
-    }
-
-  err = svn_io_file_rename(tmp_path, final_path, repos->pool);
-  if (err)
-    {
-      svn_error_clear(svn_io_remove_file2(tmp_path, TRUE, repos->pool));
-      return dav_svn__convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
-                                  "could not replace files.",
                                   repos->pool);
     }
 

@@ -3502,6 +3502,60 @@ svn_io_write_unique(const char **tmp_path,
                                            svn_io_file_close(new_file, pool)));
 }
 
+svn_error_t *
+svn_io_write_atomic(const char *final_path,
+                    const void *buf,
+                    apr_size_t nbytes,
+                    const char *copy_perms_path,
+                    apr_pool_t *scratch_pool)
+{
+  apr_file_t *tmp_file;
+  const char *tmp_path;
+  svn_error_t *err;
+  const char *dirname = svn_dirent_dirname(final_path, scratch_pool);
+
+  SVN_ERR(svn_io_open_unique_file3(&tmp_file, &tmp_path, dirname,
+                                   svn_io_file_del_none,
+                                   scratch_pool, scratch_pool));
+
+  err = svn_io_file_write_full(tmp_file, buf, nbytes, NULL, scratch_pool);
+
+  if (!err)
+    err = svn_io_file_flush_to_disk(tmp_file, scratch_pool);
+
+  err = svn_error_compose_create(err,
+                                 svn_io_file_close(tmp_file, scratch_pool));
+
+  if (!err && copy_perms_path)
+    err = svn_io_copy_perms(copy_perms_path, tmp_path, scratch_pool);
+
+  if (err)
+    {
+      return svn_error_compose_create(err,
+                                      svn_io_remove_file2(tmp_path, FALSE,
+                                                          scratch_pool));
+    }
+
+  SVN_ERR(svn_io_file_rename(tmp_path, final_path, scratch_pool));
+
+#ifdef __linux__
+  {
+    /* Linux has the unusual feature that fsync() on a file is not
+       enough to ensure that a file's directory entries have been
+       flushed to disk; you have to fsync the directory as well.
+       On other operating systems, we'd only be asking for trouble
+       by trying to open and fsync a directory. */
+    apr_file_t *file;
+
+    SVN_ERR(svn_io_file_open(&file, dirname, APR_READ, APR_OS_DEFAULT,
+                             scratch_pool));
+    SVN_ERR(svn_io_file_flush_to_disk(file, pool));
+    SVN_ERR(svn_io_file_close(file, pool));
+  }
+#endif
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_io_file_trunc(apr_file_t *file, apr_off_t offset, apr_pool_t *pool)

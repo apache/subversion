@@ -395,7 +395,6 @@ run_postupgrade(work_item_baton_t *wqb,
   const char *format_path;
   const char *wcroot_abspath;
   const char *adm_path;
-  const char *temp_path;
   svn_error_t *err;
 
   err = svn_wc__wipe_postupgrade(wri_abspath, FALSE,
@@ -420,15 +419,13 @@ run_postupgrade(work_item_baton_t *wqb,
      ### The order may matter for some sufficiently old clients.. but
      ### this code only runs during upgrade after the files had been
      ### removed earlier during the upgrade. */
-  SVN_ERR(svn_io_write_unique(&temp_path, adm_path, SVN_WC__NON_ENTRIES_STRING,
+  SVN_ERR(svn_io_write_atomic(format_path, SVN_WC__NON_ENTRIES_STRING,
                               sizeof(SVN_WC__NON_ENTRIES_STRING) - 1,
-                              svn_io_file_del_none, scratch_pool));
-  SVN_ERR(svn_io_file_rename(temp_path, format_path, scratch_pool));
+                              NULL, scratch_pool));
 
-  SVN_ERR(svn_io_write_unique(&temp_path, adm_path, SVN_WC__NON_ENTRIES_STRING,
+  SVN_ERR(svn_io_write_atomic(entries_path, SVN_WC__NON_ENTRIES_STRING,
                               sizeof(SVN_WC__NON_ENTRIES_STRING) - 1,
-                              svn_io_file_del_none, scratch_pool));
-  SVN_ERR(svn_io_file_rename(temp_path, entries_path, scratch_pool));
+                              NULL, scratch_pool));
 
   return SVN_NO_ERROR;
 }
