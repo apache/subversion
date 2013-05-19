@@ -122,7 +122,7 @@ display_diff(const svn_log_entry_t *log_entry,
   end_revision.value.number = log_entry->revision;
 
   SVN_ERR(svn_stream_puts(outstream, "\n"));
-  SVN_ERR(svn_client_diff_peg6(diff_options,
+  SVN_ERR(svn_client_diff_peg7(diff_options,
                                target_path_or_url,
                                target_peg_revision,
                                &start_revision, &end_revision,
@@ -140,7 +140,8 @@ display_diff(const svn_log_entry_t *log_entry,
                                outstream,
                                errstream,
                                NULL,
-                               ctx, pool));
+			       NULL,
+			       ctx, pool));
   SVN_ERR(svn_stream_puts(outstream, _("\n")));
   return SVN_NO_ERROR;
 }
