@@ -152,6 +152,13 @@ Candidate changes:
   Votes:
     +1: pburba, rhuijben
 
+* r1483575, r1483580
+  Define SVN_UNALIGNED_ACCESS_IS_OK for PowerPC.
+  Justification:
+    Performance for free.
+  Votes:
+    +1: mattiase (non-binding)
+
 Approved for 1.8.1 or if soak is restarted for 1.8.0:
 ====================================================
 
