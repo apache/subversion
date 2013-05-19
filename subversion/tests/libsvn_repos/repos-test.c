@@ -2462,111 +2462,6 @@ get_logs(const char **msg,
 }
 
 
-
-/* Related to issue 4340, "fs layer should reject filenames with trailing \n" */
-static svn_error_t *
-filename_with_control_chars(const char **msg,
-                            svn_boolean_t msg_only,
-                            svn_test_opts_t *opts,
-                            apr_pool_t *pool)
-{
-  apr_pool_t *subpool = svn_pool_create(pool);
-  svn_repos_t *repos;
-  svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
-  svn_revnum_t youngest_rev = 0;
-  svn_error_t *err;
-  static const char *bad_paths[] = {
-    "/bar\t",
-    "/bar\n",
-    "/\barb\az",
-    "/\x02 baz",
-    NULL,
-  };
-  const char *p;
-  int i;
-  void *edit_baton;
-  void *root_baton;
-  void *out_baton;
-  const svn_delta_editor_t *editor;
-
-  *msg = "test filenames with control characters";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  /* Create the repository. */
-  SVN_ERR(svn_test__create_repos(&repos, "test-repos-filename-with-cntrl-chars",
-                                 opts, pool));
-  fs = svn_repos_fs(repos);
-
-  /* Revision 1:  Add a directory /foo  */
-  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
-  SVN_ERR(svn_fs_make_dir(txn_root, "/foo", subpool));
-  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
-  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
-  svn_pool_clear(subpool);
-
-  /* Checks for control characters are implemented in the commit editor,
-   * not in the FS API. */
-  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, pool));
-  SVN_ERR(svn_repos_get_commit_editor4(&editor, &edit_baton, repos,
-                                       txn, "file://test", "/",
-                                       "plato", "test commit",
-                                       dummy_commit_cb, NULL, NULL, NULL,
-                                       pool));
-
-  SVN_ERR(editor->open_root(edit_baton, 1, pool, &root_baton));
-
-  /* Attempt to copy /foo to a bad path P. This should fail. */
-  i = 0;
-  do
-    {
-      p = bad_paths[i++];
-      if (p == NULL)
-        break;
-      svn_pool_clear(subpool);
-      err = editor->add_directory(p, root_baton, "/foo", 1, subpool,
-                                  &out_baton);
-      SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_FS_PATH_SYNTAX);
-      svn_error_clear(err);
-  } while (p);
-
-  /* Attempt to add a file with bad path P. This should fail. */
-  i = 0;
-  do
-    {
-      p = bad_paths[i++];
-      if (p == NULL)
-        break;
-      svn_pool_clear(subpool);
-      err = editor->add_file(p, root_baton, NULL, SVN_INVALID_REVNUM,
-                             subpool, &out_baton);
-      SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_FS_PATH_SYNTAX);
-      svn_error_clear(err);
-  } while (p);
-
-
-  /* Attempt to add a directory with bad path P. This should fail. */
-  i = 0;
-  do
-    {
-      p = bad_paths[i++];
-      if (p == NULL)
-        break;
-      svn_pool_clear(subpool);
-      err = editor->add_directory(p, root_baton, NULL, SVN_INVALID_REVNUM,
-                                  subpool, &out_baton);
-      SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_FS_PATH_SYNTAX);
-      svn_error_clear(err);
-  } while (p);
-
-  SVN_ERR(editor->abort_edit(edit_baton, subpool));
-
-  return SVN_NO_ERROR;
-}
 
 /* The test table.  */
 
@@ -2586,6 +2481,5 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(reporter_depth_exclude),
     SVN_TEST_PASS(prop_validation),
     SVN_TEST_PASS(get_logs),
-    SVN_TEST_PASS(filename_with_control_chars),
     SVN_TEST_NULL
   };
