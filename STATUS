@@ -70,8 +70,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-issue4340
    Votes:
-     +1: stsp
-     +0: danielsh (reviewed 1.7.x-issue4340)
+     +1: stsp, danielsh
 
  * r1461760
    Additional fix related to issue #4340, "filenames containing \n corrupt
