@@ -2465,7 +2465,9 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
   /* old style diff_cmd has precedence in config file */
   if (config)
     {
-      svn_config_t *cfg = svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
+      svn_config_t *cfg;
+
+      cfg = svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
       svn_config_get(cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS,
                      SVN_CONFIG_OPTION_DIFF_CMD, NULL);
       if (options == NULL)
@@ -2486,7 +2488,8 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
   else {
     if (config) /* check if there is a invoke_diff_cmd in the config file */
      {
-       svn_config_t *cfg = svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
+       svn_config_t *cfg;
+       cfg =svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
        diff_cmd_baton->diff_cmd = NULL; 
        svn_config_get(cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS,
                       SVN_CONFIG_OPTION_INVOKE_DIFF_CMD, NULL);
