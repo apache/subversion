@@ -2488,24 +2488,25 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
   if (diff_cmd)
     SVN_ERR(svn_path_cstring_to_utf8(&diff_cmd_baton->diff_cmd, 
 				     diff_cmd, pool));
-  else {
-    if (config) /* check if there is a invoke_diff_cmd in the config file */
-      {
-        svn_config_t *cfg;
-
-        cfg = svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
-        diff_cmd_baton->diff_cmd = NULL; 
-        svn_config_get(cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS,
-                       SVN_CONFIG_OPTION_INVOKE_DIFF_CMD, NULL);
-        if (diff_cmd) 
-          {
-            SVN_ERR(svn_path_cstring_to_utf8(
-                        &diff_cmd_baton->invoke_diff_cmd, diff_cmd, pool));
-         
-            return SVN_NO_ERROR;
-          }
-      }
-  }
+  else 
+    {
+      if (config) /* check if there is a invoke_diff_cmd in the config file */
+	{
+	  svn_config_t *cfg;
+	  
+	  cfg = svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
+	  diff_cmd_baton->diff_cmd = NULL; 
+	  svn_config_get(cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS,
+			 SVN_CONFIG_OPTION_INVOKE_DIFF_CMD, NULL);
+	  if (diff_cmd) 
+	    {
+	      SVN_ERR(svn_path_cstring_to_utf8(
+                      &diff_cmd_baton->invoke_diff_cmd, diff_cmd, pool));
+	      
+	      return SVN_NO_ERROR;
+	    }
+	}
+    }
 
   /* If there was a command, arrange options to pass to it. */
   if (diff_cmd_baton->diff_cmd)
