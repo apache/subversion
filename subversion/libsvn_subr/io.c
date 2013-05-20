@@ -51,8 +51,8 @@
 #include <arch/win32/apr_arch_file_io.h>
 #endif
 
-#if APR_HAVE_SYS_IOCTL_H
-#include <sys/ioctl.h>
+#if APR_HAVE_FCNTL_H
+#include <fcntl.h>
 #endif
 
 #include "svn_hash.h"
@@ -2118,7 +2118,7 @@ svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
 
       do {
 #ifdef F_FULLFSYNC
-        rv = ioctl(filehand, F_FULLFSYNC, 0);
+        rv = fcntl(filehand, F_FULLFSYNC, 0);
 #else
         rv = fsync(filehand);
 #endif
