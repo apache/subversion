@@ -3244,7 +3244,7 @@ svn_client_diff_peg7(const apr_array_header_t *diff_options,
 
 /** Similar to svn_client_peg5(), but with @a no_diff_added set to
  *  FALSE, @a ignore_properties set to FALSE and @a properties_only
- *  set to false.
+ *  set to FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
  * @since New in 1.9.
