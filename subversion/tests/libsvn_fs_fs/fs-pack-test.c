@@ -71,10 +71,8 @@ write_format(const char *path,
       contents = apr_psprintf(pool, "%d\n", format);
     }
 
-    {
-      SVN_ERR(svn_io_write_atomic(path, contents, strlen(contents),
-                                  NULL /* copy perms */, pool));
-    }
+  SVN_ERR(svn_io_write_atomic(path, contents, strlen(contents),
+                              NULL /* copy perms */, pool));
 
   /* And set the perms to make it read only */
   return svn_io_set_file_read_only(path, FALSE, pool);
