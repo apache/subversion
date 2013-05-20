@@ -51,6 +51,10 @@
 #include <arch/win32/apr_arch_file_io.h>
 #endif
 
+#if APR_HAVE_SYS_IOCTL_H
+#include <sys/ioctl.h>
+#endif
+
 #include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_dirent_uri.h"
@@ -2113,7 +2117,11 @@ svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
       int rv;
 
       do {
+#ifdef F_FULLFSYNC
+        rv = ioctl(filehand, F_FULLFSYNC, 0);
+#else
         rv = fsync(filehand);
+#endif
       } while (rv == -1 && APR_STATUS_IS_EINTR(apr_get_os_error()));
 
       /* If the file is in a memory filesystem, fsync() may return
