@@ -72,8 +72,6 @@ write_format(const char *path,
     }
 
     {
-      const char *path_tmp;
-
       SVN_ERR(svn_io_write_atomic(path, contents, strlen(contents),
                                   NULL /* copy perms */, pool));
     }
