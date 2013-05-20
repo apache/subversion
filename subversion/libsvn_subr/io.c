@@ -2096,10 +2096,7 @@ svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
          contain the retry loop for EINTR on linux. */
 
   /* First make sure that any user-space buffered data is flushed. */
-  SVN_ERR(do_io_file_wrapper_cleanup(file, apr_file_flush(file),
-                                     N_("Can't flush file '%s'"),
-                                     N_("Can't flush stream"),
-                                     pool));
+  SVN_ERR(svn_io_file_flush(file, pool));
 
   apr_os_file_get(&filehand, file);
 
