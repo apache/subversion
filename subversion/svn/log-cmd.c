@@ -140,8 +140,8 @@ display_diff(const svn_log_entry_t *log_entry,
                                outstream,
                                errstream,
                                NULL,
-			       NULL,
-			       ctx, pool));
+                               NULL,
+                               ctx, pool));
   SVN_ERR(svn_stream_puts(outstream, _("\n")));
   return SVN_NO_ERROR;
 }
