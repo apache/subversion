@@ -2938,62 +2938,63 @@ svn_io_create_custom_diff_cmd(const char *label1,
 
   subpool = svn_pool_create(pool);
   
-  tmp = svn_cstring_split(cmd," ",TRUE, subpool);
+  tmp = svn_cstring_split(cmd, " ", TRUE, subpool);
 
-  ret = apr_pcalloc(pool, 
-                    tmp->nelts * 
-                    tmp->elt_size*sizeof(char *));  
+  ret = apr_palloc(pool, 
+                   (tmp->nelts + 1) * 
+                   tmp->elt_size*sizeof(char *));  
 
   for (argv = 0;  argv < tmp->nelts ; argv++)
-   {
-     svn_stringbuf_t *com;
-     int i;
+    {
+      svn_stringbuf_t *com;
+      int i;
+      
+      com = svn_stringbuf_create_empty(subpool);
+      svn_stringbuf_appendcstr(com, APR_ARRAY_IDX(tmp, argv, char *));
 
-     com = svn_stringbuf_create_empty(subpool);
-     svn_stringbuf_appendcstr(com, APR_ARRAY_IDX(tmp, argv, char *));
+      for (i = 0; i < 6 /* sizeof(token_list) */; i++) 
+        {        
+          static const char *token_list[] = 
+            {"%f1%","%f2%", "%f3%", "%l1%", "%l2%","%l3%" };
+          svn_stringbuf_t *token;
+          int len;
+          char *found;
 
-     for (i = 0; i < 6 /* sizeof(token_list) */; i++) 
-       {        
-         static const char *token_list[] = 
-           {"%f1%","%f2%", "%f3%", "%l1%", "%l2%","%l3%" };
-         svn_stringbuf_t *token;
-         int len;
-         char *found;
+          token = svn_stringbuf_create_empty(subpool);
+          svn_stringbuf_appendcstr(token, token_list[i]);
+          len = 0;
 
-         token = svn_stringbuf_create_empty(subpool);
-         svn_stringbuf_appendcstr(token, token_list[i]);
-         len = 0;
-
-         while ( (found = strstr(com->data, token->data)) && 
+          while ( (found = strstr(com->data, token->data)) && 
                   (strlen(found) > len) ) 
-           {
-             len = strlen(found); 
+            {
+              len = strlen(found); 
 
-             /* if we find a % in front of this, consume it */
-             if (com->data[com->len - strlen(found)-1] == '%')
-               svn_stringbuf_remove(com, strlen(found)-1, 1);
-             else if (i == 0) /* %f1 */
-               svn_stringbuf_replace(com, com->len - strlen(found), token->len,
-                                     tmpfile1, strlen(tmpfile1));
-             else if (i == 1) /* %f2 */
-               svn_stringbuf_replace(com, com->len - strlen(found), token->len, 
-                                     tmpfile2, strlen(tmpfile2));
-             else if (i == 2) /* %f3 */
-               svn_stringbuf_replace(com, com->len - strlen(found), token->len, 
-                                     base, strlen(base));
-             else if (i == 3) /* %l1 */
-               svn_stringbuf_replace(com, com->len - strlen(found), token->len, 
-                                     label1, strlen(label1));
-             else if (i == 4) /* %l2 */
-	       svn_stringbuf_replace(com, com->len - strlen(found), token->len, 
-                                    label2, strlen(label2));
-	     else if (i == 5) /* %l3 */
-	       svn_stringbuf_replace(com, com->len - strlen(found), token->len, 
-                                    label3, strlen(label3));
-	   }
-       }
-     ret[argv] = com->data;
-   }  
+              /* if we find a % in front of this, consume it */
+              if (found > 0 && /* ensure there is a char in front */
+                  (com->data[com->len - (len-1)] == '%'))
+                  svn_stringbuf_remove(com, len-1, 1);
+              else if (i == 0) /* %f1 */
+                svn_stringbuf_replace(com, com->len - len, token->len,
+                                      tmpfile1, strlen(tmpfile1));
+              else if (i == 1) /* %f2 */
+                svn_stringbuf_replace(com, com->len - len, token->len, 
+                                      tmpfile2, strlen(tmpfile2));
+              else if (i == 2) /* %f3 */
+                svn_stringbuf_replace(com, com->len - len, token->len, 
+                                      base, strlen(base));
+              else if (i == 3) /* %l1 */
+                svn_stringbuf_replace(com, com->len - len, token->len, 
+                                      label1, strlen(label1));
+              else if (i == 4) /* %l2 */
+                svn_stringbuf_replace(com, com->len - len, token->len, 
+                                      label2, strlen(label2));
+              else if (i == 5) /* %l3 */
+                svn_stringbuf_replace(com, com->len - len, token->len, 
+                                      label3, strlen(label3));
+            }
+        }
+      ret[argv] = com->data;
+    }  
   ret[argv] = NULL;
 
   svn_pool_destroy(subpool);
