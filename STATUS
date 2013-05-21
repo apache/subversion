@@ -78,7 +78,7 @@ Candidate changes:
    Justification:
      No reason to prevent this.
    Votes:
-     +1: breser (for 1.8.1)
+     +1: breser (for 1.8.1), pburba
 
  * r1480344, r1480412, r1480442, r1480738, r1480765, r1482479, r1482524,
    r1482528, r1482536
@@ -98,7 +98,7 @@ Candidate changes:
      A 256 MB ramdrive should be more than enough for running the
      tests in parallel mode, but currently isn't.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, pburba
 
  * r1483116
    Retry removing test temporary directories when running as deferred deletes
@@ -107,22 +107,7 @@ Candidate changes:
      Without this patch running the svnserve-bdb tests on Windows leaves a lot
      of temporary directories behind, causing testruns to fail on ramdrives.
    Votes:
-     +1: rhuijben
-
- * r1483391, r1483397
-   Fix 'svn diff' erroring out on missing tree conflict victims.
-   Justification:
-     Regresion from 1.7.
-   Votes:
-     +1: stsp, rhuijben
-     
-* r1483557
-  Match our revision property names exactly instead by prefix.
-  Justification:
-    While the impact of this bug is certainly low, it is still an easy
-    to fix problem.
-  Votes:
-     +1: stefan2 (for 1.8.1), rhuijben
+     +1: rhuijben, pburba
 
 * r1483781
   Fix FSFS repository corruption on power or network disk failure on Windows:
@@ -159,16 +144,31 @@ Candidate changes:
   Votes:
     +1: mattiase (non-binding)
 
+Approved for 1.8.1 or if soak is restarted for 1.8.0:
+====================================================
+
+ * r1483391, r1483397
+   Fix 'svn diff' erroring out on missing tree conflict victims.
+   Justification:
+     Regresion from 1.7.
+   Votes:
+     +1: stsp, rhuijben, pburba
+
+* r1483557
+  Match our revision property names exactly instead by prefix.
+  Justification:
+    While the impact of this bug is certainly low, it is still an easy
+    to fix problem.
+  Votes:
+     +1: stefan2 (for 1.8.1), rhuijben, pburba
+
 * r1484755
   Fix SVN_ERR_ASSERT macro to provide failed expression, instead of
   evaluated value when compiled using Visual Studio 2010.
   Justification:
     Assertions diagnostic is important. Regression from 1.7.x.
   Votes:
-    +1: ivan, cmpilato
-
-Approved for 1.8.1 or if soak is restarted for 1.8.0:
-====================================================
+    +1: ivan, cmpilato, pburba
 
 Veto-blocked changes:
 =====================
