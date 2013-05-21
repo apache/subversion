@@ -376,7 +376,8 @@ static const svn_auth_provider_t kwallet_simple_provider = {
   SVN_AUTH_CRED_SIMPLE,
   kwallet_simple_first_creds,
   NULL,
-  kwallet_simple_save_creds
+  kwallet_simple_save_creds,
+  "KDE KWallet (simple)"
 };
 
 /* Public API */
@@ -439,7 +440,8 @@ static const svn_auth_provider_t kwallet_ssl_client_cert_pw_provider = {
   SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
   kwallet_ssl_client_cert_pw_first_creds,
   NULL,
-  kwallet_ssl_client_cert_pw_save_creds
+  kwallet_ssl_client_cert_pw_save_creds,
+  "KDE KWallet (SSL client cert passphrase)"
 };
 
 /* Public API */

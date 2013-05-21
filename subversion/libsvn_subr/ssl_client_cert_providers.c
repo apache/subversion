@@ -84,7 +84,8 @@ static const svn_auth_provider_t ssl_client_cert_file_provider =
     SVN_AUTH_CRED_SSL_CLIENT_CERT,
     ssl_client_cert_file_first_credentials,
     NULL,
-    NULL
+    NULL,
+    "Plaintext (SSL client cert file)"
   };
 
 
@@ -184,7 +185,8 @@ static const svn_auth_provider_t ssl_client_cert_prompt_provider = {
   SVN_AUTH_CRED_SSL_CLIENT_CERT,
   ssl_client_cert_prompt_first_cred,
   ssl_client_cert_prompt_next_cred,
-  NULL
+  NULL,
+  "Prompt (SSL client cert file)"
 };
 
 

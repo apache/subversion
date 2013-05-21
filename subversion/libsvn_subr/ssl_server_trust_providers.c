@@ -152,6 +152,7 @@ static const svn_auth_provider_t ssl_server_trust_file_provider = {
   &ssl_server_trust_file_first_credentials,
   NULL,
   &ssl_server_trust_file_save_credentials,
+  "Plaintext (SSL server trust)"
 };
 
 
@@ -211,7 +212,8 @@ static const svn_auth_provider_t ssl_server_trust_prompt_provider = {
   SVN_AUTH_CRED_SSL_SERVER_TRUST,
   ssl_server_trust_prompt_first_cred,
   NULL,
-  NULL
+  NULL,
+  "Prompt (SSL server trust)"
 };
 
 

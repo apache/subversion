@@ -444,7 +444,8 @@ static const svn_auth_provider_t gpg_agent_simple_provider = {
   SVN_AUTH_CRED_SIMPLE,
   simple_gpg_agent_first_creds,
   NULL,
-  simple_gpg_agent_save_creds
+  simple_gpg_agent_save_creds,
+  "GPG Agent (simple)"
 };
 
 

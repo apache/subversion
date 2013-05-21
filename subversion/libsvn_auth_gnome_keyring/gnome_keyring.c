@@ -441,7 +441,7 @@ static const svn_auth_provider_t gnome_keyring_simple_provider = {
   simple_gnome_keyring_first_creds,
   NULL,
   simple_gnome_keyring_save_creds,
-  "Gnome Keyring simple provider"
+  "Gnome Keyring (simple)"
 };
 
 /* Public API */

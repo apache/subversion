@@ -207,7 +207,8 @@ static const svn_auth_provider_t windows_simple_provider = {
   SVN_AUTH_CRED_SIMPLE,
   windows_simple_first_creds,
   NULL,
-  windows_simple_save_creds
+  windows_simple_save_creds,
+  "Windows CryptoAPI (simple)"
 };
 
 
@@ -326,6 +327,7 @@ static const svn_auth_provider_t windows_ssl_client_cert_pw_provider = {
   windows_ssl_client_cert_pw_first_creds,
   NULL,
   windows_ssl_client_cert_pw_save_creds
+  "Windows CryptoAPI (SSL client cert passphrase)"
 };
 
 
@@ -476,6 +478,7 @@ static const svn_auth_provider_t windows_server_trust_provider = {
   windows_ssl_server_trust_first_credentials,
   NULL,
   NULL,
+  "Windows CryptoAPI (SSL server trust)"
 };
 
 /* Public API */

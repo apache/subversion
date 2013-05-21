@@ -369,7 +369,8 @@ static const svn_auth_provider_t ssl_client_cert_pw_file_provider = {
   SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
   ssl_client_cert_pw_file_first_credentials,
   NULL,
-  ssl_client_cert_pw_file_save_credentials
+  ssl_client_cert_pw_file_save_credentials,
+  "Plaintext (SSL client cert passphrase)"
 };
 
 
@@ -481,7 +482,8 @@ static const svn_auth_provider_t client_cert_pw_prompt_provider = {
   SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
   ssl_client_cert_pw_prompt_first_cred,
   ssl_client_cert_pw_prompt_next_cred,
-  NULL
+  NULL,
+  "Prompt (SSL client cert passphrase)"
 };
 
 

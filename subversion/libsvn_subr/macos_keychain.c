@@ -192,7 +192,8 @@ static const svn_auth_provider_t keychain_simple_provider = {
   SVN_AUTH_CRED_SIMPLE,
   keychain_simple_first_creds,
   NULL,
-  keychain_simple_save_creds
+  keychain_simple_save_creds,
+  "Mac OS Keychain (simple)"
 };
 
 /* Get cached encrypted credentials from the ssl client cert password
@@ -235,7 +236,8 @@ static const svn_auth_provider_t keychain_ssl_client_cert_pw_provider = {
   SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
   keychain_ssl_client_cert_pw_first_creds,
   NULL,
-  keychain_ssl_client_cert_pw_save_creds
+  keychain_ssl_client_cert_pw_save_creds,
+  "Mac OS Keychain (SSL client cert passphrase)"
 };
 
 

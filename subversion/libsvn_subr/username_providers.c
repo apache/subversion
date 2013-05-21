@@ -140,7 +140,8 @@ static const svn_auth_provider_t username_provider = {
   SVN_AUTH_CRED_USERNAME,
   username_first_creds,
   NULL,
-  username_save_creds
+  username_save_creds,
+  "Plaintext (username)"
 };
 
 
@@ -281,6 +282,7 @@ static const svn_auth_provider_t username_prompt_provider = {
   username_prompt_first_creds,
   username_prompt_next_creds,
   NULL,
+  "Prompt (username)"
 };
 
 
