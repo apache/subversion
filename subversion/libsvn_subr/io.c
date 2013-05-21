@@ -3036,7 +3036,7 @@ svn_io_run_external_diff(const char *dir,
        for (i = 0, size = 0; cmd[i]; i++) 
          size += strlen(cmd[i]) + 1;
 
-       failed_command = apr_pcalloc(pool, size * sizeof(char *));
+       failed_command = apr_palloc(pool, size * sizeof(char *));
 
        for (i = 0; cmd[i]; i++) 
         {
