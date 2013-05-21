@@ -109,50 +109,50 @@ Candidate changes:
    Votes:
      +1: rhuijben, pburba
 
-* r1483781
-  Fix FSFS repository corruption on power or network disk failure on Windows:
-  http://svn.haxx.se/dev/archive-2013-05/0245.shtml
-  Justification:
-    Repository corruption. Regression from 1.6.x
-  Votes:
-    +1: ivan, blair
+ * r1483781
+   Fix FSFS repository corruption on power or network disk failure on Windows:
+   http://svn.haxx.se/dev/archive-2013-05/0245.shtml
+   Justification:
+     Repository corruption. Regression from 1.6.x
+   Votes:
+     +1: ivan, blair
 
-* r1483913
-  Fix hard-coded version in JavaHL's JNI loader.
-  Justification:
-    We don't want to try to use the 1.7 libraries.
-  Branch: ^/subversion/branches/1.8.x-libsvnjavahl-version
-  Votes:
-    +1: philip, rhuijben
+ * r1483913
+   Fix hard-coded version in JavaHL's JNI loader.
+   Justification:
+     We don't want to try to use the 1.7 libraries.
+   Branch: ^/subversion/branches/1.8.x-libsvnjavahl-version
+   Votes:
+     +1: philip, rhuijben
 
-* r1483125, r1483555, r1483927, r1483947
-  Fix issue #4367 'merge to shallow WC, repeat merge to infinite depth WC is
-  broken'.
-  Justification:
-    Edge case merge can result in incorrect WC state which cannot be
-    committed.
+ * r1483125, r1483555, r1483927, r1483947
+   Fix issue #4367 'merge to shallow WC, repeat merge to infinite depth WC is
+   broken'.
+   Justification:
+     Edge case merge can result in incorrect WC state which cannot be
+     committed.
    Notes:
      r1483125, r1483555, and r1483927 are a test and some subsequent tweaks
      for the issue.  r1483947 is the fix proper. 
-  Votes:
-    +1: pburba, rhuijben
+   Votes:
+     +1: pburba, rhuijben
 
-* r1483575, r1483580
-  Define SVN_UNALIGNED_ACCESS_IS_OK for PowerPC.
-  Justification:
-    Performance for free.
-  Votes:
-    +1: mattiase (non-binding)
+ * r1483575, r1483580
+   Define SVN_UNALIGNED_ACCESS_IS_OK for PowerPC.
+   Justification:
+     Performance for free.
+   Votes:
+     +1: mattiase (non-binding)
 
 Approved for 1.8.1 or if soak is restarted for 1.8.0:
 ====================================================
 
-* r1483557
-  Match our revision property names exactly instead by prefix.
-  Justification:
-    While the impact of this bug is certainly low, it is still an easy
-    to fix problem.
-  Votes:
+ * r1483557
+   Match our revision property names exactly instead by prefix.
+   Justification:
+     While the impact of this bug is certainly low, it is still an easy
+     to fix problem.
+   Votes:
      +1: stefan2 (for 1.8.1), rhuijben, pburba
 
 Veto-blocked changes:
