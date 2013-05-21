@@ -2279,8 +2279,37 @@ svn_io_file_readline(apr_file_t *file,
 /** @} */
 
 /** Parse a user defined command to contain dynamically created labels
- *  and filenames.
- *  
+ *  and filenames.  This function serves both diff and diff3 parsing
+ *  requirements.
+ *
+ *  When used in a diff context: (responding parse tokens in braces)
+ *
+ *  @a label1 (%l1%) refers to the label of @a tmpfile1 (%f1) which is
+ *  the pristine copy.
+ *
+ *  @a label2 (%l2%) refers to the label of @a tmpfile2 (%f2%) which
+ *  is the altered copy.
+ *
+ *  When used in a diff3 context:
+ *
+ *  @a label1 refers to the label of @a tmpfile1 which is the 'mine'
+ *  copy.
+ *
+ *  @a label2 refers to the label of @a tmpfile2 which is the 'older'
+ *  copy.
+ *
+ *  @a label3 (%l3%) refers to the label of @a base (%f3%) which is
+ *  the 'base' copy.
+ *
+ *  In general:
+ *
+ *  @a cmd is a user defined string containing 0 or more parse tokens
+ *  which are expanded by the required labels and filenames.
+ * 
+ *  @a scratch_pool is used for temporary allocations.
+ *
+ *  @return A NULL-terminated character array.
+ * 
  * @since New in 1.9.
  */
 const char **

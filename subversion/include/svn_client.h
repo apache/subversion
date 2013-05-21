@@ -3242,12 +3242,13 @@ svn_client_diff_peg7(const apr_array_header_t *diff_options,
                      apr_pool_t *pool);
          
 
-/** Similar to svn_client_peg5(), but with @a no_diff_added set to
- *  FALSE, @a ignore_properties set to FALSE and @a properties_only
- *  set to FALSE.
+/**
+ * Similar to svn_client_peg7(), but with @a no_diff_added set to
+ * FALSE, @a ignore_properties set to FALSE and @a properties_only
+ * set to FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
- * @since New in 1.9.
+ * @since New in 1.8.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -3273,7 +3274,8 @@ svn_client_diff_peg6(const apr_array_header_t *diff_options,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
-/** Similar to svn_client_diff6_peg6(), but with @a outfile and @a errfile,
+/**
+ * Similar to svn_client_diff6_peg6(), but with @a outfile and @a errfile,
  * instead of @a outstream and @a errstream, and with @a
  * no_diff_added, @a ignore_properties, and @a properties_only always
  * passed as @c FALSE (which means that additions and property changes
