@@ -454,17 +454,19 @@ ssl_trust_unknown_server_cert
 }
 
 svn_error_t *
-svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
-                              svn_boolean_t non_interactive,
-                              const char *auth_username,
-                              const char *auth_password,
-                              const char *config_dir,
-                              svn_boolean_t no_auth_cache,
-                              svn_boolean_t trust_server_cert,
-                              svn_config_t *cfg,
-                              svn_cancel_func_t cancel_func,
-                              void *cancel_baton,
-                              apr_pool_t *pool)
+svn_cmdline_create_auth_baton2(svn_auth_baton_t **ab,
+                               svn_boolean_t non_interactive,
+                               const char *auth_username,
+                               const char *auth_password,
+                               const char *config_dir,
+                               svn_boolean_t no_auth_cache,
+                               svn_boolean_t trust_server_cert,
+                               svn_config_t *cfg,
+                               svn_auth_notify_func_t notify_func,
+                               void *notify_baton,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
+                               apr_pool_t *pool)
 {
   svn_boolean_t store_password_val = TRUE;
   svn_boolean_t store_auth_creds_val = TRUE;
@@ -631,7 +633,37 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
                          &svn_cmdline__auth_gnome_keyring_unlock_prompt);
 #endif /* SVN_HAVE_GNOME_KEYRING */
 
+  /* If we have a notification function, add it and its baton to the
+     auth baton parameter set. */
+  if (notify_func)
+    {
+      svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_NOTIFY_FUNC, notify_func);
+      svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_NOTIFY_BATON, notify_baton);
+    }
+
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
+                              svn_boolean_t non_interactive,
+                              const char *auth_username,
+                              const char *auth_password,
+                              const char *config_dir,
+                              svn_boolean_t no_auth_cache,
+                              svn_boolean_t trust_server_cert,
+                              svn_config_t *cfg,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *pool)
+{
+  return svn_cmdline_create_auth_baton2(ab, non_interactive,
+                                        auth_username, auth_password,
+                                        config_dir, no_auth_cache,
+                                        trust_server_cert, cfg,
+                                        NULL, NULL,
+                                        cancel_func, cancel_baton,
+                                        pool);
 }
 
 svn_error_t *

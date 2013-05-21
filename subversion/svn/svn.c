@@ -1654,6 +1654,44 @@ svn_cl__check_cancel(void *baton)
     return SVN_NO_ERROR;
 }
 
+/* Auth notification callback (implements `svn_auth_notify_func_t'). */
+static svn_error_t *
+auth_notify(void *baton,
+            svn_auth_notify_action_t action,
+            const char *provider_name,
+            apr_pool_t *scratch_pool)
+{
+  if (! provider_name)
+    provider_name = "- unknown -";
+
+  switch (action)
+    {
+    case svn_auth_notify_creds_acquired:
+      return svn_cmdline_fprintf(stderr, scratch_pool,
+                                 _("Credentials acquired (%s)\n"),
+                                 provider_name);
+      /* not reached */
+
+    case svn_auth_notify_creds_validated:
+      return svn_cmdline_fputs(_("Credentials validated\n"),
+                               stderr, scratch_pool);
+      /* not reached */
+
+    case svn_auth_notify_creds_stored:
+      return svn_cmdline_fprintf(stderr, scratch_pool,
+                                 _("Credentials stored (%s)\n"),
+                                 provider_name);
+      /* not reached */
+
+    default:
+      break;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* Add a --search argument to OPT_STATE.
  * These options start a new search pattern group. */
 static void
@@ -1735,6 +1773,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   svn_boolean_t reading_file_from_stdin = FALSE;
   apr_hash_t *changelists;
   apr_hash_t *cfg_hash;
+  svn_auth_notify_func_t auth_notify_func;
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
@@ -2814,17 +2853,24 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
 #endif
 
   /* Set up Authentication stuff. */
-  SVN_INT_ERR(svn_cmdline_create_auth_baton(&ab,
-                                            opt_state.non_interactive,
-                                            opt_state.auth_username,
-                                            opt_state.auth_password,
-                                            opt_state.config_dir,
-                                            opt_state.no_auth_cache,
-                                            opt_state.trust_server_cert,
-                                            cfg_config,
-                                            ctx->cancel_func,
-                                            ctx->cancel_baton,
-                                            pool));
+  auth_notify_func = NULL;
+  if (getenv("SVN_AUTH_NOTIFY"))
+    {
+      auth_notify_func = auth_notify;
+    }
+  SVN_INT_ERR(svn_cmdline_create_auth_baton2(&ab,
+                                             opt_state.non_interactive,
+                                             opt_state.auth_username,
+                                             opt_state.auth_password,
+                                             opt_state.config_dir,
+                                             opt_state.no_auth_cache,
+                                             opt_state.trust_server_cert,
+                                             cfg_config,
+                                             auth_notify_func,
+                                             NULL /* auth_notify_baton */,
+                                             ctx->cancel_func,
+                                             ctx->cancel_baton,
+                                             pool));
 
   ctx->auth_baton = ab;
 

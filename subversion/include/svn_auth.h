@@ -89,6 +89,27 @@ typedef struct svn_auth_baton_t svn_auth_baton_t;
 /** The type of a Subversion authentication-iteration object */
 typedef struct svn_auth_iterstate_t svn_auth_iterstate_t;
 
+/** Notification actions for use with svn_auth_notify_func_t().
+ *
+ * @since New in 1.9.
+ */
+typedef enum svn_auth_notify_action_t
+  {
+    svn_auth_notify_creds_acquired = 0,
+    svn_auth_notify_creds_validated,
+    svn_auth_notify_creds_stored
+    
+  } svn_auth_notify_action_t;
+
+/** Callback type used for notifying about authentication-related
+ * events.
+ *
+ * @since New in 1.9.
+ */
+typedef svn_error_t *(*svn_auth_notify_func_t)(void *baton,
+                                               svn_auth_notify_action_t action,
+                                               const char *provider_name,
+                                               apr_pool_t *scratch_pool);
 
 /** The main authentication "provider" vtable. */
 typedef struct svn_auth_provider_t
@@ -149,6 +170,11 @@ typedef struct svn_auth_provider_t
                                     apr_hash_t *parameters,
                                     const char *realmstring,
                                     apr_pool_t *pool);
+
+  /** The name of the provider (for debugging, mostly).
+   * @since New in 1.9.
+   */
+  const char *provider_name;
 
 } svn_auth_provider_t;
 
@@ -647,6 +673,19 @@ svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 /** @brief A configuration directory that overrides the default
  * ~/.subversion. */
 #define SVN_AUTH_PARAM_CONFIG_DIR SVN_AUTH_PARAM_PREFIX "config-dir"
+
+/** A notification function of type @c svn_auth_notify_func_t.
+ *
+ * @since New in 1.9.
+ */
+#define SVN_AUTH_PARAM_NOTIFY_FUNC SVN_AUTH_PARAM_PREFIX "notify-func"
+
+/** An implementation-specific closure used with the function
+ * specified by the @c SVN_AUTH_PARAM_NOTIFY_FUNC parameter.
+ *
+ * @since New in 1.9.
+ */
+#define SVN_AUTH_PARAM_NOTIFY_BATON SVN_AUTH_PARAM_PREFIX "notify-baton"
 
 /** Get an initial set of credentials.
  *

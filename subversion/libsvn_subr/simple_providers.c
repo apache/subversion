@@ -515,7 +515,8 @@ static const svn_auth_provider_t simple_provider = {
   SVN_AUTH_CRED_SIMPLE,
   simple_first_creds,
   NULL,
-  simple_save_creds
+  simple_save_creds,
+  "Plaintext (simple)"
 };
 
 
@@ -709,6 +710,7 @@ static const svn_auth_provider_t simple_prompt_provider = {
   simple_prompt_first_creds,
   simple_prompt_next_creds,
   NULL,
+  "Plaintext (prompt)"
 };
 
 

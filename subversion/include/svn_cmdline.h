@@ -327,10 +327,35 @@ svn_cmdline_auth_plaintext_passphrase_prompt(svn_boolean_t *may_save_plaintext,
  * @a cancel_func and @a cancel_baton control the cancellation of the
  * prompting providers that are initialized.
  *
+ * @a notify_func and @a notify_baton are used to notify about
+ * authentication-related events.
+ *
  * Use @a pool for all allocations.
  *
- * @since New in 1.6.
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_cmdline_create_auth_baton2(svn_auth_baton_t **ab,
+                               svn_boolean_t non_interactive,
+                               const char *username,
+                               const char *password,
+                               const char *config_dir,
+                               svn_boolean_t no_auth_cache,
+                               svn_boolean_t trust_server_cert,
+                               svn_config_t *cfg,
+                               svn_auth_notify_func_t notify_func,
+                               void *notify_baton,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
+                               apr_pool_t *pool);
+
+/** Similar to svn_cmdline_create_auth_baton2(), but with @a
+ * notify_func and @a notify_baton always @c NULL.
+ *
+ * @since New in 1.6.
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
                               svn_boolean_t non_interactive,

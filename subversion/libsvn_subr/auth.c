@@ -213,7 +213,14 @@ svn_auth_first_credentials(void **credentials,
   svn_boolean_t got_first = FALSE;
   svn_auth_iterstate_t *iterstate;
   const char *cache_key;
+  svn_auth_notify_func_t auth_notify_func;
+  void *auth_notify_baton;
 
+  auth_notify_func = svn_hash_gets(auth_baton->parameters,
+                                   SVN_AUTH_PARAM_NOTIFY_FUNC);
+  auth_notify_baton = svn_hash_gets(auth_baton->parameters,
+                                    SVN_AUTH_PARAM_NOTIFY_BATON);
+                                            
   /* Get the appropriate table of providers for CRED_KIND. */
   table = svn_hash_gets(auth_baton->tables, cred_kind);
   if (! table)
@@ -227,6 +234,13 @@ svn_auth_first_credentials(void **credentials,
   if (creds)
     {
        got_first = FALSE;
+       if (auth_notify_func)
+         {
+           SVN_ERR(auth_notify_func(auth_notify_baton,
+                                    svn_auth_notify_creds_acquired,
+                                    "Auth Baton Cache",
+                                    pool));
+         }
     }
   else
     /* If not, find a provider that can give "first" credentials. */
@@ -245,6 +259,13 @@ svn_auth_first_credentials(void **credentials,
           if (creds != NULL)
             {
               got_first = TRUE;
+              if (auth_notify_func)
+                {
+                  SVN_ERR(auth_notify_func(auth_notify_baton,
+                                           svn_auth_notify_creds_acquired,
+                                           provider->vtable->provider_name,
+                                           pool));
+                }
               break;
             }
         }
@@ -286,6 +307,13 @@ svn_auth_next_credentials(void **credentials,
   svn_auth_provider_object_t *provider;
   provider_set_t *table = state->table;
   void *creds = NULL;
+  svn_auth_notify_func_t auth_notify_func;
+  void *auth_notify_baton;
+
+  auth_notify_func = svn_hash_gets(auth_baton->parameters,
+                                   SVN_AUTH_PARAM_NOTIFY_FUNC);
+  auth_notify_baton = svn_hash_gets(auth_baton->parameters,
+                                    SVN_AUTH_PARAM_NOTIFY_BATON);
 
   /* Continue traversing the table from where we left off. */
   for (/* no init */;
@@ -319,6 +347,13 @@ svn_auth_next_credentials(void **credentials,
         }
 
       state->got_first = FALSE;
+      if (auth_notify_func)
+        {
+          SVN_ERR(auth_notify_func(auth_notify_baton,
+                                   svn_auth_notify_creds_acquired,
+                                   provider->vtable->provider_name,
+                                   pool));
+        }
     }
 
   *credentials = creds;
@@ -337,6 +372,8 @@ svn_auth_save_credentials(svn_auth_iterstate_t *state,
   const char *no_auth_cache;
   svn_auth_baton_t *auth_baton;
   void *creds;
+  svn_auth_notify_func_t auth_notify_func;
+  void *auth_notify_baton;
 
   if (! state || state->table->providers->nelts <= state->provider_idx)
     return SVN_NO_ERROR;
@@ -345,6 +382,18 @@ svn_auth_save_credentials(svn_auth_iterstate_t *state,
   creds = svn_hash_gets(state->auth_baton->creds_cache, state->cache_key);
   if (! creds)
     return SVN_NO_ERROR;
+
+  auth_notify_func = svn_hash_gets(auth_baton->parameters,
+                                   SVN_AUTH_PARAM_NOTIFY_FUNC);
+  auth_notify_baton = svn_hash_gets(auth_baton->parameters,
+                                    SVN_AUTH_PARAM_NOTIFY_BATON);
+
+  if (auth_notify_func)
+    {
+      SVN_ERR(auth_notify_func(auth_notify_baton,
+                               svn_auth_notify_creds_validated,
+                               NULL, pool));
+    }
 
   /* Do not save the creds if SVN_AUTH_PARAM_NO_AUTH_CACHE is set */
   no_auth_cache = svn_hash_gets(auth_baton->parameters,
@@ -364,7 +413,15 @@ svn_auth_save_credentials(svn_auth_iterstate_t *state,
                                                state->realmstring,
                                                pool));
   if (save_succeeded)
-    return SVN_NO_ERROR;
+    {
+      if (auth_notify_func)
+        {
+          SVN_ERR(auth_notify_func(auth_notify_baton,
+                                   svn_auth_notify_creds_stored,
+                                   provider->vtable->provider_name, pool));
+        }
+      return SVN_NO_ERROR;
+    }
 
   /* Otherwise, loop from the top of the list, asking every provider
      to attempt a save.  ### todo: someday optimize so we don't
@@ -382,6 +439,15 @@ svn_auth_save_credentials(svn_auth_iterstate_t *state,
                  pool));
 
       if (save_succeeded)
+        {
+          if (auth_notify_func)
+            {
+              SVN_ERR(auth_notify_func(auth_notify_baton,
+                                       svn_auth_notify_creds_stored,
+                                       provider->vtable->provider_name,
+                                       pool));
+            }
+        }
         break;
     }
 

@@ -440,7 +440,8 @@ static const svn_auth_provider_t gnome_keyring_simple_provider = {
   SVN_AUTH_CRED_SIMPLE,
   simple_gnome_keyring_first_creds,
   NULL,
-  simple_gnome_keyring_save_creds
+  simple_gnome_keyring_save_creds,
+  "Gnome Keyring simple provider"
 };
 
 /* Public API */
@@ -499,7 +500,8 @@ static const svn_auth_provider_t gnome_keyring_ssl_client_cert_pw_provider = {
   SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
   ssl_client_cert_pw_gnome_keyring_first_creds,
   NULL,
-  ssl_client_cert_pw_gnome_keyring_save_creds
+  ssl_client_cert_pw_gnome_keyring_save_creds,
+  "Gnome Keyring (SSL client cert passphrase)"
 };
 
 /* Public API */
