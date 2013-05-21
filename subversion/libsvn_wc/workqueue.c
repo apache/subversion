@@ -394,7 +394,6 @@ run_postupgrade(work_item_baton_t *wqb,
   const char *entries_path;
   const char *format_path;
   const char *wcroot_abspath;
-  const char *adm_path;
   svn_error_t *err;
 
   err = svn_wc__wipe_postupgrade(wri_abspath, FALSE,
@@ -408,7 +407,6 @@ run_postupgrade(work_item_baton_t *wqb,
   SVN_ERR(svn_wc__db_get_wcroot(&wcroot_abspath, db, wri_abspath,
                                 scratch_pool, scratch_pool));
 
-  adm_path = svn_wc__adm_child(wcroot_abspath, NULL, scratch_pool);
   entries_path = svn_wc__adm_child(wcroot_abspath, SVN_WC__ADM_ENTRIES,
                                    scratch_pool);
   format_path = svn_wc__adm_child(wcroot_abspath, SVN_WC__ADM_FORMAT,
