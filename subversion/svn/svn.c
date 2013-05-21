@@ -1672,11 +1672,6 @@ auth_notify(void *baton,
                                  provider_name);
       /* not reached */
 
-    case svn_auth_notify_creds_validated:
-      return svn_cmdline_fputs(_("Credentials validated\n"),
-                               stderr, scratch_pool);
-      /* not reached */
-
     case svn_auth_notify_creds_stored:
       return svn_cmdline_fprintf(stderr, scratch_pool,
                                  _("Credentials stored (%s)\n"),

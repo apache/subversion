@@ -388,13 +388,6 @@ svn_auth_save_credentials(svn_auth_iterstate_t *state,
   auth_notify_baton = svn_hash_gets(auth_baton->parameters,
                                     SVN_AUTH_PARAM_NOTIFY_BATON);
 
-  if (auth_notify_func)
-    {
-      SVN_ERR(auth_notify_func(auth_notify_baton,
-                               svn_auth_notify_creds_validated,
-                               NULL, pool));
-    }
-
   /* Do not save the creds if SVN_AUTH_PARAM_NO_AUTH_CACHE is set */
   no_auth_cache = svn_hash_gets(auth_baton->parameters,
                                 SVN_AUTH_PARAM_NO_AUTH_CACHE);

@@ -95,8 +95,10 @@ typedef struct svn_auth_iterstate_t svn_auth_iterstate_t;
  */
 typedef enum svn_auth_notify_action_t
   {
+    /** @brief Credentials were acquired (from provider). */
     svn_auth_notify_creds_acquired = 0,
-    svn_auth_notify_creds_validated,
+
+    /** @brief Credentials were stored (by provider). */
     svn_auth_notify_creds_stored
     
   } svn_auth_notify_action_t;
