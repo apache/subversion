@@ -2497,8 +2497,8 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
 			 SVN_CONFIG_OPTION_INVOKE_DIFF_CMD, NULL);
 	  if (diff_cmd) 
 	    {
-	      SVN_ERR(svn_path_cstring_to_utf8(
-                                               &diff_cmd_baton->invoke_diff_cmd, diff_cmd, pool));
+	      SVN_ERR(svn_path_cstring_to_utf8(&diff_cmd_baton->invoke_diff_cmd,
+                                               diff_cmd, pool));
 	      
 	      return SVN_NO_ERROR;
 	    }
