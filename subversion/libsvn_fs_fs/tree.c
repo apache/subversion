@@ -3462,26 +3462,17 @@ fs_node_origin_rev(svn_revnum_t *revision,
 }
 
 
-struct history_prev_args
-{
-  svn_fs_history_t **prev_history_p;
-  svn_fs_history_t *history;
-  svn_boolean_t cross_copies;
-  apr_pool_t *pool;
-};
-
-
 static svn_error_t *
-history_prev(void *baton, apr_pool_t *pool)
+history_prev(svn_fs_history_t **prev_history,
+             svn_fs_history_t *history,
+             svn_boolean_t cross_copies,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool)
 {
-  struct history_prev_args *args = baton;
-  svn_fs_history_t **prev_history = args->prev_history_p;
-  svn_fs_history_t *history = args->history;
   fs_history_data_t *fhd = history->fsap_data;
   const char *commit_path, *src_path, *path = fhd->path;
   svn_revnum_t commit_rev, src_rev, dst_rev;
   svn_revnum_t revision = fhd->revision;
-  apr_pool_t *retpool = args->pool;
   svn_fs_t *fs = fhd->fs;
   parent_path_t *parent_path;
   dag_node_t *node;
@@ -3500,21 +3491,21 @@ history_prev(void *baton, apr_pool_t *pool)
   if (fhd->path_hint && SVN_IS_VALID_REVNUM(fhd->rev_hint))
     {
       reported = FALSE;
-      if (! args->cross_copies)
+      if (! cross_copies)
         return SVN_NO_ERROR;
       path = fhd->path_hint;
       revision = fhd->rev_hint;
     }
 
   /* Construct a ROOT for the current revision. */
-  SVN_ERR(svn_fs_fs__revision_root(&root, fs, revision, pool));
+  SVN_ERR(svn_fs_fs__revision_root(&root, fs, revision, scratch_pool));
 
   /* Open PATH/REVISION, and get its node and a bunch of other
      goodies.  */
-  SVN_ERR(open_path(&parent_path, root, path, 0, NULL, pool));
+  SVN_ERR(open_path(&parent_path, root, path, 0, NULL, scratch_pool));
   node = parent_path->node;
   commit_path = svn_fs_fs__dag_get_created_path(node);
-  SVN_ERR(svn_fs_fs__dag_get_revision(&commit_rev, node, pool));
+  SVN_ERR(svn_fs_fs__dag_get_revision(&commit_rev, node, scratch_pool));
 
   /* The Subversion filesystem is written in such a way that a given
      line of history may have at most one interesting history point
@@ -3530,9 +3521,9 @@ history_prev(void *baton, apr_pool_t *pool)
           /* ... we either have not yet reported on this revision (and
              need now to do so) ... */
           *prev_history = assemble_history(fs,
-                                           apr_pstrdup(retpool, commit_path),
+                                           apr_pstrdup(result_pool, commit_path),
                                            commit_rev, TRUE, NULL,
-                                           SVN_INVALID_REVNUM, retpool);
+                                           SVN_INVALID_REVNUM, result_pool);
           return SVN_NO_ERROR;
         }
       else
@@ -3548,16 +3539,16 @@ history_prev(void *baton, apr_pool_t *pool)
 
           /* Replace NODE and friends with the information from its
              predecessor. */
-          SVN_ERR(svn_fs_fs__dag_get_node(&node, fs, pred_id, pool));
+          SVN_ERR(svn_fs_fs__dag_get_node(&node, fs, pred_id, scratch_pool));
           commit_path = svn_fs_fs__dag_get_created_path(node);
-          SVN_ERR(svn_fs_fs__dag_get_revision(&commit_rev, node, pool));
+          SVN_ERR(svn_fs_fs__dag_get_revision(&commit_rev, node, scratch_pool));
         }
     }
 
   /* Find the youngest copyroot in the path of this node, including
      itself. */
   SVN_ERR(find_youngest_copyroot(&copyroot_rev, &copyroot_path, fs,
-                                 parent_path, pool));
+                                 parent_path, scratch_pool));
 
   /* Initialize some state variables. */
   src_path = NULL;
@@ -3571,8 +3562,8 @@ history_prev(void *baton, apr_pool_t *pool)
       svn_fs_root_t *copyroot_root;
 
       SVN_ERR(svn_fs_fs__revision_root(&copyroot_root, fs, copyroot_rev,
-                                       pool));
-      SVN_ERR(get_dag(&node, copyroot_root, copyroot_path, FALSE, pool));
+                                       scratch_pool));
+      SVN_ERR(get_dag(&node, copyroot_root, copyroot_path, FALSE, scratch_pool));
       copy_dst = svn_fs_fs__dag_get_created_path(node);
 
       /* If our current path was the very destination of the copy,
@@ -3594,7 +3585,7 @@ history_prev(void *baton, apr_pool_t *pool)
           SVN_ERR(svn_fs_fs__dag_get_copyfrom_path(&copy_src, node));
 
           dst_rev = copyroot_rev;
-          src_path = svn_fspath__join(copy_src, remainder_path, pool);
+          src_path = svn_fspath__join(copy_src, remainder_path, scratch_pool);
         }
     }
 
@@ -3611,15 +3602,15 @@ history_prev(void *baton, apr_pool_t *pool)
       if ((dst_rev == revision) && reported)
         retry = TRUE;
 
-      *prev_history = assemble_history(fs, apr_pstrdup(retpool, path),
+      *prev_history = assemble_history(fs, apr_pstrdup(result_pool, path),
                                        dst_rev, ! retry,
-                                       src_path, src_rev, retpool);
+                                       src_path, src_rev, result_pool);
     }
   else
     {
-      *prev_history = assemble_history(fs, apr_pstrdup(retpool, commit_path),
+      *prev_history = assemble_history(fs, apr_pstrdup(result_pool, commit_path),
                                        commit_rev, TRUE, NULL,
-                                       SVN_INVALID_REVNUM, retpool);
+                                       SVN_INVALID_REVNUM, result_pool);
     }
 
   return SVN_NO_ERROR;
@@ -3655,16 +3646,12 @@ fs_history_prev(svn_fs_history_t **prev_history_p,
     }
   else
     {
-      struct history_prev_args args;
       prev_history = history;
 
       while (1)
         {
-          args.prev_history_p = &prev_history;
-          args.history = prev_history;
-          args.cross_copies = cross_copies;
-          args.pool = pool;
-          SVN_ERR(history_prev(&args, pool));
+          SVN_ERR(history_prev(&prev_history, prev_history, cross_copies,
+                               pool, pool));
 
           if (! prev_history)
             break;
