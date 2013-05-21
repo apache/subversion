@@ -2460,16 +2460,13 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
                             const apr_array_header_t *options,
                             apr_hash_t *config, apr_pool_t *pool)
 {
-  const char *diff_cmd;
-
-  diff_cmd = NULL;
+  const char *diff_cmd = NULL;
 
   /* old style diff_cmd has precedence in config file */
   if (config)
     {
-      svn_config_t *cfg;
+      svn_config_t *cfg  = svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
 
-      cfg = svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
       svn_config_get(cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS,
                      SVN_CONFIG_OPTION_DIFF_CMD, NULL);
       if (options == NULL)
@@ -2501,7 +2498,7 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
 	  if (diff_cmd) 
 	    {
 	      SVN_ERR(svn_path_cstring_to_utf8(
-                      &diff_cmd_baton->invoke_diff_cmd, diff_cmd, pool));
+                                               &diff_cmd_baton->invoke_diff_cmd, diff_cmd, pool));
 	      
 	      return SVN_NO_ERROR;
 	    }
@@ -2523,7 +2520,9 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
           argv = apr_palloc(pool, argc * sizeof(char *));
           for (i = 0; i < argc; i++)
             SVN_ERR(svn_utf_cstring_to_utf8(&argv[i],
-                    APR_ARRAY_IDX(options, i, const char *), pool));
+                                            APR_ARRAY_IDX(options, i, 
+                                                          const char *), 
+                                            pool));
         }
       diff_cmd_baton->options.for_external.argv = argv;
       diff_cmd_baton->options.for_external.argc = argc;
