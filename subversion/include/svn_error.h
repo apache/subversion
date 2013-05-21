@@ -491,22 +491,10 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
     abort();                                                 \
   } while (1)
 
-/** Check that a condition is true: if not, report an error (appending
- * ERR if non-NULL) and possibly terminate the program.
+/** Like SVN_ERR_ASSERT(), but append ERR to the returned error chain.
  *
- * If the boolean expression @a expr is true, do nothing. Otherwise,
- * act as determined by the current "malfunction handler" which may have
- * been specified by a call to svn_error_set_malfunction_handler() or else
- * is the default handler as specified in that function's documentation. If
- * the malfunction handler returns, then cause the function using this macro
- * to return the error object that it generated.
- *
- * @note The intended use of this macro is to check a condition that cannot
- * possibly be false unless there is a bug in the program.
- *
- * @note The condition to be checked should not be computationally expensive
- * if it is reached often, as, unlike traditional "assert" statements, the
- * evaluation of this expression is not compiled out in release-mode builds.
+ * If EXPR is false, return a malfunction error whose chain includes ERR.
+ * If EXPR is true, do nothing.  (In particular, this does not clear ERR.)
  *
  * Types: (svn_boolean_t expr, svn_error_t *err)
  *
@@ -527,13 +515,38 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
   } while (0)
 #endif
 
-/** Like SVN_ERR_ASSERT_E(), but with @a err always NULL.
+
+/** Check that a condition is true: if not, report an error and possibly
+ * terminate the program.
  *
- * @see SVN_ERR_ASSERT_E()
+ * If the Boolean expression @a expr is true, do nothing. Otherwise,
+ * act as determined by the current "malfunction handler" which may have
+ * been specified by a call to svn_error_set_malfunction_handler() or else
+ * is the default handler as specified in that function's documentation. If
+ * the malfunction handler returns, then cause the function using this macro
+ * to return the error object that it generated.
+ *
+ * @note The intended use of this macro is to check a condition that cannot
+ * possibly be false unless there is a bug in the program.
+ *
+ * @note The condition to be checked should not be computationally expensive
+ * if it is reached often, as, unlike traditional "assert" statements, the
+ * evaluation of this expression is not compiled out in release-mode builds.
  *
  * @since New in 1.6.
+ *
+ * @see SVN_ERR_ASSERT_E()
  */
-#define SVN_ERR_ASSERT(expr)       SVN_ERR_ASSERT_E(expr, NULL)
+#ifdef __clang_analyzer__
+#include <assert.h>
+#define SVN_ERR_ASSERT(expr)       assert((expr))
+#else
+#define SVN_ERR_ASSERT(expr)                                            \
+  do {                                                                  \
+    if (!(expr))                                                        \
+      SVN_ERR(svn_error__malfunction(TRUE, __FILE__, __LINE__, #expr)); \
+  } while (0)
+#endif
 
 /** Similar to SVN_ERR_ASSERT(), but without the option of returning
  * an error to the calling function.
