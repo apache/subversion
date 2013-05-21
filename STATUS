@@ -147,13 +147,6 @@ Candidate changes:
 Approved for 1.8.1 or if soak is restarted for 1.8.0:
 ====================================================
 
- * r1483391, r1483397
-   Fix 'svn diff' erroring out on missing tree conflict victims.
-   Justification:
-     Regresion from 1.7.
-   Votes:
-     +1: stsp, rhuijben, pburba
-
 * r1483557
   Match our revision property names exactly instead by prefix.
   Justification:
@@ -161,14 +154,6 @@ Approved for 1.8.1 or if soak is restarted for 1.8.0:
     to fix problem.
   Votes:
      +1: stefan2 (for 1.8.1), rhuijben, pburba
-
-* r1484755
-  Fix SVN_ERR_ASSERT macro to provide failed expression, instead of
-  evaluated value when compiled using Visual Studio 2010.
-  Justification:
-    Assertions diagnostic is important. Regression from 1.7.x.
-  Votes:
-    +1: ivan, cmpilato, pburba
 
 Veto-blocked changes:
 =====================
@@ -195,4 +180,19 @@ Approved changes:
      Build fails.
    Votes:
      +1: philip, rhuijben, stsp, breser
+
+ * r1484755
+   Fix SVN_ERR_ASSERT macro to provide failed expression, instead of
+   evaluated value when compiled using Visual Studio 2010.
+   Justification:
+     Assertions diagnostic is important. Regression from 1.7.x.
+   Votes:
+     +1: ivan, cmpilato, pburba
+
+ * r1483391, r1483397
+   Fix 'svn diff' erroring out on missing tree conflict victims.
+   Justification:
+     Regresion from 1.7.
+   Votes:
+     +1: stsp, rhuijben, pburba
 
