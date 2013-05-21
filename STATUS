@@ -165,7 +165,7 @@ Candidate changes:
   Justification:
     Assertions diagnostic is important. Regression from 1.7.x.
   Votes:
-    +1: ivan
+    +1: ivan, cmpilato
 
 Approved for 1.8.1 or if soak is restarted for 1.8.0:
 ====================================================
