@@ -3017,8 +3017,7 @@ svn_io_run_external_diff(const char *dir,
   const char ** cmd;
 
   if (0 == strlen(external_diff_cmd)) 
-     return svn_error_createf(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-                        _("The --invoke-diff-cmd string was empty.\n"));
+     return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL, NULL);
 
   cmd = svn_io_create_custom_diff_cmd(label1, label2, NULL, 
                                       tmpfile1, tmpfile2, NULL, 
@@ -3046,7 +3045,7 @@ svn_io_run_external_diff(const char *dir,
         }
        
        return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
-                                _("'%s' was expanded to '%s' and returned %d\n"),
+                                _("'%s' was expanded to '%s' and returned %d"),
                                 external_diff_cmd,
                                 svn_dirent_local_style(failed_command, pool),
                                 *pexitcode);

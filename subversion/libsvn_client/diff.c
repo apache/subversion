@@ -821,6 +821,7 @@ diff_content_changed(svn_boolean_t *wrote_header,
                                        scratch_pool, scratch_pool));
       
       if (diff_cmd_baton->diff_cmd) 
+        /* "." is a non-canonical path for the diff process's working directory. */
         SVN_ERR(svn_io_run_diff2(".",
                                  diff_cmd_baton->options.for_external.argv,
                                  diff_cmd_baton->options.for_external.argc,
@@ -829,14 +830,13 @@ diff_content_changed(svn_boolean_t *wrote_header,
                                  &exitcode, outfile, errfile,
                                  diff_cmd_baton->diff_cmd, scratch_pool));
       else
-        { 
-          SVN_ERR(
-          svn_io_run_external_diff(".",
-                                   label1, label2,
-                                   tmpfile1, tmpfile2,
-                                   &exitcode, outfile, errfile,
-                                   diff_cmd_baton->invoke_diff_cmd,
-                                   scratch_pool));
+        { /* "." is a non-canonical path for the diff process's working directory. */
+          SVN_ERR(svn_io_run_external_diff(".", 
+                                           label1, label2,
+                                           tmpfile1, tmpfile2,
+                                           &exitcode, outfile, errfile,
+                                           diff_cmd_baton->invoke_diff_cmd,
+                                           scratch_pool));
         }  
       SVN_ERR(svn_io_file_close(outfile, scratch_pool));
       SVN_ERR(svn_io_file_close(errfile, scratch_pool));
