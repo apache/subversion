@@ -234,6 +234,7 @@ Candidate changes:
    Votes:
      +1: stsp, danielsh
      +1: cmpilato (without r1481627)
+     +1: rhuijben (r1481627 only, once it is merged to the branch)
 
  * r1461760
    Additional fix related to issue #4340, "filenames containing \n corrupt
