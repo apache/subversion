@@ -123,7 +123,9 @@ fi
 $SVN diff > $backupfile
 cp STATUS STATUS.$$
 $SVNq revert -R .
-mv STATUS.$$ STATUS
+if $MAY_COMMIT ; then
+  mv STATUS.$$ STATUS
+fi
 $SVNq up
 $SVNq merge $mergeargs
 if [ "`$SVN status -q | wc -l`" -eq 1 ]; then
