@@ -34,7 +34,7 @@ Candidate changes:
      Necessary for building on PPC Macs.
    Votes:
      +1: mattiase (non-binding)
-     +1: rhuijben
+     +1: rhuijben, breser
 
  * r1477876, r1477891, r1478001, r1479605
    Fix a bug whereby a property conflict description always reported
