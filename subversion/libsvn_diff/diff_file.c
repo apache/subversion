@@ -957,7 +957,7 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
          function.
 
          When changing things here, make sure the whitespace settings are
-         applied, or we mught not reach the exact suffix boundary as token
+         applied, or we might not reach the exact suffix boundary as token
          boundary. */
       SVN_ERR(read_chunk(file->file, file->path,
                          curp, length,
