@@ -52,7 +52,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-serf-1-win32
    Votes:
-     +0: rhuijben (Still running some tests)
+     +1: rhuijben
 
  * r1461562, r1461580, r1461701, r1481627
    Fix issue #4340, "filenames containing \n corrupt FSFS repositories"
@@ -87,7 +87,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-issue4340-repos
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
 Veto-blocked changes:
 =====================
