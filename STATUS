@@ -92,23 +92,6 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r1482829
-   Reduce diskspace needed by our testsuite when using cleanup mode.
-   Justification:
-     A 256 MB ramdrive should be more than enough for running the
-     tests in parallel mode, but currently isn't.
-   Votes:
-     +1: rhuijben, pburba
-
- * r1483116
-   Retry removing test temporary directories when running as deferred deletes
-   using a short delay.
-   Justification:
-     Without this patch running the svnserve-bdb tests on Windows leaves a lot
-     of temporary directories behind, causing testruns to fail on ramdrives.
-   Votes:
-     +1: rhuijben, pburba
-
  * r1483781
    Fix FSFS repository corruption on power or network disk failure on Windows:
    http://svn.haxx.se/dev/archive-2013-05/0245.shtml
@@ -116,14 +99,6 @@ Candidate changes:
      Repository corruption. Regression from 1.6.x
    Votes:
      +1: ivan, blair
-
- * r1483913
-   Fix hard-coded version in JavaHL's JNI loader.
-   Justification:
-     We don't want to try to use the 1.7 libraries.
-   Branch: ^/subversion/branches/1.8.x-libsvnjavahl-version
-   Votes:
-     +1: philip, rhuijben
 
  * r1483125, r1483555, r1483927, r1483947
    Fix issue #4367 'merge to shallow WC, repeat merge to infinite depth WC is
@@ -137,12 +112,13 @@ Candidate changes:
    Votes:
      +1: pburba, rhuijben
 
- * r1483575, r1483580
+ * r1483575, r1483580, r1485018
    Define SVN_UNALIGNED_ACCESS_IS_OK for PowerPC.
    Justification:
      Performance for free.
    Votes:
-     +1: mattiase (non-binding)
+     +1: mattiase (non-binding, not including r1485018)
+     +1: breser
 
 Approved for 1.8.1 or if soak is restarted for 1.8.0:
 ====================================================
@@ -195,4 +171,29 @@ Approved changes:
      Regresion from 1.7.
    Votes:
      +1: stsp, rhuijben, pburba
+
+ * r1482829
+   Reduce diskspace needed by our testsuite when using cleanup mode.
+   Justification:
+     A 256 MB ramdrive should be more than enough for running the
+     tests in parallel mode, but currently isn't.
+   Votes:
+     +1: rhuijben, pburba, breser
+
+ * r1483116
+   Retry removing test temporary directories when running as deferred deletes
+   using a short delay.
+   Justification:
+     Without this patch running the svnserve-bdb tests on Windows leaves a lot
+     of temporary directories behind, causing testruns to fail on ramdrives.
+   Votes:
+     +1: rhuijben, pburba, breser
+
+ * r1483913
+   Fix hard-coded version in JavaHL's JNI loader.
+   Justification:
+     We don't want to try to use the 1.7 libraries.
+   Branch: ^/subversion/branches/1.8.x-libsvnjavahl-version
+   Votes:
+     +1: philip, rhuijben, breser
 
