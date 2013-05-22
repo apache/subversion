@@ -176,16 +176,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1434128, r1434435, r1434476
-   Fix issue #4034, 'blame on files with non-native eol-style sees every
-   line as modified'.
-   Justification:
-     When blaming to the working copy instead of the base version eol styles
-     all other styles than those with "\n" repository form show up as
-     entirely changed.
-   Votes:
-     +1: rhuijben, stsp, breser
-
  * r1434750
    Resolve regression in 'svn status -u' output when running on externals.
    Without this patch the paths in directory externals are shown as absolute
