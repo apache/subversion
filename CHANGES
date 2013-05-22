@@ -4,7 +4,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.23
 
  User-visible changes
   - Server-side bugfixes:
-    * fix repository corruption due to newline in filename (issue #4340)
+    * fix FSFS repository corruption due to newline in filename (issue #4340)
     * fix svnserve exiting when a client connection is aborted (r1482759)
 
   - Other tool improvements and bugfixes:
