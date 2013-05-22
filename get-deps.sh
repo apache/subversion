@@ -122,7 +122,11 @@ get_deps() {
 
     if [ $# -gt 0 ]; then
       for target in "$@"; do
-        get_$target || usage
+        if [ "$target" != "deps" ]; then
+          get_$target || usage
+        else
+          usage
+        fi
       done
     else
       get_apr

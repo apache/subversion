@@ -176,14 +176,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1421541, r1424977
-   Fix infinite recursion in './get-deps.sh'.
-   Justification:
-     Trivial fix to plug an edge case.
-   Votes:
-     -0: rhuijben (Is this needed on this branch?)
-     +1: breser, stsp, danielsh (as much as it's needed on trunk)
-
  * r1434128, r1434435, r1434476
    Fix issue #4034, 'blame on files with non-native eol-style sees every
    line as modified'.
