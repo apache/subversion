@@ -384,7 +384,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.10
     * fix externals not removed when working copy is made shallow (issue #3741)
 
   - Server-side bugfixes:
-    * fix repository corruption due to newline in filename (issue #4340)
+    * fix FSFS repository corruption due to newline in filename (issue #4340)
     * fix svnserve exiting when a client connection is aborted (r1482759)
     * fix svnserve memory use after clear (issue #4365)
     * fix repository corruption on power/disk failure on Windows (r1483781)
@@ -946,7 +946,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.23
 
  User-visible changes
   - Server-side bugfixes:
-    * fix repository corruption due to newline in filename (issue #4340)
+    * fix FSFS repository corruption due to newline in filename (issue #4340)
     * fix svnserve exiting when a client connection is aborted (r1482759)
 
   - Other tool improvements and bugfixes:
