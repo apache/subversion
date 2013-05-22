@@ -27,7 +27,7 @@ APR=apr-1.4.5
 APR_UTIL=apr-util-1.3.12
 NEON=neon-0.29.6
 SERF=serf-0.7.2
-ZLIB=zlib-1.2.7
+ZLIB=zlib-1.2.8
 SQLITE_VERSION=3.7.6.3
 SQLITE_VERSION_LIST=`echo $SQLITE_VERSION | sed -e 's/\./ /g'`
 SQLITE=sqlite-amalgamation-`printf %d%02d%02d%02d $SQLITE_VERSION_LIST`
@@ -91,10 +91,10 @@ get_serf() {
 
 get_zlib() {
     cd $TEMPDIR
-    $HTTP_FETCH http://www.zlib.net/$ZLIB.tar.bz2
+    $HTTP_FETCH http://www.zlib.net/$ZLIB.tar.gz
     cd $BASEDIR
 
-    bzip2 -dc $TEMPDIR/$ZLIB.tar.bz2 | tar -xf -
+    gzip -dc $TEMPDIR/$ZLIB.tar.gz | tar -xf -
 
     mv $ZLIB zlib
 }
