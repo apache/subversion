@@ -143,15 +143,6 @@ Approved changes:
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 
- * r1483116
-   Retry removing test temporary directories when running as deferred deletes
-   using a short delay.
-   Justification:
-     Without this patch running the svnserve-bdb tests on Windows leaves a lot
-     of temporary directories behind, causing testruns to fail on ramdrives.
-   Votes:
-     +1: rhuijben, pburba, breser
-
  * r1483913
    Fix hard-coded version in JavaHL's JNI loader.
    Justification:
