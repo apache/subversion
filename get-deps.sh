@@ -27,7 +27,7 @@ APR=apr-1.4.4
 APR_UTIL=apr-util-1.3.11
 NEON=neon-0.28.3
 SERF=serf-0.7.0
-ZLIB=zlib-1.2.7
+ZLIB=zlib-1.2.8
 SQLITE_VERSION=3.7.5.0
 SQLITE=sqlite-amalgamation-$(printf %u%02u%02u%02u $(echo $SQLITE_VERSION | sed -e "s/\./ /g"))
 
@@ -49,12 +49,12 @@ get_deps() {
     wget -nc $APACHE_MIRROR/apr/$APR_UTIL.tar.bz2
     wget -nc http://webdav.org/neon/$NEON.tar.gz
     wget -nc http://serf.googlecode.com/files/$SERF.tar.bz2
-    wget -nc http://www.zlib.net/$ZLIB.tar.bz2
+    wget -nc http://www.zlib.net/$ZLIB.tar.gz
     wget -nc http://www.sqlite.org/$SQLITE.zip
 
     cd $BASEDIR
     gzip  -dc $TEMPDIR/$NEON.tar.gz | tar -xf -
-    bzip2 -dc $TEMPDIR/$ZLIB.tar.bz2 | tar -xf -
+    gzip  -dc $TEMPDIR/$ZLIB.tar.gz | tar -xf -
     bzip2 -dc $TEMPDIR/$SERF.tar.bz2 | tar -xf -
     unzip -q $TEMPDIR/$SQLITE.zip
 
