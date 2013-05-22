@@ -89,3 +89,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1485350
+   contrib: fix some argument passing.
+   Justification:
+     More robust that way.
+   Votes:
+     +1: danielsh, stsp, breser
