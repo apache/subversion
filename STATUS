@@ -160,10 +160,3 @@ Approved changes:
 # that would restart the soak should not be added unless they are resolving
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
-
- * r1485350
-   contrib: fix some argument passing.
-   Justification:
-     More robust that way.
-   Votes:
-     +1: danielsh, stsp, breser
