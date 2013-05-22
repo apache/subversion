@@ -176,14 +176,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1465975
-   Replace assertions that trigger in the wild with proper error messages.
-   Justification:
-     User-friendliness, see http://svn.haxx.se/users/archive-2013-04/0064.shtml
-     Showing the problematic path will help with figuring out the problem.
-   Votes:
-     +1: stsp, breser
-     +1: danielsh (should we avoid svn_dirent_local_style in this case, i.e.,
-                   print the literal value that nodes.local_relpath is expected
-                   to contain?)
-
