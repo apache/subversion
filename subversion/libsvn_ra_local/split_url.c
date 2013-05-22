@@ -30,7 +30,7 @@
 
 svn_error_t *
 svn_ra_local__split_URL(svn_repos_t **repos,
-                        const char **repos_url,
+                        const char **repos_root_url,
                         const char **fs_path,
                         const char *URL,
                         apr_pool_t *pool)
@@ -88,7 +88,7 @@ svn_ra_local__split_URL(svn_repos_t **repos,
   svn_path_remove_components(urlbuf,
                              svn_path_component_count(repos_dirent)
                              - svn_path_component_count(repos_root_dirent));
-  *repos_url = urlbuf->data;
+  *repos_root_url = urlbuf->data;
 
   /* Configure hook script environment variables. */
   SVN_ERR(svn_repos_hooks_setenv(*repos, NULL, pool));
