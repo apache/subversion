@@ -1202,14 +1202,15 @@ static svn_error_t *vparse_tuple(const apr_array_header_t *items, apr_pool_t *po
       if (**fmt == '?')
         (*fmt)++;
       elt = &APR_ARRAY_IDX(items, count, svn_ra_svn_item_t);
-      if (**fmt == 'n' && elt->kind == SVN_RA_SVN_NUMBER)
-        *va_arg(*ap, apr_uint64_t *) = elt->u.number;
-      else if (**fmt == 'r' && elt->kind == SVN_RA_SVN_NUMBER)
-        *va_arg(*ap, svn_revnum_t *) = (svn_revnum_t) elt->u.number;
-      else if (**fmt == 's' && elt->kind == SVN_RA_SVN_STRING)
-        *va_arg(*ap, svn_string_t **) = elt->u.string;
+      if (**fmt == '(' && elt->kind == SVN_RA_SVN_LIST)
+        {
+          (*fmt)++;
+          SVN_ERR(vparse_tuple(elt->u.list, pool, fmt, ap));
+        }
       else if (**fmt == 'c' && elt->kind == SVN_RA_SVN_STRING)
         *va_arg(*ap, const char **) = elt->u.string->data;
+      else if (**fmt == 's' && elt->kind == SVN_RA_SVN_STRING)
+        *va_arg(*ap, svn_string_t **) = elt->u.string;
       else if (**fmt == 'w' && elt->kind == SVN_RA_SVN_WORD)
         *va_arg(*ap, const char **) = elt->u.word;
       else if (**fmt == 'b' && elt->kind == SVN_RA_SVN_WORD)
@@ -1221,6 +1222,10 @@ static svn_error_t *vparse_tuple(const apr_array_header_t *items, apr_pool_t *po
           else
             break;
         }
+      else if (**fmt == 'n' && elt->kind == SVN_RA_SVN_NUMBER)
+        *va_arg(*ap, apr_uint64_t *) = elt->u.number;
+      else if (**fmt == 'r' && elt->kind == SVN_RA_SVN_NUMBER)
+        *va_arg(*ap, svn_revnum_t *) = (svn_revnum_t) elt->u.number;
       else if (**fmt == 'B' && elt->kind == SVN_RA_SVN_WORD)
         {
           if (strcmp(elt->u.word, "true") == 0)
@@ -1241,11 +1246,6 @@ static svn_error_t *vparse_tuple(const apr_array_header_t *items, apr_pool_t *po
         }
       else if (**fmt == 'l' && elt->kind == SVN_RA_SVN_LIST)
         *va_arg(*ap, apr_array_header_t **) = elt->u.list;
-      else if (**fmt == '(' && elt->kind == SVN_RA_SVN_LIST)
-        {
-          (*fmt)++;
-          SVN_ERR(vparse_tuple(elt->u.list, pool, fmt, ap));
-        }
       else if (**fmt == ')')
         return SVN_NO_ERROR;
       else
