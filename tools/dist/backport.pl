@@ -161,9 +161,9 @@ else
 fi
 EOF
 
-  open SHELL, '|-', qw#/bin/sh# or die $!;
+  open SHELL, '|-', qw#/bin/sh# or die "$! (in '$entry{header}')";
   print SHELL $script;
-  close SHELL or warn "$0: sh($?): $!";
+  close SHELL or warn "$0: sh($?): $! (in '$entry{header}')";
 
   unlink $backupfile if -z $backupfile;
   unlink $logmsg_filename unless $? or $!;
