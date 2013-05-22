@@ -274,11 +274,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
-* r1483781
-  Fix FSFS repository corruption on power or network disk failure on Windows:
-  http://svn.haxx.se/dev/archive-2013-05/0245.shtml
-  Justification:
-    Repository corruption. Regression from 1.6.x
-  Votes:
-    +1: ivan, blair, stsp
