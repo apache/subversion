@@ -47,14 +47,6 @@ Candidate changes:
    Votes:
      +0: rhuijben (I would like to see some test results before backporting)
 
- * r1421541, r1424977
-   Fix infinite recursion in './get-deps.sh'.
-   Justification:
-     Trivial fix to plug an edge case.
-   Votes:
-     -0: rhuijben (Is this needed on this branch?)
-     +1: stsp, danielsh (as much as it's needed on trunk)
-
  * r1426762
    Fix issue #4283, When the identical suffix starts at chunk boundary, "svn
    diff" produces incorrect diff.
@@ -67,25 +59,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, jcorvel
      +0: stsp (doesn't compile, undefined reference to `svn_stringbuf_insert')
-
- * r1434128, r1434435, r1434476
-   Fix issue #4034, 'blame on files with non-native eol-style sees every
-   line as modified'.
-   Justification:
-     When blaming to the working copy instead of the base version eol styles
-     all other styles than those with "\n" repository form show up as
-     entirely changed.
-   Votes:
-     +1: rhuijben, stsp
-
- * r1434750
-   Resolve regression in 'svn status -u' output when running on externals.
-   Without this patch the paths in directory externals are shown as absolute
-   while all others are shown relative/as provided by the user.
-   Justification:
-     Consistent api behavior is good
-   Votes:
-     +1: rhuijben, stsp
 
  * r1435635, r1435714, r1435722, r1435737
    When svn update removes a switched subtree because it was deleted in the
@@ -143,22 +116,13 @@ Candidate changes:
                    their or their-old (src-left) version, as that is the final
                    change I would commit.)
 
- * r1445753
-   Fix issue #3741, 'externals not removed when working copy is made shallow'.
-   Justification:
-     Externals linger after update --set-depth empty, causing unnecessary
-     tree conflicts when the working copy is updated back to depth infinity.
-     See regression test and also the recipe script attached to issue #3741.
-   Votes:
-     +1: stsp, rhuijben
-
  * r1452780
    Address issue #4331, "working copy permissions change on commit for files
    with keywords".
    Justification:
      Keyword translation should not affect file permission bits.
    Votes:
-     +1: stsp
+     +1: stsp, breser
      +0: rhuijben (code looks ok, but is a no-op on Windows), danielsh
 
  * ^/subversion/branches/1.7.x-gssapi-solaris10
@@ -197,7 +161,7 @@ Candidate changes:
      User-friendliness, see http://svn.haxx.se/users/archive-2013-04/0064.shtml
      Showing the problematic path will help with figuring out the problem.
    Votes:
-     +1: stsp
+     +1: stsp, breser
      +1: danielsh (should we avoid svn_dirent_local_style in this case, i.e.,
                    print the literal value that nodes.local_relpath is expected
                    to contain?)
@@ -211,7 +175,7 @@ Candidate changes:
       application that can't be expressed in unicode, which is very hard if the
       path itself is stored in Unicode)
    Votes:
-     +1: rhuijben
+     +1: rhuijben, breser
 
 Veto-blocked changes:
 =====================
@@ -230,3 +194,39 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1421541, r1424977
+   Fix infinite recursion in './get-deps.sh'.
+   Justification:
+     Trivial fix to plug an edge case.
+   Votes:
+     -0: rhuijben (Is this needed on this branch?)
+     +1: breser, stsp, danielsh (as much as it's needed on trunk)
+
+ * r1434128, r1434435, r1434476
+   Fix issue #4034, 'blame on files with non-native eol-style sees every
+   line as modified'.
+   Justification:
+     When blaming to the working copy instead of the base version eol styles
+     all other styles than those with "\n" repository form show up as
+     entirely changed.
+   Votes:
+     +1: rhuijben, stsp, breser
+
+ * r1434750
+   Resolve regression in 'svn status -u' output when running on externals.
+   Without this patch the paths in directory externals are shown as absolute
+   while all others are shown relative/as provided by the user.
+   Justification:
+     Consistent api behavior is good
+   Votes:
+     +1: rhuijben, stsp, breser
+
+ * r1445753
+   Fix issue #3741, 'externals not removed when working copy is made shallow'.
+   Justification:
+     Externals linger after update --set-depth empty, causing unnecessary
+     tree conflicts when the working copy is updated back to depth infinity.
+     See regression test and also the recipe script attached to issue #3741.
+   Votes:
+     +1: stsp, rhuijben, breser
