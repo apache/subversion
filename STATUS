@@ -116,15 +116,6 @@ Candidate changes:
                    their or their-old (src-left) version, as that is the final
                    change I would commit.)
 
- * r1452780
-   Address issue #4331, "working copy permissions change on commit for files
-   with keywords".
-   Justification:
-     Keyword translation should not affect file permission bits.
-   Votes:
-     +1: stsp, breser
-     +0: rhuijben (code looks ok, but is a no-op on Windows), danielsh
-
  * ^/subversion/branches/1.7.x-gssapi-solaris10
    Justification:
      Make it easier to build svn+serf with kerberos support on Solaris10.
@@ -155,17 +146,6 @@ Candidate changes:
      -0: danielsh (restrictions not suitable for introduction in patch release;
                    dev@ thread started 2013/05/10 9pm)
 
- * r1465975
-   Replace assertions that trigger in the wild with proper error messages.
-   Justification:
-     User-friendliness, see http://svn.haxx.se/users/archive-2013-04/0064.shtml
-     Showing the problematic path will help with figuring out the problem.
-   Votes:
-     +1: stsp, breser
-     +1: danielsh (should we avoid svn_dirent_local_style in this case, i.e.,
-                   print the literal value that nodes.local_relpath is expected
-                   to contain?)
-
  * r1482282
    Don't use unitialized variable to produce an error code.
    Justification:
@@ -176,6 +156,7 @@ Candidate changes:
       path itself is stored in Unicode)
    Votes:
      +1: rhuijben, breser
+     +0: danielsh (don't know whether GetLastError is the right API here)
 
 Veto-blocked changes:
 =====================
@@ -230,3 +211,24 @@ Approved changes:
      See regression test and also the recipe script attached to issue #3741.
    Votes:
      +1: stsp, rhuijben, breser
+
+ * r1452780
+   Address issue #4331, "working copy permissions change on commit for files
+   with keywords".
+   Justification:
+     Keyword translation should not affect file permission bits.
+   Votes:
+     +1: stsp, breser, danielsh
+     +0: rhuijben (code looks ok, but is a no-op on Windows)
+
+ * r1465975
+   Replace assertions that trigger in the wild with proper error messages.
+   Justification:
+     User-friendliness, see http://svn.haxx.se/users/archive-2013-04/0064.shtml
+     Showing the problematic path will help with figuring out the problem.
+   Votes:
+     +1: stsp, breser
+     +1: danielsh (should we avoid svn_dirent_local_style in this case, i.e.,
+                   print the literal value that nodes.local_relpath is expected
+                   to contain?)
+
