@@ -366,6 +366,15 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix some reference counting bugs in swig-py bindings (r1464899, r1466524)
 
 
+Version 1.7.11
+(?? ??? 2013, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.11
+
+ User-visible changes:
+  - Other tool improvements and bugfixes:
+    * fix argument processing in contrib hook scripts (r1485350)
+
+
 Version 1.7.10
 (30 May 2013, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.10
