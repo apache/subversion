@@ -2394,7 +2394,83 @@ merge_adjacent_changes(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Issue #4133, 'When sequences of whitespace characters at head of line
+   strides chunk boundary, "diff -x -w" showing wrong change'.
+   The magic number used in this test, 1<<17, is
+   CHUNK_SIZE from ../../libsvn_diff/diff_file.c
+ */
+static svn_error_t *
+test_norm_offset(apr_pool_t *pool)
+{
+  apr_size_t chunk_size = 1 << 17;
+  const char *pattern1 = "       \n";
+  const char *pattern2 = "\n\n\n\n\n\n\n\n";
+  const char *pattern3 = "                        @@@@@@@\n";
+  const char *pattern4 = "               \n";
+  svn_stringbuf_t *original, *modified;
+  svn_diff_file_options_t *diff_opts = svn_diff_file_options_create(pool);
 
+  /* The original contents become like this
+
+     $ hexdump -C norm-offset-original
+     00000000  20 20 20 20 20 20 20 0a  0a 0a 0a 0a 0a 0a 0a 0a  |       .........|
+     00000010  0a 0a 0a 0a 0a 0a 0a 0a  0a 0a 0a 0a 0a 0a 0a 0a  |................|
+     *
+     0001fff0  0a 0a 0a 0a 0a 0a 0a 0a  20 20 20 20 20 20 20 20  |........        |
+     00020000  20 20 20 20 20 20 20 20  20 20 20 20 20 20 20 20  |                |
+     00020010  40 40 40 40 40 40 40 0a  0a 0a 0a 0a 0a 0a 0a 0a  |@@@@@@@.........|
+     00020020  0a 0a 0a 0a 0a 0a 0a 0a  0a 0a 0a 0a 0a 0a 0a 0a  |................|
+     *
+     000203f0  20 20 20 20 20 20 20 20  20 20 20 20 20 20 20 0a  |               .|
+     00020400
+  */
+  original = svn_stringbuf_create_ensure(chunk_size + 1024, pool);
+  svn_stringbuf_appendcstr(original, pattern1);
+  while (original->len < chunk_size - 8)
+    {
+      svn_stringbuf_appendcstr(original, pattern2);
+    }
+  svn_stringbuf_appendcstr(original, pattern3);
+  while (original->len < chunk_size +1024 - 16)
+    {
+      svn_stringbuf_appendcstr(original, pattern2);
+    }
+  svn_stringbuf_appendcstr(original, pattern4);
+
+  /* The modified contents become like this.
+
+     $ hexdump -C norm-offset-modified
+     00000000  20 20 20 20 20 20 20 20  20 20 20 20 20 20 20 0a  |               .|
+     00000010  0a 0a 0a 0a 0a 0a 0a 0a  0a 0a 0a 0a 0a 0a 0a 0a  |................|
+     *
+     00020000  20 20 20 20 20 20 20 20  20 20 20 20 20 20 20 20  |                |
+     00020010  20 20 20 20 20 20 20 20  40 40 40 40 40 40 40 0a  |        @@@@@@@.|
+     00020020  0a 0a 0a 0a 0a 0a 0a 0a  0a 0a 0a 0a 0a 0a 0a 0a  |................|
+     *
+     000203f0  0a 0a 0a 0a 0a 0a 0a 0a  20 20 20 20 20 20 20 0a  |........       .|
+     00020400
+  */
+  modified = svn_stringbuf_create_ensure(chunk_size + 1024, pool);
+  svn_stringbuf_appendcstr(modified, pattern4);
+  while (modified->len < chunk_size)
+    {
+      svn_stringbuf_appendcstr(modified, pattern2);
+    }
+  svn_stringbuf_appendcstr(modified, pattern3);
+  while (modified->len < chunk_size +1024 - 8)
+    {
+      svn_stringbuf_appendcstr(modified, pattern2);
+    }
+  svn_stringbuf_appendcstr(modified, pattern1);
+
+  /* Diff them.  Modulo whitespace, they are identical. */
+  diff_opts->ignore_space = svn_diff_file_ignore_space_all;
+  SVN_ERR(two_way_diff("norm-offset-original", "norm-offset-modified",
+                       original->data, modified->data, "",
+                       diff_opts, pool));
+
+  return SVN_NO_ERROR;
+}
 
 /* ========================================================================== */
 
@@ -2425,5 +2501,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "3-way merge with conflict styles"),
     SVN_TEST_PASS2(test_diff4,
                    "4-way merge; see variance-adjusted-patching.html"),
+    SVN_TEST_PASS2(test_norm_offset,
+                   "offset of the normalized token"),
     SVN_TEST_NULL
   };

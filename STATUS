@@ -231,22 +231,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1426752
-   Fix Issue #4133, an issue in the diff-libraries whitespace normalization
-   handling that might make diff use the wrong tokens, showing up as
-   unexpected changes.
-   Justification:
-     The diff library should behave properly when suppressing whitespace
-     changes.
-   Notes:
-     The branch is just needed for avoiding a conflict with the testcase.
-     Will probably conflict again if r1426762 and/or r1427278 are merged to
-     1.7.x, because they all add a test to the testlist in diff-diff3-test.c.
-   Branch:
-     ^/subversion/branches/1.7.x-r1426752
-   Votes:
-     +1: rhuijben, jcorvel, stsp
-
  * r1427278
    Fix another issue in the diff-libraries whitespace normalization
    handling that might make diff show unexpected changes, and even trying
