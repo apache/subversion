@@ -929,7 +929,11 @@ svn_client__export_externals(apr_hash_t *externals,
 
 /* Perform status operations on each external in EXTERNAL_MAP, a const char *
    local_abspath of all externals mapping to the const char* defining_abspath.
-   All other options are the same as those passed to svn_client_status(). */
+   All other options are the same as those passed to svn_client_status().
+
+   If ANCHOR_ABSPATH and ANCHOR-RELPATH are not null, use them to provide
+   properly formatted relative paths
+ */
 svn_error_t *
 svn_client__do_external_status(svn_client_ctx_t *ctx,
                                apr_hash_t *external_map,
@@ -937,9 +941,11 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
                                svn_boolean_t get_all,
                                svn_boolean_t update,
                                svn_boolean_t no_ignore,
+                               const char *anchor_abspath,
+                               const char *anchor_relpath,
                                svn_client_status_func_t status_func,
                                void *status_baton,
-                               apr_pool_t *pool);
+                               apr_pool_t *scratch_pool);
 
 /* Baton type for svn_wc__external_info_gatherer(). */
 typedef struct svn_client__external_func_baton_t

@@ -519,6 +519,7 @@ svn_client_status5(svn_revnum_t *result_rev,
       SVN_ERR(svn_client__do_external_status(ctx, external_map,
                                              depth, get_all,
                                              update, no_ignore,
+                                             sb.anchor_abspath, sb.anchor_relpath,
                                              status_func, status_baton, pool));
     }
 

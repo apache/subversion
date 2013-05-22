@@ -176,15 +176,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1434750
-   Resolve regression in 'svn status -u' output when running on externals.
-   Without this patch the paths in directory externals are shown as absolute
-   while all others are shown relative/as provided by the user.
-   Justification:
-     Consistent api behavior is good
-   Votes:
-     +1: rhuijben, stsp, breser
-
  * r1445753
    Fix issue #3741, 'externals not removed when working copy is made shallow'.
    Justification:
