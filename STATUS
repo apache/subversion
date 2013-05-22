@@ -143,14 +143,6 @@ Approved changes:
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 
- * r1482829
-   Reduce diskspace needed by our testsuite when using cleanup mode.
-   Justification:
-     A 256 MB ramdrive should be more than enough for running the
-     tests in parallel mode, but currently isn't.
-   Votes:
-     +1: rhuijben, pburba, breser
-
  * r1483116
    Retry removing test temporary directories when running as deferred deletes
    using a short delay.
