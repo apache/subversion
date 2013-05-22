@@ -143,13 +143,6 @@ Approved changes:
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 
- * r1483391, r1483397
-   Fix 'svn diff' erroring out on missing tree conflict victims.
-   Justification:
-     Regresion from 1.7.
-   Votes:
-     +1: stsp, rhuijben, pburba
-
  * r1482829
    Reduce diskspace needed by our testsuite when using cleanup mode.
    Justification:
