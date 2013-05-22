@@ -669,7 +669,7 @@ patterning_copy(char *target, const char *source, apr_size_t len)
 
 #if SVN_UNALIGNED_ACCESS_IS_OK
 
-  if (end + sizeof(apr_uint32_t) <= target)
+  if (source + sizeof(apr_uint32_t) <= target)
     {
       /* Source and target are at least 4 bytes apart, so we can copy in
        * 4-byte chunks.  */
