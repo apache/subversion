@@ -107,12 +107,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1482759, r1482779 
-   Prevent svnserve from exiting when a client connection is aborted.
-   Justification:
-     DoS against svnserve possible.
-   Branch:
-     ^/subversion/branches/1.6.x-r1482759
-   Votes:
-     +1: breser, stsp, philip
