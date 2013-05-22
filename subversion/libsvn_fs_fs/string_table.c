@@ -840,9 +840,8 @@ svn_fs_fs__string_table_get_func(const string_table_t *table,
               len = header->head_length + header->tail_length + 1;
               result = apr_palloc(pool, len);
               
-
               if (length)
-                *length = len + 1;
+                *length = len - 1;
               table_copy_string(result, len, &table_copy, header);
 
               return result;
