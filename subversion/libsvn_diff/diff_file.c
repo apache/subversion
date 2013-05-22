@@ -433,7 +433,7 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
         }
 
       is_match = TRUE;
-      for (delta = 0; delta < max_delta && is_match; delta += sizeof(apr_uintptr_t))
+      for (delta = 0; delta < max_delta; delta += sizeof(apr_uintptr_t))
         {
           apr_uintptr_t chunk = *(const apr_size_t *)(file[0].curp + delta);
           if (contains_eol(chunk))
@@ -443,18 +443,25 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
             if (chunk != *(const apr_size_t *)(file[i].curp + delta))
               {
                 is_match = FALSE;
-                delta -= sizeof(apr_size_t);
                 break;
               }
+
+          if (! is_match)
+            break;
         }
 
-      /* We either found a mismatch or an EOL at or shortly behind curp+delta
-       * or we cannot proceed with chunky ops without exceeding endp.
-       * In any way, everything up to curp + delta is equal and not an EOL.
-       */
-      for (i = 0; i < file_len; i++)
-        file[i].curp += delta;
+      if (delta /* > 0*/)
+        {
+          /* We either found a mismatch or an EOL at or shortly behind curp+delta
+           * or we cannot proceed with chunky ops without exceeding endp.
+           * In any way, everything up to curp + delta is equal and not an EOL.
+           */
+          for (i = 0; i < file_len; i++)
+            file[i].curp += delta;
 
+          /* Skipped data without EOL markers, so last char was not a CR. */
+          had_cr = FALSE; 
+        }
 #endif
 
       *reached_one_eof = is_one_at_eof(file, file_len);
@@ -634,32 +641,41 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
         can_read_word = can_read_word
                         && (   file_for_suffix[i].curp - sizeof(apr_uintptr_t)
                             >= min_curp[i]);
-      if (can_read_word)
+      while (can_read_word)
         {
-          do
+          apr_uintptr_t chunk;
+
+          /* For each file curp is positioned at the next byte to read, but we
+             want to examine the bytes before the current location. */
+
+          chunk = *(const apr_uintptr_t *)(file_for_suffix[0].curp + 1
+                                             - sizeof(apr_uintptr_t));
+          if (contains_eol(chunk))
+            break;
+
+          for (i = 1, is_match = TRUE; i < file_len; i++)
+            is_match = is_match
+                       && (   chunk
+                           == *(const apr_uintptr_t *)
+                                    (file_for_suffix[i].curp + 1
+                                       - sizeof(apr_uintptr_t)));
+
+          if (! is_match)
+            break;
+
+          for (i = 0; i < file_len; i++)
             {
-              apr_uintptr_t chunk;
-              for (i = 0; i < file_len; i++)
-                file_for_suffix[i].curp -= sizeof(apr_uintptr_t);
+              file_for_suffix[i].curp -= sizeof(apr_uintptr_t);
+              can_read_word = can_read_word
+                              && (   (file_for_suffix[i].curp
+                                        - sizeof(apr_uintptr_t))
+                                  >= min_curp[i]);
+            }
 
-              chunk = *(const apr_uintptr_t *)(file_for_suffix[0].curp + 1);
-              if (contains_eol(chunk))
-                break;
-
-              for (i = 0, can_read_word = TRUE; i < file_len; i++)
-                can_read_word = can_read_word
-                                && (   file_for_suffix[i].curp - sizeof(apr_uintptr_t)
-                                    >= min_curp[i]);
-              for (i = 1, is_match = TRUE; i < file_len; i++)
-                is_match = is_match
-                           && (   chunk
-                               == *(const apr_uintptr_t *)(file_for_suffix[i].curp + 1));
-            } while (can_read_word && is_match);
-
-            for (i = 0; i < file_len; i++)
-              file_for_suffix[i].curp += sizeof(apr_uintptr_t);
+          /* We skipped 4 bytes, so there are no closing EOLs */
+          had_nl = FALSE;
+          had_cr = FALSE;
         }
-
 #endif
 
       reached_prefix = file_for_suffix[0].chunk == suffix_min_chunk0
