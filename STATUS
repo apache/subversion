@@ -55,6 +55,19 @@ Candidate changes:
      -0: rhuijben (Is this needed on this branch?)
      +1: stsp, danielsh (as much as it's needed on trunk)
 
+ * r1426762
+   Fix issue #4283, When the identical suffix starts at chunk boundary, "svn
+   diff" produces incorrect diff.
+   Justification:
+     Without this patch the identical suffix might show up as an added or
+     deleted suffix of a file.
+   Notes:
+     Will probably conflict if r1426752 and/or r1427278 are merged to
+     1.7.x, because they all add a test to the testlist in diff-diff3-test.c.
+   Votes:
+     +1: rhuijben, jcorvel
+     +0: stsp (doesn't compile, undefined reference to `svn_stringbuf_insert')
+
  * r1434128, r1434435, r1434476
    Fix issue #4034, 'blame on files with non-native eol-style sees every
    line as modified'.
@@ -231,18 +244,6 @@ Approved changes:
      1.7.x, because they all add a test to the testlist in diff-diff3-test.c.
    Branch:
      ^/subversion/branches/1.7.x-r1426752
-   Votes:
-     +1: rhuijben, jcorvel, stsp
-
- * r1426762
-   Fix issue #4283, When the identical suffix starts at chunk boundary, "svn
-   diff" produces incorrect diff.
-   Justification:
-     Without this patch the identical suffix might show up as an added or
-     deleted suffix of a file.
-   Notes:
-     Will probably conflict if r1426752 and/or r1427278 are merged to
-     1.7.x, because they all add a test to the testlist in diff-diff3-test.c.
    Votes:
      +1: rhuijben, jcorvel, stsp
 
