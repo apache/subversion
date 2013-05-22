@@ -231,23 +231,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1427278
-   Fix another issue in the diff-libraries whitespace normalization
-   handling that might make diff show unexpected changes, and even trying
-   to read beyond end of file.
-   Justification:
-     The diff library should behave properly when suppressing whitespace
-     changes. See also http://svn.haxx.se/dev/archive-2012-12/0556.shtml
-     for some examples of this bug.
-   Notes:
-     The branch is just needed for avoiding a conflict with adding a comment.
-     Will probably conflict again if r1426752 and/or r1426762 are merged to
-     1.7.x, because they all add a test to the testlist in diff-diff3-test.c.
-   Branch:
-     ^/subversion/branches/1.7.x-r1427278
-   Votes:
-     +1: jcorvel, rhuijben, stsp
-
  * r1427197, r1427210
    Fix issue #4270 'diff -cN shows wrong line changed'.  In the optimized
    code path (unaligned access) for prefix/suffix scanning, the diff would
