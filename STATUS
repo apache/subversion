@@ -138,13 +138,6 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1485350
-   contrib: fix some argument passing.
-   Justification:
-     More robust that way.
-   Votes:
-     +1: danielsh, stsp
-
 Approved for 1.8.1 or if soak is restarted for 1.8.0:
 ====================================================
 
@@ -168,3 +161,9 @@ Approved changes:
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 
+ * r1485350
+   contrib: fix some argument passing.
+   Justification:
+     More robust that way.
+   Votes:
+     +1: danielsh, stsp, breser
