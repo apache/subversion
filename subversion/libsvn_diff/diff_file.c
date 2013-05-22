@@ -634,7 +634,7 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
         min_curp[0] += suffix_min_offset0;
 
       /* Scan quickly by reading with machine-word granularity. */
-      for (i = 0, can_read_word = TRUE; i < file_len; i++)
+      for (i = 0, can_read_word = TRUE; can_read_word && i < file_len; i++)
         can_read_word = can_read_word
                         && (  (file_for_suffix[i].curp + 1
                                  - sizeof(apr_uintptr_t))
@@ -652,7 +652,7 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
           if (contains_eol(chunk))
             break;
 
-          for (i = 1, is_match = TRUE; i < file_len; i++)
+          for (i = 1, is_match = TRUE; is_match && i < file_len; i++)
             is_match = is_match
                        && (   chunk
                            == *(const apr_uintptr_t *)
