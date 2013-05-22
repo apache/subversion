@@ -120,6 +120,15 @@ Candidate changes:
      +1: mattiase (non-binding, not including r1485018)
      +1: breser
 
+ * r1485127
+   Revert 1.8 behavior change that breaks some url forms when passed to
+   ra_local. Without this some existing working copies using non standard
+   urls to access the repository might be broken.
+   Justification:
+     Restores functionality that was lost in 1.8 compared to 1.7.
+   Votes:
+     +1: rhuijben (for 1.8.1 or soak restart)
+
 Approved for 1.8.1 or if soak is restarted for 1.8.0:
 ====================================================
 
