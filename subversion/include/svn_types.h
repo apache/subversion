@@ -72,6 +72,10 @@ extern "C" {
  * Unaligned access on other machines (e.g. IA64) will trigger memory
  * access faults or simply misbehave.
  *
+ * Note: Some platforms may only support unaligned access for integers
+ * (PowerPC).  As a result this macro should only be used to determine
+ * if unaligned access is supported for integers.
+ *
  * @since New in 1.7.
  */
 #ifndef SVN_UNALIGNED_ACCESS_IS_OK
