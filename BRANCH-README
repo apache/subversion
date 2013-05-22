@@ -1,0 +1,47 @@
+This is a development branch, intended for prototyping ideas around move
+tracking, with an emphasis on the client side and how move information can
+be used in merging.
+
+The branch should be maintained with catch-up merges from trunk.
+
+The branch should NOT be merged back to trunk.
+
+The code on this branch should build but need not pass testing at all times.
+
+Everything documented here is subject to change from time to time.
+
+
+== Main Goals ==
+
+  * Discover which APIs and API concepts will be affected by move tracking:
+    which need to be modified to maintain backward compatibility, and which
+    need to be extended to handle moves.  See
+    <http://wiki.apache.org/subversion/MergeDev/ApiChangesForMove>.
+
+  * Establish how to feed move information into diff and merge.
+
+  * Keep backward compatibility.
+
+
+== Non-Goals for This Branch ==
+
+  * FSFS storage format.
+
+  * APIs at libsvn_repos, libsvn_fs and libsvn_fs_fs.
+
+  * Wire protocols.
+
+  * A new merge algorithm.
+
+
+== Tasks and Changes ==
+
+  * Implement simple move tracking in FSFS, sufficient to provide move
+    information on demand.  (An alternative would be to implement heuristic
+    move detection.) [STARTED]
+
+  * Create a tree-diff representation to include move information.  Perhaps
+    based on svn_diff_tree_processor_t, svn_delta_editor_t or Ev2.  The move
+    information may be in the form of a list of matching node pairs.
+
+  * ...
