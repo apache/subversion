@@ -1,6 +1,6 @@
-Version 1.6.22
+Version 1.6.23
 (30 May 2013, from /branches/1.6.x)
-http://svn.apache.org/repos/asf/subversion/tags/1.6.22
+http://svn.apache.org/repos/asf/subversion/tags/1.6.23
 
  User-visible changes
   - Server-side bugfixes:
@@ -9,6 +9,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.22
 
   - Other tool improvements and bugfixes:
     * fix argument processing in contrib hook scripts (r1485350)
+
+
+Version 1.6.22
+(Not released, see changes for 1.6.23.)
 
 
 Version 1.6.21
