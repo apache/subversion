@@ -1,3 +1,16 @@
+Version 1.6.22
+(30 May 2013, from /branches/1.6.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.6.22
+
+ User-visible changes
+  - Server-side bugfixes:
+    * fix repository corruption due to newline in filename (issue #4340)
+    * fix svnserve exiting when a client connection is aborted (r1482759)
+
+  - Other tool improvements and bugfixes:
+    * fix argument processing in contrib hook scripts (r1485350)
+
+
 Version 1.6.21
 (04 Apr 2013, from /branches/1.6.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.6.21
