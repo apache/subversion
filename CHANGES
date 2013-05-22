@@ -1,3 +1,36 @@
+Version 1.7.10
+(30 May 2013, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.10
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * fix 'svn revert' "no such table: revert_list" spurious error (issue #4168)
+    * fix 'svn diff' doesn't show some locally added files (issue #3797)
+    * fix changelist filtering when --changelist values aren't UTF8 (r1475724)
+    * fix 'svn diff --git' shows wrong copyfrom (issue #4294)
+    * fix 'svn diff -x-w' shows wrong changes (issues #4133 and #4270, r1427278)
+    * fix 'svn blame' sometimes shows every line as modified (issue #4034)
+    * fix regression in 'svn status -u' output for externals (r1434750)
+    * fix file permissions change on commit of file with keywords (issue #4331)
+    * improve some fatal error messages (r1465975)
+    * fix externals not removed when working copy is made shallow (issue #3741)
+
+  - Server-side bugfixes:
+    * fix repository corruption due to newline in filename (issue #4340)
+    * fix svnserve exiting when a client connection is aborted (r1482759)
+    * fix svnserve memory use after clear (issue #4365)
+    * fix repository corruption on power/disk failure on Windows (r1483781)
+
+ Developer-visible changes
+  - General:
+    * make get-deps.sh compatible with Solaris /bin/sh (r1451678)
+    * fix infinite recursion bug in get-deps.sh (r1421541, r1424977)
+    * fix uninitialised output parameter of svn_fs_commit_txn() (r1461743)
+
+  - Bindings:
+    * fix JavaHL thread-safety bug (r1476359)
+
+
 Version 1.7.9
 (04 Apr 2013, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.9
