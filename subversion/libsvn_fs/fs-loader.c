@@ -1176,6 +1176,14 @@ svn_fs_copy(svn_fs_root_t *from_root, const char *from_path,
 }
 
 svn_error_t *
+svn_fs_move(svn_fs_root_t *root, const char *from_path,
+            const char *to_path, apr_pool_t *pool)
+{
+  SVN_ERR(svn_fs__path_valid(to_path, pool));
+  return svn_error_trace(root->vtable->move(root, from_path, to_path, pool));
+}
+
+svn_error_t *
 svn_fs_revision_link(svn_fs_root_t *from_root, svn_fs_root_t *to_root,
                      const char *path, apr_pool_t *pool)
 {

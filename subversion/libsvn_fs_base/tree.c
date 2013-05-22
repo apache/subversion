@@ -5376,6 +5376,7 @@ static root_vtable_t root_vtable = {
   base_dir_entries,
   base_make_dir,
   base_copy,
+  NULL /* move */,
   base_revision_link,
   base_file_length,
   base_file_checksum,

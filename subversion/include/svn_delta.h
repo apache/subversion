@@ -890,6 +890,11 @@ typedef struct svn_delta_editor_t
    * copy), and the origin of the copy may be recorded as
    * @a copyfrom_path under @a copyfrom_revision.
    *
+   * If @a copyfrom_revision is SVN_INVALID_REVNUM, then this is a move
+   * rather than a copy, and @a copyfrom_path identifies the source node
+   * of the move by reference to a path within the current tree being
+   * edited.  This implicitly deletes the node which was at the source path.
+   *
    * Allocations for the returned @a child_baton should be performed in
    * @a result_pool. It is also typical to (possibly) save this pool for
    * later usage by @c close_directory.
@@ -962,9 +967,7 @@ typedef struct svn_delta_editor_t
    * store a baton for this new file in @a **file_baton; whatever value
    * it stores there should be passed through to @c apply_textdelta.
    *
-   * If @a copyfrom_path is non-@c NULL, this add has history (i.e., is a
-   * copy), and the origin of the copy may be recorded as
-   * @a copyfrom_path under @a copyfrom_revision.
+   * @a copyfrom_path and @a copyfrom_revision are as for @c add_directory.
    *
    * Allocations for the returned @a file_baton should be performed in
    * @a result_pool. It is also typical to save this pool for later usage

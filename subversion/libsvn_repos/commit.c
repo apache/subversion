@@ -284,12 +284,6 @@ add_file_or_directory(const char *path,
   full_path = svn_fspath__join(eb->base_path,
                                svn_relpath_canonicalize(path, pool), pool);
 
-  /* Sanity check. */
-  if (copy_path && (! SVN_IS_VALID_REVNUM(copy_revision)))
-    return svn_error_createf
-      (SVN_ERR_FS_GENERAL, NULL,
-       _("Got source path but no source revision for '%s'"), full_path);
-
   if (copy_path)
     {
       const char *fs_path;
@@ -325,17 +319,36 @@ add_file_or_directory(const char *path,
 
       fs_path = apr_pstrdup(subpool, copy_path + repos_url_len);
 
-      /* Now use the "fs_path" as an absolute path within the
-         repository to make the copy from. */
-      SVN_ERR(svn_fs_revision_root(&copy_root, eb->fs,
-                                   copy_revision, subpool));
+      /* Is this a copy or a move? */
+      if (SVN_IS_VALID_REVNUM(copy_revision))
+        {
+          /* Now use the "fs_path" as an absolute path within the
+             repository to make the copy from. */
+          SVN_ERR(svn_fs_revision_root(&copy_root, eb->fs,
+                                       copy_revision, subpool));
 
-      /* Copy also requires (recursive) read access to the source */
-      required = svn_authz_read | (is_dir ? svn_authz_recursive : 0);
-      SVN_ERR(check_authz(eb, fs_path, copy_root, required, subpool));
+          /* Copy also requires (recursive) read access to the source */
+          required = svn_authz_read | (is_dir ? svn_authz_recursive : 0);
+          SVN_ERR(check_authz(eb, fs_path, copy_root, required, subpool));
 
-      SVN_ERR(svn_fs_copy(copy_root, fs_path,
-                          eb->txn_root, full_path, subpool));
+          SVN_ERR(svn_fs_copy(copy_root, fs_path,
+                              eb->txn_root, full_path, subpool));
+        }
+      else
+        {
+          const char *from_parent_fs_path
+            = svn_fspath__dirname(fs_path, subpool);
+
+          /* Move also requires (recursive) write access to the source node
+             and write access to its parent directory. */
+          required = svn_authz_write | (is_dir ? svn_authz_recursive : 0);
+          SVN_ERR(check_authz(eb, fs_path, eb->txn_root, required, subpool));
+          SVN_ERR(check_authz(eb, from_parent_fs_path, eb->txn_root,
+                              svn_authz_write, subpool));
+
+          SVN_ERR(svn_fs_move(eb->txn_root, fs_path, full_path, subpool));
+        }
+
       was_copied = TRUE;
     }
   else

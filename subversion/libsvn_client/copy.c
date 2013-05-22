@@ -603,8 +603,9 @@ path_driver_cb_func(void **dir_baton,
                     apr_pool_t *pool)
 {
   struct path_driver_cb_baton *cb_baton = callback_baton;
-  svn_boolean_t do_delete = FALSE, do_add = FALSE;
   path_driver_info_t *path_info = svn_hash_gets(cb_baton->action_hash, path);
+
+  SVN_ERR_ASSERT(! (path_info->resurrection && cb_baton->is_move));
 
   /* Initialize return value. */
   *dir_baton = NULL;
@@ -622,69 +623,35 @@ path_driver_cb_func(void **dir_baton,
                                              dir_baton);
     }
 
-  /* If this is a resurrection, we know the source and dest paths are
-     the same, and that our driver will only be calling us once.  */
-  if (path_info->resurrection)
+  SVN_ERR(svn_path_check_valid(path, pool));
+
+  if (path_info->src_kind == svn_node_file)
     {
-      /* If this is a move, we do nothing.  Otherwise, we do the copy.  */
-      if (! cb_baton->is_move)
-        do_add = TRUE;
+      void *file_baton;
+      SVN_ERR(cb_baton->editor->add_file(path, parent_baton,
+                                         path_info->src_url,
+                                         path_info->src_revnum,
+                                         pool, &file_baton));
+      if (path_info->mergeinfo)
+        SVN_ERR(cb_baton->editor->change_file_prop(file_baton,
+                                                   SVN_PROP_MERGEINFO,
+                                                   path_info->mergeinfo,
+                                                   pool));
+      SVN_ERR(cb_baton->editor->close_file(file_baton, NULL, pool));
     }
-  /* Not a resurrection. */
   else
     {
-      /* If this is a move, we check PATH to see if it is the source
-         or the destination of the move. */
-      if (cb_baton->is_move)
-        {
-          if (strcmp(path_info->src_path, path) == 0)
-            do_delete = TRUE;
-          else
-            do_add = TRUE;
-        }
-      /* Not a move?  This must just be the copy addition. */
-      else
-        {
-          do_add = TRUE;
-        }
+      SVN_ERR(cb_baton->editor->add_directory(path, parent_baton,
+                                              path_info->src_url,
+                                              path_info->src_revnum,
+                                              pool, dir_baton));
+      if (path_info->mergeinfo)
+        SVN_ERR(cb_baton->editor->change_dir_prop(*dir_baton,
+                                                  SVN_PROP_MERGEINFO,
+                                                  path_info->mergeinfo,
+                                                  pool));
     }
 
-  if (do_delete)
-    {
-      SVN_ERR(cb_baton->editor->delete_entry(path, SVN_INVALID_REVNUM,
-                                             parent_baton, pool));
-    }
-  if (do_add)
-    {
-      SVN_ERR(svn_path_check_valid(path, pool));
-
-      if (path_info->src_kind == svn_node_file)
-        {
-          void *file_baton;
-          SVN_ERR(cb_baton->editor->add_file(path, parent_baton,
-                                             path_info->src_url,
-                                             path_info->src_revnum,
-                                             pool, &file_baton));
-          if (path_info->mergeinfo)
-            SVN_ERR(cb_baton->editor->change_file_prop(file_baton,
-                                                       SVN_PROP_MERGEINFO,
-                                                       path_info->mergeinfo,
-                                                       pool));
-          SVN_ERR(cb_baton->editor->close_file(file_baton, NULL, pool));
-        }
-      else
-        {
-          SVN_ERR(cb_baton->editor->add_directory(path, parent_baton,
-                                                  path_info->src_url,
-                                                  path_info->src_revnum,
-                                                  pool, dir_baton));
-          if (path_info->mergeinfo)
-            SVN_ERR(cb_baton->editor->change_dir_prop(*dir_baton,
-                                                      SVN_PROP_MERGEINFO,
-                                                      path_info->mergeinfo,
-                                                      pool));
-        }
-    }
   return SVN_NO_ERROR;
 }
 
@@ -849,7 +816,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
 
       /* Plop an INFO structure onto our array thereof. */
       info->src_url = pair->src_abspath_or_url;
-      info->src_revnum = pair->src_revnum;
+      info->src_revnum = is_move ? SVN_INVALID_REVNUM : pair->src_revnum;
       info->resurrection = FALSE;
       APR_ARRAY_PUSH(path_infos, path_driver_info_t *) = info;
     }
@@ -1122,15 +1089,13 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
         }
     }
 
-  /* Then our copy destinations and move sources (if any). */
+  /* Then our copy destinations. */
   for (i = 0; i < path_infos->nelts; i++)
     {
       path_driver_info_t *info = APR_ARRAY_IDX(path_infos, i,
                                                path_driver_info_t *);
 
       APR_ARRAY_PUSH(paths, const char *) = info->dst_path;
-      if (is_move && (! info->resurrection))
-        APR_ARRAY_PUSH(paths, const char *) = info->src_path;
     }
 
   SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,

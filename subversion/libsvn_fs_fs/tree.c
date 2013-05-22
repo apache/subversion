@@ -2483,6 +2483,30 @@ fs_copy(svn_fs_root_t *from_root,
 }
 
 
+/* Move FROM_PATH to TO_PATH in ROOT.
+ *
+ * Temporary allocations are from POOL.
+ */
+static svn_error_t *
+fs_move(svn_fs_root_t *root,
+        const char *from_path,
+        const char *to_path,
+        apr_pool_t *pool)
+{
+  svn_fs_root_t *from_root;
+
+  SVN_ERR(check_newline(to_path, pool));
+  from_path = svn_fs__canonicalize_abspath(from_path, pool);
+  to_path = svn_fs__canonicalize_abspath(to_path, pool);
+
+  SVN_ERR(svn_fs_fs__revision_root(&from_root, root->fs, root->rev, pool));
+  SVN_ERR(fs_delete_node(root, from_path, pool));
+  SVN_ERR(copy_helper(from_root, from_path, root, to_path,
+                      FALSE /*preserve_history*/, pool));
+  return SVN_NO_ERROR;
+}
+
+
 /* Create a copy of FROM_PATH in FROM_ROOT named TO_PATH in TO_ROOT.
    If FROM_PATH is a directory, copy it recursively.  No history is
    preserved.  Temporary allocations are from POOL. */
@@ -3134,7 +3158,10 @@ typedef struct fs_history_data_t
   const char *path_hint;
   svn_revnum_t rev_hint;
 
-  /* FALSE until the first call to svn_fs_history_prev(). */
+  /* If true, this history object is being reported (or was or will be
+   * reported) by the prev() method.  (If false, the location described
+   * by this history object might still be found to be interesting and,
+   * if so, then a new object will be created to report it). */
   svn_boolean_t is_interesting;
 } fs_history_data_t;
 
@@ -3462,6 +3489,11 @@ fs_node_origin_rev(svn_revnum_t *revision,
 }
 
 
+/* Set *PREV_HISTORY to a description of the previous, potentially
+ * interesting, history location before HISTORY. If the location described
+ * is not actually interesting (for example, it is a copy but not a
+ * copy-root), then set its 'is_interesting' field to false.
+ */
 static svn_error_t *
 history_prev(svn_fs_history_t **prev_history,
              svn_fs_history_t *history,
@@ -3484,9 +3516,12 @@ history_prev(svn_fs_history_t **prev_history,
   /* Initialize our return value. */
   *prev_history = NULL;
 
-  /* If our last history report left us hints about where to pickup
-     the chase, then our last report was on the destination of a
-     copy.  If we are crossing copies, start from those locations,
+  SVN_DBG(("history: %s@%ld (from %s@%ld)",
+           fhd->path, fhd->revision,
+           fhd->path_hint, fhd->rev_hint));
+  /* If our last history report left us hints about where to pick up
+     the chase, then our last report was on the destination of a copy
+     or move.  If we are crossing copies, start from those locations,
      otherwise, we're all done here.  */
   if (fhd->path_hint && SVN_IS_VALID_REVNUM(fhd->rev_hint))
     {
@@ -3506,6 +3541,7 @@ history_prev(svn_fs_history_t **prev_history,
   node = parent_path->node;
   commit_path = svn_fs_fs__dag_get_created_path(node);
   SVN_ERR(svn_fs_fs__dag_get_revision(&commit_rev, node, scratch_pool));
+  SVN_DBG(("ppath.noderev=%s", svn_fs_fs__id_unparse(svn_fs_fs__dag_get_id(node), scratch_pool)->data));
 
   /* The Subversion filesystem is written in such a way that a given
      line of history may have at most one interesting history point
@@ -3514,7 +3550,7 @@ history_prev(svn_fs_history_t **prev_history,
      source cannot be from the same revision as its destination.  So,
      if our history revision matches its node's commit revision, we
      know that ... */
-  if (revision == commit_rev)
+  if (revision == commit_rev || strcmp(path, commit_path) != 0)
     {
       if (! reported)
         {
@@ -3591,19 +3627,14 @@ history_prev(svn_fs_history_t **prev_history,
 
   /* If we calculated a copy source path and revision, we'll make a
      'copy-style' history object. */
-  if (src_path && SVN_IS_VALID_REVNUM(src_rev))
+  if (src_path)
     {
-      svn_boolean_t retry = FALSE;
-
       /* It's possible for us to find a copy location that is the same
          as the history point we've just reported.  If that happens,
          we simply need to take another trip through this history
          search. */
-      if ((dst_rev == revision) && reported)
-        retry = TRUE;
-
       *prev_history = assemble_history(fs, apr_pstrdup(result_pool, path),
-                                       dst_rev, ! retry,
+                                       dst_rev, dst_rev != revision || ! reported,
                                        src_path, src_rev, result_pool);
     }
   else
@@ -4124,6 +4155,7 @@ static root_vtable_t root_vtable = {
   fs_dir_entries,
   fs_make_dir,
   fs_copy,
+  fs_move,
   fs_revision_link,
   fs_file_length,
   fs_file_checksum,
