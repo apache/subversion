@@ -16,7 +16,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.10
     * fix externals not removed when working copy is made shallow (issue #3741)
 
   - Server-side bugfixes:
-    * fix repository corruption due to newline in filename (issue #4340)
+    * fix FSFS repository corruption due to newline in filename (issue #4340)
     * fix svnserve exiting when a client connection is aborted (r1482759)
     * fix svnserve memory use after clear (issue #4365)
     * fix repository corruption on power/disk failure on Windows (r1483781)
@@ -570,6 +570,23 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * Deprecate the SVNClientSynchronized class in JavaHL (issue #2755)
     * fixed setting binary properties in JavaHL (issue #3770)
     * fix type mapping of svn_txdelta_window_t in python bindings (issue #3688)
+
+
+Version 1.6.23
+(30 May 2013, from /branches/1.6.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.6.23
+
+ User-visible changes
+  - Server-side bugfixes:
+    * fix FSFS repository corruption due to newline in filename (issue #4340)
+    * fix svnserve exiting when a client connection is aborted (r1482759)
+
+  - Other tool improvements and bugfixes:
+    * fix argument processing in contrib hook scripts (r1485350)
+
+
+Version 1.6.22
+(Not released, see changes for 1.6.23.)
 
 
 Version 1.6.21
