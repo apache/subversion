@@ -171,8 +171,8 @@ svn_repos_get_committed_info(svn_revnum_t *committed_rev,
   SVN_ERR(svn_fs_revision_proplist(&revprops, fs, *committed_rev, pool));
 
   /* Extract date and author from these revprops. */
-  committed_date_s = svn_hash_gets_fixed_key(revprops, SVN_PROP_REVISION_DATE);
-  last_author_s = svn_hash_gets_fixed_key(revprops, SVN_PROP_REVISION_AUTHOR);
+  committed_date_s = svn_hash_gets(revprops, SVN_PROP_REVISION_DATE);
+  last_author_s = svn_hash_gets(revprops, SVN_PROP_REVISION_AUTHOR);
 
   *committed_date = committed_date_s ? committed_date_s->data : NULL;
   *last_author = last_author_s ? last_author_s->data : NULL;

@@ -591,7 +591,13 @@ desirability:
   * The protocol version may be bumped.  Clients and servers can then
     choose to any range of protocol versions.
 
-4.1. Extending existing commands
+4.1. Limitations
+
+The current implementation limits the length of a word to 31 characters.
+Longer words, such as capability names, will be cause an error on the
+receiver side.
+
+4.2. Extending existing commands
 
 Extending an existing command is normally done by indicating that its
 tuple is allowed to end where it currently ends, for backwards

@@ -832,7 +832,7 @@ hotcopy_body(void *baton, apr_pool_t *pool)
 
   /* Hotcopied FS is complete. Stamp it with a format file. */
   dst_ffd->max_files_per_dir = max_files_per_dir;
-  SVN_ERR(svn_fs_fs__write_format(dst_fs, pool));
+  SVN_ERR(svn_fs_fs__write_format(dst_fs, TRUE, pool));
 
   return SVN_NO_ERROR;
 }

@@ -1104,8 +1104,7 @@ prepare_merge_props_changed(const apr_array_header_t **prop_updates,
                                                 scratch_pool));
 
               if (pristine_props
-                  && svn_hash_gets_fixed_key(pristine_props,
-                                             SVN_PROP_MERGEINFO))
+                  && svn_hash_gets(pristine_props, SVN_PROP_MERGEINFO))
                 has_pristine_mergeinfo = TRUE;
 
               if (!has_pristine_mergeinfo && prop->value)
@@ -2173,7 +2172,7 @@ merge_file_added(const char *relpath,
           pristine_props = right_props; /* Includes last_* information */
           new_props = NULL; /* No local changes */
 
-          if (svn_hash_gets_fixed_key(pristine_props, SVN_PROP_MERGEINFO))
+          if (svn_hash_gets(pristine_props, SVN_PROP_MERGEINFO))
             {
               alloc_and_store_path(&merge_b->paths_with_new_mergeinfo,
                                    local_abspath, merge_b->pool);
@@ -2201,7 +2200,7 @@ merge_file_added(const char *relpath,
           new_props = svn_prop_array_to_hash(regular_props, scratch_pool);
 
           /* Issue #3383: We don't want mergeinfo from a foreign repository. */
-          svn_hash_sets_fixed_key(new_props, SVN_PROP_MERGEINFO, NULL);
+          svn_hash_sets(new_props, SVN_PROP_MERGEINFO, NULL);
         }
 
       /* Do everything like if we had called 'svn cp PATH1 PATH2'. */
@@ -2754,7 +2753,7 @@ merge_dir_opened(void **new_dir_baton,
               SVN_ERR(svn_wc_add4(merge_b->ctx->wc_ctx, local_abspath,
                                   svn_depth_infinity,
                                   original_url,
-                                  merge_b->merge_source.loc2->rev,
+                                  right_source->revision,
                                   merge_b->ctx->cancel_func,
                                   merge_b->ctx->cancel_baton,
                                   NULL, NULL /* no notify! */,
@@ -2954,7 +2953,7 @@ merge_dir_added(const char *relpath,
 
       copyfrom_url = svn_path_url_add_component2(merge_b->merge_source.loc2->url,
                                                  child, scratch_pool);
-      copyfrom_rev = merge_b->merge_source.loc2->rev;
+      copyfrom_rev = right_source->revision;
 
       SVN_ERR(check_repos_match(merge_b->target, parent_abspath, copyfrom_url,
                                 scratch_pool));
@@ -2968,7 +2967,7 @@ merge_dir_added(const char *relpath,
                                                 scratch_pool));
         }
 
-      if (svn_hash_gets_fixed_key(new_pristine_props, SVN_PROP_MERGEINFO))
+      if (svn_hash_gets(new_pristine_props, SVN_PROP_MERGEINFO))
         {
           alloc_and_store_path(&merge_b->paths_with_new_mergeinfo,
                                local_abspath, merge_b->pool);
@@ -2986,7 +2985,7 @@ merge_dir_added(const char *relpath,
 
       new_props = svn_prop_array_to_hash(regular_props, scratch_pool);
 
-      svn_hash_sets_fixed_key(new_props, SVN_PROP_MERGEINFO, NULL);
+      svn_hash_sets(new_props, SVN_PROP_MERGEINFO, NULL);
 
       /* ### What is the easiest way to set new_props on LOCAL_ABSPATH?
 
@@ -3195,7 +3194,7 @@ merge_dir_deleted(const char *relpath,
     {
       /* Record that we might have deleted mergeinfo */
       if (working_props
-          && svn_hash_gets_fixed_key(working_props, SVN_PROP_MERGEINFO))
+          && svn_hash_gets(working_props, SVN_PROP_MERGEINFO))
         {
           alloc_and_store_path(&merge_b->paths_with_deleted_mergeinfo,
                                local_abspath, merge_b->pool);

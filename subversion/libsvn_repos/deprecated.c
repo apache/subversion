@@ -57,11 +57,11 @@ svn_repos_get_commit_editor4(const svn_delta_editor_t **editor,
 {
   apr_hash_t *revprop_table = apr_hash_make(pool);
   if (user)
-    svn_hash_sets_fixed_key(revprop_table, SVN_PROP_REVISION_AUTHOR,
-                            svn_string_create(user, pool));
+    svn_hash_sets(revprop_table, SVN_PROP_REVISION_AUTHOR,
+                  svn_string_create(user, pool));
   if (log_msg)
-    svn_hash_sets_fixed_key(revprop_table, SVN_PROP_REVISION_LOG,
-                            svn_string_create(log_msg, pool));
+    svn_hash_sets(revprop_table, SVN_PROP_REVISION_LOG,
+                  svn_string_create(log_msg, pool));
   return svn_repos_get_commit_editor5(editor, edit_baton, repos, txn,
                                       repos_url, base_path, revprop_table,
                                       commit_callback, commit_baton,

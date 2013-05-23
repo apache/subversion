@@ -56,6 +56,12 @@
 
 #define SUSPICIOUSLY_HUGE_STRING_SIZE_THRESHOLD (0x100000)
 
+/* We don't use "words" longer than this in our protocol.  The longest word
+ * we are currently using is only about 16 chars long but we leave room for
+ * longer future capability and command names.
+ */
+#define MAX_WORD_LENGTH 31
+
 /* Return the APR socket timeout to be used for the connection depending
  * on whether there is a blockage handler or zero copy has been activated. */
 static apr_interval_time_t
@@ -929,7 +935,6 @@ svn_ra_svn__write_tuple(svn_ra_svn_conn_t *conn,
 static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                 svn_ra_svn_item_t *item, apr_uint64_t len64)
 {
-  svn_stringbuf_t *stringbuf;
   apr_size_t len = (apr_size_t)len64;
   apr_size_t readbuf_len;
   char *dest;
@@ -940,51 +945,53 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                             _("String length larger than maximum"));
 
-  /* Read the string in chunks.  The chunk size is large enough to avoid
-   * re-allocation in typical cases, and small enough to ensure we do not
-   * pre-allocate an unreasonable amount of memory if (perhaps due to
-   * network data corruption or a DOS attack), we receive a bogus claim that
-   * a very long string is going to follow.  In that case, we start small
-   * and wait for all that data to actually show up.  This does not fully
-   * prevent DOS attacks but makes them harder (you have to actually send
-   * gigabytes of data). */
-  readbuf_len = len < SUSPICIOUSLY_HUGE_STRING_SIZE_THRESHOLD
-                    ? len
-                    : SUSPICIOUSLY_HUGE_STRING_SIZE_THRESHOLD;
-  stringbuf = svn_stringbuf_create_ensure(readbuf_len, pool);
-  dest = stringbuf->data;
-
-  /* Read remaining string data directly into the string structure.
-   * Do it iteratively, if necessary.  */
-  while (readbuf_len)
+  /* Shorter strings can be copied directly from the read buffer. */
+  if (conn->read_ptr + len <= conn->read_end)
     {
-      SVN_ERR(readbuf_read(conn, pool, dest, readbuf_len));
-
-      stringbuf->len += readbuf_len;
-      len -= readbuf_len;
-
-      /* Early exit. In most cases, strings can be read in the first
-       * iteration. */
-      if (len == 0)
-        break;
-
-      /* Prepare next iteration: determine length of chunk to read
-       * and re-alloc the string buffer. */
-      readbuf_len
-        = len < SUSPICIOUSLY_HUGE_STRING_SIZE_THRESHOLD
-              ? len
-              : SUSPICIOUSLY_HUGE_STRING_SIZE_THRESHOLD;
-
-      svn_stringbuf_ensure(stringbuf, stringbuf->len + readbuf_len);
-      dest = stringbuf->data + stringbuf->len;
+      item->kind = SVN_RA_SVN_STRING;
+      item->u.string = svn_string_ncreate(conn->read_ptr, len, pool);
+      conn->read_ptr += len;
     }
+  else
+    {
+      /* Read the string in chunks.  The chunk size is large enough to avoid
+       * re-allocation in typical cases, and small enough to ensure we do
+       * not pre-allocate an unreasonable amount of memory if (perhaps due
+       * to network data corruption or a DOS attack), we receive a bogus
+       * claim that a very long string is going to follow.  In that case, we
+       * start small and wait for all that data to actually show up.  This
+       * does not fully prevent DOS attacks but makes them harder (you have
+       * to actually send gigabytes of data). */
+      svn_stringbuf_t *stringbuf = svn_stringbuf_create_empty(pool);
 
-  /* zero-terminate the string */
-  stringbuf->data[stringbuf->len] = '\0';
+      /* Read string data directly into the string structure.
+       * Do it iteratively.  */
+      do      
+        {
+          /* Determine length of chunk to read and re-alloc the buffer. */
+          readbuf_len
+            = len < SUSPICIOUSLY_HUGE_STRING_SIZE_THRESHOLD
+                  ? len
+                  : SUSPICIOUSLY_HUGE_STRING_SIZE_THRESHOLD;
 
-  /* Return the string properly wrapped into an RA_SVN item. */
-  item->kind = SVN_RA_SVN_STRING;
-  item->u.string = svn_stringbuf__morph_into_string(stringbuf);
+          svn_stringbuf_ensure(stringbuf, stringbuf->len + readbuf_len);
+          dest = stringbuf->data + stringbuf->len;
+
+          /* read data & update length info */
+          SVN_ERR(readbuf_read(conn, pool, dest, readbuf_len));
+
+          stringbuf->len += readbuf_len;
+          len -= readbuf_len;
+        }
+      while (len);
+      
+      /* zero-terminate the string */
+      stringbuf->data[stringbuf->len] = '\0';
+
+      /* Return the string properly wrapped into an RA_SVN item. */
+      item->kind = SVN_RA_SVN_STRING;
+      item->u.string = svn_stringbuf__morph_into_string(stringbuf);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1022,7 +1029,8 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
             break;
           val = val * 10 + (c - '0');
           /* val wrapped past maximum value? */
-          if (prev_val >= (APR_UINT64_MAX / 10) && (val / 10) != prev_val)
+          if ((prev_val >= (APR_UINT64_MAX / 10))
+              && (val < APR_UINT64_MAX - 10))
             return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                     _("Number is larger than maximum"));
         }
@@ -1041,31 +1049,72 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
   else if (svn_ctype_isalpha(c))
     {
-      /* It's a word. */
-      str = svn_stringbuf_create_ensure(16, pool);
-      svn_stringbuf_appendbyte(str, c);
+      /* It's a word.  Read it into a buffer of limited size. */
+      char *buffer = apr_palloc(pool, MAX_WORD_LENGTH + 1);
+      char *end = buffer + MAX_WORD_LENGTH;
+      char *p = buffer + 1;
+
+      buffer[0] = c;
       while (1)
         {
-          SVN_ERR(readbuf_getchar(conn, pool, &c));
-          if (!svn_ctype_isalnum(c) && c != '-')
+          SVN_ERR(readbuf_getchar(conn, pool, p));
+          if (!svn_ctype_isalnum(*p) && *p != '-')
             break;
-          svn_stringbuf_appendbyte(str, c);
+
+          if (++p == end)
+            return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                    _("Word is too long"));
         }
+
+      c = *p;
+      *p = '\0';
+
       item->kind = SVN_RA_SVN_WORD;
-      item->u.word = str->data;
+      item->u.word = buffer;
     }
   else if (c == '(')
     {
-      /* Read in the list items. */
+      /* Allocate an APR array with room for (initially) 4 items.
+       * We do this manually because lists are the most frequent protocol
+       * element, often used to frame a single, optional value.  We save
+       * about 20% of total protocol handling time. */
+      char *buffer = apr_palloc(pool, sizeof(apr_array_header_t)
+                                      + 4 * sizeof(svn_ra_svn_item_t));
+      svn_ra_svn_item_t *data
+        = (svn_ra_svn_item_t *)(buffer + sizeof(apr_array_header_t));
+
       item->kind = SVN_RA_SVN_LIST;
-      item->u.list = apr_array_make(pool, 4, sizeof(svn_ra_svn_item_t));
+      item->u.list = (apr_array_header_t *)buffer;
+      item->u.list->elts = (char *)data;
+      item->u.list->pool = pool;
+      item->u.list->elt_size = sizeof(*data);
+      item->u.list->nelts = 0; 
+      item->u.list->nalloc = 4;
+
+      listitem = data;
+
+      /* Read in the list items. */
       while (1)
         {
           SVN_ERR(readbuf_getchar_skip_whitespace(conn, pool, &c));
           if (c == ')')
             break;
-          listitem = apr_array_push(item->u.list);
+
+          /* increase array capacity if necessary */
+          if (item->u.list->nelts == item->u.list->nalloc)
+            {
+              data = apr_palloc(pool, 2 * item->u.list->nelts * sizeof(*data));
+              memcpy(data, item->u.list->elts, item->u.list->nelts * sizeof(*data));
+              item->u.list->elts = (char *)data;
+              item->u.list->nalloc *= 2;
+              listitem = data + item->u.list->nelts;
+            }
+
+          /* read next protocol item */
           SVN_ERR(read_item(conn, pool, listitem, c, level));
+
+          listitem++; 
+          item->u.list->nelts++;
         }
       SVN_ERR(readbuf_getchar(conn, pool, &c));
     }
@@ -1202,14 +1251,15 @@ static svn_error_t *vparse_tuple(const apr_array_header_t *items, apr_pool_t *po
       if (**fmt == '?')
         (*fmt)++;
       elt = &APR_ARRAY_IDX(items, count, svn_ra_svn_item_t);
-      if (**fmt == 'n' && elt->kind == SVN_RA_SVN_NUMBER)
-        *va_arg(*ap, apr_uint64_t *) = elt->u.number;
-      else if (**fmt == 'r' && elt->kind == SVN_RA_SVN_NUMBER)
-        *va_arg(*ap, svn_revnum_t *) = (svn_revnum_t) elt->u.number;
-      else if (**fmt == 's' && elt->kind == SVN_RA_SVN_STRING)
-        *va_arg(*ap, svn_string_t **) = elt->u.string;
+      if (**fmt == '(' && elt->kind == SVN_RA_SVN_LIST)
+        {
+          (*fmt)++;
+          SVN_ERR(vparse_tuple(elt->u.list, pool, fmt, ap));
+        }
       else if (**fmt == 'c' && elt->kind == SVN_RA_SVN_STRING)
         *va_arg(*ap, const char **) = elt->u.string->data;
+      else if (**fmt == 's' && elt->kind == SVN_RA_SVN_STRING)
+        *va_arg(*ap, svn_string_t **) = elt->u.string;
       else if (**fmt == 'w' && elt->kind == SVN_RA_SVN_WORD)
         *va_arg(*ap, const char **) = elt->u.word;
       else if (**fmt == 'b' && elt->kind == SVN_RA_SVN_WORD)
@@ -1221,6 +1271,10 @@ static svn_error_t *vparse_tuple(const apr_array_header_t *items, apr_pool_t *po
           else
             break;
         }
+      else if (**fmt == 'n' && elt->kind == SVN_RA_SVN_NUMBER)
+        *va_arg(*ap, apr_uint64_t *) = elt->u.number;
+      else if (**fmt == 'r' && elt->kind == SVN_RA_SVN_NUMBER)
+        *va_arg(*ap, svn_revnum_t *) = (svn_revnum_t) elt->u.number;
       else if (**fmt == 'B' && elt->kind == SVN_RA_SVN_WORD)
         {
           if (strcmp(elt->u.word, "true") == 0)
@@ -1241,11 +1295,6 @@ static svn_error_t *vparse_tuple(const apr_array_header_t *items, apr_pool_t *po
         }
       else if (**fmt == 'l' && elt->kind == SVN_RA_SVN_LIST)
         *va_arg(*ap, apr_array_header_t **) = elt->u.list;
-      else if (**fmt == '(' && elt->kind == SVN_RA_SVN_LIST)
-        {
-          (*fmt)++;
-          SVN_ERR(vparse_tuple(elt->u.list, pool, fmt, ap));
-        }
       else if (**fmt == ')')
         return SVN_NO_ERROR;
       else

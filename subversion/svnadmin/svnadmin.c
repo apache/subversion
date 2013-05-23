@@ -39,6 +39,7 @@
 #include "svn_cache_config.h"
 #include "svn_version.h"
 #include "svn_props.h"
+#include "svn_sorts.h"
 #include "svn_time.h"
 #include "svn_user.h"
 #include "svn_xml.h"
@@ -46,6 +47,8 @@
 #include "private/svn_opt_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_cmdline_private.h"
+
+#include "../libsvn_fs_fs/fs.h" /* for SVN_FS_FS__MIN_PACKED_FORMAT */
 
 #include "svn_private_config.h"
 
@@ -753,6 +756,39 @@ subcommand_deltify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static void
+cmdline_stream_printf(svn_stream_t *stream,
+                      apr_pool_t *pool,
+                      const char *fmt,
+                      ...)
+  __attribute__((format(printf, 3, 4)));
+
+static void
+cmdline_stream_printf(svn_stream_t *stream,
+                      apr_pool_t *pool,
+                      const char *fmt,
+                      ...)
+{
+  const char *message;
+  va_list ap;
+  svn_error_t *err;
+  const char *out;
+
+  va_start(ap, fmt);
+  message = apr_pvsprintf(pool, fmt, ap);
+  va_end(ap);
+
+  err = svn_cmdline_cstring_from_utf8(&out, message, pool);
+
+  if (err)
+    {
+      svn_error_clear(err);
+      out = svn_cmdline_cstring_from_utf8_fuzzy(message, pool);
+    }
+
+  svn_error_clear(svn_stream_puts(stream, out));
+}
+
 
 /* Implementation of svn_repos_notify_func_t to wrap the output to a
    response stream for svn_repos_dump_fs2() and svn_repos_verify_fs() */
@@ -762,36 +798,35 @@ repos_notify_handler(void *baton,
                      apr_pool_t *scratch_pool)
 {
   svn_stream_t *feedback_stream = baton;
-  apr_size_t len;
 
   switch (notify->action)
   {
     case svn_repos_notify_warning:
-      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                                        "WARNING 0x%04x: %s\n", notify->warning,
-                                        notify->warning_str));
+      cmdline_stream_printf(feedback_stream, scratch_pool,
+                            "WARNING 0x%04x: %s\n", notify->warning,
+                            notify->warning_str);
       return;
 
     case svn_repos_notify_dump_rev_end:
-      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                                        _("* Dumped revision %ld.\n"),
-                                        notify->revision));
+      cmdline_stream_printf(feedback_stream, scratch_pool,
+                            _("* Dumped revision %ld.\n"),
+                            notify->revision);
       return;
 
     case svn_repos_notify_verify_rev_end:
-      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                                        _("* Verified revision %ld.\n"),
-                                        notify->revision));
+      cmdline_stream_printf(feedback_stream, scratch_pool,
+                            _("* Verified revision %ld.\n"),
+                            notify->revision);
       return;
 
     case svn_repos_notify_verify_rev_structure:
       if (notify->revision == SVN_INVALID_REVNUM)
-        svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                                _("* Verifying repository metadata ...\n")));
+        cmdline_stream_printf(feedback_stream, scratch_pool,
+                              _("* Verifying repository metadata ...\n"));
       else
-        svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                        _("* Verifying metadata at revision %ld ...\n"),
-                        notify->revision));
+        cmdline_stream_printf(feedback_stream, scratch_pool,
+                              _("* Verifying metadata at revision %ld ...\n"),
+                              notify->revision);
       return;
 
     case svn_repos_notify_pack_shard_start:
@@ -799,14 +834,14 @@ repos_notify_handler(void *baton,
         const char *shardstr = apr_psprintf(scratch_pool,
                                             "%" APR_INT64_T_FMT,
                                             notify->shard);
-        svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                                          _("Packing revisions in shard %s..."),
-                                          shardstr));
+        cmdline_stream_printf(feedback_stream, scratch_pool,
+                              _("Packing revisions in shard %s..."),
+                              shardstr);
       }
       return;
 
     case svn_repos_notify_pack_shard_end:
-      svn_error_clear(svn_stream_puts(feedback_stream, _("done.\n")));
+      cmdline_stream_printf(feedback_stream, scratch_pool, _("done.\n"));
       return;
 
     case svn_repos_notify_pack_shard_start_revprop:
@@ -814,30 +849,30 @@ repos_notify_handler(void *baton,
         const char *shardstr = apr_psprintf(scratch_pool,
                                             "%" APR_INT64_T_FMT,
                                             notify->shard);
-        svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                                          _("Packing revprops in shard %s..."),
-                                          shardstr));
+        cmdline_stream_printf(feedback_stream, scratch_pool,
+                              _("Packing revprops in shard %s..."),
+                              shardstr);
       }
       return;
 
     case svn_repos_notify_pack_shard_end_revprop:
-      svn_error_clear(svn_stream_puts(feedback_stream, _("done.\n")));
+      cmdline_stream_printf(feedback_stream, scratch_pool, _("done.\n"));
       return;
 
     case svn_repos_notify_load_txn_committed:
       if (notify->old_revision == SVN_INVALID_REVNUM)
         {
-          svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                            _("\n------- Committed revision %ld >>>\n\n"),
-                            notify->new_revision));
+          cmdline_stream_printf(feedback_stream, scratch_pool,
+                                _("\n------- Committed revision %ld >>>\n\n"),
+                                notify->new_revision);
         }
       else
         {
-          svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                            _("\n------- Committed new rev %ld"
-                              " (loaded from original rev %ld"
-                              ") >>>\n\n"), notify->new_revision,
-                              notify->old_revision));
+          cmdline_stream_printf(feedback_stream, scratch_pool,
+                                _("\n------- Committed new rev %ld"
+                                  " (loaded from original rev %ld"
+                                  ") >>>\n\n"), notify->new_revision,
+                                notify->old_revision);
         }
       return;
 
@@ -846,27 +881,27 @@ repos_notify_handler(void *baton,
         switch (notify->node_action)
         {
           case svn_node_action_change:
-            svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+            cmdline_stream_printf(feedback_stream, scratch_pool,
                                   _("     * editing path : %s ..."),
-                                  notify->path));
+                                  notify->path);
             break;
 
           case svn_node_action_delete:
-            svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+            cmdline_stream_printf(feedback_stream, scratch_pool,
                                   _("     * deleting path : %s ..."),
-                                  notify->path));
+                                  notify->path);
             break;
 
           case svn_node_action_add:
-            svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+            cmdline_stream_printf(feedback_stream, scratch_pool,
                                   _("     * adding path : %s ..."),
-                                  notify->path));
+                                  notify->path);
             break;
 
           case svn_node_action_replace:
-            svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+            cmdline_stream_printf(feedback_stream, scratch_pool,
                                   _("     * replacing path : %s ..."),
-                                  notify->path));
+                                  notify->path);
             break;
 
         }
@@ -874,32 +909,30 @@ repos_notify_handler(void *baton,
       return;
 
     case svn_repos_notify_load_node_done:
-      len = 7;
-      svn_error_clear(svn_stream_write(feedback_stream, _(" done.\n"), &len));
+      cmdline_stream_printf(feedback_stream, scratch_pool, _(" done.\n"));
       return;
 
     case svn_repos_notify_load_copied_node:
-      len = 9;
-      svn_error_clear(svn_stream_write(feedback_stream, "COPIED...", &len));
+      cmdline_stream_printf(feedback_stream, scratch_pool, "COPIED...");
       return;
 
     case svn_repos_notify_load_txn_start:
-      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                                _("<<< Started new transaction, based on "
-                                  "original revision %ld\n"),
-                                notify->old_revision));
+      cmdline_stream_printf(feedback_stream, scratch_pool,
+                            _("<<< Started new transaction, based on "
+                              "original revision %ld\n"),
+                            notify->old_revision);
       return;
 
     case svn_repos_notify_load_skipped_rev:
-      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                                _("<<< Skipped original revision %ld\n"),
-                                notify->old_revision));
+      cmdline_stream_printf(feedback_stream, scratch_pool,
+                            _("<<< Skipped original revision %ld\n"),
+                            notify->old_revision);
       return;
 
     case svn_repos_notify_load_normalized_mergeinfo:
-      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                                _(" removing '\\r' from %s ..."),
-                                SVN_PROP_MERGEINFO));
+      cmdline_stream_printf(feedback_stream, scratch_pool,
+                            _(" removing '\\r' from %s ..."),
+                            SVN_PROP_MERGEINFO);
       return;
 
     case svn_repos_notify_mutex_acquired:
@@ -908,17 +941,17 @@ repos_notify_handler(void *baton,
       return;
 
     case svn_repos_notify_recover_start:
-      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                             _("Repository lock acquired.\n"
-                               "Please wait; recovering the"
-                               " repository may take some time...\n")));
+      cmdline_stream_printf(feedback_stream, scratch_pool,
+                            _("Repository lock acquired.\n"
+                              "Please wait; recovering the"
+                              " repository may take some time...\n"));
       return;
 
     case svn_repos_notify_upgrade_start:
-      svn_error_clear(svn_stream_puts(feedback_stream,
-                             _("Repository lock acquired.\n"
-                               "Please wait; upgrading the"
-                               " repository may take some time...\n")));
+      cmdline_stream_printf(feedback_stream, scratch_pool,
+                            _("Repository lock acquired.\n"
+                              "Please wait; upgrading the"
+                              " repository may take some time...\n"));
       return;
 
     default:
@@ -1644,6 +1677,7 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
   svn_fs_t *fs;
+  int fs_format;
 
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
@@ -1655,7 +1689,7 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                                     pool)));
 
   {
-    int repos_format, fs_format, minor;
+    int repos_format, minor;
     svn_version_t *repos_version, *fs_version;
     SVN_ERR(svn_repos_info_format(&repos_format, &repos_version,
                                   repos, pool, pool));
@@ -1664,8 +1698,7 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
     SVN_ERR(svn_fs_info_format(&fs_format, &fs_version,
                                fs, pool, pool));
-    SVN_ERR(svn_cmdline_printf(pool, _("Filesystem Format: %d\n"),
-                               fs_format));
+    /* fs_format will be printed later. */
 
     SVN_ERR_ASSERT(repos_version->major == SVN_VER_MAJOR);
     SVN_ERR_ASSERT(fs_version->major == SVN_VER_MAJOR);
@@ -1681,19 +1714,21 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   {
     apr_hash_t *capabilities_set;
     apr_array_header_t *capabilities;
-    char *as_string;
+    int i;
 
     SVN_ERR(svn_repos_capabilities(&capabilities_set, repos, pool, pool));
-    SVN_ERR(svn_hash_keys(&capabilities, capabilities_set, pool));
-    as_string = svn_cstring_join(capabilities, ",", pool);
+    capabilities = svn_sort__hash(capabilities_set,
+                                  svn_sort_compare_items_lexically,
+                                  pool);
 
-    /* Delete the trailing comma. */
-    if (as_string[0])
-      as_string[strlen(as_string)-1] = '\0';
-
-    if (capabilities->nelts)
-      SVN_ERR(svn_cmdline_printf(pool, _("Repository Capabilities: %s\n"),
-                                 as_string));
+    for (i = 0; i < capabilities->nelts; i++)
+      {
+        svn_sort__item_t *item = &APR_ARRAY_IDX(capabilities, i,
+                                                svn_sort__item_t);
+        const char *capability = item->key;
+        SVN_ERR(svn_cmdline_printf(pool, _("Repository Capability: %s\n"),
+                                   capability));
+      }
   }
 
   {
@@ -1702,6 +1737,8 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     SVN_ERR(svn_fs_info(&info, fs, pool, pool));
     SVN_ERR(svn_cmdline_printf(pool, _("Filesystem Type: %s\n"),
                                info->fs_type));
+    SVN_ERR(svn_cmdline_printf(pool, _("Filesystem Format: %d\n"),
+                               fs_format));
     if (!strcmp(info->fs_type, SVN_FS_TYPE_FSFS))
       {
         const svn_fs_fsfs_info_t *fsfs_info = (const void *)info;
@@ -1717,12 +1754,15 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
           SVN_ERR(svn_cmdline_printf(pool, _("FSFS Shard Size: %d\n"),
                                      fsfs_info->shard_size));
 
-        if (fsfs_info->min_unpacked_rev + fsfs_info->shard_size > youngest + 1)
-          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Packed: yes\n")));
-        else if (fsfs_info->min_unpacked_rev)
-          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Packed: partly\n")));
-        else
-          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Packed: no\n")));
+        /* Print packing statistics, if supported by the FS format. */
+        if (fs_format >= SVN_FS_FS__MIN_PACKED_FORMAT && fsfs_info->shard_size)
+          {
+            const int shard_size = fsfs_info->shard_size;
+            const int shards_packed = fsfs_info->min_unpacked_rev / shard_size;
+            const int shards_full = (youngest + 1) / shard_size;
+            SVN_ERR(svn_cmdline_printf(pool, _("FSFS Shards Packed: %d/%d\n"),
+                                       shards_packed, shards_full));
+          }
       }
   }
 
@@ -1733,7 +1773,9 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     SVN_ERR(svn_fs_info_config_files(&files, fs, pool, pool));
     for (i = 0; i < files->nelts; i++)
       SVN_ERR(svn_cmdline_printf(pool, _("Configuration File: %s\n"),
-                                 APR_ARRAY_IDX(files, i, const char *)));
+                                 svn_dirent_local_style(
+                                   APR_ARRAY_IDX(files, i, const char *),
+                                   pool)));
   }
 
   /* 'svn info' prints an extra newline here, to support multiple targets.

@@ -471,8 +471,8 @@ dump_node(struct edit_baton *eb,
          dumped. */
       if (!eb->verify && eb->notify_func && eb->oldest_dumped_rev > 1)
         {
-          svn_string_t *mergeinfo_str
-            = svn_hash_gets_fixed_key(prophash, SVN_PROP_MERGEINFO);
+          svn_string_t *mergeinfo_str = svn_hash_gets(prophash,
+                                                      SVN_PROP_MERGEINFO);
           if (mergeinfo_str)
             {
               svn_mergeinfo_t mergeinfo, old_mergeinfo;
@@ -1041,13 +1041,13 @@ write_revision_record(svn_stream_t *stream,
   /* Run revision date properties through the time conversion to
      canonicalize them. */
   /* ### Remove this when it is no longer needed for sure. */
-  datevalue = svn_hash_gets_fixed_key(props, SVN_PROP_REVISION_DATE);
+  datevalue = svn_hash_gets(props, SVN_PROP_REVISION_DATE);
   if (datevalue)
     {
       SVN_ERR(svn_time_from_cstring(&timetemp, datevalue->data, pool));
       datevalue = svn_string_create(svn_time_to_cstring(timetemp, pool),
                                     pool);
-      svn_hash_sets_fixed_key(props, SVN_PROP_REVISION_DATE, datevalue);
+      svn_hash_sets(props, SVN_PROP_REVISION_DATE, datevalue);
     }
 
   encoded_prophash = svn_stringbuf_create_ensure(0, pool);

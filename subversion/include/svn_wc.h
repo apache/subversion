@@ -8131,17 +8131,17 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
  *
  * If @a show_hidden and @a show_deleted are both @c FALSE, the kind of
  * scheduled for delete, administrative only 'not present' and excluded
- * nodes is reported as #svn_node_kind_node. This is recommended as a check
+ * nodes is reported as #svn_node_none. This is recommended as a check
  * for 'is there a versioned file or directory here?'
  *
  * If @a show_deleted is FALSE, but @a show_hidden is @c TRUE then only
  * scheduled for delete and administrative only 'not present' nodes are
- * reported as #svn_node_kind_none. This is recommended as check for
+ * reported as #svn_node_none. This is recommended as check for
  * 'Can I add a node here?'
  *
  * If @a show_deleted is TRUE, but @a show_hidden is FALSE, then only
  * administrative only 'not present' nodes and excluded nodes are reported as
- * #svn_node_kind_none. This behavior is the behavior bescribed as 'hidden'
+ * #svn_node_none. This behavior is the behavior bescribed as 'hidden'
  * before Subversion 1.7.
  *
  * If @a show_hidden and @a show_deleted are both @c TRUE all nodes are

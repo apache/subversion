@@ -115,9 +115,8 @@ svn_repos_fs_begin_txn_for_commit2(svn_fs_txn_t **txn_p,
 {
   apr_array_header_t *revprops;
   const char *txn_name;
+  svn_string_t *author = svn_hash_gets(revprop_table, SVN_PROP_REVISION_AUTHOR);
   apr_hash_t *hooks_env;
-  svn_string_t *author = svn_hash_gets_fixed_key(revprop_table,
-                                                 SVN_PROP_REVISION_AUTHOR);
 
   /* Parse the hooks-env file (if any). */
   SVN_ERR(svn_repos__parse_hooks_env(&hooks_env, repos->hooks_env_path,
@@ -154,11 +153,11 @@ svn_repos_fs_begin_txn_for_commit(svn_fs_txn_t **txn_p,
 {
   apr_hash_t *revprop_table = apr_hash_make(pool);
   if (author)
-    svn_hash_sets_fixed_key(revprop_table, SVN_PROP_REVISION_AUTHOR,
-                            svn_string_create(author, pool));
+    svn_hash_sets(revprop_table, SVN_PROP_REVISION_AUTHOR,
+                  svn_string_create(author, pool));
   if (log_msg)
-    svn_hash_sets_fixed_key(revprop_table, SVN_PROP_REVISION_LOG,
-                            svn_string_create(log_msg, pool));
+    svn_hash_sets(revprop_table, SVN_PROP_REVISION_LOG,
+                  svn_string_create(log_msg, pool));
   return svn_repos_fs_begin_txn_for_commit2(txn_p, repos, rev, revprop_table,
                                             pool);
 }
@@ -458,13 +457,13 @@ svn_repos_fs_revision_proplist(apr_hash_t **table_p,
 
       /* If they exist, we only copy svn:author and svn:date into the
          'real' hashtable being returned. */
-      value = svn_hash_gets_fixed_key(tmphash, SVN_PROP_REVISION_AUTHOR);
+      value = svn_hash_gets(tmphash, SVN_PROP_REVISION_AUTHOR);
       if (value)
-        svn_hash_sets_fixed_key(*table_p, SVN_PROP_REVISION_AUTHOR, value);
+        svn_hash_sets(*table_p, SVN_PROP_REVISION_AUTHOR, value);
 
-      value = svn_hash_gets_fixed_key(tmphash, SVN_PROP_REVISION_DATE);
+      value = svn_hash_gets(tmphash, SVN_PROP_REVISION_DATE);
       if (value)
-        svn_hash_sets_fixed_key(*table_p, SVN_PROP_REVISION_DATE, value);
+        svn_hash_sets(*table_p, SVN_PROP_REVISION_DATE, value);
     }
   else /* wholly readable revision */
     {

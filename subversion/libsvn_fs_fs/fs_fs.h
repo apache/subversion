@@ -146,7 +146,9 @@ svn_fs_fs__path_current(svn_fs_t *fs, apr_pool_t *pool);
 
    Use POOL for temporary allocation. */
 svn_error_t *
-svn_fs_fs__write_format(svn_fs_t *fs, apr_pool_t *pool);
+svn_fs_fs__write_format(svn_fs_t *fs,
+                        svn_boolean_t overwrite,
+                        apr_pool_t *pool);
 
 /* Find the value of the property named PROPNAME in transaction TXN.
    Return the contents in *VALUE_P.  The contents will be allocated

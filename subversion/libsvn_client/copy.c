@@ -1675,7 +1675,7 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
                               &pair->src_revnum, &new_props, pool));
 
       if (new_props && ! same_repositories)
-        svn_hash_sets_fixed_key(new_props, SVN_PROP_MERGEINFO, NULL);
+        svn_hash_sets(new_props, SVN_PROP_MERGEINFO, NULL);
 
       *timestamp_sleep = TRUE;
 

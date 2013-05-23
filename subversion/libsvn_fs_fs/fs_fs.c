@@ -166,7 +166,9 @@ read_format(int *pformat, int *max_files_per_dir,
 
    Use POOL for temporary allocation. */
 svn_error_t *
-svn_fs_fs__write_format(svn_fs_t *fs, apr_pool_t *pool)
+svn_fs_fs__write_format(svn_fs_t *fs,
+                        svn_boolean_t overwrite,
+                        apr_pool_t *pool)
 {
   svn_stringbuf_t *sb;
   const char *path = path_format(fs, pool);
@@ -186,13 +188,19 @@ svn_fs_fs__write_format(svn_fs_t *fs, apr_pool_t *pool)
         svn_stringbuf_appendcstr(sb, "layout linear\n");
     }
 
-  SVN_ERR(svn_io_write_unique(&path_tmp,
-                              svn_dirent_dirname(path, pool),
-                              sb->data, sb->len,
-                              svn_io_file_del_none, pool));
-
-  /* rename the temp file as the real destination */
-  SVN_ERR(svn_io_file_rename(path_tmp, path, pool));
+  /* svn_io_write_version_file() does a load of magic to allow it to
+     replace version files that already exist.  We only need to do
+     that when we're allowed to overwrite an existing file. */
+  if (! overwrite)
+    {
+      /* Create the file */
+      SVN_ERR(svn_io_file_create(path, sb->data, pool));
+    }
+  else
+    {
+      SVN_ERR(svn_io_write_atomic(path, sb->data, sb->len,
+                                  NULL /* copy_perms_path */, pool));
+    }
 
   /* And set the perms to make it read only */
   return svn_io_set_file_read_only(path, FALSE, pool);
@@ -660,7 +668,7 @@ upgrade_body(void *baton, apr_pool_t *pool)
 
   ffd->format = SVN_FS_FS__FORMAT_NUMBER;
   ffd->max_files_per_dir = max_files_per_dir;
-  return svn_fs_fs__write_format(fs, pool);
+  return svn_fs_fs__write_format(fs, TRUE, pool);
 }
 
 
@@ -938,7 +946,7 @@ write_revision_zero(svn_fs_t *fs)
   date.data = svn_time_to_cstring(apr_time_now(), fs->pool);
   date.len = strlen(date.data);
   proplist = apr_hash_make(fs->pool);
-  svn_hash_sets_fixed_key(proplist, SVN_PROP_REVISION_DATE, &date);
+  svn_hash_sets(proplist, SVN_PROP_REVISION_DATE, &date);
   return set_revision_proplist(fs, 0, proplist, fs->pool);
 }
 
@@ -1027,7 +1035,7 @@ svn_fs_fs__create(svn_fs_t *fs,
     }
 
   /* This filesystem is ready.  Stamp it with a format number. */
-  SVN_ERR(svn_fs_fs__write_format(fs, pool));
+  SVN_ERR(svn_fs_fs__write_format(fs, FALSE, pool));
 
   ffd->youngest_rev_cache = 0;
   return SVN_NO_ERROR;
@@ -1040,7 +1048,6 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
 {
   char *my_uuid;
   apr_size_t my_uuid_len;
-  const char *tmp_path;
   const char *uuid_path = path_uuid(fs, pool);
 
   if (! uuid)
@@ -1050,15 +1057,11 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
   my_uuid = apr_pstrcat(fs->pool, uuid, "\n", (char *)NULL);
   my_uuid_len = strlen(my_uuid);
 
-  SVN_ERR(svn_io_write_unique(&tmp_path,
-                              svn_dirent_dirname(uuid_path, pool),
-                              my_uuid, my_uuid_len,
-                              svn_io_file_del_none, pool));
-
   /* We use the permissions of the 'current' file, because the 'uuid'
      file does not exist during repository creation. */
-  SVN_ERR(move_into_place(tmp_path, uuid_path,
-                          svn_fs_fs__path_current(fs, pool), pool));
+  SVN_ERR(svn_io_write_atomic(uuid_path, my_uuid, my_uuid_len,
+                              svn_fs_fs__path_current(fs, pool) /* perms */,
+                              pool));
 
   /* Remove the newline we added, and stash the UUID. */
   my_uuid[my_uuid_len - 1] = '\0';
@@ -1131,8 +1134,11 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
                                      pool));
   if (node_origins)
     {
-      svn_string_t *origin_id_str =
-        svn_hash_gets(node_origins, node_id);
+      char node_id_ptr[SVN_INT64_BUFFER_SIZE];
+      apr_size_t len = svn__ui64tobase36(node_id_ptr, node_id->number);
+      svn_string_t *origin_id_str
+        = apr_hash_get(node_origins, node_id_ptr, len);
+
       if (origin_id_str)
         *origin_id = svn_fs_fs__id_parse(origin_id_str->data,
                                          origin_id_str->len, pool);

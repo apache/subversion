@@ -1348,7 +1348,7 @@ svn_repos__get_commit_ev2(svn_editor_t **editor,
   /* Can the user modify the repository at all?  */
   /* ### check against AUTHZ.  */
 
-  author = svn_hash_gets_fixed_key(revprops, SVN_PROP_REVISION_AUTHOR);
+  author = svn_hash_gets(revprops, SVN_PROP_REVISION_AUTHOR);
 
   eb = apr_palloc(result_pool, sizeof(*eb));
   eb->repos = repos;

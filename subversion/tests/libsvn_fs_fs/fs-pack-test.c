@@ -71,17 +71,8 @@ write_format(const char *path,
       contents = apr_psprintf(pool, "%d\n", format);
     }
 
-    {
-      const char *path_tmp;
-
-      SVN_ERR(svn_io_write_unique(&path_tmp,
-                                  svn_dirent_dirname(path, pool),
-                                  contents, strlen(contents),
-                                  svn_io_file_del_none, pool));
-
-      /* rename the temp file as the real destination */
-      SVN_ERR(svn_io_file_rename(path_tmp, path, pool));
-    }
+  SVN_ERR(svn_io_write_atomic(path, contents, strlen(contents),
+                              NULL /* copy perms */, pool));
 
   /* And set the perms to make it read only */
   return svn_io_set_file_read_only(path, FALSE, pool);

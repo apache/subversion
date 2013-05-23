@@ -490,7 +490,7 @@ edit_chunk(apr_array_header_t **merged_chunk,
         return svn_error_create(SVN_ERR_IO_WRITE_ERROR, NULL,
                                 _("Could not write data to temporary file"));
     }
-  SVN_ERR(svn_io_file_flush_to_disk(temp_file, scratch_pool));
+  SVN_ERR(svn_io_file_flush(temp_file, scratch_pool));
 
   err = svn_cmdline__edit_file_externally(temp_file_name, editor_cmd,
                                           config, scratch_pool);

@@ -50,6 +50,7 @@
 #include "svn_private_config.h"
 
 #include "private/svn_string_private.h"
+#include "private/svn_eol_private.h"
 
 /**
  * The textual elements of a detranslated special file.  One of these
@@ -1116,28 +1117,39 @@ translate_chunk(svn_stream_t *dst,
               /* skip current EOL */
               len += b->eol_str_len;
 
-              /* Check 4 bytes at once to allow for efficient pipelining
-                 and to reduce loop condition overhead. */
-              while ((p + len + 4) <= end)
+              if (b->keywords)
                 {
-                  if (interesting[(unsigned char)p[len]]
-                      || interesting[(unsigned char)p[len+1]]
-                      || interesting[(unsigned char)p[len+2]]
-                      || interesting[(unsigned char)p[len+3]])
-                    break;
+                  /* Check 4 bytes at once to allow for efficient pipelining
+                    and to reduce loop condition overhead. */
+                  while ((p + len + 4) <= end)
+                    {
+                      if (interesting[(unsigned char)p[len]]
+                          || interesting[(unsigned char)p[len+1]]
+                          || interesting[(unsigned char)p[len+2]]
+                          || interesting[(unsigned char)p[len+3]])
+                        break;
 
-                  len += 4;
+                      len += 4;
+                    }
+
+                  /* Found an interesting char or EOF in the next 4 bytes.
+                     Find its exact position. */
+                  while ((p + len) < end
+                         && !interesting[(unsigned char)p[len]])
+                    ++len;
                 }
-
-               /* Found an interesting char or EOF in the next 4 bytes.
-                  Find its exact position. */
-               while ((p + len) < end && !interesting[(unsigned char)p[len]])
-                 ++len;
+              else
+                {
+                  /* use our optimized sub-routine to find the next EOL */
+                  const char *eol
+                    = svn_eol__find_eol_start((char *)p + len, end - p);
+                  len += (eol ? eol : end) - (p + len);
+                }
             }
           while (b->nl_translation_skippable ==
                    svn_tristate_true &&       /* can potentially skip EOLs */
                  p + len + 2 < end &&         /* not too close to EOF */
-                 eol_unchanged (b, p + len)); /* EOL format already ok */
+                 eol_unchanged(b, p + len));  /* EOL format already ok */
 
           while ((p + len) < end && !interesting[(unsigned char)p[len]])
             len++;

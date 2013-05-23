@@ -221,14 +221,11 @@ pre_15_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
           /* Pre-1.5 servers send the standard revprops unconditionally;
              clear those the caller doesn't want. */
           if (!want_author)
-            svn_hash_sets_fixed_key(log_entry->revprops,
-                                    SVN_PROP_REVISION_AUTHOR, NULL);
+            svn_hash_sets(log_entry->revprops, SVN_PROP_REVISION_AUTHOR, NULL);
           if (!want_date)
-            svn_hash_sets_fixed_key(log_entry->revprops,
-                                    SVN_PROP_REVISION_DATE, NULL);
+            svn_hash_sets(log_entry->revprops, SVN_PROP_REVISION_DATE, NULL);
           if (!want_log)
-            svn_hash_sets_fixed_key(log_entry->revprops,
-                                    SVN_PROP_REVISION_LOG, NULL);
+            svn_hash_sets(log_entry->revprops, SVN_PROP_REVISION_LOG, NULL);
         }
     }
   else

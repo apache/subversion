@@ -19010,7 +19010,6 @@ def conflicted_split_merge_with_resolve(sbox):
 # depth WC is broken'.
 @SkipUnless(server_has_mergeinfo)
 @Issues(4367)
-@XFail()
 def merge_to_empty_target_merge_to_infinite_target(sbox):
   "repeat merge to infinite depth WC conflicts"
 
@@ -19076,9 +19075,8 @@ def merge_to_empty_target_merge_to_infinite_target(sbox):
   expected_output = wc.State(A_COPY_path, {
     'B/B1'              : Item(status='A '),
     'B/B1/test.txt'     : Item(status='A '),
-    'B/B1/B1a'          : Item(status='A '),
+    'B/B1/B1a'          : Item(status='D ', prev_status='A '),
     'B/B1/B1a/test.txt' : Item(status='A '),
-    'B/B1/B1a'          : Item(status='D '),
     })
   expected_mergeinfo_output = wc.State(A_COPY_path, {
     ''  : Item(status=' U'),
@@ -19155,7 +19153,7 @@ def merge_to_empty_target_merge_to_infinite_target(sbox):
                                        None, 1, 0)
 
   # Commit the merge.
-  sbox.simple_commit()
+  #sbox.simple_commit()
 
 ########################################################################
 # Run the tests

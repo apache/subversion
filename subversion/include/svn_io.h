@@ -2114,6 +2114,14 @@ svn_io_file_write(apr_file_t *file,
                   apr_size_t *nbytes,
                   apr_pool_t *pool);
 
+/** Wrapper for apr_file_flush().
+ * @since New in 1.9
+ */
+svn_error_t *
+svn_io_file_flush(apr_file_t *file,
+                  apr_pool_t *scratch_pool);
+
+
 
 /** Wrapper for apr_file_write_full(). */
 svn_error_t *
@@ -2122,6 +2130,24 @@ svn_io_file_write_full(apr_file_t *file,
                        apr_size_t nbytes,
                        apr_size_t *bytes_written,
                        apr_pool_t *pool);
+
+/**
+ * Writes @a nbytes bytes from @a *buf to a temporary file inside the same
+ * directory as @a *final_path. Then syncs the temporary file to disk and
+ * closes the file. After this rename the temporary file to @a final_path,
+ * possibly replacing an existing file.
+ *
+ * If @a copy_perms_path is not NULL, copy the permissions applied on @a
+ * @a copy_perms_path on the temporary file before renaming.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_io_write_atomic(const char *final_path,
+                    const void *buf,
+                    apr_size_t nbytes,
+                    const char* copy_perms_path,
+                    apr_pool_t *scratch_pool);
 
 /**
  * Open a unique file in @a dirpath, and write @a nbytes from @a buf to
