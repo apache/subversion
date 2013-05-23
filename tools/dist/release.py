@@ -575,7 +575,7 @@ def create_tag(args):
         STATUS.seek(0, os.SEEK_SET)
         subprocess.check_call(['svnmucc', '-r', str(args.revnum),
                                '-m', 'Post-release housekeeping: '
-                                     'bump the %s branch to %s'
+                                     'bump the %s branch to %s.'
                                % (branch.split('/')[-1], str(new_version)),
                                'put', svn_version_h.name, svn_version_h_url,
                                'put', STATUS.name, STATUS_url,
