@@ -463,9 +463,8 @@ def sign_candidates(args):
     def sign_file(filename):
         asc_file = open(filename + '.asc', 'a')
         logging.info("Signing %s" % filename)
-        proc = subprocess.Popen(['gpg', '-ba', '-o', '-', filename],
-                              stdout=asc_file)
-        proc.wait()
+        proc = subprocess.check_call(['gpg', '-ba', '-o', '-', filename],
+                                     stdout=asc_file)
         asc_file.close()
 
     if args.target:
