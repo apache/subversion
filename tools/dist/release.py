@@ -91,8 +91,8 @@ tool_versions = {
 }
 
 # Some constants
-repos = 'file:///tmp/danielsh/r'
-secure_repos = 'file:///tmp/danielsh/r'
+repos = 'http://svn.apache.org/repos/asf/subversion'
+secure_repos = 'https://svn.apache.org/repos/asf/subversion'
 dist_repos = 'https://dist.apache.org/repos/dist'
 dist_dev_url = dist_repos + '/dev/subversion'
 dist_release_url = dist_repos + '/release/subversion'
@@ -530,48 +530,6 @@ def create_tag(args):
 
     # don't redirect stdout/stderr since svnmucc might ask for a password
     subprocess.check_call(svnmucc_cmd)
-
-    if not args.version.is_prerelease():
-        logging.info('Bumping revisions on the branch')
-        svn_version_h = tempfile.SpooledTemporaryFile()
-        svn_version_h_url = '%s/subversion/include/svn_version.h' % branch
-        subprocess.check_call(['svn', 'cat',
-                               '%s@%d' % (svn_version_h_url, args.revnum),
-                              ],
-                              stdout=svn_version_h)
-        svn_version_h.seek(0, os.SEEK_SET)
-        lines = svn_version_h.readlines()
-        for i, line in enumerate(lines):
-            if line.startswith('#define SVN_VER_PATCH '):
-                logging.warn("Old %d: %r", i, lines[i])
-                logging.warn("Replacing: %r", args.version)
-                lines[i] = line.replace(str(args.version.patch),
-                                        str(args.version.patch+1))
-                logging.warn("New %d: %r", i, lines[i])
-                break
-        else:
-            raise RuntimeError('Definition of SVN_VER_MINOR not found')
-
-        svn_version_h.seek(0, os.SEEK_SET)
-        svn_version_h.writelines(lines)
-        svn_version_h.truncate() # no op, new value is never shorter.
-
-        subprocess.check_call(['svnmucc', '-r', str(args.revnum),
-                               '-m', 'Bump svn_version.h to %s'
-                                     % str(Version('%d.%d.%d' %
-                                                    (args.version.major,
-                                                     args.version.minor,
-                                                     args.version.patch + 1))),
-                               'put', '/dev/stdin', svn_version_h_url],
-                              stdin=svn_version_h)
-        del svn_version_h
-       
-
-        STATUS = tempfile.SpooledTemporaryFile()
-        subprocess.check_call(['svn', 'cat', '%s/STATUS@%d' % (branch, args.revnum),
-                              ],
-                              stdout=STATUS)
-
 
 #----------------------------------------------------------------------
 # Clean dist
