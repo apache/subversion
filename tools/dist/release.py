@@ -553,21 +553,20 @@ def create_tag(args):
         new_version = Version('%d.%d.%d' %
                               (args.version.major, args.version.minor,
                                args.version.patch + 1))
-        svn_version_h = tempfile.NamedTemporaryFile()
-        svn_version_h_url = '%s/subversion/include/svn_version.h' % branch
-        subprocess.check_call(['svn', 'cat',
-                               '%s@%d' % (svn_version_h_url, args.revnum),
-                              ],
-                              stdout=svn_version_h)
+
+        def file_object_for(relpath):
+            fd = tempfile.NamedTemporaryFile()
+            url = branch + '/' + relpath
+            fd.url = url
+            subprocess.check_call(['svn', 'cat', '%s@%d' % (url, args.revnum)],
+                                  stdout=fd)
+            return fd
+
+        svn_version_h = file_object_for('subversion/include/svn_version.h')
         replace_in_place(svn_version_h, '#define SVN_VER_PATCH ',
                          str(args.version.patch), str(new_version.patch))
 
-        STATUS = tempfile.NamedTemporaryFile()
-        STATUS_url = '%s/STATUS' % branch
-        subprocess.check_call(['svn', 'cat',
-                               '%s@%d' % (STATUS_url, args.revnum),
-                              ],
-                              stdout=STATUS)
+        STATUS = file_object_for('STATUS')
         replace_in_place(STATUS, 'Status of ',
                          str(args.version), str(new_version))
 
@@ -577,8 +576,8 @@ def create_tag(args):
                                '-m', 'Post-release housekeeping: '
                                      'bump the %s branch to %s.'
                                % (branch.split('/')[-1], str(new_version)),
-                               'put', svn_version_h.name, svn_version_h_url,
-                               'put', STATUS.name, STATUS_url,
+                               'put', svn_version_h.name, svn_version_h.url,
+                               'put', STATUS.name, STATUS.url,
                               ])
         del svn_version_h
         del STATUS
