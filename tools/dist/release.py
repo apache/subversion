@@ -199,8 +199,7 @@ def get_tmplfile(filename):
         return urllib2.urlopen(repos + '/trunk/tools/dist/templates/' + filename)
 
 def get_nullfile():
-    # This is certainly not cross platform
-    return open('/dev/null', 'w')
+    return open(os.path.devnull, 'w')
 
 def run_script(verbose, script):
     if verbose:
