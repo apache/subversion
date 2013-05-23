@@ -104,7 +104,7 @@ extns = ['zip', 'tar.gz', 'tar.bz2']
 # Utility functions
 
 class Version(object):
-    regex = re.compile('(\d+).(\d+).(\d+)(?:-(?:(rc|alpha|beta)(\d+)))?')
+    regex = re.compile(r'(\d+).(\d+).(\d+)(?:-(?:(rc|alpha|beta)(\d+)))?')
 
     def __init__(self, ver_str):
         # Special case the 'trunk-nightly' version
@@ -160,7 +160,7 @@ class Version(object):
         else:
             return self.pre_num < that.pre_num
 
-    def __str(self):
+    def __str__(self):
         if self.pre:
             if self.pre == 'nightly':
                 return 'nightly'
@@ -173,11 +173,7 @@ class Version(object):
 
     def __repr__(self):
 
-        return "Version('%s')" % self.__str()
-
-    def __str__(self):
-        return self.__str()
-
+        return "Version(%s)" % repr(str(self))
 
 def get_prefix(base_dir):
     return os.path.join(base_dir, 'prefix')
