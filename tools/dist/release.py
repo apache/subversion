@@ -531,6 +531,58 @@ def create_tag(args):
     # don't redirect stdout/stderr since svnmucc might ask for a password
     subprocess.check_call(svnmucc_cmd)
 
+    if not args.version.is_prerelease():
+        logging.info('Bumping revisions on the branch')
+        def replace_in_place(fd, startofline, flat, spare):
+            """In file object FD, replace FLAT with SPARE in the first line
+            starting with STARTOFLINE."""
+
+            fd.seek(0, os.SEEK_SET)
+            lines = fd.readlines()
+            for i, line in enumerate(lines):
+                if line.startswith(startofline):
+                    lines[i] = line.replace(flat, spare)
+                    break
+            else:
+                raise RuntimeError('Definition of %r not found' % startofline)
+
+            fd.seek(0, os.SEEK_SET)
+            fd.writelines(lines)
+            fd.truncate() # for current callers, new value is never shorter.
+
+        new_version = Version('%d.%d.%d' %
+                              (args.version.major, args.version.minor,
+                               args.version.patch + 1))
+        svn_version_h = tempfile.NamedTemporaryFile()
+        svn_version_h_url = '%s/subversion/include/svn_version.h' % branch
+        subprocess.check_call(['svn', 'cat',
+                               '%s@%d' % (svn_version_h_url, args.revnum),
+                              ],
+                              stdout=svn_version_h)
+        replace_in_place(svn_version_h, '#define SVN_VER_PATCH ',
+                         str(args.version.patch), str(new_version.patch))
+
+        STATUS = tempfile.NamedTemporaryFile()
+        STATUS_url = '%s/STATUS' % branch
+        subprocess.check_call(['svn', 'cat',
+                               '%s@%d' % (STATUS_url, args.revnum),
+                              ],
+                              stdout=STATUS)
+        replace_in_place(STATUS, 'Status of ',
+                         str(args.version), str(new_version))
+
+        svn_version_h.seek(0, os.SEEK_SET)
+        STATUS.seek(0, os.SEEK_SET)
+        subprocess.check_call(['svnmucc', '-r', str(args.revnum),
+                               '-m', 'Post-release housekeeping: '
+                                     'bump the %s branch to %s'
+                               % (branch.split('/')[-1], str(new_version)),
+                               'put', svn_version_h.name, svn_version_h_url,
+                               'put', STATUS.name, STATUS_url,
+                              ])
+        del svn_version_h
+        del STATUS
+
 #----------------------------------------------------------------------
 # Clean dist
 
