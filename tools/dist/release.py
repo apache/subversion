@@ -66,6 +66,22 @@ except ImportError:
     import ezt
 
 
+try:
+    subprocess.check_output
+except AttributeError:
+    def check_output(cmd):
+        proc = subprocess.Popen(['svn', 'list', dist_dev_url],
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+        (stdout, stderr) = proc.communicate()
+        rc = proc.wait()
+        if rc or stderr:
+            logging.error('%r failed with stderr %r', cmd, stderr)
+            raise subprocess.CalledProcessError(rc, cmd)
+        return stdout
+    subprocess.check_output = check_output
+    del check_output
+
 # Our required / recommended release tool versions by release branch
 tool_versions = {
   'trunk' : {
@@ -371,12 +387,7 @@ def compare_changes(repos, branch, revision):
     mergeinfo_cmd = ['svn', 'mergeinfo', '--show-revs=eligible',
                      repos + '/trunk/CHANGES',
                      repos + '/' + branch + '/' + 'CHANGES']
-    proc = subprocess.Popen(mergeinfo_cmd, stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
-    (stdout, stderr) = proc.communicate()
-    rc = proc.wait()
-    if stderr:
-      raise RuntimeError('svn mergeinfo failed: %s' % stderr)
+    stdout = subprocess.check_output(mergeinfo_cmd)
     if stdout:
       # Treat this as a warning since we are now putting entries for future
       # minor releases in CHANGES on trunk.
@@ -583,13 +594,7 @@ def create_tag(args):
 def clean_dist(args):
     'Clean the distribution directory of all but the most recent artifacts.'
 
-    proc = subprocess.Popen(['svn', 'list', dist_release_url],
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
-    (stdout, stderr) = proc.communicate()
-    proc.wait()
-    if stderr:
-      raise RuntimeError(stderr)
+    stdout = subprocess.check_output(['svn', 'list', dist_release_url])
 
     filenames = stdout.split('\n')
     tar_gz_archives = []
@@ -626,13 +631,7 @@ def clean_dist(args):
 def move_to_dist(args):
     'Move candidate artifacts to the distribution directory.'
 
-    proc = subprocess.Popen(['svn', 'list', dist_dev_url],
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
-    (stdout, stderr) = proc.communicate()
-    proc.wait()
-    if stderr:
-      raise RuntimeError(stderr)
+    stdout = subprocess.check_output(['svn', 'list', dist_dev_url])
 
     filenames = []
     for entry in stdout.split('\n'):
