@@ -138,6 +138,13 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1485650
+   Convert svnadmin notifications from UTF8 to native encoding.
+   Justification:
+     Non-UTF8 locales can see garbled output.
+   Votes:
+     +1: philip
+
 Approved for 1.8.1 or if soak is restarted for 1.8.0:
 ====================================================
 
