@@ -501,9 +501,7 @@ def post_candidates(args):
                get_deploydir(args.base_dir), dist_dev_url]
     if (args.username):
         svn_cmd += ['--username', args.username]
-    proc = subprocess.Popen(svn_cmd)
-    (stdout, stderr) = proc.communicate()
-    proc.wait()
+    subprocess.check_call(svn_cmd)
 
 #----------------------------------------------------------------------
 # Create tag
@@ -532,8 +530,7 @@ def create_tag(args):
                     tag + '/subversion/include/svn_version.h']
 
     # don't redirect stdout/stderr since svnmucc might ask for a password
-    proc = subprocess.Popen(svnmucc_cmd)
-    proc.wait()
+    subprocess.check_call(svnmucc_cmd)
 
 #----------------------------------------------------------------------
 # Clean dist
@@ -576,8 +573,7 @@ def clean_dist(args):
                 svnmucc_cmd += ['rm', dist_release_url + '/' + filename]
 
     # don't redirect stdout/stderr since svnmucc might ask for a password
-    proc = subprocess.Popen(svnmucc_cmd)
-    proc.wait()
+    subprocess.check_call(svnmucc_cmd)
 
 #----------------------------------------------------------------------
 # Move to dist
@@ -609,8 +605,7 @@ def move_to_dist(args):
 
     # don't redirect stdout/stderr since svnmucc might ask for a password
     logging.info('Moving release artifacts to %s' % dist_release_url)
-    proc = subprocess.Popen(svnmucc_cmd)
-    proc.wait()
+    subprocess.check_call(svnmucc_cmd)
 
 #----------------------------------------------------------------------
 # Write announcements
