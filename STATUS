@@ -72,13 +72,7 @@ Candidate changes:
      behavior stable
    Votes:
      +1: rhuijben (for either 1.8.0 or later)
-
- * r1481944
-   Let Windows compile against BDB 5.0, 5.1, 5.2 and 5.3.
-   Justification:
-     No reason to prevent this.
-   Votes:
-     +1: breser (for 1.8.1), pburba
+     +1: cmpilato
 
  * r1480344, r1480412, r1480442, r1480738, r1480765, r1482479, r1482524,
    r1482528, r1482536
@@ -99,18 +93,6 @@ Candidate changes:
      Repository corruption. Regression from 1.6.x
    Votes:
      +1: ivan, blair
-
- * r1483125, r1483555, r1483927, r1483947
-   Fix issue #4367 'merge to shallow WC, repeat merge to infinite depth WC is
-   broken'.
-   Justification:
-     Edge case merge can result in incorrect WC state which cannot be
-     committed.
-   Notes:
-     r1483125, r1483555, and r1483927 are a test and some subsequent tweaks
-     for the issue.  r1483947 is the fix proper. 
-   Votes:
-     +1: pburba, rhuijben
 
  * r1483575, r1483580, r1485018
    Define SVN_UNALIGNED_ACCESS_IS_OK for PowerPC.
@@ -136,35 +118,28 @@ Candidate changes:
      if upstream break the URL to the tarball after a newer version has been
      released.
    Votes:
-     +1: danielsh
+     +1: danielsh, cmpilato
 
- * r1485650
-   Convert svnadmin notifications from UTF8 to native encoding.
-   Justification:
-     Non-UTF8 locales can see garbled output.
-   Votes:
-     +1: philip, rhuijben
-
- * r1486072
-   Fix expansion of custom keywords with values that contain '='.
-   Justification:
-     Custom keyword values containing '=' should work.
-   Votes:
-     +1: stsp, danielsh
+Veto-blocked changes:
+=====================
 
 Approved for 1.8.1 or if soak is restarted for 1.8.0:
 ====================================================
 
+ * r1481944
+   Let Windows compile against BDB 5.0, 5.1, 5.2 and 5.3.
+   Justification:
+     No reason to prevent this.
+   Votes:
+     +1: breser (for 1.8.1), pburba, cmpilato
+
  * r1483557
-   Match our revision property names exactly instead by prefix.
+   Match our revision property names exactly instead of by prefix only.
    Justification:
      While the impact of this bug is certainly low, it is still an easy
      to fix problem.
    Votes:
      +1: stefan2 (for 1.8.1), rhuijben, pburba
-
-Veto-blocked changes:
-=====================
 
 Approved changes:
 =================
@@ -174,3 +149,29 @@ Approved changes:
 # that would restart the soak should not be added unless they are resolving
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
+
+ * r1483125, r1483555, r1483927, r1483947
+   Fix issue #4367 'merge to shallow WC, repeat merge to infinite depth WC is
+   broken'.
+   Justification:
+     Edge case merge can result in incorrect WC state which cannot be
+     committed.
+   Notes:
+     r1483125, r1483555, and r1483927 are a test and some subsequent tweaks
+     for the issue.  r1483947 is the fix proper. 
+   Votes:
+     +1: pburba, rhuijben, cmpilato
+
+ * r1485650
+   Convert svnadmin notifications from UTF8 to native encoding.
+   Justification:
+     Non-UTF8 locales can see garbled output.
+   Votes:
+     +1: philip, rhuijben, cmpilato
+
+ * r1486072
+   Fix expansion of custom keywords with values that contain '='.
+   Justification:
+     Custom keyword values containing '=' should work.
+   Votes:
+     +1: stsp, danielsh, cmpilato
