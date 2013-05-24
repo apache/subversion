@@ -145,6 +145,13 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
+ * r1486072
+   Fix expansion of custom keywords with values that contain '='.
+   Justification:
+     Custom keyword values containing '=' should work.
+   Votes:
+     +1: stsp
+
 Approved for 1.8.1 or if soak is restarted for 1.8.0:
 ====================================================
 
