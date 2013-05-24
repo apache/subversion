@@ -571,27 +571,28 @@ svn_ra_svn__write_proplist(svn_ra_svn_conn_t *conn,
                            apr_pool_t *pool,
                            apr_hash_t *props)
 {
-  apr_pool_t *iterpool;
   apr_hash_index_t *hi;
-  const void *key;
-  void *val;
   const char *propname;
   svn_string_t *propval;
+  apr_size_t len;
 
+  /* One might use an iterpool here but that would only be used when the
+     send buffer gets flushed and only by the CONN's progress callback.
+     That should happen at most once for typical prop lists and even then
+     use only a few bytes at best.
+   */
   if (props)
-    {
-      iterpool = svn_pool_create(pool);
-      for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
-        {
-          svn_pool_clear(iterpool);
-          apr_hash_this(hi, &key, NULL, &val);
-          propname = key;
-          propval = val;
-          SVN_ERR(svn_ra_svn__write_tuple(conn, iterpool, "cs",
-                                          propname, propval));
-        }
-      svn_pool_destroy(iterpool);
-    }
+    for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
+      {
+        apr_hash_this(hi, (const void **)&propname, 
+                          (apr_ssize_t *)&len,
+                          (void **)&propval);
+
+        SVN_ERR(svn_ra_svn__start_list(conn, pool));
+        SVN_ERR(svn_ra_svn__write_ncstring(conn, pool, propname, len));
+        SVN_ERR(svn_ra_svn__write_string(conn, pool, propval));
+        SVN_ERR(svn_ra_svn__end_list(conn, pool));
+      }
 
   return SVN_NO_ERROR;
 }
