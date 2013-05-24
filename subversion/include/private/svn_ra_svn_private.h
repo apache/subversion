@@ -83,6 +83,15 @@ svn_ra_svn__write_word(svn_ra_svn_conn_t *conn,
                        apr_pool_t *pool,
                        const char *word);
 
+/** Write a boolean over the net.
+ *
+ * Writes will be buffered until the next read or flush.
+ */
+svn_error_t *
+svn_ra_svn__write_boolean(svn_ra_svn_conn_t *conn,
+                          apr_pool_t *pool,
+                          svn_boolean_t value);
+
 /** Write a list of properties over the net.  @a props is allowed to be NULL,
  * in which case an empty list will be written out.
  *
@@ -820,6 +829,53 @@ svn_ra_svn__write_cmd_get_iprops(svn_ra_svn_conn_t *conn,
 svn_error_t *
 svn_ra_svn__write_cmd_finish_replay(svn_ra_svn_conn_t *conn,
                                     apr_pool_t *pool);
+
+/**
+ * @}
+ */
+
+/**
+ * @defgroup svn_data sending data structures over ra_svn
+ * @{
+ */
+
+/** Send a changed path (as part of transmitting a log entry) over connection
+ * @a conn.  Use @a pool for allocations.
+ *
+ * @see svn_log_changed_path2_t for a description of the other parameters.
+ */
+svn_error_t *
+svn_ra_svn__write_data_log_changed_path(svn_ra_svn_conn_t *conn,
+                                        apr_pool_t *pool,
+                                        const char *path,
+                                        char action,
+                                        const char *copyfrom_path,
+                                        svn_revnum_t copyfrom_rev,
+                                        svn_node_kind_t node_kind,
+                                        svn_boolean_t text_modified,
+                                        svn_boolean_t props_modified);
+
+/** Send a the details of a log entry (as part of transmitting a log entry
+ * and without revprops and changed paths) over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * @a author, @a date and @a message have been extracted and removed from
+ * the revprops to follow.  @a has_children is taken directly from the
+ * #svn_log_entry_t struct.  @a revision is too, except when it equals
+ * #SVN_INVALID_REVNUM.  In that case, @a revision must be 0 and
+ * @a invalid_revnum be set to TRUE.  @a revprop_count is the number of
+ * revprops that will follow in the revprops list.
+ */
+svn_error_t *
+svn_ra_svn__write_data_log_entry(svn_ra_svn_conn_t *conn,
+                                 apr_pool_t *pool,
+                                 svn_revnum_t revision,
+                                 const svn_string_t *author,
+                                 const svn_string_t *date,
+                                 const svn_string_t *message,
+                                 svn_boolean_t has_children,
+                                 svn_boolean_t invalid_revnum,
+                                 int revprop_count);
 
 /**
  * @}
