@@ -298,14 +298,23 @@ build_keywords(apr_hash_t **kw,
   for (i = 0; i < keyword_tokens->nelts; ++i)
     {
       const char *keyword = APR_ARRAY_IDX(keyword_tokens, i, const char *);
-      apr_array_header_t *custom_keyword_tokens = NULL;
+      const char *custom_fmt = NULL;
 
       if (expand_custom_keywords)
-        custom_keyword_tokens = svn_cstring_split(keyword, "=",
-                                                  TRUE /* chop */, pool);
-      if (expand_custom_keywords && custom_keyword_tokens->nelts == 2)
         {
-          const char *custom_fmt;
+          char *sep;
+
+          /* Check if there is a custom keyword definition, started by '='. */
+          sep = strchr(keyword, '=');
+          if (sep)
+            {
+              *sep = '\0'; /* Split keyword's name from custom format. */
+              custom_fmt = sep + 1;
+            }
+        }
+
+      if (custom_fmt)
+        {
           svn_string_t *custom_val;
 
           /* Custom keywords must be allowed to match the name of an
@@ -313,9 +322,6 @@ build_keywords(apr_hash_t **kw,
            * in case new fixed keywords are added to Subversion which
            * happen to match a custom keyword defined somewhere.
            * There is only one global namespace for keyword names. */
-
-          keyword = APR_ARRAY_IDX(custom_keyword_tokens, 0, const char*);
-          custom_fmt = APR_ARRAY_IDX(custom_keyword_tokens, 1, const char*);
           custom_val = keyword_printf(custom_fmt, rev, url, repos_root_url,
                                       date, author, pool);
           svn_hash_sets(*kw, keyword, custom_val);
