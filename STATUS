@@ -126,21 +126,6 @@ Veto-blocked changes:
 Approved for 1.8.1 or if soak is restarted for 1.8.0:
 ====================================================
 
- * r1481944
-   Let Windows compile against BDB 5.0, 5.1, 5.2 and 5.3.
-   Justification:
-     No reason to prevent this.
-   Votes:
-     +1: breser (for 1.8.1), pburba, cmpilato
-
- * r1483557
-   Match our revision property names exactly instead of by prefix only.
-   Justification:
-     While the impact of this bug is certainly low, it is still an easy
-     to fix problem.
-   Votes:
-     +1: stefan2 (for 1.8.1), rhuijben, pburba
-
 Approved changes:
 =================
 
@@ -175,3 +160,18 @@ Approved changes:
      Custom keyword values containing '=' should work.
    Votes:
      +1: stsp, danielsh, cmpilato
+
+ * r1481944
+   Let Windows compile against BDB 5.0, 5.1, 5.2 and 5.3.
+   Justification:
+     No reason to prevent this.
+   Votes:
+     +1: breser (for 1.8.1), pburba, cmpilato
+
+ * r1483557
+   Match our revision property names exactly instead of by prefix only.
+   Justification:
+     While the impact of this bug is certainly low, it is still an easy
+     to fix problem.
+   Votes:
+     +1: stefan2 (for 1.8.1), rhuijben, pburba
