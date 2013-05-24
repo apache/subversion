@@ -200,6 +200,13 @@ def get_tempdir(base_dir):
 def get_deploydir(base_dir):
     return os.path.join(base_dir, 'deploy')
 
+def get_target(args):
+    "Return the location of the artifacts"
+    if args.target:
+        return args.target
+    else:
+        return get_deploydir(args.base_dir)
+
 def get_tmpldir():
     return os.path.join(os.path.abspath(sys.path[0]), 'templates')
 
@@ -478,10 +485,7 @@ def sign_candidates(args):
                                      stdout=asc_file)
         asc_file.close()
 
-    if args.target:
-        target = args.target
-    else:
-        target = get_deploydir(args.base_dir)
+    target = get_target(args)
 
     for e in extns:
         filename = os.path.join(target, 'subversion-%s.%s' % (args.version, e))
@@ -498,12 +502,14 @@ def sign_candidates(args):
 def post_candidates(args):
     'Post candidate artifacts to the dist development directory.'
 
+    target = get_target(args)
+
     logging.info('Importing tarballs to %s' % dist_dev_url)
     svn_cmd = ['svn', 'import', '-m',
                'Add %s candidate release artifacts' % args.version.base,
                '--auto-props', '--config-option',
                'config:auto-props:*.asc=svn:eol-style=native;svn:mime-type=text/plain',
-               get_deploydir(args.base_dir), dist_dev_url]
+               target, dist_dev_url]
     if (args.username):
         svn_cmd += ['--username', args.username]
     subprocess.check_call(svn_cmd)
@@ -521,6 +527,7 @@ def create_tag(args):
     else:
         branch = secure_repos + '/branches/%d.%d.x' % (args.version.major,
                                                        args.version.minor)
+    target = get_target(args)
 
     tag = secure_repos + '/tags/' + str(args.version)
 
@@ -529,8 +536,7 @@ def create_tag(args):
     if (args.username):
         svnmucc_cmd += ['--username', args.username]
     svnmucc_cmd += ['cp', str(args.revnum), branch, tag]
-    svnmucc_cmd += ['put', os.path.join(get_deploydir(args.base_dir),
-                                        'svn_version.h.dist' + '-' +
+    svnmucc_cmd += ['put', os.path.join(target, 'svn_version.h.dist' + '-' +
                                         str(args.version)),
                     tag + '/subversion/include/svn_version.h']
 
@@ -676,10 +682,7 @@ def write_news(args):
 def get_sha1info(args, replace=False):
     'Return a list of sha1 info for the release'
 
-    if args.target:
-        target = args.target
-    else:
-        target = get_deploydir(args.base_dir)
+    target = get_target(args)
 
     sha1s = glob.glob(os.path.join(target, 'subversion*-%s*.sha1' % args.version))
 
@@ -753,10 +756,7 @@ def get_siginfo(args, quiet=False):
         import _gnupg as gnupg
     gpg = gnupg.GPG()
 
-    if args.target:
-        target = args.target
-    else:
-        target = get_deploydir(args.base_dir)
+    target = get_target(args)
 
     good_sigs = {}
     fingerprints = {}
@@ -887,6 +887,9 @@ def main():
                     help='''The release label, such as '1.7.0-alpha1'.''')
     subparser.add_argument('--username',
                     help='''Username for ''' + dist_repos + '''.''')
+    subparser.add_argument('--target',
+                    help='''The full path to the directory containing
+                            release artifacts.''')
 
     # Setup the parser for the create-tag subcommand
     subparser = subparsers.add_parser('create-tag',
@@ -900,6 +903,9 @@ def main():
                     help='''The branch to base the release on.''')
     subparser.add_argument('--username',
                     help='''Username for ''' + secure_repos + '''.''')
+    subparser.add_argument('--target',
+                    help='''The full path to the directory containing
+                            release artifacts.''')
 
     # The clean-dist subcommand
     subparser = subparsers.add_parser('clean-dist',
