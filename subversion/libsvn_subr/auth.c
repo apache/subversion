@@ -251,7 +251,9 @@ svn_auth_first_credentials(void **credentials,
     }
 
   if (! creds)
-    *state = NULL;
+    {
+      *state = NULL;
+    }
   else
     {
       /* Build an abstract iteration state. */
@@ -305,10 +307,12 @@ svn_auth_next_credentials(void **credentials,
         }
       else if (provider->vtable->next_credentials)
         {
-          SVN_ERR(provider->vtable->next_credentials(
-                      &creds, state->provider_iter_baton,
-                      provider->provider_baton, auth_baton->parameters,
-                      state->realmstring, auth_baton->pool));
+          SVN_ERR(provider->vtable->next_credentials(&creds,
+                                                     state->provider_iter_baton,
+                                                     provider->provider_baton,
+                                                     auth_baton->parameters,
+                                                     state->realmstring,
+                                                     auth_baton->pool));
         }
 
       if (creds != NULL)
@@ -374,12 +378,11 @@ svn_auth_save_credentials(svn_auth_iterstate_t *state,
       provider = APR_ARRAY_IDX(state->table->providers, i,
                                svn_auth_provider_object_t *);
       if (provider->vtable->save_credentials)
-        SVN_ERR(provider->vtable->save_credentials
-                (&save_succeeded, creds,
-                 provider->provider_baton,
-                 auth_baton->parameters,
-                 state->realmstring,
-                 pool));
+        SVN_ERR(provider->vtable->save_credentials(&save_succeeded, creds,
+                                                   provider->provider_baton,
+                                                   auth_baton->parameters,
+                                                   state->realmstring,
+                                                   pool));
 
       if (save_succeeded)
         break;
