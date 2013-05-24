@@ -39,6 +39,7 @@
 #define MAX_STRINGS_PER_TABLE (1 << (TABLE_SHIFT - 1))
 #define LONG_STRING_MASK (1 << (TABLE_SHIFT - 1))
 #define STRING_INDEX_MASK ((1 << (TABLE_SHIFT - 1)) - 1)
+#define PADDING (sizeof(apr_uint64_t))
 
 
 typedef struct builder_string_t
@@ -105,7 +106,8 @@ static builder_table_t *
 add_table(string_table_builder_t *builder)
 {
   builder_table_t *table = apr_pcalloc(builder->pool, sizeof(*table));
-  table->max_data_size = MAX_DATA_SIZE;
+  table->max_data_size = MAX_DATA_SIZE - PADDING; /* ensure there remain a few
+                                                     unused bytes at the end */
   table->short_strings = apr_array_make(builder->pool, 64,
                                         sizeof(builder_string_t *));
   table->long_strings = apr_array_make(builder->pool, 0,
@@ -438,6 +440,10 @@ create_table(string_sub_table_t *target,
       string->data = apr_pstrmemdup(pool, string->data, string->len);
     }
 
+  data->len += PADDING; /* there a few extra bytes at then of the buffer
+                           that we want to keep */
+  assert(data->len < data->blocksize);
+
   target->data = apr_pmemdup(pool, data->data, data->len);
   target->data_size = data->len;
 }
@@ -462,30 +468,69 @@ svn_fs_fs__string_table_create(const string_table_builder_t *builder,
   return result;
 }
 
+/* Masks used by table_copy_string.  copy_mask[I] is used if the target
+   content to be preserved starts at byte I within the current chunk.
+   This is used to work around alignment issues.
+ */
+static const char *copy_masks[8] = { "\xff\xff\xff\xff\xff\xff\xff\xff",
+                                     "\x00\xff\xff\xff\xff\xff\xff\xff",
+                                     "\x00\x00\xff\xff\xff\xff\xff\xff",
+                                     "\x00\x00\x00\xff\xff\xff\xff\xff",
+                                     "\x00\x00\x00\x00\xff\xff\xff\xff",
+                                     "\x00\x00\x00\x00\x00\xff\xff\xff",
+                                     "\x00\x00\x00\x00\x00\x00\xff\xff",
+                                     "\x00\x00\x00\x00\x00\x00\x00\xff" };
+
 static void
 table_copy_string(char *buffer,
-                  apr_size_t size,
+                  apr_size_t len,
                   const string_sub_table_t *table,
                   string_header_t *header)
 {
-  apr_size_t len = header->head_length + header->tail_length;
-  apr_size_t to_copy = len;
-
-  while (to_copy)
+  buffer[len] = '\0';
+  do
     {
-      if (header->head_length < to_copy)
+      assert(header->head_length <= len);
         {
+#if SVN_UNALIGNED_ACCESS_IS_OK
+          /* the sections that we copy tend to be short but we can copy
+             *all* of it chunky because we made sure that source and target
+             buffer have some extra padding to prevent segfaults. */
+          apr_uint64_t mask;
+          apr_size_t to_copy = len - header->head_length;
+          apr_size_t copied = 0;
+
+          const char *source = table->data + header->tail_start;
+          char *target = buffer + header->head_length;
+          len = header->head_length;
+
+          /* copy whole chunks */
+          while (to_copy >= copied + sizeof(apr_uint64_t))
+            {
+              *(apr_uint64_t *)(target + copied)
+                = *(const apr_uint64_t *)(source + copied);
+              copied += sizeof(apr_uint64_t);
+            }
+
+          /* copy the remainder assuming that we have up to 8 extra bytes
+             of addressable buffer on the source and target sides.
+             Now, we simply copy 8 bytes and use a mask to filter & merge
+             old with new data. */
+          mask = *(const apr_uint64_t *)copy_masks[to_copy - copied];
+          *(apr_uint64_t *)(target + copied)
+            = (*(apr_uint64_t *)(target + copied) & mask)
+            | (*(const apr_uint64_t *)(source + copied) & ~mask);
+#else
           memcpy(buffer + header->head_length,
                  table->data + header->tail_start,
-                 to_copy - header->head_length);
-          to_copy = header->head_length;
+                 len - header->head_length);
+          len = header->head_length;
+#endif
         }
 
       header = &table->short_strings[header->head_string];
     }
-
-  if (size > len)
-    buffer[len] = '\0';
+  while (len);
 }
 
 const char*
@@ -517,11 +562,11 @@ svn_fs_fs__string_table_get(const string_table_t *table,
           if (sub_index < sub_table->short_string_count)
             {
               string_header_t *header = sub_table->short_strings + sub_index;
-              apr_size_t len = header->head_length + header->tail_length + 1;
-              char *result = apr_palloc(pool, len);
+              apr_size_t len = header->head_length + header->tail_length;
+              char *result = apr_palloc(pool, len + PADDING);
 
               if (length)
-                *length = len - 1;
+                *length = len;
               table_copy_string(result, len, sub_table, header);
 
               return result;
@@ -837,11 +882,11 @@ svn_fs_fs__string_table_get_func(const string_table_t *table,
 
               /* reconstruct the char data and return it */
               header = table_copy.short_strings + sub_index;
-              len = header->head_length + header->tail_length + 1;
-              result = apr_palloc(pool, len);
-              
+              len = header->head_length + header->tail_length;
+              result = apr_palloc(pool, len + PADDING);
               if (length)
-                *length = len - 1;
+                *length = len;
+
               table_copy_string(result, len, &table_copy, header);
 
               return result;
