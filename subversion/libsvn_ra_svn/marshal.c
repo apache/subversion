@@ -47,6 +47,7 @@
 #include "private/svn_string_private.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_error_private.h"
+#include "private/svn_subr_private.h"
 
 #define svn_iswhitespace(c) ((c) == ' ' || (c) == '\n')
 
@@ -1421,7 +1422,7 @@ svn_ra_svn__parse_proplist(const apr_array_header_t *list,
   svn_ra_svn_item_t *elt;
   int i;
 
-  *props = apr_hash_make(pool);
+  *props = svn_hash__make(pool);
   for (i = 0; i < list->nelts; i++)
     {
       elt = &APR_ARRAY_IDX(list, i, svn_ra_svn_item_t);
