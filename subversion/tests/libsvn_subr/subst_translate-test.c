@@ -269,6 +269,10 @@ test_svn_subst_build_keywords3(apr_pool_t *pool)
        "trunk/foo.txt stsp foo.txt %",
        "1234", "http://svn.example.com/repos/trunk/foo.txt",
        "http://svn.example.com/repos", "stsp"},
+      {"FOO", "FOO=author%_=%_%a",
+       "author = stsp",
+       "1234", "http://svn.example.com/repos/trunk/foo.txt",
+       "http://svn.example.com/repos", "stsp"},
       {"MyKeyword", "MyKeyword=%r%_%u%_%_%a",
        "4567 http://svn.example.com/svn/branches/myfile  jrandom",
        "4567", "http://svn.example.com/svn/branches/myfile",
@@ -295,6 +299,7 @@ test_svn_subst_build_keywords3(apr_pool_t *pool)
                                         t->rev, t->url, t->repos_root_url,
                                         0 /* date */, t->author, pool));
       expanded_keyword = svn_hash_gets(kw, t->keyword_name);
+      SVN_TEST_ASSERT(expanded_keyword != NULL);
       SVN_TEST_STRING_ASSERT(expanded_keyword->data, t->expanded_keyword);
     }
 
