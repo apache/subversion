@@ -366,8 +366,9 @@ typedef struct svn_auth_cred_ssl_server_trust_t
 typedef struct svn_auth_cred_master_passphrase_t
 {
   /** Master passphrase: this is the SHA-1 digest (as a counted
-      string, not a pretty-printed C-string) of the user-supplied
-      passphrase.  Subversion doesn't want the actual passphrase! */
+   * string, not a pretty-printed C-string) of the user-supplied
+   * passphrase.  Subversion doesn't want the actual passphrase!
+   */
   const svn_string_t *passphrase;
 
   /** Indicates if the credentials may be saved (to disk). For
