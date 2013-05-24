@@ -3755,6 +3755,17 @@ small_file_integrity(const svn_test_opts_t *opts,
 
 
 static svn_error_t *
+almostmedium_file_integrity(const svn_test_opts_t *opts,
+                            apr_pool_t *pool)
+{
+  apr_uint32_t seed = (apr_uint32_t) apr_time_now();
+
+  return file_integrity_helper(SVN_DELTA_WINDOW_SIZE - 1, &seed, opts,
+                               "test-repo-almostmedium-file-integrity", pool);
+}
+
+
+static svn_error_t *
 medium_file_integrity(const svn_test_opts_t *opts,
                       apr_pool_t *pool)
 {
@@ -5055,6 +5066,8 @@ struct svn_test_descriptor_t test_funcs[] =
                        "check old revisions"),
     SVN_TEST_OPTS_PASS(check_all_revisions,
                        "after each commit, check all revisions"),
+    SVN_TEST_OPTS_PASS(almostmedium_file_integrity,
+                       "create and modify almostmedium file"),
     SVN_TEST_OPTS_PASS(medium_file_integrity,
                        "create and modify medium file"),
     SVN_TEST_OPTS_PASS(large_file_integrity,
