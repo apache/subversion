@@ -620,6 +620,17 @@ parse_args(apr_array_header_t **args,
 }
 
 
+/* This implements 'svn_error_malfunction_handler_t. */
+static svn_error_t *
+crashtest_malfunction_handler(svn_boolean_t can_return,
+                              const char *file,
+                              int line,
+                              const char *expr)
+{
+  abort();
+  return SVN_NO_ERROR; /* Not reached. */
+}
+
 /* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *
 subcommand_crashtest(apr_getopt_t *os, void *baton, apr_pool_t *pool)
@@ -627,7 +638,14 @@ subcommand_crashtest(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
 
+  (void)svn_error_set_malfunction_handler(crashtest_malfunction_handler);
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  SVN_ERR(svn_cmdline_printf(pool,
+                             _("Successfully opened repository '%s'.\n"
+                               "Will now crash to simulate a crashing "
+                               "server process.\n"),
+                             svn_dirent_local_style(opt_state->repository_path,
+                                                    pool)));
   SVN_ERR_MALFUNCTION();
 
   /* merely silence a compiler warning (this will never be executed) */
