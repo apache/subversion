@@ -150,7 +150,7 @@ Candidate changes:
    Justification:
      Custom keyword values containing '=' should work.
    Votes:
-     +1: stsp
+     +1: stsp, danielsh
 
 Approved for 1.8.1 or if soak is restarted for 1.8.0:
 ====================================================
