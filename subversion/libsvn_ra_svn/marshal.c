@@ -62,6 +62,13 @@
  */
 #define MAX_WORD_LENGTH 31
 
+/* The generic parsers will use the following value to limit the recursion
+ * depth to some reasonable value.  The current protocol implementation
+ * actually uses only maximum item nesting level of around 5.  So, there is
+ * plenty of headroom here.
+ */
+#define ITEM_NESTING_LIMIT 64
+
 /* Return the APR socket timeout to be used for the connection depending
  * on whether there is a blockage handler or zero copy has been activated. */
 static apr_interval_time_t
@@ -1020,9 +1027,9 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_stringbuf_t *str;
   svn_ra_svn_item_t *listitem;
 
-  if (++level >= 64)
+  if (++level >= ITEM_NESTING_LIMIT)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                            _("Too many nested items"));
+                            _("Items are nested too deeply"));
 
 
   /* Determine the item type and read it in.  Make sure that c is the
