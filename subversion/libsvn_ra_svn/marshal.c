@@ -567,6 +567,19 @@ svn_ra_svn__write_word(svn_ra_svn_conn_t *conn,
 }
 
 svn_error_t *
+svn_ra_svn__write_boolean(svn_ra_svn_conn_t *conn,
+                          apr_pool_t *pool,
+                          svn_boolean_t value)
+{
+  if (value)
+    SVN_ERR(writebuf_write_short_string(conn, pool, "true ", 5));
+  else
+    SVN_ERR(writebuf_write_short_string(conn, pool, "false ", 6));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_ra_svn__write_proplist(svn_ra_svn_conn_t *conn,
                            apr_pool_t *pool,
                            apr_hash_t *props)
@@ -710,8 +723,7 @@ vwrite_tuple_number(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
 static svn_error_t *
 vwrite_tuple_boolean(svn_ra_svn_conn_t *conn, apr_pool_t *pool, va_list *ap)
 {
-  const char *cstr = va_arg(*ap, svn_boolean_t) ? "true" : "false";
-  return svn_ra_svn__write_word(conn, pool, cstr);
+  return svn_ra_svn__write_boolean(conn, pool, va_arg(*ap, svn_boolean_t));
 }
 
 static svn_error_t *
@@ -786,8 +798,7 @@ write_tuple_boolean(svn_ra_svn_conn_t *conn,
                     apr_pool_t *pool,
                     svn_boolean_t value)
 {
-  const char *cstr = value ? "true" : "false";
-  return svn_ra_svn__write_word(conn, pool, cstr);
+  return svn_ra_svn__write_boolean(conn, pool, value);
 }
 
 static svn_error_t *

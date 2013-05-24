@@ -83,6 +83,15 @@ svn_ra_svn__write_word(svn_ra_svn_conn_t *conn,
                        apr_pool_t *pool,
                        const char *word);
 
+/** Write a boolean over the net.
+ *
+ * Writes will be buffered until the next read or flush.
+ */
+svn_error_t *
+svn_ra_svn__write_boolean(svn_ra_svn_conn_t *conn,
+                          apr_pool_t *pool,
+                          svn_boolean_t value);
+
 /** Write a list of properties over the net.  @a props is allowed to be NULL,
  * in which case an empty list will be written out.
  *
