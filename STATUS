@@ -135,13 +135,6 @@ Approved changes:
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 
- * r1486072
-   Fix expansion of custom keywords with values that contain '='.
-   Justification:
-     Custom keyword values containing '=' should work.
-   Votes:
-     +1: stsp, danielsh, cmpilato
-
  * r1481944
    Let Windows compile against BDB 5.0, 5.1, 5.2 and 5.3.
    Justification:
