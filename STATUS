@@ -135,13 +135,6 @@ Approved changes:
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 
- * r1481944
-   Let Windows compile against BDB 5.0, 5.1, 5.2 and 5.3.
-   Justification:
-     No reason to prevent this.
-   Votes:
-     +1: breser (for 1.8.1), pburba, cmpilato
-
  * r1483557
    Match our revision property names exactly instead of by prefix only.
    Justification:
