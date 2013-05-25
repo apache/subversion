@@ -134,11 +134,3 @@ Approved changes:
 # that would restart the soak should not be added unless they are resolving
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
-
- * r1483557
-   Match our revision property names exactly instead of by prefix only.
-   Justification:
-     While the impact of this bug is certainly low, it is still an easy
-     to fix problem.
-   Votes:
-     +1: stefan2 (for 1.8.1), rhuijben, pburba
