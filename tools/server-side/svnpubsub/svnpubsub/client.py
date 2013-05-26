@@ -62,7 +62,8 @@ class SvnpubsubClientException(Exception):
 
 class Client(asynchat.async_chat):
 
-  def __init__(self, url, commit_callback, event_callback):
+  def __init__(self, url, commit_callback, event_callback,
+               metadata_callback = None):
     asynchat.async_chat.__init__(self)
 
     self.last_activity = time.time()
@@ -82,7 +83,8 @@ class Client(asynchat.async_chat):
 
     self.event_callback = event_callback
 
-    self.parser = JSONRecordHandler(commit_callback, event_callback)
+    self.parser = JSONRecordHandler(commit_callback, event_callback,
+                                    metadata_callback)
 
     # Wait for the end of headers. Then we start parsing JSON.
     self.set_terminator(b'\r\n\r\n')
@@ -126,36 +128,50 @@ class Client(asynchat.async_chat):
       self.ibuffer.append(data)
 
 
+class Notification(object):
+  def __init__(self, data):
+    self.__dict__.update(data)
+
+class Commit(Notification):
+  KIND = 'COMMIT'
+
+class Metadata(Notification):
+  KIND = 'METADATA'
+
+
 class JSONRecordHandler:
-  def __init__(self, commit_callback, event_callback):
+  def __init__(self, commit_callback, event_callback, metadata_callback):
     self.commit_callback = commit_callback
     self.event_callback = event_callback
+    self.metadata_callback = metadata_callback
+
+  EXPECTED_VERSION = 1
 
   def feed(self, record):
     obj = json.loads(record)
     if 'svnpubsub' in obj:
       actual_version = obj['svnpubsub'].get('version')
-      EXPECTED_VERSION = 1
-      if actual_version != EXPECTED_VERSION:
-        raise SvnpubsubClientException("Unknown svnpubsub format: %r != %d"
-                                       % (actual_format, expected_format))
+      if actual_version != self.EXPECTED_VERSION:
+        raise SvnpubsubClientException(
+          "Unknown svnpubsub format: %r != %d"
+          % (actual_version, self.EXPECTED_VERSION))
       self.event_callback('version', obj['svnpubsub']['version'])
     elif 'commit' in obj:
       commit = Commit(obj['commit'])
       self.commit_callback(commit)
     elif 'stillalive' in obj:
       self.event_callback('ping', obj['stillalive'])
-
-
-class Commit(object):
-  def __init__(self, commit):
-    self.__dict__.update(commit)
+    elif 'metadata' in obj and self.metadata_callback:
+      metadata = Metadata(obj['metadata'])
+      self.metadata_callback(metadata)
 
 
 class MultiClient(object):
-  def __init__(self, urls, commit_callback, event_callback):
+  def __init__(self, urls, commit_callback, event_callback,
+               metadata_callback = None):
     self.commit_callback = commit_callback
     self.event_callback = event_callback
+    self.metadata_callback = metadata_callback
 
     # No target time, as no work to do
     self.target_time = 0
@@ -185,9 +201,15 @@ class MultiClient(object):
   def _add_channel(self, url):
     # Simply instantiating the client will install it into the global map
     # for processing in the main event loop.
-    Client(url,
-           functools.partial(self.commit_callback, url),
-           functools.partial(self._reconnect, url))
+    if self.metadata_callback:
+      Client(url,
+             functools.partial(self.commit_callback, url),
+             functools.partial(self._reconnect, url),
+             functools.partial(self.metadata_callback, url))
+    else:
+      Client(url,
+             functools.partial(self.commit_callback, url),
+             functools.partial(self._reconnect, url))
 
   def _check_stale(self):
     now = time.time()
