@@ -26,6 +26,7 @@ Candidate changes:
      of the -Wno-clobbered, see above).
    Votes:
      +1: brane (for 1.8.1)
+     +1: danielsh
      +0: rhuijben (looks ok, but I can't test or verify via code inspection)
 
  * r1480149
@@ -85,14 +86,7 @@ Candidate changes:
      compelling reason not to include with this bunch.
    Votes:
      +1: pburba
-
- * r1483781
-   Fix FSFS repository corruption on power or network disk failure on Windows:
-   http://svn.haxx.se/dev/archive-2013-05/0245.shtml
-   Justification:
-     Repository corruption. Regression from 1.6.x
-   Votes:
-     +1: ivan, blair
+     -0: danielsh (very close to +0; see dev@)
 
  * r1483575, r1483580, r1485018
    Define SVN_UNALIGNED_ACCESS_IS_OK for PowerPC.
@@ -134,3 +128,12 @@ Approved changes:
 # that would restart the soak should not be added unless they are resolving
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
+
+ * r1483781
+   Fix FSFS repository corruption on power or network disk failure on Windows:
+   http://svn.haxx.se/dev/archive-2013-05/0245.shtml
+   Justification:
+     Repository corruption. Regression from 1.6.x
+   Votes:
+     +1: ivan, blair, danielsh
+
