@@ -32,7 +32,7 @@ except ImportError:
 import urllib2
 
 def svncmd(cmd):
-    return subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+    return subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE)
 
 def svncmd_uuid(repo):
     cmd = "%s uuid %s" % (SVNLOOK, repo)
