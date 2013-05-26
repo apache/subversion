@@ -104,6 +104,10 @@ Candidate changes:
      Restores functionality that was lost in 1.8 compared to 1.7.
    Votes:
      +1: rhuijben (for 1.8.1 or soak restart)
+     +0: danielsh (looks right, but all this does is cause sess->repos_url
+                   to be set to a non-canonical value; I wonder if the right
+                   fix is to add a canonicalize() call in front of a strcmp()
+                   in libsvn_client)
 
  * r1485447, r1485449
    Make 'SQLITE_VERSION=3.7.15.1 ./get-deps.sh' work.
