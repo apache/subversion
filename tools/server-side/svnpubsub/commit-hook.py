@@ -19,6 +19,9 @@
 SVNLOOK="/usr/local/svn-install/current/bin/svnlook"
 #SVNLOOK="/usr/local/bin/svnlook"
 
+HOST="127.0.0.1"
+PORT=2069
+
 import sys
 import subprocess
 try:
@@ -27,9 +30,6 @@ except ImportError:
     import json
 
 import urllib2
-
-HOST="127.0.0.1"
-PORT=2069
 
 def svncmd(cmd):
     return subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
@@ -86,8 +86,8 @@ def main(repo, revision):
     do_put(body)
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print "invalid args"
+    if len(sys.argv) not in (3, 4):
+        sys.stderr.write("invalid args\n")
         sys.exit(0)
 
-    main(sys.argv[1], sys.argv[2])
+    main(*sys.argv[1:3])
