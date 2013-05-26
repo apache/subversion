@@ -29,14 +29,6 @@ Candidate changes:
      +1: danielsh
      +0: rhuijben (looks ok, but I can't test or verify via code inspection)
 
- * r1480149
-   Fix a build problem on OS X 10.5.
-   Justification:
-     Necessary for building on PPC Macs.
-   Votes:
-     +1: mattiase (non-binding)
-     +1: rhuijben, breser
-
  * r1477876, r1477891, r1478001, r1479605
    Fix a bug whereby a property conflict description always reported
      'unknown' for the node kind. Add a test which catches that bug.
@@ -83,7 +75,7 @@ Candidate changes:
      Performance for free.
    Votes:
      +1: mattiase (non-binding, not including r1485018)
-     +1: breser
+     +1: breser, stefan2
 
  * r1485127
    Revert 1.8 behavior change that breaks some url forms when passed to
@@ -97,15 +89,6 @@ Candidate changes:
                    to be set to a non-canonical value; I wonder if the right
                    fix is to add a canonicalize() call in front of a strcmp()
                    in libsvn_client)
-
- * r1485447, r1485449
-   Make 'SQLITE_VERSION=3.7.15.1 ./get-deps.sh' work.
-   Justification:
-     Allow downloading another version without editing the script, for example
-     if upstream break the URL to the tarball after a newer version has been
-     released.
-   Votes:
-     +1: danielsh, cmpilato
 
 Veto-blocked changes:
 =====================
@@ -140,4 +123,21 @@ Approved changes:
    Votes:
      +1: rhuijben (for either 1.8.0 or later)
      +1: cmpilato, danielsh
+
+ * r1480149
+   Fix a build problem on OS X 10.5.
+   Justification:
+     Necessary for building on PPC Macs.
+   Votes:
+     +1: mattiase (non-binding)
+     +1: rhuijben, breser, stefan2
+
+ * r1485447, r1485449
+   Make 'SQLITE_VERSION=3.7.15.1 ./get-deps.sh' work.
+   Justification:
+     Allow downloading another version without editing the script, for example
+     if upstream break the URL to the tarball after a newer version has been
+     released.
+   Votes:
+     +1: danielsh, cmpilato, stefan2
 
