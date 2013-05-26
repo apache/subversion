@@ -64,17 +64,6 @@ Candidate changes:
      -0: rhuijben, breser (merge conflict in configure.ac in r1481848
                            <danielsh> resolved on the branch)
 
- * r1482436
-   Resolve regression in svn_ra_replay_range() where it didn't apply
-   the send_changes FALSE flag to property changes.
-   Justification:
-     The replay without changes mode is used by repository viewers
-     to obtain more information about changes. We should keep this
-     behavior stable
-   Votes:
-     +1: rhuijben (for either 1.8.0 or later)
-     +1: cmpilato
-
  * r1480344, r1480412, r1480442, r1480738, r1480765, r1482479, r1482524,
    r1482528, r1482536
    Fix Ruby binding tests on Windows and support Ruby 1.9[1].
@@ -140,4 +129,15 @@ Approved changes:
      Repository corruption. Regression from 1.6.x
    Votes:
      +1: ivan, blair, danielsh
+
+ * r1482436
+   Resolve regression in svn_ra_replay_range() where it didn't apply
+   the send_changes FALSE flag to property changes.
+   Justification:
+     The replay without changes mode is used by repository viewers
+     to obtain more information about changes. We should keep this
+     behavior stable
+   Votes:
+     +1: rhuijben (for either 1.8.0 or later)
+     +1: cmpilato, danielsh
 
