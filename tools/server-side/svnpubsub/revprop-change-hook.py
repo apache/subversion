@@ -23,7 +23,6 @@ HOST="127.0.0.1"
 PORT=2069
 
 import sys
-import subprocess
 try:
     import simplejson as json
 except ImportError:
@@ -31,18 +30,20 @@ except ImportError:
 
 import urllib2
 
-def svncmd(cmd):
-    return subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE)
 
-def svncmd_uuid(repo):
-    cmd = "%s uuid %s" % (SVNLOOK, repo)
-    p = svncmd(cmd)
-    return p.stdout.read().strip()
+import svnpubsub.util
 
-def svncmd_revprop(repo, revision, propname):
-    cmd = "%s propget -r %s --revprop %s %s" % (SVNLOOK, revision, repo, propname)
-    p = svncmd(cmd)
-    data = p.stdout.read()
+def svnlook(cmd, **kwargs):
+    args = [SVNLOOK] + cmd
+    return svnpubsub.util.check_output(args, **kwargs)
+
+def svnlook_uuid(repo):
+    cmd = ["uuid", repo]
+    return svnlook(cmd).strip()
+
+def svnlook_revprop(repo, revision, propname):
+    cmd = ["propget", "-r", revision, "--revprop", repo, propname]
+    data = svnlook(cmd)
     #print data
     return data
 
@@ -57,7 +58,7 @@ def do_put(body):
 def main(repo, revision, author, propname, action):
     revision = revision.lstrip('r')
     if action in ('A', 'M'):
-        new_value = svncmd_revprop(repo, revision, propname)
+        new_value = svnlook_revprop(repo, revision, propname)
     elif action == 'D':
         new_value = None
     else:
@@ -70,7 +71,7 @@ def main(repo, revision, author, propname, action):
     data = {'type': 'svn',
             'format': 1,
             'id': int(revision),
-            'repository': svncmd_uuid(repo),
+            'repository': svnlook_uuid(repo),
             'revprop': {
                 'name': propname,
                 'committer': author,
@@ -84,6 +85,6 @@ def main(repo, revision, author, propname, action):
 if __name__ == "__main__":
     if len(sys.argv) != 6:
         sys.stderr.write("invalid args\n")
-        sys.exit(0)
+        sys.exit(1)
 
     main(*sys.argv[1:6])
