@@ -31,19 +31,26 @@
 # features already used in the file.  Reviewing the history of changes
 # may be useful as well.
 
-APR=apr-1.4.6
-APR_UTIL=apr-util-1.5.1
-SERF=serf-1.2.0
-ZLIB=zlib-1.2.8
-SQLITE_VERSION=3.7.15.1
+APR_VERSION=${APR_VERSION:-"1.4.6"}
+APU_VERSION=${APU_VERSION:-"1.5.1"}
+SERF_VERSION=${SERF_VERSION:-"1.2.0"}
+ZLIB_VERSION=${ZLIB_VERSION:-"1.2.8"}
+SQLITE_VERSION=${SQLITE_VERSION:-"3.7.15.1"}
+GTEST_VERSION=${GTEST_VERSION:-"1.6.0"}
+HTTPD_VERSION=${HTTPD_VERSION:-"2.4.3"}
+APR_ICONV_VERSION=${APR_ICONV_VERSION:-"1.2.1"}
+
+APR=apr-${APR_VERSION}
+APR_UTIL=apr-util-${APU_VERSION}
+SERF=serf-${SERF_VERSION}
+ZLIB=zlib-${ZLIB_VERSION}
 SQLITE_VERSION_LIST=`echo $SQLITE_VERSION | sed -e 's/\./ /g'`
 SQLITE=sqlite-amalgamation-`printf %d%02d%02d%02d $SQLITE_VERSION_LIST`
-GTEST_VERSION=1.6.0
 GTEST=gtest-${GTEST_VERSION}
 GTEST_URL=http://googletest.googlecode.com/files/
 
-HTTPD=httpd-2.4.3
-APR_ICONV=apr-iconv-1.2.1
+HTTPD=httpd-${HTTPD_VERSION}
+APR_ICONV=apr-iconv-${APR_ICONV_VERSION}
 
 BASEDIR=`pwd`
 TEMPDIR=$BASEDIR/temp
