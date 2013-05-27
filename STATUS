@@ -105,12 +105,3 @@ Approved changes:
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 
- * r1485447, r1485449
-   Make 'SQLITE_VERSION=3.7.15.1 ./get-deps.sh' work.
-   Justification:
-     Allow downloading another version without editing the script, for example
-     if upstream break the URL to the tarball after a newer version has been
-     released.
-   Votes:
-     +1: danielsh, cmpilato, stefan2
-
