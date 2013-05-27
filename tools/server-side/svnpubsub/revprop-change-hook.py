@@ -63,7 +63,7 @@ def main(repo, revision, author, propname, action):
         new_value = None
     else:
         sys.stderr.write('Unknown revprop change action "%s"\n' % action)
-        return
+        sys.exit(1)
     if action in ('D', 'M'):
         old_value = sys.stdin.read()
     else:
