@@ -105,3 +105,10 @@ Approved changes:
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 
+ * r1486457
+   svnpubsub: make the example commit hook work with 1.8 libsvn_repos.
+   Justification:
+     Examples should work.
+   Votes:
+     +1: brane (via dev@), breser, danielsh
+
