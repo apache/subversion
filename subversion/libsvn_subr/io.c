@@ -3472,17 +3472,8 @@ svn_io_write_unique(const char **tmp_path,
 
   err = svn_io_file_write_full(new_file, buf, nbytes, NULL, pool);
 
-  /* ### BH: Windows doesn't have the race condition between the write and the
-     ###     rename that other operating systems might have. So allow windows
-     ###     to decide when it wants to perform the disk synchronization using
-     ###     the normal file locking and journaling filesystem rules.
-
-     ### Note that this function doesn't handle the rename, so we aren't even
-     ### sure that we really have to sync. */
-#ifndef WIN32
-  if (!err && nbytes > 0)
+  if (!err)
     err = svn_io_file_flush_to_disk(new_file, pool);
-#endif
 
   return svn_error_trace(
                   svn_error_compose_create(err,
