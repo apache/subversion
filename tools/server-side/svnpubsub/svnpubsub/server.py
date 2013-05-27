@@ -127,7 +127,7 @@ class Metadata(Notification):
     def render_log(self):
         return "metadata %s:%s repo '%s' id '%s' revprop '%s'" % (
             self.type, self.format, self.repository, self.id,
-            self.revprop.name)
+            self.revprop['name'])
 
 
 HEARTBEAT_TIME = 15
