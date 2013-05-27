@@ -37,11 +37,11 @@ def svnlook(cmd, **kwargs):
     return svnpubsub.util.check_output(args, **kwargs)
 
 def svnlook_uuid(repo):
-    cmd = ["uuid", repo]
+    cmd = ["uuid", "--", repo]
     return svnlook(cmd).strip()
 
 def svnlook_info(repo, revision):
-    cmd = ["info", "-r", revision, repo]
+    cmd = ["info", "-r", revision, "--", repo]
     data = svnlook(cmd, universal_newlines=True).split("\n")
     #print data
     return {'author': data[0].strip(),
@@ -49,7 +49,7 @@ def svnlook_info(repo, revision):
             'log': "\n".join(data[3:]).strip()}
 
 def svnlook_changed(repo, revision):
-    cmd = ["changed", "-r", revision, repo]
+    cmd = ["changed", "-r", revision, "--", repo]
     lines = svnlook(cmd, universal_newlines=True).split("\n")
     changed = {}
     for line in lines:
