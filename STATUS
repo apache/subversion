@@ -105,17 +105,6 @@ Approved changes:
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 
- * r1482436
-   Resolve regression in svn_ra_replay_range() where it didn't apply
-   the send_changes FALSE flag to property changes.
-   Justification:
-     The replay without changes mode is used by repository viewers
-     to obtain more information about changes. We should keep this
-     behavior stable
-   Votes:
-     +1: rhuijben (for either 1.8.0 or later)
-     +1: cmpilato, danielsh
-
  * r1480149
    Fix a build problem on OS X 10.5.
    Justification:
