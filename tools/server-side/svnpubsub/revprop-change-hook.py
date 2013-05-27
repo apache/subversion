@@ -38,11 +38,11 @@ def svnlook(cmd, **kwargs):
     return svnpubsub.util.check_output(args, **kwargs)
 
 def svnlook_uuid(repo):
-    cmd = ["uuid", repo]
+    cmd = ["uuid", "--", repo]
     return svnlook(cmd).strip()
 
 def svnlook_revprop(repo, revision, propname):
-    cmd = ["propget", "-r", revision, "--revprop", repo, propname]
+    cmd = ["propget", "-r", revision, "--revprop", "--", repo, propname]
     data = svnlook(cmd)
     #print data
     return data
