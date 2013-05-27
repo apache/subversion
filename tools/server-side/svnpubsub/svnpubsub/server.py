@@ -28,17 +28,17 @@
 # Currently supports both XML and JSON serialization.
 #
 # Example Sub clients:
-#   curl -sN http://127.0.0.1:2069/commits
-#   curl -sN http://127.0.0.1:2069/commits/svn/*
-#   curl -sN http://127.0.0.1:2069/commits/svn
-#   curl -sN http://127.0.0.1:2069/commits/*/13f79535-47bb-0310-9956-ffa450edef68
-#   curl -sN http://127.0.0.1:2069/commits/svn/13f79535-47bb-0310-9956-ffa450edef68
+#   curl -sN  http://127.0.0.1:2069/commits
+#   curl -sN 'http://127.0.0.1:2069/commits/svn/*'
+#   curl -sN  http://127.0.0.1:2069/commits/svn
+#   curl -sN 'http://127.0.0.1:2069/commits/*/13f79535-47bb-0310-9956-ffa450edef68'
+#   curl -sN  http://127.0.0.1:2069/commits/svn/13f79535-47bb-0310-9956-ffa450edef68
 #
-#   curl -sN http://127.0.0.1:2069/metadata
-#   curl -sN http://127.0.0.1:2069/metadata/svn/*
-#   curl -sN http://127.0.0.1:2069/metadata/svn
-#   curl -sN http://127.0.0.1:2069/metadata/*/13f79535-47bb-0310-9956-ffa450edef68
-#   curl -sN http://127.0.0.1:2069/metadata/svn/13f79535-47bb-0310-9956-ffa450edef68
+#   curl -sN  http://127.0.0.1:2069/metadata
+#   curl -sN 'http://127.0.0.1:2069/metadata/svn/*'
+#   curl -sN  http://127.0.0.1:2069/metadata/svn
+#   curl -sN 'http://127.0.0.1:2069/metadata/*/13f79535-47bb-0310-9956-ffa450edef68'
+#   curl -sN  http://127.0.0.1:2069/metadata/svn/13f79535-47bb-0310-9956-ffa450edef68
 #
 #   URLs are constructed from 3 parts:
 #       /${notification}/${optional_type}/${optional_repository}
