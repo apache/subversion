@@ -776,6 +776,8 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
       SVN_ERR(err);
       if (status)
         {
+          /* ### This omits SVN_WARNING, and possibly relies on the fact that
+             ### MAX(SERF_ERROR_*) < SVN_ERR_BAD_CATEGORY_START? */
           if (status >= SVN_ERR_BAD_CATEGORY_START && status < SVN_ERR_LAST)
             {
               /* apr can't translate subversion errors to text */
