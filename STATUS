@@ -78,7 +78,7 @@ Candidate changes:
    Justification:
      Be friendly to generic MIME/HTTP clients.
    Votes:
-     +1: danielsh
+     +1: danielsh, brane
 
 Veto-blocked changes:
 =====================
