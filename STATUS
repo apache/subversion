@@ -97,6 +97,14 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1486915
+   Provide APR_BUFFERED flag when opening file in svn patch.
+   Justification:
+     One-line fix to dramatically improve svn patch performance. Without
+     this fix applying 27k patch takes minutes.
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
