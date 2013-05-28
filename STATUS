@@ -57,7 +57,7 @@ Candidate changes:
                            <danielsh> resolved on the branch)
 
  * r1480344, r1480412, r1480442, r1480738, r1480765, r1482479, r1482524,
-   r1482528, r1482536
+   r1482528, r1482536, r1486931
    Fix Ruby binding tests on Windows and support Ruby 1.9[1].
    Justification:
      Running the test suite is important for, you know, testing.
