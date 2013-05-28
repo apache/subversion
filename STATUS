@@ -67,7 +67,7 @@ Candidate changes:
      compelling reason not to include with this bunch.
    Votes:
      +1: pburba
-     -0: danielsh (very close to +0; see dev@)
+     +0: danielsh
 
  * r1483575, r1483580, r1485018
    Define SVN_UNALIGNED_ACCESS_IS_OK for PowerPC.
