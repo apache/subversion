@@ -114,5 +114,5 @@ Approved changes:
      One-line fix to dramatically improve svn patch performance. Without
      this fix applying 27 KB patch takes minutes.
    Votes:
-     +1: ivan, stsp, danielsh
+     +1: ivan, stsp, danielsh, philip
 
