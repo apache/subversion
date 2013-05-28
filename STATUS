@@ -73,6 +73,20 @@ Candidate changes:
    Votes:
      +1: rhuijben (for 1.8.1 or soak restart), danielsh
 
+ * r1479540
+   Add an in typemap for PROPHASH to the Perl bindings.
+   Justification:
+     Make it easier to use APIs that take hashes of properties as input.
+   Votes:
+     +1: breser
+
+ * r1479563, r1480119, r1487083
+   Make svn_client_log5() callable from the Perl bindings.
+   Justification:
+     1.6 API that wasn't wrapped yet.
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
