@@ -56,19 +56,6 @@ Candidate changes:
      -0: rhuijben, breser (merge conflict in configure.ac in r1481848
                            <danielsh> resolved on the branch)
 
- * r1480344, r1480412, r1480442, r1480738, r1480765, r1482479, r1482524,
-   r1482528, r1482536, r1486931
-   Fix Ruby binding tests on Windows and support Ruby 1.9[1].
-   Justification:
-     Running the test suite is important for, you know, testing.
-   Notes:
-     Bindings changes, so can go into 1.8.0.  [1] Ruby 1.9 doesn't quite
-     yet work on Windows, but this gets us part way there, so there is no
-     compelling reason not to include with this bunch.
-   Votes:
-     +1: pburba
-     +0: danielsh
-
  * r1483575, r1483580, r1485018
    Define SVN_UNALIGNED_ACCESS_IS_OK for PowerPC.
    Justification:
@@ -84,11 +71,7 @@ Candidate changes:
    Justification:
      Restores functionality that was lost in 1.8 compared to 1.7.
    Votes:
-     +1: rhuijben (for 1.8.1 or soak restart)
-     +0: danielsh (looks right, but all this does is cause sess->repos_url
-                   to be set to a non-canonical value; I wonder if the right
-                   fix is to add a canonicalize() call in front of a strcmp()
-                   in libsvn_client)
+     +1: rhuijben (for 1.8.1 or soak restart), danielsh
 
  * r1486809
    svnpubsub: fix MIME type of response.
@@ -96,14 +79,6 @@ Candidate changes:
      Be friendly to generic MIME/HTTP clients.
    Votes:
      +1: danielsh
-
- * r1486915
-   Provide APR_BUFFERED flag when opening file in svn patch.
-   Justification:
-     One-line fix to dramatically improve svn patch performance. Without
-     this fix applying 27 KB patch takes minutes.
-   Votes:
-     +1: ivan, stsp
 
 Veto-blocked changes:
 =====================
@@ -119,3 +94,25 @@ Approved changes:
 # that would restart the soak should not be added unless they are resolving
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
+
+ * r1480344, r1480412, r1480442, r1480738, r1480765, r1482479, r1482524,
+   r1482528, r1482536, r1486931
+   Fix Ruby binding tests on Windows and support Ruby 1.9[1].
+   Justification:
+     Running the test suite is important for, you know, testing.
+   Notes:
+     Bindings changes, so can go into 1.8.0.  [1] Ruby 1.9 doesn't quite
+     yet work on Windows, but this gets us part way there, so there is no
+     compelling reason not to include with this bunch.
+   Votes:
+     +1: pburba
+     +0: danielsh
+
+ * r1486915
+   Provide APR_BUFFERED flag when opening file in svn patch.
+   Justification:
+     One-line fix to dramatically improve svn patch performance. Without
+     this fix applying 27 KB patch takes minutes.
+   Votes:
+     +1: ivan, stsp, danielsh
+
