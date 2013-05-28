@@ -73,13 +73,6 @@ Candidate changes:
    Votes:
      +1: rhuijben (for 1.8.1 or soak restart), danielsh
 
- * r1486809
-   svnpubsub: fix MIME type of response.
-   Justification:
-     Be friendly to generic MIME/HTTP clients.
-   Votes:
-     +1: danielsh, brane
-
 Veto-blocked changes:
 =====================
 
@@ -116,3 +109,9 @@ Approved changes:
    Votes:
      +1: ivan, stsp, danielsh, philip
 
+ * r1486809
+   svnpubsub: fix MIME type of response.
+   Justification:
+     Be friendly to generic MIME/HTTP clients.
+   Votes:
+     +1: danielsh, brane, breser
