@@ -209,7 +209,10 @@ class SvnPubSub(resource.Resource):
 
     def render_GET(self, request):
         log.msg("REQUEST: %s"  % (request.uri))
-        request.setHeader('content-type', 'text/plain')
+        # TODO: use application/x-* or vnd.* - see 
+        # Message-ID: <CADkdwvR=HwWevz+xN2hdiLD-HBPiz7Q5FqAFQ_f5+m77ZG6QHQ@mail.gmail.com>
+        # on May 2013
+        request.setHeader('content-type', 'application/octet-stream')
 
         repository = None
         type = None
