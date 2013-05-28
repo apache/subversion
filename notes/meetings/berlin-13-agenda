@@ -1,0 +1,49 @@
+The Berlin '13 hackathon will be held at the elego offices in Berlin, Germany
+on June 10-14.  elego has generously donated office space and $BEVERAGE for
+the duration of the week, and several committers will be on hand to hack,
+discuss, and make themselves merry.
+
+
+POTENTIAL ITEMS FOR DISCUSSION
+==============================
+
+ * Goals / ideas for Subversion 1.9
+   - Are we aiming for a 9 month or rather a 18 month project?
+   - Non-binding improvement / feature wishlist
+ * Merge
+   - Do we need a new data model? How would that look like?
+   - What needs to be done for move support?
+   - In what aspects can the current merge algorithms / infrastructe be
+     improved besides adding merge support?
+   - Refactoring our 500+kB merge.c?
+ * Branch cleanup
+   - Which of the existing branches are obsolete and can be removed?
+ * FSFS format 7
+   - Goals and feature overview is given as a WebEx talk on Wednesday
+   - Technical discussion needs to be separate from that
+   - People's feature whishlist
+   - How to get that into /trunk? This includes organizing a review
+     of the refactoring and improvements for f6. f7 features can be
+     disabled (similar to what we do with Ev2 right now).   
+ * Shared repository cache
+   - A.k.a. "cache server". What it is and why it's useful.
+ * How do people feel about C++?
+   - GCC recently allowed it in for its own code. What is the general
+     opinion amoungst SVN devs toways doing the same?
+ * Pipelining the client
+   - This seems to be the only available option to make the client
+     scale better for large projects.  Is that approach feasible for
+     a 1.10+ timeframe and what would it take?
+ * Benchmarking
+   - How could a systematic scalability and performance test for
+     SVN look like?
+ * Test coverage
+   - Should coverage reports be part of our CI builds?
+   - Do we want to improve coverage? If so, where and when?
+ * [insert item here]
+
+
+DISCUSSION NOTES
+================
+
+
