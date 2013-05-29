@@ -101,10 +101,3 @@ Approved changes:
 # that would restart the soak should not be added unless they are resolving
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
-
- * r1486809
-   svnpubsub: fix MIME type of response.
-   Justification:
-     Be friendly to generic MIME/HTTP clients.
-   Votes:
-     +1: danielsh, brane, breser
