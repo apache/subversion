@@ -29,21 +29,6 @@ Candidate changes:
      +1: danielsh
      +0: rhuijben (looks ok, but I can't test or verify via code inspection)
 
- * r1477876, r1477891, r1478001, r1479605
-   Fix a bug whereby a property conflict description always reported
-     'unknown' for the node kind. Add a test which catches that bug.
-   Justification:
-     Regression from 1.7.
-   Branch: ^/subversion/branches/1.8.x-r1477876
-   Notes:
-     The fix is in r1477876, and the branch was needed to resolve conflicts
-     (rather than porting prior changes on which it depended). The test is
-     in r1478001, and it depends on the test file changes made in r1477891.
-     r1479605 fixes an interactive conflict resolution bug triggered by this
-     change.
-   Votes:
-     +1: julianfoad, stsp
-
  * r1469519, r1469520, r1481848, r1481870
    Silence compiler warnings, tighten scopes and improve code.
    Justification:
@@ -63,15 +48,6 @@ Candidate changes:
    Votes:
      +1: mattiase (non-binding, not including r1485018)
      +1: breser, stefan2
-
- * r1485127
-   Revert 1.8 behavior change that breaks some url forms when passed to
-   ra_local. Without this some existing working copies using non standard
-   urls to access the repository might be broken.
-   Justification:
-     Restores functionality that was lost in 1.8 compared to 1.7.
-   Votes:
-     +1: rhuijben (for 1.8.1 or soak restart), danielsh
 
 Veto-blocked changes:
 =====================
@@ -101,3 +77,27 @@ Approved changes:
      1.6 API that wasn't wrapped yet.
    Votes:
      +1: breser, rschupp
+
+ * r1477876, r1477891, r1478001, r1479605
+   Fix a bug whereby a property conflict description always reported
+     'unknown' for the node kind. Add a test which catches that bug.
+   Justification:
+     Regression from 1.7.
+   Branch: ^/subversion/branches/1.8.x-r1477876
+   Notes:
+     The fix is in r1477876, and the branch was needed to resolve conflicts
+     (rather than porting prior changes on which it depended). The test is
+     in r1478001, and it depends on the test file changes made in r1477891.
+     r1479605 fixes an interactive conflict resolution bug triggered by this
+     change.
+   Votes:
+     +1: julianfoad, stsp, cmpilato
+
+ * r1485127
+   Revert 1.8 behavior change that breaks some url forms when passed to
+   ra_local. Without this some existing working copies using non standard
+   urls to access the repository might be broken.
+   Justification:
+     Restores functionality that was lost in 1.8 compared to 1.7.
+   Votes:
+     +1: rhuijben (for 1.8.1 or soak restart), danielsh, cmpilato
