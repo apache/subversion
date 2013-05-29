@@ -102,19 +102,6 @@ Approved changes:
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 
- * r1480344, r1480412, r1480442, r1480738, r1480765, r1482479, r1482524,
-   r1482528, r1482536, r1486931
-   Fix Ruby binding tests on Windows and support Ruby 1.9[1].
-   Justification:
-     Running the test suite is important for, you know, testing.
-   Notes:
-     Bindings changes, so can go into 1.8.0.  [1] Ruby 1.9 doesn't quite
-     yet work on Windows, but this gets us part way there, so there is no
-     compelling reason not to include with this bunch.
-   Votes:
-     +1: pburba
-     +0: danielsh
-
  * r1486915
    Provide APR_BUFFERED flag when opening file in svn patch.
    Justification:
