@@ -102,14 +102,6 @@ Approved changes:
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 
- * r1486915
-   Provide APR_BUFFERED flag when opening file in svn patch.
-   Justification:
-     One-line fix to dramatically improve svn patch performance. Without
-     this fix applying 27 KB patch takes minutes.
-   Votes:
-     +1: ivan, stsp, danielsh, philip
-
  * r1486809
    svnpubsub: fix MIME type of response.
    Justification:
