@@ -321,6 +321,75 @@ truncate_buffer_at_prefix(apr_size_t *new_len,
   /* NOTREACHED */
 }
 
+static svn_error_t *
+get_log_message_template(svn_stringbuf_t **log_msg_template,
+                         const apr_array_header_t *commit_items,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  int i;
+  apr_hash_t *log_templates = apr_hash_make(scratch_pool);
+  svn_stringbuf_t *template_text;
+  const svn_string_t *last_log_template = NULL;
+
+  if (commit_items)
+    {
+      for (i = 0; i < commit_items->nelts; i++)
+        {
+          svn_client_commit_item3_t *item =
+            APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
+          const svn_string_t *lmt = item->log_msg_template;
+          apr_array_header_t *lmt_paths;
+
+          if (! lmt)
+            continue;
+
+          fprintf(stderr, "path(%s), lmt(%s)\n", item->path, lmt->data);
+          lmt_paths = apr_hash_get(log_templates, lmt->data, lmt->len);
+          if (! lmt_paths)
+            {
+              lmt_paths = apr_array_make(scratch_pool, 4, sizeof(const char *));
+              apr_hash_set(log_templates, lmt->data, lmt->len, lmt_paths);
+              last_log_template = lmt;
+            }
+          
+          APR_ARRAY_PUSH(lmt_paths, const char *) = item->path;
+        }
+    }
+
+  /* No log message template?  No sweat. */
+  if (apr_hash_count(log_templates) == 0)
+    {
+      template_text = svn_stringbuf_create_empty(result_pool);
+    }
+  else if (apr_hash_count(log_templates) == 1)
+    {
+      template_text = svn_stringbuf_create_from_string(last_log_template,
+                                                        result_pool);
+    }
+  else
+    {
+      apr_hash_index_t *hi;
+
+      template_text = svn_stringbuf_create(_("Multiple log message templates "
+                                             "found:\n"), result_pool);
+      for (hi = apr_hash_first(NULL, log_templates); hi; hi = apr_hash_next(hi))
+        {
+          const void *key;
+          apr_ssize_t klen;
+          void * val;
+
+          apr_hash_this(hi, &key, &klen, &val);
+          svn_stringbuf_appendcstr(template_text, "\n{{{\n");
+          svn_stringbuf_appendbytes(template_text, key, klen);
+          svn_stringbuf_appendcstr(template_text, "\n}}}\n");
+        }
+    }
+
+  *log_msg_template = template_text;
+  return SVN_NO_ERROR;
+}
+
 
 #define EDITOR_EOF_PREFIX  _("--This line, and those below, will be ignored--")
 
@@ -336,7 +405,8 @@ svn_cl__get_log_message(const char **log_msg,
   svn_stringbuf_t *message = NULL;
 
   /* Set default message.  */
-  default_msg = svn_stringbuf_create(APR_EOL_STR, pool);
+  SVN_ERR(get_log_message_template(&default_msg, commit_items, pool, pool));
+  svn_stringbuf_appendcstr(default_msg, APR_EOL_STR);
   svn_stringbuf_appendcstr(default_msg, EDITOR_EOF_PREFIX);
   svn_stringbuf_appendcstr(default_msg, APR_EOL_STR APR_EOL_STR);
 
