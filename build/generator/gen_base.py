@@ -471,10 +471,9 @@ class TargetLinked(Target):
     # the specified install area depends upon this target
     self.gen_obj.graph.add(DT_INSTALL, self.install, self)
 
-    sources = sorted(_collect_paths(self.sources or '*.c' or '*.cpp', self.path))
+    sources = sorted(_collect_paths(self.sources, self.path))
 
-    for srcs, reldir in sources:
-      for src in srcs.split(" "):
+    for src, reldir in sources:
         if glob.glob(src):
           if src[-2:] == '.c':
             objname = src[:-2] + self.objext
@@ -954,10 +953,13 @@ def _collect_paths(pats, path=None):
   path (string), if specified, is a path that will be prepended to each
     glob pattern before it is evaluated
 
-  If path is none the return value is a list of filenames, otherwise
+  If path is None the return value is a list of filenames, otherwise
   the return value is a list of 2-tuples. The first element in each tuple
   is a matching filename and the second element is the portion of the
   glob pattern which matched the file before its last forward slash (/)
+
+  If no files are found matching a pattern, then include the pattern itself
+  as a filename in the results.
   """
   result = [ ]
   for base_pat in pats.split():
