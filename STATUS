@@ -64,13 +64,6 @@ Approved changes:
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 
- * r1479540
-   Add an in typemap for PROPHASH to the Perl bindings.
-   Justification:
-     Make it easier to use APIs that take hashes of properties as input.
-   Votes:
-     +1: breser, rschupp
-
  * r1479563, r1480119, r1487083
    Make svn_client_log5() callable from the Perl bindings.
    Justification:
