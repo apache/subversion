@@ -784,6 +784,12 @@
 }
 #endif
 
+#ifdef SWIGPERL
+%typemap(in) apr_array_header_t *REVISION_RANGE_LIST {
+  $1 = svn_swig_pl_array_to_apr_array_revision_range($input, _global_pool);
+}
+#endif
+
 #ifdef SWIGRUBY
 %typemap(in) apr_array_header_t *REVISION_RANGE_LIST {
   $1 = svn_swig_rb_array_to_apr_array_revision_range($input, _global_pool);
