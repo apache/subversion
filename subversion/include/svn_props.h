@@ -449,6 +449,12 @@ svn_prop_name_is_valid(const char *prop_name);
 /** Property used to record inheritable configuration ignores. */
 #define SVN_PROP_INHERITABLE_IGNORES SVN_PROP_PREFIX "global-ignores"
 
+/** Property used to record inheritable log message templates.
+ *
+ * @since New in 1.9.
+ */
+#define SVN_PROP_INHERITABLE_LOG_TEMPLATE SVN_PROP_PREFIX "log-template"
+
 /** Meta-data properties.
  *
  * The following properties are used for storing meta-data about
@@ -505,6 +511,7 @@ svn_prop_name_is_valid(const char *prop_name);
                                 SVN_PROP_MERGEINFO, \
                                 SVN_PROP_INHERITABLE_AUTO_PROPS, \
                                 SVN_PROP_INHERITABLE_IGNORES, \
+                                SVN_PROP_INHERITABLE_LOG_TEMPLATE, \
                                 \
                                 SVN_PROP_TEXT_TIME, \
                                 SVN_PROP_OWNER, \

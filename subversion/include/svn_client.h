@@ -528,6 +528,13 @@ typedef struct svn_client_commit_item3_t
    */
   const char *moved_from_abspath;
 
+  /** Log message template associated with this item (if any; NULL
+   * otherwise).
+   *
+   * @since New in 1.9.
+   */
+  const svn_string_t *log_msg_template;
+
 } svn_client_commit_item3_t;
 
 /** The commit candidate structure.

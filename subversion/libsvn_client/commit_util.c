@@ -197,6 +197,7 @@ add_committable(svn_client__committables_t *committables,
                 const char *copyfrom_relpath,
                 svn_revnum_t copyfrom_rev,
                 const char *moved_from_abspath,
+                const svn_string_t *log_msg_template,
                 apr_byte_t state_flags,
                 apr_hash_t *lock_tokens,
                 const svn_lock_t *lock,
@@ -246,6 +247,9 @@ add_committable(svn_client__committables_t *committables,
   if (moved_from_abspath)
     new_item->moved_from_abspath = apr_pstrdup(result_pool,
                                                moved_from_abspath);
+  if (log_msg_template)
+    new_item->log_msg_template = svn_string_dup(log_msg_template,
+                                                result_pool);
 
   /* Now, add the commit item to the array. */
   APR_ARRAY_PUSH(array, svn_client_commit_item3_t *) = new_item;
@@ -449,6 +453,39 @@ harvest_committables(const char *local_abspath,
   return SVN_NO_ERROR;
 }
 
+/* Set *LOG_MSG_TEMPLATE to the log message template associated with
+   LOCAL_ABSPATH (or NULL if there is none). */
+static svn_error_t *
+get_log_msg_template(const svn_string_t **log_msg_template,
+                     svn_wc_context_t *wc_ctx,
+                     const char *local_abspath,
+                     apr_pool_t *result_pool)
+{
+  apr_hash_t *props;
+
+  SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, local_abspath,
+                            result_pool, result_pool));
+  *log_msg_template = svn_hash_gets(props, SVN_PROP_INHERITABLE_LOG_TEMPLATE);
+  if (! *log_msg_template)
+    {
+      apr_array_header_t *inherited_lmt;
+      
+      SVN_ERR(svn_wc__get_iprops(&inherited_lmt, wc_ctx, local_abspath,
+                                 SVN_PROP_INHERITABLE_LOG_TEMPLATE,
+                                 result_pool, result_pool));
+      if (inherited_lmt && inherited_lmt->nelts)
+        {
+          svn_prop_inherited_item_t *iprop =
+            APR_ARRAY_IDX(inherited_lmt,
+                          inherited_lmt->nelts - 1,
+                          svn_prop_inherited_item_t *);
+          *log_msg_template = svn_hash_gets(iprop->prop_hash,
+                                            SVN_PROP_INHERITABLE_LOG_TEMPLATE);
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
                              const char *local_abspath,
@@ -476,6 +513,7 @@ harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
       const char *this_commit_relpath;
       svn_boolean_t not_present;
       svn_node_kind_t kind;
+      const svn_string_t *log_msg_template;
 
       svn_pool_clear(iterpool);
 
@@ -525,6 +563,8 @@ harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
         SVN_ERR(svn_wc_read_kind2(&kind, wc_ctx, this_abspath,
                                   TRUE, TRUE, scratch_pool));
 
+      SVN_ERR(get_log_msg_template(&log_msg_template, wc_ctx,
+                                   this_abspath, scratch_pool));
       SVN_ERR(add_committable(committables, this_abspath, kind,
                               repos_root_url,
                               this_commit_relpath,
@@ -532,6 +572,7 @@ harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
                               NULL /* copyfrom_relpath */,
                               SVN_INVALID_REVNUM /* copyfrom_rev */,
                               NULL /* moved_from_abspath */,
+                              log_msg_template,
                               SVN_CLIENT_COMMIT_ITEM_DELETE,
                               NULL, NULL,
                               result_pool, scratch_pool));
@@ -837,6 +878,11 @@ harvest_status_callback(void *status_baton,
   if (matches_changelists
       && state_flags)
     {
+      const svn_string_t *log_msg_template;
+
+      SVN_ERR(get_log_msg_template(&log_msg_template, wc_ctx,
+                                   local_abspath, scratch_pool));
+
       /* Finally, add the committable item. */
       SVN_ERR(add_committable(committables, local_abspath,
                               status->kind,
@@ -850,6 +896,7 @@ harvest_status_callback(void *status_baton,
                               cf_relpath,
                               cf_rev,
                               moved_from_abspath,
+                              log_msg_template,
                               state_flags,
                               baton->lock_tokens, status->lock,
                               result_pool, scratch_pool));
