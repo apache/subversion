@@ -63,12 +63,3 @@ Approved changes:
 # that would restart the soak should not be added unless they are resolving
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
-
- * r1485127
-   Revert 1.8 behavior change that breaks some url forms when passed to
-   ra_local. Without this some existing working copies using non standard
-   urls to access the repository might be broken.
-   Justification:
-     Restores functionality that was lost in 1.8 compared to 1.7.
-   Votes:
-     +1: rhuijben (for 1.8.1 or soak restart), danielsh, cmpilato
