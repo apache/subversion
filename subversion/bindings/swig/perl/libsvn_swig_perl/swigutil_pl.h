@@ -93,6 +93,7 @@ apr_hash_t *svn_swig_pl_objs_to_hash_by_name(SV *source,
                                              apr_pool_t *pool);
 apr_hash_t *svn_swig_pl_objs_to_hash_of_revnum_t(SV *source,
                                                  apr_pool_t *pool);
+apr_hash_t *svn_swig_pl_hash_to_prophash(SV *source, apr_pool_t *pool);
 const apr_array_header_t *svn_swig_pl_objs_to_array(SV *source,
                                                     swig_type_info *tinfo,
                                                     apr_pool_t *pool);
