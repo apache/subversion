@@ -58,6 +58,16 @@ Candidate changes:
    Votes:
      +1: ivan
 
+ * r1488183
+   Fix issue #4370 '(m)erge interactive conflict resolution segfaults when cwd
+   not parent of target'.
+   Justification:
+     Prevents a segfault in the new 'internal text conflict merge tool'.
+   Votes:
+     +1: pburba (for 1.8.0:  This isn't a 'destabilizing' change per my
+                 reading of our release-stabilization guidelines, so it can
+                 be included in 1.8.0 without a soak restart.)
+
 Veto-blocked changes:
 =====================
 
