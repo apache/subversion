@@ -1200,7 +1200,7 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
           s_fullpath = s_path ? svn_fspath__join(s_path, name, subpool) : NULL;
           s_entry = s_entries ? svn_hash_gets(s_entries, name) : NULL;
 
-          /* The only special cases here are
+          /* The only special cases where we don't process the entry are
 
              - When requested_depth is files but the reported path is
              a directory.  This is technically a client error, but we
@@ -1208,10 +1208,10 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 
              - When the reported depth is svn_depth_exclude.
           */
-          if ((! info || info->depth != svn_depth_exclude)
-              && (requested_depth != svn_depth_files
-                  || ((! t_entry || t_entry->kind != svn_node_dir)
-                      && (! s_entry || s_entry->kind != svn_node_dir))))
+          if (! ((requested_depth == svn_depth_files
+                  && ((t_entry && t_entry->kind == svn_node_dir)
+                      || (s_entry && s_entry->kind == svn_node_dir)))
+                 || (info && info->depth == svn_depth_exclude)))
             SVN_ERR(update_entry(b, s_rev, s_fullpath, s_entry, t_fullpath,
                                  t_entry, dir_baton, e_fullpath, info,
                                  info ? info->depth
