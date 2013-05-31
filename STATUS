@@ -68,6 +68,13 @@ Candidate changes:
                  reading of our release-stabilization guidelines, so it can
                  be included in 1.8.0 without a soak restart.)
 
+ * r1488294
+   Add signal information to external program errors.
+   Justification:
+     Makes it easier to diagnose failures.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
