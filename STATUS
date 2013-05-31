@@ -75,6 +75,13 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1488425
+   Fix issue 4369, poor serf error message for commit with stolen locks.
+   Justification:
+     Confusing to user and a regression from 1.7/neon.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
