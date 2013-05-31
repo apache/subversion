@@ -49,6 +49,15 @@ Candidate changes:
      +1: mattiase (non-binding, not including r1485018)
      +1: breser, stefan2
 
+ * r1488183
+   Check target WC for mixed revisions, local modifications and switched
+   subtrees before contacting server for merge calculations.
+   Justification:
+     Merge calculations can easy take 10 seconds over WAN, while mixed
+     revisions working copy are common. Small fix.
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
