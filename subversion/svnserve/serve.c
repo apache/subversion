@@ -2090,7 +2090,6 @@ static svn_error_t *log_receiver(void *baton,
   svn_ra_svn_conn_t *conn = b->conn;
   apr_hash_index_t *h;
   svn_boolean_t invalid_revnum = FALSE;
-  char action[2];
   const svn_string_t *author, *date, *message;
   apr_uint64_t revprop_count;
 
