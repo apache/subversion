@@ -74,7 +74,7 @@ Candidate changes:
    Justification:
      Makes it easier to diagnose failures.
    Votes:
-     +1: philip
+     +1: philip, danielsh
 
  * r1488425
    Fix issue 4369, poor serf error message for commit with stolen locks.
@@ -82,6 +82,7 @@ Candidate changes:
      Confusing to user and a regression from 1.7/neon.
    Votes:
      +1: philip
+     +0: danielsh
 
 Veto-blocked changes:
 =====================
