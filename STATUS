@@ -64,6 +64,7 @@ Candidate changes:
    Justification:
      Prevents a segfault in the new 'internal text conflict merge tool'.
    Votes:
+     -1: danielsh (Paul: I think you meant r1488267)
      +1: pburba (for 1.8.0:  This isn't a 'destabilizing' change per my
                  reading of our release-stabilization guidelines, so it can
                  be included in 1.8.0 without a soak restart.)
