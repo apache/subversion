@@ -3267,7 +3267,8 @@ def diff_invoke_external_diffcmd(sbox):
   diff_script_path = os.path.abspath(".")+"/diff"
 
   svntest.main.create_python_hook_script(diff_script_path, 'import sys\n'
-                                          'for arg in sys.argv[1:]:\n  print(arg)\n')
+    'for arg in sys.argv[1:]:\n  print(arg)\n')
+
   if sys.platform == 'win32':
      diff_script_path = "%s.bat" % diff_script_path
 
