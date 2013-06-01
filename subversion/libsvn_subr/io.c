@@ -3035,8 +3035,8 @@ svn_io_run_external_diff(const char *dir,
 
       for (i = 0; cmd[i]; ++i)
         {
-          failed_command = apr_pstrcat(pool, failed_command, cmd[i], NULL);
-          failed_command = apr_pstrcat(pool, failed_command, " ", NULL); 
+          failed_command = apr_pstrcat(pool, failed_command, cmd[i], (char*) NULL);
+          failed_command = apr_pstrcat(pool, failed_command, " ", (char*) NULL); 
         }
       return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
                                _("'%s' was expanded to '%s' and returned %d"),
