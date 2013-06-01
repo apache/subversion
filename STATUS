@@ -69,6 +69,7 @@ Candidate changes:
      +1: pburba (for 1.8.0:  This isn't a 'destabilizing' change per my
                  reading of our release-stabilization guidelines, so it can
                  be included in 1.8.0 without a soak restart.)
+     +1: rhuijben
 
  * r1488294
    Add signal information to external program errors.
@@ -82,7 +83,7 @@ Candidate changes:
    Justification:
      Confusing to user and a regression from 1.7/neon.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
      +0: danielsh
 
 Veto-blocked changes:
