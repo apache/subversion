@@ -342,15 +342,19 @@ const apr_getopt_option_t svn_cl__options[] =
                       "                             "
                       "invocation. \n                                         \n" 
                       "                             "
-                      "Substitutions: %f1% %f2%  files to compare             \n"
+                      "Substitutions: %f1% original file                      \n"
                       "                             "
-                      "               %l1% %l2%  user defined labels          \n"
+                      "               %f2% changed file                       \n"
                       "                             "
-                      "Examples: --invoke-diff-cmd=\"diff -y %f1% %f2%        \n"          
+                      "               %l1% label of the original file         \n"
+                      "                             "
+                      "               %l2% label of the changed file          \n"
+                      "                             "
+                      "Examples: --invoke-diff-cmd=\"diff -y %f1% %f2%\"      \n"          
                       "                             "
                       "   --invoke-diff-cmd=\"kdiff3 -auto -o /home/u/log \\  \n"
                       "                             "
-                      "     %f1% %f2% --L1 %l1% --L2 \"Custom Label\" \"      \n"
+                      "     +%f1% %f2% --L1 %l1% --L2 \"Custom Label\" \"     \n"
                       "                             "
                       "The switch symbol '%' can be escaped in the usual way  \n"          
                       "                             "
@@ -761,7 +765,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy, opt_incremental,
      opt_xml, 'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,
      opt_depth, opt_diff, opt_diff_cmd, opt_internal_diff, 'x', opt_search,
-     opt_search_and, },
+     opt_search_and, opt_invoke_diff_cmd },
     {{opt_with_revprop, N_("retrieve revision property ARG")},
      {'c', N_("the change made in revision ARG")}} },
 

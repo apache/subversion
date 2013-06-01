@@ -3029,27 +3029,21 @@ svn_io_run_external_diff(const char *dir,
                          NULL, outfile, errfile, pool));
   
   if (*pexitcode != 0 && *pexitcode != 1)
-   {
-       int i, size;
-       char * failed_command;
+    {
+      int i;
+      const char *failed_command = "";
 
-       for (i = 0, size = 0; cmd[i]; i++) 
-         size += strlen(cmd[i]) + 1;
-
-       failed_command = apr_palloc(pool, size * sizeof(char *));
-
-       for (i = 0; cmd[i]; i++) 
+      for (i = 0; cmd[i]; ++i)
         {
-         strcat(failed_command, cmd[i]);
-         strcat(failed_command, " ");
+          failed_command = apr_pstrcat(pool, failed_command, cmd[i], NULL);
+          failed_command = apr_pstrcat(pool, failed_command, " ", NULL); 
         }
-       
-       return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
-                                _("'%s' was expanded to '%s' and returned %d"),
-                                external_diff_cmd,
-                                svn_dirent_local_style(failed_command, pool),
-                                *pexitcode);
-   }
+      return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
+                               _("'%s' was expanded to '%s' and returned %d"),
+                               external_diff_cmd,
+                               failed_command,
+                               *pexitcode);
+    }
   return SVN_NO_ERROR;
 }
 

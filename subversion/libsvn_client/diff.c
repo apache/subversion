@@ -2465,14 +2465,16 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
   /* old style diff_cmd has precedence in config file */
   if (config)
     {
-      svn_config_t *cfg  = svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
-
+      svn_config_t *cfg;
+      
+      cfg = svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
+      
       svn_config_get(cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS,
                      SVN_CONFIG_OPTION_DIFF_CMD, NULL);
       if (options == NULL)
         {
           const char *diff_extensions;
-
+          
           svn_config_get(cfg, &diff_extensions, SVN_CONFIG_SECTION_HELPERS,
                          SVN_CONFIG_OPTION_DIFF_EXTENSIONS, NULL);
           if (diff_extensions)
@@ -2481,7 +2483,7 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
     }
   if (options == NULL)
     options = apr_array_make(pool, 0, sizeof(const char *));
-
+  
   if (diff_cmd)
     SVN_ERR(svn_path_cstring_to_utf8(&diff_cmd_baton->diff_cmd, 
 				     diff_cmd, pool));
@@ -2490,8 +2492,8 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
       if (config) /* check if there is a invoke_diff_cmd in the config file */
 	{
 	  svn_config_t *cfg;
-	  
-	  cfg = svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
+          
+          cfg = svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
 	  diff_cmd_baton->diff_cmd = NULL; 
 	  svn_config_get(cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS,
 			 SVN_CONFIG_OPTION_INVOKE_DIFF_CMD, NULL);
@@ -2499,7 +2501,6 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
 	    {
 	      SVN_ERR(svn_path_cstring_to_utf8(&diff_cmd_baton->invoke_diff_cmd,
                                                diff_cmd, pool));
-	      
 	      return SVN_NO_ERROR;
 	    }
 	}

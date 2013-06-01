@@ -67,6 +67,9 @@ struct log_receiver_baton
   /* Diff arguments received from command line. */
   const char *diff_extensions;
 
+  /* Custom diff command. */
+  const char *invoke_diff_cmd;
+
   /* Stack which keeps track of merge revision nesting, using svn_revnum_t's */
   apr_array_header_t *merge_stack;
 
@@ -102,6 +105,7 @@ display_diff(const svn_log_entry_t *log_entry,
              const char *diff_extensions,
              svn_stream_t *outstream,
              svn_stream_t *errstream,
+             const char *invoke_diff_cmd,
              svn_client_ctx_t *ctx,
              apr_pool_t *pool)
 {
@@ -140,8 +144,7 @@ display_diff(const svn_log_entry_t *log_entry,
                                outstream,
                                errstream,
                                NULL,
-                               NULL,
-                               /* invoke_diff_cmd, */
+                               invoke_diff_cmd,
                                ctx, pool));
   SVN_ERR(svn_stream_puts(outstream, _("\n")));
   return SVN_NO_ERROR;
@@ -468,6 +471,7 @@ log_entry_receiver(void *baton,
                            lb->target_path_or_url, &lb->target_peg_revision,
                            lb->depth, lb->diff_extensions,
                            outstream, errstream,
+                           lb->invoke_diff_cmd,
                            lb->ctx, pool));
 
       SVN_ERR(svn_stream_close(outstream));
@@ -705,23 +709,36 @@ svn_cl__log(apr_getopt_t *os,
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("'diff' option is not supported in "
                                   "XML mode"));
-    }
+    } 
 
+  if (opt_state->diff.diff_cmd && opt_state->diff.diff_cmd)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                            _("'diff-cmd' and 'invoke-diff-cmd' options are "
+                              "mutually exclusive"));
+ 
   if (opt_state->quiet && opt_state->show_diff)
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                             _("'quiet' and 'diff' options are "
                               "mutually exclusive"));
+
   if (opt_state->diff.diff_cmd && (! opt_state->show_diff))
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                             _("'diff-cmd' option requires 'diff' "
                               "option"));
+
   if (opt_state->diff.internal_diff && (! opt_state->show_diff))
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                             _("'internal-diff' option requires "
                               "'diff' option"));
+
   if (opt_state->extensions && (! opt_state->show_diff))
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                             _("'extensions' option requires 'diff' "
+                              "option"));
+
+  if (opt_state->diff.invoke_diff_cmd && (! opt_state->show_diff))
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                            _("'invoke-diff-cmd' option requires 'diff' "
                               "option"));
 
   if (opt_state->depth != svn_depth_unknown && (! opt_state->show_diff))
@@ -787,6 +804,7 @@ svn_cl__log(apr_getopt_t *os,
   lb.depth = opt_state->depth == svn_depth_unknown ? svn_depth_infinity
                                                    : opt_state->depth;
   lb.diff_extensions = opt_state->extensions;
+  lb.invoke_diff_cmd = opt_state->diff.invoke_diff_cmd;
   lb.merge_stack = apr_array_make(pool, 0, sizeof(svn_revnum_t));
   lb.search_patterns = opt_state->search_patterns;
   lb.pool = pool;
