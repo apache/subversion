@@ -337,6 +337,11 @@ class WinGeneratorBase(GeneratorBase):
     else:
       print("%s not found; skipping SWIG file generation..." % self.swig_exe)
 
+  def errno_filter(self, codes):
+    "Callback for gen_base.write_errno_table()."
+    # Filter out apr_errno.h SOC* codes, which alias the windows API names.
+    return set(filter(lambda code: not (10000 <= code <= 10100), codes))
+
   def find_rootpath(self):
     "Gets the root path as understand by the project system"
     return os.path.relpath('.', self.projfilesdir) + "\\"
