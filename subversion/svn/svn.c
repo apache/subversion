@@ -2520,8 +2520,8 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       return EXIT_ERROR(err);
     }
 
-  /* Disallow simultaneous use of both --diff-cmd and
-     --internal-diff.  */
+  /* Disallow simultaneous use of both --diff-cmd, --invoke-diff-cmd
+     and --internal-diff.  */
   if (opt_state.diff.diff_cmd && opt_state.diff.internal_diff)
     {
       err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
@@ -2534,6 +2534,14 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
     {
       err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                              _("--invoke-diff-cmd and --internal-diff "
+                               "are mutually exclusive"));
+      return EXIT_ERROR(err);
+    }
+
+  if ((opt_state.diff.diff_cmd) && (opt_state.diff.invoke_diff_cmd))
+    {
+      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("--invoke-diff-cmd and --diff-cmd "
                                "are mutually exclusive"));
       return EXIT_ERROR(err);
     }
@@ -2751,16 +2759,11 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   /* XXX: Only diff_cmd for now, overlay rest later and stop passing
      opt_state altogether? */
   if (opt_state.diff.diff_cmd) 
-   {
     svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
                    SVN_CONFIG_OPTION_DIFF_CMD, opt_state.diff.diff_cmd);
-   }
-  else 
-    {
-      if (opt_state.diff.invoke_diff_cmd)
+  if (opt_state.diff.invoke_diff_cmd)
         svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
                        SVN_CONFIG_OPTION_INVOKE_DIFF_CMD, opt_state.diff.invoke_diff_cmd);
-    }
   if (opt_state.merge_cmd)
     svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
                    SVN_CONFIG_OPTION_DIFF3_CMD, opt_state.merge_cmd);
