@@ -74,6 +74,8 @@ our $CMAKE = 'cmake';
 our $NMAKE = 'nmake';
 # Use the .com version so we get output, the .exe doesn't produce any output
 our $DEVENV = 'devenv.com';
+our $VCUPGRADE = 'vcupgrade';
+our $PYTHON = 'python';
 
 # Versions of the dependencies we will use
 # Change these if you want but these are known to work with
@@ -88,6 +90,7 @@ our $PCRE_VER = '8.32';
 our $BDB_VER = '5.3.21';
 our $SQLITE_VER = '3071602';
 our $SERF_VER = '1.2.0';
+our $NEON_VER = '0.29.6';
 
 # Sources for files to download
 our $AWK_URL = 'http://www.cs.princeton.edu/~bwk/btl.mirror/awk95.exe';
@@ -101,6 +104,8 @@ our $PCRE_URL;
 our $BDB_URL;
 our $SQLITE_URL;
 our $SERF_URL;
+our $NEON_URL;
+our $PROJREF_URL = 'https://downloads.redhoundsoftware.com/blog/ProjRef.py';
 
 # Location of the already downloaded file.
 # by default these are undefined and set by the downloader.
@@ -118,12 +123,19 @@ our $PCRE_FILE;
 our $BDB_FILE;
 our $SQLITE_FILE;
 our $SERF_FILE;
+our $NEON_FILE;
+our $PROJREF_FILE;
 
 # Various directories we use
 our $TOPDIR = Cwd::cwd(); # top of our tree
 our $INSTDIR; # where we install to
 our $BLDDIR; # directory where we actually build
 our $SRCDIR; # directory where we store package files
+
+# Some other options
+our $VS_VER;
+our $NEON;
+our $SVN_VER = '1.8.x';
 
 # Utility function to remove dots from a string
 sub remove_dots {
@@ -143,6 +155,16 @@ sub set_default {
   }
 }
 
+sub set_svn_ver_defaults {
+  my ($svn_major, $svn_minor, $svn_patch) = $SVN_VER =~ /^(\d+)\.(\d+)\.(.+)$/;
+
+  if ($svn_major > 1 or ($svn_major == 1 and $svn_minor >= 8)) {
+    $NEON=0 unless defined($NEON);
+  } else {
+    $NEON=1 unless defined($NEON);
+  }
+}
+
 # Any variables with defaults that reference other values
 # should be set here.  This defers setting of the default until runtime in these cases.
 sub set_defaults {
@@ -156,9 +178,11 @@ sub set_defaults {
   set_default(\$BDB_URL, "http://download.oracle.com/berkeley-db/db-5.3.21.zip");
   set_default(\$SQLITE_URL, "http://www.sqlite.org/2013/sqlite-amalgamation-$SQLITE_VER.zip");
   set_default(\$SERF_URL, "http://serf.googlecode.com/files/serf-$SERF_VER.zip");
+  set_default(\$NEON_URL, "http://www.webdav.org/neon/neon-$NEON_VER.tar.gz");
   set_default(\$INSTDIR, $TOPDIR);
   set_default(\$BLDDIR, "$TOPDIR\\build");
   set_default(\$SRCDIR, "$TOPDIR\\sources");
+  set_svn_ver_defaults();
 }
 
 #################################
@@ -277,6 +301,27 @@ sub modify_file_in_place {
   close(OUT);
 }
 
+sub check_vs_ver {
+  return if defined($VS_VER);
+
+  # using the vcupgrade command here because it has a consistent name and version
+  # numbering across versions including express versions.
+  my $help_output = `"$VCUPGRADE" /?`;
+  my ($major_version) = $help_output =~ /Version (\d+)\./s;
+
+  if (defined($major_version)) {
+    if ($major_version eq '11') {
+      $VS_VER = '2012';
+      return;
+    } elsif ($major_version eq '10') {
+      $VS_VER = '2010';
+      return;
+    }
+  }
+
+  die("Visual Studio Version Not Supported");
+}
+
 ##################
 # TREE STRUCTURE #
 ##################
@@ -363,6 +408,10 @@ sub download_dependencies {
   unless(-x "$BINDIR\\awk.exe") { # skip the copy if it exists
     copy_or_die($AWK_FILE, "$BINDIR\\awk.exe");
   }
+  download_file($PROJREF_URL, "$SRCDIR\\ProjRef.py", \$PROJREF_FILE);
+  unless(-x "$BINDIR\\ProjRef.py") { # skip the copy if it exists
+    copy_or_die($PROJREF_FILE, $BINDIR);
+  }
   download_file($BDB_URL, "$SRCDIR\\db.zip", \$BDB_FILE);
   download_file($ZLIB_URL, "$SRCDIR\\zlib.zip", \$ZLIB_FILE);
   download_file($OPENSSL_URL, "$SRCDIR\\openssl.tar.gz", \$OPENSSL_FILE);
@@ -373,6 +422,7 @@ sub download_dependencies {
   download_file($PCRE_URL, "$SRCDIR\\pcre.zip", \$PCRE_FILE);
   download_file($SQLITE_URL, "$SRCDIR\\sqlite-amalgamation.zip", \$SQLITE_FILE);
   download_file($SERF_URL, "$SRCDIR\\serf.zip", \$SERF_FILE);
+  download_file($NEON_URL, "$SRCDIR\\neon.tar.gz", \$NEON_FILE) if defined($NEON);
 }
 
 ##############
@@ -437,6 +487,8 @@ sub extract_dependencies {
                "$INSTDIR\\sqlite-amalgamation");
   extract_file($SERF_FILE, $INSTDIR,
                "$INSTDIR\\serf-$SERF_VER", "$INSTDIR\\serf");
+  extract_file($NEON_FILE, $INSTDIR,
+               "$INSTDIR\\neon-$NEON_VER", "$INSTDIR\\neon") if defined($NEON);
 }
 
 #########
@@ -507,6 +559,8 @@ sub build_openssl {
 # Visual Studio whining about its backup step.
 sub upgrade_solution {
   my $file = shift;
+  my $interactive = shift;
+  my $flags = "";
 
   my ($basename, $directories) = fileparse($file, qr/\.[^.]*$/);
   my $sln = $directories . $basename . '.sln';
@@ -519,7 +573,15 @@ sub upgrade_solution {
     close(SLN);
   }
   print "Upgrading $file (this may take a while)\n";
-  system_or_die("Failure upgrading $file", qq("$DEVENV" $file /Upgrade));
+  $flags = " /Upgrade" unless $interactive;
+  system_or_die("Failure upgrading $file", qq("$DEVENV" "$file"$flags));
+  if ($interactive) {
+    print "Can't do automatic upgrade, doing interactive upgrade\n";
+    print "IDE will load, choose to convert all projects, exit the IDE and\n";
+    print "save the resulting solution file\n\n";
+    print "Press Enter to Continue\n";
+    <>;
+  }
 }
 
 # Run the lineends.pl script
@@ -629,6 +691,9 @@ sub httpd_enable_bdb {
 sub build_httpd {
   chdir_or_die($HTTPD);
 
+  my $vs_2012 = $VS_VER eq '2012';
+  my $vs_2010 = $VS_VER eq '2010';
+
   # I don't think cvtdsp.pl is necessary with Visual Studio 2012
   # but it shouldn't hurt anything either.  Including it allows
   # for the possibility that this may work for older Visual Studio
@@ -636,19 +701,9 @@ sub build_httpd {
   system_or_die("Failure converting DSP files",
                 qq("$PERL" srclib\\apr\\build\\cvtdsp.pl -2005));
 
-  upgrade_solution('Apache.dsw');
+  upgrade_solution('Apache.dsw', $vs_2010);
   httpd_enable_bdb();
   httpd_fix_makefile('Makefile.win');
-
-  # Turn off pre-compiled headers for apr-iconv to avoid:
-  # LNK2011: http://msdn.microsoft.com/en-us/library/3ay26wa2(v=vs.110).aspx
-  disable_pch('srclib\apr-iconv\build\modules.mk.win'); 
-
-  # ApacheMonitor build fails due a duplicate manifest, turn off
-  # GenerateManifest
-  insert_property_group('support\win32\ApacheMonitor.vcxproj',
-                        '<GenerateManifest>false</GenerateManifest>',
-                        '.dupman');
 
   # Modules and support projects randomly fail due to an error about the
   # CL.read.1.tlog file already existing.  This is really because of the
@@ -660,25 +715,40 @@ sub build_httpd {
          }
        }, 'modules', 'support');
 
-  # The APR libraries have projects named libapr but produce output named libapr-1
-  # The problem with this is in newer versions of Visual Studio TargetName defaults
-  # to the project name and not the basename of the output.  Since the PDB file
-  # is named based on the TargetName the pdb file ends up being named libapr.pdb
-  # instead of libapr-1.pdb.  The below call fixes this by explicitly providing
-  # a TargetName definition and shuts up some warnings about this problem as well.
-  # Without this fix the install fails when it tries to copy libapr-1.pdb.
-  # See this thread for details of the changes:
-  # http://social.msdn.microsoft.com/Forums/en-US/vcprerelease/thread/3c03e730-6a0e-4ee4-a0d6-6a5c3ce4343c
-  find(sub {
-         return unless (/\.vcxproj$/);
-         my $output_file = get_output_file($_);
-         return unless (defined($output_file));
-         my ($project_name) = fileparse($_, qr/\.[^.]*$/);
-         my ($old_style_target_name) = fileparse($output_file, qr/\.[^.]*$/);
-         return if ($old_style_target_name eq $project_name);
-         insert_property_group($_,
-           "<TargetName>$old_style_target_name</TargetName>", '.torig');
-       }, "$SRCLIB\\apr", "$SRCLIB\\apr-util", "$SRCLIB\\apr-iconv");
+  if ($vs_2012) {
+    # Turn off pre-compiled headers for apr-iconv to avoid:
+    # LNK2011: http://msdn.microsoft.com/en-us/library/3ay26wa2(v=vs.110).aspx
+    disable_pch('srclib\apr-iconv\build\modules.mk.win');
+
+    # ApacheMonitor build fails due a duplicate manifest, turn off
+    # GenerateManifest
+    insert_property_group('support\win32\ApacheMonitor.vcxproj',
+                          '<GenerateManifest>false</GenerateManifest>',
+                          '.dupman');
+
+    # The APR libraries have projects named libapr but produce output named libapr-1
+    # The problem with this is in newer versions of Visual Studio TargetName defaults
+    # to the project name and not the basename of the output.  Since the PDB file
+    # is named based on the TargetName the pdb file ends up being named libapr.pdb
+    # instead of libapr-1.pdb.  The below call fixes this by explicitly providing
+    # a TargetName definition and shuts up some warnings about this problem as well.
+    # Without this fix the install fails when it tries to copy libapr-1.pdb.
+    # See this thread for details of the changes:
+    # http://social.msdn.microsoft.com/Forums/en-US/vcprerelease/thread/3c03e730-6a0e-4ee4-a0d6-6a5c3ce4343c
+    find(sub {
+           return unless (/\.vcxproj$/);
+           my $output_file = get_output_file($_);
+           return unless (defined($output_file));
+           my ($project_name) = fileparse($_, qr/\.[^.]*$/);
+           my ($old_style_target_name) = fileparse($output_file, qr/\.[^.]*$/);
+           return if ($old_style_target_name eq $project_name);
+           insert_property_group($_,
+             "<TargetName>$old_style_target_name</TargetName>", '.torig');
+         }, "$SRCLIB\\apr", "$SRCLIB\\apr-util", "$SRCLIB\\apr-iconv");
+  } elsif ($vs_2010) {
+    system_or_die("Failed fixing project guid references",
+      qq("$PYTHON" "$BINDIR\\ProjRef.py" -i Apache.sln"));
+  }
 
   # If you're looking here it's possible that something went
   # wrong with the httpd build.  Debugging it can be a bit of a pain
@@ -773,6 +843,9 @@ sub main {
   # on other variables.
   Vars::set_defaults();
   set_paths();
+
+  # Determine the Visual Studio Version and die if not supported.
+  check_vs_ver();
 
   # change directory to our TOPDIR before running any commands
   # the variable assignment might have changed it.
