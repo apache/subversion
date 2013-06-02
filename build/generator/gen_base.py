@@ -239,8 +239,7 @@ class GeneratorBase:
         except: pass
         os.rename(new_hdrfile, hdrfile)
 
-  @staticmethod
-  def write_errno_table():
+  def write_errno_table(self):
     # ### We generate errorcode.inc at autogen.sh time (here!).
     # ###
     # ### Currently it's only used by maintainer-mode builds.  If this
@@ -278,8 +277,11 @@ class GeneratorBase:
 
     ## sanity check
     intersection = set(errno.errorcode.keys()) & set(dict(aprerr).keys())
-    if intersection:
+    if self.errno_filter(intersection):
         print("WARNING: errno intersects APR error codes: %r" % intersection)
+
+  def errno_filter(self, codes):
+    return codes
 
 class DependencyGraph:
   """Record dependencies between build items.
