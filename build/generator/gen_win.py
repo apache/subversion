@@ -1448,7 +1448,7 @@ class WinGeneratorBase(GeneratorBase):
   def _find_serf(self):
     "Check if serf and its dependencies are available"
 
-    minimal_serf_version = (1, 2, 0)
+    minimal_serf_version = (1, 2, 1)
     self.serf_lib = None
     if self.serf_path and os.path.exists(self.serf_path):
       if self.openssl_path and os.path.exists(self.openssl_path):
