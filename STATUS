@@ -73,6 +73,13 @@ Candidate changes:
      +1: philip, rhuijben
      +0: danielsh
 
+ * 1488878
+   Don't leave return value uninitialised.
+   Justification:
+     Possible SEGV when using legacy status API.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
