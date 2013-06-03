@@ -76,6 +76,18 @@ Candidate changes:
    Votes:
      +1: cmpilato, gstein
 
+ * r1489203
+   Fix a crash when the automatic merge API is called with unrelated source
+   and target branches, other than by 'svn' which does an ancestry check
+   before calling it.  Also affected svn_client_get_merging_summary().
+   Justification:
+     It's a crash. The fix is a straightforward check.
+   Notes:
+     Tested as in the email: by temporarily removing the check at
+     merge-cmd.c:109 and trying a mismatched automatic merge.
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
