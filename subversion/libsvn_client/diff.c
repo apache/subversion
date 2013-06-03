@@ -789,6 +789,10 @@ diff_content_changed(svn_boolean_t *wrote_header,
       return SVN_NO_ERROR;
     }
 
+  if (diff_cmd_baton->diff_cmd && diff_cmd_baton->invoke_diff_cmd)
+      return svn_error_create(SVN_ERR_CLIENT_DIFF_CMD, NULL,
+                              _("diff-cmd and invoke-diff-cmd are"
+                                "mutually exclusive."));
 
   if (diff_cmd_baton->diff_cmd || diff_cmd_baton->invoke_diff_cmd)
     {

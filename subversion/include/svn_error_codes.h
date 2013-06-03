@@ -1149,6 +1149,11 @@ SVN_ERROR_START
              SVN_ERR_CLIENT_CATEGORY_START + 23,
              "The operation is forbidden by the server")
 
+  /** @since New in 1.9 */
+  SVN_ERRDEF(SVN_ERR_CLIENT_DIFF_CMD,
+             SVN_ERR_CLIENT_CATEGORY_START + 24,
+             "More than one diff command defined")
+
   /* misc errors */
 
   SVN_ERRDEF(SVN_ERR_BASE,
