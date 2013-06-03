@@ -41,14 +41,6 @@ Candidate changes:
      -0: rhuijben, breser (merge conflict in configure.ac in r1481848
                            <danielsh> resolved on the branch)
 
- * r1483575, r1483580, r1485018
-   Define SVN_UNALIGNED_ACCESS_IS_OK for PowerPC.
-   Justification:
-     Performance for free.
-   Votes:
-     +1: mattiase (non-binding, not including r1485018)
-     +1: breser, stefan2
-
  * r1488183
    Check target WC for mixed revisions, local modifications and switched
    subtrees before contacting server for merge calculations.
@@ -73,13 +65,6 @@ Candidate changes:
      +1: philip, rhuijben
      +0: danielsh
 
- * 1488878
-   Don't leave return value uninitialised.
-   Justification:
-     Possible SEGV when using legacy status API.
-   Votes:
-     +1: philip, brane
-
 Veto-blocked changes:
 =====================
 
@@ -94,3 +79,18 @@ Approved changes:
 # that would restart the soak should not be added unless they are resolving
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
+
+ * r1483575, r1483580, r1485018
+   Define SVN_UNALIGNED_ACCESS_IS_OK for PowerPC.
+   Justification:
+     Performance for free.
+   Votes:
+     +1: mattiase (non-binding, not including r1485018)
+     +1: breser, stefan2, rhuijben
+
+ * 1488878
+   Don't leave return value uninitialised.
+   Justification:
+     Possible SEGV when using legacy status API.
+   Votes:
+     +1: philip, brane, rhuijben
