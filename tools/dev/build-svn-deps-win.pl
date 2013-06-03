@@ -89,7 +89,7 @@ our $OPENSSL_VER = '1.0.1e';
 our $PCRE_VER = '8.32';
 our $BDB_VER = '5.3.21';
 our $SQLITE_VER = '3071602';
-our $SERF_VER = '1.2.0';
+our $SERF_VER = '1.2.1';
 our $NEON_VER = '0.29.6';
 
 # Sources for files to download
