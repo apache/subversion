@@ -65,6 +65,17 @@ Candidate changes:
      +1: philip, rhuijben
      +0: danielsh
 
+ * r1489114, r1489116
+   Require Serf 1.2.1.
+   Justification:
+     Serf 1.2.0 doesn't work where Digest authentication is in use.
+     See http://subversion.tigris.org/issues/show_bug.cgi?id=4371 and
+     https://code.google.com/p/serf/issues/detail?id=102 for details.
+   Notes:
+     This is a blocking issue.
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 =====================
 
