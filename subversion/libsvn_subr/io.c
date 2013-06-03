@@ -2931,16 +2931,14 @@ svn_io_create_custom_diff_cmd(const char *label1,
                               const char *cmd,
                               apr_pool_t *pool)
 {
-  apr_pool_t *subpool; 
+  apr_pool_t *scratch_pool = svn_pool_create(pool);; 
   apr_array_header_t *tmp;
-  const char ** ret;
+  const char ** result;
   int argv;
 
-  subpool = svn_pool_create(pool);
-  
-  tmp = svn_cstring_split(cmd, " ", TRUE, subpool);
+  tmp = svn_cstring_split(cmd, " ", TRUE, scratch_pool);
 
-  ret = apr_palloc(pool, 
+  result = apr_palloc(pool, 
                    (tmp->nelts + 1) * 
                    tmp->elt_size*sizeof(char *));  
 
@@ -2949,7 +2947,7 @@ svn_io_create_custom_diff_cmd(const char *label1,
       svn_stringbuf_t *com;
       int i;
       
-      com = svn_stringbuf_create_empty(subpool);
+      com = svn_stringbuf_create_empty(scratch_pool);
       svn_stringbuf_appendcstr(com, APR_ARRAY_IDX(tmp, argv, char *));
 
       for (i = 0; i < 6 /* sizeof(token_list) */; i++) 
@@ -2960,7 +2958,7 @@ svn_io_create_custom_diff_cmd(const char *label1,
           int len;
           char *found;
 
-          token = svn_stringbuf_create_empty(subpool);
+          token = svn_stringbuf_create_empty(scratch_pool);
           svn_stringbuf_appendcstr(token, token_list[i]);
           len = 0;
 
@@ -2993,12 +2991,12 @@ svn_io_create_custom_diff_cmd(const char *label1,
                                       label3, strlen(label3));
             }
         }
-      ret[argv] = com->data;
+      result[argv] = com->data;
     }  
-  ret[argv] = NULL;
+  result[argv] = NULL;
 
-  svn_pool_destroy(subpool);
-  return ret;
+  svn_pool_destroy(scratch_pool);
+  return result;
 }
 
 svn_error_t *
