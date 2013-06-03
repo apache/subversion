@@ -131,7 +131,7 @@ Candidate changes:
      gssapi options since we have them and advertise them while serf
      doesn't.  So I think we should include this fix.
    Votes:
-     +1: breser
+     +1: breser, rhuijben
 
  * r1461760
    Additional fix related to issue #4340, "filenames containing \n corrupt
@@ -164,21 +164,14 @@ Candidate changes:
      +1: rhuijben, breser
      +0: danielsh (don't know whether GetLastError is the right API here)
 
- * r1405922 
+ * r1405922
    Fix bug in error-constructing code in JavaHL.
    Justification:
      Bug that seems to be related to spurious JavaHL test failures I'm seeing,
      where absolute paths are passed into svn_relpath_dirname().
      Could cause worse issues such as abort() crashing Eclipse. Simple fix.
    Votes:
-     +1: stsp
-
- * 1488878
-   Don't leave return value uninitialised.
-   Justification:
-     Possible SEGV when using legacy status API.
-   Votes:
-     +1: philip, brane
+     +1: stsp, rhuijben
 
 Veto-blocked changes:
 =====================
@@ -197,3 +190,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * 1488878
+   Don't leave return value uninitialised.
+   Justification:
+     Possible SEGV when using legacy status API.
+   Votes:
+     +1: philip, brane, rhuijben
