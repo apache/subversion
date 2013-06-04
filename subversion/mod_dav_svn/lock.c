@@ -647,7 +647,7 @@ append_locks(dav_lockdb *lockdb,
 
   /* We don't allow anonymous locks */
   if (! repos->username)
-    return dav_svn__new_error(resource->pool, HTTP_UNAUTHORIZED,
+    return dav_svn__new_error(resource->pool, HTTP_NOT_IMPLEMENTED,
                               DAV_ERR_LOCK_SAVE_LOCK,
                               "Anonymous lock creation is not allowed.");
 
@@ -776,7 +776,7 @@ append_locks(dav_lockdb *lockdb,
   if (serr && serr->apr_err == SVN_ERR_FS_NO_USER)
     {
       svn_error_clear(serr);
-      return dav_svn__new_error(resource->pool, HTTP_UNAUTHORIZED,
+      return dav_svn__new_error(resource->pool, HTTP_NOT_IMPLEMENTED,
                                 DAV_ERR_LOCK_SAVE_LOCK,
                                 "Anonymous lock creation is not allowed.");
     }
@@ -886,7 +886,7 @@ remove_lock(dav_lockdb *lockdb,
       if (serr && serr->apr_err == SVN_ERR_FS_NO_USER)
         {
           svn_error_clear(serr);
-          return dav_svn__new_error(resource->pool, HTTP_UNAUTHORIZED,
+          return dav_svn__new_error(resource->pool, HTTP_NOT_IMPLEMENTED,
                                     DAV_ERR_LOCK_SAVE_LOCK,
                                     "Anonymous lock removal is not allowed.");
         }
@@ -953,7 +953,7 @@ refresh_locks(dav_lockdb *lockdb,
      current lock on the incoming resource? */
   if ((! slock)
       || (strcmp(token->uuid_str, slock->token) != 0))
-    return dav_svn__new_error(resource->pool, HTTP_UNAUTHORIZED,
+    return dav_svn__new_error(resource->pool, HTTP_PRECONDITION_FAILED,
                               DAV_ERR_LOCK_SAVE_LOCK,
                               "Lock refresh request doesn't match existing "
                               "lock.");
@@ -974,7 +974,7 @@ refresh_locks(dav_lockdb *lockdb,
   if (serr && serr->apr_err == SVN_ERR_FS_NO_USER)
     {
       svn_error_clear(serr);
-      return dav_svn__new_error(resource->pool, HTTP_UNAUTHORIZED,
+      return dav_svn__new_error(resource->pool, HTTP_NOT_IMPLEMENTED,
                                 DAV_ERR_LOCK_SAVE_LOCK,
                                 "Anonymous lock refreshing is not allowed.");
     }
