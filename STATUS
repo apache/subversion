@@ -191,7 +191,7 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * 1488878
+ * r1488878
    Don't leave return value uninitialised.
    Justification:
      Possible SEGV when using legacy status API.
