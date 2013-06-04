@@ -57,25 +57,6 @@ Candidate changes:
    Votes:
      +1: philip, danielsh
 
- * r1488425
-   Fix issue 4369, poor serf error message for commit with stolen locks.
-   Justification:
-     Confusing to user and a regression from 1.7/neon.
-   Votes:
-     +1: philip, rhuijben
-     +0: danielsh
-
- * r1489114, r1489116
-   Require Serf 1.2.1.
-   Justification:
-     Serf 1.2.0 doesn't work where Digest authentication is in use.
-     See http://subversion.tigris.org/issues/show_bug.cgi?id=4371 and
-     https://code.google.com/p/serf/issues/detail?id=102 for details.
-   Notes:
-     This is a blocking issue.
-   Votes:
-     +1: cmpilato, gstein
-
  * r1489203
    Fix a crash when the automatic merge API is called with unrelated source
    and target branches, other than by 'svn' which does an ancestry check
@@ -86,7 +67,7 @@ Candidate changes:
      Tested as in the email: by temporarily removing the check at
      merge-cmd.c:109 and trying a mismatched automatic merge.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, ivan
 
 Veto-blocked changes:
 =====================
@@ -96,6 +77,17 @@ Approved for 1.8.1 or if soak is restarted for 1.8.0:
 
 Approved changes:
 =================
+
+ * r1489114, r1489116
+   Require Serf 1.2.1.
+   Justification:
+     Serf 1.2.0 doesn't work where Digest authentication is in use.
+     See http://subversion.tigris.org/issues/show_bug.cgi?id=4371 and
+     https://code.google.com/p/serf/issues/detail?id=102 for details.
+   Notes:
+     This is a blocking issue.
+   Votes:
+     +1: cmpilato, gstein, ivan
 
 # 1.8.0-rc2 is being voted on currently and as such 1.8.0 is in the soak phase.
 # Changes that are not intended for 1.8.0 should not be placed here and changes
@@ -109,3 +101,11 @@ Approved changes:
      Possible SEGV when using legacy status API.
    Votes:
      +1: philip, brane, rhuijben
+
+ * r1488425
+   Fix issue 4369, poor serf error message for commit with stolen locks.
+   Justification:
+     Confusing to user and a regression from 1.7/neon.
+   Votes:
+     +1: philip, rhuijben, ivan
+     +0: danielsh
