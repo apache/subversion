@@ -41,15 +41,6 @@ Candidate changes:
      -0: rhuijben, breser (merge conflict in configure.ac in r1481848
                            <danielsh> resolved on the branch)
 
- * r1488183
-   Check target WC for mixed revisions, local modifications and switched
-   subtrees before contacting server for merge calculations.
-   Justification:
-     Merge calculations can easy take 10 seconds over WAN, while mixed
-     revisions working copy are common. Small fix.
-   Votes:
-     +1: ivan, philip
-
  * r1488294
    Add signal information to external program errors.
    Justification:
@@ -109,3 +100,12 @@ Approved changes:
    Votes:
      +1: philip, rhuijben, ivan
      +0: danielsh
+
+ * r1488183
+   Check target WC for mixed revisions, local modifications and switched
+   subtrees before contacting server for merge calculations.
+   Justification:
+     Merge calculations can easy take 10 seconds over WAN, while mixed
+     revisions working copy are common. Small fix.
+   Votes:
+     +1: ivan, philip, julianfoad
