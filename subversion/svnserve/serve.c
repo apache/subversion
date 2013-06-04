@@ -2090,8 +2090,7 @@ static svn_error_t *log_receiver(void *baton,
   svn_ra_svn_conn_t *conn = b->conn;
   apr_hash_index_t *h;
   svn_boolean_t invalid_revnum = FALSE;
-  char action[2];
-  const char *author, *date, *message;
+  const svn_string_t *author, *date, *message;
   apr_uint64_t revprop_count;
 
   if (log_entry->revision == SVN_INVALID_REVNUM)
@@ -2108,7 +2107,19 @@ static svn_error_t *log_receiver(void *baton,
       b->stack_depth--;
     }
 
-  SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "(!"));
+  svn_compat_log_revprops_out_string(&author, &date, &message,
+                                     log_entry->revprops);
+  svn_compat_log_revprops_clear(log_entry->revprops);
+  if (log_entry->revprops)
+    revprop_count = apr_hash_count(log_entry->revprops);
+  else
+    revprop_count = 0;
+
+  /* send LOG_ENTRY */
+  SVN_ERR(svn_ra_svn__start_list(conn, pool));
+
+  /* send LOG_ENTRY->CHANGED_PATHS2 */
+  SVN_ERR(svn_ra_svn__start_list(conn, pool));
   if (log_entry->changed_paths2)
     {
       for (h = apr_hash_first(pool, log_entry->changed_paths2); h;
@@ -2117,34 +2128,36 @@ static svn_error_t *log_receiver(void *baton,
           const char *path = svn__apr_hash_index_key(h);
           svn_log_changed_path2_t *change = svn__apr_hash_index_val(h);
 
-          action[0] = change->action;
-          action[1] = '\0';
-          SVN_ERR(svn_ra_svn__write_tuple(
-                      conn, pool, "cw(?cr)(cbb)",
+          SVN_ERR(svn_ra_svn__write_data_log_changed_path(
+                      conn, pool,
                       path,
-                      action,
+                      change->action,
                       change->copyfrom_path,
                       change->copyfrom_rev,
-                      svn_node_kind_to_word(change->node_kind),
+                      change->node_kind,
                       /* text_modified and props_modified are never unknown */
                       change->text_modified  == svn_tristate_true,
                       change->props_modified == svn_tristate_true));
         }
     }
-  svn_compat_log_revprops_out(&author, &date, &message, log_entry->revprops);
-  svn_compat_log_revprops_clear(log_entry->revprops);
-  if (log_entry->revprops)
-    revprop_count = apr_hash_count(log_entry->revprops);
-  else
-    revprop_count = 0;
-  SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!)r(?c)(?c)(?c)bbn(!",
-                                  log_entry->revision,
-                                  author, date, message,
-                                  log_entry->has_children,
-                                  invalid_revnum, revprop_count));
-  SVN_ERR(svn_ra_svn__write_proplist(conn, pool, log_entry->revprops));
-  SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!)b",
-                                  log_entry->subtractive_merge));
+  SVN_ERR(svn_ra_svn__end_list(conn, pool));
+  
+  /* send LOG_ENTRY main members */
+  SVN_ERR(svn_ra_svn__write_data_log_entry(conn, pool,
+                                           log_entry->revision,
+                                           author, date, message,
+                                           log_entry->has_children,
+                                           invalid_revnum, revprop_count));
+
+  /* send LOG_ENTRY->REVPROPS */
+  SVN_ERR(svn_ra_svn__start_list(conn, pool));
+  if (revprop_count)
+    SVN_ERR(svn_ra_svn__write_proplist(conn, pool, log_entry->revprops));
+  SVN_ERR(svn_ra_svn__end_list(conn, pool));
+
+  /* send LOG_ENTRY members that were added in later SVN releases */
+  SVN_ERR(svn_ra_svn__write_boolean(conn, pool, log_entry->subtractive_merge));
+  SVN_ERR(svn_ra_svn__end_list(conn, pool));
 
   if (log_entry->has_children)
     b->stack_depth++;

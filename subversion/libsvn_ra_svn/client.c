@@ -50,6 +50,7 @@
 #include "svn_private_config.h"
 
 #include "private/svn_fspath.h"
+#include "private/svn_subr_private.h"
 
 #include "../libsvn_ra/ra_loader.h"
 
@@ -1095,7 +1096,7 @@ parse_iproplist(apr_array_header_t **inherited_props,
       new_iprop->path_or_url = svn_path_url_add_component2(repos_root_url,
                                                            parent_rel_path,
                                                            result_pool);
-      new_iprop->prop_hash = apr_hash_make(result_pool);
+      new_iprop->prop_hash = svn_hash__make(result_pool);
       for (hi = apr_hash_first(iterpool, iprops);
            hi;
            hi = apr_hash_next(hi))
@@ -1234,7 +1235,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
     return SVN_NO_ERROR;
 
   /* Interpret the directory list. */
-  *dirents = apr_hash_make(pool);
+  *dirents = svn_hash__make(pool);
   for (i = 0; i < dirlist->nelts; i++)
     {
       const char *name, *kind, *cdate, *cauthor;
@@ -1322,7 +1323,7 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
   *catalog = NULL;
   if (mergeinfo_tuple->nelts > 0)
     {
-      *catalog = apr_hash_make(pool);
+      *catalog = svn_hash__make(pool);
       for (i = 0; i < mergeinfo_tuple->nelts; i++)
         {
           svn_mergeinfo_t for_path;
@@ -1475,6 +1476,9 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
   const char *path;
   char *name;
   svn_boolean_t want_custom_revprops;
+  svn_boolean_t want_author = FALSE;
+  svn_boolean_t want_message = FALSE;
+  svn_boolean_t want_date = FALSE;
 
   SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w((!", "log"));
   if (paths)
@@ -1497,10 +1501,14 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
         {
           name = APR_ARRAY_IDX(revprops, i, char *);
           SVN_ERR(svn_ra_svn__write_cstring(conn, pool, name));
-          if (!want_custom_revprops
-              && strcmp(name, SVN_PROP_REVISION_AUTHOR) != 0
-              && strcmp(name, SVN_PROP_REVISION_DATE) != 0
-              && strcmp(name, SVN_PROP_REVISION_LOG) != 0)
+
+          if (strcmp(name, SVN_PROP_REVISION_AUTHOR) == 0)
+            want_author = TRUE;
+          else if (strcmp(name, SVN_PROP_REVISION_DATE) == 0)
+            want_date = TRUE;
+          else if (strcmp(name, SVN_PROP_REVISION_LOG) == 0)
+            want_message = TRUE;
+          else
             want_custom_revprops = TRUE;
         }
       SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!))"));
@@ -1508,6 +1516,10 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
   else
     {
       SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!w())", "all-revprops"));
+
+      want_author = TRUE;
+      want_date = TRUE;
+      want_message = TRUE;
       want_custom_revprops = TRUE;
     }
 
@@ -1571,11 +1583,12 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
       if (cplist->nelts > 0)
         {
           /* Interpret the changed-paths list. */
-          cphash = apr_hash_make(iterpool);
+          cphash = svn_hash__make(iterpool);
           for (i = 0; i < cplist->nelts; i++)
             {
               svn_log_changed_path2_t *change;
-              const char *copy_path, *action, *cpath, *kind_str;
+              svn_string_t *cpath;
+              const char *copy_path, *action, *kind_str;
               apr_uint64_t text_mods, prop_mods;
               svn_revnum_t copy_rev;
               svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(cplist, i,
@@ -1585,13 +1598,19 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
                 return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                         _("Changed-path entry not a list"));
               SVN_ERR(svn_ra_svn__parse_tuple(elt->u.list, iterpool,
-                                              "cw(?cr)?(?c?BB)",
+                                              "sw(?cr)?(?c?BB)",
                                               &cpath, &action, &copy_path,
                                               &copy_rev, &kind_str,
                                               &text_mods, &prop_mods));
-              cpath = svn_fspath__canonicalize(cpath, iterpool);
-              if (copy_path)
+
+              if (!svn_fspath__is_canonical(cpath->data))
+                {
+                  cpath->data = svn_fspath__canonicalize(cpath->data, iterpool);
+                  cpath->len = strlen(cpath->data);
+                }
+              if (copy_path && !svn_fspath__is_canonical(copy_path))
                 copy_path = svn_fspath__canonicalize(copy_path, iterpool);
+
               change = svn_log_changed_path2_create(iterpool);
               change->action = *action;
               change->copyfrom_path = copy_path;
@@ -1599,7 +1618,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
               change->node_kind = svn_node_kind_from_word(kind_str);
               change->text_modified = optbool_to_tristate(text_mods);
               change->props_modified = optbool_to_tristate(prop_mods);
-              svn_hash_sets(cphash, cpath, change);
+              apr_hash_set(cphash, cpath->data, cpath->len, change);
             }
         }
       else
@@ -1619,37 +1638,18 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
             SVN_ERR(svn_ra_svn__parse_proplist(rplist, iterpool,
                                                &log_entry->revprops));
           if (log_entry->revprops == NULL)
-            log_entry->revprops = apr_hash_make(iterpool);
-          if (revprops == NULL)
-            {
-              /* Caller requested all revprops; set author/date/log. */
-              if (author)
-                svn_hash_sets(log_entry->revprops,
-                              SVN_PROP_REVISION_AUTHOR, author);
-              if (date)
-                svn_hash_sets(log_entry->revprops,
-                              SVN_PROP_REVISION_DATE, date);
-              if (message)
-                svn_hash_sets(log_entry->revprops,
-                              SVN_PROP_REVISION_LOG, message);
-            }
-          else
-            {
-              /* Caller requested some; maybe set author/date/log. */
-              for (i = 0; i < revprops->nelts; i++)
-                {
-                  name = APR_ARRAY_IDX(revprops, i, char *);
-                  if (author && strcmp(name, SVN_PROP_REVISION_AUTHOR) == 0)
-                    svn_hash_sets(log_entry->revprops,
-                                  SVN_PROP_REVISION_AUTHOR, author);
-                  if (date && strcmp(name, SVN_PROP_REVISION_DATE) == 0)
-                    svn_hash_sets(log_entry->revprops,
-                                  SVN_PROP_REVISION_DATE, date);
-                  if (message && strcmp(name, SVN_PROP_REVISION_LOG) == 0)
-                    svn_hash_sets(log_entry->revprops,
-                                  SVN_PROP_REVISION_LOG, message);
-                }
-            }
+            log_entry->revprops = svn_hash__make(iterpool);
+
+          if (author && want_author)
+            svn_hash_sets(log_entry->revprops,
+                          SVN_PROP_REVISION_AUTHOR, author);
+          if (date && want_date)
+            svn_hash_sets(log_entry->revprops,
+                          SVN_PROP_REVISION_DATE, date);
+          if (message && want_message)
+            svn_hash_sets(log_entry->revprops,
+                          SVN_PROP_REVISION_LOG, message);
+
           SVN_ERR(receiver(receiver_baton, log_entry, iterpool));
           if (log_entry->has_children)
             {

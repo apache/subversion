@@ -2947,7 +2947,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test_identical_suffix,
                    "identical suffix starts at the boundary of a chunk"),
     SVN_TEST_PASS2(test_token_compare,
-                   "compare tokes at the chunk boundary"),
+                   "compare tokens at the chunk boundary"),
     SVN_TEST_PASS2(two_way_issue_3362_v1,
                    "2-way issue #3362 test v1"),
     SVN_TEST_PASS2(two_way_issue_3362_v2,

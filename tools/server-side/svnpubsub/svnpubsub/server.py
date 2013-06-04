@@ -28,17 +28,24 @@
 # Currently supports both XML and JSON serialization.
 #
 # Example Sub clients:
-#   curl -sN http://127.0.0.1:2069/commits
-#   curl -sN http://127.0.0.1:2069/commits/svn/*
-#   curl -sN http://127.0.0.1:2069/commits/svn
-#   curl -sN http://127.0.0.1:2069/commits/*/13f79535-47bb-0310-9956-ffa450edef68
-#   curl -sN http://127.0.0.1:2069/commits/svn/13f79535-47bb-0310-9956-ffa450edef68
+#   curl -sN  http://127.0.0.1:2069/commits
+#   curl -sN 'http://127.0.0.1:2069/commits/svn/*'
+#   curl -sN  http://127.0.0.1:2069/commits/svn
+#   curl -sN 'http://127.0.0.1:2069/commits/*/13f79535-47bb-0310-9956-ffa450edef68'
+#   curl -sN  http://127.0.0.1:2069/commits/svn/13f79535-47bb-0310-9956-ffa450edef68
 #
-#   URL is built into 2 parts:
-#       /commits/${optional_type}/${optional_repository}
+#   curl -sN  http://127.0.0.1:2069/metadata
+#   curl -sN 'http://127.0.0.1:2069/metadata/svn/*'
+#   curl -sN  http://127.0.0.1:2069/metadata/svn
+#   curl -sN 'http://127.0.0.1:2069/metadata/*/13f79535-47bb-0310-9956-ffa450edef68'
+#   curl -sN  http://127.0.0.1:2069/metadata/svn/13f79535-47bb-0310-9956-ffa450edef68
 #
-#   If the type is included in the URL, you will only get commits of that type.
-#   The type can be * and then you will receive commits of any type.
+#   URLs are constructed from 3 parts:
+#       /${notification}/${optional_type}/${optional_repository}
+#
+#   Notifications can be sent for commits or metadata (e.g., revprop) changes.
+#   If the type is included in the URL, you will only get notifications of that type.
+#   The type can be * and then you will receive notifications of any type.
 #
 #   If the repository is included in the URL, you will only receive
 #   messages about that repository.  The repository can be * and then you
@@ -71,7 +78,7 @@ from twisted.python import log
 
 import time
 
-class Commit:
+class Notification(object):
     def __init__(self, r):
         self.__dict__.update(r)
         if not self.check_value('repository'):
@@ -86,7 +93,16 @@ class Commit:
     def check_value(self, k):
         return hasattr(self, k) and self.__dict__[k]
 
-    def render_commit(self):
+    def render(self):
+        raise NotImplementedError
+
+    def render_log(self):
+        raise NotImplementedError
+
+class Commit(Notification):
+    KIND = 'COMMIT'
+
+    def render(self):
         obj = {'commit': {}}
         obj['commit'].update(self.__dict__)
         return json.dumps(obj)
@@ -96,20 +112,32 @@ class Commit:
             paths_changed = " %d paths changed" % len(self.changed)
         except:
             paths_changed = ""
-        return "%s:%s repo '%s' id '%s'%s" % (self.type,
-                                  self.format,
-                                  self.repository,
-                                  self.id,
-                                  paths_changed)
+        return "commit %s:%s repo '%s' id '%s'%s" % (
+            self.type, self.format, self.repository, self.id,
+            paths_changed)
+
+class Metadata(Notification):
+    KIND = 'METADATA'
+
+    def render(self):
+        obj = {'metadata': {}}
+        obj['metadata'].update(self.__dict__)
+        return json.dumps(obj)
+
+    def render_log(self):
+        return "metadata %s:%s repo '%s' id '%s' revprop '%s'" % (
+            self.type, self.format, self.repository, self.id,
+            self.revprop['name'])
 
 
 HEARTBEAT_TIME = 15
 
 class Client(object):
-    def __init__(self, pubsub, r, type, repository):
+    def __init__(self, pubsub, r, kind, type, repository):
         self.pubsub = pubsub
         r.notifyFinish().addErrback(self.finished)
         self.r = r
+        self.kind = kind
         self.type = type
         self.repository = repository
         self.alive = True
@@ -123,11 +151,14 @@ class Client(object):
         except ValueError:
             pass
 
-    def interested_in(self, commit):
-        if self.type and self.type != commit.type:
+    def interested_in(self, notification):
+        if self.kind != notification.KIND:
             return False
 
-        if self.repository and self.repository != commit.repository:
+        if self.type and self.type != notification.type:
+            return False
+
+        if self.repository and self.repository != notification.repository:
             return False
 
         return True
@@ -152,7 +183,10 @@ class Client(object):
         self.r.write(str(input))
 
     def write_start(self):
-        self.r.setHeader('content-type', 'application/json')
+        # TODO: use application/x-* or vnd.* - see 
+        # Message-ID: <CADkdwvR=HwWevz+xN2hdiLD-HBPiz7Q5FqAFQ_f5+m77ZG6QHQ@mail.gmail.com>
+        # on May 2013
+        self.r.setHeader('content-type', 'application/octet-stream')
         self.write('{"svnpubsub": {"version": 1}}\n\0')
 
     def write_heartbeat(self):
@@ -162,6 +196,13 @@ class Client(object):
 class SvnPubSub(resource.Resource):
     isLeaf = True
     clients = []
+
+    __notification_uri_map = {'commits': Commit.KIND,
+                              'metadata': Metadata.KIND}
+
+    def __init__(self, notification_class):
+        resource.Resource.__init__(self)
+        self.__notification_class = notification_class
 
     def cc(self):
         return len(self.clients)
@@ -182,6 +223,11 @@ class SvnPubSub(resource.Resource):
             request.setResponseCode(400)
             return "Invalid path\n"
 
+        kind = self.__notification_uri_map.get(uri[1], None)
+        if kind is None:
+            request.setResponseCode(400)
+            return "Invalid path\n"
+
         if uri_len >= 3:
           type = uri[2]
 
@@ -194,17 +240,18 @@ class SvnPubSub(resource.Resource):
         if repository == '*':
           repository = None
 
-        c = Client(self, request, type, repository)
+        c = Client(self, request, kind, type, repository)
         self.clients.append(c)
         c.start()
         return twisted.web.server.NOT_DONE_YET
 
-    def notifyAll(self, commit):
-        data = commit.render_commit()
+    def notifyAll(self, notification):
+        data = notification.render()
 
-        log.msg("COMMIT: %s (%d clients)" % (commit.render_log(), self.cc()))
+        log.msg("%s: %s (%d clients)"
+                % (notification.KIND, notification.render_log(), self.cc()))
         for client in self.clients:
-            if client.interested_in(commit):
+            if client.interested_in(notification):
                 client.write_data(data)
 
     def render_PUT(self, request):
@@ -217,19 +264,23 @@ class SvnPubSub(resource.Resource):
         #import pdb;pdb.set_trace()
         #print "input: %s" % (input)
         try:
-            c = json.loads(input)
-            commit = Commit(c)
+            data = json.loads(input)
+            notification = self.__notification_class(data)
         except ValueError as e:
             request.setResponseCode(400)
-            log.msg("COMMIT: failed due to: %s" % str(e))
-            return str(e)
-        self.notifyAll(commit)
+            errstr = str(e)
+            log.msg("%s: failed due to: %s" % (notification.KIND, errstr))
+            return errstr
+        self.notifyAll(notification)
         return "Ok"
+
 
 def svnpubsub_server():
     root = resource.Resource()
-    s = SvnPubSub()
-    root.putChild("commits", s)
+    c = SvnPubSub(Commit)
+    m = SvnPubSub(Metadata)
+    root.putChild('commits', c)
+    root.putChild('metadata', m)
     return server.Site(root)
 
 if __name__ == "__main__":

@@ -50,6 +50,7 @@
 #include "svn_private_config.h"
 
 #include "private/svn_string_private.h"
+#include "private/svn_eol_private.h"
 
 /**
  * The textual elements of a detranslated special file.  One of these
@@ -297,14 +298,23 @@ build_keywords(apr_hash_t **kw,
   for (i = 0; i < keyword_tokens->nelts; ++i)
     {
       const char *keyword = APR_ARRAY_IDX(keyword_tokens, i, const char *);
-      apr_array_header_t *custom_keyword_tokens = NULL;
+      const char *custom_fmt = NULL;
 
       if (expand_custom_keywords)
-        custom_keyword_tokens = svn_cstring_split(keyword, "=",
-                                                  TRUE /* chop */, pool);
-      if (expand_custom_keywords && custom_keyword_tokens->nelts == 2)
         {
-          const char *custom_fmt;
+          char *sep;
+
+          /* Check if there is a custom keyword definition, started by '='. */
+          sep = strchr(keyword, '=');
+          if (sep)
+            {
+              *sep = '\0'; /* Split keyword's name from custom format. */
+              custom_fmt = sep + 1;
+            }
+        }
+
+      if (custom_fmt)
+        {
           svn_string_t *custom_val;
 
           /* Custom keywords must be allowed to match the name of an
@@ -312,9 +322,6 @@ build_keywords(apr_hash_t **kw,
            * in case new fixed keywords are added to Subversion which
            * happen to match a custom keyword defined somewhere.
            * There is only one global namespace for keyword names. */
-
-          keyword = APR_ARRAY_IDX(custom_keyword_tokens, 0, const char*);
-          custom_fmt = APR_ARRAY_IDX(custom_keyword_tokens, 1, const char*);
           custom_val = keyword_printf(custom_fmt, rev, url, repos_root_url,
                                       date, author, pool);
           svn_hash_sets(*kw, keyword, custom_val);
@@ -1116,28 +1123,42 @@ translate_chunk(svn_stream_t *dst,
               /* skip current EOL */
               len += b->eol_str_len;
 
-              /* Check 4 bytes at once to allow for efficient pipelining
-                 and to reduce loop condition overhead. */
-              while ((p + len + 4) <= end)
+              if (b->keywords)
                 {
-                  if (interesting[(unsigned char)p[len]]
-                      || interesting[(unsigned char)p[len+1]]
-                      || interesting[(unsigned char)p[len+2]]
-                      || interesting[(unsigned char)p[len+3]])
-                    break;
+                  /* Check 4 bytes at once to allow for efficient pipelining
+                    and to reduce loop condition overhead. */
+                  while ((p + len + 4) <= end)
+                    {
+                      if (interesting[(unsigned char)p[len]]
+                          || interesting[(unsigned char)p[len+1]]
+                          || interesting[(unsigned char)p[len+2]]
+                          || interesting[(unsigned char)p[len+3]])
+                        break;
 
-                  len += 4;
+                      len += 4;
+                    }
+
+                  /* Found an interesting char or EOF in the next 4 bytes.
+                     Find its exact position. */
+                  while ((p + len) < end
+                         && !interesting[(unsigned char)p[len]])
+                    ++len;
                 }
-
-               /* Found an interesting char or EOF in the next 4 bytes.
-                  Find its exact position. */
-               while ((p + len) < end && !interesting[(unsigned char)p[len]])
-                 ++len;
+              else
+                {
+                  /* use our optimized sub-routine to find the next EOL */
+                  const char *start = p + len;
+                  const char *eol
+                    = svn_eol__find_eol_start((char *)start, end - start);
+                  
+                  /* EOL will be NULL if we did not find a line ending */
+                  len += (eol ? eol : end) - start;
+                }
             }
           while (b->nl_translation_skippable ==
                    svn_tristate_true &&       /* can potentially skip EOLs */
                  p + len + 2 < end &&         /* not too close to EOF */
-                 eol_unchanged (b, p + len)); /* EOL format already ok */
+                 eol_unchanged(b, p + len));  /* EOL format already ok */
 
           while ((p + len) < end && !interesting[(unsigned char)p[len]])
             len++;

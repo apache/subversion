@@ -834,20 +834,20 @@ A revision, specified in one of C<SVN::Core::opt_revision_*> ways.
 =item $rev-E<gt>kind()
 
 An enum denoting how the revision C<$rev> was specified.  One of 
-C<$VN::Core::opt_revision_unspecified>,
-C<$VN::Core::opt_revision_number>,
-C<$VN::Core::opt_revision_date>,
-C<$VN::Core::opt_revision_committed>,
-C<$VN::Core::opt_revision_previous>,
-C<$VN::Core::opt_revision_base>,
-C<$VN::Core::opt_revision_working>
+C<$SVN::Core::opt_revision_unspecified>,
+C<$SVN::Core::opt_revision_number>,
+C<$SVN::Core::opt_revision_date>,
+C<$SVN::Core::opt_revision_committed>,
+C<$SVN::Core::opt_revision_previous>,
+C<$SVN::Core::opt_revision_base>,
+C<$SVN::Core::opt_revision_working>
 or C<$SVN::Core::opt_revision_head>.
 
 =item $rev-E<gt>value()
 
 Extra data about the revision. Only relevant if C<$rev-E<gt>kind> is
-C<$VN::Core::opt_revision_number> (where it contains the revision number)
-or C<$VN::Core::opt_revision_date> (where it contains a date).
+C<$SVN::Core::opt_revision_number> (where it contains the revision number)
+or C<$SVN::Core::opt_revision_date> (where it contains a date).
 
 =back
 

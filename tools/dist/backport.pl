@@ -123,7 +123,9 @@ fi
 $SVN diff > $backupfile
 cp STATUS STATUS.$$
 $SVNq revert -R .
-mv STATUS.$$ STATUS
+if $MAY_COMMIT ; then
+  mv STATUS.$$ STATUS
+fi
 $SVNq up
 $SVNq merge $mergeargs
 if [ "`$SVN status -q | wc -l`" -eq 1 ]; then
@@ -161,9 +163,9 @@ else
 fi
 EOF
 
-  open SHELL, '|-', qw#/bin/sh# or die $!;
+  open SHELL, '|-', qw#/bin/sh# or die "$! (in '$entry{header}')";
   print SHELL $script;
-  close SHELL or warn "$0: sh($?): $!";
+  close SHELL or warn "$0: sh($?): $! (in '$entry{header}')";
 
   unlink $backupfile if -z $backupfile;
   unlink $logmsg_filename unless $? or $!;

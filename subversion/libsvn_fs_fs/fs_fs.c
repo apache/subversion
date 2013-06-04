@@ -3155,20 +3155,15 @@ write_revprop_generation_file(svn_fs_t *fs,
                               apr_int64_t current,
                               apr_pool_t *pool)
 {
-  apr_file_t *file;
-  const char *tmp_path;
-
   char buf[SVN_INT64_BUFFER_SIZE];
   apr_size_t len = svn__i64toa(buf, current);
   buf[len] = '\n';
 
-  SVN_ERR(svn_io_open_unique_file3(&file, &tmp_path, fs->path,
-                                   svn_io_file_del_none, pool, pool));
-  SVN_ERR(svn_io_file_write_full(file, buf, len + 1, NULL, pool));
-  SVN_ERR(svn_io_file_close(file, pool));
+  SVN_ERR(svn_io_write_atomic(path_revprop_generation(fs, pool),
+                              buf, len + 1,
+                              NULL /* copy_perms */, pool));
 
-  return move_into_place(tmp_path, path_revprop_generation(fs, pool),
-                         tmp_path, pool);
+  return SVN_NO_ERROR;
 }
 
 /* Make sure the revprop_namespace member in FS is set. */
@@ -9773,16 +9768,16 @@ write_revnum_file(const char *fs_path,
                   svn_revnum_t revnum,
                   apr_pool_t *scratch_pool)
 {
-  const char *final_path, *tmp_path;
-  svn_stream_t *tmp_stream;
+  const char *final_path;
+  char buf[SVN_INT64_BUFFER_SIZE];
+  apr_size_t len = svn__i64toa(buf, revnum);
+  buf[len] = '\n';
 
   final_path = svn_dirent_join(fs_path, filename, scratch_pool);
-  SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_path, fs_path,
-                                   svn_io_file_del_none,
-                                   scratch_pool, scratch_pool));
-  SVN_ERR(svn_stream_printf(tmp_stream, scratch_pool, "%ld\n", revnum));
-  SVN_ERR(svn_stream_close(tmp_stream));
-  SVN_ERR(move_into_place(tmp_path, final_path, final_path, scratch_pool));
+
+  SVN_ERR(svn_io_write_atomic(final_path, buf, len + 1,
+                              final_path /* copy_perms */, scratch_pool));
+
   return SVN_NO_ERROR;
 }
 

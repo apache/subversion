@@ -106,6 +106,7 @@ module SvnTestUtil
             begin
               Dir.chdir(path)
             rescue Errno::ENOENT
+              next
             end
 
             found_targets = []
