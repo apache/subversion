@@ -192,6 +192,7 @@ svn_cache__get_info(svn_cache__t *cache,
 {
   /* write general statistics */
 
+  memset(info, 0, sizeof(*info));
   info->gets = cache->reads;
   info->hits = cache->hits;
   info->sets = cache->writes;

@@ -2458,13 +2458,6 @@ svn_membuffer_cache_get_info(void *cache_void,
 
   /* collect info from shared cache back-end */
 
-  info->data_size = 0;
-  info->used_size = 0;
-  info->total_size = 0;
-
-  info->used_entries = 0;
-  info->total_entries = 0;
-
   for (i = 0; i < cache->membuffer->segment_count; ++i)
     {
       svn_membuffer_t *segment = cache->membuffer + i;
