@@ -57,7 +57,7 @@ Candidate changes:
      so I'm not 100% sure if we should introduce this patch in this form in
      1.8.1 or later.
    Votes:
-     +1: rhuijben
+     +0: rhuijben (Needs more work. Breaks JavaHL)
 
 Veto-blocked changes:
 =====================
