@@ -33,7 +33,7 @@ from svntest import wc
 
 from svntest.main import server_has_mergeinfo
 from svntest.main import SVN_PROP_MERGEINFO
-from merge_tests import set_up_branch
+from svntest.mergetrees import set_up_branch
 from diff_tests import make_diff_header, make_no_diff_deleted_header
 
 # (abbreviation)

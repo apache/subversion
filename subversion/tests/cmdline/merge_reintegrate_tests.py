@@ -44,8 +44,8 @@ exp_noop_up_out = svntest.actions.expected_noop_update_output
 
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import server_has_mergeinfo
-from merge_tests import set_up_branch
-from merge_tests import expected_merge_output
+from svntest.mergetrees import set_up_branch
+from svntest.mergetrees import expected_merge_output
 
 #----------------------------------------------------------------------
 def run_reintegrate(src_url, tgt_path):
