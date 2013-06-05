@@ -312,6 +312,16 @@ svn_stringbuf_appendbytes(svn_stringbuf_t *targetstr,
                           const char *bytes,
                           apr_size_t count);
 
+/** Append @a byte @a count times onto @a targetstr.
+ *
+ * reallocs if necessary. @a targetstr is affected, nothing else is.
+ * @since New in 1.9.
+ */
+void
+svn_stringbuf_appendfill(svn_stringbuf_t *targetstr,
+                         char byte,
+                         apr_size_t count);
+
 /** Append the stringbuf @c appendstr onto @a targetstr.
  *
  * reallocs if necessary. @a targetstr is affected, nothing else is.
