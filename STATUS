@@ -57,17 +57,6 @@ Approved for 1.8.1 or if soak is restarted for 1.8.0:
 Approved changes:
 =================
 
- * r1489114, r1489116
-   Require Serf 1.2.1.
-   Justification:
-     Serf 1.2.0 doesn't work where Digest authentication is in use.
-     See http://subversion.tigris.org/issues/show_bug.cgi?id=4371 and
-     https://code.google.com/p/serf/issues/detail?id=102 for details.
-   Notes:
-     This is a blocking issue.
-   Votes:
-     +1: cmpilato, gstein, ivan
-
  * r1489203
    Fix a crash when the automatic merge API is called with unrelated source
    and target branches, other than by 'svn' which does an ancestry check
