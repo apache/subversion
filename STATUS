@@ -63,13 +63,6 @@ Approved changes:
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 
- * r1488878
-   Don't leave return value uninitialised.
-   Justification:
-     Possible SEGV when using legacy status API.
-   Votes:
-     +1: philip, brane, rhuijben
-
  * r1488425
    Fix issue 4369, poor serf error message for commit with stolen locks.
    Justification:
