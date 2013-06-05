@@ -385,7 +385,7 @@ svn_fs_fs__read_changes_container(svn_fs_fs__changes_t **changes_p,
   svn_packed__int_stream_t *offsets_stream;
   svn_packed__int_stream_t *changes_stream;
 
-  /* write from disk */
+  /* read from disk */
   SVN_ERR(svn_fs_fs__read_string_table(&changes->paths, stream,
                                        result_pool, scratch_pool));
 

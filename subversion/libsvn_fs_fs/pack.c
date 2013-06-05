@@ -91,7 +91,7 @@ typedef struct rep_info_t
 
   /* given a typical tree traversal, this item will probably be requested
    * soon after ENTRY.  So, place it near the current item.  May be NULL.
-   * If this is set on a noderev item, it links to a sibbling.  On a
+   * If this is set on a noderev item, it links to a sibling.  On a
    * representation item, it links to sub-directory entries. */
   struct rep_info_t *next;
 } rep_info_t;
@@ -667,7 +667,7 @@ copy_node_to_temp(pack_context_t *context,
       /* link all items in sorted order.
        * This may overwrite existing linkage from older revisions.  But we
        * place data starting with the latest revision, it is only older
-       * data that looses some of its coherence.
+       * data that loses some of its coherence.
        */
       for (i = 0; i < sorted->nelts; ++i)
         {
