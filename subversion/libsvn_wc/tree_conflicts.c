@@ -458,5 +458,7 @@ svn_wc__get_all_tree_conflicts(apr_hash_t **tree_conflicts,
       apr_hash_set(*tree_conflicts, abspath, APR_HASH_KEY_STRING, conflict);
     }
 
+
+  *tree_conflict = NULL;
   return SVN_NO_ERROR;
 }

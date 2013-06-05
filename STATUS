@@ -190,10 +190,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1488878
-   Don't leave return value uninitialised.
-   Justification:
-     Possible SEGV when using legacy status API.
-   Votes:
-     +1: philip, brane, rhuijben
