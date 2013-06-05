@@ -39,7 +39,7 @@ svn_revnum_parse(svn_revnum_t *rev,
                  const char *str,
                  const char **endptr)
 {
-  char *end;
+  const char *end;
 
   svn_revnum_t result = (svn_revnum_t)svn__strtoul(str, &end);
 
