@@ -705,8 +705,7 @@ svn_packed__get_uint(svn_packed__int_stream_t *stream)
 }
 
 apr_int64_t
-svn_packed__get_int(svn_packed__int_stream_t *stream,
-                         apr_int64_t value)
+svn_packed__get_int(svn_packed__int_stream_t *stream)
 {
   return (apr_int64_t)svn_packed__get_uint(stream);
 }
