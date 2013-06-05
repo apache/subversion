@@ -41,8 +41,8 @@ Issues = svntest.testcase.Issues_deco
 Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
 
-from merge_tests import set_up_branch
-from merge_tests import expected_merge_output
+from svntest.mergetrees import set_up_branch
+from svntest.mergetrees import expected_merge_output
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import write_restrictive_svnserve_conf
 from svntest.main import write_authz_file

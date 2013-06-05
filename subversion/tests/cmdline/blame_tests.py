@@ -34,7 +34,7 @@ from svntest.main import server_has_mergeinfo
 from prop_tests import binary_mime_type_on_text_file_warning
 
 # For some basic merge setup used by blame -g tests.
-from merge_tests import set_up_branch
+from svntest.mergetrees import set_up_branch
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
