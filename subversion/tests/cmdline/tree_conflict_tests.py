@@ -30,7 +30,7 @@ import sys, re, os, traceback
 # Our testing module
 import svntest
 from svntest import main, wc, verify
-from svntest.actions import run_and_verify_svn
+from svntest.actions import run_and_verify_svn, run_and_verify_svn2
 from svntest.actions import run_and_verify_commit
 from svntest.actions import run_and_verify_resolved
 from svntest.actions import run_and_verify_update
@@ -523,8 +523,10 @@ def ensure_tree_conflict(sbox, operation,
       run_and_verify_resolved([victim_path])
 
       logger.debug("--- Checking that 'status' does not report a conflict")
-      exitcode, stdout, stderr = run_and_verify_svn(None, None, [],
-                                                'status', victim_path)
+
+      exitcode, stdout, stderr = main.run_svn(True, 'status', victim_path)
+      verify.verify_exit_code(None, exitcode, 0)
+
       for line in stdout:
         if line[6] == 'C': # and line.endswith(victim_path + '\n'):
           raise svntest.Failure("unexpected status C") # on victim_path
