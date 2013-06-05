@@ -1246,7 +1246,7 @@ $(SVN_OBJDIR)/.installed: $(SVN_OBJDIR)/.compiled
 # by the same version of SWIG.
 $(SVN_OBJDIR)/.pre-generated-swig-cleaned:
 	-cd $(svn_builddir) \
-		&& make extraclean-swig
+		&& make clean-swig
 	touch $@
 
 $(SVN_OBJDIR)/.bindings-compiled: $(SVN_OBJDIR)/.installed $(SVN_OBJDIR)/.pre-generated-swig-cleaned

@@ -1328,7 +1328,7 @@ list_func_wrapper(void *baton,
   struct list_func_wrapper_baton *lfwb = baton;
 
   if (lfwb->list_func1)
-    return lfwb->list_func1(lfwb->list_func1_baton, path, dirent, 
+    return lfwb->list_func1(lfwb->list_func1_baton, path, dirent,
                            lock, abs_path, scratch_pool);
 
   return SVN_NO_ERROR;
@@ -1344,7 +1344,7 @@ wrap_list_func(svn_client_list_func2_t *list_func2,
                void *baton,
                apr_pool_t *result_pool)
 {
-  struct list_func_wrapper_baton *lfwb = apr_palloc(result_pool, 
+  struct list_func_wrapper_baton *lfwb = apr_palloc(result_pool,
                                                     sizeof(*lfwb));
 
   /* Set the user provided old format callback in the baton. */
@@ -1372,8 +1372,8 @@ svn_client_list2(const char *path_or_url,
 
   wrap_list_func(&list_func2, &list_func2_baton, list_func, baton, pool);
 
-  return svn_client_list3(path_or_url, peg_revision, revision, depth, 
-                          dirent_fields, fetch_locks, 
+  return svn_client_list3(path_or_url, peg_revision, revision, depth,
+                          dirent_fields, fetch_locks,
                           FALSE /* include externals */,
                           list_func2, list_func2_baton, ctx, pool);
 }

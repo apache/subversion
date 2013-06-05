@@ -202,7 +202,7 @@ svn_version__parse_version_string(svn_version_t **version_p,
 {
   svn_error_t *err;
   svn_version_t *version;
-  apr_array_header_t *pieces = 
+  apr_array_header_t *pieces =
     svn_cstring_split(version_string, ".", FALSE, result_pool);
 
   if ((pieces->nelts < 2) || (pieces->nelts > 3))

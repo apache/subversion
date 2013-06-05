@@ -2892,7 +2892,7 @@ def commit_danglers(sbox):
   A_copied = sbox.ospath('A_copied')
   mu_copied = sbox.ospath('A_copied/mu')
 
-  svntest.main.file_write(mu_copied, "xxxx")  
+  svntest.main.file_write(mu_copied, "xxxx")
 
   # We already test for this problem for some time
   expected_error = "svn: E200009: '.*A_copied' .*exist.*yet.* '.*mu'.*part"
@@ -2936,16 +2936,16 @@ def last_changed_of_copied_subdir(sbox):
   E_copied = sbox.ospath('A/B_copied/E')
   alpha_copied = sbox.ospath('A/B_copied/E/alpha')
 
-  svntest.main.file_write(alpha_copied, "xxxx") 
-  
+  svntest.main.file_write(alpha_copied, "xxxx")
+
   svntest.main.run_svn(None, 'commit', wc_dir, '-mm')
 
   expected = {'Revision'          : '2',
               'Last Changed Rev'  : '2',
              }
   svntest.actions.run_and_verify_info([expected], E_copied)
-  
-  
+
+
 ########################################################################
 # Run the tests
 

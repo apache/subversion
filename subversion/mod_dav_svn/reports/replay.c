@@ -450,7 +450,7 @@ dav_svn__replay_report(const dav_resource *resource,
       rev = SVN_INVALID_REVNUM;
       base_dir = resource->info->repos_path;
     }
-  
+
   arb.r = resource->info->r;
   arb.repos = resource->info->repos;
 

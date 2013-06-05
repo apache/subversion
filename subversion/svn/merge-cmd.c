@@ -88,7 +88,7 @@ run_merge(svn_boolean_t two_sources_specified,
 
   if (opt_state->reintegrate)
     {
-      merge_err = svn_client_merge_reintegrate(
+      merge_err = svn_cl__deprecated_merge_reintegrate(
                     sourcepath1, &peg_revision1, targetpath,
                     opt_state->dry_run, options, ctx, scratch_pool);
     }
@@ -350,7 +350,7 @@ svn_cl__merge(apr_getopt_t *os,
   /* If no targetpath was specified, see if we can infer it from the
      sourcepaths. */
   if (! has_explicit_target
-      && sourcepath1 && sourcepath2 
+      && sourcepath1 && sourcepath2
       && strcmp(targetpath, "") == 0)
     {
       /* If the sourcepath is a URL, it can only refer to a target in

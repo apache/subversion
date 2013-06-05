@@ -1,6 +1,6 @@
 #!/bin/sh
-USAGE="Fix some kinds of corruption in a Subversion repository
-by running './fixer/fix-rev.py' on each revision.
+USAGE="Fix some kinds of corruption in a Subversion FSFS repository.
+This script runs './fixer/fix-rev.py' on each revision.
 Usage: $0 REPO-DIR START-REV
 
 Backup your repository before running these scripts."

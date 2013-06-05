@@ -2074,7 +2074,7 @@ copy_test(const svn_test_opts_t *opts,
   svn_revnum_t after_rev;
 
   /* Prepare a filesystem. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-copy-test",
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-copy",
                               opts, pool));
 
   /* In first txn, create and commit the greek tree. */
@@ -3755,6 +3755,17 @@ small_file_integrity(const svn_test_opts_t *opts,
 
 
 static svn_error_t *
+almostmedium_file_integrity(const svn_test_opts_t *opts,
+                            apr_pool_t *pool)
+{
+  apr_uint32_t seed = (apr_uint32_t) apr_time_now();
+
+  return file_integrity_helper(SVN_DELTA_WINDOW_SIZE - 1, &seed, opts,
+                               "test-repo-almostmedium-file-integrity", pool);
+}
+
+
+static svn_error_t *
 medium_file_integrity(const svn_test_opts_t *opts,
                       apr_pool_t *pool)
 {
@@ -4237,7 +4248,7 @@ branch_test(const svn_test_opts_t *opts,
   svn_revnum_t youngest_rev = 0;
 
   /* Create a filesystem and repository. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-branch-test",
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-branch",
                               opts, pool));
 
   /*** Revision 1:  Create the greek tree in revision.  ***/
@@ -4935,7 +4946,7 @@ delete_fs(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
-/* Issue 4340, "fs layer should reject filenames with trailing \n" */
+/* Issue 4340, "filenames containing \n corrupt FSFS repositories" */
 static svn_error_t *
 filename_trailing_newline(const svn_test_opts_t *opts,
                           apr_pool_t *pool)
@@ -4947,7 +4958,7 @@ filename_trailing_newline(const svn_test_opts_t *opts,
   svn_revnum_t youngest_rev = 0;
   svn_error_t *err;
   svn_boolean_t allow_newlines;
-  
+
   /* Some filesystem implementations can handle newlines in filenames
    * and can be white-listed here.
    * Currently, only BDB supports \n in filenames. */
@@ -5055,6 +5066,8 @@ struct svn_test_descriptor_t test_funcs[] =
                        "check old revisions"),
     SVN_TEST_OPTS_PASS(check_all_revisions,
                        "after each commit, check all revisions"),
+    SVN_TEST_OPTS_PASS(almostmedium_file_integrity,
+                       "create and modify almostmedium file"),
     SVN_TEST_OPTS_PASS(medium_file_integrity,
                        "create and modify medium file"),
     SVN_TEST_OPTS_PASS(large_file_integrity,

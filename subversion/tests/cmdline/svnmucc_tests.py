@@ -375,7 +375,7 @@ def too_many_log_messages(sbox):
   svntest.main.file_append(msg_file, 'some log message')
   err_msg = ["svnmucc: E205000: --message (-m), --file (-F), and "
              "--with-revprop=svn:log are mutually exclusive"]
-             
+
   xtest_svnmucc(sbox.repo_url, err_msg,
                 '--non-interactive',
                 '-m', 'log msg',
@@ -397,11 +397,11 @@ def too_many_log_messages(sbox):
                 '-F', msg_file,
                 '--with-revprop', 'svn:log=proppy log message',
                 'mkdir', 'A/subdir')
-  
+
 @Issues(3418)
 def no_log_msg_non_interactive(sbox):
   "test non-interactive without a log message"
-  
+
   sbox.build(create_wc=False)
   xtest_svnmucc(sbox.repo_url,
                 ["svnmucc: E205001: Cannot invoke editor to get log message "
@@ -409,7 +409,7 @@ def no_log_msg_non_interactive(sbox):
                  ], #---------
                 '--non-interactive',
                 'mkdir', 'A/subdir')
-  
+
 
 ######################################################################
 

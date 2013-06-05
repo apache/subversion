@@ -107,7 +107,7 @@ fetch_base(const char **filename,
 
   *filename = apr_pstrdup(result_pool, tmp_filename);
 
- 
+
 
   return SVN_NO_ERROR;
 }

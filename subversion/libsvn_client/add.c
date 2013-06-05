@@ -641,7 +641,7 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
   *autoprops = apr_hash_make(result_pool);
   autoprops_baton.result_pool = result_pool;
   autoprops_baton.autoprops = *autoprops;
-  
+
 
   /* Are "traditional" auto-props enabled?  If so grab them from the
     config.  This is our starting set auto-props, which may be overriden
@@ -704,15 +704,12 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
 
   for (i = 0; i < inherited_config_auto_props->nelts; i++)
     {
-      apr_hash_index_t *hi;
       svn_prop_inherited_item_t *elt = APR_ARRAY_IDX(
         inherited_config_auto_props, i, svn_prop_inherited_item_t *);
+      const svn_string_t *propval =
+        svn_hash_gets(elt->prop_hash, SVN_PROP_INHERITABLE_AUTO_PROPS);
 
-      for (hi = apr_hash_first(scratch_pool, elt->prop_hash);
-           hi;
-           hi = apr_hash_next(hi))
         {
-          const svn_string_t *propval = svn__apr_hash_index_val(hi);
           const char *ch = propval->data;
           svn_stringbuf_t *config_auto_prop_pattern;
           svn_stringbuf_t *config_auto_prop_val;
@@ -1026,7 +1023,7 @@ svn_client_add5(const char *path,
   SVN_WC__CALL_WITH_WRITE_LOCK(
     add(local_abspath, depth, force, no_ignore, no_autoprops,
         existing_parent_abspath, ctx, scratch_pool),
-    ctx->wc_ctx, (existing_parent_abspath ? existing_parent_abspath 
+    ctx->wc_ctx, (existing_parent_abspath ? existing_parent_abspath
                                           : parent_abspath),
     FALSE /* lock_anchor */, scratch_pool);
   return SVN_NO_ERROR;
@@ -1131,7 +1128,7 @@ mkdir_urls(const apr_array_header_t *urls,
 
       if (*bname == '\0')
         return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                                 _("There is no valid uri above '%s'"),
+                                 _("There is no valid URI above '%s'"),
                                  common);
     }
   else
@@ -1158,7 +1155,7 @@ mkdir_urls(const apr_array_header_t *urls,
 
           if (*bname == '\0')
              return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                                      _("There is no valid uri above '%s'"),
+                                      _("There is no valid URI above '%s'"),
                                       common);
 
           for (i = 0; i < targets->nelts; i++)

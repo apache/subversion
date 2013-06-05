@@ -8,25 +8,26 @@ package SVN::Client;
 my @_all_fns;
 BEGIN {
     @_all_fns =
-        qw( version diff_summarize_dup create_context checkout3
-            checkout2 checkout update4 update3 update2 update switch2 switch
-            add4 add3 add2 add mkdir4 mkdir3 mkdir2 mkdir delete3 delete2
-            delete import3 import2 import commit4 commit3 commit2
-            commit status4 status3 status2 status log4 log3 log2 log blame4
-            blame3 blame2 blame diff4 diff3 diff2 diff diff_peg4
-            diff_peg3 diff_peg2 diff_peg diff_summarize2
-            diff_summarize diff_summarize_peg2 diff_summarize_peg
-            merge3 merge2 merge merge_peg3 merge_peg2 merge_peg
-            cleanup relocate revert2 revert resolve resolved copy4
-            copy3 copy2 copy move5 move4 move3 move2 move propset3
-            propset2 propset revprop_set propget3 propget2
-            propget revprop_get proplist3 proplist2 proplist
-            revprop_list export4 export3 export2 export list2 list
-            ls3 ls2 ls cat2 cat add_to_changelist
-            remove_from_changelist lock unlock info2 info
-            url_from_path uuid_from_url uuid_from_path open_ra_session
-            invoke_blame_receiver2 invoke_blame_receiver
-            invoke_diff_summarize_func
+        qw( add add2 add3 add4 add_to_changelist blame blame2 blame3 blame4
+            cat cat2 checkout checkout2 checkout3 cleanup
+            commit commit2 commit3 commit4 copy copy2 copy3 copy4
+            create_context delete delete2 delete3 diff diff2 diff3 diff4
+            diff_peg diff_peg2 diff_peg3 diff_peg4
+            diff_summarize diff_summarize2 diff_summarize_dup
+            diff_summarize_peg diff_summarize_peg2
+            export export2 export3 export4 import import2 import3
+            info info2 invoke_blame_receiver invoke_blame_receiver2
+            invoke_diff_summarize_func list list2 lock
+            log log2 log3 log4 log5 ls ls2 ls3
+            merge merge2 merge3 merge_peg merge_peg2 merge_peg3
+            mkdir mkdir2 mkdir3 mkdir4 move move2 move3 move4 move5
+            open_ra_session propget propget2 propget3
+            proplist proplist2 proplist3 propset propset2 propset3
+            relocate remove_from_changelist resolve resolved
+            revert revert2 revprop_get revprop_list revprop_set
+            status status2 status3 status4 switch switch2
+            unlock update update2 update3 update4
+            url_from_path uuid_from_path uuid_from_url version
           );
 
     require SVN::Base;
@@ -40,21 +41,18 @@ SVN::Client - Subversion client functions
 =head1 SYNOPSIS
 
     use SVN::Client;
-    my $ctx = new SVN::Client(
-              auth => [SVN::Client::get_simple_provider(),
-              SVN::Client::get_simple_prompt_provider(\&simple_prompt,2),
-              SVN::Client::get_username_provider()]
-              );
+    my $client = new SVN::Client(
+      auth => [
+          SVN::Client::get_simple_provider(),
+          SVN::Client::get_simple_prompt_provider(\&simple_prompt,2),
+          SVN::Client::get_username_provider()
+      ]);
 
-    $ctx->cat(\*STDOUT, 'http://svn.apache.org/repos/asf/subversion/trunk/README',
-              'HEAD');
+    $client->cat(\*STDOUT, 
+              'http://svn.apache.org/repos/asf/subversion/trunk/README', 'HEAD');
 
     sub simple_prompt {
-      my $cred = shift;
-      my $realm = shift;
-      my $default_username = shift;
-      my $may_save = shift;
-      my $pool = shift;
+      my ($cred, $realm, $default_username, $may_save, $pool) = @_;
 
       print "Enter authentication info for realm: $realm\n";
       print "Username: ";
@@ -81,8 +79,8 @@ The Perl method calls take a SVN::Client object as the first parameter.
 This allows method call invocation of the methods to be possible.  For
 example, the following are equivalent:
 
-  SVN::Client::add($ctx,$path, $recursive, $pool);
-  $ctx->add($path, $recursive, $pool);
+  SVN::Client::add($client,$path, $recursive, $pool);
+  $client->add($path, $recursive, $pool);
 
 Many of the C API calls also take a apr_pool_t pointer as their last
 argument.  The Perl bindings generally deal with this for you and
@@ -103,7 +101,7 @@ the rules below or will be noted otherwise in the method description.
 
 =over 4
 
-=item $ctx
+=item $client
 
 An SVN::Client object that you get from the constructor.
 
@@ -163,7 +161,7 @@ The following methods are available:
 
 =over 4
 
-=item $ctx = SVN::Client-E<gt>new( %options );
+=item $client = SVN::Client-E<gt>new( %options );
 
 This class method constructs a new C<SVN::Client> object and returns
 a reference to it.
@@ -252,21 +250,21 @@ sub new
     return $self;
 }
 
-=item $ctx-E<gt>add($path, $recursive, $pool);
+=item $client-E<gt>add($path, $recursive, $pool);
 
-Similar to $ctx-E<gt>add2(), but with $force always set to FALSE.
+Similar to $client-E<gt>add2(), but with $force always set to FALSE.
 
-=item $ctx-E<gt>add2($path, $recursive, $force, $ctx, $pool);
+=item $client-E<gt>add2($path, $recursive, $force, $pool);
 
-Similar to $ctx-E<gt>add3(), but with $no_ignore always set to FALSE.
+Similar to $client-E<gt>add3(), but with $no_ignore always set to FALSE.
 
-=item $ctx-E<gt>add3($path, $recursive, $force, $no_ignore, $pool);
+=item $client-E<gt>add3($path, $recursive, $force, $no_ignore, $pool);
 
-Similar to $ctx-E<gt>add4(), but with $add_parents always set to FALSE and
+Similar to $client-E<gt>add4(), but with $add_parents always set to FALSE and
 $depth set according to $recursive; if TRUE, then depth is
 $SVN::Depth::infinity, if FALSE, then $SVN::Depth::empty.
 
-=item $ctx-E<gt>add4($path, $depth, $force, $no_ignore, $add_parents, $pool);
+=item $client-E<gt>add4($path, $depth, $force, $no_ignore, $add_parents, $pool);
 
 Schedule a working copy $path for addition to the repository.
 
@@ -289,7 +287,7 @@ Calls the notify callback for each added item.
 If $no_ignore is FALSE, don't add any file or directory (or recurse into any
 directory) that is unversioned and found by recursion (as opposed to being the
 explicit target $path) and whose name matches the svn:ignore property on its
-parent directory or the global-ignores list in $ctx->config.  If $no_ignore is
+parent directory or the global-ignores list in $client->config.  If $no_ignore is
 TRUE, do include such files and directories.  (Note that an svn:ignore property
 can influence this behaviour only when recursing into an already versioned
 directory with $force).
@@ -300,11 +298,11 @@ found return $SVN::Error::NO_VERSIONED_PARENT.
 
 Important: this is a B<scheduling> operation.  No changes will happen
 to the repository until a commit occurs.  This scheduling can be
-removed with $ctx-E<gt>revert().
+removed with $client-E<gt>revert().
 
 No return.
 
-=item $ctx-E<gt>blame($target, $start, $end, \&receiver, $pool);
+=item $client-E<gt>blame($target, $start, $end, \&receiver, $pool);
 
 Invoke \&receiver subroutine on each line-blame item associated with revision
 $end of $target, using $start as the default source of all blame.
@@ -324,7 +322,7 @@ The blame receiver subroutine can return an svn_error_t object
 to return an error.  All other returns will be ignored.
 You can create an svn_error_t object with SVN::Error::create().
 
-=item $ctx-E<gt>cat(\*FILEHANDLE, $target, $revision, $pool);
+=item $client-E<gt>cat(\*FILEHANDLE, $target, $revision, $pool);
 
 Outputs the content of the file identified by $target and $revision to the
 FILEHANDLE.  FILEHANDLE is a reference to a filehandle.
@@ -333,17 +331,17 @@ If $target is not a local path and if $revision is 'PREV' (or some
 other kind that requires a local path), then an error will be raised,
 because the desired revision can not be determined.
 
-=item $ctx-E<gt>checkout($url, $path, $revision, $recursive, $pool);
+=item $client-E<gt>checkout($url, $path, $revision, $recursive, $pool);
 
-Similar to $ctx-E<gt>checkout2(), but with $peg_revision always set to undef (unspecified) and $ignore_externals always set to FALSE.
+Similar to $client-E<gt>checkout2(), but with $peg_revision always set to undef (unspecified) and $ignore_externals always set to FALSE.
 
-=item $ctx-E<gt>checkout2($url, $path, $peg_revision, $revision, $recursive, $ignore_externals, $pool);
+=item $client-E<gt>checkout2($url, $path, $peg_revision, $revision, $recursive, $ignore_externals, $pool);
 
-Similar to $ctx-E<gt>checkout3(), but with $allow_unver_obstructions always set
+Similar to $client-E<gt>checkout3(), but with $allow_unver_obstructions always set
 to FALSE, and $depth set according to $recurse: if $recurse is TRUE, $depth is
 $SVN::Depth::infinity, if $recurse is FALSE, set $depth to $SVN::Depth::files.
 
-=item $ctx-E<gt>checkout3($url, $path, $preg_revision, $revision, $depth, $ignore_externals, $allow_unver_obstructions, $pool);
+=item $client-E<gt>checkout3($url, $path, $preg_revision, $revision, $depth, $ignore_externals, $allow_unver_obstructions, $pool);
 
 Checkout a working copy of $url at $revision using $path as the root directory
 of the newly checked out working copy.
@@ -370,12 +368,12 @@ obstructing items.
 
 Returns the value of the revision actually checked out of the repository.
 
-=item $ctx-E<gt>cleanup($dir, $pool);
+=item $client-E<gt>cleanup($dir, $pool);
 
 Recursively cleanup a working copy directory, $dir, finishing any incomplete
 operations, removing lockfiles, etc.
 
-=item $ctx-E<gt>commit($targets, $nonrecursive, $pool);
+=item $client-E<gt>commit($targets, $nonrecursive, $pool);
 
 Commit files or directories referenced by target.  Will use the log_msg
 callback to obtain the log message for the commit.
@@ -397,7 +395,7 @@ Returns a svn_client_commit_info_t object.  If the revision member of the
 commit information object is $SVN::Core::INVALID_REVNUM and no error was
 raised, then the commit was a no-op; nothing needed to be committed.
 
-=item $ctx-E<gt>copy($src_target, $src_revision, $dst_target, $pool);
+=item $client-E<gt>copy($src_target, $src_revision, $dst_target, $pool);
 
 Copies $src_target to $dst_target.
 
@@ -412,15 +410,15 @@ to the repository.  The log_msg callback will be called to query for a commit
 log message.  If the commit succeeds, return a svn_client_commit_info_t
 object.
 
-If $dst_target is not a URL, then this is just a variant of $ctx-E<gt>add(),
+If $dst_target is not a URL, then this is just a variant of $client-E<gt>add(),
 where the $dst_path items are scheduled for addition as copies.  No changes
 will happen to the repository until a commit occurs.  This scheduling can be
-removed with $ctx-E<gt>revert().  undef will be returned in this case.
+removed with $client-E<gt>revert().  undef will be returned in this case.
 
 Calls the notify callback for each item added at the new location, passing
 the new, relative path of the added item.
 
-=item $ctx-E<gt>delete($targets, $force, $pool);
+=item $client-E<gt>delete($targets, $force, $pool);
 
 Delete items from a repository or working copy.
 
@@ -433,7 +431,7 @@ repository.
 Else, schedule the working copy paths in $targets for removal from the
 repository.  Each path's parent must be under revision control.  This is
 just a B<scheduling> operation.  No changes will happen to the repository
-until a commit occurs.  This scheduling can be removed with $ctx-E<gt>revert().
+until a commit occurs.  This scheduling can be removed with $client-E<gt>revert().
 If a path is a file it is immediately removed from the working copy.  If
 the path is a directory it will remain in the working copy but all the files,
 and all unversioned items it contains will be removed.  If $force is not set
@@ -445,7 +443,7 @@ the deleted item.
 
 Has no return.
 
-=item $ctx-E<gt>diff($diff_options, $target1, $revision1, $target2, $revision2, $recursive, $ignore_ancestry, $no_diff_deleted, $outfile, $errfile, $pool);
+=item $client-E<gt>diff($diff_options, $target1, $revision1, $target2, $revision2, $recursive, $ignore_ancestry, $no_diff_deleted, $outfile, $errfile, $pool);
 
 Produces diff output which describes the delta between $target1 at
 $revision1 and $target2 at $revision2.  They both must represent the same
@@ -469,7 +467,7 @@ pass an empty array to return a unified context diff (like `diff -u`).
 
 Has no return.
 
-=item $ctx-E<gt>diff_summarize($target1, $revision1, $target2, $revision2, $recursive, $ignore_ancestry, \&summarize_func, $pool);
+=item $client-E<gt>diff_summarize($target1, $revision1, $target2, $revision2, $recursive, $ignore_ancestry, \&summarize_func, $pool);
 
 Produce a diff summary which lists the changed items between $target1
 at $revision1 and $target2 at $revision2 without creating text deltas.
@@ -486,7 +484,7 @@ See diff() for a description of the other parameters.
 
 Has no return.
 
-=item $ctx-E<gt>export($from, $to, $revision, $force, $pool);
+=item $client-E<gt>export($from, $to, $revision, $force, $pool);
 
 Export the contents of either a subversion repository or a subversion
 working copy into a 'clean' directory (meaning a directory with no
@@ -506,7 +504,7 @@ The notify callback will be called for the items exported.
 Returns the value of the revision actually exported or
 $SVN::Core::INVALID_REVNUM for local exports.
 
-=item $ctx-E<gt>import($path, $url, $nonrecursive, $pool);
+=item $client-E<gt>import($path, $url, $nonrecursive, $pool);
 
 Import file or directory $path into repository directory $url at head.
 
@@ -534,7 +532,39 @@ one is needed.
 
 Returns a svn_client_commit_info_t object.
 
-=item $ctx-E<gt>log($targets, $start, $end, $discover_changed_paths, $strict_node_history, \&log_receiver, $pool);
+=item $client-E<gt>info($path_or_url, $peg_revision, $revision, \&receiver, $recurse);
+
+Invokes \&receiver passing it information about $path_or_url for $revision.
+The information returned is system-generated metadata, not the sort of
+"property" metadata created by users.  For methods available on the object
+passed to \&receiver, B<see svn_info_t>.
+
+If both revision arguments are either svn_opt_revision_unspecified or NULL,
+then information will be pulled solely from the working copy; no network
+connections will be made.
+
+Otherwise, information will be pulled from a repository.  The actual node
+revision selected is determined by the $path_or_url as it exists in
+$peg_revision.  If $peg_revision is undef, then it defaults to HEAD for URLs
+or WORKING for WC targets.
+
+If $path_or_url is not a local path, then if $revision is PREV (or some other
+kind that requires a local path), an error will be returned, because the
+desired revision cannot be determined.
+
+Uses the authentication baton cached in ctx to authenticate against the
+repository.
+
+If $recurse is true (and $path_or_url is a directory) this will be a recursive
+operation, invoking $receiver on each child.
+
+ my $receiver = sub {
+     my( $path, $info, $pool ) = @_;
+     print "Current revision of $path is ", $info->rev, "\n";
+ };
+ $client->info( 'foo/bar.c', undef, 'WORKING', $receiver, 0 );
+
+=item $client-E<gt>log($targets, $start, $end, $discover_changed_paths, $strict_node_history, \&log_receiver, $pool);
 
 Invoke the log_receiver subroutine on each log_message from $start to $end in
 turn, inclusive (but will never invoke receiver on a given log message more
@@ -577,7 +607,7 @@ If $changed_paths is defined it references a hash with the keys
 every path committed in $revision; the values are svn_log_changed_path_t
 objects.
 
-=item $ctx-E<gt>ls($target, $revision, $recursive, $pool);
+=item $client-E<gt>ls($target, $revision, $recursive, $pool);
 
 Returns a hash of svn_dirent_t objects for $target at $revision.
 
@@ -589,7 +619,7 @@ If $target is a file only return an entry for the file.
 If $target is non-existent, raises the $SVN::Error::FS_NOT_FOUND
 error.
 
-=item $ctx-E<gt>merge($src1, $rev1, $src2, $rev2, $target_wcpath, $recursive, $ignore_ancestry, $force, $dry_run, $pool);
+=item $client-E<gt>merge($src1, $rev1, $src2, $rev2, $target_wcpath, $recursive, $ignore_ancestry, $force, $dry_run, $pool);
 
 Merge changes from $src1/$rev1 to $src2/$rev2 into the working-copy path
 $target_wcpath.
@@ -626,22 +656,22 @@ feedback is provided, but the working copy is not modified.
 
 Has no return.
 
-=item $ctx-E<gt>mkdir($targets, $pool);
+=item $client-E<gt>mkdir($targets, $pool);
 
-Similar to $ctx-E<gt>mkdir2() except it returns an svn_client_commit_info_t
+Similar to $client-E<gt>mkdir2() except it returns an svn_client_commit_info_t
 object instead of a svn_commit_info_t object.
 
-=item $ctx-E<gt>mkdir2($targets, $pool);
+=item $client-E<gt>mkdir2($targets, $pool);
 
-Similar to $ctx-E<gt>mkdir3(), but with $make_parents always FALSE, and
+Similar to $client-E<gt>mkdir3(), but with $make_parents always FALSE, and
 $revprop_hash always undef.
 
-=item $ctx-E<gt>mkdir3($targets, $make_parents, $revprop_hash, $pool);
+=item $client-E<gt>mkdir3($targets, $make_parents, $revprop_hash, $pool);
 
-Similar to $ctx-E<gt>mkdir4(), but returns a svn_commit_info_t object rather
+Similar to $client-E<gt>mkdir4(), but returns a svn_commit_info_t object rather
 than through a callback function.
 
-=item $ctx-E<gt>mkdir4($targets, $make_parents, $revprop_hash, \&commit_callback, $pool);
+=item $client-E<gt>mkdir4($targets, $make_parents, $revprop_hash, \&commit_callback, $pool);
 
 Create a directory, either in a repository or a working copy.
 
@@ -669,7 +699,7 @@ called for items added to the working copy.
 If \&commit_callback is not undef, then for each successful commit, call
 \&commit_callback with the svn_commit_info_t object for the commit.
 
-=item $ctx-E<gt>move($src_path, $src_revision, $dst_path, $force, $pool);
+=item $client-E<gt>move($src_path, $src_revision, $dst_path, $force, $pool);
 
 Move $src_path to $dst_path.
 
@@ -696,7 +726,7 @@ If $src_path is a working copy path
 not be called.
 
 * This is a scheduling operation.  No changes will happen to the repository
-until a commit occurs.  This scheduling can be removed with $ctx-E<gt>revert().
+until a commit occurs.  This scheduling can be removed with $client-E<gt>revert().
 If $src_path is a file it is removed from the working copy immediately.
 If $src_path is a directory it will remain in the working copy but all
 files, and unversioned items, it contains will be removed.
@@ -709,13 +739,13 @@ The notify callback will be called twice for each item moved, once to
 indicate the deletion of the moved node, and once to indicate the addition
 of the new location of the node.
 
-=item $ctx-E<gt>propget($propname, $target, $revision, $recursive, $pool);
+=item $client-E<gt>propget($propname, $target, $revision, $recursive, $pool);
 
 Returns a reference to a hash containing paths or URLs, prefixed by $target (a
 working copy or URL), of items for which the property $propname is set, and
 whose values represent the property value for $propname at that path.
 
-=item $ctx-E<gt>proplist($target, $revision, $recursive, $pool);
+=item $client-E<gt>proplist($target, $revision, $recursive, $pool);
 
 Returns a reference to an array of svn_client_proplist_item_t objects.
 
@@ -732,7 +762,7 @@ versioned entry below (and including) $target.
 
 If $target is not found, raises the $SVN::Error::ENTRY_NOT_FOUND error.
 
-=item $ctx-E<gt>propset($propname, $propval, $target, $recursive, $pool);
+=item $client-E<gt>propset($propname, $propval, $target, $recursive, $pool);
 
 Set $propname to $propval on $target (a working copy or URL path).
 
@@ -746,7 +776,7 @@ If $propname is an svn-controlled property (i.e. prefixed with svn:),
 then the caller is responsible for ensuring that $propval is UTF8-encoded
 and uses LF line-endings.
 
-=item $ctx-E<gt>relocate($dir, $from, $to, $recursive, $pool);
+=item $client-E<gt>relocate($dir, $from, $to, $recursive, $pool);
 
 Modify a working copy directory $dir, changing any repository URLs that
 begin with $from to begin with $to instead, recursing into subdirectories if
@@ -754,7 +784,7 @@ $recursive is true.
 
 Has no return.
 
-=item $ctx-E<gt>resolved($path, $recursive, $pool);
+=item $client-E<gt>resolved($path, $recursive, $pool);
 
 Removed the 'conflicted' state on a working copy path.
 
@@ -768,7 +798,7 @@ If $path is not in a state of conflict to begin with, do nothing.
 If $path's conflict state is removed, call the notify callback with the
 $path.
 
-=item $ctx-E<gt>revert($paths, $recursive, $pool);
+=item $client-E<gt>revert($paths, $recursive, $pool);
 
 Restore the pristine version of a working copy $paths, effectively undoing
 any local mods.
@@ -776,28 +806,28 @@ any local mods.
 For each path in $paths, if it is a directory and $recursive
 is true, this will be a recursive operation.
 
-=item $ctx-E<gt>revprop_get($propname, $url, $revision, $pool);
+=item $client-E<gt>revprop_get($propname, $url, $revision, $pool);
 
 Returns two values, the first of which is the value of $propname on revision
 $revision in the repository represented by $url.  The second value is the
 actual revision queried.
 
-Note that unlike its cousin $ctx-E<gt>propget(), this routine doesn't affect
+Note that unlike its cousin $client-E<gt>propget(), this routine doesn't affect
 working copy at all; it's a pure network operation that queries an
 B<unversioned> property attached to a revision.  This can be used to query
 log messages, dates, authors, and the like.
 
-=item $ctx-E<gt>revprop_list($url, $revision, $pool);
+=item $client-E<gt>revprop_list($url, $revision, $pool);
 
 Returns two values, the first of which is a reference to a hash containing
 the properties attached to $revision in the repository represented by $url.
 The second value is the actual revision queried.
 
-Note that unlike its cousin $ctx-E<gt>proplist(), this routine doesn't read a
+Note that unlike its cousin $client-E<gt>proplist(), this routine doesn't read a
 working copy at all; it's a pure network operation that reads B<unversioned>
 properties attached to a revision.
 
-=item $ctx-E<gt>revprop_set($propname, $propval, $url, $revision, $force, $pool);
+=item $client-E<gt>revprop_set($propname, $propval, $url, $revision, $force, $pool);
 
 Set $propname to $propval on revision $revision in the repository represented
 by $url.
@@ -811,7 +841,7 @@ If $propname is an svn-controlled property (i.e. prefixed with svn:), then
 the caller is responsible for ensuring that the value is UTF8-encoded and
 uses LF line-endings.
 
-Note that unlike its cousin $ctx-E<gt>propset(), this routine doesn't affect
+Note that unlike its cousin $client-E<gt>propset(), this routine doesn't affect
 the working copy at all; it's a pure network operation that changes an
 B<unversioned> property attached to a revision.  This can be used to tweak
 log messages, dates, authors, and the like.  Be careful: it's a lossy
@@ -821,19 +851,19 @@ with no way to retrieve the prior value.
 Also note that unless the administrator creates a pre-revprop-change hook
 in the repository, this feature will fail.
 
-=item $ctx-E<gt>status($path, $revision, \&status_func, $recursive, $get_all, $update, $no_ignore, $pool);
+=item $client-E<gt>status($path, $revision, \&status_func, $recursive, $get_all, $update, $no_ignore, $pool);
 
-Similar to $ctx-E<gt>status2(), but with ignore_externals always set to FALSE, and with the status_func receiving a svn_wc_status2_t instead of a svn_wc_status_t object.
+Similar to $client-E<gt>status2(), but with ignore_externals always set to FALSE, and with the status_func receiving a svn_wc_status2_t instead of a svn_wc_status_t object.
 
-=item $ctx-E<gt>status2($path, $revision, \&status_func, $recursive, $get_all, $update, $no_ignore, $ignore_externals, $pool);
+=item $client-E<gt>status2($path, $revision, \&status_func, $recursive, $get_all, $update, $no_ignore, $ignore_externals, $pool);
 
-Similar to $ctx-E<gt>status3(), but with the changelists passed as undef, and with recursive instead of depth.
+Similar to $client-E<gt>status3(), but with the changelists passed as undef, and with recursive instead of depth.
 
-=item $ctx-E<gt>status3($path, $revision, \&status_func, $depth, $get_all, $update, $no_ignore, $ignore_externals, $changelists, $pool);
+=item $client-E<gt>status3($path, $revision, \&status_func, $depth, $get_all, $update, $no_ignore, $ignore_externals, $changelists, $pool);
 
-Similar to $ctx-E<gt>status4(), without the pool parameter to the callback and the return of the callback is ignored. 
+Similar to $client-E<gt>status4(), without the pool parameter to the callback and the return of the callback is ignored. 
 
-=item $ctx-E<gt>status4($path, $revision, \&status_func, $depth, $get_all, $update, $no_ignore, $ignore_externals, $changelists, $pool);
+=item $client-E<gt>status4($path, $revision, \&status_func, $depth, $get_all, $update, $no_ignore, $ignore_externals, $changelists, $pool);
 
 Given $path to a working copy directory (or single file), call status_func()
 with a set of svn_wc_status2_t objects which describe the status of $path and
@@ -867,39 +897,7 @@ object which is cleaned beteween invocations to the callback.
 The return of the status_func subroutine can be a svn_error_t object created by
 SVN::Error::create in order to propogate an error up.
 
-=item $ctx-E<gt>info($path_or_url, $peg_revision, $revision, \&receiver, $recurse);
-
-Invokes \&receiver passing it information about $path_or_url for $revision.
-The information returned is system-generated metadata, not the sort of
-"property" metadata created by users.  For methods available on the object
-passed to \&receiver, B<see svn_info_t>.
-
-If both revision arguments are either svn_opt_revision_unspecified or NULL,
-then information will be pulled solely from the working copy; no network
-connections will be made.
-
-Otherwise, information will be pulled from a repository.  The actual node
-revision selected is determined by the $path_or_url as it exists in
-$peg_revision.  If $peg_revision is undef, then it defaults to HEAD for URLs
-or WORKING for WC targets.
-
-If $path_or_url is not a local path, then if $revision is PREV (or some other
-kind that requires a local path), an error will be returned, because the
-desired revision cannot be determined.
-
-Uses the authentication baton cached in ctx to authenticate against the
-repository.
-
-If $recurse is true (and $path_or_url is a directory) this will be a recursive
-operation, invoking $receiver on each child.
-
- my $receiver = sub {
-     my( $path, $info, $pool ) = @_;
-     print "Current revision of $path is ", $info->rev, "\n";
- };
- $ctx->info( 'foo/bar.c', undef, 'WORKING', $receiver, 0 );
-
-=item $ctx-E<gt>switch($path, $url, $revision, $recursive, $pool);
+=item $client-E<gt>switch($path, $url, $revision, $recursive, $pool);
 
 Switch working tree $path to $url at $revision.
 
@@ -918,24 +916,24 @@ scratch.
 Returns the value of the revision to which the working copy was actually
 switched.
 
-=item $ctx-E<gt>update($path, $revision, $recursive, $pool)
+=item $client-E<gt>update($path, $revision, $recursive, $pool)
 
-Similar to $ctx-E<gt>update2() except that it accepts only a single target in
+Similar to $client-E<gt>update2() except that it accepts only a single target in
 $path, returns a single revision, and $ignore_externals is always set to FALSE.
 
-=item $ctx-E<gt>update2($paths, $revision, $recursive, $ignore_externals, $pool)
+=item $client-E<gt>update2($paths, $revision, $recursive, $ignore_externals, $pool)
 
-Similar to $ctx-E<gt>update3() but with $allow_unver_obstructions always set to
+Similar to $client-E<gt>update3() but with $allow_unver_obstructions always set to
 FALSE, $depth_is_sticky to FALSE, and $depth set according to $recursive: if
 $recursive is TRUE, set $depth to $SVN::Depth::infinity, if $recursive is
 FALSE, set $depth to $SVN::Depth::files.
 
-=item $ctx-E<gt>update3($paths, $revision, $depth, $depth_is_sticky, $ignore_externals, $allow_unver_obstructions, $pool)
+=item $client-E<gt>update3($paths, $revision, $depth, $depth_is_sticky, $ignore_externals, $allow_unver_obstructions, $pool)
 
-Similar to $ctx-E<gt>update4() but with $make_parents always set to FALSE and
+Similar to $client-E<gt>update4() but with $make_parents always set to FALSE and
 $adds_as_modification set to TRUE.
 
-=item $ctx-E<gt>update4($paths, $revision, $depth, $depth_is_sticky, $ignore_externals, $allow_unver_obstructions, $adds_as_modification, $make_parents)
+=item $client-E<gt>update4($paths, $revision, $depth, $depth_is_sticky, $ignore_externals, $allow_unver_obstructions, $adds_as_modification, $make_parents)
 
 Update working trees $paths to $revision.
 
@@ -989,7 +987,7 @@ set to the revision to which $revision was resolved for the corresponding
 element of $paths.
 
 
-=item $ctx-E<gt>url_from_path($target, $pool); or SVN::Client::url_from_path($target, $pool);
+=item $client-E<gt>url_from_path($target, $pool); or SVN::Client::url_from_path($target, $pool);
 
 Returns the URL for $target.
 
@@ -999,21 +997,21 @@ If $target is a versioned item, it returns $target's entry URL.
 
 If $target is unversioned (has no entry), returns undef.
 
-=item $ctx-E<gt>uuid_from_path($path, $adm_access, $pool);
+=item $client-E<gt>uuid_from_path($path, $adm_access, $pool);
 
 Return the repository uuid for working-copy $path, allocated in $pool.
 
 Use $adm_access to retrieve the uuid from $path's entry; if not present in the
-entry, then call $ctx-E<gt>uuid_from_url() to retrieve, using the entry's URL.
+entry, then call $client-E<gt>uuid_from_url() to retrieve, using the entry's URL.
 
-Note: The only reason this function falls back on $ctx-E<gt>uuid_from_url is for
+Note: The only reason this function falls back on $client-E<gt>uuid_from_url is for
 compatibility purposes.  Old working copies may not have uuids in the entries
 files.
 
 Note: This method probably doesn't work right now without a lot of pain,
 because SVN::Wc is incomplete and it requires an adm_access object from it.
 
-=item $ctx-E<gt>uuid_from_url($url, $pool);
+=item $client-E<gt>uuid_from_url($url, $pool);
 
 Return repository uuid for url.
 
@@ -1022,7 +1020,7 @@ Return repository uuid for url.
 =cut
 
 # import methods into our name space and wrap them in a closure
-# to support method calling style $ctx->log()
+# to support method calling style $client->log()
 foreach my $function (@_all_fns)
 {
     no strict 'refs';
@@ -1102,7 +1100,7 @@ current value.
 
 =over 4
 
-=item $ctx-E<gt>auth(SVN::Client::get_username_provider());
+=item $client-E<gt>auth(SVN::Client::get_username_provider());
 
 Provides access to the auth_baton in the svn_client_ctx_t attached to the
 SVN::Client object.
@@ -1143,7 +1141,7 @@ sub auth
     return $self->{'ctx'}->auth_baton();
 }
 
-=item $ctx-E<gt>notify(\&notify);
+=item $client-E<gt>notify(\&notify);
 
 Sets the notify callback for the client context to a code reference that
 you pass.  It always returns the current codereference set.
@@ -1174,7 +1172,7 @@ sub notify {
     return ${$self->{'notify_callback'}};
 }
 
-=item $ctx-E<gt>log_msg(\&log_msg)
+=item $client-E<gt>log_msg(\&log_msg)
 
 Sets the log_msg callback for the client context to a code reference that you
 pass.  It always returns the current codereference set.
@@ -1207,7 +1205,7 @@ sub log_msg {
     return ${$self->{'log_msg_callback'}};
 }
 
-=item $ctx-E<gt>cancel(\&cancel)
+=item $client-E<gt>cancel(\&cancel)
 
 Sets the cancellation callback for the client context to a code reference that you
 pass.  It always returns the current codereference set.
@@ -1240,7 +1238,7 @@ sub cancel {
     return ${$self->{'cancel_callback'}};
 }
 
-=item $ctx-E<gt>pool(new SVN::Pool);
+=item $client-E<gt>pool(new SVN::Pool);
 
 Method that sets or gets the default pool that is passed to method calls
 requiring a pool, but which were not explicitly passed one.
@@ -1261,7 +1259,7 @@ sub pool
         return $self->{'pool'} = shift;
     }
 }
-=item $ctx-E<gt>config(SVN::Core::config_get_config(undef));
+=item $client-E<gt>config(SVN::Core::config_get_config(undef));
 
 Method that allows access to the config member of the svn_client_ctx_t.
 Accepts a Perl hash to set, which is what functions like
@@ -1509,11 +1507,11 @@ use SVN::Base qw(Client svn_client_commit_info_t_);
 
 =over 8
 
-=item $citem-E<gt>path()
+=item $commit_item-E<gt>path()
 
 Absolute working-copy path of item.
 
-=item $citem-E<gt>kind()
+=item $commit_item-E<gt>kind()
 
 An integer representing the type of node it is (file/dir).
 Can be one of the following constants:
@@ -1522,19 +1520,19 @@ $SVN::Node::file
 $SVN::Node::dir
 $SVN::Node::unknown
 
-=item $citem-E<gt>url()
+=item $commit_item-E<gt>url()
 
 Commit URL for this item.
 
-=item $citem-E<gt>revision()
+=item $commit_item-E<gt>revision()
 
 Revision (copyfrom_rev if state_flags has IS_COPY set).
 
-=item $citem-E<gt>copyform_url();
+=item $commit_item-E<gt>copyform_url();
 
 CopyFrom URL
 
-=item $citem-E<gt>state_flags();
+=item $commit_item-E<gt>state_flags();
 
 One of several state flags:
 $SVN::Client::COMMIT_ITEM_ADD
@@ -1543,12 +1541,12 @@ $SVN::Client::COMMIT_ITEM_TEXT_MODS
 $SVN::Client::COMMIT_ITEM_PROP_MODS
 $SVN::Client::COMMIT_ITEM_IS_COPY
 
-=item $citem-E<gt>incoming_prop_changes()
+=item $commit_item-E<gt>incoming_prop_changes()
 
 A reference to an array of svn_prop_t objects representing changes to
 WC properties.
 
-=item $citem-E<gt>outgoing_prop_changes()
+=item $commit_item-E<gt>outgoing_prop_changes()
 
 A reference to an array of svn_prop_t objects representing extra
 changes to properties in the repository (which are not necessarily
@@ -1565,15 +1563,15 @@ use SVN::Base qw(Client svn_client_commit_item3_t_);
 
 =over 4
 
-=item $cinfo-E<gt>revision()
+=item $commit_info-E<gt>revision()
 
 Just committed revision.
 
-=item $cinfo-E<gt>date()
+=item $commit_info-E<gt>date()
 
 Server-Side date of the commit as a string.
 
-=item $cinfo-E<gt>author()
+=item $commit_info-E<gt>author()
 
 Author of the commit.
 
@@ -1638,6 +1636,144 @@ Properties changed?
 =item $diff_summarize-E<gt>node_kind()
 
 File or dir?
+
+=back
+
+=head2 ADDITIONAL METHODS
+
+The following methods work, but are not currently documented in this
+file.  Please consult the svn_client.h section in the Subversion API
+for more details.
+
+=over 4
+
+=item $client-E<gt>add_to_changelist(...)
+
+=item $client-E<gt>blame2(...)
+
+=item $client-E<gt>blame3(...)
+
+=item $client-E<gt>blame4(...)
+
+=item $client-E<gt>cat2(...)
+
+=item $client-E<gt>commit2(...)
+
+=item $client-E<gt>commit3(...)
+
+=item $client-E<gt>commit4(...)
+
+=item $client-E<gt>copy2(...)
+
+=item $client-E<gt>copy3(...)
+
+=item $client-E<gt>copy4(...)
+
+=item $client-E<gt>create_context(...)
+
+=item $client-E<gt>delete2(...)
+
+=item $client-E<gt>delete3(...)
+
+=item $client-E<gt>diff2(...)
+
+=item $client-E<gt>diff3(...)
+
+=item $client-E<gt>diff4(...)
+
+=item $client-E<gt>diff_peg(...)
+
+=item $client-E<gt>diff_peg2(...)
+
+=item $client-E<gt>diff_peg3(...)
+
+=item $client-E<gt>diff_peg4(...)
+
+=item $client-E<gt>diff_summarize2(...)
+
+=item $client-E<gt>diff_summarize_dup(...)
+
+=item $client-E<gt>diff_summarize_peg(...)
+
+=item $client-E<gt>diff_summarize_peg2(...)
+
+=item $client-E<gt>export2(...)
+
+=item $client-E<gt>export3(...)
+
+=item $client-E<gt>export4(...)
+
+=item $client-E<gt>import2(...)
+
+=item $client-E<gt>import3(...)
+
+=item $client-E<gt>info2(...)
+
+=item $client-E<gt>invoke_blame_receiver(...)
+
+=item $client-E<gt>invoke_blame_receiver2(...)
+
+=item $client-E<gt>invoke_diff_summarize_func(...)
+
+=item $client-E<gt>list(...)
+
+=item $client-E<gt>list2(...)
+
+=item $client-E<gt>log2(...)
+
+=item $client-E<gt>log3(...)
+
+=item $client-E<gt>log4(...)
+
+=item $client-E<gt>log5(...)
+
+=item $client-E<gt>ls2(...)
+
+=item $client-E<gt>ls3(...)
+
+=item $client-E<gt>merge2(...)
+
+=item $client-E<gt>merge3(...)
+
+=item $client-E<gt>merge_peg(...)
+
+=item $client-E<gt>merge_peg2(...)
+
+=item $client-E<gt>merge_peg3(...)
+
+=item $client-E<gt>move2(...)
+
+=item $client-E<gt>move3(...)
+
+=item $client-E<gt>move4(...)
+
+=item $client-E<gt>move5(...)
+
+=item $client-E<gt>open_ra_session(...)
+
+=item $client-E<gt>propget2(...)
+
+=item $client-E<gt>propget3(...)
+
+=item $client-E<gt>proplist2(...)
+
+=item $client-E<gt>proplist3(...)
+
+=item $client-E<gt>propset2(...)
+
+=item $client-E<gt>propset3(...)
+
+=item $client-E<gt>remove_from_changelist(...)
+
+=item $client-E<gt>resolve(...)
+
+=item $client-E<gt>revert2(...)
+
+=item $client-E<gt>switch2(...)
+
+=item $client-E<gt>unlock(...)
+
+=item $client-E<gt>version(...)
 
 =back
 

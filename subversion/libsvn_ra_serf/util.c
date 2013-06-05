@@ -497,7 +497,7 @@ svn_ra_serf__conn_closed(serf_connection_t *conn,
 
   err = svn_error_trace(connection_closed(ra_conn, why, pool));
 
-  save_error(ra_conn->session, err);
+  (void) save_error(ra_conn->session, err);
 }
 
 
@@ -657,7 +657,7 @@ setup_serf_req(serf_request_t *request,
       SVN_ERR(svn_ra_serf__copy_into_spillbuf(&buf, body_bkt,
                                               request_pool,
                                               scratch_pool));
-      /* Destroy original bucket since it content is already copied 
+      /* Destroy original bucket since it content is already copied
          to spillbuf. */
       serf_bucket_destroy(body_bkt);
 
@@ -723,7 +723,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
 {
   apr_pool_t *iterpool;
   apr_interval_time_t waittime_left = sess->timeout;
-  
+
   assert(sess->pending_error == SVN_NO_ERROR);
 
   iterpool = svn_pool_create(scratch_pool);
@@ -761,7 +761,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
                 {
                   waittime_left -= SVN_RA_SERF__CONTEXT_RUN_DURATION;
                 }
-              else 
+              else
                 {
                   return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT, NULL,
                                           _("Connection timed out"));
@@ -776,6 +776,8 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
       SVN_ERR(err);
       if (status)
         {
+          /* ### This omits SVN_WARNING, and possibly relies on the fact that
+             ### MAX(SERF_ERROR_*) < SVN_ERR_BAD_CATEGORY_START? */
           if (status >= SVN_ERR_BAD_CATEGORY_START && status < SVN_ERR_LAST)
             {
               /* apr can't translate subversion errors to text */
@@ -1419,7 +1421,7 @@ xml_parser_cleanup(void *baton)
 
   if (*xmlp)
     {
-      XML_ParserFree(*xmlp);
+      (void) XML_ParserFree(*xmlp);
       *xmlp = NULL;
     }
 
@@ -1451,7 +1453,7 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
   /* Parsing the pending conten in the spillbuf will result in many disc i/o
      operations. This can be so slow that we don't run the network event
      processing loop often enough, resulting in timed out connections.
-   
+
      So we limit the amounts of bytes parsed per iteration.
    */
   while (cur_read < PENDING_TO_PARSE)
@@ -1490,7 +1492,7 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
 
       /* Tell the parser that no more content will be parsed. Ignore the
          return status. We just don't care.  */
-      XML_Parse(parser->xmlp, NULL, 0, 1);
+      (void) XML_Parse(parser->xmlp, NULL, 0, 1);
 
       apr_pool_cleanup_run(parser->pool, &parser->xmlp, xml_parser_cleanup);
       parser->xmlp = NULL;
@@ -1711,7 +1713,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
               SVN_ERR_ASSERT(ctx->xmlp != NULL);
 
               /* Ignore the return status. We just don't care.  */
-              XML_Parse(ctx->xmlp, NULL, 0, 1);
+              (void) XML_Parse(ctx->xmlp, NULL, 0, 1);
 
               apr_pool_cleanup_run(ctx->pool, &ctx->xmlp, xml_parser_cleanup);
               add_done_item(ctx);
@@ -1763,7 +1765,7 @@ svn_ra_serf__credentials_callback(char **username, char **password,
 
       if (err)
         {
-          save_error(session, err);
+          (void) save_error(session, err);
           return err->apr_err;
         }
 
@@ -1772,8 +1774,8 @@ svn_ra_serf__credentials_callback(char **username, char **password,
       if (!creds || session->auth_attempts > 4)
         {
           /* No more credentials. */
-          save_error(session,
-                     svn_error_create(
+          (void) save_error(session,
+                            svn_error_create(
                               SVN_ERR_AUTHN_FAILED, NULL,
                               _("No more credentials or we tried too many "
                                 "times.\nAuthentication failed")));
@@ -1794,8 +1796,8 @@ svn_ra_serf__credentials_callback(char **username, char **password,
       if (!session->proxy_username || session->proxy_auth_attempts > 4)
         {
           /* No more credentials. */
-          save_error(session, 
-                     svn_error_create(
+          (void) save_error(session,
+                            svn_error_create(
                               SVN_ERR_AUTHN_FAILED, NULL,
                               _("Proxy authentication failed")));
           return SVN_ERR_AUTHN_FAILED;
@@ -2217,8 +2219,8 @@ svn_ra_serf__request_create(svn_ra_serf__handler_t *handler)
 
   /* ### do we need to hold onto the returned request object, or just
      ### not worry about it (the serf ctx will manage it).  */
-  serf_connection_request_create(handler->conn->conn,
-                                 setup_request_cb, handler);
+  (void) serf_connection_request_create(handler->conn->conn,
+                                        setup_request_cb, handler);
 }
 
 
@@ -2446,7 +2448,7 @@ expat_start(void *userData, const char *raw_name, const char **attrs)
 
 #ifdef EXPAT_HAS_STOPPARSER
   if (ectx->inner_error)
-    XML_StopParser(ectx->parser, 0 /* resumable */);
+    (void) XML_StopParser(ectx->parser, 0 /* resumable */);
 #endif
 }
 
@@ -2465,7 +2467,7 @@ expat_end(void *userData, const char *raw_name)
 
 #ifdef EXPAT_HAS_STOPPARSER
   if (ectx->inner_error)
-    XML_StopParser(ectx->parser, 0 /* resumable */);
+    (void) XML_StopParser(ectx->parser, 0 /* resumable */);
 #endif
 }
 
@@ -2484,7 +2486,7 @@ expat_cdata(void *userData, const char *data, int len)
 
 #ifdef EXPAT_HAS_STOPPARSER
   if (ectx->inner_error)
-    XML_StopParser(ectx->parser, 0 /* resumable */);
+    (void) XML_StopParser(ectx->parser, 0 /* resumable */);
 #endif
 }
 
@@ -2570,7 +2572,7 @@ expat_response_handler(serf_request_t *request,
         {
           /* Tell expat we've reached the end of the content. Ignore the
              return status. We just don't care.  */
-          XML_Parse(ectx->parser, NULL, 0, 1 /* isFinal */);
+          (void) XML_Parse(ectx->parser, NULL, 0, 1 /* isFinal */);
 
           svn_ra_serf__xml_context_destroy(ectx->xmlctx);
           apr_pool_cleanup_run(ectx->cleanup_pool, &ectx->parser,

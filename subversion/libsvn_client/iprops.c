@@ -118,7 +118,7 @@ svn_client__iprop_relpaths_to_urls(apr_array_header_t *inherited_props,
         {
           elt->path_or_url = svn_path_url_add_component2(repos_root_url,
                                                          elt->path_or_url,
-                                                         result_pool);      
+                                                         result_pool);
         }
     }
   return SVN_NO_ERROR;

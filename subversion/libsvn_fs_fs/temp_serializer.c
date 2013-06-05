@@ -1198,13 +1198,13 @@ typedef struct mergeinfo_data_t
 {
   /* number of paths in the hash */
   unsigned count;
-  
+
   /* COUNT keys (paths) */
   const char **keys;
-  
+
   /* COUNT keys lengths (strlen of path) */
   apr_ssize_t *key_lengths;
-  
+
   /* COUNT entries, each giving the number of ranges for the key */
   int *range_counts;
 
@@ -1256,7 +1256,7 @@ svn_fs_fs__serialize_mergeinfo(void **data,
       for (k = 0; k < ranges->nelts; ++k, ++i)
         merges.ranges[i] = *APR_ARRAY_IDX(ranges, k, svn_merge_range_t*);
     }
-  
+
   /* serialize it and all its elements */
   context = svn_temp_serializer__init(&merges,
                                       sizeof(merges),
@@ -1310,7 +1310,7 @@ svn_fs_fs__deserialize_mergeinfo(void **out,
   int k, n;
   mergeinfo_data_t *merges = (mergeinfo_data_t *)data;
   svn_mergeinfo_t mergeinfo;
-  
+
   /* de-serialize our auxiliary data structure */
   svn_temp_deserializer__resolve(merges, (void**)&merges->keys);
   svn_temp_deserializer__resolve(merges, (void**)&merges->key_lengths);
@@ -1327,7 +1327,7 @@ svn_fs_fs__deserialize_mergeinfo(void **out,
                                                sizeof(svn_merge_range_t*));
       for (k = 0; k < merges->range_counts[i]; ++k, ++n)
         APR_ARRAY_PUSH(ranges, svn_merge_range_t*) = &merges->ranges[n];
-      
+
       svn_temp_deserializer__resolve((void*)merges->keys,
                                      (void**)&merges->keys[i]);
       apr_hash_set(mergeinfo, merges->keys[i], merges->key_lengths[i], ranges);

@@ -70,6 +70,11 @@ public class CommitItem implements java.io.Serializable
     long revision;
 
     /**
+     * the source of the move
+     */
+    String movedFromPath;
+
+    /**
      * This constructor will be only called from the jni code.
      * @param p     path to the commit item
      * @param nk    kind of node (see NodeKind)
@@ -77,8 +82,9 @@ public class CommitItem implements java.io.Serializable
      * @param u     url of the item
      * @param cu    copy source url
      * @param r     revision number
+     * @param mf    move source abspath
      */
-    public CommitItem(String p, NodeKind nk, int sf, String u, String cu, long r)
+    CommitItem(String p, NodeKind nk, int sf, String u, String cu, long r, String mf)
     {
         path = p;
         nodeKind = nk;
@@ -86,6 +92,7 @@ public class CommitItem implements java.io.Serializable
         url = u;
         copyUrl = cu;
         revision = r;
+        movedFromPath = mf;
     }
 
     /**
@@ -148,5 +155,14 @@ public class CommitItem implements java.io.Serializable
     public long getRevision()
     {
         return revision;
+    }
+
+    /**
+     * @return the absolute path of the source of a move.
+     * @since 1.8
+     */
+    public String getMovedFromPath()
+    {
+        return movedFromPath;
     }
 }

@@ -952,7 +952,7 @@ usage(apr_pool_t *pool, int exit_val)
       "                               NAME[=VALUE]\n"
       "  --non-interactive      : do no interactive prompting (default is to\n"
       "                           prompt only if standard input is a terminal)\n"
-      "  --force-interactive    : do interactive propmting even if standard\n"
+      "  --force-interactive    : do interactive prompting even if standard\n"
       "                           input is not a terminal\n"
       "  --trust-server-cert    : accept SSL server certificates from unknown\n"
       "                           certificate authorities without prompting (but\n"
@@ -1036,7 +1036,7 @@ sanitize_log_sources(apr_hash_t *revprops,
       svn_hash_sets(revprops, SVN_PROP_REVISION_LOG,
                     svn_string_create(message, hash_pool));
     }
-  
+
   return SVN_NO_ERROR;
 }
 

@@ -824,7 +824,7 @@ authz_retrieve_config_repo(svn_config_t **cfg_p, const char *dirent,
     {
       if (!must_exist)
         {
-          SVN_ERR(svn_config_create(cfg_p, TRUE, result_pool));
+          SVN_ERR(svn_config_create2(cfg_p, TRUE, TRUE, result_pool));
           return SVN_NO_ERROR;
         }
       else
@@ -842,11 +842,11 @@ authz_retrieve_config_repo(svn_config_t **cfg_p, const char *dirent,
     }
 
   SVN_ERR(svn_fs_file_contents(&contents, root, fs_path, scratch_pool));
-  err = svn_config_parse(cfg_p, contents, TRUE, result_pool);
+  err = svn_config_parse(cfg_p, contents, TRUE, TRUE, result_pool);
 
   /* Add the URL to the error stack since the parser doesn't have it. */
   if (err != SVN_NO_ERROR)
-    return svn_error_createf(err->apr_err, err, 
+    return svn_error_createf(err->apr_err, err,
                              "Error while parsing config file: '%s' in repo '%s':",
                              fs_path, repos_root_dirent);
 
@@ -875,7 +875,7 @@ authz_retrieve_config(svn_config_t **cfg_p, const char *path,
     {
       const char *dirent;
       svn_error_t *err;
-      apr_pool_t *scratch_pool = svn_pool_create(pool); 
+      apr_pool_t *scratch_pool = svn_pool_create(pool);
 
       err = svn_uri_get_dirent_from_file_url(&dirent, path, scratch_pool);
 
@@ -891,7 +891,7 @@ authz_retrieve_config(svn_config_t **cfg_p, const char *path,
   else
     {
       /* Outside of repo file or Windows registry*/
-      SVN_ERR(svn_config_read2(cfg_p, path, must_exist, TRUE, pool));
+      SVN_ERR(svn_config_read3(cfg_p, path, must_exist, TRUE, TRUE, pool));
     }
 
   return SVN_NO_ERROR;
@@ -944,7 +944,7 @@ svn_repos__authz_read(svn_authz_t **authz_p, const char *path,
   if (accept_urls)
     SVN_ERR(authz_retrieve_config(&authz->cfg, path, must_exist, pool));
   else
-    SVN_ERR(svn_config_read2(&authz->cfg, path, must_exist, TRUE, pool));
+    SVN_ERR(svn_config_read3(&authz->cfg, path, must_exist, TRUE, TRUE, pool));
 
   if (groups_path)
     {
@@ -956,8 +956,8 @@ svn_repos__authz_read(svn_authz_t **authz_p, const char *path,
         SVN_ERR(authz_retrieve_config(&groups_cfg, groups_path, must_exist,
                                       pool));
       else
-        SVN_ERR(svn_config_read2(&groups_cfg, groups_path, must_exist,
-                                 TRUE, pool));
+        SVN_ERR(svn_config_read3(&groups_cfg, groups_path, must_exist,
+                                 TRUE, TRUE, pool));
 
       /* Copy the groups from groups_cfg into authz. */
       err = authz_copy_groups(authz, groups_cfg, pool);
@@ -992,20 +992,20 @@ svn_repos_authz_read2(svn_authz_t **authz_p, const char *path,
 
 
 svn_error_t *
-svn_repos_authz_parse(svn_authz_t **authz_p, svn_stream_t *stream, 
+svn_repos_authz_parse(svn_authz_t **authz_p, svn_stream_t *stream,
                       svn_stream_t *groups_stream, apr_pool_t *pool)
 {
   svn_authz_t *authz = apr_palloc(pool, sizeof(*authz));
 
   /* Parse the authz stream */
-  SVN_ERR(svn_config_parse(&authz->cfg, stream, TRUE, pool));
+  SVN_ERR(svn_config_parse(&authz->cfg, stream, TRUE, TRUE, pool));
 
   if (groups_stream)
     {
       svn_config_t *groups_cfg;
 
       /* Parse the groups stream */
-      SVN_ERR(svn_config_parse(&groups_cfg, groups_stream, TRUE, pool));
+      SVN_ERR(svn_config_parse(&groups_cfg, groups_stream, TRUE, TRUE, pool));
 
       SVN_ERR(authz_copy_groups(authz, groups_cfg, pool));
     }

@@ -236,7 +236,7 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
   /* Create a pool for use by the UTF-8 routines.  It will be cleaned
      up by APR at exit time. */
   pool = svn_pool_create(NULL);
-  svn_utf_initialize2(pool, FALSE);
+  svn_utf_initialize2(FALSE, pool);
 
   if ((err = svn_nls_init()))
     {
@@ -946,7 +946,7 @@ svn_cmdline__be_interactive(svn_boolean_t non_interactive,
       return (isatty(STDIN_FILENO) != 0);
 #endif
     }
-  else if (force_interactive) 
+  else if (force_interactive)
     return TRUE;
 
   return !non_interactive;

@@ -69,18 +69,7 @@ except ImportError:
 
 import daemonize
 import svnpubsub.client
-
-# check_output() is only available in Python 2.7. Allow us to run with
-# earlier versions
-try:
-    check_output = subprocess.check_output
-except AttributeError:
-    def check_output(args, env):  # note: we only use these two args
-        pipe = subprocess.Popen(args, stdout=subprocess.PIPE, env=env)
-        output, _ = pipe.communicate()
-        if pipe.returncode:
-            raise subprocess.CalledProcessError(pipe.returncode, args)
-        return output
+import svnpubsub.util
 
 assert hasattr(subprocess, 'check_call')
 def check_call(*args, **kwds):
@@ -103,7 +92,7 @@ def check_call(*args, **kwds):
 def svn_info(svnbin, env, path):
     "Run 'svn info' on the target path, returning a dict of info data."
     args = [svnbin, "info", "--non-interactive", "--", path]
-    output = check_output(args, env=env).strip()
+    output = svnpubsub.util.check_output(args, env=env).strip()
     info = { }
     for line in output.split('\n'):
         idx = line.index(':')
@@ -452,7 +441,7 @@ def prepare_logging(logfile):
     # Apply the handler to the root logger
     root = logging.getLogger()
     root.addHandler(handler)
-    
+
     ### use logging.INFO for now. switch to cmdline option or a config?
     root.setLevel(logging.INFO)
 

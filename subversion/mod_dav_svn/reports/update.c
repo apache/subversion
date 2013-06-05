@@ -116,10 +116,10 @@ typedef struct item_baton_t {
   const char *path3;   /* ... uc->dst_path, without dst_path prefix. */
 
   /* Base_checksum (from apply_textdelta). */
-  const char *base_checksum;   
+  const char *base_checksum;
 
   /* Did the file's contents change? */
-  svn_boolean_t text_changed; 
+  svn_boolean_t text_changed;
 
   /* File/dir added? (Implies text_changed for files.) */
   svn_boolean_t added;
@@ -470,7 +470,7 @@ close_helper(svn_boolean_t is_dir, item_baton_t *baton, apr_pool_t *pool)
   if (baton->fetch_props)
     SVN_ERR(dav_svn__brigade_printf(baton->uc->bb, baton->uc->output,
                                     "<S:fetch-props/>" DEBUG_CR));
-    
+
 
   /* Let's tie it off, nurse. */
   if (baton->added)
@@ -655,7 +655,7 @@ send_propchange(item_baton_t *b,
                                       DEBUG_CR,
                                       qname));
     }
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -711,7 +711,7 @@ upd_change_xxx_prop(void *baton,
             {
               if (! b->removed_props)
                 b->removed_props = apr_array_make(b->pool, 1, sizeof(name));
-              
+
               APR_ARRAY_PUSH(b->removed_props, const char *) = name;
             }
         }
@@ -935,7 +935,7 @@ validate_input_revision(svn_revnum_t revision,
 {
   if (! SVN_IS_VALID_REVNUM(revision))
     return SVN_NO_ERROR;
-    
+
   if (revision > youngest)
     {
       svn_error_t *serr;
@@ -1021,7 +1021,7 @@ dav_svn__update_report(const dav_resource *resource,
      (a report with props and textdeltas inline, rather than placeholder tags
      that tell the client to do further fetches), look to see if client
      requested as much.
-      
+
      SVNAllowBulkUpdates Off: no bulk updates allowed, force skelta mode.
    */
   if (repos->bulk_updates == CONF_BULKUPD_ON ||

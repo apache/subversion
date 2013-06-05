@@ -83,7 +83,7 @@ svn_repos_fs_commit_txn(const char **conflict_p,
         }
     }
   svn_pool_destroy(iterpool);
-  
+
   /* Commit. */
   err = svn_fs_commit_txn(conflict_p, new_rev, txn, pool);
   if (! SVN_IS_VALID_REVNUM(*new_rev))
@@ -357,7 +357,7 @@ svn_repos_fs_change_rev_prop4(svn_repos_t *repos,
         action = 'M';
 
       /* Parse the hooks-env file (if any, and if to be used). */
-      if (use_post_revprop_change_hook || use_post_revprop_change_hook)
+      if (use_pre_revprop_change_hook || use_post_revprop_change_hook)
         SVN_ERR(svn_repos__parse_hooks_env(&hooks_env, repos->hooks_env_path,
                                            pool, pool));
 
@@ -409,10 +409,8 @@ svn_repos_fs_revision_prop(svn_string_t **value_p,
   else if (readability == svn_repos_revision_access_partial)
     {
       /* Only svn:author and svn:date are fetchable. */
-      if ((strncmp(propname, SVN_PROP_REVISION_AUTHOR,
-                   sizeof(SVN_PROP_REVISION_AUTHOR)-1) != 0)
-          && (strncmp(propname, SVN_PROP_REVISION_DATE,
-                      sizeof(SVN_PROP_REVISION_DATE)-1) != 0))
+      if ((strcmp(propname, SVN_PROP_REVISION_AUTHOR) != 0)
+          && (strcmp(propname, SVN_PROP_REVISION_DATE) != 0))
         *value_p = NULL;
 
       else
@@ -740,7 +738,14 @@ pack_notify_func(void *baton,
   struct pack_notify_baton *pnb = baton;
   svn_repos_notify_t *notify;
 
-  notify = svn_repos_notify_create(pack_action + 3, pool);
+  /* Simple conversion works for these values. */
+  SVN_ERR_ASSERT(pack_action >= svn_fs_pack_notify_start
+                 && pack_action <= svn_fs_pack_notify_end_revprop);
+
+  notify = svn_repos_notify_create(pack_action
+                                   + svn_repos_notify_pack_shard_start
+                                   - svn_fs_pack_notify_start,
+                                   pool);
   notify->shard = shard;
   pnb->notify_func(pnb->notify_baton, notify, pool);
 

@@ -145,7 +145,7 @@ unescape_xml(const char **output,
       char errbuf[1024];
 
       errbuf[0] = '\0';
-      apr_xml_parser_geterror(xml_parser, errbuf, sizeof(errbuf));
+      (void)apr_xml_parser_geterror(xml_parser, errbuf, sizeof(errbuf));
       return dav_svn__new_error(pool, HTTP_INTERNAL_SERVER_ERROR,
                                 DAV_ERR_LOCK_SAVE_LOCK, errbuf);
     }
@@ -644,7 +644,7 @@ append_locks(dav_lockdb *lockdb,
   svn_error_t *serr;
   dav_error *derr;
   dav_svn_repos *repos = resource->info->repos;
-      
+
   /* We don't allow anonymous locks */
   if (! repos->username)
     return dav_svn__new_error(resource->pool, HTTP_UNAUTHORIZED,

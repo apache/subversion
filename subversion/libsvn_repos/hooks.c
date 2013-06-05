@@ -246,7 +246,7 @@ run_hook_cmd(svn_string_t **result,
         hook_env = svn_hash_gets(hooks_env,
                                  SVN_REPOS__HOOKS_ENV_DEFAULT_SECTION);
     }
-    
+
   err = svn_io_start_cmd3(&cmd_proc, ".", cmd, args,
                           env_from_env_hash(hook_env, pool, pool),
                           FALSE, FALSE, stdin_handle, result != NULL,
@@ -376,7 +376,7 @@ parse_hooks_env_option(const char *name, const char *value,
   struct parse_hooks_env_option_baton *bo = baton;
   apr_pool_t *result_pool = apr_hash_pool_get(bo->hooks_env);
   apr_hash_t *hook_env;
-  
+
   hook_env = svn_hash_gets(bo->hooks_env, bo->section);
   if (hook_env == NULL)
     {
@@ -405,7 +405,7 @@ parse_hooks_env_section(const char *name, void *baton, apr_pool_t *pool)
   bo.section = name;
   bo.hooks_env = b->hooks_env;
 
-  svn_config_enumerate2(b->cfg, name, parse_hooks_env_option, &bo, pool);
+  (void)svn_config_enumerate2(b->cfg, name, parse_hooks_env_option, &bo, pool);
 
   return TRUE;
 }
@@ -421,11 +421,12 @@ svn_repos__parse_hooks_env(apr_hash_t **hooks_env_p,
 
   if (local_abspath)
     {
-      SVN_ERR(svn_config_read2(&cfg, local_abspath, FALSE, TRUE, scratch_pool));
+      SVN_ERR(svn_config_read3(&cfg, local_abspath, FALSE,
+                               TRUE, TRUE, scratch_pool));
       b.cfg = cfg;
       b.hooks_env = apr_hash_make(result_pool);
-      svn_config_enumerate_sections2(cfg, parse_hooks_env_section, &b,
-                                     scratch_pool);
+      (void)svn_config_enumerate_sections2(cfg, parse_hooks_env_section, &b,
+                                           scratch_pool);
       *hooks_env_p = b.hooks_env;
     }
   else

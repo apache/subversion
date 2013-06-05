@@ -73,7 +73,7 @@ normalize_key_part(const char *original,
    *CACHE_TXDELTAS, *CACHE_FULLTEXTS and *CACHE_REVPROPS flags will be set
    according to FS->CONFIG.  *CACHE_NAMESPACE receives the cache prefix
    to use.
-   
+
    Use FS->pool for allocating the memcache and CACHE_NAMESPACE, and POOL
    for temporary allocations. */
 static svn_error_t *
@@ -133,7 +133,7 @@ read_config(svn_memcache_t **memcache_p,
    * Revprop caching significantly speeds up operations like
    * svn ls -v. However, it requires synchronization that may
    * not be available or efficient in the current server setup.
-   * 
+   *
    * If the caller chose option "2", enable revprop caching if
    * the required API support is there to make it efficient.
    */
@@ -285,7 +285,7 @@ init_callbacks(svn_cache__t *cache,
  *
  * Unless NO_HANDLER is true, register an error handler that reports errors
  * as warnings to the FS warning callback.
- * 
+ *
  * Cache is allocated in POOL.
  * */
 static svn_error_t *
@@ -474,7 +474,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            fs,
                            no_handler,
                            fs->pool));
-      
+
       SVN_ERR(create_cache(&(ffd->properties_cache),
                            NULL,
                            membuffer,
@@ -487,7 +487,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            fs,
                            no_handler,
                            fs->pool));
-      
+
       SVN_ERR(create_cache(&(ffd->mergeinfo_cache),
                            NULL,
                            membuffer,
@@ -500,7 +500,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            fs,
                            no_handler,
                            fs->pool));
-      
+
       SVN_ERR(create_cache(&(ffd->mergeinfo_existence_cache),
                            NULL,
                            membuffer,

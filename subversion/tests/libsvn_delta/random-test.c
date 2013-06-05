@@ -500,6 +500,8 @@ random_combine_test(apr_pool_t *pool)
 {
   apr_uint32_t seed;
   svn_error_t *err = do_random_combine_test(pool, &seed);
+  if (err)
+    fprintf(stderr, "SEED: %lu\n", (unsigned long)seed);
   return err;
 }
 

@@ -372,10 +372,10 @@ svn_client_status5(svn_revnum_t *result_rev,
          if necessary */
 
       svn_node_kind_t kind;
- 
+
       SVN_ERR(svn_wc_read_kind2(&kind, ctx->wc_ctx, target_abspath,
                                 TRUE, FALSE, pool));
- 
+
       /* Dir must be a working copy directory or the status editor fails */
       if (kind == svn_node_dir)
         {
@@ -388,7 +388,7 @@ svn_client_status5(svn_revnum_t *result_rev,
           dir_abspath = svn_dirent_dirname(target_abspath, pool);
           target_basename = svn_dirent_basename(target_abspath, NULL);
           dir = svn_dirent_dirname(path, pool);
- 
+
           if (kind == svn_node_file)
             {
               if (depth == svn_depth_empty)
@@ -398,9 +398,9 @@ svn_client_status5(svn_revnum_t *result_rev,
             {
               err = svn_wc_read_kind2(&kind, ctx->wc_ctx, dir_abspath,
                                       FALSE, FALSE, pool);
- 
+
               svn_error_clear(err);
- 
+
               if (err || kind != svn_node_dir)
                 {
                   return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,

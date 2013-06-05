@@ -1582,7 +1582,7 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
           /* Find a temporary location in which to check out the copy source. */
           SVN_ERR(svn_wc__get_tmpdir(&tmpdir_abspath, ctx->wc_ctx, dst_abspath,
                                      pool, pool));
-                                     
+
           SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_abspath, tmpdir_abspath,
                                            svn_io_file_del_on_close, pool, pool));
 
@@ -1597,14 +1597,14 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
             void *old_notify_baton2 = ctx->notify_baton2;
             struct notification_adjust_baton nb;
             svn_error_t *err;
-          
+
             nb.inner_func = ctx->notify_func2;
             nb.inner_baton = ctx->notify_baton2;
             nb.checkout_abspath = tmp_abspath;
             nb.final_abspath = dst_abspath;
             ctx->notify_func2 = notification_adjust_func;
             ctx->notify_baton2 = &nb;
-          
+
             err = svn_client__checkout_internal(&pair->src_revnum,
                                                 pair->src_original,
                                                 tmp_abspath,
@@ -1613,7 +1613,7 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
                                                 svn_depth_infinity,
                                                 ignore_externals, FALSE,
                                                 &sleep_needed, ctx, pool);
-          
+
             ctx->notify_func2 = old_notify_func2;
             ctx->notify_baton2 = old_notify_baton2;
 
@@ -1910,7 +1910,14 @@ repos_to_wc_copy(svn_boolean_t *timestamp_sleep,
         ((revision.kind != svn_opt_revision_unspecified) \
           && (revision.kind != svn_opt_revision_working))
 
-/* Perform all allocations in POOL. */
+/* ...
+ *
+ * Set *TIMESTAMP_SLEEP to TRUE if a sleep is required; otherwise do not
+ * change *TIMESTAMP_SLEEP.  This output will be valid even if the
+ * function returns an error.
+ *
+ * Perform all allocations in POOL.
+ */
 static svn_error_t *
 try_copy(svn_boolean_t *timestamp_sleep,
          const apr_array_header_t *sources,
@@ -2258,7 +2265,7 @@ svn_client_copy6(const apr_array_header_t *sources,
                  apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_boolean_t timestamp_sleep;
+  svn_boolean_t timestamp_sleep = FALSE;
   apr_pool_t *subpool = svn_pool_create(pool);
 
   if (sources->nelts > 1 && !copy_as_child)
@@ -2294,13 +2301,13 @@ svn_client_copy6(const apr_array_header_t *sources,
 
       src_basename = src_is_url ? svn_uri_basename(src_path, subpool)
                                 : svn_dirent_basename(src_path, subpool);
+      dst_path
+        = dst_is_url ? svn_path_url_add_component2(dst_path, src_basename,
+                                                   subpool)
+                     : svn_dirent_join(dst_path, src_basename, subpool);
 
       err = try_copy(&timestamp_sleep,
-                     sources,
-                     dst_is_url
-                         ? svn_path_url_add_component2(dst_path, src_basename,
-                                                       subpool)
-                         : svn_dirent_join(dst_path, src_basename, subpool),
+                     sources, dst_path,
                      FALSE /* is_move */,
                      TRUE /* allow_mixed_revisions */,
                      FALSE /* metadata_only */,
@@ -2312,8 +2319,9 @@ svn_client_copy6(const apr_array_header_t *sources,
                      subpool);
     }
 
+  /* Sleep if required.  DST_PATH is not a URL in these cases. */
   if (timestamp_sleep)
-    svn_io_sleep_for_timestamps(NULL, subpool);
+    svn_io_sleep_for_timestamps(dst_path, subpool);
 
   svn_pool_destroy(subpool);
   return svn_error_trace(err);
@@ -2336,7 +2344,7 @@ svn_client_move7(const apr_array_header_t *src_paths,
   const svn_opt_revision_t head_revision
     = { svn_opt_revision_head, { 0 } };
   svn_error_t *err;
-  svn_boolean_t timestamp_sleep;
+  svn_boolean_t timestamp_sleep = FALSE;
   int i;
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_array_header_t *sources = apr_array_make(pool, src_paths->nelts,
@@ -2387,13 +2395,13 @@ svn_client_move7(const apr_array_header_t *src_paths,
 
       src_basename = src_is_url ? svn_uri_basename(src_path, pool)
                                 : svn_dirent_basename(src_path, pool);
+      dst_path
+        = dst_is_url ? svn_path_url_add_component2(dst_path, src_basename,
+                                                   subpool)
+                     : svn_dirent_join(dst_path, src_basename, subpool);
 
       err = try_copy(&timestamp_sleep,
-                     sources,
-                     dst_is_url
-                         ? svn_path_url_add_component2(dst_path,
-                                                       src_basename, pool)
-                         : svn_dirent_join(dst_path, src_basename, pool),
+                     sources, dst_path,
                      TRUE /* is_move */,
                      allow_mixed_revisions,
                      metadata_only,
@@ -2405,8 +2413,9 @@ svn_client_move7(const apr_array_header_t *src_paths,
                      subpool);
     }
 
+  /* Sleep if required.  DST_PATH is not a URL in these cases. */
   if (timestamp_sleep)
-    svn_io_sleep_for_timestamps(NULL, subpool);
+    svn_io_sleep_for_timestamps(dst_path, subpool);
 
   svn_pool_destroy(subpool);
   return svn_error_trace(err);

@@ -576,7 +576,8 @@ def authz_log_and_tracing_test(sbox):
   if sbox.repo_url.startswith('http'):
     expected_err2 = expected_err
   else:
-    expected_err2 = ".*svn: E220001: Item is not readable.*"
+    expected_err2 = ".*svn: E220001: Unreadable path encountered; " \
+                    "access denied.*"
 
   # if we do the same thing directly on the unreadable file, we get:
   # svn: Item is not readable
@@ -1537,17 +1538,17 @@ def authz_del_from_subdir(sbox):
 def log_diff_dontdothat(sbox):
   "log --diff on dontdothat"
   sbox.build(create_wc = False)
-  
+
   ddt_url = sbox.repo_url.replace('/svn-test-work/', '/ddt-test-work/')
-  
+
   svntest.actions.run_and_verify_svn(None, None, [],
-                                      'log', sbox.repo_url, 
+                                      'log', sbox.repo_url,
                                       '-c', 1, '--diff')
 
   # We should expect a PASS or a proper error message instead of
   # svn: E175009: XML parsing failed: (403 Forbidden)
   svntest.actions.run_and_verify_svn(None, None, [],
-                                      'log', ddt_url, 
+                                      'log', ddt_url,
                                       '-c', 1, '--diff')
 
 

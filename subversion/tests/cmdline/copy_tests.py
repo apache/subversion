@@ -4749,7 +4749,7 @@ def mixed_rev_copy_del(sbox):
                                         '-r1',
                                         sbox.ospath('A/B/E/alpha'),
                                         sbox.ospath('A/B/E/beta'))
-  
+
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Copy A/B/E to A/B/E_copy
@@ -5217,7 +5217,7 @@ def case_only_rename(sbox):
   # Create expected status.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-  
+
     'iota'              : Item(status='D ', wc_rev=1, moved_to='IoTa'),
     'IoTa'              : Item(status='A ', copied='+', wc_rev='-', moved_from='iota'),
     'A/B'               : Item(status='D ', wc_rev='1', moved_to='A/b'),

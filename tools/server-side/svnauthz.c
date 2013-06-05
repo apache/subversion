@@ -65,7 +65,7 @@ static const apr_getopt_option_t options_table[] =
      "                             "
      "   rw    write access (which also implies read)\n"
      "                             "
-     "    r    read-only access\n" 
+     "    r    read-only access\n"
      "                             "
      "   no    no access\n")
   },
@@ -341,7 +341,7 @@ subcommand_accessof(apr_getopt_t *os, void *baton, apr_pool_t *pool)
           /* Check that --is argument matches.
            * The errors returned here are not strictly correct, but
            * none of the other code paths will generate them and they
-           * roughly mean what we're saying here. */ 
+           * roughly mean what we're saying here. */
           if (check_rw && !write_access)
             err = svn_error_createf(SVN_ERR_AUTHZ_UNWRITABLE, NULL,
                                     ("%s is '%s', not writable"),
@@ -584,7 +584,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
           if (opt_state.version)
             {
               /* Use the "help" subcommand to handle the "--version" option. */
-              static const svn_opt_subcommand_desc2_t pseudo_cmd = 
+              static const svn_opt_subcommand_desc2_t pseudo_cmd =
                 { "--version", subcommand_help, {0}, "",
                   {svnauthz__version /* must accept its own option */ } };
 
@@ -631,7 +631,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
               err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                      ("Repository and authz file arguments "
                                       "required"));
-              return EXIT_ERROR(err, EXIT_FAILURE); 
+              return EXIT_ERROR(err, EXIT_FAILURE);
             }
 
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.repos_path, os->argv[os->ind],
@@ -646,7 +646,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         {
           err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                  ("Authz file argument required"));
-          return EXIT_ERROR(err, EXIT_FAILURE); 
+          return EXIT_ERROR(err, EXIT_FAILURE);
         }
 
       /* Grab AUTHZ_FILE from argv. */
@@ -725,7 +725,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
            * match. */
           return EXIT_ERROR(err, 3);
         }
-                   
+
 
       return EXIT_ERROR(err, EXIT_FAILURE);
     }

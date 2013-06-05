@@ -109,7 +109,7 @@ test_text_retrieval(apr_pool_t *pool)
     SVN_ERR(init_params(pool));
 
   cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", (char *)NULL);
-  SVN_ERR(svn_config_read2(&cfg, cfg_file, TRUE, FALSE, pool));
+  SVN_ERR(svn_config_read3(&cfg, cfg_file, TRUE, FALSE, FALSE, pool));
 
   /* Test values retrieved from our ConfigParser instance against
      values retrieved using svn_config. */
@@ -160,7 +160,7 @@ test_boolean_retrieval(apr_pool_t *pool)
     SVN_ERR(init_params(pool));
 
   cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", (char *)NULL);
-  SVN_ERR(svn_config_read2(&cfg, cfg_file, TRUE, FALSE, pool));
+  SVN_ERR(svn_config_read3(&cfg, cfg_file, TRUE, FALSE, FALSE, pool));
 
   for (i = 0; true_keys[i] != NULL; i++)
     {
@@ -220,7 +220,7 @@ test_has_section_case_insensitive(apr_pool_t *pool)
     SVN_ERR(init_params(pool));
 
   cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", (char *)NULL);
-  SVN_ERR(svn_config_read2(&cfg, cfg_file, TRUE, FALSE, pool));
+  SVN_ERR(svn_config_read3(&cfg, cfg_file, TRUE, FALSE, FALSE, pool));
 
   if (! svn_config_has_section(cfg, "section1"))
     return fail(pool, "Failed to find section1");
@@ -250,7 +250,7 @@ test_has_section_case_sensitive(apr_pool_t *pool)
     SVN_ERR(init_params(pool));
 
   cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", (char *)NULL);
-  SVN_ERR(svn_config_read2(&cfg, cfg_file, TRUE, TRUE, pool));
+  SVN_ERR(svn_config_read3(&cfg, cfg_file, TRUE, TRUE, FALSE, pool));
 
   if (! svn_config_has_section(cfg, "section1"))
     return fail(pool, "Failed to find section1");
@@ -271,6 +271,48 @@ test_has_section_case_sensitive(apr_pool_t *pool)
 }
 
 static svn_error_t *
+test_has_option_case_sensitive(apr_pool_t *pool)
+{
+  svn_config_t *cfg;
+  const char *cfg_file;
+  apr_int64_t value;
+  int i;
+
+  static struct test_dataset {
+    const char *option;
+    apr_int64_t value;
+  } const test_data[] = {
+    { "a", 1 },
+    { "A", 2 },
+    { "B", 3 },
+    { "b", 4 }
+  };
+  static const int test_data_size = sizeof(test_data)/sizeof(*test_data);
+
+  if (!srcdir)
+    SVN_ERR(init_params(pool));
+
+  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", (char *)NULL);
+  SVN_ERR(svn_config_read3(&cfg, cfg_file, TRUE, TRUE, TRUE, pool));
+
+  for (i = 0; i < test_data_size; ++i)
+    {
+      SVN_ERR(svn_config_get_int64(cfg, &value, "case-sensitive-option",
+                                   test_data[i].option, -1));
+      if (test_data[i].value != value)
+        return fail(pool,
+                    apr_psprintf(pool,
+                                 "case-sensitive-option.%s != %"
+                                 APR_INT64_T_FMT" but %"APR_INT64_T_FMT,
+                                 test_data[i].option,
+                                 test_data[i].value,
+                                 value));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 test_stream_interface(apr_pool_t *pool)
 {
   svn_config_t *cfg;
@@ -283,7 +325,7 @@ test_stream_interface(apr_pool_t *pool)
   cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", (char *)NULL);
   SVN_ERR(svn_stream_open_readonly(&stream, cfg_file, pool, pool));
 
-  SVN_ERR(svn_config_parse(&cfg, stream, TRUE, pool));
+  SVN_ERR(svn_config_parse(&cfg, stream, TRUE, TRUE, pool));
 
   /* nominal test to make sure cfg is populated with something since
    * svn_config_parse will happily return an empty cfg if the stream is
@@ -313,6 +355,8 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_config_has_section (case insensitive)"),
     SVN_TEST_PASS2(test_has_section_case_sensitive,
                    "test svn_config_has_section (case sensitive)"),
+    SVN_TEST_PASS2(test_has_option_case_sensitive,
+                   "test case-sensitive option name lookup"),
     SVN_TEST_PASS2(test_stream_interface,
                    "test svn_config_parse"),
     SVN_TEST_NULL

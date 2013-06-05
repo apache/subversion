@@ -41,15 +41,6 @@ svn_auth__file_path(const char **path,
                     const char *config_dir,
                     apr_pool_t *pool);
 
-/* Implementation of svn_auth_cleanup_walk() for the "simple" provider */
-svn_error_t *
-svn_auth__simple_cleanup_walk(svn_auth_baton_t *baton,
-                              svn_auth_cleanup_func_t cleanup_func,
-                              void *cleanup_baton,
-                              apr_hash_t *creds_cache,
-                              apr_pool_t *scratch_pool);
-
-
 
 #ifdef __cplusplus
 }

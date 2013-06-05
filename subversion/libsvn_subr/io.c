@@ -51,6 +51,10 @@
 #include <arch/win32/apr_arch_file_io.h>
 #endif
 
+#if APR_HAVE_FCNTL_H
+#include <fcntl.h>
+#endif
+
 #include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_dirent_uri.h"
@@ -2069,7 +2073,7 @@ svn_io_file_lock2(const char *lock_file,
 
   /* locktype is never read after this block, so we don't need to bother
      setting it.  If that were to ever change, uncomment the following
-     block. 
+     block.
   if (nonblocking)
     locktype |= APR_FLOCK_NONBLOCK;
   */
@@ -2091,11 +2095,12 @@ svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
 {
   apr_os_file_t filehand;
 
+  /* ### In apr 1.4+ we could delegate most of this function to
+         apr_file_sync(). The only major difference is that this doesn't
+         contain the retry loop for EINTR on linux. */
+
   /* First make sure that any user-space buffered data is flushed. */
-  SVN_ERR(do_io_file_wrapper_cleanup(file, apr_file_flush(file),
-                                     N_("Can't flush file '%s'"),
-                                     N_("Can't flush stream"),
-                                     pool));
+  SVN_ERR(svn_io_file_flush(file, pool));
 
   apr_os_file_get(&filehand, file);
 
@@ -2112,7 +2117,11 @@ svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
       int rv;
 
       do {
+#ifdef F_FULLFSYNC
+        rv = fcntl(filehand, F_FULLFSYNC, 0);
+#else
         rv = fsync(filehand);
+#endif
       } while (rv == -1 && APR_STATUS_IS_EINTR(apr_get_os_error()));
 
       /* If the file is in a memory filesystem, fsync() may return
@@ -2795,10 +2804,23 @@ svn_io_wait_for_cmd(apr_proc_t *cmd_proc,
 
   if (exitwhy)
     *exitwhy = exitwhy_val;
-  else if (! APR_PROC_CHECK_EXIT(exitwhy_val))
+  else if (APR_PROC_CHECK_SIGNALED(exitwhy_val)
+           && APR_PROC_CHECK_CORE_DUMP(exitwhy_val))
     return svn_error_createf
       (SVN_ERR_EXTERNAL_PROGRAM, NULL,
-       _("Process '%s' failed (exitwhy %d)"), cmd, exitwhy_val);
+       _("Process '%s' failed (exitwhy %d, signal %d, core dumped)"),
+       cmd, exitwhy_val, exitcode_val);
+  else if (APR_PROC_CHECK_SIGNALED(exitwhy_val))
+    return svn_error_createf
+      (SVN_ERR_EXTERNAL_PROGRAM, NULL,
+       _("Process '%s' failed (exitwhy %d, signal %d)"),
+       cmd, exitwhy_val, exitcode_val);
+  else if (! APR_PROC_CHECK_EXIT(exitwhy_val))
+    /* Don't really know what happened here. */
+    return svn_error_createf
+      (SVN_ERR_EXTERNAL_PROGRAM, NULL,
+       _("Process '%s' failed (exitwhy %d, exitcode %d)"),
+       cmd, exitwhy_val, exitcode_val);
 
   if (exitcode)
     *exitcode = exitcode_val;
@@ -3408,6 +3430,16 @@ svn_io_file_write(apr_file_t *file, const void *buf,
      pool));
 }
 
+svn_error_t *
+svn_io_file_flush(apr_file_t *file,
+                  apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(do_io_file_wrapper_cleanup(
+     file, apr_file_flush(file),
+     N_("Can't flush file '%s'"),
+     N_("Can't flush stream"),
+     scratch_pool));
+}
 
 svn_error_t *
 svn_io_file_write_full(apr_file_t *file, const void *buf,
@@ -3472,23 +3504,76 @@ svn_io_write_unique(const char **tmp_path,
 
   err = svn_io_file_write_full(new_file, buf, nbytes, NULL, pool);
 
-  /* ### BH: Windows doesn't have the race condition between the write and the
-     ###     rename that other operating systems might have. So allow windows
-     ###     to decide when it wants to perform the disk synchronization using
-     ###     the normal file locking and journaling filesystem rules.
-
-     ### Note that this function doesn't handle the rename, so we aren't even
-     ### sure that we really have to sync. */
-#ifndef WIN32
-  if (!err && nbytes > 0)
-    err = svn_io_file_flush_to_disk(new_file, pool);
-#endif
+  if (!err)
+    {
+      /* svn_io_file_flush_to_disk() can be very expensive, so use the
+         cheaper standard flush if the file is created as temporary file
+         anyway */
+      if (delete_when == svn_io_file_del_none)
+        err = svn_io_file_flush_to_disk(new_file, pool);
+      else
+        err = svn_io_file_flush(new_file, pool);
+    }
 
   return svn_error_trace(
                   svn_error_compose_create(err,
                                            svn_io_file_close(new_file, pool)));
 }
 
+svn_error_t *
+svn_io_write_atomic(const char *final_path,
+                    const void *buf,
+                    apr_size_t nbytes,
+                    const char *copy_perms_path,
+                    apr_pool_t *scratch_pool)
+{
+  apr_file_t *tmp_file;
+  const char *tmp_path;
+  svn_error_t *err;
+  const char *dirname = svn_dirent_dirname(final_path, scratch_pool);
+
+  SVN_ERR(svn_io_open_unique_file3(&tmp_file, &tmp_path, dirname,
+                                   svn_io_file_del_none,
+                                   scratch_pool, scratch_pool));
+
+  err = svn_io_file_write_full(tmp_file, buf, nbytes, NULL, scratch_pool);
+
+  if (!err)
+    err = svn_io_file_flush_to_disk(tmp_file, scratch_pool);
+
+  err = svn_error_compose_create(err,
+                                 svn_io_file_close(tmp_file, scratch_pool));
+
+  if (!err && copy_perms_path)
+    err = svn_io_copy_perms(copy_perms_path, tmp_path, scratch_pool);
+
+  if (err)
+    {
+      return svn_error_compose_create(err,
+                                      svn_io_remove_file2(tmp_path, FALSE,
+                                                          scratch_pool));
+    }
+
+  SVN_ERR(svn_io_file_rename(tmp_path, final_path, scratch_pool));
+
+#ifdef __linux__
+  {
+    /* Linux has the unusual feature that fsync() on a file is not
+       enough to ensure that a file's directory entries have been
+       flushed to disk; you have to fsync the directory as well.
+       On other operating systems, we'd only be asking for trouble
+       by trying to open and fsync a directory. */
+    apr_file_t *file;
+
+    SVN_ERR(svn_io_file_open(&file, dirname, APR_READ, APR_OS_DEFAULT,
+                             scratch_pool));
+    SVN_ERR(svn_io_file_flush_to_disk(file, scratch_pool));
+    SVN_ERR(svn_io_file_close(file, scratch_pool));
+  }
+#endif
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_io_file_trunc(apr_file_t *file, apr_off_t offset, apr_pool_t *pool)
@@ -3539,7 +3624,7 @@ svn_io_read_length_line(apr_file_t *file, char *buf, apr_size_t *limit,
       if (eol)
         {
           apr_off_t offset = (eol + 1 - buf) - (apr_off_t)bytes_read;
-          
+
           *eol = 0;
           *limit = total_read + (eol - buf);
 

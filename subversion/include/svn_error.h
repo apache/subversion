@@ -68,7 +68,23 @@ svn_strerror(apr_status_t statcode,
 
 /**
  * Return the symbolic name of an error code.  If the error code
- * is not a Subversion error code (from svn_error_codes.h), return @c NULL.
+ * is in svn_error_codes.h, return the name of the macro as a string.
+ * If the error number is not recognised, return @c NULL.
+ *
+ * An error number may not be recognised because it was defined in a future
+ * version of Subversion (e.g., a 1.9.x server may transmit a defined-in-1.9.0
+ * error number to a 1.8.x client).
+ *
+ * An error number may be recognised @em incorrectly if the @c apr_status_t
+ * value originates in another library (such as libserf) which also uses APR.
+ * (This is a theoretical concern only: the @c apr_err member of #svn_error_t
+ * should never contain a "foreign" @c apr_status_t value, and
+ * in any case Subversion and Serf use non-overlapping subsets of the
+ * @c APR_OS_START_USERERR range.)
+ *
+ * Support for error codes returned by APR itself (i.e., not in the
+ * @c APR_OS_START_USERERR range, as defined in apr_errno.h) may be implemented
+ * in the future.
  *
  * @note In rare cases, a single numeric code has more than one symbolic name.
  * (For example, #SVN_ERR_WC_NOT_DIRECTORY and #SVN_ERR_WC_NOT_WORKING_COPY).
@@ -423,7 +439,7 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
    err->apr_err == SVN_ERR_RA_NOT_LOCKED ||                 \
    err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
 
-/** Evaluates to @c TRUE iff @a apr_err (of type #apr_status_t) is in the given
+/** Evaluates to @c TRUE iff @a apr_err (of type apr_status_t) is in the given
  * @a category, which should be one of the @c SVN_ERR_*_CATEGORY_START
  * constants.
  *
@@ -475,22 +491,10 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
     abort();                                                 \
   } while (1)
 
-/** Check that a condition is true: if not, report an error (appending
- * ERR if non-NULL) and possibly terminate the program.
+/** Like SVN_ERR_ASSERT(), but append ERR to the returned error chain.
  *
- * If the boolean expression @a expr is true, do nothing. Otherwise,
- * act as determined by the current "malfunction handler" which may have
- * been specified by a call to svn_error_set_malfunction_handler() or else
- * is the default handler as specified in that function's documentation. If
- * the malfunction handler returns, then cause the function using this macro
- * to return the error object that it generated.
- *
- * @note The intended use of this macro is to check a condition that cannot
- * possibly be false unless there is a bug in the program.
- *
- * @note The condition to be checked should not be computationally expensive
- * if it is reached often, as, unlike traditional "assert" statements, the
- * evaluation of this expression is not compiled out in release-mode builds.
+ * If EXPR is false, return a malfunction error whose chain includes ERR.
+ * If EXPR is true, do nothing.  (In particular, this does not clear ERR.)
  *
  * Types: (svn_boolean_t expr, svn_error_t *err)
  *
@@ -511,13 +515,38 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
   } while (0)
 #endif
 
-/** Like SVN_ERR_ASSERT_E(), but with @a err always NULL.
+
+/** Check that a condition is true: if not, report an error and possibly
+ * terminate the program.
  *
- * @see SVN_ERR_ASSERT_E()
+ * If the Boolean expression @a expr is true, do nothing. Otherwise,
+ * act as determined by the current "malfunction handler" which may have
+ * been specified by a call to svn_error_set_malfunction_handler() or else
+ * is the default handler as specified in that function's documentation. If
+ * the malfunction handler returns, then cause the function using this macro
+ * to return the error object that it generated.
+ *
+ * @note The intended use of this macro is to check a condition that cannot
+ * possibly be false unless there is a bug in the program.
+ *
+ * @note The condition to be checked should not be computationally expensive
+ * if it is reached often, as, unlike traditional "assert" statements, the
+ * evaluation of this expression is not compiled out in release-mode builds.
  *
  * @since New in 1.6.
+ *
+ * @see SVN_ERR_ASSERT_E()
  */
-#define SVN_ERR_ASSERT(expr)       SVN_ERR_ASSERT_E(expr, NULL)
+#ifdef __clang_analyzer__
+#include <assert.h>
+#define SVN_ERR_ASSERT(expr)       assert((expr))
+#else
+#define SVN_ERR_ASSERT(expr)                                            \
+  do {                                                                  \
+    if (!(expr))                                                        \
+      SVN_ERR(svn_error__malfunction(TRUE, __FILE__, __LINE__, #expr)); \
+  } while (0)
+#endif
 
 /** Similar to SVN_ERR_ASSERT(), but without the option of returning
  * an error to the calling function.
@@ -596,6 +625,11 @@ typedef svn_error_t *(*svn_error_malfunction_handler_t)
  */
 svn_error_malfunction_handler_t
 svn_error_set_malfunction_handler(svn_error_malfunction_handler_t func);
+
+/** Return the malfunction handler that is currently in effect.
+ * @since New in 1.9. */
+svn_error_malfunction_handler_t
+svn_error_get_malfunction_handler(void);
 
 /** Handle a malfunction by returning an error object that describes it.
  *

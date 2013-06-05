@@ -1097,7 +1097,7 @@ svn_repos_dump_fs3(svn_repos_t *repos,
 {
   const svn_delta_editor_t *dump_editor;
   void *dump_edit_baton = NULL;
-  svn_revnum_t i;
+  svn_revnum_t rev;
   svn_fs_t *fs = svn_repos_fs(repos);
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_revnum_t youngest;
@@ -1129,10 +1129,6 @@ svn_repos_dump_fs3(svn_repos_t *repos,
                              _("End revision %ld is invalid "
                                "(youngest revision is %ld)"),
                              end_rev, youngest);
-  if ((start_rev == 0) && incremental)
-    incremental = FALSE; /* revision 0 looks the same regardless of
-                            whether or not this is an incremental
-                            dump, so just simplify things. */
 
   /* Write out the UUID. */
   SVN_ERR(svn_fs_get_uuid(fs, &uuid, pool));
@@ -1156,10 +1152,9 @@ svn_repos_dump_fs3(svn_repos_t *repos,
     notify = svn_repos_notify_create(svn_repos_notify_dump_rev_end,
                                      pool);
 
-  /* Main loop:  we're going to dump revision i.  */
-  for (i = start_rev; i <= end_rev; i++)
+  /* Main loop:  we're going to dump revision REV.  */
+  for (rev = start_rev; rev <= end_rev; rev++)
     {
-      svn_revnum_t from_rev, to_rev;
       svn_fs_root_t *to_root;
       svn_boolean_t use_deltas_for_rev;
 
@@ -1169,56 +1164,35 @@ svn_repos_dump_fs3(svn_repos_t *repos,
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
 
-      /* Special-case the initial revision dump: it needs to contain
-         *all* nodes, because it's the foundation of all future
-         revisions in the dumpfile. */
-      if ((i == start_rev) && (! incremental))
-        {
-          /* Special-special-case a dump of revision 0. */
-          if (i == 0)
-            {
-              /* Just write out the one revision 0 record and move on.
-                 The parser might want to use its properties. */
-              SVN_ERR(write_revision_record(stream, fs, 0, subpool));
-              to_rev = 0;
-              goto loop_end;
-            }
-
-          /* Compare START_REV to revision 0, so that everything
-             appears to be added.  */
-          from_rev = 0;
-          to_rev = i;
-        }
-      else
-        {
-          /* In the normal case, we want to compare consecutive revs. */
-          from_rev = i - 1;
-          to_rev = i;
-        }
-
       /* Write the revision record. */
-      SVN_ERR(write_revision_record(stream, fs, to_rev, subpool));
+      SVN_ERR(write_revision_record(stream, fs, rev, subpool));
+
+      /* When dumping revision 0, we just write out the revision record.
+         The parser might want to use its properties. */
+      if (rev == 0)
+        goto loop_end;
 
       /* Fetch the editor which dumps nodes to a file.  Regardless of
          what we've been told, don't use deltas for the first rev of a
          non-incremental dump. */
-      use_deltas_for_rev = use_deltas && (incremental || i != start_rev);
-      SVN_ERR(get_dump_editor(&dump_editor, &dump_edit_baton, fs, to_rev,
+      use_deltas_for_rev = use_deltas && (incremental || rev != start_rev);
+      SVN_ERR(get_dump_editor(&dump_editor, &dump_edit_baton, fs, rev,
                               "", stream, &found_old_reference,
                               &found_old_mergeinfo, NULL,
                               notify_func, notify_baton,
                               start_rev, use_deltas_for_rev, FALSE, subpool));
 
       /* Drive the editor in one way or another. */
-      SVN_ERR(svn_fs_revision_root(&to_root, fs, to_rev, subpool));
+      SVN_ERR(svn_fs_revision_root(&to_root, fs, rev, subpool));
 
       /* If this is the first revision of a non-incremental dump,
          we're in for a full tree dump.  Otherwise, we want to simply
          replay the revision.  */
-      if ((i == start_rev) && (! incremental))
+      if ((rev == start_rev) && (! incremental))
         {
+          /* Compare against revision 0, so everything appears to be added. */
           svn_fs_root_t *from_root;
-          SVN_ERR(svn_fs_revision_root(&from_root, fs, from_rev, subpool));
+          SVN_ERR(svn_fs_revision_root(&from_root, fs, 0, subpool));
           SVN_ERR(svn_repos_dir_delta2(from_root, "", "",
                                        to_root, "",
                                        dump_editor, dump_edit_baton,
@@ -1232,6 +1206,7 @@ svn_repos_dump_fs3(svn_repos_t *repos,
         }
       else
         {
+          /* The normal case: compare consecutive revs. */
           SVN_ERR(svn_repos_replay2(to_root, "", SVN_INVALID_REVNUM, FALSE,
                                     dump_editor, dump_edit_baton,
                                     NULL, NULL, subpool));
@@ -1244,7 +1219,7 @@ svn_repos_dump_fs3(svn_repos_t *repos,
     loop_end:
       if (notify_func)
         {
-          notify->revision = to_rev;
+          notify->revision = rev;
           notify_func(notify_baton, notify, subpool);
         }
     }
@@ -1507,7 +1482,8 @@ svn_repos_verify_fs3(svn_repos_t *repos,
     }
 
   /* Verify global metadata and backend-specific data first. */
-  err = svn_fs_verify(svn_fs_path(fs, pool), start_rev, end_rev,
+  err = svn_fs_verify(svn_fs_path(fs, pool), svn_fs_config(fs, pool),
+                      start_rev, end_rev,
                       verify_notify, verify_notify_baton,
                       cancel_func, cancel_baton, pool);
 
@@ -1558,34 +1534,6 @@ svn_repos_verify_fs3(svn_repos_t *repos,
           else
             break;
         }
-
-      /* Get cancellable dump editor, but with our close_directory handler. */
-      SVN_ERR(get_dump_editor(&dump_editor, &dump_edit_baton,
-                              fs, rev, "",
-                              svn_stream_empty(iterpool),
-                              NULL, NULL,
-                              verify_close_directory,
-                              notify_func, notify_baton,
-                              start_rev,
-                              FALSE, TRUE, /* use_deltas, verify */
-                              iterpool));
-      SVN_ERR(svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
-                                                dump_editor, dump_edit_baton,
-                                                &cancel_editor,
-                                                &cancel_edit_baton,
-                                                iterpool));
-
-      SVN_ERR(svn_fs_revision_root(&to_root, fs, rev, iterpool));
-      SVN_ERR(svn_fs_verify_root(to_root, iterpool));
-
-      SVN_ERR(svn_repos_replay2(to_root, "", SVN_INVALID_REVNUM, FALSE,
-                                cancel_editor, cancel_edit_baton,
-                                NULL, NULL, iterpool));
-      /* While our editor close_edit implementation is a no-op, we still
-         do this for completeness. */
-      SVN_ERR(cancel_editor->close_edit(cancel_edit_baton, iterpool));
-
-      SVN_ERR(svn_fs_revision_proplist(&props, fs, rev, iterpool));
 
       if (notify_func)
         {

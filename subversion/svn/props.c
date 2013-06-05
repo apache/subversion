@@ -164,8 +164,64 @@ simprop_compare(const void *pkeya, const void *pkeyb)
                 : (keya->diff < keyb->diff ? -1 : 0))));
 }
 
+
+static const char*
+force_prop_option_message(svn_cl__prop_use_t prop_use, const char *prop_name,
+                          apr_pool_t *scratch_pool)
+{
+  switch (prop_use)
+    {
+    case svn_cl__prop_use_set:
+      return apr_psprintf(
+          scratch_pool,
+          _("(To set the '%s' property, re-run with '--force'.)"),
+          prop_name);
+    case svn_cl__prop_use_edit:
+      return apr_psprintf(
+          scratch_pool,
+          _("(To edit the '%s' property, re-run with '--force'.)"),
+          prop_name);
+    case svn_cl__prop_use_use:
+    default:
+      return apr_psprintf(
+          scratch_pool,
+          _("(To use the '%s' property, re-run with '--force'.)"),
+          prop_name);
+    }
+}
+
+static const char*
+wrong_prop_error_message(svn_cl__prop_use_t prop_use, const char *prop_name,
+                         apr_pool_t *scratch_pool)
+{
+  switch (prop_use)
+    {
+    case svn_cl__prop_use_set:
+      return apr_psprintf(
+          scratch_pool,
+          _("'%s' is not a valid %s property name;"
+            " re-run with '--force' to set it"),
+          prop_name, SVN_PROP_PREFIX);
+    case svn_cl__prop_use_edit:
+      return apr_psprintf(
+          scratch_pool,
+          _("'%s' is not a valid %s property name;"
+            " re-run with '--force' to edit it"),
+          prop_name, SVN_PROP_PREFIX);
+    case svn_cl__prop_use_use:
+    default:
+      return apr_psprintf(
+          scratch_pool,
+          _("'%s' is not a valid %s property name;"
+            " re-run with '--force' to use it"),
+          prop_name, SVN_PROP_PREFIX);
+    }
+}
+
 svn_error_t *
-svn_cl__check_svn_prop_name(const char *propname, svn_boolean_t revprop,
+svn_cl__check_svn_prop_name(const char *propname,
+                            svn_boolean_t revprop,
+                            svn_cl__prop_use_t prop_use,
                             apr_pool_t *scratch_pool)
 {
   static const char *const nodeprops[] =
@@ -222,9 +278,10 @@ svn_cl__check_svn_prop_name(const char *propname, svn_boolean_t revprop,
               if (0 == strcmp(proplist[i] + prefix.len, propname + prefix.len))
                 return svn_error_createf(
                   SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
-                  _("'%s' is not a valid %s property name; did you mean '%s'?"
-                    "\n(To set the '%s' property, re-run with '--force'.)"),
-                  propname, SVN_PROP_PREFIX, proplist[i], propname);
+                  _("'%s' is not a valid %s property name;"
+                    " did you mean '%s'?\n%s"),
+                  propname, SVN_PROP_PREFIX, proplist[i],
+                  force_prop_option_message(prop_use, propname, scratch_pool));
             }
           return SVN_NO_ERROR;
         }
@@ -264,39 +321,36 @@ svn_cl__check_svn_prop_name(const char *propname, svn_boolean_t revprop,
     {
     case 0:
       /* The best alternative isn't good enough */
-      return svn_error_createf(
+      return svn_error_create(
         SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
-        _("'%s' is not a valid %s property name;"
-          " re-run with '--force' to set it"),
-        propname, SVN_PROP_PREFIX);
+        wrong_prop_error_message(prop_use, propname, scratch_pool));
 
     case 1:
       /* There is only one good candidate */
       return svn_error_createf(
         SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
-        _("'%s' is not a valid %s property name; did you mean '%s'?\n"
-          "(To set the '%s' property, re-run with '--force'.)"),
-        propname, SVN_PROP_PREFIX, propkeys[0]->propname, propname);
+        _("'%s' is not a valid %s property name; did you mean '%s'?\n%s"),
+        propname, SVN_PROP_PREFIX, propkeys[0]->propname,
+        force_prop_option_message(prop_use, propname, scratch_pool));
 
     case 2:
       /* Suggest a list of the most likely candidates */
       return svn_error_createf(
         SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
         _("'%s' is not a valid %s property name\n"
-          "Did you mean '%s' or '%s'?\n"
-          "(To set the '%s' property, re-run with '--force'.)"),
+          "Did you mean '%s' or '%s'?\n%s"),
         propname, SVN_PROP_PREFIX,
-        propkeys[0]->propname, propkeys[1]->propname, propname);
+        propkeys[0]->propname, propkeys[1]->propname,
+        force_prop_option_message(prop_use, propname, scratch_pool));
 
     default:
       /* Never suggest more than three candidates */
       return svn_error_createf(
         SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
         _("'%s' is not a valid %s property name\n"
-          "Did you mean '%s', '%s' or '%s'?\n"
-          "(To set the '%s' property, re-run with '--force'.)"),
+          "Did you mean '%s', '%s' or '%s'?\n%s"),
         propname, SVN_PROP_PREFIX,
         propkeys[0]->propname, propkeys[1]->propname, propkeys[2]->propname,
-        propname);
+        force_prop_option_message(prop_use, propname, scratch_pool));
     }
 }

@@ -69,8 +69,11 @@ enum svn_node_action
 /** The different policies for processing the UUID in the dumpfile. */
 enum svn_repos_load_uuid
 {
+  /** only update uuid if the repos has no revisions. */
   svn_repos_load_uuid_default,
+  /** never update uuid. */
   svn_repos_load_uuid_ignore,
+  /** always update uuid. */
   svn_repos_load_uuid_force
 };
 
@@ -298,8 +301,7 @@ typedef struct svn_repos_notify_t
    * the revision which just completed. */
   svn_revnum_t revision;
 
-  /** For #svn_repos_notify_warning, the warning object. Must be cleared
-      by the consumer of the notification. */
+  /** For #svn_repos_notify_warning, the warning object. */
   const char *warning_str;
   svn_repos_notify_warning_t warning;
 
@@ -511,9 +513,9 @@ svn_repos_has_capability(svn_repos_t *repos,
  * The set is represented as a hash whose keys are the set members.  The values
  * are not defined.
  *
- * @see svn_repos_info()
+ * @see svn_repos_info_format()
  *
- * @since New in 1.8.
+ * @since New in 1.9.
  */
 svn_error_t *
 svn_repos_capabilities(apr_hash_t **capabilities,
@@ -701,7 +703,7 @@ typedef svn_error_t *(*svn_repos_freeze_func_t)(void *baton, apr_pool_t *pool);
 /**
  * Take an exclusive lock on each of the repositories in @a paths to
  * prevent commits and then while holding all the locks invoke @a
- * freeze_body passing @a baton.  Each repository may be readable by
+ * freeze_func passing @a freeze_baton.  Each repository may be readable by
  * Subversion while frozen, or may be unreadable, depending on which
  * FS backend the repository uses.  Repositories are locked in the
  * order in which they are specified in the array.
@@ -715,8 +717,8 @@ typedef svn_error_t *(*svn_repos_freeze_func_t)(void *baton, apr_pool_t *pool);
  */
 svn_error_t *
 svn_repos_freeze(apr_array_header_t *paths,
-                 svn_repos_freeze_func_t freeze_body,
-                 void *baton,
+                 svn_repos_freeze_func_t freeze_func,
+                 void *freeze_baton,
                  apr_pool_t *pool);
 
 /** This function is a wrapper around svn_fs_berkeley_logfiles(),
@@ -837,7 +839,7 @@ svn_repos_post_unlock_hook(svn_repos_t *repos,
  * file in its default location within the repository disk structure.
  * If @a hooks_env_path is not absolute, it specifies a path relative
  * to the parent of the file's default location.
- * 
+ *
  * Use @a scratch_pool for temporary allocations.
  *
  * If this function is not called, or if the specified configuration
@@ -964,9 +966,9 @@ svn_repos_begin_report3(void **report_baton,
  * always passed as 0.
  *
  * @since New in 1.5.
- * 
  * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_begin_report2(void **report_baton,
                         svn_revnum_t revnum,
@@ -2504,9 +2506,9 @@ svn_repos_node_from_baton(void *edit_baton);
  * Set @a *supports_version to the version number of the minimum Subversion GA
  * release that can read and write @a repos.
  *
- * @see svn_fs_info_format()
+ * @see svn_fs_info_format(), svn_repos_capabilities()
  *
- * @since New in 1.8.
+ * @since New in 1.9.
  */
 svn_error_t *
 svn_repos_info_format(int *repos_format,
@@ -3268,7 +3270,7 @@ svn_repos_authz_read2(svn_authz_t **authz_p,
                       apr_pool_t *pool);
 
 
-/** 
+/**
  * Similar to svn_repos_authz_read2(), but with @a groups_path and @a
  * repos_root always passed as @c NULL.
  *
@@ -3292,7 +3294,7 @@ svn_repos_authz_read(svn_authz_t **authz_p,
  */
 svn_error_t *
 svn_repos_authz_parse(svn_authz_t **authz_p,
-                      svn_stream_t *stream, 
+                      svn_stream_t *stream,
                       svn_stream_t *groups_stream,
                       apr_pool_t *pool);
 
@@ -3383,8 +3385,14 @@ svn_repos_authz_check_access(svn_authz_t *authz,
  */
 typedef enum svn_repos_revision_access_level_t
 {
+  /** no access allowed to the revision properties and all changed-paths
+   * information. */ 
   svn_repos_revision_access_none,
+  /** access granted to some (svn:date and svn:author) revision properties and
+   * changed-paths information on paths the read has access to. */
   svn_repos_revision_access_partial,
+  /** access granted to all revision properites and changed-paths
+   * information. */
   svn_repos_revision_access_full
 }
 svn_repos_revision_access_level_t;

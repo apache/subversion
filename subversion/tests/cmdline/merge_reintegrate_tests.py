@@ -63,7 +63,7 @@ def run_reintegrate_expect_error(src_url, tgt_path,
      unless stdout and stderr both match and the exit code is non-zero.
      Every line of stderr must match the regex EXPECTED_STDERR.
   """
-  expected_stderr += "|(.*apr_err.*)"  # In case of debug build
+  expected_stderr += "|" + svntest.main.stack_trace_regexp
 
   # The actions.run_and_verify_* methods are happy if one line of the error
   # matches the regex, but we want to check that every line matches.

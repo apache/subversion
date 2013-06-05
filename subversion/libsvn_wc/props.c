@@ -81,12 +81,10 @@ append_prop_conflict(svn_stream_t *stream,
   /* TODO:  someday, perhaps prefix each conflict_description with a
      timestamp or something? */
   const svn_string_t *conflict_desc;
-  const char *native_text;
 
   SVN_ERR(prop_conflict_from_skel(&conflict_desc, prop_skel, pool, pool));
-  native_text = svn_utf_cstring_from_utf8_fuzzy(conflict_desc->data, pool);
 
-  return svn_stream_puts(stream, native_text);
+  return svn_stream_puts(stream, conflict_desc->data);
 }
 
 /*---------------------------------------------------------------------*/
@@ -614,12 +612,26 @@ prop_conflict_from_skel(const svn_string_t **conflict_desc,
           const char *mine_marker = _("<<<<<<< (local property value)");
           const char *incoming_marker = _(">>>>>>> (incoming property value)");
           const char *separator = "=======";
+          svn_string_t *original_ascii =
+            svn_string_create(svn_utf_cstring_from_utf8_fuzzy(original->data,
+                                                              scratch_pool),
+                              scratch_pool);
+          svn_string_t *mine_ascii =
+            svn_string_create(svn_utf_cstring_from_utf8_fuzzy(mine->data,
+                                                              scratch_pool),
+                              scratch_pool);
+          svn_string_t *incoming_ascii =
+            svn_string_create(svn_utf_cstring_from_utf8_fuzzy(incoming->data,
+                                                              scratch_pool),
+                              scratch_pool);
 
           style = svn_diff_conflict_display_modified_latest;
           stream = svn_stream_from_stringbuf(buf, scratch_pool);
           SVN_ERR(svn_stream_skip(stream, buf->len));
           SVN_ERR(svn_diff_mem_string_output_merge2(stream, diff,
-                                                    original, mine, incoming,
+                                                    original_ascii,
+                                                    mine_ascii,
+                                                    incoming_ascii,
                                                     NULL, mine_marker,
                                                     incoming_marker, separator,
                                                     style, scratch_pool));
@@ -1158,7 +1170,7 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
       to_val = to_val ? svn_string_dup(to_val, result_pool) : NULL;
 
       svn_hash_sets(their_props, propname, to_val);
-      
+
 
       /* We already know that state is at least `changed', so mark
          that, but remember that we may later upgrade to `merged' or
@@ -1626,9 +1638,9 @@ validate_eol_prop_against_file(const char *path,
   if (mime_type && svn_mime_type_is_binary(mime_type->data))
     return svn_error_createf
       (SVN_ERR_ILLEGAL_TARGET, NULL,
-       _("Can't set '" SVN_PROP_EOL_STYLE "': "
+       _("Can't set '%s': "
          "file '%s' has binary mime type property"),
-       path_display);
+       SVN_PROP_EOL_STYLE, path_display);
 
   /* Now ask the getter for the contents of the file; this will do a
      newline translation.  All we really care about here is whether or

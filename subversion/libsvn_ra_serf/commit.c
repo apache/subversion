@@ -804,12 +804,22 @@ maybe_set_lock_token_header(serf_bucket_t *headers,
       if (token)
         {
           const char *token_header;
+          const char *token_uri;
+          apr_uri_t uri = commit_ctx->session->session_url;
 
-          token_header = apr_pstrcat(pool, "(<", token, ">)", (char *)NULL);
+          /* Supplying the optional URI affects apache response when
+             the lock is broken, see issue 4369.  When present any URI
+             must be absolute (RFC 2518 9.4). */
+          uri.path = (char *)svn_path_url_add_component2(uri.path, relpath,
+                                                         pool);
+          token_uri = apr_uri_unparse(pool, &uri, 0);
+
+          token_header = apr_pstrcat(pool, "<", token_uri, "> (<", token, ">)",
+                                     (char *)NULL);
           serf_bucket_headers_set(headers, "If", token_header);
         }
     }
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -984,12 +994,12 @@ create_put_body(serf_bucket_t **body_bkt,
    * check the buffer status; but serf will fall through and create a file
    * bucket for us on the buffered svndiff handle.
    */
-  apr_file_flush(ctx->svndiff);
+  SVN_ERR(svn_io_file_flush(ctx->svndiff, pool));
 #if APR_VERSION_AT_LEAST(1, 3, 0)
   apr_file_buffer_set(ctx->svndiff, NULL, 0);
 #endif
   offset = 0;
-  apr_file_seek(ctx->svndiff, APR_SET, &offset);
+  SVN_ERR(svn_io_file_seek(ctx->svndiff, APR_SET, &offset, pool));
 
   *body_bkt = serf_bucket_file_create(ctx->svndiff, alloc);
   return SVN_NO_ERROR;

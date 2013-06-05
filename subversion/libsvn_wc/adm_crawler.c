@@ -123,7 +123,7 @@ svn_wc_restore(svn_wc_context_t *wc_ctx,
                                scratch_pool, scratch_pool));
 
   if (status != svn_wc__db_status_normal
-      && !((status == svn_wc__db_status_added 
+      && !((status == svn_wc__db_status_added
             || status == svn_wc__db_status_incomplete)
            && (kind == svn_node_dir
                || (kind == svn_node_file && checksum != NULL)
