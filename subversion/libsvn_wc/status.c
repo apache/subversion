@@ -2757,6 +2757,17 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
                              cancel_func, cancel_baton,
                              scratch_pool));
     }
+  else if (! info && dirent->kind == svn_node_none)
+    {
+      /* Calling wc status on a node that doesn't exist in the working copy,
+         nor on disk. There is no possible status to describe a not conflicted
+         not-node. */
+
+      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                               _("The node '%s' was not found."),
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
+    }
   else
     {
       /* It may be a file or an unversioned item. And this is an explicit
