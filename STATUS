@@ -188,5 +188,15 @@ Veto-blocked changes:
                    this is about err->message which is valid in all builds)
      -1: stsp (not a bug fix, changes output in a patch release)
 
+ * r1488878
+   Don't leave return value uninitialised.
+   Justification:
+     Possible SEGV when using legacy status API.
+   Votes:
+     +1: philip, brane
+     -1: rhuijben (This issue doesn't affect 1.7.x. The patch accidentally
+                   applies to a similar enough function for us not to notice
+                   the problem while reviewing)
+
 Approved changes:
 =================
