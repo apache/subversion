@@ -1500,7 +1500,7 @@ def verify_path_escaping(sbox):
 
   svntest.main.run_svn(None, 'add', file1, file2, file3)
 
-  svntest.main.run_svn(None, 'ci', '-m', 'commit', wc_dir)
+  sbox.simple_commit(message='commit')
 
   svntest.main.run_svn(None, 'lock', '-m', 'lock 1', file1)
   svntest.main.run_svn(None, 'lock', '-m', 'lock 2', sbox.repo_url + '/file%20%232')

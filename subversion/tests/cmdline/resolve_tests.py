@@ -570,7 +570,7 @@ def theirs_conflict_in_subdir(sbox):
   alpha_path2 = os.path.join(wc2, 'A', 'B', 'E', 'alpha')
 
   svntest.main.file_append(alpha_path, "Modified alpha.\n")
-  svntest.main.run_svn(None, 'ci', '-m', 'logmsg', wc)
+  sbox.simple_commit(message='logmsg')
 
   svntest.main.file_append(alpha_path2, "Modified alpha, too.\n")
   svntest.main.run_svn(None, 'up', wc2)

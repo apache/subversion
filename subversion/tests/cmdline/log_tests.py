@@ -1875,14 +1875,12 @@ def merge_sensitive_log_reverse_merges(sbox):
   # Merge -c3,5 from A to A_COPY, commit as r7
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge', '-c3,5', A_path, A_COPY_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'Merge -c3,5 from A to A_COPY',
-                       wc_dir)
+  sbox.simple_commit(message='Merge -c3,5 from A to A_COPY')
 
   # Merge -c-3,-5,4,6 from A to A_COPY, commit as r8
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge', '-c-3,4,-5,6', A_path, A_COPY_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'Merge -c-3,-5,4,6 from A to A_COPY',
-                       wc_dir)
+  sbox.simple_commit(message='Merge -c-3,-5,4,6 from A to A_COPY')
 
   # Update so
   svntest.main.run_svn(None, 'up', wc_dir)
@@ -1938,58 +1936,55 @@ def merge_sensitive_log_ignores_cyclic_merges(sbox):
 
   # Make an edit on the "branch" to A_COPY/mu, commit as r7.
   svntest.main.file_write(mu_COPY_path, "Branch edit.\n")
-  svntest.main.run_svn(None, 'ci', '-m', 'Branch edit', wc_dir)
+  sbox.simple_commit(message='Branch edit')
 
   # Make an edit on both the "trunk" and the "branch", commit as r8.
   svntest.main.file_write(chi_path, "Trunk edit.\n")
   svntest.main.file_write(tau_COPY_path, "Branch edit.\n")
-  svntest.main.run_svn(None, 'ci', '-m', 'Branch and trunk edits in one rev',
-                       wc_dir)
+  sbox.simple_commit(message='Branch and trunk edits in one rev')
 
   # Sync merge A to A_COPY, commit as r9
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'Sync merge A to A_COPY', wc_dir)
+  sbox.simple_commit(message='Sync merge A to A_COPY')
 
   # Reintegrate A_COPY to A, commit as r10
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge', '--reintegrate',
                        sbox.repo_url + '/A_COPY', A_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'Reintegrate A_COPY to A', wc_dir)
+  sbox.simple_commit(message='Reintegrate A_COPY to A')
 
   # Do a --record-only merge of r10 from A to A_COPY, commit as r11.
   # This will allow us to continue using the branch without deleting it.
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path)
-  svntest.main.run_svn(None, 'ci', '-m',
-                       '--record-only merge r10 from A to A_COPY', wc_dir)
+  sbox.simple_commit(message='--record-only merge r10 from A to A_COPY')
 
   # Make an edit on the "branch"; add A_COPY/C and A_COPY/C/Z/nu,
   # commit as r12.
   svntest.main.run_svn(None, 'mkdir', Z_COPY_path)
   svntest.main.file_write(nu_COPY_path, "A new branch file.\n")
   svntest.main.run_svn(None, 'add', nu_COPY_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'Branch edit: Add a subtree', wc_dir)
+  sbox.simple_commit(message='Branch edit: Add a subtree')
 
   # Make an edit on the "trunk"; add A/C/X and A/C/X/kappa,
   # commit as r13.
   svntest.main.run_svn(None, 'mkdir', X_path)
   svntest.main.file_write(kappa_path, "A new trunk file.\n")
   svntest.main.run_svn(None, 'add', kappa_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'Trunk edit: Add a subtree', wc_dir)
+  sbox.simple_commit(message='Trunk edit: Add a subtree')
   svntest.main.run_svn(None, 'up', wc_dir)
 
   # Sync merge A to A_COPY, commit as r14
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'Sync merge A to A_COPY', wc_dir)
+  sbox.simple_commit(message='Sync merge A to A_COPY')
 
   # Reintegrate A_COPY to A, commit as r15
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge', '--reintegrate',
                        sbox.repo_url + '/A_COPY', A_path)
-  svntest.main.run_svn(None, 'ci', '-m', '2nd reintegrate of A_COPY to A',
-                       wc_dir)
+  sbox.simple_commit(message='2nd reintegrate of A_COPY to A')
 
   # Run 'svn log -g A'.  We expect to see r13, r10, r6, r5, r4, and r3 only
   # once, as part of A's own history, not as merged in from A_COPY.
@@ -2090,17 +2085,17 @@ def merge_sensitive_log_copied_path_inherited_mergeinfo(sbox):
 
   # r3 - Modify a file (A_COPY/D/gamma) on the branch
   svntest.main.file_write(gamma_COPY_path, "Branch edit.\n")
-  svntest.main.run_svn(None, 'ci', '-m', 'Branch edit', wc_dir)
+  sbox.simple_commit(message='Branch edit')
 
   # r4 - Reintegrate A_COPY to A
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge', '--reintegrate',
                        sbox.repo_url + '/A_COPY', A_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'Reintegrate A_COPY to A', wc_dir)
+  sbox.simple_commit(message='Reintegrate A_COPY to A')
 
   # r5 - Move file modified by reintegrate (A/D/gamma to A/C/gamma).
   svntest.main.run_svn(None, 'move', old_gamma_path, new_gamma_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'Move file', wc_dir)
+  sbox.simple_commit(message='Move file')
 
   # 'svn log -g --stop-on-copy ^/A/C/gamma' hould return *only* r5
   # Previously this test failed because the change in gamma's inherited

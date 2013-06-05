@@ -10535,7 +10535,7 @@ def merge_range_predates_history(sbox):
 
   # Tweak a file and commit. (r2)
   svntest.main.file_append(iota_path, "More data.\n")
-  svntest.main.run_svn(None, 'ci', '-m', 'tweak iota', wc_dir)
+  sbox.simple_commit(message='tweak iota')
 
   # Create our trunk and branches directory, and update working copy. (r3)
   svntest.main.run_svn(None, 'mkdir', trunk_url, branches_url,
@@ -10545,7 +10545,7 @@ def merge_range_predates_history(sbox):
   # Add a file to the trunk and commit. (r4)
   svntest.main.file_append(trunk_file_path, "This is the file 'file'.\n")
   svntest.main.run_svn(None, 'add', trunk_file_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'add trunk file', wc_dir)
+  sbox.simple_commit(message='add trunk file')
 
   # Branch trunk from r3, and update working copy. (r5)
   svntest.main.run_svn(None, 'cp', trunk_url, branch_url, '-r3',
@@ -10659,7 +10659,7 @@ def foreign_repos(sbox):
 
   ### TODO: Use run_and_verify_merge() ###
   svntest.main.run_svn(None, 'merge', '-c2', sbox.repo_url, wc_dir2)
-  svntest.main.run_svn(None, 'ci', '-m', 'Merge from foreign repos', wc_dir2)
+  sbox2.simple_commit(message='Merge from foreign repo')
   svntest.actions.verify_disk(wc_dir2, expected_disk, True)
 
   # Now, let's make a third checkout -- our second from the original
@@ -10721,7 +10721,7 @@ def foreign_repos_uuid(sbox):
   svntest.actions.verify_disk(wc_dir, expected_disk, True)
 
   svntest.main.run_svn(None, 'merge', '-c2', sbox.repo_url, wc_dir2)
-  svntest.main.run_svn(None, 'ci', '-m', 'Merge from foreign repos', wc_dir2)
+  sbox2.simple_commit(message='Merge from foreign repos')
 
   # Run info to check the copied rev to make sure it's right
   zeta2_path = os.path.join(wc_dir2, 'A', 'D', 'G', 'zeta')
@@ -10843,7 +10843,7 @@ def foreign_repos_2_url(sbox):
   svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A-tag1',
                        sbox.repo_url + '/A-tag2',
                        os.path.join(wc_dir2, 'A'))
-  svntest.main.run_svn(None, 'ci', '-m', 'Merge from foreign repos', wc_dir2)
+  sbox2.simple_commit(message='Merge from foreign repos')
   svntest.actions.verify_disk(wc_dir2, expected_disk, True)
 
 #----------------------------------------------------------------------
@@ -14913,17 +14913,17 @@ def copy_then_replace_via_merge(sbox):
   main.file_append(AJK_zeta, 'new text')
   main.file_append(AJL_zeta, 'new text')
   main.run_svn(None, 'add', AJ)
-  main.run_svn(None, 'ci', wc_dir, '-m', 'create tree J') # r3
+  sbox.simple_commit(message='create tree J') # r3
   main.run_svn(None, 'up', wc_dir)
 
   # Copy J to the branch via merge
   main.run_svn(None, 'merge', url_A, branch)
-  main.run_svn(None, 'ci', wc_dir, '-m', 'merge to branch') # r4
+  sbox.simple_commit(message='merge to branch') # r4
   main.run_svn(None, 'up', wc_dir)
 
   # In A, replace J with a slightly different tree
   main.run_svn(None, 'rm', AJ)
-  main.run_svn(None, 'ci', wc_dir, '-m', 'rm AJ') # r5
+  sbox.simple_commit(message='rm AJ') # r5
   main.run_svn(None, 'up', wc_dir)
 
   os.makedirs(AJL)
@@ -14933,7 +14933,7 @@ def copy_then_replace_via_merge(sbox):
   main.file_append(AJL_zeta, 'really new text')
   main.file_append(AJM_zeta, 'really new text')
   main.run_svn(None, 'add', AJ)
-  main.run_svn(None, 'ci', wc_dir, '-m', 'create tree J again') # r6
+  sbox.simple_commit(message='create tree J again') # r6
   main.run_svn(None, 'up', wc_dir)
 
   # Run merge to replace /branch/J in one swell foop.
@@ -17508,12 +17508,11 @@ def merge_source_with_replacement(sbox):
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'del', A_path)
   svntest.main.run_svn(None, 'copy', sbox.repo_url + '/A@5', A_path)
-  svntest.main.run_svn(None, 'ci', '-m',
-                       'Replace A with older version of itself', wc_dir)
+  sbox.simple_commit(message='Replace A with older version of itself')
 
   # r8: Make an edit to A/D/H/omega:
   svntest.main.file_write(omega_path, "New content for 'omega'.\n")
-  svntest.main.run_svn(None, 'ci', '-m', 'file edit', wc_dir)
+  sbox.simple_commit(message='file edit')
 
   # Update and sync merge ^/A to A_COPY.
   #
@@ -17616,7 +17615,7 @@ def reverse_merge_with_rename(sbox):
 
   # r8 - Make and edit to trunk/D/H/omega (which was also edited in r6).
   svntest.main.file_write(omega_path, "Edit 'omega' on trunk.\n")
-  svntest.main.run_svn(None, 'ci', '-m', 'Another omega edit', wc_dir)
+  sbox.simple_commit(message='Another omega edit')
 
   # r9 - Sync merge ^/trunk to A_COPY.
   svntest.actions.run_and_verify_svn(None,
@@ -17624,7 +17623,7 @@ def reverse_merge_with_rename(sbox):
                                            # type of merge to death elsewhere.
                                      [], 'merge', sbox.repo_url + '/trunk',
                                      A_COPY_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'Sync A_COPY with ^/trunk', wc_dir)
+  sbox.simple_commit(message='Sync A_COPY with ^/trunk')
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # Reverse merge -r9:1 from ^/trunk to A_COPY.  This should return
