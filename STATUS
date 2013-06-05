@@ -38,15 +38,14 @@ Candidate changes:
      +1: blair
      +1: brane (for 1.8.1)
      -0: philip (see dev thread: false alarm, trades one warning for another)
-     -0: rhuijben, breser (merge conflict in configure.ac in r1481848
-                           <danielsh> resolved on the branch)
 
- * r1488294
+ * r1488294, r1489935
    Add signal information to external program errors.
    Justification:
      Makes it easier to diagnose failures.
    Votes:
-     +1: philip, danielsh
+     +1: philip, danielsh (without r1489935)
+     +1: rhuijben
 
  * r1489885, r1489928
    Resolve regression where 'svn ci ci' just returned success when 'ci' doesn't
