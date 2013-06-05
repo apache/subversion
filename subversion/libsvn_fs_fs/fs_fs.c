@@ -173,7 +173,6 @@ svn_fs_fs__write_format(svn_fs_t *fs,
   svn_stringbuf_t *sb;
   const char *path = path_format(fs, pool);
   fs_fs_data_t *ffd = fs->fsap_data;
-  const char *path_tmp;
 
   SVN_ERR_ASSERT(1 <= ffd->format && ffd->format <= SVN_FS_FS__FORMAT_NUMBER);
 
