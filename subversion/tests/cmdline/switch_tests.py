@@ -41,7 +41,6 @@ Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 from svntest.main import SVN_PROP_MERGEINFO, server_has_mergeinfo
-from externals_tests import change_external
 
 
 ### Bummer.  It would be really nice to have easy access to the URL
