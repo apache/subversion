@@ -362,6 +362,13 @@ class Sandbox:
        DEST is a relpath relative to the WC."""
     open(self.ospath(dest), truncate and 'w' or 'a').write(contents)
 
+  def simple_lock(self, *targets):
+    """Lock TARGETS in the WC.
+       TARGETS are relpaths relative to the WC."""
+    assert len(targets) > 0
+    targets = self.ospaths(targets)
+    svntest.main.run_svn(False, 'lock', *targets)
+
 
 def is_url(target):
   return (target.startswith('^/')
