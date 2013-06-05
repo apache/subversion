@@ -12301,6 +12301,12 @@ find_automatic_merge(svn_client__pathrev_t **base_p,
   SVN_ERR(svn_client__get_youngest_common_ancestor(
             &s_t->yca, s_t->source, &s_t->target->loc, s_t->source_ra_session,
             ctx, result_pool, result_pool));
+  if (! s_t->yca)
+    return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
+                             _("'%s@%ld' must be ancestrally related to "
+                               "'%s@%ld'"),
+                             s_t->source->url, s_t->source->rev,
+                             s_t->target->loc.url, s_t->target->loc.rev);
 
   /* Find the latest revision of A synced to B and the latest
    * revision of B synced to A.
