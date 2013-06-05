@@ -48,6 +48,18 @@ Candidate changes:
    Votes:
      +1: philip, danielsh
 
+ * r1489885, r1489928
+   Resolve regression where 'svn ci ci' just returned success when 'ci' doesn't
+   exist in the working copy.
+   Justification:
+     Improves usability of 'svn', and of the status api (for api users).
+   Notes:
+     This introduces a warning/error for a specific case via the status walker,
+     so I'm not 100% sure if we should introduce this patch in this form in
+     1.8.1 or later.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
