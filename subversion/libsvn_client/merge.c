@@ -12415,14 +12415,15 @@ client_find_automatic_merge(automatic_merge_t **merge_p,
   source_and_target_t *s_t = apr_palloc(result_pool, sizeof(*s_t));
   automatic_merge_t *merge = apr_palloc(result_pool, sizeof(*merge));
 
-  /* "Open" the target WC.  We're not going to check the target WC for
-   * mixed-rev, local mods or switched subtrees yet.  After we find out
-   * what kind of merge is required, then if a reintegrate-like merge is
-   * required we'll do the stricter checks, in do_automatic_merge_locked(). */
+  /* "Open" the target WC.  Check the target WC for mixed-rev, local mods and
+   * switched subtrees yet to faster exit and notify user before contacting
+   * with server.  After we find out what kind of merge is required, then if a
+   * reintegrate-like merge is required we'll do the stricter checks, in
+   * do_automatic_merge_locked(). */
   SVN_ERR(open_target_wc(&s_t->target, target_abspath,
-                         TRUE /*allow_mixed_rev*/,
-                         TRUE /*allow_local_mods*/,
-                         TRUE /*allow_switched_subtrees*/,
+                         allow_mixed_rev,
+                         allow_local_mods,
+                         allow_switched_subtrees,
                          ctx, result_pool, scratch_pool));
 
   /* Open RA sessions to the source and target trees. */
