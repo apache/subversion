@@ -2641,7 +2641,7 @@ block_read(void **result,
                             && entry->size < ffd->block_size))
             {
               void *item = NULL;
-              pair_cache_key_t key;
+              pair_cache_key_t key = { 0 };
               key.revision = entry->items[0].revision;
               key.second = entry->items[0].number;
 
