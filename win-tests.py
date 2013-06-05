@@ -366,7 +366,7 @@ def locate_libs():
                                       'mod_authz_svn', 'mod_authz_svn.so')
     mod_dontdothat_path = os.path.join(abs_objdir, 'tools', 'server-side',
                                         'mod_dontdothat', 'mod_dontdothat.so')
-                                        
+
     copy_changed_file(mod_dav_svn_path, abs_objdir)
     copy_changed_file(mod_authz_svn_path, abs_objdir)
     copy_changed_file(mod_dontdothat_path, abs_objdir)
@@ -396,7 +396,7 @@ class Svnserve:
     self.path = os.path.join(abs_objdir,
                              'subversion', 'svnserve', self.name)
     self.root = os.path.join(abs_builddir, CMDLINE_TEST_SCRIPT_NATIVE_PATH)
-    self.proc_handle = None
+    self.proc = None
 
   def __del__(self):
     "Stop svnserve when the object is deleted"
@@ -414,26 +414,18 @@ class Svnserve:
     else:
       args = [self.name] + self.args
     print('Starting %s %s' % (self.kind, self.name))
-    try:
-      import win32process
-      import win32con
-      args = ' '.join([self._quote(x) for x in args])
-      self.proc_handle = (
-        win32process.CreateProcess(self._quote(self.path), args,
-                                   None, None, 0,
-                                   win32con.CREATE_NEW_CONSOLE,
-                                   None, None, win32process.STARTUPINFO()))[0]
-    except ImportError:
-      os.spawnv(os.P_NOWAIT, self.path, args)
+
+    self.proc = subprocess.Popen([self.path] + args[1:])
 
   def stop(self):
-    if self.proc_handle is not None:
+    if self.proc is not None:
       try:
-        import win32process
         print('Stopping %s' % self.name)
-        win32process.TerminateProcess(self.proc_handle, 0)
+        self.proc.poll();
+        if self.proc.returncode is None:
+          self.proc.kill();
         return
-      except ImportError:
+      except AttributeError:
         pass
     print('Svnserve.stop not implemented')
 
@@ -456,7 +448,7 @@ class Httpd:
       self.bulkupdates_option = 'off'
 
     self.service = service
-    self.proc_handle = None
+    self.proc = None
     self.path = os.path.join(self.httpd_dir, 'bin', self.name)
 
     if short_circuit:
@@ -522,7 +514,7 @@ class Httpd:
     fp.write('PidFile      pid\n')
     fp.write('ErrorLog     log\n')
     fp.write('Listen       ' + str(self.httpd_port) + '\n')
-    
+
     if not no_log:
       fp.write('LogFormat    "%h %l %u %t \\"%r\\" %>s %b" common\n')
       fp.write('Customlog    log common\n')
@@ -549,7 +541,7 @@ class Httpd:
     # Write LoadModule for Subversion modules
     fp.write(self._svn_module('dav_svn_module', 'mod_dav_svn.so'))
     fp.write(self._svn_module('authz_svn_module', 'mod_authz_svn.so'))
-    
+
     # And for mod_dontdothat
     fp.write(self._svn_module('dontdothat_module', 'mod_dontdothat.so'))
 
@@ -597,7 +589,7 @@ class Httpd:
     "Create empty mime.types file"
     fp = open(self.httpd_mime_types, 'w')
     fp.close()
-    
+
   def _create_dontdothat_file(self):
     "Create empty mime.types file"
     fp = open(self.dontdothat_file, 'w')
@@ -644,7 +636,7 @@ class Httpd:
       '  AuthUserFile    ' + self._quote(self.httpd_users) + '\n' \
       '  Require         valid-user\n' \
       '  DontDoThatConfigFile ' + self._quote(self.dontdothat_file) + '\n' \
-      '</Location>\n'      
+      '</Location>\n'
 
   def start(self):
     if self.service:
@@ -674,27 +666,18 @@ class Httpd:
     "Start HTTPD as daemon"
     print('Starting httpd as daemon')
     print(self.httpd_args)
-    try:
-      import win32process
-      import win32con
-      args = ' '.join([self._quote(x) for x in self.httpd_args])
-      self.proc_handle = (
-        win32process.CreateProcess(self._quote(self.path), args,
-                                   None, None, 0,
-                                   win32con.CREATE_NEW_CONSOLE,
-                                   None, None, win32process.STARTUPINFO()))[0]
-    except ImportError:
-      os.spawnv(os.P_NOWAIT, self.path, self.httpd_args)
+    self.proc = subprocess.Popen([self.path] + self.httpd_args[1:])
 
   def _stop_daemon(self):
     "Stop the HTTPD daemon"
-    if self.proc_handle is not None:
+    if self.proc is not None:
       try:
-        import win32process
         print('Stopping %s' % self.name)
-        win32process.TerminateProcess(self.proc_handle, 0)
+        self.proc.poll();
+        if self.proc.returncode is None:
+          self.proc.kill();
         return
-      except ImportError:
+      except AttributeError:
         pass
     print('Httpd.stop_daemon not implemented')
 

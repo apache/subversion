@@ -212,7 +212,8 @@ class GeneratorBase(gen_base.GeneratorBase):
 
   def _find_bdb(self):
     "Find the Berkeley DB library and version"
-    for ver in ("48", "47", "46", "45", "44", "43", "42", "41", "40"):
+    for ver in ("53", "52", "51", "50", "48", "47", "46",
+                "45", "44", "43", "42", "41", "40"):
       lib = "libdb" + ver
       path = os.path.join(self.bdb_path, "lib")
       if os.path.exists(os.path.join(path, lib + ".lib")):
@@ -335,6 +336,11 @@ class WinGeneratorBase(GeneratorBase):
         swig.Generator(self.conf, self.swig_exe).write()
     else:
       print("%s not found; skipping SWIG file generation..." % self.swig_exe)
+
+  def errno_filter(self, codes):
+    "Callback for gen_base.write_errno_table()."
+    # Filter out apr_errno.h SOC* codes, which alias the windows API names.
+    return set(filter(lambda code: not (10000 <= code <= 10100), codes))
 
   def find_rootpath(self):
     "Gets the root path as understand by the project system"
@@ -966,7 +972,7 @@ class WinGeneratorBase(GeneratorBase):
     if target.name == "libsvnjavahl" and self.jdk_path:
       fakeincludes.append(os.path.join(self.jdk_path, 'include'))
       fakeincludes.append(os.path.join(self.jdk_path, 'include', 'win32'))
-      
+
     if target.name.find('cxxhl') != -1:
       fakeincludes.append(self.path("subversion/bindings/cxxhl/include"))
 
@@ -1253,7 +1259,9 @@ class WinGeneratorBase(GeneratorBase):
     self.ruby_version = None
     self.ruby_major_version = None
     self.ruby_minor_version = None
-    proc = os.popen('ruby -rrbconfig -e ' + escape_shell_arg(
+    # Pass -W0 to stifle the "-e:1: Use RbConfig instead of obsolete
+    # and deprecated Config." warning if we are using Ruby 1.9.
+    proc = os.popen('ruby -rrbconfig -W0 -e ' + escape_shell_arg(
                     "puts Config::CONFIG['ruby_version'];"
                     "puts Config::CONFIG['LIBRUBY'];"
                     "puts Config::CONFIG['archdir'];"
@@ -1465,7 +1473,7 @@ class WinGeneratorBase(GeneratorBase):
 
   def _find_apr(self):
     "Find the APR library and version"
-    
+
     minimal_apr_version = (0, 9, 0)
 
     version_file_path = os.path.join(self.apr_path, 'include',
@@ -1479,16 +1487,16 @@ class WinGeneratorBase(GeneratorBase):
     fp = open(version_file_path)
     txt = fp.read()
     fp.close()
-    
+
     vermatch = re.search(r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)', txt, re.M)
     major = int(vermatch.group(1))
-    
+
     vermatch = re.search(r'^\s*#define\s+APR_MINOR_VERSION\s+(\d+)', txt, re.M)
     minor = int(vermatch.group(1))
-    
+
     vermatch = re.search(r'^\s*#define\s+APR_PATCH_VERSION\s+(\d+)', txt, re.M)
     patch = int(vermatch.group(1))
-    
+
     version = (major, minor, patch)
     self.apr_version = '%d.%d.%d' % version
 
@@ -1500,7 +1508,7 @@ class WinGeneratorBase(GeneratorBase):
       self.apr_lib = 'apr%s.lib' % suffix
     else:
       self.apr_lib = 'libapr%s.lib' % suffix
-      
+
     if version < minimal_apr_version:
       sys.stderr.write("ERROR: apr %s or higher is required "
                        "(%s found)\n" % (
@@ -1525,16 +1533,16 @@ class WinGeneratorBase(GeneratorBase):
     fp = open(version_file_path)
     txt = fp.read()
     fp.close()
-    
+
     vermatch = re.search(r'^\s*#define\s+APU_MAJOR_VERSION\s+(\d+)', txt, re.M)
     major = int(vermatch.group(1))
-    
+
     vermatch = re.search(r'^\s*#define\s+APU_MINOR_VERSION\s+(\d+)', txt, re.M)
     minor = int(vermatch.group(1))
-    
+
     vermatch = re.search(r'^\s*#define\s+APU_PATCH_VERSION\s+(\d+)', txt, re.M)
     patch = int(vermatch.group(1))
-   
+
     version = (major, minor, patch)
     self.aprutil_version = '%d.%d.%d' % version
 
@@ -1546,7 +1554,7 @@ class WinGeneratorBase(GeneratorBase):
       self.aprutil_lib = 'aprutil%s.lib' % suffix
     else:
       self.aprutil_lib = 'libaprutil%s.lib' % suffix
-      
+
     if version < minimal_aprutil_version:
       sys.stderr.write("ERROR: aprutil %s or higher is required "
                        "(%s found)\n" % (
@@ -1588,7 +1596,7 @@ class WinGeneratorBase(GeneratorBase):
     vermatch = re.search(r'^\s*#define\s+SQLITE_VERSION\s+"(\d+)\.(\d+)\.(\d+)(?:\.(\d))?"', txt, re.M)
 
     version = vermatch.groups()
-    
+
     # Sqlite doesn't add patch numbers for their ordinary releases
     if not version[3]:
       version = version[0:3]

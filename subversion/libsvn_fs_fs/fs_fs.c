@@ -1102,15 +1102,8 @@ write_format(const char *path, int format, int max_files_per_dir,
     }
   else
     {
-      const char *path_tmp;
-
-      SVN_ERR(svn_io_write_unique(&path_tmp,
-                                  svn_dirent_dirname(path, pool),
-                                  sb->data, sb->len,
-                                  svn_io_file_del_none, pool));
-
-      /* rename the temp file as the real destination */
-      SVN_ERR(svn_io_file_rename(path_tmp, path, pool));
+      SVN_ERR(svn_io_write_atomic(path, sb->data, sb->len,
+                                  NULL /* copy_perms_path */, pool));
     }
 
   /* And set the perms to make it read only */
@@ -1157,9 +1150,9 @@ read_config(fs_fs_data_t *ffd,
             const char *fs_path,
             apr_pool_t *pool)
 {
-  SVN_ERR(svn_config_read2(&ffd->config,
+  SVN_ERR(svn_config_read3(&ffd->config,
                            svn_dirent_join(fs_path, PATH_CONFIG, pool),
-                           FALSE, FALSE, pool));
+                           FALSE, FALSE, FALSE, pool));
 
   /* Initialize ffd->rep_sharing_allowed. */
   if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
@@ -3069,7 +3062,7 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
  *
  * Mechanism:
  * ----------
- * 
+ *
  * Revprop caching needs to be activated and will be deactivated for the
  * respective FS instance if the necessary infrastructure could not be
  * initialized.  In deactivated mode, there is almost no runtime overhead
@@ -3162,20 +3155,15 @@ write_revprop_generation_file(svn_fs_t *fs,
                               apr_int64_t current,
                               apr_pool_t *pool)
 {
-  apr_file_t *file;
-  const char *tmp_path;
-
   char buf[SVN_INT64_BUFFER_SIZE];
   apr_size_t len = svn__i64toa(buf, current);
   buf[len] = '\n';
 
-  SVN_ERR(svn_io_open_unique_file3(&file, &tmp_path, fs->path,
-                                   svn_io_file_del_none, pool, pool));
-  SVN_ERR(svn_io_file_write_full(file, buf, len + 1, NULL, pool));
-  SVN_ERR(svn_io_file_close(file, pool));
+  SVN_ERR(svn_io_write_atomic(path_revprop_generation(fs, pool),
+                              buf, len + 1,
+                              NULL /* copy_perms */, pool));
 
-  return move_into_place(tmp_path, path_revprop_generation(fs, pool),
-                         tmp_path, pool);
+  return SVN_NO_ERROR;
 }
 
 /* Make sure the revprop_namespace member in FS is set. */
@@ -3215,7 +3203,7 @@ ensure_revprop_generation(svn_fs_t *fs, apr_pool_t *pool)
   if (ffd->revprop_generation == NULL)
     {
       apr_int64_t current = 0;
-      
+
       SVN_ERR(svn_named_atomic__get(&ffd->revprop_generation,
                                     ffd->revprop_namespace,
                                     ATOMIC_REVPROP_GENERATION,
@@ -3266,7 +3254,7 @@ log_revprop_cache_init_warning(svn_fs_t *fs,
 
   if (fs->warning)
     (fs->warning)(fs->warning_baton, err);
-  
+
   svn_error_clear(err);
 }
 
@@ -3292,7 +3280,7 @@ has_revprop_cache(svn_fs_t *fs, apr_pool_t *pool)
       log_revprop_cache_init_warning(fs, NULL,
                                      "Revprop caching for '%s' disabled"
                                      " because it would be inefficient.");
-      
+
       return FALSE;
     }
 
@@ -3337,7 +3325,7 @@ revprop_generation_fixup(void *void_baton,
 {
   revprop_generation_upgrade_t *baton = void_baton;
   assert(baton->ffd->has_write_lock);
-  
+
   /* Maybe, either the original revprop writer or some other reader has
      already corrected / bumped the revprop generation.  Thus, we need
      to read it again. */
@@ -3503,7 +3491,7 @@ typedef struct packed_revprops_t
   apr_array_header_t *offsets;
 
 
-  /* concatenation of the serialized representation of all revprops 
+  /* concatenation of the serialized representation of all revprops
    * in the pack, i.e. the pack content without header and compression */
   svn_stringbuf_t *packed_revprops;
 
@@ -3517,7 +3505,7 @@ typedef struct packed_revprops_t
  * Three more parameters are being used to update the revprop cache: FS is
  * our file system, the revprops belong to REVISION and the global revprop
  * GENERATION is used as well.
- * 
+ *
  * The returned hash will be allocated in POOL, SCRATCH_POOL is being used
  * for temporary allocations.
  */
@@ -3893,7 +3881,7 @@ get_revision_proplist(apr_hash_t **proplist_p,
  * filesystem FS to a non-packed file.  Return the name of that temporary
  * file in *TMP_PATH and the file path that it must be moved to in
  * *FINAL_PATH.
- * 
+ *
  * Use POOL for allocations.
  */
 static svn_error_t *
@@ -3925,7 +3913,7 @@ write_non_packed_revprop(const char **final_path,
  * If indicated in BUMP_GENERATION, increase FS' revprop generation.
  * Finally, delete all the temporary files given in FILES_TO_DELETE.
  * The latter may be NULL.
- * 
+ *
  * Use POOL for temporary allocations.
  */
 static svn_error_t *
@@ -3953,7 +3941,7 @@ switch_to_new_revprop(svn_fs_t *fs,
     {
       apr_pool_t *iterpool = svn_pool_create(pool);
       int i;
-      
+
       for (i = 0; i < files_to_delete->nelts; ++i)
         {
           const char *path = APR_ARRAY_IDX(files_to_delete, i, const char*);
@@ -4003,7 +3991,7 @@ serialize_revprops_header(svn_stream_t *stream,
 
 /* Writes the a pack file to FILE_STREAM.  It copies the serialized data
  * from REVPROPS for the indexes [START,END) except for index CHANGED_INDEX.
- * 
+ *
  * The data for the latter is taken from NEW_SERIALIZED.  Note, that
  * CHANGED_INDEX may be outside the [START,END) range, i.e. no new data is
  * taken in that case but only a subset of the old data will be copied.
@@ -4047,9 +4035,9 @@ repack_revprops(svn_fs_t *fs,
       }
     else
       {
-        apr_size_t size 
+        apr_size_t size
             = (apr_size_t)APR_ARRAY_IDX(revprops->sizes, i, apr_off_t);
-        apr_size_t offset 
+        apr_size_t offset
             = (apr_size_t)APR_ARRAY_IDX(revprops->offsets, i, apr_off_t);
 
         SVN_ERR(svn_stream_write(stream,
@@ -4110,7 +4098,7 @@ repack_stream_open(svn_stream_t **stream,
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                              _("Packed file '%s' misses a tag"),
                              old_filename);
-    
+
   SVN_ERR(svn_cstring_atoi64(&tag, tag_string + 1));
   new_filename = svn_string_createf(pool, "%ld.%" APR_INT64_T_FMT,
                                     revprops->start_revision + start,
@@ -4194,7 +4182,7 @@ write_packed_revprop(const char **final_path,
     {
       /* split the pack file into two of roughly equal size */
       int right_count, left_count, i;
-          
+
       int left = 0;
       int right = revprops->sizes->nelts - 1;
       apr_off_t left_size = 2 * SVN_INT64_BUFFER_SIZE;
@@ -4279,7 +4267,7 @@ write_packed_revprop(const char **final_path,
 
       SVN_ERR(svn_stream_close(stream));
     }
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -4302,7 +4290,7 @@ set_revision_proplist(svn_fs_t *fs,
 
   /* this info will not change while we hold the global FS write lock */
   is_packed = is_packed_revprop(fs, rev);
-  
+
   /* Test whether revprops already exist for this revision.
    * Only then will we need to bump the revprop generation. */
   if (has_revprop_cache(fs, pool))
@@ -4729,7 +4717,7 @@ set_cached_combined_window(svn_stringbuf_t *window,
    Also, set *WINDOW_P to the base window content for *LIST, if it
    could be found in cache. Otherwise, *LIST will contain the base
    representation for the whole delta chain.
-   Finally, return the expanded size of the representation in 
+   Finally, return the expanded size of the representation in
    *EXPANDED_SIZE. It will take care of cases where only the on-disk
    size is known.  */
 static svn_error_t *
@@ -5350,7 +5338,7 @@ cache_access_wrapper(void **out,
                               data_len - 1, /* cache adds terminating 0 */
                               wrapper_baton->baton,
                               pool));
-  
+
   /* non-NULL value to signal the calling cache that all went well */
   *out = baton;
 
@@ -5693,7 +5681,7 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
       SVN_ERR(read_representation(&stream, fs, noderev->prop_rep, pool));
       SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool));
       SVN_ERR(svn_stream_close(stream));
-      
+
       if (ffd->properties_cache && SVN_IS_VALID_REVNUM(rep->revision))
         SVN_ERR(svn_cache__set(ffd->properties_cache, &key, proplist, pool));
     }
@@ -6173,7 +6161,7 @@ process_changes(apr_hash_t *changed_paths,
   for (i = 0; i < changes->nelts; ++i)
     {
       change_t *change = APR_ARRAY_IDX(changes, i, change_t *);
-      
+
       SVN_ERR(fold_change(changed_paths, change, copyfrom_cache));
 
       /* Now, if our change was a deletion or replacement, we have to
@@ -6247,7 +6235,7 @@ read_all_changes(apr_array_header_t **changes,
   /* pre-allocate enough room for most change lists
      (will be auto-expanded as necessary) */
   *changes = apr_array_make(pool, 30, sizeof(change_t *));
-  
+
   SVN_ERR(read_change(&change, file, pool));
   while (change)
     {
@@ -6308,7 +6296,7 @@ get_changes(apr_array_header_t **changes,
     }
 
   /* read changes from revision file */
-  
+
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
   SVN_ERR(open_pack_or_rev_file(&revision_file, fs, rev, pool));
@@ -6318,11 +6306,11 @@ get_changes(apr_array_header_t **changes,
 
   SVN_ERR(svn_io_file_seek(revision_file, APR_SET, &changes_offset, pool));
   SVN_ERR(read_all_changes(changes, revision_file, pool));
-  
+
   SVN_ERR(svn_io_file_close(revision_file, pool));
 
   /* cache for future reference */
-  
+
   if (ffd->changes_cache)
     SVN_ERR(svn_cache__set(ffd->changes_cache, &rev, *changes, pool));
 
@@ -6401,7 +6389,6 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
 {
   struct get_and_increment_txn_key_baton *cb = baton;
   const char *txn_current_filename = path_txn_current(cb->fs, pool);
-  const char *tmp_filename;
   char next_txn_id[MAX_KEY_SIZE+3];
   apr_size_t len;
 
@@ -6420,11 +6407,8 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
   ++len;
   next_txn_id[len] = '\0';
 
-  SVN_ERR(svn_io_write_unique(&tmp_filename,
-                              svn_dirent_dirname(txn_current_filename, pool),
-                              next_txn_id, len, svn_io_file_del_none, pool));
-  SVN_ERR(move_into_place(tmp_filename, txn_current_filename,
-                          txn_current_filename, pool));
+  SVN_ERR(svn_io_write_atomic(txn_current_filename, next_txn_id, len,
+                              txn_current_filename /* copy_perms path */, pool));
 
   return SVN_NO_ERROR;
 }
@@ -6602,7 +6586,6 @@ svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
                             const apr_array_header_t *props,
                             apr_pool_t *pool)
 {
-  const char *txn_prop_filename;
   svn_stringbuf_t *buf;
   svn_stream_t *stream;
   apr_hash_t *txn_prop = apr_hash_make(pool);
@@ -6632,15 +6615,10 @@ svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
   stream = svn_stream_from_stringbuf(buf, pool);
   SVN_ERR(svn_hash_write2(txn_prop, stream, SVN_HASH_TERMINATOR, pool));
   SVN_ERR(svn_stream_close(stream));
-  SVN_ERR(svn_io_write_unique(&txn_prop_filename,
-                              path_txn_dir(txn->fs, txn->id, pool),
-                              buf->data,
-                              buf->len,
-                              svn_io_file_del_none,
-                              pool));
-  return svn_io_file_rename(txn_prop_filename,
-                            path_txn_props(txn->fs, txn->id, pool),
-                            pool);
+  SVN_ERR(svn_io_write_atomic(path_txn_props(txn->fs, txn->id, pool),
+                              buf->data, buf->len,
+                              NULL /* copy_perms_path */, pool));
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -7161,7 +7139,7 @@ choose_delta_base(representation_t **rep,
 
       /* If there is a shared rep along the way, we need to limit the
        * length of the deltification chain.
-       * 
+       *
        * Please note that copied nodes - such as branch directories - will
        * look the same (false positive) while reps shared within the same
        * revision will not be caught (false negative).
@@ -7192,7 +7170,7 @@ choose_delta_base(representation_t **rep,
        * extreme cases. */
       apr_pool_t *sub_pool = svn_pool_create(pool);
       representation_t base_rep = **rep;
-      
+
       /* Some reasonable limit, depending on how acceptable longer linear
        * chains are in this repo.  Also, allow for some minimal chain. */
       int max_chain_length = 2 * (int)ffd->max_linear_deltification + 2;
@@ -7245,12 +7223,12 @@ rep_write_cleanup(void *data)
   struct rep_write_baton *b = data;
   const char *txn_id = svn_fs_fs__id_txn_id(b->noderev->id);
   svn_error_t *err;
-  
+
   /* Truncate and close the protorevfile. */
   err = svn_io_file_trunc(b->file, b->rep_offset, b->pool);
   err = svn_error_compose_create(err, svn_io_file_close(b->file, b->pool));
 
-  /* Remove our lock regardless of any preceeding errors so that the 
+  /* Remove our lock regardless of any preceeding errors so that the
      being_written flag is always removed and stays consistent with the
      file lock which will be removed no matter what since the pool is
      going away. */
@@ -8245,7 +8223,7 @@ write_current(svn_fs_t *fs, svn_revnum_t rev, const char *next_node_id,
               const char *next_copy_id, apr_pool_t *pool)
 {
   char *buf;
-  const char *tmp_name, *name;
+  const char *name;
   fs_fs_data_t *ffd = fs->fsap_data;
 
   /* Now we can just write out this line. */
@@ -8255,12 +8233,10 @@ write_current(svn_fs_t *fs, svn_revnum_t rev, const char *next_node_id,
     buf = apr_psprintf(pool, "%ld %s %s\n", rev, next_node_id, next_copy_id);
 
   name = svn_fs_fs__path_current(fs, pool);
-  SVN_ERR(svn_io_write_unique(&tmp_name,
-                              svn_dirent_dirname(name, pool),
-                              buf, strlen(buf),
-                              svn_io_file_del_none, pool));
+  SVN_ERR(svn_io_write_atomic(name, buf, strlen(buf),
+                              name /* copy_perms_path */, pool));
 
-  return move_into_place(tmp_name, name, name, pool);
+  return SVN_NO_ERROR;
 }
 
 /* Open a new svn_fs_t handle to FS, set that handle's concept of "current
@@ -8658,6 +8634,9 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
        * We use an sqlite transaction to speed things up;
        * see <http://www.sqlite.org/faq.html#q19>.
        */
+      /* ### A commit that touches thousands of files will starve other
+             (reader/writer) commits for the duration of the below call.
+             Maybe write in batches? */
       SVN_SQLITE__WITH_TXN(
         write_reps_to_cache(fs, cb.reps_to_cache, pool),
         ffd->rep_cache_db);
@@ -9057,7 +9036,7 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
 
 /* Return TRUE, if for REVISION in FS, we can find the revprop pack file.
  * Use POOL for temporary allocations.
- * Set *MISSING, if the reason is a missing manifest or pack file. 
+ * Set *MISSING, if the reason is a missing manifest or pack file.
  */
 static svn_boolean_t
 packed_revprop_available(svn_boolean_t *missing,
@@ -9311,7 +9290,6 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
 {
   char *my_uuid;
   apr_size_t my_uuid_len;
-  const char *tmp_path;
   const char *uuid_path = path_uuid(fs, pool);
 
   if (! uuid)
@@ -9321,15 +9299,11 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
   my_uuid = apr_pstrcat(fs->pool, uuid, "\n", (char *)NULL);
   my_uuid_len = strlen(my_uuid);
 
-  SVN_ERR(svn_io_write_unique(&tmp_path,
-                              svn_dirent_dirname(uuid_path, pool),
-                              my_uuid, my_uuid_len,
-                              svn_io_file_del_none, pool));
-
   /* We use the permissions of the 'current' file, because the 'uuid'
      file does not exist during repository creation. */
-  SVN_ERR(move_into_place(tmp_path, uuid_path,
-                          svn_fs_fs__path_current(fs, pool), pool));
+  SVN_ERR(svn_io_write_atomic(uuid_path, my_uuid, my_uuid_len,
+                              svn_fs_fs__path_current(fs, pool) /* perms */,
+                              pool));
 
   /* Remove the newline we added, and stash the UUID. */
   my_uuid[my_uuid_len - 1] = '\0';
@@ -9794,16 +9768,16 @@ write_revnum_file(const char *fs_path,
                   svn_revnum_t revnum,
                   apr_pool_t *scratch_pool)
 {
-  const char *final_path, *tmp_path;
-  svn_stream_t *tmp_stream;
+  const char *final_path;
+  char buf[SVN_INT64_BUFFER_SIZE];
+  apr_size_t len = svn__i64toa(buf, revnum);
+  buf[len] = '\n';
 
   final_path = svn_dirent_join(fs_path, filename, scratch_pool);
-  SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_path, fs_path,
-                                   svn_io_file_del_none,
-                                   scratch_pool, scratch_pool));
-  SVN_ERR(svn_stream_printf(tmp_stream, scratch_pool, "%ld\n", revnum));
-  SVN_ERR(svn_stream_close(tmp_stream));
-  SVN_ERR(move_into_place(tmp_path, final_path, final_path, scratch_pool));
+
+  SVN_ERR(svn_io_write_atomic(final_path, buf, len + 1,
+                              final_path /* copy_perms */, scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -10132,7 +10106,7 @@ delete_revprops_shard(const char *shard_path,
  * for allocations.  REVPROPS_DIR will be NULL if revprop packing is not
  * supported.  COMPRESSION_LEVEL and MAX_PACK_SIZE will be ignored in that
  * case.
- * 
+ *
  * CANCEL_FUNC and CANCEL_BATON are what you think they are; similarly
  * NOTIFY_FUNC and NOTIFY_BATON.
  *
@@ -10340,7 +10314,7 @@ typedef struct verify_walker_baton_t
 {
   /* number of calls to verify_walker() since the last clean */
   int iteration_count;
-  
+
   /* number of files opened since the last clean */
   int file_count;
 
@@ -10393,7 +10367,7 @@ verify_walker(representation_t *rep,
             }
 
           svn_pool_clear(walker_baton->pool);
-          
+
           walker_baton->iteration_count = 0;
           walker_baton->file_count = 0;
           walker_baton->file_hint = NULL;
@@ -10458,7 +10432,7 @@ svn_fs_fs__verify(svn_fs_t *fs,
       baton->last_notified_revision = SVN_INVALID_REVNUM;
       baton->notify_func = notify_func;
       baton->notify_baton = notify_baton;
-      
+
       /* tell the user that we are now ready to do *something* */
       if (notify_func)
         notify_func(SVN_INVALID_REVNUM, notify_baton, baton->pool);
@@ -10496,15 +10470,15 @@ hotcopy_io_dir_file_copy(const char *src_path,
 
   /* Does the destination already exist? If not, we must copy it. */
   dst_target = svn_dirent_join(dst_path, file, scratch_pool);
-  SVN_ERR(svn_io_stat_dirent(&dst_dirent, dst_target, TRUE,
-                             scratch_pool, scratch_pool));
+  SVN_ERR(svn_io_stat_dirent2(&dst_dirent, dst_target, FALSE, TRUE,
+                              scratch_pool, scratch_pool));
   if (dst_dirent->kind != svn_node_none)
     {
       /* If the destination's stat information indicates that the file
        * is equal to the source, don't bother copying the file again. */
       src_target = svn_dirent_join(src_path, file, scratch_pool);
-      SVN_ERR(svn_io_stat_dirent(&src_dirent, src_target, FALSE,
-                                 scratch_pool, scratch_pool));
+      SVN_ERR(svn_io_stat_dirent2(&src_dirent, src_target, FALSE, FALSE,
+                                  scratch_pool, scratch_pool));
       if (src_dirent->kind == dst_dirent->kind &&
           src_dirent->special == dst_dirent->special &&
           src_dirent->filesize == dst_dirent->filesize &&

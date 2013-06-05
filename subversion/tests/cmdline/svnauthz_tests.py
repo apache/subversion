@@ -90,7 +90,7 @@ def svnauthz_validate_file_test(sbox):
   (authz_fd, authz_path) = tempfile.mkstemp()
   authz_content = "[/]\n* = rw\n"
   svntest.main.file_write(authz_path, authz_content)
-  
+
   # Valid authz file
   svntest.actions.run_and_verify_svnauthz("Valid authz file", None, None,
                                           0, False, "validate", authz_path)
@@ -162,7 +162,7 @@ def svnauthz_validate_txn_test(sbox):
                                    repr([('validate', 'A/authz')]))
   svntest.main.create_python_hook_script(pre_commit_hook, hook_instance)
 
-  # Create an authz file 
+  # Create an authz file
   authz_content = "[/]\n* = rw\n"
   authz_path = os.path.join(wc_dir, 'A/authz')
   svntest.main.file_write(authz_path, authz_content)
@@ -249,7 +249,7 @@ def svnauthz_accessof_file_test(sbox):
                                           "--path", "/jokes", "--username",
                                           "groucho")
 
-  # User groucho specified on /jokes with the repo comedy will be rw 
+  # User groucho specified on /jokes with the repo comedy will be rw
   svntest.actions.run_and_verify_svnauthz("User access on path with repo",
                                           ["rw\n"], None, 0, False, "accessof",
                                           authz_path, "--path", "/jokes",
@@ -318,13 +318,13 @@ def svnauthz_accessof_repo_test(sbox):
                                           "--path", "/jokes", "--username",
                                           "groucho")
 
-  # User groucho specified on /jokes with the repo comedy will be rw 
+  # User groucho specified on /jokes with the repo comedy will be rw
   svntest.actions.run_and_verify_svnauthz("User access on path with repo",
                                           ["rw\n"], None, 0, False, "accessof",
                                           authz_url, "--path", "/jokes",
                                           "--username", "groucho",
                                           "--repository", "comedy")
- 
+
 def svnauthz_accessof_groups_file_test(sbox):
   "test 'svnauthz accessof --groups-file' on files"
 
@@ -359,7 +359,7 @@ def svnauthz_accessof_groups_file_test(sbox):
                                           ["no\n"], None,
                                           0, False, "accessof", authz_path,
                                           "--groups-file", groups_path,
-                                          "--username", "groucho")  
+                                          "--username", "groucho")
 
   # Anonymous access specified on /jokes with the repo comedy will be no.
   svntest.actions.run_and_verify_svnauthz("Anonymous access on path with repo",
@@ -449,7 +449,7 @@ def svnauthz_accessof_groups_repo_test(sbox):
                                           ["no\n"], None,
                                           0, False, "accessof", authz_url,
                                           "--groups-file", groups_url,
-                                          "--username", "groucho")  
+                                          "--username", "groucho")
 
   # Anonymous access specified on /jokes with the repo comedy will be no.
   svntest.actions.run_and_verify_svnauthz("Anonymous access on path with repo",
@@ -592,7 +592,7 @@ def svnauthz_accessof_is_file_test(sbox):
                                           "--username", "groucho",
                                           "--is", "no")
 
-  # User groucho specified on /jokes with the repo comedy will be rw 
+  # User groucho specified on /jokes with the repo comedy will be rw
   # Test --is rw returns 0.
   svntest.actions.run_and_verify_svnauthz("User access on path w/ repo --is rw",
                                           None, None, 0, False, "accessof",
@@ -623,7 +623,7 @@ def svnauthz_accessof_is_file_test(sbox):
       match_all=False
   )
   svntest.actions.run_and_verify_svnauthz("--is with invalid authz file",
-                                          None, expected_out, 1, False, 
+                                          None, expected_out, 1, False,
                                           "accessof", authz_path, "--path",
                                           "/jokes", "--username", "groucho",
                                           "--repository", "comedy", "--is",
@@ -761,7 +761,7 @@ def svnauthz_accessof_is_repo_test(sbox):
                                           "--username", "groucho",
                                           "--is", "no")
 
-  # User groucho specified on /jokes with the repo comedy will be rw 
+  # User groucho specified on /jokes with the repo comedy will be rw
   # Test --is rw returns 0.
   svntest.actions.run_and_verify_svnauthz("User access on path w/ repo --is rw",
                                           None, None, 0, False, "accessof",
@@ -818,7 +818,7 @@ def svnauthz_accessof_txn_test(sbox):
                                           '--is rw A/authz')]))
   svntest.main.create_python_hook_script(pre_commit_hook, hook_instance)
 
-  # Create an authz file 
+  # Create an authz file
   authz_content = "[/]\n* = rw\n"
   authz_path = os.path.join(wc_dir, 'A/authz')
   svntest.main.file_write(authz_path, authz_content)
@@ -875,9 +875,9 @@ def svnauthz_accessof_txn_test(sbox):
 
 def svnauthz_compat_mode_file_test(sbox):
   "test 'svnauthz-validate' compatability mode file"
- 
 
-  # Create an authz file 
+
+  # Create an authz file
   (authz_fd, authz_path) = tempfile.mkstemp()
   authz_content = "[/]\n* = rw\n"
   svntest.main.file_write(authz_path, authz_content)
@@ -912,7 +912,7 @@ def svnauthz_compat_mode_repo_test(sbox):
   wc_dir = sbox.wc_dir
   repo_url = sbox.repo_url
 
-  # Create an authz file 
+  # Create an authz file
   authz_content = "[/]\n* = rw\n"
   authz_path = os.path.join(wc_dir, 'A/authz')
   svntest.main.file_write(authz_path, authz_content)
@@ -944,7 +944,7 @@ def svnauthz_compat_mode_repo_test(sbox):
                                           authz_path)
 
   # Check a non-existant url.
-  # Exit code really should be 2 since this is an operational error. 
+  # Exit code really should be 2 since this is an operational error.
   svntest.actions.run_and_verify_svnauthz(
       "svnauthz-validate on non-existant file", None, None, 2, True,
       repo_url + "/zilch"

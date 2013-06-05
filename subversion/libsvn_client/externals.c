@@ -24,7 +24,7 @@
 /* ==================================================================== */
 
 
- 
+
 /*** Includes. ***/
 
 #include <apr_uri.h>
@@ -42,7 +42,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
- 
+
 
 /* Remove the directory at LOCAL_ABSPATH from revision control, and do the
  * same to any revision controlled directories underneath LOCAL_ABSPATH

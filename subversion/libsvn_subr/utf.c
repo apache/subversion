@@ -121,8 +121,8 @@ xlate_handle_node_cleanup(void *arg)
 }
 
 void
-svn_utf_initialize2(apr_pool_t *pool,
-                    svn_boolean_t assume_native_utf8)
+svn_utf_initialize2(svn_boolean_t assume_native_utf8,
+                    apr_pool_t *pool)
 {
   if (!xlate_handle_hash)
     {
@@ -945,7 +945,7 @@ svn_utf_cstring_from_utf8(const char **dest,
   SVN_ERR(get_uton_xlate_handle_node(&node, pool));
   err = convert_cstring(dest, src, node, pool);
   err = svn_error_compose_create(
-          err, 
+          err,
           put_xlate_handle_node(node, SVN_UTF_UTON_XLATE_HANDLE, pool));
 
   return err;

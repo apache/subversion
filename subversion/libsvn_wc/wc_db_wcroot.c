@@ -397,7 +397,7 @@ read_link_target(const char **link_target_abspath,
                              svn_dirent_local_style(local_abspath, pool));
 
   canon_link_target = svn_dirent_canonicalize(link_target->data, pool);
-                
+
   /* Treat relative symlinks as relative to LOCAL_ABSPATH's parent. */
   if (!svn_dirent_is_absolute(canon_link_target))
     canon_link_target = svn_dirent_join(svn_dirent_dirname(local_abspath,

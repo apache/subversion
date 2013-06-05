@@ -1329,7 +1329,7 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
   })
 
   # Currently this test fails because some parts of the merge
-  # start succeeding. 
+  # start succeeding.
   svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase(
                "local_tree_missing_incoming_leaf_edit",

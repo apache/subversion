@@ -95,7 +95,7 @@ log_entry_receiver(void *baton,
   svn_compat_log_revprops_out(&author, &date, &message, log_entry->revprops);
   if (log_entry->revision == 0 && message == NULL)
     return SVN_NO_ERROR;
-  
+
   lb->revisions++;
   if (lb->merge_depth)
     lb->merged_revs++;

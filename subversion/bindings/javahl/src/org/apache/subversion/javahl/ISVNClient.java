@@ -592,6 +592,7 @@ public interface ISVNClient
      * @param localPath     target local path
      * @param dryRun        do not change anything
      * @throws ClientException
+     * @deprecated Will be removed in a future release
      */
     void mergeReintegrate(String path, Revision pegRevision,
                           String localPath, boolean dryRun)

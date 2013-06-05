@@ -522,7 +522,7 @@ base_bdb_info_config_files(apr_array_header_t **files,
                                                          result_pool);
   return SVN_NO_ERROR;
 }
- 
+
 static svn_error_t *
 base_bdb_verify_root(svn_fs_root_t *root,
                      apr_pool_t *scratch_pool)
@@ -533,8 +533,8 @@ base_bdb_verify_root(svn_fs_root_t *root,
 
 static svn_error_t *
 base_bdb_freeze(svn_fs_t *fs,
-                svn_error_t *(*freeze_body)(void *, apr_pool_t *),
-                void *baton,
+                svn_fs_freeze_func_t freeze_func,
+                void *freeze_baton,
                 apr_pool_t *pool)
 {
   SVN__NOT_IMPLEMENTED();
@@ -562,6 +562,7 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__get_locks,
   base_bdb_info_format,
   base_bdb_info_config_files,
+  NULL /* info_fsap */,
   base_bdb_verify_root,
   base_bdb_freeze,
   base_bdb_set_errcall,
@@ -718,7 +719,7 @@ open_databases(svn_fs_t *fs,
 }
 
 
-/* Called by functions that initialize an svn_fs_t struct, after that 
+/* Called by functions that initialize an svn_fs_t struct, after that
    initialization is done, to populate svn_fs_t->uuid. */
 static svn_error_t *
 populate_opened_fs(svn_fs_t *fs, apr_pool_t *scratch_pool)
@@ -1462,7 +1463,8 @@ static fs_library_vtable_t library_vtable = {
   base_bdb_pack,
   base_bdb_logfiles,
   svn_fs_base__id_parse,
-  base_set_svn_fs_open
+  base_set_svn_fs_open,
+  NULL /* info_fsap_dup */
 };
 
 svn_error_t *

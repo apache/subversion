@@ -769,7 +769,7 @@ merge_file_trivial(svn_skel_t **work_items,
     {
       /* If the locally existing, changed file equals the incoming 'right'
        * file, there is no conflict.  For binary files, we historically
-       * conflicted them needlessly, while merge_text_file figured it out 
+       * conflicted them needlessly, while merge_text_file figured it out
        * eventually and returned svn_wc_merge_unchanged for them, which
        * is what we do here. */
       if (same_right_target)
@@ -871,10 +871,11 @@ merge_text_file(svn_skel_t **work_items,
   SVN_ERR(svn_io_file_close(result_f, pool));
 
   /* Determine the MERGE_OUTCOME, and record any conflict. */
-  if (contains_conflicts && ! dry_run)
+  if (contains_conflicts)
     {
       *merge_outcome = svn_wc_merge_conflict;
-      if (*merge_outcome == svn_wc_merge_conflict)
+
+      if (! dry_run)
         {
           const char *left_copy, *right_copy, *target_copy;
 
@@ -902,12 +903,7 @@ merge_text_file(svn_skel_t **work_items,
                                                           result_pool,
                                                           scratch_pool));
         }
-
-      if (*merge_outcome == svn_wc_merge_merged)
-        goto done;
     }
-  else if (contains_conflicts && dry_run)
-      *merge_outcome = svn_wc_merge_conflict;
   else
     {
       svn_boolean_t same, special;
@@ -941,7 +937,6 @@ merge_text_file(svn_skel_t **work_items,
       *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
     }
 
-done:
   /* Remove the tempfile after use */
   SVN_ERR(svn_wc__wq_build_file_remove(&work_item, mt->db, mt->local_abspath,
                                        result_target,
@@ -1419,6 +1414,6 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
             *merge_content_outcome = svn_wc_merge_merged;
         }
     }
-  
+
   return SVN_NO_ERROR;
 }

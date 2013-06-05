@@ -182,9 +182,10 @@ svn_io_check_resolved_path(const char *path,
  * may be @c NULL.  If @a file is @c NULL, the file will be created but not
  * open.
  *
- * If @a delete_when is #svn_io_file_del_on_close, then the @c APR_DELONCLOSE
- * flag will be used when opening the file.  The @c APR_BUFFERED flag will
- * always be used.
+ * The file will be deleted according to @a delete_when.  If that is
+ * #svn_io_file_del_on_pool_cleanup, it refers to @a result_pool.
+ *
+ * The @c APR_BUFFERED flag will always be used when opening the file.
  *
  * The first attempt will just append @a suffix.  If the result is not
  * a unique name, then subsequent attempts will append a dot,
@@ -248,8 +249,9 @@ svn_io_open_uniquely_named(apr_file_t **file,
  * be possible to atomically rename the resulting file due to cross-device
  * issues.)
  *
- * The file will be deleted according to @a delete_when.  If @a delete_when
- * is @c svn_io_file_del_on_close and @a file is @c NULL, the file will be
+ * The file will be deleted according to @a delete_when.  If that is
+ * #svn_io_file_del_on_pool_cleanup, it refers to @a result_pool.  If it
+ * is #svn_io_file_del_on_close and @a file is @c NULL, the file will be
  * deleted before this function returns.
  *
  * When passing @c svn_io_file_del_none please don't forget to eventually
@@ -664,8 +666,8 @@ svn_io_files_contents_same_p(svn_boolean_t *same,
                              apr_pool_t *pool);
 
 /** Set @a *same12 to TRUE if @a file1 and @a file2 have the same
- * contents, else set it to FALSE.  Do the similar for @a *same23 
- * with @a file2 and @a file3, and @a *same13 for @a file1 and @a 
+ * contents, else set it to FALSE.  Do the similar for @a *same23
+ * with @a file2 and @a file3, and @a *same13 for @a file1 and @a
  * file3. The filenames @a file1, @a file2 and @a file3 are
  * utf8-encoded. Use @a scratch_pool for temporary allocations.
  *
@@ -917,7 +919,7 @@ svn_stream_empty(apr_pool_t *pool);
 /** Return a stream allocated in @a pool which forwards all requests
  * to @a stream.  Destruction is explicitly excluded from forwarding.
  *
- * @see notes/destruction-of-stacked-resources
+ * @see http://subversion.apache.org/docs/community-guide/conventions.html#destruction-of-stacked-resources
  *
  * @since New in 1.4.
  */
@@ -972,7 +974,8 @@ svn_stream_open_writable(svn_stream_t **stream,
  * be possible to atomically rename the resulting file due to cross-device
  * issues.)
  *
- * The file will be deleted according to @a delete_when.
+ * The file will be deleted according to @a delete_when.  If that is
+ * #svn_io_file_del_on_pool_cleanup, it refers to @a result_pool.
  *
  * Temporary allocations will be performed in @a scratch_pool.
  *
@@ -1370,6 +1373,15 @@ svn_string_from_stream(svn_string_t **result,
 /** A function type provided for use as a callback from
  * @c svn_stream_lazyopen_create().
  *
+ * The callback function shall open a new stream and set @a *stream to
+ * the stream object, allocated in @a result_pool.  @a baton is the
+ * callback baton that was passed to svn_stream_lazyopen_create().
+ *
+ * @a result_pool is the result pool that was passed to
+ * svn_stream_lazyopen_create().  The callback function may use
+ * @a scratch_pool for temporary allocations; the caller may clear or
+ * destroy @a scratch_pool any time after the function returns.
+ *
  * @since New in 1.8.
  */
 typedef svn_error_t *
@@ -1381,20 +1393,22 @@ typedef svn_error_t *
 
 /** Return a generic stream which wraps another primary stream,
  * delaying the "opening" of that stream until the first time the
- * stream is accessed.
+ * returned stream is accessed.
  *
  * @a open_func and @a open_baton are a callback function/baton pair
- * invoked upon the first read of @a *stream which are used to open the
- * "real" source stream.
+ * which will be invoked upon the first access of the returned
+ * stream (read, write, mark, seek, skip, or possibly close).  The
+ * callback shall open the primary stream.
  *
- * @note If the only "access" the returned stream gets is to close it,
- * @a open_func will not be called.
+ * If the only "access" the returned stream gets is to close it
+ * then @a open_func will only be called if @a open_on_close is TRUE.
  *
  * @since New in 1.8.
  */
 svn_stream_t *
 svn_stream_lazyopen_create(svn_stream_lazyopen_func_t open_func,
                            void *open_baton,
+                           svn_boolean_t open_on_close,
                            apr_pool_t *result_pool);
 
 /** @} */
@@ -1578,12 +1592,13 @@ svn_io_stat_dirent2(const svn_io_dirent2_t **dirent_p,
                     apr_pool_t *scratch_pool);
 
 
-/** Similar to svn_io_stat_dirent2, but always passes FALSE for
- * verify_truename.
+/** Similar to svn_io_stat_dirent2(), but always passes FALSE for
+ * @a verify_truename.
  *
  * @since New in 1.7.
  * @deprecated Provided for backwards compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
                    const char *path,
@@ -1668,8 +1683,8 @@ svn_io_dir_walk(const char *dirname,
  * a non-zero exit status being returned to the parent process.
  *
  * @note An APR bug affects Windows: passing a NULL @a env does not
- * guarantee the invoked program to run with an empty environment when 
- * @a inherits is FALSE, the program may inherit its parent's environment.
+ * guarantee the invoked program to run with an empty environment when
+ * @a inherit is FALSE, the program may inherit its parent's environment.
  * Explicitly pass an empty @a env to get an empty environment.
  *
  * @since New in 1.8.
@@ -1695,6 +1710,7 @@ svn_error_t *svn_io_start_cmd3(apr_proc_t *cmd_proc,
  * @deprecated Provided for backward compatibility with the 1.7 API
  * @since New in 1.7.
  */
+SVN_DEPRECATED
 svn_error_t *svn_io_start_cmd2(apr_proc_t *cmd_proc,
                                const char *path,
                                const char *cmd,
@@ -2057,6 +2073,14 @@ svn_io_file_write(apr_file_t *file,
                   apr_size_t *nbytes,
                   apr_pool_t *pool);
 
+/** Wrapper for apr_file_flush().
+ * @since New in 1.9
+ */
+svn_error_t *
+svn_io_file_flush(apr_file_t *file,
+                  apr_pool_t *scratch_pool);
+
+
 
 /** Wrapper for apr_file_write_full(). */
 svn_error_t *
@@ -2065,6 +2089,24 @@ svn_io_file_write_full(apr_file_t *file,
                        apr_size_t nbytes,
                        apr_size_t *bytes_written,
                        apr_pool_t *pool);
+
+/**
+ * Writes @a nbytes bytes from @a *buf to a temporary file inside the same
+ * directory as @a *final_path. Then syncs the temporary file to disk and
+ * closes the file. After this rename the temporary file to @a final_path,
+ * possibly replacing an existing file.
+ *
+ * If @a copy_perms_path is not NULL, copy the permissions applied on @a
+ * @a copy_perms_path on the temporary file before renaming.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_io_write_atomic(const char *final_path,
+                    const void *buf,
+                    apr_size_t nbytes,
+                    const char* copy_perms_path,
+                    apr_pool_t *scratch_pool);
 
 /**
  * Open a unique file in @a dirpath, and write @a nbytes from @a buf to

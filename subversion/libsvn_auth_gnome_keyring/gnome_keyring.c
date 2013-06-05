@@ -29,6 +29,9 @@
 
 #include <apr_pools.h>
 #include <apr_strings.h>
+#include <glib.h>
+#include <gnome-keyring.h>
+
 #include "svn_auth.h"
 #include "svn_config.h"
 #include "svn_error.h"
@@ -39,8 +42,6 @@
 
 #include "svn_private_config.h"
 
-#include <glib.h>
-#include <gnome-keyring.h>
 
 
 /*-----------------------------------------------------------------------*/

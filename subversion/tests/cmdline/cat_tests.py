@@ -163,6 +163,8 @@ def cat_skip_uncattable(sbox):
   expected_err_re = re.compile(expected_err3, re.DOTALL)
 
   exit_code, output, error = svntest.main.run_svn(1, 'cat', rho_path, G_path, new_file_path)
+  error = [line for line in error
+           if not re.compile(svntest.main.stack_trace_regexp).match(line)]
 
   # Verify output
   if output[0] != expected_out:

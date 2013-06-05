@@ -559,7 +559,15 @@ public class ClientNotifyInformation extends EventObject
         conflict_resolver_done ("conflict resolver done"),
 
         /** Operation left local modifications. */
-        left_local_modifications ("left local modifications");
+        left_local_modifications ("left local modifications"),
+
+        /** A copy from a foreign repository has started
+         * @since New in 1.8. */
+        foreign_copy_begin ("foreign copy begin"),
+
+        /** A move in the working copy has been broken
+         * @since New in 1.8. */
+        move_broken ("move broken");
 
         /**
          * The description of the action.

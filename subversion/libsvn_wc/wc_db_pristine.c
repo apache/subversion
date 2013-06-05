@@ -823,6 +823,37 @@ svn_wc__db_pristine_remove(svn_wc__db_t *db,
 }
 
 
+/* Remove all unreferenced pristines in the WC DB in WCROOT.
+ *
+ * Look for pristine texts whose 'refcount' in the DB is zero, and remove
+ * them from the 'pristine' table and from disk.
+ *
+ * TODO: At least check that any zero refcount is really correct, before
+ *       using it.  See dev@ email thread "Pristine text missing - cleanup
+ *       doesn't work", <http://svn.haxx.se/dev/archive-2013-04/0426.shtml>.
+ *
+ * TODO: Ideas for possible extra clean-up operations:
+ *
+ *       * Check and correct all the refcounts.  Identify any rows missing
+ *         from the 'pristine' table.  (Create a temporary index for speed
+ *         if necessary?)
+ *
+ *       * Check the checksums.  (Very expensive to check them all, so find
+ *         a way to not check them all.)
+ *
+ *       * Check for pristine files missing from disk but referenced in the
+ *         'pristine' table.
+ *
+ *       * Repair any pristine files missing from disk and/or rows missing
+ *         from the 'pristine' table and/or bad checksums.  Generally
+ *         requires contacting the server, so requires support at a higher
+ *         level than this function.
+ *
+ *       * Identify any pristine text files on disk that are not referenced
+ *         in the DB, and delete them.
+ *
+ * TODO: Provide feedback about any errors found and any corrections made.
+ */
 static svn_error_t *
 pristine_cleanup_wcroot(svn_wc__db_wcroot_t *wcroot,
                         apr_pool_t *scratch_pool)

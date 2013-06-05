@@ -635,7 +635,7 @@ def svn_prop_inheritable_autoprops_add_versioned_target(sbox):
   # again, which is not what we are here to test.
   if os.name == 'posix':
     os.chmod(os.path.join(sbox.wc_dir, 'D', 'rip.bat'), 0664)
-    
+
   os.chdir(sbox.wc_dir)
   svntest.main.run_svn(None, 'add', '.', '--force', '--no-auto-props',
                        '--config-dir', config_dir)

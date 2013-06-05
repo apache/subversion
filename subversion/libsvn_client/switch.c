@@ -245,7 +245,7 @@ switch_internal(svn_revnum_t *result_rev,
     }
 
   wcroot_iprops = apr_hash_make(pool);
-  
+
   /* Will the base of LOCAL_ABSPATH require an iprop cache post-switch?
      If we are switching LOCAL_ABSPATH to the root of the repository then
      we don't need to cache inherited properties.  In all other cases we
@@ -259,7 +259,7 @@ switch_internal(svn_revnum_t *result_rev,
                                 pool));
 
       /* Switching the WC root to anything but the repos root means
-         we need an iprop cache. */ 
+         we need an iprop cache. */
       if (!wc_root)
         {
           /* We know we are switching a subtree to something other than the
@@ -340,8 +340,8 @@ switch_internal(svn_revnum_t *result_rev,
   *timestamp_sleep = TRUE;
 
   /* Drive the reporter structure, describing the revisions within
-     PATH.  When we call reporter->finish_report, the update_editor
-     will be driven by svn_repos_dir_delta2. */
+     LOCAL_ABSPATH.  When this calls reporter->finish_report, the
+     reporter will drive the switch_editor. */
   SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath, reporter,
                                   report_baton, TRUE,
                                   depth, (! depth_is_sticky),

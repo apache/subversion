@@ -3354,7 +3354,7 @@ svn_wc__db_base_moved_to(const char **move_dst_abspath,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
-                         
+
 /* Recover space from the database file for LOCAL_ABSPATH by running
  * the "vacuum" command. */
 svn_error_t *

@@ -309,6 +309,7 @@ public class SVNClient implements ISVNClient
     }
 
 
+    /** @deprecated */
     public native void mergeReintegrate(String path, Revision pegRevision,
                                         String localPath, boolean dryRun)
             throws ClientException;

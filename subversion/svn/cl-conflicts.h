@@ -41,6 +41,18 @@ extern "C" {
 
 /**
  * Return in @a desc a possibly localized human readable
+ * description of a property conflict described by @a conflict.
+ *
+ * Allocate the result in @a pool.
+ */
+svn_error_t *
+svn_cl__get_human_readable_prop_conflict_description(
+  const char **desc,
+  const svn_wc_conflict_description2_t *conflict,
+  apr_pool_t *pool);
+
+/**
+ * Return in @a desc a possibly localized human readable
  * description of a tree conflict described by @a conflict.
  *
  * Allocate the result in @a pool.

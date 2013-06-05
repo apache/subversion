@@ -63,7 +63,7 @@ extern "C" {
  * Modify when new functionality is added or new interfaces are
  * defined, but all changes are backward compatible.
  */
-#define SVN_VER_MINOR      8
+#define SVN_VER_MINOR      9
 
 /**
  * Patch number.
@@ -116,10 +116,8 @@ extern "C" {
 /** Revision number: The repository revision number of this release.
  *
  * This constant is used to generate the build number part of the Windows
- * file version. Its value remains 0 in the repository.
- *
- * When rolling a tarball, we automatically replace it with what we
- * guess to be the correct revision number.
+ * file version. Its value remains 0 in the repository except in release
+ * tags where it is the revision from which the tag was created.
  */
 #define SVN_VER_REVISION   0
 

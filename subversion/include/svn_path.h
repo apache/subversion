@@ -716,6 +716,14 @@ svn_path_resolve_repos_relative_url(const char **absolute_url,
                                     const char *repos_root_url,
                                     apr_pool_t *pool);
 
+/* Return a copy of @a path, allocated from @a pool, for which control
+ * characters have been escaped using the form \NNN (where NNN is the
+ * octal representation of the byte's ordinal value).
+ * 
+ * @since New in 1.9. */
+const char *
+svn_path_illegal_path_escape(const char *path, apr_pool_t *pool);
+
 /** @} */
 
 #ifdef __cplusplus

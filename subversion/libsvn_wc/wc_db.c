@@ -958,7 +958,7 @@ insert_working_node(const insert_working_baton_t *piwb,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
     moved_to_relpath = svn_sqlite__column_text(stmt, 0, scratch_pool);
-  SVN_ERR(svn_sqlite__reset(stmt)); 
+  SVN_ERR(svn_sqlite__reset(stmt));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_INSERT_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isdsnnntstrisn"
@@ -1520,7 +1520,7 @@ svn_wc__db_init(svn_wc__db_t *db,
 
   /* Create the SDB and insert the basic rows.  */
   SVN_ERR(create_db(&sdb, &repos_id, &wc_id, local_abspath, repos_root_url,
-                    repos_uuid, SDB_FILE, 
+                    repos_uuid, SDB_FILE,
                     repos_relpath, initial_rev, depth, sqlite_exclusive,
                     db->state_pool, scratch_pool));
 
@@ -2226,7 +2226,7 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
     {
       apr_pool_t *iterpool;
 
-      /* 
+      /*
        * When deleting a conflicted node, moves of any moved-outside children
        * of the node must be broken. Else, the destination will still be marked
        * moved-here after the move source disappears from the working copy.
@@ -2249,7 +2249,7 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
         {
           const char *child_relpath;
           svn_error_t *err;
-          
+
           svn_pool_clear(iterpool);
           child_relpath = svn_sqlite__column_text(stmt, 0, iterpool);
           err = clear_moved_here(child_relpath, wcroot, iterpool);
@@ -3497,7 +3497,7 @@ svn_wc__db_committable_externals_below(apr_array_header_t **externals,
 
   SVN_ERR(svn_sqlite__get_statement(
                 &stmt, wcroot->sdb,
-                immediates_only 
+                immediates_only
                     ? STMT_SELECT_COMMITTABLE_EXTERNALS_IMMEDIATELY_BELOW
                     : STMT_SELECT_COMMITTABLE_EXTERNALS_BELOW));
 
@@ -6939,7 +6939,7 @@ remove_node_txn(svn_boolean_t *left_changes,
 
   /* Need info for not_present node? */
   if (SVN_IS_VALID_REVNUM(not_present_rev))
-    SVN_ERR(svn_wc__db_base_get_info_internal(NULL, NULL, NULL, 
+    SVN_ERR(svn_wc__db_base_get_info_internal(NULL, NULL, NULL,
                                               &repos_relpath, &repos_id,
                                               NULL, NULL, NULL, NULL, NULL,
                                               NULL, NULL, NULL, NULL, NULL,
@@ -6996,8 +6996,8 @@ remove_node_txn(svn_boolean_t *left_changes,
           if (err)
             break;
 
-          err = svn_io_stat_dirent(&dirent, child_abspath, TRUE,
-                                   iterpool, iterpool);
+          err = svn_io_stat_dirent2(&dirent, child_abspath, FALSE, TRUE,
+                                    iterpool, iterpool);
 
           if (err)
             break;
@@ -7007,7 +7007,7 @@ remove_node_txn(svn_boolean_t *left_changes,
               || child_kind != svn_node_file)
             {
               /* Not interested in keeping changes */
-              modified_p = FALSE; 
+              modified_p = FALSE;
             }
           else if (child_kind == svn_node_file
                    && dirent->kind == svn_node_file
@@ -7534,7 +7534,7 @@ delete_node(void *baton,
         {
           const char *part = svn_relpath_skip_ancestor(local_relpath,
                                                        moved_from_relpath);
-            
+
           /* Existing move-root is moved to another location */
           moved_node = apr_palloc(scratch_pool, sizeof(struct moved_node_t));
           if (!part)
@@ -9019,7 +9019,7 @@ svn_wc__db_read_node_install_info(const char **wcroot_abspath,
 
   if (have_row)
     {
-      if (!err && sha1_checksum)
+      if (sha1_checksum)
         err = svn_sqlite__column_checksum(sha1_checksum, stmt, 6, result_pool);
 
       if (!err && pristine_props)
@@ -10434,7 +10434,7 @@ determine_repos_info(apr_int64_t *repos_id,
    This code is only valid to fix-up a move from an old location, to a new
    location during a commit.
 
-   Assumptions: 
+   Assumptions:
      * local_relpath is not the working copy root (can't be moved)
      * repos_relpath is not the repository root (can't be moved)
    */
@@ -10537,7 +10537,7 @@ moved_descendant_commit(svn_wc__db_wcroot_t *wcroot,
    Makes all nodes below LOCAL_RELPATH represent the descendants of repository
    location repos_id:repos_relpath@revision.
 
-   Assumptions: 
+   Assumptions:
      * local_relpath is not the working copy root (can't be replaced)
      * repos_relpath is not the repository root (can't be replaced)
    */
@@ -11909,7 +11909,7 @@ svn_wc__db_scan_moved(const char **moved_from_abspath,
                             : NULL,
                         wcroot, local_relpath, scratch_pool, scratch_pool));
 
-  if (status != svn_wc__db_status_moved_here)
+  if (status != svn_wc__db_status_moved_here || !moved_from_relpath)
     return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                              _("Path '%s' was not moved here"),
                              path_for_error_message(wcroot, local_relpath,
@@ -13424,7 +13424,7 @@ svn_wc__db_is_switched(svn_boolean_t *is_wcroot,
       /* Easy out */
       if (is_wcroot)
         *is_wcroot = TRUE;
-      
+
       if (kind)
         *kind = svn_node_dir;
       return SVN_NO_ERROR;
@@ -14638,8 +14638,8 @@ has_local_mods(svn_boolean_t *is_modified,
             {
               const svn_io_dirent2_t *dirent;
 
-              err = svn_io_stat_dirent(&dirent, node_abspath, TRUE,
-                                       iterpool, iterpool);
+              err = svn_io_stat_dirent2(&dirent, node_abspath, FALSE, TRUE,
+                                        iterpool, iterpool);
               if (err)
                 return svn_error_trace(svn_error_compose_create(
                                                     err,

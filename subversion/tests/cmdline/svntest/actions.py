@@ -1628,7 +1628,7 @@ def run_and_verify_inherited_prop_xml(path_or_url,
   expected_iprops = {}
   for x in expected_inherited_props:
     if sandbox.is_url(x):
-      expected_iprops[x] = expected_inherited_props[x]    
+      expected_iprops[x] = expected_inherited_props[x]
     else:
       expected_iprops[os.path.abspath(x)] = expected_inherited_props[x]
 

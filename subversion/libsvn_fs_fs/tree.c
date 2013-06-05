@@ -186,7 +186,7 @@ typedef struct cache_lock_t
 {
   /* pool holding the lock */
   apr_pool_t *pool;
-  
+
   /* cache being locked */
   fs_fs_dag_cache_t *cache;
 
@@ -201,7 +201,7 @@ typedef struct cache_lock_t
    When the number of INSERTIONS (i.e. objects created form that pool)
    exceeds a certain threshold, the pool will be cleared and the cache
    with it.
-   
+
    To ensure that nodes returned from this structure remain valid, the
    cache will get locked for the lifetime of the _receiving_ pools (i.e.
    those in which we would allocate the node if there was no cache.).
@@ -272,7 +272,7 @@ svn_fs_fs__create_dag_cache(apr_pool_t *pool)
                             result,
                             unregister_locks,
                             apr_pool_cleanup_null);
-  
+
   return result;
 }
 
@@ -355,7 +355,7 @@ cache_lookup( fs_fs_dag_cache_t *cache
      (HASH_VALUE has been initialized to REVISION). */
   for (i = 0; i + 4 <= path_len; i += 4)
     hash_value = hash_value * 0xd1f3da69 + *(const apr_uint32_t*)(path + i);
-  
+
   for (; i < path_len; ++i)
     hash_value = hash_value * 33 + path[i];
 
@@ -416,7 +416,7 @@ locate_cache(svn_cache__t **cache,
 
 /* Return NODE for PATH from ROOT's node cache, or NULL if the node
    isn't cached; read it from the FS. *NODE remains valid until either
-   POOL or the FS gets cleared or destroyed (whichever comes first). 
+   POOL or the FS gets cleared or destroyed (whichever comes first).
 
    Since locking can be expensive and POOL may be long-living, for
    nodes that will not need to survive the next call to this function,
@@ -438,7 +438,7 @@ dag_node_cache_get(dag_node_t **node_p,
   if (!root->is_txn_root)
     {
       /* immutable DAG node. use the global caches for it */
-      
+
       fs_fs_data_t *ffd = root->fs->fsap_data;
       cache_entry_t *bucket;
 
@@ -470,7 +470,7 @@ dag_node_cache_get(dag_node_t **node_p,
   else
     {
       /* DAG is mutable / may become invalid. Use the TXN-local cache */
-      
+
       locate_cache(&cache, &key, root, path, pool);
 
       SVN_ERR(svn_cache__get((void **) &node, &found, cache, key, pool));
@@ -904,38 +904,46 @@ open_path(parent_path_t **parent_path_p,
   dag_node_t *here = NULL; /* The directory we're currently looking at.  */
   parent_path_t *parent_path; /* The path from HERE up to the root. */
   const char *rest; /* The portion of PATH we haven't traversed yet.  */
-
-  /* ensure a canonical path representation */
-  const char *path_so_far = "/";
   apr_pool_t *iterpool = svn_pool_create(pool);
+
+  /* path to the currently processed entry without trailing '/'.
+     We will reuse this across iterations by simply putting a NUL terminator
+     at the respective position and replacing that with a '/' in the next
+     iteration.  This is correct as we assert() PATH to be canonical. */
+  svn_stringbuf_t *path_so_far = svn_stringbuf_create(path, pool);
 
   /* callers often traverse the tree in some path-based order.  That means
      a sibling of PATH has been presently accessed.  Try to start the lookup
      directly at the parent node, if the caller did not requested the full
      parent chain. */
-  const char *directory;
   assert(svn_fs__is_canonical_abspath(path));
+  path_so_far->len = 0; /* "" */
   if (flags & open_path_node_only)
     {
-      directory = svn_dirent_dirname(path, pool);
+      const char *directory = svn_dirent_dirname(path, pool);
       if (directory[1] != 0) /* root nodes are covered anyway */
-        SVN_ERR(dag_node_cache_get(&here, root, directory, TRUE, pool));
+        {
+          SVN_ERR(dag_node_cache_get(&here, root, directory, TRUE, pool));
+          /* did the shortcut work? */
+          if (here)
+            {
+              apr_size_t dirname_len = strlen(directory);
+              path_so_far->len = dirname_len;
+              rest = path + dirname_len + 1;
+            }
+        }
     }
 
   /* did the shortcut work? */
-  if (here)
-    {
-      path_so_far = directory;
-      rest = path + strlen(directory) + 1;
-    }
-  else
+  if (!here)
     {
       /* Make a parent_path item for the root node, using its own current
          copy id.  */
       SVN_ERR(root_node(&here, root, pool));
       rest = path + 1; /* skip the leading '/', it saves in iteration */
     }
- 
+
+  path_so_far->data[path_so_far->len] = '\0';
   parent_path = make_parent_path(here, 0, 0, pool);
   parent_path->copy_inherit = copy_id_inherit_self;
 
@@ -955,8 +963,10 @@ open_path(parent_path_t **parent_path_p,
       /* Parse out the next entry from the path.  */
       entry = svn_fs__next_entry_name(&next, rest, pool);
 
-      /* Calculate the path traversed thus far. */
-      path_so_far = svn_fspath__join(path_so_far, entry, pool);
+      /* Update the path traversed thus far. */
+      path_so_far->data[path_so_far->len] = '/';
+      path_so_far->len += strlen(entry) + 1;
+      path_so_far->data[path_so_far->len] = '\0';
 
       if (*entry == '\0')
         {
@@ -979,7 +989,7 @@ open_path(parent_path_t **parent_path_p,
              element if we already know the lookup to fail for the
              complete path. */
           if (next || !(flags & open_path_uncached))
-            SVN_ERR(dag_node_cache_get(&cached_node, root, path_so_far,
+            SVN_ERR(dag_node_cache_get(&cached_node, root, path_so_far->data,
                                        TRUE, pool));
           if (cached_node)
             child = cached_node;
@@ -1033,7 +1043,8 @@ open_path(parent_path_t **parent_path_p,
 
           /* Cache the node we found (if it wasn't already cached). */
           if (! cached_node)
-            SVN_ERR(dag_node_cache_set(root, path_so_far, child, iterpool));
+            SVN_ERR(dag_node_cache_set(root, path_so_far->data, child,
+                                       iterpool));
         }
 
       /* Are we finished traversing the path?  */
@@ -1042,7 +1053,7 @@ open_path(parent_path_t **parent_path_p,
 
       /* The path isn't finished yet; we'd better be in a directory.  */
       if (svn_fs_fs__dag_node_kind(child) != svn_node_dir)
-        SVN_ERR_W(SVN_FS__ERR_NOT_DIRECTORY(fs, path_so_far),
+        SVN_ERR_W(SVN_FS__ERR_NOT_DIRECTORY(fs, path_so_far->data),
                   apr_psprintf(iterpool, _("Failure opening '%s'"), path));
 
       rest = next;
@@ -2178,53 +2189,6 @@ fs_dir_entries(apr_hash_t **table_p,
   return svn_fs_fs__dag_dir_entries(table_p, node, pool);
 }
 
-/* Return a copy of PATH, allocated from POOL, for which newlines
-   have been escaped using the form \NNN (where NNN is the
-   octal representation of the byte's ordinal value).  */
-static const char *
-escape_newline(const char *path, apr_pool_t *pool)
-{
-  svn_stringbuf_t *retstr;
-  apr_size_t i, copied = 0;
-  int c;
-
-  /* At least one control character:
-      strlen - 1 (control) + \ + N + N + N + null . */
-  retstr = svn_stringbuf_create_ensure(strlen(path) + 4, pool);
-  for (i = 0; path[i]; i++)
-    {
-      c = (unsigned char)path[i];
-      if (c != '\n')
-        continue;
-
-      /* First things first, copy all the good stuff that we haven't
-         yet copied into our output buffer. */
-      if (i - copied)
-        svn_stringbuf_appendbytes(retstr, path + copied,
-                                  i - copied);
-
-      /* Make sure buffer is big enough for '\' 'N' 'N' 'N' (and NUL) */
-      svn_stringbuf_ensure(retstr, retstr->len + 4);
-      /*### The backslash separator doesn't work too great with Windows,
-         but it's what we'll use for consistency with invalid utf8
-         formatting (until someone has a better idea) */
-      apr_snprintf(retstr->data + retstr->len, 5, "\\%03o", (unsigned char)c);
-      retstr->len += 4;
-
-      /* Finally, update our copy counter. */
-      copied = i + 1;
-    }
-
-  /* Anything left to copy? */
-  if (i - copied)
-    svn_stringbuf_appendbytes(retstr, path + copied, i - copied);
-
-  /* retstr is null-terminated either by apr_snprintf or the svn_stringbuf
-     functions. */
-
-  return retstr->data;
-}
-
 /* Raise an error if PATH contains a newline because FSFS cannot handle
  * such paths. See issue #4340. */
 static svn_error_t *
@@ -2235,7 +2199,7 @@ check_newline(const char *path, apr_pool_t *pool)
   if (c)
     return svn_error_createf(SVN_ERR_FS_PATH_SYNTAX, NULL,
        _("Invalid control character '0x%02x' in path '%s'"),
-       (unsigned char)*c, escape_newline(path, pool));
+       (unsigned char)*c, svn_path_illegal_path_escape(path, pool));
 
   return SVN_NO_ERROR;
 }
@@ -3498,26 +3462,17 @@ fs_node_origin_rev(svn_revnum_t *revision,
 }
 
 
-struct history_prev_args
-{
-  svn_fs_history_t **prev_history_p;
-  svn_fs_history_t *history;
-  svn_boolean_t cross_copies;
-  apr_pool_t *pool;
-};
-
-
 static svn_error_t *
-history_prev(void *baton, apr_pool_t *pool)
+history_prev(svn_fs_history_t **prev_history,
+             svn_fs_history_t *history,
+             svn_boolean_t cross_copies,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool)
 {
-  struct history_prev_args *args = baton;
-  svn_fs_history_t **prev_history = args->prev_history_p;
-  svn_fs_history_t *history = args->history;
   fs_history_data_t *fhd = history->fsap_data;
   const char *commit_path, *src_path, *path = fhd->path;
   svn_revnum_t commit_rev, src_rev, dst_rev;
   svn_revnum_t revision = fhd->revision;
-  apr_pool_t *retpool = args->pool;
   svn_fs_t *fs = fhd->fs;
   parent_path_t *parent_path;
   dag_node_t *node;
@@ -3536,21 +3491,21 @@ history_prev(void *baton, apr_pool_t *pool)
   if (fhd->path_hint && SVN_IS_VALID_REVNUM(fhd->rev_hint))
     {
       reported = FALSE;
-      if (! args->cross_copies)
+      if (! cross_copies)
         return SVN_NO_ERROR;
       path = fhd->path_hint;
       revision = fhd->rev_hint;
     }
 
   /* Construct a ROOT for the current revision. */
-  SVN_ERR(svn_fs_fs__revision_root(&root, fs, revision, pool));
+  SVN_ERR(svn_fs_fs__revision_root(&root, fs, revision, scratch_pool));
 
   /* Open PATH/REVISION, and get its node and a bunch of other
      goodies.  */
-  SVN_ERR(open_path(&parent_path, root, path, 0, NULL, pool));
+  SVN_ERR(open_path(&parent_path, root, path, 0, NULL, scratch_pool));
   node = parent_path->node;
   commit_path = svn_fs_fs__dag_get_created_path(node);
-  SVN_ERR(svn_fs_fs__dag_get_revision(&commit_rev, node, pool));
+  SVN_ERR(svn_fs_fs__dag_get_revision(&commit_rev, node, scratch_pool));
 
   /* The Subversion filesystem is written in such a way that a given
      line of history may have at most one interesting history point
@@ -3566,9 +3521,9 @@ history_prev(void *baton, apr_pool_t *pool)
           /* ... we either have not yet reported on this revision (and
              need now to do so) ... */
           *prev_history = assemble_history(fs,
-                                           apr_pstrdup(retpool, commit_path),
+                                           apr_pstrdup(result_pool, commit_path),
                                            commit_rev, TRUE, NULL,
-                                           SVN_INVALID_REVNUM, retpool);
+                                           SVN_INVALID_REVNUM, result_pool);
           return SVN_NO_ERROR;
         }
       else
@@ -3584,16 +3539,16 @@ history_prev(void *baton, apr_pool_t *pool)
 
           /* Replace NODE and friends with the information from its
              predecessor. */
-          SVN_ERR(svn_fs_fs__dag_get_node(&node, fs, pred_id, pool));
+          SVN_ERR(svn_fs_fs__dag_get_node(&node, fs, pred_id, scratch_pool));
           commit_path = svn_fs_fs__dag_get_created_path(node);
-          SVN_ERR(svn_fs_fs__dag_get_revision(&commit_rev, node, pool));
+          SVN_ERR(svn_fs_fs__dag_get_revision(&commit_rev, node, scratch_pool));
         }
     }
 
   /* Find the youngest copyroot in the path of this node, including
      itself. */
   SVN_ERR(find_youngest_copyroot(&copyroot_rev, &copyroot_path, fs,
-                                 parent_path, pool));
+                                 parent_path, scratch_pool));
 
   /* Initialize some state variables. */
   src_path = NULL;
@@ -3607,8 +3562,8 @@ history_prev(void *baton, apr_pool_t *pool)
       svn_fs_root_t *copyroot_root;
 
       SVN_ERR(svn_fs_fs__revision_root(&copyroot_root, fs, copyroot_rev,
-                                       pool));
-      SVN_ERR(get_dag(&node, copyroot_root, copyroot_path, FALSE, pool));
+                                       scratch_pool));
+      SVN_ERR(get_dag(&node, copyroot_root, copyroot_path, FALSE, scratch_pool));
       copy_dst = svn_fs_fs__dag_get_created_path(node);
 
       /* If our current path was the very destination of the copy,
@@ -3630,7 +3585,7 @@ history_prev(void *baton, apr_pool_t *pool)
           SVN_ERR(svn_fs_fs__dag_get_copyfrom_path(&copy_src, node));
 
           dst_rev = copyroot_rev;
-          src_path = svn_fspath__join(copy_src, remainder_path, pool);
+          src_path = svn_fspath__join(copy_src, remainder_path, scratch_pool);
         }
     }
 
@@ -3647,15 +3602,15 @@ history_prev(void *baton, apr_pool_t *pool)
       if ((dst_rev == revision) && reported)
         retry = TRUE;
 
-      *prev_history = assemble_history(fs, apr_pstrdup(retpool, path),
+      *prev_history = assemble_history(fs, apr_pstrdup(result_pool, path),
                                        dst_rev, ! retry,
-                                       src_path, src_rev, retpool);
+                                       src_path, src_rev, result_pool);
     }
   else
     {
-      *prev_history = assemble_history(fs, apr_pstrdup(retpool, commit_path),
+      *prev_history = assemble_history(fs, apr_pstrdup(result_pool, commit_path),
                                        commit_rev, TRUE, NULL,
-                                       SVN_INVALID_REVNUM, retpool);
+                                       SVN_INVALID_REVNUM, result_pool);
     }
 
   return SVN_NO_ERROR;
@@ -3691,16 +3646,12 @@ fs_history_prev(svn_fs_history_t **prev_history_p,
     }
   else
     {
-      struct history_prev_args args;
       prev_history = history;
 
       while (1)
         {
-          args.prev_history_p = &prev_history;
-          args.history = prev_history;
-          args.cross_copies = cross_copies;
-          args.pool = pool;
-          SVN_ERR(history_prev(&args, pool));
+          SVN_ERR(history_prev(&prev_history, prev_history, cross_copies,
+                               pool, pool));
 
           if (! prev_history)
             break;
@@ -3877,7 +3828,7 @@ mergeinfo_cache_key(const char *path,
   number = number * 4
          + (inherit == svn_mergeinfo_nearest_ancestor ? 2 : 0)
          + (adjust_inherited_mergeinfo ? 1 : 0);
-  
+
   return svn_fs_fs__combine_number_and_string(number, path, pool);
 }
 
@@ -4016,7 +3967,7 @@ get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
                               ffd->mergeinfo_cache,
                               cache_key, result_pool));
     }
-    
+
   if (! found)
     {
       SVN_ERR(get_mergeinfo_for_path_internal(mergeinfo, rev_root, path,

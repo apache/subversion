@@ -135,7 +135,7 @@ class SubversionCoreTestCase(unittest.TestCase):
 
     def enumerator(name, value, pool):
       raise Exception
-    
+
     # the exception will be swallowed, but enumeration must be stopped
     self.assertEqual(
       svn.core.svn_config_enumerate2(cfg, "section", enumerator), 1)

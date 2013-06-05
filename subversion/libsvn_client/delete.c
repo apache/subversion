@@ -100,12 +100,12 @@ find_undeletables(void *baton,
 }
 
 /* Check whether LOCAL_ABSPATH is an external and raise an error if it is.
-  
+
    A file external should not be deleted since the file external is
    implemented as a switched file and it would delete the file the
    file external is switched to, which is not the behavior the user
    would probably want.
-   
+
    A directory external should not be deleted since it is the root
    of a different working copy. */
 static svn_error_t *
@@ -396,7 +396,7 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
           svn_uri_split(&base_uri, &target_relpath, base_uri, iterpool);
           APR_ARRAY_IDX(target_relpaths, 0, const char *) = target_relpath;
         }
-          
+
       SVN_ERR(svn_ra_reparent(repos_deletables->ra_session, base_uri, pool));
       SVN_ERR(single_repos_delete(repos_deletables->ra_session, repos_root,
                                   target_relpaths,

@@ -57,7 +57,7 @@ static svn_error_t *read_success(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
 {
   const char *status, *arg;
 
-  SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "w(?c)", &status, &arg));
+  SVN_ERR(svn_ra_svn__read_tuple(conn, pool, "w(?c)", &status, &arg));
   if (strcmp(status, "failure") == 0 && arg)
     return svn_error_createf(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                              _("Authentication error from server: %s"), arg);

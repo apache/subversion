@@ -149,9 +149,9 @@ ssl_server_trust_file_save_credentials(svn_boolean_t *saved,
 
 static const svn_auth_provider_t ssl_server_trust_file_provider = {
   SVN_AUTH_CRED_SSL_SERVER_TRUST,
-  &ssl_server_trust_file_first_credentials,
+  ssl_server_trust_file_first_credentials,
   NULL,
-  &ssl_server_trust_file_save_credentials,
+  ssl_server_trust_file_save_credentials,
 };
 
 

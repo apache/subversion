@@ -113,12 +113,12 @@ getLinkedLib(JNIEnv *env, jobject jthis)
     {
       fid = env->GetFieldID(env->GetObjectClass(jthis), "index", "I");
       if (JNIUtil::isJavaExceptionThrown())
-        return NULL;      
+        return NULL;
     }
 
   const int index = env->GetIntField(jthis, fid);
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;      
+    return NULL;
 
   const VersionExtended *const vx =
     VersionExtended::getCppObjectFromLinkedLib(jthis);
@@ -173,12 +173,12 @@ getLoadedLib(JNIEnv *env, jobject jthis)
     {
       fid = env->GetFieldID(env->GetObjectClass(jthis), "index", "I");
       if (JNIUtil::isJavaExceptionThrown())
-        return NULL;      
+        return NULL;
     }
 
   const int index = env->GetIntField(jthis, fid);
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;      
+    return NULL;
 
   const VersionExtended *const vx =
     VersionExtended::getCppObjectFromLoadedLib(jthis);

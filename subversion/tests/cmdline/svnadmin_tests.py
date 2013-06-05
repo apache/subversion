@@ -548,6 +548,8 @@ def verify_windows_paths_in_repos(sbox):
 
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
                                                         sbox.repo_dir)
+  if errput:
+    raise SVNUnexpectedStderr(errput)
 
   # unfortunately, FSFS needs to do more checks than BDB resulting in
   # different progress output
@@ -557,13 +559,13 @@ def verify_windows_paths_in_repos(sbox):
       'STDERR', ["* Verifying repository metadata ...\n",
                  "* Verified revision 0.\n",
                  "* Verified revision 1.\n",
-                 "* Verified revision 2.\n"], errput)
+                 "* Verified revision 2.\n"], output)
   else:
     svntest.verify.compare_and_display_lines(
       "Error while running 'svnadmin verify'.",
       'STDERR', ["* Verified revision 0.\n",
                  "* Verified revision 1.\n",
-                 "* Verified revision 2.\n"], errput)
+                 "* Verified revision 2.\n"], output)
 
 #----------------------------------------------------------------------
 
@@ -1062,8 +1064,10 @@ def verify_with_invalid_revprops(sbox):
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
                                                         sbox.repo_dir)
 
+  if errput:
+    raise SVNUnexpectedStderr(errput)
   if svntest.verify.verify_outputs(
-    "Output of 'svnadmin verify' is unexpected.", None, errput, None,
+    "Output of 'svnadmin verify' is unexpected.", None, output, None,
     ".*Verified revision 0*"):
     raise svntest.Failure
 
@@ -1621,7 +1625,8 @@ def hotcopy_incremental_packed(sbox):
 
   # Pack revisions 0 and 1.
   svntest.actions.run_and_verify_svnadmin(
-    None, None, [], "pack", os.path.join(cwd, sbox.repo_dir))
+    None, ['Packing revisions in shard 0...done.\n'], [], "pack",
+    os.path.join(cwd, sbox.repo_dir))
 
   # Commit 5 more revs, hotcopy and pack after each commit.
   for i in [1, 2, 3, 4, 5]:
@@ -1637,8 +1642,12 @@ def hotcopy_incremental_packed(sbox):
     if i < 5:
       sbox.simple_mkdir("newdir-%i" % i)
       sbox.simple_commit()
+      if not i % 2:
+        expected_output = ['Packing revisions in shard %d...done.\n' % (i/2)]
+      else:
+        expected_output = []
       svntest.actions.run_and_verify_svnadmin(
-        None, None, [], "pack", os.path.join(cwd, sbox.repo_dir))
+        None, expected_output, [], "pack", os.path.join(cwd, sbox.repo_dir))
 
 
 def locking(sbox):

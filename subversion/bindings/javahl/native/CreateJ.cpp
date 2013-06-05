@@ -151,7 +151,8 @@ CreateJ::ConflictVersion(const svn_wc_conflict_version_t *version)
   static jmethodID ctor = 0;
   if (ctor == 0)
     {
-      ctor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;J"
+      ctor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;"
+                                               "Ljava/lang/String;J"
                                                "Ljava/lang/String;"
                                                "L"JAVA_PACKAGE"/types/NodeKind;"
                                                ")V");
@@ -162,6 +163,9 @@ CreateJ::ConflictVersion(const svn_wc_conflict_version_t *version)
   jstring jreposURL = JNIUtil::makeJString(version->repos_url);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
+  jstring jreposUUID = JNIUtil::makeJString(version->repos_uuid);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
   jstring jpathInRepos = JNIUtil::makeJString(version->path_in_repos);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
@@ -169,7 +173,7 @@ CreateJ::ConflictVersion(const svn_wc_conflict_version_t *version)
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
-  jobject jversion = env->NewObject(clazz, ctor, jreposURL,
+  jobject jversion = env->NewObject(clazz, ctor, jreposURL, jreposUUID,
                                     (jlong)version->peg_rev, jpathInRepos,
                                     jnodeKind);
   if (JNIUtil::isJavaExceptionThrown())
@@ -835,7 +839,8 @@ CreateJ::CommitItem(svn_client_commit_item3_t *item)
                                         "(Ljava/lang/String;"
                                         "L"JAVA_PACKAGE"/types/NodeKind;"
                                         "ILjava/lang/String;"
-                                        "Ljava/lang/String;J)V");
+                                        "Ljava/lang/String;J"
+                                        "Ljava/lang/String;)V");
       if (JNIUtil::isExceptionThrown())
         POP_AND_RETURN_NULL;
     }
@@ -862,6 +867,12 @@ CreateJ::CommitItem(svn_client_commit_item3_t *item)
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
     jstateFlags |=
       org_apache_subversion_javahl_CommitItemStateFlags_IsCopy;
+  if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN)
+    jstateFlags |=
+      org_apache_subversion_javahl_CommitItemStateFlags_LockToken;
+  if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_MOVED_HERE)
+    jstateFlags |=
+      org_apache_subversion_javahl_CommitItemStateFlags_MovedHere;
 
   jstring jurl = JNIUtil::makeJString(item->url);
   if (JNIUtil::isJavaExceptionThrown())
@@ -871,12 +882,16 @@ CreateJ::CommitItem(svn_client_commit_item3_t *item)
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
+  jstring jmovedFromPath = JNIUtil::makeJString(item->moved_from_abspath);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
   jlong jcopyRevision = item->revision;
 
   // create the Java object
   jobject jitem = env->NewObject(clazz, midConstructor, jpath,
                                  jnodeKind, jstateFlags, jurl,
-                                 jcopyUrl, jcopyRevision);
+                                 jcopyUrl, jcopyRevision, jmovedFromPath);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 

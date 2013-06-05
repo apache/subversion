@@ -576,20 +576,16 @@ svn_hash__get_bool(apr_hash_t *hash, const char *key,
 
 /*** Optimized hash function ***/
 
-/* Optimized version of apr_hashfunc_default in APR 1.4.5 and earlier.
- * It assumes that the CPU has 32-bit multiplications with high throughput
- * of at least 1 operation every 3 cycles. Latency is not an issue. Another
- * optimization is a mildly unrolled main loop and breaking the dependency
- * chain within the loop.
- *
- * Note that most CPUs including Intel Atom, VIA Nano, ARM feature the
- * assumed pipelined multiplication circuitry. They can do one MUL every
- * or every other cycle.
- *
- * The performance is ultimately limited by the fact that most CPUs can
- * do only one LOAD and only one BRANCH operation per cycle. The best we
- * can do is to process one character per cycle - provided the processor
- * is wide enough to do 1 LOAD, COMPARE, BRANCH, MUL and ADD per cycle.
+/* apr_hashfunc_t optimized for the key that we use in SVN: paths and 
+ * property names.  Its primary goal is speed for keys of known length.
+ * 
+ * Since strings tend to spawn large value spaces (usually differ in many
+ * bits with differences spanning a larger section of the key), we can be
+ * quite sloppy extracting a hash value.  The more keys there are in a
+ * hash container, the more bits of the value returned by this function
+ * will be used.  For a small number of string keys, choosing bits from any 
+ * any fix location close to the tail of those keys would usually be good
+ * enough to prevent high collision rates.
  */
 static unsigned int
 hashfunc_compatible(const char *char_key, apr_ssize_t *klen)
@@ -600,37 +596,29 @@ hashfunc_compatible(const char *char_key, apr_ssize_t *klen)
     apr_ssize_t i;
 
     if (*klen == APR_HASH_KEY_STRING)
-      {
-        for (p = key; ; p+=4)
-          {
-            unsigned int new_hash = hash * 33 * 33 * 33 * 33;
-            if (!p[0]) break;
-            new_hash += p[0] * 33 * 33 * 33;
-            if (!p[1]) break;
-            new_hash += p[1] * 33 * 33;
-            if (!p[2]) break;
-            new_hash += p[2] * 33;
-            if (!p[3]) break;
-            hash = new_hash + p[3];
-          }
-        for (; *p; p++)
-            hash = hash * 33 + *p;
+      *klen = strlen(char_key);
 
-        *klen = p - key;
-      }
-    else
+#if SVN_UNALIGNED_ACCESS_IS_OK
+    for (p = key, i = *klen; i >= 4; i-=4, p+=4)
       {
-        for (p = key, i = *klen; i >= 4; i-=4, p+=4)
-          {
-            hash = hash * 33 * 33 * 33 * 33
-                 + p[0] * 33 * 33 * 33
-                 + p[1] * 33 * 33
-                 + p[2] * 33
-                 + p[3];
-          }
-        for (; i; i--, p++)
-            hash = hash * 33 + *p;
+        apr_uint32_t chunk = *(apr_uint32_t *)p;
+
+        /* the ">> 17" part gives upper bits in the chunk a chance to make
+           some impact as well */
+        hash = hash * 33 * 33 * 33 * 33 + chunk + (chunk >> 17);
       }
+#else
+    for (p = key, i = *klen; i >= 4; i-=4, p+=4)
+      {
+        hash = hash * 33 * 33 * 33 * 33
+              + p[0] * 33 * 33 * 33
+              + p[1] * 33 * 33
+              + p[2] * 33
+              + p[3];
+      }
+#endif
+    for (; i; i--, p++)
+        hash = hash * 33 + *p;
 
     return hash;
 }

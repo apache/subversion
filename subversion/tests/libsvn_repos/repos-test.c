@@ -1423,15 +1423,15 @@ in_repo_authz(const svn_test_opts_t *opts,
    * Create an authz file and put it in the repository.
    * Verify it can be read with an relative URL.
    * Verify it can be read with an absolute URL.
-   * Verify non-existant path does not error out when must_exist is FALSE. 
+   * Verify non-existant path does not error out when must_exist is FALSE.
    * Verify non-existant path does error out when must_exist is TRUE.
    * Verify that an http:// URL produces an error.
    * Verify that an svn:// URL produces an error.
    */
 
   /* What we'll put in the authz file, it's simple since we're not testing
-   * the parsing, just that we got what we expected. */ 
-  authz_contents = 
+   * the parsing, just that we got what we expected. */
+  authz_contents =
     ""                                                                       NL
     ""                                                                       NL
     "[/]"                                                                    NL
@@ -1451,7 +1451,7 @@ in_repo_authz(const svn_test_opts_t *opts,
                                       pool));
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
-  
+
   repos_root = svn_repos_path(repos, pool);
   SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_root, pool));
   authz_url = apr_pstrcat(pool, repos_url, "/authz", (char *)NULL);
@@ -1460,12 +1460,12 @@ in_repo_authz(const svn_test_opts_t *opts,
   /* absolute file URL. */
   SVN_ERR(svn_repos_authz_read2(&authz_cfg, authz_url, NULL, TRUE, pool));
   SVN_ERR(authz_check_access(authz_cfg, test_set, pool));
-  
-  /* Non-existant path in the repo with must_exist set to FALSE */ 
+
+  /* Non-existant path in the repo with must_exist set to FALSE */
   SVN_ERR(svn_repos_authz_read2(&authz_cfg, noent_authz_url, NULL,
                                 FALSE, pool));
 
-  /* Non-existant path in the repo with must_exist set to TRUE */ 
+  /* Non-existant path in the repo with must_exist set to TRUE */
   err = svn_repos_authz_read2(&authz_cfg, noent_authz_url, NULL, TRUE, pool);
   if (!err || err->apr_err != SVN_ERR_ILLEGAL_TARGET)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
@@ -1601,7 +1601,6 @@ in_repo_groups_authz(const svn_test_opts_t *opts,
 
 
   /* absolute file URLs. */
-  groups_url = apr_pstrcat(pool, repos_url, "/groups", (char *)NULL);
   SVN_ERR(svn_repos_authz_read2(&authz_cfg, authz_url, groups_url, TRUE, pool));
   SVN_ERR(authz_check_access(authz_cfg, test_set, pool));
 
@@ -2035,6 +2034,9 @@ test_path_authz(svn_repos_t *repos,
                                     path_action->copyfrom_path, youngest_rev,
                                     scratch_pool, &out_baton);
         break;
+
+      default:
+        SVN_TEST_ASSERT(FALSE);
     }
 
   /* Don't worry about closing batons, just abort the edit.  Since errors
@@ -3162,7 +3164,7 @@ test_delete_repos(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
-/* Related to issue 4340, "fs layer should reject filenames with trailing \n" */
+/* Related to issue 4340, "filenames containing \n corrupt FSFS repositories" */
 static svn_error_t *
 filename_with_control_chars(const svn_test_opts_t *opts,
                             apr_pool_t *pool)
@@ -3268,7 +3270,7 @@ test_repos_info(const svn_test_opts_t *opts,
   svn_version_t v1_0_0 = {1, 0, 0, ""};
   svn_version_t v1_4_0 = {1, 4, 0, ""};
   int repos_format;
-  
+
   opts2 = *opts;
 
   opts2.server_minor_version = 3;

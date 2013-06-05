@@ -114,7 +114,7 @@ struct file_baton
 
   /* The action associate with this node. */
   enum svn_node_action action;
-  
+
   /* Flags to trigger dumping props and text. */
   svn_boolean_t dump_text;
   svn_boolean_t dump_props;
@@ -202,7 +202,7 @@ make_dir_baton(const char *path,
   new_db->parent_dir_baton = pb;
   new_db->pool = pool;
   new_db->repos_relpath = repos_relpath;
-  new_db->copyfrom_path = copyfrom_path 
+  new_db->copyfrom_path = copyfrom_path
                             ? svn_relpath_canonicalize(copyfrom_path, pool)
                             : NULL;
   new_db->copyfrom_rev = copyfrom_rev;
@@ -556,7 +556,7 @@ dump_pending(struct dump_edit_baton *eb,
       /* Some pending properties to dump? */
       SVN_ERR(do_dump_props(NULL, eb->stream, db->props, db->deleted_props,
                             &(db->dump_props), db->pool, scratch_pool));
-      
+
       /* Some pending newlines to dump? */
       SVN_ERR(do_dump_newlines(eb, &(db->dump_newlines), scratch_pool));
     }
@@ -590,7 +590,7 @@ open_root(void *edit_baton,
 {
   struct dump_edit_baton *eb = edit_baton;
   struct dir_baton *new_db = NULL;
-  
+
   /* Clear the per-revision pool after each revision */
   svn_pool_clear(eb->pool);
 
@@ -778,7 +778,7 @@ close_directory(void *dir_baton,
      out (at some point in the past, prior to our handling other
      nodes), we might need to generate a second "change" record just
      to carry the information we've since learned about the
-     directory. */ 
+     directory. */
   if ((! this_pending) && (db->dump_props))
     {
       SVN_ERR(dump_node(db->eb, db->repos_relpath, db, NULL,
@@ -823,13 +823,13 @@ add_file(const char *path,
 
   /* Make the file baton. */
   fb = make_file_baton(path, pb, pool);
-  
+
   /* This might be a replacement -- is the path already deleted? */
   val = svn_hash_gets(pb->deleted_entries, path);
 
   /* Detect add-with-history. */
   if (ARE_VALID_COPY_ARGS(copyfrom_path, copyfrom_rev))
-    {    
+    {
       fb->copyfrom_path = svn_relpath_canonicalize(copyfrom_path, fb->pool);
       fb->copyfrom_rev = copyfrom_rev;
       fb->is_copy = TRUE;
@@ -883,7 +883,7 @@ change_dir_prop(void *parent_baton,
 {
   struct dir_baton *db = parent_baton;
   svn_boolean_t this_pending;
-  
+
   LDR_DBG(("change_dir_prop %p\n", parent_baton));
 
   /* This directory is not pending, but something else is, so handle
@@ -1000,7 +1000,7 @@ close_file(void *file_baton,
   struct dump_edit_baton *eb = fb->eb;
   apr_finfo_t *info = apr_pcalloc(pool, sizeof(apr_finfo_t));
   svn_stringbuf_t *propstring;
-  
+
   LDR_DBG(("close_file %p\n", file_baton));
 
   SVN_ERR(dump_pending(eb, pool));

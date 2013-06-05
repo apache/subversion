@@ -144,7 +144,9 @@ fi
 dnl Find Apache with a recent-enough magic module number
 SVN_FIND_APACHE(20020903)
 
-dnl Search for SQLite
+dnl Search for SQLite.  If you change SQLITE_URL from a .zip to
+dnl something else also update build/ac-macros/sqlite.m4 to reflect
+dnl the correct command to unpack the downloaded file.
 SQLITE_MINIMUM_VER="3.7.12"
 SQLITE_RECOMMENDED_VER="3.7.15.1"
 SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-$(printf %d%02d%02d%02d $(echo ${SQLITE_RECOMMENDED_VER} | sed -e 's/\./ /g')).zip"
@@ -1084,7 +1086,8 @@ if test "$enable_optimization" = "yes"; then
         SVN_CFLAGS_ADD_IFELSE([-O2],[],[
           SVN_CFLAGS_ADD_IFELSE([-O1],[],[
             SVN_CFLAGS_ADD_IFELSE([-O])])])])
-      SVN_CFLAGS_ADD_IFELSE([-flto -Wno-clobbered])
+      SVN_CFLAGS_ADD_IFELSE([-Wno-clobbered])
+      SVN_CFLAGS_ADD_IFELSE([-flto])
       SVN_CFLAGS_ADD_IFELSE([-fwhole-program])
     fi
   fi
@@ -1100,7 +1103,8 @@ if test "$enable_optimization" = "yes"; then
         SVN_CXXFLAGS_ADD_IFELSE([-O2],[],[
           SVN_CXXFLAGS_ADD_IFELSE([-O1],[],[
             SVN_CXXFLAGS_ADD_IFELSE([-O])])])])
-      SVN_CXXFLAGS_ADD_IFELSE([-flto -Wno-clobbered])
+      SVN_CXXFLAGS_ADD_IFELSE([-Wno-clobbered])
+      SVN_CXXFLAGS_ADD_IFELSE([-flto])
       SVN_CXXFLAGS_ADD_IFELSE([-fwhole-program])
     fi
   fi
@@ -1113,6 +1117,13 @@ elif test "$enable_optimization" = "no"; then
 #   # do nothing
 fi
 
+dnl Dump the current compiler options
+AC_MSG_NOTICE([C compiler flags: $CFLAGS])
+AC_MSG_NOTICE([    user-defined: $CUSERFLAGS])
+AC_MSG_NOTICE([ maintainer-mode: $CMAINTAINERFLAGS])
+AC_MSG_NOTICE([C++ compiler flags: $CXXFLAGS])
+AC_MSG_NOTICE([      user-defined: $CXXUSERFLAGS])
+AC_MSG_NOTICE([   maintainer-mode: $CXXMAINTAINERFLAGS])
 
 AC_ARG_ENABLE(full-version-match,
 AS_HELP_STRING([--disable-full-version-match],

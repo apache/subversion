@@ -1,8 +1,8 @@
 #!/bin/sh
 #
 # A pre-commit hook to detect changes that look like forgotten
-# conflict markers. If any additions starting with '>>>>>>>',
-# '=======' or '<<<<<<<' are found, the commit is aborted with a nice
+# conflict markers.  If any added line starting with '<<<<<<< .'
+# or '>>>>>>> .' is found, the commit is aborted with a nice
 # error message.
 #
 # $HeadURL$
@@ -23,7 +23,10 @@ fi
 
 # We scan through the transaction diff, looking for things that look
 # like conflict markers.  If we find one, we abort the commit.
-SUSPICIOUS=$($SVNLOOK diff -t "$TXN" "$REPOS" | grep -E '^\+(<{7} \.|={7}$|>{7} \.)' | wc -l)
+# (We only look for the conflict beginning and end markers, but not for
+# the separator line "=======" because that line occurs reasonably often
+# in normal text files.)
+SUSPICIOUS=$($SVNLOOK diff -t "$TXN" "$REPOS" | grep -E '^\+(<{7} \.|>{7} \.)' | wc -l)
 
 if [ $SUSPICIOUS -ne 0 ]; then
   echo "Some parts of your commit look suspiciously like merge" >&2

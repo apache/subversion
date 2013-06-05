@@ -378,7 +378,7 @@ init_client_context(svn_client_ctx_t **ctx_p,
      ### server will allow it, or at least try to limit all its
      ### auxiliary GETs/PROPFINDs to happening (well-ordered) on a
      ### single server connection.
-     ### 
+     ###
      ### See http://subversion.tigris.org/issues/show_bug.cgi?id=4116.
   */
   cfg_servers = svn_hash_gets(ctx->config, SVN_CONFIG_CATEGORY_SERVERS);
@@ -994,9 +994,6 @@ main(int argc, const char **argv)
                                "are mutually exclusive"));
       return svn_cmdline_handle_exit_error(err, pool, "svnrdump: ");
     }
-  else
-    non_interactive = !svn_cmdline__be_interactive(non_interactive,
-                                                   force_interactive);
 
   if (opt_baton->help)
     {
@@ -1080,14 +1077,14 @@ main(int argc, const char **argv)
         }
     }
 
-  if (subcommand && strcmp(subcommand->name, "--version") == 0)
+  if (strcmp(subcommand->name, "--version") == 0)
     {
       SVNRDUMP_ERR(version(argv[0], opt_baton->quiet, pool));
       svn_pool_destroy(pool);
       exit(EXIT_SUCCESS);
     }
 
-  if (subcommand && strcmp(subcommand->name, "help") == 0)
+  if (strcmp(subcommand->name, "help") == 0)
     {
       SVNRDUMP_ERR(help_cmd(os, opt_baton, pool));
       svn_pool_destroy(pool);
@@ -1127,6 +1124,22 @@ main(int argc, const char **argv)
         }
       opt_baton->url = svn_uri_canonicalize(repos_url, pool);
     }
+
+  if (strcmp(subcommand->name, "load") == 0)
+    {
+      /* 
+       * By default (no --*-interactive options given), the 'load' subcommand
+       * is interactive unless username and password were provided on the
+       * command line. This allows prompting for auth creds to work without
+       * requiring users to remember to use --force-interactive.
+       * See issue #3913, "svnrdump load is not working in interactive mode".
+       */
+      if (!non_interactive && !force_interactive)
+        force_interactive = (username == NULL || password == NULL);
+    }
+
+  non_interactive = !svn_cmdline__be_interactive(non_interactive,
+                                                 force_interactive);
 
   SVNRDUMP_ERR(init_client_context(&(opt_baton->ctx),
                                    non_interactive,

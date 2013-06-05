@@ -96,7 +96,7 @@ pop_stack(apr_array_header_t *db_stack,
 
   /* Close the most recent directory pushed to the stack. */
   item = APR_ARRAY_IDX(db_stack, db_stack->nelts - 1, dir_stack_t *);
-  apr_array_pop(db_stack);
+  (void) apr_array_pop(db_stack);
   SVN_ERR(editor->close_directory(item->dir_baton, item->pool));
   svn_pool_destroy(item->pool);
 

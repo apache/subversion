@@ -349,7 +349,7 @@ typedef struct fs_fs_data_t
 
   /* Whether packed revprop files shall be compressed. */
   svn_boolean_t compress_packed_revprops;
-  
+
   /* Whether directory nodes shall be deltified just like file nodes. */
   svn_boolean_t deltify_directories;
 

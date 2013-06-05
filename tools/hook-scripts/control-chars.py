@@ -53,7 +53,7 @@ def walk_tree(node, path, callback):
   "Walk NODE"
   if not node:
     return 0
- 
+
   ret_val = callback(node, path)
   if ret_val > 0:
     return ret_val
@@ -67,10 +67,10 @@ def walk_tree(node, path, callback):
     ret_val = walk_tree(node, full_path, callback)
     # If we ran into an error just return up the stack all the way
     if ret_val > 0:
-      return ret_val 
+      return ret_val
     node = node.sibling
 
-  return 0 
+  return 0
 
 def usage():
   sys.stderr.write("Invalid arguments, expects to be called like a pre-commit hook.")
@@ -81,10 +81,10 @@ def main(ignored_pool, argv):
     return 2
 
   repos_path = svn.core.svn_path_canonicalize(argv[1])
-  txn_name = argv[2] 
-  
+  txn_name = argv[2]
+
   if not repos_path or not txn_name:
-    usage() 
+    usage()
     return 2
 
   repos = svn.repos.svn_repos_open(repos_path)
@@ -92,7 +92,7 @@ def main(ignored_pool, argv):
   txn = svn.fs.svn_fs_open_txn(fs, txn_name)
   txn_root = svn.fs.svn_fs_txn_root(txn)
   base_rev = svn.fs.svn_fs_txn_base_revision(txn)
-  if base_rev is None or base_rev <= svn.core.SVN_INVALID_REVNUM: 
+  if base_rev is None or base_rev <= svn.core.SVN_INVALID_REVNUM:
     sys.stderr.write("Transaction '%s' is not based on a revision" % txn_name)
     return 2
   base_root = svn.fs.svn_fs_revision_root(fs, base_rev)

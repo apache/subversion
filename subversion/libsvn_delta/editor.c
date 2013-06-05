@@ -35,7 +35,7 @@
    introduce additional memory and runtime overhead, and should not be used
    in production builds.
 
-   ### Remove before release? 
+   ### Remove before release?
 
    ### Disabled for now.  If I call svn_editor_alter_directory(A) then
        svn_editor_add_file(A/f) the latter fails on SHOULD_ALLOW_ADD.

@@ -76,7 +76,7 @@ svn_cache__get(void **value_p,
      out with FOUND set to false. */
   *found = FALSE;
 #ifdef SVN_DEBUG
-  if (getenv("SVN_X_DOES_NOT_MARK_THE_SPOT"))
+  if (cache->pretend_empty)
     return SVN_NO_ERROR;
 #endif
 
@@ -119,7 +119,7 @@ svn_cache__iter(svn_boolean_t *completed,
                 apr_pool_t *scratch_pool)
 {
 #ifdef SVN_DEBUG
-  if (getenv("SVN_X_DOES_NOT_MARK_THE_SPOT"))
+  if (cache->pretend_empty)
     /* Pretend CACHE is empty. */
     return SVN_NO_ERROR;
 #endif
@@ -146,7 +146,7 @@ svn_cache__get_partial(void **value,
   out with FOUND set to false. */
   *found = FALSE;
 #ifdef SVN_DEBUG
-  if (getenv("SVN_X_DOES_NOT_MARK_THE_SPOT"))
+  if (cache->pretend_empty)
     return SVN_NO_ERROR;
 #endif
 

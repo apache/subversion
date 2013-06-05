@@ -38,6 +38,11 @@
 #include "private/svn_skel.h"
 #include "private/svn_token.h"
 
+#ifdef SVN_UNICODE_NORMALIZATION_FIXES
+#include "private/svn_utf_private.h"
+#include "private/svn_string_private.h"
+#endif /* SVN_UNICODE_NORMALIZATION_FIXES */
+
 #ifdef SQLITE3_DEBUG
 #include "private/svn_debug.h"
 #endif
@@ -59,6 +64,13 @@ extern int (*const svn_sqlite3__api_config)(int, ...);
 #if !SQLITE_VERSION_AT_LEAST(3,7,12)
 #error SQLite is too old -- version 3.7.12 is the minimum required version
 #endif
+
+#ifdef SVN_UNICODE_NORMALIZATION_FIXES
+/* Limit the length of a GLOB or LIKE pattern. */
+#ifndef SQLITE_MAX_LIKE_PATTERN_LENGTH
+# define SQLITE_MAX_LIKE_PATTERN_LENGTH 50000
+#endif
+#endif /* SVN_UNICODE_NORMALIZATION_FIXES */
 
 const char *
 svn_sqlite__compiled_version(void)
@@ -104,6 +116,13 @@ struct svn_sqlite__db_t
   int nbr_statements;
   svn_sqlite__stmt_t **prepared_stmts;
   apr_pool_t *state_pool;
+
+#ifdef SVN_UNICODE_NORMALIZATION_FIXES
+  /* Buffers for SQLite extensoins. */
+  svn_membuf_t sqlext_buf1;
+  svn_membuf_t sqlext_buf2;
+  svn_membuf_t sqlext_buf3;
+#endif /* SVN_UNICODE_NORMALIZATION_FIXES */
 };
 
 struct svn_sqlite__stmt_t
@@ -873,6 +892,99 @@ close_apr(void *data)
   return APR_SUCCESS;
 }
 
+#ifdef SVN_UNICODE_NORMALIZATION_FIXES
+/* Unicode normalizing collation for WC paths */
+static int
+collate_ucs_nfd(void *baton,
+                int len1, const void *key1,
+                int len2, const void *key2)
+{
+  svn_sqlite__db_t *db = baton;
+  int result;
+
+  if (svn_utf__normcmp(key1, len1, key2, len2,
+                       &db->sqlext_buf1, &db->sqlext_buf2, &result))
+    {
+      /* There is really nothing we can do here if an error occurs
+         during Unicode normalizetion, and attempting to recover could
+         result in the wc.db index being corrupted. Presumably this
+         can only happen if the index already contains invalid UTF-8
+         strings, which should never happen in any case ... */
+      SVN_ERR_MALFUNCTION_NO_RETURN();
+    }
+
+  return result;
+}
+
+static void
+glob_like_ucs_nfd_common(sqlite3_context *context,
+                         int argc, sqlite3_value **argv,
+                         svn_boolean_t sql_like)
+{
+  svn_sqlite__db_t *const db = sqlite3_user_data(context);
+
+  const char *const pattern = (void*)sqlite3_value_text(argv[0]);
+  const apr_size_t pattern_len = sqlite3_value_bytes(argv[0]);
+  const char *const string = (void*)sqlite3_value_text(argv[1]);
+  const apr_size_t string_len = sqlite3_value_bytes(argv[1]);
+
+  const char *escape = NULL;
+  apr_size_t escape_len = 0;
+
+  svn_boolean_t match;
+  svn_error_t *err;
+
+  if (pattern_len > SQLITE_MAX_LIKE_PATTERN_LENGTH)
+    {
+      sqlite3_result_error(context, "LIKE or GLOB pattern too complex", -1);
+      return;
+    }
+
+  if (argc == 3 && sql_like)
+    {
+      escape = (void*)sqlite3_value_text(argv[2]);
+      escape_len = sqlite3_value_bytes(argv[2]);
+    }
+
+  if (pattern && string)
+    {
+      err = svn_utf__glob(pattern, pattern_len, string, string_len,
+                          escape, escape_len, sql_like,
+                          &db->sqlext_buf1, &db->sqlext_buf2, &db->sqlext_buf3,
+                          &match);
+
+      if (err)
+        {
+          const char *errmsg;
+          svn_membuf__ensure(&db->sqlext_buf1, 512);
+          errmsg = svn_err_best_message(err,
+                                        db->sqlext_buf1.data,
+                                        db->sqlext_buf1.size - 1);
+          svn_error_clear(err);
+          sqlite3_result_error(context, errmsg, -1);
+          return;
+        }
+
+      sqlite3_result_int(context, match);
+    }
+}
+
+/* Unicode normalizing implementation of GLOB */
+static void
+glob_ucs_nfd(sqlite3_context *context,
+             int argc, sqlite3_value **argv)
+{
+  glob_like_ucs_nfd_common(context, argc, argv, FALSE);
+}
+
+/* Unicode normalizing implementation of LIKE */
+static void
+like_ucs_nfd(sqlite3_context *context,
+             int argc, sqlite3_value **argv)
+{
+  glob_like_ucs_nfd_common(context, argc, argv, TRUE);
+}
+#endif /* SVN_UNICODE_NORMALIZATION_FIXES */
 
 svn_error_t *
 svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
@@ -886,6 +998,28 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   *db = apr_pcalloc(result_pool, sizeof(**db));
 
   SVN_ERR(internal_open(&(*db)->db3, path, mode, scratch_pool));
+
+#ifdef SVN_UNICODE_NORMALIZATION_FIXES
+  /* Create extension buffers with space for 200 UCS-4 characters. */
+  svn_membuf__create(&(*db)->sqlext_buf1, 800, result_pool);
+  svn_membuf__create(&(*db)->sqlext_buf2, 800, result_pool);
+  svn_membuf__create(&(*db)->sqlext_buf3, 800, result_pool);
+
+  /* Register collation and LIKE and GLOB operator replacements. */
+  SQLITE_ERR(sqlite3_create_collation((*db)->db3,
+                                      "svn-ucs-nfd", SQLITE_UTF8,
+                                      *db, collate_ucs_nfd),
+             *db);
+  SQLITE_ERR(sqlite3_create_function((*db)->db3, "glob", 2, SQLITE_UTF8,
+                                     *db, glob_ucs_nfd, NULL, NULL),
+             *db);
+  SQLITE_ERR(sqlite3_create_function((*db)->db3, "like", 2, SQLITE_UTF8,
+                                     *db, like_ucs_nfd, NULL, NULL),
+             *db);
+  SQLITE_ERR(sqlite3_create_function((*db)->db3, "like", 3, SQLITE_UTF8,
+                                     *db, like_ucs_nfd, NULL, NULL),
+             *db);
+#endif /* SVN_UNICODE_NORMALIZATION_FIXES */
 
 #ifdef SQLITE3_DEBUG
   sqlite3_trace((*db)->db3, sqlite_tracer, (*db)->db3);
