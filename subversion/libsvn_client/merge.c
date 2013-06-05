@@ -12307,6 +12307,12 @@ find_automatic_merge(svn_client__pathrev_t **base_p,
   SVN_ERR(svn_client__get_youngest_common_ancestor(
             &s_t->yca, s_t->source, &s_t->target->loc, s_t->source_ra_session,
             ctx, result_pool, result_pool));
+  if (! s_t->yca)
+    return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
+                             _("'%s@%ld' must be ancestrally related to "
+                               "'%s@%ld'"),
+                             s_t->source->url, s_t->source->rev,
+                             s_t->target->loc.url, s_t->target->loc.rev);
 
   /* Find the latest revision of A synced to B and the latest
    * revision of B synced to A.
@@ -12415,14 +12421,15 @@ client_find_automatic_merge(automatic_merge_t **merge_p,
   source_and_target_t *s_t = apr_palloc(result_pool, sizeof(*s_t));
   automatic_merge_t *merge = apr_palloc(result_pool, sizeof(*merge));
 
-  /* "Open" the target WC.  We're not going to check the target WC for
-   * mixed-rev, local mods or switched subtrees yet.  After we find out
-   * what kind of merge is required, then if a reintegrate-like merge is
-   * required we'll do the stricter checks, in do_automatic_merge_locked(). */
+  /* "Open" the target WC.  Check the target WC for mixed-rev, local mods and
+   * switched subtrees yet to faster exit and notify user before contacting
+   * with server.  After we find out what kind of merge is required, then if a
+   * reintegrate-like merge is required we'll do the stricter checks, in
+   * do_automatic_merge_locked(). */
   SVN_ERR(open_target_wc(&s_t->target, target_abspath,
-                         TRUE /*allow_mixed_rev*/,
-                         TRUE /*allow_local_mods*/,
-                         TRUE /*allow_switched_subtrees*/,
+                         allow_mixed_rev,
+                         allow_local_mods,
+                         allow_switched_subtrees,
                          ctx, result_pool, scratch_pool));
 
   /* Open RA sessions to the source and target trees. */

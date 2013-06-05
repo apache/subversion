@@ -486,16 +486,16 @@ write_revnum_file(svn_fs_t *fs,
                   svn_revnum_t revnum,
                   apr_pool_t *scratch_pool)
 {
-  const char *final_path, *tmp_path;
-  svn_stream_t *tmp_stream;
+  const char *final_path;
+  char buf[SVN_INT64_BUFFER_SIZE];
+  apr_size_t len = svn__i64toa(buf, revnum);
+  buf[len] = '\n';
 
   final_path = path_min_unpacked_rev(fs, scratch_pool);
-  SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_path, fs->path,
-                                 svn_io_file_del_none,
-                                 scratch_pool, scratch_pool));
-  SVN_ERR(svn_stream_printf(tmp_stream, scratch_pool, "%ld\n", revnum));
-  SVN_ERR(svn_stream_close(tmp_stream));
-  SVN_ERR(move_into_place(tmp_path, final_path, final_path, scratch_pool));
+
+  SVN_ERR(svn_io_write_atomic(final_path, buf, len + 1,
+                              final_path /* copy_perms */, scratch_pool));
+
   return SVN_NO_ERROR;
 }
 

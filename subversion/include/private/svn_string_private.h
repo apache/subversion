@@ -142,7 +142,7 @@ svn__strtoff(apr_off_t *offset, const char *buf, char **end, int base);
  * want to test for a more specific value range anyway.
  */
 unsigned long
-svn__strtoul(const char *buffer, char **end);
+svn__strtoul(const char *buffer, const char **end);
 
 /** Number of chars needed to represent signed (19 places + sign + NUL) or
  * unsigned (20 places + NUL) integers as strings.

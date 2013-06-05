@@ -1039,7 +1039,7 @@ svn__strtoff(apr_off_t *offset, const char *buf, char **end, int base)
 }
 
 unsigned long
-svn__strtoul(const char *buffer, char **end)
+svn__strtoul(const char* buffer, const char** end)
 {
   unsigned long result = 0;
 
@@ -1063,7 +1063,7 @@ svn__strtoul(const char *buffer, char **end)
       ++buffer;
     }
 
-  *end = (char *)buffer;
+  *end = buffer;
   return result;
 }
 

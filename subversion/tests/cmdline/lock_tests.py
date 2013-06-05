@@ -1815,6 +1815,31 @@ def lock_unlock_deleted(sbox):
   expected_status.tweak('A/mu', writelocked=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+@Issue(4369)
+def commit_stolen_lock(sbox):
+  "commit with a stolen lock"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_append('A/mu', 'zig-zag')
+  sbox.simple_lock('A/mu')
+
+  expected_output = '\'mu\' locked by user \'jrandom\'.'
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'lock', '--force',
+                                     sbox.repo_url + '/A/mu')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='M ', writelocked='T')
+  err_re = "(.*E160037: Cannot verify lock on path '/A/mu')|" + \
+           "(.*E160038: '/.*/A/mu': no lock token available)"
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        [],
+                                        expected_status,
+                                        err_re,
+                                        wc_dir)
+
 ########################################################################
 # Run the tests
 
@@ -1866,6 +1891,7 @@ test_list = [ None,
               lock_multi_wc,
               locks_stick_over_switch,
               lock_unlock_deleted,
+              commit_stolen_lock,
             ]
 
 if __name__ == '__main__':

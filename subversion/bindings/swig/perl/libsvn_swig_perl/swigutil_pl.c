@@ -29,6 +29,10 @@
 #include <perl.h>
 #include <XSUB.h>
 
+/* Perl defines a _ macro, but SVN uses it for translations.
+ * So undefine _ after including the Perl headers. */
+#undef _
+
 #include <stdarg.h>
 #ifdef WIN32
 #include <io.h>

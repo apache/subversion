@@ -401,10 +401,13 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
                        svn_boolean_t must_exist, apr_pool_t *result_pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
+  apr_file_t *apr_file;
   svn_stream_t *stream;
   apr_pool_t *scratch_pool = svn_pool_create(result_pool);
 
-  err = svn_stream_open_readonly(&stream, file, scratch_pool, scratch_pool);
+  /* Use unbuffered IO since we use our own buffering. */
+  err = svn_io_file_open(&apr_file, file, APR_READ, APR_OS_DEFAULT,
+                         scratch_pool);
 
   if (! must_exist && err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
@@ -415,6 +418,7 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
   else
     SVN_ERR(err);
 
+  stream = svn_stream_from_aprfile2(apr_file, FALSE, scratch_pool);
   err = svn_config__parse_stream(cfg, stream, result_pool, scratch_pool);
 
   if (err != SVN_NO_ERROR)

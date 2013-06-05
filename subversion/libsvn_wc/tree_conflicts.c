@@ -506,6 +506,8 @@ svn_wc__get_tree_conflict(const svn_wc_conflict_description2_t **tree_conflict,
           return SVN_NO_ERROR;
         }
     }
+
+  *tree_conflict = NULL;
   return SVN_NO_ERROR;
 }
 
