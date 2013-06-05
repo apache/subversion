@@ -337,6 +337,11 @@ class WinGeneratorBase(GeneratorBase):
     else:
       print("%s not found; skipping SWIG file generation..." % self.swig_exe)
 
+  def errno_filter(self, codes):
+    "Callback for gen_base.write_errno_table()."
+    # Filter out apr_errno.h SOC* codes, which alias the windows API names.
+    return set(filter(lambda code: not (10000 <= code <= 10100), codes))
+
   def find_rootpath(self):
     "Gets the root path as understand by the project system"
     return os.path.relpath('.', self.projfilesdir) + "\\"
@@ -1443,7 +1448,7 @@ class WinGeneratorBase(GeneratorBase):
   def _find_serf(self):
     "Check if serf and its dependencies are available"
 
-    minimal_serf_version = (1, 2, 0)
+    minimal_serf_version = (1, 2, 1)
     self.serf_lib = None
     if self.serf_path and os.path.exists(self.serf_path):
       if self.openssl_path and os.path.exists(self.openssl_path):

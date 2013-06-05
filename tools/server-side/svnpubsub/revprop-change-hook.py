@@ -30,6 +30,7 @@ except ImportError:
 
 import urllib2
 
+
 import svnpubsub.util
 
 def svnlook(cmd, **kwargs):
@@ -40,53 +41,50 @@ def svnlook_uuid(repo):
     cmd = ["uuid", "--", repo]
     return svnlook(cmd).strip()
 
-def svnlook_info(repo, revision):
-    cmd = ["info", "-r", revision, "--", repo]
-    data = svnlook(cmd, universal_newlines=True).split("\n")
+def svnlook_revprop(repo, revision, propname):
+    cmd = ["propget", "-r", revision, "--revprop", "--", repo, propname]
+    data = svnlook(cmd)
     #print data
-    return {'author': data[0].strip(),
-            'date': data[1].strip(),
-            'log': "\n".join(data[3:]).strip()}
-
-def svnlook_changed(repo, revision):
-    cmd = ["changed", "-r", revision, "--", repo]
-    lines = svnlook(cmd, universal_newlines=True).split("\n")
-    changed = {}
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-        (flags, filename) = (line[0:3], line[4:])
-        changed[filename] = {'flags': flags}
-    return changed
+    return data
 
 def do_put(body):
     opener = urllib2.build_opener(urllib2.HTTPHandler)
-    request = urllib2.Request("http://%s:%d/commits" %(HOST, PORT), data=body)
+    request = urllib2.Request("http://%s:%d/metadata" %(HOST, PORT), data=body)
     request.add_header('Content-Type', 'application/json')
     request.get_method = lambda: 'PUT'
     url = opener.open(request)
 
 
-def main(repo, revision):
+def main(repo, revision, author, propname, action):
     revision = revision.lstrip('r')
-    i = svnlook_info(repo, revision)
+    if action in ('A', 'M'):
+        new_value = svnlook_revprop(repo, revision, propname)
+    elif action == 'D':
+        new_value = None
+    else:
+        sys.stderr.write('Unknown revprop change action "%s"\n' % action)
+        sys.exit(1)
+    if action in ('D', 'M'):
+        old_value = sys.stdin.read()
+    else:
+        old_value = None
     data = {'type': 'svn',
             'format': 1,
             'id': int(revision),
-            'changed': {},
             'repository': svnlook_uuid(repo),
-            'committer': i['author'],
-            'log': i['log'],
-            'date': i['date'],
+            'revprop': {
+                'name': propname,
+                'committer': author,
+                'value': new_value,
+                'old_value': old_value,
+                }
             }
-    data['changed'].update(svnlook_changed(repo, revision))
     body = json.dumps(data)
     do_put(body)
 
 if __name__ == "__main__":
-    if len(sys.argv) not in (3, 4):
+    if len(sys.argv) != 6:
         sys.stderr.write("invalid args\n")
         sys.exit(1)
 
-    main(*sys.argv[1:3])
+    main(*sys.argv[1:6])

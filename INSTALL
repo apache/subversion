@@ -306,7 +306,7 @@ I.    INTRODUCTION
       newer. The autogen.sh script knows about that.
 
 
-      5.  Serf library 1.2 or newer (http://code.google.com/p/serf/) (OPTIONAL)
+      5.  Serf library 1.2.1 or newer (OPTIONAL)
 
       If you want your client to be able to speak to an Apache
       server (via a http:// or https:// URL), you must link against
@@ -319,6 +319,9 @@ I.    INTRODUCTION
                --with-serf=/path/to/serf/install
 
       instead.
+
+      Serf can be obtained via your system's package distribution
+      system or directly from http://code.google.com/p/serf/.
 
       For more information on serf and Subversion's ra_serf, see the file
       subversion/libsvn_ra_serf/README.
