@@ -804,8 +804,18 @@ maybe_set_lock_token_header(serf_bucket_t *headers,
       if (token)
         {
           const char *token_header;
+          const char *token_uri;
+          apr_uri_t uri = commit_ctx->session->session_url;
 
-          token_header = apr_pstrcat(pool, "(<", token, ">)", (char *)NULL);
+          /* Supplying the optional URI affects apache response when
+             the lock is broken, see issue 4369.  When present any URI
+             must be absolute (RFC 2518 9.4). */
+          uri.path = (char *)svn_path_url_add_component2(uri.path, relpath,
+                                                         pool);
+          token_uri = apr_uri_unparse(pool, &uri, 0);
+
+          token_header = apr_pstrcat(pool, "<", token_uri, "> (<", token, ">)",
+                                     (char *)NULL);
           serf_bucket_headers_set(headers, "If", token_header);
         }
     }

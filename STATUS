@@ -63,14 +63,6 @@ Approved changes:
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 
- * r1488425
-   Fix issue 4369, poor serf error message for commit with stolen locks.
-   Justification:
-     Confusing to user and a regression from 1.7/neon.
-   Votes:
-     +1: philip, rhuijben, ivan
-     +0: danielsh
-
  * r1488183
    Check target WC for mixed revisions, local modifications and switched
    subtrees before contacting server for merge calculations.
