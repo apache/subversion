@@ -31,6 +31,7 @@
 #include "svn_private_config.h"
 #include "cache.h"
 #include "svn_string.h"
+#include "svn_sorts.h"  /* get the MIN macro */
 #include "private/svn_dep_compat.h"
 #include "private/svn_mutex.h"
 #include "private/svn_pseudo_md5.h"
@@ -2423,12 +2424,16 @@ svn_membuffer_cache_is_cachable(void *cache_void, apr_size_t size)
   return size <= cache->membuffer->max_entry_size;
 }
 
-/* Add statistics of SEGMENT to INFO.
+/* Add statistics of SEGMENT to INFO.  If INCLUDE_HISTOGRAM is TRUE,
+ * accumulate index bucket fill levels in INFO->HISTOGRAM.
  */
 static svn_error_t *
 svn_membuffer_get_segment_info(svn_membuffer_t *segment,
-                               svn_cache__info_t *info)
+                               svn_cache__info_t *info,
+                               svn_boolean_t include_histogram)
 {
+  apr_size_t i;
+
   info->data_size += segment->l1.size + segment->l2.size;
   info->used_size += segment->data_used;
   info->total_size += segment->l1.size + segment->l2.size +
@@ -2436,6 +2441,15 @@ svn_membuffer_get_segment_info(svn_membuffer_t *segment,
 
   info->used_entries += segment->used_entries;
   info->total_entries += segment->group_count * GROUP_SIZE;
+
+  if (include_histogram)
+    for (i = 0; i < segment->group_count; ++i)
+      {
+        apr_size_t use
+          = MIN(segment->directory[i].used,
+                sizeof(info->histogram) / sizeof(info->histogram[0]) - 1);
+        info->histogram[use]++;
+      }
 
   return SVN_NO_ERROR;
 }
@@ -2462,7 +2476,7 @@ svn_membuffer_cache_get_info(void *cache_void,
     {
       svn_membuffer_t *segment = cache->membuffer + i;
       WITH_READ_LOCK(segment,
-                     svn_membuffer_get_segment_info(segment, info));
+                     svn_membuffer_get_segment_info(segment, info, FALSE));
     }
 
   return SVN_NO_ERROR;
@@ -2690,3 +2704,37 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+svn_membuffer_get_global_segment_info(svn_membuffer_t *segment,
+                                      svn_cache__info_t *info)
+{
+  info->gets += segment->total_reads;
+  info->sets += segment->total_writes;
+  info->hits += segment->total_hits;
+
+  WITH_READ_LOCK(segment,
+                  svn_membuffer_get_segment_info(segment, info, TRUE));
+
+  return SVN_NO_ERROR;
+}
+
+svn_cache__info_t *
+svn_cache__membuffer_get_global_info(apr_pool_t *pool)
+{
+  apr_uint32_t i;
+
+  svn_membuffer_t *membuffer = svn_cache__get_global_membuffer_cache();
+  svn_cache__info_t *info = apr_pcalloc(pool, sizeof(*info));
+
+  /* cache front-end specific data */
+
+  info->id = "membuffer globals";
+
+  /* collect info from shared cache back-end */
+
+  for (i = 0; i < membuffer->segment_count; ++i)
+    svn_error_clear(svn_membuffer_get_global_segment_info(membuffer + i,
+                                                          info));
+
+  return info;
+}
