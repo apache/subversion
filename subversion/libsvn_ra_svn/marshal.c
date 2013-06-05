@@ -1025,7 +1025,6 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   char c = first_char;
   apr_uint64_t val;
-  svn_stringbuf_t *str;
   svn_ra_svn_item_t *listitem;
 
   if (++level >= ITEM_NESTING_LIMIT)
