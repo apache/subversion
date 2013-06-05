@@ -67,7 +67,7 @@ svn_revnum_parse(svn_revnum_t *rev,
       if (*str > '2' || (apr_uint32_t)result > APR_INT32_MAX)
         return svn_error_createf
                   (SVN_ERR_REVNUM_PARSE_FAILURE, NULL,
-                  _("Revision number too large or not normalized '%s'"), str);
+                  _("Revision number too large '%s'"), str);
     }
   
   if (endptr)
