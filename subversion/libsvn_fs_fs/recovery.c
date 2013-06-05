@@ -192,7 +192,7 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
 
   baton.stream = svn_stream_from_aprfile2(rev_file, TRUE, pool);
   SVN_ERR(svn_fs_fs__read_rep_header(&header, baton.stream, pool));
-  if (header->is_delta)
+  if (header->type != svn_fs_fs__rep_plain)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Recovery encountered a deltified directory "
                               "representation"));

@@ -122,9 +122,9 @@ dgb__log_access(svn_fs_t *fs,
       svn_fs_fs__rep_header_t *header = item;
       if (header == NULL)
         description = "  (txdelta window)";
-      else if (!header->is_delta)
+      else if (header->type == svn_fs_fs__rep_plain)
         description = "  PLAIN";
-      else if (header->is_delta_vs_empty)
+      else if (header->type == svn_fs_fs__rep_self_delta)
         description = "  DELTA";
       else
         description = apr_psprintf(scratch_pool,
@@ -757,7 +757,7 @@ create_rep_state_body(rep_state_t **rep_state,
   *rep_state = rs;
   *rep_header = rh;
 
-  if (!rh->is_delta)
+  if (rh->type == svn_fs_fs__rep_plain)
     /* This is a plaintext, so just return the current rep_state. */
     return SVN_NO_ERROR;
 
@@ -865,7 +865,7 @@ svn_fs_fs__rep_chain_length(int *chain_length,
       base_rep.item_index = header->base_item_index;
       base_rep.size = header->base_length;
       svn_fs_fs__id_txn_reset(&base_rep.txn_id);
-      is_delta = header->is_delta;
+      is_delta = header->type == svn_fs_fs__rep_delta;
 
       ++count;
       if (count % 16 == 0)
@@ -1121,7 +1121,7 @@ build_rep_list(apr_array_header_t **list,
      Please note that for all non-empty deltas have
      a 4-byte header _plus_ some data. */
   if (*expanded_size == 0)
-    if (! rep_header->is_delta || first_rep->size != 4)
+    if (rep_header->type == svn_fs_fs__rep_plain || first_rep->size != 4)
       *expanded_size = first_rep->size;
 
   while (1)
@@ -1145,7 +1145,7 @@ build_rep_list(apr_array_header_t **list,
           return SVN_NO_ERROR;
         }
 
-      if (!rep_header->is_delta)
+      if (rep_header->type == svn_fs_fs__rep_plain)
         {
           /* This is a plaintext, so just return the current rep_state. */
           *src_state = rs;
@@ -1154,7 +1154,7 @@ build_rep_list(apr_array_header_t **list,
 
       /* Push this rep onto the list.  If it's self-compressed, we're done. */
       APR_ARRAY_PUSH(*list, rep_state_t *) = rs;
-      if (rep_header->is_delta_vs_empty)
+      if (rep_header->type == svn_fs_fs__rep_self_delta)
         {
           *src_state = NULL;
           return SVN_NO_ERROR;
@@ -1810,10 +1810,10 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
       SVN_ERR(create_rep_state(&rep_state, &rep_header, NULL,
                                target->data_rep, fs, pool));
       /* If that matches source, then use this delta as is. */
-      if (rep_header->is_delta
-          && (rep_header->is_delta_vs_empty
-              || (rep_header->base_revision == source->data_rep->revision
-                  && rep_header->base_item_index == source->data_rep->item_index)))
+      if (rep_header->type == svn_fs_fs__rep_self_delta
+          || (rep_header->type == svn_fs_fs__rep_delta
+              && rep_header->base_revision == source->data_rep->revision
+              && rep_header->base_item_index == source->data_rep->item_index))
         {
           /* Create the delta read baton. */
           struct delta_read_baton *drb = apr_pcalloc(pool, sizeof(*drb));
@@ -2264,8 +2264,10 @@ block_read_windows(svn_fs_fs__rep_header_t *rep_header,
   svn_boolean_t is_cached = FALSE;
   window_cache_key_t key = { 0 };
 
-  if (   (rep_header->is_delta && !ffd->txdelta_window_cache)
-      || (!rep_header->is_delta && !ffd->combined_window_cache))
+  if (   (rep_header->type != svn_fs_fs__rep_plain
+          && !ffd->txdelta_window_cache)
+      || (rep_header->type == svn_fs_fs__rep_plain
+          && !ffd->combined_window_cache))
     return SVN_NO_ERROR;
 
   /* we don't support containers, yet */
@@ -2282,7 +2284,7 @@ block_read_windows(svn_fs_fs__rep_header_t *rep_header,
   rs.item_index = entry->items[0].number;
   rs.header_size = rep_header->header_size;
   rs.start = entry->offset + rs.header_size;
-  rs.current = rep_header->is_delta ? 4 : 0;
+  rs.current = rep_header->type == svn_fs_fs__rep_plain ? 0 : 4;
   rs.size = entry->size - rep_header->header_size - 7;
   rs.ver = 1;
   rs.chunk_index = 0;
@@ -2292,7 +2294,7 @@ block_read_windows(svn_fs_fs__rep_header_t *rep_header,
   /* RS->FILE may be shared between RS instances -> make sure we point
    * to the right data. */
   offset = rs.start + rs.current;
-  if (!rep_header->is_delta)
+  if (rep_header->type == svn_fs_fs__rep_plain)
     {
       svn_stringbuf_t *plaintext;
       

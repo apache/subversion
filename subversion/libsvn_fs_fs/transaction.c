@@ -1911,10 +1911,11 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
       header.base_revision = base_rep->revision;
       header.base_item_index = base_rep->item_index;
       header.base_length = base_rep->size;
+      header.type = svn_fs_fs__rep_delta;
     }
   else
     {
-      header.is_delta_vs_empty = TRUE;
+      header.type = svn_fs_fs__rep_self_delta;
     }
   SVN_ERR(svn_fs_fs__write_rep_header(&header, b->rep_stream, b->pool));
 
@@ -2453,10 +2454,11 @@ write_hash_delta_rep(representation_t *rep,
       header.base_revision = base_rep->revision;
       header.base_item_index = base_rep->item_index;
       header.base_length = base_rep->size;
+      header.type = svn_fs_fs__rep_delta;
     }
   else
     {
-      header.is_delta_vs_empty = TRUE;
+      header.type = svn_fs_fs__rep_self_delta;
     }
 
   file_stream = svn_stream_from_aprfile2(file, TRUE, pool);

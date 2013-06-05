@@ -514,8 +514,7 @@ copy_rep_to_temp(pack_context_t *context,
   svn_stream_close(stream);
 
   /* if the representation is a delta against some other rep, link the two */
-  if (   rep_header->is_delta
-      && !rep_header->is_delta_vs_empty
+  if (   rep_header->type == svn_fs_fs__rep_delta
       && rep_header->base_revision >= context->start_rev)
     {
       int idx = get_item_array_index(context, rep_header->base_revision,

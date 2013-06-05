@@ -640,18 +640,19 @@ svn_fs_fs__read_rep_header(svn_fs_fs__rep_header_t **header,
   *header = apr_pcalloc(pool, sizeof(**header));
   (*header)->header_size = buffer->len + 1;
   if (strcmp(buffer->data, REP_PLAIN) == 0)
-    return SVN_NO_ERROR;
+    {
+      (*header)->type = svn_fs_fs__rep_plain;
+      return SVN_NO_ERROR;
+    }
 
   if (strcmp(buffer->data, REP_DELTA) == 0)
     {
       /* This is a delta against the empty stream. */
-      (*header)->is_delta = TRUE;
-      (*header)->is_delta_vs_empty = TRUE;
+      (*header)->type = svn_fs_fs__rep_self_delta;
       return SVN_NO_ERROR;
     }
 
-  (*header)->is_delta = TRUE;
-  (*header)->is_delta_vs_empty = FALSE;
+  (*header)->type = svn_fs_fs__rep_delta;
 
   /* We have hopefully a DELTA vs. a non-empty base revision. */
   last_str = buffer->data;
@@ -690,20 +691,21 @@ svn_fs_fs__write_rep_header(svn_fs_fs__rep_header_t *header,
 {
   const char *text;
   
-  if (!header->is_delta)
+  switch (header->type)
     {
-      text = REP_PLAIN "\n";
-    }
-  else if (header->is_delta_vs_empty)
-    {
-      text = REP_DELTA "\n";
-    }
-  else
-    {
-      text = apr_psprintf(pool, REP_DELTA " %ld %" APR_OFF_T_FMT " %"
-                          SVN_FILESIZE_T_FMT "\n",
-                          header->base_revision, header->base_item_index,
-                          header->base_length);
+      case svn_fs_fs__rep_plain:
+        text = REP_PLAIN "\n";
+        break;
+
+      case svn_fs_fs__rep_self_delta:
+        text = REP_DELTA "\n";
+        break;
+
+      default:
+        text = apr_psprintf(pool, REP_DELTA " %ld %" APR_OFF_T_FMT " %"
+                            SVN_FILESIZE_T_FMT "\n",
+                            header->base_revision, header->base_item_index,
+                            header->base_length);
     }
 
   return svn_error_trace(svn_stream_puts(stream, text));

@@ -88,17 +88,25 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
                          svn_boolean_t include_mergeinfo,
                          apr_pool_t *pool);
 
+/* This type enumerates all forms of representations that we support. */
+typedef enum svn_fs_fs__rep_type_t
+{
+  /* this is a PLAIN representation */
+  svn_fs_fs__rep_plain,
+
+  /* this is a DELTA representation with no base representation */
+  svn_fs_fs__rep_self_delta,
+
+  /* this is a DELTA representation against some base representation */
+  svn_fs_fs__rep_delta
+} svn_fs_fs__rep_type_t;
+
 /* This structure is used to hold the information stored in a representation
  * header. */
 typedef struct svn_fs_fs__rep_header_t
 {
-  /* if TRUE,  this is a DELTA rep, PLAIN otherwise */
-  svn_boolean_t is_delta;
-
-  /* if IS_DELTA is TRUE, this flag indicates that there is no base rep,
-   * i.e. this rep is simply self-compressed.  Ignored for PLAIN reps
-   * but should be FALSE in that case. */
-  svn_boolean_t is_delta_vs_empty;
+  /* type of the representation, i.e. whether it is PLAIN, self-DELTA etc. */
+  svn_fs_fs__rep_type_t type;
 
   /* if this rep is a delta against some other rep, that base rep can
    * be found in this revision.  Should be 0 if there is no base rep. */
