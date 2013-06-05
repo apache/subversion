@@ -659,7 +659,7 @@ def reintegrate_fails_if_no_root_access(sbox):
                                            ' U   ' + A_COPY_path     + '\n'])
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'merge',
                                      sbox.repo_url + '/A', A_COPY_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'synch A_COPY with A', wc_dir)
+  sbox.simple_commit(message='synch A_COPY with A')
 
   # Update so we are ready for reintegrate.
   svntest.main.run_svn(None, 'up', wc_dir)

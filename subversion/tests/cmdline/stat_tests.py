@@ -1468,7 +1468,7 @@ def status_depth_update(sbox):
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'propset', '--force', 'svn:test', 'value', A_path)
   svntest.main.run_svn(None, 'propset', '--force', 'svn:test', 'value', D_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'log message', wc_dir)
+  sbox.simple_commit(message='log message')
 
   # update to r1
   svntest.main.run_svn(None, 'up', '-r', '1', wc_dir)

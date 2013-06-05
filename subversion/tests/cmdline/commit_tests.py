@@ -1797,7 +1797,7 @@ def commit_out_of_date_deletions(sbox):
   I_path = sbox.ospath('A/I')
   os.mkdir(I_path)
   svntest.main.run_svn(None, 'add', I_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'prep', wc_dir)
+  sbox.simple_commit(message='prep')
   svntest.main.run_svn(None, 'up', wc_dir)
 
   # Make a backup copy of the working copy
