@@ -59,6 +59,14 @@ Candidate changes:
    Votes:
      +0: rhuijben (Needs more work. Breaks JavaHL)
 
+ * r1490045
+   Use a unique media-type for svnpubsub.
+   Justification:
+     application/octent-stream is not specific, having a specific mime-type
+     can help with cross version compatability.
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
