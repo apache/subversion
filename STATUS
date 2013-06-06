@@ -72,4 +72,5 @@ Approved changes:
      application/octent-stream is not specific, having a specific mime-type
      can help with cross version compatability.
    Votes:
-     +1: breser, stefan2 (not r1490326)
+     +1: breser, brane
+     +1 stefan2 (only r1490045)
