@@ -45,7 +45,7 @@ Candidate changes:
      Makes it easier to diagnose failures.
    Votes:
      +1: philip, danielsh (without r1489935)
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1489885, r1489928
    Resolve regression where 'svn ci ci' just returned success when 'ci' doesn't
