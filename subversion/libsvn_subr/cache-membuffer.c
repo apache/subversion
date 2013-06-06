@@ -889,8 +889,9 @@ get_group_index(svn_membuffer_t **cache,
    * Since key may not be well-distributed, pre-fold it to a smaller but
    * "denser" ranger.  The divisors are primes larger than the largest
    * counts. */
-  *cache = &segment0[(key[1] % 2809637ull) & (segment0->segment_count - 1)];
-  return (key[0] % 5030895599ull) % segment0->group_count;
+  *cache = &segment0[(key[1] % APR_UINT64_C(2809637))
+         & (segment0->segment_count - 1)];
+  return (key[0] % APR_UINT64_C(5030895599)) % segment0->group_count;
 }
 
 /* Reduce the hit count of ENTRY and update the accumulated hit info
@@ -2246,7 +2247,7 @@ combine_key(svn_membuffer_cache_t *cache,
    * collisions.  So, we limit ourselves to xor and permutations. */
   data[1] = (data[1] << 27) | (data[1] >> 37);
   data[1] ^= data[0] & 0xffff;
-  data[0] ^= data[1] & 0xffffffffffff0000ull;
+  data[0] ^= data[1] & APR_UINT64_C(0xffffffffffff0000);
 
   /* combine with this cache's namespace */
   cache->combined_key[0] = data[0] ^ cache->prefix[0];
