@@ -65,12 +65,3 @@ Approved changes:
 # that would restart the soak should not be added unless they are resolving
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
-
- * r1490045, r1490326
-   Use a unique media-type for svnpubsub.
-   Justification:
-     application/octent-stream is not specific, having a specific mime-type
-     can help with cross version compatability.
-   Votes:
-     +1: breser, brane
-     +1: stefan2 (only r1490045)
