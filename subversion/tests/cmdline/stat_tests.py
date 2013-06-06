@@ -378,8 +378,8 @@ def status_for_nonexistent_file(sbox):
 
   os.chdir(wc_dir)
 
-  exit_code, output, err = svntest.actions.run_and_verify_svn2(
-    None, None, '.*W155010:.*', 0, 'status', 'nonexistent-file')
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'status', 'nonexistent-file')
 
   # there should *not* be a status line printed for the nonexistent file
   for line in output:
@@ -1970,13 +1970,12 @@ def status_not_present(sbox):
                        sbox.ospath('A/mu'), sbox.ospath('A/B'))
   sbox.simple_commit()
 
-  expected_err = '.*W155010.*'
-  svntest.actions.run_and_verify_svn2(None, [], expected_err, 0 ,'status',
-                                      sbox.ospath('iota'),
-                                      sbox.ospath('A/B'),
-                                      sbox.ospath('A/C'),
-                                      sbox.ospath('A/mu'),
-                                      sbox.ospath('no-file'))
+  svntest.actions.run_and_verify_svn(None, [], [],'status',
+                                     sbox.ospath('iota'),
+                                     sbox.ospath('A/B'),
+                                     sbox.ospath('A/C'),
+                                     sbox.ospath('A/mu'),
+                                     sbox.ospath('no-file'))
 
 # Skip this test is a .svn dir exists in the root directory
 @Skip(lambda: os.path.exists("/%s" % svntest.main.get_admin_name()))
