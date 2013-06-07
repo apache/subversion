@@ -592,6 +592,12 @@ class Httpd:
 
   def _create_dontdothat_file(self):
     "Create empty mime.types file"
+    # If the tests have not previously been run or were cleaned
+    # up, then 'svn-test-work' does not exist yet.
+    parent_dir = os.path.dirname(self.dontdothat_file)
+    if not os.path.exists(parent_dir):
+      os.makedirs(parent_dir)
+
     fp = open(self.dontdothat_file, 'w')
     fp.write('[recursive-actions]\n')
     fp.write('/ = deny\n')
