@@ -76,6 +76,9 @@ typedef struct
   /* the txdelta window information cached / to be cached */
   svn_txdelta_window_t *window;
 
+  /* the revision file read pointer position before reading the window */
+  apr_off_t start_offset;
+
   /* the revision file read pointer position right after reading the window */
   apr_off_t end_offset;
 } svn_fs_fs__txdelta_cached_window_t;
