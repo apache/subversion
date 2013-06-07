@@ -51,6 +51,14 @@ Candidate changes:
    Votes:
      +0: rhuijben (Needs more work. Breaks JavaHL)
 
+ * r1490679
+   Allow test suite to run properly on Windows.
+   Justification:
+     Fixes a (very) minor test setup failure when running the ra_serf tests on
+     Windows for the first time in a given environment.
+   Votes:
+     +1: pburba
+
 Veto-blocked changes:
 =====================
 
