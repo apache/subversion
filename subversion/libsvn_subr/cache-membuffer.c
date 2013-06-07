@@ -1301,8 +1301,6 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
  * If necessary, enlarge the insertion window of CACHE->L1 by promoting
  * entries to L2 until it is at least SIZE bytes long.
  *
- * Return TRUE if enough room could be found or made. A FALSE result
- *
  * Return TRUE if enough room could be found or made.  A FALSE result
  * indicates that the respective item shall not be added because it is
  * too large.
