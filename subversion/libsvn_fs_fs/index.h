@@ -49,6 +49,8 @@
 
 #define SVN_FS_FS__ITEM_TYPE_CHANGES_CONT  8  /* item is a changes container */
 #define SVN_FS_FS__ITEM_TYPE_NODEREVS_CONT 9  /* item is a noderevs container */
+#define SVN_FS_FS__ITEM_TYPE_REPS_CONT    10  /* item is a representations
+                                                 container */
 
 /* (user visible) entry in the phys-to-log index.  It describes a section
  * of some packed / non-packed rev file as containing a specific item.

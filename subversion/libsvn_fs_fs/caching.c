@@ -29,6 +29,7 @@
 #include "changes.h"
 #include "noderevs.h"
 #include "temp_serializer.h"
+#include "reps.h"
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_config.h"
@@ -650,6 +651,19 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            fs,
                            no_handler,
                            fs->pool));
+      SVN_ERR(create_cache(&(ffd->reps_container_cache),
+                           NULL,
+                           membuffer,
+                           0, 0, /* Do not use inprocess cache */
+                           svn_fs_fs__serialize_reps_container,
+                           svn_fs_fs__deserialize_reps_container,
+                           sizeof(pair_cache_key_t),
+                           apr_pstrcat(pool, prefix, "REPSCNT",
+                                       (char *)NULL),
+                           0,
+                           fs,
+                           no_handler,
+                           fs->pool));
 
       SVN_ERR(create_cache(&(ffd->l2p_header_cache),
                            NULL,
@@ -708,6 +722,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
     {
       ffd->noderevs_container_cache = NULL;
       ffd->changes_container_cache = NULL;
+      ffd->reps_container_cache = NULL;
 
       ffd->l2p_header_cache = NULL;
       ffd->l2p_page_cache = NULL;

@@ -26,6 +26,7 @@
 #include "svn_sorts.h"
 #include "private/svn_temp_serializer.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_string_private.h"
 
 #include "fs_fs.h"
 #include "pack.h"
@@ -37,6 +38,7 @@
 #include "cached_data.h"
 #include "changes.h"
 #include "noderevs.h"
+#include "reps.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
@@ -1354,6 +1356,146 @@ write_changes_containers(pack_context_t *context,
   return SVN_NO_ERROR;
 }
 
+/* Finalize CONTAINER and write it to CONTEXT's pack file.
+ * Append an P2L entry containing the given SUB_ITEMS to NEW_ENTRIES.
+ * Use POOL for temporary allocations.
+ */
+static svn_error_t *
+write_reps_container(pack_context_t *context,
+                     svn_fs_fs__reps_builder_t *container,
+                     apr_array_header_t *sub_items,
+                     apr_array_header_t *new_entries,
+                     apr_pool_t *pool)
+{
+  apr_off_t offset = 0;
+  svn_fs_fs__p2l_entry_t container_entry;
+
+  svn_stream_t *pack_stream
+    = svn_stream_from_aprfile2(context->pack_file, TRUE, pool);
+
+  SVN_ERR(svn_fs_fs__write_reps_container(pack_stream, container, pool));
+  SVN_ERR(svn_io_file_seek(context->pack_file, SEEK_CUR, &offset, pool));
+
+  container_entry.offset = context->pack_offset;
+  container_entry.size = offset - container_entry.offset;
+  container_entry.type = SVN_FS_FS__ITEM_TYPE_REPS_CONT;
+  container_entry.item_count = sub_items->nelts;
+  container_entry.items = (svn_fs_fs__id_part_t *)sub_items->elts;
+
+  context->pack_offset = offset;
+  APR_ARRAY_PUSH(new_entries, svn_fs_fs__p2l_entry_t *)
+    = svn_fs_fs__p2l_entry_dup(&container_entry, context->info_pool);
+
+  SVN_ERR(svn_fs_fs__p2l_proto_index_add_entry
+            (context->proto_p2l_index, &container_entry, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Read the (property) representations identified by svn_fs_fs__p2l_entry_t
+ * elements in ENTRIES from TEMP_FILE, aggregate them and write them into
+ * CONTEXT->PACK_FILE.  Use POOL for temporary allocations.
+ */
+static svn_error_t *
+write_property_containers(pack_context_t *context,
+                          apr_array_header_t *entries,
+                          apr_file_t *temp_file,
+                          apr_pool_t *pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *container_pool = svn_pool_create(pool);
+  int i;
+
+  apr_ssize_t block_left = get_block_left(context);
+
+  svn_fs_fs__reps_builder_t *container
+    = svn_fs_fs__reps_builder_create(context->fs, container_pool);
+  apr_array_header_t *sub_items
+    = apr_array_make(pool, 64, sizeof(svn_fs_fs__id_part_t));
+  apr_array_header_t *new_entries
+    = apr_array_make(context->info_pool, 16, entries->elt_size);
+  svn_stream_t *temp_stream
+    = svn_stream_from_aprfile2(temp_file, TRUE, pool);
+
+  /* copy all items in strict order */
+  for (i = entries->nelts-1; i >= 0; --i)
+    {
+      representation_t representation = { 0 };
+      svn_stringbuf_t *contents;
+      svn_stream_t *stream;
+      apr_size_t list_index;
+      svn_fs_fs__p2l_entry_t *entry
+        = APR_ARRAY_IDX(entries, i, svn_fs_fs__p2l_entry_t *);
+
+      if ((block_left < entry->size) && sub_items->nelts)
+        {
+          block_left = get_block_left(context)
+                     - svn_fs_fs__reps_estimate_size(container);
+        }
+
+      if ((block_left < entry->size) && sub_items->nelts)
+        {
+          SVN_ERR(write_reps_container(context, container, sub_items,
+                                       new_entries, iterpool));
+
+          apr_array_clear(sub_items);
+          svn_pool_clear(container_pool);
+          container = svn_fs_fs__reps_builder_create(context->fs,
+                                                     container_pool);
+          block_left = get_block_left(context);
+        }
+
+      /* still enough space in current block? */
+      if (block_left < entry->size)
+        {
+          SVN_ERR(auto_pad_block(context, iterpool));
+          block_left = get_block_left(context);
+        }
+
+      assert(entry->item_count == 1);
+      representation.revision = entry->items[0].revision;
+      representation.item_index = entry->items[0].number;
+      svn_fs_fs__id_txn_reset(&representation.txn_id);
+      
+      /* select the change list in the source file, parse it and add it to
+       * the container */
+      SVN_ERR(svn_io_file_seek(temp_file, SEEK_SET, &entry->offset,
+                               iterpool));
+      SVN_ERR(svn_fs_fs__get_representation_length(&representation.size,
+                                             &representation.expanded_size,
+                                             context->fs, temp_file,
+                                             temp_stream, entry, iterpool));
+      SVN_ERR(svn_fs_fs__get_contents(&stream, context->fs, &representation,
+                                      iterpool));
+      contents = svn_stringbuf_create_ensure(representation.expanded_size,
+                                             iterpool);
+      contents->len = representation.expanded_size;
+
+      /* The representation is immutable.  Read it normally. */
+      SVN_ERR(svn_stream_read(stream, contents->data, &contents->len));
+      SVN_ERR(svn_stream_close(stream));
+      
+      list_index = svn_fs_fs__reps_add(container,
+                                svn_stringbuf__morph_into_string(contents));
+      SVN_ERR_ASSERT(list_index == sub_items->nelts);
+      block_left -= entry->size;
+      
+      APR_ARRAY_PUSH(sub_items, svn_fs_fs__id_part_t) = entry->items[0];
+
+      svn_pool_clear(iterpool);
+    }
+
+  if (sub_items->nelts)
+    SVN_ERR(write_reps_container(context, container, sub_items,
+                                 new_entries, iterpool));
+
+  *entries = *new_entries;
+  svn_pool_destroy(iterpool);
+  svn_pool_destroy(container_pool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Append all entries of svn_fs_fs__p2l_entry_t * array TO_APPEND to
  * svn_fs_fs__p2l_entry_t * array DEST.
  */
@@ -1587,11 +1729,11 @@ pack_range(pack_context_t *context,
   SVN_ERR(write_changes_containers(context, context->changes,
                                    context->changes_file, revpool));
   svn_pool_clear(revpool);
-  SVN_ERR(copy_items_from_temp(context, context->file_props,
-                               context->file_props_file, revpool));
+  SVN_ERR(write_property_containers(context, context->file_props,
+                                    context->file_props_file, revpool));
   svn_pool_clear(revpool);
-  SVN_ERR(copy_items_from_temp(context, context->dir_props,
-                               context->dir_props_file, revpool));
+  SVN_ERR(write_property_containers(context, context->dir_props,
+                                    context->dir_props_file, revpool));
   svn_pool_clear(revpool);
   SVN_ERR(copy_items_from_temp(context, context->reps,
                                context->reps_file, revpool));

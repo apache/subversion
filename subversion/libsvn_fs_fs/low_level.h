@@ -98,7 +98,10 @@ typedef enum svn_fs_fs__rep_type_t
   svn_fs_fs__rep_self_delta,
 
   /* this is a DELTA representation against some base representation */
-  svn_fs_fs__rep_delta
+  svn_fs_fs__rep_delta,
+
+  /* this is a representation in a star-delta container */
+  svn_fs_fs__rep_container
 } svn_fs_fs__rep_type_t;
 
 /* This structure is used to hold the information stored in a representation

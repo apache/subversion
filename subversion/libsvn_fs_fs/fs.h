@@ -352,6 +352,10 @@ typedef struct fs_fs_data_t
      the key is a (pack file revision, file offset) pair */
   svn_cache__t *changes_container_cache;
 
+  /* Cache for star-delta / representation containers;
+     the key is a (pack file revision, file offset) pair */
+  svn_cache__t *reps_container_cache;
+
   /* Cache for svn_fs_fs__rep_header_t objects; the key is a
      (revision, item index) pair */
   svn_cache__t *rep_header_cache;
