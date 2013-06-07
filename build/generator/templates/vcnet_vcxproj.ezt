@@ -94,20 +94,21 @@
 [end][end]    </ResourceCompile>
   </ItemGroup>
 [end]  <ItemGroup>
-[for sources][is sources.extension ".h"][else][if-any sources.custom_build]    <CustomBuild Include="[sources.path]">
+[for sources][is sources.extension ".h"][else][is sources.extension ".hpp"][else][if-any sources.custom_build]    <CustomBuild Include="[sources.path]">
       <FileType>Document</FileType>
 [for configs][for platforms]      <Command Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[sources.custom_build]</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[for sources.user_deps][sources.user_deps];[end]%(AdditionalInputs)</AdditionalInputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[sources.custom_target];%(Outputs)</Outputs>
 [if-any sources.custom_desc]<Message Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[sources.custom_desc]</Message>
 [end][end][end]    </CustomBuild>
-[else][is sources.extension ".c"]    <ClCompile Include="[sources.path]" />
-[else][is sources.extension ".cpp"]    <ClCompile Include="[sources.path]" />
+[else][is sources.extension ".c"][if-any sources.ignored]    <None Include="[sources.path]" />[else]    <ClCompile Include="[sources.path]" />[end]
+[else][is sources.extension ".cpp"][if-any sources.ignored]    <None Include="[sources.path]" />[else]    <ClCompile Include="[sources.path]" />[end]
 [else]    <None Include="[sources.path]" />
-[end][end][end][end][end]  </ItemGroup>
+[end][end][end][end][end][end]  </ItemGroup>
   <ItemGroup>
 [for sources][is sources.extension ".h"]    <ClInclude Include="[sources.path]" />
-[end][end]  </ItemGroup>
+[else][is sources.extension ".hpp"]    <ClInclude Include="[sources.path]" />
+[end][end][end]  </ItemGroup>
   <ItemGroup>
 [for depends]    <ProjectReference Include="[depends.path]">
       <Project>[depends.guid]</Project>
