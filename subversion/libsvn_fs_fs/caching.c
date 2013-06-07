@@ -215,9 +215,10 @@ dump_cache_statistics(void *baton_void)
                                          TRUE,
                                          baton->pool);
 
-  if (! err)
+  /* skip unused caches */
+  if (! err && (info.gets > 0 || info.sets > 0))
     {
-      text_stats = svn_cache__format_info(&info, baton->pool);
+      text_stats = svn_cache__format_info(&info, TRUE, baton->pool);
       lines = svn_cstring_split(text_stats->data, "\n", FALSE, baton->pool);
 
       for (i = 0; i < lines->nelts; ++i)
@@ -238,6 +239,29 @@ dump_cache_statistics(void *baton_void)
 
   return result;
 }
+
+static apr_status_t
+dump_global_cache_statistics(void *baton_void)
+{
+  apr_pool_t *pool = baton_void;
+
+  svn_cache__info_t *info = svn_cache__membuffer_get_global_info(pool);
+  svn_string_t *text_stats = svn_cache__format_info(info, FALSE, pool);
+  apr_array_header_t *lines = svn_cstring_split(text_stats->data, "\n",
+                                                FALSE, pool);
+
+  int i;
+  for (i = 0; i < lines->nelts; ++i)
+    {
+      const char *line = APR_ARRAY_IDX(lines, i, const char *);
+#ifdef SVN_DEBUG
+      SVN_DBG(("%s\n", line));
+#endif
+    }
+
+  return APR_SUCCESS;
+}
+
 #endif /* SVN_DEBUG_CACHE_DUMP_STATS */
 
 /* This function sets / registers the required callbacks for a given
@@ -386,6 +410,18 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
    *   (e.g. noderevs, L2P and P2L index pages)
    * - everthing else should use default prio
    */
+
+#ifdef SVN_DEBUG_CACHE_DUMP_STATS
+
+  /* schedule printing the global access statistics upon pool cleanup,
+    * i.e. end of FSFS session.
+    */
+  if (membuffer)
+    apr_pool_cleanup_register(pool,
+                              pool,
+                              dump_global_cache_statistics,
+                              apr_pool_cleanup_null);
+#endif
 
   /* Make the cache for revision roots.  For the vast majority of
    * commands, this is only going to contain a few entries (svnadmin

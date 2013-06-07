@@ -41,8 +41,8 @@ Issues = svntest.testcase.Issues_deco
 Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
 
-from merge_tests import set_up_branch
-from merge_tests import expected_merge_output
+from svntest.mergetrees import set_up_branch
+from svntest.mergetrees import expected_merge_output
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import write_restrictive_svnserve_conf
 from svntest.main import write_authz_file
@@ -659,7 +659,7 @@ def reintegrate_fails_if_no_root_access(sbox):
                                            ' U   ' + A_COPY_path     + '\n'])
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'merge',
                                      sbox.repo_url + '/A', A_COPY_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'synch A_COPY with A', wc_dir)
+  sbox.simple_commit(message='synch A_COPY with A')
 
   # Update so we are ready for reintegrate.
   svntest.main.run_svn(None, 'up', wc_dir)

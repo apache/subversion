@@ -44,10 +44,9 @@ exp_noop_up_out = svntest.actions.expected_noop_update_output
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import server_has_mergeinfo
 
-# Get a couple merge helpers from merge_tests.py
-import merge_tests
-from merge_tests import set_up_branch
-from merge_tests import expected_merge_output
+# Get a couple merge helpers
+from svntest.mergetrees import set_up_branch
+from svntest.mergetrees import expected_merge_output
 
 def adjust_error_for_server_version(expected_err):
   "Return the expected error regexp appropriate for the server version."

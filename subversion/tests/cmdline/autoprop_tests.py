@@ -695,8 +695,7 @@ def svn_prop_inheritable_autoprops_unversioned_subtrees_versioned_target(sbox):
                        '*.c=svn:eol-style=CR', sbox.ospath('A/B'))
   svntest.main.run_svn(None, 'ps', SVN_PROP_INHERITABLE_AUTOPROPS,
                        '*.c=svn:eol-style=native', sbox.ospath('A/D'))
-  svntest.main.run_svn(None, 'ci', '-m', 'Add inheritable autoprops',
-                       sbox.wc_dir)
+  sbox.simple_commit(message='Add inheritable autoprops')
 
   # Create two subtrees, each with one new file.
   os.mkdir(Z_path)

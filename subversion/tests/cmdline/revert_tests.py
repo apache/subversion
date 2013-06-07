@@ -1000,7 +1000,7 @@ def revert_add_over_not_present_dir(sbox):
   wc_dir = sbox.wc_dir
 
   main.run_svn(None, 'rm', os.path.join(wc_dir, 'A/C'))
-  main.run_svn(None, 'ci', wc_dir, '-m', 'Deleted dir')
+  sbox.simple_commit(message='Deleted dir')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/C')

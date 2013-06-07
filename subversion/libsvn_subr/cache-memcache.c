@@ -386,12 +386,6 @@ memcache_get_info(void *cache_void,
 
   /* we don't have any memory allocation info */
 
-  info->used_size = 0;
-  info->total_size = 0;
-  info->data_size = 0;
-  info->used_entries = 0;
-  info->total_entries = 0;
-
   return SVN_NO_ERROR;
 }
 
