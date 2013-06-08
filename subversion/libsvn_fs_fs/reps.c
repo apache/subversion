@@ -672,7 +672,7 @@ svn_fs_fs__write_reps_container(svn_stream_t *stream,
   for (i = 0; i < builder->instructions->nelts; ++i)
     {
       const instruction_t *instruction
-        = &APR_ARRAY_IDX(builder->reps, i, instruction_t);
+        = &APR_ARRAY_IDX(builder->instructions, i, instruction_t);
       svn_packed__add_int(instructions_stream, instruction->offset);
       svn_packed__add_uint(instructions_stream, instruction->count);
     }
