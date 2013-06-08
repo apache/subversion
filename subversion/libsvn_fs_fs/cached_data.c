@@ -1801,7 +1801,7 @@ svn_fs_fs__get_representation_length(svn_filesize_t *packed_len,
   /* RS->FILE may be shared between RS instances -> make sure we point
    * to the right data. */
   *packed_len = rs.size;
-  if (!rep_header->type == svn_fs_fs__rep_plain)
+  if (rep_header->type == svn_fs_fs__rep_plain)
     *expanded_len = rs.size;
   else
     SVN_ERR(cache_windows(expanded_len, fs, &rs, pool));
