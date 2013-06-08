@@ -1584,7 +1584,7 @@ get_combined_window(svn_stringbuf_t **result,
       source = buf;
       if (source == NULL && rb->src_state != NULL)
         {
-          if (rs->header_size == 0)
+          if (rb->src_state->header_size == 0)
             SVN_ERR(read_container_window(&source, rb->src_state, pool));
           else
             SVN_ERR(read_plain_window(&source, rb->src_state,
