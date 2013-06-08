@@ -753,7 +753,7 @@ create_rep_state_body(rep_state_t **rep_state,
         }
       else
         {
-          shared_file_t *file = apr_palloc(pool, sizeof(*file));
+          shared_file_t *file = apr_pcalloc(pool, sizeof(*file));
           file->revision = rep->revision;
           file->pool = pool;
           file->fs = fs;
