@@ -736,6 +736,12 @@ create_rep_state_body(rep_state_t **rep_state,
               *rep_header = apr_pcalloc(pool, sizeof(**rep_header));
               (*rep_header)->type = svn_fs_fs__rep_container;
 
+              /* provide an empty shared file struct */
+              rs->file = apr_pcalloc(pool, sizeof(*rs->file));
+              rs->file->revision = rep->revision;
+              rs->file->pool = pool;
+              rs->file->fs = fs;
+
               /* exit to caller */
               *rep_state = rs;
               return SVN_NO_ERROR;
