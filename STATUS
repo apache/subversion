@@ -57,14 +57,18 @@ Candidate changes:
      Fixes a (very) minor test setup failure when running the ra_serf tests on
      Windows for the first time in a given environment.
    Votes:
-     +1: pburba
+     +1: pburba, rhuijben
 
  * r1489339
    Return 501/412 rather than 401 for lock errors.
    Justification:
      Old values are not valid HTTP.
+   Notes:
+     Usually the authorization layer produces an error earlier. This patch
+     should only change the behavior for repositories without authorization
+     requirements for these operations.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
  * r1490684
    Return 500 rather than 409 when commit fails and it is not a conflict.
