@@ -7163,7 +7163,7 @@ choose_delta_base(representation_t **rep,
   /* return a suitable base representation */
   *rep = props ? base->prop_rep : base->data_rep;
 
-  /* if we encountered a shared rep, it's parent chain may be different
+  /* if we encountered a shared rep, its parent chain may be different
    * from the node-rev parent chain. */
   if (*rep && maybe_shared_rep)
     {
