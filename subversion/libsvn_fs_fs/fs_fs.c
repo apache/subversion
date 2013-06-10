@@ -484,6 +484,7 @@ path_and_offset_of(apr_file_t *file, apr_pool_t *pool)
 
 
 
+
 /* Functions for working with shared transaction data. */
 
 /* Return the transaction object for transaction TXN_ID from the
