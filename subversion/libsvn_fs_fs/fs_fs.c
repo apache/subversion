@@ -2238,7 +2238,7 @@ get_cached_node_revision_body(node_revision_t **noderev_p,
     }
   else
     {
-      pair_cache_key_t key = { 0 };
+      pair_cache_key_t key;
 
       key.revision = svn_fs_fs__id_rev(id);
       key.second = svn_fs_fs__id_offset(id);
