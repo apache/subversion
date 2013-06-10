@@ -7211,7 +7211,6 @@ choose_delta_base(representation_t **rep,
       svn_pool_destroy(sub_pool);
     }
 
-  /* verify that the reps don't form a degenerated '*/
   return SVN_NO_ERROR;
 }
 
