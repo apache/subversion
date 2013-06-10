@@ -818,10 +818,6 @@ SVN_ERROR_START
              SVN_ERR_REPOS_CATEGORY_START + 4,
              "Bogus revision report")
 
-  SVN_ERRDEF(SVN_ERR_REPOS_CORRUPTED,
-             SVN_ERR_REPOS_CATEGORY_START + 5,
-             "Repository has corruptions")
-
   /* This is analogous to SVN_ERR_FS_UNSUPPORTED_FORMAT.  To avoid
    * confusion with "versions" (i.e., releases) of Subversion, we
    * started using the word "format" instead of "version".  However,
@@ -853,6 +849,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_REPOS_UNSUPPORTED_UPGRADE,
              SVN_ERR_REPOS_CATEGORY_START + 10,
              "Repository upgrade is not supported")
+
+  /** @since New in 1.8. */
+  SVN_ERRDEF(SVN_ERR_REPOS_CORRUPTED,
+             SVN_ERR_REPOS_CATEGORY_START + 11,
+             "Repository has corruptions")
 
   /* generic RA errors */
 
