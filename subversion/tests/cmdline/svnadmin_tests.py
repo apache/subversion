@@ -1886,30 +1886,32 @@ _0.0.t1-1 Add-dir false false /B
                                                         "--keep-going",
                                                         sbox.repo_dir)
 
-  exp_err = svntest.verify.RegexListOutput([".*Verifying repository metadata",
+  exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
                                            ".*Verified revision 0.",
                                            ".*Verified revision 1.",
                                            ".*Error verifying revision 2.",
-                                           ".*svnadmin: E160004:",
-                                           ".*Verified revision 3.",
-                                           "svnadmin: E165005:.*"])
+                                           ".*Verified revision 3."])
+
+  exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
+                                           "svnadmin: E165011:.*"])
 
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
-                                   [], errput, None, exp_err):
+                                   output, errput, exp_out, exp_err):
     raise svntest.Failure
 
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
                                                         sbox.repo_dir)
 
-  exp_err = svntest.verify.RegexListOutput([".* Verifying repository metadata",
+  exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
                                            ".*Verified revision 0.",
                                            ".*Verified revision 1.",
-                                           ".*Error verifying revision 2.",
-                                           "svnadmin: E160004:.*",
-                                           "svnadmin: E165005:.*"])
+                                           ".*Error verifying revision 2."])
+
+  exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
+                                           "svnadmin: E165011:.*"])
 
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
-                                   [], errput, None, exp_err):
+                                   output, errput, exp_out, exp_err):
     raise svntest.Failure
 
 
@@ -1918,7 +1920,7 @@ _0.0.t1-1 Add-dir false false /B
                                                         sbox.repo_dir)
 
   if svntest.verify.verify_outputs("Output of 'svnadmin verify' is unexpected.",
-                                   None, errput, None, ".*svnadmin: E165005:.*"):
+                                   None, errput, None, "svnadmin: E165011:.*"):
     raise svntest.Failure
 
 ########################################################################
