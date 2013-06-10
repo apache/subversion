@@ -223,6 +223,13 @@ newlines.  Format 7 revisions shall escape all control chars (e.g. < 0x20)
 in path names when using them in textual item representations.
 
 
+Sharded transaction directories
+-------------------------------
+
+Transaction directories contain 3 OS files per FS file modified in the
+transaction.  That doesn't scale well; find something better.
+
+
 DONE
 ====
 
