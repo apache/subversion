@@ -207,6 +207,11 @@ class GeneratorBase(gen_base.GeneratorBase):
     # Initialize parent
     gen_base.GeneratorBase.__init__(self, fname, verfname, options)
 
+    # These files will be excluded from the build when they're not
+    # explicitly listed as project sources.
+    self._excluded_from_build = frozenset(self.private_includes
+                                          + self.private_built_includes)
+
     # Find Berkeley DB
     self._find_bdb()
 
@@ -550,7 +555,8 @@ class WinGeneratorBase(GeneratorBase):
           rsrc = '"%s"' % rsrc
 
         if (not isinstance(source, gen_base.SourceFile)
-            and cbuild is None and ctarget is None and cdesc is None):
+            and cbuild is None and ctarget is None and cdesc is None
+            and source in self._excluded_from_build):
           # Make sure include dependencies are excluded from the build.
           # This is an 'orrible 'ack that relies on the source being a
           # string if it's an include dependency, or a SourceFile object
