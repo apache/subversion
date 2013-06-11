@@ -183,10 +183,8 @@ class Client(object):
         self.r.write(str(input))
 
     def write_start(self):
-        # TODO: use application/x-* or vnd.* - see 
-        # Message-ID: <CADkdwvR=HwWevz+xN2hdiLD-HBPiz7Q5FqAFQ_f5+m77ZG6QHQ@mail.gmail.com>
-        # on May 2013
-        self.r.setHeader('content-type', 'application/octet-stream')
+        self.r.setHeader('X-SVNPubSub-Version', '1')
+        self.r.setHeader('content-type', 'application/vnd.apache.vc-notify+json')
         self.write('{"svnpubsub": {"version": 1}}\n\0')
 
     def write_heartbeat(self):

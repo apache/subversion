@@ -34,7 +34,7 @@ from svntest.main import server_has_mergeinfo
 from prop_tests import binary_mime_type_on_text_file_warning
 
 # For some basic merge setup used by blame -g tests.
-from merge_tests import set_up_branch
+from svntest.mergetrees import set_up_branch
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -772,7 +772,7 @@ def merge_sensitive_blame_and_empty_mergeinfo(sbox):
 
   # Make an edit to A/D/H/psi in r3.
   svntest.main.file_append(psi_path, "trunk edit in revision three.\n")
-  svntest.main.run_svn(None, 'ci', '-m', 'trunk edit', wc_dir)
+  sbox.simple_commit(message='trunk edit')
 
   # Merge r3 from A to A_COPY, reverse merge r3 from A/D/H/psi
   # to A_COPY/D/H/psi, and commit as r4.  This results in empty
@@ -782,21 +782,18 @@ def merge_sensitive_blame_and_empty_mergeinfo(sbox):
                        sbox.repo_url + '/A', A_COPY_path)
   svntest.main.run_svn(None, 'merge', '-c-3',
                        sbox.repo_url + '/A/D/H/psi', psi_COPY_path)
-  svntest.main.run_svn(None, 'ci', '-m',
-                       'Sync merge A to A_COPY excepting A_COPY/D/H/psi',
-                       wc_dir)
+  sbox.simple_commit(message='Sync merge A to A_COPY excepting A_COPY/D/H/psi')
 
   # Make an edit to A/D/H/psi in r5.
   svntest.main.file_append(psi_path, "trunk edit in revision five.\n")
-  svntest.main.run_svn(None, 'ci', '-m', 'trunk edit', wc_dir)
+  sbox.simple_commit(message='trunk edit')
 
   # Sync merge A/D/H/psi to A_COPY/D/H/psi and commit as r6.  This replaces
   # the empty mergeinfo on A_COPY/D/H/psi with '/A/D/H/psi:2-5'.
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge',  sbox.repo_url + '/A/D/H/psi',
                        psi_COPY_path)
-  svntest.main.run_svn(None, 'ci', '-m',
-                       'Sync merge A/D/H/psi to A_COPY/D/H/psi', wc_dir)
+  sbox.simple_commit(message='Sync merge A/D/H/psi to A_COPY/D/H/psi')
 
   # Check the blame -g output:
   # Currently this test fails because the trunk edit done in r3 is

@@ -1597,8 +1597,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
               if (elt->kind != SVN_RA_SVN_LIST)
                 return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                         _("Changed-path entry not a list"));
-              SVN_ERR(svn_ra_svn__parse_tuple(elt->u.list, iterpool,
-                                              "sw(?cr)?(?c?BB)",
+              SVN_ERR(svn_ra_svn__read_data_log_changed_entry(elt->u.list,
                                               &cpath, &action, &copy_path,
                                               &copy_rev, &kind_str,
                                               &text_mods, &prop_mods));

@@ -131,16 +131,17 @@ to an array of them.
 
 =item $revision
 
-This specifies a revision in the subversion repository.  You can specify a
+This specifies a revision in the Subversion repository.  You can specify a
 revision in several ways.  The easiest and most obvious is to directly
 provide the revision number.  You may also use the strings (aka revision
 keywords) 'HEAD', 'BASE', 'COMMITTED', and 'PREV' which have the same
 meanings as in the command line client.  When referencing a working copy
 you can use the string 'WORKING" to reference the BASE plus any local
-modifications.  undef may be used to specify an unspecified revision.
-Finally you may pass a date by specifying the date inside curly braces
+modifications.  C<undef> may be used to specify an unspecified revision.
+You may alos pass a date by specifying the date inside curly braces
 '{}'.  The date formats accepted are the same as the command line client
-accepts.
+accepts. Finally a C<_p_svn_opt_revision_t> object is accepted
+(which may have been returned by some Subversion function).
 
 =item $recursive $nonrecursive.
 
@@ -564,48 +565,113 @@ operation, invoking $receiver on each child.
  };
  $client->info( 'foo/bar.c', undef, 'WORKING', $receiver, 0 );
 
-=item $client-E<gt>log($targets, $start, $end, $discover_changed_paths, $strict_node_history, \&log_receiver, $pool);
+=item $client-E<gt>log5($targets, $peg_revision, $revision_ranges, $limit, $discover_changed_paths, $strict_node_history, $include_merged_revisions, $revprops, \&log_entry_receiver, $pool);
 
-Invoke the log_receiver subroutine on each log_message from $start to $end in
-turn, inclusive (but will never invoke receiver on a given log message more
+Invoke C<log_entry_receiver> on each log message from
+each revision range in C<$revision_ranges> in turn,
+inclusive (but never invoke C<log_entry_receiver> on a given log message more
 than once).
 
-$targets is a reference to an array containing all the paths or URLs for
-which the log messages are desired.  The log_receiver is only invoked on
-messages whose revisions involved a change to some path in $targets.
+C<$targets> is a reference to an array of either a URL followed by zero 
+or more relative paths, or 1 working copy path, for which log
+messages are desired. If the array contains only a single element
+you may set C<$targets> to this element instead.
+C<log_entry_receiver> is invoked only on messages whose
+revisions involved a change to some path in C<$targets>.
 
-If $discover_changed_paths is set, then the changed_paths argument to the
-log_receiver routine will be passed on each invocation.
+C<$peg_revision> indicates in which revision C<$targets> are valid. 
+If C<$peg_revision> is C<undef>, it defaults to 'HEAD'
+for URLs or 'WORKING' for WC paths.
 
-If $strict_node_history is set, copy history (if any exists) will not be
-traversed while harvesting revision logs for each target.
+C<$revision_ranges> is either a single I<revision range> or a reference
+to an array of them. A I<revision range> may be specified
+as a reference to a two-element array C<[$start, $end]>
+of L<$revision|/$revision>s or a 
+L<SVN::Core::svn_opt_revision_range_t|SVN::Core/svn_opt_revision_range_t> 
+object. Examples:
 
-If $start or $end is undef the arp_err code will be set to:
-$SVN::Error::CLIENT_BAD_REVISION.
+  $revision_ranges = ['HEAD', 1];
+  $revision_ranges = [[2, 3], [5, 8], [13, 21]];
 
-Special case for repositories at revision 0:
+If C<$limit> is non-zero only invoke C<log_entry_receiver> 
+on the first C<$limit> logs.
 
-If $start is 'HEAD' and $end is 1, then handle an empty (no revisions)
+If C<$discover_changed_paths> is true, then the I<changed_paths2> field 
+in the C<$log_entry> argument to C<log_entry_receiver> will be
+populated on each invocation.  I<Note:> The I<text_modified> and
+I<props_modified> fields of the I<changed_paths2> structure may have the value
+C<$SVN::Tristate::unknown> if the repository does not report that information.
+
+If C<$strict_node_history> is true, copy history (if any exists) will
+not be traversed while harvesting revision logs for each target.
+
+If C<$include_merged_revisions> is true, log information for revisions
+which have been merged to C<$targets> will also be returned.
+
+If C<$revprops> is C<undef>, retrieve all revision properties.
+Otherwise C<$revpros> should be a reference to an array of
+property names and only these properties will be retrieved
+(i.e. none if the array is empty).
+
+Use C<$pool> for any temporary allocation.
+
+Calls the notify subroutine with a C<$SVN::Wc::Notify::Action::skip> 
+signal on any unversioned C<$targets>.
+
+The C<log_entry_receiver> takes the following arguments:
+C<$log_entry, $pool>.  C<$log_entry> is a 
+L<SVN::Core::svn_log_entry_t|SVN::Core/svn_log_entry_t> object.
+
+=item $client-E<gt>log4($targets, $peg_revision, $start, $end, $limit, $discover_changed_paths, $strict_node_history, $include_merged_revisions, $revprops, \&log_entry_receiver, $pool);
+
+Similar to C<$client-E<gt>log5()>, 
+but takes explicit C<$start> and C<$end> parameters
+instead of C<$revision_ranges>.
+
+Deprecated.
+
+=item $client-E<gt>log3($targets, $peg_revision, $start, $end, $limit, $discover_changed_paths, $strict_node_history, \&log_message_receiver, $pool);
+
+Similar to C<$client-E<gt>log4()>, but using C<log_message_receiver>
+instead of C<log_entry_receiver>.  Also, C<$include_merged_revisions> 
+is false and C<$revprops> is [qw( svn:author svn:date and svn:log )].
+
+The C<log_message_receiver> takes the following arguments:
+C<$changed_paths, $revision, $author, $date, $message, $pool>.
+It is called once for each log C<$message> from the C<$revision>
+on C<$date> by C<$author>.  C<$author>, C<$date> or C<$message> 
+may be C<undef>.
+
+If C<$changed_paths> is defined it references a hash with the keys
+every path committed in C<$revision>; the values are 
+L<SVN::Core::svn_log_changed_path_t|SVN::Core/svn_log_changed_path_t>
+objects.
+
+Deprecated.
+
+=item $client-E<gt>log2($targets, $start, $end, $limit, $discover_changed_paths, $strict_node_history, \&log_message_receiver, $pool);
+
+Similar to C<$client-E<gt>log3()>, but with C<$peg_revision> set to C<undef>.
+
+Deprecated.
+
+=item $client-E<gt>log($targets, $start, $end, $discover_changed_paths, $strict_node_history, \&log_message_receiver, $pool);
+
+Similar to C<$client-E<gt>log2()>, but with C<$limit> set to 0.
+
+I<Special case for repositories at revision 0:>
+If C<$start> is 'HEAD' and C<$end> is 1, then handle an empty (no revisions)
 repository specially: instead of erroring because requested revision 1
-when the highest revision is 0, just invoke $log_receiver on revision 0,
-passing undef to changed paths and empty strings for the author and date.
-This is because that particular combination of $start and $end usually indicates
+when the highest revision is 0, just invoke 
+C<log_message_receiver> on revision 0,
+passing C<undef> to C<$changed_paths> and empty strings for the author and date.
+This is because that particular combination of C<$start> 
+and C<$end> usually indicates
 the common case of log invocation; the user wants to see all log messages from
 youngest to oldest, where the oldest commit is revision 1.  That works fine,
 except there are no commits in the repository, hence this special case.
 
-Calls the notify subroutine with a $SVN::Wc::Notify::Action::skip signal on any
-unversioned targets.
-
-The log_receiver takes the following arguments:
-$changed_paths, $revision, $author, $date, $message, $pool
-
-It is called once for each log $message from the $revision
-on $date by $author.  $author, $date or $message may be undef.
-
-If $changed_paths is defined it references a hash with the keys
-every path committed in $revision; the values are svn_log_changed_path_t
-objects.
+Deprecated.
 
 =item $client-E<gt>ls($target, $revision, $recursive, $pool);
 
@@ -1718,14 +1784,6 @@ for more details.
 =item $client-E<gt>list(...)
 
 =item $client-E<gt>list2(...)
-
-=item $client-E<gt>log2(...)
-
-=item $client-E<gt>log3(...)
-
-=item $client-E<gt>log4(...)
-
-=item $client-E<gt>log5(...)
 
 =item $client-E<gt>ls2(...)
 

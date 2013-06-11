@@ -835,7 +835,7 @@ svn_ra_svn__write_cmd_finish_replay(svn_ra_svn_conn_t *conn,
  */
 
 /**
- * @defgroup svn_data sending data structures over ra_svn
+ * @defgroup svn_send_data sending data structures over ra_svn
  * @{
  */
 
@@ -880,6 +880,30 @@ svn_ra_svn__write_data_log_entry(svn_ra_svn_conn_t *conn,
 /**
  * @}
  */
+
+/**
+ * @defgroup svn_read_data reading data structures from ra_svn
+ * @{
+ */
+
+/** Take the data tuple ITEMS received over ra_svn and convert it to the
+ * a changed path (as part of receiving a log entry).
+ *
+ * @see svn_log_changed_path2_t for a description of the output parameters.
+ */
+svn_error_t *
+svn_ra_svn__read_data_log_changed_entry(const apr_array_header_t *items,
+                                        svn_string_t **cpath,
+                                        const char **action,
+                                        const char **copy_path,
+                                        svn_revnum_t *copy_rev,
+                                        const char **kind_str,
+                                        apr_uint64_t *text_mods,
+                                        apr_uint64_t *prop_mods);
+/**
+ * @}
+ */
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -125,7 +125,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * support ipv6 in URLs (e.g. http://[::1]/svn/repos) (r1454047)
     * conflict resolver now iterates paths in a sorted order (r1461820)
     * mod_dav_svn does keyword expansion with 'kw=1' query arg (r1466055)
-    * add support for custom keyword definitions (issue #890)
 
   - Minor new features and improvements (server-side):
     * improve performance of config file parsing (r1344347 et al)
