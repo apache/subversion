@@ -98,6 +98,15 @@ Candidate changes:
    Votes:
      +1: danielsh, breser
 
+ * r1491770
+   Eliminate revprop buffer size limit.
+   Justification:
+     This removes an inconsistency; we don't limit object sizes anywhere
+     else. Particularly, we allowed for unlimited revprop sizes when setting
+     them but had a 16MB limit in the getter.
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
