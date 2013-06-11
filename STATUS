@@ -115,6 +115,14 @@ Candidate changes:
     Votes:
       +1: stsp
 
+  * r1491816
+    Add two additional options to interactive file merge.
+    Justification:
+      Usability enhancement for quicker conflict resolution in some cases.
+      Very simple change. Only affects interactive mode, not scripts.
+    Votes:
+      +1: stsp
+
 Veto-blocked changes:
 =====================
 
