@@ -37,23 +37,24 @@
 #undef TRUE
 #undef FALSE
 
+namespace apache {
 namespace subversion {
 namespace cxxhl {
 
 namespace detail {
 
-class error_description
+class ErrorDescription
 {
 public:
-  static error_description* create(const char* message,
-                                   const char *loc_file, long loc_line,
-                                   bool trace_link)
+  static ErrorDescription* create(const char* message,
+                                  const char *loc_file, long loc_line,
+                                  bool trace_link)
     {
       bool empty_message = (message == NULL);
       const std::size_t length = (empty_message ? 0 : std::strlen(message));
-      void *memblock = ::operator new(length + sizeof(error_description));
+      void *memblock = ::operator new(length + sizeof(ErrorDescription));
 
-      error_description* description = new(memblock) error_description(
+      ErrorDescription* description = new(memblock) ErrorDescription(
           loc_file, loc_line, trace_link, empty_message);
       if (length)
         std::memcpy(description->m_message, message, length);
@@ -61,23 +62,23 @@ public:
       return description;
     }
 
-  static error_description* create(const char* message)
+  static ErrorDescription* create(const char* message)
     {
       return create(message, NULL, 0, false);
     }
 
-  error_description* reference() throw()
+  ErrorDescription* reference() throw()
     {
       if (this)
         svn_atomic_inc(&m_refcount);
       return this;
     }
 
-  error_description* dereference() throw()
+  ErrorDescription* dereference() throw()
     {
       if (this && 0 == svn_atomic_dec(&m_refcount))
         {
-          this->~error_description();
+          this->~ErrorDescription();
           ::operator delete(this, std::nothrow);
           return NULL;
         }
@@ -90,8 +91,8 @@ public:
   bool trace() const throw() { return m_trace; }
 
 private:
-  error_description(const char *loc_file, long loc_line,
-                    bool trace_link, bool empty_message) throw()
+  ErrorDescription(const char *loc_file, long loc_line,
+                   bool trace_link, bool empty_message) throw()
     : m_loc_file(loc_file),
       m_loc_line(loc_line),
       m_trace(trace_link),
@@ -99,7 +100,7 @@ private:
       m_refcount(0)
     {}
 
-  ~error_description() throw() {}
+  ~ErrorDescription() throw() {}
 
   const char* m_loc_file;
   long m_loc_line;
@@ -113,27 +114,25 @@ private:
 } // namespace detail
 
 
-namespace version_1_9_dev {
-
-error::error(const char* description, int error_code)
+Error::Error(const char* description, int error_code)
   : m_errno(error_code),
-    m_description(detail::error_description::create(description)->reference())
+    m_description(detail::ErrorDescription::create(description)->reference())
 {}
 
-error::error(const char* description, int error_code,
-             error::shared_ptr nested_error)
+Error::Error(const char* description, int error_code,
+             Error::shared_ptr nested_error)
   : m_errno(error_code),
     m_nested(nested_error),
-    m_description(detail::error_description::create(description)->reference())
+    m_description(detail::ErrorDescription::create(description)->reference())
 {}
 
-error::error(const error& that) throw()
+Error::Error(const Error& that) throw()
   : m_errno(that.m_errno),
     m_nested(that.m_nested),
     m_description(that.m_description->reference())
 {}
 
-error& error::operator=(const error& that) throw()
+Error& Error::operator=(const Error& that) throw()
 {
   if (this == &that)
     return *this;
@@ -141,29 +140,28 @@ error& error::operator=(const error& that) throw()
   // This in-place destroy+copy implementation of the assignment
   // operator is safe because both the destructor and the copy
   // constructor do not throw exceptions.
-  this->~error();
-  return *new(this) error(that);
+  this->~Error();
+  return *new(this) Error(that);
 }
 
-error::~error() throw()
+Error::~Error() throw()
 {
   m_description->dereference();
 }
 
-const char* error::what() const throw()
+const char* Error::what() const throw()
 {
   return m_description->what();
 }
 
-error::error(int error_code, detail::error_description* description) throw()
+Error::Error(int error_code, detail::ErrorDescription* description) throw()
   : m_errno(error_code),
     m_description(description)
 {}
 
-void error::throw_svn_error(svn_error_t* err)
+void Error::throw_svn_error(svn_error_t* err)
 {
-  const bool throw_cancelled = (err->apr_err == SVN_ERR_CANCELLED);
-  detail::error_description* description = NULL;
+  detail::ErrorDescription* description = NULL;
   try
     {
       // Be very careful when creating the error descriptions, so that
@@ -174,33 +172,36 @@ void error::throw_svn_error(svn_error_t* err)
       shared_ptr nested;
       shared_ptr* current = &nested;
 
+      bool cancelled = (err->apr_err == SVN_ERR_CANCELLED);
       for (svn_error_t* next = err->child; next; next = next->child)
         {
-          description = detail::error_description::create(
+          description = detail::ErrorDescription::create(
               next->message, next->file, next->line,
               svn_error__is_tracing_link(next));
           description->reference();
-          current->reset(new error(next->apr_err, description));
+          current->reset(new Error(next->apr_err, description));
           description = NULL;
           current = &(*current)->m_nested;
+          if (next->apr_err == SVN_ERR_CANCELLED)
+            cancelled = true;
         }
 
       const int apr_err = err->apr_err;
-      description = detail::error_description::create(
+      description = detail::ErrorDescription::create(
           err->message, err->file, err->line,
           svn_error__is_tracing_link(err));
       description->reference();
       svn_error_clear(err);
-      if (throw_cancelled)
+      if (cancelled)
         {
-          cancelled converted = cancelled(apr_err, description);
+          Cancelled converted = Cancelled(apr_err, description);
           description = NULL;
           converted.m_nested = nested;
           throw converted;
         }
       else
         {
-          error converted = error(apr_err, description);
+          Error converted = Error(apr_err, description);
           description = NULL;
           converted.m_nested = nested;
           throw converted;
@@ -215,8 +216,8 @@ void error::throw_svn_error(svn_error_t* err)
 
 
 namespace {
-void handle_one_error(error::message_list& ml, bool show_traces,
-                      int error_code, detail::error_description* descr,
+void handle_one_error(Error::MessageList& ml, bool show_traces,
+                      int error_code, detail::ErrorDescription* descr,
                       apr_pool_t* pool)
 {
   if (show_traces && descr->file())
@@ -234,8 +235,20 @@ void handle_one_error(error::message_list& ml, bool show_traces,
         buffer << file_utf8 << ':' << descr->line();
       else
         buffer << "svn:<undefined>";
-      buffer << ": (apr_err=" << error_code << ')';
-      ml.push_back(error::message(0, buffer.str()));
+      if (descr->trace())
+        buffer << ',';
+      else
+        {
+#ifdef SVN_DEBUG
+          if (const char *const symbolic_name =
+              svn_error_symbolic_name(error_code))
+            //if (symbolic_name)
+            buffer << ": (apr_err=" << symbolic_name << ')';
+          else
+#endif
+            buffer << ": (apr_err=" << error_code << ')';
+        }
+      ml.push_back(Error::Message(0, buffer.str()));
     }
 
   if (descr->trace())
@@ -264,22 +277,22 @@ void handle_one_error(error::message_list& ml, bool show_traces,
             }
         }
     }
-  ml.push_back(error::message(error_code, std::string(description)));
+  ml.push_back(Error::Message(error_code, std::string(description)));
 }
 } // anonymous namespace
 
-error::message_list error::compile_messages(bool show_traces) const
+Error::MessageList Error::compile_messages(bool show_traces) const
 {
   // Determine the maximum size of the returned list
-  message_list::size_type max_length = 0;
-  for (const error* err = this; err; err = err->m_nested.get())
+  MessageList::size_type max_length = 0;
+  for (const Error* err = this; err; err = err->m_nested.get())
     {
       if (show_traces && m_description->file())
         ++max_length;                   // We will display an error location
       if (!m_description->trace())
         ++max_length;                   // Traces do not emit a message line
     }
-  message_list ml;
+  MessageList ml;
   ml.reserve(max_length);
 
   // This vector holds a list of all error codes that we've printed
@@ -291,7 +304,7 @@ error::message_list error::compile_messages(bool show_traces) const
   apr_pool_create(&pool, NULL);
   try
     {
-      for (const error* err = this; err; err = err->m_nested.get())
+      for (const Error* err = this; err; err = err->m_nested.get())
         {
           if (!err->m_description->what())
             {
@@ -317,6 +330,6 @@ error::message_list error::compile_messages(bool show_traces) const
   return ml;
 }
 
-} // namespace version_1_9_dev
 } // namespace cxxhl
 } // namespace subversion
+} // namespace apache
