@@ -2795,10 +2795,23 @@ svn_io_wait_for_cmd(apr_proc_t *cmd_proc,
 
   if (exitwhy)
     *exitwhy = exitwhy_val;
-  else if (! APR_PROC_CHECK_EXIT(exitwhy_val))
+  else if (APR_PROC_CHECK_SIGNALED(exitwhy_val)
+           && APR_PROC_CHECK_CORE_DUMP(exitwhy_val))
     return svn_error_createf
       (SVN_ERR_EXTERNAL_PROGRAM, NULL,
-       _("Process '%s' failed (exitwhy %d)"), cmd, exitwhy_val);
+       _("Process '%s' failed (signal %d, core dumped)"),
+       cmd, exitcode_val);
+  else if (APR_PROC_CHECK_SIGNALED(exitwhy_val))
+    return svn_error_createf
+      (SVN_ERR_EXTERNAL_PROGRAM, NULL,
+       _("Process '%s' failed (signal %d)"),
+       cmd, exitcode_val);
+  else if (! APR_PROC_CHECK_EXIT(exitwhy_val))
+    /* Don't really know what happened here. */
+    return svn_error_createf
+      (SVN_ERR_EXTERNAL_PROGRAM, NULL,
+       _("Process '%s' failed (exitwhy %d, exitcode %d)"),
+       cmd, exitwhy_val, exitcode_val);
 
   if (exitcode)
     *exitcode = exitcode_val;
@@ -3472,17 +3485,8 @@ svn_io_write_unique(const char **tmp_path,
 
   err = svn_io_file_write_full(new_file, buf, nbytes, NULL, pool);
 
-  /* ### BH: Windows doesn't have the race condition between the write and the
-     ###     rename that other operating systems might have. So allow windows
-     ###     to decide when it wants to perform the disk synchronization using
-     ###     the normal file locking and journaling filesystem rules.
-
-     ### Note that this function doesn't handle the rename, so we aren't even
-     ### sure that we really have to sync. */
-#ifndef WIN32
-  if (!err && nbytes > 0)
+  if (!err)
     err = svn_io_file_flush_to_disk(new_file, pool);
-#endif
 
   return svn_error_trace(
                   svn_error_compose_create(err,

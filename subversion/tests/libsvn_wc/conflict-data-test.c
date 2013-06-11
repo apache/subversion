@@ -28,6 +28,7 @@
 #include <apr_hash.h>
 #include <apr_tables.h>
 
+#include "svn_props.h"
 #include "svn_pools.h"
 #include "svn_hash.h"
 #include "svn_types.h"
@@ -54,42 +55,128 @@ fail(apr_pool_t *pool, const char *fmt, ...)
   return svn_error_create(SVN_ERR_TEST_FAILED, 0, msg);
 }
 
-/* Raise a test error if EXPECTED and ACTUAL differ. */
+/* Assert that two integers are equal. Return an error if not. */
+#define ASSERT_INT_EQ(a, b) \
+  do { \
+    if ((a) != (b)) \
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL, \
+                               "failed: ASSERT_INT_EQ(" #a ", " #b ") " \
+                               "-> (%d == %d)", a, b); \
+  } while (0)
+
+/* Assert that two strings are equal or both null. Return an error if not. */
+#define ASSERT_STR_EQ(a, b) \
+  SVN_TEST_STRING_ASSERT(a, b)
+
+/* Assert that two version_t's are equal or both null. Return an error if not. */
 static svn_error_t *
-compare_version(const svn_wc_conflict_version_t *expected,
-                const svn_wc_conflict_version_t *actual)
+compare_version(const svn_wc_conflict_version_t *actual,
+                const svn_wc_conflict_version_t *expected)
 {
-  SVN_TEST_STRING_ASSERT(expected->repos_url, actual->repos_url);
-  SVN_TEST_ASSERT(expected->peg_rev == actual->peg_rev);
-  SVN_TEST_STRING_ASSERT(expected->path_in_repos, actual->path_in_repos);
-  SVN_TEST_ASSERT(expected->node_kind == actual->node_kind);
+  if (actual == NULL && expected == NULL)
+    return SVN_NO_ERROR;
+
+  SVN_TEST_ASSERT(actual && expected);
+  ASSERT_STR_EQ(actual->repos_url,      expected->repos_url);
+  ASSERT_INT_EQ((int)actual->peg_rev,   (int)expected->peg_rev);
+  ASSERT_STR_EQ(actual->path_in_repos,  expected->path_in_repos);
+  ASSERT_INT_EQ(actual->node_kind,      expected->node_kind);
   return SVN_NO_ERROR;
 }
 
-/* Raise a test error if EXPECTED and ACTUAL differ or if ACTUAL is NULL. */
+/* Assert that two conflict descriptions contain exactly the same data
+ * (including names of temporary files), or are both NULL.  Return an
+ * error if not. */
 static svn_error_t *
-compare_conflict(const svn_wc_conflict_description2_t *expected,
-                 const svn_wc_conflict_description2_t *actual)
+compare_conflict(const svn_wc_conflict_description2_t *actual,
+                 const svn_wc_conflict_description2_t *expected)
 {
-  SVN_TEST_ASSERT(actual != NULL);
+  if (actual == NULL && expected == NULL)
+    return SVN_NO_ERROR;
 
-  SVN_TEST_STRING_ASSERT(expected->local_abspath, actual->local_abspath);
-  SVN_TEST_ASSERT(expected->node_kind == actual->node_kind);
-  SVN_TEST_ASSERT(expected->kind == actual->kind);
-  SVN_TEST_STRING_ASSERT(expected->property_name, actual->property_name);
-  SVN_TEST_ASSERT(expected->is_binary == actual->is_binary);
-  SVN_TEST_STRING_ASSERT(expected->mime_type, actual->mime_type);
-  SVN_TEST_ASSERT(expected->action == actual->action);
-  SVN_TEST_ASSERT(expected->reason == actual->reason);
-  SVN_TEST_STRING_ASSERT(expected->base_abspath, actual->base_abspath);
-  SVN_TEST_STRING_ASSERT(expected->their_abspath, actual->their_abspath);
-  SVN_TEST_STRING_ASSERT(expected->my_abspath, actual->my_abspath);
-  SVN_TEST_STRING_ASSERT(expected->merged_file, actual->merged_file);
-  SVN_TEST_ASSERT(expected->operation == actual->operation);
-  SVN_ERR(compare_version(expected->src_left_version,
-                          actual->src_left_version));
-  SVN_ERR(compare_version(expected->src_right_version,
-                          actual->src_right_version));
+  SVN_TEST_ASSERT(actual && expected);
+
+  ASSERT_INT_EQ(actual->kind,           expected->kind);
+  ASSERT_STR_EQ(actual->local_abspath,  expected->local_abspath);
+  ASSERT_INT_EQ(actual->node_kind,      expected->node_kind);
+  ASSERT_STR_EQ(actual->property_name,  expected->property_name);
+  ASSERT_INT_EQ(actual->is_binary,      expected->is_binary);
+  ASSERT_STR_EQ(actual->mime_type,      expected->mime_type);
+  ASSERT_INT_EQ(actual->action,         expected->action);
+  ASSERT_INT_EQ(actual->reason,         expected->reason);
+  ASSERT_STR_EQ(actual->base_abspath,   expected->base_abspath);
+  ASSERT_STR_EQ(actual->their_abspath,  expected->their_abspath);
+  ASSERT_STR_EQ(actual->my_abspath,     expected->my_abspath);
+  ASSERT_STR_EQ(actual->merged_file,    expected->merged_file);
+  ASSERT_INT_EQ(actual->operation,      expected->operation);
+  SVN_ERR(compare_version(actual->src_left_version,
+                          expected->src_left_version));
+  SVN_ERR(compare_version(actual->src_right_version,
+                          expected->src_right_version));
+  return SVN_NO_ERROR;
+}
+
+/* Assert that a file contains the expected data.  Return an
+ * error if not. */
+static svn_error_t *
+compare_file_content(const char *file_abspath,
+                     const char *expected_val,
+                     apr_pool_t *scratch_pool)
+{
+  svn_stringbuf_t *actual_val;
+
+  SVN_ERR(svn_stringbuf_from_file2(&actual_val, file_abspath, scratch_pool));
+  ASSERT_STR_EQ(actual_val->data, expected_val);
+  return SVN_NO_ERROR;
+}
+
+/* Assert that ACTUAL and EXPECTED both represent the same property
+ * conflict, or are both NULL.  Return an error if not.
+ *
+ * Compare the property values found in files named by
+ * ACTUAL->base_abspath, ACTUAL->my_abspath, ACTUAL->merged_abspath
+ * with EXPECTED_BASE_VAL, EXPECTED_MY_VAL, EXPECTED_THEIR_VAL
+ * respectively, ignoring the corresponding fields in EXPECTED. */
+static svn_error_t *
+compare_prop_conflict(const svn_wc_conflict_description2_t *actual,
+                      const svn_wc_conflict_description2_t *expected,
+                      const char *expected_base_val,
+                      const char *expected_my_val,
+                      const char *expected_their_val,
+                      apr_pool_t *scratch_pool)
+{
+  if (actual == NULL && expected == NULL)
+    return SVN_NO_ERROR;
+
+  SVN_TEST_ASSERT(actual && expected);
+  ASSERT_INT_EQ(actual->kind,   svn_wc_conflict_kind_property);
+  ASSERT_INT_EQ(expected->kind, svn_wc_conflict_kind_property);
+
+  ASSERT_STR_EQ(actual->local_abspath,  expected->local_abspath);
+  ASSERT_INT_EQ(actual->node_kind,      expected->node_kind);
+  ASSERT_STR_EQ(actual->property_name,  expected->property_name);
+  ASSERT_INT_EQ(actual->action,         expected->action);
+  ASSERT_INT_EQ(actual->reason,         expected->reason);
+  ASSERT_INT_EQ(actual->operation,      expected->operation);
+  SVN_ERR(compare_version(actual->src_left_version,
+                          expected->src_left_version));
+  SVN_ERR(compare_version(actual->src_right_version,
+                          expected->src_right_version));
+
+  SVN_ERR(compare_file_content(actual->base_abspath, expected_base_val,
+                               scratch_pool));
+  SVN_ERR(compare_file_content(actual->my_abspath, expected_my_val,
+                               scratch_pool));
+  /* Historical wart: for a prop conflict, 'theirs' is in the 'merged_file'
+   * field, and the conflict artifact file is in the 'theirs_abspath' field. */
+  SVN_ERR(compare_file_content(actual->merged_file, expected_their_val,
+                               scratch_pool));
+  /*ASSERT_STR_EQ(actual->theirs_abspath, conflict_artifact_file));*/
+
+  /* These are 'undefined' for a prop conflict */
+  /*ASSERT_INT_EQ(actual->is_binary, expected->is_binary);*/
+  /*ASSERT_STR_EQ(actual->mime_type, expected->mime_type);*/
+
   return SVN_NO_ERROR;
 }
 
@@ -254,11 +341,11 @@ test_read_write_tree_conflicts(const svn_test_opts_t *opts,
 
     SVN_ERR(svn_wc__get_tree_conflict(&read_conflict, sbox.wc_ctx,
                                       child1_abspath, pool, pool));
-    SVN_ERR(compare_conflict(conflict1, read_conflict));
+    SVN_ERR(compare_conflict(read_conflict, conflict1));
 
     SVN_ERR(svn_wc__get_tree_conflict(&read_conflict, sbox.wc_ctx,
                                       child2_abspath, pool, pool));
-    SVN_ERR(compare_conflict(conflict2, read_conflict));
+    SVN_ERR(compare_conflict(read_conflict, conflict2));
   }
 
   /* Read many */
@@ -540,6 +627,186 @@ test_serialize_tree_conflict(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* A conflict resolver callback baton for test_prop_conflicts(). */
+typedef struct test_prop_conflict_baton_t
+{
+  /* Sets of properties. */
+  apr_hash_t *mine;
+  apr_hash_t *their_old;
+  apr_hash_t *theirs;
+  /* The set of prop names in conflict. */
+  apr_hash_t *conflicts;
+
+  /* We use all the fields of DESC except the base/theirs/mine/merged paths. */
+  svn_wc_conflict_description2_t *desc;
+
+  int conflicts_seen;
+} test_prop_conflict_baton_t;
+
+/* Set *CONFLICT_SKEL_P to a new property conflict skel reflecting the
+ * conflict details given in B. */
+static svn_error_t *
+create_prop_conflict_skel(svn_skel_t **conflict_skel_p,
+                          svn_wc_context_t *wc_ctx,
+                          const test_prop_conflict_baton_t *b,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  svn_skel_t *conflict_skel = svn_wc__conflict_skel_create(result_pool);
+  const char *marker_abspath;
+  svn_boolean_t complete;
+
+  SVN_ERR(svn_io_write_unique(&marker_abspath,
+                              b->desc->local_abspath,
+                              "conflict-artifact-file-content\n", 6,
+                              svn_io_file_del_none, scratch_pool));
+
+  SVN_ERR(svn_wc__conflict_skel_add_prop_conflict(conflict_skel,
+                                                  wc_ctx->db,
+                                                  b->desc->local_abspath,
+                                                  marker_abspath,
+                                                  b->mine, b->their_old,
+                                                  b->theirs, b->conflicts,
+                                                  result_pool, scratch_pool));
+
+  switch (b->desc->operation)
+    {
+    case svn_wc_operation_update:
+      SVN_ERR(svn_wc__conflict_skel_set_op_update(
+                conflict_skel,
+                b->desc->src_left_version, b->desc->src_right_version,
+                result_pool, scratch_pool));
+      break;
+    case svn_wc_operation_switch:
+      SVN_ERR(svn_wc__conflict_skel_set_op_switch(
+                conflict_skel,
+                b->desc->src_left_version, b->desc->src_right_version,
+                result_pool, scratch_pool));
+      break;
+    case svn_wc_operation_merge:
+      SVN_ERR(svn_wc__conflict_skel_set_op_merge(
+                conflict_skel,
+                b->desc->src_left_version, b->desc->src_right_version,
+                result_pool, scratch_pool));
+      break;
+    default:
+      SVN_ERR_MALFUNCTION();
+    }
+
+  SVN_ERR(svn_wc__conflict_skel_is_complete(&complete, conflict_skel));
+  SVN_TEST_ASSERT(complete);
+  *conflict_skel_p = conflict_skel;
+  return SVN_NO_ERROR;
+}
+
+/* A conflict resolver callback for test_prop_conflicts(), that checks
+ * that the conflict described to it matches the one described in BATON,
+ * and also counts the number of times it is called. */
+static svn_error_t *
+prop_conflict_cb(svn_wc_conflict_result_t **result_p,
+                 const svn_wc_conflict_description2_t *desc,
+                 void *baton,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  test_prop_conflict_baton_t *b = baton;
+
+  SVN_ERR(compare_prop_conflict(
+            desc, b->desc,
+            svn_prop_get_value(b->their_old, desc->property_name),
+            svn_prop_get_value(b->mine, desc->property_name),
+            svn_prop_get_value(b->theirs, desc->property_name),
+            scratch_pool));
+  b->conflicts_seen++;
+
+  *result_p = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,
+                                            NULL /*merged_file*/, result_pool);
+  return SVN_NO_ERROR;
+}
+
+/* Test for correct retrieval of property conflict descriptions from
+ * the WC DB.
+ *
+ * Presently it tests just one prop conflict, and only during the
+ * 'resolve' operation.  We should also test during the 'update'/
+ * 'switch'/'merge' operations.
+ */
+static svn_error_t *
+test_prop_conflicts(const svn_test_opts_t *opts,
+                    apr_pool_t *pool)
+{
+  svn_test__sandbox_t sbox;
+  svn_skel_t *conflict_skel;
+  svn_error_t *err;
+  const char *lock_abspath;
+  test_prop_conflict_baton_t *b = apr_pcalloc(pool, sizeof(*b));
+  svn_wc_conflict_description2_t *desc = apr_pcalloc(pool, sizeof(*b));
+
+  SVN_ERR(svn_test__sandbox_create(&sbox, "test_prop_conflicts", opts, pool));
+
+  /* Describe a property conflict */
+  b->mine = apr_hash_make(pool);
+  b->their_old = apr_hash_make(pool);
+  b->theirs = apr_hash_make(pool);
+  b->conflicts = apr_hash_make(pool);
+  svn_hash_sets(b->mine, "prop", svn_string_create("Mine", pool));
+  svn_hash_sets(b->their_old, "prop", svn_string_create("Their-Old", pool));
+  svn_hash_sets(b->theirs, "prop", svn_string_create("Theirs", pool));
+  svn_hash_sets(b->conflicts, "prop", "");
+
+  b->desc = desc;
+  desc->local_abspath = sbox.wc_abspath;
+  desc->kind = svn_wc_conflict_kind_property;
+  desc->node_kind = svn_node_dir;
+  desc->operation = svn_wc_operation_update;
+  desc->action = svn_wc_conflict_action_edit;
+  desc->reason = svn_wc_conflict_reason_edited;
+  desc->mime_type = NULL;
+  desc->is_binary = FALSE;
+  desc->property_name = "prop";
+  desc->src_left_version
+    = svn_wc_conflict_version_create2(sbox.repos_url, "uuid",
+                                      "trunk", 12, svn_node_dir, pool);
+  desc->src_right_version = NULL;  /* WC only */
+
+  b->conflicts_seen = 0;
+
+  /* Record a conflict */
+  {
+    apr_pool_t *subpool = svn_pool_create(pool);
+    SVN_ERR(create_prop_conflict_skel(&conflict_skel, sbox.wc_ctx, b,
+                                      pool, subpool));
+    svn_pool_clear(subpool);
+    SVN_ERR(svn_wc__db_op_mark_conflict(sbox.wc_ctx->db,
+                                        sbox.wc_abspath,
+                                        conflict_skel, NULL, subpool));
+    svn_pool_destroy(subpool);
+  }
+
+  /* Test the API for resolving the conflict: check that correct details
+   * of the conflict are returned. */
+  SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, sbox.wc_ctx,
+                                                 sbox.wc_abspath, pool, pool));
+  err = svn_wc__resolve_conflicts(sbox.wc_ctx, sbox.wc_abspath,
+                                  svn_depth_empty,
+                                  FALSE /* resolve_text */,
+                                  "" /* resolve_prop (ALL props) */,
+                                  FALSE /* resolve_tree */,
+                                  svn_wc_conflict_choose_unspecified,
+                                  prop_conflict_cb, b,
+                                  NULL, NULL, /* cancellation */
+                                  NULL, NULL, /* notification */
+                                  pool);
+
+  SVN_ERR(svn_error_compose_create(err,
+                                   svn_wc__release_write_lock(sbox.wc_ctx,
+                                                              lock_abspath,
+                                                              pool)));
+
+  ASSERT_INT_EQ(b->conflicts_seen, 1);
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -557,6 +824,8 @@ struct svn_test_descriptor_t test_funcs[] =
                        "read and write a text conflict"),
     SVN_TEST_OPTS_PASS(test_serialize_tree_conflict,
                        "read and write a tree conflict"),
+    SVN_TEST_OPTS_PASS(test_prop_conflicts,
+                       "test prop conflicts"),
     SVN_TEST_NULL
   };
 

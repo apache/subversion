@@ -12,8 +12,8 @@ BEGIN {
             checkout2 checkout update4 update3 update2 update switch2 switch
             add4 add3 add2 add mkdir4 mkdir3 mkdir2 mkdir delete3 delete2
             delete import3 import2 import commit4 commit3 commit2
-            commit status4 status3 status2 status log4 log3 log2 log blame4
-            blame3 blame2 blame diff4 diff3 diff2 diff diff_peg4
+            commit status4 status3 status2 status log5 log4 log3 log2 log 
+            blame4 blame3 blame2 blame diff4 diff3 diff2 diff diff_peg4
             diff_peg3 diff_peg2 diff_peg diff_summarize2
             diff_summarize diff_summarize_peg2 diff_summarize_peg
             merge3 merge2 merge merge_peg3 merge_peg2 merge_peg

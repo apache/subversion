@@ -212,7 +212,8 @@ class GeneratorBase(gen_base.GeneratorBase):
 
   def _find_bdb(self):
     "Find the Berkeley DB library and version"
-    for ver in ("48", "47", "46", "45", "44", "43", "42", "41", "40"):
+    for ver in ("53", "52", "51", "50", "48", "47", "46",
+                "45", "44", "43", "42", "41", "40"):
       lib = "libdb" + ver
       path = os.path.join(self.bdb_path, "lib")
       if os.path.exists(os.path.join(path, lib + ".lib")):
@@ -1253,7 +1254,9 @@ class WinGeneratorBase(GeneratorBase):
     self.ruby_version = None
     self.ruby_major_version = None
     self.ruby_minor_version = None
-    proc = os.popen('ruby -rrbconfig -e ' + escape_shell_arg(
+    # Pass -W0 to stifle the "-e:1: Use RbConfig instead of obsolete
+    # and deprecated Config." warning if we are using Ruby 1.9.
+    proc = os.popen('ruby -rrbconfig -W0 -e ' + escape_shell_arg(
                     "puts Config::CONFIG['ruby_version'];"
                     "puts Config::CONFIG['LIBRUBY'];"
                     "puts Config::CONFIG['archdir'];"
@@ -1440,7 +1443,7 @@ class WinGeneratorBase(GeneratorBase):
   def _find_serf(self):
     "Check if serf and its dependencies are available"
 
-    minimal_serf_version = (1, 2, 0)
+    minimal_serf_version = (1, 2, 1)
     self.serf_lib = None
     if self.serf_path and os.path.exists(self.serf_path):
       if self.openssl_path and os.path.exists(self.openssl_path):

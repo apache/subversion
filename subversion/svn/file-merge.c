@@ -853,13 +853,20 @@ svn_cl__merge_file(const char *base_path,
   const char *merged_file_name;
   struct file_merge_baton fmb;
   svn_boolean_t executable;
+  const char *merged_path_local_style;
+  const char *merged_rel_path;
+  const char *wc_path_local_style;
+  const char *wc_rel_path = svn_dirent_skip_ancestor(path_prefix, wc_path);
 
+  /* PATH_PREFIX may not be an ancestor of WC_PATH, just use the
+     full WC_PATH in that case. */
+  if (wc_rel_path)
+    wc_path_local_style = svn_dirent_local_style(wc_rel_path, scratch_pool);
+  else
+    wc_path_local_style = svn_dirent_local_style(wc_path, scratch_pool);
 
-  SVN_ERR(svn_cmdline_printf(
-            scratch_pool, _("Merging '%s'.\n"),
-            svn_dirent_local_style(svn_dirent_skip_ancestor(path_prefix,
-                                                            wc_path),
-                                   scratch_pool)));
+  SVN_ERR(svn_cmdline_printf(scratch_pool, _("Merging '%s'.\n"),
+                             wc_path_local_style));
 
   SVN_ERR(svn_io_file_open(&original_file, base_path,
                            APR_READ | APR_BUFFERED,
@@ -905,29 +912,30 @@ svn_cl__merge_file(const char *base_path,
   if (fmb.abort_merge)
     {
       SVN_ERR(svn_io_remove_file2(merged_file_name, TRUE, scratch_pool));
-      SVN_ERR(svn_cmdline_printf(
-                scratch_pool, _("Merge of '%s' aborted.\n"),
-                svn_dirent_local_style(svn_dirent_skip_ancestor(path_prefix,
-                                                                wc_path),
-                                       scratch_pool)));
-
+      SVN_ERR(svn_cmdline_printf(scratch_pool, _("Merge of '%s' aborted.\n"),
+                                 wc_path_local_style));
       return SVN_NO_ERROR;
     }
 
   SVN_ERR(svn_io_is_file_executable(&executable, merged_path, scratch_pool));
+
+  merged_rel_path = svn_dirent_skip_ancestor(path_prefix, merged_path);
+  if (merged_rel_path)
+    merged_path_local_style = svn_dirent_local_style(merged_rel_path,
+                                                     scratch_pool);
+  else
+    merged_path_local_style = svn_dirent_local_style(merged_path,
+                                                     scratch_pool);
+
   SVN_ERR_W(svn_io_copy_file(merged_file_name, merged_path, FALSE,
                              scratch_pool),
             apr_psprintf(scratch_pool,
                          _("Could not write merged result to '%s', saved "
                            "instead at '%s'.\n'%s' remains in conflict.\n"),
-                         svn_dirent_local_style(
-                           svn_dirent_skip_ancestor(path_prefix, merged_path),
-                           scratch_pool),
+                         merged_path_local_style,
                          svn_dirent_local_style(merged_file_name,
                                                 scratch_pool),
-                         svn_dirent_local_style(
-                           svn_dirent_skip_ancestor(path_prefix, wc_path),
-                           scratch_pool)));
+                         wc_path_local_style));
   SVN_ERR(svn_io_set_file_executable(merged_path, executable, FALSE,
                                      scratch_pool));
   SVN_ERR(svn_io_remove_file2(merged_file_name, TRUE, scratch_pool));
@@ -941,15 +949,11 @@ svn_cl__merge_file(const char *base_path,
     SVN_ERR(svn_cmdline_printf(
               scratch_pool,
               _("Merge of '%s' completed (remains in conflict).\n"),
-              svn_dirent_local_style(svn_dirent_skip_ancestor(path_prefix,
-                                                              wc_path),
-                                     scratch_pool)));
+              wc_path_local_style));
   else
     SVN_ERR(svn_cmdline_printf(
               scratch_pool, _("Merge of '%s' completed.\n"),
-              svn_dirent_local_style(svn_dirent_skip_ancestor(path_prefix,
-                                                              wc_path),
-                                     scratch_pool)));
+              wc_path_local_style));
 
   return SVN_NO_ERROR;
 }

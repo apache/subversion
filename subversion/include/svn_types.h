@@ -72,10 +72,16 @@ extern "C" {
  * Unaligned access on other machines (e.g. IA64) will trigger memory
  * access faults or simply misbehave.
  *
+ * Note: Some platforms may only support unaligned access for integers
+ * (PowerPC).  As a result this macro should only be used to determine
+ * if unaligned access is supported for integers.
+ *
  * @since New in 1.7.
  */
 #ifndef SVN_UNALIGNED_ACCESS_IS_OK
-# if defined(_M_IX86) || defined(_M_X64) || defined(i386) || defined(__x86_64)
+# if defined(_M_IX86) || defined(i386) \
+     || defined(_M_X64) || defined(__x86_64) \
+     || defined(__powerpc__) || defined(__ppc__)
 #  define SVN_UNALIGNED_ACCESS_IS_OK 1
 # else
 #  define SVN_UNALIGNED_ACCESS_IS_OK 0
@@ -270,8 +276,11 @@ svn_node_kind_from_word(const char *word);
  * @since New in 1.7. */
 typedef enum svn_tristate_t
 {
+  /** state known to be false (the constant does not evaulate to false) */
   svn_tristate_false = 2,
+  /** state known to be true */
   svn_tristate_true,
+  /** state could be true or false */
   svn_tristate_unknown
 } svn_tristate_t;
 
