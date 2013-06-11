@@ -105,7 +105,7 @@ Candidate changes:
      else. Particularly, we allowed for unlimited revprop sizes when setting
      them but had a 16MB limit in the getter.
    Votes:
-     +1: stefan2
+     +1: stefan2, blair
 
 Veto-blocked changes:
 =====================
