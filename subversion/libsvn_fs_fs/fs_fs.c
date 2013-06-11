@@ -3316,9 +3316,9 @@ typedef struct revprop_generation_fixup_t
 /* If the revprop generation has an odd value, it means the original writer
    of the revprop got killed. We don't know whether that process as able
    to change the revprop data but we assume that it was. Therefore, we
-   increase the generation in that case to basically invalidate everyones
+   increase the generation in that case to basically invalidate everyone's
    cache content.
-   Execute this onlx while holding the write lock to the repo in baton->FFD.
+   Execute this only while holding the write lock to the repo in baton->FFD.
  */
 static svn_error_t *
 revprop_generation_fixup(void *void_baton,
