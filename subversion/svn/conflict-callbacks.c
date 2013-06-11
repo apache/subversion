@@ -455,7 +455,7 @@ static const resolver_option_t text_conflict_options[] =
                                   -1 },
   { "df", N_("show diff"),        N_("show all changes made to merged file"),
                                   -1 },
-  { "r",  N_("resolved"),         N_("accept merged version of file"),
+  { "r",  N_("mark resolved"),   N_("accept merged version of file"),
                                   svn_wc_conflict_choose_merged },
   { "",   "",                     "", svn_wc_conflict_choose_unspecified },
   { "dc", N_("display conflict"), N_("show all conflicts "
@@ -500,7 +500,7 @@ static const resolver_option_t prop_conflict_options[] =
   { "dc", N_("display conflict"), N_("show conflicts in this property"), -1 },
   { "e",  N_("edit property"),    N_("change merged property value in an editor"
                                      "  [edit]"), -1 },
-  { "r",  N_("resolved"),         N_("accept edited version of property"),
+  { "r",  N_("mark resolved"),    N_("accept edited version of property"),
                                   svn_wc_conflict_choose_merged },
   { "p",  N_("postpone"),         N_("mark the conflict to be resolved later"
                                      "  [postpone]"),
@@ -532,7 +532,7 @@ static const resolver_option_t obstructed_add_options[] =
 /* Resolver options for a tree conflict */
 static const resolver_option_t tree_conflict_options[] =
 {
-  { "r",  N_("resolved"),         N_("accept current working copy state"),
+  { "r",  N_("mark resolved"),    N_("accept current working copy state"),
                                   svn_wc_conflict_choose_merged },
   { "p",  N_("postpone"),         N_("resolve the conflict later  [postpone]"),
                                   svn_wc_conflict_choose_postpone },
@@ -547,7 +547,7 @@ static const resolver_option_t tree_conflict_options_update_moved_away[] =
   { "mc", N_("my side of conflict"), N_("apply update to the move destination"
                                         "  [mine-conflict]"),
                                   svn_wc_conflict_choose_mine_conflict },
-  { "r",  N_("resolved"),         N_("mark resolved "
+  { "r",  N_("mark resolved"),    N_("mark resolved "
                                      "(the move will become a copy)"),
                                   svn_wc_conflict_choose_merged },
   { "p",  N_("postpone"),         N_("resolve the conflict later  [postpone]"),
@@ -563,7 +563,7 @@ static const resolver_option_t tree_conflict_options_update_deleted[] =
   { "mc", N_("my side of conflict"), N_("keep any moves affected "
                                         "by this deletion  [mine-conflict]"),
                                   svn_wc_conflict_choose_mine_conflict },
-  { "r",  N_("resolved"),         N_("mark resolved (any affected moves will "
+  { "r",  N_("mark resolved"),     N_("mark resolved (any affected moves will "
                                      "become copies)"),
                                   svn_wc_conflict_choose_merged },
   { "p",  N_("postpone"),         N_("resolve the conflict later  [postpone]"),
@@ -579,7 +579,7 @@ static const resolver_option_t tree_conflict_options_update_replaced[] =
   { "mc", N_("my side of conflict"), N_("keep any moves affected by this "
                                         "replacement  [mine-conflict]"),
                                   svn_wc_conflict_choose_mine_conflict },
-  { "r",  N_("resolved"),         N_("mark resolved (any affected moves will "
+  { "r",  N_("mark resolved"),    N_("mark resolved (any affected moves will "
                                      "become copies)"),
                                   svn_wc_conflict_choose_merged },
   { "p",  N_("postpone"),         N_("resolve the conflict later  [postpone]"),
@@ -927,7 +927,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
               SVN_ERR(svn_cmdline_fprintf(
                         stderr, iterpool,
                         _("Invalid option; use diff/edit/merge/launch "
-                          "before choosing 'resolved'.\n\n")));
+                          "before choosing 'mark resolved'.\n\n")));
               continue;
             }
 
