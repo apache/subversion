@@ -2815,9 +2815,12 @@ check_ancestor_delete(const char *deleted_target,
 {
   struct can_delete_baton_t cb;
   svn_error_t *err;
+  apr_array_header_t *ignores;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   const char *dir_abspath = svn_dirent_dirname(deleted_target, scratch_pool);
+
+  SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, scratch_pool));
 
   while (svn_dirent_is_child(apply_root, dir_abspath, iterpool))
     {
@@ -2828,7 +2831,7 @@ check_ancestor_delete(const char *deleted_target,
       cb.targets_info = targets_info;
 
       err = svn_wc_walk_status(ctx->wc_ctx, dir_abspath, svn_depth_infinity,
-                               TRUE, FALSE, FALSE, NULL,
+                               TRUE, FALSE, FALSE, ignores,
                                can_delete_callback, &cb,
                                ctx->cancel_func, ctx->cancel_baton,
                                iterpool);

@@ -1023,7 +1023,7 @@ def up_add_onto_add_revert(sbox):
   main.run_svn(None, 'cp', os.path.join(wc_dir, 'A/C'), dir1)
   main.run_svn(None, 'cp', os.path.join(wc2_dir, 'A/C'), dir2)
 
-  main.run_svn(None, 'ci', wc_dir, '-m', 'Added file')
+  sbox.simple_commit(message='Added file')
 
   expected_disk = main.greek_state.copy()
   expected_disk.add({

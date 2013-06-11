@@ -1688,8 +1688,9 @@ svn_dirent_is_canonical(const char *dirent, apr_pool_t *scratch_pool)
 static svn_boolean_t
 relpath_is_canonical(const char *relpath)
 {
-  const char *ptr = relpath;
+  const char *dot_pos, *ptr = relpath;
   apr_size_t i, len;
+  unsigned pattern = 0;
 
   /* RELPATH is canonical if it has:
    *  - no '.' segments
@@ -1713,16 +1714,23 @@ relpath_is_canonical(const char *relpath)
   if (ptr[len-1] == '/' || (ptr[len-1] == '.' && ptr[len-2] == '/'))
     return FALSE;
 
+  /* '.' are rare. So, search for them globally. There will often be no 
+   * more than one hit.  Also note that we already checked for invalid 
+   * starts and endings, i.e. we only need to check for "/./"
+   */
+  for (dot_pos = memchr(ptr, '.', len);
+       dot_pos;
+       dot_pos = strchr(dot_pos+1, '.'))
+    if (dot_pos > ptr && dot_pos[-1] == '/' && dot_pos[1] == '/')
+      return FALSE;
+
   /* Now validate the rest of the path. */
   for (i = 0; i < len - 1; ++i)
-    if (ptr[i] == '/' && ptr[i+1] <= '/') /* '.' and '/' have smaller UTF-8
-                                             codes than most other chars */
-      {
-        if (ptr[i+1] == '/')
-          return FALSE;  /*  //   */
-        if (ptr[i+1] == '.' && ptr[i+2] == '/')
-          return FALSE;  /*  /./  */
-      }
+    {
+      pattern = ((pattern & 0xff) << 8) + (unsigned char)ptr[i];
+      if (pattern == 0x101 * (unsigned char)('/'))
+        return FALSE;
+    }
 
   return TRUE;
 }

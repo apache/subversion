@@ -386,8 +386,7 @@ def dump_copied_dir(sbox):
   old_C_path = os.path.join(wc_dir, 'A', 'C')
   new_C_path = os.path.join(wc_dir, 'A', 'B', 'C')
   svntest.main.run_svn(None, 'cp', old_C_path, new_C_path)
-  svntest.main.run_svn(None, 'ci', wc_dir, '--quiet',
-                       '-m', 'log msg')
+  sbox.simple_commit(message='log msg')
 
   exit_code, output, errput = svntest.main.run_svnadmin("dump", repo_dir)
   if svntest.verify.compare_and_display_lines(
@@ -410,8 +409,7 @@ def dump_move_dir_modify_child(sbox):
   Q_path = os.path.join(wc_dir, 'A', 'Q')
   svntest.main.run_svn(None, 'cp', B_path, Q_path)
   svntest.main.file_append(os.path.join(Q_path, 'lambda'), 'hello')
-  svntest.main.run_svn(None, 'ci', wc_dir, '--quiet',
-                       '-m', 'log msg')
+  sbox.simple_commit(message='log msg')
   exit_code, output, errput = svntest.main.run_svnadmin("dump", repo_dir)
   svntest.verify.compare_and_display_lines(
     "Output of 'svnadmin dump' is unexpected.",
@@ -738,10 +736,10 @@ def recover_fsfs(sbox):
 
   # Commit up to r3, so we can test various recovery scenarios.
   svntest.main.file_append(os.path.join(sbox.wc_dir, 'iota'), 'newer line\n')
-  svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
+  sbox.simple_commit(message='log msg')
 
   svntest.main.file_append(os.path.join(sbox.wc_dir, 'iota'), 'newest line\n')
-  svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
+  sbox.simple_commit(message='log msg')
 
   # Remember the contents of the db/current file.
   expected_current_contents = open(current_path).read()
@@ -949,10 +947,10 @@ def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
 
   # Commit up to r3, so we can test various recovery scenarios.
   svntest.main.file_append(os.path.join(sbox.wc_dir, 'iota'), 'newer line\n')
-  svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
+  sbox.simple_commit(message='log msg')
 
   svntest.main.file_append(os.path.join(sbox.wc_dir, 'iota'), 'newest line\n')
-  svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
+  sbox.simple_commit(message='log msg')
 
   rev_3 = fsfs_file(sbox.repo_dir, 'revs', '3')
   rev_was_3 = rev_3 + '.was'

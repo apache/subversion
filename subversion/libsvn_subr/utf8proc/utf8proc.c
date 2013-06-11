@@ -40,7 +40,7 @@
 
 
 #include "utf8proc.h"
-#include "utf8proc_data.c.inline"
+#include "utf8proc_data.c"
 
 
 UTF8PROC_DATA

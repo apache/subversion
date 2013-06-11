@@ -484,6 +484,7 @@ path_and_offset_of(apr_file_t *file, apr_pool_t *pool)
 
 
 
+
 /* Functions for working with shared transaction data. */
 
 /* Return the transaction object for transaction TXN_ID from the
@@ -2238,10 +2239,10 @@ get_cached_node_revision_body(node_revision_t **noderev_p,
     }
   else
     {
-      pair_cache_key_t key = { 0 };
-
+      pair_cache_key_t key;
       key.revision = svn_fs_fs__id_rev(id);
       key.second = svn_fs_fs__id_offset(id);
+
       SVN_ERR(svn_cache__get((void **) noderev_p,
                             is_cached,
                             ffd->node_revision_cache,
@@ -2267,10 +2268,10 @@ set_cached_node_revision_body(node_revision_t *noderev_p,
 
   if (ffd->node_revision_cache && !svn_fs_fs__id_txn_id(id))
     {
-      pair_cache_key_t key = { 0 };
-
+      pair_cache_key_t key;
       key.revision = svn_fs_fs__id_rev(id);
       key.second = svn_fs_fs__id_offset(id);
+
       return svn_cache__set(ffd->node_revision_cache,
                             &key,
                             noderev_p,
@@ -3242,7 +3243,7 @@ ensure_revprop_timeout(svn_fs_t *fs)
 }
 
 /* Create an error object with the given MESSAGE and pass it to the
-   WARNING member of FS. */
+   WARNING member of FS. Clears UNDERLYING_ERR. */
 static void
 log_revprop_cache_init_warning(svn_fs_t *fs,
                                svn_error_t *underlying_err,
@@ -3315,9 +3316,9 @@ typedef struct revprop_generation_fixup_t
 /* If the revprop generation has an odd value, it means the original writer
    of the revprop got killed. We don't know whether that process as able
    to change the revprop data but we assume that it was. Therefore, we
-   increase the generation in that case to basically invalidate everyones
+   increase the generation in that case to basically invalidate everyone's
    cache content.
-   Execute this onlx while holding the write lock to the repo in baton->FFD.
+   Execute this only while holding the write lock to the repo in baton->FFD.
  */
 static svn_error_t *
 revprop_generation_fixup(void *void_baton,
@@ -3525,10 +3526,10 @@ parse_revprop(apr_hash_t **properties,
   if (has_revprop_cache(fs, pool))
     {
       fs_fs_data_t *ffd = fs->fsap_data;
-      pair_cache_key_t key = { 0 };
-
+      pair_cache_key_t key;
       key.revision = revision;
       key.second = generation;
+
       SVN_ERR(svn_cache__set(ffd->revprop_cache, &key, *properties,
                              scratch_pool));
     }
@@ -3652,7 +3653,7 @@ parse_packed_revprops(svn_fs_t *fs,
   svn_string_t *compressed
       = svn_stringbuf__morph_into_string(revprops->packed_revprops);
   svn_stringbuf_t *uncompressed = svn_stringbuf_create_empty(pool);
-  SVN_ERR(svn__decompress(compressed, uncompressed, 0x1000000));
+  SVN_ERR(svn__decompress(compressed, uncompressed, APR_SIZE_MAX));
 
   /* read first revision number and number of revisions in the pack */
   stream = svn_stream_from_stringbuf(uncompressed, scratch_pool);
@@ -3828,7 +3829,7 @@ get_revision_proplist(apr_hash_t **proplist_p,
   if (has_revprop_cache(fs, pool))
     {
       svn_boolean_t is_cached;
-      pair_cache_key_t key = { 0 };
+      pair_cache_key_t key;
 
       SVN_ERR(read_revprop_generation(&generation, fs, pool));
 
@@ -4926,7 +4927,6 @@ get_combined_window(svn_stringbuf_t **result,
 {
   apr_pool_t *pool, *new_pool, *window_pool;
   int i;
-  svn_txdelta_window_t *window;
   apr_array_header_t *windows;
   svn_stringbuf_t *source, *buf = rb->base_window;
   struct rep_state *rs;
@@ -4939,6 +4939,8 @@ get_combined_window(svn_stringbuf_t **result,
   windows = apr_array_make(window_pool, 0, sizeof(svn_txdelta_window_t *));
   for (i = 0; i < rb->rs_list->nelts; ++i)
     {
+      svn_txdelta_window_t *window;
+
       rs = APR_ARRAY_IDX(rb->rs_list, i, struct rep_state *);
       SVN_ERR(read_delta_window(&window, rb->chunk_index, rs, window_pool));
 
@@ -4954,6 +4956,7 @@ get_combined_window(svn_stringbuf_t **result,
   pool = svn_pool_create(rb->pool);
   for (--i; i >= 0; --i)
     {
+      svn_txdelta_window_t *window;
 
       rs = APR_ARRAY_IDX(rb->rs_list, i, struct rep_state *);
       window = APR_ARRAY_IDX(windows, i, svn_txdelta_window_t *);
@@ -5183,12 +5186,12 @@ read_representation(svn_stream_t **contents_p,
   else
     {
       fs_fs_data_t *ffd = fs->fsap_data;
-      pair_cache_key_t fulltext_cache_key = { 0 };
+      pair_cache_key_t fulltext_cache_key;
       svn_filesize_t len = rep->expanded_size ? rep->expanded_size : rep->size;
       struct rep_read_baton *rb;
-
       fulltext_cache_key.revision = rep->revision;
       fulltext_cache_key.second = rep->offset;
+
       if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(rep->revision)
           && fulltext_size_is_cachable(ffd, len))
         {
@@ -5357,10 +5360,10 @@ svn_fs_fs__try_process_file_contents(svn_boolean_t *success,
   if (rep)
     {
       fs_fs_data_t *ffd = fs->fsap_data;
-      pair_cache_key_t fulltext_cache_key = { 0 };
-
+      pair_cache_key_t fulltext_cache_key;
       fulltext_cache_key.revision = rep->revision;
       fulltext_cache_key.second = rep->offset;
+
       if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(rep->revision)
           && fulltext_size_is_cachable(ffd, rep->expanded_size))
         {
@@ -5664,10 +5667,10 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
     {
       fs_fs_data_t *ffd = fs->fsap_data;
       representation_t *rep = noderev->prop_rep;
-      pair_cache_key_t key = { 0 };
-
+      pair_cache_key_t key;
       key.revision = rep->revision;
       key.second = rep->offset;
+
       if (ffd->properties_cache && SVN_IS_VALID_REVNUM(rep->revision))
         {
           svn_boolean_t is_cached;
@@ -7089,7 +7092,12 @@ choose_delta_base(representation_t **rep,
                   svn_boolean_t props,
                   apr_pool_t *pool)
 {
+  /* The zero-based index (counting from the "oldest" end), along NODEREVs line
+   * predecessors, of the node-rev we will use as delta base. */
   int count;
+  /* The length of the linear part of a delta chain.  (Delta chains use
+   * skip-delta bits for the high-order bits and are linear in the low-order
+   * bits.) */
   int walk;
   node_revision_t *base;
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -7161,7 +7169,7 @@ choose_delta_base(representation_t **rep,
   /* return a suitable base representation */
   *rep = props ? base->prop_rep : base->data_rep;
 
-  /* if we encountered a shared rep, it's parent chain may be different
+  /* if we encountered a shared rep, its parent chain may be different
    * from the node-rev parent chain. */
   if (*rep && maybe_shared_rep)
     {
@@ -7209,7 +7217,6 @@ choose_delta_base(representation_t **rep,
       svn_pool_destroy(sub_pool);
     }
 
-  /* verify that the reps don't form a degenerated '*/
   return SVN_NO_ERROR;
 }
 
@@ -7327,7 +7334,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
   return SVN_NO_ERROR;
 }
 
-/* For the hash REP->SHA1, try to find an already existing representation
+/* For REP->SHA1_CHECKSUM, try to find an already existing representation
    in FS and return it in *OUT_REP.  If no such representation exists or
    if rep sharing has been disabled for FS, NULL will be returned.  Since
    there may be new duplicate representations within the same uncommitted

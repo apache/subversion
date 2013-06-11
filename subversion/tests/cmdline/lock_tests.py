@@ -1500,7 +1500,7 @@ def verify_path_escaping(sbox):
 
   svntest.main.run_svn(None, 'add', file1, file2, file3)
 
-  svntest.main.run_svn(None, 'ci', '-m', 'commit', wc_dir)
+  sbox.simple_commit(message='commit')
 
   svntest.main.run_svn(None, 'lock', '-m', 'lock 1', file1)
   svntest.main.run_svn(None, 'lock', '-m', 'lock 2', sbox.repo_url + '/file%20%232')
@@ -1840,6 +1840,56 @@ def commit_stolen_lock(sbox):
                                         err_re,
                                         wc_dir)
 
+# When removing directories, the locks of contained files were not 
+# correctly removed from the working copy database, thus they later 
+# magically reappeared when new files or directories with the same
+# pathes were added.
+@Issue(4364)
+def drop_locks_on_parent_deletion(sbox):
+  "drop locks when the parent is deleted"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # lock some files, and remove them.
+  sbox.simple_lock('A/B/lambda')
+  sbox.simple_lock('A/B/E/alpha')
+  sbox.simple_lock('A/B/E/beta')
+  sbox.simple_rm('A/B')
+  
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove_subtree('A/B')
+  
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        [],
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+
+  # now re-add entities to the deleted pathes.
+  sbox.simple_mkdir('A/B')
+  sbox.simple_add_text('new file replacing old file', 'A/B/lambda')
+  sbox.simple_add_text('file replacing former dir', 'A/B/F')
+  # The bug also resurrected locks on directories when their path
+  # matched a former file.
+  sbox.simple_mkdir('A/B/E', 'A/B/E/alpha')
+    
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B',
+						'A/B/E',
+						'A/B/E/alpha',
+						'A/B/F',
+						'A/B/lambda',
+						wc_rev='3')
+  expected_status.remove('A/B/E/beta')
+   
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        [],
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+	
+										
 ########################################################################
 # Run the tests
 
@@ -1892,6 +1942,7 @@ test_list = [ None,
               locks_stick_over_switch,
               lock_unlock_deleted,
               commit_stolen_lock,
+              drop_locks_on_parent_deletion,
             ]
 
 if __name__ == '__main__':

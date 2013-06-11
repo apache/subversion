@@ -207,6 +207,11 @@ class GeneratorBase(gen_base.GeneratorBase):
     # Initialize parent
     gen_base.GeneratorBase.__init__(self, fname, verfname, options)
 
+    # These files will be excluded from the build when they're not
+    # explicitly listed as project sources.
+    self._excluded_from_build = frozenset(self.private_includes
+                                          + self.private_built_includes)
+
     # Find Berkeley DB
     self._find_bdb()
 
@@ -514,6 +519,7 @@ class WinGeneratorBase(GeneratorBase):
         cbuild = None
         ctarget = None
         cdesc = None
+        cignore = None
         if isinstance(target, gen_base.TargetJavaHeaders):
           classes = self.path(target.classes)
           if self.junit_path is not None:
@@ -548,9 +554,18 @@ class WinGeneratorBase(GeneratorBase):
         if quote_path and '-' in rsrc:
           rsrc = '"%s"' % rsrc
 
+        if (not isinstance(source, gen_base.SourceFile)
+            and cbuild is None and ctarget is None and cdesc is None
+            and source in self._excluded_from_build):
+          # Make sure include dependencies are excluded from the build.
+          # This is an 'orrible 'ack that relies on the source being a
+          # string if it's an include dependency, or a SourceFile object
+          # otherwise.
+          cignore = 'yes'
+
         sources.append(ProjectItem(path=rsrc, reldir=reldir, user_deps=[],
                                    custom_build=cbuild, custom_target=ctarget,
-                                   custom_desc=cdesc,
+                                   custom_desc=cdesc, ignored = cignore,
                                    extension=os.path.splitext(rsrc)[1]))
 
     if isinstance(target, gen_base.TargetJavaClasses) and target.jar:
@@ -1448,7 +1463,7 @@ class WinGeneratorBase(GeneratorBase):
   def _find_serf(self):
     "Check if serf and its dependencies are available"
 
-    minimal_serf_version = (1, 2, 0)
+    minimal_serf_version = (1, 2, 1)
     self.serf_lib = None
     if self.serf_path and os.path.exists(self.serf_path):
       if self.openssl_path and os.path.exists(self.openssl_path):
@@ -1641,6 +1656,7 @@ class WinGeneratorBase(GeneratorBase):
 class ProjectItem:
   "A generic item class for holding sources info, config info, etc for a project"
   def __init__(self, **kw):
+    self.ignored = None
     vars(self).update(kw)
 
 # ============================================================================
