@@ -90,6 +90,14 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1491707
+   Add version header to svnpubsub server.
+   Justification:
+     Make Daniel happy; potentially allow proxies to filter on this or some
+     hypothetical use case.
+   Votes:
+     +1: danielsh, breser
+
 Veto-blocked changes:
 =====================
 
