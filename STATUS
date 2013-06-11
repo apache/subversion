@@ -182,12 +182,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1405922
-   Fix bug in error-constructing code in JavaHL.
-   Justification:
-     Bug that seems to be related to spurious JavaHL test failures I'm seeing,
-     where absolute paths are passed into svn_relpath_dirname().
-     Could cause worse issues such as abort() crashing Eclipse. Simple fix.
-   Votes:
-     +1: stsp, rhuijben
-
