@@ -3243,7 +3243,7 @@ ensure_revprop_timeout(svn_fs_t *fs)
 }
 
 /* Create an error object with the given MESSAGE and pass it to the
-   WARNING member of FS. */
+   WARNING member of FS. Clears UNDERLYING_ERR. */
 static void
 log_revprop_cache_init_warning(svn_fs_t *fs,
                                svn_error_t *underlying_err,
