@@ -92,6 +92,9 @@ typedef struct handle_info_t
 typedef unsigned char byte;
 typedef unsigned short word;
 
+/* an RGB color */
+typedef byte color_t[3];
+
 /* global const char * file name -> *file_info_t map */
 static apr_hash_t *files = NULL;
 
@@ -509,17 +512,82 @@ write_bitmap_header(apr_file_t *file, int xsize, int ysize)
   apr_file_write(file, header, &written);
 }
 
-/* write the cluster read map for all files in INFO as BMP image to FILE.
+/* To COLOR, add the fractional value of SOURCE from fractional indexes
+ * SOURCE_START to SOURCE_END and apply the SCALING_FACTOR.
  */
 static void
-write_bitmap(apr_array_header_t *info, apr_file_t *file)
+add_sample(color_t color,
+           color_t *source,
+           double source_start,
+           double source_end,
+           double scaling_factor)
+{
+  double factor = (source_end - source_start) / scaling_factor;
+
+  apr_size_t i;
+  for (i = 0; i < sizeof(color_t) / sizeof(*color); ++i)
+    color[i] += (source_end - source_start < 0.5) && source_start > 1.0
+              ? factor * source[(apr_size_t)source_start - 1][i]
+              : factor * source[(apr_size_t)source_start][i];
+}
+
+/* Scale the IN_LEN RGB values from IN to OUT_LEN RGB values in OUT.
+ */
+static void
+scale_line(color_t* out,
+           apr_size_t out_len,
+           color_t *in,
+           apr_size_t in_len)
+{
+  double scaling_factor = (double)(in_len) / (double)(out_len);
+  
+  apr_size_t i;
+  memset(out, 0, out_len * sizeof(color_t));
+  for (i = 0; i < out_len; ++i)
+    {
+      color_t color = { 0 };
+      
+      double source_start = i * scaling_factor;
+      double source_end = (i + 1) * scaling_factor;
+
+      if ((apr_size_t)source_start == (apr_size_t)source_end)
+        {
+          add_sample(color, in, source_start, source_end, scaling_factor);
+        }
+      else
+        {
+          apr_size_t k;
+          apr_size_t first_sample_end = (apr_size_t)source_start + 1;
+          apr_size_t last_sample_start = (apr_size_t)source_end;
+
+          add_sample(color, in, source_start, first_sample_end, scaling_factor);
+          for (k = first_sample_end; k < last_sample_start; ++k)
+            add_sample(color, in, k, k + 1, scaling_factor);
+
+          add_sample(color, in, last_sample_start, source_end, scaling_factor);
+        }
+
+      memcpy(out[i], color, sizeof(color));
+    }
+}
+
+/* Write the cluster read map for all files in INFO as BMP image to FILE.
+ * If MAX_X is not 0, scale all lines to MAX_X pixels.  Use POOL for
+ * allocations.
+ */
+static void
+write_bitmap(apr_array_header_t *info,
+             apr_size_t max_x,
+             apr_file_t *file,
+             apr_pool_t *pool)
 {
   int ysize = info->nelts;
   int xsize = 0;
   int x, y;
   int row_size;
-  int padding;
   apr_size_t written;
+  color_t *line, *scaled_line;
+  svn_boolean_t do_scale = max_x > 0;
 
   /* xsize = max cluster number */
   for (y = 0; y < ysize; ++y)
@@ -531,37 +599,40 @@ write_bitmap(apr_array_header_t *info, apr_file_t *file)
     xsize = 0x3fff;
   if (ysize >= 0x4000)
     ysize = 0x3fff;
+  if (max_x == 0)
+    max_x = xsize;
 
   /* rows in BMP files must be aligned to 4 bytes */
-  row_size = APR_ALIGN(xsize * 3, 4);
-  padding = row_size - xsize * 3;
+  row_size = APR_ALIGN(max_x * sizeof(color_t), 4);
 
+  /**/
+  line = apr_pcalloc(pool, xsize * sizeof(color_t));
+  scaled_line = apr_pcalloc(pool, row_size);
+  
   /* write header to file */
-  write_bitmap_header(file, xsize, ysize);
+  write_bitmap_header(file, max_x, ysize);
 
   /* write all rows */
   for (y = 0; y < ysize; ++y)
     {
       file_stats_t *file_info = APR_ARRAY_IDX(info, y, file_stats_t *);
+      int block_count = file_info->read_map->nelts;
       for (x = 0; x < xsize; ++x)
         {
-          byte color[3] = { 128, 128, 128 };
-          if (x < file_info->read_map->nelts)
+          color_t color = { 128, 128, 128 };
+          if (x < block_count)
             {
               word count = APR_ARRAY_IDX(file_info->read_map, x, word);
               select_color(color, count);
             }
 
-          written = sizeof(color);
-          apr_file_write(file, color, &written);
+          memcpy(line[x], color, sizeof(color));
         }
 
-      if (padding)
-        {
-          char pad[3] = { 0 };
-          written = padding;
-          apr_file_write(file, pad, &written);
-        }
+      scale_line(scaled_line, max_x, line, block_count ? block_count : 1);
+
+      written = row_size;
+      apr_file_write(file, do_scale ? scaled_line : line, &written);
     }
 }
 
@@ -680,7 +751,13 @@ int main(int argc, const char *argv[])
   apr_file_open(&file, "access.bmp",
                 APR_WRITE | APR_CREATE | APR_TRUNCATE | APR_BUFFERED,
                 APR_OS_DEFAULT, pool);
-  write_bitmap(get_rev_files(pool), file);
+  write_bitmap(get_rev_files(pool), 0, file, pool);
+  apr_file_close(file);
+
+  apr_file_open(&file, "access_scaled.bmp",
+                APR_WRITE | APR_CREATE | APR_TRUNCATE | APR_BUFFERED,
+                APR_OS_DEFAULT, pool);
+  write_bitmap(get_rev_files(pool), 1024, file, pool);
   apr_file_close(file);
 
   apr_file_open(&file, "scale.bmp",
