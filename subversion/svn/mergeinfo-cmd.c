@@ -311,22 +311,32 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   /* Do the real work, depending on the requested data flavor. */
   if (opt_state->show_revs == svn_cl__show_revs_merged)
     {
+      apr_array_header_t *revprops;
+
+      /* We need only revisions number, not revision properties. */
+      revprops = apr_array_make(pool, 0, sizeof(const char *));
+
       SVN_ERR(svn_client_mergeinfo_log2(TRUE, target, &tgt_peg_revision,
                                         source, &src_peg_revision,
                                         src_start_revision,
                                         src_end_revision,
                                         print_log_rev, NULL,
-                                        TRUE, depth, NULL, ctx,
+                                        TRUE, depth, revprops, ctx,
                                         pool));
     }
   else if (opt_state->show_revs == svn_cl__show_revs_eligible)
     {
+      apr_array_header_t *revprops;
+
+      /* We need only revisions number, not revision properties. */
+      revprops = apr_array_make(pool, 0, sizeof(const char *));
+
       SVN_ERR(svn_client_mergeinfo_log2(FALSE, target, &tgt_peg_revision,
                                         source, &src_peg_revision,
                                         src_start_revision,
                                         src_end_revision,
                                         print_log_rev, NULL,
-                                        TRUE, depth, NULL, ctx,
+                                        TRUE, depth, revprops, ctx,
                                         pool));
     }
   else
