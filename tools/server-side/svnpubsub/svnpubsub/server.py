@@ -183,6 +183,7 @@ class Client(object):
         self.r.write(str(input))
 
     def write_start(self):
+        self.r.setHeader('X-SVNPubSub-Version', '1')
         self.r.setHeader('content-type', 'application/vnd.apache.vc-notify+json')
         self.write('{"svnpubsub": {"version": 1}}\n\0')
 
