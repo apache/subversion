@@ -67,7 +67,7 @@ Candidate changes:
    Justification:
      Not a client failure so 4xx is wrong.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
  * r1491432
    Rename 'automatic merge' to 'complete merge' in the merge help text.
@@ -130,6 +130,16 @@ Candidate changes:
    Votes:
      +1: ivan (without r1478987, r1492020)
      +1: rhuijben
+
+ * r1492145
+   Properly handle a corner case in svn_io_read_length_line().
+   Justification:
+     Don't get in an endless loop when repos/db/uuid contains a \r\n instead
+     of a \n. (Some testcode of one user got in this case by applying a hack
+     and it worked in 1.7)
+   Votes:
+     +1: rhuijben
+
 
 Veto-blocked changes:
 =====================
