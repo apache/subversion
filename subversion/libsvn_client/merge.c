@@ -12031,7 +12031,7 @@ operative_rev_receiver(void *baton,
 /* Wrapper around svn_client__mergeinfo_log. All arguments are as per
    that private API.  The discover_changed_paths, depth, and revprops args to
    svn_client__mergeinfo_log are always TRUE, svn_depth_infinity_t,
-   and NULL respectively.
+   and empty array respectively.
 
    If RECEIVER raises a SVN_ERR_CEASE_INVOCATION error, but still sets
    *REVISION to a valid revnum, then clear the error.  Otherwise return
@@ -12051,18 +12051,22 @@ short_circuit_mergeinfo_log(svn_mergeinfo_catalog_t *target_mergeinfo_cat,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
-  svn_error_t *err = svn_client__mergeinfo_log(finding_merged,
-                                               target_path_or_url,
-                                               target_peg_revision,
-                                               target_mergeinfo_cat,
-                                               source_path_or_url,
-                                               source_peg_revision,
-                                               source_start_revision,
-                                               source_end_revision,
-                                               receiver, revision,
-                                               TRUE, svn_depth_infinity,
-                                               NULL, ctx, result_pool,
-                                               scratch_pool);
+  apr_array_header_t *revprops;
+  svn_error_t *err;
+
+  revprops = apr_array_make(scratch_pool, 0, sizeof(const char *));
+  err = svn_client__mergeinfo_log(finding_merged,
+                                  target_path_or_url,
+                                  target_peg_revision,
+                                  target_mergeinfo_cat,
+                                  source_path_or_url,
+                                  source_peg_revision,
+                                  source_start_revision,
+                                  source_end_revision,
+                                  receiver, revision,
+                                  TRUE, svn_depth_infinity,
+                                  revprops, ctx, result_pool,
+                                  scratch_pool);
 
   if (err)
     {
