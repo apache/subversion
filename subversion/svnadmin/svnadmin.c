@@ -290,7 +290,7 @@ static const apr_getopt_option_t options_table[] =
      N_("deprecated; see --compatible-version")},
 
     {"keep-going",    svnadmin__keep_going, 0,
-     N_("continue verifying after detecting a corruption")},
+     N_("continue verification after detecting a corruption")},
 
     {"memory-cache-size",     'M', 1,
      N_("size of the extra in-memory cache in MB used to\n"
@@ -830,8 +830,8 @@ repos_notify_handler(void *baton,
     case svn_repos_notify_failure:
       if (notify->revision != SVN_INVALID_REVNUM)
         cmdline_stream_printf(feedback_stream, scratch_pool,
-                               _("* Error verifying revision %ld.\n"),
-                               notify->revision);
+                              _("* Error verifying revision %ld.\n"),
+                              notify->revision);
       if (notify->err)
         svn_handle_error2(notify->err, stderr, FALSE /* non-fatal */,
                           "svnadmin: ");

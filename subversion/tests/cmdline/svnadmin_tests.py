@@ -1844,41 +1844,8 @@ def verify_keep_going(sbox):
                                      C_url)
   
   r2 = fsfs_file(sbox.repo_dir, 'revs', '2')
-  fp = open(r2, 'wb')
-  fp.write("""id: 0-2.0.r2/0
-type: dir
-count: 0
-cpath: /B
-copyroot: 0 /
-
-PLAIN
-K 1
-A
-V 17
-dir 0-1.0.r1/3837
-K 1
-B
-V 14
-dir 0-2.0.r2/0
-K 4
-iota
-V 19
-file 11-1.0.r1/3951
-END
-ENDREP
-id: 0.0.r2/165
-type: dir
-pred: 0.0.r1/4198
-count: 2
-text: 2 59 93 0 ae352a67fd07433f009f7234d2ea47ac
-cpath: /
-copyroot: 0 /
-
-_0.0.t1-1 Add-dir false false /B
-
-
-165 290
-""")
+  fp = open(r2, 'a')
+  fp.write("""inserting junk to corrupt the rev""")
   fp.close()
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
                                                         "--keep-going",
