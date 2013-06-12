@@ -99,37 +99,37 @@ Candidate changes:
    Votes:
      +1: stefan2, blair
 
-  * r1491739, r1491755, r1491762
-    Improve interactive conflict resolution menu.
-    Justification:
-      The current menu is too hard to figure out for users.
-      See http://svn.haxx.se/dev/archive-2013-06/0147.shtml
-    Votes:
-      +1: stsp
+ * r1491739, r1491755, r1491762
+   Improve interactive conflict resolution menu.
+   Justification:
+     The current menu is too hard to figure out for users.
+     See http://svn.haxx.se/dev/archive-2013-06/0147.shtml
+   Votes:
+     +1: stsp
 
-  * r1491816
-    Add two additional options to interactive file merge.
-    Justification:
-      Usability enhancement for quicker conflict resolution in some cases.
-      Very simple change. Only affects interactive mode, not scripts.
-    Votes:
-      +1: stsp
+ * r1491816
+   Add two additional options to interactive file merge.
+   Justification:
+     Usability enhancement for quicker conflict resolution in some cases.
+     Very simple change. Only affects interactive mode, not scripts.
+   Votes:
+     +1: stsp
 
-  * r1491868
-    Add missing conflict callback invocations to the update editor.
-    Justification:
-      Resolver is not invoked after some updates which flag new tree conflicts.
-    Votes:
-      +1: stsp, rhuijben
+ * r1491868
+   Add missing conflict callback invocations to the update editor.
+   Justification:
+     Resolver is not invoked after some updates which flag new tree conflicts.
+   Votes:
+     +1: stsp, rhuijben
 
-  * r1492005, r1492020
-    Optimize 'svn mergeinfo --show-revs' network usage and a similar case in the
-    merge code.
-    Justification:
-      Simple fixes to improve performance.
-    Votes:
-      +1: ivan (without r1492020)
-      +1: rhuijben
+ * r1492005, r1492020
+   Optimize 'svn mergeinfo --show-revs' network usage and a similar case in the
+   merge code.
+   Justification:
+     Simple fixes to improve performance.
+   Votes:
+     +1: ivan (without r1492020)
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
