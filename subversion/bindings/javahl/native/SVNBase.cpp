@@ -42,7 +42,7 @@ jlong SVNBase::getCppAddr() const
 }
 
 jlong SVNBase::findCppAddrForJObject(jobject jthis, jfieldID *fid,
-    const char *className)
+                                     const char *className)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -50,7 +50,8 @@ jlong SVNBase::findCppAddrForJObject(jobject jthis, jfieldID *fid,
   if (*fid == 0)
     {
       return 0;
-    } else
+    }
+  else
     {
       jlong cppAddr = env->GetLongField(jthis, *fid);
       if (JNIUtil::isJavaExceptionThrown())
@@ -83,7 +84,7 @@ void SVNBase::dispose(jobject jthis, jfieldID *fid, const char *className)
 }
 
 inline void SVNBase::findCppAddrFieldID(jfieldID *fid, const char *className,
-    JNIEnv *env)
+                                        JNIEnv *env)
 {
   if (*fid == 0)
     {
