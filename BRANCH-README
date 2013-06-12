@@ -123,6 +123,10 @@ Note that by making the decision contingent upon the size of the deltified
 and packed representation,  all large data that benefits from these will
 still be stored within the rev and pack files.
 
+/* danielsh: so if we have a file which is 20MB over many revisions, it'll
+be stored in fulltext every single time unless the configured threshold is
+changed?  Wondering if that's the best solution... */
+
 
 Binary representations
 ----------------------
@@ -164,6 +168,9 @@ comparison to reading / writing them from / to disk or cache.  That not
 only reduces CPU load during e.g. transaction building but also gives us
 a deterministic repo representation without relying on stable hash order.
 
+/* danielsh: what change is this describing? sort the node-revs or reps of
+ * directory members in alphabetical order by basename? */
+
 
 Containers
 ----------
@@ -189,7 +196,7 @@ Star-Deltification
 Most node contents are smaller than 500k, i.e. less than Txdelta 2 window.
 Those contents shall be aggregated into star-delta containers upon pack.
 This will save significant amounts of disk space, particularly in case
-of heavy branching.  Also, the data extraction is indenpendent of the
+of heavy branching.  Also, the data extraction is independent of the
 number of deltas, i.e. delta chain length) within the same container.
 
 
@@ -212,7 +219,7 @@ current|min-unpacked-revprop).
 
 (danielsh adds: if we do this, would be nice to have 'svnadmin info' command
 that prints the equivalent of `cat fs-type uuid ../format ../db/format`; but
-that's orthogonal to all backend changes.)
+that's orthogonal to all backend changes. (update: done in 1.9/trunk))
 
 
 Support for arbitrary chars in path names
