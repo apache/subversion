@@ -559,15 +559,13 @@ static const resolver_option_t tree_conflict_options_update_moved_away[] =
   { "h",  N_("help"),             N_("show this help (also '?')"), -1 },
   { NULL }
 };
+
 static const resolver_option_t tree_conflict_options_update_edit_moved_away[] =
 {
-  { "mc", N_("apply edit (recommended)"),
-                                  N_("apply incoming edit to move destination"
+  { "mc", N_("apply update to move destination"),
+                                  N_("apply incoming update to move destination"
                                      "  [mine-conflict]"),
                                   svn_wc_conflict_choose_mine_conflict },
-  { "r",  N_("discard edit (breaks move)"), N_("discard edit, mark resolved, "
-                                               "the move will become a copy"),
-                                  svn_wc_conflict_choose_merged },
   { "p",  N_("postpone"),         N_("resolve the conflict later  [postpone]"),
                                   svn_wc_conflict_choose_postpone },
   { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
