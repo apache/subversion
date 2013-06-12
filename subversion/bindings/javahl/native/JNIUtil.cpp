@@ -871,7 +871,21 @@ void JNIUtil::assembleErrorMessage(svn_error_t *err, int depth,
         buffer.append(svn_strerror(err->apr_err, errbuf, sizeof(errbuf)));
       /* Otherwise, this must be an APR error code. */
       else
-        buffer.append(apr_strerror(err->apr_err, errbuf, sizeof(errbuf)));
+        {
+          /* Messages coming from apr_strerror are in the native
+             encoding, it's a good idea to convert them to UTF-8. */
+          const char* utf8_message;
+          apr_strerror(err->apr_err, errbuf, sizeof(errbuf));
+          svn_error_t* utf8_err = svn_utf_cstring_to_utf8(
+              &utf8_message, errbuf, err->pool);
+          if (utf8_err)
+            {
+              /* Use fuzzy transliteration instead. */
+              svn_error_clear(utf8_err);
+              utf8_message = svn_utf_cstring_from_utf8_fuzzy(errbuf, err->pool);
+            }
+          buffer.append(utf8_message);
+        }
       buffer.append("\n");
     }
   if (err->message)
