@@ -39,7 +39,7 @@
 
 
 ClientContext::ClientContext(jobject jsvnclient, SVN::Pool &pool)
-: RaSharedContext(pool)
+    : RaSharedContext(pool)
 {
     static jfieldID ctxFieldID = 0;
     attachJavaObject(jsvnclient, "L"JAVA_PACKAGE"/SVNClient$ClientContext;", "clientContext", &ctxFieldID);
