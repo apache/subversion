@@ -131,6 +131,91 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Test SVNClient.getVersionExtended().
+     * @throws Throwable
+     */
+    public void testVersionExtendedQuiet() throws Throwable
+    {
+        try
+        {
+            VersionExtended vx = client.getVersionExtended(false);
+            String result = vx.getBuildDate();
+            if (result == null || result.trim().length() == 0)
+                throw new Exception("Build date empty");
+            result = vx.getBuildTime();
+            if (result == null || result.trim().length() == 0)
+                throw new Exception("Build time empty");
+            result = vx.getBuildHost();
+            if (result == null || result.trim().length() == 0)
+                throw new Exception("Build host empty");
+            result = vx.getCopyright();
+            if (result == null || result.trim().length() == 0)
+                throw new Exception("Copyright empty");
+        }
+        catch (Exception e)
+        {
+            fail("VersionExtended should always be available unless the " +
+                 "native libraries failed to initialize: " + e);
+        }
+    }
+
+    /**
+     * Test SVNClient.getVersionExtended().
+     * @throws Throwable
+     */
+    public void testVersionExtendedVerbose() throws Throwable
+    {
+        try
+        {
+            VersionExtended vx = client.getVersionExtended(true);
+            String result = vx.getRuntimeHost();
+            if (result == null || result.trim().length() == 0)
+                throw new Exception("Runtime host empty");
+
+            // OS name is allowed to be null, but not empty
+            result = vx.getRuntimeOSName();
+            if (result != null && result.trim().length() == 0)
+                throw new Exception("Runtime OS name empty");
+
+            java.util.Iterator<VersionExtended.LinkedLib> ikl;
+            ikl = vx.getLinkedLibs();
+            if (ikl.hasNext())
+            {
+                VersionExtended.LinkedLib lib = ikl.next();
+                result = lib.getName();
+                if (result == null || result.trim().length() == 0)
+                    throw new Exception("Linked lib name empty");
+                result = lib.getCompiledVersion();
+                if (result == null || result.trim().length() == 0)
+                    throw new Exception("Linked lib compiled version empty");
+                // Runtime version is allowed to be null, but not empty
+                result = lib.getRuntimeVersion();
+                if (result != null && result.trim().length() == 0)
+                    throw new Exception("Linked lib runtime version empty");
+            }
+
+            java.util.Iterator<VersionExtended.LoadedLib> ill;
+            ill = vx.getLoadedLibs();
+            if (ill.hasNext())
+            {
+                VersionExtended.LoadedLib lib = ill.next();
+                result = lib.getName();
+                if (result == null || result.trim().length() == 0)
+                    throw new Exception("Loaded lib name empty");
+                // Version is allowed to be null, but not empty
+                result = lib.getVersion();
+                if (result != null && result.trim().length() == 0)
+                    throw new Exception("Loaded lib version empty");
+            }
+        }
+        catch (Exception e)
+        {
+            fail("VersionExtended should always be available unless the " +
+                 "native libraries failed to initialize: " + e);
+        }
+    }
+
+    /**
      * Test the JNIError class functionality
      * @throws Throwable
      */
@@ -711,6 +796,49 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Test property inheritance.
+     * @throws Throwable
+     */
+    public void testInheritedProperties() throws Throwable
+    {
+        OneTest thisTest = new OneTest();
+        WC wc = thisTest.getWc();
+
+        String adirPath = fileToSVNPath(new File(thisTest.getWCPath(),
+                                                 "/A"),
+                                        false);
+        String alphaPath = fileToSVNPath(new File(thisTest.getWCPath(),
+                                                  "/A/B/E/alpha"),
+                                         false);
+
+        String propval = "ybg";
+        setprop(adirPath, "ahqrtz", propval.getBytes());
+
+        final Map<String, Collection<InheritedProplistCallback.InheritedItem>> ipropMaps =
+            new HashMap<String, Collection<InheritedProplistCallback.InheritedItem>>();
+
+        client.properties(alphaPath, null, null, Depth.empty, null,
+            new InheritedProplistCallback () {
+                public void singlePath(
+                    String path, Map<String, byte[]> props,
+                    Collection<InheritedProplistCallback.InheritedItem> iprops)
+                { ipropMaps.put(path, iprops); }
+            });
+        Collection<InheritedProplistCallback.InheritedItem> iprops = ipropMaps.get(alphaPath);
+        for (InheritedProplistCallback.InheritedItem item : iprops)
+        {
+            for (String key : item.properties.keySet())
+            {
+                assertEquals("ahqrtz", key);
+                assertEquals(propval, new String(item.properties.get(key)));
+            }
+        }
+
+        wc.setItemPropStatus("A", Status.Kind.modified);
+        thisTest.checkStatus();
+    }
+
+    /**
      * Test the basic SVNClient.update functionality.
      * @throws Throwable
      */
@@ -899,7 +1027,21 @@ public class BasicTests extends SVNTests
         }
         client.move(srcPaths,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    false, true, false, null, null, null);
+                    false, true, false, false, false, null, null, null);
+
+        MyStatusCallback statusCallback = new MyStatusCallback();
+        String statusPath = fileToSVNPath(new File(thisTest.getWCPath() + "/A/B"), true);
+        client.status(statusPath, Depth.infinity, false, false, false, true,
+                      null, statusCallback);
+        Status[] statusList = statusCallback.getStatusArray();
+        assertEquals(statusPath + "/F/alpha",
+                     statusList[0].getMovedToAbspath());
+        assertEquals(statusPath + "/F/beta",
+                     statusList[1].getMovedToAbspath());
+        assertEquals(statusPath + "/E/alpha",
+                     statusList[2].getMovedFromAbspath());
+        assertEquals(statusPath + "/E/beta",
+                     statusList[3].getMovedFromAbspath());
 
         // Commit the changes, and check the state of the WC.
         checkCommitRevision(thisTest,
@@ -2394,6 +2536,43 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Test merge with automatic source and revision determination
+     * (e.g. 'svn merge -g) with implied revision range.
+     * @throws Throwable
+     * @since 1.8
+     */
+    public void testMergeUsingHistoryImpliedRange() throws Throwable
+    {
+        OneTest thisTest = setupAndPerformMerge();
+
+        // Test that getMergeinfo() returns null.
+        assertNull(client.getMergeinfo(new File(thisTest.getWCPath(), "A")
+                                       .toString(), Revision.HEAD));
+
+        // Merge and commit some changes (r4).
+        appendText(thisTest, "A/mu", "xxx", 4);
+        checkCommitRevision(thisTest, "wrong revision number from commit", 4,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+
+        String branchPath = thisTest.getWCPath() + "/branches/A";
+        String modUrl = thisTest.getUrl() + "/A";
+        client.merge(modUrl, Revision.HEAD, null,
+                     branchPath, true, Depth.infinity, false, false, false);
+
+        // commit the changes so that we can verify merge
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
+                              "branches/A", NodeKind.dir,
+                              CommitItemStateFlags.PropMods);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
+                              "branches/A/mu", NodeKind.file,
+                              CommitItemStateFlags.TextMods);
+        checkCommitRevision(thisTest, "wrong revision number from commit", 5,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+    }
+
+    /**
      * Test reintegrating a branch with trunk
      * (e.g. 'svn merge --reintegrate').
      * @throws Throwable
@@ -2649,7 +2828,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * Test the {@link SVNClientInterface.diff()} APIs.
+     * Test the {@link ISVNClient.diff()} APIs.
      * @since 1.5
      */
     public void testDiff()
@@ -2884,6 +3063,132 @@ public class BasicTests extends SVNTests
 
     }
 
+    /**
+     * Test the {@link ISVNClient.diff()} with {@link DiffOptions}.
+     * @since 1.8
+     */
+    public void testDiffOptions()
+        throws SubversionException, IOException
+    {
+        OneTest thisTest = new OneTest(true);
+        File diffOutput = new File(super.localTmp, thisTest.testName);
+        final String NL = System.getProperty("line.separator");
+        final String sepLine =
+            "===================================================================" + NL;
+        final String underSepLine =
+            "___________________________________________________________________" + NL;
+        final String iotaPath = thisTest.getWCPath().replace('\\', '/') + "/iota";
+        final String wcPath = fileToSVNPath(new File(thisTest.getWCPath()),
+                false);
+        final String expectedDiffHeader =
+            "Index: iota" + NL + sepLine +
+            "--- iota\t(revision 1)" + NL +
+            "+++ iota\t(working copy)" + NL;
+
+        // make edits to iota
+        PrintWriter writer = new PrintWriter(new FileOutputStream(iotaPath));
+        writer.print("This is  the  file 'iota'.");
+        writer.flush();
+        writer.close();
+
+        try
+        {
+            final String expectedDiffOutput = expectedDiffHeader +
+                "@@ -1 +1 @@" + NL +
+                "-This is the file 'iota'." + NL +
+                "\\ No newline at end of file" + NL +
+                "+This is  the  file 'iota'." + NL +
+                "\\ No newline at end of file" + NL;
+
+            client.diff(iotaPath, Revision.BASE, iotaPath, Revision.WORKING,
+                        wcPath, new FileOutputStream(diffOutput.getPath()),
+                        Depth.infinity, null,
+                        false, false, false, false, false, false, null);
+            assertFileContentsEquals(
+                "Unexpected diff output with no options in file '" +
+                diffOutput.getPath() + '\'',
+                expectedDiffOutput, diffOutput);
+            diffOutput.delete();
+        }
+        catch (ClientException e)
+        {
+            fail(e.getMessage());
+        }
+
+        try
+        {
+            final String expectedDiffOutput = "";
+
+            client.diff(iotaPath, Revision.BASE, iotaPath, Revision.WORKING,
+                        wcPath, new FileOutputStream(diffOutput.getPath()),
+                        Depth.infinity, null,
+                        false, false, false, false, false, false,
+                        new DiffOptions(DiffOptions.Flag.IgnoreWhitespace));
+            assertFileContentsEquals(
+                "Unexpected diff output with Flag.IgnoreWhitespace in file '" +
+                diffOutput.getPath() + '\'',
+                expectedDiffOutput, diffOutput);
+            diffOutput.delete();
+        }
+        catch (ClientException e)
+        {
+            fail("Using Flag.IgnoreWhitespace: "
+                  + e.getMessage());
+        }
+
+        try
+        {
+            final String expectedDiffOutput = "";
+
+            client.diff(iotaPath, Revision.BASE, iotaPath, Revision.WORKING,
+                        wcPath, diffOutput.getPath(), Depth.infinity, null,
+                        false, false, false, false, false, false,
+                        new DiffOptions(DiffOptions.Flag.IgnoreSpaceChange));
+            assertFileContentsEquals(
+                "Unexpected diff output with Flag.IgnoreSpaceChange in file '" +
+                diffOutput.getPath() + '\'',
+                expectedDiffOutput, diffOutput);
+            diffOutput.delete();
+        }
+        catch (ClientException e)
+        {
+            fail("Using Flag.IgnoreSpaceChange: "
+                 + e.getMessage());
+        }
+
+        // make edits to iota
+        writer = new PrintWriter(new FileOutputStream(iotaPath));
+        writer.print("This is  the  file 'io ta'.");
+        writer.flush();
+        writer.close();
+
+        try
+        {
+            final String expectedDiffOutput = expectedDiffHeader +
+                "@@ -1 +1 @@" + NL +
+                "-This is the file 'iota'." + NL +
+                "\\ No newline at end of file" + NL +
+                "+This is  the  file 'io ta'." + NL +
+                "\\ No newline at end of file" + NL;
+
+            client.diff(iotaPath, Revision.BASE, iotaPath, Revision.WORKING,
+                        wcPath, diffOutput.getPath(), Depth.infinity, null,
+                        false, false, false, false, false, false,
+                        new DiffOptions(DiffOptions.Flag.IgnoreSpaceChange));
+            assertFileContentsEquals(
+                "Unexpected diff output with Flag.IgnoreSpaceChange in file '" +
+                diffOutput.getPath() + '\'',
+                expectedDiffOutput, diffOutput);
+            diffOutput.delete();
+        }
+        catch (ClientException e)
+        {
+            fail("Using Flag.IgnoreSpaceChange: "
+                 + e.getMessage());
+        }
+    }
+
+
     private void assertFileContentsEquals(String msg, String expected,
                                           File actual)
         throws IOException
@@ -3062,7 +3367,7 @@ public class BasicTests extends SVNTests
         }
         client.move(srcPaths,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    false, true, false, null, null, null);
+                    false, true, false, false, false, null, null, null);
 
         // Commit the changes, and check the state of the WC.
         checkCommitRevision(thisTest,
@@ -3103,6 +3408,7 @@ public class BasicTests extends SVNTests
         ConflictDescriptor conflict = conflicts.iterator().next();
 
         assertNotNull("Conflict should not be null", conflict);
+        assertNotNull("Repository UUID must be set", conflict.getSrcLeftVersion().getReposUUID());
 
         assertEquals(conflict.getSrcLeftVersion().getNodeKind(), NodeKind.file);
         assertEquals(conflict.getSrcLeftVersion().getReposURL() + "/" +
@@ -3111,6 +3417,8 @@ public class BasicTests extends SVNTests
 
         if (conflict.getSrcRightVersion() != null)
         {
+            assertEquals(conflict.getSrcLeftVersion().getReposUUID(),
+                         conflict.getSrcRightVersion().getReposUUID());
             assertEquals(conflict.getSrcRightVersion().getNodeKind(), NodeKind.none);
             assertEquals(conflict.getSrcRightVersion().getReposURL(), tcTest.getUrl().toString());
             assertEquals(conflict.getSrcRightVersion().getPegRevision(), 2L);

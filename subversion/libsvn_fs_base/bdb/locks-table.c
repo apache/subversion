@@ -26,6 +26,7 @@
 #include "bdb_compat.h"
 
 #include "svn_pools.h"
+#include "svn_path.h"
 #include "private/svn_skel.h"
 
 #include "dbt.h"

@@ -67,6 +67,9 @@ struct svn_config_t
 
   /* Specifies whether section names are populated case sensitively. */
   svn_boolean_t section_names_case_sensitive;
+
+  /* Specifies whether option names are populated case sensitively. */
+  svn_boolean_t option_names_case_sensitive;
 };
 
 

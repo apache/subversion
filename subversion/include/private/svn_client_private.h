@@ -121,9 +121,9 @@ svn_client__pathrev_fspath(const svn_client__pathrev_t *pathrev,
    that it is the same node in both PEG_REVISION and REVISION.  If it
    is not, then @c SVN_ERR_CLIENT_UNRELATED_RESOURCES is returned.
 
-   BASE_DIR_ABSPATH is the working copy path the ra_session corresponds to,
-   and should only be used if PATH_OR_URL is a url
-     ### else NULL? what's it for?
+   BASE_DIR_ABSPATH is the working copy path the ra_session corresponds
+   to. If provided it will be used to read and dav props. So if provided
+   this directory MUST match the session anchor.
 
    If PEG_REVISION->kind is 'unspecified', the peg revision is 'head'
    for a URL or 'working' for a WC path.  If REVISION->kind is
@@ -146,6 +146,37 @@ svn_client__ra_session_from_path2(svn_ra_session_t **ra_session_p,
                                  const svn_opt_revision_t *revision,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
+
+/* Given PATH_OR_URL, which contains either a working copy path or an
+   absolute URL, a peg revision PEG_REVISION, and a desired revision
+   REVISION, find the path at which that object exists in REVISION,
+   following copy history if necessary.  If REVISION is younger than
+   PEG_REVISION, then check that PATH_OR_URL is the same node in both
+   PEG_REVISION and REVISION, and return @c
+   SVN_ERR_CLIENT_UNRELATED_RESOURCES if it is not the same node.
+
+   If PEG_REVISION->kind is 'unspecified', the peg revision is 'head'
+   for a URL or 'working' for a WC path.  If REVISION->kind is
+   'unspecified', the operative revision is the peg revision.
+
+   Store the actual location of the object in *RESOLVED_LOC_P.
+
+   RA_SESSION should be an open RA session pointing at the URL of
+   PATH_OR_URL, or NULL, in which case this function will open its own
+   temporary session.
+
+   Use authentication baton cached in CTX to authenticate against the
+   repository.
+
+   Use POOL for all allocations. */
+svn_error_t *
+svn_client__resolve_rev_and_url(svn_client__pathrev_t **resolved_loc_p,
+                                svn_ra_session_t *ra_session,
+                                const char *path_or_url,
+                                const svn_opt_revision_t *peg_revision,
+                                const svn_opt_revision_t *revision,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *pool);
 
 /** Return @c SVN_ERR_ILLEGAL_TARGET if TARGETS contains a mixture of
  * URLs and paths; otherwise return SVN_NO_ERROR.
@@ -226,6 +257,73 @@ svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
+/* Produce a diff with depth DEPTH between two files or two directories at
+ * LOCAL_ABSPATH1 and LOCAL_ABSPATH2, using the provided diff callbacks to
+ * show changes in files. The files and directories involved may be part of
+ * a working copy or they may be unversioned. For versioned files, show
+ * property changes, too. */
+svn_error_t *
+svn_client__arbitrary_nodes_diff(const char *local_abspath1,
+                                 const char *local_abspath2,
+                                 svn_depth_t depth,
+                                 const svn_wc_diff_callbacks4_t *callbacks,
+                                 void *callback_baton,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *scratch_pool);
+
+/* Copy the file or directory on URL in some repository to DST_ABSPATH,
+ * copying node information and properties. Resolve URL using PEG_REV and
+ * REVISION.
+ *
+ * If URL specifies a directory, create the copy using depth DEPTH.
+ *
+ * If MAKE_PARENTS is TRUE and DST_ABSPATH doesn't have an added parent
+ * create missing parent directories
+ */
+svn_error_t *
+svn_client__copy_foreign(const char *url,
+                         const char *dst_abspath,
+                         svn_opt_revision_t *peg_revision,
+                         svn_opt_revision_t *revision,
+                         svn_depth_t depth,
+                         svn_boolean_t make_parents,
+                         svn_boolean_t already_locked,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *scratch_pool);
+
+/* Same as the public svn_client_mergeinfo_log2 API, except for the addition
+ * of the TARGET_MERGEINFO_CATALOG and RESULT_POOL parameters.
+ *
+ * If TARGET_MERGEINFO_CATALOG is NULL then this acts exactly as the public
+ * API.  If *TARGET_MERGEINFO_CATALOG is NULL, then *TARGET_MERGEINFO_CATALOG
+ * is set to the a mergeinfo catalog representing the mergeinfo on
+ * TARGET_PATH_OR_URL@TARGET_PEG_REVISION at DEPTH, (like the public API only
+ * depths of svn_depth_empty or svn_depth_infinity are supported) allocated in
+ * RESULT_POOL.  Finally, if *TARGET_MERGEINFO_CATALOG is non-NULL, then it is
+ * assumed to be a mergeinfo catalog representing the mergeinfo on
+ * TARGET_PATH_OR_URL@TARGET_PEG_REVISION at DEPTH.
+ *
+ * The keys for the subtree mergeinfo are the repository root-relative
+ * paths of TARGET_PATH_OR_URL and/or its subtrees, regardless of whether
+ * TARGET_PATH_OR_URL is a URL or WC path.
+ */
+svn_error_t *
+svn_client__mergeinfo_log(svn_boolean_t finding_merged,
+                          const char *target_path_or_url,
+                          const svn_opt_revision_t *target_peg_revision,
+                          svn_mergeinfo_catalog_t *target_mergeinfo_catalog,
+                          const char *source_path_or_url,
+                          const svn_opt_revision_t *source_peg_revision,
+                          const svn_opt_revision_t *source_start_revision,
+                          const svn_opt_revision_t *source_end_revision,
+                          svn_log_entry_receiver_t log_receiver,
+                          void *log_receiver_baton,
+                          svn_boolean_t discover_changed_paths,
+                          svn_depth_t depth,
+                          const apr_array_header_t *revprops,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

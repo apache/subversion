@@ -54,11 +54,13 @@ ListCallback::callback(void *baton,
                        const svn_dirent_t *dirent,
                        const svn_lock_t *lock,
                        const char *abs_path,
-                       apr_pool_t *pool)
+                       const char * /* external_parent_url */,
+                       const char * /* external_target */,
+                       apr_pool_t *scratch_pool)
 {
   if (baton)
     return static_cast<ListCallback *>(baton)->doList(
-            path, dirent, lock, abs_path, pool);
+            path, dirent, lock, abs_path, scratch_pool);
 
   return SVN_NO_ERROR;
 }

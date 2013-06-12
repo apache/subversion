@@ -222,7 +222,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    If locked, the letter 'O'.  (Use 'svn info URL' to see details)\n"
      "    Size (in bytes)\n"
      "    Date and time of the last commit\n"),
-    {'r', 'v', 'R', opt_depth} },
+    {'r', 'v', 'q', 'R', opt_depth} },
 
   { "null-log", svn_cl__null_log, {0}, N_
     ("Fetch the log messages for a set of revision(s) and/or path(s).\n"
@@ -253,7 +253,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  affected paths for that revision were explicitly requested.  Logs\n"
      "  follow copy history by default.  Use --stop-on-copy to disable this\n"
      "  behavior, which can be useful for determining branchpoints.\n"),
-    {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy, 
+    {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy,
      'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,
      'x',},
     {{opt_with_revprop, N_("retrieve revision property ARG")},
@@ -363,7 +363,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   /* No args?  Show usage. */
   if (argc <= 1)
     {
-      svn_cl__help(NULL, NULL, pool);
+      SVN_INT_ERR(svn_cl__help(NULL, NULL, pool));
       return EXIT_FAILURE;
     }
 
@@ -383,7 +383,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         break;
       else if (apr_err)
         {
-          svn_cl__help(NULL, NULL, pool);
+          SVN_INT_ERR(svn_cl__help(NULL, NULL, pool));
           return EXIT_FAILURE;
         }
 
@@ -668,7 +668,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
               svn_error_clear
                 (svn_cmdline_fprintf(stderr, pool,
                                      _("Subcommand argument required\n")));
-              svn_cl__help(NULL, NULL, pool);
+              SVN_INT_ERR(svn_cl__help(NULL, NULL, pool));
               return EXIT_FAILURE;
             }
         }
@@ -684,9 +684,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                                   first_arg, pool));
               svn_error_clear
                 (svn_cmdline_fprintf(stderr, pool,
-                                     _("Unknown command: '%s'\n"),
+                                     _("Unknown subcommand: '%s'\n"),
                                      first_arg_utf8));
-              svn_cl__help(NULL, NULL, pool);
+              SVN_INT_ERR(svn_cl__help(NULL, NULL, pool));
               return EXIT_FAILURE;
             }
         }
@@ -713,7 +713,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                           subcommand, pool);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if (subcommand->name[0] == '-')
-            svn_cl__help(NULL, NULL, pool);
+            SVN_INT_ERR(svn_cl__help(NULL, NULL, pool));
           else
             svn_error_clear
               (svn_cmdline_fprintf
@@ -798,7 +798,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
     }
 
   /* -N has a different meaning depending on the command */
-  if (descend == FALSE)
+  if (!descend)
     opt_state.depth = svn_depth_files;
 
   err = svn_config_get_config(&(ctx->config),

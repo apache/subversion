@@ -98,7 +98,10 @@ def main(pool, cmd, config_fname, repos_dir, cmd_args):
   if cmd == 'commit':
     revision = int(cmd_args[0])
     repos = Repository(repos_dir, revision, pool)
-    cfg = Config(config_fname, repos, { 'author' : repos.author })
+    cfg = Config(config_fname, repos,
+                 {'author': repos.author,
+                  'repos_basename': os.path.basename(repos.repos_dir)
+                 })
     messenger = Commit(pool, cfg, repos)
   elif cmd == 'propchange' or cmd == 'propchange2':
     revision = int(cmd_args[0])
@@ -108,14 +111,20 @@ def main(pool, cmd, config_fname, repos_dir, cmd_args):
     repos = Repository(repos_dir, revision, pool)
     # Override the repos revision author with the author of the propchange
     repos.author = author
-    cfg = Config(config_fname, repos, { 'author' : author })
+    cfg = Config(config_fname, repos,
+                 {'author': author,
+                  'repos_basename': os.path.basename(repos.repos_dir)
+                 })
     messenger = PropChange(pool, cfg, repos, author, propname, action)
   elif cmd == 'lock' or cmd == 'unlock':
     author = cmd_args[0]
     repos = Repository(repos_dir, 0, pool) ### any old revision will do
     # Override the repos revision author with the author of the lock/unlock
     repos.author = author
-    cfg = Config(config_fname, repos, { 'author' : author })
+    cfg = Config(config_fname, repos,
+                 {'author': author,
+                  'repos_basename': os.path.basename(repos.repos_dir)
+                 })
     messenger = Lock(pool, cfg, repos, author, cmd == 'lock')
   else:
     raise UnknownSubcommand(cmd)
@@ -227,16 +236,33 @@ class MailedOutput(OutputBase):
                                and self.reply_to[2] == ']':
       self.reply_to = self.reply_to[3:]
 
+  def _rfc2047_encode(self, hdr):
+    # Return the result of splitting HDR into tokens (on space
+    # characters), encoding (per RFC2047) each token as necessary, and
+    # slapping 'em back to together again.
+    from email.Header import Header
+    
+    def _maybe_encode_header(hdr_token):
+      try:
+        hdr_token.encode('ascii')
+        return hdr_token
+      except UnicodeError:
+        return Header(hdr_token, 'utf-8').encode()
+
+    return ' '.join(map(_maybe_encode_header, hdr.split()))
+
   def mail_headers(self, group, params):
-    subject = self.make_subject(group, params)
-    try:
-      subject.encode('ascii')
-    except UnicodeError:
-      from email.Header import Header
-      subject = Header(subject, 'utf-8').encode()
-    hdrs = 'From: %s\n'    \
-           'To: %s\n'      \
+    from email import Utils
+
+    subject  = self._rfc2047_encode(self.make_subject(group, params))
+    from_hdr = self._rfc2047_encode(self.from_addr)
+    to_hdr   = self._rfc2047_encode(', '.join(self.to_addrs))
+
+    hdrs = 'From: %s\n' \
+           'To: %s\n' \
            'Subject: %s\n' \
+           'Date: %s\n' \
+           'Message-ID: %s\n' \
            'MIME-Version: 1.0\n' \
            'Content-Type: text/plain; charset=UTF-8\n' \
            'Content-Transfer-Encoding: 8bit\n' \
@@ -244,8 +270,9 @@ class MailedOutput(OutputBase):
            'X-Svn-Commit-Author: %s\n' \
            'X-Svn-Commit-Revision: %d\n' \
            'X-Svn-Commit-Repository: %s\n' \
-           % (self.from_addr, ', '.join(self.to_addrs), subject,
-              group, self.repos.author or 'no_author', self.repos.rev,
+           % (from_hdr, to_hdr, subject,
+              Utils.formatdate(), Utils.make_msgid(), group,
+              self.repos.author or 'no_author', self.repos.rev,
               os.path.basename(self.repos.repos_dir))
     if self.reply_to:
       hdrs = '%sReply-To: %s\n' % (hdrs, self.reply_to)
@@ -343,7 +370,7 @@ class Commit(Messenger):
     editor = svn.repos.ChangeCollector(repos.fs_ptr, repos.root_this, \
                                        self.pool)
     e_ptr, e_baton = svn.delta.make_editor(editor, self.pool)
-    svn.repos.replay(repos.root_this, e_ptr, e_baton, self.pool)
+    svn.repos.replay2(repos.root_this, "", svn.core.SVN_INVALID_REVNUM, 1, e_ptr, e_baton, None, self.pool)
 
     self.changelist = sorted(editor.get_changes().items())
 

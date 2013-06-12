@@ -27,6 +27,7 @@
 
 /*** Includes. ***/
 
+#include "svn_hash.h"
 #include "svn_string.h"
 #include "svn_wc.h"
 #include "svn_client.h"
@@ -241,13 +242,12 @@ print_status(void *baton,
       scache->status = svn_client_status_dup(status, sb->cl_pool);
 
       path_array =
-        apr_hash_get(sb->cached_changelists, cl_key, APR_HASH_KEY_STRING);
+        svn_hash_gets(sb->cached_changelists, cl_key);
       if (path_array == NULL)
         {
           path_array = apr_array_make(sb->cl_pool, 1,
                                       sizeof(struct status_cache *));
-          apr_hash_set(sb->cached_changelists, cl_key,
-                       APR_HASH_KEY_STRING, path_array);
+          svn_hash_sets(sb->cached_changelists, cl_key, path_array);
         }
 
       APR_ARRAY_PUSH(path_array, struct status_cache *) = scache;

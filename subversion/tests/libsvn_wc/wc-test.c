@@ -133,9 +133,12 @@ test_node_get_base(const svn_test_opts_t *opts, apr_pool_t *pool)
         svn_revnum_t revision;
         const char *repos_relpath, *repos_root_url, *repos_uuid;
 
-        SVN_ERR(svn_wc__node_get_base(&revision, &repos_relpath,
+        SVN_ERR(svn_wc__node_get_base(NULL, &revision, &repos_relpath,
                                       &repos_root_url, &repos_uuid,
+                                      NULL,
                                       b->wc_ctx, local_abspath,
+                                      TRUE /* ignore_enoent */,
+                                      FALSE /* show_hidden */,
                                       b->pool, b->pool));
         SVN_TEST_ASSERT(revision == subtest->base_rev);
         if (SVN_IS_VALID_REVNUM(subtest->base_rev))

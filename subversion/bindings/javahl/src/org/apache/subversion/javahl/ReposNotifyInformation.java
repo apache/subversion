@@ -188,7 +188,19 @@ public class ReposNotifyInformation extends EventObject
         recover_start,
 
         /** Upgrade has started. */
-        upgrade_start;
+        upgrade_start,
+
+        /**
+         * A revision was skipped during loading.
+         * @since 1.8
+         */
+        load_skipped_rev,
+
+        /**
+         * The structure of a revision is being verified.
+         * @since 1.8
+         */
+        verify_rev_structure;
     }
 
     public enum NodeAction

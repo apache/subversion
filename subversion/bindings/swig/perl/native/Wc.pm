@@ -13,11 +13,28 @@ SVN::Wc - Subversion working copy functions
 
 Incomplete
 
-=head1 OBJECTS
-
 =cut
 
 swig_init_asp_dot_net_hack($SVN::Core::gpool);
+
+=head1 FUNCTIONS
+
+=over 4
+
+=item SVN::Wc::parse_externals_description3($parent_directory, $desc, $canonicalize_url, $pool);
+
+Parse the string $desc as an C<svn:externals> value and return a reference 
+to an array of L<_p_svn_wc_external_item2_t|svn_wc_external_item2_t> objects. 
+If $canonicalize_url is true, canonicalize the C<url> member of those objects.  
+$parent_directory is only used in constructing error strings.
+
+=back
+
+=cut
+
+=head1 OBJECTS
+
+=cut
 
 package _p_svn_wc_t;
 
@@ -227,6 +244,42 @@ package _p_svn_wc_entry_t;
 # still need to check if the function prototype allows it to be called
 # as method.
 use SVN::Base qw(Wc svn_wc_entry_t_);
+
+=head2 svn_wc_external_item2_t
+
+=over 4
+
+=item $ext-E<gt>target_dir()
+
+The name of the subdirectory into which this external should be
+checked out.  This is relative to the parent directory that
+holds this external item.  
+
+=item $ext-E<gt>url()
+
+Where to check out from. This is possibly a relative external URL, as
+allowed in externals definitions, but without the peg revision.
+
+=item $ext-E<gt>revision()
+
+What revision to check out,
+a L<svn_opt_revision_t|SVN::Core/svn_opt_revision_t> object.
+The only valid kind()s for this are $SVN::Core::opt_revision_number,
+$SVN::Core::opt_revision_date, and $SVN::Core::opt_revision_head.
+
+=item $ext-E<gt>peg_revision()
+
+The peg revision to use when checking out, 
+a L<svn_opt_revision_t|SVN::Core/svn_opt_revision_t> object.
+The only valid kind()s for this are $SVN::Core::opt_revision_number,
+$SVN::Core::opt_revision_date, and $SVN::Core::opt_revision_head.
+
+=back
+
+=cut
+
+package _p_svn_wc_external_item2_t;
+use SVN::Base qw(Wc svn_wc_external_item2_t_);
 
 =head1 CONSTANTS
 

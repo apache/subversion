@@ -19,7 +19,7 @@ accordance with the constraints of that API [1].
 == Details of New Behavior ==
 
 The ra_serf client-side HTTP/DAV layer (introduced in Subversion 1.4, and
-made the default DAV layer in Subversion 1.7) does not respect all the
+made the only DAV layer in Subversion 1.8) does not respect all the
 ordering constraints of the delta editor API: it may open two sibling
 directores at the same time, which the delta editor API does not permit.
 

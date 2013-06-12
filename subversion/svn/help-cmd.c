@@ -27,6 +27,7 @@
 
 /*** Includes. ***/
 
+#include "svn_hash.h"
 #include "svn_string.h"
 #include "svn_config.h"
 #include "svn_error.h"
@@ -92,9 +93,8 @@ svn_cl__help(apr_getopt_t *os,
 
       if (cmd_baton->ctx->config)
         {
-          cfg = apr_hash_get(cmd_baton->ctx->config,
-                             SVN_CONFIG_CATEGORY_CONFIG,
-                             APR_HASH_KEY_STRING);
+          cfg = svn_hash_gets(cmd_baton->ctx->config,
+                              SVN_CONFIG_CATEGORY_CONFIG);
           if (cfg)
             {
               SVN_ERR(svn_config_get_bool(cfg, &store_auth_creds,
@@ -106,9 +106,8 @@ svn_cl__help(apr_getopt_t *os,
                                           SVN_CONFIG_OPTION_STORE_PASSWORDS,
                                           store_passwords));
             }
-          cfg = apr_hash_get(cmd_baton->ctx->config,
-                             SVN_CONFIG_CATEGORY_SERVERS,
-                             APR_HASH_KEY_STRING);
+          cfg = svn_hash_gets(cmd_baton->ctx->config,
+                              SVN_CONFIG_CATEGORY_SERVERS);
           if (cfg)
             {
               const char *value;

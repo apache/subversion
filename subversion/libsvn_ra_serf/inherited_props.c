@@ -25,6 +25,7 @@
 #include <apr_tables.h>
 #include <apr_xml.h>
 
+#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_ra.h"
 #include "svn_string.h"
@@ -183,11 +184,10 @@ end_element(svn_ra_serf__xml_parser_t *parser,
                                                 iprops_ctx->pool);
         }
 
-      apr_hash_set(iprops_ctx->curr_iprop->prop_hash,
-                   apr_pstrdup(iprops_ctx->pool,
-                               iprops_ctx->curr_propname->data),
-                   APR_HASH_KEY_STRING,
-                   prop_val);
+      svn_hash_sets(iprops_ctx->curr_iprop->prop_hash,
+                    apr_pstrdup(iprops_ctx->pool,
+                                iprops_ctx->curr_propname->data),
+                    prop_val);
       /* Clear current propname and propval in the event there are
          multiple properties on the current path. */
       svn_stringbuf_setempty(iprops_ctx->curr_propname);

@@ -78,9 +78,6 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool)
 {
-  svn_error_t *err = NULL;
-  svn_boolean_t sleep_here = FALSE;
-  svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
   svn_node_kind_t kind;
   apr_pool_t *session_pool = svn_pool_create(pool);
   svn_ra_session_t *ra_session;
@@ -123,7 +120,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
          entries file should only have an entry for THIS_DIR with a
          URL, revnum, and an 'incomplete' flag.  */
       SVN_ERR(svn_io_make_dir_recursively(local_abspath, pool));
-      err = initialize_area(local_abspath, pathrev, depth, ctx, pool);
+      SVN_ERR(initialize_area(local_abspath, pathrev, depth, ctx, pool));
     }
   else if (kind == svn_node_dir)
     {
@@ -133,7 +130,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
       SVN_ERR(svn_wc_check_wc2(&wc_format, ctx->wc_ctx, local_abspath, pool));
       if (! wc_format)
         {
-          err = initialize_area(local_abspath, pathrev, depth, ctx, pool);
+          SVN_ERR(initialize_area(local_abspath, pathrev, depth, ctx, pool));
         }
       else
         {
@@ -160,28 +157,13 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
     }
 
   /* Have update fix the incompleteness. */
-  if (! err)
-    {
-      err = svn_client__update_internal(result_rev, local_abspath,
-                                        revision, depth, TRUE,
-                                        ignore_externals,
-                                        allow_unver_obstructions,
-                                        TRUE /* adds_as_modification */,
-                                        FALSE, FALSE,
-                                        use_sleep, ctx, pool);
-    }
-
-  if (err)
-    {
-      /* Don't rely on the error handling to handle the sleep later, do
-         it now */
-      svn_io_sleep_for_timestamps(local_abspath, pool);
-      return svn_error_trace(err);
-    }
-  *use_sleep = TRUE;
-
-  if (sleep_here)
-    svn_io_sleep_for_timestamps(local_abspath, pool);
+  SVN_ERR(svn_client__update_internal(result_rev, local_abspath,
+                                      revision, depth, TRUE,
+                                      ignore_externals,
+                                      allow_unver_obstructions,
+                                      TRUE /* adds_as_modification */,
+                                      FALSE, FALSE,
+                                      timestamp_sleep, ctx, pool));
 
   return SVN_NO_ERROR;
 }
@@ -199,12 +181,18 @@ svn_client_checkout3(svn_revnum_t *result_rev,
                      apr_pool_t *pool)
 {
   const char *local_abspath;
+  svn_error_t *err;
+  svn_boolean_t sleep_here = FALSE;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  return svn_client__checkout_internal(result_rev, URL, local_abspath,
-                                       peg_revision, revision, depth,
-                                       ignore_externals,
-                                       allow_unver_obstructions, NULL,
-                                       ctx, pool);
+  err = svn_client__checkout_internal(result_rev, URL, local_abspath,
+                                      peg_revision, revision, depth,
+                                      ignore_externals,
+                                      allow_unver_obstructions, &sleep_here,
+                                      ctx, pool);
+  if (sleep_here)
+    svn_io_sleep_for_timestamps(local_abspath, pool);
+
+  return svn_error_trace(err);
 }

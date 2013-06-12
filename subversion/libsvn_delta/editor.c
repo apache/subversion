@@ -26,16 +26,26 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_pools.h"
-#include "svn_editor.h"
 #include "svn_dirent_uri.h"
+
+#include "private/svn_editor.h"
 
 #ifdef SVN_DEBUG
 /* This enables runtime checks of the editor API constraints.  This may
    introduce additional memory and runtime overhead, and should not be used
    in production builds.
 
-   ### Remove before release? */
+   ### Remove before release?
+
+   ### Disabled for now.  If I call svn_editor_alter_directory(A) then
+       svn_editor_add_file(A/f) the latter fails on SHOULD_ALLOW_ADD.
+       If I modify svn_editor_alter_directory to MARK_ALLOW_ADD(child)
+       then if I call svn_editor_alter_directory(A) followed by
+       svn_editor_alter_directory(A/B/C) the latter fails on
+       VERIFY_PARENT_MAY_EXIST. */
+#if 0
 #define ENABLE_ORDERING_CHECK
+#endif
 #endif
 
 
@@ -100,19 +110,16 @@ static const int marker_added_dir = 0;
 #define SHOULD_NOT_BE_FINISHED(editor)  SVN_ERR_ASSERT(!(editor)->finished)
 
 #define CLEAR_INCOMPLETE(editor, relpath) \
-  apr_hash_set((editor)->pending_incomplete_children, relpath,  \
-               APR_HASH_KEY_STRING, NULL);
+  svn_hash_sets((editor)->pending_incomplete_children, relpath, NULL);
 
 #define MARK_RELPATH(editor, relpath, value) \
-  apr_hash_set((editor)->completed_nodes, \
-               apr_pstrdup((editor)->state_pool, relpath), \
-               APR_HASH_KEY_STRING, value)
+  svn_hash_sets((editor)->completed_nodes, \
+                apr_pstrdup((editor)->state_pool, relpath), value)
 
 #define MARK_COMPLETED(editor, relpath) \
   MARK_RELPATH(editor, relpath, MARKER_DONE)
 #define SHOULD_NOT_BE_COMPLETED(editor, relpath) \
-  SVN_ERR_ASSERT(apr_hash_get((editor)->completed_nodes, relpath, \
-                              APR_HASH_KEY_STRING) == NULL)
+  SVN_ERR_ASSERT(svn_hash_gets((editor)->completed_nodes, relpath) == NULL)
 
 #define MARK_ALLOW_ADD(editor, relpath) \
   MARK_RELPATH(editor, relpath, MARKER_ALLOW_ADD)
@@ -138,10 +145,10 @@ static const int marker_added_dir = 0;
 /* If the parent is MARKER_ALLOW_ADD, then it has been moved-away, and we
    know it does not exist. All other cases: it might exist.  */
 #define VERIFY_PARENT_MAY_EXIST(editor, relpath) \
-  SVN_ERR_ASSERT(apr_hash_get((editor)->completed_nodes, \
-                              svn_relpath_dirname(relpath, \
-                                                  (editor)->scratch_pool), \
-                              APR_HASH_KEY_STRING) != MARKER_ALLOW_ADD)
+  SVN_ERR_ASSERT(svn_hash_gets((editor)->completed_nodes, \
+                               svn_relpath_dirname(relpath, \
+                                                   (editor)->scratch_pool)) \
+                 != MARKER_ALLOW_ADD)
 
 /* If the parent is MARKER_ADDED_DIR, then we should not be deleting
    children(*). If the parent is MARKER_ALLOW_ADD, then it has been
@@ -165,8 +172,7 @@ allow_either(const svn_editor_t *editor,
              const void *marker1,
              const void *marker2)
 {
-  void *value = apr_hash_get(editor->completed_nodes, relpath,
-                             APR_HASH_KEY_STRING);
+  void *value = svn_hash_gets(editor->completed_nodes, relpath);
   return value == marker1 || value == marker2;
 }
 
@@ -177,14 +183,13 @@ check_unknown_child(const svn_editor_t *editor,
   const char *parent;
 
   /* If we already know about the new child, then exit early.  */
-  if (apr_hash_get(editor->pending_incomplete_children, relpath,
-                   APR_HASH_KEY_STRING) != NULL)
+  if (svn_hash_gets(editor->pending_incomplete_children, relpath) != NULL)
     return TRUE;
 
   parent = svn_relpath_dirname(relpath, editor->scratch_pool);
 
   /* Was this parent created via svn_editor_add_directory() ?  */
-  if (apr_hash_get(editor->completed_nodes, parent, APR_HASH_KEY_STRING)
+  if (svn_hash_gets(editor->completed_nodes, parent)
       == MARKER_ADDED_DIR)
     {
       /* Whoops. This child should have been listed in that add call,
@@ -201,8 +206,7 @@ mark_parent_stable(const svn_editor_t *editor,
                    const char *relpath)
 {
   const char *parent = svn_relpath_dirname(relpath, editor->scratch_pool);
-  const void *marker = apr_hash_get(editor->completed_nodes,
-                                    parent, APR_HASH_KEY_STRING);
+  const void *marker = svn_hash_gets(editor->completed_nodes, parent);
 
   /* If RELPATH has already been marked (to disallow adds, or that it
      has been fully-completed), then do nothing.  */
@@ -501,8 +505,7 @@ svn_editor_add_directory(svn_editor_t *editor,
         const char *child = svn_relpath_join(relpath, child_basename,
                                              editor->state_pool);
 
-        apr_hash_set(editor->pending_incomplete_children, child,
-                     APR_HASH_KEY_STRING, "");
+        svn_hash_sets(editor->pending_incomplete_children, child, "");
       }
   }
 #endif
@@ -590,7 +593,7 @@ svn_editor_add_symlink(svn_editor_t *editor,
 svn_error_t *
 svn_editor_add_absent(svn_editor_t *editor,
                       const char *relpath,
-                      svn_kind_t kind,
+                      svn_node_kind_t kind,
                       svn_revnum_t replaces_rev)
 {
   svn_error_t *err = SVN_NO_ERROR;
@@ -665,6 +668,7 @@ svn_editor_alter_directory(svn_editor_t *editor,
 
         apr_hash_set(editor->pending_incomplete_children, child,
                      APR_HASH_KEY_STRING, "");
+        /* Perhaps MARK_ALLOW_ADD(editor, child); ? */
       }
   }
 #endif

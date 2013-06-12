@@ -54,8 +54,10 @@
 #include "svn_utf.h"
 #include "svn_subst.h"
 #include "svn_config.h"
+#include "svn_wc.h"
 #include "svn_xml.h"
 #include "svn_time.h"
+#include "svn_props.h"
 #include "svn_private_config.h"
 #include "cl.h"
 
@@ -110,8 +112,7 @@ svn_cl__merge_file_externally(const char *base_path,
     {
       struct svn_config_t *cfg;
       merge_tool = NULL;
-      cfg = config ? apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
-                                  APR_HASH_KEY_STRING) : NULL;
+      cfg = config ? svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG) : NULL;
       /* apr_env_get wants char **, this wants const char ** */
       svn_config_get(cfg, (const char **)&merge_tool,
                      SVN_CONFIG_SECTION_HELPERS,
@@ -223,8 +224,7 @@ svn_cl__make_log_msg_baton(void **baton,
     }
   else if (config)
     {
-      svn_config_t *cfg = apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
-                                       APR_HASH_KEY_STRING);
+      svn_config_t *cfg = svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
       svn_config_get(cfg, &(lmb->message_encoding),
                      SVN_CONFIG_SECTION_MISCELLANY,
                      SVN_CONFIG_OPTION_LOG_ENCODING,
@@ -343,21 +343,16 @@ svn_cl__get_log_message(const char **log_msg,
   *tmp_file = NULL;
   if (lmb->message)
     {
-      svn_stringbuf_t *log_msg_buf = svn_stringbuf_create(lmb->message, pool);
-      svn_string_t *log_msg_str = apr_pcalloc(pool, sizeof(*log_msg_str));
+      svn_string_t *log_msg_str = svn_string_create(lmb->message, pool);
 
-      /* Trim incoming messages of the EOF marker text and the junk
-         that follows it.  */
-      truncate_buffer_at_prefix(&(log_msg_buf->len), log_msg_buf->data,
-                                EDITOR_EOF_PREFIX);
-
-      /* Make a string from a stringbuf, sharing the data allocation. */
-      log_msg_str->data = log_msg_buf->data;
-      log_msg_str->len = log_msg_buf->len;
       SVN_ERR_W(svn_subst_translate_string2(&log_msg_str, FALSE, FALSE,
                                             log_msg_str, lmb->message_encoding,
                                             FALSE, pool, pool),
                 _("Error normalizing log message to internal format"));
+
+      /* Strip off the EOF marker text and the junk that follows it. */
+      truncate_buffer_at_prefix(&(log_msg_str->len), (char *)log_msg_str->data,
+                                EDITOR_EOF_PREFIX);
 
       *log_msg = log_msg_str->data;
       return SVN_NO_ERROR;
@@ -466,7 +461,7 @@ svn_cl__get_log_message(const char **log_msg,
       if (msg_string)
         message = svn_stringbuf_create_from_string(msg_string, pool);
 
-      /* Strip the prefix from the buffer. */
+      /* Strip off the EOF marker text and the junk that follows it. */
       if (message)
         truncate_buffer_at_prefix(&message->len, message->data,
                                   EDITOR_EOF_PREFIX);
@@ -972,9 +967,7 @@ svn_cl__assert_homogeneous_target_type(const apr_array_header_t *targets)
 
   err = svn_client__assert_homogeneous_target_type(targets);
   if (err && err->apr_err == SVN_ERR_ILLEGAL_TARGET)
-    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, err,
-                             _("Cannot mix repository and working copy "
-                               "targets"));
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, err, NULL);
   return err;
 }
 
@@ -1053,3 +1046,59 @@ svn_cl__check_related_source_and_target(const char *path_or_url1,
     }
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_cl__propset_print_binary_mime_type_warning(apr_array_header_t *targets,
+                                               const char *propname,
+                                               const svn_string_t *propval,
+                                               apr_pool_t *scratch_pool)
+{
+  if (strcmp(propname, SVN_PROP_MIME_TYPE) == 0)
+    {
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+      int i;
+
+      for (i = 0; i < targets->nelts; i++)
+        {
+          const char *detected_mimetype;
+          const char *target = APR_ARRAY_IDX(targets, i, const char *);
+          const char *local_abspath;
+          const svn_string_t *canon_propval;
+          svn_node_kind_t node_kind;
+
+          svn_pool_clear(iterpool);
+
+          SVN_ERR(svn_dirent_get_absolute(&local_abspath, target, iterpool));
+          SVN_ERR(svn_io_check_path(local_abspath, &node_kind, iterpool));
+          if (node_kind != svn_node_file)
+            continue;
+
+          SVN_ERR(svn_wc_canonicalize_svn_prop(&canon_propval,
+                                               propname, propval,
+                                               local_abspath,
+                                               svn_node_file,
+                                               FALSE, NULL, NULL,
+                                               iterpool));
+
+          if (svn_mime_type_is_binary(canon_propval->data))
+            {
+              SVN_ERR(svn_io_detect_mimetype2(&detected_mimetype,
+                                              local_abspath, NULL,
+                                              iterpool));
+              if (detected_mimetype == NULL ||
+                  !svn_mime_type_is_binary(detected_mimetype))
+                svn_error_clear(svn_cmdline_fprintf(stderr, iterpool,
+                  _("svn: warning: '%s' is a binary mime-type but file '%s' "
+                    "looks like text; diff, merge, blame, and other "
+                    "operations will stop working on this file\n"),
+                    canon_propval->data,
+                    svn_dirent_local_style(local_abspath, iterpool)));
+
+            }
+        }
+      svn_pool_destroy(iterpool);
+    }
+
+  return SVN_NO_ERROR;
+}
+

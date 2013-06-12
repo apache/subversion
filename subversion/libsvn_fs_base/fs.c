@@ -28,6 +28,7 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_fs.h"
 #include "svn_path.h"
@@ -446,9 +447,7 @@ bdb_write_config(svn_fs_t *fs)
 
       if (fs->config)
         {
-          value = apr_hash_get(fs->config,
-                               dbconfig_options[i].config_key,
-                               APR_HASH_KEY_STRING);
+          value = svn_hash_gets(fs->config, dbconfig_options[i].config_key);
         }
 
       SVN_ERR(svn_io_file_write_full(dbconfig_file,
@@ -472,9 +471,70 @@ bdb_write_config(svn_fs_t *fs)
 }
 
 static svn_error_t *
+base_bdb_info_format(int *fs_format,
+                     svn_version_t **supports_version,
+                     svn_fs_t *fs,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  base_fs_data_t *bfd = fs->fsap_data;
+
+  *fs_format = bfd->format;
+  *supports_version = apr_palloc(result_pool, sizeof(svn_version_t));
+
+  (*supports_version)->major = SVN_VER_MAJOR;
+  (*supports_version)->minor = 0;
+  (*supports_version)->patch = 0;
+  (*supports_version)->tag = "";
+
+  switch (bfd->format)
+    {
+    case 1:
+      break;
+    case 2:
+      (*supports_version)->minor = 4;
+      break;
+    case 3:
+      (*supports_version)->minor = 5;
+      break;
+    case 4:
+      (*supports_version)->minor = 6;
+      break;
+#ifdef SVN_DEBUG
+# if SVN_FS_BASE__FORMAT_NUMBER != 4
+#  error "Need to add a 'case' statement here"
+# endif
+#endif
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+base_bdb_info_config_files(apr_array_header_t **files,
+                           svn_fs_t *fs,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  *files = apr_array_make(result_pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(*files, const char *) = svn_dirent_join(fs->path,
+                                                         BDB_CONFIG_FILE,
+                                                         result_pool);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+base_bdb_verify_root(svn_fs_root_t *root,
+                     apr_pool_t *scratch_pool)
+{
+  /* Verifying is currently a no op for BDB. */
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 base_bdb_freeze(svn_fs_t *fs,
-                svn_error_t *(*freeze_body)(void *, apr_pool_t *),
-                void *baton,
+                svn_fs_freeze_func_t freeze_func,
+                void *freeze_baton,
                 apr_pool_t *pool)
 {
   SVN__NOT_IMPLEMENTED();
@@ -500,6 +560,10 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__unlock,
   svn_fs_base__get_lock,
   svn_fs_base__get_locks,
+  base_bdb_info_format,
+  base_bdb_info_config_files,
+  NULL /* info_fsap */,
+  base_bdb_verify_root,
   base_bdb_freeze,
   base_bdb_set_errcall,
 };
@@ -655,7 +719,7 @@ open_databases(svn_fs_t *fs,
 }
 
 
-/* Called by functions that initialize an svn_fs_t struct, after that 
+/* Called by functions that initialize an svn_fs_t struct, after that
    initialization is done, to populate svn_fs_t->uuid. */
 static svn_error_t *
 populate_opened_fs(svn_fs_t *fs, apr_pool_t *scratch_pool)
@@ -674,14 +738,11 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   /* See if compatibility with older versions was explicitly requested. */
   if (fs->config)
     {
-      if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
-                                   APR_HASH_KEY_STRING))
+      if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE))
         format = 1;
-      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
-                                        APR_HASH_KEY_STRING))
+      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE))
         format = 2;
-      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
-                                        APR_HASH_KEY_STRING))
+      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE))
         format = 3;
     }
 
@@ -892,10 +953,12 @@ base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
 
 static svn_error_t *
 base_verify(svn_fs_t *fs, const char *path,
-            svn_cancel_func_t cancel_func,
-            void *cancel_baton,
             svn_revnum_t start,
             svn_revnum_t end,
+            svn_fs_progress_notify_func_t notify_func,
+            void *notify_baton,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
             apr_pool_t *pool,
             apr_pool_t *common_pool)
 {
@@ -1016,7 +1079,7 @@ svn_fs_base__clean_logs(const char *live_path,
                                                  sub_pool));
 
           /* If log files do not match, go to the next log file. */
-          if (files_match == FALSE)
+          if (!files_match)
             continue;
         }
 
@@ -1124,7 +1187,7 @@ copy_db_file_safely(const char *src_dir,
   /* Open source file.  If it's missing and that's allowed, there's
      nothing more to do here. */
   err = svn_io_file_open(&s, file_src_path,
-                         (APR_READ | APR_LARGEFILE | APR_BINARY),
+                         (APR_READ | APR_LARGEFILE),
                          APR_OS_DEFAULT, pool);
   if (err && APR_STATUS_IS_ENOENT(err->apr_err) && allow_missing)
     {
@@ -1135,7 +1198,7 @@ copy_db_file_safely(const char *src_dir,
 
   /* Open destination file. */
   SVN_ERR(svn_io_file_open(&d, file_dst_path, (APR_WRITE | APR_CREATE |
-                                               APR_LARGEFILE | APR_BINARY),
+                                               APR_LARGEFILE),
                            APR_OS_DEFAULT, pool));
 
   /* Allocate our read/write buffer. */
@@ -1374,6 +1437,15 @@ base_get_description(void)
   return _("Module for working with a Berkeley DB repository.");
 }
 
+static svn_error_t *
+base_set_svn_fs_open(svn_fs_t *fs,
+                     svn_error_t *(*svn_fs_open_)(svn_fs_t **,
+                                                  const char *,
+                                                  apr_hash_t *,
+                                                  apr_pool_t *))
+{
+  return SVN_NO_ERROR;
+}
 
 
 /* Base FS library vtable, used by the FS loader library. */
@@ -1390,7 +1462,9 @@ static fs_library_vtable_t library_vtable = {
   base_bdb_recover,
   base_bdb_pack,
   base_bdb_logfiles,
-  svn_fs_base__id_parse
+  svn_fs_base__id_parse,
+  base_set_svn_fs_open,
+  NULL /* info_fsap_dup */
 };
 
 svn_error_t *

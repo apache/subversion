@@ -214,29 +214,26 @@ static svn_error_t *
 determine_error(svn_ra_serf__handler_t *handler,
                 svn_error_t *err)
 {
-    {
-      apr_status_t errcode;
+  apr_status_t errcode;
 
-      if (handler->sline.code == 423)
-        errcode = SVN_ERR_FS_PATH_ALREADY_LOCKED;
-      else if (handler->sline.code == 403)
-        errcode = SVN_ERR_RA_DAV_FORBIDDEN;
-      else
-        return err;
+  if (err)
+    return err;
 
-      /* Client-side or server-side error already. Return it.  */
-      if (err != NULL)
-        return err;
+  if (handler->sline.code == 200 || handler->sline.code == 207)
+    return SVN_NO_ERROR;
+  else if (handler->sline.code == 423)
+    errcode = SVN_ERR_FS_PATH_ALREADY_LOCKED;
+  else if (handler->sline.code == 403)
+    errcode = SVN_ERR_RA_DAV_FORBIDDEN;
+  else
+    errcode = SVN_ERR_RA_DAV_REQUEST_FAILED;
 
-      /* The server did not send us a detailed human-readable error.
-         Provide a generic error.  */
-      err = svn_error_createf(errcode, NULL,
-                              _("Lock request failed: %d %s"),
-                              handler->sline.code,
-                              handler->sline.reason);
-    }
-
-  return err;
+  /* The server did not send us a detailed human-readable error.
+     Provide a generic error.  */
+  return svn_error_createf(errcode, NULL,
+                           _("Lock request failed: %d %s"),
+                           handler->sline.code,
+                           handler->sline.reason ? handler->sline.reason : "");
 }
 
 
@@ -261,7 +258,7 @@ handle_lock(serf_request_t *request,
                                request, response, ctx->handler, pool));
     }
 
-  if (ctx->read_headers == FALSE)
+  if (!ctx->read_headers)
     {
       serf_bucket_t *headers;
       const char *val;
@@ -406,7 +403,7 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
   lock_ctx->handler = handler;
 
   err = svn_ra_serf__context_run_one(handler, pool);
-  err = determine_error(handler, err);
+  err = svn_error_trace(determine_error(handler, err));
 
   if (handler->sline.code == 404)
     {
@@ -497,7 +494,7 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       lock_ctx->handler = handler;
 
       err = svn_ra_serf__context_run_one(handler, iterpool);
-      err = determine_error(handler, err);
+      err = svn_error_trace(determine_error(handler, err));
 
       if (lock_func)
         new_err = lock_func(lock_baton, lock_ctx->path, TRUE, lock_ctx->lock,

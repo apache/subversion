@@ -1685,7 +1685,7 @@ test_path_resolve_repos_relative_url(apr_pool_t *pool)
                                  tests[i].repos_root_url,
                                  result, tests[i].absolute_url);
     }
-  
+
   return SVN_NO_ERROR;
 }
 

@@ -99,6 +99,10 @@ struct svn_cache__t {
 
   /* Total number of function calls that returned an error. */
   apr_uint64_t failures;
+
+  /* Cause all getters to act as though the cache contains no data.
+     (Currently this never becomes set except in maintainer builds.) */
+  svn_boolean_t pretend_empty;
 };
 
 

@@ -32,7 +32,7 @@ AC_DEFUN(SVN_LIB_APR,
 
   AC_MSG_NOTICE([Apache Portable Runtime (APR) library configuration])
 
-  APR_FIND_APR("$abs_srcdir/apr", "$abs_builddir/apr", 1, [1 0])
+  APR_FIND_APR("", "", 1, [1 0])
 
   if test $apr_found = "no"; then
     AC_MSG_WARN([APR not found])
@@ -40,7 +40,7 @@ AC_DEFUN(SVN_LIB_APR,
   fi
 
   if test $apr_found = "reconfig"; then
-    SVN_EXTERNAL_PROJECT([apr])
+    AC_MSG_ERROR([Unexpected APR reconfig])
   fi
 
   dnl check APR version number against regex  
@@ -117,29 +117,12 @@ dnl no apr found, print out a message telling the user what to do
 AC_DEFUN(SVN_DOWNLOAD_APR,
 [
   echo "The Apache Portable Runtime (APR) library cannot be found."
-  echo "Please install APR on this system and supply the appropriate"
-  echo "--with-apr option to 'configure'"
+  echo "Please install APR on this system and configure Subversion"
+  echo "with the appropriate --with-apr option."
   echo ""
-  echo "or"
+  echo "You probably need to do something similar with the Apache"
+  echo "Portable Runtime Utility (APRUTIL) library and then configure"
+  echo "Subversion with both the --with-apr and --with-apr-util options."
   echo ""
-  echo "get it with SVN and put it in a subdirectory of this source:"
-  echo ""
-  echo "   svn co \\"
-  echo "    http://svn.apache.org/repos/asf/apr/apr/branches/1.4.x \\"
-  echo "    apr"
-  echo ""
-  echo "Run that right here in the top level of the Subversion tree."
-  echo "Afterwards, run ./buildconf in that subdirectory and"
-  echo "then run configure again here."
-  echo ""
-  echo "Whichever of the above you do, you probably need to do"
-  echo "something similar for apr-util, either providing both"
-  echo "--with-apr and --with-apr-util to 'configure', or"
-  echo "getting both from SVN with:"
-  echo ""
-  echo "   svn co \\"
-  echo "    http://svn.apache.org/repos/asf/apr/apr-util/branches/1.5.x \\"
-  echo "    apr-util"
-  echo ""
-  AC_MSG_ERROR([no suitable apr found])
+  AC_MSG_ERROR([no suitable APR found])
 ])

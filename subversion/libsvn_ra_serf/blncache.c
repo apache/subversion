@@ -23,6 +23,7 @@
 
 #include <apr_pools.h>
 
+#include "svn_hash.h"
 #include "svn_dirent_uri.h"
 #include "svn_types.h"
 #include "svn_pools.h"
@@ -161,8 +162,7 @@ svn_ra_serf__blncache_get_baseline_info(const char **bc_url_p,
                                         const char *baseline_url,
                                         apr_pool_t *pool)
 {
-  baseline_info_t *info = apr_hash_get(blncache->baseline_info, baseline_url,
-                                       APR_HASH_KEY_STRING);
+  baseline_info_t *info = svn_hash_gets(blncache->baseline_info, baseline_url);
   if (info)
     {
       *bc_url_p = apr_pstrdup(pool, info->bc_url);

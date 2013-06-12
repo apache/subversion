@@ -814,10 +814,19 @@ WHERE wc_id = ?1 and local_relpath = ?2
 /* Format 31 adds the inherited_props column to the NODES table. C code then
    initializes the update/switch roots to make sure future updates fetch the
    inherited properties */
--- STMT_UPGRADE_TO_31
+-- STMT_UPGRADE_TO_31_ALTER_TABLE
 ALTER TABLE NODES ADD COLUMN inherited_props BLOB;
+-- STMT_UPGRADE_TO_31_FINALIZE
 DROP INDEX IF EXISTS I_ACTUAL_CHANGELIST;
 DROP INDEX IF EXISTS I_EXTERNALS_PARENT;
+
+DROP INDEX I_NODES_PARENT;
+CREATE UNIQUE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath,
+                                             local_relpath, op_depth);
+
+DROP INDEX I_ACTUAL_PARENT;
+CREATE UNIQUE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath,
+                                                    local_relpath);
 
 PRAGMA user_version = 31;
 
@@ -831,17 +840,13 @@ PRAGMA user_version = 31;
 SELECT l.wc_id, l.local_relpath FROM nodes as l
 LEFT OUTER JOIN nodes as r
 ON l.wc_id = r.wc_id
-   AND l.repos_id = r.repos_id
    AND r.local_relpath = l.parent_relpath
-WHERE (l.local_relpath = '' AND l.repos_path != '')
-   OR (l.op_depth = 0
-       AND l.local_relpath != ''
-       AND l.repos_path != ltrim(r.repos_path
-                                 || '/'
-                                 || ltrim(substr(l.local_relpath,
-                                                 length(l.parent_relpath) + 1),
-                                          '/'),
-                                 '/'))
+   AND r.op_depth = 0
+WHERE l.op_depth = 0
+  AND l.repos_path != ''
+  AND ((l.repos_id IS NOT r.repos_id)
+       OR (l.repos_path IS NOT RELPATH_SKIP_JOIN(r.local_relpath, r.repos_path, l.local_relpath)))
+
 
 /* ------------------------------------------------------------------------- */
 /* Format 32 ....  */
@@ -857,8 +862,8 @@ CREATE UNIQUE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath,
                                              local_relpath, op_depth);
 
 DROP INDEX I_ACTUAL_PARENT;
-CREATE UNIQUE INDEX I_ACTUAL_PARENT ON ACTUAL (wc_id, parent_relpath,
-                                               local_relpath);
+CREATE UNIQUE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath,
+                                                    local_relpath);
 
 /* ------------------------------------------------------------------------- */
 

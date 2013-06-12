@@ -26,6 +26,7 @@
 #include <apr_uri.h>
 #include <serf.h>
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
 #include "svn_dav.h"
@@ -177,7 +178,7 @@ collect_revprop(apr_hash_t *revprops,
     }
 
   /* Caller has ensured PROPNAME has sufficient lifetime.  */
-  apr_hash_set(revprops, propname, APR_HASH_KEY_STRING, decoded);
+  svn_hash_sets(revprops, propname, decoded);
 
   return SVN_NO_ERROR;
 }
@@ -202,8 +203,8 @@ collect_path(apr_hash_t *paths,
   lcp->copyfrom_rev = SVN_INVALID_REVNUM;
 
   /* COPYFROM_* are only recorded for ADDED_PATH and REPLACED_PATH.  */
-  copyfrom_path = apr_hash_get(attrs, "copyfrom-path", APR_HASH_KEY_STRING);
-  copyfrom_rev = apr_hash_get(attrs, "copyfrom-rev", APR_HASH_KEY_STRING);
+  copyfrom_path = svn_hash_gets(attrs, "copyfrom-path");
+  copyfrom_rev = svn_hash_gets(attrs, "copyfrom-rev");
   if (copyfrom_path && copyfrom_rev)
     {
       svn_revnum_t rev = SVN_STR_TO_REV(copyfrom_rev);
@@ -215,18 +216,14 @@ collect_path(apr_hash_t *paths,
         }
     }
 
-  lcp->node_kind = svn_node_kind_from_word(apr_hash_get(
-                                             attrs, "node-kind",
-                                             APR_HASH_KEY_STRING));
-  lcp->text_modified = svn_tristate__from_word(apr_hash_get(
-                                                 attrs, "text-mods",
-                                                 APR_HASH_KEY_STRING));
-  lcp->props_modified = svn_tristate__from_word(apr_hash_get(
-                                                  attrs, "prop-mods",
-                                                  APR_HASH_KEY_STRING));
+  lcp->node_kind = svn_node_kind_from_word(svn_hash_gets(attrs, "node-kind"));
+  lcp->text_modified = svn_tristate__from_word(svn_hash_gets(attrs,
+                                                             "text-mods"));
+  lcp->props_modified = svn_tristate__from_word(svn_hash_gets(attrs,
+                                                              "prop-mods"));
 
   path = apr_pstrmemdup(result_pool, cdata->data, cdata->len);
-  apr_hash_set(paths, path, APR_HASH_KEY_STRING, lcp);
+  svn_hash_sets(paths, path, lcp);
 
   return SVN_NO_ERROR;
 }
@@ -297,7 +294,7 @@ log_closed(svn_ra_serf__xml_estate_t *xes,
                                                         "subtractive-merge",
                                                         FALSE);
 
-      rev_str = apr_hash_get(attrs, "revision", APR_HASH_KEY_STRING);
+      rev_str = svn_hash_gets(attrs, "revision");
       if (rev_str)
         log_entry->revision = SVN_STR_TO_REV(rev_str);
       else
@@ -335,8 +332,7 @@ log_closed(svn_ra_serf__xml_estate_t *xes,
           SVN_ERR(collect_revprop(log_ctx->collect_revprops,
                                   SVN_PROP_REVISION_AUTHOR,
                                   cdata,
-                                  apr_hash_get(attrs, "encoding",
-                                               APR_HASH_KEY_STRING)));
+                                  svn_hash_gets(attrs, "encoding")));
         }
     }
   else if (leaving_state == DATE)
@@ -346,8 +342,7 @@ log_closed(svn_ra_serf__xml_estate_t *xes,
           SVN_ERR(collect_revprop(log_ctx->collect_revprops,
                                   SVN_PROP_REVISION_DATE,
                                   cdata,
-                                  apr_hash_get(attrs, "encoding",
-                                               APR_HASH_KEY_STRING)));
+                                  svn_hash_gets(attrs, "encoding")));
         }
     }
   else if (leaving_state == COMMENT)
@@ -357,8 +352,7 @@ log_closed(svn_ra_serf__xml_estate_t *xes,
           SVN_ERR(collect_revprop(log_ctx->collect_revprops,
                                   SVN_PROP_REVISION_LOG,
                                   cdata,
-                                  apr_hash_get(attrs, "encoding",
-                                               APR_HASH_KEY_STRING)));
+                                  svn_hash_gets(attrs, "encoding")));
         }
     }
   else if (leaving_state == REVPROP)
@@ -368,9 +362,9 @@ log_closed(svn_ra_serf__xml_estate_t *xes,
       SVN_ERR(collect_revprop(
                 log_ctx->collect_revprops,
                 apr_pstrdup(result_pool,
-                            apr_hash_get(attrs, "name", APR_HASH_KEY_STRING)),
+                            svn_hash_gets(attrs, "name")),
                 cdata,
-                apr_hash_get(attrs, "encoding", APR_HASH_KEY_STRING)
+                svn_hash_gets(attrs, "encoding")
                 ));
     }
   else if (leaving_state == HAS_CHILDREN)

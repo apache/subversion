@@ -119,8 +119,9 @@ load_http_auth_types(apr_pool_t *pool, svn_config_t *config,
             *authn_types |= SERF_AUTHN_NEGOTIATE;
           else
             return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
-                                     _("Invalid config: unknown http auth"
-                                       "type '%s'"), token);
+                                     _("Invalid config: unknown %s "
+                                       "'%s'"),
+                                     SVN_CONFIG_OPTION_HTTP_AUTH_TYPES, token);
       }
     }
   else
@@ -151,10 +152,8 @@ load_config(svn_ra_serf__session_t *session,
 
   if (config_hash)
     {
-      config = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_SERVERS,
-                            APR_HASH_KEY_STRING);
-      config_client = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_CONFIG,
-                                   APR_HASH_KEY_STRING);
+      config = svn_hash_gets(config_hash, SVN_CONFIG_CATEGORY_SERVERS);
+      config_client = svn_hash_gets(config_hash, SVN_CONFIG_CATEGORY_CONFIG);
     }
   else
     {
@@ -187,24 +186,21 @@ load_config(svn_ra_serf__session_t *session,
   /* Use the default proxy-specific settings if and only if
      "http-proxy-exceptions" is not set to exclude this host. */
   svn_config_get(config, &exceptions, SVN_CONFIG_SECTION_GLOBAL,
-                 SVN_CONFIG_OPTION_HTTP_PROXY_EXCEPTIONS, NULL);
-  if (exceptions)
+                 SVN_CONFIG_OPTION_HTTP_PROXY_EXCEPTIONS, "");
+  if (! svn_cstring_match_glob_list(session->session_url.hostname,
+                                    svn_cstring_split(exceptions, ",",
+                                                      TRUE, pool)))
     {
-      if (! svn_cstring_match_glob_list(session->session_url.hostname,
-                                        svn_cstring_split(exceptions, ",",
-                                                          TRUE, pool)))
-        {
-          svn_config_get(config, &proxy_host, SVN_CONFIG_SECTION_GLOBAL,
-                         SVN_CONFIG_OPTION_HTTP_PROXY_HOST, NULL);
-          svn_config_get(config, &port_str, SVN_CONFIG_SECTION_GLOBAL,
-                         SVN_CONFIG_OPTION_HTTP_PROXY_PORT, NULL);
-          svn_config_get(config, &session->proxy_username,
-                         SVN_CONFIG_SECTION_GLOBAL,
-                         SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME, NULL);
-          svn_config_get(config, &session->proxy_password,
-                         SVN_CONFIG_SECTION_GLOBAL,
-                         SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, NULL);
-        }
+      svn_config_get(config, &proxy_host, SVN_CONFIG_SECTION_GLOBAL,
+                     SVN_CONFIG_OPTION_HTTP_PROXY_HOST, NULL);
+      svn_config_get(config, &port_str, SVN_CONFIG_SECTION_GLOBAL,
+                     SVN_CONFIG_OPTION_HTTP_PROXY_PORT, NULL);
+      svn_config_get(config, &session->proxy_username,
+                     SVN_CONFIG_SECTION_GLOBAL,
+                     SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME, NULL);
+      svn_config_get(config, &session->proxy_password,
+                     SVN_CONFIG_SECTION_GLOBAL,
+                     SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, NULL);
     }
 
   /* Load the global ssl settings, if set. */
@@ -217,16 +213,17 @@ load_config(svn_ra_serf__session_t *session,
 
   /* If set, read the flag that tells us to do bulk updates or not. Defaults
      to skelta updates. */
-  SVN_ERR(svn_config_get_bool(config, &session->bulk_updates,
-                              SVN_CONFIG_SECTION_GLOBAL,
-                              SVN_CONFIG_OPTION_HTTP_BULK_UPDATES,
-                              FALSE));
+  SVN_ERR(svn_config_get_tristate(config, &session->bulk_updates,
+                                  SVN_CONFIG_SECTION_GLOBAL,
+                                  SVN_CONFIG_OPTION_HTTP_BULK_UPDATES,
+                                  "auto",
+                                  svn_tristate_unknown));
 
   /* Load the maximum number of parallel session connections. */
-  svn_config_get_int64(config, &session->max_connections,
-                       SVN_CONFIG_SECTION_GLOBAL,
-                       SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
-                       SVN_CONFIG_DEFAULT_OPTION_HTTP_MAX_CONNECTIONS);
+  SVN_ERR(svn_config_get_int64(config, &session->max_connections,
+                               SVN_CONFIG_SECTION_GLOBAL,
+                               SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
+                               SVN_CONFIG_DEFAULT_OPTION_HTTP_MAX_CONNECTIONS));
 
   if (config)
     server_group = svn_config_find_group(config,
@@ -272,16 +269,18 @@ load_config(svn_ra_serf__session_t *session,
                      session->ssl_authorities);
 
       /* Load the group bulk updates flag. */
-      SVN_ERR(svn_config_get_bool(config, &session->bulk_updates,
-                                  server_group,
-                                  SVN_CONFIG_OPTION_HTTP_BULK_UPDATES,
-                                  session->bulk_updates));
+      SVN_ERR(svn_config_get_tristate(config, &session->bulk_updates,
+                                      server_group,
+                                      SVN_CONFIG_OPTION_HTTP_BULK_UPDATES,
+                                      "auto",
+                                      session->bulk_updates));
 
       /* Load the maximum number of parallel session connections,
          overriding global values. */
-      svn_config_get_int64(config, &session->max_connections,
-                           server_group, SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
-                           session->max_connections);
+      SVN_ERR(svn_config_get_int64(config, &session->max_connections,
+                                   server_group,
+                                   SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
+                                   session->max_connections));
     }
 
   /* Don't allow the http-max-connections value to be larger than our
@@ -453,7 +452,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   /* create the user agent string */
   if (callbacks->get_client_string)
-    callbacks->get_client_string(callback_baton, &client_string, pool);
+    SVN_ERR(callbacks->get_client_string(callback_baton, &client_string, pool));
 
   if (client_string)
     serf_sess->useragent = apr_pstrcat(pool, USER_AGENT, " ",
@@ -610,7 +609,7 @@ svn_ra_serf__rev_prop(svn_ra_session_t *session,
 
   SVN_ERR(svn_ra_serf__rev_proplist(session, rev, &props, pool));
 
-  *value = apr_hash_get(props, name, APR_HASH_KEY_STRING);
+  *value = svn_hash_gets(props, name);
 
   return SVN_NO_ERROR;
 }
@@ -674,14 +673,11 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
     }
   else
     {
-      svn_kind_t res_kind;
-
       /* Any other error, raise to caller. */
       if (err)
         return svn_error_trace(err);
 
-      SVN_ERR(svn_ra_serf__get_resource_type(&res_kind, props));
-      *kind = svn__node_kind_from_kind(res_kind);
+      SVN_ERR(svn_ra_serf__get_resource_type(kind, props));
     }
 
   return SVN_NO_ERROR;
@@ -803,14 +799,14 @@ path_dirent_walker(void *baton,
     {
       const char *base_name;
 
-      entry = apr_pcalloc(pool, sizeof(*entry));
+      entry = svn_dirent_create(pool);
 
       apr_hash_set(dirents->full_paths, path, path_len, entry);
 
       base_name = svn_path_uri_decode(svn_urlpath__basename(path, pool),
                                       pool);
 
-      apr_hash_set(dirents->base_paths, base_name, APR_HASH_KEY_STRING, entry);
+      svn_hash_sets(dirents->base_paths, base_name, entry);
     }
 
   dwb.entry = entry;
@@ -921,7 +917,7 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
         return svn_error_trace(err);
     }
 
-  dwb.entry = apr_pcalloc(pool, sizeof(*dwb.entry));
+  dwb.entry = svn_dirent_create(pool);
   dwb.supports_deadprop_count = &deadprop_count;
   dwb.result_pool = pool;
   SVN_ERR(svn_ra_serf__walk_node_props(props, dirent_walker, &dwb, pool));
@@ -957,11 +953,11 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
 static svn_error_t *
 resource_is_directory(apr_hash_t *props)
 {
-  svn_kind_t kind;
+  svn_node_kind_t kind;
 
   SVN_ERR(svn_ra_serf__get_resource_type(&kind, props));
 
-  if (kind != svn_kind_dir)
+  if (kind != svn_node_dir)
     {
       return svn_error_create(SVN_ERR_FS_NOT_DIRECTORY, NULL,
                               _("Can't get entries of non-directory"));
@@ -1057,8 +1053,8 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
                                                                session, pool),
                                               pool, pool));
 
-          SVN_ERR(svn_hash__clear(dirent_walk.full_paths, pool));
-          SVN_ERR(svn_hash__clear(dirent_walk.base_paths, pool));
+          apr_hash_clear(dirent_walk.full_paths);
+          apr_hash_clear(dirent_walk.base_paths);
 
           SVN_ERR(svn_ra_serf__walk_all_paths(props, SVN_INVALID_REVNUM,
                                               path_dirent_walker,

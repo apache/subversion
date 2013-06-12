@@ -187,8 +187,7 @@ pristine_write_read(const svn_test_opts_t *opts,
     SVN_ERR(svn_wc__db_pristine_remove(db, wc_abspath, data_sha1, pool));
     err = svn_wc__db_pristine_read(&data_read_back, NULL, db, wc_abspath,
                                    data_sha1, pool, pool);
-    SVN_TEST_ASSERT(err != NULL);
-    svn_error_clear(err);
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_WC_PATH_NOT_FOUND);
   }
 
   /* Ensure it's no longer found in the store. */
@@ -308,9 +307,7 @@ reject_mismatching_text(const svn_test_opts_t *opts,
     SVN_ERR(write_and_checksum_temp_file(&path, NULL, NULL,
                                          data2, pristine_tmp_dir, pool));
     err = svn_wc__db_pristine_install(db, path, data_sha1, data_md5, pool);
-    SVN_TEST_ASSERT(err != NULL);
-    SVN_TEST_ASSERT(err->apr_err == SVN_ERR_WC_CORRUPT_TEXT_BASE);
-    svn_error_clear(err);
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_WC_CORRUPT_TEXT_BASE);
   }
 
   return SVN_NO_ERROR;

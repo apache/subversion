@@ -65,7 +65,7 @@ typedef struct file_stats_t
    * (i.e. number of non-zero entries in read_map). */
   apr_int64_t unique_clusters_read;
 
-  /* cluster -> read count mapping (1 byte per cluster, saturated at 255) */
+  /* cluster -> read count mapping (1 word per cluster, saturated at 64k) */
   apr_array_header_t *read_map;
 
 } file_stats_t;
@@ -90,6 +90,7 @@ typedef struct handle_info_t
 
 /* useful typedef */
 typedef unsigned char byte;
+typedef unsigned short word;
 
 /* global const char * file name -> *file_info_t map */
 static apr_hash_t *files = NULL;
@@ -121,17 +122,17 @@ store_read_info(handle_info_t *handle_info)
 
       /* auto-expand access map in case the file later shrunk or got deleted */
       while (handle_info->file->read_map->nelts <= last_cluster)
-        APR_ARRAY_PUSH(handle_info->file->read_map, byte) = 0;
+        APR_ARRAY_PUSH(handle_info->file->read_map, word) = 0;
 
       /* accumulate the accesses per cluster. Saturate and count first
        * (i.e. disjoint) accesses clusters */
       handle_info->file->clusters_read += last_cluster - first_cluster + 1;
       for (i = first_cluster; i <= last_cluster; ++i)
         {
-          byte *count = &APR_ARRAY_IDX(handle_info->file->read_map, i, byte);
+          word *count = &APR_ARRAY_IDX(handle_info->file->read_map, i, word);
           if (*count == 0)
             handle_info->file->unique_clusters_read++;
-          if (*count < 255)
+          if (*count < 0xffff)
             ++*count;
         }
     }
@@ -162,7 +163,7 @@ open_file(const char *name, int handle)
                     APR_READ | APR_BUFFERED, APR_OS_DEFAULT, sub_pool);
       if (apr_file)
         apr_file_info_get(&finfo, APR_FINFO_SIZE, apr_file);
-      apr_pool_destroy(sub_pool);
+      svn_pool_destroy(sub_pool);
 
       file = apr_pcalloc(pool, sizeof(*file));
       file->name = apr_pstrdup(pool, name);
@@ -173,7 +174,7 @@ open_file(const char *name, int handle)
       cluster_count = (apr_size_t)(1 + (file->size - 1) / cluster_size);
       file->read_map = apr_array_make(pool, file->size
                                           ? cluster_count
-                                          : 1, sizeof(byte));
+                                          : 1, sizeof(word));
 
       while (file->read_map->nelts < cluster_count)
         APR_ARRAY_PUSH(file->read_map, byte) = 0;
@@ -218,7 +219,7 @@ read_file(int handle, apr_int64_t count)
   if (handle_info)
     {
       /* known file handle -> expand current read sequence */
-      
+
       handle_info->last_read_size += count;
       handle_info->file->read_count++;
       handle_info->file->read_size += count;
@@ -238,7 +239,7 @@ seek_file(int handle, apr_int64_t location)
       apr_size_t cluster = (apr_size_t)(location / cluster_size);
 
       store_read_info(handle_info);
-      
+
       handle_info->last_read_size = 0;
       handle_info->last_read_start = location;
       handle_info->file->seek_count++;
@@ -247,7 +248,7 @@ seek_file(int handle, apr_int64_t location)
        * there will probably be a real I/O seek on the following read.
        */
       if (   handle_info->file->read_map->nelts <= cluster
-          || APR_ARRAY_IDX(handle_info->file->read_map, cluster, byte) == 0)
+          || APR_ARRAY_IDX(handle_info->file->read_map, cluster, word) == 0)
         handle_info->file->uncached_seek_count++;
     }
 }
@@ -272,14 +273,26 @@ parse_line(svn_stringbuf_t *line)
   /* determine function name, first parameter and return value */
   char *func_end = strchr(line->data, '(');
   char *return_value = strrchr(line->data, ' ');
+  char *first_param_end;
+  apr_int64_t func_return = 0;
 
-  char *first_param_end = strchr(func_end, ',');
+  if (func_end == NULL || return_value == NULL)
+    return;
+
+  first_param_end = strchr(func_end, ',');
   if (first_param_end == NULL)
     first_param_end = strchr(func_end, ')');
+
+  if (first_param_end == NULL)
+    return;
 
   *func_end++ = 0;
   *first_param_end = 0;
   ++return_value;
+
+  /* (try to) convert the return value into an integer.
+   * If that fails, continue anyway as defaulting to 0 will be safe for us. */
+  svn_error_clear(svn_cstring_atoi64(&func_return, return_value));
 
   /* process those operations that we care about */
   if (strcmp(line->data, "open") == 0)
@@ -287,13 +300,13 @@ parse_line(svn_stringbuf_t *line)
       /* remove double quotes from file name parameter */
       *func_end++ = 0;
       *--first_param_end = 0;
-      
-      open_file(func_end, atoi(return_value));
+
+      open_file(func_end, (int)func_return);
     }
   else if (strcmp(line->data, "read") == 0)
-    read_file(atoi(func_end), atoi(return_value));
+    read_file(atoi(func_end), func_return);
   else if (strcmp(line->data, "lseek") == 0)
-    seek_file(atoi(func_end), atoi(return_value));
+    seek_file(atoi(func_end), func_return);
   else if (strcmp(line->data, "close") == 0)
     close_file(atoi(func_end));
 }
@@ -320,7 +333,7 @@ parse_file(apr_file_t *file)
         break;
 
       parse_line(line);
-      apr_pool_clear(iter_pool);
+      svn_pool_clear(iter_pool);
     }
   while (line->len > 0);
 }
@@ -390,33 +403,38 @@ interpolate(int y0, int x0, int y1, int x1, int x)
 /* Return the BMP-encoded 24 bit COLOR for the given value.
  */
 static void
-select_color(byte color[3], byte value)
+select_color(byte color[3], word value)
 {
+  enum { COLOR_COUNT = 10 };
+
   /* value -> color table. Missing values get interpolated.
    * { count, B - G - R } */
-  byte table[7][4] =
+  word table[COLOR_COUNT][4] =
     {
-      {   0, 255, 255, 255 },   /* unread -> white */
-      {   1, 128, 128,   0 },   /* read once -> turquoise  */
-      {   2,   0, 128,   0 },   /* twice  -> green */
-      {   4,   0, 192, 192 },   /*    4x  -> yellow */
-      {  16,   0,   0, 192 },   /*   16x  -> red */
-      {  64, 192,   0, 128 },   /*   64x  -> purple */
-      { 255,   0,   0,   0 }    /*   max  -> black */
+      {     0, 255, 255, 255 },   /* unread -> white */
+      {     1,  64, 128,   0 },   /* read once -> turquoise  */
+      {     2,   0, 128,   0 },   /* twice  -> green */
+      {     8,   0, 192, 192 },   /*    8x  -> yellow */
+      {    64,   0,   0, 192 },   /*   64x  -> red */
+      {   256,  64,  32, 230 },   /*  256x  -> bright red */
+      {   512, 192,   0, 128 },   /*  512x  -> purple */
+      {  1024,  96,  32,  96 },   /* 1024x  -> UV purple */
+      {  4096,  32,  16,  32 },   /* 4096x  -> EUV purple */
+      { 65535,   0,   0,   0 }    /*   max  -> black */
     };
 
   /* find upper limit entry for value */
   int i;
-  for (i = 0; i < 7; ++i)
+  for (i = 0; i < COLOR_COUNT; ++i)
     if (table[i][0] >= value)
       break;
 
   /* exact match? */
   if (table[i][0] == value)
     {
-      color[0] = table[i][1];
-      color[1] = table[i][2];
-      color[2] = table[i][3];
+      color[0] = (byte)table[i][1];
+      color[1] = (byte)table[i][2];
+      color[2] = (byte)table[i][3];
     }
   else
     {
@@ -433,10 +451,11 @@ select_color(byte color[3], byte value)
     }
 }
 
-/* write the cluster read map for all files in INFO as BMP image to FILE.
+/* Writes a BMP image header to FILE for a 24-bit color picture of the
+ * given XSIZE and YSIZE dimension.
  */
 static void
-write_bitmap(apr_array_header_t *info, apr_file_t *file)
+write_bitmap_header(apr_file_t *file, int xsize, int ysize)
 {
   /* BMP file header (some values need to filled in later)*/
   byte header[54] =
@@ -458,7 +477,28 @@ write_bitmap(apr_array_header_t *info, apr_file_t *file)
       0, 0, 0, 0,      /* no colors in palette */
       0, 0, 0, 0       /* no colors to import */
     };
-  
+
+  apr_size_t written;
+
+  /* rows in BMP files must be aligned to 4 bytes */
+  int row_size = APR_ALIGN(xsize * 3, 4);
+
+  /* write numbers to header */
+  write_number(header + 2, ysize * row_size + 54);
+  write_number(header + 18, xsize);
+  write_number(header + 22, ysize);
+  write_number(header + 38, ysize * row_size);
+
+  /* write header to file */
+  written = sizeof(header);
+  apr_file_write(file, header, &written);
+}
+
+/* write the cluster read map for all files in INFO as BMP image to FILE.
+ */
+static void
+write_bitmap(apr_array_header_t *info, apr_file_t *file)
+{
   int ysize = info->nelts;
   int xsize = 0;
   int x, y;
@@ -471,19 +511,18 @@ write_bitmap(apr_array_header_t *info, apr_file_t *file)
     if (xsize < APR_ARRAY_IDX(info, y, file_stats_t *)->read_map->nelts)
       xsize = APR_ARRAY_IDX(info, y, file_stats_t *)->read_map->nelts;
 
+  /* limit picture dimensions (16k pixels in each direction) */
+  if (xsize >= 0x4000)
+    xsize = 0x3fff;
+  if (ysize >= 0x4000)
+    ysize = 0x3fff;
+
   /* rows in BMP files must be aligned to 4 bytes */
   row_size = APR_ALIGN(xsize * 3, 4);
   padding = row_size - xsize * 3;
 
-  /* write numbers to header */
-  write_number(header + 2, ysize * row_size + 54);
-  write_number(header + 18, xsize);
-  write_number(header + 22, ysize);
-  write_number(header + 38, ysize * row_size);
-
   /* write header to file */
-  written = sizeof(header);
-  apr_file_write(file, header, &written);
+  write_bitmap_header(file, xsize, ysize);
 
   /* write all rows */
   for (y = 0; y < ysize; ++y)
@@ -494,7 +533,7 @@ write_bitmap(apr_array_header_t *info, apr_file_t *file)
           byte color[3] = { 128, 128, 128 };
           if (x < file_info->read_map->nelts)
             {
-              byte count = APR_ARRAY_IDX(file_info->read_map, x, byte);
+              word count = APR_ARRAY_IDX(file_info->read_map, x, word);
               select_color(color, count);
             }
 
@@ -511,6 +550,35 @@ write_bitmap(apr_array_header_t *info, apr_file_t *file)
     }
 }
 
+/* write a color bar with (roughly) logarithmic scale as BMP image to FILE.
+ */
+static void
+write_scale(apr_file_t *file)
+{
+  int x;
+  word value = 0, inc = 1;
+
+  /* write header to file */
+  write_bitmap_header(file, 64, 1);
+
+  for (x = 0; x < 64; ++x)
+    {
+      apr_size_t written;
+      byte color[3] = { 128, 128, 128 };
+
+      select_color(color, value);
+      if (value + (int)inc < 0x10000)
+        {
+          value += inc;
+          if (value >= 8 * inc)
+            inc *= 2;
+        }
+
+      written = sizeof(color);
+      apr_file_write(file, color, &written);
+    }
+}
+
 /* Write a summary of the I/O ops to stdout.
  * Use POOL for temporaries.
  */
@@ -524,14 +592,14 @@ print_stats(apr_pool_t *pool)
   apr_int64_t clusters_read = 0;
   apr_int64_t unique_clusters_read = 0;
   apr_int64_t uncached_seek_count = 0;
-  
+
   apr_hash_index_t *hi;
   for (hi = apr_hash_first(pool, files); hi; hi = apr_hash_next(hi))
     {
       const char *name = NULL;
       apr_ssize_t len = 0;
       file_stats_t *file = NULL;
-      
+
       apr_hash_this(hi, (const void **)&name, &len, (void**)&file);
 
       open_count += file->open_count;
@@ -555,13 +623,13 @@ print_stats(apr_pool_t *pool)
 
 /* Some help output. */
 static void
-print_usage()
+print_usage(void)
 {
   printf("fsfs-access-map <file>\n\n");
   printf("Reads strace of some FSFS-based tool from <file>, prints some stats\n");
   printf("and writes a cluster access map to 'access.bmp' the current folder.\n");
   printf("Each pixel corresponds to one 64kB cluster and every line to a rev\n");
-  printf("or packed rev file in the repository.  Turquoise and greed indicate\n");
+  printf("or packed rev file in the repository.  Turquoise and green indicate\n");
   printf("1 and 2 hits, yellow to read-ish colors for up to 20, shares of\n");
   printf("for up to 100 and black for > 200 hits.\n\n");
   printf("A typical strace invocation looks like this:\n");
@@ -573,7 +641,7 @@ int main(int argc, const char *argv[])
 {
   apr_pool_t *pool = NULL;
   apr_file_t *file = NULL;
-  
+
   apr_initialize();
   atexit(apr_terminate);
 
@@ -593,11 +661,17 @@ int main(int argc, const char *argv[])
   apr_file_close(file);
 
   print_stats(pool);
-  
+
   apr_file_open(&file, "access.bmp",
                 APR_WRITE | APR_CREATE | APR_TRUNCATE | APR_BUFFERED,
                 APR_OS_DEFAULT, pool);
   write_bitmap(get_rev_files(pool), file);
+  apr_file_close(file);
+
+  apr_file_open(&file, "scale.bmp",
+                APR_WRITE | APR_CREATE | APR_TRUNCATE | APR_BUFFERED,
+                APR_OS_DEFAULT, pool);
+  write_scale(file);
   apr_file_close(file);
 
   return 0;

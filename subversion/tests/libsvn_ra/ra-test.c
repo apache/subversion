@@ -120,10 +120,13 @@ location_segments_test(const svn_test_opts_t *opts,
   svn_ra_session_t *session;
   apr_array_header_t *segments
     = apr_array_make(pool, 1, sizeof(svn_location_segment_t *));
-  struct gls_receiver_baton_t b = { segments, pool };
+  struct gls_receiver_baton_t b;
   const char *path = "A";
   svn_revnum_t peg_revision = 1;
   svn_location_segment_t *seg;
+
+  b.segments = segments;
+  b.pool = pool;
 
   SVN_ERR(make_and_open_local_repos(&session,
                                     "test-repo-locsegs", opts,

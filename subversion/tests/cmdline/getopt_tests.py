@@ -172,7 +172,7 @@ def run_one_test(sbox, basename, *varargs):
     exit_code, actual_stdout, actual_stderr = svntest.main.run_svn(1, *varargs)
   else:
     exit_code, actual_stdout, actual_stderr = svntest.main.run_command(svntest.main.svn_binary,
-                                                                       1, 0, *varargs)
+                                                                       1, False, *varargs)
 
   # Delete and perform search and replaces on the lines from the
   # actual and expected output that may differ between build

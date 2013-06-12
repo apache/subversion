@@ -146,6 +146,15 @@
 #
 #   from_addr = %(author)s@example.com
 #
+# The substitution variable "repos_basename" is provided, and is set to
+# the directory name of the repository. This can be useful to set
+# a custom subject that can be re-used in multiple repositories:
+#
+#   commit_subject_prefix = [svn-%(repos_basename)s]
+#
+# For example if the repository is at /path/to/repo/project-x then
+# the subject of commit emails will be prefixed with [svn-project-x]
+#
 #
 # SUMMARY
 #

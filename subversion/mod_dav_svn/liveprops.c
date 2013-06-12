@@ -436,7 +436,8 @@ insert_prop_internal(const dav_resource *resource,
         svn_filesize_t len = 0;
 
         /* our property, but not defined on collection resources */
-        if (resource->collection || resource->baselined)
+        if (resource->type == DAV_RESOURCE_TYPE_ACTIVITY
+            || resource->collection || resource->baselined)
           return DAV_PROP_INSERT_NOTSUPP;
 
         serr = svn_fs_file_length(&len, resource->info->root.root,
@@ -466,7 +467,9 @@ insert_prop_internal(const dav_resource *resource,
         svn_string_t *pval;
         const char *mime_type = NULL;
 
-        if (resource->baselined && resource->type == DAV_RESOURCE_TYPE_VERSION)
+        if (resource->type == DAV_RESOURCE_TYPE_ACTIVITY
+            || (resource->baselined
+                && resource->type == DAV_RESOURCE_TYPE_VERSION))
           return DAV_PROP_INSERT_NOTSUPP;
 
         if (resource->type == DAV_RESOURCE_TYPE_PRIVATE
@@ -831,10 +834,10 @@ insert_prop(const dav_resource *resource,
 static int
 is_writable(const dav_resource *resource, int propid)
 {
-  const dav_liveprop_spec *info;
+  const dav_liveprop_spec *info = NULL;
 
   (void) dav_get_liveprop_info(propid, &dav_svn__liveprop_group, &info);
-  return info->is_writable;
+  return info ? info->is_writable : FALSE;
 }
 
 

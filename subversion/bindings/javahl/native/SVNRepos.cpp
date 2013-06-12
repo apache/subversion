@@ -177,7 +177,7 @@ void SVNRepos::deltify(File &path, Revision &revStart, Revision &revEnd)
 }
 
 void SVNRepos::dump(File &path, OutputStream &dataOut,
-                    Revision &revsionStart, Revision &revisionEnd,
+                    Revision &revisionStart, Revision &revisionEnd,
                     bool incremental, bool useDeltas,
                     ReposNotifyCallback *notifyCallback)
 {
@@ -199,9 +199,9 @@ void SVNRepos::dump(File &path, OutputStream &dataOut,
   SVN_JNI_ERR(svn_fs_youngest_rev(&youngest, fs, requestPool.getPool()), );
 
   /* ### We only handle revision numbers right now, not dates. */
-  if (revsionStart.revision()->kind == svn_opt_revision_number)
-    lower = revsionStart.revision()->value.number;
-  else if (revsionStart.revision()->kind == svn_opt_revision_head)
+  if (revisionStart.revision()->kind == svn_opt_revision_number)
+    lower = revisionStart.revision()->value.number;
+  else if (revisionStart.revision()->kind == svn_opt_revision_head)
     lower = youngest;
   else
     lower = SVN_INVALID_REVNUM;
@@ -315,6 +315,8 @@ void SVNRepos::listUnusedDBLogs(File &path,
 
 void SVNRepos::load(File &path,
                     InputStream &dataIn,
+                    Revision &revisionStart,
+                    Revision &revisionEnd,
                     bool ignoreUUID,
                     bool forceUUID,
                     bool usePreCommitHook,
@@ -324,6 +326,7 @@ void SVNRepos::load(File &path,
 {
   SVN::Pool requestPool;
   svn_repos_t *repos;
+  svn_revnum_t lower = SVN_INVALID_REVNUM, upper = SVN_INVALID_REVNUM;
   enum svn_repos_load_uuid uuid_action = svn_repos_load_uuid_default;
   if (ignoreUUID)
     uuid_action = svn_repos_load_uuid_ignore;
@@ -336,11 +339,25 @@ void SVNRepos::load(File &path,
       return;
     }
 
+  /* ### We only handle revision numbers right now, not dates. */
+  if (revisionStart.revision()->kind == svn_opt_revision_number)
+    lower = revisionStart.revision()->value.number;
+  if (revisionEnd.revision()->kind == svn_opt_revision_number)
+    upper = revisionEnd.revision()->value.number;
+  if (upper < lower
+      && lower != SVN_INVALID_REVNUM
+      && upper != SVN_INVALID_REVNUM)
+    {
+      SVN_JNI_ERR(svn_error_create
+                  (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                   _("First revision cannot be higher than second")), );
+    }
+
   SVN_JNI_ERR(svn_repos_open2(&repos, path.getInternalStyle(requestPool),
                               NULL, requestPool.getPool()), );
 
-  SVN_JNI_ERR(svn_repos_load_fs3(repos, dataIn.getStream(requestPool),
-                                 uuid_action, relativePath,
+  SVN_JNI_ERR(svn_repos_load_fs4(repos, dataIn.getStream(requestPool),
+                                 lower, upper, uuid_action, relativePath,
                                  usePreCommitHook, usePostCommitHook,
                                  FALSE,
                                  notifyCallback != NULL
@@ -407,6 +424,28 @@ jlong SVNRepos::recover(File &path, ReposNotifyCallback *notifyCallback)
               -1);
   return youngest_rev;
 }
+
+void SVNRepos::freeze(jobjectArray jpaths, ReposFreezeAction* action)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+  SVN::Pool subPool(pool);
+  const jsize num_paths = env->GetArrayLength(jpaths);
+
+  apr_array_header_t *paths = apr_array_make(subPool.getPool(), num_paths,
+                                             sizeof(const char*));
+  for (jsize i = 0; i < num_paths; ++i)
+    {
+      jobject obj = env->GetObjectArrayElement(jpaths, i);
+      APR_ARRAY_PUSH(paths, const char*) =
+        apr_pstrdup(subPool.getPool(), File(obj).getAbsPath());
+      env->DeleteLocalRef(obj);
+    }
+
+  SVN_JNI_ERR(svn_repos_freeze(paths, action->callback, action,
+                               subPool.getPool()),
+              );
+}
+
 
 void SVNRepos::rmtxns(File &path, StringArray &transactions)
 {
@@ -694,7 +733,7 @@ void SVNRepos::rmlocks(File &path, StringArray &locks)
   SVN_JNI_ERR(svn_repos_open2(&repos, path.getInternalStyle(requestPool),
                               NULL, requestPool.getPool()), );
   fs = svn_repos_fs(repos);
-  const char *username;
+  const char *username = NULL;
 
   /* svn_fs_unlock() demands that some username be associated with the
    * filesystem, so just use the UID of the person running 'svnadmin'.*/

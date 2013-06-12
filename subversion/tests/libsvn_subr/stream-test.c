@@ -490,7 +490,7 @@ test_readonly(apr_pool_t *pool)
   /* File should be writable */
   SVN_ERR(svn_io_stat(&finfo, path, wanted, pool));
   SVN_ERR(svn_io__is_finfo_read_only(&read_only, &finfo, pool));
-  SVN_TEST_ASSERT(read_only == FALSE);
+  SVN_TEST_ASSERT(!read_only);
 
   /* Set read only */
   SVN_ERR(svn_io_set_file_read_only(path, FALSE, pool));
@@ -506,7 +506,7 @@ test_readonly(apr_pool_t *pool)
   /* File should be writable */
   SVN_ERR(svn_io_stat(&finfo, path, wanted, pool));
   SVN_ERR(svn_io__is_finfo_read_only(&read_only, &finfo, pool));
-  SVN_TEST_ASSERT(read_only == FALSE);
+  SVN_TEST_ASSERT(!read_only);
 
   return SVN_NO_ERROR;
 }

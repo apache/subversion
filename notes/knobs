@@ -68,6 +68,7 @@ SERF_VERBOSE
 SSL_VERBOSE
 SVN_DEPRECATED
 SVN_FS__TRAIL_DEBUG
+SVN_UTF_NO_UNINITIALISED_ACCESS
 
 2.4 Test-only
 
@@ -394,6 +395,15 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Default:   not defined
   Suggested: defined, not defined
 
+5.14 SVN_UTF_NO_UNINITIALISED_ACCESS
+
+  Scope:     libsvn_subr
+  Purpose:   Disables some code that triggers warnings in memory tools
+             such as valgrind and address sanitizer.
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
+
 6 Defines that affect unit tests
 ================================
 
@@ -464,6 +474,11 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
 
   Scope:     'make install-tools'
   Purpose:   Symlinks $prefix/bin/svnsyitf to $prefix/bin/svnmucc
+
+7.8 SVN_X_DOES_NOT_MARK_THE_SPOT
+
+  Scope:     svn_cache__t subsystem (used by FSFS, svnserve, etc)
+  Purpose:   Disable the subsystem.  Requires -D SVN_DEBUG.
 
 * (TODO: others)
 

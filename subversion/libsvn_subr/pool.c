@@ -130,8 +130,8 @@ svn_pool_create_allocator(svn_boolean_t thread_safe)
   if (thread_safe)
     {
       apr_thread_mutex_t *mutex;
-      apr_thread_mutex_create (&mutex, APR_THREAD_MUTEX_DEFAULT, pool);
-      apr_allocator_mutex_set (allocator, mutex);
+      apr_thread_mutex_create(&mutex, APR_THREAD_MUTEX_DEFAULT, pool);
+      apr_allocator_mutex_set(allocator, mutex);
     }
 #endif
 

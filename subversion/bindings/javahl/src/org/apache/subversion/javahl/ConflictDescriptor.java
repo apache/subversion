@@ -244,11 +244,13 @@ public class ConflictDescriptor
 
         /**
          * Object is already added or schedule-add.
+         * @since 1.6
          */
         added,
 
         /**
          * Object is already replaced.
+         * @since 1.7
          */
         replaced,
 

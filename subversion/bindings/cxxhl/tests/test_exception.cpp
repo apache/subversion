@@ -20,6 +20,7 @@
  */
 
 #include <algorithm>
+#include <cstdio>
 #include <iomanip>
 #include <ios>
 #include <iostream>
@@ -30,7 +31,7 @@
 #include "svn_error.h"
 
 namespace {
-void trace(const svn::error::message& msg)
+void trace(const SVN::Error::Message& msg)
 {
   std::cout << "    ";
   if (msg.first)
@@ -39,35 +40,112 @@ void trace(const svn::error::message& msg)
               << msg.first << ':' << ' ';
   std::cout << msg.second << std::endl;
 }
+
+void traceall(const char *message, const SVN::Error& err)
+{
+  typedef SVN::Error::MessageList MessageList;
+  std::cout << message << std::endl;
+  std::cout << "Traced Messages:" << std::endl;
+  MessageList ml = err.traced_messages();
+  std::for_each(ml.begin(), ml.end(), trace);
+  std::cout << "Just Messages:" << std::endl;
+  ml = err.messages();
+  std::for_each(ml.begin(), ml.end(), trace);
+}
+
+void tracecheck(svn_error_t* err)
+{
+  std::cout << "C-API handler:" << std::endl;
+  svn_handle_error2(err, stdout, false, "    test_exception");
+  svn_error_clear(err);
+}
+
+svn_error_t* make_cancel_test_error()
+{
+  svn_error_t* err;
+  err = svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
+  err = svn_error_create(SVN_ERR_CANCELLED, err, NULL);
+  err = svn_error_trace(err);
+  err = svn_error_create(SVN_ERR_TEST_FAILED, err, "original message");
+  err = svn_error_create(SVN_ERR_BASE, err, "wrapper message");
+  err = svn_error_trace(err);
+  return err;
+}
+
+svn_error_t* make_error_test_error()
+{
+  svn_error_t* err;
+  err = svn_error_create(SVN_ERR_TEST_FAILED, NULL, "original message");
+  err = svn_error_create(SVN_ERR_BASE, err, "wrapper message");
+  err = svn_error_trace(err);
+  err = svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, err, NULL);
+  err = svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, err, NULL);
+  err = svn_error_trace(err);
+  return err;
+}
 } // anonymous namespace
+
+
+bool test_cancel()
+{
+  try
+    {
+      SVN::Error::throw_svn_error(make_cancel_test_error());
+    }
+  catch (const SVN::Cancelled& err)
+    {
+      traceall("Caught: CANCELLED", err);
+      tracecheck(make_cancel_test_error());
+      return true;
+    }
+  catch (const SVN::Error& err)
+    {
+      traceall("Caught: ERROR", err);
+      tracecheck(make_cancel_test_error());
+      return false;
+    }
+  catch (...)
+    {
+      return false;
+    }
+  return false;
+}
+
+int test_error()
+{
+  try
+    {
+      SVN::Error::throw_svn_error(make_error_test_error());
+    }
+  catch (const SVN::Cancelled& err)
+    {
+      traceall("Caught: CANCELLED", err);
+      tracecheck(make_error_test_error());
+      return false;
+    }
+  catch (const SVN::Error& err)
+    {
+      traceall("Caught: ERROR", err);
+      tracecheck(make_error_test_error());
+      return true;
+    }
+  catch (...)
+    {
+      return false;
+    }
+  return false;
+}
 
 int main()
 {
   apr_initialize();
 
-  try
-    {
-      svn_error_t* err;
-      err = svn_error_create(SVN_ERR_TEST_FAILED, NULL, "original message");
-      err = svn_error_create(SVN_ERR_BASE, err, "wrapper message");
-      err = svn_error_create(SVN_ERR_CANCELLED, err, NULL);
-      err = svn_error_create(SVN_ERR_CANCELLED, err, NULL);
-      err = svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, err, NULL);
-      err = svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, err, NULL);
-      err = svn_error_create(SVN_ERR_CANCELLED, err, NULL);
-      err = svn_error_trace(err);
-      svn::error::throw_svn_error(err);
-    }
-  catch (const svn::error& err)
-    {
-      typedef svn::error::message_list message_list;
-      std::cout << "Traced Messages:" << std::endl;
-      message_list ml = err.traced_messages();
-      std::for_each(ml.begin(), ml.end(), trace);
-      std::cout << "Just Messages:" << std::endl;
-      ml = err.messages();
-      std::for_each(ml.begin(), ml.end(), trace);
-    }
+  const char *stat  = (test_cancel() ? "OK" : "ERROR");
+  std::cerr << "test_cancel .... " << stat << std::endl;
 
+  stat = (test_error() ? "OK" : "ERROR");
+  std::cerr << "test_error ..... " << stat << std::endl;
+
+  apr_terminate();
   return 0;
 }
