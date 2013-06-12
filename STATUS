@@ -150,6 +150,14 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1492148
+   Don't try to use 'blame -r 3:1' against 1.7 servers.  Affects only users
+   of the RA API, not users of the client API or svn.
+   Justification:
+     1.7 servers would silently do the wrong thing.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
