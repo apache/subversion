@@ -158,6 +158,13 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1492164
+   Invalid repository paths cause a segfault in the fsfs-stats tool.
+   Justification:
+     Don't segfault.
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
