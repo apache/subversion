@@ -27,7 +27,9 @@
 
 /*** Includes. ***/
 
+#include "svn_compat.h"
 #include "svn_pools.h"
+#include "svn_props.h"
 #include "svn_client.h"
 #include "svn_cmdline.h"
 #include "svn_path.h"
@@ -51,6 +53,61 @@ print_log_rev(void *baton,
     SVN_ERR(svn_cmdline_printf(pool, "r%ld*\n", log_entry->revision));
   else
     SVN_ERR(svn_cmdline_printf(pool, "r%ld\n", log_entry->revision));
+
+  return SVN_NO_ERROR;
+}
+
+/* The separator between log messages. */
+#define SEP_STRING \
+  "------------------------------------------------------------------------\n"
+
+/* Implements the svn_log_entry_receiver_t interface. */
+static svn_error_t *
+print_log_details(void *baton,
+                  svn_log_entry_t *log_entry,
+                  apr_pool_t *pool)
+{
+  const char *author;
+  const char *date;
+  const char *message;
+
+  svn_compat_log_revprops_out(&author, &date, &message, log_entry->revprops);
+
+  if (author == NULL)
+    author = _("(no author)");
+
+  if (date && date[0])
+    /* Convert date to a format for humans. */
+    SVN_ERR(svn_cl__time_cstring_to_human_cstring(&date, date, pool));
+  else
+    date = _("(no date)");
+
+  if (log_entry->non_inheritable)
+    SVN_ERR(svn_cmdline_printf(pool,
+                               SEP_STRING "r%ld* | %s | %s",
+                               log_entry->revision, author, date));
+  else
+    SVN_ERR(svn_cmdline_printf(pool,
+                               SEP_STRING "r%ld | %s | %s",
+                               log_entry->revision, author, date));
+
+  if (message != NULL)
+    {
+      /* Number of lines in the msg. */
+      int lines = svn_cstring_count_newlines(message) + 1;
+
+      SVN_ERR(svn_cmdline_printf(pool,
+                                 Q_(" | %d line", " | %d lines", lines),
+                                 lines));
+    }
+
+  SVN_ERR(svn_cmdline_printf(pool, "\n"));
+
+  if (message != NULL)
+    {
+      /* A blank line always precedes the log message. */
+      SVN_ERR(svn_cmdline_printf(pool, "\n%s\n", message));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -238,6 +295,50 @@ mergeinfo_summary(
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+mergeinfo_log(svn_boolean_t finding_merged,
+              const char *target,
+              const svn_opt_revision_t *tgt_peg_revision,
+              const char *source,
+              const svn_opt_revision_t *src_peg_revision,
+              const svn_opt_revision_t *src_start_revision,
+              const svn_opt_revision_t *src_end_revision,
+              svn_depth_t depth,
+              svn_boolean_t include_log_details,
+              svn_client_ctx_t *ctx,
+              apr_pool_t *pool)
+{
+  apr_array_header_t *revprops;
+  svn_log_entry_receiver_t log_reciever;
+
+  if (include_log_details)
+    {
+      revprops = apr_array_make(pool, 3, sizeof(const char *));
+      APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_AUTHOR;
+      APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_DATE;
+      APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_LOG;
+
+      log_reciever = print_log_details;
+    }
+  else
+    {
+      /* We need only revisions number, not revision properties. */
+      revprops = apr_array_make(pool, 0, sizeof(const char *));
+      log_reciever = print_log_rev;
+    }
+
+  SVN_ERR(svn_client_mergeinfo_log2(finding_merged, target,
+                                    tgt_peg_revision,
+                                    source, src_peg_revision,
+                                    src_start_revision,
+                                    src_end_revision,
+                                    log_reciever, NULL,
+                                    TRUE, depth, revprops, ctx,
+                                    pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__mergeinfo(apr_getopt_t *os,
@@ -311,33 +412,21 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   /* Do the real work, depending on the requested data flavor. */
   if (opt_state->show_revs == svn_cl__show_revs_merged)
     {
-      apr_array_header_t *revprops;
-
-      /* We need only revisions number, not revision properties. */
-      revprops = apr_array_make(pool, 0, sizeof(const char *));
-
-      SVN_ERR(svn_client_mergeinfo_log2(TRUE, target, &tgt_peg_revision,
-                                        source, &src_peg_revision,
-                                        src_start_revision,
-                                        src_end_revision,
-                                        print_log_rev, NULL,
-                                        TRUE, depth, revprops, ctx,
-                                        pool));
+      SVN_ERR(mergeinfo_log(TRUE, target, &tgt_peg_revision,
+                            source, &src_peg_revision,
+                            src_start_revision,
+                            src_end_revision,
+                            depth, opt_state->mergeinfo_log,
+                            ctx, pool));
     }
   else if (opt_state->show_revs == svn_cl__show_revs_eligible)
     {
-      apr_array_header_t *revprops;
-
-      /* We need only revisions number, not revision properties. */
-      revprops = apr_array_make(pool, 0, sizeof(const char *));
-
-      SVN_ERR(svn_client_mergeinfo_log2(FALSE, target, &tgt_peg_revision,
-                                        source, &src_peg_revision,
-                                        src_start_revision,
-                                        src_end_revision,
-                                        print_log_rev, NULL,
-                                        TRUE, depth, revprops, ctx,
-                                        pool));
+      SVN_ERR(mergeinfo_log(FALSE, target, &tgt_peg_revision,
+                            source, &src_peg_revision,
+                            src_start_revision,
+                            src_end_revision,
+                            depth, opt_state->mergeinfo_log,
+                            ctx, pool));
     }
   else
     {
