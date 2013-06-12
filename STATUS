@@ -130,6 +130,13 @@ Candidate changes:
     Votes:
       +1: stsp, rhuijben
 
+  * r1492005
+    Optimize 'svn mergeinfo --show-revs' network usage.
+    Justification:
+      Simple fix to improve performance.
+    Votes:
+      +1: ivan
+
 Veto-blocked changes:
 =====================
 
