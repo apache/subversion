@@ -69,6 +69,31 @@ svn_ra__assert_mergeinfo_capable_server(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_ra__assert_capable_server(svn_ra_session_t *ra_session,
+                              const char *capability,
+                              const char *path_or_url,
+                              apr_pool_t *pool)
+{
+  if (!strcmp(capability, SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE))
+    return svn_ra__assert_mergeinfo_capable_server(ra_session, path_or_url,
+                                                   pool);
+
+  else
+    {
+      svn_boolean_t has;
+      SVN_ERR(svn_ra_has_capability(ra_session, &has, capability, pool));
+      if (! has)
+        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                               _("The '%s' feature is not supported by '%s'"),
+                               capability,
+                               svn_path_is_url(path_or_url)
+                                  ? path_or_url
+                                  : svn_dirent_local_style(path_or_url, pool));
+    }
+  return SVN_NO_ERROR;
+}
+
 /* Does ERR mean "the current value of the revprop isn't equal to
    the *OLD_VALUE_P you gave me"?
  */
