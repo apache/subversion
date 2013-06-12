@@ -120,7 +120,9 @@ Candidate changes:
    Justification:
      Resolver is not invoked after some updates which flag new tree conflicts.
    Votes:
-     +1: stsp, rhuijben
+     +1: stsp
+     -0: rhuijben (Working on a further review to avoid a possible duplicate
+                   callback call)
 
  * r1478987, r1492005, r1492020
    Optimize 'svn mergeinfo --show-revs' network usage and a similar case in the
@@ -139,7 +141,6 @@ Candidate changes:
      and it worked in 1.7)
    Votes:
      +1: rhuijben
-
 
 Veto-blocked changes:
 =====================
