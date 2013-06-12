@@ -124,13 +124,20 @@ Candidate changes:
      -0: rhuijben (Working on a further review to avoid a possible duplicate
                    callback call)
 
- * r1478987, r1492005, r1492020
+ * r1492005
    Optimize 'svn mergeinfo --show-revs' network usage and a similar case in the
    merge code.
    Justification:
      Simple fixes to improve performance.
    Votes:
-     +1: ivan (without r1478987, r1492020)
+     +1: ivan, rhuijben
+     
+ * r1478987, r1492020
+   Optimize some code that retrieves mergeinfo to obtain less unneeded
+   information from the repository.
+   Justification:
+     Simple fixes to improve performance.
+   Votes:
      +1: rhuijben
 
  * r1491756
