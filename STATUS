@@ -99,7 +99,7 @@ Candidate changes:
    Votes:
      +1: stefan2, blair
 
- * r1491739, r1491755, r1491762
+ * r1491739, r1491755, r1491762, r1492152
    Improve interactive conflict resolution menu.
    Justification:
      The current menu is too hard to figure out for users.
