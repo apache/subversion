@@ -134,7 +134,10 @@ typedef svn_error_t *
                                  apr_pool_t *pool);
 
 
-/** A function type for retrieving the youngest revision from a repos. */
+/** A function type for retrieving the youngest revision from a repos.
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+/* ### It seems this type was never used by the API, since 1.0.0. */
 typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t)(
   void *session_baton,
   svn_revnum_t *latest_revnum);
