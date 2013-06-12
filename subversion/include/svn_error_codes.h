@@ -853,7 +853,7 @@ SVN_ERROR_START
   /** @since New in 1.8. */
   SVN_ERRDEF(SVN_ERR_REPOS_CORRUPTED,
              SVN_ERR_REPOS_CATEGORY_START + 11,
-             "Repository has corruptions")
+             "Repository is corrupt")
 
   /* generic RA errors */
 

@@ -328,7 +328,7 @@ typedef struct svn_repos_notify_t
 
   /** For #svn_repos_notify_failure, this error chain indicates what
       went wrong during verification.
-      @since New in 1.8. */
+      @since New in 1.9. */
   svn_error_t *err;
 
   /* NOTE: Add new fields at the end to preserve binary compatibility.
@@ -2613,7 +2613,7 @@ svn_repos_info_format(int *repos_format,
  * not notified. Finally, return an error if there were any failures during
  * verification, or SVN_NO_ERROR if there were no failures.
  *
- * @since New in 1.8.
+ * @since New in 1.9.
  */
 svn_error_t *
 svn_repos_verify_fs3(svn_repos_t *repos,
