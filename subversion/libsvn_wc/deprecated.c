@@ -32,6 +32,7 @@
 #include "svn_subst.h"
 #include "svn_pools.h"
 #include "svn_props.h"
+#include "svn_hash.h"
 #include "svn_time.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
@@ -85,8 +86,7 @@ traversal_info_update(void *baton,
     {
       dup_val = apr_pstrmemdup(dup_pool, old_val->data, old_val->len);
 
-      apr_hash_set(ub->traversal->externals_old, dup_path, APR_HASH_KEY_STRING,
-                   dup_val);
+      svn_hash_sets(ub->traversal->externals_old, dup_path, dup_val);
     }
 
   if (new_val)
@@ -95,12 +95,10 @@ traversal_info_update(void *baton,
       if (old_val != new_val)
         dup_val = apr_pstrmemdup(dup_pool, new_val->data, new_val->len);
 
-      apr_hash_set(ub->traversal->externals_new, dup_path, APR_HASH_KEY_STRING,
-                   dup_val);
+      svn_hash_sets(ub->traversal->externals_new, dup_path, dup_val);
     }
 
-  apr_hash_set(ub->traversal->depths, dup_path, APR_HASH_KEY_STRING,
-               svn_depth_to_word(depth));
+  svn_hash_sets(ub->traversal->depths, dup_path, svn_depth_to_word(depth));
 
   return SVN_NO_ERROR;
 }
@@ -138,19 +136,15 @@ gather_traversal_info(svn_wc_context_t *wc_ctx,
                                 traversal_info->pool);
 
       if (gather_as_old)
-        apr_hash_set(traversal_info->externals_old,
-                     relpath, APR_HASH_KEY_STRING,
-                     svn__apr_hash_index_val(hi));
+        svn_hash_sets(traversal_info->externals_old, relpath,
+                      svn__apr_hash_index_val(hi));
 
       if (gather_as_new)
-        apr_hash_set(traversal_info->externals_new,
-                     relpath, APR_HASH_KEY_STRING,
-                     svn__apr_hash_index_val(hi));
+        svn_hash_sets(traversal_info->externals_new, relpath,
+                      svn__apr_hash_index_val(hi));
 
-      apr_hash_set(traversal_info->depths,
-                   relpath, APR_HASH_KEY_STRING,
-                   apr_hash_get(ambient_depths, node_abspath,
-                                APR_HASH_KEY_STRING));
+      svn_hash_sets(traversal_info->depths, relpath,
+                    svn_hash_gets(ambient_depths, node_abspath));
     }
 
   return SVN_NO_ERROR;
@@ -607,6 +601,34 @@ svn_wc_create_tmp_file(apr_file_t **fp,
                                  pool);
 }
 
+svn_error_t *
+svn_wc_create_tmp_file2(apr_file_t **fp,
+                        const char **new_name,
+                        const char *path,
+                        svn_io_file_del_t delete_when,
+                        apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+  const char *local_abspath;
+  const char *temp_dir;
+  svn_error_t *err;
+
+  SVN_ERR_ASSERT(fp || new_name);
+
+  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL /* config */, pool, pool));
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  err = svn_wc__get_tmpdir(&temp_dir, wc_ctx, local_abspath, pool, pool);
+  err = svn_error_compose_create(err, svn_wc_context_destroy(wc_ctx));
+  if (err)
+    return svn_error_trace(err);
+
+  SVN_ERR(svn_io_open_unique_file3(fp, new_name, temp_dir,
+                                   delete_when, pool, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 /*** From adm_ops.c ***/
 svn_error_t *
@@ -942,12 +964,13 @@ svn_wc_add3(const char *path,
   /* Make sure the caller gets the new access baton in the set. */
   if (svn_wc__adm_retrieve_internal2(wc_db, local_abspath, pool) == NULL)
     {
-      svn_kind_t kind;
+      svn_node_kind_t kind;
 
       SVN_ERR(svn_wc__db_read_kind(&kind, wc_db, local_abspath,
                                    FALSE /* allow_missing */,
+                                   TRUE /* show_deleted */,
                                    FALSE /* show_hidden */, pool));
-      if (kind == svn_kind_dir)
+      if (kind == svn_node_dir)
         {
           svn_wc_adm_access_t *adm_access;
 
@@ -2328,8 +2351,7 @@ svn_wc_parse_externals_description(apr_hash_t **externals_p,
           svn_wc_external_item_t *item;
           item = APR_ARRAY_IDX(list, i, svn_wc_external_item_t *);
 
-          apr_hash_set(*externals_p, item->target_dir,
-                       APR_HASH_KEY_STRING, item);
+          svn_hash_sets(*externals_p, item->target_dir, item);
         }
     }
   return SVN_NO_ERROR;
@@ -2609,6 +2631,146 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
 
   return svn_error_trace(svn_wc_context_destroy(wc_ctx));
 }
+
+
+svn_error_t *
+svn_wc__status2_from_3(svn_wc_status2_t **status,
+                       const svn_wc_status3_t *old_status,
+                       svn_wc_context_t *wc_ctx,
+                       const char *local_abspath,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  const svn_wc_entry_t *entry = NULL;
+
+  if (old_status == NULL)
+    {
+      *status = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  *status = apr_pcalloc(result_pool, sizeof(**status));
+
+  if (old_status->versioned)
+    {
+      svn_error_t *err;
+      err= svn_wc__get_entry(&entry, wc_ctx->db, local_abspath, FALSE,
+                             svn_node_unknown, result_pool, scratch_pool);
+
+      if (err && err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)
+        svn_error_clear(err);
+      else
+        SVN_ERR(err);
+    }
+
+  (*status)->entry = entry;
+  (*status)->copied = old_status->copied;
+  (*status)->repos_lock = svn_lock_dup(old_status->repos_lock, result_pool);
+
+  if (old_status->repos_relpath)
+    (*status)->url = svn_path_url_add_component2(old_status->repos_root_url,
+                                                 old_status->repos_relpath,
+                                                 result_pool);
+  (*status)->ood_last_cmt_rev = old_status->ood_changed_rev;
+  (*status)->ood_last_cmt_date = old_status->ood_changed_date;
+  (*status)->ood_kind = old_status->ood_kind;
+  (*status)->ood_last_cmt_author = old_status->ood_changed_author;
+
+  if (old_status->conflicted)
+    {
+      const svn_wc_conflict_description2_t *tree_conflict;
+      SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, wc_ctx, local_abspath,
+                                        scratch_pool, scratch_pool));
+      (*status)->tree_conflict = svn_wc__cd2_to_cd(tree_conflict, result_pool);
+    }
+
+  (*status)->switched = old_status->switched;
+
+  (*status)->text_status = old_status->node_status;
+  (*status)->prop_status = old_status->prop_status;
+
+  (*status)->repos_text_status = old_status->repos_node_status;
+  (*status)->repos_prop_status = old_status->repos_prop_status;
+
+  /* Some values might be inherited from properties */
+  if (old_status->node_status == svn_wc_status_modified
+      || old_status->node_status == svn_wc_status_conflicted)
+    (*status)->text_status = old_status->text_status;
+
+  /* (Currently a no-op, but just make sure it is ok) */
+  if (old_status->repos_node_status == svn_wc_status_modified
+      || old_status->repos_node_status == svn_wc_status_conflicted)
+    (*status)->repos_text_status = old_status->repos_text_status;
+
+  if (old_status->node_status == svn_wc_status_added)
+    (*status)->prop_status = svn_wc_status_none; /* No separate info */
+
+  /* Find pristine_text_status value */
+  switch (old_status->text_status)
+    {
+      case svn_wc_status_none:
+      case svn_wc_status_normal:
+      case svn_wc_status_modified:
+        (*status)->pristine_text_status = old_status->text_status;
+        break;
+      case svn_wc_status_conflicted:
+      default:
+        /* ### Fetch compare data, or fall back to the documented
+               not retrieved behavior? */
+        (*status)->pristine_text_status = svn_wc_status_none;
+        break;
+    }
+
+  /* Find pristine_prop_status value */
+  switch (old_status->prop_status)
+    {
+      case svn_wc_status_none:
+      case svn_wc_status_normal:
+      case svn_wc_status_modified:
+        if (old_status->node_status != svn_wc_status_added
+            && old_status->node_status != svn_wc_status_deleted
+            && old_status->node_status != svn_wc_status_replaced)
+          {
+            (*status)->pristine_prop_status = old_status->prop_status;
+          }
+        else
+          (*status)->pristine_prop_status = svn_wc_status_none;
+        break;
+      case svn_wc_status_conflicted:
+      default:
+        /* ### Fetch compare data, or fall back to the documented
+               not retrieved behavior? */
+        (*status)->pristine_prop_status = svn_wc_status_none;
+        break;
+    }
+
+  if (old_status->versioned
+      && old_status->conflicted
+      && old_status->node_status != svn_wc_status_obstructed
+      && (old_status->kind == svn_node_file
+          || old_status->node_status != svn_wc_status_missing))
+    {
+      svn_boolean_t text_conflict_p, prop_conflict_p;
+
+      /* The entry says there was a conflict, but the user might have
+         marked it as resolved by deleting the artifact files, so check
+         for that. */
+      SVN_ERR(svn_wc__internal_conflicted_p(&text_conflict_p,
+                                            &prop_conflict_p,
+                                            NULL,
+                                            wc_ctx->db, local_abspath,
+                                            scratch_pool));
+
+      if (text_conflict_p)
+        (*status)->text_status = svn_wc_status_conflicted;
+
+      if (prop_conflict_p)
+        (*status)->prop_status = svn_wc_status_conflicted;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /*** From status.c ***/
@@ -3119,8 +3281,7 @@ svn_wc_add_repos_file2(const char *dst_path,
 
       /* If the new file is special, then we can simply open the given
          contents since it is already in normal form. */
-      if (apr_hash_get(new_props,
-                       SVN_PROP_SPECIAL, APR_HASH_KEY_STRING) != NULL)
+      if (svn_hash_gets(new_props, SVN_PROP_SPECIAL) != NULL)
         {
           SVN_ERR(svn_stream_open_readonly(&new_contents, new_text_path,
                                            pool, pool));
@@ -3133,8 +3294,7 @@ svn_wc_add_repos_file2(const char *dst_path,
           apr_hash_t *keywords = NULL;
           svn_string_t *list;
 
-          list = apr_hash_get(new_props,
-                              SVN_PROP_KEYWORDS, APR_HASH_KEY_STRING);
+          list = svn_hash_gets(new_props, SVN_PROP_KEYWORDS);
           if (list != NULL)
             {
               /* Since we are detranslating, all of the keyword values
@@ -3148,9 +3308,8 @@ svn_wc_add_repos_file2(const char *dst_path,
             }
 
           svn_subst_eol_style_from_value(&eol_style, &eol_str,
-                                         apr_hash_get(new_props,
-                                                      SVN_PROP_EOL_STYLE,
-                                                      APR_HASH_KEY_STRING));
+                                         svn_hash_gets(new_props,
+                                                       SVN_PROP_EOL_STYLE));
 
           if (svn_subst_translation_required(eol_style, eol_str, keywords,
                                              FALSE, FALSE))
@@ -3230,7 +3389,7 @@ svn_wc_is_wc_root2(svn_boolean_t *wc_root,
 {
   svn_boolean_t is_root;
   svn_boolean_t is_switched;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_error_t *err;
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -3246,7 +3405,7 @@ svn_wc_is_wc_root2(svn_boolean_t *wc_root,
       return svn_error_create(SVN_ERR_ENTRY_NOT_FOUND, err, err->message);
     }
 
-  *wc_root = is_root || (kind == svn_kind_dir && is_switched);
+  *wc_root = is_root || (kind == svn_node_dir && is_switched);
 
   return SVN_NO_ERROR;
 }
@@ -4536,4 +4695,28 @@ svn_wc_move(svn_wc_context_t *wc_ctx,
                                        cancel_func, cancel_baton,
                                        notify_func, notify_baton,
                                        scratch_pool));
+}
+
+svn_error_t *
+svn_wc_read_kind(svn_node_kind_t *kind,
+                 svn_wc_context_t *wc_ctx,
+                 const char *abspath,
+                 svn_boolean_t show_hidden,
+                 apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(
+          svn_wc_read_kind2(kind,
+                            wc_ctx, abspath,
+                            TRUE /* show_deleted */,
+                            show_hidden,
+                            scratch_pool));
+
+  /*if (db_kind == svn_node_dir)
+    *kind = svn_node_dir;
+  else if (db_kind == svn_node_file || db_kind == svn_node_symlink)
+    *kind = svn_node_file;
+  else
+    *kind = svn_node_none;*/
+
+  return SVN_NO_ERROR;
 }

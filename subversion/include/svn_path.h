@@ -677,10 +677,9 @@ svn_path_cstring_to_utf8(const char **path_utf8,
  * @{
  */
 
-
 /**
- * Return true iff @a path is a repository-relative URL: specifically that
- * it starts with the characters "^/"
+ * Return @c TRUE iff @a path is a repository-relative URL:  specifically
+ * that it starts with the characters "^/"
  *
  * @a path is in UTF-8 encoding.
  *
@@ -694,22 +693,20 @@ svn_path_is_repos_relative_url(const char *path);
 
 /**
  * Set @a absolute_url to the absolute URL represented by @a relative_url
- * relative to @a repos_root_url.  @a absolute_url will be allocated in
- * @a pool.
- *
- * @a absolute_url will end with a peg revision specifier if @a relative_url
- * did.
+ * relative to @a repos_root_url, preserving any peg revision
+ * specifier present in @a relative_url.  Allocate @a absolute_url
+ * from @a pool.
  *
  * @a relative_url is in repository-relative syntax: "^/[REL-URL][@PEG]"
  *
- * @a repos_root_url is the absolute url of the repository root.
+ * @a repos_root_url is the absolute URL of the repository root.
  *
  * All strings are in UTF-8 encoding.
  *
  * @a repos_root_url and @a relative_url do not have to be properly
- * URI-encoded, canonical, or valid in any other way.  The caller is expected
- * to perform canonicalization on @a absolute_url after the call to the
- * function.
+ * URI-encoded, canonical, or valid in any other way.  The caller is
+ * expected to perform canonicalization on @a absolute_url after the
+ * call to the function.
  *
  * @since New in 1.8.
  */
@@ -719,6 +716,13 @@ svn_path_resolve_repos_relative_url(const char **absolute_url,
                                     const char *repos_root_url,
                                     apr_pool_t *pool);
 
+/* Return a copy of @a path, allocated from @a pool, for which control
+ * characters have been escaped using the form \NNN (where NNN is the
+ * octal representation of the byte's ordinal value).
+ * 
+ * @since New in 1.9. */
+const char *
+svn_path_illegal_path_escape(const char *path, apr_pool_t *pool);
 
 /** @} */
 

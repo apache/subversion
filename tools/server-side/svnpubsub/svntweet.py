@@ -23,7 +23,7 @@
 #  svntweet.py  my-config.json
 #
 # With my-config.json containing stream paths and the twitter auth info:
-#    {"stream": "http://svn.apache.org:2069/commits/xml",
+#    {"stream": "http://svn.apache.org:2069/commits",
 #     "username": "asfcommits",
 #     "password": "MyLuggageComboIs1234"}
 #
@@ -43,8 +43,8 @@ from twisted.python import failure, log
 from twisted.web.client import HTTPClientFactory, HTTPPageDownloader
 
 from urlparse import urlparse
-from xml.sax import handler, make_parser
 import time
+import posixpath
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "twitty-twister", "lib"))
 try:
@@ -81,81 +81,60 @@ class HTTPStream(HTTPClientFactory):
     def pageEnd(self):
         pass
 
-class Revision:
-    def __init__(self, repos, rev):
-        self.repos = repos
-        self.rev = rev
-        self.dirs_changed = []
-        self.author = None
-        self.log = None
-        self.date = None
+class Commit(object):
+  def __init__(self, commit):
+    self.__dict__.update(commit)
 
-class StreamHandler(handler.ContentHandler):
-    def __init__(self, bdec):
-        handler.ContentHandler.__init__(self)
-        self.bdec =  bdec
-        self.rev = None
-        self.text_value = None
+class JSONRecordHandler:
+  def __init__(self, bdec):
+    self.bdec = bdec
 
-    def startElement(self, name, attrs):
-        #print "start element: %s" % (name)
-        """
-        <commit repository="13f79535-47bb-0310-9956-ffa450edef68"
-                revision="815618">
-            <author>joehni</author>
-            <date>2009-09-16 06:00:21 +0000 (Wed, 16 Sep 2009)</date>
-            <log>pom.xml is not executable.</log>
-            <dirs_changed><path>commons/proper/commons-parent/trunk/</path></dirs_changed>
-        </commit>
-        """
-        if name == "commit":
-            self.rev = Revision(repos=attrs['repository'],
-                                rev=int(attrs['revision']))
-        elif name == "stillalive":
-            self.bdec.stillalive()
-    def characters(self, data):
-        if self.text_value is not None:
-            self.text_value = self.text_value + data
-        else:
-            self.text_value = data
+  def feed(self, record):
+    obj = json.loads(record)
+    if 'svnpubsub' in obj:
+      actual_version = obj['svnpubsub'].get('version')
+      EXPECTED_VERSION = 1
+      if actual_version != EXPECTED_VERSION:
+        raise ValueException("Unknown svnpubsub format: %r != %d"
+                             % (actual_format, expected_format))
+    elif 'commit' in obj:
+      commit = Commit(obj['commit'])
+      if not hasattr(commit, 'type'):
+        raise ValueException("Commit object is missing type field.")
+      if not hasattr(commit, 'format'):
+        raise ValueException("Commit object is missing format field.")
+      if commit.type != 'svn' and commit.format != 1:
+        raise ValueException("Unexpected type and/or format: %s:%s"
+                             % (commit.type, commit.format))
+      self.bdec.commit(commit)
+    elif 'stillalive' in obj:
+      self.bdec.stillalive()
 
-    def endElement(self, name):
-        #print "end   element: %s" % (name)
-        if name == "commit":
-            self.bdec.commit(self.rev)
-            self.rev = None
-        if self.text_value is not None and self.rev is not None:
-            if name == "path":
-                self.rev.dirs_changed.append(self.text_value.strip())
-            if name == "author":
-                self.rev.author = self.text_value.strip()
-            if name == "date":
-                self.rev.date = self.text_value.strip()
-            if name == "log":
-                self.rev.log = self.text_value.strip()
-        self.text_value = None
-
-
-class XMLHTTPStream(HTTPStream):
+class JSONHTTPStream(HTTPStream):
     def __init__(self, url, bdec):
         HTTPStream.__init__(self, url)
         self.bdec =  bdec
-        self.parser = make_parser(['xml.sax.expatreader'])
-        self.handler = StreamHandler(bdec)
-        self.parser.setContentHandler(self.handler)
+        self.ibuffer = []
+        self.parser = JSONRecordHandler(bdec)
 
-    def pageStart(self, parital):
+    def pageStart(self, partial):
         self.bdec.pageStart()
 
     def pagePart(self, data):
-        self.parser.feed(data)
+        eor = data.find("\0")
+        if eor >= 0:
+            self.ibuffer.append(data[0:eor])
+            self.parser.feed(''.join(self.ibuffer))
+            self.ibuffer = [data[eor+1:]]
+        else:
+            self.ibuffer.append(data)
 
 def connectTo(url, bdec):
     u = urlparse(url)
     port = u.port
     if not port:
         port = 80
-    s = XMLHTTPStream(url, bdec)
+    s = JSONHTTPStream(url, bdec)
     conn = reactor.connectTCP(u.hostname, u.port, s)
     return [s, conn]
 
@@ -209,7 +188,7 @@ class BigDoEverythingClasss(object):
     def _normalize_path(self, path):
         if path[0] != '/':
             return "/" + path
-        return os.path.abspath(path)
+        return posixpath.abspath(path)
 
     def tweet(self, msg):
         log.msg("SEND TWEET: %s" % (msg))
@@ -218,29 +197,29 @@ class BigDoEverythingClasss(object):
     def tweet_done(self, x):
         log.msg("TWEET: Success!")
 
-    def build_tweet(self, rev):
+    def build_tweet(self, commit):
         maxlen = 144
         left = maxlen
-        paths = map(self._normalize_path, rev.dirs_changed)
+        paths = map(self._normalize_path, commit.changed)
         if not len(paths):
             return None
-        path = os.path.commonprefix(paths)
+        path = posixpath.commonprefix(paths)
         if path[0:1] == '/' and len(path) > 1:
             path = path[1:]
 
-        #TODO: shorter link
-        link = " - http://svn.apache.org/viewvc?view=rev&revision=%d" % (rev.rev)
+        #TODO: allow URL to be configurable.
+        link = " - http://svn.apache.org/r%d" % (commit.id)
         left -= len(link)
-        msg = "r%d in %s by %s: "  % (rev.rev, path, rev.author)
+        msg = "r%d in %s by %s: "  % (commit.id, path, commit.committer)
         left -= len(msg)
         if left > 3:
-            msg += rev.log[0:left]
+            msg += commit.log[0:left]
         msg += link
         return msg
 
-    def commit(self, rev):
-        log.msg("COMMIT r%d (%d paths)" % (rev.rev, len(rev.dirs_changed)))
-        msg = self.build_tweet(rev)
+    def commit(self, commit):
+        log.msg("COMMIT r%d (%d paths)" % (commit.id, len(commit.changed)))
+        msg = self.build_tweet(commit)
         if msg:
             self.tweet(msg)
             #print "Common Prefix: %s" % (pre)

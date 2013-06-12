@@ -201,7 +201,7 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
     dump = [ dump ]
 
   exit_code, output, errput = svntest.main.run_command_stdin(
-    svntest.main.svnadmin_binary, expected_stderr, 0, 1, dump,
+    svntest.main.svnadmin_binary, expected_stderr, 0, True, dump,
     'load', '--quiet', sbox.repo_dir, *varargs)
 
   if expected_stdout:
@@ -230,14 +230,8 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
                                          "update", "-r%s" % (rev+1),
                                          sbox.wc_dir)
 
-      wc_tree = svntest.tree.build_tree_from_wc(sbox.wc_dir, check_props)
-      rev_tree = revs[rev].old_tree()
-
-      try:
-        svntest.tree.compare_trees("rev/disk", rev_tree, wc_tree)
-      except svntest.tree.SVNTreeError:
-        svntest.verify.display_trees(None, 'WC TREE', wc_tree, rev_tree)
-        raise
+      rev_tree = revs[rev]
+      svntest.actions.verify_disk(sbox.wc_dir, rev_tree, check_props)
 
 def load_dumpstream(sbox, dump, *varargs):
   "Load dump text without verification."
@@ -392,8 +386,7 @@ def dump_copied_dir(sbox):
   old_C_path = os.path.join(wc_dir, 'A', 'C')
   new_C_path = os.path.join(wc_dir, 'A', 'B', 'C')
   svntest.main.run_svn(None, 'cp', old_C_path, new_C_path)
-  svntest.main.run_svn(None, 'ci', wc_dir, '--quiet',
-                       '-m', 'log msg')
+  sbox.simple_commit(message='log msg')
 
   exit_code, output, errput = svntest.main.run_svnadmin("dump", repo_dir)
   if svntest.verify.compare_and_display_lines(
@@ -416,8 +409,7 @@ def dump_move_dir_modify_child(sbox):
   Q_path = os.path.join(wc_dir, 'A', 'Q')
   svntest.main.run_svn(None, 'cp', B_path, Q_path)
   svntest.main.file_append(os.path.join(Q_path, 'lambda'), 'hello')
-  svntest.main.run_svn(None, 'ci', wc_dir, '--quiet',
-                       '-m', 'log msg')
+  sbox.simple_commit(message='log msg')
   exit_code, output, errput = svntest.main.run_svnadmin("dump", repo_dir)
   svntest.verify.compare_and_display_lines(
     "Output of 'svnadmin dump' is unexpected.",
@@ -554,11 +546,24 @@ def verify_windows_paths_in_repos(sbox):
 
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
                                                         sbox.repo_dir)
-  svntest.verify.compare_and_display_lines(
-    "Error while running 'svnadmin verify'.",
-    'STDERR', ["* Verified revision 0.\n",
-               "* Verified revision 1.\n",
-               "* Verified revision 2.\n"], errput)
+  if errput:
+    raise SVNUnexpectedStderr(errput)
+
+  # unfortunately, FSFS needs to do more checks than BDB resulting in
+  # different progress output
+  if svntest.main.is_fs_type_fsfs():
+    svntest.verify.compare_and_display_lines(
+      "Error while running 'svnadmin verify'.",
+      'STDERR', ["* Verifying repository metadata ...\n",
+                 "* Verified revision 0.\n",
+                 "* Verified revision 1.\n",
+                 "* Verified revision 2.\n"], output)
+  else:
+    svntest.verify.compare_and_display_lines(
+      "Error while running 'svnadmin verify'.",
+      'STDERR', ["* Verified revision 0.\n",
+                 "* Verified revision 1.\n",
+                 "* Verified revision 2.\n"], output)
 
 #----------------------------------------------------------------------
 
@@ -731,17 +736,17 @@ def recover_fsfs(sbox):
 
   # Commit up to r3, so we can test various recovery scenarios.
   svntest.main.file_append(os.path.join(sbox.wc_dir, 'iota'), 'newer line\n')
-  svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
+  sbox.simple_commit(message='log msg')
 
   svntest.main.file_append(os.path.join(sbox.wc_dir, 'iota'), 'newest line\n')
-  svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
+  sbox.simple_commit(message='log msg')
 
   # Remember the contents of the db/current file.
   expected_current_contents = open(current_path).read()
 
   # Move aside the current file for r3.
   os.rename(os.path.join(sbox.repo_dir, 'db','current'),
-            os.path.join(sbox.repo_dir, 'db','was_current'));
+            os.path.join(sbox.repo_dir, 'db','was_current'))
 
   # Run 'svnadmin recover' and check that the current file is recreated.
   exit_code, output, errput = svntest.main.run_svnadmin("recover",
@@ -942,10 +947,10 @@ def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
 
   # Commit up to r3, so we can test various recovery scenarios.
   svntest.main.file_append(os.path.join(sbox.wc_dir, 'iota'), 'newer line\n')
-  svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
+  sbox.simple_commit(message='log msg')
 
   svntest.main.file_append(os.path.join(sbox.wc_dir, 'iota'), 'newest line\n')
-  svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
+  sbox.simple_commit(message='log msg')
 
   rev_3 = fsfs_file(sbox.repo_dir, 'revs', '3')
   rev_was_3 = rev_3 + '.was'
@@ -1057,8 +1062,10 @@ def verify_with_invalid_revprops(sbox):
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
                                                         sbox.repo_dir)
 
+  if errput:
+    raise SVNUnexpectedStderr(errput)
   if svntest.verify.verify_outputs(
-    "Output of 'svnadmin verify' is unexpected.", None, errput, None,
+    "Output of 'svnadmin verify' is unexpected.", None, output, None,
     ".*Verified revision 0*"):
     raise svntest.Failure
 
@@ -1494,44 +1501,31 @@ def test_lslocks_and_rmlocks(sbox):
                                      [], "lock", "-m", "Locking files",
                                      iota_url, lambda_url)
 
-  expected_output_list = [
-      "Path: /A/B/lambda",
+  def expected_output_list(path):
+    return [
+      "Path: " + path,
       "UUID Token: opaquelocktoken",
       "Owner: jrandom",
       "Created:",
       "Expires:",
       "Comment \(1 line\):",
       "Locking files",
-      "Path: /iota",
-      "UUID Token: opaquelocktoken.*",
       "\n", # empty line
       ]
 
   # List all locks
   exit_code, output, errput = svntest.main.run_svnadmin("lslocks",
                                                         sbox.repo_dir)
-
   if errput:
     raise SVNUnexpectedStderr(errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
-  try:
-    expected_output = svntest.verify.UnorderedRegexOutput(expected_output_list)
-    svntest.verify.compare_and_display_lines('lslocks output mismatch',
-                                             'output',
-                                             expected_output, output)
-  except:
-    # Usually both locks have the same timestamp but if the clock
-    # ticks between creating the two locks then the timestamps will
-    # differ.  When the output has two identical "Created" lines
-    # UnorderedRegexOutput must have one matching regex, when the
-    # output has two different "Created" lines UnorderedRegexOutput
-    # must have two regex.
-    expected_output_list.append("Created:.*")
-    expected_output = svntest.verify.UnorderedRegexOutput(expected_output_list)
-    svntest.verify.compare_and_display_lines('lslocks output mismatch',
-                                             'output',
-                                             expected_output, output)
+  expected_output = svntest.verify.UnorderedRegexListOutput(
+                                     expected_output_list('/A/B/lambda') +
+                                     expected_output_list('/iota'))
+  svntest.verify.compare_and_display_lines('lslocks output mismatch',
+                                           'output',
+                                           expected_output, output)
 
   # List lock in path /A
   exit_code, output, errput = svntest.main.run_svnadmin("lslocks",
@@ -1540,18 +1534,10 @@ def test_lslocks_and_rmlocks(sbox):
   if errput:
     raise SVNUnexpectedStderr(errput)
 
-  expected_output = svntest.verify.UnorderedRegexOutput([
-    "Path: /A/B/lambda",
-    "UUID Token: opaquelocktoken",
-    "Owner: jrandom",
-    "Created:",
-    "Expires:",
-    "Comment \(1 line\):",
-    "Locking files",
-    "\n", # empty line
-    ])
-
-  svntest.verify.compare_and_display_lines('message', 'label',
+  expected_output = svntest.verify.RegexListOutput(
+                                     expected_output_list('/A/B/lambda'))
+  svntest.verify.compare_and_display_lines('lslocks output mismatch',
+                                           'output',
                                            expected_output, output)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
@@ -1637,7 +1623,8 @@ def hotcopy_incremental_packed(sbox):
 
   # Pack revisions 0 and 1.
   svntest.actions.run_and_verify_svnadmin(
-    None, None, [], "pack", os.path.join(cwd, sbox.repo_dir))
+    None, ['Packing revisions in shard 0...done.\n'], [], "pack",
+    os.path.join(cwd, sbox.repo_dir))
 
   # Commit 5 more revs, hotcopy and pack after each commit.
   for i in [1, 2, 3, 4, 5]:
@@ -1653,8 +1640,12 @@ def hotcopy_incremental_packed(sbox):
     if i < 5:
       sbox.simple_mkdir("newdir-%i" % i)
       sbox.simple_commit()
+      if not i % 2:
+        expected_output = ['Packing revisions in shard %d...done.\n' % (i/2)]
+      else:
+        expected_output = []
       svntest.actions.run_and_verify_svnadmin(
-        None, None, [], "pack", os.path.join(cwd, sbox.repo_dir))
+        None, expected_output, [], "pack", os.path.join(cwd, sbox.repo_dir))
 
 
 def locking(sbox):
@@ -1817,9 +1808,9 @@ def mergeinfo_race(sbox):
   t2 = threading.Thread(None, makethread(wc2_dir))
 
   # t2 will trigger the issue #4129 sanity check in fs_fs.c
-  t1.start(); t2.start();
+  t1.start(); t2.start()
 
-  t1.join(); t2.join();
+  t1.join(); t2.join()
 
   # Crude attempt to make sure everything worked.
   # TODO: better way to catch exceptions in the thread

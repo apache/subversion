@@ -38,14 +38,48 @@
 #include "private/svn_debug.h"
 #include "private/svn_subr_private.h"
 
+/* Take the ORIGINAL string and replace all occurrences of ":" without
+ * limiting the key space.  Allocate the result in POOL.
+ */
+static const char *
+normalize_key_part(const char *original,
+                   apr_pool_t *pool)
+{
+  apr_size_t i;
+  apr_size_t len = strlen(original);
+  svn_stringbuf_t *normalized = svn_stringbuf_create_ensure(len, pool);
+
+  for (i = 0; i < len; ++i)
+    {
+      char c = original[i];
+      switch (c)
+        {
+        case ':': svn_stringbuf_appendbytes(normalized, "%_", 2);
+                  break;
+        case '%': svn_stringbuf_appendbytes(normalized, "%%", 2);
+                  break;
+        default : svn_stringbuf_appendbyte(normalized, c);
+        }
+    }
+
+  return normalized->data;
+}
+
 /* Return a memcache in *MEMCACHE_P for FS if it's configured to use
    memcached, or NULL otherwise.  Also, sets *FAIL_STOP to a boolean
    indicating whether cache errors should be returned to the caller or
-   just passed to the FS warning handler.  Use FS->pool for allocating
-   the memcache, and POOL for temporary allocations. */
+   just passed to the FS warning handler.
+
+   *CACHE_TXDELTAS, *CACHE_FULLTEXTS and *CACHE_REVPROPS flags will be set
+   according to FS->CONFIG.  *CACHE_NAMESPACE receives the cache prefix
+   to use.
+
+   Use FS->pool for allocating the memcache and CACHE_NAMESPACE, and POOL
+   for temporary allocations. */
 static svn_error_t *
 read_config(svn_memcache_t **memcache_p,
             svn_boolean_t *fail_stop,
+            const char **cache_namespace,
             svn_boolean_t *cache_txdeltas,
             svn_boolean_t *cache_fulltexts,
             svn_boolean_t *cache_revprops,
@@ -56,6 +90,22 @@ read_config(svn_memcache_t **memcache_p,
 
   SVN_ERR(svn_cache__make_memcache_from_config(memcache_p, ffd->config,
                                               fs->pool));
+
+  /* No cache namespace by default.  I.e. all FS instances share the
+   * cached data.  If you specify different namespaces, the data will
+   * share / compete for the same cache memory but keys will not match
+   * across namespaces and, thus, cached data will not be shared between
+   * namespaces.
+   *
+   * Since the namespace will be concatenated with other elements to form
+   * the complete key prefix, we must make sure that the resulting string
+   * is unique and cannot be created by any other combination of elements.
+   */
+  *cache_namespace
+    = normalize_key_part(svn_hash__get_cstring(fs->config,
+                                               SVN_FS_CONFIG_FSFS_CACHE_NS,
+                                               ""),
+                         pool);
 
   /* don't cache text deltas by default.
    * Once we reconstructed the fulltexts from the deltas,
@@ -83,7 +133,7 @@ read_config(svn_memcache_t **memcache_p,
    * Revprop caching significantly speeds up operations like
    * svn ls -v. However, it requires synchronization that may
    * not be available or efficient in the current server setup.
-   * 
+   *
    * If the caller chose option "2", enable revprop caching if
    * the required API support is there to make it efficient.
    */
@@ -160,9 +210,10 @@ dump_cache_statistics(void *baton_void)
                                          TRUE,
                                          baton->pool);
 
-  if (! err)
+  /* skip unused caches */
+  if (! err && (info.gets > 0 || info.sets > 0))
     {
-      text_stats = svn_cache__format_info(&info, baton->pool);
+      text_stats = svn_cache__format_info(&info, TRUE, baton->pool);
       lines = svn_cstring_split(text_stats->data, "\n", FALSE, baton->pool);
 
       for (i = 0; i < lines->nelts; ++i)
@@ -183,6 +234,29 @@ dump_cache_statistics(void *baton_void)
 
   return result;
 }
+
+static apr_status_t
+dump_global_cache_statistics(void *baton_void)
+{
+  apr_pool_t *pool = baton_void;
+
+  svn_cache__info_t *info = svn_cache__membuffer_get_global_info(pool);
+  svn_string_t *text_stats = svn_cache__format_info(info, FALSE, pool);
+  apr_array_header_t *lines = svn_cstring_split(text_stats->data, "\n",
+                                                FALSE, pool);
+
+  int i;
+  for (i = 0; i < lines->nelts; ++i)
+    {
+      const char *line = APR_ARRAY_IDX(lines, i, const char *);
+#ifdef SVN_DEBUG
+      SVN_DBG(("%s\n", line));
+#endif
+    }
+
+  return APR_SUCCESS;
+}
+
 #endif /* SVN_DEBUG_CACHE_DUMP_STATS */
 
 /* This function sets / registers the required callbacks for a given
@@ -235,7 +309,7 @@ init_callbacks(svn_cache__t *cache,
  *
  * Unless NO_HANDLER is true, register an error handler that reports errors
  * as warnings to the FS warning callback.
- * 
+ *
  * Cache is allocated in POOL.
  * */
 static svn_error_t *
@@ -294,7 +368,8 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   const char *prefix = apr_pstrcat(pool,
                                    "fsfs:", fs->uuid,
-                                   "/", fs->path, ":",
+                                   "/", normalize_key_part(fs->path, pool),
+                                   ":",
                                    (char *)NULL);
   svn_memcache_t *memcache;
   svn_membuffer_t *membuffer;
@@ -302,17 +377,33 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   svn_boolean_t cache_txdeltas;
   svn_boolean_t cache_fulltexts;
   svn_boolean_t cache_revprops;
+  const char *cache_namespace;
 
   /* Evaluating the cache configuration. */
   SVN_ERR(read_config(&memcache,
                       &no_handler,
+                      &cache_namespace,
                       &cache_txdeltas,
                       &cache_fulltexts,
                       &cache_revprops,
                       fs,
                       pool));
 
+  prefix = apr_pstrcat(pool, "ns:", cache_namespace, ":", prefix, NULL);
+
   membuffer = svn_cache__get_global_membuffer_cache();
+
+#ifdef SVN_DEBUG_CACHE_DUMP_STATS
+
+  /* schedule printing the global access statistics upon pool cleanup,
+    * i.e. end of FSFS session.
+    */
+  if (membuffer)
+    apr_pool_cleanup_register(pool,
+                              pool,
+                              dump_global_cache_statistics,
+                              apr_pool_cleanup_null);
+#endif
 
   /* Make the cache for revision roots.  For the vast majority of
    * commands, this is only going to contain a few entries (svnadmin
@@ -419,7 +510,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            fs,
                            no_handler,
                            fs->pool));
-      
+
       SVN_ERR(create_cache(&(ffd->properties_cache),
                            NULL,
                            membuffer,
@@ -432,7 +523,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            fs,
                            no_handler,
                            fs->pool));
-      
+
       SVN_ERR(create_cache(&(ffd->mergeinfo_cache),
                            NULL,
                            membuffer,
@@ -445,7 +536,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            fs,
                            no_handler,
                            fs->pool));
-      
+
       SVN_ERR(create_cache(&(ffd->mergeinfo_existence_cache),
                            NULL,
                            membuffer,

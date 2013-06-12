@@ -165,7 +165,7 @@ arguments ARGS. Return the process object for it."
    (lambda ()
      (apply svn-process-file svn-program infile buffer display args))))
 
-(defun svn-call-process (buffer &rest args)
+(defun svn-call-process (buffer args)
   "Run svn and wait for it to finish.
 Argument BUFFER is the buffer in which to insert output.
 Optional argument ARGS are the arguments to svn."
@@ -614,8 +614,8 @@ VERBOSE-P."
       (erase-buffer)
       (setq default-directory dir)
       (svn-call-process diff-buf
-                        "diff" "-x" "-p" "-r"
-                        (format "%d:%d" (1- commit-id) commit-id)))))
+       (append (list "diff" "-r" (format "%d:%d" (1- commit-id) commit-id))
+               svn-diff-args)))))
 
 (defun svn-log-edit-files (commit-id)
   (let ((root (svn-repository-root))
@@ -1864,8 +1864,8 @@ argument."
   (interactive)
   (let ((files (svn-action-files
                 (lambda (pos)
-                  (or (= (svn-file-status pos) ?C)
-		      (= (svn-prop-status pos) ?C)
+                  (or (memq (svn-file-status pos) '(?C ?!))
+		      (memq (svn-prop-status pos) '(?C ?!))
 		      (error "%s has no conflicts"
 			     (svn-getprop pos 'file)))))))
     (make-local-variable 'svn-resolved-files)

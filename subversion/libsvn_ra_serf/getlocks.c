@@ -27,6 +27,7 @@
 
 #include <serf.h>
 
+#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
@@ -114,7 +115,7 @@ getlocks_closed(svn_ra_serf__xml_estate_t *xes,
 
   if (leaving_state == LOCK)
     {
-      const char *path = apr_hash_get(attrs, "path", APR_HASH_KEY_STRING);
+      const char *path = svn_hash_gets(attrs, "path");
       svn_boolean_t save_lock = FALSE;
 
       /* Filter out unwanted paths.  Since Subversion only allows
@@ -153,25 +154,22 @@ getlocks_closed(svn_ra_serf__xml_estate_t *xes,
              them may have not been sent, so the value will be NULL.  */
 
           lock.path = path;
-          lock.token = apr_hash_get(attrs, "token", APR_HASH_KEY_STRING);
-          lock.owner = apr_hash_get(attrs, "owner", APR_HASH_KEY_STRING);
-          lock.comment = apr_hash_get(attrs, "comment", APR_HASH_KEY_STRING);
+          lock.token = svn_hash_gets(attrs, "token");
+          lock.owner = svn_hash_gets(attrs, "owner");
+          lock.comment = svn_hash_gets(attrs, "comment");
 
-          date = apr_hash_get(attrs, SVN_DAV__CREATIONDATE,
-                              APR_HASH_KEY_STRING);
+          date = svn_hash_gets(attrs, SVN_DAV__CREATIONDATE);
           if (date)
             SVN_ERR(svn_time_from_cstring(&lock.creation_date, date,
                                           scratch_pool));
 
-          date = apr_hash_get(attrs, "expirationdate",
-                              APR_HASH_KEY_STRING);
+          date = svn_hash_gets(attrs, "expirationdate");
           if (date)
             SVN_ERR(svn_time_from_cstring(&lock.expiration_date, date,
                                           scratch_pool));
 
           result_lock = svn_lock_dup(&lock, lock_ctx->pool);
-          apr_hash_set(lock_ctx->hash, result_lock->path, APR_HASH_KEY_STRING,
-                       result_lock);
+          svn_hash_sets(lock_ctx->hash, result_lock->path, result_lock);
         }
     }
   else
@@ -262,9 +260,16 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
   handler->body_delegate = create_getlocks_body;
   handler->body_delegate_baton = lock_ctx;
 
-  /* ### use svn_ra_serf__error_on_status() ?  */
-
   SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
+
+  /* We get a 404 when a path doesn't exist in HEAD, but it might
+     have existed earlier (E.g. 'svn ls http://s/svn/trunk/file@1' */
+  if (handler->sline.code != 404)
+    {
+      SVN_ERR(svn_ra_serf__error_on_status(handler->sline.code,
+                                           handler->path,
+                                           handler->location));
+    }
 
   *locks = lock_ctx->hash;
 

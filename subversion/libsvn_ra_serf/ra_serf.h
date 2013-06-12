@@ -40,6 +40,7 @@
 
 #include "private/svn_dav_protocol.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_editor.h"
 
 #include "blncache.h"
 
@@ -49,8 +50,8 @@ extern "C" {
 
 
 /* Enforce the minimum version of serf. */
-#if !SERF_VERSION_AT_LEAST(0, 7, 1)
-#error Please update your version of serf to at least 0.7.1.
+#if !SERF_VERSION_AT_LEAST(1, 2, 1)
+#error Please update your version of serf to at least 1.2.1.
 #endif
 
 /** Use this to silence compiler warnings about unused parameters. */
@@ -180,6 +181,10 @@ struct svn_ra_serf__session_t {
      constants' addresses, therefore). */
   apr_hash_t *capabilities;
 
+  /* Activity collection URL.  (Cached from the initial OPTIONS
+     request when run against HTTPv1 servers.)  */
+  const char *activity_collection_url;
+
   /* Are we using a proxy? */
   int using_proxy;
 
@@ -230,15 +235,25 @@ struct svn_ra_serf__session_t {
 
   svn_ra_serf__blncache_t *blncache;
 
-  /* Flag that indicates if we request the server for bulk updates (TRUE) with
-     all the properties and content in the update-report response. If FALSE,
-     request a skelta update-report with inlined properties. */
-  svn_boolean_t bulk_updates;
+  /* Trisate flag that indicates user preference for using bulk updates
+     (svn_tristate_true) with all the properties and content in the
+     update-report response. If svn_tristate_false, request a skelta
+     update-report with inlined properties. If svn_tristate_unknown then use
+     server preference. */
+  svn_tristate_t bulk_updates;
 
   /* Indicates if the server wants bulk update requests (Prefer) or only
-     accepts skelta requests (Off). If this value is On both options are 
+     accepts skelta requests (Off). If this value is On both options are
      allowed. */
   const char *server_allows_bulk;
+
+  /* Indicates if the server supports sending inlined props in update editor
+   * in skelta mode (send-all == 'false'). */
+  svn_boolean_t supports_inline_props;
+
+  /* Indicates whether the server supports issuing replay REPORTs
+     against rev resources (children of `rev_stub', elsestruct). */
+  svn_boolean_t supports_rev_rsrc_replay;
 };
 
 #define SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(sess) ((sess)->me_resource != NULL)
@@ -1287,7 +1302,7 @@ svn_ra_serf__set_prop(apr_hash_t *props, const char *path,
                       const svn_string_t *val, apr_pool_t *pool);
 
 svn_error_t *
-svn_ra_serf__get_resource_type(svn_kind_t *kind,
+svn_ra_serf__get_resource_type(svn_node_kind_t *kind,
                                apr_hash_t *props);
 
 
@@ -1514,9 +1529,11 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
                        const char *update_target,
                        svn_depth_t depth,
                        svn_boolean_t send_copyfrom_args,
+                       svn_boolean_t ignore_ancestry,
                        const svn_delta_editor_t *update_editor,
                        void *update_baton,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
 
 /* Implements svn_ra__vtable_t.do_switch(). */
 svn_error_t *
@@ -1527,9 +1544,12 @@ svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
                        const char *switch_target,
                        svn_depth_t depth,
                        const char *switch_url,
+                       svn_boolean_t send_copyfrom_args,
+                       svn_boolean_t ignore_ancestry,
                        const svn_delta_editor_t *switch_editor,
                        void *switch_baton,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
 
 /* Implements svn_ra__vtable_t.get_file_revs(). */
 svn_error_t *

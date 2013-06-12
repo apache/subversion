@@ -187,7 +187,7 @@ Valid options:
   --diff3-cmd ARG          : use ARG as merge command
   --relocate               : relocate via URL-rewriting
   --ignore-externals       : ignore externals definitions
-  --ignore-ancestry        : ignore ancestry when calculating merges
+  --ignore-ancestry        : allow switching to a node with no common ancestor
   --force                  : force operation to run
   --accept ARG             : specify automatic conflict resolution action
                              ('postpone', 'working', 'base', 'mine-conflict',

@@ -267,7 +267,8 @@ class Generator(generator.swig.Generator):
     # Open a temporary output file
     self.ofile = tempfile.TemporaryFile(dir=self.proxy_dir)
     self.ofile.write('/* Proxy classes for %s\n' % base_fname)
-    self.ofile.write(' * DO NOT EDIT -- AUTOMATICALLY GENERATED */\n')
+    self.ofile.write(' * DO NOT EDIT -- AUTOMATICALLY GENERATED\n')
+    self.ofile.write(' * BY build/generator/swig/header_wrappers.py */\n')
 
     # Write list of structs for which we shouldn't define constructors
     # by default

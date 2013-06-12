@@ -27,6 +27,7 @@
 
 #include <serf.h>
 
+#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
@@ -89,8 +90,8 @@ getloc_closed(svn_ra_serf__xml_estate_t *xes,
 
   SVN_ERR_ASSERT(leaving_state == LOCATION);
 
-  revstr = apr_hash_get(attrs, "rev", APR_HASH_KEY_STRING);
-  path = apr_hash_get(attrs, "path", APR_HASH_KEY_STRING);
+  revstr = svn_hash_gets(attrs, "rev");
+  path = svn_hash_gets(attrs, "path");
   if (revstr != NULL && path != NULL)
     {
       svn_revnum_t rev = SVN_STR_TO_REV(revstr);

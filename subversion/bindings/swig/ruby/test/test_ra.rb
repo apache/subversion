@@ -98,7 +98,7 @@ class SvnRaTest < Test::Unit::TestCase
         entries, props = session.dir("", info.revision, Svn::Core::DIRENT_KIND)
         assert_equal(Svn::Core::NODE_FILE, entries[file].kind)
         entries, props = session.dir("", info.revision, 0)
-        assert_equal(Svn::Core::NODE_NONE, entries[file].kind)
+        assert_equal(Svn::Core::NODE_UNKNOWN, entries[file].kind)
 
         make_context(log2) do |ctx|
           File.open(path, "w") {|f| f.print(src * 2)}

@@ -479,7 +479,7 @@ test21(apr_pool_t *pool)
 
   svn_stringbuf_strip_whitespace(a);
 
-  if (svn_stringbuf_compare(a, b) == TRUE)
+  if (svn_stringbuf_compare(a, b))
     return SVN_NO_ERROR;
   else
     return fail(pool, "test failed");
@@ -564,7 +564,7 @@ test_stringbuf_insert(apr_pool_t *pool)
 
   svn_stringbuf_insert(a, 6, a->data + 1, 1);
   SVN_TEST_STRING_ASSERT(a->data, "test hello, ");
-  
+
   svn_stringbuf_insert(a, 12, "world class", 5);
   SVN_TEST_STRING_ASSERT(a->data, "test hello, world");
 

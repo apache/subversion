@@ -354,10 +354,13 @@ enable-auto-props = yes
 
   # eol styl of test.dsp is CRLF, so diff will use that too. Make sure we
   # define CRLF in a platform independent way.
+  # CRLF is a string that will match a CRLF sequence read from a text file.
+  # ### On Windows, we assume CRLF will be read as LF, so it's a poor test.
   if os.name == 'nt':
     crlf = '\n'
   else:
     crlf = '\r\n'
+
   expected_output = [
   "Index: test.dsp\n",
   "===================================================================\n",
@@ -551,7 +554,7 @@ def import_inherited_ignores(sbox):
   svntest.actions.run_and_verify_svn(None, [], [], 'import',
                                      '--config-dir', config_dir,
                                      os.path.join(import_tree_dir,
-                                                  'DIR6', 'file6.foo'), 
+                                                  'DIR6', 'file6.foo'),
                                      sbox.repo_url + '/A/B/E/file6.foo',
                                      '-m', 'This import should fail!')
 
@@ -560,7 +563,7 @@ def import_inherited_ignores(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'import', '--no-ignore',
                                      '--config-dir', config_dir,
                                      os.path.join(import_tree_dir,
-                                                  'DIR6', 'file6.foo'), 
+                                                  'DIR6', 'file6.foo'),
                                      sbox.repo_url + '/A/B/E/file6.foo',
                                      '-m', 'import')
   expected_output = svntest.verify.UnorderedOutput(

@@ -28,6 +28,7 @@
 #include <http_log.h>
 #include <mod_dav.h>
 
+#include "svn_hash.h"
 #include "svn_fs.h"
 #include "svn_xml.h"
 #include "svn_repos.h"
@@ -149,6 +150,8 @@ get_vsn_options(apr_pool_t *p, apr_text_header *phdr)
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_ATOMIC_REVPROPS);
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY);
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_INHERITED_PROPS);
+  apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_INLINE_PROPS);
+  apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_REVERSE_FILE_REVS);
   /* Mergeinfo is a special case: here we merely say that the server
    * knows how to handle mergeinfo -- whether the repository does too
    * is a separate matter.
@@ -241,6 +244,24 @@ get_option(const dav_resource *resource,
         }
     }
 
+  if (resource->info->repos->repos)
+    {
+        svn_error_t *serr;
+        svn_boolean_t has;
+
+        serr = svn_repos_has_capability(resource->info->repos->repos, &has,
+                                        SVN_REPOS_CAPABILITY_MERGEINFO,
+                                        r->pool);
+        if (serr)
+        return dav_svn__convert_err
+                    (serr, HTTP_INTERNAL_SERVER_ERROR,
+                    "Error fetching repository capabilities",
+                    resource->pool);
+
+        apr_table_set(r->headers_out, SVN_DAV_REPOSITORY_MERGEINFO,
+                    has ? "yes" : "no");
+    }
+
   /* Welcome to the 2nd generation of the svn HTTP protocol, now
      DeltaV-free!  If we're configured to advise this support, do so.  */
   if (resource->info->repos->v2_protocol)
@@ -248,7 +269,7 @@ get_option(const dav_resource *resource,
       int i;
       svn_version_t *master_version = dav_svn__get_master_version(r);
       dav_svn__bulk_upd_conf bulk_upd_conf = dav_svn__get_bulk_updates_flag(r);
-      
+
       /* The list of Subversion's custom POSTs and which versions of
          Subversion support them.  We need this latter information
          when acting as a WebDAV slave -- we don't want to claim
@@ -265,6 +286,14 @@ get_option(const dav_resource *resource,
         { "create-txn-with-props",  { 1, 8, 0, "" } },
       };
 
+      /* Add the header which indicates that this server can handle
+         replay REPORTs submitted against an HTTP v2 revision resource. */
+      apr_table_addn(r->headers_out, "DAV",
+                     SVN_DAV_NS_DAV_SVN_REPLAY_REV_RESOURCE);
+
+      /* Add a bunch of HTTP v2 headers which carry resource and
+         resource stub URLs that the client can use to naively build
+         addressable resources. */
       apr_table_set(r->headers_out, SVN_DAV_ROOT_URI_HEADER, repos_root_uri);
       apr_table_set(r->headers_out, SVN_DAV_ME_RESOURCE_HEADER,
                     apr_pstrcat(resource->pool, repos_root_uri, "/",
@@ -1004,8 +1033,11 @@ dav_svn__checkin(dav_resource *resource,
 
           if (serr)
             {
+              int status;
+
               if (serr->apr_err == SVN_ERR_FS_CONFLICT)
                 {
+                  status = HTTP_CONFLICT;
                   msg = apr_psprintf(resource->pool,
                                      "A conflict occurred during the CHECKIN "
                                      "processing. The problem occurred with  "
@@ -1013,10 +1045,12 @@ dav_svn__checkin(dav_resource *resource,
                                      conflict_msg);
                 }
               else
-                msg = "An error occurred while committing the transaction.";
+                {
+                  status = HTTP_INTERNAL_SERVER_ERROR;
+                  msg = "An error occurred while committing the transaction.";
+                }
 
-              return dav_svn__convert_err(serr, HTTP_CONFLICT, msg,
-                                          resource->pool);
+              return dav_svn__convert_err(serr, status, msg, resource->pool);
             }
           else
             {
@@ -1193,7 +1227,7 @@ make_activity(dav_resource *resource)
                                   SVN_DAV_ERROR_NAMESPACE,
                                   SVN_DAV_ERROR_TAG);
 
-  err = dav_svn__create_txn(resource->info->repos, &txn_name, 
+  err = dav_svn__create_txn(resource->info->repos, &txn_name,
                             NULL, resource->pool);
   if (err != NULL)
     return err;
@@ -1299,7 +1333,7 @@ dav_svn__build_lock_hash(apr_hash_t **locks,
               lockpath = svn_fspath__join(path_prefix, cdata, pool);
               if (lockpath && locktoken)
                 {
-                  apr_hash_set(hash, lockpath, APR_HASH_KEY_STRING, locktoken);
+                  svn_hash_sets(hash, lockpath, locktoken);
                   lockpath = NULL;
                   locktoken = NULL;
                 }
@@ -1309,7 +1343,7 @@ dav_svn__build_lock_hash(apr_hash_t **locks,
               locktoken = dav_xml_get_cdata(lfchild, pool, 1);
               if (lockpath && *locktoken)
                 {
-                  apr_hash_set(hash, lockpath, APR_HASH_KEY_STRING, locktoken);
+                  svn_hash_sets(hash, lockpath, locktoken);
                   lockpath = NULL;
                   locktoken = NULL;
                 }
@@ -1511,8 +1545,11 @@ merge(dav_resource *target,
       if (serr)
         {
           const char *msg;
+          int status;
+
           if (serr->apr_err == SVN_ERR_FS_CONFLICT)
             {
+              status = HTTP_CONFLICT;
               /* ### we need to convert the conflict path into a URI */
               msg = apr_psprintf(pool,
                                  "A conflict occurred during the MERGE "
@@ -1521,9 +1558,12 @@ merge(dav_resource *target,
                                  conflict);
             }
           else
-            msg = "An error occurred while committing the transaction.";
+            {
+              status = HTTP_INTERNAL_SERVER_ERROR;
+              msg = "An error occurred while committing the transaction.";
+            }
 
-          return dav_svn__convert_err(serr, HTTP_CONFLICT, msg, pool);
+          return dav_svn__convert_err(serr, status, msg, pool);
         }
       else
         {

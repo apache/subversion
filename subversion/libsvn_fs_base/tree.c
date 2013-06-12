@@ -39,6 +39,7 @@
 #include <string.h>
 #include <assert.h>
 #include "svn_private_config.h"
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_path.h"
@@ -160,7 +161,7 @@ dag_node_cache_get(svn_fs_root_t *root,
     return NULL;
 
   /* Look in the cache for our desired item. */
-  cache_item = apr_hash_get(brd->node_cache, path, APR_HASH_KEY_STRING);
+  cache_item = svn_hash_gets(brd->node_cache, path);
   if (cache_item)
     return svn_fs_base__dag_dup(cache_item->node, pool);
 
@@ -208,7 +209,7 @@ dag_node_cache_set(svn_fs_root_t *root,
      root, and that only happens once under that root.  So, we'll be a
      little bit sloppy here, and count on callers doing the right
      thing. */
-  cache_item = apr_hash_get(brd->node_cache, path, APR_HASH_KEY_STRING);
+  cache_item = svn_hash_gets(brd->node_cache, path);
   if (cache_item)
     {
       /* ### This section is somehow broken.  I don't know how, but it
@@ -250,9 +251,8 @@ dag_node_cache_set(svn_fs_root_t *root,
     {
       /* No room.  Expire the oldest thing. */
       cache_path = brd->node_cache_keys[brd->node_cache_idx];
-      cache_item = apr_hash_get(brd->node_cache, cache_path,
-                                APR_HASH_KEY_STRING);
-      apr_hash_set(brd->node_cache, cache_path, APR_HASH_KEY_STRING, NULL);
+      cache_item = svn_hash_gets(brd->node_cache, cache_path);
+      svn_hash_sets(brd->node_cache, cache_path, NULL);
       cache_pool = cache_item->pool;
       svn_pool_clear(cache_pool);
     }
@@ -269,7 +269,7 @@ dag_node_cache_set(svn_fs_root_t *root,
 
   /* Now add it to the cache. */
   cache_path = apr_pstrdup(cache_pool, path);
-  apr_hash_set(brd->node_cache, cache_path, APR_HASH_KEY_STRING, cache_item);
+  svn_hash_sets(brd->node_cache, cache_path, cache_item);
   brd->node_cache_keys[brd->node_cache_idx] = cache_path;
 
   /* Advance the cache pointer. */
@@ -309,11 +309,10 @@ txn_body_txn_root(void *baton,
   /* Look for special txn props that represent the 'flags' behavior of
      the transaction. */
   SVN_ERR(svn_fs_base__txn_proplist_in_trail(&txnprops, svn_txn_id, trail));
-  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_OOD, APR_HASH_KEY_STRING))
+  if (svn_hash_gets(txnprops, SVN_FS__PROP_TXN_CHECK_OOD))
     flags |= SVN_FS_TXN_CHECK_OOD;
 
-  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS,
-                   APR_HASH_KEY_STRING))
+  if (svn_hash_gets(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS))
     flags |= SVN_FS_TXN_CHECK_LOCKS;
 
   root = make_txn_root(fs, svn_txn_id, txn->base_rev, flags, trail->pool);
@@ -1191,8 +1190,7 @@ txn_body_node_prop(void *baton,
                                         trail, trail->pool));
   *(args->value_p) = NULL;
   if (proplist)
-    *(args->value_p) = apr_hash_get(proplist, args->propname,
-                                    APR_HASH_KEY_STRING);
+    *(args->value_p) = svn_hash_gets(proplist, args->propname);
   return SVN_NO_ERROR;
 }
 
@@ -1304,7 +1302,7 @@ txn_body_change_node_prop(void *baton,
     proplist = apr_hash_make(trail->pool);
 
   /* Set the property. */
-  apr_hash_set(proplist, args->name, APR_HASH_KEY_STRING, args->value);
+  svn_hash_sets(proplist, args->name, args->value);
 
   /* Overwrite the node's proplist. */
   SVN_ERR(svn_fs_base__dag_set_proplist(parent_path->node, proplist,
@@ -2527,7 +2525,7 @@ verify_locks(const char *txn_name,
         continue;
 
       /* Fetch the change associated with our path.  */
-      change = apr_hash_get(changes, path, APR_HASH_KEY_STRING);
+      change = svn_hash_gets(changes, path);
 
       /* What does it mean to succeed at lock verification for a given
          path?  For an existing file or directory getting modified
@@ -3732,8 +3730,7 @@ txn_body_apply_textdelta(void *baton, trail_t *trail)
          we're calculating both SHA1 and MD5 checksums somewhere in
          reps-strings.c.  Could we keep them both around somehow so this
          check could be more comprehensive? */
-      if (tb->base_checksum->kind == checksum->kind
-            && !svn_checksum_match(tb->base_checksum, checksum))
+      if (!svn_checksum_match(tb->base_checksum, checksum))
         return svn_checksum_mismatch_err(tb->base_checksum, checksum,
                             trail->pool,
                             _("Base checksum mismatch on '%s'"),
@@ -4024,7 +4021,7 @@ base_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
   SVN_ERR(base_file_contents(&target, target_root, target_path, pool));
 
   /* Create a delta stream that turns the ancestor into the target.  */
-  svn_txdelta(&delta_stream, source, target, pool);
+  svn_txdelta2(&delta_stream, source, target, TRUE, pool);
 
   *stream_p = delta_stream;
   return SVN_NO_ERROR;
@@ -5000,7 +4997,7 @@ txn_body_get_mergeinfo_data_and_entries(void *baton, trail_t *trail)
 
           SVN_ERR(svn_fs_base__dag_get_proplist(&plist, child_node,
                                                 trail, iterpool));
-          pval = apr_hash_get(plist, SVN_PROP_MERGEINFO, APR_HASH_KEY_STRING);
+          pval = svn_hash_gets(plist, SVN_PROP_MERGEINFO);
           if (! pval)
             {
               svn_string_t *id_str = svn_fs_base__id_unparse(child_id,
@@ -5024,11 +5021,10 @@ txn_body_get_mergeinfo_data_and_entries(void *baton, trail_t *trail)
             }
           else
             {
-              apr_hash_set(args->result_catalog,
-                           svn_fspath__join(args->node_path, dirent->name,
-                                            result_pool),
-                           APR_HASH_KEY_STRING,
-                           child_mergeinfo);
+              svn_hash_sets(args->result_catalog,
+                            svn_fspath__join(args->node_path, dirent->name,
+                                             result_pool),
+                            child_mergeinfo);
             }
         }
 
@@ -5048,10 +5044,9 @@ txn_body_get_mergeinfo_data_and_entries(void *baton, trail_t *trail)
                                          "but is not a directory"),
                                        id_str->data);
             }
-          apr_hash_set(args->children_atop_mergeinfo_trees,
-                       apr_pstrdup(children_pool, dirent->name),
-                       APR_HASH_KEY_STRING,
-                       svn_fs_base__dag_dup(child_node, children_pool));
+          svn_hash_sets(args->children_atop_mergeinfo_trees,
+                        apr_pstrdup(children_pool, dirent->name),
+                        svn_fs_base__dag_dup(child_node, children_pool));
         }
     }
 
@@ -5177,8 +5172,7 @@ txn_body_get_mergeinfo_for_path(void *baton, trail_t *trail)
   svn_pool_destroy(iterpool);
 
   SVN_ERR(svn_fs_base__dag_get_proplist(&proplist, node, trail, trail->pool));
-  mergeinfo_string = apr_hash_get(proplist, SVN_PROP_MERGEINFO,
-                                  APR_HASH_KEY_STRING);
+  mergeinfo_string = svn_hash_gets(proplist, SVN_PROP_MERGEINFO);
   if (! mergeinfo_string)
     {
       svn_string_t *id_str =
@@ -5295,9 +5289,8 @@ get_mergeinfos_for_paths(svn_fs_root_t *root,
                                      txn_body_get_mergeinfo_for_path,
                                      &gmfp_args, FALSE, iterpool));
       if (path_mergeinfo)
-        apr_hash_set(result_catalog, apr_pstrdup(result_pool, path),
-                     APR_HASH_KEY_STRING,
-                     path_mergeinfo);
+        svn_hash_sets(result_catalog, apr_pstrdup(result_pool, path),
+                      path_mergeinfo);
 
       /* If we're including descendants, do so. */
       if (include_descendants)

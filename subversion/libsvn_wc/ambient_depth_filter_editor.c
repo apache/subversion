@@ -121,7 +121,7 @@ struct dir_baton
  */
 static svn_error_t *
 ambient_read_info(svn_wc__db_status_t *status,
-                  svn_kind_t *kind,
+                  svn_node_kind_t *kind,
                   svn_depth_t *depth,
                   svn_wc__db_t *db,
                   const char *local_abspath,
@@ -140,7 +140,7 @@ ambient_read_info(svn_wc__db_status_t *status,
     {
       svn_error_clear(err);
 
-      *kind = svn_kind_unknown;
+      *kind = svn_node_unknown;
       if (status)
         *status = svn_wc__db_status_normal;
       if (depth)
@@ -190,7 +190,7 @@ make_dir_baton(struct dir_baton **d_p,
     {
       svn_boolean_t exclude;
       svn_wc__db_status_t status;
-      svn_kind_t kind;
+      svn_node_kind_t kind;
       svn_boolean_t exists = TRUE;
 
       if (!added)
@@ -201,10 +201,10 @@ make_dir_baton(struct dir_baton **d_p,
       else
         {
           status = svn_wc__db_status_not_present;
-          kind = svn_kind_unknown;
+          kind = svn_node_unknown;
         }
 
-      exists = (kind != svn_kind_unknown);
+      exists = (kind != svn_node_unknown);
 
       if (pb->ambient_depth == svn_depth_empty
           || pb->ambient_depth == svn_depth_files)
@@ -250,7 +250,7 @@ make_file_baton(struct file_baton **f_p,
   struct file_baton *f = apr_pcalloc(pool, sizeof(*f));
   struct edit_baton *eb = pb->edit_baton;
   svn_wc__db_status_t status;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   const char *abspath;
 
   SVN_ERR_ASSERT(path);
@@ -272,7 +272,7 @@ make_file_baton(struct file_baton **f_p,
   else
     {
       status = svn_wc__db_status_not_present;
-      kind = svn_kind_unknown;
+      kind = svn_node_unknown;
     }
 
   if (pb->ambient_depth == svn_depth_empty)
@@ -285,7 +285,7 @@ make_file_baton(struct file_baton **f_p,
       if (status == svn_wc__db_status_not_present
           || status == svn_wc__db_status_server_excluded
           || status == svn_wc__db_status_excluded
-          || kind == svn_kind_unknown)
+          || kind == svn_node_unknown)
         {
           f->ambiently_excluded = TRUE;
           *f_p = f;
@@ -344,7 +344,7 @@ open_root(void *edit_baton,
   if (! *eb->target)
     {
       /* For an update with a NULL target, this is equivalent to open_dir(): */
-      svn_kind_t kind;
+      svn_node_kind_t kind;
       svn_wc__db_status_t status;
       svn_depth_t depth;
 
@@ -353,7 +353,7 @@ open_root(void *edit_baton,
                                 eb->db, eb->anchor_abspath,
                                 pool));
 
-      if (kind != svn_kind_unknown
+      if (kind != svn_node_unknown
           && status != svn_wc__db_status_not_present
           && status != svn_wc__db_status_excluded
           && status != svn_wc__db_status_server_excluded)
@@ -384,7 +384,7 @@ delete_entry(const char *path,
       /* If the entry we want to delete doesn't exist, that's OK.
          It's probably an old server that doesn't understand
          depths. */
-      svn_kind_t kind;
+      svn_node_kind_t kind;
       svn_wc__db_status_t status;
       const char *abspath;
 
@@ -393,7 +393,7 @@ delete_entry(const char *path,
       SVN_ERR(ambient_read_info(&status, &kind, NULL,
                                 eb->db, abspath, pool));
 
-      if (kind == svn_kind_unknown
+      if (kind == svn_node_unknown
           || status == svn_wc__db_status_not_present
           || status == svn_wc__db_status_excluded
           || status == svn_wc__db_status_server_excluded)
@@ -462,7 +462,7 @@ open_directory(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   struct dir_baton *b;
   const char *local_abspath;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_wc__db_status_t status;
   svn_depth_t depth;
 
@@ -484,7 +484,7 @@ open_directory(const char *path,
   SVN_ERR(ambient_read_info(&status, &kind, &depth,
                             eb->db, local_abspath, pool));
 
-  if (kind != svn_kind_unknown
+  if (kind != svn_node_unknown
       && status != svn_wc__db_status_not_present
       && status != svn_wc__db_status_excluded
       && status != svn_wc__db_status_server_excluded)

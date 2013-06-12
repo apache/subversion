@@ -29,6 +29,7 @@ import org.apache.subversion.javahl.types.NodeKind;
 /**
  * This interface is used to filter imported nodes in the
  * {@link ISVNClient#import} call.
+ * @since 1.8
  */
 public interface ImportFilterCallback
 {

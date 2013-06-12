@@ -230,7 +230,7 @@ svn_fs_base__revision_prop(svn_string_t **value_p,
                                  FALSE, pool));
 
   /* And then the prop from that list (if there was a list). */
-  *value_p = apr_hash_get(table, propname, APR_HASH_KEY_STRING);
+  *value_p = svn_hash_gets(table, propname);
 
   return SVN_NO_ERROR;
 }
@@ -262,8 +262,7 @@ svn_fs_base__set_rev_prop(svn_fs_t *fs,
   if (old_value_p)
     {
       const svn_string_t *wanted_value = *old_value_p;
-      const svn_string_t *present_value = apr_hash_get(txn->proplist, name,
-                                                       APR_HASH_KEY_STRING);
+      const svn_string_t *present_value = svn_hash_gets(txn->proplist, name);
       if ((!wanted_value != !present_value)
           || (wanted_value && present_value
               && !svn_string_compare(wanted_value, present_value)))
@@ -276,7 +275,7 @@ svn_fs_base__set_rev_prop(svn_fs_t *fs,
         }
       /* Fall through. */
     }
-  apr_hash_set(txn->proplist, name, APR_HASH_KEY_STRING, value);
+  svn_hash_sets(txn->proplist, name, value);
 
   /* Overwrite the revision. */
   return put_txn(fs, txn, txn_id, trail, pool);
@@ -537,7 +536,7 @@ svn_fs_base__txn_prop(svn_string_t **value_p,
                                  FALSE, pool));
 
   /* And then the prop from that list (if there was a list). */
-  *value_p = apr_hash_get(table, propname, APR_HASH_KEY_STRING);
+  *value_p = svn_hash_gets(table, propname);
 
   return SVN_NO_ERROR;
 }
@@ -575,7 +574,7 @@ svn_fs_base__set_txn_prop(svn_fs_t *fs,
     txn->proplist = apr_hash_make(pool);
 
   /* Set the property. */
-  apr_hash_set(txn->proplist, name, APR_HASH_KEY_STRING, value);
+  svn_hash_sets(txn->proplist, name, value);
 
   /* Now overwrite the transaction. */
   return put_txn(fs, txn, txn_name, trail, pool);

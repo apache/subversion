@@ -103,12 +103,54 @@ test_pseudo_md5(apr_pool_t *pool)
   /* the checksums shall also be different from "proper" MD5 */
   SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, input, 15, pool));
   SVN_TEST_ASSERT(memcmp(digest_15, checksum->digest, sizeof(digest_15)));
-  
+
   SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, input, 31, pool));
   SVN_TEST_ASSERT(memcmp(digest_31, checksum->digest, sizeof(digest_15)));
 
   SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, input, 63, pool));
   SVN_TEST_ASSERT(memcmp(digest_63, checksum->digest, sizeof(digest_15)));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+zero_match(apr_pool_t *pool)
+{
+  svn_checksum_t *zero_md5;
+  svn_checksum_t *zero_sha1;
+  svn_checksum_t *A_md5;
+  svn_checksum_t *B_md5;
+  svn_checksum_t *A_sha1;
+  svn_checksum_t *B_sha1;
+
+
+  zero_md5 = svn_checksum_create(svn_checksum_md5, pool);
+  SVN_ERR(svn_checksum_clear(zero_md5));
+  SVN_ERR(svn_checksum(&A_md5, svn_checksum_md5, "A", 1, pool));
+  SVN_ERR(svn_checksum(&B_md5, svn_checksum_md5, "B", 1, pool));
+
+  zero_sha1 = svn_checksum_create(svn_checksum_sha1, pool);
+  SVN_ERR(svn_checksum_clear(zero_sha1));
+  SVN_ERR(svn_checksum(&A_sha1, svn_checksum_sha1, "A", 1, pool));
+  SVN_ERR(svn_checksum(&B_sha1, svn_checksum_sha1, "B", 1, pool));
+
+  /* Different non-zero don't match. */
+  SVN_TEST_ASSERT(!svn_checksum_match(A_md5, B_md5));
+  SVN_TEST_ASSERT(!svn_checksum_match(A_sha1, B_sha1));
+  SVN_TEST_ASSERT(!svn_checksum_match(A_md5, A_sha1));
+  SVN_TEST_ASSERT(!svn_checksum_match(A_md5, B_sha1));
+
+  /* Zero matches anything of the same kind. */
+  SVN_TEST_ASSERT(svn_checksum_match(A_md5, zero_md5));
+  SVN_TEST_ASSERT(svn_checksum_match(zero_md5, B_md5));
+  SVN_TEST_ASSERT(svn_checksum_match(A_sha1, zero_sha1));
+  SVN_TEST_ASSERT(svn_checksum_match(zero_sha1, B_sha1));
+
+  /* Zero doesn't match anything of a different kind... */
+  SVN_TEST_ASSERT(!svn_checksum_match(zero_md5, A_sha1));
+  SVN_TEST_ASSERT(!svn_checksum_match(zero_sha1, A_md5));
+  /* ...even another zero. */
+  SVN_TEST_ASSERT(!svn_checksum_match(zero_md5, zero_sha1));
 
   return SVN_NO_ERROR;
 }
@@ -123,5 +165,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "checksum emptiness"),
     SVN_TEST_PASS2(test_pseudo_md5,
                    "pseudo-md5 compatibility"),
+    SVN_TEST_PASS2(zero_match,
+                   "zero checksum matching"),
     SVN_TEST_NULL
   };

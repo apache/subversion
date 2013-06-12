@@ -43,6 +43,8 @@ extern "C" {
 
 #if defined(SVN_ERROR_BUILD_ARRAY)
 
+#error "Need to update err_defn for r1464679 and un-typo 'CDMLINE'"
+
 #define SVN_ERROR_START \
         static const err_defn error_table[] = { \
           { SVN_ERR_CDMLINE__WARNING, "Warning" },

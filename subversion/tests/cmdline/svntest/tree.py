@@ -253,6 +253,10 @@ class SVNTreeNode:
     # remove the subtree path, skip this node if necessary.
     if path.startswith(subtree):
       path = path[len(subtree):]
+    elif path + os.sep == subtree:
+      # Many callers set subtree to 'some-path' + os.sep. Don't skip the
+      # root node in that case.
+      path = ''
     else:
       return 0
 

@@ -84,7 +84,7 @@ crop_children(svn_wc__db_t *db,
       const char *child_name = APR_ARRAY_IDX(children, i, const char *);
       const char *child_abspath;
       svn_wc__db_status_t child_status;
-      svn_kind_t kind;
+      svn_node_kind_t kind;
       svn_depth_t child_depth;
 
       svn_pool_clear(iterpool);
@@ -103,17 +103,20 @@ crop_children(svn_wc__db_t *db,
           child_status == svn_wc__db_status_excluded ||
           child_status == svn_wc__db_status_not_present)
         {
-          svn_depth_t remove_below = (kind == svn_kind_dir)
+          svn_depth_t remove_below = (kind == svn_node_dir)
                                             ? svn_depth_immediates
                                             : svn_depth_files;
           if (new_depth < remove_below)
-            SVN_ERR(svn_wc__db_base_remove(db, local_abspath, FALSE,
+            SVN_ERR(svn_wc__db_base_remove(db, child_abspath,
+                                           FALSE /* keep_as_working */,
+                                           FALSE /* queue_deletes */,
+                                           FALSE /* remove_locks */,
                                            SVN_INVALID_REVNUM,
                                            NULL, NULL, iterpool));
 
           continue;
         }
-      else if (kind == svn_kind_file)
+      else if (kind == svn_node_file)
         {
           if (new_depth == svn_depth_empty)
             SVN_ERR(svn_wc__db_op_remove_node(NULL,
@@ -122,7 +125,7 @@ crop_children(svn_wc__db_t *db,
                                               FALSE /* destroy_changes */,
                                               SVN_INVALID_REVNUM,
                                               svn_wc__db_status_not_present,
-                                              svn_kind_none,
+                                              svn_node_none,
                                               NULL, NULL,
                                               cancel_func, cancel_baton,
                                               iterpool));
@@ -130,7 +133,7 @@ crop_children(svn_wc__db_t *db,
             continue;
 
         }
-      else if (kind == svn_kind_dir)
+      else if (kind == svn_node_dir)
         {
           if (new_depth < svn_depth_immediates)
             {
@@ -140,7 +143,7 @@ crop_children(svn_wc__db_t *db,
                                                 FALSE /* destroy_changes */,
                                                 SVN_INVALID_REVNUM,
                                                 svn_wc__db_status_not_present,
-                                                svn_kind_none,
+                                                svn_node_none,
                                                 NULL, NULL,
                                                 cancel_func, cancel_baton,
                                                 iterpool));
@@ -192,7 +195,7 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
 {
   svn_boolean_t is_root, is_switched;
   svn_wc__db_status_t status;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_revnum_t revision;
   const char *repos_relpath, *repos_root, *repos_uuid;
 
@@ -295,7 +298,7 @@ svn_wc_crop_tree2(svn_wc_context_t *wc_ctx,
 {
   svn_wc__db_t *db = wc_ctx->db;
   svn_wc__db_status_t status;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_depth_t dir_depth;
 
   /* Only makes sense when the depth is restrictive. */
@@ -312,7 +315,7 @@ svn_wc_crop_tree2(svn_wc_context_t *wc_ctx,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
 
-  if (kind != svn_kind_dir)
+  if (kind != svn_node_dir)
     return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
       _("Can only crop directories"));
 

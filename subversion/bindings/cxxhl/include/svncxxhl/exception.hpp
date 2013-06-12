@@ -38,6 +38,7 @@
 // Forward declaration of implementation-specific structure
 struct svn_error_t;
 
+namespace apache {
 namespace subversion {
 namespace cxxhl {
 
@@ -45,22 +46,20 @@ namespace compat {} // Announce the compat namespace for shared_ptr lookup
 
 namespace detail {
 // Forward declaration of implementation-specific structure
-class error_description;
+class ErrorDescription;
 } // namespace detail
 
-namespace version_1_9_dev {
-
-class error : public std::exception
+class Error : public std::exception
 {
 public:
-  typedef compat::shared_ptr<error> shared_ptr;
+  typedef compat::shared_ptr<Error> shared_ptr;
 
-  error(const char* description, int error_code);
-  error(const char* description, int error_code, shared_ptr nested_error);
+  Error(const char* description, int error_code);
+  Error(const char* description, int error_code, shared_ptr nested_error);
 
-  error(const error& that) throw();
-  error& operator=(const error& that) throw();
-  virtual ~error() throw();
+  Error(const Error& that) throw();
+  Error& operator=(const Error& that) throw();
+  virtual ~Error() throw();
 
   /**
    * Returns the error code associated with the exception.
@@ -83,18 +82,18 @@ public:
    * describes the location in the source code where the error was
    * generated from.
    */
-  typedef std::pair<int, std::string> message;
+  typedef std::pair<int, std::string> Message;
 
   /**
    * The list of messages associated with an error.
    */
-  typedef std::vector<message> message_list;
+  typedef std::vector<Message> MessageList;
 
   /**
    * Returns the complete list of error messages, including those from
    * nested exceptions.
    */
-  virtual message_list messages() const
+  virtual MessageList messages() const
     {
       return compile_messages(false);
     }
@@ -106,7 +105,7 @@ public:
    * Traceback is only available if the Subversion libraries were
    * compiled with tracing enabled.
    */
-  virtual message_list traced_messages() const
+  virtual MessageList traced_messages() const
     {
       return compile_messages(true);
     }
@@ -115,20 +114,30 @@ public:
   /** Used internally by the implementation. */
   static void throw_svn_error(svn_error_t*);
 
+protected:
+  Error(int error_code, detail::ErrorDescription* description) throw();
+
 private:
-  error(int error_code, detail::error_description* description) throw();
-  std::vector<message> compile_messages(bool show_traces) const;
+  MessageList compile_messages(bool show_traces) const;
 
   int m_errno;                /**< The (SVN or APR) error code. */
   shared_ptr m_nested;        /**< Optional pointer to nessted error. */
   /** Error description and trace location information. */
-  detail::error_description* m_description;
+  detail::ErrorDescription* m_description;
 };
 
-class canceled : public error {};
+class Cancelled : public Error
+{
+  friend void Error::throw_svn_error(svn_error_t*);
 
-} // namespace version_1_9_dev
+protected:
+  Cancelled(int error_code, detail::ErrorDescription* description) throw()
+    : Error(error_code, description)
+    {}
+};
+
 } // namespace cxxhl
 } // namespace subversion
+} // namespace apache
 
 #endif  // SVN_CXXHL_EXCEPTION_HPP

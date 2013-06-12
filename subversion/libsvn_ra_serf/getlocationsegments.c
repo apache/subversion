@@ -27,6 +27,7 @@
 #include <apr_uri.h>
 #include <serf.h>
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
 #include "svn_xml.h"
@@ -87,9 +88,9 @@ gls_closed(svn_ra_serf__xml_estate_t *xes,
 
   SVN_ERR_ASSERT(leaving_state == SEGMENT);
 
-  path = apr_hash_get(attrs, "path", APR_HASH_KEY_STRING);
-  start_str = apr_hash_get(attrs, "range-start", APR_HASH_KEY_STRING);
-  end_str = apr_hash_get(attrs, "range-end", APR_HASH_KEY_STRING);
+  path = svn_hash_gets(attrs, "path");
+  start_str = svn_hash_gets(attrs, "range-start");
+  end_str = svn_hash_gets(attrs, "range-end");
 
   /* The transition table said these must exist.  */
   SVN_ERR_ASSERT(start_str && end_str);

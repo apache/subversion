@@ -27,6 +27,7 @@
 
 /*** Includes. ***/
 
+#include "svn_hash.h"
 #include "svn_cmdline.h"
 #include "svn_wc.h"
 #include "svn_pools.h"
@@ -86,7 +87,8 @@ svn_cl__propedit(apr_getopt_t *os,
                              _("'%s' is not a valid Subversion property name"),
                              pname_utf8);
   if (!opt_state->force)
-    SVN_ERR(svn_cl__check_svn_prop_name(pname_utf8, opt_state->revprop, pool));
+    SVN_ERR(svn_cl__check_svn_prop_name(pname_utf8, opt_state->revprop,
+                                        svn_cl__prop_use_edit, pool));
 
   if (opt_state->encoding && !svn_prop_needs_translation(pname_utf8))
       return svn_error_create
@@ -239,7 +241,7 @@ svn_cl__propedit(apr_getopt_t *os,
                                       NULL, ctx, subpool, subpool));
 
           /* Get the property value. */
-          propval = apr_hash_get(props, abspath_or_url, APR_HASH_KEY_STRING);
+          propval = svn_hash_gets(props, abspath_or_url);
           if (! propval)
             propval = svn_string_create_empty(subpool);
 
@@ -260,8 +262,8 @@ svn_cl__propedit(apr_getopt_t *os,
                 }
 
               /* Split the path if it is a file path. */
-              SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, abspath_or_url,
-                                       FALSE, subpool));
+              SVN_ERR(svn_wc_read_kind2(&kind, ctx->wc_ctx, abspath_or_url,
+                                        FALSE, FALSE, subpool));
 
               if (kind == svn_node_none)
                 return svn_error_createf(
@@ -315,6 +317,10 @@ svn_cl__propedit(apr_getopt_t *os,
                                                     sizeof(const char *));
 
                   APR_ARRAY_PUSH(targs, const char *) = target;
+
+                  SVN_ERR(svn_cl__propset_print_binary_mime_type_warning(
+                      targs, pname_utf8, propval, subpool));
+
                   err = svn_client_propset_local(pname_utf8, edited_propval,
                                                  targs, svn_depth_empty,
                                                  opt_state->force, NULL,

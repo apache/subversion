@@ -125,19 +125,11 @@ dnl Search for pkg-config
 AC_PATH_PROG(PKG_CONFIG, pkg-config)
 
 dnl Search for serf
-SVN_LIB_SERF(1,0,0)
+SVN_LIB_SERF(1,2,1)
 
 if test "$svn_lib_serf" = "yes"; then
   AC_DEFINE([SVN_HAVE_SERF], 1,
             [Defined if support for Serf is enabled])
-fi
-
-dnl Search for GSSAPI
-SVN_LIB_RA_SERF_GSSAPI
-
-if test "$svn_lib_gssapi" = "yes"; then
-  AC_DEFINE([SVN_RA_SERF_HAVE_GSSAPI], 1,
-            [Defined if support for GSSAPI is enabled])
 fi
 
 dnl Search for apr_memcache (only affects fs_fs)
@@ -152,7 +144,9 @@ fi
 dnl Find Apache with a recent-enough magic module number
 SVN_FIND_APACHE(20020903)
 
-dnl Search for SQLite
+dnl Search for SQLite.  If you change SQLITE_URL from a .zip to
+dnl something else also update build/ac-macros/sqlite.m4 to reflect
+dnl the correct command to unpack the downloaded file.
 SQLITE_MINIMUM_VER="3.7.12"
 SQLITE_RECOMMENDED_VER="3.7.15.1"
 SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-$(printf %d%02d%02d%02d $(echo ${SQLITE_RECOMMENDED_VER} | sed -e 's/\./ /g')).zip"
@@ -883,21 +877,14 @@ AC_CHECK_FUNCS(symlink readlink)
 dnl check for uname
 AC_CHECK_HEADERS(sys/utsname.h, [AC_CHECK_FUNCS(uname)], [])
 
-dnl Process some configuration options ----------
+dnl check for termios
+AC_CHECK_HEADER(termios.h,[
+  AC_CHECK_FUNCS(tcgetattr tcsetattr,[
+    AC_DEFINE(HAVE_TERMIOS_H,1,[Defined if we have a usable termios library.])
+  ])
+])
 
-AC_ARG_WITH(ssl,
-AS_HELP_STRING([--with-ssl],
-               [This option does NOT affect the Subversion build process in any
-                way. It enables OpenSSL support in the Neon HTTP client
-                library. If and only if you are building Neon as an integrated
-                part of the Subversion build process, rather than linking to
-                an already installed version of Neon, you probably want to pass
-                this option so that Neon (and so indirectly, Subversion) will
-                be capable of https:// access via that library. (Note that
-                Subversion may also or alternatively be configured to use
-                the Serf library for http:// and https:// access; see the
-                --with-serf and --with-openssl options.)]),
-[])
+dnl Process some configuration options ----------
 
 AC_ARG_WITH(openssl,
 AS_HELP_STRING([--with-openssl],
@@ -1095,9 +1082,13 @@ if test "$enable_optimization" = "yes"; then
         SVN_CFLAGS_ADD_IFELSE([-O])])
     else
       AC_MSG_NOTICE([Enabling optimizations for C])
-      SVN_CFLAGS_ADD_IFELSE([-O2],[],[
-        SVN_CFLAGS_ADD_IFELSE([-O1],[],[
-          SVN_CFLAGS_ADD_IFELSE([-O])])])
+      SVN_CFLAGS_ADD_IFELSE([-O3],[],[
+        SVN_CFLAGS_ADD_IFELSE([-O2],[],[
+          SVN_CFLAGS_ADD_IFELSE([-O1],[],[
+            SVN_CFLAGS_ADD_IFELSE([-O])])])])
+      SVN_CFLAGS_ADD_IFELSE([-Wno-clobbered])
+      SVN_CFLAGS_ADD_IFELSE([-flto])
+      SVN_CFLAGS_ADD_IFELSE([-fwhole-program])
     fi
   fi
   if test -z ["`echo $CXXUSERFLAGS' ' | $EGREP -- '-O[^ ]* '`"]; then
@@ -1108,9 +1099,13 @@ if test "$enable_optimization" = "yes"; then
         SVN_CXXFLAGS_ADD_IFELSE([-O])])
     else
       AC_MSG_NOTICE([Enabling optimizations for C++])
-      SVN_CXXFLAGS_ADD_IFELSE([-O2],[],[
-        SVN_CXXFLAGS_ADD_IFELSE([-O1],[],[
-          SVN_CXXFLAGS_ADD_IFELSE([-O])])])
+      SVN_CXXFLAGS_ADD_IFELSE([-O3],[],[
+        SVN_CXXFLAGS_ADD_IFELSE([-O2],[],[
+          SVN_CXXFLAGS_ADD_IFELSE([-O1],[],[
+            SVN_CXXFLAGS_ADD_IFELSE([-O])])])])
+      SVN_CXXFLAGS_ADD_IFELSE([-Wno-clobbered])
+      SVN_CXXFLAGS_ADD_IFELSE([-flto])
+      SVN_CXXFLAGS_ADD_IFELSE([-fwhole-program])
     fi
   fi
 elif test "$enable_optimization" = "no"; then
@@ -1122,6 +1117,13 @@ elif test "$enable_optimization" = "no"; then
 #   # do nothing
 fi
 
+dnl Dump the current compiler options
+AC_MSG_NOTICE([C compiler flags: $CFLAGS])
+AC_MSG_NOTICE([    user-defined: $CUSERFLAGS])
+AC_MSG_NOTICE([ maintainer-mode: $CMAINTAINERFLAGS])
+AC_MSG_NOTICE([C++ compiler flags: $CXXFLAGS])
+AC_MSG_NOTICE([      user-defined: $CXXUSERFLAGS])
+AC_MSG_NOTICE([   maintainer-mode: $CXXMAINTAINERFLAGS])
 
 AC_ARG_ENABLE(full-version-match,
 AS_HELP_STRING([--disable-full-version-match],

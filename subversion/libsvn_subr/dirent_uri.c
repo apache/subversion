@@ -359,8 +359,24 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
             src = seg;
 
           /* Found a hostname, convert to lowercase and copy to dst. */
-          while (*src && (*src != '/') && (*src != ':'))
-            *(dst++) = canonicalize_to_lower((*src++));
+          if (*src == '[')
+            {
+             *(dst++) = *(src++); /* Copy '[' */
+
+              while (*src == ':'
+                     || (*src >= '0' && (*src <= '9'))
+                     || (*src >= 'a' && (*src <= 'f'))
+                     || (*src >= 'A' && (*src <= 'F')))
+                {
+                  *(dst++) = canonicalize_to_lower((*src++));
+                }
+
+              if (*src == ']')
+                *(dst++) = *(src++); /* Copy ']' */
+            }
+          else
+            while (*src && (*src != '/') && (*src != ':'))
+              *(dst++) = canonicalize_to_lower((*src++));
 
           if (*src == ':')
             {
@@ -1672,7 +1688,9 @@ svn_dirent_is_canonical(const char *dirent, apr_pool_t *scratch_pool)
 static svn_boolean_t
 relpath_is_canonical(const char *relpath)
 {
-  const char *ptr = relpath, *seg = relpath;
+  const char *dot_pos, *ptr = relpath;
+  apr_size_t i, len;
+  unsigned pattern = 0;
 
   /* RELPATH is canonical if it has:
    *  - no '.' segments
@@ -1680,35 +1698,38 @@ relpath_is_canonical(const char *relpath)
    *  - no '//'
    */
 
-  if (*relpath == '\0')
-    return TRUE;
-
+  /* invalid beginnings */
   if (*ptr == '/')
     return FALSE;
 
+  if (ptr[0] == '.' && (ptr[1] == '/' || ptr[1] == '\0'))
+    return FALSE;
+
+  /* valid special cases */
+  len = strlen(ptr);
+  if (len < 2)
+    return TRUE;
+
+  /* invalid endings */
+  if (ptr[len-1] == '/' || (ptr[len-1] == '.' && ptr[len-2] == '/'))
+    return FALSE;
+
+  /* '.' are rare. So, search for them globally. There will often be no 
+   * more than one hit.  Also note that we already checked for invalid 
+   * starts and endings, i.e. we only need to check for "/./"
+   */
+  for (dot_pos = memchr(ptr, '.', len);
+       dot_pos;
+       dot_pos = strchr(dot_pos+1, '.'))
+    if (dot_pos > ptr && dot_pos[-1] == '/' && dot_pos[1] == '/')
+      return FALSE;
+
   /* Now validate the rest of the path. */
-  while(1)
+  for (i = 0; i < len - 1; ++i)
     {
-      apr_size_t seglen = ptr - seg;
-
-      if (seglen == 1 && *seg == '.')
-        return FALSE;  /*  /./   */
-
-      if (*ptr == '/' && *(ptr+1) == '/')
-        return FALSE;  /*  //    */
-
-      if (! *ptr && *(ptr - 1) == '/')
-        return FALSE;  /* foo/  */
-
-      if (! *ptr)
-        break;
-
-      if (*ptr == '/')
-        ptr++;
-      seg = ptr;
-
-      while (*ptr && (*ptr != '/'))
-        ptr++;
+      pattern = ((pattern & 0xff) << 8) + (unsigned char)ptr[i];
+      if (pattern == 0x101 * (unsigned char)('/'))
+        return FALSE;
     }
 
   return TRUE;
@@ -1774,12 +1795,28 @@ svn_uri_is_canonical(const char *uri, apr_pool_t *scratch_pool)
 
   /* Found a hostname, check that it's all lowercase. */
   ptr = seg;
-  while (*ptr && *ptr != '/' && *ptr != ':')
+
+  if (*ptr == '[')
     {
-      if (*ptr >= 'A' && *ptr <= 'Z')
+      ptr++;
+      while (*ptr == ':'
+             || (*ptr >= '0' && *ptr <= '9')
+             || (*ptr >= 'a' && *ptr <= 'f'))
+        {
+          ptr++;
+        }
+
+      if (*ptr != ']')
         return FALSE;
       ptr++;
     }
+  else
+    while (*ptr && *ptr != '/' && *ptr != ':')
+      {
+        if (*ptr >= 'A' && *ptr <= 'Z')
+          return FALSE;
+        ptr++;
+      }
 
   /* Found a portnumber */
   if (*ptr == ':')

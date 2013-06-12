@@ -569,11 +569,11 @@ svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 
 /**
  * @name Default credentials defines
- * Any 'default' credentials that came in through the application itself,
- * (e.g. --username and --password options). Property values are
- * const char *.
+ * Property values are const char *.
  * @{ */
+/** Default username provided by the application itself (e.g. --username) */
 #define SVN_AUTH_PARAM_DEFAULT_USERNAME  SVN_AUTH_PARAM_PREFIX "username"
+/** Default password provided by the application itself (e.g. --password) */
 #define SVN_AUTH_PARAM_DEFAULT_PASSWORD  SVN_AUTH_PARAM_PREFIX "password"
 /** @} */
 
@@ -590,19 +590,25 @@ svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 
 /** @brief Indicates whether providers may save passwords to disk in
  * plaintext. Property value can be either SVN_CONFIG_TRUE,
- * SVN_CONFIG_FALSE, or SVN_CONFIG_ASK. */
+ * SVN_CONFIG_FALSE, or SVN_CONFIG_ASK.
+ * @since New in 1.6.
+ */
 #define SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS  SVN_AUTH_PARAM_PREFIX \
                                                   "store-plaintext-passwords"
 
 /** @brief The application doesn't want any providers to save passphrase
  * to disk. Property value is irrelevant; only property's existence
- * matters. */
+ * matters.
+ * @since New in 1.6.
+ */
 #define SVN_AUTH_PARAM_DONT_STORE_SSL_CLIENT_CERT_PP \
   SVN_AUTH_PARAM_PREFIX "dont-store-ssl-client-cert-pp"
 
 /** @brief Indicates whether providers may save passphrase to disk in
  * plaintext. Property value can be either SVN_CONFIG_TRUE,
- * SVN_CONFIG_FALSE, or SVN_CONFIG_ASK. */
+ * SVN_CONFIG_FALSE, or SVN_CONFIG_ASK.
+ * @since New in 1.6.
+ */
 #define SVN_AUTH_PARAM_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT \
   SVN_AUTH_PARAM_PREFIX "store-ssl-client-cert-pp-plaintext"
 
@@ -622,9 +628,15 @@ svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 #define SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO SVN_AUTH_PARAM_PREFIX \
   "ssl:cert-info"
 
-/** Some providers need access to the @c svn_config_t configuration. */
-#define SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG SVN_AUTH_PARAM_PREFIX "config-category-config"
-#define SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS SVN_AUTH_PARAM_PREFIX "config-category-servers"
+/** This provides a pointer to a @c svn_config_t containting the config
+ * category. */
+#define SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG SVN_AUTH_PARAM_PREFIX \
+  "config-category-config"
+
+/** This provides a pointer to a @c svn_config_t containting the servers
+ * category. */
+#define SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS SVN_AUTH_PARAM_PREFIX \
+  "config-category-servers"
 
 /** @deprecated Provided for backward compatibility with the 1.5 API. */
 #define SVN_AUTH_PARAM_CONFIG SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS
@@ -682,6 +694,28 @@ svn_auth_next_credentials(void **credentials,
 svn_error_t *
 svn_auth_save_credentials(svn_auth_iterstate_t *state,
                           apr_pool_t *pool);
+
+/** Forget a set (or all) memory-cached credentials.
+ *
+ * Remove references (if any) in @a auth_baton to credentials cached
+ * therein.  If @a cred_kind and @a realmstring are non-NULL, forget
+ * only the credentials associated with those credential types and
+ * realm.  Otherwise @a cred_kind and @a realmstring must both be
+ * NULL, and this function will forget all credentials cached within
+ * @a auth_baton.
+ *
+ * @note This function does not affect persisted authentication
+ * credential storage at all.  It is merely a way to cause Subversion
+ * to forget about credentials already fetched from a provider,
+ * forcing them to be fetched again later should they be required.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_auth_forget_credentials(svn_auth_baton_t *auth_baton,
+                            const char *cred_kind,
+                            const char *realmstring,
+                            apr_pool_t *pool);
 
 /** @} */
 

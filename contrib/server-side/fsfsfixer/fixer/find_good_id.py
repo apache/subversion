@@ -14,6 +14,7 @@ Example:
 """
 
 import os, sys
+from fixer_config import *
 
 class FixError(Exception):
   """An exception for any kind of inablility to repair the repository."""
@@ -28,8 +29,15 @@ def parse_id(id):
   return noderev, rev, offset
 
 def rev_file_path(repo_dir, rev):
-  # TODO: support shards
-  return os.path.join(repo_dir, 'db', 'revs', rev)
+  """Return the path to the revision file in the repository at REPO_DIR
+     (a path string) for revision number REV (int or string).
+     """
+  if REVS_PER_SHARD:
+    shard = int(rev) / REVS_PER_SHARD
+    path = os.path.join(repo_dir, 'db', 'revs', str(shard), str(rev))
+  else:
+    path = os.path.join(repo_dir, 'db', 'revs', str(rev))
+  return path
 
 def rev_file_indexes(repo_dir, rev):
   """Return (ids, texts), where IDS is a dictionary of all node-rev ids

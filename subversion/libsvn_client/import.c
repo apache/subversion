@@ -32,6 +32,7 @@
 #include <apr_hash.h>
 #include <apr_md5.h>
 
+#include "svn_hash.h"
 #include "svn_ra.h"
 #include "svn_delta.h"
 #include "svn_subst.h"
@@ -116,7 +117,7 @@ send_file_contents(const char *local_abspath,
                                    sizeof(SVN_PROP_EOL_STYLE) - 1);
       keywords_val = apr_hash_get(properties, SVN_PROP_KEYWORDS,
                                   sizeof(SVN_PROP_KEYWORDS) - 1);
-      if (apr_hash_get(properties, SVN_PROP_SPECIAL, APR_HASH_KEY_STRING))
+      if (svn_hash_gets(properties, SVN_PROP_SPECIAL))
         special = TRUE;
     }
 
@@ -133,9 +134,9 @@ send_file_contents(const char *local_abspath,
     }
 
   if (keywords_val)
-    SVN_ERR(svn_subst_build_keywords2(&keywords, keywords_val->data,
+    SVN_ERR(svn_subst_build_keywords3(&keywords, keywords_val->data,
                                       APR_STRINGIFY(SVN_INVALID_REVNUM),
-                                      "", 0, "", pool));
+                                      "", "", 0, "", pool));
   else
     keywords = NULL;
 
@@ -262,12 +263,11 @@ import_file(const svn_delta_editor_t *editor,
      send to the server. */
   if (dirent->special)
     {
-      apr_hash_set(properties, SVN_PROP_SPECIAL, APR_HASH_KEY_STRING,
-                   svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool));
+      svn_hash_sets(properties, SVN_PROP_SPECIAL,
+                    svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool));
       SVN_ERR(editor->change_file_prop(file_baton, SVN_PROP_SPECIAL,
-                                       apr_hash_get(properties,
-                                                    SVN_PROP_SPECIAL,
-                                                    APR_HASH_KEY_STRING),
+                                       svn_hash_gets(properties,
+                                                     SVN_PROP_SPECIAL),
                                        pool));
     }
 
@@ -341,26 +341,26 @@ get_filtered_children(apr_hash_t **children,
               (*ctx->notify_func2)(ctx->notify_baton2, notify, iterpool);
             }
 
-          apr_hash_set(dirents, base_name, APR_HASH_KEY_STRING, NULL);
+          svn_hash_sets(dirents, base_name, NULL);
           continue;
         }
             /* If this is an excluded path, exclude it. */
-      if (apr_hash_get(excludes, local_abspath, APR_HASH_KEY_STRING))
+      if (svn_hash_gets(excludes, local_abspath))
         {
-          apr_hash_set(dirents, base_name, APR_HASH_KEY_STRING, NULL);
+          svn_hash_sets(dirents, base_name, NULL);
           continue;
         }
 
       if (ignores && svn_wc_match_ignore_list(base_name, ignores, iterpool))
         {
-          apr_hash_set(dirents, base_name, APR_HASH_KEY_STRING, NULL);
+          svn_hash_sets(dirents, base_name, NULL);
           continue;
         }
 
       if (global_ignores &&
           svn_wc_match_ignore_list(base_name, global_ignores, iterpool))
         {
-          apr_hash_set(dirents, base_name, APR_HASH_KEY_STRING, NULL);
+          svn_hash_sets(dirents, base_name, NULL);
           continue;
         }
 
@@ -373,7 +373,7 @@ get_filtered_children(apr_hash_t **children,
 
           if (filter)
             {
-              apr_hash_set(dirents, base_name, APR_HASH_KEY_STRING, NULL);
+              svn_hash_sets(dirents, base_name, NULL);
               continue;
             }
         }
@@ -593,6 +593,9 @@ import_dir(const svn_delta_editor_t *editor,
  * DEPTH is the depth at which to import PATH; it behaves as for
  * svn_client_import4().
  *
+ * BASE_REV is the revision to use for the root of the commit. We
+ * checked the preconditions against this revision.
+ *
  * NEW_ENTRIES is an ordered array of path components that must be
  * created in the repository (where the ordering direction is
  * parent-to-child).  If PATH is a directory, NEW_ENTRIES may be empty
@@ -641,6 +644,7 @@ import(const char *local_abspath,
        const svn_delta_editor_t *editor,
        void *edit_baton,
        svn_depth_t depth,
+       svn_revnum_t base_rev,
        apr_hash_t *excludes,
        apr_hash_t *autoprops,
        apr_array_header_t *local_ignores,
@@ -662,14 +666,13 @@ import(const char *local_abspath,
   import_ctx->autoprops = autoprops;
   svn_magic__init(&import_ctx->magic_cookie, pool);
 
-  /* Get a root dir baton.  We pass an invalid revnum to open_root
-     to mean "base this on the youngest revision".  Should we have an
-     SVN_YOUNGEST_REVNUM defined for these purposes? */
-  SVN_ERR(editor->open_root(edit_baton, SVN_INVALID_REVNUM,
-                            pool, &root_baton));
+  /* Get a root dir baton.  We pass the revnum we used for testing our
+     assumptions and obtaining inherited properties. */
+  SVN_ERR(editor->open_root(edit_baton, base_rev, pool, &root_baton));
 
   /* Import a file or a directory tree. */
-  SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, FALSE, pool, pool));
+  SVN_ERR(svn_io_stat_dirent2(&dirent, local_abspath, FALSE, FALSE,
+                              pool, pool));
 
   /* Make the intermediate directory components necessary for properly
      rooting our import source tree.  */
@@ -803,14 +806,14 @@ svn_client_import5(const char *path,
   const char *local_abspath;
   apr_array_header_t *new_entries = apr_array_make(scratch_pool, 4,
                                                    sizeof(const char *));
-  const char *temp;
-  const char *dir;
   apr_hash_t *commit_revprops;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_t *autoprops = NULL;
   apr_array_header_t *global_ignores;
-  apr_hash_t *local_ignores_hash;
   apr_array_header_t *local_ignores_arr;
+  svn_revnum_t base_rev;
+  apr_array_header_t *inherited_props = NULL;
+  apr_hash_t *url_props = NULL;
 
   if (svn_path_is_url(path))
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
@@ -842,20 +845,20 @@ svn_client_import5(const char *path,
         {
           const char *abs_path;
           SVN_ERR(svn_dirent_get_absolute(&abs_path, tmp_file, scratch_pool));
-          apr_hash_set(excludes, abs_path, APR_HASH_KEY_STRING, (void *)1);
+          svn_hash_sets(excludes, abs_path, (void *)1);
         }
     }
 
   SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
 
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, url, NULL,
-                                               NULL, FALSE, TRUE, ctx,
-                                               scratch_pool));
+  SVN_ERR(svn_client_open_ra_session2(&ra_session, url, NULL,
+                                      ctx, scratch_pool, iterpool));
+
+  SVN_ERR(svn_ra_get_latest_revnum(ra_session, &base_rev, iterpool));
 
   /* Figure out all the path components we need to create just to have
      a place to stick our imported tree. */
-  SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM, &kind,
-                            iterpool));
+  SVN_ERR(svn_ra_check_path(ra_session, "", base_rev, &kind, iterpool));
 
   /* We can import into directories, but if a file already exists, that's
      an error. */
@@ -866,52 +869,47 @@ svn_client_import5(const char *path,
 
   while (kind == svn_node_none)
     {
+      const char *dir;
+
       svn_pool_clear(iterpool);
 
-      svn_uri_split(&temp, &dir, url, scratch_pool);
+      svn_uri_split(&url, &dir, url, scratch_pool);
       APR_ARRAY_PUSH(new_entries, const char *) = dir;
-      url = temp;
       SVN_ERR(svn_ra_reparent(ra_session, url, iterpool));
 
-      SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM, &kind,
-                                iterpool));
+      SVN_ERR(svn_ra_check_path(ra_session, "", base_rev, &kind, iterpool));
     }
 
   /* Reverse the order of the components we added to our NEW_ENTRIES array. */
-  if (new_entries->nelts)
-    {
-      int i, j;
-      const char *component;
-      for (i = 0; i < (new_entries->nelts / 2); i++)
-        {
-          j = new_entries->nelts - i - 1;
-          component =
-            APR_ARRAY_IDX(new_entries, i, const char *);
-          APR_ARRAY_IDX(new_entries, i, const char *) =
-            APR_ARRAY_IDX(new_entries, j, const char *);
-          APR_ARRAY_IDX(new_entries, j, const char *) =
-            component;
-        }
-    }
+  svn_sort__array_reverse(new_entries, scratch_pool);
 
   /* The repository doesn't know about the reserved administrative
      directory. */
-  if (new_entries->nelts
-      /* What's this, what's this?  This assignment is here because we
-         use the value to construct the error message just below.  It
-         may not be aesthetically pleasing, but it's less ugly than
-         calling APR_ARRAY_IDX twice. */
-      && svn_wc_is_adm_dir(temp = APR_ARRAY_IDX(new_entries,
-                                                new_entries->nelts - 1,
-                                                const char *),
-                           scratch_pool))
-    return svn_error_createf
-      (SVN_ERR_CL_ADM_DIR_RESERVED, NULL,
-       _("'%s' is a reserved name and cannot be imported"),
-       svn_dirent_local_style(temp, scratch_pool));
+  if (new_entries->nelts)
+    {
+      const char *last_component
+        = APR_ARRAY_IDX(new_entries, new_entries->nelts - 1, const char *);
+
+      if (svn_wc_is_adm_dir(last_component, scratch_pool))
+        return svn_error_createf
+          (SVN_ERR_CL_ADM_DIR_RESERVED, NULL,
+           _("'%s' is a reserved name and cannot be imported"),
+           svn_dirent_local_style(last_component, scratch_pool));
+    }
 
   SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
                                            log_msg, ctx, scratch_pool));
+
+  /* Obtain properties before opening the commit editor, as at that point we are
+     not allowed to use the existing ra-session */
+  if (! no_ignore /*|| ! no_autoprops*/)
+    {
+      SVN_ERR(svn_ra_get_dir2(ra_session, NULL, NULL, &url_props, "",
+                              base_rev, SVN_DIRENT_KIND, scratch_pool));
+
+      SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props, "", base_rev,
+                                         scratch_pool, iterpool));
+    }
 
   /* Fetch RA commit editor. */
   SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
@@ -925,8 +923,13 @@ svn_client_import5(const char *path,
   /* Get inherited svn:auto-props, svn:global-ignores, and
      svn:ignores for the location we are importing to. */
   if (!no_autoprops)
-    SVN_ERR(svn_client__get_all_auto_props(&autoprops, url, ctx,
-                                           scratch_pool, iterpool));
+    {
+      /* ### This should use inherited_props and url_props to avoid creating
+             another ra session to obtain the same values, but using a possibly
+             different HEAD revision */
+      SVN_ERR(svn_client__get_all_auto_props(&autoprops, url, ctx,
+                                             scratch_pool, iterpool));
+    }
   if (no_ignore)
     {
       global_ignores = NULL;
@@ -934,38 +937,48 @@ svn_client_import5(const char *path,
     }
   else
     {
-      svn_opt_revision_t rev;
       apr_array_header_t *config_ignores;
+      svn_string_t *val;
+      int i;
 
-      SVN_ERR(svn_client__get_inherited_ignores(&global_ignores, url, ctx,
-                                                scratch_pool, iterpool));
+      global_ignores = apr_array_make(scratch_pool, 64, sizeof(const char *));
+
       SVN_ERR(svn_wc_get_default_ignores(&config_ignores, ctx->config,
                                          scratch_pool));
       global_ignores = apr_array_append(scratch_pool, global_ignores,
                                         config_ignores);
 
-      rev.kind = svn_opt_revision_head;
-      SVN_ERR(svn_client_propget5(&local_ignores_hash, NULL, SVN_PROP_IGNORE, url,
-                                  &rev, &rev, NULL, svn_depth_empty, NULL, ctx,
-                                  scratch_pool, scratch_pool));
+      val = svn_hash_gets(url_props, SVN_PROP_INHERITABLE_IGNORES);
+      if (val)
+        svn_cstring_split_append(global_ignores, val->data, "\n\r\t\v ",
+                                 FALSE, scratch_pool);
+
+      for (i = 0; i < inherited_props->nelts; i++)
+        {
+          svn_prop_inherited_item_t *elt = APR_ARRAY_IDX(
+            inherited_props, i, svn_prop_inherited_item_t *);
+
+          val = svn_hash_gets(elt->prop_hash, SVN_PROP_INHERITABLE_IGNORES);
+
+          if (val)
+            svn_cstring_split_append(global_ignores, val->data, "\n\r\t\v ",
+                                     FALSE, scratch_pool);
+        }
       local_ignores_arr = apr_array_make(scratch_pool, 1, sizeof(const char *));
 
-      if (apr_hash_count(local_ignores_hash))
+      val = svn_hash_gets(url_props, SVN_PROP_IGNORE);
+
+      if (val)
         {
-          svn_string_t *propval = apr_hash_get(local_ignores_hash, url,
-                                               APR_HASH_KEY_STRING);
-          if (propval)
-            {
-              svn_cstring_split_append(local_ignores_arr, propval->data,
-                                       "\n\r\t\v ", FALSE, scratch_pool);
-            }
+          svn_cstring_split_append(local_ignores_arr, val->data,
+                                   "\n\r\t\v ", FALSE, scratch_pool);
         }
     }
 
   /* If an error occurred during the commit, abort the edit and return
      the error.  We don't even care if the abort itself fails.  */
   if ((err = import(local_abspath, new_entries, editor, edit_baton,
-                    depth, excludes, autoprops, local_ignores_arr,
+                    depth, base_rev, excludes, autoprops, local_ignores_arr,
                     global_ignores, no_ignore, no_autoprops,
                     ignore_unknown_node_types, filter_callback,
                     filter_baton, ctx, iterpool)))

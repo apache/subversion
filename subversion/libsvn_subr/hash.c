@@ -96,11 +96,14 @@ hash_read(apr_hash_t *hash, svn_stream_t *stream, const char *terminator,
   svn_stringbuf_t *buf;
   svn_boolean_t eof;
   apr_size_t len, keylen, vallen;
-  char c, *end, *keybuf, *valbuf;
+  char c, *keybuf, *valbuf;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
   while (1)
     {
+      svn_error_t *err;
+      apr_uint64_t ui64;
+
       svn_pool_clear(iterpool);
 
       /* Read a key length line.  Might be END, though. */
@@ -119,10 +122,12 @@ hash_read(apr_hash_t *hash, svn_stream_t *stream, const char *terminator,
       if ((buf->len >= 3) && (buf->data[0] == 'K') && (buf->data[1] == ' '))
         {
           /* Get the length of the key */
-          keylen = (size_t) strtoul(buf->data + 2, &end, 10);
-          if (keylen == (size_t) ULONG_MAX || *end != '\0')
-            return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL,
+          err = svn_cstring_strtoui64(&ui64, buf->data + 2,
+                                      0, APR_SIZE_MAX, 10);
+          if (err)
+            return svn_error_create(SVN_ERR_MALFORMED_FILE, err,
                                     _("Serialized hash malformed"));
+          keylen = (apr_size_t)ui64;
 
           /* Now read that much into a buffer. */
           keybuf = apr_palloc(pool, keylen + 1);
@@ -141,10 +146,12 @@ hash_read(apr_hash_t *hash, svn_stream_t *stream, const char *terminator,
 
           if ((buf->data[0] == 'V') && (buf->data[1] == ' '))
             {
-              vallen = (size_t) strtoul(buf->data + 2, &end, 10);
-              if (vallen == (size_t) ULONG_MAX || *end != '\0')
-                return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL,
+              err = svn_cstring_strtoui64(&ui64, buf->data + 2,
+                                          0, APR_SIZE_MAX, 10);
+              if (err)
+                return svn_error_create(SVN_ERR_MALFORMED_FILE, err,
                                         _("Serialized hash malformed"));
+              vallen = (apr_size_t)ui64;
 
               valbuf = apr_palloc(iterpool, vallen + 1);
               SVN_ERR(svn_stream_read(stream, valbuf, &vallen));
@@ -169,10 +176,12 @@ hash_read(apr_hash_t *hash, svn_stream_t *stream, const char *terminator,
                && (buf->data[0] == 'D') && (buf->data[1] == ' '))
         {
           /* Get the length of the key */
-          keylen = (size_t) strtoul(buf->data + 2, &end, 10);
-          if (keylen == (size_t) ULONG_MAX || *end != '\0')
-            return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL,
+          err = svn_cstring_strtoui64(&ui64, buf->data + 2,
+                                      0, APR_SIZE_MAX, 10);
+          if (err)
+            return svn_error_create(SVN_ERR_MALFORMED_FILE, err,
                                     _("Serialized hash malformed"));
+          keylen = (apr_size_t)ui64;
 
           /* Now read that much into a buffer. */
           keybuf = apr_palloc(iterpool, keylen + 1);
@@ -230,11 +239,16 @@ hash_write(apr_hash_t *hash, apr_hash_t *oldhash, svn_stream_t *stream,
             continue;
         }
 
+      if (item->klen < 0)
+        return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL,
+                                _("Cannot serialize negative length"));
+
       /* Write it out. */
       SVN_ERR(svn_stream_printf(stream, subpool,
-                                "K %" APR_SSIZE_T_FMT "\n%s\n"
+                                "K %" APR_SIZE_T_FMT "\n%s\n"
                                 "V %" APR_SIZE_T_FMT "\n",
-                                item->klen, (const char *) item->key,
+                                (apr_size_t) item->klen,
+                                (const char *) item->key,
                                 valstr->len));
       len = valstr->len;
       SVN_ERR(svn_stream_write(stream, valstr->data, &len));
@@ -501,31 +515,28 @@ svn_hash_from_cstring_keys(apr_hash_t **hash_p,
     {
       const char *key =
         apr_pstrdup(pool, APR_ARRAY_IDX(keys, i, const char *));
-      apr_hash_set(hash, key, APR_HASH_KEY_STRING, key);
+      svn_hash_sets(hash, key, key);
     }
   *hash_p = hash;
   return SVN_NO_ERROR;
 }
 
 
-svn_error_t *
-svn_hash__clear(apr_hash_t *hash, apr_pool_t *pool)
+#if !APR_VERSION_AT_LEAST(1, 3, 0)
+void
+svn_hash__clear(apr_hash_t *hash)
 {
-#if APR_VERSION_AT_LEAST(1, 3, 0)
-  apr_hash_clear(hash);
-#else
   apr_hash_index_t *hi;
   const void *key;
   apr_ssize_t klen;
 
-  for (hi = apr_hash_first(pool, hash); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(NULL, hash); hi; hi = apr_hash_next(hi))
     {
       apr_hash_this(hi, &key, &klen, NULL);
       apr_hash_set(hash, key, klen, NULL);
     }
-#endif
-  return SVN_NO_ERROR;
 }
+#endif
 
 
 
@@ -538,7 +549,7 @@ svn_hash__get_cstring(apr_hash_t *hash,
 {
   if (hash)
     {
-      const char *value = apr_hash_get(hash, key, APR_HASH_KEY_STRING);
+      const char *value = svn_hash_gets(hash, key);
       return value ? value : default_value;
     }
 
@@ -565,20 +576,16 @@ svn_hash__get_bool(apr_hash_t *hash, const char *key,
 
 /*** Optimized hash function ***/
 
-/* Optimized version of apr_hashfunc_default in APR 1.4.5 and earlier.
- * It assumes that the CPU has 32-bit multiplications with high throughput
- * of at least 1 operation every 3 cycles. Latency is not an issue. Another
- * optimization is a mildly unrolled main loop and breaking the dependency
- * chain within the loop.
- *
- * Note that most CPUs including Intel Atom, VIA Nano, ARM feature the
- * assumed pipelined multiplication circuitry. They can do one MUL every
- * or every other cycle.
- *
- * The performance is ultimately limited by the fact that most CPUs can
- * do only one LOAD and only one BRANCH operation per cycle. The best we
- * can do is to process one character per cycle - provided the processor
- * is wide enough to do 1 LOAD, COMPARE, BRANCH, MUL and ADD per cycle.
+/* apr_hashfunc_t optimized for the key that we use in SVN: paths and 
+ * property names.  Its primary goal is speed for keys of known length.
+ * 
+ * Since strings tend to spawn large value spaces (usually differ in many
+ * bits with differences spanning a larger section of the key), we can be
+ * quite sloppy extracting a hash value.  The more keys there are in a
+ * hash container, the more bits of the value returned by this function
+ * will be used.  For a small number of string keys, choosing bits from any 
+ * any fix location close to the tail of those keys would usually be good
+ * enough to prevent high collision rates.
  */
 static unsigned int
 hashfunc_compatible(const char *char_key, apr_ssize_t *klen)
@@ -589,37 +596,29 @@ hashfunc_compatible(const char *char_key, apr_ssize_t *klen)
     apr_ssize_t i;
 
     if (*klen == APR_HASH_KEY_STRING)
-      {
-        for (p = key; ; p+=4)
-          {
-            unsigned int new_hash = hash * 33 * 33 * 33 * 33;
-            if (!p[0]) break;
-            new_hash += p[0] * 33 * 33 * 33;
-            if (!p[1]) break;
-            new_hash += p[1] * 33 * 33;
-            if (!p[2]) break;
-            new_hash += p[2] * 33;
-            if (!p[3]) break;
-            hash = new_hash + p[3];
-          }
-        for (; *p; p++)
-            hash = hash * 33 + *p;
+      *klen = strlen(char_key);
 
-        *klen = p - key;
-      }
-    else
+#if SVN_UNALIGNED_ACCESS_IS_OK
+    for (p = key, i = *klen; i >= 4; i-=4, p+=4)
       {
-        for (p = key, i = *klen; i >= 4; i-=4, p+=4)
-          {
-            hash = hash * 33 * 33 * 33 * 33
-                 + p[0] * 33 * 33 * 33
-                 + p[1] * 33 * 33
-                 + p[2] * 33
-                 + p[3];
-          }
-        for (; i; i--, p++)
-            hash = hash * 33 + *p;
+        apr_uint32_t chunk = *(apr_uint32_t *)p;
+
+        /* the ">> 17" part gives upper bits in the chunk a chance to make
+           some impact as well */
+        hash = hash * 33 * 33 * 33 * 33 + chunk + (chunk >> 17);
       }
+#else
+    for (p = key, i = *klen; i >= 4; i-=4, p+=4)
+      {
+        hash = hash * 33 * 33 * 33 * 33
+              + p[0] * 33 * 33 * 33
+              + p[1] * 33 * 33
+              + p[2] * 33
+              + p[3];
+      }
+#endif
+    for (; i; i--, p++)
+        hash = hash * 33 + *p;
 
     return hash;
 }

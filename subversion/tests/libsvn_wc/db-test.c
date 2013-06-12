@@ -180,7 +180,7 @@ static const char * const TESTING_DATA = (
       the value 1 is just 'good enough' to make the nodes WORKING nodes. */
   "insert into nodes values ("
   "  1, 'I', 1, '', 2, 'some/dir', 2, 'normal',"
-  "  0, null, 'dir', '()', 'immediates', null, null, 2, " TIME_2s ", '" AUTHOR_2 "',"
+  "  null, null, 'dir', '()', 'immediates', null, null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  null, null, null, null, null);"
 
    /* I'm not sure what the working J is supposed to represent.  It
@@ -189,39 +189,39 @@ static const char * const TESTING_DATA = (
       implies they are children of a copied J. */
   "insert into nodes values ("
   "  1, 'J', 1, '', null, null, null, 'normal',"
-  "  0, null, 'dir', '()', 'immediates', null, null, null, null, null,"
+  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-a', 1, 'J', null, null, null, 'normal',"
-  "  0, null, 'file', '()', null, null, null, null, null, null,"
+  "  null, null, 'file', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-b', 2, 'J', 2, 'some/dir', 2, 'normal',"
-  "  0, null, 'dir', '()', 'infinity', null, null, 2, " TIME_2s ", '" AUTHOR_2 "',"
+  "  null, null, 'dir', '()', 'infinity', null, null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-b/J-b-a', 3, 'J/J-b', 2, 'another/dir', 2, 'normal',"
-  "  0, null, 'dir', '()', 'infinity', null, null, 2, " TIME_2s ", '" AUTHOR_2 "',"
+  "  null, null, 'dir', '()', 'infinity', null, null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-b/J-b-b', 2, 'J/J-b', null, null, 2, 'normal',"
-  "  0, null, 'file', '()', null, null, null, null, null, null,"
+  "  null, null, 'file', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-c', 1, 'J', null, null, null, 'normal',"
-  "  0, null, 'dir', '()', null, null, null, null, null, null,"
+  "  null, null, 'dir', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-c/J-c-a', 1, 'J/J-c', null, null, null, 'normal',"
-  "  0, null, 'dir', '()', null, null, null, null, null, null,"
+  "  null, null, 'dir', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-c', 2, 'J', null, null, null, 'base-deleted',"
-  "  0, null, 'dir', '()', null, null, null, null, null, null,"
+  "  null, null, 'dir', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-c/J-c-a', 2, 'J/J-c', null, null, null, 'base-deleted',"
-  "  0, null, 'dir', '()', null, null, null, null, null, null,"
+  "  null, null, 'dir', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-d', 2, 'J', 2, 'moved/file', 2, 'normal',"
@@ -229,79 +229,79 @@ static const char * const TESTING_DATA = (
   "  10, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'moved/file', 0, 'moved', 2, 'moved/file', 2, 'normal',"
-  "  0, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
+  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  10, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'moved/file', 2, 'moved', 2, 'moved/file', 2, 'base-deleted',"
-  "  0, 'J/J-d', 'file', '()', null, null, null, null, null, null,"
+  "  null, 'J/J-d', 'file', '()', null, null, null, null, null, null,"
   "  10, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e', 1, 'J', null, null, null, 'normal',"
-  "  0, null, 'dir', '()', null, null, null, null, null, null,"
+  "  null, null, 'dir', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e/J-e-a', 1, 'J/J-e', null, null, null, 'normal',"
-  "  0, null, 'file', '()', null, null, null, null, null, null,"
+  "  null, null, 'file', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e/J-e-b', 1, 'J/J-e', null, null, null, 'normal',"
-  "  0, null, 'dir', '()', null, null, null, null, null, null,"
+  "  null, null, 'dir', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e', 2, 'J', null, null, null, 'base-deleted',"
-  "  0, null, 'dir', '()', null, null, null, null, null, null,"
+  "  null, null, 'dir', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e/J-e-a', 2, 'J/J-e', null, null, null, 'base-deleted',"
-  "  0, null, 'file', '()', null, null, null, null, null, null,"
+  "  null, null, 'file', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e/J-e-b', 2, 'J/J-e', null, null, null, 'base-deleted',"
-  "  0, null, 'dir', '()', null, null, null, null, null, null,"
+  "  null, null, 'dir', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e/J-e-b/Jeba', 1, 'J/J-e/J-e-b', null, null, null, 'base-deleted',"
-  "  0, null, 'file', '()', null, null, null, null, null, null,"
+  "  null, null, 'file', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-f', 1, 'J', null, null, null, 'normal',"
-  "  0, null, 'dir', '()', 'immediates', null, null, null, null, null,"
+  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-f/J-f-a', 1, 'J/J-f', null, null, null, 'base-deleted',"
-  "  0, null, 'dir', '()', 'immediates', null, null, null, null, null,"
+  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'K', 1, '', null, null, null, 'base-deleted',"
-  "  0, null, 'dir', '()', null, null, null, null, null, null,"
+  "  null, null, 'dir', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'K/K-a', 1, 'K', null, null, null, 'base-deleted',"
-  "  0, null, 'file', '()', null, null, null, null, null, null,"
+  "  null, null, 'file', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'K/K-b', 1, 'K', null, null, null, 'base-deleted',"
-  "  0, null, 'file', '()', null, null, null, null, null, null,"
+  "  null, null, 'file', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'L', 1, '', null, null, null, 'normal',"
-  "  0, null, 'dir', '()', 'immediates', null, null, null, null, null,"
+  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'L/L-a', 1, 'L', null, null, null, 'normal',"
-  "  0, null, 'dir', '()', 'immediates', null, null, null, null, null,"
+  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'L/L-a/L-a-a', 1, 'L/L-a', null, null, null, 'normal',"
-  "  0, null, 'dir', '()', 'immediates', null, null, null, null, null,"
+  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'L/L-a', 2, 'L', null, null, null, 'base-deleted',"
-  "  0, null, 'dir', '()', 'immediates', null, null, null, null, null,"
+  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'L/L-a/L-a-a', 2, 'L/L-a', null, null, null, 'base-deleted',"
-  "  0, null, 'dir', '()', 'immediates', null, null, null, null, null,"
+  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'other/place', 2, 'other', null, null, null, 'normal',"
@@ -309,7 +309,7 @@ static const char * const TESTING_DATA = (
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'other/place/J-e-a', 2, 'other/place', null, null, null, 'normal',"
-  "  0, null, 'dir', '()', 'immediates', null, null, null, null, null,"
+  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'other/place/J-e-b', 2, 'other/place', null, null, null, 'normal',"
@@ -342,6 +342,8 @@ create_open(svn_wc__db_t **db,
                                   pool));
   SVN_ERR(svn_wc__db_open(db, NULL, FALSE, TRUE, pool, pool));
   SVN_ERR(svn_test__create_fake_wc(*local_abspath, TESTING_DATA, pool, pool));
+
+  svn_test_add_dir_cleanup(*local_abspath);
 
   return SVN_NO_ERROR;
 }
@@ -378,7 +380,7 @@ static svn_error_t *
 test_getting_info(apr_pool_t *pool)
 {
   const char *local_abspath;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_wc__db_status_t status;
   svn_revnum_t revision;
   const char *repos_relpath;
@@ -408,7 +410,7 @@ test_getting_info(apr_pool_t *pool)
             &update_root,
             db, local_abspath,
             pool, pool));
-  SVN_TEST_ASSERT(kind == svn_kind_dir);
+  SVN_TEST_ASSERT(kind == svn_node_dir);
   SVN_TEST_ASSERT(status == svn_wc__db_status_normal);
   SVN_TEST_ASSERT(revision == 1);
   SVN_TEST_STRING_ASSERT(repos_relpath, "");
@@ -421,7 +423,7 @@ test_getting_info(apr_pool_t *pool)
   SVN_TEST_ASSERT(checksum == NULL);
   SVN_TEST_ASSERT(target == NULL);
   SVN_TEST_ASSERT(lock == NULL);
-  SVN_TEST_ASSERT(had_props == FALSE);
+  SVN_TEST_ASSERT(!had_props);
   SVN_TEST_ASSERT(apr_hash_count(props) == 0);
   /* SVN_TEST_ASSERT(update_root == ???); */
 
@@ -434,7 +436,7 @@ test_getting_info(apr_pool_t *pool)
             NULL, NULL, NULL,
             db, svn_dirent_join(local_abspath, "A", pool),
             pool, pool));
-  SVN_TEST_ASSERT(kind == svn_kind_file);
+  SVN_TEST_ASSERT(kind == svn_node_file);
   SVN_TEST_STRING_ASSERT(SHA1_1, svn_checksum_to_cstring(checksum, pool));
   SVN_TEST_STRING_ASSERT(repos_relpath, "A");
   SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_ONE);
@@ -449,7 +451,7 @@ test_getting_info(apr_pool_t *pool)
             NULL, NULL, NULL,
             db, svn_dirent_join(local_abspath, "B", pool),
             pool, pool));
-  SVN_TEST_ASSERT(kind == svn_kind_symlink);
+  SVN_TEST_ASSERT(kind == svn_node_symlink);
   SVN_TEST_ASSERT(status == svn_wc__db_status_excluded);
   SVN_TEST_ASSERT(!SVN_IS_VALID_REVNUM(revision));
   SVN_TEST_STRING_ASSERT(repos_relpath, "B");
@@ -472,7 +474,7 @@ test_getting_info(apr_pool_t *pool)
             NULL, NULL, NULL, NULL,
             db, svn_dirent_join(local_abspath, "C", pool),
             pool, pool));
-  SVN_TEST_ASSERT(kind == svn_kind_unknown);
+  SVN_TEST_ASSERT(kind == svn_node_unknown);
   SVN_TEST_ASSERT(status == svn_wc__db_status_server_excluded);
 
   /* Test: not-present presence. */
@@ -546,8 +548,7 @@ test_getting_info(apr_pool_t *pool)
             NULL, NULL, NULL, NULL,
             db, svn_dirent_join(local_abspath, "missing-file", pool),
             pool, pool);
-  SVN_TEST_ASSERT(err != NULL && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND);
-  svn_error_clear(err);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_WC_PATH_NOT_FOUND);
 
   return SVN_NO_ERROR;
 }
@@ -557,12 +558,12 @@ static svn_error_t *
 validate_node(svn_wc__db_t *db,
               const char *local_abspath,
               const char *relpath,
-              svn_kind_t expected_kind,
+              svn_node_kind_t expected_kind,
               svn_wc__db_status_t expected_status,
               apr_pool_t *scratch_pool)
 {
   const char *path = svn_dirent_join(local_abspath, relpath, scratch_pool);
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_wc__db_status_t status;
   apr_hash_t *props;
   const svn_string_t *value;
@@ -692,7 +693,7 @@ test_inserting_nodes(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_base_add_excluded_node(
             db, svn_dirent_join(local_abspath, "N/N-b", pool),
             "N/N-b", ROOT_ONE, UUID_ONE, 3,
-            svn_kind_file, svn_wc__db_status_server_excluded,
+            svn_node_file, svn_wc__db_status_server_excluded,
             NULL, NULL,
             pool));
 
@@ -700,7 +701,7 @@ test_inserting_nodes(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_base_add_excluded_node(
             db, svn_dirent_join(local_abspath, "P", pool),
             "P", ROOT_ONE, UUID_ONE, 3,
-            svn_kind_dir, svn_wc__db_status_excluded,
+            svn_node_dir, svn_wc__db_status_excluded,
             NULL, NULL,
             pool));
 
@@ -708,7 +709,7 @@ test_inserting_nodes(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_base_add_not_present_node(
             db, svn_dirent_join(local_abspath, "Q", pool),
             "Q", ROOT_ONE, UUID_ONE, 3,
-            svn_kind_symlink,
+            svn_node_symlink,
             NULL, NULL,
             pool));
 
@@ -716,36 +717,36 @@ test_inserting_nodes(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_base_add_excluded_node(
             db, svn_dirent_join(local_abspath, "R", pool),
             "R", ROOT_ONE, UUID_ONE, 3,
-            svn_kind_unknown, svn_wc__db_status_server_excluded,
+            svn_node_unknown, svn_wc__db_status_server_excluded,
             NULL, NULL,
             pool));
 
 
   /* Are all the nodes where we expect them to be? */
   SVN_ERR(validate_node(db, local_abspath, "N",
-                        svn_kind_dir, svn_wc__db_status_normal,
+                        svn_node_dir, svn_wc__db_status_normal,
                         pool));
   SVN_ERR(validate_node(db, local_abspath, "N/N-a",
-                        svn_kind_file, svn_wc__db_status_normal,
+                        svn_node_file, svn_wc__db_status_normal,
                         pool));
   SVN_ERR(validate_node(db, local_abspath, "N/N-b",
-                        svn_kind_file,
+                        svn_node_file,
                         svn_wc__db_status_server_excluded,
                         pool));
   SVN_ERR(validate_node(db, local_abspath, "N/N-c",
-                        svn_kind_unknown, svn_wc__db_status_incomplete,
+                        svn_node_unknown, svn_wc__db_status_incomplete,
                         pool));
   SVN_ERR(validate_node(db, local_abspath, "O",
-                        svn_kind_symlink, svn_wc__db_status_normal,
+                        svn_node_symlink, svn_wc__db_status_normal,
                         pool));
   SVN_ERR(validate_node(db, local_abspath, "P",
-                        svn_kind_dir, svn_wc__db_status_excluded,
+                        svn_node_dir, svn_wc__db_status_excluded,
                         pool));
   SVN_ERR(validate_node(db, local_abspath, "Q",
-                        svn_kind_symlink, svn_wc__db_status_not_present,
+                        svn_node_symlink, svn_wc__db_status_not_present,
                         pool));
   SVN_ERR(validate_node(db, local_abspath, "R",
-                        svn_kind_unknown,
+                        svn_node_unknown,
                         svn_wc__db_status_server_excluded,
                         pool));
 
@@ -801,7 +802,7 @@ static svn_error_t *
 test_working_info(apr_pool_t *pool)
 {
   const char *local_abspath;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_wc__db_status_t status;
   svn_revnum_t revision;
   const char *repos_relpath;
@@ -845,7 +846,7 @@ test_working_info(apr_pool_t *pool)
             db, svn_dirent_join(local_abspath, "I", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_added);
-  SVN_TEST_ASSERT(kind == svn_kind_dir);
+  SVN_TEST_ASSERT(kind == svn_node_dir);
   SVN_TEST_ASSERT(revision == SVN_INVALID_REVNUM);
   SVN_TEST_ASSERT(repos_relpath == NULL);
   SVN_TEST_ASSERT(repos_root_url == NULL);
@@ -862,12 +863,12 @@ test_working_info(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(original_root_url, ROOT_TWO);
   SVN_TEST_STRING_ASSERT(original_uuid, UUID_TWO);
   SVN_TEST_ASSERT(original_revnum == 2);
-  SVN_TEST_ASSERT(had_props == FALSE);
-  SVN_TEST_ASSERT(props_mod == FALSE);
-  SVN_TEST_ASSERT(have_base == TRUE);
+  SVN_TEST_ASSERT(!had_props);
+  SVN_TEST_ASSERT(!props_mod);
+  SVN_TEST_ASSERT(have_base);
   /* SVN_TEST_ASSERT(have_more_work...); */
-  SVN_TEST_ASSERT(have_work == TRUE);
-  SVN_TEST_ASSERT(conflicted == FALSE);
+  SVN_TEST_ASSERT(have_work);
+  SVN_TEST_ASSERT(!conflicted);
   SVN_TEST_ASSERT(lock == NULL);
   /* SVN_TEST_ASSERT(last_mod_time...); */
   /* SVN_TEST_ASSERT(op_root...); */
@@ -896,14 +897,14 @@ test_pdh(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_base_add_excluded_node(
             db, svn_dirent_join(local_abspath, "sub", pool),
             "sub", ROOT_ONE, UUID_ONE, 1,
-            svn_kind_file, svn_wc__db_status_server_excluded,
+            svn_node_file, svn_wc__db_status_server_excluded,
             NULL, NULL,
             pool));
 
   SVN_ERR(svn_wc__db_base_add_excluded_node(
             db, svn_dirent_join(local_abspath, "sub/A", pool),
             "sub/A", ROOT_ONE, UUID_ONE, 1,
-            svn_kind_file, svn_wc__db_status_server_excluded,
+            svn_node_file, svn_wc__db_status_server_excluded,
             NULL, NULL,
             pool));
 
@@ -926,6 +927,8 @@ test_scan_addition(apr_pool_t *pool)
   const char *original_uuid;
   svn_revnum_t original_revision;
   const char *moved_from_abspath;
+  const char *move_op_root_abspath;
+  const char *move_op_root_src;
   const char *delete_op_root_abspath;
 
   SVN_ERR(create_open(&db, &local_abspath, "test_scan_addition", pool));
@@ -935,7 +938,7 @@ test_scan_addition(apr_pool_t *pool)
             &status, &op_root_abspath,
             &repos_relpath, &repos_root_url, &repos_uuid,
             &original_repos_relpath, &original_root_url, &original_uuid,
-            &original_revision, NULL, NULL,
+            &original_revision,
             db, svn_dirent_join(local_abspath, "J", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_added);
@@ -953,7 +956,7 @@ test_scan_addition(apr_pool_t *pool)
             &status, &op_root_abspath,
             &repos_relpath, &repos_root_url, &repos_uuid,
             &original_repos_relpath, &original_root_url, &original_uuid,
-            &original_revision, NULL, NULL,
+            &original_revision,
             db, svn_dirent_join(local_abspath, "J/J-a", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_added);
@@ -971,7 +974,14 @@ test_scan_addition(apr_pool_t *pool)
             &status, &op_root_abspath,
             &repos_relpath, &repos_root_url, &repos_uuid,
             &original_repos_relpath, &original_root_url, &original_uuid,
-            &original_revision, &moved_from_abspath, &delete_op_root_abspath,
+            &original_revision,
+            db, svn_dirent_join(local_abspath, "J/J-d", pool),
+            pool, pool));
+  SVN_ERR(svn_wc__db_scan_moved(
+            &moved_from_abspath,
+            &move_op_root_abspath,
+            &move_op_root_src,
+            &delete_op_root_abspath,
             db, svn_dirent_join(local_abspath, "J/J-d", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_moved_here);
@@ -979,6 +989,10 @@ test_scan_addition(apr_pool_t *pool)
                                    op_root_abspath, pool));
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "moved/file",
                                    moved_from_abspath, pool));
+  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-d",
+                                   move_op_root_abspath, pool));
+  SVN_TEST_ASSERT(validate_abspath(local_abspath, "moved/file",
+                                   move_op_root_src, pool));
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "moved/file",
                                    delete_op_root_abspath, pool));
   SVN_TEST_STRING_ASSERT(repos_relpath, "J/J-d");
@@ -994,7 +1008,7 @@ test_scan_addition(apr_pool_t *pool)
             &status, &op_root_abspath,
             &repos_relpath, &repos_root_url, &repos_uuid,
             &original_repos_relpath, &original_root_url, &original_uuid,
-            &original_revision, NULL, NULL,
+            &original_revision,
             db, svn_dirent_join(local_abspath, "J/J-b", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_copied);
@@ -1013,7 +1027,7 @@ test_scan_addition(apr_pool_t *pool)
             &status, &op_root_abspath,
             &repos_relpath, &repos_root_url, &repos_uuid,
             &original_repos_relpath, &original_root_url, &original_uuid,
-            &original_revision, NULL, NULL,
+            &original_revision,
             db, svn_dirent_join(local_abspath, "J/J-b/J-b-a", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_copied);
@@ -1032,7 +1046,7 @@ test_scan_addition(apr_pool_t *pool)
             &status, &op_root_abspath,
             &repos_relpath, &repos_root_url, &repos_uuid,
             &original_repos_relpath, &original_root_url, &original_uuid,
-            &original_revision, NULL, NULL,
+            &original_revision,
             db, svn_dirent_join(local_abspath, "J/J-b/J-b-b", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_copied);
@@ -1447,7 +1461,7 @@ test_externals_store(apr_pool_t *pool)
 
   {
     svn_wc__db_status_t status;
-    svn_kind_t kind;
+    svn_node_kind_t kind;
     const char *repos_root_url;
     const char *repos_uuid;
     const char *defining_abspath;
@@ -1464,7 +1478,7 @@ test_externals_store(apr_pool_t *pool)
                                      pool, pool));
 
     SVN_TEST_ASSERT(status == svn_wc__db_status_normal);
-    SVN_TEST_ASSERT(kind == svn_kind_file);
+    SVN_TEST_ASSERT(kind == svn_node_file);
     SVN_TEST_STRING_ASSERT(repos_root_url, "svn://some-repos/svn");
     SVN_TEST_STRING_ASSERT(repos_uuid, "not-a-uuid");
     SVN_TEST_STRING_ASSERT(defining_abspath, subdir);
@@ -1495,7 +1509,7 @@ test_externals_store(apr_pool_t *pool)
                                      pool, pool));
 
     SVN_TEST_ASSERT(status == svn_wc__db_status_normal);
-    SVN_TEST_ASSERT(kind == svn_kind_dir);
+    SVN_TEST_ASSERT(kind == svn_node_dir);
     SVN_TEST_STRING_ASSERT(repos_root_url, "svn://other-repos/nsv");
     SVN_TEST_STRING_ASSERT(repos_uuid, "no-uuid-either");
     SVN_TEST_STRING_ASSERT(defining_abspath, subdir);

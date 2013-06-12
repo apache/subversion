@@ -855,12 +855,7 @@ def lock_switched_files(sbox):
   expected_status.tweak('A/D/gamma', 'A/B/lambda', writelocked='K')
 
   # In WC-NG locks are kept per working copy, not per file
-  if svntest.main.wc_is_singledb(wc_dir):
-    # In single-db you see these files are locked locally
-    expected_status.tweak('A/B/E/alpha', 'iota', writelocked='K')
-  else:
-    # In multi-db you see these files are not locked in the right dir
-    expected_status.tweak('A/B/E/alpha', 'iota', writelocked='O')
+  expected_status.tweak('A/B/E/alpha', 'iota', writelocked='K')
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -1437,15 +1432,10 @@ def lock_twice_in_one_wc(sbox):
   os.chmod(mu2_path, 0700)
   svntest.main.file_append(mu2_path, "Updated text")
 
-  if svntest.main.wc_is_singledb(wc_dir):
-    # Commit will just succeed as the DB owns the lock. It's a user decision
-    # to commit the other target instead of the one originally locked
-    expected_err = []
-  else:
-    # Commit should fail because it is locked in the other location
-    expected_err = '.*(([Nn]o)|(Server)).*[lL]ock.*'
+  # Commit will just succeed as the DB owns the lock. It's a user decision
+  # to commit the other target instead of the one originally locked
 
-  svntest.actions.run_and_verify_svn(None, None, expected_err,
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'commit', mu2_path, '-m', '')
 
 #----------------------------------------------------------------------
@@ -1484,9 +1474,12 @@ def lock_path_not_in_head(sbox):
   # svn: In file '..\..\..\subversion\libsvn_ra_serf\util.c' line 1120:
   #  assertion failed (ctx->status_code)
   svntest.actions.run_and_verify_svn2(None, None, expected_lock_fail_err_re,
-                                      0, 'lock', D_path)
-  svntest.actions.run_and_verify_svn2(None, None, expected_lock_fail_err_re,
                                       0, 'lock', lambda_path)
+
+  expected_err = 'svn: E155008: The node \'.*D\' is not a file'
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'lock', D_path)
+
 
 #----------------------------------------------------------------------
 def verify_path_escaping(sbox):
@@ -1507,7 +1500,7 @@ def verify_path_escaping(sbox):
 
   svntest.main.run_svn(None, 'add', file1, file2, file3)
 
-  svntest.main.run_svn(None, 'ci', '-m', 'commit', wc_dir)
+  sbox.simple_commit(message='commit')
 
   svntest.main.run_svn(None, 'lock', '-m', 'lock 1', file1)
   svntest.main.run_svn(None, 'lock', '-m', 'lock 2', sbox.repo_url + '/file%20%232')
@@ -1520,7 +1513,7 @@ def verify_path_escaping(sbox):
       'file #1'           : Item(status='  ', writelocked='K', wc_rev='2'),
       'file #2'           : Item(status='  ', writelocked='O', wc_rev='2'),
       'file #3'           : Item(status='  ', writelocked='B', wc_rev='2')
-    });
+    })
 
   # Make sure the file locking is reported correctly
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -1718,7 +1711,185 @@ def lock_invalid_token(sbox):
                                       ".*scheme.*'opaquelocktoken'", 0,
                                       'lock', '-m', '', file_path)
 
+@Issue(3105)
+def lock_multi_wc(sbox):
+  "obtain locks in multiple working copies in one go"
 
+  sbox.build()
+
+  sbox2 = sbox.clone_dependent(copy_wc=True)
+
+  wc_name = os.path.basename(sbox.wc_dir)
+  wc2_name = os.path.basename(sbox2.wc_dir)
+
+  expected_output = svntest.verify.UnorderedOutput([
+    '\'%s\' locked by user \'jrandom\'.\n' % os.path.join(wc_name, 'iota'),
+    '\'%s\' locked by user \'jrandom\'.\n' % os.path.join(wc2_name, 'A', 'mu'),
+  ])
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'lock', sbox.ospath('iota'),
+                                             sbox2.ospath('A/mu'))
+
+  expected_output = svntest.verify.UnorderedOutput([
+    '\'%s\' unlocked.\n' % os.path.join(wc_name, 'iota'),
+    '\'%s\' unlocked.\n' % os.path.join(wc2_name, 'A', 'mu'),
+  ])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'unlock', sbox.ospath('iota'),
+                                               sbox2.ospath('A/mu'))
+
+@Issue(3378)
+def locks_stick_over_switch(sbox):
+  "locks are kept alive over switching"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', sbox.ospath('A'), repo_url + '/AA',
+                                     '-m', '')
+
+  expected_output = svntest.verify.UnorderedOutput([
+    '\'iota\' locked by user \'jrandom\'.\n',
+    '\'%s\' locked by user \'jrandom\'.\n' % os.path.join('A', 'D', 'H', 'chi'),
+    '\'%s\' locked by user \'jrandom\'.\n' % os.path.join('A', 'mu'),
+  ])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'lock', sbox.ospath('A/D/H/chi'),
+                                             sbox.ospath('A/mu'),
+                                             sbox.ospath('iota'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/H/chi', 'A/mu', 'iota', writelocked='K')
+
+  # Make sure the file is still locked
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_output = svntest.wc.State(wc_dir, {
+  })
+
+  expected_status.tweak(wc_rev=2)
+  expected_status.tweak('', wc_rev=1)
+  expected_status.tweak('iota', writelocked='K', wc_rev=1)
+
+  switched_status = expected_status.copy()
+  switched_status.tweak(writelocked=None)
+  switched_status.tweak('iota', writelocked='K')
+  switched_status.tweak('A', switched='S')
+
+  svntest.actions.run_and_verify_switch(wc_dir, sbox.ospath('A'),
+                                        repo_url + '/AA',
+                                        expected_output, None, switched_status)
+
+  # And now switch back to verify that the locks reappear
+  expected_output = svntest.wc.State(wc_dir, {
+  })
+  svntest.actions.run_and_verify_switch(wc_dir, sbox.ospath('A'),
+                                        repo_url + '/A',
+                                        expected_output, None, expected_status)
+
+@Issue(4304)
+def lock_unlock_deleted(sbox):
+  "lock/unlock a deleted file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', sbox.ospath('A/mu'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='D ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_output = '\'mu\' locked by user \'jrandom\'.'
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'lock', sbox.ospath('A/mu'))
+  expected_status.tweak('A/mu', writelocked='K')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_output = '\'mu\' unlocked.'
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'unlock', sbox.ospath('A/mu'))
+  expected_status.tweak('A/mu', writelocked=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+@Issue(4369)
+def commit_stolen_lock(sbox):
+  "commit with a stolen lock"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_append('A/mu', 'zig-zag')
+  sbox.simple_lock('A/mu')
+
+  expected_output = '\'mu\' locked by user \'jrandom\'.'
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'lock', '--force',
+                                     sbox.repo_url + '/A/mu')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='M ', writelocked='T')
+  err_re = "(.*E160037: Cannot verify lock on path '/A/mu')|" + \
+           "(.*E160038: '/.*/A/mu': no lock token available)"
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        [],
+                                        expected_status,
+                                        err_re,
+                                        wc_dir)
+
+# When removing directories, the locks of contained files were not 
+# correctly removed from the working copy database, thus they later 
+# magically reappeared when new files or directories with the same
+# pathes were added.
+@Issue(4364)
+def drop_locks_on_parent_deletion(sbox):
+  "drop locks when the parent is deleted"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # lock some files, and remove them.
+  sbox.simple_lock('A/B/lambda')
+  sbox.simple_lock('A/B/E/alpha')
+  sbox.simple_lock('A/B/E/beta')
+  sbox.simple_rm('A/B')
+  
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove_subtree('A/B')
+  
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        [],
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+
+  # now re-add entities to the deleted pathes.
+  sbox.simple_mkdir('A/B')
+  sbox.simple_add_text('new file replacing old file', 'A/B/lambda')
+  sbox.simple_add_text('file replacing former dir', 'A/B/F')
+  # The bug also resurrected locks on directories when their path
+  # matched a former file.
+  sbox.simple_mkdir('A/B/E', 'A/B/E/alpha')
+    
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B',
+						'A/B/E',
+						'A/B/E/alpha',
+						'A/B/F',
+						'A/B/lambda',
+						wc_rev='3')
+  expected_status.remove('A/B/E/beta')
+   
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        [],
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+	
+										
 ########################################################################
 # Run the tests
 
@@ -1767,6 +1938,11 @@ test_list = [ None,
               update_locked_deleted,
               block_unlock_if_pre_unlock_hook_fails,
               lock_invalid_token,
+              lock_multi_wc,
+              locks_stick_over_switch,
+              lock_unlock_deleted,
+              commit_stolen_lock,
+              drop_locks_on_parent_deletion,
             ]
 
 if __name__ == '__main__':

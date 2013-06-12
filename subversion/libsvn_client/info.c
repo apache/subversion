@@ -142,7 +142,7 @@ push_dir_info(svn_ra_session_t *ra_session,
       child_pathrev = svn_client__pathrev_join_relpath(pathrev, name, subpool);
       fs_path = svn_client__pathrev_fspath(child_pathrev, subpool);
 
-      lock = apr_hash_get(locks, fs_path, APR_HASH_KEY_STRING);
+      lock = svn_hash_gets(locks, fs_path);
 
       SVN_ERR(build_info_from_dirent(&info, the_ent, lock, child_pathrev,
                                      subpool));
@@ -382,8 +382,8 @@ svn_client_get_wc_root(const char **wcroot_abspath,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
-  return svn_wc__get_wc_root(wcroot_abspath, ctx->wc_ctx, local_abspath,
-                             result_pool, scratch_pool);
+  return svn_wc__get_wcroot(wcroot_abspath, ctx->wc_ctx, local_abspath,
+                            result_pool, scratch_pool);
 }
 
 

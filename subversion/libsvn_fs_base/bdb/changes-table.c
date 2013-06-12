@@ -25,6 +25,7 @@
 #include <apr_hash.h>
 #include <apr_tables.h>
 
+#include "svn_hash.h"
 #include "svn_fs.h"
 #include "svn_pools.h"
 #include "svn_path.h"
@@ -132,7 +133,7 @@ fold_change(apr_hash_t *changes,
   svn_fs_path_change2_t *old_change, *new_change;
   const char *path;
 
-  if ((old_change = apr_hash_get(changes, change->path, APR_HASH_KEY_STRING)))
+  if ((old_change = svn_hash_gets(changes, change->path)))
     {
       /* This path already exists in the hash, so we have to merge
          this change into the already existing one. */
@@ -244,7 +245,7 @@ fold_change(apr_hash_t *changes,
     }
 
   /* Add (or update) this path. */
-  apr_hash_set(changes, path, APR_HASH_KEY_STRING, new_change);
+  svn_hash_sets(changes, path, new_change);
 
   return SVN_NO_ERROR;
 }

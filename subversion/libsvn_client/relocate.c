@@ -100,13 +100,13 @@ validator_func(void *baton,
   if (! url_uuid)
     {
       apr_pool_t *sesspool = svn_pool_create(pool);
-      svn_ra_session_t *ra_session;
-      SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, url, NULL,
-                                                   NULL, FALSE, TRUE,
-                                                   b->ctx, sesspool));
+
       url_uuid = &APR_ARRAY_PUSH(uuids, struct url_uuid_t);
-      SVN_ERR(svn_ra_get_uuid2(ra_session, &(url_uuid->uuid), pool));
-      SVN_ERR(svn_ra_get_repos_root2(ra_session, &(url_uuid->root), pool));
+      SVN_ERR(svn_client_get_repos_root(&url_uuid->root,
+                                        &url_uuid->uuid,
+                                        url, b->ctx,
+                                        pool, sesspool));
+
       svn_pool_destroy(sesspool);
     }
 

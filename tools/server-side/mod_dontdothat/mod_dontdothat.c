@@ -584,7 +584,8 @@ dontdothat_insert_filters(request_rec *r)
 
       /* XXX is there a way to error out from this point?  Would be nice... */
 
-      err = svn_config_read2(&config, cfg->config_file, TRUE, FALSE, r->pool);
+      err = svn_config_read3(&config, cfg->config_file, TRUE,
+                             FALSE, TRUE, r->pool);
       if (err)
         {
           char buff[256];

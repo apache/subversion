@@ -107,15 +107,16 @@ typedef struct replay_context_t {
   const svn_delta_editor_t *editor;
   void *editor_baton;
 
-  /* current revision */
+  /* Path and revision used to filter replayed changes.  If
+     INCLUDE_PATH is non-NULL, REVISION is unnecessary and will not be
+     included in the replay REPORT.  (Because the REPORT is being
+     aimed an HTTP v2 revision resource.)  */
+  const char *include_path;
   svn_revnum_t revision;
 
   /* Information needed to create the replay report body */
   svn_revnum_t low_water_mark;
   svn_boolean_t send_deltas;
-
-  /* Cached report target url */
-  const char *report_target;
 
   /* Target and revision to fetch revision properties on */
   const char *revprop_target;
@@ -128,8 +129,9 @@ typedef struct replay_context_t {
   /* Keep a reference to the XML parser ctx to report any errors. */
   svn_ra_serf__xml_parser_t *parser_ctx;
 
-  /* The propfind for the revision properties of the current revision */
+  /* Handlers for the PROPFIND and REPORT for the current revision. */
   svn_ra_serf__handler_t *propfind_handler;
+  svn_ra_serf__handler_t *report_handler;
 
 } replay_context_t;
 
@@ -602,10 +604,22 @@ create_replay_body(serf_bucket_t **bkt,
                                     "xmlns:S", SVN_XML_NAMESPACE,
                                     NULL);
 
-  svn_ra_serf__add_tag_buckets(body_bkt,
-                               "S:revision",
-                               apr_ltoa(ctx->src_rev_pool, ctx->revision),
-                               alloc);
+  /* If we have a non-NULL include path, we add it to the body and
+     omit the revision; otherwise, the reverse. */
+  if (ctx->include_path)
+    {
+      svn_ra_serf__add_tag_buckets(body_bkt,
+                                   "S:include-path",
+                                   ctx->include_path,
+                                   alloc);
+    }
+  else
+    {
+      svn_ra_serf__add_tag_buckets(body_bkt,
+                                   "S:revision",
+                                   apr_ltoa(ctx->src_rev_pool, ctx->revision),
+                                   alloc);
+    }
   svn_ra_serf__add_tag_buckets(body_bkt,
                                "S:low-water-mark",
                                apr_ltoa(ctx->src_rev_pool, ctx->low_water_mark),
@@ -648,7 +662,6 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
   replay_ctx->revision = revision;
   replay_ctx->low_water_mark = low_water_mark;
   replay_ctx->send_deltas = send_deltas;
-  replay_ctx->report_target = report_target;
   replay_ctx->revs_props = apr_hash_make(replay_ctx->src_rev_pool);
 
   handler = apr_pcalloc(pool, sizeof(*handler));
@@ -676,12 +689,17 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
 
   /* This is only needed to handle errors during XML parsing. */
   replay_ctx->parser_ctx = parser_ctx;
+  replay_ctx->report_handler = handler; /* unused */
 
   svn_ra_serf__request_create(handler);
 
   err = svn_ra_serf__context_run_wait(&replay_ctx->done, session, pool);
 
-  SVN_ERR(err);
+  SVN_ERR(svn_error_compose_create(
+              svn_ra_serf__error_on_status(handler->sline.code,
+                                           handler->path,
+                                           handler->location),
+              err));
 
   return SVN_NO_ERROR;
 }
@@ -732,8 +750,38 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
   svn_revnum_t rev = start_revision;
   const char *report_target;
   int active_reports = 0;
+  const char *include_path;
 
   SVN_ERR(svn_ra_serf__report_resource(&report_target, session, NULL, pool));
+
+  /* Prior to 1.8, mod_dav_svn expect to get replay REPORT requests
+     aimed at the session URL.  But that's incorrect -- these reports
+     aren't about specific resources -- they are above revisions.  The
+     path-based filtering offered by this API is just that: a filter
+     applied to the full set of changes made in the revision.  As
+     such, the correct target for these REPORT requests is the "me
+     resource" (or, pre-http-v2, the default VCC).
+
+     Our server should have told us if it supported this protocol
+     correction.  If so, we aimed our report at the correct resource
+     and include the filtering path as metadata within the report
+     body.  Otherwise, we fall back to the pre-1.8 behavior and just
+     wish for the best.
+
+     See issue #4287:
+     http://subversion.tigris.org/issues/show_bug.cgi?id=4287
+  */
+  if (session->supports_rev_rsrc_replay)
+    {
+      SVN_ERR(svn_ra_serf__get_relative_path(&include_path,
+                                             session->session_url.path,
+                                             session, session->conns[0],
+                                             pool));
+    }
+  else
+    {
+      include_path = NULL;
+    }
 
   while (active_reports || rev <= end_revision)
     {
@@ -751,6 +799,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           svn_ra_serf__handler_t *handler;
           svn_ra_serf__xml_parser_t *parser_ctx;
           apr_pool_t *ctx_pool = svn_pool_create(pool);
+          const char *replay_target;
 
           replay_ctx = apr_pcalloc(ctx_pool, sizeof(*replay_ctx));
           replay_ctx->src_rev_pool = ctx_pool;
@@ -758,19 +807,20 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           replay_ctx->revfinish_func = revfinish_func;
           replay_ctx->replay_baton = replay_baton;
           replay_ctx->done = FALSE;
+          replay_ctx->include_path = include_path;
           replay_ctx->revision = rev;
           replay_ctx->low_water_mark = low_water_mark;
           replay_ctx->send_deltas = send_deltas;
           replay_ctx->done_item.data = replay_ctx;
+
           /* Request all properties of a certain revision. */
-          replay_ctx->report_target = report_target;
           replay_ctx->revs_props = apr_hash_make(replay_ctx->src_rev_pool);
 
           if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
-           {
-             replay_ctx->revprop_target = apr_psprintf(pool, "%s/%ld",
-                                                       session->rev_stub, rev);
-             replay_ctx->revprop_rev = SVN_INVALID_REVNUM;
+            {
+              replay_ctx->revprop_target = apr_psprintf(pool, "%s/%ld",
+                                                        session->rev_stub, rev);
+              replay_ctx->revprop_rev = SVN_INVALID_REVNUM;
             }
           else
             {
@@ -790,12 +840,22 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           /* Spin up the serf request for the PROPFIND.  */
           svn_ra_serf__request_create(replay_ctx->propfind_handler);
 
-          /* Send the replay report request. */
+          /* Send the replay REPORT request. */
+          if (session->supports_rev_rsrc_replay)
+            {
+              replay_target = apr_psprintf(pool, "%s/%ld",
+                                           session->rev_stub, rev);
+            }
+          else
+            {
+              replay_target = session->session_url.path;
+            }
+
           handler = apr_pcalloc(replay_ctx->src_rev_pool, sizeof(*handler));
 
           handler->handler_pool = replay_ctx->src_rev_pool;
           handler->method = "REPORT";
-          handler->path = session->session_url.path;
+          handler->path = replay_target;
           handler->body_delegate = create_replay_body;
           handler->body_delegate_baton = replay_ctx;
           handler->conn = session->conns[0];
@@ -821,6 +881,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           parser_ctx->done_item = &replay_ctx->done_item;
           handler->response_handler = svn_ra_serf__handle_xml_parser;
           handler->response_baton = parser_ctx;
+          replay_ctx->report_handler = handler;
 
           /* This is only needed to handle errors during XML parsing. */
           replay_ctx->parser_ctx = parser_ctx;
@@ -841,8 +902,12 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
       while (done_list)
         {
           replay_context_t *ctx = (replay_context_t *)done_list->data;
+          svn_ra_serf__handler_t *done_handler = ctx->report_handler;
 
           done_list = done_list->next;
+          SVN_ERR(svn_ra_serf__error_on_status(done_handler->sline.code,
+                                               done_handler->path,
+                                               done_handler->location));
           svn_pool_destroy(ctx->src_rev_pool);
           active_reports--;
         }

@@ -32,6 +32,9 @@
 #include "svn_types.h"
 #include "svn_string.h"
 
+#ifndef SVN_DBG__PROTOTYPES
+#define SVN_DBG__PROTOTYPES
+#endif
 #include "private/svn_debug.h"
 
 

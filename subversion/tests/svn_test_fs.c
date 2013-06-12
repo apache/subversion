@@ -213,7 +213,10 @@ svn_test__create_repos(svn_repos_t **repos_p,
   if (apr_stat(&finfo, name, APR_FINFO_TYPE, pool) == APR_SUCCESS)
     {
       if (finfo.filetype == APR_DIR)
-        SVN_ERR(svn_repos_delete(name, pool));
+        SVN_ERR_W(svn_io_remove_dir2(name, TRUE, NULL, NULL, pool),
+                  apr_psprintf(pool,
+                               "cannot create repos '%s' there is already "
+                               "a directory of that name", name));
       else
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "there is already a file named '%s'", name);
