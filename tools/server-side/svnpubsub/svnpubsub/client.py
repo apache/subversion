@@ -71,8 +71,8 @@ class Client(asynchat.async_chat):
 
     self.url = url
     parsed_url = urlparse.urlsplit(url)
-    if parsed_url.scheme != 'http':
-      raise ValueError("URL scheme must be http: '%s'" % url)
+    if parsed_url.scheme != 'http' and parsed.url_scheme != 'https':
+      raise ValueError("URL scheme must be http or https: '%s'" % url)
     host = parsed_url.hostname
     port = parsed_url.port
     resource = parsed_url.path
