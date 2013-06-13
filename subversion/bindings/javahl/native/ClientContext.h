@@ -29,7 +29,7 @@
 
 #include <string>
 
-#include "RaSharedContext.h"
+#include "OperationContext.h"
 
 #include "svn_types.h"
 #include "svn_client.h"
@@ -45,7 +45,7 @@ class CommitMessage;
  * and implements the functions read & close of svn_stream_t.
  *
  */
-class ClientContext : public RaSharedContext
+class ClientContext : public OperationContext
 {
  private:
   svn_client_ctx_t *m_context;

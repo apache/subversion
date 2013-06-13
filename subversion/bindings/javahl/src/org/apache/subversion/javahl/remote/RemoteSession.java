@@ -21,32 +21,33 @@
  * @endcopyright
  */
 
-package org.apache.subversion.javahl.ra;
+package org.apache.subversion.javahl.remote;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import org.apache.subversion.javahl.types.*;
+import org.apache.subversion.javahl.callback.*;
+
+import org.apache.subversion.javahl.ISVNRemote;
+import org.apache.subversion.javahl.JNIObject;
+import org.apache.subversion.javahl.OperationContext;
+import org.apache.subversion.javahl.SubversionException;
 
 import java.util.Date;
 import java.util.Map;
 
-import org.apache.subversion.javahl.JNIObject;
-import org.apache.subversion.javahl.SubversionException;
-import org.apache.subversion.javahl.types.Depth;
-import org.apache.subversion.javahl.types.Lock;
-import org.apache.subversion.javahl.types.NodeKind;
-import org.apache.subversion.javahl.types.Revision;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
-public class SVNRa extends JNIObject implements ISVNRa
+public class RemoteSession extends JNIObject implements ISVNRemote
 {
     @Override
     public native long getLatestRevision();
-    
+
     @Override
     public native String getUUID();
 
     @Override
     public native String getUrl();
-    
+
     public native long getDatedRevision(long timestamp) throws SubversionException;
 
     public long getDatedRevision(Date date) throws SubversionException
@@ -67,19 +68,18 @@ public class SVNRa extends JNIObject implements ISVNRa
     @Override
     public native void dispose();
 
-    /*
-     * NOTE: This field is accessed from native code for callbacks.
-     */
-    private RaContext sessionContext = new RaContext();
-
     /**
-     * This constructor is called from JNI to get an instance call getRaSession
-     * method of ISVNClient
-     * 
-     * @param cppAddr
+     * This constructor is called from JNI to get an instance call
+     * getRaSession method of ISVNClient
      */
-    protected SVNRa(long cppAddr)
+    protected RemoteSession(long cppAddr)
     {
         super(cppAddr);
     }
+
+    /*
+     * NOTE: This field is accessed from native code for callbacks.
+     */
+    private RemoteSessionContext sessionContext = new RemoteSessionContext();
+    private class RemoteSessionContext extends OperationContext {}
 }

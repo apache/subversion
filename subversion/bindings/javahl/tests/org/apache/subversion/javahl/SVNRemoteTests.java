@@ -22,34 +22,30 @@
  */
 package org.apache.subversion.javahl;
 
+import org.apache.subversion.javahl.*;
+import org.apache.subversion.javahl.remote.*;
+import org.apache.subversion.javahl.types.*;
+
 import java.util.Date;
 import java.util.Set;
 import java.util.Map;
 import java.util.HashSet;
 import java.io.IOException;
 
-import org.apache.subversion.javahl.ra.ISVNRa;
-import org.apache.subversion.javahl.ra.SVNRaConfigDefault;
-import org.apache.subversion.javahl.ra.SVNRaFactory;
-import org.apache.subversion.javahl.types.Depth;
-import org.apache.subversion.javahl.types.Lock;
-import org.apache.subversion.javahl.types.NodeKind;
-import org.apache.subversion.javahl.types.Revision;
-
 /**
  * This class is used for testing the SVNReposAccess class
  *
  * More methodes for testing are still needed
  */
-public class SVNRATests extends SVNTests
+public class SVNRemoteTests extends SVNTests
 {
     protected OneTest thisTest;
 
-    public SVNRATests()
+    public SVNRemoteTests()
     {
     }
 
-    public SVNRATests(String name)
+    public SVNRemoteTests(String name)
     {
         super(name);
     }
@@ -74,7 +70,7 @@ public class SVNRATests extends SVNTests
     public void testDatedRev()
         throws SubversionException, IOException
     {
-        ISVNRa session = getSession();
+        ISVNRemote session = getSession();
 
         long revision = session.getDatedRevision(new Date());
         assertEquals(revision, 1);
@@ -83,7 +79,7 @@ public class SVNRATests extends SVNTests
     public void testGetLocks()
         throws SubversionException, IOException
     {
-        ISVNRa session = getSession();
+        ISVNRemote session = getSession();
 
         Set<String> iotaPathSet = new HashSet<String>(1);
         String iotaPath = thisTest.getWCPath() + "/iota";
@@ -102,7 +98,7 @@ public class SVNRATests extends SVNTests
     public void testCheckPath()
         throws SubversionException, IOException
     {
-        ISVNRa session = getSession();
+        ISVNRemote session = getSession();
 
         NodeKind kind = session.checkPath("iota", Revision.getInstance(1));
         assertEquals(NodeKind.file, kind);
@@ -114,22 +110,27 @@ public class SVNRATests extends SVNTests
         assertEquals(NodeKind.dir, kind);
     }
     
-    public static ISVNRa getSession(String url, String configDirectory)
+    public static ISVNRemote getSession(String url, String configDirectory)
     {
-        SVNRaConfigDefault config = new SVNRaConfigDefault();
-        config.setUsername(USERNAME);
-        config.setPassword(PASSWORD);
-        config.setPrompt(new DefaultPromptUserPassword());
-        config.setConfigDirectory(configDirectory);
-        
-        ISVNRa raSession = SVNRaFactory.createRaSession(url, null, config);
+        try
+        {
+            RemoteFactory factory = new RemoteFactory();
+            factory.setConfigDirectory(configDirectory);
+            factory.setUsername(USERNAME);
+            factory.setPassword(PASSWORD);
+            factory.setPrompt(new DefaultPromptUserPassword());
 
-        assertNotNull("Null session was returned by factory", raSession);
-
-        return raSession;
+            ISVNRemote raSession = factory.openRemoteSession(url);
+            assertNotNull("Null session was returned by factory", raSession);
+            return raSession;
+        }
+        catch (ClientException ex)
+        {
+            throw new RuntimeException(ex);
+        }
     }
     
-    private ISVNRa getSession()
+    private ISVNRemote getSession()
     {
         return getSession(getTestRepoUrl(), super.conf.getAbsolutePath());
     }
@@ -141,14 +142,14 @@ public class SVNRATests extends SVNTests
     
     public void testGetLatestRevision() throws Exception
     {
-        ISVNRa session = getSession();
+        ISVNRemote session = getSession();
 
         assertEquals(1, session.getLatestRevision());
     }
 
     public void testGetUUID() throws Exception
     {
-        ISVNRa session = getSession();
+        ISVNRemote session = getSession();
 
         /*
          * Test UUID
@@ -160,7 +161,7 @@ public class SVNRATests extends SVNTests
 
     public void testGetUrl() throws Exception
     {
-        ISVNRa session = getSession();
+        ISVNRemote session = getSession();
 
         assertEquals(getTestRepoUrl(), session.getUrl());
     }

@@ -20,12 +20,12 @@
  * ====================================================================
  * @endcopyright
  *
- * @file RaSharedContext.h
- * @brief Interface of the class RaSharedContext
+ * @file OperationContext.h
+ * @brief Interface of the class OperationContext
  */
 
-#ifndef RASHAREDCONTEXT_H
-#define RASHAREDCONTEXT_H
+#ifndef JAVAHL_OPERATION_CONTEXT_H
+#define JAVAHL_OPERATION_CONTEXT_H
 
 #include <string>
 
@@ -41,7 +41,7 @@ class Prompter;
 /**
  * This class contains a Java objects implementing the interface RaSharedContext
  */
-class RaSharedContext
+class OperationContext
 {
  private:
   std::string m_userName;
@@ -60,9 +60,9 @@ class RaSharedContext
   static void progress(apr_off_t progressVal, apr_off_t total,
                        void *baton, apr_pool_t *pool);
  public:
-  RaSharedContext(SVN::Pool &pool);
+  OperationContext(SVN::Pool &pool);
   void attachJavaObject(jobject contextHolder, const char *contextClassType, const char *contextFieldName, jfieldID * ctxFieldID);
-  virtual ~RaSharedContext();
+  virtual ~OperationContext();
 
   static svn_error_t *checkCancel(void *cancelBaton);
 
@@ -93,4 +93,4 @@ class RaSharedContext
   virtual const char * getClientName() const;
 };
 
-#endif // RASHAREDCONTEXT_H
+#endif // JAVAHL_OPERATION_CONTEXT_H

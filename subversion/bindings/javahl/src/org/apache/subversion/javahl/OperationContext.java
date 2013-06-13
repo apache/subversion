@@ -21,58 +21,26 @@
  * @endcopyright
  */
 
-package org.apache.subversion.javahl.ra;
+package org.apache.subversion.javahl;
 
-import org.apache.subversion.javahl.callback.UserPasswordCallback;
+import org.apache.subversion.javahl.callback.ProgressCallback;
 
-public class SVNRaConfigDefault implements ISVNRaConfig
+/**
+ * A private class to hold the contextual information required to
+ * persist in this object, such as notification handlers.
+ */
+public class OperationContext implements ProgressCallback
 {
-    private String username;
-    private String password;
-    private UserPasswordCallback prompt;
-    private String configDirectory;
+    private ProgressCallback progress = null;
 
-    @Override
-    public String getUsername()
+    public void onProgress(ProgressEvent event)
     {
-        return username;
+        if (progress != null)
+            progress.onProgress(event);
     }
 
-    public void setUsername(String username)
+    public void setProgressCallback(ProgressCallback progress)
     {
-        this.username = username;
-    }
-
-    @Override
-    public String getPassword()
-    {
-        return password;
-    }
-
-    public void setPassword(String password)
-    {
-        this.password = password;
-    }
-
-    @Override
-    public UserPasswordCallback getPrompt()
-    {
-        return prompt;
-    }
-
-    public void setPrompt(UserPasswordCallback prompt)
-    {
-        this.prompt = prompt;
-    }
-
-    @Override
-    public String getConfigDirectory()
-    {
-        return configDirectory;
-    }
-
-    public void setConfigDirectory(String configDirectory)
-    {
-        this.configDirectory = configDirectory;
+        this.progress = progress;
     }
 }

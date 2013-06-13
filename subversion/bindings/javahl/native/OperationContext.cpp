@@ -20,15 +20,15 @@
  * ====================================================================
  * @endcopyright
  *
- * @file RaSharedContext.cpp
- * @brief Implementation of the class RaSharedContext
+ * @file OperationContext.cpp
+ * @brief Implementation of the class OperationContext
  */
 
 #include "svn_client.h"
 #include "private/svn_wc_private.h"
 #include "svn_private_config.h"
 
-#include "RaSharedContext.h"
+#include "OperationContext.h"
 #include "JNIUtil.h"
 #include "JNICriticalSection.h"
 
@@ -37,19 +37,23 @@
 #include "EnumMapper.h"
 #include "CommitMessage.h"
 
-RaSharedContext::RaSharedContext(SVN::Pool &pool)
-  :m_prompter(NULL), m_cancelOperation(false), m_pool(&pool), m_config(NULL), m_jctx(NULL)
-{
-}
+OperationContext::OperationContext(SVN::Pool &pool)
+  : m_config(NULL),
+    m_prompter(NULL),
+    m_cancelOperation(false),
+    m_pool(&pool),
+    m_jctx(NULL)
+{}
 
 void
-RaSharedContext::attachJavaObject(jobject contextHolder, const char *contextClassType,
+OperationContext::attachJavaObject(
+    jobject contextHolder, const char *contextClassType,
     const char *contextFieldName, jfieldID * ctxFieldID)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
-  /* Grab a global reference to the Java object embedded in the parent Java
-   object. */
+  /* Grab a global reference to the Java object embedded in the parent
+     Java object. */
   if ((*ctxFieldID) == 0)
     {
       jclass clazz = env->GetObjectClass(contextHolder);
@@ -74,7 +78,7 @@ RaSharedContext::attachJavaObject(jobject contextHolder, const char *contextClas
   env->DeleteLocalRef(jctx);
 }
 
-RaSharedContext::~RaSharedContext()
+OperationContext::~OperationContext()
 {
   delete m_prompter;
 
@@ -83,7 +87,7 @@ RaSharedContext::~RaSharedContext()
 }
 
 apr_hash_t *
-RaSharedContext::getConfigData()
+OperationContext::getConfigData()
 {
   if(m_pool->getPool() == NULL)
     {
@@ -103,7 +107,7 @@ RaSharedContext::getConfigData()
 }
 
 svn_auth_baton_t *
-RaSharedContext::getAuthBaton(SVN::Pool &in_pool)
+OperationContext::getAuthBaton(SVN::Pool &in_pool)
 {
   svn_auth_baton_t *ab;
   apr_pool_t *pool = in_pool.getPool();
@@ -210,26 +214,26 @@ RaSharedContext::getAuthBaton(SVN::Pool &in_pool)
 }
 
 void
-RaSharedContext::username(const char *pi_username)
+OperationContext::username(const char *pi_username)
 {
   m_userName = (pi_username == NULL ? "" : pi_username);
 }
 
 void
-RaSharedContext::password(const char *pi_password)
+OperationContext::password(const char *pi_password)
 {
   m_passWord = (pi_password == NULL ? "" : pi_password);
 }
 
 void
-RaSharedContext::setPrompt(Prompter *prompter)
+OperationContext::setPrompt(Prompter *prompter)
 {
   delete m_prompter;
   m_prompter = prompter;
 }
 
 void
-RaSharedContext::setConfigDirectory(const char *configDir)
+OperationContext::setConfigDirectory(const char *configDir)
 {
   // A change to the config directory may necessitate creation of
   // the config templates.
@@ -242,33 +246,33 @@ RaSharedContext::setConfigDirectory(const char *configDir)
 }
 
 const char *
-RaSharedContext::getConfigDirectory() const
+OperationContext::getConfigDirectory() const
 {
   return m_configDir.c_str();
 }
 
 void
-RaSharedContext::cancelOperation()
+OperationContext::cancelOperation()
 {
   m_cancelOperation = true;
 }
 
 void
-RaSharedContext::resetCancelRequest()
+OperationContext::resetCancelRequest()
 {
   m_cancelOperation = false;
 }
 
 bool
-RaSharedContext::isCancelledOperation()
+OperationContext::isCancelledOperation()
 {
   return m_cancelOperation;
 }
 
 svn_error_t *
-RaSharedContext::checkCancel(void *cancelBaton)
+OperationContext::checkCancel(void *cancelBaton)
 {
-  RaSharedContext *that = static_cast<RaSharedContext *>(cancelBaton);
+  OperationContext *that = static_cast<OperationContext *>(cancelBaton);
   if (that->isCancelledOperation())
     return svn_error_create(SVN_ERR_CANCELLED, NULL, _("Operation cancelled"));
   else
@@ -276,7 +280,7 @@ RaSharedContext::checkCancel(void *cancelBaton)
 }
 
 void
-RaSharedContext::progress(apr_off_t progressVal, apr_off_t total, void *baton,
+OperationContext::progress(apr_off_t progressVal, apr_off_t total, void *baton,
     apr_pool_t *pool)
 {
   jobject jctx = (jobject) baton;
@@ -324,15 +328,15 @@ RaSharedContext::progress(apr_off_t progressVal, apr_off_t total, void *baton,
 }
 
 const char *
-RaSharedContext::getClientName() const
+OperationContext::getClientName() const
 {
   return "javahl";
 }
 
 svn_error_t *
-RaSharedContext::clientName(void *baton, const char **name, apr_pool_t *pool)
+OperationContext::clientName(void *baton, const char **name, apr_pool_t *pool)
 {
-  RaSharedContext *that = (RaSharedContext *) baton;
+  OperationContext *that = (OperationContext *) baton;
 
   *name = that->getClientName();
 
