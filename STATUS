@@ -131,7 +131,7 @@ Candidate changes:
      Simple fixes to improve performance.
    Votes:
      +1: ivan, rhuijben
-     
+
  * r1478987, r1492020
    Optimize some code that retrieves mergeinfo to obtain less unneeded
    information from the repository.
