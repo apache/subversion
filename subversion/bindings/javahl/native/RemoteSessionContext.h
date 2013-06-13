@@ -19,34 +19,31 @@
  *    under the License.
  * ====================================================================
  * @endcopyright
+ *
+ * @file RemoteSessionContext.h
+ * @brief Interface of the class RemoteSessionContext
  */
 
-package org.apache.subversion.javahl;
+#ifndef JAVAHL_REMOTE_SESSION_CONTEXT_H
+#define JAVAHL_REMOTE_SESSION_CONTEXT_H
 
-import org.apache.subversion.javahl.callback.ProgressCallback;
+#include "svn_ra.h"
 
-/**
- * A private class to hold the contextual information required to
- * persist in this object, such as notification handlers.
- */
-public class RaSharedContext
-    implements ProgressCallback
+#include "OperationContext.h"
+
+class RemoteSessionContext : public OperationContext
 {
-    private ProgressCallback listener = null;
+  public:
+    RemoteSessionContext(jobject contextHolder, SVN::Pool &pool,
+                         jstring jconfigDirectory,
+                         jstring jusername, jstring jpassword,
+                         jobject jprompter, jobject jprogress);
+    virtual ~RemoteSessionContext();
+    void * getCallbackBaton();
+    svn_ra_callbacks2_t * getCallbacks();
 
-    public void onProgress(ProgressEvent event)
-    {
-        if (listener != null)
-            listener.onProgress(event);
-    }
+  private:
+    svn_ra_callbacks2_t * m_raCallbacks;
+};
 
-    public ProgressCallback getListener()
-    {
-        return listener;
-    }
-
-    public void setListener(ProgressCallback listener)
-    {
-        this.listener = listener;
-    }
-}
+#endif /* JAVAHL_REMOTE_SESSION_CONTEXT_H */

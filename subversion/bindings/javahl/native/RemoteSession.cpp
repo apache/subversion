@@ -1,3 +1,29 @@
+/**
+ * @copyright
+ * ====================================================================
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
+ * ====================================================================
+ * @endcopyright
+ *
+ * @file RemoteSession.cpp
+ * @brief Implementation of the class RemoteSession
+ */
+
 #include "JNIStringHolder.h"
 #include "JNIUtil.h"
 
@@ -5,22 +31,25 @@
 
 #include "CreateJ.h"
 #include "EnumMapper.h"
-#include "SVNRa.h"
+#include "RemoteSession.h"
 
 #include "svn_private_config.h"
 
-#define JAVA_CLASS_SVN_RA JAVA_PACKAGE "/ra/SVNRa"
+#define JAVA_CLASS_REMOTE_SESSION JAVA_PACKAGE "/remote/RemoteSession"
 
-SVNRa *
-SVNRa::getCppObject(jobject jthis)
+RemoteSession *
+RemoteSession::getCppObject(jobject jthis)
 {
   static jfieldID fid = 0;
   jlong cppAddr = SVNBase::findCppAddrForJObject(jthis, &fid,
-      JAVA_CLASS_SVN_RA);
-  return (cppAddr == 0 ? NULL : reinterpret_cast<SVNRa *>(cppAddr));
+      JAVA_CLASS_REMOTE_SESSION);
+  return (cppAddr == 0 ? NULL : reinterpret_cast<RemoteSession *>(cppAddr));
 }
 
-SVNRa::SVNRa(jobject *jthis_out, jstring jurl, jstring juuid, jobject jconfig)
+RemoteSession::RemoteSession(jobject *jthis_out, jstring jurl, jstring juuid,
+                             jstring jconfigDirectory,
+                             jstring jusername, jstring jpassword,
+                             jobject jprompter, jobject jprogress)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -37,7 +66,7 @@ SVNRa::SVNRa(jobject *jthis_out, jstring jurl, jstring juuid, jobject jconfig)
     }
 
   // Create java session object
-  jclass clazz = env->FindClass(JAVA_CLASS_SVN_RA);
+  jclass clazz = env->FindClass(JAVA_CLASS_REMOTE_SESSION);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -51,13 +80,15 @@ SVNRa::SVNRa(jobject *jthis_out, jstring jurl, jstring juuid, jobject jconfig)
 
   jlong cppAddr = this->getCppAddr();
 
-  jobject jSVNRa = env->NewObject(clazz, ctor, cppAddr);
+  jobject jremoteSession = env->NewObject(clazz, ctor, cppAddr);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
-  *jthis_out = jSVNRa;
+  *jthis_out = jremoteSession;
 
-  m_context = new RaContext(jSVNRa, pool, jconfig);
+  m_context = new RemoteSessionContext(
+      jremoteSession, pool, jconfigDirectory,
+      jusername, jpassword, jprompter, jprogress);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -69,7 +100,7 @@ SVNRa::SVNRa(jobject *jthis_out, jstring jurl, jstring juuid, jobject jconfig)
       );
 }
 
-SVNRa::~SVNRa()
+RemoteSession::~RemoteSession()
 {
   if (m_context)
     {
@@ -78,7 +109,7 @@ SVNRa::~SVNRa()
 }
 
 jlong
-SVNRa::getLatestRevision()
+RemoteSession::getLatestRevision()
 {
   SVN::Pool subPool(pool);
   svn_revnum_t rev;
@@ -90,7 +121,7 @@ SVNRa::getLatestRevision()
 }
 
 jstring
-SVNRa::getUUID()
+RemoteSession::getUUID()
 {
   SVN::Pool subPool(pool);
   const char * uuid;
@@ -105,7 +136,7 @@ SVNRa::getUUID()
 }
 
 jstring
-SVNRa::getUrl()
+RemoteSession::getUrl()
 {
   SVN::Pool subPool(pool);
   const char * url;
@@ -120,14 +151,14 @@ SVNRa::getUrl()
 }
 
 void
-SVNRa::dispose(jobject jthis)
+RemoteSession::dispose(jobject jthis)
 {
   static jfieldID fid = 0;
-  SVNBase::dispose(jthis, &fid, JAVA_CLASS_SVN_RA);
+  SVNBase::dispose(jthis, &fid, JAVA_CLASS_REMOTE_SESSION);
 }
 
 svn_revnum_t
-SVNRa::getDatedRev(jlong timestamp)
+RemoteSession::getDatedRev(jlong timestamp)
 {
   SVN::Pool requestPool;
   svn_revnum_t rev;
@@ -142,7 +173,7 @@ SVNRa::getDatedRev(jlong timestamp)
 }
 
 jobject
-SVNRa::getLocks(jstring jpath, jobject jdepth)
+RemoteSession::getLocks(jstring jpath, jobject jdepth)
 {
   SVN::Pool requestPool;
   apr_hash_t *locks;
@@ -163,7 +194,7 @@ SVNRa::getLocks(jstring jpath, jobject jdepth)
 }
 
 jobject
-SVNRa::checkPath(jstring jpath, jobject jrevision)
+RemoteSession::checkPath(jstring jpath, jobject jrevision)
 {
   SVN::Pool requestPool;
   svn_node_kind_t kind;

@@ -151,14 +151,14 @@ public class SVNClient implements ISVNClient
         clientContext.notify = notify;
     }
 
-    public void setConflictResolver(ConflictResolverCallback listener)
+    public void setConflictResolver(ConflictResolverCallback resolver)
     {
-        clientContext.resolver = listener;
+        clientContext.resolver = resolver;
     }
 
-    public void setProgressCallback(ProgressCallback listener)
+    public void setProgressCallback(ProgressCallback progress)
     {
-        clientContext.setListener(listener);
+        clientContext.setProgressCallback(progress);
     }
 
     public native void remove(Set<String> paths, boolean force,
@@ -665,9 +665,8 @@ public class SVNClient implements ISVNClient
      * A private class to hold the contextual information required to
      * persist in this object, such as notification handlers.
      */
-    private class ClientContext extends RaSharedContext
-        implements ClientNotifyCallback, ProgressCallback,
-            ConflictResolverCallback
+    private class ClientContext extends OperationContext
+        implements ClientNotifyCallback, ConflictResolverCallback
     {
         public ClientNotifyCallback notify = null;
         public ConflictResolverCallback resolver = null;

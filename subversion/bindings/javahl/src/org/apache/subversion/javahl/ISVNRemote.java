@@ -21,25 +21,24 @@
  * @endcopyright
  */
 
-package org.apache.subversion.javahl.ra;
+package org.apache.subversion.javahl;
+
+import org.apache.subversion.javahl.types.*;
+import org.apache.subversion.javahl.callback.*;
 
 import java.util.Date;
 import java.util.Map;
 
-import org.apache.subversion.javahl.SubversionException;
-import org.apache.subversion.javahl.types.Depth;
-import org.apache.subversion.javahl.types.Lock;
-import org.apache.subversion.javahl.types.NodeKind;
-import org.apache.subversion.javahl.types.Revision;
-
 /**
- * Represent an instance of RA session
+ * Encapsulates an RA session object and related operations.
+ * @see subversion/include/svn_ra.h#svn_ra_open
+ * @since 1.9
  */
-public interface ISVNRa
+public interface ISVNRemote
 {
     /**
-     * Release native resources use by this Ra session. Once called this object
-     * is no longer usable
+     * Release the native peer (should not depend on finalize).
+     * Also invalidates any existing editors related to this session.
      */
     public void dispose();
 
