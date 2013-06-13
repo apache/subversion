@@ -1858,7 +1858,8 @@ def verify_keep_going(sbox):
                                            ".*Verified revision 3."])
 
   exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
-                                           "svnadmin: E165011:.*"])
+                                           "svnadmin: E165011:.*"], False)
+
 
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
                                    output, errput, exp_out, exp_err):
@@ -1871,9 +1872,6 @@ def verify_keep_going(sbox):
                                            ".*Verified revision 0.",
                                            ".*Verified revision 1.",
                                            ".*Error verifying revision 2."])
-
-  exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
-                                           "svnadmin: E165011:.*"])
 
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
                                    output, errput, exp_out, exp_err):

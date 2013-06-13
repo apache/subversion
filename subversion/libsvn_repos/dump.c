@@ -1339,9 +1339,11 @@ notify_verification_error(svn_revnum_t rev,
                           void *notify_baton,
                           apr_pool_t *pool)
 {
+  svn_repos_notify_t *notify_failure;
+
   if (notify_func == NULL)
     return;
-  svn_repos_notify_t *notify_failure;
+
   notify_failure = svn_repos_notify_create(svn_repos_notify_failure, pool);
   notify_failure->err = err;
   notify_failure->revision = rev;
@@ -1507,14 +1509,6 @@ svn_repos_verify_fs3(svn_repos_t *repos,
 
   for (rev = start_rev; rev <= end_rev; rev++)
     {
-      const svn_delta_editor_t *dump_editor;
-      void *dump_edit_baton;
-      const svn_delta_editor_t *cancel_editor;
-      void *cancel_edit_baton;
-      svn_fs_root_t *to_root;
-      apr_hash_t *props;
-      svn_error_t *err;
-
       svn_pool_clear(iterpool);
 
       /* Wrapper function to catch the possible errors. */
