@@ -3250,6 +3250,14 @@ make_update_reporter(svn_ra_session_t *ra_session,
              supports inlining properties in update editor report. */
           if (sess->supports_inline_props)
             {
+              /* NOTE: both inlined properties and server->allows_bulk_update
+                 (flag SVN_DAV_ALLOW_BULK_UPDATES) were added in 1.8.0, so
+                 this code is never reached with a released version of
+                 mod_dav_svn.
+
+                 Basically by default a 1.8.0 client connecting to a 1.7.x or
+                 older server will always use bulk updates. */
+
               /* Inline props supported: do not use bulk updates. */
               use_bulk_updates = FALSE;
             }
