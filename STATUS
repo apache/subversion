@@ -156,13 +156,6 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1492164
-   Invalid repository paths cause a segfault in the fsfs-stats tool.
-   Justification:
-     Don't segfault.
-   Votes:
-     +1: stefan2
-
  * r1492295
    Fix swig-rb tests with out-of-tree builds.
    Justification:
@@ -184,7 +177,13 @@ Approved for 1.8.1 or if soak is restarted for 1.8.0:
      and it worked in 1.7)
    Votes:
      +1: rhuijben, ivan, stefan2
-     
+
+ * r1492164
+   Invalid repository paths cause a segfault in the fsfs-stats tool.
+   Justification:
+     Don't segfault.
+   Votes:
+     +1: stefan2, stsp
 
 Approved changes:
 =================
