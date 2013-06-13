@@ -51,6 +51,12 @@ Candidate changes:
    Votes:
      +1: philip, danielsh
 
+ * r1490684
+   Return 500 rather than 409 when commit fails and it is not a conflict.
+   Justification:
+     Not a client failure so 4xx is wrong.
+   Votes:
+     +1: philip
 
 Veto-blocked changes:
 =====================
