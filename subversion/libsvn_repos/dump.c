@@ -1363,7 +1363,6 @@ verify_one_revision(svn_fs_t *fs,
 {
   const svn_delta_editor_t *dump_editor;
   void *dump_edit_baton;
- 
   svn_fs_root_t *to_root;
   apr_hash_t *props;
   const svn_delta_editor_t *cancel_editor;
@@ -1442,7 +1441,6 @@ svn_repos_verify_fs3(svn_repos_t *repos,
   svn_repos_notify_t *notify;
   svn_fs_progress_notify_func_t verify_notify = NULL;
   struct verify_fs2_notify_func_baton_t *verify_notify_baton = NULL;
-
   svn_error_t *err;
   svn_boolean_t found_corruption = FALSE;
 
@@ -1473,7 +1471,6 @@ svn_repos_verify_fs3(svn_repos_t *repos,
     {
       notify = svn_repos_notify_create(svn_repos_notify_verify_rev_end,
                                        pool);
-
       verify_notify = verify_fs2_notify_func;
       verify_notify_baton = apr_palloc(pool, sizeof(*verify_notify_baton));
       verify_notify_baton->notify_func = notify_func;
