@@ -682,6 +682,7 @@ create_rep_state_body(rep_state_t **rep_state,
   rs->window_cache = ffd->txdelta_window_cache;
   rs->combined_cache = ffd->combined_window_cache;
   rs->ver = -1;
+  rs->start = -1;
 
   if (ffd->rep_header_cache && !svn_fs_fs__id_txn_used(&rep->txn_id))
     SVN_ERR(svn_cache__get((void **) &rh, &is_cached,
@@ -689,9 +690,6 @@ create_rep_state_body(rep_state_t **rep_state,
 
   if (is_cached)
     {
-      /* we don't know the offset of the item */
-      rs->start = -1;
-
       if (reuse_shared_file)
         {
           rs->file = *shared_file;
