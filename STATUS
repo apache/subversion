@@ -148,10 +148,16 @@ Candidate changes:
    Votes:
      +1: stefan2, stsp
 
- * r1493027, r1493028
+ * r1493027, r1493028, r1493060
    Make 'blame -r 5:4' work.
    Justification:
      Make it possible to track removed lines.
+   Notes:
+     r1493027 is the fix.
+     r1493028 is a typo fix.
+     r1493060 is a docstring change.  If this group is merged, that docstring
+       should be amended to say "1.8.1" rather than "1.9.0" (this amendment
+       does not require votes).
    Votes:
      +1: danielsh
 
