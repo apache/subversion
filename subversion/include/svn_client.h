@@ -6462,7 +6462,7 @@ svn_client_open_ra_session2(svn_ra_session_t **session,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
-/** Similar to svn_client_open_ra_session(), but with @ wri_abspath
+/** Similar to svn_client_open_ra_session2(), but with @ wri_abspath
  * always passed as NULL, and with the same pool used as both @a
  * result_pool and @a scratch_pool.
  *
