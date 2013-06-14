@@ -863,7 +863,7 @@ svn_fs_fs__reps_get_func(void **out,
                                  (const void **)&cached->instructions);
 
   /* return an extractor for the selected item */
-  SVN_ERR(svn_fs_fs__reps_get((svn_fs_fs__rep_extractor_t **)&out,
+  SVN_ERR(svn_fs_fs__reps_get((svn_fs_fs__rep_extractor_t **)out,
                               reps_baton->fs, reps, reps_baton->idx, pool));
 
   return SVN_NO_ERROR;
