@@ -33,11 +33,7 @@
 
 #include "SVNBase.h"
 #include "RemoteSessionContext.h"
-#include "Revision.h"
-
-#include <set>
-
-class SVNEditor;
+#include "Prompter.h"
 
 /*
  * This class wraps Ra based operations from svn_ra.h
@@ -46,10 +42,15 @@ class RemoteSession : public SVNBase
 {
   public:
     static RemoteSession* getCppObject(jobject jthis);
-    RemoteSession(jobject*, jstring jurl, jstring juuid,
-                  jstring jconfigDirectory,
-                  jstring jusername, jstring jpassword,
-                  jobject jprompter, jobject jprogress);
+    static RemoteSession* open(jobject*, jstring jurl, jstring juuid,
+                               jstring jconfigDirectory,
+                               jstring jusername, jstring jpassword,
+                               jobject jprompter, jobject jprogress);
+    RemoteSession(jobject*, const char* url, const char* uuid,
+                  const char* configDirectory,
+                  const char* username, const char* password,
+                  Prompter* prompter, jobject jprogress);
+
     ~RemoteSession();
 
     jlong getLatestRevision();

@@ -32,51 +32,19 @@
 #define STRING_RETURN_SIGNATURE "()Ljava/lang/String;"
 
 RemoteSessionContext::RemoteSessionContext(
-    jobject contextHolder, SVN::Pool &pool, jstring jconfigDirectory,
-    jstring jusername, jstring jpassword, jobject jprompter, jobject jprogress)
+    jobject contextHolder, SVN::Pool &pool, const char* configDirectory,
+    const char*  usernameStr, const char*  passwordStr,
+    Prompter* prompter, jobject jprogress)
   : OperationContext(pool), m_raCallbacks(NULL)
 {
-  /*
-   * Extract config properties
-   */
-  JNIEnv *env = JNIUtil::getEnv();
-
-  JNIStringHolder configDirectory(jconfigDirectory);
-  if (JNIUtil::isExceptionThrown())
-      return;
-
   setConfigDirectory(configDirectory);
-  env->DeleteLocalRef(jconfigDirectory);
+  if (usernameStr != NULL)
+    username(usernameStr);
 
-  if (jusername != NULL)
-    {
-      JNIStringHolder usernameStr(jusername);
-      if (JNIUtil::isExceptionThrown())
-          return;
+  if (passwordStr != NULL)
+    password(passwordStr);
 
-      username(usernameStr);
-      env->DeleteLocalRef(jusername);
-    }
-
-  if (jpassword != NULL)
-    {
-      JNIStringHolder passwordStr(jpassword);
-      if (JNIUtil::isExceptionThrown())
-          return;
-
-      password(passwordStr);
-      env->DeleteLocalRef(jpassword);
-    }
-
-  if (jprompter != NULL)
-    {
-      Prompter *prompter = Prompter::makeCPrompter(jprompter);
-      if (JNIUtil::isExceptionThrown())
-        return;
-
-      setPrompt(prompter);
-      env->DeleteLocalRef(jprompter);
-    }
+  setPrompt(prompter);
 
   /*
    * Attach session context java object
@@ -89,6 +57,8 @@ RemoteSessionContext::RemoteSessionContext(
   /*
    * Set the progress callback
    */
+  JNIEnv *env = JNIUtil::getEnv();
+
   jclass clazz = env->GetObjectClass(m_jctx);
   if (JNIUtil::isJavaExceptionThrown())
     return;

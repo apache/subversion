@@ -1851,3 +1851,24 @@ Java_org_apache_subversion_javahl_SVNClient_patch
             jreverse ? true : false, jignoreWhitespace ? true : false,
             jremoveTempfiles ? true : false, &callback);
 }
+
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_SVNClient_openRemoteSession
+(JNIEnv *env, jobject jthis, jstring jpath)
+{
+  JNIEntry(SVNClient, openRemoteSession);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError("bad C++ this");
+      return NULL;
+    }
+
+  // TODO: convert path to URL
+  JNIStringHolder url(jpath);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  //return cl->openRemoteSession(url);
+  return NULL;
+}

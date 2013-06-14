@@ -45,24 +45,14 @@ Java_org_apache_subversion_javahl_remote_RemoteFactory_open(
   JNIEntry(Remotefactory, open);
 
   /*
-   * Initialize ra layer if we have not done so yet
-   */
-  static bool initialized = false;
-  if (!initialized)
-    {
-      SVN_JNI_ERR(svn_ra_initialize(JNIUtil::getPool()), NULL);
-      initialized = true;
-    }
-
-  /*
    * Create RemoteSession C++ object and return its java wrapper to the caller
    */
   jobject jremoteSession = NULL;
 
-  RemoteSession* session = new RemoteSession(
+  RemoteSession* session = RemoteSession::open(
       &jremoteSession, jurl, juuid, jconfigDirectory,
       jusername, jpassword, jprompter, jprogress);
-  if (JNIUtil::isJavaExceptionThrown())
+  if (JNIUtil::isJavaExceptionThrown() || !session)
     {
       delete session;
       return NULL;

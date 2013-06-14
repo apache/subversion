@@ -661,6 +661,9 @@ public class SVNClient implements ISVNClient
                              PatchCallback callback)
             throws ClientException;
 
+    public native ISVNRemote openRemoteSession(String path)
+            throws ClientException;
+
     /**
      * A private class to hold the contextual information required to
      * persist in this object, such as notification handlers.
