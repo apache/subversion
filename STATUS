@@ -141,13 +141,6 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1492295
-   Fix swig-rb tests with out-of-tree builds.
-   Justification:
-     Our tests should not be broken, regression in 1.8.0 from previous versions
-   Votes:
-     +1: breser
-
 Veto-blocked changes:
 =====================
 
@@ -196,6 +189,14 @@ Approved for 1.8.1:
      Simple fixes to improve performance.
    Votes:
      +1: ivan, rhuijben, danielsh
+
+ * r1492295
+   Fix swig-rb tests with out-of-tree builds.
+   Justification:
+     Our tests should not be broken, regression in 1.8.0 from previous versions
+   Votes:
+     +1: breser
+     +0: danielsh
 
 Approved changes:
 =================
