@@ -601,6 +601,24 @@ svn_client_blame5(const char *target,
                                           target_abspath_or_url, ra_session,
                                           start, pool));
 
+  if (start_revnum > end_revnum)
+    {
+      /* Repeat the last bit of svn_client__ra_session_from_path2(), to end
+         up where we would have ended up if we had passed 'start' rather than
+         'end' to it.
+         ### Should we try calling 
+         ###   svn_client__open_ra_session_internal(peg_revision, start)
+         ### if calling it with (peg_revision, end) fails?
+       */
+      svn_client__pathrev_t *start_loc;
+      SVN_ERR(svn_client__resolve_rev_and_url(&start_loc, ra_session,
+                                              target, peg_revision, start,
+                                              ctx, pool));
+    
+      /* Make the session point to the real URL. */
+      SVN_ERR(svn_ra_reparent(ra_session, start_loc->url, pool));
+    }
+
   /* We check the mime-type of the yougest revision before getting all
      the older revisions. */
   if (!ignore_mime_type)
