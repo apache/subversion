@@ -668,6 +668,8 @@ svn_fs_fs__write_reps_container(svn_stream_t *stream,
       svn_packed__add_uint(reps_stream, rep->first_instruction);
     }
 
+  svn_packed__add_uint(reps_stream, builder->instructions->nelts);
+
   /* serialize instructions */
   for (i = 0; i < builder->instructions->nelts; ++i)
     {
