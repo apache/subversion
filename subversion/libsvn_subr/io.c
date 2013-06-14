@@ -3481,12 +3481,18 @@ svn_io_file_aligned_seek(apr_file_t *file,
 
       /* We have no way to determine the block start of an APR file.
          Furthermore, we don't want to throw away the current buffer
-         contents.  Thus, we re-align the buffer only if the OFFSET
-         definitely lies outside the current buffer.
+         contents.  Thus, we re-align the buffer only if the CURRENT
+         offset definitely lies outside the desired, aligned buffer.
+         This covers the typical case of linear reads getting very
+         close to OFFSET but reading the previous / following block.
+
+         Note that ALIGNED_OFFSET may still be within the current
+         buffer and no I/O will actually happen in the FILL_BUFFER
+         section below.
        */
       SVN_ERR(svn_io_file_seek(file, SEEK_CUR, &current, pool));
       fill_buffer = aligned_offset + file_buffer_size <= current
-                 || current + file_buffer_size <= aligned_offset;
+                 || current <= aligned_offset;
     }
 
   if (fill_buffer)
