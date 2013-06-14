@@ -35,15 +35,15 @@ class RemoteSessionContext : public OperationContext
 {
   public:
     RemoteSessionContext(jobject contextHolder, SVN::Pool &pool,
-                         jstring jconfigDirectory,
-                         jstring jusername, jstring jpassword,
-                         jobject jprompter, jobject jprogress);
+                         const char* jconfigDirectory,
+                         const char* jusername, const char* jpassword,
+                         Prompter* prompter, jobject jprogress);
     virtual ~RemoteSessionContext();
     void * getCallbackBaton();
-    svn_ra_callbacks2_t * getCallbacks();
+    svn_ra_callbacks2_t* getCallbacks();
 
   private:
-    svn_ra_callbacks2_t * m_raCallbacks;
+    svn_ra_callbacks2_t* m_raCallbacks;
 };
 
 #endif /* JAVAHL_REMOTE_SESSION_CONTEXT_H */

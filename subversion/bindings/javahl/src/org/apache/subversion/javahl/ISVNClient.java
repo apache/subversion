@@ -1145,4 +1145,16 @@ public interface ISVNClient
                int stripCount, boolean reverse, boolean ignoreWhitespace,
                boolean removeTempfiles, PatchCallback callback)
             throws ClientException;
+
+    /**
+     * Open a persistent session to a repository.
+     * @param path A path in a working copy from which the
+     *        session URL is derived.
+     * @throws ClientException
+     * @note The session object inherits the progress callback,
+     *       configuration directory and authentication info.
+     * @since 1.9
+     */
+    ISVNRemote openRemoteSession(String path)
+            throws ClientException;
 }

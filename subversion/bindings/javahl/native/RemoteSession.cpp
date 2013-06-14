@@ -31,6 +31,8 @@
 
 #include "CreateJ.h"
 #include "EnumMapper.h"
+#include "Prompter.h"
+#include "Revision.h"
 #include "RemoteSession.h"
 
 #include "svn_private_config.h"
@@ -46,26 +48,78 @@ RemoteSession::getCppObject(jobject jthis)
   return (cppAddr == 0 ? NULL : reinterpret_cast<RemoteSession *>(cppAddr));
 }
 
-RemoteSession::RemoteSession(jobject *jthis_out, jstring jurl, jstring juuid,
-                             jstring jconfigDirectory,
-                             jstring jusername, jstring jpassword,
-                             jobject jprompter, jobject jprogress)
+RemoteSession*
+RemoteSession::open(jobject* jthis_out, jstring jurl, jstring juuid,
+                    jstring jconfigDirectory,
+                    jstring jusername, jstring jpassword,
+                    jobject jprompter, jobject jprogress)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
   JNIStringHolder url(jurl);
   if (JNIUtil::isExceptionThrown())
-    {
-      return;
-    }
+    return NULL;
+  env->DeleteLocalRef(jurl);
 
   JNIStringHolder uuid(juuid);
   if (JNIUtil::isExceptionThrown())
+    return NULL;
+  env->DeleteLocalRef(juuid);
+
+  JNIStringHolder configDirectory(jconfigDirectory);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+  env->DeleteLocalRef(jconfigDirectory);
+
+  JNIStringHolder usernameStr(jusername);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+  env->DeleteLocalRef(jusername);
+
+  JNIStringHolder passwordStr(jpassword);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+  env->DeleteLocalRef(jpassword);
+
+  Prompter *prompter = NULL;
+  if (jprompter != NULL)
     {
-      return;
+      prompter = Prompter::makeCPrompter(jprompter);
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+    }
+
+  RemoteSession* session = new RemoteSession(
+      jthis_out, url, uuid, configDirectory,
+      usernameStr, passwordStr, prompter, jprogress);
+  if (JNIUtil::isJavaExceptionThrown())
+    {
+      delete session;
+      delete prompter;
+      session = NULL;
+    }
+  return session;
+}
+
+RemoteSession::RemoteSession(jobject* jthis_out,
+                             const char* url, const char* uuid,
+                             const char* configDirectory,
+                             const char*  username, const char*  password,
+                             Prompter* prompter, jobject jprogress)
+{
+  /*
+   * Initialize ra layer if we have not done so yet
+   */
+  static bool initialized = false;
+  if (!initialized)
+    {
+      SVN_JNI_ERR(svn_ra_initialize(JNIUtil::getPool()), );
+      initialized = true;
     }
 
   // Create java session object
+  JNIEnv *env = JNIUtil::getEnv();
+
   jclass clazz = env->FindClass(JAVA_CLASS_REMOTE_SESSION);
   if (JNIUtil::isJavaExceptionThrown())
     return;
@@ -84,11 +138,9 @@ RemoteSession::RemoteSession(jobject *jthis_out, jstring jurl, jstring juuid,
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
-  *jthis_out = jremoteSession;
-
   m_context = new RemoteSessionContext(
-      jremoteSession, pool, jconfigDirectory,
-      jusername, jpassword, jprompter, jprogress);
+      jremoteSession, pool, configDirectory,
+      username, password, prompter, jprogress);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -98,6 +150,7 @@ RemoteSession::RemoteSession(jobject *jthis_out, jstring jurl, jstring juuid,
                    m_context->getCallbackBaton(), m_context->getConfigData(),
                    pool.getPool()),
       );
+  *jthis_out = jremoteSession;
 }
 
 RemoteSession::~RemoteSession()
