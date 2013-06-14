@@ -213,6 +213,14 @@ OperationContext::getAuthBaton(SVN::Pool &in_pool)
   return ab;
 }
 
+jobject OperationContext::getSelf() const
+{
+  jobject jctx = JNIUtil::getEnv()->NewGlobalRef(m_jctx);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+  return jctx;
+}
+
 void
 OperationContext::username(const char *pi_username)
 {
@@ -248,7 +256,24 @@ OperationContext::setConfigDirectory(const char *configDir)
 const char *
 OperationContext::getConfigDirectory() const
 {
-  return m_configDir.c_str();
+  return (m_configDir.empty() ? NULL : m_configDir.c_str());
+}
+
+const char *
+OperationContext::getUsername() const
+{
+  return (m_userName.empty() ? NULL : m_userName.c_str());
+}
+
+const char *
+OperationContext::getPassword() const
+{
+  return (m_passWord.empty() ? NULL : m_passWord.c_str());
+}
+
+const Prompter& OperationContext::getPrompter() const
+{
+  return *m_prompter;
 }
 
 void

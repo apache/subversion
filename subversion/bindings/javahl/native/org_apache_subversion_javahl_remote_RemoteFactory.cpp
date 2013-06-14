@@ -53,10 +53,7 @@ Java_org_apache_subversion_javahl_remote_RemoteFactory_open(
       &jremoteSession, jurl, juuid, jconfigDirectory,
       jusername, jpassword, jprompter, jprogress);
   if (JNIUtil::isJavaExceptionThrown() || !session)
-    {
-      delete session;
-      return NULL;
-    }
+    return NULL;
 
   return jremoteSession;
 }
