@@ -466,7 +466,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   /* Create the rev structure. */
   frb->rev = apr_pcalloc(frb->mainpool, sizeof(struct rev));
 
-  if (revnum < frb->start_rev)
+  if (revnum < MIN(frb->start_rev, frb->end_rev))
     {
       /* We shouldn't get more than one revision before the starting
          revision (unless of including merged revisions). */
@@ -479,7 +479,8 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
     }
   else
     {
-      SVN_ERR_ASSERT(revnum <= frb->end_rev);
+      /* 1+ for the "youngest to oldest" blame */
+      SVN_ERR_ASSERT(revnum <= 1 + MAX(frb->end_rev, frb->start_rev));
 
       /* Set values from revision props. */
       frb->rev->revision = revnum;
@@ -578,6 +579,7 @@ svn_client_blame5(const char *target,
   svn_stream_t *last_stream;
   svn_stream_t *stream;
   const char *target_abspath_or_url;
+  svn_revnum_t youngest;
 
   if (start->kind == svn_opt_revision_unspecified
       || end->kind == svn_opt_revision_unspecified)
@@ -598,11 +600,6 @@ svn_client_blame5(const char *target,
   SVN_ERR(svn_client__get_revision_number(&start_revnum, NULL, ctx->wc_ctx,
                                           target_abspath_or_url, ra_session,
                                           start, pool));
-
-  if (end_revnum < start_revnum)
-    return svn_error_create
-      (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-       _("Start revision must precede end revision"));
 
   /* We check the mime-type of the yougest revision before getting all
      the older revisions. */
@@ -674,8 +671,12 @@ svn_client_blame5(const char *target,
      We need to ensure that we get one revision before the start_rev,
      if available so that we can know what was actually changed in the start
      revision. */
+  SVN_ERR(svn_ra_get_latest_revnum(ra_session, &youngest, frb.currpool));
   SVN_ERR(svn_ra_get_file_revs2(ra_session, "",
-                                start_revnum - (start_revnum > 0 ? 1 : 0),
+                                start_revnum 
+                                - (0 < start_revnum && start_revnum <= end_revnum ? 1 : 0)
+                                + (youngest > start_revnum && start_revnum > end_revnum ? 1 : 0),
+                                /* ### blame 5 fails. */
                                 end_revnum, include_merged_revisions,
                                 file_rev_handler, &frb, pool));
 
