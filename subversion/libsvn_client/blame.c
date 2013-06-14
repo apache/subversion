@@ -676,7 +676,6 @@ svn_client_blame5(const char *target,
                                 start_revnum 
                                 - (0 < start_revnum && start_revnum <= end_revnum ? 1 : 0)
                                 + (youngest > start_revnum && start_revnum > end_revnum ? 1 : 0),
-                                /* ### blame 5 fails. */
                                 end_revnum, include_merged_revisions,
                                 file_rev_handler, &frb, pool));
 
