@@ -81,6 +81,8 @@ Candidate changes:
      versions will name the feature in different ways.
    Votes:
      +1: stsp
+     +1: danielsh (no opinion on the name of the feature; just confirming this
+                   patch does what it claims to)
 
  * r1491707
    Add version header to svnpubsub server.
@@ -89,15 +91,6 @@ Candidate changes:
      hypothetical use case.
    Votes:
      +1: danielsh, breser
-
- * r1491770
-   Eliminate revprop buffer size limit.
-   Justification:
-     This removes an inconsistency; we don't limit object sizes anywhere
-     else. Particularly, we allowed for unlimited revprop sizes when setting
-     them but had a 16MB limit in the getter.
-   Votes:
-     +1: stefan2, blair
 
  * r1491739, r1491755, r1491762, r1492152, r1492670, r1492682
    Improve interactive conflict resolution menu.
@@ -123,14 +116,6 @@ Candidate changes:
      +1: stsp
      -0: rhuijben (Working on a further review to avoid a possible duplicate
                    callback call)
-
- * r1492005
-   Optimize 'svn mergeinfo --show-revs' network usage and a similar case in the
-   merge code.
-   Justification:
-     Simple fixes to improve performance.
-   Votes:
-     +1: ivan, rhuijben
 
  * r1478987, r1492020
    Optimize some code that retrieves mergeinfo to obtain less unneeded
@@ -200,3 +185,21 @@ Approved changes:
 # that would restart the soak should not be added unless they are resolving
 # blocking issues.  If in doubt see this link for details:
 # http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
+
+ * r1491770
+   Eliminate revprop buffer size limit.
+   Justification:
+     This removes an inconsistency; we don't limit object sizes anywhere
+     else. Particularly, we allowed for unlimited revprop sizes when setting
+     them but had a 16MB limit in the getter.
+   Votes:
+     +1: stefan2, blair, danielsh
+
+ * r1492005
+   Optimize 'svn mergeinfo --show-revs' network usage and a similar case in the
+   merge code.
+   Justification:
+     Simple fixes to improve performance.
+   Votes:
+     +1: ivan, rhuijben, danielsh
+
