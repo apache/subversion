@@ -148,6 +148,9 @@ Candidate changes:
    Votes:
      +1: stefan2, stsp
 
+Veto-blocked changes:
+=====================
+
  * r1493027, r1493028, r1493060
    Make 'blame -r 5:4' work.
    Justification:
@@ -159,10 +162,7 @@ Candidate changes:
        should be amended to say "1.8.1" rather than "1.9.0" (this amendment
        does not require votes).
    Votes:
-     +1: danielsh
-
-Veto-blocked changes:
-=====================
+     -1: danielsh (doesn't resolve peg revisions correctly)
 
 Approved for 1.8.1 or if soak is restarted for 1.8.0:
 ====================================================
