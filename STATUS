@@ -185,6 +185,13 @@ Approved for 1.8.1 or if soak is restarted for 1.8.0:
    Votes:
      +1: stefan2, stsp
 
+ * r1493027, r1493028
+   Make 'blame -r 5:4' work.
+   Justification:
+     Make it possible to track removed lines.
+   Votes:
+     +1: danielsh
+
 Approved changes:
 =================
 
