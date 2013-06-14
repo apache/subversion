@@ -632,6 +632,8 @@ typedef struct rep_state_t
   apr_off_t start;  /* The starting offset for the raw
                        svndiff/plaintext data minus header.
                        -1 if the offset is yet unknwon. */
+                    /* sub-item index in case the rep is containered */
+  apr_uint32_t sub_item;
   apr_off_t current;/* The current offset relative to start. */
   apr_off_t size;   /* Final value of CURRENT. */
   int ver;          /* If a delta, what svndiff version? 
@@ -1349,12 +1351,9 @@ auto_set_start_offset(rep_state_t *rs, apr_pool_t *pool)
 {
   if (rs->start == -1)
     {
-      apr_uint32_t sub_item;
-      SVN_ERR(svn_fs_fs__item_offset(&rs->start, &sub_item, rs->file->fs,
-                                     rs->revision, NULL, rs->item_index,
-                                     pool));
-      SVN_ERR_ASSERT(sub_item == 0);
-      
+      SVN_ERR(svn_fs_fs__item_offset(&rs->start, &rs->sub_item,
+                                     rs->file->fs, rs->revision, NULL,
+                                     rs->item_index, pool));
       rs->start += rs->header_size;
     }
 
@@ -1519,8 +1518,14 @@ read_container_window(svn_stringbuf_t **nwin,
   if (ffd->reps_container_cache)
     {
       svn_boolean_t is_cached = FALSE;
-      SVN_ERR(svn_cache__get((void**)&extractor, &is_cached,
-                             ffd->reps_container_cache, &key, pool));
+      svn_fs_fs__reps_baton_t baton;
+      baton.fs = fs;
+      baton.idx = rs->sub_item;
+
+      SVN_ERR(svn_cache__get_partial((void**)&extractor, &is_cached,
+                                     ffd->reps_container_cache, &key,
+                                     svn_fs_fs__reps_get_func, &baton,
+                                     pool));
     }
 
   /* read from disk, if necessary */
