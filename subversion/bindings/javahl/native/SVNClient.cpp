@@ -1569,7 +1569,10 @@ SVNClient::openRemoteSession(const char* path)
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
+    /* Decouple the RemoteSession's context from SVNClient's context
+       by creating a copy of the prompter here. */
     Prompter* prompter = new Prompter(context.getPrompter());
+
     jobject jremoteSession = NULL;
     RemoteSession* session = new RemoteSession(
         &jremoteSession, path_info.url, path_info.uuid,
@@ -1578,6 +1581,7 @@ SVNClient::openRemoteSession(const char* path)
         prompter, jctx);
     if (JNIUtil::isJavaExceptionThrown() || !session)
     {
+        /* context.getSelf() created a new global reference. */
         JNIUtil::getEnv()->DeleteGlobalRef(jctx);
         jremoteSession = NULL;
         delete session;
