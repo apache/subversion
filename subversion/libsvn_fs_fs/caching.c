@@ -513,7 +513,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        0, 0, /* Do not use inprocess cache */
                        svn_fs_fs__serialize_rep_header,
                        svn_fs_fs__deserialize_rep_header,
-                       sizeof(pair_cache_key_t),
+                       sizeof(representation_cache_key_t),
                        apr_pstrcat(pool, prefix, "REPHEADER", (char *)NULL),
                        SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
                        fs,

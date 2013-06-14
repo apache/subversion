@@ -671,9 +671,10 @@ create_rep_state_body(rep_state_t **rep_state,
       && (   ((*shared_file)->revision / ffd->max_files_per_dir)
           == (rep->revision / ffd->max_files_per_dir));
       
-  pair_cache_key_t key;
+  representation_cache_key_t key;
   key.revision = rep->revision;
-  key.second = rep->item_index;
+  key.is_packed = rep->revision < ffd->min_unpacked_rev;
+  key.item_index = rep->item_index;
 
   /* continue constructing RS and RA */
   rs->size = rep->size;
@@ -1730,6 +1731,9 @@ cache_windows(svn_filesize_t *fulltext_len,
           SVN_ERR(svn_txdelta_read_svndiff_window(&window, rs->file->stream,
                                                   rs->ver, pool));
 
+          /* aggregate expanded window size */
+          *fulltext_len += window->tview_len;
+          
           /* determine on-disk window size */
           SVN_ERR(get_file_offset(&end_offset, rs->file->file, pool));
           rs->current = end_offset - rs->start;
@@ -1759,7 +1763,7 @@ static svn_error_t *
 read_rep_header(svn_fs_fs__rep_header_t **rep_header,
                 svn_fs_t *fs,
                 svn_stream_t *stream,
-                pair_cache_key_t *key,
+                representation_cache_key_t *key,
                 apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -1790,7 +1794,7 @@ svn_fs_fs__get_representation_length(svn_filesize_t *packed_len,
                                      svn_fs_fs__p2l_entry_t* entry,
                                      apr_pool_t *pool)
 {
-  pair_cache_key_t key = { 0 };
+  representation_cache_key_t key = { 0 };
   rep_state_t rs = { 0 };
   svn_fs_fs__rep_header_t *rep_header;
   
@@ -1801,7 +1805,8 @@ svn_fs_fs__get_representation_length(svn_filesize_t *packed_len,
 
   /* get / read the representation header */  
   key.revision = entry->items[0].revision;
-  key.second = entry->items[0].number;
+  key.is_packed = is_packed_rev(fs, key.revision);
+  key.item_index = entry->items[0].number;
   SVN_ERR(read_rep_header(&rep_header, fs, stream, &key, pool));
 
   /* prepare representation reader state (rs) structure */
@@ -2621,8 +2626,14 @@ block_read_contents(svn_stringbuf_t **item,
                     pair_cache_key_t *key,
                     apr_pool_t *pool)
 {
+  representation_cache_key_t header_key = { 0 };
   svn_fs_fs__rep_header_t *rep_header;
-  SVN_ERR(read_rep_header(&rep_header, fs, stream, key, pool));
+
+  header_key.revision = (apr_int32_t)key->revision;
+  header_key.is_packed = is_packed_rev(fs, header_key.revision);
+  header_key.item_index = key->second;
+
+  SVN_ERR(read_rep_header(&rep_header, fs, stream, &header_key, pool));
   SVN_ERR(block_read_windows(rep_header, fs, file, stream, entry, pool));
 
   return SVN_NO_ERROR;
