@@ -7151,6 +7151,8 @@ choose_delta_base(representation_t **rep,
        * Please note that copied nodes - such as branch directories - will
        * look the same (false positive) while reps shared within the same
        * revision will not be caught (false negative).
+       *
+       * Message-ID: <CA+t0gk1wzitkih3GRCLDvK-bTEm=hgppGb_7xXMtvuXDYPfL+Q@mail.gmail.com>
        */
       if (props)
         {
