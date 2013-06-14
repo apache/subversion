@@ -177,14 +177,8 @@ Approved for 1.8.1 or if soak is restarted for 1.8.0:
    Votes:
      +1: danielsh
 
-Approved changes:
-=================
-
-# 1.8.0-rc3 is released and as such 1.8.0 is in the final weak of soak. 
-# Changes that are not intended for 1.8.0 should not be placed here and changes
-# that would restart the soak should not be added unless they are resolving
-# blocking issues.  If in doubt see this link for details:
-# http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
+Approved for 1.8.1:
+===================
 
  * r1491770
    Eliminate revprop buffer size limit.
@@ -202,4 +196,13 @@ Approved changes:
      Simple fixes to improve performance.
    Votes:
      +1: ivan, rhuijben, danielsh
+
+Approved changes:
+=================
+
+# 1.8.0-rc3 is released and as such 1.8.0 is in the final weak of soak. 
+# Changes that are not intended for 1.8.0 should not be placed here and changes
+# that would restart the soak should not be added unless they are resolving
+# blocking issues.  If in doubt see this link for details:
+# http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 
