@@ -581,6 +581,9 @@ password-stores =
 
 [miscellany]
 interactive-conflicts = false
+
+[working-copy]
+exclusive-locking = true
 """
 
   # define default server file contents if none provided
