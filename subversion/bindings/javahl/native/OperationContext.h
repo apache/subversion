@@ -74,7 +74,11 @@ class OperationContext
   void cancelOperation();
   void resetCancelRequest();
   virtual bool isCancelledOperation();
+  jobject getSelf() const;
   const char *getConfigDirectory() const;
+  const char *getUsername() const;
+  const char *getPassword() const;
+  const Prompter& getPrompter() const;
 
   /**
    * Set the configuration directory, taking the usual steps to

@@ -1864,11 +1864,9 @@ Java_org_apache_subversion_javahl_SVNClient_openRemoteSession
       return NULL;
     }
 
-  // TODO: convert path to URL
-  JNIStringHolder url(jpath);
+  JNIStringHolder path(jpath);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  //return cl->openRemoteSession(url);
-  return NULL;
+  return cl->openRemoteSession(path);
 }

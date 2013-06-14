@@ -165,4 +165,12 @@ public class SVNRemoteTests extends SVNTests
 
         assertEquals(getTestRepoUrl(), session.getUrl());
     }
+
+    public void testGetUrl_viaSVNClient() throws Exception
+    {
+        ISVNRemote session = client.openRemoteSession(getTestRepoUrl());
+
+        assertEquals(getTestRepoUrl(), session.getUrl());
+    }
+
 }

@@ -92,7 +92,7 @@ RemoteSession::open(jobject* jthis_out, jstring jurl, jstring juuid,
   RemoteSession* session = new RemoteSession(
       jthis_out, url, uuid, configDirectory,
       usernameStr, passwordStr, prompter, jprogress);
-  if (JNIUtil::isJavaExceptionThrown())
+  if (JNIUtil::isJavaExceptionThrown() || !session)
     {
       delete session;
       delete prompter;
