@@ -173,4 +173,23 @@ public class SVNRemoteTests extends SVNTests
         assertEquals(getTestRepoUrl(), session.getUrl());
     }
 
+
+    public void testGetSession_ConfigConstructor() throws Exception
+    {
+        ISVNRemote session;
+        try
+        {
+            session = new RemoteFactory(
+                super.conf.getAbsolutePath(),
+                USERNAME, PASSWORD,
+                new DefaultPromptUserPassword(), null)
+                .openRemoteSession(getTestRepoUrl());
+        }
+        catch (ClientException ex)
+        {
+            throw new RuntimeException(ex);
+        }
+        assertNotNull("Null session was returned by factory", session);
+        assertEquals(getTestRepoUrl(), session.getUrl());
+    }
 }
