@@ -1572,6 +1572,13 @@ SVNClient::openRemoteSession(const char* path)
     /* Decouple the RemoteSession's context from SVNClient's context
        by creating a copy of the prompter here. */
     Prompter* prompter = new Prompter(context.getPrompter());
+    if (!prompter)
+    {
+        /* context.getSelf() created a new global reference. */
+        JNIUtil::getEnv()->DeleteGlobalRef(jctx);
+        JNIUtil::throwNullPointerException("allocating Prompter");
+        return NULL;
+    }
 
     jobject jremoteSession = NULL;
     RemoteSession* session = new RemoteSession(
