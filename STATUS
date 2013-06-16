@@ -139,7 +139,7 @@ Candidate changes:
    Justification:
      1.7 servers would silently do the wrong thing.
    Votes:
-     +1: danielsh
+     +1: danielsh, rhuijben
 
  * r1492164
    Invalid repository paths cause a segfault in the fsfs-stats tool.
@@ -156,7 +156,17 @@ Candidate changes:
      There is no reason to command line and third-party use different
      codepath for ancestory checks. Simple performance fix.
    Votes:
-     +1: ivan
+     +1: ivan, rhuijben
+
+ * r1493475
+   Improve 'svn merge' performance over WAN: Use already fetched 
+   history-as-mergeinfo data to find youngest common ancestor in automatic 
+   merge.
+   Justification:
+     No reason to create an RA session or perform RA calls if the information
+     is already in memory.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
@@ -196,8 +206,7 @@ Approved for 1.8.1 or if soak is restarted for 1.8.0:
      +1: stefan2, blair, danielsh
 
  * r1492005
-   Optimize 'svn mergeinfo --show-revs' network usage and a similar case in the
-   merge code.
+   Optimize 'svn mergeinfo --show-revs' network usage.
    Justification:
      Simple fixes to improve performance.
    Votes:
