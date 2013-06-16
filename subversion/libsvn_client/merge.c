@@ -12308,9 +12308,13 @@ find_automatic_merge(svn_client__pathrev_t **base_p,
             &s_t->target->loc, SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
             s_t->target_ra_session, ctx, scratch_pool));
 
-  SVN_ERR(svn_client__get_youngest_common_ancestor(
-            &s_t->yca, s_t->source, &s_t->target->loc, s_t->source_ra_session,
-            ctx, result_pool, result_pool));
+  SVN_ERR(svn_client__calc_youngest_common_ancestor(
+            &s_t->yca, s_t->source, s_t->source_branch.history,
+            s_t->source_branch.has_r0_history,
+            &s_t->target->loc, s_t->target_branch.history,
+            s_t->target_branch.has_r0_history,
+            result_pool, scratch_pool));
+
   if (! s_t->yca)
     return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                              _("'%s@%ld' must be ancestrally related to "
