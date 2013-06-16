@@ -41,10 +41,7 @@ public class RemoteSession extends JNIObject implements ISVNRemote
 {
     public native void dispose();
 
-    public void cancelOperation() throws ClientException
-    {
-        thrownotimplemented("cancelOperation");
-    }
+    public native void cancelOperation() throws ClientException;
 
     public void reparent(String url) throws ClientException
     {
