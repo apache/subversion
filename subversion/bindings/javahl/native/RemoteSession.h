@@ -52,6 +52,8 @@ class RemoteSession : public SVNBase
                   Prompter* prompter, jobject jprogress);
     ~RemoteSession();
 
+    void cancelOperation() const { m_context->cancelOperation(); }
+
     virtual void dispose(jobject jthis);
 
     jstring getSessionUrl();
