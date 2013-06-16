@@ -72,8 +72,9 @@ public class SVNRemoteTests extends SVNTests
     {
         ISVNRemote session = getSession();
 
-        long revision = session.getDatedRevision(new Date());
-        assertEquals(revision, 1);
+        Revision revision = session.getRevisionByDate(new Date());
+        assertEquals(revision.getKind(), Revision.Kind.number);
+        assertEquals(((Revision.Number)revision).getNumber(), 1);
     }
 
     public void testGetLocks()
@@ -109,7 +110,7 @@ public class SVNRemoteTests extends SVNTests
         kind = session.checkPath("A", Revision.getInstance(1));
         assertEquals(NodeKind.dir, kind);
     }
-    
+
     public static ISVNRemote getSession(String url, String configDirectory)
     {
         try
@@ -129,22 +130,23 @@ public class SVNRemoteTests extends SVNTests
             throw new RuntimeException(ex);
         }
     }
-    
+
     private ISVNRemote getSession()
     {
         return getSession(getTestRepoUrl(), super.conf.getAbsolutePath());
     }
-    
+
     private String getTestRepoUrl()
     {
         return thisTest.getUrl().toASCIIString();
     }
-    
+
     public void testGetLatestRevision() throws Exception
     {
         ISVNRemote session = getSession();
-
-        assertEquals(1, session.getLatestRevision());
+        Revision revision = session.getLatestRevision();
+        assertEquals(revision.getKind(), Revision.Kind.number);
+        assertEquals(((Revision.Number)revision).getNumber(), 1);
     }
 
     public void testGetUUID() throws Exception
@@ -156,21 +158,21 @@ public class SVNRemoteTests extends SVNTests
          * TODO: Test for actual UUID once test dump file has
          * fixed UUID
          */
-        assertNotNull(session.getUUID());
+        assertNotNull(session.getReposUUID());
     }
 
     public void testGetUrl() throws Exception
     {
         ISVNRemote session = getSession();
 
-        assertEquals(getTestRepoUrl(), session.getUrl());
+        assertEquals(getTestRepoUrl(), session.getSessionUrl());
     }
 
     public void testGetUrl_viaSVNClient() throws Exception
     {
         ISVNRemote session = client.openRemoteSession(getTestRepoUrl());
 
-        assertEquals(getTestRepoUrl(), session.getUrl());
+        assertEquals(getTestRepoUrl(), session.getSessionUrl());
     }
 
 
@@ -190,6 +192,6 @@ public class SVNRemoteTests extends SVNTests
             throw new RuntimeException(ex);
         }
         assertNotNull("Null session was returned by factory", session);
-        assertEquals(getTestRepoUrl(), session.getUrl());
+        assertEquals(getTestRepoUrl(), session.getSessionUrl());
     }
 }

@@ -29,7 +29,7 @@ import org.apache.subversion.javahl.callback.*;
 import org.apache.subversion.javahl.ISVNRemote;
 import org.apache.subversion.javahl.JNIObject;
 import org.apache.subversion.javahl.OperationContext;
-import org.apache.subversion.javahl.SubversionException;
+import org.apache.subversion.javahl.ClientException;
 
 import java.util.Date;
 import java.util.Map;
@@ -39,34 +39,53 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 public class RemoteSession extends JNIObject implements ISVNRemote
 {
-    @Override
-    public native long getLatestRevision();
+    public native void dispose();
 
-    @Override
-    public native String getUUID();
-
-    @Override
-    public native String getUrl();
-
-    public native long getDatedRevision(long timestamp) throws SubversionException;
-
-    public long getDatedRevision(Date date) throws SubversionException
+    public void cancelOperation() throws ClientException
     {
-        long timestamp = NANOSECONDS.convert(date.getTime(), MILLISECONDS);
-        return getDatedRevision(timestamp);
+        thrownotimplemented("cancelOperation");
     }
 
-    public native Map<String, Lock> getLocks(String path, Depth depth)
-            throws SubversionException;
+    public void reparent(String url) throws ClientException
+    {
+        thrownotimplemented("reparent");
+    }
+
+    public native String getSessionUrl() throws ClientException;
+
+    public String getSessionRelativePath(String url) throws ClientException
+    {
+        thrownotimplemented("getSessionRelativePath");
+        return null;
+    }
+
+    public String getRepositoryRelativePath(String url) throws ClientException
+    {
+        thrownotimplemented("getRepositoryRelativePath");
+        return null;
+    }
+
+    public native String getReposUUID() throws ClientException;
+
+    public native Revision getLatestRevision() throws ClientException;
+
+    public Revision getRevisionByDate(Date date) throws ClientException
+    {
+        long timestamp = NANOSECONDS.convert(date.getTime(), MILLISECONDS);
+        return getRevisionByTimestamp(timestamp);
+    }
+
+    public native Revision getRevisionByTimestamp(long timestamp)
+            throws ClientException;
 
     public native NodeKind checkPath(String path, Revision revision)
-            throws SubversionException;
+            throws ClientException;
+
+    public native Map<String, Lock> getLocks(String path, Depth depth)
+            throws ClientException;
 
     @Override
     public native void finalize() throws Throwable;
-
-    @Override
-    public native void dispose();
 
     /**
      * This constructor is called from JNI to get an instance call
@@ -82,4 +101,10 @@ public class RemoteSession extends JNIObject implements ISVNRemote
      */
     private RemoteSessionContext sessionContext = new RemoteSessionContext();
     private class RemoteSessionContext extends OperationContext {}
+
+
+    private void thrownotimplemented(String message)
+    {
+        throw new RuntimeException("Not implemented: " + message);
+    }
 }
