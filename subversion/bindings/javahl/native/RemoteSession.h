@@ -50,18 +50,17 @@ class RemoteSession : public SVNBase
                   const char* configDirectory,
                   const char* username, const char* password,
                   Prompter* prompter, jobject jprogress);
-
     ~RemoteSession();
 
-    jlong getLatestRevision();
-    jstring getUUID();
-    jstring getUrl();
+    virtual void dispose(jobject jthis);
 
-    svn_revnum_t getDatedRev(jlong timestamp);
+    jstring getSessionUrl();
+    jstring getReposUUID();
+    jobject getLatestRevision();
+
+    jobject getRevisionByTimestamp(jlong timestamp);
     jobject getLocks(jstring jpath, jobject jdepth);
     jobject checkPath(jstring jpath, jobject jrevision);
-
-    virtual void dispose(jobject jthis);
 
   private:
     svn_ra_session_t* m_session;

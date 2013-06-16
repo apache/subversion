@@ -161,35 +161,15 @@ RemoteSession::~RemoteSession()
     }
 }
 
-jlong
-RemoteSession::getLatestRevision()
+void
+RemoteSession::dispose(jobject jthis)
 {
-  SVN::Pool subPool(pool);
-  svn_revnum_t rev;
-
-  SVN_JNI_ERR(svn_ra_get_latest_revnum(m_session, &rev, subPool.getPool()),
-      SVN_INVALID_REVNUM);
-
-  return rev;
+  static jfieldID fid = 0;
+  SVNBase::dispose(jthis, &fid, JAVA_CLASS_REMOTE_SESSION);
 }
 
 jstring
-RemoteSession::getUUID()
-{
-  SVN::Pool subPool(pool);
-  const char * uuid;
-
-  SVN_JNI_ERR(svn_ra_get_uuid2(m_session, &uuid, subPool.getPool()), NULL);
-
-  jstring juuid = JNIUtil::makeJString(uuid);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  return juuid;
-}
-
-jstring
-RemoteSession::getUrl()
+RemoteSession::getSessionUrl()
 {
   SVN::Pool subPool(pool);
   const char * url;
@@ -203,15 +183,35 @@ RemoteSession::getUrl()
   return jurl;
 }
 
-void
-RemoteSession::dispose(jobject jthis)
+jstring
+RemoteSession::getReposUUID()
 {
-  static jfieldID fid = 0;
-  SVNBase::dispose(jthis, &fid, JAVA_CLASS_REMOTE_SESSION);
+  SVN::Pool subPool(pool);
+  const char * uuid;
+
+  SVN_JNI_ERR(svn_ra_get_uuid2(m_session, &uuid, subPool.getPool()), NULL);
+
+  jstring juuid = JNIUtil::makeJString(uuid);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  return juuid;
 }
 
-svn_revnum_t
-RemoteSession::getDatedRev(jlong timestamp)
+jobject
+RemoteSession::getLatestRevision()
+{
+  SVN::Pool subPool(pool);
+  svn_revnum_t rev;
+
+  SVN_JNI_ERR(svn_ra_get_latest_revnum(m_session, &rev, subPool.getPool()),
+              NULL);
+
+  return Revision::makeJRevision(rev);
+}
+
+jobject
+RemoteSession::getRevisionByTimestamp(jlong timestamp)
 {
   SVN::Pool requestPool;
   svn_revnum_t rev;
@@ -220,9 +220,9 @@ RemoteSession::getDatedRev(jlong timestamp)
 
   SVN_JNI_ERR(svn_ra_get_dated_revision(m_session, &rev, tm,
                                         requestPool.getPool()),
-              SVN_INVALID_REVNUM);
+              NULL);
 
-  return rev;
+  return Revision::makeJRevision(rev);
 }
 
 jobject

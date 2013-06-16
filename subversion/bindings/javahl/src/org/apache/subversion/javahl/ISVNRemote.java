@@ -40,39 +40,87 @@ public interface ISVNRemote
      * Release the native peer (should not depend on finalize).
      * Also invalidates any existing editors related to this session.
      */
-    public void dispose();
+    void dispose();
 
     /**
-     * @return latest revision
+     * Cancel the active operation.
+     * @throws ClientException
      */
-    public long getLatestRevision();
-    
-    /**
-     * @return repository UUID
-     */
-    public String getUUID();
-    
-    /**
-     * @return parent url for this session
-     */
-    public String getUrl();
-    
-    /**
-     * @param date
-     *            The date
-     * @return The latest revision at date
-     */
-    public long getDatedRevision(Date date) throws SubversionException;
-    
-    /**
-     * @param timestamp (in nano seconds) used as a cutoff time 
-     * @return the latest revision at that moment
-     */
-    public long getDatedRevision(long timestamp) throws SubversionException;
+    void cancelOperation() throws ClientException;
 
-    public Map<String, Lock> getLocks(String path, Depth depth)
-            throws SubversionException;
+    /** Change the URL of the session to point to a new path in the
+     * same repository.
+     * @throws ClientException
+     * @note The operation fails if the URL has a different repository
+     *       root than the current session URL.
+     */
+    void reparent(String url) throws ClientException;
 
-    public NodeKind checkPath(String path, Revision revision)
-            throws SubversionException;
+    /**
+     * Get the current session URL.
+     * @throws ClientException
+     */
+    String getSessionUrl() throws ClientException;
+
+    /**
+     * Return a path relative to the current session URL.
+     * @param url Must be a child of the current session URL.
+     * @throws ClientException
+     */
+    String getSessionRelativePath(String url) throws ClientException;
+
+    /**
+     * Return a path relative to the repository root URL associated with
+     * current session URL.
+     * @param url Must be a child of the repository root URL.
+     * @throws ClientException
+     */
+    String getRepositoryRelativePath(String url) throws ClientException;
+
+    /**
+     * Get the UUID of the session's repository.
+     * @throws ClientException
+     */
+    String getReposUUID() throws ClientException;
+
+    /**
+     * Get the latest revision number from the session's repository.
+     * @throws ClientException
+     */
+    Revision getLatestRevision() throws ClientException;
+
+    /**
+     * Get the latest revision number at the given time
+     * from the session's repository.
+     * @throws ClientException
+     */
+    Revision getRevisionByDate(Date date) throws ClientException;
+
+    /**
+     * Get the latest revision number at the given time, expressed as
+     * the number of milliseconds since the epoch, from the session's
+     * repository.
+     * @throws ClientException
+     */
+    Revision getRevisionByTimestamp(long timestamp) throws ClientException;
+
+    /**
+     * Return the kind of the node in path at revision.
+     * @param path A path relative to the sessionn URL
+     * @throws ClientException
+     */
+    NodeKind checkPath(String path, Revision revision)
+            throws ClientException;
+
+    /**
+     * Return a dictionary containing all locks on or below the given path.
+     * @param path A path relative to the sessionn URL
+     * @param depth The recursion depth
+     * @note It is not considered an error for the path to not exist in HEAD.
+     *       Such a search will simply return no locks.
+     * @note This functionality is not available in pre-1.2 servers.
+     * @throws ClientException
+     */
+    Map<String, Lock> getLocks(String path, Depth depth)
+            throws ClientException;
 }
