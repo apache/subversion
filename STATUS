@@ -148,6 +148,16 @@ Candidate changes:
    Votes:
      +1: stefan2, stsp
 
+ * r1493424
+   Remove unnecessary check for branches ancestry from 
+   command line client. All required checks are already performed in
+   libsvn_client.
+   Justification:
+     There is no reason to command line and third-party use different
+     codepath for ancestory checks. Simple performance fix.
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
