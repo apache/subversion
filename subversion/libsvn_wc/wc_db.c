@@ -14990,13 +14990,17 @@ svn_wc__db_verify(svn_wc__db_t *db,
 
 svn_error_t *
 svn_wc__db_bump_format(int *result_format,
-                       const char *wcroot_abspath,
+                       svn_boolean_t *bumped_format,
                        svn_wc__db_t *db,
+                       const char *wcroot_abspath,
                        apr_pool_t *scratch_pool)
 {
   svn_sqlite__db_t *sdb;
   svn_error_t *err;
   int format;
+
+  if (bumped_format)
+    *bumped_format = FALSE;
 
   /* Do not scan upwards for a working copy root here to prevent accidental
    * upgrades of any working copies the WCROOT might be nested in.
@@ -15032,7 +15036,10 @@ svn_wc__db_bump_format(int *result_format,
 
   SVN_ERR(svn_sqlite__read_schema_version(&format, sdb, scratch_pool));
   err = svn_wc__upgrade_sdb(result_format, wcroot_abspath,
-                                     sdb, format, scratch_pool);
+                            sdb, format, scratch_pool);
+
+  if (bumped_format)
+    *bumped_format = (*result_format > format);
 
   /* Make sure we return a different error than expected for upgrades from
      entries */
