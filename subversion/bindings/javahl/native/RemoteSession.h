@@ -58,6 +58,7 @@ class RemoteSession : public SVNBase
 
     virtual void dispose(jobject jthis);
 
+    void reparent(const char* url);
     jstring getSessionUrl();
     jstring getReposUUID();
     jobject getLatestRevision();
