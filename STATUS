@@ -161,7 +161,7 @@ Candidate changes:
      No reason to create an RA session or perform RA calls if the information
      is already in memory.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, ivan
 
  * r1493703
    Fix upgrade notification for explicit upgrades of post-WC-NG working copies.
