@@ -661,8 +661,24 @@ public class SVNClient implements ISVNClient
                              PatchCallback callback)
             throws ClientException;
 
-    public native ISVNRemote openRemoteSession(String path)
-            throws ClientException;
+    public ISVNRemote openRemoteSession(String path)
+            throws ClientException, SubversionException
+    {
+        return nativeOpenRemoteSession(path, 1);
+    }
+
+    public ISVNRemote openRemoteSession(String path, int retryAttempts)
+            throws ClientException, SubversionException
+    {
+        if (retryAttempts <= 0)
+            throw new IllegalArgumentException(
+                "retryAttempts must be positive");
+        return nativeOpenRemoteSession(path, retryAttempts);
+    }
+
+    private native ISVNRemote nativeOpenRemoteSession(
+        String path, int retryAttempts)
+            throws ClientException, SubversionException;
 
     /**
      * A private class to hold the contextual information required to

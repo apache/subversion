@@ -27,8 +27,11 @@ import org.apache.subversion.javahl.callback.*;
 import org.apache.subversion.javahl.types.*;
 
 import org.apache.subversion.javahl.ISVNRemote;
-import org.apache.subversion.javahl.ClientException;
 import org.apache.subversion.javahl.NativeResources;
+import org.apache.subversion.javahl.ClientException;
+import org.apache.subversion.javahl.SubversionException;
+
+import java.util.HashSet;
 
 
 /**
@@ -117,15 +120,39 @@ public class RemoteFactory
     /**
      * Open a persistent session to a repository.
      * @param url The initial session root URL.
+     * @throws SubversionException If URL redirects cannot be followed
      * @throws ClientException
      * @note The URL can point to a subtree of the repository.
      * @note The session object inherits the progress callback,
      *       configuration directory and authentication info.
      */
     public ISVNRemote openRemoteSession(String url)
-            throws ClientException
+            throws ClientException, SubversionException
     {
-        return open(url, null,
+        return open(1, url, null,
+                    configDirectory, username, password, prompt, progress);
+    }
+
+    /**
+     * Open a persistent session to a repository.
+     * @param url The initial session root URL.
+     * @param retryAttempts The number of times to retry the operation
+     *        if the given URL is redirected.
+     * @throws IllegalArgumentException If <code>retryAttempts</code>
+     *         is not positive
+     * @throws SubversionException If URL redirects cannot be followed
+     * @throws ClientException
+     * @note The URL can point to a subtree of the repository.
+     * @note The session object inherits the progress callback,
+     *       configuration directory and authentication info.
+     */
+    public ISVNRemote openRemoteSession(String url, int retryAttempts)
+            throws ClientException, SubversionException
+    {
+        if (retryAttempts <= 0)
+            throw new IllegalArgumentException(
+                "retryAttempts must be positive");
+        return open(retryAttempts, url, null,
                     configDirectory, username, password, prompt, progress);
     }
 
@@ -134,6 +161,7 @@ public class RemoteFactory
      * @param url The initial session root URL.
      * @param reposUUID The expected repository UUID; may not be null..
      * @throws IllegalArgumentException If <code>reposUUID</code> is null.
+     * @throws SubversionException If URL redirects cannot be followed
      * @throws ClientException
      * @note The URL can point to a subtree of the repository.
      * @note If the UUID does not match the repository, this function fails.
@@ -141,14 +169,41 @@ public class RemoteFactory
      *       configuration directory and authentication info.
      */
     public ISVNRemote openRemoteSession(String url, String reposUUID)
-            throws ClientException
+            throws ClientException, SubversionException
     {
         if (reposUUID == null)
             throw new IllegalArgumentException("reposUUID may not be null");
-        return open(url, reposUUID,
+        return open(1, url, reposUUID,
                     configDirectory, username, password, prompt, progress);
     }
 
+    /**
+     * Open a persistent session to a repository.
+     * @param url The initial session root URL.
+     * @param reposUUID The expected repository UUID; may not be null..
+     * @param retryAttempts The number of times to retry the operation
+     *        if the given URL is redirected.
+     * @throws IllegalArgumentException If <code>reposUUID</code> is null
+     *         or <code>retryAttempts</code> is not positive
+     * @throws SubversionException If URL redirects cannot be followed
+     * @throws ClientException
+     * @note The URL can point to a subtree of the repository.
+     * @note If the UUID does not match the repository, this function fails.
+     * @note The session object inherits the progress callback,
+     *       configuration directory and authentication info.
+     */
+    public ISVNRemote openRemoteSession(String url, String reposUUID,
+                                        int retryAttempts)
+            throws ClientException, SubversionException
+    {
+        if (reposUUID == null)
+            throw new IllegalArgumentException("reposUUID may not be null");
+        if (retryAttempts <= 0)
+            throw new IllegalArgumentException(
+                "retryAttempts must be positive");
+        return open(retryAttempts, url, reposUUID,
+                    configDirectory, username, password, prompt, progress);
+    }
 
     private String configDirectory;
     private String username;
@@ -156,11 +211,12 @@ public class RemoteFactory
     private UserPasswordCallback prompt;
     private ProgressCallback progress;
 
-    /** Native factory implementation. */
-    private static native ISVNRemote open(String url, String reposUUID,
+    /* Native factory implementation. */
+    private static native ISVNRemote open(int retryAttempts,
+                                          String url, String reposUUID,
                                           String configDirectory,
                                           String username, String password,
                                           UserPasswordCallback prompt,
                                           ProgressCallback progress)
-            throws ClientException;
+            throws ClientException, SubversionException;
 }

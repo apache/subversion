@@ -1150,11 +1150,29 @@ public interface ISVNClient
      * Open a persistent session to a repository.
      * @param path A path in a working copy from which the
      *        session URL is derived.
+     * @throws SubversionException If URL redirects cannot be followed
      * @throws ClientException
      * @note The session object inherits the progress callback,
      *       configuration directory and authentication info.
      * @since 1.9
      */
     ISVNRemote openRemoteSession(String path)
-            throws ClientException;
+            throws ClientException, SubversionException;
+
+    /**
+     * Open a persistent session to a repository.
+     * @param path A path in a working copy from which the
+     *        session URL is derived.
+     * @param retryAttempts The number of times to retry the operation
+     *        if the given URL is redirected.
+     * @throws IllegalArgumentException If <code>retryAttempts</code>
+     *         is not positive
+     * @throws SubversionException If URL redirects cannot be followed
+     * @throws ClientException
+     * @note The session object inherits the progress callback,
+     *       configuration directory and authentication info.
+     * @since 1.9
+     */
+    ISVNRemote openRemoteSession(String path, int retryAttempts)
+            throws ClientException, SubversionException;
 }

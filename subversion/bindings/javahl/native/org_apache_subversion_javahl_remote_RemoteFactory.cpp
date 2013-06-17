@@ -36,7 +36,8 @@
 
 JNIEXPORT jobject JNICALL
 Java_org_apache_subversion_javahl_remote_RemoteFactory_open(
-    JNIEnv *env, jclass jclass, jstring jurl, jstring juuid,
+    JNIEnv *env, jclass jclass, jint jretryAttempts,
+    jstring jurl, jstring juuid,
     jstring jconfigDirectory, jstring jusername, jstring jpassword,
     jobject jprompter, jobject jprogress)
 {
@@ -47,12 +48,10 @@ Java_org_apache_subversion_javahl_remote_RemoteFactory_open(
   /*
    * Create RemoteSession C++ object and return its java wrapper to the caller
    */
-  jobject jremoteSession = NULL;
-
-  RemoteSession* session = RemoteSession::open(
-      &jremoteSession, jurl, juuid, jconfigDirectory,
+  jobject jremoteSession = RemoteSession::open(
+      jretryAttempts, jurl, juuid, jconfigDirectory,
       jusername, jpassword, jprompter, jprogress);
-  if (JNIUtil::isJavaExceptionThrown() || !session)
+  if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
   return jremoteSession;
