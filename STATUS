@@ -168,6 +168,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1493703
+   Fix upgrade notification for explicit upgrades of post-WC-NG working copies.
+   Justification:
+     Without this notification users can't see whether the upgrade was a no-op.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
