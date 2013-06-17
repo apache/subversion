@@ -120,7 +120,8 @@ public class RemoteFactory
     /**
      * Open a persistent session to a repository.
      * @param url The initial session root URL.
-     * @throws SubversionException If URL redirects cannot be followed
+     * @throws RetryOpenSession If the session URL was redirected
+     * @throws SubversionException If an URL redirect cycle was detected
      * @throws ClientException
      * @note The URL can point to a subtree of the repository.
      * @note The session object inherits the progress callback,
@@ -140,7 +141,8 @@ public class RemoteFactory
      *        if the given URL is redirected.
      * @throws IllegalArgumentException If <code>retryAttempts</code>
      *         is not positive
-     * @throws SubversionException If URL redirects cannot be followed
+     * @throws RetryOpenSession If the session URL was redirected
+     * @throws SubversionException If an URL redirect cycle was detected
      * @throws ClientException
      * @note The URL can point to a subtree of the repository.
      * @note The session object inherits the progress callback,
@@ -161,7 +163,8 @@ public class RemoteFactory
      * @param url The initial session root URL.
      * @param reposUUID The expected repository UUID; may not be null..
      * @throws IllegalArgumentException If <code>reposUUID</code> is null.
-     * @throws SubversionException If URL redirects cannot be followed
+     * @throws RetryOpenSession If the session URL was redirected
+     * @throws SubversionException If an URL redirect cycle was detected
      * @throws ClientException
      * @note The URL can point to a subtree of the repository.
      * @note If the UUID does not match the repository, this function fails.
@@ -185,7 +188,8 @@ public class RemoteFactory
      *        if the given URL is redirected.
      * @throws IllegalArgumentException If <code>reposUUID</code> is null
      *         or <code>retryAttempts</code> is not positive
-     * @throws SubversionException If URL redirects cannot be followed
+     * @throws RetryOpenSession If the session URL was redirected
+     * @throws SubversionException If an URL redirect cycle was detected
      * @throws ClientException
      * @note The URL can point to a subtree of the repository.
      * @note If the UUID does not match the repository, this function fails.

@@ -205,16 +205,12 @@ RemoteSession::RemoteSession(jobject* jthis_out, int retryAttempts,
         }
     }
 
-  if (corrected_url)
+  if (cycle_detected)
     {
       jstring exmsg = JNIUtil::makeJString(
-          (cycle_detected
-           ? apr_psprintf(pool.getPool(),
-                          _("Redirect cycle detected for URL '%s'"),
-                          corrected_url)
-           : _("Too many redirects")));
-      if (JNIUtil::isJavaExceptionThrown())
-        return;
+          apr_psprintf(pool.getPool(),
+                       _("Redirect cycle detected for URL '%s'"),
+                       corrected_url));
 
       jclass excls = env->FindClass(
           JAVA_PACKAGE "/SubversionException");
@@ -230,6 +226,34 @@ RemoteSession::RemoteSession(jobject* jthis_out, int retryAttempts,
         }
 
       jobject ex = env->NewObject(excls, exctor, exmsg);
+      env->Throw(static_cast<jthrowable>(ex));
+      return;
+    }
+
+  if (corrected_url)
+    {
+      jstring exmsg = JNIUtil::makeJString(_("Too many redirects"));
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+
+      jstring exurl = JNIUtil::makeJString(corrected_url);
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+
+      jclass excls = env->FindClass(
+          JAVA_PACKAGE "/remote/RetryOpenSession");
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+
+      static jmethodID exctor = 0;
+      if (exctor == 0)
+        {
+          exctor = env->GetMethodID(excls, "<init>", "(JJ)V");
+          if (JNIUtil::isJavaExceptionThrown())
+            return;
+        }
+
+      jobject ex = env->NewObject(excls, exctor, exmsg, exurl);
       env->Throw(static_cast<jthrowable>(ex));
       return;
     }
