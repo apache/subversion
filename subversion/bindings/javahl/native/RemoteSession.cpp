@@ -24,6 +24,9 @@
  * @brief Implementation of the class RemoteSession
  */
 
+#include <cstring>
+#include <set>
+
 #include "JNIStringHolder.h"
 #include "JNIUtil.h"
 
@@ -48,8 +51,9 @@ RemoteSession::getCppObject(jobject jthis)
   return (cppAddr == 0 ? NULL : reinterpret_cast<RemoteSession *>(cppAddr));
 }
 
-RemoteSession*
-RemoteSession::open(jobject* jthis_out, jstring jurl, jstring juuid,
+jobject
+RemoteSession::open(jint jretryAttempts,
+                    jstring jurl, jstring juuid,
                     jstring jconfigDirectory,
                     jstring jusername, jstring jpassword,
                     jobject jprompter, jobject jprogress)
@@ -89,23 +93,23 @@ RemoteSession::open(jobject* jthis_out, jstring jurl, jstring juuid,
         return NULL;
     }
 
-  RemoteSession* session = new RemoteSession(
-      jthis_out, url, uuid, configDirectory,
+  jobject jremoteSession = open(
+      jretryAttempts, url, uuid, configDirectory,
       usernameStr, passwordStr, prompter, jprogress);
-  if (JNIUtil::isJavaExceptionThrown() || !session)
+  if (JNIUtil::isExceptionThrown() || !jremoteSession)
     {
-      delete session;
       delete prompter;
-      session = NULL;
+      jremoteSession = NULL;
     }
-  return session;
+  return jremoteSession;
 }
 
-RemoteSession::RemoteSession(jobject* jthis_out,
-                             const char* url, const char* uuid,
-                             const char* configDirectory,
-                             const char*  username, const char*  password,
-                             Prompter* prompter, jobject jprogress)
+jobject
+RemoteSession::open(jint jretryAttempts,
+                    const char* url, const char* uuid,
+                    const char* configDirectory,
+                    const char*  usernameStr, const char*  passwordStr,
+                    Prompter* prompter, jobject jprogress)
 {
   /*
    * Initialize ra layer if we have not done so yet
@@ -113,10 +117,42 @@ RemoteSession::RemoteSession(jobject* jthis_out,
   static bool initialized = false;
   if (!initialized)
     {
-      SVN_JNI_ERR(svn_ra_initialize(JNIUtil::getPool()), );
+      SVN_JNI_ERR(svn_ra_initialize(JNIUtil::getPool()), NULL);
       initialized = true;
     }
 
+  jobject jthis_out = NULL;
+  RemoteSession* session = new RemoteSession(
+      &jthis_out, jretryAttempts, url, uuid, configDirectory,
+      usernameStr, passwordStr, prompter, jprogress);
+  if (JNIUtil::isJavaExceptionThrown() || !session)
+    {
+      delete session;
+      jthis_out = NULL;
+    }
+  return jthis_out;
+}
+
+
+namespace{
+  struct compare_c_strings
+  {
+    bool operator()(const char* a, const char* b)
+      {
+        return (0 < std::strcmp(a, b));
+      }
+  };
+  typedef std::set<const char*, compare_c_strings> attempt_set;
+  typedef std::pair<attempt_set::iterator, bool> attempt_insert;
+} // anonymous namespace
+
+RemoteSession::RemoteSession(jobject* jthis_out, int retryAttempts,
+                             const char* url, const char* uuid,
+                             const char* configDirectory,
+                             const char*  username, const char*  password,
+                             Prompter* prompter, jobject jprogress)
+  : m_session(NULL), m_context(NULL)
+{
   // Create java session object
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -144,21 +180,66 @@ RemoteSession::RemoteSession(jobject* jthis_out,
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
-  //TODO: add corrected URL support
-  SVN_JNI_ERR(
-      svn_ra_open4(&m_session, NULL, url, uuid, m_context->getCallbacks(),
-                   m_context->getCallbackBaton(), m_context->getConfigData(),
-                   pool.getPool()),
-      );
+  const char* corrected_url = NULL;
+  bool cycle_detected = false;
+  attempt_set attempted;
+
+  while (retryAttempts-- >= 0)
+    {
+      SVN_JNI_ERR(
+          svn_ra_open4(&m_session, &corrected_url,
+                       url, uuid, m_context->getCallbacks(),
+                       m_context->getCallbackBaton(),
+                       m_context->getConfigData(),
+                       pool.getPool()),
+                  );
+
+      if (!corrected_url)
+        break;
+
+      attempt_insert result = attempted.insert(corrected_url);
+      if (!result.second)
+        {
+          cycle_detected = true;
+          break;
+        }
+    }
+
+  if (corrected_url)
+    {
+      jstring exmsg = JNIUtil::makeJString(
+          (cycle_detected
+           ? apr_psprintf(pool.getPool(),
+                          _("Redirect cycle detected for URL '%s'"),
+                          corrected_url)
+           : _("Too many redirects")));
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+
+      jclass excls = env->FindClass(
+          JAVA_PACKAGE "/SubversionException");
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+
+      static jmethodID exctor = 0;
+      if (exctor == 0)
+        {
+          exctor = env->GetMethodID(excls, "<init>", "(J)V");
+          if (JNIUtil::isJavaExceptionThrown())
+            return;
+        }
+
+      jobject ex = env->NewObject(excls, exctor, exmsg);
+      env->Throw(static_cast<jthrowable>(ex));
+      return;
+    }
+
   *jthis_out = jremoteSession;
 }
 
 RemoteSession::~RemoteSession()
 {
-  if (m_context)
-    {
-      delete m_context;
-    }
+  delete m_context;
 }
 
 void

@@ -42,14 +42,16 @@ class RemoteSession : public SVNBase
 {
   public:
     static RemoteSession* getCppObject(jobject jthis);
-    static RemoteSession* open(jobject*, jstring jurl, jstring juuid,
-                               jstring jconfigDirectory,
-                               jstring jusername, jstring jpassword,
-                               jobject jprompter, jobject jprogress);
-    RemoteSession(jobject*, const char* url, const char* uuid,
-                  const char* configDirectory,
-                  const char* username, const char* password,
-                  Prompter* prompter, jobject jprogress);
+    static jobject open(jint jretryAttempts,
+                        jstring jurl, jstring juuid,
+                        jstring jconfigDirectory,
+                        jstring jusername, jstring jpassword,
+                        jobject jprompter, jobject jprogress);
+    static jobject open(jint jretryAttempts,
+                        const char* url, const char* uuid,
+                        const char* configDirectory,
+                        const char* username, const char* password,
+                        Prompter* prompter, jobject jprogress);
     ~RemoteSession();
 
     void cancelOperation() const { m_context->cancelOperation(); }
@@ -65,6 +67,12 @@ class RemoteSession : public SVNBase
     jobject checkPath(jstring jpath, jobject jrevision);
 
   private:
+    RemoteSession(jobject*, int retryAttempts,
+                  const char* url, const char* uuid,
+                  const char* configDirectory,
+                  const char* username, const char* password,
+                  Prompter* prompter, jobject jprogress);
+
     svn_ra_session_t* m_session;
     RemoteSessionContext* m_context;
 };

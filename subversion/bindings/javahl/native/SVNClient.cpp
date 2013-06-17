@@ -1527,7 +1527,7 @@ SVNClient::patch(const char *patchPath, const char *targetPath, bool dryRun,
 }
 
 jobject
-SVNClient::openRemoteSession(const char* path)
+SVNClient::openRemoteSession(const char* path, int retryAttempts)
 {
     static const svn_opt_revision_t HEAD = { svn_opt_revision_head, {0}};
     static const svn_opt_revision_t NONE = { svn_opt_revision_unspecified, {0}};
@@ -1580,18 +1580,16 @@ SVNClient::openRemoteSession(const char* path)
         return NULL;
     }
 
-    jobject jremoteSession = NULL;
-    RemoteSession* session = new RemoteSession(
-        &jremoteSession, path_info.url, path_info.uuid,
+    jobject jremoteSession = RemoteSession::open(
+        retryAttempts, path_info.url, path_info.uuid,
         context.getConfigDirectory(),
         context.getUsername(), context.getPassword(),
         prompter, jctx);
-    if (JNIUtil::isJavaExceptionThrown() || !session)
+    if (JNIUtil::isJavaExceptionThrown())
     {
         /* context.getSelf() created a new global reference. */
         JNIUtil::getEnv()->DeleteGlobalRef(jctx);
         jremoteSession = NULL;
-        delete session;
         delete prompter;
     }
 

@@ -1853,8 +1853,8 @@ Java_org_apache_subversion_javahl_SVNClient_patch
 }
 
 JNIEXPORT jobject JNICALL
-Java_org_apache_subversion_javahl_SVNClient_openRemoteSession
-(JNIEnv *env, jobject jthis, jstring jpath)
+Java_org_apache_subversion_javahl_SVNClient_nativeOpenRemoteSession
+(JNIEnv *env, jobject jthis, jstring jpath, jint jretryAttempts)
 {
   JNIEntry(SVNClient, openRemoteSession);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1868,5 +1868,5 @@ Java_org_apache_subversion_javahl_SVNClient_openRemoteSession
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  return cl->openRemoteSession(path);
+  return cl->openRemoteSession(path, jretryAttempts);
 }
