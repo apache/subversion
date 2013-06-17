@@ -60,6 +60,8 @@ class RemoteSession : public SVNBase
 
     void reparent(const char* url);
     jstring getSessionUrl();
+    jstring getSessionRelativePath(const char* url);
+    jstring getReposRelativePath(const char* url);
     jstring getReposUUID();
     jobject getLatestRevision();
 

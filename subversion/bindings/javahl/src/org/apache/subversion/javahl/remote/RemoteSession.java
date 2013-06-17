@@ -47,17 +47,11 @@ public class RemoteSession extends JNIObject implements ISVNRemote
 
     public native String getSessionUrl() throws ClientException;
 
-    public String getSessionRelativePath(String url) throws ClientException
-    {
-        thrownotimplemented("getSessionRelativePath");
-        return null;
-    }
+    public native String getSessionRelativePath(String url)
+            throws ClientException;
 
-    public String getRepositoryRelativePath(String url) throws ClientException
-    {
-        thrownotimplemented("getRepositoryRelativePath");
-        return null;
-    }
+    public native String getReposRelativePath(String url)
+            throws ClientException;
 
     public native String getReposUUID() throws ClientException;
 
@@ -95,10 +89,4 @@ public class RemoteSession extends JNIObject implements ISVNRemote
      */
     private RemoteSessionContext sessionContext = new RemoteSessionContext();
     private class RemoteSessionContext extends OperationContext {}
-
-
-    private void thrownotimplemented(String message)
-    {
-        throw new RuntimeException("Not implemented: " + message);
-    }
 }
