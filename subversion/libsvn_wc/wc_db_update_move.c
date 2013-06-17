@@ -1008,9 +1008,9 @@ static svn_error_t *
 tc_editor_alter_file(void *baton,
                      const char *dst_relpath,
                      svn_revnum_t expected_move_dst_revision,
-                     apr_hash_t *new_props,
                      const svn_checksum_t *new_checksum,
                      svn_stream_t *new_contents,
+                     apr_hash_t *new_props,
                      apr_pool_t *scratch_pool)
 {
   struct tc_editor_baton *b = baton;
@@ -1071,8 +1071,8 @@ static svn_error_t *
 tc_editor_alter_symlink(void *baton,
                         const char *relpath,
                         svn_revnum_t revision,
-                        apr_hash_t *props,
                         const char *target,
+                        apr_hash_t *props,
                         apr_pool_t *scratch_pool)
 {
   return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
@@ -1593,7 +1593,7 @@ update_moved_away_node(svn_editor_t *tc_editor,
           if (props || src_checksum)
             SVN_ERR(svn_editor_alter_file(tc_editor, dst_relpath,
                                           move_root_dst_revision,
-                                          props, src_checksum, contents));
+                                          src_checksum, contents, props));
         }
       else if (src_kind == svn_node_dir)
         {
