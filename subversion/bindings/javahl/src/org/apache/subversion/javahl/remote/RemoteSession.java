@@ -27,6 +27,7 @@ import org.apache.subversion.javahl.types.*;
 import org.apache.subversion.javahl.callback.*;
 
 import org.apache.subversion.javahl.ISVNRemote;
+import org.apache.subversion.javahl.ISVNEditor;
 import org.apache.subversion.javahl.JNIObject;
 import org.apache.subversion.javahl.OperationContext;
 import org.apache.subversion.javahl.ClientException;
@@ -71,6 +72,11 @@ public class RemoteSession extends JNIObject implements ISVNRemote
 
     public native Map<String, Lock> getLocks(String path, Depth depth)
             throws ClientException;
+
+    public ISVNEditor getCommitEditor() throws ClientException
+    {
+        throw new RuntimeException("Not implemented: getCommitEditor");
+    }
 
     @Override
     public native void finalize() throws Throwable;
