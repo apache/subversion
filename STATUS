@@ -107,6 +107,7 @@ Candidate changes:
      Very simple change. Only affects interactive mode, not scripts.
    Votes:
      +1: stsp
+     +0: danielsh (modifies input argument "chunk1"; +1 if that's fixed)
 
  * r1491868
    Add missing conflict callback invocations to the update editor.
@@ -133,20 +134,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1492148
-   Don't try to use 'blame -r 3:1' against 1.7 servers.  Affects only users
+ * r1492148, r1493720
+   Don't try to use 'blame -r 5:1' against 1.7 servers.  Affects only users
    of the RA API, not users of the client API or svn.
    Justification:
      1.7 servers would silently do the wrong thing.
    Votes:
-     +1: danielsh, rhuijben
-
- * r1492164
-   Invalid repository paths cause a segfault in the fsfs-stats tool.
-   Justification:
-     Don't segfault.
-   Votes:
-     +1: stefan2, stsp
+     +1: danielsh, rhuijben (without r1493720)
 
  * r1493424
    Remove unnecessary check for branches ancestry from 
@@ -157,6 +151,7 @@ Candidate changes:
      codepath for ancestory checks. Simple performance fix.
    Votes:
      +1: ivan, rhuijben
+     +0: danielsh
 
  * r1493475
    Improve 'svn merge' performance over WAN: Use already fetched 
@@ -226,6 +221,13 @@ Approved for 1.8.1 or if soak is restarted for 1.8.0:
    Votes:
      +1: breser
      +0: danielsh
+
+ * r1492164
+   Invalid repository paths cause a segfault in the fsfs-stats tool.
+   Justification:
+     Don't segfault.
+   Votes:
+     +1: stefan2, stsp, danielsh
 
 Approved changes:
 =================
