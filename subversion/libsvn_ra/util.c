@@ -75,7 +75,7 @@ svn_ra__assert_capable_server(svn_ra_session_t *ra_session,
                               const char *path_or_url,
                               apr_pool_t *pool)
 {
-  if (!strcmp(capability, SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE))
+  if (!strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO))
     return svn_ra__assert_mergeinfo_capable_server(ra_session, path_or_url,
                                                    pool);
 
