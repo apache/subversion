@@ -273,6 +273,11 @@ RemoteSession::dispose(jobject jthis)
   SVNBase::dispose(jthis, &fid, JAVA_CLASS_REMOTE_SESSION);
 }
 
+void RemoteSession::reparent(const char* url)
+{
+  SVN_JNI_ERR(svn_ra_reparent(m_session, url, pool.getPool()), );
+}
+
 jstring
 RemoteSession::getSessionUrl()
 {

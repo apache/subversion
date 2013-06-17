@@ -125,7 +125,7 @@ public class SVNRemoteTests extends SVNTests
             assertNotNull("Null session was returned by factory", raSession);
             return raSession;
         }
-        catch (ClientException ex)
+        catch (Exception ex)
         {
             throw new RuntimeException(ex);
         }
@@ -175,7 +175,6 @@ public class SVNRemoteTests extends SVNTests
         assertEquals(getTestRepoUrl(), session.getSessionUrl());
     }
 
-
     public void testGetSession_ConfigConstructor() throws Exception
     {
         ISVNRemote session;
@@ -193,5 +192,13 @@ public class SVNRemoteTests extends SVNTests
         }
         assertNotNull("Null session was returned by factory", session);
         assertEquals(getTestRepoUrl(), session.getSessionUrl());
+    }
+
+    public void testReparent() throws Exception
+    {
+        ISVNRemote session = getSession();
+        String newUrl = session.getSessionUrl() + "/A/B/E";
+        session.reparent(newUrl);
+        assertEquals(newUrl, session.getSessionUrl());
     }
 }

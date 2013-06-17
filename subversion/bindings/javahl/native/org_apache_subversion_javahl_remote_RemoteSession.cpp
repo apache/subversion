@@ -66,6 +66,19 @@ Java_org_apache_subversion_javahl_remote_RemoteSession_cancelOperation(
   ras->cancelOperation();
 }
 
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_remote_RemoteSession_reparent(
+    JNIEnv *env, jobject jthis, jstring jurl)
+{
+  JNIEntry(RemoteSession, getSessionUrl);
+  RemoteSession *ras = RemoteSession::getCppObject(jthis);
+  CPPADDR_NULL_PTR(ras, );
+
+  JNIStringHolder url(jurl);
+  if (!JNIUtil::isJavaExceptionThrown())
+    ras->reparent(url);
+}
+
 JNIEXPORT jstring JNICALL
 Java_org_apache_subversion_javahl_remote_RemoteSession_getSessionUrl(
     JNIEnv *env, jobject jthis)
