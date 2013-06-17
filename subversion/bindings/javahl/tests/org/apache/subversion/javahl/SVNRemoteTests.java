@@ -201,4 +201,17 @@ public class SVNRemoteTests extends SVNTests
         session.reparent(newUrl);
         assertEquals(newUrl, session.getSessionUrl());
     }
+
+    public void testGetRelativePath() throws Exception
+    {
+        ISVNRemote session = getSession();
+        String baseUrl = session.getSessionUrl() + "/A/B/E";
+        session.reparent(baseUrl);
+
+        String relPath = session.getSessionRelativePath(baseUrl + "/alpha");
+        assertEquals("alpha", relPath);
+
+        relPath = session.getReposRelativePath(baseUrl + "/beta");
+        assertEquals("A/B/E/beta", relPath);
+    }
 }

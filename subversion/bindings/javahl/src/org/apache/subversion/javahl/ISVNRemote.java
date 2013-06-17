@@ -75,7 +75,7 @@ public interface ISVNRemote
      * @param url Must be a child of the repository root URL.
      * @throws ClientException
      */
-    String getRepositoryRelativePath(String url) throws ClientException;
+    String getReposRelativePath(String url) throws ClientException;
 
     /**
      * Get the UUID of the session's repository.

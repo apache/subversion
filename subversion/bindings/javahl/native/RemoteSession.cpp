@@ -275,7 +275,8 @@ RemoteSession::dispose(jobject jthis)
 
 void RemoteSession::reparent(const char* url)
 {
-  SVN_JNI_ERR(svn_ra_reparent(m_session, url, pool.getPool()), );
+  SVN::Pool subPool(pool);
+  SVN_JNI_ERR(svn_ra_reparent(m_session, url, subPool.getPool()), );
 }
 
 jstring
@@ -291,6 +292,38 @@ RemoteSession::getSessionUrl()
     return NULL;
 
   return jurl;
+}
+
+jstring
+RemoteSession::getSessionRelativePath(const char* url)
+{
+  SVN::Pool subPool(pool);
+  const char* rel_path;
+
+  SVN_JNI_ERR(svn_ra_get_path_relative_to_session(
+                  m_session, &rel_path, url, subPool.getPool()),
+              NULL);
+  jstring jrel_path = JNIUtil::makeJString(rel_path);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  return jrel_path;
+}
+
+jstring
+RemoteSession::getReposRelativePath(const char* url)
+{
+  SVN::Pool subPool(pool);
+  const char* rel_path;
+
+  SVN_JNI_ERR(svn_ra_get_path_relative_to_root(
+                  m_session, &rel_path, url, subPool.getPool()),
+              NULL);
+  jstring jrel_path = JNIUtil::makeJString(rel_path);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  return jrel_path;
 }
 
 jstring

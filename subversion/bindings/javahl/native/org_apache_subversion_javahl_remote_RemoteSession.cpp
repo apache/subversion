@@ -80,6 +80,34 @@ Java_org_apache_subversion_javahl_remote_RemoteSession_reparent(
 }
 
 JNIEXPORT jstring JNICALL
+Java_org_apache_subversion_javahl_remote_RemoteSession_getSessionRelativePath(
+    JNIEnv *env, jobject jthis, jstring jurl)
+{
+  JNIEntry(RemoteSession, getSessionUrl);
+  RemoteSession *ras = RemoteSession::getCppObject(jthis);
+  CPPADDR_NULL_PTR(ras, NULL);
+
+  JNIStringHolder url(jurl);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+  return ras->getSessionRelativePath(url);
+}
+
+JNIEXPORT jstring JNICALL
+Java_org_apache_subversion_javahl_remote_RemoteSession_getReposRelativePath(
+    JNIEnv *env, jobject jthis, jstring jurl)
+{
+  JNIEntry(RemoteSession, getSessionUrl);
+  RemoteSession *ras = RemoteSession::getCppObject(jthis);
+  CPPADDR_NULL_PTR(ras, NULL);
+
+  JNIStringHolder url(jurl);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+  return ras->getReposRelativePath(url);
+}
+
+JNIEXPORT jstring JNICALL
 Java_org_apache_subversion_javahl_remote_RemoteSession_getSessionUrl(
     JNIEnv *env, jobject jthis)
 {
