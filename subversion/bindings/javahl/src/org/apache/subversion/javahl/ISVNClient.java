@@ -1150,7 +1150,8 @@ public interface ISVNClient
      * Open a persistent session to a repository.
      * @param path A path in a working copy from which the
      *        session URL is derived.
-     * @throws SubversionException If URL redirects cannot be followed
+     * @throws remote.RetryOpenSession If the session URL was redirected
+     * @throws SubversionException If an URL redirect cycle was detected
      * @throws ClientException
      * @note The session object inherits the progress callback,
      *       configuration directory and authentication info.
@@ -1167,7 +1168,8 @@ public interface ISVNClient
      *        if the given URL is redirected.
      * @throws IllegalArgumentException If <code>retryAttempts</code>
      *         is not positive
-     * @throws SubversionException If URL redirects cannot be followed
+     * @throws remote.RetryOpenSession If the session URL was redirected
+     * @throws SubversionException If an URL redirect cycle was detected
      * @throws ClientException
      * @note The session object inherits the progress callback,
      *       configuration directory and authentication info.
