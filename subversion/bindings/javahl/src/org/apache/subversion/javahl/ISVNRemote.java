@@ -123,4 +123,11 @@ public interface ISVNRemote
      */
     Map<String, Lock> getLocks(String path, Depth depth)
             throws ClientException;
+
+
+    /**
+     * Create a commit editor instance, rooted at the current session URL.
+     * @throws SubversionException
+     */
+    ISVNEditor getCommitEditor() throws ClientException;
 }
