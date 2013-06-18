@@ -1461,6 +1461,12 @@ delete_revprops_shard(const char *shard_path,
                       apr_pool_t *scratch_pool);
 
 /* In the filesystem FS, pack all revprop shards up to min_unpacked_rev.
+ * 
+ * NOTE: Keep the old non-packed shards around until after the format bump.
+ * Otherwise, re-running upgrade will drop the packed revprop shard but
+ * have no unpacked data anymore.  Call upgrade_cleanup_pack_revprops after
+ * the bump.
+ * 
  * Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
@@ -1501,6 +1507,29 @@ upgrade_pack_revprops(svn_fs_t *fs,
       svn_pool_clear(iterpool);
     }
 
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* In the filesystem FS, remove all non-packed revprop shards up to
+ * min_unpacked_rev.  Use SCRATCH_POOL for temporary allocations.
+ * See upgrade_pack_revprops for more info.
+ */
+static svn_error_t *
+upgrade_cleanup_pack_revprops(svn_fs_t *fs,
+                              apr_pool_t *scratch_pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  const char *revprops_shard_path;
+  apr_int64_t shard;
+  apr_int64_t first_unpacked_shard
+    =  ffd->min_unpacked_rev / ffd->max_files_per_dir;
+
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  const char *revsprops_dir = svn_dirent_join(fs->path, PATH_REVPROPS_DIR,
+                                              scratch_pool);
+  
   /* delete the non-packed revprops shards afterwards */
   for (shard = 0; shard < first_unpacked_shard; ++shard)
     {
@@ -1525,6 +1554,7 @@ upgrade_body(void *baton, apr_pool_t *pool)
   int format, max_files_per_dir;
   const char *format_path = path_format(fs, pool);
   svn_node_kind_t kind;
+  svn_boolean_t needs_revprop_shard_cleanup = FALSE;
 
   /* Read the FS format number and max-files-per-dir setting. */
   SVN_ERR(read_format(&format, &max_files_per_dir, format_path, pool));
@@ -1578,15 +1608,26 @@ upgrade_body(void *baton, apr_pool_t *pool)
 
   /* If the file system supports revision packing but not revprop packing
      *and* the FS has been sharded, pack the revprops up to the point that
-     revision data has been packed. */
+     revision data has been packed.  However, keep the non-packed revprop
+     files around until after the format bump */
   if (   format >= SVN_FS_FS__MIN_PACKED_FORMAT
       && format < SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT
       && max_files_per_dir > 0)
-    SVN_ERR(upgrade_pack_revprops(fs, pool));
+    {
+      needs_revprop_shard_cleanup = TRUE;
+      SVN_ERR(upgrade_pack_revprops(fs, pool));
+    }
 
   /* Bump the format file. */
-  return write_format(format_path, SVN_FS_FS__FORMAT_NUMBER, max_files_per_dir,
-                      TRUE, pool);
+  SVN_ERR(write_format(format_path, SVN_FS_FS__FORMAT_NUMBER,
+                       max_files_per_dir, TRUE, pool));
+
+  /* Now, it is safe to remove the redundant revprop files. */
+  if (needs_revprop_shard_cleanup)
+    SVN_ERR(upgrade_pack_revprops(fs, pool));
+
+  /* Done */
+  return SVN_NO_ERROR;
 }
 
 
