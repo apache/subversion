@@ -10047,6 +10047,9 @@ pack_revprops_shard(const char *pack_file_dir,
   end_rev = (svn_revnum_t) ((shard + 1) * (max_files_per_dir) - 1);
   if (start_rev == 0)
     ++start_rev;
+    /* Special special case: if max_files_per_dir is 1, then at this point
+       start_rev == 1 and end_rev == 0 (!).  Fortunately, everything just
+       works. */
 
   /* initialize the revprop size info */
   sizes = apr_array_make(scratch_pool, max_files_per_dir, sizeof(apr_off_t));
