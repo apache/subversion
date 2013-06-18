@@ -161,13 +161,12 @@ Candidate changes:
    Votes:
      +1: rhuijben, ivan
 
- * r1493703
+ * r1493703, r1494171
    Fix upgrade notification for explicit upgrades of post-WC-NG working copies.
    Justification:
      Without this notification users can't see whether the upgrade was a no-op.
    Votes:
-     +1: rhuijben
-     +0: stsp (modifies output argument even in error case)
+     +1: rhuijben, stsp
 
  * r1493951
    Fix 'svn-bench' misreporting itself as 'svn'.
