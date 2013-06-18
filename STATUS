@@ -105,8 +105,7 @@ Candidate changes:
      Usability enhancement for quicker conflict resolution in some cases.
      Very simple change. Only affects interactive mode, not scripts.
    Votes:
-     +1: stsp
-     +0: danielsh (without r1494089)
+     +1: stsp, danielsh
 
  * r1491868
    Add missing conflict callback invocations to the update editor.
@@ -174,7 +173,7 @@ Candidate changes:
    Justification:
      Misleading output, pretty obvious fix.
    Votes:
-     +1: stsp
+     +1: stsp, danielsh
 
 Veto-blocked changes:
 =====================
