@@ -63,11 +63,11 @@ class RemoteSession : public SVNBase
     jstring getSessionRelativePath(const char* url);
     jstring getReposRelativePath(const char* url);
     jstring getReposUUID();
-    jobject getLatestRevision();
+    jlong getLatestRevision();
 
-    jobject getRevisionByTimestamp(jlong timestamp);
+    jlong getRevisionByTimestamp(jlong timestamp);
     jobject getLocks(jstring jpath, jobject jdepth);
-    jobject checkPath(jstring jpath, jobject jrevision);
+    jobject checkPath(jstring jpath, jlong jrevision);
 
   private:
     RemoteSession(jobject*, int retryAttempts,
