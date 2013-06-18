@@ -15038,7 +15038,7 @@ svn_wc__db_bump_format(int *result_format,
   err = svn_wc__upgrade_sdb(result_format, wcroot_abspath,
                             sdb, format, scratch_pool);
 
-  if (bumped_format)
+  if (err == SVN_NO_ERROR && bumped_format)
     *bumped_format = (*result_format > format);
 
   /* Make sure we return a different error than expected for upgrades from
