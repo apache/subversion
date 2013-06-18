@@ -138,7 +138,7 @@ Candidate changes:
    Justification:
      1.7 servers would silently do the wrong thing.
    Votes:
-     +1: danielsh, rhuijben (without r1493720)
+     +1: danielsh, rhuijben
 
  * r1493424
    Remove unnecessary check for branches ancestry from 
@@ -168,13 +168,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, stsp
 
- * r1493951
-   Fix 'svn-bench' misreporting itself as 'svn'.
-   Justification:
-     Misleading output, pretty obvious fix.
-   Votes:
-     +1: stsp, danielsh
-
  * r1494223
    Forbid 'svnadmin create --fs-type=fsfs --compatible-version=1.0'.
    Justification:
@@ -182,7 +175,7 @@ Candidate changes:
      where it matters, but I'll sleep better knowing we're strict about
      input validation.
    Votes:
-     +1: danielsh
+     +1: danielsh, rhuijben
 
 Veto-blocked changes:
 =====================
@@ -242,6 +235,13 @@ Approved for 1.8.1 or if soak is restarted for 1.8.0:
      Don't segfault.
    Votes:
      +1: stefan2, stsp, danielsh
+
+ * r1493951
+   Fix 'svn-bench' misreporting itself as 'svn'.
+   Justification:
+     Misleading output, pretty obvious fix.
+   Votes:
+     +1: stsp, danielsh, rhuijben
 
 Approved changes:
 =================
