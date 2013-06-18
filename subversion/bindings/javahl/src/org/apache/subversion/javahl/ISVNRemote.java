@@ -87,14 +87,14 @@ public interface ISVNRemote
      * Get the latest revision number from the session's repository.
      * @throws ClientException
      */
-    Revision getLatestRevision() throws ClientException;
+    long getLatestRevision() throws ClientException;
 
     /**
      * Get the latest revision number at the given time
      * from the session's repository.
      * @throws ClientException
      */
-    Revision getRevisionByDate(Date date) throws ClientException;
+    long getRevisionByDate(Date date) throws ClientException;
 
     /**
      * Get the latest revision number at the given time, expressed as
@@ -102,14 +102,14 @@ public interface ISVNRemote
      * repository.
      * @throws ClientException
      */
-    Revision getRevisionByTimestamp(long timestamp) throws ClientException;
+    long getRevisionByTimestamp(long timestamp) throws ClientException;
 
     /**
      * Return the kind of the node in path at revision.
      * @param path A path relative to the sessionn URL
      * @throws ClientException
      */
-    NodeKind checkPath(String path, Revision revision)
+    NodeKind checkPath(String path, long revision)
             throws ClientException;
 
     /**

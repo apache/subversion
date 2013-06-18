@@ -72,9 +72,8 @@ public class SVNRemoteTests extends SVNTests
     {
         ISVNRemote session = getSession();
 
-        Revision revision = session.getRevisionByDate(new Date());
-        assertEquals(revision.getKind(), Revision.Kind.number);
-        assertEquals(((Revision.Number)revision).getNumber(), 1);
+        long revision = session.getRevisionByDate(new Date());
+        assertEquals(revision, 1);
     }
 
     public void testGetLocks()
@@ -101,13 +100,13 @@ public class SVNRemoteTests extends SVNTests
     {
         ISVNRemote session = getSession();
 
-        NodeKind kind = session.checkPath("iota", Revision.getInstance(1));
+        NodeKind kind = session.checkPath("iota", 1);
         assertEquals(NodeKind.file, kind);
 
-        kind = session.checkPath("iota", Revision.getInstance(0));
+        kind = session.checkPath("iota", 0);
         assertEquals(NodeKind.none, kind);
 
-        kind = session.checkPath("A", Revision.getInstance(1));
+        kind = session.checkPath("A", 1);
         assertEquals(NodeKind.dir, kind);
     }
 
@@ -144,9 +143,8 @@ public class SVNRemoteTests extends SVNTests
     public void testGetLatestRevision() throws Exception
     {
         ISVNRemote session = getSession();
-        Revision revision = session.getLatestRevision();
-        assertEquals(revision.getKind(), Revision.Kind.number);
-        assertEquals(((Revision.Number)revision).getNumber(), 1);
+        long revision = session.getLatestRevision();
+        assertEquals(revision, 1);
     }
 
     public void testGetUUID() throws Exception

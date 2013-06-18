@@ -56,18 +56,18 @@ public class RemoteSession extends JNIObject implements ISVNRemote
 
     public native String getReposUUID() throws ClientException;
 
-    public native Revision getLatestRevision() throws ClientException;
+    public native long getLatestRevision() throws ClientException;
 
-    public Revision getRevisionByDate(Date date) throws ClientException
+    public long getRevisionByDate(Date date) throws ClientException
     {
         long timestamp = NANOSECONDS.convert(date.getTime(), MILLISECONDS);
         return getRevisionByTimestamp(timestamp);
     }
 
-    public native Revision getRevisionByTimestamp(long timestamp)
+    public native long getRevisionByTimestamp(long timestamp)
             throws ClientException;
 
-    public native NodeKind checkPath(String path, Revision revision)
+    public native NodeKind checkPath(String path, long revision)
             throws ClientException;
 
     public native Map<String, Lock> getLocks(String path, Depth depth)

@@ -341,19 +341,18 @@ RemoteSession::getReposUUID()
   return juuid;
 }
 
-jobject
+jlong
 RemoteSession::getLatestRevision()
 {
   SVN::Pool subPool(pool);
   svn_revnum_t rev;
 
   SVN_JNI_ERR(svn_ra_get_latest_revnum(m_session, &rev, subPool.getPool()),
-              NULL);
-
-  return Revision::makeJRevision(rev);
+              SVN_INVALID_REVNUM);
+  return rev;
 }
 
-jobject
+jlong
 RemoteSession::getRevisionByTimestamp(jlong timestamp)
 {
   SVN::Pool requestPool;
@@ -363,9 +362,8 @@ RemoteSession::getRevisionByTimestamp(jlong timestamp)
 
   SVN_JNI_ERR(svn_ra_get_dated_revision(m_session, &rev, tm,
                                         requestPool.getPool()),
-              NULL);
-
-  return Revision::makeJRevision(rev);
+              SVN_INVALID_REVNUM);
+  return rev;
 }
 
 jobject
@@ -390,7 +388,7 @@ RemoteSession::getLocks(jstring jpath, jobject jdepth)
 }
 
 jobject
-RemoteSession::checkPath(jstring jpath, jobject jrevision)
+RemoteSession::checkPath(jstring jpath, jlong jrevision)
 {
   SVN::Pool requestPool;
   svn_node_kind_t kind;
@@ -399,12 +397,8 @@ RemoteSession::checkPath(jstring jpath, jobject jrevision)
   if (JNIUtil::isExceptionThrown())
     return NULL;
 
-  Revision revision(jrevision);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
-
   SVN_JNI_ERR(svn_ra_check_path(m_session, path,
-                                revision.revision()->value.number,
+                                svn_revnum_t(jrevision),
                                 &kind, requestPool.getPool()),
               NULL);
 

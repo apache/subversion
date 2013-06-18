@@ -129,31 +129,31 @@ Java_org_apache_subversion_javahl_remote_RemoteSession_getReposUUID(
   return ras->getReposUUID();
 }
 
-JNIEXPORT jobject JNICALL
+JNIEXPORT jlong JNICALL
 Java_org_apache_subversion_javahl_remote_RemoteSession_getLatestRevision(
     JNIEnv *env, jobject jthis)
 {
   JNIEntry(RemoteSession, getLatestRevision);
   RemoteSession *ras = RemoteSession::getCppObject(jthis);
-  CPPADDR_NULL_PTR(ras, Revision::makeJRevision(SVN_INVALID_REVNUM));
+  CPPADDR_NULL_PTR(ras, SVN_INVALID_REVNUM);
 
   return ras->getLatestRevision();
 }
 
-JNIEXPORT jobject JNICALL
+JNIEXPORT jlong JNICALL
 Java_org_apache_subversion_javahl_remote_RemoteSession_getRevisionByTimestamp(
     JNIEnv *env, jobject jthis, jlong timestamp)
 {
   JNIEntry(RemoteSession, getDatedRevision);
   RemoteSession *ras = RemoteSession::getCppObject(jthis);
-  CPPADDR_NULL_PTR(ras, Revision::makeJRevision(SVN_INVALID_REVNUM));
+  CPPADDR_NULL_PTR(ras, SVN_INVALID_REVNUM);
 
   return ras->getRevisionByTimestamp(timestamp);
 }
 
 JNIEXPORT jobject JNICALL
 Java_org_apache_subversion_javahl_remote_RemoteSession_checkPath(
-    JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision)
+    JNIEnv *env, jobject jthis, jstring jpath, jlong jrevision)
 {
   JNIEntry(SVNReposAccess, checkPath);
   RemoteSession *ras = RemoteSession::getCppObject(jthis);
