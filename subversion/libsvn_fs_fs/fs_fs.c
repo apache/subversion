@@ -1624,7 +1624,7 @@ upgrade_body(void *baton, apr_pool_t *pool)
 
   /* Now, it is safe to remove the redundant revprop files. */
   if (needs_revprop_shard_cleanup)
-    SVN_ERR(upgrade_pack_revprops(fs, pool));
+    SVN_ERR(upgrade_cleanup_pack_revprops(fs, pool));
 
   /* Done */
   return SVN_NO_ERROR;
