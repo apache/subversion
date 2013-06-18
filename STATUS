@@ -149,7 +149,8 @@ Candidate changes:
      codepath for ancestory checks. Simple performance fix.
    Votes:
      +1: ivan, rhuijben
-     +0: danielsh
+     +0: danielsh (note: svn_client__youngest_common_ancestor can be striken;
+                         no callers left)
 
  * r1493475
    Improve 'svn merge' performance over WAN: Use already fetched 
