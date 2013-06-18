@@ -100,14 +100,14 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1491816
+ * r1491816, r1494089
    Add two additional options to interactive file merge.
    Justification:
      Usability enhancement for quicker conflict resolution in some cases.
      Very simple change. Only affects interactive mode, not scripts.
    Votes:
      +1: stsp
-     +0: danielsh (modifies input argument "chunk1"; +1 if that's fixed)
+     +0: danielsh (without r1494089)
 
  * r1491868
    Add missing conflict callback invocations to the update editor.
