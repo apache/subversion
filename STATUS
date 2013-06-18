@@ -193,8 +193,8 @@ Veto-blocked changes:
    Votes:
      -1: danielsh (doesn't resolve peg revisions correctly)
 
-Approved for 1.8.1 or if soak is restarted for 1.8.0:
-====================================================
+Approved changes:
+=================
 
  * r1492145
    Properly handle a corner case in svn_io_read_length_line().
@@ -242,7 +242,4 @@ Approved for 1.8.1 or if soak is restarted for 1.8.0:
      Misleading output, pretty obvious fix.
    Votes:
      +1: stsp, danielsh, rhuijben
-
-Approved changes:
-=================
 
