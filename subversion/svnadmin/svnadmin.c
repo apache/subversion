@@ -48,8 +48,6 @@
 #include "private/svn_subr_private.h"
 #include "private/svn_cmdline_private.h"
 
-#include "../libsvn_fs_fs/fs.h" /* for SVN_FS_FS__MIN_PACKED_FORMAT */
-
 #include "svn_private_config.h"
 
 
@@ -1793,8 +1791,8 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
           SVN_ERR(svn_cmdline_printf(pool, _("FSFS Shard Size: %d\n"),
                                      fsfs_info->shard_size));
 
-        /* Print packing statistics, if supported by the FS format. */
-        if (fs_format >= SVN_FS_FS__MIN_PACKED_FORMAT && fsfs_info->shard_size)
+        /* Print packing statistics, if enabled on the FS. */
+        if (fsfs_info->shard_size)
           {
             const int shard_size = fsfs_info->shard_size;
             const int shards_packed = fsfs_info->min_unpacked_rev / shard_size;
