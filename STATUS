@@ -170,6 +170,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1493951
+   Fix 'svn-bench' misreporting itself as 'svn'.
+   Justification:
+     Misleading output, pretty obvious fix.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
