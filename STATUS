@@ -197,6 +197,13 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1494342
+   C tests: support --compatible-version=1.8.
+   Justification:
+     Enable running the tests with --compatible-version
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
