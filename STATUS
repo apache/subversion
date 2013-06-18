@@ -187,6 +187,15 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1494298
+   Fix a FSFS data loss when aborting 'svnadmin upgrade' late in the process.
+   Justification:
+     This is a critical issue. People may actually abort the potentially long-
+     running 'svnadmin upgrade'.  If they do that after the actual packing
+     phase, they *will* lose data.
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
