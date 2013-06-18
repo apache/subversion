@@ -82,8 +82,7 @@ public class RemoteSession extends JNIObject implements ISVNRemote
     public native void finalize() throws Throwable;
 
     /**
-     * This constructor is called from JNI to get an instance call
-     * getRaSession method of ISVNClient
+     * This constructor is called from JNI to get an instance.
      */
     protected RemoteSession(long cppAddr)
     {
