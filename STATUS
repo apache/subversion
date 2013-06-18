@@ -167,6 +167,7 @@ Candidate changes:
      Without this notification users can't see whether the upgrade was a no-op.
    Votes:
      +1: rhuijben
+     +0: stsp (modifies output argument even in error case)
 
  * r1493951
    Fix 'svn-bench' misreporting itself as 'svn'.
