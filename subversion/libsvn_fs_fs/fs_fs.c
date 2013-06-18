@@ -3290,11 +3290,13 @@ ensure_revprop_timeout(svn_fs_t *fs)
 static void
 log_revprop_cache_init_warning(svn_fs_t *fs,
                                svn_error_t *underlying_err,
-                               const char *message)
+                               const char *message,
+                               apr_pool_t *pool)
 {
-  svn_error_t *err = svn_error_createf(SVN_ERR_FS_REVPROP_CACHE_INIT_FAILURE,
-                                       underlying_err,
-                                       message, fs->path);
+  svn_error_t *err = svn_error_createf(
+                       SVN_ERR_FS_REVPROP_CACHE_INIT_FAILURE,
+                       underlying_err, message,
+                       svn_dirent_local_style(fs->path, pool));
 
   if (fs->warning)
     (fs->warning)(fs->warning_baton, err);
@@ -3323,7 +3325,8 @@ has_revprop_cache(svn_fs_t *fs, apr_pool_t *pool)
       ffd->revprop_cache = NULL;
       log_revprop_cache_init_warning(fs, NULL,
                                      "Revprop caching for '%s' disabled"
-                                     " because it would be inefficient.");
+                                     " because it would be inefficient.",
+                                     pool);
 
       return FALSE;
     }
@@ -3338,7 +3341,8 @@ has_revprop_cache(svn_fs_t *fs, apr_pool_t *pool)
       log_revprop_cache_init_warning(fs, error,
                                      "Revprop caching for '%s' disabled "
                                      "because SHM infrastructure for revprop "
-                                     "caching failed to initialize.");
+                                     "caching failed to initialize.",
+                                     pool);
 
       return FALSE;
     }
