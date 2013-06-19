@@ -212,7 +212,6 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
    See also svn_client__calc_youngest_common_ancestor() to find youngest
    common ancestor for already fetched history-as-mergeinfo information.
 
-   See also svn_client__youngest_common_ancestor().
 */
 svn_error_t *
 svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
