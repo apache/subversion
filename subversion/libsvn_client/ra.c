@@ -992,48 +992,6 @@ svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client__youngest_common_ancestor(const char **ancestor_url,
-                                     svn_revnum_t *ancestor_rev,
-                                     const char *path_or_url1,
-                                     const svn_opt_revision_t *revision1,
-                                     const char *path_or_url2,
-                                     const svn_opt_revision_t *revision2,
-                                     svn_client_ctx_t *ctx,
-                                     apr_pool_t *result_pool,
-                                     apr_pool_t *scratch_pool)
-{
-  apr_pool_t *sesspool = svn_pool_create(scratch_pool);
-  svn_ra_session_t *session;
-  svn_client__pathrev_t *loc1, *loc2, *ancestor;
-
-  /* Resolve the two locations */
-  SVN_ERR(svn_client__ra_session_from_path2(&session, &loc1,
-                                            path_or_url1, NULL,
-                                            revision1, revision1,
-                                            ctx, sesspool));
-  SVN_ERR(svn_client__resolve_rev_and_url(&loc2, session,
-                                          path_or_url2, revision2, revision2,
-                                          ctx, scratch_pool));
-
-  SVN_ERR(svn_client__get_youngest_common_ancestor(
-            &ancestor, loc1, loc2, session, ctx, result_pool, scratch_pool));
-
-  if (ancestor)
-    {
-      *ancestor_url = ancestor->url;
-      *ancestor_rev = ancestor->rev;
-    }
-  else
-    {
-      *ancestor_url = NULL;
-      *ancestor_rev = SVN_INVALID_REVNUM;
-    }
-  svn_pool_destroy(sesspool);
-  return SVN_NO_ERROR;
-}
-
-
 struct ra_ev2_baton {
   /* The working copy context, from the client context.  */
   svn_wc_context_t *wc_ctx;
