@@ -130,10 +130,86 @@ public interface ISVNRemote
     Map<String, Lock> getLocks(String path, Depth depth)
             throws ClientException;
 
-
     /**
      * Create a commit editor instance, rooted at the current session URL.
      * @throws SubversionException
      */
     ISVNEditor getCommitEditor() throws ClientException;
+
+    /**
+     * Enumeration of known capabilities of the repository and server.
+     */
+    public enum Capability
+    {
+        /**
+         * The capability of understanding operation depth.
+         * @since 1.5
+         */
+        depth ("depth"),
+
+        /**
+         * The capability of doing the right thing with merge-tracking
+         * information.
+         * @since 1.5
+         */
+        mergeinfo ("mergeinfo"),
+
+        /**
+         * The capability of retrieving arbitrary revprops in #getLog().
+         * @since 1.5
+         */
+        log_revprops ("log-revprops"),
+
+        /**
+         * The capability of replaying a directory in the
+         * repository (partial replay).
+         * @since 1.5
+         */
+        partial_replay ("partial-replay"),
+
+        /**
+         * The capability of including revision properties in a commit.
+         * @since 1.5
+         */
+        commit_revprops ("commit-revprops"),
+
+        /**
+         * The capability of specifying (and atomically verifying) expected
+         * preexisting values when modifying revprops.
+         * @since 1.7
+         */
+        atomic_revprops ("atomic-revprops"),
+
+        /**
+         * The capability to get inherited properties.
+         * @since 1.8
+         */
+        inherited_props ("inherited-props"),
+
+        /**
+         * The capability of a server to automatically ephemeral
+         * transaction properties.
+         * @since 1.8
+         */
+        ephemeral_txnprops ("ephemeral-txnprops"),
+
+        /**
+         * The capability of a server to walk revisions backwards in
+         * #getFileRevisions().
+         * @since 1.8
+         */
+        get_file_revs_reversed ("get-file-revs-reversed");
+
+        private Capability(String token)
+        {
+            this.token = token;
+        }
+
+        public String toString()
+        {
+            return token;
+        }
+
+        private String token;
+    }
 }
