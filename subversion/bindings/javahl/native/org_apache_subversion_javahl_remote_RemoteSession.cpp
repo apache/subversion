@@ -129,6 +129,17 @@ Java_org_apache_subversion_javahl_remote_RemoteSession_getReposUUID(
   return ras->getReposUUID();
 }
 
+JNIEXPORT jstring JNICALL
+Java_org_apache_subversion_javahl_remote_RemoteSession_getReposRootUrl(
+    JNIEnv *env, jobject jthis)
+{
+  JNIEntry(RemoteSession, geRepostUUID);
+  RemoteSession *ras = RemoteSession::getCppObject(jthis);
+  CPPADDR_NULL_PTR(ras, NULL);
+
+  return ras->getReposRootUrl();
+}
+
 JNIEXPORT jlong JNICALL
 Java_org_apache_subversion_javahl_remote_RemoteSession_getLatestRevision(
     JNIEnv *env, jobject jthis)

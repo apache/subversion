@@ -341,6 +341,22 @@ RemoteSession::getReposUUID()
   return juuid;
 }
 
+jstring
+RemoteSession::getReposRootUrl()
+{
+  SVN::Pool subPool(pool);
+  const char* url;
+
+  SVN_JNI_ERR(svn_ra_get_repos_root2(m_session, &url, subPool.getPool()),
+              NULL);
+
+  jstring jurl = JNIUtil::makeJString(url);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  return jurl;
+}
+
 jlong
 RemoteSession::getLatestRevision()
 {

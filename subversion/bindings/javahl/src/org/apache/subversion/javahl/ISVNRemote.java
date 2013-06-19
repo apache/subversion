@@ -84,6 +84,12 @@ public interface ISVNRemote
     String getReposUUID() throws ClientException;
 
     /**
+     * Get the root URL of the session's repository.
+     * @throws ClientException
+     */
+    String getReposRootUrl() throws ClientException;
+
+    /**
      * Get the latest revision number from the session's repository.
      * @throws ClientException
      */
