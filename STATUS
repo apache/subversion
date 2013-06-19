@@ -223,13 +223,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1492164
-   Invalid repository paths cause a segfault in the fsfs-stats tool.
-   Justification:
-     Don't segfault.
-   Votes:
-     +1: stefan2, stsp, danielsh
-
  * r1493951
    Fix 'svn-bench' misreporting itself as 'svn'.
    Justification:
