@@ -50,13 +50,12 @@ sub usage {
   my $basename = $0;
   $basename =~ s#.*/##;
   print <<EOF;
-Run this from the root of your release branch (e.g., 1.6.x) working copy.
+Run this from the root of your release branch (e.g., 1.6.x) working copy.  Use
+a working copy 'svn revert -R .' can be run on at any time, as this script
+will run revert prior to every merge.
 
-For each entry in STATUS, you will be prompted whether to merge it.
-
-WARNING:
-If you accept the prompt, $basename will revert all local changes and will
-commit the merge immediately.
+For each entry in STATUS, you will be prompted whether to merge it.  The
+merge will not be committed.
 
 The 'svn' binary defined by the environment variable \$SVN, or otherwise the
 'svn' found in \$PATH, will be used to manage the working copy.
