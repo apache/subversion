@@ -19,32 +19,24 @@
  *    under the License.
  * ====================================================================
  * @endcopyright
- *
- * @file RevpropTable.h
- * @brief Interface of the class RevpropTable
  */
 
-#ifndef REVPROPTABLE_H
-#define REVPROPTABLE_H
+package org.apache.subversion.javahl;
 
-#include <jni.h>
-#include "Pool.h"
-
-struct apr_hash_t;
-
-#include "Path.h"
-#include <map>
-#include <string>
-
-class RevpropTable
+/**
+ * This class is used internally by the JavaHL implementation and not considered
+ * part part of the public API.
+ */
+public abstract class JNIObject
 {
- private:
-  std::map<std::string, std::string> m_revprops;
-  jobject m_revpropTable;
- public:
-  RevpropTable(jobject jrevpropTable);
-  ~RevpropTable();
-  apr_hash_t *hash(const SVN::Pool &pool, bool nullIfEmpty = true);
-};
+    /**
+     * slot for the address of the native peer. The JNI code controls this
+     * field. If it is set to 0 then underlying JNI object has been freed
+     */
+    protected final long cppAddr;
 
-#endif // REVPROPTABLE_H
+    protected JNIObject(long cppAddr)
+    {
+        this.cppAddr = cppAddr;
+    }
+}

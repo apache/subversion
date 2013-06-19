@@ -67,6 +67,7 @@ class JNIUtil
   static jbyteArray makeJByteArray(const void *data, int length);
   static jbyteArray makeJByteArray(const svn_string_t *str);
   static jobject createDate(apr_time_t time);
+  static apr_time_t getDate(jobject jdate);
   static void logMessage(const char *message);
   static int getLogLevel();
   static char *getFormatBuffer();

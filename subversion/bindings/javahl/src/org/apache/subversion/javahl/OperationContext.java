@@ -19,32 +19,28 @@
  *    under the License.
  * ====================================================================
  * @endcopyright
- *
- * @file RevpropTable.h
- * @brief Interface of the class RevpropTable
  */
 
-#ifndef REVPROPTABLE_H
-#define REVPROPTABLE_H
+package org.apache.subversion.javahl;
 
-#include <jni.h>
-#include "Pool.h"
+import org.apache.subversion.javahl.callback.ProgressCallback;
 
-struct apr_hash_t;
-
-#include "Path.h"
-#include <map>
-#include <string>
-
-class RevpropTable
+/**
+ * A private class to hold the contextual information required to
+ * persist in this object, such as notification handlers.
+ */
+public class OperationContext implements ProgressCallback
 {
- private:
-  std::map<std::string, std::string> m_revprops;
-  jobject m_revpropTable;
- public:
-  RevpropTable(jobject jrevpropTable);
-  ~RevpropTable();
-  apr_hash_t *hash(const SVN::Pool &pool, bool nullIfEmpty = true);
-};
+    private ProgressCallback progress = null;
 
-#endif // REVPROPTABLE_H
+    public void onProgress(ProgressEvent event)
+    {
+        if (progress != null)
+            progress.onProgress(event);
+    }
+
+    public void setProgressCallback(ProgressCallback progress)
+    {
+        this.progress = progress;
+    }
+}
