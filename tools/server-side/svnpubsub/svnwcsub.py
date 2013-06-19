@@ -299,11 +299,12 @@ class BackgroundWorker(threading.Thread):
         logging.info("updating: %s", wc.path)
 
         ## Run the hook
+        HEAD = svn_info(self.svnbin, self.env, wc.url)['Revision']
         if self.hook:
             hook_mode = ['pre-update', 'pre-boot'][boot]
             logging.info('running hook: %s at %s',
                          wc.path, hook_mode)
-            args = [self.hook, hook_mode, wc.path, wc.url]
+            args = [self.hook, hook_mode, wc.path, HEAD, wc.url]
             rc = check_call(args, env=self.env, __okayexits=[0, 1])
             if rc == 1:
                 # TODO: log stderr
@@ -322,12 +323,13 @@ class BackgroundWorker(threading.Thread):
                 '--config-option',
                 'config:miscellany:use-commit-times=on',
                 '--',
-                wc.url,
+                wc.url + '@' + HEAD,
                 wc.path]
         check_call(args, env=self.env)
 
         ### check the loglevel before running 'svn info'?
         info = svn_info(self.svnbin, self.env, wc.path)
+        assert info['Revision'] == HEAD
         logging.info("updated: %s now at r%s", wc.path, info['Revision'])
 
         ## Run the hook
