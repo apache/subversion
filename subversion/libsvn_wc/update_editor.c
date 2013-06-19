@@ -898,8 +898,6 @@ complete_conflict(svn_skel_t *conflict,
 static svn_error_t *
 mark_directory_edited(struct dir_baton *db, apr_pool_t *scratch_pool)
 {
-  struct edit_baton *eb = db->edit_baton;
-
   if (db->edited)
     return SVN_NO_ERROR;
 
@@ -923,16 +921,6 @@ mark_directory_edited(struct dir_baton *db, apr_pool_t *scratch_pool)
                                           db->edit_conflict, NULL,
                                           scratch_pool));
 
-      if (eb->conflict_func)
-        SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, db->local_abspath,
-                                                 db->edit_conflict,
-                                                 NULL /* merge_options */,
-                                                 eb->conflict_func,
-                                                 eb->conflict_baton,
-                                                 eb->cancel_func,
-                                                 eb->cancel_baton,
-                                                 scratch_pool));
-
       do_notification(db->edit_baton, db->local_abspath, svn_node_dir,
                       svn_wc_notify_tree_conflict, scratch_pool);
       db->already_notified = TRUE;
@@ -947,8 +935,6 @@ mark_directory_edited(struct dir_baton *db, apr_pool_t *scratch_pool)
 static svn_error_t *
 mark_file_edited(struct file_baton *fb, apr_pool_t *scratch_pool)
 {
-  struct edit_baton *eb = fb->edit_baton;
-
   if (fb->edited)
     return SVN_NO_ERROR;
 
@@ -970,16 +956,6 @@ mark_file_edited(struct file_baton *fb, apr_pool_t *scratch_pool)
                                           fb->local_abspath,
                                           fb->edit_conflict, NULL,
                                           scratch_pool));
-
-      if (eb->conflict_func)
-        SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, fb->local_abspath,
-                                                 fb->edit_conflict,
-                                                 NULL /* merge_options */,
-                                                 eb->conflict_func,
-                                                 eb->conflict_baton,
-                                                 eb->cancel_func,
-                                                 eb->cancel_baton,
-                                                 scratch_pool));
 
       do_notification(fb->edit_baton, fb->local_abspath, svn_node_file,
                       svn_wc_notify_tree_conflict, scratch_pool);
