@@ -57,59 +57,6 @@ public class SVNRemoteTests extends SVNTests
         thisTest = new OneTest();
     }
 
-    /**
-     * Test the basic SVNAdmin.create functionality
-     * @throws SubversionException
-     */
-    public void testCreate()
-        throws SubversionException, IOException
-    {
-        assertTrue("repository exists", thisTest.getRepository().exists());
-    }
-
-    public void testDatedRev()
-        throws SubversionException, IOException
-    {
-        ISVNRemote session = getSession();
-
-        long revision = session.getRevisionByDate(new Date());
-        assertEquals(revision, 1);
-    }
-
-    public void testGetLocks()
-        throws SubversionException, IOException
-    {
-        ISVNRemote session = getSession();
-
-        Set<String> iotaPathSet = new HashSet<String>(1);
-        String iotaPath = thisTest.getWCPath() + "/iota";
-        iotaPathSet.add(iotaPath);
-
-        client.lock(iotaPathSet, "foo", false);
-
-        Map<String, Lock> locks = session.getLocks("iota", Depth.infinity);
-
-        assertEquals(locks.size(), 1);
-        Lock lock = locks.get("/iota");
-        assertNotNull(lock);
-        assertEquals(lock.getOwner(), "jrandom");
-    }
-
-    public void testCheckPath()
-        throws SubversionException, IOException
-    {
-        ISVNRemote session = getSession();
-
-        NodeKind kind = session.checkPath("iota", 1);
-        assertEquals(NodeKind.file, kind);
-
-        kind = session.checkPath("iota", 0);
-        assertEquals(NodeKind.none, kind);
-
-        kind = session.checkPath("A", 1);
-        assertEquals(NodeKind.dir, kind);
-    }
-
     public static ISVNRemote getSession(String url, String configDirectory)
     {
         try
@@ -133,6 +80,81 @@ public class SVNRemoteTests extends SVNTests
     private ISVNRemote getSession()
     {
         return getSession(getTestRepoUrl(), super.conf.getAbsolutePath());
+    }
+
+    /**
+     * Test the basic SVNAdmin.create functionality
+     * @throws SubversionException
+     */
+    public void testCreate()
+        throws SubversionException, IOException
+    {
+        assertTrue("repository exists", thisTest.getRepository().exists());
+    }
+
+    public void testGetSession_ConfigConstructor() throws Exception
+    {
+        ISVNRemote session;
+        try
+        {
+            session = new RemoteFactory(
+                super.conf.getAbsolutePath(),
+                USERNAME, PASSWORD,
+                new DefaultPromptUserPassword(), null)
+                .openRemoteSession(getTestRepoUrl());
+        }
+        catch (ClientException ex)
+        {
+            throw new RuntimeException(ex);
+        }
+        assertNotNull("Null session was returned by factory", session);
+        assertEquals(getTestRepoUrl(), session.getSessionUrl());
+    }
+
+    public void testDispose() throws Exception
+    {
+        ISVNRemote session = getSession();
+        session.dispose();
+    }
+
+    public void testDatedRev() throws Exception
+    {
+        ISVNRemote session = getSession();
+
+        long revision = session.getRevisionByDate(new Date());
+        assertEquals(revision, 1);
+    }
+
+    public void testGetLocks() throws Exception
+    {
+        ISVNRemote session = getSession();
+
+        Set<String> iotaPathSet = new HashSet<String>(1);
+        String iotaPath = thisTest.getWCPath() + "/iota";
+        iotaPathSet.add(iotaPath);
+
+        client.lock(iotaPathSet, "foo", false);
+
+        Map<String, Lock> locks = session.getLocks("iota", Depth.infinity);
+
+        assertEquals(locks.size(), 1);
+        Lock lock = locks.get("/iota");
+        assertNotNull(lock);
+        assertEquals(lock.getOwner(), "jrandom");
+    }
+
+    public void testCheckPath() throws Exception
+    {
+        ISVNRemote session = getSession();
+
+        NodeKind kind = session.checkPath("iota", 1);
+        assertEquals(NodeKind.file, kind);
+
+        kind = session.checkPath("iota", 0);
+        assertEquals(NodeKind.none, kind);
+
+        kind = session.checkPath("A", 1);
+        assertEquals(NodeKind.dir, kind);
     }
 
     private String getTestRepoUrl()
@@ -173,22 +195,10 @@ public class SVNRemoteTests extends SVNTests
         assertEquals(getTestRepoUrl(), session.getSessionUrl());
     }
 
-    public void testGetSession_ConfigConstructor() throws Exception
+    public void testGetUrl_viaSVNClientWorkingCopy() throws Exception
     {
-        ISVNRemote session;
-        try
-        {
-            session = new RemoteFactory(
-                super.conf.getAbsolutePath(),
-                USERNAME, PASSWORD,
-                new DefaultPromptUserPassword(), null)
-                .openRemoteSession(getTestRepoUrl());
-        }
-        catch (ClientException ex)
-        {
-            throw new RuntimeException(ex);
-        }
-        assertNotNull("Null session was returned by factory", session);
+        ISVNRemote session = client.openRemoteSession(thisTest.getWCPath());
+
         assertEquals(getTestRepoUrl(), session.getSessionUrl());
     }
 
@@ -211,5 +221,18 @@ public class SVNRemoteTests extends SVNTests
 
         relPath = session.getReposRelativePath(baseUrl + "/beta");
         assertEquals("A/B/E/beta", relPath);
+    }
+
+    public void testGetCommitEditor() throws Exception
+    {
+        ISVNRemote session = getSession();
+        session.getCommitEditor();
+    }
+
+    public void testDisposeCommitEditor() throws Exception
+    {
+        ISVNRemote session = getSession();
+        session.getCommitEditor();
+        session.dispose();
     }
 }
