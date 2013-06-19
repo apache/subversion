@@ -1,7 +1,6 @@
       * * * * * * * * * * * * * * * * * * * * * * * * * * * *
       *                                                     *
       *  THIS RELEASE STREAM IS OPEN TO BUG FIXES.          *
-      *  THIS RELEASE STREAM IS OPEN TO API CHANGES.        *
       *                                                     *
       * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
@@ -11,7 +10,7 @@ See http://subversion.apache.org/docs/community-guide/releasing.html#release-sta
 for details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.8.0:
+Status of 1.8.1:
 
 Candidate changes:
 ==================
@@ -51,14 +50,6 @@ Candidate changes:
    Votes:
      +0: rhuijben (Needs more work. Breaks JavaHL)
 
- * r1490679
-   Allow test suite to run properly on Windows.
-   Justification:
-     Fixes a (very) minor test setup failure when running the ra_serf tests on
-     Windows for the first time in a given environment.
-   Votes:
-     +1: pburba, rhuijben
-
  * r1489339
    Return 501/412 rather than 401 for lock errors.
    Justification:
@@ -75,7 +66,7 @@ Candidate changes:
    Justification:
      Not a client failure so 4xx is wrong.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
  * r1491432
    Rename 'automatic merge' to 'complete merge' in the merge help text.
@@ -89,6 +80,8 @@ Candidate changes:
      versions will name the feature in different ways.
    Votes:
      +1: stsp
+     +1: danielsh (no opinion on the name of the feature; just confirming this
+                   patch does what it claims to)
 
  * r1491707
    Add version header to svnpubsub server.
@@ -98,17 +91,137 @@ Candidate changes:
    Votes:
      +1: danielsh, breser
 
+ * r1491739, r1491755, r1491762, r1492152, r1492670, r1492682
+   Improve interactive conflict resolution menu.
+   Justification:
+     The current menu is too hard to figure out for users.
+     See http://svn.haxx.se/dev/archive-2013-06/0147.shtml
+     and http://blog.elegosoft.com/?q=updating-moves-in-subversion-18-just-ask
+   Votes:
+     +1: stsp
+
+ * r1491816, r1494089
+   Add two additional options to interactive file merge.
+   Justification:
+     Usability enhancement for quicker conflict resolution in some cases.
+     Very simple change. Only affects interactive mode, not scripts.
+   Votes:
+     +1: stsp, danielsh
+
+ * r1491868
+   Add missing conflict callback invocations to the update editor.
+   Justification:
+     Resolver is not invoked after some updates which flag new tree conflicts.
+   Votes:
+     +1: stsp
+     -0: rhuijben (Working on a further review to avoid a possible duplicate
+                   callback call)
+
+ * r1478987, r1492020
+   Optimize some code that retrieves mergeinfo to obtain less unneeded
+   information from the repository.
+   Justification:
+     Simple fixes to improve performance.
+   Votes:
+     +1: rhuijben
+
+ * r1491756
+   Fix issue #4364: Correctly remove the stale entries from the lock table
+   when committing deletions.
+   Justification:
+     Keep wc.db as consistent and clean as possible.
+   Votes:
+     +1: rhuijben, stsp
+
+ * r1492148, r1493720
+   Don't try to use 'blame -r 5:1' against 1.7 servers.  Affects only users
+   of the RA API, not users of the client API or svn.
+   Justification:
+     1.7 servers would silently do the wrong thing.
+   Votes:
+     +1: danielsh, rhuijben
+
+ * r1493424
+   Remove unnecessary check for branches ancestry from 
+   command line client. All required checks are already performed in
+   libsvn_client.
+   Justification:
+     There is no reason to command line and third-party use different
+     codepath for ancestory checks. Simple performance fix.
+   Votes:
+     +1: ivan, rhuijben
+     +0: danielsh (note: svn_client__youngest_common_ancestor can be striken;
+                         no callers left)
+
+ * r1493475
+   Improve 'svn merge' performance over WAN: Use already fetched 
+   history-as-mergeinfo data to find youngest common ancestor in automatic 
+   merge.
+   Justification:
+     No reason to create an RA session or perform RA calls if the information
+     is already in memory.
+   Votes:
+     +1: rhuijben, ivan
+
+ * r1493703, r1494171
+   Fix upgrade notification for explicit upgrades of post-WC-NG working copies.
+   Justification:
+     Without this notification users can't see whether the upgrade was a no-op.
+   Votes:
+     +1: rhuijben, stsp
+
+ * r1494342
+   C tests: support --compatible-version=1.8.
+   Justification:
+     Enable running the tests with --compatible-version
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
-Approved for 1.8.1 or if soak is restarted for 1.8.0:
-====================================================
+ * r1493027, r1493028, r1493060
+   Make 'blame -r 5:4' work.
+   Justification:
+     Make it possible to track removed lines.
+   Notes:
+     r1493027 is the fix.
+     r1493028 is a typo fix.
+     r1493060 is a docstring change.  If this group is merged, that docstring
+       should be amended to say "1.8.1" rather than "1.9.0" (this amendment
+       does not require votes).
+   Votes:
+     -1: danielsh (doesn't resolve peg revisions correctly)
 
 Approved changes:
 =================
 
-# 1.8.0-rc3 is being voted on currently and as such 1.8.0 is in the soak phase.
-# Changes that are not intended for 1.8.0 should not be placed here and changes
-# that would restart the soak should not be added unless they are resolving
-# blocking issues.  If in doubt see this link for details:
-# http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
+ * r1494287
+   Fix a "div-by-0" error when upgrading unsharded format 3+ FSFS repositories.
+   Justification:
+     Even if the format supports sharding, the actual repo may be unsharded.
+     The upgrade code simply needs to check for that condition and skip revprop
+     catch-up packing in that case.
+   Votes:
+     +1: stefan2, danielsh, ivan, philip
+
+ * r1494298, r1494318
+   Fix a FSFS data loss when aborting 'svnadmin upgrade' late in the process.
+   Justification:
+     This is a critical issue. People may actually abort the potentially long-
+     running 'svnadmin upgrade'.  If they do that after the actual packing
+     phase, they *will* lose data.
+     r1494318 is a follow-up that fixes a copy'n'pasto.
+   Notes:
+     Depends on r1494287 which must be merged first.
+   Votes:
+     +1: stefan2, danielsh, ivan
+
+ * r1494223
+   Forbid 'svnadmin create --fs-type=fsfs --compatible-version=1.0'.
+   Justification:
+     Well, I hope no one will actually run into this error in a situation
+     where it matters, but I'll sleep better knowing we're strict about
+     input validation.
+   Votes:
+     +1: danielsh, rhuijben, stsp
