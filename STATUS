@@ -108,14 +108,15 @@ Candidate changes:
    Votes:
      +1: stsp, danielsh
 
- * r1491868
+ * r1491868, r1494657
    Add missing conflict callback invocations to the update editor.
    Justification:
      Resolver is not invoked after some updates which flag new tree conflicts.
    Votes:
      +1: stsp
-     -0: rhuijben (Working on a further review to avoid a possible duplicate
-                   callback call)
+     -0: rhuijben (without r1494657) (Working on a further review to
+                                      avoid a possible duplicate
+                                      callback call) 
 
  * r1478987, r1492020
    Optimize some code that retrieves mergeinfo to obtain less unneeded
