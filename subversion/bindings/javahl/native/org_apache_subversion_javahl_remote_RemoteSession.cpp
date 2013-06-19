@@ -46,7 +46,7 @@ Java_org_apache_subversion_javahl_remote_RemoteSession_finalize(
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_remote_RemoteSession_dispose(
+Java_org_apache_subversion_javahl_remote_RemoteSession_nativeDispose(
     JNIEnv *env, jobject jthis)
 {
   JNIEntry(RemoteSession, dispose);
