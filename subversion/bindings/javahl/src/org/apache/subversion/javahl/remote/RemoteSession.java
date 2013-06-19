@@ -32,6 +32,8 @@ import org.apache.subversion.javahl.JNIObject;
 import org.apache.subversion.javahl.OperationContext;
 import org.apache.subversion.javahl.ClientException;
 
+import java.lang.ref.WeakReference;
+import java.util.HashSet;
 import java.util.Date;
 import java.util.Map;
 
@@ -40,7 +42,22 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 public class RemoteSession extends JNIObject implements ISVNRemote
 {
-    public native void dispose();
+    public void dispose()
+    {
+        if (editors != null)
+        {
+            // Deactivate all open editors
+            for (WeakReference<ISVNEditor> ref : editors)
+            {
+                ISVNEditor ed = ref.get();
+                if (ed == null)
+                    continue;
+                ed.dispose();
+                ref.clear();
+            }
+        }
+        nativeDispose();
+    }
 
     public native void cancelOperation() throws ClientException;
 
@@ -75,7 +92,11 @@ public class RemoteSession extends JNIObject implements ISVNRemote
 
     public ISVNEditor getCommitEditor() throws ClientException
     {
-        throw new RuntimeException("Not implemented: getCommitEditor");
+        ISVNEditor ed = CommitEditor.createInstance(this);
+        if (editors == null)
+            editors = new HashSet<WeakReference<ISVNEditor>>();
+        editors.add(new WeakReference<ISVNEditor>(ed));
+        return ed;
     }
 
     @Override
@@ -89,9 +110,17 @@ public class RemoteSession extends JNIObject implements ISVNRemote
         super(cppAddr);
     }
 
+    private native void nativeDispose();
+
     /*
      * NOTE: This field is accessed from native code for callbacks.
      */
     private RemoteSessionContext sessionContext = new RemoteSessionContext();
     private class RemoteSessionContext extends OperationContext {}
+
+    /*
+     * The set of open editors. We need this in order to dispose/abort
+     * the editors when the session is disposed.
+     */
+    private HashSet<WeakReference<ISVNEditor>> editors;
 }

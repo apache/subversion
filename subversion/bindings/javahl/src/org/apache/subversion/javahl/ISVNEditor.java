@@ -39,6 +39,12 @@ import java.util.Map;
 public interface ISVNEditor
 {
     /**
+     * Release the native peer (should not depend on finalize),
+     * and abort the edit if it has not been completed yet.
+     */
+    void dispose();
+
+    /**
      * Create a new directory at <code>relativePath</code>.
      * The immediate parent of <code>relativePath</code> is expected to exist.
      *

@@ -40,6 +40,8 @@ import java.util.Map;
  */
 public class CommitEditor extends JNIObject implements ISVNEditor
 {
+    public void dispose() {/* TODO */}
+
     public void addDirectory(String relativePath,
                              Iterable<String> children,
                              Map<String, byte[]> properties,
@@ -142,6 +144,16 @@ public class CommitEditor extends JNIObject implements ISVNEditor
     public void abort() throws ClientException
     {
         notimplemented("abort");
+    }
+
+    /**
+     * This factory method called from RemoteSession.getCommitEditor.
+     */
+    static final CommitEditor createInstance(RemoteSession owner)
+            throws ClientException
+    {
+        // FIXME: temporary implementation
+        return new CommitEditor(0L);
     }
 
     /**
