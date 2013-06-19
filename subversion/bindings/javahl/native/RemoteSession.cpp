@@ -273,8 +273,12 @@ RemoteSession::dispose(jobject jthis)
   SVNBase::dispose(jthis, &fid, JAVA_CLASS_REMOTE_SESSION);
 }
 
-void RemoteSession::reparent(const char* url)
+void RemoteSession::reparent(jstring jurl)
 {
+  JNIStringHolder url(jurl);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
   SVN::Pool subPool(pool);
   SVN_JNI_ERR(svn_ra_reparent(m_session, url, subPool.getPool()), );
 }
@@ -283,8 +287,7 @@ jstring
 RemoteSession::getSessionUrl()
 {
   SVN::Pool subPool(pool);
-  const char * url;
-
+  const char* url;
   SVN_JNI_ERR(svn_ra_get_session_url(m_session, &url, subPool.getPool()), NULL);
 
   jstring jurl = JNIUtil::makeJString(url);
@@ -295,11 +298,14 @@ RemoteSession::getSessionUrl()
 }
 
 jstring
-RemoteSession::getSessionRelativePath(const char* url)
+RemoteSession::getSessionRelativePath(jstring jurl)
 {
+  JNIStringHolder url(jurl);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
   SVN::Pool subPool(pool);
   const char* rel_path;
-
   SVN_JNI_ERR(svn_ra_get_path_relative_to_session(
                   m_session, &rel_path, url, subPool.getPool()),
               NULL);
@@ -311,14 +317,18 @@ RemoteSession::getSessionRelativePath(const char* url)
 }
 
 jstring
-RemoteSession::getReposRelativePath(const char* url)
+RemoteSession::getReposRelativePath(jstring jurl)
 {
+  JNIStringHolder url(jurl);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
   SVN::Pool subPool(pool);
   const char* rel_path;
-
-  SVN_JNI_ERR(svn_ra_get_path_relative_to_root(
-                  m_session, &rel_path, url, subPool.getPool()),
+  SVN_JNI_ERR(svn_ra_get_path_relative_to_root(m_session, &rel_path, url,
+                                               subPool.getPool()),
               NULL);
+
   jstring jrel_path = JNIUtil::makeJString(rel_path);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
@@ -331,7 +341,6 @@ RemoteSession::getReposUUID()
 {
   SVN::Pool subPool(pool);
   const char * uuid;
-
   SVN_JNI_ERR(svn_ra_get_uuid2(m_session, &uuid, subPool.getPool()), NULL);
 
   jstring juuid = JNIUtil::makeJString(uuid);
@@ -346,7 +355,6 @@ RemoteSession::getReposRootUrl()
 {
   SVN::Pool subPool(pool);
   const char* url;
-
   SVN_JNI_ERR(svn_ra_get_repos_root2(m_session, &url, subPool.getPool()),
               NULL);
 
@@ -362,7 +370,6 @@ RemoteSession::getLatestRevision()
 {
   SVN::Pool subPool(pool);
   svn_revnum_t rev;
-
   SVN_JNI_ERR(svn_ra_get_latest_revnum(m_session, &rev, subPool.getPool()),
               SVN_INVALID_REVNUM);
   return rev;
@@ -371,13 +378,11 @@ RemoteSession::getLatestRevision()
 jlong
 RemoteSession::getRevisionByTimestamp(jlong timestamp)
 {
-  SVN::Pool requestPool;
+  SVN::Pool subPool(pool);
   svn_revnum_t rev;
-
-  apr_time_t tm = timestamp;
-
-  SVN_JNI_ERR(svn_ra_get_dated_revision(m_session, &rev, tm,
-                                        requestPool.getPool()),
+  SVN_JNI_ERR(svn_ra_get_dated_revision(m_session, &rev,
+                                        apr_time_t(timestamp),
+                                        subPool.getPool()),
               SVN_INVALID_REVNUM);
   return rev;
 }
@@ -385,9 +390,6 @@ RemoteSession::getRevisionByTimestamp(jlong timestamp)
 jobject
 RemoteSession::getLocks(jstring jpath, jobject jdepth)
 {
-  SVN::Pool requestPool;
-  apr_hash_t *locks;
-
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
     return NULL;
@@ -396,26 +398,27 @@ RemoteSession::getLocks(jstring jpath, jobject jdepth)
   if (JNIUtil::isExceptionThrown())
     return NULL;
 
+  SVN::Pool subPool(pool);
+  apr_hash_t *locks;
   SVN_JNI_ERR(svn_ra_get_locks2(m_session, &locks, path, depth,
-                                requestPool.getPool()),
+                                subPool.getPool()),
               NULL);
 
-  return CreateJ::LockMap(locks, requestPool.getPool());
+  return CreateJ::LockMap(locks, subPool.getPool());
 }
 
 jobject
 RemoteSession::checkPath(jstring jpath, jlong jrevision)
 {
-  SVN::Pool requestPool;
-  svn_node_kind_t kind;
-
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
     return NULL;
 
+  SVN::Pool subPool(pool);
+  svn_node_kind_t kind;
   SVN_JNI_ERR(svn_ra_check_path(m_session, path,
                                 svn_revnum_t(jrevision),
-                                &kind, requestPool.getPool()),
+                                &kind, subPool.getPool()),
               NULL);
 
   return EnumMapper::mapNodeKind(kind);
@@ -424,13 +427,12 @@ RemoteSession::checkPath(jstring jpath, jlong jrevision)
 jboolean
 RemoteSession::hasCapability(jstring jcapability)
 {
-  SVN::Pool subPool(pool);
-  svn_boolean_t has;
-
   JNIStringHolder capability(jcapability);
   if (JNIUtil::isExceptionThrown())
     return false;
 
+  SVN::Pool subPool(pool);
+  svn_boolean_t has;
   SVN_JNI_ERR(svn_ra_has_capability(m_session, &has, capability,
                                     subPool.getPool()),
               false);
