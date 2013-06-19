@@ -68,9 +68,9 @@ sub prompt {
   my %args = @_;
 
   die "$0: called prompt() in non-interactive mode!" if $YES;
-  # TODO: this part was written by trial-and-error
   ReadMode 'cbreak';
   my $answer = (ReadKey 0);
+  ReadMode 'restore';
   print $answer, "\n";
   return $args{verbose}
          ? $answer
