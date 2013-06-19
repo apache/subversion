@@ -63,6 +63,7 @@ class RemoteSession : public SVNBase
     jstring getSessionRelativePath(const char* url);
     jstring getReposRelativePath(const char* url);
     jstring getReposUUID();
+    jstring getReposRootUrl();
     jlong getLatestRevision();
 
     jlong getRevisionByTimestamp(jlong timestamp);

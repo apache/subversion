@@ -73,6 +73,8 @@ public class RemoteSession extends JNIObject implements ISVNRemote
 
     public native String getReposUUID() throws ClientException;
 
+    public native String getReposRootUrl() throws ClientException;
+
     public native long getLatestRevision() throws ClientException;
 
     public long getRevisionByDate(Date date) throws ClientException
