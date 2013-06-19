@@ -113,10 +113,7 @@ Candidate changes:
    Justification:
      Resolver is not invoked after some updates which flag new tree conflicts.
    Votes:
-     +1: stsp
-     -0: rhuijben (without r1494657) (Working on a further review to
-                                      avoid a possible duplicate
-                                      callback call) 
+     +1: stsp, rhuijben
 
  * r1478987, r1492020
    Optimize some code that retrieves mergeinfo to obtain less unneeded
