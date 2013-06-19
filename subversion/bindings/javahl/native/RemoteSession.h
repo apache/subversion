@@ -69,6 +69,7 @@ class RemoteSession : public SVNBase
     jlong getRevisionByTimestamp(jlong timestamp);
     jobject getLocks(jstring jpath, jobject jdepth);
     jobject checkPath(jstring jpath, jlong jrevision);
+    jboolean hasCapability(jstring capability);
 
   private:
     RemoteSession(jobject*, int retryAttempts,
