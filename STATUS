@@ -223,10 +223,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1493951
-   Fix 'svn-bench' misreporting itself as 'svn'.
-   Justification:
-     Misleading output, pretty obvious fix.
-   Votes:
-     +1: stsp, danielsh, rhuijben
-

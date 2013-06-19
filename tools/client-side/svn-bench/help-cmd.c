@@ -80,7 +80,7 @@ svn_cl__help(apr_getopt_t *os,
   SVN_ERR(svn_ra_print_modules(version_footer, pool));
 
   return svn_opt_print_help4(os,
-                             "svn",   /* ### erm, derive somehow? */
+                             "svn-bench",   /* ### erm, derive somehow? */
                              opt_state ? opt_state->version : FALSE,
                              opt_state ? opt_state->quiet : FALSE,
                              opt_state ? opt_state->verbose : FALSE,
