@@ -180,6 +180,7 @@ Candidate changes:
 
  * r1494298, r1494318
    Fix a FSFS data loss when aborting 'svnadmin upgrade' late in the process.
+   NOTE: Depends on r1494287.
    Justification:
      This is a critical issue. People may actually abort the potentially long-
      running 'svnadmin upgrade'.  If they do that after the actual packing
