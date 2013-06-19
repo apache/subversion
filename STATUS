@@ -169,15 +169,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, stsp
 
- * r1494223
-   Forbid 'svnadmin create --fs-type=fsfs --compatible-version=1.0'.
-   Justification:
-     Well, I hope no one will actually run into this error in a situation
-     where it matters, but I'll sleep better knowing we're strict about
-     input validation.
-   Votes:
-     +1: danielsh, rhuijben
-
  * r1494342
    C tests: support --compatible-version=1.8.
    Justification:
@@ -224,3 +215,12 @@ Approved changes:
      Depends on r1494287 which must be merged first.
    Votes:
      +1: stefan2, danielsh, ivan
+
+ * r1494223
+   Forbid 'svnadmin create --fs-type=fsfs --compatible-version=1.0'.
+   Justification:
+     Well, I hope no one will actually run into this error in a situation
+     where it matters, but I'll sleep better knowing we're strict about
+     input validation.
+   Votes:
+     +1: danielsh, rhuijben, stsp
