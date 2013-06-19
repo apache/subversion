@@ -30,6 +30,7 @@
 #include "DiffSummaryReceiver.h"
 #include "ClientContext.h"
 #include "Prompter.h"
+#include "RemoteSession.h"
 #include "Pool.h"
 #include "Targets.h"
 #include "Revision.h"
@@ -70,6 +71,7 @@
 #include <vector>
 #include <iostream>
 #include <sstream>
+#include <string>
 
 
 SVNClient::SVNClient(jobject jthis_in)
@@ -1523,6 +1525,77 @@ SVNClient::patch(const char *patchPath, const char *targetPath, bool dryRun,
                                  ignoreWhitespace, removeTempfiles,
                                  PatchCallback::callback, callback,
                                  ctx, subPool.getPool()), );
+}
+
+jobject
+SVNClient::openRemoteSession(const char* path, int retryAttempts)
+{
+    static const svn_opt_revision_t HEAD = { svn_opt_revision_head, {0}};
+    static const svn_opt_revision_t NONE = { svn_opt_revision_unspecified, {0}};
+
+    SVN_JNI_NULL_PTR_EX(path, "path", NULL);
+
+    SVN::Pool subPool(pool);
+    svn_client_ctx_t *ctx = context.getContext(NULL, subPool);
+    if (ctx == NULL)
+        return NULL;
+
+    Path checkedPath(path, subPool);
+    SVN_JNI_ERR(checkedPath.error_occurred(), NULL);
+
+    struct PathInfo
+    {
+        std::string url;
+        std::string uuid;
+        static svn_error_t *callback(void *baton,
+                                     const char *,
+                                     const svn_client_info2_t *info,
+                                     apr_pool_t *)
+          {
+              PathInfo* const pi = static_cast<PathInfo*>(baton);
+              pi->url = info->URL;
+              pi->uuid = info->repos_UUID;
+              return SVN_NO_ERROR;
+          }
+    } path_info;
+
+    SVN_JNI_ERR(svn_client_info3(
+                    checkedPath.c_str(), &NONE,
+                    (svn_path_is_url(checkedPath.c_str()) ? &HEAD : &NONE),
+                    svn_depth_empty, FALSE, TRUE, NULL,
+                    PathInfo::callback, &path_info,
+                    ctx, subPool.getPool()),
+                NULL);
+
+    jobject jctx = context.getSelf();
+    if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+
+    /* Decouple the RemoteSession's context from SVNClient's context
+       by creating a copy of the prompter here. */
+    Prompter* prompter = new Prompter(context.getPrompter());
+    if (!prompter)
+    {
+        /* context.getSelf() created a new global reference. */
+        JNIUtil::getEnv()->DeleteGlobalRef(jctx);
+        JNIUtil::throwNullPointerException("allocating Prompter");
+        return NULL;
+    }
+
+    jobject jremoteSession = RemoteSession::open(
+        retryAttempts, path_info.url.c_str(), path_info.uuid.c_str(),
+        context.getConfigDirectory(),
+        context.getUsername(), context.getPassword(),
+        prompter, jctx);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        /* context.getSelf() created a new global reference. */
+        JNIUtil::getEnv()->DeleteGlobalRef(jctx);
+        jremoteSession = NULL;
+        delete prompter;
+    }
+
+    return jremoteSession;
 }
 
 ClientContext &

@@ -19,32 +19,39 @@
  *    under the License.
  * ====================================================================
  * @endcopyright
- *
- * @file RevpropTable.h
- * @brief Interface of the class RevpropTable
  */
 
-#ifndef REVPROPTABLE_H
-#define REVPROPTABLE_H
+package org.apache.subversion.javahl.remote;
 
-#include <jni.h>
-#include "Pool.h"
+import org.apache.subversion.javahl.SubversionException;
 
-struct apr_hash_t;
-
-#include "Path.h"
-#include <map>
-#include <string>
-
-class RevpropTable
+/**
+ * This checked exception is thrown only from ISVNClient.openRemoteSession
+ * or RemoteFactory.openRemoteSession if a session could not be opened
+ * due to a redirect.
+ */
+public class RetryOpenSession extends SubversionException
 {
- private:
-  std::map<std::string, std::string> m_revprops;
-  jobject m_revpropTable;
- public:
-  RevpropTable(jobject jrevpropTable);
-  ~RevpropTable();
-  apr_hash_t *hash(const SVN::Pool &pool, bool nullIfEmpty = true);
-};
+    // Update the serialVersionUID when there is a incompatible change
+    // made to this class.
+    private static final long serialVersionUID = 1L;
 
-#endif // REVPROPTABLE_H
+    /**
+     * This constructor is only called from native code.
+     */
+    protected RetryOpenSession(String message, String correctedUrl)
+    {
+        super(message);
+        this.correctedUrl = correctedUrl;
+    }
+
+    /**
+     * @return the corrected URL for the session.
+     */
+    public String getCorrectedUrl()
+    {
+        return correctedUrl;
+    }
+
+    private final String correctedUrl;
+}

@@ -151,14 +151,14 @@ public class SVNClient implements ISVNClient
         clientContext.notify = notify;
     }
 
-    public void setConflictResolver(ConflictResolverCallback listener)
+    public void setConflictResolver(ConflictResolverCallback resolver)
     {
-        clientContext.resolver = listener;
+        clientContext.resolver = resolver;
     }
 
-    public void setProgressCallback(ProgressCallback listener)
+    public void setProgressCallback(ProgressCallback progress)
     {
-        clientContext.listener = listener;
+        clientContext.setProgressCallback(progress);
     }
 
     public native void remove(Set<String> paths, boolean force,
@@ -661,28 +661,39 @@ public class SVNClient implements ISVNClient
                              PatchCallback callback)
             throws ClientException;
 
+    public ISVNRemote openRemoteSession(String path)
+            throws ClientException, SubversionException
+    {
+        return nativeOpenRemoteSession(path, 1);
+    }
+
+    public ISVNRemote openRemoteSession(String path, int retryAttempts)
+            throws ClientException, SubversionException
+    {
+        if (retryAttempts <= 0)
+            throw new IllegalArgumentException(
+                "retryAttempts must be positive");
+        return nativeOpenRemoteSession(path, retryAttempts);
+    }
+
+    private native ISVNRemote nativeOpenRemoteSession(
+        String path, int retryAttempts)
+            throws ClientException, SubversionException;
+
     /**
      * A private class to hold the contextual information required to
      * persist in this object, such as notification handlers.
      */
-    private class ClientContext
-        implements ClientNotifyCallback, ProgressCallback,
-            ConflictResolverCallback
+    private class ClientContext extends OperationContext
+        implements ClientNotifyCallback, ConflictResolverCallback
     {
         public ClientNotifyCallback notify = null;
-        public ProgressCallback listener = null;
         public ConflictResolverCallback resolver = null;
 
         public void onNotify(ClientNotifyInformation notifyInfo)
         {
             if (notify != null)
                 notify.onNotify(notifyInfo);
-        }
-
-        public void onProgress(ProgressEvent event)
-        {
-            if (listener != null)
-                listener.onProgress(event);
         }
 
         public ConflictResult resolve(ConflictDescriptor conflict)
