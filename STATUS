@@ -223,14 +223,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1492295
-   Fix swig-rb tests with out-of-tree builds.
-   Justification:
-     Our tests should not be broken, regression in 1.8.0 from previous versions
-   Votes:
-     +1: breser
-     +0: danielsh
-
  * r1492164
    Invalid repository paths cause a segfault in the fsfs-stats tool.
    Justification:
