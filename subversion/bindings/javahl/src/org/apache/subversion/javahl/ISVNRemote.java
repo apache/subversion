@@ -132,7 +132,7 @@ public interface ISVNRemote
 
     /**
      * Create a commit editor instance, rooted at the current session URL.
-     * @throws SubversionException
+     * @throws ClientException
      */
     ISVNEditor getCommitEditor() throws ClientException;
 
@@ -212,4 +212,11 @@ public interface ISVNRemote
 
         private String token;
     }
+
+    /**
+     * Check if the server associated with this session has
+     * the given <code>capability</code>.
+     * @throws ClientException
+     */
+    boolean hasCapability(Capability capability) throws ClientException;
 }

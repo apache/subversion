@@ -183,3 +183,14 @@ Java_org_apache_subversion_javahl_remote_RemoteSession_getLocks(
 
   return ras->getLocks(jpath, jdepth);
 }
+
+JNIEXPORT jboolean JNICALL
+Java_org_apache_subversion_javahl_remote_RemoteSession_nativeHasCapability(
+    JNIEnv *env, jobject jthis, jstring jcapability)
+{
+  JNIEntry(RemoteSession, nativeHasCapability);
+  RemoteSession *ras = RemoteSession::getCppObject(jthis);
+  CPPADDR_NULL_PTR(ras, false);
+
+  return ras->hasCapability(jcapability);
+}

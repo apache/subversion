@@ -242,4 +242,10 @@ public class SVNRemoteTests extends SVNTests
         session.getCommitEditor();
         session.dispose();
     }
+
+    public void testHasCapability() throws Exception
+    {
+        ISVNRemote session = getSession();
+        assert(session.hasCapability(ISVNRemote.Capability.depth));
+    }
 }

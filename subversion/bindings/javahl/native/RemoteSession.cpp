@@ -420,3 +420,20 @@ RemoteSession::checkPath(jstring jpath, jlong jrevision)
 
   return EnumMapper::mapNodeKind(kind);
 }
+
+jboolean
+RemoteSession::hasCapability(jstring jcapability)
+{
+  SVN::Pool subPool(pool);
+  svn_boolean_t has;
+
+  JNIStringHolder capability(jcapability);
+  if (JNIUtil::isExceptionThrown())
+    return false;
+
+  SVN_JNI_ERR(svn_ra_has_capability(m_session, &has, capability,
+                                    subPool.getPool()),
+              false);
+
+  return jboolean(has);
+}

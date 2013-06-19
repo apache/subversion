@@ -101,6 +101,12 @@ public class RemoteSession extends JNIObject implements ISVNRemote
         return ed;
     }
 
+    public boolean hasCapability(Capability capability)
+            throws ClientException
+    {
+        return nativeHasCapability(capability.toString());
+    }
+
     @Override
     public native void finalize() throws Throwable;
 
@@ -113,6 +119,8 @@ public class RemoteSession extends JNIObject implements ISVNRemote
     }
 
     private native void nativeDispose();
+
+    private native boolean nativeHasCapability(String capability);
 
     /*
      * NOTE: This field is accessed from native code for callbacks.
