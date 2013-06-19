@@ -481,6 +481,31 @@ test_three_file_content_comparison(apr_pool_t *scratch_pool)
   return err;
 }
 
+static svn_error_t *
+read_length_line_shouldnt_loop(apr_pool_t *pool)
+{
+  const char *tmp_dir;
+  const char *tmp_file;
+  char buffer[4];
+  apr_size_t buffer_limit = sizeof(buffer);
+  apr_file_t *f;
+
+  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "read_length_tmp", pool));
+  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
+  svn_test_add_dir_cleanup(tmp_dir);
+
+  SVN_ERR(svn_io_write_unique(&tmp_file, tmp_dir, "1234\r\n", 6,
+                              svn_io_file_del_on_pool_cleanup, pool));
+
+  SVN_ERR(svn_io_file_open(&f, tmp_file, APR_READ, APR_OS_DEFAULT, pool));
+
+  SVN_TEST_ASSERT_ERROR(svn_io_read_length_line(f, buffer, &buffer_limit,
+                                                pool), SVN_ERR_MALFORMED_FILE);
+  SVN_TEST_ASSERT(buffer_limit == 4);
+
+  return SVN_NO_ERROR;
+}
 
 
 /* The test table.  */
@@ -496,5 +521,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "three file size comparison"),
     SVN_TEST_PASS2(test_three_file_content_comparison,
                    "three file content comparison"),
+    SVN_TEST_PASS2(read_length_line_shouldnt_loop,
+                   "svn_io_read_length_line() shouldn't loop"),
     SVN_TEST_NULL
   };

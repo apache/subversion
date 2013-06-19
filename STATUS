@@ -223,15 +223,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1492145
-   Properly handle a corner case in svn_io_read_length_line().
-   Justification:
-     Don't get in an endless loop when repos/db/uuid contains a \r\n instead
-     of a \n. (Some testcode of one user got in this case by applying a hack
-     and it worked in 1.7)
-   Votes:
-     +1: rhuijben, ivan, stefan2
-
  * r1491770
    Eliminate revprop buffer size limit.
    Justification:
