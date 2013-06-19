@@ -71,6 +71,7 @@
 #include <vector>
 #include <iostream>
 #include <sstream>
+#include <string>
 
 
 SVNClient::SVNClient(jobject jthis_in)
@@ -1544,8 +1545,8 @@ SVNClient::openRemoteSession(const char* path, int retryAttempts)
 
     struct PathInfo
     {
-        const char *url;
-        const char *uuid;
+        std::string url;
+        std::string uuid;
         static svn_error_t *callback(void *baton,
                                      const char *,
                                      const svn_client_info2_t *info,
@@ -1563,7 +1564,8 @@ SVNClient::openRemoteSession(const char* path, int retryAttempts)
                     (svn_path_is_url(checkedPath.c_str()) ? &HEAD : &NONE),
                     svn_depth_empty, FALSE, TRUE, NULL,
                     PathInfo::callback, &path_info,
-                    ctx, subPool.getPool()), NULL);
+                    ctx, subPool.getPool()),
+                NULL);
 
     jobject jctx = context.getSelf();
     if (JNIUtil::isJavaExceptionThrown())
@@ -1581,7 +1583,7 @@ SVNClient::openRemoteSession(const char* path, int retryAttempts)
     }
 
     jobject jremoteSession = RemoteSession::open(
-        retryAttempts, path_info.url, path_info.uuid,
+        retryAttempts, path_info.url.c_str(), path_info.uuid.c_str(),
         context.getConfigDirectory(),
         context.getUsername(), context.getPassword(),
         prompter, jctx);
