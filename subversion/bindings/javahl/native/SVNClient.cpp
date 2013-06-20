@@ -547,6 +547,7 @@ void SVNClient::resolve(const char *path, svn_depth_t depth,
 jlong SVNClient::doExport(const char *srcPath, const char *destPath,
                           Revision &revision, Revision &pegRevision,
                           bool force, bool ignoreExternals,
+                          bool ignoreKeywords,
                           svn_depth_t depth, const char *nativeEOL)
 {
     SVN::Pool subPool(pool);
@@ -565,7 +566,7 @@ jlong SVNClient::doExport(const char *srcPath, const char *destPath,
                                    destinationPath.c_str(),
                                    pegRevision.revision(),
                                    revision.revision(), force,
-                                   ignoreExternals, FALSE,
+                                   ignoreExternals, ignoreKeywords,
                                    depth,
                                    nativeEOL, ctx,
                                    subPool.getPool()),
