@@ -176,12 +176,17 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1494913
+ * r1494913, r1494913
    Fix performance regression in 'svn log' on repository roots.
    Justification:
      In 1.8.0, 'svn log' is unusably slow on FSFS repo roots.
+     BDB most likely has the same issue.
+   Note:
+     r1494913 fixes FSFS
+     r1494967 fixes BDB
    Votes:
-     +1: stefan2, danielsh
+     +1: stefan2
+     +1: danielsh (r1494913 only)
 
 Veto-blocked changes:
 =====================
