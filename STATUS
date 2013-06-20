@@ -174,7 +174,7 @@ Candidate changes:
    Justification:
      Enable running the tests with --compatible-version
    Votes:
-     +1: danielsh
+     +1: danielsh, rhuijben
 
  * r1494913, r1494967
    Fix performance regression in 'svn log' on repository roots.
@@ -194,7 +194,7 @@ Candidate changes:
      Minor performance regression against 1.7.x and requesting e.g. single
      revision logs on a repo root is not a fringe use-case.
    Votes:
-     +1: stefan2
+     +1: stefan2, rhuijben
 
 Veto-blocked changes:
 =====================
