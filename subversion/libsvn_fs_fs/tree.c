@@ -354,7 +354,19 @@ cache_lookup( fs_fs_dag_cache_t *cache
   /* need to do a full lookup.  Calculate the hash value
      (HASH_VALUE has been initialized to REVISION). */
   for (i = 0; i + 4 <= path_len; i += 4)
+#if SVN_UNALIGNED_ACCESS_IS_OK
     hash_value = hash_value * 0xd1f3da69 + *(const apr_uint32_t*)(path + i);
+#else
+    {
+      apr_uint32_t val = 0;
+      int j;
+
+      for (j = 0; j < 4; j++)
+        val |= (path[i + j] << (j * 8));
+
+      hash_value = hash_value * 0xd1f3da69 + val;
+    }
+#endif
 
   for (; i < path_len; ++i)
     hash_value = hash_value * 33 + path[i];
