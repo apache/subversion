@@ -204,6 +204,14 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1495104
+   Handle unexpected HTTP status codes as errors instead of as SUCCESS codes
+   in ra_serf.
+   Justification:
+     Handling them as success values causes assertions.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
