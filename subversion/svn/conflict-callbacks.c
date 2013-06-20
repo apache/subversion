@@ -1055,6 +1055,8 @@ handle_tree_conflict(svn_wc_conflict_result_t *result,
 
       svn_pool_clear(iterpool);
 
+      tc_opts = tree_conflict_options;
+
       if (desc->operation == svn_wc_operation_update ||
           desc->operation == svn_wc_operation_switch)
         {
@@ -1068,14 +1070,8 @@ handle_tree_conflict(svn_wc_conflict_result_t *result,
               if (desc->action == svn_wc_conflict_action_edit &&
                   desc->node_kind == svn_node_dir)
                 tc_opts = tree_conflict_options_update_edit_deleted_dir;
-              else
-                tc_opts = tree_conflict_options;
             }
-          else
-            tc_opts = tree_conflict_options;
         }
-      else
-        tc_opts = tree_conflict_options;
 
       SVN_ERR(prompt_user(&opt, tc_opts, NULL, b->pb, iterpool));
       if (! opt)
