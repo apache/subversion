@@ -1744,7 +1744,7 @@ svn_ra_serf__credentials_callback(char **username, char **password,
  * where it necessary.
  */
 svn_error_t *
-svn_ra_serf__error_on_status(int status_code,
+svn_ra_serf__error_on_status(serf_status_line sline,
                              const char *path,
                              const char *location);
 
