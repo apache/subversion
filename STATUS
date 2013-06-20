@@ -194,18 +194,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1494298, r1494318
-   Fix a FSFS data loss when aborting 'svnadmin upgrade' late in the process.
-   Justification:
-     This is a critical issue. People may actually abort the potentially long-
-     running 'svnadmin upgrade'.  If they do that after the actual packing
-     phase, they *will* lose data.
-     r1494318 is a follow-up that fixes a copy'n'pasto.
-   Notes:
-     Depends on r1494287 which must be merged first.
-   Votes:
-     +1: stefan2, danielsh, ivan
-
  * r1494223
    Forbid 'svnadmin create --fs-type=fsfs --compatible-version=1.0'.
    Justification:
