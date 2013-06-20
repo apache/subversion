@@ -162,12 +162,10 @@ Candidate changes:
  * r1495204, r1495209, r1495214
    Follow-up to r1495063, improving the hash effectiveness.
    Justification:
-     With zero runtime overhead, this gives us a better distribution over
-     the hash buckets.
-     In case of an issue on big-endian platforms, we want to be sure to
-     see the same deterministic error condition on little-endian as well.
-     This incur an insignificant performance overhead on big-endian systems
-     (PPC & friends) only.
+     Without a runtime overhead, r1495204 gives us a better distribution
+     over the hash buckets.  The other two improve reproducibility by
+     making the hash platform-independent with a minor overhead on
+     little-endian machines (x86 & friends).
    Votes:
      +1: stefan2, stsp
 
