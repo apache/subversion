@@ -675,7 +675,7 @@ public class SVNClient implements ISVNClient
     public ISVNRemote openRemoteSession(String pathOrUrl)
             throws ClientException, SubversionException
     {
-        return nativeOpenRemoteSession(path, 1);
+        return nativeOpenRemoteSession(pathOrUrl, 1);
     }
 
     public ISVNRemote openRemoteSession(String pathOrUrl, int retryAttempts)
@@ -684,7 +684,7 @@ public class SVNClient implements ISVNClient
         if (retryAttempts <= 0)
             throw new IllegalArgumentException(
                 "retryAttempts must be positive");
-        return nativeOpenRemoteSession(path, retryAttempts);
+        return nativeOpenRemoteSession(pathOrUrl, retryAttempts);
     }
 
     private native ISVNRemote nativeOpenRemoteSession(
