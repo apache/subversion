@@ -196,6 +196,14 @@ Candidate changes:
    Votes:
      +1: stefan2, rhuijben
 
+ * r1495063
+   Fix crash in FSFS caching code on strict-alignment architectures.
+   Justification:
+     FSFS shouldn't crash.
+     See http://svn.haxx.se/dev/archive-2013-06/0432.shtml
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
