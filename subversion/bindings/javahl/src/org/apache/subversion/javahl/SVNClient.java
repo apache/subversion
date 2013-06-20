@@ -672,13 +672,13 @@ public class SVNClient implements ISVNClient
                              PatchCallback callback)
             throws ClientException;
 
-    public ISVNRemote openRemoteSession(String path)
+    public ISVNRemote openRemoteSession(String pathOrUrl)
             throws ClientException, SubversionException
     {
         return nativeOpenRemoteSession(path, 1);
     }
 
-    public ISVNRemote openRemoteSession(String path, int retryAttempts)
+    public ISVNRemote openRemoteSession(String pathOrUrl, int retryAttempts)
             throws ClientException, SubversionException
     {
         if (retryAttempts <= 0)
@@ -688,7 +688,7 @@ public class SVNClient implements ISVNClient
     }
 
     private native ISVNRemote nativeOpenRemoteSession(
-        String path, int retryAttempts)
+        String pathOrUrl, int retryAttempts)
             throws ClientException, SubversionException;
 
     /**

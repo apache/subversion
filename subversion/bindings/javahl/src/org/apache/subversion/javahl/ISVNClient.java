@@ -1172,8 +1172,8 @@ public interface ISVNClient
 
     /**
      * Open a persistent session to a repository.
-     * @param path A path in a working copy from which the
-     *        session URL is derived.
+     * @param pathOrUrl A path in a working copy from which the
+     *        session URL is derived, or the URL itself.
      * @throws remote.RetryOpenSession If the session URL was redirected
      * @throws SubversionException If an URL redirect cycle was detected
      * @throws ClientException
@@ -1181,13 +1181,13 @@ public interface ISVNClient
      *       configuration directory and authentication info.
      * @since 1.9
      */
-    ISVNRemote openRemoteSession(String path)
+    ISVNRemote openRemoteSession(String pathOrUrl)
             throws ClientException, SubversionException;
 
     /**
      * Open a persistent session to a repository.
-     * @param path A path in a working copy from which the
-     *        session URL is derived.
+     * @param pathOrUrl A path in a working copy from which the
+     *        session URL is derived, or the URL itself.
      * @param retryAttempts The number of times to retry the operation
      *        if the given URL is redirected.
      * @throws IllegalArgumentException If <code>retryAttempts</code>
@@ -1199,6 +1199,6 @@ public interface ISVNClient
      *       configuration directory and authentication info.
      * @since 1.9
      */
-    ISVNRemote openRemoteSession(String path, int retryAttempts)
+    ISVNRemote openRemoteSession(String pathOrUrl, int retryAttempts)
             throws ClientException, SubversionException;
 }
