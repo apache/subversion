@@ -436,11 +436,12 @@ svn_ra_serf__v2_get_youngest_revnum(svn_revnum_t *youngest,
 
   SVN_ERR(create_options_req(&opt_ctx, session, conn, scratch_pool));
   SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, scratch_pool));
-  SVN_ERR(svn_ra_serf__error_on_status(opt_ctx->handler->sline.code,
+  SVN_ERR(svn_ra_serf__error_on_status(opt_ctx->handler->sline,
                                        opt_ctx->handler->path,
                                        opt_ctx->handler->location));
 
   *youngest = opt_ctx->youngest_rev;
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(*youngest));
 
   return SVN_NO_ERROR;
 }
@@ -460,7 +461,7 @@ svn_ra_serf__v1_get_activity_collection(const char **activity_url,
   SVN_ERR(create_options_req(&opt_ctx, session, conn, scratch_pool));
   SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, scratch_pool));
 
-  SVN_ERR(svn_ra_serf__error_on_status(opt_ctx->handler->sline.code,
+  SVN_ERR(svn_ra_serf__error_on_status(opt_ctx->handler->sline,
                                        opt_ctx->handler->path,
                                        opt_ctx->handler->location));
 
@@ -499,7 +500,7 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
     }
 
   SVN_ERR(svn_error_compose_create(
-              svn_ra_serf__error_on_status(opt_ctx->handler->sline.code,
+              svn_ra_serf__error_on_status(opt_ctx->handler->sline,
                                            serf_sess->session_url.path,
                                            opt_ctx->handler->location),
               err));
