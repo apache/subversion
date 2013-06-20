@@ -193,12 +193,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1494223
-   Forbid 'svnadmin create --fs-type=fsfs --compatible-version=1.0'.
-   Justification:
-     Well, I hope no one will actually run into this error in a situation
-     where it matters, but I'll sleep better knowing we're strict about
-     input validation.
-   Votes:
-     +1: danielsh, rhuijben, stsp
