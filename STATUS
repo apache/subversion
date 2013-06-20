@@ -130,6 +130,7 @@ Candidate changes:
      Keep wc.db as consistent and clean as possible.
    Votes:
      +1: rhuijben, stsp
+     +1 (nonbinding): schabi
 
  * r1492148, r1493720
    Don't try to use 'blame -r 5:1' against 1.7 servers.  Affects only users
