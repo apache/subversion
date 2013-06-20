@@ -210,7 +210,7 @@ Candidate changes:
    Justification:
      Handling them as success values causes assertions.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, ivan
 
 Veto-blocked changes:
 =====================
