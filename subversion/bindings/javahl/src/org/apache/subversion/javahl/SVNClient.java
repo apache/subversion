@@ -235,8 +235,19 @@ public class SVNClient implements ISVNClient
     public native long doExport(String srcPath, String destPath,
                                 Revision revision, Revision pegRevision,
                                 boolean force, boolean ignoreExternals,
+                                boolean ignorKeywords,
                                 Depth depth, String nativeEOL)
             throws ClientException;
+
+    public long doExport(String srcPath, String destPath,
+                                Revision revision, Revision pegRevision,
+                                boolean force, boolean ignoreExternals,
+                                Depth depth, String nativeEOL)
+            throws ClientException
+    {
+        return doExport(srcPath, destPath, revision, pegRevision,
+                        force, ignoreExternals, false, depth, nativeEOL);
+    }
 
     public native long doSwitch(String path, String url, Revision revision,
                                 Revision pegRevision, Depth depth,
