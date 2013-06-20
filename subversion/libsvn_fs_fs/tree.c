@@ -355,14 +355,15 @@ cache_lookup( fs_fs_dag_cache_t *cache
      (HASH_VALUE has been initialized to REVISION). */
   for (i = 0; i + 4 <= path_len; i += 4)
 #if SVN_UNALIGNED_ACCESS_IS_OK
-    hash_value = hash_value * 0xd1f3da69 + *(const apr_uint32_t*)(path + i);
+    hash_value = hash_value * 0xd1f3da69
+               + ntohl(*(const apr_uint32_t*)(path + i));
 #else
     {
       apr_uint32_t val = 0;
       int j;
 
       for (j = 0; j < 4; j++)
-        val |= ((apr_uint32_t)(unsigned char)path[i + j] << (j * 8));
+        val = (val << 8) + (unsigned char)path[i + j];
 
       hash_value = hash_value * 0xd1f3da69 + val;
     }
