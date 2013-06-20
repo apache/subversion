@@ -154,10 +154,30 @@ Candidate changes:
  * r1494966
    Eliminate an extra RA layer roundtrip in 'svn log' on repository roots.
    Justification:
-     Minor performance regression against 1.7.x and requesting e.g. single
+     Minor performance regression against 1.7.x plus requesting e.g. single
      revision logs on a repo root is not a fringe use-case.
    Votes:
      +1: stefan2, rhuijben
+
+ * r1495204
+   Follow-up to r1495063, improving the hash effectiveness.
+   Justification:
+     With zero runtime overhead, this gives us a better distribution over
+     the hash buckets.
+   Votes:
+     +1: stefan2
+
+ * r1495209
+   Follow-up to r1495063, make hash function target-independent.
+   Justification:
+     In case of an issue on big-endian platforms, we want to be sure to
+     see the same deterministic error condition on little-endian as well.
+     This incur an insignificant performance overhead on big-endian systems
+     (PPC & friends) only.
+   Notes:
+     Depends on r1495204.
+   Votes:
+     +1: stefan2
 
 Veto-blocked changes:
 =====================
