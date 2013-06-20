@@ -113,6 +113,9 @@ public interface ISVNRepos {
 	 * @throws ClientException  throw in case of problem
 	 */
 	public abstract void hotcopy(File path, File targetPath,
+			boolean cleanLogs, boolean incremental) throws ClientException;
+
+	public abstract void hotcopy(File path, File targetPath,
 			boolean cleanLogs) throws ClientException;
 
 	/**
@@ -133,8 +136,35 @@ public interface ISVNRepos {
 	public abstract void listUnusedDBLogs(File path, MessageReceiver receiver)
 			throws ClientException;
 
+
 	/**
-	 * load the data of a dump into a repository,
+	 * load the data of a dump into a repository
+	 * @param path              the path to the repository
+	 * @param dataInput         the data input source
+         * @param start             the first revision to load
+         * @param end               the last revision to load
+	 * @param ignoreUUID        ignore any UUID found in the input stream
+	 * @param forceUUID         set the repository UUID to any found in the
+	 *                          stream
+	 * @param usePreCommitHook  use the pre-commit hook when processing commits
+	 * @param usePostCommitHook use the post-commit hook when processing commits
+	 * @param relativePath      the directory in the repository, where the data
+	 *                          in put optional.
+	 * @param callback          the target for processing messages
+	 * @throws ClientException  throw in case of problem
+         * @since 1.8
+	 */
+	public abstract void load(File path, InputStream dataInput,
+                                  Revision start, Revision end,
+                                  boolean ignoreUUID, boolean forceUUID,
+                                  boolean usePreCommitHook,
+                                  boolean usePostCommitHook,
+                                  String relativePath,
+                                  ReposNotifyCallback callback)
+        throws ClientException;
+
+	/**
+	 * load the data of a dump into a repository
 	 * @param path              the path to the repository
 	 * @param dataInput         the data input source
 	 * @param ignoreUUID        ignore any UUID found in the input stream
@@ -146,6 +176,8 @@ public interface ISVNRepos {
 	 *                          in put optional.
 	 * @param callback          the target for processing messages
 	 * @throws ClientException  throw in case of problem
+         * @note behaves like the 1.8 vesion with the revision
+         *       parameters set to Revision.START and Revision.HEAD.
 	 */
 	public abstract void load(File path, InputStream dataInput,
 			boolean ignoreUUID, boolean forceUUID, boolean usePreCommitHook,
@@ -163,8 +195,9 @@ public interface ISVNRepos {
 			throws ClientException;
 
 	/**
-	 * recover the berkeley db of a repository, returns youngest revision
+	 * recover the filesystem backend of a repository
 	 * @param path              the path to the repository
+         * @return youngest revision
 	 * @throws ClientException  throw in case of problem
 	 */
 	public abstract long recover(File path, ReposNotifyCallback callback)

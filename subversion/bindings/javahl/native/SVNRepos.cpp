@@ -54,10 +54,10 @@ SVNRepos *SVNRepos::getCppObject(jobject jthis)
   return (cppAddr == 0 ? NULL : reinterpret_cast<SVNRepos *>(cppAddr));
 }
 
-void SVNRepos::dispose()
+void SVNRepos::dispose(jobject jthis)
 {
   static jfieldID fid = 0;
-  SVNBase::dispose(&fid, JAVA_PACKAGE"/SVNRepos");
+  SVNBase::dispose(jthis, &fid, JAVA_PACKAGE"/SVNRepos");
 }
 
 void SVNRepos::cancelOperation()
@@ -68,7 +68,7 @@ void SVNRepos::cancelOperation()
 svn_error_t *
 SVNRepos::checkCancel(void *cancelBaton)
 {
-  SVNRepos *that = (SVNRepos *)cancelBaton;
+  SVNRepos *that = static_cast<SVNRepos *>(cancelBaton);
   if (that->m_cancelOperation)
     return svn_error_create(SVN_ERR_CANCELLED, NULL,
                             _("Operation cancelled"));
@@ -169,7 +169,7 @@ void SVNRepos::deltify(File &path, Revision &revStart, Revision &revEnd)
   for (revision = start; revision <= end; ++revision)
     {
       revisionPool.clear();
-      SVN_JNI_ERR(svn_fs_deltify_revision (fs, revision, revisionPool.getPool()),
+      SVN_JNI_ERR(svn_fs_deltify_revision(fs, revision, revisionPool.getPool()),
                   );
     }
 
@@ -177,7 +177,7 @@ void SVNRepos::deltify(File &path, Revision &revStart, Revision &revEnd)
 }
 
 void SVNRepos::dump(File &path, OutputStream &dataOut,
-                    Revision &revsionStart, Revision &revisionEnd,
+                    Revision &revisionStart, Revision &revisionEnd,
                     bool incremental, bool useDeltas,
                     ReposNotifyCallback *notifyCallback)
 {
@@ -199,9 +199,9 @@ void SVNRepos::dump(File &path, OutputStream &dataOut,
   SVN_JNI_ERR(svn_fs_youngest_rev(&youngest, fs, requestPool.getPool()), );
 
   /* ### We only handle revision numbers right now, not dates. */
-  if (revsionStart.revision()->kind == svn_opt_revision_number)
-    lower = revsionStart.revision()->value.number;
-  else if (revsionStart.revision()->kind == svn_opt_revision_head)
+  if (revisionStart.revision()->kind == svn_opt_revision_number)
+    lower = revisionStart.revision()->value.number;
+  else if (revisionStart.revision()->kind == svn_opt_revision_head)
     lower = youngest;
   else
     lower = SVN_INVALID_REVNUM;
@@ -248,7 +248,7 @@ void SVNRepos::dump(File &path, OutputStream &dataOut,
 }
 
 void SVNRepos::hotcopy(File &path, File &targetPath,
-                       bool cleanLogs)
+                       bool cleanLogs, bool incremental)
 {
   SVN::Pool requestPool;
 
@@ -270,7 +270,7 @@ void SVNRepos::hotcopy(File &path, File &targetPath,
 }
 
 static void
-list_dblogs (File &path, MessageReceiver &receiver, bool only_unused)
+list_dblogs(File &path, MessageReceiver &receiver, bool only_unused)
 {
   SVN::Pool requestPool;
   apr_array_header_t *logfiles;
@@ -294,7 +294,7 @@ list_dblogs (File &path, MessageReceiver &receiver, bool only_unused)
       log_utf8 = svn_dirent_join(path.getInternalStyle(requestPool),
                                  APR_ARRAY_IDX(logfiles, i, const char *),
                                  requestPool.getPool());
-      log_utf8 = svn_dirent_local_style (log_utf8, requestPool.getPool());
+      log_utf8 = svn_dirent_local_style(log_utf8, requestPool.getPool());
       receiver.receiveMessage(log_utf8);
     }
 }
@@ -312,6 +312,8 @@ void SVNRepos::listUnusedDBLogs(File &path,
 
 void SVNRepos::load(File &path,
                     InputStream &dataIn,
+                    Revision &revisionStart,
+                    Revision &revisionEnd,
                     bool ignoreUUID,
                     bool forceUUID,
                     bool usePreCommitHook,
@@ -321,6 +323,7 @@ void SVNRepos::load(File &path,
 {
   SVN::Pool requestPool;
   svn_repos_t *repos;
+  svn_revnum_t lower = SVN_INVALID_REVNUM, upper = SVN_INVALID_REVNUM;
   enum svn_repos_load_uuid uuid_action = svn_repos_load_uuid_default;
   if (ignoreUUID)
     uuid_action = svn_repos_load_uuid_ignore;
@@ -331,6 +334,20 @@ void SVNRepos::load(File &path,
     {
       JNIUtil::throwNullPointerException("path");
       return;
+    }
+
+  /* ### We only handle revision numbers right now, not dates. */
+  if (revisionStart.revision()->kind == svn_opt_revision_number)
+    lower = revisionStart.revision()->value.number;
+  if (revisionEnd.revision()->kind == svn_opt_revision_number)
+    upper = revisionEnd.revision()->value.number;
+  if (upper < lower
+      && lower != SVN_INVALID_REVNUM
+      && upper != SVN_INVALID_REVNUM)
+    {
+      SVN_JNI_ERR(svn_error_create
+                  (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                   _("First revision cannot be higher than second")), );
     }
 
   SVN_JNI_ERR(svn_repos_open2(&repos, path.getInternalStyle(requestPool),
@@ -362,13 +379,13 @@ void SVNRepos::lstxns(File &path, MessageReceiver &messageReceiver)
 
   SVN_JNI_ERR(svn_repos_open2(&repos, path.getInternalStyle(requestPool),
                               NULL, requestPool.getPool()), );
-  fs = svn_repos_fs (repos);
+  fs = svn_repos_fs(repos);
   SVN_JNI_ERR(svn_fs_list_transactions(&txns, fs, requestPool.getPool()), );
 
   /* Loop, printing revisions. */
   for (int i = 0; i < txns->nelts; ++i)
     {
-      messageReceiver.receiveMessage(APR_ARRAY_IDX (txns, i, const char *));
+      messageReceiver.receiveMessage(APR_ARRAY_IDX(txns, i, const char *));
     }
 
 
@@ -399,7 +416,7 @@ jlong SVNRepos::recover(File &path, ReposNotifyCallback *notifyCallback)
    * recovery actually worked. */
   SVN_JNI_ERR(svn_repos_open2(&repos, path.getInternalStyle(requestPool),
                               NULL, requestPool.getPool()), -1);
-  SVN_JNI_ERR(svn_fs_youngest_rev(&youngest_rev, svn_repos_fs (repos),
+  SVN_JNI_ERR(svn_fs_youngest_rev(&youngest_rev, svn_repos_fs(repos),
                                   requestPool.getPool()),
               -1);
   return youngest_rev;
@@ -423,13 +440,13 @@ void SVNRepos::rmtxns(File &path, StringArray &transactions)
 
   SVN_JNI_ERR(svn_repos_open2(&repos, path.getInternalStyle(requestPool),
                               NULL, requestPool.getPool()), );
-  fs = svn_repos_fs (repos);
+  fs = svn_repos_fs(repos);
 
   args = transactions.array(requestPool);
   /* All the rest of the arguments are transaction names. */
   for (i = 0; i < args->nelts; ++i)
     {
-      const char *txn_name = APR_ARRAY_IDX (args, i, const char *);
+      const char *txn_name = APR_ARRAY_IDX(args, i, const char *);
       svn_error_t *err;
 
       /* Try to open the txn.  If that succeeds, try to abort it. */
@@ -443,7 +460,7 @@ void SVNRepos::rmtxns(File &path, StringArray &transactions)
        * all.  */
       if (err && (err->apr_err == SVN_ERR_FS_TRANSACTION_DEAD))
         {
-          svn_error_clear (err);
+          svn_error_clear(err);
           err = svn_fs_purge_txn(fs, txn_name, transactionPool.getPool());
         }
 
@@ -497,7 +514,7 @@ void SVNRepos::setRevProp(File &path, Revision &revision,
     }
   else
     {
-      svn_fs_t *fs = svn_repos_fs (repos);
+      svn_fs_t *fs = svn_repos_fs(repos);
       err = svn_fs_change_rev_prop2(fs, revision.revision()->value.number,
                                     propName, NULL, propValStr,
                                     requestPool.getPool());
@@ -554,7 +571,7 @@ SVNRepos::verify(File &path, Revision &revisionStart, Revision &revisionEnd,
    * with no interest in the output. */
   SVN_JNI_ERR(svn_repos_open2(&repos, path.getInternalStyle(requestPool),
                               NULL, requestPool.getPool()), );
-  SVN_JNI_ERR(svn_fs_youngest_rev(&youngest, svn_repos_fs (repos),
+  SVN_JNI_ERR(svn_fs_youngest_rev(&youngest, svn_repos_fs(repos),
                                   requestPool.getPool()), );
 
   /* Find the revision numbers at which to start and end. */
@@ -658,13 +675,13 @@ jobject SVNRepos::lslocks(File &path, svn_depth_t depth)
 
   std::vector<jobject> jlocks;
 
-  for (hi = apr_hash_first (requestPool.getPool(), locks);
+  for (hi = apr_hash_first(requestPool.getPool(), locks);
        hi;
-       hi = apr_hash_next (hi))
+       hi = apr_hash_next(hi))
     {
       void *val;
-      apr_hash_this (hi, NULL, NULL, &val);
-      svn_lock_t *lock = (svn_lock_t *)val;
+      apr_hash_this(hi, NULL, NULL, &val);
+      svn_lock_t *lock = reinterpret_cast<svn_lock_t *>(val);
       jobject jLock = CreateJ::Lock(lock);
 
       jlocks.push_back(jLock);
@@ -691,8 +708,8 @@ void SVNRepos::rmlocks(File &path, StringArray &locks)
 
   SVN_JNI_ERR(svn_repos_open2(&repos, path.getInternalStyle(requestPool),
                               NULL, requestPool.getPool()), );
-  fs = svn_repos_fs (repos);
-  const char *username;
+  fs = svn_repos_fs(repos);
+  const char *username = NULL;
 
   /* svn_fs_unlock() demands that some username be associated with the
    * filesystem, so just use the UID of the person running 'svnadmin'.*/
@@ -704,7 +721,7 @@ void SVNRepos::rmlocks(File &path, StringArray &locks)
         apr_uid_name_get (&un, uid, pool) == APR_SUCCESS)
       {
         svn_error_t *err = svn_utf_cstring_to_utf8(&username, un, pool);
-        svn_error_clear (err);
+        svn_error_clear(err);
         if (err)
           username = "administrator";
       }
@@ -720,7 +737,7 @@ void SVNRepos::rmlocks(File &path, StringArray &locks)
   const apr_array_header_t *args = locks.array(requestPool);
   for (int i = 0; i < args->nelts; ++i)
     {
-      const char *lock_path = APR_ARRAY_IDX (args, i, const char *);
+      const char *lock_path = APR_ARRAY_IDX(args, i, const char *);
       svn_lock_t *lock;
 
       /* Fetch the path's svn_lock_t. */
@@ -731,13 +748,13 @@ void SVNRepos::rmlocks(File &path, StringArray &locks)
         continue;
 
       /* Now forcibly destroy the lock. */
-      err = svn_fs_unlock (fs, lock_path,
-                           lock->token, 1 /* force */, subpool.getPool());
+      err = svn_fs_unlock(fs, lock_path,
+                          lock->token, 1 /* force */, subpool.getPool());
       if (err)
         goto move_on;
 
     move_on:
-      svn_error_clear (err);
+      svn_error_clear(err);
       subpool.clear();
     }
 

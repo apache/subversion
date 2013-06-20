@@ -57,7 +57,7 @@ CommitCallback::callback(const svn_commit_info_t *commit_info,
                          apr_pool_t *pool)
 {
   if (baton)
-    return ((CommitCallback *)baton)->commitInfo(commit_info, pool);
+    return static_cast<CommitCallback *>(baton)->commitInfo(commit_info, pool);
 
   return SVN_NO_ERROR;
 }

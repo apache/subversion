@@ -46,7 +46,7 @@ DiffSummaryReceiver::summarize(const svn_client_diff_summarize_t *diff,
                                apr_pool_t *pool)
 {
   if (baton)
-    return ((DiffSummaryReceiver *) baton)->onSummary(diff, pool);
+    return static_cast<DiffSummaryReceiver *>(baton)->onSummary(diff, pool);
 
   return SVN_NO_ERROR;
 }

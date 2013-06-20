@@ -438,6 +438,7 @@ class SVNTests extends TestCase
      * @param stateFlags        expected commit state flags
      *                          (see CommitItemStateFlags)
      */
+    @SuppressWarnings("unchecked")
     protected void addExpectedCommitItem(String workingCopyPath,
                                          String baseUrl,
                                          String itemPath,

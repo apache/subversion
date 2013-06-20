@@ -73,12 +73,12 @@ Path::init(const char *pi_path, SVN::Pool &in_pool)
 {
   if (*pi_path == 0)
     {
-      m_error_occured = NULL;
+      m_error_occurred = NULL;
       m_path = "";
     }
   else
     {
-      m_error_occured = JNIUtil::preprocessPath(pi_path, in_pool.getPool());
+      m_error_occurred = JNIUtil::preprocessPath(pi_path, in_pool.getPool());
 
       m_path = pi_path;
     }
@@ -108,15 +108,15 @@ Path::c_str() const
 Path&
 Path::operator=(const Path &pi_path)
 {
-  m_error_occured = NULL;
+  m_error_occurred = NULL;
   m_path = pi_path.m_path;
 
   return *this;
 }
 
-  svn_error_t *Path::error_occured() const
+  svn_error_t *Path::error_occurred() const
 {
-  return m_error_occured;
+  return m_error_occurred;
 }
 
 jboolean Path::isValid(const char *p)

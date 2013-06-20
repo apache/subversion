@@ -52,7 +52,7 @@ InfoCallback::callback(void *baton,
                        apr_pool_t *pool)
 {
   if (baton)
-    return ((InfoCallback *)baton)->singleInfo(path, info, pool);
+    return static_cast<InfoCallback *>(baton)->singleInfo(path, info, pool);
 
   return SVN_NO_ERROR;
 }

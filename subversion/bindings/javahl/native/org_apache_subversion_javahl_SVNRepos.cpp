@@ -60,7 +60,7 @@ Java_org_apache_subversion_javahl_SVNRepos_dispose
       JNIUtil::throwError(_("bad C++ this"));
       return;
     }
-  cl->dispose();
+  cl->dispose(jthis);
 }
 
 JNIEXPORT void JNICALL
@@ -170,7 +170,7 @@ Java_org_apache_subversion_javahl_SVNRepos_dump
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNRepos_hotcopy
 (JNIEnv *env, jobject jthis, jobject jpath, jobject jtargetPath,
- jboolean jcleanLogs)
+ jboolean jcleanLogs, jboolean jincremental)
 {
   JNIEntry(SVNRepos, hotcopy);
   SVNRepos *cl = SVNRepos::getCppObject(jthis);
@@ -188,7 +188,8 @@ Java_org_apache_subversion_javahl_SVNRepos_hotcopy
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->hotcopy(path, targetPath, jcleanLogs ? true : false);
+  cl->hotcopy(path, targetPath, jcleanLogs ? true : false,
+              jincremental ? true : false);
 }
 
 JNIEXPORT void JNICALL
@@ -240,6 +241,7 @@ Java_org_apache_subversion_javahl_SVNRepos_listUnusedDBLogs
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNRepos_load
 (JNIEnv *env, jobject jthis, jobject jpath, jobject jinputData,
+ jobject jrevisionStart, jobject jrevisionEnd,
  jboolean jignoreUUID, jboolean jforceUUID, jboolean jusePreCommitHook,
  jboolean jusePostCommitHook, jstring jrelativePath, jobject jnotifyCallback)
 {
@@ -263,12 +265,23 @@ Java_org_apache_subversion_javahl_SVNRepos_load
   if (JNIUtil::isExceptionThrown())
     return;
 
+  Revision revisionStart(jrevisionStart);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  Revision revisionEnd(jrevisionEnd, true);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
   ReposNotifyCallback notifyCallback(jnotifyCallback);
 
-  cl->load(path, inputData, jignoreUUID ? true : false,
-           jforceUUID ? true : false, jusePreCommitHook ? true : false,
-           jusePostCommitHook ? true : false, relativePath,
-           jnotifyCallback != NULL ? &notifyCallback : NULL);
+  cl->load(path, inputData, revisionStart, revisionEnd,
+           jignoreUUID ? true : false,
+           jforceUUID ? true : false,
+           jusePreCommitHook ? true : false,
+           jusePostCommitHook ? true : false,
+           relativePath,
+           (jnotifyCallback != NULL ? &notifyCallback : NULL));
 }
 
 JNIEXPORT void JNICALL

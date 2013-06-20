@@ -244,6 +244,7 @@ public class ConflictDescriptor
 
         /**
          * Object is already added or schedule-add.
+         * @since 1.6
          */
         added,
 

@@ -223,9 +223,27 @@ public interface ISVNClient
      *                  ignore patterns
      * @param addParents add any intermediate parents to the working copy
      * @throws ClientException
+     * @note this method behaves like the 1.8 version with noAutoProps=false
      */
     void add(String path, Depth depth, boolean force, boolean noIgnores,
              boolean addParents)
+        throws ClientException;
+
+    /**
+     * Adds a file to the repository.
+     * @param path      path to be added.
+     * @param depth     the depth to recurse into subdirectories
+     * @param force     if adding a directory and recurse true and path is a
+     *                  directory, all not already managed files are added.
+     * @param noIgnores if false, don't add files or directories matching
+     *                  ignore patterns
+     * @param noAutoProps if true, ignore any auto-props configuration
+     * @param addParents add any intermediate parents to the working copy
+     * @throws ClientException
+     * @since 1.8
+     */
+    void add(String path, Depth depth, boolean force,
+             boolean noIgnores, boolean noAutoProps, boolean addParents)
         throws ClientException;
 
     /**
@@ -298,12 +316,27 @@ public interface ISVNClient
      * @param moveAsChild Whether to move <code>srcPaths</code> as
      * children of <code>destPath</code>.
      * @param makeParents Whether to create intermediate parents.
+     * @param metadataOnly Move just the metadata and not the working files/dirs
+     * @param allowMixRev If true use copy and delete without move tracking
+     *                    when a srcPath is mixed-revision, if false return
+     *                    an error when a srcPath is mixed-revision.
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
      * @param handler   the commit message callback, may be <code>null</code>
      *                  if <code>destPath</code> is not a URL
      * @throws ClientException If the move operation fails.
+     * @since 1.8
+     */
+    void move(Set<String> srcPaths, String destPath, boolean force,
+              boolean moveAsChild, boolean makeParents, boolean metadataOnly,
+              boolean allowMixRev, Map<String, String> revpropTable,
+              CommitMessageCallback handler, CommitCallback callback)
+        throws ClientException;
+
+    /**
+     * @deprecated Provided for backward compatibility with 1.7. Passes
+     *             metadataOnly false and allowMixRev true.
      */
     void move(Set<String> srcPaths, String destPath, boolean force,
               boolean moveAsChild, boolean makeParents,
@@ -400,8 +433,10 @@ public interface ISVNClient
      *                     to values which will be set if this operation
      *                     results in a commit.
      * @param handler   the commit message callback
+     * @param callback  the commit status callback
      * @throws ClientException
-     *
+     * @note this method behaves like the 1.8 version with noAutoProps=false
+     *       and without the filtering option.
      */
     void doImport(String path, String url, Depth depth,
                   boolean noIgnore, boolean ignoreUnknownNodeTypes,
@@ -433,6 +468,8 @@ public interface ISVNClient
      * @param dryRun         do not change anything
      * @param recordOnly     record mergeinfo but do not run merge
      * @throws ClientException
+     * @note Behaves like the 1.8 where ignoreAncestry maps to
+     *       both ignoreMergeinfo and diffIgnoreAncestry
      */
     void merge(String path1, Revision revision1, String path2,
                Revision revision2, String localPath, boolean force, Depth depth,
@@ -443,7 +480,9 @@ public interface ISVNClient
      * Merge set of revisions into a new local path.
      * @param path          path or url
      * @param pegRevision   revision to interpret path
-     * @param revisions     revisions to merge
+     * @param revisions     revisions to merge;
+     *                      may be null, indicating that the optimal range
+     *                      should be determined automatcially (new in 1.8)
      * @param localPath     target local path
      * @param force         overwrite local changes
      * @param depth         how deep to traverse into subdirectories
@@ -451,7 +490,10 @@ public interface ISVNClient
      * @param dryRun        do not change anything
      * @param recordOnly    record mergeinfo but do not run merge
      * @throws ClientException
+     * @note Behaves like the 1.8 where ignoreAncestry maps to
+     *       both ignoreMergeinfo and diffIgnoreAncestry
      */
+    // FIXME: Broken
     void merge(String path, Revision pegRevision, List<RevisionRange> revisions,
                String localPath, boolean force, Depth depth,
                boolean ignoreAncestry, boolean dryRun, boolean recordOnly)
@@ -472,6 +514,7 @@ public interface ISVNClient
      * @param localPath     target local path
      * @param dryRun        do not change anything
      * @throws ClientException
+     * @deprecated Will be removed in a future release
      */
     void mergeReintegrate(String path, Revision pegRevision,
                           String localPath, boolean dryRun)
@@ -521,6 +564,8 @@ public interface ISVNClient
      * @param force         diff even on binary files
      * @param copiesAsAdds  if set, copied files will be shown in their
      *                      entirety, not as diffs from their sources
+     * @param ignoreProps   don't show property diffs
+     * @param propsOnly     show property changes only
      * @throws ClientException
      */
     void diff(String target1, Revision revision1, String target2,
@@ -545,6 +590,8 @@ public interface ISVNClient
      * @param force         diff even on binary files
      * @param copiesAsAdds  if set, copied files will be shown in their
      *                      entirety, not as diffs from their sources
+     * @param ignoreProps   don't show property diffs
+     * @param propsOnly     show property changes only
      * @throws ClientException
      */
     void diff(String target, Revision pegRevision, Revision startRevision,
@@ -699,6 +746,10 @@ public interface ISVNClient
      * @return the Property
      * @throws ClientException
      */
+    byte[] propertyGet(String path, String name, Revision revision,
+                       Revision pegRevision, Collection<String> changelists)
+            throws ClientException;
+
     byte[] propertyGet(String path, String name, Revision revision,
                        Revision pegRevision)
             throws ClientException;
@@ -886,4 +937,36 @@ public interface ISVNClient
                int stripCount, boolean reverse, boolean ignoreWhitespace,
                boolean removeTempfiles, PatchCallback callback)
             throws ClientException;
+
+    /**
+     * Open a persistent session to a repository.
+     * @param path A path in a working copy from which the
+     *        session URL is derived.
+     * @throws remote.RetryOpenSession If the session URL was redirected
+     * @throws SubversionException If an URL redirect cycle was detected
+     * @throws ClientException
+     * @note The session object inherits the progress callback,
+     *       configuration directory and authentication info.
+     * @since 1.9
+     */
+    ISVNRemote openRemoteSession(String path)
+            throws ClientException, SubversionException;
+
+    /**
+     * Open a persistent session to a repository.
+     * @param path A path in a working copy from which the
+     *        session URL is derived.
+     * @param retryAttempts The number of times to retry the operation
+     *        if the given URL is redirected.
+     * @throws IllegalArgumentException If <code>retryAttempts</code>
+     *         is not positive
+     * @throws remote.RetryOpenSession If the session URL was redirected
+     * @throws SubversionException If an URL redirect cycle was detected
+     * @throws ClientException
+     * @note The session object inherits the progress callback,
+     *       configuration directory and authentication info.
+     * @since 1.9
+     */
+    ISVNRemote openRemoteSession(String path, int retryAttempts)
+            throws ClientException, SubversionException;
 }

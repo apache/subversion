@@ -61,11 +61,9 @@ BlameCallback::callback(void *baton,
                         apr_pool_t *pool)
 {
   if (baton)
-    return ((BlameCallback *)baton)->singleLine(start_revnum, end_revnum,
-                                                line_no, revision, rev_props,
-                                                merged_revision,
-                                                merged_rev_props, merged_path,
-                                                line, local_change, pool);
+    return static_cast<BlameCallback *>(baton)->singleLine(start_revnum,
+        end_revnum, line_no, revision, rev_props, merged_revision,
+        merged_rev_props, merged_path, line, local_change, pool);
 
   return SVN_NO_ERROR;
 }

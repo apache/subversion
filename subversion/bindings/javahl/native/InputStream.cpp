@@ -70,7 +70,7 @@ svn_error_t *InputStream::read(void *baton, char *buffer, apr_size_t *len)
 {
   JNIEnv *env = JNIUtil::getEnv();
   // An object of our class is passed in as the baton.
-  InputStream *that = (InputStream*)baton;
+  InputStream *that = static_cast<InputStream *>(baton);
 
   // The method id will not change during the time this library is
   // loaded, so it can be cached.
@@ -89,8 +89,7 @@ svn_error_t *InputStream::read(void *baton, char *buffer, apr_size_t *len)
     }
 
   // Allocate a Java byte array to read the data.
-  jbyteArray data = JNIUtil::makeJByteArray((const signed char*)buffer,
-                                            *len);
+  jbyteArray data = JNIUtil::makeJByteArray(buffer, static_cast<int>(*len));
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 
@@ -98,6 +97,14 @@ svn_error_t *InputStream::read(void *baton, char *buffer, apr_size_t *len)
   jint jread = env->CallIntMethod(that->m_jthis, mid, data);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
+
+  /*
+   * Convert -1 from InputStream.read that means EOF, 0 which is subversion equivalent
+   */
+  if(jread == -1)
+    {
+      jread = 0;
+    }
 
   // Put the Java byte array into a helper object to retrieve the
   // data bytes.
@@ -107,7 +114,7 @@ svn_error_t *InputStream::read(void *baton, char *buffer, apr_size_t *len)
 
   // Catch when the Java method tells us it read too much data.
   if (jread > (jint) *len)
-    jread = -1;
+    jread = 0;
 
   // In the case of success copy the data back to the Subversion
   // buffer.
@@ -130,7 +137,7 @@ svn_error_t *InputStream::close(void *baton)
   JNIEnv *env = JNIUtil::getEnv();
 
   // An object of our class is passed in as the baton
-  InputStream *that = (InputStream*)baton;
+  InputStream *that = reinterpret_cast<InputStream*>(baton);
 
   // The method id will not change during the time this library is
   // loaded, so it can be cached.

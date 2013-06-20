@@ -53,7 +53,8 @@ ChangelistCallback::callback(void *baton,
                              apr_pool_t *pool)
 {
   if (baton)
-    ((ChangelistCallback *)baton)->doChangelist(path, changelist, pool);
+    static_cast<ChangelistCallback *>(baton)->doChangelist(path, changelist,
+            pool);
 
   return SVN_NO_ERROR;
 }
