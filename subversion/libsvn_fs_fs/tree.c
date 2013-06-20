@@ -40,6 +40,8 @@
 #include <assert.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
+#define APR_WANT_BYTEFUNC
+#include <apr_want.h>
 
 #include "svn_hash.h"
 #include "svn_private_config.h"
