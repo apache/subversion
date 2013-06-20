@@ -132,18 +132,6 @@ Candidate changes:
      +1: rhuijben, stsp
      +1 (nonbinding): schabi
 
- * r1493424
-   Remove unnecessary check for branches ancestry from 
-   command line client. All required checks are already performed in
-   libsvn_client.
-   Justification:
-     There is no reason to command line and third-party use different
-     codepath for ancestory checks. Simple performance fix.
-   Votes:
-     +1: ivan, rhuijben
-     +0: danielsh (note: svn_client__youngest_common_ancestor can be striken;
-                         no callers left)
-
  * r1493703, r1494171
    Fix upgrade notification for explicit upgrades of post-WC-NG working copies.
    Justification:
@@ -230,3 +218,15 @@ Approved changes:
      See http://svn.haxx.se/dev/archive-2013-06/0432.shtml
    Votes:
      +1: stsp, stefan2, rhuijben
+
+ * r1493424
+   Remove unnecessary check for branches ancestry from 
+   command line client. All required checks are already performed in
+   libsvn_client.
+   Justification:
+     There is no reason to command line and third-party use different
+     codepath for ancestory checks. Simple performance fix.
+   Votes:
+     +1: ivan, rhuijben, julianfoad
+     +0: danielsh (note: svn_client__youngest_common_ancestor can be striken;
+                         no callers left)
