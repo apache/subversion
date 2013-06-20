@@ -123,8 +123,8 @@ class SVNClient :public SVNBase
                  bool allowUnverObstructions, bool ignoreAncestry);
   jlong doExport(const char *srcPath, const char *destPath,
                  Revision &revision, Revision &pegRevision, bool force,
-                 bool ignoreExternals, svn_depth_t depth,
-                 const char *nativeEOL);
+                 bool ignoreExternals, bool ignoreKeywords,
+                 svn_depth_t depth, const char *nativeEOL);
   void resolve(const char *path, svn_depth_t depth,
                svn_wc_conflict_choice_t choice);
   void cleanup(const char *path);
