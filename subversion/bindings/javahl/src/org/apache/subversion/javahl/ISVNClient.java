@@ -399,6 +399,30 @@ public interface ISVNClient
      * @param depth           how deep to recurse in subdirectories
      * @param nativeEOL       which EOL characters to use during export
      * @throws ClientException
+     * @since 1.9
+     */
+    long doExport(String srcPath, String destPath, Revision revision,
+                  Revision pegRevision, boolean force,
+                  boolean ignoreExternals, boolean ignoreKeywords,
+                  Depth depth, String nativeEOL)
+            throws ClientException;
+
+    /**
+     * Exports the contents of either a subversion repository into a
+     * 'clean' directory (meaning a directory with no administrative
+     * directories).
+     *
+     * @param srcPath         the url of the repository path to be exported
+     * @param destPath        a destination path that must not already exist.
+     * @param revision        the revsion to be exported
+     * @param pegRevision     the revision to interpret srcPath
+     * @param force           set if it is ok to overwrite local files
+     * @param ignoreExternals ignore external during export
+     * @param depth           how deep to recurse in subdirectories
+     * @param nativeEOL       which EOL characters to use during export
+     * @throws ClientException
+     * @note this method behaves like the 1.9 version with
+     *       ignoreKeywords set to false.
      */
     long doExport(String srcPath, String destPath, Revision revision,
                   Revision pegRevision, boolean force, boolean ignoreExternals,
