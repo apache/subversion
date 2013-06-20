@@ -176,7 +176,7 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1494913, r1494913
+ * r1494913, r1494967
    Fix performance regression in 'svn log' on repository roots.
    Justification:
      In 1.8.0, 'svn log' is unusably slow on FSFS repo roots.
@@ -187,6 +187,14 @@ Candidate changes:
    Votes:
      +1: stefan2
      +1: danielsh (r1494913 only)
+
+ * r1494966
+   Eliminate an extra RA layer roundtrip in 'svn log' on repository roots.
+   Justification:
+     Minor performance regression against 1.7.x and requesting e.g. single
+     revision logs on a repo root is not a fringe use-case.
+   Votes:
+     +1: stefan2
 
 Veto-blocked changes:
 =====================
