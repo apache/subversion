@@ -362,14 +362,14 @@ cache_lookup( fs_fs_dag_cache_t *cache
       int j;
 
       for (j = 0; j < 4; j++)
-        val |= (path[i + j] << (j * 8));
+        val |= ((apr_uint32_t)(unsigned char)path[i + j] << (j * 8));
 
       hash_value = hash_value * 0xd1f3da69 + val;
     }
 #endif
 
   for (; i < path_len; ++i)
-    hash_value = hash_value * 33 + path[i];
+    hash_value = hash_value * 33 + (unsigned char)path[i];
 
   bucket_index = hash_value + (hash_value >> 16);
   bucket_index = (bucket_index + (bucket_index >> 8)) % BUCKET_COUNT;
