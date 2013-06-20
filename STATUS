@@ -132,14 +132,6 @@ Candidate changes:
      +1: rhuijben, stsp
      +1 (nonbinding): schabi
 
- * r1492148, r1493720
-   Don't try to use 'blame -r 5:1' against 1.7 servers.  Affects only users
-   of the RA API, not users of the client API or svn.
-   Justification:
-     1.7 servers would silently do the wrong thing.
-   Votes:
-     +1: danielsh, rhuijben
-
  * r1493424
    Remove unnecessary check for branches ancestry from 
    command line client. All required checks are already performed in
@@ -152,29 +144,12 @@ Candidate changes:
      +0: danielsh (note: svn_client__youngest_common_ancestor can be striken;
                          no callers left)
 
- * r1493475
-   Improve 'svn merge' performance over WAN: Use already fetched 
-   history-as-mergeinfo data to find youngest common ancestor in automatic 
-   merge.
-   Justification:
-     No reason to create an RA session or perform RA calls if the information
-     is already in memory.
-   Votes:
-     +1: rhuijben, ivan
-
  * r1493703, r1494171
    Fix upgrade notification for explicit upgrades of post-WC-NG working copies.
    Justification:
      Without this notification users can't see whether the upgrade was a no-op.
    Votes:
      +1: rhuijben, stsp
-
- * r1494342
-   C tests: support --compatible-version=1.8.
-   Justification:
-     Enable running the tests with --compatible-version
-   Votes:
-     +1: danielsh, rhuijben
 
  * r1494913, r1494967
    Fix performance regression in 'svn log' on repository roots.
@@ -202,7 +177,7 @@ Candidate changes:
      FSFS shouldn't crash.
      See http://svn.haxx.se/dev/archive-2013-06/0432.shtml
    Votes:
-     +1: stsp
+     +1: stsp, stefan2
 
 Veto-blocked changes:
 =====================
@@ -223,6 +198,31 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1492148, r1493720
+   Don't try to use 'blame -r 5:1' against 1.7 servers.  Affects only users
+   of the RA API, not users of the client API or svn.
+   Justification:
+     1.7 servers would silently do the wrong thing.
+   Votes:
+     +1: danielsh, rhuijben, stefan2
+
+ * r1493475
+   Improve 'svn merge' performance over WAN: Use already fetched 
+   history-as-mergeinfo data to find youngest common ancestor in automatic 
+   merge.
+   Justification:
+     No reason to create an RA session or perform RA calls if the information
+     is already in memory.
+   Votes:
+     +1: rhuijben, ivan, stefan2
+
+ * r1494342
+   C tests: support --compatible-version=1.8.
+   Justification:
+     Enable running the tests with --compatible-version
+   Votes:
+     +1: danielsh, rhuijben, stefan2
+
  * r1495104
    Handle unexpected HTTP status codes as errors instead of as SUCCESS codes
    in ra_serf.
@@ -230,3 +230,4 @@ Approved changes:
      Handling them as success values causes assertions.
    Votes:
      +1: rhuijben, ivan, philip
+
