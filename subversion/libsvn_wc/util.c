@@ -188,11 +188,11 @@ svn_wc_match_ignore_list(const char *str, const apr_array_header_t *list,
   return svn_cstring_match_glob_list(str, list);
 }
 
-svn_wc_conflict_description2_t *
-svn_wc_conflict_description_create_text2(const char *local_abspath,
+svn_wc_conflict_description3_t *
+svn_wc_conflict_description_create_text3(const char *local_abspath,
                                          apr_pool_t *result_pool)
 {
-  svn_wc_conflict_description2_t *conflict;
+  svn_wc_conflict_description3_t *conflict;
 
   SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_abspath));
 
@@ -205,13 +205,13 @@ svn_wc_conflict_description_create_text2(const char *local_abspath,
   return conflict;
 }
 
-svn_wc_conflict_description2_t *
-svn_wc_conflict_description_create_prop2(const char *local_abspath,
+svn_wc_conflict_description3_t *
+svn_wc_conflict_description_create_prop3(const char *local_abspath,
                                          svn_node_kind_t node_kind,
                                          const char *property_name,
                                          apr_pool_t *result_pool)
 {
-  svn_wc_conflict_description2_t *conflict;
+  svn_wc_conflict_description3_t *conflict;
 
   SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_abspath));
 
@@ -223,8 +223,8 @@ svn_wc_conflict_description_create_prop2(const char *local_abspath,
   return conflict;
 }
 
-svn_wc_conflict_description2_t *
-svn_wc_conflict_description_create_tree2(
+svn_wc_conflict_description3_t *
+svn_wc_conflict_description_create_tree3(
   const char *local_abspath,
   svn_node_kind_t node_kind,
   svn_wc_operation_t operation,
@@ -232,7 +232,7 @@ svn_wc_conflict_description_create_tree2(
   const svn_wc_conflict_version_t *src_right_version,
   apr_pool_t *result_pool)
 {
-  svn_wc_conflict_description2_t *conflict;
+  svn_wc_conflict_description3_t *conflict;
 
   SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_abspath));
 
@@ -249,11 +249,11 @@ svn_wc_conflict_description_create_tree2(
 }
 
 
-svn_wc_conflict_description2_t *
-svn_wc__conflict_description2_dup(const svn_wc_conflict_description2_t *conflict,
+svn_wc_conflict_description3_t *
+svn_wc__conflict_description3_dup(const svn_wc_conflict_description3_t *conflict,
                                   apr_pool_t *pool)
 {
-  svn_wc_conflict_description2_t *new_conflict;
+  svn_wc_conflict_description3_t *new_conflict;
 
   new_conflict = apr_pcalloc(pool, sizeof(*new_conflict));
 
