@@ -168,6 +168,16 @@ Candidate changes:
      +1: stsp, stefan2, rhuijben
      -0: ivan (need more time for discussion before backporting)
 
+ * r1495204
+   Follow-up to r1495063, improving the hash effectiveness.
+   Justification:
+     Without a runtime overhead, this gives us a better distribution
+     over the hash buckets.
+   Notes:
+     Depends on r1495063
+   Votes:
+     +1: stefan2, stsp
+
 Veto-blocked changes:
 =====================
 
@@ -183,18 +193,6 @@ Veto-blocked changes:
        does not require votes).
    Votes:
      -1: danielsh (doesn't resolve peg revisions correctly)
-
- * r1495204, r1495209, r1495214
-   Follow-up to r1495063, improving the hash effectiveness.
-   Justification:
-     Without a runtime overhead, r1495204 gives us a better distribution
-     over the hash buckets.  The other two improve reproducibility by
-     making the hash platform-independent with a minor overhead on
-     little-endian machines (x86 & friends).
-   Votes:
-     +1: stefan2, stsp
-     -1: ivan (hash function slowdown on Windows:
-               http://svn.haxx.se/dev/archive-2013-06/0483.shtml)
 
 Approved changes:
 =================
