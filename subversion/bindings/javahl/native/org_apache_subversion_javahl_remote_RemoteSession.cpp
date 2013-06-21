@@ -154,6 +154,40 @@ Java_org_apache_subversion_javahl_remote_RemoteSession_getRevisionByTimestamp(
   return ras->getRevisionByTimestamp(timestamp);
 }
 
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_remote_RemoteSession_nativeChangeRevisionProperty(
+    JNIEnv *env, jobject jthis, jlong jrevision, jstring jname,
+    jbyteArray jold_value, jbyteArray jvalue)
+{
+  JNIEntry(RemoteSession, nativeChangeRevisionProperty);
+  RemoteSession *ras = RemoteSession::getCppObject(jthis);
+  CPPADDR_NULL_PTR(ras, );
+
+  return ras->changeRevisionProperty(jrevision, jname, jold_value, jvalue);
+}
+
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_remote_RemoteSession_getRevisionProperties(
+    JNIEnv *env, jobject jthis, jlong jrevision)
+{
+  JNIEntry(SVNReposAccess, getRevisionProperties);
+  RemoteSession *ras = RemoteSession::getCppObject(jthis);
+  CPPADDR_NULL_PTR(ras, NULL);
+
+  return ras->getRevisionProperties(jrevision);
+}
+
+JNIEXPORT jbyteArray JNICALL
+Java_org_apache_subversion_javahl_remote_RemoteSession_getRevisionProperty(
+    JNIEnv *env, jobject jthis, jlong jrevision, jstring jname)
+{
+  JNIEntry(SVNReposAccess, getRevisionProperty);
+  RemoteSession *ras = RemoteSession::getCppObject(jthis);
+  CPPADDR_NULL_PTR(ras, NULL);
+
+  return ras->getRevisionProperty(jrevision, jname);
+}
+
 JNIEXPORT jobject JNICALL
 Java_org_apache_subversion_javahl_remote_RemoteSession_checkPath(
     JNIEnv *env, jobject jthis, jstring jpath, jlong jrevision)

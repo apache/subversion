@@ -86,10 +86,25 @@ public class RemoteSession extends JNIObject implements ISVNRemote
     public native long getRevisionByTimestamp(long timestamp)
             throws ClientException;
 
-    public native NodeKind checkPath(String path, long revision)
+    public void changeRevisionProperty(long revision,
+                                       String propertyName,
+                                       byte[] oldValue,
+                                       byte[] newValue)
+            throws ClientException
+    {
+        if (oldValue != null && !hasCapability(Capability.atomic_revprops))
+            throw new IllegalArgumentException(
+                "oldValue must be null;\n" +
+                "The server does not support" +
+                " atomic revision property changes");
+        nativeChangeRevisionProperty(revision, propertyName,
+                                     oldValue, newValue);
+    }
+
+    public native Map<String, byte[]> getRevisionProperties(long revision)
             throws ClientException;
 
-    public native Map<String, Lock> getLocks(String path, Depth depth)
+    public native byte[] getRevisionProperty(long revision, String propertyName)
             throws ClientException;
 
     public ISVNEditor getCommitEditor() throws ClientException
@@ -100,6 +115,12 @@ public class RemoteSession extends JNIObject implements ISVNRemote
         editors.add(new WeakReference<ISVNEditor>(ed));
         return ed;
     }
+
+    public native NodeKind checkPath(String path, long revision)
+            throws ClientException;
+
+    public native Map<String, Lock> getLocks(String path, Depth depth)
+            throws ClientException;
 
     public boolean hasCapability(Capability capability)
             throws ClientException
@@ -118,9 +139,17 @@ public class RemoteSession extends JNIObject implements ISVNRemote
         super(cppAddr);
     }
 
+    /*
+     * Wrapped private native implementation declarations.
+     */
     private native void nativeDispose();
-
-    private native boolean nativeHasCapability(String capability);
+    private native void nativeChangeRevisionProperty(long revision,
+                                                     String propertyName,
+                                                     byte[] oldValue,
+                                                     byte[] newValue)
+            throws ClientException;
+    private native boolean nativeHasCapability(String capability)
+            throws ClientException;
 
     /*
      * NOTE: This field is accessed from native code for callbacks.

@@ -26,11 +26,13 @@ import org.apache.subversion.javahl.*;
 import org.apache.subversion.javahl.remote.*;
 import org.apache.subversion.javahl.types.*;
 
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Set;
 import java.util.Map;
 import java.util.HashSet;
 import java.io.IOException;
+import java.nio.charset.Charset;
 
 /**
  * This class is used for testing the SVNReposAccess class
@@ -247,5 +249,82 @@ public class SVNRemoteTests extends SVNTests
     {
         ISVNRemote session = getSession();
         assert(session.hasCapability(ISVNRemote.Capability.depth));
+    }
+
+    public void testChangeRevpropNoAtomic() throws Exception
+    {
+        Charset UTF8 = Charset.forName("UTF-8");
+        ISVNRemote session = getSession();
+
+        boolean atomic =
+            session.hasCapability(ISVNRemote.Capability.atomic_revprops);
+
+        if (atomic)
+            return;
+
+        boolean exceptioned = false;
+        try
+        {
+            byte[] oldValue = "bumble".getBytes(UTF8);
+            byte[] newValue = "bee".getBytes(UTF8);
+            session.changeRevisionProperty(1, "svn:author",
+                                           oldValue, newValue);
+        }
+        catch (IllegalArgumentException ex)
+        {
+            exceptioned = true;
+        }
+        assert(exceptioned);
+    }
+
+    public void testChangeRevpropAtomic() throws Exception
+    {
+        Charset UTF8 = Charset.forName("UTF-8");
+        ISVNRemote session = getSession();
+
+        boolean atomic =
+            session.hasCapability(ISVNRemote.Capability.atomic_revprops);
+
+        if (!atomic)
+            return;
+
+        byte[] oldValue = USERNAME.getBytes(UTF8);
+        byte[] newValue = "rayjandom".getBytes(UTF8);
+        try
+        {
+            session.changeRevisionProperty(1, "svn:author",
+                                           oldValue, newValue);
+        }
+        catch (ClientException ex)
+        {
+            String msg = ex.getMessage();
+            int index = msg.indexOf('\n');
+            assertEquals(msg.substring(0, index),
+                         "Disabled repository feature");
+            return;
+        }
+
+        byte[] check = client.revProperty(getTestRepoUrl(), "svn:author",
+                                          Revision.getInstance(1));
+        assertTrue(Arrays.equals(newValue, check));
+    }
+
+    public void testGetRevpropList() throws Exception
+    {
+        Charset UTF8 = Charset.forName("UTF-8");
+        ISVNRemote session = getSession();
+
+        Map<String, byte[]> proplist = session.getRevisionProperties(1);
+        assertTrue(Arrays.equals(proplist.get("svn:author"),
+                                 USERNAME.getBytes(UTF8)));
+    }
+
+    public void testGetRevprop() throws Exception
+    {
+        Charset UTF8 = Charset.forName("UTF-8");
+        ISVNRemote session = getSession();
+
+        byte[] propval = session.getRevisionProperty(1, "svn:author");
+        assertTrue(Arrays.equals(propval, USERNAME.getBytes(UTF8)));
     }
 }

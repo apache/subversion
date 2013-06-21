@@ -111,6 +111,56 @@ public interface ISVNRemote
     long getRevisionByTimestamp(long timestamp) throws ClientException;
 
     /**
+     * Change the value of an unversioned property.
+     * @param revision The revision to which the propery is attached
+     * @param propertyName The name of the propery
+     * @param oldValue The previous value of the property (see note below)
+     * @param newValue The new value of the property. If <code>newValue</code>
+     *        is <code>null</code>, the property will be deleted.
+     *
+     * @node If the server has Capability.atomic_revprops and
+     *       <code>oldValue</code> is not <code>null</code>, and the
+     *       present value of the propery is not <code>oldValue</code>
+     *       (e.g., if another client changed the property), then
+     *       the operation will fail.
+     * @note If the server does not adveritse Capability.atomic_revprops,
+     *       then <code>oldValue</code> <em>must</em> be <code>null</code>.
+     *
+     * @throws IllegalArgumentException if <code>oldValue</code> is not
+     *         <code>null</code> and the server does not advertise the
+     *         atomic_revprops capability.
+     * @throws ClientException
+     */
+    void changeRevisionProperty(long revision,
+                                String propertyName,
+                                byte[] oldValue,
+                                byte[] newValue)
+            throws ClientException;
+
+    /**
+     * Return the set of unversioned properties set on <code>revision</code>
+     * in the session's repository.
+     * @throws ClientException
+     */
+    Map<String, byte[]> getRevisionProperties(long revision)
+            throws ClientException;
+
+    /**
+     * Return the value of unversioned property <code>propertyName</code>
+     * in <code>revision</code> in the session's repository.
+     * Returns <code>null</code> if the property does not exist.
+     * @throws ClientException
+     */
+    byte[] getRevisionProperty(long revision, String propertyName)
+            throws ClientException;
+
+    /**
+     * Create a commit editor instance, rooted at the current session URL.
+     * @throws ClientException
+     */
+    ISVNEditor getCommitEditor() throws ClientException;
+
+    /**
      * Return the kind of the node in path at revision.
      * @param path A path relative to the sessionn URL
      * @throws ClientException
@@ -131,10 +181,11 @@ public interface ISVNRemote
             throws ClientException;
 
     /**
-     * Create a commit editor instance, rooted at the current session URL.
+     * Check if the server associated with this session has
+     * the given <code>capability</code>.
      * @throws ClientException
      */
-    ISVNEditor getCommitEditor() throws ClientException;
+    boolean hasCapability(Capability capability) throws ClientException;
 
     /**
      * Enumeration of known capabilities of the repository and server.
@@ -212,11 +263,4 @@ public interface ISVNRemote
 
         private String token;
     }
-
-    /**
-     * Check if the server associated with this session has
-     * the given <code>capability</code>.
-     * @throws ClientException
-     */
-    boolean hasCapability(Capability capability) throws ClientException;
 }
