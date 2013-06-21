@@ -223,7 +223,7 @@ return_response_err(svn_ra_serf__handler_t *handler)
   /* Try to return one of the standard errors for 301, 404, etc.,
      then look for an error embedded in the response.  */
   return svn_error_compose_create(svn_ra_serf__error_on_status(
-                                    handler->sline.code,
+                                    handler->sline,
                                     handler->path,
                                     handler->location),
                                   err);

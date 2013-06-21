@@ -197,14 +197,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1495104
-   Handle unexpected HTTP status codes as errors instead of as SUCCESS codes
-   in ra_serf.
-   Justification:
-     Handling them as success values causes assertions.
-   Votes:
-     +1: rhuijben, ivan, philip
-
  * r1493424
    Remove unnecessary check for branches ancestry from 
    command line client. All required checks are already performed in
