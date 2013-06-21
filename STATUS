@@ -197,14 +197,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1492148, r1493720
-   Don't try to use 'blame -r 5:1' against 1.7 servers.  Affects only users
-   of the RA API, not users of the client API or svn.
-   Justification:
-     1.7 servers would silently do the wrong thing.
-   Votes:
-     +1: danielsh, rhuijben, stefan2
-
  * r1493475
    Improve 'svn merge' performance over WAN: Use already fetched 
    history-as-mergeinfo data to find youngest common ancestor in automatic 
