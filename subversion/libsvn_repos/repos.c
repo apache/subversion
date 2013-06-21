@@ -1546,7 +1546,7 @@ struct fs_upgrade_notify_baton_t
 /* Implements svn_fs_upgrade_notify_t as forwarding to a
  * svn_repos_notify_func_t passed in a fs_upgrade_notify_baton_t* BATON.
  */
-svn_error_t *
+static svn_error_t *
 fs_upgrade_notify(void *baton,
                   apr_uint64_t number,
                   svn_fs_upgrade_notify_action_t action,
