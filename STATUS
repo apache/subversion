@@ -178,6 +178,13 @@ Candidate changes:
    Votes:
      +1: stefan2, stsp
 
+ * r1495329
+   Use relative symlink for svnmucc in svn-tools.
+   Justification:
+     Makes 'make install-tools' work when DESTDIR is set.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
