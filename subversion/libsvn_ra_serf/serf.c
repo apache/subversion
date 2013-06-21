@@ -437,9 +437,10 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   serf_sess->capabilities = apr_hash_make(serf_sess->pool);
 
-  /* We have to assume that the server only supports HTTP/1.0. Once it's clear
-     HTTP/1.1 is supported, we can upgrade. */
-  serf_sess->http10 = TRUE;
+  /* Assume HTTP/1.1 server and use chunked transfer encoding. We fallback
+   * to HTTP/1.0 requests in svn_ra_serf__exchange_capabilities() if server
+   * doesn't support chunked encoding. */
+  serf_sess->use_chunked_encoding = FALSE;
 
   SVN_ERR(load_config(serf_sess, config, serf_sess->pool));
 
