@@ -185,6 +185,13 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1495428
+   Improve BDB error codes.
+   Justification:
+     (err->apr_err == APR_SUCCESS) leaks to API consumers.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
