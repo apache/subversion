@@ -1467,10 +1467,15 @@ delete_revprops_shard(const char *shard_path,
  * have no unpacked data anymore.  Call upgrade_cleanup_pack_revprops after
  * the bump.
  * 
- * Use SCRATCH_POOL for temporary allocations.
+ * NOTIFY_FUNC and NOTIFY_BATON as well as CANCEL_FUNC and CANCEL_BATON are
+ * used in the usual way.  Temporary allocations are done in SCRATCH_POOL.
  */
 static svn_error_t *
 upgrade_pack_revprops(svn_fs_t *fs,
+                      svn_fs_upgrade_notify_t notify_func,
+                      void *notify_baton,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
                       apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -1503,7 +1508,11 @@ upgrade_pack_revprops(svn_fs_t *fs,
                                   shard, ffd->max_files_per_dir,
                                   (int)(0.9 * ffd->revprop_pack_size),
                                   compression_level,
-                                  NULL, NULL, iterpool));
+                                  cancel_func, cancel_baton, iterpool));
+      if (notify_func)
+        SVN_ERR(notify_func(notify_baton, shard,
+                            svn_fs_upgrade_pack_revprops, iterpool));
+
       svn_pool_clear(iterpool);
     }
 
@@ -1513,11 +1522,21 @@ upgrade_pack_revprops(svn_fs_t *fs,
 }
 
 /* In the filesystem FS, remove all non-packed revprop shards up to
- * min_unpacked_rev.  Use SCRATCH_POOL for temporary allocations.
+ * min_unpacked_rev.  Temporary allocations are done in SCRATCH_POOL.
+ * 
+ * NOTIFY_FUNC and NOTIFY_BATON as well as CANCEL_FUNC and CANCEL_BATON are
+ * used in the usual way.  Cancellation is supported in the sense that we
+ * will cleanly abort the operation.  However, there will be remnant shards
+ * that must be removed manually.
+ *
  * See upgrade_pack_revprops for more info.
  */
 static svn_error_t *
 upgrade_cleanup_pack_revprops(svn_fs_t *fs,
+                              svn_fs_upgrade_notify_t notify_func,
+                              void *notify_baton,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
                               apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -1538,7 +1557,11 @@ upgrade_cleanup_pack_revprops(svn_fs_t *fs,
                        iterpool);
       SVN_ERR(delete_revprops_shard(revprops_shard_path,
                                     shard, ffd->max_files_per_dir,
-                                    NULL, NULL, iterpool));
+                                    cancel_func, cancel_baton, iterpool));
+      if (notify_func)
+        SVN_ERR(notify_func(notify_baton, shard,
+                            svn_fs_upgrade_cleanup_revprops, iterpool));
+
       svn_pool_clear(iterpool);
     }
 
@@ -1547,10 +1570,22 @@ upgrade_cleanup_pack_revprops(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Baton type bridging svn_fs_fs__upgrade and upgrade_body carrying 
+ * parameters over between them. */
+struct upgrade_baton_t
+{
+  svn_fs_t *fs;
+  svn_fs_upgrade_notify_t notify_func;
+  void *notify_baton;
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+};
+
 static svn_error_t *
 upgrade_body(void *baton, apr_pool_t *pool)
 {
-  svn_fs_t *fs = baton;
+  struct upgrade_baton_t *upgrade_baton = baton;
+  svn_fs_t *fs = upgrade_baton->fs;
   int format, max_files_per_dir;
   const char *format_path = path_format(fs, pool);
   svn_node_kind_t kind;
@@ -1615,16 +1650,31 @@ upgrade_body(void *baton, apr_pool_t *pool)
       && max_files_per_dir > 0)
     {
       needs_revprop_shard_cleanup = TRUE;
-      SVN_ERR(upgrade_pack_revprops(fs, pool));
+      SVN_ERR(upgrade_pack_revprops(fs,
+                                    upgrade_baton->notify_func,
+                                    upgrade_baton->notify_baton,
+                                    upgrade_baton->cancel_func,
+                                    upgrade_baton->cancel_baton,
+                                    pool));
     }
 
   /* Bump the format file. */
   SVN_ERR(write_format(format_path, SVN_FS_FS__FORMAT_NUMBER,
                        max_files_per_dir, TRUE, pool));
+  if (upgrade_baton->notify_func)
+    SVN_ERR(upgrade_baton->notify_func(upgrade_baton->notify_baton,
+                                       SVN_FS_FS__FORMAT_NUMBER,
+                                       svn_fs_upgrade_format_bumped,
+                                       pool));
 
   /* Now, it is safe to remove the redundant revprop files. */
   if (needs_revprop_shard_cleanup)
-    SVN_ERR(upgrade_cleanup_pack_revprops(fs, pool));
+    SVN_ERR(upgrade_cleanup_pack_revprops(fs,
+                                          upgrade_baton->notify_func,
+                                          upgrade_baton->notify_baton,
+                                          upgrade_baton->cancel_func,
+                                          upgrade_baton->cancel_baton,
+                                          pool));
 
   /* Done */
   return SVN_NO_ERROR;
@@ -1632,9 +1682,21 @@ upgrade_body(void *baton, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_fs_fs__upgrade(svn_fs_t *fs, apr_pool_t *pool)
+svn_fs_fs__upgrade(svn_fs_t *fs,
+                   svn_fs_upgrade_notify_t notify_func,
+                   void *notify_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool)
 {
-  return svn_fs_fs__with_write_lock(fs, upgrade_body, (void *)fs, pool);
+  struct upgrade_baton_t baton;
+  baton.fs = fs;
+  baton.notify_func = notify_func;
+  baton.notify_baton = notify_baton;
+  baton.cancel_func = cancel_func;
+  baton.cancel_baton = cancel_baton;
+  
+  return svn_fs_fs__with_write_lock(fs, upgrade_body, (void *)&baton, pool);
 }
 
 
