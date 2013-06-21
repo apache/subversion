@@ -488,6 +488,22 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
 
   err = svn_ra_serf__context_run_one(opt_ctx->handler, pool);
 
+  /* Retry request if HTTP/1.1 411 Length Required or we got HTTP/1.0 response. */
+  if (serf_sess->use_chunked_encoding &&
+      (opt_ctx->handler->sline.code == 411 ||
+       opt_ctx->handler->sline.version == SERF_HTTP_10))
+    {
+      /* Ignore any errors and retry request using HTTP/1.0 with
+         Content-Length.*/
+      svn_error_clear(err);
+
+      serf_sess->use_chunked_encoding = FALSE;
+
+      SVN_ERR(create_options_req(&opt_ctx, serf_sess, serf_sess->conns[0], pool));
+
+      err = svn_ra_serf__context_run_one(opt_ctx->handler, pool);
+    }
+
   /* If our caller cares about server redirections, and our response
      carries such a thing, report as much.  We'll disregard ERR --
      it's most likely just a complaint about the response body not
