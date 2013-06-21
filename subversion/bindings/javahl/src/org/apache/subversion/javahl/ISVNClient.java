@@ -221,6 +221,10 @@ public interface ISVNClient
 
     /**
      * Adds a file to the repository.
+     *
+     * <p><em>Note:</em> Behaves like the 1.8 version with
+     * <code>noAutoProps</code> set to <code>false</code>.
+     *
      * @param path      path to be added.
      * @param depth     the depth to recurse into subdirectories
      * @param force     if adding a directory and recurse true and path is a
@@ -229,7 +233,6 @@ public interface ISVNClient
      *                  ignore patterns
      * @param addParents add any intermediate parents to the working copy
      * @throws ClientException
-     * @note this method behaves like the 1.8 version with noAutoProps=false
      */
     void add(String path, Depth depth, boolean force, boolean noIgnores,
              boolean addParents)
@@ -412,6 +415,9 @@ public interface ISVNClient
      * 'clean' directory (meaning a directory with no administrative
      * directories).
      *
+     * <p><em>Note:</em> Behaves like the 1.9 version with
+     * ignoreKeywords set to false.
+     *
      * @param srcPath         the url of the repository path to be exported
      * @param destPath        a destination path that must not already exist.
      * @param revision        the revsion to be exported
@@ -421,8 +427,6 @@ public interface ISVNClient
      * @param depth           how deep to recurse in subdirectories
      * @param nativeEOL       which EOL characters to use during export
      * @throws ClientException
-     * @note this method behaves like the 1.9 version with
-     *       ignoreKeywords set to false.
      */
     long doExport(String srcPath, String destPath, Revision revision,
                   Revision pegRevision, boolean force, boolean ignoreExternals,
@@ -481,6 +485,10 @@ public interface ISVNClient
     /**
      * Import a file or directory into a repository directory  at
      * head.
+     *
+     * <p><em>Note:</em> Behaves like the 1.8 version with noAutoProps
+     * set to false and without the filtering option.
+     *
      * @param path      the local path
      * @param url       the target url
      * @param depth     depth to traverse into subdirectories
@@ -493,8 +501,6 @@ public interface ISVNClient
      * @param handler   the commit message callback
      * @param callback  the commit status callback
      * @throws ClientException
-     * @note this method behaves like the 1.8 version with noAutoProps=false
-     *       and without the filtering option.
      */
     void doImport(String path, String url, Depth depth,
                   boolean noIgnore, boolean ignoreUnknownNodeTypes,
@@ -538,6 +544,9 @@ public interface ISVNClient
     /**
      * Merge changes from two paths into a new local path.
      *
+     * <p><em>Note:</em> Behaves like the 1.8 version where ignoreAncestry
+     * maps to both ignoreMergeinfo and diffIgnoreAncestry
+     *
      * @param path1          first path or url
      * @param revision1      first revision
      * @param path2          second path or url
@@ -549,8 +558,6 @@ public interface ISVNClient
      * @param dryRun         do not change anything
      * @param recordOnly     record mergeinfo but do not run merge
      * @throws ClientException
-     * @note Behaves like the 1.8 where ignoreAncestry maps to
-     *       both ignoreMergeinfo and diffIgnoreAncestry
      */
     void merge(String path1, Revision revision1, String path2,
                Revision revision2, String localPath, boolean force, Depth depth,
@@ -581,6 +588,10 @@ public interface ISVNClient
 
     /**
      * Merge set of revisions into a new local path.
+     *
+     * <p><em>Note:</em> Behaves like the 1.8 version where ignoreAncestry
+     * maps to both ignoreMergeinfo and diffIgnoreAncestry
+     *
      * @param path          path or url
      * @param pegRevision   revision to interpret path
      * @param revisions     revisions to merge;
@@ -593,8 +604,6 @@ public interface ISVNClient
      * @param dryRun        do not change anything
      * @param recordOnly    record mergeinfo but do not run merge
      * @throws ClientException
-     * @note Behaves like the 1.8 where ignoreAncestry maps to
-     *       both ignoreMergeinfo and diffIgnoreAncestry
      */
     void merge(String path, Revision pegRevision, List<RevisionRange> revisions,
                String localPath, boolean force, Depth depth,
@@ -659,6 +668,10 @@ public interface ISVNClient
 
     /**
      * Retrieve either merged or eligible-to-be-merged revisions.
+     *
+     * <p><em>Note:</em> Behaves like the 1.8 version, with unspecified
+     * revision range.
+     *
      * @param kind                   kind of revisions to receive
      * @param pathOrUrl              target of merge
      * @param pegRevision            peg rev for pathOrUrl
@@ -668,7 +681,6 @@ public interface ISVNClient
      * @param depth                  the depth to recurse to
      * @param revProps               the revprops to retrieve
      * @param callback               the object to receive the log messages
-     * @note Behaves like the 1.8 version, with unspecified revision range.
      */
     void getMergeinfoLog(Mergeinfo.LogKind kind, String pathOrUrl,
                          Revision pegRevision, String mergeSourceUrl,
@@ -1172,13 +1184,15 @@ public interface ISVNClient
 
     /**
      * Open a persistent session to a repository.
+     *
+     * <p><em>Note:</em> The session object inherits the progress callback,
+     * configuration directory and authentication info.
+     *
      * @param pathOrUrl A path in a working copy from which the
      *        session URL is derived, or the URL itself.
      * @throws remote.RetryOpenSession If the session URL was redirected
      * @throws SubversionException If an URL redirect cycle was detected
      * @throws ClientException
-     * @note The session object inherits the progress callback,
-     *       configuration directory and authentication info.
      * @since 1.9
      */
     ISVNRemote openRemoteSession(String pathOrUrl)
@@ -1186,6 +1200,10 @@ public interface ISVNClient
 
     /**
      * Open a persistent session to a repository.
+     *
+     * <p><em>Note:</em> The session object inherits the progress callback,
+     * configuration directory and authentication info.
+     *
      * @param pathOrUrl A path in a working copy from which the
      *        session URL is derived, or the URL itself.
      * @param retryAttempts The number of times to retry the operation
@@ -1195,8 +1213,6 @@ public interface ISVNClient
      * @throws remote.RetryOpenSession If the session URL was redirected
      * @throws SubversionException If an URL redirect cycle was detected
      * @throws ClientException
-     * @note The session object inherits the progress callback,
-     *       configuration directory and authentication info.
      * @since 1.9
      */
     ISVNRemote openRemoteSession(String pathOrUrl, int retryAttempts)
