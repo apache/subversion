@@ -197,16 +197,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1493475
-   Improve 'svn merge' performance over WAN: Use already fetched 
-   history-as-mergeinfo data to find youngest common ancestor in automatic 
-   merge.
-   Justification:
-     No reason to create an RA session or perform RA calls if the information
-     is already in memory.
-   Votes:
-     +1: rhuijben, ivan, stefan2
-
  * r1494342
    C tests: support --compatible-version=1.8.
    Justification:
