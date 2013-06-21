@@ -27,10 +27,12 @@
 #include <cstring>
 #include <set>
 
+#include "JNIByteArray.h"
 #include "JNIStringHolder.h"
 #include "JNIUtil.h"
 
 #include "svn_ra.h"
+#include "svn_string.h"
 
 #include "CreateJ.h"
 #include "EnumMapper.h"
@@ -385,6 +387,81 @@ RemoteSession::getRevisionByTimestamp(jlong timestamp)
                                         subPool.getPool()),
               SVN_INVALID_REVNUM);
   return rev;
+}
+
+namespace {
+bool byte_array_to_svn_string(JNIByteArray& ary, svn_string_t& str)
+{
+  if (ary.isNull())
+    return false;
+
+  str.data = reinterpret_cast<const char*>(ary.getBytes());
+  str.len = ary.getLength();
+  return true;
+}
+} // anonymous namespace
+
+void
+RemoteSession::changeRevisionProperty(
+    jlong jrevision, jstring jname,
+    jbyteArray jold_value, jbyteArray jvalue)
+{
+  JNIStringHolder name(jname);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  JNIByteArray old_value(jold_value);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  JNIByteArray value(jvalue);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  svn_string_t str_old_value;
+  svn_string_t* const p_old_value = &str_old_value;
+  svn_string_t* const* pp_old_value = NULL;
+  if (byte_array_to_svn_string(old_value, str_old_value))
+      pp_old_value = &p_old_value;
+
+  svn_string_t str_value;
+  svn_string_t* p_value = NULL;
+  if (byte_array_to_svn_string(value, str_value))
+      p_value = &str_value;
+
+  SVN::Pool subPool(pool);
+  SVN_JNI_ERR(svn_ra_change_rev_prop2(m_session,
+                                      svn_revnum_t(jrevision),
+                                      name, pp_old_value, p_value,
+                                      subPool.getPool()), );
+}
+
+jobject
+RemoteSession::getRevisionProperties(jlong jrevision)
+{
+  SVN::Pool subPool(pool);
+  apr_hash_t *props;
+  SVN_JNI_ERR(svn_ra_rev_proplist(m_session, svn_revnum_t(jrevision),
+                                  &props, subPool.getPool()),
+              NULL);
+
+  return CreateJ::PropertyMap(props);
+}
+
+jbyteArray
+RemoteSession::getRevisionProperty(jlong jrevision, jstring jname)
+{
+  JNIStringHolder name(jname);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  SVN::Pool subPool(pool);
+  svn_string_t *propval;
+  SVN_JNI_ERR(svn_ra_rev_prop(m_session, svn_revnum_t(jrevision),
+                              name, &propval, subPool.getPool()),
+              NULL);
+
+  return JNIUtil::makeJByteArray(propval);
 }
 
 jobject

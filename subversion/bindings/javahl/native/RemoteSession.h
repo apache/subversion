@@ -65,8 +65,12 @@ class RemoteSession : public SVNBase
     jstring getReposUUID();
     jstring getReposRootUrl();
     jlong getLatestRevision();
-
-    jlong getRevisionByTimestamp(jlong timestamp);
+    jlong getRevisionByTimestamp(jlong jtimestamp);
+    void changeRevisionProperty(jlong jrevision, jstring jname,
+                                jbyteArray jold_value,
+                                jbyteArray jvalue);
+    jobject getRevisionProperties(jlong jrevision);
+    jbyteArray getRevisionProperty(jlong jrevision, jstring jname);
     jobject getLocks(jstring jpath, jobject jdepth);
     jobject checkPath(jstring jpath, jlong jrevision);
     jboolean hasCapability(jstring capability);
