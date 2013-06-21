@@ -197,13 +197,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1494342
-   C tests: support --compatible-version=1.8.
-   Justification:
-     Enable running the tests with --compatible-version
-   Votes:
-     +1: danielsh, rhuijben, stefan2
-
  * r1495104
    Handle unexpected HTTP status codes as errors instead of as SUCCESS codes
    in ra_serf.
