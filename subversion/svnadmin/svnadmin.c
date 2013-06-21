@@ -994,6 +994,35 @@ repos_notify_handler(void *baton,
                               " repository may take some time...\n"));
       return;
 
+    case svn_repos_notify_pack_revprops:
+      {
+        const char *shardstr = apr_psprintf(scratch_pool,
+                                            "%" APR_INT64_T_FMT,
+                                            notify->shard);
+        cmdline_stream_printf(feedback_stream, scratch_pool,
+                              _("Packing revision properties"
+                                " in shard %s..."),
+                              shardstr);
+        return;
+      }
+
+    case svn_repos_notify_cleanup_revprops:
+      {
+        const char *shardstr = apr_psprintf(scratch_pool,
+                                            "%" APR_INT64_T_FMT,
+                                            notify->shard);
+        cmdline_stream_printf(feedback_stream, scratch_pool,
+                              _("Removing non-packed revision properties"
+                                " in shard %s..."),
+                              shardstr);
+        return;
+      }
+
+    case svn_repos_notify_format_bumped:
+      cmdline_stream_printf(feedback_stream, scratch_pool,
+                            _("Bumped repository format to %ld\n"),
+                            notify->revision);
+
     default:
       return;
   }
