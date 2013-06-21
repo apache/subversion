@@ -1026,33 +1026,6 @@ path_for_display(const char *path_or_url,
 }
 
 svn_error_t *
-svn_cl__check_related_source_and_target(const char *path_or_url1,
-                                        const svn_opt_revision_t *revision1,
-                                        const char *path_or_url2,
-                                        const svn_opt_revision_t *revision2,
-                                        svn_client_ctx_t *ctx,
-                                        apr_pool_t *pool)
-{
-  const char *ancestor_url;
-  svn_revnum_t ancestor_rev;
-
-  SVN_ERR(svn_client__youngest_common_ancestor(
-            &ancestor_url, &ancestor_rev,
-            path_or_url1, revision1, path_or_url2, revision2,
-            ctx, pool, pool));
-
-  if (ancestor_url == NULL)
-    {
-      return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                               _("Source and target have no common ancestor: "
-                                 "'%s' and '%s'"),
-                               path_for_display(path_or_url1, revision1, pool),
-                               path_for_display(path_or_url2, revision2, pool));
-    }
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_cl__propset_print_binary_mime_type_warning(apr_array_header_t *targets,
                                                const char *propname,
                                                const svn_string_t *propval,
