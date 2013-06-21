@@ -184,6 +184,7 @@ Candidate changes:
      Makes 'make install-tools' work when DESTDIR is set.
    Votes:
      +1: philip
+     -0: danielsh (the symlink should be absolute; see r1495329 thread)
 
  * r1495428
    Improve BDB error codes.
