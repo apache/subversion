@@ -140,8 +140,9 @@ struct svn_ra_serf__session_t {
   apr_uri_t repos_root;
   const char *repos_root_str;
 
-  /* The server supports chunked request bodies. */
-  svn_boolean_t use_chunked_encoding;
+  /* The server is not Apache/mod_dav_svn (directly) and only supports
+     HTTP/1.0. Thus, we cannot send chunked requests.  */
+  svn_boolean_t http10;
 
   /* Our Version-Controlled-Configuration; may be NULL until we know it. */
   const char *vcc_url;

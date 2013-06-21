@@ -642,7 +642,7 @@ setup_serf_req(serf_request_t *request,
 
   svn_spillbuf_t *buf;
 
-  if (!session->use_chunked_encoding && body_bkt != NULL)
+  if (session->http10 && body_bkt != NULL)
     {
       /* Ugh. Use HTTP/1.0 to talk to the server because we don't know if
          it speaks HTTP/1.1 (and thus, chunked requests), or because the
@@ -670,7 +670,7 @@ setup_serf_req(serf_request_t *request,
 
   /* Set the Content-Length value. This will also trigger an HTTP/1.0
      request (rather than the default chunked request).  */
-  if (!session->use_chunked_encoding)
+  if (session->http10)
     {
       if (body_bkt == NULL)
         serf_bucket_request_set_CL(*req_bkt, 0);
@@ -690,9 +690,10 @@ setup_serf_req(serf_request_t *request,
       serf_bucket_headers_setn(*hdrs_bkt, "Content-Type", content_type);
     }
 
-  /* Always set Connection: keep-alive because we don't know if server
-   * is HTTP/1.1 aware. */
-  serf_bucket_headers_setn(*hdrs_bkt, "Connection", "keep-alive");
+  if (session->http10)
+    {
+      serf_bucket_headers_setn(*hdrs_bkt, "Connection", "keep-alive");
+    }
 
   if (accept_encoding)
     {
@@ -1860,6 +1861,10 @@ handle_response(serf_request_t *request,
 
       handler->sline = sl;
       handler->sline.reason = apr_pstrdup(handler->handler_pool, sl.reason);
+
+      /* HTTP/1.1? (or later)  */
+      if (sl.version != SERF_HTTP_10)
+        handler->session->http10 = FALSE;
     }
 
   /* Keep reading from the network until we've read all the headers.  */
