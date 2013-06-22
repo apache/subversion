@@ -221,8 +221,8 @@ public interface ISVNClient
 
     /**
      * Adds a file to the repository.
-     *
-     * <p><em>Note:</em> Behaves like the 1.8 version with
+     * <p>
+     * <b>Note:</b> Behaves like the 1.8 version with
      * <code>noAutoProps</code> set to <code>false</code>.
      *
      * @param path      path to be added.
@@ -414,8 +414,8 @@ public interface ISVNClient
      * Exports the contents of either a subversion repository into a
      * 'clean' directory (meaning a directory with no administrative
      * directories).
-     *
-     * <p><em>Note:</em> Behaves like the 1.9 version with
+     * <p>
+     * <b>Note:</b> Behaves like the 1.9 version with
      * ignoreKeywords set to false.
      *
      * @param srcPath         the url of the repository path to be exported
@@ -485,8 +485,8 @@ public interface ISVNClient
     /**
      * Import a file or directory into a repository directory  at
      * head.
-     *
-     * <p><em>Note:</em> Behaves like the 1.8 version with noAutoProps
+     * <p>
+     * <b>Note:</b> Behaves like the 1.8 version with noAutoProps
      * set to false and without the filtering option.
      *
      * @param path      the local path
@@ -543,8 +543,8 @@ public interface ISVNClient
 
     /**
      * Merge changes from two paths into a new local path.
-     *
-     * <p><em>Note:</em> Behaves like the 1.8 version where ignoreAncestry
+     * <p>
+     * <b>Note:</b> Behaves like the 1.8 version where ignoreAncestry
      * maps to both ignoreMergeinfo and diffIgnoreAncestry
      *
      * @param path1          first path or url
@@ -588,8 +588,8 @@ public interface ISVNClient
 
     /**
      * Merge set of revisions into a new local path.
-     *
-     * <p><em>Note:</em> Behaves like the 1.8 version where ignoreAncestry
+     * <p>
+     * <b>Note:</b> Behaves like the 1.8 version where ignoreAncestry
      * maps to both ignoreMergeinfo and diffIgnoreAncestry
      *
      * @param path          path or url
@@ -668,8 +668,8 @@ public interface ISVNClient
 
     /**
      * Retrieve either merged or eligible-to-be-merged revisions.
-     *
-     * <p><em>Note:</em> Behaves like the 1.8 version, with unspecified
+     * <p>
+     * <b>Note:</b> Behaves like the 1.8 version, with unspecified
      * revision range.
      *
      * @param kind                   kind of revisions to receive
@@ -1184,8 +1184,8 @@ public interface ISVNClient
 
     /**
      * Open a persistent session to a repository.
-     *
-     * <p><em>Note:</em> The session object inherits the progress callback,
+     * <p>
+     * <b>Note:</b> The session object inherits the progress callback,
      * configuration directory and authentication info.
      *
      * @param pathOrUrl A path in a working copy from which the
@@ -1200,8 +1200,8 @@ public interface ISVNClient
 
     /**
      * Open a persistent session to a repository.
-     *
-     * <p><em>Note:</em> The session object inherits the progress callback,
+     * <p>
+     * <b>Note:</b> The session object inherits the progress callback,
      * configuration directory and authentication info.
      *
      * @param pathOrUrl A path in a working copy from which the
