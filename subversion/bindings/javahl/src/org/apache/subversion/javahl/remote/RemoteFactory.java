@@ -120,9 +120,9 @@ public class RemoteFactory
     /**
      * Open a persistent session to a repository.
      * <p>
-     * <em>Note:</em> The URL can point to a subtree of the repository.
+     * <b>Note:</b> The URL can point to a subtree of the repository.
      * <p>
-     * <em>Note:</em> The session object inherits the progress callback,
+     * <b>Note:</b> The session object inherits the progress callback,
      * configuration directory and authentication info.
      *
      * @param url The initial session root URL.
@@ -140,9 +140,9 @@ public class RemoteFactory
     /**
      * Open a persistent session to a repository.
      * <p>
-     * <em>Note:</em> The URL can point to a subtree of the repository.
+     * <b>Note:</b> The URL can point to a subtree of the repository.
      * <p>
-     * <em>Note:</em> The session object inherits the progress callback,
+     * <b>Note:</b> The session object inherits the progress callback,
      * configuration directory and authentication info.
      *
      * @param url The initial session root URL.
@@ -167,12 +167,12 @@ public class RemoteFactory
     /**
      * Open a persistent session to a repository.
      * <p>
-     * <em>Note:</em> The URL can point to a subtree of the repository.
+     * <b>Note:</b> The URL can point to a subtree of the repository.
      * <p>
-     * <em>Note:</em> If the UUID does not match the repository,
+     * <b>Note:</b> If the UUID does not match the repository,
      * this function fails.
      * <p>
-     * <em>Note:</em> The session object inherits the progress callback,
+     * <b>Note:</b> The session object inherits the progress callback,
      * configuration directory and authentication info.
      *
      * @param url The initial session root URL.
@@ -194,12 +194,12 @@ public class RemoteFactory
     /**
      * Open a persistent session to a repository.
      * <p>
-     * <em>Note:</em> The URL can point to a subtree of the repository.
+     * <b>Note:</b> The URL can point to a subtree of the repository.
      * <p>
-     * <em>Note:</em> If the UUID does not match the repository,
+     * <b>Note:</b> If the UUID does not match the repository,
      * this function fails.
      * <p>
-     * <em>Note:</em> The session object inherits the progress callback,
+     * <b>Note:</b> The session object inherits the progress callback,
      * configuration directory and authentication info.
      *
      * @param url The initial session root URL.

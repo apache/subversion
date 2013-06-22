@@ -86,8 +86,8 @@ public interface ISVNEditor
      * <code>replacesRevision</code>. Otherwise,
      * <code>replacesRevision</code> must be
      * Revision.SVN_INVALID_REVNUM.
-     *
-     * <p><em>Note:</em> It is not allowed to call a "delete" followed by
+     * <p>
+     * <b>Note:</b> It is not allowed to call a "delete" followed by
      * an "add" on the same path. Instead, an "add" with
      * <code>replacesRevision</code> set accordingly <em>must</em> be used.
      *
@@ -240,7 +240,7 @@ public interface ISVNEditor
      * <p>
      * For a description of <code>replacesRevision</code>, see #addFile().
      * <p>
-     * <p><em>Note:</em> See the general instructions on paths for this API.
+     * <b>Note:</b> See the general instructions on paths for this API.
      * Sice the <code>sourceRelativePath</code> argument must generally be
      * able to reference any node in the repository, the implication
      * is that the editor's root must be the repository root.

@@ -279,11 +279,11 @@ public interface ISVNRemote
      * using this session from within the editing operations of
      * <code>statusEditor</code>.
      * <p>
-     * <em>Note</em>: The reporter provided by this function does
+     * <b>Note:</b> The reporter provided by this function does
      * <em>not</em> supply copy-from information to the editor
      * methods.
      * <p>
-     * <em>Note</em>: In order to prevent pre-1.5 servers from doing
+     * <b>Note:</b> In order to prevent pre-1.5 servers from doing
      * more work than needed, and sending too much data back, a
      * pre-1.5 'recurse' directive may be sent to the server, based on
      * <code>depth</code>.
