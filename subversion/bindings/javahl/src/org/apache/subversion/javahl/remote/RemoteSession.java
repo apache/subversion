@@ -34,7 +34,6 @@ import org.apache.subversion.javahl.OperationContext;
 import org.apache.subversion.javahl.ClientException;
 
 import java.lang.ref.WeakReference;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Date;
 import java.util.Map;
@@ -129,12 +128,14 @@ public class RemoteSession extends JNIObject implements ISVNRemote
     }
 
     public long getDirectory(long revision, String path,
-                             int direntFields, Collection<DirEntry> dirents,
+                             int direntFields,
+                             Map<String, DirEntry> dirents,
                              Map<String, byte[]> properties)
             throws ClientException
     {
-        if (direntFields <= 0)
-            throw new IllegalArgumentException("direntFields must be positive");
+        if (direntFields <= 0 && direntFields != DirEntry.Fields.all)
+            throw new IllegalArgumentException(
+                "direntFields must be positive or DirEntry.Fields.all");
         maybe_clear(dirents);
         maybe_clear(properties);
         return nativeGetDirectory(revision, path,
@@ -205,7 +206,7 @@ public class RemoteSession extends JNIObject implements ISVNRemote
 
     private native long nativeGetDirectory(long revision, String path,
                                            int direntFields,
-                                           Collection<DirEntry> dirents,
+                                           Map<String, DirEntry> dirents,
                                            Map<String, byte[]> properties)
             throws ClientException;
     private native boolean nativeHasCapability(String capability)
@@ -227,16 +228,6 @@ public class RemoteSession extends JNIObject implements ISVNRemote
      * Private helper methods.
      */
     private final static void maybe_clear(Map clearable)
-    {
-        if (clearable != null && !clearable.isEmpty())
-            try {
-                clearable.clear();
-            } catch (UnsupportedOperationException ex) {
-                // ignored
-            }
-    }
-
-    private final static void maybe_clear(Collection clearable)
     {
         if (clearable != null && !clearable.isEmpty())
             try {

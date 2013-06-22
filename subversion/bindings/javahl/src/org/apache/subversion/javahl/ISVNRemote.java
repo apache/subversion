@@ -26,7 +26,6 @@ package org.apache.subversion.javahl;
 import org.apache.subversion.javahl.types.*;
 import org.apache.subversion.javahl.callback.*;
 
-import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
 import java.io.OutputStream;
@@ -188,8 +187,9 @@ public interface ISVNRemote
      * will be discarded by calling {@link java.util.Map#clear()}, if the
      * map implementation supports that operation.
      * <p>
-     * The implementation of <code>contents</code> may not perform any
-     * ISVNRemote operations using this session.
+     * The implementations of <code>contents</code> and
+     * <code>properties</code> may not perform any ISVNRemote
+     * operations using this session.
      * @return The revision of the file that was retreived.
      * @throws ClientException
      */
@@ -206,10 +206,11 @@ public interface ISVNRemote
      * used. <code>path</code> is interpreted relative to the
      * session's URL.
      * <p>
-     * If <code>dirents</code> is not <code>null</code>, it will contain
-     * all the entries of the directory. Any existing contente of the
+     * If <code>dirents</code> is not <code>null</code>, it will
+     * contain all the entries of the directory; the keys will be the
+     * entry basenames.  Any existing contente of the
      * <code>dirents</code> collection will be discarded by calling
-     * {@link java.util.Collection#clear()}, if the collection implementation
+     * {@link java.util.Map#clear()}, if the collection implementation
      * supports that operation.
      * <p>
      * <code>direntFields</code> controls which portions of the DirEntry
@@ -226,15 +227,17 @@ public interface ISVNRemote
      * will be discarded by calling {@link java.util.Map#clear()}, if the
      * map implementation supports that operation.
      * <p>
-     * The implementation of <code>dirents</code> may not perform any
-     * ISVNRemote operations using this session.
+     * The implementations of <code>dirents</code> and
+     * <code>properties</code> may not perform any ISVNRemote
+     * operations using this session.
      * @return The revision of the directory that was retreived.
      * @throws IllegalArgumentException if <code>direntFields</code>
      *         is less than or equal to 0.
      * @throws ClientException
      */
     long getDirectory(long revision, String path,
-                      int direntFields, Collection<DirEntry> dirents,
+                      int direntFields,
+                      Map<String, DirEntry> dirents,
                       Map<String, byte[]> properties)
             throws ClientException;
 

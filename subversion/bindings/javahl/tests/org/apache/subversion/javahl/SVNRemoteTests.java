@@ -30,7 +30,9 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Set;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
@@ -326,5 +328,45 @@ public class SVNRemoteTests extends SVNTests
 
         byte[] propval = session.getRevisionProperty(1, "svn:author");
         assertTrue(Arrays.equals(propval, USERNAME.getBytes(UTF8)));
+    }
+
+    public void testGetFile() throws Exception
+    {
+        Charset UTF8 = Charset.forName("UTF-8");
+        ISVNRemote session = getSession();
+
+        ByteArrayOutputStream contents = new ByteArrayOutputStream();
+        HashMap<String, byte[]> properties = new HashMap<String, byte[]>();
+        properties.put("fakename", "fakecontents".getBytes(UTF8));
+        long fetched_rev =
+            session.getFile(Revision.SVN_INVALID_REVNUM, "A/B/lambda",
+                            contents, properties);
+        assertEquals(fetched_rev, 1);
+        assertEquals(contents.toString("UTF-8"),
+                     "This is the file 'lambda'.");
+        for (Map.Entry<String, byte[]> e : properties.entrySet())
+            assertTrue(e.getKey().startsWith("svn:entry:"));
+    }
+
+    public void testGetDirectory() throws Exception
+    {
+        Charset UTF8 = Charset.forName("UTF-8");
+        ISVNRemote session = getSession();
+
+        HashMap<String, DirEntry> dirents = new HashMap<String, DirEntry>();
+        dirents.put("E", null);
+        dirents.put("F", null);
+        dirents.put("lambda", null);
+        HashMap<String, byte[]> properties = new HashMap<String, byte[]>();
+        properties.put("fakename", "fakecontents".getBytes(UTF8));
+        long fetched_rev =
+            session.getDirectory(Revision.SVN_INVALID_REVNUM, "A/B",
+                                 DirEntry.Fields.all, dirents, properties);
+        assertEquals(fetched_rev, 1);
+        assertEquals(dirents.get("E").getPath(), "E");
+        assertEquals(dirents.get("F").getPath(), "F");
+        assertEquals(dirents.get("lambda").getPath(), "lambda");
+        for (Map.Entry<String, byte[]> e : properties.entrySet())
+            assertTrue(e.getKey().startsWith("svn:entry:"));
     }
 }
