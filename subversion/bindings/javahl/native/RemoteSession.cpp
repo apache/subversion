@@ -33,9 +33,11 @@
 
 #include "svn_ra.h"
 #include "svn_string.h"
+#include "svn_dirent_uri.h"
 
 #include "CreateJ.h"
 #include "EnumMapper.h"
+#include "OutputStream.h"
 #include "Prompter.h"
 #include "Revision.h"
 #include "RemoteSession.h"
@@ -468,15 +470,150 @@ jlong
 RemoteSession::getFile(jlong jrevision, jstring jpath,
                        jobject jcontents, jobject jproperties)
 {
-  return SVN_INVALID_REVNUM;
+  JNIStringHolder path(jpath);
+  if (JNIUtil::isExceptionThrown())
+    return SVN_INVALID_REVNUM;
+
+  OutputStream contents_proxy(jcontents);
+  if (JNIUtil::isExceptionThrown())
+    return SVN_INVALID_REVNUM;
+
+  SVN::Pool subPool(pool);
+  apr_hash_t* props = NULL;
+  svn_revnum_t fetched_rev = svn_revnum_t(jrevision);
+  svn_stream_t* contents = (!jcontents ? NULL
+                            : contents_proxy.getStream(subPool));
+
+  SVN_JNI_ERR(svn_ra_get_file(m_session, path, fetched_rev,
+                              contents, &fetched_rev,
+                              (jproperties ? &props : NULL),
+                              subPool.getPool()),
+              SVN_INVALID_REVNUM);
+
+  if (jproperties)
+    {
+      CreateJ::FillPropertyMap(jproperties, props);
+      if (JNIUtil::isExceptionThrown())
+        return SVN_INVALID_REVNUM;
+    }
+
+  return fetched_rev;
 }
+
+namespace {
+void fill_dirents(const char* base_url, const char* base_relpath,
+                  jobject jdirents, apr_hash_t* dirents,
+                  apr_pool_t* scratch_pool)
+{
+  base_url = apr_pstrcat(scratch_pool, base_url, "/", base_relpath, NULL);
+  base_url = svn_uri_canonicalize(base_url, scratch_pool);
+  svn_stringbuf_t* abs_path = svn_stringbuf_create(base_url, scratch_pool);
+  svn_stringbuf_appendbyte(abs_path, '/');
+  const apr_size_t base_len = abs_path->len;
+
+  JNIEnv *env = JNIUtil::getEnv();
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
+  // We have no way of knowing the exact type of `dirents' in advance
+  // so we cannot remember the "put" method ID across calls.
+  jmethodID put_mid =
+    env->GetMethodID(env->GetObjectClass(jdirents), "put",
+                     "(Ljava/lang/Object;Ljava/lang/Object;)"
+                     "Ljava/lang/Object;");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NOTHING();
+
+  static jfieldID path_fid = 0;
+  if (path_fid == 0)
+    {
+      jclass clazz = env->FindClass(JAVA_PACKAGE "/types/DirEntry");
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NOTHING();
+
+      path_fid = env->GetFieldID(clazz, "path", "Ljava/lang/String;");
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NOTHING();
+    }
+
+  for (apr_hash_index_t* hi = apr_hash_first(scratch_pool, dirents);
+       hi; hi = apr_hash_next(hi))
+    {
+      const char* path;
+      svn_dirent_t* dirent;
+
+      const void *v_key;
+      void *v_val;
+
+      apr_hash_this(hi, &v_key, NULL, &v_val);
+      path = static_cast<const char*>(v_key);
+      dirent = static_cast<svn_dirent_t*>(v_val);
+      abs_path->len = base_len;
+      svn_stringbuf_appendcstr(abs_path, path);
+
+      jobject jdirent = CreateJ::DirEntry(path, abs_path->data, dirent);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NOTHING();
+
+      // Use the existing DirEntry.path field as the key
+      jstring jpath = jstring(env->GetObjectField(jdirent, path_fid));
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NOTHING();
+
+      env->CallObjectMethod(jdirents, put_mid, jpath, jdirent);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NOTHING();
+      env->DeleteLocalRef(jdirent);
+    }
+
+  POP_AND_RETURN_NOTHING();
+}
+} // anonymous namespace
 
 jlong
 RemoteSession::getDirectory(jlong jrevision, jstring jpath,
                             jint jdirent_fields, jobject jdirents,
                             jobject jproperties)
 {
-  return SVN_INVALID_REVNUM;
+  JNIStringHolder path(jpath);
+  if (JNIUtil::isExceptionThrown())
+    return SVN_INVALID_REVNUM;
+
+  SVN::Pool subPool(pool);
+  apr_hash_t* props = NULL;
+  apr_hash_t* dirents = NULL;
+  svn_revnum_t fetched_rev = svn_revnum_t(jrevision);
+
+  SVN_JNI_ERR(svn_ra_get_dir2(m_session, (jdirents ? &dirents : NULL),
+                              &fetched_rev, (jproperties ? &props : NULL),
+                              path, fetched_rev, apr_uint32_t(jdirent_fields),
+                              subPool.getPool()),
+              SVN_INVALID_REVNUM);
+
+  if (jdirents)
+    {
+      // We will construct the absolute path in the DirEntry objects
+      // from the session URL and directory relpath.
+      const char* base_url;
+      SVN_JNI_ERR(svn_ra_get_session_url(m_session, &base_url,
+                                         subPool.getPool()),
+                  SVN_INVALID_REVNUM);
+      fill_dirents(base_url, path, jdirents, dirents, subPool.getPool());
+      if (JNIUtil::isExceptionThrown())
+        return SVN_INVALID_REVNUM;
+    }
+
+  if (jproperties)
+    {
+      CreateJ::FillPropertyMap(jproperties, props);
+      if (JNIUtil::isExceptionThrown())
+        return SVN_INVALID_REVNUM;
+    }
+
+  return fetched_rev;
 }
 
 // TODO: getMergeinfo
