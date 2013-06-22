@@ -464,6 +464,61 @@ RemoteSession::getRevisionProperty(jlong jrevision, jstring jname)
   return JNIUtil::makeJByteArray(propval);
 }
 
+jlong
+RemoteSession::getFile(jlong jrevision, jstring jpath,
+                       jobject jcontents, jobject jproperties)
+{
+  return SVN_INVALID_REVNUM;
+}
+
+jlong
+RemoteSession::getDirectory(jlong jrevision, jstring jpath,
+                            jint jdirent_fields, jobject jdirents,
+                            jobject jproperties)
+{
+  return SVN_INVALID_REVNUM;
+}
+
+// TODO: getMergeinfo
+// TODO: doUpdate
+// TODO: doSwitch
+
+jobject
+RemoteSession::doStatus(jstring jstatus_target,
+                        jlong jrevision, jobject jdepth,
+                        jobject jstatus_editor)
+{
+  return NULL;
+}
+
+// TODO: doDiff
+// TODO: getLog
+
+jobject
+RemoteSession::checkPath(jstring jpath, jlong jrevision)
+{
+  JNIStringHolder path(jpath);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  SVN::Pool subPool(pool);
+  svn_node_kind_t kind;
+  SVN_JNI_ERR(svn_ra_check_path(m_session, path,
+                                svn_revnum_t(jrevision),
+                                &kind, subPool.getPool()),
+              NULL);
+
+  return EnumMapper::mapNodeKind(kind);
+}
+
+// TODO: stat
+// TODO: getLocations
+// TODO: getLocationSegments
+// TODO: getFileRevisions
+// TODO: lock
+// TODO: unlock
+// TODO: getLock
+
 jobject
 RemoteSession::getLocks(jstring jpath, jobject jdepth)
 {
@@ -484,22 +539,10 @@ RemoteSession::getLocks(jstring jpath, jobject jdepth)
   return CreateJ::LockMap(locks, subPool.getPool());
 }
 
-jobject
-RemoteSession::checkPath(jstring jpath, jlong jrevision)
-{
-  JNIStringHolder path(jpath);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
-
-  SVN::Pool subPool(pool);
-  svn_node_kind_t kind;
-  SVN_JNI_ERR(svn_ra_check_path(m_session, path,
-                                svn_revnum_t(jrevision),
-                                &kind, subPool.getPool()),
-              NULL);
-
-  return EnumMapper::mapNodeKind(kind);
-}
+// TODO: replayRange
+// TODO: replay
+// TODO: getDeletedRevision
+// TODO: getInheritedProperties
 
 jboolean
 RemoteSession::hasCapability(jstring jcapability)
