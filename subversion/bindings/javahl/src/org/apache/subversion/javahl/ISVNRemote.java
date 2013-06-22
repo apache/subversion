@@ -26,8 +26,10 @@ package org.apache.subversion.javahl;
 import org.apache.subversion.javahl.types.*;
 import org.apache.subversion.javahl.callback.*;
 
+import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
+import java.io.OutputStream;
 
 /**
  * Encapsulates an RA session object and related operations.
@@ -161,12 +163,155 @@ public interface ISVNRemote
     ISVNEditor getCommitEditor() throws ClientException;
 
     /**
+     * Fetch the contents and properties of file <code>path</code> at
+     * <code>revision</code>.  <code>revision</code> may be
+     * {@link org.apache.subversion.javahl.types.Revision#SVN_INVALID_REVNUM}
+     * indicating that the HEAD revision should be
+     * used. <code>path</code> is interpreted relative to the
+     * session's URL.
+     * <p>
+
+     * If <code>revision</code> is
+     * {@link org.apache.subversion.javahl.types.Revision#SVN_INVALID_REVNUM}.
+     * returns the actual revision that was retrieved; otherwise
+     * returns <code>revision</code>.
+     * <p>
+     * If <code>contents</code> is not <code>null</code>, push the
+     * contents of the file into the stream.
+     * <p>
+     * If <code>properties</code> is not <code>null</code>, set
+     * <code>properties</code> to contain the properties of the file. This
+     * means <em>all</em> properties: not just ones controlled by the
+     * user and stored in the repository, but immutable ones generated
+     * by the SCM system itself (e.g. 'wcprops', 'entryprops',
+     * etc.). Any existing contents of the <code>properties</code> map
+     * will be discarded by calling {@link java.util.Map#clear()}, if the
+     * map implementation supports that operation.
+     * <p>
+     * The implementation of <code>contents</code> may not perform any
+     * ISVNRemote operations using this session.
+     * @return The revision of the file that was retreived.
+     * @throws ClientException
+     */
+    long getFile(long revision, String path,
+                 OutputStream contents,
+                 Map<String, byte[]> properties)
+            throws ClientException;
+
+    /**
+     * Fetch the contents and properties of directory <code>path</code>
+     * at <code>revision</code>.  <code>revision</code> may be
+     * {@link org.apache.subversion.javahl.types.Revision#SVN_INVALID_REVNUM},
+     * indicating that the HEAD revision should be
+     * used. <code>path</code> is interpreted relative to the
+     * session's URL.
+     * <p>
+     * If <code>dirents</code> is not <code>null</code>, it will contain
+     * all the entries of the directory. Any existing contente of the
+     * <code>dirents</code> collection will be discarded by calling
+     * {@link java.util.Collection#clear()}, if the collection implementation
+     * supports that operation.
+     * <p>
+     * <code>direntFields</code> controls which portions of the DirEntry
+     * objects are filled in. To have them completely filled in, just pass
+     * DirEntry.Fields.all, othewise pass a bitwise OR of any of the
+     * DirEntry.Fields flags you would like to have.
+     * <p>
+     * If <code>properties</code> is not <code>null</code>, set
+     * <code>properties</code> to contain the properties of the directory.
+     * This means <em>all</em> properties: not just ones controlled by the
+     * user and stored in the repository, but immutable ones generated
+     * by the SCM system itself (e.g. 'wcprops', 'entryprops',
+     * etc.). Any existing contents of the <code>properties</code> map
+     * will be discarded by calling {@link java.util.Map#clear()}, if the
+     * map implementation supports that operation.
+     * <p>
+     * The implementation of <code>dirents</code> may not perform any
+     * ISVNRemote operations using this session.
+     * @return The revision of the directory that was retreived.
+     * @throws IllegalArgumentException if <code>direntFields</code>
+     *         is less than or equal to 0.
+     * @throws ClientException
+     */
+    long getDirectory(long revision, String path,
+                      int direntFields, Collection<DirEntry> dirents,
+                      Map<String, byte[]> properties)
+            throws ClientException;
+
+    // TODO: getMergeinfo
+    // TODO: doUpdate
+    // TODO: doSwitch
+
+    /**
+     * Ask for a description of the status of a working copy with
+     * respect to <code>revision</code> of the session's repository,
+     * or the HEAD revision if <code>revision</code> is
+     * {@link org.apache.subversion.javahl.types.Revision#SVN_INVALID_REVNUM}.
+     * <p>
+     * The client begins by providing a <code>statusEditor</code> to
+     * the remote session; this editor must contain knowledge of where
+     * the change will begin in the working copy.
+     * <p>
+     * In return, the client receives an {@link ISVNReporter}
+     * instance, which it uses to describe its working copy by making
+     * calls to its methods.
+     * <p>
+     * When finished, the client calls {@link ISVNReporter#finishReport}.
+     * This results in a complete drive of <code>statusEditor</code>,
+     * ending with {@link ISVNEditor#complete()}, to report,
+     * essentially, what would be modified in the working copy were
+     * the client to perform an update.  <code>statusTarget</code> is
+     * an optional single path component that restricts the scope of
+     * the status report to an entry in the directory represented by
+     * the session's URL, or empty if the entire directory is meant to
+     * be examined.
+     * <p>
+     * Get status as deeply as <code>depth</code> indicates.  If
+     * <code>depth</code> is
+     * {@link org.apache.subversion.javahl.types.Depth#unknown},
+     * get the status down to the ambient depth of the working
+     * copy. If <code>depth</code> is deeper than the working copy,
+     * include changes that would be needed to populate the working
+     * copy to that depth.
+     * <p>
+     * The caller may not perform any operations using this session
+     * before finishing the report, and may not perform any operations
+     * using this session from within the editing operations of
+     * <code>statusEditor</code>.
+     * <p>
+     * <em>Note</em>: The reporter provided by this function does
+     * <em>not</em> supply copy-from information to the editor
+     * methods.
+     * <p>
+     * <em>Note</em>: In order to prevent pre-1.5 servers from doing
+     * more work than needed, and sending too much data back, a
+     * pre-1.5 'recurse' directive may be sent to the server, based on
+     * <code>depth</code>.
+     * @throws ClientException
+     */
+    ISVNReporter doStatus(String statusTarget,
+                          long revision, Depth depth,
+                          ISVNEditor statusEditor)
+            throws ClientException;
+
+    // TODO: doDiff
+    // TODO: getLog
+
+    /**
      * Return the kind of the node in path at revision.
      * @param path A path relative to the sessionn URL
      * @throws ClientException
      */
     NodeKind checkPath(String path, long revision)
             throws ClientException;
+
+    // TODO: stat
+    // TODO: getLocations
+    // TODO: getLocationSegments
+    // TODO: getFileRevisions
+    // TODO: lock
+    // TODO: unlock
+    // TODO: getLock
 
     /**
      * Return a dictionary containing all locks on or below the given path.
@@ -179,6 +324,11 @@ public interface ISVNRemote
      */
     Map<String, Lock> getLocks(String path, Depth depth)
             throws ClientException;
+
+    // TODO: replayRange
+    // TODO: replay
+    // TODO: getDeletedRevision
+    // TODO: getInheritedProperties
 
     /**
      * Check if the server associated with this session has
