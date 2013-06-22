@@ -190,29 +190,27 @@ Java_org_apache_subversion_javahl_remote_RemoteSession_getRevisionProperty(
 
 JNIEXPORT jlong JNICALL
 Java_org_apache_subversion_javahl_remote_RemoteSession_nativeGetFile(
-    JNIEnv *env, jobject jthis, jlong revision, jstring jpath,
+    JNIEnv *env, jobject jthis, jlong jrevision, jstring jpath,
     jobject jcontents, jobject jproperties)
 {
   JNIEntry(SVNReposAccess, nativeGetFile);
   RemoteSession *ras = RemoteSession::getCppObject(jthis);
   CPPADDR_NULL_PTR(ras, SVN_INVALID_REVNUM);
 
-  //return ras->getFile(jrevision, jpath, jcontents, jproperties);
-  return SVN_INVALID_REVNUM;    // FIXME: TODO:
+  return ras->getFile(jrevision, jpath, jcontents, jproperties);
 }
 
 JNIEXPORT jlong JNICALL
 Java_org_apache_subversion_javahl_remote_RemoteSession_nativeGetDirectory(
-    JNIEnv *env, jobject jthis, jlong revision, jstring jpath,
-    jint dirent_fields, jobject jdirents, jobject jproperties)
+    JNIEnv *env, jobject jthis, jlong jrevision, jstring jpath,
+    jint jdirent_fields, jobject jdirents, jobject jproperties)
 {
   JNIEntry(SVNReposAccess, nativeGetDirectory);
   RemoteSession *ras = RemoteSession::getCppObject(jthis);
   CPPADDR_NULL_PTR(ras, SVN_INVALID_REVNUM);
 
-  //return ras->getDirectory(jrevision, jpath,
-  //                         jdirent_fields, jdirents, jproperties);
-  return SVN_INVALID_REVNUM;    // FIXME: TODO:
+  return ras->getDirectory(jrevision, jpath,
+                           jdirent_fields, jdirents, jproperties);
 }
 
 // TODO: getMergeinfo
@@ -221,15 +219,14 @@ Java_org_apache_subversion_javahl_remote_RemoteSession_nativeGetDirectory(
 
 JNIEXPORT jobject JNICALL
 Java_org_apache_subversion_javahl_remote_RemoteSession_doStatus(
-    JNIEnv *env, jobject jthis, jstring jstatusTarget,
-    jlong jrevision, jobject jdepth, jobject jstatusEditor)
+    JNIEnv *env, jobject jthis, jstring jstatus_target,
+    jlong jrevision, jobject jdepth, jobject jstatus_editor)
 {
   JNIEntry(SVNReposAccess, doStatus);
   RemoteSession *ras = RemoteSession::getCppObject(jthis);
   CPPADDR_NULL_PTR(ras, NULL);
 
-  //return ras->doStatus(jstatusTarget, jrevision, jdepth, jstatusEditor);
-  return NULL;                  // FIXME: TODO:
+  return ras->doStatus(jstatus_target, jrevision, jdepth, jstatus_editor);
 }
 
 // TODO: doDiff

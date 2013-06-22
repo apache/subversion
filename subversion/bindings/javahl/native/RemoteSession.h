@@ -71,8 +71,31 @@ class RemoteSession : public SVNBase
                                 jbyteArray jvalue);
     jobject getRevisionProperties(jlong jrevision);
     jbyteArray getRevisionProperty(jlong jrevision, jstring jname);
-    jobject getLocks(jstring jpath, jobject jdepth);
+    jlong getFile(jlong jrevision, jstring jpath,
+                  jobject jcontents, jobject jproperties);
+    jlong getDirectory(jlong jrevision, jstring jpath, jint jdirent_fields,
+                       jobject jdirents, jobject jproperties);
+    // TODO: getMergeinfo
+    // TODO: doUpdate
+    // TODO: doSwitch
+    jobject doStatus(jstring jstatus_target,
+                     jlong jrevision, jobject jdepth,
+                     jobject jstatus_editor);
+    // TODO: doDiff
+    // TODO: getLog
     jobject checkPath(jstring jpath, jlong jrevision);
+    // TODO: stat
+    // TODO: getLocations
+    // TODO: getLocationSegments
+    // TODO: getFileRevisions
+    // TODO: lock
+    // TODO: unlock
+    // TODO: getLock
+    jobject getLocks(jstring jpath, jobject jdepth);
+    // TODO: replayRange
+    // TODO: replay
+    // TODO: getDeletedRevision
+    // TODO: getInheritedProperties
     jboolean hasCapability(jstring capability);
 
   private:
