@@ -50,24 +50,6 @@ Candidate changes:
    Votes:
      +0: rhuijben (Needs more work. Breaks JavaHL)
 
- * r1489339
-   Return 501/412 rather than 401 for lock errors.
-   Justification:
-     Old values are not valid HTTP.
-   Notes:
-     Usually the authorization layer produces an error earlier. This patch
-     should only change the behavior for repositories without authorization
-     requirements for these operations.
-   Votes:
-     +1: philip, rhuijben
-
- * r1490684
-   Return 500 rather than 409 when commit fails and it is not a conflict.
-   Justification:
-     Not a client failure so 4xx is wrong.
-   Votes:
-     +1: philip, rhuijben
-
  * r1491432
    Rename 'automatic merge' to 'complete merge' in the merge help text.
    Justification:
@@ -82,14 +64,6 @@ Candidate changes:
      +1: stsp
      +1: danielsh (no opinion on the name of the feature; just confirming this
                    patch does what it claims to)
-
- * r1491707
-   Add version header to svnpubsub server.
-   Justification:
-     Make Daniel happy; potentially allow proxies to filter on this or some
-     hypothetical use case.
-   Votes:
-     +1: danielsh, breser
 
  * r1491739, r1491755, r1491762, r1492152, r1492670, r1492682
    Improve interactive conflict resolution menu.
@@ -195,14 +169,6 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1495850
-   Use the correct baton in a callback API.
-   Justification:
-     Causes a crash in TSVN reported by multiple users.
-     See: http://svn.haxx.se/dev/archive-2013-06/0543.shtml
-   Votes:
-     +1: lgo, danielsh
-
 Veto-blocked changes:
 =====================
 
@@ -221,3 +187,38 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1489339
+   Return 501/412 rather than 401 for lock errors.
+   Justification:
+     Old values are not valid HTTP.
+   Notes:
+     Usually the authorization layer produces an error earlier. This patch
+     should only change the behavior for repositories without authorization
+     requirements for these operations.
+   Votes:
+     +1: philip, rhuijben, stefan2
+
+ * r1490684
+   Return 500 rather than 409 when commit fails and it is not a conflict.
+   Justification:
+     Not a client failure so 4xx is wrong.
+   Votes:
+     +1: philip, rhuijben, stefan2
+
+ * r1491707
+   Add version header to svnpubsub server.
+   Justification:
+     Make Daniel happy; potentially allow proxies to filter on this or some
+     hypothetical use case.
+   Votes:
+     +1: danielsh, breser, stefan2
+
+ * r1495850
+   Use the correct baton in a callback API.
+   Justification:
+     Causes a crash in TSVN reported by multiple users.
+     See: http://svn.haxx.se/dev/archive-2013-06/0543.shtml
+   Votes:
+     +1: lgo, danielsh, stefan2
+
