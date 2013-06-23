@@ -195,6 +195,14 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1495850
+   Use the correct baton in a callback API.
+   Justification:
+     Causes a crash in TSVN reported by multiple users.
+     See: http://svn.haxx.se/dev/archive-2013-06/0543.shtml
+   Votes:
+     +1: lgo
+
 Veto-blocked changes:
 =====================
 
