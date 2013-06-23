@@ -159,24 +159,19 @@ Candidate changes:
    Votes:
      +1: stefan2, rhuijben
 
- * r1495063
-   Fix crash in FSFS caching code on strict-alignment architectures.
+ * ^/subversion/branches/1.8.x-r1495063
+   r1495806
+   Fix crash in FSFS DAG caching code on strict-alignment architectures.
+   Also, improve hash hash effectiveness and efficiency.
    Justification:
      FSFS shouldn't crash.
      See http://svn.haxx.se/dev/archive-2013-06/0432.shtml
-   Votes:
-     +1: stsp, stefan2, rhuijben
-     -0: ivan (need more time for discussion before backporting)
-
- * r1495204
-   Follow-up to r1495063, improving the hash effectiveness.
-   Justification:
-     Without a runtime overhead, this gives us a better distribution
-     over the hash buckets.
    Notes:
-     Depends on r1495063
+     It took a while to figure out the "right way" to fix the hash function.
+     The branch takes all the individual back-and-forth changes and combines
+     them into one small patch.
    Votes:
-     +1: stefan2, stsp
+     +1: stefan2
 
  * r1495329
    Use relative symlink for svnmucc in svn-tools.
