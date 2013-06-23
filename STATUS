@@ -95,7 +95,7 @@ Candidate changes:
    Justification:
      Simple fixes to improve performance.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1491756
    Fix issue #4364: Correctly remove the stale entries from the lock table
@@ -160,14 +160,14 @@ Candidate changes:
    Justification:
      (err->apr_err == APR_SUCCESS) leaks to API consumers.
    Votes:
-     +1: danielsh
+     +1: danielsh, stefan2
 
  * r1495432
    Allow deleting non-regular properties from nodes.
    Justification:
      No way to remove them from historical files that have them.
    Votes:
-     +1: danielsh
+     +1: danielsh, stefan2
 
 Veto-blocked changes:
 =====================
