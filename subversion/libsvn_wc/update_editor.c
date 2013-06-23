@@ -2928,7 +2928,7 @@ close_directory(void *dir_baton,
                                              eb->conflict_func,
                                              eb->conflict_baton,
                                              eb->cancel_func,
-                                             eb->conflict_baton,
+                                             eb->cancel_baton,
                                              scratch_pool));
 
   /* Notify of any prop changes on this directory -- but do nothing if
