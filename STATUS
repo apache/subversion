@@ -148,8 +148,7 @@ Candidate changes:
      r1494913 fixes FSFS
      r1494967 fixes BDB
    Votes:
-     +1: stefan2
-     +1: danielsh (r1494913 only)
+     +1: stefan2, danielsh
 
  * r1494966
    Eliminate an extra RA layer roundtrip in 'svn log' on repository roots.
@@ -201,7 +200,7 @@ Candidate changes:
      Causes a crash in TSVN reported by multiple users.
      See: http://svn.haxx.se/dev/archive-2013-06/0543.shtml
    Votes:
-     +1: lgo
+     +1: lgo, danielsh
 
 Veto-blocked changes:
 =====================
