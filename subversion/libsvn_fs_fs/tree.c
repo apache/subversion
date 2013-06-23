@@ -151,7 +151,7 @@ typedef struct cache_entry_t
 {
   /* hash value derived from PATH, REVISION.
      Used to short-circuit failed lookups. */
-  long int hash_value;
+  apr_uint32_t hash_value;
 
   /* revision to which the NODE belongs */
   svn_revnum_t revision;
@@ -340,7 +340,10 @@ cache_lookup( fs_fs_dag_cache_t *cache
 {
   apr_size_t i, bucket_index;
   apr_size_t path_len = strlen(path);
-  long int hash_value = revision;
+  apr_uint32_t hash_value = (apr_uint32_t)revision;
+
+  /* "randomizing" / distributing factor used in our hash function */
+  const apr_uint32_t factor = 0xd1f3da69;
 
   /* optimistic lookup: hit the same bucket again? */
   cache_entry_t *result = &cache->buckets[cache->last_hit];
@@ -353,11 +356,25 @@ cache_lookup( fs_fs_dag_cache_t *cache
 
   /* need to do a full lookup.  Calculate the hash value
      (HASH_VALUE has been initialized to REVISION). */
-  for (i = 0; i + 4 <= path_len; i += 4)
-    hash_value = hash_value * 0xd1f3da69 + *(const apr_uint32_t*)(path + i);
+  i = 0;
+#if SVN_UNALIGNED_ACCESS_IS_OK
+  /* We relax the dependency chain between iterations by processing
+     two chunks from the input per hash_value self-multiplication.
+     The HASH_VALUE update latency is now 1 MUL latency + 1 ADD latency
+     per 2 chunks instead of 1 chunk.
+   */
+  for (; i + 8 <= path_len; i += 8)
+    hash_value = hash_value * factor * factor
+               + (  *(const apr_uint32_t*)(path + i) * factor
+                  + *(const apr_uint32_t*)(path + i + 4));
+#endif
 
   for (; i < path_len; ++i)
-    hash_value = hash_value * 33 + path[i];
+    /* Help GCC to minimize the HASH_VALUE update latency by splitting the
+       MUL 33 of the naive implementation: h = h * 33 + path[i].  This
+       shortens the dependency chain from 1 shift + 2 ADDs to 1 shift + 1 ADD.
+     */
+    hash_value = hash_value * 32 + (hash_value + (unsigned char)path[i]);
 
   bucket_index = hash_value + (hash_value >> 16);
   bucket_index = (bucket_index + (bucket_index >> 8)) % BUCKET_COUNT;
