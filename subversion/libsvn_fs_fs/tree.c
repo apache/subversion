@@ -151,7 +151,7 @@ typedef struct cache_entry_t
 {
   /* hash value derived from PATH, REVISION.
      Used to short-circuit failed lookups. */
-  long int hash_value;
+  apr_uint32_t hash_value;
 
   /* revision to which the NODE belongs */
   svn_revnum_t revision;
@@ -340,10 +340,10 @@ cache_lookup( fs_fs_dag_cache_t *cache
 {
   apr_size_t i, bucket_index;
   apr_size_t path_len = strlen(path);
-  long int hash_value = revision;
+  apr_uint32_t hash_value = (apr_uint32_t)revision;
 
   /* "randomizing" / distributing factor used in our hash function */
-  enum { factor = 0xd1f3da69 };
+  const apr_uint32_t factor = 0xd1f3da69;
 
   /* optimistic lookup: hit the same bucket again? */
   cache_entry_t *result = &cache->buckets[cache->last_hit];
@@ -365,23 +365,8 @@ cache_lookup( fs_fs_dag_cache_t *cache
    */
   for (; i + 8 <= path_len; i += 8)
     hash_value = hash_value * factor * factor
-               + (  (long int)*(const apr_uint32_t*)(path + i) * factor
-                  + (long int)*(const apr_uint32_t*)(path + i + 4));
-#else
-  for (; i + 4 <= path_len; i += 4)
-    {
-      /* read the data in BIG-ENDIAN order
-         (it's just simpler code and most of the machines in question are
-          actually big endian) */
-      apr_uint32_t val = 0;
-      int j;
-
-      /* most compilers will unroll this loop: */
-      for (j = 0; j < 4; j++)
-        val = (val << 8) + (unsigned char)path[i + j];
-
-      hash_value = hash_value * factor + val;
-    }
+               + (  *(const apr_uint32_t*)(path + i) * factor
+                  + *(const apr_uint32_t*)(path + i + 4));
 #endif
 
   for (; i < path_len; ++i)
