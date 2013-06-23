@@ -165,6 +165,7 @@ Candidate changes:
    Justification:
      FSFS shouldn't crash.
      See http://svn.haxx.se/dev/archive-2013-06/0432.shtml
+   Branch: 1.8.x-r1495063
    Notes:
      It took a while to figure out the "right way" to fix the hash function.
      The branch takes all the individual back-and-forth changes and combines
