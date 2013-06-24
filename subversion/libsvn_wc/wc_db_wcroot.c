@@ -757,6 +757,13 @@ try_symlink_as_dir:
     {
       const char *dir_relpath;
 
+      if (symlink_wcroot_abspath)
+        {
+          /* The WCROOT was found through a symlink pointing at the root of
+           * the WC. Cache the WCROOT under the symlink's path. */
+          local_dir_abspath = symlink_wcroot_abspath;
+        }
+
       /* The subdirectory's relpath is easily computed relative to the
          wcroot that we just found.  */
       dir_relpath = compute_relpath(*wcroot, local_dir_abspath, NULL);
@@ -836,15 +843,6 @@ try_symlink_as_dir:
   svn_hash_sets(db->dir_data,
                 apr_pstrdup(db->state_pool, local_dir_abspath),
                 *wcroot);
-
-  /* If the WCROOT was found through a symlink pointing at the root of
-   * the WC, its cache entry is now keyed on the link's target path.
-   * Cache the WCROOT under the symlink's path as well. Otherwise, future
-   * wcroot queries for the symlink path would construct a fresh wcroot. */
-  if (symlink_wcroot_abspath)
-    svn_hash_sets(db->dir_data,
-                  apr_pstrdup(db->state_pool, symlink_wcroot_abspath),
-                  *wcroot);
 
   /* Did we traverse up to parent directories?  */
   if (!moved_upwards)
