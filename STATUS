@@ -166,6 +166,14 @@ Candidate changes:
    Votes:
      +1: brane
 
+* r1496110
+   Prevent a segfault in svn_client_log5.
+   Justification:
+     No command line replication yet, but several reports of segfaults
+    with TSVN, see http://svn.haxx.se/dev/archive-2013-06/0522.shtml.
+   Votes:
+     +1: pburba
+
 Veto-blocked changes:
 =====================
 
