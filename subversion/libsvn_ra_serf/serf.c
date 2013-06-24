@@ -482,8 +482,8 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   err = svn_ra_serf__exchange_capabilities(serf_sess, corrected_url, pool);
 
-  /* serf should produce a usable error code instead of EGENERAL */
-  if (err->apr_err == APR_EGENERAL)
+  /* serf should produce a usable error code instead of APR_EGENERAL */
+  if (err && err->apr_err == APR_EGENERAL)
     err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, err,
                             _("Connection to '%s' failed"), session_URL);
 
