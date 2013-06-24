@@ -156,6 +156,13 @@ Candidate changes:
    Votes:
      +1: danielsh, stefan2
 
+ * r1496007
+   Fix issue #4383, "Subversion 1.8.0 crash when WC path is symlink"
+   Justification:
+     Crash, regression from 1.7.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
