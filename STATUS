@@ -175,17 +175,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1489339
-   Return 501/412 rather than 401 for lock errors.
-   Justification:
-     Old values are not valid HTTP.
-   Notes:
-     Usually the authorization layer produces an error earlier. This patch
-     should only change the behavior for repositories without authorization
-     requirements for these operations.
-   Votes:
-     +1: philip, rhuijben, stefan2
-
  * r1490684
    Return 500 rather than 409 when commit fails and it is not a conflict.
    Justification:
