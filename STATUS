@@ -175,14 +175,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1491707
-   Add version header to svnpubsub server.
-   Justification:
-     Make Daniel happy; potentially allow proxies to filter on this or some
-     hypothetical use case.
-   Votes:
-     +1: danielsh, breser, stefan2
-
  * r1495850
    Use the correct baton in a callback API.
    Justification:
