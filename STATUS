@@ -120,7 +120,7 @@ Candidate changes:
      +1: stefan2, rhuijben
 
  * ^/subversion/branches/1.8.x-r1495063
-   r1495806
+   r1495806, r1495985
    Fix crash in FSFS DAG caching code on strict-alignment architectures.
    Also, improve hash hash effectiveness and efficiency.
    Justification:
