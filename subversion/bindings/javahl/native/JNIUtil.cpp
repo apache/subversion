@@ -796,6 +796,31 @@ jobject JNIUtil::createDate(apr_time_t time)
   return ret;
 }
 
+apr_time_t
+JNIUtil::getDate(jobject jdate)
+{
+  JNIEnv *env = getEnv();
+  jclass clazz = env->FindClass("java/util/Date");
+  if (isJavaExceptionThrown())
+    return 0;
+
+  static jmethodID mid = 0;
+  if (mid == 0)
+    {
+      mid = env->GetMethodID(clazz, "getTime", "()J");
+      if (isJavaExceptionThrown())
+        return 0;
+    }
+
+  jlong jmillis = env->CallLongMethod(jdate, mid);
+  if (isJavaExceptionThrown())
+    return 0;
+
+  env->DeleteLocalRef(clazz);
+
+  return jmillis * 1000;
+}
+
 /**
  * Create a Java byte array from an array of characters.
  * @param data      the character array
@@ -871,7 +896,21 @@ void JNIUtil::assembleErrorMessage(svn_error_t *err, int depth,
         buffer.append(svn_strerror(err->apr_err, errbuf, sizeof(errbuf)));
       /* Otherwise, this must be an APR error code. */
       else
-        buffer.append(apr_strerror(err->apr_err, errbuf, sizeof(errbuf)));
+        {
+          /* Messages coming from apr_strerror are in the native
+             encoding, it's a good idea to convert them to UTF-8. */
+          const char* utf8_message;
+          apr_strerror(err->apr_err, errbuf, sizeof(errbuf));
+          svn_error_t* utf8_err = svn_utf_cstring_to_utf8(
+              &utf8_message, errbuf, err->pool);
+          if (utf8_err)
+            {
+              /* Use fuzzy transliteration instead. */
+              svn_error_clear(utf8_err);
+              utf8_message = svn_utf_cstring_from_utf8_fuzzy(errbuf, err->pool);
+            }
+          buffer.append(utf8_message);
+        }
       buffer.append("\n");
     }
   if (err->message)

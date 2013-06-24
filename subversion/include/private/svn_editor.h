@@ -573,9 +573,9 @@ typedef svn_error_t *(*svn_editor_cb_alter_file_t)(
   void *baton,
   const char *relpath,
   svn_revnum_t revision,
-  apr_hash_t *props,
   const svn_checksum_t *checksum,
   svn_stream_t *contents,
+  apr_hash_t *props,
   apr_pool_t *scratch_pool);
 
 /** @see svn_editor_alter_symlink(), svn_editor_t.
@@ -585,8 +585,8 @@ typedef svn_error_t *(*svn_editor_cb_alter_symlink_t)(
   void *baton,
   const char *relpath,
   svn_revnum_t revision,
-  apr_hash_t *props,
   const char *target,
+  apr_hash_t *props,
   apr_pool_t *scratch_pool);
 
 /** @see svn_editor_delete(), svn_editor_t.
@@ -1020,9 +1020,9 @@ svn_error_t *
 svn_editor_alter_file(svn_editor_t *editor,
                       const char *relpath,
                       svn_revnum_t revision,
-                      apr_hash_t *props,
                       const svn_checksum_t *checksum,
-                      svn_stream_t *contents);
+                      svn_stream_t *contents,
+                      apr_hash_t *props);
 
 /** Drive @a editor's #svn_editor_cb_alter_symlink_t callback.
  *
@@ -1047,8 +1047,8 @@ svn_error_t *
 svn_editor_alter_symlink(svn_editor_t *editor,
                          const char *relpath,
                          svn_revnum_t revision,
-                         apr_hash_t *props,
-                         const char *target);
+                         const char *target,
+                         apr_hash_t *props);
 
 /** Drive @a editor's #svn_editor_cb_delete_t callback.
  *

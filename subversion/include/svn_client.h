@@ -2814,6 +2814,11 @@ svn_client_log(const apr_array_header_t *targets,
  * in which case blame information will be generated regardless of the
  * MIME types of the revisions.
  *
+ * @a start may resolve to a revision number greater (younger) than @a end
+ * only if the server is 1.8.0 or greater (supports
+ * #SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE) and the client is 1.9.0 or
+ * newer.
+ *
  * Use @a diff_options to determine how to compare different revisions of the
  * target.
  *
@@ -6457,7 +6462,7 @@ svn_client_open_ra_session2(svn_ra_session_t **session,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
-/** Similar to svn_client_open_ra_session(), but with @ wri_abspath
+/** Similar to svn_client_open_ra_session2(), but with @ wri_abspath
  * always passed as NULL, and with the same pool used as both @a
  * result_pool and @a scratch_pool.
  *

@@ -683,9 +683,9 @@ svn_error_t *
 svn_editor_alter_file(svn_editor_t *editor,
                       const char *relpath,
                       svn_revnum_t revision,
-                      apr_hash_t *props,
                       const svn_checksum_t *checksum,
-                      svn_stream_t *contents)
+                      svn_stream_t *contents,
+                      apr_hash_t *props)
 {
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -705,8 +705,8 @@ svn_editor_alter_file(svn_editor_t *editor,
     {
       START_CALLBACK(editor);
       err = editor->funcs.cb_alter_file(editor->baton,
-                                        relpath, revision, props,
-                                        checksum, contents,
+                                        relpath, revision,
+                                        checksum, contents, props,
                                         editor->scratch_pool);
       END_CALLBACK(editor);
     }
@@ -723,8 +723,8 @@ svn_error_t *
 svn_editor_alter_symlink(svn_editor_t *editor,
                          const char *relpath,
                          svn_revnum_t revision,
-                         apr_hash_t *props,
-                         const char *target)
+                         const char *target,
+                         apr_hash_t *props)
 {
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -740,8 +740,8 @@ svn_editor_alter_symlink(svn_editor_t *editor,
     {
       START_CALLBACK(editor);
       err = editor->funcs.cb_alter_symlink(editor->baton,
-                                           relpath, revision, props,
-                                           target,
+                                           relpath, revision,
+                                           target, props,
                                            editor->scratch_pool);
       END_CALLBACK(editor);
     }

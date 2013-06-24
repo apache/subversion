@@ -33,6 +33,7 @@
 #include "svn_fs.h"
 #include "svn_path.h"
 #include "svn_delta.h"
+#include "svn_hash.h"
 
 #include "svn_test_fs.h"
 
@@ -81,8 +82,8 @@ make_fs_config(const char *fs_type,
                fs_type);
   if (server_minor_version)
     {
-      if (server_minor_version == 6)
-        /* no SVN_FS_CONFIG_PRE_1_7_COMPATIBLE */;
+      if (server_minor_version == 6 || server_minor_version == 7)
+        svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE, "1");
       else if (server_minor_version == 5)
         apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
                      APR_HASH_KEY_STRING, "1");

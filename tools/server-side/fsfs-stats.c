@@ -2169,13 +2169,13 @@ int main(int argc, const char *argv[])
   svn_err = read_revisions(&fs, repo_path, start_revision, memsize, pool);
   printf("\n");
 
-  print_stats(fs, pool);
-
   if (svn_err)
     {
       svn_handle_error2(svn_err, stdout, FALSE, ERROR_TAG);
       return 2;
     }
+
+  print_stats(fs, pool);
 
   return 0;
 }

@@ -544,30 +544,10 @@ static const resolver_option_t tree_conflict_options[] =
 
 static const resolver_option_t tree_conflict_options_update_moved_away[] =
 {
-  { "mc", N_("apply update (recommended)"),
-                                  N_("apply update to the move destination"
+  { "mc", N_("apply update to move destination (recommended)"),
+                                  N_("apply incoming update to move destination"
                                      "  [mine-conflict]"),
                                   svn_wc_conflict_choose_mine_conflict },
-  { "r",  N_("discard update (breaks move)"), N_("discard update, mark "
-                                                 "resolved, the move will "
-                                                 "will become a copy"),
-                                  svn_wc_conflict_choose_merged },
-  { "p",  N_("postpone"),         N_("resolve the conflict later  [postpone]"),
-                                  svn_wc_conflict_choose_postpone },
-  { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
-                                  svn_wc_conflict_choose_postpone },
-  { "h",  N_("help"),             N_("show this help (also '?')"), -1 },
-  { NULL }
-};
-static const resolver_option_t tree_conflict_options_update_edit_moved_away[] =
-{
-  { "mc", N_("apply edit (recommended)"),
-                                  N_("apply incoming edit to move destination"
-                                     "  [mine-conflict]"),
-                                  svn_wc_conflict_choose_mine_conflict },
-  { "r",  N_("discard edit (breaks move)"), N_("discard edit, mark resolved, "
-                                               "the move will become a copy"),
-                                  svn_wc_conflict_choose_merged },
   { "p",  N_("postpone"),         N_("resolve the conflict later  [postpone]"),
                                   svn_wc_conflict_choose_postpone },
   { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
@@ -576,14 +556,12 @@ static const resolver_option_t tree_conflict_options_update_edit_moved_away[] =
   { NULL }
 };
 
-static const resolver_option_t tree_conflict_options_update_deleted[] =
+static const resolver_option_t tree_conflict_options_update_edit_deleted_dir[] =
 {
-  { "mc", N_("keep affected local moves"), N_("keep any local moves affected "
-                                              "by this deletion  [mine-conflict]"),
+  { "mc", N_("prepare for updating moved-away children, if any (recommended)"),
+                                  N_("allow updating moved-away children "
+                                     "with 'svn resolve' [mine-conflict]"),
                                   svn_wc_conflict_choose_mine_conflict },
-  { "r",  N_("mark resolved (breaks moves)"),  N_("mark resolved, any affected "
-                                                  "moves will become copies"),
-                                  svn_wc_conflict_choose_merged },
   { "p",  N_("postpone"),         N_("resolve the conflict later  [postpone]"),
                                   svn_wc_conflict_choose_postpone },
   { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
@@ -591,23 +569,6 @@ static const resolver_option_t tree_conflict_options_update_deleted[] =
   { "h",  N_("help"),             N_("show this help (also '?')"), -1 },
   { NULL }
 };
-
-static const resolver_option_t tree_conflict_options_update_replaced[] =
-{
-  { "mc", N_("keep affected local moves"), N_("keep any moves affected by this "
-                                              "replacement  [mine-conflict]"),
-                                  svn_wc_conflict_choose_mine_conflict },
-  { "r",  N_("mark resolved (breaks moves)"), N_("mark resolved (any affected "
-                                                 "moves will become copies)"),
-                                  svn_wc_conflict_choose_merged },
-  { "p",  N_("postpone"),         N_("resolve the conflict later  [postpone]"),
-                                  svn_wc_conflict_choose_postpone },
-  { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
-                                  svn_wc_conflict_choose_postpone },
-  { "h",  N_("help"),             N_("show this help (also '?')"), -1 },
-  { NULL }
-};
-
 
 /* Return a pointer to the option description in OPTIONS matching the
  * one- or two-character OPTION_CODE.  Return NULL if not found. */
@@ -1094,25 +1055,23 @@ handle_tree_conflict(svn_wc_conflict_result_t *result,
 
       svn_pool_clear(iterpool);
 
+      tc_opts = tree_conflict_options;
+
       if (desc->operation == svn_wc_operation_update ||
           desc->operation == svn_wc_operation_switch)
         {
           if (desc->reason == svn_wc_conflict_reason_moved_away)
             {
-              if (desc->action == svn_wc_conflict_action_edit)
-                tc_opts = tree_conflict_options_update_edit_moved_away;
-              else
-                tc_opts = tree_conflict_options_update_moved_away;
+              tc_opts = tree_conflict_options_update_moved_away;
             }
-          else if (desc->reason == svn_wc_conflict_reason_deleted)
-            tc_opts = tree_conflict_options_update_deleted;
-          else if (desc->reason == svn_wc_conflict_reason_replaced)
-            tc_opts = tree_conflict_options_update_replaced;
-          else
-            tc_opts = tree_conflict_options;
+          else if (desc->reason == svn_wc_conflict_reason_deleted ||
+                   desc->reason == svn_wc_conflict_reason_replaced)
+            {
+              if (desc->action == svn_wc_conflict_action_edit &&
+                  desc->node_kind == svn_node_dir)
+                tc_opts = tree_conflict_options_update_edit_deleted_dir;
+            }
         }
-      else
-        tc_opts = tree_conflict_options;
 
       SVN_ERR(prompt_user(&opt, tc_opts, NULL, b->pb, iterpool));
       if (! opt)

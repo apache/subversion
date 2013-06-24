@@ -48,8 +48,6 @@
 #include "private/svn_subr_private.h"
 #include "private/svn_cmdline_private.h"
 
-#include "../libsvn_fs_fs/fs.h" /* for SVN_FS_FS__MIN_PACKED_FORMAT */
-
 #include "svn_private_config.h"
 
 
@@ -715,6 +713,18 @@ subcommand_create(apr_getopt_t *os, void *baton, apr_pool_t *pool)
         svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE, "1");
       if (! svn_version__at_least(opt_state->compatible_version, 1, 8, 0))
         svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE, "1");
+    }
+
+  if (opt_state->compatible_version
+      && ! svn_version__at_least(opt_state->compatible_version, 1, 1, 0)
+      /* ### TODO: this NULL check hard-codes knowledge of the library's
+                   default fs-type value */
+      && (opt_state->fs_type == NULL
+          || !strcmp(opt_state->fs_type, SVN_FS_TYPE_FSFS)))
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("Repositories compatible with 1.0.x must use "
+                                "--fs-type=bdb"));
     }
 
   SVN_ERR(svn_repos_create(&repos, opt_state->repository_path,
@@ -1781,8 +1791,8 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
           SVN_ERR(svn_cmdline_printf(pool, _("FSFS Shard Size: %d\n"),
                                      fsfs_info->shard_size));
 
-        /* Print packing statistics, if supported by the FS format. */
-        if (fs_format >= SVN_FS_FS__MIN_PACKED_FORMAT && fsfs_info->shard_size)
+        /* Print packing statistics, if enabled on the FS. */
+        if (fsfs_info->shard_size)
           {
             const int shard_size = fsfs_info->shard_size;
             const int shards_packed = fsfs_info->min_unpacked_rev / shard_size;

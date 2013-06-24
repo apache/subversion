@@ -133,7 +133,8 @@ typedef enum svn_cl__longopt_t {
   opt_include_externals,
   opt_show_inherited_props,
   opt_search,
-  opt_search_and
+  opt_search_and,
+  opt_mergeinfo_log
 } svn_cl__longopt_t;
 
 
@@ -379,6 +380,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("use ARG as search pattern (glob syntax)")},
   {"search-and", opt_search_and, 1,
                        N_("combine ARG with the previous search pattern")},
+  {"log", opt_mergeinfo_log, 0,
+                       N_("show revision log message, author and date")},
 
   /* Long-opt Aliases
    *
@@ -1108,7 +1111,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  and the default for TARGET is HEAD for a URL or BASE for a WC path.\n"
      "\n"
      "  The depth can be 'empty' or 'infinity'; the default is 'empty'.\n"),
-    {'r', 'R', opt_depth, opt_show_revs} },
+    {'r', 'R', opt_depth, opt_show_revs, opt_mergeinfo_log} },
 
   { "mkdir", svn_cl__mkdir, {0}, N_
     ("Create a new directory under version control.\n"
@@ -2211,6 +2214,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
             (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                _("'%s' is not a valid --show-revs value"),
                                utf8_opt_arg));
+        break;
+      case opt_mergeinfo_log:
+        opt_state.mergeinfo_log = TRUE;
         break;
       case opt_reintegrate:
         opt_state.reintegrate = TRUE;
