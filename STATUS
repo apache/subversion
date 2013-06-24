@@ -182,7 +182,7 @@ Candidate changes:
      +1: stsp
      +0: rhuijben (looks good)
 
- * r1496132
+ * r1496132, r1496151
    Provide a more detailed error than APR_EGENERAL when a serf connection
    fails.
    Justification:
