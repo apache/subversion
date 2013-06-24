@@ -132,7 +132,7 @@ Candidate changes:
      The branch takes all the individual back-and-forth changes and combines
      them into one small patch.
    Votes:
-     +1: stefan2
+     +1: stefan2, stsp
 
  * r1495329
    Use relative symlink for svnmucc in svn-tools.
