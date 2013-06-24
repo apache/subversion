@@ -1826,6 +1826,7 @@ def recover_old(sbox):
   svntest.main.run_svnadmin("recover", sbox.repo_dir)
 
 
+@SkipUnless(svntest.main.is_fs_type_fsfs)
 def verify_keep_going(sbox):
   "svnadmin verify --keep-going test"
 

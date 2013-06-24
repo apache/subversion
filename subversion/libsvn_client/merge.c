@@ -12031,7 +12031,7 @@ operative_rev_receiver(void *baton,
 /* Wrapper around svn_client__mergeinfo_log. All arguments are as per
    that private API.  The discover_changed_paths, depth, and revprops args to
    svn_client__mergeinfo_log are always TRUE, svn_depth_infinity_t,
-   and NULL respectively.
+   and empty array respectively.
 
    If RECEIVER raises a SVN_ERR_CEASE_INVOCATION error, but still sets
    *REVISION to a valid revnum, then clear the error.  Otherwise return
@@ -12051,18 +12051,22 @@ short_circuit_mergeinfo_log(svn_mergeinfo_catalog_t *target_mergeinfo_cat,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
-  svn_error_t *err = svn_client__mergeinfo_log(finding_merged,
-                                               target_path_or_url,
-                                               target_peg_revision,
-                                               target_mergeinfo_cat,
-                                               source_path_or_url,
-                                               source_peg_revision,
-                                               source_start_revision,
-                                               source_end_revision,
-                                               receiver, revision,
-                                               TRUE, svn_depth_infinity,
-                                               NULL, ctx, result_pool,
-                                               scratch_pool);
+  apr_array_header_t *revprops;
+  svn_error_t *err;
+
+  revprops = apr_array_make(scratch_pool, 0, sizeof(const char *));
+  err = svn_client__mergeinfo_log(finding_merged,
+                                  target_path_or_url,
+                                  target_peg_revision,
+                                  target_mergeinfo_cat,
+                                  source_path_or_url,
+                                  source_peg_revision,
+                                  source_start_revision,
+                                  source_end_revision,
+                                  receiver, revision,
+                                  TRUE, svn_depth_infinity,
+                                  revprops, ctx, result_pool,
+                                  scratch_pool);
 
   if (err)
     {
@@ -12304,9 +12308,13 @@ find_automatic_merge(svn_client__pathrev_t **base_p,
             &s_t->target->loc, SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
             s_t->target_ra_session, ctx, scratch_pool));
 
-  SVN_ERR(svn_client__get_youngest_common_ancestor(
-            &s_t->yca, s_t->source, &s_t->target->loc, s_t->source_ra_session,
-            ctx, result_pool, result_pool));
+  SVN_ERR(svn_client__calc_youngest_common_ancestor(
+            &s_t->yca, s_t->source, s_t->source_branch.history,
+            s_t->source_branch.has_r0_history,
+            &s_t->target->loc, s_t->target_branch.history,
+            s_t->target_branch.has_r0_history,
+            result_pool, scratch_pool));
+
   if (! s_t->yca)
     return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                              _("'%s@%ld' must be ancestrally related to "

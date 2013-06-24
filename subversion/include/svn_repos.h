@@ -253,7 +253,7 @@ typedef enum svn_repos_notify_action_t
   /** The structure of a revision is being verified.  @since New in 1.8. */
   svn_repos_notify_verify_rev_structure,
 
-  /** A revision is found with corruption/errors. @since New in 1.8. */
+  /** A revision is found with corruption/errors. @since New in 1.9. */
   svn_repos_notify_failure
 
 } svn_repos_notify_action_t;

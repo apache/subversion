@@ -55,6 +55,9 @@ class CreateJ
   Lock(const svn_lock_t *lock);
 
   static jobject
+  LockMap(const apr_hash_t *locks, apr_pool_t *pool);
+
+  static jobject
   ChangedPath(const char *path, svn_log_changed_path2_t *log_item);
 
   static jobject

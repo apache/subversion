@@ -1461,6 +1461,12 @@ delete_revprops_shard(const char *shard_path,
                       apr_pool_t *scratch_pool);
 
 /* In the filesystem FS, pack all revprop shards up to min_unpacked_rev.
+ * 
+ * NOTE: Keep the old non-packed shards around until after the format bump.
+ * Otherwise, re-running upgrade will drop the packed revprop shard but
+ * have no unpacked data anymore.  Call upgrade_cleanup_pack_revprops after
+ * the bump.
+ * 
  * Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
@@ -1501,6 +1507,29 @@ upgrade_pack_revprops(svn_fs_t *fs,
       svn_pool_clear(iterpool);
     }
 
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* In the filesystem FS, remove all non-packed revprop shards up to
+ * min_unpacked_rev.  Use SCRATCH_POOL for temporary allocations.
+ * See upgrade_pack_revprops for more info.
+ */
+static svn_error_t *
+upgrade_cleanup_pack_revprops(svn_fs_t *fs,
+                              apr_pool_t *scratch_pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  const char *revprops_shard_path;
+  apr_int64_t shard;
+  apr_int64_t first_unpacked_shard
+    =  ffd->min_unpacked_rev / ffd->max_files_per_dir;
+
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  const char *revsprops_dir = svn_dirent_join(fs->path, PATH_REVPROPS_DIR,
+                                              scratch_pool);
+  
   /* delete the non-packed revprops shards afterwards */
   for (shard = 0; shard < first_unpacked_shard; ++shard)
     {
@@ -1525,6 +1554,7 @@ upgrade_body(void *baton, apr_pool_t *pool)
   int format, max_files_per_dir;
   const char *format_path = path_format(fs, pool);
   svn_node_kind_t kind;
+  svn_boolean_t needs_revprop_shard_cleanup = FALSE;
 
   /* Read the FS format number and max-files-per-dir setting. */
   SVN_ERR(read_format(&format, &max_files_per_dir, format_path, pool));
@@ -1576,15 +1606,28 @@ upgrade_body(void *baton, apr_pool_t *pool)
   if (format < SVN_FS_FS__MIN_PACKED_FORMAT)
     SVN_ERR(svn_io_file_create(path_min_unpacked_rev(fs, pool), "0\n", pool));
 
-  /* If the file system supports revision packing but not revprop packing,
-     pack the revprops up to the point that revision data has been packed. */
+  /* If the file system supports revision packing but not revprop packing
+     *and* the FS has been sharded, pack the revprops up to the point that
+     revision data has been packed.  However, keep the non-packed revprop
+     files around until after the format bump */
   if (   format >= SVN_FS_FS__MIN_PACKED_FORMAT
-      && format < SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
-    SVN_ERR(upgrade_pack_revprops(fs, pool));
+      && format < SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT
+      && max_files_per_dir > 0)
+    {
+      needs_revprop_shard_cleanup = TRUE;
+      SVN_ERR(upgrade_pack_revprops(fs, pool));
+    }
 
   /* Bump the format file. */
-  return write_format(format_path, SVN_FS_FS__FORMAT_NUMBER, max_files_per_dir,
-                      TRUE, pool);
+  SVN_ERR(write_format(format_path, SVN_FS_FS__FORMAT_NUMBER,
+                       max_files_per_dir, TRUE, pool));
+
+  /* Now, it is safe to remove the redundant revprop files. */
+  if (needs_revprop_shard_cleanup)
+    SVN_ERR(upgrade_cleanup_pack_revprops(fs, pool));
+
+  /* Done */
+  return SVN_NO_ERROR;
 }
 
 
@@ -3247,11 +3290,13 @@ ensure_revprop_timeout(svn_fs_t *fs)
 static void
 log_revprop_cache_init_warning(svn_fs_t *fs,
                                svn_error_t *underlying_err,
-                               const char *message)
+                               const char *message,
+                               apr_pool_t *pool)
 {
-  svn_error_t *err = svn_error_createf(SVN_ERR_FS_REVPROP_CACHE_INIT_FAILURE,
-                                       underlying_err,
-                                       message, fs->path);
+  svn_error_t *err = svn_error_createf(
+                       SVN_ERR_FS_REVPROP_CACHE_INIT_FAILURE,
+                       underlying_err, message,
+                       svn_dirent_local_style(fs->path, pool));
 
   if (fs->warning)
     (fs->warning)(fs->warning_baton, err);
@@ -3280,7 +3325,8 @@ has_revprop_cache(svn_fs_t *fs, apr_pool_t *pool)
       ffd->revprop_cache = NULL;
       log_revprop_cache_init_warning(fs, NULL,
                                      "Revprop caching for '%s' disabled"
-                                     " because it would be inefficient.");
+                                     " because it would be inefficient.",
+                                     pool);
 
       return FALSE;
     }
@@ -3295,7 +3341,8 @@ has_revprop_cache(svn_fs_t *fs, apr_pool_t *pool)
       log_revprop_cache_init_warning(fs, error,
                                      "Revprop caching for '%s' disabled "
                                      "because SHM infrastructure for revprop "
-                                     "caching failed to initialize.");
+                                     "caching failed to initialize.",
+                                     pool);
 
       return FALSE;
     }
@@ -7151,6 +7198,8 @@ choose_delta_base(representation_t **rep,
        * Please note that copied nodes - such as branch directories - will
        * look the same (false positive) while reps shared within the same
        * revision will not be caught (false negative).
+       *
+       * Message-ID: <CA+t0gk1wzitkih3GRCLDvK-bTEm=hgppGb_7xXMtvuXDYPfL+Q@mail.gmail.com>
        */
       if (props)
         {
@@ -10002,6 +10051,9 @@ pack_revprops_shard(const char *pack_file_dir,
   end_rev = (svn_revnum_t) ((shard + 1) * (max_files_per_dir) - 1);
   if (start_rev == 0)
     ++start_rev;
+    /* Special special case: if max_files_per_dir is 1, then at this point
+       start_rev == 1 and end_rev == 0 (!).  Fortunately, everything just
+       works. */
 
   /* initialize the revprop size info */
   sizes = apr_array_make(scratch_pool, max_files_per_dir, sizeof(apr_off_t));

@@ -581,6 +581,9 @@ password-stores =
 
 [miscellany]
 interactive-conflicts = false
+
+[working-copy]
+exclusive-locking = true
 """
 
   # define default server file contents if none provided
@@ -1355,6 +1358,9 @@ def server_enforces_date_syntax():
 
 def server_has_atomic_revprop():
   return options.server_minor_version >= 7
+
+def server_has_reverse_get_file_revs():
+  return options.server_minor_version >= 8
 
 def is_plaintext_password_storage_disabled():
   try:

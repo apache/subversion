@@ -683,13 +683,19 @@ merge_chunks(apr_array_header_t **merged_chunk,
         }
       if (strcmp(answer, "12") == 0)
         {
-          *merged_chunk = chunk1;
+          *merged_chunk = apr_array_make(result_pool,
+                                         chunk1->nelts + chunk2->nelts,
+                                         sizeof(svn_stringbuf_t *));
+          apr_array_cat(*merged_chunk, chunk1);
           apr_array_cat(*merged_chunk, chunk2);
           break;
         }
       if (strcmp(answer, "21") == 0)
         {
-          *merged_chunk = chunk2;
+          *merged_chunk = apr_array_make(result_pool,
+                                         chunk1->nelts + chunk2->nelts,
+                                         sizeof(svn_stringbuf_t *));
+          apr_array_cat(*merged_chunk, chunk2);
           apr_array_cat(*merged_chunk, chunk1);
           break;
         }

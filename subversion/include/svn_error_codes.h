@@ -850,7 +850,7 @@ SVN_ERROR_START
              SVN_ERR_REPOS_CATEGORY_START + 10,
              "Repository upgrade is not supported")
 
-  /** @since New in 1.8. */
+  /** @since New in 1.9. */
   SVN_ERRDEF(SVN_ERR_REPOS_CORRUPTED,
              SVN_ERR_REPOS_CATEGORY_START + 11,
              "Repository is corrupt")
