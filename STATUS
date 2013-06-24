@@ -175,19 +175,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1480080, r1481772, r1481847
-   Instruct clang to not warn about unknown warning flags.
-   Justification:
-     Newer versions of clang accept warning flags that they do not
-     support, but emit warnings about them instead -- making the
-     compile output a mess with a warning emitted for every
-     single C and C++ file in an optimized build (because
-     of the -Wno-clobbered, see above).
-   Votes:
-     +1: brane, danielsh
-     +1: stefan2 (despite a minor  "maintainer"->"maintanier" typo)
-     +0: rhuijben (looks ok, but I can't test or verify via code inspection)
-
  * r1489339
    Return 501/412 rather than 401 for lock errors.
    Justification:

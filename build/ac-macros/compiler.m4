@@ -70,6 +70,9 @@ AC_DEFUN([SVN_CC_MODE_SETUP],
   CFLAGS="$CFLAGS_KEEP"
   AC_SUBST(CMODEFLAGS)
   AC_SUBST(CMAINTAINERFLAGS)
+
+  dnl Tell clang to not accept unknown warning flags
+  SVN_CFLAGS_ADD_IFELSE([-Werror=unknown-warning-option])
 ])
 
 
@@ -86,4 +89,7 @@ AC_DEFUN([SVN_CXX_MODE_SETUP],
   CXXFLAGS="$CXXFLAGS_KEEP"
   AC_SUBST(CXXMODEFLAGS)
   AC_SUBST(CXXMAINTAINERFLAGS)
+
+  dnl Tell clang++ to not accept unknown warning flags
+  SVN_CXXFLAGS_ADD_IFELSE([-Werror=unknown-warning-option])
 ])
