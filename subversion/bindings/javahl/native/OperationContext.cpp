@@ -40,7 +40,7 @@
 OperationContext::OperationContext(SVN::Pool &pool)
   : m_config(NULL),
     m_prompter(NULL),
-    m_cancelOperation(false),
+    m_cancelOperation(0),
     m_pool(&pool),
     m_jctx(NULL)
 {}
@@ -279,19 +279,19 @@ const Prompter& OperationContext::getPrompter() const
 void
 OperationContext::cancelOperation()
 {
-  m_cancelOperation = true;
+  svn_atomic_set(&m_cancelOperation, 1);
 }
 
 void
 OperationContext::resetCancelRequest()
 {
-  m_cancelOperation = false;
+  svn_atomic_set(&m_cancelOperation, 0);
 }
 
 bool
 OperationContext::isCancelledOperation()
 {
-  return m_cancelOperation;
+  return bool(svn_atomic_read(&m_cancelOperation));
 }
 
 svn_error_t *
