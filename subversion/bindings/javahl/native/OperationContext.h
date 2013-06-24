@@ -31,6 +31,7 @@
 
 #include "svn_types.h"
 #include "svn_client.h"
+#include "private/svn_atomic.h"
 
 #include <jni.h>
 #include "Pool.h"
@@ -51,7 +52,7 @@ class OperationContext
   apr_hash_t * m_config;
 
   Prompter *m_prompter;
-  bool m_cancelOperation;
+  svn_atomic_t m_cancelOperation;
 
  protected:
   SVN::Pool *m_pool;
