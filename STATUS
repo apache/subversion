@@ -156,13 +156,6 @@ Candidate changes:
    Votes:
      +1: danielsh, stefan2
 
- * r1496007
-   Fix issue #4383, "Subversion 1.8.0 crash when WC path is symlink"
-   Justification:
-     Crash, regression from 1.7.
-   Votes:
-     +1: stsp
-
  * r1492264
    Fix wrong character encoding handling of generic error messages
    in JavaHL
@@ -188,6 +181,22 @@ Veto-blocked changes:
        does not require votes).
    Votes:
      -1: danielsh (doesn't resolve peg revisions correctly)
+
+ * r1496007
+   Fix issue #4383, "Subversion 1.8.0 crash when WC path is symlink"
+   Justification:
+     Crash, regression from 1.7.
+   Votes:
+     +1: stsp
+     -1: rhuijben (This still caches wcroots for different abspaths than
+                   their ancestor, which makes the wc_db broken for future
+                   usages. This just fixes one symptom, while introducing
+                   bigger issues.
+                   
+                   The real fix is to NEVER return a wcroot that is not of
+                   an ancestor directory. Setting something else in the wcroot
+                   while still storing it for two locations just breaks other
+                   users. The wcroot simply shouldn't be stored for two locations)
 
 Approved changes:
 =================
