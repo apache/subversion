@@ -105,7 +105,7 @@ class SVNClient :public SVNBase
              bool ignoreAncestry,
              bool dryRun, bool recordOnly);
   void merge(const char *path, Revision &pegRevision,
-             std::vector<RevisionRange> *rangesToMerge,
+             std::vector<RevisionRange> &rangesToMerge,
              const char *localPath, bool forceDelete, svn_depth_t depth,
              bool ignoreAncestry,
              bool dryRun, bool recordOnly);

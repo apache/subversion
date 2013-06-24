@@ -849,8 +849,7 @@ Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apach
   if (JNIUtil::isExceptionThrown())
     return;
 
-  std::vector<RevisionRange> *revisionRanges = NULL;
-  std::vector<RevisionRange> realRevisionRanges;
+  std::vector<RevisionRange> revisionRanges;
   // Build the revision range vector from the Java array.
   if (jranges)
     {
@@ -867,9 +866,8 @@ Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apach
           if (JNIUtil::isExceptionThrown())
             return;
 
-          realRevisionRanges.push_back(revisionRange);
+          revisionRanges.push_back(revisionRange);
         }
-      revisionRanges = &realRevisionRanges;
     }
 
   cl->merge(path, pegRevision, revisionRanges, localPath,

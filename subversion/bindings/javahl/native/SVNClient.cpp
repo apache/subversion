@@ -644,7 +644,7 @@ void SVNClient::merge(const char *path1, Revision &revision1,
 }
 
 void SVNClient::merge(const char *path, Revision &pegRevision,
-                      std::vector<RevisionRange> *rangesToMerge,
+                      std::vector<RevisionRange> &rangesToMerge,
                       const char *localPath, bool forceDelete,
                       svn_depth_t depth, bool ignoreAncestry,
                       bool dryRun, bool recordOnly)
@@ -663,8 +663,7 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
         return;
 
     apr_array_header_t *ranges =
-      (!rangesToMerge ? NULL
-       : rev_range_vector_to_apr_array(*rangesToMerge, subPool));
+        rev_range_vector_to_apr_array(rangesToMerge, subPool);
     if (JNIUtil::isExceptionThrown())
         return;
 
