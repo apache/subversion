@@ -1123,7 +1123,7 @@ AC_MSG_NOTICE([    user-defined: $CUSERFLAGS])
 AC_MSG_NOTICE([ maintainer-mode: $CMAINTAINERFLAGS])
 AC_MSG_NOTICE([C++ compiler flags: $CXXFLAGS])
 AC_MSG_NOTICE([      user-defined: $CXXUSERFLAGS])
-AC_MSG_NOTICE([   maintanier-mode: $CXXMAINTAINERFLAGS])
+AC_MSG_NOTICE([   maintainer-mode: $CXXMAINTAINERFLAGS])
 
 AC_ARG_ENABLE(full-version-match,
 AS_HELP_STRING([--disable-full-version-match],
