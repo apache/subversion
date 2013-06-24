@@ -342,8 +342,10 @@ cache_lookup( fs_fs_dag_cache_t *cache
   apr_size_t path_len = strlen(path);
   apr_uint32_t hash_value = (apr_uint32_t)revision;
 
+#if SVN_UNALIGNED_ACCESS_IS_OK
   /* "randomizing" / distributing factor used in our hash function */
   const apr_uint32_t factor = 0xd1f3da69;
+#endif
 
   /* optimistic lookup: hit the same bucket again? */
   cache_entry_t *result = &cache->buckets[cache->last_hit];
