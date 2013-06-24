@@ -190,13 +190,14 @@ Veto-blocked changes:
    Votes:
      -1: danielsh (doesn't resolve peg revisions correctly)
 
- * r1496007
+ * r1496007, r1496111
    Fix issue #4383, "Subversion 1.8.0 crash when WC path is symlink"
    Justification:
      Crash, regression from 1.7.
    Votes:
      +1: stsp
-     -1: rhuijben (This still caches wcroots for different abspaths than
+     -1: rhuijben (without r1496111)
+                  (This still caches wcroots for different abspaths than
                    their ancestor, which makes the wc_db broken for future
                    usages. This just fixes one symptom, while introducing
                    bigger issues.
