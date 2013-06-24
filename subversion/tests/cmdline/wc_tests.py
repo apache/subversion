@@ -200,6 +200,25 @@ def cleanup_below_wc_root(sbox):
   svntest.actions.run_and_verify_svn("Cleanup below wc root", None, [],
                                      "cleanup", sbox.ospath("A"))
 
+@SkipUnless(svntest.main.is_posix_os)
+@Issue(4383)
+def update_through_unversioned_symlink(sbox):
+  """update through unversioned symlink"""
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+  state = svntest.actions.get_virginal_state(wc_dir, 1)
+  symlink = sbox.get_tempname()
+  os.symlink(os.path.abspath(sbox.wc_dir), symlink)
+  expected_output = []
+  expected_disk = []
+  expected_status = []
+  # Subversion 1.8.0 crashes when updating a working copy through a symlink
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        expected_disk, expected_status,
+                                        None, None, None, None, None, 1,
+                                        symlink)
+
 ########################################################################
 # Run the tests
 
@@ -218,6 +237,7 @@ test_list = [ None,
               status_without_wc_db_and_entries,
               status_with_missing_wc_db_and_maybe_valid_entries,
               cleanup_below_wc_root,
+              update_through_unversioned_symlink,
              ]
 
 if __name__ == '__main__':
