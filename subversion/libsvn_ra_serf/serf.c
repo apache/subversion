@@ -392,6 +392,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
   svn_ra_serf__session_t *serf_sess;
   apr_uri_t url;
   const char *client_string = NULL;
+  svn_error_t *err;
 
   if (corrected_url)
     *corrected_url = NULL;
@@ -479,7 +480,14 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   session->priv = serf_sess;
 
-  return svn_ra_serf__exchange_capabilities(serf_sess, corrected_url, pool);
+  err = svn_ra_serf__exchange_capabilities(serf_sess, corrected_url, pool);
+
+  /* serf should produce a usable error code instead of EGENERAL */
+  if (err->apr_err == APR_EGENERAL)
+    err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, err,
+                            _("Connection to '%s' failed"), session_URL);
+
+  return svn_error_trace(err);
 }
 
 /* Implements svn_ra__vtable_t.reparent(). */
