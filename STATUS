@@ -180,6 +180,17 @@ Candidate changes:
      Crash, regression from 1.7.
    Votes:
      +1: stsp
+     +0: rhuijben (looks good)
+
+ * r1496132
+   Provide a more detailed error than APR_EGENERAL when a serf connection
+   fails.
+   Justification:
+     Returning APR_EGENERAL for a very common error breaks all usable
+     error handling in GUI clients. Serf should provide a better
+     error that differentiates between separate problems.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
