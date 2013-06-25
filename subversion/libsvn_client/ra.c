@@ -609,7 +609,7 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
      know the result in advance.  It's fair to assume that the repo root
      has already been cached in ra_session.
 
-     We also assume that all parameters are valid and reivisons properly
+     We also assume that all parameters are valid and revisions properly
      ordered.  Otherwise, the error behavior might differ.
    */
   SVN_ERR(svn_ra_get_path_relative_to_root(ra_session, &rel_path, url, pool));
