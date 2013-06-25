@@ -136,6 +136,7 @@ load_http_auth_types(apr_pool_t *pool, svn_config_t *config,
 /* Default HTTP timeout (in seconds); overridden by the 'http-timeout'
    runtime configuration variable. */
 #define DEFAULT_HTTP_TIMEOUT 600
+#define OPTION_HTTP_CHUNKED_REQUESTS "http-chunked-requests"
 
 static svn_error_t *
 load_config(svn_ra_serf__session_t *session,
@@ -227,7 +228,7 @@ load_config(svn_ra_serf__session_t *session,
 
   SVN_ERR(svn_config_get_bool(config, &session->using_chunked_requests,
                               SVN_CONFIG_SECTION_GLOBAL,
-                              SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS,
+                              OPTION_HTTP_CHUNKED_REQUESTS,
                               TRUE));
 
   if (config)
@@ -290,7 +291,7 @@ load_config(svn_ra_serf__session_t *session,
       SVN_ERR(svn_config_get_bool(
                config, &session->using_chunked_requests,
                server_group,
-               SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS,
+               OPTION_HTTP_CHUNKED_REQUESTS,
                session->using_chunked_requests));
     }
 
