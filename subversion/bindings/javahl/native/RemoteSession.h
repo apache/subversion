@@ -35,6 +35,8 @@
 #include "RemoteSessionContext.h"
 #include "Prompter.h"
 
+class CommitEditor;
+
 /*
  * This class wraps Ra based operations from svn_ra.h
  */
@@ -76,12 +78,12 @@ class RemoteSession : public SVNBase
     jlong getDirectory(jlong jrevision, jstring jpath, jint jdirent_fields,
                        jobject jdirents, jobject jproperties);
     // TODO: getMergeinfo
-    // TODO: doUpdate
-    // TODO: doSwitch
-    jobject doStatus(jstring jstatus_target,
-                     jlong jrevision, jobject jdepth,
-                     jobject jstatus_editor);
-    // TODO: doDiff
+    // TODO: update
+    // TODO: switch
+    jobject status(jstring jstatus_target,
+                   jlong jrevision, jobject jdepth,
+                   jobject jstatus_editor);
+    // TODO: diff
     // TODO: getLog
     jobject checkPath(jstring jpath, jlong jrevision);
     // TODO: stat
@@ -99,6 +101,7 @@ class RemoteSession : public SVNBase
     jboolean hasCapability(jstring capability);
 
   private:
+    friend class CommitEditor;
     RemoteSession(jobject*, int retryAttempts,
                   const char* url, const char* uuid,
                   const char* configDirectory,

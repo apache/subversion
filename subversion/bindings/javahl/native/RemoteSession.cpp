@@ -617,18 +617,18 @@ RemoteSession::getDirectory(jlong jrevision, jstring jpath,
 }
 
 // TODO: getMergeinfo
-// TODO: doUpdate
-// TODO: doSwitch
+// TODO: update
+// TODO: switch
 
 jobject
-RemoteSession::doStatus(jstring jstatus_target,
-                        jlong jrevision, jobject jdepth,
-                        jobject jstatus_editor)
+RemoteSession::status(jstring jstatus_target,
+                      jlong jrevision, jobject jdepth,
+                      jobject jstatus_editor)
 {
   return NULL;
 }
 
-// TODO: doDiff
+// TODO: diff
 // TODO: getLog
 
 jobject
