@@ -119,13 +119,16 @@ public class RemoteFactory
 
     /**
      * Open a persistent session to a repository.
+     * <p>
+     * <b>Note:</b> The URL can point to a subtree of the repository.
+     * <p>
+     * <b>Note:</b> The session object inherits the progress callback,
+     * configuration directory and authentication info.
+     *
      * @param url The initial session root URL.
      * @throws RetryOpenSession If the session URL was redirected
      * @throws SubversionException If an URL redirect cycle was detected
      * @throws ClientException
-     * @note The URL can point to a subtree of the repository.
-     * @note The session object inherits the progress callback,
-     *       configuration directory and authentication info.
      */
     public ISVNRemote openRemoteSession(String url)
             throws ClientException, SubversionException
@@ -136,6 +139,12 @@ public class RemoteFactory
 
     /**
      * Open a persistent session to a repository.
+     * <p>
+     * <b>Note:</b> The URL can point to a subtree of the repository.
+     * <p>
+     * <b>Note:</b> The session object inherits the progress callback,
+     * configuration directory and authentication info.
+     *
      * @param url The initial session root URL.
      * @param retryAttempts The number of times to retry the operation
      *        if the given URL is redirected.
@@ -144,9 +153,6 @@ public class RemoteFactory
      * @throws RetryOpenSession If the session URL was redirected
      * @throws SubversionException If an URL redirect cycle was detected
      * @throws ClientException
-     * @note The URL can point to a subtree of the repository.
-     * @note The session object inherits the progress callback,
-     *       configuration directory and authentication info.
      */
     public ISVNRemote openRemoteSession(String url, int retryAttempts)
             throws ClientException, SubversionException
@@ -160,16 +166,21 @@ public class RemoteFactory
 
     /**
      * Open a persistent session to a repository.
+     * <p>
+     * <b>Note:</b> The URL can point to a subtree of the repository.
+     * <p>
+     * <b>Note:</b> If the UUID does not match the repository,
+     * this function fails.
+     * <p>
+     * <b>Note:</b> The session object inherits the progress callback,
+     * configuration directory and authentication info.
+     *
      * @param url The initial session root URL.
      * @param reposUUID The expected repository UUID; may not be null..
      * @throws IllegalArgumentException If <code>reposUUID</code> is null.
      * @throws RetryOpenSession If the session URL was redirected
      * @throws SubversionException If an URL redirect cycle was detected
      * @throws ClientException
-     * @note The URL can point to a subtree of the repository.
-     * @note If the UUID does not match the repository, this function fails.
-     * @note The session object inherits the progress callback,
-     *       configuration directory and authentication info.
      */
     public ISVNRemote openRemoteSession(String url, String reposUUID)
             throws ClientException, SubversionException
@@ -182,6 +193,15 @@ public class RemoteFactory
 
     /**
      * Open a persistent session to a repository.
+     * <p>
+     * <b>Note:</b> The URL can point to a subtree of the repository.
+     * <p>
+     * <b>Note:</b> If the UUID does not match the repository,
+     * this function fails.
+     * <p>
+     * <b>Note:</b> The session object inherits the progress callback,
+     * configuration directory and authentication info.
+     *
      * @param url The initial session root URL.
      * @param reposUUID The expected repository UUID; may not be null..
      * @param retryAttempts The number of times to retry the operation
@@ -191,10 +211,6 @@ public class RemoteFactory
      * @throws RetryOpenSession If the session URL was redirected
      * @throws SubversionException If an URL redirect cycle was detected
      * @throws ClientException
-     * @note The URL can point to a subtree of the repository.
-     * @note If the UUID does not match the repository, this function fails.
-     * @note The session object inherits the progress callback,
-     *       configuration directory and authentication info.
      */
     public ISVNRemote openRemoteSession(String url, String reposUUID,
                                         int retryAttempts)
