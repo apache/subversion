@@ -354,6 +354,16 @@ svn_wc__get_wcroot(const char **wcroot_abspath,
  * before the 1.7 release.
  */
 
+/*
+ * Convert from svn_wc_conflict_description3_t to
+ * svn_wc_conflict_description2_t.
+ *
+ * Allocate the result in RESULT_POOL.
+ */
+svn_wc_conflict_description2_t *
+svn_wc__cd3_to_cd2(const svn_wc_conflict_description3_t *conflict,
+                   apr_pool_t *result_pool);
+
 
 /*
  * Convert from svn_wc_conflict_description2_t to
