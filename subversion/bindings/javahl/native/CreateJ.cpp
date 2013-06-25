@@ -20,8 +20,8 @@
  * ====================================================================
  * @endcopyright
  *
- * @file CreateJ.cpp
- * @brief Implementation of the class CreateJ.
+ * @file ConflictResolverCallback.cpp
+ * @brief Implementation of the class ConflictResolverCallback.
  */
 
 #include "svn_error.h"
@@ -35,7 +35,6 @@
 #include "../include/org_apache_subversion_javahl_CommitItemStateFlags.h"
 
 #include "svn_path.h"
-#include "svn_props.h"
 #include "private/svn_wc_private.h"
 
 jobject
@@ -151,8 +150,7 @@ CreateJ::ConflictVersion(const svn_wc_conflict_version_t *version)
   static jmethodID ctor = 0;
   if (ctor == 0)
     {
-      ctor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;"
-                                               "Ljava/lang/String;J"
+      ctor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;J"
                                                "Ljava/lang/String;"
                                                "L"JAVA_PACKAGE"/types/NodeKind;"
                                                ")V");
@@ -170,7 +168,7 @@ CreateJ::ConflictVersion(const svn_wc_conflict_version_t *version)
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
-  jobject jversion = env->NewObject(clazz, ctor, jreposURL, NULL,
+  jobject jversion = env->NewObject(clazz, ctor, jreposURL,
                                     (jlong)version->peg_rev, jpathInRepos,
                                     jnodeKind);
   if (JNIUtil::isJavaExceptionThrown())
@@ -208,9 +206,9 @@ CreateJ::Checksum(const svn_checksum_t *checksum)
         POP_AND_RETURN_NULL;
     }
 
-  jbyteArray jdigest
-    = JNIUtil::makeJByteArray(checksum->digest,
-                              static_cast<int>(svn_checksum_size(checksum)));
+  jbyteArray jdigest = JNIUtil::makeJByteArray(
+                            (const signed char *)checksum->digest,
+                            svn_checksum_size(checksum));
   if (JNIUtil::isExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -420,72 +418,6 @@ CreateJ::Lock(const svn_lock_t *lock)
 }
 
 jobject
-CreateJ::LockMap(const apr_hash_t *locks, apr_pool_t *pool)
-{
-  JNIEnv *env = JNIUtil::getEnv();
-
-  if (locks == NULL)
-    return NULL;
-
-  // Create a local frame for our references
-  env->PushLocalFrame(LOCAL_FRAME_SIZE);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  jclass clazz = env->FindClass("java/util/HashMap");
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  static jmethodID init_mid = 0;
-  if (init_mid == 0)
-    {
-      init_mid = env->GetMethodID(clazz, "<init>", "()V");
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-    }
-
-  static jmethodID put_mid = 0;
-  if (put_mid == 0)
-    {
-      put_mid = env->GetMethodID(clazz, "put",
-                                 "(Ljava/lang/Object;Ljava/lang/Object;)"
-                                 "Ljava/lang/Object;");
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-    }
-
-  jobject map = env->NewObject(clazz, init_mid);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  apr_hash_index_t *hi;
-  int i = 0;
-  for (hi = apr_hash_first(pool, (apr_hash_t *) locks); hi;
-        hi = apr_hash_next(hi), ++i)
-    {
-      const char *key = (const char *) svn__apr_hash_index_key(hi);
-      const svn_lock_t *lock = (const svn_lock_t *) svn__apr_hash_index_val(hi);
-
-      jstring jpath = JNIUtil::makeJString(key);
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-
-      jobject jlock = Lock(lock);
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-
-      env->CallObjectMethod(map, put_mid, jpath, jlock);
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-
-      env->DeleteLocalRef(jpath);
-      env->DeleteLocalRef(jlock);
-    }
-
-  return env->PopLocalFrame(map);
-}
-
-jobject
 CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
 {
   JNIEnv *env = JNIUtil::getEnv();
@@ -497,7 +429,7 @@ CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
 
   jclass clazzCP = env->FindClass(JAVA_PACKAGE"/types/ChangePath");
   if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
+    POP_AND_RETURN(SVN_NO_ERROR);
 
   static jmethodID midCP = 0;
   if (midCP == 0)
@@ -510,7 +442,7 @@ CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
                                "L"JAVA_PACKAGE"/types/Tristate;"
                                "L"JAVA_PACKAGE"/types/Tristate;)V");
       if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
+        POP_AND_RETURN(SVN_NO_ERROR);
     }
 
   jstring jpath = JNIUtil::makeJString(path);
@@ -574,7 +506,6 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
                              "ZZZZZL"JAVA_PACKAGE"/types/Lock;"
                              "L"JAVA_PACKAGE"/types/Lock;"
                              "JJL"JAVA_PACKAGE"/types/NodeKind;"
-                             "Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
@@ -594,8 +525,6 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
   jstring jLastCommitAuthor = NULL;
   jobject jLocalLock = NULL;
   jstring jChangelist = NULL;
-  jstring jMovedFromAbspath = NULL;
-  jstring jMovedToAbspath = NULL;
 
   enum svn_wc_status_kind text_status = status->node_status;
 
@@ -675,8 +604,7 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
                                jIsSwitched, jIsFileExternal, jLocalLock,
                                jReposLock,
                                jOODLastCmtRevision, jOODLastCmtDate,
-                               jOODKind, jOODLastCmtAuthor, jChangelist,
-                               jMovedFromAbspath, jMovedToAbspath);
+                               jOODKind, jOODLastCmtAuthor, jChangelist);
 
   return env->PopLocalFrame(ret);
 }
@@ -783,13 +711,7 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
   jlong jhunkModifiedStart = wcNotify->hunk_modified_start;
   jlong jhunkModifiedLength = wcNotify->hunk_modified_length;
   jlong jhunkMatchedLine = wcNotify->hunk_matched_line;
-  jint jhunkFuzz = static_cast<jint>(wcNotify->hunk_fuzz);
-  if (jhunkFuzz != wcNotify->hunk_fuzz)
-    {
-      env->ThrowNew(env->FindClass("java.lang.ArithmeticException"),
-                    "Overflow converting C svn_linenum_t to Java int");
-      POP_AND_RETURN_NULL;
-    }
+  jint jhunkFuzz = wcNotify->hunk_fuzz;
 
   // call the Java method
   jobject jInfo = env->NewObject(clazz, midCT, jPath, jAction,
@@ -888,8 +810,7 @@ CreateJ::CommitItem(svn_client_commit_item3_t *item)
                                         "(Ljava/lang/String;"
                                         "L"JAVA_PACKAGE"/types/NodeKind;"
                                         "ILjava/lang/String;"
-                                        "Ljava/lang/String;J"
-                                        "Ljava/lang/String;)V");
+                                        "Ljava/lang/String;J)V");
       if (JNIUtil::isExceptionThrown())
         POP_AND_RETURN_NULL;
     }
@@ -916,9 +837,6 @@ CreateJ::CommitItem(svn_client_commit_item3_t *item)
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
     jstateFlags |=
       org_apache_subversion_javahl_CommitItemStateFlags_IsCopy;
-  if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN)
-    jstateFlags |=
-      org_apache_subversion_javahl_CommitItemStateFlags_LockToken;
 
   jstring jurl = JNIUtil::makeJString(item->url);
   if (JNIUtil::isJavaExceptionThrown())
@@ -933,7 +851,7 @@ CreateJ::CommitItem(svn_client_commit_item3_t *item)
   // create the Java object
   jobject jitem = env->NewObject(clazz, midConstructor, jpath,
                                  jnodeKind, jstateFlags, jurl,
-                                 jcopyUrl, jcopyRevision, NULL);
+                                 jcopyUrl, jcopyRevision);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -1101,22 +1019,21 @@ jobject CreateJ::PropertyMap(apr_hash_t *prop_hash)
     POP_AND_RETURN_NULL;
 
   apr_hash_index_t *hi;
+  int i = 0;
   for (hi = apr_hash_first(apr_hash_pool_get(prop_hash), prop_hash);
-       hi; hi = apr_hash_next(hi))
+       hi; hi = apr_hash_next(hi), ++i)
     {
       const char *key;
       svn_string_t *val;
 
-      apr_hash_this(hi,
-                    reinterpret_cast<const void **>(&key),
-                    NULL,
-                    reinterpret_cast<void **>(&val));
+      apr_hash_this(hi, (const void **)&key, NULL, (void **)&val);
 
       jstring jpropName = JNIUtil::makeJString(key);
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
-      jbyteArray jpropVal = JNIUtil::makeJByteArray(val);
+      jbyteArray jpropVal = JNIUtil::makeJByteArray(
+                                    (const signed char *)val->data, val->len);
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
@@ -1130,7 +1047,6 @@ jobject CreateJ::PropertyMap(apr_hash_t *prop_hash)
 
   return env->PopLocalFrame(map);
 }
-
 
 jobject CreateJ::Set(std::vector<jobject> &objects)
 {

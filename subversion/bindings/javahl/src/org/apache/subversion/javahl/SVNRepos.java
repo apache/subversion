@@ -130,14 +130,7 @@ public class SVNRepos implements ISVNRepos
      * @throws ClientException  throw in case of problem
      */
     public native void hotcopy(File path, File targetPath,
-                               boolean cleanLogs, boolean incremental)
-            throws ClientException;
-
-    public void hotcopy(File path, File targetPath,
-                        boolean cleanLogs) throws ClientException
-    {
-        hotcopy(path, targetPath, cleanLogs, false);
-    }
+                               boolean cleanLogs) throws ClientException;
 
     /**
      * list all logfiles (BDB) in use or not)
@@ -157,19 +150,7 @@ public class SVNRepos implements ISVNRepos
     public native void listUnusedDBLogs(File path, ISVNRepos.MessageReceiver receiver)
             throws ClientException;
 
-    public void load(File path, InputStream dataInput,
-                     boolean ignoreUUID, boolean forceUUID,
-                     boolean usePreCommitHook, boolean usePostCommitHook,
-                     String relativePath, ReposNotifyCallback callback)
-            throws ClientException
-    {
-        load(path, dataInput, Revision.START, Revision.HEAD,
-             ignoreUUID, forceUUID, usePreCommitHook, usePostCommitHook,
-             relativePath, callback);
-    }
-
     public native void load(File path, InputStream dataInput,
-                            Revision start, Revision end,
                             boolean ignoreUUID, boolean forceUUID,
                             boolean usePreCommitHook, boolean usePostCommitHook,
                             String relativePath, ReposNotifyCallback callback)

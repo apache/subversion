@@ -49,7 +49,7 @@ class SVNBase
    *
    * @since 1.4.0
    */
-  virtual void dispose(jobject jthis) = 0;
+  virtual void dispose() = 0;
 
   /**
    * This method should never be called, as @c dispose() should be
@@ -80,12 +80,13 @@ class SVNBase
    *
    * @since 1.4.0
    */
-  void dispose(jobject jthis, jfieldID *fid, const char *className);
+  void dispose(jfieldID *fid, const char *className);
 
   /**
-   * Instantiates java object attached to this base object
+   * A pointer to the parent java object.  This is not valid across JNI
+   * method invocations, and so should be set in each one.
    */
-  jobject createCppBoundObject(const char *clazzName);
+  jobject jthis;
 
  private:
   /**

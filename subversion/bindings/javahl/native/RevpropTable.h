@@ -44,7 +44,7 @@ class RevpropTable
  public:
   RevpropTable(jobject jrevpropTable);
   ~RevpropTable();
-  apr_hash_t *hash(const SVN::Pool &pool, bool nullIfEmpty = true);
+  const apr_hash_t *hash(const SVN::Pool &pool);
 };
 
 #endif // REVPROPTABLE_H

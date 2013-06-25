@@ -52,15 +52,13 @@ class SVNRepos : public SVNBase
   void rmtxns(File &path, StringArray &transactions);
   jlong recover(File &path, ReposNotifyCallback *notifyCallback);
   void lstxns(File &path, MessageReceiver &messageReceiver);
-  void load(File &path, InputStream &dataIn,
-            Revision &revsionStart, Revision &revisionEnd,
-            bool ignoreUUID, bool forceUUID,
+  void load(File &path, InputStream &dataIn, bool ignoreUUID, bool forceUUID,
             bool usePreCommitHook, bool usePostCommitHook,
             const char *relativePath, ReposNotifyCallback *notifyCallback);
   void listUnusedDBLogs(File &path,
                         MessageReceiver &messageReceiver);
   void listDBLogs(File &path, MessageReceiver &messageReceiver);
-  void hotcopy(File &path, File &targetPath, bool cleanLogs, bool incremental);
+  void hotcopy(File &path, File &targetPath, bool cleanLogs);
   void dump(File &path, OutputStream &dataOut, Revision &revsionStart,
             Revision &RevisionEnd, bool incremental, bool useDeltas,
             ReposNotifyCallback *notifyCallback);
@@ -71,7 +69,7 @@ class SVNRepos : public SVNBase
   void pack(File &path, ReposNotifyCallback *callback);
   SVNRepos();
   virtual ~SVNRepos();
-  void dispose(jobject jthis);
+  void dispose();
   static SVNRepos *getCppObject(jobject jthis);
 
   static svn_error_t *checkCancel(void *cancelBaton);

@@ -20,7 +20,7 @@
  * ====================================================================
  * @endcopyright
  *
- * @file RevisionRange.cpp
+ * @file RevisionRanges.cpp
  * @brief Implementation of the class RevisionRange.
  */
 
@@ -87,8 +87,7 @@ const svn_opt_revision_range_t *RevisionRange::toRange(SVN::Pool &pool) const
     return NULL;
 
   svn_opt_revision_range_t *range =
-    reinterpret_cast<svn_opt_revision_range_t *>
-      (apr_palloc(pool.getPool(), sizeof(*range)));
+    (svn_opt_revision_range_t *) apr_palloc(pool.getPool(), sizeof(*range));
 
   range->start = *startRevision.revision();
   if (JNIUtil::isExceptionThrown())

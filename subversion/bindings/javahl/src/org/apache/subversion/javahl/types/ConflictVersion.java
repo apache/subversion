@@ -31,19 +31,16 @@ package org.apache.subversion.javahl.types;
 public class ConflictVersion
 {
     private String reposURL;
-    private String reposUUID;
     private long pegRevision;
     private String pathInRepos;
 
     private NodeKind nodeKind;
 
     /** This constructor should only be called from JNI code. */
-    ConflictVersion(String reposURL, String reposUUID,
-                    long pegRevision, String pathInRepos,
+    public ConflictVersion(String reposURL, long pegRevision, String pathInRepos,
                     NodeKind nodeKind)
     {
         this.reposURL = reposURL;
-        this.reposUUID = reposUUID;
         this.pegRevision = pegRevision;
         this.pathInRepos = pathInRepos;
         this.nodeKind = nodeKind;
@@ -52,12 +49,6 @@ public class ConflictVersion
     public String getReposURL()
     {
         return reposURL;
-    }
-
-    /** @since 1.8 */
-    public String getReposUUID()
-    {
-        return reposUUID;
     }
 
     public long getPegRevision()

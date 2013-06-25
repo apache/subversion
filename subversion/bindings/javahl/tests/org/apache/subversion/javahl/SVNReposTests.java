@@ -34,7 +34,7 @@ import java.net.URI;
 import java.util.Map;
 
 /**
- * This class is used for testing the ISVNRepos interface
+ * This class is used for testing the SVNAdmin class
  *
  * More methodes for testing are still needed
  */
@@ -50,7 +50,7 @@ public class SVNReposTests extends SVNTests
     }
 
     /**
-     * Test the basic ISVNRepos.create functionality
+     * Test the basic SVNAdmin.create functionality
      * @throws SubversionException
      */
     public void testCreate()
@@ -103,7 +103,7 @@ public class SVNReposTests extends SVNTests
     public void testLoadRepo()
         throws SubversionException, IOException
     {
-        /* Make sure ISVNRepos.load() works, with a repo dump file known
+        /* Make sure SVNAdmin.load() works, with a repo dump file known
          * to provoke bug 2979
          */
         // makes repos with nothing in it

@@ -28,23 +28,17 @@ package org.apache.subversion.javahl.types;
  */
 public enum NodeKind
 {
-    /** absent */
+    /* absent */
     none    ("none"),
 
-    /** regular file */
+    /* regular file */
     file    ("file"),
 
-    /** directory */
+    /* directory */
     dir     ("dir"),
 
-    /** something's here, but we don't know what */
-    unknown ("unknown"),
-
-    /**
-     * symbolic link
-     * @since: 1.8
-     */
-    symlink ("symlink");
+    /* something's here, but we don't know what */
+    unknown ("unknown");
 
     /**
      * The description of the node kind.

@@ -125,12 +125,8 @@ public class ConflictDescriptor
              aDesc.getAction().ordinal(), aDesc.getReason().ordinal(),
              aDesc.getOperation().ordinal(), aDesc.getBasePath(),
              aDesc.getTheirPath(), aDesc.getMyPath(), aDesc.getMergedPath(),
-             aDesc.getSrcLeftVersion() != null
-               ? new ConflictVersion(aDesc.getSrcLeftVersion())
-               : null,
-             aDesc.getSrcRightVersion() != null
-               ? new ConflictVersion(aDesc.getSrcRightVersion())
-               : null);
+             new ConflictVersion(aDesc.getSrcLeftVersion()),
+             new ConflictVersion(aDesc.getSrcRightVersion()));
     }
 
     public String getPath()

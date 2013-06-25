@@ -55,8 +55,7 @@ StatusCallback::callback(void *baton,
                          apr_pool_t *pool)
 {
   if (baton)
-    return static_cast<StatusCallback *>(baton)->doStatus(
-            local_abspath, status, pool);
+    return ((StatusCallback *)baton)->doStatus(local_abspath, status, pool);
 
   return SVN_NO_ERROR;
 }
@@ -94,7 +93,7 @@ StatusCallback::doStatus(const char *local_abspath,
 
   jstring jPath = JNIUtil::makeJString(local_abspath);
   if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN(SVN_NO_ERROR);
+    POP_AND_RETURN_NULL;
 
   jobject jStatus = CreateJ::Status(wc_ctx, status, pool);
   if (JNIUtil::isJavaExceptionThrown())

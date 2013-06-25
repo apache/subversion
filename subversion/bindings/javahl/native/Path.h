@@ -41,7 +41,7 @@ class Path
   // The path to be stored.
   std::string m_path;
 
-  svn_error_t *m_error_occurred;
+  svn_error_t *m_error_occured;
 
   /**
    * Initialize the class.
@@ -90,7 +90,7 @@ class Path
    */
   const char *c_str() const;
 
-  svn_error_t *error_occurred() const;
+  svn_error_t *error_occured() const;
 
   /**
    * Returns whether @a path is non-NULL and passes the @c

@@ -33,10 +33,10 @@
  * Create a ProplistCallback object
  * @param jcallback the Java callback object.
  */
-ProplistCallback::ProplistCallback(jobject jcallback, bool inherited)
-  : m_callback(jcallback),
-    m_inherited(inherited)
-{}
+ProplistCallback::ProplistCallback(jobject jcallback)
+{
+  m_callback = jcallback;
+}
 
 /**
  * Destroy a ProplistCallback object
@@ -54,10 +54,7 @@ ProplistCallback::callback(void *baton,
                            apr_pool_t *pool)
 {
   if (baton)
-    {
-      ProplistCallback *cb = static_cast<ProplistCallback *>(baton);
-      return cb->singlePath(path, prop_hash, pool);
-    }
+    return ((ProplistCallback *)baton)->singlePath(path, prop_hash, pool);
 
   return SVN_NO_ERROR;
 }
@@ -81,7 +78,7 @@ svn_error_t *ProplistCallback::singlePath(const char *path,
 
   // The method id will not change during the time this library is
   // loaded, so it can be cached.
-  static volatile jmethodID mid = 0;
+  static jmethodID mid = 0;
   if (mid == 0)
     {
       jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/ProplistCallback");
@@ -105,61 +102,6 @@ svn_error_t *ProplistCallback::singlePath(const char *path,
 
   // call the Java method
   env->CallVoidMethod(m_callback, mid, jpath, jmap);
-  // We return whether an exception was thrown or not.
-
-  env->PopLocalFrame(NULL);
-
-  return SVN_NO_ERROR;
-}
-
-
-
-/**
- * Callback called for a single path
- * @param path      the path name
- * @param prop_hash the hash of properties on this path
- * @param inherited_props list of inherited props
- * @param pool      memory pool for the use of this function
- */
-svn_error_t *ProplistCallback::singlePath(
-    const char *path,
-    apr_hash_t *prop_hash,
-    apr_array_header_t *inherited_props,
-    apr_pool_t *pool)
-{
-  JNIEnv *env = JNIUtil::getEnv();
-
-  // Create a local frame for our references
-  env->PushLocalFrame(LOCAL_FRAME_SIZE);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  // The method id will not change during the time this library is
-  // loaded, so it can be cached.
-  static jmethodID mid = 0;
-  if (mid == 0)
-    {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/InheritedProplistCallback");
-      if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
-
-      mid = env->GetMethodID(clazz, "singlePath",
-                             "(Ljava/lang/String;Ljava/util/Map;Ljava/util/Collection;)V");
-      if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        POP_AND_RETURN(SVN_NO_ERROR);
-    }
-
-  // convert the parameters to their Java relatives
-  jstring jpath = JNIUtil::makeJString(path);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN(SVN_NO_ERROR);
-
-  jobject jmap = CreateJ::PropertyMap(prop_hash);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN(SVN_NO_ERROR);
-
-  // call the Java method
-  env->CallVoidMethod(m_callback, mid, jpath, jmap, NULL);
   // We return whether an exception was thrown or not.
 
   env->PopLocalFrame(NULL);

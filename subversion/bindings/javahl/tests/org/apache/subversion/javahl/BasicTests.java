@@ -147,10 +147,10 @@ public class BasicTests extends SVNTests
                               CommitItemStateFlags.Add);
         Set<String> urls = new HashSet<String>(1);
         urls.add(thisTest.getUrl() + "/Y");
-        try
+        try 
         {
             tempclient.mkdir(urls, false, null, new ConstMsg("log_msg"), null);
-        }
+        } 
         catch(JNIError e)
         {
 	        return; // Test passes!
@@ -898,7 +898,7 @@ public class BasicTests extends SVNTests
         }
         client.move(srcPaths,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    false, true, false, false, false, null, null, null);
+                    false, true, false, null, null, null);
 
         // Commit the changes, and check the state of the WC.
         checkCommitRevision(thisTest,
@@ -2352,222 +2352,222 @@ public class BasicTests extends SVNTests
         acquireMergeinfoAndAssertEquals(2, 4, 6, 6, targetPath, mergeSrc);
     }
 
-//FIXME:    /**
-//FIXME:     * Test merge with automatic source and revision determination
-//FIXME:     * (e.g. 'svn merge -g').
-//FIXME:     * @throws Throwable
-//FIXME:     * @since 1.5
-//FIXME:     */
-//FIXME:    public void testMergeUsingHistory() throws Throwable
-//FIXME:    {
-//FIXME:        OneTest thisTest = setupAndPerformMerge();
-//FIXME:
-//FIXME:        // Test that getMergeinfo() returns null.
-//FIXME:        assertNull(client.getMergeinfo(new File(thisTest.getWCPath(), "A")
-//FIXME:                                       .toString(), Revision.HEAD));
-//FIXME:
-//FIXME:        // Merge and commit some changes (r4).
-//FIXME:        appendText(thisTest, "A/mu", "xxx", 4);
-//FIXME:        checkCommitRevision(thisTest, "wrong revision number from commit", 4,
-//FIXME:                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
-//FIXME:                            false, false, null, null);
-//FIXME:
-//FIXME:        String branchPath = thisTest.getWCPath() + "/branches/A";
-//FIXME:        String modUrl = thisTest.getUrl() + "/A";
-//FIXME:        Revision unspec = new Revision(Revision.Kind.unspecified);
-//FIXME:        List<RevisionRange> ranges = new ArrayList<RevisionRange>(1);
-//FIXME:        ranges.add(new RevisionRange(unspec, unspec));
-//FIXME:        client.merge(modUrl, Revision.HEAD, ranges,
-//FIXME:                     branchPath, true, Depth.infinity, false, false, false);
-//FIXME:
-//FIXME:        // commit the changes so that we can verify merge
-//FIXME:        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
-//FIXME:                              "branches/A", NodeKind.dir,
-//FIXME:                              CommitItemStateFlags.PropMods);
-//FIXME:        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
-//FIXME:                              "branches/A/mu", NodeKind.file,
-//FIXME:                              CommitItemStateFlags.TextMods);
-//FIXME:        checkCommitRevision(thisTest, "wrong revision number from commit", 5,
-//FIXME:                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
-//FIXME:                            false, false, null, null);
-//FIXME:    }
-//FIXME:
-//FIXME:    /**
-//FIXME:     * Test reintegrating a branch with trunk
-//FIXME:     * (e.g. 'svn merge --reintegrate').
-//FIXME:     * @throws Throwable
-//FIXME:     * @since 1.5
-//FIXME:     */
-//FIXME:    public void testMergeReintegrate() throws Throwable
-//FIXME:    {
-//FIXME:        OneTest thisTest = setupAndPerformMerge();
-//FIXME:
-//FIXME:        // Test that getMergeinfo() returns null.
-//FIXME:        assertNull(client.getMergeinfo(new File(thisTest.getWCPath(), "A")
-//FIXME:                                       .toString(), Revision.HEAD));
-//FIXME:
-//FIXME:        // Merge and commit some changes to main (r4).
-//FIXME:        appendText(thisTest, "A/mu", "xxx", 4);
-//FIXME:        checkCommitRevision(thisTest,
-//FIXME:                            "wrong revision number from main commit", 4,
-//FIXME:                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
-//FIXME:                            false, false, null, null);
-//FIXME:        // Merge and commit some changes to branch (r5).
-//FIXME:        appendText(thisTest, "branches/A/D/G/rho", "yyy", -1);
-//FIXME:        checkCommitRevision(thisTest,
-//FIXME:                            "wrong revision number from branch commit", 5,
-//FIXME:                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
-//FIXME:                            false, false, null, null);
-//FIXME:
-//FIXME:        // update the branch WC (to r5) before merge
-//FIXME:        update(thisTest, "/branches");
-//FIXME:
-//FIXME:        String branchPath = thisTest.getWCPath() + "/branches/A";
-//FIXME:        String modUrl = thisTest.getUrl() + "/A";
-//FIXME:        Revision unspec = new Revision(Revision.Kind.unspecified);
-//FIXME:        List<RevisionRange> ranges = new ArrayList<RevisionRange>(1);
-//FIXME:        ranges.add(new RevisionRange(unspec, unspec));
-//FIXME:        client.merge(modUrl, Revision.HEAD, ranges,
-//FIXME:                     branchPath, true, Depth.infinity, false, false, false);
-//FIXME:
-//FIXME:        // commit the changes so that we can verify merge
-//FIXME:        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
-//FIXME:                              "branches/A", NodeKind.dir,
-//FIXME:                              CommitItemStateFlags.PropMods);
-//FIXME:        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
-//FIXME:                              "branches/A/mu", NodeKind.file,
-//FIXME:                              CommitItemStateFlags.TextMods);
-//FIXME:        checkCommitRevision(thisTest, "wrong revision number from commit", 6,
-//FIXME:                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
-//FIXME:                            false, false, null, null);
-//FIXME:
-//FIXME:        // now we --reintegrate the branch with main
-//FIXME:        String branchUrl = thisTest.getUrl() + "/branches/A";
-//FIXME:        try
-//FIXME:        {
-//FIXME:            client.mergeReintegrate(branchUrl, Revision.HEAD,
-//FIXME:                                    thisTest.getWCPath() + "/A", false);
-//FIXME:            fail("reintegrate merged into a mixed-revision WC");
-//FIXME:        }
-//FIXME:        catch(ClientException e)
-//FIXME:        {
-//FIXME:            // update the WC (to r6) and try again
-//FIXME:            update(thisTest);
-//FIXME:            client.mergeReintegrate(branchUrl, Revision.HEAD,
-//FIXME:                                    thisTest.getWCPath() + "/A", false);
-//FIXME:        }
-//FIXME:        // commit the changes so that we can verify merge
-//FIXME:        addExpectedCommitItem(thisTest.getWCPath(),
-//FIXME:                             thisTest.getUrl().toString(), "A", NodeKind.dir,
-//FIXME:                              CommitItemStateFlags.PropMods);
-//FIXME:        addExpectedCommitItem(thisTest.getWCPath(),
-//FIXME:                             thisTest.getUrl().toString(), "A/D/G/rho",
-//FIXME:                             NodeKind.file, CommitItemStateFlags.TextMods);
-//FIXME:        checkCommitRevision(thisTest, "wrong revision number from commit", 7,
-//FIXME:                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
-//FIXME:                            false, false, null, null);
-//FIXME:
-//FIXME:    }
-//FIXME:
-//FIXME:    /**
-//FIXME:     * Test automatic merge conflict resolution.
-//FIXME:     * @throws Throwable
-//FIXME:     * @since 1.5
-//FIXME:     */
-//FIXME:    public void testMergeConflictResolution() throws Throwable
-//FIXME:    {
-//FIXME:        // Add a conflict resolution callback which always chooses the
-//FIXME:        // user's version of a conflicted file.
-//FIXME:        client.setConflictResolver(new ConflictResolverCallback()
-//FIXME:            {
-//FIXME:                public ConflictResult resolve(ConflictDescriptor descrip)
-//FIXME:                {
-//FIXME:                    return new ConflictResult(ConflictResult.Choice.chooseTheirsConflict,
-//FIXME:                                              null);
-//FIXME:                }
-//FIXME:            });
-//FIXME:
-//FIXME:        OneTest thisTest = new OneTest();
-//FIXME:        String originalContents = thisTest.getWc().getItemContent("A/mu");
-//FIXME:        String expectedContents = originalContents + "xxx";
-//FIXME:
-//FIXME:        // Merge and commit a change (r2).
-//FIXME:        File mu = appendText(thisTest, "A/mu", "xxx", 2);
-//FIXME:        checkCommitRevision(thisTest, "wrong revision number from commit", 2,
-//FIXME:                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
-//FIXME:                            false, false, null, null);
-//FIXME:
-//FIXME:        // Backdate the WC to the previous revision (r1).
-//FIXME:        client.update(thisTest.getWCPathSet(), Revision.getInstance(1),
-//FIXME:                      Depth.unknown, false, false, false, false);
-//FIXME:
-//FIXME:        // Prep for a merge conflict by changing A/mu in a different
-//FIXME:        // way.
-//FIXME:        mu = appendText(thisTest, "A/mu", "yyy", 1);
-//FIXME:
-//FIXME:        // Merge in the previous changes to A/mu (from r2).
-//FIXME:        List<RevisionRange> ranges = new ArrayList<RevisionRange>(1);
-//FIXME:        ranges.add(new RevisionRange(new Revision.Number(1),
-//FIXME:                                     new Revision.Number(2)));
-//FIXME:        client.merge(thisTest.getUrl().toString(), Revision.HEAD, ranges,
-//FIXME:                     thisTest.getWCPath(), false, Depth.infinity, false,
-//FIXME:                     false, false);
-//FIXME:
-//FIXME:        assertFileContentsEquals("Unexpected conflict resolution",
-//FIXME:                                 expectedContents, mu);
-//FIXME:    }
-//FIXME:
-//FIXME:    /**
-//FIXME:     * Test merge --record-only
-//FIXME:     * @throws Throwable
-//FIXME:     * @since 1.5
-//FIXME:     */
-//FIXME:    public void testRecordOnlyMerge() throws Throwable
-//FIXME:    {
-//FIXME:        OneTest thisTest = setupAndPerformMerge();
-//FIXME:
-//FIXME:        // Verify that there are now potential merge sources.
-//FIXME:        Set<String> suggestedSrcs =
-//FIXME:            client.suggestMergeSources(thisTest.getWCPath() + "/branches/A",
-//FIXME:                                       Revision.WORKING);
-//FIXME:        assertNotNull(suggestedSrcs);
-//FIXME:        assertEquals(1, suggestedSrcs.size());
-//FIXME:
-//FIXME:        // Test that getMergeinfo() returns null.
-//FIXME:        assertNull(client.getMergeinfo(new File(thisTest.getWCPath(), "A")
-//FIXME:                                       .toString(), Revision.HEAD));
-//FIXME:
-//FIXME:        // Merge and commit some changes (r4).
-//FIXME:        appendText(thisTest, "A/mu", "xxx", 4);
-//FIXME:        appendText(thisTest, "A/D/G/rho", "yyy", 4);
-//FIXME:        checkCommitRevision(thisTest, "wrong revision number from commit", 4,
-//FIXME:                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
-//FIXME:                            false, false, null, null);
-//FIXME:
-//FIXME:        // --record-only merge changes in A to branches/A
-//FIXME:        String branchPath = thisTest.getWCPath() + "/branches/A";
-//FIXME:        String modUrl = thisTest.getUrl() + "/A";
-//FIXME:
-//FIXME:        List<RevisionRange> ranges = new ArrayList<RevisionRange>(1);
-//FIXME:        ranges.add(new RevisionRange(new Revision.Number(2),
-//FIXME:                                     new Revision.Number(4)));
-//FIXME:        client.merge(modUrl, Revision.HEAD, ranges,
-//FIXME:                     branchPath, true, Depth.infinity, false, false, true);
-//FIXME:
-//FIXME:        // commit the changes so that we can verify merge
-//FIXME:        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
-//FIXME:                              "branches/A", NodeKind.dir,
-//FIXME:                              CommitItemStateFlags.PropMods);
-//FIXME:        checkCommitRevision(thisTest, "wrong revision number from commit", 5,
-//FIXME:                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
-//FIXME:                            false, false, null, null);
-//FIXME:
-//FIXME:        // Test retrieval of mergeinfo from a WC path.
-//FIXME:        String targetPath =
-//FIXME:            new File(thisTest.getWCPath(), "branches/A").getPath();
-//FIXME:        final String mergeSrc = thisTest.getUrl() + "/A";
-//FIXME:        acquireMergeinfoAndAssertEquals(2, 4, 0, 0, targetPath, mergeSrc);
-//FIXME:    }
+    /**
+     * Test merge with automatic source and revision determination
+     * (e.g. 'svn merge -g').
+     * @throws Throwable
+     * @since 1.5
+     */
+    public void testMergeUsingHistory() throws Throwable
+    {
+        OneTest thisTest = setupAndPerformMerge();
+
+        // Test that getMergeinfo() returns null.
+        assertNull(client.getMergeinfo(new File(thisTest.getWCPath(), "A")
+                                       .toString(), Revision.HEAD));
+
+        // Merge and commit some changes (r4).
+        appendText(thisTest, "A/mu", "xxx", 4);
+        checkCommitRevision(thisTest, "wrong revision number from commit", 4,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+
+        String branchPath = thisTest.getWCPath() + "/branches/A";
+        String modUrl = thisTest.getUrl() + "/A";
+        Revision unspec = new Revision(Revision.Kind.unspecified);
+        List<RevisionRange> ranges = new ArrayList<RevisionRange>(1);
+        ranges.add(new RevisionRange(unspec, unspec));
+        client.merge(modUrl, Revision.HEAD, ranges,
+                     branchPath, true, Depth.infinity, false, false, false);
+
+        // commit the changes so that we can verify merge
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
+                              "branches/A", NodeKind.dir,
+                              CommitItemStateFlags.PropMods);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
+                              "branches/A/mu", NodeKind.file,
+                              CommitItemStateFlags.TextMods);
+        checkCommitRevision(thisTest, "wrong revision number from commit", 5,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+    }
+
+    /**
+     * Test reintegrating a branch with trunk
+     * (e.g. 'svn merge --reintegrate').
+     * @throws Throwable
+     * @since 1.5
+     */
+    public void testMergeReintegrate() throws Throwable
+    {
+        OneTest thisTest = setupAndPerformMerge();
+
+        // Test that getMergeinfo() returns null.
+        assertNull(client.getMergeinfo(new File(thisTest.getWCPath(), "A")
+                                       .toString(), Revision.HEAD));
+
+        // Merge and commit some changes to main (r4).
+        appendText(thisTest, "A/mu", "xxx", 4);
+        checkCommitRevision(thisTest,
+                            "wrong revision number from main commit", 4,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+        // Merge and commit some changes to branch (r5).
+        appendText(thisTest, "branches/A/D/G/rho", "yyy", -1);
+        checkCommitRevision(thisTest,
+                            "wrong revision number from branch commit", 5,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+
+        // update the branch WC (to r5) before merge
+        update(thisTest, "/branches");
+
+        String branchPath = thisTest.getWCPath() + "/branches/A";
+        String modUrl = thisTest.getUrl() + "/A";
+        Revision unspec = new Revision(Revision.Kind.unspecified);
+        List<RevisionRange> ranges = new ArrayList<RevisionRange>(1);
+        ranges.add(new RevisionRange(unspec, unspec));
+        client.merge(modUrl, Revision.HEAD, ranges,
+                     branchPath, true, Depth.infinity, false, false, false);
+
+        // commit the changes so that we can verify merge
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
+                              "branches/A", NodeKind.dir,
+                              CommitItemStateFlags.PropMods);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
+                              "branches/A/mu", NodeKind.file,
+                              CommitItemStateFlags.TextMods);
+        checkCommitRevision(thisTest, "wrong revision number from commit", 6,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+
+        // now we --reintegrate the branch with main
+        String branchUrl = thisTest.getUrl() + "/branches/A";
+        try
+        {
+            client.mergeReintegrate(branchUrl, Revision.HEAD,
+                                    thisTest.getWCPath() + "/A", false);
+            fail("reintegrate merged into a mixed-revision WC");
+        }
+        catch(ClientException e)
+        {
+            // update the WC (to r6) and try again
+            update(thisTest);
+            client.mergeReintegrate(branchUrl, Revision.HEAD,
+                                    thisTest.getWCPath() + "/A", false);
+        }
+        // commit the changes so that we can verify merge
+        addExpectedCommitItem(thisTest.getWCPath(),
+                             thisTest.getUrl().toString(), "A", NodeKind.dir,
+                              CommitItemStateFlags.PropMods);
+        addExpectedCommitItem(thisTest.getWCPath(),
+                             thisTest.getUrl().toString(), "A/D/G/rho",
+                             NodeKind.file, CommitItemStateFlags.TextMods);
+        checkCommitRevision(thisTest, "wrong revision number from commit", 7,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+
+    }
+
+    /**
+     * Test automatic merge conflict resolution.
+     * @throws Throwable
+     * @since 1.5
+     */
+    public void testMergeConflictResolution() throws Throwable
+    {
+        // Add a conflict resolution callback which always chooses the
+        // user's version of a conflicted file.
+        client.setConflictResolver(new ConflictResolverCallback()
+            {
+                public ConflictResult resolve(ConflictDescriptor descrip)
+                {
+                    return new ConflictResult(ConflictResult.Choice.chooseTheirsConflict,
+                                              null);
+                }
+            });
+
+        OneTest thisTest = new OneTest();
+        String originalContents = thisTest.getWc().getItemContent("A/mu");
+        String expectedContents = originalContents + "xxx";
+
+        // Merge and commit a change (r2).
+        File mu = appendText(thisTest, "A/mu", "xxx", 2);
+        checkCommitRevision(thisTest, "wrong revision number from commit", 2,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+
+        // Backdate the WC to the previous revision (r1).
+        client.update(thisTest.getWCPathSet(), Revision.getInstance(1),
+                      Depth.unknown, false, false, false, false);
+
+        // Prep for a merge conflict by changing A/mu in a different
+        // way.
+        mu = appendText(thisTest, "A/mu", "yyy", 1);
+
+        // Merge in the previous changes to A/mu (from r2).
+        List<RevisionRange> ranges = new ArrayList<RevisionRange>(1);
+        ranges.add(new RevisionRange(new Revision.Number(1),
+                                     new Revision.Number(2)));
+        client.merge(thisTest.getUrl().toString(), Revision.HEAD, ranges,
+                     thisTest.getWCPath(), false, Depth.infinity, false,
+                     false, false);
+
+        assertFileContentsEquals("Unexpected conflict resolution",
+                                 expectedContents, mu);
+    }
+
+    /**
+     * Test merge --record-only
+     * @throws Throwable
+     * @since 1.5
+     */
+    public void testRecordOnlyMerge() throws Throwable
+    {
+        OneTest thisTest = setupAndPerformMerge();
+
+        // Verify that there are now potential merge sources.
+        Set<String> suggestedSrcs =
+            client.suggestMergeSources(thisTest.getWCPath() + "/branches/A",
+                                       Revision.WORKING);
+        assertNotNull(suggestedSrcs);
+        assertEquals(1, suggestedSrcs.size());
+
+        // Test that getMergeinfo() returns null.
+        assertNull(client.getMergeinfo(new File(thisTest.getWCPath(), "A")
+                                       .toString(), Revision.HEAD));
+
+        // Merge and commit some changes (r4).
+        appendText(thisTest, "A/mu", "xxx", 4);
+        appendText(thisTest, "A/D/G/rho", "yyy", 4);
+        checkCommitRevision(thisTest, "wrong revision number from commit", 4,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+
+        // --record-only merge changes in A to branches/A
+        String branchPath = thisTest.getWCPath() + "/branches/A";
+        String modUrl = thisTest.getUrl() + "/A";
+
+        List<RevisionRange> ranges = new ArrayList<RevisionRange>(1);
+        ranges.add(new RevisionRange(new Revision.Number(2),
+                                     new Revision.Number(4)));
+        client.merge(modUrl, Revision.HEAD, ranges,
+                     branchPath, true, Depth.infinity, false, false, true);
+
+        // commit the changes so that we can verify merge
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
+                              "branches/A", NodeKind.dir,
+                              CommitItemStateFlags.PropMods);
+        checkCommitRevision(thisTest, "wrong revision number from commit", 5,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+
+        // Test retrieval of mergeinfo from a WC path.
+        String targetPath =
+            new File(thisTest.getWCPath(), "branches/A").getPath();
+        final String mergeSrc = thisTest.getUrl() + "/A";
+        acquireMergeinfoAndAssertEquals(2, 4, 0, 0, targetPath, mergeSrc);
+    }
 
     /**
      * Setup a test with a WC.  In the repository, create a
@@ -2648,7 +2648,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * Test the {@link ISVNClient.diff()} APIs.
+     * Test the {@link SVNClientInterface.diff()} APIs.
      * @since 1.5
      */
     public void testDiff()
@@ -3061,7 +3061,7 @@ public class BasicTests extends SVNTests
         }
         client.move(srcPaths,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    false, true, false, false, false, null, null, null);
+                    false, true, false, null, null, null);
 
         // Commit the changes, and check the state of the WC.
         checkCommitRevision(thisTest,
@@ -3102,21 +3102,16 @@ public class BasicTests extends SVNTests
         ConflictDescriptor conflict = conflicts.iterator().next();
 
         assertNotNull("Conflict should not be null", conflict);
-        // 1.8 assertNotNull("Repository UUID must be set", conflict.getSrcLeftVersion().getReposUUID());
 
         assertEquals(conflict.getSrcLeftVersion().getNodeKind(), NodeKind.file);
         assertEquals(conflict.getSrcLeftVersion().getReposURL() + "/" +
                 conflict.getSrcLeftVersion().getPathInRepos(), tcTest.getUrl() + "/A/B/E/alpha");
         assertEquals(conflict.getSrcLeftVersion().getPegRevision(), 1L);
 
-        if (conflict.getSrcRightVersion() != null)
-        {
-            assertEquals(conflict.getSrcLeftVersion().getReposUUID(),
-                         conflict.getSrcRightVersion().getReposUUID());
-            assertEquals(conflict.getSrcRightVersion().getNodeKind(), NodeKind.none);
-            assertEquals(conflict.getSrcRightVersion().getReposURL(), tcTest.getUrl().toString());
-            assertEquals(conflict.getSrcRightVersion().getPegRevision(), 2L);
-        }
+        assertEquals(conflict.getSrcRightVersion().getNodeKind(), NodeKind.none);
+        assertEquals(conflict.getSrcRightVersion().getReposURL(), tcTest.getUrl().toString());
+        assertEquals(conflict.getSrcRightVersion().getPegRevision(), 2L);
+
     }
 
     /**
@@ -3151,12 +3146,12 @@ public class BasicTests extends SVNTests
 
         // check the status of the working copy
         thisTest.checkStatus();
-
+        
         // now edit the propval directly in the repository
         long baseRev = 2L;
         client.propertySetRemote(thisTest.getUrl()+"/A/D/G/rho", baseRev, PROP, NEWVALUE,
                                  new ConstMsg("edit prop"), false, null, null);
-
+        
         // update the WC and verify that the property was changed
         client.update(thisTest.getWCPathSet(), Revision.HEAD, Depth.infinity, false, false,
                       false, false);

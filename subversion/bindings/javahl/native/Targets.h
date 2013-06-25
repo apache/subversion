@@ -43,14 +43,14 @@ class Targets
   SVN::Pool m_subpool;
   std::vector<const char*> m_targets;
   StringArray *m_strArray;
-  svn_error_t *m_error_occurred;
+  svn_error_t *m_error_occured;
  public:
   Targets(StringArray &strArray, SVN::Pool &in_pool);
   Targets(const char *path, SVN::Pool &in_pool);
   void add(const char *path);
   ~Targets();
   const apr_array_header_t *array(const SVN::Pool &pool);
-  svn_error_t *error_occurred();
+  svn_error_t *error_occured();
 };
 
 #endif // TARGETS_H

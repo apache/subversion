@@ -47,7 +47,6 @@ public class RunTests
          *
          * @return The complete test suite.
          */
-        @SuppressWarnings("unchecked")
         public static TestSuite suite()
         {
             TestSuite suite = new SVNTestSuite();
@@ -76,8 +75,9 @@ public class RunTests
                         Constructor ctor =
                             clazz.getDeclaredConstructor(argTypes);
                         methodName = methodName.substring(i + 1);
+                        String[] args = { methodName };
                         testCases[testCaseIndex++] =
-                            (TestCase) ctor.newInstance(methodName);
+                            (TestCase) ctor.newInstance(args);
                     }
                     catch (Exception e)
                     {

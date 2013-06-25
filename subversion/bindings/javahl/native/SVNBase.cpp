@@ -30,6 +30,7 @@
 SVNBase::SVNBase()
     : pool(JNIUtil::getPool())
 {
+  jthis = NULL;
 }
 
 SVNBase::~SVNBase()
@@ -57,6 +58,17 @@ jlong SVNBase::findCppAddrForJObject(jobject jthis, jfieldID *fid,
       if (JNIUtil::isJavaExceptionThrown())
         return 0;
 
+      if (cppAddr)
+        {
+          /* jthis is not guaranteed to be the same between JNI invocations, so
+             we do a little dance here and store the updated version in our
+             object for this invocation.
+
+             findCppAddrForJObject() is, by necessity, called before any other
+             methods on the C++ object, so by doing this we can guarantee a
+             valid jthis pointer for subsequent uses. */
+          (reinterpret_cast<SVNBase *> (cppAddr))->jthis = jthis;
+        }
       return cppAddr;
     }
 }
@@ -70,15 +82,17 @@ void SVNBase::finalize()
   JNIUtil::enqueueForDeletion(this);
 }
 
-void SVNBase::dispose(jobject jthis, jfieldID *fid, const char *className)
+void SVNBase::dispose(jfieldID *fid, const char *className)
 {
+  jobject my_jthis = this->jthis;
+
   delete this;
   JNIEnv *env = JNIUtil::getEnv();
   SVNBase::findCppAddrFieldID(fid, className, env);
   if (*fid == 0)
     return;
 
-  env->SetLongField(jthis, *fid, 0);
+  env->SetLongField(my_jthis, *fid, 0);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 }
@@ -96,30 +110,4 @@ inline void SVNBase::findCppAddrFieldID(jfieldID *fid, const char *className,
             *fid = 0;
         }
     }
-}
-
-jobject SVNBase::createCppBoundObject(const char *clazzName)
-{
-  JNIEnv *env = JNIUtil::getEnv();
-
-  // Create java session object
-  jclass clazz = env->FindClass(clazzName);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  static jmethodID ctor = 0;
-  if (ctor == 0)
-    {
-      ctor = env->GetMethodID(clazz, "<init>", "(J)V");
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-    }
-
-  jlong cppAddr = this->getCppAddr();
-
-  jobject jself = env->NewObject(clazz, ctor, cppAddr);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  return jself;
 }

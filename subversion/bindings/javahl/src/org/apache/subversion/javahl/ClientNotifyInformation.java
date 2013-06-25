@@ -544,30 +544,7 @@ public class ClientNotifyInformation extends EventObject
         failed_forbidden_by_server ("failed forbidden by server"),
 
         /** Operation skipped the path because it was conflicted */
-        skip_conflicted ("skipped conflicted path"),
-
-        /** The lock on a file was removed during update */
-        update_broken_lock ("broken lock removed"),
-
-        /** Operation failed because a node is obstructed */
-        failed_obstructed ("failed by obstruction"),
-
-        /** Conflict resolver is starting. */
-        conflict_resolver_starting ("conflict resolver starting"),
-
-        /** Conflict resolver is done. */
-        conflict_resolver_done ("conflict resolver done"),
-
-        /** Operation left local modifications. */
-        left_local_modifications ("left local modifications"),
-
-        /** A copy from a foreign repository has started
-         * @since New in 1.8. */
-        foreign_copy_begin ("foreign copy begin"),
-
-        /** A move in the working copy has been broken
-         * @since New in 1.8. */
-        move_broken ("move broken");
+        skip_conflicted ("skipped conflicted path");
 
         /**
          * The description of the action.
