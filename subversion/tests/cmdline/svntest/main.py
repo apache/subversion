@@ -561,7 +561,8 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
          stderr_lines
 
 def create_config_dir(cfgdir, config_contents=None, server_contents=None,
-                      ssl_cert=None, ssl_url=None, http_proxy=None):
+                      ssl_cert=None, ssl_url=None, http_proxy=None,
+                      exclusive_wc_locks=None):
   "Create config directories and files"
 
   # config file names
@@ -582,7 +583,11 @@ password-stores =
 [miscellany]
 interactive-conflicts = false
 """
-
+    if exclusive_wc_locks:
+      config_contents += """
+[working-copy]
+exclusive-locking = true
+"""
   # define default server file contents if none provided
   if server_contents is None:
     http_library_str = ""
@@ -1427,6 +1432,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--ssl-cert=' + options.ssl_cert)
     if options.http_proxy:
       args.append('--http-proxy=' + options.http_proxy)
+    if options.exclusive_wc_locks:
+      args.append('--exclusive-wc-locks')
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
@@ -1774,6 +1781,8 @@ def _create_parser():
                     help='Use the HTTP Proxy at hostname:port.')
   parser.add_option('--tools-bin', action='store', dest='tools_bin',
                     help='Use the svn tools installed in this path')
+  parser.add_option('--exclusive-wc-locks', action='store_true',
+                    help='Use sqlite exclusive locking for working copies')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
@@ -2095,7 +2104,8 @@ def execute_tests(test_list, serial_only = False, test_name = None,
     create_config_dir(default_config_dir,
                       ssl_cert=options.ssl_cert,
                       ssl_url=options.test_area_url,
-                      http_proxy=options.http_proxy)
+                      http_proxy=options.http_proxy,
+                      exclusive_wc_locks=options.exclusive_wc_locks)
 
     # Setup the pristine repository
     svntest.actions.setup_pristine_greek_repository()
