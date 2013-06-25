@@ -144,6 +144,9 @@ struct svn_ra_serf__session_t {
      HTTP/1.0. Thus, we cannot send chunked requests.  */
   svn_boolean_t http10;
 
+  /* Should we use Transfer-Encoding: chunked for HTTP/1.1 servers. */
+  svn_boolean_t using_chunked_requests;
+
   /* Our Version-Controlled-Configuration; may be NULL until we know it. */
   const char *vcc_url;
 
