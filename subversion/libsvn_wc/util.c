@@ -339,6 +339,28 @@ svn_wc_conflict_version_dup(const svn_wc_conflict_version_t *version,
   return new_version;
 }
 
+apr_array_header_t *
+svn_wc__cd3_array_to_cd2_array(const apr_array_header_t *conflicts,
+                               apr_pool_t *result_pool)
+{
+  apr_array_header_t *new_conflicts;
+  int i;
+
+  new_conflicts = apr_array_make(result_pool, conflicts->nelts,
+                                 sizeof (svn_wc_conflict_description2_t *));
+
+  for (i = 0; i < conflicts->nelts; i++)
+    {
+      svn_wc_conflict_description3_t *cd;
+      svn_wc_conflict_description2_t *cd2;
+      
+      cd = APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description3_t *);
+      cd2 = svn_wc__cd3_to_cd2(cd, result_pool);
+      APR_ARRAY_PUSH(new_conflicts, svn_wc_conflict_description2_t *) = cd2;
+    }
+
+  return new_conflicts;
+}
 
 svn_wc_conflict_description2_t *
 svn_wc__cd3_to_cd2(const svn_wc_conflict_description3_t *conflict,
