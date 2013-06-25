@@ -21,21 +21,22 @@
  * @endcopyright
  */
 
-package org.apache.subversion.javahl.callback;
-
-import java.util.Map;
-import org.apache.subversion.javahl.ISVNClient;
+package org.apache.subversion.javahl;
 
 /**
- * This interface is used to property lists for each path in a
- * {@link ISVNClient#properties} call.
+ * This class is used internally by the JavaHL implementation and not considered
+ * part part of the public API.
  */
-public interface ProplistCallback
+public abstract class JNIObject
 {
     /**
-     * the method will be called once for every file.
-     * @param path        the path.
-     * @param properties  the properties on the path.
+     * slot for the address of the native peer. The JNI code controls this
+     * field. If it is set to 0 then underlying JNI object has been freed
      */
-    public void singlePath(String path, Map<String, byte[]> properties);
+    protected final long cppAddr;
+
+    protected JNIObject(long cppAddr)
+    {
+        this.cppAddr = cppAddr;
+    }
 }

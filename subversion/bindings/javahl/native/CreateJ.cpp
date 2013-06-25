@@ -35,6 +35,7 @@
 #include "../include/org_apache_subversion_javahl_CommitItemStateFlags.h"
 
 #include "svn_path.h"
+#include "svn_props.h"
 #include "private/svn_wc_private.h"
 
 jobject
@@ -418,6 +419,72 @@ CreateJ::Lock(const svn_lock_t *lock)
 }
 
 jobject
+CreateJ::LockMap(const apr_hash_t *locks, apr_pool_t *pool)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+
+  if (locks == NULL)
+    return NULL;
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  jclass clazz = env->FindClass("java/util/HashMap");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  static jmethodID init_mid = 0;
+  if (init_mid == 0)
+    {
+      init_mid = env->GetMethodID(clazz, "<init>", "()V");
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+    }
+
+  static jmethodID put_mid = 0;
+  if (put_mid == 0)
+    {
+      put_mid = env->GetMethodID(clazz, "put",
+                                 "(Ljava/lang/Object;Ljava/lang/Object;)"
+                                 "Ljava/lang/Object;");
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+    }
+
+  jobject map = env->NewObject(clazz, init_mid);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  apr_hash_index_t *hi;
+  int i = 0;
+  for (hi = apr_hash_first(pool, (apr_hash_t *) locks); hi;
+        hi = apr_hash_next(hi), ++i)
+    {
+      const char *key = (const char *) svn__apr_hash_index_key(hi);
+      const svn_lock_t *lock = (const svn_lock_t *) svn__apr_hash_index_val(hi);
+
+      jstring jpath = JNIUtil::makeJString(key);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      jobject jlock = Lock(lock);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      env->CallObjectMethod(map, put_mid, jpath, jlock);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      env->DeleteLocalRef(jpath);
+      env->DeleteLocalRef(jlock);
+    }
+
+  return env->PopLocalFrame(map);
+}
+
+jobject
 CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
 {
   JNIEnv *env = JNIUtil::getEnv();
@@ -429,7 +496,7 @@ CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
 
   jclass clazzCP = env->FindClass(JAVA_PACKAGE"/types/ChangePath");
   if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN(SVN_NO_ERROR);
+    POP_AND_RETURN_NULL;
 
   static jmethodID midCP = 0;
   if (midCP == 0)
@@ -442,7 +509,7 @@ CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
                                "L"JAVA_PACKAGE"/types/Tristate;"
                                "L"JAVA_PACKAGE"/types/Tristate;)V");
       if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN(SVN_NO_ERROR);
+        POP_AND_RETURN_NULL;
     }
 
   jstring jpath = JNIUtil::makeJString(path);

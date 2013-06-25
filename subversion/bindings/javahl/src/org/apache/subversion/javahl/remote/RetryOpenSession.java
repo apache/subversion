@@ -21,21 +21,37 @@
  * @endcopyright
  */
 
-package org.apache.subversion.javahl.callback;
+package org.apache.subversion.javahl.remote;
 
-import java.util.Map;
-import org.apache.subversion.javahl.ISVNClient;
+import org.apache.subversion.javahl.SubversionException;
 
 /**
- * This interface is used to property lists for each path in a
- * {@link ISVNClient#properties} call.
+ * This checked exception is thrown only from ISVNClient.openRemoteSession
+ * or RemoteFactory.openRemoteSession if a session could not be opened
+ * due to a redirect.
  */
-public interface ProplistCallback
+public class RetryOpenSession extends SubversionException
 {
+    // Update the serialVersionUID when there is a incompatible change
+    // made to this class.
+    private static final long serialVersionUID = 1L;
+
     /**
-     * the method will be called once for every file.
-     * @param path        the path.
-     * @param properties  the properties on the path.
+     * This constructor is only called from native code.
      */
-    public void singlePath(String path, Map<String, byte[]> properties);
+    protected RetryOpenSession(String message, String correctedUrl)
+    {
+        super(message);
+        this.correctedUrl = correctedUrl;
+    }
+
+    /**
+     * @return the corrected URL for the session.
+     */
+    public String getCorrectedUrl()
+    {
+        return correctedUrl;
+    }
+
+    private final String correctedUrl;
 }

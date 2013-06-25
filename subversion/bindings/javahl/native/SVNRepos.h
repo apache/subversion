@@ -69,7 +69,7 @@ class SVNRepos : public SVNBase
   void pack(File &path, ReposNotifyCallback *callback);
   SVNRepos();
   virtual ~SVNRepos();
-  void dispose();
+  void dispose(jobject jthis);
   static SVNRepos *getCppObject(jobject jthis);
 
   static svn_error_t *checkCancel(void *cancelBaton);

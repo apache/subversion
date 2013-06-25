@@ -21,21 +21,26 @@
  * @endcopyright
  */
 
-package org.apache.subversion.javahl.callback;
+package org.apache.subversion.javahl;
 
-import java.util.Map;
-import org.apache.subversion.javahl.ISVNClient;
+import org.apache.subversion.javahl.callback.ProgressCallback;
 
 /**
- * This interface is used to property lists for each path in a
- * {@link ISVNClient#properties} call.
+ * A private class to hold the contextual information required to
+ * persist in this object, such as notification handlers.
  */
-public interface ProplistCallback
+public class OperationContext implements ProgressCallback
 {
-    /**
-     * the method will be called once for every file.
-     * @param path        the path.
-     * @param properties  the properties on the path.
-     */
-    public void singlePath(String path, Map<String, byte[]> properties);
+    private ProgressCallback progress = null;
+
+    public void onProgress(ProgressEvent event)
+    {
+        if (progress != null)
+            progress.onProgress(event);
+    }
+
+    public void setProgressCallback(ProgressCallback progress)
+    {
+        this.progress = progress;
+    }
 }

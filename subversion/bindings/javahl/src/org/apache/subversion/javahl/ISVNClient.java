@@ -84,7 +84,7 @@ public interface ISVNClient
             throws ClientException;
 
     /**
-     * Lists the directory entries of an url on the server.
+     * Lists the directory entries of a url on the server.
      * @param url             the url to list
      * @param revision        the revision to list
      * @param pegRevision     the revision to interpret url
@@ -472,6 +472,7 @@ public interface ISVNClient
      * @param localPath     target local path
      * @param dryRun        do not change anything
      * @throws ClientException
+     * @deprecated Will be removed in a future release
      */
     void mergeReintegrate(String path, Revision pegRevision,
                           String localPath, boolean dryRun)
@@ -886,4 +887,36 @@ public interface ISVNClient
                int stripCount, boolean reverse, boolean ignoreWhitespace,
                boolean removeTempfiles, PatchCallback callback)
             throws ClientException;
+
+    /**
+     * Open a persistent session to a repository.
+     * @param path A path in a working copy from which the
+     *        session URL is derived.
+     * @throws remote.RetryOpenSession If the session URL was redirected
+     * @throws SubversionException If an URL redirect cycle was detected
+     * @throws ClientException
+     * @note The session object inherits the progress callback,
+     *       configuration directory and authentication info.
+     * @since 1.9
+     */
+    ISVNRemote openRemoteSession(String path)
+            throws ClientException, SubversionException;
+
+    /**
+     * Open a persistent session to a repository.
+     * @param path A path in a working copy from which the
+     *        session URL is derived.
+     * @param retryAttempts The number of times to retry the operation
+     *        if the given URL is redirected.
+     * @throws IllegalArgumentException If <code>retryAttempts</code>
+     *         is not positive
+     * @throws remote.RetryOpenSession If the session URL was redirected
+     * @throws SubversionException If an URL redirect cycle was detected
+     * @throws ClientException
+     * @note The session object inherits the progress callback,
+     *       configuration directory and authentication info.
+     * @since 1.9
+     */
+    ISVNRemote openRemoteSession(String path, int retryAttempts)
+            throws ClientException, SubversionException;
 }

@@ -60,6 +60,7 @@ class RevpropTable;
 class SVNClient :public SVNBase
 {
  public:
+  jobject openRemoteSession(const char* path, int);
   void patch(const char *patchPath, const char *targetPath, bool dryRun,
              int stripCount, bool reverse, bool ignoreWhitespace,
              bool removeTempfiles, PatchCallback *callback);
@@ -196,7 +197,7 @@ class SVNClient :public SVNBase
   ClientContext &getClientContext();
 
   const char *getLastPath();
-  void dispose();
+  virtual void dispose(jobject jthis);
   static SVNClient *getCppObject(jobject jthis);
   SVNClient(jobject jthis_in);
   virtual ~SVNClient();

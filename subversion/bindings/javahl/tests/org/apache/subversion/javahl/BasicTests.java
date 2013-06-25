@@ -2648,7 +2648,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * Test the {@link SVNClientInterface.diff()} APIs.
+     * Test the {@link ISVNClient.diff()} APIs.
      * @since 1.5
      */
     public void testDiff()

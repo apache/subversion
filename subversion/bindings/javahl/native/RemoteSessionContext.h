@@ -19,23 +19,31 @@
  *    under the License.
  * ====================================================================
  * @endcopyright
+ *
+ * @file RemoteSessionContext.h
+ * @brief Interface of the class RemoteSessionContext
  */
 
-package org.apache.subversion.javahl.callback;
+#ifndef JAVAHL_REMOTE_SESSION_CONTEXT_H
+#define JAVAHL_REMOTE_SESSION_CONTEXT_H
 
-import java.util.Map;
-import org.apache.subversion.javahl.ISVNClient;
+#include "svn_ra.h"
 
-/**
- * This interface is used to property lists for each path in a
- * {@link ISVNClient#properties} call.
- */
-public interface ProplistCallback
+#include "OperationContext.h"
+
+class RemoteSessionContext : public OperationContext
 {
-    /**
-     * the method will be called once for every file.
-     * @param path        the path.
-     * @param properties  the properties on the path.
-     */
-    public void singlePath(String path, Map<String, byte[]> properties);
-}
+  public:
+    RemoteSessionContext(jobject contextHolder, SVN::Pool &pool,
+                         const char* jconfigDirectory,
+                         const char* jusername, const char* jpassword,
+                         Prompter* prompter, jobject jprogress);
+    virtual ~RemoteSessionContext();
+    void * getCallbackBaton();
+    svn_ra_callbacks2_t* getCallbacks();
+
+  private:
+    svn_ra_callbacks2_t* m_raCallbacks;
+};
+
+#endif /* JAVAHL_REMOTE_SESSION_CONTEXT_H */

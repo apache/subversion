@@ -75,7 +75,7 @@ Java_org_apache_subversion_javahl_SVNClient_dispose
       JNIUtil::throwError(_("bad C++ this"));
       return;
     }
-  cl->dispose();
+  cl->dispose(jthis);
 }
 
 JNIEXPORT void JNICALL
@@ -1763,4 +1763,23 @@ Java_org_apache_subversion_javahl_SVNClient_patch
   cl->patch(patchPath, targetPath, jdryRun ? true : false, (int) jstripCount,
             jreverse ? true : false, jignoreWhitespace ? true : false,
             jremoveTempfiles ? true : false, &callback);
+}
+
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_SVNClient_nativeOpenRemoteSession
+(JNIEnv *env, jobject jthis, jstring jpath, jint jretryAttempts)
+{
+  JNIEntry(SVNClient, openRemoteSession);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError("bad C++ this");
+      return NULL;
+    }
+
+  JNIStringHolder path(jpath);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  return cl->openRemoteSession(path, jretryAttempts);
 }
