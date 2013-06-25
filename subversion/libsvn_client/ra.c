@@ -668,9 +668,9 @@ repos_locations(const char **start_url,
   apr_array_header_t *revs;
   apr_hash_t *rev_locs;
 
-  SVN_ERR_ASSERT(peg_revnum != SVN_INVALID_REVNUM);
-  SVN_ERR_ASSERT(start_revnum != SVN_INVALID_REVNUM);
-  SVN_ERR_ASSERT(end_revnum != SVN_INVALID_REVNUM || end_url == NULL);
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(peg_revnum));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(start_revnum));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(end_revnum) || end_url == NULL);
 
   /* Avoid a network request in the common easy case. */
   if (start_revnum == peg_revnum
@@ -684,6 +684,26 @@ repos_locations(const char **start_url,
     }
 
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_url, scratch_pool));
+
+  /* Handle another common case: The repository root can't move */
+  if (! strcmp(repos_url, url))
+    {
+      svn_revnum_t latest_revnum;
+      SVN_ERR(svn_ra_get_latest_revnum(ra_session, &latest_revnum,
+                                       scratch_pool));
+
+      if (start_revnum > latest_revnum || end_revnum > latest_revnum)
+        return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                 _("No such revision %ld"),
+                                 (start_revnum > latest_revnum) 
+                                        ? start_revnum : end_revnum);
+
+      if (start_url)
+        *start_url = apr_pstrdup(result_pool, repos_url);
+      if (end_url)
+        *end_url = apr_pstrdup(result_pool, repos_url);
+      return SVN_NO_ERROR;
+    }
 
   revs = apr_array_make(scratch_pool, 2, sizeof(svn_revnum_t));
   APR_ARRAY_PUSH(revs, svn_revnum_t) = start_revnum;
