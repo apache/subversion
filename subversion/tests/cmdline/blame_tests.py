@@ -957,6 +957,7 @@ def blame_eol_handling(sbox):
 
 
 @SkipUnless(svntest.main.server_has_reverse_get_file_revs)
+@Wimp(svntest.main.is_ra_type_dav)
 def blame_youngest_to_oldest(sbox):
   "blame_youngest_to_oldest"
 
