@@ -364,6 +364,15 @@ svn_wc_conflict_description2_t *
 svn_wc__cd3_to_cd2(const svn_wc_conflict_description3_t *conflict,
                    apr_pool_t *result_pool);
 
+/*
+ * Convert an array of svn_wc_conflict_description3_t * elements to an
+ * array of * svn_wc_conflict_description2_t * elements.
+ *
+ * Allocate the result in RESULT_POOL.
+ */
+apr_array_header_t *
+svn_wc__cd3_array_to_cd2_array(const apr_array_header_t *conflicts,
+                               apr_pool_t *result_pool);
 
 /*
  * Convert from svn_wc_conflict_description2_t to
