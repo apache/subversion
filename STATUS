@@ -76,14 +76,6 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
- * r1478987, r1492020
-   Optimize some code that retrieves mergeinfo to obtain less unneeded
-   information from the repository.
-   Justification:
-     Simple fixes to improve performance.
-   Votes:
-     +1: rhuijben, stefan2
-
  * r1491756
    Fix issue #4364: Correctly remove the stale entries from the lock table
    when committing deletions.
@@ -100,17 +92,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, stsp
 
- * r1494913, r1494967
-   Fix performance regression in 'svn log' on repository roots.
-   Justification:
-     In 1.8.0, 'svn log' is unusably slow on FSFS repo roots.
-     BDB most likely has the same issue.
-   Note:
-     r1494913 fixes FSFS
-     r1494967 fixes BDB
-   Votes:
-     +1: stefan2, danielsh
-
  * r1494966
    Eliminate an extra RA layer roundtrip in 'svn log' on repository roots.
    Justification:
@@ -118,6 +99,8 @@ Candidate changes:
      revision logs on a repo root is not a fringe use-case.
    Votes:
      +1: stefan2, rhuijben
+     -0: stsp (looks like this code generates invalid location segments
+               for the root node, see dev@ r1494966 thread)
 
  * ^/subversion/branches/1.8.x-r1495063
    r1495806, r1495985
@@ -142,19 +125,13 @@ Candidate changes:
      +1: philip
      -0: danielsh (the symlink should be absolute; see r1495329 thread)
 
- * r1495428
-   Improve BDB error codes.
-   Justification:
-     (err->apr_err == APR_SUCCESS) leaks to API consumers.
-   Votes:
-     +1: danielsh, stefan2
-
- * r1495432
+ * r1495432, r1495446
    Allow deleting non-regular properties from nodes.
    Justification:
      No way to remove them from historical files that have them.
    Votes:
-     +1: danielsh, stefan2
+     +1 (without r1495446): danielsh, stefan2
+     +1: stsp
 
  * r1492264
    Fix wrong character encoding handling of generic error messages
@@ -172,7 +149,7 @@ Candidate changes:
      No command line replication yet, but several reports of segfaults
     with TSVN, see http://svn.haxx.se/dev/archive-2013-06/0522.shtml.
    Votes:
-     +1: pburba
+     +1: pburba, stsp
 
  * r1496007, r1496111
    Fix issue #4383, "Subversion 1.8.0 crash when WC path is symlink"
@@ -190,7 +167,7 @@ Candidate changes:
      error handling in GUI clients. Serf should provide a better
      error that differentiates between separate problems.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stsp
 
 Veto-blocked changes:
 =====================
@@ -211,3 +188,28 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1478987, r1492020
+   Optimize some code that retrieves mergeinfo to obtain less unneeded
+   information from the repository.
+   Justification:
+     Simple fixes to improve performance.
+   Votes:
+     +1: rhuijben, stefan2, stsp
+
+ * r1494913, r1494967
+   Fix performance regression in 'svn log' on repository roots.
+   Justification:
+     In 1.8.0, 'svn log' is unusably slow on FSFS repo roots.
+     BDB most likely has the same issue.
+   Note:
+     r1494913 fixes FSFS
+     r1494967 fixes BDB
+   Votes:
+     +1: stefan2, danielsh, stsp
+
+ * r1495428
+   Improve BDB error codes.
+   Justification:
+     (err->apr_err == APR_SUCCESS) leaks to API consumers.
+   Votes:
+     +1: danielsh, stefan2, stsp
