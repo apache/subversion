@@ -1651,6 +1651,8 @@ signal_handler(int signum)
 svn_error_t *
 svn_cl__check_cancel(void *baton)
 {
+  /* Cancel baton should be always NULL in command line client. */
+  SVN_ERR_ASSERT(baton == NULL);
   if (cancelled)
     return svn_error_create(SVN_ERR_CANCELLED, NULL, _("Caught signal"));
   else
