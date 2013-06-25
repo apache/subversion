@@ -225,6 +225,11 @@ load_config(svn_ra_serf__session_t *session,
                                SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
                                SVN_CONFIG_DEFAULT_OPTION_HTTP_MAX_CONNECTIONS));
 
+  SVN_ERR(svn_config_get_bool(config, &session->using_chunked_requests,
+                              SVN_CONFIG_SECTION_GLOBAL,
+                              SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS,
+                              TRUE));
+
   if (config)
     server_group = svn_config_find_group(config,
                                          session->session_url.hostname,
@@ -281,6 +286,12 @@ load_config(svn_ra_serf__session_t *session,
                                    server_group,
                                    SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
                                    session->max_connections));
+
+      SVN_ERR(svn_config_get_bool(
+               config, &session->using_chunked_requests,
+               server_group,
+               SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS,
+               session->using_chunked_requests));
     }
 
   /* Don't allow the http-max-connections value to be larger than our
