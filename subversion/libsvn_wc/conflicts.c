@@ -2156,7 +2156,7 @@ read_prop_conflict_descs(apr_array_header_t *conflicts,
       desc->src_left_version = left_version;
       desc->src_right_version = right_version;
 
-      APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description3_t*) = desc;
+      APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description3_t *) = desc;
 
       return SVN_NO_ERROR;
     }
@@ -2250,7 +2250,7 @@ read_prop_conflict_descs(apr_array_header_t *conflicts,
           SVN_ERR(svn_stream_close(s));
         }
 
-      APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description3_t*) = desc;
+      APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description3_t *) = desc;
     }
   svn_pool_destroy(iterpool);
 
@@ -2282,7 +2282,7 @@ svn_wc__read_conflicts(const apr_array_header_t **conflicts,
     {
       /* Some callers expect not NULL */
       *conflicts = apr_array_make(result_pool, 0,
-                                  sizeof(svn_wc_conflict_description3_t*));;
+                                  sizeof(svn_wc_conflict_description3_t *));;
       return SVN_NO_ERROR;
     }
 
@@ -2292,7 +2292,7 @@ svn_wc__read_conflicts(const apr_array_header_t **conflicts,
                                      result_pool, scratch_pool));
 
   cflcts = apr_array_make(result_pool, 4,
-                          sizeof(svn_wc_conflict_description3_t*));
+                          sizeof(svn_wc_conflict_description3_t *));
 
   if (locations && locations->nelts > 0)
     left_version = APR_ARRAY_IDX(locations, 0, const svn_wc_conflict_version_t *);
@@ -2320,7 +2320,7 @@ svn_wc__read_conflicts(const apr_array_header_t **conflicts,
                                       FALSE /*is_binary*/, NULL /*mime_type*/,
                                       operation, left_version, right_version,
                                       result_pool, scratch_pool));
-      APR_ARRAY_PUSH(cflcts, svn_wc_conflict_description3_t*) = desc;
+      APR_ARRAY_PUSH(cflcts, svn_wc_conflict_description3_t *) = desc;
     }
 
   if (tree_conflicted)
