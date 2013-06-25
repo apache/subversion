@@ -957,7 +957,6 @@ def blame_eol_handling(sbox):
 
 
 @SkipUnless(svntest.main.server_has_reverse_get_file_revs)
-@XFail()
 def blame_youngest_to_oldest(sbox):
   "blame_youngest_to_oldest"
 
@@ -983,7 +982,7 @@ def blame_youngest_to_oldest(sbox):
         '     %d    jrandom %s\n' % (3, orig_line[:-1]),
   ]
   svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     'blame', '-r4:0', iota_moved)
+                                     'blame', '-r4:1', iota_moved)
 
 ########################################################################
 # Run the tests
