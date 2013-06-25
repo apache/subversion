@@ -101,6 +101,7 @@ Candidate changes:
      +1: stefan2, rhuijben
      -0: stsp (looks like this code generates invalid location segments
                for the root node, see dev@ r1494966 thread)
+     -0: ivan (doesn't handle SVN_INVALID_REVNUM)
 
  * ^/subversion/branches/1.8.x-r1495063
    r1495806, r1495985
