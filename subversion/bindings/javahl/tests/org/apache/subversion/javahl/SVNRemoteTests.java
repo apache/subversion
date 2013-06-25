@@ -290,7 +290,8 @@ public class SVNRemoteTests extends SVNTests
         if (!atomic)
             return;
 
-        byte[] oldValue = USERNAME.getBytes(UTF8);
+        byte[] oldValue = client.revProperty(getTestRepoUrl(), "svn:author",
+                                             Revision.getInstance(1));
         byte[] newValue = "rayjandom".getBytes(UTF8);
         try
         {
@@ -301,14 +302,14 @@ public class SVNRemoteTests extends SVNTests
         {
             String msg = ex.getMessage();
             int index = msg.indexOf('\n');
-            assertEquals(msg.substring(0, index),
-                         "Disabled repository feature");
+            assertEquals("Disabled repository feature",
+                         msg.substring(0, index));
             return;
         }
 
         byte[] check = client.revProperty(getTestRepoUrl(), "svn:author",
                                           Revision.getInstance(1));
-        assertTrue(Arrays.equals(newValue, check));
+        assertTrue(Arrays.equals(check, newValue));
     }
 
     public void testGetRevpropList() throws Exception
