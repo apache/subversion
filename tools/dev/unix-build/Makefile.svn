@@ -39,6 +39,7 @@ endif
 USE_APR_ICONV ?= no # set to yes to use APR iconv instead of GNU iconv
 PARALLEL ?= 1
 CLEANUP ?= 1
+EXCLUSIVE_WC_LOCKS ?= 1
 USE_HTTPV1 ?= no
 USE_AUTHZ_SHORT_CIRCUIT ?= no
 RAMDISK ?= /ramdisk
@@ -1421,7 +1422,8 @@ define do_check
     echo "Begin test: $(subst svn-check-,,$@) x $$fs"; \
     test -d "$(RAMDISK)/tmp" && export TMPDIR="$(RAMDISK)/tmp"; \
     env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(LIB_PTHREAD_HACK) \
-        make check PARALLEL=$(PARALLEL) CLEANUP=$(CLEANUP) $1 FS_TYPE=$$fs; \
+        make check PARALLEL=$(PARALLEL) CLEANUP=$(CLEANUP) \
+	  EXCLUSIVE_WC_LOCKS=$(EXCLUSIVE_WC_LOCKS) $1 FS_TYPE=$$fs; \
     for log in tests.log fails.log; do \
         test -f $$log && mv -f $$log $$log.$@-$$fs; \
     done; \
