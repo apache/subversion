@@ -28,6 +28,7 @@ import org.apache.subversion.javahl.callback.*;
 
 import java.util.Date;
 import java.util.Map;
+import java.util.Set;
 import java.io.OutputStream;
 
 /**
@@ -44,7 +45,7 @@ public interface ISVNRemote
     void dispose();
 
     /**
-     * Cancel the active operation.
+     * Cancel the active operation, including any ongoing edits.
      * @throws ClientException
      */
     void cancelOperation() throws ClientException;
@@ -156,10 +157,47 @@ public interface ISVNRemote
             throws ClientException;
 
     /**
-     * Create a commit editor instance, rooted at the current session URL.
+     * Return an editor for committing changes to the session's
+     * repository, setting the revision properties from
+     * <code>revisionProperties</code>. The revisions being committed
+     * against are passed to the editor functions. The root of the commit
+     * is the session's URL.
+     * <p>
+     * <code>revisionProperties</code> is a hash mapping property names to
+     * property values. The commit log message is expected to be in the
+     * {@link Property#REV_LOG} element.  <code>revisionProperties</code>
+     * can not contain either of {@link Property#REV_DATE} or
+     * {@link Property#REV_AUTHOR}.
+     * <p>
+     * Before {@link ISVNEditor#complete()} returns, but after the commit
+     * has succeeded, it will invoke <code>commitCallback</code> (if not
+     * <code>null</code>) with filled-in {@link CommitInfo}.  If
+     * <code>commitCallback</code> returns an error, that error will be
+     * returned from {@link ISVNEditor#complete()}, otherwise
+     * {@link ISVNEditor#complete()} will return successfully (unless it
+     * encountered an error before invoking <code>commitCallback</code>).
+     * The callback will not be called if the commit was a no-op
+     * (i.e., nothing was committed).
+     * <p>
+     * <code>lockTokens</code>, if not <code>null</code>, is a hash
+     * mapping paths (relative to the session's URL) to lock tokens.  The
+     * server checks that the correct token is provided for each
+     * committed, locked path.  <code>lockTokens</code> must live during
+     * the whole commit operation.
+     * <p>
+     * If <cpde>keepLocks</code> is <cpde>true</code>, then do not release
+     * locks on committed objects.  Else, automatically release such
+     * locks.
+     * <p>
+     * The caller may not perform any remote operations using this session
+     * before finishing the edit.
      * @throws ClientException
      */
-    ISVNEditor getCommitEditor() throws ClientException;
+    ISVNEditor getCommitEditor(Map<String, byte[]> revisionProperties,
+                               CommitCallback commitCallback,
+                               Set<Lock> lockTokens,
+                               boolean keepLocks)
+            throws ClientException;
 
     /**
      * Fetch the contents and properties of file <code>path</code> at
@@ -242,8 +280,8 @@ public interface ISVNRemote
             throws ClientException;
 
     // TODO: getMergeinfo
-    // TODO: doUpdate
-    // TODO: doSwitch
+    // TODO: update
+    // TODO: switch
 
     /**
      * Ask for a description of the status of a working copy with
@@ -292,12 +330,12 @@ public interface ISVNRemote
      * <code>depth</code>.
      * @throws ClientException
      */
-    ISVNReporter doStatus(String statusTarget,
-                          long revision, Depth depth,
-                          ISVNEditor statusEditor)
+    ISVNReporter status(String statusTarget,
+                        long revision, Depth depth,
+                        ISVNEditor statusEditor)
             throws ClientException;
 
-    // TODO: doDiff
+    // TODO: diff
     // TODO: getLog
 
     /**

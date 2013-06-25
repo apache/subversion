@@ -33,6 +33,7 @@ import org.apache.subversion.javahl.ClientException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Implementation of ISVNEditor that drives commits.
@@ -40,7 +41,11 @@ import java.util.Map;
  */
 public class CommitEditor extends JNIObject implements ISVNEditor
 {
-    public void dispose() {/* TODO */}
+    public void dispose()
+    {
+        session.disposeEditor(this);
+        nativeDispose();
+    }
 
     public void addDirectory(String relativePath,
                              Iterable<String> children,
@@ -48,7 +53,8 @@ public class CommitEditor extends JNIObject implements ISVNEditor
                              long replacesRevision)
             throws ClientException
     {
-        notimplemented("addDirectory");
+        nativeAddDirectory(session, relativePath, children, properties,
+                           replacesRevision);
     }
 
     public void addFile(String relativePath,
@@ -58,7 +64,9 @@ public class CommitEditor extends JNIObject implements ISVNEditor
                         long replacesRevision)
             throws ClientException
     {
-        notimplemented("addFile");
+        nativeAddFile(session, relativePath,
+                      checksum, contents, properties,
+                      replacesRevision);
     }
 
     public void addSymlink(String relativePath,
@@ -67,7 +75,8 @@ public class CommitEditor extends JNIObject implements ISVNEditor
                            long replacesRevision)
             throws ClientException
     {
-        notimplemented("addSymlink");
+        nativeAddSymlink(session, relativePath, target, properties,
+                         replacesRevision);
     }
 
     public void addAbsent(String relativePath,
@@ -75,7 +84,7 @@ public class CommitEditor extends JNIObject implements ISVNEditor
                           long replacesRevision)
             throws ClientException
     {
-        notimplemented("addAbsent");
+        nativeAddAbsent(session, relativePath, kind, replacesRevision);
     }
 
     public void alterDirectory(String relativePath,
@@ -84,7 +93,8 @@ public class CommitEditor extends JNIObject implements ISVNEditor
                                Map<String, byte[]> properties)
             throws ClientException
     {
-        notimplemented("alterDirectory");
+        nativeAlterDirectory(session, relativePath, revision,
+                             children, properties);
     }
 
     public void alterFile(String relativePath,
@@ -94,7 +104,8 @@ public class CommitEditor extends JNIObject implements ISVNEditor
                           Map<String, byte[]> properties)
             throws ClientException
     {
-        notimplemented("alterFile");
+        nativeAlterFile(session, relativePath, revision,
+                        checksum, contents, properties);
     }
 
     public void alterSymlink(String relativePath,
@@ -103,14 +114,15 @@ public class CommitEditor extends JNIObject implements ISVNEditor
                              Map<String, byte[]> properties)
             throws ClientException
     {
-        notimplemented("alterSymlink");
+        nativeAlterSymlink(session, relativePath, revision,
+                           target, properties);
     }
 
     public void delete(String relativePath,
                        long revision)
             throws ClientException
     {
-        notimplemented("delete");
+        nativeDelete(session, relativePath, revision);
     }
 
     public void copy(String sourceRelativePath,
@@ -119,7 +131,8 @@ public class CommitEditor extends JNIObject implements ISVNEditor
                      long replacesRevision)
             throws ClientException
     {
-        notimplemented("copy");
+        nativeCopy(session, sourceRelativePath, sourceRevision,
+                   destinationRelativePath, replacesRevision);
     }
 
     public void move(String sourceRelativePath,
@@ -128,44 +141,132 @@ public class CommitEditor extends JNIObject implements ISVNEditor
                      long replacesRevision)
             throws ClientException
     {
-        notimplemented("move");
+        nativeMove(session, sourceRelativePath, sourceRevision,
+                   destinationRelativePath, replacesRevision);
     }
 
     public void rotate(List<RotatePair> elements) throws ClientException
     {
-        notimplemented("rotate");
+        nativeRotate(session, elements);
     }
 
     public void complete() throws ClientException
     {
-        notimplemented("complete");
+        nativeComplete(session);
     }
 
     public void abort() throws ClientException
     {
-        notimplemented("abort");
+        nativeAbort(session);
     }
 
     /**
      * This factory method called from RemoteSession.getCommitEditor.
      */
-    static final CommitEditor createInstance(RemoteSession owner)
+    static final
+        CommitEditor createInstance(RemoteSession session,
+                                    Map<String, byte[]> revisionProperties,
+                                    CommitCallback commitCallback,
+                                    Set<Lock> lockTokens,
+                                    boolean keepLocks)
             throws ClientException
     {
-        // FIXME: temporary implementation
-        return new CommitEditor(0L);
+        long cppAddr = nativeCreateInstance(session,
+                                            revisionProperties, commitCallback,
+                                            lockTokens, keepLocks);
+        return new CommitEditor(cppAddr, session);
     }
 
     /**
-     * This constructor is called from JNI to get an instance.
+     * This constructor is called from the factory to get an instance.
      */
-    protected CommitEditor(long cppAddr)
+    protected CommitEditor(long cppAddr, RemoteSession session)
     {
         super(cppAddr);
+        this.session = session;
     }
 
-    private void notimplemented(String name)
-    {
-        throw new RuntimeException("Not implemented: " + name);
-    }
+    /** Stores a reference to the session that created this editor. */
+    protected RemoteSession session;
+
+    @Override
+    public native void finalize() throws Throwable;
+
+    /*
+     * Wrapped private native implementation declarations.
+     */
+    private native void nativeDispose();
+    private native void nativeAddDirectory(RemoteSession session,
+                                           String relativePath,
+                                           Iterable<String> children,
+                                           Map<String, byte[]> properties,
+                                           long replacesRevision)
+            throws ClientException;
+    private native void nativeAddFile(RemoteSession session,
+                                      String relativePath,
+                                      Checksum checksum,
+                                      InputStream contents,
+                                      Map<String, byte[]> properties,
+                                      long replacesRevision)
+            throws ClientException;
+    private native void nativeAddSymlink(RemoteSession session,
+                                         String relativePath,
+                                         String target,
+                                         Map<String, byte[]> properties,
+                                         long replacesRevision)
+            throws ClientException;
+    private native void nativeAddAbsent(RemoteSession session,
+                                        String relativePath,
+                                        NodeKind kind,
+                                        long replacesRevision)
+            throws ClientException;
+    private native void nativeAlterDirectory(RemoteSession session,
+                                             String relativePath,
+                                             long revision,
+                                             Iterable<String> children,
+                                             Map<String, byte[]> properties)
+            throws ClientException;
+    private native void nativeAlterFile(RemoteSession session,
+                                        String relativePath,
+                                        long revision,
+                                        Checksum checksum,
+                                        InputStream contents,
+                                        Map<String, byte[]> properties)
+            throws ClientException;
+    private native void nativeAlterSymlink(RemoteSession session,
+                                           String relativePath,
+                                           long revision,
+                                           String target,
+                                           Map<String, byte[]> properties)
+            throws ClientException;
+    private native void nativeDelete(RemoteSession session,
+                                     String relativePath,
+                                     long revision)
+            throws ClientException;
+    private native void nativeCopy(RemoteSession session,
+                                   String sourceRelativePath,
+                                   long sourceRevision,
+                                   String destinationRelativePath,
+                                   long replacesRevision)
+            throws ClientException;
+    private native void nativeMove(RemoteSession session,
+                                   String sourceRelativePath,
+                                   long sourceRevision,
+                                   String destinationRelativePath,
+                                   long replacesRevision)
+            throws ClientException;
+    private native void nativeRotate(RemoteSession session,
+                                     List<RotatePair> elements)
+            throws ClientException;
+    private native void nativeComplete(RemoteSession session)
+            throws ClientException;
+    private native void nativeAbort(RemoteSession session)
+            throws ClientException;
+    private static final native
+        long nativeCreateInstance(RemoteSession session,
+                                  Map<String, byte[]> revisionProperties,
+                                  CommitCallback commitCallback,
+                                  Set<Lock> lockTokens,
+                                  boolean keepLocks)
+            throws ClientException;
 }

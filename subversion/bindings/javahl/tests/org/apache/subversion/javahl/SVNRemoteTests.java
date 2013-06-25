@@ -237,13 +237,13 @@ public class SVNRemoteTests extends SVNTests
     public void testGetCommitEditor() throws Exception
     {
         ISVNRemote session = getSession();
-        session.getCommitEditor();
+        session.getCommitEditor(null, null, null, false);
     }
 
     public void testDisposeCommitEditor() throws Exception
     {
         ISVNRemote session = getSession();
-        session.getCommitEditor();
+        session.getCommitEditor(null, null, null, false);
         session.dispose();
     }
 
@@ -300,10 +300,8 @@ public class SVNRemoteTests extends SVNTests
         }
         catch (ClientException ex)
         {
-            String msg = ex.getMessage();
-            int index = msg.indexOf('\n');
             assertEquals("Disabled repository feature",
-                         msg.substring(0, index));
+                         ex.getAllMessages().get(0).getMessage());
             return;
         }
 
