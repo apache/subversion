@@ -126,7 +126,7 @@ LIBMAGIC_URL	= ftp://ftp.astron.com/pub/file/$(LIBMAGIC_DIST)
 RUBY_URL	= http://ftp.ruby-lang.org/pub/ruby/1.8/$(RUBY_DIST)
 BZ2_URL		= http://bzip.org/$(BZ2_VER)/$(BZ2_DIST)
 PYTHON_URL	= http://python.org/ftp/python/$(PYTHON_VER)/$(PYTHON_DIST)
-JUNIT_URL	= http://cloud.github.com/downloads/KentBeck/junit/$(JUNIT_DIST)
+JUNIT_URL	= http://downloads.sourceforge.net/project/junit/junit/$(JUNIT_VER)/$(JUNIT_DIST)
 
 
 BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
