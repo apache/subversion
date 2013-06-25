@@ -152,6 +152,16 @@ Candidate changes:
      +1: stsp
      +0: rhuijben (looks good)
 
+ * r1496470
+   Add runtime configuration option to control using of chunked transfer
+   encoding for HTTP requests body.
+   Branch: ^/subversion/branches/1.8.x-r1496470
+   Justification:
+     Workaround for issue with busted proxies that don't support chunked
+     transfer encoding for request body. Reported many times on mailing list.
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
