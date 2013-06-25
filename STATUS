@@ -143,14 +143,6 @@ Candidate changes:
    Votes:
      +1: brane
 
- * r1496110
-   Prevent a segfault in svn_client_log5.
-   Justification:
-     No command line replication yet, but several reports of segfaults
-    with TSVN, see http://svn.haxx.se/dev/archive-2013-06/0522.shtml.
-   Votes:
-     +1: pburba, stsp
-
  * r1496007, r1496111
    Fix issue #4383, "Subversion 1.8.0 crash when WC path is symlink"
    Justification:
@@ -214,3 +206,10 @@ Approved changes:
    Votes:
      +1: rhuijben, stsp, danielsh
 
+ * r1496110
+   Prevent a segfault in svn_client_log5.
+   Justification:
+     No command line replication yet, but several reports of segfaults
+    with TSVN, see http://svn.haxx.se/dev/archive-2013-06/0522.shtml.
+   Votes:
+     +1: pburba, stsp, ivan
