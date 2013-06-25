@@ -130,8 +130,8 @@ Candidate changes:
    Justification:
      No way to remove them from historical files that have them.
    Votes:
-     +1 (without r1495446): danielsh, stefan2
-     +1: stsp
+     +1 (without r1495446): stefan2
+     +1: stsp, danielsh
 
  * r1492264
    Fix wrong character encoding handling of generic error messages
@@ -158,16 +158,6 @@ Candidate changes:
    Votes:
      +1: stsp
      +0: rhuijben (looks good)
-
- * r1496132, r1496151
-   Provide a more detailed error than APR_EGENERAL when a serf connection
-   fails.
-   Justification:
-     Returning APR_EGENERAL for a very common error breaks all usable
-     error handling in GUI clients. Serf should provide a better
-     error that differentiates between separate problems.
-   Votes:
-     +1: rhuijben, stsp
 
 Veto-blocked changes:
 =====================
@@ -213,3 +203,14 @@ Approved changes:
      (err->apr_err == APR_SUCCESS) leaks to API consumers.
    Votes:
      +1: danielsh, stefan2, stsp
+
+ * r1496132, r1496151
+   Provide a more detailed error than APR_EGENERAL when a serf connection
+   fails.
+   Justification:
+     Returning APR_EGENERAL for a very common error breaks all usable
+     error handling in GUI clients. Serf should provide a better
+     error that differentiates between separate problems.
+   Votes:
+     +1: rhuijben, stsp, danielsh
+
