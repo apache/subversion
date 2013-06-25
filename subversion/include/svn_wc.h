@@ -1810,8 +1810,6 @@ typedef struct svn_wc_conflict_description3_t
   const char *base_abspath;  /* common ancestor of the two files being merged */
 
   /** their version of the file */
-  /* ### BH: For properties this field contains the reference to
-             the property rejection (.prej) file */
   const char *their_abspath;
 
   /** my locally-edited version of the file */
@@ -1819,6 +1817,9 @@ typedef struct svn_wc_conflict_description3_t
 
   /** merged version; may contain conflict markers */
   const char *merged_file;
+
+  /* For property conflicts, the path to the property reject file. */
+  const char *prop_reject_abspath;
 
   /** The operation that exposed the conflict.
    * Used only for tree conflicts.
