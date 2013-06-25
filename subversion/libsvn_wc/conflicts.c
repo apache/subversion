@@ -1781,7 +1781,7 @@ resolve_text_conflict(svn_skel_t **work_items,
                       svn_boolean_t *was_resolved,
                       svn_wc__db_t *db,
                       const char *local_abspath,
-                      svn_wc_conflict_description2_t *cdesc,
+                      svn_wc_conflict_description3_t *cdesc,
                       const apr_array_header_t *merge_options,
                       svn_wc_conflict_resolver_func2_t conflict_func,
                       void *conflict_baton,
@@ -1797,8 +1797,8 @@ resolve_text_conflict(svn_skel_t **work_items,
   /* Give the conflict resolution callback a chance to clean
      up the conflicts before we mark the file 'conflicted' */
 
-  SVN_ERR(conflict_func(&result, cdesc, conflict_baton, scratch_pool,
-                        scratch_pool));
+  SVN_ERR(conflict_func(&result, svn_wc__cd3_to_cd2(cdesc, scratch_pool),
+                        conflict_baton, scratch_pool, scratch_pool));
   if (result == NULL)
     return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                             _("Conflict callback violated API:"
@@ -1851,7 +1851,7 @@ resolve_text_conflict(svn_skel_t **work_items,
  * Allocate results in RESULT_POOL.  SCRATCH_POOL is used for temporary
  * allocations. */
 static svn_error_t *
-read_text_conflict_desc(svn_wc_conflict_description2_t **desc,
+read_text_conflict_desc(svn_wc_conflict_description3_t **desc,
                         svn_wc__db_t *db,
                         const char *local_abspath,
                         const svn_skel_t *conflict_skel,
@@ -1863,7 +1863,7 @@ read_text_conflict_desc(svn_wc_conflict_description2_t **desc,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  *desc = svn_wc_conflict_description_create_text2(local_abspath, result_pool);
+  *desc = svn_wc_conflict_description_create_text3(local_abspath, result_pool);
   (*desc)->is_binary = is_binary;
   (*desc)->mime_type = mime_type;
   (*desc)->operation = operation;
@@ -1891,7 +1891,7 @@ read_text_conflict_desc(svn_wc_conflict_description2_t **desc,
  * Allocate results in RESULT_POOL.  SCRATCH_POOL is used for temporary
  * allocations. */
 static svn_error_t *
-read_tree_conflict_desc(svn_wc_conflict_description2_t **desc,
+read_tree_conflict_desc(svn_wc_conflict_description3_t **desc,
                         svn_wc__db_t *db,
                         const char *local_abspath,
                         const svn_skel_t *conflict_skel,
@@ -1916,7 +1916,7 @@ read_tree_conflict_desc(svn_wc_conflict_description2_t **desc,
   else
     tc_kind = svn_node_file; /* Avoid assertion */
 
-  *desc = svn_wc_conflict_description_create_tree2(local_abspath, tc_kind,
+  *desc = svn_wc_conflict_description_create_tree3(local_abspath, tc_kind,
                                                    operation,
                                                    left_version, right_version,
                                                    result_pool);
@@ -2042,7 +2042,7 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
     {
       svn_skel_t *work_items;
       svn_boolean_t was_resolved;
-      svn_wc_conflict_description2_t *desc;
+      svn_wc_conflict_description3_t *desc;
       apr_hash_t *props;
 
       SVN_ERR(svn_wc__db_read_props(&props, db, local_abspath,
@@ -2079,7 +2079,7 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
   if (tree_conflicted)
     {
       svn_wc_conflict_result_t *result;
-      svn_wc_conflict_description2_t *desc;
+      svn_wc_conflict_description3_t *desc;
 
       SVN_ERR(read_tree_conflict_desc(&desc,
                                       db, local_abspath, conflict_skel,
@@ -2087,8 +2087,8 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
                                       scratch_pool, scratch_pool));
 
       /* Tell the resolver func about this conflict. */
-      SVN_ERR(resolver_func(&result, desc, resolver_baton, scratch_pool,
-                            scratch_pool));
+      SVN_ERR(resolver_func(&result, svn_wc__cd3_to_cd2(desc, scratch_pool),
+                            resolver_baton, scratch_pool, scratch_pool));
 
       /* Ignore the result. We cannot apply it here since this code runs
        * during an update or merge operation. Tree conflicts are always
@@ -2144,22 +2144,19 @@ read_prop_conflict_descs(apr_array_header_t *conflicts,
   if ((! create_tempfiles) || apr_hash_count(conflicted_props) == 0)
     {
       /* Legacy prop conflict with only a .reject file. */
-      svn_wc_conflict_description2_t *desc;
+      svn_wc_conflict_description3_t *desc;
 
-      desc  = svn_wc_conflict_description_create_prop2(local_abspath,
+      desc  = svn_wc_conflict_description_create_prop3(local_abspath,
                                                        node_kind,
                                                        "", result_pool);
 
-      /* ### This should be changed. The prej file should be stored
-       * ### separately from the other files. We need to rev the
-       * ### conflict description struct for this. */
-      desc->their_abspath = apr_pstrdup(result_pool, prop_reject_file);
+      desc->prop_reject_abspath = apr_pstrdup(result_pool, prop_reject_file);
 
       desc->operation = operation;
       desc->src_left_version = left_version;
       desc->src_right_version = right_version;
 
-      APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description2_t*) = desc;
+      APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description3_t*) = desc;
 
       return SVN_NO_ERROR;
     }
@@ -2173,14 +2170,14 @@ read_prop_conflict_descs(apr_array_header_t *conflicts,
       svn_string_t *old_value;
       svn_string_t *my_value;
       svn_string_t *their_value;
-      svn_wc_conflict_description2_t *desc;
+      svn_wc_conflict_description3_t *desc;
 
       svn_pool_clear(iterpool);
 
-      desc  = svn_wc_conflict_description_create_prop2(local_abspath,
-                                                       node_kind,
-                                                       propname,
-                                                       result_pool);
+      desc = svn_wc_conflict_description_create_prop3(local_abspath,
+                                                      node_kind,
+                                                      propname,
+                                                      result_pool);
 
       desc->operation = operation;
       desc->src_left_version = left_version;
@@ -2208,10 +2205,7 @@ read_prop_conflict_descs(apr_array_header_t *conflicts,
       else
         desc->reason = svn_wc_conflict_reason_edited;
 
-      /* ### This should be changed. The prej file should be stored
-       * ### separately from the other files. We need to rev the
-       * ### conflict description struct for this. */
-      desc->their_abspath = apr_pstrdup(result_pool, prop_reject_file);
+      desc->prop_reject_abspath = apr_pstrdup(result_pool, prop_reject_file);
 
       /* ### This should be changed. The conflict description for
        * ### props should contain these values as svn_string_t,
@@ -2235,10 +2229,7 @@ read_prop_conflict_descs(apr_array_header_t *conflicts,
           svn_stream_t *s;
           apr_size_t len;
 
-          /* ### Currently, their_abspath is used for the prop reject file.
-           * ### Put their value into merged instead...
-           * ### We need to rev the conflict description struct to fix this. */
-          SVN_ERR(svn_stream_open_unique(&s, &desc->merged_file, NULL,
+          SVN_ERR(svn_stream_open_unique(&s, &desc->their_abspath, NULL,
                                          svn_io_file_del_on_pool_cleanup,
                                          result_pool, iterpool));
           len = their_value->len;
@@ -2259,7 +2250,7 @@ read_prop_conflict_descs(apr_array_header_t *conflicts,
           SVN_ERR(svn_stream_close(s));
         }
 
-      APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description2_t*) = desc;
+      APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description3_t*) = desc;
     }
   svn_pool_destroy(iterpool);
 
@@ -2301,7 +2292,7 @@ svn_wc__read_conflicts(const apr_array_header_t **conflicts,
                                      result_pool, scratch_pool));
 
   cflcts = apr_array_make(result_pool, 4,
-                          sizeof(svn_wc_conflict_description2_t*));
+                          sizeof(svn_wc_conflict_description3_t*));
 
   if (locations && locations->nelts > 0)
     left_version = APR_ARRAY_IDX(locations, 0, const svn_wc_conflict_version_t *);
@@ -2322,26 +2313,26 @@ svn_wc__read_conflicts(const apr_array_header_t **conflicts,
 
   if (text_conflicted)
     {
-      svn_wc_conflict_description2_t *desc;
+      svn_wc_conflict_description3_t *desc;
 
       SVN_ERR(read_text_conflict_desc(&desc,
                                       db, local_abspath, conflict_skel,
                                       FALSE /*is_binary*/, NULL /*mime_type*/,
                                       operation, left_version, right_version,
                                       result_pool, scratch_pool));
-      APR_ARRAY_PUSH(cflcts, svn_wc_conflict_description2_t*) = desc;
+      APR_ARRAY_PUSH(cflcts, svn_wc_conflict_description3_t*) = desc;
     }
 
   if (tree_conflicted)
     {
-      svn_wc_conflict_description2_t *desc;
+      svn_wc_conflict_description3_t *desc;
 
       SVN_ERR(read_tree_conflict_desc(&desc,
                                       db, local_abspath, conflict_skel,
                                       operation, left_version, right_version,
                                       result_pool, scratch_pool));
 
-      APR_ARRAY_PUSH(cflcts, const svn_wc_conflict_description2_t *) = desc;
+      APR_ARRAY_PUSH(cflcts, const svn_wc_conflict_description3_t *) = desc;
     }
 
   *conflicts = cflcts;
@@ -2929,12 +2920,12 @@ conflict_status_walker(void *baton,
 
   for (i = 0; i < conflicts->nelts; i++)
     {
-      const svn_wc_conflict_description2_t *cd;
+      const svn_wc_conflict_description3_t *cd;
       svn_boolean_t did_resolve;
       svn_wc_conflict_choice_t my_choice = cswb->conflict_choice;
       const char *merged_file = NULL;
 
-      cd = APR_ARRAY_IDX(conflicts, i, const svn_wc_conflict_description2_t *);
+      cd = APR_ARRAY_IDX(conflicts, i, const svn_wc_conflict_description3_t *);
 
       svn_pool_clear(iterpool);
 
@@ -2947,7 +2938,9 @@ conflict_status_walker(void *baton,
                                     _("No conflict-callback and no "
                                       "pre-defined conflict-choice provided"));
 
-          SVN_ERR(cswb->conflict_func(&result, cd, cswb->conflict_baton,
+          SVN_ERR(cswb->conflict_func(&result,
+                                      svn_wc__cd3_to_cd2(cd, scratch_pool),
+                                      cswb->conflict_baton,
                                       iterpool, iterpool));
 
           my_choice = result->choice;

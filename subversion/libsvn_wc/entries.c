@@ -464,15 +464,16 @@ read_one_entry(const svn_wc_entry_t **new_entry,
 
           for (j = 0; j < child_conflicts->nelts; j++)
             {
-              const svn_wc_conflict_description2_t *conflict =
+              const svn_wc_conflict_description3_t *conflict =
                 APR_ARRAY_IDX(child_conflicts, j,
-                              svn_wc_conflict_description2_t *);
+                              svn_wc_conflict_description3_t *);
 
               if (conflict->kind == svn_wc_conflict_kind_tree)
                 {
                   if (!tree_conflicts)
                     tree_conflicts = apr_hash_make(scratch_pool);
-                  svn_hash_sets(tree_conflicts, child_name, conflict);
+                  svn_hash_sets(tree_conflicts, child_name,
+                                svn_wc__cd3_to_cd2(conflict, scratch_pool));
                 }
             }
         }

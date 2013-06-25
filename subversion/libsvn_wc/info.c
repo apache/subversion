@@ -310,10 +310,16 @@ build_info_for_node(svn_wc__info2_t **info,
                                 local_abspath, result_pool, scratch_pool));
 
   if (conflicted)
-    SVN_ERR(svn_wc__read_conflicts(&wc_info->conflicts, db,
-                                   local_abspath,
-                                   TRUE /* ### create tempfiles */,
-                                   result_pool, scratch_pool));
+    {
+      const apr_array_header_t *conflicts;
+
+      SVN_ERR(svn_wc__read_conflicts(&conflicts, db,
+                                     local_abspath,
+                                     TRUE /* ### create tempfiles */,
+                                     result_pool, scratch_pool));
+      wc_info->conflicts = svn_wc__cd3_array_to_cd2_array(conflicts,
+                                                          result_pool);
+    }
   else
     wc_info->conflicts = NULL;
 
@@ -534,8 +540,9 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
        hi = apr_hash_next(hi))
     {
       const char *this_abspath = svn__apr_hash_index_key(hi);
-      const svn_wc_conflict_description2_t *tree_conflict;
+      const svn_wc_conflict_description3_t *tree_conflict;
       svn_wc__info2_t *info;
+      const apr_array_header_t *conflicts;
 
       svn_pool_clear(iterpool);
 
@@ -557,21 +564,22 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
       info->repos_root_URL = repos_root_url;
       info->repos_UUID = repos_uuid;
 
-      SVN_ERR(svn_wc__read_conflicts(&info->wc_info->conflicts,
+      SVN_ERR(svn_wc__read_conflicts(&conflicts,
                                      wc_ctx->db, this_abspath,
                                      TRUE /* ### create tempfiles */,
                                      iterpool, iterpool));
-
-      if (! info->wc_info->conflicts || ! info->wc_info->conflicts->nelts)
+      if (! conflicts || ! conflicts->nelts)
         continue;
 
-      tree_conflict = APR_ARRAY_IDX(info->wc_info->conflicts, 0,
-                                    svn_wc_conflict_description2_t *);
+      tree_conflict = APR_ARRAY_IDX(conflicts, 0,
+                                    const svn_wc_conflict_description3_t *);
 
       if (!depth_includes(local_abspath, depth, tree_conflict->local_abspath,
                           tree_conflict->node_kind, iterpool))
         continue;
 
+      info->wc_info->conflicts = svn_wc__cd3_array_to_cd2_array(conflicts,
+                                                                iterpool);
       SVN_ERR(receiver(receiver_baton, this_abspath, info, iterpool));
     }
   svn_pool_destroy(iterpool);

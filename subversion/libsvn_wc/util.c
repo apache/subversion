@@ -389,13 +389,30 @@ svn_wc__cd3_to_cd2(const svn_wc_conflict_description3_t *conflict,
   if (conflict->base_abspath)
     new_conflict->base_abspath = apr_pstrdup(result_pool,
                                              conflict->base_abspath);
-  if (conflict->their_abspath)
-    new_conflict->their_abspath = apr_pstrdup(result_pool,
-                                              conflict->their_abspath);
+
+  if (conflict->kind == svn_wc_conflict_kind_property)
+    {
+      /* For property conflicts, cd2 stored prop_reject_abspath in
+       * their_abspath, and stored theirs_abspath in merged_file. */
+      if (conflict->prop_reject_abspath)
+        new_conflict->their_abspath = apr_pstrdup(result_pool,
+                                                  conflict->prop_reject_abspath);
+      if (conflict->their_abspath)
+        new_conflict->merged_file = apr_pstrdup(result_pool,
+                                                conflict->their_abspath);
+    }
+  else
+    {
+      if (conflict->their_abspath)
+        new_conflict->their_abspath = apr_pstrdup(result_pool,
+                                                  conflict->their_abspath);
+
+      if (conflict->merged_file)
+        new_conflict->merged_file = apr_pstrdup(result_pool,
+                                                conflict->merged_file);
+    }
   if (conflict->my_abspath)
     new_conflict->my_abspath = apr_pstrdup(result_pool, conflict->my_abspath);
-  if (conflict->merged_file)
-    new_conflict->merged_file = apr_pstrdup(result_pool, conflict->merged_file);
   new_conflict->operation = conflict->operation;
   if (conflict->src_left_version)
     new_conflict->src_left_version =
