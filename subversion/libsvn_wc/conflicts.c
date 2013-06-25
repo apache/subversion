@@ -1332,7 +1332,6 @@ generate_propconflict(svn_boolean_t *conflict_remains,
          base_file stay NULL as-is.  Both agents are attempting to add a
          new property.  */
     }
-
   else if ((base_val && !incoming_old_val)
            || (!base_val && incoming_old_val))
     {
@@ -1354,7 +1353,6 @@ generate_propconflict(svn_boolean_t *conflict_remains,
                                   scratch_pool));
       cdesc->base_abspath = svn_dirent_join(dirpath, file_name, scratch_pool);
     }
-
   else  /* base and old are both non-NULL */
     {
       const svn_string_t *conflict_base_val;
@@ -1404,8 +1402,8 @@ generate_propconflict(svn_boolean_t *conflict_remains,
           SVN_ERR(svn_diff_mem_string_diff3(&diff, conflict_base_val,
                                             working_val,
                                             incoming_new_val, options, scratch_pool));
-          SVN_ERR(svn_diff_mem_string_output_merge2
-                  (mergestream, diff, conflict_base_val, working_val,
+          SVN_ERR(svn_diff_mem_string_output_merge2(mergestream, diff,
+                   conflict_base_val, working_val,
                    incoming_new_val, NULL, NULL, NULL, NULL,
                    svn_diff_conflict_display_modified_latest, scratch_pool));
           SVN_ERR(svn_stream_close(mergestream));
