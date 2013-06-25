@@ -126,14 +126,6 @@ Candidate changes:
      +1: philip
      -0: danielsh (the symlink should be absolute; see r1495329 thread)
 
- * r1495432, r1495446
-   Allow deleting non-regular properties from nodes.
-   Justification:
-     No way to remove them from historical files that have them.
-   Votes:
-     +1 (without r1495446): stefan2
-     +1: stsp, danielsh
-
  * r1492264
    Fix wrong character encoding handling of generic error messages
    in JavaHL
@@ -211,3 +203,11 @@ Approved changes:
     with TSVN, see http://svn.haxx.se/dev/archive-2013-06/0522.shtml.
    Votes:
      +1: pburba, stsp, ivan
+
+ * r1495432, r1495446
+   Allow deleting non-regular properties from nodes.
+   Justification:
+     No way to remove them from historical files that have them.
+   Votes:
+     +1: stsp, danielsh, stefan2
+
