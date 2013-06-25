@@ -28,6 +28,7 @@ import org.apache.subversion.javahl.callback.*;
 
 import org.apache.subversion.javahl.ISVNRemote;
 import org.apache.subversion.javahl.ISVNEditor;
+import org.apache.subversion.javahl.ISVNReporter;
 import org.apache.subversion.javahl.JNIObject;
 import org.apache.subversion.javahl.OperationContext;
 import org.apache.subversion.javahl.ClientException;
@@ -36,6 +37,7 @@ import java.lang.ref.WeakReference;
 import java.util.HashSet;
 import java.util.Date;
 import java.util.Map;
+import java.io.OutputStream;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -86,10 +88,25 @@ public class RemoteSession extends JNIObject implements ISVNRemote
     public native long getRevisionByTimestamp(long timestamp)
             throws ClientException;
 
-    public native NodeKind checkPath(String path, long revision)
+    public void changeRevisionProperty(long revision,
+                                       String propertyName,
+                                       byte[] oldValue,
+                                       byte[] newValue)
+            throws ClientException
+    {
+        if (oldValue != null && !hasCapability(Capability.atomic_revprops))
+            throw new IllegalArgumentException(
+                "oldValue must be null;\n" +
+                "The server does not support" +
+                " atomic revision property changes");
+        nativeChangeRevisionProperty(revision, propertyName,
+                                     oldValue, newValue);
+    }
+
+    public native Map<String, byte[]> getRevisionProperties(long revision)
             throws ClientException;
 
-    public native Map<String, Lock> getLocks(String path, Depth depth)
+    public native byte[] getRevisionProperty(long revision, String propertyName)
             throws ClientException;
 
     public ISVNEditor getCommitEditor() throws ClientException
@@ -100,6 +117,61 @@ public class RemoteSession extends JNIObject implements ISVNRemote
         editors.add(new WeakReference<ISVNEditor>(ed));
         return ed;
     }
+
+    public long getFile(long revision, String path,
+                        OutputStream contents,
+                        Map<String, byte[]> properties)
+            throws ClientException
+    {
+        maybe_clear(properties);
+        return nativeGetFile(revision, path, contents, properties);
+    }
+
+    public long getDirectory(long revision, String path,
+                             int direntFields,
+                             Map<String, DirEntry> dirents,
+                             Map<String, byte[]> properties)
+            throws ClientException
+    {
+        if (direntFields <= 0 && direntFields != DirEntry.Fields.all)
+            throw new IllegalArgumentException(
+                "direntFields must be positive or DirEntry.Fields.all");
+        maybe_clear(dirents);
+        maybe_clear(properties);
+        return nativeGetDirectory(revision, path,
+                                  direntFields, dirents, properties);
+    }
+
+    // TODO: getMergeinfo
+    // TODO: doUpdate
+    // TODO: doSwitch
+
+    public native ISVNReporter doStatus(String statusTarget,
+                                        long revision, Depth depth,
+                                        ISVNEditor statusEditor)
+            throws ClientException;
+
+    // TODO: doDiff
+    // TODO: getLog
+
+    public native NodeKind checkPath(String path, long revision)
+            throws ClientException;
+
+    // TODO: stat
+    // TODO: getLocations
+    // TODO: getLocationSegments
+    // TODO: getFileRevisions
+    // TODO: lock
+    // TODO: unlock
+    // TODO: getLock
+
+    public native Map<String, Lock> getLocks(String path, Depth depth)
+            throws ClientException;
+
+    // TODO: replayRange
+    // TODO: replay
+    // TODO: getDeletedRevision
+    // TODO: getInheritedProperties
 
     public boolean hasCapability(Capability capability)
             throws ClientException
@@ -118,9 +190,27 @@ public class RemoteSession extends JNIObject implements ISVNRemote
         super(cppAddr);
     }
 
+    /*
+     * Wrapped private native implementation declarations.
+     */
     private native void nativeDispose();
+    private native void nativeChangeRevisionProperty(long revision,
+                                                     String propertyName,
+                                                     byte[] oldValue,
+                                                     byte[] newValue)
+            throws ClientException;
+    private native long nativeGetFile(long revision, String path,
+                                      OutputStream contents,
+                                      Map<String, byte[]> properties)
+            throws ClientException;
 
-    private native boolean nativeHasCapability(String capability);
+    private native long nativeGetDirectory(long revision, String path,
+                                           int direntFields,
+                                           Map<String, DirEntry> dirents,
+                                           Map<String, byte[]> properties)
+            throws ClientException;
+    private native boolean nativeHasCapability(String capability)
+            throws ClientException;
 
     /*
      * NOTE: This field is accessed from native code for callbacks.
@@ -133,4 +223,17 @@ public class RemoteSession extends JNIObject implements ISVNRemote
      * the editors when the session is disposed.
      */
     private HashSet<WeakReference<ISVNEditor>> editors;
+
+    /*
+     * Private helper methods.
+     */
+    private final static void maybe_clear(Map clearable)
+    {
+        if (clearable != null && !clearable.isEmpty())
+            try {
+                clearable.clear();
+            } catch (UnsupportedOperationException ex) {
+                // ignored
+            }
+    }
 }

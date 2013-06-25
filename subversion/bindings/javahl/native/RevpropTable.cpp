@@ -27,6 +27,7 @@
 #include "RevpropTable.h"
 #include "JNIUtil.h"
 #include "JNIStringHolder.h"
+#include "JNIByteArray.h"
 #include "Array.h"
 #include <apr_tables.h>
 #include <apr_strings.h>
@@ -71,7 +72,7 @@ const apr_hash_t *RevpropTable::hash(const SVN::Pool &pool)
   return revprop_table;
 }
 
-RevpropTable::RevpropTable(jobject jrevpropTable)
+RevpropTable::RevpropTable(jobject jrevpropTable, bool bytearray_values)
 {
   m_revpropTable = jrevpropTable;
 
@@ -116,12 +117,27 @@ RevpropTable::RevpropTable(jobject jrevpropTable)
           if (JNIUtil::isExceptionThrown())
             return;
 
-          JNIStringHolder propval((jstring)jpropval);
-          if (JNIUtil::isExceptionThrown())
-            return;
+          std::string pv;
+          if (bytearray_values)
+            {
+              JNIByteArray propval((jbyteArray)jpropval);
+              if (JNIUtil::isExceptionThrown())
+                return;
+              if (!propval.isNull())
+                pv = std::string(
+                    reinterpret_cast<const char*>(propval.getBytes()),
+                    propval.getLength());
+            }
+          else
+            {
+              JNIStringHolder propval((jstring)jpropval);
+              if (JNIUtil::isExceptionThrown())
+                return;
+              if (NULL != static_cast<const char *>(propval))
+                pv = static_cast<const char *>(propval);
+            }
 
-          m_revprops[std::string((const char *)propname)]
-            = std::string((const char *)propval);
+          m_revprops[std::string(static_cast<const char *>(propname))] = pv;
 
           JNIUtil::getEnv()->DeleteLocalRef(jpropval);
         }

@@ -215,6 +215,10 @@ public interface ISVNClient
 
     /**
      * Adds a file to the repository.
+     * <p>
+     * <b>Note:</b> Behaves like the 1.8 version with
+     * <code>noAutoProps</code> set to <code>false</code>.
+     *
      * @param path      path to be added.
      * @param depth     the depth to recurse into subdirectories
      * @param force     if adding a directory and recurse true and path is a
@@ -360,6 +364,31 @@ public interface ISVNClient
      * @param depth           how deep to recurse in subdirectories
      * @param nativeEOL       which EOL characters to use during export
      * @throws ClientException
+     * @since 1.9
+     */
+    long doExport(String srcPath, String destPath, Revision revision,
+                  Revision pegRevision, boolean force,
+                  boolean ignoreExternals, boolean ignoreKeywords,
+                  Depth depth, String nativeEOL)
+            throws ClientException;
+
+    /**
+     * Exports the contents of either a subversion repository into a
+     * 'clean' directory (meaning a directory with no administrative
+     * directories).
+     * <p>
+     * <b>Note:</b> Behaves like the 1.9 version with
+     * ignoreKeywords set to false.
+     *
+     * @param srcPath         the url of the repository path to be exported
+     * @param destPath        a destination path that must not already exist.
+     * @param revision        the revsion to be exported
+     * @param pegRevision     the revision to interpret srcPath
+     * @param force           set if it is ok to overwrite local files
+     * @param ignoreExternals ignore external during export
+     * @param depth           how deep to recurse in subdirectories
+     * @param nativeEOL       which EOL characters to use during export
+     * @throws ClientException
      */
     long doExport(String srcPath, String destPath, Revision revision,
                   Revision pegRevision, boolean force, boolean ignoreExternals,
@@ -401,7 +430,6 @@ public interface ISVNClient
      *                     results in a commit.
      * @param handler   the commit message callback
      * @throws ClientException
-     *
      */
     void doImport(String path, String url, Depth depth,
                   boolean noIgnore, boolean ignoreUnknownNodeTypes,
@@ -890,22 +918,28 @@ public interface ISVNClient
 
     /**
      * Open a persistent session to a repository.
-     * @param path A path in a working copy from which the
-     *        session URL is derived.
+     * <p>
+     * <b>Note:</b> The session object inherits the progress callback,
+     * configuration directory and authentication info.
+     *
+     * @param pathOrUrl A path in a working copy from which the
+     *        session URL is derived, or the URL itself.
      * @throws remote.RetryOpenSession If the session URL was redirected
      * @throws SubversionException If an URL redirect cycle was detected
      * @throws ClientException
-     * @note The session object inherits the progress callback,
-     *       configuration directory and authentication info.
      * @since 1.9
      */
-    ISVNRemote openRemoteSession(String path)
+    ISVNRemote openRemoteSession(String pathOrUrl)
             throws ClientException, SubversionException;
 
     /**
      * Open a persistent session to a repository.
-     * @param path A path in a working copy from which the
-     *        session URL is derived.
+     * <p>
+     * <b>Note:</b> The session object inherits the progress callback,
+     * configuration directory and authentication info.
+     *
+     * @param pathOrUrl A path in a working copy from which the
+     *        session URL is derived, or the URL itself.
      * @param retryAttempts The number of times to retry the operation
      *        if the given URL is redirected.
      * @throws IllegalArgumentException If <code>retryAttempts</code>
@@ -913,10 +947,8 @@ public interface ISVNClient
      * @throws remote.RetryOpenSession If the session URL was redirected
      * @throws SubversionException If an URL redirect cycle was detected
      * @throws ClientException
-     * @note The session object inherits the progress callback,
-     *       configuration directory and authentication info.
      * @since 1.9
      */
-    ISVNRemote openRemoteSession(String path, int retryAttempts)
+    ISVNRemote openRemoteSession(String pathOrUrl, int retryAttempts)
             throws ClientException, SubversionException;
 }

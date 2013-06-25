@@ -636,7 +636,8 @@ JNIEXPORT jlong JNICALL
 Java_org_apache_subversion_javahl_SVNClient_doExport
 (JNIEnv *env, jobject jthis, jstring jsrcPath, jstring jdestPath,
  jobject jrevision, jobject jpegRevision, jboolean jforce,
- jboolean jignoreExternals, jobject jdepth, jstring jnativeEOL)
+ jboolean jignoreExternals, jboolean jignoreKeywords,
+ jobject jdepth, jstring jnativeEOL)
 {
   JNIEntry(SVNClient, doExport);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -666,7 +667,9 @@ Java_org_apache_subversion_javahl_SVNClient_doExport
     return -1;
 
   return cl->doExport(srcPath, destPath, revision, pegRevision,
-                      jforce ? true : false, jignoreExternals ? true : false,
+                      jforce ? true : false,
+                      jignoreExternals ? true : false,
+                      jignoreKeywords ? true : false,
                       EnumMapper::toDepth(jdepth), nativeEOL);
 }
 

@@ -214,8 +214,19 @@ public class SVNClient implements ISVNClient
     public native long doExport(String srcPath, String destPath,
                                 Revision revision, Revision pegRevision,
                                 boolean force, boolean ignoreExternals,
+                                boolean ignorKeywords,
                                 Depth depth, String nativeEOL)
             throws ClientException;
+
+    public long doExport(String srcPath, String destPath,
+                                Revision revision, Revision pegRevision,
+                                boolean force, boolean ignoreExternals,
+                                Depth depth, String nativeEOL)
+            throws ClientException
+    {
+        return doExport(srcPath, destPath, revision, pegRevision,
+                        force, ignoreExternals, false, depth, nativeEOL);
+    }
 
     public native long doSwitch(String path, String url, Revision revision,
                                 Revision pegRevision, Depth depth,
@@ -458,23 +469,23 @@ public class SVNClient implements ISVNClient
                              PatchCallback callback)
             throws ClientException;
 
-    public ISVNRemote openRemoteSession(String path)
+    public ISVNRemote openRemoteSession(String pathOrUrl)
             throws ClientException, SubversionException
     {
-        return nativeOpenRemoteSession(path, 1);
+        return nativeOpenRemoteSession(pathOrUrl, 1);
     }
 
-    public ISVNRemote openRemoteSession(String path, int retryAttempts)
+    public ISVNRemote openRemoteSession(String pathOrUrl, int retryAttempts)
             throws ClientException, SubversionException
     {
         if (retryAttempts <= 0)
             throw new IllegalArgumentException(
                 "retryAttempts must be positive");
-        return nativeOpenRemoteSession(path, retryAttempts);
+        return nativeOpenRemoteSession(pathOrUrl, retryAttempts);
     }
 
     private native ISVNRemote nativeOpenRemoteSession(
-        String path, int retryAttempts)
+        String pathOrUrl, int retryAttempts)
             throws ClientException, SubversionException;
 
     /**

@@ -202,23 +202,23 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
     std::vector<RevisionRange>::const_iterator it;
     for (it = logRanges.begin(); it != logRanges.end(); ++it)
     {
-        if (it->toRange(subPool)->start.kind
-            == svn_opt_revision_unspecified
-            && it->toRange(subPool)->end.kind
-            == svn_opt_revision_unspecified)
+        const svn_opt_revision_range_t *range = it->toRange(subPool);
+
+        if (range->start.kind == svn_opt_revision_unspecified
+            && range->end.kind == svn_opt_revision_unspecified)
         {
-            svn_opt_revision_range_t *range =
+            svn_opt_revision_range_t *full =
                 (svn_opt_revision_range_t *)apr_pcalloc(subPool.getPool(),
                                                         sizeof(*range));
-            range->start.kind = svn_opt_revision_number;
-            range->start.value.number = 1;
-            range->end.kind = svn_opt_revision_head;
-            APR_ARRAY_PUSH(ranges, const svn_opt_revision_range_t *) = range;
+            full->start.kind = svn_opt_revision_number;
+            full->start.value.number = 1;
+            full->end.kind = svn_opt_revision_head;
+            full->end.value.number = 0;
+            APR_ARRAY_PUSH(ranges, const svn_opt_revision_range_t *) = full;
         }
         else
         {
-            APR_ARRAY_PUSH(ranges, const svn_opt_revision_range_t *) =
-                it->toRange(subPool);
+            APR_ARRAY_PUSH(ranges, const svn_opt_revision_range_t *) = range;
         }
         if (JNIUtil::isExceptionThrown())
             return;
@@ -488,6 +488,7 @@ void SVNClient::resolve(const char *path, svn_depth_t depth,
 jlong SVNClient::doExport(const char *srcPath, const char *destPath,
                           Revision &revision, Revision &pegRevision,
                           bool force, bool ignoreExternals,
+                          bool ignoreKeywords,
                           svn_depth_t depth, const char *nativeEOL)
 {
     SVN::Pool subPool(pool);
@@ -506,7 +507,7 @@ jlong SVNClient::doExport(const char *srcPath, const char *destPath,
                                    destinationPath.c_str(),
                                    pegRevision.revision(),
                                    revision.revision(), force,
-                                   ignoreExternals, FALSE,
+                                   ignoreExternals, ignoreKeywords,
                                    depth,
                                    nativeEOL, ctx,
                                    subPool.getPool()),
