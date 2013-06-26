@@ -160,14 +160,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1496110
-   Prevent a segfault in svn_client_log5.
-   Justification:
-     No command line replication yet, but several reports of segfaults
-    with TSVN, see http://svn.haxx.se/dev/archive-2013-06/0522.shtml.
-   Votes:
-     +1: pburba, stsp, ivan
-
  * r1495432, r1495446
    Allow deleting non-regular properties from nodes.
    Justification:
