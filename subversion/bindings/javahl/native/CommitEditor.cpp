@@ -24,14 +24,17 @@
  * @brief Implementation of the class CommitEditor
  */
 
-#include "EnumMapper.h"
 #include "CommitEditor.h"
+#include "EnumMapper.h"
+#include "InputStream.h"
 #include "Iterator.h"
+#include "JNIByteArray.h"
 #include "LockTokenTable.h"
 #include "RevpropTable.h"
 #include "RemoteSession.h"
 
 #include <apr_tables.h>
+#include "svn_checksum.h"
 #include "private/svn_editor.h"
 #include "private/svn_ra_private.h"
 #include "svn_private_config.h"
@@ -178,6 +181,55 @@ build_children(const Iterator& iter, SVN::Pool& pool)
     }
   return children;
 }
+
+svn_checksum_t
+build_checksum(jobject jchecksum, SVN::Pool& pool)
+{
+  apr_pool_t* result_pool = pool.getPool();
+  svn_checksum_t checksum = { 0 };
+  if (jchecksum)
+    {
+      JNIEnv *env = JNIUtil::getEnv();
+
+      static jmethodID digest_mid = 0;
+      static jmethodID kind_mid = 0;
+
+      jclass cls = env->FindClass(JAVA_PACKAGE"/types/Checksum");
+      if (JNIUtil::isJavaExceptionThrown())
+        return checksum;
+
+      if (0 == digest_mid)
+        {
+          digest_mid = env->GetMethodID(cls, "getDigest", "()[B");
+          if (JNIUtil::isJavaExceptionThrown())
+            return checksum;
+        }
+      if (0 == kind_mid)
+        {
+          kind_mid = env->GetMethodID(cls, "getKind", "()L"
+                                      JAVA_PACKAGE"/types/Checksum$Kind;");
+          if (JNIUtil::isJavaExceptionThrown())
+            return checksum;
+        }
+
+      jobject jdigest = env->CallObjectMethod(jchecksum, digest_mid);
+      if (JNIUtil::isJavaExceptionThrown())
+        return checksum;
+      jobject jkind = env->CallObjectMethod(jchecksum, kind_mid);
+      if (JNIUtil::isJavaExceptionThrown())
+        return checksum;
+      JNIByteArray bdigest((jbyteArray)jdigest, true);
+      if (JNIUtil::isJavaExceptionThrown())
+        return checksum;
+
+      void* digest = apr_palloc(result_pool, bdigest.getLength());
+      memcpy(digest, bdigest.getBytes(), bdigest.getLength());
+      checksum.digest = static_cast<const unsigned char*>(digest);
+      checksum.kind = EnumMapper::toChecksumKind(jkind);
+    }
+
+  return checksum;
+}
 } // anonymous namespace
 
 
@@ -220,7 +272,23 @@ void CommitEditor::addFile(jstring jrelpath,
       return;
     }
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
-  throw_not_implemented("addFile");
+
+  JNIStringHolder relpath(jrelpath);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+  InputStream contents(jcontents);
+  RevpropTable properties(jproperties, true);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
+  SVN::Pool subPool(pool);
+  svn_checksum_t checksum = build_checksum(jchecksum, subPool);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+  SVN_JNI_ERR(svn_editor_add_file(m_editor, relpath,
+                                  &checksum, contents.getStream(subPool),
+                                  properties.hash(subPool, false),
+                                  svn_revnum_t(jreplaces_revision)),);
 }
 
 void CommitEditor::addSymlink(jstring jrelpath,
@@ -272,7 +340,7 @@ void CommitEditor::alterDirectory(jstring jrelpath, jlong jrevision,
   SVN_JNI_ERR(svn_editor_alter_directory(
                   m_editor, relpath, svn_revnum_t(jrevision),
                   (jchildren ? build_children(children, subPool) : NULL),
-                  properties.hash(subPool, false)),);
+                  properties.hash(subPool, true)),);
 }
 
 void CommitEditor::alterFile(jstring jrelpath, jlong jrevision,
@@ -285,7 +353,24 @@ void CommitEditor::alterFile(jstring jrelpath, jlong jrevision,
       return;
     }
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
-  throw_not_implemented("alterFile");
+
+  JNIStringHolder relpath(jrelpath);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+  InputStream contents(jcontents);
+  RevpropTable properties(jproperties, true);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
+  SVN::Pool subPool(pool);
+  svn_checksum_t checksum = build_checksum(jchecksum, subPool);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+  SVN_JNI_ERR(svn_editor_alter_file(
+                  m_editor, relpath, svn_revnum_t(jrevision),
+                  (jcontents ? &checksum : NULL),
+                  (jcontents ? contents.getStream(subPool) : NULL),
+                  properties.hash(subPool, true)),);
 }
 
 void CommitEditor::alterSymlink(jstring jrelpath, jlong jrevision,
