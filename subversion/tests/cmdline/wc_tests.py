@@ -258,16 +258,27 @@ def cleanup_unversioned_items(sbox):
   svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
                                      [], 'status', '--no-ignore')
 
-  svntest.actions.run_and_verify_svn("Cleanup wc root", None, [],
-                                     "cleanup", "--remove-unversioned")
+  expected_output = [
+        'D         dir1\n',
+        'D         dir2\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'cleanup', '--remove-unversioned')
   expected_output = [
         ' M      .\n',
         'I       dir_foo\n',
         'I       file_foo\n',
   ]
-  svntest.actions.run_and_verify_svn("Cleanup wc root", None, [],
-                                     "cleanup", "--remove-unversioned",
-                                     "--no-ignore")
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'status', '--no-ignore')
+
+  expected_output = [
+        'D         dir_foo\n',
+        'D         file_foo\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'cleanup', '--remove-unversioned',
+                                     '--no-ignore')
   expected_output = [
         ' M      .\n',
   ]
