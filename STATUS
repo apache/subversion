@@ -160,10 +160,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1495432, r1495446
-   Allow deleting non-regular properties from nodes.
-   Justification:
-     No way to remove them from historical files that have them.
-   Votes:
-     +1: stsp, danielsh, stefan2
-
