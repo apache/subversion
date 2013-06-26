@@ -3364,6 +3364,14 @@ fs_node_origin_rev(svn_revnum_t *revision,
       return SVN_NO_ERROR;
     }
 
+  /* The root node always has ID 0, created in revision 0 and will never
+     use the new-style ID format. */
+  if (strcmp(node_id, "0") == 0)
+    {
+      *revision = 0;
+      return SVN_NO_ERROR;
+    }
+
   /* OK, it's an old-style ID?  Maybe it's cached. */
   SVN_ERR(svn_fs_fs__get_node_origin(&cached_origin_id,
                                      fs,

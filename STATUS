@@ -160,17 +160,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1494913, r1494967
-   Fix performance regression in 'svn log' on repository roots.
-   Justification:
-     In 1.8.0, 'svn log' is unusably slow on FSFS repo roots.
-     BDB most likely has the same issue.
-   Note:
-     r1494913 fixes FSFS
-     r1494967 fixes BDB
-   Votes:
-     +1: stefan2, danielsh, stsp
-
  * r1495428
    Improve BDB error codes.
    Justification:
