@@ -27,6 +27,7 @@
 #ifndef JAVAHL_COMMIT_EDITOR_H
 #define JAVAHL_COMMIT_EDITOR_H
 
+#include <string>
 #include <jni.h>
 
 #include "svn_ra.h"
@@ -35,9 +36,10 @@
 #include "SVNBase.h"
 #include "CommitCallback.h"
 
-// Forward-declare the currently private EV2 editor structs.
+class RemoteSession;
+
+// Forward-declare the currently private EV2 editor struct.
 struct svn_editor_t;
-struct svn_delta__extra_baton;
 
 /*
  * This class wraps an EV2 commit editor.
@@ -55,48 +57,54 @@ public:
 
   virtual void dispose(jobject jthis);
 
-  void addDirectory(jobject jsession, jstring jrelpath,
+  void addDirectory(jstring jrelpath,
                     jobject jchildren, jobject jproperties,
                     jlong jreplaces_revision);
-  void addFile(jobject jsession, jstring jrelpath,
+  void addFile(jstring jrelpath,
                jobject jchecksum, jobject jcontents,
                jobject jproperties,
                jlong jreplaces_revision);
-  void addSymlink(jobject jsession, jstring jrelpath,
+  void addSymlink(jstring jrelpath,
                   jstring jtarget, jobject jproperties,
                   jlong jreplaces_revision);
-  void addAbsent(jobject jsession, jstring jrelpath,
+  void addAbsent(jstring jrelpath,
                  jobject jkind, jlong jreplaces_revision);
-  void alterDirectory(jobject jsession,
-                      jstring jrelpath, jlong jrevision,
+  void alterDirectory(jstring jrelpath, jlong jrevision,
                       jobject jchildren, jobject jproperties);
-  void alterFile(jobject jsession,
-                 jstring jrelpath, jlong jrevision,
+  void alterFile(jstring jrelpath, jlong jrevision,
                  jobject jchecksum, jobject jcontents,
                  jobject jproperties);
-  void alterSymlink(jobject jsession,
-                    jstring jrelpath, jlong jrevision,
+  void alterSymlink(jstring jrelpath, jlong jrevision,
                     jstring jtarget, jobject jproperties);
-  void remove(jobject jsession, jstring jrelpath, jlong jrevision);
-  void copy(jobject jsession,
-            jstring jsrc_relpath, jlong jsrc_revision,
+  void remove(jstring jrelpath, jlong jrevision);
+  void copy(jstring jsrc_relpath, jlong jsrc_revision,
             jstring jdst_relpath, jlong jreplaces_revision);
-  void move(jobject jsession,
-            jstring jsrc_relpath, jlong jsrc_revision,
+  void move(jstring jsrc_relpath, jlong jsrc_revision,
             jstring jdst_relpath, jlong jreplaces_revision);
-  void rotate(jobject jsession, jobject jelements);
-  void complete(jobject jsession);
-  void abort(jobject jsession);
+  void rotate(jobject jelements);
+  void complete();
+  void abort();
 
 private:
-  CommitEditor(svn_ra_session_t* session,
+  CommitEditor(RemoteSession* session,
                jobject jrevprops, jobject jcommit_callback,
-               jobject jlock_tokens, bool keep_locks);
+               jobject jlock_tokens, jboolean jkeep_locks);
+
+  // This is our svn_ra__get_copysrc_kind_cb_t for the commit editor.
+  static svn_error_t* get_copysrc_kind_cb(svn_node_kind_t* kind, void* baton,
+                                          const char* repos_relpath,
+                                          svn_revnum_t src_revision,
+                                          apr_pool_t *scratch_pool);
 
   bool m_valid;
-  CommitCallback m_callback;
+  PersistentCommitCallback m_callback;
+  RemoteSession* m_session;
   svn_editor_t* m_editor;
-  svn_delta__extra_baton* m_extra_baton;
+
+  // Temporary, while EV2 shims are in place
+  svn_ra_session_t* m_callback_session;
+  const char* m_callback_session_url;
+  const char* m_callback_session_uuid;
 };
 
 #endif // JAVAHL_COMMIT_EDITOR_H

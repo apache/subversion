@@ -66,157 +66,148 @@ Java_org_apache_subversion_javahl_remote_CommitEditor_nativeCreateInstance(
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_remote_CommitEditor_nativeAddDirectory(
-    JNIEnv* env, jobject jthis, jobject jsession,
+Java_org_apache_subversion_javahl_remote_CommitEditor_addDirectory(
+    JNIEnv* env, jobject jthis,
     jstring jrelpath, jobject jchildren, jobject jproperties,
     jlong jreplaces_revision)
 {
-  JNIEntry(CommitEditor, nativeAddDirectory);
+  JNIEntry(CommitEditor, addDirectory);
   CommitEditor *editor = CommitEditor::getCppObject(jthis);
   CPPADDR_NULL_PTR(editor,);
-  editor->addDirectory(jsession,
-                       jrelpath, jchildren, jproperties, jreplaces_revision);
+  editor->addDirectory(jrelpath, jchildren, jproperties, jreplaces_revision);
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_remote_CommitEditor_nativeAddFile(
-    JNIEnv* env, jobject jthis, jobject jsession,
+Java_org_apache_subversion_javahl_remote_CommitEditor_addFile(
+    JNIEnv* env, jobject jthis,
     jstring jrelpath, jobject jchecksum, jobject jcontents,
     jobject jproperties, jlong jreplaces_revision)
 {
-  JNIEntry(CommitEditor, nativeAddFile);
+  JNIEntry(CommitEditor, addFile);
   CommitEditor *editor = CommitEditor::getCppObject(jthis);
   CPPADDR_NULL_PTR(editor,);
-  editor->addFile(jsession,
-                  jrelpath, jchecksum, jcontents, jproperties,
+  editor->addFile(jrelpath, jchecksum, jcontents, jproperties,
                   jreplaces_revision);
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_remote_CommitEditor_nativeAddSymlink(
-    JNIEnv* env, jobject jthis, jobject jsession,
+Java_org_apache_subversion_javahl_remote_CommitEditor_addSymlink(
+    JNIEnv* env, jobject jthis,
     jstring jrelpath, jstring jtarget, jobject jproperties,
     jlong jreplaces_revision)
 {
-  JNIEntry(CommitEditor, nativeAddSymlink);
+  JNIEntry(CommitEditor, addSymlink);
   CommitEditor *editor = CommitEditor::getCppObject(jthis);
   CPPADDR_NULL_PTR(editor,);
-  editor->addSymlink(jsession,
-                     jrelpath, jtarget, jproperties, jreplaces_revision);
+  editor->addSymlink(jrelpath, jtarget, jproperties, jreplaces_revision);
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_remote_CommitEditor_nativeAddAbsent(
-    JNIEnv* env, jobject jthis, jobject jsession,
+Java_org_apache_subversion_javahl_remote_CommitEditor_addAbsent(
+    JNIEnv* env, jobject jthis,
     jstring jrelpath, jobject jkind, jlong jreplaces_revision)
 {
-  JNIEntry(CommitEditor, nativeAddAbsent);
+  JNIEntry(CommitEditor, addAbsent);
   CommitEditor *editor = CommitEditor::getCppObject(jthis);
   CPPADDR_NULL_PTR(editor,);
-  editor->addAbsent(jsession,
-                    jrelpath, jkind, jreplaces_revision);
+  editor->addAbsent(jrelpath, jkind, jreplaces_revision);
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_remote_CommitEditor_nativeAlterDirectory(
-    JNIEnv* env, jobject jthis, jobject jsession,
+Java_org_apache_subversion_javahl_remote_CommitEditor_alterDirectory(
+    JNIEnv* env, jobject jthis,
     jstring jrelpath, jlong jrevision, jobject jchildren, jobject jproperties)
 {
-  JNIEntry(CommitEditor, nativeAlterDirectory);
+  JNIEntry(CommitEditor, alterDirectory);
   CommitEditor *editor = CommitEditor::getCppObject(jthis);
   CPPADDR_NULL_PTR(editor,);
-  editor->alterDirectory(jsession,
-                         jrelpath, jrevision, jchildren, jproperties);
+  editor->alterDirectory(jrelpath, jrevision, jchildren, jproperties);
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_remote_CommitEditor_nativeAlterFile(
-    JNIEnv* env, jobject jthis, jobject jsession,
+Java_org_apache_subversion_javahl_remote_CommitEditor_alterFile(
+    JNIEnv* env, jobject jthis,
     jstring jrelpath, jlong jrevision, jobject jchecksum, jobject jcontents,
     jobject jproperties)
 {
-  JNIEntry(CommitEditor, nativeAlterFile);
+  JNIEntry(CommitEditor, alterFile);
   CommitEditor *editor = CommitEditor::getCppObject(jthis);
   CPPADDR_NULL_PTR(editor,);
-  editor->alterFile(jsession,
-                    jrelpath, jrevision, jchecksum, jcontents, jproperties);
+  editor->alterFile(jrelpath, jrevision, jchecksum, jcontents, jproperties);
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_remote_CommitEditor_nativeAlterSymlink(
-    JNIEnv* env, jobject jthis, jobject jsession,
+Java_org_apache_subversion_javahl_remote_CommitEditor_alterSymlink(
+    JNIEnv* env, jobject jthis,
     jstring jrelpath, jlong jrevision, jstring jtarget, jobject jproperties)
 {
-  JNIEntry(CommitEditor, nativeAlterSymlink);
+  JNIEntry(CommitEditor, alterSymlink);
   CommitEditor *editor = CommitEditor::getCppObject(jthis);
   CPPADDR_NULL_PTR(editor,);
-  editor->alterSymlink(jsession,
-                       jrelpath, jrevision, jtarget, jproperties);
+  editor->alterSymlink(jrelpath, jrevision, jtarget, jproperties);
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_remote_CommitEditor_nativeDelete(
-    JNIEnv* env, jobject jthis, jobject jsession,
+Java_org_apache_subversion_javahl_remote_CommitEditor_delete(
+    JNIEnv* env, jobject jthis,
     jstring jrelpath, jlong jrevision)
 {
-  JNIEntry(CommitEditor, nativeDelete);
+  JNIEntry(CommitEditor, delete);
   CommitEditor *editor = CommitEditor::getCppObject(jthis);
   CPPADDR_NULL_PTR(editor,);
-  editor->remove(jsession, jrelpath, jrevision);
+  editor->remove(jrelpath, jrevision);
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_remote_CommitEditor_nativeCopy(
-    JNIEnv* env, jobject jthis, jobject jsession,
+Java_org_apache_subversion_javahl_remote_CommitEditor_copy(
+    JNIEnv* env, jobject jthis,
     jstring jsrc_relpath, jlong jsrc_revision, jstring jdst_relpath,
     jlong jreplaces_revision)
 {
-  JNIEntry(CommitEditor, nativeCopy);
+  JNIEntry(CommitEditor, copy);
   CommitEditor *editor = CommitEditor::getCppObject(jthis);
   CPPADDR_NULL_PTR(editor,);
-  editor->copy(jsession,
-               jsrc_relpath, jsrc_revision, jdst_relpath, jreplaces_revision);
+  editor->copy(jsrc_relpath, jsrc_revision, jdst_relpath, jreplaces_revision);
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_remote_CommitEditor_nativeMove(
-    JNIEnv* env, jobject jthis, jobject jsession,
+Java_org_apache_subversion_javahl_remote_CommitEditor_move(
+    JNIEnv* env, jobject jthis,
     jstring jsrc_relpath, jlong jsrc_revision, jstring jdst_relpath,
     jlong jreplaces_revision)
 {
-  JNIEntry(CommitEditor, nativeMove);
+  JNIEntry(CommitEditor, move);
   CommitEditor *editor = CommitEditor::getCppObject(jthis);
   CPPADDR_NULL_PTR(editor,);
-  editor->move(jsession,
-               jsrc_relpath, jsrc_revision, jdst_relpath, jreplaces_revision);
+  editor->move(jsrc_relpath, jsrc_revision, jdst_relpath, jreplaces_revision);
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_remote_CommitEditor_nativeRotate(
-    JNIEnv* env, jobject jthis, jobject jsession, jobject jelements)
+Java_org_apache_subversion_javahl_remote_CommitEditor_rotate(
+    JNIEnv* env, jobject jthis, jobject jelements)
 {
-  JNIEntry(CommitEditor, nativeRotate);
+  JNIEntry(CommitEditor, rotate);
   CommitEditor *editor = CommitEditor::getCppObject(jthis);
   CPPADDR_NULL_PTR(editor,);
-  editor->rotate(jsession, jelements);
+  editor->rotate(jelements);
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_remote_CommitEditor_nativeComplete(
+Java_org_apache_subversion_javahl_remote_CommitEditor_complete(
+    JNIEnv* env, jobject jthis)
+{
+  JNIEntry(CommitEditor, complete);
+  CommitEditor *editor = CommitEditor::getCppObject(jthis);
+  CPPADDR_NULL_PTR(editor,);
+  editor->complete();
+}
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_remote_CommitEditor_abort(
     JNIEnv* env, jobject jthis, jobject jsession)
 {
-  JNIEntry(CommitEditor, nativeComplete);
+  JNIEntry(CommitEditor, abort);
   CommitEditor *editor = CommitEditor::getCppObject(jthis);
   CPPADDR_NULL_PTR(editor,);
-  editor->complete(jsession);
-}
-
-JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_remote_CommitEditor_nativeAbort(
-    JNIEnv* env, jobject jthis, jobject jsession)
-{
-  JNIEntry(CommitEditor, nativeAbort);
-  CommitEditor *editor = CommitEditor::getCppObject(jthis);
-  CPPADDR_NULL_PTR(editor,);
-  editor->abort(jsession);
+  editor->abort();
 }
