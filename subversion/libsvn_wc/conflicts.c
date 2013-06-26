@@ -1277,7 +1277,7 @@ generate_propconflict(svn_boolean_t *conflict_remains,
                       apr_pool_t *scratch_pool)
 {
   svn_wc_conflict_result_t *result = NULL;
-  svn_wc_conflict_description2_t *cdesc;
+  svn_wc_conflict_description3_t *cdesc;
   const char *dirpath = svn_dirent_dirname(local_abspath, scratch_pool);
   svn_node_kind_t kind;
   const svn_string_t *new_value = NULL;
@@ -1294,7 +1294,7 @@ generate_propconflict(svn_boolean_t *conflict_remains,
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
 
-  cdesc = svn_wc_conflict_description_create_prop2(
+  cdesc = svn_wc_conflict_description_create_prop3(
                 local_abspath,
                 (kind == svn_node_dir) ? svn_node_dir : svn_node_file,
                 propname, scratch_pool);
@@ -1396,7 +1396,8 @@ generate_propconflict(svn_boolean_t *conflict_remains,
           svn_diff_file_options_t *options =
             svn_diff_file_options_create(scratch_pool);
 
-          SVN_ERR(svn_stream_open_unique(&mergestream, &cdesc->merged_file,
+          SVN_ERR(svn_stream_open_unique(&mergestream,
+                                         &cdesc->prop_reject_abspath,
                                          NULL, svn_io_file_del_on_pool_cleanup,
                                          scratch_pool, scratch_pool));
           SVN_ERR(svn_diff_mem_string_diff3(&diff, conflict_base_val,
@@ -1425,10 +1426,8 @@ generate_propconflict(svn_boolean_t *conflict_remains,
     cdesc->reason = svn_wc_conflict_reason_edited;
 
   /* Invoke the interactive conflict callback. */
-  {
-    SVN_ERR(conflict_func(&result, cdesc, conflict_baton, scratch_pool,
-                          scratch_pool));
-  }
+  SVN_ERR(conflict_func(&result, svn_wc__cd3_to_cd2(cdesc, scratch_pool),
+                        conflict_baton, scratch_pool, scratch_pool));
   if (result == NULL)
     {
       *conflict_remains = TRUE;
