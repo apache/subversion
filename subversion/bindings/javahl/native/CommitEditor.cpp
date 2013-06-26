@@ -26,10 +26,12 @@
 
 #include "EnumMapper.h"
 #include "CommitEditor.h"
+#include "Iterator.h"
 #include "LockTokenTable.h"
 #include "RevpropTable.h"
 #include "RemoteSession.h"
 
+#include <apr_tables.h>
 #include "private/svn_editor.h"
 #include "private/svn_ra_private.h"
 #include "svn_private_config.h"
@@ -160,6 +162,22 @@ void throw_not_implemented(const char* fname)
   msg += fname;
   throw_illegal_state(msg.c_str());
 }
+
+const apr_array_header_t*
+build_children(const Iterator& iter, SVN::Pool& pool)
+{
+  apr_pool_t* result_pool = pool.getPool();
+  apr_array_header_t* children = apr_array_make(
+      result_pool, 0, sizeof(const char*));
+  while (iter.hasNext())
+    {
+      JNIStringHolder path((jstring)iter.next());
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+      APR_ARRAY_PUSH(children, const char*) = path.pstrdup(result_pool);
+    }
+  return children;
+}
 } // anonymous namespace
 
 
@@ -173,7 +191,22 @@ void CommitEditor::addDirectory(jstring jrelpath,
       return;
     }
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
-  throw_not_implemented("addDirectory");
+
+  JNIStringHolder relpath(jrelpath);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+  Iterator children(jchildren);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+  RevpropTable properties(jproperties, true);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
+  SVN::Pool subPool(pool);
+  SVN_JNI_ERR(svn_editor_add_directory(m_editor, relpath,
+                                       build_children(children, subPool),
+                                       properties.hash(subPool, false),
+                                       svn_revnum_t(jreplaces_revision)),);
 }
 
 void CommitEditor::addFile(jstring jrelpath,
@@ -224,7 +257,22 @@ void CommitEditor::alterDirectory(jstring jrelpath, jlong jrevision,
       return;
     }
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
-  throw_not_implemented("alterDirectory");
+
+  JNIStringHolder relpath(jrelpath);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+  Iterator children(jchildren);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+  RevpropTable properties(jproperties, true);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
+  SVN::Pool subPool(pool);
+  SVN_JNI_ERR(svn_editor_alter_directory(
+                  m_editor, relpath, svn_revnum_t(jrevision),
+                  (jchildren ? build_children(children, subPool) : NULL),
+                  properties.hash(subPool, false)),);
 }
 
 void CommitEditor::alterFile(jstring jrelpath, jlong jrevision,

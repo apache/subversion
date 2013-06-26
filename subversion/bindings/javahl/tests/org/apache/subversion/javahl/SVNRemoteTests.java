@@ -28,6 +28,7 @@ import org.apache.subversion.javahl.callback.*;
 import org.apache.subversion.javahl.types.*;
 
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Set;
 import java.util.Map;
@@ -398,6 +399,7 @@ public class SVNRemoteTests extends SVNTests
             new CommitContext(session, "Copy A/B/lambda -> A/B/omega");
 
         try {
+            // FIXME: alter dir A/B first
             cc.editor.copy("A/B/lambda", 1, "A/B/omega",
                            Revision.SVN_INVALID_REVNUM);
             cc.editor.complete();
@@ -432,6 +434,7 @@ public class SVNRemoteTests extends SVNTests
                                "A/D/H/psi" };
 
         try {
+            // FIXME: alter a bunch of dirs first
             for (String path : filePaths)
                 cc.editor.delete(path, 1);
             cc.editor.complete();
@@ -444,5 +447,54 @@ public class SVNRemoteTests extends SVNTests
         for (String path : filePaths)
             assertEquals(NodeKind.none,
                          session.checkPath(path, Revision.SVN_INVALID_REVNUM));
+    }
+
+    public void testEditorMkdir() throws Exception
+    {
+        ISVNRemote session = getSession();
+        CommitContext cc = new CommitContext(session, "Make hebrew dir");
+
+        try {
+            // FIXME: alter dir . first
+            cc.editor.addDirectory("ALEPH",
+                                   new ArrayList<String>(),
+                                   new HashMap<String, byte[]>(),
+                                   Revision.SVN_INVALID_REVNUM);
+            cc.editor.complete();
+        } finally {
+            cc.editor.dispose();
+        }
+
+        assertEquals(2, cc.getRevision());
+        assertEquals(2, session.getLatestRevision());
+        assertEquals(NodeKind.dir,
+                     session.checkPath("ALEPH",
+                                       Revision.SVN_INVALID_REVNUM));
+    }
+
+    public void testEditorSetDirProps() throws Exception
+    {
+        Charset UTF8 = Charset.forName("UTF-8");
+        ISVNRemote session = getSession();
+        CommitContext cc = new CommitContext(session, "Add svn:ignore");
+
+        byte[] ignoreval = "*.pyc\n.gitignore\n".getBytes(UTF8);
+        HashMap<String, byte[]> props = new HashMap<String, byte[]>();
+        props.put("svn:ignore", ignoreval);
+
+        try {
+            cc.editor.alterDirectory("", 1, null, props);
+            cc.editor.complete();
+        } finally {
+            cc.editor.dispose();
+        }
+
+        assertEquals(2, cc.getRevision());
+        assertEquals(2, session.getLatestRevision());
+        assertTrue(Arrays.equals(ignoreval,
+                                 client.propertyGet(session.getSessionUrl(),
+                                                    "svn:ignore",
+                                                    Revision.HEAD,
+                                                    Revision.HEAD)));
     }
 }
