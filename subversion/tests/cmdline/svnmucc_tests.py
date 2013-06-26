@@ -416,13 +416,15 @@ def nested_replaces(sbox):
 
   sbox.build(create_wc=False)
   repo_url = sbox.repo_url
-  svntest.main.run_svnmucc('-U', repo_url, '-m', 'r2: create tree',
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
+                           '-U', repo_url, '-m', 'r2: create tree',
                            'rm', 'A',
                            'rm', 'iota',
                            'mkdir', 'A', 'mkdir', 'A/B', 'mkdir', 'A/B/C',
                            'mkdir', 'M', 'mkdir', 'M/N', 'mkdir', 'M/N/O',
                            'mkdir', 'X', 'mkdir', 'X/Y', 'mkdir', 'X/Y/Z')
-  svntest.main.run_svnmucc('-U', repo_url, '-m', 'r3: nested replaces',
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
+                           '-U', repo_url, '-m', 'r3: nested replaces',
                            *("""
 rm A rm M rm X
 cp HEAD X/Y/Z A cp HEAD A/B/C M cp HEAD M/N/O X
