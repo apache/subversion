@@ -760,7 +760,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "          (the '2-URL' merge)\n"
 "\n"
 "  1. This form, with one source path and no revision range, is called\n"
-"     an 'complete' merge:\n"
+"     a 'complete' merge:\n"
 "\n"
 "       svn merge SOURCE[@REV] [TARGET_WCPATH]\n"
 "\n"
