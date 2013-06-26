@@ -615,13 +615,23 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
   SVN_ERR(svn_ra_get_path_relative_to_root(ra_session, &rel_path, url, pool));
   if (rel_path && rel_path[0] == 0)
     {
-      svn_location_segment_t *segment = apr_pcalloc(pool, sizeof(*segment));
-      segment->range_start
-        = end_revision <= start_revision ? end_revision : 0;
-      segment->range_end
-        = end_revision <= start_revision ? start_revision : 0;
-      segment->path = rel_path;
-      APR_ARRAY_PUSH(*segments, svn_location_segment_t *) = segment;
+      svn_location_segment_t *segment;
+
+      /* complete revision parameters if not given */
+      if (start_revision == SVN_INVALID_REVNUM)
+        SVN_ERR(svn_ra_get_latest_revnum(ra_session, &start_revision, pool));
+      if (end_revision == SVN_INVALID_REVNUM)
+        end_revision = 0;
+
+      /* root exists for any non-empty revision range */
+      if (end_revision <= start_revision)
+        {
+          segment = apr_pcalloc(pool, sizeof(*segment));
+          segment->range_start = end_revision;
+          segment->range_end = start_revision;
+          segment->path = rel_path;
+          APR_ARRAY_PUSH(*segments, svn_location_segment_t *) = segment;
+        }
 
       return SVN_NO_ERROR;
     }
