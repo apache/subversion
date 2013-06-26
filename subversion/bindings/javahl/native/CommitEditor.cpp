@@ -194,18 +194,15 @@ build_checksum(jobject jchecksum, SVN::Pool& pool)
       static jmethodID digest_mid = 0;
       static jmethodID kind_mid = 0;
 
-      jclass cls = env->FindClass(JAVA_PACKAGE"/types/Checksum");
-      if (JNIUtil::isJavaExceptionThrown())
-        return checksum;
-
-      if (0 == digest_mid)
+      if (0 == digest_mid || 0 == kind_mid)
         {
+          jclass cls = env->FindClass(JAVA_PACKAGE"/types/Checksum");
+          if (JNIUtil::isJavaExceptionThrown())
+            return checksum;
+
           digest_mid = env->GetMethodID(cls, "getDigest", "()[B");
           if (JNIUtil::isJavaExceptionThrown())
             return checksum;
-        }
-      if (0 == kind_mid)
-        {
           kind_mid = env->GetMethodID(cls, "getKind", "()L"
                                       JAVA_PACKAGE"/types/Checksum$Kind;");
           if (JNIUtil::isJavaExceptionThrown())
@@ -230,6 +227,57 @@ build_checksum(jobject jchecksum, SVN::Pool& pool)
 
   return checksum;
 }
+
+// void
+// build_rotation(const apr_array_header_t **p_relpaths,
+//                const apr_array_header_t **p_revisions,
+//                const Iterator& iter, SVN::Pool& pool)
+// {
+//   *p_relpaths = *p_revisions = NULL;
+//
+//   static jfieldID relpath_fid = 0;
+//   static jfieldID revision_fid = 0;
+//
+//   JNIEnv *env = JNIUtil::getEnv();
+//   if (0 == relpath_fid || 0 == revision_fid)
+//     {
+//       jclass cls = env->FindClass(JAVA_PACKAGE"/ISVNEditor$RotatePair");
+//       if (JNIUtil::isJavaExceptionThrown())
+//         return;
+//
+//       relpath_fid = env->GetFieldID(cls, "relativePath", "Ljava/lang/String;");
+//       if (JNIUtil::isJavaExceptionThrown())
+//         return;
+//       revision_fid = env->GetFieldID(cls, "revision", "J");
+//       if (JNIUtil::isJavaExceptionThrown())
+//         return;
+//     }
+//
+//   apr_pool_t* result_pool = pool.getPool();
+//   apr_array_header_t* relpaths = apr_array_make(
+//       result_pool, 0, sizeof(const char*));
+//   apr_array_header_t* revisions = apr_array_make(
+//       result_pool, 0, sizeof(svn_revnum_t));
+//   while (iter.hasNext())
+//     {
+//       jobject jpair = iter.next();
+//       jobject jrelpath = env->GetObjectField(jpair, relpath_fid);
+//       if (JNIUtil::isJavaExceptionThrown())
+//         return;
+//       jlong jrevision = env->GetLongField(jpair, revision_fid);
+//       if (JNIUtil::isJavaExceptionThrown())
+//         return;
+//       JNIStringHolder relpath((jstring)jrelpath);
+//       if (JNIUtil::isJavaExceptionThrown())
+//         return;
+//
+//       APR_ARRAY_PUSH(relpaths, const char*) = relpath.pstrdup(result_pool);
+//       APR_ARRAY_PUSH(revisions, svn_revnum_t) = svn_revnum_t(jrevision);
+//     }
+//
+//   *p_relpaths = relpaths;
+//   *p_revisions = revisions;
+// }
 } // anonymous namespace
 
 
@@ -440,6 +488,21 @@ void CommitEditor::move(jstring jsrc_relpath, jlong jsrc_revision,
 
 void CommitEditor::rotate(jobject jelements)
 {
+//   if (!m_valid)
+//     {
+//       throw_editor_inactive();
+//       return;
+//     }
+//   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
+//
+//   SVN::Pool subPool(pool);
+//   const apr_array_header_t* relpaths;
+//   const apr_array_header_t* revisions;
+//   build_rotation(&relpaths, &revisions, jelements, subPool);
+//   if (JNIUtil::isJavaExceptionThrown())
+//     return;
+//
+//   SVN_JNI_ERR(svn_editor_rotate(m_editor, relpaths, revisions),);
   throw_not_implemented("rotate");
 }
 
