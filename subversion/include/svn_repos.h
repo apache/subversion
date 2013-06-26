@@ -2641,7 +2641,7 @@ svn_repos_verify_fs3(svn_repos_t *repos,
  * Like svn_repos_verify_fs3(), but with @a keep_going set to @c FALSE.
  *
  * @since New in 1.7.
- * @deprecated Provided for backward compatibility with the 1.7 API.
+ * @deprecated Provided for backward compatibility with the 1.8 API.
  */
 SVN_DEPRECATED
 svn_error_t *
