@@ -42,6 +42,7 @@ Issues = svntest.testcase.Issues_deco
 Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
 Item = wc.StateItem
+UnorderedOutput = svntest.verify.UnorderedOutput
 
 ######################################################################
 # Tests
@@ -219,6 +220,60 @@ def update_through_unversioned_symlink(sbox):
                                         None, None, None, None, None, 1,
                                         symlink)
 
+@Issue(3549)
+def cleanup_unversioned_items(sbox):
+  """cleanup --remove-unversioned / --no-ignore"""
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  # create some unversioned items
+  os.mkdir(sbox.ospath('dir1'))
+  os.mkdir(sbox.ospath('dir2'))
+  contents = "This is an unversioned file\n."
+  svntest.main.file_write(sbox.ospath('dir1/dir1_child1'), contents)
+  svntest.main.file_write(sbox.ospath('dir2/dir2_child1'), contents)
+  os.mkdir(sbox.ospath('dir2/foo_child2'))
+  svntest.main.file_write(sbox.ospath('file_foo'), contents),
+  os.mkdir(sbox.ospath('dir_foo'))
+  svntest.main.file_write(sbox.ospath('dir_foo/foo_child1'), contents)
+  os.mkdir(sbox.ospath('dir_foo/foo_child2'))
+
+  # ignore some of the unversioned items
+  sbox.simple_propset('svn:ignore', '*_foo', '.')
+
+  os.chdir(wc_dir)
+
+  expected_output = [
+        ' M      .\n',
+        '?       dir1\n',
+        '?       dir2\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'status')
+  expected_output += [
+        'I       dir_foo\n',
+        'I       file_foo\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'status', '--no-ignore')
+
+  svntest.actions.run_and_verify_svn("Cleanup wc root", None, [],
+                                     "cleanup", "--remove-unversioned")
+  expected_output = [
+        ' M      .\n',
+        'I       dir_foo\n',
+        'I       file_foo\n',
+  ]
+  svntest.actions.run_and_verify_svn("Cleanup wc root", None, [],
+                                     "cleanup", "--remove-unversioned",
+                                     "--no-ignore")
+  expected_output = [
+        ' M      .\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output,
+                                     [], 'status', '--no-ignore')
+
 ########################################################################
 # Run the tests
 
@@ -238,6 +293,7 @@ test_list = [ None,
               status_with_missing_wc_db_and_maybe_valid_entries,
               cleanup_below_wc_root,
               update_through_unversioned_symlink,
+              cleanup_unversioned_items,
              ]
 
 if __name__ == '__main__':
