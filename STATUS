@@ -160,13 +160,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1495428
-   Improve BDB error codes.
-   Justification:
-     (err->apr_err == APR_SUCCESS) leaks to API consumers.
-   Votes:
-     +1: danielsh, stefan2, stsp
-
  * r1496132, r1496151
    Provide a more detailed error than APR_EGENERAL when a serf connection
    fails.
