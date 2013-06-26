@@ -160,16 +160,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1496132, r1496151
-   Provide a more detailed error than APR_EGENERAL when a serf connection
-   fails.
-   Justification:
-     Returning APR_EGENERAL for a very common error breaks all usable
-     error handling in GUI clients. Serf should provide a better
-     error that differentiates between separate problems.
-   Votes:
-     +1: rhuijben, stsp, danielsh
-
  * r1496110
    Prevent a segfault in svn_client_log5.
    Justification:
