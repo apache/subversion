@@ -429,6 +429,7 @@ cp HEAD X/Y/Z A cp HEAD A/B/C M cp HEAD M/N/O X
 cp HEAD A/B A/B cp HEAD M/N M/N cp HEAD X/Y X/Y
 rm A/B/C rm M/N/O rm X/Y/Z
 cp HEAD X A/B/C cp HEAD A M/N/O cp HEAD M X/Y/Z
+rm A/B/C/Y
                            """.split()))
 
   # ### TODO: need a smarter run_and_verify_log() that verifies copyfrom
@@ -442,6 +443,7 @@ cp HEAD X A/B/C cp HEAD A M/N/O cp HEAD M X/Y/Z
     '   R /X (from /M/N/O:2)',
     '   A /X/Y (from /X/Y:2)',
     '   R /X/Y/Z (from /M:2)',
+    '   D /A/B/C/Y',
   ]) + [
     '^-', '^r3', '^-', '^Changed paths:',
   ])
