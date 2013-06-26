@@ -1234,6 +1234,61 @@ def move_missing(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+def nested_replaces(sbox):
+  "nested replaces"
+
+  repo_dir, repo_url = sbox.add_repo_path('blank')
+  wc_dir = sbox.add_wc_path('blank')
+  svntest.main.create_repos(repo_dir)
+  ospath = lambda dirent: sbox.ospath(dirent, wc_dir)
+
+  ## r1: setup
+  svntest.main.run_svn(None, 'mkdir', '--parents',
+                       '-m', 'r1: create tree',
+                       repo_url + '/A/B/C', repo_url + '/X/Y/Z')
+  svntest.main.run_svn(None, 'checkout', '-q', repo_url, wc_dir)
+  expected_status = svntest.wc.State(wc_dir, {
+    ''            : Item(status='  ', wc_rev='1'),
+    'A'           : Item(status='  ', wc_rev='1'),
+    'A/B'         : Item(status='  ', wc_rev='1'),
+    'A/B/C'       : Item(status='  ', wc_rev='1'),
+    'X'           : Item(status='  ', wc_rev='1'),
+    'X/Y'         : Item(status='  ', wc_rev='1'),
+    'X/Y/Z'       : Item(status='  ', wc_rev='1'),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  ## r2: juggling
+  moves = [
+    ('A', 'A2'),
+    ('X', 'X2'),
+    ('A2/B/C', 'X'),
+    ('X2/Y/Z', 'A'),
+    ('A2/B', 'A/B'),
+    ('X2/Y', 'X/Y'),
+    ('A2', 'X/Y/Z'),
+    ('X2', 'A/B/C'),
+  ]
+  for src, dst in moves:
+    svntest.main.run_svn(None, 'mv', ospath(src), ospath(dst))
+  # svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  svntest.main.run_svn(None, 'commit', '-m', 'r2: juggle the tree', wc_dir)
+  expected_output = svntest.verify.UnorderedRegexListOutput(map(re.escape, [
+    '   R /A (from /X/Y/Z:1)',
+    '   A /A/B (from /A/B:1)',
+    '   R /A/B/C (from /X:1)',
+    '   R /X (from /A/B/C:1)',
+    '   A /X/Y (from /X/Y:1)',
+    '   R /X/Y/Z (from /A:1)',
+    '   D /X/Y/Z/B',
+    '   D /A/B/C/Y',
+  ]) + [
+    '^-', '^r2', '^-', '^Changed paths:',
+  ])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'log', '-qvr2', repo_url)
+
 #######################################################################
 # Run the tests
 
@@ -1245,6 +1300,7 @@ test_list = [ None,
               deeper_move_file_test,
               property_merge,
               move_missing,
+              nested_replaces,
             ]
 
 if __name__ == '__main__':
