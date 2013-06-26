@@ -1289,6 +1289,10 @@ def nested_replaces(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'log', '-qvr2', repo_url)
 
+  ## Test updating to r1.
+  svntest.main.run_svn(None, 'update', '-r1', wc_dir)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 #######################################################################
 # Run the tests
 
