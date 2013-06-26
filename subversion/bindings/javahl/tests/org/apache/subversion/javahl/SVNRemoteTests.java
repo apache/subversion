@@ -34,9 +34,12 @@ import java.util.Set;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 /**
  * This class is used for testing the SVNReposAccess class
@@ -504,12 +507,12 @@ public class SVNRemoteTests extends SVNTests
     {
         Charset UTF8 = Charset.forName("UTF-8");
         ISVNRemote session = getSession();
-        CommitContext cc = new CommitContext(session, "Add svn:ignore");
 
         byte[] ignoreval = "*.pyc\n.gitignore\n".getBytes(UTF8);
         HashMap<String, byte[]> props = new HashMap<String, byte[]>();
         props.put("svn:ignore", ignoreval);
 
+        CommitContext cc = new CommitContext(session, "Add svn:ignore");
         try {
             cc.editor.alterDirectory("", 1, null, props);
             cc.editor.complete();
@@ -524,5 +527,75 @@ public class SVNRemoteTests extends SVNTests
                                                     "svn:ignore",
                                                     Revision.HEAD,
                                                     Revision.HEAD)));
+    }
+
+    private static byte[] SHA1(byte[] text) throws NoSuchAlgorithmException
+    {
+        MessageDigest md = MessageDigest.getInstance("SHA-1");
+        return md.digest(text);
+    }
+
+    public void testEditorAddFile() throws Exception
+    {
+        Charset UTF8 = Charset.forName("UTF-8");
+        ISVNRemote session = getSession();
+
+        byte[] eolstyle = "native".getBytes(UTF8);
+        HashMap<String, byte[]> props = new HashMap<String, byte[]>();
+        props.put("svn:eol-style", eolstyle);
+
+        byte[] contents = "This is file 'xi'.".getBytes(UTF8);
+        Checksum hash = new Checksum(SHA1(contents), Checksum.Kind.SHA1);
+        ByteArrayInputStream stream = new ByteArrayInputStream(contents);
+
+        CommitContext cc = new CommitContext(session, "Add A/xi");
+        try {
+            // FIXME: alter dir A first
+            cc.editor.addFile("A/xi", hash, stream, props,
+                              Revision.SVN_INVALID_REVNUM);
+            cc.editor.complete();
+        } finally {
+            cc.editor.dispose();
+        }
+
+        assertEquals(2, cc.getRevision());
+        assertEquals(2, session.getLatestRevision());
+        assertEquals(NodeKind.file,
+                     session.checkPath("A/xi",
+                                       Revision.SVN_INVALID_REVNUM));
+
+        byte[] propval = client.propertyGet(session.getSessionUrl() + "/A/xi",
+                                            "svn:eol-style",
+                                            Revision.HEAD,
+                                            Revision.HEAD);
+        assertTrue(Arrays.equals(eolstyle, propval));
+    }
+
+    public void testEditorSetFileProps() throws Exception
+    {
+        Charset UTF8 = Charset.forName("UTF-8");
+        ISVNRemote session = getSession();
+
+        byte[] eolstyle = "CRLF".getBytes(UTF8);
+        HashMap<String, byte[]> props = new HashMap<String, byte[]>();
+        props.put("svn:eol-style", eolstyle);
+
+        CommitContext cc =
+            new CommitContext(session, "Change eol-style on A/B/E/alpha");
+        try {
+            cc.editor.alterFile("A/B/E/alpha", 1, null, null, props);
+            cc.editor.complete();
+        } finally {
+            cc.editor.dispose();
+        }
+
+        assertEquals(2, cc.getRevision());
+        assertEquals(2, session.getLatestRevision());
+        byte[] propval = client.propertyGet(session.getSessionUrl()
+                                            + "/A/B/E/alpha",
+                                            "svn:eol-style",
+                                            Revision.HEAD,
+                                            Revision.HEAD);
+        assertTrue(Arrays.equals(eolstyle, propval));
     }
 }
