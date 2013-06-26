@@ -712,7 +712,17 @@ run_ra_get_log(apr_array_header_t *revision_ranges,
       matching_segment = bsearch(&younger_rev, log_segments->elts,
                                  log_segments->nelts, log_segments->elt_size,
                                  compare_rev_to_segment);
-      SVN_ERR_ASSERT(*matching_segment);
+      /* LOG_SEGMENTS is supposed to represent the history of PATHS from
+         the oldest to youngest revs in REVISION_RANGES.  This function's
+         current sole caller svn_client_log5 *should* be providing
+         LOG_SEGMENTS that span the oldest to youngest revs in
+         REVISION_RANGES, even if one or more of the svn_location_segment_t's
+         returned have NULL path members indicating a gap in the history. So
+         MATCHING_SEGMENT should never be NULL, but clearly sometimes it is,
+         see http://svn.haxx.se/dev/archive-2013-06/0522.shtml
+         So to be safe we handle that case. */
+      if (matching_segment == NULL)
+        continue;
       
       /* A segment with a NULL path means there is gap in the history.
          We'll just proceed and let svn_ra_get_log2 fail with a useful
