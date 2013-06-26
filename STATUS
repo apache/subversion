@@ -92,16 +92,15 @@ Candidate changes:
    Votes:
      +1: rhuijben, stsp
 
- * r1494966
+ * r1494966, r1496886
    Eliminate an extra RA layer roundtrip in 'svn log' on repository roots.
    Justification:
      Minor performance regression against 1.7.x plus requesting e.g. single
      revision logs on a repo root is not a fringe use-case.
+   Notes:
+     r1496886 properly handles the revision parameter edge-cases.
    Votes:
-     +1: stefan2, rhuijben
-     -0: stsp (looks like this code generates invalid location segments
-               for the root node, see dev@ r1494966 thread)
-     -0: ivan (doesn't handle SVN_INVALID_REVNUM)
+     +1: stefan2
 
  * ^/subversion/branches/1.8.x-r1495063
    r1495806, r1495985
