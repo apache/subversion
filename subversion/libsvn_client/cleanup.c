@@ -104,7 +104,6 @@ svn_client_cleanup2(const char *path,
 {
   const char *local_abspath;
   svn_error_t *err;
-  struct remove_unversioned_items_baton b;
 
   if (svn_path_is_url(path))
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
@@ -120,6 +119,8 @@ svn_client_cleanup2(const char *path,
  
   if (remove_unversioned_children)
     {
+      struct remove_unversioned_items_baton b;
+
       b.remove_ignored_items = no_ignore;
       b.notify_func = ctx->notify_func2;
       b.notify_baton = ctx->notify_baton2;
