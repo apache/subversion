@@ -136,6 +136,13 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1497002
+   Avoid temporary files when calling external diff. Fixes issue 4382.
+   Justification:
+     Regression from 1.7.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
