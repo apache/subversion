@@ -601,42 +601,8 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
   struct gls_receiver_baton_t gls_receiver_baton;
   const char *old_session_url;
   svn_error_t *err;
-  const char *rel_path;
 
   *segments = apr_array_make(pool, 8, sizeof(svn_location_segment_t *));
-
-  /* Save us an RA layer round trip if we are on the repository root and
-     know the result in advance.  It's fair to assume that the repo root
-     has already been cached in ra_session.
-
-     We also assume that all parameters are valid and revisions properly
-     ordered.  Otherwise, the error behavior might differ.
-   */
-  SVN_ERR(svn_ra_get_path_relative_to_root(ra_session, &rel_path, url, pool));
-  if (rel_path && rel_path[0] == 0)
-    {
-      svn_location_segment_t *segment;
-
-      /* complete revision parameters if not given */
-      if (start_revision == SVN_INVALID_REVNUM)
-        SVN_ERR(svn_ra_get_latest_revnum(ra_session, &start_revision, pool));
-      if (end_revision == SVN_INVALID_REVNUM)
-        end_revision = 0;
-
-      /* root exists for any non-empty revision range */
-      if (end_revision <= start_revision)
-        {
-          segment = apr_pcalloc(pool, sizeof(*segment));
-          segment->range_start = end_revision;
-          segment->range_end = start_revision;
-          segment->path = rel_path;
-          APR_ARRAY_PUSH(*segments, svn_location_segment_t *) = segment;
-        }
-
-      return SVN_NO_ERROR;
-    }
-
-  /* Do it the hard way and ask the repository layer. */
   gls_receiver_baton.segments = *segments;
   gls_receiver_baton.ctx = ctx;
   gls_receiver_baton.pool = pool;
