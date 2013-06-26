@@ -160,14 +160,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1478987, r1492020
-   Optimize some code that retrieves mergeinfo to obtain less unneeded
-   information from the repository.
-   Justification:
-     Simple fixes to improve performance.
-   Votes:
-     +1: rhuijben, stefan2, stsp
-
  * r1494913, r1494967
    Fix performance regression in 'svn log' on repository roots.
    Justification:
