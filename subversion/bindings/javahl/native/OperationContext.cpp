@@ -215,10 +215,7 @@ OperationContext::getAuthBaton(SVN::Pool &in_pool)
 
 jobject OperationContext::getSelf() const
 {
-  jobject jctx = JNIUtil::getEnv()->NewGlobalRef(m_jctx);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-  return jctx;
+  return m_jctx;
 }
 
 void
