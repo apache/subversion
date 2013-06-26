@@ -1247,7 +1247,7 @@ def nested_replaces(sbox):
                        '-m', 'r1: create tree',
                        repo_url + '/A/B/C', repo_url + '/X/Y/Z')
   svntest.main.run_svn(None, 'checkout', '-q', repo_url, wc_dir)
-  expected_status = svntest.wc.State(wc_dir, {
+  r1_status = svntest.wc.State(wc_dir, {
     ''            : Item(status='  ', wc_rev='1'),
     'A'           : Item(status='  ', wc_rev='1'),
     'A/B'         : Item(status='  ', wc_rev='1'),
@@ -1256,7 +1256,7 @@ def nested_replaces(sbox):
     'X/Y'         : Item(status='  ', wc_rev='1'),
     'X/Y/Z'       : Item(status='  ', wc_rev='1'),
     })
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.actions.run_and_verify_status(wc_dir, r1_status)
 
   ## r2: juggling
   moves = [
@@ -1271,7 +1271,20 @@ def nested_replaces(sbox):
   ]
   for src, dst in moves:
     svntest.main.run_svn(None, 'mv', ospath(src), ospath(dst))
-  # svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  r2_status = svntest.wc.State(wc_dir, {
+    ''          : Item(status='  ', wc_rev='1'),
+    'A'         : Item(status='R ', copied='+', moved_from='X/Y/Z', moved_to='X/Y/Z', wc_rev='-'),
+    'A/B'       : Item(status='A ', copied='+', moved_from='X/Y/Z/B', wc_rev='-', entry_status='R '),
+    'A/B/C'     : Item(status='R ', copied='+', moved_from='X', moved_to='X', wc_rev='-'),
+    'A/B/C/Y'   : Item(status='D ', copied='+', wc_rev='-', moved_to='X/Y'),
+    'A/B/C/Y/Z' : Item(status='D ', copied='+', wc_rev='-'),
+    'X'         : Item(status='R ', copied='+', moved_from='A/B/C', moved_to='A/B/C', wc_rev='-'),
+    'X/Y'       : Item(status='A ', copied='+', moved_from='A/B/C/Y', wc_rev='-', entry_status='R '),
+    'X/Y/Z'     : Item(status='R ', copied='+', moved_from='A', moved_to='A', wc_rev='-'),
+    'X/Y/Z/B'   : Item(status='D ', copied='+', wc_rev='-', moved_to='A/B'),
+    'X/Y/Z/B/C' : Item(status='D ', copied='+', wc_rev='-'),
+  })
+  svntest.actions.run_and_verify_status(wc_dir, r2_status)
 
   svntest.main.run_svn(None, 'commit', '-m', 'r2: juggle the tree', wc_dir)
   expected_output = svntest.verify.UnorderedRegexListOutput(map(re.escape, [
@@ -1291,7 +1304,7 @@ def nested_replaces(sbox):
 
   ## Test updating to r1.
   svntest.main.run_svn(None, 'update', '-r1', wc_dir)
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.actions.run_and_verify_status(wc_dir, r1_status)
 
 #######################################################################
 # Run the tests
