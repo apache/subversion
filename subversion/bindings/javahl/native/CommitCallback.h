@@ -62,7 +62,11 @@ class PersistentCommitCallback : protected CommitCallback
  public:
   PersistentCommitCallback(jobject jcallback);
   ~PersistentCommitCallback();
-  using CommitCallback::callback;
+  static svn_error_t *callback(const svn_commit_info_t *commit_info,
+                               void *baton, apr_pool_t *pool)
+    {
+      return CommitCallback::callback(commit_info, baton, pool);
+    }
 };
 
 #endif  // COMMITCALLBACK_H
