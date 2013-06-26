@@ -370,46 +370,79 @@ public class SVNRemoteTests extends SVNTests
             assertTrue(e.getKey().startsWith("svn:entry:"));
     }
 
-    private class MyCommitCallback implements CommitCallback
+    private final class CommitContext implements CommitCallback
     {
-        private CommitInfo info = null;
-
-        public void commitInfo(CommitInfo info) {
-            this.info = info;
+        public final ISVNEditor editor;
+        public CommitContext(ISVNRemote session, String logstr)
+            throws ClientException
+        {
+            Charset UTF8 = Charset.forName("UTF-8");
+            byte[] log = (logstr == null
+                          ? new byte[0]
+                          : logstr.getBytes(UTF8));
+            HashMap<String, byte[]> revprops = new HashMap<String, byte[]>();
+            revprops.put("svn:log", log);
+            editor = session.getCommitEditor(revprops, this, null, false);
         }
 
-        public long getRevision() {
-            if (info != null)
-                return info.getRevision();
-            else
-                return Revision.SVN_INVALID_REVNUM;
-        }
+        public void commitInfo(CommitInfo info) { this.info = info; }
+        public long getRevision() { return info.getRevision(); }
+
+        private CommitInfo info;
     }
 
-    public void testRemoteCopy() throws Exception
+    public void testEditorCopy() throws Exception
     {
         ISVNRemote session = getSession();
-
-        HashMap<String, byte[]> revprops = new HashMap<String, byte[]>();
-        revprops.put("svn:log", new byte[0]);
-
-        MyCommitCallback commitcb = new MyCommitCallback();
-
-        ISVNEditor editor =
-            session.getCommitEditor(revprops, commitcb, null, false);
+        CommitContext cc =
+            new CommitContext(session, "Copy A/B/lambda -> A/B/omega");
 
         try {
-            editor.copy("A/B/lambda", 1, "A/B/omega",
-                        Revision.SVN_INVALID_REVNUM);
-            editor.complete();
+            cc.editor.copy("A/B/lambda", 1, "A/B/omega",
+                           Revision.SVN_INVALID_REVNUM);
+            cc.editor.complete();
         } finally {
-            editor.dispose();
+            cc.editor.dispose();
         }
 
-        assertEquals(2, commitcb.getRevision());
+        assertEquals(2, cc.getRevision());
         assertEquals(2, session.getLatestRevision());
         assertEquals(NodeKind.file,
                      session.checkPath("A/B/omega",
                                        Revision.SVN_INVALID_REVNUM));
+    }
+
+    public void testEditorDelete() throws Exception
+    {
+        ISVNRemote session = getSession();
+        CommitContext cc =
+            new CommitContext(session, "Delete all greek files");
+
+        String[] filePaths = { "iota",
+                               "A/mu",
+                               "A/B/lambda",
+                               "A/B/E/alpha",
+                               "A/B/E/beta",
+                               "A/D/gamma",
+                               "A/D/G/pi",
+                               "A/D/G/rho",
+                               "A/D/G/tau",
+                               "A/D/H/chi",
+                               "A/D/H/omega",
+                               "A/D/H/psi" };
+
+        try {
+            for (String path : filePaths)
+                cc.editor.delete(path, 1);
+            cc.editor.complete();
+        } finally {
+            cc.editor.dispose();
+        }
+
+        assertEquals(2, cc.getRevision());
+        assertEquals(2, session.getLatestRevision());
+        for (String path : filePaths)
+            assertEquals(NodeKind.none,
+                         session.checkPath(path, Revision.SVN_INVALID_REVNUM));
     }
 }

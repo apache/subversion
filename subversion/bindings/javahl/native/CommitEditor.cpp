@@ -24,6 +24,7 @@
  * @brief Implementation of the class CommitEditor
  */
 
+#include "EnumMapper.h"
 #include "CommitEditor.h"
 #include "LockTokenTable.h"
 #include "RevpropTable.h"
@@ -193,12 +194,6 @@ void CommitEditor::addSymlink(jstring jrelpath,
                               jstring jtarget, jobject jproperties,
                               jlong jreplaces_revision)
 {
-  if (!m_valid)
-    {
-      throw_editor_inactive();
-      return;
-    }
-  SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
   throw_not_implemented("addSymlink");
 }
 
@@ -211,7 +206,13 @@ void CommitEditor::addAbsent(jstring jrelpath, jobject jkind,
       return;
     }
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
-  throw_not_implemented("addAbsent");
+
+  JNIStringHolder relpath(jrelpath);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+  SVN_JNI_ERR(svn_editor_add_absent(m_editor,
+                                    relpath, EnumMapper::toNodeKind(jkind),
+                                    svn_revnum_t(jreplaces_revision)),);
 }
 
 void CommitEditor::alterDirectory(jstring jrelpath, jlong jrevision,
@@ -242,12 +243,6 @@ void CommitEditor::alterFile(jstring jrelpath, jlong jrevision,
 void CommitEditor::alterSymlink(jstring jrelpath, jlong jrevision,
                                 jstring jtarget, jobject jproperties)
 {
-  if (!m_valid)
-    {
-      throw_editor_inactive();
-      return;
-    }
-  SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
   throw_not_implemented("alterSymlink");
 }
 
@@ -259,7 +254,11 @@ void CommitEditor::remove(jstring jrelpath, jlong jrevision)
       return;
     }
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
-  throw_not_implemented("delete");
+
+  JNIStringHolder relpath(jrelpath);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+  SVN_JNI_ERR(svn_editor_delete(m_editor, relpath, svn_revnum_t(jrevision)),);
 }
 
 void CommitEditor::copy(jstring jsrc_relpath, jlong jsrc_revision,

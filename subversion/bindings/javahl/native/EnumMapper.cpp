@@ -191,6 +191,12 @@ int EnumMapper::toLogLevel(jobject jLogLevel)
   return getOrdinal(JAVA_PACKAGE"/SVNClient$ClientLogLevel", jLogLevel);
 }
 
+svn_node_kind_t EnumMapper::toNodeKind(jobject jNodeKind)
+{
+  return svn_node_kind_t(
+      getOrdinal(JAVA_PACKAGE"/types/NodeKind", jNodeKind));
+}
+
 svn_depth_t EnumMapper::toDepth(jobject jdepth)
 {
   // The offset for depths is -2
