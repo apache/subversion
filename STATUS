@@ -77,16 +77,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, stsp
 
- * r1494966, r1496886
-   Eliminate an extra RA layer roundtrip in 'svn log' on repository roots.
-   Justification:
-     Minor performance regression against 1.7.x plus requesting e.g. single
-     revision logs on a repo root is not a fringe use-case.
-   Notes:
-     r1496886 properly handles the revision parameter edge-cases.
-   Votes:
-     +1: stefan2
-
  * ^/subversion/branches/1.8.x-r1495063
    r1495806, r1495985
    Fix crash in FSFS DAG caching code on strict-alignment architectures.
@@ -137,6 +127,14 @@ Candidate changes:
      transfer encoding for request body. Reported many times on mailing list.
    Votes:
      +1: ivan
+
+ * r1496957
+   Eliminate an extra RA layer roundtrip in 'svn log' on repository roots.
+   Justification:
+     Minor performance regression against 1.7.x plus requesting e.g. single
+     revision logs on a repo root is not a fringe use-case.
+   Votes:
+     +1: stefan2
 
 Veto-blocked changes:
 =====================
