@@ -1243,9 +1243,19 @@ def nested_replaces(sbox):
   ospath = lambda dirent: sbox.ospath(dirent, wc_dir)
 
   ## r1: setup
-  svntest.main.run_svn(None, 'mkdir', '--parents',
-                       '-m', 'r1: create tree',
-                       repo_url + '/A/B/C', repo_url + '/X/Y/Z')
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
+                           '-U', repo_url,
+                           '-m', 'r1: create tree',
+                           'mkdir', 'A', 'mkdir', 'A/B', 'mkdir', 'A/B/C',
+                           'mkdir', 'X', 'mkdir', 'X/Y', 'mkdir', 'X/Y/Z',
+                           # sentinel files
+                           'put', os.devnull, 'A/a',
+                           'put', os.devnull, 'A/B/b',
+                           'put', os.devnull, 'A/B/C/c',
+                           'put', os.devnull, 'X/x',
+                           'put', os.devnull, 'X/Y/y',
+                           'put', os.devnull, 'X/Y/Z/z')
+
   svntest.main.run_svn(None, 'checkout', '-q', repo_url, wc_dir)
   r1_status = svntest.wc.State(wc_dir, {
     ''            : Item(status='  ', wc_rev='1'),
@@ -1255,6 +1265,12 @@ def nested_replaces(sbox):
     'X'           : Item(status='  ', wc_rev='1'),
     'X/Y'         : Item(status='  ', wc_rev='1'),
     'X/Y/Z'       : Item(status='  ', wc_rev='1'),
+    'A/a'         : Item(status='  ', wc_rev='1'),
+    'A/B/b'       : Item(status='  ', wc_rev='1'),
+    'A/B/C/c'     : Item(status='  ', wc_rev='1'),
+    'X/x'         : Item(status='  ', wc_rev='1'),
+    'X/Y/y'       : Item(status='  ', wc_rev='1'),
+    'X/Y/Z/z'     : Item(status='  ', wc_rev='1'),
     })
   svntest.actions.run_and_verify_status(wc_dir, r1_status)
 
@@ -1277,12 +1293,28 @@ def nested_replaces(sbox):
     'A/B'       : Item(status='A ', copied='+', moved_from='X/Y/Z/B', wc_rev='-', entry_status='R '),
     'A/B/C'     : Item(status='R ', copied='+', moved_from='X', moved_to='X', wc_rev='-'),
     'A/B/C/Y'   : Item(status='D ', copied='+', wc_rev='-', moved_to='X/Y'),
+    'A/B/C/Y/y' : Item(status='D ', copied='+', wc_rev='-'),
     'A/B/C/Y/Z' : Item(status='D ', copied='+', wc_rev='-'),
+    'A/B/C/Y/Z/z':Item(status='D ', copied='+', wc_rev='-'),
     'X'         : Item(status='R ', copied='+', moved_from='A/B/C', moved_to='A/B/C', wc_rev='-'),
     'X/Y'       : Item(status='A ', copied='+', moved_from='A/B/C/Y', wc_rev='-', entry_status='R '),
     'X/Y/Z'     : Item(status='R ', copied='+', moved_from='A', moved_to='A', wc_rev='-'),
     'X/Y/Z/B'   : Item(status='D ', copied='+', wc_rev='-', moved_to='A/B'),
+    'X/Y/Z/B/b' : Item(status='D ', copied='+', wc_rev='-'),
     'X/Y/Z/B/C' : Item(status='D ', copied='+', wc_rev='-'),
+    'X/Y/Z/B/C/c':Item(status='D ', copied='+', wc_rev='-'),
+    'A/a'       : Item(status='D ', wc_rev='1'),
+    'A/B/b'     : Item(status='D ', wc_rev='1'),
+    'A/B/C/c'   : Item(status='D ', copied='+', wc_rev='-'),
+    'X/x'       : Item(status='D ', wc_rev='1'),
+    'X/Y/y'     : Item(status='D ', wc_rev='1'),
+    'X/Y/Z/z'   : Item(status='D ', copied='+', wc_rev='-'),
+    'X/c'       : Item(status='  ', copied='+', wc_rev='-'),
+    'A/z'       : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/b'     : Item(status='  ', copied='+', wc_rev='-'),
+    'X/Y/y'     : Item(status='  ', copied='+', wc_rev='-'),
+    'X/Y/Z/a'   : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/C/x'   : Item(status='  ', copied='+', wc_rev='-'),
   })
   svntest.actions.run_and_verify_status(wc_dir, r2_status)
 
