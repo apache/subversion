@@ -410,6 +410,34 @@ public class SVNRemoteTests extends SVNTests
         assertEquals(2, cc.getRevision());
         assertEquals(2, session.getLatestRevision());
         assertEquals(NodeKind.file,
+                     session.checkPath("A/B/lambda",
+                                       Revision.SVN_INVALID_REVNUM));
+        assertEquals(NodeKind.file,
+                     session.checkPath("A/B/omega",
+                                       Revision.SVN_INVALID_REVNUM));
+    }
+
+    public void testEditorMove() throws Exception
+    {
+        ISVNRemote session = getSession();
+        CommitContext cc =
+            new CommitContext(session, "Move A/B/lambda -> A/B/omega");
+
+        try {
+            // FIXME: alter dir A/B first
+            cc.editor.move("A/B/lambda", 1, "A/B/omega",
+                           Revision.SVN_INVALID_REVNUM);
+            cc.editor.complete();
+        } finally {
+            cc.editor.dispose();
+        }
+
+        assertEquals(2, cc.getRevision());
+        assertEquals(2, session.getLatestRevision());
+        assertEquals(NodeKind.none,
+                     session.checkPath("A/B/lambda",
+                                       Revision.SVN_INVALID_REVNUM));
+        assertEquals(NodeKind.file,
                      session.checkPath("A/B/omega",
                                        Revision.SVN_INVALID_REVNUM));
     }

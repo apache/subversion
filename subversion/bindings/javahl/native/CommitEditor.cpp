@@ -328,14 +328,29 @@ void CommitEditor::copy(jstring jsrc_relpath, jlong jsrc_revision,
 
   SVN_JNI_ERR(svn_editor_copy(m_editor,
                               src_relpath, svn_revnum_t(jsrc_revision),
-                              dst_relpath, svn_revnum_t(jreplaces_revision)),
-              );
+                              dst_relpath, svn_revnum_t(jreplaces_revision)),);
 }
 
 void CommitEditor::move(jstring jsrc_relpath, jlong jsrc_revision,
                         jstring jdst_relpath, jlong jreplaces_revision)
 {
-  throw_not_implemented("move");
+  if (!m_valid)
+    {
+      throw_editor_inactive();
+      return;
+    }
+  SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
+
+  JNIStringHolder src_relpath(jsrc_relpath);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+  JNIStringHolder dst_relpath(jdst_relpath);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
+  SVN_JNI_ERR(svn_editor_move(m_editor,
+                              src_relpath, svn_revnum_t(jsrc_revision),
+                              dst_relpath, svn_revnum_t(jreplaces_revision)),);
 }
 
 void CommitEditor::rotate(jobject jelements)
