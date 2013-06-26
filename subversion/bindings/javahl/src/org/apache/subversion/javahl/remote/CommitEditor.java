@@ -31,7 +31,6 @@ import org.apache.subversion.javahl.JNIObject;
 import org.apache.subversion.javahl.ClientException;
 
 import java.io.InputStream;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -60,6 +59,9 @@ public class CommitEditor extends JNIObject implements ISVNEditor
                                long replacesRevision)
             throws ClientException;
 
+    /**
+     * <b>Note:</b> Not implemented.
+     */
     public native void addSymlink(String relativePath,
                                   String target,
                                   Map<String, byte[]> properties,
@@ -84,6 +86,9 @@ public class CommitEditor extends JNIObject implements ISVNEditor
                                  Map<String, byte[]> properties)
             throws ClientException;
 
+    /**
+     * <b>Note:</b> Not implemented.
+     */
     public native void alterSymlink(String relativePath,
                                     long revision,
                                     String target,
@@ -106,7 +111,10 @@ public class CommitEditor extends JNIObject implements ISVNEditor
                             long replacesRevision)
             throws ClientException;
 
-    public native void rotate(List<RotatePair> elements)
+    /**
+     * <b>Note:</b> Not implemented.
+     */
+    public native void rotate(Iterable<RotatePair> elements)
             throws ClientException;
 
     public native void complete() throws ClientException;
