@@ -24,6 +24,7 @@ package org.apache.subversion.javahl;
 
 import org.apache.subversion.javahl.*;
 import org.apache.subversion.javahl.remote.*;
+import org.apache.subversion.javahl.callback.*;
 import org.apache.subversion.javahl.types.*;
 
 import java.util.Arrays;
@@ -367,5 +368,48 @@ public class SVNRemoteTests extends SVNTests
         assertEquals(dirents.get("lambda").getPath(), "lambda");
         for (Map.Entry<String, byte[]> e : properties.entrySet())
             assertTrue(e.getKey().startsWith("svn:entry:"));
+    }
+
+    private class MyCommitCallback implements CommitCallback
+    {
+        private CommitInfo info = null;
+
+        public void commitInfo(CommitInfo info) {
+            this.info = info;
+        }
+
+        public long getRevision() {
+            if (info != null)
+                return info.getRevision();
+            else
+                return Revision.SVN_INVALID_REVNUM;
+        }
+    }
+
+    public void testRemoteCopy() throws Exception
+    {
+        ISVNRemote session = getSession();
+
+        HashMap<String, byte[]> revprops = new HashMap<String, byte[]>();
+        revprops.put("svn:log", new byte[0]);
+
+        MyCommitCallback commitcb = new MyCommitCallback();
+
+        ISVNEditor editor =
+            session.getCommitEditor(revprops, commitcb, null, false);
+
+        try {
+            editor.copy("A/B/lambda", 1, "A/B/omega",
+                        Revision.SVN_INVALID_REVNUM);
+            editor.complete();
+        } finally {
+            editor.dispose();
+        }
+
+        assertEquals(2, commitcb.getRevision());
+        assertEquals(2, session.getLatestRevision());
+        assertEquals(NodeKind.file,
+                     session.checkPath("A/B/omega",
+                                       Revision.SVN_INVALID_REVNUM));
     }
 }

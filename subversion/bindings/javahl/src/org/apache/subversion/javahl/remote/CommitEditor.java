@@ -47,118 +47,71 @@ public class CommitEditor extends JNIObject implements ISVNEditor
         nativeDispose();
     }
 
-    public void addDirectory(String relativePath,
-                             Iterable<String> children,
-                             Map<String, byte[]> properties,
-                             long replacesRevision)
-            throws ClientException
-    {
-        nativeAddDirectory(session, relativePath, children, properties,
-                           replacesRevision);
-    }
+    public native void addDirectory(String relativePath,
+                                    Iterable<String> children,
+                                    Map<String, byte[]> properties,
+                                    long replacesRevision)
+            throws ClientException;
 
-    public void addFile(String relativePath,
-                        Checksum checksum,
-                        InputStream contents,
-                        Map<String, byte[]> properties,
-                        long replacesRevision)
-            throws ClientException
-    {
-        nativeAddFile(session, relativePath,
-                      checksum, contents, properties,
-                      replacesRevision);
-    }
+    public native void addFile(String relativePath,
+                               Checksum checksum,
+                               InputStream contents,
+                               Map<String, byte[]> properties,
+                               long replacesRevision)
+            throws ClientException;
 
-    public void addSymlink(String relativePath,
-                           String target,
-                           Map<String, byte[]> properties,
-                           long replacesRevision)
-            throws ClientException
-    {
-        nativeAddSymlink(session, relativePath, target, properties,
-                         replacesRevision);
-    }
+    public native void addSymlink(String relativePath,
+                                  String target,
+                                  Map<String, byte[]> properties,
+                                  long replacesRevision)
+            throws ClientException;
 
-    public void addAbsent(String relativePath,
-                          NodeKind kind,
-                          long replacesRevision)
-            throws ClientException
-    {
-        nativeAddAbsent(session, relativePath, kind, replacesRevision);
-    }
+    public native void addAbsent(String relativePath,
+                                 NodeKind kind,
+                                 long replacesRevision)
+            throws ClientException;
 
-    public void alterDirectory(String relativePath,
-                               long revision,
-                               Iterable<String> children,
-                               Map<String, byte[]> properties)
-            throws ClientException
-    {
-        nativeAlterDirectory(session, relativePath, revision,
-                             children, properties);
-    }
+    public native void alterDirectory(String relativePath,
+                                      long revision,
+                                      Iterable<String> children,
+                                      Map<String, byte[]> properties)
+            throws ClientException;
 
-    public void alterFile(String relativePath,
-                          long revision,
-                          Checksum checksum,
-                          InputStream contents,
-                          Map<String, byte[]> properties)
-            throws ClientException
-    {
-        nativeAlterFile(session, relativePath, revision,
-                        checksum, contents, properties);
-    }
+    public native void alterFile(String relativePath,
+                                 long revision,
+                                 Checksum checksum,
+                                 InputStream contents,
+                                 Map<String, byte[]> properties)
+            throws ClientException;
 
-    public void alterSymlink(String relativePath,
-                             long revision,
-                             String target,
-                             Map<String, byte[]> properties)
-            throws ClientException
-    {
-        nativeAlterSymlink(session, relativePath, revision,
-                           target, properties);
-    }
+    public native void alterSymlink(String relativePath,
+                                    long revision,
+                                    String target,
+                                    Map<String, byte[]> properties)
+            throws ClientException;
+   
+    public native void delete(String relativePath,
+                              long revision)
+            throws ClientException;
 
-    public void delete(String relativePath,
-                       long revision)
-            throws ClientException
-    {
-        nativeDelete(session, relativePath, revision);
-    }
+    public native void copy(String sourceRelativePath,
+                            long sourceRevision,
+                            String destinationRelativePath,
+                            long replacesRevision)
+            throws ClientException;
 
-    public void copy(String sourceRelativePath,
-                     long sourceRevision,
-                     String destinationRelativePath,
-                     long replacesRevision)
-            throws ClientException
-    {
-        nativeCopy(session, sourceRelativePath, sourceRevision,
-                   destinationRelativePath, replacesRevision);
-    }
+    public native void move(String sourceRelativePath,
+                            long sourceRevision,
+                            String destinationRelativePath,
+                            long replacesRevision)
+            throws ClientException;
 
-    public void move(String sourceRelativePath,
-                     long sourceRevision,
-                     String destinationRelativePath,
-                     long replacesRevision)
-            throws ClientException
-    {
-        nativeMove(session, sourceRelativePath, sourceRevision,
-                   destinationRelativePath, replacesRevision);
-    }
+    public native void rotate(List<RotatePair> elements)
+            throws ClientException;
 
-    public void rotate(List<RotatePair> elements) throws ClientException
-    {
-        nativeRotate(session, elements);
-    }
+    public native void complete() throws ClientException;
 
-    public void complete() throws ClientException
-    {
-        nativeComplete(session);
-    }
-
-    public void abort() throws ClientException
-    {
-        nativeAbort(session);
-    }
+    public native void abort() throws ClientException;
 
     /**
      * This factory method called from RemoteSession.getCommitEditor.
@@ -171,9 +124,8 @@ public class CommitEditor extends JNIObject implements ISVNEditor
                                     boolean keepLocks)
             throws ClientException
     {
-        long cppAddr = nativeCreateInstance(session,
-                                            revisionProperties, commitCallback,
-                                            lockTokens, keepLocks);
+        long cppAddr = nativeCreateInstance(session, revisionProperties,
+                                            commitCallback, lockTokens, keepLocks);
         return new CommitEditor(cppAddr, session);
     }
 
@@ -196,72 +148,6 @@ public class CommitEditor extends JNIObject implements ISVNEditor
      * Wrapped private native implementation declarations.
      */
     private native void nativeDispose();
-    private native void nativeAddDirectory(RemoteSession session,
-                                           String relativePath,
-                                           Iterable<String> children,
-                                           Map<String, byte[]> properties,
-                                           long replacesRevision)
-            throws ClientException;
-    private native void nativeAddFile(RemoteSession session,
-                                      String relativePath,
-                                      Checksum checksum,
-                                      InputStream contents,
-                                      Map<String, byte[]> properties,
-                                      long replacesRevision)
-            throws ClientException;
-    private native void nativeAddSymlink(RemoteSession session,
-                                         String relativePath,
-                                         String target,
-                                         Map<String, byte[]> properties,
-                                         long replacesRevision)
-            throws ClientException;
-    private native void nativeAddAbsent(RemoteSession session,
-                                        String relativePath,
-                                        NodeKind kind,
-                                        long replacesRevision)
-            throws ClientException;
-    private native void nativeAlterDirectory(RemoteSession session,
-                                             String relativePath,
-                                             long revision,
-                                             Iterable<String> children,
-                                             Map<String, byte[]> properties)
-            throws ClientException;
-    private native void nativeAlterFile(RemoteSession session,
-                                        String relativePath,
-                                        long revision,
-                                        Checksum checksum,
-                                        InputStream contents,
-                                        Map<String, byte[]> properties)
-            throws ClientException;
-    private native void nativeAlterSymlink(RemoteSession session,
-                                           String relativePath,
-                                           long revision,
-                                           String target,
-                                           Map<String, byte[]> properties)
-            throws ClientException;
-    private native void nativeDelete(RemoteSession session,
-                                     String relativePath,
-                                     long revision)
-            throws ClientException;
-    private native void nativeCopy(RemoteSession session,
-                                   String sourceRelativePath,
-                                   long sourceRevision,
-                                   String destinationRelativePath,
-                                   long replacesRevision)
-            throws ClientException;
-    private native void nativeMove(RemoteSession session,
-                                   String sourceRelativePath,
-                                   long sourceRevision,
-                                   String destinationRelativePath,
-                                   long replacesRevision)
-            throws ClientException;
-    private native void nativeRotate(RemoteSession session,
-                                     List<RotatePair> elements)
-            throws ClientException;
-    private native void nativeComplete(RemoteSession session)
-            throws ClientException;
-    private native void nativeAbort(RemoteSession session)
-            throws ClientException;
     private static final native
         long nativeCreateInstance(RemoteSession session,
                                   Map<String, byte[]> revisionProperties,
