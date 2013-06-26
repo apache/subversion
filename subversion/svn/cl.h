@@ -240,6 +240,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t show_inherited_props;  /* get inherited properties */
   apr_array_header_t* search_patterns; /* pattern arguments for --search */
   svn_boolean_t mergeinfo_log;     /* show log message in mergeinfo command */
+  svn_boolean_t remove_unversioned;/* remove unversioned items */
 } svn_cl__opt_state_t;
 
 

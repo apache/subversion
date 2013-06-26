@@ -4025,12 +4025,29 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
 /** Recursively cleanup a working copy directory @a dir, finishing any
  * incomplete operations, removing lockfiles, etc.
  *
+ * If @a remove_unversioned_children is @c TRUE, remove unversioned children
+ * of @a dir after successfull working copy cleanup. If @a no_ignore is
+ * @c TRUE as well, also remove unversioned children which are being ignored.
+ *
  * If @a ctx->cancel_func is non-NULL, invoke it with @a
  * ctx->cancel_baton at various points during the operation.  If it
  * returns an error (typically #SVN_ERR_CANCELLED), return that error
  * immediately.
  *
  * Use @a scratch_pool for any temporary allocations.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_client_cleanup2(const char *dir,
+                    svn_boolean_t remove_unversioned_children,
+                    svn_boolean_t no_ignore,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *scratch_pool);
+
+/* Like svn_client_cleanup2(), but no support for removing unversioned items.
+ *
+ * @deprecated Provided for limited backwards compatibility with the 1.8 API.
  */
 svn_error_t *
 svn_client_cleanup(const char *dir,

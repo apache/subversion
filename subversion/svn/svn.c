@@ -134,7 +134,8 @@ typedef enum svn_cl__longopt_t {
   opt_show_inherited_props,
   opt_search,
   opt_search_and,
-  opt_mergeinfo_log
+  opt_mergeinfo_log,
+  opt_remove_unversioned
 } svn_cl__longopt_t;
 
 
@@ -382,6 +383,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("combine ARG with the previous search pattern")},
   {"log", opt_mergeinfo_log, 0,
                        N_("show revision log message, author and date")},
+  {"remove-unversioned", opt_remove_unversioned, 0,
+                       N_("remove unversioned items")},
 
   /* Long-opt Aliases
    *
@@ -489,8 +492,12 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
   { "cleanup", svn_cl__cleanup, {0}, N_
     ("Recursively clean up the working copy, removing locks, resuming\n"
      "unfinished operations, etc.\n"
-     "usage: cleanup [WCPATH...]\n"),
-    {opt_merge_cmd} },
+     "usage: cleanup [WCPATH...]\n"
+     "\n"
+     "  If the --remove-unversioned option is given, also remove unversioned\n"
+     "  items within WCPATH. If --no-ignore is also given, disregard any\n"
+     "  ignore patterns and remove ignored unversioned items as well.\n"),
+    {opt_merge_cmd, opt_remove_unversioned, opt_no_ignore} },
 
   { "commit", svn_cl__commit, {"ci"},
     N_("Send changes from your working copy to the repository.\n"
@@ -2282,6 +2289,8 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       case opt_search_and:
         SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         add_search_pattern_to_latest_group(&opt_state, utf8_opt_arg, pool);
+      case opt_remove_unversioned:
+        opt_state.remove_unversioned = TRUE;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
