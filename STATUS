@@ -151,6 +151,22 @@ Candidate changes:
    Votes:
      +1: stsp
    
+ * r1497318
+   Better explain working copy locks in 'svn help status' output.
+   Justification:
+     The current documentation can be misleading for users who might
+     not know what the purpose of the lock is.
+   Votes:
+     +1: stsp
+   
+ * r1497319
+   Better explain exclusive-commit locks in 'svn help status' output.
+   Justification:
+     The current documentation can be misleading for users who might not
+     know what a 'lock token' is, or what the purpose of the lock is.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
