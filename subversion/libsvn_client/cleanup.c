@@ -109,16 +109,16 @@ do_cleanup(const char *local_abspath,
   if (remove_unversioned_items || remove_ignored_items || include_externals)
     {
       struct cleanup_status_walk_baton b;
-      apr_array_header_t *ignores = NULL;
+      apr_array_header_t *ignores;
 
       b.include_externals = include_externals;
       b.remove_unversioned_items = remove_unversioned_items;
       b.remove_ignored_items = remove_ignored_items;
       b.include_externals = include_externals;
       b.ctx = ctx;
-      if (remove_ignored_items)
-        SVN_ERR(svn_wc_get_ignores2(&ignores, ctx->wc_ctx, local_abspath,
-                                    ctx->config, scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config,
+                                         scratch_pool));
       SVN_ERR(svn_wc_walk_status(ctx->wc_ctx, local_abspath,
                                  svn_depth_infinity,
                                  TRUE,  /* get all */
