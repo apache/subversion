@@ -149,20 +149,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1491432, r1496938
-   Rename 'automatic merge' to 'complete merge' in the merge help text.
-   Justification:
-     Prevent user confusion. "Automatic merge" sounds too ambitious and
-     may be misunderstood if not used in context. The term 'complete'
-     refers to a merge which merges all outstanding changes from the
-     source branch, i.e. sync or reintegrate.
-   Notes:
-     This was not merged in time for 1.8.0, so different client
-     versions will name the feature in different ways.
-     r1496938 just tweaks "an 'complete' merge" to "a 'complete' merge".
-   Votes:
-     +1: stsp
-     +1: danielsh (no opinion on the name of the feature; just confirming this
-                   patch does what it claims to)
-     +1: julianfoad
-
