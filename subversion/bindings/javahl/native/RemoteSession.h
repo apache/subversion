@@ -84,7 +84,10 @@ class RemoteSession : public SVNBase
                    jlong jrevision, jobject jdepth,
                    jobject jstatus_editor);
     // TODO: diff
-    // TODO: getLog
+    void getLog(jobject jpaths, jlong jstartrev, jlong jendrev, jint jlimit,
+                jboolean jstop_on_copy, jboolean jdiscover_changed_paths,
+                jboolean jinclude_merged_revisions,
+                jobject jrevprops, jobject jlog_callback);
     jobject checkPath(jstring jpath, jlong jrevision);
     // TODO: stat
     // TODO: getLocations

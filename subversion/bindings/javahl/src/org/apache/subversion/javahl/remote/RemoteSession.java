@@ -161,7 +161,14 @@ public class RemoteSession extends JNIObject implements ISVNRemote
             throws ClientException;
 
     // TODO: diff
-    // TODO: getLog
+
+    public native void getLog(Iterable<String> paths,
+                              long startRevision, long endRevision, int limit,
+                              boolean stopOnCopy, boolean discoverPath,
+                              boolean includeMergedRevisions,
+                              Iterable<String> revisionProperties,
+                              LogMessageCallback callback)
+            throws ClientException;
 
     public native NodeKind checkPath(String path, long revision)
             throws ClientException;

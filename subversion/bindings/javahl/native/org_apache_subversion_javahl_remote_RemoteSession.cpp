@@ -230,7 +230,24 @@ Java_org_apache_subversion_javahl_remote_RemoteSession_status(
 }
 
 // TODO: diff
-// TODO: getLog
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_remote_RemoteSession_getLog(
+    JNIEnv *env, jobject jthis, jobject jpaths,
+    jlong jstartrev, jlong jendrev, jint jlimit,
+    jboolean jstop_on_copy, jboolean jdiscover_changed_paths,
+    jboolean jinclude_merged_revisions,
+    jobject jrevprops, jobject jlog_callback)
+{
+  JNIEntry(SVNReposAccess, getLog);
+  RemoteSession *ras = RemoteSession::getCppObject(jthis);
+  CPPADDR_NULL_PTR(ras,);
+
+  ras->getLog(jpaths, jstartrev, jendrev, jlimit,
+              jstop_on_copy, jdiscover_changed_paths,
+              jinclude_merged_revisions,
+              jrevprops, jlog_callback);
+}
 
 JNIEXPORT jobject JNICALL
 Java_org_apache_subversion_javahl_remote_RemoteSession_checkPath(

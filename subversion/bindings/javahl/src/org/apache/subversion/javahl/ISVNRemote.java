@@ -336,7 +336,70 @@ public interface ISVNRemote
             throws ClientException;
 
     // TODO: diff
-    // TODO: getLog
+
+    /**
+     * Invoke <code>callback</code> for each log message from
+     * <code>start</code> to <code>end</code>.  <code>start</code> may be greater or less than <code>end</code>;
+     * this just controls whether the log messages are processed in descending
+     * or ascending revision number order.
+     * <p>
+     * If <code>start</code> or <code>end</code> is
+     * {@link org.apache.subversion.javahl.types.Revision#SVN_INVALID_REVNUM},
+     * the HEAD revision is uses for that argument. If eiter is an
+     * invaild non-existent revision, an error will be returned.
+     * <p>
+     * If <code>paths</code> is not <code>null</code> and has one or
+     * more elements, then only show revisions in which at least one
+     * of <code>paths</code> was changed (i.e., if file, text or props
+     * changed; if dir, props changed or an entry was added or
+     * deleted).
+     * <p>
+     * If <code>limit</code> is non-zero only invoke @a receiver on
+     * the first code>limit</code> logs.
+     * <p>
+     * If <code>discoverPath</code> is set, then each call to
+     * <code>callback</code> the list of changed paths in that
+     * revision.
+     * <p>
+     * If <code>stopOnCopy</code> is set, copy history will not be
+     * traversed (if any exists) when harvesting the revision logs for
+     * each path.
+     * <p>
+     * If <code>includeMergedRevisions</code> is set, log information
+     * for revisions which have been merged to @a targets will also be
+     * returned.
+     * <p>
+     * If <code>revisionProperties</code> is <code>null</code>,
+     * retrieve all revision properties; otherwise, retrieve only the
+     * revision properties contained in the set (i.e. retrieve none if
+     * the set is empty).
+     * <p>
+     * The implementation of <code>callback</code> may not perform any
+     * operations using this session. If the invocation of
+     * <code>callback</code> throws an exception, the operation will
+     * stop.
+     * <p>
+     * <b>Note:</b> If <code>paths</code> is <code>null</code> or
+     * empty, the result depends on the server.  Pre-1.5 servers will
+     * send nothing; 1.5 servers will effectively perform the log
+     * operation on the root of the repository.  This behavior may be
+     * changed in the future to ensure consistency across all
+     * pedigrees of server.
+     * <p>
+     * <b>Note:</b> Pre-1.5 servers do not support custom revprop
+     * retrieval; <code>revisionProperties</code> is <code>null</code>
+     * or contains a revprop other than svn:author, svn:date, or
+     * svn:log, an not-implemented error is returned.
+     *
+     * @throws ClientException
+     */
+    void getLog(Iterable<String> paths,
+                long startRevision, long endRevision, int limit,
+                boolean stopOnCopy, boolean discoverPath,
+                boolean includeMergedRevisions,
+                Iterable<String> revisionProperties,
+                LogMessageCallback callback)
+            throws ClientException;
 
     /**
      * Return the kind of the node in path at revision.
