@@ -20,31 +20,45 @@
  * ====================================================================
  * @endcopyright
  *
- * @file RevpropTable.h
- * @brief Interface of the class RevpropTable
+ * @file Iterator.cpp
+ * @brief Interface of the class Iterator
  */
 
-#ifndef REVPROPTABLE_H
-#define REVPROPTABLE_H
+#ifndef JAVAHL_ITERATOR_H
+#define JAVAHL_ITERATOR_H
 
-#include <jni.h>
-#include "Pool.h"
+#include "JNIUtil.h"
 
-struct apr_hash_t;
-
-#include "Path.h"
-#include <map>
-#include <string>
-
-class RevpropTable
+/**
+ * Encapsulates an immutable java.lang.Iterator implementation.
+ */
+class Iterator
 {
- private:
-  std::map<std::string, std::string> m_revprops;
-  jobject m_revpropTable;
- public:
-  RevpropTable(jobject jrevpropTable, bool bytearray_values=false);
-  ~RevpropTable();
-  apr_hash_t *hash(const SVN::Pool &pool, bool nullIfEmpty = true);
+public:
+  Iterator(jobject jiterable);
+  ~Iterator();
+  bool hasNext() const;
+  jobject next() const;
+
+protected:
+  Iterator(jobject jiterable, bool);
+
+private:
+  bool m_persistent;
+  jobject m_jiterator;
 };
 
-#endif // REVPROPTABLE_H
+
+/**
+ * Like Iterator, but the implementation will hold a global reference
+ * to the internal iterator object to protect it across JNI calls.
+ */
+class PersistentIterator : protected Iterator
+{
+public:
+  PersistentIterator(jobject jiterable) : Iterator(jiterable, true) {}
+  bool hasNext() const { return Iterator::hasNext(); }
+  jobject next() const { return Iterator::next(); }
+};
+
+#endif  // JAVAHL_ITERATOR_H

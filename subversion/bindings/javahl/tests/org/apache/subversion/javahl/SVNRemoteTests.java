@@ -24,17 +24,22 @@ package org.apache.subversion.javahl;
 
 import org.apache.subversion.javahl.*;
 import org.apache.subversion.javahl.remote.*;
+import org.apache.subversion.javahl.callback.*;
 import org.apache.subversion.javahl.types.*;
 
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Set;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 /**
  * This class is used for testing the SVNReposAccess class
@@ -237,13 +242,13 @@ public class SVNRemoteTests extends SVNTests
     public void testGetCommitEditor() throws Exception
     {
         ISVNRemote session = getSession();
-        session.getCommitEditor();
+        session.getCommitEditor(null, null, null, false);
     }
 
     public void testDisposeCommitEditor() throws Exception
     {
         ISVNRemote session = getSession();
-        session.getCommitEditor();
+        session.getCommitEditor(null, null, null, false);
         session.dispose();
     }
 
@@ -300,10 +305,8 @@ public class SVNRemoteTests extends SVNTests
         }
         catch (ClientException ex)
         {
-            String msg = ex.getMessage();
-            int index = msg.indexOf('\n');
             assertEquals("Disabled repository feature",
-                         msg.substring(0, index));
+                         ex.getAllMessages().get(0).getMessage());
             return;
         }
 
@@ -369,5 +372,26 @@ public class SVNRemoteTests extends SVNTests
         assertEquals(dirents.get("lambda").getPath(), "lambda");
         for (Map.Entry<String, byte[]> e : properties.entrySet())
             assertTrue(e.getKey().startsWith("svn:entry:"));
+    }
+
+    private final class CommitContext implements CommitCallback
+    {
+        public final ISVNEditor editor;
+        public CommitContext(ISVNRemote session, String logstr)
+            throws ClientException
+        {
+            Charset UTF8 = Charset.forName("UTF-8");
+            byte[] log = (logstr == null
+                          ? new byte[0]
+                          : logstr.getBytes(UTF8));
+            HashMap<String, byte[]> revprops = new HashMap<String, byte[]>();
+            revprops.put("svn:log", log);
+            editor = session.getCommitEditor(revprops, this, null, false);
+        }
+
+        public void commitInfo(CommitInfo info) { this.info = info; }
+        public long getRevision() { return info.getRevision(); }
+
+        private CommitInfo info;
     }
 }

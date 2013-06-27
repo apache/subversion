@@ -42,9 +42,9 @@ RevpropTable::~RevpropTable()
     JNIUtil::getEnv()->DeleteLocalRef(m_revpropTable);
 }
 
-const apr_hash_t *RevpropTable::hash(const SVN::Pool &pool)
+apr_hash_t *RevpropTable::hash(const SVN::Pool &pool, bool nullIfEmpty)
 {
-  if (m_revprops.size() == 0)
+  if (m_revprops.size() == 0 && nullIfEmpty)
     return NULL;
 
   apr_hash_t *revprop_table = apr_hash_make(pool.getPool());
@@ -78,7 +78,7 @@ RevpropTable::RevpropTable(jobject jrevpropTable, bool bytearray_values)
 
   if (jrevpropTable != NULL)
     {
-      static jmethodID keySet = 0, toArray = 0, get = 0;
+      static jmethodID keySet = 0, get = 0;
       JNIEnv *env = JNIUtil::getEnv();
 
       jclass mapClazz = env->FindClass("java/util/Map");

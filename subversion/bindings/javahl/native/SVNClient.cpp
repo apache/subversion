@@ -1548,12 +1548,7 @@ SVNClient::openRemoteSession(const char* path, int retryAttempts)
        by creating a copy of the prompter here. */
     Prompter* prompter = new Prompter(context.getPrompter());
     if (!prompter)
-    {
-        /* context.getSelf() created a new global reference. */
-        JNIUtil::getEnv()->DeleteGlobalRef(jctx);
-        JNIUtil::throwNullPointerException("allocating Prompter");
-        return NULL;
-    }
+      return NULL;
 
     jobject jremoteSession = RemoteSession::open(
         retryAttempts, path_info.url.c_str(), path_info.uuid.c_str(),
@@ -1561,12 +1556,7 @@ SVNClient::openRemoteSession(const char* path, int retryAttempts)
         context.getUsername(), context.getPassword(),
         prompter, jctx);
     if (JNIUtil::isJavaExceptionThrown())
-    {
-        /* context.getSelf() created a new global reference. */
-        JNIUtil::getEnv()->DeleteGlobalRef(jctx);
-        jremoteSession = NULL;
-        delete prompter;
-    }
+      delete prompter;
 
     return jremoteSession;
 }

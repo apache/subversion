@@ -20,31 +20,31 @@
  * ====================================================================
  * @endcopyright
  *
- * @file RevpropTable.h
- * @brief Interface of the class RevpropTable
+ * @file LockTokenTable.h
+ * @brief Interface of the class LockTokenTable
  */
 
-#ifndef REVPROPTABLE_H
-#define REVPROPTABLE_H
+#ifndef JAVAHL_LOCK_TOKEN_TABLE_H
+#define JAVAHL_LOCK_TOKEN_TABLE_H
 
 #include <jni.h>
 #include "Pool.h"
 
 struct apr_hash_t;
 
-#include "Path.h"
 #include <map>
 #include <string>
 
-class RevpropTable
+class LockTokenTable
 {
  private:
-  std::map<std::string, std::string> m_revprops;
-  jobject m_revpropTable;
+  typedef std::map<std::string, std::string> lock_tokens_t;
+  lock_tokens_t m_lock_tokens;
+  jobject m_jlock_tokens;
  public:
-  RevpropTable(jobject jrevpropTable, bool bytearray_values=false);
-  ~RevpropTable();
-  apr_hash_t *hash(const SVN::Pool &pool, bool nullIfEmpty = true);
+  LockTokenTable(jobject jlock_tokens);
+  ~LockTokenTable();
+  apr_hash_t *hash(const SVN::Pool &pool, bool null_if_empty = true);
 };
 
-#endif // REVPROPTABLE_H
+#endif // JAVAHL_LOCK_TOKEN_TABLE_H

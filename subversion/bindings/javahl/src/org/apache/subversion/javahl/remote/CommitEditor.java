@@ -31,8 +31,8 @@ import org.apache.subversion.javahl.JNIObject;
 import org.apache.subversion.javahl.ClientException;
 
 import java.io.InputStream;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Implementation of ISVNEditor that drives commits.
@@ -131,7 +131,7 @@ public class CommitEditor extends JNIObject implements ISVNEditor
         notimplemented("move");
     }
 
-    public void rotate(List<RotatePair> elements) throws ClientException
+    public void rotate(Iterable<RotatePair> elements) throws ClientException
     {
         notimplemented("rotate");
     }
@@ -149,7 +149,11 @@ public class CommitEditor extends JNIObject implements ISVNEditor
     /**
      * This factory method called from RemoteSession.getCommitEditor.
      */
-    static final CommitEditor createInstance(RemoteSession owner)
+    static final CommitEditor createInstance(RemoteSession owner,
+                                             Map<String, byte[]> revisionProperties,
+                                             CommitCallback commitCallback,
+                                             Set<Lock> lockTokens,
+                                             boolean keepLocks)
             throws ClientException
     {
         // FIXME: temporary implementation

@@ -49,7 +49,7 @@ JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_remote_RemoteSession_nativeDispose(
     JNIEnv *env, jobject jthis)
 {
-  JNIEntry(RemoteSession, dispose);
+  JNIEntry(RemoteSession, nativeDispose);
   RemoteSession *ras = RemoteSession::getCppObject(jthis);
   if (ras != NULL)
     ras->dispose(jthis);
@@ -214,11 +214,11 @@ Java_org_apache_subversion_javahl_remote_RemoteSession_nativeGetDirectory(
 }
 
 // TODO: getMergeinfo
-// TODO: doUpdate
-// TODO: doSwitch
+// TODO: update
+// TODO: switch
 
 JNIEXPORT jobject JNICALL
-Java_org_apache_subversion_javahl_remote_RemoteSession_doStatus(
+Java_org_apache_subversion_javahl_remote_RemoteSession_status(
     JNIEnv *env, jobject jthis, jstring jstatus_target,
     jlong jrevision, jobject jdepth, jobject jstatus_editor)
 {
@@ -226,10 +226,10 @@ Java_org_apache_subversion_javahl_remote_RemoteSession_doStatus(
   RemoteSession *ras = RemoteSession::getCppObject(jthis);
   CPPADDR_NULL_PTR(ras, NULL);
 
-  return ras->doStatus(jstatus_target, jrevision, jdepth, jstatus_editor);
+  return ras->status(jstatus_target, jrevision, jdepth, jstatus_editor);
 }
 
-// TODO: doDiff
+// TODO: diff
 // TODO: getLog
 
 JNIEXPORT jobject JNICALL

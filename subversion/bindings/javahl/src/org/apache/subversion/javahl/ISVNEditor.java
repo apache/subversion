@@ -27,7 +27,6 @@ import org.apache.subversion.javahl.types.*;
 import org.apache.subversion.javahl.callback.*;
 
 import java.io.InputStream;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -296,7 +295,7 @@ public interface ISVNEditor
      *
      * @throws ClientException
      */
-    void rotate(List<RotatePair> elements) throws ClientException;
+    void rotate(Iterable<RotatePair> elements) throws ClientException;
 
     public static final class RotatePair
     {
