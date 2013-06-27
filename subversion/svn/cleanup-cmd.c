@@ -87,7 +87,7 @@ svn_cl__cleanup(apr_getopt_t *os,
                                        "Subversion client is currently "
                                        "using the working copy, try running "
                                        "'svn cleanup' without the "
-                                       "--remove-unversioned or "
+                                       "--remove-unversioned and "
                                        "--remove-ignored options first."));
             }
           else
