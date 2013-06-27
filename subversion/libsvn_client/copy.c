@@ -1454,7 +1454,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
 #ifdef ENABLE_EV2_SHIMS
   if (commit_items)
     {
-      relpath_map = apr_hash_make(pool);
+      relpath_map = apr_hash_make(scratch_pool);
       for (i = 0; i < commit_items->nelts; i++)
         {
           svn_client_commit_item3_t *item = APR_ARRAY_IDX(commit_items, i,
