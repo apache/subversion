@@ -1136,6 +1136,13 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         goto print_error;
       break;
 
+    case svn_wc_notify_cleanup_external:
+      if ((err = svn_cmdline_printf
+           (pool, _("Performing cleanup on external item at '%s'.\n"),
+            path_local)))
+        goto print_error;
+      break;
+
     default:
       break;
     }

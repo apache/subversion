@@ -4025,6 +4025,9 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
 /** Recursively cleanup a working copy directory @a dir, finishing any
  * incomplete operations, removing lockfiles, etc.
  *
+ * If @a include_externals is @c TRUE, recurse into externals and clean
+ * them up as well.
+ *
  * If @a remove_unversioned_children is @c TRUE, remove unversioned children
  * of @a dir after successfull working copy cleanup.
  * If @a remove_ignored_children is @c TRUE, remove ignored unversioned children
@@ -4047,12 +4050,14 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
  */
 svn_error_t *
 svn_client_cleanup2(const char *dir,
+                    svn_boolean_t include_externals,
                     svn_boolean_t remove_unversioned_children,
                     svn_boolean_t remove_ignored_children,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *scratch_pool);
 
-/* Like svn_client_cleanup2(), but no support for removing unversioned items.
+/* Like svn_client_cleanup2(), but no support for removing unversioned items
+ * and cleaning up externals.
  *
  * @deprecated Provided for limited backwards compatibility with the 1.8 API.
  */

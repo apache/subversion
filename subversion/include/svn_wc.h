@@ -1255,7 +1255,11 @@ typedef enum svn_wc_notify_action_t
    * copy + delete. The notified path is the move source (the deleted path).
    * ### TODO: Provide path to move destination as well?
    * @since New in 1.8. */
-  svn_wc_notify_move_broken
+  svn_wc_notify_move_broken,
+
+  /** Running cleanup on an external module.
+   * @since New in 1.9. */
+  svn_wc_notify_cleanup_external,
 
 } svn_wc_notify_action_t;
 
