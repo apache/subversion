@@ -4030,6 +4030,12 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
  * If @a remove_ignored_children is @c TRUE, remove ignored unversioned children
  * of @a dir after successfull working copy cleanup.
  *
+ * When asked to remove unversioned or ignored items, and the working copy
+ * is already locked via a different client or WC context than @a ctx, return
+ * #SVN_ERR_WC_LOCKED. This prevents accidental working copy corruption in
+ * case users run the cleanup operation to remove unversioned items while
+ * another client is performing some other operation on the working copy.
+ *
  * If @a ctx->cancel_func is non-NULL, invoke it with @a
  * ctx->cancel_baton at various points during the operation.  If it
  * returns an error (typically #SVN_ERR_CANCELLED), return that error

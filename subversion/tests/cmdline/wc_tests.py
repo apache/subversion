@@ -284,6 +284,22 @@ def cleanup_unversioned_items(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output,
                                      [], 'status', '--no-ignore')
 
+def cleanup_unversioned_items_in_locked_wc(sbox):
+  """cleanup unversioned items in locked WC should fail"""
+
+  sbox.build(read_only = True)
+
+  contents = "This is an unversioned file\n."
+  svntest.main.file_write(sbox.ospath('unversioned_file'), contents)
+
+  svntest.actions.lock_admin_dir(sbox.ospath(""), True)
+  for option in ['--remove-unversioned', '--remove-ignored']:
+    svntest.actions.run_and_verify_svn(None, None,
+                                       "svn: E155004: Working copy locked;.*",
+                                       "cleanup", option,
+                                       sbox.ospath(""))
+
+
 ########################################################################
 # Run the tests
 
@@ -304,6 +320,7 @@ test_list = [ None,
               cleanup_below_wc_root,
               update_through_unversioned_symlink,
               cleanup_unversioned_items,
+              cleanup_unversioned_items_in_locked_wc,
              ]
 
 if __name__ == '__main__':
