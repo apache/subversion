@@ -394,4 +394,69 @@ public class SVNRemoteTests extends SVNTests
 
         private CommitInfo info;
     }
+
+    private static final class LogMsg
+    {
+        public Set<ChangePath> changedPaths;
+        public long revision;
+        public Map<String, byte[]> revprops;
+        public boolean hasChildren;
+    }
+
+    private static final class LogReceiver implements LogMessageCallback
+    {
+        public final ArrayList<LogMsg> logs = new ArrayList<LogMsg>();
+
+        public void singleMessage(Set<ChangePath> changedPaths,
+                                  long revision,
+                                  Map<String, byte[]> revprops,
+                                  boolean hasChildren)
+        {
+            LogMsg msg = new LogMsg();
+            msg.changedPaths = changedPaths;
+            msg.revision = revision;
+            msg.revprops = revprops;
+            msg.hasChildren = hasChildren;
+            logs.add(msg);
+        }
+    }
+
+    public void testGetLog() throws Exception
+    {
+        ISVNRemote session = getSession();
+        LogReceiver receiver = new LogReceiver();
+
+        session.getLog(null,
+                       Revision.SVN_INVALID_REVNUM,
+                       Revision.SVN_INVALID_REVNUM,
+                       0, false, false, false, null,
+                       receiver);
+
+        assertEquals(1, receiver.logs.size());
+    }
+
+    public void testGetLogMissing() throws Exception
+    {
+        ISVNRemote session = getSession();
+        LogReceiver receiver = new LogReceiver();
+
+        ArrayList<String> paths = new ArrayList<String>(1);
+        paths.add("X");
+
+        boolean exception = false;
+        try {
+            session.getLog(paths,
+                           Revision.SVN_INVALID_REVNUM,
+                           Revision.SVN_INVALID_REVNUM,
+                           0, false, false, false, null,
+                           receiver);
+        } catch (ClientException ex) {
+            assertEquals("Filesystem has no item",
+                         ex.getAllMessages().get(0).getMessage());
+            exception = true;
+        }
+
+        assertEquals(0, receiver.logs.size());
+        assertTrue(exception);
+    }
 }

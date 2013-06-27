@@ -38,11 +38,14 @@
 
 #include "CreateJ.h"
 #include "EnumMapper.h"
+#include "Iterator.h"
+#include "LogMessageCallback.h"
 #include "OutputStream.h"
 #include "Prompter.h"
 #include "Revision.h"
 #include "RemoteSession.h"
 
+#include <apr_strings.h>
 #include "svn_private_config.h"
 
 #define JAVA_CLASS_REMOTE_SESSION JAVA_PACKAGE "/remote/RemoteSession"
@@ -641,7 +644,75 @@ RemoteSession::status(jstring jstatus_target,
 }
 
 // TODO: diff
-// TODO: getLog
+
+namespace {
+const apr_array_header_t*
+build_string_array(const Iterator& iter,
+                   bool contains_relpaths, SVN::Pool& pool)
+{
+  apr_pool_t* result_pool = pool.getPool();
+  apr_array_header_t* array = apr_array_make(
+      result_pool, 0, sizeof(const char*));
+  while (iter.hasNext())
+    {
+      const char* element;
+      jstring jitem = (jstring)iter.next();
+      if (contains_relpaths)
+        {
+          Relpath item(jitem, pool);
+          if (JNIUtil::isExceptionThrown())
+            return NULL;
+          SVN_JNI_ERR(item.error_occurred(), NULL);
+          element = apr_pstrdup(result_pool, item.c_str());
+        }
+      else
+        {
+          JNIStringHolder item(jitem);
+          if (JNIUtil::isJavaExceptionThrown())
+            return NULL;
+          element = item.pstrdup(result_pool);
+        }
+      APR_ARRAY_PUSH(array, const char*) = element;
+    }
+  return array;
+}
+}
+
+void
+RemoteSession::getLog(jobject jpaths,
+                      jlong jstartrev, jlong jendrev, jint jlimit,
+                      jboolean jstop_on_copy, jboolean jdiscover_changed_paths,
+                      jboolean jinclude_merged_revisions,
+                      jobject jrevprops, jobject jlog_callback)
+{
+  Iterator pathiter(jpaths);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+  Iterator revpropiter(jrevprops);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+  LogMessageCallback receiver(jlog_callback);
+
+  SVN::Pool subPool(pool);
+  const apr_array_header_t* paths = build_string_array(pathiter,
+                                                       true, subPool);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+  const apr_array_header_t* revprops = build_string_array(revpropiter,
+                                                          false, subPool);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
+  SVN_JNI_ERR(svn_ra_get_log2(m_session, paths,
+                              svn_revnum_t(jstartrev), svn_revnum_t(jendrev),
+                              int(jlimit),
+                              bool(jdiscover_changed_paths),
+                              bool(jstop_on_copy),
+                              bool(jinclude_merged_revisions),
+                              revprops,
+                              receiver.callback, &receiver,
+                              subPool.getPool()),);
+}
 
 jobject
 RemoteSession::checkPath(jstring jpath, jlong jrevision)
