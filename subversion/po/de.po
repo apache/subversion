@@ -96,8 +96,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.8\n"
 "Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
-"POT-Creation-Date: 2013-06-26 23:29+0100\n"
-"PO-Revision-Date: 2013-06-26 23:26+0100\n"
+"POT-Creation-Date: 2013-06-27 23:27+0100\n"
+"PO-Revision-Date: 2013-06-27 23:25+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.apache.org>\n"
 "Language-Team: German <dev@subversion.apache.org>\n"
 "Language: de\n"
@@ -395,7 +395,7 @@ msgstr "Problem während der Ausführung des Logs"
 
 #: ../include/svn_error_codes.h:409
 msgid "Can't find a working copy path"
-msgstr "Kann keinen Pfad einer Arbeitskopie finden"
+msgstr "Kann keinen Arbeitskopiepfad finden"
 
 #: ../include/svn_error_codes.h:413
 msgid "Working copy is not up-to-date"
@@ -411,7 +411,7 @@ msgstr "Nicht zusammenführbare Planungsanforderung für einen Eintrag"
 
 #: ../include/svn_error_codes.h:425
 msgid "Found a working copy path"
-msgstr "Pfad einer Arbeitskopie gefunden"
+msgstr "Arbeitskopiepfad gefunden"
 
 #: ../include/svn_error_codes.h:429
 msgid "A conflict in the working copy obstructs the current operation"
@@ -1368,7 +1368,7 @@ msgid "Unsupported node kind for path '%s'"
 msgstr "Nicht unterstützter Knotentyp für Pfad »%s«"
 
 #: ../libsvn_client/add.c:957 ../libsvn_client/changelist.c:65
-#: ../libsvn_client/changelist.c:104 ../libsvn_client/cleanup.c:110
+#: ../libsvn_client/changelist.c:104 ../libsvn_client/cleanup.c:233
 #: ../libsvn_client/export.c:1392 ../libsvn_client/import.c:820
 #: ../libsvn_client/patch.c:3012 ../libsvn_client/relocate.c:232
 #: ../libsvn_client/resolved.c:121 ../libsvn_client/revert.c:136
@@ -1448,6 +1448,11 @@ msgstr "»%s« ist bereits eine Arbeitskopie für eine andere URL"
 #, c-format
 msgid "'%s' already exists and is not a directory"
 msgstr "»%s« existiert bereits und ist kein Verzeichnis"
+
+#: ../libsvn_client/cleanup.c:87
+#, c-format
+msgid "Working copy at '%s' is already locked."
+msgstr "Arbeitskopie »%s« ist schon gesperrt."
 
 #: ../libsvn_client/cmdline.c:104
 #, c-format
@@ -1955,7 +1960,7 @@ msgstr "»%s« ist kein relativer Pfad"
 
 #: ../libsvn_client/log.c:366
 msgid "When specifying working copy paths, only one target may be given"
-msgstr "Bei Pfaden innerhalb der Arbeitskopie darf nur ein Ziel angegeben werden"
+msgstr "Bei der Angabe von Arbeitskopiepfaden darf nur ein Ziel angegeben werden"
 
 #: ../libsvn_client/log.c:390 ../libsvn_client/revisions.c:189
 msgid "PREV, BASE, or COMMITTED revision keywords are invalid for URL"
@@ -2058,7 +2063,7 @@ msgstr "Kann nicht in eine Arbeitskopie mit lokalen Änderungen zusammenführen"
 #: ../libsvn_client/merge.c:10202 ../svn/merge-cmd.c:60
 #, c-format
 msgid "Invalid merge source '%s'; a working copy path can only be used with a repository revision (a number, a date, or head)"
-msgstr "Ungültige Quelle für Zusammenführung »%s«; ein Pfad in einer Arbeitskopie kann nur mit einer Revision im Projektarchiv verwendet werden (eine Zahl, ein Datum oder »HEAD«)"
+msgstr "Ungültige Quelle für Zusammenführung »%s«; ein Arbeitskopiepfad kann nur mit einer Revision im Projektarchiv verwendet werden (eine Zahl, ein Datum oder »HEAD«)"
 
 #: ../libsvn_client/merge.c:10525 ../svn/merge-cmd.c:127
 msgid "Merge sources must both be either paths or URLs"
@@ -2161,7 +2166,7 @@ msgstr "Ungültiger Name für Eigenschaft: »%s«"
 
 #: ../libsvn_client/prop_commands.c:301
 msgid "Targets must be working copy paths"
-msgstr "Ziele müssen Pfade in Arbeitskopien sein"
+msgstr "Ziele müssen Arbeitskopiepfade sein"
 
 #: ../libsvn_client/prop_commands.c:362
 msgid "Targets must be URLs"
@@ -5265,7 +5270,7 @@ msgstr "Ungültige Tiefe (%c) für Pfad »%s«"
 #: ../libsvn_repos/reporter.c:951
 #, c-format
 msgid "Working copy path '%s' does not exist in repository"
-msgstr "Arbeitskopie Pfad »%s« existiert nicht im Projektarchiv"
+msgstr "Arbeitskopiepfad »%s« existiert nicht im Projektarchiv"
 
 #: ../libsvn_repos/reporter.c:1345
 msgid "Not authorized to open root of edit operation"
@@ -8340,14 +8345,14 @@ msgstr "%s, %s %s"
 msgid "local: %s %s incoming: %s %s %s"
 msgstr "lokal: %s %s, empfangen: %s %s %s"
 
-#: ../svn/cleanup-cmd.c:55
-msgid "'--no-ignore' option only valid with '--remove-unversioned' option"
-msgstr "Option »--no-ignore« ist nur in Verbindung mit der Option »--remove-unversioned« zulässig"
+#: ../svn/cleanup-cmd.c:88
+msgid "Working copy locked; if no other Subversion client is currently using the working copy, try running 'svn cleanup' without the --remove-unversioned and --remove-ignored options first."
+msgstr "Arbeitskopie gesperrt; Wenn kein anderer Subversion-Client gerade die Arbeitskopie verwendet, versuchen Sie zuerst »svn cleanup« ohne die Optionen »--remove-unversioned« und »--remove-ignored« auszuführen."
 
-#: ../svn/cleanup-cmd.c:98
+#: ../svn/cleanup-cmd.c:105
 #, c-format
 msgid "Working copy locked; try running 'svn cleanup' on the root of the working copy ('%s') instead."
-msgstr "Arbeitskopie gesperrt; Versuchen Sie stattdessen »svn cleanup« auf der Basis des Projektarchivs (»%s«) auszuführen"
+msgstr "Arbeitskopie gesperrt; Versuchen Sie stattdessen »svn cleanup« auf der Basis der Arbeitskopie (»%s«) auszuführen"
 
 #: ../svn/commit-cmd.c:80
 #, c-format
@@ -9804,6 +9809,11 @@ msgstr "-- Kopieren aus fremdem Projektarchiv bei URL »%s«:\n"
 msgid "Breaking move with source path '%s'\n"
 msgstr "Zertrennung der Verschiebeoperation mit Quellpfad »%s«\n"
 
+#: ../svn/notify.c:1141
+#, c-format
+msgid "Performing cleanup on external item at '%s'.\n"
+msgstr "Räume externen Verweis »%s« auf.\n"
+
 #: ../svn/propdel-cmd.c:88
 #, c-format
 msgid "Cannot specify revision for deleting versioned property '%s'"
@@ -9840,7 +9850,7 @@ msgstr "Expliziter Zielparameter benötigt"
 #: ../svn/propedit-cmd.c:271
 #, c-format
 msgid "'%s' does not appear to be a working copy path"
-msgstr "»%s« scheint kein Pfad einer Arbeitskopie zu sein"
+msgstr "»%s« scheint kein Arbeitskopiepfad zu sein"
 
 #: ../svn/propedit-cmd.c:348
 #, c-format
@@ -10041,42 +10051,42 @@ msgstr "Verschoben von %s"
 msgid "moved to %s"
 msgstr "Verschoben nach %s"
 
-#: ../svn/svn.c:148
+#: ../svn/svn.c:149
 msgid "force operation to run"
 msgstr "Durchführung des Befehls erzwingen"
 
-#: ../svn/svn.c:150
+#: ../svn/svn.c:151
 msgid "force validity of log message source"
 msgstr "Gültigkeit der Quelle für die Logmeldung erzwingen"
 
-#: ../svn/svn.c:151 ../svn/svn.c:152 ../svnadmin/svnadmin.c:211
+#: ../svn/svn.c:152 ../svn/svn.c:153 ../svnadmin/svnadmin.c:211
 #: ../svnadmin/svnadmin.c:214 ../svndumpfilter/svndumpfilter.c:1018
 #: ../svndumpfilter/svndumpfilter.c:1021 ../svnlook/svnlook.c:113
 #: ../svnlook/svnlook.c:125 ../svnsync/svnsync.c:243 ../svnsync/svnsync.c:245
 msgid "show help on a subcommand"
 msgstr "zeige Hilfe zu einem Unterbefehl"
 
-#: ../svn/svn.c:153
+#: ../svn/svn.c:154
 msgid "specify log message ARG"
 msgstr "PAR als Logmeldung verwenden"
 
-#: ../svn/svn.c:154
+#: ../svn/svn.c:155
 msgid "print nothing, or only summary information"
 msgstr "nichts oder nur Zusammenfassungen ausgeben"
 
-#: ../svn/svn.c:155
+#: ../svn/svn.c:156
 msgid "descend recursively, same as --depth=infinity"
 msgstr ""
 "rekursiv absteigen, das gleiche wie\n"
 "                             --depth=infinity"
 
-#: ../svn/svn.c:156
+#: ../svn/svn.c:157
 msgid "obsolete; try --depth=files or --depth=immediates"
 msgstr ""
 "veraltet; versuchen Sie --depth=files oder\n"
 "                             --depth=immediates"
 
-#: ../svn/svn.c:158
+#: ../svn/svn.c:159
 msgid ""
 "the change made by revision ARG (like -r ARG-1:ARG)\n"
 "                             If ARG is negative this is like -r ARG:ARG-1\n"
@@ -10088,7 +10098,7 @@ msgstr ""
 "                             Falls PAR die Form PAR1-PAR2 hat, dann wie\n"
 "                             PAR1:PAR2, wobei PAR1 eingeschlossen ist"
 
-#: ../svn/svn.c:166
+#: ../svn/svn.c:167
 msgid ""
 "ARG (some commands also take ARG1:ARG2 range)\n"
 "                             A revision argument can be one of:\n"
@@ -10110,44 +10120,44 @@ msgstr ""
 "                                             oder vor BASE\n"
 "                                »PREV«       letzte Revision vor COMMITTED"
 
-#: ../svn/svn.c:181
+#: ../svn/svn.c:182
 msgid "read log message from file ARG"
 msgstr "Logmeldung aus Datei PAR lesen"
 
-#: ../svn/svn.c:183
+#: ../svn/svn.c:184
 msgid "give output suitable for concatenation"
 msgstr "Ausgabe für Verkettung formatieren"
 
-#: ../svn/svn.c:185
+#: ../svn/svn.c:186
 msgid "treat value as being in charset encoding ARG"
 msgstr ""
 "Wert behandeln, als sei er in der Zeichenkodierung\n"
 "                             PAR"
 
-#: ../svn/svn.c:186 ../svnadmin/svnadmin.c:217
+#: ../svn/svn.c:187 ../svnadmin/svnadmin.c:217
 #: ../svndumpfilter/svndumpfilter.c:1024 ../svnlook/svnlook.c:167
 #: ../svnrdump/svnrdump.c:144 ../svnserve/svnserve.c:288
 #: ../svnsync/svnsync.c:241 ../svnversion/svnversion.c:140
 msgid "show program version information"
 msgstr "Zeige Versionsinformationen des Programms"
 
-#: ../svn/svn.c:187
+#: ../svn/svn.c:188
 msgid "print extra information"
 msgstr "zusätzliche Informationen ausgeben"
 
-#: ../svn/svn.c:188
+#: ../svn/svn.c:189
 msgid "display update information"
 msgstr "Aktualisierungsinformation ausgeben"
 
-#: ../svn/svn.c:189 ../svnrdump/svnrdump.c:128
+#: ../svn/svn.c:190 ../svnrdump/svnrdump.c:128
 msgid "specify a username ARG"
 msgstr "Benutzername PAR angeben"
 
-#: ../svn/svn.c:190 ../svnrdump/svnrdump.c:130
+#: ../svn/svn.c:191 ../svnrdump/svnrdump.c:130
 msgid "specify a password ARG"
 msgstr "Passwort PAR angeben"
 
-#: ../svn/svn.c:192
+#: ../svn/svn.c:193
 msgid ""
 "Specify differencing options for external diff or\n"
 "                             internal diff or blame. Default: '-u'. Options are\n"
@@ -10176,13 +10186,13 @@ msgstr ""
 "                                -p (--show-c-function):\n"
 "                                   Zeigt C-Funktionsname in Diff-Ausgabe."
 
-#: ../svn/svn.c:210
+#: ../svn/svn.c:211
 msgid "pass contents of file ARG as additional args"
 msgstr ""
 "Inhalt der Datei PAR als zusätzliche Parameter\n"
 "                             übergeben"
 
-#: ../svn/svn.c:212
+#: ../svn/svn.c:213
 msgid ""
 "limit operation by depth ARG ('empty', 'files',\n"
 "                             'immediates', or 'infinity')"
@@ -10190,7 +10200,7 @@ msgstr ""
 "begrenzt Operation auf Tiefe PAR (»empty«, »files«,\n"
 "                            »immediates« oder »infinity«)"
 
-#: ../svn/svn.c:216
+#: ../svn/svn.c:217
 msgid ""
 "set new working copy depth to ARG ('exclude',\n"
 "                             'empty', 'files', 'immediates', or 'infinity')"
@@ -10198,19 +10208,19 @@ msgstr ""
 "setzt eine neue Tiefe PAR der Arbeitskopie (»exclude«,\n"
 "                            »empty«, »files«, »immediates« oder »infinity«)"
 
-#: ../svn/svn.c:219 ../svnlook/svnlook.c:170
+#: ../svn/svn.c:220 ../svnlook/svnlook.c:170
 msgid "output in XML"
 msgstr "gibt XML aus"
 
-#: ../svn/svn.c:220
+#: ../svn/svn.c:221
 msgid "use strict semantics"
 msgstr "wendet strikte Semantik an"
 
-#: ../svn/svn.c:222
+#: ../svn/svn.c:223
 msgid "do not cross copies while traversing history"
 msgstr "beendet Log-Ausgabe bei Kopieroperationen"
 
-#: ../svn/svn.c:224
+#: ../svn/svn.c:225
 msgid ""
 "disregard default and svn:ignore and\n"
 "                             svn:global-ignores property ignores"
@@ -10218,11 +10228,11 @@ msgstr ""
 "ignoriert Einstellungen aus »global-ignores« und den\n"
 "                        Eigenschaften »svn:ignore« und »svn:global-ignores«"
 
-#: ../svn/svn.c:228 ../svnrdump/svnrdump.c:140 ../svnsync/svnsync.c:187
+#: ../svn/svn.c:229 ../svnrdump/svnrdump.c:140 ../svnsync/svnsync.c:187
 msgid "do not cache authentication tokens"
 msgstr "Anmeldeinformationen nicht zwischenspeichern"
 
-#: ../svn/svn.c:230 ../svnrdump/svnrdump.c:154 ../svnsync/svnsync.c:197
+#: ../svn/svn.c:231 ../svnrdump/svnrdump.c:154 ../svnsync/svnsync.c:197
 msgid ""
 "accept SSL server certificates from unknown\n"
 "                             certificate authorities without prompting (but only\n"
@@ -10232,7 +10242,7 @@ msgstr ""
 "                             Ausstellern ohne Nachfrage (aber nur\n"
 "                             mit »--non-interactive«)"
 
-#: ../svn/svn.c:236 ../svnrdump/svnrdump.c:132 ../svnsync/svnsync.c:179
+#: ../svn/svn.c:237 ../svnrdump/svnrdump.c:132 ../svnsync/svnsync.c:179
 msgid ""
 "do no interactive prompting (default is to prompt\n"
 "                             only if standard input is a terminal device)"
@@ -10240,7 +10250,7 @@ msgstr ""
 "verhindert interaktive Nachfragen (Standard sind Nachfragen\n"
 "                             nur wenn die Standardeingabe ein Terminal ist)"
 
-#: ../svn/svn.c:240 ../svnrdump/svnrdump.c:136 ../svnsync/svnsync.c:183
+#: ../svn/svn.c:241 ../svnrdump/svnrdump.c:136 ../svnsync/svnsync.c:183
 msgid ""
 "do interactive prompting even if standard input\n"
 "                             is not a terminal device"
@@ -10248,56 +10258,56 @@ msgstr ""
 "erzwingt interaktive Nachfragen auch wenn die\n"
 "                             Standardeingabe kein Terminal ist"
 
-#: ../svn/svn.c:244
+#: ../svn/svn.c:245
 msgid "try operation but make no changes"
 msgstr "Operation testen, aber keine Änderungen durchführen"
 
-#: ../svn/svn.c:246
+#: ../svn/svn.c:247
 msgid "disable merge tracking; diff nodes as if related"
 msgstr "deaktiviert Zusammenführungsverfolgung; erzeugt Unterschiede als ob Knoten verwandt wären"
 
-#: ../svn/svn.c:248
+#: ../svn/svn.c:249
 msgid "ignore externals definitions"
 msgstr "»svn:externals«-Definitionen ignorieren"
 
-#: ../svn/svn.c:249
+#: ../svn/svn.c:250
 msgid "use ARG as merge command"
 msgstr "PAR als Konflikteditor verwenden"
 
-#: ../svn/svn.c:250
+#: ../svn/svn.c:251
 msgid "use ARG as external editor"
 msgstr "PAR als externen Editor verwenden"
 
-#: ../svn/svn.c:252
+#: ../svn/svn.c:253
 msgid "merge only mergeinfo differences"
 msgstr "Führt nur Unterschiede in den Zusammenführungsinformationen zusammen"
 
-#: ../svn/svn.c:253
+#: ../svn/svn.c:254
 msgid "use ARG as the older target"
 msgstr "PAR als älteres Ziel verwenden"
 
-#: ../svn/svn.c:254
+#: ../svn/svn.c:255
 msgid "use ARG as the newer target"
 msgstr "PAR als neueres Ziel verwenden"
 
-#: ../svn/svn.c:256
+#: ../svn/svn.c:257
 msgid "operate on a revision property (use with -r)"
 msgstr ""
 "auf einer Revisionseigenschaft arbeiten (mit -r\n"
 "                             verwenden)"
 
-#: ../svn/svn.c:257
+#: ../svn/svn.c:258
 msgid "relocate via URL-rewriting"
 msgstr "durch Umschreiben der URL umplatzieren"
 
-#: ../svn/svn.c:259 ../svnadmin/svnadmin.c:259 ../svnrdump/svnrdump.c:126
+#: ../svn/svn.c:260 ../svnadmin/svnadmin.c:259 ../svnrdump/svnrdump.c:126
 #: ../svnsync/svnsync.c:211
 msgid "read user configuration files from directory ARG"
 msgstr ""
 "Benutzerkonfigurationsdateien aus dem Verzeichnis\n"
 "                             PAR lesen"
 
-#: ../svn/svn.c:261 ../svnrdump/svnrdump.c:146 ../svnsync/svnsync.c:213
+#: ../svn/svn.c:262 ../svnrdump/svnrdump.c:146 ../svnsync/svnsync.c:213
 msgid ""
 "set user configuration option in the format:\n"
 "                                 FILE:SECTION:OPTION=[VALUE]\n"
@@ -10309,15 +10319,15 @@ msgstr ""
 "                             Zum Beispiel:\n"
 "                                 servers:global:http-library=serf"
 
-#: ../svn/svn.c:268
+#: ../svn/svn.c:269
 msgid "enable automatic properties"
 msgstr "automatische Eigenschaften einschalten"
 
-#: ../svn/svn.c:269
+#: ../svn/svn.c:270
 msgid "disable automatic properties"
 msgstr "automatische Eigenschaften ausschalten"
 
-#: ../svn/svn.c:271
+#: ../svn/svn.c:272
 msgid ""
 "use a different EOL marker than the standard\n"
 "                             system marker for files with the svn:eol-style\n"
@@ -10329,40 +10339,40 @@ msgstr ""
 "                             »svn:eol-style native«.\n"
 "                             PAR kann »LF«, »CR« oder »CRLF« sein."
 
-#: ../svn/svn.c:278
+#: ../svn/svn.c:279
 msgid "maximum number of log entries"
 msgstr "maximale Anzahl Logeinträge"
 
-#: ../svn/svn.c:279
+#: ../svn/svn.c:280
 msgid "don't unlock the targets"
 msgstr "Ziele nicht freigeben"
 
 # CHECKME
-#: ../svn/svn.c:280
+#: ../svn/svn.c:281
 msgid "remove changelist association"
 msgstr "Bezug zur Änderungsliste entfernen"
 
-#: ../svn/svn.c:282
+#: ../svn/svn.c:283
 msgid "operate only on members of changelist ARG"
 msgstr "nur auf Elementen der Änderungsliste PAR operieren"
 
-#: ../svn/svn.c:284
+#: ../svn/svn.c:285
 msgid "don't delete changelists after commit"
 msgstr "Änderungslisten nach Übertragung nicht löschen"
 
-#: ../svn/svn.c:285
+#: ../svn/svn.c:286
 msgid "keep path in working copy"
 msgstr "Pfad in Arbeitskopie beibehalten"
 
-#: ../svn/svn.c:287
+#: ../svn/svn.c:288
 msgid "retrieve all revision properties"
 msgstr "alle Revisionseigenschaften abfragen"
 
-#: ../svn/svn.c:289
+#: ../svn/svn.c:290
 msgid "retrieve no revision properties"
 msgstr "keine Revisionseigenschaften abfragen"
 
-#: ../svn/svn.c:291
+#: ../svn/svn.c:292
 msgid ""
 "set revision property ARG in new revision\n"
 "                             using the name[=value] format"
@@ -10370,11 +10380,11 @@ msgstr ""
 "Revisionseigenschaft PAR in neuer Revision\n"
 "                             unter Verwendung des Formats name[=Wert] setzen"
 
-#: ../svn/svn.c:294
+#: ../svn/svn.c:295
 msgid "make intermediate directories"
 msgstr "Zwischenverzeichnisse erzeugen"
 
-#: ../svn/svn.c:296
+#: ../svn/svn.c:297
 msgid ""
 "use/display additional information from merge\n"
 "                             history"
@@ -10382,7 +10392,7 @@ msgstr ""
 "verwendet und zeigt zusätzliche Informationen aus der\n"
 "                             Zusammenführungsgeschichte an"
 
-#: ../svn/svn.c:300
+#: ../svn/svn.c:301
 msgid ""
 "specify automatic conflict resolution action\n"
 "                             ('postpone', 'working', 'base', 'mine-conflict',\n"
@@ -10396,7 +10406,7 @@ msgstr ""
 "                            »edit«, »launch«)\n"
 "                            (kurz: »p«, »mc«, »tc«, »mf«, »tf«, »e«, »l«)"
 
-#: ../svn/svn.c:311
+#: ../svn/svn.c:312
 msgid ""
 "specify which collection of revisions to display\n"
 "                             ('merged', 'eligible')"
@@ -10404,11 +10414,11 @@ msgstr ""
 "gibt anzuzeigende Menge der Revisionen an\n"
 "                             (»merged«, »eligible«)"
 
-#: ../svn/svn.c:315
+#: ../svn/svn.c:316
 msgid "deprecated"
 msgstr "veraltet"
 
-#: ../svn/svn.c:317
+#: ../svn/svn.c:318
 msgid ""
 "number of leading path components to strip from\n"
 "                             paths parsed from the patch file. --strip 0\n"
@@ -10427,65 +10437,65 @@ msgstr ""
 "                             Das erwartete Trennzeichen für Pfadkomponenten ist »/« auf\n"
 "                             allen Plattformen. Ein einleitendes »/« zählt als eine Komponente."
 
-#: ../svn/svn.c:333
+#: ../svn/svn.c:334
 msgid "don't expand keywords"
 msgstr "Schlüsselwörter nicht expandieren"
 
-#: ../svn/svn.c:335
+#: ../svn/svn.c:336
 msgid "apply the unidiff in reverse"
 msgstr "Wendet Unidiff rückwärts an"
 
-#: ../svn/svn.c:337
+#: ../svn/svn.c:338
 msgid "ignore whitespace during pattern matching"
 msgstr "Ignoriert während des Mustervergleichs Leerzeichen, Tabulatoren und andere nicht druckbare Zeichen"
 
-#: ../svn/svn.c:338
+#: ../svn/svn.c:339
 msgid "produce diff output"
 msgstr "Erzeugt Ausgabe von Unterschieden"
 
 #. maps to show_diff
 #. diff options
-#: ../svn/svn.c:340 ../svnlook/svnlook.c:137
+#: ../svn/svn.c:341 ../svnlook/svnlook.c:137
 msgid "use ARG as diff command"
 msgstr "PAR als Vergleichsprogramm verwenden"
 
-#: ../svn/svn.c:342
+#: ../svn/svn.c:343
 msgid "override diff-cmd specified in config file"
 msgstr "Setzt in den Einstellungen angegebenes »diff-cmd« außer Kraft"
 
-#: ../svn/svn.c:344 ../svnlook/svnlook.c:131
+#: ../svn/svn.c:345 ../svnlook/svnlook.c:131
 msgid "do not print differences for added files"
 msgstr "Keine Unterschiede für hinzugefügte Dateien ausgeben"
 
-#: ../svn/svn.c:346 ../svnlook/svnlook.c:134
+#: ../svn/svn.c:347 ../svnlook/svnlook.c:134
 msgid "do not print differences for deleted files"
 msgstr "keine Unterschiede für gelöschte Dateien ausgeben"
 
-#: ../svn/svn.c:348
+#: ../svn/svn.c:349
 msgid "don't diff copied or moved files with their source"
 msgstr "Gibt kopierte oder verschobene Dateien nicht als Unterschied zu ihrer Quelle aus"
 
-#: ../svn/svn.c:350
+#: ../svn/svn.c:351
 msgid "diff unrelated nodes as delete and add"
 msgstr "Gibt nicht verwandte Knoten als Löschungen und Hinzufügung aus"
 
-#: ../svn/svn.c:351
+#: ../svn/svn.c:352
 msgid "show a summary of the results"
 msgstr "Zeige eine Zusammenfassung der Ergebnisse"
 
-#: ../svn/svn.c:353
+#: ../svn/svn.c:354
 msgid "use git's extended diff format"
 msgstr "Erweitertes Format von git verwenden"
 
-#: ../svn/svn.c:355 ../svnlook/svnlook.c:140
+#: ../svn/svn.c:356 ../svnlook/svnlook.c:140
 msgid "ignore properties during the operation"
 msgstr "Während des Vorgangs Eigenschaften ignorieren"
 
-#: ../svn/svn.c:357 ../svnlook/svnlook.c:143
+#: ../svn/svn.c:358 ../svnlook/svnlook.c:143
 msgid "show only properties during the operation"
 msgstr "Während des Vorgangs nur Eigenschaften anzeigen"
 
-#: ../svn/svn.c:359
+#: ../svn/svn.c:360
 msgid ""
 "generate diff suitable for generic third-party\n"
 "                             patch tools; currently the same as\n"
@@ -10495,7 +10505,7 @@ msgstr ""
 "                             Werkzeuge von Drittanbietern eignen; momentan identisch\n"
 "                             mit --show-copies-as-adds --ignore-properties"
 
-#: ../svn/svn.c:367
+#: ../svn/svn.c:368
 msgid ""
 "Allow operation on mixed-revision working copy.\n"
 "                             Use of this option is not recommended!\n"
@@ -10505,35 +10515,37 @@ msgstr ""
 "                             Wie Verwendung dieser Option wird nicht empfohlen!\n"
 "                             Führen Sie stattdessen »svn update« aus."
 
-#: ../svn/svn.c:373
+#: ../svn/svn.c:374
 msgid ""
-"Also commit file and dir externals reached by\n"
-"                             recursion. This does not include externals with a\n"
-"                             fixed revision. (See the svn:externals property)"
+"also operate on externals defined by\n"
+"                             svn:externals properties"
 msgstr ""
-"Überträgt auch externe Verweise auf Dateien und Verzeichnisse, die durch\n"
-"                             Rekursion erreicht werden. Dies schließt externe Verweise\n"
-"                             mit fixen Revisionen aus. (siehe Eigenschaft »svn:externals«)"
+"Arbeitet auch auf externen Verweisen\n"
+"                             (»svn:externals« Eigenschaften)"
 
-#: ../svn/svn.c:379
+#: ../svn/svn.c:378
 msgid "retrieve target's inherited properties"
 msgstr "Geerbte Eigenschaften des Ziels abfragen"
 
-#: ../svn/svn.c:381
+#: ../svn/svn.c:380
 msgid "use ARG as search pattern (glob syntax)"
 msgstr "PAR als Suchmuster verwenden (mit Platzhaltern)"
 
-#: ../svn/svn.c:383
+#: ../svn/svn.c:382
 msgid "combine ARG with the previous search pattern"
 msgstr "PAR mit dem vorherigen Suchmuster kombinieren"
 
-#: ../svn/svn.c:385
+#: ../svn/svn.c:384
 msgid "show revision log message, author and date"
 msgstr "Zeigt Logmeldung, Author und Datum der Revision an"
 
-#: ../svn/svn.c:387
+#: ../svn/svn.c:386
 msgid "remove unversioned items"
 msgstr "Entfernt nicht versionierte Objekte"
+
+#: ../svn/svn.c:387
+msgid "remove ignored items"
+msgstr "Entfernt ignorierte Objekte"
 
 #: ../svn/svn.c:435
 msgid ""
@@ -10641,25 +10653,53 @@ msgstr ""
 
 #: ../svn/svn.c:493
 msgid ""
-"Recursively clean up the working copy, removing locks, resuming\n"
+"Recursively clean up the working copy, removing write locks, resuming\n"
 "unfinished operations, etc.\n"
 "usage: cleanup [WCPATH...]\n"
 "\n"
-"  If the --remove-unversioned option is given, also remove unversioned\n"
-"  items within WCPATH. If --no-ignore is also given, disregard any\n"
-"  ignore patterns and remove ignored unversioned items as well.\n"
+"  By default, finish any unfinished business in the working copy at WCPATH,\n"
+"  and remove write locks (shown as 'L' by the 'svn status' command) from\n"
+"  the working copy. Usually, this is only necessary if a Subversion client\n"
+"  has crashed while using the working copy, leaving it in an unusable state.\n"
+"\n"
+"  WARNING: There is no mechanism that will protect write locks still\n"
+"           being used by other Subversion clients. Running this command\n"
+"           while another client is using the working copy can corrupt\n"
+"           the working copy beyond repair!\n"
+"\n"
+"  If the --remove-unversioned option or the --remove-ignored option\n"
+"  is given, remove any unversioned or ignored items within WCPATH.\n"
+"  To prevent accidental working copy corruption, unversioned or ignored\n"
+"  items can only be removed if the working copy is not already locked\n"
+"  for writing by another Subversion client.\n"
+"  Note that the 'svn status' command shows unversioned items as '?',\n"
+"  and ignored items as 'I' if the --no-ignore option is given to it.\n"
 msgstr ""
-"Räumt eine Arbeitskopie rekursiv auf, entfernt Sperren, führt\n"
-"nicht beendete Operationen zu Ende usw.\n"
+"Räumt eine Arbeitskopie rekursiv auf, entfernt Schreibsperren, führt nicht\n"
+"beendete Operationen zu Ende usw.\n"
 "Aufruf: cleanup [AKPFAD...]\n"
 "\n"
-"  Wenn die Option --remove-unversioned angegeben ist, werden auch alle\n"
-"  nicht versionierten Objekte in AKPFAD entfernt. Wenn --no-ignore auch\n"
-"  angegeben ist, werden Einstellungen aus »global-ignores« sowie die\n"
-"  Eigenschaften »svn:ignore« und »svn:global-ignores«\" nicht beachtet\n"
-"  und ignorierte nicht versionierte Objekte ebenfalls entfernt.\n"
+"  Ohne weitere Parameter führt der Aufruf unterbrochene Operationen in\n"
+"  AKPFAD zu Ende und entfernt Schreibsperren (mit »L« in »svn status«\n"
+"  angezeigt). Dies ist allgemein nur notwendig, nachdem ein Subversion-\n"
+"  Client abgestürzt ist, während dieser auf die Arbeitskopie zugriff, und so\n"
+"  die Arbeitskopie in einem nicht verwendbaren Zustand hinterließ.\n"
+"\n"
+"  WARNUNG: Es gibt keinen Mechanismus, der noch verwendete Schreib-\n"
+"           sperren anderer Subversion-Clients schützt. Die Ausführung dieses\n"
+"           Kommandos während des Zugriffs eines anderen Clients auf die\n"
+"           Arbeitskopie kann diese irreparabel beschädigen!\n"
+"\n"
+"  Wenn die Optionen --remove-unversioned oder --remove-ignored gegeben\n"
+"  sind, werden nicht versionierte bzw. ignorierte Objekte in AKPFAD entfernt.\n"
+"  Um unbeabsichtigte Beschädigungen der Arbeitskopie zu vermeiden,\n"
+"  können nicht versionierte bzw. ignorierte Objekte nur entfernt werden, wenn\n"
+"  die Arbeitskopie nicht schon von einem anderen Subversion-Client zum\n"
+"  Schreiben gesperrt wurde.\n"
+"  »svn status« zeigt nicht versionierte Objekte als »?« an, sowie ignorierte\n"
+"  Objekte mit »I«, wenn die Option --no-ignore verwendet wird.\n"
 
-#: ../svn/svn.c:503
+#: ../svn/svn.c:518
 msgid ""
 "Send changes from your working copy to the repository.\n"
 "usage: commit [PATH...]\n"
@@ -10668,17 +10708,26 @@ msgid ""
 "  given by a --message or --file option, an editor will be started.\n"
 "  If any targets are (or contain) locked items, those will be\n"
 "  unlocked after a successful commit.\n"
+"\n"
+"  If --include-externals is given, also commit file and directory\n"
+"  externals reached by recursion. Do not commit externals with a\n"
+"  fixed revision.\n"
 msgstr ""
 "Überträgt Änderungen Ihrer Arbeitskopie ins Projektarchiv.\n"
 "Aufruf: commit [PFAD...]\n"
 "\n"
-"  Eine Logmeldung muss angegeben werden; diese kann jedoch leer sein. Wird\n"
-"  sie nicht mittels einer --message- oder --file-Option übergeben, wird ein\n"
-"  Editor gestartet.\n"
+"  Eine Logmeldung muss angegeben werden; diese kann jedoch leer sein.\n"
+"  Wird sie nicht mittels einer --message- oder --file-Option übergeben, wird\n"
+"  ein Editor gestartet.\n"
 "  Falls Objekte gesperrt sind oder gesperrte Objekte enthalten, werden diese\n"
 "  nach einer erfolgreichen Übertragung entsperrt.\n"
+"\n"
+"  Wenn --include-externals angegeben wird, werden auch Dateien und\n"
+"  Verzeichnisse in externen Verweisen übertragen, die durch Rekursion\n"
+"  erreicht werden. Übertragen Sie keine externen Verweise mit einer\n"
+"  festgelegten Revision.\n"
 
-#: ../svn/svn.c:514
+#: ../svn/svn.c:533
 msgid ""
 "Copy files and directories in a working copy or repository.\n"
 "usage: copy SRC[@REV]... DST\n"
@@ -10718,7 +10767,7 @@ msgstr ""
 "  standardmäßig nicht in der Lage sein, Zusammenführungsinformationen\n"
 "  von der Quelle der Kopie in das Ziel weiterzureichen.\n"
 
-#: ../svn/svn.c:533
+#: ../svn/svn.c:552
 msgid ""
 "Remove files and directories from version control.\n"
 "usage: 1. delete PATH...\n"
@@ -10749,7 +10798,7 @@ msgstr ""
 "  2. Jedes mit einer URL angegebene Element wird mittels sofortiger\n"
 "     Übertragung aus dem Projektarchiv entfernt.\n"
 
-#: ../svn/svn.c:549
+#: ../svn/svn.c:568
 msgid ""
 "Display local changes or differences between two revisions or paths.\n"
 "usage: 1. diff\n"
@@ -10826,7 +10875,7 @@ msgstr ""
 "  5. Kurzform für »svn diff --old=URL-ALT[@REVALT] --new=URL-NEU[@REVNEU]«\n"
 "  6. Kurzform für »svn diff --old=URL-ALT[@REVALT] --new=URL-NEU[@REVNEU]«\n"
 
-#: ../svn/svn.c:590
+#: ../svn/svn.c:609
 msgid ""
 "Create an unversioned copy of a tree.\n"
 "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
@@ -10865,7 +10914,7 @@ msgstr ""
 "\n"
 "  PEGREV gibt an, in welcher Revision das Ziel zuerst gesucht wird.\n"
 
-#: ../svn/svn.c:612
+#: ../svn/svn.c:631
 msgid ""
 "Describe the usage of this program or its subcommands.\n"
 "usage: help [SUBCOMMAND...]\n"
@@ -10873,7 +10922,7 @@ msgstr ""
 "Beschreibt die Anwendung dieses Programms und seiner Unterbefehle.\n"
 "Aufruf: help [UNTERBEFEHL...]\n"
 
-#: ../svn/svn.c:618
+#: ../svn/svn.c:637
 msgid ""
 "Commit an unversioned file or tree into the repository.\n"
 "usage: import [PATH] URL\n"
@@ -10898,7 +10947,7 @@ msgstr ""
 "  Nichtversionierbare Elemente wie Gerätedateien und Pipes werden ignoriert,\n"
 "  falls --force angegeben wird.\n"
 
-#: ../svn/svn.c:632
+#: ../svn/svn.c:651
 msgid ""
 "Display information about a local or remote item.\n"
 "usage: info [TARGET[@REV]...]\n"
@@ -10919,7 +10968,7 @@ msgstr ""
 # FIXME: "looked up" ist überall leicht unterschiedlich übersetzt
 # Ich (Jens) bevorzuge "gesucht" statt "nachgeschlagen" oder "durchsucht", "nachgeschaut"
 # FIXME: Standardsätze sollten eigene msgid haben!
-#: ../svn/svn.c:642
+#: ../svn/svn.c:661
 msgid ""
 "List directory entries in the repository.\n"
 "usage: list [TARGET[@REV]...]\n"
@@ -10944,7 +10993,7 @@ msgstr ""
 "Aufruf: list [ZIEL[@REV]...]\n"
 "\n"
 "  Listet jede ZIEL-Datei und die Inhalte jedes ZIEL-Verzeichnisses, wie\n"
-"  sie im Projektarchiv existieren, auf. Wenn ZIEL eine Arbeitskopie ist,\n"
+"  sie im Projektarchiv existieren, auf. Wenn ZIEL ein Arbeitskopiepfad ist,\n"
 "  wird die entsprechende URL des Projektarchivs verwendet. REV bestimmt,\n"
 "  in welcher Revision zuerst nachgeschaut wird.\n"
 "\n"
@@ -10959,11 +11008,7 @@ msgstr ""
 "    Größe (in Bytes)\n"
 "    Datum und Zeit der letzten Übertragung\n"
 
-#: ../svn/svn.c:662
-msgid "include externals definitions"
-msgstr "»svn:externals«-Definitionen einbeziehen"
-
-#: ../svn/svn.c:665
+#: ../svn/svn.c:683
 msgid ""
 "Lock working copy paths or URLs in the repository, so that\n"
 "no other user can commit changes to them.\n"
@@ -10971,27 +11016,27 @@ msgid ""
 "\n"
 "  Use --force to steal the lock from another user or working copy.\n"
 msgstr ""
-"Sperrt Pfade in Arbeitskopie oder URLs im Projektarchiv, so dass kein\n"
+"Sperrt Arbeitskopiepfade oder URLs im Projektarchiv, so dass kein\n"
 "anderer Anwender Änderungen an ihnen übertragen kann.\n"
 "Aufruf: lock ZIEL...\n"
 "\n"
 "  Benutze --force, um eine bereits vorhandene Sperre zu stehlen.\n"
 
-#: ../svn/svn.c:671
+#: ../svn/svn.c:689
 msgid "read lock comment from file ARG"
 msgstr "Sperrkommentar aus Datei PAR lesen"
 
-#: ../svn/svn.c:672
+#: ../svn/svn.c:690
 msgid "specify lock comment ARG"
 msgstr "PAR als Sperrkommentar verwenden"
 
-#: ../svn/svn.c:673
+#: ../svn/svn.c:691
 msgid "force validity of lock comment source"
 msgstr ""
 "Gültigkeit der Quelle für die Sperrmeldung\n"
 "                             erzwingen"
 
-#: ../svn/svn.c:676
+#: ../svn/svn.c:694
 msgid ""
 "Show the log messages for a set of revision(s) and/or path(s).\n"
 "usage: 1. log [PATH][@REV]\n"
@@ -11142,18 +11187,18 @@ msgstr ""
 "    Ausgabe der Logmeldung für die Revision die »/branches/zweig» erzeugte:\n"
 "      svn log --stop-on-copy --limit 1 -r0:HEAD ^/branches/zweig\n"
 
-#: ../svn/svn.c:754
+#: ../svn/svn.c:772
 msgid "retrieve revision property ARG"
 msgstr "Revisionseigenschaft PAR abfragen"
 
-#: ../svn/svn.c:755
+#: ../svn/svn.c:773
 msgid "the change made in revision ARG"
 msgstr "die in Revision PAR durchgeführte Änderung"
 
 #. For this large section, let's keep it unindented for easier
 #. * viewing/editing. It has been vim-treated with a textwidth=75 and 'gw'
 #. * (with quotes and newlines removed).
-#: ../svn/svn.c:761
+#: ../svn/svn.c:779
 msgid ""
 "Merge changes into a working copy.\n"
 "usage: 1. merge SOURCE[@REV] [TARGET_WCPATH]\n"
@@ -11521,7 +11566,7 @@ msgstr ""
 "     verwendet, dies ist meist die letzte Revision, auf die die\n"
 "     Arbeitskopie aktualisiert wurde.\n"
 "\n"
-"     ZIEL_AKPfad ist der Pfad einer Arbeitskopie; Fehlt die Angabe, wird\n"
+"     ZIEL_AKPfad ist ein Arbeitskopiepfad; Fehlt die Angabe, wird\n"
 "     allgemein das aktuelle Arbeitsverzeichnis ».« angenommen. Es gibt\n"
 "     folgende Sonderfälle:\n"
 "\n"
@@ -11534,7 +11579,7 @@ msgstr ""
 "              Datei angewandt. In allen anderen Fällen wird als Ziel ».«\n"
 "              verwendet.\n"
 "\n"
-"        - wenn QUELLE ein Pfad in einer Arbeitskopie ist:\n"
+"        - wenn QUELLE ein Arbeitskopiepfad ist:\n"
 "\n"
 "            - Wenn QUELLE eine Datei ist, werden die Unterschiede auf\n"
 "              diese Datei angewandt (Hilfreich beim rückwärtigen\n"
@@ -11654,15 +11699,15 @@ msgstr ""
 "     QUELLE ist im Normalfall eine URL. Die optionale Angabe von »@REV«\n"
 "     gibt nur Fix-Revision zum Auffinden des Pfades an und beeinflusst\n"
 "     nicht den Revisionsbereich für die Zusammenführung. Ist REV nicht\n"
-"     angegeben, wird »HEAD« angenommen. Ist QUELLE der Pfad einer\n"
-"     Arbeitskopie, wird die damit zusammenhängende URL verwendet. Die\n"
+"     angegeben, wird »HEAD« angenommen. Ist QUELLE ein Arbeitskopie-\n"
+"     pfad, wird die damit zusammenhängende URL verwendet. Die\n"
 "     Basisversion der Arbeitskopie wird dann als REV verwendet, dies ist\n"
 "     meist die letzte Revision, auf die sie aktualisiert wurde.\n"
 "\n"
-"     ZIEL_AKPfad ist der Pfad einer Arbeitskopie; Fehlt die Angabe, wird\n"
-"     allgemein das aktuelle Arbeitsverzeichnis ».« angenommen. Die unter\n"
-"     der Form der vollständigen Zusammenführung erwähnten Sonderfälle\n"
-"     finden hier ebenfalls Anwendung.\n"
+"     ZIEL_AKPfad ist ein Arbeitskopiepfad; Fehlt die Angabe, wird allgemein\n"
+"     das aktuelle Arbeitsverzeichnis ».« angenommen. Die unter der Form\n"
+"     der vollständigen Zusammenführung erwähnten Sonderfälle finden hier\n"
+"     ebenfalls Anwendung.\n"
 "\n"
 "     Die zusammenzuführenden Revisionsbereiche werden durch die Optionen\n"
 "     »-r« und/oder »-c« angegeben. »-r N:M« bezieht sich auf den\n"
@@ -11674,7 +11719,7 @@ msgstr ""
 "\n"
 "     Wenn die Zusammenführungsinformationen in ZIEL_AKPfad anzeigen, dass\n"
 "     die  Revisionen im angegebenen Bereich schon zusammengeführt wurden,\n"
-"     werden  Änderungen aus diesen Revisionen nicht erneut zusammengeführt.\n"
+"     werden Änderungen aus diesen Revisionen nicht erneut zusammengeführt.\n"
 "     Falls nötig, wird das Revisionsbereich in Unterbereiche aufgeteilt und\n"
 "     jeder Unterbereich getrennt in das Ziel zusammengeführt.\n"
 "\n"
@@ -11742,9 +11787,9 @@ msgstr ""
 "     verschieden sein. Die drei involvierten Zweige müssen nicht in einer\n"
 "     Beziehung zueinander stehen.\n"
 "\n"
-"     ZIEL_AKPfad ist ein Pfad in einer Arbeitskopie; Fehlt die Angabe, wird\n"
-"     das aktuelle Verzeichnis ».« angenommen. Die unter der Form der\n"
-"     vollständigen Zusammenführung erwähnten Sonderfälle finden hier\n"
+"     ZIEL_AKPfad ist ein Arbeitskopiepfad; Fehlt die Angabe, wird allgemein\n"
+"     das aktuelle Arbeitsverzeichnis ».« angenommen. Die unter der Form\n"
+"     der vollständigen Zusammenführung erwähnten Sonderfälle finden hier\n"
 "     ebenfalls Anwendung.\n"
 "\n"
 "     QUELLE1 und/oder QUELLE2 können auch als ein Pfad in einer\n"
@@ -11865,7 +11910,7 @@ msgstr ""
 "  eine Zusammenführungsverfolgung bei Zusammenführungen aus fremdem\n"
 "  Projektarchiven nicht unterstützt.\n"
 
-#: ../svn/svn.c:1093
+#: ../svn/svn.c:1111
 msgid ""
 "Display merge-related information.\n"
 "usage: 1. mergeinfo SOURCE[@REV] [TARGET[@REV]]\n"
@@ -11927,7 +11972,7 @@ msgstr ""
 "\n"
 "   Die Tiefe kann »empty« oder »infinity« sein, Vorgabe ist »empty«.\n"
 
-#: ../svn/svn.c:1124
+#: ../svn/svn.c:1142
 msgid ""
 "Create a new directory under version control.\n"
 "usage: 1. mkdir PATH...\n"
@@ -11959,7 +12004,7 @@ msgstr ""
 "  In beiden Fällen müssen alle Zwischenverzeichnisse bereits existieren,\n"
 "  es sei denn, die Option --parents wurde angegeben.\n"
 
-#: ../svn/svn.c:1141
+#: ../svn/svn.c:1159
 msgid ""
 "Move (rename) an item in a working copy or repository.\n"
 "usage: move SRC... DST\n"
@@ -11995,7 +12040,7 @@ msgstr ""
 "\n"
 "  Die Option »--revision« ist funktionslos und veraltet.\n"
 
-#: ../svn/svn.c:1163
+#: ../svn/svn.c:1181
 msgid ""
 "Apply a patch to a working copy.\n"
 "usage: patch PATCHFILE [WCPATH]\n"
@@ -12091,7 +12136,7 @@ msgstr ""
 "        und aktualisieren Sie dann auf HEAD. Auf diese Weise können\n"
 "        Konflikte interaktiv aufgelöst werden.\n"
 
-#: ../svn/svn.c:1211
+#: ../svn/svn.c:1229
 msgid ""
 "Remove a property from files, dirs, or revisions.\n"
 "usage: 1. propdel PROPNAME [PATH...]\n"
@@ -12109,7 +12154,7 @@ msgstr ""
 "  1. Entfernt eine versionierte Eigenschaft aus der Arbeitskopie.\n"
 "  2. Entfernt eine nicht versionierte Eigenschaft aus dem Projektarchiv.\n"
 
-#: ../svn/svn.c:1221
+#: ../svn/svn.c:1239
 msgid ""
 "Edit a property with an external editor.\n"
 "usage: 1. propedit PROPNAME TARGET...\n"
@@ -12132,7 +12177,7 @@ msgstr ""
 "\n"
 "Siehe »svn help propset« für Weiteres zum Setzen von Eigenschaften.\n"
 
-#: ../svn/svn.c:1233
+#: ../svn/svn.c:1251
 msgid ""
 "Print the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propget PROPNAME [TARGET[@REV]...]\n"
@@ -12173,15 +12218,15 @@ msgstr ""
 "  um diese Formatierungen abzuschalten. (dies ist nützlich, um einen binären\n"
 "  Eigenschaftswert in eine Datei umzuleiten)\n"
 
-#: ../svn/svn.c:1253 ../svn/svn.c:1270
+#: ../svn/svn.c:1271 ../svn/svn.c:1288
 msgid "print path, name and value on separate lines"
 msgstr "Pfad, Name und Wert in getrennten Zeilen ausgeben"
 
-#: ../svn/svn.c:1254
+#: ../svn/svn.c:1272
 msgid "don't print an extra newline"
 msgstr "Keinen zusätzlichen Zeilenumbruch ausgeben"
 
-#: ../svn/svn.c:1257
+#: ../svn/svn.c:1275
 msgid ""
 "List all properties on files, dirs, or revisions.\n"
 "usage: 1. proplist [TARGET[@REV]...]\n"
@@ -12208,12 +12253,12 @@ msgstr ""
 "  Mit »--verbose« werden auch die Eigenschaftwerte ausgegeben,wie mit \n"
 "  »svn propget --verbose«. Mit »--quiet« werden Pfade nicht ausgegeben.\n"
 
-#: ../svn/svn.c:1271
+#: ../svn/svn.c:1289
 msgid "don't print the path"
 msgstr "Pfad nicht ausgeben"
 
 # FIXME: propchange?
-#: ../svn/svn.c:1274
+#: ../svn/svn.c:1292
 msgid ""
 "Set the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propset PROPNAME PROPVAL PATH...\n"
@@ -12384,11 +12429,11 @@ msgstr ""
 "      »relative_URL relativer_Pfad« mit Peg-Revisionsunterstützung gedeutet.\n"
 "      Zeilen, die mit »#« beginnen, werden ignoriert.\n"
 
-#: ../svn/svn.c:1353
+#: ../svn/svn.c:1371
 msgid "read property value from file ARG"
 msgstr "Eigenschaftswert aus Datei PAR lesen"
 
-#: ../svn/svn.c:1356
+#: ../svn/svn.c:1374
 msgid ""
 "Relocate the working copy to point to a different repository root URL.\n"
 "usage: 1. relocate FROM-PREFIX TO-PREFIX [PATH...]\n"
@@ -12432,7 +12477,7 @@ msgstr ""
 "    svn relocate http://www.example.com/repo/Projekt \\\n"
 "                 svn://svn.example.com/repo/Projekt\n"
 
-#: ../svn/svn.c:1379
+#: ../svn/svn.c:1397
 msgid ""
 "Resolve conflicts on working copy files or directories.\n"
 "usage: resolve [PATH...]\n"
@@ -12454,7 +12499,7 @@ msgstr ""
 "  die Konfliktlösung von PFAD in der durch PAR angegebenen Weise. Damit\n"
 "  arbeitet das Programm als Vorgabe nicht rekursiv. (Tiefe »empty«)\n"
 
-#: ../svn/svn.c:1389
+#: ../svn/svn.c:1407
 msgid ""
 "specify automatic conflict resolution source\n"
 "                             ('base', 'working', 'mine-conflict',\n"
@@ -12464,7 +12509,7 @@ msgstr ""
 "                             (»base«, »working«, »mine-conflict«,\n"
 "                             »theirs-conflict«, »mine-full«, »theirs-full«)"
 
-#: ../svn/svn.c:1396
+#: ../svn/svn.c:1414
 msgid ""
 "Remove 'conflicted' state on working copy files or directories.\n"
 "usage: resolved PATH...\n"
@@ -12484,7 +12529,7 @@ msgstr ""
 "  übertragen werden kann. Dies wird zugunsten von »svn resolve --accept\n"
 "  working« missbilligt.\n"
 
-#: ../svn/svn.c:1406
+#: ../svn/svn.c:1424
 msgid ""
 "Restore pristine working copy state (undo local changes).\n"
 "usage: revert PATH...\n"
@@ -12508,7 +12553,7 @@ msgstr ""
 "  schon übertragenen Änderungen, siehe in »svn help merge« den\n"
 "  Abschnitt »undo«.\n"
 
-#: ../svn/svn.c:1418
+#: ../svn/svn.c:1436
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -12535,9 +12580,10 @@ msgid ""
 "      ' ' no modifications\n"
 "      'C' Conflicted\n"
 "      'M' Modified\n"
-"    Third column: Whether the working copy directory is locked\n"
-"      ' ' not locked\n"
-"      'L' locked\n"
+"    Third column: Whether the working copy is locked for writing by\n"
+"                  another Subversion client modifying the working copy\n"
+"      ' ' not locked for writing\n"
+"      'L' locked for writing\n"
 "    Fourth column: Scheduled commit will contain addition-with-history\n"
 "      ' ' no history scheduled with commit\n"
 "      '+' history scheduled with commit\n"
@@ -12545,16 +12591,16 @@ msgid ""
 "      ' ' normal\n"
 "      'S' the item has a Switched URL relative to the parent\n"
 "      'X' a versioned file created by an eXternals definition\n"
-"    Sixth column: Repository lock token\n"
+"    Sixth column: Whether the item is locked in repository for exclusive commit\n"
 "      (without -u)\n"
-"      ' ' no lock token\n"
-"      'K' lock token present\n"
+"      ' ' not locked by this working copy\n"
+"      'K' locked by this working copy, but lock might be stolen or broken\n"
 "      (with -u)\n"
-"      ' ' not locked in repository, no lock token\n"
-"      'K' locked in repository, lock toKen present\n"
-"      'O' locked in repository, lock token in some Other working copy\n"
-"      'T' locked in repository, lock token present but sTolen\n"
-"      'B' not locked in repository, lock token present but Broken\n"
+"      ' ' not locked in repository, not locked by this working copy\n"
+"      'K' locked in repository, lock owned by this working copy\n"
+"      'O' locked in repository, lock owned by another working copy\n"
+"      'T' locked in repository, lock owned by this working copy was stolen\n"
+"      'B' not locked in repository, lock owned by this working copy is broken\n"
 "    Seventh column: Whether the item is the victim of a tree conflict\n"
 "      ' ' normal\n"
 "      'C' tree-Conflicted\n"
@@ -12627,9 +12673,9 @@ msgstr ""
 "      » « keine Änderungen\n"
 "      »C« Conflicted - konfliktbehaftet\n"
 "      »M« Modified   - verändert\n"
-"    Dritte Spalte: Arbeitsverzeichnis gesperrt - ja/nein\n"
-"      » « nicht gesperrt\n"
-"      »L« Locked     - gesperrt\n"
+"    Dritte Spalte: Gibt an, ob die Arbeitskopie durch einen anderen Subversion-Client\n"
+"                   zum Schreiben gesperrt wurde      » « keine Schreibsperre\n"
+"      »L« Locked     - Schreibsperre\n"
 "    Vierte Spalte: Geplante Übertragung wird »Hinzufügen mit Historie«\n"
 "                   enthalten\n"
 "      » « Übertragung wird keine Historie enthalten\n"
@@ -12638,16 +12684,16 @@ msgstr ""
 "      » « normal\n"
 "      »S« das Objekt hat eine umgestellte URL relativ zu seinem Elternteil\n"
 "      »X« eine von einem externen Verweis erzeugte versionierte Datei\n"
-"    Sechste Spalte: Sperre im Projektarchiv\n"
-"      (ohne -u)\n"
-"      » « keine Sperre\n"
-"      »K« Sperre vorhanden\n"
+"    Sechste Spalte: Gibt an, ob das Objekt im Projektarchiv zur alleinigen\n"
+"      gesperrt wurde (ohne -u)\n"
+"      » « nicht von dieser Arbeitskopie gesperrt\n"
+"      »K« von dieser Arbeitskopie gesperrt, Sperre ggf. aufgebrochen oder gestohlen\n"
 "      (mit -u)\n"
-"      » « nicht gesperrt, keine Sperre vorhanden\n"
-"      »K« gesperrt, Sperre vorhanden\n"
-"      »O« gesperrt, Sperre in anderer Arbeitskopie\n"
-"      »T« gesperrt, Sperre vorhanden, aber gestohlen\n"
-"      »B« nicht gesperrt, Sperre vorhanden aber beschädigt\n"
+"      » « nicht im Projektarchiv gesperrt, nicht von dieser Arbeitskopie gesperrt\n"
+"      »K« im Projektarchiv gesperrt, Sperre gehört dieser Arbeitskopie\n"
+"      »O« im Projektarchiv gesperrt, Sperre gehört einer anderen Arbeitskopie\n"
+"      »T« im Projektarchiv gesperrt, Sperre gehört dieser Arbeitskopie, wurde aber gestohlen\n"
+"      »B« nicht im Projektarchiv gesperrt, Sperre in dieser Arbeitskopie wurde aufgebrochen\n"
 "    Siebte Spalte: Ist das Objekt Opfer eines Baumkonflikts?\n"
 "      » « normal\n"
 "      »C« Baumkonflikt\n"
@@ -12663,7 +12709,7 @@ msgstr ""
 "  Leerzeichen getrennt:\n"
 "    die Arbeitsrevision (mit »-u« oder »-v«)\n"
 "    die letzte übertragene Revision und der letzte übertragene Autor (mit »-v«)\n"
-"    Das Arbeitsverzeichnis ist immer das letzte Feld, daher kann es Leerzeichen\n"
+"    Der Arbeitskopiepfad ist immer das letzte Feld, daher kann es Leerzeichen\n"
 "      enthalten.\n"
 "\n"
 "  Ein Fragezeichen (»?«) an den Stellen, an denen eine Arbeitsrevision, letzte\n"
@@ -12696,11 +12742,11 @@ msgstr ""
 "          >   lokal fehlend, eingehend editiert bei Aktualisierung\n"
 "    D       wc/qax.c\n"
 
-#: ../svn/svn.c:1510
+#: ../svn/svn.c:1529
 msgid "don't print unversioned items"
 msgstr "Gibt nicht versioniertes Objekte nicht aus"
 
-#: ../svn/svn.c:1513
+#: ../svn/svn.c:1532
 msgid ""
 "Update the working copy to a different URL within the same repository.\n"
 "usage: 1. switch URL[@PEGREV] [PATH]\n"
@@ -12783,25 +12829,25 @@ msgstr ""
 "    svn switch --relocate http://www.example.com/repo/Projekt \\\n"
 "                          svn://svn.example.com/repo/Projekt\n"
 
-#: ../svn/svn.c:1555
+#: ../svn/svn.c:1574
 msgid "allow switching to a node with no common ancestor"
 msgstr "Erlaubt Umstellung auf einen Knoten ohne gemeinsamen Vorfahren"
 
-#: ../svn/svn.c:1559
+#: ../svn/svn.c:1578
 msgid ""
 "Unlock working copy paths or URLs.\n"
 "usage: unlock TARGET...\n"
 "\n"
 "  Use --force to break the lock.\n"
 msgstr ""
-"Hebt Sperren von Pfaden in Arbeitskopie oder URLs im Projektarchiv auf.\n"
+"Hebt Sperren von Arbeitskopiepfaden oder URLs auf.\n"
 "Aufruf: unlock ZIEL...\n"
 "\n"
 "  Benutzen Sie --force, um die Freigabe zu erzwingen.\n"
 
 # Parts of the text (--force and --set-depth) are shared with the
 # switch help. Keep it consistent.
-#: ../svn/svn.c:1566
+#: ../svn/svn.c:1585
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -12899,7 +12945,7 @@ msgstr ""
 "  Arbeitskopieverzeichnisses nur erhöht werden (tiefer ineinander geschachtelt);\n"
 "  eine Verzeichnistiefe kann nicht reduziert werden.\n"
 
-#: ../svn/svn.c:1616
+#: ../svn/svn.c:1635
 msgid ""
 "Upgrade the metadata storage format for a working copy.\n"
 "usage: upgrade [WCPATH...]\n"
@@ -12911,110 +12957,110 @@ msgstr ""
 "\n"
 "  Lokale Änderungen bleiben erhalten.\n"
 
-#: ../svn/svn.c:1664 ../svnadmin/svnadmin.c:91 ../svnlook/svnlook.c:379
+#: ../svn/svn.c:1683 ../svnadmin/svnadmin.c:91 ../svnlook/svnlook.c:379
 #: ../svnrdump/svnrdump.c:65 ../svnsync/svnsync.c:296
 msgid "Caught signal"
 msgstr "Abbruchsignal empfangen"
 
-#: ../svn/svn.c:1818 ../svnlook/svnlook.c:2564
+#: ../svn/svn.c:1837 ../svnlook/svnlook.c:2564
 msgid "Non-numeric limit argument given"
 msgstr "Nicht-numerische Bereichsgrenze angegeben"
 
-#: ../svn/svn.c:1824 ../svnlook/svnlook.c:2570
+#: ../svn/svn.c:1843 ../svnlook/svnlook.c:2570
 msgid "Argument to --limit must be positive"
 msgstr "Parameter für --limit muss positiv sein"
 
-#: ../svn/svn.c:1846 ../svn/svn.c:2122
+#: ../svn/svn.c:1865 ../svn/svn.c:2141
 msgid "Can't specify -c with --old"
 msgstr "-c kann nicht mit --old verwendet werden"
 
-#: ../svn/svn.c:1877
+#: ../svn/svn.c:1896
 #, c-format
 msgid "Negative number in range (%s) not supported with -c"
 msgstr "Negative Zahl im Bereich (%s) ist mit -c nicht unterstützt"
 
-#: ../svn/svn.c:1890
+#: ../svn/svn.c:1909
 #, c-format
 msgid "Non-numeric change argument (%s) given to -c"
 msgstr "Nicht-numerischer Parameter (%s) an -c übergeben"
 
-#: ../svn/svn.c:1898
+#: ../svn/svn.c:1917
 msgid "There is no change 0"
 msgstr "Es gibt keine Änderung 0"
 
-#: ../svn/svn.c:1941 ../svnadmin/svnadmin.c:2252 ../svnrdump/svnrdump.c:937
+#: ../svn/svn.c:1960 ../svnadmin/svnadmin.c:2252 ../svnrdump/svnrdump.c:937
 #: ../svnsync/svnsync.c:2051
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "Syntaxfehler in Revisionsparameter »%s«"
 
-#: ../svn/svn.c:2006 ../svn/svn.c:2025
+#: ../svn/svn.c:2025 ../svn/svn.c:2044
 #, c-format
 msgid "Error converting depth from locale to UTF-8"
 msgstr "Fehler beim Konvertieren der Tiefe aus Locale nach UTF-8"
 
-#: ../svn/svn.c:2014
+#: ../svn/svn.c:2033
 #, c-format
 msgid "'%s' is not a valid depth; try 'empty', 'files', 'immediates', or 'infinity'"
 msgstr "»%s« ist keine gültige Tiefe; versuchen Sie »empty«, »files«, »immediates« oder »infinity«"
 
-#: ../svn/svn.c:2033
+#: ../svn/svn.c:2052
 #, c-format
 msgid "'%s' is not a valid depth; try 'exclude', 'empty', 'files', 'immediates', or 'infinity'"
 msgstr "»%s« ist keine gültige Tiefe; versuchen Sie »exclude«, »empty«, »files«, »immediates« oder »infinity«"
 
-#: ../svn/svn.c:2161
+#: ../svn/svn.c:2180
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "Syntaxfehler im »native-eol« Parameter »%s«"
 
-#: ../svn/svn.c:2180
+#: ../svn/svn.c:2199
 msgid "Changelist names must not be empty"
 msgstr "Namen von Änderungslisten dürfen nicht leer sein"
 
-#: ../svn/svn.c:2215
+#: ../svn/svn.c:2234
 #, c-format
 msgid "'%s' is not a valid --accept value"
 msgstr "»%s« ist kein gültiger Wert für --accept"
 
-#: ../svn/svn.c:2224
+#: ../svn/svn.c:2243
 #, c-format
 msgid "'%s' is not a valid --show-revs value"
 msgstr "»%s« ist kein gültiger Wert für --show-revs"
 
-#: ../svn/svn.c:2240
+#: ../svn/svn.c:2259
 #, c-format
 msgid "Invalid strip count '%s'"
 msgstr "Ungültige Anzahl der zu entfernenden Komponenten »%s«"
 
-#: ../svn/svn.c:2247
+#: ../svn/svn.c:2266
 msgid "Argument to --strip must be positive"
 msgstr "Parameter für --strip muss positiv sein"
 
-#: ../svn/svn.c:2306 ../svnmucc/svnmucc.c:1207 ../svnrdump/svnrdump.c:993
+#: ../svn/svn.c:2329 ../svnmucc/svnmucc.c:1207 ../svnrdump/svnrdump.c:993
 #: ../svnsync/svnsync.c:2095
 msgid "--non-interactive and --force-interactive are mutually exclusive"
 msgstr "--non-interactive und --force-interactive schließen sich gegenseitig aus"
 
-#: ../svn/svn.c:2360 ../svndumpfilter/svndumpfilter.c:1509
+#: ../svn/svn.c:2383 ../svndumpfilter/svndumpfilter.c:1509
 #: ../svnlook/svnlook.c:2666
 #, c-format
 msgid "Subcommand argument required\n"
 msgstr "Unterbefehl benötigt einen Parameter\n"
 
-#: ../svn/svn.c:2377 ../svnadmin/svnadmin.c:2438
+#: ../svn/svn.c:2400 ../svnadmin/svnadmin.c:2438
 #: ../svndumpfilter/svndumpfilter.c:1529 ../svnlook/svnlook.c:2685
 #: ../svnrdump/svnrdump.c:1039
 #, c-format
 msgid "Unknown subcommand: '%s'\n"
 msgstr "Unbekannter Unterbefehl: »%s«\n"
 
-#: ../svn/svn.c:2386
+#: ../svn/svn.c:2409
 #, c-format
 msgid "Undo is done using either the 'svn revert' or the 'svn merge' command.\n"
 msgstr "Undo wird mit den Befehlen »svn revert« bzw. »svn merge« durchgeführt.\n"
 
-#: ../svn/svn.c:2421
+#: ../svn/svn.c:2444
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -13023,95 +13069,95 @@ msgstr ""
 "Unterbefehl »%s« akzeptiert die Option »%s« nicht\n"
 "Geben Sie »svn help %s« für Hilfe ein.\n"
 
-#: ../svn/svn.c:2435
+#: ../svn/svn.c:2458
 msgid "Multiple revision arguments encountered; can't specify -c twice, or both -c and -r"
 msgstr "Mehrere Revisionsparameter gefunden; bitte nicht zweimal -c oder gleichzeitig -r und -c angeben"
 
-#: ../svn/svn.c:2447
+#: ../svn/svn.c:2470
 msgid "--depth and --set-depth are mutually exclusive"
 msgstr "--depth und --set-depth schließen sich gegenseitig aus"
 
-#: ../svn/svn.c:2457
+#: ../svn/svn.c:2480
 msgid "--with-all-revprops and --with-no-revprops are mutually exclusive"
 msgstr "--with-all-revprops und --with-no-revprops schließen sich gegenseitig aus"
 
-#: ../svn/svn.c:2467
+#: ../svn/svn.c:2490
 msgid "--with-revprop and --with-no-revprops are mutually exclusive"
 msgstr "--with-revprop und --with-no-revprops schließen sich gegenseitig aus"
 
-#: ../svn/svn.c:2498
+#: ../svn/svn.c:2521
 msgid "--message (-m) and --file (-F) are mutually exclusive"
 msgstr "--message (-m) und --file (-F) schließen sich gegenseitig aus"
 
-#: ../svn/svn.c:2507 ../svnmucc/svnmucc.c:1218 ../svnrdump/svnrdump.c:1098
+#: ../svn/svn.c:2530 ../svnmucc/svnmucc.c:1218 ../svnrdump/svnrdump.c:1098
 #: ../svnsync/svnsync.c:2146
 msgid "--trust-server-cert requires --non-interactive"
 msgstr "--trust-server-cert erfordert --non-interactive"
 
 # TODO: Duplicated message!!!!
-#: ../svn/svn.c:2517
+#: ../svn/svn.c:2540
 msgid "--diff-cmd and --internal-diff are mutually exclusive"
 msgstr "--diff-cmd und --internal-diff schließen sich gegenseitig aus"
 
-#: ../svn/svn.c:2559
+#: ../svn/svn.c:2582
 msgid "--relocate and --depth are mutually exclusive"
 msgstr "--relocate und --depth schließen sich gegenseitig aus"
 
-#: ../svn/svn.c:2567
+#: ../svn/svn.c:2590
 msgid "--relocate and --non-recursive (-N) are mutually exclusive"
 msgstr "--relocate und --non-recursive (-N) schließen sich gegenseitig aus"
 
-#: ../svn/svn.c:2689
+#: ../svn/svn.c:2712
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr "Die Datei für die Logmeldung ist versioniert; geben Sie »--force-log« an, um sie zu verwenden"
 
-#: ../svn/svn.c:2696
+#: ../svn/svn.c:2719
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
 msgstr "Die Datei für den Sperrkommentar ist versioniert; geben Sie »--force-log« an, um sie zu verwenden"
 
-#: ../svn/svn.c:2717
+#: ../svn/svn.c:2740
 msgid "The log message is a pathname (was -F intended?); use '--force-log' to override"
 msgstr "Die Logmeldung ist ein Pfad (war -F gemeint?); geben Sie »--force-log« an, um sie zu verwenden"
 
-#: ../svn/svn.c:2724
+#: ../svn/svn.c:2747
 msgid "The lock comment is a pathname (was -F intended?); use '--force-log' to override"
 msgstr "Der Sperrkommentar ist ein Pfad (war -F gemeint?); geben Sie »--force-log« an, um ihn zu verwenden"
 
-#: ../svn/svn.c:2748
+#: ../svn/svn.c:2771
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props und --no-auto-props schließen sich gegenseitig aus"
 
-#: ../svn/svn.c:2853 ../svn/svn.c:2860
+#: ../svn/svn.c:2876 ../svn/svn.c:2883
 #, c-format
 msgid "--accept=%s incompatible with --non-interactive"
 msgstr "--accept=%s ist mit --non-interactive nicht kompatibel"
 
-#: ../svn/svn.c:2916
+#: ../svn/svn.c:2939
 #, c-format
 msgid "Try 'svn help %s' for more information"
 msgstr "Versuchen Sie »svn help %s« für weitere Informationen"
 
-#: ../svn/svn.c:2922
+#: ../svn/svn.c:2945
 msgid "Please see the 'svn upgrade' command"
 msgstr "Siehe Kommando »svn upgrade«"
 
-#: ../svn/svn.c:2928 ../svnmucc/svnmucc.c:1449 ../svnrdump/svnrdump.c:1175
+#: ../svn/svn.c:2951 ../svnmucc/svnmucc.c:1449 ../svnrdump/svnrdump.c:1175
 msgid "Authentication failed and interactive prompting is disabled; see the --force-interactive option"
 msgstr "Authentifizierung schlug fehl und interaktives Nachfragen ist deaktiviert; Siehe Option »--force-interactive«"
 
-#: ../svn/svn.c:2933
+#: ../svn/svn.c:2956
 msgid "Reading file from standard input because of -F option; this can interfere with interactive prompting"
 msgstr "Einlesen der Datei von der Standardeingabe wegen Option -F; dies kann interaktive Nachfragen stören"
 
-#: ../svn/svn.c:2944
+#: ../svn/svn.c:2967
 msgid "Run 'svn cleanup' to remove locks (type 'svn help cleanup' for details)"
 msgstr "Starten Sie »svn cleanup«, um die Sperren zu entfernen (Aufruf: »svn help cleanup« für Details)"
 
-#: ../svn/svn.c:2951
+#: ../svn/svn.c:2974
 msgid "Another process is blocking the working copy database, or the underlying filesystem does not support file locking; if the working copy is on a network filesystem, make sure file locking has been enabled on the file server"
 msgstr "Ein anderer Vorgang blockiert die Datenbank der Arbeitskopie, oder das darunterliegende Dateisystem unterstützt das Sperren von Dateien nicht; falls sich die Arbeitskopie auf einem Netzwerkdateisystem befindet, stellen Sie sicher, dass Dateisperren auf dem Dateiserver aktiviert sind"
 
-#: ../svn/svn.c:2964
+#: ../svn/svn.c:2987
 msgid "When using svn+ssh:// URLs, keep in mind that the --username and --password options are ignored because authentication is performed by SSH, not Subversion"
 msgstr "Bei der Verwendung von svn+ssh:// URLs sollte beachtet werden, dass die Optionen »--username« und »--password« ignoriert werden, da die Authentifizierung von SSH und nicht Subversion durchgeführt wird"
 
@@ -15811,6 +15857,40 @@ msgstr "»%s« ist unbekannten Typs\n"
 #, c-format
 msgid "Uncommitted local addition, copy or move%s"
 msgstr "Nicht übertragenes lokal hinzugefügtes, kopiertes oder verschobenes Element%s"
+
+#~ msgid "'--no-ignore' option only valid with '--remove-unversioned' option"
+#~ msgstr "Option »--no-ignore« ist nur in Verbindung mit der Option »--remove-unversioned« zulässig"
+
+#~ msgid ""
+#~ "Also commit file and dir externals reached by\n"
+#~ "                             recursion. This does not include externals with a\n"
+#~ "                             fixed revision. (See the svn:externals property)"
+#~ msgstr ""
+#~ "Überträgt auch externe Verweise auf Dateien und Verzeichnisse, die durch\n"
+#~ "                             Rekursion erreicht werden. Dies schließt externe Verweise\n"
+#~ "                             mit fixen Revisionen aus. (siehe Eigenschaft »svn:externals«)"
+
+#~ msgid ""
+#~ "Recursively clean up the working copy, removing locks, resuming\n"
+#~ "unfinished operations, etc.\n"
+#~ "usage: cleanup [WCPATH...]\n"
+#~ "\n"
+#~ "  If the --remove-unversioned option is given, also remove unversioned\n"
+#~ "  items within WCPATH. If --no-ignore is also given, disregard any\n"
+#~ "  ignore patterns and remove ignored unversioned items as well.\n"
+#~ msgstr ""
+#~ "Räumt eine Arbeitskopie rekursiv auf, entfernt Sperren, führt\n"
+#~ "nicht beendete Operationen zu Ende usw.\n"
+#~ "Aufruf: cleanup [AKPFAD...]\n"
+#~ "\n"
+#~ "  Wenn die Option --remove-unversioned angegeben ist, werden auch alle\n"
+#~ "  nicht versionierten Objekte in AKPFAD entfernt. Wenn --no-ignore auch\n"
+#~ "  angegeben ist, werden Einstellungen aus »global-ignores« sowie die\n"
+#~ "  Eigenschaften »svn:ignore« und »svn:global-ignores«\" nicht beachtet\n"
+#~ "  und ignorierte nicht versionierte Objekte ebenfalls entfernt.\n"
+
+#~ msgid "include externals definitions"
+#~ msgstr "»svn:externals«-Definitionen einbeziehen"
 
 #~ msgid ""
 #~ "Recursively clean up the working copy, removing locks, resuming\n"
