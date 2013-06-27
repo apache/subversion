@@ -511,7 +511,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  for writing by another Subversion client.\n"
      "  Note that the 'svn status' command shows unversioned items as '?',\n"
      "  and ignored items as 'I' if the --no-ignore option is given to it.\n"),
-    {opt_merge_cmd, opt_remove_unversioned, opt_remove_ignored} },
+    {opt_merge_cmd, opt_remove_unversioned, opt_remove_ignored,
+     opt_include_externals} },
 
   { "commit", svn_cl__commit, {"ci"},
     N_("Send changes from your working copy to the repository.\n"

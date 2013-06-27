@@ -299,6 +299,20 @@ def cleanup_unversioned_items_in_locked_wc(sbox):
                                        "cleanup", option,
                                        sbox.ospath(""))
 
+def cleanup_dir_external(sbox):
+  """cleanup --include-externals"""
+
+  sbox.build(read_only = True)
+
+  # configure a directory external
+  sbox.simple_propset("svn:externals", "^/A A_ext", ".")
+  sbox.simple_update()
+
+  svntest.actions.lock_admin_dir(sbox.ospath("A_ext"), True)
+  svntest.actions.run_and_verify_svn(None, ["Performing cleanup on external " +
+                                     "item at '%s'.\n" % sbox.ospath("A_ext")],
+                                     [], "cleanup", '--include-externals',
+                                     sbox.ospath(""))
 
 ########################################################################
 # Run the tests
@@ -321,6 +335,7 @@ test_list = [ None,
               update_through_unversioned_symlink,
               cleanup_unversioned_items,
               cleanup_unversioned_items_in_locked_wc,
+              cleanup_dir_external,
              ]
 
 if __name__ == '__main__':

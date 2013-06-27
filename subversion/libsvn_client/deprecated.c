@@ -2969,6 +2969,6 @@ svn_client_cleanup(const char *path,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *scratch_pool)
 {
-  return svn_error_trace(svn_client_cleanup2(path, FALSE, FALSE, ctx,
+  return svn_error_trace(svn_client_cleanup2(path, FALSE, FALSE, FALSE, ctx,
                                              scratch_pool));
 }
