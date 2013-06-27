@@ -21,8 +21,7 @@ Candidate changes:
      Clean builds make it more likely to notice real compiler warnings.
    Branch: ^/subversion/branches/1.8.x-r1469519-and-friends
    Votes:
-     +1: blair
-     +1: brane (for 1.8.1)
+     +1: blair, brane
      -0: philip (see dev thread: false alarm, trades one warning for another)
 
  * r1489885, r1489928
@@ -127,7 +126,7 @@ Candidate changes:
      transfer encoding for request body. Reported many times on mailing list.
    Votes:
      +1: ivan
-     -0: gstein (we should dynamically detect the problem; should fix name)
+     -0: gstein, brane (we should dynamically detect the problem; should fix name)
 
  * r1496957
    Eliminate an extra RA layer roundtrip in 'svn log' on repository roots.
@@ -151,22 +150,22 @@ Candidate changes:
    Branch: ^/subversion/branches/1.8.x-r1497310-partial
    Votes:
      +1: stsp
-   
+
  * r1497318
    Better explain working copy locks in 'svn help status' output.
    Justification:
      The current documentation can be misleading for users who might
      not know what the purpose of the lock is.
    Votes:
-     +1: stsp
-   
+     +1: stsp, brane
+
  * r1497319
    Better explain exclusive-commit locks in 'svn help status' output.
    Justification:
      The current documentation can be misleading for users who might not
      know what a 'lock token' is, or what the purpose of the lock is.
    Votes:
-     +1: stsp
+     +1: stsp, brane
 
  * r1497551
    Fix the Accept-Encoding header format
@@ -174,7 +173,7 @@ Candidate changes:
      When IIS is used as a reverse-proxy, it chokes. And we should use the
      format from the specification anyways :-P
    Votes:
-     +1: gstein
+     +1: gstein, brane
 
 Veto-blocked changes:
 =====================
