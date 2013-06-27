@@ -32,12 +32,14 @@
 #include "svn_client.h"
 #include "svn_config.h"
 #include "svn_dirent_uri.h"
+#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "client.h"
 #include "svn_props.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 /*** Code. ***/
@@ -119,16 +121,33 @@ svn_client_cleanup2(const char *path,
 
   if (remove_unversioned_children || remove_ignored_children)
     {
+      svn_boolean_t is_locked_here;
       svn_boolean_t is_locked;
+      svn_boolean_t sqlite_exclusive;
+      svn_config_t *cfg = ctx->config
+                          ? svn_hash_gets(ctx->config,
+                                          SVN_CONFIG_CATEGORY_CONFIG)
+                          : NULL;
 
       /* Check if someone else owns a lock for LOCAL_ABSPATH. */
-      SVN_ERR(svn_wc_locked2(NULL, &is_locked, ctx->wc_ctx,
+      SVN_ERR(svn_wc_locked2(&is_locked_here, &is_locked, ctx->wc_ctx,
                              local_abspath, scratch_pool));
-      if (is_locked)
+      if (is_locked && !is_locked_here)
         return svn_error_createf(SVN_ERR_WC_LOCKED, NULL,
                                  _("Working copy at '%s' is already locked."),
                                  svn_dirent_local_style(local_abspath,
                                                         scratch_pool));
+
+      SVN_ERR(svn_config_get_bool(cfg, &sqlite_exclusive,
+                                  SVN_CONFIG_SECTION_WORKING_COPY,
+                                  SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE,
+                                  FALSE));
+      if (sqlite_exclusive)
+        {
+          /* Close the db because svn_wc_cleanup3() will try to open it again,
+           * which doesn't work if exclusive sqlite locking mode is enabled. */
+          SVN_ERR(svn_wc__close_db(local_abspath, ctx->wc_ctx, scratch_pool));
+        }
     }
 
   err = svn_wc_cleanup3(ctx->wc_ctx, local_abspath, ctx->cancel_func,
