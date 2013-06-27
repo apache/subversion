@@ -292,9 +292,6 @@ void CommitEditor::addDirectory(jstring jrelpath,
     }
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
 
-  JNIStringHolder relpath(jrelpath);
-  if (JNIUtil::isJavaExceptionThrown())
-    return;
   Iterator children(jchildren);
   if (JNIUtil::isJavaExceptionThrown())
     return;
@@ -303,7 +300,12 @@ void CommitEditor::addDirectory(jstring jrelpath,
     return;
 
   SVN::Pool subPool(pool);
-  SVN_JNI_ERR(svn_editor_add_directory(m_editor, relpath,
+  Relpath relpath(jrelpath, subPool);
+  if (JNIUtil::isExceptionThrown())
+    return;
+  SVN_JNI_ERR(relpath.error_occurred(),);
+
+  SVN_JNI_ERR(svn_editor_add_directory(m_editor, relpath.c_str(),
                                        build_children(children, subPool),
                                        properties.hash(subPool, false),
                                        svn_revnum_t(jreplaces_revision)),);
@@ -321,19 +323,21 @@ void CommitEditor::addFile(jstring jrelpath,
     }
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
 
-  JNIStringHolder relpath(jrelpath);
-  if (JNIUtil::isJavaExceptionThrown())
-    return;
   InputStream contents(jcontents);
   RevpropTable properties(jproperties, true);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
   SVN::Pool subPool(pool);
+  Relpath relpath(jrelpath, subPool);
+  if (JNIUtil::isExceptionThrown())
+    return;
+  SVN_JNI_ERR(relpath.error_occurred(),);
+
   svn_checksum_t checksum = build_checksum(jchecksum, subPool);
   if (JNIUtil::isJavaExceptionThrown())
     return;
-  SVN_JNI_ERR(svn_editor_add_file(m_editor, relpath,
+  SVN_JNI_ERR(svn_editor_add_file(m_editor, relpath.c_str(),
                                   &checksum, contents.getStream(subPool),
                                   properties.hash(subPool, false),
                                   svn_revnum_t(jreplaces_revision)),);
@@ -356,11 +360,14 @@ void CommitEditor::addAbsent(jstring jrelpath, jobject jkind,
     }
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
 
-  JNIStringHolder relpath(jrelpath);
-  if (JNIUtil::isJavaExceptionThrown())
+  SVN::Pool subPool(pool);
+  Relpath relpath(jrelpath, subPool);
+  if (JNIUtil::isExceptionThrown())
     return;
-  SVN_JNI_ERR(svn_editor_add_absent(m_editor,
-                                    relpath, EnumMapper::toNodeKind(jkind),
+  SVN_JNI_ERR(relpath.error_occurred(),);
+
+  SVN_JNI_ERR(svn_editor_add_absent(m_editor, relpath.c_str(),
+                                    EnumMapper::toNodeKind(jkind),
                                     svn_revnum_t(jreplaces_revision)),);
 }
 
@@ -374,9 +381,6 @@ void CommitEditor::alterDirectory(jstring jrelpath, jlong jrevision,
     }
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
 
-  JNIStringHolder relpath(jrelpath);
-  if (JNIUtil::isJavaExceptionThrown())
-    return;
   Iterator children(jchildren);
   if (JNIUtil::isJavaExceptionThrown())
     return;
@@ -385,8 +389,13 @@ void CommitEditor::alterDirectory(jstring jrelpath, jlong jrevision,
     return;
 
   SVN::Pool subPool(pool);
+  Relpath relpath(jrelpath, subPool);
+  if (JNIUtil::isExceptionThrown())
+    return;
+  SVN_JNI_ERR(relpath.error_occurred(),);
+
   SVN_JNI_ERR(svn_editor_alter_directory(
-                  m_editor, relpath, svn_revnum_t(jrevision),
+                  m_editor, relpath.c_str(), svn_revnum_t(jrevision),
                   (jchildren ? build_children(children, subPool) : NULL),
                   properties.hash(subPool, true)),);
 }
@@ -402,20 +411,22 @@ void CommitEditor::alterFile(jstring jrelpath, jlong jrevision,
     }
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
 
-  JNIStringHolder relpath(jrelpath);
-  if (JNIUtil::isJavaExceptionThrown())
-    return;
   InputStream contents(jcontents);
   RevpropTable properties(jproperties, true);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
   SVN::Pool subPool(pool);
+  Relpath relpath(jrelpath, subPool);
+  if (JNIUtil::isExceptionThrown())
+    return;
+  SVN_JNI_ERR(relpath.error_occurred(),);
+
   svn_checksum_t checksum = build_checksum(jchecksum, subPool);
   if (JNIUtil::isJavaExceptionThrown())
     return;
   SVN_JNI_ERR(svn_editor_alter_file(
-                  m_editor, relpath, svn_revnum_t(jrevision),
+                  m_editor, relpath.c_str(), svn_revnum_t(jrevision),
                   (jcontents ? &checksum : NULL),
                   (jcontents ? contents.getStream(subPool) : NULL),
                   properties.hash(subPool, true)),);
@@ -436,10 +447,14 @@ void CommitEditor::remove(jstring jrelpath, jlong jrevision)
     }
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
 
-  JNIStringHolder relpath(jrelpath);
-  if (JNIUtil::isJavaExceptionThrown())
+  SVN::Pool subPool(pool);
+  Relpath relpath(jrelpath, subPool);
+  if (JNIUtil::isExceptionThrown())
     return;
-  SVN_JNI_ERR(svn_editor_delete(m_editor, relpath, svn_revnum_t(jrevision)),);
+  SVN_JNI_ERR(relpath.error_occurred(),);
+
+  SVN_JNI_ERR(svn_editor_delete(m_editor, relpath.c_str(),
+                                svn_revnum_t(jrevision)),);
 }
 
 void CommitEditor::copy(jstring jsrc_relpath, jlong jsrc_revision,
@@ -452,16 +467,21 @@ void CommitEditor::copy(jstring jsrc_relpath, jlong jsrc_revision,
     }
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
 
-  JNIStringHolder src_relpath(jsrc_relpath);
-  if (JNIUtil::isJavaExceptionThrown())
+  SVN::Pool subPool(pool);
+  Relpath src_relpath(jsrc_relpath, subPool);
+  if (JNIUtil::isExceptionThrown())
     return;
-  JNIStringHolder dst_relpath(jdst_relpath);
-  if (JNIUtil::isJavaExceptionThrown())
+  SVN_JNI_ERR(src_relpath.error_occurred(),);
+  Relpath dst_relpath(jdst_relpath, subPool);
+  if (JNIUtil::isExceptionThrown())
     return;
+  SVN_JNI_ERR(dst_relpath.error_occurred(),);
 
   SVN_JNI_ERR(svn_editor_copy(m_editor,
-                              src_relpath, svn_revnum_t(jsrc_revision),
-                              dst_relpath, svn_revnum_t(jreplaces_revision)),);
+                              src_relpath.c_str(),
+                              svn_revnum_t(jsrc_revision),
+                              dst_relpath.c_str(),
+                              svn_revnum_t(jreplaces_revision)),);
 }
 
 void CommitEditor::move(jstring jsrc_relpath, jlong jsrc_revision,
@@ -474,16 +494,21 @@ void CommitEditor::move(jstring jsrc_relpath, jlong jsrc_revision,
     }
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
 
-  JNIStringHolder src_relpath(jsrc_relpath);
-  if (JNIUtil::isJavaExceptionThrown())
+  SVN::Pool subPool(pool);
+  Relpath src_relpath(jsrc_relpath, subPool);
+  if (JNIUtil::isExceptionThrown())
     return;
-  JNIStringHolder dst_relpath(jdst_relpath);
-  if (JNIUtil::isJavaExceptionThrown())
+  SVN_JNI_ERR(src_relpath.error_occurred(),);
+  Relpath dst_relpath(jdst_relpath, subPool);
+  if (JNIUtil::isExceptionThrown())
     return;
+  SVN_JNI_ERR(dst_relpath.error_occurred(),);
 
   SVN_JNI_ERR(svn_editor_move(m_editor,
-                              src_relpath, svn_revnum_t(jsrc_revision),
-                              dst_relpath, svn_revnum_t(jreplaces_revision)),);
+                              src_relpath.c_str(),
+                              svn_revnum_t(jsrc_revision),
+                              dst_relpath.c_str(),
+                              svn_revnum_t(jreplaces_revision)),);
 }
 
 void CommitEditor::rotate(jobject jelements)
