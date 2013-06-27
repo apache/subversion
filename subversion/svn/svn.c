@@ -490,13 +490,27 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'r', 'q', 'N', opt_depth, opt_force, opt_ignore_externals} },
 
   { "cleanup", svn_cl__cleanup, {0}, N_
-    ("Recursively clean up the working copy, removing locks, resuming\n"
+    ("Recursively clean up the working copy, removing write locks, resuming\n"
      "unfinished operations, etc.\n"
      "usage: cleanup [WCPATH...]\n"
      "\n"
-     "  If the --remove-unversioned option is given, remove unversioned\n"
-     "  items within WCPATH. If --remove-ignored is given, remove ignored\n"
-     "  unversioned items within WCPATH.\n"),
+     "  By default, finish any unfinished business in the working copy at WCPATH,\n"
+     "  and remove write locks (shown as 'L' by the 'svn status' command) from\n"
+     "  the working copy. Usually, this is only necessary if a Subversion client\n"
+     "  has crashed while using the working copy, leaving it in an unusable state.\n"
+     "\n"
+     "  WARNING: There is no mechanism that will protect write locks still\n"
+     "           being used by other Subversion clients. Running this command\n"
+     "           while another client is using the working copy can corrupt\n"
+     "           the working copy beyond repair!\n"
+     "\n"
+     "  If the --remove-unversioned option or the --remove-ignored option\n"
+     "  is given, remove any unversioned or ignored items within WCPATH.\n"
+     "  To prevent accidental working copy corruption, unversioned or ignored\n"
+     "  items can only be removed if the working copy is not already locked\n"
+     "  for writing by another Subversion client.\n"
+     "  Note that the 'svn status' command shows unversioned items as '?',\n"
+     "  and ignored items as 'I' if the --no-ignore option is given to it.\n"),
     {opt_merge_cmd, opt_remove_unversioned, opt_remove_ignored} },
 
   { "commit", svn_cl__commit, {"ci"},

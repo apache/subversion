@@ -117,6 +117,20 @@ svn_client_cleanup2(const char *path,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
+  if (remove_unversioned_children || remove_ignored_children)
+    {
+      svn_boolean_t is_locked;
+
+      /* Check if someone else owns a lock for LOCAL_ABSPATH. */
+      SVN_ERR(svn_wc_locked2(NULL, &is_locked, ctx->wc_ctx,
+                             local_abspath, scratch_pool));
+      if (is_locked)
+        return svn_error_createf(SVN_ERR_WC_LOCKED, NULL,
+                                 _("Working copy at '%s' is already locked."),
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool));
+    }
+
   err = svn_wc_cleanup3(ctx->wc_ctx, local_abspath, ctx->cancel_func,
                         ctx->cancel_baton, scratch_pool);
   svn_io_sleep_for_timestamps(path, scratch_pool);

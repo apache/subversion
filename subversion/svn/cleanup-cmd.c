@@ -80,6 +80,16 @@ svn_cl__cleanup(apr_getopt_t *os,
             {
               err =  svn_error_compose_create(err, err2);
             }
+          else if (opt_state->remove_unversioned || opt_state->remove_ignored)
+            {
+              err = svn_error_create(SVN_ERR_WC_LOCKED, err,
+                                     _("Working copy locked; if no other "
+                                       "Subversion client is currently "
+                                       "using the working copy, try running "
+                                       "'svn cleanup' without the "
+                                       "--remove-unversioned or "
+                                       "--remove-ignored options first."));
+            }
           else
             {
               const char *wcroot_abspath;
