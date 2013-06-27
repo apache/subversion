@@ -117,8 +117,7 @@ do_cleanup(const char *local_abspath,
       b.include_externals = include_externals;
       b.ctx = ctx;
 
-      SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config,
-                                         scratch_pool));
+      SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, scratch_pool));
       SVN_ERR(svn_wc_walk_status(ctx->wc_ctx, local_abspath,
                                  svn_depth_infinity,
                                  TRUE,  /* get all */
