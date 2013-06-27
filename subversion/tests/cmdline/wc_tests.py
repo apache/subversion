@@ -294,11 +294,15 @@ def cleanup_unversioned_items(sbox):
   svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
                                      [], 'status', '--no-ignore')
 
+  # un-ignore the file matching global ignores, making it unversioned,
+  # and remove it with --remove-unversioned
   expected_output = [
         'D         foo.o\n',
   ]
   svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
-                                     [], 'cleanup', '--remove-ignored')
+                                     [], 'cleanup', '--remove-unversioned',
+                                     '--config-option',
+                                     'config:miscellany:global-ignores=')
   expected_output = [
         ' M      .\n',
   ]
