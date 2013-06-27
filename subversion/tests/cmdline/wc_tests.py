@@ -238,6 +238,8 @@ def cleanup_unversioned_items(sbox):
   os.mkdir(sbox.ospath('dir_foo'))
   svntest.main.file_write(sbox.ospath('dir_foo/foo_child1'), contents)
   os.mkdir(sbox.ospath('dir_foo/foo_child2'))
+  # a file that matches a default ignore pattern
+  svntest.main.file_write(sbox.ospath('foo.o'), contents)
 
   # ignore some of the unversioned items
   sbox.simple_propset('svn:ignore', '*_foo', '.')
@@ -254,6 +256,7 @@ def cleanup_unversioned_items(sbox):
   expected_output += [
         'I       dir_foo\n',
         'I       file_foo\n',
+        'I       foo.o\n',
   ]
   svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
                                      [], 'status', '--no-ignore')
@@ -268,13 +271,31 @@ def cleanup_unversioned_items(sbox):
         ' M      .\n',
         'I       dir_foo\n',
         'I       file_foo\n',
+        'I       foo.o\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'status', '--no-ignore')
+
+  # remove ignored items, with an empty global-ignores list
+  expected_output = [
+        'D         dir_foo\n',
+        'D         file_foo\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'cleanup', '--remove-ignored',
+                                     '--config-option',
+                                     'config:miscellany:global-ignores=')
+
+  # the file matching global-ignores should still be present
+  expected_output = [
+        ' M      .\n',
+        'I       foo.o\n',
   ]
   svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
                                      [], 'status', '--no-ignore')
 
   expected_output = [
-        'D         dir_foo\n',
-        'D         file_foo\n',
+        'D         foo.o\n',
   ]
   svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
                                      [], 'cleanup', '--remove-ignored')
