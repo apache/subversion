@@ -37,6 +37,7 @@ class SVNBase;
 #include <fstream>
 #include <apr_time.h>
 #include <string>
+#include <vector>
 struct svn_error_t;
 
 #define JAVA_PACKAGE "org/apache/subversion/javahl"
@@ -141,10 +142,26 @@ class JNIUtil
   enum { formatBufferSize = 2048 };
   enum { noLog, errorLog, exceptionLog, entryLog } LogLevel;
 
+  struct message_stack_item
+  {
+    apr_status_t m_code;
+    std::string m_message;
+    bool m_generic;
+
+    message_stack_item(apr_status_t code, const char* message,
+                       bool generic = false)
+      : m_code(code),
+        m_message(message),
+        m_generic(generic)
+      {}
+  };
+  typedef std::vector<message_stack_item> error_message_stack_t;
+
  private:
   static void assembleErrorMessage(svn_error_t *err, int depth,
                                    apr_status_t parent_apr_err,
-                                   std::string &buffer);
+                                   std::string &buffer,
+                                   error_message_stack_t* message_stack = NULL);
   static void putErrorsInTrace(svn_error_t *err,
                                std::vector<jobject> &stackTrace);
   /**

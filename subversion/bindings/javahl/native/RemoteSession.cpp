@@ -30,6 +30,7 @@
 #include "JNIByteArray.h"
 #include "JNIStringHolder.h"
 #include "JNIUtil.h"
+#include "Path.h"
 
 #include "svn_ra.h"
 #include "svn_string.h"
@@ -64,9 +65,11 @@ RemoteSession::open(jint jretryAttempts,
 {
   JNIEnv *env = JNIUtil::getEnv();
 
-  JNIStringHolder url(jurl);
+  SVN::Pool requestPool;
+  URL url(jurl, requestPool);
   if (JNIUtil::isExceptionThrown())
     return NULL;
+  SVN_JNI_ERR(url.error_occurred(), NULL);
   env->DeleteLocalRef(jurl);
 
   JNIStringHolder uuid(juuid);
@@ -98,7 +101,7 @@ RemoteSession::open(jint jretryAttempts,
     }
 
   jobject jremoteSession = open(
-      jretryAttempts, url, uuid, configDirectory,
+      jretryAttempts, url.c_str(), uuid, configDirectory,
       usernameStr, passwordStr, prompter, jprogress);
   if (JNIUtil::isExceptionThrown() || !jremoteSession)
     {
@@ -279,12 +282,13 @@ RemoteSession::dispose(jobject jthis)
 
 void RemoteSession::reparent(jstring jurl)
 {
-  JNIStringHolder url(jurl);
-  if (JNIUtil::isJavaExceptionThrown())
-    return;
-
   SVN::Pool subPool(pool);
-  SVN_JNI_ERR(svn_ra_reparent(m_session, url, subPool.getPool()), );
+  URL url(jurl, subPool);
+  if (JNIUtil::isExceptionThrown())
+    return;
+  SVN_JNI_ERR(url.error_occurred(),);
+
+  SVN_JNI_ERR(svn_ra_reparent(m_session, url.c_str(), subPool.getPool()), );
 }
 
 jstring
@@ -304,14 +308,15 @@ RemoteSession::getSessionUrl()
 jstring
 RemoteSession::getSessionRelativePath(jstring jurl)
 {
-  JNIStringHolder url(jurl);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
   SVN::Pool subPool(pool);
+  URL url(jurl, subPool);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+  SVN_JNI_ERR(url.error_occurred(), NULL);
+
   const char* rel_path;
   SVN_JNI_ERR(svn_ra_get_path_relative_to_session(
-                  m_session, &rel_path, url, subPool.getPool()),
+                  m_session, &rel_path, url.c_str(), subPool.getPool()),
               NULL);
   jstring jrel_path = JNIUtil::makeJString(rel_path);
   if (JNIUtil::isJavaExceptionThrown())
@@ -323,13 +328,15 @@ RemoteSession::getSessionRelativePath(jstring jurl)
 jstring
 RemoteSession::getReposRelativePath(jstring jurl)
 {
-  JNIStringHolder url(jurl);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
   SVN::Pool subPool(pool);
+  URL url(jurl, subPool);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+  SVN_JNI_ERR(url.error_occurred(), NULL);
+
   const char* rel_path;
-  SVN_JNI_ERR(svn_ra_get_path_relative_to_root(m_session, &rel_path, url,
+  SVN_JNI_ERR(svn_ra_get_path_relative_to_root(m_session, &rel_path,
+                                               url.c_str(),
                                                subPool.getPool()),
               NULL);
 
@@ -470,21 +477,22 @@ jlong
 RemoteSession::getFile(jlong jrevision, jstring jpath,
                        jobject jcontents, jobject jproperties)
 {
-  JNIStringHolder path(jpath);
-  if (JNIUtil::isExceptionThrown())
-    return SVN_INVALID_REVNUM;
-
   OutputStream contents_proxy(jcontents);
   if (JNIUtil::isExceptionThrown())
     return SVN_INVALID_REVNUM;
 
   SVN::Pool subPool(pool);
+  Relpath path(jpath, subPool);
+  if (JNIUtil::isExceptionThrown())
+    return SVN_INVALID_REVNUM;
+  SVN_JNI_ERR(path.error_occurred(), SVN_INVALID_REVNUM);
+
   apr_hash_t* props = NULL;
   svn_revnum_t fetched_rev = svn_revnum_t(jrevision);
   svn_stream_t* contents = (!jcontents ? NULL
                             : contents_proxy.getStream(subPool));
 
-  SVN_JNI_ERR(svn_ra_get_file(m_session, path, fetched_rev,
+  SVN_JNI_ERR(svn_ra_get_file(m_session, path.c_str(), fetched_rev,
                               contents, &fetched_rev,
                               (jproperties ? &props : NULL),
                               subPool.getPool()),
@@ -578,18 +586,20 @@ RemoteSession::getDirectory(jlong jrevision, jstring jpath,
                             jint jdirent_fields, jobject jdirents,
                             jobject jproperties)
 {
-  JNIStringHolder path(jpath);
+  SVN::Pool subPool(pool);
+  Relpath path(jpath, subPool);
   if (JNIUtil::isExceptionThrown())
     return SVN_INVALID_REVNUM;
+  SVN_JNI_ERR(path.error_occurred(), SVN_INVALID_REVNUM);
 
-  SVN::Pool subPool(pool);
   apr_hash_t* props = NULL;
   apr_hash_t* dirents = NULL;
   svn_revnum_t fetched_rev = svn_revnum_t(jrevision);
 
   SVN_JNI_ERR(svn_ra_get_dir2(m_session, (jdirents ? &dirents : NULL),
                               &fetched_rev, (jproperties ? &props : NULL),
-                              path, fetched_rev, apr_uint32_t(jdirent_fields),
+                              path.c_str(), fetched_rev,
+                              apr_uint32_t(jdirent_fields),
                               subPool.getPool()),
               SVN_INVALID_REVNUM);
 
@@ -601,7 +611,8 @@ RemoteSession::getDirectory(jlong jrevision, jstring jpath,
       SVN_JNI_ERR(svn_ra_get_session_url(m_session, &base_url,
                                          subPool.getPool()),
                   SVN_INVALID_REVNUM);
-      fill_dirents(base_url, path, jdirents, dirents, subPool.getPool());
+      fill_dirents(base_url, path.c_str(), jdirents, dirents,
+                   subPool.getPool());
       if (JNIUtil::isExceptionThrown())
         return SVN_INVALID_REVNUM;
     }
@@ -617,30 +628,31 @@ RemoteSession::getDirectory(jlong jrevision, jstring jpath,
 }
 
 // TODO: getMergeinfo
-// TODO: doUpdate
-// TODO: doSwitch
+// TODO: update
+// TODO: switch
 
 jobject
-RemoteSession::doStatus(jstring jstatus_target,
-                        jlong jrevision, jobject jdepth,
-                        jobject jstatus_editor)
+RemoteSession::status(jstring jstatus_target,
+                      jlong jrevision, jobject jdepth,
+                      jobject jstatus_editor)
 {
   return NULL;
 }
 
-// TODO: doDiff
+// TODO: diff
 // TODO: getLog
 
 jobject
 RemoteSession::checkPath(jstring jpath, jlong jrevision)
 {
-  JNIStringHolder path(jpath);
+  SVN::Pool subPool(pool);
+  Relpath path(jpath, subPool);
   if (JNIUtil::isExceptionThrown())
     return NULL;
+  SVN_JNI_ERR(path.error_occurred(), NULL);
 
-  SVN::Pool subPool(pool);
   svn_node_kind_t kind;
-  SVN_JNI_ERR(svn_ra_check_path(m_session, path,
+  SVN_JNI_ERR(svn_ra_check_path(m_session, path.c_str(),
                                 svn_revnum_t(jrevision),
                                 &kind, subPool.getPool()),
               NULL);
@@ -659,17 +671,18 @@ RemoteSession::checkPath(jstring jpath, jlong jrevision)
 jobject
 RemoteSession::getLocks(jstring jpath, jobject jdepth)
 {
-  JNIStringHolder path(jpath);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
-
   svn_depth_t depth = EnumMapper::toDepth(jdepth);
   if (JNIUtil::isExceptionThrown())
     return NULL;
 
   SVN::Pool subPool(pool);
+  Relpath path(jpath, subPool);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+  SVN_JNI_ERR(path.error_occurred(), NULL);
+
   apr_hash_t *locks;
-  SVN_JNI_ERR(svn_ra_get_locks2(m_session, &locks, path, depth,
+  SVN_JNI_ERR(svn_ra_get_locks2(m_session, &locks, path.c_str(), depth,
                                 subPool.getPool()),
               NULL);
 

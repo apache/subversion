@@ -48,6 +48,8 @@ class EnumMapper
   static svn_wc_conflict_choice_t toConflictChoice(jobject jchoice);
   static int toMergeinfoLogKind(jobject jLogKind);
   static int toLogLevel(jobject jLogLevel);
+  static svn_node_kind_t toNodeKind(jobject jNodeKind);
+  static svn_checksum_kind_t toChecksumKind(jobject jChecksumKind);
 
   /* Converting from C enum's */
   static jint mapCommitMessageStateFlags(apr_byte_t flags);

@@ -34,9 +34,9 @@ import org.apache.subversion.javahl.OperationContext;
 import org.apache.subversion.javahl.ClientException;
 
 import java.lang.ref.WeakReference;
-import java.util.HashSet;
 import java.util.Date;
 import java.util.Map;
+import java.util.Set;
 import java.io.OutputStream;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -46,17 +46,16 @@ public class RemoteSession extends JNIObject implements ISVNRemote
 {
     public void dispose()
     {
-        if (editors != null)
+        if (editorReference != null)
         {
-            // Deactivate all open editors
-            for (WeakReference<ISVNEditor> ref : editors)
+            // Deactivate the open editor
+            ISVNEditor ed = editorReference.get();
+            if (ed != null)
             {
-                ISVNEditor ed = ref.get();
-                if (ed == null)
-                    continue;
                 ed.dispose();
-                ref.clear();
+                editorReference.clear();
             }
+            editorReference = null;
         }
         nativeDispose();
     }
@@ -109,12 +108,22 @@ public class RemoteSession extends JNIObject implements ISVNRemote
     public native byte[] getRevisionProperty(long revision, String propertyName)
             throws ClientException;
 
-    public ISVNEditor getCommitEditor() throws ClientException
+    public ISVNEditor getCommitEditor(Map<String, byte[]> revisionProperties,
+                                      CommitCallback commitCallback,
+                                      Set<Lock> lockTokens,
+                                      boolean keepLocks)
+            throws ClientException
     {
-        ISVNEditor ed = CommitEditor.createInstance(this);
-        if (editors == null)
-            editors = new HashSet<WeakReference<ISVNEditor>>();
-        editors.add(new WeakReference<ISVNEditor>(ed));
+        if (editorReference != null && editorReference.get() != null)
+            throw new IllegalStateException("An editor is already active");
+
+        ISVNEditor ed =
+            CommitEditor.createInstance(this, revisionProperties,
+                                        commitCallback, lockTokens, keepLocks);
+
+        if (editorReference != null)
+            editorReference.clear();
+        editorReference = new WeakReference<ISVNEditor>(ed);
         return ed;
     }
 
@@ -143,15 +152,15 @@ public class RemoteSession extends JNIObject implements ISVNRemote
     }
 
     // TODO: getMergeinfo
-    // TODO: doUpdate
-    // TODO: doSwitch
+    // TODO: update
+    // TODO: switch
 
-    public native ISVNReporter doStatus(String statusTarget,
-                                        long revision, Depth depth,
-                                        ISVNEditor statusEditor)
+    public native ISVNReporter status(String statusTarget,
+                                      long revision, Depth depth,
+                                      ISVNEditor statusEditor)
             throws ClientException;
 
-    // TODO: doDiff
+    // TODO: diff
     // TODO: getLog
 
     public native NodeKind checkPath(String path, long revision)
@@ -219,10 +228,28 @@ public class RemoteSession extends JNIObject implements ISVNRemote
     private class RemoteSessionContext extends OperationContext {}
 
     /*
-     * The set of open editors. We need this in order to dispose/abort
-     * the editors when the session is disposed.
+     * A reference to the current open editor. We need this in order
+     * to dispose/abort the editor when the session is disposed. And
+     * furthermore, there can be only one editor active at any time.
      */
-    private HashSet<WeakReference<ISVNEditor>> editors;
+    private WeakReference<ISVNEditor> editorReference;
+
+    /*
+     * The commit editor callse this when disposed to clear the
+     * reference. Note that this function will be called during our
+     * dispose, so make sure they don't step on each others' toes.
+     */
+    void disposeEditor(CommitEditor editor)
+    {
+        if (editorReference == null)
+            return;
+        ISVNEditor ed = editorReference.get();
+        if (ed == null)
+            return;
+        if (ed != editor)
+            throw new IllegalStateException("Disposing unknown editor");
+        editorReference.clear();
+    }
 
     /*
      * Private helper methods.

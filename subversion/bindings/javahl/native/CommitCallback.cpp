@@ -37,9 +37,8 @@
  * @param jcallback the Java callback object.
  */
 CommitCallback::CommitCallback(jobject jcallback)
-{
-  m_callback = jcallback;
-}
+  : m_callback(jcallback)
+{}
 
 /**
  * Destroy a CommitCallback object
@@ -101,4 +100,15 @@ CommitCallback::commitInfo(const svn_commit_info_t *commit_info,
 
   env->PopLocalFrame(NULL);
   return SVN_NO_ERROR;
+}
+
+
+PersistentCommitCallback::PersistentCommitCallback(jobject jcallback)
+  : CommitCallback(JNIUtil::getEnv()->NewGlobalRef(jcallback))
+{}
+
+PersistentCommitCallback::~PersistentCommitCallback()
+{
+  if (m_callback)
+    JNIUtil::getEnv()->DeleteGlobalRef(m_callback);
 }

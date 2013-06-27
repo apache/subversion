@@ -24,17 +24,22 @@ package org.apache.subversion.javahl;
 
 import org.apache.subversion.javahl.*;
 import org.apache.subversion.javahl.remote.*;
+import org.apache.subversion.javahl.callback.*;
 import org.apache.subversion.javahl.types.*;
 
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Set;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 /**
  * This class is used for testing the SVNReposAccess class
@@ -237,13 +242,13 @@ public class SVNRemoteTests extends SVNTests
     public void testGetCommitEditor() throws Exception
     {
         ISVNRemote session = getSession();
-        session.getCommitEditor();
+        session.getCommitEditor(null, null, null, false);
     }
 
     public void testDisposeCommitEditor() throws Exception
     {
         ISVNRemote session = getSession();
-        session.getCommitEditor();
+        session.getCommitEditor(null, null, null, false);
         session.dispose();
     }
 
@@ -300,10 +305,8 @@ public class SVNRemoteTests extends SVNTests
         }
         catch (ClientException ex)
         {
-            String msg = ex.getMessage();
-            int index = msg.indexOf('\n');
             assertEquals("Disabled repository feature",
-                         msg.substring(0, index));
+                         ex.getAllMessages().get(0).getMessage());
             return;
         }
 
@@ -369,5 +372,314 @@ public class SVNRemoteTests extends SVNTests
         assertEquals(dirents.get("lambda").getPath(), "lambda");
         for (Map.Entry<String, byte[]> e : properties.entrySet())
             assertTrue(e.getKey().startsWith("svn:entry:"));
+    }
+
+    private final class CommitContext implements CommitCallback
+    {
+        public final ISVNEditor editor;
+        public CommitContext(ISVNRemote session, String logstr)
+            throws ClientException
+        {
+            Charset UTF8 = Charset.forName("UTF-8");
+            byte[] log = (logstr == null
+                          ? new byte[0]
+                          : logstr.getBytes(UTF8));
+            HashMap<String, byte[]> revprops = new HashMap<String, byte[]>();
+            revprops.put("svn:log", log);
+            editor = session.getCommitEditor(revprops, this, null, false);
+        }
+
+        public void commitInfo(CommitInfo info) { this.info = info; }
+        public long getRevision() { return info.getRevision(); }
+
+        private CommitInfo info;
+    }
+
+    public void testEditorCopy() throws Exception
+    {
+        ISVNRemote session = getSession();
+        CommitContext cc =
+            new CommitContext(session, "Copy A/B/lambda -> A/B/omega");
+
+        try {
+            // FIXME: alter dir A/B first
+            cc.editor.copy("A/B/lambda", 1, "A/B/omega",
+                           Revision.SVN_INVALID_REVNUM);
+            cc.editor.complete();
+        } finally {
+            cc.editor.dispose();
+        }
+
+        assertEquals(2, cc.getRevision());
+        assertEquals(2, session.getLatestRevision());
+        assertEquals(NodeKind.file,
+                     session.checkPath("A/B/lambda",
+                                       Revision.SVN_INVALID_REVNUM));
+        assertEquals(NodeKind.file,
+                     session.checkPath("A/B/omega",
+                                       Revision.SVN_INVALID_REVNUM));
+    }
+
+    public void testEditorMove() throws Exception
+    {
+        ISVNRemote session = getSession();
+        CommitContext cc =
+            new CommitContext(session, "Move A/B/lambda -> A/B/omega");
+
+        try {
+            // FIXME: alter dir A/B first
+            cc.editor.move("A/B/lambda", 1, "A/B/omega",
+                           Revision.SVN_INVALID_REVNUM);
+            cc.editor.complete();
+        } finally {
+            cc.editor.dispose();
+        }
+
+        assertEquals(2, cc.getRevision());
+        assertEquals(2, session.getLatestRevision());
+        assertEquals(NodeKind.none,
+                     session.checkPath("A/B/lambda",
+                                       Revision.SVN_INVALID_REVNUM));
+        assertEquals(NodeKind.file,
+                     session.checkPath("A/B/omega",
+                                       Revision.SVN_INVALID_REVNUM));
+    }
+
+    public void testEditorDelete() throws Exception
+    {
+        ISVNRemote session = getSession();
+        CommitContext cc =
+            new CommitContext(session, "Delete all greek files");
+
+        String[] filePaths = { "iota",
+                               "A/mu",
+                               "A/B/lambda",
+                               "A/B/E/alpha",
+                               "A/B/E/beta",
+                               "A/D/gamma",
+                               "A/D/G/pi",
+                               "A/D/G/rho",
+                               "A/D/G/tau",
+                               "A/D/H/chi",
+                               "A/D/H/omega",
+                               "A/D/H/psi" };
+
+        try {
+            // FIXME: alter a bunch of dirs first
+            for (String path : filePaths)
+                cc.editor.delete(path, 1);
+            cc.editor.complete();
+        } finally {
+            cc.editor.dispose();
+        }
+
+        assertEquals(2, cc.getRevision());
+        assertEquals(2, session.getLatestRevision());
+        for (String path : filePaths)
+            assertEquals(NodeKind.none,
+                         session.checkPath(path, Revision.SVN_INVALID_REVNUM));
+    }
+
+    public void testEditorMkdir() throws Exception
+    {
+        ISVNRemote session = getSession();
+        CommitContext cc = new CommitContext(session, "Make hebrew dir");
+
+        try {
+            // FIXME: alter dir . first
+            cc.editor.addDirectory("ALEPH",
+                                   new ArrayList<String>(),
+                                   new HashMap<String, byte[]>(),
+                                   Revision.SVN_INVALID_REVNUM);
+            cc.editor.complete();
+        } finally {
+            cc.editor.dispose();
+        }
+
+        assertEquals(2, cc.getRevision());
+        assertEquals(2, session.getLatestRevision());
+        assertEquals(NodeKind.dir,
+                     session.checkPath("ALEPH",
+                                       Revision.SVN_INVALID_REVNUM));
+    }
+
+    public void testEditorSetDirProps() throws Exception
+    {
+        Charset UTF8 = Charset.forName("UTF-8");
+        ISVNRemote session = getSession();
+
+        byte[] ignoreval = "*.pyc\n.gitignore\n".getBytes(UTF8);
+        HashMap<String, byte[]> props = new HashMap<String, byte[]>();
+        props.put("svn:ignore", ignoreval);
+
+        CommitContext cc = new CommitContext(session, "Add svn:ignore");
+        try {
+            cc.editor.alterDirectory("", 1, null, props);
+            cc.editor.complete();
+        } finally {
+            cc.editor.dispose();
+        }
+
+        assertEquals(2, cc.getRevision());
+        assertEquals(2, session.getLatestRevision());
+        assertTrue(Arrays.equals(ignoreval,
+                                 client.propertyGet(session.getSessionUrl(),
+                                                    "svn:ignore",
+                                                    Revision.HEAD,
+                                                    Revision.HEAD)));
+    }
+
+    private static byte[] SHA1(byte[] text) throws NoSuchAlgorithmException
+    {
+        MessageDigest md = MessageDigest.getInstance("SHA-1");
+        return md.digest(text);
+    }
+
+    public void testEditorAddFile() throws Exception
+    {
+        Charset UTF8 = Charset.forName("UTF-8");
+        ISVNRemote session = getSession();
+
+        byte[] eolstyle = "native".getBytes(UTF8);
+        HashMap<String, byte[]> props = new HashMap<String, byte[]>();
+        props.put("svn:eol-style", eolstyle);
+
+        byte[] contents = "This is file 'xi'.".getBytes(UTF8);
+        Checksum hash = new Checksum(SHA1(contents), Checksum.Kind.SHA1);
+        ByteArrayInputStream stream = new ByteArrayInputStream(contents);
+
+        CommitContext cc = new CommitContext(session, "Add A/xi");
+        try {
+            // FIXME: alter dir A first
+            cc.editor.addFile("A/xi", hash, stream, props,
+                              Revision.SVN_INVALID_REVNUM);
+            cc.editor.complete();
+        } finally {
+            cc.editor.dispose();
+        }
+
+        assertEquals(2, cc.getRevision());
+        assertEquals(2, session.getLatestRevision());
+        assertEquals(NodeKind.file,
+                     session.checkPath("A/xi",
+                                       Revision.SVN_INVALID_REVNUM));
+
+        byte[] propval = client.propertyGet(session.getSessionUrl() + "/A/xi",
+                                            "svn:eol-style",
+                                            Revision.HEAD,
+                                            Revision.HEAD);
+        assertTrue(Arrays.equals(eolstyle, propval));
+    }
+
+    public void testEditorSetFileProps() throws Exception
+    {
+        Charset UTF8 = Charset.forName("UTF-8");
+        ISVNRemote session = getSession();
+
+        byte[] eolstyle = "CRLF".getBytes(UTF8);
+        HashMap<String, byte[]> props = new HashMap<String, byte[]>();
+        props.put("svn:eol-style", eolstyle);
+
+        CommitContext cc =
+            new CommitContext(session, "Change eol-style on A/B/E/alpha");
+        try {
+            cc.editor.alterFile("A/B/E/alpha", 1, null, null, props);
+            cc.editor.complete();
+        } finally {
+            cc.editor.dispose();
+        }
+
+        assertEquals(2, cc.getRevision());
+        assertEquals(2, session.getLatestRevision());
+        byte[] propval = client.propertyGet(session.getSessionUrl()
+                                            + "/A/B/E/alpha",
+                                            "svn:eol-style",
+                                            Revision.HEAD,
+                                            Revision.HEAD);
+        assertTrue(Arrays.equals(eolstyle, propval));
+    }
+
+    // public void testEditorRotate() throws Exception
+    // {
+    //     ISVNRemote session = getSession();
+    //
+    //     ArrayList<ISVNEditor.RotatePair> rotation =
+    //         new ArrayList<ISVNEditor.RotatePair>(3);
+    //     rotation.add(new ISVNEditor.RotatePair("A/B", 1));
+    //     rotation.add(new ISVNEditor.RotatePair("A/C", 1));
+    //     rotation.add(new ISVNEditor.RotatePair("A/D", 1));
+    //
+    //     CommitContext cc =
+    //         new CommitContext(session, "Rotate A/B -> A/C -> A/D");
+    //     try {
+    //         // No alter-dir of A is needed, children remain the same.
+    //         cc.editor.rotate(rotation);
+    //         cc.editor.complete();
+    //     } finally {
+    //         cc.editor.dispose();
+    //     }
+    //
+    //     assertEquals(2, cc.getRevision());
+    //     assertEquals(2, session.getLatestRevision());
+    //
+    //     HashMap<String, DirEntry> dirents = new HashMap<String, DirEntry>();
+    //     HashMap<String, byte[]> properties = new HashMap<String, byte[]>();
+    //
+    //     // A/B is now what used to be A/D, so A/B/H must exist
+    //     session.getDirectory(Revision.SVN_INVALID_REVNUM, "A/B",
+    //                          DirEntry.Fields.all, dirents, properties);
+    //     assertEquals(dirents.get("H").getPath(), "H");
+    //
+    //     // A/C is now what used to be A/B, so A/C/F must exist
+    //     session.getDirectory(Revision.SVN_INVALID_REVNUM, "A/C",
+    //                          DirEntry.Fields.all, dirents, properties);
+    //     assertEquals(dirents.get("F").getPath(), "F");
+    //
+    //     // A/D is now what used to be A/C and must be empty
+    //     session.getDirectory(Revision.SVN_INVALID_REVNUM, "A/D",
+    //                          DirEntry.Fields.all, dirents, properties);
+    //     assertTrue(dirents.isEmpty());
+    // }
+
+    // Sanity check so that we don't forget about unimplemented methods.
+    public void testEditorNotImplemented() throws Exception
+    {
+        ISVNRemote session = getSession();
+
+        HashMap<String, byte[]> props = new HashMap<String, byte[]>();
+        ArrayList<ISVNEditor.RotatePair> rotation =
+            new ArrayList<ISVNEditor.RotatePair>();
+
+        CommitContext cc = new CommitContext(session, "not implemented");
+        try {
+            String exmsg;
+
+            try {
+                exmsg = "";
+                cc.editor.addSymlink("", "", props, 1);
+            } catch (IllegalStateException ex) {
+                exmsg = ex.getMessage();
+            }
+            assertEquals("Not implemented: CommitEditor.addSymlink", exmsg);
+
+            try {
+                exmsg = "";
+                cc.editor.alterSymlink("", 1, "", null);
+            } catch (IllegalStateException ex) {
+                exmsg = ex.getMessage();
+            }
+            assertEquals("Not implemented: CommitEditor.alterSymlink", exmsg);
+
+            try {
+                exmsg = "";
+                cc.editor.rotate(rotation);
+            } catch (IllegalStateException ex) {
+                exmsg = ex.getMessage();
+            }
+            assertEquals("Not implemented: CommitEditor.rotate", exmsg);
+        } finally {
+            cc.editor.dispose();
+        }
+
     }
 }
