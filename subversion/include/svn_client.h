@@ -4026,8 +4026,9 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
  * incomplete operations, removing lockfiles, etc.
  *
  * If @a remove_unversioned_children is @c TRUE, remove unversioned children
- * of @a dir after successfull working copy cleanup. If @a no_ignore is
- * @c TRUE as well, also remove unversioned children which are being ignored.
+ * of @a dir after successfull working copy cleanup.
+ * If @a remove_ignored_children is @c TRUE, remove ignored unversioned children
+ * of @a dir after successfull working copy cleanup.
  *
  * If @a ctx->cancel_func is non-NULL, invoke it with @a
  * ctx->cancel_baton at various points during the operation.  If it
@@ -4041,7 +4042,7 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
 svn_error_t *
 svn_client_cleanup2(const char *dir,
                     svn_boolean_t remove_unversioned_children,
-                    svn_boolean_t no_ignore,
+                    svn_boolean_t remove_ignored_children,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *scratch_pool);
 

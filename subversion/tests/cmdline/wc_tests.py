@@ -222,7 +222,7 @@ def update_through_unversioned_symlink(sbox):
 
 @Issue(3549)
 def cleanup_unversioned_items(sbox):
-  """cleanup --remove-unversioned / --no-ignore"""
+  """cleanup --remove-unversioned / --remove-ignored"""
 
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
@@ -277,8 +277,7 @@ def cleanup_unversioned_items(sbox):
         'D         file_foo\n',
   ]
   svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
-                                     [], 'cleanup', '--remove-unversioned',
-                                     '--no-ignore')
+                                     [], 'cleanup', '--remove-ignored')
   expected_output = [
         ' M      .\n',
   ]

@@ -241,6 +241,7 @@ typedef struct svn_cl__opt_state_t
   apr_array_header_t* search_patterns; /* pattern arguments for --search */
   svn_boolean_t mergeinfo_log;     /* show log message in mergeinfo command */
   svn_boolean_t remove_unversioned;/* remove unversioned items */
+  svn_boolean_t remove_ignored;    /* remove ignored items */
 } svn_cl__opt_state_t;
 
 

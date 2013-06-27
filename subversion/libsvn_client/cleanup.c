@@ -44,6 +44,7 @@
 
 struct remove_unversioned_items_baton
 {
+  svn_boolean_t remove_unversioned_items;
   svn_boolean_t remove_ignored_items;
   svn_wc_notify_func2_t notify_func;
   void *notify_baton;
@@ -67,7 +68,12 @@ remove_unversioned_items(void *baton,
       if (!b->remove_ignored_items)
         return SVN_NO_ERROR;
     }
-  else if (status->node_status != svn_wc_status_unversioned)
+  else if (status->node_status == svn_wc_status_unversioned)
+    {
+      if (!b->remove_unversioned_items)
+        return SVN_NO_ERROR;
+    }
+  else
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_io_check_path(local_abspath, &kind_on_disk, scratch_pool));
@@ -98,7 +104,7 @@ remove_unversioned_items(void *baton,
 svn_error_t *
 svn_client_cleanup2(const char *path,
                     svn_boolean_t remove_unversioned_children,
-                    svn_boolean_t no_ignore,
+                    svn_boolean_t remove_ignored_children,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *scratch_pool)
 {
@@ -117,11 +123,12 @@ svn_client_cleanup2(const char *path,
   if (err)
     return svn_error_trace(err);
  
-  if (remove_unversioned_children)
+  if (remove_unversioned_children || remove_ignored_children)
     {
       struct remove_unversioned_items_baton b;
 
-      b.remove_ignored_items = no_ignore;
+      b.remove_unversioned_items = remove_unversioned_children;
+      b.remove_ignored_items = remove_ignored_children;
       b.notify_func = ctx->notify_func2;
       b.notify_baton = ctx->notify_baton2;
       b.cancel_func = ctx->cancel_func;
@@ -129,7 +136,7 @@ svn_client_cleanup2(const char *path,
       SVN_ERR(svn_wc_walk_status(ctx->wc_ctx, local_abspath,
                                  svn_depth_infinity,
                                  TRUE,  /* get all */
-                                 no_ignore,
+                                 remove_ignored_children,
                                  TRUE,  /* ignore textmods */
                                  NULL,  /* use default ignore patterns */
                                  remove_unversioned_items, &b,
