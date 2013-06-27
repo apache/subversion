@@ -135,7 +135,8 @@ typedef enum svn_cl__longopt_t {
   opt_search,
   opt_search_and,
   opt_mergeinfo_log,
-  opt_remove_unversioned
+  opt_remove_unversioned,
+  opt_remove_ignored
 } svn_cl__longopt_t;
 
 
@@ -385,6 +386,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("show revision log message, author and date")},
   {"remove-unversioned", opt_remove_unversioned, 0,
                        N_("remove unversioned items")},
+  {"remove-ignored", opt_remove_ignored, 0, N_("remove ignored items")},
 
   /* Long-opt Aliases
    *
@@ -494,10 +496,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "unfinished operations, etc.\n"
      "usage: cleanup [WCPATH...]\n"
      "\n"
-     "  If the --remove-unversioned option is given, also remove unversioned\n"
-     "  items within WCPATH. If --no-ignore is also given, disregard any\n"
-     "  ignore patterns and remove ignored unversioned items as well.\n"),
-    {opt_merge_cmd, opt_remove_unversioned, opt_no_ignore} },
+     "  If the --remove-unversioned option is given, remove unversioned\n"
+     "  items within WCPATH. If --remove-ignored is given, remove ignored\n"
+     "  unversioned items within WCPATH.\n"),
+    {opt_merge_cmd, opt_remove_unversioned, opt_remove_ignored} },
 
   { "commit", svn_cl__commit, {"ci"},
     N_("Send changes from your working copy to the repository.\n"
@@ -2291,6 +2293,10 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         add_search_pattern_to_latest_group(&opt_state, utf8_opt_arg, pool);
       case opt_remove_unversioned:
         opt_state.remove_unversioned = TRUE;
+        break;
+      case opt_remove_ignored:
+        opt_state.remove_ignored = TRUE;
+        break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */

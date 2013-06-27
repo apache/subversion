@@ -50,11 +50,6 @@ svn_cl__cleanup(apr_getopt_t *os,
   apr_pool_t *subpool;
   int i;
 
-  if (opt_state->no_ignore && !opt_state->remove_unversioned)
-    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                            _("'--no-ignore' option only valid with "
-                              "'--remove-unversioned' option"));
-
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
                                                       ctx, FALSE, pool));
@@ -75,7 +70,7 @@ svn_cl__cleanup(apr_getopt_t *os,
       svn_pool_clear(subpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
       err = svn_client_cleanup2(target, opt_state->remove_unversioned,
-                                opt_state->no_ignore, ctx, subpool);
+                                opt_state->remove_ignored, ctx, subpool);
       if (err && err->apr_err == SVN_ERR_WC_LOCKED)
         {
           const char *target_abspath;
