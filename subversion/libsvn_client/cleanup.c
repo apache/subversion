@@ -153,10 +153,14 @@ cleanup_status_walk(void *baton,
       SVN_ERR(svn_io_check_path(local_abspath, &kind_on_disk, scratch_pool));
       if (kind_on_disk == svn_node_dir)
         {
-          notify = svn_wc_create_notify(local_abspath,
-                                        svn_wc_notify_cleanup_external,
-                                        scratch_pool);
-          (*b->ctx->notify_func2)(b->ctx->notify_baton2, notify, scratch_pool);
+          if (b->ctx->notify_func2)
+            {
+              notify = svn_wc_create_notify(local_abspath,
+                                            svn_wc_notify_cleanup_external,
+                                            scratch_pool);
+              (*b->ctx->notify_func2)(b->ctx->notify_baton2, notify,
+                                      scratch_pool);
+            }
 
           err = do_cleanup(local_abspath, b->include_externals,
                             b->remove_unversioned_items,
@@ -204,10 +208,13 @@ cleanup_status_walk(void *baton,
         return SVN_NO_ERROR;
     }
 
-  notify = svn_wc_create_notify(local_abspath, svn_wc_notify_delete,
-                                scratch_pool);
-  notify->kind = kind_on_disk;
-  (*b->ctx->notify_func2)(b->ctx->notify_baton2, notify, scratch_pool);
+  if (b->ctx->notify_func2)
+    {
+      notify = svn_wc_create_notify(local_abspath, svn_wc_notify_delete,
+                                    scratch_pool);
+      notify->kind = kind_on_disk;
+      (*b->ctx->notify_func2)(b->ctx->notify_baton2, notify, scratch_pool);
+    }
 
   return SVN_NO_ERROR;
 }
