@@ -371,11 +371,9 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "Please run 'svn update' instead.")},
   {"include-externals", opt_include_externals, 0,
-                       N_("Also commit file and dir externals reached by\n"
+                       N_("also operate on externals defined by\n"
                        "                             "
-                       "recursion. This does not include externals with a\n"
-                       "                             "
-                       "fixed revision. (See the svn:externals property)")},
+                       "svn:externals properties")},
   {"show-inherited-props", opt_show_inherited_props, 0,
                        N_("retrieve target's inherited properties")},
   {"search", opt_search, 1,
@@ -508,7 +506,11 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
        "  A log message must be provided, but it can be empty.  If it is not\n"
        "  given by a --message or --file option, an editor will be started.\n"
        "  If any targets are (or contain) locked items, those will be\n"
-       "  unlocked after a successful commit.\n"),
+       "  unlocked after a successful commit.\n"
+       "\n"
+       "  If --include-externals is given, also commit file and directory\n"
+       "  externals reached by recursion. Do not commit externals with a\n"
+       "  fixed revision.\n"),
     {'q', 'N', opt_depth, opt_targets, opt_no_unlock, SVN_CL__LOG_MSG_OPTIONS,
      opt_changelist, opt_keep_changelists, opt_include_externals} },
 
@@ -660,8 +662,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    Size (in bytes)\n"
      "    Date and time of the last commit\n"),
     {'r', 'v', 'R', opt_depth, opt_incremental, opt_xml,
-     opt_include_externals },
-    {{opt_include_externals, N_("include externals definitions")}} },
+     opt_include_externals}, },
 
   { "lock", svn_cl__lock, {0}, N_
     ("Lock working copy paths or URLs in the repository, so that\n"
