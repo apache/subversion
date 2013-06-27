@@ -4028,10 +4028,10 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
  * If @a include_externals is @c TRUE, recurse into externals and clean
  * them up as well.
  *
- * If @a remove_unversioned_children is @c TRUE, remove unversioned children
- * of @a dir after successfull working copy cleanup.
- * If @a remove_ignored_children is @c TRUE, remove ignored unversioned children
- * of @a dir after successfull working copy cleanup.
+ * If @a remove_unversioned_items is @c TRUE, remove unversioned items
+ * in @a dir after successfull working copy cleanup.
+ * If @a remove_ignored_items is @c TRUE, remove ignored unversioned items
+ * in @a dir after successfull working copy cleanup.
  *
  * When asked to remove unversioned or ignored items, and the working copy
  * is already locked via a different client or WC context than @a ctx, return
@@ -4051,8 +4051,8 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
 svn_error_t *
 svn_client_cleanup2(const char *dir,
                     svn_boolean_t include_externals,
-                    svn_boolean_t remove_unversioned_children,
-                    svn_boolean_t remove_ignored_children,
+                    svn_boolean_t remove_unversioned_items,
+                    svn_boolean_t remove_ignored_items,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *scratch_pool);
 

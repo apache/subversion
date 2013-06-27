@@ -211,8 +211,8 @@ cleanup_status_walk(void *baton,
 svn_error_t *
 svn_client_cleanup2(const char *path,
                     svn_boolean_t include_externals,
-                    svn_boolean_t remove_unversioned_children,
-                    svn_boolean_t remove_ignored_children,
+                    svn_boolean_t remove_unversioned_items,
+                    svn_boolean_t remove_ignored_items,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *scratch_pool)
 {
@@ -224,7 +224,7 @@ svn_client_cleanup2(const char *path,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
   SVN_ERR(do_cleanup(local_abspath, include_externals,
-                     remove_unversioned_children, remove_ignored_children,
+                     remove_unversioned_items, remove_ignored_items,
                      ctx, scratch_pool));
 
   return SVN_NO_ERROR;
