@@ -53,6 +53,12 @@ import org.apache.subversion.javahl.callback.*;
 public interface ISVNReporter
 {
     /**
+     * Release the native peer (should not depend on finalize),
+     * and abort the report if it has not been completed yet.
+     */
+    void dispose();
+
+    /**
      * Describe a working copy <code>path</code> as being at a
      * particular <code>revision</code> and having the given
      * <code>depth</code>.
