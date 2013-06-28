@@ -47,11 +47,13 @@ class RemoteSession : public SVNBase
     static jobject open(jint jretryAttempts,
                         jstring jurl, jstring juuid,
                         jstring jconfigDirectory,
+                        jobject jconfigHandler,
                         jstring jusername, jstring jpassword,
                         jobject jprompter, jobject jprogress);
     static jobject open(jint jretryAttempts,
                         const char* url, const char* uuid,
                         const char* configDirectory,
+                        jobject jconfigHandler,
                         const char* username, const char* password,
                         Prompter* prompter, jobject jprogress);
     ~RemoteSession();
@@ -108,6 +110,7 @@ class RemoteSession : public SVNBase
     RemoteSession(jobject*, int retryAttempts,
                   const char* url, const char* uuid,
                   const char* configDirectory,
+                  jobject jconfigHandler,
                   const char* username, const char* password,
                   Prompter* prompter, jobject jprogress);
 
