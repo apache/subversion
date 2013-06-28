@@ -66,12 +66,14 @@ public class SVNRemoteTests extends SVNTests
         thisTest = new OneTest();
     }
 
-    public static ISVNRemote getSession(String url, String configDirectory)
+    public static ISVNRemote getSession(String url, String configDirectory,
+                                        ConfigEvent configHandler)
     {
         try
         {
             RemoteFactory factory = new RemoteFactory();
             factory.setConfigDirectory(configDirectory);
+            factory.setConfigEventHandler(configHandler);
             factory.setUsername(USERNAME);
             factory.setPassword(PASSWORD);
             factory.setPrompt(new DefaultPromptUserPassword());
@@ -88,7 +90,7 @@ public class SVNRemoteTests extends SVNTests
 
     private ISVNRemote getSession()
     {
-        return getSession(getTestRepoUrl(), super.conf.getAbsolutePath());
+        return getSession(getTestRepoUrl(), super.conf.getAbsolutePath(), null);
     }
 
     /**
@@ -107,7 +109,7 @@ public class SVNRemoteTests extends SVNTests
         try
         {
             session = new RemoteFactory(
-                super.conf.getAbsolutePath(),
+                super.conf.getAbsolutePath(), null,
                 USERNAME, PASSWORD,
                 new DefaultPromptUserPassword(), null)
                 .openRemoteSession(getTestRepoUrl());
@@ -745,5 +747,40 @@ public class SVNRemoteTests extends SVNTests
 
         assertEquals(0, receiver.logs.size());
         assertTrue(exception);
+    }
+
+    public void testConfigHandler() throws Exception
+    {
+        ConfigEvent handler = new ConfigEvent()
+            {
+                public void onLoad(ISVNConfig cfg)
+                {
+                    //System.out.println("config:");
+                    onecat(cfg.config());
+                    //System.out.println("servers:");
+                    onecat(cfg.servers());
+                }
+
+                private void onecat(ISVNConfig.Category cat)
+                {
+                    for (String sec : cat.sections()) {
+                        //System.out.println("  [" + sec + "]");
+                        ISVNConfig.Enumerator en = new ISVNConfig.Enumerator()
+                            {
+                                public void option(String name, String value)
+                                {
+                                    //System.out.println("    " + name
+                                    //                   + " = " + value);
+                                }
+                            };
+                        cat.enumerate(sec, en);
+                    }
+                }
+            };
+
+        ISVNRemote session = getSession(getTestRepoUrl(),
+                                        super.conf.getAbsolutePath(),
+                                        handler);
+        session.getLatestRevision(); // Make sure the configuration gets loaded
     }
 }

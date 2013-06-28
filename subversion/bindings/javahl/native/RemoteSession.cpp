@@ -63,6 +63,7 @@ jobject
 RemoteSession::open(jint jretryAttempts,
                     jstring jurl, jstring juuid,
                     jstring jconfigDirectory,
+                    jobject jconfigHandler,
                     jstring jusername, jstring jpassword,
                     jobject jprompter, jobject jprogress)
 {
@@ -80,9 +81,10 @@ RemoteSession::open(jint jretryAttempts,
     return NULL;
   env->DeleteLocalRef(juuid);
 
-  JNIStringHolder configDirectory(jconfigDirectory);
+  Path configDirectory(jconfigDirectory, requestPool);
   if (JNIUtil::isExceptionThrown())
     return NULL;
+  SVN_JNI_ERR(configDirectory.error_occurred(), NULL);
   env->DeleteLocalRef(jconfigDirectory);
 
   JNIStringHolder usernameStr(jusername);
@@ -104,7 +106,8 @@ RemoteSession::open(jint jretryAttempts,
     }
 
   jobject jremoteSession = open(
-      jretryAttempts, url.c_str(), uuid, configDirectory,
+      jretryAttempts, url.c_str(), uuid,
+      configDirectory.c_str(), jconfigHandler,
       usernameStr, passwordStr, prompter, jprogress);
   if (JNIUtil::isExceptionThrown() || !jremoteSession)
     {
@@ -117,7 +120,7 @@ RemoteSession::open(jint jretryAttempts,
 jobject
 RemoteSession::open(jint jretryAttempts,
                     const char* url, const char* uuid,
-                    const char* configDirectory,
+                    const char* configDirectory, jobject jconfigHandler,
                     const char*  usernameStr, const char*  passwordStr,
                     Prompter* prompter, jobject jprogress)
 {
@@ -133,7 +136,8 @@ RemoteSession::open(jint jretryAttempts,
 
   jobject jthis_out = NULL;
   RemoteSession* session = new RemoteSession(
-      &jthis_out, jretryAttempts, url, uuid, configDirectory,
+      &jthis_out, jretryAttempts, url, uuid,
+      configDirectory, jconfigHandler,
       usernameStr, passwordStr, prompter, jprogress);
   if (JNIUtil::isJavaExceptionThrown() || !session)
     {
@@ -159,6 +163,7 @@ namespace{
 RemoteSession::RemoteSession(jobject* jthis_out, int retryAttempts,
                              const char* url, const char* uuid,
                              const char* configDirectory,
+                             jobject jconfigHandler,
                              const char*  username, const char*  password,
                              Prompter* prompter, jobject jprogress)
   : m_session(NULL), m_context(NULL)
@@ -185,7 +190,7 @@ RemoteSession::RemoteSession(jobject* jthis_out, int retryAttempts,
     return;
 
   m_context = new RemoteSessionContext(
-      jremoteSession, pool, configDirectory,
+      jremoteSession, pool, configDirectory, jconfigHandler,
       username, password, prompter, jprogress);
   if (JNIUtil::isJavaExceptionThrown())
     return;
@@ -680,7 +685,8 @@ build_string_array(const Iterator& iter,
 void
 RemoteSession::getLog(jobject jpaths,
                       jlong jstartrev, jlong jendrev, jint jlimit,
-                      jboolean jstop_on_copy, jboolean jdiscover_changed_paths,
+                      jboolean jstrict_node_history,
+                      jboolean jdiscover_changed_paths,
                       jboolean jinclude_merged_revisions,
                       jobject jrevprops, jobject jlog_callback)
 {
@@ -706,7 +712,7 @@ RemoteSession::getLog(jobject jpaths,
                               svn_revnum_t(jstartrev), svn_revnum_t(jendrev),
                               int(jlimit),
                               bool(jdiscover_changed_paths),
-                              bool(jstop_on_copy),
+                              bool(jstrict_node_history),
                               bool(jinclude_merged_revisions),
                               revprops,
                               receiver.callback, &receiver,

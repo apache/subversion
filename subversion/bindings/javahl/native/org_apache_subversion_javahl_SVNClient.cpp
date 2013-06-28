@@ -1634,6 +1634,21 @@ Java_org_apache_subversion_javahl_SVNClient_setConfigDirectory
   cl->getClientContext().setConfigDirectory(configDir);
 }
 
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNClient_setConfigEventHandler
+(JNIEnv *env, jobject jthis, jobject jconfigHandler)
+{
+  JNIEntry(SVNClient, setConfigDirectory);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return;
+    }
+
+  cl->getClientContext().setConfigCallback(jconfigHandler);
+}
+
 JNIEXPORT jstring JNICALL
 Java_org_apache_subversion_javahl_SVNClient_getConfigDirectory
 (JNIEnv *env, jobject jthis)

@@ -361,7 +361,7 @@ public interface ISVNRemote
      * <code>callback</code> the list of changed paths in that
      * revision.
      * <p>
-     * If <code>stopOnCopy</code> is set, copy history will not be
+     * If <code>strictNodeHistory</code> is set, copy history will not be
      * traversed (if any exists) when harvesting the revision logs for
      * each path.
      * <p>
@@ -395,7 +395,7 @@ public interface ISVNRemote
      */
     void getLog(Iterable<String> paths,
                 long startRevision, long endRevision, int limit,
-                boolean stopOnCopy, boolean discoverPath,
+                boolean strictNodeHistory, boolean discoverPath,
                 boolean includeMergedRevisions,
                 Iterable<String> revisionProperties,
                 LogMessageCallback callback)

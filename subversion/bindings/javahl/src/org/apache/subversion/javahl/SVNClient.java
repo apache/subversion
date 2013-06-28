@@ -573,6 +573,8 @@ public class SVNClient implements ISVNClient
     public native void setConfigDirectory(String configDir)
             throws ClientException;
 
+    public native void setConfigEventHandler(ConfigEvent configHandler);
+
     public native String getConfigDirectory()
             throws ClientException;
 
