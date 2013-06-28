@@ -50,6 +50,7 @@ class EnumMapper
   static int toLogLevel(jobject jLogLevel);
   static svn_node_kind_t toNodeKind(jobject jNodeKind);
   static svn_checksum_kind_t toChecksumKind(jobject jChecksumKind);
+  static svn_tristate_t toTristate(jobject jTristate);
 
   /* Converting from C enum's */
   static jint mapCommitMessageStateFlags(apr_byte_t flags);

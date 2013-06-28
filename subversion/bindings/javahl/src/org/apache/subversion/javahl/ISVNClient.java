@@ -803,6 +803,12 @@ public interface ISVNClient
     void setConfigDirectory(String configDir) throws ClientException;
 
     /**
+     * Set an event handler that will be called every time the
+     * configuration is loaded.
+     */
+    void setConfigEventHandler(ConfigEvent configHandler);
+
+    /**
      * Get the configuration directory
      * @return  the directory
      * @throws ClientException

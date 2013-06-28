@@ -164,7 +164,7 @@ public class RemoteSession extends JNIObject implements ISVNRemote
 
     public native void getLog(Iterable<String> paths,
                               long startRevision, long endRevision, int limit,
-                              boolean stopOnCopy, boolean discoverPath,
+                              boolean strictNodeHistory, boolean discoverPath,
                               boolean includeMergedRevisions,
                               Iterable<String> revisionProperties,
                               LogMessageCallback callback)

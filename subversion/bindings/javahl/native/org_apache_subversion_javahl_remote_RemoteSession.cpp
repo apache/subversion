@@ -235,7 +235,7 @@ JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_remote_RemoteSession_getLog(
     JNIEnv *env, jobject jthis, jobject jpaths,
     jlong jstartrev, jlong jendrev, jint jlimit,
-    jboolean jstop_on_copy, jboolean jdiscover_changed_paths,
+    jboolean jstrict_node_history, jboolean jdiscover_changed_paths,
     jboolean jinclude_merged_revisions,
     jobject jrevprops, jobject jlog_callback)
 {
@@ -244,7 +244,7 @@ Java_org_apache_subversion_javahl_remote_RemoteSession_getLog(
   CPPADDR_NULL_PTR(ras,);
 
   ras->getLog(jpaths, jstartrev, jendrev, jlimit,
-              jstop_on_copy, jdiscover_changed_paths,
+              jstrict_node_history, jdiscover_changed_paths,
               jinclude_merged_revisions,
               jrevprops, jlog_callback);
 }
