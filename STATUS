@@ -167,17 +167,17 @@ Candidate changes:
    Votes:
      +1: stsp, brane
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1497551
    Fix the Accept-Encoding header format
    Justification:
      When IIS is used as a reverse-proxy, it chokes. And we should use the
      format from the specification anyways :-P
    Votes:
-     +1: gstein, brane
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: gstein, brane, danielsh
 
