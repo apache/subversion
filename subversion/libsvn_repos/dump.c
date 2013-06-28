@@ -1350,6 +1350,42 @@ notify_verification_error(svn_revnum_t rev,
   notify_func(notify_baton, notify_failure, pool);
 }
 
+static void
+notify_verification_summary(svn_error_t *err,
+                            svn_repos_notify_func_t notify_func,
+                            void *notify_baton,
+                            apr_pool_t *pool)
+{
+  svn_repos_notify_t *notify_failure;
+
+  if (notify_func == NULL)
+    return;
+
+  notify_failure = svn_repos_notify_create(svn_repos_notify_summary, pool);
+  notify_failure->err = err;
+  notify_failure->revision = SVN_INVALID_REVNUM;
+  notify_func(notify_baton, notify_failure, pool);
+}
+
+static void
+notify_verification_error_summary(svn_revnum_t rev,
+                                  svn_error_t *err,
+                                  svn_repos_notify_func_t notify_func,
+                                  void *notify_baton,
+                                  apr_pool_t *pool)
+{
+  svn_repos_notify_t *notify_failure;
+
+  if (notify_func == NULL)
+    return;
+
+  notify_failure = svn_repos_notify_create(svn_repos_notify_failure_summary,
+                                           pool);
+  notify_failure->err = err;
+  notify_failure->revision = rev;
+  notify_func(notify_baton, notify_failure, pool);
+}
+
 /* Verify revision REV in file system FS. */
 static svn_error_t *
 verify_one_revision(svn_fs_t *fs,
@@ -1423,6 +1459,38 @@ verify_fs2_notify_func(svn_revnum_t revision,
                             notify_baton->notify, pool);
 }
 
+/* Structure for populating the errors. */
+struct error_list
+{
+  svn_revnum_t rev;
+  svn_error_t *err;
+};
+
+/* Pool cleanup function to clear an svn_error_t *. */
+static apr_status_t err_cleanup(void *data)
+{
+  svn_error_clear(data);
+
+  return APR_SUCCESS;
+}
+
+/* Populate the error summary. */
+static void
+populate_summary(apr_array_header_t **error_summary,
+                 svn_revnum_t rev,
+                 svn_error_t *err,
+                 apr_pool_t *scratch_pool)
+{
+  struct error_list *el = apr_palloc(scratch_pool, sizeof(*el));
+
+  el->rev = rev;
+  el->err = svn_error_dup(err);
+
+  apr_pool_cleanup_register(scratch_pool, el->err, err_cleanup,
+                            apr_pool_cleanup_null);
+  APR_ARRAY_PUSH(*error_summary, struct error_list *) = el;
+}
+
 svn_error_t *
 svn_repos_verify_fs3(svn_repos_t *repos,
                      svn_revnum_t start_rev,
@@ -1442,6 +1510,8 @@ svn_repos_verify_fs3(svn_repos_t *repos,
   svn_fs_progress_notify_func_t verify_notify = NULL;
   struct verify_fs2_notify_func_baton_t *verify_notify_baton = NULL;
   svn_error_t *err;
+  apr_array_header_t *error_summary;
+  int i;
   svn_boolean_t found_corruption = FALSE;
 
   /* Determine the current youngest revision of the filesystem. */
@@ -1504,6 +1574,8 @@ svn_repos_verify_fs3(svn_repos_t *repos,
       svn_error_clear(err);
     }
 
+  error_summary = apr_array_make(pool, 0, sizeof(struct error_list *));
+          
   for (rev = start_rev; rev <= end_rev; rev++)
     {
       svn_pool_clear(iterpool);
@@ -1517,18 +1589,36 @@ svn_repos_verify_fs3(svn_repos_t *repos,
           found_corruption = TRUE;
           notify_verification_error(rev, err, notify_func, notify_baton,
                                     iterpool);
-          svn_error_clear(err);
 
           if (keep_going)
-            continue;
+            {
+              populate_summary(&error_summary, rev, err, pool);
+              svn_error_clear(err);
+              continue;
+            }
           else
-            break;
+            {
+              svn_error_clear(err);
+              break;
+            }
         }
 
       if (notify_func)
         {
           notify->revision = rev;
           notify_func(notify_baton, notify, iterpool);
+        }
+    }
+
+  /* Show the summary. */
+  if (notify_func && keep_going)
+    {
+      notify_verification_summary(err, notify_func, notify_baton, iterpool);
+      for(i=0; i < error_summary->nelts; i++)
+        {
+          struct error_list *err_list = APR_ARRAY_IDX(error_summary, i, struct error_list *);
+          notify_verification_error_summary(err_list->rev, err_list->err, notify_func, notify_baton,
+                                            iterpool);
         }
     }
 
