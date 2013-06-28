@@ -4254,6 +4254,9 @@ typedef void (*svn_wc_status_func_t)(void *baton,
  * @a ignore_patterns is an array of file patterns matching
  * unversioned files to ignore for the purposes of status reporting,
  * or @c NULL if the default set of ignorable file patterns should be used.
+ * Patterns from #SVN_PROP_IGNORE (and, as of 1.8,
+ * #SVN_PROP_INHERITABLE_IGNORES) properties are always used, even if not
+ * specified in @a ignore_patterns.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton while walking
  * to determine if the client has canceled the operation.
