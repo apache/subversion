@@ -57,6 +57,17 @@ public class RemoteSession extends JNIObject implements ISVNRemote
             }
             editorReference = null;
         }
+        if (reporterReference != null)
+        {
+            // Deactivate the open reporter
+            ISVNReporter rp = reporterReference.get();
+            if (rp != null)
+            {
+                rp.dispose();
+                reporterReference.clear();
+            }
+            reporterReference = null;
+        }
         nativeDispose();
     }
 
@@ -114,13 +125,10 @@ public class RemoteSession extends JNIObject implements ISVNRemote
                                       boolean keepLocks)
             throws ClientException
     {
-        if (editorReference != null && editorReference.get() != null)
-            throw new IllegalStateException("An editor is already active");
-
+        check_inactive(editorReference, reporterReference);
         ISVNEditor ed =
             CommitEditor.createInstance(this, revisionProperties,
                                         commitCallback, lockTokens, keepLocks);
-
         if (editorReference != null)
             editorReference.clear();
         editorReference = new WeakReference<ISVNEditor>(ed);
@@ -235,18 +243,19 @@ public class RemoteSession extends JNIObject implements ISVNRemote
     private class RemoteSessionContext extends OperationContext {}
 
     /*
-     * A reference to the current open editor. We need this in order
+     * A reference to the current active editor. We need this in order
      * to dispose/abort the editor when the session is disposed. And
-     * furthermore, there can be only one editor active at any time.
+     * furthermore, there can be only one editor or reporter active at
+     * any time.
      */
     private WeakReference<ISVNEditor> editorReference;
 
     /*
-     * The commit editor callse this when disposed to clear the
+     * The commit editor calls this when disposed to clear the
      * reference. Note that this function will be called during our
      * dispose, so make sure they don't step on each others' toes.
      */
-    void disposeEditor(CommitEditor editor)
+    void disposeEditor(ISVNEditor editor)
     {
         if (editorReference == null)
             return;
@@ -256,6 +265,31 @@ public class RemoteSession extends JNIObject implements ISVNRemote
         if (ed != editor)
             throw new IllegalStateException("Disposing unknown editor");
         editorReference.clear();
+    }
+
+    /*
+     * A reference to the current active reporter. We need this in
+     * order to dispose/abort the report when the session is
+     * disposed. And furthermore, there can be only one reporter or
+     * editor active at any time.
+     */
+    private WeakReference<ISVNReporter> reporterReference;
+
+    /*
+     * The update reporter calls this when disposed to clear the
+     * reference. Note that this function will be called during our
+     * dispose, so make sure they don't step on each others' toes.
+     */
+    void disposeReporter(ISVNReporter reporter)
+    {
+        if (reporterReference == null)
+            return;
+        ISVNReporter rp = reporterReference.get();
+        if (rp == null)
+            return;
+        if (rp != reporter)
+            throw new IllegalStateException("Disposing unknown reporter");
+        reporterReference.clear();
     }
 
     /*
@@ -269,5 +303,15 @@ public class RemoteSession extends JNIObject implements ISVNRemote
             } catch (UnsupportedOperationException ex) {
                 // ignored
             }
+    }
+
+    private final static
+        void check_inactive(WeakReference<ISVNEditor> editorReference,
+                            WeakReference<ISVNReporter> reporterReference)
+    {
+        if (editorReference != null && editorReference.get() != null)
+            throw new IllegalStateException("An editor is already active");
+        if (reporterReference != null && reporterReference.get() != null)
+            throw new IllegalStateException("A reporter is already active");
     }
 }

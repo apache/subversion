@@ -36,7 +36,11 @@ import org.apache.subversion.javahl.ClientException;
  */
 public class UpdateReporter extends JNIObject implements ISVNReporter
 {
-    public void dispose() {/* TODO: */}
+    public void dispose()
+    {
+        session.disposeReporter(this);
+        nativeDispose();
+    }
 
     public void setPath(String path,
                         long revision,
@@ -74,6 +78,11 @@ public class UpdateReporter extends JNIObject implements ISVNReporter
         throw new RuntimeException("Not implemented: abortReport");
     }
 
+    /*
+     * Wrapped private native implementation declarations.
+     */
+    private /*TODO:native*/ void nativeDispose() {;}
+
     /**
      * This constructor is called from the factory to get an instance.
      */
@@ -86,4 +95,3 @@ public class UpdateReporter extends JNIObject implements ISVNReporter
     /** Stores a reference to the session that created this reporter. */
     protected RemoteSession session;
 }
-
