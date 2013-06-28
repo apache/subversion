@@ -2739,7 +2739,7 @@ setup_update_report_headers(serf_bucket_t *headers,
   if (report->sess->using_compression)
     {
       serf_bucket_headers_setn(headers, "Accept-Encoding",
-                               "gzip;svndiff1;q=0.9,svndiff;q=0.8");
+                               "gzip,svndiff1;q=0.9,svndiff;q=0.8");
     }
   else
     {
