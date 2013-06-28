@@ -1581,6 +1581,7 @@ SVNClient::openRemoteSession(const char* path, int retryAttempts)
     jobject jremoteSession = RemoteSession::open(
         retryAttempts, path_info.url.c_str(), path_info.uuid.c_str(),
         context.getConfigDirectory(),
+        context.getConfigCallback(),
         context.getUsername(), context.getPassword(),
         prompter, jctx);
     if (JNIUtil::isJavaExceptionThrown())
