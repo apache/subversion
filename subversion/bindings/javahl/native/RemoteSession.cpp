@@ -685,7 +685,8 @@ build_string_array(const Iterator& iter,
 void
 RemoteSession::getLog(jobject jpaths,
                       jlong jstartrev, jlong jendrev, jint jlimit,
-                      jboolean jstop_on_copy, jboolean jdiscover_changed_paths,
+                      jboolean jstrict_node_history,
+                      jboolean jdiscover_changed_paths,
                       jboolean jinclude_merged_revisions,
                       jobject jrevprops, jobject jlog_callback)
 {
@@ -711,7 +712,7 @@ RemoteSession::getLog(jobject jpaths,
                               svn_revnum_t(jstartrev), svn_revnum_t(jendrev),
                               int(jlimit),
                               bool(jdiscover_changed_paths),
-                              bool(jstop_on_copy),
+                              bool(jstrict_node_history),
                               bool(jinclude_merged_revisions),
                               revprops,
                               receiver.callback, &receiver,
