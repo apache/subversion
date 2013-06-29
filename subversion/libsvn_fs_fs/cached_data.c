@@ -327,7 +327,7 @@ get_node_revision_body(node_revision_t **noderev_p,
       /* noderevs in rev / pack files can be cached */
       const svn_fs_fs__id_part_t *rev_item = svn_fs_fs__id_rev_item(id);
       pair_cache_key_t key;
-    
+
       /* First, try a noderevs container cache lookup. */
       if (   is_packed_rev(fs, rev_item->revision)
           && ffd->noderevs_container_cache)
@@ -350,7 +350,7 @@ get_node_revision_body(node_revision_t **noderev_p,
 
       key.revision = rev_item->revision;
       key.second = rev_item->number;
-    
+
       /* Not found or not applicable. Try a noderev cache lookup.
        * If that succeeds, we are done here. */
       if (ffd->node_revision_cache)
@@ -670,7 +670,7 @@ create_rep_state_body(rep_state_t **rep_state,
       && rep->revision < ffd->min_unpacked_rev
       && (   ((*shared_file)->revision / ffd->max_files_per_dir)
           == (rep->revision / ffd->max_files_per_dir));
-      
+
   representation_cache_key_t key;
   key.revision = rep->revision;
   key.is_packed = rep->revision < ffd->min_unpacked_rev;
@@ -730,7 +730,7 @@ create_rep_state_body(rep_state_t **rep_state,
                                                   offset, pool));
               in_container = entry->type == SVN_FS_FS__ITEM_TYPE_REPS_CONT;
             }
-            
+
           if (in_container)
             {
               /* construct a container rep header */

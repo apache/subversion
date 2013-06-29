@@ -1339,7 +1339,7 @@ write_changes_containers(pack_context_t *context,
       SVN_ERR_ASSERT(list_index == sub_items->nelts);
       block_left -= estimated_size;
       estimated_addition += estimated_size;
-      
+
       APR_ARRAY_PUSH(sub_items, svn_fs_fs__id_part_t) = entry->items[0];
 
       svn_pool_clear(iterpool);
@@ -1599,7 +1599,7 @@ write_l2p_index(pack_context_t *context,
           /* make ITEM_COUNT point the next sub-item to use+1 */
           --ordered->entry->item_count;
         }
-        
+
       /* process remaining sub-items (if any) of that container later */
       if (ordered->entry->item_count)
         svn__priority_queue_update(queue);
@@ -1633,7 +1633,7 @@ pack_range(pack_context_t *context,
       apr_off_t offset = 0;
       apr_finfo_t finfo;
       apr_file_t *rev_file;
-      
+
       /* Get the size of the file. */
       const char *path = svn_dirent_join(context->shard_dir,
                                          apr_psprintf(revpool, "%ld",
