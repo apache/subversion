@@ -296,7 +296,7 @@ svn_fs_fs__noderevs_add(svn_fs_fs__noderevs_t *container,
 
   binary_noderev.flags = (noderev->has_mergeinfo ? NODEREV_HAS_MINFO : 0)
                        | (noderev->copyfrom_path ? NODEREV_HAS_COPYFROM : 0)
-                       | (noderev->copyroot_rev  ? NODEREV_HAS_COPYROOT : 0)
+                       | (noderev->copyroot_path  ? NODEREV_HAS_COPYROOT : 0)
                        | (noderev->created_path  ? NODEREV_HAS_CPATH : 0)
                        | (int)noderev->kind;
 
@@ -314,7 +314,7 @@ svn_fs_fs__noderevs_add(svn_fs_fs__noderevs_t *container,
       binary_noderev.copyfrom_rev = noderev->copyfrom_rev;
     }
 
-  if (noderev->copyroot_rev)
+  if (noderev->copyroot_path)
     {
       binary_noderev.copyroot_path
         = svn_fs_fs__string_table_builder_add(container->builder,
