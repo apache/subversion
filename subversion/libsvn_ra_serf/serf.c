@@ -505,9 +505,10 @@ svn_ra_serf__open(svn_ra_session_t *session,
                             _("Connection to '%s' failed"), session_URL);
   SVN_ERR(err);
 
-  /* We have set up a useful connection. If we have a proxy AND it might be busted
-     AND we switched to HTTP/1.1 (chunked requests), then probe the proxy.  */
-  if (serf_sess->using_proxy && serf_sess->busted_proxy && !serf_sess->http10)
+  /* We have set up a useful connection. If we've been told there is possibly a
+     busted proxy in our path to the server AND we switched to HTTP/1.1 (chunked
+     requests), then probe for problems in any proxy.  */
+  if (serf_sess->busted_proxy && !serf_sess->http10)
     SVN_ERR(svn_ra_serf__probe_proxy(serf_sess, pool));
 
   return SVN_NO_ERROR;
