@@ -324,30 +324,46 @@ init_hash(hash_t *hash,
   allocate_hash_members(hash, 1 << twoPower, pool);
 }
 
-/* Double the number of buckets in HASH by rehashing it based TEXT.
+/* Make HASH have at least MIN_SIZE buckets but at least double the number
+ * of buckets in HASH by rehashing it based TEXT.
  */
 static void
 grow_hash(hash_t *hash,
-          svn_stringbuf_t *text)
+          svn_stringbuf_t *text,
+          apr_size_t min_size)
 {
   hash_t copy;
   apr_size_t i;
 
-  allocate_hash_members(&copy, hash->size * 2, hash->pool);
-  copy.used = hash->used;
-  copy.shift = hash->shift - 1;
+  /* determine the new hash size */
+  apr_size_t new_size = hash->size * 2;
+  apr_size_t new_shift = hash->shift - 1;
+  while (new_size < min_size)
+    {
+      new_size *= 2;
+      --new_shift;
+    }
 
+  /* allocate new hash */
+  allocate_hash_members(&copy, new_size, hash->pool);
+  copy.used = 0;
+  copy.shift = new_shift;
+
+  /* copy / translate data */
   for (i = 0; i < hash->size; ++i)
     {
       apr_uint32_t offset = hash->offsets[i];
       if (offset != NO_OFFSET)
         {
           hash_key_t key = hash_key(text->data + offset);
-          size_t idx =  hash_to_index(&copy, key);
+          size_t idx = hash_to_index(&copy, key);
+
+          if (copy.offsets[idx] == NO_OFFSET)
+            copy.used++;
 
           copy.prefixes[idx] = hash->prefixes[i];
           copy.offsets[idx] = offset;
-          copy.last_matches[idx] = hash->last_matches[idx];
+          copy.last_matches[idx] = hash->last_matches[i];
         }
     }
 
@@ -406,7 +422,9 @@ add_new_text(svn_fs_fs__reps_builder_t *builder,
              apr_size_t len)
 {
   instruction_t instruction;
-  size_t offset;
+  apr_size_t offset;
+  apr_size_t buckets_required;
+
   if (len == 0)
     return;
 
@@ -418,6 +436,11 @@ add_new_text(svn_fs_fs__reps_builder_t *builder,
   /* add to text corpus */
   svn_stringbuf_appendbytes(builder->text, data, len);
 
+  /* expand the hash upfront to minimize the chances of collisions */
+  buckets_required = builder->hash.used + len / MATCH_BLOCKSIZE;
+  if (buckets_required * 3 >= builder->hash.size * 2)
+    grow_hash(&builder->hash, builder->text, 2 * buckets_required);
+
   /* add hash entries for the new sequence */
   for (offset = instruction.offset;
        offset + MATCH_BLOCKSIZE <= builder->text->len;
@@ -426,10 +449,15 @@ add_new_text(svn_fs_fs__reps_builder_t *builder,
       hash_key_t key = hash_key(builder->text->data + offset);
       size_t idx = hash_to_index(&builder->hash, key);
 
+      /* Don't replace hash entries that stem from the current text.
+       * This makes early matches more likely. */
+      if (builder->hash.offsets[idx] == NO_OFFSET)
+        ++builder->hash.used;
+      else if (builder->hash.offsets[idx] >= instruction.offset)
+        continue;
+
       builder->hash.offsets[idx] = offset;
       builder->hash.prefixes[idx] = builder->text->data[offset];
-      if (++builder->hash.used * 3 >= builder->hash.size * 2)
-        grow_hash(&builder->hash, builder->text);
     }
 }
 
