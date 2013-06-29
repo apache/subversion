@@ -1899,13 +1899,27 @@ p2l_page_info_copy(p2l_page_info_baton_t *baton,
                    const p2l_header_t *header,
                    const apr_off_t *offsets)
 {
-  baton->page_no = baton->offset / header->page_size;
+  /* if the requested offset is out of bounds, return info for 
+   * a zero-sized empty page right behind the last page.
+   */
+  if (baton->offset / header->page_size < header->page_count)
+    {
+      baton->page_no = baton->offset / header->page_size;
+      baton->start_offset = offsets[baton->page_no];
+      baton->next_offset = offsets[baton->page_no + 1];
+      baton->page_size = header->page_size;
+    }
+  else
+    {
+      baton->page_no = header->page_count;
+      baton->start_offset = offsets[baton->page_no];
+      baton->next_offset = offsets[baton->page_no];
+      baton->page_size = 0;
+    }
+
   baton->first_revision = header->first_revision;
-  baton->start_offset = offsets[baton->page_no];
-  baton->next_offset = offsets[baton->page_no + 1];
   baton->page_start = (apr_off_t)(header->page_size * baton->page_no);
   baton->page_count = header->page_count;
-  baton->page_size = header->page_size;
 }
 
 /* Implement svn_cache__partial_getter_func_t: extract the p2l page info
