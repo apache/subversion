@@ -225,10 +225,11 @@ load_config(svn_ra_serf__session_t *session,
                                SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
                                SVN_CONFIG_DEFAULT_OPTION_HTTP_MAX_CONNECTIONS));
 
-  SVN_ERR(svn_config_get_bool(config, &session->using_chunked_requests,
+  /* Is this proxy potentially busted? Do we need to take special care?  */
+  SVN_ERR(svn_config_get_bool(config, &session->busted_proxy,
                               SVN_CONFIG_SECTION_GLOBAL,
-                              SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS,
-                              TRUE));
+                              SVN_CONFIG_OPTION_BUSTED_PROXY,
+                              FALSE));
 
   if (config)
     server_group = svn_config_find_group(config,
@@ -287,11 +288,12 @@ load_config(svn_ra_serf__session_t *session,
                                    SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
                                    session->max_connections));
 
+      /* Do we need to take care with this proxy?  */
       SVN_ERR(svn_config_get_bool(
-               config, &session->using_chunked_requests,
+               config, &session->busted_proxy,
                server_group,
-               SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS,
-               session->using_chunked_requests));
+               SVN_CONFIG_OPTION_BUSTED_PROXY,
+               session->busted_proxy));
     }
 
   /* Don't allow the http-max-connections value to be larger than our
@@ -365,6 +367,12 @@ load_config(svn_ra_serf__session_t *session,
     {
       session->using_proxy = FALSE;
     }
+
+  /* If we're using a proxy, *and* it might be busted,
+     then disable chunked requests.  */
+  /* ### we'll switch this to dynamic shortly.  */
+  if (session->using_proxy && session->busted_proxy)
+    session->using_chunked_requests = FALSE;
 
   /* Setup authentication. */
   SVN_ERR(load_http_auth_types(pool, config, server_group,
@@ -452,6 +460,10 @@ svn_ra_serf__open(svn_ra_session_t *session,
   /* We have to assume that the server only supports HTTP/1.0. Once it's clear
      HTTP/1.1 is supported, we can upgrade. */
   serf_sess->http10 = TRUE;
+
+  /* If we switch to HTTP/1.1, then we will use chunked requests. We may disable
+     this, if we find an intervening proxy does not support chunked requests.  */
+  serf_sess->using_chunked_requests = TRUE;
 
   SVN_ERR(load_config(serf_sess, config, serf_sess->pool));
 

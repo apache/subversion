@@ -189,7 +189,11 @@ struct svn_ra_serf__session_t {
   const char *activity_collection_url;
 
   /* Are we using a proxy? */
-  int using_proxy;
+  svn_boolean_t using_proxy;
+
+  /* Should we be careful with this proxy? (some have insufficient support that
+     we need to work around).  */
+  svn_boolean_t busted_proxy;
 
   const char *proxy_username;
   const char *proxy_password;
