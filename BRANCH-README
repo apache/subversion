@@ -1,9 +1,9 @@
 Goal
 ====
 
-Before FS2 and FSFS2 will be implemented, there are a number of
-improvements that can be applied to FSFS without completely changing
-its overall data structure and algorithms.
+Before FS2 will be implemented, there are a number of improvements that can
+be applied to FSFS without completely changing its fundamental structure.
+This will result in an experimental file system FS-X [fisiks].
 
 There is a whole bunch of changes scheduled for SVN 1.9 - often building
 upon each other - that will improve the repository format in the following
@@ -13,24 +13,15 @@ aspects:
 - reduce disk I/O by 3x or more in typical scenarios
 - faster data processing and reduced interaction with the OS
 
-The key point will be to attempt all of this while keeping much of the
-code shared between old and format support.
-
 
 TODO (see also DONE section below)
 ==================================
 
-Support for mixed structure repositories
-----------------------------------------
+Turn into separate FS
+---------------------
 
-A user shall be able to run 'svnadmin upgrade' on a sharded repository
-(i.e. min format is 3) and the format7 features shall then be available
-in future commits.
-
-To that end, the format file will contain another line that tells which
-will be the first revision to use logical addressing.  We don't support
-mixed modes within a pack file.  Therefore, this first / switchover
-revision may be one not yet committed in the repository.
+Make FS-X a separate file system alongside BDB and FSFS.  Rip out all
+FSFS compatibility code.
 
 
 Internal API cleanup
@@ -42,10 +33,10 @@ function definitions to turn them into a proper API that may be useful
 to other other code (such as fsfs tools).
 
 
-Checksum all FSFS metadata elements
------------------------------------
+Checksum all metadata elements
+------------------------------
 
-All elements of an FSFS repository shall be guarded by checksums. That
+All elements of an FS-X repository shall be guarded by checksums. That
 includes indexes, noderevs etc.  Larger data structures, such as index
 files, should have checksummed sub-elements such that corrupted parts
 may be identified and potentially repaired / circumvented in a meaningful
@@ -55,34 +46,21 @@ Those checksums may be quite simple such as Adler32 because that meta-
 data can be cross-verified with other parts as well and acts only as a
 fallback to narrow down the affected parts.
 
-
-Update existing FSFS tools
---------------------------
-
-fsfs-stats, fsfsverify.py and possibly others will need to be enabled
-to format7's logical addressing.
+'svnadmin verify' shall check consistency based on those checksums.
 
 
-Extend 'svnadmin verify'
+Port existing FSFS tools
 ------------------------
 
-Format 7 provides many extra chances to verify contents plus contains
-extra indexes that must be consistent with the pack / rev files.  We
-must extend the tests to cover all that.
+fsfs-stats, fsfsverify.py and possibly others should have equivalents
+in the FS-X world.
 
 
 Optimize data ordering during pack
 ----------------------------------
 
-Some aspects that have not been implemented yet:
-
-* deltified file and directory properties reps shall be stored in
-  their deltification order, i.e. all elements of the delta chain
-  in one place (just as for deltified file and directory reps)
-* containers (see below) may favour a slightly different grouping
-
 I/O optimized copy algorithms are yet to be implemented.  The current
-code is relatively slow as it performans quasi-random I/O on the
+code is relatively slow as it performs quasi-random I/O on the
 input stream.
 
 
@@ -120,90 +98,47 @@ not be deltified against it.  From that location, the data can be forwarded
 directly via SendFile and the fulltext caches will not be used for it.
 
 Note that by making the decision contingent upon the size of the deltified
-and packed representation,  all large data that benefits from these will
-still be stored within the rev and pack files.
+and packed representation,  all large data that benefit from these (i.e.
+have smaller increments) will still be stored within the rev and pack files.
+If a future representation is smaller than the threshold, it may be
 
 /* danielsh: so if we have a file which is 20MB over many revisions, it'll
 be stored in fulltext every single time unless the configured threshold is
 changed?  Wondering if that's the best solution... */
 
 
-Binary representations
-----------------------
+Sorted binary directory representations
+---------------------------------------
 
-Since deltification already does a good job at eliminating redundancy,
-the textual representation of noderev and representation headers can
-make up 50% of the repository data.
+Lookup of entries in a directory is a frequent operation when following
+cached paths.  The represents directories as arrays sorted by entry name
+to allow for binary search during that lookup.  However, all external
+representation uses hashes and the conversion is expensive.
 
-Format 7 will optionally support binary representations for
+FS-X shall store directory representations sorted by element names and
+all use that array representation internally wherever appropriate.  This
+will minimize the conversion overhead for long directories, especially
+during transaction building.
 
-- noderevs
-- representations
-- directories
-- change lists
-
-They can be controlled by a config file setting and that setting will
-apply to new commits only.  A new svnadmin sub-command will allow for
-changing between binary and textual representation, e.g. for debugging
-purposes.
-
-
-Packed change lists
--------------------
-
-Change lists tend to be large, in some cases >20% of the repo.  Due to the
-new ordering of pack data,  the change lists can be the largest part of
-data to read for svn log.  Use our standard compression method to save
-70 .. 80% of the disk space.
-
-Packing will only be applied to binary representations of change lists
-to keep the number of possible combinations low.
-
-
-Sorted directories
-------------------
-
-Binary lookup in directory data structures is not a frequent operation in
-comparison to reading / writing them from / to disk or cache.  That not
-only reduces CPU load during e.g. transaction building but also gives us
-a deterministic repo representation without relying on stable hash order.
-
-/* danielsh: what change is this describing? sort the node-revs or reps of
- * directory members in alphabetical order by basename? */
-
-
-Containers
-----------
-
-Extend the index format support containers, i.e. map a logical item index
-to (file offset, sub-index) pairs.  The whole container will be read and
-cached and the specific item later accessed from the whole structure.
-
-Use these containers for reps, noderevs and changes.  Provide specific
-data container types for each of these item types and different item
-types cannot be put into the same container.  Containers are binaries,
-i.e. there is no textual representations of their contents.
-
-This allows for significant space savings on disk due to deltification
-amongst e.g. revprops.  More importantly, it reduces the size of the
-runtime data structures within the cache *and* reduces the number of
-cache entries (the cache is can't handle items < 500 bytes very well).
+Moreover, switch from the key/value representation to a slightly tighter
+and easier to process binary representation (validity is already guaranteed
+by checksums).
 
 
 Star-Deltification
 ------------------
 
-Most node contents are smaller than 500k, i.e. less than Txdelta 2 window.
-Those contents shall be aggregated into star-delta containers upon pack.
-This will save significant amounts of disk space, particularly in case
-of heavy branching.  Also, the data extraction is independent of the
-number of deltas, i.e. delta chain length) within the same container.
+Current implementation is incomplete. TODO: actually support & use base
+representations, optimize instruction table.
+
+Combine this with Txdelta 2 such that the corresponding windows from
+all representations get stored in a common star-delta container.
 
 
-Multiple pack stages (may not happen in f7)
--------------------------------------------
+Multiple pack stages
+--------------------
 
-Format 6 only knows one packing level - the shard.  For repositories with
+FSFS only knows one packing level - the shard.  For repositories with
 a large number of revisions, it may be more efficient to start with small
 packs (10-ish) and later pack them into larger and larger ones.
 
@@ -217,16 +152,12 @@ Opening a repository reads numerous files in db/ (besides several more in
 Combine most of them into one or two files (eg uuid|format(|fs-type?),
 current|min-unpacked-revprop).
 
-(danielsh adds: if we do this, would be nice to have 'svnadmin info' command
-that prints the equivalent of `cat fs-type uuid ../format ../db/format`; but
-that's orthogonal to all backend changes. (update: done in 1.9/trunk))
-
 
 Support for arbitrary chars in path names
 -----------------------------------------
 
-Format 6's textual item representations breaks when path names contain
-newlines.  Format 7 revisions shall escape all control chars (e.g. < 0x20)
+FSFS's textual item representations breaks when path names contain
+newlines.  FS-X revisions shall escape all control chars (e.g. < 0x20)
 in path names when using them in textual item representations.
 
 
@@ -303,4 +234,52 @@ data within the APR file buffer and put that into the cache.
 For maximum efficiency,  we will align the data blocks being read to
 multiples of the block size and allow that buffer size to be configured
 (where supported by APR).  The default block size will be raised to 64kB.
+
+
+Extend 'svnadmin verify'
+------------------------
+
+Format 7 provides many extra chances to verify contents plus contains
+extra indexes that must be consistent with the pack / rev files.  We
+must extend the tests to cover all that.
+
+
+Containers
+----------
+
+Extend the index format support containers, i.e. map a logical item index
+to (file offset, sub-index) pairs.  The whole container will be read and
+cached and the specific item later accessed from the whole structure.
+
+Use these containers for reps, noderevs and changes.  Provide specific
+data container types for each of these item types and different item
+types cannot be put into the same container.  Containers are binaries,
+i.e. there is no textual representations of their contents.
+
+This allows for significant space savings on disk due to deltification
+amongst e.g. revprops.  More importantly, it reduces the size of the
+runtime data structures within the cache *and* reduces the number of
+cache entries (the cache is can't handle items < 500 bytes very well).
+
+
+Packed change lists
+-------------------
+
+Change lists tend to be large, in some cases >20% of the repo.  Due to the
+new ordering of pack data,  the change lists can be the largest part of
+data to read for svn log.  Use our standard compression method to save
+70 .. 80% of the disk space.
+
+Packing will only be applied to binary representations of change lists
+to keep the number of possible combinations low.
+
+
+Star-Deltification
+------------------
+
+Most node contents are smaller than 500k, i.e. less than Txdelta 2 window.
+Those contents shall be aggregated into star-delta containers upon pack.
+This will save significant amounts of disk space, particularly in case
+of heavy branching.  Also, the data extraction is independent of the
+number of deltas, i.e. delta chain length) within the same container.
 
