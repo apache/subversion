@@ -322,6 +322,18 @@ svn_fs_fs__id_compare(const svn_fs_id_t *a,
   return (svn_fs_fs__id_check_related(a, b) ? 1 : -1);
 }
 
+int
+svn_fs_fs__id_part_compare(const svn_fs_fs__id_part_t *a,
+                           const svn_fs_fs__id_part_t *b)
+{
+  if (a->revision < b->revision)
+    return -1;
+  if (a->revision > b->revision)
+    return 1;
+
+  return a->number < b->number ? -1 : a->number == b->number ? 0 : 1;
+}
+
 
 
 /* Creating ID's.  */
