@@ -654,7 +654,7 @@ svn_fs_fs__extractor_drive(svn_stringbuf_t **contents,
         size = extractor->result->len - start_offset;
 
       *contents = svn_stringbuf_ncreate(extractor->result->data + start_offset,
-                                        size, result_pool)
+                                        size, result_pool);
     }
 
   return SVN_NO_ERROR;
