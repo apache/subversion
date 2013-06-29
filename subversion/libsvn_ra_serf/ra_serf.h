@@ -1341,6 +1341,14 @@ svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
 
 /** OPTIONS-related functions **/
 
+/* When running with a proxy, we may need to detect and correct for problems.
+   This probing function will send a simple OPTIONS request to detect problems
+   with the connection.  */
+svn_error_t *
+svn_ra_serf__probe_proxy(svn_ra_serf__session_t *serf_sess,
+                         apr_pool_t *scratch_pool);
+
+
 /* On HTTPv2 connections, run an OPTIONS request over CONN to fetch the
    current youngest revnum, returning it in *YOUNGEST.
 
