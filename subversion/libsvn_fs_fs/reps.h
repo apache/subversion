@@ -121,16 +121,21 @@ svn_fs_fs__reps_get(svn_fs_fs__rep_extractor_t **extractor,
                     apr_pool_t *pool);
 
 /* Let the EXTRACTOR object fetch all parts of the desired fulltext and
- * return the latter in *CONTENTS.  Allocate the result in RESULT_POOL
- * and use SCRATCH_POOL for temporary allocations.
+ * return the latter in *CONTENTS.  If SIZE is not 0, return SIZE bytes
+ * starting at offset START_OFFSET of the full contents.  If that range
+ * lies partly or completely outside the content, clip it accordingly.
+ * Allocate the result in RESULT_POOL and use SCRATCH_POOL for temporary
+ * allocations.
  *
  * Note, you may not run this inside a cache access function.
  */
 svn_error_t *
-svn_fs_fs__extractor_drive(svn_stringbuf_t **contents,
-                           svn_fs_fs__rep_extractor_t *extractor,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
+svn_fs_fs__extractor_drive(svn_stringbuf_t** contents,
+                           svn_fs_fs__rep_extractor_t* extractor,
+                           apr_size_t start_offset,
+                           apr_size_t size,
+                           apr_pool_t* result_pool,
+                           apr_pool_t* scratch_pool);
 
 /* I/O interface. */
 

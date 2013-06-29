@@ -1502,6 +1502,7 @@ read_plain_window(svn_stringbuf_t **nwin, rep_state_t *rs,
 static svn_error_t *
 read_container_window(svn_stringbuf_t **nwin,
                       rep_state_t *rs,
+                      apr_size_t size,
                       apr_pool_t *pool)
 {
   svn_fs_fs__rep_extractor_t *extractor = NULL;
@@ -1535,7 +1536,11 @@ read_container_window(svn_stringbuf_t **nwin,
                          rs->item_index, rs->file->file, pool, pool));
     }
 
-  SVN_ERR(svn_fs_fs__extractor_drive(nwin, extractor, pool, pool));
+  SVN_ERR(svn_fs_fs__extractor_drive(nwin, extractor, rs->current, size,
+                                     pool, pool));
+
+  /* Update RS. */
+  rs->current += (apr_off_t)size;
 
   return SVN_NO_ERROR;
 }
@@ -1589,7 +1594,8 @@ get_combined_window(svn_stringbuf_t **result,
       if (source == NULL && rb->src_state != NULL)
         {
           if (rb->src_state->header_size == 0)
-            SVN_ERR(read_container_window(&source, rb->src_state, pool));
+            SVN_ERR(read_container_window(&source, rb->src_state,
+                                          window->sview_len, pool));
           else
             SVN_ERR(read_plain_window(&source, rb->src_state,
                                       window->sview_len, pool));
@@ -1842,7 +1848,14 @@ get_contents(struct rep_read_baton *rb,
 
       /* reps in containers don't have a header */
       if (rs->header_size == 0 && rb->base_window == NULL)
-        SVN_ERR(read_container_window(&rb->base_window, rs, rb->pool));
+        {
+          /* RS->SIZE is unreliable here because it is based upon
+           * the delta rep size _before_ putting the data into a
+           * a container. */
+          SVN_ERR(read_container_window(&rb->base_window, rs,
+                                        rb->len, rb->pool));
+          rs->current -= rb->base_window->len;
+        }
 
       if (rb->base_window != NULL)
         {

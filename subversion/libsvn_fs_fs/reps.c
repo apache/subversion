@@ -604,12 +604,30 @@ svn_fs_fs__reps_get(svn_fs_fs__rep_extractor_t **extractor,
 svn_error_t *
 svn_fs_fs__extractor_drive(svn_stringbuf_t **contents,
                            svn_fs_fs__rep_extractor_t *extractor,
+                           apr_size_t start_offset,
+                           apr_size_t size,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
   /* we don't support base reps right now */
   SVN_ERR_ASSERT(extractor->missing == NULL);
-  *contents = svn_stringbuf_dup(extractor->result, result_pool);
+
+  if (size == 0)
+    {
+      *contents = svn_stringbuf_dup(extractor->result, result_pool);
+    }
+  else
+    {
+      /* clip the selected range */
+      if (start_offset > extractor->result->len)
+        start_offset = extractor->result->len;
+
+      if (size > extractor->result->len - start_offset)
+        size = extractor->result->len - start_offset;
+
+      *contents = svn_stringbuf_ncreate(extractor->result->data + start_offset,
+                                        size, result_pool)
+    }
 
   return SVN_NO_ERROR;
 }
