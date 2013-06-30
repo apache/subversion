@@ -21,7 +21,7 @@
  */
 
 #include "../svn_test.h"
-#include "../../libsvn_fs_fs/string_table.h"
+#include "../../libsvn_fs_x/string_table.h"
 #include "svn_pools.h"
 #include "svn_sorts.h"
 
