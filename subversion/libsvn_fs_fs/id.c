@@ -360,21 +360,6 @@ svn_fs_fs__id_txn_create_root(const svn_fs_fs__id_part_t *txn_id,
   return (svn_fs_id_t *)id;
 }
 
-svn_fs_id_t *svn_fs_fs__id_create_root(const svn_revnum_t revision,
-                                       apr_pool_t *pool)
-{
-  fs_fs__id_t *id = apr_pcalloc(pool, sizeof(*id));
-
-  id->txn_id.revision = SVN_INVALID_REVNUM;
-  id->rev_item.revision = revision;
-  id->rev_item.number = SVN_FS_FS__ITEM_INDEX_ROOT_NODE;
-
-  id->generic_id.vtable = &id_vtable;
-  id->generic_id.fsap_data = &id;
-
-  return (svn_fs_id_t *)id;
-}
-
 svn_fs_id_t *
 svn_fs_fs__id_txn_create(const svn_fs_fs__id_part_t *node_id,
                          const svn_fs_fs__id_part_t *copy_id,

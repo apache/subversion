@@ -109,15 +109,11 @@ extern "C" {
 #define CONFIG_SECTION_PACKED_REVPROPS   "packed-revprops"
 #define CONFIG_OPTION_REVPROP_PACK_SIZE  "revprop-pack-size"
 #define CONFIG_OPTION_COMPRESS_PACKED_REVPROPS  "compress-packed-revprops"
-#define CONFIG_SECTION_IO                "io"
-#define CONFIG_OPTION_BLOCK_SIZE         "block-size"
-#define CONFIG_OPTION_L2P_PAGE_SIZE      "l2p-page-size"
-#define CONFIG_OPTION_P2L_PAGE_SIZE      "p2l-page-size"
 
 /* The format number of this filesystem.
    This is independent of the repository format number, and
    independent of any other FS back ends. */
-#define SVN_FS_FS__FORMAT_NUMBER   7
+#define SVN_FS_FS__FORMAT_NUMBER   6
 
 /* The minimum format number that supports svndiff version 1.  */
 #define SVN_FS_FS__MIN_SVNDIFF1_FORMAT 2
@@ -159,9 +155,6 @@ extern "C" {
 
 /* The minimum format number that supports packed revprops. */
 #define SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT 6
-
-/* The minimum format number that supports packed revprops. */
-#define SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT 7
 
 /* The minimum format number that supports a configuration file (fsfs.conf) */
 #define SVN_FS_FS__MIN_CONFIG_FILE 4
@@ -279,15 +272,6 @@ typedef struct fs_fs_data_t
      layouts) or zero (for linear layouts). */
   int max_files_per_dir;
 
-  /* Rev / pack file read granularity. */
-  apr_int64_t block_size;
-
-  /* Capacity in entries of log-to-phys index pages */
-  apr_int64_t l2p_page_size;
-
-  /* Rev / pack file granularity covered by phys-to-log index pages */
-  apr_int64_t p2l_page_size;
-  
   /* The revision that was youngest, last time we checked. */
   svn_revnum_t youngest_rev_cache;
 
@@ -353,21 +337,9 @@ typedef struct fs_fs_data_t
    * the key is (revision, item index) */
   svn_cache__t *node_revision_cache;
 
-  /* Cache for noderevs_t containers;
-     the key is a (pack file revision, file offset) pair */
-  svn_cache__t *noderevs_container_cache;
-
   /* Cache for change lists as APR arrays of change_t * objects; the key
      is the revision */
   svn_cache__t *changes_cache;
-
-  /* Cache for change_list_t containers;
-     the key is a (pack file revision, file offset) pair */
-  svn_cache__t *changes_container_cache;
-
-  /* Cache for star-delta / representation containers;
-     the key is a (pack file revision, file offset) pair */
-  svn_cache__t *reps_container_cache;
 
   /* Cache for svn_fs_fs__rep_header_t objects; the key is a
      (revision, item index) pair */
@@ -381,23 +353,6 @@ typedef struct fs_fs_data_t
      combination of revision, inheritance flags and path; value is "1"
      if the node has mergeinfo, "0" if it doesn't. */
   svn_cache__t *mergeinfo_existence_cache;
-
-  /* Cache for l2p_header_t objects; the key is (revision, is-packed).
-     Will be NULL for pre-format7 repos */
-  svn_cache__t *l2p_header_cache;
-
-  /* Cache for l2p_page_t objects; the key is svn_fs_fs__page_cache_key_t.
-     Will be NULL for pre-format7 repos */
-  svn_cache__t *l2p_page_cache;
-
-  /* Cache for p2l_header_t objects; the key is (revision, is-packed).
-     Will be NULL for pre-format7 repos */
-  svn_cache__t *p2l_header_cache;
-
-  /* Cache for apr_array_header_t objects containing svn_fs_fs__p2l_entry_t
-     elements; the key is svn_fs_fs__page_cache_key_t.
-     Will be NULL for pre-format7 repos */
-  svn_cache__t *p2l_page_cache;
 
   /* TRUE while the we hold a lock on the write lock file. */
   svn_boolean_t has_write_lock;

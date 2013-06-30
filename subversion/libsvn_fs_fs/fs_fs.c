@@ -325,32 +325,6 @@ read_config(fs_fs_data_t *ffd,
       ffd->compress_packed_revprops = FALSE;
     }
 
-  if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    {
-      SVN_ERR(svn_config_get_int64(ffd->config, &ffd->block_size,
-                                   CONFIG_SECTION_IO,
-                                   CONFIG_OPTION_BLOCK_SIZE,
-                                   64));
-      SVN_ERR(svn_config_get_int64(ffd->config, &ffd->l2p_page_size,
-                                   CONFIG_SECTION_IO,
-                                   CONFIG_OPTION_L2P_PAGE_SIZE,
-                                   0x2000));
-      SVN_ERR(svn_config_get_int64(ffd->config, &ffd->p2l_page_size,
-                                   CONFIG_SECTION_IO,
-                                   CONFIG_OPTION_P2L_PAGE_SIZE,
-                                   64));
-
-      ffd->block_size *= 0x400;
-      ffd->p2l_page_size *= 0x400;
-    }
-  else
-    {
-      /* should be irrelevant but we initialize them anyway */
-      ffd->block_size = 0x1000;
-      ffd->l2p_page_size = 0x2000;
-      ffd->p2l_page_size = 0x1000;
-    }
-  
   return SVN_NO_ERROR;
 }
 
@@ -485,58 +459,6 @@ write_config(svn_fs_t *fs,
 "### unless you often modify revprops after packing."                        NL
 "### Compressing packed revprops is enabled by default."                     NL
 "# " CONFIG_OPTION_COMPRESS_PACKED_REVPROPS " = true"                        NL
-""                                                                           NL
-"[" CONFIG_SECTION_IO "]"                                                    NL
-"### Parameters in this section control the data access granularity in"      NL
-"### format 7 repositories and later.  The defaults should translate into"   NL
-"### decent performance over a wide range of setups."                        NL
-"###"                                                                        NL
-"### When a specific piece of information needs to be read from disk,  a"    NL
-"### data block is being read at once and its contents are being cached."    NL
-"### If the repository is being stored on a RAID,  the block size should"    NL
-"### be either 50% or 100% of RAID block size / granularity.  Also,  your"   NL
-"### file system (clusters) should be properly aligned and sized.  In that"  NL
-"### setup, each access will hit only one disk (minimizes I/O load) but"     NL
-"### uses all the data provided by the disk in a single access."             NL
-"### For SSD-based storage systems,  slightly lower values around 16 kB"     NL
-"### may improve latency while still maximizing throughput."                 NL
-"### Can be changed at any time but must be a power of 2."                   NL
-"### block-size is 64 kBytes by default."                                    NL
-"# " CONFIG_OPTION_BLOCK_SIZE " = 64"                                        NL
-"###"                                                                        NL
-"### The log-to-phys index maps data item numbers to offsets within the"     NL
-"### rev or pack file.  A revision typically contains 2 .. 5 such items"     NL
-"### per changed path.  For each revision, at least one page is being"       NL
-"### allocated in the l2p index with unused parts resulting in no wasted"    NL
-"### space."                                                                 NL
-"### Changing this parameter only affects larger revisions with thousands"   NL
-"### of changed paths.  A smaller value means that more pages need to be"    NL
-"### allocated for such revisions,  increasing the size of the page table"   NL
-"### meaning it takes longer to read that table (once).  Access to each"     NL
-"### page is then faster because less data has to read.  So, if you have"    NL
-"### several extremely large revisions (approaching 1 mio changes),  think"  NL
-"### about increasing this setting.  Reducing the value will rarely result"  NL
-"### in a net speedup."                                                      NL
-"### This is an expert setting.  Any non-zero value is possible."            NL
-"### l2p-page-size is 8192 entries by default."                              NL
-"# " CONFIG_OPTION_L2P_PAGE_SIZE " = 8192"                                   NL
-"###"                                                                        NL
-"### The phys-to-log index maps positions within the rev or pack file to"    NL
-"### to data items,  i.e. describes what piece of information is being"      NL
-"### stored at that particular offset.  The index describes the rev file"    NL
-"### in chunks (pages) and keeps a global list of all those pages.  Large"   NL
-"### pages mean a shorter page table but a larger per-page description of"   NL
-"### data items in it.  The latency sweetspot depends on the change size"    NL
-"### distribution but is relatively wide."                                   NL
-"### If the repository contains very large files,  i.e. individual changes"  NL
-"### of tens of MB each,  increasing the page size will shorten the index"   NL
-"### file at the expense of a slightly increased latency in sections with"   NL
-"### smaller changes."                                                       NL
-"### For practical reasons,  this should match block-size.  Differing"       NL
-"### values are perfectly legal but may result in some processing overhead." NL
-"### Must be a power of 2."                                                  NL
-"### p2l-page-size is 64 kBytes by default."                                 NL
-"# " CONFIG_OPTION_P2L_PAGE_SIZE " = 64"                                     NL
 ;
 #undef NL
   return svn_io_file_create(svn_dirent_join(fs->path, PATH_CONFIG, pool),
@@ -943,56 +865,17 @@ write_revision_zero(svn_fs_t *fs)
   fs_fs_data_t *ffd = fs->fsap_data;
 
   /* Write out a rev file for revision 0. */
-  if (ffd->format < SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    SVN_ERR(svn_io_file_create(path_revision_zero,
-                               "PLAIN\nEND\nENDREP\n"
-                               "id: 0.0.r0/17\n"
-                               "type: dir\n"
-                               "count: 0\n"
-                               "text: 0 0 4 4 "
-                               "2d2977d1c96f487abe4a1e202dd03b4e\n"
-                               "cpath: /\n"
-                               "\n\n17 107\n", fs->pool));
-  else
-    SVN_ERR(svn_io_file_create(path_revision_zero,
-                               "PLAIN\nEND\nENDREP\n"
-                               "id: 0.0.r0/2\n"
-                               "type: dir\n"
-                               "count: 0\n"
-                               "text: 0 3 4 4 "
-                               "2d2977d1c96f487abe4a1e202dd03b4e\n"
-                               "cpath: /\n"
-                               "\n\n", fs->pool));
+  SVN_ERR(svn_io_file_create(path_revision_zero,
+                              "PLAIN\nEND\nENDREP\n"
+                              "id: 0.0.r0/17\n"
+                              "type: dir\n"
+                              "count: 0\n"
+                              "text: 0 0 4 4 "
+                              "2d2977d1c96f487abe4a1e202dd03b4e\n"
+                              "cpath: /\n"
+                              "\n\n17 107\n", fs->pool));
 
   SVN_ERR(svn_io_set_file_read_only(path_revision_zero, FALSE, fs->pool));
-
-  if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    {
-      const char *path = path_l2p_index(fs, 0, fs->pool);
-      SVN_ERR(svn_io_file_create_binary
-                 (path,
-                  "\0\1\x80\x40\1\1" /* rev 0, single page */
-                  "\5\4"             /* page size: bytes, count */
-                  "\0"               /* 0 container offsets in list */
-                  "\0\x6b\x12\1",    /* phys offsets + 1 */
-                  13,
-                  fs->pool));
-      SVN_ERR(svn_io_set_file_read_only(path, FALSE, fs->pool));
-
-      path = path_p2l_index(fs, 0, fs->pool);
-      SVN_ERR(svn_io_file_create_binary
-                 (path,
-                  "\0"                /* start rev */
-                  "\x80\x80\4\1\x11"  /* 64k pages, 1 page using 17 bytes */
-                  "\0"                /* offset entry 0 page 1 */
-                  "\x11\x11\0\6"      /* len, type + 16 * count, (rev, item)* */
-                  "\x59\x15\0\4"
-                  "\1\x16\0\2"
-                  "\x95\xff\3\0",     /* last entry fills up 64k page */
-                  23,
-                  fs->pool));
-      SVN_ERR(svn_io_set_file_read_only(path, FALSE, fs->pool));
-    }
 
   /* Set a date on revision 0. */
   date.data = svn_time_to_cstring(apr_time_now(), fs->pool);
@@ -1398,11 +1281,8 @@ svn_fs_fs__info_format(int *fs_format,
     case 6:
       (*supports_version)->minor = 8;
       break;
-    case 7:
-      (*supports_version)->minor = 9;
-      break;
 #ifdef SVN_DEBUG
-# if SVN_FS_FS__FORMAT_NUMBER != 7
+# if SVN_FS_FS__FORMAT_NUMBER != 6
 #  error "Need to add a 'case' statement here"
 # endif
 #endif
