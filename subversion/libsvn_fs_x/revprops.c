@@ -1562,8 +1562,7 @@ copy_revprops(const char *pack_file_dir,
   SVN_ERR(svn_stream_close(pack_stream));
 
   /* compress the content (or just store it for COMPRESSION_LEVEL 0) */
-  SVN_ERR(svn__compress(svn_stringbuf__morph_into_string(uncompressed),
-                        compressed, compression_level));
+  SVN_ERR(svn__compress(uncompressed, compressed, compression_level));
 
   /* write the pack file content to disk */
   stream = svn_stream_from_aprfile2(pack_file, FALSE, scratch_pool);
