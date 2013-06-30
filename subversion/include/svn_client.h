@@ -2814,6 +2814,11 @@ svn_client_log(const apr_array_header_t *targets,
  * in which case blame information will be generated regardless of the
  * MIME types of the revisions.
  *
+ * @a start may resolve to a revision number greater (younger) than @a end
+ * only if the server is 1.8.0 or greater (supports
+ * #SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE) and the client is 1.9.0 or
+ * newer.
+ *
  * Use @a diff_options to determine how to compare different revisions of the
  * target.
  *
@@ -4020,12 +4025,41 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
 /** Recursively cleanup a working copy directory @a dir, finishing any
  * incomplete operations, removing lockfiles, etc.
  *
+ * If @a include_externals is @c TRUE, recurse into externals and clean
+ * them up as well.
+ *
+ * If @a remove_unversioned_items is @c TRUE, remove unversioned items
+ * in @a dir after successfull working copy cleanup.
+ * If @a remove_ignored_items is @c TRUE, remove ignored unversioned items
+ * in @a dir after successfull working copy cleanup.
+ *
+ * When asked to remove unversioned or ignored items, and the working copy
+ * is already locked via a different client or WC context than @a ctx, return
+ * #SVN_ERR_WC_LOCKED. This prevents accidental working copy corruption in
+ * case users run the cleanup operation to remove unversioned items while
+ * another client is performing some other operation on the working copy.
+ *
  * If @a ctx->cancel_func is non-NULL, invoke it with @a
  * ctx->cancel_baton at various points during the operation.  If it
  * returns an error (typically #SVN_ERR_CANCELLED), return that error
  * immediately.
  *
  * Use @a scratch_pool for any temporary allocations.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_client_cleanup2(const char *dir,
+                    svn_boolean_t include_externals,
+                    svn_boolean_t remove_unversioned_items,
+                    svn_boolean_t remove_ignored_items,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *scratch_pool);
+
+/* Like svn_client_cleanup2(), but no support for removing unversioned items
+ * and cleaning up externals.
+ *
+ * @deprecated Provided for limited backwards compatibility with the 1.8 API.
  */
 svn_error_t *
 svn_client_cleanup(const char *dir,
@@ -6457,7 +6491,7 @@ svn_client_open_ra_session2(svn_ra_session_t **session,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
-/** Similar to svn_client_open_ra_session(), but with @ wri_abspath
+/** Similar to svn_client_open_ra_session2(), but with @ wri_abspath
  * always passed as NULL, and with the same pool used as both @a
  * result_pool and @a scratch_pool.
  *

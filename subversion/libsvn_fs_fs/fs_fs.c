@@ -598,14 +598,27 @@ create_file_ignore_eexist(const char *file,
   return svn_error_trace(err);
 }
 
+/* Baton type bridging svn_fs_fs__upgrade and upgrade_body carrying 
+ * parameters over between them. */
+struct upgrade_baton_t
+{
+  svn_fs_t *fs;
+  svn_fs_upgrade_notify_t notify_func;
+  void *notify_baton;
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+};
+
 static svn_error_t *
 upgrade_body(void *baton, apr_pool_t *pool)
 {
-  svn_fs_t *fs = baton;
+  struct upgrade_baton_t *upgrade_baton = baton;
+  svn_fs_t *fs = upgrade_baton->fs;
   fs_fs_data_t *ffd = fs->fsap_data;
   int format, max_files_per_dir;
   const char *format_path = path_format(fs, pool);
   svn_node_kind_t kind;
+  svn_boolean_t needs_revprop_shard_cleanup = FALSE;
 
   /* Read the FS format number and max-files-per-dir setting. */
   SVN_ERR(read_format(&format, &max_files_per_dir, format_path, pool));
@@ -657,24 +670,64 @@ upgrade_body(void *baton, apr_pool_t *pool)
   if (format < SVN_FS_FS__MIN_PACKED_FORMAT)
     SVN_ERR(svn_io_file_create(path_min_unpacked_rev(fs, pool), "0\n", pool));
 
-  /* If the file system supports revision packing but not revprop packing,
-     pack the revprops up to the point that revision data has been packed. */
+  /* If the file system supports revision packing but not revprop packing
+     *and* the FS has been sharded, pack the revprops up to the point that
+     revision data has been packed.  However, keep the non-packed revprop
+     files around until after the format bump */
   if (   format >= SVN_FS_FS__MIN_PACKED_FORMAT
-      && format < SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
-    SVN_ERR(upgrade_pack_revprops(fs, pool));
+      && format < SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT
+      && max_files_per_dir > 0)
+    {
+      needs_revprop_shard_cleanup = TRUE;
+      SVN_ERR(upgrade_pack_revprops(fs,
+                                    upgrade_baton->notify_func,
+                                    upgrade_baton->notify_baton,
+                                    upgrade_baton->cancel_func,
+                                    upgrade_baton->cancel_baton,
+                                    pool));
+    }
 
   /* Bump the format file. */
 
   ffd->format = SVN_FS_FS__FORMAT_NUMBER;
   ffd->max_files_per_dir = max_files_per_dir;
-  return svn_fs_fs__write_format(fs, TRUE, pool);
+  SVN_ERR(svn_fs_fs__write_format(fs, TRUE, pool));
+  if (upgrade_baton->notify_func)
+    SVN_ERR(upgrade_baton->notify_func(upgrade_baton->notify_baton,
+                                       SVN_FS_FS__FORMAT_NUMBER,
+                                       svn_fs_upgrade_format_bumped,
+                                       pool));
+
+  /* Now, it is safe to remove the redundant revprop files. */
+  if (needs_revprop_shard_cleanup)
+    SVN_ERR(upgrade_cleanup_pack_revprops(fs,
+                                          upgrade_baton->notify_func,
+                                          upgrade_baton->notify_baton,
+                                          upgrade_baton->cancel_func,
+                                          upgrade_baton->cancel_baton,
+                                          pool));
+
+  /* Done */
+  return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_fs_fs__upgrade(svn_fs_t *fs, apr_pool_t *pool)
+svn_fs_fs__upgrade(svn_fs_t *fs,
+                   svn_fs_upgrade_notify_t notify_func,
+                   void *notify_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool)
 {
-  return svn_fs_fs__with_write_lock(fs, upgrade_body, (void *)fs, pool);
+  struct upgrade_baton_t baton;
+  baton.fs = fs;
+  baton.notify_func = notify_func;
+  baton.notify_baton = notify_baton;
+  baton.cancel_func = cancel_func;
+  baton.cancel_baton = cancel_baton;
+  
+  return svn_fs_fs__with_write_lock(fs, upgrade_body, (void *)&baton, pool);
 }
 
 

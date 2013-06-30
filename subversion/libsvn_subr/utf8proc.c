@@ -24,7 +24,7 @@
 
 
 #define UTF8PROC_INLINE
-#include "utf8proc/utf8proc.c.inline"
+#include "utf8proc/utf8proc.c"
 
 #include <apr_fnmatch.h>
 

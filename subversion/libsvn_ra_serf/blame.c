@@ -332,6 +332,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   svn_ra_serf__xml_context_t *xmlctx;
   const char *req_url;
   svn_error_t *err;
+  svn_revnum_t peg_rev;
 
   blame_ctx = apr_pcalloc(pool, sizeof(*blame_ctx));
   blame_ctx->pool = pool;
@@ -342,9 +343,16 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   blame_ctx->end = end;
   blame_ctx->include_merged_revisions = include_merged_revisions;
 
+  /* Since Subversion 1.8 we allow retrieving blames backwards. So we can't
+     just unconditionally use end_rev as the peg revision as before */
+  if (end > start)
+    peg_rev = end;
+  else
+    peg_rev = start;
+
   SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
                                       session, NULL /* conn */,
-                                      NULL /* url */, end,
+                                      NULL /* url */, peg_rev,
                                       pool, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(blame_ttable,
@@ -366,7 +374,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   err = svn_ra_serf__context_run_one(handler, pool);
 
   err = svn_error_compose_create(
-            svn_ra_serf__error_on_status(handler->sline.code,
+            svn_ra_serf__error_on_status(handler->sline,
                                          handler->path,
                                          handler->location),
             err);

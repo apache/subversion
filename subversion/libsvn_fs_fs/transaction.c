@@ -1738,7 +1738,12 @@ choose_delta_base(representation_t **rep,
                   svn_boolean_t props,
                   apr_pool_t *pool)
 {
+  /* The zero-based index (counting from the "oldest" end), along NODEREVs line
+   * predecessors, of the node-rev we will use as delta base. */
   int count;
+  /* The length of the linear part of a delta chain.  (Delta chains use
+   * skip-delta bits for the high-order bits and are linear in the low-order
+   * bits.) */
   int walk;
   node_revision_t *base;
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -1793,6 +1798,8 @@ choose_delta_base(representation_t **rep,
        * Please note that copied nodes - such as branch directories - will
        * look the same (false positive) while reps shared within the same
        * revision will not be caught (false negative).
+       *
+       * Message-ID: <CA+t0gk1wzitkih3GRCLDvK-bTEm=hgppGb_7xXMtvuXDYPfL+Q@mail.gmail.com>
        */
       base_revision = svn_fs_fs__id_rev(base->id);
       if (props)
@@ -1810,7 +1817,7 @@ choose_delta_base(representation_t **rep,
   /* return a suitable base representation */
   *rep = props ? base->prop_rep : base->data_rep;
 
-  /* if we encountered a shared rep, it's parent chain may be different
+  /* if we encountered a shared rep, its parent chain may be different
    * from the node-rev parent chain. */
   if (*rep && maybe_shared_rep)
     {
@@ -1823,7 +1830,6 @@ choose_delta_base(representation_t **rep,
         *rep = NULL;
     }
 
-  /* verify that the reps don't form a degenerated '*/
   return SVN_NO_ERROR;
 }
 
@@ -1941,7 +1947,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
   return SVN_NO_ERROR;
 }
 
-/* For the hash REP->SHA1, try to find an already existing representation
+/* For REP->SHA1_CHECKSUM, try to find an already existing representation
    in FS and return it in *OUT_REP.  If no such representation exists or
    if rep sharing has been disabled for FS, NULL will be returned.  Since
    there may be new duplicate representations within the same uncommitted

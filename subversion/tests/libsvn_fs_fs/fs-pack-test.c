@@ -125,6 +125,8 @@ pack_notify(void *baton,
   return SVN_NO_ERROR;
 }
 
+#define R1_LOG_MSG "Let's serf"
+
 /* Create a packed filesystem in DIR.  Set the shard size to
    SHARD_SIZE and create NUM_REVS number of revisions (in addition to
    r0).  Use POOL for allocations.  After this function successfully
@@ -166,6 +168,9 @@ create_packed_filesystem(const char *dir,
   SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__create_greek_tree(txn_root, subpool));
+  SVN_ERR(svn_fs_change_txn_prop(txn, SVN_PROP_REVISION_LOG,
+                                 svn_string_create(R1_LOG_MSG, pool), 
+                                 pool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, subpool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(after_rev));
 
@@ -902,6 +907,35 @@ test_reps(const svn_test_opts_t *opts,
 #undef MAX_REV
 
 /* ------------------------------------------------------------------------ */
+#define REPO_NAME "test-repo-fsfs-pack-shard-size-one"
+#define SHARD_SIZE 1
+#define MAX_REV 4
+static svn_error_t *
+pack_shard_size_one(const svn_test_opts_t *opts,
+                     apr_pool_t *pool)
+{
+  svn_string_t *propval;
+  svn_fs_t *fs;
+
+  /* Bail (with success) on known-untestable scenarios */
+  if ((strcmp(opts->fs_type, "fsfs") != 0)
+      || (opts->server_minor_version && (opts->server_minor_version < 6)))
+    return SVN_NO_ERROR;
+
+  SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE,
+                                   pool));
+  SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, pool));
+  /* whitebox: revprop packing special-cases r0, which causes
+     (start_rev==1, end_rev==0) in pack_revprops_shard().  So test that. */
+  SVN_ERR(svn_fs_revision_prop(&propval, fs, 1, SVN_PROP_REVISION_LOG, pool));
+  SVN_TEST_STRING_ASSERT(propval->data, R1_LOG_MSG);
+
+  return SVN_NO_ERROR;
+}
+#undef REPO_NAME
+#undef SHARD_SIZE
+#undef MAX_REV
+/* ------------------------------------------------------------------------ */
 
 /* The test table.  */
 
@@ -930,5 +964,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test svn_fs_info"),
     SVN_TEST_OPTS_PASS(test_reps,
                        "test representations container"),
+    SVN_TEST_OPTS_PASS(pack_shard_size_one,
+                       "test packing with shard size = 1"),
     SVN_TEST_NULL
   };

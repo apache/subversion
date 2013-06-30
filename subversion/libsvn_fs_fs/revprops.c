@@ -48,11 +48,12 @@
 #define ATOMIC_REVPROP_TIMEOUT    "rev-prop-timeout"
 #define ATOMIC_REVPROP_NAMESPACE  "rev-prop-atomics"
 
-/* In the filesystem FS, pack all revprop shards up to min_unpacked_rev.
- * Use SCRATCH_POOL for temporary allocations.
- */
 svn_error_t *
 upgrade_pack_revprops(svn_fs_t *fs,
+                      svn_fs_upgrade_notify_t notify_func,
+                      void *notify_baton,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
                       apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -85,10 +86,37 @@ upgrade_pack_revprops(svn_fs_t *fs,
                                   shard, ffd->max_files_per_dir,
                                   (int)(0.9 * ffd->revprop_pack_size),
                                   compression_level,
-                                  NULL, NULL, iterpool));
+                                  cancel_func, cancel_baton, iterpool));
+      if (notify_func)
+        SVN_ERR(notify_func(notify_baton, shard,
+                            svn_fs_upgrade_pack_revprops, iterpool));
+
       svn_pool_clear(iterpool);
     }
 
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+upgrade_cleanup_pack_revprops(svn_fs_t *fs,
+                              svn_fs_upgrade_notify_t notify_func,
+                              void *notify_baton,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *scratch_pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  const char *revprops_shard_path;
+  apr_int64_t shard;
+  apr_int64_t first_unpacked_shard
+    =  ffd->min_unpacked_rev / ffd->max_files_per_dir;
+
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  const char *revsprops_dir = svn_dirent_join(fs->path, PATH_REVPROPS_DIR,
+                                              scratch_pool);
+  
   /* delete the non-packed revprops shards afterwards */
   for (shard = 0; shard < first_unpacked_shard; ++shard)
     {
@@ -97,7 +125,11 @@ upgrade_pack_revprops(svn_fs_t *fs,
                        iterpool);
       SVN_ERR(delete_revprops_shard(revprops_shard_path,
                                     shard, ffd->max_files_per_dir,
-                                    NULL, NULL, iterpool));
+                                    cancel_func, cancel_baton, iterpool));
+      if (notify_func)
+        SVN_ERR(notify_func(notify_baton, shard,
+                            svn_fs_upgrade_cleanup_revprops, iterpool));
+
       svn_pool_clear(iterpool);
     }
 
@@ -290,15 +322,17 @@ ensure_revprop_timeout(svn_fs_t *fs)
 }
 
 /* Create an error object with the given MESSAGE and pass it to the
-   WARNING member of FS. */
+   WARNING member of FS. Clears UNDERLYING_ERR. */
 static void
 log_revprop_cache_init_warning(svn_fs_t *fs,
                                svn_error_t *underlying_err,
-                               const char *message)
+                               const char *message,
+                               apr_pool_t *pool)
 {
-  svn_error_t *err = svn_error_createf(SVN_ERR_FS_REVPROP_CACHE_INIT_FAILURE,
-                                       underlying_err,
-                                       message, fs->path);
+  svn_error_t *err = svn_error_createf(
+                       SVN_ERR_FS_REVPROP_CACHE_INIT_FAILURE,
+                       underlying_err, message,
+                       svn_dirent_local_style(fs->path, pool));
 
   if (fs->warning)
     (fs->warning)(fs->warning_baton, err);
@@ -327,7 +361,8 @@ has_revprop_cache(svn_fs_t *fs, apr_pool_t *pool)
       ffd->revprop_cache = NULL;
       log_revprop_cache_init_warning(fs, NULL,
                                      "Revprop caching for '%s' disabled"
-                                     " because it would be inefficient.");
+                                     " because it would be inefficient.",
+                                     pool);
 
       return FALSE;
     }
@@ -342,7 +377,8 @@ has_revprop_cache(svn_fs_t *fs, apr_pool_t *pool)
       log_revprop_cache_init_warning(fs, error,
                                      "Revprop caching for '%s' disabled "
                                      "because SHM infrastructure for revprop "
-                                     "caching failed to initialize.");
+                                     "caching failed to initialize.",
+                                     pool);
 
       return FALSE;
     }
@@ -363,9 +399,9 @@ typedef struct revprop_generation_fixup_t
 /* If the revprop generation has an odd value, it means the original writer
    of the revprop got killed. We don't know whether that process as able
    to change the revprop data but we assume that it was. Therefore, we
-   increase the generation in that case to basically invalidate everyones
+   increase the generation in that case to basically invalidate everyone's
    cache content.
-   Execute this onlx while holding the write lock to the repo in baton->FFD.
+   Execute this only while holding the write lock to the repo in baton->FFD.
  */
 static svn_error_t *
 revprop_generation_fixup(void *void_baton,
@@ -699,7 +735,7 @@ parse_packed_revprops(svn_fs_t *fs,
    * length header to remove) */
   svn_stringbuf_t *compressed = revprops->packed_revprops;
   svn_stringbuf_t *uncompressed = svn_stringbuf_create_empty(pool);
-  SVN_ERR(svn__decompress(compressed, uncompressed, 0x1000000));
+  SVN_ERR(svn__decompress(compressed, uncompressed, APR_SIZE_MAX));
 
   /* read first revision number and number of revisions in the pack */
   stream = svn_stream_from_stringbuf(uncompressed, scratch_pool);
@@ -1526,7 +1562,8 @@ copy_revprops(const char *pack_file_dir,
   SVN_ERR(svn_stream_close(pack_stream));
 
   /* compress the content (or just store it for COMPRESSION_LEVEL 0) */
-  SVN_ERR(svn__compress(uncompressed, compressed, compression_level));
+  SVN_ERR(svn__compress(svn_stringbuf__morph_into_string(uncompressed),
+                        compressed, compression_level));
 
   /* write the pack file content to disk */
   stream = svn_stream_from_aprfile2(pack_file, FALSE, scratch_pool);
@@ -1585,6 +1622,9 @@ pack_revprops_shard(const char *pack_file_dir,
   end_rev = (svn_revnum_t) ((shard + 1) * (max_files_per_dir) - 1);
   if (start_rev == 0)
     ++start_rev;
+    /* Special special case: if max_files_per_dir is 1, then at this point
+       start_rev == 1 and end_rev == 0 (!).  Fortunately, everything just
+       works. */
 
   /* initialize the revprop size info */
   sizes = apr_array_make(scratch_pool, max_files_per_dir, sizeof(apr_off_t));

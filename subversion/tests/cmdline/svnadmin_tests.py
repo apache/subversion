@@ -1826,6 +1826,67 @@ def recover_old(sbox):
   svntest.main.run_svnadmin("recover", sbox.repo_dir)
 
 
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def verify_keep_going(sbox):
+  "svnadmin verify --keep-going test"
+
+  sbox.build(create_wc = False)
+  repo_url = sbox.repo_url
+  B_url = sbox.repo_url + '/B'
+  C_url = sbox.repo_url + '/C'
+
+  # Create A/B/E/bravo in r2.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', '-m', 'log_msg',
+                                     B_url)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', '-m', 'log_msg',
+                                     C_url)
+  
+  r2 = fsfs_file(sbox.repo_dir, 'revs', '2')
+  fp = open(r2, 'a')
+  fp.write("""inserting junk to corrupt the rev""")
+  fp.close()
+  exit_code, output, errput = svntest.main.run_svnadmin("verify",
+                                                        "--keep-going",
+                                                        sbox.repo_dir)
+
+  exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
+                                           ".*Verified revision 0.",
+                                           ".*Verified revision 1.",
+                                           ".*Error verifying revision 2.",
+                                           ".*Verified revision 3."])
+
+  exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
+                                           "svnadmin: E165011:.*"], False)
+
+
+  if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
+                                   output, errput, exp_out, exp_err):
+    raise svntest.Failure
+
+  exit_code, output, errput = svntest.main.run_svnadmin("verify",
+                                                        sbox.repo_dir)
+
+  exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
+                                           ".*Verified revision 0.",
+                                           ".*Verified revision 1.",
+                                           ".*Error verifying revision 2."])
+
+  if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
+                                   output, errput, exp_out, exp_err):
+    raise svntest.Failure
+
+
+  exit_code, output, errput = svntest.main.run_svnadmin("verify",
+                                                        "--quiet",
+                                                        sbox.repo_dir)
+
+  if svntest.verify.verify_outputs("Output of 'svnadmin verify' is unexpected.",
+                                   None, errput, None, "svnadmin: E165011:.*"):
+    raise svntest.Failure
+
 ########################################################################
 # Run the tests
 
@@ -1862,6 +1923,7 @@ test_list = [ None,
               locking,
               mergeinfo_race,
               recover_old,
+              verify_keep_going,
              ]
 
 if __name__ == '__main__':

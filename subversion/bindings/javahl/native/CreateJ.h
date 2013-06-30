@@ -49,10 +49,17 @@ class CreateJ
   Checksum(const svn_checksum_t *checksum);
 
   static jobject
+  DirEntry(const char *path, const char *absPath,
+           const svn_dirent_t *dirent);
+
+  static jobject
   Info(const char *path, const svn_client_info2_t *info);
 
   static jobject
   Lock(const svn_lock_t *lock);
+
+  static jobject
+  LockMap(const apr_hash_t *locks, apr_pool_t *pool);
 
   static jobject
   ChangedPath(const char *path, svn_log_changed_path2_t *log_item);
@@ -81,6 +88,10 @@ class CreateJ
 
   static jobject
   PropertyMap(apr_hash_t *prop_hash);
+
+  static void
+  FillPropertyMap(jobject map, apr_hash_t* prop_hash,
+                  jmethodID put_method_id = 0);
 
   static jobject
   InheritedProps(apr_array_header_t *inherited_props);

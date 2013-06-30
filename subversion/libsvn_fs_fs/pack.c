@@ -2339,13 +2339,31 @@ pack_shard(const char *revs_dir,
                             pool));
   ffd->min_unpacked_rev = (svn_revnum_t)((shard + 1) * max_files_per_dir);
 
-  /* Finally, remove the existing shard directories. */
+  /* Finally, remove the existing shard directories.
+   * For revprops, clean up older obsolete shards as well as they might
+   * have been left over from an interrupted FS upgrade. */
   SVN_ERR(svn_io_remove_dir2(rev_shard_path, TRUE,
                              cancel_func, cancel_baton, pool));
   if (revsprops_dir)
-    SVN_ERR(delete_revprops_shard(revprops_shard_path,
-                                  shard, max_files_per_dir,
-                                  cancel_func, cancel_baton, pool));
+    {
+      svn_node_kind_t kind = svn_node_dir;
+      apr_int64_t to_cleanup = shard;
+      do
+        {
+          SVN_ERR(delete_revprops_shard(revprops_shard_path,
+                                        to_cleanup, max_files_per_dir,
+                                        cancel_func, cancel_baton, pool));
+
+          /* If the previous shard exists, clean it up as well.
+             Don't try to clean up shard 0 as it we can't tell quickly
+             whether it actually needs cleaning up. */
+          revprops_shard_path = svn_dirent_join(revsprops_dir,
+                      apr_psprintf(pool, "%" APR_INT64_T_FMT, --to_cleanup),
+                      pool);
+          SVN_ERR(svn_io_check_path(revprops_shard_path, &kind, pool));
+        }
+      while (kind == svn_node_dir && to_cleanup > 0);
+    }
 
   /* Notify caller we're starting to pack this shard. */
   if (notify_func)

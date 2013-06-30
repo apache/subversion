@@ -436,11 +436,12 @@ svn_ra_serf__v2_get_youngest_revnum(svn_revnum_t *youngest,
 
   SVN_ERR(create_options_req(&opt_ctx, session, conn, scratch_pool));
   SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, scratch_pool));
-  SVN_ERR(svn_ra_serf__error_on_status(opt_ctx->handler->sline.code,
+  SVN_ERR(svn_ra_serf__error_on_status(opt_ctx->handler->sline,
                                        opt_ctx->handler->path,
                                        opt_ctx->handler->location));
 
   *youngest = opt_ctx->youngest_rev;
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(*youngest));
 
   return SVN_NO_ERROR;
 }
@@ -460,7 +461,7 @@ svn_ra_serf__v1_get_activity_collection(const char **activity_url,
   SVN_ERR(create_options_req(&opt_ctx, session, conn, scratch_pool));
   SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, scratch_pool));
 
-  SVN_ERR(svn_ra_serf__error_on_status(opt_ctx->handler->sline.code,
+  SVN_ERR(svn_ra_serf__error_on_status(opt_ctx->handler->sline,
                                        opt_ctx->handler->path,
                                        opt_ctx->handler->location));
 
@@ -499,7 +500,7 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
     }
 
   SVN_ERR(svn_error_compose_create(
-              svn_ra_serf__error_on_status(opt_ctx->handler->sline.code,
+              svn_ra_serf__error_on_status(opt_ctx->handler->sline,
                                            serf_sess->session_url.path,
                                            opt_ctx->handler->location),
               err));
@@ -511,6 +512,74 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
     {
       serf_sess->activity_collection_url =
         apr_pstrdup(serf_sess->pool, opt_ctx->activity_collection);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+create_simple_options_body(serf_bucket_t **body_bkt,
+                           void *baton,
+                           serf_bucket_alloc_t *alloc,
+                           apr_pool_t *pool)
+{
+  serf_bucket_t *body;
+  serf_bucket_t *s;
+
+  body = serf_bucket_aggregate_create(alloc);
+  svn_ra_serf__add_xml_header_buckets(body, alloc);
+
+  s = SERF_BUCKET_SIMPLE_STRING("<D:options xmlns:D=\"DAV:\" />", alloc);
+  serf_bucket_aggregate_append(body, s);
+
+  *body_bkt = body;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_ra_serf__probe_proxy(svn_ra_serf__session_t *serf_sess,
+                         apr_pool_t *scratch_pool)
+{
+  svn_ra_serf__handler_t *handler;
+  svn_error_t *err;
+
+  handler = apr_pcalloc(scratch_pool, sizeof(*handler));
+  handler->handler_pool = scratch_pool;
+  handler->method = "OPTIONS";
+  handler->path = serf_sess->session_url.path;
+  handler->conn = serf_sess->conns[0];
+  handler->session = serf_sess;
+
+  /* We don't care about the response body, so discard it.  */
+  handler->response_handler = svn_ra_serf__handle_discard_body;
+
+  /* We need a simple body, in order to send it in chunked format.  */
+  handler->body_delegate = create_simple_options_body;
+
+  /* No special headers.  */
+
+  err = svn_ra_serf__context_run_one(handler, scratch_pool);
+  if (err)
+    {
+      /* Some versions of nginx in reverse proxy mode will return 411. They want
+         a Content-Length header, rather than chunked requests. We can keep other
+         HTTP/1.1 features, but will disable the chunking.  */
+      if (handler->sline.code == 411)
+        {
+          serf_sess->using_chunked_requests = FALSE;
+
+          svn_error_clear(err);
+          return SVN_NO_ERROR;
+        }
+
+      return svn_error_trace(
+        svn_error_compose_create(
+          svn_ra_serf__error_on_status(handler->sline,
+                                       serf_sess->session_url.path,
+                                       handler->location),
+          err));
     }
 
   return SVN_NO_ERROR;

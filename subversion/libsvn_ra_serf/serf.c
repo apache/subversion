@@ -225,6 +225,12 @@ load_config(svn_ra_serf__session_t *session,
                                SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
                                SVN_CONFIG_DEFAULT_OPTION_HTTP_MAX_CONNECTIONS));
 
+  /* Is this proxy potentially busted? Do we need to take special care?  */
+  SVN_ERR(svn_config_get_bool(config, &session->busted_proxy,
+                              SVN_CONFIG_SECTION_GLOBAL,
+                              SVN_CONFIG_OPTION_BUSTED_PROXY,
+                              FALSE));
+
   if (config)
     server_group = svn_config_find_group(config,
                                          session->session_url.hostname,
@@ -281,6 +287,13 @@ load_config(svn_ra_serf__session_t *session,
                                    server_group,
                                    SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
                                    session->max_connections));
+
+      /* Do we need to take care with this proxy?  */
+      SVN_ERR(svn_config_get_bool(
+               config, &session->busted_proxy,
+               server_group,
+               SVN_CONFIG_OPTION_BUSTED_PROXY,
+               session->busted_proxy));
     }
 
   /* Don't allow the http-max-connections value to be larger than our
@@ -392,6 +405,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
   svn_ra_serf__session_t *serf_sess;
   apr_uri_t url;
   const char *client_string = NULL;
+  svn_error_t *err;
 
   if (corrected_url)
     *corrected_url = NULL;
@@ -441,6 +455,10 @@ svn_ra_serf__open(svn_ra_session_t *session,
      HTTP/1.1 is supported, we can upgrade. */
   serf_sess->http10 = TRUE;
 
+  /* If we switch to HTTP/1.1, then we will use chunked requests. We may disable
+     this, if we find an intervening proxy does not support chunked requests.  */
+  serf_sess->using_chunked_requests = TRUE;
+
   SVN_ERR(load_config(serf_sess, config, serf_sess->pool));
 
   serf_sess->conns[0] = apr_pcalloc(serf_sess->pool,
@@ -479,7 +497,21 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   session->priv = serf_sess;
 
-  return svn_ra_serf__exchange_capabilities(serf_sess, corrected_url, pool);
+  err = svn_ra_serf__exchange_capabilities(serf_sess, corrected_url, pool);
+
+  /* serf should produce a usable error code instead of APR_EGENERAL */
+  if (err && err->apr_err == APR_EGENERAL)
+    err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, err,
+                            _("Connection to '%s' failed"), session_URL);
+  SVN_ERR(err);
+
+  /* We have set up a useful connection. If we've been told there is possibly a
+     busted proxy in our path to the server AND we switched to HTTP/1.1 (chunked
+     requests), then probe for problems in any proxy.  */
+  if (serf_sess->busted_proxy && !serf_sess->http10)
+    SVN_ERR(svn_ra_serf__probe_proxy(serf_sess, pool));
+
+  return SVN_NO_ERROR;
 }
 
 /* Implements svn_ra__vtable_t.reparent(). */

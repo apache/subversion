@@ -956,6 +956,34 @@ def blame_eol_handling(sbox):
                                        'blame', f2)
 
 
+@SkipUnless(svntest.main.server_has_reverse_get_file_revs)
+def blame_youngest_to_oldest(sbox):
+  "blame_youngest_to_oldest"
+
+  sbox.build()
+
+  # First, make a new revision of iota.
+  iota = sbox.ospath('iota')
+  orig_line = open(iota).read()
+  line = "New contents for iota\n"
+  svntest.main.file_append(iota, line)
+  sbox.simple_commit()
+  
+  # Move the file, to check that the operation will peg correctly.
+  iota_moved = sbox.ospath('iota_moved')
+  sbox.simple_move('iota', 'iota_moved')
+  sbox.simple_commit()
+  
+  # Delete a line.
+  open(iota_moved, 'w').write(line)
+  sbox.simple_commit()
+
+  expected_output = [
+        '     %d    jrandom %s\n' % (3, orig_line[:-1]),
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'blame', '-r4:1', iota_moved)
+
 ########################################################################
 # Run the tests
 
@@ -979,6 +1007,7 @@ test_list = [ None,
               merge_sensitive_blame_and_empty_mergeinfo,
               blame_multiple_targets,
               blame_eol_handling,
+              blame_youngest_to_oldest,
              ]
 
 if __name__ == '__main__':

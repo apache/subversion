@@ -69,7 +69,10 @@ svn_cl__cleanup(apr_getopt_t *os,
 
       svn_pool_clear(subpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
-      err = svn_client_cleanup(target, ctx, subpool);
+      err = svn_client_cleanup2(target, opt_state->include_externals,
+                                opt_state->remove_unversioned,
+                                opt_state->remove_ignored,
+                                ctx, subpool);
       if (err && err->apr_err == SVN_ERR_WC_LOCKED)
         {
           const char *target_abspath;
@@ -78,6 +81,16 @@ svn_cl__cleanup(apr_getopt_t *os,
           if (err2)
             {
               err =  svn_error_compose_create(err, err2);
+            }
+          else if (opt_state->remove_unversioned || opt_state->remove_ignored)
+            {
+              err = svn_error_create(SVN_ERR_WC_LOCKED, err,
+                                     _("Working copy locked; if no other "
+                                       "Subversion client is currently "
+                                       "using the working copy, try running "
+                                       "'svn cleanup' without the "
+                                       "--remove-unversioned and "
+                                       "--remove-ignored options first."));
             }
           else
             {

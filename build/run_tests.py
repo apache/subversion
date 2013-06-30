@@ -30,6 +30,7 @@
             [--list] [--milestone-filter=<regex>] [--mode-filter=<type>]
             [--server-minor-version=<version>] [--http-proxy=<host>:<port>]
             [--config-file=<file>] [--ssl-cert=<file>]
+            [--exclusive-wc-locks]
             <abs_srcdir> <abs_builddir>
             <prog ...>
 
@@ -125,7 +126,7 @@ class TestHarness:
                fsfs_sharding=None, fsfs_packing=None,
                list_tests=None, svn_bin=None, mode_filter=None,
                milestone_filter=None, set_log_level=None, ssl_cert=None,
-               http_proxy=None):
+               http_proxy=None, exclusive_wc_locks=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
@@ -178,6 +179,7 @@ class TestHarness:
     self.log = None
     self.ssl_cert = ssl_cert
     self.http_proxy = http_proxy
+    self.exclusive_wc_locks = exclusive_wc_locks
     if not sys.stdout.isatty() or sys.platform == 'win32':
       TextColors.disable()
 
@@ -481,6 +483,8 @@ class TestHarness:
       svntest.main.options.ssl_cert = self.ssl_cert
     if self.http_proxy is not None:
       svntest.main.options.http_proxy = self.http_proxy
+    if self.exclusive_wc_locks is not None:
+      svntest.main.options.exclusive_wc_locks = self.exclusive_wc_locks
 
     svntest.main.options.srcdir = self.srcdir
 
@@ -645,7 +649,7 @@ def main():
                             'enable-sasl', 'parallel', 'config-file=',
                             'log-to-stdout', 'list', 'milestone-filter=',
                             'mode-filter=', 'set-log-level=', 'ssl-cert=',
-                            'http-proxy='])
+                            'http-proxy=', 'exclusive-wc-locks'])
   except getopt.GetoptError:
     args = []
 
@@ -656,9 +660,9 @@ def main():
   base_url, fs_type, verbose, cleanup, enable_sasl, http_library, \
     server_minor_version, fsfs_sharding, fsfs_packing, parallel, \
     config_file, log_to_stdout, list_tests, mode_filter, milestone_filter, \
-    set_log_level, ssl_cert, http_proxy = \
+    set_log_level, ssl_cert, http_proxy, exclusive_wc_locks = \
             None, None, None, None, None, None, None, None, None, None, None, \
-            None, None, None, None, None, None, None
+            None, None, None, None, None, None, None, None
   for opt, val in opts:
     if opt in ['-u', '--url']:
       base_url = val
@@ -696,6 +700,8 @@ def main():
       ssl_cert = val
     elif opt in ['--http-proxy']:
       http_proxy = val
+    elif opt in ['--exclusive-wc-locks']:
+      exclusive_wc_locks = 1
     else:
       raise getopt.GetoptError
 
@@ -712,7 +718,8 @@ def main():
                    fsfs_sharding, fsfs_packing, list_tests,
                    mode_filter=mode_filter, milestone_filter=milestone_filter,
                    set_log_level=set_log_level, ssl_cert=ssl_cert,
-                   http_proxy=http_proxy)
+                   http_proxy=http_proxy,
+                   exclusive_wc_locks=exclusive_wc_locks)
 
   failed = th.run(args[2:])
   if failed:

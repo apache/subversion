@@ -495,14 +495,13 @@ svn_wc__get_tree_conflict(const svn_wc_conflict_description2_t **tree_conflict,
 
   for (i = 0; i < conflicts->nelts; i++)
     {
-      const svn_wc_conflict_description2_t *desc;
+      const svn_wc_conflict_description3_t *desc;
 
-      desc = APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description2_t *);
+      desc = APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description3_t *);
 
       if (desc->kind == svn_wc_conflict_kind_tree)
         {
-          *tree_conflict = svn_wc__conflict_description2_dup(desc,
-                                                             result_pool);
+          *tree_conflict = svn_wc__cd3_to_cd2(desc, result_pool);
           return SVN_NO_ERROR;
         }
     }

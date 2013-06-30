@@ -641,8 +641,9 @@ setup_serf_req(serf_request_t *request,
   serf_bucket_alloc_t *allocator = serf_request_get_alloc(request);
 
   svn_spillbuf_t *buf;
+  svn_boolean_t set_CL = session->http10 || !session->using_chunked_requests;
 
-  if (session->http10 && body_bkt != NULL)
+  if (set_CL && body_bkt != NULL)
     {
       /* Ugh. Use HTTP/1.0 to talk to the server because we don't know if
          it speaks HTTP/1.1 (and thus, chunked requests), or because the
@@ -670,7 +671,7 @@ setup_serf_req(serf_request_t *request,
 
   /* Set the Content-Length value. This will also trigger an HTTP/1.0
      request (rather than the default chunked request).  */
-  if (session->http10)
+  if (set_CL)
     {
       if (body_bkt == NULL)
         serf_bucket_request_set_CL(*req_bkt, 0);
@@ -2386,17 +2387,17 @@ svn_ra_serf__report_resource(const char **report_target,
 }
 
 svn_error_t *
-svn_ra_serf__error_on_status(int status_code,
+svn_ra_serf__error_on_status(serf_status_line sline,
                              const char *path,
                              const char *location)
 {
-  switch(status_code)
+  switch(sline.code)
     {
       case 301:
       case 302:
       case 307:
         return svn_error_createf(SVN_ERR_RA_DAV_RELOCATED, NULL,
-                                 (status_code == 301)
+                                 (sline.code == 301)
                                  ? _("Repository moved permanently to '%s';"
                                      " please relocate")
                                  : _("Repository moved temporarily to '%s';"
@@ -2411,7 +2412,17 @@ svn_ra_serf__error_on_status(int status_code,
       case 423:
         return svn_error_createf(SVN_ERR_FS_NO_LOCK_TOKEN, NULL,
                                  _("'%s': no lock token available"), path);
+
+      case 411:
+        return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                _("DAV request failed: "
+                                  "Content length required"));
     }
+
+  if (sline.code >= 300)
+    return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                             _("Unexpected HTTP status %d '%s' on '%s'\n"),
+                             sline.code, sline.reason, path);
 
   return SVN_NO_ERROR;
 }

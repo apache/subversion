@@ -481,7 +481,12 @@ svn_fs_open(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
 }
 
 svn_error_t *
-svn_fs_upgrade(const char *path, apr_pool_t *pool)
+svn_fs_upgrade2(const char *path,
+                svn_fs_upgrade_notify_t notify_func,
+                void *notify_baton,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *pool)
 {
   fs_library_vtable_t *vtable;
   svn_fs_t *fs;
@@ -490,8 +495,17 @@ svn_fs_upgrade(const char *path, apr_pool_t *pool)
   fs = fs_new(NULL, pool);
 
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
-                       vtable->upgrade_fs(fs, path, pool, common_pool));
+                       vtable->upgrade_fs(fs, path,
+                                          notify_func, notify_baton,
+                                          cancel_func, cancel_baton,
+                                          pool, common_pool));
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_upgrade(const char *path, apr_pool_t *pool)
+{
+  return svn_error_trace(svn_fs_upgrade2(path, NULL, NULL, NULL, NULL, pool));
 }
 
 svn_error_t *

@@ -34,11 +34,40 @@ svn_error_t *
 cleanup_revprop_namespace(svn_fs_t *fs);
 
 /* In the filesystem FS, pack all revprop shards up to min_unpacked_rev.
- * Use SCRATCH_POOL for temporary allocations.
+ * 
+ * NOTE: Keep the old non-packed shards around until after the format bump.
+ * Otherwise, re-running upgrade will drop the packed revprop shard but
+ * have no unpacked data anymore.  Call upgrade_cleanup_pack_revprops after
+ * the bump.
+ * 
+ * NOTIFY_FUNC and NOTIFY_BATON as well as CANCEL_FUNC and CANCEL_BATON are
+ * used in the usual way.  Temporary allocations are done in SCRATCH_POOL.
  */
 svn_error_t *
 upgrade_pack_revprops(svn_fs_t *fs,
+                      svn_fs_upgrade_notify_t notify_func,
+                      void *notify_baton,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
                       apr_pool_t *scratch_pool);
+
+/* In the filesystem FS, remove all non-packed revprop shards up to
+ * min_unpacked_rev.  Temporary allocations are done in SCRATCH_POOL.
+ * 
+ * NOTIFY_FUNC and NOTIFY_BATON as well as CANCEL_FUNC and CANCEL_BATON are
+ * used in the usual way.  Cancellation is supported in the sense that we
+ * will cleanly abort the operation.  However, there will be remnant shards
+ * that must be removed manually.
+ *
+ * See upgrade_pack_revprops for more info.
+ */
+svn_error_t *
+upgrade_cleanup_pack_revprops(svn_fs_t *fs,
+                              svn_fs_upgrade_notify_t notify_func,
+                              void *notify_baton,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *scratch_pool);
 
 /* Read the revprops for revision REV in FS and return them in *PROPERTIES_P.
  *

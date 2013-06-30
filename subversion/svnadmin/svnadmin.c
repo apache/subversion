@@ -48,8 +48,6 @@
 #include "private/svn_subr_private.h"
 #include "private/svn_cmdline_private.h"
 
-#include "../libsvn_fs_fs/fs.h" /* for SVN_FS_FS__MIN_PACKED_FORMAT */
-
 #include "svn_private_config.h"
 
 
@@ -180,6 +178,7 @@ enum svnadmin__cmdline_options_t
   {
     svnadmin__version = SVN_OPT_FIRST_LONGOPT_ID,
     svnadmin__incremental,
+    svnadmin__keep_going,
     svnadmin__deltas,
     svnadmin__ignore_uuid,
     svnadmin__force_uuid,
@@ -287,6 +286,9 @@ static const apr_getopt_option_t options_table[] =
 
     {"pre-1.6-compatible",     svnadmin__pre_1_6_compatible, 0,
      N_("deprecated; see --compatible-version")},
+
+    {"keep-going",    svnadmin__keep_going, 0,
+     N_("continue verification after detecting a corruption")},
 
     {"memory-cache-size",     'M', 1,
      N_("size of the extra in-memory cache in MB used to\n"
@@ -491,7 +493,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
   {"verify", subcommand_verify, {0}, N_
    ("usage: svnadmin verify REPOS_PATH\n\n"
     "Verify the data stored in the repository.\n"),
-  {'t', 'r', 'q', 'M'} },
+  {'t', 'r', 'q', svnadmin__keep_going, 'M'} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -522,6 +524,7 @@ struct svnadmin_opt_state
   svn_boolean_t clean_logs;                         /* --clean-logs */
   svn_boolean_t bypass_hooks;                       /* --bypass-hooks */
   svn_boolean_t wait;                               /* --wait */
+  svn_boolean_t keep_going;                         /* --keep-going */
   svn_boolean_t bypass_prop_validation;             /* --bypass-prop-validation */
   enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
                                                        --force-uuid */
@@ -715,6 +718,18 @@ subcommand_create(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                      APR_HASH_KEY_STRING, "1");
     }
 
+  if (opt_state->compatible_version
+      && ! svn_version__at_least(opt_state->compatible_version, 1, 1, 0)
+      /* ### TODO: this NULL check hard-codes knowledge of the library's
+                   default fs-type value */
+      && (opt_state->fs_type == NULL
+          || !strcmp(opt_state->fs_type, SVN_FS_TYPE_FSFS)))
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("Repositories compatible with 1.0.x must use "
+                                "--fs-type=bdb"));
+    }
+
   SVN_ERR(svn_repos_create(&repos, opt_state->repository_path,
                            NULL, NULL, NULL, fs_config, pool));
   svn_fs_set_warning_func(svn_repos_fs(repos), warning_func, NULL);
@@ -823,6 +838,16 @@ repos_notify_handler(void *baton,
       cmdline_stream_printf(feedback_stream, scratch_pool,
                             "WARNING 0x%04x: %s\n", notify->warning,
                             notify->warning_str);
+      return;
+
+    case svn_repos_notify_failure:
+      if (notify->revision != SVN_INVALID_REVNUM)
+        cmdline_stream_printf(feedback_stream, scratch_pool,
+                              _("* Error verifying revision %ld.\n"),
+                              notify->revision);
+      if (notify->err)
+        svn_handle_error2(notify->err, stderr, FALSE /* non-fatal */,
+                          "svnadmin: ");
       return;
 
     case svn_repos_notify_dump_rev_end:
@@ -971,6 +996,35 @@ repos_notify_handler(void *baton,
                               "Please wait; upgrading the"
                               " repository may take some time...\n"));
       return;
+
+    case svn_repos_notify_pack_revprops:
+      {
+        const char *shardstr = apr_psprintf(scratch_pool,
+                                            "%" APR_INT64_T_FMT,
+                                            notify->shard);
+        cmdline_stream_printf(feedback_stream, scratch_pool,
+                              _("Packing revision properties"
+                                " in shard %s..."),
+                              shardstr);
+        return;
+      }
+
+    case svn_repos_notify_cleanup_revprops:
+      {
+        const char *shardstr = apr_psprintf(scratch_pool,
+                                            "%" APR_INT64_T_FMT,
+                                            notify->shard);
+        cmdline_stream_printf(feedback_stream, scratch_pool,
+                              _("Removing non-packed revision properties"
+                                " in shard %s..."),
+                              shardstr);
+        return;
+      }
+
+    case svn_repos_notify_format_bumped:
+      cmdline_stream_printf(feedback_stream, scratch_pool,
+                            _("Bumped repository format to %ld\n"),
+                            notify->revision);
 
     default:
       return;
@@ -1660,10 +1714,12 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (! opt_state->quiet)
     progress_stream = recode_stream_create(stdout, pool);
 
-  return svn_repos_verify_fs2(repos, lower, upper,
-                              !opt_state->quiet
-                                ? repos_notify_handler : NULL,
-                              progress_stream, check_cancel, NULL, pool);
+  return svn_error_trace(svn_repos_verify_fs3(repos, lower, upper,
+                                              opt_state->keep_going,
+                                              !opt_state->quiet
+                                              ? repos_notify_handler : NULL,
+                                              progress_stream, check_cancel,
+                                              NULL, pool));
 }
 
 /* This implements `svn_opt_subcommand_t'. */
@@ -1767,8 +1823,8 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
           SVN_ERR(svn_cmdline_printf(pool, _("FSFS Shard Size: %d\n"),
                                      fsfs_info->shard_size));
 
-        /* Print packing statistics, if supported by the FS format. */
-        if (fs_format >= SVN_FS_FS__MIN_PACKED_FORMAT && fsfs_info->shard_size)
+        /* Print packing statistics, if enabled on the FS. */
+        if (fsfs_info->shard_size)
           {
             const int shard_size = fsfs_info->shard_size;
             const int shards_packed = fsfs_info->min_unpacked_rev / shard_size;
@@ -2283,6 +2339,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
 
           opt_state.compatible_version = compatible_version;
         }
+        break;
+      case svnadmin__keep_going:
+        opt_state.keep_going = TRUE;
         break;
       case svnadmin__fs_type:
         SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.fs_type, opt_arg, pool));

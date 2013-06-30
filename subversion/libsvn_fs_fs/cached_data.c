@@ -1554,7 +1554,6 @@ get_combined_window(svn_stringbuf_t **result,
 {
   apr_pool_t *pool, *new_pool, *window_pool;
   int i;
-  svn_txdelta_window_t *window;
   apr_array_header_t *windows;
   svn_stringbuf_t *source, *buf = rb->base_window;
   rep_state_t *rs;
@@ -1567,6 +1566,8 @@ get_combined_window(svn_stringbuf_t **result,
   windows = apr_array_make(window_pool, 0, sizeof(svn_txdelta_window_t *));
   for (i = 0; i < rb->rs_list->nelts; ++i)
     {
+      svn_txdelta_window_t *window;
+
       rs = APR_ARRAY_IDX(rb->rs_list, i, rep_state_t *);
       SVN_ERR(read_delta_window(&window, rb->chunk_index, rs, window_pool));
 
@@ -1582,6 +1583,7 @@ get_combined_window(svn_stringbuf_t **result,
   pool = svn_pool_create(rb->pool);
   for (--i; i >= 0; --i)
     {
+      svn_txdelta_window_t *window;
 
       rs = APR_ARRAY_IDX(rb->rs_list, i, rep_state_t *);
       window = APR_ARRAY_IDX(windows, i, svn_txdelta_window_t *);

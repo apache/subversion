@@ -34,8 +34,15 @@ svn_error_t *svn_fs_fs__open(svn_fs_t *fs,
                              const char *path,
                              apr_pool_t *pool);
 
-/* Upgrade the fsfs filesystem FS.  Use POOL for temporary allocations. */
+/* Upgrade the fsfs filesystem FS.  Indicate progress via the optional
+ * NOTIFY_FUNC callback using NOTIFY_BATON.  The optional CANCEL_FUNC
+ * will periodically be called with CANCEL_BATON to allow for preemption.
+ * Use POOL for temporary allocations. */
 svn_error_t *svn_fs_fs__upgrade(svn_fs_t *fs,
+                                svn_fs_upgrade_notify_t notify_func,
+                                void *notify_baton,
+                                svn_cancel_func_t cancel_func,
+                                void *cancel_baton,
                                 apr_pool_t *pool);
 
 /* Set *YOUNGEST to the youngest revision in filesystem FS.  Do any
