@@ -159,6 +159,13 @@ Candidate changes:
    Votes:
      +1: danielsh, stefan2
 
+ * r1498136
+   Disable named atomics if APR does not implement memory-mapped files.
+   Justification:
+     People still use Subversion on platforms where mmap is not available.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
