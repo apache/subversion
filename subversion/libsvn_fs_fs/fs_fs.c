@@ -2344,10 +2344,10 @@ get_cached_node_revision_body(node_revision_t **noderev_p,
     }
   else
     {
-      pair_cache_key_t key;
+      pair_cache_key_t key = { 0 };
+
       key.revision = svn_fs_fs__id_rev(id);
       key.second = svn_fs_fs__id_offset(id);
-
       SVN_ERR(svn_cache__get((void **) noderev_p,
                             is_cached,
                             ffd->node_revision_cache,
@@ -2373,10 +2373,10 @@ set_cached_node_revision_body(node_revision_t *noderev_p,
 
   if (ffd->node_revision_cache && !svn_fs_fs__id_txn_id(id))
     {
-      pair_cache_key_t key;
+      pair_cache_key_t key = { 0 };
+
       key.revision = svn_fs_fs__id_rev(id);
       key.second = svn_fs_fs__id_offset(id);
-
       return svn_cache__set(ffd->node_revision_cache,
                             &key,
                             noderev_p,
@@ -3635,10 +3635,10 @@ parse_revprop(apr_hash_t **properties,
   if (has_revprop_cache(fs, pool))
     {
       fs_fs_data_t *ffd = fs->fsap_data;
-      pair_cache_key_t key;
+      pair_cache_key_t key = { 0 };
+
       key.revision = revision;
       key.second = generation;
-
       SVN_ERR(svn_cache__set(ffd->revprop_cache, &key, *properties,
                              scratch_pool));
     }
@@ -3938,7 +3938,7 @@ get_revision_proplist(apr_hash_t **proplist_p,
   if (has_revprop_cache(fs, pool))
     {
       svn_boolean_t is_cached;
-      pair_cache_key_t key;
+      pair_cache_key_t key = { 0 };
 
       SVN_ERR(read_revprop_generation(&generation, fs, pool));
 
@@ -5295,12 +5295,12 @@ read_representation(svn_stream_t **contents_p,
   else
     {
       fs_fs_data_t *ffd = fs->fsap_data;
-      pair_cache_key_t fulltext_cache_key;
+      pair_cache_key_t fulltext_cache_key = { 0 };
       svn_filesize_t len = rep->expanded_size ? rep->expanded_size : rep->size;
       struct rep_read_baton *rb;
+
       fulltext_cache_key.revision = rep->revision;
       fulltext_cache_key.second = rep->offset;
-
       if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(rep->revision)
           && fulltext_size_is_cachable(ffd, len))
         {
@@ -5469,10 +5469,10 @@ svn_fs_fs__try_process_file_contents(svn_boolean_t *success,
   if (rep)
     {
       fs_fs_data_t *ffd = fs->fsap_data;
-      pair_cache_key_t fulltext_cache_key;
+      pair_cache_key_t fulltext_cache_key = { 0 };
+
       fulltext_cache_key.revision = rep->revision;
       fulltext_cache_key.second = rep->offset;
-
       if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(rep->revision)
           && fulltext_size_is_cachable(ffd, rep->expanded_size))
         {
@@ -5776,10 +5776,10 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
     {
       fs_fs_data_t *ffd = fs->fsap_data;
       representation_t *rep = noderev->prop_rep;
-      pair_cache_key_t key;
+      pair_cache_key_t key = { 0 };
+
       key.revision = rep->revision;
       key.second = rep->offset;
-
       if (ffd->properties_cache && SVN_IS_VALID_REVNUM(rep->revision))
         {
           svn_boolean_t is_cached;
