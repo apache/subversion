@@ -239,9 +239,12 @@ get_library_vtable(fs_library_vtable_t **vtable, const char *fs_type,
      want to check these without any locking overhead even when
      dynamic third party modules are enabled.  The third party modules
      cannot be checked until the lock is held.  */
-  for (fst = &fs_modules; *fst && !known; fst = &(*fst)->next)
+  for (fst = &fs_modules; *fst; fst = &(*fst)->next)
     if (strcmp(fs_type, (*fst)->fs_type) == 0)
-      known = TRUE;
+      {
+        known = TRUE;
+        break;
+      }
 
 #if defined(SVN_USE_DSO) && APR_HAS_DSO
   /* Third party FS modules that are unknown at compile time.
