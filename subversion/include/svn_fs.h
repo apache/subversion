@@ -120,6 +120,8 @@ typedef struct svn_fs_t svn_fs_t;
 #define SVN_FS_TYPE_BDB                         "bdb"
 /** @since New in 1.1. */
 #define SVN_FS_TYPE_FSFS                        "fsfs"
+/** @since New in 1.9. */
+#define SVN_FS_TYPE_FSX                         "fsx"
 
 /** Create repository format compatible with Subversion versions
  * earlier than 1.4.
@@ -229,6 +231,7 @@ svn_fs_set_warning_func(svn_fs_t *fs,
  *
  *   SVN_FS_TYPE_BDB   Berkeley-DB implementation
  *   SVN_FS_TYPE_FSFS  Native-filesystem implementation
+ *   SVN_FS_TYPE_FSX   Experimental filesystem implementation
  *
  * If @a fs_config is @c NULL or does not contain a value for
  * #SVN_FS_CONFIG_FS_TYPE then the default filesystem type will be used.

@@ -428,7 +428,7 @@ fs_version(void)
 static const char *
 fs_get_description(void)
 {
-  return _("Module for working with a plain file (FSFS) repository.");
+  return _("Module for working with an experimental (FSX) repository.");
 }
 
 static svn_error_t *
@@ -474,8 +474,8 @@ static fs_library_vtable_t library_vtable = {
 };
 
 svn_error_t *
-svn_fs_fs__init(const svn_version_t *loader_version,
-                fs_library_vtable_t **vtable, apr_pool_t* common_pool)
+svn_fs_x__init(const svn_version_t *loader_version,
+               fs_library_vtable_t **vtable, apr_pool_t* common_pool)
 {
   static const svn_version_checklist_t checklist[] =
     {
@@ -488,7 +488,7 @@ svn_fs_fs__init(const svn_version_t *loader_version,
      VTABLE parameter. The FS loader does a more exhaustive check. */
   if (loader_version->major != SVN_VER_MAJOR)
     return svn_error_createf(SVN_ERR_VERSION_MISMATCH, NULL,
-                             _("Unsupported FS loader version (%d) for fsfs"),
+                             _("Unsupported FS loader version (%d) for fsx"),
                              loader_version->major);
   SVN_ERR(svn_ver_check_list(fs_version(), checklist));
 
