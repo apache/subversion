@@ -3370,7 +3370,7 @@ fs_node_origin_rev(svn_revnum_t *revision,
 
   /* The root node always has ID 0, created in revision 0 and will never
      use the new-style ID format. */
-  if (strcmp(node_id, "0") == 0)
+  if (node_id->number == 0)
     {
       *revision = 0;
       return SVN_NO_ERROR;
