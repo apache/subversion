@@ -2326,11 +2326,13 @@ pack_shard(const char *revs_dir,
                            apr_psprintf(pool, "%" APR_INT64_T_FMT, shard),
                            pool);
 
-      SVN_ERR(pack_revprops_shard(revprops_pack_file_dir, revprops_shard_path,
-                                  shard, max_files_per_dir,
-                                  (int)(0.9 * max_pack_size),
-                                  compression_level,
-                                  cancel_func, cancel_baton, pool));
+      SVN_ERR(svn_fs_x__pack_revprops_shard(revprops_pack_file_dir,
+                                            revprops_shard_path,
+                                            shard, max_files_per_dir,
+                                            (int)(0.9 * max_pack_size),
+                                            compression_level,
+                                            cancel_func, cancel_baton,
+                                            pool));
     }
 
   /* Update the min-unpacked-rev file to reflect our newly packed shard. */
@@ -2350,9 +2352,11 @@ pack_shard(const char *revs_dir,
       apr_int64_t to_cleanup = shard;
       do
         {
-          SVN_ERR(delete_revprops_shard(revprops_shard_path,
-                                        to_cleanup, max_files_per_dir,
-                                        cancel_func, cancel_baton, pool));
+          SVN_ERR(svn_fs_x__delete_revprops_shard(revprops_shard_path,
+                                                  to_cleanup,
+                                                  max_files_per_dir,
+                                                  cancel_func, cancel_baton,
+                                                  pool));
 
           /* If the previous shard exists, clean it up as well.
              Don't try to clean up shard 0 as it we can't tell quickly

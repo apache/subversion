@@ -338,7 +338,7 @@ recover_body(void *baton, apr_pool_t *pool)
   svn_node_kind_t youngest_revprops_kind;
 
   /* Lose potentially corrupted data in temp files */
-  SVN_ERR(cleanup_revprop_namespace(fs));
+  SVN_ERR(svn_fs_x__cleanup_revprop_namespace(fs));
 
   /* We need to know the largest revision in the filesystem. */
   SVN_ERR(recover_get_largest_revision(fs, &max_rev, pool));
@@ -419,7 +419,7 @@ recover_body(void *baton, apr_pool_t *pool)
   if (youngest_revprops_kind == svn_node_none)
     {
       svn_boolean_t missing = TRUE;
-      if (!packed_revprop_available(&missing, fs, max_rev, pool))
+      if (!svn_fs_x__packed_revprop_available(&missing, fs, max_rev, pool))
         {
           if (missing)
             {

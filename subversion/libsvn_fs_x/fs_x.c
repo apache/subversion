@@ -683,12 +683,12 @@ upgrade_body(void *baton, apr_pool_t *pool)
       && max_files_per_dir > 0)
     {
       needs_revprop_shard_cleanup = TRUE;
-      SVN_ERR(upgrade_pack_revprops(fs,
-                                    upgrade_baton->notify_func,
-                                    upgrade_baton->notify_baton,
-                                    upgrade_baton->cancel_func,
-                                    upgrade_baton->cancel_baton,
-                                    pool));
+      SVN_ERR(svn_fs_x__upgrade_pack_revprops(fs,
+                                              upgrade_baton->notify_func,
+                                              upgrade_baton->notify_baton,
+                                              upgrade_baton->cancel_func,
+                                              upgrade_baton->cancel_baton,
+                                              pool));
     }
 
   /* Bump the format file. */
@@ -704,12 +704,12 @@ upgrade_body(void *baton, apr_pool_t *pool)
 
   /* Now, it is safe to remove the redundant revprop files. */
   if (needs_revprop_shard_cleanup)
-    SVN_ERR(upgrade_cleanup_pack_revprops(fs,
-                                          upgrade_baton->notify_func,
-                                          upgrade_baton->notify_baton,
-                                          upgrade_baton->cancel_func,
-                                          upgrade_baton->cancel_baton,
-                                          pool));
+    SVN_ERR(svn_fs_x__upgrade_cleanup_pack_revprops(fs,
+                                              upgrade_baton->notify_func,
+                                              upgrade_baton->notify_baton,
+                                              upgrade_baton->cancel_func,
+                                              upgrade_baton->cancel_baton,
+                                              pool));
 
   /* Done */
   return SVN_NO_ERROR;
@@ -846,7 +846,7 @@ svn_fs_x__revision_proplist(apr_hash_t **proplist_p,
                             svn_revnum_t rev,
                             apr_pool_t *pool)
 {
-  SVN_ERR(get_revision_proplist(proplist_p, fs, rev, pool));
+  SVN_ERR(svn_fs_x__get_revision_proplist(proplist_p, fs, rev, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1003,7 +1003,7 @@ write_revision_zero(svn_fs_t *fs)
   date.len = strlen(date.data);
   proplist = apr_hash_make(fs->pool);
   svn_hash_sets(proplist, SVN_PROP_REVISION_DATE, &date);
-  return set_revision_proplist(fs, 0, proplist, fs->pool);
+  return svn_fs_x__set_revision_proplist(fs, 0, proplist, fs->pool);
 }
 
 svn_error_t *
@@ -1351,7 +1351,7 @@ change_rev_prop_body(void *baton, apr_pool_t *pool)
     }
   svn_hash_sets(table, cb->name, cb->value);
 
-  return set_revision_proplist(cb->fs, cb->rev, table, pool);
+  return svn_fs_x__set_revision_proplist(cb->fs, cb->rev, table, pool);
 }
 
 svn_error_t *

@@ -25,13 +25,13 @@
 /* Write the CURRENT revprop generation to disk for repository FS.
  */
 svn_error_t *
-write_revprop_generation_file(svn_fs_t *fs,
-                              apr_int64_t current,
-                              apr_pool_t *pool);
+svn_fs_x__write_revprop_generation_file(svn_fs_t *fs,
+                                        apr_int64_t current,
+                                        apr_pool_t *pool);
 
 /* Make sure the revprop_namespace member in FS is set. */
 svn_error_t *
-cleanup_revprop_namespace(svn_fs_t *fs);
+svn_fs_x__cleanup_revprop_namespace(svn_fs_t *fs);
 
 /* In the filesystem FS, pack all revprop shards up to min_unpacked_rev.
  * 
@@ -44,12 +44,12 @@ cleanup_revprop_namespace(svn_fs_t *fs);
  * used in the usual way.  Temporary allocations are done in SCRATCH_POOL.
  */
 svn_error_t *
-upgrade_pack_revprops(svn_fs_t *fs,
-                      svn_fs_upgrade_notify_t notify_func,
-                      void *notify_baton,
-                      svn_cancel_func_t cancel_func,
-                      void *cancel_baton,
-                      apr_pool_t *scratch_pool);
+svn_fs_x__upgrade_pack_revprops(svn_fs_t *fs,
+                                svn_fs_upgrade_notify_t notify_func,
+                                void *notify_baton,
+                                svn_cancel_func_t cancel_func,
+                                void *cancel_baton,
+                                apr_pool_t *scratch_pool);
 
 /* In the filesystem FS, remove all non-packed revprop shards up to
  * min_unpacked_rev.  Temporary allocations are done in SCRATCH_POOL.
@@ -62,30 +62,30 @@ upgrade_pack_revprops(svn_fs_t *fs,
  * See upgrade_pack_revprops for more info.
  */
 svn_error_t *
-upgrade_cleanup_pack_revprops(svn_fs_t *fs,
-                              svn_fs_upgrade_notify_t notify_func,
-                              void *notify_baton,
-                              svn_cancel_func_t cancel_func,
-                              void *cancel_baton,
-                              apr_pool_t *scratch_pool);
+svn_fs_x__upgrade_cleanup_pack_revprops(svn_fs_t *fs,
+                                        svn_fs_upgrade_notify_t notify_func,
+                                        void *notify_baton,
+                                        svn_cancel_func_t cancel_func,
+                                        void *cancel_baton,
+                                        apr_pool_t *scratch_pool);
 
 /* Read the revprops for revision REV in FS and return them in *PROPERTIES_P.
  *
  * Allocations will be done in POOL.
  */
 svn_error_t *
-get_revision_proplist(apr_hash_t **proplist_p,
-                      svn_fs_t *fs,
-                      svn_revnum_t rev,
-                      apr_pool_t *pool);
+svn_fs_x__get_revision_proplist(apr_hash_t **proplist_p,
+                                svn_fs_t *fs,
+                                svn_revnum_t rev,
+                                apr_pool_t *pool);
 
 /* Set the revision property list of revision REV in filesystem FS to
    PROPLIST.  Use POOL for temporary allocations. */
 svn_error_t *
-set_revision_proplist(svn_fs_t *fs,
-                      svn_revnum_t rev,
-                      apr_hash_t *proplist,
-                      apr_pool_t *pool);
+svn_fs_x__set_revision_proplist(svn_fs_t *fs,
+                                svn_revnum_t rev,
+                                apr_hash_t *proplist,
+                                apr_pool_t *pool);
 
 
 /* Return TRUE, if for REVISION in FS, we can find the revprop pack file.
@@ -93,10 +93,10 @@ set_revision_proplist(svn_fs_t *fs,
  * Set *MISSING, if the reason is a missing manifest or pack file. 
  */
 svn_boolean_t
-packed_revprop_available(svn_boolean_t *missing,
-                         svn_fs_t *fs,
-                         svn_revnum_t revision,
-                         apr_pool_t *pool);
+svn_fs_x__packed_revprop_available(svn_boolean_t *missing,
+                                   svn_fs_t *fs,
+                                   svn_revnum_t revision,
+                                   apr_pool_t *pool);
 
 
 /****** Packing FSFS shards *********/
@@ -118,17 +118,17 @@ packed_revprop_available(svn_boolean_t *missing,
  * are done in SCRATCH_POOL.
  */
 svn_error_t *
-copy_revprops(const char *pack_file_dir,
-              const char *pack_filename,
-              const char *shard_path,
-              svn_revnum_t start_rev,
-              svn_revnum_t end_rev,
-              apr_array_header_t *sizes,
-              apr_size_t total_size,
-              int compression_level,
-              svn_cancel_func_t cancel_func,
-              void *cancel_baton,
-              apr_pool_t *scratch_pool);
+svn_fs_x__copy_revprops(const char *pack_file_dir,
+                        const char *pack_filename,
+                        const char *shard_path,
+                        svn_revnum_t start_rev,
+                        svn_revnum_t end_rev,
+                        apr_array_header_t *sizes,
+                        apr_size_t total_size,
+                        int compression_level,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *scratch_pool);
 
 /* For the revprop SHARD at SHARD_PATH with exactly MAX_FILES_PER_DIR
  * revprop files in it, create a packed shared at PACK_FILE_DIR.
@@ -142,15 +142,15 @@ copy_revprops(const char *pack_file_dir,
  * allocations are done in SCRATCH_POOL.
  */
 svn_error_t *
-pack_revprops_shard(const char *pack_file_dir,
-                    const char *shard_path,
-                    apr_int64_t shard,
-                    int max_files_per_dir,
-                    apr_off_t max_pack_size,
-                    int compression_level,
-                    svn_cancel_func_t cancel_func,
-                    void *cancel_baton,
-                    apr_pool_t *scratch_pool);
+svn_fs_x__pack_revprops_shard(const char *pack_file_dir,
+                              const char *shard_path,
+                              apr_int64_t shard,
+                              int max_files_per_dir,
+                              apr_off_t max_pack_size,
+                              int compression_level,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *scratch_pool);
 
 /* Delete the non-packed revprop SHARD at SHARD_PATH with exactly
  * MAX_FILES_PER_DIR revprop files in it.  If this is shard 0, keep the
@@ -160,9 +160,9 @@ pack_revprops_shard(const char *pack_file_dir,
  * allocations are done in SCRATCH_POOL.
  */
 svn_error_t *
-delete_revprops_shard(const char *shard_path,
-                      apr_int64_t shard,
-                      int max_files_per_dir,
-                      svn_cancel_func_t cancel_func,
-                      void *cancel_baton,
-                      apr_pool_t *scratch_pool);
+svn_fs_x__delete_revprops_shard(const char *shard_path,
+                                apr_int64_t shard,
+                                int max_files_per_dir,
+                                svn_cancel_func_t cancel_func,
+                                void *cancel_baton,
+                                apr_pool_t *scratch_pool);
