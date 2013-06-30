@@ -281,7 +281,7 @@ hotcopy_copy_packed_shard(svn_revnum_t *dst_min_unpacked_rev,
   const char *src_subdir_packed_shard;
   svn_revnum_t revprop_rev;
   apr_pool_t *iterpool;
-  fs_fs_data_t *src_ffd = src_fs->fsap_data;
+  fs_x_data_t *src_ffd = src_fs->fsap_data;
 
   /* Copy the packed shard. */
   src_subdir = svn_dirent_join(src_fs->path, PATH_REVS_DIR, scratch_pool);
@@ -341,9 +341,9 @@ hotcopy_copy_packed_shard(svn_revnum_t *dst_min_unpacked_rev,
   if (*dst_min_unpacked_rev < rev + max_files_per_dir)
     {
       *dst_min_unpacked_rev = rev + max_files_per_dir;
-      SVN_ERR(write_revnum_file(dst_fs,
-                                *dst_min_unpacked_rev,
-                                scratch_pool));
+      SVN_ERR(svn_fs_x__write_revnum_file(dst_fs,
+                                          *dst_min_unpacked_rev,
+                                          scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -360,20 +360,20 @@ hotcopy_update_current(svn_revnum_t *dst_youngest,
 {
   apr_uint64_t next_node_id = 0;
   apr_uint64_t next_copy_id = 0;
-  fs_fs_data_t *dst_ffd = dst_fs->fsap_data;
+  fs_x_data_t *dst_ffd = dst_fs->fsap_data;
 
   if (*dst_youngest >= new_youngest)
     return SVN_NO_ERROR;
 
   /* If necessary, get new current next_node and next_copy IDs. */
   if (dst_ffd->format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
-    SVN_ERR(svn_fs_fs__find_max_ids(dst_fs, new_youngest,
-                                    &next_node_id, &next_copy_id,
-                                    scratch_pool));
+    SVN_ERR(svn_fs_x__find_max_ids(dst_fs, new_youngest,
+                                   &next_node_id, &next_copy_id,
+                                   scratch_pool));
 
   /* Update 'current'. */
-  SVN_ERR(write_current(dst_fs, new_youngest, next_node_id, next_copy_id,
-                        scratch_pool));
+  SVN_ERR(svn_fs_x__write_current(dst_fs, new_youngest, next_node_id,
+                                  next_copy_id, scratch_pool));
 
   *dst_youngest = new_youngest;
 
@@ -439,8 +439,8 @@ hotcopy_incremental_check_preconditions(svn_fs_t *src_fs,
                                         svn_fs_t *dst_fs,
                                         apr_pool_t *pool)
 {
-  fs_fs_data_t *src_ffd = src_fs->fsap_data;
-  fs_fs_data_t *dst_ffd = dst_fs->fsap_data;
+  fs_x_data_t *src_ffd = src_fs->fsap_data;
+  fs_x_data_t *dst_ffd = dst_fs->fsap_data;
 
   /* We only support incremental hotcopy between the same format. */
   if (src_ffd->format != dst_ffd->format)
@@ -501,9 +501,9 @@ hotcopy_body(void *baton, apr_pool_t *pool)
 {
   struct hotcopy_body_baton *hbb = baton;
   svn_fs_t *src_fs = hbb->src_fs;
-  fs_fs_data_t *src_ffd = src_fs->fsap_data;
+  fs_x_data_t *src_ffd = src_fs->fsap_data;
   svn_fs_t *dst_fs = hbb->dst_fs;
-  fs_fs_data_t *dst_ffd = dst_fs->fsap_data;
+  fs_x_data_t *dst_ffd = dst_fs->fsap_data;
   int max_files_per_dir = src_ffd->max_files_per_dir;
   svn_boolean_t incremental = hbb->incremental;
   svn_cancel_func_t cancel_func = hbb->cancel_func;
@@ -586,10 +586,10 @@ hotcopy_body(void *baton, apr_pool_t *pool)
    * of revisions than the destination.
    * This also catches the case where users accidentally swap the
    * source and destination arguments. */
-  SVN_ERR(svn_fs_fs__youngest_rev(&src_youngest, src_fs, pool));
+  SVN_ERR(svn_fs_x__youngest_rev(&src_youngest, src_fs, pool));
   if (incremental)
     {
-      SVN_ERR(svn_fs_fs__youngest_rev(&dst_youngest, dst_fs, pool));
+      SVN_ERR(svn_fs_x__youngest_rev(&dst_youngest, dst_fs, pool));
       if (src_youngest < dst_youngest)
         return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                  _("The hotcopy destination already contains more revisions "
@@ -606,8 +606,10 @@ hotcopy_body(void *baton, apr_pool_t *pool)
   /* Copy the min unpacked rev, and read its value. */
   if (src_ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
     {
-      SVN_ERR(read_min_unpacked_rev(&src_min_unpacked_rev, src_fs, pool));
-      SVN_ERR(read_min_unpacked_rev(&dst_min_unpacked_rev, dst_fs, pool));
+      SVN_ERR(svn_fs_x__read_min_unpacked_rev(&src_min_unpacked_rev, src_fs,
+                                              pool));
+      SVN_ERR(svn_fs_x__read_min_unpacked_rev(&dst_min_unpacked_rev, dst_fs,
+                                              pool));
 
       /* We only support packs coming from the hotcopy source.
        * The destination should not be packed independently from
@@ -671,7 +673,7 @@ hotcopy_body(void *baton, apr_pool_t *pool)
 
       /* Now that all revisions have moved into the pack, the original
        * rev dir can be removed. */
-      err = svn_io_remove_dir2(path_rev_shard(dst_fs, rev, iterpool),
+      err = svn_io_remove_dir2(svn_fs_x__path_rev_shard(dst_fs, rev, iterpool),
                                TRUE, cancel_func, cancel_baton, iterpool);
       if (err)
         {
@@ -722,10 +724,10 @@ hotcopy_body(void *baton, apr_pool_t *pool)
                *
                * If the youngest revision ended up being packed, don't try
                * to be smart and work around this. Just abort the hotcopy. */
-              SVN_ERR(update_min_unpacked_rev(src_fs, pool));
-              if (is_packed_rev(src_fs, rev))
+              SVN_ERR(svn_fs_x__update_min_unpacked_rev(src_fs, pool));
+              if (svn_fs_x__is_packed_rev(src_fs, rev))
                 {
-                  if (is_packed_rev(src_fs, src_youngest))
+                  if (svn_fs_x__is_packed_rev(src_fs, src_youngest))
                     return svn_error_createf(
                              SVN_ERR_FS_NO_SUCH_REVISION, NULL,
                              _("The assumed HEAD revision (%lu) of the "
@@ -810,7 +812,7 @@ hotcopy_body(void *baton, apr_pool_t *pool)
       if (kind == svn_node_file)
         {
           SVN_ERR(svn_sqlite__hotcopy(src_subdir, dst_subdir, pool));
-          SVN_ERR(svn_fs_fs__del_rep_reference(dst_fs, dst_youngest, pool));
+          SVN_ERR(svn_fs_x__del_rep_reference(dst_fs, dst_youngest, pool));
         }
     }
 
@@ -823,7 +825,7 @@ hotcopy_body(void *baton, apr_pool_t *pool)
    * reset it to zero (since this is on a different path, it will not
    * overlap with data already in cache).  Also, clean up stale files
    * used for the named atomics implementation. */
-  SVN_ERR(svn_io_check_path(path_revprop_generation(src_fs, pool),
+  SVN_ERR(svn_io_check_path(svn_fs_x__path_revprop_generation(src_fs, pool),
                             &kind, pool));
   if (kind == svn_node_file)
     SVN_ERR(write_revprop_generation_file(dst_fs, 0, pool));
@@ -832,7 +834,7 @@ hotcopy_body(void *baton, apr_pool_t *pool)
 
   /* Hotcopied FS is complete. Stamp it with a format file. */
   dst_ffd->max_files_per_dir = max_files_per_dir;
-  SVN_ERR(svn_fs_fs__write_format(dst_fs, TRUE, pool));
+  SVN_ERR(svn_fs_x__write_format(dst_fs, TRUE, pool));
 
   return SVN_NO_ERROR;
 }
@@ -842,8 +844,8 @@ hotcopy_body(void *baton, apr_pool_t *pool)
 static void
 hotcopy_setup_shared_fs_data(svn_fs_t *src_fs, svn_fs_t *dst_fs)
 {
-  fs_fs_data_t *src_ffd = src_fs->fsap_data;
-  fs_fs_data_t *dst_ffd = dst_fs->fsap_data;
+  fs_x_data_t *src_ffd = src_fs->fsap_data;
+  fs_x_data_t *dst_ffd = dst_fs->fsap_data;
 
   /* The common pool and mutexes are shared between src and dst filesystems.
    * During hotcopy we only grab the mutexes for the destination, so there
@@ -861,8 +863,8 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
                           const char *dst_path,
                           apr_pool_t *pool)
 {
-  fs_fs_data_t *src_ffd = src_fs->fsap_data;
-  fs_fs_data_t *dst_ffd = dst_fs->fsap_data;
+  fs_x_data_t *src_ffd = src_fs->fsap_data;
+  fs_x_data_t *dst_ffd = dst_fs->fsap_data;
 
   dst_fs->path = apr_pstrdup(pool, dst_path);
 
@@ -872,7 +874,8 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
 
   /* Create the revision data directories. */
   if (dst_ffd->max_files_per_dir)
-    SVN_ERR(svn_io_make_dir_recursively(path_rev_shard(dst_fs, 0, pool),
+    SVN_ERR(svn_io_make_dir_recursively(svn_fs_x__path_rev_shard(dst_fs, 0,
+                                                                 pool),
                                         pool));
   else
     SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(dst_path,
@@ -881,7 +884,8 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
 
   /* Create the revprops directory. */
   if (src_ffd->max_files_per_dir)
-    SVN_ERR(svn_io_make_dir_recursively(path_revprops_shard(dst_fs, 0, pool),
+    SVN_ERR(svn_io_make_dir_recursively(svn_fs_x__path_revprops_shard(dst_fs,
+                                                                      0, pool),
                                         pool));
   else
     SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(dst_path,
@@ -902,54 +906,55 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
                                         pool));
 
   /* Create the 'current' file. */
-  SVN_ERR(svn_io_file_create(svn_fs_fs__path_current(dst_fs, pool),
+  SVN_ERR(svn_io_file_create(svn_fs_x__path_current(dst_fs, pool),
                               (dst_ffd->format >=
                                  SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT
                                  ? "0\n" : "0 1 1\n"), 
                                pool));
 
   /* Create lock file and UUID. */
-  SVN_ERR(svn_io_file_create_empty(path_lock(dst_fs, pool), pool));
-  SVN_ERR(svn_fs_fs__set_uuid(dst_fs, src_fs->uuid, pool));
+  SVN_ERR(svn_io_file_create_empty(svn_fs_x__path_lock(dst_fs, pool), pool));
+  SVN_ERR(svn_fs_x__set_uuid(dst_fs, src_fs->uuid, pool));
 
   /* Create the min unpacked rev file. */
   if (dst_ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(svn_io_file_create(path_min_unpacked_rev(dst_fs, pool),
-                                                     "0\n", pool));
+    SVN_ERR(svn_io_file_create(svn_fs_x__path_min_unpacked_rev(dst_fs, pool),
+                               "0\n", pool));
   /* Create the txn-current file if the repository supports
      the transaction sequence file. */
   if (dst_ffd->format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
     {
-      SVN_ERR(svn_io_file_create(path_txn_current(dst_fs, pool),
-                                  "0\n", pool));
-      SVN_ERR(svn_io_file_create_empty(path_txn_current_lock(dst_fs, pool),
+      SVN_ERR(svn_io_file_create(svn_fs_x__path_txn_current(dst_fs, pool),
+                                 "0\n", pool));
+      SVN_ERR(svn_io_file_create_empty(svn_fs_x__path_txn_current_lock(dst_fs,
+                                                                       pool),
                                        pool));
     }
 
   dst_ffd->youngest_rev_cache = 0;
 
   hotcopy_setup_shared_fs_data(src_fs, dst_fs);
-  SVN_ERR(svn_fs_fs__initialize_caches(dst_fs, pool));
+  SVN_ERR(svn_fs_x__initialize_caches(dst_fs, pool));
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_fs_fs__hotcopy(svn_fs_t *src_fs,
-                   svn_fs_t *dst_fs,
-                   const char *src_path,
-                   const char *dst_path,
-                   svn_boolean_t incremental,
-                   svn_cancel_func_t cancel_func,
-                   void *cancel_baton,
-                   apr_pool_t *pool)
+svn_fs_x__hotcopy(svn_fs_t *src_fs,
+                  svn_fs_t *dst_fs,
+                  const char *src_path,
+                  const char *dst_path,
+                  svn_boolean_t incremental,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
+                  apr_pool_t *pool)
 {
   struct hotcopy_body_baton hbb;
 
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
-  SVN_ERR(svn_fs_fs__open(src_fs, src_path, pool));
+  SVN_ERR(svn_fs_x__open(src_fs, src_path, pool));
 
   if (incremental)
     {
@@ -969,11 +974,11 @@ svn_fs_fs__hotcopy(svn_fs_t *src_fs,
       else
         {
           /* Check the existing repository. */
-          SVN_ERR(svn_fs_fs__open(dst_fs, dst_path, pool));
+          SVN_ERR(svn_fs_x__open(dst_fs, dst_path, pool));
           SVN_ERR(hotcopy_incremental_check_preconditions(src_fs, dst_fs,
                                                           pool));
           hotcopy_setup_shared_fs_data(src_fs, dst_fs);
-          SVN_ERR(svn_fs_fs__initialize_caches(dst_fs, pool));
+          SVN_ERR(svn_fs_x__initialize_caches(dst_fs, pool));
         }
     }
   else
@@ -991,7 +996,7 @@ svn_fs_fs__hotcopy(svn_fs_t *src_fs,
   hbb.incremental = incremental;
   hbb.cancel_func = cancel_func;
   hbb.cancel_baton = cancel_baton;
-  SVN_ERR(svn_fs_fs__with_write_lock(dst_fs, hotcopy_body, &hbb, pool));
+  SVN_ERR(svn_fs_x__with_write_lock(dst_fs, hotcopy_body, &hbb, pool));
 
   return SVN_NO_ERROR;
 }

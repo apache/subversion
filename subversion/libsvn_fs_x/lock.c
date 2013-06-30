@@ -177,10 +177,10 @@ write_digest_file(apr_hash_t *children,
   apr_hash_t *hash = apr_hash_make(pool);
   const char *tmp_path;
 
-  SVN_ERR(svn_fs_fs__ensure_dir_exists(svn_dirent_join(fs_path, PATH_LOCKS_DIR,
-                                                       pool), fs_path, pool));
-  SVN_ERR(svn_fs_fs__ensure_dir_exists(svn_dirent_dirname(digest_path, pool),
-                                       fs_path, pool));
+  SVN_ERR(svn_fs_x__ensure_dir_exists(svn_dirent_join(fs_path, PATH_LOCKS_DIR,
+                                                      pool), fs_path, pool));
+  SVN_ERR(svn_fs_x__ensure_dir_exists(svn_dirent_dirname(digest_path, pool),
+                                      fs_path, pool));
 
   if (lock)
     {
@@ -458,7 +458,7 @@ delete_lock(svn_fs_t *fs,
       else
         {
           const char *rev_0_path
-            = svn_fs_fs__path_rev_absolute(fs, 0, pool);
+            = svn_fs_x__path_rev_absolute(fs, 0, pool);
           SVN_ERR(write_digest_file(this_children, this_lock, fs->path,
                                     digest_path, rev_0_path, subpool));
         }
@@ -712,11 +712,11 @@ get_locks_callback(void *baton,
 
 /* The main routine for lock enforcement, used throughout libsvn_fs_fs. */
 svn_error_t *
-svn_fs_fs__allow_locked_operation(const char *path,
-                                  svn_fs_t *fs,
-                                  svn_boolean_t recurse,
-                                  svn_boolean_t have_write_lock,
-                                  apr_pool_t *pool)
+svn_fs_x__allow_locked_operation(const char *path,
+                                 svn_fs_t *fs,
+                                 svn_boolean_t recurse,
+                                 svn_boolean_t have_write_lock,
+                                 apr_pool_t *pool)
 {
   path = svn_fs__canonicalize_abspath(path, pool);
   if (recurse)
@@ -753,7 +753,7 @@ struct lock_baton {
 };
 
 
-/* This implements the svn_fs_fs__with_write_lock() 'body' callback
+/* This implements the svn_fs_x__with_write_lock() 'body' callback
    type, and assumes that the write lock is held.
    BATON is a 'struct lock_baton *'. */
 static svn_error_t *
@@ -773,7 +773,7 @@ lock_body(void *baton, apr_pool_t *pool)
      library dependencies, which are not portable. */
   SVN_ERR(lb->fs->vtable->youngest_rev(&youngest, lb->fs, pool));
   SVN_ERR(lb->fs->vtable->revision_root(&root, lb->fs, youngest, pool));
-  SVN_ERR(svn_fs_fs__check_path(&kind, root, lb->path, pool));
+  SVN_ERR(svn_fs_x__check_path(&kind, root, lb->path, pool));
   if (kind == svn_node_dir)
     return SVN_FS__ERR_NOT_FILE(lb->fs, lb->path);
 
@@ -801,8 +801,7 @@ lock_body(void *baton, apr_pool_t *pool)
   if (SVN_IS_VALID_REVNUM(lb->current_rev))
     {
       svn_revnum_t created_rev;
-      SVN_ERR(svn_fs_fs__node_created_rev(&created_rev, root, lb->path,
-                                          pool));
+      SVN_ERR(svn_fs_x__node_created_rev(&created_rev, root, lb->path, pool));
 
       /* SVN_INVALID_REVNUM means the path doesn't exist.  So
          apparently somebody is trying to lock something in their
@@ -857,8 +856,7 @@ lock_body(void *baton, apr_pool_t *pool)
   if (lb->token)
     lock->token = apr_pstrdup(lb->pool, lb->token);
   else
-    SVN_ERR(svn_fs_fs__generate_lock_token(&(lock->token), lb->fs,
-                                           lb->pool));
+    SVN_ERR(svn_fs_x__generate_lock_token(&(lock->token), lb->fs, lb->pool));
   lock->path = apr_pstrdup(lb->pool, lb->path);
   lock->owner = apr_pstrdup(lb->pool, lb->fs->access_ctx->username);
   lock->comment = apr_pstrdup(lb->pool, lb->comment);
@@ -866,7 +864,7 @@ lock_body(void *baton, apr_pool_t *pool)
   lock->creation_date = apr_time_now();
   lock->expiration_date = lb->expiration_date;
 
-  rev_0_path = svn_fs_fs__path_rev_absolute(lb->fs, 0, pool);
+  rev_0_path = svn_fs_x__path_rev_absolute(lb->fs, 0, pool);
   SVN_ERR(set_lock(lb->fs->path, lock, rev_0_path, pool));
   *lb->lock_p = lock;
 
@@ -881,7 +879,7 @@ struct unlock_baton {
   svn_boolean_t break_lock;
 };
 
-/* This implements the svn_fs_fs__with_write_lock() 'body' callback
+/* This implements the svn_fs_x__with_write_lock() 'body' callback
    type, and assumes that the write lock is held.
    BATON is a 'struct unlock_baton *'. */
 static svn_error_t *
@@ -918,16 +916,16 @@ unlock_body(void *baton, apr_pool_t *pool)
 /*** Public API implementations ***/
 
 svn_error_t *
-svn_fs_fs__lock(svn_lock_t **lock_p,
-                svn_fs_t *fs,
-                const char *path,
-                const char *token,
-                const char *comment,
-                svn_boolean_t is_dav_comment,
-                apr_time_t expiration_date,
-                svn_revnum_t current_rev,
-                svn_boolean_t steal_lock,
-                apr_pool_t *pool)
+svn_fs_x__lock(svn_lock_t **lock_p,
+               svn_fs_t *fs,
+               const char *path,
+               const char *token,
+               const char *comment,
+               svn_boolean_t is_dav_comment,
+               apr_time_t expiration_date,
+               svn_revnum_t current_rev,
+               svn_boolean_t steal_lock,
+               apr_pool_t *pool)
 {
   struct lock_baton lb;
 
@@ -945,14 +943,14 @@ svn_fs_fs__lock(svn_lock_t **lock_p,
   lb.steal_lock = steal_lock;
   lb.pool = pool;
 
-  return svn_fs_fs__with_write_lock(fs, lock_body, &lb, pool);
+  return svn_fs_x__with_write_lock(fs, lock_body, &lb, pool);
 }
 
 
 svn_error_t *
-svn_fs_fs__generate_lock_token(const char **token,
-                               svn_fs_t *fs,
-                               apr_pool_t *pool)
+svn_fs_x__generate_lock_token(const char **token,
+                              svn_fs_t *fs,
+                              apr_pool_t *pool)
 {
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
@@ -967,11 +965,11 @@ svn_fs_fs__generate_lock_token(const char **token,
 
 
 svn_error_t *
-svn_fs_fs__unlock(svn_fs_t *fs,
-                  const char *path,
-                  const char *token,
-                  svn_boolean_t break_lock,
-                  apr_pool_t *pool)
+svn_fs_x__unlock(svn_fs_t *fs,
+                 const char *path,
+                 const char *token,
+                 svn_boolean_t break_lock,
+                 apr_pool_t *pool)
 {
   struct unlock_baton ub;
 
@@ -983,15 +981,15 @@ svn_fs_fs__unlock(svn_fs_t *fs,
   ub.token = token;
   ub.break_lock = break_lock;
 
-  return svn_fs_fs__with_write_lock(fs, unlock_body, &ub, pool);
+  return svn_fs_x__with_write_lock(fs, unlock_body, &ub, pool);
 }
 
 
 svn_error_t *
-svn_fs_fs__get_lock(svn_lock_t **lock_p,
-                    svn_fs_t *fs,
-                    const char *path,
-                    apr_pool_t *pool)
+svn_fs_x__get_lock(svn_lock_t **lock_p,
+                   svn_fs_t *fs,
+                   const char *path,
+                   apr_pool_t *pool)
 {
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
   path = svn_fs__canonicalize_abspath(path, pool);
@@ -1010,7 +1008,7 @@ typedef struct get_locks_filter_baton_t
 } get_locks_filter_baton_t;
 
 
-/* A wrapper for the GET_LOCKS_FUNC passed to svn_fs_fs__get_locks()
+/* A wrapper for the GET_LOCKS_FUNC passed to svn_fs_x__get_locks()
    which filters out locks on paths that aren't within
    BATON->requested_depth of BATON->path before called
    BATON->get_locks_func() with BATON->get_locks_baton.
@@ -1020,7 +1018,7 @@ typedef struct get_locks_filter_baton_t
    resolved, we take this filtering approach rather than honoring
    depth requests closer to the crawling code.  In other words, once
    we decide how to resolve issue #3660, there might be a more
-   performant way to honor the depth passed to svn_fs_fs__get_locks().  */
+   performant way to honor the depth passed to svn_fs_x__get_locks().  */
 static svn_error_t *
 get_locks_filter_func(void *baton,
                       svn_lock_t *lock,
@@ -1055,12 +1053,12 @@ get_locks_filter_func(void *baton,
 }
 
 svn_error_t *
-svn_fs_fs__get_locks(svn_fs_t *fs,
-                     const char *path,
-                     svn_depth_t depth,
-                     svn_fs_get_locks_callback_t get_locks_func,
-                     void *get_locks_baton,
-                     apr_pool_t *pool)
+svn_fs_x__get_locks(svn_fs_t *fs,
+                    const char *path,
+                    svn_depth_t depth,
+                    svn_fs_get_locks_callback_t get_locks_func,
+                    void *get_locks_baton,
+                    apr_pool_t *pool)
 {
   const char *digest_path;
   get_locks_filter_baton_t glfb;

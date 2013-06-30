@@ -61,7 +61,7 @@ generate_string(apr_uint64_t key, apr_size_t len, apr_pool_t *pool)
     {
       apr_size_t idx;
       apr_size_t add_len;
-      
+
       if (temp == 0)
         {
           temp = key;
@@ -88,13 +88,13 @@ store_and_load_table(string_table_t **table, apr_pool_t *pool)
   svn_stream_t *stream;
 
   stream = svn_stream_from_stringbuf(stream_buffer, pool);
-  SVN_ERR(svn_fs_fs__write_string_table(stream, *table, pool));
+  SVN_ERR(svn_fs_x__write_string_table(stream, *table, pool));
   SVN_ERR(svn_stream_close(stream));
 
   *table = NULL;
 
   stream = svn_stream_from_stringbuf(stream_buffer, pool);
-  SVN_ERR(svn_fs_fs__read_string_table(table, stream, pool, pool));
+  SVN_ERR(svn_fs_x__read_string_table(table, stream, pool, pool));
   SVN_ERR(svn_stream_close(stream));
 
   return SVN_NO_ERROR;
@@ -105,16 +105,16 @@ create_empty_table_body(svn_boolean_t do_load_store,
                         apr_pool_t *pool)
 {
   string_table_builder_t *builder
-    = svn_fs_fs__string_table_builder_create(pool);
+    = svn_fs_x__string_table_builder_create(pool);
   string_table_t *table
-    = svn_fs_fs__string_table_create(builder, pool);
+    = svn_fs_x__string_table_create(builder, pool);
 
-  SVN_TEST_STRING_ASSERT(svn_fs_fs__string_table_get(table, 0, NULL, pool), "");
+  SVN_TEST_STRING_ASSERT(svn_fs_x__string_table_get(table, 0, NULL, pool), "");
 
   if (do_load_store)
     SVN_ERR(store_and_load_table(&table, pool));
 
-  SVN_TEST_STRING_ASSERT(svn_fs_fs__string_table_get(table, 0, NULL, pool), "");
+  SVN_TEST_STRING_ASSERT(svn_fs_x__string_table_get(table, 0, NULL, pool), "");
 
   return SVN_NO_ERROR;
 }
@@ -129,11 +129,11 @@ short_string_table_body(svn_boolean_t do_load_store,
   string_table_t *table;
   int i;
   
-  builder = svn_fs_fs__string_table_builder_create(pool);
+  builder = svn_fs_x__string_table_builder_create(pool);
   for (i = 0; i < STRING_COUNT; ++i)
-    indexes[i] = svn_fs_fs__string_table_builder_add(builder, basic_strings[i], 0);
+    indexes[i] = svn_fs_x__string_table_builder_add(builder, basic_strings[i], 0);
   
-  table = svn_fs_fs__string_table_create(builder, pool);
+  table = svn_fs_x__string_table_create(builder, pool);
   if (do_load_store)
     SVN_ERR(store_and_load_table(&table, pool));
   
@@ -142,15 +142,15 @@ short_string_table_body(svn_boolean_t do_load_store,
     {
       apr_size_t len;
       const char *string
-        = svn_fs_fs__string_table_get(table, indexes[i], &len, pool);
+        = svn_fs_x__string_table_get(table, indexes[i], &len, pool);
 
       SVN_TEST_STRING_ASSERT(string, basic_strings[i]);
       SVN_TEST_ASSERT(len == strlen(string));
       SVN_TEST_ASSERT(len == strlen(basic_strings[i]));
     }
 
-  SVN_TEST_STRING_ASSERT(svn_fs_fs__string_table_get(table, STRING_COUNT,
-                                                     NULL, pool), "");
+  SVN_TEST_STRING_ASSERT(svn_fs_x__string_table_get(table, STRING_COUNT,
+                                                    NULL, pool), "");
 
   return SVN_NO_ERROR;
 }
@@ -168,14 +168,14 @@ large_string_table_body(svn_boolean_t do_load_store,
   string_table_t *table;
   int i;
 
-  builder = svn_fs_fs__string_table_builder_create(pool);
+  builder = svn_fs_x__string_table_builder_create(pool);
   for (i = 0; i < COUNT; ++i)
     {
       strings[i] = generate_string(0x1234567876543210ull * (i + 1), 73000 + 1000 * i,  pool);
-      indexes[i] = svn_fs_fs__string_table_builder_add(builder, strings[i]->data, strings[i]->len);
+      indexes[i] = svn_fs_x__string_table_builder_add(builder, strings[i]->data, strings[i]->len);
     }
 
-  table = svn_fs_fs__string_table_create(builder, pool);
+  table = svn_fs_x__string_table_create(builder, pool);
   if (do_load_store)
     SVN_ERR(store_and_load_table(&table, pool));
 
@@ -183,7 +183,7 @@ large_string_table_body(svn_boolean_t do_load_store,
     {
       apr_size_t len;
       const char *string
-        = svn_fs_fs__string_table_get(table, indexes[i], &len, pool);
+        = svn_fs_x__string_table_get(table, indexes[i], &len, pool);
 
       SVN_TEST_STRING_ASSERT(string, strings[i]->data);
       SVN_TEST_ASSERT(len == strlen(string));
@@ -207,14 +207,17 @@ many_strings_table_body(svn_boolean_t do_load_store,
   string_table_t *table;
   int i;
 
-  builder = svn_fs_fs__string_table_builder_create(pool);
+  builder = svn_fs_x__string_table_builder_create(pool);
   for (i = 0; i < COUNT; ++i)
     {
-      strings[i] = generate_string(0x1234567876543210ull * (i + 1), (i * i) % 23000,  pool);
-      indexes[i] = svn_fs_fs__string_table_builder_add(builder, strings[i]->data, strings[i]->len);
+      strings[i] = generate_string(0x1234567876543210ull * (i + 1),
+                                   (i * i) % 23000,  pool);
+      indexes[i] = svn_fs_x__string_table_builder_add(builder,
+                                                      strings[i]->data,
+                                                      strings[i]->len);
     }
 
-  table = svn_fs_fs__string_table_create(builder, pool);
+  table = svn_fs_x__string_table_create(builder, pool);
   if (do_load_store)
     SVN_ERR(store_and_load_table(&table, pool));
 
@@ -222,7 +225,7 @@ many_strings_table_body(svn_boolean_t do_load_store,
     {
       apr_size_t len;
       const char *string
-        = svn_fs_fs__string_table_get(table, indexes[i], &len, pool);
+        = svn_fs_x__string_table_get(table, indexes[i], &len, pool);
 
       SVN_TEST_STRING_ASSERT(string, strings[i]->data);
       SVN_TEST_ASSERT(len == strlen(string));

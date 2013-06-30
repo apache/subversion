@@ -34,46 +34,46 @@
 /* Set *NODEREV_P to the node-revision for the node ID in FS.  Do any
    allocations in POOL. */
 svn_error_t *
-svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
-                             svn_fs_t *fs,
-                             const svn_fs_id_t *id,
-                             apr_pool_t *pool);
+svn_fs_x__get_node_revision(node_revision_t **noderev_p,
+                            svn_fs_t *fs,
+                            const svn_fs_id_t *id,
+                            apr_pool_t *pool);
 
 /* Set *ROOT_ID to the node-id for the root of revision REV in
    filesystem FS.  Do any allocations in POOL. */
 svn_error_t *
-svn_fs_fs__rev_get_root(svn_fs_id_t **root_id,
-                        svn_fs_t *fs,
-                        svn_revnum_t rev,
-                        apr_pool_t *pool);
+svn_fs_x__rev_get_root(svn_fs_id_t **root_id,
+                       svn_fs_t *fs,
+                       svn_revnum_t rev,
+                       apr_pool_t *pool);
 
 /* Verify that representation REP in FS can be accessed.  Successive calls
    to this function should pass a non-NULL value to HINT.  In that case,
    many file open / close operations can be eliminated.
    Do any allocations in POOL. */
 svn_error_t *
-svn_fs_fs__check_rep(representation_t *rep,
-                     svn_fs_t *fs,
-                     void **hint,
-                     apr_pool_t *pool);
+svn_fs_x__check_rep(representation_t *rep,
+                    svn_fs_t *fs,
+                    void **hint,
+                    apr_pool_t *pool);
 
 /* Follow the representation delta chain in FS starting with REP.  The
    number of reps (including REP) in the chain will be returned in
    *CHAIN_LENGTH.  Do any allocations in POOL. */
 svn_error_t *
-svn_fs_fs__rep_chain_length(int *chain_length,
-                            representation_t *rep,
-                            svn_fs_t *fs,
-                            apr_pool_t *pool);
+svn_fs_x__rep_chain_length(int *chain_length,
+                           representation_t *rep,
+                           svn_fs_t *fs,
+                           apr_pool_t *pool);
 
 /* Set *CONTENTS to be a readable svn_stream_t that receives the text
    representation REP as seen in filesystem FS.
    Use POOL for temporary allocations. */
 svn_error_t *
-svn_fs_fs__get_contents(svn_stream_t **contents_p,
-                        svn_fs_t *fs,
-                        representation_t *rep,
-                        apr_pool_t *pool);
+svn_fs_x__get_contents(svn_stream_t **contents_p,
+                       svn_fs_t *fs,
+                       representation_t *rep,
+                       apr_pool_t *pool);
 
 /* Determine on-disk and expanded sizes of the representation identified
  * by ENTRY in FS and return the result in PACKED_LEN and EXPANDED_LEN,
@@ -82,13 +82,13 @@ svn_fs_fs__get_contents(svn_stream_t **contents_p,
  * Use POOL for allocations.
  */
 svn_error_t *
-svn_fs_fs__get_representation_length(svn_filesize_t *packed_len,
-                                     svn_filesize_t *expanded_len,
-                                     svn_fs_t *fs,
-                                     apr_file_t *file,
-                                     svn_stream_t *stream,
-                                     svn_fs_fs__p2l_entry_t* entry,
-                                     apr_pool_t *pool);
+svn_fs_x__get_representation_length(svn_filesize_t *packed_len,
+                                    svn_filesize_t *expanded_len,
+                                    svn_fs_t *fs,
+                                    apr_file_t *file,
+                                    svn_stream_t *stream,
+                                    svn_fs_x__p2l_entry_t* entry,
+                                    apr_pool_t *pool);
 
 /* Attempt to fetch the text representation of node-revision NODEREV as
    seen in filesystem FS and pass it along with the BATON to the PROCESSOR.
@@ -97,61 +97,61 @@ svn_fs_fs__get_representation_length(svn_filesize_t *packed_len,
    Use POOL for all allocations.
  */
 svn_error_t *
-svn_fs_fs__try_process_file_contents(svn_boolean_t *success,
-                                     svn_fs_t *fs,
-                                     node_revision_t *noderev,
-                                     svn_fs_process_contents_func_t processor,
-                                     void* baton,
-                                     apr_pool_t *pool);
+svn_fs_x__try_process_file_contents(svn_boolean_t *success,
+                                    svn_fs_t *fs,
+                                    node_revision_t *noderev,
+                                    svn_fs_process_contents_func_t processor,
+                                    void* baton,
+                                    apr_pool_t *pool);
 
 /* Set *STREAM_P to a delta stream turning the contents of the file SOURCE into
    the contents of the file TARGET, allocated in POOL.
    If SOURCE is null, the empty string will be used. */
 svn_error_t *
-svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
-                                 svn_fs_t *fs,
-                                 node_revision_t *source,
-                                 node_revision_t *target,
-                                 apr_pool_t *pool);
+svn_fs_x__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
+                                svn_fs_t *fs,
+                                node_revision_t *source,
+                                node_revision_t *target,
+                                apr_pool_t *pool);
 
 /* Set *ENTRIES to an apr_hash_t of dirent structs that contain the
    directory entries of node-revision NODEREV in filesystem FS.  The
    returned table (and its keys and values) is allocated in POOL,
    which is also used for temporary allocations. */
 svn_error_t *
-svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
-                            svn_fs_t *fs,
-                            node_revision_t *noderev,
-                            apr_pool_t *pool);
+svn_fs_x__rep_contents_dir(apr_hash_t **entries_p,
+                           svn_fs_t *fs,
+                           node_revision_t *noderev,
+                           apr_pool_t *pool);
 
 /* Set *DIRENT to the entry identified by NAME in the directory given
    by NODEREV in filesystem FS.  If no such entry exits, *DIRENT will
    be NULL. The returned object is allocated in RESULT_POOL; SCRATCH_POOL
    used for temporary allocations. */
 svn_error_t *
-svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
-                                  svn_fs_t *fs,
-                                  node_revision_t *noderev,
-                                  const char *name,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool);
+svn_fs_x__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
+                                 svn_fs_t *fs,
+                                 node_revision_t *noderev,
+                                 const char *name,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
 /* Set *PROPLIST to be an apr_hash_t containing the property list of
    node-revision NODEREV as seen in filesystem FS.  Use POOL for
    temporary allocations. */
 svn_error_t *
-svn_fs_fs__get_proplist(apr_hash_t **proplist,
-                        svn_fs_t *fs,
-                        node_revision_t *noderev,
-                        apr_pool_t *pool);
+svn_fs_x__get_proplist(apr_hash_t **proplist,
+                       svn_fs_t *fs,
+                       node_revision_t *noderev,
+                       apr_pool_t *pool);
 
 /* Fetch the list of change in revision REV in FS and return it in *CHANGES.
  * Allocate the result in POOL.
  */
 svn_error_t *
-svn_fs_fs__get_changes(apr_array_header_t **changes,
-                       svn_fs_t *fs,
-                       svn_revnum_t rev,
-                       apr_pool_t *pool);
+svn_fs_x__get_changes(apr_array_header_t **changes,
+                      svn_fs_t *fs,
+                      svn_revnum_t rev,
+                      apr_pool_t *pool);
 
 #endif

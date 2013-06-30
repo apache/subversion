@@ -31,7 +31,7 @@
  * Also, the binary representation of a noderev can be much shorter than
  * the ordinary textual variant.
  *
- * In its serialized form, the svn_fs_fs__noderevs_t container extracts
+ * In its serialized form, the svn_fs_x__noderevs_t container extracts
  * most of that redundancy and the run-time representation is also much
  * smaller than sum of the respective node_revision_t objects.
  *
@@ -42,29 +42,29 @@
 
 /* An opaque collection of node revisions.
  */
-typedef struct svn_fs_fs__noderevs_t svn_fs_fs__noderevs_t;
+typedef struct svn_fs_x__noderevs_t svn_fs_x__noderevs_t;
 
 /* Create and populate noderev containers. */
 
 /* Create and return a new noderevs container with an initial capacity of
  * INITIAL_COUNT node_revision_t objects.  Allocate the result in POOL.
  */
-svn_fs_fs__noderevs_t *
-svn_fs_fs__noderevs_create(apr_size_t initial_count,
-                           apr_pool_t *pool);
+svn_fs_x__noderevs_t *
+svn_fs_x__noderevs_create(apr_size_t initial_count,
+                          apr_pool_t *pool);
 
 /* Add NODEREV to the CONTAINER. Return the index that identifies the new
  * item in this container.
  */
 apr_size_t
-svn_fs_fs__noderevs_add(svn_fs_fs__noderevs_t *container,
-                        node_revision_t *noderev);
+svn_fs_x__noderevs_add(svn_fs_x__noderevs_t *container,
+                       node_revision_t *noderev);
 
 /* Return a rough estimate in bytes for the serialized representation
  * of CONTAINER.
  */
 apr_size_t
-svn_fs_fs__noderevs_estimate_size(const svn_fs_fs__noderevs_t *container);
+svn_fs_x__noderevs_estimate_size(const svn_fs_x__noderevs_t *container);
 
 /* Read from noderev containers. */
 
@@ -72,10 +72,10 @@ svn_fs_fs__noderevs_estimate_size(const svn_fs_fs__noderevs_t *container);
  * the result in POOL and return it in *NODEREV_P.
  */
 svn_error_t *
-svn_fs_fs__noderevs_get(node_revision_t **noderev_p,
-                        const svn_fs_fs__noderevs_t *container,
-                        apr_size_t idx,
-                        apr_pool_t *pool);
+svn_fs_x__noderevs_get(node_revision_t **noderev_p,
+                       const svn_fs_x__noderevs_t *container,
+                       apr_size_t idx,
+                       apr_pool_t *pool);
 
 /* I/O interface. */
 
@@ -83,8 +83,8 @@ svn_fs_fs__noderevs_get(node_revision_t **noderev_p,
  * temporary allocations.
  */
 svn_error_t *
-svn_fs_fs__write_noderevs_container(svn_stream_t *stream,
-                                    const svn_fs_fs__noderevs_t *container,
+svn_fs_x__write_noderevs_container(svn_stream_t *stream,
+                                    const svn_fs_x__noderevs_t *container,
                                     apr_pool_t *pool);
 
 /* Read a noderev container from its serialized representation in STREAM.
@@ -92,36 +92,36 @@ svn_fs_fs__write_noderevs_container(svn_stream_t *stream,
  * SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
-svn_fs_fs__read_noderevs_container(svn_fs_fs__noderevs_t **container,
+svn_fs_x__read_noderevs_container(svn_fs_x__noderevs_t **container,
                                    svn_stream_t *stream,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool);
 
-/* Implements #svn_cache__serialize_func_t for svn_fs_fs__noderevs_t
+/* Implements #svn_cache__serialize_func_t for svn_fs_x__noderevs_t
  * objects.
  */
 svn_error_t *
-svn_fs_fs__serialize_noderevs_container(void **data,
+svn_fs_x__serialize_noderevs_container(void **data,
                                         apr_size_t *data_len,
                                         void *in,
                                         apr_pool_t *pool);
 
-/* Implements #svn_cache__deserialize_func_t for svn_fs_fs__noderevs_t
+/* Implements #svn_cache__deserialize_func_t for svn_fs_x__noderevs_t
  * objects.
  */
 svn_error_t *
-svn_fs_fs__deserialize_noderevs_container(void **out,
+svn_fs_x__deserialize_noderevs_container(void **out,
                                           void *data,
                                           apr_size_t data_len,
                                           apr_pool_t *pool);
 
-/* Implements svn_cache__partial_getter_func_t for svn_fs_fs__noderevs_t,
+/* Implements svn_cache__partial_getter_func_t for svn_fs_x__noderevs_t,
  * setting *OUT to the node_revision_t selected by the apr_uint32_t index
- * passed in as *BATON.  This function is similar to svn_fs_fs__noderevs_get
+ * passed in as *BATON.  This function is similar to svn_fs_x__noderevs_get
  * but operates on the cache serialized representation of the container.
  */
 svn_error_t *
-svn_fs_fs__noderevs_get_func(void **out,
+svn_fs_x__noderevs_get_func(void **out,
                              const void *data,
                              apr_size_t data_len,
                              void *baton,

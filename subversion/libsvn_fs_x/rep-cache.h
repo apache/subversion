@@ -37,36 +37,37 @@ extern "C" {
 /* Open and create, if needed, the rep cache database associated with FS.
    Use POOL for temporary allocations. */
 svn_error_t *
-svn_fs_fs__open_rep_cache(svn_fs_t *fs,
-                          apr_pool_t *pool);
+svn_fs_x__open_rep_cache(svn_fs_t *fs,
+                         apr_pool_t *pool);
 
 /* Set *EXISTS to TRUE iff the rep-cache DB file exists. */
 svn_error_t *
-svn_fs_fs__exists_rep_cache(svn_boolean_t *exists,
-                            svn_fs_t *fs, apr_pool_t *pool);
+svn_fs_x__exists_rep_cache(svn_boolean_t *exists,
+                           svn_fs_t *fs,
+                           apr_pool_t *pool);
 
 /* Iterate all representations currently in FS's cache. */
 svn_error_t *
-svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
-                              svn_revnum_t start,
-                              svn_revnum_t end,
-                              svn_error_t *(*walker)(representation_t *rep,
-                                                     void *walker_baton,
-                                                     svn_fs_t *fs,
-                                                     apr_pool_t *scratch_pool),
-                              void *walker_baton,
-                              svn_cancel_func_t cancel_func,
-                              void *cancel_baton,
-                              apr_pool_t *pool);
+svn_fs_x__walk_rep_reference(svn_fs_t *fs,
+                             svn_revnum_t start,
+                             svn_revnum_t end,
+                             svn_error_t *(*walker)(representation_t *rep,
+                                                    void *walker_baton,
+                                                    svn_fs_t *fs,
+                                                    apr_pool_t *scratch_pool),
+                             void *walker_baton,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *pool);
 
 /* Return the representation REP in FS which has fulltext CHECKSUM.
    REP is allocated in POOL.  If the rep cache database has not been
    opened, just set *REP to NULL. */
 svn_error_t *
-svn_fs_fs__get_rep_reference(representation_t **rep,
-                             svn_fs_t *fs,
-                             svn_checksum_t *checksum,
-                             apr_pool_t *pool);
+svn_fs_x__get_rep_reference(representation_t **rep,
+                            svn_fs_t *fs,
+                            svn_checksum_t *checksum,
+                            apr_pool_t *pool);
 
 /* Set the representation REP in FS, using REP->CHECKSUM.
    Use POOL for temporary allocations.
@@ -76,23 +77,23 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
    If REJECT_DUP is TRUE, return an error if there is an existing
    match for REP->CHECKSUM. */
 svn_error_t *
-svn_fs_fs__set_rep_reference(svn_fs_t *fs,
-                             representation_t *rep,
-                             svn_boolean_t reject_dup,
-                             apr_pool_t *pool);
+svn_fs_x__set_rep_reference(svn_fs_t *fs,
+                            representation_t *rep,
+                            svn_boolean_t reject_dup,
+                            apr_pool_t *pool);
 
 /* Delete from the cache all reps corresponding to revisions younger
    than YOUNGEST. */
 svn_error_t *
-svn_fs_fs__del_rep_reference(svn_fs_t *fs,
-                             svn_revnum_t youngest,
-                             apr_pool_t *pool);
+svn_fs_x__del_rep_reference(svn_fs_t *fs,
+                            svn_revnum_t youngest,
+                            apr_pool_t *pool);
 
 /* Start a transaction to take an SQLite reserved lock that prevents
    other writes. */
 svn_error_t *
-svn_fs_fs__lock_rep_cache(svn_fs_t *fs,
-                          apr_pool_t *pool);
+svn_fs_x__lock_rep_cache(svn_fs_t *fs,
+                         apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

@@ -120,7 +120,7 @@ add_table(string_table_builder_t *builder)
 }
 
 string_table_builder_t *
-svn_fs_fs__string_table_builder_create(apr_pool_t *pool)
+svn_fs_x__string_table_builder_create(apr_pool_t *pool)
 {
   string_table_builder_t *result = apr_palloc(pool, sizeof(*result));
   result->pool = pool;
@@ -269,9 +269,9 @@ insert_string(builder_table_t *table,
 }
 
 apr_size_t
-svn_fs_fs__string_table_builder_add(string_table_builder_t *builder,
-                                    const char *string,
-                                    apr_size_t len)
+svn_fs_x__string_table_builder_add(string_table_builder_t *builder,
+                                   const char *string,
+                                   apr_size_t len)
 {
   apr_size_t result = -1;
   builder_table_t *table = APR_ARRAY_IDX(builder->tables,
@@ -341,7 +341,7 @@ svn_fs_fs__string_table_builder_add(string_table_builder_t *builder,
 }
 
 apr_size_t
-svn_fs_fs__string_table_builder_estimate_size(string_table_builder_t *builder)
+svn_fs_x__string_table_builder_estimate_size(string_table_builder_t *builder)
 {
   apr_size_t total = 0;
   int i;
@@ -449,8 +449,8 @@ create_table(string_sub_table_t *target,
 }
 
 string_table_t *
-svn_fs_fs__string_table_create(const string_table_builder_t *builder,
-                               apr_pool_t *pool)
+svn_fs_x__string_table_create(const string_table_builder_t *builder,
+                              apr_pool_t *pool)
 {
   apr_size_t i;
   
@@ -534,10 +534,10 @@ table_copy_string(char *buffer,
 }
 
 const char*
-svn_fs_fs__string_table_get(const string_table_t *table,
-                            apr_size_t idx,
-                            apr_size_t *length,
-                            apr_pool_t *pool)
+svn_fs_x__string_table_get(const string_table_t *table,
+                           apr_size_t idx,
+                           apr_size_t *length,
+                           apr_pool_t *pool)
 {
   apr_size_t table_number = idx >> TABLE_SHIFT;
   apr_size_t sub_index = idx & STRING_INDEX_MASK;
@@ -578,9 +578,9 @@ svn_fs_fs__string_table_get(const string_table_t *table,
 }
 
 svn_error_t *
-svn_fs_fs__write_string_table(svn_stream_t *stream,
-                              const string_table_t *table,
-                              apr_pool_t *pool)
+svn_fs_x__write_string_table(svn_stream_t *stream,
+                             const string_table_t *table,
+                             apr_pool_t *pool)
 {
   apr_size_t i, k;
 
@@ -647,10 +647,10 @@ svn_fs_fs__write_string_table(svn_stream_t *stream,
 }
 
 svn_error_t *
-svn_fs_fs__read_string_table(string_table_t **table_p,
-                             svn_stream_t *stream,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool)
+svn_fs_x__read_string_table(string_table_t **table_p,
+                            svn_stream_t *stream,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
 {
   apr_size_t i, k;
 
@@ -738,8 +738,8 @@ svn_fs_fs__read_string_table(string_table_t **table_p,
 }
 
 void
-svn_fs_fs__serialize_string_table(svn_temp_serializer__context_t *context,
-                                  string_table_t **st)
+svn_fs_x__serialize_string_table(svn_temp_serializer__context_t *context,
+                                 string_table_t **st)
 {
   apr_size_t i, k;
   string_table_t *string_table = *st;
@@ -791,8 +791,8 @@ svn_fs_fs__serialize_string_table(svn_temp_serializer__context_t *context,
 }
 
 void
-svn_fs_fs__deserialize_string_table(void *buffer,
-                                    string_table_t **table)
+svn_fs_x__deserialize_string_table(void *buffer,
+                                   string_table_t **table)
 {
   apr_size_t i, k;
   string_sub_table_t *sub_tables;
@@ -821,10 +821,10 @@ svn_fs_fs__deserialize_string_table(void *buffer,
 }
 
 const char*
-svn_fs_fs__string_table_get_func(const string_table_t *table,
-                                 apr_size_t idx,
-                                 apr_size_t *length,
-                                 apr_pool_t *pool)
+svn_fs_x__string_table_get_func(const string_table_t *table,
+                                apr_size_t idx,
+                                apr_size_t *length,
+                                apr_pool_t *pool)
 {
   apr_size_t table_number = idx >> TABLE_SHIFT;
   apr_size_t sub_index = idx & STRING_INDEX_MASK;
@@ -867,7 +867,7 @@ svn_fs_fs__string_table_get_func(const string_table_t *table,
               string_header_t *header;
               apr_size_t len;
               char *result;
-              
+
               /* construct a copy of our sub-table struct with SHORT_STRINGS
                  and DATA pointers resolved.  Leave all other pointers as
                  they are.  This allows us to use the same code for string

@@ -70,166 +70,166 @@
 
 /* Return TRUE is REV is packed in FS, FALSE otherwise. */
 svn_boolean_t
-is_packed_rev(svn_fs_t *fs,
-              svn_revnum_t rev);
+svn_fs_x__is_packed_rev(svn_fs_t *fs,
+                        svn_revnum_t rev);
 
 /* Return TRUE is REV is packed in FS, FALSE otherwise. */
 svn_boolean_t
-is_packed_revprop(svn_fs_t *fs,
-                  svn_revnum_t rev);
+svn_fs_x__is_packed_revprop(svn_fs_t *fs,
+                            svn_revnum_t rev);
 
 /* Return the revision number of the pack / rev file in FS containing REV. */
 svn_revnum_t
-packed_base_rev(svn_fs_t *fs, svn_revnum_t rev);
+svn_fs_x__packed_base_rev(svn_fs_t *fs, svn_revnum_t rev);
 
 /* Return the number of revisions in the pack / rev file in FS that contains
  * revision REV. */
 svn_revnum_t
-pack_size(svn_fs_t *fs, svn_revnum_t rev);
+svn_fs_x__pack_size(svn_fs_t *fs, svn_revnum_t rev);
 
 const char *
-path_format(svn_fs_t *fs,
-            apr_pool_t *pool);
-
-const char *
-path_uuid(svn_fs_t *fs,
-          apr_pool_t *pool);
-
-const char *
-path_txn_current(svn_fs_t *fs,
-                 apr_pool_t *pool);
-
-const char *
-path_txn_current_lock(svn_fs_t *fs,
+svn_fs_x__path_format(svn_fs_t *fs,
                       apr_pool_t *pool);
 
 const char *
-path_lock(svn_fs_t *fs,
-          apr_pool_t *pool);
-
-const char *
-path_revprop_generation(svn_fs_t *fs,
-                        apr_pool_t *pool);
-
-const char *
-path_rev_packed(svn_fs_t *fs,
-                svn_revnum_t rev,
-                const char *kind,
-                apr_pool_t *pool);
-
-const char *
-path_rev_shard(svn_fs_t *fs,
-               svn_revnum_t rev,
-               apr_pool_t *pool);
-
-const char *
-path_rev(svn_fs_t *fs,
-         svn_revnum_t rev,
-         apr_pool_t *pool);
-
-const char *
-path_l2p_index(svn_fs_t *fs,
-               svn_revnum_t rev,
-               apr_pool_t *pool);
-
-const char *
-path_p2l_index(svn_fs_t *fs,
-               svn_revnum_t rev,
-               apr_pool_t *pool);
-
-const char *
-path_revprops_shard(svn_fs_t *fs,
-                    svn_revnum_t rev,
+svn_fs_x__path_uuid(svn_fs_t *fs,
                     apr_pool_t *pool);
 
 const char *
-path_revprops_pack_shard(svn_fs_t *fs,
+svn_fs_x__path_txn_current(svn_fs_t *fs,
+                           apr_pool_t *pool);
+
+const char *
+svn_fs_x__path_txn_current_lock(svn_fs_t *fs,
+                                apr_pool_t *pool);
+
+const char *
+svn_fs_x__path_lock(svn_fs_t *fs,
+                    apr_pool_t *pool);
+
+const char *
+svn_fs_x__path_revprop_generation(svn_fs_t *fs,
+                                  apr_pool_t *pool);
+
+const char *
+svn_fs_x__path_rev_packed(svn_fs_t *fs,
+                          svn_revnum_t rev,
+                          const char *kind,
+                          apr_pool_t *pool);
+
+const char *
+svn_fs_x__path_rev_shard(svn_fs_t *fs,
                          svn_revnum_t rev,
                          apr_pool_t *pool);
 
 const char *
-path_revprops(svn_fs_t *fs,
-              svn_revnum_t rev,
-              apr_pool_t *pool);
+svn_fs_x__path_rev(svn_fs_t *fs,
+                   svn_revnum_t rev,
+                   apr_pool_t *pool);
 
 const char *
-path_txn_dir(svn_fs_t *fs,
-             const svn_fs_fs__id_part_t *txn_id,
-             apr_pool_t *pool);
+svn_fs_x__path_l2p_index(svn_fs_t *fs,
+                         svn_revnum_t rev,
+                         apr_pool_t *pool);
+
+const char *
+svn_fs_x__path_p2l_index(svn_fs_t *fs,
+                         svn_revnum_t rev,
+                         apr_pool_t *pool);
+
+const char *
+svn_fs_x__path_revprops_shard(svn_fs_t *fs,
+                              svn_revnum_t rev,
+                              apr_pool_t *pool);
+
+const char *
+svn_fs_x__path_revprops_pack_shard(svn_fs_t *fs,
+                                   svn_revnum_t rev,
+                                   apr_pool_t *pool);
+
+const char *
+svn_fs_x__path_revprops(svn_fs_t *fs,
+                        svn_revnum_t rev,
+                        apr_pool_t *pool);
+
+const char *
+svn_fs_x__path_txn_dir(svn_fs_t *fs,
+                       const svn_fs_x__id_part_t *txn_id,
+                       apr_pool_t *pool);
 
 /* Return the name of the sha1->rep mapping file in transaction TXN_ID
  * within FS for the given SHA1 checksum.  Use POOL for allocations.
  */
 const char *
-path_txn_sha1(svn_fs_t *fs,
-              const svn_fs_fs__id_part_t *txn_id,
-              const unsigned char *sha1,
-              apr_pool_t *pool);
-
-const char *
-path_txn_changes(svn_fs_t *fs,
-                 const svn_fs_fs__id_part_t *txn_id,
-                 apr_pool_t *pool);
-
-const char*
-path_l2p_proto_index(svn_fs_t *fs,
-                     const svn_fs_fs__id_part_t *txn_id,
-                     apr_pool_t *pool);
-
-const char*
-path_p2l_proto_index(svn_fs_t *fs,
-                     const svn_fs_fs__id_part_t *txn_id,
-                     apr_pool_t *pool);
-
-const char *
-path_txn_props(svn_fs_t *fs,
-               const svn_fs_fs__id_part_t *txn_id,
-               apr_pool_t *pool);
-
-const char *
-path_txn_next_ids(svn_fs_t *fs,
-                  const svn_fs_fs__id_part_t *txn_id,
-                  apr_pool_t *pool);
-
-const char *
-path_min_unpacked_rev(svn_fs_t *fs,
-                      apr_pool_t *pool);
-
-
-const char *
-path_txn_item_index(svn_fs_t *fs,
-                    const svn_fs_fs__id_part_t *txn_id,
-                    apr_pool_t *pool);
-
-const char *
-path_txn_proto_rev(svn_fs_t *fs,
-                   const svn_fs_fs__id_part_t *txn_id,
-                   apr_pool_t *pool);
-
-const char *
-path_txn_proto_rev_lock(svn_fs_t *fs,
-                        const svn_fs_fs__id_part_t *txn_id,
+svn_fs_x__path_txn_sha1(svn_fs_t *fs,
+                        const svn_fs_x__id_part_t *txn_id,
+                        const unsigned char *sha1,
                         apr_pool_t *pool);
 
 const char *
-path_txn_node_rev(svn_fs_t *fs,
-                  const svn_fs_id_t *id,
-                  apr_pool_t *pool);
+svn_fs_x__path_txn_changes(svn_fs_t *fs,
+                           const svn_fs_x__id_part_t *txn_id,
+                           apr_pool_t *pool);
+
+const char*
+svn_fs_x__path_l2p_proto_index(svn_fs_t *fs,
+                               const svn_fs_x__id_part_t *txn_id,
+                               apr_pool_t *pool);
+
+const char*
+svn_fs_x__path_p2l_proto_index(svn_fs_t *fs,
+                               const svn_fs_x__id_part_t *txn_id,
+                               apr_pool_t *pool);
 
 const char *
-path_txn_node_props(svn_fs_t *fs,
-                    const svn_fs_id_t *id,
-                    apr_pool_t *pool);
+svn_fs_x__path_txn_props(svn_fs_t *fs,
+                         const svn_fs_x__id_part_t *txn_id,
+                         apr_pool_t *pool);
 
 const char *
-path_txn_node_children(svn_fs_t *fs,
-                       const svn_fs_id_t *id,
-                       apr_pool_t *pool);
+svn_fs_x__path_txn_next_ids(svn_fs_t *fs,
+                            const svn_fs_x__id_part_t *txn_id,
+                            apr_pool_t *pool);
 
 const char *
-path_node_origin(svn_fs_t *fs,
-                 const svn_fs_fs__id_part_t *node_id,
-                 apr_pool_t *pool);
+svn_fs_x__path_min_unpacked_rev(svn_fs_t *fs,
+                                apr_pool_t *pool);
+
+
+const char *
+svn_fs_x__path_txn_item_index(svn_fs_t *fs,
+                              const svn_fs_x__id_part_t *txn_id,
+                              apr_pool_t *pool);
+
+const char *
+svn_fs_x__path_txn_proto_rev(svn_fs_t *fs,
+                             const svn_fs_x__id_part_t *txn_id,
+                             apr_pool_t *pool);
+
+const char *
+svn_fs_x__path_txn_proto_rev_lock(svn_fs_t *fs,
+                                  const svn_fs_x__id_part_t *txn_id,
+                                  apr_pool_t *pool);
+
+const char *
+svn_fs_x__path_txn_node_rev(svn_fs_t *fs,
+                            const svn_fs_id_t *id,
+                            apr_pool_t *pool);
+
+const char *
+svn_fs_x__path_txn_node_props(svn_fs_t *fs,
+                              const svn_fs_id_t *id,
+                              apr_pool_t *pool);
+
+const char *
+svn_fs_x__path_txn_node_children(svn_fs_t *fs,
+                                 const svn_fs_id_t *id,
+                                 apr_pool_t *pool);
+
+const char *
+svn_fs_x__path_node_origin(svn_fs_t *fs,
+                           const svn_fs_x__id_part_t *node_id,
+                           apr_pool_t *pool);
 
 /* Check that BUF, a nul-terminated buffer of text from file PATH,
    contains only digits at OFFSET and beyond, raising an error if not.
@@ -238,20 +238,20 @@ path_node_origin(svn_fs_t *fs,
 
    Uses POOL for temporary allocation. */
 svn_error_t *
-check_file_buffer_numeric(const char *buf,
-                          apr_off_t offset,
-                          const char *path,
-                          const char *title,
-                          apr_pool_t *pool);
+svn_fs_x__check_file_buffer_numeric(const char *buf,
+                                    apr_off_t offset,
+                                    const char *path,
+                                    const char *title,
+                                    apr_pool_t *pool);
 
 svn_error_t *
-read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
-                      svn_fs_t *fs,
-                      apr_pool_t *pool);
+svn_fs_x__read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
+                                svn_fs_t *fs,
+                                apr_pool_t *pool);
 
 svn_error_t *
-update_min_unpacked_rev(svn_fs_t *fs,
-                        apr_pool_t *pool);
+svn_fs_x__update_min_unpacked_rev(svn_fs_t *fs,
+                                  apr_pool_t *pool);
 
 /* Write a file FILENAME in directory FS_PATH, containing a single line
  * with the number REVNUM in ASCII decimal.  Move the file into place
@@ -259,20 +259,20 @@ update_min_unpacked_rev(svn_fs_t *fs,
  *
  * Similar to write_current(). */
 svn_error_t *
-write_revnum_file(svn_fs_t *fs,
-                  svn_revnum_t revnum,
-                  apr_pool_t *scratch_pool);
+svn_fs_x__write_revnum_file(svn_fs_t *fs,
+                            svn_revnum_t revnum,
+                            apr_pool_t *scratch_pool);
 
 /* Atomically update the 'current' file to hold the specifed REV,
    NEXT_NODE_ID, and NEXT_COPY_ID.  (The two next-ID parameters are
    ignored and may be 0 if the FS format does not use them.)
    Perform temporary allocations in POOL. */
 svn_error_t *
-write_current(svn_fs_t *fs,
-              svn_revnum_t rev,
-              apr_uint64_t next_node_id,
-              apr_uint64_t next_copy_id,
-              apr_pool_t *pool);
+svn_fs_x__write_current(svn_fs_t *fs,
+                        svn_revnum_t rev,
+                        apr_uint64_t next_node_id,
+                        apr_uint64_t next_copy_id,
+                        apr_pool_t *pool);
 
 /* Read the file at PATH and return its content in *CONTENT. *CONTENT will
  * not be modified unless the whole file was read successfully.
@@ -284,24 +284,24 @@ write_current(svn_fs_t *fs,
  * Use POOL for allocations.
  */
 svn_error_t *
-try_stringbuf_from_file(svn_stringbuf_t **content,
-                        svn_boolean_t *missing,
-                        const char *path,
-                        svn_boolean_t last_attempt,
-                        apr_pool_t *pool);
+svn_fs_x__try_stringbuf_from_file(svn_stringbuf_t **content,
+                                  svn_boolean_t *missing,
+                                  const char *path,
+                                  svn_boolean_t last_attempt,
+                                  apr_pool_t *pool);
 
 /* Fetch the current offset of FILE into *OFFSET_P. */
 svn_error_t *
-get_file_offset(apr_off_t *offset_p,
-                apr_file_t *file,
-                apr_pool_t *pool);
+svn_fs_x__get_file_offset(apr_off_t *offset_p,
+                          apr_file_t *file,
+                          apr_pool_t *pool);
 
 /* Read the file FNAME and store the contents in *BUF.
    Allocations are performed in POOL. */
 svn_error_t *
-read_content(svn_stringbuf_t **content,
-             const char *fname,
-             apr_pool_t *pool);
+svn_fs_x__read_content(svn_stringbuf_t **content,
+                       const char *fname,
+                       apr_pool_t *pool);
 
 /* Reads a line from STREAM and converts it to a 64 bit integer to be
  * returned in *RESULT.  If we encounter eof, set *HIT_EOF and leave
@@ -310,10 +310,10 @@ read_content(svn_stringbuf_t **content,
  * SCRATCH_POOL is used for temporary allocations.
  */
 svn_error_t *
-read_number_from_stream(apr_int64_t *result,
-                        svn_boolean_t *hit_eof,
-                        svn_stream_t *stream,
-                        apr_pool_t *scratch_pool);
+svn_fs_x__read_number_from_stream(apr_int64_t *result,
+                                  svn_boolean_t *hit_eof,
+                                  svn_stream_t *stream,
+                                  apr_pool_t *scratch_pool);
 
 /* Move a file into place from OLD_FILENAME in the transactions
    directory to its final location NEW_FILENAME in the repository.  On
@@ -323,9 +323,9 @@ read_number_from_stream(apr_int64_t *result,
    This function almost duplicates svn_io_file_move(), but it tries to
    guarantee a flush. */
 svn_error_t *
-move_into_place(const char *old_filename,
-                const char *new_filename,
-                const char *perms_reference,
-                apr_pool_t *pool);
+svn_fs_x__move_into_place(const char *old_filename,
+                          const char *new_filename,
+                          const char *perms_reference,
+                          apr_pool_t *pool);
 
 #endif

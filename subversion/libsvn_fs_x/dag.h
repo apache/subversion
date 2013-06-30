@@ -66,10 +66,10 @@ typedef struct dag_node_t dag_node_t;
 /* Fill *NODE with a dag_node_t representing node revision ID in FS,
    allocating in POOL.  */
 svn_error_t *
-svn_fs_fs__dag_get_node(dag_node_t **node,
-                        svn_fs_t *fs,
-                        const svn_fs_id_t *id,
-                        apr_pool_t *pool);
+svn_fs_x__dag_get_node(dag_node_t **node,
+                       svn_fs_t *fs,
+                       const svn_fs_id_t *id,
+                       apr_pool_t *pool);
 
 
 /* Return a new dag_node_t object referring to the same node as NODE,
@@ -77,91 +77,91 @@ svn_fs_fs__dag_get_node(dag_node_t **node,
    pool that wants to refer to dag nodes that may have been allocated
    elsewhere, you can call this function and avoid inter-pool pointers. */
 dag_node_t *
-svn_fs_fs__dag_dup(const dag_node_t *node,
-                   apr_pool_t *pool);
+svn_fs_x__dag_dup(const dag_node_t *node,
+                  apr_pool_t *pool);
 
 /* Serialize a DAG node, except don't try to preserve the 'fs' member.
    Implements svn_cache__serialize_func_t */
 svn_error_t *
-svn_fs_fs__dag_serialize(void **data,
-                         apr_size_t *data_len,
-                         void *in,
-                         apr_pool_t *pool);
+svn_fs_x__dag_serialize(void **data,
+                        apr_size_t *data_len,
+                        void *in,
+                        apr_pool_t *pool);
 
 /* Deserialize a DAG node, leaving the 'fs' member as NULL.
    Implements svn_cache__deserialize_func_t */
 svn_error_t *
-svn_fs_fs__dag_deserialize(void **out,
-                           void *data,
-                           apr_size_t data_len,
-                           apr_pool_t *pool);
+svn_fs_x__dag_deserialize(void **out,
+                          void *data,
+                          apr_size_t data_len,
+                          apr_pool_t *pool);
 
 /* Return the filesystem containing NODE.  */
-svn_fs_t *svn_fs_fs__dag_get_fs(dag_node_t *node);
+svn_fs_t *svn_fs_x__dag_get_fs(dag_node_t *node);
 
 /* Changes the filesystem containing NODE to FS.  (Used when pulling
    nodes out of a shared cache, say.) */
-void svn_fs_fs__dag_set_fs(dag_node_t *node, svn_fs_t *fs);
+void svn_fs_x__dag_set_fs(dag_node_t *node, svn_fs_t *fs);
 
 
 /* Set *REV to NODE's revision number, allocating in POOL.  If NODE
    has never been committed as part of a revision, set *REV to
    SVN_INVALID_REVNUM.  */
-svn_error_t *svn_fs_fs__dag_get_revision(svn_revnum_t *rev,
-                                         dag_node_t *node,
-                                         apr_pool_t *pool);
+svn_error_t *svn_fs_x__dag_get_revision(svn_revnum_t *rev,
+                                        dag_node_t *node,
+                                        apr_pool_t *pool);
 
 
 /* Return the node revision ID of NODE.  The value returned is shared
    with NODE, and will be deallocated when NODE is.  */
-const svn_fs_id_t *svn_fs_fs__dag_get_id(const dag_node_t *node);
+const svn_fs_id_t *svn_fs_x__dag_get_id(const dag_node_t *node);
 
 
 /* Return the created path of NODE.  The value returned is shared
    with NODE, and will be deallocated when NODE is.  */
-const char *svn_fs_fs__dag_get_created_path(dag_node_t *node);
+const char *svn_fs_x__dag_get_created_path(dag_node_t *node);
 
 
 /* Set *ID_P to the node revision ID of NODE's immediate predecessor,
    or NULL if NODE has no predecessor.
  */
-svn_error_t *svn_fs_fs__dag_get_predecessor_id(const svn_fs_id_t **id_p,
-                                               dag_node_t *node);
+svn_error_t *svn_fs_x__dag_get_predecessor_id(const svn_fs_id_t **id_p,
+                                              dag_node_t *node);
 
 
 /* Set *COUNT to the number of predecessors NODE has (recursively), or
    -1 if not known.
  */
 /* ### This function is currently only used by 'verify'. */
-svn_error_t *svn_fs_fs__dag_get_predecessor_count(int *count,
-                                                  dag_node_t *node);
+svn_error_t *svn_fs_x__dag_get_predecessor_count(int *count,
+                                                 dag_node_t *node);
 
 /* Set *COUNT to the number of node under NODE (inclusive) with
    svn:mergeinfo properties.
  */
-svn_error_t *svn_fs_fs__dag_get_mergeinfo_count(apr_int64_t *count,
-                                                dag_node_t *node);
+svn_error_t *svn_fs_x__dag_get_mergeinfo_count(apr_int64_t *count,
+                                               dag_node_t *node);
 
 /* Set *DO_THEY to a flag indicating whether or not NODE is a
    directory with at least one descendant (not including itself) with
    svn:mergeinfo.
  */
 svn_error_t *
-svn_fs_fs__dag_has_descendants_with_mergeinfo(svn_boolean_t *do_they,
-                                              dag_node_t *node);
+svn_fs_x__dag_has_descendants_with_mergeinfo(svn_boolean_t *do_they,
+                                             dag_node_t *node);
 
 /* Set *HAS_MERGEINFO to a flag indicating whether or not NODE itself
    has svn:mergeinfo set on it.
  */
 svn_error_t *
-svn_fs_fs__dag_has_mergeinfo(svn_boolean_t *has_mergeinfo,
-                             dag_node_t *node);
+svn_fs_x__dag_has_mergeinfo(svn_boolean_t *has_mergeinfo,
+                            dag_node_t *node);
 
 /* Return non-zero IFF NODE is currently mutable. */
-svn_boolean_t svn_fs_fs__dag_check_mutable(const dag_node_t *node);
+svn_boolean_t svn_fs_x__dag_check_mutable(const dag_node_t *node);
 
 /* Return the node kind of NODE. */
-svn_node_kind_t svn_fs_fs__dag_node_kind(dag_node_t *node);
+svn_node_kind_t svn_fs_x__dag_node_kind(dag_node_t *node);
 
 /* Set *PROPLIST_P to a PROPLIST hash representing the entire property
    list of NODE, allocating from POOL.  The hash has const char *
@@ -173,36 +173,36 @@ svn_node_kind_t svn_fs_fs__dag_node_kind(dag_node_t *node);
 
    Use POOL for all allocations.
  */
-svn_error_t *svn_fs_fs__dag_get_proplist(apr_hash_t **proplist_p,
-                                         dag_node_t *node,
-                                         apr_pool_t *pool);
+svn_error_t *svn_fs_x__dag_get_proplist(apr_hash_t **proplist_p,
+                                        dag_node_t *node,
+                                        apr_pool_t *pool);
 
 /* Set the property list of NODE to PROPLIST, allocating from POOL.
    The node being changed must be mutable.
 
    Use POOL for all allocations.
  */
-svn_error_t *svn_fs_fs__dag_set_proplist(dag_node_t *node,
-                                         apr_hash_t *proplist,
-                                         apr_pool_t *pool);
+svn_error_t *svn_fs_x__dag_set_proplist(dag_node_t *node,
+                                        apr_hash_t *proplist,
+                                        apr_pool_t *pool);
 
 /* Increment the mergeinfo_count field on NODE by INCREMENT.  The node
    being changed must be mutable.
 
    Use POOL for all allocations.
  */
-svn_error_t *svn_fs_fs__dag_increment_mergeinfo_count(dag_node_t *node,
-                                                      apr_int64_t increment,
-                                                      apr_pool_t *pool);
+svn_error_t *svn_fs_x__dag_increment_mergeinfo_count(dag_node_t *node,
+                                                     apr_int64_t increment,
+                                                     apr_pool_t *pool);
 
 /* Set the has-mergeinfo flag on NODE to HAS_MERGEINFO.  The node
    being changed must be mutable.
 
    Use POOL for all allocations.
  */
-svn_error_t *svn_fs_fs__dag_set_has_mergeinfo(dag_node_t *node,
-                                              svn_boolean_t has_mergeinfo,
-                                              apr_pool_t *pool);
+svn_error_t *svn_fs_x__dag_set_has_mergeinfo(dag_node_t *node,
+                                             svn_boolean_t has_mergeinfo,
+                                             apr_pool_t *pool);
 
 
 
@@ -211,10 +211,10 @@ svn_error_t *svn_fs_fs__dag_set_has_mergeinfo(dag_node_t *node,
 
 /* Open the root of revision REV of filesystem FS, allocating from
    POOL.  Set *NODE_P to the new node.  */
-svn_error_t *svn_fs_fs__dag_revision_root(dag_node_t **node_p,
-                                          svn_fs_t *fs,
-                                          svn_revnum_t rev,
-                                          apr_pool_t *pool);
+svn_error_t *svn_fs_x__dag_revision_root(dag_node_t **node_p,
+                                         svn_fs_t *fs,
+                                         svn_revnum_t rev,
+                                         apr_pool_t *pool);
 
 
 /* Set *NODE_P to the root of transaction TXN_ID in FS, allocating
@@ -223,29 +223,29 @@ svn_error_t *svn_fs_fs__dag_revision_root(dag_node_t **node_p,
    Note that the root node of TXN_ID is not necessarily mutable.  If
    no changes have been made in the transaction, then it may share its
    root directory with its base revision.  To get a mutable root node
-   for a transaction, call svn_fs_fs__dag_clone_root.  */
-svn_error_t *svn_fs_fs__dag_txn_root(dag_node_t **node_p,
-                                     svn_fs_t *fs,
-                                     const svn_fs_fs__id_part_t *txn_id,
-                                     apr_pool_t *pool);
+   for a transaction, call svn_fs_x__dag_clone_root.  */
+svn_error_t *svn_fs_x__dag_txn_root(dag_node_t **node_p,
+                                    svn_fs_t *fs,
+                                    const svn_fs_x__id_part_t *txn_id,
+                                    apr_pool_t *pool);
 
 
 /* Set *NODE_P to the base root of transaction TXN_ID in FS,
    allocating from POOL.  Allocate the node in TRAIL->pool.  */
-svn_error_t *svn_fs_fs__dag_txn_base_root(dag_node_t **node_p,
-                                          svn_fs_t *fs,
-                                          const svn_fs_fs__id_part_t *txn_id,
-                                          apr_pool_t *pool);
+svn_error_t *svn_fs_x__dag_txn_base_root(dag_node_t **node_p,
+                                         svn_fs_t *fs,
+                                         const svn_fs_x__id_part_t *txn_id,
+                                         apr_pool_t *pool);
 
 
 /* Clone the root directory of TXN_ID in FS, and update the
    `transactions' table entry to point to it, unless this has been
    done already.  In either case, set *ROOT_P to a reference to the
    root directory clone.  Allocate *ROOT_P in POOL.  */
-svn_error_t *svn_fs_fs__dag_clone_root(dag_node_t **root_p,
-                                       svn_fs_t *fs,
-                                       const svn_fs_fs__id_part_t *txn_id,
-                                       apr_pool_t *pool);
+svn_error_t *svn_fs_x__dag_clone_root(dag_node_t **root_p,
+                                      svn_fs_t *fs,
+                                      const svn_fs_x__id_part_t *txn_id,
+                                      apr_pool_t *pool);
 
 
 
@@ -257,20 +257,20 @@ svn_error_t *svn_fs_fs__dag_clone_root(dag_node_t **root_p,
    component; it cannot be a slash-separated directory path.
  */
 svn_error_t *
-svn_fs_fs__dag_open(dag_node_t **child_p,
-                    dag_node_t *parent,
-                    const char *name,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool);
+svn_fs_x__dag_open(dag_node_t **child_p,
+                   dag_node_t *parent,
+                   const char *name,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool);
 
 
 /* Set *ENTRIES_P to a hash table of NODE's entries.  The keys of the
    table are entry names, and the values are svn_fs_dirent_t's.  The
    returned table (and its keys and values) is allocated in POOL,
    which is also used for temporary allocations. */
-svn_error_t *svn_fs_fs__dag_dir_entries(apr_hash_t **entries_p,
-                                        dag_node_t *node,
-                                        apr_pool_t *pool);
+svn_error_t *svn_fs_x__dag_dir_entries(apr_hash_t **entries_p,
+                                       dag_node_t *node,
+                                       apr_pool_t *pool);
 
 /* Fetches the NODE's entries and returns a copy of the entry selected
    by the key value given in NAME and set *DIRENT to a copy of that
@@ -279,11 +279,11 @@ svn_error_t *svn_fs_fs__dag_dir_entries(apr_hash_t **entries_p,
    Otherwise, the *DIRENT will be set to NULL.
  */
 /* ### This function is currently only called from dag.c. */
-svn_error_t * svn_fs_fs__dag_dir_entry(svn_fs_dirent_t **dirent,
-                                       dag_node_t *node,
-                                       const char* name,
-                                       apr_pool_t *result_pool,
-                                       apr_pool_t *scratch_pool);
+svn_error_t * svn_fs_x__dag_dir_entry(svn_fs_dirent_t **dirent,
+                                      dag_node_t *node,
+                                      const char* name,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
 
 /* Set ENTRY_NAME in NODE to point to ID (with kind KIND), allocating
    from POOL.  NODE must be a mutable directory.  ID can refer to a
@@ -294,12 +294,12 @@ svn_error_t * svn_fs_fs__dag_dir_entry(svn_fs_dirent_t **dirent,
    Use POOL for all allocations, including to cache the node_revision in
    NODE.
  */
-svn_error_t *svn_fs_fs__dag_set_entry(dag_node_t *node,
-                                      const char *entry_name,
-                                      const svn_fs_id_t *id,
-                                      svn_node_kind_t kind,
-                                      const svn_fs_fs__id_part_t *txn_id,
-                                      apr_pool_t *pool);
+svn_error_t *svn_fs_x__dag_set_entry(dag_node_t *node,
+                                     const char *entry_name,
+                                     const svn_fs_id_t *id,
+                                     svn_node_kind_t kind,
+                                     const svn_fs_x__id_part_t *txn_id,
+                                     apr_pool_t *pool);
 
 
 /* Make a new mutable clone of the node named NAME in PARENT, and
@@ -321,14 +321,14 @@ svn_error_t *svn_fs_fs__dag_set_entry(dag_node_t *node,
 
    Use POOL for all allocations.
  */
-svn_error_t *svn_fs_fs__dag_clone_child(dag_node_t **child_p,
-                                        dag_node_t *parent,
-                                        const char *parent_path,
-                                        const char *name,
-                                        const svn_fs_fs__id_part_t *copy_id,
-                                        const svn_fs_fs__id_part_t *txn_id,
-                                        svn_boolean_t is_parent_copyroot,
-                                        apr_pool_t *pool);
+svn_error_t *svn_fs_x__dag_clone_child(dag_node_t **child_p,
+                                       dag_node_t *parent,
+                                       const char *parent_path,
+                                       const char *name,
+                                       const svn_fs_x__id_part_t *copy_id,
+                                       const svn_fs_x__id_part_t *txn_id,
+                                       svn_boolean_t is_parent_copyroot,
+                                       apr_pool_t *pool);
 
 
 /* Delete the directory entry named NAME from PARENT, allocating from
@@ -343,10 +343,10 @@ svn_error_t *svn_fs_fs__dag_clone_child(dag_node_t **child_p,
 
    Use POOL for all allocations.
  */
-svn_error_t *svn_fs_fs__dag_delete(dag_node_t *parent,
-                                   const char *name,
-                                   const svn_fs_fs__id_part_t *txn_id,
-                                   apr_pool_t *pool);
+svn_error_t *svn_fs_x__dag_delete(dag_node_t *parent,
+                                  const char *name,
+                                  const svn_fs_x__id_part_t *txn_id,
+                                  apr_pool_t *pool);
 
 
 /* Delete the node revision assigned to node ID from FS's `nodes'
@@ -358,9 +358,9 @@ svn_error_t *svn_fs_fs__dag_delete(dag_node_t *parent,
    children, you risk orphaning those children by leaving them
    dangling, disconnected from all DAG trees.  It is assumed that
    callers of this interface know what in the world they are doing.  */
-svn_error_t *svn_fs_fs__dag_remove_node(svn_fs_t *fs,
-                                        const svn_fs_id_t *id,
-                                        apr_pool_t *pool);
+svn_error_t *svn_fs_x__dag_remove_node(svn_fs_t *fs,
+                                       const svn_fs_id_t *id,
+                                       apr_pool_t *pool);
 
 
 /* Delete all mutable node revisions reachable from node ID, including
@@ -368,9 +368,9 @@ svn_error_t *svn_fs_fs__dag_remove_node(svn_fs_t *fs,
    delete any mutable representations and strings associated with that
    node revision.  ID may refer to a file or directory, which may be
    mutable or immutable. */
-svn_error_t *svn_fs_fs__dag_delete_if_mutable(svn_fs_t *fs,
-                                              const svn_fs_id_t *id,
-                                              apr_pool_t *pool);
+svn_error_t *svn_fs_x__dag_delete_if_mutable(svn_fs_t *fs,
+                                             const svn_fs_id_t *id,
+                                             apr_pool_t *pool);
 
 
 /* Create a new mutable directory named NAME in PARENT.  Set *CHILD_P
@@ -384,12 +384,12 @@ svn_error_t *svn_fs_fs__dag_delete_if_mutable(svn_fs_t *fs,
 
    Use POOL for all allocations.
  */
-svn_error_t *svn_fs_fs__dag_make_dir(dag_node_t **child_p,
-                                     dag_node_t *parent,
-                                     const char *parent_path,
-                                     const char *name,
-                                     const svn_fs_fs__id_part_t *txn_id,
-                                     apr_pool_t *pool);
+svn_error_t *svn_fs_x__dag_make_dir(dag_node_t **child_p,
+                                    dag_node_t *parent,
+                                    const char *parent_path,
+                                    const char *name,
+                                    const svn_fs_x__id_part_t *txn_id,
+                                    apr_pool_t *pool);
 
 
 
@@ -403,9 +403,9 @@ svn_error_t *svn_fs_fs__dag_make_dir(dag_node_t **child_p,
 
    Use POOL for all allocations.
  */
-svn_error_t *svn_fs_fs__dag_get_contents(svn_stream_t **contents,
-                                         dag_node_t *file,
-                                         apr_pool_t *pool);
+svn_error_t *svn_fs_x__dag_get_contents(svn_stream_t **contents,
+                                        dag_node_t *file,
+                                        apr_pool_t *pool);
 
 /* Attempt to fetch the contents of NODE and pass it along with the BATON
    to the PROCESSOR.   Set *SUCCESS only of the data could be provided
@@ -414,11 +414,11 @@ svn_error_t *svn_fs_fs__dag_get_contents(svn_stream_t **contents,
    Use POOL for all allocations.
  */
 svn_error_t *
-svn_fs_fs__dag_try_process_file_contents(svn_boolean_t *success,
-                                         dag_node_t *node,
-                                         svn_fs_process_contents_func_t processor,
-                                         void* baton,
-                                         apr_pool_t *pool);
+svn_fs_x__dag_try_process_file_contents(svn_boolean_t *success,
+                                        dag_node_t *node,
+                                        svn_fs_process_contents_func_t processor,
+                                        void* baton,
+                                        apr_pool_t *pool);
 
 
 /* Set *STREAM_P to a delta stream that will turn the contents of SOURCE into
@@ -428,10 +428,10 @@ svn_fs_fs__dag_try_process_file_contents(svn_boolean_t *success,
    Use POOL for all allocations.
  */
 svn_error_t *
-svn_fs_fs__dag_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
-                                     dag_node_t *source,
-                                     dag_node_t *target,
-                                     apr_pool_t *pool);
+svn_fs_x__dag_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
+                                    dag_node_t *source,
+                                    dag_node_t *target,
+                                    apr_pool_t *pool);
 
 /* Return a generic writable stream in *CONTENTS with which to set the
    contents of FILE.  Allocate the stream in POOL.
@@ -441,13 +441,13 @@ svn_fs_fs__dag_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
 
    Use POOL for all allocations.
  */
-svn_error_t *svn_fs_fs__dag_get_edit_stream(svn_stream_t **contents,
-                                            dag_node_t *file,
-                                            apr_pool_t *pool);
+svn_error_t *svn_fs_x__dag_get_edit_stream(svn_stream_t **contents,
+                                           dag_node_t *file,
+                                           apr_pool_t *pool);
 
 
 /* Signify the completion of edits to FILE made using the stream
-   returned by svn_fs_fs__dag_get_edit_stream, allocating from POOL.
+   returned by svn_fs_x__dag_get_edit_stream, allocating from POOL.
 
    If CHECKSUM is non-null, it must match the checksum for FILE's
    contents (note: this is not recalculated, the recorded checksum is
@@ -458,18 +458,18 @@ svn_error_t *svn_fs_fs__dag_get_edit_stream(svn_stream_t **contents,
    Use POOL for all allocations, including to cache the node_revision in
    FILE.
  */
-svn_error_t *svn_fs_fs__dag_finalize_edits(dag_node_t *file,
-                                           const svn_checksum_t *checksum,
-                                           apr_pool_t *pool);
+svn_error_t *svn_fs_x__dag_finalize_edits(dag_node_t *file,
+                                          const svn_checksum_t *checksum,
+                                          apr_pool_t *pool);
 
 
 /* Set *LENGTH to the length of the contents of FILE.
 
    Use POOL for all allocations.
  */
-svn_error_t *svn_fs_fs__dag_file_length(svn_filesize_t *length,
-                                        dag_node_t *file,
-                                        apr_pool_t *pool);
+svn_error_t *svn_fs_x__dag_file_length(svn_filesize_t *length,
+                                       dag_node_t *file,
+                                       apr_pool_t *pool);
 
 /* Put the recorded checksum of type KIND for FILE into CHECKSUM, allocating
    from POOL.
@@ -480,10 +480,10 @@ svn_error_t *svn_fs_fs__dag_file_length(svn_filesize_t *length,
    Use POOL for all allocations.
  */
 svn_error_t *
-svn_fs_fs__dag_file_checksum(svn_checksum_t **checksum,
-                             dag_node_t *file,
-                             svn_checksum_kind_t kind,
-                             apr_pool_t *pool);
+svn_fs_x__dag_file_checksum(svn_checksum_t **checksum,
+                            dag_node_t *file,
+                            svn_checksum_kind_t kind,
+                            apr_pool_t *pool);
 
 /* Create a new mutable file named NAME in PARENT.  Set *CHILD_P to a
    reference to the new node, allocated in POOL.  The new file's
@@ -495,12 +495,12 @@ svn_fs_fs__dag_file_checksum(svn_checksum_t **checksum,
 
    Use POOL for all allocations.
  */
-svn_error_t *svn_fs_fs__dag_make_file(dag_node_t **child_p,
-                                      dag_node_t *parent,
-                                      const char *parent_path,
-                                      const char *name,
-                                      const svn_fs_fs__id_part_t *txn_id,
-                                      apr_pool_t *pool);
+svn_error_t *svn_fs_x__dag_make_file(dag_node_t **child_p,
+                                     dag_node_t *parent,
+                                     const char *parent_path,
+                                     const char *name,
+                                     const svn_fs_x__id_part_t *txn_id,
+                                     apr_pool_t *pool);
 
 
 
@@ -520,14 +520,14 @@ svn_error_t *svn_fs_fs__dag_make_file(dag_node_t **child_p,
 
    Use POOL for all allocations.
  */
-svn_error_t *svn_fs_fs__dag_copy(dag_node_t *to_node,
-                                 const char *entry,
-                                 dag_node_t *from_node,
-                                 svn_boolean_t preserve_history,
-                                 svn_revnum_t from_rev,
-                                 const char *from_path,
-                                 const svn_fs_fs__id_part_t *txn_id,
-                                 apr_pool_t *pool);
+svn_error_t *svn_fs_x__dag_copy(dag_node_t *to_node,
+                                const char *entry,
+                                dag_node_t *from_node,
+                                svn_boolean_t preserve_history,
+                                svn_revnum_t from_rev,
+                                const char *from_path,
+                                const svn_fs_x__id_part_t *txn_id,
+                                apr_pool_t *pool);
 
 
 /* Comparison */
@@ -549,35 +549,35 @@ svn_error_t *svn_fs_fs__dag_copy(dag_node_t *to_node,
    don't really see how that would happen in practice.  Nevertheless,
    it should probably be fixed.
  */
-svn_error_t *svn_fs_fs__dag_things_different(svn_boolean_t *props_changed,
-                                             svn_boolean_t *contents_changed,
-                                             dag_node_t *node1,
-                                             dag_node_t *node2);
+svn_error_t *svn_fs_x__dag_things_different(svn_boolean_t *props_changed,
+                                            svn_boolean_t *contents_changed,
+                                            dag_node_t *node1,
+                                            dag_node_t *node2);
 
 
 /* Set *REV and *PATH to the copyroot revision and path of node NODE, or
    to SVN_INVALID_REVNUM and NULL if no copyroot exists.
  */
-svn_error_t *svn_fs_fs__dag_get_copyroot(svn_revnum_t *rev,
-                                         const char **path,
-                                         dag_node_t *node);
+svn_error_t *svn_fs_x__dag_get_copyroot(svn_revnum_t *rev,
+                                        const char **path,
+                                        dag_node_t *node);
 
 /* Set *REV to the copyfrom revision associated with NODE.
  */
-svn_error_t *svn_fs_fs__dag_get_copyfrom_rev(svn_revnum_t *rev,
-                                             dag_node_t *node);
+svn_error_t *svn_fs_x__dag_get_copyfrom_rev(svn_revnum_t *rev,
+                                            dag_node_t *node);
 
 /* Set *PATH to the copyfrom path associated with NODE.
  */
-svn_error_t *svn_fs_fs__dag_get_copyfrom_path(const char **path,
-                                              dag_node_t *node);
+svn_error_t *svn_fs_x__dag_get_copyfrom_path(const char **path,
+                                             dag_node_t *node);
 
 /* Update *TARGET so that SOURCE is it's predecessor.
  */
 svn_error_t *
-svn_fs_fs__dag_update_ancestry(dag_node_t *target,
-                               dag_node_t *source,
-                               apr_pool_t *pool);
+svn_fs_x__dag_update_ancestry(dag_node_t *target,
+                              dag_node_t *source,
+                              apr_pool_t *pool);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

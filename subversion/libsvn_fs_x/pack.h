@@ -31,12 +31,12 @@
 
    Existing filesystem references need not change.  */
 svn_error_t *
-svn_fs_fs__pack(svn_fs_t *fs,
-                svn_fs_pack_notify_t notify_func,
-                void *notify_baton,
-                svn_cancel_func_t cancel_func,
-                void *cancel_baton,
-                apr_pool_t *pool);
+svn_fs_x__pack(svn_fs_t *fs,
+               svn_fs_pack_notify_t notify_func,
+               void *notify_baton,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               apr_pool_t *pool);
 
 /**
  * For the packed revision @a rev in @a fs,  determine the offset within
@@ -44,19 +44,19 @@ svn_fs_fs__pack(svn_fs_t *fs,
  * allocations.
  */
 svn_error_t *
-svn_fs_fs__get_packed_offset(apr_off_t *rev_offset,
-                             svn_fs_t *fs,
-                             svn_revnum_t rev,
-                             apr_pool_t *pool);
+svn_fs_x__get_packed_offset(apr_off_t *rev_offset,
+                            svn_fs_t *fs,
+                            svn_revnum_t rev,
+                            apr_pool_t *pool);
 
 /* Return the svn_dir_entry_t* objects of DIRECTORY in an APR array
  * allocated in POOL with entries added in storage (on-disk) order.
  * FS format will be used to pick the optimal ordering strategy.
  */
 apr_array_header_t *
-svn_fs_fs__order_dir_entries(svn_fs_t *fs,
-                             apr_hash_t *directory,
-                             apr_pool_t *pool);
+svn_fs_x__order_dir_entries(svn_fs_t *fs,
+                            apr_hash_t *directory,
+                            apr_pool_t *pool);
 
 
 #endif

@@ -57,7 +57,7 @@ recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
       svn_error_t *err;
       apr_file_t *file;
 
-      err = svn_fs_fs__open_pack_or_rev_file(&file, fs, right, iterpool);
+      err = svn_fs_x__open_pack_or_rev_file(&file, fs, right, iterpool);
       svn_pool_clear(iterpool);
 
       if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
@@ -81,7 +81,7 @@ recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
       svn_error_t *err;
       apr_file_t *file;
 
-      err = svn_fs_fs__open_pack_or_rev_file(&file, fs, probe, iterpool);
+      err = svn_fs_x__open_pack_or_rev_file(&file, fs, probe, iterpool);
       svn_pool_clear(iterpool);
 
       if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
@@ -152,7 +152,7 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
                      apr_uint64_t *max_copy_id,
                      apr_pool_t *pool)
 {
-  svn_fs_fs__rep_header_t *header;
+  svn_fs_x__rep_header_t *header;
   struct recover_read_from_file_baton baton;
   svn_stream_t *stream;
   apr_hash_t *entries;
@@ -162,10 +162,10 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
   apr_uint32_t sub_item;
 
   SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
-  SVN_ERR(svn_fs_fs__read_noderev(&noderev,
-                                  svn_stream_from_aprfile2(rev_file, TRUE,
-                                                           pool),
-                                  pool));
+  SVN_ERR(svn_fs_x__read_noderev(&noderev,
+                                 svn_stream_from_aprfile2(rev_file, TRUE,
+                                                          pool),
+                                 pool));
 
   /* Check that this is a directory.  It should be. */
   if (noderev->kind != svn_node_dir)
@@ -185,14 +185,14 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
 
   /* We could use get_dir_contents(), but this is much cheaper.  It does
      rely on directory entries being stored as PLAIN reps, though. */
-  SVN_ERR(svn_fs_fs__item_offset(&offset, &sub_item, fs, rev, NULL,
-                                 noderev->data_rep->item_index, pool));
+  SVN_ERR(svn_fs_x__item_offset(&offset, &sub_item, fs, rev, NULL,
+                                noderev->data_rep->item_index, pool));
   SVN_ERR_ASSERT(sub_item == 0);
   SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
 
   baton.stream = svn_stream_from_aprfile2(rev_file, TRUE, pool);
-  SVN_ERR(svn_fs_fs__read_rep_header(&header, baton.stream, pool));
-  if (header->type != svn_fs_fs__rep_plain)
+  SVN_ERR(svn_fs_x__read_rep_header(&header, baton.stream, pool));
+  if (header->type != svn_fs_x__rep_plain)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Recovery encountered a deltified directory "
                               "representation"));
@@ -218,7 +218,7 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
       char *str;
       svn_node_kind_t kind;
       svn_fs_id_t *id;
-      const svn_fs_fs__id_part_t *rev_item;
+      const svn_fs_x__id_part_t *rev_item;
       apr_uint64_t node_id, copy_id;
       apr_off_t child_dir_offset;
       const svn_string_t *path = svn__apr_hash_index_val(hi);
@@ -247,9 +247,9 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                                 _("Directory entry corrupt"));
 
-      id = svn_fs_fs__id_parse(str, strlen(str), iterpool);
+      id = svn_fs_x__id_parse(str, strlen(str), iterpool);
 
-      rev_item = svn_fs_fs__id_rev_item(id);
+      rev_item = svn_fs_x__id_rev_item(id);
       if (rev_item->revision != rev)
         {
           /* If the node wasn't modified in this revision, we've already
@@ -257,8 +257,8 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
           continue;
         }
 
-      node_id = svn_fs_fs__id_node_id(id)->number;
-      copy_id = svn_fs_fs__id_copy_id(id)->number;
+      node_id = svn_fs_x__id_node_id(id)->number;
+      copy_id = svn_fs_x__id_copy_id(id)->number;
 
       if (node_id > *max_node_id)
         *max_node_id = node_id;
@@ -268,13 +268,13 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
       if (kind == svn_node_file)
         continue;
 
-      SVN_ERR(svn_fs_fs__item_offset(&child_dir_offset,
-                                     &sub_item,
-                                     fs,
-                                     rev_item->revision,
-                                     NULL,
-                                     rev_item->number,
-                                     iterpool));
+      SVN_ERR(svn_fs_x__item_offset(&child_dir_offset,
+                                    &sub_item,
+                                    fs,
+                                    rev_item->revision,
+                                    NULL,
+                                    rev_item->number,
+                                    iterpool));
       SVN_ERR_ASSERT(sub_item == 0);
       SVN_ERR(recover_find_max_ids(fs, rev, rev_file, child_dir_offset,
                                    max_node_id, max_copy_id, iterpool));
@@ -285,12 +285,12 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
 }
 
 svn_error_t *
-svn_fs_fs__find_max_ids(svn_fs_t *fs, svn_revnum_t youngest,
-                        apr_uint64_t *max_node_id,
-                        apr_uint64_t *max_copy_id,
-                        apr_pool_t *pool)
+svn_fs_x__find_max_ids(svn_fs_t *fs, svn_revnum_t youngest,
+                       apr_uint64_t *max_node_id,
+                       apr_uint64_t *max_copy_id,
+                       apr_pool_t *pool)
 {
-  fs_fs_data_t *ffd = fs->fsap_data;
+  fs_x_data_t *ffd = fs->fsap_data;
   apr_off_t root_offset;
   apr_uint32_t sub_item;
   apr_file_t *rev_file;
@@ -299,15 +299,15 @@ svn_fs_fs__find_max_ids(svn_fs_t *fs, svn_revnum_t youngest,
   /* call this function for old repo formats only */
   SVN_ERR_ASSERT(ffd->format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT);
 
-  SVN_ERR(svn_fs_fs__rev_get_root(&root_id, fs, youngest, pool));
-  SVN_ERR(svn_fs_fs__item_offset(&root_offset, &sub_item, fs,
-                                 svn_fs_fs__id_rev(root_id),
-                                 NULL,
-                                 svn_fs_fs__id_item(root_id),
-                                 pool));
+  SVN_ERR(svn_fs_x__rev_get_root(&root_id, fs, youngest, pool));
+  SVN_ERR(svn_fs_x__item_offset(&root_offset, &sub_item, fs,
+                                svn_fs_x__id_rev(root_id),
+                                NULL,
+                                svn_fs_x__id_item(root_id),
+                                pool));
   SVN_ERR_ASSERT(sub_item == 0);
 
-  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, youngest, pool));
+  SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, fs, youngest, pool));
   SVN_ERR(recover_find_max_ids(fs, youngest, rev_file, root_offset,
                                max_node_id, max_copy_id, pool));
   SVN_ERR(svn_io_file_close(rev_file, pool));
@@ -322,15 +322,15 @@ struct recover_baton {
   void *cancel_baton;
 };
 
-/* The work-horse for svn_fs_fs__recover, called with the FS
-   write lock.  This implements the svn_fs_fs__with_write_lock()
+/* The work-horse for svn_fs_x__recover, called with the FS
+   write lock.  This implements the svn_fs_x__with_write_lock()
    'body' callback type.  BATON is a 'struct recover_baton *'. */
 static svn_error_t *
 recover_body(void *baton, apr_pool_t *pool)
 {
   struct recover_baton *b = baton;
   svn_fs_t *fs = b->fs;
-  fs_fs_data_t *ffd = fs->fsap_data;
+  fs_x_data_t *ffd = fs->fsap_data;
   svn_revnum_t max_rev;
   apr_uint64_t next_node_id = 0;
   apr_uint64_t next_copy_id = 0;
@@ -344,7 +344,7 @@ recover_body(void *baton, apr_pool_t *pool)
   SVN_ERR(recover_get_largest_revision(fs, &max_rev, pool));
 
   /* Get the expected youngest revision */
-  SVN_ERR(svn_fs_fs__youngest_rev(&youngest_rev, fs, pool));
+  SVN_ERR(svn_fs_x__youngest_rev(&youngest_rev, fs, pool));
 
   /* Policy note:
 
@@ -401,8 +401,8 @@ recover_body(void *baton, apr_pool_t *pool)
           if (b->cancel_func)
             SVN_ERR(b->cancel_func(b->cancel_baton));
 
-          SVN_ERR(svn_fs_fs__find_max_ids(fs, rev, &next_node_id,
-                                          &next_copy_id, iterpool));
+          SVN_ERR(svn_fs_x__find_max_ids(fs, rev, &next_node_id,
+                                         &next_copy_id, iterpool));
         }
       svn_pool_destroy(iterpool);
 
@@ -414,7 +414,7 @@ recover_body(void *baton, apr_pool_t *pool)
 
   /* Before setting current, verify that there is a revprops file
      for the youngest revision.  (Issue #2992) */
-  SVN_ERR(svn_io_check_path(path_revprops(fs, max_rev, pool),
+  SVN_ERR(svn_io_check_path(svn_fs_x__path_revprops(fs, max_rev, pool),
                             &youngest_revprops_kind, pool));
   if (youngest_revprops_kind == svn_node_none)
     {
@@ -452,21 +452,22 @@ recover_body(void *baton, apr_pool_t *pool)
     {
       svn_boolean_t rep_cache_exists;
 
-      SVN_ERR(svn_fs_fs__exists_rep_cache(&rep_cache_exists, fs, pool));
+      SVN_ERR(svn_fs_x__exists_rep_cache(&rep_cache_exists, fs, pool));
       if (rep_cache_exists)
-        SVN_ERR(svn_fs_fs__del_rep_reference(fs, max_rev, pool));
+        SVN_ERR(svn_fs_x__del_rep_reference(fs, max_rev, pool));
     }
 
   /* Now store the discovered youngest revision, and the next IDs if
      relevant, in a new 'current' file. */
-  return write_current(fs, max_rev, next_node_id, next_copy_id, pool);
+  return svn_fs_x__write_current(fs, max_rev, next_node_id, next_copy_id,
+                                 pool);
 }
 
 /* This implements the fs_library_vtable_t.recover() API. */
 svn_error_t *
-svn_fs_fs__recover(svn_fs_t *fs,
-                   svn_cancel_func_t cancel_func, void *cancel_baton,
-                   apr_pool_t *pool)
+svn_fs_x__recover(svn_fs_t *fs,
+                  svn_cancel_func_t cancel_func, void *cancel_baton,
+                  apr_pool_t *pool)
 {
   struct recover_baton b;
 
@@ -477,5 +478,5 @@ svn_fs_fs__recover(svn_fs_t *fs,
   b.fs = fs;
   b.cancel_func = cancel_func;
   b.cancel_baton = cancel_baton;
-  return svn_fs_fs__with_write_lock(fs, recover_body, &b, pool);
+  return svn_fs_x__with_write_lock(fs, recover_body, &b, pool);
 }

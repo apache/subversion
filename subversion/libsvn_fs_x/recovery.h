@@ -29,18 +29,18 @@
    Return the result in the pre-allocated MAX_NODE_ID and MAX_COPY_ID data
    buffer, respectively.   Use POOL for allocations.  */
 svn_error_t *
-svn_fs_fs__find_max_ids(svn_fs_t *fs,
-                        svn_revnum_t youngest,
-                        apr_uint64_t *max_node_id,
-                        apr_uint64_t *max_copy_id,
-                        apr_pool_t *pool);
+svn_fs_x__find_max_ids(svn_fs_t *fs,
+                       svn_revnum_t youngest,
+                       apr_uint64_t *max_node_id,
+                       apr_uint64_t *max_copy_id,
+                       apr_pool_t *pool);
 
 /* Recover the fsfs associated with filesystem FS.
    Use optional CANCEL_FUNC/CANCEL_BATON for cancellation support.
    Use POOL for temporary allocations. */
-svn_error_t *svn_fs_fs__recover(svn_fs_t *fs,
-                                svn_cancel_func_t cancel_func,
-                                void *cancel_baton,
-                                apr_pool_t *pool);
+svn_error_t *svn_fs_x__recover(svn_fs_t *fs,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
+                               apr_pool_t *pool);
 
 #endif

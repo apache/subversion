@@ -141,7 +141,7 @@ typedef apr_uint32_t hash_key_t;
 
 /* Constructor data structure.
  */
-struct svn_fs_fs__reps_builder_t
+struct svn_fs_x__reps_builder_t
 {
   /* file system to read base representations from */
   svn_fs_t *fs;
@@ -168,7 +168,7 @@ struct svn_fs_fs__reps_builder_t
 
 /* R/o container.
  */
-struct svn_fs_fs__reps_t
+struct svn_fs_x__reps_t
 {
   /* text corpus */
   const char *text;
@@ -222,7 +222,7 @@ typedef struct missing_t
 
 /* Fulltext extractor data structure.
  */
-struct svn_fs_fs__rep_extractor_t
+struct svn_fs_x__rep_extractor_t
 {
   /* filesystem to read the bases from */
   svn_fs_t *fs;
@@ -370,11 +370,11 @@ grow_hash(hash_t *hash,
   *hash = copy;
 }
 
-svn_fs_fs__reps_builder_t *
-svn_fs_fs__reps_builder_create(svn_fs_t *fs,
-                               apr_pool_t *pool)
+svn_fs_x__reps_builder_t *
+svn_fs_x__reps_builder_create(svn_fs_t *fs,
+                              apr_pool_t *pool)
 {
-  svn_fs_fs__reps_builder_t *result = apr_pcalloc(pool, sizeof(*result));
+  svn_fs_x__reps_builder_t *result = apr_pcalloc(pool, sizeof(*result));
 
   result->fs = fs;
   result->text = svn_stringbuf_create_empty(pool);
@@ -388,24 +388,24 @@ svn_fs_fs__reps_builder_create(svn_fs_t *fs,
 }
 
 svn_error_t *
-svn_fs_fs__reps_add_base(svn_fs_fs__reps_builder_t *builder,
-                         representation_t *rep,
-                         int priority,
-                         apr_pool_t *scratch_pool)
+svn_fs_x__reps_add_base(svn_fs_x__reps_builder_t *builder,
+                        representation_t *rep,
+                        int priority,
+                        apr_pool_t *scratch_pool)
 {
   base_t base;
   apr_size_t text_start_offset = builder->text->len;
 
   svn_stream_t *stream;
   svn_string_t *contents;
-  SVN_ERR(svn_fs_fs__get_contents(&stream, builder->fs, rep, scratch_pool));
+  SVN_ERR(svn_fs_x__get_contents(&stream, builder->fs, rep, scratch_pool));
   SVN_ERR(svn_string_from_stream(&contents, stream, scratch_pool,
                                  scratch_pool));
   
   base.revision = rep->revision;
   base.item_index = rep->item_index;
   base.priority = priority;
-  base.rep = (apr_uint32_t)svn_fs_fs__reps_add(builder, contents);
+  base.rep = (apr_uint32_t)svn_fs_x__reps_add(builder, contents);
   
   APR_ARRAY_PUSH(builder->bases, base_t) = base;
   builder->base_text_len += builder->text->len - text_start_offset;
@@ -417,7 +417,7 @@ svn_fs_fs__reps_add_base(svn_fs_fs__reps_builder_t *builder,
  * operation for that text fragment.
  */
 static void
-add_new_text(svn_fs_fs__reps_builder_t *builder,
+add_new_text(svn_fs_x__reps_builder_t *builder,
              const char *data,
              apr_size_t len)
 {
@@ -462,8 +462,8 @@ add_new_text(svn_fs_fs__reps_builder_t *builder,
 }
 
 apr_size_t
-svn_fs_fs__reps_add(svn_fs_fs__reps_builder_t *builder,
-                    const svn_string_t *contents)
+svn_fs_x__reps_add(svn_fs_x__reps_builder_t *builder,
+                   const svn_string_t *contents)
 {
   rep_t rep;
   const char *current = contents->data;
@@ -539,7 +539,7 @@ svn_fs_fs__reps_add(svn_fs_fs__reps_builder_t *builder,
 }
 
 apr_size_t
-svn_fs_fs__reps_estimate_size(const svn_fs_fs__reps_builder_t *builder)
+svn_fs_x__reps_estimate_size(const svn_fs_x__reps_builder_t *builder)
 {
   /* approx: size of the text exclusive to us @ 50% compression rate
    *       + 2 bytes per instruction
@@ -564,8 +564,8 @@ svn_fs_fs__reps_estimate_size(const svn_fs_fs__reps_builder_t *builder)
  * instruction sequences. COUNT refers to the top-level instructions only.
  */
 static void
-get_text(svn_fs_fs__rep_extractor_t *extractor,
-         const svn_fs_fs__reps_t *container,
+get_text(svn_fs_x__rep_extractor_t *extractor,
+         const svn_fs_x__reps_t *container,
          apr_size_t instruction_idx,
          apr_size_t count)
 {
@@ -607,17 +607,17 @@ get_text(svn_fs_fs__rep_extractor_t *extractor,
 }
 
 svn_error_t *
-svn_fs_fs__reps_get(svn_fs_fs__rep_extractor_t **extractor,
-                    svn_fs_t *fs,
-                    const svn_fs_fs__reps_t *container,
-                    apr_size_t idx,
-                    apr_pool_t *pool)
+svn_fs_x__reps_get(svn_fs_x__rep_extractor_t **extractor,
+                   svn_fs_t *fs,
+                   const svn_fs_x__reps_t *container,
+                   apr_size_t idx,
+                   apr_pool_t *pool)
 {
   apr_uint32_t first = container->first_instructions[idx];
   apr_uint32_t last = container->first_instructions[idx + 1];
 
   /* create the extractor object */
-  svn_fs_fs__rep_extractor_t *result = apr_pcalloc(pool, sizeof(*result));
+  svn_fs_x__rep_extractor_t *result = apr_pcalloc(pool, sizeof(*result));
   result->fs = fs;
   result->result = svn_stringbuf_create_empty(pool);
   result->pool = pool;
@@ -630,12 +630,12 @@ svn_fs_fs__reps_get(svn_fs_fs__rep_extractor_t **extractor,
 }
 
 svn_error_t *
-svn_fs_fs__extractor_drive(svn_stringbuf_t **contents,
-                           svn_fs_fs__rep_extractor_t *extractor,
-                           apr_size_t start_offset,
-                           apr_size_t size,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
+svn_fs_x__extractor_drive(svn_stringbuf_t **contents,
+                          svn_fs_x__rep_extractor_t *extractor,
+                          apr_size_t start_offset,
+                          apr_size_t size,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
   /* we don't support base reps right now */
   SVN_ERR_ASSERT(extractor->missing == NULL);
@@ -661,9 +661,9 @@ svn_fs_fs__extractor_drive(svn_stringbuf_t **contents,
 }
 
 svn_error_t *
-svn_fs_fs__write_reps_container(svn_stream_t *stream,
-                                const svn_fs_fs__reps_builder_t *builder,
-                                apr_pool_t *pool)
+svn_fs_x__write_reps_container(svn_stream_t *stream,
+                               const svn_fs_x__reps_builder_t *builder,
+                               apr_pool_t *pool)
 {
   int i;
   svn_packed__data_root_t *root = svn_packed__data_create_root(pool);
@@ -735,10 +735,10 @@ svn_fs_fs__write_reps_container(svn_stream_t *stream,
 }
 
 svn_error_t *
-svn_fs_fs__read_reps_container(svn_fs_fs__reps_t **container,
-                               svn_stream_t *stream,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool)
+svn_fs_x__read_reps_container(svn_fs_x__reps_t **container,
+                              svn_stream_t *stream,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
 {
   apr_size_t i;
 
@@ -746,7 +746,7 @@ svn_fs_fs__read_reps_container(svn_fs_fs__reps_t **container,
   apr_uint32_t *first_instructions;
   instruction_t *instructions;
 
-  svn_fs_fs__reps_t *reps = apr_pcalloc(result_pool, sizeof(*reps));
+  svn_fs_x__reps_t *reps = apr_pcalloc(result_pool, sizeof(*reps));
 
   svn_packed__data_root_t *root;
   svn_packed__int_stream_t *bases_stream;
@@ -821,12 +821,12 @@ svn_fs_fs__read_reps_container(svn_fs_fs__reps_t **container,
 }
 
 svn_error_t *
-svn_fs_fs__serialize_reps_container(void **data,
-                                    apr_size_t *data_len,
-                                    void *in,
-                                    apr_pool_t *pool)
+svn_fs_x__serialize_reps_container(void **data,
+                                   apr_size_t *data_len,
+                                   void *in,
+                                   apr_pool_t *pool)
 {
-  svn_fs_fs__reps_t *reps = in;
+  svn_fs_x__reps_t *reps = in;
   svn_stringbuf_t *serialized;
 
   /* make a guesstimate on the size of the serialized data.  Erring on the
@@ -865,12 +865,12 @@ svn_fs_fs__serialize_reps_container(void **data,
 }
 
 svn_error_t *
-svn_fs_fs__deserialize_reps_container(void **out,
-                                      void *data,
-                                      apr_size_t data_len,
-                                      apr_pool_t *pool)
+svn_fs_x__deserialize_reps_container(void **out,
+                                     void *data,
+                                     apr_size_t data_len,
+                                     apr_pool_t *pool)
 {
-  svn_fs_fs__reps_t *reps = (svn_fs_fs__reps_t *)data;
+  svn_fs_x__reps_t *reps = (svn_fs_x__reps_t *)data;
 
   /* de-serialize sub-structures */
   svn_temp_deserializer__resolve(reps, (void **)&reps->text);
@@ -885,17 +885,17 @@ svn_fs_fs__deserialize_reps_container(void **out,
 }
 
 svn_error_t *
-svn_fs_fs__reps_get_func(void **out,
-                         const void *data,
-                         apr_size_t data_len,
-                         void *baton,
-                         apr_pool_t *pool)
+svn_fs_x__reps_get_func(void **out,
+                        const void *data,
+                        apr_size_t data_len,
+                        void *baton,
+                        apr_pool_t *pool)
 {
-  svn_fs_fs__reps_baton_t *reps_baton = baton;
+  svn_fs_x__reps_baton_t *reps_baton = baton;
   
   /* get a usable reps structure  */
-  const svn_fs_fs__reps_t *cached = data;
-  svn_fs_fs__reps_t *reps = apr_pmemdup(pool, cached, sizeof(*reps));
+  const svn_fs_x__reps_t *cached = data;
+  svn_fs_x__reps_t *reps = apr_pmemdup(pool, cached, sizeof(*reps));
 
   reps->text
     = svn_temp_deserializer__ptr(cached, (const void **)&cached->text);
@@ -909,8 +909,8 @@ svn_fs_fs__reps_get_func(void **out,
                                  (const void **)&cached->instructions);
 
   /* return an extractor for the selected item */
-  SVN_ERR(svn_fs_fs__reps_get((svn_fs_fs__rep_extractor_t **)out,
-                              reps_baton->fs, reps, reps_baton->idx, pool));
+  SVN_ERR(svn_fs_x__reps_get((svn_fs_x__rep_extractor_t **)out,
+                             reps_baton->fs, reps, reps_baton->idx, pool));
 
   return SVN_NO_ERROR;
 }

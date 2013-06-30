@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS_FS_H
-#define SVN_LIBSVN_FS_FS_H
+#ifndef SVN_LIBSVN_FS_X_H
+#define SVN_LIBSVN_FS_X_H
 
 #include <apr_pools.h>
 #include <apr_hash.h>
@@ -170,14 +170,14 @@ extern "C" {
    relate to a particular transaction in a filesystem (as identified
    by transaction id and filesystem UUID).  Objects of this type are
    allocated in their own subpool of the common pool. */
-typedef struct fs_fs_shared_txn_data_t
+typedef struct fs_x_shared_txn_data_t
 {
   /* The next transaction in the list, or NULL if there is no following
      transaction. */
-  struct fs_fs_shared_txn_data_t *next;
+  struct fs_x_shared_txn_data_t *next;
 
   /* ID of this transaction. */
-  svn_fs_fs__id_part_t txn_id;
+  svn_fs_x__id_part_t txn_id;
 
   /* Whether the transaction's prototype revision file is locked for
      writing by any thread in this process (including the current
@@ -188,7 +188,7 @@ typedef struct fs_fs_shared_txn_data_t
   /* The pool in which this object has been allocated; a subpool of the
      common pool. */
   apr_pool_t *pool;
-} fs_fs_shared_txn_data_t;
+} fs_x_shared_txn_data_t;
 
 /* On most operating systems apr implements file locks per process, not
    per file.  On Windows apr implements the locking as per file handle
@@ -204,17 +204,17 @@ typedef struct fs_fs_shared_txn_data_t
 /* Private FSFS-specific data shared between all svn_fs_t objects that
    relate to a particular filesystem, as identified by filesystem UUID.
    Objects of this type are allocated in the common pool. */
-typedef struct fs_fs_shared_data_t
+typedef struct fs_x_shared_data_t
 {
   /* A list of shared transaction objects for each transaction that is
      currently active, or NULL if none are.  All access to this list,
      including the contents of the objects stored in it, is synchronised
      under TXN_LIST_LOCK. */
-  fs_fs_shared_txn_data_t *txns;
+  fs_x_shared_txn_data_t *txns;
 
   /* A free transaction object, or NULL if there is no free object.
      Access to this object is synchronised under TXN_LIST_LOCK. */
-  fs_fs_shared_txn_data_t *free_txn;
+  fs_x_shared_txn_data_t *free_txn;
 
   /* A lock for intra-process synchronization when accessing the TXNS list. */
   svn_mutex__t *txn_list_lock;
@@ -230,10 +230,10 @@ typedef struct fs_fs_shared_data_t
   /* The common pool, under which this object is allocated, subpools
      of which are used to allocate the transaction objects. */
   apr_pool_t *common_pool;
-} fs_fs_shared_data_t;
+} fs_x_shared_data_t;
 
 /* Data structure for the 1st level DAG node cache. */
-typedef struct fs_fs_dag_cache_t fs_fs_dag_cache_t;
+typedef struct fs_x_dag_cache_t fs_x_dag_cache_t;
 
 /* Key type for all caches that use revision + offset / counter as key. */
 typedef struct pair_cache_key_t
@@ -271,7 +271,7 @@ typedef struct window_cache_key_t
 
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object.
    Any caches in here may be NULL. */
-typedef struct fs_fs_data_t
+typedef struct fs_x_data_t
 {
   /* The format number of this FS. */
   int format;
@@ -303,7 +303,7 @@ typedef struct fs_fs_data_t
   svn_cache__t *rev_root_id_cache;
 
   /* Caches native dag_node_t* instances and acts as a 1st level cache */
-  fs_fs_dag_cache_t *dag_node_cache;
+  fs_x_dag_cache_t *dag_node_cache;
 
   /* DAG node cache for immutable nodes.  Maps (revision, fspath)
      to (dag_node_t *). This is the 2nd level cache for DAG nodes. */
@@ -349,7 +349,7 @@ typedef struct fs_fs_data_t
      the key is window_cache_key_t */
   svn_cache__t *combined_window_cache;
 
-  /* Cache for svn_fs_fs__rep_header_t objects;
+  /* Cache for svn_fs_x__rep_header_t objects;
    * the key is (revision, item index) */
   svn_cache__t *node_revision_cache;
 
@@ -369,7 +369,7 @@ typedef struct fs_fs_data_t
      the key is a (pack file revision, file offset) pair */
   svn_cache__t *reps_container_cache;
 
-  /* Cache for svn_fs_fs__rep_header_t objects; the key is a
+  /* Cache for svn_fs_x__rep_header_t objects; the key is a
      (revision, item index) pair */
   svn_cache__t *rep_header_cache;
 
@@ -386,7 +386,7 @@ typedef struct fs_fs_data_t
      Will be NULL for pre-format7 repos */
   svn_cache__t *l2p_header_cache;
 
-  /* Cache for l2p_page_t objects; the key is svn_fs_fs__page_cache_key_t.
+  /* Cache for l2p_page_t objects; the key is svn_fs_x__page_cache_key_t.
      Will be NULL for pre-format7 repos */
   svn_cache__t *l2p_page_cache;
 
@@ -394,8 +394,8 @@ typedef struct fs_fs_data_t
      Will be NULL for pre-format7 repos */
   svn_cache__t *p2l_header_cache;
 
-  /* Cache for apr_array_header_t objects containing svn_fs_fs__p2l_entry_t
-     elements; the key is svn_fs_fs__page_cache_key_t.
+  /* Cache for apr_array_header_t objects containing svn_fs_x__p2l_entry_t
+     elements; the key is svn_fs_x__page_cache_key_t.
      Will be NULL for pre-format7 repos */
   svn_cache__t *p2l_page_cache;
 
@@ -410,7 +410,7 @@ typedef struct fs_fs_data_t
   svn_cache__t *txn_dir_cache;
 
   /* Data shared between all svn_fs_t objects for a given filesystem. */
-  fs_fs_shared_data_t *shared;
+  fs_x_shared_data_t *shared;
 
   /* The sqlite database used for rep caching. */
   svn_sqlite__db_t *rep_cache_db;
@@ -449,7 +449,7 @@ typedef struct fs_fs_data_t
   /* Pointer to svn_fs_open. */
   svn_error_t *(*svn_fs_open_)(svn_fs_t **, const char *, apr_hash_t *,
                                apr_pool_t *);
-} fs_fs_data_t;
+} fs_x_data_t;
 
 
 /*** Filesystem Transaction ***/
@@ -475,7 +475,7 @@ typedef struct transaction_t
 
 /*** Representation ***/
 /* If you add fields to this, check to see if you need to change
- * svn_fs_fs__rep_copy. */
+ * svn_fs_x__rep_copy. */
 typedef struct representation_t
 {
   /* Checksums digests for the contents produced by this representation.
@@ -508,15 +508,15 @@ typedef struct representation_t
   svn_filesize_t expanded_size;
 
   /* Is this representation a transaction? */
-  svn_fs_fs__id_part_t txn_id;
+  svn_fs_x__id_part_t txn_id;
 
   /* For rep-sharing, we need a way of uniquifying node-revs which share the
-     same representation (see svn_fs_fs__noderev_same_rep_key() ).  So, we
+     same representation (see svn_fs_x__noderev_same_rep_key() ).  So, we
      store the original txn of the node rev (not the rep!), along with some
      intra-node uniqification content. */
   struct
   {
-    svn_fs_fs__id_part_t txn_id;
+    svn_fs_x__id_part_t txn_id;
     apr_uint64_t number;
   } uniquifier;
 } representation_t;

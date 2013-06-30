@@ -272,7 +272,7 @@ huge_log(svn_revnum_t rev, apr_pool_t *pool)
 /*** Tests ***/
 
 /* ------------------------------------------------------------------------ */
-#define REPO_NAME "test-repo-fsfs-pack"
+#define REPO_NAME "test-repo-fsx-pack"
 #define SHARD_SIZE 7
 #define MAX_REV 53
 static svn_error_t *
@@ -287,7 +287,7 @@ pack_filesystem(const svn_test_opts_t *opts,
   apr_size_t len;
 
   /* Bail (with success) on known-untestable scenarios */
-  if ((strcmp(opts->fs_type, "fsfs") != 0)
+  if ((strcmp(opts->fs_type, "fsx") != 0)
       || (opts->server_minor_version && (opts->server_minor_version < 6)))
     return SVN_NO_ERROR;
 
@@ -379,7 +379,7 @@ pack_filesystem(const svn_test_opts_t *opts,
 #undef MAX_REV
 
 /* ------------------------------------------------------------------------ */
-#define REPO_NAME "test-repo-fsfs-pack-even"
+#define REPO_NAME "test-repo-fsx-pack-even"
 #define SHARD_SIZE 4
 #define MAX_REV 11
 static svn_error_t *
@@ -390,7 +390,7 @@ pack_even_filesystem(const svn_test_opts_t *opts,
   const char *path;
 
   /* Bail (with success) on known-untestable scenarios */
-  if ((strcmp(opts->fs_type, "fsfs") != 0)
+  if ((strcmp(opts->fs_type, "fsx") != 0)
       || (opts->server_minor_version && (opts->server_minor_version < 6)))
     return SVN_NO_ERROR;
 
@@ -423,7 +423,7 @@ read_packed_fs(const svn_test_opts_t *opts,
   svn_revnum_t i;
 
   /* Bail (with success) on known-untestable scenarios */
-  if ((strcmp(opts->fs_type, "fsfs") != 0)
+  if ((strcmp(opts->fs_type, "fsx") != 0)
       || (opts->server_minor_version && (opts->server_minor_version < 6)))
     return SVN_NO_ERROR;
 
@@ -470,7 +470,7 @@ commit_packed_fs(const svn_test_opts_t *opts,
   svn_revnum_t after_rev;
 
   /* Bail (with success) on known-untestable scenarios */
-  if ((strcmp(opts->fs_type, "fsfs") != 0)
+  if ((strcmp(opts->fs_type, "fsx") != 0)
       || (opts->server_minor_version && (opts->server_minor_version < 6)))
     return SVN_NO_ERROR;
 
@@ -505,7 +505,7 @@ get_set_revprop_packed_fs(const svn_test_opts_t *opts,
   svn_string_t *prop_value;
 
   /* Bail (with success) on known-untestable scenarios */
-  if ((strcmp(opts->fs_type, "fsfs") != 0)
+  if ((strcmp(opts->fs_type, "fsx") != 0)
       || (opts->server_minor_version && (opts->server_minor_version < 7)))
     return SVN_NO_ERROR;
 
@@ -562,7 +562,7 @@ get_set_large_revprop_packed_fs(const svn_test_opts_t *opts,
   svn_revnum_t rev;
 
   /* Bail (with success) on known-untestable scenarios */
-  if ((strcmp(opts->fs_type, "fsfs") != 0)
+  if ((strcmp(opts->fs_type, "fsx") != 0)
       || (opts->server_minor_version && (opts->server_minor_version < 7)))
     return SVN_NO_ERROR;
 
@@ -635,7 +635,7 @@ get_set_huge_revprop_packed_fs(const svn_test_opts_t *opts,
   svn_revnum_t rev;
 
   /* Bail (with success) on known-untestable scenarios */
-  if ((strcmp(opts->fs_type, "fsfs") != 0)
+  if ((strcmp(opts->fs_type, "fsx") != 0)
       || (opts->server_minor_version && (opts->server_minor_version < 7)))
     return SVN_NO_ERROR;
 
@@ -708,7 +708,7 @@ recover_fully_packed(const svn_test_opts_t *opts,
   svn_error_t *err;
 
   /* Bail (with success) on known-untestable scenarios */
-  if ((strcmp(opts->fs_type, "fsfs") != 0)
+  if ((strcmp(opts->fs_type, "fsx") != 0)
       || (opts->server_minor_version && (opts->server_minor_version < 7)))
     return SVN_NO_ERROR;
 
@@ -771,7 +771,7 @@ file_hint_at_shard_boundary(const svn_test_opts_t *opts,
   svn_error_t *err = SVN_NO_ERROR;
 
   /* Bail (with success) on known-untestable scenarios */
-  if ((strcmp(opts->fs_type, "fsfs") != 0)
+  if ((strcmp(opts->fs_type, "fsx") != 0)
       || (opts->server_minor_version && (opts->server_minor_version < 8)))
     return SVN_NO_ERROR;
 
@@ -808,7 +808,7 @@ file_hint_at_shard_boundary(const svn_test_opts_t *opts,
 #undef SHARD_SIZE
 
 /* ------------------------------------------------------------------------ */
-#define REPO_NAME "test-repo-fsfs-info"
+#define REPO_NAME "test-repo-fsx-info"
 #define SHARD_SIZE 3
 #define MAX_REV 5
 static svn_error_t *
@@ -829,7 +829,7 @@ test_info(const svn_test_opts_t *opts,
   SVN_TEST_STRING_ASSERT(opts->fs_type, info->fs_type);
 
   /* Bail (with success) on known-untestable scenarios */
-  if (strcmp(opts->fs_type, "fsfs") != 0)
+  if (strcmp(opts->fs_type, "fsx") != 0)
     return SVN_NO_ERROR;
 
   fsfs_info = (const void *)info;
@@ -852,7 +852,7 @@ test_info(const svn_test_opts_t *opts,
 #undef MAX_REV
 
 /* ------------------------------------------------------------------------ */
-#define REPO_NAME "test-repo-fsfs-rev-container"
+#define REPO_NAME "test-repo-fsx-rev-container"
 #define SHARD_SIZE 3
 #define MAX_REV 5
 static svn_error_t *
@@ -860,8 +860,8 @@ test_reps(const svn_test_opts_t *opts,
           apr_pool_t *pool)
 {
   svn_fs_t *fs = NULL;
-  svn_fs_fs__reps_builder_t *builder;
-  svn_fs_fs__reps_t *container;
+  svn_fs_x__reps_builder_t *builder;
+  svn_fs_x__reps_t *container;
   svn_stringbuf_t *serialized;
   svn_stream_t *stream;
   svn_stringbuf_t *contents = svn_stringbuf_create_ensure(10000, pool);
@@ -881,22 +881,22 @@ test_reps(const svn_test_opts_t *opts,
 
   SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, pool));
 
-  builder = svn_fs_fs__reps_builder_create(fs, pool);
+  builder = svn_fs_x__reps_builder_create(fs, pool);
   for (i = 10000; i > 10; --i)
     {
       svn_string_t string;
       string.data = contents->data;
       string.len = i;
 
-      svn_fs_fs__reps_add(builder, &string);
+      svn_fs_x__reps_add(builder, &string);
     }
 
   serialized = svn_stringbuf_create_empty(pool);
   stream = svn_stream_from_stringbuf(serialized, pool);
-  SVN_ERR(svn_fs_fs__write_reps_container(stream, builder, pool));
+  SVN_ERR(svn_fs_x__write_reps_container(stream, builder, pool));
 
   SVN_ERR(svn_stream_reset(stream));
-  SVN_ERR(svn_fs_fs__read_reps_container(&container, stream, pool, pool));
+  SVN_ERR(svn_fs_x__read_reps_container(&container, stream, pool, pool));
   SVN_ERR(svn_stream_close(stream));
 
   return SVN_NO_ERROR;
@@ -907,7 +907,7 @@ test_reps(const svn_test_opts_t *opts,
 #undef MAX_REV
 
 /* ------------------------------------------------------------------------ */
-#define REPO_NAME "test-repo-fsfs-pack-shard-size-one"
+#define REPO_NAME "test-repo-fsx-pack-shard-size-one"
 #define SHARD_SIZE 1
 #define MAX_REV 4
 static svn_error_t *
@@ -918,7 +918,7 @@ pack_shard_size_one(const svn_test_opts_t *opts,
   svn_fs_t *fs;
 
   /* Bail (with success) on known-untestable scenarios */
-  if ((strcmp(opts->fs_type, "fsfs") != 0)
+  if ((strcmp(opts->fs_type, "fsx") != 0)
       || (opts->server_minor_version && (opts->server_minor_version < 6)))
     return SVN_NO_ERROR;
 
