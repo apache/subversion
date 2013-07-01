@@ -355,6 +355,8 @@ get_dir_entries(apr_hash_t *tree_entries,
 }
 
 
+/* Verify that PATH under ROOT is: a directory if contents is NULL;
+   a file with contents CONTENTS otherwise. */
 static svn_error_t *
 validate_tree_entry(svn_fs_root_t *root,
                     const char *path,
