@@ -2257,45 +2257,6 @@ svn_fs_x__set_proplist(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Read the 'current' file for filesystem FS and store the next
-   available node id in *NODE_ID, and the next available copy id in
-   *COPY_ID.  Allocations are performed from POOL. */
-static svn_error_t *
-get_next_revision_ids(apr_uint64_t *node_id,
-                      apr_uint64_t *copy_id,
-                      svn_fs_t *fs,
-                      apr_pool_t *pool)
-{
-  char *buf;
-  char *str;
-  svn_stringbuf_t *content;
-
-  SVN_ERR(svn_fs_x__read_content(&content,
-                                 svn_fs_x__path_current(fs, pool), pool));
-  buf = content->data;
-
-  str = svn_cstring_tokenize(" ", &buf);
-  if (! str)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Corrupt 'current' file"));
-
-  str = svn_cstring_tokenize(" ", &buf);
-  if (! str)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Corrupt 'current' file"));
-
-  *node_id = svn__base36toui64(NULL, str);
-
-  str = svn_cstring_tokenize(" \n", &buf);
-  if (! str)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Corrupt 'current' file"));
-
-  *copy_id = svn__base36toui64(NULL, str);
-
-  return SVN_NO_ERROR;
-}
-
 /* This baton is used by the stream created for write_hash_rep. */
 struct write_hash_baton
 {
@@ -2611,17 +2572,7 @@ get_final_id(svn_fs_x__id_part_t *part,
              int format)
 {
   if (part->revision == SVN_INVALID_REVNUM)
-    {
-      if (format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
-        {
-          part->revision = revision;
-        }
-      else
-        {
-          part->revision = 0;
-          part->number += start_id;
-        }
-    }
+    part->revision = revision;
 }
 
 /* Copy a node-revision specified by id ID in fileystem FS from a
@@ -2939,34 +2890,6 @@ verify_as_revision_before_current_plus_plus(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Update the 'current' file to hold the correct next node and copy_ids
-   from transaction TXN_ID in filesystem FS.  The current revision is
-   set to REV.  Perform temporary allocations in POOL. */
-static svn_error_t *
-write_final_current(svn_fs_t *fs,
-                    const svn_fs_x__id_part_t *txn_id,
-                    svn_revnum_t rev,
-                    apr_uint64_t start_node_id,
-                    apr_uint64_t start_copy_id,
-                    apr_pool_t *pool)
-{
-  apr_uint64_t txn_node_id;
-  apr_uint64_t txn_copy_id;
-  fs_x_data_t *ffd = fs->fsap_data;
-
-  if (ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
-    return svn_fs_x__write_current(fs, rev, 0, 0, pool);
-
-  /* To find the next available ids, we add the id that used to be in
-     the 'current' file, to the next ids from the transaction file. */
-  SVN_ERR(read_next_ids(&txn_node_id, &txn_copy_id, fs, txn_id, pool));
-
-  start_node_id += txn_node_id;
-  start_copy_id += txn_copy_id;
-
-  return svn_fs_x__write_current(fs, rev, start_node_id, start_copy_id, pool);
-}
-
 /* Verify that the user registed with FS has all the locks necessary to
    permit all the changes associate with TXN_NAME.
    The FS write lock is assumed to be held by the caller. */
@@ -3090,11 +3013,6 @@ commit_body(void *baton, apr_pool_t *pool)
      discovered locks. */
   SVN_ERR(verify_locks(cb->fs, txn_id, pool));
 
-  /* Get the next node_id and copy_id to use. */
-  if (ffd->format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
-    SVN_ERR(get_next_revision_ids(&start_node_id, &start_copy_id, cb->fs,
-                                  pool));
-
   /* We are going to be one better than this puny old revision. */
   new_rev = old_rev + 1;
 
@@ -3217,8 +3135,7 @@ commit_body(void *baton, apr_pool_t *pool)
 
   /* Update the 'current' file. */
   SVN_ERR(verify_as_revision_before_current_plus_plus(cb->fs, new_rev, pool));
-  SVN_ERR(write_final_current(cb->fs, txn_id, new_rev, start_node_id,
-                              start_copy_id, pool));
+  SVN_ERR(svn_fs_x__write_current(cb->fs, new_rev, pool));
 
   /* At this point the new revision is committed and globally visible
      so let the caller know it succeeded by giving it the new revision

@@ -504,33 +504,16 @@ svn_fs_x__write_revnum_file(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Atomically update the 'current' file to hold the specifed REV,
-   NEXT_NODE_ID, and NEXT_COPY_ID.  (The two next-ID parameters are
-   ignored and may be NULL if the FS format does not use them.)
+/* Atomically update the 'current' file to hold the specifed REV.
    Perform temporary allocations in POOL. */
 svn_error_t *
-svn_fs_x__write_current(svn_fs_t *fs, svn_revnum_t rev,
-                        apr_uint64_t next_node_id,
-                        apr_uint64_t next_copy_id, apr_pool_t *pool)
+svn_fs_x__write_current(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
   char *buf;
   const char *tmp_name, *name;
-  fs_x_data_t *ffd = fs->fsap_data;
 
   /* Now we can just write out this line. */
-  if (ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
-    {
-      buf = apr_psprintf(pool, "%ld\n", rev);
-    }
-  else
-    {
-      char node_id_str[SVN_INT64_BUFFER_SIZE];
-      char copy_id_str[SVN_INT64_BUFFER_SIZE];
-      svn__ui64tobase36(node_id_str, next_node_id);
-      svn__ui64tobase36(copy_id_str, next_copy_id);
-
-      buf = apr_psprintf(pool, "%ld %s %s\n", rev, node_id_str, copy_id_str);
-    }
+  buf = apr_psprintf(pool, "%ld\n", rev);
 
   name = svn_fs_x__path_current(fs, pool);
   SVN_ERR(svn_io_write_unique(&tmp_name,

@@ -103,218 +103,6 @@ recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* A baton for reading a fixed amount from an open file.  For
-   recover_find_max_ids() below. */
-struct recover_read_from_file_baton
-{
-  svn_stream_t *stream;
-  apr_pool_t *pool;
-  apr_size_t remaining;
-};
-
-/* A stream read handler used by recover_find_max_ids() below.
-   Read and return at most BATON->REMAINING bytes from the stream,
-   returning nothing after that to indicate EOF. */
-static svn_error_t *
-read_handler_recover(void *baton, char *buffer, apr_size_t *len)
-{
-  struct recover_read_from_file_baton *b = baton;
-  apr_size_t bytes_to_read = *len;
-
-  if (b->remaining == 0)
-    {
-      /* Return a successful read of zero bytes to signal EOF. */
-      *len = 0;
-      return SVN_NO_ERROR;
-    }
-
-  if (bytes_to_read > b->remaining)
-    bytes_to_read = b->remaining;
-  b->remaining -= bytes_to_read;
-
-  return svn_stream_read(b->stream, buffer, &bytes_to_read);
-}
-
-/* Part of the recovery procedure.  Read the directory noderev at offset
-   OFFSET of file REV_FILE (the revision file of revision REV of
-   filesystem FS), and set MAX_NODE_ID and MAX_COPY_ID to be the node-id
-   and copy-id of that node, if greater than the current value stored
-   in either.  Recurse into any child directories that were modified in
-   this revision.
-
-   MAX_NODE_ID and MAX_COPY_ID must be arrays of at least MAX_KEY_SIZE.
-
-   Perform temporary allocation in POOL. */
-static svn_error_t *
-recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
-                     apr_file_t *rev_file, apr_off_t offset,
-                     apr_uint64_t *max_node_id,
-                     apr_uint64_t *max_copy_id,
-                     apr_pool_t *pool)
-{
-  svn_fs_x__rep_header_t *header;
-  struct recover_read_from_file_baton baton;
-  svn_stream_t *stream;
-  apr_hash_t *entries;
-  apr_hash_index_t *hi;
-  apr_pool_t *iterpool;
-  node_revision_t *noderev;
-  apr_uint32_t sub_item;
-
-  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
-  SVN_ERR(svn_fs_x__read_noderev(&noderev,
-                                 svn_stream_from_aprfile2(rev_file, TRUE,
-                                                          pool),
-                                 pool));
-
-  /* Check that this is a directory.  It should be. */
-  if (noderev->kind != svn_node_dir)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Recovery encountered a non-directory node"));
-
-  /* Get the data location.  No data location indicates an empty directory. */
-  if (!noderev->data_rep)
-    return SVN_NO_ERROR;
-
-  /* If the directory's data representation wasn't changed in this revision,
-     we've already scanned the directory's contents for noderevs, so we don't
-     need to again.  This will occur if a property is changed on a directory
-     without changing the directory's contents. */
-  if (noderev->data_rep->revision != rev)
-    return SVN_NO_ERROR;
-
-  /* We could use get_dir_contents(), but this is much cheaper.  It does
-     rely on directory entries being stored as PLAIN reps, though. */
-  SVN_ERR(svn_fs_x__item_offset(&offset, &sub_item, fs, rev, NULL,
-                                noderev->data_rep->item_index, pool));
-  SVN_ERR_ASSERT(sub_item == 0);
-  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
-
-  baton.stream = svn_stream_from_aprfile2(rev_file, TRUE, pool);
-  SVN_ERR(svn_fs_x__read_rep_header(&header, baton.stream, pool));
-  if (header->type != svn_fs_x__rep_plain)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Recovery encountered a deltified directory "
-                              "representation"));
-
-  /* Now create a stream that's allowed to read only as much data as is
-     stored in the representation. */
-  baton.pool = pool;
-  baton.remaining = (apr_size_t) noderev->data_rep->expanded_size;
-  stream = svn_stream_create(&baton, pool);
-  svn_stream_set_read(stream, read_handler_recover);
-
-  /* Now read the entries from that stream. */
-  entries = apr_hash_make(pool);
-  SVN_ERR(svn_hash_read2(entries, stream, SVN_HASH_TERMINATOR, pool));
-  SVN_ERR(svn_stream_close(stream));
-
-  /* Now check each of the entries in our directory to find new node and
-     copy ids, and recurse into new subdirectories. */
-  iterpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
-    {
-      char *str_val;
-      char *str;
-      svn_node_kind_t kind;
-      svn_fs_id_t *id;
-      const svn_fs_x__id_part_t *rev_item;
-      apr_uint64_t node_id, copy_id;
-      apr_off_t child_dir_offset;
-      const svn_string_t *path = svn__apr_hash_index_val(hi);
-
-      svn_pool_clear(iterpool);
-
-      str_val = apr_pstrdup(iterpool, path->data);
-
-      str = svn_cstring_tokenize(" ", &str_val);
-      if (str == NULL)
-        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                _("Directory entry corrupt"));
-
-      if (strcmp(str, SVN_FS_FS__KIND_FILE) == 0)
-        kind = svn_node_file;
-      else if (strcmp(str, SVN_FS_FS__KIND_DIR) == 0)
-        kind = svn_node_dir;
-      else
-        {
-          return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                  _("Directory entry corrupt"));
-        }
-
-      str = svn_cstring_tokenize(" ", &str_val);
-      if (str == NULL)
-        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                _("Directory entry corrupt"));
-
-      id = svn_fs_x__id_parse(str, strlen(str), iterpool);
-
-      rev_item = svn_fs_x__id_rev_item(id);
-      if (rev_item->revision != rev)
-        {
-          /* If the node wasn't modified in this revision, we've already
-             checked the node and copy id. */
-          continue;
-        }
-
-      node_id = svn_fs_x__id_node_id(id)->number;
-      copy_id = svn_fs_x__id_copy_id(id)->number;
-
-      if (node_id > *max_node_id)
-        *max_node_id = node_id;
-      if (copy_id > *max_copy_id)
-        *max_copy_id = copy_id;
-
-      if (kind == svn_node_file)
-        continue;
-
-      SVN_ERR(svn_fs_x__item_offset(&child_dir_offset,
-                                    &sub_item,
-                                    fs,
-                                    rev_item->revision,
-                                    NULL,
-                                    rev_item->number,
-                                    iterpool));
-      SVN_ERR_ASSERT(sub_item == 0);
-      SVN_ERR(recover_find_max_ids(fs, rev, rev_file, child_dir_offset,
-                                   max_node_id, max_copy_id, iterpool));
-    }
-  svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_fs_x__find_max_ids(svn_fs_t *fs, svn_revnum_t youngest,
-                       apr_uint64_t *max_node_id,
-                       apr_uint64_t *max_copy_id,
-                       apr_pool_t *pool)
-{
-  fs_x_data_t *ffd = fs->fsap_data;
-  apr_off_t root_offset;
-  apr_uint32_t sub_item;
-  apr_file_t *rev_file;
-  svn_fs_id_t *root_id;
-
-  /* call this function for old repo formats only */
-  SVN_ERR_ASSERT(ffd->format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT);
-
-  SVN_ERR(svn_fs_x__rev_get_root(&root_id, fs, youngest, pool));
-  SVN_ERR(svn_fs_x__item_offset(&root_offset, &sub_item, fs,
-                                svn_fs_x__id_rev(root_id),
-                                NULL,
-                                svn_fs_x__id_item(root_id),
-                                pool));
-  SVN_ERR_ASSERT(sub_item == 0);
-
-  SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, fs, youngest, pool));
-  SVN_ERR(recover_find_max_ids(fs, youngest, rev_file, root_offset,
-                               max_node_id, max_copy_id, pool));
-  SVN_ERR(svn_io_file_close(rev_file, pool));
-
-  return SVN_NO_ERROR;
-}
-
 /* Baton used for recover_body below. */
 struct recover_baton {
   svn_fs_t *fs;
@@ -332,8 +120,6 @@ recover_body(void *baton, apr_pool_t *pool)
   svn_fs_t *fs = b->fs;
   fs_x_data_t *ffd = fs->fsap_data;
   svn_revnum_t max_rev;
-  apr_uint64_t next_node_id = 0;
-  apr_uint64_t next_copy_id = 0;
   svn_revnum_t youngest_rev;
   svn_node_kind_t youngest_revprops_kind;
 
@@ -383,35 +169,6 @@ recover_body(void *baton, apr_pool_t *pool)
                              _("Expected current rev to be <= %ld "
                                "but found %ld"), max_rev, youngest_rev);
 
-  /* We only need to search for maximum IDs for old FS formats which
-     se global ID counters. */
-  if (ffd->format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
-    {
-      /* Next we need to find the maximum node id and copy id in use across the
-         filesystem.  Unfortunately, the only way we can get this information
-         is to scan all the noderevs of all the revisions and keep track as
-         we go along. */
-      svn_revnum_t rev;
-      apr_pool_t *iterpool = svn_pool_create(pool);
-
-      for (rev = 0; rev <= max_rev; rev++)
-        {
-          svn_pool_clear(iterpool);
-
-          if (b->cancel_func)
-            SVN_ERR(b->cancel_func(b->cancel_baton));
-
-          SVN_ERR(svn_fs_x__find_max_ids(fs, rev, &next_node_id,
-                                         &next_copy_id, iterpool));
-        }
-      svn_pool_destroy(iterpool);
-
-      /* Now that we finally have the maximum revision, node-id and copy-id, we
-         can bump the two ids to get the next of each. */
-      next_node_id++;
-      next_copy_id++;
-    }
-
   /* Before setting current, verify that there is a revprops file
      for the youngest revision.  (Issue #2992) */
   SVN_ERR(svn_io_check_path(svn_fs_x__path_revprops(fs, max_rev, pool),
@@ -459,8 +216,7 @@ recover_body(void *baton, apr_pool_t *pool)
 
   /* Now store the discovered youngest revision, and the next IDs if
      relevant, in a new 'current' file. */
-  return svn_fs_x__write_current(fs, max_rev, next_node_id, next_copy_id,
-                                 pool);
+  return svn_fs_x__write_current(fs, max_rev, pool);
 }
 
 /* This implements the fs_library_vtable_t.recover() API. */

@@ -357,22 +357,11 @@ hotcopy_update_current(svn_revnum_t *dst_youngest,
                        svn_revnum_t new_youngest,
                        apr_pool_t *scratch_pool)
 {
-  apr_uint64_t next_node_id = 0;
-  apr_uint64_t next_copy_id = 0;
-  fs_x_data_t *dst_ffd = dst_fs->fsap_data;
-
   if (*dst_youngest >= new_youngest)
     return SVN_NO_ERROR;
 
-  /* If necessary, get new current next_node and next_copy IDs. */
-  if (dst_ffd->format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
-    SVN_ERR(svn_fs_x__find_max_ids(dst_fs, new_youngest,
-                                   &next_node_id, &next_copy_id,
-                                   scratch_pool));
-
   /* Update 'current'. */
-  SVN_ERR(svn_fs_x__write_current(dst_fs, new_youngest, next_node_id,
-                                  next_copy_id, scratch_pool));
+  SVN_ERR(svn_fs_x__write_current(dst_fs, new_youngest, scratch_pool));
 
   *dst_youngest = new_youngest;
 
@@ -886,11 +875,8 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
                                         pool));
 
   /* Create the 'current' file. */
-  SVN_ERR(svn_io_file_create(svn_fs_x__path_current(dst_fs, pool),
-                              (dst_ffd->format >=
-                                 SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT
-                                 ? "0\n" : "0 1 1\n"), 
-                               pool));
+  SVN_ERR(svn_io_file_create(svn_fs_x__path_current(dst_fs, pool), "0\n", 
+                             pool));
 
   /* Create lock file and UUID. */
   SVN_ERR(svn_io_file_create_empty(svn_fs_x__path_lock(dst_fs, pool), pool));
