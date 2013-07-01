@@ -2670,6 +2670,32 @@ typedef struct svn_fs_fsfs_info_t {
      or svn_fs_info_dup(). */
 } svn_fs_fsfs_info_t;
 
+/**
+ * A structure that provides some information about a filesystem.
+ * Returned by svn_fs_info() for #SVN_FS_TYPE_FSX filesystems.
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, users shouldn't allocate structures of this
+ * type, to preserve binary compatibility.
+ *
+ * @since New in 1.9.
+ */
+typedef struct svn_fs_fsx_info_t {
+
+  /** Filesystem backend (#fs_type), i.e., the string #SVN_FS_TYPE_FSX. */
+  const char *fs_type;
+
+  /** Shard size, always > 0. */
+  int shard_size;
+
+  /** The smallest revision (as #svn_revnum_t) which is not in a pack file. */
+  svn_revnum_t min_unpacked_rev;
+
+  /* If you add fields here, check whether you need to extend svn_fs_info()
+     or svn_fs_info_dup(). */
+
+} svn_fs_fsx_info_t;
+
 /** @see svn_fs_info()
  * @since New in 1.9. */
 typedef struct svn_fs_info_placeholder_t {

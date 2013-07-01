@@ -171,17 +171,17 @@ x_freeze(svn_fs_t *fs,
 }
 
 static svn_error_t *
-x_info(const void **fsfs_info,
+x_info(const void **fsx_info,
        svn_fs_t *fs,
        apr_pool_t *result_pool,
        apr_pool_t *scratch_pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
-  svn_fs_fsfs_info_t *info = apr_palloc(result_pool, sizeof(*info));
-  info->fs_type = SVN_FS_TYPE_FSFS;
+  svn_fs_fsx_info_t *info = apr_palloc(result_pool, sizeof(*info));
+  info->fs_type = SVN_FS_TYPE_FSX;
   info->shard_size = ffd->max_files_per_dir;
   info->min_unpacked_rev = ffd->min_unpacked_rev;
-  *fsfs_info = info;
+  *fsx_info = info;
   return SVN_NO_ERROR;
 }
 
@@ -444,12 +444,12 @@ x_set_svn_fs_open(svn_fs_t *fs,
 }
 
 static void *
-x_info_dup(const void *fsfs_info_void,
+x_info_dup(const void *fsx_info_void,
            apr_pool_t *result_pool)
 {
   /* All fields are either ints or static strings. */
-  const svn_fs_fsfs_info_t *fsfs_info = fsfs_info_void;
-  return apr_pmemdup(result_pool, fsfs_info, sizeof(*fsfs_info));
+  const svn_fs_fsx_info_t *fsx_info = fsx_info_void;
+  return apr_pmemdup(result_pool, fsx_info, sizeof(*fsx_info));
 }
 
 
