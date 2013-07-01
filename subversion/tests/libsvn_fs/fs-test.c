@@ -27,6 +27,7 @@
 
 #include "../svn_test.h"
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_time.h"
 #include "svn_string.h"
@@ -4958,11 +4959,13 @@ filename_trailing_newline(const svn_test_opts_t *opts,
   svn_revnum_t youngest_rev = 0;
   svn_error_t *err;
   svn_boolean_t allow_newlines;
+  static const char contents[] = "foo\003bar";
 
-  /* Some filesystem implementations can handle newlines in filenames
-   * and can be white-listed here.
-   * Currently, only BDB supports \n in filenames. */
-  allow_newlines = (strcmp(opts->fs_type, "bdb") == 0);
+  /* The FS API wants \n to be permitted, but FSFS never implemented that,
+   * so for FSFS we expect errors rather than successes in some of the commits.
+   * Use a blacklist approach so that new FSes default to implementing the API
+   * as originally defined. */
+  allow_newlines = (!!strcmp(opts->fs_type, SVN_FS_TYPE_FSFS));
 
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-filename-trailing-newline",
                               opts, pool));
@@ -4991,6 +4994,48 @@ filename_trailing_newline(const svn_test_opts_t *opts,
     SVN_TEST_ASSERT(err == SVN_NO_ERROR);
   else
     SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
+  
+
+  /* Create another file, with contents. */
+  if (allow_newlines)
+    {
+      SVN_ERR(svn_fs_make_file(txn_root, "/bar\n/baz\n", subpool));
+      SVN_ERR(svn_test__set_file_contents(txn_root, "bar\n/baz\n",
+                                          contents, pool));
+    }
+
+  if (allow_newlines)
+    {
+      svn_revnum_t after_rev;
+      static svn_test__tree_entry_t expected_entries[] = {
+        { "foo", NULL },
+        { "bar\n", NULL },
+        { "foo/baz\n", "" },
+        { "bar\n/baz\n", contents },
+        { NULL, NULL }
+      };
+      const char *expected_changed_paths[] = {
+        "/bar\n",
+        "/foo/baz\n",
+        "/bar\n/baz\n",
+        NULL
+      };
+      apr_hash_t *expected_changes = apr_hash_make(pool);
+      int i;
+
+      SVN_ERR(svn_fs_commit_txn(NULL, &after_rev, txn, subpool));
+      SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(after_rev));
+
+      /* Validate the DAG. */
+      SVN_ERR(svn_fs_revision_root(&root, fs, after_rev, pool));
+      SVN_ERR(svn_test__validate_tree(root, expected_entries, 4, pool));
+
+      /* Validate changed-paths, where the problem originally occurred. */
+      for (i = 0; expected_changed_paths[i]; i++)
+        svn_hash_sets(expected_changes, expected_changed_paths[i],
+                      "undefined value");
+      SVN_ERR(svn_test__validate_changes(root, expected_changes, pool));
+    }
 
   return SVN_NO_ERROR;
 }
