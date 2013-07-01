@@ -978,6 +978,21 @@ static svn_error_t *ra_svn_commit(svn_ra_session_t *session,
   const svn_string_t *log_msg = svn_hash_gets(revprop_table,
                                               SVN_PROP_REVISION_LOG);
 
+  if (log_msg == NULL &&
+      ! svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_COMMIT_REVPROPS))
+    {
+      return svn_error_createf(SVN_ERR_BAD_PROPERTY_VALUE, NULL,
+                               _("ra_svn does not support not specifying "
+                                 "a log message with pre-1.5 servers; "
+                                 "consider passing an empty one, or upgrading "
+                                 "the server"));
+    } 
+  else if (log_msg == NULL)
+    /* 1.5+ server.  Set LOG_MSG to something, since the 'logmsg' argument
+       to the 'commit' protocol command is non-optional; later, REVPROP_TABLE
+       (which has NULL for svn:log) will override this value. */
+    log_msg = svn_string_create("", pool);
+
   /* If we're sending revprops other than svn:log, make sure the server won't
      silently ignore them. */
   if (apr_hash_count(revprop_table) > 1 &&
