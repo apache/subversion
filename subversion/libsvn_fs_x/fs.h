@@ -75,8 +75,8 @@ extern "C" {
                                                     to-phys index */
 #define PATH_EXT_P2L_INDEX    ".p2l"             /* extension of the phys-
                                                     to-log index */
-/* If you change this, look at tests/svn_test_fs.c(maybe_install_fsfs_conf) */
-#define PATH_CONFIG           "fsfs.conf"        /* Configuration */
+/* If you change this, look at tests/svn_test_fs.c(maybe_install_fsx_conf) */
+#define PATH_CONFIG           "fsx.conf"         /* Configuration */
 
 /* Names of special files and file extensions for transactions */
 #define PATH_CHANGES       "changes"       /* Records changes made so far */

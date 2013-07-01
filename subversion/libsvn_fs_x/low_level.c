@@ -64,11 +64,11 @@
 
 /* An arbitrary maximum path length, so clients can't run us out of memory
  * by giving us arbitrarily large paths. */
-#define FSFS_MAX_PATH_LEN 4096
+#define FSX_MAX_PATH_LEN 4096
 
 /* The 256 is an arbitrary size large enough to hold the node id and the
  * various flags. */
-#define MAX_CHANGE_LINE_LEN FSFS_MAX_PATH_LEN + 256
+#define MAX_CHANGE_LINE_LEN FSX_MAX_PATH_LEN + 256
 
 svn_error_t *
 svn_fs_x__parse_revision_trailer(apr_off_t *root_offset,

@@ -376,7 +376,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
 {
   fs_x_data_t *ffd = fs->fsap_data;
   const char *prefix = apr_pstrcat(pool,
-                                   "fsfs:", fs->uuid,
+                                   "fsx:", fs->uuid,
                                    "/", normalize_key_part(fs->path, pool),
                                    ":",
                                    (char *)NULL);
@@ -819,7 +819,7 @@ svn_fs_x__initialize_txn_caches(svn_fs_t *fs,
      to start a new transaction later that receives the same id.
      Therefore, throw in a uuid as well - just to be sure. */
   const char *prefix = apr_pstrcat(pool,
-                                   "fsfs:", fs->uuid,
+                                   "fsx:", fs->uuid,
                                    "/", fs->path,
                                    ":", txn_id,
                                    ":", svn_uuid_generate(pool), ":",

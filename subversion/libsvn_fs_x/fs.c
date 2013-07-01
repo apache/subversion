@@ -52,7 +52,7 @@
 
 /* A prefix for the pool userdata variables used to hold
    per-filesystem shared data.  See fs_serialized_init. */
-#define SVN_FSFS_SHARED_USERDATA_PREFIX "svn-fsfs-shared-"
+#define SVN_FSX_SHARED_USERDATA_PREFIX "svn-fsx-shared-"
 
 
 
@@ -81,11 +81,11 @@ x_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
      repository. */
 
   SVN_ERR_ASSERT(fs->uuid);
-  key = apr_pstrcat(pool, SVN_FSFS_SHARED_USERDATA_PREFIX, fs->uuid,
+  key = apr_pstrcat(pool, SVN_FSX_SHARED_USERDATA_PREFIX, fs->uuid,
                     (char *) NULL);
   status = apr_pool_userdata_get(&val, key, common_pool);
   if (status)
-    return svn_error_wrap_apr(status, _("Can't fetch FSFS shared data"));
+    return svn_error_wrap_apr(status, _("Can't fetch FSX shared data"));
   ffsd = val;
 
   if (!ffsd)
@@ -109,7 +109,7 @@ x_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
       key = apr_pstrdup(common_pool, key);
       status = apr_pool_userdata_set(ffsd, key, NULL, common_pool);
       if (status)
-        return svn_error_wrap_apr(status, _("Can't store FSFS shared data"));
+        return svn_error_wrap_apr(status, _("Can't store FSX shared data"));
     }
 
   ffd->shared = ffsd;

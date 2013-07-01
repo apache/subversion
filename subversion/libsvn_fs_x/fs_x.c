@@ -269,13 +269,13 @@ write_config(svn_fs_t *fs,
              apr_pool_t *pool)
 {
 #define NL APR_EOL_STR
-  static const char * const fsfs_conf_contents =
-"### This file controls the configuration of the FSFS filesystem."           NL
+  static const char * const fsx_conf_contents =
+"### This file controls the configuration of the FSX filesystem."            NL
 ""                                                                           NL
 "[" SVN_CACHE_CONFIG_CATEGORY_MEMCACHED_SERVERS "]"                          NL
-"### These options name memcached servers used to cache internal FSFS"       NL
+"### These options name memcached servers used to cache internal FSX"        NL
 "### data.  See http://www.danga.com/memcached/ for more information on"     NL
-"### memcached.  To use memcached with FSFS, run one or more memcached"      NL
+"### memcached.  To use memcached with FSX, run one or more memcached"       NL
 "### servers, and specify each of them as an option like so:"                NL
 "# first-server = 127.0.0.1:11211"                                           NL
 "# remote-memcached = mymemcached.corp.example.com:11212"                    NL
@@ -356,7 +356,7 @@ write_config(svn_fs_t *fs,
 "### For 1.8, the default value is 1023; earlier versions have no limit."    NL
 "# " CONFIG_OPTION_MAX_DELTIFICATION_WALK " = 1023"                          NL
 "###"                                                                        NL
-"### The skip-delta scheme used by FSFS tends to repeatably store redundant" NL
+"### The skip-delta scheme used by FSX tends to repeatably store redundant" NL
 "### delta information where a simple delta against the latest version is"   NL
 "### often smaller.  By default, 1.8+ will therefore use skip deltas only"   NL
 "### after the linear chain of deltas has grown beyond the threshold"        NL
@@ -450,7 +450,7 @@ write_config(svn_fs_t *fs,
 ;
 #undef NL
   return svn_io_file_create(svn_dirent_join(fs->path, PATH_CONFIG, pool),
-                            fsfs_conf_contents, pool);
+                            fsx_conf_contents, pool);
 }
 
 svn_error_t *
