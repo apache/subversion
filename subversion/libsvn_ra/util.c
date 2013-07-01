@@ -92,6 +92,7 @@ svn_ra__assert_capable_server(svn_ra_session_t *ra_session,
     {
       svn_boolean_t has;
       SVN_ERR(svn_ra_has_capability(ra_session, &has, capability, pool));
+      path_or_url = get_path(path_or_url, ra_session, pool);
       if (! has)
         return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                _("The '%s' feature is not supported by '%s'"),
