@@ -137,7 +137,7 @@ svn_fs_x__write_format(svn_fs_t *fs,
   const char *path = svn_fs_x__path_format(fs, pool);
   fs_x_data_t *ffd = fs->fsap_data;
 
-  SVN_ERR_ASSERT(1 <= ffd->format && ffd->format <= SVN_FS_FS__FORMAT_NUMBER);
+  SVN_ERR_ASSERT(1 <= ffd->format && ffd->format <= SVN_FS_X__FORMAT_NUMBER);
 
   sb = svn_stringbuf_createf(pool, "%d\n", ffd->format);
   svn_stringbuf_appendcstr(sb, apr_psprintf(pool, "layout sharded %d\n",
@@ -168,12 +168,12 @@ static svn_error_t *
 check_format(int format)
 {
   /* We support all formats from 1-current simultaneously */
-  if (1 <= format && format <= SVN_FS_FS__FORMAT_NUMBER)
+  if (1 <= format && format <= SVN_FS_X__FORMAT_NUMBER)
     return SVN_NO_ERROR;
 
   return svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
      _("Expected FS format between '1' and '%d'; found format '%d'"),
-     SVN_FS_FS__FORMAT_NUMBER, format);
+     SVN_FS_X__FORMAT_NUMBER, format);
 }
 
 /* Find the youngest revision in a repository at path FS_PATH and
@@ -516,7 +516,7 @@ upgrade_body(void *baton, apr_pool_t *pool)
   SVN_ERR(check_format(format));
 
   /* If we're already up-to-date, there's nothing else to be done here. */
-  if (format == SVN_FS_FS__FORMAT_NUMBER)
+  if (format == SVN_FS_X__FORMAT_NUMBER)
     return SVN_NO_ERROR;
 
   /* Done */
@@ -795,7 +795,7 @@ svn_fs_x__create(svn_fs_t *fs,
                  const char *path,
                  apr_pool_t *pool)
 {
-  int format = SVN_FS_FS__FORMAT_NUMBER;
+  int format = SVN_FS_X__FORMAT_NUMBER;
   fs_x_data_t *ffd = fs->fsap_data;
 
   fs->path = apr_pstrdup(pool, path);
@@ -1150,30 +1150,15 @@ svn_fs_x__info_format(int *fs_format,
 
   (*supports_version)->major = SVN_VER_MAJOR;
   (*supports_version)->minor = 1;
-  (*supports_version)->patch = 0;
+  (*supports_version)->patch = 9;
   (*supports_version)->tag = "";
 
   switch (ffd->format)
     {
     case 1:
       break;
-    case 2:
-      (*supports_version)->minor = 4;
-      break;
-    case 3:
-      (*supports_version)->minor = 5;
-      break;
-    case 4:
-      (*supports_version)->minor = 6;
-      break;
-    case 6:
-      (*supports_version)->minor = 8;
-      break;
-    case 7:
-      (*supports_version)->minor = 9;
-      break;
 #ifdef SVN_DEBUG
-# if SVN_FS_FS__FORMAT_NUMBER != 7
+# if SVN_FS_X__FORMAT_NUMBER != 1
 #  error "Need to add a 'case' statement here"
 # endif
 #endif
