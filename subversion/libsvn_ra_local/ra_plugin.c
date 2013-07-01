@@ -599,6 +599,9 @@ svn_ra_local__open(svn_ra_session_t *session,
   if (sess->callbacks->get_client_string != NULL)
     SVN_ERR(sess->callbacks->get_client_string(sess->callback_baton,
                                                &client_string, pool));
+  else
+    client_string = NULL;
+
   if (client_string)
     sess->useragent = apr_pstrcat(pool, USER_AGENT " ",
                                   client_string, (char *)NULL);
