@@ -59,6 +59,7 @@ taskkill /im svnsync.exe /f 2> nul:
 taskkill /im httpd.exe /f 2> nul:
 taskkill /im fs-test.exe /f 2> nul:
 taskkill /im op-depth-test.exe /f 2> nul:
+taskkill /im atomic-ra-revprop-change.exe /f 2> nul:
 taskkill /im java.exe /f 2> nul:
 taskkill /im perl.exe /f 2> nul:
 taskkill /im mspdbsrv.exe /f 2> nul:
