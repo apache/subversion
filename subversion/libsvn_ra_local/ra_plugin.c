@@ -541,6 +541,9 @@ ignore_warnings(void *baton,
   return;
 }
 
+#define USER_AGENT "SVN/" SVN_VER_NUMBER " (" SVN_BUILD_TARGET ")" \
+                   " ra_local"
+
 static svn_error_t *
 svn_ra_local__open(svn_ra_session_t *session,
                    const char **corrected_url,
@@ -550,6 +553,7 @@ svn_ra_local__open(svn_ra_session_t *session,
                    apr_hash_t *config,
                    apr_pool_t *pool)
 {
+  const char *client_string;
   svn_ra_local__session_baton_t *sess;
   const char *fs_path;
   static volatile svn_atomic_t cache_init_state = 0;
@@ -591,6 +595,15 @@ svn_ra_local__open(svn_ra_session_t *session,
 
   /* Be sure username is NULL so we know to look it up / ask for it */
   sess->username = NULL;
+
+  if (sess->callbacks->get_client_string != NULL)
+    SVN_ERR(sess->callbacks->get_client_string(sess->callback_baton,
+                                               &client_string, pool));
+  if (client_string)
+    sess->useragent = apr_pstrcat(pool, USER_AGENT " ",
+                                  client_string, (char *)NULL);
+  else
+    sess->useragent = USER_AGENT;
 
   session->priv = sess;
   return SVN_NO_ERROR;
@@ -765,6 +778,8 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
                 svn_string_create(sess->username, pool));
   svn_hash_sets(revprop_table, SVN_PROP_TXN_CLIENT_COMPAT_VERSION,
                 svn_string_create(SVN_VER_NUMBER, pool));
+  svn_hash_sets(revprop_table, SVN_PROP_TXN_USER_AGENT,
+                svn_string_create(sess->useragent, pool));
 
   /* Get the repos commit-editor */
   return svn_repos_get_commit_editor5
