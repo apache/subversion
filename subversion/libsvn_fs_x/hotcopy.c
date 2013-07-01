@@ -240,19 +240,16 @@ hotcopy_copy_shard_file(const char *src_subdir,
   const char *src_subdir_shard = src_subdir,
              *dst_subdir_shard = dst_subdir;
 
-  if (max_files_per_dir)
-    {
-      const char *shard = apr_psprintf(scratch_pool, "%ld",
-                                       rev / max_files_per_dir);
-      src_subdir_shard = svn_dirent_join(src_subdir, shard, scratch_pool);
-      dst_subdir_shard = svn_dirent_join(dst_subdir, shard, scratch_pool);
+  const char *shard = apr_psprintf(scratch_pool, "%ld",
+                                   rev / max_files_per_dir);
+  src_subdir_shard = svn_dirent_join(src_subdir, shard, scratch_pool);
+  dst_subdir_shard = svn_dirent_join(dst_subdir, shard, scratch_pool);
 
-      if (rev % max_files_per_dir == 0)
-        {
-          SVN_ERR(svn_io_make_dir_recursively(dst_subdir_shard, scratch_pool));
-          SVN_ERR(svn_io_copy_perms(dst_subdir, dst_subdir_shard,
-                                    scratch_pool));
-        }
+  if (rev % max_files_per_dir == 0)
+    {
+      SVN_ERR(svn_io_make_dir_recursively(dst_subdir_shard, scratch_pool));
+      SVN_ERR(svn_io_copy_perms(dst_subdir, dst_subdir_shard,
+                                scratch_pool));
     }
 
   SVN_ERR(hotcopy_io_dir_file_copy(src_subdir_shard, dst_subdir_shard,
@@ -842,25 +839,14 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
   dst_ffd->format = src_ffd->format;
 
   /* Create the revision data directories. */
-  if (dst_ffd->max_files_per_dir)
-    SVN_ERR(svn_io_make_dir_recursively(svn_fs_x__path_rev_shard(dst_fs, 0,
-                                                                 pool),
-                                        pool));
-  else
-    SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(dst_path,
-                                                        PATH_REVS_DIR, pool),
-                                        pool));
+  SVN_ERR(svn_io_make_dir_recursively(svn_fs_x__path_rev_shard(dst_fs, 0,
+                                                               pool),
+                                      pool));
 
   /* Create the revprops directory. */
-  if (src_ffd->max_files_per_dir)
-    SVN_ERR(svn_io_make_dir_recursively(svn_fs_x__path_revprops_shard(dst_fs,
-                                                                      0, pool),
-                                        pool));
-  else
-    SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(dst_path,
-                                                        PATH_REVPROPS_DIR,
-                                                        pool),
-                                        pool));
+  SVN_ERR(svn_io_make_dir_recursively(svn_fs_x__path_revprops_shard(dst_fs,
+                                                                    0, pool),
+                                      pool));
 
   /* Create the transaction directory. */
   SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(dst_path, PATH_TXNS_DIR,

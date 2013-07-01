@@ -2303,9 +2303,6 @@ pack_body(void *baton,
   const char *revprops_data_path = NULL;
 
   /* If we aren't using sharding, we can't do any packing, so quit. */
-  if (!ffd->max_files_per_dir)
-    return SVN_NO_ERROR;
-
   SVN_ERR(svn_fs_x__read_min_unpacked_rev(&ffd->min_unpacked_rev, pb->fs,
                                           pool));
 

@@ -126,10 +126,6 @@ extern "C" {
    using a transaction sequence in the txn-current file. */
 #define SVN_FS_FS__MIN_TXN_CURRENT_FORMAT 3
 
-/* The minimum format number that supports the "layout" filesystem
-   format option. */
-#define SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT 3
-
 /* The minimum format number that maintains minfo-here and minfo-count
    noderev fields. */
 #define SVN_FS_FS__MIN_MERGEINFO_FORMAT 3
@@ -246,8 +242,8 @@ typedef struct fs_x_data_t
 {
   /* The format number of this FS. */
   int format;
-  /* The maximum number of files to store per directory (for sharded
-     layouts) or zero (for linear layouts). */
+
+  /* The maximum number of files to store per directory. */
   int max_files_per_dir;
 
   /* Rev / pack file read granularity. */

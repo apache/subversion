@@ -87,30 +87,12 @@ static svn_error_t *
 read_format(int *pformat, int *max_files_per_dir,
             const char *path, apr_pool_t *pool)
 {
-  svn_error_t *err;
   svn_stream_t *stream;
   svn_stringbuf_t *content;
   svn_stringbuf_t *buf;
   svn_boolean_t eos = FALSE;
 
-  err = svn_stringbuf_from_file2(&content, path, pool);
-  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-    {
-      /* Treat an absent format file as format 1.  Do not try to
-         create the format file on the fly, because the repository
-         might be read-only for us, or this might be a read-only
-         operation, and the spirit of FSFS is to make no changes
-         whatseover in read-only operations.  See thread starting at
-         http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=97600
-         for more. */
-      svn_error_clear(err);
-      *pformat = 1;
-      *max_files_per_dir = 0;
-
-      return SVN_NO_ERROR;
-    }
-  SVN_ERR(err);
-
+  SVN_ERR(svn_stringbuf_from_file2(&content, path, pool));
   stream = svn_stream_from_stringbuf(content, pool);
   SVN_ERR(svn_stream_readline(stream, &buf, "\n", &eos, pool));
   if (buf->len == 0 && eos)
@@ -125,38 +107,18 @@ read_format(int *pformat, int *max_files_per_dir,
   SVN_ERR(check_format_file_buffer_numeric(buf->data, 0, path, pool));
   SVN_ERR(svn_cstring_atoi(pformat, buf->data));
 
-  /* Set the default values for anything that can be set via an option. */
-  *max_files_per_dir = 0;
-
   /* Read any options. */
-  while (!eos)
+  SVN_ERR(svn_stream_readline(stream, &buf, "\n", &eos, pool));
+  if (!eos && strncmp(buf->data, "layout sharded ", 15) == 0)
     {
-      SVN_ERR(svn_stream_readline(stream, &buf, "\n", &eos, pool));
-      if (buf->len == 0)
-        break;
-
-      if (*pformat >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT &&
-          strncmp(buf->data, "layout ", 7) == 0)
-        {
-          if (strcmp(buf->data + 7, "linear") == 0)
-            {
-              *max_files_per_dir = 0;
-              continue;
-            }
-
-          if (strncmp(buf->data + 7, "sharded ", 8) == 0)
-            {
-              /* Check that the argument is numeric. */
-              SVN_ERR(check_format_file_buffer_numeric(buf->data, 15, path, pool));
-              SVN_ERR(svn_cstring_atoi(max_files_per_dir, buf->data + 15));
-              continue;
-            }
-        }
-
-      return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
-         _("'%s' contains invalid filesystem format option '%s'"),
-         svn_dirent_local_style(path, pool), buf->data);
+      /* Check that the argument is numeric. */
+      SVN_ERR(check_format_file_buffer_numeric(buf->data, 15, path, pool));
+      SVN_ERR(svn_cstring_atoi(max_files_per_dir, buf->data + 15));
     }
+  else
+    return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
+                  _("'%s' contains invalid filesystem format option '%s'"),
+                  svn_dirent_local_style(path, pool), buf->data);
 
   return SVN_NO_ERROR;
 }
@@ -178,15 +140,8 @@ svn_fs_x__write_format(svn_fs_t *fs,
   SVN_ERR_ASSERT(1 <= ffd->format && ffd->format <= SVN_FS_FS__FORMAT_NUMBER);
 
   sb = svn_stringbuf_createf(pool, "%d\n", ffd->format);
-
-  if (ffd->format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
-    {
-      if (ffd->max_files_per_dir)
-        svn_stringbuf_appendcstr(sb, apr_psprintf(pool, "layout sharded %d\n",
-                                                  ffd->max_files_per_dir));
-      else
-        svn_stringbuf_appendcstr(sb, "layout linear\n");
-    }
+  svn_stringbuf_appendcstr(sb, apr_psprintf(pool, "layout sharded %d\n",
+                                            ffd->max_files_per_dir));
 
   /* svn_io_write_version_file() does a load of magic to allow it to
      replace version files that already exist.  We only need to do
@@ -866,30 +821,16 @@ svn_fs_x__create(svn_fs_t *fs,
         format = 6;
     }
   ffd->format = format;
-
-  /* Override the default linear layout if this is a new-enough format. */
-  if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
-    ffd->max_files_per_dir = SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR;
+  ffd->max_files_per_dir = SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR;
 
   /* Create the revision data directories. */
-  if (ffd->max_files_per_dir)
-    SVN_ERR(svn_io_make_dir_recursively(svn_fs_x__path_rev_shard(fs, 0, pool),
-                                        pool));
-  else
-    SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path, PATH_REVS_DIR,
-                                                        pool),
-                                        pool));
+  SVN_ERR(svn_io_make_dir_recursively(svn_fs_x__path_rev_shard(fs, 0, pool),
+                                      pool));
 
   /* Create the revprops directory. */
-  if (ffd->max_files_per_dir)
-    SVN_ERR(svn_io_make_dir_recursively(svn_fs_x__path_revprops_shard(fs, 0,
-                                                                      pool),
-                                        pool));
-  else
-    SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path,
-                                                        PATH_REVPROPS_DIR,
-                                                        pool),
-                                        pool));
+  SVN_ERR(svn_io_make_dir_recursively(svn_fs_x__path_revprops_shard(fs, 0,
+                                                                    pool),
+                                      pool));
 
   /* Create the transaction directory. */
   SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path, PATH_TXNS_DIR,

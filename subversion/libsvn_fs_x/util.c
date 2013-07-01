@@ -135,8 +135,6 @@ svn_fs_x__path_rev_packed(svn_fs_t *fs, svn_revnum_t rev, const char *kind,
                           apr_pool_t *pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
-
-  assert(ffd->max_files_per_dir);
   assert(svn_fs_x__is_packed_rev(fs, rev));
 
   return svn_dirent_join_many(pool, fs->path, PATH_REVS_DIR,
@@ -150,8 +148,6 @@ const char *
 svn_fs_x__path_rev_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
-
-  assert(ffd->max_files_per_dir);
   return svn_dirent_join_many(pool, fs->path, PATH_REVS_DIR,
                               apr_psprintf(pool, "%ld",
                                                  rev / ffd->max_files_per_dir),
@@ -161,19 +157,11 @@ svn_fs_x__path_rev_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 const char *
 svn_fs_x__path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
-
   assert(! svn_fs_x__is_packed_rev(fs, rev));
 
-  if (ffd->max_files_per_dir)
-    {
-      return svn_dirent_join(svn_fs_x__path_rev_shard(fs, rev, pool),
-                             apr_psprintf(pool, "%ld", rev),
-                             pool);
-    }
-
-  return svn_dirent_join_many(pool, fs->path, PATH_REVS_DIR,
-                              apr_psprintf(pool, "%ld", rev), NULL);
+  return svn_dirent_join(svn_fs_x__path_rev_shard(fs, rev, pool),
+                         apr_psprintf(pool, "%ld", rev),
+                         pool);
 }
 
 const char *
@@ -211,7 +199,6 @@ svn_fs_x__path_revprops_shard(svn_fs_t *fs,
 {
   fs_x_data_t *ffd = fs->fsap_data;
 
-  assert(ffd->max_files_per_dir);
   return svn_dirent_join_many(pool, fs->path, PATH_REVPROPS_DIR,
                               apr_psprintf(pool, "%ld",
                                            rev / ffd->max_files_per_dir),
@@ -225,7 +212,6 @@ svn_fs_x__path_revprops_pack_shard(svn_fs_t *fs,
 {
   fs_x_data_t *ffd = fs->fsap_data;
 
-  assert(ffd->max_files_per_dir);
   return svn_dirent_join_many(pool, fs->path, PATH_REVPROPS_DIR,
                               apr_psprintf(pool, "%ld" PATH_EXT_PACKED_SHARD,
                                            rev / ffd->max_files_per_dir),
@@ -235,17 +221,9 @@ svn_fs_x__path_revprops_pack_shard(svn_fs_t *fs,
 const char *
 svn_fs_x__path_revprops(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
-
-  if (ffd->max_files_per_dir)
-    {
-      return svn_dirent_join(svn_fs_x__path_revprops_shard(fs, rev, pool),
-                             apr_psprintf(pool, "%ld", rev),
-                             pool);
-    }
-
-  return svn_dirent_join_many(pool, fs->path, PATH_REVPROPS_DIR,
-                              apr_psprintf(pool, "%ld", rev), NULL);
+  return svn_dirent_join(svn_fs_x__path_revprops_shard(fs, rev, pool),
+                         apr_psprintf(pool, "%ld", rev),
+                         pool);
 }
 
 /* Return TO_ADD appended to the C string representation of TXN_ID.

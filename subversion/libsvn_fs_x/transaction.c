@@ -3060,7 +3060,7 @@ commit_body(void *baton, apr_pool_t *pool)
   /* Create the shard for the rev and revprop file, if we're sharding and
      this is the first revision of a new shard.  We don't care if this
      fails because the shard already existed for some reason. */
-  if (ffd->max_files_per_dir && new_rev % ffd->max_files_per_dir == 0)
+  if (new_rev % ffd->max_files_per_dir == 0)
     {
       /* Create the revs shard. */
         {

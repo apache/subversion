@@ -53,24 +53,12 @@ write_format(const char *path,
   const char *contents;
 
   path = svn_dirent_join(path, "format", pool);
+  SVN_TEST_ASSERT(max_files_per_dir > 0);
 
-  if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
-    {
-      if (max_files_per_dir)
-        contents = apr_psprintf(pool,
-                                "%d\n"
-                                "layout sharded %d\n",
-                                format, max_files_per_dir);
-      else
-        contents = apr_psprintf(pool,
-                                "%d\n"
-                                "layout linear",
-                                format);
-    }
-  else
-    {
-      contents = apr_psprintf(pool, "%d\n", format);
-    }
+  contents = apr_psprintf(pool,
+                          "%d\n"
+                          "layout sharded %d\n",
+                          format, max_files_per_dir);
 
   SVN_ERR(svn_io_write_atomic(path, contents, strlen(contents),
                               NULL /* copy perms */, pool));
