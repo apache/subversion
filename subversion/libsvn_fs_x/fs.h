@@ -130,9 +130,6 @@ extern "C" {
    format option. */
 #define SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT 3
 
-/* The minimum format number that stores protorevs in a separate directory. */
-#define SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT 3
-
 /* The minimum format number that maintains minfo-here and minfo-count
    noderev fields. */
 #define SVN_FS_FS__MIN_MERGEINFO_FORMAT 3

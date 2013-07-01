@@ -355,15 +355,10 @@ svn_fs_x__path_txn_proto_rev(svn_fs_t *fs,
                              const svn_fs_x__id_part_t *txn_id,
                              apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
-  if (ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
-    return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
-                                combine_txn_id_string(txn_id, PATH_EXT_REV,
-                                                      pool),
-                                NULL);
-  else
-    return svn_dirent_join(svn_fs_x__path_txn_dir(fs, txn_id, pool),
-                           PATH_REV, pool);
+  return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
+                              combine_txn_id_string(txn_id, PATH_EXT_REV,
+                                                    pool),
+                              NULL);
 }
 
 const char *
@@ -371,16 +366,11 @@ svn_fs_x__path_txn_proto_rev_lock(svn_fs_t *fs,
                                   const svn_fs_x__id_part_t *txn_id,
                                   apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
-  if (ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
-    return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
-                                combine_txn_id_string(txn_id,
-                                                      PATH_EXT_REV_LOCK,
-                                                      pool),
-                                NULL);
-  else
-    return svn_dirent_join(svn_fs_x__path_txn_dir(fs, txn_id, pool),
-                           PATH_REV_LOCK, pool);
+  return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
+                              combine_txn_id_string(txn_id,
+                                                    PATH_EXT_REV_LOCK,
+                                                    pool),
+                              NULL);
 }
 
 const char *

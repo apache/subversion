@@ -868,11 +868,10 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
                                       pool));
 
   /* Create the protorevs directory. */
-  if (dst_ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
-    SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(dst_path,
-                                                        PATH_TXN_PROTOS_DIR,
-                                                        pool),
-                                        pool));
+  SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(dst_path,
+                                                      PATH_TXN_PROTOS_DIR,
+                                                      pool),
+                                      pool));
 
   /* Create the 'current' file. */
   SVN_ERR(svn_io_file_create(svn_fs_x__path_current(dst_fs, pool), "0\n", 

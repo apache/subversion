@@ -1385,7 +1385,6 @@ svn_fs_x__purge_txn(svn_fs_t *fs,
                     const char *txn_id_str,
                     apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
   svn_fs_x__id_part_t txn_id;
   SVN_ERR(svn_fs_x__id_txn_parse(&txn_id, txn_id_str));
 
@@ -1394,19 +1393,18 @@ svn_fs_x__purge_txn(svn_fs_t *fs,
   /* Remove the directory associated with this transaction. */
   SVN_ERR(svn_io_remove_dir2(svn_fs_x__path_txn_dir(fs, &txn_id, pool),
                              FALSE, NULL, NULL, pool));
-  if (ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
-    {
-      /* Delete protorev and its lock, which aren't in the txn
-         directory.  It's OK if they don't exist (for example, if this
-         is post-commit and the proto-rev has been moved into
-         place). */
-      SVN_ERR(svn_io_remove_file2(
-                      svn_fs_x__path_txn_proto_rev(fs, &txn_id, pool),
-                      TRUE, pool));
-      SVN_ERR(svn_io_remove_file2(
-                      svn_fs_x__path_txn_proto_rev_lock(fs, &txn_id, pool),
-                      TRUE, pool));
-    }
+
+  /* Delete protorev and its lock, which aren't in the txn
+      directory.  It's OK if they don't exist (for example, if this
+      is post-commit and the proto-rev has been moved into
+      place). */
+  SVN_ERR(svn_io_remove_file2(
+                  svn_fs_x__path_txn_proto_rev(fs, &txn_id, pool),
+                  TRUE, pool));
+  SVN_ERR(svn_io_remove_file2(
+                  svn_fs_x__path_txn_proto_rev_lock(fs, &txn_id, pool),
+                  TRUE, pool));
+
   return SVN_NO_ERROR;
 }
 
