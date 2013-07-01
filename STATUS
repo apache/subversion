@@ -184,6 +184,18 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1498483, r1498484, r1498486
+   fs: Improve a regression test.
+   Notes:
+     r1498483 adds a helper function.
+     r1498484 extends the test to perform additional verifications, and
+       switches it to a blacklist approach.
+     r1498486 renames a local variable; no functional change.
+   Justification:
+     Makes the test more likely to exercise the bug.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
