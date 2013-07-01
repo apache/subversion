@@ -96,7 +96,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.8\n"
 "Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
-"POT-Creation-Date: 2013-06-28 19:27+0100\n"
+"POT-Creation-Date: 2013-07-01 20:09+0100\n"
 "PO-Revision-Date: 2013-06-28 19:41+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.apache.org>\n"
 "Language-Team: German <dev@subversion.apache.org>\n"
@@ -8384,24 +8384,19 @@ msgstr "Wendet die Aktualisierung auf das verschobene Ziel an  [mine-conflict]"
 
 #: ../svn/conflict-callbacks.c:550
 msgid "mark resolved (the move will become a copy)"
-msgstr ""
-"Markiert den Konflikt als aufgelöst (wandelt Verschiebung in eine Kopie um)"
+msgstr "Markiert den Konflikt als aufgelöst (wandelt Verschiebung in eine Kopie um)"
 
 #: ../svn/conflict-callbacks.c:563
 msgid "keep any moves affected by this deletion  [mine-conflict]"
-msgstr ""
-"Behält alle durch das Löschen betroffenen Verschiebungen   [mine-conflict]"
+msgstr "Behält alle durch das Löschen betroffenen Verschiebungen   [mine-conflict]"
 
 #: ../svn/conflict-callbacks.c:566 ../svn/conflict-callbacks.c:582
 msgid "mark resolved (any affected moves will become copies)"
-msgstr ""
-"Markiert den Konflikt als aufgelöst (wandelt betroffene Verschiebungen in "
-"Kopien um)"
+msgstr "Markiert den Konflikt als aufgelöst (wandelt betroffene Verschiebungen in Kopien um)"
 
 #: ../svn/conflict-callbacks.c:579
 msgid "keep any moves affected by this replacement  [mine-conflict]"
-msgstr ""
-"Behält alle durch das Ersetzen betroffenen Verschiebungen   [mine-conflict]"
+msgstr "Behält alle durch das Ersetzen betroffenen Verschiebungen   [mine-conflict]"
 
 #: ../svn/conflict-callbacks.c:616
 msgid "Select:"
@@ -8476,10 +8471,7 @@ msgstr ""
 #: ../svn/conflict-callbacks.c:927
 #, c-format
 msgid "Invalid option; use diff/edit/merge/launch before choosing 'resolved'.\n\n"
-msgstr ""
-"Ungültige Option; Verwenden Sie Änderungen anzeigen / Datei bearbeiten / "
-"Zusammenführung / Werkzeug starten bevor Sie den Konflikt als aufgelöst "
-"markieren.\n"
+msgstr "Ungültige Option; Verwenden Sie Änderungen anzeigen / Datei bearbeiten / Zusammenführung / Werkzeug starten bevor Sie den Konflikt als aufgelöst markieren.\n"
 
 #: ../svn/conflict-callbacks.c:968
 #, c-format
@@ -8588,10 +8580,8 @@ msgstr ""
 "         (e1) bearbeitet fremde Version und verwendet das Ergebnis,\n"
 "         (e2) bearbeitet eigene Version und verwendet das Ergebnis,\n"
 "         (eb) bearbeitet beide Versionen und verwendet das Ergebnis,\n"
-"         (p) Verschiebt Konfliktlösung für diesen Abschnitt und setzt "
-"Konfliktmarkierungen,\n"
-"         (a) Bricht Zusammenführung der Datei ab und kehrt zum Hauptmenü "
-"zurück: "
+"         (p) Verschiebt Konfliktlösung für diesen Abschnitt und setzt Konfliktmarkierungen,\n"
+"         (a) Bricht Zusammenführung der Datei ab und kehrt zum Hauptmenü zurück: "
 
 #: ../svn/file-merge.c:868
 #, c-format
@@ -10167,10 +10157,8 @@ msgstr ""
 msgid "Also commit file and dir externals reached by\n                             recursion. This does not include externals with a\n                             fixed revision. (See the svn:externals property)"
 msgstr ""
 "Überträgt auch externe Verweise auf Dateien und Verzeichnisse, die durch\n"
-"                             Rekursion erreicht werden. Dies schließt "
-"externe Verweise\n"
-"                             mit fixen Revisionen aus. (siehe Eigenschaft "
-"»svn:externals«)"
+"                             Rekursion erreicht werden. Dies schließt externe Verweise\n"
+"                             mit fixen Revisionen aus. (siehe Eigenschaft »svn:externals«)"
 
 #: ../svn/svn.c:377
 msgid "retrieve target's inherited properties"
@@ -10263,8 +10251,7 @@ msgstr ""
 "  Eine Logmeldung muss angegeben werden; diese kann jedoch leer sein. Wird\n"
 "  sie nicht mittels einer --message- oder --file-Option übergeben, wird ein\n"
 "  Editor gestartet.\n"
-"  Falls Objekte gesperrt sind oder gesperrte Objekte enthalten, werden "
-"diese\n"
+"  Falls Objekte gesperrt sind oder gesperrte Objekte enthalten, werden diese\n"
 "  nach einer erfolgreichen Übertragung entsperrt.\n"
 
 #: ../svn/svn.c:504
@@ -11301,13 +11288,12 @@ msgstr ""
 "  Abschnitt »undo«.\n"
 
 #: ../svn/svn.c:1408
-msgid "Print the status of working copy files and directories.\nusage: status [PATH...]\n\n  With no args, print only locally modified items (no network access).\n  With -q, print only summary information about locally modified items.\n  With -u, add working revision and server out-of-date information.\n  With -v, print full revision information on every item.\n\n  The first seven columns in the output are each one character wide:\n    First column: Says if item was added, deleted, or otherwise changed\n      ' ' no modifications\n      'A' Added\n      'C' Conflicted\n      'D' Deleted\n      'I' Ignored\n      'M' Modified\n      'R' Replaced\n      'X' an unversioned directory created by an externals definition\n      '?' item is not under version control\n      '!' item is missing (removed by non-svn command) or incomplete\n      '~' versioned item obstructed by some item of a different kind\n    Second column: Modifications of a file's or directory's properties\n      ' ' no modifications\n      'C' Conflicted\n      'M' Modified\n    Third column: Whether the working copy directory is locked\n      ' ' not locked\n      'L' locked\n    Fourth column: Scheduled commit will contain addition-with-history\n      ' ' no history scheduled with commit\n      '+' history scheduled with commit\n    Fifth column: Whether the item is switched or a file external\n      ' ' normal\n      'S' the item has a Switched URL relative to the parent\n      'X' a versioned file created by an eXternals definition\n    Sixth column: Repository lock token\n      (without -u)\n      ' ' no lock token\n      'K' lock token present\n      (with -u)\n      ' ' not locked in repository, no lock token\n      'K' locked in repository, lock toKen present\n      'O' locked in repository, lock token in some Other working copy\n      'T' locked in repository, lock token present but sTolen\n      'B' not locked in repository, lock token present but Broken\n    Seventh column: Whether the item is the victim of a tree conflict\n      ' ' normal\n      'C' tree-Conflicted\n    If the item is a tree conflict victim, an additional line is printed\n    after the item's status line, explaining the nature of the conflict.\n\n  The out-of-date information appears in the ninth column (with -u):\n      '*' a newer revision exists on the server\n      ' ' the working copy is up to date\n\n  Remaining fields are variable width and delimited by spaces:\n    The working revision (with -u or -v; '-' if the item is copied)\n    The last committed revision and last committed author (with -v)\n    The working copy path is always the final field, so it can\n      include spaces.\n\n  The presence of a question mark ('?') where a working revision, last\n  committed revision, or last committed author was expected indicates\n  that the information is unknown or irrelevant given the state of the\n  item (for example, when the item is the result of a copy operation).\n  The question mark serves as a visual placeholder to facilitate parsing.\n\n  Example output:\n    svn status wc\n     M      wc/bar.c\n    A  +    wc/qax.c\n\n    svn status -u wc\n     M             965   wc/bar.c\n            *      965   wc/foo.c\n    A  +             -   wc/qax.c\n    Status against revision:   981\n\n    svn status --show-updates --verbose wc\n     M             965      938 kfogel       wc/bar.c\n            *      965      922 sussman      wc/foo.c\n    A  +             -      687 joe          wc/qax.c\n                   965      687 joe          wc/zig.c\n    Status against revision:   981\n\n    svn status\n     M      wc/bar.c\n    !     C wc/qaz.c\n          >   local missing, incoming edit upon update\n    D       wc/qax.c\n"
+msgid "Print the status of working copy files and directories.\nusage: status [PATH...]\n\n  With no args, print only locally modified items (no network access).\n  With -q, print only summary information about locally modified items.\n  With -u, add working revision and server out-of-date information.\n  With -v, print full revision information on every item.\n\n  The first seven columns in the output are each one character wide:\n    First column: Says if item was added, deleted, or otherwise changed\n      ' ' no modifications\n      'A' Added\n      'C' Conflicted\n      'D' Deleted\n      'I' Ignored\n      'M' Modified\n      'R' Replaced\n      'X' an unversioned directory created by an externals definition\n      '?' item is not under version control\n      '!' item is missing (removed by non-svn command) or incomplete\n      '~' versioned item obstructed by some item of a different kind\n    Second column: Modifications of a file's or directory's properties\n      ' ' no modifications\n      'C' Conflicted\n      'M' Modified\n    Third column: Whether the working copy is locked for writing by\n                  another Subversion client modifying the working copy\n      ' ' not locked for writing\n      'L' locked for writing\n    Fourth column: Scheduled commit will contain addition-with-history\n      ' ' no history scheduled with commit\n      '+' history scheduled with commit\n    Fifth column: Whether the item is switched or a file external\n      ' ' normal\n      'S' the item has a Switched URL relative to the parent\n      'X' a versioned file created by an eXternals definition\n    Sixth column: Whether the item is locked in repository for exclusive commit\n      (without -u)\n      ' ' not locked by this working copy\n      'K' locked by this working copy, but lock might be stolen or broken\n      (with -u)\n      ' ' not locked in repository, not locked by this working copy\n      'K' locked in repository, lock owned by this working copy\n      'O' locked in repository, lock owned by another working copy\n      'T' locked in repository, lock owned by this working copy was stolen\n      'B' not locked in repository, lock owned by this working copy is broken\n    Seventh column: Whether the item is the victim of a tree conflict\n      ' ' normal\n      'C' tree-Conflicted\n    If the item is a tree conflict victim, an additional line is printed\n    after the item's status line, explaining the nature of the conflict.\n\n  The out-of-date information appears in the ninth column (with -u):\n      '*' a newer revision exists on the server\n      ' ' the working copy is up to date\n\n  Remaining fields are variable width and delimited by spaces:\n    The working revision (with -u or -v; '-' if the item is copied)\n    The last committed revision and last committed author (with -v)\n    The working copy path is always the final field, so it can\n      include spaces.\n\n  The presence of a question mark ('?') where a working revision, last\n  committed revision, or last committed author was expected indicates\n  that the information is unknown or irrelevant given the state of the\n  item (for example, when the item is the result of a copy operation).\n  The question mark serves as a visual placeholder to facilitate parsing.\n\n  Example output:\n    svn status wc\n     M      wc/bar.c\n    A  +    wc/qax.c\n\n    svn status -u wc\n     M             965   wc/bar.c\n            *      965   wc/foo.c\n    A  +             -   wc/qax.c\n    Status against revision:   981\n\n    svn status --show-updates --verbose wc\n     M             965      938 kfogel       wc/bar.c\n            *      965      922 sussman      wc/foo.c\n    A  +             -      687 joe          wc/qax.c\n                   965      687 joe          wc/zig.c\n    Status against revision:   981\n\n    svn status\n     M      wc/bar.c\n    !     C wc/qaz.c\n          >   local missing, incoming edit upon update\n    D       wc/qax.c\n"
 msgstr ""
 "Gibt den Status von Dateien und Verzeichnissen in der Arbeitskopie aus.\n"
 "Aufruf: status [PFAD...]\n"
 "\n"
-"  Listet ohne weitere Optionen nur lokale Änderungen auf (kein "
-"Netzwerkzugriff)\n"
+"  Listet ohne weitere Optionen nur lokale Änderungen auf (kein Netzwerkzugriff)\n"
 "  »-q« gibt nur Zusammenfassungen über lokal modifizierte Objekte aus.\n"
 "  »-u« fügt Arbeitsrevision und »veraltet«-Informationen des Servers hinzu.\n"
 "  »-v« gibt vollständige Revisionsinformationen jedes Objektes aus.\n"
@@ -11322,8 +11308,7 @@ msgstr ""
 "      »I« Ignored    - ignoriert\n"
 "      »M« Modified   - verändert\n"
 "      »R« Replaced   - ersetzt\n"
-"      »X« nicht versioniertes, von »svn:externals«-Verweis erzeugtes "
-"Verzeichnis\n"
+"      »X« nicht versioniertes, von »svn:externals«-Verweis erzeugtes Verzeichnis\n"
 "      »?« Objekt ist nicht unter Versionskontrolle\n"
 "      »!« Objekt fehlt (durch nicht-svn-Befehl entfernt) oder unvollständig\n"
 "      »~« versioniertes Objekt von einem Objekt anderer Art behindert\n"
@@ -11331,28 +11316,27 @@ msgstr ""
 "      » « keine Änderungen\n"
 "      »C« Conflicted - konfliktbehaftet\n"
 "      »M« Modified   - verändert\n"
-"    Dritte Spalte: Arbeitsverzeichnis gesperrt - ja/nein\n"
-"      » « nicht gesperrt\n"
-"      »L« Locked     - gesperrt\n"
+"    Dritte Spalte: Gibt an, ob die Arbeitskopie durch einen anderen Subversion-Client\n"
+"                   zum Schreiben gesperrt wurde      » « keine Schreibsperre\n"
+"      »L« Locked     - Schreibsperre\n"
 "    Vierte Spalte: Geplante Übertragung wird »Hinzufügen mit Historie«\n"
 "                   enthalten\n"
 "      » « Übertragung wird keine Historie enthalten\n"
 "      »+« Übertragung wird Historie enthalten\n"
-"    Fünfte Spalte: Wurde Objekt umgestellt oder ist ein externer "
-"Dateiverweis?\n"
+"    Fünfte Spalte: Wurde Objekt umgestellt oder ist ein externer Dateiverweis?\n"
 "      » « normal\n"
 "      »S« das Objekt hat eine umgestellte URL relativ zu seinem Elternteil\n"
 "      »X« eine von einem externen Verweis erzeugte versionierte Datei\n"
-"    Sechste Spalte: Sperre im Projektarchiv\n"
-"      (ohne -u)\n"
-"      » « keine Sperre\n"
-"      »K« Sperre vorhanden\n"
+"    Sechste Spalte: Gibt an, ob das Objekt im Projektarchiv zur alleinigen\n"
+"      gesperrt wurde (ohne -u)\n"
+"      » « nicht von dieser Arbeitskopie gesperrt\n"
+"      »K« von dieser Arbeitskopie gesperrt, Sperre ggf. aufgebrochen oder gestohlen\n"
 "      (mit -u)\n"
-"      » « nicht gesperrt, keine Sperre vorhanden\n"
-"      »K« gesperrt, Sperre vorhanden\n"
-"      »O« gesperrt, Sperre in anderer Arbeitskopie\n"
-"      »T« gesperrt, Sperre vorhanden, aber gestohlen\n"
-"      »B« nicht gesperrt, Sperre vorhanden aber beschädigt\n"
+"      » « nicht im Projektarchiv gesperrt, nicht von dieser Arbeitskopie gesperrt\n"
+"      »K« im Projektarchiv gesperrt, Sperre gehört dieser Arbeitskopie\n"
+"      »O« im Projektarchiv gesperrt, Sperre gehört einer anderen Arbeitskopie\n"
+"      »T« im Projektarchiv gesperrt, Sperre gehört dieser Arbeitskopie, wurde aber gestohlen\n"
+"      »B« nicht im Projektarchiv gesperrt, Sperre in dieser Arbeitskopie wurde aufgebrochen\n"
 "    Siebte Spalte: Ist das Objekt Opfer eines Baumkonflikts?\n"
 "      » « normal\n"
 "      »C« Baumkonflikt\n"
@@ -11367,22 +11351,15 @@ msgstr ""
 "  Die verbleibenden Felder haben eine variable Breite und werden mit\n"
 "  Leerzeichen getrennt:\n"
 "    die Arbeitsrevision (mit »-u« oder »-v«)\n"
-"    die letzte übertragene Revision und der letzte übertragene Autor (mit »-"
-"v«)\n"
-"    Das Arbeitsverzeichnis ist immer das letzte Feld, daher kann es "
-"Leerzeichen\n"
+"    die letzte übertragene Revision und der letzte übertragene Autor (mit »-v«)\n"
+"    Der Arbeitskopiepfad ist immer das letzte Feld, daher kann es Leerzeichen\n"
 "      enthalten.\n"
 "\n"
-"  Ein Fragezeichen (»?«) an den Stellen, an denen eine Arbeitsrevision, "
-"letzte\n"
-"  übertragene Revision oder letzter übertragene Autor erwartet wird, zeigt "
-"an,\n"
-"  dass die Information unbekannt oder irrelevant für den Zustand des "
-"Objektes\n"
-"  ist. (z.B. wenn es das Ergebnis eines Kopiervorgangs ist). Das "
-"Fragezeichen\n"
-"  dient als visueller Platzhalter und erleichtert die Verarbeitung der "
-"Ausgabe.\n"
+"  Ein Fragezeichen (»?«) an den Stellen, an denen eine Arbeitsrevision, letzte\n"
+"  übertragene Revision oder letzter übertragene Autor erwartet wird, zeigt an,\n"
+"  dass die Information unbekannt oder irrelevant für den Zustand des Objektes\n"
+"  ist. (z.B. wenn es das Ergebnis eines Kopiervorgangs ist). Das Fragezeichen\n"
+"  dient als visueller Platzhalter und erleichtert die Verarbeitung der Ausgabe.\n"
 "\n"
 "  Beispielausgabe:\n"
 "    svn status wc\n"
@@ -11408,11 +11385,11 @@ msgstr ""
 "          >   lokal fehlend, eingehend editiert bei Aktualisierung\n"
 "    D       wc/qax.c\n"
 
-#: ../svn/svn.c:1500
+#: ../svn/svn.c:1501
 msgid "don't print unversioned items"
 msgstr "Gibt nicht versioniertes Objekte nicht aus"
 
-#: ../svn/svn.c:1503
+#: ../svn/svn.c:1504
 msgid "Update the working copy to a different URL within the same repository.\nusage: 1. switch URL[@PEGREV] [PATH]\n       2. switch --relocate FROM-PREFIX TO-PREFIX [PATH...]\n\n  1. Update the working copy to mirror a new URL within the repository.\n     This behavior is similar to 'svn update', and is the way to\n     move a working copy to a branch or tag within the same repository.\n     If specified, PEGREV determines in which revision the target is first\n     looked up.\n\n     If --force is used, unversioned obstructing paths in the working\n     copy do not automatically cause a failure if the switch attempts to\n     add the same path.  If the obstructing path is the same type (file\n     or directory) as the corresponding path in the repository it becomes\n     versioned but its contents are left 'as-is' in the working copy.\n     This means that an obstructing directory's unversioned children may\n     also obstruct and become versioned.  For files, any content differences\n     between the obstruction and the repository are treated like a local\n     modification to the working copy.  All properties from the repository\n     are applied to the obstructing path.\n\n     Use the --set-depth option to set a new working copy depth on the\n     targets of this operation.\n\n     By default, Subversion will refuse to switch a working copy path to\n     a new URL with which it shares no common version control ancestry.\n     Use the '--ignore-ancestry' option to override this sanity check.\n\n  2. The '--relocate' option is deprecated. This syntax is equivalent to\n     'svn relocate FROM-PREFIX TO-PREFIX [PATH]'.\n\n  See also 'svn help update' for a list of possible characters\n  reporting the action taken.\n\n  Examples:\n    svn switch ^/branches/1.x-release\n    svn switch --relocate http:// svn://\n    svn switch --relocate http://www.example.com/repo/project \\\n                          svn://svn.example.com/repo/project\n"
 msgstr ""
 "Stellt die Arbeitskopie auf eine andere URL.\n"
@@ -11456,11 +11433,11 @@ msgstr ""
 "    svn switch --relocate http://www.example.com/repo/Projekt \\\n"
 "                          svn://svn.example.com/repo/Projekt\n"
 
-#: ../svn/svn.c:1545
+#: ../svn/svn.c:1546
 msgid "allow switching to a node with no common ancestor"
 msgstr "Erlaubt Umstellung auf einen Knoten ohne gemeinsamen Vorfahren"
 
-#: ../svn/svn.c:1549
+#: ../svn/svn.c:1550
 msgid "Unlock working copy paths or URLs.\nusage: unlock TARGET...\n\n  Use --force to break the lock.\n"
 msgstr ""
 "Hebt Sperren von Arbeitskopiepfaden oder URLs auf.\n"
@@ -11470,7 +11447,7 @@ msgstr ""
 
 # Parts of the text (--force and --set-depth) are shared with the
 # switch help. Keep it consistent.
-#: ../svn/svn.c:1556
+#: ../svn/svn.c:1557
 msgid "Bring changes from the repository into the working copy.\nusage: update [PATH...]\n\n  If no revision is given, bring working copy up-to-date with HEAD rev.\n  Else synchronize working copy to revision given by -r.\n\n  For each updated item a line will be printed with characters reporting\n  the action taken. These characters have the following meaning:\n\n    A  Added\n    D  Deleted\n    U  Updated\n    C  Conflict\n    G  Merged\n    E  Existed\n    R  Replaced\n\n  Characters in the first column report about the item itself.\n  Characters in the second column report about properties of the item.\n  A 'B' in the third column signifies that the lock for the file has\n  been broken or stolen.\n  A 'C' in the fourth column indicates a tree conflict, while a 'C' in\n  the first and second columns indicate textual conflicts in files\n  and in property values, respectively.\n\n  If --force is used, unversioned obstructing paths in the working\n  copy do not automatically cause a failure if the update attempts to\n  add the same path.  If the obstructing path is the same type (file\n  or directory) as the corresponding path in the repository it becomes\n  versioned but its contents are left 'as-is' in the working copy.\n  This means that an obstructing directory's unversioned children may\n  also obstruct and become versioned.  For files, any content differences\n  between the obstruction and the repository are treated like a local\n  modification to the working copy.  All properties from the repository\n  are applied to the obstructing path.  Obstructing paths are reported\n  in the first column with code 'E'.\n\n  If the specified update target is missing from the working copy but its\n  immediate parent directory is present, checkout the target into its\n  parent directory at the specified depth.  If --parents is specified,\n  create any missing parent directories of the target by checking them\n  out, too, at depth=empty.\n\n  Use the --set-depth option to set a new working copy depth on the\n  targets of this operation.\n"
 msgstr ""
 "Aktualisiert die Arbeitskopie mit Änderungen aus dem Projektarchiv.\n"
@@ -11523,7 +11500,7 @@ msgstr ""
 "  Arbeitskopieverzeichnisses nur erhöht werden (tiefer ineinander geschachtelt);\n"
 "  eine Verzeichnistiefe kann nicht reduziert werden.\n"
 
-#: ../svn/svn.c:1606
+#: ../svn/svn.c:1607
 msgid "Upgrade the metadata storage format for a working copy.\nusage: upgrade [WCPATH...]\n\n  Local modifications are preserved.\n"
 msgstr ""
 "Überführt die Metadaten einer Arbeitskopie in ein neues Speicherformat.\n"
@@ -11531,205 +11508,205 @@ msgstr ""
 "\n"
 "  Lokale Änderungen bleiben erhalten.\n"
 
-#: ../svn/svn.c:1652 ../svnadmin/svnadmin.c:90 ../svnlook/svnlook.c:378
+#: ../svn/svn.c:1653 ../svnadmin/svnadmin.c:90 ../svnlook/svnlook.c:378
 #: ../svnrdump/svnrdump.c:65 ../svnsync/svnsync.c:296
 msgid "Caught signal"
 msgstr "Abbruchsignal empfangen"
 
-#: ../svn/svn.c:1805 ../svnlook/svnlook.c:2550
+#: ../svn/svn.c:1806 ../svnlook/svnlook.c:2550
 msgid "Non-numeric limit argument given"
 msgstr "Nicht-numerische Bereichsgrenze angegeben"
 
-#: ../svn/svn.c:1811 ../svnlook/svnlook.c:2556
+#: ../svn/svn.c:1812 ../svnlook/svnlook.c:2556
 msgid "Argument to --limit must be positive"
 msgstr "Parameter für --limit muss positiv sein"
 
-#: ../svn/svn.c:1832 ../svn/svn.c:2109
+#: ../svn/svn.c:1833 ../svn/svn.c:2110
 msgid "Can't specify -c with --old"
 msgstr "-c kann nicht mit --old verwendet werden"
 
-#: ../svn/svn.c:1863
+#: ../svn/svn.c:1864
 #, c-format
 msgid "Negative number in range (%s) not supported with -c"
 msgstr "Negative Zahl im Bereich (%s) ist mit -c nicht unterstützt"
 
-#: ../svn/svn.c:1876
+#: ../svn/svn.c:1877
 #, c-format
 msgid "Non-numeric change argument (%s) given to -c"
 msgstr "Nicht-numerischer Parameter (%s) an -c übergeben"
 
-#: ../svn/svn.c:1884
+#: ../svn/svn.c:1885
 msgid "There is no change 0"
 msgstr "Es gibt keine Änderung 0"
 
-#: ../svn/svn.c:1927 ../svnadmin/svnadmin.c:2067 ../svnrdump/svnrdump.c:937
+#: ../svn/svn.c:1928 ../svnadmin/svnadmin.c:2067 ../svnrdump/svnrdump.c:937
 #: ../svnsync/svnsync.c:2051
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "Syntaxfehler in Revisionsparameter »%s«"
 
-#: ../svn/svn.c:1993 ../svn/svn.c:2012
+#: ../svn/svn.c:1994 ../svn/svn.c:2013
 #, c-format
 msgid "Error converting depth from locale to UTF-8"
 msgstr "Fehler beim Konvertieren der Tiefe aus Locale nach UTF-8"
 
-#: ../svn/svn.c:2001
+#: ../svn/svn.c:2002
 #, c-format
 msgid "'%s' is not a valid depth; try 'empty', 'files', 'immediates', or 'infinity'"
 msgstr "»%s« ist keine gültige Tiefe; versuchen Sie »empty«, »files«, »immediates« oder »infinity«"
 
-#: ../svn/svn.c:2020
+#: ../svn/svn.c:2021
 #, c-format
 msgid "'%s' is not a valid depth; try 'exclude', 'empty', 'files', 'immediates', or 'infinity'"
 msgstr "»%s« ist keine gültige Tiefe; versuchen Sie »exclude«, »empty«, »files«, »immediates« oder »infinity«"
 
-#: ../svn/svn.c:2149
+#: ../svn/svn.c:2150
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "Syntaxfehler im »native-eol« Parameter »%s«"
 
-#: ../svn/svn.c:2169
+#: ../svn/svn.c:2170
 msgid "Changelist names must not be empty"
 msgstr "Namen von Änderungslisten dürfen nicht leer sein"
 
-#: ../svn/svn.c:2203
+#: ../svn/svn.c:2204
 #, c-format
 msgid "'%s' is not a valid --accept value"
 msgstr "»%s« ist kein gültiger Wert für --accept"
 
-#: ../svn/svn.c:2211
+#: ../svn/svn.c:2212
 #, c-format
 msgid "'%s' is not a valid --show-revs value"
 msgstr "»%s« ist kein gültiger Wert für --show-revs"
 
-#: ../svn/svn.c:2223
+#: ../svn/svn.c:2224
 #, c-format
 msgid "Invalid strip count '%s'"
 msgstr "Ungültige Anzahl der zu entfernenden Komponenten »%s«"
 
-#: ../svn/svn.c:2229
+#: ../svn/svn.c:2230
 msgid "Argument to --strip must be positive"
 msgstr "Parameter für --strip muss positiv sein"
 
-#: ../svn/svn.c:2284 ../svnmucc/svnmucc.c:1207 ../svnrdump/svnrdump.c:993
+#: ../svn/svn.c:2285 ../svnmucc/svnmucc.c:1207 ../svnrdump/svnrdump.c:993
 #: ../svnsync/svnsync.c:2095
 msgid "--non-interactive and --force-interactive are mutually exclusive"
 msgstr "--non-interactive und --force-interactive schließen sich gegenseitig aus"
 
-#: ../svn/svn.c:2338 ../svndumpfilter/svndumpfilter.c:1509
+#: ../svn/svn.c:2339 ../svndumpfilter/svndumpfilter.c:1509
 #: ../svnlook/svnlook.c:2652
 #, c-format
 msgid "Subcommand argument required\n"
 msgstr "Unterbefehl benötigt einen Parameter\n"
 
-#: ../svn/svn.c:2355 ../svnadmin/svnadmin.c:2250
+#: ../svn/svn.c:2356 ../svnadmin/svnadmin.c:2250
 #: ../svndumpfilter/svndumpfilter.c:1529 ../svnlook/svnlook.c:2671
 #: ../svnrdump/svnrdump.c:1039
 #, c-format
 msgid "Unknown subcommand: '%s'\n"
 msgstr "Unbekannter Unterbefehl: »%s«\n"
 
-#: ../svn/svn.c:2364
+#: ../svn/svn.c:2365
 #, c-format
 msgid "Undo is done using either the 'svn revert' or the 'svn merge' command.\n"
 msgstr "Undo wird mit den Befehlen »svn revert« bzw. »svn merge« durchgeführt.\n"
 
-#: ../svn/svn.c:2399
+#: ../svn/svn.c:2400
 #, c-format
 msgid "Subcommand '%s' doesn't accept option '%s'\nType 'svn help %s' for usage.\n"
 msgstr ""
 "Unterbefehl »%s« akzeptiert die Option »%s« nicht\n"
 "Geben Sie »svn help %s« für Hilfe ein.\n"
 
-#: ../svn/svn.c:2413
+#: ../svn/svn.c:2414
 msgid "Multiple revision arguments encountered; can't specify -c twice, or both -c and -r"
 msgstr "Mehrere Revisionsparameter gefunden; bitte nicht zweimal -c oder gleichzeitig -r und -c angeben"
 
-#: ../svn/svn.c:2425
+#: ../svn/svn.c:2426
 msgid "--depth and --set-depth are mutually exclusive"
 msgstr "--depth und --set-depth schließen sich gegenseitig aus"
 
-#: ../svn/svn.c:2435
+#: ../svn/svn.c:2436
 msgid "--with-all-revprops and --with-no-revprops are mutually exclusive"
 msgstr "--with-all-revprops und --with-no-revprops schließen sich gegenseitig aus"
 
-#: ../svn/svn.c:2445
+#: ../svn/svn.c:2446
 msgid "--with-revprop and --with-no-revprops are mutually exclusive"
 msgstr "--with-revprop und --with-no-revprops schließen sich gegenseitig aus"
 
-#: ../svn/svn.c:2458
+#: ../svn/svn.c:2459
 msgid "--message (-m) and --file (-F) are mutually exclusive"
 msgstr "--message (-m) und --file (-F) schließen sich gegenseitig aus"
 
-#: ../svn/svn.c:2467 ../svnmucc/svnmucc.c:1218 ../svnrdump/svnrdump.c:1098
+#: ../svn/svn.c:2468 ../svnmucc/svnmucc.c:1218 ../svnrdump/svnrdump.c:1098
 #: ../svnsync/svnsync.c:2146
 msgid "--trust-server-cert requires --non-interactive"
 msgstr "--trust-server-cert erfordert --non-interactive"
 
 # TODO: Duplicated message!!!!
-#: ../svn/svn.c:2477
+#: ../svn/svn.c:2478
 msgid "--diff-cmd and --internal-diff are mutually exclusive"
 msgstr "--diff-cmd und --internal-diff schließen sich gegenseitig aus"
 
-#: ../svn/svn.c:2519
+#: ../svn/svn.c:2520
 msgid "--relocate and --depth are mutually exclusive"
 msgstr "--relocate und --depth schließen sich gegenseitig aus"
 
-#: ../svn/svn.c:2527
+#: ../svn/svn.c:2528
 msgid "--relocate and --non-recursive (-N) are mutually exclusive"
 msgstr "--relocate und --non-recursive (-N) schließen sich gegenseitig aus"
 
-#: ../svn/svn.c:2649
+#: ../svn/svn.c:2650
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr "Die Datei für die Logmeldung ist versioniert; geben Sie »--force-log« an, um sie zu verwenden"
 
-#: ../svn/svn.c:2656
+#: ../svn/svn.c:2657
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
 msgstr "Die Datei für den Sperrkommentar ist versioniert; geben Sie »--force-log« an, um sie zu verwenden"
 
-#: ../svn/svn.c:2677
+#: ../svn/svn.c:2678
 msgid "The log message is a pathname (was -F intended?); use '--force-log' to override"
 msgstr "Die Logmeldung ist ein Pfad (war -F gemeint?); geben Sie »--force-log« an, um sie zu verwenden"
 
-#: ../svn/svn.c:2684
+#: ../svn/svn.c:2685
 msgid "The lock comment is a pathname (was -F intended?); use '--force-log' to override"
 msgstr "Der Sperrkommentar ist ein Pfad (war -F gemeint?); geben Sie »--force-log« an, um ihn zu verwenden"
 
-#: ../svn/svn.c:2708
+#: ../svn/svn.c:2709
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props und --no-auto-props schließen sich gegenseitig aus"
 
-#: ../svn/svn.c:2813 ../svn/svn.c:2820
+#: ../svn/svn.c:2814 ../svn/svn.c:2821
 #, c-format
 msgid "--accept=%s incompatible with --non-interactive"
 msgstr "--accept=%s ist mit --non-interactive nicht kompatibel"
 
-#: ../svn/svn.c:2876
+#: ../svn/svn.c:2877
 #, c-format
 msgid "Try 'svn help %s' for more information"
 msgstr "Versuchen Sie »svn help %s« für weitere Informationen"
 
-#: ../svn/svn.c:2882
+#: ../svn/svn.c:2883
 msgid "Please see the 'svn upgrade' command"
 msgstr "Siehe Kommando »svn upgrade«"
 
-#: ../svn/svn.c:2888 ../svnmucc/svnmucc.c:1449 ../svnrdump/svnrdump.c:1175
+#: ../svn/svn.c:2889 ../svnmucc/svnmucc.c:1449 ../svnrdump/svnrdump.c:1175
 msgid "Authentication failed and interactive prompting is disabled; see the --force-interactive option"
 msgstr "Authentifizierung schlug fehl und interaktives Nachfragen ist deaktiviert; Siehe Option »--force-interactive«"
 
-#: ../svn/svn.c:2893
+#: ../svn/svn.c:2894
 msgid "Reading file from standard input because of -F option; this can interfere with interactive prompting"
 msgstr "Einlesen der Datei von der Standardeingabe wegen Option -F; dies kann interaktive Nachfragen stören"
 
-#: ../svn/svn.c:2904
+#: ../svn/svn.c:2905
 msgid "Run 'svn cleanup' to remove locks (type 'svn help cleanup' for details)"
 msgstr "Starten Sie »svn cleanup«, um die Sperren zu entfernen (Aufruf: »svn help cleanup« für Details)"
 
-#: ../svn/svn.c:2911
+#: ../svn/svn.c:2912
 msgid "Another process is blocking the working copy database, or the underlying filesystem does not support file locking; if the working copy is on a network filesystem, make sure file locking has been enabled on the file server"
 msgstr "Ein anderer Vorgang blockiert die Datenbank der Arbeitskopie, oder das darunterliegende Dateisystem unterstützt das Sperren von Dateien nicht; falls sich die Arbeitskopie auf einem Netzwerkdateisystem befindet, stellen Sie sicher, dass Dateisperren auf dem Dateiserver aktiviert sind"
 
-#: ../svn/svn.c:2924
+#: ../svn/svn.c:2925
 msgid "When using svn+ssh:// URLs, keep in mind that the --username and --password options are ignored because authentication is performed by SSH, not Subversion"
 msgstr "Bei der Verwendung von svn+ssh:// URLs sollte beachtet werden, dass die Optionen »--username« und »--password« ignoriert werden, da die Authentifizierung von SSH und nicht Subversion durchgeführt wird"
 
