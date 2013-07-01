@@ -367,7 +367,7 @@ svn_fs_id_t *svn_fs_x__id_create_root(const svn_revnum_t revision,
 
   id->txn_id.revision = SVN_INVALID_REVNUM;
   id->rev_item.revision = revision;
-  id->rev_item.number = SVN_FS_FS__ITEM_INDEX_ROOT_NODE;
+  id->rev_item.number = SVN_FS_X__ITEM_INDEX_ROOT_NODE;
 
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = &id;

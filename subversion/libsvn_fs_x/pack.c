@@ -851,7 +851,7 @@ auto_pad_block(pack_context_t *context,
 
       null_entry.offset = context->pack_offset;
       null_entry.size = padding;
-      null_entry.type = SVN_FS_FS__ITEM_TYPE_UNUSED;
+      null_entry.type = SVN_FS_X__ITEM_TYPE_UNUSED;
       null_entry.item_count = 0;
       null_entry.items = NULL;
 
@@ -972,7 +972,7 @@ select_reps(pack_context_t *context,
           if (!depending)
             continue;
 
-          if (depending->type == SVN_FS_FS__ITEM_TYPE_NODEREV)
+          if (depending->type == SVN_FS_X__ITEM_TYPE_NODEREV)
             APR_ARRAY_PUSH(node_parts, svn_fs_x__p2l_entry_t *) = depending;
           else
             APR_ARRAY_PUSH(rep_parts, svn_fs_x__p2l_entry_t *) = depending;
@@ -1033,7 +1033,7 @@ write_nodes_container(pack_context_t *context,
   container_entry = apr_palloc(context->info_pool, sizeof(*container_entry));
   container_entry->offset = context->pack_offset;
   container_entry->size = offset - container_entry->offset;
-  container_entry->type = SVN_FS_FS__ITEM_TYPE_NODEREVS_CONT;
+  container_entry->type = SVN_FS_X__ITEM_TYPE_NODEREVS_CONT;
   container_entry->item_count = items->nelts;
   container_entry->items = apr_palloc(context->info_pool,
       sizeof(svn_fs_x__id_part_t) * container_entry->item_count);
@@ -1178,7 +1178,7 @@ write_reps_container(pack_context_t *context,
 
   container_entry.offset = context->pack_offset;
   container_entry.size = offset - container_entry.offset;
-  container_entry.type = SVN_FS_FS__ITEM_TYPE_REPS_CONT;
+  container_entry.type = SVN_FS_X__ITEM_TYPE_REPS_CONT;
   container_entry.item_count = sub_items->nelts;
   container_entry.items = (svn_fs_x__id_part_t *)sub_items->elts;
 
@@ -1339,7 +1339,7 @@ store_items(pack_context_t *context,
       svn_fs_x__p2l_entry_t *entry
         = APR_ARRAY_IDX(items, i, svn_fs_x__p2l_entry_t *);
       if (!entry
-          || entry->type == SVN_FS_FS__ITEM_TYPE_UNUSED
+          || entry->type == SVN_FS_X__ITEM_TYPE_UNUSED
           || entry->item_count == 0)
         continue;
 
@@ -1488,7 +1488,7 @@ write_changes_container(pack_context_t *context,
 
   container_entry.offset = context->pack_offset;
   container_entry.size = offset - container_entry.offset;
-  container_entry.type = SVN_FS_FS__ITEM_TYPE_CHANGES_CONT;
+  container_entry.type = SVN_FS_X__ITEM_TYPE_CHANGES_CONT;
   container_entry.item_count = sub_items->nelts;
   container_entry.items = (svn_fs_x__id_part_t *)sub_items->elts;
 
@@ -1806,30 +1806,30 @@ pack_range(pack_context_t *context,
                   SVN_ERR(svn_io_file_seek(rev_file, SEEK_SET, &offset,
                                            iterpool));
 
-                  if (entry->type == SVN_FS_FS__ITEM_TYPE_CHANGES)
+                  if (entry->type == SVN_FS_X__ITEM_TYPE_CHANGES)
                     SVN_ERR(copy_item_to_temp(context,
                                               context->changes,
                                               context->changes_file,
                                               rev_file, entry, iterpool));
-                  else if (entry->type == SVN_FS_FS__ITEM_TYPE_FILE_PROPS)
+                  else if (entry->type == SVN_FS_X__ITEM_TYPE_FILE_PROPS)
                     SVN_ERR(copy_item_to_temp(context,
                                               context->file_props,
                                               context->file_props_file,
                                               rev_file, entry, iterpool));
-                  else if (entry->type == SVN_FS_FS__ITEM_TYPE_DIR_PROPS)
+                  else if (entry->type == SVN_FS_X__ITEM_TYPE_DIR_PROPS)
                     SVN_ERR(copy_item_to_temp(context,
                                               context->dir_props,
                                               context->dir_props_file,
                                               rev_file, entry, iterpool));
-                  else if (   entry->type == SVN_FS_FS__ITEM_TYPE_FILE_REP
-                           || entry->type == SVN_FS_FS__ITEM_TYPE_DIR_REP)
+                  else if (   entry->type == SVN_FS_X__ITEM_TYPE_FILE_REP
+                           || entry->type == SVN_FS_X__ITEM_TYPE_DIR_REP)
                     SVN_ERR(copy_rep_to_temp(context, rev_file, entry,
                                              iterpool));
-                  else if (entry->type == SVN_FS_FS__ITEM_TYPE_NODEREV)
+                  else if (entry->type == SVN_FS_X__ITEM_TYPE_NODEREV)
                     SVN_ERR(copy_node_to_temp(context, rev_file, entry,
                                               iterpool));
                   else
-                    SVN_ERR_ASSERT(entry->type == SVN_FS_FS__ITEM_TYPE_UNUSED);
+                    SVN_ERR_ASSERT(entry->type == SVN_FS_X__ITEM_TYPE_UNUSED);
 
                   offset += entry->size;
                 }

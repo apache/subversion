@@ -54,13 +54,13 @@ block_read(void **result,
 
 
 /* Defined this to enable access logging via dgb__log_access
-#define SVN_FS_FS__LOG_ACCESS
+#define SVN_FS_X__LOG_ACCESS
 */
 
-/* When SVN_FS_FS__LOG_ACCESS has been defined, write a line to console
+/* When SVN_FS_X__LOG_ACCESS has been defined, write a line to console
  * showing where REVISION, ITEM_INDEX is located in FS and use ITEM to
  * show details on it's contents if not NULL.  To support format 6 and
- * earlier repos, ITEM_TYPE (SVN_FS_FS__ITEM_TYPE_*) must match ITEM.
+ * earlier repos, ITEM_TYPE (SVN_FS_X__ITEM_TYPE_*) must match ITEM.
  * Use SCRATCH_POOL for temporary allocations.
  *
  * For pre-format7 repos, the display will be restricted.
@@ -74,7 +74,7 @@ dgb__log_access(svn_fs_t *fs,
                 apr_pool_t *scratch_pool)
 {
   /* no-op if this macro is not defined */
-#ifdef SVN_FS_FS__LOG_ACCESS
+#ifdef SVN_FS_X__LOG_ACCESS
   fs_x_data_t *ffd = fs->fsap_data;
   apr_off_t offset = -1;
   apr_off_t end_offset = 0;
@@ -98,7 +98,7 @@ dgb__log_access(svn_fs_t *fs,
                         revision / ffd->max_files_per_dir);
 
   /* construct description if possible */
-  if (item_type == SVN_FS_FS__ITEM_TYPE_NODEREV && item != NULL)
+  if (item_type == SVN_FS_X__ITEM_TYPE_NODEREV && item != NULL)
     {
       node_revision_t *node = item;
       const char *data_rep
@@ -119,7 +119,7 @@ dgb__log_access(svn_fs_t *fs,
                                  data_rep,
                                  prop_rep);
     }
-  else if (item_type == SVN_FS_FS__ITEM_TYPE_ANY_REP)
+  else if (item_type == SVN_FS_X__ITEM_TYPE_ANY_REP)
     {
       svn_fs_x__rep_header_t *header = item;
       if (header == NULL)
@@ -134,7 +134,7 @@ dgb__log_access(svn_fs_t *fs,
                                    header->base_revision,
                                    header->base_item_index);
     }
-  else if (item_type == SVN_FS_FS__ITEM_TYPE_CHANGES && item != NULL)
+  else if (item_type == SVN_FS_X__ITEM_TYPE_CHANGES && item != NULL)
     {
       apr_array_header_t *changes = item;
       switch (changes->nelts)
@@ -149,7 +149,7 @@ dgb__log_access(svn_fs_t *fs,
     }
 
   /* some info is only available in format7 repos */
-  if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+  if (ffd->format >= SVN_FS_X__MIN_LOG_ADDRESSING_FORMAT)
     {
       /* reverse index lookup: get item description in ENTRY */
       SVN_ERR(svn_fs_x__p2l_entry_lookup(&entry, fs, revision, offset,
@@ -161,9 +161,9 @@ dgb__log_access(svn_fs_t *fs,
           type = types[entry->type];
 
           /* merge the sub-item number with the container type */
-          if (   entry->type == SVN_FS_FS__ITEM_TYPE_CHANGES_CONT
-              || entry->type == SVN_FS_FS__ITEM_TYPE_NODEREVS_CONT
-              || entry->type == SVN_FS_FS__ITEM_TYPE_REPS_CONT)
+          if (   entry->type == SVN_FS_X__ITEM_TYPE_CHANGES_CONT
+              || entry->type == SVN_FS_X__ITEM_TYPE_NODEREVS_CONT
+              || entry->type == SVN_FS_X__ITEM_TYPE_REPS_CONT)
             type = apr_psprintf(scratch_pool, "%s%-3d", type, sub_item);
         }
 
@@ -407,7 +407,7 @@ svn_fs_x__get_node_revision(node_revision_t **noderev_p,
                           rev_item->revision,
                           rev_item->number,
                           *noderev_p,
-                          SVN_FS_FS__ITEM_TYPE_NODEREV,
+                          SVN_FS_X__ITEM_TYPE_NODEREV,
                           pool));
 
   return svn_error_trace(err);
@@ -564,7 +564,7 @@ create_rep_state_body(rep_state_t **rep_state,
               svn_fs_x__p2l_entry_t *entry;
               SVN_ERR(svn_fs_x__p2l_entry_lookup(&entry, fs, rep->revision,
                                                  offset, pool));
-              in_container = entry->type == SVN_FS_FS__ITEM_TYPE_REPS_CONT;
+              in_container = entry->type == SVN_FS_X__ITEM_TYPE_REPS_CONT;
             }
 
           if (in_container)
@@ -626,7 +626,7 @@ create_rep_state_body(rep_state_t **rep_state,
     }
 
   SVN_ERR(dgb__log_access(fs, rep->revision, rep->item_index, rh,
-                          SVN_FS_FS__ITEM_TYPE_ANY_REP, pool));
+                          SVN_FS_X__ITEM_TYPE_ANY_REP, pool));
 
   rs->header_size = rh->header_size;
   *rep_state = rs;
@@ -1234,7 +1234,7 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
   SVN_ERR_ASSERT(rs->chunk_index <= this_chunk);
 
   SVN_ERR(dgb__log_access(rs->file->fs, rs->revision, rs->item_index,
-                          NULL, SVN_FS_FS__ITEM_TYPE_ANY_REP, pool));
+                          NULL, SVN_FS_X__ITEM_TYPE_ANY_REP, pool));
 
   /* Read the next window.  But first, try to find it in the cache. */
   SVN_ERR(get_cached_window(nwin, rs, this_chunk, &is_cached, pool));
@@ -1507,8 +1507,8 @@ init_rep_state(rep_state_t *rs,
   shared_file_t *shared_file = apr_pcalloc(pool, sizeof(*shared_file));
 
   /* this function does not apply to representation containers */
-  SVN_ERR_ASSERT(entry->type >= SVN_FS_FS__ITEM_TYPE_FILE_REP
-                 && entry->type <= SVN_FS_FS__ITEM_TYPE_DIR_PROPS);
+  SVN_ERR_ASSERT(entry->type >= SVN_FS_X__ITEM_TYPE_FILE_REP
+                 && entry->type <= SVN_FS_X__ITEM_TYPE_DIR_PROPS);
   SVN_ERR_ASSERT(entry->item_count == 1);
   
   shared_file->file = file;
@@ -1640,8 +1640,8 @@ svn_fs_x__get_representation_length(svn_filesize_t *packed_len,
   svn_fs_x__rep_header_t *rep_header;
   
   /* this function does not apply to representation containers */
-  SVN_ERR_ASSERT(entry->type >= SVN_FS_FS__ITEM_TYPE_FILE_REP
-                 && entry->type <= SVN_FS_FS__ITEM_TYPE_DIR_PROPS);
+  SVN_ERR_ASSERT(entry->type >= SVN_FS_X__ITEM_TYPE_FILE_REP
+                 && entry->type <= SVN_FS_X__ITEM_TYPE_DIR_PROPS);
   SVN_ERR_ASSERT(entry->item_count == 1);
 
   /* get / read the representation header */  
@@ -2115,11 +2115,11 @@ parse_dir_entries(apr_hash_t **entries_p,
                                  _("Directory entry corrupt in '%s'"),
                                  svn_fs_x__id_unparse(id, pool)->data);
 
-      if (strcmp(str, SVN_FS_FS__KIND_FILE) == 0)
+      if (strcmp(str, SVN_FS_X__KIND_FILE) == 0)
         {
           dirent->kind = svn_node_file;
         }
-      else if (strcmp(str, SVN_FS_FS__KIND_DIR) == 0)
+      else if (strcmp(str, SVN_FS_X__KIND_DIR) == 0)
         {
           dirent->kind = svn_node_dir;
         }
@@ -2352,7 +2352,7 @@ svn_fs_x__get_changes(apr_array_header_t **changes,
       pair_cache_key_t key;
 
       SVN_ERR(svn_fs_x__item_offset(&offset, &sub_item, fs, rev, NULL,
-                                    SVN_FS_FS__ITEM_INDEX_CHANGES, pool));
+                                    SVN_FS_X__ITEM_INDEX_CHANGES, pool));
       key.revision = svn_fs_x__packed_base_rev(fs, rev);
       key.second = offset;
 
@@ -2377,14 +2377,14 @@ svn_fs_x__get_changes(apr_array_header_t **changes,
 
       /* 'block-read' will also provide us with the desired data */
       SVN_ERR(block_read((void **)changes, fs,
-                         rev, SVN_FS_FS__ITEM_INDEX_CHANGES,
+                         rev, SVN_FS_X__ITEM_INDEX_CHANGES,
                          revision_file, pool, pool));
 
       SVN_ERR(svn_io_file_close(revision_file, pool));
     }
 
-  SVN_ERR(dgb__log_access(fs, rev, SVN_FS_FS__ITEM_INDEX_CHANGES, *changes,
-                          SVN_FS_FS__ITEM_TYPE_CHANGES, pool));
+  SVN_ERR(dgb__log_access(fs, rev, SVN_FS_X__ITEM_INDEX_CHANGES, *changes,
+                          SVN_FS_X__ITEM_TYPE_CHANGES, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2764,7 +2764,7 @@ block_read(void **result,
             = &APR_ARRAY_IDX(entries, i, svn_fs_x__p2l_entry_t);
 
           /* skip empty sections */
-          if (entry->type == SVN_FS_FS__ITEM_TYPE_UNUSED)
+          if (entry->type == SVN_FS_X__ITEM_TYPE_UNUSED)
             continue;
 
           /* the item / container we were looking for? */
@@ -2792,16 +2792,16 @@ block_read(void **result,
                                        &entry->offset, iterpool));
               switch (entry->type)
                 {
-                  case SVN_FS_FS__ITEM_TYPE_FILE_REP:
-                  case SVN_FS_FS__ITEM_TYPE_DIR_REP:
-                  case SVN_FS_FS__ITEM_TYPE_FILE_PROPS:
-                  case SVN_FS_FS__ITEM_TYPE_DIR_PROPS:
+                  case SVN_FS_X__ITEM_TYPE_FILE_REP:
+                  case SVN_FS_X__ITEM_TYPE_DIR_REP:
+                  case SVN_FS_X__ITEM_TYPE_FILE_PROPS:
+                  case SVN_FS_X__ITEM_TYPE_DIR_PROPS:
                     SVN_ERR(block_read_contents((svn_stringbuf_t **)&item,
                                                 fs, revision_file, stream,
                                                 entry, &key, pool));
                     break;
 
-                  case SVN_FS_FS__ITEM_TYPE_NODEREV:
+                  case SVN_FS_X__ITEM_TYPE_NODEREV:
                     if (ffd->node_revision_cache || is_result)
                       SVN_ERR(block_read_noderev((node_revision_t **)&item,
                                                  fs, revision_file, stream,
@@ -2809,13 +2809,13 @@ block_read(void **result,
                                                  pool));
                     break;
 
-                  case SVN_FS_FS__ITEM_TYPE_CHANGES:
+                  case SVN_FS_X__ITEM_TYPE_CHANGES:
                     SVN_ERR(block_read_changes((apr_array_header_t **)&item,
                                                fs, revision_file,  stream,
                                                entry, is_result, pool));
                     break;
 
-                  case SVN_FS_FS__ITEM_TYPE_CHANGES_CONT:
+                  case SVN_FS_X__ITEM_TYPE_CHANGES_CONT:
                     SVN_ERR(block_read_changes_container
                                             ((apr_array_header_t **)&item,
                                              fs, revision_file,  stream,
@@ -2823,7 +2823,7 @@ block_read(void **result,
                                              is_result, pool));
                     break;
 
-                  case SVN_FS_FS__ITEM_TYPE_NODEREVS_CONT:
+                  case SVN_FS_X__ITEM_TYPE_NODEREVS_CONT:
                     SVN_ERR(block_read_noderevs_container
                                             ((node_revision_t **)&item,
                                              fs, revision_file,  stream,
@@ -2831,7 +2831,7 @@ block_read(void **result,
                                              is_result, pool));
                     break;
 
-                  case SVN_FS_FS__ITEM_TYPE_REPS_CONT:
+                  case SVN_FS_X__ITEM_TYPE_REPS_CONT:
                     SVN_ERR(block_read_reps_container
                                       ((svn_fs_x__rep_extractor_t **)&item,
                                        fs, revision_file,  stream,

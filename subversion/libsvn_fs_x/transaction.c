@@ -605,8 +605,8 @@ unparse_dir_entry(svn_node_kind_t kind, const svn_fs_id_t *id,
                   apr_pool_t *pool)
 {
   return apr_psprintf(pool, "%s %s",
-                      (kind == svn_node_file) ? SVN_FS_FS__KIND_FILE
-                                              : SVN_FS_FS__KIND_DIR,
+                      (kind == svn_node_file) ? SVN_FS_X__KIND_FILE
+                                              : SVN_FS_X__KIND_DIR,
                       svn_fs_x__id_unparse(id, pool)->data);
 }
 
@@ -1588,7 +1588,7 @@ allocate_item_index(apr_uint64_t *item_index,
   if (read)
     SVN_ERR(svn_cstring_atoui64(item_index, buffer));
   else
-    *item_index = SVN_FS_FS__ITEM_INDEX_FIRST_USER;
+    *item_index = SVN_FS_X__ITEM_INDEX_FIRST_USER;
 
   to_write = svn__ui64toa(buffer, *item_index + 1);
   SVN_ERR(svn_io_file_seek(file, SEEK_SET, &offset, pool));
@@ -2076,7 +2076,7 @@ rep_write_contents_close(void *baton)
       entry.offset = b->rep_offset;
       SVN_ERR(svn_fs_x__get_file_offset(&offset, b->file, b->pool));
       entry.size = offset - b->rep_offset;
-      entry.type = SVN_FS_FS__ITEM_TYPE_FILE_REP;
+      entry.type = SVN_FS_X__ITEM_TYPE_FILE_REP;
       entry.item_count = 1;
       entry.items = &rev_item;
 
@@ -2344,8 +2344,8 @@ write_hash_delta_rep(representation_t *rep,
 
   struct write_hash_baton *whb;
   int diff_version = 1;
-  svn_boolean_t is_props = (item_type == SVN_FS_FS__ITEM_TYPE_FILE_PROPS)
-                        || (item_type == SVN_FS_FS__ITEM_TYPE_DIR_PROPS);
+  svn_boolean_t is_props = (item_type == SVN_FS_X__ITEM_TYPE_FILE_PROPS)
+                        || (item_type == SVN_FS_X__ITEM_TYPE_DIR_PROPS);
 
   /* Get the base for this delta. */
   SVN_ERR(choose_delta_base(&base_rep, fs, noderev, is_props, pool));
@@ -2612,12 +2612,12 @@ write_final_rev(const svn_fs_id_t **new_id_p,
           if (ffd->deltify_directories)
             SVN_ERR(write_hash_delta_rep(noderev->data_rep, file,
                                          str_entries, fs, txn_id, noderev,
-                                         NULL, SVN_FS_FS__ITEM_TYPE_DIR_REP,
+                                         NULL, SVN_FS_X__ITEM_TYPE_DIR_REP,
                                          pool));
           else
             SVN_ERR(write_hash_rep(noderev->data_rep, file, str_entries,
                                    fs, txn_id, NULL,
-                                   SVN_FS_FS__ITEM_TYPE_DIR_REP, pool));
+                                   SVN_FS_X__ITEM_TYPE_DIR_REP, pool));
 
           svn_fs_x__id_txn_reset(&noderev->data_rep->txn_id);
         }
@@ -2642,8 +2642,8 @@ write_final_rev(const svn_fs_id_t **new_id_p,
     {
       apr_hash_t *proplist;
       int item_type = noderev->kind == svn_node_dir
-                    ? SVN_FS_FS__ITEM_TYPE_DIR_PROPS
-                    : SVN_FS_FS__ITEM_TYPE_FILE_PROPS;
+                    ? SVN_FS_X__ITEM_TYPE_DIR_PROPS
+                    : SVN_FS_X__ITEM_TYPE_FILE_PROPS;
       SVN_ERR(svn_fs_x__get_proplist(&proplist, fs, noderev, pool));
 
       svn_fs_x__id_txn_reset(&noderev->prop_rep->txn_id);
@@ -2670,7 +2670,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   SVN_ERR(svn_fs_x__get_file_offset(&my_offset, file, pool));
 
   /* reference the root noderev from the log-to-phys index */
-  rev_item.number = SVN_FS_FS__ITEM_INDEX_ROOT_NODE;
+  rev_item.number = SVN_FS_X__ITEM_INDEX_ROOT_NODE;
   SVN_ERR(store_l2p_index_entry(fs, txn_id, my_offset, rev_item.number,
                                 pool));
 
@@ -2730,7 +2730,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   entry.offset = my_offset;
   SVN_ERR(svn_fs_x__get_file_offset(&my_offset, file, pool));
   entry.size = my_offset - entry.offset;
-  entry.type = SVN_FS_FS__ITEM_TYPE_NODEREV;
+  entry.type = SVN_FS_X__ITEM_TYPE_NODEREV;
   entry.item_count = 1;
   entry.items = &rev_item;
 
@@ -2757,7 +2757,7 @@ write_final_changed_path_info(apr_off_t *offset_p,
   apr_off_t offset;
   svn_fs_x__p2l_entry_t entry;
   svn_fs_x__id_part_t rev_item
-    = {SVN_INVALID_REVNUM, SVN_FS_FS__ITEM_INDEX_CHANGES};
+    = {SVN_INVALID_REVNUM, SVN_FS_X__ITEM_INDEX_CHANGES};
 
   SVN_ERR(svn_fs_x__get_file_offset(&offset, file, pool));
   SVN_ERR(svn_fs_x__txn_changes_fetch(&changed_paths, fs, txn_id, pool));
@@ -2770,13 +2770,13 @@ write_final_changed_path_info(apr_off_t *offset_p,
   entry.offset = offset;
   SVN_ERR(svn_fs_x__get_file_offset(&offset, file, pool));
   entry.size = offset - entry.offset;
-  entry.type = SVN_FS_FS__ITEM_TYPE_CHANGES;
+  entry.type = SVN_FS_X__ITEM_TYPE_CHANGES;
   entry.item_count = 1;
   entry.items = &rev_item;
 
   SVN_ERR(store_p2l_index_entry(fs, txn_id, &entry, pool));
   SVN_ERR(store_l2p_index_entry(fs, txn_id, entry.offset,
-                                SVN_FS_FS__ITEM_INDEX_CHANGES, pool));
+                                SVN_FS_X__ITEM_INDEX_CHANGES, pool));
 
   return SVN_NO_ERROR;
 }

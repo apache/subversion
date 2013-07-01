@@ -149,9 +149,9 @@ typedef struct fs_x_shared_txn_data_t
    synchronization. */
 /* Compare ../libsvn_subr/named_atomic.c:USE_THREAD_MUTEX */
 #if APR_HAS_THREADS && !defined(WIN32)
-#define SVN_FS_FS__USE_LOCK_MUTEX 1
+#define SVN_FS_X__USE_LOCK_MUTEX 1
 #else
-#define SVN_FS_FS__USE_LOCK_MUTEX 0
+#define SVN_FS_X__USE_LOCK_MUTEX 0
 #endif
 
 /* Private FSFS-specific data shared between all svn_fs_t objects that
@@ -542,4 +542,4 @@ typedef struct change_t
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_FS_FS_H */
+#endif /* SVN_LIBSVN_FS_X_H */

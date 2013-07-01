@@ -28,28 +28,28 @@
 /* Per-defined item index values.  They are used to identify empty or
  * mandatory items.
  */
-#define SVN_FS_FS__ITEM_INDEX_UNUSED     0  /* invalid / reserved value */
-#define SVN_FS_FS__ITEM_INDEX_CHANGES    1  /* list of changed paths */
-#define SVN_FS_FS__ITEM_INDEX_ROOT_NODE  2  /* the root noderev */
-#define SVN_FS_FS__ITEM_INDEX_FIRST_USER 3  /* first noderev to be freely
+#define SVN_FS_X__ITEM_INDEX_UNUSED     0  /* invalid / reserved value */
+#define SVN_FS_X__ITEM_INDEX_CHANGES    1  /* list of changed paths */
+#define SVN_FS_X__ITEM_INDEX_ROOT_NODE  2  /* the root noderev */
+#define SVN_FS_X__ITEM_INDEX_FIRST_USER 3  /* first noderev to be freely
                                                assigned */
 
 /* Data / item types as stored in the phys-to-log index.
  */
-#define SVN_FS_FS__ITEM_TYPE_UNUSED     0  /* file section not used */
-#define SVN_FS_FS__ITEM_TYPE_FILE_REP   1  /* item is a file representation */
-#define SVN_FS_FS__ITEM_TYPE_DIR_REP    2  /* item is a directory rep. */
-#define SVN_FS_FS__ITEM_TYPE_FILE_PROPS 3  /* item is a file property rep. */
-#define SVN_FS_FS__ITEM_TYPE_DIR_PROPS  4  /* item is a directory prop rep */
-#define SVN_FS_FS__ITEM_TYPE_NODEREV    5  /* item is a noderev */
-#define SVN_FS_FS__ITEM_TYPE_CHANGES    6  /* item is a changed paths list */
+#define SVN_FS_X__ITEM_TYPE_UNUSED     0  /* file section not used */
+#define SVN_FS_X__ITEM_TYPE_FILE_REP   1  /* item is a file representation */
+#define SVN_FS_X__ITEM_TYPE_DIR_REP    2  /* item is a directory rep. */
+#define SVN_FS_X__ITEM_TYPE_FILE_PROPS 3  /* item is a file property rep. */
+#define SVN_FS_X__ITEM_TYPE_DIR_PROPS  4  /* item is a directory prop rep */
+#define SVN_FS_X__ITEM_TYPE_NODEREV    5  /* item is a noderev */
+#define SVN_FS_X__ITEM_TYPE_CHANGES    6  /* item is a changed paths list */
 
-#define SVN_FS_FS__ITEM_TYPE_ANY_REP    7  /* item is any representation.
+#define SVN_FS_X__ITEM_TYPE_ANY_REP    7  /* item is any representation.
                                               Only used in pre-format7. */
 
-#define SVN_FS_FS__ITEM_TYPE_CHANGES_CONT  8  /* item is a changes container */
-#define SVN_FS_FS__ITEM_TYPE_NODEREVS_CONT 9  /* item is a noderevs container */
-#define SVN_FS_FS__ITEM_TYPE_REPS_CONT    10  /* item is a representations
+#define SVN_FS_X__ITEM_TYPE_CHANGES_CONT  8  /* item is a changes container */
+#define SVN_FS_X__ITEM_TYPE_NODEREVS_CONT 9  /* item is a noderevs container */
+#define SVN_FS_X__ITEM_TYPE_REPS_CONT    10  /* item is a representations
                                                  container */
 
 /* (user visible) entry in the phys-to-log index.  It describes a section
@@ -64,7 +64,7 @@ typedef struct svn_fs_x__p2l_entry_t
   /* length of the item in bytes */
   apr_off_t size;
 
-  /* type of the item (see SVN_FS_FS__ITEM_TYPE_*) defines */
+  /* type of the item (see SVN_FS_X__ITEM_TYPE_*) defines */
   unsigned type;
 
   /* Number of items in this block / container.  Their list can be found

@@ -50,8 +50,8 @@
    and can be overridden by defining the macro while compiling; the
    figure of 1000 is reasonable for VFAT filesystems, which are by far
    the worst performers in this area. */
-#ifndef SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR
-#define SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR 1000
+#ifndef SVN_FS_X_DEFAULT_MAX_FILES_PER_DIR
+#define SVN_FS_X_DEFAULT_MAX_FILES_PER_DIR 1000
 #endif
 
 /* Begin deltification after a node history exceeded this this limit.
@@ -59,14 +59,14 @@
    computational overhead and repository size savings.
    Should be a power of 2.
    Values < 2 will result in standard skip-delta behavior. */
-#define SVN_FS_FS_MAX_LINEAR_DELTIFICATION 16
+#define SVN_FS_X_MAX_LINEAR_DELTIFICATION 16
 
 /* Finding a deltification base takes operations proportional to the
    number of changes being skipped. To prevent exploding runtime
    during commits, limit the deltification range to this value.
    Should be a power of 2 minus one.
    Values < 1 disable deltification. */
-#define SVN_FS_FS_MAX_DELTIFICATION_WALK 1023
+#define SVN_FS_X_MAX_DELTIFICATION_WALK 1023
 
 
 
@@ -224,11 +224,11 @@ read_config(fs_x_data_t *ffd,
   SVN_ERR(svn_config_get_int64(ffd->config, &ffd->max_deltification_walk,
                                CONFIG_SECTION_DELTIFICATION,
                                CONFIG_OPTION_MAX_DELTIFICATION_WALK,
-                               SVN_FS_FS_MAX_DELTIFICATION_WALK));
+                               SVN_FS_X_MAX_DELTIFICATION_WALK));
   SVN_ERR(svn_config_get_int64(ffd->config, &ffd->max_linear_deltification,
                                CONFIG_SECTION_DELTIFICATION,
                                CONFIG_OPTION_MAX_LINEAR_DELTIFICATION,
-                               SVN_FS_FS_MAX_LINEAR_DELTIFICATION));
+                               SVN_FS_X_MAX_LINEAR_DELTIFICATION));
 
   /* Initialize revprop packing settings in ffd. */
   SVN_ERR(svn_config_get_bool(ffd->config, &ffd->compress_packed_revprops,
@@ -814,7 +814,7 @@ svn_fs_x__create(svn_fs_t *fs,
         format = 6;
     }
   ffd->format = format;
-  ffd->max_files_per_dir = SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR;
+  ffd->max_files_per_dir = SVN_FS_X_DEFAULT_MAX_FILES_PER_DIR;
 
   /* Create the revision data directories. */
   SVN_ERR(svn_io_make_dir_recursively(svn_fs_x__path_rev_shard(fs, 0, pool),

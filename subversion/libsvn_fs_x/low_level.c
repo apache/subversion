@@ -377,14 +377,14 @@ svn_fs_x__read_noderev(node_revision_t **noderev_p,
   value = svn_hash_gets(headers, HEADER_TYPE);
 
   if ((value == NULL) ||
-      (   strcmp(value, SVN_FS_FS__KIND_FILE)
-       && strcmp(value, SVN_FS_FS__KIND_DIR)))
+      (   strcmp(value, SVN_FS_X__KIND_FILE)
+       && strcmp(value, SVN_FS_X__KIND_DIR)))
     /* ### s/kind/type/ */
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                              _("Missing kind field in node-rev '%s'"),
                              noderev_id);
 
-  noderev->kind = (strcmp(value, SVN_FS_FS__KIND_FILE) == 0)
+  noderev->kind = (strcmp(value, SVN_FS_X__KIND_FILE) == 0)
                 ? svn_node_file
                 : svn_node_dir;
 
@@ -565,7 +565,7 @@ svn_fs_x__write_noderev(svn_stream_t *outfile,
 
   SVN_ERR(svn_stream_printf(outfile, pool, HEADER_TYPE ": %s\n",
                             (noderev->kind == svn_node_file) ?
-                            SVN_FS_FS__KIND_FILE : SVN_FS_FS__KIND_DIR));
+                            SVN_FS_X__KIND_FILE : SVN_FS_X__KIND_DIR));
 
   if (noderev->predecessor_id)
     SVN_ERR(svn_stream_printf(outfile, pool, HEADER_PRED ": %s\n",
@@ -758,9 +758,9 @@ read_change(change_t **change_p,
       /* Cap off the end of "str" (the action). */
       *kind_str = '\0';
       kind_str++;
-      if (strcmp(kind_str, SVN_FS_FS__KIND_FILE) == 0)
+      if (strcmp(kind_str, SVN_FS_X__KIND_FILE) == 0)
         info->node_kind = svn_node_file;
-      else if (strcmp(kind_str, SVN_FS_FS__KIND_DIR) == 0)
+      else if (strcmp(kind_str, SVN_FS_X__KIND_DIR) == 0)
         info->node_kind = svn_node_dir;
       else
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -933,8 +933,8 @@ write_change_entry(svn_stream_t *stream,
                   || change->node_kind == svn_node_file);
   kind_string = apr_psprintf(pool, "-%s",
                               change->node_kind == svn_node_dir
-                              ? SVN_FS_FS__KIND_DIR
-                              : SVN_FS_FS__KIND_FILE);
+                              ? SVN_FS_X__KIND_DIR
+                              : SVN_FS_X__KIND_FILE);
   buf = apr_psprintf(pool, "%s %s%s %s %s %s\n",
                      idstr, change_string, kind_string,
                      change->text_mod ? FLAG_TRUE : FLAG_FALSE,

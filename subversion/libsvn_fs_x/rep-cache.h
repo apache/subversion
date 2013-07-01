@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS_FS_REP_CACHE_H
-#define SVN_LIBSVN_FS_FS_REP_CACHE_H
+#ifndef SVN_LIBSVN_FS_X_REP_CACHE_H
+#define SVN_LIBSVN_FS_X_REP_CACHE_H
 
 #include "svn_error.h"
 
@@ -99,4 +99,4 @@ svn_fs_x__lock_rep_cache(svn_fs_t *fs,
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_FS_FS_REP_CACHE_H */
+#endif /* SVN_LIBSVN_FS_X_REP_CACHE_H */

@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS_FS_STRING_TABLE_H
-#define SVN_LIBSVN_FS_FS_STRING_TABLE_H
+#ifndef SVN_LIBSVN_FS_X_STRING_TABLE_H
+#define SVN_LIBSVN_FS_X_STRING_TABLE_H
 
 #include "svn_io.h"
 #include "private/svn_temp_serializer.h"
@@ -130,4 +130,4 @@ svn_fs_x__string_table_get_func(const string_table_t *table,
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_FS_FS_STRING_TABLE_H */
+#endif /* SVN_LIBSVN_FS_X_STRING_TABLE_H */

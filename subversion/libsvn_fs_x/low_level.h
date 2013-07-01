@@ -26,8 +26,8 @@
 #include "id.h"
 
 /* Kinds that a node-rev can be. */
-#define SVN_FS_FS__KIND_FILE          "file"
-#define SVN_FS_FS__KIND_DIR           "dir"
+#define SVN_FS_X__KIND_FILE          "file"
+#define SVN_FS_X__KIND_DIR           "dir"
 
 /* Given the last "few" bytes (should be at least 40) of revision REV in
  * TRAILER,  parse the last line and return the offset of the root noderev
