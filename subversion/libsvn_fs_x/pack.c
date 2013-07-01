@@ -2324,9 +2324,8 @@ pack_body(void *baton,
     return SVN_NO_ERROR;
 
   rev_data_path = svn_dirent_join(pb->fs->path, PATH_REVS_DIR, pool);
-  if (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
-    revprops_data_path = svn_dirent_join(pb->fs->path, PATH_REVPROPS_DIR,
-                                         pool);
+  revprops_data_path = svn_dirent_join(pb->fs->path, PATH_REVPROPS_DIR,
+                                        pool);
 
   iterpool = svn_pool_create(pool);
   for (i = ffd->min_unpacked_rev / ffd->max_files_per_dir;

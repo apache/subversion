@@ -937,8 +937,7 @@ svn_fs_x__get_revision_proplist(apr_hash_t **proplist_p,
                                                  generation, pool);
       if (err)
         {
-          if (!APR_STATUS_IS_ENOENT(err->apr_err)
-              || ffd->format < SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
+          if (!APR_STATUS_IS_ENOENT(err->apr_err))
             return svn_error_trace(err);
 
           svn_error_clear(err);
@@ -949,7 +948,7 @@ svn_fs_x__get_revision_proplist(apr_hash_t **proplist_p,
   /* if revprop packing is available and we have not read the revprops, yet,
    * try reading them from a packed shard.  If that fails, REV is most
    * likely invalid (or its revprops highly contested). */
-  if (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT && !*proplist_p)
+  if (!*proplist_p)
     {
       packed_revprops_t *packed_revprops;
       SVN_ERR(read_pack_revprop(&packed_revprops, fs, rev, generation, pool));

@@ -67,9 +67,7 @@ svn_fs_x__is_packed_revprop(svn_fs_t *fs, svn_revnum_t rev)
   fs_x_data_t *ffd = fs->fsap_data;
 
   /* rev 0 will not be packed */
-  return (rev < ffd->min_unpacked_rev)
-      && (rev != 0)
-      && (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT);
+  return (rev < ffd->min_unpacked_rev) && (rev != 0);
 }
 
 svn_revnum_t

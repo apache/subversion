@@ -306,27 +306,20 @@ read_config(fs_x_data_t *ffd,
     }
 
   /* Initialize revprop packing settings in ffd. */
-  if (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
-    {
-      SVN_ERR(svn_config_get_bool(ffd->config, &ffd->compress_packed_revprops,
-                                  CONFIG_SECTION_PACKED_REVPROPS,
-                                  CONFIG_OPTION_COMPRESS_PACKED_REVPROPS,
-                                  TRUE));
-      SVN_ERR(svn_config_get_int64(ffd->config, &ffd->revprop_pack_size,
-                                   CONFIG_SECTION_PACKED_REVPROPS,
-                                   CONFIG_OPTION_REVPROP_PACK_SIZE,
-                                   ffd->compress_packed_revprops
-                                       ? 0x100
-                                       : 0x40));
+  SVN_ERR(svn_config_get_bool(ffd->config, &ffd->compress_packed_revprops,
+                              CONFIG_SECTION_PACKED_REVPROPS,
+                              CONFIG_OPTION_COMPRESS_PACKED_REVPROPS,
+                              TRUE));
+  SVN_ERR(svn_config_get_int64(ffd->config, &ffd->revprop_pack_size,
+                                CONFIG_SECTION_PACKED_REVPROPS,
+                                CONFIG_OPTION_REVPROP_PACK_SIZE,
+                                ffd->compress_packed_revprops
+                                    ? 0x100
+                                    : 0x40));
 
-      ffd->revprop_pack_size *= 1024;
-    }
-  else
-    {
-      ffd->revprop_pack_size = 0x10000;
-      ffd->compress_packed_revprops = FALSE;
-    }
+  ffd->revprop_pack_size *= 1024;
 
+  /* I/O settings in ffd. */
   SVN_ERR(svn_config_get_int64(ffd->config, &ffd->block_size,
                                 CONFIG_SECTION_IO,
                                 CONFIG_OPTION_BLOCK_SIZE,

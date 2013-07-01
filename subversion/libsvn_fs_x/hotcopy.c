@@ -300,8 +300,7 @@ hotcopy_copy_packed_shard(svn_revnum_t *dst_min_unpacked_rev,
   src_subdir = svn_dirent_join(src_fs->path, PATH_REVPROPS_DIR, scratch_pool);
   dst_subdir = svn_dirent_join(dst_fs->path, PATH_REVPROPS_DIR, scratch_pool);
 
-  if (   src_ffd->format < SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT
-      || src_ffd->min_unpacked_rev < rev + max_files_per_dir)
+  if (src_ffd->min_unpacked_rev < rev + max_files_per_dir)
     {
       /* copy unpacked revprops rev by rev */
       iterpool = svn_pool_create(scratch_pool);

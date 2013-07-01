@@ -157,9 +157,6 @@ extern "C" {
    revprops.db . */
 #define SVN_FS_FS__PACKED_REVPROP_SQLITE_DEV_FORMAT 5
 
-/* The minimum format number that supports packed revprops. */
-#define SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT 6
-
 /* The minimum format number that supports a configuration file (fsfs.conf) */
 #define SVN_FS_FS__MIN_CONFIG_FILE 4
 
