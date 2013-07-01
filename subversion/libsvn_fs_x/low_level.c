@@ -895,7 +895,6 @@ static svn_error_t *
 write_change_entry(svn_stream_t *stream,
                    const char *path,
                    svn_fs_path_change2_t *change,
-                   svn_boolean_t include_node_kind,
                    apr_pool_t *pool)
 {
   const char *idstr, *buf;
@@ -930,15 +929,12 @@ write_change_entry(svn_stream_t *stream,
   else
     idstr = ACTION_RESET;
 
-  if (include_node_kind)
-    {
-      SVN_ERR_ASSERT(change->node_kind == svn_node_dir
-                     || change->node_kind == svn_node_file);
-      kind_string = apr_psprintf(pool, "-%s",
-                                 change->node_kind == svn_node_dir
-                                 ? SVN_FS_FS__KIND_DIR
-                                  : SVN_FS_FS__KIND_FILE);
-    }
+  SVN_ERR_ASSERT(change->node_kind == svn_node_dir
+                  || change->node_kind == svn_node_file);
+  kind_string = apr_psprintf(pool, "-%s",
+                              change->node_kind == svn_node_dir
+                              ? SVN_FS_FS__KIND_DIR
+                              : SVN_FS_FS__KIND_FILE);
   buf = apr_psprintf(pool, "%s %s%s %s %s %s\n",
                      idstr, change_string, kind_string,
                      change->text_mod ? FLAG_TRUE : FLAG_FALSE,
@@ -965,9 +961,6 @@ svn_fs_x__write_changes(svn_stream_t *stream,
                         apr_pool_t *pool)
 {
   apr_pool_t *iterpool = svn_pool_create(pool);
-  fs_x_data_t *ffd = fs->fsap_data;
-  svn_boolean_t include_node_kinds =
-      ffd->format >= SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT;
   apr_array_header_t *sorted_changed_paths;
   int i;
 
@@ -1007,8 +1000,7 @@ svn_fs_x__write_changes(svn_stream_t *stream,
         }
 
       /* Write out the new entry into the final rev-file. */
-      SVN_ERR(write_change_entry(stream, path, change, include_node_kinds,
-                                 iterpool));
+      SVN_ERR(write_change_entry(stream, path, change, iterpool));
     }
 
   if (terminate_list)

@@ -119,16 +119,6 @@ extern "C" {
    independent of any other FS back ends. */
 #define SVN_FS_FS__FORMAT_NUMBER   7
 
-/* The minimum format number that supports svndiff version 1.  */
-#define SVN_FS_FS__MIN_SVNDIFF1_FORMAT 2
-
-/* The minimum format number that supports transaction ID generation
-   using a transaction sequence in the txn-current file. */
-#define SVN_FS_FS__MIN_TXN_CURRENT_FORMAT 3
-
-/* The minimum format number that stores node kinds in changed-paths lists. */
-#define SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT 4
-
 /* Private FSFS-specific data shared between all svn_txn_t objects that
    relate to a particular transaction in a filesystem (as identified
    by transaction id and filesystem UUID).  Objects of this type are

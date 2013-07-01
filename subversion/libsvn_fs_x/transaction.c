@@ -1025,65 +1025,12 @@ create_txn_dir(const char **id_p,
   return svn_io_dir_make(txn_dir, APR_OS_DEFAULT, pool);
 }
 
-/* Create a unique directory for a transaction in FS based on revision
-   REV.  Return the ID for this transaction in *ID_P and *TXN_ID.  This
-   implementation is used in svn 1.4 and earlier repositories and is
-   kept in 1.5 and greater to support the --pre-1.4-compatible and
-   --pre-1.5-compatible repository creation options.  Reused
-   transaction IDs are possible with this implementation. */
-static svn_error_t *
-create_txn_dir_pre_1_5(const char **id_p,
-                       svn_fs_x__id_part_t *txn_id,
-                       svn_fs_t *fs,
-                       svn_revnum_t rev,
-                       apr_pool_t *pool)
-{
-  unsigned int i;
-  apr_pool_t *subpool;
-  const char *unique_path, *prefix;
-
-  /* Try to create directories named "<txndir>/<rev>-<uniqueifier>.txn". */
-  prefix = svn_dirent_join_many(pool, fs->path, PATH_TXNS_DIR,
-                                apr_psprintf(pool, "%ld", rev), NULL);
-
-  subpool = svn_pool_create(pool);
-  for (i = 1; i <= 99999; i++)
-    {
-      svn_error_t *err;
-
-      svn_pool_clear(subpool);
-      unique_path = apr_psprintf(subpool, "%s-%u" PATH_EXT_TXN, prefix, i);
-      err = svn_io_dir_make(unique_path, APR_OS_DEFAULT, subpool);
-      if (! err)
-        {
-          /* We succeeded.  Return the basename minus the ".txn" extension. */
-          const char *name = svn_dirent_basename(unique_path, subpool);
-          *id_p = apr_pstrndup(pool, name,
-                               strlen(name) - strlen(PATH_EXT_TXN));
-          SVN_ERR(svn_fs_x__id_txn_parse(txn_id, *id_p));
-          svn_pool_destroy(subpool);
-          return SVN_NO_ERROR;
-        }
-      if (! APR_STATUS_IS_EEXIST(err->apr_err))
-        return svn_error_trace(err);
-      svn_error_clear(err);
-    }
-
-  return svn_error_createf(SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
-                           NULL,
-                           _("Unable to create transaction directory "
-                             "in '%s' for revision %ld"),
-                           svn_dirent_local_style(fs->path, pool),
-                           rev);
-}
-
 svn_error_t *
 svn_fs_x__create_txn(svn_fs_txn_t **txn_p,
                      svn_fs_t *fs,
                      svn_revnum_t rev,
                      apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
   svn_fs_txn_t *txn;
   fs_txn_data_t *ftd;
   svn_fs_id_t *root_id;
@@ -1092,10 +1039,7 @@ svn_fs_x__create_txn(svn_fs_txn_t **txn_p,
   ftd = apr_pcalloc(pool, sizeof(*ftd));
 
   /* Get the txn_id. */
-  if (ffd->format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
-    SVN_ERR(create_txn_dir(&txn->id, &ftd->txn_id, fs, rev, pool));
-  else
-    SVN_ERR(create_txn_dir_pre_1_5(&txn->id, &ftd->txn_id, fs, rev, pool));
+  SVN_ERR(create_txn_dir(&txn->id, &ftd->txn_id, fs, rev, pool));
 
   txn->fs = fs;
   txn->base_rev = rev;
@@ -1876,8 +1820,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
   svn_stream_t *source;
   svn_txdelta_window_handler_t wh;
   void *whb;
-  fs_x_data_t *ffd = fs->fsap_data;
-  int diff_version = ffd->format >= SVN_FS_FS__MIN_SVNDIFF1_FORMAT ? 1 : 0;
+  int diff_version = 1;
   svn_fs_x__rep_header_t header = { TRUE };
 
   b = apr_pcalloc(pool, sizeof(*b));
@@ -2400,8 +2343,7 @@ write_hash_delta_rep(representation_t *rep,
   apr_off_t offset = 0;
 
   struct write_hash_baton *whb;
-  fs_x_data_t *ffd = fs->fsap_data;
-  int diff_version = ffd->format >= SVN_FS_FS__MIN_SVNDIFF1_FORMAT ? 1 : 0;
+  int diff_version = 1;
   svn_boolean_t is_props = (item_type == SVN_FS_FS__ITEM_TYPE_FILE_PROPS)
                         || (item_type == SVN_FS_FS__ITEM_TYPE_DIR_PROPS);
 

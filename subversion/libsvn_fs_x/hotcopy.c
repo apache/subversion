@@ -783,9 +783,8 @@ hotcopy_body(void *baton, apr_pool_t *pool)
     }
 
   /* Copy the txn-current file. */
-  if (dst_ffd->format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
-    SVN_ERR(svn_io_dir_file_copy(src_fs->path, dst_fs->path,
-                                 PATH_TXN_CURRENT, pool));
+  SVN_ERR(svn_io_dir_file_copy(src_fs->path, dst_fs->path,
+                                PATH_TXN_CURRENT, pool));
 
   /* If a revprop generation file exists in the source filesystem,
    * reset it to zero (since this is on a different path, it will not
