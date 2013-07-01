@@ -197,6 +197,13 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1498550
+   ra_svn: Fix client-triggerable client segfault upon commit.
+   Justification:
+     Segfault.  ra_local and ra_serf permit the commit.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
