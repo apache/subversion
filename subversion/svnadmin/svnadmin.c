@@ -850,13 +850,16 @@ repos_notify_handler(void *baton,
     case svn_repos_notify_failure_summary:
       if (notify->revision != SVN_INVALID_REVNUM)
         cmdline_stream_printf(feedback_stream, scratch_pool,
-                              _("r%ld: %s\n"),
-                              notify->revision, notify->err->message);
+                              _("\nRevision %ld \n"),
+                              notify->revision);
+      if (notify->err)
+        svn_handle_error2(notify->err, stderr, FALSE /* non-fatal */,
+                          "svnadmin: ");
       return;
 
     case svn_repos_notify_summary:
       cmdline_stream_printf(feedback_stream, scratch_pool,
-                            _("\n-----Summary of corrupt revisions-----\n"));
+                            _("\n-----Summary of corrupt revisions-----"));
       return;
 
     case svn_repos_notify_dump_rev_end:
