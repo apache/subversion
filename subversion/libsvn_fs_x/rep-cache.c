@@ -146,9 +146,6 @@ svn_fs_x__walk_rep_reference(svn_fs_t *fs,
 
   apr_pool_t *iterpool = svn_pool_create(pool);
 
-  /* Don't check ffd->rep_sharing_allowed. */
-  SVN_ERR_ASSERT(ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT);
-
   if (! ffd->rep_cache_db)
     SVN_ERR(svn_fs_x__open_rep_cache(fs, pool));
 
@@ -363,7 +360,6 @@ svn_fs_x__del_rep_reference(svn_fs_t *fs,
   fs_x_data_t *ffd = fs->fsap_data;
   svn_sqlite__stmt_t *stmt;
 
-  SVN_ERR_ASSERT(ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT);
   if (! ffd->rep_cache_db)
     SVN_ERR(svn_fs_x__open_rep_cache(fs, pool));
 

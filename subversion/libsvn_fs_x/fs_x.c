@@ -260,12 +260,9 @@ read_config(fs_x_data_t *ffd,
                            FALSE, FALSE, FALSE, pool));
 
   /* Initialize ffd->rep_sharing_allowed. */
-  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
-    SVN_ERR(svn_config_get_bool(ffd->config, &ffd->rep_sharing_allowed,
-                                CONFIG_SECTION_REP_SHARING,
-                                CONFIG_OPTION_ENABLE_REP_SHARING, TRUE));
-  else
-    ffd->rep_sharing_allowed = FALSE;
+  SVN_ERR(svn_config_get_bool(ffd->config, &ffd->rep_sharing_allowed,
+                              CONFIG_SECTION_REP_SHARING,
+                              CONFIG_OPTION_ENABLE_REP_SHARING, TRUE));
 
   /* Initialize deltification settings in ffd. */
   SVN_ERR(svn_config_get_bool(ffd->config, &ffd->deltify_directories,

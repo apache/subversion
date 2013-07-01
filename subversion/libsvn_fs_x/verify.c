@@ -389,9 +389,8 @@ svn_fs_x__verify(svn_fs_t *fs,
                                    cancel_func, cancel_baton, pool));
 
   /* rep cache consistency */
-  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
-    SVN_ERR(verify_rep_cache(fs, start, end, notify_func, notify_baton,
-                             cancel_func, cancel_baton, pool));
+  SVN_ERR(verify_rep_cache(fs, start, end, notify_func, notify_baton,
+                            cancel_func, cancel_baton, pool));
 
   return SVN_NO_ERROR;
 }

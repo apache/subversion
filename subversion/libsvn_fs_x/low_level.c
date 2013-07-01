@@ -529,7 +529,7 @@ svn_fs_x__unparse_representation(representation_t *rep,
   if (svn_fs_x__id_txn_used(&rep->txn_id) && mutable_rep_truncated)
     return svn_stringbuf_ncreate("-1", 2, pool);
 
-  if (format < SVN_FS_FS__MIN_REP_SHARING_FORMAT || !rep->has_sha1)
+  if (!rep->has_sha1)
     return svn_stringbuf_createf
             (pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
              " %" SVN_FILESIZE_T_FMT " %s",

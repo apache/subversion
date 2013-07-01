@@ -785,18 +785,15 @@ hotcopy_body(void *baton, apr_pool_t *pool)
    *     Writers are still locked out at this point.
    */
 
-  if (dst_ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+  /* Copy the rep cache and then remove entries for revisions
+   * younger than the destination's youngest revision. */
+  src_subdir = svn_dirent_join(src_fs->path, REP_CACHE_DB_NAME, pool);
+  dst_subdir = svn_dirent_join(dst_fs->path, REP_CACHE_DB_NAME, pool);
+  SVN_ERR(svn_io_check_path(src_subdir, &kind, pool));
+  if (kind == svn_node_file)
     {
-      /* Copy the rep cache and then remove entries for revisions
-       * younger than the destination's youngest revision. */
-      src_subdir = svn_dirent_join(src_fs->path, REP_CACHE_DB_NAME, pool);
-      dst_subdir = svn_dirent_join(dst_fs->path, REP_CACHE_DB_NAME, pool);
-      SVN_ERR(svn_io_check_path(src_subdir, &kind, pool));
-      if (kind == svn_node_file)
-        {
-          SVN_ERR(svn_sqlite__hotcopy(src_subdir, dst_subdir, pool));
-          SVN_ERR(svn_fs_x__del_rep_reference(dst_fs, dst_youngest, pool));
-        }
+      SVN_ERR(svn_sqlite__hotcopy(src_subdir, dst_subdir, pool));
+      SVN_ERR(svn_fs_x__del_rep_reference(dst_fs, dst_youngest, pool));
     }
 
   /* Copy the txn-current file. */

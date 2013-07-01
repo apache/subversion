@@ -140,9 +140,6 @@ extern "C" {
    noderev fields. */
 #define SVN_FS_FS__MIN_MERGEINFO_FORMAT 3
 
-/* The minimum format number that allows rep sharing. */
-#define SVN_FS_FS__MIN_REP_SHARING_FORMAT 4
-
 /* The minimum format number that stores node kinds in changed-paths lists. */
 #define SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT 4
 
