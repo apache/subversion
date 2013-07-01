@@ -1611,13 +1611,15 @@ svn_repos_verify_fs3(svn_repos_t *repos,
     }
 
   /* Show the summary. */
-  if (notify_func && keep_going)
+  if (notify_func && keep_going && found_corruption)
     {
       notify_verification_summary(err, notify_func, notify_baton, iterpool);
       for(i=0; i < error_summary->nelts; i++)
         {
-          struct error_list *err_list = APR_ARRAY_IDX(error_summary, i, struct error_list *);
-          notify_verification_error_summary(err_list->rev, err_list->err, notify_func, notify_baton,
+          struct error_list *err_list = APR_ARRAY_IDX(error_summary, i,
+                                                      struct error_list *);
+          notify_verification_error_summary(err_list->rev, err_list->err,
+                                            notify_func, notify_baton,
                                             iterpool);
         }
     }
