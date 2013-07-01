@@ -525,56 +525,53 @@ hotcopy_body(void *baton, apr_pool_t *pool)
    * ### because higher layers will abort the hotcopy if we throw
    * ### an error from this function, and that renders the hotcopy
    * ### unusable anyway. */
-  if (src_ffd->format >= SVN_FS_FS__MIN_CONFIG_FILE)
+  svn_error_t *err;
+
+  err = svn_io_dir_file_copy(src_fs->path, dst_fs->path, PATH_CONFIG,
+                              pool);
+  if (err)
     {
-      svn_error_t *err;
-
-      err = svn_io_dir_file_copy(src_fs->path, dst_fs->path, PATH_CONFIG,
-                                 pool);
-      if (err)
+      if (APR_STATUS_IS_ENOENT(err->apr_err))
         {
-          if (APR_STATUS_IS_ENOENT(err->apr_err))
-            {
-              /* 1.6.0 to 1.6.11 did not copy the configuration file during
-               * hotcopy. So if we're hotcopying a repository which has been
-               * created as a hotcopy itself, it's possible that fsfs.conf
-               * does not exist. Ask the user to re-create it.
-               *
-               * ### It would be nice to make this a non-fatal error,
-               * ### but this function does not get an svn_fs_t object
-               * ### so we have no way of just printing a warning via
-               * ### the fs->warning() callback. */
+          /* 1.6.0 to 1.6.11 did not copy the configuration file during
+            * hotcopy. So if we're hotcopying a repository which has been
+            * created as a hotcopy itself, it's possible that fsfs.conf
+            * does not exist. Ask the user to re-create it.
+            *
+            * ### It would be nice to make this a non-fatal error,
+            * ### but this function does not get an svn_fs_t object
+            * ### so we have no way of just printing a warning via
+            * ### the fs->warning() callback. */
 
-              const char *msg;
-              const char *src_abspath;
-              const char *dst_abspath;
-              const char *config_relpath;
-              svn_error_t *err2;
+          const char *msg;
+          const char *src_abspath;
+          const char *dst_abspath;
+          const char *config_relpath;
+          svn_error_t *err2;
 
-              config_relpath = svn_dirent_join(src_fs->path, PATH_CONFIG, pool);
-              err2 = svn_dirent_get_absolute(&src_abspath, src_fs->path, pool);
-              if (err2)
-                return svn_error_trace(svn_error_compose_create(err, err2));
-              err2 = svn_dirent_get_absolute(&dst_abspath, dst_fs->path, pool);
-              if (err2)
-                return svn_error_trace(svn_error_compose_create(err, err2));
+          config_relpath = svn_dirent_join(src_fs->path, PATH_CONFIG, pool);
+          err2 = svn_dirent_get_absolute(&src_abspath, src_fs->path, pool);
+          if (err2)
+            return svn_error_trace(svn_error_compose_create(err, err2));
+          err2 = svn_dirent_get_absolute(&dst_abspath, dst_fs->path, pool);
+          if (err2)
+            return svn_error_trace(svn_error_compose_create(err, err2));
 
-              /* ### hack: strip off the 'db/' directory from paths so
-               * ### they make sense to the user */
-              src_abspath = svn_dirent_dirname(src_abspath, pool);
-              dst_abspath = svn_dirent_dirname(dst_abspath, pool);
+          /* ### hack: strip off the 'db/' directory from paths so
+            * ### they make sense to the user */
+          src_abspath = svn_dirent_dirname(src_abspath, pool);
+          dst_abspath = svn_dirent_dirname(dst_abspath, pool);
 
-              msg = apr_psprintf(pool,
-                                 _("Failed to create hotcopy at '%s'. "
-                                   "The file '%s' is missing from the source "
-                                   "repository. Please create this file, for "
-                                   "instance by running 'svnadmin upgrade %s'"),
-                                 dst_abspath, config_relpath, src_abspath);
-              return svn_error_quick_wrap(err, msg);
-            }
-          else
-            return svn_error_trace(err);
+          msg = apr_psprintf(pool,
+                             _("Failed to create hotcopy at '%s'. "
+                               "The file '%s' is missing from the source "
+                               "repository. Please create this file, for "
+                               "instance by running 'svnadmin upgrade %s'"),
+                             dst_abspath, config_relpath, src_abspath);
+          return svn_error_quick_wrap(err, msg);
         }
+      else
+        return svn_error_trace(err);
     }
 
   if (cancel_func)
@@ -646,8 +643,6 @@ hotcopy_body(void *baton, apr_pool_t *pool)
   /* First, copy packed shards. */
   for (rev = 0; rev < src_min_unpacked_rev; rev += max_files_per_dir)
     {
-      svn_error_t *err;
-
       svn_pool_clear(iterpool);
 
       if (cancel_func)
@@ -695,8 +690,6 @@ hotcopy_body(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_io_make_dir_recursively(revprop_dst_subdir, pool));
   for (; rev <= src_youngest; rev++)
     {
-      svn_error_t *err;
-
       svn_pool_clear(iterpool);
 
       if (cancel_func)
