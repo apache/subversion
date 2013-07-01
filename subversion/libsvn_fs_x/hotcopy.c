@@ -600,33 +600,25 @@ hotcopy_body(void *baton, apr_pool_t *pool)
     SVN_ERR(cancel_func(cancel_baton));
 
   /* Copy the min unpacked rev, and read its value. */
-  if (src_ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-    {
-      SVN_ERR(svn_fs_x__read_min_unpacked_rev(&src_min_unpacked_rev, src_fs,
-                                              pool));
-      SVN_ERR(svn_fs_x__read_min_unpacked_rev(&dst_min_unpacked_rev, dst_fs,
-                                              pool));
+  SVN_ERR(svn_fs_x__read_min_unpacked_rev(&src_min_unpacked_rev, src_fs,
+                                          pool));
+  SVN_ERR(svn_fs_x__read_min_unpacked_rev(&dst_min_unpacked_rev, dst_fs,
+                                          pool));
 
-      /* We only support packs coming from the hotcopy source.
-       * The destination should not be packed independently from
-       * the source. This also catches the case where users accidentally
-       * swap the source and destination arguments. */
-      if (src_min_unpacked_rev < dst_min_unpacked_rev)
-        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                 _("The hotcopy destination already contains "
-                                   "more packed revisions (%lu) than the "
-                                   "hotcopy source contains (%lu)"),
-                                   dst_min_unpacked_rev - 1,
-                                   src_min_unpacked_rev - 1);
+  /* We only support packs coming from the hotcopy source.
+    * The destination should not be packed independently from
+    * the source. This also catches the case where users accidentally
+    * swap the source and destination arguments. */
+  if (src_min_unpacked_rev < dst_min_unpacked_rev)
+    return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                             _("The hotcopy destination already contains "
+                               "more packed revisions (%lu) than the "
+                               "hotcopy source contains (%lu)"),
+                             dst_min_unpacked_rev - 1,
+                             src_min_unpacked_rev - 1);
 
-      SVN_ERR(svn_io_dir_file_copy(src_fs->path, dst_fs->path,
-                                   PATH_MIN_UNPACKED_REV, pool));
-    }
-  else
-    {
-      src_min_unpacked_rev = 0;
-      dst_min_unpacked_rev = 0;
-    }
+  SVN_ERR(svn_io_dir_file_copy(src_fs->path, dst_fs->path,
+                               PATH_MIN_UNPACKED_REV, pool));
 
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
@@ -701,8 +693,7 @@ hotcopy_body(void *baton, apr_pool_t *pool)
                                     iterpool);
       if (err)
         {
-          if (APR_STATUS_IS_ENOENT(err->apr_err) &&
-              src_ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
+          if (APR_STATUS_IS_ENOENT(err->apr_err))
             {
               svn_error_clear(err);
 
@@ -909,19 +900,16 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
   SVN_ERR(svn_fs_x__set_uuid(dst_fs, src_fs->uuid, pool));
 
   /* Create the min unpacked rev file. */
-  if (dst_ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(svn_io_file_create(svn_fs_x__path_min_unpacked_rev(dst_fs, pool),
-                               "0\n", pool));
+  SVN_ERR(svn_io_file_create(svn_fs_x__path_min_unpacked_rev(dst_fs, pool),
+                              "0\n", pool));
+
   /* Create the txn-current file if the repository supports
      the transaction sequence file. */
-  if (dst_ffd->format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
-    {
-      SVN_ERR(svn_io_file_create(svn_fs_x__path_txn_current(dst_fs, pool),
-                                 "0\n", pool));
-      SVN_ERR(svn_io_file_create_empty(svn_fs_x__path_txn_current_lock(dst_fs,
-                                                                       pool),
-                                       pool));
-    }
+  SVN_ERR(svn_io_file_create(svn_fs_x__path_txn_current(dst_fs, pool),
+                             "0\n", pool));
+  SVN_ERR(svn_io_file_create_empty(svn_fs_x__path_txn_current_lock(dst_fs,
+                                                                   pool),
+                                   pool));
 
   dst_ffd->youngest_rev_cache = 0;
 

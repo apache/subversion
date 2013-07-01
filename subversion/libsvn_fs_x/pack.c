@@ -2302,13 +2302,6 @@ pack_body(void *baton,
   const char *rev_data_path;
   const char *revprops_data_path = NULL;
 
-  /* If the repository isn't a new enough format, we don't support packing.
-     Return a friendly error to that effect. */
-  if (ffd->format < SVN_FS_FS__MIN_PACKED_FORMAT)
-    return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-      _("FSFS format (%d) too old to pack; please upgrade the filesystem."),
-      ffd->format);
-
   /* If we aren't using sharding, we can't do any packing, so quit. */
   if (!ffd->max_files_per_dir)
     return SVN_NO_ERROR;

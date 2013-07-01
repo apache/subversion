@@ -199,10 +199,7 @@ svn_fs_x__path_rev_absolute(svn_fs_t *fs,
                             svn_revnum_t rev,
                             apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
-
-  return (   ffd->format < SVN_FS_FS__MIN_PACKED_FORMAT
-          || ! svn_fs_x__is_packed_rev(fs, rev))
+  return ! svn_fs_x__is_packed_rev(fs, rev)
        ? svn_fs_x__path_rev(fs, rev, pool)
        : svn_fs_x__path_rev_packed(fs, rev, PATH_PACKED, pool);
 }
@@ -481,9 +478,6 @@ svn_error_t *
 svn_fs_x__update_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
-
-  SVN_ERR_ASSERT(ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT);
-
   return svn_fs_x__read_min_unpacked_rev(&ffd->min_unpacked_rev, fs, pool);
 }
 

@@ -143,9 +143,6 @@ extern "C" {
 /* The minimum format number that allows rep sharing. */
 #define SVN_FS_FS__MIN_REP_SHARING_FORMAT 4
 
-/* The minimum format number that supports packed shards. */
-#define SVN_FS_FS__MIN_PACKED_FORMAT 4
-
 /* The minimum format number that stores node kinds in changed-paths lists. */
 #define SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT 4
 

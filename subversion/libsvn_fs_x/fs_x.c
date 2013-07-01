@@ -539,8 +539,7 @@ svn_fs_x__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   SVN_ERR(svn_io_file_close(uuid_file, pool));
 
   /* Read the min unpacked revision. */
-  if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(svn_fs_x__update_min_unpacked_rev(fs, pool));
+  SVN_ERR(svn_fs_x__update_min_unpacked_rev(fs, pool));
 
   /* Read the configuration file. */
   SVN_ERR(read_config(ffd, fs->path, pool));
@@ -657,7 +656,6 @@ svn_fs_x__open_pack_or_rev_file(apr_file_t **file,
                                 svn_revnum_t rev,
                                 apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
   svn_error_t *err;
   svn_boolean_t retry = FALSE;
 
@@ -670,28 +668,19 @@ svn_fs_x__open_pack_or_rev_file(apr_file_t **file,
                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
       if (err && APR_STATUS_IS_ENOENT(err->apr_err))
         {
-          if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-            {
-              /* Could not open the file. This may happen if the
-               * file once existed but got packed later. */
-              svn_error_clear(err);
+          /* Could not open the file. This may happen if the
+            * file once existed but got packed later. */
+          svn_error_clear(err);
 
-              /* if that was our 2nd attempt, leave it at that. */
-              if (retry)
-                return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                                         _("No such revision %ld"), rev);
+          /* if that was our 2nd attempt, leave it at that. */
+          if (retry)
+            return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                     _("No such revision %ld"), rev);
 
-              /* We failed for the first time. Refresh cache & retry. */
-              SVN_ERR(svn_fs_x__update_min_unpacked_rev(fs, pool));
+          /* We failed for the first time. Refresh cache & retry. */
+          SVN_ERR(svn_fs_x__update_min_unpacked_rev(fs, pool));
 
-              retry = TRUE;
-            }
-          else
-            {
-              svn_error_clear(err);
-              return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                                       _("No such revision %ld"), rev);
-            }
+          retry = TRUE;
         }
       else
         {
@@ -931,20 +920,15 @@ svn_fs_x__create(svn_fs_t *fs,
   SVN_ERR(read_config(ffd, fs->path, pool));
 
   /* Create the min unpacked rev file. */
-  if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(svn_io_file_create(svn_fs_x__path_min_unpacked_rev(fs, pool),
-                               "0\n", pool));
+  SVN_ERR(svn_io_file_create(svn_fs_x__path_min_unpacked_rev(fs, pool),
+                              "0\n", pool));
 
   /* Create the txn-current file if the repository supports
      the transaction sequence file. */
-  if (format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
-    {
-      SVN_ERR(svn_io_file_create(svn_fs_x__path_txn_current(fs, pool),
-                                 "0\n", pool));
-      SVN_ERR(svn_io_file_create_empty(svn_fs_x__path_txn_current_lock(fs,
-                                                                       pool),
-                                       pool));
-    }
+  SVN_ERR(svn_io_file_create(svn_fs_x__path_txn_current(fs, pool),
+                             "0\n", pool));
+  SVN_ERR(svn_io_file_create_empty(svn_fs_x__path_txn_current_lock(fs, pool),
+                                   pool));
 
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR(svn_fs_x__write_format(fs, FALSE, pool));

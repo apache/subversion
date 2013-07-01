@@ -244,8 +244,7 @@ with_some_lock_file(svn_fs_t *fs,
 
       /* nobody else will modify the repo state
          => read HEAD & pack info once */
-      if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-        SVN_ERR(svn_fs_x__update_min_unpacked_rev(fs, pool));
+      SVN_ERR(svn_fs_x__update_min_unpacked_rev(fs, pool));
       SVN_ERR(svn_fs_x__youngest_rev(&ffd->youngest_rev_cache, fs, pool));
       err = body(baton, subpool);
     }
