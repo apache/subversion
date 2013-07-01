@@ -166,6 +166,24 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1498449, r1498455
+   kidney blame: convert a client segfault into a correct failure mode.
+   Notes:
+     r1498449 breaks out a helper function
+     r1498455 fixes the segfault.
+   Justification:
+     Segfault.  (1.8.0 didn't have the segfaulting code.)
+   Votes:
+     +1: danielsh
+
+ * r1498456
+   ra_serf: recognize the get-file-revs-reverse capability.
+   Justification:
+     Wrong failure mode: the code raised an error when it should have replied
+     FALSE with no error.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
