@@ -268,32 +268,22 @@ read_config(fs_x_data_t *ffd,
     ffd->rep_sharing_allowed = FALSE;
 
   /* Initialize deltification settings in ffd. */
-  if (ffd->format >= SVN_FS_FS__MIN_DELTIFICATION_FORMAT)
-    {
-      SVN_ERR(svn_config_get_bool(ffd->config, &ffd->deltify_directories,
-                                  CONFIG_SECTION_DELTIFICATION,
-                                  CONFIG_OPTION_ENABLE_DIR_DELTIFICATION,
-                                  TRUE));
-      SVN_ERR(svn_config_get_bool(ffd->config, &ffd->deltify_properties,
-                                  CONFIG_SECTION_DELTIFICATION,
-                                  CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION,
-                                  TRUE));
-      SVN_ERR(svn_config_get_int64(ffd->config, &ffd->max_deltification_walk,
-                                   CONFIG_SECTION_DELTIFICATION,
-                                   CONFIG_OPTION_MAX_DELTIFICATION_WALK,
-                                   SVN_FS_FS_MAX_DELTIFICATION_WALK));
-      SVN_ERR(svn_config_get_int64(ffd->config, &ffd->max_linear_deltification,
-                                   CONFIG_SECTION_DELTIFICATION,
-                                   CONFIG_OPTION_MAX_LINEAR_DELTIFICATION,
-                                   SVN_FS_FS_MAX_LINEAR_DELTIFICATION));
-    }
-  else
-    {
-      ffd->deltify_directories = FALSE;
-      ffd->deltify_properties = FALSE;
-      ffd->max_deltification_walk = SVN_FS_FS_MAX_DELTIFICATION_WALK;
-      ffd->max_linear_deltification = SVN_FS_FS_MAX_LINEAR_DELTIFICATION;
-    }
+  SVN_ERR(svn_config_get_bool(ffd->config, &ffd->deltify_directories,
+                              CONFIG_SECTION_DELTIFICATION,
+                              CONFIG_OPTION_ENABLE_DIR_DELTIFICATION,
+                              TRUE));
+  SVN_ERR(svn_config_get_bool(ffd->config, &ffd->deltify_properties,
+                              CONFIG_SECTION_DELTIFICATION,
+                              CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION,
+                              TRUE));
+  SVN_ERR(svn_config_get_int64(ffd->config, &ffd->max_deltification_walk,
+                               CONFIG_SECTION_DELTIFICATION,
+                               CONFIG_OPTION_MAX_DELTIFICATION_WALK,
+                               SVN_FS_FS_MAX_DELTIFICATION_WALK));
+  SVN_ERR(svn_config_get_int64(ffd->config, &ffd->max_linear_deltification,
+                               CONFIG_SECTION_DELTIFICATION,
+                               CONFIG_OPTION_MAX_LINEAR_DELTIFICATION,
+                               SVN_FS_FS_MAX_LINEAR_DELTIFICATION));
 
   /* Initialize revprop packing settings in ffd. */
   SVN_ERR(svn_config_get_bool(ffd->config, &ffd->compress_packed_revprops,
