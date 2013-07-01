@@ -4958,14 +4958,14 @@ filename_trailing_newline(const svn_test_opts_t *opts,
   svn_fs_root_t *txn_root, *root;
   svn_revnum_t youngest_rev = 0;
   svn_error_t *err;
-  svn_boolean_t allow_newlines;
+  svn_boolean_t legacy_backend;
   static const char contents[] = "foo\003bar";
 
   /* The FS API wants \n to be permitted, but FSFS never implemented that,
    * so for FSFS we expect errors rather than successes in some of the commits.
    * Use a blacklist approach so that new FSes default to implementing the API
    * as originally defined. */
-  allow_newlines = (!!strcmp(opts->fs_type, SVN_FS_TYPE_FSFS));
+  legacy_backend = (!strcmp(opts->fs_type, SVN_FS_TYPE_FSFS));
 
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-filename-trailing-newline",
                               opts, pool));
@@ -4983,28 +4983,28 @@ filename_trailing_newline(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_fs_revision_root(&root, fs, youngest_rev, subpool));
   err = svn_fs_copy(root, "/foo", txn_root, "/bar\n", subpool);
-  if (allow_newlines)
+  if (!legacy_backend)
     SVN_TEST_ASSERT(err == SVN_NO_ERROR);
   else
     SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
 
   /* Attempt to create a file /foo/baz\n. This should fail on FSFS. */
   err = svn_fs_make_file(txn_root, "/foo/baz\n", subpool);
-  if (allow_newlines)
+  if (!legacy_backend)
     SVN_TEST_ASSERT(err == SVN_NO_ERROR);
   else
     SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
   
 
   /* Create another file, with contents. */
-  if (allow_newlines)
+  if (!legacy_backend)
     {
       SVN_ERR(svn_fs_make_file(txn_root, "/bar\n/baz\n", subpool));
       SVN_ERR(svn_test__set_file_contents(txn_root, "bar\n/baz\n",
                                           contents, pool));
     }
 
-  if (allow_newlines)
+  if (!legacy_backend)
     {
       svn_revnum_t after_rev;
       static svn_test__tree_entry_t expected_entries[] = {
