@@ -1,4 +1,4 @@
-/* low_level.c --- low level r/w access to fs_fs file structures
+/* low_level.c --- low level r/w access to fs_x file structures
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

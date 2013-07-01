@@ -1,4 +1,4 @@
-/* index.h : interface to FSFS indexing functionality
+/* index.h : interface to FSX indexing functionality
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

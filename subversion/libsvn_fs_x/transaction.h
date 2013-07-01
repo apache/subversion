@@ -1,4 +1,4 @@
-/* transaction.h --- transaction-related functions of FSFS
+/* transaction.h --- transaction-related functions of FSX
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

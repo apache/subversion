@@ -1,4 +1,4 @@
-/* low_level.c --- low level r/w access to fs_fs file structures
+/* low_level.c --- low level r/w access to fs_x file structures
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -966,7 +966,7 @@ svn_fs_x__write_changes(svn_stream_t *stream,
 
   /* For the sake of the repository administrator sort the changes so
      that the final file is deterministic and repeatable, however the
-     rest of the FSFS code doesn't require any particular order here. */
+     rest of the FSX code doesn't require any particular order here. */
   sorted_changed_paths = svn_sort__hash(changes,
                                         svn_sort_compare_items_lexically, pool);
 

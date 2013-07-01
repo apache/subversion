@@ -120,7 +120,7 @@ x_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
 
 
 /* This function is provided for Subversion 1.0.x compatibility.  It
-   has no effect for fsfs backed Subversion filesystems.  It conforms
+   has no effect for fsx backed Subversion filesystems.  It conforms
    to the fs_library_vtable_t.bdb_set_errcall() API. */
 static svn_error_t *
 x_set_errcall(svn_fs_t *fs,
@@ -227,7 +227,7 @@ initialize_fs_struct(svn_fs_t *fs)
 }
 
 /* This implements the fs_library_vtable_t.create() API.  Create a new
-   fsfs-backed Subversion filesystem at path PATH and link it into
+   fsx-backed Subversion filesystem at path PATH and link it into
    *FS.  Perform temporary allocations in POOL, and fs-global allocations
    in COMMON_POOL. */
 static svn_error_t *
@@ -248,7 +248,7 @@ x_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
 
 /* Gaining access to an existing filesystem.  */
 
-/* This implements the fs_library_vtable_t.open() API.  Open an FSFS
+/* This implements the fs_library_vtable_t.open() API.  Open an FSX
    Subversion filesystem located at PATH, set *FS to point to the
    correct vtable for the filesystem.  Use POOL for any temporary
    allocations, and COMMON_POOL for fs-global allocations. */
@@ -272,7 +272,7 @@ x_open_for_recovery(svn_fs_t *fs,
                     const char *path,
                     apr_pool_t *pool, apr_pool_t *common_pool)
 {
-  /* Recovery for FSFS is currently limited to recreating the 'current'
+  /* Recovery for FSX is currently limited to recreating the 'current'
      file from the latest revision. */
 
   /* The only thing we have to watch out for is that the 'current' file
@@ -391,7 +391,7 @@ x_hotcopy(svn_fs_t *src_fs,
 
 
 /* This function is included for Subversion 1.0.x compatibility.  It
-   has no effect for fsfs backed Subversion filesystems.  It conforms
+   has no effect for fsx backed Subversion filesystems.  It conforms
    to the fs_library_vtable_t.bdb_logfiles() API. */
 static svn_error_t *
 x_logfiles(apr_array_header_t **logfiles,

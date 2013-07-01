@@ -1,4 +1,4 @@
-/* changes.h --- FSFS changed paths lists container
+/* changes.h --- FSX changed paths lists container
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -262,7 +262,7 @@ svn_fs_x__changes_get_list(apr_array_header_t **list,
       const binary_change_t *binary_change
         = &APR_ARRAY_IDX(changes->changes, i, binary_change_t);
 
-      /* convert BINARY_CHANGE into a standard FSFS change_t */
+      /* convert BINARY_CHANGE into a standard FSX change_t */
       change_t *change = apr_pcalloc(pool, sizeof(*change));
       svn_fs_path_change2_t *info = &change->info;
       change->path.data = svn_fs_x__string_table_get(changes->paths,
@@ -534,7 +534,7 @@ svn_fs_x__changes_get_list_func(void **out,
     {
       const binary_change_t *binary_change = &changes[i];
 
-      /* convert BINARY_CHANGE into a standard FSFS change_t */
+      /* convert BINARY_CHANGE into a standard FSX change_t */
       change_t *change = apr_pcalloc(pool, sizeof(*change));
       svn_fs_path_change2_t *info = &change->info;
       change->path.data

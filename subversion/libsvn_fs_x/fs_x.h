@@ -1,4 +1,4 @@
-/* fs_fs.h : interface to the native filesystem layer
+/* fs_x.h : interface to the native filesystem layer
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -25,7 +25,7 @@
 
 #include "fs.h"
 
-/* Open the fsfs filesystem pointed to by PATH and associate it with
+/* Open the fsx filesystem pointed to by PATH and associate it with
    filesystem object FS.  Use POOL for temporary allocations.
 
    ### Some parts of *FS must have been initialized beforehand; some parts
@@ -34,7 +34,7 @@ svn_error_t *svn_fs_x__open(svn_fs_t *fs,
                             const char *path,
                             apr_pool_t *pool);
 
-/* Upgrade the fsfs filesystem FS.  Indicate progress via the optional
+/* Upgrade the fsx filesystem FS.  Indicate progress via the optional
  * NOTIFY_FUNC callback using NOTIFY_BATON.  The optional CANCEL_FUNC
  * will periodically be called with CANCEL_BATON to allow for preemption.
  * Use POOL for temporary allocations. */
@@ -107,7 +107,7 @@ svn_error_t *svn_fs_x__file_checksum(svn_checksum_t **checksum,
                                      svn_checksum_kind_t kind,
                                      apr_pool_t *pool);
 
-/* Create a fs_fs fileysystem referenced by FS at path PATH.  Get any
+/* Create a fs_x fileysystem referenced by FS at path PATH.  Get any
    temporary allocations from POOL.
 
    ### Some parts of *FS must have been initialized beforehand; some parts

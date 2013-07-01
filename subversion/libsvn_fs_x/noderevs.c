@@ -1,4 +1,4 @@
-/* noderevs.h --- FSFS node revision container
+/* noderevs.h --- FSX node revision container
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

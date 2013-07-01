@@ -25,7 +25,7 @@
 
 #include "fs.h"
 
-/* Verify metadata in fsfs filesystem FS.  Limit the checks to revisions
+/* Verify metadata in fsx filesystem FS.  Limit the checks to revisions
  * START to END where possible.  Indicate progress via the optional
  * NOTIFY_FUNC callback using NOTIFY_BATON.  The optional CANCEL_FUNC
  * will periodically be called with CANCEL_BATON to allow for preemption.

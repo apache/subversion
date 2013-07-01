@@ -1,4 +1,4 @@
-/* util.h --- utility functions for FSFS repo access
+/* util.h --- utility functions for FSX repo access
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -29,7 +29,7 @@
 /* Functions for dealing with recoverable errors on mutable files
  *
  * Revprops, current, and txn-current files are mutable; that is, they
- * change as part of normal fsfs operation, in constrat to revs files, or
+ * change as part of normal fsx operation, in constrat to revs files, or
  * the format file, which are written once at create (or upgrade) time.
  * When more than one host writes to the same repository, we will
  * sometimes see these recoverable errors when accesssing these files.

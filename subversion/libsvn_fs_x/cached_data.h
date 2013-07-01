@@ -1,4 +1,4 @@
-/* cached_data.h --- cached (read) access to FSFS data
+/* cached_data.h --- cached (read) access to FSX data
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

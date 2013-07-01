@@ -1,4 +1,4 @@
-/* pack.h : interface FSFS pack functionality
+/* pack.h : interface FSX pack functionality
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

@@ -1,4 +1,4 @@
-/* index.c indexing support for FSFS support
+/* index.c indexing support for FSX support
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

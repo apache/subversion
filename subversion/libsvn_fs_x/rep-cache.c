@@ -1,4 +1,4 @@
-/* rep-sharing.c --- the rep-sharing cache for fsfs
+/* rep-sharing.c --- the rep-sharing cache for fsx
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

@@ -1,4 +1,4 @@
-/* id.h : interface to node ID functions, private to libsvn_fs_fs
+/* id.h : interface to node ID functions, private to libsvn_fs_x
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -29,7 +29,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* A rev node ID in FSFS consists of a 3 of sub-IDs ("parts") that consist
+/* A rev node ID in FSX consists of a 3 of sub-IDs ("parts") that consist
  * of a creation REVISION number and some revision-local counter value
  * (NUMBER).  Old-style ID parts use global counter values.
  */

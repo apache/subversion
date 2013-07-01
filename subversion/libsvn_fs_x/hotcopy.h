@@ -25,7 +25,7 @@
 
 #include "fs.h"
 
-/* Copy the fsfs filesystem SRC_FS at SRC_PATH into a new copy DST_FS at
+/* Copy the fsx filesystem SRC_FS at SRC_PATH into a new copy DST_FS at
  * DST_PATH. If INCREMENTAL is TRUE, do not re-copy data which already
  * exists in DST_FS. Use POOL for temporary allocations. */
 svn_error_t * svn_fs_x__hotcopy(svn_fs_t *src_fs,

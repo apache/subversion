@@ -1,4 +1,4 @@
-/* hotcopys.c --- FS hotcopy functionality for FSFS
+/* hotcopys.c --- FS hotcopy functionality for FSX
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -521,7 +521,7 @@ hotcopy_body(void *baton, apr_pool_t *pool)
         {
           /* 1.6.0 to 1.6.11 did not copy the configuration file during
             * hotcopy. So if we're hotcopying a repository which has been
-            * created as a hotcopy itself, it's possible that fsfs.conf
+            * created as a hotcopy itself, it's possible that fsx.conf
             * does not exist. Ask the user to re-create it.
             *
             * ### It would be nice to make this a non-fatal error,

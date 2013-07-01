@@ -1,4 +1,4 @@
-/* fs_fs.c --- filesystem operations specific to fs_fs
+/* fs_x.c --- filesystem operations specific to fs_x
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

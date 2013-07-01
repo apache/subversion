@@ -1,4 +1,4 @@
-/* util.c --- utility functions for FSFS repo access
+/* util.c --- utility functions for FSX repo access
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

@@ -710,7 +710,7 @@ get_locks_callback(void *baton,
 }
 
 
-/* The main routine for lock enforcement, used throughout libsvn_fs_fs. */
+/* The main routine for lock enforcement, used throughout libsvn_fs_x. */
 svn_error_t *
 svn_fs_x__allow_locked_operation(const char *path,
                                  svn_fs_t *fs,
@@ -832,7 +832,7 @@ lock_body(void *baton, apr_pool_t *pool)
      not existing as a key, the lock just having been expired}.  And
      that's totally fine.  Any of these three errors are perfectly
      acceptable to ignore; it means that the path is now free and
-     clear for locking, because the fsfs funcs just cleared out both
+     clear for locking, because the fsx funcs just cleared out both
      of the tables for us.   */
   SVN_ERR(get_lock_helper(lb->fs, &existing_lock, lb->path, TRUE, pool));
   if (existing_lock)
@@ -1013,7 +1013,7 @@ typedef struct get_locks_filter_baton_t
    BATON->requested_depth of BATON->path before called
    BATON->get_locks_func() with BATON->get_locks_baton.
 
-   NOTE: See issue #3660 for details about how the FSFS lock
+   NOTE: See issue #3660 for details about how the FSX lock
    management code is inconsistent.  Until that inconsistency is
    resolved, we take this filtering approach rather than honoring
    depth requests closer to the crawling code.  In other words, once

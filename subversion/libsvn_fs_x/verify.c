@@ -1,4 +1,4 @@
-/* verify.c --- verification of FSFS filesystems
+/* verify.c --- verification of FSX filesystems
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

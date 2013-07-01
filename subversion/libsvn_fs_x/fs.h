@@ -50,7 +50,7 @@ extern "C" {
 /* Following are defines that specify the textual elements of the
    native filesystem directories and revision files. */
 
-/* Names of special files in the fs_fs filesystem. */
+/* Names of special files in the fs_x filesystem. */
 #define PATH_FORMAT           "format"           /* Contains format number */
 #define PATH_UUID             "uuid"             /* Contains UUID */
 #define PATH_CURRENT          "current"          /* Youngest revision */
@@ -96,7 +96,7 @@ extern "C" {
 #define PATH_REV           "rev"           /* Proto rev file */
 #define PATH_REV_LOCK      "rev-lock"      /* Proto rev (write) lock file */
 
-/* Names of sections and options in fsfs.conf. */
+/* Names of sections and options in fsx.conf. */
 #define CONFIG_SECTION_CACHES            "caches"
 #define CONFIG_OPTION_FAIL_STOP          "fail-stop"
 #define CONFIG_SECTION_REP_SHARING       "rep-sharing"
@@ -119,7 +119,7 @@ extern "C" {
    independent of any other FS back ends. */
 #define SVN_FS_X__FORMAT_NUMBER   1
 
-/* Private FSFS-specific data shared between all svn_txn_t objects that
+/* Private FSX-specific data shared between all svn_txn_t objects that
    relate to a particular transaction in a filesystem (as identified
    by transaction id and filesystem UUID).  Objects of this type are
    allocated in their own subpool of the common pool. */
@@ -154,7 +154,7 @@ typedef struct fs_x_shared_txn_data_t
 #define SVN_FS_X__USE_LOCK_MUTEX 0
 #endif
 
-/* Private FSFS-specific data shared between all svn_fs_t objects that
+/* Private FSX-specific data shared between all svn_fs_t objects that
    relate to a particular filesystem, as identified by filesystem UUID.
    Objects of this type are allocated in the common pool. */
 typedef struct fs_x_shared_data_t
@@ -222,7 +222,7 @@ typedef struct window_cache_key_t
   apr_uint64_t item_index;
 } window_cache_key_t;
 
-/* Private (non-shared) FSFS-specific data for each svn_fs_t object.
+/* Private (non-shared) FSX-specific data for each svn_fs_t object.
    Any caches in here may be NULL. */
 typedef struct fs_x_data_t
 {
@@ -244,7 +244,7 @@ typedef struct fs_x_data_t
   /* The revision that was youngest, last time we checked. */
   svn_revnum_t youngest_rev_cache;
 
-  /* The fsfs.conf file, parsed.  Allocated in FS->pool. */
+  /* The fsx.conf file, parsed.  Allocated in FS->pool. */
   svn_config_t *config;
 
   /* Caches of immutable data.  (Note that if these are created with
@@ -372,7 +372,7 @@ typedef struct fs_x_data_t
   svn_atomic_t rep_cache_db_opened;
 
   /* The oldest revision not in a pack file.  It also applies to revprops
-   * if revprop packing has been enabled by the FSFS format version. */
+   * if revprop packing has been enabled by the FSX format version. */
   svn_revnum_t min_unpacked_rev;
 
   /* Whether rep-sharing is supported by the filesystem

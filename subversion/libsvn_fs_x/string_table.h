@@ -1,4 +1,4 @@
-/* string_table.h : interface to string tables, private to libsvn_fs_fs
+/* string_table.h : interface to string tables, private to libsvn_fs_x
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -37,7 +37,7 @@ extern "C" {
  * stuff all the strings in there and let it then do the heavy lifting of
  * classification and compression to create the actual string table object.
  *
- * We will use this for the various path values in FSFS change lists and
+ * We will use this for the various path values in FSX change lists and
  * node revision items.
  */
 

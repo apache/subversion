@@ -1,4 +1,4 @@
-/* cached_data.c --- cached (read) access to FSFS data
+/* cached_data.c --- cached (read) access to FSX data
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -671,7 +671,7 @@ create_rep_state(rep_state_t **rep_state,
       /* ### This always returns "-1" for transaction reps, because
          ### this particular bit of code doesn't know if the rep is
          ### stored in the protorev or in the mutable area (for props
-         ### or dir contents).  It is pretty rare for FSFS to *read*
+         ### or dir contents).  It is pretty rare for FSX to *read*
          ### from the protorev file, though, so this is probably OK.
          ### And anyone going to debug corruption errors is probably
          ### going to jump straight to this comment anyway! */
@@ -824,7 +824,7 @@ get_window_key(window_cache_key_t *key, rep_state_t *rs)
 }
 
 /* Read the WINDOW_P number CHUNK_INDEX for the representation given in
- * rep state RS from the current FSFS session's cache.  This will be a
+ * rep state RS from the current FSX session's cache.  This will be a
  * no-op and IS_CACHED will be set to FALSE if no cache has been given.
  * If a cache is available IS_CACHED will inform the caller about the
  * success of the lookup. Allocations (of the window in particualar) will
@@ -938,7 +938,7 @@ get_cached_window(svn_txdelta_window_t **window_p,
 }
 
 /* Store the WINDOW read for the rep state RS with the given START_OFFSET
- * within the pack / rev file in the current FSFS session's cache.  This
+ * within the pack / rev file in the current FSX session's cache.  This
  * will be a no-op if no cache has been given.
  * Temporary allocations will be made from SCRATCH_POOL. */
 static svn_error_t *
@@ -968,7 +968,7 @@ set_cached_window(svn_txdelta_window_t *window,
   return SVN_NO_ERROR;
 }
 
-/* Read the WINDOW_P for the rep state RS from the current FSFS session's
+/* Read the WINDOW_P for the rep state RS from the current FSX session's
  * cache. This will be a no-op and IS_CACHED will be set to FALSE if no
  * cache has been given. If a cache is available IS_CACHED will inform
  * the caller about the success of the lookup. Allocations (of the window
@@ -999,7 +999,7 @@ get_cached_combined_window(svn_stringbuf_t **window_p,
   return SVN_NO_ERROR;
 }
 
-/* Store the WINDOW read for the rep state RS in the current FSFS session's
+/* Store the WINDOW read for the rep state RS in the current FSX session's
  * cache. This will be a no-op if no cache has been given.
  * Temporary allocations will be made from SCRATCH_POOL. */
 static svn_error_t *
@@ -2085,7 +2085,7 @@ get_dir_contents(apr_hash_t *entries,
 
 
 /* Given a hash STR_ENTRIES with values as svn_string_t as specified
-   in an FSFS directory contents listing, return a hash of dirents in
+   in an FSX directory contents listing, return a hash of dirents in
    *ENTRIES_P.  Use ID to generate more helpful error messages.
    Perform allocations in POOL. */
 static svn_error_t *

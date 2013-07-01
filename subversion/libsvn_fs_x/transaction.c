@@ -1,4 +1,4 @@
-/* transaction.c --- transaction-related functions of FSFS
+/* transaction.c --- transaction-related functions of FSX
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -60,7 +60,7 @@ static txn_vtable_t txn_vtable = {
   svn_fs_x__change_txn_props
 };
 
-/* FSFS-specific data being attached to svn_fs_txn_t.
+/* FSX-specific data being attached to svn_fs_txn_t.
  */
 typedef struct fs_txn_data_t
 {
@@ -612,7 +612,7 @@ unparse_dir_entry(svn_node_kind_t kind, const svn_fs_id_t *id,
 
 /* Given a hash ENTRIES of dirent structions, return a hash in
    *STR_ENTRIES_P, that has svn_string_t as the values in the format
-   specified by the fs_fs directory contents file.  Perform
+   specified by the fs_x directory contents file.  Perform
    allocations in POOL. */
 static svn_error_t *
 unparse_dir_entries(apr_hash_t **str_entries_p,
@@ -2583,7 +2583,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
       SVN_ERR(svn_fs_x__rep_contents_dir(&entries, fs, noderev, pool));
       /* For the sake of the repository administrator sort the entries
          so that the final file is deterministic and repeatable,
-         however the rest of the FSFS code doesn't require any
+         however the rest of the FSX code doesn't require any
          particular order here. */
       sorted_entries = svn_sort__hash(entries, svn_sort_compare_items_lexically,
                                       pool);

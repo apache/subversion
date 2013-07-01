@@ -281,7 +281,7 @@ init_callbacks(svn_cache__t *cache,
 #ifdef SVN_DEBUG_CACHE_DUMP_STATS
 
       /* schedule printing the access statistics upon pool cleanup,
-       * i.e. end of FSFS session.
+       * i.e. end of FSX session.
        */
       struct dump_cache_baton_t *baton;
 
@@ -414,7 +414,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
 #ifdef SVN_DEBUG_CACHE_DUMP_STATS
 
   /* schedule printing the global access statistics upon pool cleanup,
-    * i.e. end of FSFS session.
+    * i.e. end of FSX session.
     */
   if (membuffer)
     apr_pool_cleanup_register(pool,
@@ -826,7 +826,7 @@ svn_fs_x__initialize_txn_caches(svn_fs_t *fs,
                                    (char *)NULL);
 
   /* We don't support caching for concurrent transactions in the SAME
-   * FSFS session. Maybe, you forgot to clean POOL. */
+   * FSX session. Maybe, you forgot to clean POOL. */
   if (ffd->txn_dir_cache != NULL || ffd->concurrent_transactions)
     {
       ffd->txn_dir_cache = NULL;

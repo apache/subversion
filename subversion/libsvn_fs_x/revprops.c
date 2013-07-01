@@ -1,4 +1,4 @@
-/* revprops.c --- everything needed to handle revprops in FSFS
+/* revprops.c --- everything needed to handle revprops in FSX
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -1490,7 +1490,7 @@ svn_fs_x__packed_revprop_available(svn_boolean_t *missing,
 }
 
 
-/****** Packing FSFS shards *********/
+/****** Packing FSX shards *********/
 
 /* Copy revprop files for revisions [START_REV, END_REV) from SHARD_PATH
  * to the pack file at PACK_FILE_NAME in PACK_FILE_DIR.

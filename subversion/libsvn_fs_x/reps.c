@@ -1,4 +1,4 @@
-/* reps.c --- FSFS representation container
+/* reps.c --- FSX representation container
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

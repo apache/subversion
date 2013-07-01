@@ -1,4 +1,4 @@
-/* recovery.c --- FSFS recovery functionality
+/* recovery.c --- FSX recovery functionality
 *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -155,7 +155,7 @@ recover_body(void *baton, apr_pool_t *pool)
      list, looking in particular working copies, etc.
 
      This policy matches well with a typical naive backup scenario.
-     Say you're rsyncing your FSFS repository nightly to the same
+     Say you're rsyncing your FSX repository nightly to the same
      location.  Once revs and revprops are written, you've got the
      maximum rev; if the backup should bomb before db/current is
      written, then db/current could stay arbitrarily out-of-date, but
@@ -227,7 +227,7 @@ svn_fs_x__recover(svn_fs_t *fs,
 {
   struct recover_baton b;
 
-  /* We have no way to take out an exclusive lock in FSFS, so we're
+  /* We have no way to take out an exclusive lock in FSX, so we're
      restricted as to the types of recovery we can do.  Luckily,
      we just want to recreate the 'current' file, and we can do that just
      by blocking other writers. */

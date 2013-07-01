@@ -1,4 +1,4 @@
-/* pack.c --- FSFS shard packing functionality
+/* pack.c --- FSX shard packing functionality
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

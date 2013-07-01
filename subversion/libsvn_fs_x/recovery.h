@@ -1,4 +1,4 @@
-/* recovery.h : interface to the FSFS recovery functionality
+/* recovery.h : interface to the FSX recovery functionality
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -25,7 +25,7 @@
 
 #include "fs.h"
 
-/* Recover the fsfs associated with filesystem FS.
+/* Recover the fsx associated with filesystem FS.
    Use optional CANCEL_FUNC/CANCEL_BATON for cancellation support.
    Use POOL for temporary allocations. */
 svn_error_t *svn_fs_x__recover(svn_fs_t *fs,

@@ -2171,7 +2171,7 @@ svn_fs_x__deltify(svn_fs_t *fs,
                   svn_revnum_t revision,
                   apr_pool_t *pool)
 {
-  /* Deltify is a no-op for fs_fs. */
+  /* Deltify is a no-op for fs_x. */
 
   return SVN_NO_ERROR;
 }
@@ -2209,7 +2209,7 @@ x_dir_optimal_order(apr_array_header_t **ordered_p,
   return SVN_NO_ERROR;
 }
 
-/* Raise an error if PATH contains a newline because FSFS cannot handle
+/* Raise an error if PATH contains a newline because FSX cannot handle
  * such paths. See issue #4340. */
 static svn_error_t *
 check_newline(const char *path, apr_pool_t *pool)
@@ -2335,7 +2335,7 @@ x_delete_node(svn_fs_root_t *root,
 
 /* Set *SAME_P to TRUE if FS1 and FS2 have the same UUID, else set to FALSE.
    Use POOL for temporary allocation only.
-   Note: this code is duplicated between libsvn_fs_fs and libsvn_fs_base. */
+   Note: this code is duplicated between libsvn_fs_x and libsvn_fs_base. */
 static svn_error_t *
 x_same_p(svn_boolean_t *same_p,
          svn_fs_t *fs1,
@@ -4315,7 +4315,7 @@ svn_fs_x__verify_root(svn_fs_root_t *root,
      (and elsewhere).  This code makes more thorough checks than the
      commit-time checks in validate_root_noderev(). */
 
-  /* Callers should disable caches by setting SVN_FS_CONFIG_FSFS_CACHE_NS;
+  /* Callers should disable caches by setting SVN_FS_CONFIG_FSX_CACHE_NS;
      see r1462436.
 
      When this code is called in the library, we want to ensure we
