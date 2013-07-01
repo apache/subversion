@@ -2660,7 +2660,7 @@ typedef struct svn_fs_fsfs_info_t {
   /** Shard size, or 0 if the filesystem is not currently sharded. */
   int shard_size;
 
-  /** The smallest revision (as #svn_revnum_t) which is not in a pack file.
+  /** The smallest revision which is not in a pack file.
    * @note Zero (0) if (but not iff) the format does not support packing. */
   svn_revnum_t min_unpacked_rev;
 
@@ -2688,7 +2688,7 @@ typedef struct svn_fs_fsx_info_t {
   /** Shard size, always > 0. */
   int shard_size;
 
-  /** The smallest revision (as #svn_revnum_t) which is not in a pack file. */
+  /** The smallest revision which is not in a pack file. */
   svn_revnum_t min_unpacked_rev;
 
   /* If you add fields here, check whether you need to extend svn_fs_info()
