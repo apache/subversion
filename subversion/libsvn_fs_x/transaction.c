@@ -2668,10 +2668,15 @@ write_final_rev(const svn_fs_id_t **new_id_p,
     noderev->copyroot_rev = rev;
 
   SVN_ERR(svn_fs_x__get_file_offset(&my_offset, file, pool));
-
-  /* reference the root noderev from the log-to-phys index */
-  rev_item.number = SVN_FS_X__ITEM_INDEX_ROOT_NODE;
-  SVN_ERR(store_l2p_index_entry(fs, txn_id, my_offset, rev_item.number,
+  if (at_root)
+    {
+      /* reference the root noderev from the log-to-phys index */
+      rev_item.number = SVN_FS_X__ITEM_INDEX_ROOT_NODE;
+      SVN_ERR(store_l2p_index_entry(fs, txn_id, my_offset, rev_item.number,
+                                    pool));
+    }
+  else
+    SVN_ERR(allocate_item_index(&rev_item.number, fs, txn_id, my_offset,
                                 pool));
 
   rev_item.revision = rev;
