@@ -62,6 +62,8 @@ typedef struct svn_ra_local__session_baton_t
   /* Callbacks/baton passed to svn_ra_open. */
   const svn_ra_callbacks2_t *callbacks;
   void *callback_baton;
+
+  const char *useragent;
 } svn_ra_local__session_baton_t;
 
 

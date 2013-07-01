@@ -709,10 +709,8 @@ fp.close()"""
                     '  bogus_rev_prop\n',
                     '  svn:date\n',
                     '  svn:txn-client-compat-version\n',
+                    '  svn:txn-user-agent\n',
                     ]
-  # ra_dav and ra_svn add the user-agent ephemeral property
-  if svntest.main.is_ra_type_dav() or svntest.main.is_ra_type_svn():
-    expected_data.append('  svn:txn-user-agent\n')
   verify_logfile(logfilepath, svntest.verify.UnorderedOutput(expected_data))
 
 def property_delete(sbox):
