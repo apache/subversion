@@ -472,6 +472,7 @@ svn_fs_x__string_table_create(const string_table_builder_t *builder,
    content to be preserved starts at byte I within the current chunk.
    This is used to work around alignment issues.
  */
+#if SVN_UNALIGNED_ACCESS_IS_OK
 static const char *copy_masks[8] = { "\xff\xff\xff\xff\xff\xff\xff\xff",
                                      "\x00\xff\xff\xff\xff\xff\xff\xff",
                                      "\x00\x00\xff\xff\xff\xff\xff\xff",
@@ -480,6 +481,7 @@ static const char *copy_masks[8] = { "\xff\xff\xff\xff\xff\xff\xff\xff",
                                      "\x00\x00\x00\x00\x00\xff\xff\xff",
                                      "\x00\x00\x00\x00\x00\x00\xff\xff",
                                      "\x00\x00\x00\x00\x00\x00\x00\xff" };
+#endif
 
 static void
 table_copy_string(char *buffer,
