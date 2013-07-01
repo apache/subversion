@@ -802,16 +802,13 @@ svn_fs_x__create(svn_fs_t *fs,
   /* See if compatibility with older versions was explicitly requested. */
   if (fs->config)
     {
-      if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE))
-        format = 1;
-      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE))
-        format = 2;
-      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE))
-        format = 3;
-      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE))
-        format = 4;
-      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_9_COMPATIBLE))
-        format = 6;
+      if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE)
+          || svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE)
+          || svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE)
+          || svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE)
+          || svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_9_COMPATIBLE))
+        return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+                 _("FSX is not compatible with Subversion prior to 1.9"));
     }
   ffd->format = format;
   ffd->max_files_per_dir = SVN_FS_X_DEFAULT_MAX_FILES_PER_DIR;
