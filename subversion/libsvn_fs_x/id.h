@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS_FS_ID_H
-#define SVN_LIBSVN_FS_FS_ID_H
+#ifndef SVN_LIBSVN_FS_X_ID_H
+#define SVN_LIBSVN_FS_X_ID_H
 
 #include "svn_fs.h"
 
@@ -171,4 +171,4 @@ svn_fs_x__id_deserialize(void *buffer,
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_FS_FS_ID_H */
+#endif /* SVN_LIBSVN_FS_X_ID_H */
