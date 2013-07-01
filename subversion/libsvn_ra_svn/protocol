@@ -296,6 +296,8 @@ second place for auth-request point as noted below.
     After auth exchange completes, server sends commit-info.
     commit-info: ( new-rev:number date:string author:string
                    ? ( post-commit-err:string ) )
+    NOTE: when revving this, make 'logmsg' optional, or delete that parameter
+          and have the log message specified in 'rev-props'.
 
   get-file
     params:   ( path:string [ rev:number ] want-props:bool want-contents:bool
