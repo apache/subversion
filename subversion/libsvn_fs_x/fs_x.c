@@ -575,21 +575,6 @@ svn_fs_x__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   return get_youngest(&(ffd->youngest_rev_cache), path, pool);
 }
 
-/* Wrapper around svn_io_file_create which ignores EEXIST. */
-static svn_error_t *
-create_file_ignore_eexist(const char *file,
-                          const char *contents,
-                          apr_pool_t *pool)
-{
-  svn_error_t *err = svn_io_file_create(file, contents, pool);
-  if (err && APR_STATUS_IS_EEXIST(err->apr_err))
-    {
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
-    }
-  return svn_error_trace(err);
-}
-
 /* Baton type bridging svn_fs_x__upgrade and upgrade_body carrying 
  * parameters over between them. */
 struct upgrade_baton_t
@@ -606,100 +591,16 @@ upgrade_body(void *baton, apr_pool_t *pool)
 {
   struct upgrade_baton_t *upgrade_baton = baton;
   svn_fs_t *fs = upgrade_baton->fs;
-  fs_x_data_t *ffd = fs->fsap_data;
   int format, max_files_per_dir;
   const char *format_path = svn_fs_x__path_format(fs, pool);
-  svn_node_kind_t kind;
-  svn_boolean_t needs_revprop_shard_cleanup = FALSE;
 
   /* Read the FS format number and max-files-per-dir setting. */
   SVN_ERR(read_format(&format, &max_files_per_dir, format_path, pool));
   SVN_ERR(check_format(format));
 
-  /* If the config file does not exist, create one. */
-  SVN_ERR(svn_io_check_path(svn_dirent_join(fs->path, PATH_CONFIG, pool),
-                            &kind, pool));
-  switch (kind)
-    {
-    case svn_node_none:
-      SVN_ERR(write_config(fs, pool));
-      break;
-    case svn_node_file:
-      break;
-    default:
-      return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
-                               _("'%s' is not a regular file."
-                                 " Please move it out of "
-                                 "the way and try again"),
-                               svn_dirent_join(fs->path, PATH_CONFIG, pool));
-    }
-
   /* If we're already up-to-date, there's nothing else to be done here. */
   if (format == SVN_FS_FS__FORMAT_NUMBER)
     return SVN_NO_ERROR;
-
-  /* If our filesystem predates the existance of the 'txn-current
-     file', make that file and its corresponding lock file. */
-  if (format < SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
-    {
-      SVN_ERR(create_file_ignore_eexist(svn_fs_x__path_txn_current(fs, pool),
-                                        "0\n", pool));
-      SVN_ERR(create_file_ignore_eexist(svn_fs_x__path_txn_current_lock(fs,
-                                                                        pool),
-                                        "", pool));
-    }
-
-  /* If our filesystem predates the existance of the 'txn-protorevs'
-     dir, make that directory.  */
-  if (format < SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
-    {
-      /* We don't use path_txn_proto_rev() here because it expects
-         we've already bumped our format. */
-      SVN_ERR(svn_io_make_dir_recursively(
-          svn_dirent_join(fs->path, PATH_TXN_PROTOS_DIR, pool), pool));
-    }
-
-  /* If our filesystem is new enough, write the min unpacked rev file. */
-  if (format < SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(svn_io_file_create(svn_fs_x__path_min_unpacked_rev(fs, pool),
-                               "0\n", pool));
-
-  /* If the file system supports revision packing but not revprop packing
-     *and* the FS has been sharded, pack the revprops up to the point that
-     revision data has been packed.  However, keep the non-packed revprop
-     files around until after the format bump */
-  if (   format >= SVN_FS_FS__MIN_PACKED_FORMAT
-      && format < SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT
-      && max_files_per_dir > 0)
-    {
-      needs_revprop_shard_cleanup = TRUE;
-      SVN_ERR(svn_fs_x__upgrade_pack_revprops(fs,
-                                              upgrade_baton->notify_func,
-                                              upgrade_baton->notify_baton,
-                                              upgrade_baton->cancel_func,
-                                              upgrade_baton->cancel_baton,
-                                              pool));
-    }
-
-  /* Bump the format file. */
-
-  ffd->format = SVN_FS_FS__FORMAT_NUMBER;
-  ffd->max_files_per_dir = max_files_per_dir;
-  SVN_ERR(svn_fs_x__write_format(fs, TRUE, pool));
-  if (upgrade_baton->notify_func)
-    SVN_ERR(upgrade_baton->notify_func(upgrade_baton->notify_baton,
-                                       SVN_FS_FS__FORMAT_NUMBER,
-                                       svn_fs_upgrade_format_bumped,
-                                       pool));
-
-  /* Now, it is safe to remove the redundant revprop files. */
-  if (needs_revprop_shard_cleanup)
-    SVN_ERR(svn_fs_x__upgrade_cleanup_pack_revprops(fs,
-                                              upgrade_baton->notify_func,
-                                              upgrade_baton->notify_baton,
-                                              upgrade_baton->cancel_func,
-                                              upgrade_baton->cancel_baton,
-                                              pool));
 
   /* Done */
   return SVN_NO_ERROR;
