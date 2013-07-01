@@ -97,7 +97,8 @@ Candidate changes:
      Makes 'make install-tools' work when DESTDIR is set.
    Votes:
      +1: philip
-     -0: danielsh (the symlink should be absolute; see r1495329 thread)
+     -0: danielsh (the symlink should be absolute, but have $(DESTDIR) prefixed
+                   to it; see r1495329 thread)
 
  * r1492264
    Fix wrong character encoding handling of generic error messages
