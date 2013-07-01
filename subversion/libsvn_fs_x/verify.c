@@ -384,10 +384,9 @@ svn_fs_x__verify(svn_fs_t *fs,
 
   /* log/phys index consistency.  We need to check them first to make
      sure we can access the rev / pack files in format7. */
-  if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    SVN_ERR(verify_index_consistency(fs, start, end,
-                                     notify_func, notify_baton,
-                                     cancel_func, cancel_baton, pool));
+  SVN_ERR(verify_index_consistency(fs, start, end,
+                                   notify_func, notify_baton,
+                                   cancel_func, cancel_baton, pool));
 
   /* rep cache consistency */
   if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)

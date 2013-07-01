@@ -372,36 +372,15 @@ get_node_revision_body(node_revision_t **noderev_p,
                                    rev_item->number,
                                    pool);
 
-      if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-        {
-          /* block-read will parse the whole block and will also return
-             the one noderev that we need right now. */
-          SVN_ERR(block_read((void **)noderev_p, fs,
-                             rev_item->revision,
-                             rev_item->number,
-                             revision_file,
-                             pool,
-                             pool));
-          SVN_ERR(svn_io_file_close(revision_file, pool));
-        }
-      else
-        {
-          /* pre-format7 reading, parsing and caching */
-          SVN_ERR(svn_fs_x__read_noderev(noderev_p,
-                                         svn_stream_from_aprfile2(revision_file,
-                                                                  FALSE,
-                                                                  pool),
-                                         pool));
-          /* Workaround issue #4031: is-fresh-txn-root in revision files. */
-          (*noderev_p)->is_fresh_txn_root = FALSE;
-
-          /* The noderev is not in cache, yet. Add it, if caching has been enabled. */
-          if (ffd->node_revision_cache)
-            SVN_ERR(svn_cache__set(ffd->node_revision_cache,
-                                   &key,
-                                   *noderev_p,
-                                   pool));
-        }
+      /* block-read will parse the whole block and will also return
+          the one noderev that we need right now. */
+      SVN_ERR(block_read((void **)noderev_p, fs,
+                         rev_item->revision,
+                         rev_item->number,
+                         revision_file,
+                         pool,
+                         pool));
+      SVN_ERR(svn_io_file_close(revision_file, pool));
     }
 
   return SVN_NO_ERROR;
@@ -435,159 +414,14 @@ svn_fs_x__get_node_revision(node_revision_t **noderev_p,
 }
 
 
-
-/* Given a revision file REV_FILE, opened to REV in FS, find the Node-ID
-   of the header located at OFFSET and store it in *ID_P.  Allocate
-   temporary variables from POOL. */
-static svn_error_t *
-get_fs_id_at_offset(svn_fs_id_t **id_p,
-                    apr_file_t *rev_file,
-                    svn_fs_t *fs,
-                    svn_revnum_t rev,
-                    apr_off_t offset,
-                    apr_pool_t *pool)
-{
-  node_revision_t *noderev;
-
-  SVN_ERR(aligned_seek(fs, rev_file, NULL, offset, pool));
-  SVN_ERR(svn_fs_x__read_noderev(&noderev,
-                                 svn_stream_from_aprfile2(rev_file, TRUE,
-                                                          pool),
-                                 pool));
-
-  /* noderev->id is const, get rid of that */
-  *id_p = svn_fs_x__id_copy(noderev->id, pool);
-
-  /* assert that the txn_id is REV
-   * (asserting on offset would be harder because we the rev_offset is not
-   * known here) */
-  assert(svn_fs_x__id_rev(*id_p) == rev);
-
-  return SVN_NO_ERROR;
-}
-
-/* Given an open revision file REV_FILE in FS for REV, locate the trailer that
-   specifies the offset to the root node-id and to the changed path
-   information.  Store the root node offset in *ROOT_OFFSET and the
-   changed path offset in *CHANGES_OFFSET.  If either of these
-   pointers is NULL, do nothing with it.
-
-   If PACKED is true, REV_FILE should be a packed shard file.
-   ### There is currently no such parameter.  This function assumes that
-       is_packed_rev(FS, REV) will indicate whether REV_FILE is a packed
-       file.  Therefore FS->fsap_data->min_unpacked_rev must not have been
-       refreshed since REV_FILE was opened if there is a possibility that
-       revision REV may have become packed since then.
-       TODO: Take an IS_PACKED parameter instead, in order to remove this
-       requirement.
-
-   Allocate temporary variables from POOL. */
-static svn_error_t *
-get_root_changes_offset(apr_off_t *root_offset,
-                        apr_off_t *changes_offset,
-                        apr_file_t *rev_file,
-                        svn_fs_t *fs,
-                        svn_revnum_t rev,
-                        apr_pool_t *pool)
-{
-  fs_x_data_t *ffd = fs->fsap_data;
-  apr_off_t offset;
-  apr_off_t rev_offset;
-  apr_seek_where_t seek_relative;
-  svn_stringbuf_t *trailer = svn_stringbuf_create_ensure(64, pool);
-
-  /* Determine where to seek to in the file.
-
-     If we've got a pack file, we want to seek to the end of the desired
-     revision.  But we don't track that, so we seek to the beginning of the
-     next revision.
-
-     Unless the next revision is in a different file, in which case, we can
-     just seek to the end of the pack file -- just like we do in the
-     non-packed case. */
-  if (svn_fs_x__is_packed_rev(fs, rev)
-      && ((rev + 1) % ffd->max_files_per_dir != 0))
-    {
-      SVN_ERR(svn_fs_x__get_packed_offset(&offset, fs, rev + 1, pool));
-      seek_relative = APR_SET;
-    }
-  else
-    {
-      seek_relative = APR_END;
-      offset = 0;
-    }
-
-  /* Offset of the revision from the start of the pack file, if applicable. */
-  if (svn_fs_x__is_packed_rev(fs, rev))
-    SVN_ERR(svn_fs_x__get_packed_offset(&rev_offset, fs, rev, pool));
-  else
-    rev_offset = 0;
-
-  /* We will assume that the last line containing the two offsets
-     will never be longer than 64 characters. */
-  SVN_ERR(svn_io_file_seek(rev_file, seek_relative, &offset, pool));
-
-  trailer->len = trailer->blocksize-1;
-  offset -= trailer->len;
-  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
-
-  /* Read in this last block, from which we will identify the last line. */
-  SVN_ERR(svn_io_file_read(rev_file, trailer->data, &trailer->len, pool));
-  trailer->data[trailer->len] = 0;
-
-  /* Parse the last line. */
-  SVN_ERR(svn_fs_x__parse_revision_trailer(root_offset,
-                                           changes_offset,
-                                           trailer,
-                                           rev));
-
-  /* return absolute offsets */
-  if (root_offset)
-    *root_offset += rev_offset;
-  if (changes_offset)
-    *changes_offset += rev_offset;
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_fs_x__rev_get_root(svn_fs_id_t **root_id_p,
                        svn_fs_t *fs,
                        svn_revnum_t rev,
                        apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
   SVN_ERR(svn_fs_x__ensure_revision_exists(rev, fs, pool));
-
-  if (ffd->format < SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    {
-      apr_file_t *revision_file;
-      apr_off_t root_offset;
-      svn_fs_id_t *root_id = NULL;
-      svn_boolean_t is_cached;
-
-      SVN_ERR(svn_cache__get((void **) root_id_p, &is_cached,
-                            ffd->rev_root_id_cache, &rev, pool));
-      if (is_cached)
-        return SVN_NO_ERROR;
-
-      SVN_ERR(svn_fs_x__open_pack_or_rev_file(&revision_file, fs, rev, pool));
-
-      SVN_ERR(get_root_changes_offset(&root_offset, NULL, revision_file,
-                                      fs, rev, pool));
-      SVN_ERR(get_fs_id_at_offset(&root_id, revision_file, fs, rev,
-                                  root_offset, pool));
-
-      SVN_ERR(svn_io_file_close(revision_file, pool));
-
-      SVN_ERR(svn_cache__set(ffd->rev_root_id_cache, &rev, root_id, pool));
-
-      *root_id_p = root_id;
-    }
-  else
-    {
-      *root_id_p = svn_fs_x__id_create_root(rev, pool);
-    }
+  *root_id_p = svn_fs_x__id_create_root(rev, pool);
 
   return SVN_NO_ERROR;
 }
@@ -722,8 +556,7 @@ create_rep_state_body(rep_state_t **rep_state,
                                       rep->item_index, pool));
 
       /* is rep stored in some star-deltified container? */
-      if (! svn_fs_x__id_txn_used(&rep->txn_id)
-          && ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+      if (! svn_fs_x__id_txn_used(&rep->txn_id))
         {
           svn_boolean_t in_container = TRUE;
           if (sub_item == 0)
@@ -785,9 +618,8 @@ create_rep_state_body(rep_state_t **rep_state,
 
       if (! svn_fs_x__id_txn_used(&rep->txn_id))
         {
-          if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-            SVN_ERR(block_read(NULL, fs, rep->revision, rep->item_index,
-                               rs->file->file, pool, pool));
+          SVN_ERR(block_read(NULL, fs, rep->revision, rep->item_index,
+                              rs->file->file, pool, pool));
           if (ffd->rep_header_cache)
             SVN_ERR(svn_cache__set(ffd->rep_header_cache, &key, rh, pool));
         }
@@ -1417,11 +1249,8 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
      because the block is unlikely to contain other data. */
   if (rs->chunk_index == 0 && SVN_IS_VALID_REVNUM(rs->revision))
     {
-      fs_x_data_t *ffd = rs->file->fs->fsap_data;
-      
-      if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-        SVN_ERR(block_read(NULL, rs->file->fs, rs->revision, rs->item_index,
-                           rs->file->file, pool, pool));
+      SVN_ERR(block_read(NULL, rs->file->fs, rs->revision, rs->item_index,
+                         rs->file->file, pool, pool));
 
       /* reading the whole block probably also provided us with the
          desired txdelta window */
@@ -2510,7 +2339,6 @@ svn_fs_x__get_changes(apr_array_header_t **changes,
                       svn_revnum_t rev,
                       apr_pool_t *pool)
 {
-  apr_off_t changes_offset;
   apr_file_t *revision_file;
   svn_boolean_t found;
   fs_x_data_t *ffd = fs->fsap_data;
@@ -2547,29 +2375,10 @@ svn_fs_x__get_changes(apr_array_header_t **changes,
       SVN_ERR(svn_fs_x__open_pack_or_rev_file(&revision_file, fs, rev,
                                               pool));
 
-      if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-        {
-          /* 'block-read' will also provide us with the desired data */
-          SVN_ERR(block_read((void **)changes, fs,
-                            rev, SVN_FS_FS__ITEM_INDEX_CHANGES,
-                            revision_file, pool, pool));
-        }
-      else
-        {
-          /* pre-format7 code path */
-          SVN_ERR(get_root_changes_offset(NULL, &changes_offset,
-                                          revision_file, fs, rev, pool));
-          SVN_ERR(svn_io_file_seek(revision_file, APR_SET, &changes_offset,
-                                   pool));
-          SVN_ERR(svn_fs_x__read_changes(changes,
-                      svn_stream_from_aprfile2(revision_file, TRUE, pool),
-                                          pool));
-
-          /* cache for future reference */
-
-          if (ffd->changes_cache)
-            SVN_ERR(svn_cache__set(ffd->changes_cache, &rev, *changes, pool));
-        }
+      /* 'block-read' will also provide us with the desired data */
+      SVN_ERR(block_read((void **)changes, fs,
+                         rev, SVN_FS_FS__ITEM_INDEX_CHANGES,
+                         revision_file, pool, pool));
 
       SVN_ERR(svn_io_file_close(revision_file, pool));
     }

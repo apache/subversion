@@ -1588,16 +1588,12 @@ store_l2p_index_entry(svn_fs_t *fs,
                       apr_uint64_t item_index,
                       apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
-  if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    {
-      const char *path = svn_fs_x__path_l2p_proto_index(fs, txn_id, pool);
-      apr_file_t *file;
-      SVN_ERR(svn_fs_x__l2p_proto_index_open(&file, path, pool));
-      SVN_ERR(svn_fs_x__l2p_proto_index_add_entry(file, offset, 0,
-                                                  item_index, pool));
-      SVN_ERR(svn_io_file_close(file, pool));
-    }
+  const char *path = svn_fs_x__path_l2p_proto_index(fs, txn_id, pool);
+  apr_file_t *file;
+  SVN_ERR(svn_fs_x__l2p_proto_index_open(&file, path, pool));
+  SVN_ERR(svn_fs_x__l2p_proto_index_add_entry(file, offset, 0,
+                                              item_index, pool));
+  SVN_ERR(svn_io_file_close(file, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1612,15 +1608,11 @@ store_p2l_index_entry(svn_fs_t *fs,
                       svn_fs_x__p2l_entry_t *entry,
                       apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
-  if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    {
-      const char *path = svn_fs_x__path_p2l_proto_index(fs, txn_id, pool);
-      apr_file_t *file;
-      SVN_ERR(svn_fs_x__p2l_proto_index_open(&file, path, pool));
-      SVN_ERR(svn_fs_x__p2l_proto_index_add_entry(file, entry, pool));
-      SVN_ERR(svn_io_file_close(file, pool));
-    }
+  const char *path = svn_fs_x__path_p2l_proto_index(fs, txn_id, pool);
+  apr_file_t *file;
+  SVN_ERR(svn_fs_x__p2l_proto_index_open(&file, path, pool));
+  SVN_ERR(svn_fs_x__p2l_proto_index_add_entry(file, entry, pool));
+  SVN_ERR(svn_io_file_close(file, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1639,42 +1631,34 @@ allocate_item_index(apr_uint64_t *item_index,
                     apr_off_t my_offset,
                     apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
-  if (ffd->format < SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    {
-      *item_index = (apr_uint64_t)my_offset;
-    }
+  apr_file_t *file;
+  char buffer[SVN_INT64_BUFFER_SIZE] = { 0 };
+  svn_boolean_t eof = FALSE;
+  apr_size_t to_write;
+  apr_size_t read;
+  apr_off_t offset = 0;
+
+  /* read number, increment it and write it back to disk */
+  SVN_ERR(svn_io_file_open(&file,
+                            svn_fs_x__path_txn_item_index(fs, txn_id, pool),
+                            APR_READ | APR_WRITE
+                            | APR_CREATE | APR_BUFFERED,
+                            APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_io_file_read_full2(file, buffer, sizeof(buffer)-1,
+                                  &read, &eof, pool));
+  if (read)
+    SVN_ERR(svn_cstring_atoui64(item_index, buffer));
   else
-    {
-      apr_file_t *file;
-      char buffer[SVN_INT64_BUFFER_SIZE] = { 0 };
-      svn_boolean_t eof = FALSE;
-      apr_size_t to_write;
-      apr_size_t read;
-      apr_off_t offset = 0;
+    *item_index = SVN_FS_FS__ITEM_INDEX_FIRST_USER;
 
-      /* read number, increment it and write it back to disk */
-      SVN_ERR(svn_io_file_open(&file,
-                               svn_fs_x__path_txn_item_index(fs, txn_id, pool),
-                               APR_READ | APR_WRITE
-                               | APR_CREATE | APR_BUFFERED,
-                               APR_OS_DEFAULT, pool));
-      SVN_ERR(svn_io_file_read_full2(file, buffer, sizeof(buffer)-1,
-                                     &read, &eof, pool));
-      if (read)
-        SVN_ERR(svn_cstring_atoui64(item_index, buffer));
-      else
-        *item_index = SVN_FS_FS__ITEM_INDEX_FIRST_USER;
+  to_write = svn__ui64toa(buffer, *item_index + 1);
+  SVN_ERR(svn_io_file_seek(file, SEEK_SET, &offset, pool));
+  SVN_ERR(svn_io_file_write_full(file, buffer, to_write, NULL, pool));
+  SVN_ERR(svn_io_file_close(file, pool));
 
-      to_write = svn__ui64toa(buffer, *item_index + 1);
-      SVN_ERR(svn_io_file_seek(file, SEEK_SET, &offset, pool));
-      SVN_ERR(svn_io_file_write_full(file, buffer, to_write, NULL, pool));
-      SVN_ERR(svn_io_file_close(file, pool));
-
-      /* write log-to-phys index */
-      SVN_ERR(store_l2p_index_entry(fs, txn_id, my_offset, *item_index,
-                                    pool));
-    }
+  /* write log-to-phys index */
+  SVN_ERR(store_l2p_index_entry(fs, txn_id, my_offset, *item_index,
+                                pool));
 
   return SVN_NO_ERROR;
 }
@@ -2688,6 +2672,8 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   svn_fs_x__id_part_t node_id, copy_id, rev_item;
   fs_x_data_t *ffd = fs->fsap_data;
   const svn_fs_x__id_part_t *txn_id = svn_fs_x__id_txn_id(id);
+  svn_fs_x__p2l_entry_t entry;
+
   *new_id_p = NULL;
 
   /* Check to see if this is a transaction node. */
@@ -2759,17 +2745,6 @@ write_final_rev(const svn_fs_id_t **new_id_p,
         {
           svn_fs_x__id_txn_reset(&noderev->data_rep->txn_id);
           noderev->data_rep->revision = rev;
-
-          if (ffd->format < SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-            {
-              /* See issue 3845.  Some unknown mechanism caused the
-                 protorev file to get truncated, so check for that
-                 here.  */
-              if (noderev->data_rep->item_index + noderev->data_rep->size
-                  > initial_offset)
-                return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                        _("Truncated protorev file detected"));
-            }
         }
     }
 
@@ -2805,15 +2780,10 @@ write_final_rev(const svn_fs_id_t **new_id_p,
     noderev->copyroot_rev = rev;
 
   SVN_ERR(svn_fs_x__get_file_offset(&my_offset, file, pool));
-  if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT && at_root)
-    {
-      /* reference the root noderev from the log-to-phys index */
-      rev_item.number = SVN_FS_FS__ITEM_INDEX_ROOT_NODE;
-      SVN_ERR(store_l2p_index_entry(fs, txn_id, my_offset, rev_item.number,
-                                    pool));
-    }
-  else
-    SVN_ERR(allocate_item_index(&rev_item.number, fs, txn_id, my_offset,
+
+  /* reference the root noderev from the log-to-phys index */
+  rev_item.number = SVN_FS_FS__ITEM_INDEX_ROOT_NODE;
+  SVN_ERR(store_l2p_index_entry(fs, txn_id, my_offset, rev_item.number,
                                 pool));
 
   rev_item.revision = rev;
@@ -2869,20 +2839,16 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                                   pool));
 
   /* reference the root noderev from the log-to-phys index */
-  if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    {
-      svn_fs_x__p2l_entry_t entry;
-      rev_item.revision = SVN_INVALID_REVNUM;
+  rev_item.revision = SVN_INVALID_REVNUM;
 
-      entry.offset = my_offset;
-      SVN_ERR(svn_fs_x__get_file_offset(&my_offset, file, pool));
-      entry.size = my_offset - entry.offset;
-      entry.type = SVN_FS_FS__ITEM_TYPE_NODEREV;
-      entry.item_count = 1;
-      entry.items = &rev_item;
+  entry.offset = my_offset;
+  SVN_ERR(svn_fs_x__get_file_offset(&my_offset, file, pool));
+  entry.size = my_offset - entry.offset;
+  entry.type = SVN_FS_FS__ITEM_TYPE_NODEREV;
+  entry.item_count = 1;
+  entry.items = &rev_item;
 
-      SVN_ERR(store_p2l_index_entry(fs, txn_id, &entry, pool));
-    }
+  SVN_ERR(store_p2l_index_entry(fs, txn_id, &entry, pool));
 
   /* Return our ID that references the revision file. */
   *new_id_p = noderev->id;
@@ -2903,35 +2869,28 @@ write_final_changed_path_info(apr_off_t *offset_p,
 {
   apr_hash_t *changed_paths;
   apr_off_t offset;
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__p2l_entry_t entry;
+  svn_fs_x__id_part_t rev_item
+    = {SVN_INVALID_REVNUM, SVN_FS_FS__ITEM_INDEX_CHANGES};
 
   SVN_ERR(svn_fs_x__get_file_offset(&offset, file, pool));
-
   SVN_ERR(svn_fs_x__txn_changes_fetch(&changed_paths, fs, txn_id, pool));
-
   SVN_ERR(svn_fs_x__write_changes(svn_stream_from_aprfile2(file, TRUE, pool),
                                   fs, changed_paths, TRUE, pool));
 
   *offset_p = offset;
 
   /* reference changes from the indexes */
-  if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    {
-      svn_fs_x__p2l_entry_t entry;
-      svn_fs_x__id_part_t rev_item
-        = {SVN_INVALID_REVNUM, SVN_FS_FS__ITEM_INDEX_CHANGES};
+  entry.offset = offset;
+  SVN_ERR(svn_fs_x__get_file_offset(&offset, file, pool));
+  entry.size = offset - entry.offset;
+  entry.type = SVN_FS_FS__ITEM_TYPE_CHANGES;
+  entry.item_count = 1;
+  entry.items = &rev_item;
 
-      entry.offset = offset;
-      SVN_ERR(svn_fs_x__get_file_offset(&offset, file, pool));
-      entry.size = offset - entry.offset;
-      entry.type = SVN_FS_FS__ITEM_TYPE_CHANGES;
-      entry.item_count = 1;
-      entry.items = &rev_item;
-
-      SVN_ERR(store_p2l_index_entry(fs, txn_id, &entry, pool));
-      SVN_ERR(store_l2p_index_entry(fs, txn_id, entry.offset,
-                                    SVN_FS_FS__ITEM_INDEX_CHANGES, pool));
-    }
+  SVN_ERR(store_p2l_index_entry(fs, txn_id, &entry, pool));
+  SVN_ERR(store_l2p_index_entry(fs, txn_id, entry.offset,
+                                SVN_FS_FS__ITEM_INDEX_CHANGES, pool));
 
   return SVN_NO_ERROR;
 }
@@ -3156,29 +3115,6 @@ commit_body(void *baton, apr_pool_t *pool)
   SVN_ERR(write_final_changed_path_info(&changed_path_offset, proto_file,
                                         cb->fs, txn_id, pool));
 
-  if (ffd->format < SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    {
-      /* Write the final line. */
-
-      svn_stringbuf_t *trailer;
-      apr_off_t root_offset;
-      apr_uint32_t sub_item;
-      SVN_ERR(svn_fs_x__item_offset(&root_offset,
-                                    &sub_item,
-                                    cb->fs,
-                                    svn_fs_x__id_rev(new_root_id),
-                                    NULL,
-                                    svn_fs_x__id_item(new_root_id),
-                                    pool));
-      SVN_ERR_ASSERT(sub_item == 0);
-      trailer = svn_fs_x__unparse_revision_trailer
-                  (root_offset,
-                   changed_path_offset,
-                   pool);
-      SVN_ERR(svn_io_file_write_full(proto_file, trailer->data, trailer->len,
-                                     NULL, pool));
-    }
-
   SVN_ERR(svn_io_file_flush_to_disk(proto_file, pool));
   SVN_ERR(svn_io_file_close(proto_file, pool));
 
@@ -3241,19 +3177,16 @@ commit_body(void *baton, apr_pool_t *pool)
         }
     }
 
-  if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    {
-      /* Convert the index files from the proto format into their form
-         in their final location */
-      SVN_ERR(svn_fs_x__l2p_index_create(cb->fs,
-                       svn_fs_x__path_l2p_index(cb->fs, new_rev, pool),
-                       svn_fs_x__path_l2p_proto_index(cb->fs, txn_id, pool),
-                       new_rev, pool));
-      SVN_ERR(svn_fs_x__p2l_index_create(cb->fs,
-                       svn_fs_x__path_p2l_index(cb->fs, new_rev, pool),
-                       svn_fs_x__path_p2l_proto_index(cb->fs, txn_id, pool),
-                       new_rev, pool));
-    }
+  /* Convert the index files from the proto format into their form
+      in their final location */
+  SVN_ERR(svn_fs_x__l2p_index_create(cb->fs,
+                    svn_fs_x__path_l2p_index(cb->fs, new_rev, pool),
+                    svn_fs_x__path_l2p_proto_index(cb->fs, txn_id, pool),
+                    new_rev, pool));
+  SVN_ERR(svn_fs_x__p2l_index_create(cb->fs,
+                    svn_fs_x__path_p2l_index(cb->fs, new_rev, pool),
+                    svn_fs_x__path_p2l_proto_index(cb->fs, txn_id, pool),
+                    new_rev, pool));
 
   /* Move the finished rev file into place. */
   old_rev_filename = svn_fs_x__path_rev_absolute(cb->fs, old_rev, pool);

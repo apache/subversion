@@ -327,32 +327,22 @@ read_config(fs_x_data_t *ffd,
       ffd->compress_packed_revprops = FALSE;
     }
 
-  if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    {
-      SVN_ERR(svn_config_get_int64(ffd->config, &ffd->block_size,
-                                   CONFIG_SECTION_IO,
-                                   CONFIG_OPTION_BLOCK_SIZE,
-                                   64));
-      SVN_ERR(svn_config_get_int64(ffd->config, &ffd->l2p_page_size,
-                                   CONFIG_SECTION_IO,
-                                   CONFIG_OPTION_L2P_PAGE_SIZE,
-                                   0x2000));
-      SVN_ERR(svn_config_get_int64(ffd->config, &ffd->p2l_page_size,
-                                   CONFIG_SECTION_IO,
-                                   CONFIG_OPTION_P2L_PAGE_SIZE,
-                                   64));
+  SVN_ERR(svn_config_get_int64(ffd->config, &ffd->block_size,
+                                CONFIG_SECTION_IO,
+                                CONFIG_OPTION_BLOCK_SIZE,
+                                64));
+  SVN_ERR(svn_config_get_int64(ffd->config, &ffd->l2p_page_size,
+                                CONFIG_SECTION_IO,
+                                CONFIG_OPTION_L2P_PAGE_SIZE,
+                                0x2000));
+  SVN_ERR(svn_config_get_int64(ffd->config, &ffd->p2l_page_size,
+                                CONFIG_SECTION_IO,
+                                CONFIG_OPTION_P2L_PAGE_SIZE,
+                                64));
 
-      ffd->block_size *= 0x400;
-      ffd->p2l_page_size *= 0x400;
-    }
-  else
-    {
-      /* should be irrelevant but we initialize them anyway */
-      ffd->block_size = 0x1000;
-      ffd->l2p_page_size = 0x2000;
-      ffd->p2l_page_size = 0x1000;
-    }
-  
+  ffd->block_size *= 0x400;
+  ffd->p2l_page_size *= 0x400;
+
   return SVN_NO_ERROR;
 }
 
@@ -944,59 +934,45 @@ write_revision_zero(svn_fs_t *fs)
   const char *path_revision_zero = svn_fs_x__path_rev(fs, 0, fs->pool);
   apr_hash_t *proplist;
   svn_string_t date;
-  fs_x_data_t *ffd = fs->fsap_data;
+  const char *path;
 
   /* Write out a rev file for revision 0. */
-  if (ffd->format < SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    SVN_ERR(svn_io_file_create(path_revision_zero,
-                               "PLAIN\nEND\nENDREP\n"
-                               "id: 0.0.r0/17\n"
-                               "type: dir\n"
-                               "count: 0\n"
-                               "text: 0 0 4 4 "
-                               "2d2977d1c96f487abe4a1e202dd03b4e\n"
-                               "cpath: /\n"
-                               "\n\n17 107\n", fs->pool));
-  else
-    SVN_ERR(svn_io_file_create(path_revision_zero,
-                               "PLAIN\nEND\nENDREP\n"
-                               "id: 0.0.r0/2\n"
-                               "type: dir\n"
-                               "count: 0\n"
-                               "text: 0 3 4 4 "
-                               "2d2977d1c96f487abe4a1e202dd03b4e\n"
-                               "cpath: /\n"
-                               "\n\n", fs->pool));
+  SVN_ERR(svn_io_file_create(path_revision_zero,
+                             "PLAIN\nEND\nENDREP\n"
+                             "id: 0.0.r0/2\n"
+                             "type: dir\n"
+                             "count: 0\n"
+                             "text: 0 3 4 4 "
+                             "2d2977d1c96f487abe4a1e202dd03b4e\n"
+                             "cpath: /\n"
+                             "\n\n", fs->pool));
 
   SVN_ERR(svn_io_set_file_read_only(path_revision_zero, FALSE, fs->pool));
 
-  if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    {
-      const char *path = svn_fs_x__path_l2p_index(fs, 0, fs->pool);
-      SVN_ERR(svn_io_file_create_binary
-                 (path,
-                  "\0\1\x80\x40\1\1" /* rev 0, single page */
-                  "\5\4"             /* page size: bytes, count */
-                  "\0"               /* 0 container offsets in list */
-                  "\0\x6b\x12\1",    /* phys offsets + 1 */
-                  13,
-                  fs->pool));
-      SVN_ERR(svn_io_set_file_read_only(path, FALSE, fs->pool));
+  path = svn_fs_x__path_l2p_index(fs, 0, fs->pool);
+  SVN_ERR(svn_io_file_create_binary
+              (path,
+              "\0\1\x80\x40\1\1" /* rev 0, single page */
+              "\5\4"             /* page size: bytes, count */
+              "\0"               /* 0 container offsets in list */
+              "\0\x6b\x12\1",    /* phys offsets + 1 */
+              13,
+              fs->pool));
+  SVN_ERR(svn_io_set_file_read_only(path, FALSE, fs->pool));
 
-      path = svn_fs_x__path_p2l_index(fs, 0, fs->pool);
-      SVN_ERR(svn_io_file_create_binary
-                 (path,
-                  "\0"                /* start rev */
-                  "\x80\x80\4\1\x11"  /* 64k pages, 1 page using 17 bytes */
-                  "\0"                /* offset entry 0 page 1 */
-                  "\x11\x11\0\6"      /* len, type + 16 * count, (rev, item)* */
-                  "\x59\x15\0\4"
-                  "\1\x16\0\2"
-                  "\x95\xff\3\0",     /* last entry fills up 64k page */
-                  23,
-                  fs->pool));
-      SVN_ERR(svn_io_set_file_read_only(path, FALSE, fs->pool));
-    }
+  path = svn_fs_x__path_p2l_index(fs, 0, fs->pool);
+  SVN_ERR(svn_io_file_create_binary
+              (path,
+              "\0"                /* start rev */
+              "\x80\x80\4\1\x11"  /* 64k pages, 1 page using 17 bytes */
+              "\0"                /* offset entry 0 page 1 */
+              "\x11\x11\0\6"      /* len, type + 16 * count, (rev, item)* */
+              "\x59\x15\0\4"
+              "\1\x16\0\2"
+              "\x95\xff\3\0",     /* last entry fills up 64k page */
+              23,
+              fs->pool));
+  SVN_ERR(svn_io_set_file_read_only(path, FALSE, fs->pool));
 
   /* Set a date on revision 0. */
   date.data = svn_time_to_cstring(apr_time_now(), fs->pool);

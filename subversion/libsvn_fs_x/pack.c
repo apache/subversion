@@ -237,7 +237,6 @@ initialize_pack_context(pack_context_t *context,
   const char *temp_dir;
   apr_size_t max_revs = MIN(ffd->max_files_per_dir, (int)max_items);
   
-  SVN_ERR_ASSERT(ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT);
   SVN_ERR_ASSERT(shard_rev % ffd->max_files_per_dir == 0);
   
   /* where we will place our various temp files */
@@ -588,8 +587,8 @@ copy_rep_to_temp(pack_context_t *context,
  * trunk-related items are more likely to be contiguous.
  */
 static int
-compare_dir_entries_format7(const svn_sort__item_t *a,
-                            const svn_sort__item_t *b)
+compare_dir_entries(const svn_sort__item_t *a,
+                    const svn_sort__item_t *b)
 {
   const svn_fs_dirent_t *lhs = (const svn_fs_dirent_t *) a->value;
   const svn_fs_dirent_t *rhs = (const svn_fs_dirent_t *) b->value;
@@ -600,42 +599,13 @@ compare_dir_entries_format7(const svn_sort__item_t *a,
   return 0 - strcmp(lhs->name, rhs->name);
 }
 
-/* Directories entries sorted by revision (decreasing - to max cache hits)
- * and offset (increasing - to max benefit from APR file buffering).
- */
-static int
-compare_dir_entries_format6(const svn_sort__item_t *a,
-                            const svn_sort__item_t *b)
-{
-  const svn_fs_dirent_t *lhs = (const svn_fs_dirent_t *) a->value;
-  const svn_fs_dirent_t *rhs = (const svn_fs_dirent_t *) b->value;
-
-  const svn_fs_x__id_part_t *lhs_rev_item = svn_fs_x__id_rev_item(lhs->id);
-  const svn_fs_x__id_part_t *rhs_rev_item = svn_fs_x__id_rev_item(rhs->id);
-
-  /* decreasing ("reverse") order on revs */
-  if (lhs_rev_item->revision != rhs_rev_item->revision)
-    return lhs_rev_item->revision > rhs_rev_item->revision ? -1 : 1;
-
-  /* increasing order on offsets */
-  if (lhs_rev_item->number != rhs_rev_item->number)
-    return lhs_rev_item->number > rhs_rev_item->number ? 1 : -1;
-
-  return 0;
-}
-
 apr_array_header_t *
 svn_fs_x__order_dir_entries(svn_fs_t *fs,
                             apr_hash_t *directory,
                             apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
   apr_array_header_t *ordered
-    = svn_sort__hash(directory,
-                     ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT
-                       ? compare_dir_entries_format7
-                       : compare_dir_entries_format6,
-                     pool);
+    = svn_sort__hash(directory, compare_dir_entries, pool);
 
   apr_array_header_t *result
     = apr_array_make(pool, ordered->nelts, sizeof(svn_fs_dirent_t *));
@@ -2137,82 +2107,6 @@ svn_fs_x__get_packed_offset(apr_off_t *rev_offset,
   return svn_cache__set(ffd->packed_offset_cache, &shard, manifest, pool);
 }
 
-/* Format 6 and earlier packing logic:  Simply concatenate all revision
- * contents.
- * 
- * Pack the revision shard starting at SHARD_REV containing exactly
- * MAX_FILES_PER_DIR revisions from SHARD_PATH into the PACK_FILE_DIR,
- * using POOL for allocations.  CANCEL_FUNC and CANCEL_BATON are what you
- * think they are.
- */
-static svn_error_t *
-pack_phys_addressed(const char *pack_file_dir,
-                    const char *shard_path,
-                    svn_revnum_t start_rev,
-                    int max_files_per_dir,
-                    svn_cancel_func_t cancel_func,
-                    void *cancel_baton,
-                    apr_pool_t *pool)
-{
-  const char *pack_file_path, *manifest_file_path;
-  svn_stream_t *pack_stream, *manifest_stream;
-  svn_revnum_t end_rev, rev;
-  apr_off_t next_offset;
-  apr_pool_t *iterpool;
-
-  /* Some useful paths. */
-  pack_file_path = svn_dirent_join(pack_file_dir, PATH_PACKED, pool);
-  manifest_file_path = svn_dirent_join(pack_file_dir, PATH_MANIFEST, pool);
-
-  /* Create the new directory and pack file. */
-  SVN_ERR(svn_stream_open_writable(&pack_stream, pack_file_path, pool,
-                                    pool));
-
-  /* Create the manifest file. */
-  SVN_ERR(svn_stream_open_writable(&manifest_stream, manifest_file_path,
-                                   pool, pool));
-
-  end_rev = start_rev + max_files_per_dir - 1;
-  next_offset = 0;
-  iterpool = svn_pool_create(pool);
-
-  /* Iterate over the revisions in this shard, squashing them together. */
-  for (rev = start_rev; rev <= end_rev; rev++)
-    {
-      svn_stream_t *rev_stream;
-      apr_finfo_t finfo;
-      const char *path;
-
-      svn_pool_clear(iterpool);
-
-      /* Get the size of the file. */
-      path = svn_dirent_join(shard_path, apr_psprintf(iterpool, "%ld", rev),
-                             iterpool);
-      SVN_ERR(svn_io_stat(&finfo, path, APR_FINFO_SIZE, iterpool));
-
-      /* build manifest */
-      SVN_ERR(svn_stream_printf(manifest_stream, iterpool,
-                                "%" APR_OFF_T_FMT "\n", next_offset));
-      next_offset += finfo.size;
-
-      /* Copy all the bits from the rev file to the end of the pack file. */
-      SVN_ERR(svn_stream_open_readonly(&rev_stream, path, iterpool, iterpool));
-      SVN_ERR(svn_stream_copy3(rev_stream, svn_stream_disown(pack_stream,
-                                                             iterpool),
-                               cancel_func, cancel_baton, iterpool));
-    }
-
-  /* disallow write access to the manifest file */
-  SVN_ERR(svn_stream_close(manifest_stream));
-  SVN_ERR(svn_io_set_file_read_only(manifest_file_path, FALSE, iterpool));
-
-  SVN_ERR(svn_stream_close(pack_stream));
-
-  svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
-}
-
 /* In filesystem FS, pack the revision SHARD containing exactly
  * MAX_FILES_PER_DIR revisions from SHARD_PATH into the PACK_FILE_DIR,
  * using POOL for allocations.  Try to limit the amount of temporary
@@ -2235,7 +2129,6 @@ pack_rev_shard(svn_fs_t *fs,
                void *cancel_baton,
                apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
   const char *pack_file_path;
   svn_revnum_t shard_rev = (svn_revnum_t) (shard * max_files_per_dir);
 
@@ -2250,14 +2143,9 @@ pack_rev_shard(svn_fs_t *fs,
   SVN_ERR(svn_io_dir_make(pack_file_dir, APR_OS_DEFAULT, pool));
 
   /* Index information files */
-  if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    SVN_ERR(pack_log_addressed(fs, pack_file_dir, shard_path, shard_rev,
-                               max_mem, cancel_func, cancel_baton, pool));
-  else
-    SVN_ERR(pack_phys_addressed(pack_file_dir, shard_path, shard_rev,
-                                max_files_per_dir, cancel_func,
-                                cancel_baton, pool));
-  
+  SVN_ERR(pack_log_addressed(fs, pack_file_dir, shard_path, shard_rev,
+                              max_mem, cancel_func, cancel_baton, pool));
+
   SVN_ERR(svn_io_copy_perms(shard_path, pack_file_dir, pool));
   SVN_ERR(svn_io_set_file_read_only(pack_file_path, FALSE, pool));
 

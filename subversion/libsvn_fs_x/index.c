@@ -2683,30 +2683,12 @@ svn_fs_x__item_offset(apr_off_t *offset,
                       apr_uint64_t item_index,
                       apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
-  if (ffd->format < SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    {
-      /* older fsfs formats don't have containers */
-      *sub_item = 0;
-
-      /* older fsfs formats use the manifest file to re-map the offsets */
-      *offset = (apr_off_t)item_index;
-      if (!txn_id && svn_fs_x__is_packed_rev(fs, revision))
-        {
-          apr_off_t rev_offset;
-
-          SVN_ERR(svn_fs_x__get_packed_offset(&rev_offset, fs, revision,
-                                              pool));
-          *offset += rev_offset;
-        }
-    }
+  if (txn_id)
+    SVN_ERR(l2p_proto_index_lookup(offset, sub_item,
+                                   fs, txn_id, item_index, pool));
   else
-    if (txn_id)
-      SVN_ERR(l2p_proto_index_lookup(offset, sub_item,
-                                     fs, txn_id, item_index, pool));
-    else
-      SVN_ERR(l2p_index_lookup(offset, sub_item,
-                               fs, revision, item_index, pool));
+    SVN_ERR(l2p_index_lookup(offset, sub_item,
+                             fs, revision, item_index, pool));
 
   return SVN_NO_ERROR;
 }
