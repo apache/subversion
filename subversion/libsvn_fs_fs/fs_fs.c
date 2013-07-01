@@ -862,7 +862,6 @@ write_revision_zero(svn_fs_t *fs)
   const char *path_revision_zero = path_rev(fs, 0, fs->pool);
   apr_hash_t *proplist;
   svn_string_t date;
-  fs_fs_data_t *ffd = fs->fsap_data;
 
   /* Write out a rev file for revision 0. */
   SVN_ERR(svn_io_file_create(path_revision_zero,
