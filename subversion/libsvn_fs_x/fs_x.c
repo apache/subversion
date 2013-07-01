@@ -176,13 +176,6 @@ check_format(int format)
      SVN_FS_FS__FORMAT_NUMBER, format);
 }
 
-svn_boolean_t
-svn_fs_x__fs_supports_mergeinfo(svn_fs_t *fs)
-{
-  fs_x_data_t *ffd = fs->fsap_data;
-  return ffd->format >= SVN_FS_FS__MIN_MERGEINFO_FORMAT;
-}
-
 /* Find the youngest revision in a repository at path FS_PATH and
    return it in *YOUNGEST_P.  Perform temporary allocations in
    POOL. */

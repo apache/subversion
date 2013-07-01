@@ -558,7 +558,6 @@ svn_error_t *
 svn_fs_x__write_noderev(svn_stream_t *outfile,
                         node_revision_t *noderev,
                         int format,
-                        svn_boolean_t include_mergeinfo,
                         apr_pool_t *pool)
 {
   SVN_ERR(svn_stream_printf(outfile, pool, HEADER_ID ": %s\n",
@@ -609,16 +608,13 @@ svn_fs_x__write_noderev(svn_stream_t *outfile,
   if (noderev->is_fresh_txn_root)
     SVN_ERR(svn_stream_puts(outfile, HEADER_FRESHTXNRT ": y\n"));
 
-  if (include_mergeinfo)
-    {
-      if (noderev->mergeinfo_count > 0)
-        SVN_ERR(svn_stream_printf(outfile, pool, HEADER_MINFO_CNT ": %"
-                                  APR_INT64_T_FMT "\n",
-                                  noderev->mergeinfo_count));
+  if (noderev->mergeinfo_count > 0)
+    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_MINFO_CNT ": %"
+                              APR_INT64_T_FMT "\n",
+                              noderev->mergeinfo_count));
 
-      if (noderev->has_mergeinfo)
-        SVN_ERR(svn_stream_puts(outfile, HEADER_MINFO_HERE ": y\n"));
-    }
+  if (noderev->has_mergeinfo)
+    SVN_ERR(svn_stream_puts(outfile, HEADER_MINFO_HERE ": y\n"));
 
   return svn_stream_puts(outfile, "\n");
 }

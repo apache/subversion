@@ -553,9 +553,7 @@ svn_fs_x__put_node_revision(svn_fs_t *fs,
 
   SVN_ERR(svn_fs_x__write_noderev(svn_stream_from_aprfile2(noderev_file, TRUE,
                                                            pool),
-                                  noderev, ffd->format,
-                                  svn_fs_x__fs_supports_mergeinfo(fs),
-                                  pool));
+                                  noderev, ffd->format, pool));
 
   SVN_ERR(svn_io_file_close(noderev_file, pool));
 
@@ -2782,9 +2780,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
     SVN_ERR(validate_root_noderev(fs, noderev, rev, pool));
 
   SVN_ERR(svn_fs_x__write_noderev(svn_stream_from_aprfile2(file, TRUE, pool),
-                                  noderev, ffd->format,
-                                  svn_fs_x__fs_supports_mergeinfo(fs),
-                                  pool));
+                                  noderev, ffd->format, pool));
 
   /* reference the root noderev from the log-to-phys index */
   rev_item.revision = SVN_INVALID_REVNUM;

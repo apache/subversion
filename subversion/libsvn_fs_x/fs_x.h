@@ -107,9 +107,6 @@ svn_error_t *svn_fs_x__file_checksum(svn_checksum_t **checksum,
                                      svn_checksum_kind_t kind,
                                      apr_pool_t *pool);
 
-/* Return whether or not the given FS supports mergeinfo metadata. */
-svn_boolean_t svn_fs_x__fs_supports_mergeinfo(svn_fs_t *fs);
-
 /* Create a fs_fs fileysystem referenced by FS at path PATH.  Get any
    temporary allocations from POOL.
 
