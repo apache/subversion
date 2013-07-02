@@ -504,9 +504,6 @@ struct svnadmin_opt_state
 {
   const char *repository_path;
   const char *fs_type;                              /* --fs-type */
-  svn_boolean_t pre_1_4_compatible;                 /* --pre-1.4-compatible */
-  svn_boolean_t pre_1_5_compatible;                 /* --pre-1.5-compatible */
-  svn_boolean_t pre_1_6_compatible;                 /* --pre-1.6-compatible */
   svn_version_t *compatible_version;                /* --compatible-version */
   svn_opt_revision_t start_revision, end_revision;  /* -r X[:Y] */
   const char *txn_id;                               /* -t TXN */
@@ -692,17 +689,6 @@ subcommand_create(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       svn_hash_sets(fs_config, SVN_FS_CONFIG_FS_TYPE, opt_state->fs_type);
     }
 
-  /* Prior to 1.8, we had explicit options to specify compatibility
-     with a handful of prior Subversion releases. */
-  if (opt_state->pre_1_4_compatible)
-    svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE, "1");
-  if (opt_state->pre_1_5_compatible)
-    svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE, "1");
-  if (opt_state->pre_1_6_compatible)
-    svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE, "1");
-
-  /* In 1.8, we figured out that we didn't have to keep extending this
-     madness indefinitely. */
   if (opt_state->compatible_version)
     {
       if (! svn_version__at_least(opt_state->compatible_version, 1, 4, 0))
@@ -2305,13 +2291,19 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         opt_state.uuid_action = svn_repos_load_uuid_force;
         break;
       case svnadmin__pre_1_4_compatible:
-        opt_state.pre_1_4_compatible = TRUE;
+        opt_state.compatible_version = apr_pcalloc(pool, sizeof(svn_version_t));
+        opt_state.compatible_version->major = 1;
+        opt_state.compatible_version->minor = 3;
         break;
       case svnadmin__pre_1_5_compatible:
-        opt_state.pre_1_5_compatible = TRUE;
+        opt_state.compatible_version = apr_pcalloc(pool, sizeof(svn_version_t));
+        opt_state.compatible_version->major = 1;
+        opt_state.compatible_version->minor = 4;
         break;
       case svnadmin__pre_1_6_compatible:
-        opt_state.pre_1_6_compatible = TRUE;
+        opt_state.compatible_version = apr_pcalloc(pool, sizeof(svn_version_t));
+        opt_state.compatible_version->major = 1;
+        opt_state.compatible_version->minor = 5;
         break;
       case svnadmin__compatible_version:
         {
