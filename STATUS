@@ -140,13 +140,6 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1498136
-   Disable named atomics if APR does not implement memory-mapped files.
-   Justification:
-     People still use Subversion on platforms where mmap is not available.
-   Votes:
-     +1: brane, rhuijben
-
  * r1498449, r1498455, r1498997
    kidney blame: convert a client segfault into a correct failure mode.  To
    reproduce run 'svn blame -r 2:1' against a 1.7 server with a 1.8.x binary.
@@ -158,14 +151,6 @@ Candidate changes:
      Segfault.  (1.8.0 didn't have the segfaulting code.)
    Votes:
      +1: danielsh, stsp
-
- * r1498456
-   ra_serf: recognize the get-file-revs-reverse capability.
-   Justification:
-     Wrong failure mode: the code raised an error when it should have replied
-     FALSE with no error.
-   Votes:
-     +1: danielsh, rhuijben
 
  * r1498483, r1498484, r1498486
    fs: Improve a regression test.
@@ -200,6 +185,30 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1498456
+   ra_serf: recognize the get-file-revs-reverse capability.
+   Justification:
+     Wrong failure mode: the code raised an error when it should have replied
+     FALSE with no error.
+   Votes:
+     +1: danielsh, rhuijben, stefan2
+
+ * r1498136
+   Disable named atomics if APR does not implement memory-mapped files.
+   Justification:
+     People still use Subversion on platforms where mmap is not available.
+   Votes:
+     +1: brane, rhuijben, stefan2
+
+ * r1498564
+   Allow the new in 1.8 move metadata only to work properly when the
+   target of the move already exists as unversioned node.
+   Justification:
+     The metadata only option was added especially to allow fixing up
+     of already performed moves.
+   Votes:
+     +1: rhuijben, philip, stsp, stefan2
 
  * r1498564
    Allow the new in 1.8 move metadata only to work properly when the
