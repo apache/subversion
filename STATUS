@@ -180,6 +180,14 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1499034
+   sqlite3.m4: allow placing the amalgamation in the build dir.
+   Justification:
+     It is not present in the extracted source tarball, so doesn't belong in
+     the source dir.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
