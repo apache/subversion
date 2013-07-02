@@ -58,8 +58,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.8\n"
 "Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
-"POT-Creation-Date: 2013-07-02 22:18+0800\n"
-"PO-Revision-Date: 2013-07-02 22:20+0000\n"
+"POT-Creation-Date: 2013-07-03 00:53+0800\n"
+"PO-Revision-Date: 2013-07-03 00:50+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.apache.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.apache.org>\n"
 "Language: \n"
@@ -67,6 +67,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Poedit 1.5.5\n"
 
 #. Constructing nice error messages for roots.
 #. Build an SVN_ERR_FS_NOT_FOUND error, with a detailed error text,
@@ -1996,9 +1997,9 @@ msgstr ""
 "请解决所有冲突后，再次运行合并，处理剩余的未合并版本"
 
 #: ../libsvn_client/merge.c:6231
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid mergeinfo detected on '%s', merge tracking not possible"
-msgstr "在“%s”发现了非法的合并信息；合并跟踪是不可能的"
+msgstr "在“%s”检测到非法的合并信息；合并跟踪是不可能的"
 
 #: ../libsvn_client/merge.c:6380
 msgid ""
@@ -2007,10 +2008,10 @@ msgid ""
 msgstr "合并跟踪不允许丢失子树; 请先恢复这些项目:\n"
 
 #: ../libsvn_client/merge.c:7380
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Invalid mergeinfo detected on merge target '%s', merge tracking not possible"
-msgstr "在合并目标“%s”发现了非法的合并信息；合并跟踪是不可能的"
+msgstr "在合并目标“%s”检测到非法的合并信息；合并跟踪是不可能的"
 
 #: ../libsvn_client/merge.c:9698
 msgid "Use of two URLs is not compatible with mergeinfo modification"
@@ -2031,10 +2032,10 @@ msgid "Cannot determine revision of working copy"
 msgstr "不能确定工作副本的版本"
 
 #: ../libsvn_client/merge.c:10152
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Cannot merge into mixed-revision working copy [%ld:%ld]; try updating first"
-msgstr "不能合并到有混合版本的工作副本 [%lu:%lu] 中；请先更新"
+msgstr "不能合并到有混合版本的工作副本 [%ld:%ld] 中；请先更新"
 
 #: ../libsvn_client/merge.c:10167
 msgid "Cannot merge into a working copy with a switched subtree"
@@ -2121,9 +2122,8 @@ msgid "Cannot strip %u components from '%s'"
 msgstr "不能修剪 %u 个组件于“%s”"
 
 #: ../libsvn_client/patch.c:910
-#, fuzzy
 msgid "Invalid link representation"
-msgstr "正在读取修订版"
+msgstr "非法链接表述"
 
 #: ../libsvn_client/patch.c:3005
 msgid "strip count must be positive"
@@ -2217,7 +2217,7 @@ msgid "Unknown node kind for '%s'"
 msgstr "“%s” 是未知的节点类型"
 
 #: ../libsvn_client/ra.c:161
-#, fuzzy, c-format
+#, c-format
 msgid "Attempt to set wcprop '%s' on '%s' in a non-commit operation"
 msgstr "试图在非提交操作中，设定工作副本属性 “%s” 于 “%s”"
 
@@ -2418,9 +2418,9 @@ msgid "%a %b %e %H:%M:%S %Y"
 msgstr "%a %b %e %H:%M:%S %Y"
 
 #: ../libsvn_diff/diff_file.c:1863 ../libsvn_diff/diff_file.c:1879
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' must be inside the directory '%s'"
-msgstr "路径 “%s” 必须是目录 “%s” 的直接子孙"
+msgstr "路径 “%s” 必须在目录 “%s”内"
 
 #: ../libsvn_diff/diff_file.c:2397
 #, c-format
@@ -3242,7 +3242,7 @@ msgstr "期望文件系统格式“%d”；发现格式“%d”"
 #: ../libsvn_fs_base/fs.c:1213
 #, c-format
 msgid "BDB repositories do not support incremental hotcopy"
-msgstr ""
+msgstr "BDB 版本库不支持增量热复制"
 
 #: ../libsvn_fs_base/fs.c:1317
 msgid ""
@@ -3393,15 +3393,15 @@ msgstr "事务终止，但清除失败"
 
 #: ../libsvn_fs_base/trail.c:99
 msgid "beginning Berkeley DB transaction"
-msgstr ""
+msgstr "正在开始 BDB 事务"
 
 #: ../libsvn_fs_base/trail.c:134
 msgid "aborting Berkeley DB transaction"
-msgstr ""
+msgstr "正在中止 BDB 事务"
 
 #: ../libsvn_fs_base/trail.c:158
 msgid "committing Berkeley DB transaction"
-msgstr ""
+msgstr "正在提交 BDB 事务"
 
 #: ../libsvn_fs_base/tree.c:772 ../libsvn_fs_fs/tree.c:1046
 #, c-format
@@ -3628,7 +3628,7 @@ msgstr "流意外结束"
 #: ../libsvn_fs_fs/fs_fs.c:1992
 #, c-format
 msgid "Number '%s' invalid or too large"
-msgstr ""
+msgstr "数字“%s”不合法，或者太大"
 
 #: ../libsvn_fs_fs/fs_fs.c:2159 ../libsvn_fs_fs/fs_fs.c:2173
 #: ../libsvn_fs_fs/fs_fs.c:2181 ../libsvn_fs_fs/fs_fs.c:2189
@@ -4128,9 +4128,9 @@ msgid "Retrieval of mergeinfo unsupported by '%s'"
 msgstr "“%s” 不支持取回合并信息"
 
 #: ../libsvn_ra/util.c:88
-#, fuzzy, c-format
+#, c-format
 msgid "The '%s' feature is not supported by '%s'"
-msgstr "“%s” 不支持取回合并信息"
+msgstr "特性“%s”不被“%s”支持"
 
 #: ../libsvn_ra/util.c:129
 #, c-format
@@ -4198,9 +4198,8 @@ msgid "No Location header received"
 msgstr "没有收到位置头"
 
 #: ../libsvn_ra_serf/commit.c:329
-#, fuzzy
 msgid "Error parsing Location header value"
-msgstr "没有收到位置头"
+msgstr "解析位置头出错"
 
 #: ../libsvn_ra_serf/commit.c:431
 #, c-format
@@ -4420,9 +4419,9 @@ msgid "Module for accessing a repository via WebDAV protocol using serf."
 msgstr "通过 WebDAV 协议使用 serf 访问版本库的模块。"
 
 #: ../libsvn_ra_serf/serf.c:122
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid config: unknown %s '%s'"
-msgstr "无效配置: 未知的密码存储 “%s”"
+msgstr "无效配置: 未知 %s “%s”"
 
 #: ../libsvn_ra_serf/serf.c:303
 msgid "Invalid config: illegal character in timeout value"
@@ -4501,11 +4500,10 @@ msgstr "未知标签“%s”，上下文状态 %d"
 
 #: ../libsvn_ra_serf/update.c:2190 ../libsvn_ra_serf/update.c:2314
 #: ../libsvn_ra_serf/update.c:2351
-#, fuzzy
 msgid ""
 "The REPORT or PROPFIND response did not include the requested checked-in "
 "value"
-msgstr "OPTIONS 响应中没有包含请求的 checked-in 值。"
+msgstr "REPORT 或 PROPFIND 响应中没有包含请求的 checked-in 值。"
 
 #: ../libsvn_ra_serf/update.c:2533
 #, c-format
@@ -4549,12 +4547,11 @@ msgid "XML parsing failed: (%d %s)"
 msgstr "XML 解析失败: (%d %s)"
 
 #: ../libsvn_ra_serf/util.c:1778
-#, fuzzy
 msgid ""
 "No more credentials or we tried too many times.\n"
 "Authentication failed"
 msgstr ""
-"没有凭证或已经试了太多次。\n"
+"没有更多凭据或已经试了太多次。\n"
 "认证失败"
 
 #: ../libsvn_ra_serf/util.c:1800
@@ -4598,9 +4595,9 @@ msgid "DAV request failed: Content length required"
 msgstr ""
 
 #: ../libsvn_ra_serf/util.c:2427
-#, fuzzy, c-format
+#, c-format
 msgid "Unexpected HTTP status %d '%s' on '%s'\n"
-msgstr "意外发现节点种类 %d 于“%s”"
+msgstr "意外 HTTP 状态 %d “%s”于“%s”\n"
 
 #: ../libsvn_ra_serf/util.c:2571
 #, c-format
@@ -4701,9 +4698,8 @@ msgid ""
 msgstr "在提交时，服务器不支持设置任意版本属性"
 
 #: ../libsvn_ra_svn/client.c:1088
-#, fuzzy
 msgid "Inherited proplist element not a list"
-msgstr "Proplist 元素不是列表"
+msgstr "继承的属性列表元素不是列表"
 
 #: ../libsvn_ra_svn/client.c:1163
 msgid "Non-string as part of file contents"
@@ -5444,9 +5440,8 @@ msgid "Creating authz file"
 msgstr "正在创建 authz 文件"
 
 #: ../libsvn_repos/repos.c:1161
-#, fuzzy
 msgid "Creating hooks-env file"
-msgstr "正在创建数据库锁文件"
+msgstr "正在创建 hooks-env 文件"
 
 #: ../libsvn_repos/repos.c:1217
 msgid "Could not create top-level directory"
@@ -6039,14 +6034,14 @@ msgid "Can't remove '%s'"
 msgstr "无法删除“%s”"
 
 #: ../libsvn_subr/io.c:2555
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' not found, case obstructed by '%s'"
-msgstr "路径 “%s” 不在版本 %ld 中"
+msgstr "没有发现路径“%s”，大小写障碍“%s”"
 
 #: ../libsvn_subr/io.c:2594
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' not found"
-msgstr "找不到 “%s”"
+msgstr "路径“%s”找不到"
 
 #: ../libsvn_subr/io.c:2668
 #, c-format
@@ -6104,19 +6099,19 @@ msgid "Error waiting for process '%s'"
 msgstr "等待进程“%s”出错"
 
 #: ../libsvn_subr/io.c:2802
-#, fuzzy, c-format
+#, c-format
 msgid "Process '%s' failed (signal %d, core dumped)"
-msgstr "进程“%s”失败(返回 %d)"
+msgstr "进程“%s”失败(信号 %d，已经核心转储)"
 
 #: ../libsvn_subr/io.c:2807
-#, fuzzy, c-format
+#, c-format
 msgid "Process '%s' failed (signal %d)"
-msgstr "进程“%s”失败(返回 %d)"
+msgstr "进程“%s”失败(信号 %d)"
 
 #: ../libsvn_subr/io.c:2813
-#, fuzzy, c-format
+#, c-format
 msgid "Process '%s' failed (exitwhy %d, exitcode %d)"
-msgstr "进程“%s”失败(返回 %d)"
+msgstr "进程“%s”失败(exitwhy %d, exitcode %d)"
 
 #: ../libsvn_subr/io.c:2821
 #, c-format
@@ -6390,14 +6385,13 @@ msgid "Not a valid atomic"
 msgstr "不是合法的原子数据"
 
 #: ../libsvn_subr/named_atomic.c:465
-#, fuzzy, c-format
+#, c-format
 msgid "MMAP failed for file '%s'"
-msgstr "“%s”域的值无效"
+msgstr "创建内存映射文件“%s”失败"
 
 #: ../libsvn_subr/named_atomic.c:477
-#, fuzzy
 msgid "Number of atomics in namespace is too large."
-msgstr "原子的名称太长"
+msgstr "命名空间中的原子数量太多"
 
 #: ../libsvn_subr/named_atomic.c:527
 msgid "Atomic's name is too long."
@@ -6492,7 +6486,7 @@ msgstr ""
 "\n"
 
 #: ../libsvn_subr/opt.c:1135
-#, fuzzy, c-format
+#, c-format
 msgid "* running on %s\n"
 msgstr "* 运行于 %s\n"
 
@@ -6520,24 +6514,23 @@ msgid "Improper relative URL '%s'"
 msgstr "不正确的相对 URL“%s”"
 
 #: ../libsvn_subr/prompt.c:147
-#, fuzzy
 msgid "Can't close terminal"
-msgstr "无法关闭流"
+msgstr "不能关闭终端"
 
 #: ../libsvn_subr/prompt.c:200
-#, fuzzy, c-format
+#, c-format
 msgid "Can't open stderr"
-msgstr "无法打开标准输入"
+msgstr "不能打开标准错误"
 
 #: ../libsvn_subr/prompt.c:263
-#, fuzzy, c-format
+#, c-format
 msgid "Can't write to terminal"
-msgstr "无法写入流"
+msgstr "无法写入终端"
 
 #: ../libsvn_subr/prompt.c:385 ../libsvn_subr/prompt.c:472
-#, fuzzy, c-format
+#, c-format
 msgid "Can't read from terminal"
-msgstr "无法读取连接"
+msgstr "无法读取终端"
 
 #: ../libsvn_subr/prompt.c:540
 msgid "End of file while reading from terminal"
@@ -6713,19 +6706,17 @@ msgid "Config error: invalid value '%s' for option '%s'"
 msgstr "配置错误: 无效取值 “%s”，对于选项 “%s”"
 
 #: ../libsvn_subr/sqlite.c:176
-#, fuzzy, c-format
+#, c-format
 msgid "sqlite[S%d]: %s, executing statement '%s'"
-msgstr "%s, 执行语句 '%s'"
+msgstr "sqlite[S%d]: %s, 执行语句 '%s'"
 
 #: ../libsvn_subr/sqlite.c:265
-#, fuzzy
 msgid "sqlite: Expected database row missing"
-msgstr "丢失了期待的数据库行"
+msgstr "sqlite: 缺少期望的数据库行"
 
 #: ../libsvn_subr/sqlite.c:266
-#, fuzzy
 msgid "sqlite: Extra database row found"
-msgstr "发现了额外的数据库行"
+msgstr "sqlite: 发现额外的数据库行"
 
 #: ../libsvn_subr/sqlite.c:726
 #, c-format
@@ -6737,9 +6728,9 @@ msgid "SQLite is required to be compiled and run in thread-safe mode"
 msgstr "SQLite 需要在编译和运行时都处于线程安全模式"
 
 #: ../libsvn_subr/sqlite.c:747
-#, fuzzy, c-format
+#, c-format
 msgid "Could not configure SQLite [S%d]"
-msgstr "不能配置 SQLite"
+msgstr "不能配置 SQLite [S%d]"
 
 #: ../libsvn_subr/sqlite.c:749
 msgid "Could not initialize SQLite"
@@ -6892,9 +6883,9 @@ msgstr ""
 #: ../libsvn_subr/version.c:210 ../libsvn_subr/version.c:221
 #: ../libsvn_subr/version.c:227 ../libsvn_subr/version.c:244
 #: ../libsvn_subr/version.c:251
-#, fuzzy, c-format
+#, c-format
 msgid "Failed to parse version number string '%s'"
-msgstr "不能解析合并信息字符串“%s”"
+msgstr "不能解析版本号字符串“%s”"
 
 #: ../libsvn_subr/xml.c:416
 #, c-format
@@ -7018,14 +7009,12 @@ msgid "Log format too old, please use Subversion 1.6 or earlier"
 msgstr "日志格式太旧，请使用 Subversion 1.6 或更新的版本"
 
 #: ../libsvn_wc/conflicts.c:83
-#, fuzzy
 msgid "Not a conflict skel"
-msgstr "解析树冲突骨架出错"
+msgstr "不是冲突骨架"
 
 #: ../libsvn_wc/conflicts.c:610 ../libsvn_wc/conflicts.c:707
-#, fuzzy
 msgid "Not a completed conflict skel"
-msgstr "解析树冲突骨架出错"
+msgstr "不是完整的冲突骨架"
 
 #: ../libsvn_wc/conflicts.c:788 ../libsvn_wc/conflicts.c:861
 #: ../libsvn_wc/conflicts.c:951
@@ -7037,7 +7026,6 @@ msgid "Conflict callback violated API: returned no results"
 msgstr "冲突的回调函数违反 API：没有返回结果。"
 
 #: ../libsvn_wc/conflicts.c:1482
-#, fuzzy
 msgid "Conflict callback violated API: returned no merged file"
 msgstr "冲突的回调函数违反 API：没有返回合并文件。"
 
@@ -7046,17 +7034,17 @@ msgid "Invalid 'conflict_result' argument"
 msgstr "无效的 “conflict_result” 参数"
 
 #: ../libsvn_wc/conflicts.c:2767 ../libsvn_wc/conflicts.c:2807
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Tree conflict can only be resolved to 'working' or 'mine-conflict' state; "
 "'%s' not resolved"
-msgstr "树冲突只能解决为 “working” 状态；“%s” 还没有解决"
+msgstr "树冲突只能解决为“working”或“mine-conflict”状态；“%s” 还没有解决"
 
 #: ../libsvn_wc/conflicts.c:2822
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Tree conflict can only be resolved to 'working' state; '%s' not resolved"
-msgstr "树冲突只能解决为 “working” 状态；“%s” 还没有解决"
+msgstr "树冲突只能解决为“working”状态；“%s” 还没有解决"
 
 #: ../libsvn_wc/conflicts.c:2924
 msgid "No conflict-callback and no pre-defined conflict-choice provided"
@@ -7089,14 +7077,14 @@ msgid "Deleted node '%s' can't be copied."
 msgstr "已经删除的节点“%s”不能被复制。"
 
 #: ../libsvn_wc/copy.c:596
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is the root of a working copy and cannot be moved"
-msgstr "不能删除工作副本根目录 '%s'"
+msgstr "“%s”是工作副本根目录，不能被移动"
 
 #: ../libsvn_wc/copy.c:604
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' represents the repository root and cannot be moved"
-msgstr "“%s” 是保留名称，无法被导入"
+msgstr "“%s”是版本库根目录，不能被移动"
 
 #: ../libsvn_wc/copy.c:673
 #, c-format
@@ -7124,10 +7112,10 @@ msgid "'%s' already exists and is in the way"
 msgstr "“%s”已存在，变成拦路虎"
 
 #: ../libsvn_wc/copy.c:791
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Cannot move mixed-revision subtree '%s' [%ld:%ld]; try updating it first"
-msgstr "不能合并到有混合版本的工作副本 [%lu:%lu] 中；请先更新"
+msgstr "不能移动有混合版本的子树“%s”[%ld:%ld] 中；请先更新"
 
 #: ../libsvn_wc/crop.c:207
 #, c-format
@@ -7184,9 +7172,9 @@ msgid "'%s' is the root of a working copy and cannot be deleted"
 msgstr "不能删除工作副本根目录 '%s'"
 
 #: ../libsvn_wc/delete.c:262 ../libsvn_wc/delete.c:379
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' represents the repository root and cannot be deleted"
-msgstr "不能删除工作副本根目录 '%s'"
+msgstr "“%s”是版本库根目录，不能被删除"
 
 #: ../libsvn_wc/delete.c:476
 #, c-format
@@ -7219,9 +7207,9 @@ msgid "The file '%s' has no checksum"
 msgstr "文件 '%s' 没有校验和。"
 
 #: ../libsvn_wc/entries.c:1619
-#, fuzzy, c-format
+#, c-format
 msgid "Unable to upgrade '%s' at line %d"
-msgstr "不能按照“%s”生成名字"
+msgstr "不能升级“%s”，第 %d 行"
 
 #: ../libsvn_wc/entries.c:1837
 #, c-format
@@ -7362,9 +7350,9 @@ msgid "Can't obtain lock on non-directory '%s'."
 msgstr "不能获取非目录对象 '%s' 的锁"
 
 #: ../libsvn_wc/merge.c:1281 ../libsvn_wc/props.c:257
-#, fuzzy, c-format
+#, c-format
 msgid "Can't merge into conflicted node '%s'"
-msgstr "无法写入文件“%s”"
+msgstr "无法合并到已经冲突的节点“%s”"
 
 #: ../libsvn_wc/merge.c:1324 ../libsvn_wc/props.c:273
 #, c-format
@@ -7372,9 +7360,9 @@ msgid "The property '%s' may not be merged into '%s'."
 msgstr "属性 “%s” 不能合并到 “%s”。"
 
 #: ../libsvn_wc/node.c:1047
-#, fuzzy, c-format
+#, c-format
 msgid "Incomplete copy information on path '%s'."
-msgstr "复制源路径“%s”无效"
+msgstr "路径“%s”上的复制信息不完整"
 
 #: ../libsvn_wc/node.c:1211
 #, c-format
@@ -7597,9 +7585,9 @@ msgid "Cannot set '%s' on a file ('%s')"
 msgstr "无法设定“%s”于文件 (“%s”)"
 
 #: ../libsvn_wc/props.c:1641
-#, fuzzy, c-format
+#, c-format
 msgid "Can't set '%s': file '%s' has binary mime type property"
-msgstr "文件“%s”有二进制的 mime 类型属性"
+msgstr "不能设置“%s”: 文件“%s”有二进制的 mime 类型属性"
 
 #: ../libsvn_wc/props.c:1686
 msgid "Failed to load current properties"
@@ -7611,9 +7599,9 @@ msgid "Can't set properties on '%s': invalid status for updating properties."
 msgstr "不能对 '%s' 设置属性: 对于更新属性，状态非法。"
 
 #: ../libsvn_wc/props.c:1990
-#, fuzzy, c-format
+#, c-format
 msgid "Property '%s' is a WC property, not a regular property"
-msgstr "属性 “%s” 不是常规属性"
+msgstr "“%s”是工作副本属性，不是常规属性"
 
 #: ../libsvn_wc/props.c:2084
 #, c-format
@@ -7627,9 +7615,9 @@ msgid " (%d more duplicate targets found)"
 msgstr ""
 
 #: ../libsvn_wc/props.c:2140
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid %s property on '%s': target '%s' appears more than once%s"
-msgstr "无效属性 %s 位于 “%s”: 目标 “%s” 包含 “..” 或是绝对路径"
+msgstr "无效属性 %s 于“%s”: 目标“%s”出现多次%s"
 
 #: ../libsvn_wc/props.c:2171
 #, c-format
@@ -7705,19 +7693,19 @@ msgstr ""
 "       实际:  %s\n"
 
 #: ../libsvn_wc/update_editor.c:1129
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not valid as filename in directory '%s'"
-msgstr "“%s”不是文件或目录"
+msgstr "“%s”不是合法文件名称于目录“%s”中"
 
 #: ../libsvn_wc/update_editor.c:1606
-#, fuzzy, c-format
+#, c-format
 msgid "Unexpected attempt to add a node at path '%s'"
-msgstr "“%s”有意外的不变节点"
+msgstr "意外的试图在路径“%s”增加节点"
 
 #: ../libsvn_wc/update_editor.c:1617
 #, c-format
 msgid "Unexpected attempt to edit, delete, or replace a node at path '%s'"
-msgstr ""
+msgstr "意外的试图在路径“%s”编辑，删除或替换节点"
 
 #: ../libsvn_wc/update_editor.c:2019
 #, c-format
@@ -7766,19 +7754,19 @@ msgid "Copyfrom-url '%s' has different repository root than '%s'"
 msgstr "Copyfrom-url“%s”与“%s”的版本库根目录不相同"
 
 #: ../libsvn_wc/update_editor.c:5439
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not an unmodified copied directory"
-msgstr "“%s”不是文件或目录"
+msgstr "“%s”不是未修改的复制目录"
 
 #: ../libsvn_wc/update_editor.c:5450
 #, c-format
 msgid "Copyfrom '%s' doesn't match original location of '%s'"
-msgstr ""
+msgstr "Copyfrom“%s”与“%s”的原始位置不匹配"
 
 #: ../libsvn_wc/upgrade.c:255
 #, c-format
 msgid "Missing end of line in wcprops file for '%s'"
-msgstr "wcprops文件“%s”丢失了行结束符"
+msgstr "“%s”的工作副本属性文件丢失了行结束符"
 
 #: ../libsvn_wc/upgrade.c:631
 #, c-format
@@ -7857,14 +7845,14 @@ msgstr ""
 "'tools/dev/wc-ng/bump-to-19.py' 升级，最后使用当前客户端"
 
 #: ../libsvn_wc/upgrade.c:2088
-#, fuzzy, c-format
+#, c-format
 msgid "Can't upgrade '%s' as it is not a working copy"
-msgstr "不能升级 '%s'，因为它不是 1.7 之前的工作副本目录"
+msgstr "不能升级“%s”，因为它不是工作副本目录"
 
 #: ../libsvn_wc/upgrade.c:2137
-#, fuzzy, c-format
+#, c-format
 msgid "Can't upgrade '%s' as it is not a working copy root, the root is '%s'"
-msgstr "不能升级 '%s'，因为它不是 1.7 之前的工作副本根目录，根目录是 '%s'"
+msgstr "不能升级“%s”，因为它不是工作副本根目录，根目录是 '%s'"
 
 #: ../libsvn_wc/wc_db.c:452
 #, c-format
@@ -7918,19 +7906,19 @@ msgid "Cannot delete '%s' as '%s' is excluded by server"
 msgstr "不能删除 '%s'，因为 '%s' 被服务器排除"
 
 #: ../libsvn_wc/wc_db.c:7501
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot delete '%s' as it is excluded by server"
-msgstr "不能删除 '%s'，因为 '%s' 被服务器排除"
+msgstr "不能删除 '%s'，因为它被服务器排除"
 
 #: ../libsvn_wc/wc_db.c:7508
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot delete '%s' as it is excluded"
-msgstr "不能删除 '%s'，因为 '%s' 被服务器排除"
+msgstr "不能删除 '%s'，因为它被排除"
 
 #: ../libsvn_wc/wc_db.c:7922
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot move '%s' to '%s' because they are not in the same working copy"
-msgstr "不能重新定位 '%s'，因为它不是工作副本根目录"
+msgstr "不能移动 '%s' 到 '%s'，因为它们不是同一工作副本"
 
 #: ../libsvn_wc/wc_db.c:8280
 #, c-format
@@ -7959,9 +7947,9 @@ msgid "The node '%s' is not installable"
 msgstr "节点 '%s' 不可安装"
 
 #: ../libsvn_wc/wc_db.c:9469 ../libsvn_wc/wc_db.c:9728
-#, fuzzy, c-format
+#, c-format
 msgid "The node '%s' has a status that has no properties."
-msgstr "节点 '%s' 没有属性。"
+msgstr "节点 '%s' 有状态，没有属性。"
 
 #: ../libsvn_wc/wc_db.c:11568
 #, c-format
@@ -7969,14 +7957,14 @@ msgid "Expected node '%s' to be added."
 msgstr "期望节点“%s”被增加。"
 
 #: ../libsvn_wc/wc_db.c:11914
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' was not moved here"
-msgstr "路径“%s”不是文件"
+msgstr "路径“%s”不是移到这里"
 
 #: ../libsvn_wc/wc_db.c:11983
-#, fuzzy, c-format
+#, c-format
 msgid "The base node '%s' was not found."
-msgstr "找不到节点 '%s'。"
+msgstr "找不到基础节点 '%s'。"
 
 #: ../libsvn_wc/wc_db.c:12415
 #, c-format
@@ -8028,21 +8016,20 @@ msgid "database inconsistency at local_relpath='%s' verifying expression '%s'"
 msgstr "数据库不一致，路径是“%s”，校验表达式是“%s”"
 
 #: ../libsvn_wc/wc_db.c:15008
-#, fuzzy, c-format
+#, c-format
 msgid "Can't upgrade '%s' as it is not a working copy root"
-msgstr "不能升级 '%s'，因为它不是 1.7 之前的工作副本目录"
+msgstr "不能升级 '%s'，因为它不是工作副本目录"
 
 #: ../libsvn_wc/wc_db.c:15014
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Working copy '%s' is too old and must be upgraded to at least format %d, as "
 "created by Subversion %s"
-msgstr "工作副本 '%s' 格式太旧 (格式 %d, Subversion %s 创建)"
+msgstr "工作副本 '%s' 格式太旧，必须至少升级到格式 %d, 被 Subversion %s 创建"
 
 #: ../libsvn_wc/wc_db.c:15029
-#, fuzzy
 msgid "Working copy upgrade failed"
-msgstr "工作副本“%s”已经锁定"
+msgstr "工作副本升级失败"
 
 #: ../libsvn_wc/wc_db_pristine.c:125 ../libsvn_wc/wc_db_pristine.c:457
 #, c-format
@@ -8070,24 +8057,24 @@ msgid "The pristine text with MD5 checksum '%s' was not found"
 msgstr "找不到 MD5 校验和为“%s”的原始内容"
 
 #: ../libsvn_wc/wc_db_update_move.c:282 ../libsvn_wc/wc_db_update_move.c:306
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' already in conflict"
-msgstr "“%s” 已存在"
+msgstr "“%s” 已在冲突中"
 
 #: ../libsvn_wc/wc_db_update_move.c:1382
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not in conflict"
-msgstr "“%s”不是一个文件"
+msgstr "“%s”不在冲突中"
 
 #: ../libsvn_wc/wc_db_update_move.c:1395
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a tree-conflict victim"
-msgstr "'%s' 不是相对路径"
+msgstr "'%s' 不是树冲突牺牲品"
 
 #: ../libsvn_wc/wc_db_update_move.c:1754
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot auto-resolve tree-conflict on '%s'"
-msgstr "无法删除目录 “%s”"
+msgstr "不能在“%s”自动解决树冲突"
 
 #: ../libsvn_wc/wc_db_update_move.c:1817
 #, c-format
@@ -8101,14 +8088,14 @@ msgid "Cannot apply update because move source '%s' is a switched subtree"
 msgstr ""
 
 #: ../libsvn_wc/wc_db_update_move.c:1879
-#, fuzzy, c-format
+#, c-format
 msgid "The node '%s' has not been moved away"
-msgstr "节点 '%s' 不能恢复。"
+msgstr "节点“%s”没有被移走"
 
 #: ../libsvn_wc/wc_db_update_move.c:1908
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not deleted"
-msgstr "“%s” 没有被锁定"
+msgstr "“%s”没有被删除"
 
 #: ../libsvn_wc/wc_db_util.c:69
 #, c-format
@@ -8116,9 +8103,9 @@ msgid "Missing a row in WCROOT."
 msgstr "WCROOT 中丢失了一行。"
 
 #: ../libsvn_wc/wc_db_util.c:135
-#, fuzzy, c-format
+#, c-format
 msgid "Working copy database '%s' not found"
-msgstr "工作副本“%s”未被锁定"
+msgstr "找不到工作副本数据库“%s”"
 
 #: ../libsvn_wc/wc_db_wcroot.c:276
 #, c-format
@@ -8163,19 +8150,19 @@ msgid "Missing a row in WCROOT for '%s'."
 msgstr "WCROOT 中的 '%s' 丢失了一行。"
 
 #: ../libsvn_wc/wc_db_wcroot.c:709
-#, fuzzy, c-format
+#, c-format
 msgid "The working copy at '%s' is corrupt."
-msgstr "工作副本的参考文件损坏"
+msgstr "位于“%s”的工作副本已损坏。"
 
 #: ../libsvn_wc/wc_db_wcroot.c:725
-#, fuzzy, c-format
+#, c-format
 msgid "The working copy database at '%s' is missing."
-msgstr "工作副本丢失"
+msgstr "位于“%s”的工作副本数据库丢失。"
 
 #: ../libsvn_wc/wc_db_wcroot.c:734
-#, fuzzy, c-format
+#, c-format
 msgid "The working copy database at '%s' is corrupt."
-msgstr "工作副本的参考文件损坏"
+msgstr "位于“%s”的工作副本数据库损坏。"
 
 #: ../libsvn_wc/wc_db_wcroot.c:881
 #, c-format
@@ -8190,9 +8177,9 @@ msgid ""
 msgstr "文件 '%s' 没有校验和记录，因此不能从原始内容仓库中安装"
 
 #: ../libsvn_wc/workqueue.c:1498
-#, fuzzy, c-format
+#, c-format
 msgid "Unrecognized work item in the queue"
-msgstr "“%s” 关联的队列中的项目无法识别"
+msgstr "队列中有无法识别的工作项"
 
 #: ../libsvn_wc/workqueue.c:1578
 #, c-format
@@ -8218,9 +8205,9 @@ msgid "'incremental' option only valid in XML mode"
 msgstr "只有在XML模式“incremental”选项才有效"
 
 #: ../svn/blame-cmd.c:378
-#, fuzzy, c-format
+#, c-format
 msgid "Skipping binary file (use --force to treat as text): '%s'\n"
-msgstr "略过二进制文件: “%s”\n"
+msgstr "略过二进制文件(使用 --force 将之视为纯文本):“%s”\n"
 
 #: ../svn/blame-cmd.c:415
 msgid "Could not perform blame on all targets because some targets don't exist"
@@ -8259,9 +8246,8 @@ msgid "local file edit"
 msgstr "本地文件编辑"
 
 #: ../svn/cl-conflicts.c:82
-#, fuzzy
 msgid "local file obstruction"
-msgstr "阻塞"
+msgstr "本地文件障碍"
 
 #: ../svn/cl-conflicts.c:84
 msgid "local file delete"
@@ -8272,18 +8258,16 @@ msgid "local file missing"
 msgstr "本地文件缺失"
 
 #: ../svn/cl-conflicts.c:88
-#, fuzzy
 msgid "local file unversioned"
-msgstr "未版本控制"
+msgstr "本地文件未版本控制"
 
 #: ../svn/cl-conflicts.c:90
 msgid "local file add"
 msgstr "本地文件增加"
 
 #: ../svn/cl-conflicts.c:92
-#, fuzzy
 msgid "local file replace"
-msgstr "调度: 替换\n"
+msgstr "本地文件替换"
 
 #: ../svn/cl-conflicts.c:94
 msgid "local file moved away"
@@ -8298,9 +8282,8 @@ msgid "local dir edit"
 msgstr "本地目录编辑"
 
 #: ../svn/cl-conflicts.c:105
-#, fuzzy
 msgid "local dir obstruction"
-msgstr "阻塞"
+msgstr "本地目录障碍"
 
 #: ../svn/cl-conflicts.c:107
 msgid "local dir delete"
@@ -8311,9 +8294,8 @@ msgid "local dir missing"
 msgstr "本地目录缺失"
 
 #: ../svn/cl-conflicts.c:111
-#, fuzzy
 msgid "local dir unversioned"
-msgstr "未版本控制"
+msgstr "本地目录未版本控制"
 
 #: ../svn/cl-conflicts.c:113
 msgid "local dir add"
@@ -8332,19 +8314,16 @@ msgid "local dir moved here"
 msgstr "本地目录移入"
 
 #: ../svn/cl-conflicts.c:141
-#, fuzzy
 msgid "incoming file edit"
-msgstr "传输文件数据"
+msgstr "进入的文件编辑"
 
 #: ../svn/cl-conflicts.c:143
-#, fuzzy
 msgid "incoming file add"
-msgstr "传输文件数据"
+msgstr "进入的文件增加"
 
 #: ../svn/cl-conflicts.c:145
-#, fuzzy
 msgid "incoming file delete"
-msgstr "传输文件数据"
+msgstr "进入的文件删除"
 
 #: ../svn/cl-conflicts.c:147
 msgid "incoming file replace"
@@ -8367,22 +8346,18 @@ msgid "incoming dir replace"
 msgstr "进入的目录替换"
 
 #: ../svn/cl-conflicts.c:178
-#, fuzzy
 msgid "upon update"
-msgstr "更新"
+msgstr "接着更新"
 
 #: ../svn/cl-conflicts.c:179
-#, fuzzy
 msgid "upon switch"
-msgstr "切换"
+msgstr "接着切换"
 
 #: ../svn/cl-conflicts.c:180
-#, fuzzy
 msgid "upon merge"
-msgstr "合并"
+msgstr "接着合并"
 
 #: ../svn/cl-conflicts.c:181
-#, fuzzy
 msgid "upon none"
 msgstr "无"
 
@@ -8391,24 +8366,21 @@ msgid "local edit"
 msgstr "本地编辑"
 
 #: ../svn/cl-conflicts.c:203
-#, fuzzy
 msgid "local add"
-msgstr "(本地)"
+msgstr "本地增加"
 
 #: ../svn/cl-conflicts.c:206
-#, fuzzy
 msgid "local delete"
-msgstr "删除"
+msgstr "本地删除"
 
 #: ../svn/cl-conflicts.c:209
-#, fuzzy
 msgid "local obstruction"
-msgstr "阻塞"
+msgstr "本地障碍"
 
 #: ../svn/cl-conflicts.c:212
-#, fuzzy, c-format
+#, c-format
 msgid "local %s"
-msgstr "(本地)"
+msgstr "本地%s"
 
 #: ../svn/cl-conflicts.c:220
 msgid "incoming edit"
@@ -8436,9 +8408,9 @@ msgstr "%s, %s %s"
 #. It will not be pretty, but is closer to an internal error than
 #. an ordinary user-facing string.
 #: ../svn/cl-conflicts.c:285
-#, fuzzy, c-format
+#, c-format
 msgid "local: %s %s incoming: %s %s %s"
-msgstr "本地 %s，动作 %s，操作 %s"
+msgstr "本地: %s %s 进入的: %s %s %s"
 
 #: ../svn/cleanup-cmd.c:92
 #, c-format
@@ -8504,18 +8476,16 @@ msgid ""
 "Invalid option; there's no merged version to edit.\n"
 "\n"
 msgstr ""
-"非法选项；没有已合并的版本来编辑。\n"
+"无效选项；没有已合并的版本来编辑。\n"
 "\n"
 
 #: ../svn/conflict-callbacks.c:411
-#, fuzzy
 msgid "No merge tool found, try '(m) merge' instead.\n"
-msgstr "没有发现合并工具。\n"
+msgstr "没有发现合并工具，请尝试“(m) merge”。\n"
 
 #: ../svn/conflict-callbacks.c:419
-#, fuzzy
 msgid "Error running merge tool, try '(m) merge' instead."
-msgstr "执行合并工具错误。"
+msgstr "执行合并工具错误，请尝试“(m) merge”。"
 
 #: ../svn/conflict-callbacks.c:451
 msgid "change merged file in an editor  [edit]"
@@ -8525,14 +8495,12 @@ msgstr "在编辑器中修改合并后的文件  [edit]"
 #. margin of 9 spaces if needed); don't translate the words within square
 #. brackets.
 #: ../svn/conflict-callbacks.c:451
-#, fuzzy
 msgid "edit file"
-msgstr "深度: 文件\n"
+msgstr "编辑文件"
 
 #: ../svn/conflict-callbacks.c:454
-#, fuzzy
 msgid "show all changes made to merged file"
-msgstr "无法将 svndiff 写入临时文件"
+msgstr "显示写入合并文件的所有改动"
 
 #: ../svn/conflict-callbacks.c:454
 msgid "show diff"
@@ -8545,14 +8513,12 @@ msgstr "接受文件的合并版本"
 #: ../svn/conflict-callbacks.c:456 ../svn/conflict-callbacks.c:504
 #: ../svn/conflict-callbacks.c:535 ../svn/conflict-callbacks.c:550
 #: ../svn/conflict-callbacks.c:566 ../svn/conflict-callbacks.c:582
-#, fuzzy
 msgid "resolved"
-msgstr "，(r) 已解决"
+msgstr "已解决"
 
 #: ../svn/conflict-callbacks.c:459 ../svn/conflict-callbacks.c:501
-#, fuzzy
 msgid "display conflict"
-msgstr "树冲突"
+msgstr "显示冲突"
 
 #: ../svn/conflict-callbacks.c:459
 msgid "show all conflicts (ignoring merged version)"
@@ -8560,53 +8526,50 @@ msgstr "显示所有冲突 (忽略已合并版本)"
 
 #: ../svn/conflict-callbacks.c:461
 msgid "accept my version for all conflicts (same)  [mine-conflict]"
-msgstr ""
+msgstr "对于所有冲突，使用我的版本 [mine-conflict]"
 
 #: ../svn/conflict-callbacks.c:461 ../svn/conflict-callbacks.c:547
 #: ../svn/conflict-callbacks.c:563 ../svn/conflict-callbacks.c:579
-#, fuzzy
 msgid "my side of conflict"
-msgstr "冲突概要：\n"
+msgstr "我这边的冲突"
 
 #: ../svn/conflict-callbacks.c:464
 msgid "accept their version for all conflicts (same)  [theirs-conflict]"
-msgstr ""
+msgstr "对于所有冲突，使用他们的版本 [theirs-conflict]"
 
 #: ../svn/conflict-callbacks.c:464
-#, fuzzy
 msgid "their side of conflict"
-msgstr "树冲突"
+msgstr "他们的冲突"
 
 #: ../svn/conflict-callbacks.c:469 ../svn/conflict-callbacks.c:495
 msgid "accept my version of entire file (even non-conflicts)  [mine-full]"
-msgstr ""
+msgstr "整个文件使用我的版本(纵然没有冲突) [mine-full]"
 
 #: ../svn/conflict-callbacks.c:469 ../svn/conflict-callbacks.c:495
 #: ../svn/conflict-callbacks.c:518
-#, fuzzy
 msgid "my version"
-msgstr "未版本控制"
+msgstr "我的版本"
 
 #: ../svn/conflict-callbacks.c:472 ../svn/conflict-callbacks.c:498
 msgid "accept their version of entire file (same)  [theirs-full]"
-msgstr ""
+msgstr "整个文件使用他们的版本 [theirs-full]"
 
 #: ../svn/conflict-callbacks.c:472 ../svn/conflict-callbacks.c:498
 #: ../svn/conflict-callbacks.c:521
 msgid "their version"
-msgstr ""
+msgstr "他们的版本"
 
 #: ../svn/conflict-callbacks.c:476 ../svn/conflict-callbacks.c:492
 #: ../svn/conflict-callbacks.c:515
 msgid "mark the conflict to be resolved later  [postpone]"
-msgstr ""
+msgstr "编辑冲突推迟解决 [postpone]"
 
 #: ../svn/conflict-callbacks.c:476 ../svn/conflict-callbacks.c:492
 #: ../svn/conflict-callbacks.c:515 ../svn/conflict-callbacks.c:533
 #: ../svn/conflict-callbacks.c:545 ../svn/conflict-callbacks.c:561
 #: ../svn/conflict-callbacks.c:577
 msgid "postpone"
-msgstr ""
+msgstr "推迟"
 
 #: ../svn/conflict-callbacks.c:479 ../svn/util.c:774
 msgid "merge"
@@ -8614,71 +8577,65 @@ msgstr "合并"
 
 #: ../svn/conflict-callbacks.c:479
 msgid "use internal merge tool to resolve conflict"
-msgstr ""
+msgstr "使用内部合并工具解决冲突"
 
 #: ../svn/conflict-callbacks.c:481
 msgid "launch external tool to resolve conflict  [launch]"
-msgstr ""
+msgstr "执行外部工具解决冲突 [launch]"
 
 #: ../svn/conflict-callbacks.c:481
 msgid "launch tool"
-msgstr ""
+msgstr "执行工具"
 
 #: ../svn/conflict-callbacks.c:483 ../svn/conflict-callbacks.c:506
 #: ../svn/conflict-callbacks.c:524 ../svn/conflict-callbacks.c:537
 #: ../svn/conflict-callbacks.c:553 ../svn/conflict-callbacks.c:569
 #: ../svn/conflict-callbacks.c:585
-#, fuzzy
 msgid "postpone all remaining conflicts"
-msgstr "提交终止: “%s” 处于冲突状态"
+msgstr "推迟解决所有剩余的冲突"
 
 #: ../svn/conflict-callbacks.c:483 ../svn/conflict-callbacks.c:506
 #: ../svn/conflict-callbacks.c:524 ../svn/conflict-callbacks.c:537
 #: ../svn/conflict-callbacks.c:553 ../svn/conflict-callbacks.c:569
 #: ../svn/conflict-callbacks.c:585
-#, fuzzy
 msgid "quit resolution"
-msgstr "解决冲突失败"
+msgstr "退出解决冲突"
 
 #: ../svn/conflict-callbacks.c:485
-#, fuzzy
 msgid "show all options"
-msgstr "(s) 显示全部选项: "
+msgstr "显示全部选项"
 
 #: ../svn/conflict-callbacks.c:485
 msgid "show this list (also 'h', '?')"
-msgstr ""
+msgstr "显示此列表(同 'h' 或 '?')"
 
 #: ../svn/conflict-callbacks.c:501
-#, fuzzy
 msgid "show conflicts in this property"
-msgstr "操作时忽略属性"
+msgstr "显示此属性的冲突"
 
 #: ../svn/conflict-callbacks.c:502
 msgid "change merged property value in an editor  [edit]"
-msgstr ""
+msgstr "在编辑器中修改已经合并的属性值 [edit]"
 
 #: ../svn/conflict-callbacks.c:502
-#, fuzzy
 msgid "edit property"
-msgstr "属性名称错误"
+msgstr "编辑属性"
 
 #: ../svn/conflict-callbacks.c:504
-#, fuzzy
 msgid "accept edited version of property"
-msgstr "获取版本属性 ARG"
+msgstr "接受属性的编辑版本"
 
 #: ../svn/conflict-callbacks.c:508 ../svn/conflict-callbacks.c:526
 #: ../svn/conflict-callbacks.c:539 ../svn/conflict-callbacks.c:555
 #: ../svn/conflict-callbacks.c:571 ../svn/conflict-callbacks.c:587
 msgid "help"
-msgstr ""
+msgstr "帮助"
 
 #: ../svn/conflict-callbacks.c:508 ../svn/conflict-callbacks.c:526
 #: ../svn/conflict-callbacks.c:539 ../svn/conflict-callbacks.c:555
 #: ../svn/conflict-callbacks.c:571 ../svn/conflict-callbacks.c:587
 msgid "show this help (also '?')"
-msgstr ""
+msgstr "显示此帮助(同 '?')"
 
 #: ../svn/conflict-callbacks.c:518
 msgid "accept pre-existing item (ignore upstream addition)  [mine-full]"
@@ -8690,14 +8647,12 @@ msgstr ""
 
 #: ../svn/conflict-callbacks.c:533 ../svn/conflict-callbacks.c:545
 #: ../svn/conflict-callbacks.c:561 ../svn/conflict-callbacks.c:577
-#, fuzzy
 msgid "resolve the conflict later  [postpone]"
-msgstr "“%s”的冲突状态已解决\n"
+msgstr "推迟解决冲突 [postpone]"
 
 #: ../svn/conflict-callbacks.c:535
-#, fuzzy
 msgid "accept current working copy state"
-msgstr "目标必须是工作副本路径"
+msgstr "接受当前的工作副本路径状态"
 
 #: ../svn/conflict-callbacks.c:547
 msgid "apply update to the move destination  [mine-conflict]"
@@ -8734,18 +8689,18 @@ msgid ""
 msgstr ""
 
 #: ../svn/conflict-callbacks.c:722
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Unrecognized option.\n"
 "\n"
 msgstr ""
-"无效选项。\n"
+"不能识别的选项。\n"
 "\n"
 
 #: ../svn/conflict-callbacks.c:750
-#, fuzzy, c-format
+#, c-format
 msgid "Conflict discovered in file '%s'.\n"
-msgstr "在 “%s” 中发现冲突。\n"
+msgstr "在文件“%s”中发现冲突。\n"
 
 #: ../svn/conflict-callbacks.c:820
 #, c-format
@@ -8753,7 +8708,7 @@ msgid ""
 "Invalid option; cannot display conflicts for a binary file.\n"
 "\n"
 msgstr ""
-"非法选项；不能显示二进制文件的冲突。\n"
+"无效选项；不能显示二进制文件的冲突。\n"
 "\n"
 
 #: ../svn/conflict-callbacks.c:829
@@ -8762,7 +8717,7 @@ msgid ""
 "Invalid option; original files not available.\n"
 "\n"
 msgstr ""
-"非法选项；原始文件不可用。\n"
+"无效选项；原始文件不可用。\n"
 "\n"
 
 #: ../svn/conflict-callbacks.c:841
@@ -8771,17 +8726,17 @@ msgid ""
 "Invalid option; there's no merged version to diff.\n"
 "\n"
 msgstr ""
-"非法选项；没有已合并的版本来比较差异。\n"
+"无效选项；没有已合并的版本来比较差异。\n"
 "\n"
 
 #: ../svn/conflict-callbacks.c:861
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Invalid option; can only resolve text conflicts with the internal merge "
 "tool.\n"
 "\n"
 msgstr ""
-"非法选项；不能使用外部合并工具来解决属性冲突。\n"
+"无效选项；只能使用内部合并工具来解决纯文本冲突。\n"
 "\n"
 
 #: ../svn/conflict-callbacks.c:887 ../svn/conflict-callbacks.c:904
@@ -8799,7 +8754,7 @@ msgid ""
 "Invalid option; cannot choose based on conflicts in a binary file.\n"
 "\n"
 msgstr ""
-"非法选项；不能为二进制文件冲突选择基准。\n"
+"无效选项；不能为二进制文件冲突选择基准。\n"
 "\n"
 
 #: ../svn/conflict-callbacks.c:927
@@ -8815,20 +8770,22 @@ msgid "Conflict for property '%s' discovered on '%s'.\n"
 msgstr "属性 “%s” 冲突，位于 “%s”。\n"
 
 #: ../svn/conflict-callbacks.c:1026
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Invalid option; please edit the property first.\n"
 "\n"
 msgstr ""
-"非法选项；不能显示属性的冲突。\n"
+"无效选项；请先编辑属性。\n"
 "\n"
 
 #: ../svn/conflict-callbacks.c:1063
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Tree conflict on '%s'\n"
 "   > %s\n"
-msgstr "  树冲突：%u\n"
+msgstr ""
+"树冲突于“%s”\n"
+"   > %s\n"
 
 #: ../svn/conflict-callbacks.c:1128
 #, c-format
@@ -8898,14 +8855,12 @@ msgid "Failure occurred processing one or more externals definitions"
 msgstr "处理一个或更多的外部定义失败"
 
 #: ../svn/file-merge.c:135 ../svn/file-merge.c:785
-#, fuzzy
 msgid "Could not write data to merged file"
-msgstr "无法将 svndiff 写入临时文件"
+msgstr "无法写入数据到已经合并文件"
 
 #: ../svn/file-merge.c:491
-#, fuzzy
 msgid "Could not write data to temporary file"
-msgstr "无法将 svndiff 写入临时文件"
+msgstr "无法写入数据到临时文件"
 
 #: ../svn/file-merge.c:600
 msgid "Conflicting section found during merge:"
@@ -8932,9 +8887,9 @@ msgid ""
 msgstr ""
 
 #: ../svn/file-merge.c:868
-#, fuzzy, c-format
+#, c-format
 msgid "Merging '%s'.\n"
-msgstr "正在读取 “%s”"
+msgstr "正在合并“%s”。\n"
 
 #: ../svn/file-merge.c:915
 #, c-format
@@ -8949,16 +8904,14 @@ msgid ""
 msgstr ""
 
 #: ../svn/file-merge.c:951
-#, fuzzy, c-format
+#, c-format
 msgid "Merge of '%s' completed (remains in conflict).\n"
-msgstr "已跳过 '%s' -- 节点处于冲突状态\n"
+msgstr "“%s”的合并完成(仍旧处于冲突状态)。\n"
 
 #: ../svn/file-merge.c:955
-#, fuzzy, c-format
+#, c-format
 msgid "Merge of '%s' completed.\n"
-msgstr ""
-"\n"
-"完成升级。\n"
+msgstr "“%s”的合并完成。\n"
 
 #: ../svn/help-cmd.c:53
 #, c-format
@@ -9046,9 +8999,9 @@ msgid "URL: %s\n"
 msgstr "URL: %s\n"
 
 #: ../svn/info-cmd.c:286
-#, fuzzy, c-format
+#, c-format
 msgid "Relative URL: ^/%s\n"
-msgstr "不正确的相对 URL“%s”"
+msgstr "正确的相对 URL: ^/%s\n"
 
 #: ../svn/info-cmd.c:293
 #, c-format
