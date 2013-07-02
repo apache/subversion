@@ -3728,7 +3728,7 @@ get_revprop_packname(svn_fs_t *fs,
 
   if (revprops->manifest->nelts <= idx)
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Packed revprop manifest for rev %ld too "
+                             _("Packed revprop manifest for r%ld too "
                                "small"), revprops->revision);
 
   /* Now get the file name */
@@ -3901,14 +3901,14 @@ read_pack_revprop(packed_revprops_t **revprops,
   /* the file content should be available now */
   if (!result->packed_revprops)
     return svn_error_createf(SVN_ERR_FS_PACKED_REVPROP_READ_FAILURE, NULL,
-                  _("Failed to read revprop pack file for rev %ld"), rev);
+                  _("Failed to read revprop pack file for r%ld"), rev);
 
   /* parse it. RESULT will be complete afterwards. */
   err = parse_packed_revprops(fs, result, pool, iterpool);
   svn_pool_destroy(iterpool);
   if (err)
     return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
-                  _("Revprop pack file for rev %ld is corrupt"), rev);
+                  _("Revprop pack file for r%ld is corrupt"), rev);
 
   *revprops = result;
 
