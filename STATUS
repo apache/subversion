@@ -198,11 +198,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1497804
-   sqlite error messages: change location of sqlite numeric error code.
-   Justification:
-     Make it clearer that 'S26' is an error code, rather than a parenthetical
-     description of the last word in the string sqlite3_errmsg() returned.
-   Votes:
-     +1: danielsh, stefan2, rhuijben
