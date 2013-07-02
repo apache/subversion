@@ -2395,7 +2395,9 @@ svn_wc__db_resolve_delete_raise_moved_away(svn_wc__db_t *db,
     wcroot);
 
   SVN_ERR(svn_wc__db_update_move_list_notify(wcroot,
-                                             old_version->peg_rev,
+                                             (old_version
+                                              ? old_version->peg_rev
+                                              : SVN_INVALID_REVNUM),
                                              (new_version
                                               ? new_version->peg_rev
                                               : SVN_INVALID_REVNUM),
