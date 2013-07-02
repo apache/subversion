@@ -148,7 +148,8 @@ Candidate changes:
      +1: brane, rhuijben
 
  * r1498449, r1498455
-   kidney blame: convert a client segfault into a correct failure mode.
+   kidney blame: convert a client segfault into a correct failure mode.  To
+   reproduce run 'svn blame -r 2:1' against a 1.7 server with a 1.8.x binary.
    Notes:
      r1498449 breaks out a helper function
      r1498455 fixes the segfault.
