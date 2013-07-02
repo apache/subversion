@@ -104,7 +104,7 @@ class StatusEditor implements ISVNEditor
     {
         //DEBUG:System.err.println("  [J] StatusEditor.alterDirectory");
         checkState();
-        receiver.modifiedDirectory(relativePath, revision, (children != null),
+        receiver.modifiedDirectory(relativePath, (children != null),
                                    props_changed(properties));
     }
 
@@ -116,7 +116,7 @@ class StatusEditor implements ISVNEditor
     {
         //DEBUG:System.err.println("  [J] StatusEditor.alterFile");
         checkState();
-        receiver.modifiedFile(relativePath, revision,
+        receiver.modifiedFile(relativePath,
                               (checksum != null && contents != null),
                               props_changed(properties));
     }
@@ -128,7 +128,7 @@ class StatusEditor implements ISVNEditor
     {
         //DEBUG:System.err.println("  [J] StatusEditor.alterSymlink");
         checkState();
-        receiver.modifiedSymlink(relativePath, revision, (target != null),
+        receiver.modifiedSymlink(relativePath, (target != null),
                                  props_changed(properties));
     }
 
@@ -136,7 +136,7 @@ class StatusEditor implements ISVNEditor
     {
         //DEBUG:System.err.println("  [J] StatusEditor.delete");
         checkState();
-        receiver.deleted(relativePath, revision);
+        receiver.deleted(relativePath);
     }
 
     public void copy(String sourceRelativePath,

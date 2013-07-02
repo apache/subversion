@@ -87,14 +87,14 @@ Java_org_apache_subversion_javahl_remote_StateReporter_linkPath(
   reporter->linkPath(jurl, jpath, jrevision, jdepth, jstart_empty, jlock_token);
 }
 
-JNIEXPORT void JNICALL
+JNIEXPORT jlong JNICALL
 Java_org_apache_subversion_javahl_remote_StateReporter_finishReport(
     JNIEnv* env, jobject jthis)
 {
   JNIEntry(StateReporter, finishReport);
   StateReporter* reporter = StateReporter::getCppObject(jthis);
-  CPPADDR_NULL_PTR(reporter,);
-  reporter->finishReport();
+  CPPADDR_NULL_PTR(reporter, SVN_INVALID_REVNUM);
+  return reporter->finishReport();
 }
 
 JNIEXPORT void JNICALL

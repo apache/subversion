@@ -793,7 +793,6 @@ public class SVNRemoteTests extends SVNTests
             public boolean textChanged = false;
             public boolean propsChanged = false;
             public boolean deleted = false;
-            public long revision = -1;
 
             StatInfo(String relpath, char kind, boolean added)
             {
@@ -802,14 +801,13 @@ public class SVNRemoteTests extends SVNTests
                 this.deleted = !added;
             }
 
-            StatInfo(String relpath, char kind, long revision,
+            StatInfo(String relpath, char kind,
                      boolean textChanged, boolean propsChanged)
             {
                 this.relpath = relpath;
                 this.kind = kind;
                 this.textChanged = textChanged;
                 this.propsChanged = propsChanged;
-                this.revision = revision;
             }
         }
 
@@ -830,28 +828,28 @@ public class SVNRemoteTests extends SVNTests
             status.add(new StatInfo(relativePath, 'L', true));
         }
 
-        public void modifiedDirectory(String relativePath, long revision,
+        public void modifiedDirectory(String relativePath,
                                       boolean childrenModified, boolean propsModified)
         {
-            status.add(new StatInfo(relativePath, 'D', revision,
+            status.add(new StatInfo(relativePath, 'D',
                                     childrenModified, propsModified));
         }
 
-        public void modifiedFile(String relativePath, long revision,
+        public void modifiedFile(String relativePath,
                                  boolean textModified, boolean propsModified)
         {
-            status.add(new StatInfo(relativePath, 'F', revision,
+            status.add(new StatInfo(relativePath, 'F',
                                     textModified, propsModified));
         }
 
-        public void modifiedSymlink(String relativePath, long revision,
+        public void modifiedSymlink(String relativePath,
                                     boolean targetModified, boolean propsModified)
         {
-            status.add(new StatInfo(relativePath, 'L', revision,
+            status.add(new StatInfo(relativePath, 'L',
                                     targetModified, propsModified));
         }
 
-        public void deleted(String relativePath, long revision)
+        public void deleted(String relativePath)
         {
             status.add(new StatInfo(relativePath, ' ', false));
         }
@@ -866,7 +864,7 @@ public class SVNRemoteTests extends SVNTests
                                          Depth.infinity, receiver);
         try {
             rp.setPath("", 0, Depth.infinity, true, null);
-            rp.finishReport();
+            assertEquals(1, rp.finishReport());
         } finally {
             rp.dispose();
         }
@@ -891,7 +889,7 @@ public class SVNRemoteTests extends SVNTests
                                          Depth.infinity, receiver);
         try {
             rp.setPath("", 1, Depth.infinity, false, null);
-            rp.finishReport();
+            assertEquals(2, rp.finishReport());
         } finally {
             rp.dispose();
         }
@@ -901,6 +899,5 @@ public class SVNRemoteTests extends SVNTests
         assertEquals('F', mod.kind);
         assertEquals(false, mod.textChanged);
         assertEquals(true, mod.propsChanged);
-        assertEquals(1, mod.revision);
     }
 }
