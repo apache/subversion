@@ -217,7 +217,7 @@ static svn_error_t *
 test_deserialize_tree_conflict(apr_pool_t *pool)
 {
   const svn_wc_conflict_description3_t *conflict;
-  svn_wc_conflict_description2_t *exp_conflict;
+  svn_wc_conflict_description3_t *exp_conflict;
   const char *tree_conflict_data;
   const char *local_abspath;
   const svn_skel_t *skel;
@@ -226,7 +226,7 @@ test_deserialize_tree_conflict(apr_pool_t *pool)
                         "(version 0  2 -1 0  0 ) (version 0  2 -1 0  0 ))";
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, "Foo.c", pool));
-  exp_conflict = svn_wc_conflict_description_create_tree2(
+  exp_conflict = svn_wc_conflict_description_create_tree3(
                         local_abspath, svn_node_file, svn_wc_operation_update,
                         NULL, NULL, pool);
   exp_conflict->action = svn_wc_conflict_action_delete;
