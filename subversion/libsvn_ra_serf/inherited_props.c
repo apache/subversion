@@ -41,7 +41,7 @@
 
 /* The current state of our XML parsing. */
 typedef enum iprops_state_e {
-  INITIAL = 0,
+  INITIAL = XML_STATE_INITIAL,
   IPROPS_REPORT,
   IPROPS_ITEM,
   IPROPS_PATH,

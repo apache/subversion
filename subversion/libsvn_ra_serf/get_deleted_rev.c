@@ -36,7 +36,7 @@
  * This enum represents the current state of our XML parsing for a REPORT.
  */
 enum drev_state_e {
-  INITIAL = 0,
+  INITIAL = XML_STATE_INITIAL,
   REPORT,
   VERSION_NAME
 };

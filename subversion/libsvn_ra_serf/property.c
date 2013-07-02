@@ -42,7 +42,7 @@
 
 /* Our current parsing state we're in for the PROPFIND response. */
 typedef enum prop_state_e {
-  INITIAL = 0,
+  INITIAL = XML_STATE_INITIAL,
   MULTISTATUS,
   RESPONSE,
   HREF,

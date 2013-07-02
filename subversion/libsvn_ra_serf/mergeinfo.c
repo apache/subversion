@@ -41,7 +41,7 @@
 
 /* The current state of our XML parsing. */
 typedef enum mergeinfo_state_e {
-  INITIAL = 0,
+  INITIAL = XML_STATE_INITIAL,
   MERGEINFO_REPORT,
   MERGEINFO_ITEM,
   MERGEINFO_PATH,

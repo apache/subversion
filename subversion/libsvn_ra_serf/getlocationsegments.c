@@ -52,8 +52,8 @@ typedef struct gls_context_t {
 
 } gls_context_t;
 
-enum {
-  INITIAL = 0,
+enum locseg_state_e {
+  INITIAL = XML_STATE_INITIAL,
   REPORT,
   SEGMENT
 };
