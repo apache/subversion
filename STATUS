@@ -117,21 +117,6 @@ Candidate changes:
      +1: ivan
      -0: gstein, brane (we should dynamically detect the problem; should fix name)
 
- * r1496957
-   Eliminate an extra RA layer roundtrip in 'svn log' on repository roots.
-   Justification:
-     Minor performance regression against 1.7.x plus requesting e.g. single
-     revision logs on a repo root is not a fringe use-case.
-   Votes:
-     +1: stefan2, stsp
-
- * r1497002
-   Avoid temporary files when calling external diff. Fixes issue 4382.
-   Justification:
-     Regression from 1.7.
-   Votes:
-     +1: philip, stsp
-
  * r1497310
    Backport 'svn help cleanup' improvements made in r1497310.
    Justification:
@@ -226,3 +211,18 @@ Approved changes:
      of already performed moves.
    Votes:
      +1: rhuijben, philip, stsp
+
+ * r1496957
+   Eliminate an extra RA layer roundtrip in 'svn log' on repository roots.
+   Justification:
+     Minor performance regression against 1.7.x plus requesting e.g. single
+     revision logs on a repo root is not a fringe use-case.
+   Votes:
+     +1: stefan2, stsp, rhuijben
+
+ * r1497002
+   Avoid temporary files when calling external diff. Fixes issue 4382.
+   Justification:
+     Regression from 1.7.
+   Votes:
+     +1: philip, stsp, rhuijben
