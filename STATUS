@@ -173,6 +173,14 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1499064
+   Fix issue #4387, svn merge --record-only errors out on renamed path.
+   Justification:
+     Record-only merge shouldn't be flagging tree conflicts.
+     Regression from 1.7.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
