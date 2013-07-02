@@ -401,7 +401,7 @@ svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
 
 svn_error_t *
 svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
-                          const svn_wc_conflict_description2_t *conflict,
+                          const svn_wc_conflict_description3_t *conflict,
                           apr_pool_t *scratch_pool)
 {
   svn_boolean_t existing_conflict;
@@ -443,7 +443,7 @@ svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
                                                   NULL,
                                                   scratch_pool, scratch_pool));
 
-  switch(conflict->operation)
+  switch (conflict->operation)
     {
       case svn_wc_operation_update:
       default:
