@@ -289,8 +289,8 @@ public interface ISVNRemote
      * or the HEAD revision if <code>revision</code> is
      * {@link org.apache.subversion.javahl.types.Revision#SVN_INVALID_REVNUM}.
      * <p>
-     * The client begins by providing a <code>statusEditor</code> to
-     * the remote session; this editor must contain knowledge of where
+     * The client begins by providing a <code>receiver</code> to
+     * the remote session; this object must contain knowledge of where
      * the change will begin in the working copy.
      * <p>
      * In return, the client receives an {@link ISVNReporter}
@@ -298,14 +298,12 @@ public interface ISVNRemote
      * calls to its methods.
      * <p>
      * When finished, the client calls {@link ISVNReporter#finishReport}.
-     * This results in a complete drive of <code>statusEditor</code>,
-     * ending with {@link ISVNEditor#complete()}, to report,
-     * essentially, what would be modified in the working copy were
-     * the client to perform an update.  <code>statusTarget</code> is
-     * an optional single path component that restricts the scope of
-     * the status report to an entry in the directory represented by
-     * the session's URL, or empty if the entire directory is meant to
-     * be examined.
+     * This results in <code>receiver</code> being called once for
+     * every path in the working copy that is different from the
+     * repository. <code>statusTarget</code> is an optional single
+     * path component that restricts the scope of the status report to
+     * an entry in the directory represented by the session's URL, or
+     * empty if the entire directory is meant to be examined.
      * <p>
      * Get status as deeply as <code>depth</code> indicates.  If
      * <code>depth</code> is
@@ -317,8 +315,8 @@ public interface ISVNRemote
      * <p>
      * The caller may not perform any operations using this session
      * before finishing the report, and may not perform any operations
-     * using this session from within the editing operations of
-     * <code>statusEditor</code>.
+     * using this session from within the implementation of
+     * <code>receiver</code>.
      * <p>
      * <b>Note:</b> The reporter provided by this function does
      * <em>not</em> supply copy-from information to the editor
@@ -332,7 +330,7 @@ public interface ISVNRemote
      */
     ISVNReporter status(String statusTarget,
                         long revision, Depth depth,
-                        ISVNEditor statusEditor)
+                        RemoteStatus receiver)
             throws ClientException;
 
     // TODO: diff
