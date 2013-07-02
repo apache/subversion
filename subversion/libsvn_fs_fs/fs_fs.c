@@ -3308,7 +3308,7 @@ ensure_revprop_generation(svn_fs_t *fs, apr_pool_t *pool)
   SVN_ERR(ensure_revprop_namespace(fs));
   if (ffd->revprop_generation == NULL)
     {
-      apr_int64_t current = 0;
+      apr_int64_t current;
 
       SVN_ERR(svn_named_atomic__get(&ffd->revprop_generation,
                                     ffd->revprop_namespace,
