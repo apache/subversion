@@ -123,14 +123,14 @@ Candidate changes:
      Minor performance regression against 1.7.x plus requesting e.g. single
      revision logs on a repo root is not a fringe use-case.
    Votes:
-     +1: stefan2
+     +1: stefan2, stsp
 
  * r1497002
    Avoid temporary files when calling external diff. Fixes issue 4382.
    Justification:
      Regression from 1.7.
    Votes:
-     +1: philip
+     +1: philip, stsp
 
  * r1497310
    Backport 'svn help cleanup' improvements made in r1497310.
@@ -147,16 +147,17 @@ Candidate changes:
    Votes:
      +1: brane, rhuijben
 
- * r1498449, r1498455
+ * r1498449, r1498455, r1498997
    kidney blame: convert a client segfault into a correct failure mode.  To
    reproduce run 'svn blame -r 2:1' against a 1.7 server with a 1.8.x binary.
    Notes:
      r1498449 breaks out a helper function
      r1498455 fixes the segfault.
+     r1498997 is a minor optimisation
    Justification:
      Segfault.  (1.8.0 didn't have the segfaulting code.)
    Votes:
-     +1: danielsh
+     +1: danielsh, stsp
 
  * r1498456
    ra_serf: recognize the get-file-revs-reverse capability.
@@ -185,15 +186,6 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1498564
-   Allow the new in 1.8 move metadata only to work properly when the
-   target of the move already exists as unversioned node.
-   Justification:
-     The metadata only option was added especially to allow fixing up
-     of already performed moves.
-   Votes:
-     +1: rhuijben, philip
-
  * r1498851
    Provide an explicit error in the serf xml parser when the root element
    isn't matched in the transition table.
@@ -208,3 +200,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1498564
+   Allow the new in 1.8 move metadata only to work properly when the
+   target of the move already exists as unversioned node.
+   Justification:
+     The metadata only option was added especially to allow fixing up
+     of already performed moves.
+   Votes:
+     +1: rhuijben, philip, stsp
