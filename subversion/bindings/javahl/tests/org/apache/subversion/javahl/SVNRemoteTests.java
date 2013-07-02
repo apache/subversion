@@ -649,8 +649,8 @@ public class SVNRemoteTests extends SVNTests
         ISVNRemote session = getSession();
 
         HashMap<String, byte[]> props = new HashMap<String, byte[]>();
-        ArrayList<ISVNEditor.RotatePair> rotation =
-            new ArrayList<ISVNEditor.RotatePair>();
+        // ArrayList<ISVNEditor.RotatePair> rotation =
+        //     new ArrayList<ISVNEditor.RotatePair>();
 
         CommitContext cc = new CommitContext(session, "not implemented");
         try {
@@ -672,12 +672,12 @@ public class SVNRemoteTests extends SVNTests
             }
             assertEquals("Not implemented: CommitEditor.alterSymlink", exmsg);
 
-            try {
-                exmsg = "";
-                cc.editor.rotate(rotation);
-            } catch (IllegalStateException ex) {
-                exmsg = ex.getMessage();
-            }
+            // try {
+            //     exmsg = "";
+            //     cc.editor.rotate(rotation);
+            // } catch (IllegalStateException ex) {
+            //     exmsg = ex.getMessage();
+            // }
             assertEquals("Not implemented: CommitEditor.rotate", exmsg);
         } finally {
             cc.editor.dispose();

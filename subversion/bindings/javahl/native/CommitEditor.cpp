@@ -511,8 +511,8 @@ void CommitEditor::move(jstring jsrc_relpath, jlong jsrc_revision,
                               svn_revnum_t(jreplaces_revision)),);
 }
 
-void CommitEditor::rotate(jobject jelements)
-{
+// void CommitEditor::rotate(jobject jelements)
+// {
 //   if (!m_valid)
 //     {
 //       throw_editor_inactive();
@@ -528,8 +528,7 @@ void CommitEditor::rotate(jobject jelements)
 //     return;
 //
 //   SVN_JNI_ERR(svn_editor_rotate(m_editor, relpaths, revisions),);
-  throw_not_implemented("rotate");
-}
+// }
 
 void CommitEditor::complete()
 {
