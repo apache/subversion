@@ -731,6 +731,10 @@ typedef svn_error_t *
                             apr_pool_t *scratch_pool);
 
 
+/* Magic state value for the initial state in a svn_ra_serf__xml_transition_t
+   table */
+#define XML_STATE_INITIAL 0
+
 /* State transition table.
 
    When the XML Context is constructed, it is in state 0. User states are
@@ -738,6 +742,8 @@ typedef svn_error_t *
 
    In a list of transitions, use { 0 } to indicate the end. Specifically,
    the code looks for NS == NULL.
+
+   The initial state for each transition table is XML_STATE_INITIAL.
 
    ### more docco
 */

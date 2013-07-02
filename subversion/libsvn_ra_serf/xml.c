@@ -615,7 +615,7 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
     }
   if (scan->ns == NULL)
     {
-      if (current->state == 0)
+      if (current->state == XML_STATE_INITIAL)
         {
           return svn_error_createf(
                         SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,

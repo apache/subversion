@@ -48,7 +48,7 @@
  * This enum represents the current state of our XML parsing for a MERGE.
  */
 typedef enum merge_state_e {
-  INITIAL = 0,
+  INITIAL = XML_STATE_INITIAL,
   MERGE_RESPONSE,
   UPDATED_SET,
   RESPONSE,
