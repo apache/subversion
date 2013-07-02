@@ -699,9 +699,16 @@ subcommand_create(apr_getopt_t *os, void *baton, apr_pool_t *pool)
         svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE, "1");
       if (! svn_version__at_least(opt_state->compatible_version, 1, 8, 0))
         svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE, "1");
-      if (! svn_version__at_least(opt_state->compatible_version, 1, 9, 0))
-        apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_9_COMPATIBLE,
-                     APR_HASH_KEY_STRING, "1");
+      /* In 1.8, we figured out that we didn't have to keep extending this
+         madness indefinitely. */
+      svn_hash_sets(fs_config, SVN_FS_CONFIG_COMPATIBLE_VERSION,
+                    apr_psprintf(pool, "%d.%d.%d%s%s",
+                                 opt_state->compatible_version->major,
+                                 opt_state->compatible_version->minor,
+                                 opt_state->compatible_version->patch,
+                                 opt_state->compatible_version->tag
+                                 ? "-" : "",
+                                 opt_state->compatible_version->tag));
     }
 
   if (opt_state->compatible_version)

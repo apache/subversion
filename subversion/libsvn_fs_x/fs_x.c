@@ -41,6 +41,7 @@
 
 #include "private/svn_fs_util.h"
 #include "private/svn_string_private.h"
+#include "private/svn_subr_private.h"
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_private_config.h"
@@ -802,11 +803,18 @@ svn_fs_x__create(svn_fs_t *fs,
   /* See if compatibility with older versions was explicitly requested. */
   if (fs->config)
     {
+      svn_version_t *compatible_version;
+      const char *compatible;
+      compatible = svn_hash_gets(fs->config, SVN_FS_CONFIG_COMPATIBLE_VERSION);
+      if (compatible)
+        SVN_ERR(svn_version__parse_version_string(&compatible_version,
+                                                  compatible, pool));
       if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE)
           || svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE)
           || svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE)
           || svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE)
-          || svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_9_COMPATIBLE))
+          || (compatible && compatible_version->major == SVN_VER_MAJOR
+              && compatible_version->minor <= 8))
         return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
                  _("FSX is not compatible with Subversion prior to 1.9"));
     }

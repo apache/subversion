@@ -152,11 +152,16 @@ typedef struct svn_fs_t svn_fs_t;
 #define SVN_FS_CONFIG_PRE_1_8_COMPATIBLE        "pre-1.8-compatible"
 
 /** Create repository format compatible with Subversion versions
- * earlier than 1.9.
+ * earlier than 1.9.  The value must be a version in the same format
+ * as #SVN_VER_NUMBER.
+ *
+ * @note The @c patch component would often be ignored, due to our forward
+ * compatibility promises within minor release lines.  It should therefore
+ * usually be set to @c 0.
  *
  * @since New in 1.9.
  */
-#define SVN_FS_CONFIG_PRE_1_9_COMPATIBLE        "pre-1.9-compatible"
+#define SVN_FS_CONFIG_COMPATIBLE_VERSION        "compatible-version"
 /** @} */
 
 
