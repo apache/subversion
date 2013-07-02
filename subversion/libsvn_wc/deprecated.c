@@ -2678,10 +2678,12 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
 
   if (old_status->conflicted)
     {
-      const svn_wc_conflict_description2_t *tree_conflict;
+      const svn_wc_conflict_description3_t *tree_conflict;
+      const svn_wc_conflict_description2_t *tree_conflict2;
       SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, wc_ctx, local_abspath,
                                         scratch_pool, scratch_pool));
-      (*status)->tree_conflict = svn_wc__cd2_to_cd(tree_conflict, result_pool);
+      tree_conflict2 = svn_wc__cd3_to_cd2(tree_conflict2, scratch_pool);
+      (*status)->tree_conflict = svn_wc__cd2_to_cd(tree_conflict2, result_pool);
     }
 
   (*status)->switched = old_status->switched;
