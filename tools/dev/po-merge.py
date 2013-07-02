@@ -178,9 +178,10 @@ def main(argv):
                 for i in msgstr:
                     outfile.write('msgstr[%s] %s\n' % (n, msgstr[n]))
                     n += 1
-        for m in msgstr:
-            if m == '""':
-                untranslated += 1
+        if msgstr is not None:
+            for m in msgstr:
+                if m == '""':
+                    untranslated += 1
         for c in comments:
             if c.startswith('#,') and 'fuzzy' in c.split(', '):
                 fuzzy += 1
