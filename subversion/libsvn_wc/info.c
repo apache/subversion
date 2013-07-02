@@ -379,7 +379,7 @@ struct found_entry_baton
   svn_boolean_t actual_only;
   svn_boolean_t first;
   /* The set of tree conflicts that have been found but not (yet) visited by
-   * the tree walker.  Map of abspath -> svn_wc_conflict_description2_t. */
+   * the tree walker.  Map of abspath -> empty string. */
   apr_hash_t *tree_conflicts;
   apr_pool_t *pool;
 };
