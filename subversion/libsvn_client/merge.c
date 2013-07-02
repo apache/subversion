@@ -1307,6 +1307,9 @@ record_tree_conflict(merge_cmd_baton_t *merge_b,
 {
   svn_wc_context_t *wc_ctx = merge_b->ctx->wc_ctx;
 
+  if (merge_b->record_only)
+    return SVN_NO_ERROR;
+
   if (merge_b->merge_source.ancestral
       || merge_b->reintegrate_merge)
     {
@@ -1316,8 +1319,7 @@ record_tree_conflict(merge_cmd_baton_t *merge_b,
   alloc_and_store_path(&merge_b->conflicted_paths, local_abspath,
                        merge_b->pool);
 
-
-  if (!merge_b->record_only && !merge_b->dry_run)
+  if (!merge_b->dry_run)
     {
        svn_wc_conflict_description3_t *conflict;
        const svn_wc_conflict_version_t *left;
