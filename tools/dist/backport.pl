@@ -276,7 +276,7 @@ sub handle_entry {
 }
 
 sub maybe_revert {
-  "This is both a SIGINT handler, and the tail end of main() in normal runs.";
+  # This is both a SIGINT handler, and the tail end of main() in normal runs.
   system $SVN, qw/revert -R ./ if !$YES and prompt 'Revert? ';
   exit if @_;
 }
