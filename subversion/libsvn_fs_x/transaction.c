@@ -2226,89 +2226,6 @@ write_hash_handler(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* Write out the hash HASH as a text representation to file FILE.  In
-   the process, record position, the total size of the dump and MD5 as
-   well as SHA1 in REP.   If rep sharing has been enabled and REPS_HASH
-   is not NULL, it will be used in addition to the on-disk cache to find
-   earlier reps with the same content.  When such existing reps can be
-   found, we will truncate the one just written from the file and return
-   the existing rep.  Perform temporary allocations in POOL. */
-static svn_error_t *
-write_hash_rep(representation_t *rep,
-               apr_file_t *file,
-               apr_hash_t *hash,
-               svn_fs_t *fs,
-               const svn_fs_x__id_part_t *txn_id,
-               apr_hash_t *reps_hash,
-               int item_type,
-               apr_pool_t *pool)
-{
-  svn_stream_t *stream;
-  struct write_hash_baton *whb;
-  representation_t *old_rep;
-  apr_off_t offset = 0;
-
-  SVN_ERR(svn_fs_x__get_file_offset(&offset, file, pool));
-
-  whb = apr_pcalloc(pool, sizeof(*whb));
-
-  whb->stream = svn_stream_from_aprfile2(file, TRUE, pool);
-  whb->size = 0;
-  whb->md5_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
-  whb->sha1_ctx = svn_checksum_ctx_create(svn_checksum_sha1, pool);
-
-  stream = svn_stream_create(whb, pool);
-  svn_stream_set_write(stream, write_hash_handler);
-
-  SVN_ERR(svn_stream_puts(whb->stream, "PLAIN\n"));
-
-  SVN_ERR(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool));
-
-  /* Store the results. */
-  SVN_ERR(digests_final(rep, whb->md5_ctx, whb->sha1_ctx, pool));
-
-  /* Check and see if we already have a representation somewhere that's
-     identical to the one we just wrote out. */
-  SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, pool));
-
-  if (old_rep)
-    {
-      /* We need to erase from the protorev the data we just wrote. */
-      SVN_ERR(svn_io_file_trunc(file, offset, pool));
-
-      /* Use the old rep for this content. */
-      memcpy(rep, old_rep, sizeof (*rep));
-    }
-  else
-    {
-      svn_fs_x__p2l_entry_t entry;
-      svn_fs_x__id_part_t rev_item;
-
-      /* Write out our cosmetic end marker. */
-      SVN_ERR(svn_stream_puts(whb->stream, "ENDREP\n"));
-
-      SVN_ERR(allocate_item_index(&rep->item_index, fs, txn_id, offset,
-                                  pool));
-      
-      rev_item.revision = SVN_INVALID_REVNUM;
-      rev_item.number = rep->item_index;
-
-      entry.offset = offset;
-      SVN_ERR(svn_fs_x__get_file_offset(&offset, file, pool));
-      entry.size = offset - entry.offset;
-      entry.type = item_type;
-      entry.item_count = 1;
-      entry.items = &rev_item;
-      SVN_ERR(store_p2l_index_entry(fs, txn_id, &entry, pool));
-
-      /* update the representation */
-      rep->size = whb->size;
-      rep->expanded_size = 0;
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Write out the hash HASH pertaining to the NODEREV in FS as a deltified
    text representation to file FILE.  In the process, record the total size
    and the md5 digest in REP.  If rep sharing has been enabled and REPS_HASH
@@ -2609,15 +2526,10 @@ write_final_rev(const svn_fs_id_t **new_id_p,
           SVN_ERR(unparse_dir_entries(&str_entries, entries, pool));
           noderev->data_rep->revision = rev;
 
-          if (ffd->deltify_directories)
-            SVN_ERR(write_hash_delta_rep(noderev->data_rep, file,
-                                         str_entries, fs, txn_id, noderev,
-                                         NULL, SVN_FS_X__ITEM_TYPE_DIR_REP,
-                                         pool));
-          else
-            SVN_ERR(write_hash_rep(noderev->data_rep, file, str_entries,
-                                   fs, txn_id, NULL,
-                                   SVN_FS_X__ITEM_TYPE_DIR_REP, pool));
+          SVN_ERR(write_hash_delta_rep(noderev->data_rep, file,
+                                       str_entries, fs, txn_id, noderev,
+                                       NULL, SVN_FS_X__ITEM_TYPE_DIR_REP,
+                                       pool));
 
           svn_fs_x__id_txn_reset(&noderev->data_rep->txn_id);
         }
@@ -2649,13 +2561,9 @@ write_final_rev(const svn_fs_id_t **new_id_p,
       svn_fs_x__id_txn_reset(&noderev->prop_rep->txn_id);
       noderev->prop_rep->revision = rev;
 
-      if (ffd->deltify_properties)
-        SVN_ERR(write_hash_delta_rep(noderev->prop_rep, file,
-                                     proplist, fs, txn_id, noderev,
-                                     reps_hash, item_type, pool));
-      else
-        SVN_ERR(write_hash_rep(noderev->prop_rep, file, proplist,
-                               fs, txn_id, reps_hash, item_type, pool));
+      SVN_ERR(write_hash_delta_rep(noderev->prop_rep, file,
+                                   proplist, fs, txn_id, noderev,
+                                   reps_hash, item_type, pool));
     }
 
   /* Convert our temporary ID into a permanent revision one. */

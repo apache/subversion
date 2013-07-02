@@ -59,7 +59,6 @@
 #define FLAG_FALSE         "false"
 
 /* Kinds of representation. */
-#define REP_PLAIN          "PLAIN"
 #define REP_DELTA          "DELTA"
 
 /* An arbitrary maximum path length, so clients can't run us out of memory
@@ -633,12 +632,6 @@ svn_fs_x__read_rep_header(svn_fs_x__rep_header_t **header,
 
   *header = apr_pcalloc(pool, sizeof(**header));
   (*header)->header_size = buffer->len + 1;
-  if (strcmp(buffer->data, REP_PLAIN) == 0)
-    {
-      (*header)->type = svn_fs_x__rep_plain;
-      return SVN_NO_ERROR;
-    }
-
   if (strcmp(buffer->data, REP_DELTA) == 0)
     {
       /* This is a delta against the empty stream. */
@@ -687,10 +680,6 @@ svn_fs_x__write_rep_header(svn_fs_x__rep_header_t *header,
   
   switch (header->type)
     {
-      case svn_fs_x__rep_plain:
-        text = REP_PLAIN "\n";
-        break;
-
       case svn_fs_x__rep_self_delta:
         text = REP_DELTA "\n";
         break;

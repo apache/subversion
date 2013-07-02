@@ -124,8 +124,6 @@ dgb__log_access(svn_fs_t *fs,
       svn_fs_x__rep_header_t *header = item;
       if (header == NULL)
         description = "  (txdelta window)";
-      else if (header->type == svn_fs_x__rep_plain)
-        description = "  PLAIN";
       else if (header->type == svn_fs_x__rep_self_delta)
         description = "  DELTA";
       else
@@ -467,7 +465,7 @@ typedef struct rep_state_t
                        (i.e. does not have a header) */
   apr_size_t header_size;
   apr_off_t start;  /* The starting offset for the raw
-                       svndiff/plaintext data minus header.
+                       svndiff data minus header.
                        -1 if the offset is yet unknwon. */
                     /* sub-item index in case the rep is containered */
   apr_uint32_t sub_item;
@@ -631,10 +629,6 @@ create_rep_state_body(rep_state_t **rep_state,
   rs->header_size = rh->header_size;
   *rep_state = rs;
   *rep_header = rh;
-
-  if (rh->type == svn_fs_x__rep_plain)
-    /* This is a plaintext, so just return the current rep_state. */
-    return SVN_NO_ERROR;
 
   /* We are dealing with a delta, find out what version. */
   rs->chunk_index = 0;
@@ -1022,9 +1016,9 @@ set_cached_combined_window(svn_stringbuf_t *window,
 }
 
 /* Build an array of rep_state structures in *LIST giving the delta
-   reps from first_rep to a plain-text or self-compressed rep.  Set
-   *SRC_STATE to the plain-text rep we find at the end of the chain,
-   or to NULL if the final delta representation is self-compressed.
+   reps from first_rep to a  self-compressed rep.  Set *SRC_STATE to
+   the container rep we find at the end of the chain, or to NULL if
+   the final delta representation is self-compressed.
    The representation to start from is designated by filesystem FS, id
    ID, and representation REP.
    Also, set *WINDOW_P to the base window content for *LIST, if it
@@ -1065,7 +1059,7 @@ build_rep_list(apr_array_header_t **list,
      Please note that for all non-empty deltas have
      a 4-byte header _plus_ some data. */
   if (*expanded_size == 0)
-    if (rep_header->type == svn_fs_x__rep_plain || first_rep->size != 4)
+    if (first_rep->size != 4)
       *expanded_size = first_rep->size;
 
   while (1)
@@ -1092,11 +1086,9 @@ build_rep_list(apr_array_header_t **list,
           return SVN_NO_ERROR;
         }
 
-      if (rep_header->type == svn_fs_x__rep_plain
-          || rep_header->type == svn_fs_x__rep_container)
+      if (rep_header->type == svn_fs_x__rep_container)
         {
-          /* This is a plaintext or container item, so just return the
-             current rep_state. */
+          /* This is a container item, so just return the current rep_state. */
           *src_state = rs;
           return SVN_NO_ERROR;
         }
@@ -1303,33 +1295,6 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
   return SVN_NO_ERROR;
 }
 
-/* Read SIZE bytes from the representation RS and return it in *NWIN. */
-static svn_error_t *
-read_plain_window(svn_stringbuf_t **nwin, rep_state_t *rs,
-                  apr_size_t size, apr_pool_t *pool)
-{
-  apr_off_t offset;
-  
-  /* RS->FILE may be shared between RS instances -> make sure we point
-   * to the right data. */
-  SVN_ERR(auto_open_shared_file(rs->file));
-  SVN_ERR(auto_set_start_offset(rs, pool));
-
-  offset = rs->start + rs->current;
-  SVN_ERR(aligned_seek(rs->file->fs, rs->file->file, NULL, offset, pool));
-
-  /* Read the plain data. */
-  *nwin = svn_stringbuf_create_ensure(size, pool);
-  SVN_ERR(svn_io_file_read_full2(rs->file->file, (*nwin)->data, size,
-                                 NULL, NULL, pool));
-  (*nwin)->data[size] = 0;
-
-  /* Update RS. */
-  rs->current += (apr_off_t)size;
-
-  return SVN_NO_ERROR;
-}
-
 /* Read the whole representation RS and return it in *NWIN. */
 static svn_error_t *
 read_container_window(svn_stringbuf_t **nwin,
@@ -1420,20 +1385,14 @@ get_combined_window(svn_stringbuf_t **result,
       rs = APR_ARRAY_IDX(rb->rs_list, i, rep_state_t *);
       window = APR_ARRAY_IDX(windows, i, svn_txdelta_window_t *);
 
-      /* Maybe, we've got a PLAIN start representation.  If we do, read
-         as much data from it as the needed for the txdelta window's source
-         view.
+      /* Maybe, we've got a start representation in a container.  If we do,
+         read as much data from it as the needed for the txdelta window's
+         source view.
          Note that BUF / SOURCE may only be NULL in the first iteration. */
       source = buf;
       if (source == NULL && rb->src_state != NULL)
-        {
-          if (rb->src_state->header_size == 0)
-            SVN_ERR(read_container_window(&source, rb->src_state,
-                                          window->sview_len, pool));
-          else
-            SVN_ERR(read_plain_window(&source, rb->src_state,
+        SVN_ERR(read_container_window(&source, rb->src_state,
                                       window->sview_len, pool));
-        }
 
       /* Combine this window with the current one. */
       new_pool = svn_pool_create(rb->pool);
@@ -1522,7 +1481,7 @@ init_rep_state(rep_state_t *rs,
   rs->item_index = entry->items[0].number;
   rs->header_size = rep_header->header_size;
   rs->start = entry->offset + rs->header_size;
-  rs->current = rep_header->type == svn_fs_x__rep_plain ? 0 : 4;
+  rs->current = 4;
   rs->size = entry->size - rep_header->header_size - 7;
   rs->ver = 1;
   rs->chunk_index = 0;
@@ -1656,10 +1615,7 @@ svn_fs_x__get_representation_length(svn_filesize_t *packed_len,
   /* RS->FILE may be shared between RS instances -> make sure we point
    * to the right data. */
   *packed_len = rs.size;
-  if (rep_header->type == svn_fs_x__rep_plain)
-    *expanded_len = rs.size;
-  else
-    SVN_ERR(cache_windows(expanded_len, fs, &rs, pool));
+  SVN_ERR(cache_windows(expanded_len, fs, &rs, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1674,8 +1630,8 @@ get_contents(struct rep_read_baton *rb,
   char *cur = buf;
   rep_state_t *rs;
 
-  /* Special case for when there are no delta reps, only a plain
-     text or containered text. */
+  /* Special case for when there are no delta reps, only a 
+     containered text. */
   if (rb->rs_list->nelts == 0 && rb->buf == NULL)
     {
       copy_len = remaining;
@@ -1704,21 +1660,6 @@ get_contents(struct rep_read_baton *rb,
                      : 0ul;
 
           memcpy (cur, rb->base_window->data + offset, copy_len);
-        }
-      else
-        {
-          apr_off_t offset;
-          if (((apr_off_t) copy_len) > rs->size - rs->current)
-            copy_len = (apr_size_t) (rs->size - rs->current);
-
-          SVN_ERR(auto_open_shared_file(rs->file));
-          SVN_ERR(auto_set_start_offset(rs, rb->pool));
-
-          offset = rs->start + rs->current;
-          SVN_ERR(aligned_seek(rs->file->fs, rs->file->file, NULL, offset,
-                               rb->pool));
-          SVN_ERR(svn_io_file_read_full2(rs->file->file, cur, copy_len,
-                                         NULL, NULL, rb->pool));
         }
 
       rs->current += copy_len;
@@ -2399,50 +2340,13 @@ block_read_windows(svn_fs_x__rep_header_t *rep_header,
 {
   fs_x_data_t *ffd = fs->fsap_data;
   rep_state_t rs = { 0 };
-  apr_off_t offset;
-  apr_off_t block_start;
-  svn_boolean_t is_cached = FALSE;
-  window_cache_key_t key = { 0 };
+  svn_filesize_t fulltext_len;
 
-  if (   (rep_header->type != svn_fs_x__rep_plain
-          && !ffd->txdelta_window_cache)
-      || (rep_header->type == svn_fs_x__rep_plain
-          && !ffd->combined_window_cache))
+  if (!ffd->txdelta_window_cache || !ffd->combined_window_cache)
     return SVN_NO_ERROR;
 
   SVN_ERR(init_rep_state(&rs, rep_header, fs, file, stream, entry, pool));
-  
-  /* RS->FILE may be shared between RS instances -> make sure we point
-   * to the right data. */
-  offset = rs.start + rs.current;
-  if (rep_header->type == svn_fs_x__rep_plain)
-    {
-      svn_stringbuf_t *plaintext;
-      
-      /* already in cache? */
-      SVN_ERR(svn_cache__has_key(&is_cached, rs.combined_cache,
-                                 get_window_key(&key, &rs), pool));
-      if (is_cached)
-        return SVN_NO_ERROR;
-
-      /* for larger reps, the header may have crossed a block boundary.
-       * make sure we still read blocks properly aligned, i.e. don't use
-       * plain seek here. */
-      SVN_ERR(aligned_seek(fs, file, &block_start, offset, pool));
-
-      plaintext = svn_stringbuf_create_ensure(rs.size, pool);
-      SVN_ERR(svn_io_file_read_full2(file, plaintext->data, rs.size,
-                                     &plaintext->len, NULL, pool));
-      plaintext->data[plaintext->len] = 0;
-      rs.current += rs.size;
-
-      SVN_ERR(set_cached_combined_window(plaintext, &rs, pool));
-    }
-  else
-    {
-      svn_filesize_t fulltext_len;
-      SVN_ERR(cache_windows(&fulltext_len, fs, &rs, pool));
-    }
+  SVN_ERR(cache_windows(&fulltext_len, fs, &rs, pool));
 
   return SVN_NO_ERROR;
 }

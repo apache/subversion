@@ -214,14 +214,6 @@ read_config(fs_x_data_t *ffd,
                               CONFIG_OPTION_ENABLE_REP_SHARING, TRUE));
 
   /* Initialize deltification settings in ffd. */
-  SVN_ERR(svn_config_get_bool(ffd->config, &ffd->deltify_directories,
-                              CONFIG_SECTION_DELTIFICATION,
-                              CONFIG_OPTION_ENABLE_DIR_DELTIFICATION,
-                              TRUE));
-  SVN_ERR(svn_config_get_bool(ffd->config, &ffd->deltify_properties,
-                              CONFIG_SECTION_DELTIFICATION,
-                              CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION,
-                              TRUE));
   SVN_ERR(svn_config_get_int64(ffd->config, &ffd->max_deltification_walk,
                                CONFIG_SECTION_DELTIFICATION,
                                CONFIG_OPTION_MAX_DELTIFICATION_WALK,
@@ -321,25 +313,7 @@ write_config(svn_fs_t *fs,
 "###"                                                                        NL
 "### The options in this section allow for tuning the deltification"         NL
 "### strategy.  Their effects on data size and server performance may vary"  NL
-"### from one repository to another.  Versions prior to 1.8 will ignore"     NL
-"### this section."                                                          NL
-"###"                                                                        NL
-"### The following parameter enables deltification for directories. It can"  NL
-"### be switched on and off at will, but for best space-saving results"      NL
-"### should be enabled consistently over the life of the repository."        NL
-"### Repositories containing large directories will benefit greatly."        NL
-"### In rarely read repositories, the I/O overhead may be significant as"    NL
-"### cache hit rates will most likely be low"                                NL
-"### directory deltification is enabled by default."                         NL
-"# " CONFIG_OPTION_ENABLE_DIR_DELTIFICATION " = true"                        NL
-"###"                                                                        NL
-"### The following parameter enables deltification for properties on files"  NL
-"### and directories.  Overall, this is a minor tuning option but can save"  NL
-"### some disk space if you merge frequently or frequently change node"      NL
-"### properties.  You should not activate this if rep-sharing has been"      NL
-"### disabled because this may result in a net increase in repository size." NL
-"### property deltification is enabled by default."                          NL
-"# " CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION " = true"                      NL
+"### from one repository to another."                                        NL
 "###"                                                                        NL
 "### During commit, the server may need to walk the whole change history of" NL
 "### of a given node to find a suitable deltification base.  This linear"    NL
@@ -354,12 +328,12 @@ write_config(svn_fs_t *fs,
 "### repositories that are dominated by large, changing binaries."           NL
 "### Should be a power of two minus 1.  A value of 0 will effectively"       NL
 "### disable deltification."                                                 NL
-"### For 1.8, the default value is 1023; earlier versions have no limit."    NL
+"### For 1.9, the default value is 1023."                                    NL
 "# " CONFIG_OPTION_MAX_DELTIFICATION_WALK " = 1023"                          NL
 "###"                                                                        NL
-"### The skip-delta scheme used by FSX tends to repeatably store redundant" NL
+"### The skip-delta scheme used by FSX tends to repeatably store redundant"  NL
 "### delta information where a simple delta against the latest version is"   NL
-"### often smaller.  By default, 1.8+ will therefore use skip deltas only"   NL
+"### often smaller.  By default, 1.9+ will therefore use skip deltas only"   NL
 "### after the linear chain of deltas has grown beyond the threshold"        NL
 "### specified by this setting."                                             NL
 "### Values up to 64 can result in some reduction in repository size for"    NL
@@ -368,8 +342,8 @@ write_config(svn_fs_t *fs,
 "### rarely read repositories or those containing larger binaries, this may" NL
 "### present a better trade-off."                                            NL
 "### Should be a power of two.  A value of 1 or smaller will cause the"      NL
-"### exclusive use of skip-deltas (as in pre-1.8)."                          NL
-"### For 1.8, the default value is 16; earlier versions use 1."              NL
+"### exclusive use of skip-deltas."                                          NL
+"### For 1.8, the default value is 16."                                      NL
 "# " CONFIG_OPTION_MAX_LINEAR_DELTIFICATION " = 16"                          NL
 ""                                                                           NL
 "[" CONFIG_SECTION_PACKED_REVPROPS "]"                                       NL
@@ -746,15 +720,23 @@ write_revision_zero(svn_fs_t *fs)
   const char *path;
 
   /* Write out a rev file for revision 0. */
-  SVN_ERR(svn_io_file_create(path_revision_zero,
-                             "PLAIN\nEND\nENDREP\n"
-                             "id: 0.0.r0/2\n"
-                             "type: dir\n"
-                             "count: 0\n"
-                             "text: 0 3 4 4 "
-                             "2d2977d1c96f487abe4a1e202dd03b4e\n"
-                             "cpath: /\n"
-                             "\n\n", fs->pool));
+  SVN_ERR(svn_io_file_create_binary
+              (path_revision_zero,
+/*             "DELTA\nSVN\4END\nENDREP\n"*/
+               "DELTA\nSVN\1" /* txdelta v1 */
+                 "\0\0\4\2\5" /* sview offset, sview len,
+                                 tview len, instr len, newlen */
+                 "\1\x84"     /* 1 instr byte, new 4 bytes */
+                 "\4END\n"    /* 4 new bytes, E, N, D, \n */
+                 "ENDREP\n"
+               "id: 0.0.r0/2\n"
+               "type: dir\n"
+               "count: 0\n"
+               "text: 0 3 16 4 "
+               "2d2977d1c96f487abe4a1e202dd03b4e\n"
+               "cpath: /\n"
+               "\n\n",
+               0x78, fs->pool));
 
   SVN_ERR(svn_io_set_file_read_only(path_revision_zero, FALSE, fs->pool));
 
@@ -764,7 +746,7 @@ write_revision_zero(svn_fs_t *fs)
               "\0\1\x80\x40\1\1" /* rev 0, single page */
               "\5\4"             /* page size: bytes, count */
               "\0"               /* 0 container offsets in list */
-              "\0\x6b\x12\1",    /* phys offsets + 1 */
+              "\0\x70\x1e\1",    /* phys offsets + 1 */
               13,
               fs->pool));
   SVN_ERR(svn_io_set_file_read_only(path, FALSE, fs->pool));
@@ -775,10 +757,10 @@ write_revision_zero(svn_fs_t *fs)
               "\0"                /* start rev */
               "\x80\x80\4\1\x11"  /* 64k pages, 1 page using 17 bytes */
               "\0"                /* offset entry 0 page 1 */
-              "\x11\x11\0\6"      /* len, type + 16 * count, (rev, item)* */
-              "\x59\x15\0\4"
+              "\x1d\x11\0\6"      /* len, type + 16 * count, (rev, item)* */
+              "\x5a\x15\0\4"
               "\1\x16\0\2"
-              "\x95\xff\3\0",     /* last entry fills up 64k page */
+              "\x88\xff\3\0",     /* last entry fills up 64k page */
               23,
               fs->pool));
   SVN_ERR(svn_io_set_file_read_only(path, FALSE, fs->pool));

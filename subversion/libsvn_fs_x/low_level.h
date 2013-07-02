@@ -89,9 +89,6 @@ svn_fs_x__write_noderev(svn_stream_t *outfile,
 /* This type enumerates all forms of representations that we support. */
 typedef enum svn_fs_x__rep_type_t
 {
-  /* this is a PLAIN representation */
-  svn_fs_x__rep_plain,
-
   /* this is a DELTA representation with no base representation */
   svn_fs_x__rep_self_delta,
 
@@ -106,7 +103,7 @@ typedef enum svn_fs_x__rep_type_t
  * header. */
 typedef struct svn_fs_x__rep_header_t
 {
-  /* type of the representation, i.e. whether it is PLAIN, self-DELTA etc. */
+  /* type of the representation, i.e. whether self-DELTA etc. */
   svn_fs_x__rep_type_t type;
 
   /* if this rep is a delta against some other rep, that base rep can

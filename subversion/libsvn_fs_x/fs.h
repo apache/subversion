@@ -102,8 +102,6 @@ extern "C" {
 #define CONFIG_SECTION_REP_SHARING       "rep-sharing"
 #define CONFIG_OPTION_ENABLE_REP_SHARING "enable-rep-sharing"
 #define CONFIG_SECTION_DELTIFICATION     "deltification"
-#define CONFIG_OPTION_ENABLE_DIR_DELTIFICATION   "enable-dir-deltification"
-#define CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION "enable-props-deltification"
 #define CONFIG_OPTION_MAX_DELTIFICATION_WALK     "max-deltification-walk"
 #define CONFIG_OPTION_MAX_LINEAR_DELTIFICATION   "max-linear-deltification"
 #define CONFIG_SECTION_PACKED_REVPROPS   "packed-revprops"
@@ -385,12 +383,6 @@ typedef struct fs_x_data_t
 
   /* Whether packed revprop files shall be compressed. */
   svn_boolean_t compress_packed_revprops;
-
-  /* Whether directory nodes shall be deltified just like file nodes. */
-  svn_boolean_t deltify_directories;
-
-  /* Whether nodes properties shall be deltified. */
-  svn_boolean_t deltify_properties;
 
   /* Restart deltification histories after each multiple of this value */
   apr_int64_t max_deltification_walk;
