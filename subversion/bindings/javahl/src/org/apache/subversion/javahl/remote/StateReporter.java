@@ -34,7 +34,7 @@ import org.apache.subversion.javahl.ClientException;
  * Implementation of ISVNReporter.
  * @since 1.9
  */
-public class UpdateReporter extends JNIObject implements ISVNReporter
+public class StateReporter extends JNIObject implements ISVNReporter
 {
     public void dispose()
     {
@@ -42,51 +42,52 @@ public class UpdateReporter extends JNIObject implements ISVNReporter
         nativeDispose();
     }
 
-    public void setPath(String path,
-                        long revision,
-                        Depth depth,
-                        boolean startEmpty,
-                        String lockToken)
+    public native void setPath(String path,
+                               long revision,
+                               Depth depth,
+                               boolean startEmpty,
+                               String lockToken)
+        throws ClientException;
+
+    public native void deletePath(String path) throws ClientException;
+
+    public native void linkPath(String url,
+                                String path,
+                                long revision,
+                                Depth depth,
+                                boolean startEmpty,
+                                String lockToken)
+        throws ClientException;
+
+    public native long finishReport() throws ClientException;
+
+    public native void abortReport() throws ClientException;
+
+    /**
+     * This factory method called from RemoteSession.status and friends.
+     */
+    static final
+        StateReporter createInstance(RemoteSession session)
             throws ClientException
     {
-        throw new RuntimeException("Not implemented: setPath");
+        long cppAddr = nativeCreateInstance();
+        return new StateReporter(cppAddr, session);
     }
 
-    public void deletePath(String path) throws ClientException
-    {
-        throw new RuntimeException("Not implemented: deletePath");
-    }
-
-    public void linkPath(String url,
-                         String path,
-                         long revision,
-                         Depth depth,
-                         boolean startEmpty,
-                         String lockToken)
-            throws ClientException
-    {
-        throw new RuntimeException("Not implemented: linkPath");
-    }
-
-    public void finishReport() throws ClientException
-    {
-        throw new RuntimeException("Not implemented: finishReport");
-    }
-
-    public void abortReport() throws ClientException
-    {
-        throw new RuntimeException("Not implemented: abortReport");
-    }
+    @Override
+    public native void finalize() throws Throwable;
 
     /*
      * Wrapped private native implementation declarations.
      */
-    private /*TODO:native*/ void nativeDispose() {;}
+    private native void nativeDispose();
+    private static final native long nativeCreateInstance()
+        throws ClientException;
 
     /**
-     * This constructor is called from the factory to get an instance.
+     * This constructor is called from the factory method.
      */
-    protected UpdateReporter(long cppAddr, RemoteSession session)
+    protected StateReporter(long cppAddr, RemoteSession session)
     {
         super(cppAddr);
         this.session = session;

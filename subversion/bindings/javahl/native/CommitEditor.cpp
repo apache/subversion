@@ -126,36 +126,10 @@ void CommitEditor::dispose(jobject jthis)
 }
 
 namespace {
-void throw_illegal_state(const char* msg)
-{
-  JNIEnv *env = JNIUtil::getEnv();
-
-  jclass clazz = env->FindClass("java/lang/IllegalStateException");
-  if (JNIUtil::isJavaExceptionThrown())
-    return;
-
-  static jmethodID ctor_mid = 0;
-  if (0 == ctor_mid)
-    {
-      ctor_mid = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;)V");
-      if (JNIUtil::isJavaExceptionThrown())
-        return;
-    }
-
-  jstring jmsg = JNIUtil::makeJString(msg);
-  if (JNIUtil::isJavaExceptionThrown())
-    return;
-
-  jobject jexception = env->NewObject(clazz, ctor_mid, jmsg);
-  if (JNIUtil::isJavaExceptionThrown())
-    return;
-
-  env->Throw((jthrowable)jexception);
-}
-
 void throw_editor_inactive()
 {
-  throw_illegal_state(_("The editor is not active"));
+  JNIUtil::raiseThrowable("java/lang/IllegalStateException",
+                          _("The editor is not active"));
 }
 
 void throw_not_implemented(const char* fname)
@@ -163,7 +137,7 @@ void throw_not_implemented(const char* fname)
   std::string msg = _("Not implemented: ");
   msg += "CommitEditor.";
   msg += fname;
-  throw_illegal_state(msg.c_str());
+  JNIUtil::raiseThrowable("java/lang/RuntimeException", msg.c_str());
 }
 
 const apr_array_header_t*
@@ -285,11 +259,7 @@ void CommitEditor::addDirectory(jstring jrelpath,
                                 jobject jchildren, jobject jproperties,
                                 jlong jreplaces_revision)
 {
-  if (!m_valid)
-    {
-      throw_editor_inactive();
-      return;
-    }
+  if (!m_valid) { throw_editor_inactive(); return; }
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
 
   Iterator children(jchildren);
@@ -316,11 +286,7 @@ void CommitEditor::addFile(jstring jrelpath,
                            jobject jproperties,
                            jlong jreplaces_revision)
 {
-  if (!m_valid)
-    {
-      throw_editor_inactive();
-      return;
-    }
+  if (!m_valid) { throw_editor_inactive(); return; }
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
 
   InputStream contents(jcontents);
@@ -353,11 +319,7 @@ void CommitEditor::addSymlink(jstring jrelpath,
 void CommitEditor::addAbsent(jstring jrelpath, jobject jkind,
                              jlong jreplaces_revision)
 {
-  if (!m_valid)
-    {
-      throw_editor_inactive();
-      return;
-    }
+  if (!m_valid) { throw_editor_inactive(); return; }
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
 
   SVN::Pool subPool(pool);
@@ -374,11 +336,7 @@ void CommitEditor::addAbsent(jstring jrelpath, jobject jkind,
 void CommitEditor::alterDirectory(jstring jrelpath, jlong jrevision,
                                   jobject jchildren, jobject jproperties)
 {
-  if (!m_valid)
-    {
-      throw_editor_inactive();
-      return;
-    }
+  if (!m_valid) { throw_editor_inactive(); return; }
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
 
   Iterator children(jchildren);
@@ -404,11 +362,7 @@ void CommitEditor::alterFile(jstring jrelpath, jlong jrevision,
                              jobject jchecksum, jobject jcontents,
                              jobject jproperties)
 {
-  if (!m_valid)
-    {
-      throw_editor_inactive();
-      return;
-    }
+  if (!m_valid) { throw_editor_inactive(); return; }
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
 
   InputStream contents(jcontents);
@@ -440,11 +394,7 @@ void CommitEditor::alterSymlink(jstring jrelpath, jlong jrevision,
 
 void CommitEditor::remove(jstring jrelpath, jlong jrevision)
 {
-  if (!m_valid)
-    {
-      throw_editor_inactive();
-      return;
-    }
+  if (!m_valid) { throw_editor_inactive(); return; }
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
 
   SVN::Pool subPool(pool);
@@ -460,11 +410,7 @@ void CommitEditor::remove(jstring jrelpath, jlong jrevision)
 void CommitEditor::copy(jstring jsrc_relpath, jlong jsrc_revision,
                         jstring jdst_relpath, jlong jreplaces_revision)
 {
-  if (!m_valid)
-    {
-      throw_editor_inactive();
-      return;
-    }
+  if (!m_valid) { throw_editor_inactive(); return; }
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
 
   SVN::Pool subPool(pool);
@@ -487,11 +433,7 @@ void CommitEditor::copy(jstring jsrc_relpath, jlong jsrc_revision,
 void CommitEditor::move(jstring jsrc_relpath, jlong jsrc_revision,
                         jstring jdst_relpath, jlong jreplaces_revision)
 {
-  if (!m_valid)
-    {
-      throw_editor_inactive();
-      return;
-    }
+  if (!m_valid) { throw_editor_inactive(); return; }
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
 
   SVN::Pool subPool(pool);
@@ -511,13 +453,9 @@ void CommitEditor::move(jstring jsrc_relpath, jlong jsrc_revision,
                               svn_revnum_t(jreplaces_revision)),);
 }
 
-void CommitEditor::rotate(jobject jelements)
-{
-//   if (!m_valid)
-//     {
-//       throw_editor_inactive();
-//       return;
-//     }
+// void CommitEditor::rotate(jobject jelements)
+// {
+//   if (!m_valid) { throw_editor_inactive(); return; }
 //   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
 //
 //   SVN::Pool subPool(pool);
@@ -528,16 +466,11 @@ void CommitEditor::rotate(jobject jelements)
 //     return;
 //
 //   SVN_JNI_ERR(svn_editor_rotate(m_editor, relpaths, revisions),);
-  throw_not_implemented("rotate");
-}
+// }
 
 void CommitEditor::complete()
 {
-  if (!m_valid)
-    {
-      throw_editor_inactive();
-      return;
-    }
+  if (!m_valid) { throw_editor_inactive(); return; }
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
 
   SVN_JNI_ERR(svn_editor_complete(m_editor),);
@@ -546,11 +479,7 @@ void CommitEditor::complete()
 
 void CommitEditor::abort()
 {
-  if (!m_valid)
-    {
-      throw_editor_inactive();
-      return;
-    }
+  if (!m_valid) { throw_editor_inactive(); return; }
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
 
   SVN_JNI_ERR(svn_editor_abort(m_editor),);

@@ -837,7 +837,7 @@ svn_client_log5(const apr_array_header_t *targets,
   SVN_ERR(resolve_log_targets(&relative_targets, &ra_target, &peg_rev,
                               targets, ctx, pool, pool));
 
-  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &actual_loc,
+  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, NULL,
                                             ra_target, NULL, &peg_rev, &peg_rev,
                                             ctx, pool));
 

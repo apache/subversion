@@ -48,8 +48,8 @@
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
-enum {
-  INITIAL = 0,
+enum log_state_e {
+  INITIAL = XML_STATE_INITIAL,
   REPORT,
   ITEM,
   VERSION,

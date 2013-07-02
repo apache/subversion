@@ -649,8 +649,8 @@ public class SVNRemoteTests extends SVNTests
         ISVNRemote session = getSession();
 
         HashMap<String, byte[]> props = new HashMap<String, byte[]>();
-        ArrayList<ISVNEditor.RotatePair> rotation =
-            new ArrayList<ISVNEditor.RotatePair>();
+        // ArrayList<ISVNEditor.RotatePair> rotation =
+        //     new ArrayList<ISVNEditor.RotatePair>();
 
         CommitContext cc = new CommitContext(session, "not implemented");
         try {
@@ -659,7 +659,7 @@ public class SVNRemoteTests extends SVNTests
             try {
                 exmsg = "";
                 cc.editor.addSymlink("", "", props, 1);
-            } catch (IllegalStateException ex) {
+            } catch (RuntimeException ex) {
                 exmsg = ex.getMessage();
             }
             assertEquals("Not implemented: CommitEditor.addSymlink", exmsg);
@@ -667,18 +667,18 @@ public class SVNRemoteTests extends SVNTests
             try {
                 exmsg = "";
                 cc.editor.alterSymlink("", 1, "", null);
-            } catch (IllegalStateException ex) {
+            } catch (RuntimeException ex) {
                 exmsg = ex.getMessage();
             }
             assertEquals("Not implemented: CommitEditor.alterSymlink", exmsg);
 
-            try {
-                exmsg = "";
-                cc.editor.rotate(rotation);
-            } catch (IllegalStateException ex) {
-                exmsg = ex.getMessage();
-            }
-            assertEquals("Not implemented: CommitEditor.rotate", exmsg);
+            // try {
+            //     exmsg = "";
+            //     cc.editor.rotate(rotation);
+            // } catch (RuntimeException ex) {
+            //     exmsg = ex.getMessage();
+            // }
+            // assertEquals("Not implemented: CommitEditor.rotate", exmsg);
         } finally {
             cc.editor.dispose();
         }
@@ -782,5 +782,122 @@ public class SVNRemoteTests extends SVNTests
                                         super.conf.getAbsolutePath(),
                                         handler);
         session.getLatestRevision(); // Make sure the configuration gets loaded
+    }
+
+    private static class RemoteStatusReceiver implements RemoteStatus
+    {
+        static class StatInfo
+        {
+            public String relpath = null;
+            public char kind = ' '; // F, D, L
+            public boolean textChanged = false;
+            public boolean propsChanged = false;
+            public boolean deleted = false;
+
+            StatInfo(String relpath, char kind, boolean added)
+            {
+                this.relpath = relpath;
+                this.kind = kind;
+                this.deleted = !added;
+            }
+
+            StatInfo(String relpath, char kind,
+                     boolean textChanged, boolean propsChanged)
+            {
+                this.relpath = relpath;
+                this.kind = kind;
+                this.textChanged = textChanged;
+                this.propsChanged = propsChanged;
+            }
+        }
+
+        public ArrayList<StatInfo> status = new ArrayList<StatInfo>();
+
+        public void addedDirectory(String relativePath)
+        {
+            status.add(new StatInfo(relativePath, 'D', true));
+        }
+
+        public void addedFile(String relativePath)
+        {
+            status.add(new StatInfo(relativePath, 'F', true));
+        }
+
+        public void addedSymlink(String relativePath)
+        {
+            status.add(new StatInfo(relativePath, 'L', true));
+        }
+
+        public void modifiedDirectory(String relativePath,
+                                      boolean childrenModified, boolean propsModified)
+        {
+            status.add(new StatInfo(relativePath, 'D',
+                                    childrenModified, propsModified));
+        }
+
+        public void modifiedFile(String relativePath,
+                                 boolean textModified, boolean propsModified)
+        {
+            status.add(new StatInfo(relativePath, 'F',
+                                    textModified, propsModified));
+        }
+
+        public void modifiedSymlink(String relativePath,
+                                    boolean targetModified, boolean propsModified)
+        {
+            status.add(new StatInfo(relativePath, 'L',
+                                    targetModified, propsModified));
+        }
+
+        public void deleted(String relativePath)
+        {
+            status.add(new StatInfo(relativePath, ' ', false));
+        }
+    }
+
+    public void testSimpleStatus() throws Exception
+    {
+        ISVNRemote session = getSession();
+
+        RemoteStatusReceiver receiver = new RemoteStatusReceiver();
+        ISVNReporter rp = session.status(null, Revision.SVN_INVALID_REVNUM,
+                                         Depth.infinity, receiver);
+        try {
+            rp.setPath("", 0, Depth.infinity, true, null);
+            assertEquals(1, rp.finishReport());
+        } finally {
+            rp.dispose();
+        }
+        assertEquals(21, receiver.status.size());
+    }
+
+    public void testPropchangeStatus() throws Exception
+    {
+        ISVNRemote session = getSession();
+
+        CommitMessageCallback cmcb = new CommitMessageCallback() {
+                public String getLogMessage(Set<CommitItem> x) {
+                    return "Property change on A/D/gamma";
+                }
+            };
+        client.propertySetRemote(getTestRepoUrl() + "/A/D/gamma",
+                                 1L, "foo", "bar".getBytes(), cmcb,
+                                 false, null, null);
+
+        RemoteStatusReceiver receiver = new RemoteStatusReceiver();
+        ISVNReporter rp = session.status(null, Revision.SVN_INVALID_REVNUM,
+                                         Depth.infinity, receiver);
+        try {
+            rp.setPath("", 1, Depth.infinity, false, null);
+            assertEquals(2, rp.finishReport());
+        } finally {
+            rp.dispose();
+        }
+        assertEquals(4, receiver.status.size());
+        RemoteStatusReceiver.StatInfo mod = receiver.status.get(3);
+        assertEquals("A/D/gamma", mod.relpath);
+        assertEquals('F', mod.kind);
+        assertEquals(false, mod.textChanged);
+        assertEquals(true, mod.propsChanged);
     }
 }

@@ -50,7 +50,7 @@
  * This enum represents the current state of our XML parsing for an OPTIONS.
  */
 enum options_state_e {
-  INITIAL = 0,
+  INITIAL = XML_STATE_INITIAL,
   OPTIONS,
   ACTIVITY_COLLECTION,
   HREF
@@ -361,6 +361,8 @@ options_response_handler(serf_request_t *request,
       svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_INHERITED_PROPS,
                     capability_no);
       svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS,
+                    capability_no);
+      svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE,
                     capability_no);
 
       /* Then see which ones we can discover. */

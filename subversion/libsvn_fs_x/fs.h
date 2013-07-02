@@ -186,7 +186,11 @@ typedef struct fs_x_shared_data_t
 /* Data structure for the 1st level DAG node cache. */
 typedef struct fs_x_dag_cache_t fs_x_dag_cache_t;
 
-/* Key type for all caches that use revision + offset / counter as key. */
+/* Key type for all caches that use revision + offset / counter as key.
+
+   NOTE: always initialize this using calloc() or '= {0};'!  This is used
+   as a cahe key and the padding bytes on 32 bit archs should be zero for
+   cache effectiveness. */
 typedef struct pair_cache_key_t
 {
   svn_revnum_t revision;

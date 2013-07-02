@@ -959,12 +959,9 @@ svn_fs_x__write_changes(svn_stream_t *stream,
   sorted_changed_paths = svn_sort__hash(changes,
                                         svn_sort_compare_items_lexically, pool);
 
-  /* Iterate through the changed paths one at a time, and convert the
-     temporary node-id into a permanent one for each change entry. */
+  /* Write all items to disk in the new order. */
   for (i = 0; i < sorted_changed_paths->nelts; ++i)
     {
-      node_revision_t *noderev;
-      const svn_fs_id_t *id;
       svn_fs_path_change2_t *change;
       const char *path;
 
@@ -972,21 +969,6 @@ svn_fs_x__write_changes(svn_stream_t *stream,
 
       change = APR_ARRAY_IDX(sorted_changed_paths, i, svn_sort__item_t).value;
       path = APR_ARRAY_IDX(sorted_changed_paths, i, svn_sort__item_t).key;
-
-      id = change->node_rev_id;
-
-      /* If this was a delete of a mutable node, then it is OK to
-         leave the change entry pointing to the non-existent temporary
-         node, since it will never be used. */
-      if ((change->change_kind != svn_fs_path_change_delete) &&
-          (! svn_fs_x__id_is_txn(id)))
-        {
-          SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, id, iterpool));
-
-          /* noderev has the permanent node-id at this point, so we just
-             substitute it for the temporary one. */
-          change->node_rev_id = noderev->id;
-        }
 
       /* Write out the new entry into the final rev-file. */
       SVN_ERR(write_change_entry(stream, path, change, iterpool));

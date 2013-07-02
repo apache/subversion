@@ -47,7 +47,7 @@
  * This enum represents the current state of our XML parsing for a REPORT.
  */
 typedef enum blame_state_e {
-  INITIAL = 0,
+  INITIAL = XML_STATE_INITIAL,
   FILE_REVS_REPORT,
   FILE_REV,
   REV_PROP,

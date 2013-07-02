@@ -163,10 +163,24 @@ public class RemoteSession extends JNIObject implements ISVNRemote
     // TODO: update
     // TODO: switch
 
-    public native ISVNReporter status(String statusTarget,
-                                      long revision, Depth depth,
-                                      ISVNEditor statusEditor)
-            throws ClientException;
+    public ISVNReporter status(String statusTarget,
+                               long revision, Depth depth,
+                               RemoteStatus receiver)
+            throws ClientException
+    {
+        check_inactive(editorReference, reporterReference);
+        StateReporter rp = StateReporter.createInstance(this);
+
+        // At this point, the reporter is not active/valid.
+        StatusEditor editor = new StatusEditor(receiver);
+        nativeStatus(statusTarget, revision, depth, editor, rp);
+        // Now it should be valid.
+
+        if (reporterReference != null)
+            reporterReference.clear();
+        reporterReference = new WeakReference<ISVNReporter>(rp);
+        return rp;
+    }
 
     // TODO: diff
 
@@ -227,11 +241,15 @@ public class RemoteSession extends JNIObject implements ISVNRemote
                                       OutputStream contents,
                                       Map<String, byte[]> properties)
             throws ClientException;
-
     private native long nativeGetDirectory(long revision, String path,
                                            int direntFields,
                                            Map<String, DirEntry> dirents,
                                            Map<String, byte[]> properties)
+            throws ClientException;
+    private native void nativeStatus(String statusTarget,
+                                     long revision, Depth depth,
+                                     ISVNEditor statusEditor,
+                                     ISVNReporter reporter)
             throws ClientException;
     private native boolean nativeHasCapability(String capability)
             throws ClientException;

@@ -64,7 +64,7 @@
  */
 typedef enum report_state_e {
     NONE = 0,
-    INITIAL = 0,
+    INITIAL = XML_STATE_INITIAL /* = 0 */,
     UPDATE_REPORT,
     TARGET_REVISION,
     OPEN_DIR,

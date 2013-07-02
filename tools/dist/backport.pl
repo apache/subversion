@@ -192,14 +192,18 @@ sub parse_entry {
   $branch = sanitize_branch $1
     if $_[0] =~ /^(\S*) branch$/ or $_[0] =~ m#branches/(\S+)#;
   while ($_[0] =~ /^r/) {
+    my $sawrevnum = 0;
     while ($_[0] =~ s/^r(\d+)(?:$|[,; ]+)//) {
       push @revisions, $1;
+      $sawrevnum++;
     }
-    shift;
+    $sawrevnum ? shift : last;
   }
 
   # summary
-  push @logsummary, shift until $_[0] =~ /^\s*\w+:/ or not defined $_[0];
+  do {
+    push @logsummary, shift
+  } until $_[0] =~ /^\s*\w+:/ or not defined $_[0];
 
   # votes
   unshift @votes, pop until $_[-1] =~ /^\s*Votes:/ or not defined $_[-1];
@@ -273,6 +277,12 @@ sub handle_entry {
   1;
 }
 
+sub maybe_revert {
+  # This is both a SIGINT handler, and the tail end of main() in normal runs.
+  system $SVN, qw/revert -R ./ if !$YES and prompt 'Revert? ';
+  exit if @_;
+}
+
 sub main {
   usage, exit 0 if @ARGV;
 
@@ -293,6 +303,8 @@ sub main {
     last if /^Status of \d+\.\d+/;
   }
   $/ = ""; # paragraph mode
+
+  $SIG{INT} = \&maybe_revert;
 
   my $in_approved = 0;
   while (<STATUS>) {
@@ -324,7 +336,7 @@ sub main {
     }
   }
 
-  system $SVN, qw/revert -R ./ if !$YES and prompt 'Revert? ';
+  maybe_revert;
 }
 
 &main

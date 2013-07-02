@@ -41,7 +41,7 @@
 
 /* The current state of our XML parsing. */
 typedef enum iprops_state_e {
-  INITIAL = 0,
+  INITIAL = XML_STATE_INITIAL,
   IPROPS_REPORT,
   IPROPS_ITEM,
   IPROPS_PATH,
@@ -243,7 +243,7 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
                                       NULL /* conn */,
                                       NULL /* url */,
                                       revision,
-                                      result_pool, scratch_pool));
+                                      scratch_pool, scratch_pool));
 
   SVN_ERR_ASSERT(session->repos_root_str);
 
