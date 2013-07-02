@@ -218,15 +218,6 @@ Approved changes:
    Votes:
      +1: rhuijben, philip, stsp, stefan2
 
- * r1498564
-   Allow the new in 1.8 move metadata only to work properly when the
-   target of the move already exists as unversioned node.
-   Justification:
-     The metadata only option was added especially to allow fixing up
-     of already performed moves.
-   Votes:
-     +1: rhuijben, philip, stsp
-
  * r1496957
    Eliminate an extra RA layer roundtrip in 'svn log' on repository roots.
    Justification:
