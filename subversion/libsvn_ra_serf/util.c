@@ -2505,6 +2505,25 @@ expat_response_handler(serf_request_t *request,
 {
   struct expat_ctx_t *ectx = baton;
 
+  /* ### TODO: sline.code < 200 should really be handled by the core */
+  if ((ectx->handler->sline.code < 200) || (ectx->handler->sline.code >= 300))
+    {
+      /* By deferring to expect_empty_body(), it will make a choice on
+         how to handle the body. Whatever the decision, the core handler
+         will take over, and we will not be called again.  */
+
+      /* ### This handles xml bodies as svn-errors (returned via serf context
+         ### loop), but ignores non-xml errors.
+
+         Current code depends on this behavior and checks itself while other
+         continues, and then verifies if work has been performed.
+
+         ### TODO: Make error checking consistent */
+      return svn_error_trace(svn_ra_serf__expect_empty_body(
+                               request, response, ectx->handler,
+                               scratch_pool));
+    }
+
   if (!ectx->parser)
     {
       ectx->parser = XML_ParserCreate(NULL);
@@ -2513,17 +2532,6 @@ expat_response_handler(serf_request_t *request,
       XML_SetUserData(ectx->parser, ectx);
       XML_SetElementHandler(ectx->parser, expat_start, expat_end);
       XML_SetCharacterDataHandler(ectx->parser, expat_cdata);
-    }
-
-  /* ### TODO: sline.code < 200 should really be handled by the core */
-  if ((ectx->handler->sline.code < 200) || (ectx->handler->sline.code >= 300))
-    {
-      /* By deferring to expect_empty_body(), it will make a choice on
-         how to handle the body. Whatever the decision, the core handler
-         will take over, and we will not be called again.  */
-      return svn_error_trace(svn_ra_serf__expect_empty_body(
-                               request, response, ectx->handler,
-                               scratch_pool));
     }
 
   while (1)
