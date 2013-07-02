@@ -78,15 +78,6 @@ svn_boolean_t
 is_packed_revprop(svn_fs_t *fs,
                   svn_revnum_t rev);
 
-/* Return the revision number of the pack / rev file in FS containing REV. */
-svn_revnum_t
-packed_base_rev(svn_fs_t *fs, svn_revnum_t rev);
-
-/* Return the number of revisions in the pack / rev file in FS that contains
- * revision REV. */
-svn_revnum_t
-pack_size(svn_fs_t *fs, svn_revnum_t rev);
-
 const char *
 path_format(svn_fs_t *fs,
             apr_pool_t *pool);
@@ -128,16 +119,6 @@ path_rev(svn_fs_t *fs,
          apr_pool_t *pool);
 
 const char *
-path_l2p_index(svn_fs_t *fs,
-               svn_revnum_t rev,
-               apr_pool_t *pool);
-
-const char *
-path_p2l_index(svn_fs_t *fs,
-               svn_revnum_t rev,
-               apr_pool_t *pool);
-
-const char *
 path_revprops_shard(svn_fs_t *fs,
                     svn_revnum_t rev,
                     apr_pool_t *pool);
@@ -171,16 +152,6 @@ path_txn_changes(svn_fs_t *fs,
                  const svn_fs_fs__id_part_t *txn_id,
                  apr_pool_t *pool);
 
-const char*
-path_l2p_proto_index(svn_fs_t *fs,
-                     const svn_fs_fs__id_part_t *txn_id,
-                     apr_pool_t *pool);
-
-const char*
-path_p2l_proto_index(svn_fs_t *fs,
-                     const svn_fs_fs__id_part_t *txn_id,
-                     apr_pool_t *pool);
-
 const char *
 path_txn_props(svn_fs_t *fs,
                const svn_fs_fs__id_part_t *txn_id,
@@ -195,11 +166,6 @@ const char *
 path_min_unpacked_rev(svn_fs_t *fs,
                       apr_pool_t *pool);
 
-
-const char *
-path_txn_item_index(svn_fs_t *fs,
-                    const svn_fs_fs__id_part_t *txn_id,
-                    apr_pool_t *pool);
 
 const char *
 path_txn_proto_rev(svn_fs_t *fs,
