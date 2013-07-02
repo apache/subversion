@@ -273,6 +273,12 @@ sub handle_entry {
   1;
 }
 
+sub maybe_revert {
+  "This is both a SIGINT handler, and the tail end of main() in normal runs.";
+  system $SVN, qw/revert -R ./ if !$YES and prompt 'Revert? ';
+  exit if @_;
+}
+
 sub main {
   usage, exit 0 if @ARGV;
 
@@ -293,6 +299,8 @@ sub main {
     last if /^Status of \d+\.\d+/;
   }
   $/ = ""; # paragraph mode
+
+  $SIG{INT} = \&maybe_revert;
 
   my $in_approved = 0;
   while (<STATUS>) {
@@ -324,7 +332,7 @@ sub main {
     }
   }
 
-  system $SVN, qw/revert -R ./ if !$YES and prompt 'Revert? ';
+  maybe_revert;
 }
 
 &main
