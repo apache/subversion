@@ -718,7 +718,7 @@ subcommand_create(apr_getopt_t *os, void *baton, apr_pool_t *pool)
         }
 
       if (! svn_version__at_least(opt_state->compatible_version, 1, 9, 0)
-          && !strcmp(opt_state->fs_type, SVN_FS_TYPE_FSX))
+          && opt_state->fs_type && !strcmp(opt_state->fs_type, SVN_FS_TYPE_FSX))
         {
           return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                    _("Repositories compatible with 1.8.x or "
