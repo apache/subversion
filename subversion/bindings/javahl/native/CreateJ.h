@@ -84,7 +84,7 @@ class CreateJ
   RevisionRangeList(svn_rangelist_t *ranges);
 
   static jobject
-  StringSet(apr_array_header_t *strings);
+  StringSet(const apr_array_header_t *strings);
 
   static jobject
   PropertyMap(apr_hash_t *prop_hash);
