@@ -25,6 +25,7 @@
  */
 
 #include <cstring>
+#include <memory>
 #include <set>
 
 #include "JNIByteArray.h"
@@ -44,6 +45,8 @@
 #include "Prompter.h"
 #include "Revision.h"
 #include "RemoteSession.h"
+#include "EditorProxy.h"
+#include "StateReporter.h"
 
 #include <apr_strings.h>
 #include "svn_private_config.h"
@@ -639,12 +642,109 @@ RemoteSession::getDirectory(jlong jrevision, jstring jpath,
 // TODO: update
 // TODO: switch
 
-jobject
-RemoteSession::status(jstring jstatus_target,
-                      jlong jrevision, jobject jdepth,
-                      jobject jstatus_editor)
+namespace {
+svn_error_t*
+status_unlock_func(void* baton, const char* path, apr_pool_t* scratch_pool)
 {
-  return NULL;
+  //DEBUG:fprintf(stderr, "  (n) status_unlock_func('%s')\n", path);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t*
+status_fetch_props_func(apr_hash_t **props, void *baton,
+                        const char *path, svn_revnum_t base_revision,
+                        apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  //DEBUG:fprintf(stderr, "  (n) status_fetch_props_func('%s', r%lld)\n",
+  //DEBUG:        path, static_cast<long long>(base_revision));
+  *props = apr_hash_make(scratch_pool);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t*
+status_fetch_base_func(const char **filename, void *baton,
+                       const char *path, svn_revnum_t base_revision,
+                       apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  //DEBUG:fprintf(stderr, "  (n) status_fetch_base_func('%s', r%lld)\n",
+  //DEBUG:        path, static_cast<long long>(base_revision));
+  *filename = NULL;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t*
+status_start_edit_func(void* baton, svn_revnum_t start_revision)
+{
+  //DEBUG:fprintf(stderr, "  (n) status_start_edit_func(r%lld)\n",
+  //DEBUG:        static_cast<long long>(start_revision));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t*
+status_target_revision_func(void* baton, svn_revnum_t target_revision,
+                            apr_pool_t* scratch_pool)
+{
+  //DEBUG:fprintf(stderr, "  (n) status_target_revision_func(r%lld)\n",
+  //DEBUG:        static_cast<long long>(target_revision));
+  return SVN_NO_ERROR;
+}
+
+const EditorProxyCallbacks status_editor_callbacks = {
+  status_unlock_func,
+  status_fetch_props_func,
+  status_fetch_base_func,
+  status_start_edit_func,
+  status_target_revision_func,
+  NULL
+};
+} // anonymous namespace
+
+void
+RemoteSession::status(jobject jthis, jstring jstatus_target,
+                      jlong jrevision, jobject jdepth,
+                      jobject jstatus_editor, jobject jreporter)
+{
+  StateReporter *rp = StateReporter::getCppObject(jreporter);
+  CPPADDR_NULL_PTR(rp,);
+
+  SVN::Pool scratchPool(rp->get_report_pool());
+  Relpath status_target(jstatus_target, scratchPool);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  apr_pool_t* scratch_pool = scratchPool.getPool();
+  const char* repos_root_url;
+  SVN_JNI_ERR(svn_ra_get_repos_root2(m_session, &repos_root_url,
+                                     scratch_pool),);
+  const char* session_root_url;
+  SVN_JNI_ERR(svn_ra_get_session_url(m_session, &session_root_url,
+                                     scratch_pool),);
+  const char* base_relpath;
+  SVN_JNI_ERR(svn_ra_get_path_relative_to_root(m_session, &base_relpath,
+                                               session_root_url,
+                                               scratch_pool),);
+
+
+  apr_pool_t* report_pool = rp->get_report_pool();
+  std::auto_ptr<EditorProxy> editor(
+      new EditorProxy(jstatus_editor, report_pool,
+                      repos_root_url, base_relpath,
+                      m_context->checkCancel, m_context,
+                      status_editor_callbacks));
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  const svn_ra_reporter3_t* raw_reporter;
+  void* report_baton;
+  SVN_JNI_ERR(svn_ra_do_status2(m_session,
+                                &raw_reporter, &report_baton,
+                                status_target.c_str(),
+                                svn_revnum_t(jrevision),
+                                EnumMapper::toDepth(jdepth),
+                                editor->delta_editor(),
+                                editor->delta_baton(),
+                                report_pool),);
+  rp->set_reporter_data(raw_reporter, report_baton, editor.release());
 }
 
 // TODO: diff
