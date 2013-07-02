@@ -448,8 +448,7 @@ typedef struct representation_t
      file. */
   svn_filesize_t size;
 
-  /* The size of the fulltext of the representation. If this is 0,
-   * the fulltext size is equal to representation size in the rev file, */
+  /* The size of the fulltext of the representation. */
   svn_filesize_t expanded_size;
 
   /* Is this representation a transaction? */

@@ -666,9 +666,7 @@ copy_node_to_temp(pack_context_t *context,
       APR_ARRAY_PUSH(context->references, reference_t *) = reference;
 
       path_order->rep_id = reference->to;
-      path_order->expanded_size = noderev->data_rep->expanded_size
-                                ? noderev->data_rep->expanded_size
-                                : noderev->data_rep->size;
+      path_order->expanded_size = noderev->data_rep->expanded_size;
     }
 
   path_order->path = svn__prefix_string_create(context->paths,
