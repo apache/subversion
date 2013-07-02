@@ -193,6 +193,15 @@ Candidate changes:
    Votes:
      +1: rhuijben, philip
 
+ * r1498851
+   Provide an explicit error in the serf xml parser when the root element
+   isn't matched in the transition table.
+   Notes:
+     This turns a class of previously invisible errors in an easy to diagnose
+     error message.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
