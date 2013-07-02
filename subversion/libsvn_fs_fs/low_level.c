@@ -29,9 +29,6 @@
 #include "../libsvn_fs/fs-loader.h"
 
 #include "low_level.h"
-#include "util.h"
-#include "pack.h"
-#include "cached_data.h"
 
 /* Headers used to describe node-revision in the revision file. */
 #define HEADER_ID          "id"

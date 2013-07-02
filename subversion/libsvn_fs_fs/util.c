@@ -27,7 +27,6 @@
 #include "private/svn_string_private.h"
 
 #include "fs_fs.h"
-#include "id.h"
 #include "util.h"
 
 #include "../libsvn_fs/fs-loader.h"
