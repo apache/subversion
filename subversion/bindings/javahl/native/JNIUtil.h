@@ -40,6 +40,8 @@ class SVNBase;
 #include <vector>
 struct svn_error_t;
 
+#include "svn_error.h"
+
 #define JAVA_PACKAGE "org/apache/subversion/javahl"
 
 struct svn_string_t;
@@ -107,6 +109,12 @@ class JNIUtil
    * svn_error_t's.
    */
   static const char *thrownExceptionToCString(SVN::Pool &in_pool);
+
+  /**
+   * Check if a Java exception was thrown and convert it to a
+   * Subversion error, using @a errorcode as the generic error code.
+   */
+  static svn_error_t* checkJavaException(apr_status_t errorcode);
 
   /**
    * Throw a Java exception corresponding to err, and run
@@ -300,5 +308,11 @@ class JNIUtil
       return ret_val;                                   \
     }                                                   \
   } while (0)
+
+#define SVN_JNI_CATCH(statement, errorcode)             \
+  do {                                                  \
+    do { statement; } while(0);                         \
+    SVN_ERR(JNIUtil::checkJavaException((errorcode)));  \
+  } while(0)
 
 #endif  // JNIUTIL_H
