@@ -618,7 +618,7 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
       if (current->state == XML_STATE_INITIAL)
         {
           return svn_error_createf(
-                        SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                        SVN_ERR_XML_UNEXPECTED_ELEMENT, NULL,
                         _("XML Parsing failed: Unexpected root element '%s'"),
                         elemname.name);
         }
