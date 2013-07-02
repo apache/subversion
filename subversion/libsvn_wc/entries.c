@@ -472,8 +472,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                 {
                   if (!tree_conflicts)
                     tree_conflicts = apr_hash_make(scratch_pool);
-                  svn_hash_sets(tree_conflicts, child_name,
-                                svn_wc__cd3_to_cd2(conflict, scratch_pool));
+                  svn_hash_sets(tree_conflicts, child_name, conflict);
                 }
             }
         }
@@ -1893,15 +1892,15 @@ write_entry(struct write_baton **entry_node,
                              scratch_pool);
       tree_conflicts = apr_hash_make(result_pool);
       skel = skel->children;
-      while(skel)
+      while (skel)
         {
-          svn_wc_conflict_description2_t *conflict;
+          svn_wc_conflict_description3_t *conflict;
           svn_skel_t *new_skel;
           const char *key;
 
           /* *CONFLICT is allocated so it is safe to use a non-const pointer */
           SVN_ERR(svn_wc__deserialize_conflict(
-                             (const svn_wc_conflict_description2_t**)&conflict,
+                             (const svn_wc_conflict_description3_t**)&conflict,
                                                skel,
                                                svn_dirent_join(root_abspath,
                                                                local_relpath,
