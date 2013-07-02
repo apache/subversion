@@ -38,7 +38,8 @@ StateReporter::StateReporter()
   : m_valid(false),
     m_raw_reporter(NULL),
     m_report_baton(NULL),
-    m_editor(NULL)
+    m_editor(NULL),
+    m_target_revision(SVN_INVALID_REVNUM)
 {}
 
 StateReporter::~StateReporter()
@@ -148,16 +149,18 @@ StateReporter::linkPath(jstring jurl, jstring jpath,
                                         subPool.getPool()),);
 }
 
-void
+jlong
 StateReporter::finishReport()
 {
   //DEBUG:fprintf(stderr, "  (n) StateReporter::finishReport()\n");
 
-  if (!m_valid) { throw_reporter_inactive(); return; }
+  if (!m_valid) { throw_reporter_inactive(); return SVN_INVALID_REVNUM; }
 
   SVN::Pool subPool(pool);
   SVN_JNI_ERR(m_raw_reporter->finish_report(m_report_baton,
-                                            subPool.getPool()),);
+                                            subPool.getPool()),
+              SVN_INVALID_REVNUM);
+  return jlong(m_target_revision);
 }
 
 void

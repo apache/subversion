@@ -134,16 +134,22 @@ public interface ISVNReporter
                   String lockToken)
             throws ClientException;
 
-
     /**
      * The report driver calls this when the state report is finished.
      * Any directories or files not explicitly "set" are assumed to be
      * at the baseline revision originally passed into do_update(). No
      * other reporting functions, including {@link abortReport()},
      * should be called after calling this function.
+     *
+     * @return The target revision of the resulting editor drive. In
+     *         the case of {@link ISVNRemote#status}, this is the
+     *         revision against which the status call was performed;
+     *         in the case of {@link ISVNRemote#update}, it is the
+     *         revision updated to.
+     *
      * @throws ClientException
      */
-    void finishReport() throws ClientException;
+    long finishReport() throws ClientException;
 
     /**
      * If an error occurs during a report, this routine should cause

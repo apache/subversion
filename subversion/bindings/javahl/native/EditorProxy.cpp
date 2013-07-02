@@ -35,10 +35,6 @@
 #include "svn_private_config.h"
 
 
-namespace {
-const struct svn_delta__extra_baton null_extra_baton = {0};
-} // anonymous namespace
-
 EditorProxy::EditorProxy(jobject jeditor, apr_pool_t* edit_pool,
                          const char* repos_root_url, const char* base_relpath,
                          svn_cancel_func_t cancel_func, void* cancel_baton,
@@ -52,7 +48,7 @@ EditorProxy::EditorProxy(jobject jeditor, apr_pool_t* edit_pool,
     m_editor(NULL),
     m_delta_editor(NULL),
     m_delta_baton(NULL),
-    m_extra_baton(null_extra_baton)
+    m_proxy_callbacks(callbacks)
 {
   //DEBUG:fprintf(stderr, "  (n) EditorProxy::EditorProxy(...)\n");
 
@@ -77,23 +73,20 @@ EditorProxy::EditorProxy(jobject jeditor, apr_pool_t* edit_pool,
         static_cast<const char*>(apr_pstrdup(edit_pool, repos_root_url));
       m_base_relpath =
         static_cast<const char*>(apr_pstrdup(edit_pool, base_relpath));
-      m_extra_baton.start_edit = callbacks.m_start_edit;
-      m_extra_baton.target_revision = callbacks.m_target_revision;
-      m_extra_baton.baton = callbacks.m_callbacks_baton;
 
       svn_boolean_t found_paths;
       err = svn_delta__delta_from_editor(&m_delta_editor,
                                          &m_delta_baton,
                                          m_editor,
-                                         callbacks.m_unlock_func,
-                                         callbacks.m_callbacks_baton,
+                                         m_proxy_callbacks.m_unlock_func,
+                                         m_proxy_callbacks.m_baton,
                                          &found_paths,
                                          repos_root_url, base_relpath,
-                                         callbacks.m_fetch_props_func,
-                                         callbacks.m_callbacks_baton,
-                                         callbacks.m_fetch_base_func,
-                                         callbacks.m_callbacks_baton,
-                                         &m_extra_baton,
+                                         m_proxy_callbacks.m_fetch_props_func,
+                                         m_proxy_callbacks.m_baton,
+                                         m_proxy_callbacks.m_fetch_base_func,
+                                         m_proxy_callbacks.m_baton,
+                                         &m_proxy_callbacks.m_extra_baton,
                                          edit_pool);
       m_found_paths = found_paths;
     }

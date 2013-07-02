@@ -59,7 +59,7 @@ public class StateReporter extends JNIObject implements ISVNReporter
                                 String lockToken)
         throws ClientException;
 
-    public native void finishReport() throws ClientException;
+    public native long finishReport() throws ClientException;
 
     public native void abortReport() throws ClientException;
 

@@ -686,15 +686,15 @@ status_target_revision_func(void* baton, svn_revnum_t target_revision,
 {
   //DEBUG:fprintf(stderr, "  (n) status_target_revision_func(r%lld)\n",
   //DEBUG:        static_cast<long long>(target_revision));
+  *static_cast<svn_revnum_t*>(baton) = target_revision;
   return SVN_NO_ERROR;
 }
 
-const EditorProxyCallbacks status_editor_callbacks = {
+const EditorProxyCallbacks template_status_editor_callbacks = {
   status_unlock_func,
   status_fetch_props_func,
   status_fetch_base_func,
-  status_start_edit_func,
-  status_target_revision_func,
+  { status_start_edit_func, status_target_revision_func, NULL },
   NULL
 };
 } // anonymous namespace
@@ -724,13 +724,16 @@ RemoteSession::status(jobject jthis, jstring jstatus_target,
                                                session_root_url,
                                                scratch_pool),);
 
+  EditorProxyCallbacks proxy_callbacks =
+    template_status_editor_callbacks;
+  proxy_callbacks.m_extra_baton.baton = &rp->m_target_revision;
 
   apr_pool_t* report_pool = rp->get_report_pool();
   std::auto_ptr<EditorProxy> editor(
       new EditorProxy(jstatus_editor, report_pool,
                       repos_root_url, base_relpath,
                       m_context->checkCancel, m_context,
-                      status_editor_callbacks));
+                      proxy_callbacks));
   if (JNIUtil::isExceptionThrown())
     return;
 

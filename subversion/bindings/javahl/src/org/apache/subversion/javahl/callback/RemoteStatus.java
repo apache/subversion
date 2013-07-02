@@ -56,37 +56,36 @@ public interface RemoteStatus
     /**
      * A directory was modified.
      * @param relativePath The session-relative path of the directory.
-     * @param revision The revision in which it was last modified.
      * @param childrenModified The directory contents changed.
      * @param propsModified The directory's properties changed.
      */
-    void modifiedDirectory(String relativePath, long revision,
-                           boolean childrenModified, boolean propsModified);
+    void modifiedDirectory(String relativePath,
+                           boolean childrenModified,
+                           boolean propsModified);
 
     /**
      * A file was modified.
      * @param relativePath The session-relative path of the directory.
-     * @param revision The revision in which it was last modified.
      * @param textModified The file contents changed.
      * @param propsModified The file's properties changed.
      */
-    void modifiedFile(String relativePath, long revision,
-                      boolean textModified, boolean propsModified);
+    void modifiedFile(String relativePath,
+                      boolean textModified,
+                      boolean propsModified);
 
     /**
      * A symbolic link was modified.
      * @param relativePath The session-relative path of the symlink.
-     * @param revision The revision in which it was last modified.
      * @param textModified The link target changed.
      * @param propsModified The symlink's properties changed.
      */
-    void modifiedSymlink(String relativePath, long revision,
-                         boolean targetModified, boolean propsModified);
+    void modifiedSymlink(String relativePath,
+                         boolean targetModified,
+                         boolean propsModified);
 
     /**
      * An entry was deleted.
      * @param relativePath The session-relative path of the entry.
-     * @param revision The revision in which it was deleted.
      */
-    void deleted(String relativePath, long revision);
+    void deleted(String relativePath);
 }

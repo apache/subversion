@@ -53,7 +53,7 @@ public:
   void deletePath(jstring jpath);
   void linkPath(jstring jurl, jstring jpath, jlong jrevision, jobject jdepth,
                 jboolean jstart_empty, jstring jlock_token);
-  void finishReport();
+  jlong finishReport();
   void abortReport();
 
 private:
@@ -68,6 +68,7 @@ private:
   void set_reporter_data(const svn_ra_reporter3_t* raw_reporter,
                          void* report_baton,
                          EditorProxy* editor);
+  svn_revnum_t m_target_revision;
 };
 
 #endif // JAVAHL_UPDATE_REPORTER_H

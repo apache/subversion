@@ -39,9 +39,8 @@ struct EditorProxyCallbacks
   svn_delta__unlock_func_t m_unlock_func;
   svn_delta_fetch_props_func_t m_fetch_props_func;
   svn_delta_fetch_base_func_t m_fetch_base_func;
-  svn_delta__start_edit_func_t m_start_edit;
-  svn_delta__target_revision_func_t m_target_revision;
-  void* m_callbacks_baton;
+  struct svn_delta__extra_baton m_extra_baton;
+  void* m_baton;
 };
 
 /**
@@ -151,9 +150,7 @@ private:
   svn_editor_t* m_editor;
   const svn_delta_editor_t* m_delta_editor;
   void* m_delta_baton;
-
-  // Initialized from the EditorProxyCallbacks struct.
-  struct svn_delta__extra_baton m_extra_baton;
+  EditorProxyCallbacks m_proxy_callbacks;
 };
 
 
