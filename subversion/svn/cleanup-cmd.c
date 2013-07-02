@@ -109,6 +109,14 @@ svn_cl__cleanup(apr_getopt_t *os,
                                                                  subpool));
             }
         }
+      else if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY &&
+               (opt_state->remove_unversioned || opt_state->remove_ignored))
+        {
+          err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, err,
+                                 _("Cannot remove unversioned or ignored "
+                                   "items from something that is not a "
+                                   "working copy"));
+        }
       SVN_ERR(err);
     }
 
