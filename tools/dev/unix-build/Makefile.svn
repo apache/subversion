@@ -1193,8 +1193,9 @@ else
 endif
 
 ifdef PROFILE
-SVN_ALL_STATIC=--enable-all-static
+SVN_STATIC_FLAG=--enable-all-static
 else
+SVN_STATIC_FLAG=--disable-static
 SVN_WITH_HTTPD=--with-apxs="$(PREFIX)/httpd/bin/apxs" \
 	--with-apache-libexecdir="$(PREFIX)/httpd/modules/svn-$(WC)"
 SVN_WITH_SASL=--with-sasl="$(PREFIX)/cyrus-sasl"
@@ -1224,7 +1225,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST)
 			--disable-mod-activation \
 			$(JAVAHL_FLAG) \
 			$(LIBMAGIC_FLAG) \
-			$(SVN_ALL_STATIC) \
+			$(SVN_STATIC_FLAG) \
 			$(DISABLE_NEON_VERSION_CHECK)
 	touch $@
 
