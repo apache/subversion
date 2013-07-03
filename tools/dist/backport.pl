@@ -314,10 +314,10 @@ sub main {
   die "Local mods to STATUS file $STATUS" if $YES and `$SVN status -q $STATUS`;
 
   # Skip most of the file
+  $/ = ""; # paragraph mode
   while (<STATUS>) {
     last if /^Status of \d+\.\d+/;
   }
-  $/ = ""; # paragraph mode
 
   $SIG{INT} = \&maybe_revert unless $YES;
 
