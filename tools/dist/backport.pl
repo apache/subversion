@@ -166,7 +166,12 @@ EOF
   print SHELL $script;
   close SHELL or warn "$0: sh($?): $! (in '$entry{header}')";
 
-  unlink $backupfile if -z $backupfile;
+  if (-z $backupfile) {
+    unlink $backupfile;
+  } else {
+    warn "Local mods saved to '$backupfile'\n";
+  }
+
   unlink $logmsg_filename unless $? or $!;
 }
 
