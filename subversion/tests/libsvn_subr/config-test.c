@@ -375,6 +375,6 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test case-sensitive option name lookup"),
     SVN_TEST_PASS2(test_stream_interface,
                    "test svn_config_parse"),
-    SVN_TEST_XFAIL2(test_ignore_bom, "test parsing config file with BOM"),
+    SVN_TEST_PASS2(test_ignore_bom, "test parsing config file with BOM"),
     SVN_TEST_NULL
   };
