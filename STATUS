@@ -222,7 +222,7 @@ Candidate changes:
                is within the server-side reverse proxy
      r1499423: fix 411 handling
      r1499595: don't probe when a redirect occurs
-
+     
      Local to branch:
      r1499225: remove SVN_CONFIG_OPTION_BUSTED_PROXY from the public API,
                since we cannot add a symbol in a patch release.
