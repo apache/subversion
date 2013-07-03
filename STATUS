@@ -226,6 +226,9 @@ Candidate changes:
                since we cannot add a symbol in a patch release.
    Votes:
      +1: gstein
+     -1: philip (needs r1499423, also the extra request is sent before
+                 redirect handling so a client enabling this option and
+                 connecting directly to httpd will not follow redirects)
 
  * r1498000
    Improve error handling for inherited property requests by using the
