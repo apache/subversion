@@ -52,6 +52,7 @@ public class RevisionRange implements Comparable<RevisionRange>, java.io.Seriali
         this.inheritable = inheritable;
     }
 
+    /** @since 1.9 */
     public RevisionRange(Revision from, Revision to, boolean inhertiable)
     {
         this.from = from;
@@ -202,6 +203,8 @@ public class RevisionRange implements Comparable<RevisionRange>, java.io.Seriali
     }
 
     /**
+     * <b>Note:</b> Explicitly ignores inheritable state.
+     *
      * @param range The RevisionRange to compare this object to.
      */
     public int compareTo(RevisionRange range)
@@ -212,6 +215,5 @@ public class RevisionRange implements Comparable<RevisionRange>, java.io.Seriali
         Revision other = (range).getFromRevision();
         return RevisionRange.getRevisionAsLong(this.getFromRevision())
             .compareTo(RevisionRange.getRevisionAsLong(other));
-        // NOTE: Explicitly ignores inheritable state.
     }
 }
