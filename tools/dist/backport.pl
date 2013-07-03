@@ -228,6 +228,7 @@ sub sanitize_branch {
 
 # TODO: may need to parse other headers too?
 sub parse_entry {
+  my $lines = shift;
   my @lines = @_;
   my (@revisions, @logsummary, $branch, @votes);
   # @lines = @_;
@@ -276,6 +277,7 @@ sub parse_entry {
     header => $header,
     votes => [@votes],
     entry => [@lines],
+    raw => $lines,
   );
 }
 
@@ -313,7 +315,7 @@ sub vote {
     say "Voting '$vote' on $entry->{header}";
 
     if ($vote eq 'edit') {
-      print VOTES edit_string $_, $entry->{header};
+      print VOTES $entry->{raw};
       next;
     }
     
@@ -352,7 +354,8 @@ sub exit_stage_left {
 sub handle_entry {
   my $in_approved = shift;
   my $votes = shift;
-  my %entry = parse_entry @_;
+  my $lines = shift;
+  my %entry = parse_entry $lines, @_;
   my @vetoes = grep { /^  -1:/ } @{$entry{votes}};
 
   if ($YES) {
@@ -398,8 +401,8 @@ sub handle_entry {
         print "Your '$1' vote has been recorded." if $VERBOSE;
       }
       when (/^e/i) {
-        $votes->{$.} = ['edit', \%entry];
-        print "Your edit request has been recorded." if $VERBOSE;
+        $entry{raw} = edit_string $entry{raw}, $entry{header};
+        $votes->{$.} = ['edit', \%entry]; # marker for the 2nd pass
       }
     }
   }
@@ -437,6 +440,7 @@ sub main {
 
   my $in_approved = 0;
   while (<STATUS>) {
+    my $lines = $_;
     my @lines = split /\n/;
 
     given ($lines[0]) {
@@ -457,7 +461,7 @@ sub main {
       when (/^ \*/) {
         warn "Too many bullets in $lines[0]" and next
           if grep /^ \*/, @lines[1..$#lines];
-        handle_entry $in_approved, \%votes, @lines;
+        handle_entry $in_approved, \%votes, $lines, @lines;
       }
       default {
         warn "Unknown entry '$lines[0]' at line $.\n";
