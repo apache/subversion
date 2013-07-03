@@ -283,6 +283,7 @@ sub edit_string {
   # Edits $_[0] in an editor.
   # $_[1] is used in error messages.
   die "$0: called edit_string() in non-interactive mode!" if $YES;
+  local $\; # disable 'perl -l' effects
   my $string = shift;
   my $name = shift;
   my ($fh, $fn) = tempfile;
