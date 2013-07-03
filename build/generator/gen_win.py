@@ -217,6 +217,7 @@ class GeneratorBase(gen_base.GeneratorBase):
 
   def _find_bdb(self):
     "Find the Berkeley DB library and version"
+    # Before adding "60" to this list, see build/ac-macros/berkeley-db.m4.
     for ver in ("53", "52", "51", "50", "48", "47", "46",
                 "45", "44", "43", "42", "41", "40"):
       lib = "libdb" + ver

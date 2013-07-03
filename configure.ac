@@ -460,6 +460,7 @@ powerpc-apple-darwin*)
     SVN_FS_WANT_DB_PATCH=14
     ;;
 esac
+db_alt_version="5.x"
 # Look for libdb4.so first:
 SVN_LIB_BERKELEY_DB($SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MINOR,
                     $SVN_FS_WANT_DB_PATCH, [db4 db])
@@ -1516,7 +1517,7 @@ if test "$svn_lib_berkeley_db" = "no" && test "$with_berkeley_db" != "no"; then
   AC_MSG_WARN([we have configured without BDB filesystem support
 
 
-You don't seem to have Berkeley DB version $db_version or newer
+You don't seem to have Berkeley DB version $db_version or $db_alt_version
 installed and linked to APR-UTIL.  We have created a Makefile which will build
 Subversion without support for the Berkeley DB back-end.  You can find the
 latest version of Berkeley DB here:

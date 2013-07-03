@@ -48,7 +48,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
   AC_ARG_WITH(berkeley-db, [AS_HELP_STRING(
                                            [[--with-berkeley-db[=HEADER:INCLUDES:LIB_SEARCH_DIRS:LIBS]]], [
                           The Subversion Berkeley DB based filesystem library 
-                          requires Berkeley DB $db_version or newer.  If you
+                          requires Berkeley DB $db_version or $db_alt_version.  If you
                           specify `--without-berkeley-db', that library will
                           not be built.  If you omit the argument of this option
                           completely, the configure script will use Berkeley DB
@@ -134,7 +134,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
       AC_MSG_RESULT([no])
       svn_lib_berkeley_db=no
       if test "$bdb_status" = "required"; then
-        AC_MSG_ERROR([Berkeley DB $db_version or newer wasn't found.])
+        AC_MSG_ERROR([Berkeley DB $db_version or $db_alt_version wasn't found.])
       fi
     fi
   fi
@@ -229,6 +229,12 @@ int main ()
       || minor != DB_VERSION_MINOR
       || patch != DB_VERSION_PATCH)
     exit (1);
+
+  /* Block Berkeley DB 6, because (a) we haven't tested with it, (b) 6.0.20
+     and newer are under the AGPL, and we want use of AGPL dependencies to be
+     opt-in. */
+  if (major >= 6)
+    exit(1);
 
   /* Run-time check:  ensure the library claims to be the correct version. */
 
