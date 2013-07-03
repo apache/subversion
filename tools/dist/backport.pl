@@ -44,6 +44,7 @@ my ($AVAILID) = $ENV{AVAILID} // do {
 }
 // warn "Username for commits (of votes/merges) not found";
 my $EDITOR = $ENV{SVN_EDITOR} // $ENV{VISUAL} // $ENV{EDITOR} // 'ed';
+my $VERBOSE = 0;
 $DEBUG = 'true' if exists $ENV{DEBUG};
 $MAY_COMMIT = 'true' if ($ENV{MAY_COMMIT} // "false") =~ /^(1|yes|true)$/i;
 
@@ -383,9 +384,11 @@ sub handle_entry {
       }
       when (/^([+-][01])\s*$/i) {
         $votes->{$.} = [$1, \%entry];
+        print "Your '$1' vote has been recorded." if $VERBOSE;
       }
       when (/^e/i) {
         $votes->{$.} = ['edit', \%entry];
+        print "Your edit request has been recorded." if $VERBOSE;
       }
     }
   }
