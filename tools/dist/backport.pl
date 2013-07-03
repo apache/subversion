@@ -279,6 +279,21 @@ sub parse_entry {
   );
 }
 
+sub edit_string {
+  # Edits $_[0] in an editor.
+  # $_[1] is used in error messages.
+  die "$0: called edit_string() in non-interactive mode!" if $YES;
+  my $string = shift;
+  my $name = shift;
+  my ($fh, $fn) = tempfile;
+  print $fh $string;
+  $fh->flush or die $!;
+  system("$EDITOR -- $fn") == 0
+    or warn "\$EDITOR failed editing $name: $! ($?); "
+           ."edit results ($fn) ignored.";
+  return `cat $fn`;
+}
+
 sub vote {
   my $votes = shift;
 
@@ -297,12 +312,7 @@ sub vote {
     say "Voting '$vote' on $entry->{header}";
 
     if ($vote eq 'edit') {
-      my ($fh, $fn) = tempfile;
-      print $fh $_;
-      $fh->flush or die $!;
-      system("$EDITOR -- $fn") == 0
-        or warn "\$EDITOR faile editing $entry->{header}: $! ($?); edit results ($fn) ignored.";
-      print VOTES `cat $fn`;
+      print VOTES edit_string $_, $entry->{header};
       next;
     }
     
