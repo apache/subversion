@@ -242,6 +242,8 @@ sub parse_entry {
 
 sub maybe_revert {
   # This is both a SIGINT handler, and the tail end of main() in normal runs.
+  # @_ is 'INT' in the former case and () in the latter.
+  delete $SIG{INT} unless @_;
   return if $YES or not prompt 'Revert? ';
   copy $STATUS, "$STATUS.$$";
   system $SVN, qw/revert -q/, $STATUS;
