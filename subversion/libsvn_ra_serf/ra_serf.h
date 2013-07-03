@@ -144,6 +144,9 @@ struct svn_ra_serf__session_t {
      HTTP/1.0. Thus, we cannot send chunked requests.  */
   svn_boolean_t http10;
 
+  /* Should we use Transfer-Encoding: chunked for HTTP/1.1 servers. */
+  svn_boolean_t using_chunked_requests;
+
   /* Our Version-Controlled-Configuration; may be NULL until we know it. */
   const char *vcc_url;
 
@@ -186,7 +189,11 @@ struct svn_ra_serf__session_t {
   const char *activity_collection_url;
 
   /* Are we using a proxy? */
-  int using_proxy;
+  svn_boolean_t using_proxy;
+
+  /* Should we be careful with this proxy? (some have insufficient support that
+     we need to work around).  */
+  svn_boolean_t busted_proxy;
 
   const char *proxy_username;
   const char *proxy_password;
@@ -1333,6 +1340,14 @@ svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
 
 
 /** OPTIONS-related functions **/
+
+/* When running with a proxy, we may need to detect and correct for problems.
+   This probing function will send a simple OPTIONS request to detect problems
+   with the connection.  */
+svn_error_t *
+svn_ra_serf__probe_proxy(svn_ra_serf__session_t *serf_sess,
+                         apr_pool_t *scratch_pool);
+
 
 /* On HTTPv2 connections, run an OPTIONS request over CONN to fetch the
    current youngest revnum, returning it in *YOUNGEST.
