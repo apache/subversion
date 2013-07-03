@@ -545,7 +545,6 @@ svn_ra_serf__probe_proxy(svn_ra_serf__session_t *serf_sess,
                          apr_pool_t *scratch_pool)
 {
   svn_ra_serf__handler_t *handler;
-  svn_error_t *err;
 
   handler = apr_pcalloc(scratch_pool, sizeof(*handler));
   handler->handler_pool = scratch_pool;
@@ -562,27 +561,19 @@ svn_ra_serf__probe_proxy(svn_ra_serf__session_t *serf_sess,
 
   /* No special headers.  */
 
-  err = svn_ra_serf__context_run_one(handler, scratch_pool);
-  if (err)
+  SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
+  /* Some versions of nginx in reverse proxy mode will return 411. They want
+     a Content-Length header, rather than chunked requests. We can keep other
+     HTTP/1.1 features, but will disable the chunking.  */
+  if (handler->sline.code == 411)
     {
-      /* Some versions of nginx in reverse proxy mode will return 411. They want
-         a Content-Length header, rather than chunked requests. We can keep other
-         HTTP/1.1 features, but will disable the chunking.  */
-      if (handler->sline.code == 411)
-        {
-          serf_sess->using_chunked_requests = FALSE;
+      serf_sess->using_chunked_requests = FALSE;
 
-          svn_error_clear(err);
-          return SVN_NO_ERROR;
-        }
-
-      return svn_error_trace(
-        svn_error_compose_create(
-          svn_ra_serf__error_on_status(handler->sline,
-                                       serf_sess->session_url.path,
-                                       handler->location),
-          err));
+      return SVN_NO_ERROR;
     }
+  SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
+                                       handler->path,
+                                       handler->location));
 
   return SVN_NO_ERROR;
 }
