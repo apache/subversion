@@ -304,7 +304,7 @@ sub main {
   }
   $/ = ""; # paragraph mode
 
-  $SIG{INT} = \&maybe_revert;
+  $SIG{INT} = \&maybe_revert unless $YES;
 
   my $in_approved = 0;
   while (<STATUS>) {
