@@ -297,9 +297,9 @@ sub edit_string {
 
 sub vote {
   my $votes = shift;
+  return unless %$votes;
 
   $. = 0;
-
   open STATUS, "<", $STATUS;
   open VOTES, ">", "$STATUS.$$.tmp";
   while (<STATUS>) {
