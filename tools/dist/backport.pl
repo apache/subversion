@@ -240,6 +240,16 @@ sub parse_entry {
   );
 }
 
+sub maybe_revert {
+  # This is both a SIGINT handler, and the tail end of main() in normal runs.
+  return if $YES or not prompt 'Revert? ';
+  copy $STATUS, "$STATUS.$$";
+  system $SVN, qw/revert -q/, $STATUS;
+  system $SVN, qw/revert -R ./;
+  move "$STATUS.$$", $STATUS;
+  exit if @_;
+}
+
 sub handle_entry {
   my $in_approved = shift;
   my %entry = parse_entry @_;
@@ -284,16 +294,6 @@ sub handle_entry {
   #       on my system the loop in main() doesn't seem to care.
 
   1;
-}
-
-sub maybe_revert {
-  # This is both a SIGINT handler, and the tail end of main() in normal runs.
-  return if $YES or not prompt 'Revert? ';
-  copy $STATUS, "$STATUS.$$";
-  system $SVN, qw/revert -q/, $STATUS;
-  system $SVN, qw/revert -R ./;
-  move "$STATUS.$$", $STATUS;
-  exit if @_;
 }
 
 sub main {
