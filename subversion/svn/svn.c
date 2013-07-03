@@ -2990,6 +2990,10 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                          "Subversion"));
         }
 
+      /* Ensure that stdout is flushed, so the user will see any write errors.
+         This makes sure that output is not silently lost. */
+      SVN_INT_ERR(svn_cmdline_fflush(stdout));
+
       return EXIT_ERROR(err);
     }
   else
