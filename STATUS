@@ -159,7 +159,7 @@ Candidate changes:
      This turns a class of previously invisible errors in an easy to diagnose
      error message.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, gstein
 
  * r1499034
    sqlite3.m4: allow placing the amalgamation in the build dir.
@@ -186,7 +186,7 @@ Candidate changes:
      r1499095 fixes the crash shown in the issue.
      r1499096 should prevent a similar problem, found by code inspection.
    Votes:
-      +1: stsp
+      +1: stsp, gstein
 
  * r1498885
    Correctly initialize the node kind in the Ev2 shims' change table.
@@ -200,7 +200,24 @@ Candidate changes:
      Incidentally, that backport will serve as a real-life test of the
      Ev2 API, as that is what JavaHL exposes.
    Votes:
-      +1: brane
+      +1: brane, gstein
+
+ * r1496470, r1497975, r1497980, r1498012
+   Support for HTTP/1.1 reverse proxies that require Content-Length headers
+   and deny chunked requests.
+   Branch: ### not ready yet
+   Justification:
+     Older nginx servers cannot handle chunked requests. This patch will
+     keep HTTP/1.1 features in the connection, but will always use C-L
+     headers for the length (at a variant performance cost). This increases
+     svn's compatibility in various environments. Most installations will
+     never see this; the runtime test is only enabled with a config settting.
+   Notes:
+     As evidenced by Ivan's work on branches/1.8.x-r1496470, there will be
+     some conflicts with backporting this group. A branch needs to be made.
+   Votes:
+     +1: gstein (concept)
+
 
 Veto-blocked changes:
 =====================
