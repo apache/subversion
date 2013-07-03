@@ -357,35 +357,36 @@ sub handle_entry {
     print "";
     print "Vetoes found!" if @vetoes;
 
-    given (prompt 'Go ahead? [y,±1,±0,q,e,N]', verbose => 1, extra => qr/[+-]/) {
-     when (/^y/i) {
-      merge %entry;
-      MAYBE_DIFF: while (1) { 
-        given (prompt "Shall I open a subshell? [ydN]", verbose => 1) {
-          when (/^y/i) {
-            system($ENV{SHELL} // "/bin/sh") == 0
-              or warn "Creating an interactive subshell failed ($?): $!"
+    given (prompt 'Go ahead? [y,±1,±0,q,e,N]',
+                   verbose => 1, extra => qr/[+-]/) {
+      when (/^y/i) {
+        merge %entry;
+        MAYBE_DIFF: while (1) { 
+          given (prompt "Shall I open a subshell? [ydN]", verbose => 1) {
+            when (/^y/i) {
+              system($ENV{SHELL} // "/bin/sh") == 0
+                or warn "Creating an interactive subshell failed ($?): $!"
+            }
+            when (/^d/) {
+              system($SVN, 'diff') == 0
+                or warn "diff failed ($?): $!";
+              next;
+            }
           }
-          when (/^d/) {
-            system($SVN, 'diff') == 0
-              or warn "diff failed ($?): $!";
-            next;
-          }
+          last;
         }
-      last;
+        # Don't revert.  The next merge() call will do that anyway, or maybe
+        # the user did in his interactive shell.
       }
-      # Don't revert.  The next merge() call will do that anyway, or maybe the
-      # user did in his interactive shell.
-     }
-     when (/^q/i) {
-       exit_stage_left $votes;
-     }
-     when (/^([+-][01])\s*$/i) {
-       $votes->{$.} = [$1, \%entry];
-     }
-     when (/^e/i) {
-       $votes->{$.} = ['edit', \%entry];
-     }
+      when (/^q/i) {
+        exit_stage_left $votes;
+      }
+      when (/^([+-][01])\s*$/i) {
+        $votes->{$.} = [$1, \%entry];
+      }
+      when (/^e/i) {
+        $votes->{$.} = ['edit', \%entry];
+      }
     }
   }
 
