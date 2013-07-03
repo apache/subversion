@@ -348,7 +348,7 @@ sub handle_entry {
   } else {
     print "";
     print "\n>>> The $entry{header}:";
-    print join ", ", map { "r$_" } @{$entry{revisions}};
+    print join ", ", map { "r$_" } @{$entry{revisions}} if @{$entry{revisions}};
     print "$BRANCHES/$entry{branch}" if $entry{branch};
     print "";
     print for @{$entry{logsummary}};
