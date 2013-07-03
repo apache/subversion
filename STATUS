@@ -208,14 +208,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1498456
-   ra_serf: recognize the get-file-revs-reverse capability.
-   Justification:
-     Wrong failure mode: the code raised an error when it should have replied
-     FALSE with no error.
-   Votes:
-     +1: danielsh, rhuijben, stefan2
-
  * r1498136
    Disable named atomics if APR does not implement memory-mapped files.
    Justification:
