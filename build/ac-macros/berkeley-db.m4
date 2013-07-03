@@ -126,12 +126,25 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
     svn_lib_berkeley_db=no
   else
     AC_MSG_CHECKING([for availability of Berkeley DB])
-    SVN_LIB_BERKELEY_DB_TRY($1, $2, $3)
+    AC_ARG_ENABLE(banging-head-against-wall,
+      AS_HELP_STRING([---disable-banging-head-against-wall],
+                     [Allow building against BDB 6+.
+                      See --with-berkeley-db for specifying the location of
+                      the Berkeley DB installation.  Using BDB 6 will fail if
+                      this option is not used.]),
+      [enable_bdb6=$enableval],[enable_bdb6=unspecified])
+
+    SVN_LIB_BERKELEY_DB_TRY($1, $2, $3, $enable_bdb6)
     if test "$svn_have_berkeley_db" = "yes"; then
       AC_MSG_RESULT([yes])
       svn_lib_berkeley_db=yes
     else
-      AC_MSG_RESULT([no])
+      if test "$svn_have_berkeley_db" = "no6"; then
+        AC_MSG_RESULT([no (found version 6, but --enable-banging-head-against-wall not specified)])
+        # A warning will be printed at the end of configure.ac.
+      else
+        AC_MSG_RESULT([no])
+      fi
       svn_lib_berkeley_db=no
       if test "$bdb_status" = "required"; then
         AC_MSG_ERROR([Berkeley DB $db_version or $db_alt_version wasn't found.])
@@ -141,7 +154,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
 ])
 
 
-dnl   SVN_LIB_BERKELEY_DB_TRY(major, minor, patch)
+dnl   SVN_LIB_BERKELEY_DB_TRY(major, minor, patch, enable_bdb6)
 dnl
 dnl   A subroutine of SVN_LIB_BERKELEY_DB.
 dnl
@@ -174,6 +187,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB_TRY,
     svn_check_berkeley_db_major=$1
     svn_check_berkeley_db_minor=$2
     svn_check_berkeley_db_patch=$3
+    enable_bdb6=$4
 
    if test -z "$SVN_DB_LIBS"; then
       # We pass --dbm-libs here since Debian has modified apu-config not
@@ -215,6 +229,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB_TRY,
 )
 
     AC_RUN_IFELSE([AC_LANG_SOURCE([[
+#include <string.h>
 #include <stdlib.h>
 $svn_db_header
 
@@ -233,8 +248,8 @@ int main ()
   /* Block Berkeley DB 6, because (a) we haven't tested with it, (b) 6.0.20
      and newer are under the AGPL, and we want use of AGPL dependencies to be
      opt-in. */
-  if (major >= 6)
-    exit(1);
+  if (major >= 6 && strcmp("$enable_bdb6", "yes"))
+    exit(2);
 
   /* Run-time check:  ensure the library claims to be the correct version. */
 
@@ -255,7 +270,11 @@ int main ()
 }
       ]])],
       [svn_have_berkeley_db=yes],
-      [svn_have_berkeley_db=no],
+      [rc=$?
+       svn_have_berkeley_db=no
+       if test $rc = 2; then
+         svn_have_berkeley_db=no6
+       fi],
       [svn_have_berkeley_db=yes]
     )
 
