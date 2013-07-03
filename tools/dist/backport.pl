@@ -330,15 +330,19 @@ sub vote {
     if prompt "Commit these votes? ";
 }
 
+sub revert {
+  copy $STATUS, "$STATUS.$$";
+  system $SVN, qw/revert -q/, $STATUS;
+  system $SVN, qw/revert -R ./;
+  move "$STATUS.$$", $STATUS;
+}
+
 sub maybe_revert {
   # This is both a SIGINT handler, and the tail end of main() in normal runs.
   # @_ is 'INT' in the former case and () in the latter.
   delete $SIG{INT} unless @_;
   return if $YES or not prompt 'Revert? ';
-  copy $STATUS, "$STATUS.$$";
-  system $SVN, qw/revert -q/, $STATUS;
-  system $SVN, qw/revert -R ./;
-  move "$STATUS.$$", $STATUS;
+  revert;
   exit if @_;
 }
 
@@ -388,10 +392,10 @@ sub handle_entry {
               next;
             }
           }
+          revert;
           next PROMPT;
         }
-        # Don't revert.  The next merge() call will do that anyway, or maybe
-        # the user did in his interactive shell.
+        # NOTREACHED
       }
       when (/^q/i) {
         exit_stage_left $votes;
