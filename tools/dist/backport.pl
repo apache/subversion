@@ -89,8 +89,10 @@ N:   Move to the next entry.
 
 There is also a batch mode: when \$YES and \$MAY_COMMIT are defined to '1' i
 the environment, this script will iterate the "Approved:" section, and merge
-and commit each entry therein.  This mode is normally used by the 'svn-role'
-cron job, not by human users.
+and commit each entry therein.  If only \$YES is defined, the script will
+merge every nomination (including unapproved and vetoed ones), and complain
+to stderr if it notices any conflicts.  These mode are normally used by the
+'svn-role' cron job and/or buildbot, not by human users.
 
 The 'svn' binary defined by the environment variable \$SVN, or otherwise the
 'svn' found in \$PATH, will be used to manage the working copy.
@@ -360,7 +362,24 @@ sub handle_entry {
   my @vetoes = grep { /^  -1:/ } @{$entry{votes}};
 
   if ($YES) {
-    merge %entry if $in_approved and not @vetoes;
+    # Run a merge if:
+    unless (@vetoes) {
+      if ($MAY_COMMIT eq 'true' and $in_approved) {
+        # svn-role mode
+        merge %entry;
+      } elsif ($MAY_COMMIT ne 'true') {
+        # Scan-for-conflicts mode
+        merge %entry;
+
+        my $output;
+        if (($output = `$SVN status`) =~ /^(C|.C|...C)/m) {
+          say STDERR "Conflicts merging the $entry{header}!";
+          say STDERR "";
+          say STDERR $output;
+        }
+        revert;
+      }
+    }
   } else {
     # This loop is just a hack because 'goto' panics.  The goto should be where
     # the "next PROMPT;" is; there's a "last;" at the end of the loop body.
