@@ -1,4 +1,4 @@
-#!/usr/bin/perl -l
+#!/usr/bin/perl
 use warnings;
 use strict;
 use feature qw/switch say/;
@@ -98,7 +98,6 @@ EOF
 }
 
 sub prompt {
-  local $\; # disable 'perl -l' effects
   print "$_[0] "; shift;
   my %args = @_;
   my $getchar = sub {
@@ -112,7 +111,7 @@ sub prompt {
   die "$0: called prompt() in non-interactive mode!" if $YES;
   my $answer = $getchar->();
   $answer .= $getchar->() if exists $args{extra} and $answer =~ $args{extra};
-  print "\n";
+  say "";
   return $args{verbose}
          ? $answer
          : ($answer =~ /^y/i) ? 1 : 0;
@@ -131,26 +130,26 @@ sub merge {
     $pattern = sprintf '\V\(%s branch(es)?\|branches\/%s\|Branch\(es\)\?: \*\n\? \*%s\)', $entry{branch}, $entry{branch}, $entry{branch};
     if ($SVNvsn >= 1_008_000) {
       $mergeargs = "$BRANCHES/$entry{branch}";
-      print $logmsg_fh "Merge the $entry{header}:";
+      say $logmsg_fh "Merge the $entry{header}:";
     } else {
       $mergeargs = "--reintegrate $BRANCHES/$entry{branch}";
-      print $logmsg_fh "Reintegrate the $entry{header}:";
+      say $logmsg_fh "Reintegrate the $entry{header}:";
     }
-    print $logmsg_fh "";
+    say $logmsg_fh "";
   } elsif (@{$entry{revisions}}) {
     $pattern = '^ [*] \V' . 'r' . $entry{revisions}->[0];
     $mergeargs = join " ", (map { "-c$_" } @{$entry{revisions}}), '^/subversion/trunk';
     if (@{$entry{revisions}} > 1) {
-      print $logmsg_fh "Merge the $entry{header} from trunk:";
-      print $logmsg_fh "";
+      say $logmsg_fh "Merge the $entry{header} from trunk:";
+      say $logmsg_fh "";
     } else {
-      print $logmsg_fh "Merge r$entry{revisions}->[0] from trunk:";
-      print $logmsg_fh "";
+      say $logmsg_fh "Merge r$entry{revisions}->[0] from trunk:";
+      say $logmsg_fh "";
     }
   } else {
     die "Don't know how to call $entry{header}";
   }
-  print $logmsg_fh $_ for @{$entry{entry}};
+  say $logmsg_fh $_ for @{$entry{entry}};
   close $logmsg_fh or die "Can't close $logmsg_filename: $!";
 
   my $reintegrated_word = ($SVNvsn >= 1_008_000) ? "merged" : "reintegrated";
@@ -285,7 +284,6 @@ sub edit_string {
   # Edits $_[0] in an editor.
   # $_[1] is used in error messages.
   die "$0: called edit_string() in non-interactive mode!" if $YES;
-  local $\; # disable 'perl -l' effects
   my $string = shift;
   my $name = shift;
   my ($fh, $fn) = tempfile;
@@ -301,7 +299,6 @@ sub vote {
   my $votes = shift;
 
   $. = 0;
-  local $\; # disable 'perl -l' effects
 
   open STATUS, "<", $STATUS;
   open VOTES, ">", "$STATUS.$$.tmp";
@@ -361,16 +358,16 @@ sub handle_entry {
   if ($YES) {
     merge %entry if $in_approved and not @vetoes;
   } else {
-    print "";
-    print "\n>>> The $entry{header}:";
-    print join ", ", map { "r$_" } @{$entry{revisions}} if @{$entry{revisions}};
-    print "$BRANCHES/$entry{branch}" if $entry{branch};
-    print "";
-    print for @{$entry{logsummary}};
-    print "";
-    print for @{$entry{votes}};
-    print "";
-    print "Vetoes found!" if @vetoes;
+    say "";
+    say "\n>>> The $entry{header}:";
+    say join ", ", map { "r$_" } @{$entry{revisions}} if @{$entry{revisions}};
+    say "$BRANCHES/$entry{branch}" if $entry{branch};
+    say "";
+    say for @{$entry{logsummary}};
+    say "";
+    say for @{$entry{votes}};
+    say "";
+    say "Vetoes found!" if @vetoes;
 
     given (prompt 'Go ahead? [y,±1,±0,q,e,N]',
                    verbose => 1, extra => qr/[+-]/) {
@@ -398,7 +395,7 @@ sub handle_entry {
       }
       when (/^([+-][01])\s*$/i) {
         $votes->{$.} = [$1, \%entry];
-        print "Your '$1' vote has been recorded." if $VERBOSE;
+        say "Your '$1' vote has been recorded." if $VERBOSE;
       }
       when (/^e/i) {
         $entry{raw} = edit_string $entry{raw}, $entry{header};
@@ -446,7 +443,7 @@ sub main {
     given ($lines[0]) {
       # Section header
       when (/^[A-Z].*:$/i) {
-        print "\n\n=== $lines[0]" unless $YES;
+        say "\n\n=== $lines[0]" unless $YES;
         $in_approved = $lines[0] =~ /^Approved changes/;
       }
       # Comment
