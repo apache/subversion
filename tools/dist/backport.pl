@@ -3,8 +3,6 @@ use warnings;
 use strict;
 use feature qw/switch say/;
 
-use File::Copy qw/copy move/;
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -23,6 +21,7 @@ use File::Copy qw/copy move/;
 # under the License.
 
 use Term::ReadKey qw/ReadMode ReadKey/;
+use File::Copy qw/copy move/;
 use File::Temp qw/tempfile/;
 use POSIX qw/ctermid/;
 
