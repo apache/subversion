@@ -34,6 +34,16 @@ my $BRANCHES = '^/subversion/branches';
 my $YES = $ENV{YES}; # batch mode: eliminate prompts, add sleeps
 my $MAY_COMMIT = qw[false true][0];
 my $DEBUG = qw[false true][0]; # 'set -x', etc
+my ($AVAILID) = $ENV{AVAILID} // do {
+  my $SVN_A_O_REALM = 'd3c8a345b14f6a1b42251aef8027ab57';
+  open USERNAME, '<', "$ENV{HOME}/.subversion/auth/svn.simple/$SVN_A_O_REALM";
+  1 until <USERNAME> eq "username\n";
+  <USERNAME>;
+  local $_ = <USERNAME>;
+  chomp;
+  $_
+}
+// warn "Username for commits (of votes/merges) not found";
 $DEBUG = 'true' if exists $ENV{DEBUG};
 $MAY_COMMIT = 'true' if ($ENV{MAY_COMMIT} // "false") =~ /^(1|yes|true)$/i;
 
@@ -56,8 +66,8 @@ Run this from the root of your release branch (e.g., 1.6.x) working copy.  Use
 a working copy 'svn revert -R .' can be run on at any time, as this script
 will run revert prior to every merge.
 
-For each entry in STATUS, you will be prompted whether to merge it.  The
-merge will not be committed.
+For each entry in STATUS, you will be prompted whether to vote on it
+or merge it.  Votes will be committed; merges will not be committed.
 
 The 'svn' binary defined by the environment variable \$SVN, or otherwise the
 'svn' found in \$PATH, will be used to manage the working copy.
@@ -68,12 +78,18 @@ sub prompt {
   local $\; # disable 'perl -l' effects
   print "$_[0] "; shift;
   my %args = @_;
+  my $getchar = sub {
+    ReadMode 'cbreak';
+    my $answer = (ReadKey 0);
+    ReadMode 'cbreak';
+    print $answer;
+    return $answer;
+  };
 
   die "$0: called prompt() in non-interactive mode!" if $YES;
-  ReadMode 'cbreak';
-  my $answer = (ReadKey 0);
-  ReadMode 'restore';
-  print $answer, "\n";
+  my $answer = $getchar->();
+  $answer .= $getchar->() if exists $args{extra} and $answer =~ $args{extra};
+  print "\n";
   return $args{verbose}
          ? $answer
          : ($answer =~ /^y/i) ? 1 : 0;
@@ -240,6 +256,37 @@ sub parse_entry {
   );
 }
 
+sub vote {
+  my $votes = shift;
+
+  $. = 0;
+  local $\; # disable 'perl -l' effects
+
+  open STATUS, "<", $STATUS;
+  open VOTES, ">", "$STATUS.$$.tmp";
+  while (<STATUS>) {
+    unless (exists $votes->{$.}) {
+      print VOTES;
+      next;
+    }
+
+    my ($vote, $entry) = @{delete $votes->{$.}};
+    say "Voting $vote on $entry->{header}";
+
+    s/^(\s*\Q$vote\E:.*)/"$1, $AVAILID"/me
+    or s/(.*\w.*?\n)/"$1     $vote: $AVAILID\n"/se;
+    print VOTES;
+  }
+  close STATUS;
+  close VOTES;
+  die "Some vote chunks weren't found: ", keys %$votes if %$votes;
+  move "$STATUS.$$.tmp", $STATUS;
+
+  system $SVN, qw/diff --/, $STATUS;
+  system $SVN, qw/commit -m Vote. --/, $STATUS
+    if prompt "Commit these votes? ";
+}
+
 sub maybe_revert {
   # This is both a SIGINT handler, and the tail end of main() in normal runs.
   # @_ is 'INT' in the former case and () in the latter.
@@ -252,8 +299,15 @@ sub maybe_revert {
   exit if @_;
 }
 
+sub exit_stage_left {
+  maybe_revert;
+  vote shift;
+  exit;
+}
+
 sub handle_entry {
   my $in_approved = shift;
+  my $votes = shift;
   my %entry = parse_entry @_;
   my @vetoes = grep { /^  -1:/ } @{$entry{votes}};
 
@@ -271,7 +325,8 @@ sub handle_entry {
     print "";
     print "Vetoes found!" if @vetoes;
 
-    if (prompt 'Go ahead?') {
+    given (prompt 'Go ahead? [y,±1,±0,q,N]', verbose => 1, extra => qr/[+-]/) {
+     when (/^y/i) {
       merge %entry;
       MAYBE_DIFF: while (1) { 
         given (prompt "Shall I open a subshell? [ydN]", verbose => 1) {
@@ -289,6 +344,13 @@ sub handle_entry {
       }
       # Don't revert.  The next merge() call will do that anyway, or maybe the
       # user did in his interactive shell.
+     }
+     when (/^q/i) {
+       exit_stage_left $votes;
+     }
+     when (/^([+-][01])\s*$/i) {
+       $votes->{$.} = [$1, \%entry];
+     }
     }
   }
 
@@ -299,6 +361,8 @@ sub handle_entry {
 }
 
 sub main {
+  my %votes;
+
   usage, exit 0 if @ARGV;
 
   open STATUS, "<", $STATUS or (usage, exit 1);
@@ -343,7 +407,7 @@ sub main {
       when (/^ \*/) {
         warn "Too many bullets in $lines[0]" and next
           if grep /^ \*/, @lines[1..$#lines];
-        handle_entry $in_approved, @lines;
+        handle_entry $in_approved, \%votes, @lines;
       }
       default {
         warn "Unknown entry '$lines[0]' at line $.\n";
@@ -351,7 +415,7 @@ sub main {
     }
   }
 
-  maybe_revert;
+  exit_stage_left \%votes;
 }
 
 &main
