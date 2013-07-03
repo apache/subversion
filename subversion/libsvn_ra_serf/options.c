@@ -362,6 +362,8 @@ options_response_handler(serf_request_t *request,
                     capability_no);
       svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS,
                     capability_no);
+      svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE,
+                    capability_no);
 
       /* Then see which ones we can discover. */
       serf_bucket_headers_do(hdrs, capabilities_headers_iterator_callback,
