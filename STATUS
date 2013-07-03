@@ -248,6 +248,12 @@ Candidate changes:
      +1: danielsh
      +0: stsp (I agree with the change, but the merge conflicts)
 
+ * r1499438, r1499460
+   Make building with BDB 6 an opt-in feature.
+   Justification:
+     Incompatible license.  libsvn_fs_base has not been tested with bdb6, and
+     is deprecated so we are unlikely to test it.
+
 Veto-blocked changes:
 =====================
 
