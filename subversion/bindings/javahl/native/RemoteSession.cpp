@@ -524,6 +524,9 @@ void fill_dirents(const char* base_url, const char* base_relpath,
                   jobject jdirents, apr_hash_t* dirents,
                   apr_pool_t* scratch_pool)
 {
+  if (!dirents)
+    return;
+
   base_url = apr_pstrcat(scratch_pool, base_url, "/", base_relpath, NULL);
   base_url = svn_uri_canonicalize(base_url, scratch_pool);
   svn_stringbuf_t* abs_path = svn_stringbuf_create(base_url, scratch_pool);
