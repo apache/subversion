@@ -1511,3 +1511,29 @@ AC_OUTPUT
 dnl Configure is long - users tend to miss warnings printed during it.
 dnl Hence, print a warnings about what we did and didn't configure at the 
 dnl end, where people will actually see them.
+
+if test "$svn_have_berkeley_db" = "no6" && test "$enable_bdb6" != "no"; then
+  AC_MSG_WARN([We have configured without BDB filesystem support
+
+
+Berkeley DB 6 was found, but not used.  Please re-run configure (see
+./config.nice) with the '--enable-banging-head-against-wall' flag to use it,
+or explicitly specify '--disable-banging-head-against-wall' or 
+'--without-berkeley-db' to silence this warning.
+
+Please note that some versions of Berkeley DB 6+ are under the GNU Affero
+General Public License, version 3:
+https://oss.oracle.com/pipermail/bdb/2013-June/000056.html
+
+The AGPL-3.0 licence may impose special requirements for making available
+source code of server-side software.  The text of the licence is:
+https://www.gnu.org/licenses/agpl-3.0.html
+http://opensource.org/licenses/AGPL-3.0
+
+The Berkeley DB backend to Subversion is deprecated; see
+http://subversion.apache.org/docs/release-notes/1.8#bdb-deprecated
+
+The Subversion developers have not tested Subversion with Berkeley DB 6 for
+technical problems or bugs.
+])
+fi
