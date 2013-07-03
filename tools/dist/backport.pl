@@ -358,6 +358,9 @@ sub handle_entry {
   if ($YES) {
     merge %entry if $in_approved and not @vetoes;
   } else {
+    # This loop is just a hack because 'goto' panics.  The goto should be where
+    # the "next PROMPT;" is; there's a "last;" at the end of the loop body.
+    PROMPT: while (1) {
     say "";
     say "\n>>> The $entry{header}:";
     say join ", ", map { "r$_" } @{$entry{revisions}} if @{$entry{revisions}};
@@ -373,7 +376,7 @@ sub handle_entry {
                    verbose => 1, extra => qr/[+-]/) {
       when (/^y/i) {
         merge %entry;
-        MAYBE_DIFF: while (1) { 
+        while (1) { 
           given (prompt "Shall I open a subshell? [ydN]", verbose => 1) {
             when (/^y/i) {
               system($ENV{SHELL} // "/bin/sh") == 0
@@ -385,7 +388,7 @@ sub handle_entry {
               next;
             }
           }
-          last;
+          next PROMPT;
         }
         # Don't revert.  The next merge() call will do that anyway, or maybe
         # the user did in his interactive shell.
@@ -401,6 +404,8 @@ sub handle_entry {
         $entry{raw} = edit_string $entry{raw}, $entry{header};
         $votes->{$.} = ['edit', \%entry]; # marker for the 2nd pass
       }
+    }
+    last;
     }
   }
 
