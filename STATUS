@@ -202,10 +202,10 @@ Candidate changes:
    Votes:
       +1: brane, gstein
 
- * r1496470, r1497975, r1497980, r1498012
+ * r1489117, r1496470, r1497975, r1497980, r1498012
    Support for HTTP/1.1 reverse proxies that require Content-Length headers
    and deny chunked requests.
-   Branch: ### not ready yet
+   Branch: ^/subversion/branches/1.8.x-busted-proxy
    Justification:
      Older nginx servers cannot handle chunked requests. This patch will
      keep HTTP/1.1 features in the connection, but will always use C-L
@@ -213,10 +213,20 @@ Candidate changes:
      svn's compatibility in various environments. Most installations will
      never see this; the runtime test is only enabled with a config settting.
    Notes:
-     As evidenced by Ivan's work on branches/1.8.x-r1496470, there will be
-     some conflicts with backporting this group. A branch needs to be made.
+     r1489117: this is actually unrelated to the proxy work, but it removes
+               some redundant minimum-serf-version checking and allows the
+               actual work to cleanly merge.
+     r1496470: add/respect using_chunked_requests flag to session state
+     r1497975: rename config variable, tweak session variables
+     r1497980: add runtime/dynamic checking of proxy support
+     r1498012: remove improper check of client-side proxy; the real problem
+               is within the server-side reverse proxy
+
+     Local to branch:
+     r1499225: remove SVN_CONFIG_OPTION_BUSTED_PROXY from the public API,
+               since we cannot add a symbol in a patch release.
    Votes:
-     +1: gstein (concept)
+     +1: gstein
 
 
 Veto-blocked changes:
