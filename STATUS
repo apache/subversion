@@ -208,13 +208,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1497002
-   Avoid temporary files when calling external diff. Fixes issue 4382.
-   Justification:
-     Regression from 1.7.
-   Votes:
-     +1: philip, stsp, rhuijben
-
  * r1493703, r1494171
    Fix upgrade notification for explicit upgrades of post-WC-NG working copies.
    Justification:
