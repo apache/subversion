@@ -208,14 +208,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1496957
-   Eliminate an extra RA layer roundtrip in 'svn log' on repository roots.
-   Justification:
-     Minor performance regression against 1.7.x plus requesting e.g. single
-     revision logs on a repo root is not a fringe use-case.
-   Votes:
-     +1: stefan2, stsp, rhuijben
-
  * r1497002
    Avoid temporary files when calling external diff. Fixes issue 4382.
    Justification:
