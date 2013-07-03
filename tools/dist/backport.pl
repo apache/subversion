@@ -43,6 +43,7 @@ my ($AVAILID) = $ENV{AVAILID} // do {
   $_
 }
 // warn "Username for commits (of votes/merges) not found";
+my $EDITOR = $ENV{SVN_EDITOR} // $ENV{VISUAL} // $ENV{EDITOR} // 'ed';
 $DEBUG = 'true' if exists $ENV{DEBUG};
 $MAY_COMMIT = 'true' if ($ENV{MAY_COMMIT} // "false") =~ /^(1|yes|true)$/i;
 
@@ -71,8 +72,12 @@ At a prompt, you have the following options:
 y:   Run a merge.  It will not be committed.
      WARNING: This will run 'update' and 'revert -R ./'.
 q:   Quit the "for each nomination" loop.
-±1:  Enter a +1 or -1 vote.  You will be prompted to commit it at the end.
-±0:  Enter a +0 or -0 vote.  You will be prompted to commit it at the end.
+±1:  Enter a +1 or -1 vote
+     You will be prompted to commit your vote at the end.
+±0:  Enter a +0 or -0 vote
+     You will be prompted to commit your vote at the end.
+e:   Edit the entry in $EDITOR.
+     You will be prompted to commit your edits at the end.
 N:   Move to the next entry.
 
 After running a merge, you have the following options:
@@ -288,8 +293,18 @@ sub vote {
     }
 
     my ($vote, $entry) = @{delete $votes->{$.}};
-    say "Voting $vote on $entry->{header}";
+    say "Voting '$vote' on $entry->{header}";
 
+    if ($vote eq 'edit') {
+      my ($fh, $fn) = tempfile;
+      print $fh $_;
+      $fh->flush or die $!;
+      system("$EDITOR -- $fn") == 0
+        or warn "\$EDITOR faile editing $entry->{header}: $! ($?); edit results ($fn) ignored.";
+      print VOTES `cat $fn`;
+      next;
+    }
+    
     s/^(\s*\Q$vote\E:.*)/"$1, $AVAILID"/me
     or s/(.*\w.*?\n)/"$1     $vote: $AVAILID\n"/se;
     print VOTES;
@@ -342,7 +357,7 @@ sub handle_entry {
     print "";
     print "Vetoes found!" if @vetoes;
 
-    given (prompt 'Go ahead? [y,±1,±0,q,N]', verbose => 1, extra => qr/[+-]/) {
+    given (prompt 'Go ahead? [y,±1,±0,q,e,N]', verbose => 1, extra => qr/[+-]/) {
      when (/^y/i) {
       merge %entry;
       MAYBE_DIFF: while (1) { 
@@ -367,6 +382,9 @@ sub handle_entry {
      }
      when (/^([+-][01])\s*$/i) {
        $votes->{$.} = [$1, \%entry];
+     }
+     when (/^e/i) {
+       $votes->{$.} = ['edit', \%entry];
      }
     }
   }
