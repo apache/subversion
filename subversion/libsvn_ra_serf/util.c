@@ -2540,10 +2540,13 @@ expat_response_handler(serf_request_t *request,
       const char *data;
       apr_size_t len;
       int expat_status;
+      svn_boolean_t at_eof = FALSE;
 
       status = serf_bucket_read(response, PARSE_CHUNK_SIZE, &data, &len);
       if (SERF_BUCKET_READ_ERROR(status))
         return svn_ra_serf__wrap_err(status, NULL);
+      else if (APR_STATUS_IS_EOF(status))
+        at_eof = TRUE;
 
 #if 0
       /* ### move restart/skip into the core handler  */
@@ -2555,7 +2558,15 @@ expat_response_handler(serf_request_t *request,
 
       /* ### should we have an IGNORE_ERRORS flag like the v1 parser?  */
 
-      expat_status = XML_Parse(ectx->parser, data, (int)len, 0 /* isFinal */);
+      expat_status = XML_Parse(ectx->parser, data, (int)len,
+                               at_eof /* isFinal */);
+
+      if (at_eof)
+        {
+          /* Release xml parser state/tables. */
+          apr_pool_cleanup_run(ectx->cleanup_pool, &ectx->parser,
+                               xml_parser_cleanup);
+        }
 
       /* We need to check INNER_ERROR first. This is an error from the
          callbacks that has been "dropped off" for us to retrieve. On
@@ -2564,12 +2575,7 @@ expat_response_handler(serf_request_t *request,
 
          If an error is not present, THEN we go ahead and look for parsing
          errors.  */
-      if (ectx->inner_error)
-        {
-          apr_pool_cleanup_run(ectx->cleanup_pool, &ectx->parser,
-                               xml_parser_cleanup);
-          return svn_error_trace(ectx->inner_error);
-        }
+      SVN_ERR(ectx->inner_error);
       if (expat_status == XML_STATUS_ERROR)
         return svn_error_createf(SVN_ERR_XML_MALFORMED,
                                  ectx->inner_error,
@@ -2581,18 +2587,10 @@ expat_response_handler(serf_request_t *request,
 
       /* The parsing went fine. What has the bucket told us?  */
 
-      if (APR_STATUS_IS_EOF(status))
+      if (at_eof)
         {
-          /* Tell expat we've reached the end of the content. Ignore the
-             return status. We just don't care.  */
-          (void) XML_Parse(ectx->parser, NULL, 0, 1 /* isFinal */);
-
-          svn_ra_serf__xml_context_destroy(ectx->xmlctx);
-          apr_pool_cleanup_run(ectx->cleanup_pool, &ectx->parser,
-                               xml_parser_cleanup);
-
-          /* ### should check XMLCTX to see if it has returned to the
-             ### INITIAL state. we may have ended early...  */
+          /* Make sure we actually got xml and clean up after parsing */
+          SVN_ERR(svn_ra_serf__xml_context_done(ectx->xmlctx));
         }
 
       if (status && !SERF_BUCKET_READ_ERROR(status))

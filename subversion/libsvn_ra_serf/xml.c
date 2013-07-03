@@ -458,11 +458,50 @@ lazy_create_pool(void *baton)
   return xes->state_pool;
 }
 
-void
-svn_ra_serf__xml_context_destroy(
-  svn_ra_serf__xml_context_t *xmlctx)
+svn_error_t *
+svn_ra_serf__xml_context_done(svn_ra_serf__xml_context_t *xmlctx)
 {
+  if (xmlctx->current->prev)
+    {
+      /* Probably unreachable as this would be an xml parser error */
+      return svn_error_createf(SVN_ERR_XML_MALFORMED, NULL,
+                               _("XML stream truncated: closing '%s' missing"),
+                               xmlctx->current->tag.name);
+    }
+  else if (! xmlctx->free_states)
+    {
+      /* If we have no items on the free_states list, we didn't push anything,
+         which tells us that we found an empty xml body */
+      const svn_ra_serf__xml_transition_t *scan;
+      const svn_ra_serf__xml_transition_t *document = NULL;
+      const char *msg;
+
+      for (scan = xmlctx->ttable; scan->ns != NULL; ++scan)
+        {
+          if (scan->from_state == XML_STATE_INITIAL)
+            {
+              if (document != NULL)
+                {
+                  document = NULL; /* Multiple document elements defined */
+                  break;
+                }
+              document = scan;
+            }
+        }
+
+      if (document)
+        msg = apr_psprintf(xmlctx->scratch_pool, "'%s' element not found",
+                            document->name);
+      else
+        msg = _("document element not found");
+
+      return svn_error_createf(SVN_ERR_XML_MALFORMED, NULL,
+                               _("XML stream truncated: %s"),
+                               msg);
+    }
+
   svn_pool_destroy(xmlctx->scratch_pool);
+  return SVN_NO_ERROR;
 }
 
 svn_ra_serf__xml_context_t *
@@ -677,10 +716,11 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
                   name = *saveattr;
                   value = svn_xml_get_attr_value(name, attrs);
                   if (value == NULL)
-                    return svn_error_createf(SVN_ERR_XML_ATTRIB_NOT_FOUND,
-                                             NULL,
-                                             _("Missing XML attribute: '%s'"),
-                                             name);
+                    return svn_error_createf(
+                                SVN_ERR_XML_ATTRIB_NOT_FOUND,
+                                NULL,
+                                _("Missing XML attribute '%s' on '%s' element"),
+                                name, scan->name);
                 }
 
               if (value)
