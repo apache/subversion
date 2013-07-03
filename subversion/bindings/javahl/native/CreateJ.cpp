@@ -1085,7 +1085,7 @@ CreateJ::RevisionRangeList(apr_array_header_t *ranges)
 }
 
 jobject
-CreateJ::StringSet(apr_array_header_t *strings)
+CreateJ::StringSet(const apr_array_header_t *strings)
 {
   std::vector<jobject> jstrs;
 

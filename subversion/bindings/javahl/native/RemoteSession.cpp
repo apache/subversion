@@ -640,13 +640,11 @@ RemoteSession::getDirectory(jlong jrevision, jstring jpath,
 // TODO: update
 // TODO: switch
 
-jobject
-RemoteSession::status(jstring jstatus_target,
+void
+RemoteSession::status(jobject jthis, jstring jstatus_target,
                       jlong jrevision, jobject jdepth,
-                      jobject jstatus_editor)
-{
-  return NULL;
-}
+                      jobject jstatus_editor, jobject jreporter)
+{}
 
 // TODO: diff
 

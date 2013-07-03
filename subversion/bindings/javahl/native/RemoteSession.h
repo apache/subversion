@@ -82,9 +82,9 @@ class RemoteSession : public SVNBase
     // TODO: getMergeinfo
     // TODO: update
     // TODO: switch
-    jobject status(jstring jstatus_target,
-                   jlong jrevision, jobject jdepth,
-                   jobject jstatus_editor);
+    void status(jobject jthis, jstring jstatus_target,
+                jlong jrevision, jobject jdepth,
+                jobject jstatus_editor, jobject jreporter);
     // TODO: diff
     void getLog(jobject jpaths, jlong jstartrev, jlong jendrev, jint jlimit,
                 jboolean jstrict_node_history, jboolean jdiscover_changed_paths,

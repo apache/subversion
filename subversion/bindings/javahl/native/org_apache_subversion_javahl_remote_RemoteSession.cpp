@@ -217,16 +217,17 @@ Java_org_apache_subversion_javahl_remote_RemoteSession_nativeGetDirectory(
 // TODO: update
 // TODO: switch
 
-JNIEXPORT jobject JNICALL
-Java_org_apache_subversion_javahl_remote_RemoteSession_status(
-    JNIEnv *env, jobject jthis, jstring jstatus_target,
-    jlong jrevision, jobject jdepth, jobject jstatus_editor)
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_remote_RemoteSession_nativeStatus(
+    JNIEnv *env, jobject jthis, jstring jstatus_target, jlong jrevision,
+    jobject jdepth, jobject jstatus_editor, jobject jreporter)
 {
-  JNIEntry(SVNReposAccess, doStatus);
+  JNIEntry(SVNReposAccess, nativeStatus);
   RemoteSession *ras = RemoteSession::getCppObject(jthis);
-  CPPADDR_NULL_PTR(ras, NULL);
+  CPPADDR_NULL_PTR(ras,);
 
-  return ras->status(jstatus_target, jrevision, jdepth, jstatus_editor);
+  ras->status(jthis, jstatus_target, jrevision, jdepth,
+              jstatus_editor, jreporter);
 }
 
 // TODO: diff

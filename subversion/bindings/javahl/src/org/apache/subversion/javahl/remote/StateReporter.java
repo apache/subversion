@@ -34,7 +34,7 @@ import org.apache.subversion.javahl.ClientException;
  * Implementation of ISVNReporter.
  * @since 1.9
  */
-public class UpdateReporter extends JNIObject implements ISVNReporter
+public class StateReporter extends JNIObject implements ISVNReporter
 {
     public void dispose() {/* TODO: */}
 
@@ -64,7 +64,7 @@ public class UpdateReporter extends JNIObject implements ISVNReporter
         throw new RuntimeException("Not implemented: linkPath");
     }
 
-    public void finishReport() throws ClientException
+    public long finishReport() throws ClientException
     {
         throw new RuntimeException("Not implemented: finishReport");
     }
@@ -75,9 +75,19 @@ public class UpdateReporter extends JNIObject implements ISVNReporter
     }
 
     /**
-     * This constructor is called from the factory to get an instance.
+     * This factory method called from RemoteSession.status and friends.
      */
-    protected UpdateReporter(long cppAddr, RemoteSession session)
+    static final
+        StateReporter createInstance(RemoteSession session)
+            throws ClientException
+    {
+        return null;
+    }
+
+    /**
+     * This constructor is called from the factory method.
+     */
+    protected StateReporter(long cppAddr, RemoteSession session)
     {
         super(cppAddr);
         this.session = session;
@@ -86,4 +96,3 @@ public class UpdateReporter extends JNIObject implements ISVNReporter
     /** Stores a reference to the session that created this reporter. */
     protected RemoteSession session;
 }
-
