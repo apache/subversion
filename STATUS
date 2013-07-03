@@ -246,6 +246,7 @@ Candidate changes:
      The BDB backend is deprecated and the check is buggy.
    Votes:
      +1: danielsh
+     +0: stsp (I agree with the change, but the merge conflicts)
 
 Veto-blocked changes:
 =====================
