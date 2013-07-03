@@ -205,20 +205,13 @@ skip_bom(parse_context_t *ctx)
        * safely be assumed as long as we only try to use skip_bom() at the
        * start of the stream and the buffer is longer than 3 characters. */
       SVN_ERR_ASSERT(ctx->buffer_size > ctx->buffer_pos + 1);
-      if (buf[ctx->buffer_pos] == 0xBB &&
-          buf[ctx->buffer_pos + 1] == 0xBF)
-        {
-          ctx->buffer_pos += 2;
-        }
+      if (buf[ctx->buffer_pos] == 0xBB && buf[ctx->buffer_pos + 1] == 0xBF)
+        ctx->buffer_pos += 2;
       else
-        {
-          SVN_ERR(parser_ungetc(ctx, ch));
-        }
+        SVN_ERR(parser_ungetc(ctx, ch));
     }
   else
-    {
-      SVN_ERR(parser_ungetc(ctx, ch));
-    }
+    SVN_ERR(parser_ungetc(ctx, ch));
 
   return SVN_NO_ERROR;
 }
