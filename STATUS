@@ -208,13 +208,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1498136
-   Disable named atomics if APR does not implement memory-mapped files.
-   Justification:
-     People still use Subversion on platforms where mmap is not available.
-   Votes:
-     +1: brane, rhuijben, stefan2
-
  * r1498564
    Allow the new in 1.8 move metadata only to work properly when the
    target of the move already exists as unversioned node.
