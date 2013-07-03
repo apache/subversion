@@ -373,10 +373,8 @@ conn_setup(apr_socket_t *sock,
         {
           conn->ssl_context = serf_bucket_ssl_encrypt_context_get(*read_bkt);
 
-#if SERF_VERSION_AT_LEAST(1,0,0)
           serf_ssl_set_hostname(conn->ssl_context,
                                 conn->session->session_url.hostname);
-#endif
 
           serf_ssl_client_cert_provider_set(conn->ssl_context,
                                             svn_ra_serf__handle_client_cert,
@@ -642,10 +640,10 @@ setup_serf_req(serf_request_t *request,
 {
   serf_bucket_alloc_t *allocator = serf_request_get_alloc(request);
 
-#if SERF_VERSION_AT_LEAST(1, 1, 0)
   svn_spillbuf_t *buf;
+  svn_boolean_t set_CL = session->http10 || !session->using_chunked_requests;
 
-  if (session->http10 && body_bkt != NULL)
+  if (set_CL && body_bkt != NULL)
     {
       /* Ugh. Use HTTP/1.0 to talk to the server because we don't know if
          it speaks HTTP/1.1 (and thus, chunked requests), or because the
@@ -665,7 +663,6 @@ setup_serf_req(serf_request_t *request,
                                                request_pool,
                                                scratch_pool);
     }
-#endif
 
   /* Create a request bucket.  Note that this sucker is kind enough to
      add a "Host" header for us.  */
@@ -674,15 +671,13 @@ setup_serf_req(serf_request_t *request,
 
   /* Set the Content-Length value. This will also trigger an HTTP/1.0
      request (rather than the default chunked request).  */
-#if SERF_VERSION_AT_LEAST(1, 1, 0)
-  if (session->http10)
+  if (set_CL)
     {
       if (body_bkt == NULL)
         serf_bucket_request_set_CL(*req_bkt, 0);
       else
         serf_bucket_request_set_CL(*req_bkt, svn_spillbuf__get_size(buf));
     }
-#endif
 
   *hdrs_bkt = serf_bucket_request_get_headers(*req_bkt);
 
@@ -696,10 +691,10 @@ setup_serf_req(serf_request_t *request,
       serf_bucket_headers_setn(*hdrs_bkt, "Content-Type", content_type);
     }
 
-#if SERF_VERSION_AT_LEAST(1, 1, 0)
   if (session->http10)
+    {
       serf_bucket_headers_setn(*hdrs_bkt, "Connection", "keep-alive");
-#endif
+    }
 
   if (accept_encoding)
     {
