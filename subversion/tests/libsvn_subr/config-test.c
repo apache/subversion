@@ -340,7 +340,7 @@ static svn_error_t *
 test_ignore_bom(apr_pool_t *pool)
 {
   svn_config_t *cfg;
-  svn_string_t *cfg_string = svn_string_create("\xEE\xBB\xBF[s1]\nfoo=bar\n",
+  svn_string_t *cfg_string = svn_string_create("\xEF\xBB\xBF[s1]\nfoo=bar\n",
                                                pool);
   svn_stream_t *stream = svn_stream_from_string(cfg_string, pool);
 
