@@ -62,12 +62,30 @@ sub usage {
   my $basename = $0;
   $basename =~ s#.*/##;
   print <<EOF;
-Run this from the root of your release branch (e.g., 1.6.x) working copy.  Use
-a working copy 'svn revert -R .' can be run on at any time, as this script
-will run revert prior to every merge.
+backport.pl: a tool for reviewing and merging STATUS entries.  Run this with
+CWD being the root of the stable branch (e.g., 1.8.x).  The ./STATUS file
+should be at HEAD.
 
-For each entry in STATUS, you will be prompted whether to vote on it
-or merge it.  Votes will be committed; merges will not be committed.
+In interactive mode (the default), you will be prompted once per STATUS entry.
+At a prompt, you have the following options:
+
+y:   Run a merge.  It will not be committed.
+     WARNING: This will run 'update' and 'revert -R ./'.
+q:   Quit the "for each nomination" loop.
+±1:  Enter a +1 or -1 vote.  You will be prompted to commit it at the end.
+±0:  Enter a +0 or -0 vote.  You will be prompted to commit it at the end.
+N:   Move to the next entry.
+
+After running a merge, you have the following options:
+
+y:   Open a shell.
+d:   View a diff.
+N:   Move to the next entry.
+
+There is also a batch mode: when \$YES and \$MAY_COMMIT are defined to '1' i
+the environment, this script will iterate the "Approved:" section, and merge
+and commit each entry therein.  This mode is normally used by the 'svn-role'
+cron job, not by human users.
 
 The 'svn' binary defined by the environment variable \$SVN, or otherwise the
 'svn' found in \$PATH, will be used to manage the working copy.
