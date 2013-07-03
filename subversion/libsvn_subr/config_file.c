@@ -94,7 +94,7 @@ parser_getc(parse_context_t *ctx, int *c)
         }
       else if (ctx->buffer_pos < ctx->buffer_size)
         {
-          *c = ctx->parser_buffer[ctx->buffer_pos];
+          *c = (unsigned char)ctx->parser_buffer[ctx->buffer_pos];
           ctx->buffer_pos++;
         }
       else
@@ -107,7 +107,7 @@ parser_getc(parse_context_t *ctx, int *c)
 
           if (ctx->buffer_pos < ctx->buffer_size)
             {
-              *c = ctx->parser_buffer[ctx->buffer_pos];
+              *c = (unsigned char)ctx->parser_buffer[ctx->buffer_pos];
               ctx->buffer_pos++;
             }
           else
@@ -131,7 +131,7 @@ parser_getc_plain(parse_context_t *ctx, int *c)
 {
   if (ctx->buffer_pos < ctx->buffer_size)
     {
-      *c = ctx->parser_buffer[ctx->buffer_pos];
+      *c = (unsigned char)ctx->parser_buffer[ctx->buffer_pos];
       ctx->buffer_pos++;
 
       return SVN_NO_ERROR;
