@@ -34,50 +34,60 @@ import org.apache.subversion.javahl.ClientException;
  * Implementation of ISVNReporter.
  * @since 1.9
  */
-public class UpdateReporter extends JNIObject implements ISVNReporter
+public class StateReporter extends JNIObject implements ISVNReporter
 {
-    public void dispose() {/* TODO: */}
-
-    public void setPath(String path,
-                        long revision,
-                        Depth depth,
-                        boolean startEmpty,
-                        String lockToken)
-            throws ClientException
+    public void dispose()
     {
-        throw new RuntimeException("Not implemented: setPath");
+        session.disposeReporter(this);
+        nativeDispose();
     }
 
-    public void deletePath(String path) throws ClientException
-    {
-        throw new RuntimeException("Not implemented: deletePath");
-    }
+    public native void setPath(String path,
+                               long revision,
+                               Depth depth,
+                               boolean startEmpty,
+                               String lockToken)
+        throws ClientException;
 
-    public void linkPath(String url,
-                         String path,
-                         long revision,
-                         Depth depth,
-                         boolean startEmpty,
-                         String lockToken)
-            throws ClientException
-    {
-        throw new RuntimeException("Not implemented: linkPath");
-    }
+    public native void deletePath(String path) throws ClientException;
 
-    public void finishReport() throws ClientException
-    {
-        throw new RuntimeException("Not implemented: finishReport");
-    }
+    public native void linkPath(String url,
+                                String path,
+                                long revision,
+                                Depth depth,
+                                boolean startEmpty,
+                                String lockToken)
+        throws ClientException;
 
-    public void abortReport() throws ClientException
-    {
-        throw new RuntimeException("Not implemented: abortReport");
-    }
+    public native long finishReport() throws ClientException;
+
+    public native void abortReport() throws ClientException;
 
     /**
-     * This constructor is called from the factory to get an instance.
+     * This factory method called from RemoteSession.status and friends.
      */
-    protected UpdateReporter(long cppAddr, RemoteSession session)
+    static final
+        StateReporter createInstance(RemoteSession session)
+            throws ClientException
+    {
+        long cppAddr = nativeCreateInstance();
+        return new StateReporter(cppAddr, session);
+    }
+
+    @Override
+    public native void finalize() throws Throwable;
+
+    /*
+     * Wrapped private native implementation declarations.
+     */
+    private native void nativeDispose();
+    private static final native long nativeCreateInstance()
+        throws ClientException;
+
+    /**
+     * This constructor is called from the factory method.
+     */
+    protected StateReporter(long cppAddr, RemoteSession session)
     {
         super(cppAddr);
         this.session = session;
@@ -86,4 +96,3 @@ public class UpdateReporter extends JNIObject implements ISVNReporter
     /** Stores a reference to the session that created this reporter. */
     protected RemoteSession session;
 }
-

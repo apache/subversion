@@ -94,7 +94,7 @@ public class CommitEditor extends JNIObject implements ISVNEditor
                                     String target,
                                     Map<String, byte[]> properties)
             throws ClientException;
-   
+
     public native void delete(String relativePath,
                               long revision)
             throws ClientException;
@@ -111,11 +111,8 @@ public class CommitEditor extends JNIObject implements ISVNEditor
                             long replacesRevision)
             throws ClientException;
 
-    /**
-     * <b>Note:</b> Not implemented.
-     */
-    public native void rotate(Iterable<RotatePair> elements)
-            throws ClientException;
+//    public native void rotate(Iterable<RotatePair> elements)
+//            throws ClientException;
 
     public native void complete() throws ClientException;
 
