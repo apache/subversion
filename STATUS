@@ -201,7 +201,7 @@ Candidate changes:
    Votes:
       +1: brane, gstein
 
- * r1489117, r1496470, r1497975, r1497980, r1498012
+ * r1489117, r1496470, r1497975, r1497980, r1498012, r1499423, r1499595
    Support for HTTP/1.1 reverse proxies that require Content-Length headers
    and deny chunked requests.
    Branch: ^/subversion/branches/1.8.x-busted-proxy
@@ -220,6 +220,8 @@ Candidate changes:
      r1497980: add runtime/dynamic checking of proxy support
      r1498012: remove improper check of client-side proxy; the real problem
                is within the server-side reverse proxy
+     r1499423: fix 411 handling
+     r1499595: don't probe when a redirect occurs
 
      Local to branch:
      r1499225: remove SVN_CONFIG_OPTION_BUSTED_PROXY from the public API,
