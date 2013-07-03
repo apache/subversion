@@ -120,9 +120,11 @@ if $DEBUG; then
   set -x
 fi
 $SVN diff > $backupfile
-cp STATUS STATUS.$$
+if ! $MAY_COMMIT ; then
+  cp STATUS STATUS.$$
+fi
 $SVNq revert -R .
-if $MAY_COMMIT ; then
+if ! $MAY_COMMIT ; then
   mv STATUS.$$ STATUS
 fi
 $SVNq up
