@@ -240,19 +240,21 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1499447
-   configure: Do not warn if BDB was not found.
-   Justification:
+ * r1499438, r1499447, r1499460
+   Make building with BDB 6 an opt-in feature.
+   In configure, do not warn if BDB was not found.
+   Justification (r1499447):
      The BDB backend is deprecated and the check is buggy.
+   Justification (r1499438, r1499460):
+     License change on a dependency.  libsvn_fs_base has not been tested with
+     bdb6, and is deprecated so we are unlikely to test it.
+   Notes:
+     Two orthogonal changes that conflict with each other.
+     r1499447 removes the warning.
+     r1499438 and r1499460 add an opt-in
    Votes:
      +1: danielsh
-     +0: stsp (I agree with the change, but the merge conflicts)
-
- * r1499438, r1499460
-   Make building with BDB 6 an opt-in feature.
-   Justification:
-     Incompatible license.  libsvn_fs_base has not been tested with bdb6, and
-     is deprecated so we are unlikely to test it.
+     +0: stsp (r1499447: I agree with the change, but the merge conflicts)
 
 Veto-blocked changes:
 =====================
