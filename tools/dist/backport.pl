@@ -3,6 +3,8 @@ use warnings;
 use strict;
 use feature qw/switch say/;
 
+use File::Copy qw/copy move/;
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -286,7 +288,11 @@ sub handle_entry {
 
 sub maybe_revert {
   # This is both a SIGINT handler, and the tail end of main() in normal runs.
-  system $SVN, qw/revert -R ./ if !$YES and prompt 'Revert? ';
+  return if $YES or not prompt 'Revert? ';
+  copy $STATUS, "$STATUS.$$";
+  system $SVN, qw/revert -q/, $STATUS;
+  system $SVN, qw/revert -R ./;
+  move "$STATUS.$$", $STATUS;
   exit if @_;
 }
 
