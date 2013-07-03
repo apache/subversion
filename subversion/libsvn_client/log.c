@@ -860,13 +860,32 @@ svn_client_log5(const apr_array_header_t *targets,
   SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url, ra_session,
                                             actual_loc->url, pool));
 
-  /* Get the svn_location_segment_t's representing the requested log ranges. */
-  SVN_ERR(svn_client__repos_location_segments(&log_segments, ra_session,
-                                              actual_loc->url,
-                                              actual_loc->rev, /* peg */
-                                              actual_loc->rev, /* start */
-                                              oldest_rev,      /* end */
-                                              ctx, pool));
+  /* Save us an RA layer round trip if we are on the repository root and
+     know the result in advance.  All the revision data has already been
+     validated.
+   */
+  if (strcmp(actual_loc->url, actual_loc->repos_root_url) == 0)
+    {
+      svn_location_segment_t *segment = apr_pcalloc(pool, sizeof(*segment));
+      log_segments = apr_array_make(pool, 1, sizeof(segment));
+
+      segment->range_start = oldest_rev;
+      segment->range_end = actual_loc->rev;
+      segment->path = "";
+      APR_ARRAY_PUSH(log_segments, svn_location_segment_t *) = segment;
+    }
+  else
+    {
+      /* Get the svn_location_segment_t's representing the requested log
+       * ranges. */
+      SVN_ERR(svn_client__repos_location_segments(&log_segments, ra_session,
+                                                  actual_loc->url,
+                                                  actual_loc->rev, /* peg */
+                                                  actual_loc->rev, /* start */
+                                                  oldest_rev,      /* end */
+                                                  ctx, pool));
+    }
+
 
   SVN_ERR(run_ra_get_log(revision_ranges, relative_targets, log_segments,
                          actual_loc, ra_session, targets, limit,
