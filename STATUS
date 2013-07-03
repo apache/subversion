@@ -228,6 +228,15 @@ Candidate changes:
    Votes:
      +1: gstein
 
+ * r1498000
+   Improve error handling for inherited property requests by using the
+   transition based xml parser in libsvn_ra_serf.
+   Justification:
+     This maintenance work which usually doesn't belong in a patch release
+     makes it possible to properly detect if this request should be restarted
+     on non-chunk-enabled proxies.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
