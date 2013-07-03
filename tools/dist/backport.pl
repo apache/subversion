@@ -332,8 +332,8 @@ sub vote {
 
 sub revert {
   copy $STATUS, "$STATUS.$$";
-  system $SVN, qw/revert -q/, $STATUS;
-  system $SVN, qw/revert -R ./;
+  system "$SVN revert -q $STATUS";
+  system "$SVN revert -R ./";
   move "$STATUS.$$", $STATUS;
 }
 
