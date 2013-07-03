@@ -240,6 +240,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1499447
+   configure: Do not warn if BDB was not found.
+   Justification:
+     The BDB backend is deprecated and the check is buggy.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
