@@ -2909,11 +2909,15 @@ svn_wc__db_upgrade_get_repos_id(apr_int64_t *repos_id,
  * Upgrading subdirectories of a working copy is not supported.
  * If WCROOT_ABSPATH is not a working copy root SVN_ERR_WC_INVALID_OP_ON_CWD
  * is returned.
+ *
+ * If BUMPED_FORMAT is not NULL, set *BUMPED_FORMAT to TRUE if the format
+ * was bumped or to FALSE if the wc was already at the resulting format.
  */
 svn_error_t *
 svn_wc__db_bump_format(int *result_format,
-                       const char *wcroot_abspath,
+                       svn_boolean_t *bumped_format,
                        svn_wc__db_t *db,
+                       const char *wcroot_abspath,
                        apr_pool_t *scratch_pool);
 
 /* @} */
