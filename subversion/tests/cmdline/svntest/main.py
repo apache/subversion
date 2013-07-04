@@ -594,18 +594,30 @@ exclusive-locking = true
     if options.http_library:
       http_library_str = "http-library=%s" % (options.http_library)
     http_proxy_str = ""
+    http_proxy_username_str = ""
+    http_proxy_password_str = ""
     if options.http_proxy:
       http_proxy_parsed = urlparse("//" + options.http_proxy)
       http_proxy_str = "http-proxy-host=%s\n" % (http_proxy_parsed.hostname) + \
                        "http-proxy-port=%d" % (http_proxy_parsed.port or 80)
+    if options.http_proxy_username:
+      http_proxy_username_str = "http-proxy-username=%s" % \
+                                     (options.http_proxy_username)
+    if options.http_proxy_password:
+      http_proxy_password_str = "http-proxy-password=%s" % \
+                                     (options.http_proxy_password)
+
     server_contents = """
 #
 [global]
 %s
 %s
+%s
+%s
 store-plaintext-passwords=yes
 store-passwords=yes
-""" % (http_library_str, http_proxy_str)
+""" % (http_library_str, http_proxy_str, http_proxy_username_str,
+       http_proxy_password_str)
 
   file_write(cfgfile_cfg, config_contents)
   file_write(cfgfile_srv, server_contents)
@@ -1432,6 +1444,10 @@ class TestSpawningThread(threading.Thread):
       args.append('--ssl-cert=' + options.ssl_cert)
     if options.http_proxy:
       args.append('--http-proxy=' + options.http_proxy)
+    if options.http_proxy-username:
+      args.append('--http-proxy-username=' + options.http_proxy_username)
+    if options.http_proxy-password:
+      args.append('--http-proxy-password=' + options.http_proxy_password)
     if options.exclusive_wc_locks:
       args.append('--exclusive-wc-locks')
 
@@ -1779,6 +1795,10 @@ def _create_parser():
                     help='Path to SSL server certificate.')
   parser.add_option('--http-proxy', action='store',
                     help='Use the HTTP Proxy at hostname:port.')
+  parser.add_option('--http-proxy-username', action='store',
+                    help='Username for the HTTP Proxy.')
+  parser.add_option('--http-proxy-password', action='store',
+                    help='Password for the HTTP Proxy.')
   parser.add_option('--tools-bin', action='store', dest='tools_bin',
                     help='Use the svn tools installed in this path')
   parser.add_option('--exclusive-wc-locks', action='store_true',
