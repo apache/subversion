@@ -2578,7 +2578,9 @@ expat_response_handler(serf_request_t *request,
       expat_status = XML_Parse(ectx->parser, data, (int)len,
                                at_eof /* isFinal */);
 
-      if (at_eof)
+      if (at_eof 
+          || ectx->inner_error
+          || expat_status != XML_STATUS_OK)
         {
           /* Release xml parser state/tables. */
           apr_pool_cleanup_run(ectx->cleanup_pool, &ectx->parser,
@@ -2594,8 +2596,7 @@ expat_response_handler(serf_request_t *request,
          errors.  */
       SVN_ERR(ectx->inner_error);
       if (expat_status != XML_STATUS_OK)
-        return svn_error_createf(SVN_ERR_XML_MALFORMED,
-                                 ectx->inner_error,
+        return svn_error_createf(SVN_ERR_XML_MALFORMED, NULL,
                                  _("The %s response contains invalid XML"
                                    " (%d %s)"),
                                  ectx->handler->method,
