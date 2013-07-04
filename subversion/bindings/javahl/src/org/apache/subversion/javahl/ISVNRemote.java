@@ -269,8 +269,6 @@ public interface ISVNRemote
      * <code>properties</code> may not perform any ISVNRemote
      * operations using this session.
      * @return The revision of the directory that was retreived.
-     * @throws IllegalArgumentException if <code>direntFields</code>
-     *         is less than or equal to 0.
      * @throws ClientException
      */
     long getDirectory(long revision, String path,
