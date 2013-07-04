@@ -264,6 +264,9 @@ Candidate changes:
      Spurious FAILs confuse people testing the release.
    Votes:
      +1: philip
+     -0: danielsh (loses functionality: this is the only test for @{DATE} pegs,
+                   and it should test that that works when the {DATE} argument
+                   is not exactly equal to the revprop's value)
 
 Veto-blocked changes:
 =====================
