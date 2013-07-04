@@ -752,8 +752,6 @@ jobject
 SVNClient::getMergeinfo(const char *target, Revision &pegRevision)
 {
     SVN::Pool subPool(pool);
-    JNIEnv *env = JNIUtil::getEnv();
-
     svn_client_ctx_t *ctx = context.getContext(NULL, subPool);
     if (ctx == NULL)
         return NULL;
