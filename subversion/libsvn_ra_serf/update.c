@@ -2939,8 +2939,10 @@ finish_report(void *report_baton,
          the connection timed out.  */
       if (APR_STATUS_IS_TIMEUP(status))
         {
-          svn_error_clear(err);
-          err = SVN_NO_ERROR;
+          /* If there is a pending error, handle it.
+             Unlikely case, as this should have made serf_context run return
+             an error but we shouldn't ignore true errors */
+          SVN_ERR(err);
           status = 0;
 
           if (sess->timeout)
