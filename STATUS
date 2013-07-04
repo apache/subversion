@@ -227,10 +227,7 @@ Candidate changes:
      r1499225: remove SVN_CONFIG_OPTION_BUSTED_PROXY from the public API,
                since we cannot add a symbol in a patch release.
    Votes:
-     +1: gstein
-     -1: philip (needs r1499423, also the extra request is sent before
-                 redirect handling so a client enabling this option and
-                 connecting directly to httpd will not follow redirects)
+     +1: gstein, philip
 
  * r1498000
    Improve error handling for inherited property requests by using the
@@ -257,6 +254,13 @@ Candidate changes:
    Votes:
      +1: danielsh
      +0: stsp (r1499447: I agree with the change, but the merge conflicts)
+
+ * r1496127
+   Fix occasional failure of checkout_tests.py 12.
+   Justification:
+     Spurious FAILs confuse people testing the release.
+   Votes:
+     +1: philip
 
 Veto-blocked changes:
 =====================
