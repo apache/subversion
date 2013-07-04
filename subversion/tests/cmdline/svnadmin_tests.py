@@ -1856,7 +1856,10 @@ def verify_keep_going(sbox):
                                            ".*Verified revision 0.",
                                            ".*Verified revision 1.",
                                            ".*Error verifying revision 2.",
-                                           ".*Verified revision 3."])
+                                           ".*Verified revision 3.*",
+                                           ".*",
+                                           ".*Summary.*",
+                                           ".*E160004:.*"])
 
   exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
                                            "svnadmin: E165011:.*"], False)

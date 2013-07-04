@@ -850,7 +850,7 @@ repos_notify_handler(void *baton,
     case svn_repos_notify_failure_summary:
       if (notify->revision != SVN_INVALID_REVNUM)
         cmdline_stream_printf(feedback_stream, scratch_pool,
-                              _("Revision %ld: %s \n"),
+                              _("r%ld: %s \n"),
                               notify->revision, notify->warning_str);
       return;
 
