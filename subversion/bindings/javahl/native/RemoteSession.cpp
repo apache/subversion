@@ -660,7 +660,7 @@ status_fetch_props_func(apr_hash_t **props, void *baton,
 {
   //DEBUG:fprintf(stderr, "  (n) status_fetch_props_func('%s', r%lld)\n",
   //DEBUG:        path, static_cast<long long>(base_revision));
-  *props = apr_hash_make(scratch_pool);
+  *props = apr_hash_make(result_pool);
   return SVN_NO_ERROR;
 }
 
