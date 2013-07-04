@@ -147,13 +147,6 @@ Candidate changes:
    Votes:
      +1: danielsh, stefan2
 
- * r1498550
-   ra_svn: Fix client-triggerable client segfault upon commit.
-   Justification:
-     Segfault.  ra_local and ra_serf permit the commit.
-   Votes:
-     +1: danielsh, stefan2
-
  * r1498851
    Provide an explicit error in the serf xml parser when the root element
    isn't matched in the transition table.
@@ -273,4 +266,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1498550, r1499727
+   ra_svn: Fix client-triggerable client segfault upon commit.
+   Justification:
+     Segfault.  ra_local and ra_serf permit the commit.
+   Votes:
+     +1: danielsh, stefan2, philip
 
