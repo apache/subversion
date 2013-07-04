@@ -213,6 +213,7 @@ Candidate changes:
                since we cannot add a symbol in a patch release.
    Votes:
      +1: gstein, philip
+     +0 lgo (+1 when the error message for 411 points to the busted-proxy knob).
 
  * r1498000
    Improve error handling for inherited property requests by using the
