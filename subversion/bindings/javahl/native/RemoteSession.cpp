@@ -465,7 +465,7 @@ RemoteSession::getRevisionProperties(jlong jrevision)
                                   &props, subPool.getPool()),
               NULL);
 
-  return CreateJ::PropertyMap(props);
+  return CreateJ::PropertyMap(props, subPool.getPool());
 }
 
 jbyteArray
@@ -511,7 +511,7 @@ RemoteSession::getFile(jlong jrevision, jstring jpath,
 
   if (jproperties)
     {
-      CreateJ::FillPropertyMap(jproperties, props);
+      CreateJ::FillPropertyMap(jproperties, props, subPool.getPool());
       if (JNIUtil::isExceptionThrown())
         return SVN_INVALID_REVNUM;
     }
@@ -633,7 +633,7 @@ RemoteSession::getDirectory(jlong jrevision, jstring jpath,
 
   if (jproperties)
     {
-      CreateJ::FillPropertyMap(jproperties, props);
+      CreateJ::FillPropertyMap(jproperties, props, subPool.getPool());
       if (JNIUtil::isExceptionThrown())
         return SVN_INVALID_REVNUM;
     }
