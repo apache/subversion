@@ -178,10 +178,10 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
                                       pool, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(gls_ttable,
-                                           NULL, gls_closed, NULL,
+                                           NULL, gls_closed, NULL, NULL,
                                            gls_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = req_url;

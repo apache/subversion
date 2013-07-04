@@ -140,10 +140,10 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *ra_session,
   SVN_ERR(svn_ra_serf__report_resource(&report_target, session, NULL, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(date_ttable,
-                                           NULL, date_closed, NULL,
+                                           NULL, date_closed, NULL, NULL,
                                            date_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = report_target;
