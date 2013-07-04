@@ -322,6 +322,7 @@ sub vote {
     
     s/^(\s*\Q$vote\E:.*)/"$1, $AVAILID"/me
     or s/(.*\w.*?\n)/"$1     $vote: $AVAILID\n"/se;
+    $_ = edit_string $_, $entry->{header} if $vote ne '+1';
     print VOTES;
   }
   close STATUS;
