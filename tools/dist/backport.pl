@@ -30,7 +30,7 @@ my $VIM = 'vim';
 my $STATUS = './STATUS';
 my $BRANCHES = '^/subversion/branches';
 
-my $YES = !!$ENV{YES}; # batch mode: eliminate prompts, add sleeps
+my $YES = ($ENV{YES} // 0) ? 1 : 0; # batch mode: eliminate prompts, add sleeps
 my $MAY_COMMIT = qw[false true][0];
 my $DEBUG = qw[false true][0]; # 'set -x', etc
 my ($AVAILID) = $ENV{AVAILID} // do {
