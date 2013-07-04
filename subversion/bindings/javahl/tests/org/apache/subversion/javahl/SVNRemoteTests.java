@@ -30,6 +30,7 @@ import org.apache.subversion.javahl.types.*;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Set;
 import java.util.Map;
 import java.util.HashMap;
@@ -899,5 +900,64 @@ public class SVNRemoteTests extends SVNTests
         assertEquals('F', mod.kind);
         assertEquals(false, mod.textChanged);
         assertEquals(true, mod.propsChanged);
+    }
+
+    public void testTrivialMergeinfo() throws Exception
+    {
+        ISVNRemote session = getSession();
+        ArrayList<String> paths = new ArrayList<String>(1);
+        paths.add("");
+
+        Map<String, Mergeinfo> catalog =
+            session.getMergeinfo(paths, 1L, Mergeinfo.Inheritance.explicit,
+                                 false);
+        assertEquals(null, catalog);
+    }
+
+    public void testBranchMergeinfo() throws Exception
+    {
+        CommitMessageCallback cmcb = new CommitMessageCallback() {
+                public String getLogMessage(Set<CommitItem> x) {
+                    return "testBranchMergeinfo";
+                }
+            };
+
+        ISVNRemote session = getSession();
+
+        // Create a branch
+        ArrayList<CopySource> dirA = new ArrayList<CopySource>(1);
+        dirA.add(new CopySource(getTestRepoUrl() + "/A",
+                                Revision.HEAD, Revision.HEAD));
+        client.copy(dirA, getTestRepoUrl() + "/Abranch",
+                    false, false, true, null, cmcb, null);
+
+        // Check mergeinfo on new branch
+        ArrayList<String> paths = new ArrayList<String>(1);
+        paths.add("Abranch");
+        Map<String, Mergeinfo> catalog =
+            session.getMergeinfo(paths, 2L, Mergeinfo.Inheritance.explicit,
+                                 false);
+        assertEquals(null, catalog);
+
+        // Modify source and merge to branch
+        client.propertySetRemote(getTestRepoUrl() + "/A/D/gamma",
+                                 2L, "foo", "bar".getBytes(), cmcb,
+                                 false, null, null);
+        client.update(thisTest.getWCPathSet(), Revision.HEAD, Depth.infinity,
+                      false, false, true, false);
+        client.merge(getTestRepoUrl() + "/A", Revision.HEAD, null,
+                     thisTest.getWCPath() + "/Abranch", false, Depth.infinity,
+                     false, false, false, false);
+        client.commit(thisTest.getWCPathSet(), Depth.infinity, false, false,
+                      null, null, cmcb, null);
+
+        // Check mergeinfo on updated branch
+        catalog = session.getMergeinfo(paths, 4L,
+                                       Mergeinfo.Inheritance.explicit,
+                                       false);
+        assertEquals(1, catalog.size());
+        List<RevisionRange> ranges = catalog.get("Abranch").getRevisions("/A");
+        assertEquals(1, ranges.size());
+        assertEquals("1-3*", ranges.get(0).toString());
     }
 }
