@@ -210,7 +210,7 @@ EOF
   open SHELL, '|-', qw#/bin/sh# or die "$! (in '$entry{header}')";
   print SHELL $script;
   close SHELL or warn "$0: sh($?): $! (in '$entry{header}')";
-  $ERRORS{$entry{header}} = "sh($?): $!" if $?;
+  $ERRORS{$entry{id}} = "sh($?): $!" if $?;
 
   if (-z $backupfile) {
     unlink $backupfile;
@@ -268,9 +268,11 @@ sub parse_entry {
   }
 
   # Compute a header.
-  my $header;
+  my ($header, $id);
   $header = "r$revisions[0] group" if @revisions;
-  $header = "$branch branch" if $branch;
+  $id = "r$revisions[0]"           if @revisions;
+  $header = "$branch branch"       if $branch;
+  $id = $branch                    if $branch;
   warn "No header for [@lines]" unless $header;
 
   return (
@@ -278,6 +280,7 @@ sub parse_entry {
     logsummary => [@logsummary],
     branch => $branch,
     header => $header,
+    id => $id,
     votes => [@votes],
     entry => [@lines],
     raw => $lines,
@@ -301,6 +304,7 @@ sub edit_string {
 
 sub vote {
   my $votes = shift;
+  my @votes;
   return unless %$votes;
 
   $. = 0;
@@ -313,7 +317,7 @@ sub vote {
     }
 
     my ($vote, $entry) = @{delete $votes->{$.}};
-    say "Voting '$vote' on $entry->{header}";
+    push @votes, [$vote, $entry];
 
     if ($vote eq 'edit') {
       print VOTES $entry->{raw};
@@ -330,8 +334,20 @@ sub vote {
   die "Some vote chunks weren't found: ", keys %$votes if %$votes;
   move "$STATUS.$$.tmp", $STATUS;
 
+  my $logmsg = do {
+    my @sentences = map {
+        $_->[0] eq 'edit'
+        ? "Edit the $_->[1]->{id} entry."
+        : "Vote $_->[0] on the $_->[1]->{header}."
+      } @votes;
+    (@sentences == 1)
+    ? $sentences[0]
+    : "* STATUS:\n" . join "", map "  $_\n", @sentences;
+  };
+
   system $SVN, qw/diff --/, $STATUS;
-  system $SVN, qw/commit -m Vote. --/, $STATUS
+  say "Voting '$_->[0]' on $_->[1]->{header}." for @votes;
+  system $SVN, qw/commit -m/, $logmsg, qw/--/, $STATUS
     if prompt "Commit these votes? ";
 }
 
@@ -358,10 +374,8 @@ sub warning_summary {
   warn "Warning summary\n";
   warn "===============\n";
   warn "\n";
-  for my $entry_header (keys %ERRORS) {
-    my $header;
-    ($header = $entry_header) =~ s/ (group|branch)$//;
-    warn "$header: $ERRORS{$entry_header}\n";
+  for my $header (keys %ERRORS) {
+    warn "$header: $ERRORS{$header}\n";
   }
 }
 
@@ -391,7 +405,7 @@ sub handle_entry {
 
         my $output;
         if (($output = `$SVN status`) =~ /^(C|.C|...C)/m) {
-          $ERRORS{$entry{header}} //= "Conflicts merging the $entry{header}!";
+          $ERRORS{$entry{id}} //= "Conflicts merging the $entry{header}!";
           say STDERR "Conflicts merging the $entry{header}!";
           say STDERR "";
           say STDERR $output;
