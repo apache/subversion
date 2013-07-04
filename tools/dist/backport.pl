@@ -29,6 +29,7 @@ my $SVN = $ENV{SVN} || 'svn'; # passed unquoted to sh
 my $VIM = 'vim';
 my $STATUS = './STATUS';
 my $BRANCHES = '^/subversion/branches';
+my %ERRORS = ();
 
 my $YES = ($ENV{YES} // 0) ? 1 : 0; # batch mode: eliminate prompts, add sleeps
 my $MAY_COMMIT = qw[false true][0];
@@ -209,6 +210,7 @@ EOF
   open SHELL, '|-', qw#/bin/sh# or die "$! (in '$entry{header}')";
   print SHELL $script;
   close SHELL or warn "$0: sh($?): $! (in '$entry{header}')";
+  $ERRORS{$entry{header}} = "sh($?): $!" if $?;
 
   if (-z $backupfile) {
     unlink $backupfile;
@@ -349,10 +351,24 @@ sub maybe_revert {
   exit if @_;
 }
 
+sub warning_summary {
+  return unless %ERRORS;
+
+  warn "Warning summary\n";
+  warn "===============\n";
+  warn "\n";
+  for my $entry_header (keys %ERRORS) {
+    my $header;
+    ($header = $entry_header) =~ s/ (group|branch)$//;
+    warn "$header: $ERRORS{$entry_header}\n";
+  }
+}
+
 sub exit_stage_left {
   maybe_revert;
+  warning_summary if $YES;
   vote shift;
-  exit;
+  exit scalar keys %ERRORS;
 }
 
 sub handle_entry {
@@ -374,6 +390,7 @@ sub handle_entry {
 
         my $output;
         if (($output = `$SVN status`) =~ /^(C|.C|...C)/m) {
+          $ERRORS{$entry{header}} //= "Conflicts merging the $entry{header}!";
           say STDERR "Conflicts merging the $entry{header}!";
           say STDERR "";
           say STDERR $output;
