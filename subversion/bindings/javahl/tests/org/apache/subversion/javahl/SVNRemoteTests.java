@@ -960,6 +960,6 @@ public class SVNRemoteTests extends SVNTests
         List<RevisionRange> ranges =
             catalog.get("Abranch/mu").getRevisions("/A/mu");
         assertEquals(1, ranges.size());
-        assertEquals("1-3*", ranges.get(0).toString());
+        assertEquals("1-3", ranges.get(0).toString());
     }
 }

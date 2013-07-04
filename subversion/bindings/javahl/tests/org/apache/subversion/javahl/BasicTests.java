@@ -2317,12 +2317,10 @@ public class BasicTests extends SVNTests
         assertTrue("Missing merge info for source '" + mergeSrc + "' on '" +
                    targetPath + '\'', ranges != null && !ranges.isEmpty());
         RevisionRange range = (RevisionRange) ranges.get(0);
-        RevisionRange expected =
-            new RevisionRange(Revision.getInstance(expectedMergeStart),
-                              Revision.getInstance(expectedMergeEnd));
-        assertTrue("Unexpected first merged revision range for '" +
-                   mergeSrc + "' on '" + targetPath + '\'',
-                   0 == range.compareTo(expected));
+        String expectedMergedRevs = expectedMergeStart + "-" + expectedMergeEnd;
+        assertEquals("Unexpected first merged revision range for '" +
+                     mergeSrc + "' on '" + targetPath + '\'',
+                     expectedMergedRevs, range.toString());
 
         // Verify expected available merges.
         if (expectedAvailableStart > 0)
