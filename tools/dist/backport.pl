@@ -78,6 +78,9 @@ q:   Quit the "for each nomination" loop.
      You will be prompted to commit your vote at the end.
 ±0:  Enter a +0 or -0 vote
      You will be prompted to commit your vote at the end.
+a:   Move the entry to the "Approved changes" section.
+     When both approving and voting on an entry, approve first: for example,
+     to enter a third +1 vote, type "a" "+" "1".
 e:   Edit the entry in $EDITOR.
      You will be prompted to commit your edits at the end.
 N:   Move to the next entry.
@@ -303,43 +306,57 @@ sub edit_string {
 }
 
 sub vote {
-  my $votes = shift;
+  my ($approved, $votes) = @_;
+  my $raw_approved = "";
   my @votes;
-  return unless %$votes;
+  return unless %$approved or %$votes;
 
   $. = 0;
   open STATUS, "<", $STATUS;
   open VOTES, ">", "$STATUS.$$.tmp";
   while (<STATUS>) {
     unless (exists $votes->{$.}) {
-      print VOTES;
+      (exists $approved->{$.}) ? ($raw_approved .= $_) : (print VOTES);
       next;
     }
 
-    my ($vote, $entry) = @{delete $votes->{$.}};
+    my ($vote, $entry) = @{$votes->{$.}};
+    push @{$votes->{$.}}, 1;
     push @votes, [$vote, $entry];
 
     if ($vote eq 'edit') {
-      print VOTES $entry->{raw};
+      local $_ = $entry->{raw};
+      (exists $approved->{$.}) ? ($raw_approved .= $_) : (print VOTES);
       next;
     }
     
     s/^(\s*\Q$vote\E:.*)/"$1, $AVAILID"/me
     or s/(.*\w.*?\n)/"$1     $vote: $AVAILID\n"/se;
     $_ = edit_string $_, $entry->{header} if $vote ne '+1';
-    print VOTES;
+    (exists $approved->{$.}) ? ($raw_approved .= $_) : (print VOTES);
   }
   close STATUS;
+  print VOTES $raw_approved;
   close VOTES;
-  die "Some vote chunks weren't found: ", keys %$votes if %$votes;
+  die "Some vote chunks weren't found: "
+    if grep scalar(@$_) != 3, values %$votes;
   move "$STATUS.$$.tmp", $STATUS;
 
   my $logmsg = do {
+    my %allkeys = map { $_ => 1 } keys(%$votes), keys(%$approved);
     my @sentences = map {
-        $_->[0] eq 'edit'
-        ? "Edit the $_->[1]->{id} entry."
-        : "Vote $_->[0] on the $_->[1]->{header}."
-      } @votes;
+       exists $votes->{$_}
+       ? (
+         ( $votes->{$_}->[0] eq 'edit'
+           ? "Edit the $votes->{$_}->[1]->{id} entry"
+           : "Vote $votes->{$_}->[0] on the $votes->{$_}->[1]->{header}"
+         )
+         . (exists $approved->{$_} ? ", approving" : "")
+         . "."
+         )
+      : # exists only in $approved
+        "Approve the $approved->{$_}->{header}."
+      } keys %allkeys;
     (@sentences == 1)
     ? $sentences[0]
     : "* STATUS:\n" . join "", map "  $_\n", @sentences;
@@ -347,6 +364,7 @@ sub vote {
 
   system $SVN, qw/diff --/, $STATUS;
   say "Voting '$_->[0]' on $_->[1]->{header}." for @votes;
+  # say $logmsg;
   system $SVN, qw/commit -m/, $logmsg, qw/--/, $STATUS
     if prompt "Commit these votes? ";
 }
@@ -382,13 +400,14 @@ sub warning_summary {
 sub exit_stage_left {
   maybe_revert;
   warning_summary if $YES;
-  vote shift;
+  vote @_;
   exit scalar keys %ERRORS;
 }
 
 sub handle_entry {
   my $in_approved = shift;
   my $votes = shift;
+  my $approved = shift;
   my $lines = shift;
   my %entry = parse_entry $lines, @_;
   my @vetoes = grep { /^  -1:/ } @{$entry{votes}};
@@ -428,7 +447,7 @@ sub handle_entry {
     say "";
     say "Vetoes found!" if @vetoes;
 
-    given (prompt 'Go ahead? [y,±1,±0,q,e,N]',
+    given (prompt 'Go ahead? [y,±1,±0,q,e,a,N]',
                    verbose => 1, extra => qr/[+-]/) {
       when (/^y/i) {
         merge %entry;
@@ -450,7 +469,11 @@ sub handle_entry {
         # NOTREACHED
       }
       when (/^q/i) {
-        exit_stage_left $votes;
+        exit_stage_left $approved, $votes;
+      }
+      when (/^a/i) {
+        $approved->{$.} = \%entry;
+        next PROMPT;
       }
       when (/^([+-][01])\s*$/i) {
         $votes->{$.} = [$1, \%entry];
@@ -472,6 +495,7 @@ sub handle_entry {
 }
 
 sub main {
+  my %approved;
   my %votes;
 
   usage, exit 0 if @ARGV;
@@ -519,7 +543,7 @@ sub main {
       when (/^ \*/) {
         warn "Too many bullets in $lines[0]" and next
           if grep /^ \*/, @lines[1..$#lines];
-        handle_entry $in_approved, \%votes, $lines, @lines;
+        handle_entry $in_approved, \%approved, \%votes, $lines, @lines;
       }
       default {
         warn "Unknown entry '$lines[0]' at line $.\n";
@@ -527,7 +551,7 @@ sub main {
     }
   }
 
-  exit_stage_left \%votes;
+  exit_stage_left \%approved, \%votes;
 }
 
 &main
