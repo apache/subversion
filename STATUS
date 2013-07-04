@@ -108,6 +108,9 @@ Candidate changes:
    Justification:
      Workaround for issue with busted proxies that don't support chunked
      transfer encoding for request body. Reported many times on mailing list.
+   Notes:
+     This revision is part of the 1.8.x-busted-proxy branch and so this
+     proposal becomes redundant if that branch is merged.
    Votes:
      +1: ivan
      -0: gstein, brane (we should dynamically detect the problem; should fix name)
