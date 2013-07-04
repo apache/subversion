@@ -2284,10 +2284,10 @@ svn_io_file_readline(apr_file_t *file,
  *
  *  When used in a diff context: (responding parse tokens in braces)
  *
- *  @a label1 (%l1%) refers to the label of @a tmpfile1 (%f1) which is
+ *  @a label1 (;l1) refers to the label of @a tmpfile1 (;f1) which is
  *  the pristine copy.
  *
- *  @a label2 (%l2%) refers to the label of @a tmpfile2 (%f2%) which
+ *  @a label2 (;l2) refers to the label of @a tmpfile2 (;f2) which
  *  is the altered copy.
  *
  *  When used in a diff3 context:
@@ -2298,15 +2298,18 @@ svn_io_file_readline(apr_file_t *file,
  *  @a label2 refers to the label of @a tmpfile2 which is the 'older'
  *  copy.
  *
- *  @a label3 (%l3%) refers to the label of @a base (%f3%) which is
+ *  @a label3 (;l3) refers to the label of @a base (;f3) which is
  *  the 'base' copy.
+ *
+ *  A parse token can be escaped by prefixing a ';'.  Any other
+ *  strings containing ';' are not affected.
  *
  *  In general:
  *
  *  @a cmd is a user defined string containing 0 or more parse tokens
  *  which are expanded by the required labels and filenames.
  * 
- *  @a scratch_pool is used for temporary allocations.
+ *  @a pool is used for temporary allocations.
  *
  *  @return A NULL-terminated character array.
  * 
@@ -2320,7 +2323,7 @@ svn_io_create_custom_diff_cmd(const char *label1,
                               const char *tmpfile2,
                               const char *base,
                               const char *cmd,
-                              apr_pool_t *scratch_pool);
+                              apr_pool_t *pool);
 
 /** Run the external diff command defined by the invoke-diff-cmd
  *  option.

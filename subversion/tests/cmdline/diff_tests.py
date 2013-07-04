@@ -3288,7 +3288,7 @@ def diff_invoke_external_diffcmd(sbox):
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
    'diff',
-   '--invoke-diff-cmd='+diff_script_path+' %l1% %f1% %l2% %f2%',
+   '--invoke-diff-cmd='+diff_script_path+' ;l1 ;f1 ;l2 ;f2',
    iota_path)
 
 #----------------------------------------------------------------------
